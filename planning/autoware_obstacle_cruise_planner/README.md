@@ -69,6 +69,7 @@ struct Obstacle
 ```
 
 ### Parameters
+
 {{ json_to_markdown("planning/obstacle_cruise_planner/schema/obstacle_cruise_planner.schema.json") }}
 
 ### Behavior determination against obstacles
