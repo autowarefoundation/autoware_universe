@@ -1,5 +1,25 @@
 /**:
   ros__parameters:
+  # # constraints param for normal driving
+  #   max_vel: 11.1           # max velocity limit [m/s]
+
+    normal:
+      min_acc: -1.0         # min deceleration [m/ss]
+      max_acc: 1.0          # max acceleration [m/ss]
+      min_jerk: -1.0        # min jerk [m/sss]
+      max_jerk: 1.0         # max jerk [m/sss]
+
+    # constraints to be observed
+    limit:
+      min_acc: -2.5         # min deceleration limit [m/ss]
+      max_acc: 1.0          # max acceleration limit [m/ss]
+      min_jerk: -1.5        # min jerk limit [m/sss]
+      max_jerk: 1.5         # max jerk limit [m/sss]
+    
+    # ego position threshold
+    ego_nearest_dist_threshold: 1.0
+    ego_nearest_yaw_threshold: 5.0
+
     common:
       planning_algorithm: "pid_base" # currently supported algorithm is "pid_base"
 
