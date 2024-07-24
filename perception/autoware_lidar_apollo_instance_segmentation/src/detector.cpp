@@ -84,8 +84,9 @@ bool LidarApolloInstanceSegmentation::transformCloud(
   float z_offset)
 {
   // TODO(mitsudome-r): remove conversion once pcl_ros transform are available.
-  pcl::PointCloud<pcl::PointXYZI> pcl_input, pcl_transformed_cloud;
-  pcl::fromROSMsg(input, pcl_input);
+  RCLCPP_INFO(
+    node_->get_logger(), "input frame_id: %s input_points=%d", input.header.frame_id.c_str(),
+    input.width * input.height);
 
   // transform pointcloud to target_frame
   if (target_frame_ != input.header.frame_id) {
@@ -93,27 +94,21 @@ bool LidarApolloInstanceSegmentation::transformCloud(
       geometry_msgs::msg::TransformStamped transform_stamped;
       transform_stamped = tf_buffer_.lookupTransform(
         target_frame_, input.header.frame_id, input.header.stamp, std::chrono::milliseconds(500));
-      Eigen::Matrix4f affine_matrix =
-        tf2::transformToEigen(transform_stamped.transform).matrix().cast<float>();
-      autoware_utils::transform_pointcloud(pcl_input, pcl_transformed_cloud, affine_matrix);
-      transformed_cloud.header.frame_id = target_frame_;
-      pcl_transformed_cloud.header.frame_id = target_frame_;
+
+      tf2::doTransform(input, transformed_cloud, transform_stamped);
     } catch (tf2::TransformException & ex) {
       RCLCPP_WARN(node_->get_logger(), "%s", ex.what());
       return false;
     }
   } else {
-    pcl_transformed_cloud = pcl_input;
+    transformed_cloud = input;
   }
 
   // move pointcloud z_offset in z axis
-  pcl::PointCloud<pcl::PointXYZI> pointcloud_with_z_offset;
-  Eigen::Affine3f z_up_translation(Eigen::Translation3f(0, 0, z_offset));
-  Eigen::Matrix4f z_up_transform = z_up_translation.matrix();
-  autoware_utils::transform_pointcloud(
-    pcl_transformed_cloud, pcl_transformed_cloud, z_up_transform);
-
-  pcl::toROSMsg(pcl_transformed_cloud, transformed_cloud);
+  for (sensor_msgs::PointCloud2Iterator<float> iter_z(transformed_cloud, "z");
+       iter_z != iter_z.end(); ++iter_z) {
+    *iter_z += z_offset;
+  }
 
   return true;
 }
@@ -134,7 +129,7 @@ bool LidarApolloInstanceSegmentation::detectDynamicObjects(
   pcl_pointcloud_raw.width = transformed_cloud.width;
   pcl_pointcloud_raw.height = transformed_cloud.height;
   pcl_pointcloud_raw.is_dense = transformed_cloud.is_dense == 1;
-  pcl_pointcloud_raw.resize(transformed_cloud.width * transformed_cloud.height);
+  pcl_pointcloud_raw.reserve(transformed_cloud.width * transformed_cloud.height);
 
   sensor_msgs::PointCloud2ConstIterator<float> it_x(transformed_cloud, "x");
   sensor_msgs::PointCloud2ConstIterator<float> it_y(transformed_cloud, "y");
