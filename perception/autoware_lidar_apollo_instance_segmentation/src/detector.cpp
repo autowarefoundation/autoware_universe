@@ -84,10 +84,6 @@ bool LidarApolloInstanceSegmentation::transformCloud(
   float z_offset)
 {
   // TODO(mitsudome-r): remove conversion once pcl_ros transform are available.
-  RCLCPP_INFO(
-    node_->get_logger(), "input frame_id: %s input_points=%d", input.header.frame_id.c_str(),
-    input.width * input.height);
-
   // transform pointcloud to target_frame
   if (target_frame_ != input.header.frame_id) {
     try {
