@@ -83,9 +83,11 @@ pluginStatus_t nmsInference(
   size_t postNMSScoresSize = detectionForwardPostNMSSize(N, numClasses, topKVal);
   size_t postNMSIndicesSize = detectionForwardPostNMSSize(N, numClasses, topKVal);
   void * postNMSScores = nextWorkspacePtr(reinterpret_cast<int8_t *>(indices), indicesSize);
-  void * postNMSIndices = nextWorkspacePtr(reinterpret_cast<int8_t *>(postNMSScores), postNMSScoresSize);
+  void * postNMSIndices =
+    nextWorkspacePtr(reinterpret_cast<int8_t *>(postNMSScores), postNMSScoresSize);
 
-  void * sortingWorkspace = nextWorkspacePtr(reinterpret_cast<int8_t *>(postNMSIndices), postNMSIndicesSize);
+  void * sortingWorkspace =
+    nextWorkspacePtr(reinterpret_cast<int8_t *>(postNMSIndices), postNMSIndicesSize);
   // Sort the scores so that the following NMS could be applied.
 
   status = sortScoresPerClass(

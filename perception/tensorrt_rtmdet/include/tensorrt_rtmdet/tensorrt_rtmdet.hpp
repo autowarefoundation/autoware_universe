@@ -25,10 +25,10 @@
 
 #include <cv_bridge/cv_bridge.h>
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
-#include <map>
 
 namespace tensorrt_rtmdet
 {

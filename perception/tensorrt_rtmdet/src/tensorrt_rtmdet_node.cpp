@@ -249,7 +249,7 @@ void TrtRTMDetNode::drawDebugImage(
   const tensorrt_rtmdet::ObjectArrays & objects,
   [[maybe_unused]] const tensorrt_rtmdet::ColorMap & color_map)
 {
-  //TODO(StepTurtle): add mask to debug image
+  // TODO(StepTurtle): add mask to debug image
 
   for (const auto & object : objects[0]) {
     cv::rectangle(

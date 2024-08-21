@@ -28,9 +28,9 @@
 
 #include <cv_bridge/cv_bridge.h>
 
-#include <vector>
-#include <string>
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace tensorrt_rtmdet
 {

@@ -11,10 +11,10 @@
 
 namespace mmdeploy
 {
-using nvinfer1::PluginField;
-using nvinfer1::PluginFieldType;
 using nvinfer1::IPluginV2DynamicExt;
+using nvinfer1::PluginField;
 using nvinfer1::PluginFieldCollection;
+using nvinfer1::PluginFieldType;
 using nvinfer1::plugin::NMSParameters;
 
 namespace
