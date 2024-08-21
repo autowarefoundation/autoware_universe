@@ -96,18 +96,16 @@ TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
 void TrtRTMDetNode::onConnect()
 {
   using std::placeholders::_1;
-    if (debug_image_pub_.getNumSubscribers() == 0 &&
-        mask_pub_.getNumSubscribers() == 0 &&
-        color_mask_pub_.getNumSubscribers() == 0 &&
-        objects_pub_->get_subscription_count() == 0 &&
-        objects_pub_->get_intra_process_subscription_count() == 0
-            ) {
-        image_sub_.shutdown();
-    } else if (!image_sub_) {
-        image_sub_ = image_transport::create_subscription(
-                this, "~/in/image", std::bind(&TrtRTMDetNode::onImage, this, _1), "raw",
-                rmw_qos_profile_sensor_data);
-    }
+  if (
+    debug_image_pub_.getNumSubscribers() == 0 && mask_pub_.getNumSubscribers() == 0 &&
+    color_mask_pub_.getNumSubscribers() == 0 && objects_pub_->get_subscription_count() == 0 &&
+    objects_pub_->get_intra_process_subscription_count() == 0) {
+    image_sub_.shutdown();
+  } else if (!image_sub_) {
+    image_sub_ = image_transport::create_subscription(
+      this, "~/in/image", std::bind(&TrtRTMDetNode::onImage, this, _1), "raw",
+      rmw_qos_profile_sensor_data);
+  }
 }
 
 void TrtRTMDetNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
@@ -265,7 +263,7 @@ void TrtRTMDetNode::drawDebugImage(
       1, color_map_[object.class_id].color, 2);
   }
 }
-}  // namespace tensorrt_rtmdet
+}  // namespace autoware::tensorrt_rtmdet
 
 #include "rclcpp_components/register_node_macro.hpp"
 RCLCPP_COMPONENTS_REGISTER_NODE(autoware::tensorrt_rtmdet::TrtRTMDetNode)

@@ -33,12 +33,12 @@
         },
         "mean": {
           "type": "array",
-          "default": [ 103.53, 116.28, 123.675 ],
+          "default": [103.53, 116.28, 123.675],
           "description": "Mean values for the model."
         },
         "std": {
           "type": "array",
-          "default": [ 57.375, 57.12, 58.395 ],
+          "default": [57.375, 57.12, 58.395],
           "description": "Standard deviation values for model."
         },
         "number_classes": {
