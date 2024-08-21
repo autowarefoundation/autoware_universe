@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(tensorrt_rtmdet)
+project(autoware_tensorrt_rtmdet)
 
 find_package(tensorrt_common)
 if(NOT ${tensorrt_common_FOUND})
@@ -103,8 +103,8 @@ target_compile_definitions(${PROJECT_NAME}_node PRIVATE
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}_node
-        PLUGIN "tensorrt_rtmdet::TrtRTMDetNode"
-        EXECUTABLE tensorrt_rtmdet_node_exe
+        PLUGIN "autoware::tensorrt_rtmdet::TrtRTMDetNode"
+        EXECUTABLE ${PROJECT_NAME}_node_exe
 )
 
 if(BUILD_TESTING)

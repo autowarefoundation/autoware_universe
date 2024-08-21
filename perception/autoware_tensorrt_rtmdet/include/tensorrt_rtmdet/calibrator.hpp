@@ -30,7 +30,7 @@
 #include <string>
 #include <vector>
 
-namespace tensorrt_rtmdet
+namespace autoware::tensorrt_rtmdet
 {
 class ImageStream
 {
@@ -497,6 +497,6 @@ private:
   std::vector<float> m_mean;
   std::vector<float> m_std;
 };
-}  // namespace tensorrt_rtmdet
+}  // namespace autoware::tensorrt_rtmdet
 
 #endif  // TENSORRT_RTMDET__CALIBRATOR_HPP_

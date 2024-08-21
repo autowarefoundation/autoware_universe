@@ -32,7 +32,7 @@
 #include <string>
 #include <vector>
 
-namespace tensorrt_rtmdet
+namespace autoware::tensorrt_rtmdet
 {
 class TrtRTMDetNode : public rclcpp::Node
 {
@@ -72,6 +72,6 @@ private:
   std::vector<float> mean_;
   std::vector<float> std_;
 };
-}  // namespace tensorrt_rtmdet
+}  // namespace autoware::tensorrt_rtmdet
 
 #endif  // TENSORRT_RTMDET__TENSORRT_RTMDET_NODE_HPP_

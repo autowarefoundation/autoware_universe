@@ -30,7 +30,7 @@
 #include <string>
 #include <vector>
 
-namespace tensorrt_rtmdet
+namespace autoware::tensorrt_rtmdet
 {
 using cuda_utils::CudaUniquePtr;
 using cuda_utils::CudaUniquePtrHost;
@@ -174,6 +174,6 @@ private:
   // Segmentation
   ColorMap color_map_;
 };
-}  // namespace tensorrt_rtmdet
+}  // namespace autoware::tensorrt_rtmdet
 
 #endif  // TENSORRT_RTMDET__TENSORRT_RTMDET_HPP_

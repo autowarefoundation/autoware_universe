@@ -98,7 +98,7 @@ std::vector<std::string> loadImageList(const std::string & filename, const std::
   return fileList;
 }
 
-namespace tensorrt_rtmdet
+namespace autoware::tensorrt_rtmdet
 {
 TrtRTMDet::TrtRTMDet(
   const std::string & model_path, const std::string & precision, const ColorMap & color_map,
@@ -767,4 +767,4 @@ void TrtRTMDet::getColorizedMask(
     }
   }
 }
-}  // namespace tensorrt_rtmdet
+}  // namespace autoware::tensorrt_rtmdet
