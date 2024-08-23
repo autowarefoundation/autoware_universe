@@ -78,10 +78,10 @@ public:
 
   ~TrtRTMDet();
 
-  bool doInference(const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask);
+  bool doInference(const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask, std::vector<uint8_t> &class_ids);
 
   bool doInferenceWithRoi(
-    const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask,
+    const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask, std::vector<uint8_t> &class_ids,
     const std::vector<cv::Rect> & roi);
 
   bool doMultiScaleInference(
@@ -109,7 +109,7 @@ private:
 
   bool multiScaleFeedforward(const cv::Mat & image, int batch_size, ObjectArrays & objects);
 
-  bool feedforward(const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask);
+  bool feedforward(const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask, std::vector<uint8_t> &class_ids);
 
   void readColorMap(const std::string & color_map_path);
 

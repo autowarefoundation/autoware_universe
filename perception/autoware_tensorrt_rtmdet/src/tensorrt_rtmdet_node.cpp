@@ -82,8 +82,8 @@ TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
 
   objects_pub_ = this->create_publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>(
     "~/out/objects", 1);
+  mask_pub_ = this->create_publisher<autoware_internal_msgs::msg::SegmentationMask>("~/out/mask", 1);
 
-  mask_pub_ = image_transport::create_publisher(this, "~/out/mask");
   color_mask_pub_ = image_transport::create_publisher(this, "~/out/color_mask");
   debug_image_pub_ = image_transport::create_publisher(this, "~/out/debug_image");
 
@@ -97,7 +97,7 @@ void TrtRTMDetNode::onConnect()
 {
   using std::placeholders::_1;
   if (
-    debug_image_pub_.getNumSubscribers() == 0 && mask_pub_.getNumSubscribers() == 0 &&
+    debug_image_pub_.getNumSubscribers() == 0 && mask_pub_->get_intra_process_subscription_count() == 0 &&
     color_mask_pub_.getNumSubscribers() == 0 && objects_pub_->get_subscription_count() == 0 &&
     objects_pub_->get_intra_process_subscription_count() == 0) {
     image_sub_.shutdown();
@@ -122,7 +122,8 @@ void TrtRTMDetNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
 
   tensorrt_rtmdet::ObjectArrays objects;
   cv::Mat mask;
-  if (!trt_rtmdet_->doInference({in_image_ptr->image}, objects, mask)) {
+  std::vector<uint8_t> class_ids;
+  if (!trt_rtmdet_->doInference({in_image_ptr->image}, objects, mask, class_ids)) {
     RCLCPP_WARN(this->get_logger(), "Fail to inference");
     return;
   }
@@ -145,12 +146,16 @@ void TrtRTMDetNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
   detected_objects_with_feature.header = msg->header;
   objects_pub_->publish(detected_objects_with_feature);
 
-  if (!mask.empty()) {
-    sensor_msgs::msg::Image::SharedPtr mask_msg =
+  if (!mask.empty() && !class_ids.empty()) {
+    sensor_msgs::msg::Image::SharedPtr mask_image =
       cv_bridge::CvImage(std_msgs::msg::Header(), sensor_msgs::image_encodings::MONO8, mask)
         .toImageMsg();
-    mask_msg->header = msg->header;
-    mask_pub_.publish(mask_msg);
+    autoware_internal_msgs::msg::SegmentationConfig mask_config;
+    mask_config.class_ids = class_ids;
+    autoware_internal_msgs::msg::SegmentationMask mask_msg;
+    mask_msg.config = mask_config;
+    mask_msg.image = *mask_image;
+    mask_pub_->publish(mask_msg);
   }
 
   if (is_publish_color_mask_) {
