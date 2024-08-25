@@ -54,7 +54,7 @@ These files are used to map the class index to class name and color respectively
 
 ## Citation
 
-```
+```bibtex
 @misc{lyu2022rtmdetempiricalstudydesigning,
 title={RTMDet: An Empirical Study of Designing Real-Time Object Detectors},
 author={Chengqi Lyu and Wenwei Zhang and Haian Huang and Yue Zhou and Yudong Wang and Yanyi Liu and Shilong Zhang and Kai Chen},
