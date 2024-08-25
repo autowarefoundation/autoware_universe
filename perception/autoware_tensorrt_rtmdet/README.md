@@ -12,13 +12,13 @@ bicycles, etc. in a scene. This package provides a ROS2 interface for RTMDet usi
 ### Input
 
 | Name       | Type                | Description     |
-|------------|---------------------|-----------------|
+| ---------- | ------------------- | --------------- |
 | `in/image` | `sensor_msgs/Image` | The input image |
 
 ### Output
 
 | Name              | Type                                               | Description                                                         |
-|-------------------|----------------------------------------------------|---------------------------------------------------------------------|
+| ----------------- | -------------------------------------------------- | ------------------------------------------------------------------- |
 | `out/objects`     | `tier4_perception_msgs/DetectedObjectsWithFeature` | The detected objects with 2D bounding boxes and scores              |
 | `out/mask`        | `autoware_internal_msgs/SegmentationMask`          | The instance segmentation mask                                      |
 | `out/color_mask`  | `sensor_msgs/Image`                                | The colorized image of instance segmentation mask for visualization |

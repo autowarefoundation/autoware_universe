@@ -319,7 +319,8 @@ void TrtRTMDet::preprocess(const std::vector<cv::Mat> & images)
 }
 
 bool TrtRTMDet::doInference(
-  const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask, std::vector<uint8_t> &class_ids)
+  const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask,
+  std::vector<uint8_t> & class_ids)
 {
   if (!trt_common_->isInitialized()) {
     return false;
@@ -549,8 +550,8 @@ void TrtRTMDet::multiScalePreprocess(const cv::Mat & image, const std::vector<cv
 }
 
 bool TrtRTMDet::doInferenceWithRoi(
-  const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask, std::vector<uint8_t> &class_ids,
-  const std::vector<cv::Rect> & rois)
+  const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask,
+  std::vector<uint8_t> & class_ids, const std::vector<cv::Rect> & rois)
 {
   if (!trt_common_->isInitialized()) {
     return false;
@@ -579,7 +580,8 @@ bool TrtRTMDet::doMultiScaleInference(
 }
 
 bool TrtRTMDet::feedforward(
-  const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask, std::vector<uint8_t> &class_ids)
+  const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask,
+  std::vector<uint8_t> & class_ids)
 {
   std::vector<void *> buffers = {
     input_d_.get(), out_dets_d_.get(), out_labels_d_.get(), out_masks_d_.get()};
@@ -635,7 +637,7 @@ bool TrtRTMDet::feedforward(
   // The intensity of each pixel corresponds to the index of the class_array,
   // which stores the class IDs.
   mask = cv::Mat(model_input_height_, model_input_width_, CV_8UC3, cv::Scalar(0, 0, 0));
-  uint8_t pixel_intensity = 1; // 0 is reserved for background
+  uint8_t pixel_intensity = 1;  // 0 is reserved for background
   for (size_t batch = 0; batch < batch_size; ++batch) {
     for (const auto & object : objects[batch]) {
       cv::Mat object_mask(
@@ -653,9 +655,7 @@ bool TrtRTMDet::feedforward(
         int j = position[1];
 
         if (object_mask.at<uchar>(i, j) > static_cast<int>(255 * mask_threshold_)) {
-          cv::Vec3b color(
-            pixel_intensity, pixel_intensity,
-            pixel_intensity);
+          cv::Vec3b color(pixel_intensity, pixel_intensity, pixel_intensity);
           pixel = color;
         }
       };

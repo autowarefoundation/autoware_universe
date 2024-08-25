@@ -22,8 +22,8 @@
 #include <image_transport/image_transport.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include "autoware_internal_msgs/msg/segmentation_mask.hpp"
 #include "autoware_internal_msgs/msg/segmentation_config.hpp"
+#include "autoware_internal_msgs/msg/segmentation_mask.hpp"
 #include "tier4_perception_msgs/msg/detected_object_with_feature.hpp"
 #include "tier4_perception_msgs/msg/detected_objects_with_feature.hpp"
 #include "tier4_perception_msgs/msg/feature.hpp"
