@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autoware_dynamic_lanelet_provider</name>
+  <version>0.1.0</version>
+  <description>Dynamic map provider package</description>
+  <maintainer email="baris@leodrive.ai">bzeren</maintainer>
+  <license>Apache License 2.0</license>
+  <author email="baris@leodrive.ai">bzeren</author>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+
+  <depend>autoware_auto_mapping_msgs</depend>
+  <depend>autoware_map_msgs</depend>
+  <depend>component_interface_specs</depend>
+  <depend>component_interface_utils</depend>
+  <depend>geography_utils</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
