@@ -6,8 +6,10 @@
 #include "NvInferPluginUtils.h"
 #include "tensorrt_rtmdet/trt_batched_nms/common/trt_plugin_base.hpp"
 
+#include <memory>
 #include <string>
 #include <vector>
+
 namespace mmdeploy
 {
 
