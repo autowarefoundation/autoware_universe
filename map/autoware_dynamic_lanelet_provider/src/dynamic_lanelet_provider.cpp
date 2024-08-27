@@ -53,6 +53,15 @@ double norm_xy(const T & p1, const U & p2)
   return std::hypot(dx, dy);
 }
 
+template <typename T>
+bool is_inside_region(
+  const double & min_x, const double & max_x, const double & min_y, const double & max_y,
+  const T & point)
+{
+  return min_x <= getX(point) && getX(point) <= max_x && min_y <= getY(point) &&
+         getY(point) <= max_y;
+}
+
 DynamicLaneletProviderNode::DynamicLaneletProviderNode(const rclcpp::NodeOptions & options)
 : Node("dynamic_lanelet_provider", options),
   map_frame_("map"),
@@ -128,6 +137,11 @@ void DynamicLaneletProviderNode::updateMap(const geometry_msgs::msg::Point & pos
     geometry_msgs::msg::Point point;
     point.x = (metadata.min_x + metadata.max_x) / 2;
     point.y = (metadata.min_y + metadata.max_y) / 2;
+
+    if (is_inside_region(metadata.min_x, metadata.max_x, metadata.min_y, metadata.max_y, pose)) {
+      cache_ids.push_back(metadata.id);
+      continue;
+    }
 
     double distance = norm_xy(point, pose);
     if (distance < dynamic_map_loading_map_radius_) {
