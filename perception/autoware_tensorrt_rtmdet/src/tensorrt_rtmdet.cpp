@@ -48,7 +48,9 @@ bool fileExists(const std::string & file_name, bool verbose)
 {
   if (!std::experimental::filesystem::exists(std::experimental::filesystem::path(file_name))) {
     if (verbose) {
-      RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet"), "File does not exist : %s", file_name.c_str());
+      RCLCPP_INFO(
+        rclcpp::get_logger("autoware_tensorrt_rtmdet"), "File does not exist : %s",
+        file_name.c_str());
     }
     return false;
   }
@@ -62,7 +64,8 @@ std::vector<std::string> loadListFromTextFile(const std::string & filename)
 
   std::ifstream f(filename);
   if (!f) {
-    RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet"), "failed to open %s", filename.c_str());
+    RCLCPP_INFO(
+      rclcpp::get_logger("autoware_tensorrt_rtmdet"), "failed to open %s", filename.c_str());
     assert(0);
   }
 

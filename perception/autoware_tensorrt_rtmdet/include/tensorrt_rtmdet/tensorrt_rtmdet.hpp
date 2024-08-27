@@ -21,6 +21,7 @@
 #include <cuda_utils/cuda_unique_ptr.hpp>
 #include <cuda_utils/stream_unique_ptr.hpp>
 #include <opencv2/opencv.hpp>
+#include <rclcpp/rclcpp.hpp>
 #include <tensorrt_common/tensorrt_common.hpp>
 
 #include <cv_bridge/cv_bridge.h>
@@ -29,8 +30,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-
-#include <rclcpp/rclcpp.hpp>
 
 namespace autoware::tensorrt_rtmdet
 {

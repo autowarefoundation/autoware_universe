@@ -20,6 +20,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include <NvInfer.h>
 
@@ -30,8 +31,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-#include <rclcpp/rclcpp.hpp>
 
 namespace autoware::tensorrt_rtmdet
 {
@@ -129,8 +128,9 @@ public:
     for (uint32_t i = 0; i < batch_size_; ++i) {
       auto image =
         cv::imread(calibration_images_[batch_size_ * current_batch_ + i].c_str(), cv::IMREAD_COLOR);
-      RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "Preprocess %s",
-                  calibration_images_[batch_size_ * current_batch_ + i].c_str());
+      RCLCPP_INFO(
+        rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "Preprocess %s",
+        calibration_images_[batch_size_ * current_batch_ + i].c_str());
       auto input = preprocess({image}, input_dims_, mean, std);
       batch_.insert(
         batch_.begin() + i * input_dims_.d[1] * input_dims_.d[2] * input_dims_.d[3], input.begin(),
@@ -165,8 +165,7 @@ class Int8LegacyCalibrator : public nvinfer1::IInt8LegacyCalibrator
 {
 public:
   Int8LegacyCalibrator(
-    ImageStream & stream, std::string  calibration_cache_file,
-    std::string  histogram_cache_file,
+    ImageStream & stream, std::string calibration_cache_file, std::string histogram_cache_file,
     const std::vector<float> & mean = {123.675, 116.28, 103.53},
     const std::vector<float> & std = {58.395, 57.12, 57.375}, bool read_cache = true,
     double quantile = 0.999999, double cutoff = 0.999999)
@@ -185,19 +184,28 @@ public:
     auto alg_type = getAlgorithm();
     switch (alg_type) {
       case (nvinfer1::CalibrationAlgoType::kLEGACY_CALIBRATION):
-        RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "CalibrationAlgoType : kLEGACY_CALIBRATION");
+        RCLCPP_INFO(
+          rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+          "CalibrationAlgoType : kLEGACY_CALIBRATION");
         break;
       case (nvinfer1::CalibrationAlgoType::kENTROPY_CALIBRATION):
-        RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "CalibrationAlgoType : kENTROPY_CALIBRATION");
+        RCLCPP_INFO(
+          rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+          "CalibrationAlgoType : kENTROPY_CALIBRATION");
         break;
       case (nvinfer1::CalibrationAlgoType::kENTROPY_CALIBRATION_2):
-        RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "CalibrationAlgoType : kENTROPY_CALIBRATION_2");
+        RCLCPP_INFO(
+          rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+          "CalibrationAlgoType : kENTROPY_CALIBRATION_2");
         break;
       case (nvinfer1::CalibrationAlgoType::kMINMAX_CALIBRATION):
-        RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "CalibrationAlgoType : kMINMAX_CALIBRATION");
+        RCLCPP_INFO(
+          rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+          "CalibrationAlgoType : kMINMAX_CALIBRATION");
         break;
       default:
-        RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "No CalibrationAlgType");
+        RCLCPP_INFO(
+          rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "No CalibrationAlgType");
         break;
     }
   }
@@ -236,9 +244,13 @@ public:
 
     length = calib_cache_.size();
     if (length) {
-      RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "Using cached calibration table to build the engine");
+      RCLCPP_INFO(
+        rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+        "Using cached calibration table to build the engine");
     } else {
-      RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "New calibration table will be created to build the engine");
+      RCLCPP_INFO(
+        rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+        "New calibration table will be created to build the engine");
     }
     return length ? &calib_cache_[0] : nullptr;
   }
@@ -251,7 +263,8 @@ public:
 
   double getQuantile() const noexcept
   {
-    RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "Quantile %f", m_quantile_);
+    RCLCPP_INFO(
+      rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "Quantile %f", m_quantile_);
     return m_quantile_;
   }
 
@@ -274,9 +287,13 @@ public:
 
     length = hist_cache_.size();
     if (length) {
-      RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "Using cached histogram table to build the engine");
+      RCLCPP_INFO(
+        rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+        "Using cached histogram table to build the engine");
     } else {
-      RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "New histogram table will be created to build the engine");
+      RCLCPP_INFO(
+        rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+        "New histogram table will be created to build the engine");
     }
     return length ? &hist_cache_[0] : nullptr;
   }
@@ -312,10 +329,12 @@ class Int8EntropyCalibrator : public nvinfer1::IInt8EntropyCalibrator2
 {
 public:
   Int8EntropyCalibrator(
-    ImageStream & stream, std::string  calibration_cache_file,
+    ImageStream & stream, std::string calibration_cache_file,
     const std::vector<float> & mean = {123.675, 116.28, 103.53},
     const std::vector<float> & std = {58.395, 57.12, 57.375}, bool read_cache = true)
-  : stream_(stream), calibration_cache_file_(std::move(calibration_cache_file)), read_cache_(read_cache)
+  : stream_(stream),
+    calibration_cache_file_(std::move(calibration_cache_file)),
+    read_cache_(read_cache)
   {
     auto d = stream_.getInputDims();
     input_count_ = stream_.getBatchSize() * d.d[1] * d.d[2] * d.d[3];
@@ -326,19 +345,28 @@ public:
     auto alg_type = getAlgorithm();
     switch (alg_type) {
       case (nvinfer1::CalibrationAlgoType::kLEGACY_CALIBRATION):
-        RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "CalibrationAlgoType : kLEGACY_CALIBRATION");
+        RCLCPP_INFO(
+          rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+          "CalibrationAlgoType : kLEGACY_CALIBRATION");
         break;
       case (nvinfer1::CalibrationAlgoType::kENTROPY_CALIBRATION):
-        RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "CalibrationAlgoType : kENTROPY_CALIBRATION");
+        RCLCPP_INFO(
+          rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+          "CalibrationAlgoType : kENTROPY_CALIBRATION");
         break;
       case (nvinfer1::CalibrationAlgoType::kENTROPY_CALIBRATION_2):
-        RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "CalibrationAlgoType : kENTROPY_CALIBRATION_2");
+        RCLCPP_INFO(
+          rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+          "CalibrationAlgoType : kENTROPY_CALIBRATION_2");
         break;
       case (nvinfer1::CalibrationAlgoType::kMINMAX_CALIBRATION):
-        RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "CalibrationAlgoType : kMINMAX_CALIBRATION");
+        RCLCPP_INFO(
+          rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+          "CalibrationAlgoType : kMINMAX_CALIBRATION");
         break;
       default:
-        RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "No CalibrationAlgType");
+        RCLCPP_INFO(
+          rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "No CalibrationAlgType");
         break;
     }
   }
@@ -377,9 +405,13 @@ public:
 
     length = calib_cache_.size();
     if (length) {
-      RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "Using cached calibration table to build the engine");
+      RCLCPP_INFO(
+        rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+        "Using cached calibration table to build the engine");
     } else {
-      RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "New calibration table will be created to build the engine");
+      RCLCPP_INFO(
+        rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+        "New calibration table will be created to build the engine");
     }
     return length ? &calib_cache_[0] : nullptr;
   }
@@ -413,10 +445,12 @@ class Int8MinMaxCalibrator : public nvinfer1::IInt8MinMaxCalibrator
 {
 public:
   Int8MinMaxCalibrator(
-    ImageStream & stream, std::string  calibration_cache_file,
+    ImageStream & stream, std::string calibration_cache_file,
     const std::vector<float> & mean = {123.675, 116.28, 103.53},
     const std::vector<float> & std = {58.395, 57.12, 57.375}, bool read_cache = true)
-  : stream_(stream), calibration_cache_file_(std::move(calibration_cache_file)), read_cache_(read_cache)
+  : stream_(stream),
+    calibration_cache_file_(std::move(calibration_cache_file)),
+    read_cache_(read_cache)
   {
     auto d = stream_.getInputDims();
     input_count_ = stream_.getBatchSize() * d.d[1] * d.d[2] * d.d[3];
@@ -426,19 +460,28 @@ public:
     auto alg_type = getAlgorithm();
     switch (alg_type) {
       case (nvinfer1::CalibrationAlgoType::kLEGACY_CALIBRATION):
-        RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "CalibrationAlgoType : kLEGACY_CALIBRATION");
+        RCLCPP_INFO(
+          rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+          "CalibrationAlgoType : kLEGACY_CALIBRATION");
         break;
       case (nvinfer1::CalibrationAlgoType::kENTROPY_CALIBRATION):
-        RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "CalibrationAlgoType : kENTROPY_CALIBRATION");
+        RCLCPP_INFO(
+          rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+          "CalibrationAlgoType : kENTROPY_CALIBRATION");
         break;
       case (nvinfer1::CalibrationAlgoType::kENTROPY_CALIBRATION_2):
-        RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "CalibrationAlgoType : kENTROPY_CALIBRATION_2");
+        RCLCPP_INFO(
+          rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+          "CalibrationAlgoType : kENTROPY_CALIBRATION_2");
         break;
       case (nvinfer1::CalibrationAlgoType::kMINMAX_CALIBRATION):
-        RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "CalibrationAlgoType : kMINMAX_CALIBRATION");
+        RCLCPP_INFO(
+          rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+          "CalibrationAlgoType : kMINMAX_CALIBRATION");
         break;
       default:
-        RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "No CalibrationAlgType");
+        RCLCPP_INFO(
+          rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "No CalibrationAlgType");
         break;
     }
   }
@@ -477,9 +520,13 @@ public:
 
     length = calib_cache_.size();
     if (length) {
-      RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "Using cached calibration table to build the engine");
+      RCLCPP_INFO(
+        rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+        "Using cached calibration table to build the engine");
     } else {
-      RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "New calibration table will be created to build the engine");
+      RCLCPP_INFO(
+        rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
+        "New calibration table will be created to build the engine");
     }
     return length ? &calib_cache_[0] : nullptr;
   }

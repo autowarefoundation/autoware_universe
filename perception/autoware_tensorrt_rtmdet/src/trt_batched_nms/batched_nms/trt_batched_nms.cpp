@@ -163,7 +163,8 @@ const char * TRTBatchedNMS::getPluginVersion() const TRT_NOEXCEPT
 
 IPluginV2DynamicExt * TRTBatchedNMS::clone() const TRT_NOEXCEPT
 {
-  std::unique_ptr<TRTBatchedNMS> plugin = std::make_unique<TRTBatchedNMS>(mLayerName, param, mReturnIndex);
+  std::unique_ptr<TRTBatchedNMS> plugin =
+    std::make_unique<TRTBatchedNMS>(mLayerName, param, mReturnIndex);
   plugin->setPluginNamespace(mNamespace.c_str());
   plugin->setClipParam(mClipBoxes);
   return plugin.release();
@@ -251,7 +252,8 @@ IPluginV2DynamicExt * TRTBatchedNMSCreator::createPlugin(
     }
   }
 
-  std::unique_ptr<TRTBatchedNMS> plugin = std::make_unique<TRTBatchedNMS>(name, params, returnIndex);
+  std::unique_ptr<TRTBatchedNMS> plugin =
+    std::make_unique<TRTBatchedNMS>(name, params, returnIndex);
   plugin->setClipParam(clipBoxes);
   plugin->setPluginNamespace(mNamespace.c_str());
   return plugin.release();
@@ -262,7 +264,8 @@ IPluginV2DynamicExt * TRTBatchedNMSCreator::deserializePlugin(
 {
   // This object will be deleted when the network is destroyed, which will
   // call NMS::destroy()
-  std::unique_ptr<TRTBatchedNMS> plugin = std::make_unique<TRTBatchedNMS>(name, serialData, serialLength);
+  std::unique_ptr<TRTBatchedNMS> plugin =
+    std::make_unique<TRTBatchedNMS>(name, serialData, serialLength);
   plugin->setPluginNamespace(mNamespace.c_str());
   return plugin.release();
 }
