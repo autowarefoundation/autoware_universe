@@ -30,6 +30,8 @@
 #include <string>
 #include <vector>
 
+#include <rclcpp/rclcpp.hpp>
+
 namespace autoware::tensorrt_rtmdet
 {
 using cuda_utils::CudaUniquePtr;

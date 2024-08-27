@@ -206,7 +206,7 @@ ColorMap TrtRTMDetNode::readLabelFile(const std::string & label_path)
 
     std::ifstream f(label_path);
     if (!f) {
-      std::cout << "failed to open " << label_path << std::endl;
+      RCLCPP_ERROR(this->get_logger(), "failed to open %s", label_path.c_str());
       assert(0);
     }
 

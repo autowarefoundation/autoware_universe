@@ -16,9 +16,7 @@
 
 #include "trt_batched_nms/batched_nms/trt_batched_nms.hpp"
 
-#include <assert.h>
-
-#include <algorithm>
+#include <cassert>
 #include <fstream>
 #include <functional>
 #include <iomanip>
@@ -50,7 +48,7 @@ bool fileExists(const std::string & file_name, bool verbose)
 {
   if (!std::experimental::filesystem::exists(std::experimental::filesystem::path(file_name))) {
     if (verbose) {
-      std::cout << "File does not exist : " << file_name << std::endl;
+      RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet"), "File does not exist : %s", file_name.c_str());
     }
     return false;
   }
@@ -64,7 +62,7 @@ std::vector<std::string> loadListFromTextFile(const std::string & filename)
 
   std::ifstream f(filename);
   if (!f) {
-    std::cout << "failed to open " << filename << std::endl;
+    RCLCPP_INFO(rclcpp::get_logger("autoware_tensorrt_rtmdet"), "failed to open %s", filename.c_str());
     assert(0);
   }
 
