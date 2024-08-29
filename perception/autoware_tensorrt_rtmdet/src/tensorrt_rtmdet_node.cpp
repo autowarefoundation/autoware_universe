@@ -21,7 +21,9 @@
 namespace autoware::tensorrt_rtmdet
 {
 TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
-: Node("tensorrt_rtmdet", node_options)
+: Node("tensorrt_rtmdet", node_options),
+is_publish_color_mask_(declare_parameter<bool>("is_publish_color_mask")),
+is_publish_debug_image_(declare_parameter<bool>("is_publish_debug_image"))
 {
   {
     stop_watch_ptr_ =
@@ -53,9 +55,6 @@ TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
     declare_parameter<std::string>("calibration_image_list_path");
   std::vector<std::string> plugin_paths =
     declare_parameter<std::vector<std::string>>("plugin_paths");
-
-  is_publish_color_mask_ = declare_parameter<bool>("is_publish_color_mask");
-  is_publish_debug_image_ = declare_parameter<bool>("is_publish_debug_image");
 
   color_map_ = readLabelFile(color_map_path);
 

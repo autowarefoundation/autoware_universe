@@ -137,28 +137,28 @@ private:
   int model_input_width_;
   int model_input_height_;
 
-  float score_threshold_;
-  float nms_threshold_;
-  float mask_threshold_;
-  int batch_size_;
+  const float score_threshold_;
+  const float nms_threshold_;
+  const float mask_threshold_;
+  const int batch_size_;
   CudaUniquePtrHost<float[]> out_prob_h_;
 
   // flag whether preprocess are performed on GPU
-  bool use_gpu_preprocess_;
+  const bool use_gpu_preprocess_;
   // host buffer for preprocessing on GPU
   CudaUniquePtrHost<unsigned char[]> image_buf_h_;
   // device buffer for preprocessing on GPU
   CudaUniquePtr<unsigned char[]> image_buf_d_;
   // normalization factor used for preprocessing
-  double norm_factor_;
+  const double norm_factor_;
 
   std::vector<int> output_strides_;
 
   int src_width_;
   int src_height_;
 
-  std::vector<float> mean_;
-  std::vector<float> std_;
+  const std::vector<float> mean_;
+  const std::vector<float> std_;
 
   // host pointer for ROI
   CudaUniquePtrHost<Roi[]> roi_h_;
@@ -171,7 +171,7 @@ private:
   std::unique_ptr<float[]> out_masks_h_;
 
   // Segmentation
-  ColorMap color_map_;
+  const ColorMap color_map_;
 };
 }  // namespace autoware::tensorrt_rtmdet
 

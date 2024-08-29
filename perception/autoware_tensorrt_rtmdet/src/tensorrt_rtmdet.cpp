@@ -105,15 +105,12 @@ TrtRTMDet::TrtRTMDet(
   const bool use_gpu_preprocess, std::string calibration_image_list_path, const double norm_factor,
   const std::vector<float> mean, const std::vector<float> std,
   [[maybe_unused]] const std::string & cache_dir, const tensorrt_common::BatchConfig & batch_config,
-  const size_t max_workspace_size, const std::vector<std::string> & plugin_paths)
+  const size_t max_workspace_size, const std::vector<std::string> & plugin_paths) : score_threshold_{ score_threshold },
+  nms_threshold_{ nms_threshold }, mask_threshold_{ mask_threshold }, batch_size_{ batch_config[1] }, use_gpu_preprocess_{ use_gpu_preprocess },
+    norm_factor_{ norm_factor }, mean_{ mean }, std_{ std }, color_map_{ color_map }
 {
   src_width_ = -1;
   src_height_ = -1;
-  norm_factor_ = norm_factor;
-  batch_size_ = batch_config[1];
-
-  std::vector<float> mean_ = mean;
-  std::vector<float> std_ = std;
 
   if (precision == "int8") {
     int max_batch_size = batch_config[2];
@@ -167,10 +164,6 @@ TrtRTMDet::TrtRTMDet(
     return;
   }
 
-  score_threshold_ = score_threshold;
-  nms_threshold_ = nms_threshold;
-  mask_threshold_ = mask_threshold;
-
   const auto input_dims = trt_common_->getBindingDimensions(0);
   const auto out_scores_dims = trt_common_->getBindingDimensions(3);
 
@@ -190,16 +183,10 @@ TrtRTMDet::TrtRTMDet(
   out_masks_h_ = std::make_unique<float[]>(
     batch_size_ * max_detections_ * model_input_width_ * model_input_height_);
 
-  if (use_gpu_preprocess) {
-    use_gpu_preprocess_ = true;
-    image_buf_h_ = nullptr;
-    image_buf_d_ = nullptr;
-  } else {
-    use_gpu_preprocess_ = false;
+  if (use_gpu_preprocess_) {
+      image_buf_h_ = nullptr;
+      image_buf_d_ = nullptr;
   }
-
-  // Segmentation
-  color_map_ = color_map;
 }
 
 TrtRTMDet::~TrtRTMDet()
@@ -657,7 +644,7 @@ bool TrtRTMDet::feedforward(
         }
       };
       mask.forEach<cv::Vec3b>(processPixel);
-      class_ids.push_back(color_map_[object.class_id].label_id);
+      class_ids.push_back(color_map_.at(object.class_id).label_id);
       pixel_intensity++;
     }
   }

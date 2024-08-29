@@ -66,8 +66,8 @@ private:
   std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
   std::unique_ptr<autoware::universe_utils::DebugPublisher> debug_publisher_;
 
-  bool is_publish_color_mask_;
-  bool is_publish_debug_image_;
+  const bool is_publish_color_mask_;
+  const bool is_publish_debug_image_;
 
   ColorMap color_map_;
 
