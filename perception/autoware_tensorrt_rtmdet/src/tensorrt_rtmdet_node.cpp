@@ -39,7 +39,6 @@ TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
   std::string precision = declare_parameter<std::string>("precision");
   std::vector<double> mean = declare_parameter<std::vector<double>>("input_image_mean");
   std::vector<double> std = declare_parameter<std::vector<double>>("input_image_std_dev");
-  int number_classes = declare_parameter<int>("number_classes");
   double score_threshold = declare_parameter<double>("score_threshold");
   double nms_threshold = declare_parameter<double>("nms_threshold");
   double mask_threshold = declare_parameter<double>("mask_threshold");
@@ -73,7 +72,7 @@ TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
   std_ = std::vector<float>(std.begin(), std.end());
 
   trt_rtmdet_ = std::make_unique<tensorrt_rtmdet::TrtRTMDet>(
-    model_path, precision, color_map_, number_classes, score_threshold, nms_threshold,
+    model_path, precision, color_map_, score_threshold, nms_threshold,
     mask_threshold, build_config, preprocess_on_gpu, calibration_image_list_path, norm_factor,
     mean_, std_, cache_dir, batch_config, max_workspace_size, plugin_paths);
 

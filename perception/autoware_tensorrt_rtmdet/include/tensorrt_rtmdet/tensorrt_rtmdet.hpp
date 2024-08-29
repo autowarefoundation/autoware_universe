@@ -67,7 +67,7 @@ class TrtRTMDet
 public:
   TrtRTMDet(
     const std::string & model_path, const std::string & precision, const ColorMap & color_map,
-    const int num_class = 80, const float score_threshold = 0.3, const float nms_threshold = 0.7,
+    const float score_threshold = 0.3, const float nms_threshold = 0.7,
     const float mask_threshold = 200.0,
     const tensorrt_common::BuildConfig build_config = tensorrt_common::BuildConfig(),
     const bool use_gpu_preprocess = false, std::string calibration_image_list_file = std::string(),
@@ -117,8 +117,6 @@ private:
     const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask,
     std::vector<uint8_t> & class_ids);
 
-  void readColorMap(const std::string & color_map_path);
-
   void nmsSortedBboxes(const ObjectArray & input_objects, ObjectArray & output_objects) const;
 
   std::unique_ptr<tensorrt_common::TrtCommon> trt_common_;
@@ -128,10 +126,6 @@ private:
   CudaUniquePtr<float[]> out_dets_d_;
   CudaUniquePtr<int32_t[]> out_labels_d_;
   CudaUniquePtr<float[]> out_masks_d_;
-
-  size_t out_elem_num_;
-  size_t out_elem_num_per_batch_;
-  CudaUniquePtr<float[]> out_prob_d_;
 
   StreamUniquePtr stream_{makeCudaStream()};
 
@@ -143,7 +137,6 @@ private:
   int model_input_width_;
   int model_input_height_;
 
-  int num_class_;
   float score_threshold_;
   float nms_threshold_;
   float mask_threshold_;

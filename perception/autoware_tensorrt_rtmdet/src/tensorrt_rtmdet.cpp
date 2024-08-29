@@ -100,7 +100,7 @@ namespace autoware::tensorrt_rtmdet
 {
 TrtRTMDet::TrtRTMDet(
   const std::string & model_path, const std::string & precision, const ColorMap & color_map,
-  const int num_class, const float score_threshold, const float nms_threshold,
+  const float score_threshold, const float nms_threshold,
   const float mask_threshold, tensorrt_common::BuildConfig build_config,
   const bool use_gpu_preprocess, std::string calibration_image_list_path, const double norm_factor,
   const std::vector<float> mean, const std::vector<float> std,
@@ -167,7 +167,6 @@ TrtRTMDet::TrtRTMDet(
     return;
   }
 
-  num_class_ = num_class;
   score_threshold_ = score_threshold;
   nms_threshold_ = nms_threshold;
   mask_threshold_ = mask_threshold;
@@ -689,33 +688,6 @@ bool TrtRTMDet::multiScaleFeedforward(
   cudaStreamSynchronize(*stream_);
 
   return true;
-}
-
-void TrtRTMDet::readColorMap(const std::string & color_map_path)
-{
-  std::vector<std::string> color_list = loadListFromTextFile(color_map_path);
-  for (int i = 1; i < static_cast<int>(color_list.size()); i++) {
-    auto splitString = [](const std::string & str, char delimiter) -> std::vector<std::string> {
-      std::vector<std::string> result;
-      std::stringstream ss(str);
-      std::string item;
-
-      while (std::getline(ss, item, delimiter)) {
-        result.push_back(item);
-      }
-
-      return result;
-    };
-    std::vector<std::string> tokens = splitString(color_list[i], ',');
-
-    LabelColor label_color;
-    label_color.class_name = tokens[1];
-    label_color.color[0] = std::stoi(tokens[2]);
-    label_color.color[1] = std::stoi(tokens[3]);
-    label_color.color[2] = std::stoi(tokens[4]);
-    label_color.label_id = std::stoi(tokens[5]);
-    color_map_[std::stoi(tokens[0])] = label_color;
-  }
 }
 
 float intersectionOverUnion(const Object & a, const Object & b)
