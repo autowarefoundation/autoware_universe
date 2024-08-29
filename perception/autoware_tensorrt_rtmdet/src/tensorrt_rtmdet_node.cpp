@@ -22,8 +22,8 @@ namespace autoware::tensorrt_rtmdet
 {
 TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
 : Node("tensorrt_rtmdet", node_options),
-is_publish_color_mask_(declare_parameter<bool>("is_publish_color_mask")),
-is_publish_debug_image_(declare_parameter<bool>("is_publish_debug_image"))
+  is_publish_color_mask_(declare_parameter<bool>("is_publish_color_mask")),
+  is_publish_debug_image_(declare_parameter<bool>("is_publish_debug_image"))
 {
   {
     stop_watch_ptr_ =
@@ -71,9 +71,9 @@ is_publish_debug_image_(declare_parameter<bool>("is_publish_debug_image"))
   std_ = std::vector<float>(std.begin(), std.end());
 
   trt_rtmdet_ = std::make_unique<tensorrt_rtmdet::TrtRTMDet>(
-    model_path, precision, color_map_, score_threshold, nms_threshold,
-    mask_threshold, build_config, preprocess_on_gpu, calibration_image_list_path, norm_factor,
-    mean_, std_, cache_dir, batch_config, max_workspace_size, plugin_paths);
+    model_path, precision, color_map_, score_threshold, nms_threshold, mask_threshold, build_config,
+    preprocess_on_gpu, calibration_image_list_path, norm_factor, mean_, std_, cache_dir,
+    batch_config, max_workspace_size, plugin_paths);
 
   timer_ =
     rclcpp::create_timer(this, get_clock(), 100ms, std::bind(&TrtRTMDetNode::onConnect, this));

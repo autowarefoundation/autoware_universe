@@ -103,14 +103,21 @@ namespace autoware::tensorrt_rtmdet
 {
 TrtRTMDet::TrtRTMDet(
   const std::string & model_path, const std::string & precision, const ColorMap & color_map,
-  const float score_threshold, const float nms_threshold,
-  const float mask_threshold, tensorrt_common::BuildConfig build_config,
-  const bool use_gpu_preprocess, std::string calibration_image_list_path, const double norm_factor,
-  const std::vector<float> mean, const std::vector<float> std,
-  [[maybe_unused]] const std::string & cache_dir, const tensorrt_common::BatchConfig & batch_config,
-  const size_t max_workspace_size, const std::vector<std::string> & plugin_paths) : score_threshold_{ score_threshold },
-  nms_threshold_{ nms_threshold }, mask_threshold_{ mask_threshold }, batch_size_{ batch_config[1] }, use_gpu_preprocess_{ use_gpu_preprocess },
-    norm_factor_{ norm_factor }, mean_{ mean }, std_{ std }, color_map_{ color_map }
+  const float score_threshold, const float nms_threshold, const float mask_threshold,
+  tensorrt_common::BuildConfig build_config, const bool use_gpu_preprocess,
+  std::string calibration_image_list_path, const double norm_factor, const std::vector<float> mean,
+  const std::vector<float> std, [[maybe_unused]] const std::string & cache_dir,
+  const tensorrt_common::BatchConfig & batch_config, const size_t max_workspace_size,
+  const std::vector<std::string> & plugin_paths)
+: score_threshold_{score_threshold},
+  nms_threshold_{nms_threshold},
+  mask_threshold_{mask_threshold},
+  batch_size_{batch_config[1]},
+  use_gpu_preprocess_{use_gpu_preprocess},
+  norm_factor_{norm_factor},
+  mean_{mean},
+  std_{std},
+  color_map_{color_map}
 {
   src_width_ = -1;
   src_height_ = -1;
@@ -187,8 +194,8 @@ TrtRTMDet::TrtRTMDet(
     batch_size_ * max_detections_ * model_input_width_ * model_input_height_);
 
   if (use_gpu_preprocess_) {
-      image_buf_h_ = nullptr;
-      image_buf_d_ = nullptr;
+    image_buf_h_ = nullptr;
+    image_buf_d_ = nullptr;
   }
 }
 
