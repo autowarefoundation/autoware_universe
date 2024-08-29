@@ -31,20 +31,15 @@
           "default": ["./build/tensorrt_rtmdet/libtensorrt_rtmdet_plugin.so"],
           "description": "Path to plugin files."
         },
-        "mean": {
+        "input_image_mean": {
           "type": "array",
           "default": [103.53, 116.28, 123.675],
           "description": "Mean values for the model."
         },
-        "std": {
+        "input_image_std_dev": {
           "type": "array",
           "default": [57.375, 57.12, 58.395],
           "description": "Standard deviation values for model."
-        },
-        "number_classes": {
-          "type": "number",
-          "default": 80,
-          "description": "Number of detection classes."
         },
         "score_threshold": {
           "type": "number",
@@ -119,8 +114,8 @@
         "model_path",
         "color_map_path",
         "plugin_paths",
-        "mean",
-        "std",
+        "input_image_mean",
+        "input_image_std_dev",
         "score_threshold",
         "nms_threshold",
         "precision",
