@@ -140,7 +140,6 @@ private:
   const float nms_threshold_;
   const float mask_threshold_;
   const int batch_size_;
-  CudaUniquePtrHost<float[]> out_prob_h_;
 
   // flag whether preprocess are performed on GPU
   const bool use_gpu_preprocess_;
@@ -150,8 +149,6 @@ private:
   CudaUniquePtr<unsigned char[]> image_buf_d_;
   // normalization factor used for preprocessing
   const double norm_factor_;
-
-  std::vector<int> output_strides_;
 
   int32_t src_width_;
   int32_t src_height_;
