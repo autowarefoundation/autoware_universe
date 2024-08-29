@@ -37,8 +37,8 @@ TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
   std::string model_path = declare_parameter<std::string>("model_path");
   std::string color_map_path = declare_parameter<std::string>("color_map_path");
   std::string precision = declare_parameter<std::string>("precision");
-  std::vector<double> mean = declare_parameter<std::vector<double>>("mean");
-  std::vector<double> std = declare_parameter<std::vector<double>>("std");
+  std::vector<double> mean = declare_parameter<std::vector<double>>("input_image_mean");
+  std::vector<double> std = declare_parameter<std::vector<double>>("input_image_std_dev");
   int number_classes = declare_parameter<int>("number_classes");
   double score_threshold = declare_parameter<double>("score_threshold");
   double nms_threshold = declare_parameter<double>("nms_threshold");

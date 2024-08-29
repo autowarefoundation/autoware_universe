@@ -9,8 +9,8 @@
     model_path: "$(var data_path)/tensorrt_rtmdet/$(var model_name).onnx"
     color_map_path: "$(var data_path)/tensorrt_rtmdet/color_map.csv"
     plugin_paths: [ "./build/autoware_tensorrt_rtmdet/libautoware_tensorrt_rtmdet_plugin.so" ]
-    mean: [ 103.53, 116.28, 123.675 ]
-    std: [ 57.375, 57.12, 58.395 ]
+    input_image_mean: [ 103.53, 116.28, 123.675 ]
+    input_image_std_dev: [ 57.375, 57.12, 58.395 ]
     number_classes: 80
     score_threshold: 0.3
     nms_threshold: 0.3
