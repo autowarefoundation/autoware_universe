@@ -11,7 +11,6 @@
     plugin_paths: [ "./build/autoware_tensorrt_rtmdet/libautoware_tensorrt_rtmdet_plugin.so" ] # List of paths to the TensorRT plugin shared libraries, needed for custom layers or operations.
     input_image_mean: [ 103.53, 116.28, 123.675 ] # Mean values for input image, used for normalization during preprocessing.
     input_image_std_dev: [ 57.375, 57.12, 58.395 ] # Standard deviation values for input image, used for normalization during preprocessing.
-    number_classes: 80 # The number of classes the model is trained to detect.
     score_threshold: 0.3 # The confidence score threshold, detections below this value will be ignored.
     nms_threshold: 0.3 # The NMS threshold, used to filter overlapping detections based on IoU.
     mask_threshold: 0.7 # The threshold used for mask predictions, values above this threshold are considered part of the object.
