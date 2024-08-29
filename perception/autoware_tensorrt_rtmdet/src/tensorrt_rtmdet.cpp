@@ -594,7 +594,7 @@ bool TrtRTMDet::feedforward(
   objects.clear();
   for (size_t batch = 0; batch < batch_size; ++batch) {
     ObjectArray object_array;
-    for (int index = 0; index < max_detections_; ++index) {
+    for (uint32_t index = 0; index < max_detections_; ++index) {
       if (out_dets_h_[(batch * max_detections_ * 5) + ((5 * index) + 4)] < score_threshold_) {
         break;
       }

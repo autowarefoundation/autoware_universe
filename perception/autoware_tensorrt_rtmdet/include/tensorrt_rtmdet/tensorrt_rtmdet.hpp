@@ -129,13 +129,13 @@ private:
 
   StreamUniquePtr stream_{makeCudaStream()};
 
-  int32_t max_detections_;
+  uint32_t max_detections_;
   float scale_width_;
   float scale_height_;
 
   // size of input image for model
-  int model_input_width_;
-  int model_input_height_;
+  uint32_t model_input_width_;
+  uint32_t model_input_height_;
 
   const float score_threshold_;
   const float nms_threshold_;
@@ -154,8 +154,8 @@ private:
 
   std::vector<int> output_strides_;
 
-  int src_width_;
-  int src_height_;
+  int32_t src_width_;
+  int32_t src_height_;
 
   const std::vector<float> mean_;
   const std::vector<float> std_;
