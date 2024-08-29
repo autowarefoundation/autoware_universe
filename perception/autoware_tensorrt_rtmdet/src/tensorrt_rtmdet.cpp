@@ -192,11 +192,6 @@ TrtRTMDet::TrtRTMDet(
   out_labels_h_ = std::make_unique<int32_t[]>(batch_size_ * max_detections_);
   out_masks_h_ = std::make_unique<float[]>(
     batch_size_ * max_detections_ * model_input_width_ * model_input_height_);
-
-  if (use_gpu_preprocess_) {
-    image_buf_h_ = nullptr;
-    image_buf_d_ = nullptr;
-  }
 }
 
 TrtRTMDet::~TrtRTMDet()
