@@ -7,7 +7,7 @@
       "type": "object",
       "properties": {
         "enable_differential_map_loading": {
-          "type": "boolean",
+          "type": "string",
           "description": "Flag to enable loading of differential map",
           "default": "true"
         },
