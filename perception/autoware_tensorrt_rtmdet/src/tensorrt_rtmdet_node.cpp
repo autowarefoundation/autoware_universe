@@ -155,6 +155,7 @@ void TrtRTMDetNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
     autoware_internal_msgs::msg::SegmentationMask mask_msg;
     mask_msg.config = mask_config;
     mask_msg.image = *mask_image;
+    mask_msg.header = msg->header;
     mask_pub_->publish(mask_msg);
   }
 
