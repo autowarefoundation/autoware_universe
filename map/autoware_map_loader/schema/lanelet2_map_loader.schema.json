@@ -9,7 +9,7 @@
         "enable_differential_map_loading": {
           "type": "boolean",
           "description": "Flag to enable loading of differential map",
-          "default": "false"
+          "default": "true"
         },
         "allow_unsupported_version": {
           "type": "boolean",
