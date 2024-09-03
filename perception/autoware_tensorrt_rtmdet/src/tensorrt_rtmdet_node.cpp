@@ -129,7 +129,7 @@ void TrtRTMDetNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
   }
 
   tier4_perception_msgs::msg::DetectedObjectsWithFeature detected_objects_with_feature;
-  for (const auto & object : objects[0]) {
+  for (const auto & object : objects.at(0)) {
     tier4_perception_msgs::msg::DetectedObjectWithFeature detected_object_with_feature;
     detected_object_with_feature.feature.roi.width = object.x2 - object.x1;
     detected_object_with_feature.feature.roi.height = object.y2 - object.y1;
@@ -236,15 +236,15 @@ ColorMap TrtRTMDetNode::readLabelFile(const std::string & label_path)
 
       return result;
     };
-    std::vector<std::string> tokens = splitString(color_list[i], ',');
+    std::vector<std::string> tokens = splitString(color_list.at(i), ',');
 
     LabelColor label_color;
-    label_color.class_name = tokens[1];
-    label_color.color[0] = std::stoi(tokens[2]);
-    label_color.color[1] = std::stoi(tokens[3]);
-    label_color.color[2] = std::stoi(tokens[4]);
-    label_color.label_id = std::stoi(tokens[5]);
-    color_map[std::stoi(tokens[0])] = label_color;
+    label_color.class_name = tokens.at(1);
+    label_color.color[0] = std::stoi(tokens.at(2));
+    label_color.color[1] = std::stoi(tokens.at(3));
+    label_color.color[2] = std::stoi(tokens.at(4));
+    label_color.label_id = std::stoi(tokens.at(5));
+    color_map[std::stoi(tokens.at(0))] = label_color;
   }
 
   return color_map;
@@ -257,7 +257,7 @@ void TrtRTMDetNode::drawDebugImage(
 {
   // TODO(StepTurtle): add mask to debug image
 
-  for (const auto & object : objects[0]) {
+  for (const auto & object : objects.at(0)) {
     cv::rectangle(
       image, cv::Point(static_cast<int>(object.x1), static_cast<int>(object.y1)),
       cv::Point(static_cast<int>(object.x2), static_cast<int>(object.y2)),

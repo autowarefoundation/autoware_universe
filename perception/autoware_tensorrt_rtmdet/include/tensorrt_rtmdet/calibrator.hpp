@@ -53,7 +53,7 @@ public:
 
   uint32_t getMaxBatches() const { return max_batches_; }
 
-  float * getBatch() { return &batch_[0]; }
+  float * getBatch() { return &batch_.at(0); }
 
   nvinfer1::Dims getInputDims() { return input_dims_; }
 
@@ -127,10 +127,10 @@ public:
     }
     for (uint32_t i = 0; i < batch_size_; ++i) {
       auto image =
-        cv::imread(calibration_images_[batch_size_ * current_batch_ + i].c_str(), cv::IMREAD_COLOR);
+        cv::imread(calibration_images_.at(batch_size_ * current_batch_ + i).c_str(), cv::IMREAD_COLOR);
       RCLCPP_INFO(
         rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "Preprocess %s",
-        calibration_images_[batch_size_ * current_batch_ + i].c_str());
+        calibration_images_.at(batch_size_ * current_batch_ + i).c_str());
       auto input = preprocess({image}, input_dims_, mean, std);
       batch_.insert(
         batch_.begin() + i * input_dims_.d[1] * input_dims_.d[2] * input_dims_.d[3], input.begin(),
@@ -252,7 +252,7 @@ public:
         rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
         "New calibration table will be created to build the engine");
     }
-    return length ? &calib_cache_[0] : nullptr;
+    return length ? &calib_cache_.at(0) : nullptr;
   }
 
   void writeCalibrationCache(const void * cache, size_t length) noexcept override
@@ -295,7 +295,7 @@ public:
         rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
         "New histogram table will be created to build the engine");
     }
-    return length ? &hist_cache_[0] : nullptr;
+    return length ? &hist_cache_.at(0) : nullptr;
   }
   void writeHistogramCache(void const * ptr, std::size_t length) noexcept
   {
@@ -413,7 +413,7 @@ public:
         rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
         "New calibration table will be created to build the engine");
     }
-    return length ? &calib_cache_[0] : nullptr;
+    return length ? &calib_cache_.at(0) : nullptr;
   }
 
   void writeCalibrationCache(const void * cache, size_t length) noexcept override
@@ -528,7 +528,7 @@ public:
         rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"),
         "New calibration table will be created to build the engine");
     }
-    return length ? &calib_cache_[0] : nullptr;
+    return length ? &calib_cache_.at(0) : nullptr;
   }
 
   void writeCalibrationCache(const void * cache, size_t length) noexcept override

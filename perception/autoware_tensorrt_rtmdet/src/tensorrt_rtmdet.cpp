@@ -112,7 +112,7 @@ TrtRTMDet::TrtRTMDet(
 : score_threshold_{score_threshold},
   nms_threshold_{nms_threshold},
   mask_threshold_{mask_threshold},
-  batch_size_{batch_config[1]},
+  batch_size_{batch_config.at(1)},
   use_gpu_preprocess_{use_gpu_preprocess},
   norm_factor_{norm_factor},
   mean_{mean},
@@ -123,7 +123,7 @@ TrtRTMDet::TrtRTMDet(
   src_height_ = -1;
 
   if (precision == "int8") {
-    int max_batch_size = batch_config[2];
+    int max_batch_size = batch_config.at(2);
     nvinfer1::Dims input_dims = tensorrt_common::get_input_dims(model_path);
     std::vector<std::string> calibration_images;
     if (calibration_image_list_path != "") {
@@ -361,8 +361,8 @@ void TrtRTMDet::preprocessWithRoiGpu(
   }
 
   for (const auto & image : images) {
-    scale_width_ = input_width / static_cast<float>(rois[b].width);
-    scale_height_ = input_height / static_cast<float>(rois[b].height);
+    scale_width_ = input_width / static_cast<float>(rois.at(b).width);
+    scale_height_ = input_height / static_cast<float>(rois.at(b).height);
     if (!image_buf_h_) {
       image_buf_h_ = cuda_utils::make_unique_host<unsigned char[]>(
         image.cols * image.rows * 3 * batch_size, cudaHostAllocWriteCombined);
@@ -373,22 +373,22 @@ void TrtRTMDet::preprocessWithRoiGpu(
     // Copy into pinned memory
     memcpy(
       &(image_buf_h_[index]), &image.data[0], image.cols * image.rows * 3 * sizeof(unsigned char));
-    roi_h_[b].x = rois[b].x;
-    roi_h_[b].y = rois[b].y;
-    roi_h_[b].w = rois[b].width;
-    roi_h_[b].h = rois[b].height;
+    roi_h_[b].x = rois.at(b).x;
+    roi_h_[b].y = rois.at(b).y;
+    roi_h_[b].w = rois.at(b).width;
+    roi_h_[b].h = rois.at(b).height;
     b++;
   }
   // Copy into device memory
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     image_buf_d_.get(), image_buf_h_.get(),
-    images[0].cols * images[0].rows * 3 * batch_size * sizeof(unsigned char),
+    images.at(0).cols * images.at(0).rows * 3 * batch_size * sizeof(unsigned char),
     cudaMemcpyHostToDevice, *stream_));
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     roi_d_.get(), roi_h_.get(), batch_size * sizeof(Roi), cudaMemcpyHostToDevice, *stream_));
   crop_resize_bilinear_letterbox_nhwc_to_nchw32_batch_gpu(
-    input_d_.get(), image_buf_d_.get(), input_width, input_height, 3, roi_d_.get(), images[0].cols,
-    images[0].rows, 3, batch_size, static_cast<float>(norm_factor_), *stream_);
+    input_d_.get(), image_buf_d_.get(), input_width, input_height, 3, roi_d_.get(), images.at(0).cols,
+    images.at(0).rows, 3, batch_size, static_cast<float>(norm_factor_), *stream_);
 }
 
 void TrtRTMDet::preprocessWithRoi(
@@ -406,11 +406,11 @@ void TrtRTMDet::preprocessWithRoi(
   if (letterbox) {
     for (const auto & image : images) {
       cv::Mat dst_image;
-      cv::Mat cropped = image(rois[b]);
-      scale_width_ = input_width / static_cast<float>(rois[b].width);
-      scale_height_ = input_height / static_cast<float>(rois[b].height);
+      cv::Mat cropped = image(rois.at(b));
+      scale_width_ = input_width / static_cast<float>(rois.at(b).width);
+      scale_height_ = input_height / static_cast<float>(rois.at(b).height);
       const auto scale_size =
-        cv::Size(rois[b].width * scale_width_, rois[b].height * scale_height_);
+        cv::Size(rois.at(b).width * scale_width_, rois.at(b).height * scale_height_);
       cv::resize(cropped, dst_image, scale_size, 0, 0, cv::INTER_CUBIC);
       const auto bottom = input_height - dst_image.rows;
       const auto right = input_width - dst_image.cols;
@@ -475,12 +475,12 @@ void TrtRTMDet::multiScalePreprocessGpu(const cv::Mat & image, const std::vector
   }
 
   for (size_t b = 0; b < rois.size(); b++) {
-    scale_width_ = input_width / static_cast<float>(rois[b].width);
-    scale_height_ = input_height / static_cast<float>(rois[b].height);
-    roi_h_[b].x = rois[b].x;
-    roi_h_[b].y = rois[b].y;
-    roi_h_[b].w = rois[b].width;
-    roi_h_[b].h = rois[b].height;
+    scale_width_ = input_width / static_cast<float>(rois.at(b).width);
+    scale_height_ = input_height / static_cast<float>(rois.at(b).height);
+    roi_h_[b].x = rois.at(b).x;
+    roi_h_[b].y = rois.at(b).y;
+    roi_h_[b].w = rois.at(b).width;
+    roi_h_[b].h = rois.at(b).height;
   }
   if (!image_buf_h_) {
     image_buf_h_ = cuda_utils::make_unique_host<unsigned char[]>(
@@ -628,7 +628,7 @@ bool TrtRTMDet::feedforward(
   mask = cv::Mat(model_input_height_, model_input_width_, CV_8UC3, cv::Scalar(0, 0, 0));
   uint8_t pixel_intensity = 1;  // 0 is reserved for background
   for (size_t batch = 0; batch < batch_size; ++batch) {
-    for (const auto & object : objects[batch]) {
+    for (const auto & object : objects.at(batch)) {
       cv::Mat object_mask(
         model_input_height_, model_input_width_, CV_32F,
         &out_masks_h_
@@ -706,17 +706,17 @@ void TrtRTMDet::nmsSortedBboxes(
   std::vector<bool> suppressed(input_objects.size(), false);
 
   for (size_t i = 0; i < input_objects.size(); ++i) {
-    if (suppressed[i]) continue;
+    if (suppressed.at(i)) continue;
 
-    const Object & a = input_objects[i];
+    const Object & a = input_objects.at(i);
     output_objects.push_back(a);
 
     for (size_t j = i + 1; j < input_objects.size(); ++j) {
-      if (suppressed[j]) continue;
+      if (suppressed.at(j)) continue;
 
-      const Object & b = input_objects[j];
+      const Object & b = input_objects.at(j);
       if (intersectionOverUnion(a, b) > nms_threshold_) {
-        suppressed[j] = true;
+        suppressed.at(j) = true;
       }
     }
   }
