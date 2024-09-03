@@ -22,6 +22,7 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
+#include <pcl/common/common.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/search/pcl_search.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -35,6 +36,11 @@
 
 namespace autoware::compare_map_segmentation
 {
+
+bool isFeasibleWithPCLVoxelGrid(
+  const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
+  const pcl::VoxelGrid<pcl::PointXYZ> & voxel_grid);
+
 template <typename T, typename U>
 double distance2D(const T p1, const U p2)
 {
