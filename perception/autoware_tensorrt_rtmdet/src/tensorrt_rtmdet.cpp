@@ -387,8 +387,9 @@ void TrtRTMDet::preprocessWithRoiGpu(
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     roi_d_.get(), roi_h_.get(), batch_size * sizeof(Roi), cudaMemcpyHostToDevice, *stream_));
   crop_resize_bilinear_letterbox_nhwc_to_nchw32_batch_gpu(
-    input_d_.get(), image_buf_d_.get(), input_width, input_height, 3, roi_d_.get(), images.at(0).cols,
-    images.at(0).rows, 3, batch_size, static_cast<float>(norm_factor_), *stream_);
+    input_d_.get(), image_buf_d_.get(), input_width, input_height, 3, roi_d_.get(),
+    images.at(0).cols, images.at(0).rows, 3, batch_size, static_cast<float>(norm_factor_),
+    *stream_);
 }
 
 void TrtRTMDet::preprocessWithRoi(

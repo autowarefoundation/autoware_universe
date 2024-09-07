@@ -126,8 +126,8 @@ public:
       return false;
     }
     for (uint32_t i = 0; i < batch_size_; ++i) {
-      auto image =
-        cv::imread(calibration_images_.at(batch_size_ * current_batch_ + i).c_str(), cv::IMREAD_COLOR);
+      auto image = cv::imread(
+        calibration_images_.at(batch_size_ * current_batch_ + i).c_str(), cv::IMREAD_COLOR);
       RCLCPP_INFO(
         rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "Preprocess %s",
         calibration_images_.at(batch_size_ * current_batch_ + i).c_str());
