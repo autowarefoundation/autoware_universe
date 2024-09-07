@@ -165,7 +165,6 @@ C.osm: [1200, 2520] # -> 1200 < x < 1220, 2520 < y < 2540
 D.osm: [1240, 2520] # -> 1240 < x < 1260, 2520 < y < 2540
 ```
 
-
 where,
 
 - `x_resolution` and `y_resolution` are the resolution of the map in meters.
