@@ -151,7 +151,14 @@ void TrtRTMDetNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
       cv_bridge::CvImage(std_msgs::msg::Header(), sensor_msgs::image_encodings::MONO8, mask)
         .toImageMsg();
     autoware_internal_msgs::msg::SegmentationConfig mask_config;
-    mask_config.class_ids = class_ids;
+    std::vector<autoware_perception_msgs::msg::ObjectClassification> classification;
+    for (unsigned char class_id : class_ids) {
+      autoware_perception_msgs::msg::ObjectClassification object_classification;
+      object_classification.label = class_id;
+      object_classification.probability = 1.0;
+      classification.push_back(object_classification);
+    }
+    mask_config.classification = classification;
     autoware_internal_msgs::msg::SegmentationMask mask_msg;
     mask_msg.config = mask_config;
     mask_msg.image = *mask_image;
