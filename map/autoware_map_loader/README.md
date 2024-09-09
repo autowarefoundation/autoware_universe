@@ -215,7 +215,6 @@ If you use single Lanelet2 map file:
 
 If you use multiple Lanelet2 map files:
 
-- ~output/dynamic_lanelet2_map (autoware_map_msgs/LaneletMapBin) : Binary data of loaded Lanelet2 Map
 - ~output/lanelet_map_meta_data (autoware_map_msgs/msg/LaneletMapMetaData) : Metadata of Lanelet2 Map
 
 ### Services
