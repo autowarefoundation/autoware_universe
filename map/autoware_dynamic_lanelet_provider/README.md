@@ -26,7 +26,7 @@ for more information about the divided lanelet map and the metadata file.
 | --------------------- | -------------------------------------------- | -------------------------- |
 | `output/lanelet2_map` | `autoware_auto_mapping_msgs::msg::HADMapBin` | dynamic Lanelet2 map topic |
 
-### Service
+### Client
 
 | Name                                   | Type                                             | Description                                |
 | -------------------------------------- | ------------------------------------------------ | ------------------------------------------ |
