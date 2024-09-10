@@ -97,7 +97,7 @@ void TrtRTMDetNode::onConnect()
   using std::placeholders::_1;
   if (
     debug_image_pub_.getNumSubscribers() == 0 &&
-    mask_pub_->get_intra_process_subscription_count() == 0 &&
+    mask_pub_->get_subscription_count() == 0 && mask_pub_->get_intra_process_subscription_count() == 0 &&
     color_mask_pub_.getNumSubscribers() == 0 && objects_pub_->get_subscription_count() == 0 &&
     objects_pub_->get_intra_process_subscription_count() == 0) {
     image_sub_.shutdown();
