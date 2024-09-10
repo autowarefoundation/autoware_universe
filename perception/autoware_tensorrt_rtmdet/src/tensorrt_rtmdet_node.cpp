@@ -58,8 +58,8 @@ TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
   color_map_ = readLabelFile(color_map_path);
 
   tensorrt_common::BuildConfig build_config(
-    "Entropy", dla_core_id, quantize_first_layer, quantize_last_layer,
-    profile_per_layer, clip_value);
+    "Entropy", dla_core_id, quantize_first_layer, quantize_last_layer, profile_per_layer,
+    clip_value);
 
   const double norm_factor = 1.0;
   const std::string cache_dir = "";

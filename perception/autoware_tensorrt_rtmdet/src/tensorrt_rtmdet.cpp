@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "memory"
 #include "tensorrt_rtmdet/tensorrt_rtmdet.hpp"
 
+#include "memory"
 #include "trt_batched_nms/batched_nms/trt_batched_nms.hpp"
 
 #include <cassert>
@@ -130,9 +130,9 @@ TrtRTMDet::TrtRTMDet(
     if (!calibration_image_list_path.empty()) {
       calibration_images = loadImageList(calibration_image_list_path, "");
     } else {
-        RCLCPP_ERROR(
-            rclcpp::get_logger("autoware_tensorrt_rtmdet"),
-            "Calibration image list is empty. Please set calibration_image_list_path.");
+      RCLCPP_ERROR(
+        rclcpp::get_logger("autoware_tensorrt_rtmdet"),
+        "Calibration image list is empty. Please set calibration_image_list_path.");
     }
     tensorrt_rtmdet::ImageStream stream(max_batch_size, input_dims, calibration_images);
     fs::path calibration_table{model_path};
