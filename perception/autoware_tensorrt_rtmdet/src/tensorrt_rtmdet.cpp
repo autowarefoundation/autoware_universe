@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "memory"
 #include "tensorrt_rtmdet/tensorrt_rtmdet.hpp"
 
 #include "trt_batched_nms/batched_nms/trt_batched_nms.hpp"
@@ -126,41 +127,26 @@ TrtRTMDet::TrtRTMDet(
     int max_batch_size = batch_config.at(2);
     nvinfer1::Dims input_dims = tensorrt_common::get_input_dims(model_path);
     std::vector<std::string> calibration_images;
-    if (calibration_image_list_path != "") {
+    if (!calibration_image_list_path.empty()) {
       calibration_images = loadImageList(calibration_image_list_path, "");
+    } else {
+        RCLCPP_ERROR(
+            rclcpp::get_logger("autoware_tensorrt_rtmdet"),
+            "Calibration image list is empty. Please set calibration_image_list_path.");
     }
     tensorrt_rtmdet::ImageStream stream(max_batch_size, input_dims, calibration_images);
     fs::path calibration_table{model_path};
-    std::string calibName = "";
-    std::string ext = "";
-    if (build_config.calib_type_str == "Entropy") {
-      ext = "EntropyV2-";
-    } else if (
-      build_config.calib_type_str == "Legacy" || build_config.calib_type_str == "Percentile") {
-      ext = "Legacy-";
-    } else {
-      ext = "MinMax-";
-    }
-    ext += "calibration.table";
+    std::string ext;
+    ext = "EntropyV2-calibration.table";
     calibration_table.replace_extension(ext);
     fs::path histogram_table{model_path};
     ext = "histogram.table";
     histogram_table.replace_extension(ext);
 
     std::unique_ptr<nvinfer1::IInt8Calibrator> calibrator;
-    if (build_config.calib_type_str == "Entropy") {
-      calibrator.reset(
-        new tensorrt_rtmdet::Int8EntropyCalibrator(stream, calibration_table, mean_, std_));
-    } else if (
-      build_config.calib_type_str == "Legacy" || build_config.calib_type_str == "Percentile") {
-      double quantile = 0.999999;
-      double cutoff = 0.999999;
-      calibrator.reset(new tensorrt_rtmdet::Int8LegacyCalibrator(
-        stream, calibration_table, histogram_table, mean_, std_, true, quantile, cutoff));
-    } else {
-      calibrator.reset(
-        new tensorrt_rtmdet::Int8MinMaxCalibrator(stream, calibration_table, mean_, std_));
-    }
+    calibrator = std::make_unique<tensorrt_rtmdet::Int8EntropyCalibrator>(
+      stream, calibration_table, mean_, std_);
+
     trt_common_ = std::make_unique<tensorrt_common::TrtCommon>(
       model_path, precision, std::move(calibrator), batch_config, max_workspace_size, build_config,
       plugin_paths);

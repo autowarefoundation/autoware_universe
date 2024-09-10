@@ -44,7 +44,6 @@ TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
   double score_threshold = declare_parameter<double>("score_threshold");
   double nms_threshold = declare_parameter<double>("nms_threshold");
   double mask_threshold = declare_parameter<double>("mask_threshold");
-  std::string calibration_algorithm = declare_parameter<std::string>("calibration_algorithm");
   int dla_core_id = declare_parameter<int>("dla_core_id");
   bool quantize_first_layer = declare_parameter<bool>("quantize_first_layer");
   bool quantize_last_layer = declare_parameter<bool>("quantize_last_layer");
@@ -59,7 +58,7 @@ TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
   color_map_ = readLabelFile(color_map_path);
 
   tensorrt_common::BuildConfig build_config(
-    calibration_algorithm, dla_core_id, quantize_first_layer, quantize_last_layer,
+    "Entropy", dla_core_id, quantize_first_layer, quantize_last_layer,
     profile_per_layer, clip_value);
 
   const double norm_factor = 1.0;
