@@ -612,7 +612,7 @@ bool TrtRTMDet::feedforward(
   // where each pixel represents the class intensity.
   // The intensity of each pixel corresponds to the index of the class_array,
   // which stores the class IDs.
-  mask = cv::Mat(model_input_height_, model_input_width_, CV_8UC3, cv::Scalar(0, 0, 0));
+  mask = cv::Mat(model_input_height_, model_input_width_, CV_8UC1, cv::Scalar(0, 0, 0));
   uint8_t pixel_intensity = 1;  // 0 is reserved for background
   for (size_t batch = 0; batch < batch_size; ++batch) {
     for (const auto & object : objects.at(batch)) {
@@ -626,16 +626,15 @@ bool TrtRTMDet::feedforward(
       object_mask.convertTo(
         object_mask, CV_8U, 255.0 / (maxVal - minVal), -minVal * 255.0 / (maxVal - minVal));
 
-      auto processPixel = [&](cv::Vec3b & pixel, const int * position) -> void {
+      auto process_pixel = [&]([[maybe_unused]]cv::Vec3b & pixel, const int * position) -> void {
         int i = position[0];
         int j = position[1];
 
         if (object_mask.at<uchar>(i, j) > static_cast<int>(255 * mask_threshold_)) {
-          cv::Vec3b color(pixel_intensity, pixel_intensity, pixel_intensity);
-          pixel = color;
+          mask.at<uint8_t>(i, j) = pixel_intensity;
         }
       };
-      mask.forEach<cv::Vec3b>(processPixel);
+      mask.forEach<cv::Vec3b>(process_pixel);
       class_ids.push_back(color_map_.at(object.class_id).label_id);
       pixel_intensity++;
     }
