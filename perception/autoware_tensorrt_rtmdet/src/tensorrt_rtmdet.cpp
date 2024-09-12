@@ -626,7 +626,7 @@ bool TrtRTMDet::feedforward(
       object_mask.convertTo(
         object_mask, CV_8U, 255.0 / (maxVal - minVal), -minVal * 255.0 / (maxVal - minVal));
 
-      auto process_pixel = [&]([[maybe_unused]]cv::Vec3b & pixel, const int * position) -> void {
+      auto process_pixel = [&]([[maybe_unused]] cv::Vec3b & pixel, const int * position) -> void {
         int i = position[0];
         int j = position[1];
 
