@@ -284,11 +284,12 @@ void TrtRTMDetNode::get_colorized_mask(
   }
 }
 
-void TrtRTMDetNode::apply_erosion(cv::Mat &mask, const int erosion_size) {
-    cv::Mat element = cv::getStructuringElement(
-            cv::MORPH_RECT, cv::Size(2 * erosion_size + 1, 2 * erosion_size + 1),
-            cv::Point(erosion_size, erosion_size));
-    cv::erode(mask, mask, element);
+void TrtRTMDetNode::apply_erosion(cv::Mat & mask, const int erosion_size)
+{
+  cv::Mat element = cv::getStructuringElement(
+    cv::MORPH_RECT, cv::Size(2 * erosion_size + 1, 2 * erosion_size + 1),
+    cv::Point(erosion_size, erosion_size));
+  cv::erode(mask, mask, element);
 }
 }  // namespace autoware::tensorrt_rtmdet
 
