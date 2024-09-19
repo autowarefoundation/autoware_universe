@@ -76,8 +76,8 @@ TrtRTMDet::TrtRTMDet(
 {
   src_width_ = -1;
   src_height_ = -1;
-  scale_width_ = 0;
-  scale_height_ = 0;
+  scale_width_ = -1;
+  scale_height_ = -1;
 
   if (precision == "int8") {
     std::vector<std::string> calibration_images =
@@ -217,6 +217,10 @@ void TrtRTMDet::preprocess(const std::vector<cv::Mat> & images)
 
   std::vector<cv::Mat> dst_images;
   for (const auto & image : images) {
+    if (scale_width_ == -1 || scale_height_ == -1) {
+      scale_width_ = static_cast<float>(model_input_width_) / image.cols;
+      scale_height_ = static_cast<float>(model_input_height_) / image.rows;
+    }
     cv::Mat dst_image;
     cv::resize(image, dst_image, cv::Size(model_input_width_, model_input_height_));
     dst_image.convertTo(dst_image, CV_32F);
