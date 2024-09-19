@@ -39,7 +39,7 @@ class ImageStream
 public:
   ImageStream(
     uint32_t batch_size, nvinfer1::Dims input_dims,
-    const std::vector<std::string> calibration_images)
+    const std::vector<std::string> & calibration_images)
   : batch_size_(batch_size),
     calibration_images_(calibration_images),
     current_batch_(0),
@@ -49,13 +49,13 @@ public:
     batch_.resize(batch_size_ * input_dims_.d[1] * input_dims_.d[2] * input_dims_.d[3]);
   }
 
-  uint32_t getBatchSize() const { return batch_size_; }
+  [[nodiscard]] uint32_t get_batch_size() const { return batch_size_; }
 
-  uint32_t getMaxBatches() const { return max_batches_; }
+  [[nodiscard]] uint32_t get_max_batches() const { return max_batches_; }
 
-  float * getBatch() { return &batch_.at(0); }
+  float * get_batch() { return &batch_.at(0); }
 
-  nvinfer1::Dims getInputDims() { return input_dims_; }
+  nvinfer1::Dims get_input_dims() { return input_dims_; }
 
   /**
    * @brief Preprocess in calibration
@@ -65,7 +65,7 @@ public:
    * @param[in] std std value for each channel
    * @return vector<float> preprocessed data
    */
-  std::vector<float> preprocess(
+  static std::vector<float> preprocess(
     const std::vector<cv::Mat> & images, nvinfer1::Dims input_dims, const std::vector<float> & mean,
     const std::vector<float> & std)
   {
@@ -84,8 +84,8 @@ public:
       cv::Mat dst_image;
       cv::resize(image, dst_image, cv::Size(640, 640));
       dst_image.convertTo(dst_image, CV_32F);
-      dst_image -= cv::Scalar(103.53, 116.28, 123.675);
-      dst_image /= cv::Scalar(57.375, 57.12, 58.395);
+      dst_image -= cv::Scalar(mean.at(0), mean.at(1), mean.at(2));
+      dst_image /= cv::Scalar(std.at(0), std.at(1), std.at(2));
       dst_images.emplace_back(dst_image);
     }
 
@@ -127,7 +127,7 @@ public:
     }
     for (uint32_t i = 0; i < batch_size_; ++i) {
       auto image = cv::imread(
-        calibration_images_.at(batch_size_ * current_batch_ + i).c_str(), cv::IMREAD_COLOR);
+        calibration_images_.at(batch_size_ * current_batch_ + i), cv::IMREAD_COLOR);
       RCLCPP_INFO(
         rclcpp::get_logger("autoware_tensorrt_rtmdet_calibrator"), "Preprocess %s",
         calibration_images_.at(batch_size_ * current_batch_ + i).c_str());
@@ -170,8 +170,8 @@ public:
     calibration_cache_file_(std::move(calibration_cache_file)),
     read_cache_(read_cache)
   {
-    auto d = stream_.getInputDims();
-    input_count_ = stream_.getBatchSize() * d.d[1] * d.d[2] * d.d[3];
+    auto d = stream_.get_input_dims();
+    input_count_ = stream_.get_batch_size() * d.d[1] * d.d[2] * d.d[3];
     m_std_ = std;
     m_mean_ = mean;
 
@@ -204,9 +204,9 @@ public:
         break;
     }
   }
-  int getBatchSize() const noexcept override { return stream_.getBatchSize(); }
+  int getBatchSize() const noexcept override { return stream_.get_batch_size(); }
 
-  virtual ~Int8EntropyCalibrator() { CHECK_CUDA_ERROR(cudaFree(device_input_)); }
+  ~Int8EntropyCalibrator() override { CHECK_CUDA_ERROR(cudaFree(device_input_)); }
 
   bool getBatch(void * bindings[], const char * names[], int nb_bindings) noexcept override
   {
@@ -218,7 +218,7 @@ public:
     }
     try {
       CHECK_CUDA_ERROR(cudaMemcpy(
-        device_input_, stream_.getBatch(), input_count_ * sizeof(float), cudaMemcpyHostToDevice));
+        device_input_, stream_.get_batch(), input_count_ * sizeof(float), cudaMemcpyHostToDevice));
     } catch (const std::exception & e) {
       // Do nothing
     }
