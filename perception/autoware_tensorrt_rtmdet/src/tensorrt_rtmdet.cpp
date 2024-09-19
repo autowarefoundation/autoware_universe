@@ -22,6 +22,12 @@
 #include <string>
 #include <vector>
 
+/**
+ * @brief Load calibration image list from a text file.
+ *
+ * @param filename Path to the text file.
+ * @return List of image paths.
+ */
 std::vector<std::string> load_calibration_image_list(const std::string & filename)
 {
   if (filename.empty()) {
@@ -228,7 +234,6 @@ void TrtRTMDet::preprocess(const std::vector<cv::Mat> & images)
   input_h_ = chw_images.isContinuous() ? flat : flat.clone();
   CHECK_CUDA_ERROR(cudaMemcpy(
     input_d_.get(), input_h_.data(), input_h_.size() * sizeof(float), cudaMemcpyHostToDevice));
-  // No Need for Sync
 }
 
 bool TrtRTMDet::do_inference(
@@ -335,7 +340,7 @@ bool TrtRTMDet::feedforward(
   return true;
 }
 
-float TrtRTMDet::intersection_over_union(const Object & a, const Object & b) const
+float TrtRTMDet::intersection_over_union(const Object & a, const Object & b)
 {
   int x_left = std::max(a.x1, b.x1);
   int y_top = std::max(a.y1, b.y1);

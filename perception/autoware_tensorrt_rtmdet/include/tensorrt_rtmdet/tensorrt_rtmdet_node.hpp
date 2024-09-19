@@ -42,18 +42,55 @@ class TrtRTMDetNode : public rclcpp::Node
 public:
   explicit TrtRTMDetNode(const rclcpp::NodeOptions & node_options);
 
+  /**
+   * @brief Read a color map file and return the color map.
+   *
+   * The color map file should be a csv file with the following format:
+   * ```
+   * unique_id, class_name, r, g, b, label_id
+   * ```
+   * where the label_id represents the class ID of the object, used to process the outputs in Autoware.
+   *
+   * @param[in] color_map_path The path to the color map file.
+   * @return A color map structure with the color information.
+   */
   ColorMap read_color_map_file(const std::string & color_map_path);
 
+  /**
+   * @brief Colorize the output mask.
+   *
+   * Take the output mask which includes the class ID of the objects and convert it to a colorized mask.
+   *
+   * @param[in] color_map The color map structure.
+   * @param[in] mask The output mask.
+   * @param[out] color_mask The colorized mask.
+   */
   static void get_colorized_mask(
     const ColorMap & color_map, const cv::Mat & mask, cv::Mat & color_mask);
 
+  /**
+   * @brief Draw the detected objects on the input image.
+   *
+   * @param[out] image
+   * @param[in] mask
+   * @param[in] objects
+   * @param[in] color_map
+   */
   static void draw_debug_image(
     cv::Mat & image, const cv::Mat & mask, const ObjectArrays & objects,
     const ColorMap & color_map);
 
 private:
+  /**
+   * @brief Callback function to check are there any subscribers.
+   */
   void on_connect();
 
+  /**
+   * @brief Callback function to run RTMDet model.
+   *
+   * @param[in] msg The input image message.
+   */
   void on_image(const sensor_msgs::msg::Image::ConstSharedPtr msg);
 
   std::unique_ptr<tensorrt_rtmdet::TrtRTMDet> trt_rtmdet_;

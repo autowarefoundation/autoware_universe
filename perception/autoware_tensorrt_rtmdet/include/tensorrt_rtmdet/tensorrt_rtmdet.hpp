@@ -38,6 +38,11 @@ using cuda_utils::CudaUniquePtrHost;
 using cuda_utils::makeCudaStream;
 using cuda_utils::StreamUniquePtr;
 
+/**
+ * @brief Represents a detected object.
+ *
+ * This struct stores bounding box coordinates, class id, mask index, score of detected object.
+ */
 struct Object
 {
   int32_t x1;
@@ -52,6 +57,12 @@ struct Object
 using ObjectArray = std::vector<Object>;
 using ObjectArrays = std::vector<ObjectArray>;
 
+/**
+ * @brief Represents a color for a class.
+ *
+ * This struct stores class name, color and label id for a label.
+ * Read from a color map csv file.
+ */
 using LabelColor = struct LabelColor
 {
   std::string class_name;
@@ -80,11 +91,17 @@ public:
 
   ~TrtRTMDet();
 
-  TrtRTMDet(const TrtRTMDet &) = delete;
-  TrtRTMDet & operator=(const TrtRTMDet &) = delete;
-  TrtRTMDet(TrtRTMDet &&) = default;
-  TrtRTMDet & operator=(TrtRTMDet &&) = delete;
-
+  /**
+   * @brief Perform inference.
+   *
+   * This function calls preprocess and feedforward functions to perform inference.
+   *
+   * @param[in] images a vector of input images.
+   * @param[out] objects a vector of detected objects.
+   * @param[out] mask a segmentation mask.
+   * @param[out] class_ids a vector of class ids.
+   * @return true if inference is successful.
+   */
   bool do_inference(
     const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask,
     std::vector<uint8_t> & class_ids);
@@ -92,29 +109,88 @@ public:
   void print_profiling();
 
 private:
+  /**
+   * @brief Preprocess input images on CPU.
+   *
+   * This function takes a vector of input images and preprocesses them on CPU.
+   * The images are resized to the input size of the model, normalized and stored in a buffer.
+   *
+   * @param[in] images a vector of input images.
+   */
   void preprocess(const std::vector<cv::Mat> & images);
 
+  /**
+   * @brief Preprocess input images on GPU.
+   *
+   * This function takes a vector of input images and preprocesses them on GPU.
+   * The images are resized to the input size of the model, normalized and stored in a buffer.
+   *
+   * @param[in] images a vector of input images.
+   */
   void preprocess_gpu(const std::vector<cv::Mat> & images);
 
+  /**
+   * @brief Inference with TensorRT.
+   *
+   * This function performs inference with TensorRT.
+   * The input images are fed to the model and the output is stored in the output buffers.
+   * The output buffers are then post-processed to get the detected objects and segmentation mask.
+   *
+   * @param[in] images a vector of input images.
+   * @param[out] objects a vector of detected objects.
+   * @param[out] mask a segmentation mask.
+   * @param[out] class_ids a vector of class ids.
+   * @return true if inference is successful.
+   */
   bool feedforward(
     const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask,
     std::vector<uint8_t> & class_ids);
 
-  [[nodiscard]] float intersection_over_union(const Object & a, const Object & b) const;
+  /**
+   * @brief Calculate intersection over union.
+   *
+   * This function calculates the intersection over union (IoU) between two bounding boxes.
+   * Input bounding boxes contains the bounding box and class id.
+   *
+   * @param[in] a First object.
+   * @param[in] b Second object.
+   * @return IoU value.
+   */
+  [[nodiscard]] static float intersection_over_union(const Object & a, const Object & b);
 
+  /**
+   * @brief Perform non-maximum suppression.
+   *
+   * This function performs non-maximum suppression (NMS) on the detected objects.
+   * The detected objects are sorted by score and the NMS is applied to remove overlapping boxes.
+   *
+   * Since the model architecture has own NMS layer, this function added for overlapped boxes which
+   * have different class.
+   *
+   * @param[in] input_objects a vector of detected objects.
+   * @param[out] output_objects a vector of detected objects after NMS.
+   */
   void nms_sorted_bboxes(const ObjectArray & input_objects, ObjectArray & output_objects) const;
 
   std::unique_ptr<tensorrt_common::TrtCommon> trt_common_;
 
+  // Host and device pointers for inputs
   std::vector<float> input_h_;
   CudaUniquePtr<float[]> input_d_;
+
+  // Device pointer for outputs
   CudaUniquePtr<float[]> out_dets_d_;
   CudaUniquePtr<int32_t[]> out_labels_d_;
   CudaUniquePtr<float[]> out_masks_d_;
 
+  // Host pointer for outputs
+  std::unique_ptr<float[]> out_dets_h_;
+  std::unique_ptr<int32_t[]> out_labels_h_;
+  std::unique_ptr<float[]> out_masks_h_;
+
   StreamUniquePtr stream_{makeCudaStream()};
 
-  uint32_t max_detections_;
+  // scale factor for input image
   float scale_width_;
   float scale_height_;
 
@@ -127,6 +203,9 @@ private:
   const float mask_threshold_;
   const int batch_size_;
 
+  // maximum number of detections, read from model
+  uint32_t max_detections_;
+
   // flag whether preprocess are performed on GPU
   const bool use_gpu_preprocess_;
   // host buffer for preprocessing on GPU
@@ -136,18 +215,15 @@ private:
   // normalization factor used for preprocessing
   const double norm_factor_;
 
+  // size of input image for preprocessing, check if input image size is changed
   int32_t src_width_;
   int32_t src_height_;
 
+  // mean and std for preprocessing
   const std::vector<float> mean_;
   const std::vector<float> std_;
 
-  // Host pointer for outputs
-  std::unique_ptr<float[]> out_dets_h_;
-  std::unique_ptr<int32_t[]> out_labels_h_;
-  std::unique_ptr<float[]> out_masks_h_;
-
-  // Segmentation
+  // Segmentation map, stores information for each class
   const ColorMap color_map_;
 };
 }  // namespace autoware::tensorrt_rtmdet
