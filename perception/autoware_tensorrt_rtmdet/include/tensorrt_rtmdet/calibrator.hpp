@@ -76,9 +76,7 @@ public:
     const auto input_height = static_cast<uint32_t>(input_dims.d[2]);
     const auto input_width = static_cast<uint32_t>(input_dims.d[3]);
     std::vector<cv::Mat> dst_images;
-    std::vector<float> scales;
     uint32_t volume = batch_size * input_chan * input_height * input_width;
-    scales.clear();
     input_h.resize(volume);
     for (const auto & image : images) {
       cv::Mat dst_image;
@@ -89,29 +87,12 @@ public:
       dst_images.emplace_back(dst_image);
     }
 
-    // NHWC
-    const size_t strides_cv[4] = {
-      static_cast<size_t>(input_width * input_chan * input_height),
-      static_cast<size_t>(input_width * input_chan), static_cast<size_t>(input_chan), 1};
-    // NCHW
-    const size_t strides[4] = {
-      static_cast<size_t>(input_height * input_width * input_chan),
-      static_cast<size_t>(input_height * input_width), static_cast<size_t>(input_width), 1};
-    for (uint32_t n = 0; n < batch_size; n++) {
-      for (uint32_t h = 0; h < input_height; h++) {
-        for (uint32_t w = 0; w < input_width; w++) {
-          for (uint32_t c = 0; c < input_chan; c++) {
-            // NHWC (needs RBswap)
-            const size_t offset_cv =
-              h * strides_cv[1] + w * strides_cv[2] + (input_chan - c - 1) * strides_cv[3];
-            // NCHW
-            const size_t offset = n * strides[0] + (c)*strides[1] + h * strides[2] + w * strides[3];
-            input_h[offset] =
-              (static_cast<float>(dst_images[n].data[offset_cv]) - mean[c]) / std[c];
-          }
-        }
-      }
-    }
+    const auto chw_images = cv::dnn::blobFromImages(
+        dst_images, 1.0, cv::Size(), cv::Scalar(), false, false, CV_32F);
+    const auto data_length = chw_images.total();
+    input_h.reserve(data_length);
+    const auto flat = chw_images.reshape(1, data_length);
+    input_h = chw_images.isContinuous() ? flat : flat.clone();
     return input_h;
   }
 
