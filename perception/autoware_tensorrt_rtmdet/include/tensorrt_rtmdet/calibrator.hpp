@@ -87,8 +87,8 @@ public:
       dst_images.emplace_back(dst_image);
     }
 
-    const auto chw_images = cv::dnn::blobFromImages(
-        dst_images, 1.0, cv::Size(), cv::Scalar(), false, false, CV_32F);
+    const auto chw_images =
+      cv::dnn::blobFromImages(dst_images, 1.0, cv::Size(), cv::Scalar(), false, false, CV_32F);
     const auto data_length = chw_images.total();
     input_h.reserve(data_length);
     const auto flat = chw_images.reshape(1, data_length);
