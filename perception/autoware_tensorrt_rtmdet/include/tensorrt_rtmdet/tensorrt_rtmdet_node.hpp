@@ -49,7 +49,8 @@ public:
    * ```
    * unique_id, class_name, r, g, b, label_id
    * ```
-   * where the label_id represents the class ID of the object, used to process the outputs in Autoware.
+   * where the label_id represents the class ID of the object, used to process the outputs in
+   * Autoware.
    *
    * @param[in] color_map_path The path to the color map file.
    * @return A color map structure with the color information.
@@ -59,7 +60,8 @@ public:
   /**
    * @brief Colorize the output mask.
    *
-   * Take the output mask which includes the class ID of the objects and convert it to a colorized mask.
+   * Take the output mask which includes the class ID of the objects and convert it to a colorized
+   * mask.
    *
    * @param[in] color_map The color map structure.
    * @param[in] mask The output mask.
