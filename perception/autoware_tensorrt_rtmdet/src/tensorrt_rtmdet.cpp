@@ -14,8 +14,6 @@
 
 #include "tensorrt_rtmdet/tensorrt_rtmdet.hpp"
 
-#include "trt_batched_nms/batched_nms/trt_batched_nms.hpp"
-
 #include <cmath>
 #include <fstream>
 #include <functional>

@@ -36,28 +36,6 @@ ament_target_dependencies(${PROJECT_NAME}
 )
 
 if(CMAKE_CUDA_COMPILER)
-  # trt_batched_nms
-  find_library(NVINFER_LIB nvinfer PATHS ${TENSORRT_ROOT}/lib)
-  find_library(NVPLUGIN_LIB nvinfer_plugin PATHS ${TENSORRT_ROOT}/lib)
-
-  include_directories(
-          include
-          include/tensorrt_rtmdet/trt_batched_nms
-  )
-
-  cuda_add_library(${PROJECT_NAME}_plugin SHARED
-          src/trt_batched_nms/common_impl/nms/batched_nms_kernel.cpp
-          src/trt_batched_nms/common_impl/nms/kernel.cu
-          src/trt_batched_nms/common_impl/nms/allClassNMS.cu
-          src/trt_batched_nms/common_impl/nms/gatherNMSOutputs.cu
-          src/trt_batched_nms/common_impl/nms/permuteData.cu
-          src/trt_batched_nms/common_impl/nms/sortScoresPerClass.cu
-          src/trt_batched_nms/common_impl/nms/sortScoresPerImage.cu
-          src/trt_batched_nms/batched_nms/trt_batched_nms.cpp
-  )
-
-  target_link_libraries(${PROJECT_NAME}_plugin ${CUDA_LIBRARIES} ${NVINFER_LIB} ${NVPLUGIN_LIB} ${OpenCV_LIBS} dl)
-
   # preprocess
   cuda_add_library(${PROJECT_NAME}_gpu_preprocess
           SHARED
@@ -72,7 +50,6 @@ if(CMAKE_CUDA_COMPILER)
   target_link_libraries(${PROJECT_NAME}
           ${tensorrt_common_LIBRARIES}
           ${PROJECT_NAME}_gpu_preprocess
-          ${PROJECT_NAME}_plugin
   )
 
 else()

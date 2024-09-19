@@ -8,7 +8,7 @@
 
     model_path: "$(var data_path)/tensorrt_rtmdet/$(var model_name).onnx" # Path to the ONNX model file
     color_map_path: "$(var data_path)/tensorrt_rtmdet/color_map.csv" # Path to the CSV file containing color mappings for classes, used for mapping class IDs to pixel values in the mask image
-    plugin_paths: [ "./build/autoware_tensorrt_rtmdet/libautoware_tensorrt_rtmdet_plugin.so" ] # List of paths to the TensorRT plugin shared libraries, needed for custom layers or operations.
+    plugin_paths: [ "$(find-pkg-prefix trt_batched_nms)/lib/libtrt_batched_nms_plugin.so" ] # List of paths to the TensorRT plugin shared libraries, needed for custom layers or operations.
     input_image_mean: [ 103.53, 116.28, 123.675 ] # Mean values for input image, used for normalization during preprocessing.
     input_image_std_dev: [ 57.375, 57.12, 58.395 ] # Standard deviation values for input image, used for normalization during preprocessing.
     score_threshold: 0.3 # The confidence score threshold, detections below this value will be ignored.
