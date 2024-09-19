@@ -13,37 +13,41 @@
 // limitations under the License.
 
 #include "tensorrt_rtmdet/tensorrt_rtmdet.hpp"
+
 #include "trt_batched_nms/batched_nms/trt_batched_nms.hpp"
 
 #include <cmath>
 #include <fstream>
 #include <functional>
-#include <numeric>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <vector>
 
 std::vector<std::string> load_calibration_image_list(const std::string & filename)
 {
-    if (filename.empty()) {
-        RCLCPP_ERROR(rclcpp::get_logger("autoware_tensorrt_rtmdet"), "Calibration image list is empty. Please set calibration_image_list_path.");
-        return {};
-    }
-    if (!std::experimental::filesystem::exists(std::experimental::filesystem::path(filename))) {
-        RCLCPP_ERROR(rclcpp::get_logger("autoware_tensorrt_rtmdet"), "failed to open %s", filename.c_str());
-        return {};
-    }
+  if (filename.empty()) {
+    RCLCPP_ERROR(
+      rclcpp::get_logger("autoware_tensorrt_rtmdet"),
+      "Calibration image list is empty. Please set calibration_image_list_path.");
+    return {};
+  }
+  if (!std::experimental::filesystem::exists(std::experimental::filesystem::path(filename))) {
+    RCLCPP_ERROR(
+      rclcpp::get_logger("autoware_tensorrt_rtmdet"), "failed to open %s", filename.c_str());
+    return {};
+  }
 
-    std::ifstream txt_file(filename);
+  std::ifstream txt_file(filename);
 
-    std::string line;
-    std::vector<std::string> image_list;
-    while (std::getline(txt_file, line)) {
-        image_list.push_back(line);
-    }
+  std::string line;
+  std::vector<std::string> image_list;
+  while (std::getline(txt_file, line)) {
+    image_list.push_back(line);
+  }
 
-    txt_file.close();
-    return image_list;
+  txt_file.close();
+  return image_list;
 }
 
 namespace autoware::tensorrt_rtmdet
@@ -51,11 +55,11 @@ namespace autoware::tensorrt_rtmdet
 TrtRTMDet::TrtRTMDet(
   const std::string & model_path, const std::string & precision, const ColorMap & color_map,
   const float score_threshold, const float nms_threshold, const float mask_threshold,
-  const tensorrt_common::BuildConfig& build_config, const bool use_gpu_preprocess,
-  const std::string& calibration_image_list_path, const double norm_factor, const std::vector<float>& mean,
-  const std::vector<float>& std, [[maybe_unused]] const std::string & cache_dir,
-  const tensorrt_common::BatchConfig & batch_config, const size_t max_workspace_size,
-  const std::vector<std::string> & plugin_paths)
+  const tensorrt_common::BuildConfig & build_config, const bool use_gpu_preprocess,
+  const std::string & calibration_image_list_path, const double norm_factor,
+  const std::vector<float> & mean, const std::vector<float> & std,
+  [[maybe_unused]] const std::string & cache_dir, const tensorrt_common::BatchConfig & batch_config,
+  const size_t max_workspace_size, const std::vector<std::string> & plugin_paths)
 : score_threshold_{score_threshold},
   nms_threshold_{nms_threshold},
   mask_threshold_{mask_threshold},
@@ -72,7 +76,8 @@ TrtRTMDet::TrtRTMDet(
   scale_height_ = 0;
 
   if (precision == "int8") {
-    std::vector<std::string> calibration_images = load_calibration_image_list(calibration_image_list_path);
+    std::vector<std::string> calibration_images =
+      load_calibration_image_list(calibration_image_list_path);
 
     int max_batch_size = batch_config.at(2);
     nvinfer1::Dims input_dims = tensorrt_common::get_input_dims(model_path);

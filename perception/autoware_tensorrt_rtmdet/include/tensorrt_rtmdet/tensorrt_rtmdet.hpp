@@ -68,10 +68,11 @@ public:
     const std::string & model_path, const std::string & precision, const ColorMap & color_map,
     const float score_threshold = 0.3, const float nms_threshold = 0.7,
     const float mask_threshold = 200.0,
-    const tensorrt_common::BuildConfig& build_config = tensorrt_common::BuildConfig(),
-    const bool use_gpu_preprocess = false, const std::string& calibration_image_list_file = std::string(),
-    const double norm_factor = 1.0, const std::vector<float>& mean = {103.53, 116.28, 123.675},
-    const std::vector<float>& std = {57.375, 57.12, 58.395},
+    const tensorrt_common::BuildConfig & build_config = tensorrt_common::BuildConfig(),
+    const bool use_gpu_preprocess = false,
+    const std::string & calibration_image_list_file = std::string(), const double norm_factor = 1.0,
+    const std::vector<float> & mean = {103.53, 116.28, 123.675},
+    const std::vector<float> & std = {57.375, 57.12, 58.395},
     [[maybe_unused]] const std::string & cache_dir = "",
     const tensorrt_common::BatchConfig & batch_config = {1, 1, 1},
     const size_t max_workspace_size = (1u << 30u),
@@ -79,10 +80,10 @@ public:
 
   ~TrtRTMDet();
 
-  TrtRTMDet(const TrtRTMDet&) = delete;
-  TrtRTMDet& operator=(const TrtRTMDet&) = delete;
-  TrtRTMDet(TrtRTMDet&&) = default;
-  TrtRTMDet& operator=(TrtRTMDet&&) = delete;
+  TrtRTMDet(const TrtRTMDet &) = delete;
+  TrtRTMDet & operator=(const TrtRTMDet &) = delete;
+  TrtRTMDet(TrtRTMDet &&) = default;
+  TrtRTMDet & operator=(TrtRTMDet &&) = delete;
 
   bool do_inference(
     const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask,

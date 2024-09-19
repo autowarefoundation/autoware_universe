@@ -44,11 +44,12 @@ public:
 
   ColorMap read_color_map_file(const std::string & color_map_path);
 
-  static void get_colorized_mask(const ColorMap & color_map, const cv::Mat & mask, cv::Mat & color_mask);
+  static void get_colorized_mask(
+    const ColorMap & color_map, const cv::Mat & mask, cv::Mat & color_mask);
 
   static void draw_debug_image(
-            cv::Mat & image, const cv::Mat & mask, const ObjectArrays & objects,
-            const ColorMap & color_map);
+    cv::Mat & image, const cv::Mat & mask, const ObjectArrays & objects,
+    const ColorMap & color_map);
 
 private:
   void on_connect();

@@ -149,9 +149,9 @@ void TrtRTMDetNode::on_image(const sensor_msgs::msg::Image::ConstSharedPtr msg)
     // Apply erosion to mask
     {
       int erosion_size = 6;
-      cv::Mat element = cv::getStructuringElement(cv::MORPH_RECT,
-                                                  cv::Size(2 * erosion_size + 1, 2 * erosion_size + 1),
-                                                  cv::Point(erosion_size, erosion_size));
+      cv::Mat element = cv::getStructuringElement(
+        cv::MORPH_RECT, cv::Size(2 * erosion_size + 1, 2 * erosion_size + 1),
+        cv::Point(erosion_size, erosion_size));
       cv::erode(mask, mask, element);
     }
     sensor_msgs::msg::Image::SharedPtr mask_image =
@@ -213,51 +213,50 @@ ColorMap TrtRTMDetNode::read_color_map_file(const std::string & color_map_path)
 {
   ColorMap color_map;
 
-    if (!std::experimental::filesystem::exists(std::experimental::filesystem::path(color_map_path))) {
-        RCLCPP_ERROR(this->get_logger(), "failed to open %s", color_map_path.c_str());
-        assert(0);
+  if (!std::experimental::filesystem::exists(std::experimental::filesystem::path(color_map_path))) {
+    RCLCPP_ERROR(this->get_logger(), "failed to open %s", color_map_path.c_str());
+    assert(0);
+  }
+
+  std::ifstream file(color_map_path);
+  std::string line;
+
+  // Skip the first line since it is the header
+  std::getline(file, line);
+
+  while (std::getline(file, line)) {
+    if (line.empty()) {
+      continue;
     }
 
-    std::ifstream file(color_map_path);
-    std::string line;
+    auto split_string = [](std::string & str, char delimiter) -> std::vector<std::string> {
+      std::vector<std::string> result;
+      std::stringstream ss(str);
+      std::string item;
 
-    // Skip the first line since it is the header
-    std::getline(file, line);
+      while (std::getline(ss, item, delimiter)) {
+        result.push_back(item);
+      }
 
-    while (std::getline(file, line)) {
-        if (line.empty()) {
-            continue;
-        }
+      return result;
+    };
+    std::vector<std::string> tokens = split_string(line, ',');
 
-        auto split_string = [](std::string &str, char delimiter) -> std::vector<std::string> {
-            std::vector<std::string> result;
-            std::stringstream ss(str);
-            std::string item;
+    LabelColor label_color;
+    label_color.class_name = tokens.at(1);
+    label_color.color[0] = std::stoi(tokens.at(2));
+    label_color.color[1] = std::stoi(tokens.at(3));
+    label_color.color[2] = std::stoi(tokens.at(4));
+    label_color.label_id = std::stoi(tokens.at(5));
+    color_map[std::stoi(tokens.at(0))] = label_color;
+  }
 
-            while (std::getline(ss, item, delimiter)) {
-                result.push_back(item);
-            }
-
-            return result;
-        };
-        std::vector<std::string> tokens = split_string(line, ',');
-
-        LabelColor label_color;
-        label_color.class_name = tokens.at(1);
-        label_color.color[0] = std::stoi(tokens.at(2));
-        label_color.color[1] = std::stoi(tokens.at(3));
-        label_color.color[2] = std::stoi(tokens.at(4));
-        label_color.label_id = std::stoi(tokens.at(5));
-        color_map[std::stoi(tokens.at(0))] = label_color;
-    }
-
-    return color_map;
+  return color_map;
 }
 
 void TrtRTMDetNode::draw_debug_image(
   cv::Mat & image, [[maybe_unused]] const cv::Mat & mask,
-  const tensorrt_rtmdet::ObjectArrays & objects,
-  const tensorrt_rtmdet::ColorMap & color_map)
+  const tensorrt_rtmdet::ObjectArrays & objects, const tensorrt_rtmdet::ColorMap & color_map)
 {
   // TODO(StepTurtle): add mask to debug image
 
@@ -276,19 +275,19 @@ void TrtRTMDetNode::draw_debug_image(
 }
 
 void TrtRTMDetNode::get_colorized_mask(
-        const ColorMap & color_map, const cv::Mat & mask, cv::Mat & color_mask)
+  const ColorMap & color_map, const cv::Mat & mask, cv::Mat & color_mask)
 {
-    int width = mask.cols;
-    int height = mask.rows;
-    if ((color_mask.cols != mask.cols) || (color_mask.rows != mask.rows)) {
-        throw std::runtime_error("input and output image have difference size.");
+  int width = mask.cols;
+  int height = mask.rows;
+  if ((color_mask.cols != mask.cols) || (color_mask.rows != mask.rows)) {
+    throw std::runtime_error("input and output image have difference size.");
+  }
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      unsigned char id = mask.at<unsigned char>(y, x);
+      color_mask.at<cv::Vec3b>(y, x) = color_map.at(id).color;
     }
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            unsigned char id = mask.at<unsigned char>(y, x);
-            color_mask.at<cv::Vec3b>(y, x) = color_map.at(id).color;
-        }
-    }
+  }
 }
 }  // namespace autoware::tensorrt_rtmdet
 
