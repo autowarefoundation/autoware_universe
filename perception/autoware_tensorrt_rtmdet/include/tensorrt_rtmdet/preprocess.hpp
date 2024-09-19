@@ -105,7 +105,7 @@ extern void resize_bilinear_letterbox_gpu(
 
 /**
  * @brief Optimized preprocessing including resize, letterbox, nhwc2nchw, toFloat and normalization
- * for YOLOX on gpus
+ * for RTMDet on gpus
  * @param[out] dst processed image
  * @param[in] src image
  * @param[in] d_w width for output
@@ -123,7 +123,7 @@ extern void resize_bilinear_letterbox_nhwc_to_nchw32_gpu(
 
 /**
  * @brief Optimized preprocessing including resize, letterbox, nhwc2nchw, toFloat and normalization
- * with batching for YOLOX on gpus
+ * with batching for RTMDet on gpus
  * @param[out] dst processed image
  * @param[in] src image
  * @param[in] d_w width for output
@@ -139,46 +139,6 @@ extern void resize_bilinear_letterbox_nhwc_to_nchw32_gpu(
 extern void resize_bilinear_letterbox_nhwc_to_nchw32_batch_gpu(
   float * dst, unsigned char * src, int d_w, int d_h, int d_c, int s_w, int s_h, int s_c, int batch,
   float norm, cudaStream_t stream);
-
-/**
- * @brief Optimized preprocessing including crop, resize, letterbox, nhwc2nchw, toFloat and
- * normalization with batching for YOLOX on gpus
- * @param[out] dst processed image
- * @param[in] src image
- * @param[in] d_w width for output
- * @param[in] d_h height for output
- * @param[in] d_c channel for output
- * @param[in] s_w width for input
- * @param[in] s_h height for input
- * @param[in] s_c channel for input
- * @param[in] d_roi regions of interest for cropping
- * @param[in] batch batch size
- * @param[in] norm normalization
- * @param[in] stream cuda stream
- */
-extern void crop_resize_bilinear_letterbox_nhwc_to_nchw32_batch_gpu(
-  float * dst, unsigned char * src, int d_w, int d_h, int d_c, Roi * d_roi, int s_w, int s_h,
-  int s_c, int batch, float norm, cudaStream_t stream);
-
-/**
- * @brief Optimized multi-scale preprocessing including crop, resize, letterbox, nhwc2nchw, toFloat
- * and normalization with batching for YOLOX on gpus
- * @param[out] dst processed image
- * @param[in] src image
- * @param[in] d_w width for output
- * @param[in] d_h height for output
- * @param[in] d_c channel for output
- * @param[in] s_w width for input
- * @param[in] s_h height for input
- * @param[in] s_c channel for input
- * @param[in] d_roi regions of interest for cropping
- * @param[in] batch batch size
- * @param[in] norm normalization
- * @param[in] stream cuda stream
- */
-extern void multi_scale_resize_bilinear_letterbox_nhwc_to_nchw32_batch_gpu(
-  float * dst, unsigned char * src, int d_w, int d_h, int d_c, Roi * d_roi, int s_w, int s_h,
-  int s_c, int batch, float norm, cudaStream_t stream);
 
 /**
  * @brief Argmax on GPU

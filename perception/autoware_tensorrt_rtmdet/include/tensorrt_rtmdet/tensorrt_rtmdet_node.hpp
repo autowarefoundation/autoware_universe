@@ -42,16 +42,18 @@ class TrtRTMDetNode : public rclcpp::Node
 public:
   explicit TrtRTMDetNode(const rclcpp::NodeOptions & node_options);
 
+  ColorMap read_color_map_file(const std::string & color_map_path);
+
+  static void get_colorized_mask(const ColorMap & color_map, const cv::Mat & mask, cv::Mat & color_mask);
+
+  static void draw_debug_image(
+            cv::Mat & image, const cv::Mat & mask, const ObjectArrays & objects,
+            const ColorMap & color_map);
+
 private:
-  void onConnect();
+  void on_connect();
 
-  void onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg);
-
-  ColorMap readLabelFile(const std::string & label_path);
-
-  void drawDebugImage(
-    cv::Mat & image, const cv::Mat & mask, const ObjectArrays & objects,
-    const ColorMap & color_map);
+  void on_image(const sensor_msgs::msg::Image::ConstSharedPtr msg);
 
   std::unique_ptr<tensorrt_rtmdet::TrtRTMDet> trt_rtmdet_;
 

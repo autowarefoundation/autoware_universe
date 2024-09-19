@@ -55,16 +55,16 @@ TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
   std::vector<std::string> plugin_paths =
     declare_parameter<std::vector<std::string>>("plugin_paths");
 
-  color_map_ = readLabelFile(color_map_path);
+  color_map_ = read_color_map_file(color_map_path);
 
   tensorrt_common::BuildConfig build_config(
     "Entropy", dla_core_id, quantize_first_layer, quantize_last_layer, profile_per_layer,
     clip_value);
 
   const double norm_factor = 1.0;
-  const std::string cache_dir = "";
+  const std::string cache_dir;
   const tensorrt_common::BatchConfig batch_config{1, 1, 1};
-  const size_t max_workspace_size = (1 << 30);
+  const size_t max_workspace_size = (1u << 30u);
 
   mean_ = std::vector<float>(mean.begin(), mean.end());
   std_ = std::vector<float>(std.begin(), std.end());
@@ -75,7 +75,7 @@ TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
     batch_config, max_workspace_size, plugin_paths);
 
   timer_ =
-    rclcpp::create_timer(this, get_clock(), 100ms, std::bind(&TrtRTMDetNode::onConnect, this));
+    rclcpp::create_timer(this, get_clock(), 100ms, std::bind(&TrtRTMDetNode::on_connect, this));
 
   objects_pub_ = this->create_publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>(
     "~/out/objects", 1);
@@ -91,7 +91,7 @@ TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
   }
 }
 
-void TrtRTMDetNode::onConnect()
+void TrtRTMDetNode::on_connect()
 {
   using std::placeholders::_1;
   if (
@@ -102,18 +102,18 @@ void TrtRTMDetNode::onConnect()
     image_sub_.shutdown();
   } else if (!image_sub_) {
     image_sub_ = image_transport::create_subscription(
-      this, "~/in/image", std::bind(&TrtRTMDetNode::onImage, this, _1), "raw",
+      this, "~/in/image", std::bind(&TrtRTMDetNode::on_image, this, _1), "raw",
       rmw_qos_profile_sensor_data);
   }
 }
 
-void TrtRTMDetNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
+void TrtRTMDetNode::on_image(const sensor_msgs::msg::Image::ConstSharedPtr msg)
 {
   stop_watch_ptr_->toc("processing_time", true);
 
   cv_bridge::CvImagePtr in_image_ptr;
   try {
-    in_image_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+    in_image_ptr = cv_bridge::toCvCopy(msg, msg->encoding);
   } catch (cv_bridge::Exception & e) {
     RCLCPP_ERROR(this->get_logger(), "cv_bridge exception: %s", e.what());
     return;
@@ -122,7 +122,7 @@ void TrtRTMDetNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
   tensorrt_rtmdet::ObjectArrays objects;
   cv::Mat mask;
   std::vector<uint8_t> class_ids;
-  if (!trt_rtmdet_->doInference({in_image_ptr->image}, objects, mask, class_ids)) {
+  if (!trt_rtmdet_->do_inference({in_image_ptr->image}, objects, mask, class_ids)) {
     RCLCPP_WARN(this->get_logger(), "Fail to inference");
     return;
   }
@@ -146,12 +146,20 @@ void TrtRTMDetNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
   objects_pub_->publish(detected_objects_with_feature);
 
   if (!mask.empty() && !class_ids.empty()) {
+    // Apply erosion to mask
+    {
+      int erosion_size = 6;
+      cv::Mat element = cv::getStructuringElement(cv::MORPH_RECT,
+                                                  cv::Size(2 * erosion_size + 1, 2 * erosion_size + 1),
+                                                  cv::Point(erosion_size, erosion_size));
+      cv::erode(mask, mask, element);
+    }
     sensor_msgs::msg::Image::SharedPtr mask_image =
       cv_bridge::CvImage(std_msgs::msg::Header(), sensor_msgs::image_encodings::MONO8, mask)
         .toImageMsg();
     autoware_internal_msgs::msg::SegmentationConfig mask_config;
     std::vector<autoware_perception_msgs::msg::ObjectClassification> classification;
-    for (unsigned char class_id : class_ids) {
+    for (uint8_t class_id : class_ids) {
       autoware_perception_msgs::msg::ObjectClassification object_classification;
       object_classification.label = class_id;
       object_classification.probability = 1.0;
@@ -167,7 +175,7 @@ void TrtRTMDetNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
 
   if (is_publish_color_mask_) {
     cv::Mat color_mask = cv::Mat::zeros(mask.rows, mask.cols, CV_8UC3);
-    trt_rtmdet_->getColorizedMask(trt_rtmdet_->getColorMap(), mask, color_mask);
+    get_colorized_mask(color_map_, mask, color_mask);
     sensor_msgs::msg::Image::SharedPtr color_mask_msg =
       cv_bridge::CvImage(std_msgs::msg::Header(), sensor_msgs::image_encodings::BGR8, color_mask)
         .toImageMsg();
@@ -177,7 +185,7 @@ void TrtRTMDetNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
 
   if (is_publish_debug_image_) {
     cv::Mat debug_image = in_image_ptr->image.clone();
-    drawDebugImage(debug_image, mask, objects, color_map_);
+    draw_debug_image(debug_image, mask, objects, color_map_);
     sensor_msgs::msg::Image::SharedPtr debug_image_msg =
       cv_bridge::CvImage(std_msgs::msg::Header(), sensor_msgs::image_encodings::BGR8, debug_image)
         .toImageMsg();
@@ -201,79 +209,86 @@ void TrtRTMDetNode::onImage(const sensor_msgs::msg::Image::ConstSharedPtr msg)
   }
 }
 
-ColorMap TrtRTMDetNode::readLabelFile(const std::string & label_path)
+ColorMap TrtRTMDetNode::read_color_map_file(const std::string & color_map_path)
 {
   ColorMap color_map;
 
-  std::vector<std::string> color_list;
-  {
-    assert(fileExists(label_path, true));
-
-    std::ifstream f(label_path);
-    if (!f) {
-      RCLCPP_ERROR(this->get_logger(), "failed to open %s", label_path.c_str());
-      assert(0);
+    if (!std::experimental::filesystem::exists(std::experimental::filesystem::path(color_map_path))) {
+        RCLCPP_ERROR(this->get_logger(), "failed to open %s", color_map_path.c_str());
+        assert(0);
     }
 
+    std::ifstream file(color_map_path);
     std::string line;
-    while (std::getline(f, line)) {
-      if (line.empty()) {
-        continue;
-      } else {
-        line.erase(
-          line.begin(), find_if(line.begin(), line.end(), [](int ch) { return !isspace(ch); }));
-        line.erase(
-          find_if(line.rbegin(), line.rend(), [](int ch) { return !isspace(ch); }).base(),
-          line.end());
-        color_list.push_back(line);
-      }
+
+    // Skip the first line since it is the header
+    std::getline(file, line);
+
+    while (std::getline(file, line)) {
+        if (line.empty()) {
+            continue;
+        }
+
+        auto split_string = [](std::string &str, char delimiter) -> std::vector<std::string> {
+            std::vector<std::string> result;
+            std::stringstream ss(str);
+            std::string item;
+
+            while (std::getline(ss, item, delimiter)) {
+                result.push_back(item);
+            }
+
+            return result;
+        };
+        std::vector<std::string> tokens = split_string(line, ',');
+
+        LabelColor label_color;
+        label_color.class_name = tokens.at(1);
+        label_color.color[0] = std::stoi(tokens.at(2));
+        label_color.color[1] = std::stoi(tokens.at(3));
+        label_color.color[2] = std::stoi(tokens.at(4));
+        label_color.label_id = std::stoi(tokens.at(5));
+        color_map[std::stoi(tokens.at(0))] = label_color;
     }
-  }
 
-  for (int i = 1; i < static_cast<int>(color_list.size()); i++) {
-    auto splitString = [](const std::string & str, char delimiter) -> std::vector<std::string> {
-      std::vector<std::string> result;
-      std::stringstream ss(str);
-      std::string item;
-
-      while (std::getline(ss, item, delimiter)) {
-        result.push_back(item);
-      }
-
-      return result;
-    };
-    std::vector<std::string> tokens = splitString(color_list.at(i), ',');
-
-    LabelColor label_color;
-    label_color.class_name = tokens.at(1);
-    label_color.color[0] = std::stoi(tokens.at(2));
-    label_color.color[1] = std::stoi(tokens.at(3));
-    label_color.color[2] = std::stoi(tokens.at(4));
-    label_color.label_id = std::stoi(tokens.at(5));
-    color_map[std::stoi(tokens.at(0))] = label_color;
-  }
-
-  return color_map;
+    return color_map;
 }
 
-void TrtRTMDetNode::drawDebugImage(
+void TrtRTMDetNode::draw_debug_image(
   cv::Mat & image, [[maybe_unused]] const cv::Mat & mask,
   const tensorrt_rtmdet::ObjectArrays & objects,
-  [[maybe_unused]] const tensorrt_rtmdet::ColorMap & color_map)
+  const tensorrt_rtmdet::ColorMap & color_map)
 {
   // TODO(StepTurtle): add mask to debug image
 
   for (const auto & object : objects.at(0)) {
+    // Draw the bounding box
     cv::rectangle(
       image, cv::Point(static_cast<int>(object.x1), static_cast<int>(object.y1)),
       cv::Point(static_cast<int>(object.x2), static_cast<int>(object.y2)),
-      color_map_[object.class_id].color, 2);
+      color_map.at(object.class_id).color, 2);
     // Write the class name
     cv::putText(
-      image, color_map_[object.class_id].class_name,
+      image, color_map.at(object.class_id).class_name,
       cv::Point(static_cast<int>(object.x1), static_cast<int>(object.y1)), cv::FONT_HERSHEY_SIMPLEX,
-      1, color_map_[object.class_id].color, 2);
+      1, color_map.at(object.class_id).color, 2);
   }
+}
+
+void TrtRTMDetNode::get_colorized_mask(
+        const ColorMap & color_map, const cv::Mat & mask, cv::Mat & color_mask)
+{
+    int width = mask.cols;
+    int height = mask.rows;
+    if ((color_mask.cols != mask.cols) || (color_mask.rows != mask.rows)) {
+        throw std::runtime_error("input and output image have difference size.");
+    }
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            unsigned char id = mask.at<unsigned char>(y, x);
+            color_mask.at<cv::Vec3b>(y, x) = color_map.at(id).color;
+        }
+    }
 }
 }  // namespace autoware::tensorrt_rtmdet
 
