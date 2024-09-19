@@ -82,6 +82,16 @@ public:
     cv::Mat & image, const cv::Mat & mask, const ObjectArrays & objects,
     const ColorMap & color_map);
 
+  /**
+   *  @brief Apply erosion to the mask.
+   *
+   *  With using this function, you can apply erosion to the mask and It overflowing the border.
+   *
+   * @param[in,out] mask
+   * @param[in] erosion_size
+   */
+  void apply_erosion(cv::Mat & mask, const int erosion_size);
+
 private:
   /**
    * @brief Callback function to check are there any subscribers.
@@ -116,6 +126,9 @@ private:
 
   std::vector<float> mean_;
   std::vector<float> std_;
+
+  // If true, apply erosion to the output mask.
+  bool is_apply_erosion_;
 };
 }  // namespace autoware::tensorrt_rtmdet
 
