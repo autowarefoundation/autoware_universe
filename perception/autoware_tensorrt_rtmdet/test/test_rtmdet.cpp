@@ -248,7 +248,7 @@ TEST_F(TrtRTMDetTest, TestNmsSortedBboxes)
   EXPECT_EQ(output_objects.at(0).y1, 10);
   EXPECT_EQ(output_objects.at(0).y2, 50);
   EXPECT_EQ(output_objects.at(0).class_id, 0);
-  EXPECT_EQ(output_objects.at(0).score, float(0.8));
+  EXPECT_EQ(output_objects.at(0).score, static_cast<float>(0.8));
 }
 
 TEST_F(TrtRTMDetTest, TestPluginLoad)

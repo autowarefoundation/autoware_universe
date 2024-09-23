@@ -60,7 +60,7 @@ TrtRTMDet::TrtRTMDet(
   const std::string & model_path, const std::string & precision, const ColorMap & color_map,
   const float score_threshold, const float nms_threshold, const float mask_threshold,
   const tensorrt_common::BuildConfig & build_config, const bool use_gpu_preprocess,
-  const std::string & calibration_image_list_path, const double norm_factor,
+  const std::string & calibration_image_list_file_path, const double norm_factor,
   const std::vector<float> & mean, const std::vector<float> & std,
   [[maybe_unused]] const std::string & cache_dir, const tensorrt_common::BatchConfig & batch_config,
   const size_t max_workspace_size, const std::vector<std::string> & plugin_paths)
@@ -81,7 +81,7 @@ TrtRTMDet::TrtRTMDet(
 
   if (precision == "int8") {
     std::vector<std::string> calibration_images =
-      load_calibration_image_list(calibration_image_list_path);
+      load_calibration_image_list(calibration_image_list_file_path);
 
     int max_batch_size = batch_config.at(2);
     nvinfer1::Dims input_dims = tensorrt_common::get_input_dims(model_path);
@@ -132,7 +132,7 @@ TrtRTMDet::TrtRTMDet(
     batch_size_ * max_detections_ * model_input_width_ * model_input_height_);
 }
 
-TrtRTMDet::~TrtRTMDet()
+TrtRTMDet::~TrtRTMDet() noexcept
 {
   if (use_gpu_preprocess_) {
     if (image_buf_h_) {
@@ -154,7 +154,7 @@ void TrtRTMDet::preprocess_gpu(const std::vector<cv::Mat> & images)
   const auto batch_size = images.size();
   auto input_dims = trt_common_->getBindingDimensions(0);
 
-  input_dims.d[0] = batch_size;
+  input_dims.d[0] = static_cast<int32_t>(batch_size);
   for (const auto & image : images) {
     // if size of source input has been changed...
     int width = image.cols;
@@ -183,8 +183,8 @@ void TrtRTMDet::preprocess_gpu(const std::vector<cv::Mat> & images)
   int b = 0;
   for (const auto & image : images) {
     if (!image_buf_h_) {
-      scale_width_ = input_width / image.cols;
-      scale_height_ = input_height / image.rows;
+      scale_width_ = input_width / static_cast<float>(image.cols);
+      scale_height_ = input_height / static_cast<float>(image.rows);
       image_buf_h_ = cuda_utils::make_unique_host<unsigned char[]>(
         image.cols * image.rows * 3 * batch_size, cudaHostAllocWriteCombined);
       image_buf_d_ =
@@ -204,25 +204,29 @@ void TrtRTMDet::preprocess_gpu(const std::vector<cv::Mat> & images)
     cudaMemcpyHostToDevice, *stream_));
   // Preprocess on GPU
   resize_bilinear_letterbox_nhwc_to_nchw32_batch_gpu(
-    input_d_.get(), image_buf_d_.get(), input_width, input_height, 3, images[0].cols,
-    images[0].rows, 3, batch_size, static_cast<float>(norm_factor_), *stream_);
+    input_d_.get(), image_buf_d_.get(), static_cast<int32_t>(input_width),
+    static_cast<int32_t>(input_height), 3, images[0].cols, images[0].rows, 3,
+    static_cast<int32_t>(batch_size), static_cast<float>(norm_factor_), *stream_);
 }
 
 void TrtRTMDet::preprocess(const std::vector<cv::Mat> & images)
 {
   const auto batch_size = images.size();
   auto input_dims = trt_common_->getBindingDimensions(0);
-  input_dims.d[0] = batch_size;
+  input_dims.d[0] = static_cast<int32_t>(batch_size);
   trt_common_->setBindingDimensions(0, input_dims);
 
   std::vector<cv::Mat> dst_images;
   for (const auto & image : images) {
     if (scale_width_ == -1 || scale_height_ == -1) {
-      scale_width_ = static_cast<float>(model_input_width_) / image.cols;
-      scale_height_ = static_cast<float>(model_input_height_) / image.rows;
+      scale_width_ = static_cast<float>(model_input_width_) / static_cast<float>(image.cols);
+      scale_height_ = static_cast<float>(model_input_height_) / static_cast<float>(image.rows);
     }
     cv::Mat dst_image;
-    cv::resize(image, dst_image, cv::Size(model_input_width_, model_input_height_));
+    cv::resize(
+      image, dst_image,
+      cv::Size(
+        static_cast<int32_t>(model_input_width_), static_cast<int32_t>(model_input_height_)));
     dst_image.convertTo(dst_image, CV_32F);
     dst_image -= cv::Scalar(103.53, 116.28, 123.675);
     dst_image /= cv::Scalar(57.375, 57.12, 58.395);
@@ -234,7 +238,7 @@ void TrtRTMDet::preprocess(const std::vector<cv::Mat> & images)
 
   const auto data_length = chw_images.total();
   input_h_.reserve(data_length);
-  const auto flat = chw_images.reshape(1, data_length);
+  const auto flat = chw_images.reshape(1, static_cast<int32_t>(data_length));
   input_h_ = chw_images.isContinuous() ? flat : flat.clone();
   CHECK_CUDA_ERROR(cudaMemcpy(
     input_d_.get(), input_h_.data(), input_h_.size() * sizeof(float), cudaMemcpyHostToDevice));
@@ -295,10 +299,14 @@ bool TrtRTMDet::feedforward(
       Object object{};
       object.mask_index = index;
       object.class_id = out_labels_h_[(batch * max_detections_) + index];
-      object.x1 = out_dets_h_[(batch * max_detections_ * 5) + ((5 * index) + 0)] / scale_width_;
-      object.y1 = out_dets_h_[(batch * max_detections_ * 5) + ((5 * index) + 1)] / scale_height_;
-      object.x2 = out_dets_h_[(batch * max_detections_ * 5) + ((5 * index) + 2)] / scale_width_;
-      object.y2 = out_dets_h_[(batch * max_detections_ * 5) + ((5 * index) + 3)] / scale_height_;
+      object.x1 = static_cast<uint32_t>(
+        out_dets_h_[(batch * max_detections_ * 5) + ((5 * index) + 0)] / scale_width_);
+      object.y1 = static_cast<uint32_t>(
+        out_dets_h_[(batch * max_detections_ * 5) + ((5 * index) + 1)] / scale_height_);
+      object.x2 = static_cast<uint32_t>(
+        out_dets_h_[(batch * max_detections_ * 5) + ((5 * index) + 2)] / scale_width_);
+      object.y2 = static_cast<uint32_t>(
+        out_dets_h_[(batch * max_detections_ * 5) + ((5 * index) + 3)] / scale_height_);
       object.score = out_dets_h_[(batch * max_detections_ * 5) + ((5 * index) + 4)];
       object_array.push_back(object);
     }
@@ -313,12 +321,14 @@ bool TrtRTMDet::feedforward(
   // where each pixel represents the class intensity.
   // The intensity of each pixel corresponds to the index of the class_array,
   // which stores the class IDs.
-  mask = cv::Mat(model_input_height_, model_input_width_, CV_8UC1, cv::Scalar(0, 0, 0));
+  mask = cv::Mat(
+    static_cast<int32_t>(model_input_height_), static_cast<int32_t>(model_input_width_), CV_8UC1,
+    cv::Scalar(0, 0, 0));
   uint8_t pixel_intensity = 1;  // 0 is reserved for background
   for (size_t batch = 0; batch < batch_size; ++batch) {
     for (const auto & object : objects.at(batch)) {
       cv::Mat object_mask(
-        model_input_height_, model_input_width_, CV_32F,
+        static_cast<int32_t>(model_input_height_), static_cast<int32_t>(model_input_width_), CV_32F,
         &out_masks_h_
           [(batch * 100 * model_input_width_ * model_input_height_) +
            (object.mask_index * model_input_width_ * model_input_height_)]);
@@ -346,16 +356,16 @@ bool TrtRTMDet::feedforward(
 
 float TrtRTMDet::intersection_over_union(const Object & a, const Object & b)
 {
-  int x_left = std::max(a.x1, b.x1);
-  int y_top = std::max(a.y1, b.y1);
-  int x_right = std::min(a.x2, b.x2);
-  int y_bottom = std::min(a.y2, b.y2);
+  uint32_t x_left = std::max(a.x1, b.x1);
+  uint32_t y_top = std::max(a.y1, b.y1);
+  uint32_t x_right = std::min(a.x2, b.x2);
+  uint32_t y_bottom = std::min(a.y2, b.y2);
 
   if (x_right < x_left || y_bottom < y_top) {
     return 0.0;
   }
 
-  float intersection_area = (x_right - x_left + 1) * (y_bottom - y_top + 1);
+  float intersection_area = ((x_right - x_left + 1) * (y_bottom - y_top + 1));
   float a_area = (a.x2 - a.x1 + 1) * (a.y2 - a.y1 + 1);
   float b_area = (b.x2 - b.x1 + 1) * (b.y2 - b.y1 + 1);
 

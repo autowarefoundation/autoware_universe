@@ -260,12 +260,12 @@ void TrtRTMDetNode::draw_debug_image(
     cv::rectangle(
       image, cv::Point(static_cast<int>(object.x1), static_cast<int>(object.y1)),
       cv::Point(static_cast<int>(object.x2), static_cast<int>(object.y2)),
-      color_map.at(object.class_id).color, 2);
+      color_map.at(static_cast<int32_t>(object.class_id)).color, 2);
     // Write the class name
     cv::putText(
-      image, color_map.at(object.class_id).class_name,
+      image, color_map.at(static_cast<int32_t>(object.class_id)).class_name,
       cv::Point(static_cast<int>(object.x1), static_cast<int>(object.y1)), cv::FONT_HERSHEY_SIMPLEX,
-      1, color_map.at(object.class_id).color, 2);
+      1, color_map.at(static_cast<int32_t>(object.class_id)).color, 2);
   }
 }
 

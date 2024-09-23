@@ -47,12 +47,12 @@ using cuda_utils::StreamUniquePtr;
  */
 struct Object
 {
-  int32_t x1;
-  int32_t y1;
-  int32_t x2;
-  int32_t y2;
-  int32_t class_id;
-  int32_t mask_index;
+  uint32_t x1;
+  uint32_t y1;
+  uint32_t x2;
+  uint32_t y2;
+  uint32_t class_id;
+  uint32_t mask_index;
   float score;
 };
 
@@ -72,7 +72,7 @@ using LabelColor = struct LabelColor
   uint8_t label_id;
 };
 
-using ColorMap = std::map<int, LabelColor>;
+using ColorMap = std::map<uint32_t, LabelColor>;
 
 class TrtRTMDet
 {
@@ -83,15 +83,15 @@ public:
     const float mask_threshold = 200.0,
     const tensorrt_common::BuildConfig & build_config = tensorrt_common::BuildConfig(),
     const bool use_gpu_preprocess = false,
-    const std::string & calibration_image_list_file = std::string(), const double norm_factor = 1.0,
-    const std::vector<float> & mean = {103.53, 116.28, 123.675},
+    const std::string & calibration_image_list_file_path = std::string(),
+    const double norm_factor = 1.0, const std::vector<float> & mean = {103.53, 116.28, 123.675},
     const std::vector<float> & std = {57.375, 57.12, 58.395},
     [[maybe_unused]] const std::string & cache_dir = "",
     const tensorrt_common::BatchConfig & batch_config = {1, 1, 1},
     const size_t max_workspace_size = (1u << 30u),
     const std::vector<std::string> & plugin_paths = {});
 
-  ~TrtRTMDet();
+  ~TrtRTMDet() noexcept;
 
   /**
    * @brief Perform inference.

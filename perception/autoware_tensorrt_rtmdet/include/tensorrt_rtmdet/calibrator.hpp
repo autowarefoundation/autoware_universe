@@ -42,7 +42,6 @@ public:
     const std::vector<std::string> & calibration_images)
   : batch_size_(batch_size),
     calibration_images_(calibration_images),
-    current_batch_(0),
     max_batches_(calibration_images.size() / batch_size_),
     input_dims_(input_dims)
   {
@@ -71,7 +70,7 @@ public:
   {
     std::vector<float> input_h;
     auto batch_size = static_cast<uint32_t>(images.size());
-    input_dims.d[0] = batch_size;
+    input_dims.d[0] = static_cast<int32_t>(batch_size);
     const auto input_chan = static_cast<uint32_t>(input_dims.d[1]);
     const auto input_height = static_cast<uint32_t>(input_dims.d[2]);
     const auto input_width = static_cast<uint32_t>(input_dims.d[3]);
@@ -91,7 +90,7 @@ public:
       cv::dnn::blobFromImages(dst_images, 1.0, cv::Size(), cv::Scalar(), false, false, CV_32F);
     const auto data_length = chw_images.total();
     input_h.reserve(data_length);
-    const auto flat = chw_images.reshape(1, data_length);
+    const auto flat = chw_images.reshape(1, static_cast<int>(data_length));
     input_h = chw_images.isContinuous() ? flat : flat.clone();
     return input_h;
   }
@@ -129,7 +128,7 @@ public:
 private:
   uint32_t batch_size_;
   std::vector<std::string> calibration_images_;
-  uint32_t current_batch_;
+  uint32_t current_batch_{0};
   uint32_t max_batches_;
   nvinfer1::Dims input_dims_;
   std::vector<float> batch_;
@@ -185,9 +184,12 @@ public:
         break;
     }
   }
-  int getBatchSize() const noexcept override { return stream_.get_batch_size(); }
+  [[nodiscard]] int getBatchSize() const noexcept override
+  {
+    return static_cast<int32_t>(stream_.get_batch_size());
+  }
 
-  ~Int8EntropyCalibrator() override { CHECK_CUDA_ERROR(cudaFree(device_input_)); }
+  ~Int8EntropyCalibrator() noexcept override { CHECK_CUDA_ERROR(cudaFree(device_input_)); }
 
   bool getBatch(void * bindings[], const char * names[], int nb_bindings) noexcept override
   {
@@ -234,7 +236,7 @@ public:
   void writeCalibrationCache(const void * cache, size_t length) noexcept override
   {
     std::ofstream output(calibration_cache_file_, std::ios::binary);
-    output.write(reinterpret_cast<const char *>(cache), length);
+    output.write(static_cast<const char *>(cache), length);
   }
 
 private:
