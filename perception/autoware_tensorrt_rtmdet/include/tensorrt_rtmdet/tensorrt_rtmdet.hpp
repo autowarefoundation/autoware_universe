@@ -31,6 +31,8 @@
 #include <string>
 #include <vector>
 
+class TrtRTMDetTest;
+
 namespace autoware::tensorrt_rtmdet
 {
 using cuda_utils::CudaUniquePtr;
@@ -106,6 +108,32 @@ public:
     const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask,
     std::vector<uint8_t> & class_ids);
 
+  /**
+   * @brief Calculate intersection over union.
+   *
+   * This function calculates the intersection over union (IoU) between two bounding boxes.
+   * Input bounding boxes contains the bounding box and class id.
+   *
+   * @param[in] a First object.
+   * @param[in] b Second object.
+   * @return IoU value.
+   */
+  [[nodiscard]] static float intersection_over_union(const Object & a, const Object & b);
+
+  /**
+   * @brief Perform non-maximum suppression.
+   *
+   * This function performs non-maximum suppression (NMS) on the detected objects.
+   * The detected objects are sorted by score and the NMS is applied to remove overlapping boxes.
+   *
+   * Since the model architecture has own NMS layer, this function added for overlapped boxes which
+   * have different class.
+   *
+   * @param[in] input_objects a vector of detected objects.
+   * @param[out] output_objects a vector of detected objects after NMS.
+   */
+  static void nms_sorted_bboxes(const ObjectArray & input_objects, ObjectArray & output_objects, const float & nms_threshold) ;
+
   void print_profiling();
 
 private:
@@ -145,32 +173,6 @@ private:
   bool feedforward(
     const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask,
     std::vector<uint8_t> & class_ids);
-
-  /**
-   * @brief Calculate intersection over union.
-   *
-   * This function calculates the intersection over union (IoU) between two bounding boxes.
-   * Input bounding boxes contains the bounding box and class id.
-   *
-   * @param[in] a First object.
-   * @param[in] b Second object.
-   * @return IoU value.
-   */
-  [[nodiscard]] static float intersection_over_union(const Object & a, const Object & b);
-
-  /**
-   * @brief Perform non-maximum suppression.
-   *
-   * This function performs non-maximum suppression (NMS) on the detected objects.
-   * The detected objects are sorted by score and the NMS is applied to remove overlapping boxes.
-   *
-   * Since the model architecture has own NMS layer, this function added for overlapped boxes which
-   * have different class.
-   *
-   * @param[in] input_objects a vector of detected objects.
-   * @param[out] output_objects a vector of detected objects after NMS.
-   */
-  void nms_sorted_bboxes(const ObjectArray & input_objects, ObjectArray & output_objects) const;
 
   std::unique_ptr<tensorrt_common::TrtCommon> trt_common_;
 
@@ -225,6 +227,9 @@ private:
 
   // Segmentation map, stores information for each class
   const ColorMap color_map_;
+
+public:
+    friend TrtRTMDetTest;
 };
 }  // namespace autoware::tensorrt_rtmdet
 

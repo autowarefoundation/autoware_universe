@@ -303,7 +303,7 @@ bool TrtRTMDet::feedforward(
       object_array.push_back(object);
     }
     ObjectArray nms_objects;
-    nms_sorted_bboxes(object_array, nms_objects);
+    nms_sorted_bboxes(object_array, nms_objects, nms_threshold_);
 
     objects.push_back(nms_objects);
   }
@@ -363,7 +363,7 @@ float TrtRTMDet::intersection_over_union(const Object & a, const Object & b)
 }
 
 void TrtRTMDet::nms_sorted_bboxes(
-  const ObjectArray & input_objects, ObjectArray & output_objects) const
+  const ObjectArray & input_objects, ObjectArray & output_objects, const float & nms_threshold)
 {
   std::vector<bool> suppressed(input_objects.size(), false);
 
@@ -377,7 +377,7 @@ void TrtRTMDet::nms_sorted_bboxes(
       if (suppressed.at(j)) continue;
 
       const Object & b = input_objects.at(j);
-      if (intersection_over_union(a, b) > nms_threshold_) {
+      if (intersection_over_union(a, b) > nms_threshold) {
         suppressed.at(j) = true;
       }
     }
