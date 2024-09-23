@@ -67,11 +67,6 @@
           "default": "fp16",
           "description": "Operation precision to be used on inference. Valid value is one of: [fp32, fp16, int8]."
         },
-        "calibration_algorithm": {
-          "type": "string",
-          "default": "MinMax",
-          "description": "Calibration algorithm to be used for quantization when precision==int8. Valid value is one of: [Entropy, (Legacy | Percentile), MinMax]."
-        },
         "dla_core_id": {
           "type": "number",
           "default": -1,
@@ -123,8 +118,8 @@
         "input_image_std_dev",
         "score_threshold",
         "nms_threshold",
+        "mask_threshold",
         "precision",
-        "calibration_algorithm",
         "dla_core_id",
         "quantize_first_layer",
         "quantize_last_layer",
