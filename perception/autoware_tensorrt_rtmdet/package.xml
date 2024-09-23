@@ -27,8 +27,8 @@
   <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>
   <depend>tensorrt_common</depend>
-  <depend>trt_batched_nms</depend>
   <depend>tier4_perception_msgs</depend>
+  <depend>trt_batched_nms</depend>
 
   <exec_depend>image_transport_decompressor</exec_depend>
 

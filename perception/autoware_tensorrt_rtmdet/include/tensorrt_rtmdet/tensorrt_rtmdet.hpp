@@ -132,7 +132,8 @@ public:
    * @param[in] input_objects a vector of detected objects.
    * @param[out] output_objects a vector of detected objects after NMS.
    */
-  static void nms_sorted_bboxes(const ObjectArray & input_objects, ObjectArray & output_objects, const float & nms_threshold) ;
+  static void nms_sorted_bboxes(
+    const ObjectArray & input_objects, ObjectArray & output_objects, const float & nms_threshold);
 
   void print_profiling();
 
@@ -229,7 +230,7 @@ private:
   const ColorMap color_map_;
 
 public:
-    friend TrtRTMDetTest;
+  friend TrtRTMDetTest;
 };
 }  // namespace autoware::tensorrt_rtmdet
 

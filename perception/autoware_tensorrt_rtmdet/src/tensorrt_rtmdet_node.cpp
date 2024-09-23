@@ -208,7 +208,8 @@ ColorMap TrtRTMDetNode::read_color_map_file(const std::string & color_map_path)
   ColorMap color_map;
 
   if (!std::experimental::filesystem::exists(std::experimental::filesystem::path(color_map_path))) {
-    RCLCPP_ERROR(rclcpp::get_logger("tensorrt_rtmdet_node"), "failed to open %s", color_map_path.c_str());
+    RCLCPP_ERROR(
+      rclcpp::get_logger("tensorrt_rtmdet_node"), "failed to open %s", color_map_path.c_str());
     assert(0);
   }
 
