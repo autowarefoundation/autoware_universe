@@ -15,11 +15,11 @@
 #ifndef AUTOWARE__MAP_LOADER__LANELET2_MAP_LOADER_NODE_HPP_
 #define AUTOWARE__MAP_LOADER__LANELET2_MAP_LOADER_NODE_HPP_
 
-#include <autoware/component_interface_specs_universe/map.hpp>
-#include <autoware/component_interface_utils/rclcpp.hpp>
 #include "map_loader/lanelet2_differential_loader_module.hpp"
 #include "map_loader/utils.hpp"
 
+#include <autoware/component_interface_specs_universe/map.hpp>
+#include <autoware/component_interface_utils/rclcpp.hpp>
 #include <autoware_lanelet2_extension/version.hpp>
 #include <rclcpp/rclcpp.hpp>
 
