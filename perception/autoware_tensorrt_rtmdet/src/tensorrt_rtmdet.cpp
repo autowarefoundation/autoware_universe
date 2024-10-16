@@ -131,7 +131,7 @@ TrtRTMDet::TrtRTMDet(
   out_masks_h_ = std::make_unique<float[]>(
     batch_size_ * max_detections_ * model_input_width_ * model_input_height_);
 
-#if (NV_TENSORRT_MAJOR * 10000) + (NV_TENSORRT_MINOR * 100) + NV_TENSOR_PATCH >= 80500
+#if (NV_TENSORRT_MAJOR * 1000) + (NV_TENSORRT_MINOR * 100) + NV_TENSOR_PATCH >= 8050
   std::vector<void *> buffers = {
     input_d_.get(), out_dets_d_.get(), out_labels_d_.get(), out_masks_d_.get()};
   trt_common_->setupBindings(buffers);
@@ -270,7 +270,7 @@ bool TrtRTMDet::feedforward(
   const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask,
   std::vector<uint8_t> & class_ids)
 {
-#if (NV_TENSORRT_MAJOR * 10000) + (NV_TENSORRT_MINOR * 100) + NV_TENSOR_PATCH >= 80500
+#if (NV_TENSORRT_MAJOR * 1000) + (NV_TENSORRT_MINOR * 100) + NV_TENSOR_PATCH >= 8050
   trt_common_->enqueueV3(*stream_);
 #else
   std::vector<void *> buffers = {
