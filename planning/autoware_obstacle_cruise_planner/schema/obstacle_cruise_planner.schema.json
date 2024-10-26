@@ -190,15 +190,15 @@
             "stop_obstacle_type": {
               "type": "object",
               "properties": {
-                "pointcloud":{
+                "pointcloud": {
                   "type": "boolean",
                   "description": "enable pointcloud",
                   "default": "false"
-                  },
-                "inside:":{
+                },
+                "inside:": {
                   "type": "object",
                   "properties": {
-                      "unknown": {
+                    "unknown": {
                       "type": "boolean",
                       "description": "unknow obstacle",
                       "default": "true"
@@ -249,8 +249,8 @@
                     "bicycle",
                     "pedestrian"
                   ]
-                  },
-                "outside":{
+                },
+                "outside": {
                   "type": "object",
                   "properties": {
                     "unknown": {
@@ -304,10 +304,9 @@
                     "bicycle",
                     "pedestrian"
                   ]
-                  }
-                },
-                "required": ["pointcloud", "inside", "outside"]
-                
+                }
+              },
+              "required": ["pointcloud", "inside", "outside"]
             },
 
             "cruise_obstacle_type": {
@@ -316,7 +315,7 @@
                 "inside": {
                   "type": "object",
                   "properties": {
-                   "unknown": {
+                    "unknown": {
                       "type": "boolean",
                       "description": "unknow obstacle",
                       "default": "true"
@@ -640,7 +639,12 @@
                       "default": "0.5"
                     }
                   },
-                  "required": ["max_lateral_time_margin", "num_of_predicted_paths", "pedestrian_deceleration_rate", "bicycle_deceleration_rate"]
+                  "required": [
+                    "max_lateral_time_margin",
+                    "num_of_predicted_paths",
+                    "pedestrian_deceleration_rate",
+                    "bicycle_deceleration_rate"
+                  ]
                 },
                 "crossing_obstacle": {
                   "type": "object",
@@ -654,7 +658,13 @@
                   "required": ["collision_time_margin"]
                 }
               },
-              "required": ["max_lat_margin", "max_lat_margin_against_unknown", "min_velocity_to_reach_collision_point", "crossing_obstacle", "outside_obstacle"]
+              "required": [
+                "max_lat_margin",
+                "max_lat_margin_against_unknown",
+                "min_velocity_to_reach_collision_point",
+                "crossing_obstacle",
+                "outside_obstacle"
+              ]
             },
             "cruise": {
               "type": "object",
@@ -1223,27 +1233,32 @@
                   "type": "object",
                   "properties": {
                     "limit_min_acc": {
-                    "type": "number",
-                    "description": "overwrite the deceleration limit, in usually, common_param.yaml/limit.min_acc is referred.",
-                    "default": -1.2
+                      "type": "number",
+                      "description": "overwrite the deceleration limit, in usually, common_param.yaml/limit.min_acc is referred.",
+                      "default": -1.2
                     },
                     "sudden_object_acc_threshold": {
-                    "type": "number",
-                    "description": "If a stop can be achieved by a deceleration smaller than this value, it is not considered as 'sudden stop'.",
-                    "default": -1.1
+                      "type": "number",
+                      "description": "If a stop can be achieved by a deceleration smaller than this value, it is not considered as 'sudden stop'.",
+                      "default": -1.1
                     },
                     "sudden_object_dist_threshold": {
-                    "type": "number",
-                    "description": "If a stop distance is longer than this value, it is not considered as 'sudden stop'.",
-                    "default": 1000.0
+                      "type": "number",
+                      "description": "If a stop distance is longer than this value, it is not considered as 'sudden stop'.",
+                      "default": 1000.0
                     },
                     "abandon_to_stop": {
-                    "type": "boolean",
-                    "description": "If true, the planner gives up to stop when it cannot avoid to run over while maintaining the deceleration limit.",
-                    "default": false
+                      "type": "boolean",
+                      "description": "If true, the planner gives up to stop when it cannot avoid to run over while maintaining the deceleration limit.",
+                      "default": false
                     }
                   },
-                  "required": ["limit_min_acc", "sudden_object_acc_threshold", "sudden_object_dist_threshold", "abandon_to_stop"]
+                  "required": [
+                    "limit_min_acc",
+                    "sudden_object_acc_threshold",
+                    "sudden_object_dist_threshold",
+                    "abandon_to_stop"
+                  ]
                 }
               },
               "required": ["labels", "unknown"]
