@@ -11,12 +11,12 @@
           "properties": {
             "min_acc": {
               "type": "number",
-              "description": "min deceleration [m/s]",
+              "description": "min deceleration [m/ss]",
               "default": "-1.0"
             },
             "max_acc": {
               "type": "number",
-              "description": "max acceleration [m/s]",
+              "description": "max acceleration [m/ss]",
               "default": "1.0"
             },
             "min_jerk": {
@@ -48,12 +48,12 @@
             },
             "min_jerk": {
               "type": "number",
-              "description": "max velocity limit [m/s]",
+              "description": "max velocity limit [m/sss]",
               "default": "-1.5"
             },
             "max_jerk": {
               "type": "number",
-              "description": "max velocity limit [m/s]",
+              "description": "max velocity limit [m/sss]",
               "default": "1.5"
             }
           },
@@ -81,17 +81,17 @@
             },
             "enable_debug_info": {
               "type": "boolean",
-              "description": "enable_debug_info",
+              "description": "enable debug info",
               "default": "false"
             },
             "enable_calculation_time_info": {
               "type": "boolean",
-              "description": "enable_calculation_time_info",
+              "description": "enable calculation time info",
               "default": "false"
             },
             "enable_slow_down_planning": {
               "type": "boolean",
-              "description": "enable_slow_down_planning",
+              "description": "enable slow down planning",
               "default": "true"
             },
             "idling_time": {
@@ -112,7 +112,7 @@
             "safe_distance_margin": {
               "type": "number",
               "description": "This is also used as a stop margin [m]",
-              "default": "6.0"
+              "default": "5.0"
             },
             "terminal_safe_distance_margin": {
               "type": "number",
@@ -160,17 +160,17 @@
               "properties": {
                 "enable_approaching": {
                   "type": "boolean",
-                  "description": "enable_approaching",
+                  "description": "enable approaching",
                   "default": "false"
                 },
                 "additional_safe_distance_margin": {
                   "type": "number",
-                  "description": "additional_safe_distance_margin [m]",
-                  "default": "0.0"
+                  "description": "additional safe distance margin [m]",
+                  "default": "3.0"
                 },
                 "min_safe_distance_margin": {
                   "type": "number",
-                  "description": "min_safe_distance_margin [m]",
+                  "description": "min safe distance margin [m]",
                   "default": "3.0"
                 }
               },
@@ -184,63 +184,130 @@
             "suppress_sudden_obstacle_stop": {
               "type": "boolean",
               "description": "suppress_sudden_obstacle_stop",
-              "default": "true"
+              "default": "false"
             },
 
             "stop_obstacle_type": {
               "type": "object",
               "properties": {
-                "unknown": {
+                "pointcloud":{
                   "type": "boolean",
-                  "description": "stop_obstacle_type",
-                  "default": "true"
+                  "description": "enable pointcloud",
+                  "default": "false"
+                  },
+                "inside:":{
+                  "type": "object",
+                  "properties": {
+                      "unknown": {
+                      "type": "boolean",
+                      "description": "unknow obstacle",
+                      "default": "true"
+                    },
+                    "car": {
+                      "type": "boolean",
+                      "description": "car",
+                      "default": "true"
+                    },
+                    "truck": {
+                      "type": "boolean",
+                      "description": "truck",
+                      "default": "true"
+                    },
+                    "bus": {
+                      "type": "boolean",
+                      "description": "bus",
+                      "default": "true"
+                    },
+                    "trailer": {
+                      "type": "boolean",
+                      "description": "trailer",
+                      "default": "true"
+                    },
+                    "motorcycle": {
+                      "type": "boolean",
+                      "description": "motorcycle",
+                      "default": "true"
+                    },
+                    "bicycle": {
+                      "type": "boolean",
+                      "description": "bicycle",
+                      "default": "true"
+                    },
+                    "pedestrian": {
+                      "type": "boolean",
+                      "description": "pedestrian",
+                      "default": "true"
+                    }
+                  },
+                  "required": [
+                    "unknown",
+                    "car",
+                    "truck",
+                    "bus",
+                    "trailer",
+                    "motorcycle",
+                    "bicycle",
+                    "pedestrian"
+                  ]
+                  },
+                "outside":{
+                  "type": "object",
+                  "properties": {
+                    "unknown": {
+                      "type": "boolean",
+                      "description": "unknow obstacle",
+                      "default": "false"
+                    },
+                    "car": {
+                      "type": "boolean",
+                      "description": "car",
+                      "default": "true"
+                    },
+                    "truck": {
+                      "type": "boolean",
+                      "description": "truck",
+                      "default": "true"
+                    },
+                    "bus": {
+                      "type": "boolean",
+                      "description": "bus",
+                      "default": "true"
+                    },
+                    "trailer": {
+                      "type": "boolean",
+                      "description": "trailer",
+                      "default": "true"
+                    },
+                    "motorcycle": {
+                      "type": "boolean",
+                      "description": "motorcycle",
+                      "default": "true"
+                    },
+                    "bicycle": {
+                      "type": "boolean",
+                      "description": "bicycle",
+                      "default": "true"
+                    },
+                    "pedestrian": {
+                      "type": "boolean",
+                      "description": "pedestrian",
+                      "default": "true"
+                    }
+                  },
+                  "required": [
+                    "unknown",
+                    "car",
+                    "truck",
+                    "bus",
+                    "trailer",
+                    "motorcycle",
+                    "bicycle",
+                    "pedestrian"
+                  ]
+                  }
                 },
-                "car": {
-                  "type": "boolean",
-                  "description": "stop_obstacle_type",
-                  "default": "true"
-                },
-                "truck": {
-                  "type": "boolean",
-                  "description": "stop_obstacle_type",
-                  "default": "true"
-                },
-                "bus": {
-                  "type": "boolean",
-                  "description": "stop_obstacle_type",
-                  "default": "true"
-                },
-                "trailer": {
-                  "type": "boolean",
-                  "description": "stop_obstacle_type",
-                  "default": "true"
-                },
-                "motorcycle": {
-                  "type": "boolean",
-                  "description": "stop_obstacle_type",
-                  "default": "true"
-                },
-                "bicycle": {
-                  "type": "boolean",
-                  "description": "stop_obstacle_type",
-                  "default": "true"
-                },
-                "pedestrian": {
-                  "type": "boolean",
-                  "description": "stop_obstacle_type",
-                  "default": "true"
-                }
-              },
-              "required": [
-                "unknown",
-                "car",
-                "truck",
-                "bus",
-                "trailer",
-                "motorcycle",
-                "bicycle",
-                "pedestrian"
-              ]
+                "required": ["pointcloud", "inside", "outside"]
+                
             },
 
             "cruise_obstacle_type": {
@@ -249,44 +316,44 @@
                 "inside": {
                   "type": "object",
                   "properties": {
-                    "unknown": {
+                   "unknown": {
                       "type": "boolean",
-                      "description": "cruise_obstacle_type",
+                      "description": "unknow obstacle",
                       "default": "true"
                     },
                     "car": {
                       "type": "boolean",
-                      "description": "cruise_obstacle_type",
+                      "description": "car",
                       "default": "true"
                     },
-                    "common.cruise_obstacle_type.inside.truck": {
+                    "truck": {
                       "type": "boolean",
-                      "description": "cruise_obstacle_type",
+                      "description": "truck",
                       "default": "true"
                     },
-                    "common.cruise_obstacle_type.inside.bus": {
+                    "bus": {
                       "type": "boolean",
-                      "description": "cruise_obstacle_type",
+                      "description": "bus",
                       "default": "true"
                     },
-                    "common.cruise_obstacle_type.inside.trailer": {
+                    "trailer": {
                       "type": "boolean",
-                      "description": "cruise_obstacle_type",
+                      "description": "trailer",
                       "default": "true"
                     },
-                    "common.cruise_obstacle_type.inside.motorcycle": {
+                    "motorcycle": {
                       "type": "boolean",
-                      "description": "cruise_obstacle_type",
+                      "description": "motorcycle",
                       "default": "true"
                     },
-                    "common.cruise_obstacle_type.inside.bicycle": {
+                    "bicycle": {
                       "type": "boolean",
-                      "description": "cruise_obstacle_type",
+                      "description": "bicycle",
                       "default": "true"
                     },
-                    "common.cruise_obstacle_type.inside.pedestrian": {
+                    "pedestrian": {
                       "type": "boolean",
-                      "description": "cruise_obstacle_type",
+                      "description": "pedestrian",
                       "default": "false"
                     }
                   },
@@ -306,42 +373,42 @@
                   "properties": {
                     "unknown": {
                       "type": "boolean",
-                      "description": "cruise_obstacle_type",
+                      "description": "unknow obstacle",
                       "default": "false"
                     },
                     "car": {
                       "type": "boolean",
-                      "description": "cruise_obstacle_type",
+                      "description": "car",
                       "default": "true"
                     },
                     "truck": {
                       "type": "boolean",
-                      "description": "cruise_obstacle_type",
+                      "description": "truck",
                       "default": "true"
                     },
                     "bus": {
                       "type": "boolean",
-                      "description": "cruise_obstacle_type",
+                      "description": "bus",
                       "default": "true"
                     },
                     "trailer": {
                       "type": "boolean",
-                      "description": "cruise_obstacle_type",
+                      "description": "trailer",
                       "default": "true"
                     },
                     "motorcycle": {
                       "type": "boolean",
-                      "description": "cruise_obstacle_type",
+                      "description": "motorcycle",
                       "default": "true"
                     },
                     "bicycle": {
                       "type": "boolean",
-                      "description": "cruise_obstacle_type",
-                      "default": "false"
+                      "description": "bicycle",
+                      "default": "true"
                     },
                     "pedestrian": {
                       "type": "boolean",
-                      "description": "cruise_obstacle_type",
+                      "description": "pedestrian",
                       "default": "false"
                     }
                   },
@@ -365,43 +432,48 @@
               "properties": {
                 "unknown": {
                   "type": "boolean",
-                  "description": "slow_down_obstacle_type",
+                  "description": "unknow obstacle",
                   "default": "false"
                 },
                 "car": {
                   "type": "boolean",
-                  "description": "slow_down_obstacle_type",
+                  "description": "car",
                   "default": "true"
                 },
                 "truck": {
                   "type": "boolean",
-                  "description": "slow_down_obstacle_type",
+                  "description": "truck",
                   "default": "true"
                 },
                 "bus": {
                   "type": "boolean",
-                  "description": "slow_down_obstacle_type",
+                  "description": "bus",
                   "default": "true"
                 },
                 "trailer": {
                   "type": "boolean",
-                  "description": "slow_down_obstacle_type",
+                  "description": "trailer",
                   "default": "true"
                 },
                 "motorcycle": {
                   "type": "boolean",
-                  "description": "slow_down_obstacle_type",
+                  "description": "motorcycle",
                   "default": "true"
                 },
                 "bicycle": {
                   "type": "boolean",
-                  "description": "slow_down_obstacle_type",
+                  "description": "bicycle",
                   "default": "true"
                 },
                 "pedestrian": {
                   "type": "boolean",
-                  "description": "slow_down_obstacle_type",
+                  "description": "pedestrian",
                   "default": "true"
+                },
+                "pointcloud": {
+                  "type": "boolean",
+                  "description": "enable pointcloud",
+                  "default": "false"
                 }
               },
               "required": [
@@ -412,7 +484,8 @@
                 "trailer",
                 "motorcycle",
                 "bicycle",
-                "pedestrian"
+                "pedestrian",
+                "pointcloud"
               ]
             }
           },
@@ -444,6 +517,41 @@
         "behavior_determination": {
           "type": "object",
           "properties": {
+            "pointcloud_search_radius": {
+              "type": "number",
+              "description": "pointcloud search radius [m]",
+              "default": "5.0"
+            },
+            "pointcloud_voxel_grid_x": {
+              "type": "number",
+              "description": "x value of pointcloud voxel grid filter [m]",
+              "default": "0.05"
+            },
+            "pointcloud_voxel_grid_y": {
+              "type": "number",
+              "description": "y value of pointcloud voxel grid filter [m]",
+              "default": "0.05"
+            },
+            "pointcloud_voxel_grid_z": {
+              "type": "number",
+              "description": "y value of pointcloud voxel grid filter [m]",
+              "default": "100000.0"
+            },
+            "pointcloud_cluster_tolerance": {
+              "type": "number",
+              "description": "pointcloud cluster tolerance value",
+              "default": "1.0"
+            },
+            "pointcloud_min_cluster_size": {
+              "type": "integer",
+              "description": "minimum pointcloud cluster size",
+              "default": "1"
+            },
+            "pointcloud_max_cluster_size": {
+              "type": "integer",
+              "description": "maximum pointcloud cluster size",
+              "default": "100000"
+            },
             "decimate_trajectory_step_length": {
               "type": "number",
               "description": "longitudinal step length to calculate trajectory polygon for collision checking",
@@ -501,7 +609,38 @@
                 "max_lat_margin_against_unknown": {
                   "type": "number",
                   "description": "lateral margin between the unknown obstacles and ego's footprint",
-                  "default": "-0.3"
+                  "default": "0.3"
+                },
+                "min_velocity_to_reach_collision_point": {
+                  "type": "number",
+                  "description": "minimum velocity margin to calculate time to reach collision [m/s]",
+                  "default": "2.0"
+                },
+                "outside_obstacle": {
+                  "type": "object",
+                  "properties": {
+                    "max_lateral_time_margin": {
+                      "type": "number",
+                      "description": "time threshold of lateral margin between the obstacles and ego's footprint [s]",
+                      "default": "4.0"
+                    },
+                    "num_of_predicted_paths": {
+                      "type": "integer",
+                      "description": "number of the highest confidence predicted path to check collision between obstacle and ego",
+                      "default": "3"
+                    },
+                    "pedestrian_deceleration_rate": {
+                      "type": "number",
+                      "description": "planner perceives pedestrians will stop with this rate to avoid unnecessary stops [m/ss]",
+                      "default": "0.5"
+                    },
+                    "bicycle_deceleration_rate": {
+                      "type": "number",
+                      "description": "planner perceives bicycles will stop with this rate to avoid unnecessary stops [m/ss]",
+                      "default": "0.5"
+                    }
+                  },
+                  "required": ["max_lateral_time_margin", "num_of_predicted_paths", "pedestrian_deceleration_rate", "bicycle_deceleration_rate"]
                 },
                 "crossing_obstacle": {
                   "type": "object",
@@ -515,7 +654,7 @@
                   "required": ["collision_time_margin"]
                 }
               },
-              "required": ["max_lat_margin", "max_lat_margin_against_unknown", "crossing_obstacle"]
+              "required": ["max_lat_margin", "max_lat_margin_against_unknown", "min_velocity_to_reach_collision_point", "crossing_obstacle", "outside_obstacle"]
             },
             "cruise": {
               "type": "object",
@@ -542,12 +681,24 @@
                       "type": "number",
                       "description": "prediction time to check collision between obstacle and ego",
                       "default": "20.0"
+                    },
+                    "max_lateral_time_margin": {
+                      "type": "number",
+                      "description": "time threshold of lateral margin between obstacle and trajectory band with ego's width [s]",
+                      "default": "5.0"
+                    },
+                    "num_of_predicted_paths": {
+                      "type": "integer",
+                      "description": "number of the highest confidence predicted path to check collision between obstacle and ego",
+                      "default": "3"
                     }
                   },
                   "required": [
                     "obstacle_velocity_threshold",
                     "ego_obstacle_overlap_time_threshold",
-                    "max_prediction_time_for_collision_check"
+                    "max_prediction_time_for_collision_check",
+                    "max_lateral_time_margin",
+                    "num_of_predicted_paths"
                   ]
                 },
                 "yield": {
@@ -556,7 +707,7 @@
                     "enable_yield": {
                       "type": "boolean",
                       "description": "enable_yield",
-                      "default": "false"
+                      "default": "true"
                     },
                     "lat_distance_threshold": {
                       "type": "number",
@@ -604,12 +755,12 @@
                   "default": "0.2"
                 },
                 "successive_num_to_entry_slow_down_condition": {
-                  "type": "number",
+                  "type": "integer",
                   "description": "successive_num_to_entry_slow_down_condition",
                   "default": "5"
                 },
                 "successive_num_to_exit_slow_down_condition": {
-                  "type": "number",
+                  "type": "integer",
                   "description": "successive_num_to_exit_slow_down_condition",
                   "default": "5"
                 }
@@ -627,8 +778,8 @@
               "properties": {
                 "enable_to_consider_current_pose": {
                   "type": "boolean",
-                  "description": "enable_to_consider_current_pose",
-                  "default": "false"
+                  "description": "enable to consider current pose",
+                  "default": "true"
                 },
                 "time_to_convergence": {
                   "type": "number",
@@ -640,6 +791,13 @@
             }
           },
           "required": [
+            "pointcloud_search_radius",
+            "pointcloud_voxel_grid_x",
+            "pointcloud_voxel_grid_y",
+            "pointcloud_voxel_grid_z",
+            "pointcloud_cluster_tolerance",
+            "pointcloud_min_cluster_size",
+            "pointcloud_max_cluster_size",
             "decimate_trajectory_step_length",
             "prediction_resampling_time_interval",
             "prediction_resampling_time_horizon",
@@ -665,7 +823,7 @@
                   "default": "true"
                 },
                 "error_function_type": {
-                  "type": "object",
+                  "type": "string",
                   "description": "choose from linear, quadratic",
                   "default": "quadratic"
                 },
@@ -932,11 +1090,12 @@
 
         "slow_down": {
           "type": "object",
+          "description": "parameters to calculate slow down velocity by linear interpolation",
           "properties": {
             "labels": {
               "type": "array",
               "description": "Labels for different types of slow down configurations",
-              "default": ["default", "pedestrian"]
+              "default": ["default"]
             },
             "default": {
               "type": "object",
@@ -947,22 +1106,22 @@
                     "min_lat_margin": {
                       "type": "number",
                       "description": "Minimum lateral margin for moving objects",
-                      "default": "0.8"
+                      "default": "0.2"
                     },
-                    "slow_down.default.moving.max_lat_margin": {
+                    "max_lat_margin": {
                       "type": "number",
                       "description": "Maximum lateral margin for moving objects",
-                      "default": "1.3"
+                      "default": "1.0"
                     },
-                    "slow_down.default.moving.min_ego_velocity": {
+                    "min_ego_velocity": {
                       "type": "number",
                       "description": "Minimum ego vehicle velocity for moving objects",
-                      "default": "0.5"
+                      "default": "2.0"
                     },
-                    "slow_down.default.moving.max_ego_velocity": {
+                    "max_ego_velocity": {
                       "type": "number",
                       "description": "Maximum ego vehicle velocity for moving objects",
-                      "default": "1.5"
+                      "default": "8.0"
                     }
                   },
                   "required": [
@@ -980,88 +1139,20 @@
                       "description": "Minimum lateral margin for moving objects",
                       "default": "0.2"
                     },
-                    "slow_down.default.moving.max_lat_margin": {
+                    "max_lat_margin": {
                       "type": "number",
                       "description": "Maximum lateral margin for moving objects",
                       "default": "1.0"
                     },
-                    "slow_down.default.moving.min_ego_velocity": {
+                    "min_ego_velocity": {
                       "type": "number",
                       "description": "Minimum ego vehicle velocity for moving objects",
                       "default": "4.0"
                     },
-                    "slow_down.default.moving.max_ego_velocity": {
+                    "max_ego_velocity": {
                       "type": "number",
                       "description": "Maximum ego vehicle velocity for moving objects",
                       "default": "8.0"
-                    }
-                  },
-                  "required": [
-                    "min_lat_margin",
-                    "max_lat_margin",
-                    "min_ego_velocity",
-                    "max_ego_velocity"
-                  ]
-                }
-              },
-              "required": ["moving", "static"]
-            },
-            "pedestrian": {
-              "type": "object",
-              "properties": {
-                "moving": {
-                  "type": "object",
-                  "properties": {
-                    "min_lat_margin": {
-                      "type": "number",
-                      "description": "Minimum lateral margin for moving objects",
-                      "default": "0.8"
-                    },
-                    "slow_down.default.moving.max_lat_margin": {
-                      "type": "number",
-                      "description": "Maximum lateral margin for moving objects",
-                      "default": "1.3"
-                    },
-                    "slow_down.default.moving.min_ego_velocity": {
-                      "type": "number",
-                      "description": "Minimum ego vehicle velocity for moving objects",
-                      "default": "0.5"
-                    },
-                    "slow_down.default.moving.max_ego_velocity": {
-                      "type": "number",
-                      "description": "Maximum ego vehicle velocity for moving objects",
-                      "default": "0.8"
-                    }
-                  },
-                  "required": [
-                    "min_lat_margin",
-                    "max_lat_margin",
-                    "min_ego_velocity",
-                    "max_ego_velocity"
-                  ]
-                },
-                "static": {
-                  "type": "object",
-                  "properties": {
-                    "min_lat_margin": {
-                      "type": "number",
-                      "description": "Minimum lateral margin for moving objects",
-                      "default": "0.8"
-                    },
-                    "slow_down.default.moving.max_lat_margin": {
-                      "type": "number",
-                      "description": "Maximum lateral margin for moving objects",
-                      "default": "1.3"
-                    },
-                    "slow_down.default.moving.min_ego_velocity": {
-                      "type": "number",
-                      "description": "Minimum ego vehicle velocity for moving objects",
-                      "default": "1.0"
-                    },
-                    "slow_down.default.moving.max_ego_velocity": {
-                      "type": "number",
-                      "description": "Maximum ego vehicle velocity for moving objects",
-                      "default": "2.0"
                     }
                   },
                   "required": [
@@ -1116,6 +1207,49 @@
             "lpf_gain_lat_dist",
             "lpf_gain_dist_to_slow_down"
           ]
+        },
+        "stop": {
+          "type": "object",
+          "properties": {
+            "type_specified_params": {
+              "type": "object",
+              "properties": {
+                "labels": {
+                  "type": "array",
+                  "description": "For the listed types, the node try to read the following type specified values",
+                  "default": ["default", "unknown"]
+                },
+                "unknow": {
+                  "type": "object",
+                  "properties": {
+                    "limit_min_acc": {
+                    "type": "number",
+                    "description": "overwrite the deceleration limit, in usually, common_param.yaml/limit.min_acc is referred.",
+                    "default": -1.2
+                    },
+                    "sudden_object_acc_threshold": {
+                    "type": "number",
+                    "description": "If a stop can be achieved by a deceleration smaller than this value, it is not considered as 'sudden stop'.",
+                    "default": -1.1
+                    },
+                    "sudden_object_dist_threshold": {
+                    "type": "number",
+                    "description": "If a stop distance is longer than this value, it is not considered as 'sudden stop'.",
+                    "default": 1000.0
+                    },
+                    "abandon_to_stop": {
+                    "type": "boolean",
+                    "description": "If true, the planner gives up to stop when it cannot avoid to run over while maintaining the deceleration limit.",
+                    "default": false
+                    }
+                  },
+                  "required": ["limit_min_acc", "sudden_object_acc_threshold", "sudden_object_dist_threshold", "abandon_to_stop"]
+                }
+              },
+              "required": ["labels", "unknown"]
+            }
+          },
+          "required": ["type_specified_params"]
         }
       },
       "required": [
@@ -1126,7 +1260,8 @@
         "common",
         "behavior_determination",
         "cruise",
-        "slow_down"
+        "slow_down",
+        "stop"
       ]
     }
   },
