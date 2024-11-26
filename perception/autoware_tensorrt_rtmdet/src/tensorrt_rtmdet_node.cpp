@@ -58,13 +58,13 @@ TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
 
   color_map_ = read_color_map_file(color_map_path);
 
-  tensorrt_common::BuildConfig build_config(
+    autoware::tensorrt_common::BuildConfig build_config(
     "Entropy", dla_core_id, quantize_first_layer, quantize_last_layer, profile_per_layer,
     clip_value);
 
   const double norm_factor = 1.0;
   const std::string cache_dir;
-  const tensorrt_common::BatchConfig batch_config{1, 1, 1};
+  const autoware::tensorrt_common::BatchConfig batch_config{1, 1, 1};
   const size_t max_workspace_size = (1u << 30u);
 
   mean_ = std::vector<float>(mean.begin(), mean.end());

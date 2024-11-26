@@ -17,10 +17,10 @@
 #include "tensorrt_rtmdet/tensorrt_rtmdet.hpp"
 #include "tensorrt_rtmdet/tensorrt_rtmdet_node.hpp"
 
-#include <cuda_utils/cuda_unique_ptr.hpp>
-#include <cuda_utils/stream_unique_ptr.hpp>
+#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
+#include <autoware/cuda_utils/stream_unique_ptr.hpp>
 #include <opencv2/opencv.hpp>
-#include <tensorrt_common/tensorrt_common.hpp>
+#include <autoware/tensorrt_common/tensorrt_common.hpp>
 
 #include <dlfcn.h>
 #include <gtest/gtest.h>
@@ -61,13 +61,13 @@ protected:
 
     const double norm_factor = 1.0;
     const std::string cache_dir;
-    const tensorrt_common::BatchConfig batch_config{1, 1, 1};
+    const autoware::tensorrt_common::BatchConfig batch_config{1, 1, 1};
     const size_t max_workspace_size = (1u << 30u);
     const std::vector<std::string> plugin_paths{plugin_path};
 
     test_image_ = cv::imread(test_image_path, cv::IMREAD_COLOR);
 
-    tensorrt_common::BuildConfig build_config("Entropy", -1, false, false, false, 6.0);
+    autoware::tensorrt_common::BuildConfig build_config("Entropy", -1, false, false, false, 6.0);
 
     // Test color map only includes 3 classes. It is enough for the test.
     color_map_ = autoware::tensorrt_rtmdet::TrtRTMDetNode::read_color_map_file(test_color_map_path);
@@ -108,7 +108,7 @@ public:
    *
    * @return The image buffer on the host.
    */
-  [[nodiscard]] const cuda_utils::CudaUniquePtrHost<unsigned char[]> & get_image_buffer_h() const
+  [[nodiscard]] const autoware::cuda_utils::CudaUniquePtrHost<unsigned char[]> & get_image_buffer_h() const
   {
     return trt_rtmdet_->image_buf_h_;
   }
@@ -118,7 +118,7 @@ public:
    *
    * @return The image buffer on the device.
    */
-  [[nodiscard]] const cuda_utils::CudaUniquePtr<unsigned char[]> & get_image_buffer_d() const
+  [[nodiscard]] const autoware::cuda_utils::CudaUniquePtr<unsigned char[]> & get_image_buffer_d() const
   {
     return trt_rtmdet_->image_buf_d_;
   }

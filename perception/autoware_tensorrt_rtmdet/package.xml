@@ -18,15 +18,15 @@
 
   <depend>autoware_internal_msgs</depend>
   <depend>autoware_perception_msgs</depend>
-  <depend>cuda_utils</depend>
+  <depend>autoware_cuda_utils</depend>
   <depend>cv_bridge</depend>
   <depend>image_transport</depend>
   <depend>libopencv-dev</depend>
-  <depend>object_recognition_utils</depend>
+  <depend>autoware_object_recognition_utils</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>
-  <depend>tensorrt_common</depend>
+  <depend>autoware_tensorrt_common</depend>
   <depend>tier4_perception_msgs</depend>
   <depend>trt_batched_nms</depend>
 

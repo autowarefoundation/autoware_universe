@@ -18,11 +18,11 @@
 #include "tensorrt_rtmdet/calibrator.hpp"
 #include "tensorrt_rtmdet/preprocess.hpp"
 
-#include <cuda_utils/cuda_unique_ptr.hpp>
-#include <cuda_utils/stream_unique_ptr.hpp>
+#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
+#include <autoware/cuda_utils/stream_unique_ptr.hpp>
 #include <opencv2/opencv.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <tensorrt_common/tensorrt_common.hpp>
+#include <autoware/tensorrt_common/tensorrt_common.hpp>
 
 #include <cv_bridge/cv_bridge.h>
 
@@ -35,10 +35,10 @@ class TrtRTMDetTest;
 
 namespace autoware::tensorrt_rtmdet
 {
-using cuda_utils::CudaUniquePtr;
-using cuda_utils::CudaUniquePtrHost;
-using cuda_utils::makeCudaStream;
-using cuda_utils::StreamUniquePtr;
+using autoware::cuda_utils::CudaUniquePtr;
+using autoware::cuda_utils::CudaUniquePtrHost;
+using autoware::cuda_utils::makeCudaStream;
+using autoware::cuda_utils::StreamUniquePtr;
 
 /**
  * @brief Represents a detected object.
@@ -81,13 +81,13 @@ public:
     const std::string & model_path, const std::string & precision, const ColorMap & color_map,
     const float score_threshold = 0.3, const float nms_threshold = 0.7,
     const float mask_threshold = 200.0,
-    const tensorrt_common::BuildConfig & build_config = tensorrt_common::BuildConfig(),
+    const autoware::tensorrt_common::BuildConfig & build_config = autoware::tensorrt_common::BuildConfig(),
     const bool use_gpu_preprocess = false,
     const std::string & calibration_image_list_file_path = std::string(),
     const double norm_factor = 1.0, const std::vector<float> & mean = {103.53, 116.28, 123.675},
     const std::vector<float> & std = {57.375, 57.12, 58.395},
     [[maybe_unused]] const std::string & cache_dir = "",
-    const tensorrt_common::BatchConfig & batch_config = {1, 1, 1},
+    const autoware::tensorrt_common::BatchConfig & batch_config = {1, 1, 1},
     const size_t max_workspace_size = (1u << 30u),
     const std::vector<std::string> & plugin_paths = {});
 
@@ -175,7 +175,7 @@ private:
     const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask,
     std::vector<uint8_t> & class_ids);
 
-  std::unique_ptr<tensorrt_common::TrtCommon> trt_common_;
+  std::unique_ptr<autoware::tensorrt_common::TrtCommon> trt_common_;
 
   // Host and device pointers for inputs
   std::vector<float> input_h_;

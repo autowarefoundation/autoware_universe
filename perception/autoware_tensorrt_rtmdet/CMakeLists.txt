@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.8)
 project(autoware_tensorrt_rtmdet)
 
-find_package(tensorrt_common)
-if(NOT ${tensorrt_common_FOUND})
-  message(WARNING "The tensorrt_common package is not found. Please check its dependencies.")
+find_package(autoware_tensorrt_common)
+if(NOT ${autoware_tensorrt_common_FOUND})
+  message(WARNING "The autoware_tensorrt_common package is not found. Please check its dependencies.")
   return()
 endif()
 
@@ -48,13 +48,13 @@ if(CMAKE_CUDA_COMPILER)
   )
 
   target_link_libraries(${PROJECT_NAME}
-          ${tensorrt_common_LIBRARIES}
+          ${autoware_tensorrt_common_LIBRARIES}
           ${PROJECT_NAME}_gpu_preprocess
   )
 
 else()
   target_link_libraries(${PROJECT_NAME}
-          ${tensorrt_common_LIBRARIES}
+          ${autoware_tensorrt_common_LIBRARIES}
   )
 endif()
 

@@ -59,10 +59,10 @@ namespace autoware::tensorrt_rtmdet
 TrtRTMDet::TrtRTMDet(
   const std::string & model_path, const std::string & precision, const ColorMap & color_map,
   const float score_threshold, const float nms_threshold, const float mask_threshold,
-  const tensorrt_common::BuildConfig & build_config, const bool use_gpu_preprocess,
+  const autoware::tensorrt_common::BuildConfig & build_config, const bool use_gpu_preprocess,
   const std::string & calibration_image_list_file_path, const double norm_factor,
   const std::vector<float> & mean, const std::vector<float> & std,
-  [[maybe_unused]] const std::string & cache_dir, const tensorrt_common::BatchConfig & batch_config,
+  [[maybe_unused]] const std::string & cache_dir, const autoware::tensorrt_common::BatchConfig & batch_config,
   const size_t max_workspace_size, const std::vector<std::string> & plugin_paths)
 : score_threshold_{score_threshold},
   nms_threshold_{nms_threshold},
@@ -84,7 +84,7 @@ TrtRTMDet::TrtRTMDet(
       load_calibration_image_list(calibration_image_list_file_path);
 
     int max_batch_size = batch_config.at(2);
-    nvinfer1::Dims input_dims = tensorrt_common::get_input_dims(model_path);
+    nvinfer1::Dims input_dims = autoware::tensorrt_common::get_input_dims(model_path);
     tensorrt_rtmdet::ImageStream stream(max_batch_size, input_dims, calibration_images);
 
     fs::path calibration_table{model_path};
@@ -99,11 +99,11 @@ TrtRTMDet::TrtRTMDet(
     calibrator = std::make_unique<tensorrt_rtmdet::Int8EntropyCalibrator>(
       stream, calibration_table, mean_, std_);
 
-    trt_common_ = std::make_unique<tensorrt_common::TrtCommon>(
+    trt_common_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
       model_path, precision, std::move(calibrator), batch_config, max_workspace_size, build_config,
       plugin_paths);
   } else {
-    trt_common_ = std::make_unique<tensorrt_common::TrtCommon>(
+    trt_common_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
       model_path, precision, nullptr, batch_config, max_workspace_size, build_config, plugin_paths);
   }
   trt_common_->setup();
@@ -119,11 +119,11 @@ TrtRTMDet::TrtRTMDet(
   model_input_height_ = input_dims.d[2];
   model_input_width_ = input_dims.d[3];
 
-  input_d_ = cuda_utils::make_unique<float[]>(
+  input_d_ = autoware::cuda_utils::make_unique<float[]>(
     batch_size_ * input_dims.d[1] * input_dims.d[2] * input_dims.d[3]);
-  out_dets_d_ = cuda_utils::make_unique<float[]>(batch_size_ * max_detections_ * 5);
-  out_labels_d_ = cuda_utils::make_unique<int32_t[]>(batch_size_ * max_detections_);
-  out_masks_d_ = cuda_utils::make_unique<float[]>(
+  out_dets_d_ = autoware::cuda_utils::make_unique<float[]>(batch_size_ * max_detections_ * 5);
+  out_labels_d_ = autoware::cuda_utils::make_unique<int32_t[]>(batch_size_ * max_detections_);
+  out_masks_d_ = autoware::cuda_utils::make_unique<float[]>(
     batch_size_ * max_detections_ * model_input_width_ * model_input_height_);
 
   out_dets_h_ = std::make_unique<float[]>(batch_size_ * max_detections_ * 5);
@@ -191,10 +191,10 @@ void TrtRTMDet::preprocess_gpu(const std::vector<cv::Mat> & images)
     if (!image_buf_h_) {
       scale_width_ = input_width / static_cast<float>(image.cols);
       scale_height_ = input_height / static_cast<float>(image.rows);
-      image_buf_h_ = cuda_utils::make_unique_host<unsigned char[]>(
+      image_buf_h_ = autoware::cuda_utils::make_unique_host<unsigned char[]>(
         image.cols * image.rows * 3 * batch_size, cudaHostAllocWriteCombined);
       image_buf_d_ =
-        cuda_utils::make_unique<unsigned char[]>(image.cols * image.rows * 3 * batch_size);
+        autoware::cuda_utils::make_unique<unsigned char[]>(image.cols * image.rows * 3 * batch_size);
     }
     int index = b * image.cols * image.rows * 3;
     // Copy into pinned memory
