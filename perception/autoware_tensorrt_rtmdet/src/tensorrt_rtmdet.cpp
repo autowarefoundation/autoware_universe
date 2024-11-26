@@ -62,8 +62,9 @@ TrtRTMDet::TrtRTMDet(
   const autoware::tensorrt_common::BuildConfig & build_config,
   const std::string & calibration_image_list_file_path, const double norm_factor,
   const std::vector<float> & mean, const std::vector<float> & std,
-  [[maybe_unused]] const std::string & cache_dir, const autoware::tensorrt_common::BatchConfig & batch_config,
-  const size_t max_workspace_size, const std::vector<std::string> & plugin_paths)
+  [[maybe_unused]] const std::string & cache_dir,
+  const autoware::tensorrt_common::BatchConfig & batch_config, const size_t max_workspace_size,
+  const std::vector<std::string> & plugin_paths)
 : score_threshold_{score_threshold},
   nms_threshold_{nms_threshold},
   mask_threshold_{mask_threshold},
@@ -190,8 +191,8 @@ void TrtRTMDet::preprocess_gpu(const std::vector<cv::Mat> & images)
       scale_height_ = input_height / static_cast<float>(image.rows);
       image_buf_h_ = autoware::cuda_utils::make_unique_host<unsigned char[]>(
         image.cols * image.rows * 3 * batch_size, cudaHostAllocWriteCombined);
-      image_buf_d_ =
-        autoware::cuda_utils::make_unique<unsigned char[]>(image.cols * image.rows * 3 * batch_size);
+      image_buf_d_ = autoware::cuda_utils::make_unique<unsigned char[]>(
+        image.cols * image.rows * 3 * batch_size);
     }
     int index = b * image.cols * image.rows * 3;
     // Copy into pinned memory

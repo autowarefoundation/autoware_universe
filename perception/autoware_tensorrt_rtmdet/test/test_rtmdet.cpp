@@ -19,8 +19,8 @@
 
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/cuda_utils/stream_unique_ptr.hpp>
-#include <opencv2/opencv.hpp>
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
+#include <opencv2/opencv.hpp>
 
 #include <dlfcn.h>
 #include <gtest/gtest.h>
@@ -95,7 +95,8 @@ public:
    *
    * @return The image buffer on the host.
    */
-  [[nodiscard]] const autoware::cuda_utils::CudaUniquePtrHost<unsigned char[]> & get_image_buffer_h() const
+  [[nodiscard]] const autoware::cuda_utils::CudaUniquePtrHost<unsigned char[]> &
+  get_image_buffer_h() const
   {
     return trt_rtmdet_->image_buf_h_;
   }
@@ -105,7 +106,8 @@ public:
    *
    * @return The image buffer on the device.
    */
-  [[nodiscard]] const autoware::cuda_utils::CudaUniquePtr<unsigned char[]> & get_image_buffer_d() const
+  [[nodiscard]] const autoware::cuda_utils::CudaUniquePtr<unsigned char[]> & get_image_buffer_d()
+    const
   {
     return trt_rtmdet_->image_buf_d_;
   }

@@ -20,9 +20,9 @@
 
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/cuda_utils/stream_unique_ptr.hpp>
+#include <autoware/tensorrt_common/tensorrt_common.hpp>
 #include <opencv2/opencv.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <autoware/tensorrt_common/tensorrt_common.hpp>
 
 #include <cv_bridge/cv_bridge.h>
 
@@ -81,7 +81,8 @@ public:
     const std::string & model_path, const std::string & precision, const ColorMap & color_map,
     const float score_threshold = 0.3, const float nms_threshold = 0.7,
     const float mask_threshold = 200.0,
-    const autoware::tensorrt_common::BuildConfig & build_config = autoware::tensorrt_common::BuildConfig(),
+    const autoware::tensorrt_common::BuildConfig & build_config =
+      autoware::tensorrt_common::BuildConfig(),
     const std::string & calibration_image_list_file_path = std::string(),
     const double norm_factor = 1.0, const std::vector<float> & mean = {103.53, 116.28, 123.675},
     const std::vector<float> & std = {57.375, 57.12, 58.395},

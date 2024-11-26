@@ -57,7 +57,7 @@ TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
 
   color_map_ = read_color_map_file(color_map_path);
 
-    autoware::tensorrt_common::BuildConfig build_config(
+  autoware::tensorrt_common::BuildConfig build_config(
     "Entropy", dla_core_id, quantize_first_layer, quantize_last_layer, profile_per_layer,
     clip_value);
 
@@ -71,8 +71,8 @@ TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
 
   trt_rtmdet_ = std::make_unique<tensorrt_rtmdet::TrtRTMDet>(
     model_path, precision, color_map_, score_threshold, nms_threshold, mask_threshold, build_config,
-    calibration_image_list_path, norm_factor, mean_, std_, cache_dir,
-    batch_config, max_workspace_size, plugin_paths);
+    calibration_image_list_path, norm_factor, mean_, std_, cache_dir, batch_config,
+    max_workspace_size, plugin_paths);
 
   timer_ =
     rclcpp::create_timer(this, get_clock(), 100ms, std::bind(&TrtRTMDetNode::on_connect, this));
