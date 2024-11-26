@@ -90,7 +90,7 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 
   ament_add_ros_isolated_gtest(test_rtmdet test/test_rtmdet.cpp)
-  set_tests_properties(test_rtmdet PROPERTIES TIMEOUT 300) # It could take a long time on the first run to create the engine
+  set_tests_properties(test_rtmdet PROPERTIES TIMEOUT 60) # It could take a long time on the first run to create the engine
   target_link_libraries(test_rtmdet ${PROJECT_NAME} ${PROJECT_NAME}_node)
   target_include_directories(test_rtmdet PRIVATE include)
 endif()
