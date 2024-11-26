@@ -3,7 +3,7 @@
 ## Purpose
 
 RTMDet is a real-time instance segmentation model which can be used for detecting objects like cars, pedestrians,
-bicycles, etc. in a scene. This package provides a ROS2 interface for RTMDet using TensorRT.
+bicycles, etc. in a scene. This package provides a ROS 2 interface for RTMDet using TensorRT.
 
 ## Inner-workings / Algorithms
 

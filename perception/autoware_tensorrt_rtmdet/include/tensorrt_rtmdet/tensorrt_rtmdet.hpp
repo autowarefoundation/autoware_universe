@@ -172,12 +172,12 @@ private:
   CudaUniquePtr<float[]> input_d_;
 
   // Device pointer for outputs
-  CudaUniquePtr<float[]> out_dets_d_;
+  CudaUniquePtr<float[]> out_detections_d_;
   CudaUniquePtr<int32_t[]> out_labels_d_;
   CudaUniquePtr<float[]> out_masks_d_;
 
   // Host pointer for outputs
-  std::unique_ptr<float[]> out_dets_h_;
+  std::unique_ptr<float[]> out_detections_h_;
   std::unique_ptr<int32_t[]> out_labels_h_;
   std::unique_ptr<float[]> out_masks_h_;
 

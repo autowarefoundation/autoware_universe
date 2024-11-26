@@ -121,19 +121,19 @@ TrtRTMDet::TrtRTMDet(
 
   input_d_ = autoware::cuda_utils::make_unique<float[]>(
     batch_size_ * input_dims.d[1] * input_dims.d[2] * input_dims.d[3]);
-  out_dets_d_ = autoware::cuda_utils::make_unique<float[]>(batch_size_ * max_detections_ * 5);
+  out_detections_d_ = autoware::cuda_utils::make_unique<float[]>(batch_size_ * max_detections_ * 5);
   out_labels_d_ = autoware::cuda_utils::make_unique<int32_t[]>(batch_size_ * max_detections_);
   out_masks_d_ = autoware::cuda_utils::make_unique<float[]>(
     batch_size_ * max_detections_ * model_input_width_ * model_input_height_);
 
-  out_dets_h_ = std::make_unique<float[]>(batch_size_ * max_detections_ * 5);
+  out_detections_h_ = std::make_unique<float[]>(batch_size_ * max_detections_ * 5);
   out_labels_h_ = std::make_unique<int32_t[]>(batch_size_ * max_detections_);
   out_masks_h_ = std::make_unique<float[]>(
     batch_size_ * max_detections_ * model_input_width_ * model_input_height_);
 
 #if (NV_TENSORRT_MAJOR * 1000) + (NV_TENSORRT_MINOR * 100) + NV_TENSOR_PATCH >= 8050
   std::vector<void *> buffers = {
-    input_d_.get(), out_dets_d_.get(), out_labels_d_.get(), out_masks_d_.get()};
+    input_d_.get(), out_detections_d_.get(), out_labels_d_.get(), out_masks_d_.get()};
   trt_common_->setupBindings(buffers);
 #endif
 }
@@ -239,12 +239,12 @@ bool TrtRTMDet::feedforward(
 #endif
 
   const auto batch_size = images.size();
-  out_dets_h_.reset(new float[batch_size_ * max_detections_ * 5]);
+  out_detections_h_.reset(new float[batch_size_ * max_detections_ * 5]);
   out_labels_h_.reset(new int32_t[batch_size_ * max_detections_]);
   out_masks_h_.reset(new float[batch_size_ * 20 * model_input_width_ * model_input_height_]);
 
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    out_dets_h_.get(), out_dets_d_.get(), sizeof(float) * batch_size_ * max_detections_ * 5,
+    out_detections_h_.get(), out_detections_d_.get(), sizeof(float) * batch_size_ * max_detections_ * 5,
     cudaMemcpyDeviceToHost, *stream_));
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     out_labels_h_.get(), out_labels_d_.get(), sizeof(int32_t) * batch_size_ * max_detections_,
@@ -261,7 +261,7 @@ bool TrtRTMDet::feedforward(
   for (size_t batch = 0; batch < batch_size; ++batch) {
     ObjectArray object_array;
     for (uint32_t index = 0; index < max_detections_; ++index) {
-      if (out_dets_h_[(batch * max_detections_ * 5) + ((5 * index) + 4)] < score_threshold_) {
+      if (out_detections_h_[(batch * max_detections_ * 5) + ((5 * index) + 4)] < score_threshold_) {
         break;
       }
 
@@ -269,14 +269,14 @@ bool TrtRTMDet::feedforward(
       object.mask_index = index;
       object.class_id = out_labels_h_[(batch * max_detections_) + index];
       object.x1 = static_cast<uint32_t>(
-        out_dets_h_[(batch * max_detections_ * 5) + ((5 * index) + 0)] / scale_width_);
+        out_detections_h_[(batch * max_detections_ * 5) + ((5 * index) + 0)] / scale_width_);
       object.y1 = static_cast<uint32_t>(
-        out_dets_h_[(batch * max_detections_ * 5) + ((5 * index) + 1)] / scale_height_);
+        out_detections_h_[(batch * max_detections_ * 5) + ((5 * index) + 1)] / scale_height_);
       object.x2 = static_cast<uint32_t>(
-        out_dets_h_[(batch * max_detections_ * 5) + ((5 * index) + 2)] / scale_width_);
+        out_detections_h_[(batch * max_detections_ * 5) + ((5 * index) + 2)] / scale_width_);
       object.y2 = static_cast<uint32_t>(
-        out_dets_h_[(batch * max_detections_ * 5) + ((5 * index) + 3)] / scale_height_);
-      object.score = out_dets_h_[(batch * max_detections_ * 5) + ((5 * index) + 4)];
+        out_detections_h_[(batch * max_detections_ * 5) + ((5 * index) + 3)] / scale_height_);
+      object.score = out_detections_h_[(batch * max_detections_ * 5) + ((5 * index) + 4)];
       object_array.push_back(object);
     }
     ObjectArray nms_objects;
