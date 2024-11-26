@@ -18,6 +18,5 @@
     quantize_last_layer: false
     profile_per_layer: false
     clip_value: 6.0
-    preprocess_on_gpu: true
     apply_erosion: false
     calibration_image_list_path: ""

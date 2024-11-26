@@ -74,24 +74,11 @@ protected:
 
     trt_rtmdet_ = std::make_unique<autoware::tensorrt_rtmdet::TrtRTMDet>(
       model_path, precision_, color_map_, score_threshold_, nms_threshold_, mask_threshold_,
-      build_config, true, "", norm_factor, mean_, std_, cache_dir, batch_config, max_workspace_size,
+      build_config, "", norm_factor, mean_, std_, cache_dir, batch_config, max_workspace_size,
       plugin_paths);
   }
 
 public:
-  /**
-   * @brief Wrapper function to test the autoware::tensorrt_rtmdet::TrtRTMDet::preprocess function.
-   *
-   * @param input_images The input images.
-   * @return The allocated size.
-   */
-  [[nodiscard]] size_t preprocess(const std::vector<cv::Mat> & input_images) const
-  {
-    trt_rtmdet_->preprocess(input_images);
-
-    return trt_rtmdet_->input_h_.size();
-  }
-
   /**
    * @brief Wrapper function to test the autoware::tensorrt_rtmdet::TrtRTMDet::preprocess_gpu
    * function.
@@ -147,23 +134,6 @@ public:
 
   autoware::tensorrt_rtmdet::ColorMap color_map_;
 };
-
-TEST_F(TrtRTMDetTest, TestPreprocess)
-{
-  const auto input_image = test_image_.clone();
-  const auto input_images = std::vector<cv::Mat>{input_image};
-
-  const auto input_dimensions = get_input_dimensions();
-  const uint32_t input_batch_size = input_dimensions.d[0];
-  const uint32_t input_channels = input_dimensions.d[1];
-  const uint32_t input_height = input_dimensions.d[2];
-  const uint32_t input_width = input_dimensions.d[3];
-
-  const auto allocated_size = preprocess(input_images);
-  const auto expected_size = input_batch_size * input_channels * input_height * input_width;
-
-  EXPECT_EQ(allocated_size, expected_size);
-}
 
 TEST_F(TrtRTMDetTest, TestPreprocessGPU)
 {

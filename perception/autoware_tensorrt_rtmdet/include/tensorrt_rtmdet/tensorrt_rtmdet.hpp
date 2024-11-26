@@ -82,7 +82,6 @@ public:
     const float score_threshold = 0.3, const float nms_threshold = 0.7,
     const float mask_threshold = 200.0,
     const autoware::tensorrt_common::BuildConfig & build_config = autoware::tensorrt_common::BuildConfig(),
-    const bool use_gpu_preprocess = false,
     const std::string & calibration_image_list_file_path = std::string(),
     const double norm_factor = 1.0, const std::vector<float> & mean = {103.53, 116.28, 123.675},
     const std::vector<float> & std = {57.375, 57.12, 58.395},
@@ -138,16 +137,6 @@ public:
   void print_profiling();
 
 private:
-  /**
-   * @brief Preprocess input images on CPU.
-   *
-   * This function takes a vector of input images and preprocesses them on CPU.
-   * The images are resized to the input size of the model, normalized and stored in a buffer.
-   *
-   * @param[in] images a vector of input images.
-   */
-  void preprocess(const std::vector<cv::Mat> & images);
-
   /**
    * @brief Preprocess input images on GPU.
    *
@@ -209,8 +198,6 @@ private:
   // maximum number of detections, read from model
   uint32_t max_detections_;
 
-  // flag whether preprocess are performed on GPU
-  const bool use_gpu_preprocess_;
   // host buffer for preprocessing on GPU
   CudaUniquePtrHost<unsigned char[]> image_buf_h_;
   // device buffer for preprocessing on GPU

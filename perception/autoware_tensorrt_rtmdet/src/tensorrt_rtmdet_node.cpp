@@ -50,7 +50,6 @@ TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
   bool quantize_last_layer = declare_parameter<bool>("quantize_last_layer");
   bool profile_per_layer = declare_parameter<bool>("profile_per_layer");
   double clip_value = declare_parameter<double>("clip_value");
-  bool preprocess_on_gpu = declare_parameter<bool>("preprocess_on_gpu");
   std::string calibration_image_list_path =
     declare_parameter<std::string>("calibration_image_list_path");
   std::vector<std::string> plugin_paths =
@@ -72,7 +71,7 @@ TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
 
   trt_rtmdet_ = std::make_unique<tensorrt_rtmdet::TrtRTMDet>(
     model_path, precision, color_map_, score_threshold, nms_threshold, mask_threshold, build_config,
-    preprocess_on_gpu, calibration_image_list_path, norm_factor, mean_, std_, cache_dir,
+    calibration_image_list_path, norm_factor, mean_, std_, cache_dir,
     batch_config, max_workspace_size, plugin_paths);
 
   timer_ =

@@ -59,7 +59,7 @@ namespace autoware::tensorrt_rtmdet
 TrtRTMDet::TrtRTMDet(
   const std::string & model_path, const std::string & precision, const ColorMap & color_map,
   const float score_threshold, const float nms_threshold, const float mask_threshold,
-  const autoware::tensorrt_common::BuildConfig & build_config, const bool use_gpu_preprocess,
+  const autoware::tensorrt_common::BuildConfig & build_config,
   const std::string & calibration_image_list_file_path, const double norm_factor,
   const std::vector<float> & mean, const std::vector<float> & std,
   [[maybe_unused]] const std::string & cache_dir, const autoware::tensorrt_common::BatchConfig & batch_config,
@@ -68,7 +68,6 @@ TrtRTMDet::TrtRTMDet(
   nms_threshold_{nms_threshold},
   mask_threshold_{mask_threshold},
   batch_size_{batch_config.at(1)},
-  use_gpu_preprocess_{use_gpu_preprocess},
   norm_factor_{norm_factor},
   mean_{mean},
   std_{std},
@@ -140,13 +139,11 @@ TrtRTMDet::TrtRTMDet(
 
 TrtRTMDet::~TrtRTMDet() noexcept
 {
-  if (use_gpu_preprocess_) {
-    if (image_buf_h_) {
-      image_buf_h_.reset();
-    }
-    if (image_buf_d_) {
-      image_buf_d_.reset();
-    }
+  if (image_buf_h_) {
+    image_buf_h_.reset();
+  }
+  if (image_buf_d_) {
+    image_buf_d_.reset();
   }
 }
 
@@ -215,41 +212,6 @@ void TrtRTMDet::preprocess_gpu(const std::vector<cv::Mat> & images)
     static_cast<int32_t>(batch_size), static_cast<float>(norm_factor_), *stream_);
 }
 
-void TrtRTMDet::preprocess(const std::vector<cv::Mat> & images)
-{
-  const auto batch_size = images.size();
-  auto input_dims = trt_common_->getBindingDimensions(0);
-  input_dims.d[0] = static_cast<int32_t>(batch_size);
-  trt_common_->setBindingDimensions(0, input_dims);
-
-  std::vector<cv::Mat> dst_images;
-  for (const auto & image : images) {
-    if (scale_width_ == -1 || scale_height_ == -1) {
-      scale_width_ = static_cast<float>(model_input_width_) / static_cast<float>(image.cols);
-      scale_height_ = static_cast<float>(model_input_height_) / static_cast<float>(image.rows);
-    }
-    cv::Mat dst_image;
-    cv::resize(
-      image, dst_image,
-      cv::Size(
-        static_cast<int32_t>(model_input_width_), static_cast<int32_t>(model_input_height_)));
-    dst_image.convertTo(dst_image, CV_32F);
-    dst_image -= cv::Scalar(103.53, 116.28, 123.675);
-    dst_image /= cv::Scalar(57.375, 57.12, 58.395);
-    dst_images.emplace_back(dst_image);
-  }
-
-  const auto chw_images = cv::dnn::blobFromImages(
-    dst_images, norm_factor_, cv::Size(), cv::Scalar(), false, false, CV_32F);
-
-  const auto data_length = chw_images.total();
-  input_h_.reserve(data_length);
-  const auto flat = chw_images.reshape(1, static_cast<int32_t>(data_length));
-  input_h_ = chw_images.isContinuous() ? flat : flat.clone();
-  CHECK_CUDA_ERROR(cudaMemcpy(
-    input_d_.get(), input_h_.data(), input_h_.size() * sizeof(float), cudaMemcpyHostToDevice));
-}
-
 bool TrtRTMDet::do_inference(
   const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask,
   std::vector<uint8_t> & class_ids)
@@ -257,12 +219,8 @@ bool TrtRTMDet::do_inference(
   if (!trt_common_->isInitialized()) {
     return false;
   }
+  preprocess_gpu(images);
 
-  if (use_gpu_preprocess_) {
-    preprocess_gpu(images);
-  } else {
-    preprocess(images);
-  }
   return feedforward(images, objects, mask, class_ids);
 }
 
