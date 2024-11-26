@@ -36,6 +36,8 @@ A sample model is provided in `autoware_data` folder by ansible script on env pr
 model, you follow instructions from the
 [link](https://github.com/autowarefoundation/autoware/tree/main/ansible/roles/artifacts) to download the model.
 
+The shared model was trained by open-mmlab using the COCO dataset. For more details, see [link](https://github.com/open-mmlab/mmdetection/tree/3.x/configs/rtmdet#instance-segmentation).
+
 ### Package acceptable model generation
 
 Users can generate their own model using official RTMDet repository. Please refer to the
