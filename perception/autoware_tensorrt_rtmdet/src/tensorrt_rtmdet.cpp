@@ -244,8 +244,8 @@ bool TrtRTMDet::feedforward(
   out_masks_h_.reset(new float[batch_size_ * 20 * model_input_width_ * model_input_height_]);
 
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    out_detections_h_.get(), out_detections_d_.get(), sizeof(float) * batch_size_ * max_detections_ * 5,
-    cudaMemcpyDeviceToHost, *stream_));
+    out_detections_h_.get(), out_detections_d_.get(),
+    sizeof(float) * batch_size_ * max_detections_ * 5, cudaMemcpyDeviceToHost, *stream_));
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     out_labels_h_.get(), out_labels_d_.get(), sizeof(int32_t) * batch_size_ * max_detections_,
     cudaMemcpyDeviceToHost, *stream_));
