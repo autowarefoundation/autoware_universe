@@ -3,7 +3,7 @@
 <package format="3">
   <name>autoware_tensorrt_rtmdet</name>
   <version>0.0.1</version>
-  <description>tensorrt library implementation for rtmdet</description>
+  <description>TensorRT library implementation for RTMDet</description>
   <maintainer email="baris@leodrive.ai">Barış Zeren</maintainer>
 
   <license>Apache License 2.0</license>
