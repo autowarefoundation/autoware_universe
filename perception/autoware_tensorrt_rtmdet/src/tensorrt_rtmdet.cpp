@@ -233,7 +233,7 @@ bool TrtRTMDet::feedforward(
   trt_common_->enqueueV3(*stream_);
 #else
   std::vector<void *> buffers = {
-    input_d_.get(), out_dets_d_.get(), out_labels_d_.get(), out_masks_d_.get()};
+    input_d_.get(), out_detections_d_.get(), out_labels_d_.get(), out_masks_d_.get()};
 
   trt_common_->enqueueV2(buffers.data(), *stream_, nullptr);
 #endif
