@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// cspell: ignore rtmdet
 #include "tensorrt_rtmdet/tensorrt_rtmdet.hpp"
 
 #include <cmath>

@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <launch>
+  <!-- cspell: ignore rtmdet  -->
   <arg name="input/image" default="/camera0/image_raw"/>
   <arg name="output/objects" default="/perception/object_recognition/detection/rois0"/>
   <arg name="output/mask" default="/perception/object_recognition/detection/mask0"/>

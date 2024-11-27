@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// cspell: ignore RTMDET, rtmdet
 #ifndef TENSORRT_RTMDET__CALIBRATOR_HPP_
 #define TENSORRT_RTMDET__CALIBRATOR_HPP_
 #include "autoware/cuda_utils/cuda_check_error.hpp"

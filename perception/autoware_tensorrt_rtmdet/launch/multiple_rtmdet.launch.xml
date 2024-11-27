@@ -27,6 +27,7 @@
   <arg name="output_roi_topic" default="/perception/object_recognition/detection/rois"/>
   <arg name="output_mask_topic" default="/perception/object_recognition/detection/mask"/>
 
+  <!-- cspell: ignore rtmdet  -->
   <include if="$(eval &quot;'$(var image_number)'>='1'&quot;)" file="$(find-pkg-share autoware_tensorrt_rtmdet)/launch/rtmdet.launch.xml">
     <arg name="input/image" value="$(var image_raw0)"/>
     <arg name="output/objects" value="$(var output_roi_topic)0"/>

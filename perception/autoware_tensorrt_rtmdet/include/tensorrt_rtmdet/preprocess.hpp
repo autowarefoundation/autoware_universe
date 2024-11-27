@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// cspell: ignore RTMDET, rtmdet
 #ifndef TENSORRT_RTMDET__PREPROCESS_HPP_
 #define TENSORRT_RTMDET__PREPROCESS_HPP_
 
