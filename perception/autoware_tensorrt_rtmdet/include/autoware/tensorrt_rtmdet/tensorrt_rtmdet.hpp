@@ -16,9 +16,6 @@
 #ifndef TENSORRT_RTMDET__TENSORRT_RTMDET_HPP_
 #define TENSORRT_RTMDET__TENSORRT_RTMDET_HPP_
 
-#include "autoware/tensorrt_rtmdet/calibrator.hpp"
-#include "autoware/tensorrt_rtmdet/preprocess.hpp"
-
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/cuda_utils/stream_unique_ptr.hpp>
 #include <autoware/tensorrt_common/tensorrt_common.hpp>

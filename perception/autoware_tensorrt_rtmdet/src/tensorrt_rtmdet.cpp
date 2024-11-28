@@ -15,11 +15,12 @@
 // cspell: ignore rtmdet
 #include "autoware/tensorrt_rtmdet/tensorrt_rtmdet.hpp"
 
+#include "autoware/tensorrt_rtmdet/calibrator.hpp"
+#include "autoware/tensorrt_rtmdet/preprocess.hpp"
+
 #include <cmath>
 #include <fstream>
-#include <functional>
 #include <memory>
-#include <numeric>
 #include <string>
 #include <vector>
 

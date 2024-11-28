@@ -16,7 +16,6 @@
 #ifndef TENSORRT_RTMDET__CALIBRATOR_HPP_
 #define TENSORRT_RTMDET__CALIBRATOR_HPP_
 #include "autoware/cuda_utils/cuda_check_error.hpp"
-#include "autoware/cuda_utils/cuda_unique_ptr.hpp"
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>

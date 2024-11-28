@@ -15,6 +15,9 @@
 // cspell: ignore rtmdet
 #include "autoware/tensorrt_rtmdet/tensorrt_rtmdet_node.hpp"
 
+#include "autoware_perception_msgs/msg/object_classification.hpp"
+#include "tier4_perception_msgs/msg/detected_object_with_feature.hpp"
+
 #include <dlfcn.h>
 
 #include <fstream>

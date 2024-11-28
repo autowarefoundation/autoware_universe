@@ -14,8 +14,8 @@
 
 #include "autoware/tensorrt_rtmdet/preprocess.hpp"
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 
 #include <algorithm>
 

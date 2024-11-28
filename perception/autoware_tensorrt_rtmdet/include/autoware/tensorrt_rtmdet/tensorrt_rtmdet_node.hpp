@@ -24,10 +24,7 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include "autoware_internal_msgs/msg/segmentation_mask.hpp"
-#include "autoware_perception_msgs/msg/object_classification.hpp"
-#include "tier4_perception_msgs/msg/detected_object_with_feature.hpp"
 #include "tier4_perception_msgs/msg/detected_objects_with_feature.hpp"
-#include "tier4_perception_msgs/msg/feature.hpp"
 
 #include <cv_bridge/cv_bridge.h>
 
