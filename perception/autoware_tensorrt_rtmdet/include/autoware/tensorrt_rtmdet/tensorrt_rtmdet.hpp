@@ -13,8 +13,8 @@
 // limitations under the License.
 
 // cspell: ignore RTMDET, rtmdet
-#ifndef TENSORRT_RTMDET__TENSORRT_RTMDET_HPP_
-#define TENSORRT_RTMDET__TENSORRT_RTMDET_HPP_
+#ifndef AUTOWARE__TENSORRT_RTMDET__TENSORRT_RTMDET_HPP_
+#define AUTOWARE__TENSORRT_RTMDET__TENSORRT_RTMDET_HPP_
 
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/cuda_utils/stream_unique_ptr.hpp>
@@ -220,4 +220,4 @@ public:
 };
 }  // namespace autoware::tensorrt_rtmdet
 
-#endif  // TENSORRT_RTMDET__TENSORRT_RTMDET_HPP_
+#endif  // AUTOWARE__TENSORRT_RTMDET__TENSORRT_RTMDET_HPP_

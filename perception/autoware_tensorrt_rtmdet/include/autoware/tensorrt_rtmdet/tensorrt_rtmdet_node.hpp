@@ -13,8 +13,8 @@
 // limitations under the License.
 
 // cspell: ignore RTMDET, rtmdet
-#ifndef TENSORRT_RTMDET__TENSORRT_RTMDET_NODE_HPP_
-#define TENSORRT_RTMDET__TENSORRT_RTMDET_NODE_HPP_
+#ifndef AUTOWARE__TENSORRT_RTMDET__TENSORRT_RTMDET_NODE_HPP_
+#define AUTOWARE__TENSORRT_RTMDET__TENSORRT_RTMDET_NODE_HPP_
 
 #include "autoware/tensorrt_rtmdet/tensorrt_rtmdet.hpp"
 
@@ -131,4 +131,4 @@ private:
 };
 }  // namespace autoware::tensorrt_rtmdet
 
-#endif  // TENSORRT_RTMDET__TENSORRT_RTMDET_NODE_HPP_
+#endif  // AUTOWARE__TENSORRT_RTMDET__TENSORRT_RTMDET_NODE_HPP_

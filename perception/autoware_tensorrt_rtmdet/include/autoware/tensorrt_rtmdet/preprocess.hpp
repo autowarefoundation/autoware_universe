@@ -13,8 +13,8 @@
 // limitations under the License.
 
 // cspell: ignore RTMDET, rtmdet
-#ifndef TENSORRT_RTMDET__PREPROCESS_HPP_
-#define TENSORRT_RTMDET__PREPROCESS_HPP_
+#ifndef AUTOWARE__TENSORRT_RTMDET__PREPROCESS_HPP_
+#define AUTOWARE__TENSORRT_RTMDET__PREPROCESS_HPP_
 
 #include <cublas_v2.h>
 #include <cuda.h>
@@ -111,8 +111,8 @@ extern void resize_bilinear_letterbox_gpu(
  * @param[in] stream cuda stream
  */
 extern void resize_bilinear_letterbox_nhwc_to_nchw32_gpu(
-  float * dst, unsigned char * src, int d_w, int d_h, int s_w, int s_h,
-  float norm, cudaStream_t stream);
+  float * dst, unsigned char * src, int d_w, int d_h, int s_w, int s_h, float norm,
+  cudaStream_t stream);
 
 /**
  * @brief Optimized preprocessing including resize, letterbox, nhwc2nchw, toFloat and normalization
@@ -149,4 +149,4 @@ extern void argmax_gpu(
   cudaStream_t stream);
 }  // namespace autoware::tensorrt_rtmdet
 
-#endif  // TENSORRT_RTMDET__PREPROCESS_HPP_
+#endif  // AUTOWARE__TENSORRT_RTMDET__PREPROCESS_HPP_

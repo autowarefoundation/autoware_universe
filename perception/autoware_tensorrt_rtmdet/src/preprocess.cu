@@ -14,10 +14,9 @@
 
 #include "autoware/tensorrt_rtmdet/preprocess.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
-
-#include <algorithm>
 
 #define MIN(x, y) x < y ? x : y
 
@@ -61,8 +60,8 @@ __device__ float lerp2d(int f00, int f01, int f10, int f11, float centroid_h, fl
 }
 
 __global__ void resize_bilinear_kernel(
-  int N, unsigned char * dst_img, unsigned char * src_img, int dst_w, int src_h,
-  int src_w, float stride_h, float stride_w)
+  int N, unsigned char * dst_img, unsigned char * src_img, int dst_w, int src_h, int src_w,
+  float stride_h, float stride_w)
 {
   // NHWC
   int index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
@@ -107,8 +106,7 @@ __global__ void resize_bilinear_kernel(
 }
 
 void resize_bilinear_gpu(
-  unsigned char * dst, unsigned char * src, int d_w, int d_h, int s_w, int s_h,
-  cudaStream_t stream)
+  unsigned char * dst, unsigned char * src, int d_w, int d_h, int s_w, int s_h, cudaStream_t stream)
 {
   int N = d_w * d_h;
   float stride_h = (float)s_h / (float)d_h;
@@ -119,8 +117,8 @@ void resize_bilinear_gpu(
 }
 
 __global__ void letterbox_kernel(
-  int N, unsigned char * dst_img, unsigned char * src_img, int dst_w,
-  int src_w, int letter_bot, int letter_right)
+  int N, unsigned char * dst_img, unsigned char * src_img, int dst_w, int src_w, int letter_bot,
+  int letter_right)
 {
   // NHWC
   int index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
@@ -142,16 +140,14 @@ __global__ void letterbox_kernel(
 }
 
 void letterbox_gpu(
-  unsigned char * dst, unsigned char * src, int d_w, int d_h, int s_w, int s_h,
-  cudaStream_t stream)
+  unsigned char * dst, unsigned char * src, int d_w, int d_h, int s_w, int s_h, cudaStream_t stream)
 {
   int N = d_w * d_h;
   const float scale = std::min(d_w / (float)s_w, d_h / (float)s_h);
   int r_h = (int)(scale * s_h);
   int r_w = (int)(scale * s_w);
 
-  letterbox_kernel<<<cuda_gridsize(N), block, 0, stream>>>(
-    N, dst, src, d_w, r_w, r_h, r_w);
+  letterbox_kernel<<<cuda_gridsize(N), block, 0, stream>>>(N, dst, src, d_w, r_w, r_h, r_w);
 }
 
 __global__ void nhwc_to_nchw_kernel(
@@ -225,16 +221,15 @@ __global__ void to_float_kernel(int N, float * dst32, unsigned char * src8, int 
   }
 }
 
-void to_float_gpu(
-  float * dst32, unsigned char * src, int d_w, int d_h, cudaStream_t stream)
+void to_float_gpu(float * dst32, unsigned char * src, int d_w, int d_h, cudaStream_t stream)
 {
   int N = d_w * d_h;
   to_float_kernel<<<cuda_gridsize(N), block, 0, stream>>>(N, dst32, src, d_h, d_w);
 }
 
 __global__ void resize_bilinear_letterbox_kernel(
-  int N, unsigned char * dst_img, unsigned char * src_img, int dst_w, int src_h,
-  int src_w, float scale, int letter_bot, int letter_right)
+  int N, unsigned char * dst_img, unsigned char * src_img, int dst_w, int src_h, int src_w,
+  float scale, int letter_bot, int letter_right)
 {
   // NHWC
   int index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
@@ -286,8 +281,7 @@ __global__ void resize_bilinear_letterbox_kernel(
 }
 
 void resize_bilinear_letterbox_gpu(
-  unsigned char * dst, unsigned char * src, int d_w, int d_h, int s_w, int s_h,
-  cudaStream_t stream)
+  unsigned char * dst, unsigned char * src, int d_w, int d_h, int s_w, int s_h, cudaStream_t stream)
 {
   int N = d_w * d_h;
   const float scale = std::min(d_w / (float)s_w, d_h / (float)s_h);
@@ -347,8 +341,8 @@ __global__ void resize_bilinear_letterbox_nhwc_to_nchw32_kernel(
 }
 
 void resize_bilinear_letterbox_nhwc_to_nchw32_gpu(
-  float * dst, unsigned char * src, int d_w, int d_h, int s_w, int s_h,
-  float norm, cudaStream_t stream)
+  float * dst, unsigned char * src, int d_w, int d_h, int s_w, int s_h, float norm,
+  cudaStream_t stream)
 {
   int N = d_w * d_h;
   const float scale = std::min(d_w / (float)s_w, d_h / (float)s_h);
@@ -361,7 +355,8 @@ void resize_bilinear_letterbox_nhwc_to_nchw32_gpu(
 
 __global__ void resize_bilinear_letterbox_nhwc_to_nchw32_batch_kernel(
   int N, float * dst_img, unsigned char * src_img, int dst_h, int dst_w, int src_h, int src_w,
-  float scale_h, float scale_w, int letter_bot, int letter_right, int batch, const float * mean, const float * std)
+  float scale_h, float scale_w, int letter_bot, int letter_right, int batch, const float * mean,
+  const float * std)
 {
   // NHWC
   int index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;

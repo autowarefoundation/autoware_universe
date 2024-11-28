@@ -13,8 +13,8 @@
 // limitations under the License.
 
 // cspell: ignore RTMDET, rtmdet
-#ifndef TENSORRT_RTMDET__CALIBRATOR_HPP_
-#define TENSORRT_RTMDET__CALIBRATOR_HPP_
+#ifndef AUTOWARE__TENSORRT_RTMDET__CALIBRATOR_HPP_
+#define AUTOWARE__TENSORRT_RTMDET__CALIBRATOR_HPP_
 #include "autoware/cuda_utils/cuda_check_error.hpp"
 
 #include <opencv2/core/core.hpp>
@@ -254,4 +254,4 @@ private:
 };
 }  // namespace autoware::tensorrt_rtmdet
 
-#endif  // TENSORRT_RTMDET__CALIBRATOR_HPP_
+#endif  // AUTOWARE__TENSORRT_RTMDET__CALIBRATOR_HPP_
