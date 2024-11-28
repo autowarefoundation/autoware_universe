@@ -49,7 +49,7 @@ TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
   double score_threshold = declare_parameter<double>("score_threshold");
   double nms_threshold = declare_parameter<double>("nms_threshold");
   double mask_threshold = declare_parameter<double>("mask_threshold");
-  int dla_core_id = declare_parameter<int>("dla_core_id");
+  int64_t dla_core_id = declare_parameter<int64_t>("dla_core_id");
   bool quantize_first_layer = declare_parameter<bool>("quantize_first_layer");
   bool quantize_last_layer = declare_parameter<bool>("quantize_last_layer");
   bool profile_per_layer = declare_parameter<bool>("profile_per_layer");

@@ -41,11 +41,10 @@ struct Roi
  * @param[in] d_c channel for resized image
  * @param[in] s_w width for input image
  * @param[in] s_h height for input image
- * @param[in] s_c channel for input image
  * @param[in] stream cuda stream
  */
 extern void resize_bilinear_gpu(
-  unsigned char * dst, unsigned char * src, int d_w, int d_h, int d_c, int s_w, int s_h, int s_c,
+  unsigned char * dst, unsigned char * src, int d_w, int d_h, int d_c, int s_w, int s_h,
   cudaStream_t stream);
 
 /**
@@ -54,14 +53,12 @@ extern void resize_bilinear_gpu(
  * @param[in] src image
  * @param[in] d_w width for letterbox-ing
  * @param[in] d_h height for letterbox-ing
- * @param[in] d_c channel for letterbox-ing
  * @param[in] s_w width for input image
  * @param[in] s_h height for input image
- * @param[in] s_c channel for input image
  * @param[in] stream cuda stream
  */
 extern void letterbox_gpu(
-  unsigned char * dst, unsigned char * src, int d_w, int d_h, int d_c, int s_w, int s_h, int s_c,
+  unsigned char * dst, unsigned char * src, int d_w, int d_h, int s_w, int s_h,
   cudaStream_t stream);
 
 /**
@@ -70,11 +67,10 @@ extern void letterbox_gpu(
  * @param[in] src image
  * @param[in] d_w width for a image
  * @param[in] d_h height for a image
- * @param[in] d_c channel for a image
  * @param[in] stream cuda stream
  */
 extern void nchw_to_nhwc_gpu(
-  unsigned char * dst, unsigned char * src, int d_w, int d_h, int d_c, cudaStream_t stream);
+  unsigned char * dst, unsigned char * src, int d_w, int d_h, cudaStream_t stream);
 
 /**
  * @brief Unsigned char to float32 for inference
@@ -94,14 +90,12 @@ extern void to_float_gpu(
  * @param[in] src image
  * @param[in] d_w width for output
  * @param[in] d_h height for output
- * @param[in] d_c channel for output
  * @param[in] s_w width for input
  * @param[in] s_h height for input
- * @param[in] s_c channel for input
  * @param[in] stream cuda stream
  */
 extern void resize_bilinear_letterbox_gpu(
-  unsigned char * dst, unsigned char * src, int d_w, int d_h, int d_c, int s_w, int s_h, int s_c,
+  unsigned char * dst, unsigned char * src, int d_w, int d_h, int s_w, int s_h,
   cudaStream_t stream);
 
 /**
@@ -111,15 +105,13 @@ extern void resize_bilinear_letterbox_gpu(
  * @param[in] src image
  * @param[in] d_w width for output
  * @param[in] d_h height for output
- * @param[in] d_c channel for output
  * @param[in] s_w width for input
  * @param[in] s_h height for input
- * @param[in] s_c channel for input
  * @param[in] norm normalization
  * @param[in] stream cuda stream
  */
 extern void resize_bilinear_letterbox_nhwc_to_nchw32_gpu(
-  float * dst, unsigned char * src, int d_w, int d_h, int d_c, int s_w, int s_h, int s_c,
+  float * dst, unsigned char * src, int d_w, int d_h, int s_w, int s_h,
   float norm, cudaStream_t stream);
 
 /**
@@ -129,17 +121,16 @@ extern void resize_bilinear_letterbox_nhwc_to_nchw32_gpu(
  * @param[in] src image
  * @param[in] d_w width for output
  * @param[in] d_h height for output
- * @param[in] d_c channel for output
  * @param[in] s_w width for input
  * @param[in] s_h height for input
- * @param[in] s_c channel for input
  * @param[in] batch batch size
- * @param[in] norm normalization
+ * @param[in] mean mean value for normalization
+ * @param[in] std standard deviation for normalization
  * @param[in] stream cuda stream
  */
 extern void resize_bilinear_letterbox_nhwc_to_nchw32_batch_gpu(
-  float * dst, unsigned char * src, int d_w, int d_h, int d_c, int s_w, int s_h, int s_c, int batch,
-  float norm, cudaStream_t stream);
+  float * dst, unsigned char * src, int d_w, int d_h, int s_w, int s_h, int batch,
+  const float * mean, const float * std, cudaStream_t stream);
 
 /**
  * @brief Argmax on GPU

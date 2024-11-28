@@ -211,8 +211,8 @@ void TrtRTMDet::preprocess_gpu(const std::vector<cv::Mat> & images)
   // Preprocess on GPU
   resize_bilinear_letterbox_nhwc_to_nchw32_batch_gpu(
     input_d_.get(), image_buf_d_.get(), static_cast<int32_t>(input_width),
-    static_cast<int32_t>(input_height), 3, images[0].cols, images[0].rows, 3,
-    static_cast<int32_t>(batch_size), static_cast<float>(norm_factor_), *stream_);
+    static_cast<int32_t>(input_height), images[0].cols, images[0].rows,
+    static_cast<int32_t>(batch_size), mean_.data(), std_.data(), *stream_);
 }
 
 bool TrtRTMDet::do_inference(
