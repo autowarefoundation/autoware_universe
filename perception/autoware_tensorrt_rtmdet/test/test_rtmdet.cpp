@@ -15,8 +15,8 @@
 // cspell: ignore rtmdet, libtrt
 #include "ament_index_cpp/get_package_prefix.hpp"
 #include "ament_index_cpp/get_package_share_directory.hpp"
-#include "tensorrt_rtmdet/tensorrt_rtmdet.hpp"
-#include "tensorrt_rtmdet/tensorrt_rtmdet_node.hpp"
+#include "autoware/tensorrt_rtmdet/tensorrt_rtmdet.hpp"
+#include "autoware/tensorrt_rtmdet/tensorrt_rtmdet_node.hpp"
 
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/cuda_utils/stream_unique_ptr.hpp>

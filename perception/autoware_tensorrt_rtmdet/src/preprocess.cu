@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "tensorrt_rtmdet/preprocess.hpp"
+#include "autoware/tensorrt_rtmdet/preprocess.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>

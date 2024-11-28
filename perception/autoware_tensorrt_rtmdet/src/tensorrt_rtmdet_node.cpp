@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // cspell: ignore rtmdet
-#include "tensorrt_rtmdet/tensorrt_rtmdet_node.hpp"
+#include "autoware/tensorrt_rtmdet/tensorrt_rtmdet_node.hpp"
 
 #include <dlfcn.h>
 

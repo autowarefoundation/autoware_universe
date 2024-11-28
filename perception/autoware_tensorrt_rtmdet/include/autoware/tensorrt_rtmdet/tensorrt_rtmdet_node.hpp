@@ -16,7 +16,7 @@
 #ifndef TENSORRT_RTMDET__TENSORRT_RTMDET_NODE_HPP_
 #define TENSORRT_RTMDET__TENSORRT_RTMDET_NODE_HPP_
 
-#include "tensorrt_rtmdet/tensorrt_rtmdet.hpp"
+#include "autoware/tensorrt_rtmdet/tensorrt_rtmdet.hpp"
 
 #include <autoware/universe_utils/ros/debug_publisher.hpp>
 #include <autoware/universe_utils/system/stop_watch.hpp>
