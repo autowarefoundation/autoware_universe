@@ -24,6 +24,7 @@ namespace autoware::tensorrt_rtmdet
 {
 constexpr size_t block = 512;
 constexpr size_t max_blocks_per_dim = 65535;
+constexpr int C = 3;
 
 dim3 cuda_gridsize(size_t n)
 {
@@ -67,7 +68,6 @@ __global__ void resize_bilinear_kernel(
   int index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
 
   if (index >= N) return;
-  constexpr int C = 3;
   int W = dst_w;
 
   int n = 0;
@@ -124,7 +124,6 @@ __global__ void letterbox_kernel(
   int index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
 
   if (index >= N) return;
-  constexpr int C = 3;
   int W = dst_w;
 
   int w = index % W;
@@ -157,7 +156,6 @@ __global__ void nhwc_to_nchw_kernel(
   int index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
 
   if (index >= N) return;
-  constexpr int C = 3;
   int x = index % width;
   int y = index / width;
   int src_index;
@@ -183,7 +181,6 @@ __global__ void nchw_to_nhwc_kernel(
   int index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
 
   if (index >= N) return;
-  constexpr int C = 3;
   int x = index % width;
   int y = index / width;
   int src_index;
@@ -210,7 +207,6 @@ __global__ void to_float_kernel(int N, float * dst32, unsigned char * src8, int 
   int index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
 
   if (index >= N) return;
-  constexpr int C = 3;
   int x = index % width;
   int y = index / width;
   int dst_index;
@@ -235,7 +231,6 @@ __global__ void resize_bilinear_letterbox_kernel(
   int index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
 
   if (index >= N) return;
-  constexpr int C = 3;  // # ChannelDim
   int W = dst_w;
   int n = 0;  // index / (C*W*H);
 
@@ -299,7 +294,6 @@ __global__ void resize_bilinear_letterbox_nhwc_to_nchw32_kernel(
   int index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
 
   if (index >= N) return;
-  constexpr int C = 3;
   int H = dst_h;
   int W = dst_w;
 
@@ -362,7 +356,6 @@ __global__ void resize_bilinear_letterbox_nhwc_to_nchw32_batch_kernel(
   int index = (blockIdx.x + blockIdx.y * gridDim.x) * blockDim.x + threadIdx.x;
 
   if (index >= N) return;
-  constexpr int C = 3;
   int H = dst_h;
   int W = dst_w;
 
