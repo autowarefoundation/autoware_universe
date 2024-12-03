@@ -89,7 +89,7 @@ __global__ void resize_bilinear_kernel(
   }
 
   index = C * w + C * W * h;
-  #pragma unroll
+#pragma unroll
   for (int c = 0; c < C; c++) {
     f00 = n * src_h * src_w * C + src_h_idx * src_w * C + src_w_idx * C + c;
     f01 = n * src_h * src_w * C + src_h_idx * src_w * C + (src_w_idx + 1) * C + c;
@@ -129,7 +129,7 @@ __global__ void letterbox_kernel(
 
   index = (C * w) + (C * W * h);
   int index2 = (C * w) + (C * src_w * h);
-  #pragma unroll
+#pragma unroll
   for (int c = 0; c < C; c++) {
     dst_img[index + c] =
       (w >= letter_right || h >= letter_bot) ? (unsigned int)114 : src_img[index2 + c];
@@ -257,7 +257,7 @@ __global__ void resize_bilinear_letterbox_kernel(
   }
 
   index = (C * w) + (C * W * h);
-  #pragma unroll
+#pragma unroll
   for (int c = 0; c < C; c++) {
     f00 = n * src_h * src_w * C + src_h_idx * src_w * C + src_w_idx * C + c;
     f01 = n * src_h * src_w * C + src_h_idx * src_w * C + (src_w_idx + 1) * C + c;
@@ -313,7 +313,7 @@ __global__ void resize_bilinear_letterbox_nhwc_to_nchw32_kernel(
 
   int stride = src_w * C;
 
-  #pragma unroll
+#pragma unroll
   for (int c = 0; c < C; c++) {
     f00 = src_h_idx * stride + src_w_idx * C + c;
     f01 = src_h_idx * stride + (src_w_idx + 1) * C + c;
@@ -377,7 +377,7 @@ __global__ void resize_bilinear_letterbox_nhwc_to_nchw32_batch_kernel(
   int stride = src_w * C;
   int b_stride = src_h * src_w * C;
 
-  #pragma unroll
+#pragma unroll
   for (int b = 0; b < batch; b++) {
     for (int c = 0; c < C; c++) {
       // NHWC
