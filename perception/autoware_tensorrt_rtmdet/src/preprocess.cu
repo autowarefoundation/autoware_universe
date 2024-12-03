@@ -18,8 +18,6 @@
 #include <cstdio>
 #include <cstdlib>
 
-#define MIN(x, y) x < y ? x : y
-
 namespace autoware::tensorrt_rtmdet
 {
 constexpr size_t block = 512;
