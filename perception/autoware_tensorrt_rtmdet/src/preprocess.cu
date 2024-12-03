@@ -51,10 +51,10 @@ __device__ float lerp2d(int f00, int f01, int f10, int f11, float centroid_h, fl
   centroid_h = (1 + lroundf(centroid_h) - centroid_h) / 2;
 
   float r0, r1, r;
-  r0 = lerp1d(f00, f01, centroid_w);
-  r1 = lerp1d(f10, f11, centroid_w);
+  r0 = (float)lround(lerp1d(f00, f01, centroid_w));
+  r1 = (float)lround(lerp1d(f10, f11, centroid_w));
 
-  r = lerp1d(r0, r1, centroid_h);  //+ 0.00001
+  r = lerp1d((int)r0, (int)r1, centroid_h);
   return r;
 }
 
