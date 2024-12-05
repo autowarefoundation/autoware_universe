@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(autoware_tensorrt_rtmdet) # cspell: ignore rtmdet
+project(autoware_tensorrt_rtmdet)
 
 find_package(autoware_tensorrt_common)
 if(NOT ${autoware_tensorrt_common_FOUND})

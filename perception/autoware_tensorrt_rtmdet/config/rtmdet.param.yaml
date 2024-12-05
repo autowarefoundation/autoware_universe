@@ -4,7 +4,7 @@
 
     is_publish_color_mask: false
 
-    # cspell: ignore rtmdet, libtrt
+    # cspell: ignore libtrt
     model_path: "$(var data_path)/tensorrt_rtmdet/$(var model_name).onnx"
     color_map_path: "$(var data_path)/tensorrt_rtmdet/color_map.csv"
     plugin_paths: [ "$(find-pkg-prefix trt_batched_nms)/lib/libtrt_batched_nms_plugin.so" ]

@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// cspell: ignore rtmdet
 #include "autoware/tensorrt_rtmdet/tensorrt_rtmdet.hpp"
 
 #include "autoware/tensorrt_rtmdet/calibrator.hpp"

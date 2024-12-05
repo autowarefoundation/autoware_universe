@@ -1,5 +1,3 @@
-<!-- cspell: ignore rtmdet -->
-
 # autoware_tensorrt_rtmdet
 
 ## Purpose

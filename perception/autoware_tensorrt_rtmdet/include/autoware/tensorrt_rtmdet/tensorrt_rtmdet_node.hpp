@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// cspell: ignore RTMDET, rtmdet
+// cspell: ignore RTMDET
 #ifndef AUTOWARE__TENSORRT_RTMDET__TENSORRT_RTMDET_NODE_HPP_
 #define AUTOWARE__TENSORRT_RTMDET__TENSORRT_RTMDET_NODE_HPP_
 
