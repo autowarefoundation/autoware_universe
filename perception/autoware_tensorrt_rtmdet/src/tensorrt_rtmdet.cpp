@@ -17,10 +17,12 @@
 #include "autoware/tensorrt_rtmdet/calibrator.hpp"
 #include "autoware/tensorrt_rtmdet/preprocess.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 /**

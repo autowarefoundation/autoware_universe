@@ -20,6 +20,9 @@
 #include <dlfcn.h>
 
 #include <fstream>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace autoware::tensorrt_rtmdet
 {
