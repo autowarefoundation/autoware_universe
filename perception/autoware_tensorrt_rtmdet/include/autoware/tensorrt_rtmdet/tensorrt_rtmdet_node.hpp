@@ -23,7 +23,7 @@
 #include <image_transport/image_transport.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include "autoware_internal_msgs/msg/segmentation_mask.hpp"
+#include "autoware_perception_msgs/msg/segmentation_mask.hpp"
 #include "tier4_perception_msgs/msg/detected_objects_with_feature.hpp"
 
 #include <cv_bridge/cv_bridge.h>
@@ -108,7 +108,7 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;
 
   rclcpp::Publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>::SharedPtr objects_pub_;
-  rclcpp::Publisher<autoware_internal_msgs::msg::SegmentationMask>::SharedPtr mask_pub_;
+  rclcpp::Publisher<autoware_perception_msgs::msg::SegmentationMask>::SharedPtr mask_pub_;
 
   image_transport::Publisher color_mask_pub_;
   image_transport::Publisher debug_image_pub_;
