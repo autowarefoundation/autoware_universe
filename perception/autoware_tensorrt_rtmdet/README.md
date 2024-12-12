@@ -12,17 +12,17 @@ bicycles, etc. in a scene. This package provides a ROS 2 interface for RTMDet us
 ### Input
 
 | Name       | Type                | Description     |
-| ---------- | ------------------- | --------------- |
+|------------|---------------------|-----------------|
 | `in/image` | `sensor_msgs/Image` | The input image |
 
 ### Output
 
-| Name              | Type                                               | Description                                                         |
-| ----------------- | -------------------------------------------------- | ------------------------------------------------------------------- |
-| `out/objects`     | `tier4_perception_msgs/DetectedObjectsWithFeature` | The detected objects with 2D bounding boxes and scores              |
-| `out/mask`        | `autoware_perception_msgs/SegmentationMask`        | The instance segmentation mask                                      |
-| `out/color_mask`  | `sensor_msgs/Image`                                | The colorized image of instance segmentation mask for visualization |
-| `out/debug_image` | `sensor_msgs/Image`                                | The image with 2D bounding boxes for visualization                  |
+| Name              | Type                                                 | Description                                                         |
+|-------------------|------------------------------------------------------|---------------------------------------------------------------------|
+| `out/objects`     | `tier4_perception_msgs/DetectedObjectsWithFeature`   | The detected objects with 2D bounding boxes and scores              |
+| `out/mask`        | `autoware_internal_perception_msgs/SegmentationMask` | The instance segmentation mask                                      |
+| `out/color_mask`  | `sensor_msgs/Image`                                  | The colorized image of instance segmentation mask for visualization |
+| `out/debug_image` | `sensor_msgs/Image`                                  | The image with 2D bounding boxes for visualization                  |
 
 ## Parameters
 
@@ -36,7 +36,8 @@ A sample model is provided in `autoware_data` folder by ansible script on env pr
 model, you follow instructions from the
 [link](https://github.com/autowarefoundation/autoware/tree/main/ansible/roles/artifacts) to download the model.
 
-The shared model was trained by open-mmlab using the COCO dataset. For more details, see [link](https://github.com/open-mmlab/mmdetection/tree/3.x/configs/rtmdet#instance-segmentation).
+The shared model was trained by open-mmlab using the COCO dataset. For more details,
+see [link](https://github.com/open-mmlab/mmdetection/tree/3.x/configs/rtmdet#instance-segmentation).
 
 ### Package acceptable model generation
 
