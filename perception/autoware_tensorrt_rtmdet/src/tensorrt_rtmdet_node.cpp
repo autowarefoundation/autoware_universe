@@ -85,8 +85,8 @@ TrtRTMDetNode::TrtRTMDetNode(const rclcpp::NodeOptions & node_options)
 
   objects_pub_ = this->create_publisher<tier4_perception_msgs::msg::DetectedObjectsWithFeature>(
     "~/out/objects", 1);
-  mask_pub_ =
-    this->create_publisher<autoware_internal_perception_msgs::msg::SegmentationMask>("~/out/mask", 1);
+  mask_pub_ = this->create_publisher<autoware_internal_perception_msgs::msg::SegmentationMask>(
+    "~/out/mask", 1);
 
   color_mask_pub_ = image_transport::create_publisher(this, "~/out/color_mask");
   debug_image_pub_ = image_transport::create_publisher(this, "~/out/debug_image");
