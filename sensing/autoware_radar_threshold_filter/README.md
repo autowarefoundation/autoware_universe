@@ -24,7 +24,7 @@ Calculation cost is O(n). `n` is the number of radar return.
 
 ### Parameters
 
-{{ json_to_markdown("/sensing/autoware_radar_threshold_filter/schema/radar_threshold_filter.schema.json") }}                                                                            |
+{{ json_to_markdown("/sensing/autoware_radar_threshold_filter/schema/radar_threshold_filter.schema.json") }} |
 
 ### How to launch
 
