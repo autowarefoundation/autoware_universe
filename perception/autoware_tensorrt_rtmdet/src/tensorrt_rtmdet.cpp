@@ -60,18 +60,15 @@ std::vector<std::string> load_calibration_image_list(const std::string & filenam
 namespace autoware::tensorrt_rtmdet
 {
 TrtRTMDet::TrtRTMDet(
-  const std::string & model_path, const std::string & precision, const ColorMap & color_map,
-  const float score_threshold, const float nms_threshold, const float mask_threshold,
-  const autoware::tensorrt_common::BuildConfig & build_config,
+  TrtCommonConfig & trt_config, const ColorMap & color_map, const float score_threshold,
+  const float nms_threshold, const float mask_threshold,
   const std::string & calibration_image_list_file_path, const double norm_factor,
   const std::vector<float> & mean, const std::vector<float> & std,
-  [[maybe_unused]] const std::string & cache_dir,
-  const autoware::tensorrt_common::BatchConfig & batch_config, const size_t max_workspace_size,
-  const std::vector<std::string> & plugin_paths)
+  [[maybe_unused]] const std::string & cache_dir, const std::vector<std::string> & plugin_paths,
+  const CalibrationConfig & calib_config)
 : score_threshold_{score_threshold},
   nms_threshold_{nms_threshold},
   mask_threshold_{mask_threshold},
-  batch_size_{batch_config.at(1)},
   norm_factor_{norm_factor},
   mean_{mean},
   std_{std},
@@ -82,19 +79,35 @@ TrtRTMDet::TrtRTMDet(
   scale_width_ = -1;
   scale_height_ = -1;
 
-  if (precision == "int8") {
+  trt_common_ = std::make_unique<autoware::tensorrt_common::TrtConvCalib>(
+    trt_config, std::make_shared<autoware::tensorrt_common::Profiler>(), plugin_paths);
+
+  const auto network_input_dims = trt_common_->getTensorShape(0);
+  batch_size_ = network_input_dims.d[0];
+  const auto input_channel = network_input_dims.d[1];
+  const auto input_height = network_input_dims.d[2];
+  const auto input_width = network_input_dims.d[3];
+
+  auto profile_dims_ptr = std::make_unique<std::vector<autoware::tensorrt_common::ProfileDims>>();
+
+  std::vector<autoware::tensorrt_common::ProfileDims> profile_dims{
+    autoware::tensorrt_common::ProfileDims(
+      0, {4, {batch_size_, input_channel, input_height, input_width}},
+      {4, {batch_size_, input_channel, input_height, input_width}},
+      {4, {batch_size_, input_channel, input_height, input_width}})};
+  *profile_dims_ptr = profile_dims;
+
+  if (trt_config.precision == "int8") {
     std::vector<std::string> calibration_images =
       load_calibration_image_list(calibration_image_list_file_path);
 
-    int max_batch_size = batch_config.at(2);
-    nvinfer1::Dims input_dims = autoware::tensorrt_common::get_input_dims(model_path);
-    tensorrt_rtmdet::ImageStream stream(max_batch_size, input_dims, calibration_images);
+    tensorrt_rtmdet::ImageStream stream(batch_size_, network_input_dims, calibration_images);
 
-    fs::path calibration_table{model_path};
+    fs::path calibration_table{trt_config.onnx_path};
     std::string ext = "EntropyV2-calibration.table";
     calibration_table.replace_extension(ext);
 
-    fs::path histogram_table{model_path};
+    fs::path histogram_table{trt_config.onnx_path};
     ext = "histogram.table";
     histogram_table.replace_extension(ext);
 
@@ -102,21 +115,18 @@ TrtRTMDet::TrtRTMDet(
     calibrator = std::make_unique<tensorrt_rtmdet::Int8EntropyCalibrator>(
       stream, calibration_table, mean_, std_);
 
-    trt_common_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
-      model_path, precision, std::move(calibrator), batch_config, max_workspace_size, build_config,
-      plugin_paths);
+    if (!trt_common_->setupWithCalibrator(
+          std::move(calibrator), calib_config, std::move((profile_dims_ptr)))) {
+      throw std::runtime_error("Failed to setup TensorRT engine with calibrator");
+    }
   } else {
-    trt_common_ = std::make_unique<autoware::tensorrt_common::TrtCommon>(
-      model_path, precision, nullptr, batch_config, max_workspace_size, build_config, plugin_paths);
-  }
-  trt_common_->setup();
-
-  if (!trt_common_->isInitialized()) {
-    return;
+    if (!trt_common_->setup(std::move(profile_dims_ptr))) {
+      throw std::runtime_error("Failed to setup TensorRT engine");
+    }
   }
 
-  const auto input_dims = trt_common_->getBindingDimensions(0);
-  const auto out_scores_dims = trt_common_->getBindingDimensions(3);
+  const auto input_dims = trt_common_->getTensorShape(0);
+  const auto out_scores_dims = trt_common_->getTensorShape(3);
 
   max_detections_ = out_scores_dims.d[1];
   model_input_height_ = input_dims.d[2];
@@ -133,12 +143,6 @@ TrtRTMDet::TrtRTMDet(
   out_labels_h_ = std::make_unique<int32_t[]>(batch_size_ * max_detections_);
   out_masks_h_ = std::make_unique<float[]>(
     batch_size_ * max_detections_ * model_input_width_ * model_input_height_);
-
-#if (NV_TENSORRT_MAJOR * 1000) + (NV_TENSORRT_MINOR * 100) + NV_TENSOR_PATCH >= 8050
-  std::vector<void *> buffers = {
-    input_d_.get(), out_detections_d_.get(), out_labels_d_.get(), out_masks_d_.get()};
-  trt_common_->setupBindings(buffers);
-#endif
 }
 
 TrtRTMDet::~TrtRTMDet() noexcept
@@ -159,7 +163,7 @@ void TrtRTMDet::print_profiling()
 void TrtRTMDet::preprocess_gpu(const std::vector<cv::Mat> & images)
 {
   const auto batch_size = images.size();
-  auto input_dims = trt_common_->getBindingDimensions(0);
+  auto input_dims = trt_common_->getTensorShape(0);
 
   input_dims.d[0] = static_cast<int32_t>(batch_size);
   for (const auto & image : images) {
@@ -181,7 +185,7 @@ void TrtRTMDet::preprocess_gpu(const std::vector<cv::Mat> & images)
     src_height_ = height;
   }
   if (!image_buf_h_) {
-    trt_common_->setBindingDimensions(0, input_dims);
+    trt_common_->setInputShape(0, input_dims);
     scale_width_ = 0;
     scale_height_ = 0;
   }
@@ -220,9 +224,6 @@ bool TrtRTMDet::do_inference(
   const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask,
   std::vector<uint8_t> & class_ids)
 {
-  if (!trt_common_->isInitialized()) {
-    return false;
-  }
   preprocess_gpu(images);
 
   return feedforward(images, objects, mask, class_ids);
@@ -232,14 +233,7 @@ bool TrtRTMDet::feedforward(
   const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask,
   std::vector<uint8_t> & class_ids)
 {
-#if (NV_TENSORRT_MAJOR * 1000) + (NV_TENSORRT_MINOR * 100) + NV_TENSOR_PATCH >= 8050
   trt_common_->enqueueV3(*stream_);
-#else
-  std::vector<void *> buffers = {
-    input_d_.get(), out_detections_d_.get(), out_labels_d_.get(), out_masks_d_.get()};
-
-  trt_common_->enqueueV2(buffers.data(), *stream_, nullptr);
-#endif
 
   const auto batch_size = images.size();
   out_detections_h_.reset(new float[batch_size_ * max_detections_ * 5]);

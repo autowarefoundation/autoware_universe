@@ -63,21 +63,21 @@ protected:
 
     const double norm_factor = 1.0;
     const std::string cache_dir;
-    const autoware::tensorrt_common::BatchConfig batch_config{1, 1, 1};
-    const size_t max_workspace_size = (1u << 30u);
     const std::vector<std::string> plugin_paths{plugin_path};
 
     test_image_ = cv::imread(test_image_path, cv::IMREAD_COLOR);
 
-    autoware::tensorrt_common::BuildConfig build_config("Entropy", -1, false, false, false, 6.0);
+    autoware::tensorrt_common::TrtCommonConfig trt_config(
+      model_path, "fp16", "", (1ULL << 30U), -1, false);
+
+    autoware::tensorrt_common::CalibrationConfig calib_config("Entropy", false, false, false);
 
     // Test color map only includes 3 classes. It is enough for the test.
     color_map_ = autoware::tensorrt_rtmdet::TrtRTMDetNode::read_color_map_file(test_color_map_path);
 
     trt_rtmdet_ = std::make_unique<autoware::tensorrt_rtmdet::TrtRTMDet>(
-      model_path, precision_, color_map_, score_threshold_, nms_threshold_, mask_threshold_,
-      build_config, "", norm_factor, mean_, std_, cache_dir, batch_config, max_workspace_size,
-      plugin_paths);
+      trt_config, color_map_, score_threshold_, nms_threshold_, mask_threshold_, "", norm_factor,
+      mean_, std_, cache_dir, plugin_paths, calib_config);
   }
 
 public:
@@ -121,7 +121,7 @@ public:
    */
   [[nodiscard]] nvinfer1::Dims get_input_dimensions() const
   {
-    return trt_rtmdet_->trt_common_->getBindingDimensions(0);
+    return trt_rtmdet_->trt_common_->getTensorShape(0);
   }
 
   std::unique_ptr<autoware::tensorrt_rtmdet::TrtRTMDet> trt_rtmdet_;

@@ -19,6 +19,7 @@
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/cuda_utils/stream_unique_ptr.hpp>
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
+#include <autoware/tensorrt_common/tensorrt_conv_calib.hpp>
 #include <opencv2/opencv.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -71,23 +72,21 @@ using LabelColor = struct LabelColor
 };
 
 using ColorMap = std::map<uint32_t, LabelColor>;
+using autoware::tensorrt_common::CalibrationConfig;
+using autoware::tensorrt_common::TrtCommonConfig;
 
 class TrtRTMDet
 {
 public:
   TrtRTMDet(
-    const std::string & model_path, const std::string & precision, const ColorMap & color_map,
-    const float score_threshold = 0.3, const float nms_threshold = 0.7,
-    const float mask_threshold = 200.0,
-    const autoware::tensorrt_common::BuildConfig & build_config =
-      autoware::tensorrt_common::BuildConfig(),
+    TrtCommonConfig & trt_config, const ColorMap & color_map, const float score_threshold = 0.3,
+    const float nms_threshold = 0.7, const float mask_threshold = 200.0,
     const std::string & calibration_image_list_file_path = std::string(),
     const double norm_factor = 1.0, const std::vector<float> & mean = {103.53, 116.28, 123.675},
     const std::vector<float> & std = {57.375, 57.12, 58.395},
     [[maybe_unused]] const std::string & cache_dir = "",
-    const autoware::tensorrt_common::BatchConfig & batch_config = {1, 1, 1},
-    const size_t max_workspace_size = (1u << 30u),
-    const std::vector<std::string> & plugin_paths = {});
+    const std::vector<std::string> & plugin_paths = {},
+    const CalibrationConfig & calib_config = CalibrationConfig{});
 
   ~TrtRTMDet() noexcept;
 
@@ -163,7 +162,7 @@ private:
     const std::vector<cv::Mat> & images, ObjectArrays & objects, cv::Mat & mask,
     std::vector<uint8_t> & class_ids);
 
-  std::unique_ptr<autoware::tensorrt_common::TrtCommon> trt_common_;
+  std::unique_ptr<autoware::tensorrt_common::TrtConvCalib> trt_common_;
 
   // Host and device pointers for inputs
   std::vector<float> input_h_;
@@ -192,7 +191,7 @@ private:
   const float score_threshold_;
   const float nms_threshold_;
   const float mask_threshold_;
-  const int batch_size_;
+  int batch_size_;
 
   // maximum number of detections, read from model
   uint32_t max_detections_;
