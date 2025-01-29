@@ -248,6 +248,7 @@ bool GeometricParallelParking::planPullOver(
       }
     }
   }
+
   return false;
 }
 
