@@ -139,6 +139,7 @@ Giving the longitudinal controller information about steer convergence allows it
 - `autoware_control_msgs/ControlHorizon`: message containing both lateral and longitudinal horizon commands. this is NOT published by default. by using this, the performance of vehicle control may be improved, and by turning the default on, it can be used as an experimental topic.
 
 #### Parameter
+
 {{ json_to_markdown("control/autoware_trajectory_follower_node/schema/simple_trajectory_follower.schema.json") }}
 
 ## Debugging
