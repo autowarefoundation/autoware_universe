@@ -179,6 +179,8 @@ GoalPlannerParameters GoalPlannerModuleManager::initGoalPlannerParameters(
   {
     const std::string ns = base_ns + "pull_over.parallel_parking.forward.";
     p.enable_arc_forward_parking = node->declare_parameter<bool>(ns + "enable_arc_forward_parking");
+    p.enable_clothoid_forward_parking =
+      node->declare_parameter<bool>(ns + "enable_clothoid_forward_parking");
     p.parallel_parking_parameters.after_forward_parking_straight_distance =
       node->declare_parameter<double>(ns + "after_forward_parking_straight_distance");
     p.parallel_parking_parameters.forward_parking_velocity =
@@ -191,8 +193,6 @@ GoalPlannerParameters GoalPlannerModuleManager::initGoalPlannerParameters(
       node->declare_parameter<double>(ns + "forward_parking_max_steer_angle");  // 20deg
     p.parallel_parking_parameters.forward_parking_steer_rate_lim =
       node->declare_parameter<double>(ns + "forward_parking_steer_rate_lim");
-    p.parallel_parking_parameters.forward_parking_use_clothoid =
-      node->declare_parameter<bool>(ns + "forward_parking_use_clothoid");
   }
 
   // forward parallel parking backward
@@ -200,6 +200,8 @@ GoalPlannerParameters GoalPlannerModuleManager::initGoalPlannerParameters(
     const std::string ns = base_ns + "pull_over.parallel_parking.backward.";
     p.enable_arc_backward_parking =
       node->declare_parameter<bool>(ns + "enable_arc_backward_parking");
+    p.enable_clothoid_backward_parking =
+      node->declare_parameter<bool>(ns + "enable_clothoid_backward_parking");
     p.parallel_parking_parameters.after_backward_parking_straight_distance =
       node->declare_parameter<double>(ns + "after_backward_parking_straight_distance");
     p.parallel_parking_parameters.backward_parking_velocity =
@@ -212,8 +214,6 @@ GoalPlannerParameters GoalPlannerModuleManager::initGoalPlannerParameters(
       node->declare_parameter<double>(ns + "backward_parking_max_steer_angle");  // 20deg
     p.parallel_parking_parameters.backward_parking_steer_rate_lim =
       node->declare_parameter<double>(ns + "backward_parking_steer_rate_lim");
-    p.parallel_parking_parameters.backward_parking_use_clothoid =
-      node->declare_parameter<bool>(ns + "backward_parking_use_clothoid");
   }
 
   // freespace parking general params
@@ -581,8 +581,9 @@ void GoalPlannerModuleManager::updateModuleParams(
   // forward parallel parking forward
   {
     const std::string ns = base_ns + "pull_over.parallel_parking.forward.";
+    update_param<bool>(parameters, ns + "enable_arc_forward_parking", p->enable_arc_forward_parking);
     update_param<bool>(
-      parameters, ns + "enable_arc_forward_parking", p->enable_arc_forward_parking);
+      parameters, ns + "enable_clothoid_forward_parking", p->enable_clothoid_forward_parking);
     update_param<double>(
       parameters, ns + "after_forward_parking_straight_distance",
       p->parallel_parking_parameters.after_forward_parking_straight_distance);
@@ -598,12 +599,9 @@ void GoalPlannerModuleManager::updateModuleParams(
     update_param<double>(
       parameters, ns + "forward_parking_max_steer_angle",
       p->parallel_parking_parameters.forward_parking_max_steer_angle);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "forward_parking_steer_rate_lim",
       p->parallel_parking_parameters.forward_parking_steer_rate_lim);
-    updateParam<bool>(
-      parameters, ns + "forward_parking_use_clothoid",
-      p->parallel_parking_parameters.forward_parking_use_clothoid);
   }
 
   // forward parallel parking backward
@@ -611,6 +609,8 @@ void GoalPlannerModuleManager::updateModuleParams(
     const std::string ns = base_ns + "pull_over.parallel_parking.backward.";
     update_param<bool>(
       parameters, ns + "enable_arc_backward_parking", p->enable_arc_backward_parking);
+    update_param<bool>(
+      parameters, ns + "enable_clothoid_backward_parking", p->enable_clothoid_backward_parking);
     update_param<double>(
       parameters, ns + "after_backward_parking_straight_distance",
       p->parallel_parking_parameters.after_backward_parking_straight_distance);
@@ -626,12 +626,9 @@ void GoalPlannerModuleManager::updateModuleParams(
     update_param<double>(
       parameters, ns + "backward_parking_max_steer_angle",
       p->parallel_parking_parameters.backward_parking_max_steer_angle);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "backward_parking_steer_rate_lim",
       p->parallel_parking_parameters.backward_parking_steer_rate_lim);
-    updateParam<bool>(
-      parameters, ns + "backward_parking_use_clothoid",
-      p->parallel_parking_parameters.backward_parking_use_clothoid);
   }
 
   // freespace parking general params
