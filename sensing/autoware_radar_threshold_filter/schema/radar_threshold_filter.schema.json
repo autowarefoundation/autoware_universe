@@ -8,62 +8,62 @@
       "properties": {
         "is_amplitude_filter": {
           "type": "boolean",
-          "description": "if this parameter is true, apply amplitude filter (publish amplitude_min < amplitude < amplitude_max)",
+          "description": "If this parameter is true, apply amplitude filter (publish amplitude_min < amplitude < amplitude_max).",
           "default": true
         },
         "amplitude_min": {
           "type": "number",
-          "description": "[dBm^2]",
+          "description": "Minimum amplitude threshold [dBm^2].",
           "default": -10.0
         },
         "amplitude_max": {
           "type": "number",
-          "description": "[dBm^2]",
+          "description": "Maximum amplitude threshold [dBm^2].",
           "default": 100.0
         },
         "is_range_filter": {
           "type": "boolean",
-          "description": "if this parameter is true, apply range filter (publish range_min < range < range_max) ",
+          "description": "If this parameter is true, apply range filter (publish range_min < range < range_max).",
           "default": false
         },
         "range_min": {
           "type": "number",
-          "description": "[m] ",
+          "description": "Minimum range threshold [m].",
           "default": 20.0
         },
         "range_max": {
           "type": "number",
-          "description": "[m]",
+          "description": "Maximum range threshold [m].",
           "default": 300.0
         },
         "is_azimuth_filter": {
           "type": "boolean",
-          "description": "if this parameter is true, apply angle filter (publish azimuth_min < range < azimuth_max) ",
+          "description": "If this parameter is true, apply angle filter (publish azimuth_min < azimuth < azimuth_max).",
           "default": true
         },
         "azimuth_min": {
           "type": "number",
-          "description": "[rad]",
+          "description": "Minimum azimuth threshold [rad].",
           "default": -1.2
         },
         "azimuth_max": {
           "type": "number",
-          "description": "[rad]",
+          "description": "Maximum azimuth threshold [rad].",
           "default": 1.2
         },
         "is_z_filter": {
           "type": "boolean",
-          "description": "if this parameter is true, apply z position filter (publish z_min < z < z_max) ",
+          "description": "If this parameter is true, apply Z position filter (publish z_min < z < z_max).",
           "default": false
         },
         "z_min": {
           "type": "number",
-          "description": "[m]",
+          "description": "Minimum Z threshold [m].",
           "default": -2.0
         },
         "z_max": {
           "type": "number",
-          "description": "[m]",
+          "description": "Maximum Z threshold [m].",
           "default": 5.0
         }
       },
@@ -89,7 +89,7 @@
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "$ref": "#/definitions/radar_object_clustering"
+          "$ref": "#/definitions/radar_threshold_filter"
         }
       },
       "required": ["ros__parameters"],
