@@ -1,169 +1,168 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "autoware_elevation_map_loader Parameters",
-    "type": "object",
-    "definitions": {
-      "elevation_map_parameter": {
-        "type": "object",
-        "properties": {
-          "num_processing_threads": {
-            "type": "integer",
-            "description": "Number of threads for processing grid map cells. Filtering of the raw input point cloud is not parallelized.",
-            "default": 12
-          },
-          "cloud_transform": {
-            "type": "object",
-            "description": "Rigid body transform applied to the point cloud before computing elevation.",
-            "properties": {
-              "translation": {
-                "type": "object",
-                "description": "Translation (xyz) applied to the input point cloud before computing elevation.",
-                "properties": {
-                  "x": { "type": "number", "default": 0.0 },
-                  "y": { "type": "number", "default": 0.0 },
-                  "z": { "type": "number", "default": 0.0 }
-                },
-                "required": ["x", "y", "z"],
-                "additionalProperties": false
-              },
-              "rotation": {
-                "type": "object",
-                "description": "Intrinsic rotation (X-Y-Z, r-p-y) applied to the input point cloud before computing elevation.",
-                "properties": {
-                  "r": { "type": "number", "default": 0.0 },
-                  "p": { "type": "number", "default": 0.0 },
-                  "y": { "type": "number", "default": 0.0 }
-                },
-                "required": ["r", "p", "y"],
-                "additionalProperties": false
-              }
-            },
-            "required": ["translation", "rotation"],
-            "additionalProperties": false
-          },
-          "cluster_extraction": {
-            "type": "object",
-            "description": "Cluster extraction parameters based on PCL algorithms.",
-            "properties": {
-              "cluster_tolerance": {
-                "type": "number",
-                "description": "Distance between points below which they will still be considered part of one cluster.",
-                "default": 0.2
-              },
-              "min_num_points": {
-                "type": "integer",
-                "description": "Minimum number of points that a cluster needs to have, otherwise it will be discarded.",
-                "default": 3
-              },
-              "max_num_points": {
-                "type": "integer",
-                "description": "Maximum number of points that a cluster can have, otherwise it will be discarded.",
-                "default": 1000000
-              }
-            },
-            "required": ["cluster_tolerance", "min_num_points", "max_num_points"],
-            "additionalProperties": false
-          },
-          "outlier_removal": {
-            "type": "object",
-            "description": "Parameters for statistical outlier removal.",
-            "properties": {
-              "is_remove_outliers": {
-                "type": "boolean",
-                "description": "Whether to perform statistical outlier removal.",
-                "default": false
-              },
-              "mean_K": {
-                "type": "integer",
-                "description": "Number of neighbors to analyze for estimating statistics of a point.",
-                "default": 10
-              },
-              "stddev_threshold": {
-                "type": "number",
-                "description": "Number of standard deviations under which points are considered to be inliers.",
-                "default": 1.0
-              }
-            },
-            "required": ["is_remove_outliers", "mean_K", "stddev_threshold"],
-            "additionalProperties": false
-          },
-          "downsampling": {
-            "type": "object",
-            "description": "Point cloud downsampling parameters.",
-            "properties": {
-              "is_downsample_cloud": {
-                "type": "boolean",
-                "description": "Whether to perform downsampling or not.",
-                "default": false
-              },
-              "voxel_size": {
-                "type": "object",
-                "description": "Voxel sizes (xyz) in meters.",
-                "properties": {
-                  "x": { "type": "number", "default": 0.02 },
-                  "y": { "type": "number", "default": 0.02 },
-                  "z": { "type": "number", "default": 0.02 }
-                },
-                "required": ["x", "y", "z"],
-                "additionalProperties": false
-              }
-            },
-            "required": ["is_downsample_cloud", "voxel_size"],
-            "additionalProperties": false
-          },
-          "grid_map": {
-            "type": "object",
-            "description": "Grid map parameters based on grid_map_pcl package.",
-            "properties": {
-              "min_num_points_per_cell": {
-                "type": "integer",
-                "description": "Minimum number of points in the point cloud that must fall within any grid map cell. Otherwise, the cell elevation will be set to NaN.",
-                "default": 3
-              },
-              "resolution": {
-                "type": "number",
-                "description": "Resolution of the grid map. Width and length are computed automatically.",
-                "default": 0.3
-              },
-              "height_type": {
-                "type": "integer",
-                "description": "Determines the elevation of a cell (0: Smallest value among the average values of each cluster, 1: Mean value of the cluster with the most points).",
-                "default": 1
-              },
-              "height_thresh": {
-                "type": "number",
-                "description": "Height range from the smallest cluster (Only for height_type = 1).",
-                "default": 1.0
-              }
-            },
-            "required": ["min_num_points_per_cell", "resolution", "height_type", "height_thresh"],
-            "additionalProperties": false
-          }
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_elevation_map_loader Parameters",
+  "type": "object",
+  "definitions": {
+    "elevation_map_parameter": {
+      "type": "object",
+      "properties": {
+        "num_processing_threads": {
+          "type": "integer",
+          "description": "Number of threads for processing grid map cells. Filtering of the raw input point cloud is not parallelized.",
+          "default": 12
         },
-        "required": [
-          "num_processing_threads",
-          "cloud_transform",
-          "cluster_extraction",
-          "outlier_removal",
-          "downsampling",
-          "grid_map"
-        ],
-        "additionalProperties": false
-      }
-    },
-    "properties": {
-      "/**": {
-        "type": "object",
-        "properties": {
-          "ros__parameters": {
-            "$ref": "#/definitions/elevation_map_parameter"
-          }
+        "cloud_transform": {
+          "type": "object",
+          "description": "Rigid body transform applied to the point cloud before computing elevation.",
+          "properties": {
+            "translation": {
+              "type": "object",
+              "description": "Translation (xyz) applied to the input point cloud before computing elevation.",
+              "properties": {
+                "x": { "type": "number", "default": 0.0 },
+                "y": { "type": "number", "default": 0.0 },
+                "z": { "type": "number", "default": 0.0 }
+              },
+              "required": ["x", "y", "z"],
+              "additionalProperties": false
+            },
+            "rotation": {
+              "type": "object",
+              "description": "Intrinsic rotation (X-Y-Z, r-p-y) applied to the input point cloud before computing elevation.",
+              "properties": {
+                "r": { "type": "number", "default": 0.0 },
+                "p": { "type": "number", "default": 0.0 },
+                "y": { "type": "number", "default": 0.0 }
+              },
+              "required": ["r", "p", "y"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["translation", "rotation"],
+          "additionalProperties": false
         },
-        "required": ["ros__parameters"],
-        "additionalProperties": false
-      }
-    },
-    "required": ["/**"],
-    "additionalProperties": false
-  }
-  
+        "cluster_extraction": {
+          "type": "object",
+          "description": "Cluster extraction parameters based on PCL algorithms.",
+          "properties": {
+            "cluster_tolerance": {
+              "type": "number",
+              "description": "Distance between points below which they will still be considered part of one cluster.",
+              "default": 0.2
+            },
+            "min_num_points": {
+              "type": "integer",
+              "description": "Minimum number of points that a cluster needs to have, otherwise it will be discarded.",
+              "default": 3
+            },
+            "max_num_points": {
+              "type": "integer",
+              "description": "Maximum number of points that a cluster can have, otherwise it will be discarded.",
+              "default": 1000000
+            }
+          },
+          "required": ["cluster_tolerance", "min_num_points", "max_num_points"],
+          "additionalProperties": false
+        },
+        "outlier_removal": {
+          "type": "object",
+          "description": "Parameters for statistical outlier removal.",
+          "properties": {
+            "is_remove_outliers": {
+              "type": "boolean",
+              "description": "Whether to perform statistical outlier removal.",
+              "default": false
+            },
+            "mean_K": {
+              "type": "integer",
+              "description": "Number of neighbors to analyze for estimating statistics of a point.",
+              "default": 10
+            },
+            "stddev_threshold": {
+              "type": "number",
+              "description": "Number of standard deviations under which points are considered to be inliers.",
+              "default": 1.0
+            }
+          },
+          "required": ["is_remove_outliers", "mean_K", "stddev_threshold"],
+          "additionalProperties": false
+        },
+        "downsampling": {
+          "type": "object",
+          "description": "Point cloud downsampling parameters.",
+          "properties": {
+            "is_downsample_cloud": {
+              "type": "boolean",
+              "description": "Whether to perform downsampling or not.",
+              "default": false
+            },
+            "voxel_size": {
+              "type": "object",
+              "description": "Voxel sizes (xyz) in meters.",
+              "properties": {
+                "x": { "type": "number", "default": 0.02 },
+                "y": { "type": "number", "default": 0.02 },
+                "z": { "type": "number", "default": 0.02 }
+              },
+              "required": ["x", "y", "z"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["is_downsample_cloud", "voxel_size"],
+          "additionalProperties": false
+        },
+        "grid_map": {
+          "type": "object",
+          "description": "Grid map parameters based on grid_map_pcl package.",
+          "properties": {
+            "min_num_points_per_cell": {
+              "type": "integer",
+              "description": "Minimum number of points in the point cloud that must fall within any grid map cell. Otherwise, the cell elevation will be set to NaN.",
+              "default": 3
+            },
+            "resolution": {
+              "type": "number",
+              "description": "Resolution of the grid map. Width and length are computed automatically.",
+              "default": 0.3
+            },
+            "height_type": {
+              "type": "integer",
+              "description": "Determines the elevation of a cell (0: Smallest value among the average values of each cluster, 1: Mean value of the cluster with the most points).",
+              "default": 1
+            },
+            "height_thresh": {
+              "type": "number",
+              "description": "Height range from the smallest cluster (Only for height_type = 1).",
+              "default": 1.0
+            }
+          },
+          "required": ["min_num_points_per_cell", "resolution", "height_type", "height_thresh"],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "num_processing_threads",
+        "cloud_transform",
+        "cluster_extraction",
+        "outlier_removal",
+        "downsampling",
+        "grid_map"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/elevation_map_parameter"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
