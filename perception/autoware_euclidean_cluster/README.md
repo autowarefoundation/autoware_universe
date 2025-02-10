@@ -42,8 +42,8 @@ This package has two clustering methods: `euclidean_cluster` and `voxel_grid_bas
 {{ json_to_markdown("perception/autoware_euclidean_cluster/schema/euclidean_cluster.schema.json") }}
 
 #### voxel_grid_based_euclidean_cluster
-{{ json_to_markdown("perception/autoware_euclidean_cluster/schema/voxel_grid_based_euclidean_cluster.schema.json") }}
 
+{{ json_to_markdown("perception/autoware_euclidean_cluster/schema/voxel_grid_based_euclidean_cluster.schema.json") }}
 
 ## Assumptions / Known limits
 
