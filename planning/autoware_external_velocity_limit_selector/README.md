@@ -50,19 +50,7 @@ Example:
 | `~output/max_velocity` | autoware_internal_planning_msgs::msg::VelocityLimit | current information of the hardest velocity limit |
 
 ## Parameters
-
-| Parameter         | Type   | Description                                |
-| ----------------- | ------ | ------------------------------------------ |
-| `max_velocity`    | double | default max velocity [m/s]                 |
-| `normal.min_acc`  | double | minimum acceleration [m/ss]                |
-| `normal.max_acc`  | double | maximum acceleration [m/ss]                |
-| `normal.min_jerk` | double | minimum jerk [m/sss]                       |
-| `normal.max_jerk` | double | maximum jerk [m/sss]                       |
-| `limit.min_acc`   | double | minimum acceleration to be observed [m/ss] |
-| `limit.max_acc`   | double | maximum acceleration to be observed [m/ss] |
-| `limit.min_jerk`  | double | minimum jerk to be observed [m/sss]        |
-| `limit.max_jerk`  | double | maximum jerk to be observed [m/sss]        |
-
+{{ json_to_markdown("planning/autoware_external_velocity_limit_selector/schema/external_velocity_limit_selector.schema.json") }}
 ## Assumptions / Known limits
 
 <!-- Write assumptions and limitations of your implementation.
