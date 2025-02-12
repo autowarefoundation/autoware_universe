@@ -50,7 +50,9 @@ Example:
 | `~output/max_velocity` | autoware_internal_planning_msgs::msg::VelocityLimit | current information of the hardest velocity limit |
 
 ## Parameters
+
 {{ json_to_markdown("planning/autoware_external_velocity_limit_selector/schema/external_velocity_limit_selector.schema.json") }}
+
 ## Assumptions / Known limits
 
 <!-- Write assumptions and limitations of your implementation.
