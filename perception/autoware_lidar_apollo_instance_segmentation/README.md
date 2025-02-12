@@ -27,6 +27,7 @@ See the [original design](https://github.com/ApolloAuto/apollo/blob/r6.0.0/docs/
 | `debug/instance_pointcloud` | `sensor_msgs/PointCloud2`                          | Segmented pointcloud for visualization.           |
 
 ## Parameters
+
 {{ json_to_markdown("perception/autoware_lidar_apollo_instance_segmentation/schema/hdl-64.schema.json") }}
 
 {{ json_to_markdown("perception/autoware_lidar_apollo_instance_segmentation/schema/vlp-16.schema.json") }}
