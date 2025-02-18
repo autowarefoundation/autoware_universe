@@ -1,0 +1,127 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "dummy_diag_publisher parameter",
+    "type": "object",
+    "definitions": {
+      "dummy_diag_publisher": {
+        "type": "object",
+        "properties": {
+          "required_diags": {
+            "type": "object",
+            "properties": {
+              "velodyne_connection": {
+                "type": "object",
+                "properties": {
+                  "is_active": {
+                    "type": "string",
+                    "description": "Velodyne connection active status",
+                    "default": "false"
+                  },
+                  "status": {
+                    "type": "string",
+                    "description": "Velodyne connection status",
+                    "default": "Error"
+                  }
+                },
+                "required": ["is_active", "status"],
+                "additionalProperties": false
+              },
+              "velodyne_temperature": {
+                "type": "object",
+                "properties": {
+                  "is_active": {
+                    "type": "string",
+                    "description": "Velodyne temperature active status",
+                    "default": "true"
+                  },
+                  "status": {
+                    "type": "string",
+                    "description": "Velodyne temperature status",
+                    "default": "Warn"
+                  }
+                },
+                "required": ["is_active", "status"],
+                "additionalProperties": false
+              },
+              "livox_ptp_signal": {
+                "type": "string",
+                "description": "Livox PTP signal status",
+                "default": "default"
+              },
+              "camera_connection": {
+                "type": "object",
+                "properties": {
+                  "is_active": {
+                    "type": "string",
+                    "description": "Camera connection active status",
+                    "default": "true"
+                  },
+                  "status": {
+                    "type": "string",
+                    "description": "Camera connection status",
+                    "default": "Stale"
+                  }
+                },
+                "required": ["is_active", "status"],
+                "additionalProperties": false
+              },
+              "lane_departure": {
+                "type": "string",
+                "description": "Lane departure status",
+                "default": "default"
+              },
+              "obstacle_crash": {
+                "type": "string",
+                "description": "Obstacle crash status",
+                "default": "default"
+              },
+              "vehicle_errors": {
+                "type": "string",
+                "description": "Vehicle errors status",
+                "default": "default"
+              },
+              "can_bus_connection": {
+                "type": "string",
+                "description": "CAN bus connection status",
+                "default": "default"
+              },
+              "speaker": {
+                "type": "string",
+                "description": "Speaker status",
+                "default": "default"
+              }
+            },
+            "required": [
+              "velodyne_connection",
+              "velodyne_temperature",
+              "livox_ptp_signal",
+              "camera_connection",
+              "lane_departure",
+              "obstacle_crash",
+              "vehicle_errors",
+              "can_bus_connection",
+              "speaker"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": ["required_diags"],
+        "additionalProperties": false
+      }
+    },
+    "properties": {
+      "/**": {
+        "type": "object",
+        "properties": {
+          "ros__parameters": {
+            "$ref": "#/definitions/dummy_diag_publisher"
+          }
+        },
+        "required": ["ros__parameters"],
+        "additionalProperties": false
+      }
+    },
+    "required": ["/**"],
+    "additionalProperties": false
+  }
+  
