@@ -1,101 +1,94 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "radar_threshold_filter parameters",
+  "title": "autoware_radar_threshold_filter parameter",
   "type": "object",
-  "definitions": {
-    "radar_threshold_filter": {
-      "type": "object",
-      "properties": {
-        "is_amplitude_filter": {
-          "type": "boolean",
-          "description": "If this parameter is true, apply amplitude filter (publish amplitude_min < amplitude < amplitude_max).",
-          "default": true
-        },
-        "amplitude_min": {
-          "type": "number",
-          "description": "Minimum amplitude threshold [dBm^2].",
-          "default": -10.0
-        },
-        "amplitude_max": {
-          "type": "number",
-          "description": "Maximum amplitude threshold [dBm^2].",
-          "default": 100.0
-        },
-        "is_range_filter": {
-          "type": "boolean",
-          "description": "If this parameter is true, apply range filter (publish range_min < range < range_max).",
-          "default": false
-        },
-        "range_min": {
-          "type": "number",
-          "description": "Minimum range threshold [m].",
-          "default": 20.0
-        },
-        "range_max": {
-          "type": "number",
-          "description": "Maximum range threshold [m].",
-          "default": 300.0
-        },
-        "is_azimuth_filter": {
-          "type": "boolean",
-          "description": "If this parameter is true, apply angle filter (publish azimuth_min < azimuth < azimuth_max).",
-          "default": true
-        },
-        "azimuth_min": {
-          "type": "number",
-          "description": "Minimum azimuth threshold [rad].",
-          "default": -1.2
-        },
-        "azimuth_max": {
-          "type": "number",
-          "description": "Maximum azimuth threshold [rad].",
-          "default": 1.2
-        },
-        "is_z_filter": {
-          "type": "boolean",
-          "description": "If this parameter is true, apply Z position filter (publish z_min < z < z_max).",
-          "default": false
-        },
-        "z_min": {
-          "type": "number",
-          "description": "Minimum Z threshold [m].",
-          "default": -2.0
-        },
-        "z_max": {
-          "type": "number",
-          "description": "Maximum Z threshold [m].",
-          "default": 5.0
-        }
-      },
-      "required": [
-        "is_amplitude_filter",
-        "amplitude_min",
-        "amplitude_max",
-        "is_range_filter",
-        "range_min",
-        "range_max",
-        "is_azimuth_filter",
-        "azimuth_min",
-        "azimuth_max",
-        "is_z_filter",
-        "z_min",
-        "z_max"
-      ],
-      "additionalProperties": false
-    }
-  },
-  "properties": {
-    "/**": {
+  "patternProperties": {
+    "/.*": {
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "$ref": "#/definitions/radar_threshold_filter"
+          "type": "object",
+          "properties": {
+            "node_params": {
+              "type": "object",
+              "properties": {
+                "is_amplitude_filter": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "If true, amplitude filtering is enabled."
+                },
+                "amplitude_min": {
+                  "type": "number",
+                  "default": -10.0,
+                  "description": "Minimum amplitude threshold."
+                },
+                "amplitude_max": {
+                  "type": "number",
+                  "default": 100.0,
+                  "description": "Maximum amplitude threshold."
+                },
+                "is_range_filter": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "If true, range filtering is enabled."
+                },
+                "range_min": {
+                  "type": "number",
+                  "default": 20.0,
+                  "description": "Minimum range threshold."
+                },
+                "range_max": {
+                  "type": "number",
+                  "default": 300.0,
+                  "description": "Maximum range threshold."
+                },
+                "is_azimuth_filter": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "If true, azimuth filtering is enabled."
+                },
+                "azimuth_min": {
+                  "type": "number",
+                  "default": -1.2,
+                  "description": "Minimum azimuth threshold (radians)."
+                },
+                "azimuth_max": {
+                  "type": "number",
+                  "default": 1.2,
+                  "description": "Maximum azimuth threshold (radians)."
+                },
+                "is_z_filter": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "If true, Z filtering is enabled."
+                },
+                "z_min": {
+                  "type": "number",
+                  "default": -2.0,
+                  "description": "Minimum Z threshold (meters)."
+                },
+                "z_max": {
+                  "type": "number",
+                  "default": 5.0,
+                  "description": "Maximum Z threshold (meters)."
+                }
+              },
+              "required": [
+                "is_amplitude_filter", "amplitude_min", "amplitude_max",
+                "is_range_filter", "range_min", "range_max",
+                "is_azimuth_filter", "azimuth_min", "azimuth_max",
+                "is_z_filter", "z_min", "z_max"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": ["node_params"],
+          "additionalProperties": false
         }
       },
       "required": ["ros__parameters"],
       "additionalProperties": false
     }
   },
-  "required": ["/**"],
   "additionalProperties": false
 }
