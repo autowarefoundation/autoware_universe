@@ -74,10 +74,18 @@
                 }
               },
               "required": [
-                "is_amplitude_filter", "amplitude_min", "amplitude_max",
-                "is_range_filter", "range_min", "range_max",
-                "is_azimuth_filter", "azimuth_min", "azimuth_max",
-                "is_z_filter", "z_min", "z_max"
+                "is_amplitude_filter",
+                "amplitude_min",
+                "amplitude_max",
+                "is_range_filter",
+                "range_min",
+                "range_max",
+                "is_azimuth_filter",
+                "azimuth_min",
+                "azimuth_max",
+                "is_z_filter",
+                "z_min",
+                "z_max"
               ],
               "additionalProperties": false
             }
