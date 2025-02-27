@@ -60,6 +60,10 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   bool enable_delay_compensation{declare_parameter<bool>("enable_delay_compensation")};
   bool enable_odometry_uncertainty = declare_parameter<bool>("consider_odometry_uncertainty");
 
+  // Add new parameters for extrapolation thresholds
+  diagnostics_warn_extrapolation_ = declare_parameter<double>("diagnostics_warn_extrapolation_");
+  diagnostics_error_extrapolation_ = declare_parameter<double>("diagnostics_error_extrapolation_");
+
   declare_parameter("selected_input_channels", std::vector<std::string>());
   std::vector<std::string> selected_input_channels =
     get_parameter("selected_input_channels").as_string_array();
@@ -206,7 +210,11 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
   // Debugger
   debugger_ = std::make_unique<TrackerDebugger>(*this, world_frame_id_, input_channels_config_);
+
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+  // Diagnostics
+  diagnostics_interface_ptr_ = std::make_unique<autoware_utils::DiagnosticsInterface>(
+    this, "multi_object_tracker_delay_compensation");
 }
 
 void MultiObjectTracker::onTrigger()
@@ -238,7 +246,8 @@ void MultiObjectTracker::onTrigger()
 void MultiObjectTracker::onTimer()
 {
   const rclcpp::Time current_time = this->now();
-
+  // Get minimum prediction time delta from all trackers
+  const double min_extrapolation_time = (current_time - last_updated_time_).seconds();
   // ensure minimum interval: room for the next process(prediction)
   const double minimum_publish_interval = publisher_period_ * minimum_publish_interval_ratio;
   const auto elapsed_time = (current_time - last_published_time_).seconds();
@@ -253,6 +262,27 @@ void MultiObjectTracker::onTimer()
   // in this case, it will perform extrapolate/remove old objects
   const double maximum_publish_interval = publisher_period_ * maximum_publish_interval_ratio;
   should_publish = should_publish || elapsed_time > maximum_publish_interval;
+
+  diagnostics_interface_ptr_->clear();
+  diagnostics_interface_ptr_->add_key_value("min_extrapolation_time", min_extrapolation_time);
+
+  if (min_extrapolation_time > diagnostics_error_extrapolation_) {
+    std::stringstream message;
+    message << "min_extrapolation_time exceeds error threshold ("
+            << diagnostics_error_extrapolation_ << "), current value: " << min_extrapolation_time;
+    diagnostics_interface_ptr_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::ERROR, message.str());
+  } else if (min_extrapolation_time > diagnostics_warn_extrapolation_) {
+    std::stringstream message;
+    message << "min_extrapolation_time exceeds warning threshold ("
+            << diagnostics_warn_extrapolation_ << "), current value: " << min_extrapolation_time;
+    diagnostics_interface_ptr_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, message.str());
+  } else {
+    diagnostics_interface_ptr_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::OK, "OK");
+  }
+  diagnostics_interface_ptr_->publish(current_time);
 
   // Publish with delay compensation to the current time
   if (should_publish) checkAndPublish(current_time);
