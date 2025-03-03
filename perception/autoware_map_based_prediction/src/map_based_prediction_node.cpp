@@ -30,6 +30,7 @@
 #include <autoware_utils/ros/uuid_helper.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <boost/geometry.hpp>
@@ -50,6 +51,7 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -497,6 +499,11 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
     time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(time_keeper);
     path_generator_->setTimeKeeper(time_keeper_);
     predictor_vru_->setTimeKeeper(time_keeper_);
+
+    // diagnostics handler
+    diagnostics_interface_ptr_ =
+      std::make_unique<autoware_utils::DiagnosticsInterface>(this, "map_based_prediction");
+    processing_time_tolerance_ms_ = declare_parameter<double>("processing_time_tolerance_ms");
   }
 
   if (use_debug_marker) {
@@ -671,6 +678,18 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
       "debug/cyclic_time_ms", cyclic_time_ms);
     processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time_ms", processing_time_ms);
+
+    diagnostics_interface_ptr_->clear();
+    bool is_processing_time_ok = processing_time_ms > processing_time_tolerance_ms_;
+    diagnostics_interface_ptr_->add_key_value("is_processing_time_ok", is_processing_time_ok);
+    if (is_processing_time_ok) {
+      std::ostringstream oss;
+      oss << "Processing time exceeded " << processing_time_tolerance_ms_ << "[ms] < "
+          << processing_time_ms << "[ms]";
+      diagnostics_interface_ptr_->update_level_and_message(
+        diagnostic_msgs::msg::DiagnosticStatus::WARN, oss.str());
+    }
+    diagnostics_interface_ptr_->publish(output.header.stamp);
   }
 }
 

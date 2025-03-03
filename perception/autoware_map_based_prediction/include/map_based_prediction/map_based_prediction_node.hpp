@@ -21,6 +21,7 @@
 
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <autoware_utils/ros/transform_listener.hpp>
@@ -114,6 +115,10 @@ private:
 
   // Predictor
   std::shared_ptr<PredictorVru> predictor_vru_;
+
+  // Diagnostics
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
+  double processing_time_tolerance_ms_;
 
   ////// Parameters
 
