@@ -16,6 +16,7 @@
 #define AUTOWARE__SIMPL__PROCESSING__GEOMETRY_HPP_
 
 #include "autoware/simpl/archetype/agent.hpp"
+#include "autoware/simpl/archetype/map.hpp"
 
 #include <cmath>
 
@@ -27,19 +28,19 @@ namespace autoware::simpl::processing
  * @param from Original agent state.
  * @param to Agent state coordinate where `from` will be transformed.
  */
-archetype::AgentState transform_2d(
+inline archetype::AgentState transform2d(
   const archetype::AgentState & from, const archetype::AgentState & to)
 {
-  auto cos = std::cos(to.yaw);
-  auto sin = std::sin(to.yaw);
+  auto vcos = std::cos(to.yaw);
+  auto vsin = std::sin(to.yaw);
 
-  auto ret_x = (from.x - to.x) * cos - (from.y - to.y) * sin;
-  auto ret_y = (from.x - to.x) * sin + (from.y - to.y) * cos;
-  auto ret_yaw = from.yaw - to.yaw;
-  auto ret_vx = from.vx * cos - from.vy * sin;
-  auto ret_vy = from.vx * sin + from.vy * cos;
+  auto x = (from.x - to.x) * vcos - (from.y - to.y) * vsin;
+  auto y = (from.x - to.x) * vsin + (from.y - to.y) * vcos;
+  auto yaw = from.yaw - to.yaw;
+  auto vx = from.vx * vcos - from.vy * vsin;
+  auto vy = from.vx * vsin + from.vy * vcos;
 
-  return {ret_x, ret_y, from.z, ret_yaw, ret_vx, ret_vy, from.label, from.is_valid};
+  return {x, y, from.z, yaw, vx, vy, from.label, from.is_valid};
 }
 
 /**
@@ -48,40 +49,41 @@ archetype::AgentState transform_2d(
  * @param from Original map point.
  * @param to Agent state coordinate where `from` will be transformed.
  */
-archetype::MapPoint transform_2d(const archetype::MapPoint & from, const archetype::AgentState & to)
+inline archetype::MapPoint transform2d(
+  const archetype::MapPoint & from, const archetype::AgentState & to)
 {
-  auto cos_v = std::cos(to.yaw);
-  auto sin = std::sin(to.yaw);
+  auto vcos = std::cos(to.yaw);
+  auto vsin = std::sin(to.yaw);
 
-  auto ret_x = (from.x - to.x) * cos - (from.y - to.y) * sin;
-  auto ret_y = (from.x - to.x) * sin + (from.y - to.y) * cos;
-  auto ret_dx = from.dx * cos - from.dy * sin;
-  auto ret_dy = from.dx * sin + from.dy * cos;
+  auto x = (from.x - to.x) * vcos - (from.y - to.y) * vsin;
+  auto y = (from.x - to.x) * vsin + (from.y - to.y) * vcos;
+  auto dx = from.dx * vcos - from.dy * vsin;
+  auto dy = from.dx * vsin + from.dy * vcos;
 
-  return {ret_x, ret_y, from.z, ret_dx, ret_dy, from.dz, from.label};
+  return {x, y, from.z, dx, dy, from.dz, from.label};
 }
 
 /**
  * @brief Transform a map point, which is `from`, to the coordinate frame of the specified pose.
  *
- * @param from
- * @param to_x
- * @param to_y
- * @param to_yaw
+ * @param from Original map point.
+ * @param to_x X location w.r.t other coordinate.
+ * @param to_y Y location w.r.t other coordinate.
+ * @param to_yaw Yaw angle w.r.t other coordinate.
  * @return archetype::MapPoint
  */
-archetype::MapPoint transform_2d(
+inline archetype::MapPoint transform2d(
   const archetype::MapPoint & from, double to_x, double to_y, double to_yaw)
 {
-  auto cos = std::cos(to_yaw);
-  auto sin = std::sin(to_yaw);
+  auto vcos = std::cos(to_yaw);
+  auto vsin = std::sin(to_yaw);
 
-  auto ret_x = (from.x - to_x) * cos - (from.y - to_y) * sin;
-  auto ret_y = (from.x - to_x) * sin + (from.y - to_y) * cos;
-  auto ret_dx = from.dx * cos - from.dy * sin;
-  auto ret_dy = from.dx * sin + from.dy * cos;
+  auto x = (from.x - to_x) * vcos - (from.y - to_y) * vsin;
+  auto y = (from.x - to_x) * vsin + (from.y - to_y) * vcos;
+  auto dx = from.dx * vcos - from.dy * vsin;
+  auto dy = from.dx * vsin + from.dy * vcos;
 
-  return {ret_x, ret_y, from.z, ret_dx, ret_dy, from.dz, from.label};
+  return {x, y, from.z, dx, dy, from.dz, from.label};
 }
 }  // namespace autoware::simpl::processing
 #endif  // AUTOWARE__SIMPL__PROCESSING__GEOMETRY_HPP_

@@ -19,7 +19,7 @@
 
 #include <geometry_msgs/msg/point.hpp>
 
-#include <lanelet2_core/Forward.h>
+#include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/CompoundPolygon.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/LineString.h>

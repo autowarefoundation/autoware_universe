@@ -88,7 +88,7 @@ output_type PostProcessor::process(
         agent_trajectories.emplace_back(ret_vy);
       }
     }
-    predictions.emplace_back(agent_scores, agent_trajectories);
+    predictions.emplace_back(num_mode_, num_future_, agent_scores, agent_trajectories);
   }
   return predictions;
 }

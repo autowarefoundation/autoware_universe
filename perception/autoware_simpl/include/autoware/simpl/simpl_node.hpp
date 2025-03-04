@@ -21,7 +21,7 @@
 #include "autoware/simpl/processing/preprocessor.hpp"
 #include "autoware/simpl/trt_simpl.hpp"
 
-#include <autoware/universe_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils/ros/polling_subscriber.hpp>
 #include <rclcpp/node.hpp>
 #include <rclcpp/publisher.hpp>
 #include <rclcpp/subscription.hpp>
@@ -61,7 +61,7 @@ public:
   using Shape = autoware_perception_msgs::msg::Shape;
 
   template <typename T>
-  using InterProcessPollingSubscriber = autoware::universe_utils::InterProcessPollingSubscriber<T>;
+  using InterProcessPollingSubscriber = autoware_utils::InterProcessPollingSubscriber<T>;
 
   inline static const std::string EGO_ID = "EGO";  //!< Object ID for the ego vehicle.
 

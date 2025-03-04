@@ -31,7 +31,8 @@ if(TENSORRT_VERSION VERSION_LESS 8.5)
 endif()
 
 # --- link targets ---
-ament_auto_add_library(${PROJECT_NAME} SHARED src/simpl_node.cpp)
+file(GLOB_RECURSE SIMPL_SOURCES src/*.cpp)
+ament_auto_add_library(${PROJECT_NAME} SHARED ${SIMPL_SOURCES})
 
 rclcpp_components_register_node(
   ${PROJECT_NAME} PLUGIN "autoware::simpl::SimplNode" EXECUTABLE
