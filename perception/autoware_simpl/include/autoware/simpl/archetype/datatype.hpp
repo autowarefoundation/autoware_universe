@@ -25,6 +25,8 @@ struct Point2D
 {
   double x;
   double y;
+
+  Point2D(double _x, double _y) : x(_x), y(_y) {}
 };
 
 using AgentStates = std::vector<AgentState>;

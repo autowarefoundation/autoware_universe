@@ -21,8 +21,8 @@
 #include "autoware/simpl/processing/postprocessor.hpp"
 #include "autoware/simpl/processing/preprocessor.hpp"
 
-#include <autoware/universe_utils/ros/uuid_helper.hpp>
-#include <lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware_utils/ros/uuid_helper.hpp>
 #include <rclcpp/logging.hpp>
 #include <rclcpp/node.hpp>
 #include <rclcpp/qos.hpp>
@@ -146,7 +146,7 @@ void SimplNode::on_map(const LaneletMapBin::ConstSharedPtr map_msg)
 
 std::optional<TrackedObject> SimplNode::subscribe_ego()
 {
-  const auto odometry_msg = odometry_subscription_->takeData();
+  const auto odometry_msg = odometry_subscription_->take_data();
   if (!odometry_msg) {
     return std::nullopt;
   }
@@ -174,7 +174,7 @@ void SimplNode::remove_ancient_history(
   double current_time, const TrackedObjects::ConstSharedPtr objects_msg) noexcept
 {
   for (const auto & object : objects_msg->objects) {
-    const auto object_id = universe_utils::toHexString(object.object_id);
+    const auto object_id = autoware_utils::to_hex_string(object.object_id);
     if (history_map_.count(object_id) == 0) {
       continue;
     }
@@ -196,7 +196,7 @@ void SimplNode::update_history(
   // Update agent history
   {
     for (const auto & object : objects_msg->objects) {
-      const auto object_id = universe_utils::toHexString(object.object_id);
+      const auto object_id = autoware_utils::to_hex_string(object.object_id);
       observed_ids.emplace_back(object_id);
 
       const auto state = conversion::to_state(object, is_valid);

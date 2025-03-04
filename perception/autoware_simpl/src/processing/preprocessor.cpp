@@ -71,14 +71,14 @@ AgentMetadata PreProcessor::process_agent(
     const auto & current_state = history.current();
 
     // Retrieve node data
-    const auto center = transform_2d(current_state, current_ego);
+    const auto center = transform2d(current_state, current_ego);
     node_centers.emplace_back(center.x, center.y);
     node_vectors.emplace_back(std::cos(center.yaw), std::sin(center.yaw));
     for (size_t t = 0; t < history.size(); ++t) {
       const auto & state_t = history.at(t);
 
       // Transform from map coordinate to current state relative coordinate
-      const auto ret_state = transform_2d(state_t, current_state);
+      const auto ret_state = transform2d(state_t, current_state);
 
       const auto idx = (n * num_past_ + t) * num_attribute;
 
@@ -123,16 +123,17 @@ AgentMetadata PreProcessor::process_agent(
 }
 
 // TODO(ktro2828): Implement map processing.
-MapMetadata PreProcessor::process_map(
-  const archetype::MapPoints & map_points, const archetype::AgentState & current_ego) const noexcept
-{
-  // 1. create polylines & extract topK
-  std::vector<float> input_tensor;
-  archetype::NodePoints node_centers;
-  archetype::NodePoints node_vectors;
-  for (size_t i = 1; i < map_points.size(); ++i) {
-  }
-}
+// MapMetadata PreProcessor::process_map(
+//   const archetype::MapPoints & map_points, const archetype::AgentState & current_ego) const
+//   noexcept
+// {
+//   // 1. create polylines & extract topK
+//   std::vector<float> input_tensor;
+//   archetype::NodePoints node_centers;
+//   archetype::NodePoints node_vectors;
+//   for (size_t i = 1; i < map_points.size(); ++i) {
+//   }
+// }
 
 archetype::RpeTensor PreProcessor::process_rpe(
   const AgentMetadata & agent_metadata, const MapMetadata & map_metadata) const noexcept

@@ -64,7 +64,7 @@ std::optional<std::vector<archetype::MapPoint>> LaneletConverter::convert(
     const auto label = MAP_LABEL_MAPPING.at(lanelet_subtype.value());
     if (is_lane_like(lanelet_subtype)) {
       // Convert centerlines
-      if (is_roadway_like(lanelet)) {
+      if (is_roadway_like(lanelet_subtype)) {
         const auto points =
           from_linestring(lanelet.centerline3d(), label, position_from, distance_threshold);
         insert_lane_points(points, container);
@@ -95,7 +95,7 @@ std::optional<std::vector<archetype::MapPoint>> LaneletConverter::convert(
     if (is_boundary_like(linestring)) {
       const auto subtype = to_subtype(linestring);
       const auto label = MAP_LABEL_MAPPING.at(subtype.value());
-      const auto points = from_linestring(linestring, position_from, distance_threshold);
+      const auto points = from_linestring(linestring, label, position_from, distance_threshold);
       insert_lane_points(points, container);
     }
   }
