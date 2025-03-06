@@ -6,6 +6,7 @@
     <include file="$(find-pkg-share autoware_scenario_selector)/launch/scenario_selector.launch.xml">
       <arg name="input_lane_driving_trajectory" value="/planning/scenario_planning/lane_driving/trajectory"/>
       <arg name="input_parking_trajectory" value="/planning/scenario_planning/parking/trajectory"/>
+      <arg name="input_waypoint_following_trajectory" value = "/planning/scenario_planning/waypoint_following/trajectory"/>
       <arg name="input_lanelet_map" value="/map/vector_map"/>
       <arg name="input_route" value="/planning/mission_planning/route"/>
       <arg name="input_odometry" value="/localization/kinematic_state"/>
@@ -13,6 +14,7 @@
       <arg name="output_scenario" value="/planning/scenario_planning/scenario"/>
       <arg name="output_trajectory" value="/planning/scenario_planning/scenario_selector/trajectory"/>
       <arg name="is_parking_completed" value="/planning/scenario_planning/parking/is_completed"/>
+      <arg name="is_waypoint_following_completed" value="/planning/scenario_planning/waypoint_following/is_completed"/>
     </include>
   </group>
 
