@@ -270,7 +270,7 @@ public:
   /**
    * @brief Return the pointer to the tensor data.
    */
-  const float * data_ptr() const noexcept { return tensor_.data(); }
+  const float * data() const noexcept { return tensor_.data(); }
 
   /**
    * @brief Return the size of the tensor (N*T*Da).

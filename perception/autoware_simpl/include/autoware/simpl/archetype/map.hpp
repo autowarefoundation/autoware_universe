@@ -80,13 +80,6 @@ public:
     return std::hypot(x - other.x, y - other.y, z - other.z);
   }
 
-  template <typename T>
-  std::vector<T> to_vector() const noexcept
-  {
-    return {static_cast<T>(x),  static_cast<T>(y),  static_cast<T>(z),    static_cast<T>(dx),
-            static_cast<T>(dy), static_cast<T>(dz), static_cast<T>(label)};
-  }
-
   double x{0.0};                      //!< Location x in map coordinate system.
   double y{0.0};                      //!< Location y in map coordinate system.
   double z{0.0};                      //!< Location z in map coordinate system.
@@ -121,8 +114,14 @@ public:
     }
   }
 
-  const float * data_ptr() const noexcept { return tensor_.data(); }
+  /**
+   * @brief Return the pointer to tensor data.
+   */
+  const float * data() const noexcept { return tensor_.data(); }
 
+  /**
+   * @brief Return the size of tensor elements, where K*P*D.
+   */
   size_type size() const noexcept { return tensor_.size(); }
 
   const size_t num_polyline;   //!< Number of polylines (K).

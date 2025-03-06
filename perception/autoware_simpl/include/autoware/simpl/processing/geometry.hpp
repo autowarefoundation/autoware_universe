@@ -19,6 +19,7 @@
 #include "autoware/simpl/archetype/map.hpp"
 
 #include <cmath>
+#include <tuple>
 
 namespace autoware::simpl::processing
 {
@@ -41,6 +42,29 @@ inline archetype::AgentState transform2d(
   auto vy = from.vx * vsin + from.vy * vcos;
 
   return {x, y, from.z, yaw, vx, vy, from.label, from.is_valid};
+}
+
+/**
+ * @brief Transform state from local frame to global frame.
+ *
+ * @param from_x X location w.r.t local frame.
+ * @param from_y Y location w.r.t local frame.
+ * @param from_vx X direction velocity w.r.t local frame.
+ * @param from_vy Y direction velocity w.r.t local frame.
+ * @param to Agent state coordinate where `from` will be transformed.
+ */
+inline std::tuple<double, double, double, double> transform2d(
+  double from_x, double from_y, double from_vx, double from_vy, const archetype::AgentState & to)
+{
+  auto vcos = std::cos(to.yaw);
+  auto vsin = std::sin(to.yaw);
+
+  double x = from_x * vcos - from_y * vsin + to.x;
+  double y = from_x * vsin + from_y * vcos + to.y;
+  double vx = from_vx * vcos - from_vy * vsin;
+  double vy = from_vx * vsin + from_vy * vcos;
+
+  return {x, y, vx, vy};
 }
 
 /**
