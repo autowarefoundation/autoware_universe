@@ -31,10 +31,11 @@ namespace autoware::simpl::processing
  */
 struct NodePoint
 {
-  double x;
-  double y;
-
+  NodePoint() = default;
   NodePoint(double _x, double _y) : x(_x), y(_y) {}
+
+  double x{0.0};
+  double y{0.0};
 };
 
 using NodePoints = std::vector<NodePoint>;
@@ -105,10 +106,11 @@ public:
    * @param num_past Number of past timestamps.
    * @param max_num_polyline Maximum number of polylines.
    * @param max_num_point Maximum number of points in a single polyline.
+   * @param break_distance Distance threshold to break two polylines.
    */
   PreProcessor(
     const std::vector<size_t> & label_ids, size_t max_num_agent, size_t num_past,
-    size_t max_num_polyline, size_t max_num_point);
+    size_t max_num_polyline, size_t max_num_point, double break_distance);
 
   /**
    * @brief Execute preprocessing.
@@ -157,6 +159,7 @@ private:
   const size_t num_past_;                //!< Number of past timestamps (Tp).
   const size_t max_num_polyline_;        //!< Maximum number of polylines (K).
   const size_t max_num_point_;           //!< Maximum number of points in a single polyline (P).
+  const double break_distance_;          //!< Distance threshold to break two polylines.
 };
 }  // namespace autoware::simpl::processing
 #endif  // AUTOWARE__SIMPL__PROCESSING__PREPROCESSOR_HPP_

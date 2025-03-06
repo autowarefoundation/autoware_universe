@@ -20,8 +20,13 @@
 #include "autoware/simpl/archetype/datatype.hpp"
 #include "autoware/simpl/archetype/map.hpp"
 #include "autoware/simpl/processing/geometry.hpp"
+#include "autoware/simpl/processing/polyline.hpp"
 #include "autoware/simpl/processing/rpe.hpp"
 
+#include <math.h>
+
+#include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <tuple>
 #include <utility>
@@ -33,12 +38,13 @@ using output_type = PreProcessor::output_type;
 
 PreProcessor::PreProcessor(
   const std::vector<size_t> & label_ids, size_t max_num_agent, size_t num_past,
-  size_t max_num_polyline, size_t max_num_point)
+  size_t max_num_polyline, size_t max_num_point, double break_distance)
 : label_ids_(label_ids),
   max_num_agent_(max_num_agent),
   num_past_(num_past),
   max_num_polyline_(max_num_polyline),
-  max_num_point_(max_num_point)
+  max_num_point_(max_num_point),
+  break_distance_(break_distance)
 {
 }
 
@@ -123,18 +129,52 @@ AgentMetadata PreProcessor::process_agent(
   return {agent_tensor, node_centers, node_vectors};
 }
 
-// TODO(ktro2828): Implement map processing.
-// MapMetadata PreProcessor::process_map(
-//   const archetype::MapPoints & map_points, const archetype::AgentState & current_ego) const
-//   noexcept
-// {
-//   // 1. create polylines & extract topK
-//   std::vector<float> input_tensor;
-//   archetype::NodePoints node_centers;
-//   archetype::NodePoints node_vectors;
-//   for (size_t i = 1; i < map_points.size(); ++i) {
-//   }
-// }
+MapMetadata PreProcessor::process_map(
+  const archetype::MapPoints & map_points, const archetype::AgentState & current_ego) const noexcept
+{
+  // 1. create polylines
+  auto polylines = create_polylines(map_points, current_ego, max_num_point_, break_distance_);
+
+  // 2. Sort by distance to extract topK
+  if (polylines.size() > max_num_polyline_) {
+    std::sort(
+      polylines.begin(), polylines.end(),
+      [](const archetype::MapPoints & polyline1, const archetype::MapPoints & polyline2) {
+        const auto distance1 = find_center(polyline1).distance();
+        const auto distance2 = find_center(polyline2).distance();
+        return distance1 < distance2;
+      });
+  }
+
+  // 3. Create tensor, node centers and vectors
+  constexpr size_t num_attribute = 4;
+  std::vector<float> in_tensor(max_num_polyline_ * (max_num_point_ - 1) * num_attribute);
+  NodePoints node_centers(max_num_polyline_);
+  NodePoints node_vectors(max_num_polyline_);
+  for (size_t i = 0; i < polylines.size() || i < max_num_polyline_; ++i) {
+    const auto & polyline = polylines.at(i);
+
+    const auto center = find_center(polyline);
+    node_centers.at(i) = {center.x, center.y};
+
+    const auto [vx, vy, _] = polyline.back().diff(polyline.front());
+    const auto norm = std::hypot(vx, vy);
+    node_vectors.at(i) = {vx / (norm + 1e-6), vy / (norm + 1e-6)};
+
+    const auto theta = atan2(vy, vx);
+
+    const auto first = transform2d(polyline.front(), vx, vy, theta);
+    const auto last = transform2d(polyline.back(), vx, vy, theta);
+    const auto [dx, dy, __] = last.diff(first);
+    in_tensor.push_back(static_cast<float>(0.5 * (first.x + last.x)));
+    in_tensor.push_back(static_cast<float>(0.5 * (first.y + last.y)));
+    in_tensor.push_back(dx);
+    in_tensor.push_back(dy);
+  }
+
+  archetype::MapTensor map_tensor(in_tensor, max_num_polyline_, max_num_point_, num_attribute);
+  return {map_tensor, node_centers, node_vectors};
+}
 
 archetype::RpeTensor PreProcessor::process_rpe(
   const AgentMetadata & agent_metadata, const MapMetadata & map_metadata) const noexcept

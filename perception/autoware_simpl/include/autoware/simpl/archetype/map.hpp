@@ -20,6 +20,7 @@
 #include <cmath>
 #include <cstddef>
 #include <stdexcept>
+#include <tuple>
 #include <vector>
 
 namespace autoware::simpl::archetype
@@ -71,6 +72,11 @@ public:
   static size_t num_attribute() { return 7; }
 
   /**
+   * @brief Compute the distance.
+   */
+  double distance() const noexcept { return std::hypot(x, y, z); }
+
+  /**
    * @brief Compute the distance from the specified another point.
    *
    * @param other Another point.
@@ -78,6 +84,35 @@ public:
   double distance_from(const MapPoint & other) const noexcept
   {
     return std::hypot(x - other.x, y - other.y, z - other.z);
+  }
+
+  /**
+   * @brief Compute the difference of xyz between myself and another one.
+   *
+   * @param other Another point.
+   */
+  std::tuple<double, double, double> diff(const MapPoint & other) const
+  {
+    return {x - other.x, y - other.y, z - other.z};
+  }
+
+  /**
+   * @brief Execute linear interpolation by `(1 - t) * self + t * other`.
+   *
+   * @param other Other point.
+   * @param t Weight of
+   * @return MapPoint
+   */
+  MapPoint interpolate(const MapPoint & other, double t) const
+  {
+    const auto ix = (1 - t) * x + t * other.x;
+    const auto iy = (1 - t) * y + t * other.y;
+    const auto iz = (1 - t) * z + t * other.z;
+    const auto idx = (1 - t) * dx + t * other.dx;
+    const auto idy = (1 - t) * dy + t * other.dy;
+    const auto idz = (1 - t) * dz + t * other.dz;
+
+    return {ix, iy, iz, idx, idy, idz, label};
   }
 
   double x{0.0};                      //!< Location x in map coordinate system.
