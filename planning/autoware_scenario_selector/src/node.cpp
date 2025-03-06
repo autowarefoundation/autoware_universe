@@ -49,6 +49,36 @@ std::shared_ptr<lanelet::ConstPolygon3d> findNearestParkinglot(
   }
 }
 
+std::shared_ptr<lanelet::ConstPolygon3d> findNearestWaypointZone(
+  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
+  const lanelet::BasicPoint2d & current_position)
+{
+  const auto linked_waypoint_zone = std::make_shared<lanelet::ConstPolygon3d>();
+  const auto result = lanelet::utils::query::getLinkedWaypointZone(
+    current_position, lanelet_map_ptr, linked_waypoint_zone.get());
+
+  if (result) {
+    return linked_waypoint_zone;
+  } else {
+    return {};
+  }
+}
+
+std::shared_ptr<lanelet::ConstPolygon3d> findNearestWaypointZone(
+  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
+  const lanelet::BasicPoint2d & current_position, const double distance_threshold)
+{
+  const auto linked_waypoint_zone = std::make_shared<lanelet::ConstPolygon3d>();
+  const auto result = lanelet::utils::query::getLinkedWaypointZone(
+    current_position, lanelet_map_ptr, linked_waypoint_zone.get(), distance_threshold);
+
+  if (result) {
+    return linked_waypoint_zone;
+  } else {
+    return {};
+  }
+}
+
 bool isInLane(
   const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
   const geometry_msgs::msg::Point & current_pos)
@@ -80,6 +110,41 @@ bool isAlongLane(
     lanelet::geometry::distanceToCenterline2d(closest_lanelet, src_point);
   static constexpr double margin = 1.0;
   return dist_to_centerline < margin;
+}
+
+bool isAlongOrInWaypointZone(
+  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
+  const geometry_msgs::msg::Pose & current_pose, const double distance_threshold = 3.0)
+{
+  if (!lanelet_map_ptr) {
+    return false;
+  }
+
+  lanelet::BasicPoint2d ego_2d(current_pose.position.x, current_pose.position.y);
+
+  auto nearest_zone = findNearestWaypointZone(lanelet_map_ptr, ego_2d, distance_threshold);
+  if (!nearest_zone) {
+    return false;
+  }
+
+  return true;
+}
+
+[[maybe_unused]] bool isInWaypointZone(
+  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
+  const geometry_msgs::msg::Pose & current_pose)
+{
+  const auto & p = current_pose.position;
+  const lanelet::Point3d search_point(lanelet::InvalId, p.x, p.y, p.z);
+
+  const auto nearest_waypoint_zone =
+    findNearestWaypointZone(lanelet_map_ptr, search_point.basicPoint2d());
+
+  if (!nearest_waypoint_zone) {
+    return false;
+  }
+
+  return lanelet::geometry::within(search_point, nearest_waypoint_zone->basicPolygon());
 }
 
 bool isInParkingLot(
@@ -126,7 +191,6 @@ bool isStopped(
   }
   return true;
 }
-
 }  // namespace
 
 autoware_planning_msgs::msg::Trajectory::ConstSharedPtr ScenarioSelectorNode::getScenarioTrajectory(
@@ -137,6 +201,9 @@ autoware_planning_msgs::msg::Trajectory::ConstSharedPtr ScenarioSelectorNode::ge
   }
   if (scenario == autoware_internal_planning_msgs::msg::Scenario::PARKING) {
     return parking_trajectory_;
+  }
+  if (scenario == tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING) {
+    return waypoint_following_trajectory_;
   }
   RCLCPP_ERROR_STREAM(this->get_logger(), "invalid scenario argument: " << scenario);
   return lane_driving_trajectory_;
@@ -150,17 +217,24 @@ std::string ScenarioSelectorNode::selectScenarioByPosition()
     isInLane(route_handler_->getLaneletMapPtr(), route_->goal_pose.position);
   const auto is_in_parking_lot =
     isInParkingLot(route_handler_->getLaneletMapPtr(), current_pose_->pose.pose);
+  const auto is_along_or_in_waypoint_zone =
+    isAlongOrInWaypointZone(route_handler_->getLaneletMapPtr(), current_pose_->pose.pose);
 
-  if (current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::EMPTY) {
-    if (is_in_lane && is_goal_in_lane) {
-      return autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING;
+  if (current_scenario_ == tier4_planning_msgs::msg::Scenario::EMPTY) {
+    if (is_in_lane && is_goal_in_lane && !is_along_or_in_waypoint_zone) {
+      return tier4_planning_msgs::msg::Scenario::LANEDRIVING;
+    } else if (is_along_or_in_waypoint_zone) {
+      return tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
     } else if (is_in_parking_lot) {
       return autoware_internal_planning_msgs::msg::Scenario::PARKING;
     }
     return autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING;
   }
 
-  if (current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING) {
+  if (current_scenario_ == tier4_planning_msgs::msg::Scenario::LANEDRIVING) {
+    if (is_along_or_in_waypoint_zone) {
+      return tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
+    }
     if (is_in_parking_lot && !is_goal_in_lane) {
       return autoware_internal_planning_msgs::msg::Scenario::PARKING;
     }
@@ -170,6 +244,19 @@ std::string ScenarioSelectorNode::selectScenarioByPosition()
     if (is_parking_completed_ && is_in_lane) {
       is_parking_completed_ = false;
       return autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING;
+    }
+    if (is_parking_completed_ && is_along_or_in_waypoint_zone) {
+      is_parking_completed_ = false;
+      return tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
+    }
+  }
+
+  if (current_scenario_ == tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING) {
+    if (is_in_lane && (!is_along_or_in_waypoint_zone || is_waypoint_following_completed_)) {
+      return tier4_planning_msgs::msg::Scenario::LANEDRIVING;
+    }
+    if (is_in_parking_lot && !is_goal_in_lane) {
+      return tier4_planning_msgs::msg::Scenario::PARKING;
     }
   }
 
@@ -192,22 +279,53 @@ void ScenarioSelectorNode::updateCurrentScenario()
 
   if (enable_mode_switching_) {
     if (isCurrentLaneDriving()) {
-      current_scenario_ = isSwitchToParking(is_stopped)
-                            ? autoware_internal_planning_msgs::msg::Scenario::PARKING
-                            : current_scenario_;
+      if (isSwitchToParking(is_stopped)) {
+        current_scenario_ = tier4_planning_msgs::msg::Scenario::PARKING;
+      } else if (isSwitchToWaypointFollowing(is_stopped)) {
+        current_scenario_ = tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
+      }
     } else if (isCurrentParking()) {
-      current_scenario_ = isSwitchToLaneDriving()
-                            ? autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING
-                            : current_scenario_;
+      if (isSwitchToLaneDrivingFromParking()) {
+        current_scenario_ = tier4_planning_msgs::msg::Scenario::LANEDRIVING;
+      } else if (isSwitchToWaypointFollowing(is_stopped)) {
+        current_scenario_ = tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
+      }
+    } else if (isCurrentWaypointFollowing()) {
+      if (isSwitchToLaneDrivingFromWaypointFollowing(is_stopped)) {
+        current_scenario_ = tier4_planning_msgs::msg::Scenario::LANEDRIVING;
+      } else if (isSwitchToParking(is_stopped)) {
+        current_scenario_ = tier4_planning_msgs::msg::Scenario::PARKING;
+      }
     }
   }
 
   if (current_scenario_ != prev_scenario) {
-    lane_driving_stop_time_ = {};
+    switch_parking_stop_time_ = {};
+    switch_waypoint_following_stop_time_ = {};
     empty_parking_trajectory_time_ = {};
+    waypoint_following_stop_time_ = {};
     RCLCPP_DEBUG_STREAM(
       this->get_logger(), "scenario changed: " << prev_scenario << " -> " << current_scenario_);
   }
+}
+
+bool ScenarioSelectorNode::isSwitchToWaypointFollowing(const bool is_stopped)
+{
+  const auto is_along_or_in_waypoint_zone =
+    isAlongOrInWaypointZone(route_handler_->getLaneletMapPtr(), current_pose_->pose.pose);
+
+  if (!is_stopped || !is_along_or_in_waypoint_zone) {
+    switch_waypoint_following_stop_time_ = {};
+    return false;
+  }
+
+  if (!switch_waypoint_following_stop_time_) {
+    switch_waypoint_following_stop_time_ = this->now();
+    return false;
+  }
+
+  return (this->now() - switch_waypoint_following_stop_time_.get()).seconds() >
+         switch_stopping_timeout_s;
 }
 
 bool ScenarioSelectorNode::isSwitchToParking(const bool is_stopped)
@@ -218,19 +336,19 @@ bool ScenarioSelectorNode::isSwitchToParking(const bool is_stopped)
     isInLane(route_handler_->getLaneletMapPtr(), route_->goal_pose.position);
 
   if (!is_stopped || !isAutonomous() || !is_in_parking_lot || is_goal_in_lane) {
-    lane_driving_stop_time_ = {};
+    switch_parking_stop_time_ = {};
     return false;
   }
 
-  if (!lane_driving_stop_time_) {
-    lane_driving_stop_time_ = this->now();
+  if (!switch_parking_stop_time_) {
+    switch_parking_stop_time_ = this->now();
     return false;
   }
 
-  return (this->now() - lane_driving_stop_time_.get()).seconds() > lane_stopping_timeout_s;
+  return (this->now() - switch_parking_stop_time_.get()).seconds() > switch_stopping_timeout_s;
 }
 
-bool ScenarioSelectorNode::isSwitchToLaneDriving()
+bool ScenarioSelectorNode::isSwitchToLaneDrivingFromParking()
 {
   const auto is_along_lane = isAlongLane(route_handler_, current_pose_->pose.pose);
 
@@ -247,6 +365,29 @@ bool ScenarioSelectorNode::isSwitchToLaneDriving()
   const auto duration = (this->now() - empty_parking_trajectory_time_.get()).seconds();
 
   return duration > empty_parking_trajectory_timeout_s;
+}
+
+bool ScenarioSelectorNode::isSwitchToLaneDrivingFromWaypointFollowing(const bool is_stopped)
+{
+  const auto is_along_or_in_waypoint_zone =
+    isAlongOrInWaypointZone(route_handler_->getLaneletMapPtr(), current_pose_->pose.pose);
+  const auto is_along_lane = isAlongLane(route_handler_, current_pose_->pose.pose);
+
+  if (
+    !is_stopped || !is_along_lane ||
+    !(!is_along_or_in_waypoint_zone || is_waypoint_following_completed_)) {
+    waypoint_following_stop_time_ = {};
+    return false;
+  }
+
+  if (!waypoint_following_stop_time_) {
+    waypoint_following_stop_time_ = this->now();
+    return false;
+  }
+
+  const auto duration = (this->now() - waypoint_following_stop_time_.get()).seconds();
+
+  return duration > waypoint_following_stopping_timeout_s;
 }
 
 bool ScenarioSelectorNode::isAutonomous() const
@@ -353,7 +494,10 @@ void ScenarioSelectorNode::updateData()
     auto msg = sub_parking_state_->take_data();
     is_parking_completed_ = msg ? msg->data : is_parking_completed_;
   }
-
+  {
+    auto msg = sub_waypoint_following_state_->takeData();
+    is_waypoint_following_completed_ = msg ? msg->data : is_waypoint_following_completed_;
+  }
   {
     auto msgs = sub_odom_->take_data();
     for (const auto & msg : msgs) {
@@ -421,6 +565,18 @@ void ScenarioSelectorNode::onParkingTrajectory(
   publishTrajectory(msg);
 }
 
+void ScenarioSelectorNode::onWaypointFollowingTrajectory(
+  const autoware_planning_msgs::msg::Trajectory::ConstSharedPtr msg)
+{
+  waypoint_following_trajectory_ = msg;
+
+  if (current_scenario_ != tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING) {
+    return;
+  }
+
+  publishTrajectory(msg);
+}
+
 void ScenarioSelectorNode::publishTrajectory(
   const autoware_planning_msgs::msg::Trajectory::ConstSharedPtr msg)
 {
@@ -446,10 +602,13 @@ ScenarioSelectorNode::ScenarioSelectorNode(const rclcpp::NodeOptions & node_opti
   th_stopped_time_sec_(this->declare_parameter<double>("th_stopped_time_sec")),
   th_stopped_velocity_mps_(this->declare_parameter<double>("th_stopped_velocity_mps")),
   enable_mode_switching_(this->declare_parameter<bool>("enable_mode_switching")),
-  is_parking_completed_(false)
+  is_parking_completed_(false),
+  is_waypoint_following_completed_(false)
 {
-  lane_driving_stop_time_ = {};
+  switch_parking_stop_time_ = {};
+  switch_waypoint_following_stop_time_ = {};
   empty_parking_trajectory_time_ = {};
+  waypoint_following_stop_time_ = {};
 
   // Input
   sub_lane_driving_trajectory_ = this->create_subscription<autoware_planning_msgs::msg::Trajectory>(
@@ -459,6 +618,11 @@ ScenarioSelectorNode::ScenarioSelectorNode(const rclcpp::NodeOptions & node_opti
   sub_parking_trajectory_ = this->create_subscription<autoware_planning_msgs::msg::Trajectory>(
     "input/parking/trajectory", rclcpp::QoS{1},
     std::bind(&ScenarioSelectorNode::onParkingTrajectory, this, std::placeholders::_1));
+
+  sub_waypoint_following_trajectory_ =
+    this->create_subscription<autoware_planning_msgs::msg::Trajectory>(
+      "input/waypoint_following/trajectory", rclcpp::QoS{1},
+      std::bind(&ScenarioSelectorNode::onWaypointFollowingTrajectory, this, std::placeholders::_1));
 
   sub_lanelet_map_ = this->create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
     "input/lanelet_map", rclcpp::QoS{1}.transient_local(),
@@ -473,6 +637,10 @@ ScenarioSelectorNode::ScenarioSelectorNode(const rclcpp::NodeOptions & node_opti
 
   sub_parking_state_ = decltype(sub_parking_state_)::element_type::create_subscription(
     this, "is_parking_completed", rclcpp::QoS{1});
+
+  sub_waypoint_following_state_ =
+    decltype(sub_waypoint_following_state_)::element_type::create_subscription(
+      this, "is_waypoint_following_completed", rclcpp::QoS{1});
 
   sub_operation_mode_state_ =
     decltype(sub_operation_mode_state_)::element_type::create_subscription(

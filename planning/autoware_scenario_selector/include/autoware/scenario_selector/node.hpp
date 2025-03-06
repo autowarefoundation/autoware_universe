@@ -62,6 +62,8 @@ public:
   void onRoute(const autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr msg);
   void onLaneDrivingTrajectory(const autoware_planning_msgs::msg::Trajectory::ConstSharedPtr msg);
   void onParkingTrajectory(const autoware_planning_msgs::msg::Trajectory::ConstSharedPtr msg);
+  void onWaypointFollowingTrajectory(
+    const autoware_planning_msgs::msg::Trajectory::ConstSharedPtr msg);
   void publishTrajectory(const autoware_planning_msgs::msg::Trajectory::ConstSharedPtr msg);
 
   void updateCurrentScenario();
@@ -74,8 +76,10 @@ public:
 private:
   bool isAutonomous() const;
   bool isEmptyParkingTrajectory() const;
-  bool isSwitchToLaneDriving();
+  bool isSwitchToLaneDrivingFromParking();
+  bool isSwitchToLaneDrivingFromWaypointFollowing(const bool is_stopped);
   bool isSwitchToParking(const bool is_stopped);
+  bool isSwitchToWaypointFollowing(const bool is_stopped);
 
   inline bool isCurrentLaneDriving() const
   {
@@ -87,6 +91,11 @@ private:
     return current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::PARKING;
   }
 
+  inline bool isCurrentWaypointFollowing() const
+  {
+    return current_scenario_ == tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
+  }
+
   rclcpp::TimerBase::SharedPtr timer_;
 
   // subscribers
@@ -95,21 +104,26 @@ private:
   rclcpp::Subscription<autoware_planning_msgs::msg::Trajectory>::SharedPtr
     sub_lane_driving_trajectory_;
   rclcpp::Subscription<autoware_planning_msgs::msg::Trajectory>::SharedPtr sub_parking_trajectory_;
+  rclcpp::Subscription<autoware_planning_msgs::msg::Trajectory>::SharedPtr
+    sub_waypoint_following_trajectory_;
   rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr pub_trajectory_;
   rclcpp::Publisher<autoware_internal_planning_msgs::msg::Scenario>::SharedPtr pub_scenario_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
     pub_processing_time_;
 
   // polling subscribers
-  autoware_utils::InterProcessPollingSubscriber<
-    nav_msgs::msg::Odometry, autoware_utils::polling_policy::All>::SharedPtr sub_odom_;
-  autoware_utils::InterProcessPollingSubscriber<std_msgs::msg::Bool>::SharedPtr sub_parking_state_;
-  autoware_utils::InterProcessPollingSubscriber<
+  universe_utils::InterProcessPollingSubscriber<
+    nav_msgs::msg::Odometry, autoware::universe_utils::polling_policy::All>::SharedPtr sub_odom_;
+  universe_utils::InterProcessPollingSubscriber<std_msgs::msg::Bool>::SharedPtr sub_parking_state_;
+  universe_utils::InterProcessPollingSubscriber<std_msgs::msg::Bool>::SharedPtr
+    sub_waypoint_following_state_;
+  universe_utils::InterProcessPollingSubscriber<
     autoware_adapi_v1_msgs::msg::OperationModeState>::SharedPtr sub_operation_mode_state_;
 
   autoware_adapi_v1_msgs::msg::OperationModeState::ConstSharedPtr operation_mode_state_;
   autoware_planning_msgs::msg::Trajectory::ConstSharedPtr lane_driving_trajectory_;
   autoware_planning_msgs::msg::Trajectory::ConstSharedPtr parking_trajectory_;
+  autoware_planning_msgs::msg::Trajectory::ConstSharedPtr waypoint_following_trajectory_;
   autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr route_;
   nav_msgs::msg::Odometry::ConstSharedPtr current_pose_;
   geometry_msgs::msg::TwistStamped::ConstSharedPtr twist_;
@@ -128,12 +142,16 @@ private:
   double th_stopped_velocity_mps_;
   bool enable_mode_switching_;
   bool is_parking_completed_;
+  bool is_waypoint_following_completed_;
 
-  boost::optional<rclcpp::Time> lane_driving_stop_time_;
+  boost::optional<rclcpp::Time> switch_parking_stop_time_;
+  boost::optional<rclcpp::Time> switch_waypoint_following_stop_time_;
   boost::optional<rclcpp::Time> empty_parking_trajectory_time_;
+  boost::optional<rclcpp::Time> waypoint_following_stop_time_;
 
-  static constexpr double lane_stopping_timeout_s = 5.0;
+  static constexpr double switch_stopping_timeout_s = 5.0;
   static constexpr double empty_parking_trajectory_timeout_s = 3.0;
+  static constexpr double waypoint_following_stopping_timeout_s = 5.0;
 
   // processing time
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
