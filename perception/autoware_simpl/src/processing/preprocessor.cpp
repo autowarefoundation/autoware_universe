@@ -22,6 +22,7 @@
 #include "autoware/simpl/processing/geometry.hpp"
 #include "autoware/simpl/processing/rpe.hpp"
 
+#include <cstddef>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -63,9 +64,9 @@ AgentMetadata PreProcessor::process_agent(
   const size_t num_label = label_ids_.size();
   const size_t num_attribute = num_label + 7;  // L + 7
 
-  std::vector<float> input_tensor(max_num_agent_ * num_past_, num_attribute);
-  archetype::NodePoints node_centers;
-  archetype::NodePoints node_vectors;
+  std::vector<float> in_tensor(max_num_agent_ * num_past_, num_attribute);
+  NodePoints node_centers;
+  NodePoints node_vectors;
   for (size_t n = 0; n < histories.size(); ++n) {
     const auto & history = histories.at(n);
     const auto & current_state = history.current();
@@ -85,39 +86,39 @@ AgentMetadata PreProcessor::process_agent(
       // dx, dy
       if (t == 0) {
         // (0.0, 0.0) at t=0
-        input_tensor[idx] = 0.0;
-        input_tensor[idx + 1] = 0.0;
+        in_tensor[idx] = 0.0;
+        in_tensor[idx + 1] = 0.0;
       } else {
         // XYt - XYt-1
-        input_tensor[idx] = static_cast<float>(ret_state.x - history.at(t - 1).x);
-        input_tensor[idx + 1] = static_cast<float>(ret_state.y - history.at(t - 1).y);
+        in_tensor[idx] = static_cast<float>(ret_state.x - history.at(t - 1).x);
+        in_tensor[idx + 1] = static_cast<float>(ret_state.y - history.at(t - 1).y);
       }
       // cos, sin
-      input_tensor[idx + 2] = static_cast<float>(std::cos(ret_state.yaw));
-      input_tensor[idx + 3] = static_cast<float>(std::sin(ret_state.yaw));
+      in_tensor[idx + 2] = static_cast<float>(std::cos(ret_state.yaw));
+      in_tensor[idx + 3] = static_cast<float>(std::sin(ret_state.yaw));
       // vx, vy
-      input_tensor[idx + 4] = static_cast<float>(ret_state.vx);
-      input_tensor[idx + 5] = static_cast<float>(ret_state.vy);
+      in_tensor[idx + 4] = static_cast<float>(ret_state.vx);
+      in_tensor[idx + 5] = static_cast<float>(ret_state.vy);
       // onehot
       for (size_t l = 0; l < label_ids_.size(); ++l) {
         const auto & label_id = label_ids_.at(l);
         if (label_id == static_cast<size_t>(ret_state.label)) {
-          input_tensor[idx + 6 + l] = 1.0f;
+          in_tensor[idx + 6 + l] = 1.0f;
         } else {
-          input_tensor[idx + 6 + l] = 0.0f;
+          in_tensor[idx + 6 + l] = 0.0f;
         }
       }
       // is valid
-      input_tensor[idx + 6 + num_label] = static_cast<float>(ret_state.is_valid);
+      in_tensor[idx + 6 + num_label] = static_cast<float>(ret_state.is_valid);
     }
 
-    // TODO(ktro2828): Implement much reasonable operation.
+    // TODO(ktro2828): Use more reasonable operation. e.g. sorting by distance histories first.
     if (n >= max_num_agent_) {
       break;
     }
   }
 
-  archetype::AgentTensor agent_tensor(input_tensor, max_num_agent_, num_past_, num_attribute);
+  archetype::AgentTensor agent_tensor(in_tensor, max_num_agent_, num_past_, num_attribute);
 
   return {agent_tensor, node_centers, node_vectors};
 }
@@ -139,8 +140,12 @@ archetype::RpeTensor PreProcessor::process_rpe(
   const AgentMetadata & agent_metadata, const MapMetadata & map_metadata) const noexcept
 {
   // Concatenate node centers and vectors of agent and map
-  archetype::NodePoints node_centers;
-  archetype::NodePoints node_vectors;
+  const size_t num_rpe = agent_metadata.size() + map_metadata.size();  // N + K
+  constexpr size_t num_attribute = 5;                                  // D
+
+  NodePoints node_centers, node_vectors;
+  node_centers.reserve(num_rpe);
+  node_vectors.reserve(num_rpe);
   for (size_t i = 0; i < agent_metadata.size(); ++i) {
     node_centers.emplace_back(agent_metadata.centers.at(i));
     node_vectors.emplace_back(agent_metadata.vectors.at(i));
@@ -150,28 +155,28 @@ archetype::RpeTensor PreProcessor::process_rpe(
     node_vectors.emplace_back(map_metadata.vectors.at(i));
   }
 
-  const size_t num_rpe = agent_metadata.size() + map_metadata.size();  // N + K
-
   archetype::RpeTensor rpe_tensor;
+  rpe_tensor.reserve(num_rpe * num_rpe * num_attribute);
   for (size_t i = 0; i < num_rpe; ++i) {
-    const auto & center_i = node_centers.at(i);
-    const auto & vector_i = node_vectors.at(i);
+    const auto & ci = node_centers.at(i);
+    const auto & vi = node_vectors.at(i);
     for (size_t j = 0; j < num_rpe; ++j) {
-      const auto & center_j = node_centers.at(i);
-      const auto & vector_j = node_vectors.at(j);
+      const auto & cj = node_centers.at(j);
+      const auto & vj = node_vectors.at(j);
 
-      // v_pos
-      const double vx = center_j.x - center_i.x;
-      const double vy = center_j.y - center_i.y;
+      // position vector
+      const double dvx = cj.x - ci.x;
+      const double dvy = cj.y - ci.y;
 
-      const double cos_a1 = encode_cosine(vector_j, vector_i);
-      const double sin_a1 = encode_sine(vector_j, vector_i);
-      const double cos_a2 = encode_cosine(vector_j, vx, vy);
-      const double sin_a2 = encode_sine(vector_j, vx, vy);
+      const double cos_a1 = cosine_pe(vj, vi);
+      const double sin_a1 = sine_pe(vj, vi);
+      const double cos_a2 = cosine_pe(vj, dvx, dvy);
+      const double sin_a2 = sine_pe(vj, dvx, dvy);
 
-      constexpr double rpe_radius = 100.0;
-      const double distance = 2.0 * std::hypot(vx, vy) / rpe_radius;
+      constexpr double rpe_radius = 100.0;  // NOTE: Referred to the original implementation
+      const double distance = 2.0 * std::hypot(dvx, dvy) / rpe_radius;
 
+      // (cos_a1, sin_a1, cos_a2, sin_a2, d)
       rpe_tensor.push_back(static_cast<float>(cos_a1));
       rpe_tensor.push_back(static_cast<float>(sin_a1));
       rpe_tensor.push_back(static_cast<float>(cos_a2));

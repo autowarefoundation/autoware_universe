@@ -26,9 +26,27 @@
 
 namespace autoware::simpl::processing
 {
+/**
+ * @brief 2D point for node center and vector.
+ */
+struct NodePoint
+{
+  double x;
+  double y;
+
+  NodePoint(double _x, double _y) : x(_x), y(_y) {}
+};
+
+using NodePoints = std::vector<NodePoint>;
+
+/**
+ * @brief Abstract base class of input metadata.
+ */
 struct AbstractMetadata
 {
-  AbstractMetadata(const archetype::NodePoints & _centers, const archetype::NodePoints & _vectors)
+  using size_type = NodePoints::size_type;
+
+  AbstractMetadata(const NodePoints & _centers, const NodePoints & _vectors)
   : centers(_centers), vectors(_vectors)
   {
     if (centers.size() != vectors.size()) {
@@ -36,23 +54,24 @@ struct AbstractMetadata
     }
   }
 
-  size_t size() const noexcept { return centers.size(); }
+  size_type size() const noexcept { return centers.size(); }
 
-  archetype::NodePoints centers;  //!< Node centers, (X, 2).
-  archetype::NodePoints vectors;  //!< Node vectors, (X, 2).
+  const NodePoints centers;  //!< Node centers, (X, 2).
+  const NodePoints vectors;  //!< Node vectors, (X, 2).
 };
+
 /**
  * @brief Agent metadata containing input tensor and node data.
  */
 struct AgentMetadata : public AbstractMetadata
 {
   AgentMetadata(
-    const archetype::AgentTensor & _tensor, const archetype::NodePoints & _centers,
-    const archetype::NodePoints & _vectors)
+    const archetype::AgentTensor & _tensor, const NodePoints & _centers,
+    const NodePoints & _vectors)
   : AbstractMetadata(_centers, _vectors), tensor(_tensor)
   {
   }
-  archetype::AgentTensor tensor;  //!< Input tensor for agent data.
+  const archetype::AgentTensor tensor;  //!< Input tensor for agent data.
 };
 
 /**
@@ -61,13 +80,12 @@ struct AgentMetadata : public AbstractMetadata
 struct MapMetadata : public AbstractMetadata
 {
   MapMetadata(
-    const archetype::MapTensor & _tensor, const archetype::NodePoints & _centers,
-    const archetype::NodePoints & _vectors)
+    const archetype::MapTensor & _tensor, const NodePoints & _centers, const NodePoints & _vectors)
   : AbstractMetadata(_centers, _vectors), tensor(_tensor)
   {
   }
 
-  archetype::MapTensor tensor;  //!< Input tensor for map data.
+  const archetype::MapTensor tensor;  //!< Input tensor for map data.
 };
 
 /**
@@ -126,7 +144,7 @@ private:
     const archetype::AgentState & current_ego) const noexcept;
 
   /**
-   * @brief Execute preprocessing for RPE tensor.
+   * @brief Execute preprocessing for RPE tensor (N+K*N+K*D).
    *
    * @param agent_metadata Processed agent data containing metadata.
    * @param current_ego Processed map data containing its metadata.

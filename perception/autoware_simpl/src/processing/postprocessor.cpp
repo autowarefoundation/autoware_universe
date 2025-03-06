@@ -16,6 +16,7 @@
 
 #include "autoware/simpl/archetype/agent.hpp"
 #include "autoware/simpl/archetype/prediction.hpp"
+#include "autoware/simpl/processing/geometry.hpp"
 
 #include <cmath>
 #include <cstddef>
@@ -24,32 +25,6 @@
 
 namespace autoware::simpl::processing
 {
-namespace
-{
-/**
- * @brief Transform predicted state from agent centric to map coordinate.
- *
- * @param x Predicted location x.
- * @param y Predicted location y.
- * @param vx Predicted x-direction velocity.
- * @param vy Predicted y-direction velocity.
- * @param current_state Current agent state w.r.t map coordinate.
- */
-std::tuple<double, double, double, double> transform_2d(
-  double x, double y, double vx, double vy, const archetype::AgentState & current_state)
-{
-  const double cos = std::cos(current_state.yaw);
-  const double sin = std::sin(current_state.yaw);
-
-  double ret_x = x * cos - y * sin + current_state.x;
-  double ret_y = x * sin + y * cos + current_state.y;
-  double ret_vx = vx * cos - vy * sin;
-  double ret_vy = vx * sin + vy * cos;
-
-  return {ret_x, ret_y, ret_vx, ret_vy};
-}
-}  // namespace
-
 using output_type = PostProcessor::output_type;
 
 PostProcessor::PostProcessor(size_t num_mode, size_t num_future)
@@ -81,7 +56,7 @@ output_type PostProcessor::process(
         double vy = static_cast<double>(trajectories.at(trajectory_idx + 3));
 
         // Transform from current state centric to map coordinate
-        auto [ret_x, ret_y, ret_vx, ret_vy] = transform_2d(x, y, vx, vy, current_state);
+        auto [ret_x, ret_y, ret_vx, ret_vy] = transform2d(x, y, vx, vy, current_state);
         agent_trajectories.emplace_back(ret_x);
         agent_trajectories.emplace_back(ret_y);
         agent_trajectories.emplace_back(ret_vx);

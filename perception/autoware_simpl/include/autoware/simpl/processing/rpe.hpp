@@ -15,16 +15,16 @@
 #ifndef AUTOWARE__SIMPL__PROCESSING__RPE_HPP_
 #define AUTOWARE__SIMPL__PROCESSING__RPE_HPP_
 
-#include "autoware/simpl/archetype/datatype.hpp"
+#include "autoware/simpl/processing/preprocessor.hpp"
 
 #include <cmath>
 
 namespace autoware::simpl::processing
 {
 /**
- * @brief Perform cosine encoding.
+ * @brief Perform cosine positional encoding.
  */
-inline double encode_cosine(const archetype::Point2D & v1, const archetype::Point2D & v2)
+inline double cosine_pe(const NodePoint & v1, const NodePoint & v2)
 {
   const double v1_norm = std::hypot(v1.x, v1.y);
   const double v2_norm = std::hypot(v2.x, v2.y);
@@ -32,9 +32,9 @@ inline double encode_cosine(const archetype::Point2D & v1, const archetype::Poin
 }
 
 /**
- * @brief Perform cosine encoding.
+ * @brief Perform cosine positional encoding.
  */
-inline double encode_cosine(const archetype::Point2D & v1, const double v2_x, const double v2_y)
+inline double cosine_pe(const NodePoint & v1, const double v2_x, const double v2_y)
 {
   const double v1_norm = std::hypot(v1.x, v1.y);
   const double v2_norm = std::hypot(v2_x, v2_y);
@@ -42,9 +42,9 @@ inline double encode_cosine(const archetype::Point2D & v1, const double v2_x, co
 }
 
 /**
- * @brief Perform sine encoding.
+ * @brief Perform sine positional encoding.
  */
-inline double encode_sine(const archetype::Point2D & v1, const archetype::Point2D & v2)
+inline double sine_pe(const NodePoint & v1, const NodePoint & v2)
 {
   const double v1_norm = std::hypot(v1.x, v1.y);
   const double v2_norm = std::hypot(v2.x, v2.y);
@@ -52,9 +52,9 @@ inline double encode_sine(const archetype::Point2D & v1, const archetype::Point2
 }
 
 /**
- * @brief Perform sine encoding.
+ * @brief Perform sine positional encoding.
  */
-inline double encode_sine(const archetype::Point2D & v1, const double v2_x, const double v2_y)
+inline double sine_pe(const NodePoint & v1, const double v2_x, const double v2_y)
 {
   const double v1_norm = std::hypot(v1.x, v1.y);
   const double v2_norm = std::hypot(v2_x, v2_y);

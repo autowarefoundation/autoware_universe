@@ -143,10 +143,10 @@ void TrtSimpl::init_cuda_ptr(
   in_rpe_d_ = cuda_utils::make_unique<float[]>(in_rpe_size);
 
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    in_agent_d_.get(), agent_tensor.data_ptr(), sizeof(float) * in_agent_size,
-    cudaMemcpyHostToDevice, stream_));
+    in_agent_d_.get(), agent_tensor.data(), sizeof(float) * in_agent_size, cudaMemcpyHostToDevice,
+    stream_));
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    in_map_d_.get(), map_tensor.data_ptr(), sizeof(float) * in_map_size, cudaMemcpyHostToDevice,
+    in_map_d_.get(), map_tensor.data(), sizeof(float) * in_map_size, cudaMemcpyHostToDevice,
     stream_));
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     in_rpe_d_.get(), rpe_tensor.data(), sizeof(float) * in_rpe_size, cudaMemcpyHostToDevice,

@@ -24,7 +24,9 @@
 
 namespace autoware::simpl::archetype
 {
-
+/**
+ * @brief Data container of predicted state at the specific time step.
+ */
 class PredictedState
 {
 public:
@@ -41,6 +43,9 @@ public:
   double vy;  //!< Y-direction velocity.
 };
 
+/**
+ * @brief Data container of the prediction.
+ */
 class Prediction
 {
 public:

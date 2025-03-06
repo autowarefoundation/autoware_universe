@@ -21,18 +21,9 @@
 #include <vector>
 namespace autoware::simpl::archetype
 {
-struct Point2D
-{
-  double x;
-  double y;
-
-  Point2D(double _x, double _y) : x(_x), y(_y) {}
-};
-
 using AgentStates = std::vector<AgentState>;
 using AgentHistories = std::vector<AgentHistory>;
 using MapPoints = std::vector<MapPoint>;
 using RpeTensor = std::vector<float>;
-using NodePoints = std::vector<Point2D>;
 }  // namespace autoware::simpl::archetype
 #endif  // AUTOWARE__SIMPL__ARCHETYPE__DATATYPE_HPP_
