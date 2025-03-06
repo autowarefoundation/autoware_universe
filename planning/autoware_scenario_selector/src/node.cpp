@@ -314,7 +314,7 @@ bool ScenarioSelectorNode::isSwitchToWaypointFollowing(const bool is_stopped)
   const auto is_along_or_in_waypoint_zone =
     isAlongOrInWaypointZone(route_handler_->getLaneletMapPtr(), current_pose_->pose.pose);
 
-  if (!is_stopped || !is_along_or_in_waypoint_zone) {
+  if (!is_stopped || !isAutonomous() || !is_along_or_in_waypoint_zone) {
     switch_waypoint_following_stop_time_ = {};
     return false;
   }
