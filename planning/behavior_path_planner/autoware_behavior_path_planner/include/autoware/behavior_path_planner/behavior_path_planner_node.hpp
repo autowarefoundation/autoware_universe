@@ -159,6 +159,7 @@ private:
     const autoware_internal_planning_msgs::msg::VelocityLimit::ConstSharedPtr msg);
 
   SetParametersResult onSetParam(const std::vector<rclcpp::Parameter> & parameters);
+  PathWithLaneId::SharedPtr pathWithoutWaypointZone(const PathWithLaneId::SharedPtr path);
 
   OnSetParametersCallbackHandle::SharedPtr m_set_param_res;
 

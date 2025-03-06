@@ -17,6 +17,8 @@
 #include "autoware/motion_utils/trajectory/conversion.hpp"
 
 #include <autoware_utils/ros/update_param.hpp>
+#include <autoware/universe_utils/ros/update_param.hpp>
+#include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
@@ -372,8 +374,12 @@ void BehaviorPathPlannerNode::run()
   const auto output = planner_manager_->run(planner_data_);
 
   // path handling
-  const auto path = getPath(output, planner_data_);
-  path->header.stamp = stamp;
+  const auto path_raw = getPath(output, planner_data_, planner_manager_);
+  path_raw->header.stamp = stamp;
+
+  // output path out of waypoint zone
+  const auto path = pathWithoutWaypointZone(path_raw);
+
   // update planner data
   planner_data_->prev_output_path = path;
 
@@ -847,6 +853,126 @@ SetParametersResult BehaviorPathPlannerNode::onSetParam(
   }
 
   return result;
+}
+
+PathWithLaneId::SharedPtr BehaviorPathPlannerNode::pathWithoutWaypointZone(
+  const PathWithLaneId::SharedPtr input)
+{
+  // define lambda functions
+  std::function<std::shared_ptr<lanelet::ConstPolygon3d>(
+    const std::shared_ptr<lanelet::LaneletMap> &, const lanelet::BasicPoint2d &)>
+    findNearestWaypointZone = [](
+                                const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
+                                const lanelet::BasicPoint2d & current_position)
+    -> std::shared_ptr<lanelet::ConstPolygon3d> {
+    auto linked_waypoint_zone = std::make_shared<lanelet::ConstPolygon3d>();
+    auto result = lanelet::utils::query::getLinkedWaypointZone(
+      current_position, lanelet_map_ptr, linked_waypoint_zone.get());
+
+    return result ? linked_waypoint_zone : nullptr;
+  };
+
+  std::function<bool(
+    const std::shared_ptr<lanelet::LaneletMap> &, const geometry_msgs::msg::Pose &)>
+    isInWaypointZone = [findNearestWaypointZone](
+                         const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
+                         const geometry_msgs::msg::Pose & current_pose) -> bool {
+    const auto & p = current_pose.position;
+    lanelet::Point3d search_point(lanelet::InvalId, p.x, p.y, p.z);
+
+    auto nearest_waypoint_zone =
+      findNearestWaypointZone(lanelet_map_ptr, search_point.basicPoint2d());
+
+    return nearest_waypoint_zone
+             ? lanelet::geometry::within(search_point, nearest_waypoint_zone->basicPolygon())
+             : false;
+  };
+
+  std::function<std::vector<Point>(
+    const std::shared_ptr<lanelet::LaneletMap> &, const std::vector<Point> &)>
+    splitBound = [isInWaypointZone](
+                   const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
+                   const std::vector<Point> & input_bound) -> std::vector<Point> {
+    std::vector<Point> output_bound;
+    std::vector<std::vector<Point>> bounds;
+
+    size_t i = 0;
+    while (i < input_bound.size()) {
+      std::vector<Point> bound;
+      for (; i < input_bound.size(); i++) {
+        const auto & bound_point = input_bound.at(i);
+        geometry_msgs::msg::Pose pose;
+        pose.position.x = bound_point.x;
+        pose.position.y = bound_point.y;
+        pose.position.z = bound_point.z;
+        if (!isInWaypointZone(lanelet_map_ptr, pose)) {
+          bound.emplace_back(bound_point);
+        } else {
+          i++;
+          break;
+        }
+      }
+
+      if (!bound.empty()) {
+        bounds.emplace_back(bound);
+      }
+    }
+
+    if (!bounds.empty()) {
+      output_bound = bounds.front();
+    }
+
+    return output_bound;
+  };
+
+  // return if empty
+  if (!input) {
+    return input;
+  }
+
+  PathWithLaneId::SharedPtr output;
+  std::vector<size_t> split_indices;
+  auto route_handler = std::make_unique<autoware::route_handler::RouteHandler>(*map_ptr_);
+
+  size_t i = 0;
+  while (i < input->points.size()) {
+    std::vector<size_t> path_indices;
+    for (; i < input->points.size(); i++) {
+      const auto & point = input->points.at(i);
+      const auto & pose = point.point.pose;
+
+      if (!isInWaypointZone(route_handler->getLaneletMapPtr(), pose)) {
+        path_indices.emplace_back(i);
+      } else {
+        i++;
+        break;
+      }
+    }
+
+    if (!path_indices.empty()) {
+      split_indices.emplace_back(path_indices.back());
+    }
+  }
+
+  if (!split_indices.empty()) {
+    // split_paths, bounds and correct its velocity
+    auto split_left_bound = splitBound(route_handler->getLaneletMapPtr(), input->left_bound);
+    auto split_right_bound = splitBound(route_handler->getLaneletMapPtr(), input->right_bound);
+    auto split_paths = utils::dividePath(*input, split_indices);
+    utils::correctDividedPathVelocity(split_paths);
+
+    // take first splitted path and bounds
+    output = std::make_shared<PathWithLaneId>(split_paths.front());
+    // TODO(Nick) since length before base_link will be cut, so comment out
+    // output->left_bound = split_left_bound;
+    // output->right_bound = split_right_bound;
+
+    // keep all bound
+    output->left_bound = input->left_bound;
+    output->right_bound = input->right_bound;
+  }
+
+  return output;
 }
 }  // namespace autoware::behavior_path_planner
 
