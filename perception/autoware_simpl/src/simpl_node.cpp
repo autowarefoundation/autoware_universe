@@ -65,9 +65,10 @@ SimplNode::SimplNode(const rclcpp::NodeOptions & options) : rclcpp::Node("simpl_
     num_past_ = declare_parameter<int>("processing.num_past");
     const auto max_num_polyline = declare_parameter<int>("processing.max_num_polyline");
     const auto max_num_point = declare_parameter<int>("processing.max_num_point");
+    const auto break_distance = declare_parameter<double>("processing.polyline_break_distance");
 
     preprocessor_ = std::make_unique<processing::PreProcessor>(
-      label_ids, max_num_agent, num_past_, max_num_polyline, max_num_point);
+      label_ids, max_num_agent, num_past_, max_num_polyline, max_num_point, break_distance);
 
     // Post-processor
     const auto num_mode = declare_parameter<int>("processing.num_mode");

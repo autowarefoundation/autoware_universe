@@ -10,5 +10,6 @@
       max_num_point: 20
       num_mode: 6
       num_future: 50
+      polyline_break_distance: 20.0
       time_threshold: 1.0
       polyline_distance_threshold: 100.0
