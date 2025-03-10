@@ -130,6 +130,16 @@ ObjectAssociationMergerNode::ObjectAssociationMergerNode(const rclcpp::NodeOptio
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+  // Timeout process initialization 
+  message_timeout_sec_ = this->declare_parameter<double>("message_timeout_sec", 0.001);
+  last_sync_time_ = this->now();
+  timeout_sent_ = false;
+  timeout_timer_ = this->create_wall_timer(
+    std::chrono::duration<double>(message_timeout_sec_),
+    std::bind(&ObjectAssociationMergerNode::timeoutCallback, this));
+  diagnostics_interface_ptr_ =
+    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "object_association_merger");
+
 }
 
 void ObjectAssociationMergerNode::objectsCallback(
@@ -141,6 +151,15 @@ void ObjectAssociationMergerNode::objectsCallback(
     return;
   }
   stop_watch_ptr_->toc("processing_time", true);
+
+
+  // If messages normally synced
+  diagnostics_interface_ptr_->clear();
+  diagnostics_interface_ptr_->add_key_value("are_merge_messages_synced", true);
+  diagnostics_interface_ptr_->add_key_value("messages_interval", (this->now() - last_sync_time_).seconds() );
+  diagnostics_interface_ptr_->publish(input_objects0_msg->header.stamp);
+  last_sync_time_ = this->now();
+  timeout_sent_ = false;
 
   /* transform to base_link coordinate */
   autoware_perception_msgs::msg::DetectedObjects transformed_objects0, transformed_objects1;
@@ -238,6 +257,27 @@ void ObjectAssociationMergerNode::objectsCallback(
   processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/processing_time_ms", stop_watch_ptr_->toc("processing_time", true));
 }
+
+
+void ObjectAssociationMergerNode::timeoutCallback()
+{
+  rclcpp::Time now = this->now();
+  if ((now - last_sync_time_).seconds() >= message_timeout_sec_ && !timeout_sent_) {
+    diagnostics_interface_ptr_->clear();
+    diagnostics_interface_ptr_->add_key_value("are_merge_messages_synced", false);
+    diagnostics_interface_ptr_->add_key_value("messages_interval", (now - last_sync_time_).seconds() );
+    
+    
+    std::stringstream message;
+    message << "ObjectAssociationMergerNode Timeout: Merging messages not received";
+    diagnostics_interface_ptr_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, message.str());
+    diagnostics_interface_ptr_->publish(now);
+    timeout_sent_ = true;
+  }
+}
+
+
 }  // namespace autoware::object_merger
 
 #include <rclcpp_components/register_node_macro.hpp>
