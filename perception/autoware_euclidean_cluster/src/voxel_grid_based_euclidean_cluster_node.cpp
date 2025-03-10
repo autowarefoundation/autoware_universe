@@ -31,10 +31,14 @@ VoxelGridBasedEuclideanClusterNode::VoxelGridBasedEuclideanClusterNode(
   const float tolerance = this->declare_parameter("tolerance", 1.0);
   const float voxel_leaf_size = this->declare_parameter("voxel_leaf_size", 0.5);
   const int min_points_number_per_voxel = this->declare_parameter("min_points_number_per_voxel", 3);
+
   cluster_ = std::make_shared<VoxelGridBasedEuclideanCluster>(
     use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
     min_points_number_per_voxel);
-
+  // Pass the diagnostics interface pointer from the node to the cluster
+  diagnostics_interface_ptr_ = std::make_unique<autoware_utils::DiagnosticsInterface>(this, "euclidean_cluster");
+  cluster_->setDiagnosticsInterface(diagnostics_interface_ptr_.get());
+  
   using std::placeholders::_1;
   pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "input", rclcpp::SensorDataQoS().keep_last(1),
@@ -48,6 +52,8 @@ VoxelGridBasedEuclideanClusterNode::VoxelGridBasedEuclideanClusterNode(
     std::make_unique<autoware_utils::DebugPublisher>(this, "voxel_grid_based_euclidean_cluster");
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
+  
+
 }
 
 void VoxelGridBasedEuclideanClusterNode::onPointCloud(

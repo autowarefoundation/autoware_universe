@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/euclidean_cluster/voxel_grid_based_euclidean_cluster.hpp"
+#include <rclcpp/node.hpp>
 
 #include <pcl/kdtree/kdtree.h>
 #include <pcl/segmentation/extract_clusters.h>
@@ -41,6 +42,35 @@ VoxelGridBasedEuclideanCluster::VoxelGridBasedEuclideanCluster(
   min_points_number_per_voxel_(min_points_number_per_voxel)
 {
 }
+
+// After processing all clusters, publish a summary of diagnostics.
+void VoxelGridBasedEuclideanCluster::publishDiagnosticsSummary(
+  const std::vector<std::string> & warnings,
+  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pointcloud_msg)
+{
+  if (!diagnostics_interface_ptr_) {
+    return;
+  }
+  diagnostics_interface_ptr_->clear();
+
+  std::stringstream summary;
+  if (!warnings.empty()) {
+    summary << warnings.size() << " clusters skipped because cluster size exceeds the maximum allowed "
+                    << max_cluster_size_  << " \n";
+    for (const auto & warn : warnings) {
+      summary << " - " << warn << "\n";
+    }
+    diagnostics_interface_ptr_->add_key_value("is_cluster_data_size_within_range", false);
+  } else {
+    diagnostics_interface_ptr_->add_key_value("is_cluster_data_size_within_range", true);
+  }
+  diagnostics_interface_ptr_->update_level_and_message(
+    warnings.empty() ? diagnostic_msgs::msg::DiagnosticStatus::OK : diagnostic_msgs::msg::DiagnosticStatus::WARN,
+    summary.str());
+  diagnostics_interface_ptr_->publish(pointcloud_msg->header.stamp);
+}
+
+
 // TODO(badai-nguyen): remove this function when field copying also implemented for
 // euclidean_cluster.cpp
 bool VoxelGridBasedEuclideanCluster::cluster(
@@ -136,12 +166,25 @@ bool VoxelGridBasedEuclideanCluster::cluster(
 
   // build output and check cluster size
   {
+    // At the start, create a container to collect warnings.
+    std::vector<std::string> warning_messages;  
     for (size_t i = 0; i < temporary_clusters.size(); ++i) {
       auto & i_cluster_data_size = clusters_data_size.at(i);
-      if (!(min_cluster_size_ <= static_cast<int>(i_cluster_data_size / point_step) &&
-            static_cast<int>(i_cluster_data_size / point_step) <= max_cluster_size_)) {
+      int cluster_size = static_cast<int>(i_cluster_data_size / point_step);
+      if (cluster_size < min_cluster_size_) {
+        // Cluster size is below the minimum threshold; skip without messaging.
         continue;
       }
+      if (cluster_size > max_cluster_size_ /10) {
+        // Cluster size exceeds the maximum threshold; log a warning.
+        warning_messages.push_back(" Cluster " + std::to_string(i) + " (" + std::to_string(cluster_size) + ").");
+        continue;
+      }
+
+      // if (!(min_cluster_size_ <= static_cast<int>(i_cluster_data_size / point_step) &&
+      //       static_cast<int>(i_cluster_data_size / point_step) <= max_cluster_size_)) { 
+      //   continue;
+      // }
       const auto & cluster = temporary_clusters.at(i);
       tier4_perception_msgs::msg::DetectedObjectWithFeature feature_object;
       feature_object.feature.cluster = cluster;
@@ -164,6 +207,9 @@ bool VoxelGridBasedEuclideanCluster::cluster(
       objects.feature_objects.push_back(feature_object);
     }
     objects.header = pointcloud_msg->header;
+
+    publishDiagnosticsSummary(warning_messages,  pointcloud_msg);
+
   }
 
   return true;
