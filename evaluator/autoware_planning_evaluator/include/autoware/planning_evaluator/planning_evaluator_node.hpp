@@ -33,6 +33,8 @@
 #include "geometry_msgs/msg/accel_with_covariance_stamped.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
+#include <autoware_internal_planning_msgs/msg/planning_factor.hpp>
+#include <autoware_internal_planning_msgs/msg/planning_factor_array.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <tier4_metric_msgs/msg/metric.hpp>
 #include <tier4_metric_msgs/msg/metric_array.hpp>
@@ -41,6 +43,8 @@
 #include <deque>
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 namespace planning_diagnostics
 {
@@ -54,6 +58,8 @@ using MetricMsg = tier4_metric_msgs::msg::Metric;
 using MetricArrayMsg = tier4_metric_msgs::msg::MetricArray;
 using nav_msgs::msg::Odometry;
 using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
+using autoware_internal_planning_msgs::msg::PlanningFactor;
+using autoware_internal_planning_msgs::msg::PlanningFactorArray;
 using autoware_planning_msgs::msg::LaneletRoute;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 /**
@@ -113,6 +119,10 @@ public:
    */
   void AddKinematicStateMetricMsg(
     const AccelWithCovarianceStamped & accel_stamped, const Odometry::ConstSharedPtr ego_state_ptr);
+
+  void AddStopCountMetricMsg(
+    const PlanningFactorArray::ConstSharedPtr & planning_factors,
+    const Odometry::ConstSharedPtr ego_state_ptr, const std::string & module_name);
 
 private:
   static bool isFinite(const TrajectoryPoint & p);

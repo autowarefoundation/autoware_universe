@@ -47,6 +47,8 @@ enum class Metric {
   modified_goal_longitudinal_deviation,
   modified_goal_lateral_deviation,
   modified_goal_yaw_deviation,
+  stop_count,
+  abnormal_stop_count,
   SIZE,
 };
 
@@ -74,7 +76,10 @@ static const std::unordered_map<std::string, Metric> str_to_metric = {
   {"obstacle_ttc", Metric::obstacle_ttc},
   {"modified_goal_longitudinal_deviation", Metric::modified_goal_longitudinal_deviation},
   {"modified_goal_lateral_deviation", Metric::modified_goal_lateral_deviation},
-  {"modified_goal_yaw_deviation", Metric::modified_goal_yaw_deviation}};
+  {"modified_goal_yaw_deviation", Metric::modified_goal_yaw_deviation},
+  {"stop_count", Metric::stop_count},
+  {"abnormal_stop_count", Metric::abnormal_stop_count}
+  };
 
 static const std::unordered_map<Metric, std::string> metric_to_str = {
   {Metric::curvature, "curvature"},
@@ -97,7 +102,10 @@ static const std::unordered_map<Metric, std::string> metric_to_str = {
   {Metric::obstacle_ttc, "obstacle_ttc"},
   {Metric::modified_goal_longitudinal_deviation, "modified_goal_longitudinal_deviation"},
   {Metric::modified_goal_lateral_deviation, "modified_goal_lateral_deviation"},
-  {Metric::modified_goal_yaw_deviation, "modified_goal_yaw_deviation"}};
+  {Metric::modified_goal_yaw_deviation, "modified_goal_yaw_deviation"},
+  {Metric::stop_count, "stop_count"},
+  {Metric::abnormal_stop_count, "abnormal_stop_count"}
+  };
 
 // Metrics descriptions
 static const std::unordered_map<Metric, std::string> metric_descriptions = {
@@ -121,7 +129,10 @@ static const std::unordered_map<Metric, std::string> metric_descriptions = {
   {Metric::obstacle_ttc, "Obstacle_time_to_collision[s]"},
   {Metric::modified_goal_longitudinal_deviation, "Modified_goal_longitudinal_deviation[m]"},
   {Metric::modified_goal_lateral_deviation, "Modified_goal_lateral_deviation[m]"},
-  {Metric::modified_goal_yaw_deviation, "Modified_goal_yaw_deviation[rad]"}};
+  {Metric::modified_goal_yaw_deviation, "Modified_goal_yaw_deviation[rad]"},
+  {Metric::stop_count, "Count of stop decisions made by each module"},
+  {Metric::abnormal_stop_count, "Count of abnormal stop decisions made by each module"}
+  };
 
 namespace details
 {
