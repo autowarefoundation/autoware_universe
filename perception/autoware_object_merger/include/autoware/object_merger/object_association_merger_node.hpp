@@ -23,7 +23,7 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
-
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/synchronizer.h>
@@ -57,6 +57,8 @@ private:
   void objectsCallback(
     const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr & input_objects0_msg,
     const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr & input_objects1_msg);
+  
+  void timeoutCallback();
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
@@ -72,6 +74,14 @@ private:
   int sync_queue_size_;
   std::unique_ptr<DataAssociation> data_association_;
   std::string base_link_frame_id_;  // associated with the base_link frame
+
+  // Timeout Related
+  double message_timeout_sec_;
+  rclcpp::Time last_sync_time_;
+  bool timeout_sent_;
+  rclcpp::TimerBase::SharedPtr timeout_timer_;
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
+
 
   PriorityMode priority_mode_;
   bool remove_overlapped_unknown_objects_;
