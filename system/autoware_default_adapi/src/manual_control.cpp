@@ -14,6 +14,8 @@
 
 #include "manual_control.hpp"
 
+#include "utils/command_conversion.hpp"
+
 #include <string>
 
 namespace autoware::default_adapi
@@ -148,9 +150,19 @@ void ManualControlNode::enable_velocity_commands()
 
 void ManualControlNode::enable_common_commands()
 {
-  sub_steering_ = create_subscription<SteeringCommand>(
-    ns_ + "/command/steering", rclcpp::QoS(1),
-    [this](const SteeringCommand::SharedPtr msg) { (void)msg; });
+  using command_conversion::convert;
+
+  sub_steering_ = PollingSubscription<SteeringCommand>::create_subscription(
+    this, ns_ + "/command/steering", rclcpp::QoS(1));
+  sub_gear_ = create_subscription<GearCommand>(
+    ns_ + "/command/gear", rclcpp::QoS(1).transient_local(),
+    [this](const GearCommand & msg) { pub_gear_->publish(convert(msg)); });
+  sub_turn_indicators_ = create_subscription<TurnIndicatorsCommand>(
+    ns_ + "/command/turn_indicators", rclcpp::QoS(1).transient_local(),
+    [this](const TurnIndicatorsCommand & msg) { pub_turn_indicators_->publish(convert(msg)); });
+  sub_hazard_lights_ = create_subscription<HazardLightsCommand>(
+    ns_ + "/command/hazard_lights", rclcpp::QoS(1).transient_local(),
+    [this](const HazardLightsCommand & msg) { pub_hazard_lights_->publish(convert(msg)); });
 }
 
 }  // namespace autoware::default_adapi

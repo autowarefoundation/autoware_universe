@@ -12,6 +12,8 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
+  <!-- TODO: remove tier4_external_api_msgs-->
+
   <depend>autoware_adapi_specs</depend>
   <depend>autoware_adapi_v1_msgs</depend>
   <depend>autoware_adapi_version_msgs</depend>
@@ -34,6 +36,7 @@
   <depend>std_srvs</depend>
   <depend>tier4_api_msgs</depend>
   <depend>tier4_control_msgs</depend>
+  <depend>tier4_external_api_msgs</depend>
   <depend>tier4_planning_msgs</depend>
   <depend>tier4_system_msgs</depend>
 

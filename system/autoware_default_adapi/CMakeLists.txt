@@ -19,6 +19,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/vehicle.cpp
   src/vehicle_info.cpp
   src/vehicle_door.cpp
+  src/utils/command_conversion.cpp
   src/utils/localization_conversion.cpp
   src/utils/route_conversion.cpp
   src/compatibility/autoware_state.cpp

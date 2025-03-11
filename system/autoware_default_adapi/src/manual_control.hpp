@@ -19,14 +19,21 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/acceleration_command.hpp>
+#include <autoware_adapi_v1_msgs/msg/gear_command.hpp>
+#include <autoware_adapi_v1_msgs/msg/hazard_lights_command.hpp>
 #include <autoware_adapi_v1_msgs/msg/manual_control_mode.hpp>
 #include <autoware_adapi_v1_msgs/msg/manual_control_mode_status.hpp>
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
 #include <autoware_adapi_v1_msgs/msg/pedals_command.hpp>
 #include <autoware_adapi_v1_msgs/msg/steering_command.hpp>
+#include <autoware_adapi_v1_msgs/msg/turn_indicators_command.hpp>
 #include <autoware_adapi_v1_msgs/msg/velocity_command.hpp>
 #include <autoware_adapi_v1_msgs/srv/list_manual_control_mode.hpp>
 #include <autoware_adapi_v1_msgs/srv/select_manual_control_mode.hpp>
+#include <autoware_vehicle_msgs/msg/gear_command.hpp>
+#include <autoware_vehicle_msgs/msg/hazard_lights_command.hpp>
+#include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
+#include <tier4_external_api_msgs/msg/control_command_stamped.hpp>
 
 #include <string>
 
@@ -39,6 +46,11 @@ public:
   explicit ManualControlNode(const rclcpp::NodeOptions & options);
 
 private:
+  template <class T>
+  using PollingSubscription = autoware_utils_rclcpp::InterProcessPollingSubscriber<T>;
+  using OperationModeState = autoware_adapi_v1_msgs::msg::OperationModeState;
+  PollingSubscription<OperationModeState>::SharedPtr sub_operation_mode_;
+
   using ManualControlModeStatus = autoware_adapi_v1_msgs::msg::ManualControlModeStatus;
   using ManualControlMode = autoware_adapi_v1_msgs::msg::ManualControlMode;
   using ListMode = autoware_adapi_v1_msgs::srv::ListManualControlMode;
@@ -50,24 +62,34 @@ private:
   rclcpp::Service<SelectMode>::SharedPtr srv_select_mode_;
   rclcpp::Publisher<ManualControlModeStatus>::SharedPtr pub_mode_status_;
 
-  using SteeringCommand = autoware_adapi_v1_msgs::msg::SteeringCommand;
   using PedalsCommand = autoware_adapi_v1_msgs::msg::PedalsCommand;
   using AccelerationCommand = autoware_adapi_v1_msgs::msg::AccelerationCommand;
   using VelocityCommand = autoware_adapi_v1_msgs::msg::VelocityCommand;
+  using SteeringCommand = autoware_adapi_v1_msgs::msg::SteeringCommand;
+  using GearCommand = autoware_adapi_v1_msgs::msg::GearCommand;
+  using HazardLightsCommand = autoware_adapi_v1_msgs::msg::HazardLightsCommand;
+  using TurnIndicatorsCommand = autoware_adapi_v1_msgs::msg::TurnIndicatorsCommand;
   void disable_all_commands();
   void enable_common_commands();
   void enable_pedals_commands();
   void enable_acceleration_commands();
   void enable_velocity_commands();
-  rclcpp::Subscription<SteeringCommand>::SharedPtr sub_steering_;
   rclcpp::Subscription<PedalsCommand>::SharedPtr sub_pedals_;
   rclcpp::Subscription<AccelerationCommand>::SharedPtr sub_acceleration_;
   rclcpp::Subscription<VelocityCommand>::SharedPtr sub_velocity_;
+  rclcpp::Subscription<GearCommand>::SharedPtr sub_gear_;
+  rclcpp::Subscription<TurnIndicatorsCommand>::SharedPtr sub_turn_indicators_;
+  rclcpp::Subscription<HazardLightsCommand>::SharedPtr sub_hazard_lights_;
+  PollingSubscription<SteeringCommand>::SharedPtr sub_steering_;
 
-  template <class T>
-  using PollingSubscription = autoware_utils_rclcpp::InterProcessPollingSubscriber<T>;
-  using OperationModeState = autoware_adapi_v1_msgs::msg::OperationModeState;
-  PollingSubscription<OperationModeState>::SharedPtr sub_operation_mode_;
+  using InternalControl = tier4_external_api_msgs::msg::ControlCommandStamped;
+  using InternalGear = autoware_vehicle_msgs::msg::GearCommand;
+  using InternalTurnIndicators = autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
+  using InternalHazardLights = autoware_vehicle_msgs::msg::HazardLightsCommand;
+  rclcpp::Publisher<InternalControl>::SharedPtr pub_control_;
+  rclcpp::Publisher<InternalGear>::SharedPtr pub_gear_;
+  rclcpp::Publisher<InternalTurnIndicators>::SharedPtr pub_turn_indicators_;
+  rclcpp::Publisher<InternalHazardLights>::SharedPtr pub_hazard_lights_;
 
   uint8_t target_operation_mode_;
   std::string ns_;
