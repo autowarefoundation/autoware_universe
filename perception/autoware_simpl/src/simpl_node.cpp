@@ -20,7 +20,9 @@
 #include "autoware/simpl/conversion/tracked_object.hpp"
 #include "autoware/simpl/processing/postprocessor.hpp"
 #include "autoware/simpl/processing/preprocessor.hpp"
+#include "autoware/simpl/trt_simpl.hpp"
 
+#include <autoware/tensorrt_common/utils.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
 #include <rclcpp/logging.hpp>
@@ -78,6 +80,13 @@ SimplNode::SimplNode(const rclcpp::NodeOptions & options) : rclcpp::Node("simpl_
     time_threshold_ = declare_parameter<double>("processing.time_threshold");
     polyline_distance_threshold_ =
       declare_parameter<double>("processing.polyline_distance_threshold");
+  }
+
+  {
+    // Detector
+    const auto onnx_path = declare_parameter<std::string>("detector.onnx_path");
+    tensorrt_common::TrtCommonConfig config(onnx_path, "fp32");
+    detector_ = std::make_unique<TrtSimpl>(config);
   }
 
   if (declare_parameter<bool>("build_only")) {
