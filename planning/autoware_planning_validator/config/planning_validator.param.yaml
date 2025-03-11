@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
-    # Operation option when invalid trajectory is detected
+  # Operation option when invalid trajectory is detected
     #  0: publish the trajectory even if it is invalid
     #  1: stop publishing the trajectory
     #  2: publish the last validated trajectory
@@ -14,6 +14,67 @@
     diag_error_count_threshold: 0
 
     display_on_terminal: true # show error msg on terminal
+
+    # ---------------------------------------------------------------------------------
+
+    # Operation option when invalid trajectory is detected
+    #  0: publish the trajectory even if it is invalid
+    #  1: stop publishing the trajectory
+    #  2: publish the last validated trajectory
+    handling_type:
+      noncritical: 0
+      critical: 2
+
+    validity_checks:
+      field:
+        enable: true
+        is_critical: false
+      interval:
+        enable: true
+        interval_th: 100.0
+        is_critical: false
+      curvature:
+        enable: true
+        curvature_th: 1.0
+        is_critical: false
+      relative_angle:
+        enable: true
+        angle_th: 2.0 # (= 115 degree)
+        is_critical: false
+      lateral_accel:
+        enable: true
+        lat_accel_th: 9.8
+        is_critical: false
+      longitudinal_accel:
+        enable: true
+        max_accel_th: 9.8
+        min_accel_th: -9.8
+        is_critical: false
+      steering:
+        enable: true
+        steering_th: 1.414
+        steering_rate_th: 10.0
+        is_critical: false
+      deviation:
+        enable: true
+        vel_dev_th: 100.0
+        dist_dev_th: 100.0
+        lon_dist_dev: 1.0
+        is_critical: false
+      forward_length:
+        enable: true
+        expected_decel: -3.0
+        length_th: 2.0
+        is_critical: false
+      trajectory_shift:
+        enable: true
+        lat_shift_th: 0.5
+        forward_shift_th: 1.0
+        backward_shift_th: 0.1
+        is_critical: true
+        use_emergency_stop: false
+
+    # ---------------------------------------------------------------------------------
 
     thresholds:
       interval: 100.0
