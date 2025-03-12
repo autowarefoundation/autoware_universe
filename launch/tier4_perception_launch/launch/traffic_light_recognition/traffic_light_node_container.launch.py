@@ -13,9 +13,7 @@
 # limitations under the License.
 
 from itertools import chain
-import os
 
-from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import GroupAction
@@ -24,7 +22,6 @@ from launch.actions import SetLaunchConfiguration
 from launch.conditions import IfCondition
 from launch.conditions import UnlessCondition
 from launch.substitutions import LaunchConfiguration
-from launch.substitutions import PathJoinSubstitution
 from launch.substitutions import PythonExpression
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.actions import LoadComposableNodes
@@ -35,25 +32,32 @@ import yaml
 
 
 def launch_setup(context, *args, **kwargs):
+    high_accuracy_detection_type = LaunchConfiguration("high_accuracy_detection_type").perform(
+        context
+    )
+    assert high_accuracy_detection_type in [
+        "whole_image_detection",
+        "fine_detection",
+    ], "high_accuracy_detection_type must be either 'whole_image_detection' or 'fine_detection'."
 
-    # Load all camera namespaces
-    all_camera_namespaces = LaunchConfiguration("all_camera_namespaces").perform(context)
+    # Load camera namespaces
+    camera_namespaces = LaunchConfiguration("camera_namespaces").perform(context)
 
     # Convert string to list
-    all_camera_namespaces = yaml.load(all_camera_namespaces, Loader=yaml.FullLoader)
-    if not isinstance(all_camera_namespaces, list):
+    camera_namespaces = yaml.load(camera_namespaces, Loader=yaml.FullLoader)
+    if not isinstance(camera_namespaces, list):
         raise ValueError(
-            "all_camera_namespaces is not a list. You should declare it like `['camera6', 'camera7']`."
+            "camera_namespaces is not a list. You should declare it like `['camera6', 'camera7']`."
         )
-    if not all((isinstance(v, str) for v in all_camera_namespaces)):
+    if not all((isinstance(v, str) for v in camera_namespaces)):
         raise ValueError(
-            "all_camera_namespaces is not a list of strings. You should declare it like `['camera6', 'camera7']`."
+            "camera_namespaces is not a list of strings. You should declare it like `['camera6', 'camera7']`."
         )
 
     # Create containers for all cameras
     traffic_light_recognition_containers = [
         create_traffic_light_node_container(namespace, context, *args, **kwargs)
-        for namespace in all_camera_namespaces
+        for namespace in camera_namespaces
     ]
     traffic_light_recognition_containers = list(chain(*traffic_light_recognition_containers))
 
@@ -65,28 +69,36 @@ def create_traffic_light_node_container(namespace, context, *args, **kwargs):
         "input/camera_info": f"/sensing/camera/{namespace}/camera_info",
         "input/image": f"/sensing/camera/{namespace}/image_raw",
         "output/rois": f"/perception/traffic_light_recognition/{namespace}/detection/rois",
-        "output/traffic_signals": f"/perception/traffic_light_recognition/{namespace}/classification/traffic_signals",
         "output/car/traffic_signals": f"/perception/traffic_light_recognition/{namespace}/classification/car/traffic_signals",
         "output/pedestrian/traffic_signals": f"/perception/traffic_light_recognition/{namespace}/classification/pedestrian/traffic_signals",
-        "output/debug": f"/perception/traffic_light_recognition/{namespace}/detection/rois/debug",
+        "output/traffic_signals": f"/perception/traffic_light_recognition/{namespace}/classification/traffic_signals",
     }
 
-    def create_parameter_dict(*args):
-        result = {}
-        for x in args:
-            result[x] = LaunchConfiguration(x)
-        return result
-
-    fine_detector_model_param = ParameterFile(
-        param_file=LaunchConfiguration("fine_detector_param_path").perform(context),
+    # parameter files
+    traffic_light_whole_image_detector_param = ParameterFile(
+        param_file=LaunchConfiguration("yolox_traffic_light_detector_param_path").perform(context),
         allow_substs=True,
     )
-    car_traffic_light_classifier_model_param = ParameterFile(
-        param_file=LaunchConfiguration("car_classifier_param_path").perform(context),
+    traffic_light_fine_detector_param = ParameterFile(
+        param_file=LaunchConfiguration("traffic_light_fine_detector_param_path").perform(context),
         allow_substs=True,
     )
-    pedestrian_traffic_light_classifier_model_param = ParameterFile(
-        param_file=LaunchConfiguration("pedestrian_classifier_param_path").perform(context),
+    car_traffic_light_classifier_param = ParameterFile(
+        param_file=LaunchConfiguration("car_traffic_light_classifier_param_path").perform(context),
+        allow_substs=True,
+    )
+    pedestrian_traffic_light_classifier_param = ParameterFile(
+        param_file=LaunchConfiguration("pedestrian_traffic_light_classifier_param_path").perform(
+            context
+        ),
+        allow_substs=True,
+    )
+    traffic_light_roi_visualizer_param = ParameterFile(
+        param_file=LaunchConfiguration("traffic_light_roi_visualizer_param_path").perform(context),
+        allow_substs=True,
+    )
+    traffic_light_selector_param = ParameterFile(
+        param_file=LaunchConfiguration("traffic_light_selector_param_path").perform(context),
         allow_substs=True,
     )
 
@@ -101,11 +113,18 @@ def create_traffic_light_node_container(namespace, context, *args, **kwargs):
                 plugin="autoware::traffic_light::TrafficLightClassifierNodelet",
                 name="car_traffic_light_classifier",
                 namespace="classification",
-                parameters=[car_traffic_light_classifier_model_param, {"build_only": False}],
+                parameters=[
+                    car_traffic_light_classifier_param,
+                    {
+                        "build_only": False,
+                        "label_path": LaunchConfiguration("classification/car/label_path"),
+                        "model_path": LaunchConfiguration("classification/car/model_path"),
+                    },
+                ],
                 remappings=[
                     ("~/input/image", camera_arguments["input/image"]),
                     ("~/input/rois", camera_arguments["output/rois"]),
-                    ("~/output/traffic_signals", "classified/car/traffic_signals"),
+                    ("~/output/traffic_signals", "car/traffic_signals"),
                 ],
                 extra_arguments=[
                     {"use_intra_process_comms": LaunchConfiguration("use_intra_process")}
@@ -116,11 +135,18 @@ def create_traffic_light_node_container(namespace, context, *args, **kwargs):
                 plugin="autoware::traffic_light::TrafficLightClassifierNodelet",
                 name="pedestrian_traffic_light_classifier",
                 namespace="classification",
-                parameters=[pedestrian_traffic_light_classifier_model_param, {"build_only": False}],
+                parameters=[
+                    pedestrian_traffic_light_classifier_param,
+                    {
+                        "build_only": False,
+                        "label_path": LaunchConfiguration("classification/pedestrian/label_path"),
+                        "model_path": LaunchConfiguration("classification/pedestrian/model_path"),
+                    },
+                ],
                 remappings=[
                     ("~/input/image", camera_arguments["input/image"]),
                     ("~/input/rois", camera_arguments["output/rois"]),
-                    ("~/output/traffic_signals", "classified/pedestrian/traffic_signals"),
+                    ("~/output/traffic_signals", "pedestrian/traffic_signals"),
                 ],
                 extra_arguments=[
                     {"use_intra_process_comms": LaunchConfiguration("use_intra_process")}
@@ -130,7 +156,14 @@ def create_traffic_light_node_container(namespace, context, *args, **kwargs):
                 package="autoware_traffic_light_visualization",
                 plugin="autoware::traffic_light::TrafficLightRoiVisualizerNode",
                 name="traffic_light_roi_visualizer",
-                parameters=[create_parameter_dict("use_ml_detector", "use_image_transport")],
+                parameters=[
+                    traffic_light_roi_visualizer_param,
+                    {
+                        "use_high_accuracy_detection": LaunchConfiguration(
+                            "use_high_accuracy_detection"
+                        )
+                    },
+                ],
                 remappings=[
                     ("~/input/image", camera_arguments["input/image"]),
                     ("~/input/rois", camera_arguments["output/rois"]),
@@ -183,7 +216,14 @@ def create_traffic_light_node_container(namespace, context, *args, **kwargs):
                 plugin="autoware::traffic_light::TrafficLightFineDetectorNode",
                 name="traffic_light_fine_detector",
                 namespace=f"{namespace}/detection",
-                parameters=[fine_detector_model_param, {"build_only": False}],
+                parameters=[
+                    traffic_light_fine_detector_param,
+                    {
+                        "build_only": False,
+                        "label_path": LaunchConfiguration("fine_detection/label_path"),
+                        "model_path": LaunchConfiguration("fine_detection/model_path"),
+                    },
+                ],
                 remappings=[
                     ("~/input/image", camera_arguments["input/image"]),
                     ("~/input/rois", "rough/rois"),
@@ -200,53 +240,43 @@ def create_traffic_light_node_container(namespace, context, *args, **kwargs):
             PythonExpression(
                 [
                     "'",
-                    LaunchConfiguration("ml_detection_model_type"),
-                    "' == 'fine_detection_model' ",
+                    LaunchConfiguration("high_accuracy_detection_type"),
+                    "' == 'fine_detection' ",
                 ]
             )
         ),
     )
 
-    # cspell: ignore semseg
+    internal_node_name = "traffic_light_whole_image_detector"
     whole_img_detector_loader = LoadComposableNodes(
         composable_node_descriptions=[
             ComposableNode(
                 package="autoware_tensorrt_yolox",
                 plugin="autoware::tensorrt_yolox::TrtYoloXNode",
-                name="traffic_light_detector",
+                name=internal_node_name,
                 namespace=f"{namespace}/detection",
                 parameters=[
-                    LaunchConfiguration("whole_image_detector_param_path"),
+                    traffic_light_whole_image_detector_param,
                     {
-                        "model_path": PathJoinSubstitution(
-                            [
-                                LaunchConfiguration("whole_image_detector_model_path"),
-                                LaunchConfiguration("whole_image_detector_model_name"),
-                            ]
-                        ),
-                        "label_path": PathJoinSubstitution(
-                            [
-                                LaunchConfiguration("whole_image_detector_model_path"),
-                                "car_ped_tl_detector_labels.txt",
-                            ]
-                        ),
                         "build_only": False,
-                        "clip_value": 0.0,
+                        "label_path": LaunchConfiguration("whole_image_detection/label_path"),
+                        "model_path": LaunchConfiguration("whole_image_detection/model_path"),
+                        "color_map_path": "",  # not used
                     },
                 ],
                 remappings=[
                     ("~/in/image", camera_arguments["input/image"]),
-                    ("~/out/objects", "ml_detected/rois"),
-                    ("~/out/image", camera_arguments["output/debug"] + "/image"),
+                    ("~/out/objects", internal_node_name + "/rois"),
+                    ("~/out/image", internal_node_name + "/debug/image"),
                     (
                         "~/out/image/compressed",
-                        camera_arguments["output/debug"] + "/image/compressed",
+                        internal_node_name + "/debug/image/compressed",
                     ),
                     (
                         "~/out/image/compressedDepth",
-                        camera_arguments["output/debug"] + "/image/compressedDepth",
+                        internal_node_name + "/debug/image/compressedDepth",
                     ),
-                    ("~/out/image/theora", camera_arguments["output/debug"] + "/image/theora"),
+                    ("~/out/image/theora", internal_node_name + "/debug/image/theora"),
                 ],
                 extra_arguments=[
                     {"use_intra_process_comms": LaunchConfiguration("use_intra_process")}
@@ -257,13 +287,9 @@ def create_traffic_light_node_container(namespace, context, *args, **kwargs):
                 plugin="autoware::traffic_light::TrafficLightSelectorNode",
                 name="traffic_light_selector",
                 namespace=f"{namespace}/detection",
-                parameters=[
-                    {
-                        "max_iou_threshold": -0.5,
-                    }
-                ],
+                parameters=[traffic_light_selector_param],
                 remappings=[
-                    ("input/detected_rois", "ml_detected/rois"),
+                    ("input/detected_rois", internal_node_name + "/rois"),
                     ("input/rough_rois", "rough/rois"),
                     ("input/expect_rois", "expect/rois"),
                     ("input/camera_info", camera_arguments["input/camera_info"]),
@@ -277,8 +303,8 @@ def create_traffic_light_node_container(namespace, context, *args, **kwargs):
                 namespace=f"{namespace}/classification",
                 parameters=[],
                 remappings=[
-                    ("input/car_signals", "classified/car/traffic_signals"),
-                    ("input/pedestrian_signals", "classified/pedestrian/traffic_signals"),
+                    ("input/car_signals", "car/traffic_signals"),
+                    ("input/pedestrian_signals", "pedestrian/traffic_signals"),
                     ("output/traffic_signals", camera_arguments["output/traffic_signals"]),
                 ],
             ),
@@ -288,8 +314,8 @@ def create_traffic_light_node_container(namespace, context, *args, **kwargs):
             PythonExpression(
                 [
                     "'",
-                    LaunchConfiguration("ml_detection_model_type"),
-                    "' == 'whole_image_detection_model' ",
+                    LaunchConfiguration("high_accuracy_detection_type"),
+                    "' == 'whole_image_detection' ",
                 ]
             )
         ),
@@ -312,44 +338,34 @@ def generate_launch_description():
             DeclareLaunchArgument(name, default_value=default_value, description=description)
         )
 
-    tensorrt_yolox_share_dir = get_package_share_directory("autoware_tensorrt_yolox")
-    fine_detector_share_dir = get_package_share_directory("autoware_traffic_light_fine_detector")
-    classifier_share_dir = get_package_share_directory("autoware_traffic_light_classifier")
-    add_launch_arg("all_camera_namespaces", "[camera6, camera7]")
-    add_launch_arg("enable_image_decompressor", "True")
-    add_launch_arg("use_ml_detector", "True")
-    add_launch_arg("ml_detection_model_type", "fine_detection_model")
-    add_launch_arg("use_image_transport", "True")
+    add_launch_arg("enable_image_decompressor")
+    add_launch_arg("camera_namespaces")
+    add_launch_arg("use_high_accuracy_detection")
+    add_launch_arg("high_accuracy_detection_type")
+
+    # whole image detector by yolox
+    add_launch_arg("whole_image_detection/model_path")
+    add_launch_arg("whole_image_detection/label_path")
+    add_launch_arg("yolox_traffic_light_detector_param_path")
 
     # traffic_light_fine_detector
-    add_launch_arg(
-        "fine_detector_param_path",
-        os.path.join(fine_detector_share_dir, "config", "traffic_light_fine_detector.param.yaml"),
-    )
-
-    # whole image (traffic light) detector by yolox
-    add_launch_arg(
-        "whole_image_detector_model_path", os.path.expandvars("$HOME/autoware_data/tensorrt_yolox")
-    )
-    add_launch_arg("whole_image_detector_model_name", "tlr_car_ped_yolox_s_960_960_batch_1")
-    add_launch_arg(
-        "whole_image_detector_param_path",
-        os.path.join(tensorrt_yolox_share_dir, "config", "yolox_traffic_light_detector.param.yaml"),
-    )
+    add_launch_arg("fine_detection/model_path")
+    add_launch_arg("fine_detection/label_path")
+    add_launch_arg("traffic_light_fine_detector_param_path")
 
     # traffic_light_classifier
-    add_launch_arg(
-        "car_classifier_param_path",
-        os.path.join(classifier_share_dir, "config", "car_traffic_light_classifier.param.yaml"),
-    )
-    add_launch_arg(
-        "pedestrian_classifier_param_path",
-        os.path.join(
-            classifier_share_dir,
-            "config",
-            "pedestrian_traffic_light_classifier.param.yaml",
-        ),
-    )
+    add_launch_arg("classification/car/model_path")
+    add_launch_arg("classification/car/label_path")
+    add_launch_arg("classification/pedestrian/model_path")
+    add_launch_arg("classification/pedestrian/label_path")
+    add_launch_arg("car_traffic_light_classifier_param_path")
+    add_launch_arg("pedestrian_traffic_light_classifier_param_path")
+
+    # traffic_light_roi_visualizer
+    add_launch_arg("traffic_light_roi_visualizer_param_path")
+
+    # traffic_light_selector
+    add_launch_arg("traffic_light_selector_param_path")
 
     add_launch_arg("use_intra_process", "False")
     add_launch_arg("use_multithread", "False")

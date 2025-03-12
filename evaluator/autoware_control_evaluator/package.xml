@@ -16,7 +16,9 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
+  <depend>autoware_internal_planning_msgs</depend>
   <depend>autoware_motion_utils</depend>
+  <depend>autoware_planning_factor_interface</depend>
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_route_handler</depend>
   <depend>autoware_test_utils</depend>
@@ -31,7 +33,6 @@
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
   <depend>tier4_metric_msgs</depend>
-  <depend>tier4_planning_msgs</depend>
 
   <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_lint_auto</test_depend>

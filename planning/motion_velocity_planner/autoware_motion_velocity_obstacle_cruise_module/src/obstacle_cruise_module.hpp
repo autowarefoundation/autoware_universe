@@ -119,10 +119,12 @@ private:
     const bool is_driving_forward, const VehicleInfo & vehicle_info,
     const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check) const;
   std::optional<CruiseObstacle> create_yield_cruise_obstacle(
-    const std::shared_ptr<PlannerData::Object> object, const rclcpp::Time & predicted_objects_stamp,
-    const std::vector<TrajectoryPoint> & traj_points);
+    const std::shared_ptr<PlannerData::Object> object,
+    const std::shared_ptr<PlannerData::Object> stopped_object,
+    const rclcpp::Time & predicted_objects_stamp, const std::vector<TrajectoryPoint> & traj_points);
   bool is_inside_cruise_obstacle(const uint8_t label) const;
   bool is_outside_cruise_obstacle(const uint8_t label) const;
+  bool is_side_stopped_obstacle(const uint8_t label) const;
   bool is_cruise_obstacle(const uint8_t label) const;
   bool is_front_collide_obstacle(
     const std::vector<TrajectoryPoint> & traj_points,

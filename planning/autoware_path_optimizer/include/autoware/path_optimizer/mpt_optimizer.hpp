@@ -75,9 +75,9 @@ struct ReferencePoint
   // additional information
   double curvature{0.0};
   double delta_arc_length{0.0};
-  double alpha{0.0};                          // for minimizing lateral error
-  Bounds bounds{};                            // bounds on `pose`
-  std::vector<std::optional<double>> beta{};  // for collision-free constraint
+  double alpha{0.0};           // for minimizing lateral error
+  Bounds bounds{};             // bounds on `pose`
+  std::vector<double> beta{};  // for collision-free constraint
   double normalized_avoidance_cost{0.0};
 
   // bounds and its local pose on each collision-free constraint

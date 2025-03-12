@@ -1351,7 +1351,7 @@ MPTOptimizer::ConstraintMatrix MPTOptimizer::calcConstraintMatrix(
 
     // calculate C mat and vec
     for (size_t i = 0; i < N_ref; ++i) {
-      const double beta = *ref_points.at(i).beta.at(l_idx);
+      const double beta = ref_points.at(i).beta.at(l_idx);
       const double lon_offset = vehicle_circle_longitudinal_offsets_.at(l_idx);
 
       C_triplet_vec.push_back(Eigen::Triplet<double>(i, i * D_x, 1.0 * std::cos(beta)));

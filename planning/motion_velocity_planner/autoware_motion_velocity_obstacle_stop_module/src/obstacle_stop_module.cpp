@@ -229,7 +229,7 @@ VelocityPlanningResult ObstacleStopModule::plan(
   // 4. filter obstacles of point cloud
   auto stop_obstacles_for_point_cloud = filter_stop_obstacle_for_point_cloud(
     planner_data->current_odometry, raw_trajectory_points, decimated_traj_points,
-    planner_data->no_ground_pointcloud, planner_data->vehicle_info_,
+    planner_data->no_ground_pointcloud, planner_data->vehicle_info_, dist_to_bumper,
     planner_data->trajectory_polygon_collision_check,
     planner_data->find_index(raw_trajectory_points, planner_data->current_odometry.pose.pose));
 
@@ -268,10 +268,9 @@ std::vector<geometry_msgs::msg::Point> ObstacleStopModule::convert_point_cloud_t
 
   std::vector<geometry_msgs::msg::Point> stop_collision_points;
 
-  // 1. transform pointcloud
   pcl::PointCloud<pcl::PointXYZ>::Ptr pointcloud_ptr =
     std::make_shared<pcl::PointCloud<pcl::PointXYZ>>(pointcloud.pointcloud);
-  // 2. downsample & cluster pointcloud
+  // 1. downsample & cluster pointcloud
   PointCloud::Ptr filtered_points_ptr(new PointCloud);
   pcl::VoxelGrid<pcl::PointXYZ> filter;
   filter.setInputCloud(pointcloud_ptr);
@@ -292,7 +291,7 @@ std::vector<geometry_msgs::msg::Point> ObstacleStopModule::convert_point_cloud_t
   ec.setInputCloud(filtered_points_ptr);
   ec.extract(clusters);
 
-  // 3. convert clusters to obstacles
+  // 2. convert clusters to obstacles
   for (const auto & cluster_indices : clusters) {
     double ego_to_stop_collision_distance = std::numeric_limits<double>::max();
     double lat_dist_from_obstacle_to_traj = std::numeric_limits<double>::max();
@@ -335,14 +334,14 @@ std::vector<geometry_msgs::msg::Point> ObstacleStopModule::convert_point_cloud_t
 
 std::optional<StopObstacle> ObstacleStopModule::create_stop_obstacle_for_point_cloud(
   const std::vector<TrajectoryPoint> & traj_points, const rclcpp::Time & stamp,
-  const geometry_msgs::msg::Point & stop_point) const
+  const geometry_msgs::msg::Point & stop_point, const double dist_to_bumper) const
 {
   if (!use_pointcloud_) {
     return std::nullopt;
   }
 
   const auto dist_to_collide_on_traj =
-    autoware::motion_utils::calcSignedArcLength(traj_points, 0, stop_point);
+    autoware::motion_utils::calcSignedArcLength(traj_points, 0, stop_point) - dist_to_bumper;
 
   const unique_identifier_msgs::msg::UUID obj_uuid;
   const auto & obj_uuid_str = autoware_utils::to_hex_string(obj_uuid);
@@ -444,6 +443,7 @@ std::vector<StopObstacle> ObstacleStopModule::filter_stop_obstacle_for_point_clo
   const Odometry & odometry, const std::vector<TrajectoryPoint> & traj_points,
   const std::vector<TrajectoryPoint> & decimated_traj_points,
   const PlannerData::Pointcloud & point_cloud, const VehicleInfo & vehicle_info,
+  const double dist_to_bumper,
   const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check, size_t ego_idx)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
@@ -466,8 +466,8 @@ std::vector<StopObstacle> ObstacleStopModule::filter_stop_obstacle_for_point_clo
   std::vector<StopObstacle> stop_obstacles;
   for (const auto & stop_point : stop_points) {
     // Filter obstacles for stop
-    const auto stop_obstacle =
-      create_stop_obstacle_for_point_cloud(decimated_traj_points, stop_obstacle_stamp, stop_point);
+    const auto stop_obstacle = create_stop_obstacle_for_point_cloud(
+      decimated_traj_points, stop_obstacle_stamp, stop_point, dist_to_bumper);
     if (stop_obstacle) {
       stop_obstacles.push_back(*stop_obstacle);
       continue;
@@ -493,8 +493,10 @@ std::vector<StopObstacle> ObstacleStopModule::filter_stop_obstacle_for_point_clo
 
     if (min_lat_dist_to_traj_poly < obstacle_filtering_param_.max_lat_margin_against_unknown) {
       auto stop_obstacle = *itr;
-      stop_obstacle.dist_to_collide_on_decimated_traj = autoware::motion_utils::calcSignedArcLength(
-        decimated_traj_points, 0, stop_obstacle.collision_point);
+      stop_obstacle.dist_to_collide_on_decimated_traj =
+        autoware::motion_utils::calcSignedArcLength(
+          decimated_traj_points, 0, stop_obstacle.collision_point) -
+        dist_to_bumper;
       past_stop_obstacles.push_back(stop_obstacle);
     }
 

@@ -1,23 +1,18 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Parameters for traffic_light_visualization",
+  "title": "Parameters for traffic_light_roi_visualizer",
   "type": "object",
   "definitions": {
-    "traffic_light_visualization": {
+    "traffic_light_roi_visualizer": {
       "type": "object",
       "properties": {
-        "use_ml_detector": {
-          "type": "boolean",
-          "description": "whether to visualize result of the traffic light fine detection",
-          "default": "false"
-        },
         "use_image_transport": {
           "type": "boolean",
           "description": "whether to apply image transport to compress the output debugging image in the traffic light fine detection",
           "default": "true"
         }
       },
-      "required": ["use_ml_detector", "use_image_transport"]
+      "required": ["use_image_transport"]
     }
   },
   "properties": {
@@ -25,7 +20,7 @@
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "$ref": "#/definitions/traffic_light_visualization"
+          "$ref": "#/definitions/traffic_light_roi_visualizer"
         }
       },
       "required": ["ros__parameters"]

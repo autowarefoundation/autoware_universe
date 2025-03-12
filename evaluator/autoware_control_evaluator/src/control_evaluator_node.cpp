@@ -24,9 +24,12 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace control_diagnostics
@@ -36,6 +39,21 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
   vehicle_info_(autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo())
 {
   using std::placeholders::_1;
+
+  // planning_factor subscribers
+  std::vector<std::string> stop_deviation_modules_list =
+    declare_parameter<std::vector<std::string>>(
+      "planning_factor_metrics.stop_deviation.module_list");
+  stop_deviation_modules_ = std::unordered_set<std::string>(
+    stop_deviation_modules_list.begin(), stop_deviation_modules_list.end());
+
+  const std::string topic_prefix =
+    declare_parameter<std::string>("planning_factor_metrics.topic_prefix");
+  for (const auto & module_name : stop_deviation_modules_) {
+    planning_factors_sub_.emplace(
+      module_name, autoware_utils::InterProcessPollingSubscriber<PlanningFactorArray>(
+                     this, topic_prefix + module_name));
+  }
 
   // Publisher
   processing_time_pub_ = this->create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
@@ -328,6 +346,29 @@ void ControlEvaluatorNode::AddGoalYawDeviationMetricMsg(const Pose & ego_pose)
   AddMetricMsg(metric, metric_value);
 }
 
+void ControlEvaluatorNode::AddStopDeviationMetricMsg(
+  const PlanningFactorArray::ConstSharedPtr & planning_factors, const std::string & module_name)
+{
+  std::optional<double> min_distance = std::nullopt;
+  for (const auto & factor : planning_factors->factors) {
+    if (factor.behavior == PlanningFactor::STOP) {
+      for (const auto & control_point : factor.control_points) {
+        if (!min_distance || std::abs(control_point.distance) < std::abs(*min_distance)) {
+          min_distance = control_point.distance;
+        }
+      }
+    }
+  }
+  if (!min_distance) {
+    return;
+  }
+
+  MetricMsg metric_msg;
+  metric_msg.name = "stop_deviation/" + module_name;
+  metric_msg.value = std::to_string(*min_distance);
+  metrics_msg_.metric_array.push_back(metric_msg);
+}
+
 void ControlEvaluatorNode::onTimer()
 {
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
@@ -337,13 +378,14 @@ void ControlEvaluatorNode::onTimer()
   const auto behavior_path = behavior_path_subscriber_.take_data();
   const auto steering_status = steering_sub_.take_data();
 
-  // calculate deviation metrics
+  // add deviation metrics
   if (odom && traj && !traj->points.empty()) {
     const Pose ego_pose = odom->pose.pose;
     AddLateralDeviationMetricMsg(*traj, ego_pose.position);
     AddYawDeviationMetricMsg(*traj, ego_pose);
   }
 
+  // add goal deviation metrics
   getRouteData();
   if (odom && route_handler_.isHandlerReady()) {
     const Pose ego_pose = odom->pose.pose;
@@ -353,15 +395,30 @@ void ControlEvaluatorNode::onTimer()
     AddGoalYawDeviationMetricMsg(ego_pose);
   }
 
+  // add planning_factor related metrics
+  for (auto & [module_name, planning_factor_sub_] : planning_factors_sub_) {
+    const auto planning_factors = planning_factor_sub_.take_data();
+    if (!planning_factors || planning_factors->factors.empty()) {
+      continue;
+    }
+
+    if (stop_deviation_modules_.count(module_name) > 0) {
+      AddStopDeviationMetricMsg(planning_factors, module_name);
+    }
+  }
+
+  // add kinematic info
   if (odom && acc) {
     AddKinematicStateMetricMsg(*odom, *acc);
   }
 
+  // add boundary distance metrics
   if (odom && behavior_path) {
     const Pose ego_pose = odom->pose.pose;
     AddBoundaryDistanceMetricMsg(*behavior_path, ego_pose);
   }
 
+  // add steering metrics
   if (steering_status) {
     AddSteeringMetricMsg(*steering_status);
   }

@@ -517,8 +517,8 @@ std::optional<std::vector<CruiseObstacle>> ObstacleCruiseModule::find_yield_crui
         longitudinal_distance_between_obstacles / moving_object_speed <
         obstacle_filtering_param_.max_obstacles_collision_time;
       if (are_obstacles_aligned && obstacles_collide_within_threshold_time) {
-        const auto yield_obstacle =
-          create_yield_cruise_obstacle(moving_object, predicted_objects_stamp, traj_points);
+        const auto yield_obstacle = create_yield_cruise_obstacle(
+          moving_object, stopped_object, predicted_objects_stamp, traj_points);
         if (yield_obstacle) {
           yield_obstacles.push_back(*yield_obstacle);
           using autoware::objects_of_interest_marker_interface::ColorName;
@@ -703,8 +703,9 @@ ObstacleCruiseModule::create_collision_points_for_outside_cruise_obstacle(
 }
 
 std::optional<CruiseObstacle> ObstacleCruiseModule::create_yield_cruise_obstacle(
-  const std::shared_ptr<PlannerData::Object> object, const rclcpp::Time & predicted_objects_stamp,
-  const std::vector<TrajectoryPoint> & traj_points)
+  const std::shared_ptr<PlannerData::Object> object,
+  const std::shared_ptr<PlannerData::Object> stopped_object,
+  const rclcpp::Time & predicted_objects_stamp, const std::vector<TrajectoryPoint> & traj_points)
 {
   if (traj_points.empty()) return std::nullopt;
   // check label
@@ -715,6 +716,15 @@ std::optional<CruiseObstacle> ObstacleCruiseModule::create_yield_cruise_obstacle
   if (!is_outside_cruise_obstacle(object->predicted_object.classification.at(0).label)) {
     RCLCPP_DEBUG(
       logger_, "[Cruise] Ignore yield obstacle (%s) since its type is not designated.",
+      obj_uuid_str.substr(0, 4).c_str());
+    return std::nullopt;
+  }
+
+  if (!is_side_stopped_obstacle(stopped_object->predicted_object.classification.at(0).label)) {
+    RCLCPP_DEBUG(
+      logger_,
+      "[Cruise] Ignore yield obstacle (%s) since the corresponding stopped object type is not "
+      "designated as side_stopped.",
       obj_uuid_str.substr(0, 4).c_str());
     return std::nullopt;
   }
@@ -776,6 +786,12 @@ bool ObstacleCruiseModule::is_inside_cruise_obstacle(const uint8_t label) const
 bool ObstacleCruiseModule::is_outside_cruise_obstacle(const uint8_t label) const
 {
   const auto & types = obstacle_filtering_param_.outside_object_types;
+  return std::find(types.begin(), types.end(), label) != types.end();
+}
+
+bool ObstacleCruiseModule::is_side_stopped_obstacle(const uint8_t label) const
+{
+  const auto & types = obstacle_filtering_param_.side_stopped_object_types;
   return std::find(types.begin(), types.end(), label) != types.end();
 }
 

@@ -295,7 +295,7 @@ VelocityPlanningResult OutOfLaneModule::plan(
         ego_data.trajectory_points, 0LU, previous_slowdown_pose_->position);
       return prev_arc_length < arc_length;
     }
-    return slowdown_pose && previous_slowdown_pose_;
+    return !slowdown_pose && previous_slowdown_pose_;
   }();
   if (should_use_previous_pose) {
     // if the trajectory changed the prev point is no longer on the trajectory so we project it

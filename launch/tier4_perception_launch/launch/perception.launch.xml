@@ -34,9 +34,18 @@
   <arg name="occupancy_grid_map_param_path"/>
   <arg name="occupancy_grid_map_updater"/>
   <arg name="occupancy_grid_map_updater_param_path"/>
-  <arg name="traffic_light_arbiter_param_path"/>
-  <arg name="traffic_light_multi_camera_fusion_param_path"/>
   <arg name="lidar_detection_model"/>
+  <arg name="each_traffic_light_map_based_detector_param_path"/>
+  <arg name="traffic_light_fine_detector_param_path"/>
+  <arg name="yolox_traffic_light_detector_param_path"/>
+  <arg name="car_traffic_light_classifier_param_path"/>
+  <arg name="pedestrian_traffic_light_classifier_param_path"/>
+  <arg name="traffic_light_roi_visualizer_param_path"/>
+  <arg name="traffic_light_selector_param_path"/>
+  <arg name="traffic_light_occlusion_predictor_param_path"/>
+  <arg name="traffic_light_multi_camera_fusion_param_path"/>
+  <arg name="traffic_light_arbiter_param_path"/>
+  <arg name="crosswalk_traffic_light_estimator_param_path"/>
 
   <!-- ML model parameters -->
   <arg name="lidar_detection_model_type" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[0]&quot;)"/>
@@ -98,31 +107,22 @@
   <arg name="use_obstacle_segmentation_single_frame_filter" description="use single frame filter at the ground segmentation"/>
   <arg name="use_obstacle_segmentation_time_series_filter" description="use time series filter at the ground segmentation"/>
 
-  <!-- Traffic light recognition parameters -->
-  <arg name="use_traffic_light_recognition" default="false"/>
-  <arg name="traffic_light_recognition/use_ml_detector" default="false" description="where ml model is used for TL detection"/>
-  <arg name="traffic_light_recognition/ml_detection_model_type" default="fine_detection_model" description="select ml model for TL detection: fine_detection_model or whole_image_detection_model"/>
-  <arg name="traffic_light_recognition/whole_image_detector_model_path" default="$(var data_path)/tensorrt_yolox"/>
-  <arg name="traffic_light_recognition/whole_image_detector_model_name" default="yolox_s_car_ped_tl_detector_960_960_batch_1.onnx"/>
-  <arg name="traffic_light_recognition/fusion_only" default="false"/>
-  <arg name="all_traffic_light_camera" default="[camera6, camera7]" description="choose camera which use for traffic light recognition"/>
-  <arg
-    name="traffic_light_fine_detector_model_path"
-    default="$(var data_path)/traffic_light_fine_detector"
-    description="options: `tlr_yolox_s_batch_**`. The batch number must be either one of 1, 4, 6"
-  />
-  <arg name="traffic_light_fine_detector_model_name" default="tlr_car_ped_yolox_s_batch_6" description="options: `tlr_car_ped_yolox_s_batch_**`. The batch number must be either one of 1, 4, 6"/>
-  <arg name="traffic_light_classifier_model_path" default="$(var data_path)/traffic_light_classifier" description="classifier onnx model path"/>
-  <arg
-    name="car_traffic_light_classifier_model_name"
-    default="traffic_light_classifier_mobilenetv2_batch_6"
-    description="options: `traffic_light_classifier_mobilenetv2_batch_*` or `traffic_light_classifier_efficientNet_b1_batch_*`. The batch number must be either one of 1, 4, 6"
-  />
-  <arg
-    name="pedestrian_traffic_light_classifier_model_name"
-    default="ped_traffic_light_classifier_mobilenetv2_batch_6"
-    description="options: `ped_traffic_light_classifier_mobilenetv2_batch_*` or `ped_traffic_light_classifier_efficientNet_b1_batch_*`. The batch number must be either one of 1, 4, 6"
-  />
+  <!-- traffic light recognition options to switch launch function/module -->
+  <arg name="use_traffic_light_recognition"/>
+  <arg name="traffic_light_recognition/fusion_only"/>
+  <arg name="traffic_light_recognition/camera_namespaces"/>
+  <arg name="traffic_light_recognition/use_high_accuracy_detection"/>
+  <arg name="traffic_light_recognition/high_accuracy_detection_type"/>
+
+  <!-- traffic light recognition parameters -->
+  <arg name="traffic_light_recognition/whole_image_detection/model_path"/>
+  <arg name="traffic_light_recognition/whole_image_detection/label_path"/>
+  <arg name="traffic_light_recognition/fine_detection/model_path"/>
+  <arg name="traffic_light_recognition/fine_detection/label_path"/>
+  <arg name="traffic_light_recognition/classification/car/model_path"/>
+  <arg name="traffic_light_recognition/classification/car/label_path"/>
+  <arg name="traffic_light_recognition/classification/pedestrian/model_path"/>
+  <arg name="traffic_light_recognition/classification/pedestrian/label_path"/>
 
   <!-- Whether to use detection by tracker -->
   <arg name="use_detection_by_tracker" default="true"/>
@@ -310,19 +310,29 @@
     <group if="$(var use_traffic_light_recognition)">
       <push-ros-namespace namespace="traffic_light_recognition"/>
       <include file="$(find-pkg-share tier4_perception_launch)/launch/traffic_light_recognition/traffic_light.launch.xml">
-        <arg name="use_ml_detector" value="$(var traffic_light_recognition/use_ml_detector)"/>
-        <arg name="ml_detection_model_type" value="$(var traffic_light_recognition/ml_detection_model_type)"/>
-        <arg name="whole_image_detector_model_path" value="$(var traffic_light_recognition/whole_image_detector_model_path)"/>
-        <arg name="whole_image_detector_model_name" value="$(var traffic_light_recognition/whole_image_detector_model_name)"/>
         <arg name="fusion_only" value="$(var traffic_light_recognition/fusion_only)"/>
-        <arg name="all_camera_namespaces" value="$(var all_traffic_light_camera)"/>
-        <arg name="traffic_light_arbiter_param_path" value="$(var traffic_light_arbiter_param_path)"/>
+        <arg name="camera_namespaces" value="$(var traffic_light_recognition/camera_namespaces)"/>
+        <arg name="use_high_accuracy_detection" value="$(var traffic_light_recognition/use_high_accuracy_detection)"/>
+        <arg name="high_accuracy_detection_type" value="$(var traffic_light_recognition/high_accuracy_detection_type)"/>
+        <arg name="each_traffic_light_map_based_detector_param_path" value="$(var each_traffic_light_map_based_detector_param_path)"/>
+        <arg name="traffic_light_fine_detector_param_path" value="$(var traffic_light_fine_detector_param_path)"/>
+        <arg name="yolox_traffic_light_detector_param_path" value="$(var yolox_traffic_light_detector_param_path)"/>
+        <arg name="car_traffic_light_classifier_param_path" value="$(var car_traffic_light_classifier_param_path)"/>
+        <arg name="pedestrian_traffic_light_classifier_param_path" value="$(var pedestrian_traffic_light_classifier_param_path)"/>
+        <arg name="traffic_light_roi_visualizer_param_path" value="$(var traffic_light_roi_visualizer_param_path)"/>
+        <arg name="traffic_light_selector_param_path" value="$(var traffic_light_selector_param_path)"/>
+        <arg name="traffic_light_occlusion_predictor_param_path" value="$(var traffic_light_occlusion_predictor_param_path)"/>
         <arg name="traffic_light_multi_camera_fusion_param_path" value="$(var traffic_light_multi_camera_fusion_param_path)"/>
-        <arg name="traffic_light_fine_detector_model_path" value="$(var traffic_light_fine_detector_model_path)"/>
-        <arg name="traffic_light_fine_detector_model_name" value="$(var traffic_light_fine_detector_model_name)"/>
-        <arg name="traffic_light_classifier_model_path" value="$(var traffic_light_classifier_model_path)"/>
-        <arg name="car_traffic_light_classifier_model_name" value="$(var car_traffic_light_classifier_model_name)"/>
-        <arg name="pedestrian_traffic_light_classifier_model_name" value="$(var pedestrian_traffic_light_classifier_model_name)"/>
+        <arg name="traffic_light_arbiter_param_path" value="$(var traffic_light_arbiter_param_path)"/>
+        <arg name="crosswalk_traffic_light_estimator_param_path" value="$(var crosswalk_traffic_light_estimator_param_path)"/>
+        <arg name="whole_image_detection/model_path" value="$(var traffic_light_recognition/whole_image_detection/model_path)"/>
+        <arg name="whole_image_detection/label_path" value="$(var traffic_light_recognition/whole_image_detection/label_path)"/>
+        <arg name="fine_detection/model_path" value="$(var traffic_light_recognition/fine_detection/model_path)"/>
+        <arg name="fine_detection/label_path" value="$(var traffic_light_recognition/fine_detection/label_path)"/>
+        <arg name="classification/car/model_path" value="$(var traffic_light_recognition/classification/car/model_path)"/>
+        <arg name="classification/car/label_path" value="$(var traffic_light_recognition/classification/car/label_path)"/>
+        <arg name="classification/pedestrian/model_path" value="$(var traffic_light_recognition/classification/pedestrian/model_path)"/>
+        <arg name="classification/pedestrian/label_path" value="$(var traffic_light_recognition/classification/pedestrian/label_path)"/>
       </include>
     </group>
   </group>
