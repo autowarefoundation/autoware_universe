@@ -72,7 +72,6 @@
         forward_shift_th: 1.0
         backward_shift_th: 0.1
         is_critical: true
-        use_emergency_stop: false
 
     # ---------------------------------------------------------------------------------
 

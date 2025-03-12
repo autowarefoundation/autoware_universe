@@ -83,13 +83,16 @@ void PlanningValidator::setupParameters()
       declare_parameter<double>(t + "longitudinal_distance_deviation");
     p.nominal_latency_threshold = declare_parameter<double>(t + "nominal_latency");
 
-    const std::string prefix = "validity_checks."
+    const std::string prefix = "validity_checks.";
     p.trajectory_shift.enable = declare_parameter<bool>(prefix + "trajectory_shift.enable");
-    p.trajectory_shift.lat_shift_th = declare_parameter<bool>(prefix + "trajectory_shift.lat_shift_th");
-    p.trajectory_shift.forward_shift_th = declare_parameter<bool>(prefix + "trajectory_shift.forward_shift_th");
-    p.trajectory_shift.backward_shift_th = declare_parameter<bool>(prefix + "trajectory_shift.backward_shift_th");
-    p.trajectory_shift.is_critical = declare_parameter<bool>(prefix + "trajectory_shift.is_critical");
-    p.trajectory_shift.use_emergency_stop = declare_parameter<bool>(prefix + "trajectory_shift.use_emergency_stop");
+    p.trajectory_shift.lat_shift_th =
+      declare_parameter<bool>(prefix + "trajectory_shift.lat_shift_th");
+    p.trajectory_shift.forward_shift_th =
+      declare_parameter<bool>(prefix + "trajectory_shift.forward_shift_th");
+    p.trajectory_shift.backward_shift_th =
+      declare_parameter<bool>(prefix + "trajectory_shift.backward_shift_th");
+    p.trajectory_shift.is_critical =
+      declare_parameter<bool>(prefix + "trajectory_shift.is_critical");
 
     const std::string ps = "parameters.";
     p.forward_trajectory_length_acceleration =
@@ -182,7 +185,8 @@ void PlanningValidator::setupDiag()
     setStatus(stat, validation_status_.is_valid_latency, "latency is larger than expected value.");
   });
   d->add(ns + "trajectory_shift", [&](auto & stat) {
-    setStatus(stat, validation_status_.is_valid_trajectory_shift, "detected sudden shift in trajectory.");
+    setStatus(
+      stat, validation_status_.is_valid_trajectory_shift, "detected sudden shift in trajectory.");
   });
 }
 
@@ -219,7 +223,11 @@ void PlanningValidator::onTrajectory(const Trajectory::ConstSharedPtr msg)
 
   debug_pose_publisher_->clearMarkers();
 
-  validate(*current_trajectory_);
+  std::optional<Trajectory> prev_trajectory = {};
+  if (previous_published_trajectory_) {
+    prev_trajectory = *previous_published_trajectory_;
+  }
+  validate(*current_trajectory_, prev_trajectory);
 
   diag_updater_->force_update();
 
@@ -295,7 +303,8 @@ void PlanningValidator::publishDebugInfo()
   debug_pose_publisher_->publish();
 }
 
-void PlanningValidator::validate(const Trajectory & trajectory)
+void PlanningValidator::validate(
+  const Trajectory & trajectory, const std::optional<Trajectory> & prev_trajectory)
 {
   auto & s = validation_status_;
 
@@ -324,6 +333,9 @@ void PlanningValidator::validate(const Trajectory & trajectory)
   s.is_valid_distance_deviation = checkValidDistanceDeviation(trajectory);
   s.is_valid_longitudinal_distance_deviation = checkValidLongitudinalDistanceDeviation(trajectory);
   s.is_valid_forward_trajectory_length = checkValidForwardTrajectoryLength(trajectory);
+  s.is_valid_trajectory_shift = validation_params_.trajectory_shift.enable && prev_trajectory
+                                  ? checkTrajectoryShift(trajectory, *prev_trajectory)
+                                  : true;
 
   // use resampled trajectory because the following metrics can not be evaluated for closed points.
   // Note: do not interpolate to keep original trajectory shape.
@@ -568,38 +580,43 @@ bool PlanningValidator::checkValidLatency(const Trajectory & trajectory)
 }
 
 bool PlanningValidator::checkTrajectoryShift(
-  const Trajectory & trajectory, const Trajectory & prev_trajectory
-){
-  if (trajectory.points.empty() || prev_trajectory.points.empty() ||
-      !validation_params_.trajectory_shift.enable) {
+  const Trajectory & trajectory, const Trajectory & prev_trajectory)
+{
+  if (
+    trajectory.points.empty() || prev_trajectory.points.empty() ||
+    !validation_params_.trajectory_shift.enable) {
     return true;
   }
 
   const auto ego_pose = current_kinematics_->pose.pose;
-  const size_t nearest_seg_idx =
+  const auto nearest_seg_idx =
     autoware::motion_utils::findNearestSegmentIndex(trajectory.points, ego_pose);
-  const size_t prev_nearest_seg_idx =
+  const auto prev_nearest_seg_idx =
     autoware::motion_utils::findNearestSegmentIndex(prev_trajectory.points, ego_pose);
-  
-  const auto & nearest_pose = trajectory.points.at(nearest_seg_idx).pose;
-  const auto & prev_nearest_pose = prev_trajectory.points.at(nearest_seg_idx).pose;
+
+  if (!nearest_seg_idx || !prev_nearest_seg_idx) {
+    return true;
+  }
+
+  const auto & nearest_pose = trajectory.points.at(*nearest_seg_idx).pose;
+  const auto & prev_nearest_pose = prev_trajectory.points.at(*prev_nearest_seg_idx).pose;
 
   const auto lat_shift =
     autoware_utils::calc_lateral_deviation(prev_nearest_pose, nearest_pose.position);
 
-  if(lat_shift > validation_params_.trajectory_shift.lat_shift_th) {
+  if (lat_shift > validation_params_.trajectory_shift.lat_shift_th) {
     return false;
   }
 
   // if nearest segment is within the trajectory no need to check longitudinal shift
-  if (nearest_seg_idx > 0 && nearest_seg_idx < trajectory.point.size() - 1) {
+  if (*nearest_seg_idx > 0 && *nearest_seg_idx < trajectory.points.size() - 1) {
     return true;
   }
 
   const auto lon_shift =
     autoware_utils::calc_longitudinal_deviation(prev_nearest_pose, nearest_pose.position);
 
-  if (nearest_seg_idx == 0 && lon_shift > 0.0) {
+  if (*nearest_seg_idx == 0 && lon_shift > 0.0) {
     return lon_shift < validation_params_.trajectory_shift.forward_shift_th;
   }
 

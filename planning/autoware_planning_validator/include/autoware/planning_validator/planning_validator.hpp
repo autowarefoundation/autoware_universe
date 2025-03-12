@@ -45,10 +45,10 @@ using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
 using nav_msgs::msg::Odometry;
 
-struct ValidityCheck {
+struct ValidityCheck
+{
   bool enable;
-  bool is_true;
-  bool use_emergency_stop;
+  bool is_critical;
 };
 
 struct ValidationParams
@@ -67,7 +67,8 @@ struct ValidationParams
   double longitudinal_distance_deviation_threshold;
   double nominal_latency_threshold;
 
-  struct TrajectoryShift : ValidityCheck {
+  struct TrajectoryShift : ValidityCheck
+  {
     double lat_shift_th;
     double forward_shift_th;
     double backward_shift_th;
@@ -109,7 +110,8 @@ private:
 
   bool isDataReady();
 
-  void validate(const Trajectory & trajectory);
+  void validate(
+    const Trajectory & trajectory, const std::optional<Trajectory> & prev_trajectory = {});
 
   void publishProcessingTime(const double processing_time_ms);
   void publishTrajectory();
