@@ -17,7 +17,6 @@
 #include "autoware/simpl/processing/preprocessor.hpp"
 
 #include "autoware/simpl/archetype/agent.hpp"
-#include "autoware/simpl/archetype/datatype.hpp"
 #include "autoware/simpl/archetype/map.hpp"
 #include "autoware/simpl/processing/geometry.hpp"
 #include "autoware/simpl/processing/polyline.hpp"

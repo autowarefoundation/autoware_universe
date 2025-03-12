@@ -17,7 +17,6 @@
 #include "autoware/simpl/archetype/agent.hpp"
 #include "autoware/simpl/archetype/exception.hpp"
 #include "autoware/simpl/archetype/map.hpp"
-#include "autoware/simpl/archetype/result.hpp"
 
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>

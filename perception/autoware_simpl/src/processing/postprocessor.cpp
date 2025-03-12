@@ -15,7 +15,6 @@
 #include "autoware/simpl/processing/postprocessor.hpp"
 
 #include "autoware/simpl/archetype/agent.hpp"
-#include "autoware/simpl/archetype/prediction.hpp"
 #include "autoware/simpl/processing/geometry.hpp"
 
 #include <cmath>
