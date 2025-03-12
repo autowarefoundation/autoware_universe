@@ -24,10 +24,7 @@
       - modified_goal_longitudinal_deviation
       - modified_goal_lateral_deviation
       - modified_goal_yaw_deviation
-    
-    selected_counters:
-      - stop_count
-      - abnormal_stop_count
+      - stop_decision
 
     trajectory:
       min_point_dist_m: 0.1 # [m] minimum distance between two successive points to use for angle calculation
@@ -41,7 +38,7 @@
 
     planning_factor_counters:
       topic_prefix: /planning/planning_factors/
-      stop_count:
+      stop_decision:
         time_threshold_s: 5.0 # [s] time threshold for a stop to be considered as the new one
         dist_threshold_m: 5.0 # [m] distance threshold for a stop to be considered as the new one
         abnormal_deceleration_threshold: 2.0 # [m/s^2] deceleration threshold for a stop to be considered as abnormal
