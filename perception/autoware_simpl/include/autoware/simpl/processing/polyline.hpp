@@ -16,11 +16,9 @@
 #define AUTOWARE__SIMPL__PROCESSING__POLYLINE_HPP_
 
 #include "autoware/simpl/archetype/agent.hpp"
-#include "autoware/simpl/archetype/datatype.hpp"
 #include "autoware/simpl/archetype/map.hpp"
 #include "autoware/simpl/processing/geometry.hpp"
 
-#include <algorithm>
 #include <cstddef>
 #include <vector>
 

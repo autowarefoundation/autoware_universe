@@ -16,11 +16,7 @@
 
 #include "autoware/simpl/archetype/agent.hpp"
 #include "autoware/simpl/archetype/exception.hpp"
-#include "autoware/simpl/conversion/lanelet.hpp"
 #include "autoware/simpl/conversion/tracked_object.hpp"
-#include "autoware/simpl/processing/postprocessor.hpp"
-#include "autoware/simpl/processing/preprocessor.hpp"
-#include "autoware/simpl/trt_simpl.hpp"
 
 #include <autoware/tensorrt_common/utils.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
