@@ -23,6 +23,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -144,7 +145,7 @@ public:
   using const_iterator = FixedQueue<value_type>::const_iterator;
 
   /**
-   * @brief Construct a new AgentHistory object
+   * @brief Construct a new AgentHistory object with a single state.
    *
    * @param num_past Number of past timestamps.
    * @param current_time Current timestamp.
@@ -153,6 +154,39 @@ public:
   AgentHistory(size_t num_past, double current_time, const value_type & state) : queue_(num_past)
   {
     update(current_time, state);
+  }
+
+  /**
+   * @brief Construct a new AgentHistory object with an array of states.
+   *
+   * @param num_past Number of past timestamps.
+   * @param timestamps Array of timestamps.
+   * @param history Agent states at each timestamp.
+   */
+  AgentHistory(
+    size_t num_past, const std::vector<double> & timestamps,
+    const std::vector<value_type> & history)
+  : queue_(num_past)
+  {
+    // validate inputs
+    if (timestamps.size() != num_past) {
+      std::ostringstream msg;
+      msg << "Invalid size of timestamps: " << timestamps.size() << " != " << num_past;
+      throw SimplException(SimplError_t::InvalidValue, msg.str());
+    } else if (history.size() != num_past) {
+      std::ostringstream msg;
+      msg << "Invalid size of history: " << history.size() << " != " << num_past;
+      throw SimplException(SimplError_t::InvalidValue, msg.str());
+    }
+
+    for (size_t t = 0; t < num_past; ++t) {
+      const auto & state = history.at(t);
+      if (state.is_valid) {
+        update(timestamps.at(t), state);
+      } else {
+        update();
+      }
+    }
   }
 
   /**
@@ -263,7 +297,10 @@ public:
   : num_agent(num_agent), num_past(num_past), num_attribute(num_attribute), tensor_(tensor)
   {
     if (tensor_.size() != num_agent * num_past * num_attribute) {
-      throw SimplException(SimplError_t::InvalidValue, "Invalid size of agent tensor.");
+      std::ostringstream msg;
+      msg << "Invalid size of agent tensor: " << tensor_.size()
+          << " != " << num_agent * num_past * num_attribute;
+      throw SimplException(SimplError_t::InvalidValue, msg.str());
     }
   }
 

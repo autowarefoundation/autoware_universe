@@ -122,7 +122,7 @@ public:
    */
   output_type process(
     const archetype::AgentHistories & histories, const archetype::MapPoints & map_points,
-    size_t ego_index) const noexcept;
+    size_t ego_index) const;
 
 private:
   /**
@@ -132,8 +132,7 @@ private:
    * @param current_ego Current ego state.
    */
   AgentMetadata process_agent(
-    const archetype::AgentHistories & histories,
-    const archetype::AgentState & current_ego) const noexcept;
+    const archetype::AgentHistories & histories, const archetype::AgentState & current_ego) const;
 
   /**
    * @brief Execute preprocessing for map tensor.
@@ -142,8 +141,7 @@ private:
    * @param current_ego Current ego state.
    */
   MapMetadata process_map(
-    const archetype::MapPoints & map_points,
-    const archetype::AgentState & current_ego) const noexcept;
+    const archetype::MapPoints & map_points, const archetype::AgentState & current_ego) const;
 
   /**
    * @brief Execute preprocessing for RPE tensor (N+K*N+K*D).
@@ -152,7 +150,7 @@ private:
    * @param current_ego Processed map data containing its metadata.
    */
   archetype::RpeTensor process_rpe(
-    const AgentMetadata & agent_metadata, const MapMetadata & map_metadata) const noexcept;
+    const AgentMetadata & agent_metadata, const MapMetadata & map_metadata) const;
 
   const std::vector<size_t> label_ids_;  //!< Vector of predictable label ids.
   const size_t max_num_agent_;           //!< Maximum number of predictable agents (N).

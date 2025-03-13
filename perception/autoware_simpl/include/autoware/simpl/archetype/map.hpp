@@ -19,7 +19,7 @@
 
 #include <cmath>
 #include <cstddef>
-#include <stdexcept>
+#include <sstream>
 #include <tuple>
 #include <vector>
 
@@ -99,6 +99,8 @@ public:
   /**
    * @brief Execute linear interpolation by `(1 - t) * self + t * other`.
    *
+   * Note that dx/dy/dz results are always `0.0`.
+   *
    * @param other Other point.
    * @param t Weight of
    * @return MapPoint
@@ -108,11 +110,8 @@ public:
     const auto ix = (1 - t) * x + t * other.x;
     const auto iy = (1 - t) * y + t * other.y;
     const auto iz = (1 - t) * z + t * other.z;
-    const auto idx = (1 - t) * dx + t * other.dx;
-    const auto idy = (1 - t) * dy + t * other.dy;
-    const auto idz = (1 - t) * dz + t * other.dz;
 
-    return {ix, iy, iz, idx, idy, idz, label};
+    return {ix, iy, iz, 0.0, 0.0, 0.0, label};
   }
 
   double x{0.0};                      //!< Location x in map coordinate system.
@@ -144,8 +143,11 @@ public:
     const std::vector<float> & tensor, size_t num_polyline, size_t num_point, size_t num_attribute)
   : num_polyline(num_polyline), num_point(num_point), num_attribute(num_attribute), tensor_(tensor)
   {
-    if (tensor_.size() != num_polyline * num_point * num_attribute) {
-      throw SimplException(SimplError_t::InvalidValue, "Invalid size of map tensor.");
+    if (tensor_.size() != num_polyline * (num_point - 1) * num_attribute) {
+      std::ostringstream msg;
+      msg << "Invalid size of map tensor: " << tensor_.size()
+          << " != " << num_polyline * (num_point - 1) * num_attribute;
+      throw SimplException(SimplError_t::InvalidValue, msg.str());
     }
   }
 

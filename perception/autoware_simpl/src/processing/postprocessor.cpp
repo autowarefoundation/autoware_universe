@@ -19,7 +19,6 @@
 
 #include <cmath>
 #include <cstddef>
-#include <tuple>
 #include <vector>
 
 namespace autoware::simpl::processing
@@ -43,19 +42,19 @@ output_type PostProcessor::process(
     std::vector<double> agent_scores;
     std::vector<double> agent_trajectories;
     for (size_t m = 0; m < num_mode_; ++m) {
+      const auto score_idx = n * num_mode_ * num_future_ + m;
+      agent_scores.emplace_back(scores.at(score_idx));
       for (size_t t = 0; t < num_future_; ++t) {
-        auto score_idx = n * num_mode_ * num_future_ + m;
-        agent_scores.emplace_back(scores.at(score_idx));
-
         // Index: (n * M * Tf + m * Tf + t) * Dp
-        auto trajectory_idx = (n * num_mode_ * num_future_ + m * num_future_ + t) * num_attribute;
-        double x = static_cast<double>(trajectories.at(trajectory_idx));
-        double y = static_cast<double>(trajectories.at(trajectory_idx + 1));
-        double vx = static_cast<double>(trajectories.at(trajectory_idx + 2));
-        double vy = static_cast<double>(trajectories.at(trajectory_idx + 3));
+        const auto trajectory_idx =
+          (n * num_mode_ * num_future_ + m * num_future_ + t) * num_attribute;
+        const double x = static_cast<double>(trajectories.at(trajectory_idx));
+        const double y = static_cast<double>(trajectories.at(trajectory_idx + 1));
+        const double vx = static_cast<double>(trajectories.at(trajectory_idx + 2));
+        const double vy = static_cast<double>(trajectories.at(trajectory_idx + 3));
 
         // Transform from current state centric to map coordinate
-        auto [ret_x, ret_y, ret_vx, ret_vy] = transform2d(x, y, vx, vy, current_state);
+        const auto [ret_x, ret_y, ret_vx, ret_vy] = transform2d(x, y, vx, vy, current_state);
         agent_trajectories.emplace_back(ret_x);
         agent_trajectories.emplace_back(ret_y);
         agent_trajectories.emplace_back(ret_vx);

@@ -71,8 +71,16 @@ public:
   {
     const size_t num_attribute = PredictedState::num_attribute();
 
-    if (scores.size() != num_mode || trajectories.size() != num_mode * num_future * num_attribute) {
-      throw SimplException(SimplError_t::InvalidValue, "Invalid prediction size.");
+    // validate input size
+    if (scores.size() != num_mode) {
+      std::ostringstream oss;
+      oss << "Invalid predicted score size: " << scores.size() << " != " << num_mode;
+      throw SimplException(SimplError_t::InvalidValue, oss.str());
+    } else if (trajectories.size() != num_mode * num_future * num_attribute) {
+      std::ostringstream oss;
+      oss << "Invalid predicted trajectory size: " << trajectories.size()
+          << " != " << num_mode * num_future * num_attribute;
+      throw SimplException(SimplError_t::InvalidValue, oss.str());
     }
 
     for (size_t m = 0; m < num_mode; ++m) {
