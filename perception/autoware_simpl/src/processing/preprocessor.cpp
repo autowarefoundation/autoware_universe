@@ -49,7 +49,7 @@ PreProcessor::PreProcessor(
 
 output_type PreProcessor::process(
   const archetype::AgentHistories & histories, const archetype::MapPoints & map_points,
-  size_t ego_index) const noexcept
+  size_t ego_index) const
 {
   const auto & current_ego = histories.at(ego_index).current();
 
@@ -63,23 +63,22 @@ output_type PreProcessor::process(
 }
 
 AgentMetadata PreProcessor::process_agent(
-  const archetype::AgentHistories & histories,
-  const archetype::AgentState & current_ego) const noexcept
+  const archetype::AgentHistories & histories, const archetype::AgentState & current_ego) const
 {
   const size_t num_label = label_ids_.size();
   const size_t num_attribute = num_label + 7;  // L + 7
 
-  std::vector<float> in_tensor(max_num_agent_ * num_past_, num_attribute);
-  NodePoints node_centers;
-  NodePoints node_vectors;
+  std::vector<float> in_tensor(max_num_agent_ * num_past_ * num_attribute);
+  NodePoints node_centers(max_num_agent_);
+  NodePoints node_vectors(max_num_agent_);
   for (size_t n = 0; n < histories.size(); ++n) {
     const auto & history = histories.at(n);
     const auto & current_state = history.current();
 
     // Retrieve node data
     const auto center = transform2d(current_state, current_ego);
-    node_centers.emplace_back(center.x, center.y);
-    node_vectors.emplace_back(std::cos(center.yaw), std::sin(center.yaw));
+    node_centers.at(n) = {center.x, center.y};
+    node_vectors.at(n) = {std::cos(center.yaw), std::sin(center.yaw)};
     for (size_t t = 0; t < history.size(); ++t) {
       const auto & state_t = history.at(t);
 
@@ -91,30 +90,30 @@ AgentMetadata PreProcessor::process_agent(
       // dx, dy
       if (t == 0) {
         // (0.0, 0.0) at t=0
-        in_tensor[idx] = 0.0;
-        in_tensor[idx + 1] = 0.0;
+        in_tensor.at(idx) = 0.0;
+        in_tensor.at(idx + 1) = 0.0;
       } else {
         // XYt - XYt-1
-        in_tensor[idx] = static_cast<float>(ret_state.x - history.at(t - 1).x);
-        in_tensor[idx + 1] = static_cast<float>(ret_state.y - history.at(t - 1).y);
+        in_tensor.at(idx) = static_cast<float>(ret_state.x - history.at(t - 1).x);
+        in_tensor.at(idx + 1) = static_cast<float>(ret_state.y - history.at(t - 1).y);
       }
       // cos, sin
-      in_tensor[idx + 2] = static_cast<float>(std::cos(ret_state.yaw));
-      in_tensor[idx + 3] = static_cast<float>(std::sin(ret_state.yaw));
+      in_tensor.at(idx + 2) = static_cast<float>(std::cos(ret_state.yaw));
+      in_tensor.at(idx + 3) = static_cast<float>(std::sin(ret_state.yaw));
       // vx, vy
-      in_tensor[idx + 4] = static_cast<float>(ret_state.vx);
-      in_tensor[idx + 5] = static_cast<float>(ret_state.vy);
+      in_tensor.at(idx + 4) = static_cast<float>(ret_state.vx);
+      in_tensor.at(idx + 5) = static_cast<float>(ret_state.vy);
       // onehot
       for (size_t l = 0; l < label_ids_.size(); ++l) {
         const auto & label_id = label_ids_.at(l);
         if (label_id == static_cast<size_t>(ret_state.label)) {
-          in_tensor[idx + 6 + l] = 1.0f;
+          in_tensor.at(idx + 6 + l) = 1.0f;
         } else {
-          in_tensor[idx + 6 + l] = 0.0f;
+          in_tensor.at(idx + 6 + l) = 0.0f;
         }
       }
       // is valid
-      in_tensor[idx + 6 + num_label] = static_cast<float>(ret_state.is_valid);
+      in_tensor.at(idx + num_attribute - 1) = static_cast<float>(ret_state.is_valid);
     }
 
     // TODO(ktro2828): Use more reasonable operation. e.g. sorting by distance histories first.
@@ -129,12 +128,12 @@ AgentMetadata PreProcessor::process_agent(
 }
 
 MapMetadata PreProcessor::process_map(
-  const archetype::MapPoints & map_points, const archetype::AgentState & current_ego) const noexcept
+  const archetype::MapPoints & map_points, const archetype::AgentState & current_ego) const
 {
-  // 1. create polylines
+  // create polylines
   auto polylines = create_polylines(map_points, current_ego, max_num_point_, break_distance_);
 
-  // 2. Sort by distance to extract topK
+  // sort by distance to extract topK
   if (polylines.size() > max_num_polyline_) {
     std::sort(
       polylines.begin(), polylines.end(),
@@ -145,30 +144,36 @@ MapMetadata PreProcessor::process_map(
       });
   }
 
-  // 3. Create tensor, node centers and vectors
+  // create tensor, node centers and vectors
   constexpr size_t num_attribute = 4;
   std::vector<float> in_tensor(max_num_polyline_ * (max_num_point_ - 1) * num_attribute);
   NodePoints node_centers(max_num_polyline_);
   NodePoints node_vectors(max_num_polyline_);
-  for (size_t i = 0; i < polylines.size() || i < max_num_polyline_; ++i) {
+  for (size_t i = 0; i < polylines.size() && i < max_num_polyline_; ++i) {
     const auto & polyline = polylines.at(i);
 
+    // node center
     const auto center = find_center(polyline);
     node_centers.at(i) = {center.x, center.y};
 
+    // node vector
     const auto [vx, vy, _] = polyline.back().diff(polyline.front());
     const auto norm = std::hypot(vx, vy);
     node_vectors.at(i) = {vx / (norm + 1e-6), vy / (norm + 1e-6)};
 
+    // tensor
     const auto theta = atan2(vy, vx);
+    for (size_t j = 0; j < polyline.size() - 1; ++j) {
+      const auto first = transform2d(polyline.at(j), vx, vy, theta);
+      const auto last = transform2d(polyline.at(j + 1), vx, vy, theta);
+      const auto [dx, dy, _] = last.diff(first);
 
-    const auto first = transform2d(polyline.front(), vx, vy, theta);
-    const auto last = transform2d(polyline.back(), vx, vy, theta);
-    const auto [dx, dy, __] = last.diff(first);
-    in_tensor.push_back(static_cast<float>(0.5 * (first.x + last.x)));
-    in_tensor.push_back(static_cast<float>(0.5 * (first.y + last.y)));
-    in_tensor.push_back(dx);
-    in_tensor.push_back(dy);
+      const size_t idx = (i * (max_num_point_ - 1) + j) * num_attribute;
+      in_tensor.at(idx) = static_cast<float>(0.5 * (first.x + last.x));
+      in_tensor.at(idx + 1) = static_cast<float>(0.5 * (first.y + last.y));
+      in_tensor.at(idx + 2) = static_cast<float>(dx);
+      in_tensor.at(idx + 3) = static_cast<float>(dy);
+    }
   }
 
   archetype::MapTensor map_tensor(in_tensor, max_num_polyline_, max_num_point_, num_attribute);
@@ -176,7 +181,7 @@ MapMetadata PreProcessor::process_map(
 }
 
 archetype::RpeTensor PreProcessor::process_rpe(
-  const AgentMetadata & agent_metadata, const MapMetadata & map_metadata) const noexcept
+  const AgentMetadata & agent_metadata, const MapMetadata & map_metadata) const
 {
   // Concatenate node centers and vectors of agent and map
   const size_t num_rpe = agent_metadata.size() + map_metadata.size();  // N + K

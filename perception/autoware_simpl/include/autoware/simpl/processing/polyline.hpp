@@ -16,6 +16,7 @@
 #define AUTOWARE__SIMPL__PROCESSING__POLYLINE_HPP_
 
 #include "autoware/simpl/archetype/agent.hpp"
+#include "autoware/simpl/archetype/datatype.hpp"
 #include "autoware/simpl/archetype/map.hpp"
 #include "autoware/simpl/processing/geometry.hpp"
 
@@ -37,25 +38,27 @@ inline std::vector<archetype::MapPoints> create_polylines(
   size_t max_num_point, double break_distance)
 {
   std::vector<archetype::MapPoints> polylines;
-  size_t num_polyline = 0;
-  size_t num_point = 0;
+  size_t polyline_cnt = 0;
+  size_t point_cnt = 0;
   for (size_t i = 0; i < map_points.size(); ++i) {
     const auto & current = transform2d(map_points.at(i), current_ego);
     if (i == 0) {
       archetype::MapPoints polyline{current};
       polylines.emplace_back(polyline);
-      ++num_polyline;
-      num_point = 1;
+      ++polyline_cnt;
+      point_cnt = 1;
     } else {
       const auto & previous = polylines.back().back();
-      if (previous.distance_from(current) > break_distance || num_point >= max_num_point) {
+      if (previous.distance_from(current) > break_distance || point_cnt >= max_num_point) {
+        // append new polyline
         archetype::MapPoints polyline{current};
         polylines.emplace_back(polyline);
-        ++num_polyline;
-        num_point = 1;
+        ++polyline_cnt;
+        point_cnt = 1;
       } else {
-        polylines.at(num_polyline - 1).emplace_back(current);
-        ++num_point;
+        // append the point to the last polyline
+        polylines.at(polyline_cnt - 1).emplace_back(current);
+        ++point_cnt;
       }
     }
   }
@@ -83,11 +86,10 @@ inline archetype::MapPoint find_center(const archetype::MapPoints & map_points)
   }
 
   // Find the segment where the midpoint length falls
-  const auto middle = *cumulative_length.end() / 2;
+  const auto middle = 0.5 * cumulative_length.back();
   size_t index = 0;
   for (size_t i = 0; i < cumulative_length.size(); ++i) {
-    const auto & length = cumulative_length.at(i);
-    if (length < middle) {
+    if (middle < cumulative_length.at(i)) {
       index = i == 0 ? 0 : i - 1;
       break;
     }

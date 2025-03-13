@@ -22,6 +22,7 @@
 
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <autoware_perception_msgs/msg/tracked_object.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 namespace autoware::simpl::conversion
 {
@@ -36,10 +37,10 @@ inline archetype::AgentLabel to_label(const autoware_perception_msgs::msg::Track
 
   const auto label = object_recognition_utils::getHighestProbLabel(object.classification);
   if (
-    label == object_recognition_utils::isCarLikeVehicle(label) &&
-    label != object_recognition_utils::isLargeVehicle(label)) {
+    object_recognition_utils::isCarLikeVehicle(label) &&
+    !object_recognition_utils::isLargeVehicle(label)) {
     return archetype::AgentLabel::VEHICLE;
-  } else if (label == object_recognition_utils::isLargeVehicle(label)) {
+  } else if (object_recognition_utils::isLargeVehicle(label)) {
     return archetype::AgentLabel::LARGE_VEHICLE;
   } else if (label == ObjectClassification::PEDESTRIAN) {
     return archetype::AgentLabel::PEDESTRIAN;
