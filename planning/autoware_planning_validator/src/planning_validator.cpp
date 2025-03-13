@@ -51,17 +51,23 @@ PlanningValidator::PlanningValidator(const rclcpp::NodeOptions & options)
 
 void PlanningValidator::setupParameters()
 {
-  const auto type = declare_parameter<int>("invalid_trajectory_handling_type");
-  if (type == 0) {
-    invalid_trajectory_handling_type_ = InvalidTrajectoryHandlingType::PUBLISH_AS_IT_IS;
-  } else if (type == 1) {
-    invalid_trajectory_handling_type_ = InvalidTrajectoryHandlingType::STOP_PUBLISHING;
-  } else if (type == 2) {
-    invalid_trajectory_handling_type_ = InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT;
-  } else {
-    throw std::invalid_argument{
-      "unsupported invalid_trajectory_handling_type (" + std::to_string(type) + ")"};
-  }
+  auto set_handling_type = [&](auto & type, const std::string & key) {
+    const auto value = declare_parameter<int>(key);
+    if (value == 0) {
+      type = InvalidTrajectoryHandlingType::PUBLISH_AS_IT_IS;
+    } else if (value == 1) {
+      type = InvalidTrajectoryHandlingType::STOP_PUBLISHING;
+    } else if (value == 2) {
+      type = InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT;
+    } else {
+      throw std::invalid_argument{
+        "unsupported invalid_trajectory_handling_type (" + std::to_string(value) + ")"};
+    }
+  };
+
+  set_handling_type(inv_traj_handling_type_, "handling_type.noncritical");
+  set_handling_type(inv_traj_critical_handling_type_, "handling_type.critical");
+
   publish_diag_ = declare_parameter<bool>("publish_diag");
   diag_error_count_threshold_ = declare_parameter<int>("diag_error_count_threshold");
   display_on_terminal_ = declare_parameter<bool>("display_on_terminal");
@@ -115,7 +121,8 @@ void PlanningValidator::setStatus(
 {
   if (is_ok) {
     stat.summary(DiagnosticStatus::OK, "validated.");
-  } else if (validation_status_.invalid_count < diag_error_count_threshold_) {
+  } else if (
+    validation_status_.invalid_count < diag_error_count_threshold_ && !is_critical_error_) {
     const auto warn_msg = msg + " (invalid count is less than error threshold: " +
                           std::to_string(validation_status_.invalid_count) + " < " +
                           std::to_string(diag_error_count_threshold_) + ")";
@@ -222,6 +229,7 @@ void PlanningValidator::onTrajectory(const Trajectory::ConstSharedPtr msg)
   }
 
   debug_pose_publisher_->clearMarkers();
+  is_critical_error_ = false;
 
   std::optional<Trajectory> prev_trajectory = {};
   if (previous_published_trajectory_) {
@@ -251,19 +259,22 @@ void PlanningValidator::publishTrajectory()
 
   //  ----- invalid factor is found. Publish previous trajectory. -----
 
-  if (invalid_trajectory_handling_type_ == InvalidTrajectoryHandlingType::PUBLISH_AS_IT_IS) {
+  const auto handling_type =
+    is_critical_error_ ? inv_traj_critical_handling_type_ : inv_traj_handling_type_;
+
+  if (handling_type == InvalidTrajectoryHandlingType::PUBLISH_AS_IT_IS) {
     pub_traj_->publish(*current_trajectory_);
     published_time_publisher_->publish_if_subscribed(pub_traj_, current_trajectory_->header.stamp);
     RCLCPP_ERROR(get_logger(), "Caution! Invalid Trajectory published.");
     return;
   }
 
-  if (invalid_trajectory_handling_type_ == InvalidTrajectoryHandlingType::STOP_PUBLISHING) {
+  if (handling_type == InvalidTrajectoryHandlingType::STOP_PUBLISHING) {
     RCLCPP_ERROR(get_logger(), "Invalid Trajectory detected. Trajectory is not published.");
     return;
   }
 
-  if (invalid_trajectory_handling_type_ == InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT) {
+  if (handling_type == InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT) {
     if (previous_published_trajectory_) {
       pub_traj_->publish(*previous_published_trajectory_);
       published_time_publisher_->publish_if_subscribed(
@@ -605,6 +616,7 @@ bool PlanningValidator::checkTrajectoryShift(
     autoware_utils::calc_lateral_deviation(prev_nearest_pose, nearest_pose.position);
 
   if (lat_shift > validation_params_.trajectory_shift.lat_shift_th) {
+    is_critical_error_ = validation_params_.trajectory_shift.is_critical;
     return false;
   }
 
@@ -616,12 +628,22 @@ bool PlanningValidator::checkTrajectoryShift(
   const auto lon_shift =
     autoware_utils::calc_longitudinal_deviation(prev_nearest_pose, nearest_pose.position);
 
-  if (*nearest_seg_idx == 0 && lon_shift > 0.0) {
-    return lon_shift < validation_params_.trajectory_shift.forward_shift_th;
+  if (*nearest_seg_idx == 0) {
+    if (lon_shift < std::numeric_limits<double>::epsilon()) {
+      return true;
+    }
+    if (lon_shift > validation_params_.trajectory_shift.forward_shift_th) {
+      is_critical_error_ = validation_params_.trajectory_shift.is_critical;
+      return false;
+    }
+    return true;
   }
 
-  if (lon_shift < 0.0) {
-    return std::abs(lon_shift) < validation_params_.trajectory_shift.backward_shift_th;
+  if (
+    lon_shift < 0.0 &&
+    std::abs(lon_shift) > validation_params_.trajectory_shift.backward_shift_th) {
+    is_critical_error_ = validation_params_.trajectory_shift.is_critical;
+    return false;
   }
 
   return true;
@@ -634,7 +656,7 @@ bool PlanningValidator::isAllValid(const PlanningValidatorStatus & s) const
          s.is_valid_longitudinal_max_acc && s.is_valid_longitudinal_min_acc &&
          s.is_valid_steering && s.is_valid_steering_rate && s.is_valid_velocity_deviation &&
          s.is_valid_distance_deviation && s.is_valid_longitudinal_distance_deviation &&
-         s.is_valid_forward_trajectory_length && s.is_valid_latency;
+         s.is_valid_forward_trajectory_length && s.is_valid_latency && s.is_valid_trajectory_shift;
 }
 
 void PlanningValidator::displayStatus()
@@ -666,6 +688,7 @@ void PlanningValidator::displayStatus()
     "planning trajectory is too far from ego in longitudinal direction!!");
   warn(s.is_valid_forward_trajectory_length, "planning trajectory forward length is not enough!!");
   warn(s.is_valid_latency, "planning component latency is larger than threshold!!");
+  warn(s.is_valid_trajectory_shift, "planning trajectory had sudden shift!!");
 }
 
 }  // namespace autoware::planning_validator

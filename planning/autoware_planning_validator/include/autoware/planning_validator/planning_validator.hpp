@@ -133,10 +133,13 @@ private:
     PUBLISH_AS_IT_IS,
     STOP_PUBLISHING,
     USE_PREVIOUS_RESULT,
-  } invalid_trajectory_handling_type_;
+  };
+  InvalidTrajectoryHandlingType inv_traj_handling_type_;
+  InvalidTrajectoryHandlingType inv_traj_critical_handling_type_;
   bool publish_diag_ = true;
   int diag_error_count_threshold_ = 0;
   bool display_on_terminal_ = true;
+  bool is_critical_error_ = false;
 
   std::shared_ptr<Updater> diag_updater_ = nullptr;
 
