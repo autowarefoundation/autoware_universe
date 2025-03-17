@@ -65,7 +65,7 @@ void VoxelGridBasedEuclideanCluster::publishDiagnosticsSummary(
     diagnostics_interface_ptr_->add_key_value("is_cluster_data_size_within_range", true);
   }
   diagnostics_interface_ptr_->update_level_and_message(
-    warnings.empty() ? diagnostic_msgs::msg::DiagnosticStatus::OK : diagnostic_msgs::msg::DiagnosticStatus::WARN,
+    warnings.empty() ? static_cast<int8_t>(diagnostic_msgs::msg::DiagnosticStatus::OK) : static_cast<int8_t>(diagnostic_msgs::msg::DiagnosticStatus::WARN),
     summary.str());
   diagnostics_interface_ptr_->publish(pointcloud_msg->header.stamp);
 }
@@ -175,16 +175,11 @@ bool VoxelGridBasedEuclideanCluster::cluster(
         // Cluster size is below the minimum threshold; skip without messaging.
         continue;
       }
-      if (cluster_size > max_cluster_size_ /10) {
+      if (cluster_size > max_cluster_size_ ) {
         // Cluster size exceeds the maximum threshold; log a warning.
         warning_messages.push_back(" Cluster " + std::to_string(i) + " (" + std::to_string(cluster_size) + ").");
         continue;
       }
-
-      // if (!(min_cluster_size_ <= static_cast<int>(i_cluster_data_size / point_step) &&
-      //       static_cast<int>(i_cluster_data_size / point_step) <= max_cluster_size_)) { 
-      //   continue;
-      // }
       const auto & cluster = temporary_clusters.at(i);
       tier4_perception_msgs::msg::DetectedObjectWithFeature feature_object;
       feature_object.feature.cluster = cluster;
