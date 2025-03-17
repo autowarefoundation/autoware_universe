@@ -147,8 +147,8 @@ PointcloudBasedOccupancyGridMapNode::PointcloudBasedOccupancyGridMapNode(
   }
 
   max_output_delay_ms_ = this->declare_parameter<double>("max_output_delay_ms", 50.0);
-  diagnostics_interface_ptr_ =
-  std::make_unique<autoware_utils::DiagnosticsInterface>(this, "pointcloud_based_probabilistic_occupancy_grid_map");
+  diagnostics_interface_ptr_ = std::make_unique<autoware_utils::DiagnosticsInterface>(
+    this, "pointcloud_based_probabilistic_occupancy_grid_map");
 }
 
 void PointcloudBasedOccupancyGridMapNode::obstaclePointcloudCallback(
@@ -279,14 +279,16 @@ void PointcloudBasedOccupancyGridMapNode::onPointcloudWithObstacleAndRaw()
     diagnostics_interface_ptr_->clear();
     diagnostics_interface_ptr_->add_key_value(
       "is_output_delay_within_range", is_delay_within_range);
-      
+
     std::stringstream message;
     if (!is_delay_within_range) {
-      message << "Output delay (" << pipeline_latency_ms << " ms) exceeds allowed limit (" 
+      message << "Output delay (" << pipeline_latency_ms << " ms) exceeds allowed limit ("
               << max_output_delay_ms_ << " ms).";
     }
     diagnostics_interface_ptr_->update_level_and_message(
-      is_delay_within_range ? diagnostic_msgs::msg::DiagnosticStatus::OK : diagnostic_msgs::msg::DiagnosticStatus::WARN, message.str());
+      is_delay_within_range ? diagnostic_msgs::msg::DiagnosticStatus::OK
+                            : diagnostic_msgs::msg::DiagnosticStatus::WARN,
+      message.str());
     diagnostics_interface_ptr_->publish(raw_pointcloud_.header.stamp);
   }
 }

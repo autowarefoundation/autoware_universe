@@ -21,9 +21,9 @@
 #include "autoware/probabilistic_occupancy_grid_map/utils/cuda_pointcloud.hpp"
 
 #include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
-#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <builtin_interfaces/msg/time.hpp>
 #include <laser_geometry/laser_geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -99,7 +99,7 @@ private:
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
   // diagnostics
   std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
-  double max_output_delay_ms_;  
+  double max_output_delay_ms_;
 };
 
 }  // namespace autoware::occupancy_grid_map
