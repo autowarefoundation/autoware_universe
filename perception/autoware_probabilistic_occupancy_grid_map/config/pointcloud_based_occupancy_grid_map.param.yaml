@@ -35,3 +35,4 @@
 
     # debug parameters
     publish_processing_time_detail: false
+    max_output_delay_ms: 50.0

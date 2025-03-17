@@ -146,9 +146,9 @@ PointcloudBasedOccupancyGridMapNode::PointcloudBasedOccupancyGridMapNode(
     }
   }
 
-  max_output_delay_ms_ = this->declare_parameter<double>("max_output_delay_ms", 10.0);
+  max_output_delay_ms_ = this->declare_parameter<double>("max_output_delay_ms", 50.0);
   diagnostics_interface_ptr_ =
-  std::make_unique<autoware_utils::DiagnosticsInterface>(this, "probabilistic_occupancy_grid_map");
+  std::make_unique<autoware_utils::DiagnosticsInterface>(this, "pointcloud_based_probabilistic_occupancy_grid_map");
 }
 
 void PointcloudBasedOccupancyGridMapNode::obstaclePointcloudCallback(
