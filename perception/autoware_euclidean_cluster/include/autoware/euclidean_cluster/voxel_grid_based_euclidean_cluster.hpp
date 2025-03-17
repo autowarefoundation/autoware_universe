@@ -15,6 +15,7 @@
 #pragma once
 #include "autoware/euclidean_cluster/euclidean_cluster_interface.hpp"
 #include "autoware/euclidean_cluster/utils.hpp"
+
 #include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <rclcpp/node.hpp>
 
@@ -45,10 +46,11 @@ public:
   {
     min_points_number_per_voxel_ = min_points_number_per_voxel;
   }
-  void setDiagnosticsInterface(autoware_utils::DiagnosticsInterface* diag_ptr)
+  void setDiagnosticsInterface(autoware_utils::DiagnosticsInterface * diag_ptr)
   {
     diagnostics_interface_ptr_ = diag_ptr;
   }
+
 private:
   pcl::VoxelGrid<pcl::PointXYZ> voxel_grid_;
   float tolerance_;
@@ -58,7 +60,7 @@ private:
   void publishDiagnosticsSummary(
     const std::vector<std::string> & warnings,
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pointcloud_msg);
-    autoware_utils::DiagnosticsInterface* diagnostics_interface_ptr_{nullptr};
+  autoware_utils::DiagnosticsInterface * diagnostics_interface_ptr_{nullptr};
 };
 
 }  // namespace autoware::euclidean_cluster

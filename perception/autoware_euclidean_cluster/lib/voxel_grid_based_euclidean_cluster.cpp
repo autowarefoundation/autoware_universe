@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/euclidean_cluster/voxel_grid_based_euclidean_cluster.hpp"
+
 #include <rclcpp/node.hpp>
 
 #include <pcl/kdtree/kdtree.h>
@@ -55,8 +56,9 @@ void VoxelGridBasedEuclideanCluster::publishDiagnosticsSummary(
 
   std::stringstream summary;
   if (!warnings.empty()) {
-    summary << warnings.size() << " clusters skipped because cluster size exceeds the maximum allowed "
-                    << max_cluster_size_  << " \n";
+    summary << warnings.size()
+            << " clusters skipped because cluster size exceeds the maximum allowed "
+            << max_cluster_size_ << " \n";
     for (const auto & warn : warnings) {
       summary << " - " << warn << "\n";
     }
@@ -65,11 +67,11 @@ void VoxelGridBasedEuclideanCluster::publishDiagnosticsSummary(
     diagnostics_interface_ptr_->add_key_value("is_cluster_data_size_within_range", true);
   }
   diagnostics_interface_ptr_->update_level_and_message(
-    warnings.empty() ? static_cast<int8_t>(diagnostic_msgs::msg::DiagnosticStatus::OK) : static_cast<int8_t>(diagnostic_msgs::msg::DiagnosticStatus::WARN),
+    warnings.empty() ? static_cast<int8_t>(diagnostic_msgs::msg::DiagnosticStatus::OK)
+                     : static_cast<int8_t>(diagnostic_msgs::msg::DiagnosticStatus::WARN),
     summary.str());
   diagnostics_interface_ptr_->publish(pointcloud_msg->header.stamp);
 }
-
 
 // TODO(badai-nguyen): remove this function when field copying also implemented for
 // euclidean_cluster.cpp
@@ -167,7 +169,7 @@ bool VoxelGridBasedEuclideanCluster::cluster(
   // build output and check cluster size
   {
     // At the start, create a container to collect warnings.
-    std::vector<std::string> warning_messages;  
+    std::vector<std::string> warning_messages;
     for (size_t i = 0; i < temporary_clusters.size(); ++i) {
       auto & i_cluster_data_size = clusters_data_size.at(i);
       int cluster_size = static_cast<int>(i_cluster_data_size / point_step);
@@ -175,9 +177,10 @@ bool VoxelGridBasedEuclideanCluster::cluster(
         // Cluster size is below the minimum threshold; skip without messaging.
         continue;
       }
-      if (cluster_size > max_cluster_size_ ) {
+      if (cluster_size > max_cluster_size_) {
         // Cluster size exceeds the maximum threshold; log a warning.
-        warning_messages.push_back(" Cluster " + std::to_string(i) + " (" + std::to_string(cluster_size) + ").");
+        warning_messages.push_back(
+          " Cluster " + std::to_string(i) + " (" + std::to_string(cluster_size) + ").");
         continue;
       }
       const auto & cluster = temporary_clusters.at(i);
@@ -203,8 +206,7 @@ bool VoxelGridBasedEuclideanCluster::cluster(
     }
     objects.header = pointcloud_msg->header;
 
-    publishDiagnosticsSummary(warning_messages,  pointcloud_msg);
-
+    publishDiagnosticsSummary(warning_messages, pointcloud_msg);
   }
 
   return true;
