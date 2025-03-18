@@ -63,8 +63,6 @@ public:
   template <typename T>
   using InterProcessPollingSubscriber = autoware_utils::InterProcessPollingSubscriber<T>;
 
-  inline static const std::string EGO_ID = "EGO";  //!< Object ID for the ego vehicle.
-
   /**
    * @brief Construct a new SimplNode object.
    *
@@ -88,11 +86,11 @@ private:
   void on_map(const LaneletMapBin::ConstSharedPtr map_msg);
 
   /**
-   * @brief Subscribe the latest ego vehicle state as a `TrackedObject` message.
+   * @brief Subscribe the latest ego vehicle state as a `AgentState`.
    *
    * Note that if it fails to subscribe the ego odometry, returns `std::nullopt`.
    */
-  std::optional<TrackedObject> subscribe_ego();
+  std::optional<archetype::AgentState> subscribe_ego();
 
   /**
    * @brief Remove too old agent history that the difference of the current time and the valid
@@ -109,11 +107,9 @@ private:
    *
    * @param current_time Current timestamp.
    * @param objects_msg Tracked objects.
-   * @param ego_msg Current ego state.
    */
   void update_history(
-    double current_time, const TrackedObjects::ConstSharedPtr objects_msg,
-    const TrackedObject & ego_msg) noexcept;
+    double current_time, const TrackedObjects::ConstSharedPtr objects_msg) noexcept;
 
   //!< Tracked objects subscription.
   rclcpp::Subscription<TrackedObjects>::SharedPtr objects_subscription_;

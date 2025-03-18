@@ -22,6 +22,7 @@
 
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <autoware_perception_msgs/msg/tracked_object.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 namespace autoware::simpl::conversion
@@ -68,6 +69,21 @@ inline archetype::AgentState to_state(
   const auto label = to_label(object);
 
   return {pose.position, yaw, velocity, label, is_valid};
+}
+
+/**
+ * @brief Convert `Odometry` message of the ego to `AgentState`.
+ *
+ * @param odometry Ego odometry.
+ * @param is_valid Indicates whether this state is valid.
+ */
+inline archetype::AgentState to_state(const nav_msgs::msg::Odometry & odometry, bool is_valid)
+{
+  const auto & pose = odometry.pose.pose;
+  const auto yaw = tf2::getYaw(pose.orientation);
+  const auto & velocity = odometry.twist.twist.linear;
+
+  return {pose.position, yaw, velocity, archetype::AgentLabel::VEHICLE, is_valid};
 }
 }  // namespace autoware::simpl::conversion
 #endif  // AUTOWARE__SIMPL__CONVERSION__TRACKED_OBJECT_HPP_

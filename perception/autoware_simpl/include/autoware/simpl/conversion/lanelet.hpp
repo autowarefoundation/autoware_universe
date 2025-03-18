@@ -15,9 +15,8 @@
 #ifndef AUTOWARE__SIMPL__CONVERSION__LANELET_HPP_
 #define AUTOWARE__SIMPL__CONVERSION__LANELET_HPP_
 
+#include "autoware/simpl/archetype/agent.hpp"
 #include "autoware/simpl/archetype/map.hpp"
-
-#include <geometry_msgs/msg/point.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/CompoundPolygon.h>
@@ -190,12 +189,12 @@ public:
    * @brief Convert a lanelet map to the polyline data except of points whose distance from the
    * specified position is farther than the threshold.
    *
-   * @param position_from Origin to check the distance from this.
+   * @param state_from Origin to check the distance from this.
    * @param distance_threshold Distance threshold
    * @return std::optional<archetype::MapPoint>
    */
   std::optional<std::vector<archetype::MapPoint>> convert(
-    const geometry_msgs::msg::Point & position_from, double distance_threshold) const;
+    const archetype::AgentState & position_from, double distance_threshold) const;
 
 private:
   /**
@@ -203,26 +202,26 @@ private:
    *
    * @param linestring Linestring instance.
    * @param label Label.
-   * @param position_from Origin to check the distance from this.
+   * @param state_from Origin to check the distance from this.
    * @param distance_threshold Distance threshold from the specified position.
    * @return std::vector<archetype::MapPoint>
    */
   std::vector<archetype::MapPoint> from_linestring(
     const lanelet::ConstLineString3d & linestring, const archetype::MapLabel & label,
-    const geometry_msgs::msg::Point & position_from, double distance_threshold) const noexcept;
+    const archetype::AgentState & state_from, double distance_threshold) const noexcept;
 
   /**
    * @brief Convert a polygon to the set of polylines.
    *
    * @param polygon Polygon instance.
    * @param label Label.
-   * @param position_from Origin to check the distance from this.
+   * @param state_from Origin to check the distance from this.
    * @param distance_threshold Distance threshold from the specified position.
    * @return std::vector<archetype::MapPoint>
    */
   std::vector<archetype::MapPoint> from_polygon(
     const lanelet::CompoundPolygon3d & polygon, const archetype::MapLabel & label,
-    const geometry_msgs::msg::Point & position_from, double distance_threshold) const noexcept;
+    const archetype::AgentState & state_from, double distance_threshold) const noexcept;
 
   lanelet::LaneletMapConstPtr lanelet_map_ptr_;  //!< Pointer to the lanelet map.
 };

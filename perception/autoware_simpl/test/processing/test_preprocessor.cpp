@@ -85,18 +85,18 @@ TEST(TestPreProcessor, testPreProcessor)
   // histories
   std::vector<double> timestamps{1.0, 2.0, 3.0};  // .size() == num_past
   const archetype::AgentHistories histories{
-    // history of ego
+    // history of agent1
     archetype::AgentHistory(
-      num_past, timestamps,
+      "agent1", num_past, timestamps,
       {archetype::AgentState{
          1.0, 1.0, 1.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true},
        archetype::AgentState{
          2.0, 2.0, 2.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true},
        archetype::AgentState{
          3.0, 3.0, 3.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true}}),
-    // history of agent1
+    // history of agent2
     archetype::AgentHistory(
-      num_past, timestamps,
+      "agent2", num_past, timestamps,
       {archetype::AgentState{
          4.0, 4.0, 4.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true},
        archetype::AgentState{
@@ -114,11 +114,14 @@ TEST(TestPreProcessor, testPreProcessor)
     archetype::MapPoint(4.0, 5.0, 6.0, 1.0, 1.0, 1.0, archetype::MapLabel::ROADWAY),
     archetype::MapPoint(5.0, 6.0, 7.0, 1.0, 1.0, 1.0, archetype::MapLabel::ROADWAY)};
 
+  // current ego
+  const archetype::AgentState current_ego(
+    1.0, 1.0, 1.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true);
+
   constexpr size_t max_num_agent = 3;
   constexpr size_t max_num_polyline = 3;
   constexpr size_t max_num_point = 3;
   constexpr double break_distance = 5.0;
-  constexpr size_t ego_index = 0;
   constexpr size_t num_rpe = max_num_agent + max_num_polyline;
 
   // preprocessor
@@ -126,7 +129,7 @@ TEST(TestPreProcessor, testPreProcessor)
     label_ids, max_num_agent, num_past, max_num_polyline, max_num_point, break_distance);
 
   const auto [agent_tensor, map_tensor, rpe_tensor] =
-    processor.process(histories, map_points, ego_index);
+    processor.process(histories, map_points, current_ego);
 
   EXPECT_EQ(agent_tensor.size(), max_num_agent * num_past * agent_tensor.num_attribute);
   EXPECT_EQ(map_tensor.size(), max_num_polyline * (max_num_point - 1) * map_tensor.num_attribute);
