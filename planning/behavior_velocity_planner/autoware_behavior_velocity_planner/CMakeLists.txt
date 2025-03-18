@@ -16,6 +16,14 @@ rclcpp_components_register_node(${PROJECT_NAME}_lib
   EXECUTABLE ${PROJECT_NAME}_node
 )
 
+find_package(grid_map_core REQUIRED)
+find_package(grid_map_ros REQUIRED)
+
+include_directories(
+  ${grid_map_core_INCLUDE_DIRS}
+  ${grid_map_ros_INCLUDE_DIRS}
+)
+
 if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(test_${PROJECT_NAME}
     test/test_node_interface.cpp
