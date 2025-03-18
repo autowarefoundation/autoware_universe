@@ -1085,9 +1085,28 @@ void sortPullOverPaths(
   const auto & target_objects = static_target_objects;
   for (const size_t i : sorted_path_indices) {
     const auto & path = pull_over_path_candidates[i];
-    const double distance = utils::path_safety_checker::calculateRoughDistanceToObjects(
-      path.parking_path(), target_objects, planner_data->parameters, false, "max");
-    auto it = std::lower_bound(
+
+    // check collision roughly with {min_distance, max_distance} between ego footprint and objects
+    // footprint
+    const std::pair<bool, bool> has_collision_rough =
+      utils::path_safety_checker::checkObjectsCollisionRough(
+        path.parking_path(), target_objects, soft_margins.front(), hard_margins.back(),
+        planner_data->parameters, false);
+    // min_distance > soft_margin.front() means no collision with any margin
+    if (!has_collision_rough.first) {
+      path_id_to_rough_margin_map[path.id()] = soft_margins.front();
+      continue;
+    }
+    // max_distance < hard_margin.front() means collision with any margin
+    if (has_collision_rough.second) {
+      path_id_to_rough_margin_map[path.id()] = 0.0;
+      continue;
+    }
+    // calculate the precise distance to object footprint from the path footprint
+    const double distance = utils::path_safety_checker::calculate_distance_to_objects_from_path(
+      path.parking_path(), target_objects, planner_data->parameters, true);
+
+    const auto it = std::lower_bound(
       margins_with_zero.begin(), margins_with_zero.end(), distance, std::greater<double>());
     if (it == margins_with_zero.end()) {
       path_id_to_rough_margin_map[path.id()] = margins_with_zero.back();

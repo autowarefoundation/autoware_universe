@@ -255,18 +255,20 @@ double calc_obstacle_max_length(const Shape & shape);
  * @brief Calculate collision roughly by comparing minimum/maximum distance with margin.
  * @param path The path of the ego vehicle.
  * @param objects The predicted objects.
- * @param margin Distance margin to judge collision.
+ * @param min_margin_threshold threshold for collision check when the minimum distance between ego
+ * @param max_margin_threshold threshold for collision check when the maximum distance between ego
  * @param parameters The common parameters used in behavior path planner.
  * @param use_offset_ego_point If true, the closest point to the object is calculated by
  * interpolating the path points.
  * @return Collision (rough) between minimum distance and maximum distance
  */
 std::pair<bool, bool> checkObjectsCollisionRough(
-  const PathWithLaneId & path, const PredictedObjects & objects, const double margin,
-  const BehaviorPathPlannerParameters & parameters, const bool use_offset_ego_point);
+  const PathWithLaneId & path, const PredictedObjects & objects, const double min_margin_threshold,
+  const double max_margin_threshold, const BehaviorPathPlannerParameters & parameters,
+  const bool use_offset_ego_point);
 
 /**
- * @brief Calculate the rough distance between the ego vehicle and the objects.
+ * @brief Calculate the rough distances between the path and the objects and return the minimum
  * @param path The path of the ego vehicle.
  * @param objects The predicted objects.
  * @param parameters The common parameters used in behavior path planner.
@@ -281,6 +283,20 @@ double calculateRoughDistanceToObjects(
   const PathWithLaneId & path, const PredictedObjects & objects,
   const BehaviorPathPlannerParameters & parameters, const bool use_offset_ego_point,
   const std::string & distance_type);
+
+/**
+ * @param Calculate the distance between the path and the closest object
+ * @param path The path of the ego vehicle.
+ * @param objects The predicted objects.
+ * @param parameters The common parameters used in behavior path planner.
+ * @param use_offset_ego_point If true, the closest point to the object is calculated by
+ * interpolating the path points.
+ * @return The distance between the ego vehicle and the closest object.
+ */
+double calculate_distance_to_objects_from_path(
+  const PathWithLaneId & path, const PredictedObjects & objects,
+  const BehaviorPathPlannerParameters & parameters, const bool use_offset_ego_pose);
+
 // debug
 CollisionCheckDebugPair createObjectDebug(const ExtendedPredictedObject & obj);
 void updateCollisionCheckDebugMap(

@@ -324,18 +324,6 @@ bool checkObjectsCollision(
     return false;
   }
 
-  // check collision roughly with {min_distance, max_distance} between ego footprint and objects
-  // footprint
-  std::pair<bool, bool> has_collision_rough =
-    utils::path_safety_checker::checkObjectsCollisionRough(
-      path, target_objects, collision_check_margin, behavior_path_parameters, false);
-  if (!has_collision_rough.first) {
-    return false;
-  }
-  if (has_collision_rough.second) {
-    return true;
-  }
-
   std::vector<Polygon2d> obj_polygons;
   for (const auto & object : target_objects.objects) {
     obj_polygons.push_back(autoware_utils::to_polygon2d(object));
