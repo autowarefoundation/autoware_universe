@@ -486,9 +486,6 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
     processing_time_publisher_ =
       std::make_unique<autoware_utils::DebugPublisher>(this, "map_based_prediction");
     published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
-    stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
-    stop_watch_ptr_->tic("cyclic_time");
-    stop_watch_ptr_->tic("processing_time");
   }
 
   if (use_time_keeper) {
@@ -499,12 +496,17 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
     time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(time_keeper);
     path_generator_->setTimeKeeper(time_keeper_);
     predictor_vru_->setTimeKeeper(time_keeper_);
-
-    // diagnostics handler
-    diagnostics_interface_ptr_ =
-      std::make_unique<autoware_utils::DiagnosticsInterface>(this, "map_based_prediction");
-    processing_time_tolerance_ms_ = declare_parameter<double>("processing_time_tolerance_ms");
   }
+
+  // diagnostics
+  diagnostics_interface_ptr_ =
+    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "map_based_prediction");
+  processing_time_tolerance_ms_ = declare_parameter<double>("processing_time_tolerance_ms");
+
+  // stopwatch
+  stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
+  stop_watch_ptr_->tic("cyclic_time");
+  stop_watch_ptr_->tic("processing_time");
 
   if (use_debug_marker) {
     pub_debug_markers_ =
@@ -562,7 +564,7 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  if (stop_watch_ptr_) stop_watch_ptr_->toc("processing_time", true);
+  stop_watch_ptr_->toc("processing_time", true);
 
   // take traffic_signal
   {
@@ -670,26 +672,30 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
   // Publish Results
   publish(output, debug_markers);
 
+  // Processing time
+  const auto processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
+  const auto cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
+
+  // Diagnostics
+  diagnostics_interface_ptr_->clear();
+  bool is_processing_time_exceeds_tolerance = processing_time_ms > processing_time_tolerance_ms_;
+  diagnostics_interface_ptr_->add_key_value(
+    "is_processing_time_exceeds_tolerance", is_processing_time_exceeds_tolerance);
+  if (is_processing_time_exceeds_tolerance) {
+    std::ostringstream oss;
+    oss << "Processing time exceeded " << processing_time_tolerance_ms_ << "[ms] < "
+        << processing_time_ms << "[ms]";
+    diagnostics_interface_ptr_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, oss.str());
+  }
+  diagnostics_interface_ptr_->publish(output.header.stamp);
+
   // Publish Processing Time
-  if (stop_watch_ptr_) {
-    const auto processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
-    const auto cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
+  if (processing_time_publisher_) {
     processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
     processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time_ms", processing_time_ms);
-
-    diagnostics_interface_ptr_->clear();
-    bool is_processing_time_ok = processing_time_ms > processing_time_tolerance_ms_;
-    diagnostics_interface_ptr_->add_key_value("is_processing_time_ok", is_processing_time_ok);
-    if (is_processing_time_ok) {
-      std::ostringstream oss;
-      oss << "Processing time exceeded " << processing_time_tolerance_ms_ << "[ms] < "
-          << processing_time_ms << "[ms]";
-      diagnostics_interface_ptr_->update_level_and_message(
-        diagnostic_msgs::msg::DiagnosticStatus::WARN, oss.str());
-    }
-    diagnostics_interface_ptr_->publish(output.header.stamp);
   }
 }
 
