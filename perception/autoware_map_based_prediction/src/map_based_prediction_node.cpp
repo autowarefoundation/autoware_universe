@@ -481,6 +481,16 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
   // publishers
   pub_objects_ = this->create_publisher<PredictedObjects>("~/output/objects", rclcpp::QoS{1});
 
+  // stopwatch
+  stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
+  stop_watch_ptr_->tic("cyclic_time");
+  stop_watch_ptr_->tic("processing_time");
+
+  // diagnostics
+  diagnostics_interface_ptr_ =
+    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "map_based_prediction");
+  processing_time_tolerance_ms_ = declare_parameter<double>("processing_time_tolerance_ms");
+
   // debug publishers
   if (use_time_publisher) {
     processing_time_publisher_ =
@@ -488,6 +498,7 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
     published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
   }
 
+  // debug time keeper
   if (use_time_keeper) {
     detailed_processing_time_publisher_ =
       this->create_publisher<autoware_utils::ProcessingTimeDetail>(
@@ -498,16 +509,7 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
     predictor_vru_->setTimeKeeper(time_keeper_);
   }
 
-  // diagnostics
-  diagnostics_interface_ptr_ =
-    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "map_based_prediction");
-  processing_time_tolerance_ms_ = declare_parameter<double>("processing_time_tolerance_ms");
-
-  // stopwatch
-  stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
-  stop_watch_ptr_->tic("cyclic_time");
-  stop_watch_ptr_->tic("processing_time");
-
+  // debug marker
   if (use_debug_marker) {
     pub_debug_markers_ =
       this->create_publisher<visualization_msgs::msg::MarkerArray>("maneuver", rclcpp::QoS{1});
@@ -678,6 +680,7 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
 
   // Diagnostics
   diagnostics_interface_ptr_->clear();
+  diagnostics_interface_ptr_->add_key_value("processing_time_ms", processing_time_ms);
   bool is_processing_time_exceeds_tolerance = processing_time_ms > processing_time_tolerance_ms_;
   diagnostics_interface_ptr_->add_key_value(
     "is_processing_time_exceeds_tolerance", is_processing_time_exceeds_tolerance);
