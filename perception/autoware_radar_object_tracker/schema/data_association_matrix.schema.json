@@ -3,92 +3,153 @@
   "title": "autoware_radar_object_tracker parameter",
   "type": "object",
   "definitions": {
-    "autoware_radar_object_tracker parameter": {
+    "autoware_radar_object_tracker": {
       "type": "object",
       "properties": {
         "can_assign_matrix": {
           "type": "array",
-          "description": "An array of doubles used in the data association.",
+          "description": "8x8 assignment matrix (Tracker x Measurement) with 0/1 values",
+          "items": {
+            "type": "integer",
+            "enum": [0, 1]
+          },
+          "minItems": 64,
+          "maxItems": 64,
           "default": [
-            [1, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 1, 1, 1, 0, 0, 0],
-            [0, 1, 1, 1, 1, 0, 0, 0],
-            [0, 1, 1, 1, 1, 0, 0, 0],
-            [0, 1, 1, 1, 1, 0, 0, 0],
-            [0, 0, 0, 0, 0, 1, 1, 1],
-            [0, 0, 0, 0, 0, 1, 1, 1],
-            [0, 0, 0, 0, 0, 1, 1, 1]
+            1,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,
+            0,1,1,1,1,0,0,0,0,1,1,1,1,0,0,0,
+            0,1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,
+            0,0,0,0,0,1,1,1,0,0,0,0,0,1,1,1
           ]
         },
         "max_dist_matrix": {
           "type": "array",
-          "description": "An array of doubles used in the data association.",
+          "description": "8x8 maximum distance matrix",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          },
+          "minItems": 64,
+          "maxItems": 64,
           "default": [
-            [4.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-            [4.0, 8.0, 8.0, 8.0, 8.0, 1.0, 1.0, 1.0],
-            [4.0, 6.0, 8.0, 8.0, 8.0, 1.0, 1.0, 1.0],
-            [4.0, 6.0, 8.0, 8.0, 8.0, 1.0, 1.0, 1.0],
-            [4.0, 6.0, 8.0, 8.0, 8.0, 1.0, 1.0, 1.0],
-            [3.0, 1.0, 1.0, 1.0, 1.0, 3.0, 3.0, 2.0],
-            [3.0, 1.0, 1.0, 1.0, 1.0, 3.0, 3.0, 2.0],
-            [2.0, 1.0, 1.0, 1.0, 1.0, 3.0, 3.0, 2.0]
+            4.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,
+            4.0,8.0,8.0,8.0,8.0,1.0,1.0,1.0,
+            4.0,6.0,8.0,8.0,8.0,1.0,1.0,1.0,
+            4.0,6.0,8.0,8.0,8.0,1.0,1.0,1.0,
+            4.0,6.0,8.0,8.0,8.0,1.0,1.0,1.0,
+            3.0,1.0,1.0,1.0,1.0,3.0,3.0,2.0,
+            3.0,1.0,1.0,1.0,1.0,3.0,3.0,2.0,
+            2.0,1.0,1.0,1.0,1.0,3.0,3.0,2.0
           ]
         },
         "max_area_matrix": {
           "type": "array",
-          "description": "An array of doubles used in the data association.",
+          "description": "8x8 maximum area matrix",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          },
+          "minItems": 64,
+          "maxItems": 64,
           "default": [
-            [100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0],
-            [12.1, 12.1, 36.0, 60.0, 60.0, 10000.0, 10000.0, 10000.0],
-            [36.0, 12.1, 36.0, 60.0, 60.0, 10000.0, 10000.0, 10000.0],
-            [60.0, 12.1, 36.0, 60.0, 60.0, 10000.0, 10000.0, 10000.0],
-            [60.0, 12.1, 36.0, 60.0, 60.0, 10000.0, 10000.0, 10000.0],
-            [2.5, 10000.0, 10000.0, 10000.0, 10000.0, 2.5, 2.5, 1.0],
-            [2.5, 10000.0, 10000.0, 10000.0, 10000.0, 2.5, 2.5, 1.0],
-            [2.0, 10000.0, 10000.0, 10000.0, 10000.0, 1.5, 1.5, 1.0]
+            100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,
+            12.1,12.1,36.0,60.0,60.0,10000.0,10000.0,10000.0,
+            36.0,12.1,36.0,60.0,60.0,10000.0,10000.0,10000.0,
+            60.0,12.1,36.0,60.0,60.0,10000.0,10000.0,10000.0,
+            60.0,12.1,36.0,60.0,60.0,10000.0,10000.0,10000.0,
+            2.5,10000.0,10000.0,10000.0,10000.0,2.5,2.5,1.0,
+            2.5,10000.0,10000.0,10000.0,10000.0,2.5,2.5,1.0,
+            2.0,10000.0,10000.0,10000.0,10000.0,1.5,1.5,1.0
           ]
         },
         "min_area_matrix": {
           "type": "array",
-          "description": "An array of doubles used in the data association.",
+          "description": "8x8 minimum area matrix",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          },
+          "minItems": 64,
+          "maxItems": 64,
           "default": [
-            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-            [3.6, 3.6, 6.0, 10.0, 10.0, 0.0, 0.0, 0.0],
-            [6.0, 3.6, 6.0, 10.0, 10.0, 0.0, 0.0, 0.0],
-            [10.0, 3.6, 6.0, 10.0, 10.0, 0.0, 0.0, 0.0],
-            [10.0, 3.6, 6.0, 10.0, 10.0, 0.0, 0.0, 0.0],
-            [0.001, 0.0, 0.0, 0.0, 0.0, 0.1, 0.1, 0.1],
-            [0.001, 0.0, 0.0, 0.0, 0.0, 0.1, 0.1, 0.1],
-            [0.001, 0.0, 0.0, 0.0, 0.0, 0.1, 0.1, 0.1]
+            0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
+            3.6,3.6,6.0,10.0,10.0,0.0,0.0,0.0,
+            6.0,3.6,6.0,10.0,10.0,0.0,0.0,0.0,
+            10.0,3.6,6.0,10.0,10.0,0.0,0.0,0.0,
+            10.0,3.6,6.0,10.0,10.0,0.0,0.0,0.0,
+            0.001,0.0,0.0,0.0,0.0,0.1,0.1,0.1,
+            0.001,0.0,0.0,0.0,0.0,0.1,0.1,0.1,
+            0.001,0.0,0.0,0.0,0.0,0.1,0.1,0.1
           ]
         },
         "max_rad_matrix": {
           "type": "array",
-          "description": "An array of doubles used in the data association.",
+          "description": "8x8 maximum radius matrix",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          },
+          "minItems": 64,
+          "maxItems": 64,
           "default": [
-            [3.15, 3.15, 3.15, 3.15, 3.15, 3.15, 3.15, 3.15],
-            [3.15, 1.047, 1.047, 1.047, 1.047, 3.15, 3.15, 3.15],
-            [3.15, 1.047, 1.047, 1.047, 1.047, 3.15, 3.15, 3.15],
-            [3.15, 1.047, 1.047, 1.047, 1.047, 3.15, 3.15, 3.15],
-            [3.15, 1.047, 1.047, 1.047, 1.047, 3.15, 3.15, 3.15],
-            [3.15, 3.15, 3.15, 3.15, 3.15, 3.15, 3.15, 3.15],
-            [3.15, 3.15, 3.15, 3.15, 3.15, 3.15, 3.15, 3.15],
-            [3.15, 3.15, 3.15, 3.15, 3.15, 3.15, 3.15, 3.15]
+            3.15,3.15,3.15,3.15,3.15,3.15,3.15,3.15,
+            3.15,1.047,1.047,1.047,1.047,3.15,3.15,3.15,
+            3.15,1.047,1.047,1.047,1.047,3.15,3.15,3.15,
+            3.15,1.047,1.047,1.047,1.047,3.15,3.15,3.15,
+            3.15,1.047,1.047,1.047,1.047,3.15,3.15,3.15,
+            3.15,3.15,3.15,3.15,3.15,3.15,3.15,3.15,
+            3.15,3.15,3.15,3.15,3.15,3.15,3.15,3.15,
+            3.15,3.15,3.15,3.15,3.15,3.15,3.15,3.15
           ]
         },
         "min_iou_matrix": {
           "type": "array",
-          "description": "An array of doubles used in the data association.",
+          "description": "8x8 minimum IoU matrix",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 64,
+          "maxItems": 64,
           "default": [
-            [0.0001, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-            [0.1, -0.1, 0.2, 0.2, 0.2, 0.1, 0.1, 0.1],
-            [0.1, 0.2, 0.3, 0.3, 0.3, 0.1, 0.1, 0.1],
-            [0.1, 0.2, 0.3, 0.3, 0.3, 0.1, 0.1, 0.1],
-            [0.1, 0.2, 0.3, 0.3, 0.3, 0.1, 0.1, 0.1],
-            [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-            [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-            [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.0001]
+            0.0001,0.1,0.1,0.1,0.1,0.1,0.1,0.1,
+            0.1,-0.1,0.2,0.2,0.2,0.1,0.1,0.1,
+            0.1,0.2,0.3,0.3,0.3,0.1,0.1,0.1,
+            0.1,0.2,0.3,0.3,0.3,0.1,0.1,0.1,
+            0.1,0.2,0.3,0.3,0.3,0.1,0.1,0.1,
+            0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,
+            0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,
+            0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.0001
           ]
+        },
+        "car_tracker": {
+          "type": "string",
+          "description": "Tracker type for cars",
+          "default": "pass_through_tracker"
+        },
+        "truck_tracker": {
+          "type": "string",
+          "description": "Tracker type for trucks",
+          "default": "pass_through_tracker"
+        },
+        "bus_tracker": {
+          "type": "string",
+          "description": "Tracker type for buses",
+          "default": "pass_through_tracker"
+        },
+        "pedestrian_tracker": {
+          "type": "string",
+          "description": "Tracker type for pedestrians",
+          "default": "pass_through_tracker"
+        },
+        "bicycle_tracker": {
+          "type": "string",
+          "description": "Tracker type for bicycles",
+          "default": "pass_through_tracker"
+        },
+        "motorcycle_tracker": {
+          "type": "string",
+          "description": "Tracker type for motorcycles",
+          "default": "pass_through_tracker"
         }
       },
       "required": [
@@ -97,7 +158,13 @@
         "max_area_matrix",
         "min_area_matrix",
         "max_rad_matrix",
-        "min_iou_matrix"
+        "min_iou_matrix",
+        "car_tracker",
+        "truck_tracker",
+        "bus_tracker",
+        "pedestrian_tracker",
+        "bicycle_tracker",
+        "motorcycle_tracker"
       ],
       "additionalProperties": false
     }
@@ -107,7 +174,7 @@
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "$ref": "#/definitions/autoware_radar_object_tracker parameter"
+          "$ref": "#/definitions/autoware_radar_object_tracker"
         }
       },
       "required": ["ros__parameters"],
