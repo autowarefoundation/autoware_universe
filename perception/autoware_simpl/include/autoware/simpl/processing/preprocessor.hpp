@@ -20,9 +20,11 @@
 #include "autoware/simpl/archetype/map.hpp"
 
 #include <cstddef>
+#include <map>
 #include <stdexcept>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 namespace autoware::simpl::processing
@@ -68,13 +70,15 @@ struct AbstractMetadata
 struct AgentMetadata : public AbstractMetadata
 {
   AgentMetadata(
-    const archetype::AgentTensor & _tensor, const std::vector<std::string> & _agent_ids,
+    const archetype::AgentTensor & _tensor,
+    const std::vector<std::pair<std::string, archetype::AgentState>> & _current_states,
     const NodePoints & _centers, const NodePoints & _vectors)
-  : AbstractMetadata(_centers, _vectors), tensor(_tensor), agent_ids(_agent_ids)
+  : AbstractMetadata(_centers, _vectors), tensor(_tensor), current_states(_current_states)
   {
   }
-  const archetype::AgentTensor tensor;       //!< Input tensor for agent data.
-  const std::vector<std::string> agent_ids;  //!< Input agent IDs.
+  const archetype::AgentTensor tensor;  //!< Input tensor for agent data.
+  const std::vector<std::pair<std::string, archetype::AgentState>>
+    current_states;  //!< Agent IDs and corresponding current states.
 };
 
 /**
@@ -97,8 +101,7 @@ struct MapMetadata : public AbstractMetadata
 class PreProcessor
 {
 public:
-  using output_type =
-    std::tuple<archetype::AgentTensor, archetype::MapTensor, archetype::RpeTensor>;
+  using output_type = std::tuple<AgentMetadata, MapMetadata, archetype::RpeTensor>;
 
   /**
    * @brief Construct a new Preprocessor object.
@@ -117,24 +120,25 @@ public:
   /**
    * @brief Execute preprocessing.
    *
-   * @param histories Vector of histories for each agent.
+   * @param histories Hasmap of histories for each agent ID.
    * @param map_points Vector of map points.
    * @param current_ego Current ego state.
    * @return output_type Returns `AgentTensor`, `MapTensor` and RPE tensor (`std::vector<float>`).
    */
   output_type process(
-    const archetype::AgentHistories & histories, const archetype::MapPoints & map_points,
-    const archetype::AgentState & current_ego) const;
+    const std::map<std::string, archetype::AgentHistory> & histories,
+    const archetype::MapPoints & map_points, const archetype::AgentState & current_ego) const;
 
 private:
   /**
    * @brief Execute preprocessing for agent tensor.
    *
-   * @param histories Vector of agent histories.
+   * @param histories Hasmap of histories for each agent ID.
    * @param current_ego Current ego state.
    */
   AgentMetadata process_agent(
-    const archetype::AgentHistories & histories, const archetype::AgentState & current_ego) const;
+    const std::map<std::string, archetype::AgentHistory> & histories,
+    const archetype::AgentState & current_ego) const;
 
   /**
    * @brief Execute preprocessing for map tensor.

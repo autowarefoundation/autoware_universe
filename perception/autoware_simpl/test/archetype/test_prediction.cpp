@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include <cstddef>
+#include <string>
 #include <vector>
 
 namespace autoware::simpl
@@ -30,6 +31,7 @@ archetype::PredictedState construct_state()
 
 archetype::Prediction construct_prediction()
 {
+  const std::string agent_id{"agent1"};
   constexpr size_t num_mode = 2;
   constexpr size_t num_future = 3;
   const std::vector<double> scores{
@@ -47,7 +49,7 @@ archetype::Prediction construct_prediction()
     6.0, 6.0, 6.0, 6.0,  // t=3
   };
 
-  return {num_mode, num_future, scores, trajectories};
+  return {agent_id, num_mode, num_future, scores, trajectories};
 }
 }  // namespace
 
@@ -70,6 +72,7 @@ TEST(TestPrediction, testPrediction)
   const auto prediction = construct_prediction();
 
   // check elements
+  EXPECT_EQ(prediction.agent_id, "agent1");
   EXPECT_EQ(prediction.num_mode, 2);
   EXPECT_EQ(prediction.num_future, 3);
 

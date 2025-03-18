@@ -15,15 +15,15 @@
 #ifndef AUTOWARE__SIMPL__ARCHETYPE__DATATYPE_HPP_
 #define AUTOWARE__SIMPL__ARCHETYPE__DATATYPE_HPP_
 
-#include "autoware/simpl/archetype/agent.hpp"
 #include "autoware/simpl/archetype/map.hpp"
+#include "autoware/simpl/archetype/prediction.hpp"
 
 #include <vector>
+
 namespace autoware::simpl::archetype
 {
-using AgentStates = std::vector<AgentState>;
-using AgentHistories = std::vector<AgentHistory>;
 using MapPoints = std::vector<MapPoint>;
 using RpeTensor = std::vector<float>;
+using Predictions = std::vector<Prediction>;
 }  // namespace autoware::simpl::archetype
 #endif  // AUTOWARE__SIMPL__ARCHETYPE__DATATYPE_HPP_

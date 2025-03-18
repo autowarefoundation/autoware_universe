@@ -20,7 +20,9 @@
 #include "autoware/simpl/archetype/map.hpp"
 #include "autoware/simpl/processing/geometry.hpp"
 
+#include <algorithm>
 #include <cstddef>
+#include <iterator>
 #include <vector>
 
 namespace autoware::simpl::processing
@@ -73,7 +75,7 @@ inline std::vector<archetype::MapPoints> create_polylines(
 inline archetype::MapPoint find_center(const archetype::MapPoints & map_points)
 {
   if (map_points.size() < 2) {
-    return map_points.size() > 0 ? map_points.at(0) : archetype::MapPoint();
+    return map_points.empty() ? archetype::MapPoint() : map_points.front();
   }
 
   // Compute cumulative arc length
@@ -87,18 +89,14 @@ inline archetype::MapPoint find_center(const archetype::MapPoints & map_points)
 
   // Find the segment where the midpoint length falls
   const auto middle = 0.5 * cumulative_length.back();
-  size_t index = 0;
-  for (size_t i = 0; i < cumulative_length.size(); ++i) {
-    if (middle < cumulative_length.at(i)) {
-      index = i == 0 ? 0 : i - 1;
-      break;
-    }
+  const auto iter = std::lower_bound(cumulative_length.begin(), cumulative_length.end(), middle);
+  if (iter == cumulative_length.end()) {
+    return map_points.back();
   }
 
   // Linear interpolation
-  const auto t = (middle - cumulative_length.at(index)) /
-                 (cumulative_length.at(index + 1) - cumulative_length.at(index));
-
+  const auto t = (middle - *iter) / (*(iter + 1) - *iter);
+  const auto index = std::distance(cumulative_length.begin(), iter);
   const auto & first = map_points.at(index);
   const auto & second = map_points.at(index + 1);
   return first.interpolate(second, t);

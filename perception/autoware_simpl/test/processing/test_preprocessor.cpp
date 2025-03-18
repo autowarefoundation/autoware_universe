@@ -21,7 +21,9 @@
 
 #include <cstddef>
 #include <iostream>
+#include <map>
 #include <ostream>
+#include <string>
 #include <vector>
 
 namespace autoware::simpl
@@ -84,26 +86,31 @@ TEST(TestPreProcessor, testPreProcessor)
 
   // histories
   std::vector<double> timestamps{1.0, 2.0, 3.0};  // .size() == num_past
-  const archetype::AgentHistories histories{
+  const std::map<std::string, archetype::AgentHistory> histories{
     // history of agent1
-    archetype::AgentHistory(
-      "agent1", num_past, timestamps,
-      {archetype::AgentState{
-         1.0, 1.0, 1.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true},
-       archetype::AgentState{
-         2.0, 2.0, 2.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true},
-       archetype::AgentState{
-         3.0, 3.0, 3.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true}}),
-    // history of agent2
-    archetype::AgentHistory(
-      "agent2", num_past, timestamps,
-      {archetype::AgentState{
-         4.0, 4.0, 4.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true},
-       archetype::AgentState{
-         5.0, 5.0, 5.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true},
-       archetype::AgentState{
-         3.0, 3.0, 3.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true}}),
-  };
+    {
+      "agent1",
+      archetype::AgentHistory(
+        num_past, timestamps,
+        {archetype::AgentState{
+           1.0, 1.0, 1.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true},
+         archetype::AgentState{
+           2.0, 2.0, 2.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true},
+         archetype::AgentState{
+           3.0, 3.0, 3.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true}}),
+    },
+    {
+      // history of agent2
+      "agent2",
+      archetype::AgentHistory(
+        num_past, timestamps,
+        {archetype::AgentState{
+           4.0, 4.0, 4.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true},
+         archetype::AgentState{
+           5.0, 5.0, 5.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true},
+         archetype::AgentState{
+           3.0, 3.0, 3.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true}}),
+    }};
 
   // map points
   const archetype::MapPoints map_points{
@@ -128,15 +135,18 @@ TEST(TestPreProcessor, testPreProcessor)
   processing::PreProcessor processor(
     label_ids, max_num_agent, num_past, max_num_polyline, max_num_point, break_distance);
 
-  const auto [agent_tensor, map_tensor, rpe_tensor] =
+  const auto [agent_metadata, map_metadata, rpe_tensor] =
     processor.process(histories, map_points, current_ego);
 
-  EXPECT_EQ(agent_tensor.size(), max_num_agent * num_past * agent_tensor.num_attribute);
-  EXPECT_EQ(map_tensor.size(), max_num_polyline * (max_num_point - 1) * map_tensor.num_attribute);
+  EXPECT_EQ(
+    agent_metadata.tensor.size(), max_num_agent * num_past * agent_metadata.tensor.num_attribute);
+  EXPECT_EQ(
+    map_metadata.tensor.size(),
+    max_num_polyline * (max_num_point - 1) * map_metadata.tensor.num_attribute);
   EXPECT_EQ(rpe_tensor.size(), num_rpe * num_rpe * 5);
 
   // Debug print
-  std::cout << agent_tensor << std::endl;
-  std::cout << map_tensor << std::endl;
+  std::cout << agent_metadata.tensor << std::endl;
+  std::cout << map_metadata.tensor << std::endl;
 }
 }  // namespace autoware::simpl

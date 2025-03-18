@@ -27,6 +27,8 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <iterator>
+#include <map>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -49,8 +51,8 @@ PreProcessor::PreProcessor(
 }
 
 output_type PreProcessor::process(
-  const archetype::AgentHistories & histories, const archetype::MapPoints & map_points,
-  const archetype::AgentState & current_ego) const
+  const std::map<std::string, archetype::AgentHistory> & histories,
+  const archetype::MapPoints & map_points, const archetype::AgentState & current_ego) const
 {
   const auto agent_metadata = this->process_agent(histories, current_ego);
 
@@ -58,24 +60,26 @@ output_type PreProcessor::process(
 
   const auto rpe_tensor = this->process_rpe(agent_metadata, map_metadata);
 
-  return {agent_metadata.tensor, map_metadata.tensor, rpe_tensor};
+  return {agent_metadata, map_metadata, rpe_tensor};
 }
 
 AgentMetadata PreProcessor::process_agent(
-  const archetype::AgentHistories & histories, const archetype::AgentState & current_ego) const
+  const std::map<std::string, archetype::AgentHistory> & histories,
+  const archetype::AgentState & current_ego) const
 {
   const size_t num_label = label_ids_.size();
   const size_t num_attribute = num_label + 7;  // L + 7
 
   std::vector<float> in_tensor(max_num_agent_ * num_past_ * num_attribute);
-  std::vector<std::string> agent_ids;
+  std::vector<std::pair<std::string, archetype::AgentState>> current_states;
   NodePoints node_centers(max_num_agent_);
   NodePoints node_vectors(max_num_agent_);
   for (size_t n = 0; n < histories.size(); ++n) {
-    const auto & history = histories.at(n);
-    agent_ids.emplace_back(history.agent_id);
-
+    const auto & [agent_id, history] = *std::next(histories.begin(), n);
     const auto & current_state = history.current();
+
+    // Extract current state
+    current_states.emplace_back(agent_id, current_state);
 
     // Retrieve node data
     const auto center = transform2d(current_state, current_ego);
@@ -126,7 +130,7 @@ AgentMetadata PreProcessor::process_agent(
 
   archetype::AgentTensor agent_tensor(in_tensor, max_num_agent_, num_past_, num_attribute);
 
-  return {agent_tensor, agent_ids, node_centers, node_vectors};
+  return {agent_tensor, current_states, node_centers, node_vectors};
 }
 
 MapMetadata PreProcessor::process_map(

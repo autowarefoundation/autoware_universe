@@ -12,12 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/simpl/archetype/agent.hpp"
-#include "autoware/simpl/conversion/tracked_object.hpp"
+#include "autoware/simpl/archetype/prediction.hpp"
+#include "autoware/simpl/conversion/predicted_object.hpp"
+
+#include <autoware_utils/ros/uuid_helper.hpp>
+#include <rclcpp/duration.hpp>
 
 #include <autoware_perception_msgs/msg/object_classification.hpp>
+#include <autoware_perception_msgs/msg/shape.hpp>
 #include <autoware_perception_msgs/msg/tracked_object.hpp>
-#include <nav_msgs/msg/odometry.hpp>
 
 #include <gtest/gtest.h>
 
@@ -43,9 +46,28 @@ std::vector<autoware_perception_msgs::msg::ObjectClassification> construct_class
   return classifications;
 }
 
-autoware_perception_msgs::msg::TrackedObject construct_object()
+autoware_perception_msgs::msg::Shape construct_shape()
+{
+  autoware_perception_msgs::msg::Shape shape;
+  shape.dimensions.x = 1.0;
+  shape.dimensions.y = 1.0;
+  shape.dimensions.z = 1.0;
+  shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+  return shape;
+}
+
+autoware_perception_msgs::msg::TrackedObject construct_tracked_object()
 {
   autoware_perception_msgs::msg::TrackedObject object;
+
+  // object id
+  object.object_id = autoware_utils::generate_default_uuid();
+
+  // existence probability
+  object.existence_probability = 1.0;
+
+  // shape
+  object.shape = construct_shape();
 
   // classification
   object.classification = construct_classification();
@@ -68,70 +90,40 @@ autoware_perception_msgs::msg::TrackedObject construct_object()
 
   return object;
 }
-
-nav_msgs::msg::Odometry construct_odometry()
-{
-  nav_msgs::msg::Odometry odometry;
-
-  // position
-  odometry.pose.pose.position.x = 1.0;
-  odometry.pose.pose.position.y = 1.0;
-  odometry.pose.pose.position.z = 1.0;
-
-  // orientation
-  odometry.pose.pose.orientation.w = 1.0;
-  odometry.pose.pose.orientation.x = 0.0;
-  odometry.pose.pose.orientation.y = 0.0;
-  odometry.pose.pose.orientation.z = 0.0;
-
-  // velocity
-  odometry.twist.twist.linear.x = 1.0;
-  odometry.twist.twist.linear.y = 1.0;
-  odometry.twist.twist.linear.z = 1.0;
-
-  return odometry;
-}
 }  // namespace
 
-TEST(TestTrackedObject, testToLabel)
+TEST(TestPredictedObject, testToPredictedMode)
 {
-  const auto object = construct_object();
+  constexpr double confidence = 1.0;
+  const std::vector<archetype::PredictedState> waypoints{
+    {1.0, 1.0, 1.0, 1.0}, {2.0, 2.0, 2.0, 2.0}, {3.0, 3.0, 3.0, 3.0}};
+  const auto result =
+    conversion::to_predicted_mode(confidence, waypoints, construct_tracked_object());
 
-  const auto result = conversion::to_label(object);
-
-  // label with the highest probability should be choosen
-  EXPECT_EQ(result, archetype::AgentLabel::LARGE_VEHICLE);
+  EXPECT_EQ(result.confidence, confidence);
+  EXPECT_EQ(result.time_step, rclcpp::Duration::from_seconds(0.1));
+  EXPECT_EQ(result.path.size(), 3);
 }
 
-TEST(TestTrackedObject, testToStateTrackedObject)
+TEST(TestPredictedObject, testFromTrackedObject)
 {
-  const auto object = construct_object();
+  const auto result = conversion::from_tracked_object(construct_tracked_object());
 
-  const auto result = conversion::to_state(object);
-
-  EXPECT_DOUBLE_EQ(result.x, 1.0);
-  EXPECT_DOUBLE_EQ(result.y, 1.0);
-  EXPECT_DOUBLE_EQ(result.z, 1.0);
-  EXPECT_DOUBLE_EQ(result.yaw, 0.0);
-  EXPECT_DOUBLE_EQ(result.vx, 1.0);
-  EXPECT_DOUBLE_EQ(result.vy, 1.0);
-  EXPECT_EQ(result.label, archetype::AgentLabel::LARGE_VEHICLE);
-  EXPECT_TRUE(result.is_valid);
+  EXPECT_DOUBLE_EQ(result.existence_probability, 1.0);
+  EXPECT_EQ(result.shape, construct_shape());
 }
 
-TEST(TestTrackedObject, testToStateOdometry)
+TEST(TestPredictedObject, testToPredictedPose)
 {
-  const auto odometry = construct_odometry();
+  const archetype::PredictedState predicted_state(1.0, 1.0, 1.0, 1.0);
+  const auto result = conversion::to_predicted_pose(predicted_state, construct_tracked_object());
 
-  const auto result = conversion::to_state(odometry);
-
-  EXPECT_DOUBLE_EQ(result.x, 1.0);
-  EXPECT_DOUBLE_EQ(result.y, 1.0);
-  EXPECT_DOUBLE_EQ(result.z, 1.0);
-  EXPECT_DOUBLE_EQ(result.yaw, 0.0);
-  EXPECT_DOUBLE_EQ(result.vx, 1.0);
-  EXPECT_DOUBLE_EQ(result.vy, 1.0);
-  EXPECT_EQ(result.label, archetype::AgentLabel::VEHICLE);
-  EXPECT_TRUE(result.is_valid);
+  EXPECT_DOUBLE_EQ(result.position.x, 1.0);
+  EXPECT_DOUBLE_EQ(result.position.y, 1.0);
+  EXPECT_DOUBLE_EQ(result.position.z, 1.0);
+  EXPECT_DOUBLE_EQ(result.orientation.w, 1.0);
+  EXPECT_DOUBLE_EQ(result.orientation.x, 0.0);
+  EXPECT_DOUBLE_EQ(result.orientation.y, 0.0);
+  EXPECT_DOUBLE_EQ(result.orientation.z, 0.0);
 }
 }  // namespace autoware::simpl

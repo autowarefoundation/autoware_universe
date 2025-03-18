@@ -147,14 +147,11 @@ public:
   /**
    * @brief Construct a new AgentHistory object with a single state.
    *
-   * @param agent_id Agent ID.
    * @param num_past Number of past timestamps.
    * @param current_time Current timestamp.
    * @param state Current agent state.
    */
-  AgentHistory(
-    const std::string & agent_id, size_t num_past, double current_time, const value_type & state)
-  : agent_id(agent_id), queue_(num_past)
+  AgentHistory(size_t num_past, double current_time, const value_type & state) : queue_(num_past)
   {
     update(current_time, state);
   }
@@ -162,15 +159,14 @@ public:
   /**
    * @brief Construct a new AgentHistory object with an array of states.
    *
-   * @param agent_id Agent ID.
    * @param num_past Number of past timestamps.
    * @param timestamps Array of timestamps.
    * @param history Agent states at each timestamp.
    */
   AgentHistory(
-    const std::string & agent_id, size_t num_past, const std::vector<double> & timestamps,
+    size_t num_past, const std::vector<double> & timestamps,
     const std::vector<value_type> & history)
-  : agent_id(agent_id), queue_(num_past)
+  : queue_(num_past)
   {
     // validate inputs
     if (timestamps.size() != num_past) {
@@ -276,8 +272,6 @@ public:
    * @brief Return a read only iterator that points the current state.
    */
   const_iterator end() const noexcept { return queue_.end(); }
-
-  const std::string agent_id;  //!< Agent ID.
 
 private:
   FixedQueue<value_type> queue_;  //!< Agent state container.

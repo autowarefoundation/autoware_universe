@@ -19,6 +19,9 @@
 
 #include <cmath>
 #include <cstddef>
+#include <iterator>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::simpl::processing
@@ -32,13 +35,14 @@ PostProcessor::PostProcessor(size_t num_mode, size_t num_future)
 
 output_type PostProcessor::process(
   const std::vector<float> & scores, const std::vector<float> & trajectories,
-  archetype::AgentStates & current_states) const
+  const std::vector<std::pair<std::string, archetype::AgentState>> & current_states) const
 {
   const auto num_attribute = archetype::PredictedState::num_attribute();
 
   output_type predictions;
   for (size_t n = 0; n < current_states.size(); ++n) {
-    const auto & current_state = current_states.at(n);
+    // const auto & current_state = current_states.at(n);
+    const auto & [agent_id, current_state] = current_states.at(n);
     std::vector<double> agent_scores;
     std::vector<double> agent_trajectories;
     for (size_t m = 0; m < num_mode_; ++m) {
@@ -61,7 +65,7 @@ output_type PostProcessor::process(
         agent_trajectories.emplace_back(ret_vy);
       }
     }
-    predictions.emplace_back(num_mode_, num_future_, agent_scores, agent_trajectories);
+    predictions.emplace_back(agent_id, num_mode_, num_future_, agent_scores, agent_trajectories);
   }
   return predictions;
 }

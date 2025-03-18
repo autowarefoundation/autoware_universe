@@ -32,9 +32,9 @@ archetype::AgentState construct_state()
   return {1.0, 1.0, 1.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true};
 }
 
-archetype::AgentHistory construct_history(const std::string & agent_id)
+archetype::AgentHistory construct_history()
 {
-  archetype::AgentHistory history(agent_id, 10, 1.0, construct_state());
+  archetype::AgentHistory history(10, 1.0, construct_state());
   for (double time = 2.0; time <= 5.0; ++time) {
     if (std::fmod(time, 2) == 0) {
       history.update(time, construct_state());
@@ -80,7 +80,7 @@ TEST(TestAgent, testAgentState)
 
 TEST(TestAgent, testAgentHistory)
 {
-  auto history = construct_history("agent1");
+  auto history = construct_history();
 
   // the latest valid time is 4.0
   EXPECT_TRUE(history.is_ancient(6.0, 2.0));

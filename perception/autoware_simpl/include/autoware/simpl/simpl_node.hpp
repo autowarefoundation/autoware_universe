@@ -132,6 +132,9 @@ private:
   //!< Hasmap of agent ID and its history.
   std::map<std::string, archetype::AgentHistory> history_map_;
 
+  //!< Hashmap of agent ID and tracked object message.
+  std::map<std::string, TrackedObject> tracked_object_map_;
+
   //!< SIMPL detector.
   std::unique_ptr<TrtSimpl> detector_;
 
