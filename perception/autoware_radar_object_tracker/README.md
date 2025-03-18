@@ -39,7 +39,7 @@ See more details in the [models.md](models.md).
 
 ## Parameters
 
-{{ json_to_markdown("perception/autoware_radar_object_tracker/schema/data-association_matrix.schema.json") }}
+{{ json_to_markdown("perception/autoware_radar_object_tracker/schema/data_association_matrix.schema.json") }}
 
 {{ json_to_markdown("perception/autoware_radar_object_tracker/schema/default_tracker.schema.json") }}
 
