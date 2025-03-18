@@ -15,6 +15,7 @@
 #include "autoware/simpl/archetype/agent.hpp"
 #include "autoware/simpl/conversion/tracked_object.hpp"
 
+#include "nav_msgs/msg/odometry.hpp"
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <autoware_perception_msgs/msg/tracked_object.hpp>
 
@@ -67,6 +68,29 @@ autoware_perception_msgs::msg::TrackedObject construct_object()
 
   return object;
 }
+
+nav_msgs::msg::Odometry construct_odometry()
+{
+  nav_msgs::msg::Odometry odometry;
+
+  // position
+  odometry.pose.pose.position.x = 1.0;
+  odometry.pose.pose.position.y = 1.0;
+  odometry.pose.pose.position.z = 1.0;
+
+  // orientation
+  odometry.pose.pose.orientation.w = 1.0;
+  odometry.pose.pose.orientation.x = 0.0;
+  odometry.pose.pose.orientation.y = 0.0;
+  odometry.pose.pose.orientation.z = 0.0;
+
+  // velocity
+  odometry.twist.twist.linear.x = 1.0;
+  odometry.twist.twist.linear.y = 1.0;
+  odometry.twist.twist.linear.z = 1.0;
+
+  return odometry;
+}
 }  // namespace
 
 TEST(TestTrackedObject, testToLabel)
@@ -79,7 +103,7 @@ TEST(TestTrackedObject, testToLabel)
   EXPECT_EQ(result, archetype::AgentLabel::LARGE_VEHICLE);
 }
 
-TEST(TestTrackedObject, testToState)
+TEST(TestTrackedObject, testToStateTrackedObject)
 {
   const auto object = construct_object();
 
@@ -92,6 +116,22 @@ TEST(TestTrackedObject, testToState)
   EXPECT_DOUBLE_EQ(result.vx, 1.0);
   EXPECT_DOUBLE_EQ(result.vy, 1.0);
   EXPECT_EQ(result.label, archetype::AgentLabel::LARGE_VEHICLE);
+  EXPECT_TRUE(result.is_valid);
+}
+
+TEST(TestTrackedObject, testToStateOdometry)
+{
+  const auto odometry = construct_odometry();
+
+  const auto result = conversion::to_state(odometry, true);
+
+  EXPECT_DOUBLE_EQ(result.x, 1.0);
+  EXPECT_DOUBLE_EQ(result.y, 1.0);
+  EXPECT_DOUBLE_EQ(result.z, 1.0);
+  EXPECT_DOUBLE_EQ(result.yaw, 0.0);
+  EXPECT_DOUBLE_EQ(result.vx, 1.0);
+  EXPECT_DOUBLE_EQ(result.vy, 1.0);
+  EXPECT_EQ(result.label, archetype::AgentLabel::VEHICLE);
   EXPECT_TRUE(result.is_valid);
 }
 }  // namespace autoware::simpl

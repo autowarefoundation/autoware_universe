@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -49,10 +50,8 @@ PreProcessor::PreProcessor(
 
 output_type PreProcessor::process(
   const archetype::AgentHistories & histories, const archetype::MapPoints & map_points,
-  size_t ego_index) const
+  const archetype::AgentState & current_ego) const
 {
-  const auto & current_ego = histories.at(ego_index).current();
-
   const auto agent_metadata = this->process_agent(histories, current_ego);
 
   const auto map_metadata = this->process_map(map_points, current_ego);
@@ -69,10 +68,13 @@ AgentMetadata PreProcessor::process_agent(
   const size_t num_attribute = num_label + 7;  // L + 7
 
   std::vector<float> in_tensor(max_num_agent_ * num_past_ * num_attribute);
+  std::vector<std::string> agent_ids;
   NodePoints node_centers(max_num_agent_);
   NodePoints node_vectors(max_num_agent_);
   for (size_t n = 0; n < histories.size(); ++n) {
     const auto & history = histories.at(n);
+    agent_ids.emplace_back(history.agent_id);
+
     const auto & current_state = history.current();
 
     // Retrieve node data
@@ -124,7 +126,7 @@ AgentMetadata PreProcessor::process_agent(
 
   archetype::AgentTensor agent_tensor(in_tensor, max_num_agent_, num_past_, num_attribute);
 
-  return {agent_tensor, node_centers, node_vectors};
+  return {agent_tensor, agent_ids, node_centers, node_vectors};
 }
 
 MapMetadata PreProcessor::process_map(

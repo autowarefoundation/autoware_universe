@@ -14,6 +14,7 @@
 
 #include "autoware/simpl/conversion/lanelet.hpp"
 
+#include "autoware/simpl/archetype/agent.hpp"
 #include "autoware/simpl/archetype/map.hpp"
 
 #include <geometry_msgs/msg/point.hpp>
@@ -56,7 +57,7 @@ LaneletConverter::LaneletConverter(const lanelet::LaneletMapConstPtr lanelet_map
 }
 
 std::optional<std::vector<archetype::MapPoint>> LaneletConverter::convert(
-  const geometry_msgs::msg::Point & position_from, double distance_threshold) const
+  const archetype::AgentState & state_from, double distance_threshold) const
 {
   std::vector<archetype::MapPoint> container;
   for (const auto & lanelet : lanelet_map_ptr_->laneletLayer) {
@@ -66,26 +67,24 @@ std::optional<std::vector<archetype::MapPoint>> LaneletConverter::convert(
       // Convert centerlines
       if (is_roadway_like(lanelet_subtype)) {
         const auto points =
-          from_linestring(lanelet.centerline3d(), label, position_from, distance_threshold);
+          from_linestring(lanelet.centerline3d(), label, state_from, distance_threshold);
         insert_lane_points(points, container);
       }
       // Convert boundaries except of virtual lines
       if (!is_turnable_intersection(lanelet)) {
         const auto left_bound = lanelet.leftBound3d();
         if (is_boundary_like(left_bound)) {
-          const auto points = from_linestring(left_bound, label, position_from, distance_threshold);
+          const auto points = from_linestring(left_bound, label, state_from, distance_threshold);
           insert_lane_points(points, container);
         }
         const auto right_bound = lanelet.rightBound3d();
         if (is_boundary_like(right_bound)) {
-          const auto points =
-            from_linestring(right_bound, label, position_from, distance_threshold);
+          const auto points = from_linestring(right_bound, label, state_from, distance_threshold);
           insert_lane_points(points, container);
         }
       }
     } else if (is_crosswalk_like(lanelet_subtype)) {
-      const auto points =
-        from_polygon(lanelet.polygon3d(), label, position_from, distance_threshold);
+      const auto points = from_polygon(lanelet.polygon3d(), label, state_from, distance_threshold);
       insert_lane_points(points, container);
     }
   }
@@ -95,7 +94,7 @@ std::optional<std::vector<archetype::MapPoint>> LaneletConverter::convert(
     if (is_boundary_like(linestring)) {
       const auto subtype = to_subtype(linestring);
       const auto label = MAP_LABEL_MAPPING.at(subtype.value());
-      const auto points = from_linestring(linestring, label, position_from, distance_threshold);
+      const auto points = from_linestring(linestring, label, state_from, distance_threshold);
       insert_lane_points(points, container);
     }
   }
@@ -105,12 +104,12 @@ std::optional<std::vector<archetype::MapPoint>> LaneletConverter::convert(
 
 std::vector<archetype::MapPoint> LaneletConverter::from_linestring(
   const lanelet::ConstLineString3d & linestring, const archetype::MapLabel & label,
-  const geometry_msgs::msg::Point & position_from, double distance_threshold) const noexcept
+  const archetype::AgentState & state_from, double distance_threshold) const noexcept
 {
   std::vector<archetype::MapPoint> output;
   for (auto itr = linestring.begin(); itr != linestring.end(); ++itr) {
-    if (auto distance = std::hypot(
-          itr->x() - position_from.x, itr->y() - position_from.y, itr->z() - position_from.z);
+    if (auto distance =
+          std::hypot(itr->x() - state_from.x, itr->y() - state_from.y, itr->z() - state_from.z);
         distance > distance_threshold) {
       continue;
     }
@@ -137,12 +136,12 @@ std::vector<archetype::MapPoint> LaneletConverter::from_linestring(
 
 std::vector<archetype::MapPoint> LaneletConverter::from_polygon(
   const lanelet::CompoundPolygon3d & polygon, const archetype::MapLabel & label,
-  const geometry_msgs::msg::Point & position_from, double distance_threshold) const noexcept
+  const archetype::AgentState & state_from, double distance_threshold) const noexcept
 {
   std::vector<archetype::MapPoint> output;
   for (auto itr = polygon.begin(); itr != polygon.end(); ++itr) {
-    if (auto distance = std::hypot(
-          itr->x() - position_from.x, itr->y() - position_from.y, itr->z() - position_from.z);
+    if (auto distance =
+          std::hypot(itr->x() - state_from.x, itr->y() - state_from.y, itr->z() - state_from.z);
         distance > distance_threshold) {
       continue;
     }

@@ -21,6 +21,7 @@
 
 #include <cstddef>
 #include <stdexcept>
+#include <string>
 #include <tuple>
 #include <vector>
 
@@ -67,12 +68,13 @@ struct AbstractMetadata
 struct AgentMetadata : public AbstractMetadata
 {
   AgentMetadata(
-    const archetype::AgentTensor & _tensor, const NodePoints & _centers,
-    const NodePoints & _vectors)
-  : AbstractMetadata(_centers, _vectors), tensor(_tensor)
+    const archetype::AgentTensor & _tensor, const std::vector<std::string> & _agent_ids,
+    const NodePoints & _centers, const NodePoints & _vectors)
+  : AbstractMetadata(_centers, _vectors), tensor(_tensor), agent_ids(_agent_ids)
   {
   }
-  const archetype::AgentTensor tensor;  //!< Input tensor for agent data.
+  const archetype::AgentTensor tensor;       //!< Input tensor for agent data.
+  const std::vector<std::string> agent_ids;  //!< Input agent IDs.
 };
 
 /**
@@ -117,12 +119,12 @@ public:
    *
    * @param histories Vector of histories for each agent.
    * @param map_points Vector of map points.
-   * @param ego_index Index of ego vehicle in `histories`.
+   * @param current_ego Current ego state.
    * @return output_type Returns `AgentTensor`, `MapTensor` and RPE tensor (`std::vector<float>`).
    */
   output_type process(
     const archetype::AgentHistories & histories, const archetype::MapPoints & map_points,
-    size_t ego_index) const;
+    const archetype::AgentState & current_ego) const;
 
 private:
   /**

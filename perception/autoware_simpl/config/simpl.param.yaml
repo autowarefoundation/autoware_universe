@@ -1,15 +1,15 @@
 /**:
   ros__parameters:
     detector:
-      onnx_path: $(var data_path)/simple_100x300.onnx
+      onnx_path: $(var data_path)/simpl_50x300.onnx
     processing:
       labels: [VEHICLE, PEDESTRIAN, MOTORCYCLIST, CYCLIST, LARGE_VEHICLE]
-      max_num_agent: 100
+      max_num_agent: 50
       num_past: 48
       max_num_polyline: 300
       max_num_point: 20
       num_mode: 6
-      num_future: 50
+      num_future: 60
       polyline_break_distance: 20.0
       time_threshold: 1.0
       polyline_distance_threshold: 100.0
