@@ -58,17 +58,15 @@ inline archetype::AgentLabel to_label(const autoware_perception_msgs::msg::Track
  * @brief Convert `TrackedObject` to `AgentState`.
  *
  * @param object Tracked object.
- * @param is_valid Indicates whether this state is valid.
  */
-inline archetype::AgentState to_state(
-  const autoware_perception_msgs::msg::TrackedObject & object, bool is_valid)
+inline archetype::AgentState to_state(const autoware_perception_msgs::msg::TrackedObject & object)
 {
   const auto & pose = object.kinematics.pose_with_covariance.pose;
   const auto yaw = tf2::getYaw(pose.orientation);
   const auto & velocity = object.kinematics.twist_with_covariance.twist.linear;
   const auto label = to_label(object);
 
-  return {pose.position, yaw, velocity, label, is_valid};
+  return {pose.position, yaw, velocity, label, true};
 }
 
 /**
@@ -77,13 +75,13 @@ inline archetype::AgentState to_state(
  * @param odometry Ego odometry.
  * @param is_valid Indicates whether this state is valid.
  */
-inline archetype::AgentState to_state(const nav_msgs::msg::Odometry & odometry, bool is_valid)
+inline archetype::AgentState to_state(const nav_msgs::msg::Odometry & odometry)
 {
   const auto & pose = odometry.pose.pose;
   const auto yaw = tf2::getYaw(pose.orientation);
   const auto & velocity = odometry.twist.twist.linear;
 
-  return {pose.position, yaw, velocity, archetype::AgentLabel::VEHICLE, is_valid};
+  return {pose.position, yaw, velocity, archetype::AgentLabel::VEHICLE, true};
 }
 }  // namespace autoware::simpl::conversion
 #endif  // AUTOWARE__SIMPL__CONVERSION__TRACKED_OBJECT_HPP_

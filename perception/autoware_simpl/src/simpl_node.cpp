@@ -16,6 +16,7 @@
 
 #include "autoware/simpl/archetype/agent.hpp"
 #include "autoware/simpl/archetype/exception.hpp"
+#include "autoware/simpl/conversion/predicted_object.hpp"
 #include "autoware/simpl/conversion/tracked_object.hpp"
 
 #include <autoware/tensorrt_common/utils.hpp>
@@ -96,47 +97,48 @@ void SimplNode::callback(const TrackedObjects::ConstSharedPtr objects_msg)
   RCLCPP_INFO_STREAM(get_logger(), "Subscribe: " << objects_msg->header.frame_id);
 
   // 1. Retrieve the latest ego state.
-  const auto current_ego = subscribe_ego();
-  if (!current_ego) {
+  const auto current_ego_opt = subscribe_ego();
+  if (!current_ego_opt) {
     RCLCPP_WARN(get_logger(), "Failed to subscribe ego vehicle state.");
     return;
   }
+  const auto & current_ego = current_ego_opt.value();
 
   // 2. Convert lanelet to points extracting points closer than threshold from ego vehicle.
-  const auto map_points =
-    lanelet_converter_ptr_->convert(current_ego.value(), polyline_distance_threshold_);
-  if (!map_points) {
+  const auto map_points_opt =
+    lanelet_converter_ptr_->convert(current_ego, polyline_distance_threshold_);
+  if (!map_points_opt) {
     RCLCPP_WARN(get_logger(), "No map points.");
     return;
   }
+  const auto & map_points = map_points_opt.value();
 
   const auto current_time = rclcpp::Time(objects_msg->header.stamp).seconds();
   remove_ancient_history(current_time, objects_msg);
   update_history(current_time, objects_msg);
 
-  std::vector<archetype::AgentHistory> histories;
-  std::vector<archetype::AgentState> current_states;
-  for (const auto & [agent_id, history] : history_map_) {
-    histories.emplace_back(history);
-    current_states.emplace_back(history.current());
-  }
-
   // Execute preprocessing
-  const auto & [agent_tensor, map_tensor, rpe_tensor] =
-    preprocessor_->process(histories, map_points.value(), current_ego.value());
+  const auto [agent_metadata, map_metadata, rpe_tensor] =
+    preprocessor_->process(history_map_, map_points, current_ego);
 
   // Inference
   std::vector<float> scores, trajectories;
   try {
     auto [scores, trajectories] =
-      detector_->do_inference(agent_tensor, map_tensor, rpe_tensor).unwrap();
+      detector_->do_inference(agent_metadata.tensor, map_metadata.tensor, rpe_tensor).unwrap();
   } catch (const archetype::SimplException & e) {
     RCLCPP_ERROR_STREAM(get_logger(), "Inference failed: " << e.what());
     return;
   }
 
   // Execute postprocessing
-  const auto predictions = postprocessor_->process(scores, trajectories, current_states);
+  const auto predictions =
+    postprocessor_->process(scores, trajectories, agent_metadata.current_states);
+
+  // Publish
+  const auto predicted_objects =
+    conversion::to_predicted_objects(objects_msg->header, predictions, tracked_object_map_);
+  objects_publisher_->publish(predicted_objects);
 }
 
 void SimplNode::on_map(const LaneletMapBin::ConstSharedPtr map_msg)
@@ -152,7 +154,7 @@ std::optional<archetype::AgentState> SimplNode::subscribe_ego()
   if (!odometry_msg) {
     return std::nullopt;
   }
-  return conversion::to_state(*odometry_msg, true);
+  return conversion::to_state(*odometry_msg);
 }
 
 void SimplNode::remove_ancient_history(
@@ -167,6 +169,9 @@ void SimplNode::remove_ancient_history(
     const auto & history = history_map_.at(agent_id);
     if (history.is_ancient(current_time, time_threshold_)) {
       history_map_.erase(agent_id);
+      if (tracked_object_map_.count(agent_id) != 0) {
+        tracked_object_map_.erase(agent_id);
+      }
     }
   }
 }
@@ -176,21 +181,22 @@ void SimplNode::update_history(
 {
   std::vector<std::string> observed_ids;
 
-  constexpr bool is_valid = true;
   // Update agent history
-  {
-    for (const auto & object : objects_msg->objects) {
-      const auto agent_id = autoware_utils::to_hex_string(object.object_id);
-      observed_ids.emplace_back(agent_id);
+  for (const auto & object : objects_msg->objects) {
+    const auto agent_id = autoware_utils::to_hex_string(object.object_id);
+    observed_ids.emplace_back(agent_id);
 
-      const auto state = conversion::to_state(object, is_valid);
-      if (history_map_.count(agent_id) == 0) {
-        archetype::AgentHistory history(agent_id, num_past_, current_time, state);
-        history_map_.emplace(agent_id, history);
-      } else {
-        history_map_.at(agent_id).update(current_time, state);
-      }
+    // Update history state
+    const auto state = conversion::to_state(object);
+    if (history_map_.count(agent_id) == 0) {
+      archetype::AgentHistory history(num_past_, current_time, state);
+      history_map_.emplace(agent_id, history);
+    } else {
+      history_map_.at(agent_id).update(current_time, state);
     }
+
+    // Update tracked object map
+    tracked_object_map_.insert_or_assign(agent_id, object);
   }
 
   // Update unobserved histories with empty

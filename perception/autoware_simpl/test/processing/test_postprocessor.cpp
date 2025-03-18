@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/simpl/archetype/agent.hpp"
 #include "autoware/simpl/archetype/datatype.hpp"
 #include "autoware/simpl/processing/postprocessor.hpp"
 
@@ -19,12 +20,15 @@
 
 #include <cmath>
 #include <cstddef>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::simpl
 {
 TEST(TestPostProcessor, testPostProcessor)
 {
+  const std::string agent_id{"agent1"};
   constexpr size_t num_mode = 2;
   constexpr size_t num_future = 3;
   const std::vector<float> scores{
@@ -42,8 +46,8 @@ TEST(TestPostProcessor, testPostProcessor)
     6.0, 6.0, 6.0, 6.0,  // t=3
   };
 
-  archetype::AgentStates current_states{
-    {1.0, 1.0, 1.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true}};
+  std::vector<std::pair<std::string, archetype::AgentState>> current_states{
+    {agent_id, {1.0, 1.0, 1.0, 0.5 * M_PI, 1.0, 1.0, archetype::AgentLabel::VEHICLE, true}}};
 
   const processing::PostProcessor processor(num_mode, num_future);
   const auto results = processor.process(scores, trajectories, current_states);
@@ -52,6 +56,7 @@ TEST(TestPostProcessor, testPostProcessor)
 
   const auto & prediction = results.front();
   // check elements
+  EXPECT_EQ(prediction.agent_id, agent_id);
   EXPECT_EQ(prediction.num_mode, num_mode);
   EXPECT_EQ(prediction.num_future, num_future);
   constexpr double abs_error = 1e-6;

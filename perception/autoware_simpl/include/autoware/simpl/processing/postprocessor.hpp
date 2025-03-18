@@ -17,9 +17,10 @@
 
 #include "autoware/simpl/archetype/agent.hpp"
 #include "autoware/simpl/archetype/datatype.hpp"
-#include "autoware/simpl/archetype/prediction.hpp"
 
 #include <cstddef>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::simpl::processing
@@ -30,7 +31,7 @@ namespace autoware::simpl::processing
 class PostProcessor
 {
 public:
-  using output_type = std::vector<archetype::Prediction>;
+  using output_type = archetype::Predictions;
 
   /**
    * @brief Construct a new PostProcessor object.
@@ -45,11 +46,11 @@ public:
    *
    * @param scores Vector of scores [N'xM].
    * @param trajectories Vector of predicted trajectory attributes [N'xMxTfxDp].
-   * @param current_states Current agent states [N].
+   * @param current_states Agent ID and corresponding current state [N].
    */
   output_type process(
     const std::vector<float> & scores, const std::vector<float> & trajectories,
-    archetype::AgentStates & current_states) const;
+    const std::vector<std::pair<std::string, archetype::AgentState>> & current_states) const;
 
 private:
   size_t num_mode_;    //!< Number of modes (M).

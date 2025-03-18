@@ -56,6 +56,10 @@ if(BUILD_TESTING)
   target_link_libraries(test_prediction ${PROJECT_NAME})
 
   # autoware::simpl::conversion
+  ament_auto_add_gtest(test_predicted_object
+                       test/conversion/test_predicted_object.cpp)
+  target_link_libraries(test_predicted_object ${PROJECT_NAME})
+
   ament_auto_add_gtest(test_tracked_object
                        test/conversion/test_tracked_object.cpp)
   target_link_libraries(test_tracked_object ${PROJECT_NAME})

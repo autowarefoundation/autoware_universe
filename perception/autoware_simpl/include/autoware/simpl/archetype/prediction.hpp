@@ -19,6 +19,7 @@
 #include "autoware/simpl/archetype/exception.hpp"
 
 #include <cstddef>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -59,15 +60,16 @@ public:
   /**
    * @brief Construct a new Prediction object.
    *
+   * @param agent_id Agent ID.
    * @param num_mode Number of predicted modes.
    * @param num_future Number of predicted future timestamps.
    * @param scores Predicted scores for each mode.
    * @param trajectories Predicted trajectories for each mode.
    */
   Prediction(
-    size_t num_mode, size_t num_future, const std::vector<double> & scores,
-    const std::vector<double> & trajectories)
-  : num_mode(num_mode), num_future(num_future)
+    const std::string & agent_id, size_t num_mode, size_t num_future,
+    const std::vector<double> & scores, const std::vector<double> & trajectories)
+  : agent_id(agent_id), num_mode(num_mode), num_future(num_future)
   {
     const size_t num_attribute = PredictedState::num_attribute();
 
@@ -132,8 +134,9 @@ public:
    */
   const_iterator end() const noexcept { return data_.end(); }
 
-  size_t num_mode;    //!< Number of modes.
-  size_t num_future;  //!< Number of future timestamps.
+  const std::string agent_id;  //!< Agent ID.
+  const size_t num_mode;       //!< Number of modes.
+  const size_t num_future;     //!< Number of future timestamps.
 
 private:
   std::vector<value_type> data_;  //!< Container of prediction data.
