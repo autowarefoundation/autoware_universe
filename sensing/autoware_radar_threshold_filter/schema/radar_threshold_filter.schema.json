@@ -84,8 +84,8 @@
       "additionalProperties": false
     }
   },
-  "patternProperties": {
-    "/.*": {
+  "properties": {
+    "/**": {
       "type": "object",
       "properties": {
         "ros__parameters": {
@@ -96,5 +96,6 @@
       "additionalProperties": false
     }
   },
+  "required": ["/**"],
   "additionalProperties": false
 }
