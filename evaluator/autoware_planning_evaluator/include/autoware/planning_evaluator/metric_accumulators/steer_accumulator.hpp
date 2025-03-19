@@ -85,7 +85,7 @@ private:
     : steer_angle(std::numeric_limits<double>::quiet_NaN()),
       steer_rate(std::numeric_limits<double>::quiet_NaN()),
       timestamp(std::numeric_limits<double>::quiet_NaN()),
-      steer_rate_state(SteerRateState::AROUND_ZERO){};
+      steer_rate_state(SteerRateState::AROUND_ZERO) {};
     bool has_steer_rate() const { return std::isfinite(steer_rate); }
     bool has_steer_angle() const { return std::isfinite(steer_angle); }
   } steer_state_;

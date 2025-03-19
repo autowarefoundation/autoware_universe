@@ -212,7 +212,7 @@ private:
   MetricsAccumulator metrics_accumulator_;
 
   // Metrics for publishing
-  
+
   std::unordered_set<Metric> metrics_for_publish_;
   std::unordered_set<OutputMetric> metrics_for_output_;
 
