@@ -21,6 +21,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include <string>
 
 namespace autoware::euclidean_cluster
 {
@@ -55,14 +56,16 @@ void VoxelGridBasedEuclideanCluster::publishDiagnosticsSummary(
   diagnostics_interface_ptr_->clear();
   std::string summary;
   if (skipped_cluster_count > 0) {
-    summary = std::to_string(skipped_cluster_count) + " clusters skipped because cluster point size exceeds the maximum allowed "
-              + std::to_string(max_cluster_size_);
+    summary = std::to_string(skipped_cluster_count) +
+              " clusters skipped because cluster point size exceeds the maximum allowed " +
+              std::to_string(max_cluster_size_);
     diagnostics_interface_ptr_->add_key_value("is_cluster_data_size_within_range", false);
   } else {
     diagnostics_interface_ptr_->add_key_value("is_cluster_data_size_within_range", true);
   }
   diagnostics_interface_ptr_->update_level_and_message(
-    skipped_cluster_count > 0 ? static_cast<int8_t>(diagnostic_msgs::msg::DiagnosticStatus::WARN) : static_cast<int8_t>(diagnostic_msgs::msg::DiagnosticStatus::OK),
+    skipped_cluster_count > 0 ? static_cast<int8_t>(diagnostic_msgs::msg::DiagnosticStatus::WARN)
+                              : static_cast<int8_t>(diagnostic_msgs::msg::DiagnosticStatus::OK),
     summary);
   diagnostics_interface_ptr_->publish(pointcloud_msg->header.stamp);
 }
@@ -198,7 +201,7 @@ bool VoxelGridBasedEuclideanCluster::cluster(
     }
     objects.header = pointcloud_msg->header;
     // Publish the diagnostics summary.
-    publishDiagnosticsSummary(skipped_cluster_count,  pointcloud_msg);
+    publishDiagnosticsSummary(skipped_cluster_count, pointcloud_msg);
   }
 
   return true;
