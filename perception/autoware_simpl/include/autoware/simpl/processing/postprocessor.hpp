@@ -16,10 +16,15 @@
 #define AUTOWARE__SIMPL__PROCESSING__POSTPROCESSOR_HPP_
 
 #include "autoware/simpl/archetype/agent.hpp"
-#include "autoware/simpl/archetype/datatype.hpp"
 
-#include <cstddef>
+#include <autoware_perception_msgs/msg/predicted_object.hpp>
+#include <autoware_perception_msgs/msg/predicted_objects.hpp>
+#include <autoware_perception_msgs/msg/predicted_path.hpp>
+#include <autoware_perception_msgs/msg/tracked_object.hpp>
+#include <std_msgs/msg/header.hpp>
+
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -31,30 +36,38 @@ namespace autoware::simpl::processing
 class PostProcessor
 {
 public:
-  using output_type = archetype::Predictions;
+  using Header = std_msgs::msg::Header;
+  using PredictedObjects = autoware_perception_msgs::msg::PredictedObjects;
+  using PredictedObject = autoware_perception_msgs::msg::PredictedObject;
+  using PredictedPath = autoware_perception_msgs::msg::PredictedPath;
+  using TrackedObject = autoware_perception_msgs::msg::TrackedObject;
+  using output_type = PredictedObjects;
 
   /**
    * @brief Construct a new PostProcessor object.
    *
    * @param num_mode Number of modes (M).
    * @param num_future Number of predicted future timestamps (Tf).
+   * @param score_threshold Score threshold [0, 1].
    */
-  PostProcessor(size_t num_mode, size_t num_future);
+  PostProcessor(size_t num_mode, size_t num_future, double score_threshold);
 
   /**
    * @brief Execute postprocessing.
    *
    * @param scores Vector of scores [N'xM].
    * @param trajectories Vector of predicted trajectory attributes [N'xMxTfxDp].
-   * @param current_states Agent ID and corresponding current state [N].
+   * @param agent_ids Agent IDs [N].
    */
   output_type process(
     const std::vector<float> & scores, const std::vector<float> & trajectories,
-    const std::vector<std::pair<std::string, archetype::AgentState>> & current_states) const;
+    const std::vector<std::string> & agent_ids, const Header & header,
+    const std::unordered_map<std::string, TrackedObject> & tracked_object_map) const;
 
 private:
-  size_t num_mode_;    //!< Number of modes (M).
-  size_t num_future_;  //!< Number of predicted future timestamps (Tf).
+  size_t num_mode_;         //!< Number of modes (M).
+  size_t num_future_;       //!< Number of predicted future timestamps (Tf).
+  double score_threshold_;  //!< Score threshold [0, 1].
 };
 }  // namespace autoware::simpl::processing
 #endif  // AUTOWARE__SIMPL__PROCESSING__POSTPROCESSOR_HPP_

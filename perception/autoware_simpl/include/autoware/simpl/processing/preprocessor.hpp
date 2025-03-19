@@ -16,12 +16,12 @@
 #define AUTOWARE__SIMPL__PROCESSING__PREPROCESSOR_HPP_
 
 #include "autoware/simpl/archetype/agent.hpp"
-#include "autoware/simpl/archetype/datatype.hpp"
+#include "autoware/simpl/archetype/exception.hpp"
 #include "autoware/simpl/archetype/map.hpp"
+#include "autoware/simpl/archetype/polyline.hpp"
+#include "autoware/simpl/archetype/tensor.hpp"
 
-#include <cstddef>
 #include <map>
-#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -35,10 +35,11 @@ namespace autoware::simpl::processing
 struct NodePoint
 {
   NodePoint() = default;
-  NodePoint(double _x, double _y) : x(_x), y(_y) {}
+  NodePoint(double _x, double _y) : x(_x), y(_y), norm(std::hypot(_x, _y)) {}
 
   double x{0.0};
   double y{0.0};
+  double norm{0.0};
 };
 
 using NodePoints = std::vector<NodePoint>;
@@ -54,7 +55,8 @@ struct AbstractMetadata
   : centers(_centers), vectors(_vectors)
   {
     if (centers.size() != vectors.size()) {
-      throw std::runtime_error("Size of node centers and vectors must be same.");
+      throw archetype::SimplException(
+        archetype::SimplError_t::InvalidValue, "Size of node centers and vectors must be same.");
     }
   }
 
@@ -70,15 +72,13 @@ struct AbstractMetadata
 struct AgentMetadata : public AbstractMetadata
 {
   AgentMetadata(
-    const archetype::AgentTensor & _tensor,
-    const std::vector<std::pair<std::string, archetype::AgentState>> & _current_states,
+    const archetype::AgentTensor & _tensor, const std::vector<std::string> & _agent_ids,
     const NodePoints & _centers, const NodePoints & _vectors)
-  : AbstractMetadata(_centers, _vectors), tensor(_tensor), current_states(_current_states)
+  : AbstractMetadata(_centers, _vectors), tensor(_tensor), agent_ids(_agent_ids)
   {
   }
-  const archetype::AgentTensor tensor;  //!< Input tensor for agent data.
-  const std::vector<std::pair<std::string, archetype::AgentState>>
-    current_states;  //!< Agent IDs and corresponding current states.
+  const archetype::AgentTensor tensor;       //!< Input tensor for agent data.
+  const std::vector<std::string> agent_ids;  //!< Agent IDs.
 };
 
 /**
@@ -101,7 +101,8 @@ struct MapMetadata : public AbstractMetadata
 class PreProcessor
 {
 public:
-  using output_type = std::tuple<AgentMetadata, MapMetadata, archetype::RpeTensor>;
+  using RpeTensor = std::vector<float>;
+  using output_type = std::tuple<AgentMetadata, MapMetadata, RpeTensor>;
 
   /**
    * @brief Construct a new Preprocessor object.
@@ -121,13 +122,14 @@ public:
    * @brief Execute preprocessing.
    *
    * @param histories Hasmap of histories for each agent ID.
-   * @param map_points Vector of map points.
+   * @param polylines Vector of polylines.
    * @param current_ego Current ego state.
    * @return output_type Returns `AgentTensor`, `MapTensor` and RPE tensor (`std::vector<float>`).
    */
   output_type process(
-    const std::map<std::string, archetype::AgentHistory> & histories,
-    const archetype::MapPoints & map_points, const archetype::AgentState & current_ego) const;
+    const std::vector<archetype::AgentHistory> & histories,
+    const std::vector<archetype::Polyline> & polylines,
+    const archetype::AgentState & current_ego) const;
 
 private:
   /**
@@ -137,17 +139,18 @@ private:
    * @param current_ego Current ego state.
    */
   AgentMetadata process_agent(
-    const std::map<std::string, archetype::AgentHistory> & histories,
+    const std::vector<archetype::AgentHistory> & histories,
     const archetype::AgentState & current_ego) const;
 
   /**
    * @brief Execute preprocessing for map tensor.
    *
-   * @param map_points Vector of map points.
+   * @param polylines Vector of polylines.
    * @param current_ego Current ego state.
    */
   MapMetadata process_map(
-    const archetype::MapPoints & map_points, const archetype::AgentState & current_ego) const;
+    const std::vector<archetype::Polyline> & polylines,
+    const archetype::AgentState & current_ego) const;
 
   /**
    * @brief Execute preprocessing for RPE tensor (N+K*N+K*D).
@@ -155,7 +158,7 @@ private:
    * @param agent_metadata Processed agent data containing metadata.
    * @param current_ego Processed map data containing its metadata.
    */
-  archetype::RpeTensor process_rpe(
+  RpeTensor process_rpe(
     const AgentMetadata & agent_metadata, const MapMetadata & map_metadata) const;
 
   const std::vector<size_t> label_ids_;  //!< Vector of predictable label ids.

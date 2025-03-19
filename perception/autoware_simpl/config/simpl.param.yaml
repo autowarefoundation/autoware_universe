@@ -1,15 +1,17 @@
 /**:
   ros__parameters:
     detector:
-      onnx_path: $(var data_path)/simpl_50x300.onnx
+      onnx_path: $(var data_path)/simpl_t4_a50x12x8_m300x10x4.onnx
+      engine_path: $(var data_path)/simpl_t4_a50x12x8_m300x10x4.engine
+      precision: fp32
     processing:
       labels: [VEHICLE, PEDESTRIAN, MOTORCYCLIST, CYCLIST, LARGE_VEHICLE]
       max_num_agent: 50
-      num_past: 48
+      num_past: 8
       max_num_polyline: 300
-      max_num_point: 20
+      max_num_point: 10
       num_mode: 6
-      num_future: 60
-      polyline_break_distance: 20.0
-      time_threshold: 1.0
-      polyline_distance_threshold: 100.0
+      num_future: 80
+      score_threshold: 0.15
+      polyline_break_distance: 5.0
+      polyline_distance_threshold: 150.0

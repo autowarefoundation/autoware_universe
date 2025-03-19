@@ -57,7 +57,7 @@ public:
   T unwrap() const
   {
     if (is_ok()) {
-      return std::get<T>(value_);
+      return std::move(std::get<T>(value_));
     } else {
       throw SimplException(std::get<SimplError>(value_));
     }

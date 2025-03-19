@@ -15,10 +15,8 @@
 #ifndef AUTOWARE__SIMPL__TRT_SIMPL_HPP_
 #define AUTOWARE__SIMPL__TRT_SIMPL_HPP_
 
-#include "autoware/simpl/archetype/agent.hpp"
-#include "autoware/simpl/archetype/map.hpp"
-#include "autoware/simpl/archetype/prediction.hpp"
 #include "autoware/simpl/archetype/result.hpp"
+#include "autoware/simpl/archetype/tensor.hpp"
 
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
