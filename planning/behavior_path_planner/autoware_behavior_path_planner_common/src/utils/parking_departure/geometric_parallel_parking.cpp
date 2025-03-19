@@ -617,7 +617,7 @@ std::vector<PathWithLaneId> GeometricParallelParking::planOneTrialClothoid(
   Pose pose_zero;
   pose_zero.position.x = 0;
   pose_zero.position.y = 0;
-  pose_zero.orientation = createQuaternionFromYaw(0);
+  pose_zero.orientation = create_quaternion_from_yaw(0);
   const auto clothoid_min =
     generateClothoidPath(R_E_far, L_min, pose_zero, arc_path_interval, true, true);
   const auto q = clothoid_min.points.back().point.pose;
@@ -633,22 +633,22 @@ std::vector<PathWithLaneId> GeometricParallelParking::planOneTrialClothoid(
 
   const double mu_offset = (left_side_parking ^ is_forward) ? -mu : mu;
 
-  const Pose arc_end_pose = calcOffsetPose(goal_pose, end_pose_offset, 0, 0);
+  const Pose arc_end_pose = calc_offset_pose(goal_pose, end_pose_offset, 0, 0);
 
-  const Pose start_pose_dummy = calcOffsetPose(start_pose, 0, 0, 0, mu_offset);
-  const Pose arc_end_pose_dummy = calcOffsetPose(arc_end_pose, 0, 0, 0, mu_offset);
+  const Pose start_pose_dummy = calc_offset_pose(start_pose, 0, 0, 0, mu_offset);
+  const Pose arc_end_pose_dummy = calc_offset_pose(arc_end_pose, 0, 0, 0, mu_offset);
 
   const double self_yaw = tf2::getYaw(start_pose_dummy.orientation);
   const double goal_yaw = tf2::getYaw(arc_end_pose_dummy.orientation);
-  const double psi = normalizeRadian(self_yaw - goal_yaw);
+  const double psi = normalize_radian(self_yaw - goal_yaw);
 
-  const Pose C_far = left_side_parking ? calcOffsetPose(arc_end_pose_dummy, 0, -R_1, 0)
-                                       : calcOffsetPose(arc_end_pose_dummy, 0, R_1, 0);
-  const double d_C_far_Einit = calcDistance2d(C_far, start_pose_dummy);
+  const Pose C_far = left_side_parking ? calc_offset_pose(arc_end_pose_dummy, 0, -R_1, 0)
+                                       : calc_offset_pose(arc_end_pose_dummy, 0, R_1, 0);
+  const double d_C_far_Einit = calc_distance2d(C_far, start_pose_dummy);
 
-  const Point C_far_goal_coords = inverseTransformPoint(C_far.position, arc_end_pose_dummy);
+  const Point C_far_goal_coords = inverse_transform_point(C_far.position, arc_end_pose_dummy);
   const Point self_point_goal_coords =
-    inverseTransformPoint(start_pose_dummy.position, arc_end_pose_dummy);
+    inverse_transform_point(start_pose_dummy.position, arc_end_pose_dummy);
 
   const double angle_offset =
     std::asin((self_point_goal_coords.y - C_far_goal_coords.y) / d_C_far_Einit);
@@ -665,7 +665,7 @@ std::vector<PathWithLaneId> GeometricParallelParking::planOneTrialClothoid(
   // combine road and shoulder lanes
   // cut the road lanes up to start_pose to prevent unintended processing for overlapped lane
   lanelet::ConstLanelets lanes{};
-  autoware::universe_utils::Point2d start_point2d(
+  autoware_utils::Point2d start_point2d(
     start_pose_dummy.position.x, start_pose_dummy.position.y);
   for (const auto & lane : road_lanes) {
     if (boost::geometry::within(start_point2d, lane.polygon2d().basicPolygon())) {
@@ -703,8 +703,8 @@ std::vector<PathWithLaneId> GeometricParallelParking::planOneTrialClothoid(
   }
 
   // Generate arc path(first turn -> second turn)
-  const Pose C_near = left_side_parking ? calcOffsetPose(start_pose_dummy, 0, R_E_near, 0, 0)
-                                        : calcOffsetPose(start_pose_dummy, 0, -R_E_near, 0, 0);
+  const Pose C_near = left_side_parking ? calc_offset_pose(start_pose_dummy, 0, R_E_near, 0, 0)
+                                        : calc_offset_pose(start_pose_dummy, 0, -R_E_near, 0, 0);
   const double alpha_tot_near = std::acos(
     (std::pow(R_E_near, 2) + std::pow(R_E_near + R_1, 2) - std::pow(d_C_far_Einit, 2)) /
     (2 * R_E_near * (R_E_near + R_1)));
@@ -716,7 +716,7 @@ std::vector<PathWithLaneId> GeometricParallelParking::planOneTrialClothoid(
     (left_side_parking ? -1.0 : 1.0) * R_1 * (1 - std::cos(alpha_tot_far));
   const double inflection_yaw_offset =
     (is_forward ^ left_side_parking ? -1.0 : 1.0) * alpha_tot_far + mu_offset;
-  const Pose inflection_point = calcOffsetPose(
+  const Pose inflection_point = calc_offset_pose(
     arc_end_pose_dummy, inflection_x_offset, inflection_y_offset, 0, inflection_yaw_offset);
 
   const auto generateClothoidalSequenceWithHeader =
@@ -1040,10 +1040,10 @@ PathWithLaneId GeometricParallelParking::generateClothoidPath(
     Pose pose;
     pose.position.x = x;
     pose.position.y = y;
-    pose.orientation = createQuaternionFromYaw(yaw);
+    pose.orientation = create_quaternion_from_yaw(yaw);
     // get pose in map coords
     PathPointWithLaneId p{};
-    p.point.pose = transformPose(pose, start_pose);
+    p.point.pose = transform_pose(pose, start_pose);
     return p;
   };
 
