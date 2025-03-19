@@ -185,6 +185,8 @@ GoalPlannerParameters GoalPlannerModuleManager::initGoalPlannerParameters(
       node->declare_parameter<double>(ns + "after_forward_parking_straight_distance");
     p.parallel_parking_parameters.forward_parking_velocity =
       node->declare_parameter<double>(ns + "forward_parking_velocity");
+    p.parallel_parking_parameters.clothoid_forward_parking_velocity =
+      node->declare_parameter<double>(ns + "clothoid_forward_parking_velocity");
     p.parallel_parking_parameters.forward_parking_lane_departure_margin =
       node->declare_parameter<double>(ns + "forward_parking_lane_departure_margin");
     p.parallel_parking_parameters.forward_parking_path_interval =
@@ -206,6 +208,8 @@ GoalPlannerParameters GoalPlannerModuleManager::initGoalPlannerParameters(
       node->declare_parameter<double>(ns + "after_backward_parking_straight_distance");
     p.parallel_parking_parameters.backward_parking_velocity =
       node->declare_parameter<double>(ns + "backward_parking_velocity");
+    p.parallel_parking_parameters.clothoid_backward_parking_velocity =
+      node->declare_parameter<double>(ns + "clothoid_backward_parking_velocity");
     p.parallel_parking_parameters.backward_parking_lane_departure_margin =
       node->declare_parameter<double>(ns + "backward_parking_lane_departure_margin");
     p.parallel_parking_parameters.backward_parking_path_interval =
@@ -591,6 +595,9 @@ void GoalPlannerModuleManager::updateModuleParams(
       parameters, ns + "forward_parking_velocity",
       p->parallel_parking_parameters.forward_parking_velocity);
     update_param<double>(
+      parameters, ns + "clothoid_forward_parking_velocity",
+      p->parallel_parking_parameters.clothoid_forward_parking_velocity);
+    update_param<double>(
       parameters, ns + "forward_parking_lane_departure_margin",
       p->parallel_parking_parameters.forward_parking_lane_departure_margin);
     update_param<double>(
@@ -617,6 +624,9 @@ void GoalPlannerModuleManager::updateModuleParams(
     update_param<double>(
       parameters, ns + "backward_parking_velocity",
       p->parallel_parking_parameters.backward_parking_velocity);
+    update_param<double>(
+      parameters, ns + "clothoid_backward_parking_velocity",
+      p->parallel_parking_parameters.clothoid_backward_parking_velocity);
     update_param<double>(
       parameters, ns + "backward_parking_lane_departure_margin",
       p->parallel_parking_parameters.backward_parking_lane_departure_margin);
