@@ -58,7 +58,7 @@ private:
   int min_points_number_per_voxel_;
 
   void publishDiagnosticsSummary(
-    const std::vector<std::string> & warnings,
+    size_t skipped_cluster_count,
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pointcloud_msg);
   autoware_utils::DiagnosticsInterface * diagnostics_interface_ptr_{nullptr};
 };
