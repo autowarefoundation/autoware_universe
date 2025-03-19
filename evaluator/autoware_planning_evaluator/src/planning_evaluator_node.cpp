@@ -32,6 +32,7 @@
 #include <limits>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace planning_diagnostics
