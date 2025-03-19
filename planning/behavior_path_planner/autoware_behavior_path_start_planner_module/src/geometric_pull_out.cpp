@@ -83,7 +83,8 @@ std::optional<PullOutPath> GeometricPullOut::plan(
   // collision check with stop objects in pull out lanes
   const auto arc_path = planner_.getArcPath();
 
-  const double velocity = parallel_parking_parameters_.forward_parking_velocity;
+  const double velocity = use_clothoid_ ? parallel_parking_parameters_.clothoid_forward_parking_velocity
+                                        : parallel_parking_parameters_.forward_parking_velocity;
 
   if (parameters_.divide_pull_out_path) {
     output.partial_paths = planner_.getPaths();

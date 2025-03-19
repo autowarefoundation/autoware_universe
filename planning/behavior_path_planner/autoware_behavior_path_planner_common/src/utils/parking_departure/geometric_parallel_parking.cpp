@@ -124,10 +124,10 @@ std::vector<PathWithLaneId> GeometricParallelParking::generatePullOverPaths(
     const double L_min =
       is_forward
         ? std::abs(
-            parameters_.forward_parking_velocity * (parameters_.forward_parking_max_steer_angle /
+            parameters_.clothoid_forward_parking_velocity * (parameters_.forward_parking_max_steer_angle /
                                                     parameters_.forward_parking_steer_rate_lim))
         : std::abs(
-            parameters_.backward_parking_velocity * (parameters_.backward_parking_max_steer_angle /
+            parameters_.clothoid_backward_parking_velocity * (parameters_.backward_parking_max_steer_angle /
                                                      parameters_.backward_parking_steer_rate_lim));
     arc_paths = planOneTrialClothoid(
       start_pose, goal_pose, R_E_far, L_min, road_lanes, pull_over_lanes, is_forward,
@@ -216,9 +216,11 @@ bool GeometricParallelParking::planPullOver(
         continue;
       }
 
+      const auto velocity = use_clothoid ? parameters_.clothoid_forward_parking_velocity 
+                                         : parameters_.forward_parking_velocity;
       const auto paths = generatePullOverPaths(
         *start_pose, goal_pose, R_E_far, road_lanes, pull_over_lanes, is_forward, left_side_parking,
-        use_clothoid, end_pose_offset, parameters_.forward_parking_velocity);
+        use_clothoid, end_pose_offset, velocity);
       if (!paths.empty()) {
         paths_ = paths;
         return true;
@@ -238,9 +240,11 @@ bool GeometricParallelParking::planPullOver(
         continue;
       }
 
+      const auto velocity = use_clothoid ? parameters_.clothoid_backward_parking_velocity 
+                                         : parameters_.backward_parking_velocity;
       const auto paths = generatePullOverPaths(
         *start_pose, goal_pose, R_E_min_, road_lanes, pull_over_lanes, is_forward,
-        left_side_parking, use_clothoid, end_pose_offset, parameters_.backward_parking_velocity);
+        left_side_parking, use_clothoid, end_pose_offset, velocity);
       if (!paths.empty()) {
         paths_ = paths;
         return true;
@@ -873,11 +877,11 @@ std::vector<PathWithLaneId> GeometricParallelParking::planOneTrialClothoid(
 
   // set terminal velocity and acceleration(temporary implementation)
   if (is_forward) {
-    pairs_terminal_velocity_and_accel_.emplace_back(parameters_.forward_parking_velocity, 0.0);
-    pairs_terminal_velocity_and_accel_.emplace_back(parameters_.forward_parking_velocity, 0.0);
+    pairs_terminal_velocity_and_accel_.emplace_back(parameters_.clothoid_forward_parking_velocity, 0.0);
+    pairs_terminal_velocity_and_accel_.emplace_back(parameters_.clothoid_forward_parking_velocity, 0.0);
   } else {
-    pairs_terminal_velocity_and_accel_.emplace_back(parameters_.backward_parking_velocity, 0.0);
-    pairs_terminal_velocity_and_accel_.emplace_back(parameters_.backward_parking_velocity, 0.0);
+    pairs_terminal_velocity_and_accel_.emplace_back(parameters_.clothoid_backward_parking_velocity, 0.0);
+    pairs_terminal_velocity_and_accel_.emplace_back(parameters_.clothoid_backward_parking_velocity, 0.0);
   }
 
   // set pull_over start and end pose
