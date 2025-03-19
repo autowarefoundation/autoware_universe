@@ -47,6 +47,7 @@ struct ParallelParkingParameters
   // forward parking
   double after_forward_parking_straight_distance{0.0};
   double forward_parking_velocity{0.0};
+  double clothoid_forward_parking_velocity{0.0};
   double forward_parking_lane_departure_margin{0.0};
   double forward_parking_path_interval{0.0};
   double forward_parking_max_steer_angle{0.0};
@@ -55,6 +56,7 @@ struct ParallelParkingParameters
   // backward parking
   double after_backward_parking_straight_distance{0.0};
   double backward_parking_velocity{0.0};
+  double clothoid_backward_parking_velocity{0.0};
   double backward_parking_lane_departure_margin{0.0};
   double backward_parking_path_interval{0.0};
   double backward_parking_max_steer_angle{0.0};
