@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__PLANNING_EVALUATOR__METRIC_ACCUMULATORS_PLANNING_FACTOR_ACCUMULATOR_HPP_
-#define AUTOWARE__PLANNING_EVALUATOR__METRIC_ACCUMULATORS_PLANNING_FACTOR_ACCUMULATOR_HPP_
+#ifndef AUTOWARE__PLANNING_EVALUATOR__METRIC_ACCUMULATORS__PLANNING_FACTOR_ACCUMULATOR_HPP_
+#define AUTOWARE__PLANNING_EVALUATOR__METRIC_ACCUMULATORS__PLANNING_FACTOR_ACCUMULATOR_HPP_
 
 #include "autoware/planning_evaluator/metrics/metric.hpp"
 #include "autoware/planning_evaluator/metrics/output_metric.hpp"
@@ -73,8 +73,8 @@ public:
 
   /**
    * @brief add the metric message to the MetricArrayMsg for the given Metric and module name
-    * @param metric the metric to add to the MetricArrayMsg
-    * @param metrics_msg the MetricArrayMsg to add the metric to
+   * @param metric the metric to add to the MetricArrayMsg
+   * @param metrics_msg the MetricArrayMsg to add the metric to
    */
   bool addMetricMsg(const Metric & metric, MetricArrayMsg & metrics_msg) const;
 
@@ -109,4 +109,4 @@ private:
   std::unordered_set<std::string> stop_decision_modules_;
 };
 }  // namespace planning_diagnostics
-#endif  // AUTOWARE__PLANNING_EVALUATOR__METRIC_ACCUMULATORS_PLANNING_FACTOR_ACCUMULATOR_HPP_
+#endif  // AUTOWARE__PLANNING_EVALUATOR__METRIC_ACCUMULATORS__PLANNING_FACTOR_ACCUMULATOR_HPP_
