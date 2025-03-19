@@ -28,7 +28,7 @@
       - abnormal_stop_decision
       - blinker_change_count
       - steer_change_count
-    
+
     metrics_for_output:
       - curvature
       - point_interval
@@ -68,7 +68,7 @@
 
     stop_decision:
       topic_prefix: /planning/planning_factors/ # topic prefix for planning factors
-      time_count_threshold_s: 60.0 # [s] time threshold to count a stop as a new one 
+      time_count_threshold_s: 60.0 # [s] time threshold to count a stop as a new one
       dist_count_threshold_m: 5.0 # [m] distance threshold to count a stop as a new one
       abnormal_deceleration_threshold_mps2: 2.0 # [m/s^2] deceleration threshold for a stop to be considered as abnormal
       module_list:  # list of modules to be checked for stop deciation.
@@ -115,4 +115,3 @@
 #  写测试，做PR。
 #  整理单元测试和schema。
 #  整理READEME文档。
-
