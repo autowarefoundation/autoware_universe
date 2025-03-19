@@ -12,30 +12,52 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/simpl/simpl_node.hpp"
+#include "autoware/simpl/simpl_ego_node.hpp"
 
-#include "autoware/simpl/archetype/agent.hpp"
-#include "autoware/simpl/archetype/map.hpp"
 #include "autoware/simpl/conversion/tracked_object.hpp"
 #include "autoware/simpl/debug/marker.hpp"
-#include "autoware/simpl/processing/preprocessor.hpp"
 
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
+#include <rclcpp/time.hpp>
 
 #include <glog/logging.h>
 #include <lanelet2_core/LaneletMap.h>
 
 #include <functional>
 #include <memory>
+#include <ostream>
 #include <string>
-#include <unordered_set>
-#include <utility>
 #include <vector>
 
 namespace autoware::simpl
 {
-SimplNode::SimplNode(const rclcpp::NodeOptions & options) : rclcpp::Node("simpl", options)
+namespace
+{
+autoware_perception_msgs::msg::TrackedObject to_tracked_object(
+  const nav_msgs::msg::Odometry & odometry)
+{
+  autoware_perception_msgs::msg::TrackedObject object;
+
+  object.existence_probability = 1.0;
+
+  autoware_perception_msgs::msg::ObjectClassification classification;
+  classification.probability = 1.0;
+  classification.label = autoware_perception_msgs::msg::ObjectClassification::CAR;
+  object.classification.emplace_back(classification);
+
+  object.kinematics.pose_with_covariance = odometry.pose;
+  object.kinematics.twist_with_covariance = odometry.twist;
+
+  object.shape.dimensions.x = 0.5;
+  object.shape.dimensions.y = 0.5;
+  object.shape.dimensions.z = 0.5;
+
+  return object;
+}
+}  // namespace
+
+SimplEgoNode::SimplEgoNode(const rclcpp::NodeOptions & options) : rclcpp::Node("simpl_ego", options)
 {
   google::InitGoogleLogging(get_name());
   google::InstallFailureSignalHandler();
@@ -44,12 +66,9 @@ SimplNode::SimplNode(const rclcpp::NodeOptions & options) : rclcpp::Node("simpl"
     // Subscriptions and publisher
     using std::placeholders::_1;
 
-    objects_subscription_ = create_subscription<TrackedObjects>(
-      "~/input/objects", rclcpp::QoS{1}, std::bind(&SimplNode::callback, this, _1));
-
     lanelet_subscription_ = create_subscription<LaneletMapBin>(
       "~/input/vector_map", rclcpp::QoS{1}.transient_local(),
-      std::bind(&SimplNode::on_map, this, _1));
+      std::bind(&SimplEgoNode::on_map, this, _1));
 
     objects_publisher_ = create_publisher<PredictedObjects>("~/output/objects", rclcpp::QoS{1});
   }
@@ -98,7 +117,12 @@ SimplNode::SimplNode(const rclcpp::NodeOptions & options) : rclcpp::Node("simpl"
   }
 
   {
-    // Debug processing time
+    using std::chrono_literals::operator""ms;
+    timer_ = this->create_wall_timer(100ms, std::bind(&SimplEgoNode::callback, this));
+  }
+
+  {
+    // processing time
     stopwatch_ptr_ =
       std::make_unique<autoware_utils_system::StopWatch<std::chrono::milliseconds>>();
     stopwatch_ptr_->tic("cyclic_time");
@@ -113,12 +137,10 @@ SimplNode::SimplNode(const rclcpp::NodeOptions & options) : rclcpp::Node("simpl"
       this->create_publisher<MarkerArray>("~/debug/histories", rclcpp::QoS{1});
     polyline_marker_publisher_ =
       this->create_publisher<MarkerArray>("~/debug/map_points", rclcpp::QoS{1});
-    processed_map_marker_publisher_ =
-      this->create_publisher<MarkerArray>("~/debug/processed_map", rclcpp::QoS{1});
   }
 }
 
-void SimplNode::callback(const TrackedObjects::ConstSharedPtr objects_msg)
+void SimplEgoNode::callback()
 {
   stopwatch_ptr_->toc("processing_time", true);
 
@@ -137,21 +159,20 @@ void SimplNode::callback(const TrackedObjects::ConstSharedPtr objects_msg)
   }
   const auto & polylines = polylines_opt.value();
 
-  const auto histories = update_history(objects_msg);
+  std::vector<archetype::AgentHistory> histories;
+  for (const auto & [_, history] : history_map_) {
+    histories.emplace_back(history);
+  }
 
   const auto [agent_metadata, map_metadata, rpe_tensor] =
     preprocessor_->process(histories, polylines, current_ego);
-
-  const auto processed_map_marker_array = debug::create_processed_map_marker_array(
-    map_metadata.tensor.polylines, map_metadata.centers, map_metadata.vectors, objects_msg->header);
-  processed_map_marker_publisher_->publish(processed_map_marker_array);
 
   try {
     const auto [scores, trajectories] =
       detector_->do_inference(agent_metadata.tensor, map_metadata.tensor, rpe_tensor).unwrap();
 
     const auto predicted_objects = postprocessor_->process(
-      scores, trajectories, agent_metadata.agent_ids, objects_msg->header, tracked_object_map_);
+      scores, trajectories, agent_metadata.agent_ids, *current_header_, tracked_object_map_);
 
     objects_publisher_->publish(predicted_objects);
   } catch (const archetype::SimplException & e) {
@@ -172,15 +193,15 @@ void SimplNode::callback(const TrackedObjects::ConstSharedPtr objects_msg)
   {
     // debug marker
     const auto history_marker_array =
-      debug::create_history_marker_array(history_map_, objects_msg->header);
+      debug::create_history_marker_array(history_map_, *current_header_);
     const auto polyline_marker_array =
-      debug::create_polyline_marker_array(polylines, objects_msg->header);
+      debug::create_polyline_marker_array(polylines, *current_header_);
     history_marker_publisher_->publish(history_marker_array);
     polyline_marker_publisher_->publish(polyline_marker_array);
   }
 }
 
-void SimplNode::on_map(const LaneletMapBin::ConstSharedPtr map_msg)
+void SimplEgoNode::on_map(const LaneletMapBin::ConstSharedPtr map_msg)
 {
   lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
   lanelet::utils::conversion::fromBinMsg(*map_msg, lanelet_map_ptr_);
@@ -188,56 +209,36 @@ void SimplNode::on_map(const LaneletMapBin::ConstSharedPtr map_msg)
   lanelet_converter_ptr_->convert(lanelet_map_ptr_);
 }
 
-std::optional<archetype::AgentState> SimplNode::subscribe_ego()
+std::optional<archetype::AgentState> SimplEgoNode::subscribe_ego()
 {
   const auto odometry_msg = odometry_subscription_.take_data();
   if (!odometry_msg) {
     return std::nullopt;
   }
-  return conversion::to_agent_state(*odometry_msg);
+  // update history
+  const auto current_ego = conversion::to_agent_state(*odometry_msg);
+  update_history(current_ego);
+
+  // update current header
+  current_header_ = odometry_msg->header;
+
+  // update tracked object information
+  const auto tracked_object = to_tracked_object(*odometry_msg);
+  tracked_object_map_.insert_or_assign(ego_id, tracked_object);
+
+  return current_ego;
 }
 
-std::vector<archetype::AgentHistory> SimplNode::update_history(
-  const TrackedObjects::ConstSharedPtr objects_msg)
+void SimplEgoNode::update_history(const archetype::AgentState & current_ego) noexcept
 {
-  std::vector<archetype::AgentHistory> histories;
-  if (!objects_msg) {
-    return histories;
+  if (history_map_.count(ego_id) == 0) {
+    archetype::AgentHistory history(ego_id, num_past_, current_ego);
+    history_map_.emplace(ego_id, history);
+  } else {
+    history_map_.at(ego_id).update(current_ego);
   }
-
-  std::unordered_set<std::string> observed_ids;
-
-  // update agent histories
-  for (const auto & object : objects_msg->objects) {
-    const auto agent_id = autoware_utils::to_hex_string(object.object_id);
-    observed_ids.insert(agent_id);
-
-    // update history with the current state
-    const auto state = conversion::to_agent_state(object);
-    auto [it, init] = history_map_.try_emplace(agent_id, agent_id, num_past_, state);
-    if (!init) {
-      it->second.update(state);
-    }
-    histories.emplace_back(it->second);
-
-    // update tracked object map
-    tracked_object_map_.insert_or_assign(agent_id, object);
-  }
-
-  // remove histories that are not observed at the current
-  for (auto itr = history_map_.begin(); itr != history_map_.end();) {
-    const auto & agent_id = itr->first;
-    // update unobserved history with empty
-    if (std::find(observed_ids.begin(), observed_ids.end(), agent_id) == observed_ids.end()) {
-      tracked_object_map_.erase(agent_id);
-      itr = history_map_.erase(itr);
-    } else {
-      ++itr;
-    }
-  }
-  return histories;
 }
 }  // namespace autoware::simpl
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::simpl::SimplNode);
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::simpl::SimplEgoNode);

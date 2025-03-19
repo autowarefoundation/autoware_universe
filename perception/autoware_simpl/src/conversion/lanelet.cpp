@@ -14,17 +14,11 @@
 
 #include "autoware/simpl/conversion/lanelet.hpp"
 
-#include "autoware/simpl/archetype/agent.hpp"
 #include "autoware/simpl/archetype/map.hpp"
+#include "autoware/simpl/archetype/polyline.hpp"
 
-#include <geometry_msgs/msg/point.hpp>
-
-#include <lanelet2_core/Forward.h>
-#include <lanelet2_core/primitives/CompoundPolygon.h>
-#include <lanelet2_core/primitives/LineString.h>
-
+#include <algorithm>
 #include <cmath>
-#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -49,120 +43,237 @@ const std::unordered_map<std::string, archetype::MapLabel> MAP_LABEL_MAPPING = {
   {"crosswalk", archetype::MapLabel::CROSSWALK},
   {"unknown", archetype::MapLabel::UNKNOWN},
 };
-}  // namespace
 
-LaneletConverter::LaneletConverter(const lanelet::LaneletMapConstPtr lanelet_map_ptr)
-: lanelet_map_ptr_(lanelet_map_ptr)
+/**
+ * @brief Try to retrieve the `type` attribute of the linestring object.
+ *
+ * @param linestring LineString object.
+ */
+inline lanelet::Optional<std::string> to_type(
+  const lanelet::ConstLineString3d & linestring) noexcept
 {
+  return linestring.hasAttribute("type") ? linestring.attribute("type").as<std::string>()
+                                         : lanelet::Optional<std::string>();
 }
 
-std::optional<std::vector<archetype::MapPoint>> LaneletConverter::convert(
-  const archetype::AgentState & state_from, double distance_threshold) const
+/**
+ * @brief Try to retrieve the `subtype` attribute of the lanelet object.
+ *
+ * @param lanelet Lanelet object.
+ */
+lanelet::Optional<std::string> to_subtype(const lanelet::ConstLanelet & lanelet) noexcept
 {
-  std::vector<archetype::MapPoint> container;
-  for (const auto & lanelet : lanelet_map_ptr_->laneletLayer) {
+  return lanelet.hasAttribute("subtype") ? lanelet.attribute("subtype").as<std::string>()
+                                         : lanelet::Optional<std::string>();
+}
+
+/**
+ * @brief Try to retrieve the `subtype` attribute of the linestring object.
+ *
+ * @param linestring LineString object.
+ */
+lanelet::Optional<std::string> to_subtype(const lanelet::ConstLineString3d & linestring) noexcept
+{
+  return linestring.hasAttribute("subtype") ? linestring.attribute("subtype").as<std::string>()
+                                            : lanelet::Optional<std::string>();
+}
+
+archetype::MapLabel to_boundary_label(const lanelet::ConstLineString3d & linestring)
+{
+  if (auto t = to_type(linestring); t && MAP_LABEL_MAPPING.count(*t)) {
+    return MAP_LABEL_MAPPING.at(*t);
+  } else if (auto t = to_subtype(linestring); t && MAP_LABEL_MAPPING.count(*t)) {
+    return MAP_LABEL_MAPPING.at(*t);
+  } else {
+    return archetype::MapLabel::UNKNOWN;
+  }
+}
+
+/**
+ * @brief Check if the specified lanelet subtype is kind of the roadway.
+ *
+ * @param subtype Subtype of the corresponding lanelet.
+ * @return True if the subtype is the one of the (road, highway, road_shoulder).
+ */
+bool is_roadway_like(const lanelet::Optional<std::string> & subtype) noexcept
+{
+  if (!subtype) {
+    return false;
+  }
+  const auto & subtype_str = subtype.value();
+  return subtype_str == "road" || subtype_str == "highway" || subtype_str == "road_shoulder" ||
+         subtype_str == "bicycle_lane";
+}
+
+/**
+ * @brief Check if the specified linestring is kind of the boundary.
+ *
+ * @param linestring 3D linestring.
+ * @return True if the type is the one of the (line_thin, line_thick, road_boarder, virtual).
+ */
+bool is_boundary_like(const lanelet::ConstLineString3d & linestring)
+{
+  const auto type = to_type(linestring);
+  if (!type) {
+    return false;
+  }
+
+  const auto & type_str = type.value();
+  return (
+    type_str == "line_thin" || type_str == "line_thick" || type_str == "road_border" ||
+    type_str == "virtual");
+}
+
+/**
+ * @brief Check if the specified linestring is the kind of crosswalk.
+ *
+ * @param subtype Subtype of the corresponding polygon.
+ * @return True if the lanelet subtype is the one of the (crosswalk,).
+ */
+bool is_crosswalk_like(const lanelet::Optional<std::string> & subtype)
+{
+  if (!subtype) {
+    return false;
+  }
+
+  const auto & subtype_str = subtype.value();
+  return subtype_str == "crosswalk";
+}
+
+/**
+ * @brief Check if the specified lanelet id has already been taken and contained in the set of ids.
+ *
+ * @param taken_boundary_ids Vector of taken lanelet ids.
+ * @param id Target lanelet id.
+ * @return True if the target lanelet id is contained in the taken boundary ids.
+ */
+bool is_taken_boundary(const lanelet::Ids & taken_boundary_ids, const lanelet::Id & id)
+{
+  return std::find(taken_boundary_ids.begin(), taken_boundary_ids.end(), id) !=
+         taken_boundary_ids.end();
+}
+
+archetype::Polyline interpolate_waypoints(
+  const archetype::Polyline & input, size_t num_waypoint = 20)
+{
+  if (input.size() < 2 || num_waypoint < 2) {
+    return input;
+  }
+
+  // 1. compute cumulative distances
+  std::vector<double> cumulative_distances(input.size(), 0.0);
+  for (size_t i = 1; i < input.size(); ++i) {
+    cumulative_distances[i] = cumulative_distances[i - 1] + input[i].distance_from(input[i - 1]);
+  }
+  const auto & total_distance = cumulative_distances.back();
+
+  // 2. generate target arc lengths
+  std::vector<double> target_distances(num_waypoint, 0.0);
+  double step = total_distance / static_cast<double>(num_waypoint - 1);
+  for (size_t i = 0; i < num_waypoint; ++i) {
+    target_distances[i] = static_cast<double>(i) * step;
+  }
+
+  // 3. interpolate new points
+  std::vector<archetype::MapPoint> waypoints;
+  size_t segment_idx = 0;
+  for (const auto & target : target_distances) {
+    // move to the correct segment
+    while (segment_idx + 1 < cumulative_distances.size() &&
+           cumulative_distances[segment_idx + 1] < target) {
+      ++segment_idx;
+    }
+
+    // interpolate between input[segment_idx] and input[segment_idx + 1]
+    const double & start = cumulative_distances[segment_idx];
+    const double & end = cumulative_distances[segment_idx + 1];
+    double denom = end - start;
+    double t = (std::abs(denom) > 1e-3) ? (target - start) / denom : 0.0;
+    waypoints.emplace_back(input[segment_idx].lerp(input[segment_idx + 1], t));
+  }
+
+  return archetype::Polyline(waypoints);
+}
+}  // namespace
+
+void LaneletConverter::convert(const lanelet::LaneletMapConstPtr lanelet_map_ptr)
+{
+  std::lock_guard<std::mutex> lock(container_mtx_);
+  container_.clear();
+  lanelet::Ids taken_boundary_ids;
+  for (const auto & lanelet : lanelet_map_ptr->laneletLayer) {
     const auto lanelet_subtype = to_subtype(lanelet);
+    if (!lanelet_subtype || MAP_LABEL_MAPPING.count(lanelet_subtype.value()) == 0) {
+      continue;
+    }
     const auto label = MAP_LABEL_MAPPING.at(lanelet_subtype.value());
-    if (is_lane_like(lanelet_subtype)) {
-      // Convert centerlines
-      if (is_roadway_like(lanelet_subtype)) {
-        const auto points =
-          from_linestring(lanelet.centerline3d(), label, state_from, distance_threshold);
-        insert_lane_points(points, container);
+    if (is_roadway_like(lanelet_subtype)) {
+      // convert centerlines
+      const auto roadway_points = from_linestring(lanelet.centerline3d(), label);
+      container_.emplace_back(interpolate_waypoints(roadway_points));
+
+      // left boundary
+      const auto left_bound = lanelet.leftBound3d();
+      if (!is_taken_boundary(taken_boundary_ids, left_bound.id())) {
+        const auto bound_points = from_linestring(left_bound, to_boundary_label(left_bound));
+        container_.emplace_back(interpolate_waypoints(bound_points));
+        taken_boundary_ids.emplace_back(left_bound.id());
       }
-      // Convert boundaries except of virtual lines
-      if (!is_turnable_intersection(lanelet)) {
-        const auto left_bound = lanelet.leftBound3d();
-        if (is_boundary_like(left_bound)) {
-          const auto points = from_linestring(left_bound, label, state_from, distance_threshold);
-          insert_lane_points(points, container);
-        }
-        const auto right_bound = lanelet.rightBound3d();
-        if (is_boundary_like(right_bound)) {
-          const auto points = from_linestring(right_bound, label, state_from, distance_threshold);
-          insert_lane_points(points, container);
-        }
+
+      // right boundary
+      const auto right_bound = lanelet.rightBound3d();
+      if (!is_taken_boundary(taken_boundary_ids, right_bound.id())) {
+        const auto bound_points = from_linestring(right_bound, to_boundary_label(right_bound));
+        container_.emplace_back(interpolate_waypoints(bound_points));
+        taken_boundary_ids.emplace_back(right_bound.id());
       }
     } else if (is_crosswalk_like(lanelet_subtype)) {
-      const auto points = from_polygon(lanelet.polygon3d(), label, state_from, distance_threshold);
-      insert_lane_points(points, container);
+      const auto points = from_polygon(lanelet.polygon3d(), label);
+      container_.emplace_back(interpolate_waypoints(points));
     }
   }
 
   // parse linestring layers
-  for (const auto & linestring : lanelet_map_ptr_->lineStringLayer) {
-    if (is_boundary_like(linestring)) {
-      const auto subtype = to_subtype(linestring);
-      const auto label = MAP_LABEL_MAPPING.at(subtype.value());
-      const auto points = from_linestring(linestring, label, state_from, distance_threshold);
-      insert_lane_points(points, container);
+  for (const auto & linestring : lanelet_map_ptr->lineStringLayer) {
+    if (is_boundary_like(linestring) && !is_taken_boundary(taken_boundary_ids, linestring.id())) {
+      const auto points = from_linestring(linestring, to_boundary_label(linestring));
+      container_.emplace_back(interpolate_waypoints(points));
+      taken_boundary_ids.emplace_back(linestring.id());
     }
   }
-
-  return container.size() == 0 ? std::nullopt : std::make_optional(container);
 }
 
-std::vector<archetype::MapPoint> LaneletConverter::from_linestring(
-  const lanelet::ConstLineString3d & linestring, const archetype::MapLabel & label,
-  const archetype::AgentState & state_from, double distance_threshold) const noexcept
+std::optional<std::vector<archetype::Polyline>> LaneletConverter::extract(
+  const archetype::AgentState & state_from, double distance_threshold)
 {
-  std::vector<archetype::MapPoint> output;
+  std::lock_guard<std::mutex> lock(container_mtx_);
+  std::vector<archetype::Polyline> outputs;
+  for (const auto & polyline : container_) {
+    if (polyline.distance_from(state_from) > distance_threshold) {
+      continue;
+    }
+    outputs.emplace_back(polyline);
+  }
+  return outputs.size() == 0 ? std::nullopt : std::make_optional(outputs);
+}
+
+archetype::Polyline LaneletConverter::from_linestring(
+  const lanelet::ConstLineString3d & linestring, const archetype::MapLabel & label) const noexcept
+{
+  std::vector<archetype::MapPoint> waypoints;
   for (auto itr = linestring.begin(); itr != linestring.end(); ++itr) {
-    if (auto distance =
-          std::hypot(itr->x() - state_from.x, itr->y() - state_from.y, itr->z() - state_from.z);
-        distance > distance_threshold) {
-      continue;
-    }
-
-    double dx, dy, dz;
-    constexpr double epsilon = 1e-6;
-    if (itr == linestring.begin()) {
-      dx = 0.0;
-      dy = 0.0;
-      dz = 0.0;
-    } else {
-      dx = itr->x() - (itr - 1)->x();
-      dy = itr->y() - (itr - 1)->y();
-      dz = itr->z() - (itr - 1)->z();
-      const auto norm = std::hypot(dx, dy, dz);
-      dx /= (norm + epsilon);
-      dy /= (norm + epsilon);
-      dz /= (norm + epsilon);
-    }
-    output.emplace_back(itr->x(), itr->y(), itr->z(), dx, dy, dz, label);
+    waypoints.emplace_back(itr->x(), itr->y(), itr->z(), label);
   }
-  return output;
+  return archetype::Polyline(waypoints);
 }
 
-std::vector<archetype::MapPoint> LaneletConverter::from_polygon(
-  const lanelet::CompoundPolygon3d & polygon, const archetype::MapLabel & label,
-  const archetype::AgentState & state_from, double distance_threshold) const noexcept
+archetype::Polyline LaneletConverter::from_polygon(
+  const lanelet::CompoundPolygon3d & polygon, const archetype::MapLabel & label) const noexcept
 {
-  std::vector<archetype::MapPoint> output;
+  std::vector<archetype::MapPoint> waypoints;
   for (auto itr = polygon.begin(); itr != polygon.end(); ++itr) {
-    if (auto distance =
-          std::hypot(itr->x() - state_from.x, itr->y() - state_from.y, itr->z() - state_from.z);
-        distance > distance_threshold) {
-      continue;
-    }
-
-    double dx, dy, dz;
-    constexpr double epsilon = 1e-6;
-    if (itr == polygon.begin()) {
-      dx = 0.0;
-      dy = 0.0;
-      dz = 0.0;
-    } else {
-      dx = itr->x() - (itr - 1)->x();
-      dy = itr->y() - (itr - 1)->y();
-      dz = itr->z() - (itr - 1)->z();
-      const auto norm = std::hypot(dx, dy, dz);
-      dx /= (norm + epsilon);
-      dy /= (norm + epsilon);
-      dz /= (norm + epsilon);
-    }
-    output.emplace_back(itr->x(), itr->y(), itr->z(), dx, dy, dz, label);
+    waypoints.emplace_back(itr->x(), itr->y(), itr->z(), label);
   }
-  return output;
+  return archetype::Polyline(waypoints);
 }
 }  // namespace autoware::simpl::conversion

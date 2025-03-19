@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__SIMPL__SIMPL_NODE_HPP_
-#define AUTOWARE__SIMPL__SIMPL_NODE_HPP_
+#ifndef AUTOWARE__SIMPL__SIMPL_EGO_NODE_HPP_
+#define AUTOWARE__SIMPL__SIMPL_EGO_NODE_HPP_
 
 #include "autoware/simpl/archetype/agent.hpp"
 #include "autoware/simpl/conversion/lanelet.hpp"
@@ -27,6 +27,7 @@
 #include <rclcpp/node.hpp>
 #include <rclcpp/publisher.hpp>
 #include <rclcpp/subscription.hpp>
+#include <rclcpp/timer.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
@@ -41,14 +42,13 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 namespace autoware::simpl
 {
 /**
  * @brief A ROS 2 node class for SIMPL.
  */
-class SimplNode : public rclcpp::Node
+class SimplEgoNode : public rclcpp::Node
 {
 public:
   using PredictedObjects = autoware_perception_msgs::msg::PredictedObjects;
@@ -70,7 +70,7 @@ public:
    *
    * @param options Node options.
    */
-  explicit SimplNode(const rclcpp::NodeOptions & options);
+  explicit SimplEgoNode(const rclcpp::NodeOptions & options);
 
 private:
   /**
@@ -78,7 +78,7 @@ private:
    *
    * @param objects_msg Tracked objects message.
    */
-  void callback(const TrackedObjects::ConstSharedPtr objects_msg);
+  void callback();
 
   /**
    * @brief Subscribe lanelet map.
@@ -97,14 +97,16 @@ private:
   /**
    * @brief Update history container.
    *
-   * @param objects_msg Tracked objects.
+   * @param current_ego Current ego state.
    */
-  std::vector<archetype::AgentHistory> update_history(
-    const TrackedObjects::ConstSharedPtr objects_msg);
+  void update_history(const archetype::AgentState & current_ego) noexcept;
 
   //////////////////////// member variables ////////////////////////
-  //!< Tracked objects subscription.
-  rclcpp::Subscription<TrackedObjects>::SharedPtr objects_subscription_;
+  //!< Ego ID (constant).
+  const std::string ego_id{"EGO_ID"};
+
+  //!< Callback timer.
+  rclcpp::TimerBase::SharedPtr timer_;
 
   //!< Lanelet subscription.
   rclcpp::Subscription<LaneletMapBin>::SharedPtr lanelet_subscription_;
@@ -116,10 +118,9 @@ private:
   //!< Predicted objects publisher.
   rclcpp::Publisher<PredictedObjects>::SharedPtr objects_publisher_;
 
-  //!< Debug marker publisher
+  //!< Debug marker publisher.
   rclcpp::Publisher<MarkerArray>::SharedPtr history_marker_publisher_;
   rclcpp::Publisher<MarkerArray>::SharedPtr polyline_marker_publisher_;
-  rclcpp::Publisher<MarkerArray>::SharedPtr processed_map_marker_publisher_;
 
   //!< Pointer to lanelet map.
   lanelet::LaneletMapPtr lanelet_map_ptr_;
@@ -132,6 +133,8 @@ private:
 
   //!< Hashmap of agent ID and tracked object message.
   std::unordered_map<std::string, TrackedObject> tracked_object_map_;
+
+  std::optional<std_msgs::msg::Header> current_header_{std::nullopt};
 
   //!< SIMPL detector.
   std::unique_ptr<TrtSimpl> detector_;
@@ -153,4 +156,4 @@ private:
   double polyline_distance_threshold_;
 };
 }  // namespace autoware::simpl
-#endif  // AUTOWARE__SIMPL__SIMPL_NODE_HPP_
+#endif  // AUTOWARE__SIMPL__SIMPL_EGO_NODE_HPP_

@@ -14,42 +14,16 @@
 
 #include "autoware/simpl/trt_simpl.hpp"
 
-#include "autoware/simpl/archetype/agent.hpp"
-#include "autoware/simpl/archetype/exception.hpp"
-#include "autoware/simpl/archetype/map.hpp"
-
-#include <autoware/cuda_utils/cuda_check_error.hpp>
-#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
-#include <autoware/tensorrt_common/tensorrt_common.hpp>
-#include <autoware/tensorrt_common/utils.hpp>
-
 #include <NvInferRuntimeBase.h>
 
-#include <cstddef>
 #include <functional>
 #include <memory>
 #include <numeric>
-#include <stdexcept>
 #include <utility>
 #include <vector>
 
 namespace autoware::simpl
 {
-namespace
-{
-/**
- * @brief Calculate the size of tensor dimensions.
- *
- * @param dims Tensor dimensions.
- */
-size_t calculate_dim_size(const nvinfer1::Dims & dims)
-{
-  return std::accumulate(dims.d, dims.d + dims.nbDims, 1, std::multiplies<size_t>());
-}
-}  // namespace
-
-using output_type = TrtSimpl::output_type;
-
 TrtSimpl::TrtSimpl(const tensorrt_common::TrtCommonConfig & config)
 {
   trt_common_ = std::make_unique<tensorrt_common::TrtCommon>(config);
@@ -73,7 +47,7 @@ TrtSimpl::TrtSimpl(const tensorrt_common::TrtCommonConfig & config)
   CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
 }
 
-archetype::Result<output_type> TrtSimpl::do_inference(
+archetype::Result<TrtSimpl::output_type> TrtSimpl::do_inference(
   const archetype::AgentTensor & agent_tensor, const archetype::MapTensor & map_tensor,
   const std::vector<float> & rpe_tensor) noexcept
 {
@@ -84,28 +58,40 @@ archetype::Result<output_type> TrtSimpl::do_inference(
     return archetype::Err<output_type>(archetype::SimplError_t::Cuda, e.what());
   }
 
-  // Execute inference
+  // function to compute the size of elements
+  auto compute_dim_size = [](const nvinfer1::Dims & dims) -> size_t {
+    return std::accumulate(dims.d, dims.d + dims.nbDims, 1, std::multiplies<size_t>());
+  };
+
+  const auto score_size = compute_dim_size(trt_common_->getOutputDims(0));
+  const auto trajectory_size = compute_dim_size(trt_common_->getOutputDims(1));
+  out_score_d_ = cuda_utils::make_unique<float[]>(score_size);
+  out_trajectory_d_ = cuda_utils::make_unique<float[]>(trajectory_size);
+
+  // Set tensors addresses
   std::vector<void *> buffers{
     in_agent_d_.get(), in_map_d_.get(), in_rpe_d_.get(), out_score_d_.get(),
     out_trajectory_d_.get()};
+  if (!trt_common_->setTensorsAddresses(buffers)) {
+    return archetype::Err<output_type>(
+      archetype::SimplError_t::TensorRT, "Failed to set tensors addresses");
+  }
+
+  // Execute inference
   if (!trt_common_->enqueueV3(stream_)) {
     return archetype::Err<output_type>(archetype::SimplError_t::TensorRT, "Failed to enqueue.");
   }
 
   // Copy outputs from device to host
-  const auto score_dims = trt_common_->getOutputDims(0);
-  const auto score_size = calculate_dim_size(score_dims);
   score_type score_h(score_size);
-
-  const auto trajectory_dims = trt_common_->getOutputDims(1);
-  const auto trajectory_size = calculate_dim_size(trajectory_dims);
   trajectory_type trajectory_h(trajectory_size);
 
   try {
-    CHECK_CUDA_ERROR(
-      cudaMemcpy(score_h.data(), out_score_d_.get(), score_size, cudaMemcpyDeviceToHost));
     CHECK_CUDA_ERROR(cudaMemcpy(
-      trajectory_h.data(), out_trajectory_d_.get(), trajectory_size, cudaMemcpyDeviceToHost));
+      score_h.data(), out_score_d_.get(), sizeof(float) * score_size, cudaMemcpyDeviceToHost));
+    CHECK_CUDA_ERROR(cudaMemcpy(
+      trajectory_h.data(), out_trajectory_d_.get(), sizeof(float) * trajectory_size,
+      cudaMemcpyDeviceToHost));
   } catch (const std::runtime_error & e) {
     return archetype::Err<output_type>(archetype::SimplError_t::Cuda, e.what());
   }
@@ -117,38 +103,18 @@ void TrtSimpl::init_cuda_ptr(
   const archetype::AgentTensor & agent_tensor, const archetype::MapTensor & map_tensor,
   const std::vector<float> & rpe_tensor)
 {
-  const auto in_agent_dims = trt_common_->getInputDims(0);
-  const auto in_map_dims = trt_common_->getInputDims(1);
-  const auto in_rpe_dims = trt_common_->getInputDims(2);
-
-  const auto in_agent_size = calculate_dim_size(in_agent_dims);
-  if (in_agent_size != agent_tensor.size()) {
-    throw archetype::SimplException(
-      archetype::SimplError_t::InvalidValue, "Invalid input agent size");
-  }
-  const auto in_map_size = calculate_dim_size(in_map_dims);
-  if (in_map_size != map_tensor.size()) {
-    throw archetype::SimplException(
-      archetype::SimplError_t::InvalidValue, "Invalid input map size");
-  }
-  const auto in_rpe_size = calculate_dim_size(in_rpe_dims);
-  if (in_rpe_size != rpe_tensor.size()) {
-    throw archetype::SimplException(
-      archetype::SimplError_t::InvalidValue, "Invalid input RPE size");
-  }
-
-  in_agent_d_ = cuda_utils::make_unique<float[]>(in_agent_size);
-  in_map_d_ = cuda_utils::make_unique<float[]>(in_map_size);
-  in_rpe_d_ = cuda_utils::make_unique<float[]>(in_rpe_size);
+  in_agent_d_ = cuda_utils::make_unique<float[]>(agent_tensor.size());
+  in_map_d_ = cuda_utils::make_unique<float[]>(map_tensor.size());
+  in_rpe_d_ = cuda_utils::make_unique<float[]>(rpe_tensor.size());
 
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    in_agent_d_.get(), agent_tensor.data(), sizeof(float) * in_agent_size, cudaMemcpyHostToDevice,
+    in_agent_d_.get(), agent_tensor.data(), sizeof(float) * agent_tensor.size(),
+    cudaMemcpyHostToDevice, stream_));
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    in_map_d_.get(), map_tensor.data(), sizeof(float) * map_tensor.size(), cudaMemcpyHostToDevice,
     stream_));
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    in_map_d_.get(), map_tensor.data(), sizeof(float) * in_map_size, cudaMemcpyHostToDevice,
-    stream_));
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    in_rpe_d_.get(), rpe_tensor.data(), sizeof(float) * in_rpe_size, cudaMemcpyHostToDevice,
+    in_rpe_d_.get(), rpe_tensor.data(), sizeof(float) * rpe_tensor.size(), cudaMemcpyHostToDevice,
     stream_));
 }
 }  // namespace autoware::simpl

@@ -108,14 +108,14 @@ public:
    *
    * @param n Index of the element.
    */
-  reference at(size_type n) noexcept { return queue_.at(n); }
+  reference at(size_type n) { return queue_.at(n); }
 
   /**
    * @brief Return the read only reference to the data at the specified element of the queue.
    *
    * @param n Index of the element.
    */
-  const_reference at(size_type n) const noexcept { return queue_.at(n); }
+  const_reference at(size_type n) const { return queue_.at(n); }
 
   /**
    * @brief Return the number of elements of the queue.

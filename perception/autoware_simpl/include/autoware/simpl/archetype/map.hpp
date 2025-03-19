@@ -15,8 +15,10 @@
 #ifndef AUTOWARE__SIMPL__ARCHETYPE__MAP_HPP_
 #define AUTOWARE__SIMPL__ARCHETYPE__MAP_HPP_
 
+#include "autoware/simpl/archetype/agent.hpp"
 #include "autoware/simpl/archetype/exception.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <sstream>
@@ -45,9 +47,8 @@ enum class MapLabel {
 /**
  * @brief A class to represent a single point in a map.
  */
-class MapPoint
+struct MapPoint
 {
-public:
   /**
    * @brief Construct a new MapPoint object with default values.
    */
@@ -59,114 +60,74 @@ public:
    * @param x Location x in map coordinate system.
    * @param y Location y in map coordinate system.
    * @param z Location z in map coordinate system.
-   * @param dx X difference between previous point.
-   * @param dy Y difference between previous point.
-   * @param dz Z difference between previous point.
    * @param label Label.
    */
-  MapPoint(double x, double y, double z, double dx, double dy, double dz, MapLabel label)
-  : x(x), y(y), z(z), dx(dx), dy(dy), dz(dz), label(label)
-  {
-  }
+  MapPoint(double x, double y, double z, MapLabel label) : x(x), y(y), z(z), label(label) {}
 
-  static size_t num_attribute() { return 7; }
+  static size_t num_attribute() { return 4; }
 
   /**
-   * @brief Compute the distance.
+   * @brief Compute the 2D distance.
    */
-  double distance() const noexcept { return std::hypot(x, y, z); }
+  double distance() const noexcept { return std::hypot(x, y); }
 
   /**
-   * @brief Compute the distance from the specified another point.
+   * @brief Compute the 2D distance from the specified another point.
    *
    * @param other Another point.
    */
   double distance_from(const MapPoint & other) const noexcept
   {
-    return std::hypot(x - other.x, y - other.y, z - other.z);
+    return std::hypot(x - other.x, y - other.y);
   }
 
   /**
-   * @brief Compute the difference of xyz between myself and another one.
+   * @brief Compute the 2D distance from the specified agent state.
+   *
+   * @param other Agent state.
+   */
+  double distance_from(const AgentState & state) const noexcept
+  {
+    return std::hypot(x - state.x, y - state.y);
+  }
+
+  /**
+   * @brief Compute the difference of xy between myself and another one.
    *
    * @param other Another point.
    */
-  std::tuple<double, double, double> diff(const MapPoint & other) const
+  std::tuple<double, double> diff(const MapPoint & other, bool normalize = true) const
   {
-    return {x - other.x, y - other.y, z - other.z};
+    const double vx = x - other.x;
+    const double vy = y - other.y;
+    if (normalize) {
+      const double norm = std::clamp(std::hypot(vx, vy), 1e-6, 1e9);
+      return std::make_tuple(vx / norm, vy / norm);
+    } else {
+      return {vx, vy};
+    }
   }
 
   /**
-   * @brief Execute linear interpolation by `(1 - t) * self + t * other`.
-   *
-   * Note that dx/dy/dz results are always `0.0`.
+   * @brief Perform linear interpolation by `(1 - t) * self + t * other`.
    *
    * @param other Other point.
    * @param t Weight of
    * @return MapPoint
    */
-  MapPoint interpolate(const MapPoint & other, double t) const
+  MapPoint lerp(const MapPoint & other, double t) const
   {
     const auto ix = (1 - t) * x + t * other.x;
     const auto iy = (1 - t) * y + t * other.y;
     const auto iz = (1 - t) * z + t * other.z;
 
-    return {ix, iy, iz, 0.0, 0.0, 0.0, label};
+    return {ix, iy, iz, label};
   }
 
   double x{0.0};                      //!< Location x in map coordinate system.
   double y{0.0};                      //!< Location y in map coordinate system.
   double z{0.0};                      //!< Location z in map coordinate system.
-  double dx{0.0};                     //!< X difference between previous point.
-  double dy{0.0};                     //!< Y difference between previous point.
-  double dz{0.0};                     //!< Z difference between previous point.
   MapLabel label{MapLabel::UNKNOWN};  //!< Label.
-};
-
-/**
- * @brief A class to represent map tensor data.
- */
-class MapTensor
-{
-public:
-  using size_type = std::vector<float>::size_type;
-
-  /**
-   * @brief Construct a new MapTensor object.
-   *
-   * @param tensor 1D map tensor data in the shape of (K*P*Dm).
-   * @param num_polyline Number of polylines (K).
-   * @param num_point Number of points contained in a single polyline (P).
-   * @param num_attribute Number of attributes (Dm).
-   */
-  MapTensor(
-    const std::vector<float> & tensor, size_t num_polyline, size_t num_point, size_t num_attribute)
-  : num_polyline(num_polyline), num_point(num_point), num_attribute(num_attribute), tensor_(tensor)
-  {
-    if (tensor_.size() != num_polyline * (num_point - 1) * num_attribute) {
-      std::ostringstream msg;
-      msg << "Invalid size of map tensor: " << tensor_.size()
-          << " != " << num_polyline * (num_point - 1) * num_attribute;
-      throw SimplException(SimplError_t::InvalidValue, msg.str());
-    }
-  }
-
-  /**
-   * @brief Return the pointer to tensor data.
-   */
-  const float * data() const noexcept { return tensor_.data(); }
-
-  /**
-   * @brief Return the size of tensor elements, where K*P*D.
-   */
-  size_type size() const noexcept { return tensor_.size(); }
-
-  const size_t num_polyline;   //!< Number of polylines (K).
-  const size_t num_point;      //!< Number of points contained in a single polyline (P).
-  const size_t num_attribute;  //!< Number of attributes (Dm).
-
-private:
-  std::vector<float> tensor_;  //!< Map tensor data.
 };
 }  // namespace autoware::simpl::archetype
 #endif  // AUTOWARE__SIMPL__ARCHETYPE__MAP_HPP_
