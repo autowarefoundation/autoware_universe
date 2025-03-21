@@ -527,6 +527,8 @@ private:
   void updateCurrentRouteLanelet(
     const std::shared_ptr<PlannerData> & data, const bool is_any_approved_module_running);
 
+  void pathWithoutWaypointZone(PathWithLaneId & input, const std::shared_ptr<PlannerData> & data);
+
   void generateCombinedDrivableArea(
     BehaviorModuleOutput & output, const std::shared_ptr<PlannerData> & data) const;
 

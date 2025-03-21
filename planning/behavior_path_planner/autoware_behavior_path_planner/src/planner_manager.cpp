@@ -206,8 +206,119 @@ BehaviorModuleOutput PlannerManager::run(const std::shared_ptr<PlannerData> & da
   result_output.valid_output.path = utils::resamplePathWithSpline(
     result_output.valid_output.path, data->parameters.output_path_interval,
     keep_input_points(getSceneModuleStatus()));
+
+  pathWithoutWaypointZone(result_output.valid_output.path, data);
   generateCombinedDrivableArea(result_output.valid_output, data);
+
   return result_output.valid_output;
+}
+
+void PlannerManager::pathWithoutWaypointZone(
+  PathWithLaneId & input, const std::shared_ptr<PlannerData> & data)
+{
+  // define lambda functions
+  std::function<std::shared_ptr<lanelet::ConstPolygon3d>(
+    const std::shared_ptr<lanelet::LaneletMap> &, const lanelet::BasicPoint2d &)>
+    findNearestWaypointZone = [](
+                                const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
+                                const lanelet::BasicPoint2d & current_position)
+    -> std::shared_ptr<lanelet::ConstPolygon3d> {
+    auto linked_waypoint_zone = std::make_shared<lanelet::ConstPolygon3d>();
+    auto result = lanelet::utils::query::getLinkedWaypointZone(
+      current_position, lanelet_map_ptr, linked_waypoint_zone.get());
+
+    return result ? linked_waypoint_zone : nullptr;
+  };
+
+  std::function<bool(
+    const std::shared_ptr<lanelet::LaneletMap> &, const geometry_msgs::msg::Pose &)>
+    isInWaypointZone = [findNearestWaypointZone](
+                         const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
+                         const geometry_msgs::msg::Pose & current_pose) -> bool {
+    const auto & p = current_pose.position;
+    lanelet::Point3d search_point(lanelet::InvalId, p.x, p.y, p.z);
+
+    auto nearest_waypoint_zone =
+      findNearestWaypointZone(lanelet_map_ptr, search_point.basicPoint2d());
+
+    return nearest_waypoint_zone
+             ? lanelet::geometry::within(search_point, nearest_waypoint_zone->basicPolygon())
+             : false;
+  };
+
+  std::function<std::vector<Point>(
+    const std::shared_ptr<lanelet::LaneletMap> &, const std::vector<Point> &)>
+    splitBound = [isInWaypointZone](
+                   const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
+                   const std::vector<Point> & input_bound) -> std::vector<Point> {
+    std::vector<Point> output_bound;
+    std::vector<std::vector<Point>> bounds;
+
+    size_t i = 0;
+    while (i < input_bound.size()) {
+      std::vector<Point> bound;
+      for (; i < input_bound.size(); i++) {
+        const auto & bound_point = input_bound.at(i);
+        geometry_msgs::msg::Pose pose;
+        pose.position.x = bound_point.x;
+        pose.position.y = bound_point.y;
+        pose.position.z = bound_point.z;
+        if (!isInWaypointZone(lanelet_map_ptr, pose)) {
+          bound.emplace_back(bound_point);
+        } else {
+          i++;
+          break;
+        }
+      }
+
+      if (!bound.empty()) {
+        bounds.emplace_back(bound);
+      }
+    }
+
+    if (!bounds.empty()) {
+      output_bound = bounds.front();
+    }
+
+    return output_bound;
+  };
+
+  // return if empty
+  if (input.points.empty()) {
+    return;
+  }
+
+  std::vector<size_t> split_indices;
+
+  size_t i = 0;
+  while (i < input.points.size()) {
+    std::vector<size_t> path_indices;
+    for (; i < input.points.size(); i++) {
+      const auto & point = input.points.at(i);
+      const auto & pose = point.point.pose;
+
+      if (!isInWaypointZone(data->route_handler->getLaneletMapPtr(), pose)) {
+        path_indices.emplace_back(i);
+      } else {
+        i++;
+        break;
+      }
+    }
+
+    if (!path_indices.empty()) {
+      split_indices.emplace_back(path_indices.back());
+    }
+  }
+
+  if (!split_indices.empty()) {
+    auto split_paths = utils::dividePath(input, split_indices);
+    utils::correctDividedPathVelocity(split_paths);
+
+    // take first splitted path
+    input = split_paths.front();
+  }
+
+  return;
 }
 
 // NOTE: To deal with some policies about drivable area generation, currently DrivableAreaInfo is
