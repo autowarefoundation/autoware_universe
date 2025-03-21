@@ -61,7 +61,7 @@ struct ParallelParkingParameters
   double pull_out_velocity{0.0};
   double pull_out_lane_departure_margin{0.0};
   double pull_out_arc_path_interval{0.0};
-  double pull_out_max_steer_angle{0.0};
+  double geometric_pull_out_max_steer_angle_margin_scale{0.0};
 };
 
 class GeometricParallelParking
