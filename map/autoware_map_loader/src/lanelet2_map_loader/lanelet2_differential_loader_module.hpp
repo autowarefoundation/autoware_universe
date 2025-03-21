@@ -16,7 +16,7 @@
 #define MAP_LOADER__LANELET2_DIFFERENTIAL_LOADER_MODULE_HPP_
 
 #include "autoware_lanelet2_extension/io/autoware_multi_osm_parser.hpp"
-#include "map_loader/utils.hpp"
+#include "utils.hpp"
 
 #include <autoware/geography_utils/lanelet2_projector.hpp>
 #include <autoware_lanelet2_extension/io/autoware_osm_parser.hpp>
@@ -31,7 +31,7 @@
 #include "autoware_map_msgs/srv/get_selected_lanelet2_map.hpp"
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_meta_data.hpp>
-#include <tier4_map_msgs/msg/map_projector_info.hpp>
+#include <autoware_map_msgs/msg/map_projector_info.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/geometry/LineString.h>
@@ -56,7 +56,7 @@ public:
     std::map<std::string, Lanelet2FileMetaData> & lanelet2_metadata_dict, double x_res,
     double y_res);
 
-  void setProjectionInfo(const tier4_map_msgs::msg::MapProjectorInfo & projector_info);
+  void setProjectionInfo(const autoware_map_msgs::msg::MapProjectorInfo & projector_info);
 
   lanelet::LaneletMapPtr differentialLanelet2Load(std::vector<std::string> & lanelet2_paths);
 
@@ -71,7 +71,7 @@ private:
   component_interface_utils::Publisher<map_interface::LaneletMapMetaData>::SharedPtr
     pub_lanelet_map_meta_data_;
 
-  std::optional<tier4_map_msgs::msg::MapProjectorInfo> projector_info_;
+  std::optional<autoware_map_msgs::msg::MapProjectorInfo> projector_info_;
 
   double center_line_resolution_;
 

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "map_loader/utils.hpp"
+#include "utils.hpp"
 
 #include <yaml-cpp/yaml.h>
 

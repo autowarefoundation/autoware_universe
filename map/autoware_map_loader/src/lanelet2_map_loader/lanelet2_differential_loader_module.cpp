@@ -15,7 +15,7 @@
 #include "lanelet2_differential_loader_module.hpp"
 
 #include "lanelet2_local_projector.hpp"
-#include "map_loader/lanelet2_map_loader_node.hpp"
+#include "lanelet2_map_loader_node.hpp"
 
 Lanelet2DifferentialLoaderModule::Lanelet2DifferentialLoaderModule(
   rclcpp::Node * node, const double & center_line_resolution)
@@ -68,7 +68,7 @@ bool Lanelet2DifferentialLoaderModule::onServiceGetDifferentialLanelet2Map(
 lanelet::LaneletMapPtr Lanelet2DifferentialLoaderModule::differentialLanelet2Load(
   std::vector<std::string> & lanelet2_paths)
 {
-  if (projector_info_.value().projector_type != tier4_map_msgs::msg::MapProjectorInfo::LOCAL) {
+  if (projector_info_.value().projector_type != autoware_map_msgs::msg::MapProjectorInfo::LOCAL) {
     std::unique_ptr<lanelet::Projector> projector =
       autoware::geography_utils::get_lanelet2_projector(projector_info_.value());
 
@@ -128,7 +128,7 @@ void Lanelet2DifferentialLoaderModule::setLaneletMapMetadata(
 }
 
 void Lanelet2DifferentialLoaderModule::setProjectionInfo(
-  const tier4_map_msgs::msg::MapProjectorInfo & projector_info)
+  const autoware_map_msgs::msg::MapProjectorInfo & projector_info)
 {
   projector_info_ = projector_info;
 }
