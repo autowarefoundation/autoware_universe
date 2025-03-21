@@ -159,8 +159,8 @@ void GeometricParallelParking::clearPaths()
 
 bool GeometricParallelParking::planPullOver(
   const Pose & goal_pose, const lanelet::ConstLanelets & road_lanes,
-  const lanelet::ConstLanelets & pull_over_lanes, const bool is_forward,
-  const bool left_side_parking)
+  const lanelet::ConstLanelets & pull_over_lanes, const double max_steer_angle,
+  const bool is_forward, const bool left_side_parking)
 {
   const auto & common_params = planner_data_->parameters;
   const double end_pose_offset = is_forward ? -parameters_.after_forward_parking_straight_distance
@@ -175,12 +175,10 @@ bool GeometricParallelParking::planPullOver(
   if (is_forward) {
     // When turning forward to the right, the front left goes out,
     // so reduce the steer angle at that time for seach no lane departure path.
-    // TODO(Sugahara): define in the config
     constexpr double start_pose_offset = 0.0;
     constexpr double min_steer_rad = 0.05;
     constexpr double steer_interval = 0.1;
-    for (double steer = parameters_.forward_parking_max_steer_angle; steer > min_steer_rad;
-         steer -= steer_interval) {
+    for (double steer = max_steer_angle; steer > min_steer_rad; steer -= steer_interval) {
       const double R_E_far = common_params.wheel_base / std::tan(steer);
       const auto start_pose = calcStartPose(
         arc_end_pose, road_lanes, start_pose_offset, R_E_far, is_forward, left_side_parking);
