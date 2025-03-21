@@ -15,6 +15,8 @@
 #ifndef MAP_LOADER__UTILS_HPP_
 #define MAP_LOADER__UTILS_HPP_
 
+#include <lanelet2_core/LaneletMap.h>
+
 #include <map>
 #include <string>
 #include <vector>
@@ -31,5 +33,6 @@ std::map<std::string, Lanelet2FileMetaData> loadLanelet2Metadata(
 std::map<std::string, Lanelet2FileMetaData> replaceWithAbsolutePath(
   const std::map<std::string, Lanelet2FileMetaData> & lanelet2_metadata_path,
   const std::vector<std::string> & lanelet2_paths);
+void merge_lanelet2_maps(lanelet::LaneletMap & merge_target, const lanelet::LaneletMap & merge_source);
 
 #endif  // MAP_LOADER__UTILS_HPP_

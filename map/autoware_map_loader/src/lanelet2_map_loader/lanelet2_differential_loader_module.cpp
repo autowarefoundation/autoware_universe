@@ -37,6 +37,7 @@ bool Lanelet2DifferentialLoaderModule::onServiceGetDifferentialLanelet2Map(
   GetDifferentialLanelet2Map::Request::SharedPtr req,
   GetDifferentialLanelet2Map::Response::SharedPtr res)
 {
+  // get the list of lanelet2 map paths from the requested cell_ids
   std::vector<std::string> lanelet2_paths;
   for (const auto & id : req->cell_ids) {
     auto it = std::find_if(
@@ -55,7 +56,18 @@ bool Lanelet2DifferentialLoaderModule::onServiceGetDifferentialLanelet2Map(
     return false;
   }
 
-  const auto map = differentialLanelet2Load(lanelet2_paths);
+  // load the lanelet2 maps
+  lanelet::LaneletMapPtr map = std::make_shared<lanelet::LaneletMap>();
+  for (const auto & path : lanelet2_paths) {
+    auto map_tmp = load_map(path, *msg);
+    if (!map_tmp) {
+      RCLCPP_ERROR(get_logger(), "Failed to load lanelet2_map %s", path.c_str());
+      return;
+    }
+    merge_lanelet2_maps(*map, *map_tmp);
+  }
+
+  // create the map bin message
   const auto map_bin_msg =
     Lanelet2MapLoaderNode::create_map_bin_msg(map, lanelet2_paths[0], rclcpp::Clock().now());
 
@@ -73,8 +85,7 @@ lanelet::LaneletMapPtr Lanelet2DifferentialLoaderModule::differentialLanelet2Loa
       autoware::geography_utils::get_lanelet2_projector(projector_info_.value());
 
     lanelet::ErrorMessages errors{};
-    lanelet::io_handlers::MultiOsmParser parser(*projector);
-    lanelet::LaneletMapPtr map = parser.parse(lanelet2_paths, errors);
+    lanelet::LaneletMapPtr map = lanelet::load(lanelet2_filename, *projector, &errors);
 
     if (!errors.empty()) {
       for (const auto & error : errors) {
@@ -87,7 +98,7 @@ lanelet::LaneletMapPtr Lanelet2DifferentialLoaderModule::differentialLanelet2Loa
     const lanelet::projection::LocalProjector projector;
     lanelet::ErrorMessages errors{};
     lanelet::io_handlers::MultiOsmParser parser(projector);
-    lanelet::LaneletMapPtr map = parser.parse(lanelet2_paths, errors);
+    lanelet::LaneletMapPtr map = lanelet::load(lanelet2_filename, *projector, &errors);
 
     if (!errors.empty()) {
       for (const auto & error : errors) {

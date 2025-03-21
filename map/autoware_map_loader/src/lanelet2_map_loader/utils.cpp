@@ -63,3 +63,25 @@ std::map<std::string, Lanelet2FileMetaData> replaceWithAbsolutePath(
 
   return absolute_path_map;
 }
+
+void merge_lanelet2_maps(lanelet::LaneletMap & merge_target, const lanelet::LaneletMap & merge_source)
+{
+  for (const auto & lanelet : merge_source.laneletLayer) {
+    merge_target.add(lanelet);
+  }
+  for (const auto & area : merge_source.areaLayer) {
+    merge_target.add(area);
+  }
+  for (const auto & regulatory_element : merge_source.regulatoryElementLayer) {
+    merge_target.add(regulatory_element);
+  }
+  for (const auto & line_string : merge_source.lineStringLayer) {
+    merge_target.add(line_string);
+  }
+  for (const auto & polygon : merge_source.polygonLayer) {
+    merge_target.add(polygon);
+  }
+  for (const auto & point : merge_source.pointLayer) {
+    merge_target.add(point);
+  }
+}

@@ -19,7 +19,6 @@
 #include "utils.hpp"
 
 #include <autoware/geography_utils/lanelet2_projector.hpp>
-#include <autoware_lanelet2_extension/io/autoware_osm_parser.hpp>
 #include <autoware_lanelet2_extension/projection/mgrs_projector.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
