@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "map_loader/lanelet2_differential_loader_module.hpp"
+#include "lanelet2_differential_loader_module.hpp"
 
 #include "lanelet2_local_projector.hpp"
 #include "map_loader/lanelet2_map_loader_node.hpp"
