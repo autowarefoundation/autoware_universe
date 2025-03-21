@@ -36,13 +36,10 @@ private:
   BicycleTracker bicycle_tracker_;
 
 public:
-  PedestrianAndBicycleTracker(
-    const rclcpp::Time & time, const types::DynamicObject & object, const size_t channel_size);
+  PedestrianAndBicycleTracker(const rclcpp::Time & time, const types::DynamicObject & object);
 
   bool predict(const rclcpp::Time & time) override;
-  bool measure(
-    const types::DynamicObject & object, const rclcpp::Time & time,
-    const geometry_msgs::msg::Transform & self_transform) override;
+  bool measure(const types::DynamicObject & object, const rclcpp::Time & time) override;
   bool getTrackedObject(const rclcpp::Time & time, types::DynamicObject & object) const override;
   virtual ~PedestrianAndBicycleTracker() {}
 };

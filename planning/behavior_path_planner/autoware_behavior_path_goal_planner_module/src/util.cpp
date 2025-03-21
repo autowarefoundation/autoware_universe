@@ -709,33 +709,38 @@ lanelet::Lanelet createDepartureCheckLanelet(
   const lanelet::ConstLanelets & pull_over_lanes, const route_handler::RouteHandler & route_handler,
   const bool left_side_parking)
 {
-  const auto getBoundPoints =
-    [&](const lanelet::ConstLanelet & lane, const bool is_outer) -> lanelet::Points3d {
+  const auto getBoundPoints = [&](
+                                const lanelet::ConstLanelet & lane, const bool is_outer,
+                                const bool invert) -> lanelet::Points3d {
     lanelet::Points3d points;
     const auto & bound = left_side_parking ? (is_outer ? lane.leftBound() : lane.rightBound())
                                            : (is_outer ? lane.rightBound() : lane.leftBound());
-    for (const auto & pt : bound) {
+    const auto ego_oriented_bound = invert ? bound.invert() : bound;
+    for (const auto & pt : ego_oriented_bound) {
       points.push_back(lanelet::Point3d(pt));
     }
     return points;
   };
 
-  const auto getMostInnerLane = [&](const lanelet::ConstLanelet & lane) -> lanelet::ConstLanelet {
+  const auto getMostInnerLane =
+    [&](const lanelet::ConstLanelet & lane) -> std::pair<lanelet::ConstLanelet, bool> {
     const auto getInnerLane =
       left_side_parking ? &RouteHandler::getMostRightLanelet : &RouteHandler::getMostLeftLanelet;
     const auto getOppositeLane = left_side_parking ? &RouteHandler::getRightOppositeLanelets
                                                    : &RouteHandler::getLeftOppositeLanelets;
     const auto inner_lane = (route_handler.*getInnerLane)(lane, true, true);
     const auto opposite_lanes = (route_handler.*getOppositeLane)(inner_lane);
-    return opposite_lanes.empty() ? inner_lane : opposite_lanes.front();
+    return std::make_pair(
+      opposite_lanes.empty() ? inner_lane : opposite_lanes.front(), !opposite_lanes.empty());
   };
 
   lanelet::Points3d outer_bound_points{};
   lanelet::Points3d inner_bound_points{};
   for (const auto & lane : pull_over_lanes) {
-    const auto current_outer_bound_points = getBoundPoints(lane, true);
-    const auto most_inner_lane = getMostInnerLane(lane);
-    const auto current_inner_bound_points = getBoundPoints(most_inner_lane, false);
+    const auto current_outer_bound_points = getBoundPoints(lane, true, false);
+    const auto most_inner_lane_info = getMostInnerLane(lane);
+    const auto current_inner_bound_points =
+      getBoundPoints(most_inner_lane_info.first, false, most_inner_lane_info.second);
     outer_bound_points = combineLanePoints(outer_bound_points, current_outer_bound_points);
     inner_bound_points = combineLanePoints(inner_bound_points, current_inner_bound_points);
   }

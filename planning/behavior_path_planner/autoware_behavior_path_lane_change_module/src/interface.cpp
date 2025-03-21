@@ -105,6 +105,15 @@ BehaviorModuleOutput LaneChangeInterface::plan()
   resetPathCandidate();
   resetPathReference();
 
+  // plan() should be called only when the module is in the RUNNING state, but
+  // due to planner manager implementation, it can be called in the IDLE state.
+  // TODO(Azu, Quda): consider a proper fix.
+  if (getCurrentStatus() == ModuleStatus::IDLE) {
+    auto output = getPreviousModuleOutput();
+    path_reference_ = std::make_shared<PathWithLaneId>(output.reference_path);
+    return output;
+  }
+
   auto output = module_type_->generateOutput();
   path_reference_ = std::make_shared<PathWithLaneId>(output.reference_path);
 

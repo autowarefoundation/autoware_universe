@@ -66,6 +66,7 @@ struct ValidationParams
   double distance_deviation_threshold;
   double longitudinal_distance_deviation_threshold;
   double nominal_latency_threshold;
+  double yaw_deviation_threshold;
 
   struct TrajectoryShift : ValidityCheck
   {
@@ -101,6 +102,7 @@ public:
   bool checkValidLongitudinalDistanceDeviation(const Trajectory & trajectory);
   bool checkValidForwardTrajectoryLength(const Trajectory & trajectory);
   bool checkValidLatency(const Trajectory & trajectory);
+  bool checkValidYawDeviation(const Trajectory & trajectory);
   bool checkTrajectoryShift(const Trajectory & trajectory, const Trajectory & prev_trajectory);
 
 private:

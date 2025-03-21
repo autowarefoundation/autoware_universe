@@ -15,16 +15,17 @@
 #ifndef DEBUGGER__DEBUGGER_HPP_
 #define DEBUGGER__DEBUGGER_HPP_
 
-#include "autoware_utils/ros/debug_publisher.hpp"
-#include "autoware_utils/ros/published_time_publisher.hpp"
+#include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "debug_object.hpp"
 
+#include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/ros/published_time_publisher.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <diagnostic_updater/publisher.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include "autoware_perception_msgs/msg/detected_objects.hpp"
-#include "autoware_perception_msgs/msg/tracked_objects.hpp"
+#include <autoware_perception_msgs/msg/detected_objects.hpp>
+#include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 
 #include <list>
@@ -43,7 +44,9 @@ namespace autoware::multi_object_tracker
 class TrackerDebugger
 {
 public:
-  explicit TrackerDebugger(rclcpp::Node & node, const std::string & frame_id);
+  TrackerDebugger(
+    rclcpp::Node & node, const std::string & frame_id,
+    const std::vector<types::InputChannel> & channels_config);
 
 private:
   struct DEBUG_SETTINGS
@@ -95,10 +98,6 @@ public:
   void checkDelay(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
   // Debug object
-  void setObjectChannels(const std::vector<std::string> & channels)
-  {
-    object_debugger_.setChannelNames(channels);
-  }
   void collectObjectInfo(
     const rclcpp::Time & message_time, const std::list<std::shared_ptr<Tracker>> & list_tracker,
     const types::DynamicObjectList & detected_objects,

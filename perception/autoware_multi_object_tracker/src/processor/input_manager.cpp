@@ -14,8 +14,11 @@
 
 #include "input_manager.hpp"
 
+#include "autoware/multi_object_tracker/object_model/shapes.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/uncertainty/uncertainty_processor.hpp"
+
+#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 
 #include <cassert>
 #include <memory>
@@ -27,19 +30,11 @@ namespace autoware::multi_object_tracker
 ///////////////////////////
 /////// InputStream ///////
 ///////////////////////////
-InputStream::InputStream(rclcpp::Node & node, uint & index, std::shared_ptr<Odometry> odometry)
-: node_(node), index_(index), odometry_(odometry)
+InputStream::InputStream(
+  rclcpp::Node & node, const types::InputChannel & input_channel,
+  std::shared_ptr<Odometry> odometry)
+: node_(node), channel_(input_channel), odometry_(odometry)
 {
-}
-
-void InputStream::init(const InputChannel & input_channel)
-{
-  // Initialize parameters
-  input_topic_ = input_channel.input_topic;
-  long_name_ = input_channel.long_name;
-  short_name_ = input_channel.short_name;
-  is_spawn_enabled_ = input_channel.is_spawn_enabled;
-
   // Initialize queue
   objects_que_.clear();
 
@@ -57,8 +52,9 @@ void InputStream::onMessage(
   const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr msg)
 {
   const autoware_perception_msgs::msg::DetectedObjects & objects = *msg;
+  const rclcpp::Time timestamp = objects.header.stamp;
 
-  types::DynamicObjectList dynamic_objects = types::toDynamicObjectList(objects, index_);
+  types::DynamicObjectList dynamic_objects = types::toDynamicObjectList(objects, channel_.index);
 
   // Model the object uncertainty only if it is not available
   types::DynamicObjectList objects_with_uncertainty =
@@ -69,10 +65,45 @@ void InputStream::onMessage(
   if (!transformed_objects) {
     RCLCPP_WARN(
       node_.get_logger(), "InputManager::onMessage %s: Failed to transform objects.",
-      long_name_.c_str());
+      channel_.long_name.c_str());
     return;
   }
   dynamic_objects = transformed_objects.value();
+
+  // object shape processing
+  for (auto & object : dynamic_objects.objects) {
+    const auto label =
+      autoware::object_recognition_utils::getHighestProbLabel(object.classification);
+    if (label == autoware_perception_msgs::msg::ObjectClassification::UNKNOWN) {
+      continue;
+    }
+
+    // check object shape type, bounding box, cylinder, polygon
+    const auto object_type = object.shape.type;
+    if (object_type == autoware_perception_msgs::msg::Shape::POLYGON) {
+      // convert convex hull to bounding box
+      if (!shapes::convertConvexHullToBoundingBox(object, object)) {
+        RCLCPP_WARN(
+          node_.get_logger(),
+          "InputManager::onMessage %s: Failed to convert convex hull to bounding box.",
+          channel_.long_name.c_str());
+        continue;
+      }
+    } else if (object_type == autoware_perception_msgs::msg::Shape::CYLINDER) {
+      // convert cylinder dimension to bounding box dimension
+      object.shape.dimensions.y = object.shape.dimensions.x;
+    }
+    // else, it is bounding box and nothing to do
+
+    // calculate nearest point
+    const auto self_transform = odometry_->getTransform(timestamp);
+    if (!self_transform) {
+      return;
+    }
+    shapes::getNearestCornerOrSurface(*self_transform, object);
+
+    // if object extension is not reliable, enlarge covariance of position and extend shape
+  }
 
   // Normalize the object uncertainty
   uncertainty::normalizeUncertainty(dynamic_objects);
@@ -90,7 +121,7 @@ void InputStream::onMessage(
 
   // trigger the function if it is set
   if (func_trigger_) {
-    func_trigger_(index_);
+    func_trigger_(channel_.index);
   }
 }
 
@@ -124,7 +155,7 @@ void InputStream::updateTimingStatus(const rclcpp::Time & now, const rclcpp::Tim
         node_.get_logger(),
         "InputManager::updateTimingStatus %s: Negative interval detected, now: %f, "
         "latest_message_time_: %f",
-        long_name_.c_str(), now.seconds(), latest_message_time_.seconds());
+        channel_.long_name.c_str(), now.seconds(), latest_message_time_.seconds());
     } else if (initial_count_ < INITIALIZATION_COUNT) {
       // Initialization
       constexpr double initial_gain = 0.5;
@@ -151,7 +182,7 @@ void InputStream::updateTimingStatus(const rclcpp::Time & now, const rclcpp::Tim
     RCLCPP_WARN(
       node_.get_logger(),
       "InputManager::updateTimingStatus %s: Resetting the latest measurement time to %f",
-      long_name_.c_str(), objects_time.seconds());
+      channel_.long_name.c_str(), objects_time.seconds());
   } else {
     // Update only if the object time is newer than the latest measurement time
     latest_measurement_time_ =
@@ -173,7 +204,7 @@ void InputStream::getObjectsOlderThan(
       node_.get_logger(),
       "InputManager::getObjectsOlderThan %s: Invalid object time interval, object_latest_time: %f, "
       "object_earliest_time: %f",
-      long_name_.c_str(), object_latest_time.seconds(), object_earliest_time.seconds());
+      channel_.long_name.c_str(), object_latest_time.seconds(), object_earliest_time.seconds());
     return;
   }
 
@@ -210,7 +241,7 @@ InputManager::InputManager(rclcpp::Node & node, std::shared_ptr<Odometry> odomet
   latest_exported_object_time_ = node_.now() - rclcpp::Duration::from_seconds(3.0);
 }
 
-void InputManager::init(const std::vector<InputChannel> & input_channels)
+void InputManager::init(const std::vector<types::InputChannel> & input_channels)
 {
   // Check input sizes
   input_size_ = input_channels.size();
@@ -223,9 +254,7 @@ void InputManager::init(const std::vector<InputChannel> & input_channels)
   sub_objects_array_.resize(input_size_);
   bool is_any_spawn_enabled = false;
   for (size_t i = 0; i < input_size_; i++) {
-    uint index(i);
-    InputStream input_stream(node_, index, odometry_);
-    input_stream.init(input_channels[i]);
+    InputStream input_stream(node_, input_channels[i], odometry_);
     input_stream.setTriggerFunction(
       std::bind(&InputManager::onTrigger, this, std::placeholders::_1));
     input_streams_.push_back(std::make_shared<InputStream>(input_stream));

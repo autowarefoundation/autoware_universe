@@ -7,7 +7,7 @@ Changelog for package autoware_string_stamped_rviz_plugin
 
 0.41.2 (2025-02-19)
 -------------------
-* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware.universe/issues/10088>`_)
+* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware_universe/issues/10088>`_)
 * Contributors: Ryohsuke Mitsudome
 
 0.41.1 (2025-02-10)
@@ -16,8 +16,8 @@ Changelog for package autoware_string_stamped_rviz_plugin
 0.41.0 (2025-01-29)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* chore(autoware_string_stamped_overlay_rviz_plugin): fix version in package.xml (`#9874 <https://github.com/autowarefoundation/autoware.universe/issues/9874>`_)
-* feat(autoware_overlay_rviz_plugin): add plugin to show string stamped (`#9683 <https://github.com/autowarefoundation/autoware.universe/issues/9683>`_)
+* chore(autoware_string_stamped_overlay_rviz_plugin): fix version in package.xml (`#9874 <https://github.com/autowarefoundation/autoware_universe/issues/9874>`_)
+* feat(autoware_overlay_rviz_plugin): add plugin to show string stamped (`#9683 <https://github.com/autowarefoundation/autoware_universe/issues/9683>`_)
   * feat(autoware_overlay_rviz_plugin): add plugin to show string stamped
   * fix
   * better visualization
@@ -29,8 +29,8 @@ Changelog for package autoware_string_stamped_rviz_plugin
 * Contributors: Fumiya Watanabe, Takayuki Murooka
 
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* chore(autoware_string_stamped_overlay_rviz_plugin): fix version in package.xml (`#9874 <https://github.com/autowarefoundation/autoware.universe/issues/9874>`_)
-* feat(autoware_overlay_rviz_plugin): add plugin to show string stamped (`#9683 <https://github.com/autowarefoundation/autoware.universe/issues/9683>`_)
+* chore(autoware_string_stamped_overlay_rviz_plugin): fix version in package.xml (`#9874 <https://github.com/autowarefoundation/autoware_universe/issues/9874>`_)
+* feat(autoware_overlay_rviz_plugin): add plugin to show string stamped (`#9683 <https://github.com/autowarefoundation/autoware_universe/issues/9683>`_)
   * feat(autoware_overlay_rviz_plugin): add plugin to show string stamped
   * fix
   * better visualization

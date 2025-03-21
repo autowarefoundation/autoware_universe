@@ -68,7 +68,6 @@ private:
   // ros parameters
   bool ignore_crossing_obstacle_{};
   bool suppress_sudden_stop_{};
-  bool use_pointcloud_{false};
   CommonParam common_param_{};
   StopPlanningParam stop_planning_param_{};
   ObstacleFilteringParam obstacle_filtering_param_{};
@@ -187,7 +186,7 @@ private:
     const VehicleInfo & vehicle_info, const double dist_to_bumper,
     const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check) const;
 
-  std::optional<StopObstacle> create_stop_obstacle_for_point_cloud(
+  StopObstacle create_stop_obstacle_for_point_cloud(
     const std::vector<TrajectoryPoint> & traj_points, const rclcpp::Time & stamp,
     const geometry_msgs::msg::Point & stop_point, const double dist_to_bumper) const;
 

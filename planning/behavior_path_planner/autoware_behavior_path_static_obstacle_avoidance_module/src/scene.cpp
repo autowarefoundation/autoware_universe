@@ -962,15 +962,13 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
   using autoware::motion_utils::calcSignedArcLength;
 
   const auto is_ignore_signal = [this](const UUID & uuid) {
-    if (!ignore_signal_.has_value()) {
-      return false;
-    }
-
-    return ignore_signal_.value() == uuid;
+    return ignore_signal_ids_.find(to_hex_string(uuid)) != ignore_signal_ids_.end();
   };
 
   const auto update_ignore_signal = [this](const UUID & uuid, const bool is_ignore) {
-    ignore_signal_ = is_ignore ? std::make_optional(uuid) : std::nullopt;
+    if (is_ignore) {
+      ignore_signal_ids_.insert(to_hex_string(uuid));
+    }
   };
 
   const auto is_large_deviation = [this](const auto & path) {
@@ -1509,6 +1507,7 @@ void StaticObstacleAvoidanceModule::initVariables()
   resetPathCandidate();
   resetPathReference();
   arrived_path_end_ = false;
+  ignore_signal_ids_.clear();
 }
 
 void StaticObstacleAvoidanceModule::initRTCStatus()

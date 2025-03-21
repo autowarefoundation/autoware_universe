@@ -19,6 +19,7 @@
   <depend>autoware_cuda_utils</depend>
   <depend>autoware_tensorrt_classifier</depend>
   <depend>autoware_tensorrt_common</depend>
+  <depend>autoware_utils</depend>
   <depend>cv_bridge</depend>
   <depend>image_transport</depend>
   <depend>libboost-filesystem-dev</depend>

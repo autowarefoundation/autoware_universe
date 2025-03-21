@@ -13,12 +13,12 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
   <depend>autoware_adapi_v1_msgs</depend>
+  <depend>autoware_internal_planning_msgs</depend>
   <depend>autoware_utils</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>
   <depend>std_srvs</depend>
-  <depend>tier4_planning_msgs</depend>
   <depend>tier4_system_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>

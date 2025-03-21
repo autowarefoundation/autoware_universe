@@ -257,26 +257,27 @@ std::vector<CruiseObstacle> ObstacleCruiseModule::filter_cruise_obstacle_for_pre
       cruise_obstacles.push_back(*cruise_obstacle);
       continue;
     }
+  }
 
-    // 3. precise filtering for yield cruise
-    if (obstacle_filtering_param_.enable_yield) {
-      const auto yield_obstacles = find_yield_cruise_obstacles(
-        odometry, objects, predicted_objects_stamp, traj_points, vehicle_info);
-      if (yield_obstacles) {
-        for (const auto & y : yield_obstacles.value()) {
-          // Check if there is no member with the same UUID in cruise_obstacles
-          auto it = std::find_if(
-            cruise_obstacles.begin(), cruise_obstacles.end(),
-            [&y](const auto & c) { return y.uuid == c.uuid; });
+  // 3. precise filtering for yield cruise
+  if (obstacle_filtering_param_.enable_yield) {
+    const auto yield_obstacles = find_yield_cruise_obstacles(
+      odometry, objects, predicted_objects_stamp, traj_points, vehicle_info);
+    if (yield_obstacles) {
+      for (const auto & y : yield_obstacles.value()) {
+        // Check if there is no member with the same UUID in cruise_obstacles
+        auto it = std::find_if(
+          cruise_obstacles.begin(), cruise_obstacles.end(),
+          [&y](const auto & c) { return y.uuid == c.uuid; });
 
-          // If no matching UUID found, insert yield obstacle into cruise_obstacles
-          if (it == cruise_obstacles.end()) {
-            cruise_obstacles.push_back(y);
-          }
+        // If no matching UUID found, insert yield obstacle into cruise_obstacles
+        if (it == cruise_obstacles.end()) {
+          cruise_obstacles.push_back(y);
         }
       }
     }
   }
+
   prev_cruise_object_obstacles_ = cruise_obstacles;
 
   return cruise_obstacles;
@@ -461,14 +462,14 @@ std::optional<std::vector<CruiseObstacle>> ObstacleCruiseModule::find_yield_crui
       obstacle_filtering_param_.stopped_obstacle_velocity_threshold;
     if (is_moving) {
       const bool is_within_lat_dist_threshold =
-        o->get_dist_to_traj_lateral(traj_points) <
+        std::abs(o->get_dist_to_traj_lateral(traj_points)) <
         obstacle_filtering_param_.yield_lat_distance_threshold;
       if (is_within_lat_dist_threshold) moving_objects.push_back(o);
       return;
     }
     // lat threshold is larger for stopped obstacles
     const bool is_within_lat_dist_threshold =
-      o->get_dist_to_traj_lateral(traj_points) <
+      std::abs(o->get_dist_to_traj_lateral(traj_points)) <
       obstacle_filtering_param_.yield_lat_distance_threshold +
         obstacle_filtering_param_.max_lat_dist_between_obstacles;
     if (is_within_lat_dist_threshold) stopped_objects.push_back(o);

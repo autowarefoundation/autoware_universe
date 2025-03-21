@@ -454,6 +454,10 @@ std::vector<SlowDownObstacle> ObstacleSlowDownModule::filter_slow_down_obstacle_
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
+  if (!obstacle_filtering_param_.use_pointcloud) {
+    return std::vector<SlowDownObstacle>{};
+  }
+
   // calculate collision points with trajectory with lateral stop margin
   // NOTE: For additional margin, hysteresis is not divided by two.
   const auto & p = obstacle_filtering_param_;
@@ -480,11 +484,7 @@ std::vector<SlowDownObstacle> ObstacleSlowDownModule::filter_slow_down_obstacle_
     const auto slow_down_obstacle = create_slow_down_obstacle_for_point_cloud(
       rclcpp::Time(point_cloud.pointcloud.header.stamp), front_collision_point,
       back_collision_point, slow_down_point_data.lat_dist_to_traj);
-
-    if (slow_down_obstacle) {
-      slow_down_obstacles.push_back(*slow_down_obstacle);
-      continue;
-    }
+    slow_down_obstacles.push_back(slow_down_obstacle);
   }
 
   RCLCPP_DEBUG(
@@ -630,13 +630,10 @@ ObstacleSlowDownModule::create_slow_down_obstacle_for_predicted_object(
     back_collision_point};
 }
 
-std::optional<SlowDownObstacle> ObstacleSlowDownModule::create_slow_down_obstacle_for_point_cloud(
+SlowDownObstacle ObstacleSlowDownModule::create_slow_down_obstacle_for_point_cloud(
   const rclcpp::Time & stamp, const geometry_msgs::msg::Point & front_collision_point,
   const geometry_msgs::msg::Point & back_collision_point, const double lat_dist_to_traj)
 {
-  if (!obstacle_filtering_param_.use_pointcloud) {
-    return std::nullopt;
-  }
   const unique_identifier_msgs::msg::UUID obj_uuid;
   const auto & obj_uuid_str = autoware_utils::to_hex_string(obj_uuid);
 

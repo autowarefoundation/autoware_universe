@@ -208,8 +208,8 @@ bool LinfPseudoJerkSmoother::apply(
 
   // [b0, b1, ..., bN, |  a0, a1, ..., aN, |
   //  delta0, delta1, ..., deltaN, | sigma0, sigma1, ..., sigmaN]
-  const std::vector<double> optval = std::get<0>(result);
-  const int status_val = std::get<3>(result);
+  const std::vector<double> optval = result.primal_solution;
+  const int status_val = result.solution_status;
   if (status_val != 1) {
     RCLCPP_WARN(logger_, "optimization failed : %s", qp_solver_.getStatusMessage().c_str());
     return false;
