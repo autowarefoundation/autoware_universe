@@ -315,7 +315,8 @@ TrajectoryPoints AnalyticalJerkConstrainedSmoother::apply_lateral_acceleration_f
     static_cast<size_t>(std::max(static_cast<int>((curvature_calc_dist) / points_interval), 1));
 
   // Calculate curvature assuming the trajectory points interval is constant
-  const auto curvature_v = trajectory_utils::calc_trajectory_curvature_from_3_points(output, idx_dist);
+  const auto curvature_v =
+    trajectory_utils::calc_trajectory_curvature_from_3_points(output, idx_dist);
 
   // Decrease speed according to lateral G
   const size_t before_decel_index =

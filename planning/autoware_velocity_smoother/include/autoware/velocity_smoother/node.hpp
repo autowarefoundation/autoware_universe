@@ -248,7 +248,8 @@ private:
 
   TrajectoryPoint calc_projected_trajectory_point(
     const TrajectoryPoints & trajectory, const Pose & pose) const;
-  TrajectoryPoint calc_projected_trajectory_point_from_ego(const TrajectoryPoints & trajectory) const;
+  TrajectoryPoint calc_projected_trajectory_point_from_ego(
+    const TrajectoryPoints & trajectory) const;
 
   // parameter handling
   void init_common_param();

@@ -77,7 +77,8 @@ bool LinfPseudoJerkSmoother::apply(
     return false;
   }
 
-  std::vector<double> interval_dist_arr = trajectory_utils::calc_trajectory_interval_distance(input);
+  std::vector<double> interval_dist_arr =
+    trajectory_utils::calc_trajectory_interval_distance(input);
 
   std::vector<double> v_max(N, 0.0);
   for (size_t i = 0; i < N; ++i) {

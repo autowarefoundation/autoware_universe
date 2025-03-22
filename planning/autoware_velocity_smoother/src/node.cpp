@@ -474,7 +474,8 @@ void VelocitySmootherNode::on_current_trajectory(const Trajectory::ConstSharedPt
 
   // calculate prev closest point
   if (!prev_output_.empty()) {
-    current_closest_point_from_prev_output_ = calc_projected_trajectory_point_from_ego(prev_output_);
+    current_closest_point_from_prev_output_ =
+      calc_projected_trajectory_point_from_ego(prev_output_);
   }
 
   // calculate distance to insert external velocity limit
@@ -750,8 +751,8 @@ void VelocitySmootherNode::insert_behind_velocity(
         return autoware::motion_utils::findNearestSegmentIndex(
           prev_output_, output.at(i).pose.position);
       }();
-      const auto prev_output_point =
-        trajectory_utils::calc_interpolated_trajectory_point(prev_output_, output.at(i).pose, seg_idx);
+      const auto prev_output_point = trajectory_utils::calc_interpolated_trajectory_point(
+        prev_output_, output.at(i).pose, seg_idx);
 
       // output should be always positive: TODO(Horibe) think better way
       output.at(i).longitudinal_velocity_mps =
@@ -819,7 +820,8 @@ std::pair<Motion, VelocitySmootherNode::InitializeType> VelocitySmootherNode::ca
       if (stop_dist > node_param_.stop_dist_to_prohibit_engage) {
         RCLCPP_DEBUG(
           get_logger(),
-          "calc_initial_motion : vehicle speed is low (%.3f), and desired speed is high (%.3f). Use "
+          "calc_initial_motion : vehicle speed is low (%.3f), and desired speed is high (%.3f). "
+          "Use "
           "engage speed (%.3f) until vehicle speed reaches engage_vel_thr (%.3f). stop_dist = %.3f",
           vehicle_speed, target_vel, node_param_.engage_velocity, engage_vel_thr, stop_dist);
         const double engage_acceleration =
@@ -834,7 +836,8 @@ std::pair<Motion, VelocitySmootherNode::InitializeType> VelocitySmootherNode::ca
     } else if (target_vel > 0.0) {
       RCLCPP_WARN_THROTTLE(
         get_logger(), *clock_, 3000,
-        "calc_initial_motion : target velocity(%.3f[m/s]) is lower than engage velocity(%.3f[m/s]). ",
+        "calc_initial_motion : target velocity(%.3f[m/s]) is lower than engage "
+        "velocity(%.3f[m/s]). ",
         target_vel, node_param_.engage_velocity);
     }
   }

@@ -54,7 +54,8 @@ TrajectoryPoints applyPreProcess(
     arc_length.push_back(s);
   }
 
-  const auto points = autoware::motion_utils::resampleTrajectory(convertToTrajectory(input), arc_length);
+  const auto points =
+    autoware::motion_utils::resampleTrajectory(convertToTrajectory(input), arc_length);
   output = convertToTrajectoryPointArray(points);
   output.back() = input.back();  // keep the final speed.
 
@@ -173,7 +174,8 @@ TrajectoryPoints SmootherBase::apply_lateral_acceleration_filter(
     std::max(static_cast<int>((base_param_.curvature_calculation_distance) / points_interval), 1));
 
   // Calculate curvature assuming the trajectory points interval is constant
-  const auto curvature_v = trajectory_utils::calc_trajectory_curvature_from_3_points(output, idx_dist);
+  const auto curvature_v =
+    trajectory_utils::calc_trajectory_curvature_from_3_points(output, idx_dist);
 
   //  Decrease speed according to lateral G
   const size_t before_decel_index =
@@ -183,10 +185,11 @@ TrajectoryPoints SmootherBase::apply_lateral_acceleration_filter(
   const double max_lateral_accel_abs = std::fabs(base_param_.max_lateral_accel);
 
   const auto latacc_min_vel_arr =
-    enable_smooth_limit ? trajectory_utils::calc_velocity_profile_with_constant_jerk_and_acceleration_limit(
-                            output, v0, a0, base_param_.min_jerk, base_param_.max_accel,
-                            base_param_.min_decel_for_lateral_acc_lim_filter)
-                        : std::vector<double>{};
+    enable_smooth_limit
+      ? trajectory_utils::calc_velocity_profile_with_constant_jerk_and_acceleration_limit(
+          output, v0, a0, base_param_.min_jerk, base_param_.max_accel,
+          base_param_.min_decel_for_lateral_acc_lim_filter)
+      : std::vector<double>{};
 
   for (size_t i = 0; i < output.size(); ++i) {
     double curvature = 0.0;
@@ -229,7 +232,8 @@ TrajectoryPoints SmootherBase::apply_steering_rate_limit(
     std::max(static_cast<int>((base_param_.curvature_calculation_distance) / points_interval), 1));
 
   // Step1. Calculate curvature assuming the trajectory points interval is constant.
-  const auto curvature_v = trajectory_utils::calc_trajectory_curvature_from_3_points(output, idx_dist);
+  const auto curvature_v =
+    trajectory_utils::calc_trajectory_curvature_from_3_points(output, idx_dist);
 
   // Step2. Calculate steer rate for each trajectory point.
   std::vector<double> steer_rate_arr(output.size(), 0.0);
