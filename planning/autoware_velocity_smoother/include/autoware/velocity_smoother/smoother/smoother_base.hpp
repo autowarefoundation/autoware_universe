@@ -64,30 +64,30 @@ public:
     TrajectoryPoints & output, std::vector<TrajectoryPoints> & debug_trajectories,
     const bool publish_debug_trajs) = 0;
 
-  virtual TrajectoryPoints resampleTrajectory(
+  virtual TrajectoryPoints resample_trajectory(
     const TrajectoryPoints & input, const double v0, const geometry_msgs::msg::Pose & current_pose,
     const double nearest_dist_threshold, const double nearest_yaw_threshold) const = 0;
 
-  virtual TrajectoryPoints applyLateralAccelerationFilter(
+  virtual TrajectoryPoints apply_lateral_acceleration_filter(
     const TrajectoryPoints & input, [[maybe_unused]] const double v0 = 0.0,
     [[maybe_unused]] const double a0 = 0.0, [[maybe_unused]] const bool enable_smooth_limit = false,
     const bool use_resampling = true, const double input_points_interval = 1.0) const;
 
-  TrajectoryPoints applySteeringRateLimit(
+  TrajectoryPoints apply_steering_rate_limit(
     const TrajectoryPoints & input, const bool use_resampling = true,
     const double input_points_interval = 1.0) const;
 
-  double getMaxAccel() const;
-  double getMinDecel() const;
-  double getMaxJerk() const;
-  double getMinJerk() const;
+  double get_max_accel() const;
+  double get_min_decel() const;
+  double get_max_jerk() const;
+  double get_min_jerk() const;
 
-  void setWheelBase(const double wheel_base);
-  void setMaxAccel(const double max_acceleration);
-  void setMaxJerk(const double max_jerk);
+  void set_wheel_base(const double wheel_base);
+  void set_max_accel(const double max_acceleration);
+  void set_max_jerk(const double max_jerk);
 
-  void setParam(const BaseParam & param);
-  BaseParam getBaseParam() const;
+  void set_param(const BaseParam & param);
+  BaseParam get_base_param() const;
 
 protected:
   BaseParam base_param_;

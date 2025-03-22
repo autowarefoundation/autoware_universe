@@ -86,8 +86,8 @@ std::optional<double> PlannerData::calculate_min_deceleration_distance(
 {
   return motion_utils::calcDecelDistWithJerkAndAccConstraints(
     current_odometry.twist.twist.linear.x, target_velocity,
-    current_acceleration.accel.accel.linear.x, velocity_smoother_->getMinDecel(),
-    std::abs(velocity_smoother_->getMinJerk()), velocity_smoother_->getMinJerk());
+    current_acceleration.accel.accel.linear.x, velocity_smoother_->get_min_decel(),
+    std::abs(velocity_smoother_->get_min_jerk()), velocity_smoother_->get_min_jerk());
 }
 
 double PlannerData::Object::get_dist_to_traj_poly(

@@ -50,26 +50,26 @@ public:
     TrajectoryPoints & output, std::vector<TrajectoryPoints> & debug_trajectories,
     const bool publish_debug_trajs) override;
 
-  TrajectoryPoints resampleTrajectory(
+  TrajectoryPoints resample_trajectory(
     const TrajectoryPoints & input, [[maybe_unused]] const double v0,
     const geometry_msgs::msg::Pose & current_pose, const double nearest_dist_threshold,
     const double nearest_yaw_threshold) const override;
 
-  void setParam(const Param & param);
-  Param getParam() const;
+  void set_param(const Param & param);
+  Param get_param() const;
 
 private:
   Param smoother_param_;
   std::shared_ptr<autoware::qp_interface::QPInterface> qp_interface_;
   rclcpp::Logger logger_{rclcpp::get_logger("smoother").get_child("jerk_filtered_smoother")};
 
-  TrajectoryPoints forwardJerkFilter(
+  TrajectoryPoints forward_jerk_filter(
     const double v0, const double a0, const double a_max, const double a_stop, const double j_max,
     const TrajectoryPoints & input) const;
-  TrajectoryPoints backwardJerkFilter(
+  TrajectoryPoints backward_jerk_filter(
     const double v0, const double a0, const double a_min, const double a_stop, const double j_min,
     const TrajectoryPoints & input) const;
-  TrajectoryPoints mergeFilteredTrajectory(
+  TrajectoryPoints merge_filtered_trajectory(
     const double v0, const double a0, const double a_min, const double j_min,
     const TrajectoryPoints & forward_filtered, const TrajectoryPoints & backward_filtered) const;
 };

@@ -48,12 +48,12 @@ public:
     TrajectoryPoints & output, std::vector<TrajectoryPoints> & debug_trajectories,
     const bool publish_debug_trajs) override;
 
-  TrajectoryPoints resampleTrajectory(
+  TrajectoryPoints resample_trajectory(
     const TrajectoryPoints & input, const double v0, const geometry_msgs::msg::Pose & current_pose,
     const double nearest_dist_threshold, const double nearest_yaw_threshold) const override;
 
-  void setParam(const Param & smoother_param);
-  Param getParam() const;
+  void set_param(const Param & smoother_param);
+  Param get_param() const;
 
 private:
   Param smoother_param_;

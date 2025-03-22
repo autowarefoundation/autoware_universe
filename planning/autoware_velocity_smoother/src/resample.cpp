@@ -27,7 +27,7 @@ namespace autoware::velocity_smoother
 {
 namespace resampling
 {
-TrajectoryPoints resampleTrajectory(
+TrajectoryPoints resample_trajectory(
   const TrajectoryPoints & input, const double v_current,
   const geometry_msgs::msg::Pose & current_pose, const double nearest_dist_threshold,
   const double nearest_yaw_threshold, const ResampleParam & param, const bool use_zoh_for_v)
@@ -146,7 +146,7 @@ TrajectoryPoints resampleTrajectory(
   return output;
 }
 
-TrajectoryPoints resampleTrajectory(
+TrajectoryPoints resample_trajectory(
   const TrajectoryPoints & input, const geometry_msgs::msg::Pose & current_pose,
   const double nearest_dist_threshold, const double nearest_yaw_threshold,
   const ResampleParam & param, const double nominal_ds, const bool use_zoh_for_v)

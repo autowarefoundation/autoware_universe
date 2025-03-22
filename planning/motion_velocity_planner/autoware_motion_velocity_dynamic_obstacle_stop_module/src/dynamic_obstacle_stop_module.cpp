@@ -132,9 +132,9 @@ VelocityPlanningResult DynamicObstacleStopModule::plan(
   const auto min_stop_distance = autoware::motion_utils::calcDecelDistWithJerkAndAccConstraints(
                                    planner_data->current_odometry.twist.twist.linear.x, 0.0,
                                    planner_data->current_acceleration.accel.accel.linear.x,
-                                   planner_data->velocity_smoother_->getMinDecel(),
-                                   planner_data->velocity_smoother_->getMaxJerk(),
-                                   planner_data->velocity_smoother_->getMinJerk())
+                                   planner_data->velocity_smoother_->get_min_decel(),
+                                   planner_data->velocity_smoother_->get_max_jerk(),
+                                   planner_data->velocity_smoother_->get_min_jerk())
                                    .value_or(0.0);
   ego_data.earliest_stop_pose = autoware::motion_utils::calcLongitudinalOffsetPose(
     ego_data.trajectory, ego_data.pose.position, min_stop_distance);

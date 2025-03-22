@@ -24,7 +24,7 @@ namespace autoware::velocity_smoother
 {
 namespace analytical_velocity_planning_utils
 {
-bool calcStopDistWithJerkAndAccConstraints(
+bool calc_stop_dist_with_jerk_and_acc_constraints(
   const double v0, const double a0, const double jerk_acc, const double jerk_dec,
   const double min_acc, const double target_vel, int & type, std::vector<double> & times,
   double & stop_dist)
@@ -65,7 +65,7 @@ bool calcStopDistWithJerkAndAccConstraints(
     const double a_target = 0.0;
     const double v_margin = 0.3;  // [m/s]
     const double a_margin = 0.1;  // [m/s^2]
-    if (!validCheckCalcStopDist(v3, a3, target_vel, a_target, v_margin, a_margin)) {
+    if (!valid_check_calc_stop_dist(v3, a3, target_vel, a_target, v_margin, a_margin)) {
       RCLCPP_DEBUG(rclcpp::get_logger("velocity_planning_utils"), "Valid check error. type = 1");
       return false;
     }
@@ -102,7 +102,7 @@ bool calcStopDistWithJerkAndAccConstraints(
       const double a_target = 0.0;
       const double v_margin = 0.3;
       const double a_margin = 0.1;
-      if (!validCheckCalcStopDist(v2, a2, target_vel, a_target, v_margin, a_margin)) {
+      if (!valid_check_calc_stop_dist(v2, a2, target_vel, a_target, v_margin, a_margin)) {
         RCLCPP_DEBUG(rclcpp::get_logger("velocity_planning_utils"), "Valid check error. type = 2");
         return false;
       }
@@ -129,7 +129,7 @@ bool calcStopDistWithJerkAndAccConstraints(
       const double a_target = 0.0;
       const double v_margin = 0.3;
       const double a_margin = 0.1;
-      if (!validCheckCalcStopDist(v1, a1, target_vel, a_target, v_margin, a_margin)) {
+      if (!valid_check_calc_stop_dist(v1, a1, target_vel, a_target, v_margin, a_margin)) {
         RCLCPP_DEBUG(rclcpp::get_logger("velocity_planning_utils"), "Valid check error. type = 3");
         return false;
       }
@@ -142,7 +142,7 @@ bool calcStopDistWithJerkAndAccConstraints(
   return true;
 }
 
-bool validCheckCalcStopDist(
+bool valid_check_calc_stop_dist(
   const double v_end, const double a_end, const double v_target, const double a_target,
   const double v_margin, const double a_margin)
 {
@@ -165,7 +165,7 @@ bool validCheckCalcStopDist(
   return true;
 }
 
-bool calcStopVelocityWithConstantJerkAccLimit(
+bool calc_stop_velocity_with_constant_jerk_acc_limit(
   const double v0, const double a0, const double jerk_acc, const double jerk_dec,
   const double min_acc, const double decel_target_vel, const int type,
   const std::vector<double> & times, const size_t start_index, TrajectoryPoints & output_trajectory)
@@ -179,7 +179,7 @@ bool calcStopVelocityWithConstantJerkAccLimit(
   double j = 0.0;
 
   for (double t = 0.0; t < t_total; t += dt) {
-    updateStopVelocityStatus(v0, a0, jerk_acc, jerk_dec, type, times, t, x, v, a, j);
+    update_stop_velocity_status(v0, a0, jerk_acc, jerk_dec, type, times, t, x, v, a, j);
     if (v > 0.0) {
       a = std::max(a, min_acc);
       ts.push_back(t);
@@ -189,7 +189,7 @@ bool calcStopVelocityWithConstantJerkAccLimit(
       js.push_back(j);
     }
   }
-  updateStopVelocityStatus(v0, a0, jerk_acc, jerk_dec, type, times, t_total, x, v, a, j);
+  update_stop_velocity_status(v0, a0, jerk_acc, jerk_dec, type, times, t_total, x, v, a, j);
   if (v > 0.0 && !xs.empty() && xs.back() < x) {
     a = std::max(a, min_acc);
     ts.push_back(t_total);
@@ -210,7 +210,7 @@ bool calcStopVelocityWithConstantJerkAccLimit(
   const double a_target = 0.0;
   const double v_margin = 0.3;
   const double a_margin = 0.1;
-  if (!validCheckCalcStopDist(v, a, decel_target_vel, a_target, v_margin, a_margin)) {
+  if (!valid_check_calc_stop_dist(v, a, decel_target_vel, a_target, v_margin, a_margin)) {
     return false;
   }
 
@@ -264,7 +264,7 @@ bool calcStopVelocityWithConstantJerkAccLimit(
   return true;
 }
 
-void updateStopVelocityStatus(
+void update_stop_velocity_status(
   double v0, double a0, double jerk_acc, double jerk_dec, int type,
   const std::vector<double> & times, double t, double & x, double & v, double & a, double & j)
 {

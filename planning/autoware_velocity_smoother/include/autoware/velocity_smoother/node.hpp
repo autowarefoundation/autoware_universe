@@ -187,72 +187,71 @@ private:
 
   mutable rclcpp::Clock::SharedPtr clock_;
 
-  void setupSmoother(const double wheelbase);
-
+  void setup_smoother(const double wheelbase);
   // parameter update
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
-  rcl_interfaces::msg::SetParametersResult onParameter(
+  rcl_interfaces::msg::SetParametersResult on_parameter(
     const std::vector<rclcpp::Parameter> & parameters);
 
   // topic callback
-  void onCurrentTrajectory(const Trajectory::ConstSharedPtr msg);
+  void on_current_trajectory(const Trajectory::ConstSharedPtr msg);
 
-  void calcExternalVelocityLimit();
+  void calc_external_velocity_limit();
 
   // publish methods
-  void publishTrajectory(const TrajectoryPoints & traj) const;
+  void publish_trajectory(const TrajectoryPoints & traj) const;
 
-  void publishStopDistance(const TrajectoryPoints & trajectory) const;
+  void publish_stop_distance(const TrajectoryPoints & trajectory) const;
 
   // non-const methods
-  void publishClosestState(const TrajectoryPoints & trajectory);
+  void publish_closest_state(const TrajectoryPoints & trajectory);
 
-  void updatePrevValues(const TrajectoryPoints & final_result);
+  void update_prev_values(const TrajectoryPoints & final_result);
 
   // const methods
-  bool checkData() const;
+  bool check_data() const;
 
-  void updateDataForExternalVelocityLimit();
+  void update_data_for_external_velocity_limit();
 
-  AlgorithmType getAlgorithmType(const std::string & algorithm_name) const;
+  AlgorithmType get_algorithm_type(const std::string & algorithm_name) const;
 
-  TrajectoryPoints calcTrajectoryVelocity(const TrajectoryPoints & traj_input) const;
+  TrajectoryPoints calc_trajectory_velocity(const TrajectoryPoints & traj_input) const;
 
-  bool smoothVelocity(
+  bool smooth_velocity(
     const TrajectoryPoints & input, const size_t input_closest,
     TrajectoryPoints & traj_smoothed) const;
 
-  std::pair<Motion, InitializeType> calcInitialMotion(
+  std::pair<Motion, InitializeType> calc_initial_motion(
     const TrajectoryPoints & input_traj, const size_t input_closest) const;
 
-  void applyExternalVelocityLimit(TrajectoryPoints & traj) const;
+  void apply_external_velocity_limit(TrajectoryPoints & traj) const;
 
-  void insertBehindVelocity(
+  void insert_behind_velocity(
     const size_t output_closest, const InitializeType type, TrajectoryPoints & output) const;
 
-  void applyStopApproachingVelocity(TrajectoryPoints & traj) const;
+  void apply_stop_approaching_velocity(TrajectoryPoints & traj) const;
 
-  void overwriteStopPoint(const TrajectoryPoints & input, TrajectoryPoints & output) const;
+  void overwrite_stop_point(const TrajectoryPoints & input, TrajectoryPoints & output) const;
 
-  double calcTravelDistance() const;
+  double calc_travel_distance() const;
 
-  bool isEngageStatus(const double target_vel) const;
+  bool is_engage_status(const double target_velocity) const;
 
-  void publishDebugTrajectories(const std::vector<TrajectoryPoints> & debug_trajectories) const;
+  void publish_debug_trajectories(const std::vector<TrajectoryPoints> & debug_trajectories) const;
 
-  void publishClosestVelocity(
+  void publish_closest_velocity(
     const TrajectoryPoints & trajectory, const Pose & current_pose,
     const rclcpp::Publisher<Float32Stamped>::SharedPtr pub) const;
 
-  Trajectory toTrajectoryMsg(
+  Trajectory to_trajectory_msg(
     const TrajectoryPoints & points, const std_msgs::msg::Header * header = nullptr) const;
 
-  TrajectoryPoint calcProjectedTrajectoryPoint(
+  TrajectoryPoint calc_projected_trajectory_point(
     const TrajectoryPoints & trajectory, const Pose & pose) const;
-  TrajectoryPoint calcProjectedTrajectoryPointFromEgo(const TrajectoryPoints & trajectory) const;
+  TrajectoryPoint calc_projected_trajectory_point_from_ego(const TrajectoryPoints & trajectory) const;
 
   // parameter handling
-  void initCommonParam();
+  void init_common_param();
 
   // debug
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch_;
@@ -279,10 +278,10 @@ private:
   rclcpp::Publisher<Float32Stamped>::SharedPtr pub_closest_merged_velocity_;
 
   // helper functions
-  size_t findNearestIndexFromEgo(const TrajectoryPoints & points) const;
-  bool isReverse(const TrajectoryPoints & points) const;
-  void flipVelocity(TrajectoryPoints & points) const;
-  void publishStopWatchTime();
+  size_t find_nearest_index_from_ego(const TrajectoryPoints & points) const;
+  bool is_reverse(const TrajectoryPoints & points) const;
+  void flip_velocity(TrajectoryPoints & points) const;
+  void publish_stop_watch_time();
 
   std::unique_ptr<autoware_utils::LoggerLevelConfigure> logger_configure_;
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;

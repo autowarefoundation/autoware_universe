@@ -42,12 +42,12 @@ LinfPseudoJerkSmoother::LinfPseudoJerkSmoother(
   qp_solver_.updateVerbose(false);
 }
 
-void LinfPseudoJerkSmoother::setParam(const Param & smoother_param)
+void LinfPseudoJerkSmoother::set_param(const Param & smoother_param)
 {
   smoother_param_ = smoother_param;
 }
 
-LinfPseudoJerkSmoother::Param LinfPseudoJerkSmoother::getParam() const
+LinfPseudoJerkSmoother::Param LinfPseudoJerkSmoother::get_param() const
 {
   return smoother_param_;
 }
@@ -77,7 +77,7 @@ bool LinfPseudoJerkSmoother::apply(
     return false;
   }
 
-  std::vector<double> interval_dist_arr = trajectory_utils::calcTrajectoryIntervalDistance(input);
+  std::vector<double> interval_dist_arr = trajectory_utils::calc_trajectory_interval_distance(input);
 
   std::vector<double> v_max(N, 0.0);
   for (size_t i = 0; i < N; ++i) {
@@ -249,11 +249,11 @@ bool LinfPseudoJerkSmoother::apply(
   return true;
 }
 
-TrajectoryPoints LinfPseudoJerkSmoother::resampleTrajectory(
+TrajectoryPoints LinfPseudoJerkSmoother::resample_trajectory(
   const TrajectoryPoints & input, const double v0, const geometry_msgs::msg::Pose & current_pose,
   const double nearest_dist_threshold, const double nearest_yaw_threshold) const
 {
-  return resampling::resampleTrajectory(
+  return resampling::resample_trajectory(
     input, v0, current_pose, nearest_dist_threshold, nearest_yaw_threshold,
     base_param_.resample_param);
 }

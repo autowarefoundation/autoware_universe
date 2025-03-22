@@ -61,7 +61,7 @@ inline double integ_a(double a0, double j0, double t)
   return a0 + j0 * t;
 }
 
-TrajectoryPoint calcInterpolatedTrajectoryPoint(
+TrajectoryPoint calc_interpolated_trajectory_point(
   const TrajectoryPoints & trajectory, const Pose & target_pose, const size_t seg_idx)
 {
   TrajectoryPoint traj_p{};
@@ -97,7 +97,7 @@ TrajectoryPoint calcInterpolatedTrajectoryPoint(
   return traj_p;
 }
 
-TrajectoryPoints extractPathAroundIndex(
+TrajectoryPoints extract_path_around_index(
   const TrajectoryPoints & trajectory, const size_t index, const double & ahead_length,
   const double & behind_length)
 {
@@ -140,7 +140,7 @@ TrajectoryPoints extractPathAroundIndex(
   return extracted_traj;
 }
 
-std::vector<double> calcArclengthArray(const TrajectoryPoints & trajectory)
+std::vector<double> calc_arclength_array(const TrajectoryPoints & trajectory)
 {
   if (trajectory.empty()) {
     return {};
@@ -158,7 +158,7 @@ std::vector<double> calcArclengthArray(const TrajectoryPoints & trajectory)
   return arclength;
 }
 
-std::vector<double> calcTrajectoryIntervalDistance(const TrajectoryPoints & trajectory)
+std::vector<double> calc_trajectory_interval_distance(const TrajectoryPoints & trajectory)
 {
   std::vector<double> intervals;
   for (unsigned int i = 1; i < trajectory.size(); ++i) {
@@ -170,7 +170,7 @@ std::vector<double> calcTrajectoryIntervalDistance(const TrajectoryPoints & traj
   return intervals;
 }
 
-std::vector<double> calcTrajectoryCurvatureFrom3Points(
+std::vector<double> calc_trajectory_curvature_from_3_points(
   const TrajectoryPoints & trajectory, size_t idx_dist)
 {
   using autoware_utils::calc_curvature;
@@ -219,7 +219,7 @@ std::vector<double> calcTrajectoryCurvatureFrom3Points(
   return k_arr;
 }
 
-void applyMaximumVelocityLimit(
+void apply_maximum_velocity_limit(
   const size_t begin, const size_t end, const double max_vel, TrajectoryPoints & trajectory)
 {
   for (size_t idx = begin; idx < end; ++idx) {
@@ -229,7 +229,7 @@ void applyMaximumVelocityLimit(
   }
 }
 
-bool calcStopDistWithJerkConstraints(
+bool calc_stop_dist_with_jerk_constraints(
   const double v0, const double a0, const double jerk_acc, const double jerk_dec,
   const double min_acc, const double target_vel, std::map<double, double> & jerk_profile,
   double & stop_dist)
@@ -293,7 +293,7 @@ bool calcStopDistWithJerkConstraints(
       jerk_profile.insert(std::make_pair(jerk_acc, t3));
 
       // Calculate state = (x, v, a, j) at t = t1 + t2 + t3
-      const auto state = updateStateWithJerkConstraint(v0, a0, jerk_profile, t1 + t2 + t3);
+      const auto state = update_state_with_jerk_constraint(v0, a0, jerk_profile, t1 + t2 + t3);
       if (!state) {
         return false;
       }
@@ -329,7 +329,7 @@ bool calcStopDistWithJerkConstraints(
       jerk_profile.insert(std::make_pair(jerk_acc, t2));
 
       // Calculate state = (x, v, a, j) at t = t1 + t2
-      const auto state = updateStateWithJerkConstraint(v0, a0, jerk_profile, t1 + t2);
+      const auto state = update_state_with_jerk_constraint(v0, a0, jerk_profile, t1 + t2);
       if (!state) {
         return false;
       }
@@ -354,7 +354,7 @@ bool calcStopDistWithJerkConstraints(
       jerk_profile.insert(std::make_pair(jerk, t1));
 
       // Calculate state = (x, v, a, j) at t = t1 + t2
-      const auto state = updateStateWithJerkConstraint(v0, a0, jerk_profile, t1);
+      const auto state = update_state_with_jerk_constraint(v0, a0, jerk_profile, t1);
       if (!state) {
         return false;
       }
@@ -366,7 +366,7 @@ bool calcStopDistWithJerkConstraints(
   constexpr double v_margin = 0.3;  // [m/s]
   constexpr double a_margin = 0.1;  // [m/s^2]
   stop_dist = x;
-  if (!isValidStopDist(v, a, target_vel, a_target, v_margin, a_margin)) {
+  if (!is_valid_stop_dist(v, a, target_vel, a_target, v_margin, a_margin)) {
     RCLCPP_WARN_STREAM(
       rclcpp::get_logger("autoware_velocity_smoother").get_child("trajectory_utils"),
       "valid error. type = " << static_cast<size_t>(type));
@@ -375,7 +375,7 @@ bool calcStopDistWithJerkConstraints(
   return true;
 }
 
-bool isValidStopDist(
+bool is_valid_stop_dist(
   const double v_end, const double a_end, const double v_target, const double a_target,
   const double v_margin, const double a_margin)
 {
@@ -398,7 +398,7 @@ bool isValidStopDist(
   return true;
 }
 
-std::optional<std::tuple<double, double, double, double>> updateStateWithJerkConstraint(
+std::optional<std::tuple<double, double, double, double>> update_state_with_jerk_constraint(
   const double v0, const double a0, const std::map<double, double> & jerk_profile, const double t)
 {
   // constexpr double eps = 1.0E-05;
@@ -429,7 +429,7 @@ std::optional<std::tuple<double, double, double, double>> updateStateWithJerkCon
   return std::nullopt;
 }
 
-std::vector<double> calcVelocityProfileWithConstantJerkAndAccelerationLimit(
+std::vector<double> calc_velocity_profile_with_constant_jerk_and_acceleration_limit(
   const TrajectoryPoints & trajectory, const double v0, const double a0, const double jerk,
   const double acc_max, const double acc_min)
 {
@@ -440,7 +440,7 @@ std::vector<double> calcVelocityProfileWithConstantJerkAndAccelerationLimit(
   auto curr_v = v0;
   auto curr_a = a0;
 
-  const auto intervals = calcTrajectoryIntervalDistance(trajectory);
+  const auto intervals = calc_trajectory_interval_distance(trajectory);
 
   if (intervals.size() + 1 != trajectory.size()) {
     throw std::logic_error("interval calculation result has unexpected array size.");
@@ -456,7 +456,7 @@ std::vector<double> calcVelocityProfileWithConstantJerkAndAccelerationLimit(
   return velocities;
 }
 
-double calcStopDistance(const TrajectoryPoints & trajectory, const size_t closest)
+double calc_stop_distance(const TrajectoryPoints & trajectory, const size_t closest)
 {
   const auto idx = autoware::motion_utils::searchZeroVelocityIndex(trajectory);
 

@@ -60,13 +60,13 @@ bool smoothPath(
 
   auto trajectory = autoware::motion_utils::convertToTrajectoryPoints<
     autoware_internal_planning_msgs::msg::PathWithLaneId>(in_path);
-  const auto traj_lateral_acc_filtered = smoother->applyLateralAccelerationFilter(trajectory);
+  const auto traj_lateral_acc_filtered = smoother->apply_lateral_acceleration_filter(trajectory);
 
   const auto traj_steering_rate_limited =
-    smoother->applySteeringRateLimit(traj_lateral_acc_filtered, false);
+    smoother->apply_steering_rate_limit(traj_lateral_acc_filtered, false);
 
   // Resample trajectory with ego-velocity based interval distances
-  auto traj_resampled = smoother->resampleTrajectory(
+  auto traj_resampled = smoother->resample_trajectory(
     traj_steering_rate_limited, v0, current_pose, planner_data->ego_nearest_dist_threshold,
     planner_data->ego_nearest_yaw_threshold);
   const size_t traj_resampled_closest =
@@ -89,7 +89,7 @@ bool smoothPath(
     traj_resampled.begin() + static_cast<std::ptrdiff_t>(traj_resampled_closest));
 
   if (external_v_limit) {
-    autoware::velocity_smoother::trajectory_utils::applyMaximumVelocityLimit(
+    autoware::velocity_smoother::trajectory_utils::apply_maximum_velocity_limit(
       traj_resampled_closest, traj_smoothed.size(), external_v_limit->max_velocity, traj_smoothed);
   }
   out_path = autoware::motion_utils::convertToPathWithLaneId<TrajectoryPoints>(traj_smoothed);

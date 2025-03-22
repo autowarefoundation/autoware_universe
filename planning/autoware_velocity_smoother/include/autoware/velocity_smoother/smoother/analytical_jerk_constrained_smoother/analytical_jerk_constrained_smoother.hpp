@@ -76,47 +76,47 @@ public:
     TrajectoryPoints & output, std::vector<TrajectoryPoints> & debug_trajectories,
     const bool publish_debug_trajs) override;
 
-  TrajectoryPoints resampleTrajectory(
+  TrajectoryPoints resample_trajectory(
     const TrajectoryPoints & input, [[maybe_unused]] const double v0,
     [[maybe_unused]] const geometry_msgs::msg::Pose & current_pose,
     [[maybe_unused]] const double nearest_dist_threshold,
     [[maybe_unused]] const double nearest_yaw_threshold) const override;
 
-  TrajectoryPoints applyLateralAccelerationFilter(
+  TrajectoryPoints apply_lateral_acceleration_filter(
     const TrajectoryPoints & input, [[maybe_unused]] const double v0,
     [[maybe_unused]] const double a0, [[maybe_unused]] const bool enable_smooth_limit,
     const bool use_resampling = true, const double input_points_interval = 1.0) const override;
 
-  void setParam(const Param & param);
-  Param getParam() const;
+  void set_param(const Param & param);
+  Param get_param() const;
 
 private:
   Param smoother_param_;
   rclcpp::Logger logger_{
     rclcpp::get_logger("smoother").get_child("analytical_jerk_constrained_smoother")};
 
-  bool searchDecelTargetIndices(
+  bool search_decel_target_indices(
     const TrajectoryPoints & trajectory, const size_t closest_index,
     std::vector<std::pair<size_t, double>> & decel_target_indices) const;
-  bool applyForwardJerkFilter(
+  bool apply_forward_jerk_filter(
     const TrajectoryPoints & base_trajectory, const size_t start_index, const double initial_vel,
     const double initial_acc, const Param & params, TrajectoryPoints & output_trajectory) const;
-  bool applyBackwardDecelFilter(
+  bool apply_backward_decel_filter(
     const std::vector<size_t> & start_indices, const size_t decel_target_index,
     const double decel_target_vel, const Param & params,
     TrajectoryPoints & output_trajectory) const;
-  bool calcEnoughDistForDecel(
+  bool calc_enough_dist_for_decel(
     const TrajectoryPoints & trajectory, const size_t start_index, const double decel_target_vel,
     const double planning_jerk, const Param & params, const std::vector<double> & dist_to_target,
     bool & is_enough_dist, int & type, std::vector<double> & times, double & stop_dist) const;
-  bool applyDecelVelocityFilter(
+  bool apply_decel_velocity_filter(
     const size_t decel_start_index, const double decel_target_vel, const double planning_jerk,
     const Param & params, const int type, const std::vector<double> & times,
     TrajectoryPoints & output_trajectory) const;
 
   // debug
-  std::string strTimes(const std::vector<double> & times) const;
-  std::string strStartIndices(const std::vector<size_t> & start_indices) const;
+  std::string str_times(const std::vector<double> & times) const;
+  std::string str_start_indices(const std::vector<size_t> & start_indices) const;
 };
 }  // namespace autoware::velocity_smoother
 

@@ -32,19 +32,19 @@ namespace analytical_velocity_planning_utils
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<autoware_planning_msgs::msg::TrajectoryPoint>;
 
-bool calcStopDistWithJerkAndAccConstraints(
+bool calc_stop_dist_with_jerk_and_acc_constraints(
   const double v0, const double a0, const double jerk_acc, const double jerk_dec,
   const double min_acc, const double target_vel, int & type, std::vector<double> & times,
   double & stop_dist);
-bool validCheckCalcStopDist(
+bool valid_check_calc_stop_dist(
   const double v_end, const double a_end, const double v_target, const double a_target,
   const double v_margin, const double a_margin);
-bool calcStopVelocityWithConstantJerkAccLimit(
+bool calc_stop_velocity_with_constant_jerk_acc_limit(
   const double v0, const double a0, const double jerk_acc, const double jerk_dec,
   const double min_acc, const double decel_target_vel, const int type,
   const std::vector<double> & times, const size_t start_index,
   TrajectoryPoints & output_trajectory);
-void updateStopVelocityStatus(
+void update_stop_velocity_status(
   double v0, double a0, double jerk_acc, double jerk_dec, int type,
   const std::vector<double> & times, double t, double & x, double & v, double & a, double & j);
 double integ_x(double x0, double v0, double a0, double j0, double t);

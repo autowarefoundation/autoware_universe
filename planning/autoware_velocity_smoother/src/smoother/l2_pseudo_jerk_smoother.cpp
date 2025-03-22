@@ -42,12 +42,12 @@ L2PseudoJerkSmoother::L2PseudoJerkSmoother(
   qp_solver_.updateVerbose(false);
 }
 
-void L2PseudoJerkSmoother::setParam(const Param & smoother_param)
+void L2PseudoJerkSmoother::set_param(const Param & smoother_param)
 {
   smoother_param_ = smoother_param;
 }
 
-L2PseudoJerkSmoother::Param L2PseudoJerkSmoother::getParam() const
+L2PseudoJerkSmoother::Param L2PseudoJerkSmoother::get_param() const
 {
   return smoother_param_;
 }
@@ -76,7 +76,7 @@ bool L2PseudoJerkSmoother::apply(
   }
 
   const std::vector<double> interval_dist_arr =
-    trajectory_utils::calcTrajectoryIntervalDistance(input);
+    trajectory_utils::calc_trajectory_interval_distance(input);
 
   std::vector<double> v_max(N, 0.0);
   for (unsigned int i = 0; i < N; ++i) {
@@ -237,11 +237,11 @@ bool L2PseudoJerkSmoother::apply(
   return true;
 }
 
-TrajectoryPoints L2PseudoJerkSmoother::resampleTrajectory(
+TrajectoryPoints L2PseudoJerkSmoother::resample_trajectory(
   const TrajectoryPoints & input, const double v0, const geometry_msgs::msg::Pose & current_pose,
   const double nearest_dist_threshold, const double nearest_yaw_threshold) const
 {
-  return resampling::resampleTrajectory(
+  return resampling::resample_trajectory(
     input, v0, current_pose, nearest_dist_threshold, nearest_yaw_threshold,
     base_param_.resample_param);
 }

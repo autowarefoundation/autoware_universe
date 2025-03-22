@@ -133,7 +133,7 @@ void BehaviorVelocityPlannerNode::onParam()
   // lock(mutex_);
   planner_data_.velocity_smoother_ =
     std::make_unique<autoware::velocity_smoother::AnalyticalJerkConstrainedSmoother>(*this);
-  planner_data_.velocity_smoother_->setWheelBase(planner_data_.vehicle_info_.wheel_base_m);
+  planner_data_.velocity_smoother_->set_wheel_base(planner_data_.vehicle_info_.wheel_base_m);
 }
 
 void BehaviorVelocityPlannerNode::processNoGroundPointCloud(

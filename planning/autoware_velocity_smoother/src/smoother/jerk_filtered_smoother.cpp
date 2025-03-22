@@ -47,12 +47,12 @@ JerkFilteredSmoother::JerkFilteredSmoother(
     std::make_shared<autoware::qp_interface::ProxQPInterface>(false, 20000, 1.0e-8, 1.0e-6, false);
 }
 
-void JerkFilteredSmoother::setParam(const Param & smoother_param)
+void JerkFilteredSmoother::set_param(const Param & smoother_param)
 {
   smoother_param_ = smoother_param;
 }
 
-JerkFilteredSmoother::Param JerkFilteredSmoother::getParam() const
+JerkFilteredSmoother::Param JerkFilteredSmoother::get_param() const
 {
   return smoother_param_;
 }
@@ -95,11 +95,11 @@ bool JerkFilteredSmoother::apply(
 
   // jerk filter
   const auto forward_filtered =
-    forwardJerkFilter(v0, std::max(a0, a_min), a_max, a_stop_accel, j_max, input);
-  const auto backward_filtered = backwardJerkFilter(
+    forward_jerk_filter(v0, std::max(a0, a_min), a_max, a_stop_accel, j_max, input);
+  const auto backward_filtered = backward_jerk_filter(
     input.back().longitudinal_velocity_mps, a_stop_decel, a_min, a_stop_decel, j_min, input);
   const auto filtered =
-    mergeFilteredTrajectory(v0, a0, a_min, j_min, forward_filtered, backward_filtered);
+    merge_filtered_trajectory(v0, a0, a_min, j_min, forward_filtered, backward_filtered);
 
   // Resample TrajectoryPoints for Optimization
   // TODO(planning/control team) deal with overlapped lanes with the same direction
@@ -108,7 +108,7 @@ bool JerkFilteredSmoother::apply(
   const auto resample = [&](const auto & trajectory) {
     autoware_utils::ScopedTimeTrack st("resample", *time_keeper_);
 
-    return resampling::resampleTrajectory(
+    return resampling::resample_trajectory(
       trajectory, v0, initial_traj_pose, std::numeric_limits<double>::max(),
       std::numeric_limits<double>::max(), base_param_.resample_param);
   };
@@ -156,7 +156,7 @@ bool JerkFilteredSmoother::apply(
   output = opt_resampled_trajectory;
 
   const std::vector<double> interval_dist_arr =
-    trajectory_utils::calcTrajectoryIntervalDistance(opt_resampled_trajectory);
+    trajectory_utils::calc_trajectory_interval_distance(opt_resampled_trajectory);
 
   std::vector<double> v_max_arr(N, 0.0);
   for (size_t i = 0; i < N; ++i) {
@@ -337,7 +337,7 @@ bool JerkFilteredSmoother::apply(
   }
 
   if (VERBOSE_TRAJECTORY_VELOCITY) {
-    const auto s_output = trajectory_utils::calcArclengthArray(output);
+    const auto s_output = trajectory_utils::calc_arclength_array(output);
 
     std::cerr << "\n\n" << std::endl;
     for (size_t i = 0; i < N; ++i) {
@@ -356,7 +356,7 @@ bool JerkFilteredSmoother::apply(
   return true;
 }
 
-TrajectoryPoints JerkFilteredSmoother::forwardJerkFilter(
+TrajectoryPoints JerkFilteredSmoother::forward_jerk_filter(
   const double v0, const double a0, const double a_max, const double a_start, const double j_max,
   const TrajectoryPoints & input) const
 {
@@ -410,7 +410,7 @@ TrajectoryPoints JerkFilteredSmoother::forwardJerkFilter(
   return output;
 }
 
-TrajectoryPoints JerkFilteredSmoother::backwardJerkFilter(
+TrajectoryPoints JerkFilteredSmoother::backward_jerk_filter(
   const double v0, const double a0, const double a_min, const double a_stop, const double j_min,
   const TrajectoryPoints & input) const
 {
@@ -418,7 +418,7 @@ TrajectoryPoints JerkFilteredSmoother::backwardJerkFilter(
 
   auto input_rev = input;
   std::reverse(input_rev.begin(), input_rev.end());
-  auto filtered = forwardJerkFilter(
+  auto filtered = forward_jerk_filter(
     v0, std::fabs(a0), std::fabs(a_min), std::fabs(a_stop), std::fabs(j_min), input_rev);
   std::reverse(filtered.begin(), filtered.end());
   for (size_t i = 0; i < filtered.size(); ++i) {
@@ -427,7 +427,7 @@ TrajectoryPoints JerkFilteredSmoother::backwardJerkFilter(
   return filtered;
 }
 
-TrajectoryPoints JerkFilteredSmoother::mergeFilteredTrajectory(
+TrajectoryPoints JerkFilteredSmoother::merge_filtered_trajectory(
   const double v0, const double a0, const double a_min, const double j_min,
   const TrajectoryPoints & forward_filtered, const TrajectoryPoints & backward_filtered) const
 {
@@ -480,14 +480,14 @@ TrajectoryPoints JerkFilteredSmoother::mergeFilteredTrajectory(
   return merged;
 }
 
-TrajectoryPoints JerkFilteredSmoother::resampleTrajectory(
+TrajectoryPoints JerkFilteredSmoother::resample_trajectory(
   const TrajectoryPoints & input, [[maybe_unused]] const double v0,
   const geometry_msgs::msg::Pose & current_pose, const double nearest_dist_threshold,
   const double nearest_yaw_threshold) const
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  return resampling::resampleTrajectory(
+  return resampling::resample_trajectory(
     input, current_pose, nearest_dist_threshold, nearest_yaw_threshold, base_param_.resample_param,
     smoother_param_.jerk_filter_ds);
 }

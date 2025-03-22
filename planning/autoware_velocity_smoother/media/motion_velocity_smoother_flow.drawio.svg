@@ -321,12 +321,12 @@
         <xhtml:div style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 158px; height: 1px; padding-top: 50px; margin-left: 17px;">
           <xhtml:div style="box-sizing: border-box; font-size: 0; text-align: center; ">
             <xhtml:div style="display: inline-block; font-size: 14px; font-family: Helvetica; color: #000000; line-height: 1.2; pointer-events: all; white-space: normal; word-wrap: normal; ">
-              onCurrentTrajectory
+              on_current_trajectory
             </xhtml:div>
           </xhtml:div>
         </xhtml:div>
       </foreignObject>
-      <text x="96" y="54" fill="#000000" font-family="Helvetica" font-size="14px" text-anchor="middle" id="text1082">onCurrentTrajectory</text>
+      <text x="96" y="54" fill="#000000" font-family="Helvetica" font-size="14px" text-anchor="middle" id="text1082">on_current_trajectory</text>
     </switch>
   </g>
   <path d="m 220.00026,140.00002 v 33.62997" fill="none" stroke="#000000" stroke-miterlimit="10" pointer-events="stroke" id="path1088" style="stroke-width:0.999953"/>

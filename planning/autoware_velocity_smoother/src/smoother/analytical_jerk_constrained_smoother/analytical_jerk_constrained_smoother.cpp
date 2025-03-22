@@ -93,12 +93,12 @@ AnalyticalJerkConstrainedSmoother::AnalyticalJerkConstrainedSmoother(
   p.backward.span_jerk = node.declare_parameter<double>("backward.span_jerk");
 }
 
-void AnalyticalJerkConstrainedSmoother::setParam(const Param & smoother_param)
+void AnalyticalJerkConstrainedSmoother::set_param(const Param & smoother_param)
 {
   smoother_param_ = smoother_param;
 }
 
-AnalyticalJerkConstrainedSmoother::Param AnalyticalJerkConstrainedSmoother::getParam() const
+AnalyticalJerkConstrainedSmoother::Param AnalyticalJerkConstrainedSmoother::get_param() const
 {
   return smoother_param_;
 }
@@ -131,7 +131,7 @@ bool AnalyticalJerkConstrainedSmoother::apply(
     return true;
   }
   std::vector<std::pair<size_t, double>> decel_target_indices;
-  searchDecelTargetIndices(input, closest_index, decel_target_indices);
+  search_decel_target_indices(input, closest_index, decel_target_indices);
   RCLCPP_DEBUG(logger_, "Num deceleration targets: %zd", decel_target_indices.size());
   for (auto & index : decel_target_indices) {
     RCLCPP_DEBUG(
@@ -156,7 +156,7 @@ bool AnalyticalJerkConstrainedSmoother::apply(
     }
 
     RCLCPP_DEBUG(logger_, "Apply forward jerk filter from: %ld", fwd_start_index);
-    applyForwardJerkFilter(
+    apply_forward_jerk_filter(
       reference_trajectory, fwd_start_index, fwd_start_vel, fwd_start_acc, smoother_param_,
       filtered_trajectory);
 
@@ -189,15 +189,15 @@ bool AnalyticalJerkConstrainedSmoother::apply(
     const double decel_target_vel = decel_target_indices.at(i).second;
     RCLCPP_DEBUG(
       logger_, "Apply backward decel filter from: %s, to: %ld (%f)",
-      strStartIndices(start_indices).c_str(), decel_target_index, decel_target_vel);
-    if (!applyBackwardDecelFilter(
+      str_start_indices(start_indices).c_str(), decel_target_index, decel_target_vel);
+    if (!apply_backward_decel_filter(
           start_indices, decel_target_index, decel_target_vel, smoother_param_,
           filtered_trajectory)) {
       RCLCPP_DEBUG(
         logger_,
         "Failed to apply backward decel filter, so apply max velocity filter. max velocity = %f, "
         "start_index = %s, end_index = %zd",
-        decel_target_vel, strStartIndices(start_indices).c_str(), filtered_trajectory.size() - 1);
+        decel_target_vel, str_start_indices(start_indices).c_str(), filtered_trajectory.size() - 1);
 
       const double ep = 0.001;
       if (std::abs(decel_target_vel) < ep) {
@@ -208,7 +208,7 @@ bool AnalyticalJerkConstrainedSmoother::apply(
       }
       applyMaxVelocity(decel_target_vel, bwd_start_index, decel_target_index, reference_trajectory);
       RCLCPP_DEBUG(logger_, "Apply forward jerk filter from: %ld", bwd_start_index);
-      applyForwardJerkFilter(
+      apply_forward_jerk_filter(
         reference_trajectory, bwd_start_index, bwd_start_vel, bwd_start_acc, smoother_param_,
         filtered_trajectory);
     }
@@ -227,7 +227,7 @@ bool AnalyticalJerkConstrainedSmoother::apply(
     start_acc = filtered_trajectory.at(start_index).acceleration_mps2;
   }
   RCLCPP_DEBUG(logger_, "Apply forward jerk filter from: %ld", start_index);
-  applyForwardJerkFilter(
+  apply_forward_jerk_filter(
     reference_trajectory, start_index, start_vel, start_acc, smoother_param_, filtered_trajectory);
 
   output = filtered_trajectory;
@@ -236,7 +236,7 @@ bool AnalyticalJerkConstrainedSmoother::apply(
   return true;
 }
 
-TrajectoryPoints AnalyticalJerkConstrainedSmoother::resampleTrajectory(
+TrajectoryPoints AnalyticalJerkConstrainedSmoother::resample_trajectory(
   const TrajectoryPoints & input, [[maybe_unused]] const double v0,
   [[maybe_unused]] const geometry_msgs::msg::Pose & current_pose,
   [[maybe_unused]] const double nearest_dist_threshold,
@@ -282,7 +282,7 @@ TrajectoryPoints AnalyticalJerkConstrainedSmoother::resampleTrajectory(
   return output;
 }
 
-TrajectoryPoints AnalyticalJerkConstrainedSmoother::applyLateralAccelerationFilter(
+TrajectoryPoints AnalyticalJerkConstrainedSmoother::apply_lateral_acceleration_filter(
   const TrajectoryPoints & input, [[maybe_unused]] const double v0,
   [[maybe_unused]] const double a0, [[maybe_unused]] const bool enable_smooth_limit,
   const bool use_resampling, const double input_points_interval) const
@@ -298,7 +298,7 @@ TrajectoryPoints AnalyticalJerkConstrainedSmoother::applyLateralAccelerationFilt
   // since the resampling takes a long time, omit the resampling when it is not requested
   if (use_resampling) {
     std::vector<double> out_arclength;
-    const std::vector<double> in_arclength = trajectory_utils::calcArclengthArray(input);
+    const std::vector<double> in_arclength = trajectory_utils::calc_arclength_array(input);
     for (double s = 0; s < in_arclength.back(); s += points_interval) {
       out_arclength.push_back(s);
     }
@@ -315,7 +315,7 @@ TrajectoryPoints AnalyticalJerkConstrainedSmoother::applyLateralAccelerationFilt
     static_cast<size_t>(std::max(static_cast<int>((curvature_calc_dist) / points_interval), 1));
 
   // Calculate curvature assuming the trajectory points interval is constant
-  const auto curvature_v = trajectory_utils::calcTrajectoryCurvatureFrom3Points(output, idx_dist);
+  const auto curvature_v = trajectory_utils::calc_trajectory_curvature_from_3_points(output, idx_dist);
 
   // Decrease speed according to lateral G
   const size_t before_decel_index =
@@ -391,7 +391,7 @@ TrajectoryPoints AnalyticalJerkConstrainedSmoother::applyLateralAccelerationFilt
   return output;
 }
 
-bool AnalyticalJerkConstrainedSmoother::searchDecelTargetIndices(
+bool AnalyticalJerkConstrainedSmoother::search_decel_target_indices(
   const TrajectoryPoints & trajectory, const size_t closest_index,
   std::vector<std::pair<size_t, double>> & decel_target_indices) const
 {
@@ -433,7 +433,7 @@ bool AnalyticalJerkConstrainedSmoother::searchDecelTargetIndices(
   return true;
 }
 
-bool AnalyticalJerkConstrainedSmoother::applyForwardJerkFilter(
+bool AnalyticalJerkConstrainedSmoother::apply_forward_jerk_filter(
   const TrajectoryPoints & base_trajectory, const size_t start_index, const double initial_vel,
   const double initial_acc, const Param & params, TrajectoryPoints & output_trajectory) const
 {
@@ -466,7 +466,7 @@ bool AnalyticalJerkConstrainedSmoother::applyForwardJerkFilter(
   return true;
 }
 
-bool AnalyticalJerkConstrainedSmoother::applyBackwardDecelFilter(
+bool AnalyticalJerkConstrainedSmoother::apply_backward_decel_filter(
   const std::vector<size_t> & start_indices, const size_t decel_target_index,
   const double decel_target_vel, const Param & params, TrajectoryPoints & output_trajectory) const
 {
@@ -501,7 +501,7 @@ bool AnalyticalJerkConstrainedSmoother::applyBackwardDecelFilter(
     bool is_enough_dist = false;
     for (planning_jerk = params.backward.start_jerk; planning_jerk > params.backward.min_jerk - ep;
          planning_jerk += params.backward.span_jerk) {
-      if (calcEnoughDistForDecel(
+      if (calc_enough_dist_for_decel(
             output_trajectory, start_index, decel_target_vel, planning_jerk, params, dist_to_target,
             is_enough_dist, type, times, stop_dist)) {
         break;
@@ -538,7 +538,7 @@ bool AnalyticalJerkConstrainedSmoother::applyBackwardDecelFilter(
     for (size_t i = decel_target_index - 1; i >= output_start_index; --i) {
       bool is_enough_dist = false;
       double stop_dist;
-      if (calcEnoughDistForDecel(
+      if (calc_enough_dist_for_decel(
             output_trajectory, i, decel_target_vel, output_planning_jerk, params,
             output_dist_to_target, is_enough_dist, output_type, output_times, stop_dist)) {
         decel_start_index = i;
@@ -552,20 +552,20 @@ bool AnalyticalJerkConstrainedSmoother::applyBackwardDecelFilter(
     "Apply filter. decel_start_index: %ld, target_vel: %f, "
     "planning_jerk: %f, type: %d, times: %s",
     decel_start_index, decel_target_vel, output_planning_jerk, output_type,
-    strTimes(output_times).c_str());
-  if (!applyDecelVelocityFilter(
+    str_times(output_times).c_str());
+  if (!apply_decel_velocity_filter(
         decel_start_index, decel_target_vel, output_planning_jerk, params, output_type,
         output_times, output_trajectory)) {
     RCLCPP_DEBUG(
       logger_,
-      "[applyDecelVelocityFilter] dist is enough, but fail to plan backward decel velocity");
+      "[apply_decel_velocity_filter] dist is enough, but fail to plan backward decel velocity");
     return false;
   }
 
   return true;
 }
 
-bool AnalyticalJerkConstrainedSmoother::calcEnoughDistForDecel(
+bool AnalyticalJerkConstrainedSmoother::calc_enough_dist_for_decel(
   const TrajectoryPoints & trajectory, const size_t start_index, const double decel_target_vel,
   const double planning_jerk, const Param & params, const std::vector<double> & dist_to_target,
   bool & is_enough_dist, int & type, std::vector<double> & times, double & stop_dist) const
@@ -585,7 +585,7 @@ bool AnalyticalJerkConstrainedSmoother::calcEnoughDistForDecel(
   times.clear();
   stop_dist = 0.0;
 
-  if (!analytical_velocity_planning_utils::calcStopDistWithJerkAndAccConstraints(
+  if (!analytical_velocity_planning_utils::calc_stop_dist_with_jerk_and_acc_constraints(
         v0, a0, jerk_acc, jerk_dec, min_acc, decel_target_vel, type, times, stop_dist)) {
     return false;
   }
@@ -608,7 +608,7 @@ bool AnalyticalJerkConstrainedSmoother::calcEnoughDistForDecel(
   return false;
 }
 
-bool AnalyticalJerkConstrainedSmoother::applyDecelVelocityFilter(
+bool AnalyticalJerkConstrainedSmoother::apply_decel_velocity_filter(
   const size_t decel_start_index, const double decel_target_vel, const double planning_jerk,
   const Param & params, const int type, const std::vector<double> & times,
   TrajectoryPoints & output_trajectory) const
@@ -625,7 +625,7 @@ bool AnalyticalJerkConstrainedSmoother::applyDecelVelocityFilter(
   };
   const double min_acc = calcMinAcc(planning_jerk);
 
-  if (!analytical_velocity_planning_utils::calcStopVelocityWithConstantJerkAccLimit(
+  if (!analytical_velocity_planning_utils::calc_stop_velocity_with_constant_jerk_acc_limit(
         v0, a0, jerk_acc, jerk_dec, min_acc, decel_target_vel, type, times, decel_start_index,
         output_trajectory)) {
     return false;
@@ -634,7 +634,7 @@ bool AnalyticalJerkConstrainedSmoother::applyDecelVelocityFilter(
   return true;
 }
 
-std::string AnalyticalJerkConstrainedSmoother::strTimes(const std::vector<double> & times) const
+std::string AnalyticalJerkConstrainedSmoother::str_times(const std::vector<double> & times) const
 {
   std::stringstream ss;
   unsigned int i = 0;
@@ -645,7 +645,7 @@ std::string AnalyticalJerkConstrainedSmoother::strTimes(const std::vector<double
   return ss.str();
 }
 
-std::string AnalyticalJerkConstrainedSmoother::strStartIndices(
+std::string AnalyticalJerkConstrainedSmoother::str_start_indices(
   const std::vector<size_t> & start_indices) const
 {
   std::stringstream ss;
