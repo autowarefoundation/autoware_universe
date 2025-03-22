@@ -27,10 +27,11 @@ namespace autoware::map_loader
 {
 
 Lanelet2DifferentialLoaderModule::Lanelet2DifferentialLoaderModule(
-  rclcpp::Node * node, const double & center_line_resolution)
+  rclcpp::Node * node, const double & center_line_resolution, const bool & use_waypoints)
 : logger_(node->get_logger()),
   clock_(node->get_clock()),
-  center_line_resolution_(center_line_resolution)
+  center_line_resolution_(center_line_resolution),
+  use_waypoints_(use_waypoints)
 {
   const auto metadata_adaptor = autoware::component_interface_utils::NodeAdaptor(node);
   metadata_adaptor.init_pub(pub_lanelet_map_meta_data_);
@@ -75,6 +76,13 @@ bool Lanelet2DifferentialLoaderModule::onServiceGetDifferentialLanelet2Map(
       return false;
     }
     utils::merge_lanelet2_maps(*map, *map_tmp);
+  }
+
+  // overwrite centerline
+  if (use_waypoints_) {
+    lanelet::utils::overwriteLaneletsCenterlineWithWaypoints(map, center_line_resolution_, false);
+  } else {
+    lanelet::utils::overwriteLaneletsCenterline(map, center_line_resolution_, false);
   }
 
   // create the map bin message

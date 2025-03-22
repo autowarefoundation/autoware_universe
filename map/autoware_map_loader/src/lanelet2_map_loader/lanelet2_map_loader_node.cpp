@@ -99,7 +99,8 @@ Lanelet2MapLoaderNode::Lanelet2MapLoaderNode(const rclcpp::NodeOptions & options
 
   if (get_parameter("enable_differential_map_loading").as_bool()) {
     differential_loader_module_ = std::make_unique<Lanelet2DifferentialLoaderModule>(
-      this, get_parameter("center_line_resolution").as_double());
+      this, get_parameter("center_line_resolution").as_double(),
+      get_parameter("use_waypoints").as_bool());
   }
 }
 

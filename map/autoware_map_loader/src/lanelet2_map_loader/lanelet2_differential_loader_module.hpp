@@ -51,7 +51,7 @@ class Lanelet2DifferentialLoaderModule
 {
 public:
   explicit Lanelet2DifferentialLoaderModule(
-    rclcpp::Node * node, const double & center_line_resolution);
+    rclcpp::Node * node, const double & center_line_resolution, const bool & use_waypoints);
 
   void setLaneletMapMetadata(
     const std::map<std::string, Lanelet2FileMetaData> & lanelet2_metadata_dict, const double x_res,
@@ -74,7 +74,7 @@ private:
   std::optional<autoware_map_msgs::msg::MapProjectorInfo> projector_info_;
 
   double center_line_resolution_;
-
+  bool use_waypoints_;
   bool onServiceGetDifferentialLanelet2Map(
     GetDifferentialLanelet2Map::Request::SharedPtr req,
     GetDifferentialLanelet2Map::Response::SharedPtr res);
