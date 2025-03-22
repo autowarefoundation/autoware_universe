@@ -16,7 +16,8 @@
 
 #include "lanelet2_local_projector.hpp"
 #include "lanelet2_map_loader_node.hpp"
-#include "utils.hpp"
+
+#include <autoware/map_loader/lanelet2_map_loader_utils.hpp>
 
 #include <map>
 #include <memory>
