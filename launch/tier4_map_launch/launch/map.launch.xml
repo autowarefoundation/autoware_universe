@@ -41,7 +41,7 @@
       </composable_node>
 
       <composable_node pkg="autoware_map_loader" plugin="autoware::map_loader::Lanelet2MapLoaderNode" name="lanelet2_map_loader">
-        <param from="$(var lanelet2_map_loader_param_path)"/>
+        <param from="$(var lanelet2_map_loader_param_path)" allow_substs="true"/>
         <param name="lanelet2_map_path" value="$(var lanelet2_map_path)"/>
         <param name="lanelet2_map_metadata_path" value="$(var lanelet2_map_metadata_path)"/>
         <param name="enable_differential_map_loading" value="$(var enable_differential_map_loading)"/>

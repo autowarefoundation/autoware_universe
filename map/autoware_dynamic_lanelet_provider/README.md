@@ -8,7 +8,7 @@ on the current odometry position of the vehicle.
 
 To use this package, you need to provide a divided Lanelet2 maps and a metadata file.
 You should check
-the [lanelet2_map_loader documentation](https://autowarefoundation.github.io/autoware.universe/main/map/map_loader/#lanelet2_map_loader)
+the [lanelet2_map_loader documentation](https://autowarefoundation.github.io/autoware.universe/main/map/autoware_map_loader/#lanelet2_map_loader)
 for more information about the divided lanelet map and the metadata file.
 
 ## Inputs / Outputs

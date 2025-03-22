@@ -14,6 +14,9 @@
 
 #include "autoware/dynamic_lanelet_provider/dynamic_lanelet_provider.hpp"
 
+#include <memory>
+#include <string>
+#include <vector>
 namespace autoware
 {
 namespace dynamic_lanelet_provider

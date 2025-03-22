@@ -30,6 +30,12 @@
 #include <lanelet2_projection/UTM.h>
 #include <yaml-cpp/yaml.h>
 
+#include <map>
+#include <memory>
+#include <sstream>
+#include <string>
+#include <vector>
+
 namespace autoware::map_loader::utils
 {
 

@@ -18,6 +18,11 @@
 #include "lanelet2_map_loader_node.hpp"
 #include "utils.hpp"
 
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
+
 namespace autoware::map_loader
 {
 
