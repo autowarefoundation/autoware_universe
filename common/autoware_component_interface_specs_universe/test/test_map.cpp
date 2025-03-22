@@ -27,7 +27,7 @@ TEST(map, interface)
   }
 
   {
-    using map_interface::LaneletMapMetaData;
+    using autoware::component_interface_specs_universe::map::LaneletMapMetaData;
     LaneletMapMetaData lanelet_metadata;
     size_t depth = 1;
     EXPECT_EQ(lanelet_metadata.depth, depth);
