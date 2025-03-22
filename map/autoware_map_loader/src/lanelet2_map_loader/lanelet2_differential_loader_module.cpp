@@ -16,7 +16,6 @@
 
 #include "lanelet2_local_projector.hpp"
 #include "lanelet2_map_loader_node.hpp"
-
 #include "utils.hpp"
 
 namespace autoware::map_loader
@@ -66,15 +65,15 @@ bool Lanelet2DifferentialLoaderModule::onServiceGetDifferentialLanelet2Map(
   for (const auto & path : lanelet2_paths) {
     auto map_tmp = utils::load_map(path, projector_info_.value());
     if (!map_tmp) {
-      RCLCPP_ERROR(rclcpp::get_logger("map_loader"), "Failed to load lanelet2_map %s", path.c_str());
+      RCLCPP_ERROR(
+        rclcpp::get_logger("map_loader"), "Failed to load lanelet2_map %s", path.c_str());
       return false;
     }
     utils::merge_lanelet2_maps(*map, *map_tmp);
   }
 
   // create the map bin message
-  const auto map_bin_msg =
-    utils::create_map_bin_msg(map, lanelet2_paths[0], rclcpp::Clock().now());
+  const auto map_bin_msg = utils::create_map_bin_msg(map, lanelet2_paths[0], rclcpp::Clock().now());
 
   res->lanelet2_cells = map_bin_msg;
   res->header.frame_id = "map";
@@ -83,7 +82,8 @@ bool Lanelet2DifferentialLoaderModule::onServiceGetDifferentialLanelet2Map(
 }
 
 void Lanelet2DifferentialLoaderModule::setLaneletMapMetadata(
-  std::map<std::string, Lanelet2FileMetaData> & lanelet2_metadata_dict, double x_res, double y_res)
+  const std::map<std::string, Lanelet2FileMetaData> & lanelet2_metadata_dict, const double x_res,
+  const double y_res)
 {
   lanelet2_file_metadata_dict_ = lanelet2_metadata_dict;
 

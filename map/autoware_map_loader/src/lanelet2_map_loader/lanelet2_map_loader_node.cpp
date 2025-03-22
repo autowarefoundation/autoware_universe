@@ -120,7 +120,8 @@ void Lanelet2MapLoaderNode::on_map_projector_info(
   // get lanelet2 paths
   const std::vector<std::string> lanelet2_paths = get_lanelet2_paths(lanelet2_paths_or_directory);
   if (lanelet2_paths.empty()) {
-    RCLCPP_ERROR(get_logger(), "No lanelet2 map files found from %s", lanelet2_paths_or_directory[0].c_str());
+    RCLCPP_ERROR(
+      get_logger(), "No lanelet2 map files found from %s", lanelet2_paths_or_directory[0].c_str());
     return;
   }
 
@@ -129,20 +130,15 @@ void Lanelet2MapLoaderNode::on_map_projector_info(
     RCLCPP_INFO(get_logger(), "Differential lanelet2 map loading is enabled.");
 
     // generate metadata
-    const auto lanelet2_metadata_path = declare_parameter<std::string>("lanelet2_map_metadata_path");
+    const auto lanelet2_metadata_path =
+      declare_parameter<std::string>("lanelet2_map_metadata_path");
     double x_resolution, y_resolution;
     std::map<std::string, Lanelet2FileMetaData> lanelet2_metadata_dict;
     if (std::filesystem::exists(lanelet2_metadata_path)) {
-      lanelet2_metadata_dict = get_lanelet2_metadata(
-        lanelet2_metadata_path, lanelet2_paths, x_resolution, y_resolution);
+      lanelet2_metadata_dict =
+        get_lanelet2_metadata(lanelet2_metadata_path, lanelet2_paths, x_resolution, y_resolution);
     } else {
-      if (lanelet2_paths.size() == 1) {
-        // Create a dummy metadata for a single osm file
-        lanelet2_metadata_dict =
-          get_dummy_lanelet2_metadata(lanelet2_paths[0], msg, x_resolution, y_resolution);
-      } else {
-        throw std::runtime_error("Lanelet2 metadata file not found: " + lanelet2_metadata_path);
-      }
+      throw std::runtime_error("Lanelet2 metadata file not found: " + lanelet2_metadata_path);
     }
 
     // set metadata and projection info to differential loader module
@@ -211,7 +207,8 @@ void Lanelet2MapLoaderNode::on_map_projector_info(
 
 /**
  * @brief Get list of lanelet2 map file paths from input paths/directories
- * @param lanelet2_paths_or_directory Vector of paths that can be either lanelet2 map files or directories containing them
+ * @param lanelet2_paths_or_directory Vector of paths that can be either lanelet2 map files or
+ * directories containing them
  * @return Vector of absolute paths to lanelet2 map files
  */
 std::vector<std::string> Lanelet2MapLoaderNode::get_lanelet2_paths(
@@ -247,31 +244,12 @@ std::map<std::string, Lanelet2FileMetaData> Lanelet2MapLoaderNode::get_lanelet2_
   double & x_resolution, double & y_resolution) const
 {
   std::map<std::string, Lanelet2FileMetaData> lanelet2_metadata_dict;
-  lanelet2_metadata_dict = utils::loadLanelet2Metadata(lanelet2_metadata_path, x_resolution, y_resolution);
+  lanelet2_metadata_dict =
+    utils::loadLanelet2Metadata(lanelet2_metadata_path, x_resolution, y_resolution);
   lanelet2_metadata_dict = utils::replaceWithAbsolutePath(lanelet2_metadata_dict, lanelet2_paths);
   RCLCPP_INFO_STREAM(get_logger(), "Loaded Lanelet2 metadata: " << lanelet2_metadata_path);
 
   return lanelet2_metadata_dict;
-}
-
-std::map<std::string, Lanelet2FileMetaData> Lanelet2MapLoaderNode::get_dummy_lanelet2_metadata(
-  const std::string & lanelet2_path,
-  const MapProjectorInfo::Message::ConstSharedPtr projection_info, double & x_resolution,
-  double & y_resolution)
-{
-  declare_parameter<double>("dummy_metadata.min_x");
-  declare_parameter<double>("dummy_metadata.min_y");
-  declare_parameter<double>("dummy_metadata.x_resolution");
-  declare_parameter<double>("dummy_metadata.y_resolution");
-
-  Lanelet2FileMetaData tile;
-  tile.id = "0";
-  tile.min_x = get_parameter("dummy_metadata.min_x").as_double();
-  tile.min_y = get_parameter("dummy_metadata.min_y").as_double();
-  x_resolution = get_parameter("dummy_metadata.x_resolution").as_double();
-  y_resolution = get_parameter("dummy_metadata.y_resolution").as_double();
-
-  return std::map<std::string, Lanelet2FileMetaData>{{lanelet2_path, tile}};
 }
 
 }  // namespace autoware::map_loader

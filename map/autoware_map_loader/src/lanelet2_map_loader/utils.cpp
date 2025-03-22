@@ -14,8 +14,6 @@
 
 #include "utils.hpp"
 
-#include <yaml-cpp/yaml.h>
-
 #include "lanelet2_local_projector.hpp"
 
 #include <autoware/geography_utils/lanelet2_projector.hpp>
@@ -24,13 +22,13 @@
 #include <autoware_lanelet2_extension/projection/transverse_mercator_projector.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/geometry/LineString.h>
 #include <lanelet2_io/Io.h>
 #include <lanelet2_projection/UTM.h>
-
-#include <rclcpp/rclcpp.hpp>
+#include <yaml-cpp/yaml.h>
 
 namespace autoware::map_loader::utils
 {

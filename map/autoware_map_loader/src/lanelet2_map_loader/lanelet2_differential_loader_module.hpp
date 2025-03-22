@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MAP_LOADER__LANELET2_DIFFERENTIAL_LOADER_MODULE_HPP_
-#define MAP_LOADER__LANELET2_DIFFERENTIAL_LOADER_MODULE_HPP_
+#ifndef LANELET2_MAP_LOADER__LANELET2_DIFFERENTIAL_LOADER_MODULE_HPP_
+#define LANELET2_MAP_LOADER__LANELET2_DIFFERENTIAL_LOADER_MODULE_HPP_
 
 #include "utils.hpp"
 
@@ -26,10 +26,10 @@
 #include <pugixml.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <autoware_map_msgs/srv/get_selected_lanelet2_map.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_meta_data.hpp>
 #include <autoware_map_msgs/msg/map_projector_info.hpp>
+#include <autoware_map_msgs/srv/get_selected_lanelet2_map.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/geometry/LineString.h>
@@ -40,7 +40,6 @@
 #include <map>
 #include <string>
 #include <vector>
-
 
 namespace autoware::map_loader
 {
@@ -55,8 +54,8 @@ public:
     rclcpp::Node * node, const double & center_line_resolution);
 
   void setLaneletMapMetadata(
-    std::map<std::string, Lanelet2FileMetaData> & lanelet2_metadata_dict, double x_res,
-    double y_res);
+    const std::map<std::string, Lanelet2FileMetaData> & lanelet2_metadata_dict, const double x_res,
+    const double y_res);
 
   void setProjectionInfo(const autoware_map_msgs::msg::MapProjectorInfo & projector_info);
 
@@ -68,7 +67,8 @@ private:
 
   rclcpp::Service<GetDifferentialLanelet2Map>::SharedPtr get_differential_lanelet2_maps_service_;
 
-  autoware::component_interface_utils::Publisher<autoware::component_interface_specs_universe::map::LaneletMapMetaData>::SharedPtr
+  autoware::component_interface_utils::Publisher<
+    autoware::component_interface_specs_universe::map::LaneletMapMetaData>::SharedPtr
     pub_lanelet_map_meta_data_;
 
   std::optional<autoware_map_msgs::msg::MapProjectorInfo> projector_info_;
@@ -84,4 +84,4 @@ private:
 };
 
 }  // namespace autoware::map_loader
-#endif  // MAP_LOADER__LANELET2_DIFFERENTIAL_LOADER_MODULE_HPP_
+#endif  // LANELET2_MAP_LOADER__LANELET2_DIFFERENTIAL_LOADER_MODULE_HPP_

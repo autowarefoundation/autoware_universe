@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MAP_LOADER__UTILS_HPP_
-#define MAP_LOADER__UTILS_HPP_
+#ifndef LANELET2_MAP_LOADER__UTILS_HPP_
+#define LANELET2_MAP_LOADER__UTILS_HPP_
+
+#include <rclcpp/time.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_map_msgs/msg/map_projector_info.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
-
-#include <rclcpp/time.hpp>
 
 #include <map>
 #include <string>
@@ -45,7 +45,9 @@ std::map<std::string, Lanelet2FileMetaData> replaceWithAbsolutePath(
 
 void merge_lanelet2_maps(lanelet::LaneletMap & merge_target, lanelet::LaneletMap & merge_source);
 
-lanelet::LaneletMapPtr load_map( const std::string & lanelet2_filename, const autoware_map_msgs::msg::MapProjectorInfo & projector_info);
+lanelet::LaneletMapPtr load_map(
+  const std::string & lanelet2_filename,
+  const autoware_map_msgs::msg::MapProjectorInfo & projector_info);
 
 autoware_map_msgs::msg::LaneletMapBin create_map_bin_msg(
   const lanelet::LaneletMapPtr map, const std::string & lanelet2_filename,
@@ -55,4 +57,4 @@ autoware_map_msgs::msg::LaneletMapBin create_map_bin_msg(
 
 }  // namespace autoware::map_loader
 
-#endif  // MAP_LOADER__UTILS_HPP_
+#endif  // LANELET2_MAP_LOADER__UTILS_HPP_
