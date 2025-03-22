@@ -15,11 +15,10 @@
 #ifndef LANELET2_MAP_LOADER__LANELET2_DIFFERENTIAL_LOADER_MODULE_HPP_
 #define LANELET2_MAP_LOADER__LANELET2_DIFFERENTIAL_LOADER_MODULE_HPP_
 
-#include "utils.hpp"
-
 #include <autoware/component_interface_specs_universe/map.hpp>
 #include <autoware/component_interface_utils/rclcpp.hpp>
 #include <autoware/geography_utils/lanelet2_projector.hpp>
+#include <autoware/map_loader/lanelet2_map_loader_utils.hpp>
 #include <autoware_lanelet2_extension/projection/mgrs_projector.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>

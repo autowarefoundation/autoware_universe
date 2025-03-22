@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LANELET2_MAP_LOADER__UTILS_HPP_
-#define LANELET2_MAP_LOADER__UTILS_HPP_
+#ifndef AUTOWARE__MAP_LOADER__LANELET2_MAP_LOADER_UTILS_HPP_
+#define AUTOWARE__MAP_LOADER__LANELET2_MAP_LOADER_UTILS_HPP_
 
 #include <rclcpp/time.hpp>
 
@@ -57,4 +57,4 @@ autoware_map_msgs::msg::LaneletMapBin create_map_bin_msg(
 
 }  // namespace autoware::map_loader
 
-#endif  // LANELET2_MAP_LOADER__UTILS_HPP_
+#endif  // AUTOWARE__MAP_LOADER__LANELET2_MAP_LOADER_UTILS_HPP_

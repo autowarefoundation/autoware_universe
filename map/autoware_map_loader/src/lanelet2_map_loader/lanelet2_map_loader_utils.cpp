@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "utils.hpp"
-
 #include "lanelet2_local_projector.hpp"
 
 #include <autoware/geography_utils/lanelet2_projector.hpp>
+#include <autoware/map_loader/lanelet2_map_loader_utils.hpp>
 #include <autoware_lanelet2_extension/io/autoware_osm_parser.hpp>
 #include <autoware_lanelet2_extension/projection/mgrs_projector.hpp>
 #include <autoware_lanelet2_extension/projection/transverse_mercator_projector.hpp>
