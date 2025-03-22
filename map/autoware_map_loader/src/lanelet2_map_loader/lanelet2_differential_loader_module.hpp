@@ -15,19 +15,18 @@
 #ifndef MAP_LOADER__LANELET2_DIFFERENTIAL_LOADER_MODULE_HPP_
 #define MAP_LOADER__LANELET2_DIFFERENTIAL_LOADER_MODULE_HPP_
 
-#include "autoware_lanelet2_extension/io/autoware_multi_osm_parser.hpp"
 #include "utils.hpp"
 
+#include <autoware/component_interface_specs_universe/map.hpp>
+#include <autoware/component_interface_utils/rclcpp.hpp>
 #include <autoware/geography_utils/lanelet2_projector.hpp>
 #include <autoware_lanelet2_extension/projection/mgrs_projector.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
-#include <component_interface_specs/map.hpp>
-#include <component_interface_utils/rclcpp.hpp>
 #include <pugixml.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include "autoware_map_msgs/srv/get_selected_lanelet2_map.hpp"
+#include <autoware_map_msgs/srv/get_selected_lanelet2_map.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_meta_data.hpp>
 #include <autoware_map_msgs/msg/map_projector_info.hpp>
@@ -41,6 +40,10 @@
 #include <map>
 #include <string>
 #include <vector>
+
+
+namespace autoware::map_loader
+{
 
 using GetDifferentialLanelet2Map = autoware_map_msgs::srv::GetSelectedLanelet2Map;
 using autoware_map_msgs::msg::LaneletMapBin;
@@ -57,8 +60,6 @@ public:
 
   void setProjectionInfo(const autoware_map_msgs::msg::MapProjectorInfo & projector_info);
 
-  lanelet::LaneletMapPtr differentialLanelet2Load(std::vector<std::string> & lanelet2_paths);
-
 private:
   rclcpp::Logger logger_;
   rclcpp::Clock::SharedPtr clock_;
@@ -67,7 +68,7 @@ private:
 
   rclcpp::Service<GetDifferentialLanelet2Map>::SharedPtr get_differential_lanelet2_maps_service_;
 
-  component_interface_utils::Publisher<map_interface::LaneletMapMetaData>::SharedPtr
+  autoware::component_interface_utils::Publisher<autoware::component_interface_specs_universe::map::LaneletMapMetaData>::SharedPtr
     pub_lanelet_map_meta_data_;
 
   std::optional<autoware_map_msgs::msg::MapProjectorInfo> projector_info_;
@@ -82,4 +83,5 @@ private:
     const double & x_res, const double & y_res) const;
 };
 
+}  // namespace autoware::map_loader
 #endif  // MAP_LOADER__LANELET2_DIFFERENTIAL_LOADER_MODULE_HPP_

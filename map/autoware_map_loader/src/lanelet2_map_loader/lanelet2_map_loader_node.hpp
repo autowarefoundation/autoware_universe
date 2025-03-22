@@ -43,13 +43,6 @@ public:
 public:
   explicit Lanelet2MapLoaderNode(const rclcpp::NodeOptions & options);
 
-  static lanelet::LaneletMapPtr load_map(
-    const std::string & lanelet2_filename,
-    const autoware_map_msgs::msg::MapProjectorInfo & projector_info);
-  static autoware_map_msgs::msg::LaneletMapBin create_map_bin_msg(
-    const lanelet::LaneletMapPtr map, const std::string & lanelet2_filename,
-    const rclcpp::Time & now);
-
 private:
   using MapProjectorInfo = autoware::component_interface_specs_universe::map::MapProjectorInfo;
 

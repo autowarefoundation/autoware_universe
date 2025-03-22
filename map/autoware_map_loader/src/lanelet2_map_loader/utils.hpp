@@ -15,12 +15,18 @@
 #ifndef MAP_LOADER__UTILS_HPP_
 #define MAP_LOADER__UTILS_HPP_
 
+#include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
+#include <autoware_map_msgs/msg/map_projector_info.hpp>
+
 #include <lanelet2_core/LaneletMap.h>
+
+#include <rclcpp/time.hpp>
 
 #include <map>
 #include <string>
 #include <vector>
-
+namespace autoware::map_loader
+{
 struct Lanelet2FileMetaData
 {
   std::string id;
@@ -28,11 +34,25 @@ struct Lanelet2FileMetaData
   double min_y;
 };
 
+namespace utils
+{
 std::map<std::string, Lanelet2FileMetaData> loadLanelet2Metadata(
   const std::string & lanelet2_metadata_path, double & x_resolution, double & y_resolution);
+
 std::map<std::string, Lanelet2FileMetaData> replaceWithAbsolutePath(
   const std::map<std::string, Lanelet2FileMetaData> & lanelet2_metadata_path,
   const std::vector<std::string> & lanelet2_paths);
-void merge_lanelet2_maps(lanelet::LaneletMap & merge_target, const lanelet::LaneletMap & merge_source);
+
+void merge_lanelet2_maps(lanelet::LaneletMap & merge_target, lanelet::LaneletMap & merge_source);
+
+lanelet::LaneletMapPtr load_map( const std::string & lanelet2_filename, const autoware_map_msgs::msg::MapProjectorInfo & projector_info);
+
+autoware_map_msgs::msg::LaneletMapBin create_map_bin_msg(
+  const lanelet::LaneletMapPtr map, const std::string & lanelet2_filename,
+  const rclcpp::Time & now);
+
+}  // namespace utils
+
+}  // namespace autoware::map_loader
 
 #endif  // MAP_LOADER__UTILS_HPP_
