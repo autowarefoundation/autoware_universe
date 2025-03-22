@@ -1,12 +1,12 @@
 # Velocity Smoother
 
-## Purpose
+## Overview
 
 `autoware_velocity_smoother`は目標軌道上の各点における望ましい車速を計画して出力するモジュールである。
 このモジュールは、速度の最大化と乗り心地の良さを両立するために、事前に指定された制限速度、制限加速度および制限躍度の範囲で車速を計画する。
 加速度や躍度の制限を与えることは車速の変化を滑らかにすることに対応するため、このモジュールを`autoware_velocity_smoother`と呼んでいる。
 
-## Inner-workings / Algorithms
+## Design
 
 ### Flow chart
 
@@ -237,14 +237,8 @@ Example:
 - 参照経路に設定されている制限速度を指定した減速度やジャークで達成不可能な場合、可能な範囲で速度、加速度、ジャークの逸脱量を抑えながら減速
 - 各逸脱量の重視の度合いはパラメータにより指定
 
-## (Optional) Error detection and handling
-
-## (Optional) Performance characterization
-
-## (Optional) References/External links
+## References/External links
 
 [1] B. Stellato, et al., "OSQP: an operator splitting solver for quadratic programs", Mathematical Programming Computation, 2020, [10.1007/s12532-020-00179-2](https://link.springer.com/article/10.1007/s12532-020-00179-2).
 
 [2] Y. Zhang, et al., "Toward a More Complete, Flexible, and Safer Speed Planning for Autonomous Driving via Convex Optimization", Sensors, vol. 18, no. 7, p. 2185, 2018, [10.3390/s18072185](https://doi.org/10.3390/s18072185)
-
-## (Optional) Future extensions / Unimplemented parts

@@ -1,12 +1,12 @@
 # Velocity Smoother
 
-## Purpose
+## Overview
 
 `autoware_velocity_smoother` outputs a desired velocity profile on a reference trajectory.
 This module plans a velocity profile within the limitations of the velocity, the acceleration and the jerk to realize both the maximization of velocity and the ride quality.
 We call this module `autoware_velocity_smoother` because the limitations of the acceleration and the jerk means the smoothness of the velocity profile.
 
-## Inner-workings / Algorithms
+## Design
 
 ### Flow chart
 
@@ -262,14 +262,8 @@ Example:
 - If the velocity limit set in the reference path cannot be achieved by the designated constraints of the deceleration and the jerk, decelerate while suppressing the velocity, the acceleration and the jerk deviation as much as possible
 - The importance of the deviations is set in the config file
 
-## (Optional) Error detection and handling
-
-## (Optional) Performance characterization
-
-## (Optional) References/External links
+## References/External links
 
 [1] B. Stellato, et al., "OSQP: an operator splitting solver for quadratic programs", Mathematical Programming Computation, 2020, [10.1007/s12532-020-00179-2](https://link.springer.com/article/10.1007/s12532-020-00179-2).
 
 [2] Y. Zhang, et al., "Toward a More Complete, Flexible, and Safer Speed Planning for Autonomous Driving via Convex Optimization", Sensors, vol. 18, no. 7, p. 2185, 2018, [10.3390/s18072185](https://doi.org/10.3390/s18072185)
-
-## (Optional) Future extensions / Unimplemented parts
