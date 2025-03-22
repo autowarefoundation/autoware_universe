@@ -36,7 +36,8 @@ def generate_test_description():
         executable="autoware_lanelet2_map_loader",
         parameters=[
             {
-                "lanelet2_map_path": lanelet2_map_path,
+                "enable_differential_map_loading": False,
+                "lanelet2_map_paths_or_directory": [lanelet2_map_path],
                 "center_line_resolution": 5.0,
                 "use_waypoints": True,
                 "allow_unsupported_version": True,

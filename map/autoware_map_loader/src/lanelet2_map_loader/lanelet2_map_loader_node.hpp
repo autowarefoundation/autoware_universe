@@ -12,11 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__MAP_LOADER__LANELET2_MAP_LOADER_NODE_HPP_
-#define AUTOWARE__MAP_LOADER__LANELET2_MAP_LOADER_NODE_HPP_
+#ifndef LANELET2_MAP_LOADER__LANELET2_MAP_LOADER_NODE_HPP_
+#define LANELET2_MAP_LOADER__LANELET2_MAP_LOADER_NODE_HPP_
+
+#include "lanelet2_differential_loader_module.hpp"
 
 #include <autoware/component_interface_specs_universe/map.hpp>
 #include <autoware/component_interface_utils/rclcpp.hpp>
+#include <autoware/map_loader/lanelet2_map_loader_utils.hpp>
 #include <autoware_lanelet2_extension/version.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -25,8 +28,10 @@
 
 #include <lanelet2_projection/UTM.h>
 
+#include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace autoware::map_loader
 {
@@ -38,13 +43,6 @@ public:
 public:
   explicit Lanelet2MapLoaderNode(const rclcpp::NodeOptions & options);
 
-  static lanelet::LaneletMapPtr load_map(
-    const std::string & lanelet2_filename,
-    const autoware_map_msgs::msg::MapProjectorInfo & projector_info);
-  static autoware_map_msgs::msg::LaneletMapBin create_map_bin_msg(
-    const lanelet::LaneletMapPtr map, const std::string & lanelet2_filename,
-    const rclcpp::Time & now);
-
 private:
   using MapProjectorInfo = autoware::component_interface_specs_universe::map::MapProjectorInfo;
 
@@ -52,8 +50,16 @@ private:
 
   autoware::component_interface_utils::Subscription<MapProjectorInfo>::SharedPtr
     sub_map_projector_info_;
+  std::unique_ptr<Lanelet2DifferentialLoaderModule> differential_loader_module_;
+
   rclcpp::Publisher<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr pub_map_bin_;
+
+  std::vector<std::string> get_lanelet2_paths(
+    const std::vector<std::string> & lanelet2_paths_or_directory) const;
+  std::map<std::string, Lanelet2FileMetaData> get_lanelet2_metadata(
+    const std::string & lanelet2_metadata_path, const std::vector<std::string> & lanelet2_paths,
+    double & x_resolution, double & y_resolution) const;
 };
 }  // namespace autoware::map_loader
 
-#endif  // AUTOWARE__MAP_LOADER__LANELET2_MAP_LOADER_NODE_HPP_
+#endif  // LANELET2_MAP_LOADER__LANELET2_MAP_LOADER_NODE_HPP_
