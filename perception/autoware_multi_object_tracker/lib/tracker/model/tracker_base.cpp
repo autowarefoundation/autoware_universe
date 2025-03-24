@@ -131,19 +131,22 @@ bool Tracker::updateWithMeasurement(
   return true;
 }
 
-bool Tracker::updateWithoutMeasurement(const rclcpp::Time & now)
+bool Tracker::updateWithoutMeasurement(const rclcpp::Time & timestamp)
 {
   // Update existence probability
   ++no_measurement_count_;
   ++total_no_measurement_count_;
   {
     // decay existence probability
-    float const delta_time = (now - last_update_with_measurement_time_).seconds();
+    float const delta_time = (timestamp - last_update_with_measurement_time_).seconds();
     for (float & existence_probability : existence_probabilities_) {
       existence_probability = decayProbability(existence_probability, delta_time);
     }
     total_existence_probability_ = decayProbability(total_existence_probability_, delta_time);
   }
+
+  // Update object status
+  getTrackedObject(timestamp, object_);
 
   return true;
 }
@@ -231,13 +234,20 @@ bool Tracker::isConfident() const
   // check covariance ellipses size, if the size is too large, the tracker is not confident
   using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
   auto & pose_cov = object_.pose_covariance;
-  const double area = pose_cov[XYZRPY_COV_IDX::X_X] * pose_cov[XYZRPY_COV_IDX::Y_Y] -
-                      pose_cov[XYZRPY_COV_IDX::X_Y] * pose_cov[XYZRPY_COV_IDX::Y_X];
-  const double ellipse_size = std::sqrt(area);
+  // principal component of the position covariance matrix
+  Eigen::Matrix2d covariance;
+  covariance << pose_cov[XYZRPY_COV_IDX::X_X], pose_cov[XYZRPY_COV_IDX::X_Y],
+    pose_cov[XYZRPY_COV_IDX::Y_X], pose_cov[XYZRPY_COV_IDX::Y_Y];
+  Eigen::EigenSolver<Eigen::Matrix2d> es(covariance);
+  const double major_axis_sq = es.eigenvalues().real().maxCoeff();
+  const double minor_axis_sq = es.eigenvalues().real().minCoeff();
 
   // if the tracker has enough measurements and the ellipse size is small, the tracker is confident
-  constexpr double ellipse_size_threshold = 4.0;
-  if (count >= 3 && ellipse_size < ellipse_size_threshold) {
+  // constexpr double ellipse_threshold = 0.1;
+  if (count >= 2 && major_axis_sq < 0.2) {
+    // debug message
+    std::cout << "Tracker is confident, axis_sq " << major_axis_sq << " x " << minor_axis_sq
+              << std::endl;
     return true;
   }
 
@@ -248,17 +258,29 @@ bool Tracker::isExpired(const rclcpp::Time & now) const
 {
   // check the number of no measurements
   const double elapsed_time = getElapsedTimeFromLastUpdate(now);
+
   if (elapsed_time > 1.0) {
+    // debug message
+    std::cout << "Tracker is expired " << elapsed_time << std::endl;
     return true;
   }
+
   // check covariance ellipses size, if the size is too large, the tracker is expired
   using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
   auto & pose_cov = object_.pose_covariance;
-  const double area = pose_cov[XYZRPY_COV_IDX::X_X] * pose_cov[XYZRPY_COV_IDX::Y_Y] -
-                      pose_cov[XYZRPY_COV_IDX::X_Y] * pose_cov[XYZRPY_COV_IDX::Y_X];
-  const double ellipse_size = std::sqrt(area);
-  constexpr double ellipse_size_threshold = 10.0;
-  if (elapsed_time > 0.5 && ellipse_size > ellipse_size_threshold) {
+  // principal component of the position covariance matrix
+  Eigen::Matrix2d covariance;
+  covariance << pose_cov[XYZRPY_COV_IDX::X_X], pose_cov[XYZRPY_COV_IDX::X_Y],
+    pose_cov[XYZRPY_COV_IDX::Y_X], pose_cov[XYZRPY_COV_IDX::Y_Y];
+  Eigen::EigenSolver<Eigen::Matrix2d> es(covariance);
+  const double major_axis_sq = es.eigenvalues().real().maxCoeff();
+  const double minor_axis_sq = es.eigenvalues().real().minCoeff();
+
+  // constexpr double ellipse_threshold = 0.13;
+  if (elapsed_time > 0.18 && (major_axis_sq > 0.7 || minor_axis_sq > 0.5)) {
+    // debug message
+    std::cout << "Tracker is expired " << elapsed_time << " , axis_sq " << major_axis_sq << " x "
+              << minor_axis_sq << std::endl;
     return true;
   }
 
