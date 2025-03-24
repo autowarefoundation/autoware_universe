@@ -5,6 +5,8 @@
   <arg name="mission_planner_param_path"/>
   <!-- parking -->
   <arg name="freespace_planner_param_path"/>
+  <!-- waypoint following -->
+  <arg name="waypoint_following_param_path"/>
   <!-- planning validator -->
   <arg name="planning_validator_param_path"/>
   <arg name="planning_validator_latency_checker_param_path"/>

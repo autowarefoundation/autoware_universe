@@ -73,5 +73,9 @@
         <arg name="container_type" value="component_container_mt"/>
       </include>
     </group>
+    <!-- waypoint follower -->
+    <group>
+      <include file="$(find-pkg-share tier4_planning_launch)/launch/scenario_planning/waypoint_following.launch.xml"/>
+    </group>
   </group>
 </launch>

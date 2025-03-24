@@ -1,0 +1,30 @@
+<launch>
+  <!-- lane_driving scenario -->
+  <group if="$(var launch_waypoint_following_module)">
+    <group>
+      <push-ros-namespace namespace="waypoint_following"/>
+      <!-- waypoint maker module -->
+      <group>
+        <push-ros-namespace namespace="waypoint_maker"/>
+        <group>
+          <include file="$(find-pkg-share waypoint_maker)/launch/waypoint_saver.launch.xml">
+            <arg name="config_file" value="$(var waypoint_following_param_path)"/>
+          </include>
+          <include file="$(find-pkg-share waypoint_maker)/launch/waypoint_loader.launch.xml">
+            <arg name="config_file" value="$(var waypoint_following_param_path)"/>
+          </include>
+        </group>
+      </group>
+
+      <!-- motion planning module -->
+      <group>
+        <push-ros-namespace namespace="motion_planning"/>
+        <group>
+          <include file="$(find-pkg-share tier4_planning_launch)/launch/scenario_planning/waypoint_following/motion_planning/motion_planning.launch.xml">
+            <arg name="container_type" value="component_container_mt"/>
+          </include>
+        </group>
+      </group>
+    </group>
+  </group>
+</launch>
