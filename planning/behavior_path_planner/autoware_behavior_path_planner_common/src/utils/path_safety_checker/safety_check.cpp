@@ -879,7 +879,7 @@ double calculateRoughDistanceToObjects(
   return min_distance;
 }
 
-double calculate_distance_to_objects_from_path(
+double shortest_distance_from_ego_footprint_to_objects_on_path(
   const PathWithLaneId & path, const PredictedObjects & objects,
   const BehaviorPathPlannerParameters & parameters, const bool use_offset_ego_pose)
 

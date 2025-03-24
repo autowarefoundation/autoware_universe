@@ -293,7 +293,7 @@ double calculateRoughDistanceToObjects(
  * interpolating the path points.
  * @return The distance between the ego vehicle and the closest object.
  */
-double calculate_distance_to_objects_from_path(
+double shortest_distance_from_ego_footprint_to_objects_on_path(
   const PathWithLaneId & path, const PredictedObjects & objects,
   const BehaviorPathPlannerParameters & parameters, const bool use_offset_ego_pose);
 
