@@ -220,4 +220,23 @@ void Tracker::limitObjectExtension(const object_model::ObjectModel object_model)
     object_extension.z, object_model.size_limit.height_min, object_model.size_limit.height_max);
 }
 
+bool Tracker::isConfidentTracker(const types::DynamicObject & object) const
+{
+  // check the number of measurements
+  const int count = getTotalMeasurementCount();
+
+  // check covariance ellipses size, if the size is too small, the tracker is not confident
+  using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  auto & pose_cov = object.pose_covariance;
+  const double area = pose_cov[XYZRPY_COV_IDX::X_X] * pose_cov[XYZRPY_COV_IDX::Y_Y] -
+                      pose_cov[XYZRPY_COV_IDX::X_Y] * pose_cov[XYZRPY_COV_IDX::Y_X];
+  const double ellipse_size = std::sqrt(area);
+
+  // if the tracker has enough measurements and the ellipse size is small, the tracker is confident
+  if (count >= 3 && ellipse_size < 4.0) {
+    return true;
+  }
+  return false;
+}
+
 }  // namespace autoware::multi_object_tracker
