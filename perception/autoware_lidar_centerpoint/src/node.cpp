@@ -113,7 +113,7 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
     std::make_unique<autoware_utils::DiagnosticsInterface>(this, "node_processing_time_status");
 
   // diagnostics parameters
-  max_allowed_processing_time_ = declare_parameter<double>("max_allowed_processing_time");
+  max_allowed_processing_time_ms_ = declare_parameter<double>("max_allowed_processing_time_ms");
   max_acceptable_consecutive_delay_ms_ =
     declare_parameter<double>("max_acceptable_consecutive_delay_ms");
   const long validation_callback_interval_ms =
@@ -202,13 +202,13 @@ void LidarCenterPointNode::pointCloudCallback(
     const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
 
     // check processing time is acceptable
-    if (processing_time_ms > max_allowed_processing_time_) {
+    if (processing_time_ms > max_allowed_processing_time_ms_) {
       diagnostics_interface_ptr_->add_key_value("is_processing_time_ms_in_expected_range", false);
 
       std::stringstream message;
       message << "CenterPoint processing time exceeds the acceptable limit of "
-              << max_allowed_processing_time_ << " ms by "
-              << (processing_time_ms - max_allowed_processing_time_) << " ms.";
+              << max_allowed_processing_time_ms_ << " ms by "
+              << (processing_time_ms - max_allowed_processing_time_ms_) << " ms.";
 
       diagnostics_interface_ptr_->update_level_and_message(
         diagnostic_msgs::msg::DiagnosticStatus::WARN, message.str());

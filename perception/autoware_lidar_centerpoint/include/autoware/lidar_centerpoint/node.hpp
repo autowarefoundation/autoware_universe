@@ -59,7 +59,7 @@ private:
   bool has_twist_{false};
 
   bool is_processing_delayed_{false};
-  double max_allowed_processing_time_;
+  double max_allowed_processing_time_ms_;
   double max_acceptable_consecutive_delay_ms_;
   // set optional to avoid sending the error diagnostics before node start processing
   std::optional<rclcpp::Time> last_normal_processing_timestamp_;

@@ -2,7 +2,7 @@
   ros__parameters:
     # When the processing time exceeds the max_allowed_processing_time,
     # a warning will be triggered.
-    max_allowed_processing_time: 200.0 # in milliseconds
+    max_allowed_processing_time_ms: 200.0 # in milliseconds
     # If the warning is triggered and if a timestamp of last normal processing is more than
     # max_acceptable_consecutive_delay_ms, an error diagnostic message will be sent.
     max_acceptable_consecutive_delay_ms: 1000.0
