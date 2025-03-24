@@ -244,20 +244,22 @@ void LidarCenterPointNode::pointCloudCallback(
 
 // Check the timestamp of consecutively delayed processing
 // If the node is consistently delayed, publish an error diagnostic message
-void LidarCenterPointNode::diagnosticsTimerCallback() {
+void LidarCenterPointNode::diagnosticsTimerCallback()
+{
   // skip if the node has not performed inference yet
   if (last_normal_processing_timestamp_) {
     diagnostics_processing_delay_->clear();
 
     const rclcpp::Time timestamp_now = this->get_clock()->now();
     const double delayed_state_duration =
-          std::chrono::duration<double, std::milli>(
-            std::chrono::nanoseconds(
-              (timestamp_now - last_normal_processing_timestamp_.value()).nanoseconds()))
-            .count();
+      std::chrono::duration<double, std::milli>(
+        std::chrono::nanoseconds(
+          (timestamp_now - last_normal_processing_timestamp_.value()).nanoseconds()))
+        .count();
 
     if (delayed_state_duration > max_acceptable_consecutive_delay_ms_) {
-      diagnostics_processing_delay_->add_key_value("is_processing_time_ms_in_expected_range", false);
+      diagnostics_processing_delay_->add_key_value(
+        "is_processing_time_ms_in_expected_range", false);
       diagnostics_processing_delay_->update_level_and_message(
         diagnostic_msgs::msg::DiagnosticStatus::ERROR,
         "CenterPoint processing delay has exceeded the acceptable limit continuously.");
