@@ -226,12 +226,8 @@ void Tracker::limitObjectExtension(const object_model::ObjectModel object_model)
     object_extension.z, object_model.size_limit.height_min, object_model.size_limit.height_max);
 }
 
-bool Tracker::isConfident() const
+void Tracker::getPositionCovarianceEigenSq(double & major_axis_sq, double & minor_axis_sq) const
 {
-  // check the number of measurements
-  const int count = getTotalMeasurementCount();
-
-  // check covariance ellipses size, if the size is too large, the tracker is not confident
   using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
   auto & pose_cov = object_.pose_covariance;
   // principal component of the position covariance matrix
@@ -239,14 +235,26 @@ bool Tracker::isConfident() const
   covariance << pose_cov[XYZRPY_COV_IDX::X_X], pose_cov[XYZRPY_COV_IDX::X_Y],
     pose_cov[XYZRPY_COV_IDX::Y_X], pose_cov[XYZRPY_COV_IDX::Y_Y];
   Eigen::EigenSolver<Eigen::Matrix2d> es(covariance);
-  const double major_axis_sq = es.eigenvalues().real().maxCoeff();
-  const double minor_axis_sq = es.eigenvalues().real().minCoeff();
+  major_axis_sq = es.eigenvalues().real().maxCoeff();
+  minor_axis_sq = es.eigenvalues().real().minCoeff();
+}
+
+bool Tracker::isConfident() const
+{
+  // check the number of measurements
+  const int count = getTotalMeasurementCount();
+
+  // check covariance ellipses size, if the size is too large, the tracker is not confident
+  double major_axis_sq = 0.0;
+  double minor_axis_sq = 0.0;
+  getPositionCovarianceEigenSq(major_axis_sq, minor_axis_sq);
 
   // if the tracker has enough measurements and the ellipse size is small, the tracker is confident
   if (count >= 2 && major_axis_sq < 0.25) {
     // debug message
     std::cout << "Tracker is confident, axis_sq " << major_axis_sq << " x " << minor_axis_sq
               << std::endl;
+    std::cout << "  known probability " << getKnownObjectProbability() << std::endl;
     return true;
   }
 
@@ -265,15 +273,9 @@ bool Tracker::isExpired(const rclcpp::Time & now) const
   }
 
   // check covariance ellipses size, if the size is too large, the tracker is expired
-  using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-  auto & pose_cov = object_.pose_covariance;
-  // principal component of the position covariance matrix
-  Eigen::Matrix2d covariance;
-  covariance << pose_cov[XYZRPY_COV_IDX::X_X], pose_cov[XYZRPY_COV_IDX::X_Y],
-    pose_cov[XYZRPY_COV_IDX::Y_X], pose_cov[XYZRPY_COV_IDX::Y_Y];
-  Eigen::EigenSolver<Eigen::Matrix2d> es(covariance);
-  const double major_axis_sq = es.eigenvalues().real().maxCoeff();
-  const double minor_axis_sq = es.eigenvalues().real().minCoeff();
+  double major_axis_sq = 0.0;
+  double minor_axis_sq = 0.0;
+  getPositionCovarianceEigenSq(major_axis_sq, minor_axis_sq);
 
   if (elapsed_time > 0.18 && (major_axis_sq > 1.6 || minor_axis_sq > 0.7)) {
     // debug message
@@ -283,6 +285,31 @@ bool Tracker::isExpired(const rclcpp::Time & now) const
   }
 
   return false;
+}
+
+float Tracker::getKnownObjectProbability() const
+{
+  // find unknown probability
+  float unknown_probability = 0.0;
+  for (const auto & a_class : object_.classification) {
+    if (a_class.label == autoware_perception_msgs::msg::ObjectClassification::UNKNOWN) {
+      unknown_probability = a_class.probability;
+      break;
+    }
+  }
+  // known object probability is reverse of unknown probability
+  return 1.0 - unknown_probability;
+}
+
+double Tracker::getPositionCovarianceSizeSq() const
+{
+  using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  auto & pose_cov = object_.pose_covariance;
+  const double determinant = pose_cov[XYZRPY_COV_IDX::X_X] * pose_cov[XYZRPY_COV_IDX::Y_Y] -
+  pose_cov[XYZRPY_COV_IDX::X_Y] * pose_cov[XYZRPY_COV_IDX::Y_X];
+
+  // position covariance size is square root of the determinant
+  return determinant;
 }
 
 }  // namespace autoware::multi_object_tracker
