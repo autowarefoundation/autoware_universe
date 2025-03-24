@@ -78,14 +78,14 @@ public:
     measured_acc_lpf.setGain(acc_lpf_gain);
   };
 
-  bool validate(
-    const Odometry & kinematic_state, const Control & control_cmd,
+  void validate(
+    ControlValidatorStatus & res, const Odometry & kinematic_state, const Control & control_cmd,
     const AccelWithCovarianceStamped & loc_acc);
 
 private:
   double e_offset;
   double e_scale;
-  autoware::signal_processing::LowpassFilter1d desired_acc_lpf{0.0};
+  autoware::signal_processing::LowpassFilter1d desired_acc_lpf{0.5};
   autoware::signal_processing::LowpassFilter1d measured_acc_lpf{0.0};
 };
 

@@ -29,6 +29,31 @@ namespace autoware::control_validator
 {
 using diagnostic_msgs::msg::DiagnosticStatus;
 
+void AccelerationValidator::validate(
+  ControlValidatorStatus & res, const Odometry & kinematic_state, const Control & control_cmd,
+  const AccelWithCovarianceStamped & loc_acc)
+{
+  desired_acc_lpf.filter(
+    control_cmd.longitudinal.acceleration +
+    9.8 * autoware_utils::get_rpy(kinematic_state.pose.pose).y);
+  measured_acc_lpf.filter(loc_acc.accel.accel.linear.x);
+  if (std::abs(kinematic_state.twist.twist.linear.x) < 1e-3) {
+    desired_acc_lpf.reset(0.0);
+    measured_acc_lpf.reset(0.0);
+  }
+
+  res.desired_acc = desired_acc_lpf.getValue().value();
+  res.measured_acc = measured_acc_lpf.getValue().value();
+
+  const int8_t des_sign = std::signbit(res.desired_acc) ? 1 : -1;
+  if (
+    res.measured_acc > res.desired_acc * (1 + des_sign * e_scale) + e_offset &&
+    res.measured_acc < res.desired_acc * (1 - des_sign * e_scale) - e_offset) {
+    res.is_valid_acc = false;
+  }
+  res.is_valid_acc = true;
+}
+
 ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)
 : Node("control_validator", options), validation_params_(), vehicle_info_()
 {
@@ -252,8 +277,7 @@ void ControlValidator::validate(
   std::tie(
     validation_status_.max_distance_deviation, validation_status_.is_valid_max_distance_deviation) =
     calc_lateral_deviation_status(predicted_trajectory, *current_reference_trajectory_);
-  validation_status_.is_valid_acc =
-    acceleration_validator.validate(kinematics, control_cmd, measured_acc);
+  acceleration_validator.validate(validation_status_, kinematics, control_cmd, measured_acc);
   calc_velocity_deviation_status(*current_reference_trajectory_, kinematics);
   calc_stop_point_overrun_status(*current_reference_trajectory_, kinematics);
 
@@ -269,30 +293,6 @@ std::pair<double, bool> ControlValidator::calc_lateral_deviation_status(
   return {
     max_distance_deviation,
     max_distance_deviation <= validation_params_.max_distance_deviation_threshold};
-}
-
-bool AccelerationValidator::validate(
-  const Odometry & kinematic_state, const Control & control_cmd,
-  const AccelWithCovarianceStamped & loc_acc)
-{
-  if (std::abs(kinematic_state.twist.twist.linear.x) < 1e-3) {
-    desired_acc_lpf.reset();
-    measured_acc_lpf.reset();
-    return true;
-  }
-
-  const double des = desired_acc_lpf.filter(
-    control_cmd.longitudinal.acceleration + autoware_utils::get_rpy(kinematic_state.pose.pose).y);
-  const int8_t des_sign = std::signbit(des) ? 1 : -1;
-  const double mes = measured_acc_lpf.filter(loc_acc.accel.accel.linear.x);
-
-  if (
-    mes < des * (1 + des_sign * e_scale) + e_offset &&
-    mes > des * (1 - des_sign * e_scale) - e_offset) {
-    return true;
-  }
-
-  return false;
 }
 
 void ControlValidator::calc_velocity_deviation_status(
