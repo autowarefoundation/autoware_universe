@@ -68,8 +68,7 @@ public:
     const std::unordered_map<int, int> & reverse_assignment);
   void prune(const rclcpp::Time & time);
 
-  // output
-  bool isConfidentTracker(const std::shared_ptr<Tracker> & tracker) const;
+  // output processes
   void getTrackedObjects(
     const rclcpp::Time & time,
     autoware_perception_msgs::msg::TrackedObjects & tracked_objects) const;

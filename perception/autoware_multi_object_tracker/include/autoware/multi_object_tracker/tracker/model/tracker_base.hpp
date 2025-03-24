@@ -64,6 +64,9 @@ public:
     const types::InputChannel & channel_info);
   bool updateWithoutMeasurement(const rclcpp::Time & now);
 
+  // object life management
+  bool isConfidentTracker(const types::DynamicObject & object) const;
+
   std::uint8_t getHighestProbLabel() const
   {
     return autoware::object_recognition_utils::getHighestProbLabel(object_.classification);

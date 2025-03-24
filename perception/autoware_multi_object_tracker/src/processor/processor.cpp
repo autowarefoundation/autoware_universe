@@ -266,15 +266,6 @@ void TrackerProcessor::removeOverlappedTracker(const rclcpp::Time & time)
   }
 }
 
-bool TrackerProcessor::isConfidentTracker(const std::shared_ptr<Tracker> & tracker) const
-{
-  // Confidence is determined by counting the number of measurements.
-  // If the number of measurements is equal to or greater than the threshold, the tracker is
-  // considered confident.
-  auto label = tracker->getHighestProbLabel();
-  return tracker->getTotalMeasurementCount() >= config_.confident_count_threshold.at(label);
-}
-
 void TrackerProcessor::getTrackedObjects(
   const rclcpp::Time & time, autoware_perception_msgs::msg::TrackedObjects & tracked_objects) const
 {
@@ -284,11 +275,11 @@ void TrackerProcessor::getTrackedObjects(
   tracked_objects.header.stamp = time;
   types::DynamicObject tracked_object;
   for (const auto & tracker : list_tracker_) {
-    // Skip if the tracker is not confident
-    if (!isConfidentTracker(tracker)) continue;
     // Get the tracked object, extrapolated to the given time
     if (tracker->getTrackedObject(time, tracked_object)) {
-      tracked_objects.objects.push_back(toTrackedObjectMsg(tracked_object));
+      if (tracker->isConfidentTracker(tracked_object)) {
+        tracked_objects.objects.push_back(types::toTrackedObjectMsg(tracked_object));
+      }
     }
   }
 }
@@ -303,9 +294,9 @@ void TrackerProcessor::getTentativeObjects(
   tentative_objects.header.stamp = time;
   types::DynamicObject tracked_object;
   for (const auto & tracker : list_tracker_) {
-    if (!isConfidentTracker(tracker)) {
-      if (tracker->getTrackedObject(time, tracked_object)) {
-        tentative_objects.objects.push_back(toTrackedObjectMsg(tracked_object));
+    if (tracker->getTrackedObject(time, tracked_object)) {
+      if (!tracker->isConfidentTracker(tracked_object)) {
+        tentative_objects.objects.push_back(types::toTrackedObjectMsg(tracked_object));
       }
     }
   }
