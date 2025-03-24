@@ -116,8 +116,8 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
   max_allowed_processing_time_ms_ = declare_parameter<double>("max_allowed_processing_time_ms");
   max_acceptable_consecutive_delay_ms_ =
     declare_parameter<double>("max_acceptable_consecutive_delay_ms");
-  const long validation_callback_interval_ms =
-    declare_parameter<long>("validation_callback_interval_ms");
+  const int64_t validation_callback_interval_ms =
+    declare_parameter<int64_t>("validation_callback_interval_ms");
 
   pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "~/input/pointcloud", rclcpp::SensorDataQoS{}.keep_last(1),
