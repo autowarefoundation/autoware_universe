@@ -64,11 +64,5 @@ def generate_launch_description():
         ros_arguments=["--log-level", "adapi.container:=WARN"],
         composable_node_descriptions=components,
     )
-    web_server = Node(
-        namespace="adapi",
-        package="autoware_default_adapi",
-        name="web_server",
-        executable="web_server.py",
-    )
     argument = DeclareLaunchArgument("config", default_value=get_default_config())
-    return launch.LaunchDescription([argument, container, web_server])
+    return launch.LaunchDescription([argument, container])
