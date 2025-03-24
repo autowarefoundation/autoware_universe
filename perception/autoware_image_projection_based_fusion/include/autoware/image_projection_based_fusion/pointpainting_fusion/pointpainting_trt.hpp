@@ -23,6 +23,8 @@
 #include <string>
 #include <vector>
 
+#pragma clang diagnostic ignored "-Woverloaded-virtual"
+
 namespace autoware::image_projection_based_fusion
 {
 class PointPaintingTRT : public autoware::lidar_centerpoint::CenterPointTRT
