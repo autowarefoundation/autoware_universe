@@ -65,8 +65,11 @@ public:
   bool updateWithoutMeasurement(const rclcpp::Time & now);
 
   // object life management
+  void getPositionCovarianceEigenSq(double & major_axis_sq, double & minor_axis_sq) const;
   bool isConfident() const;
   bool isExpired(const rclcpp::Time & time) const;
+  float getKnownObjectProbability() const;
+  double getPositionCovarianceSizeSq() const;
 
   std::uint8_t getHighestProbLabel() const
   {

@@ -172,9 +172,8 @@ void TrackerProcessor::removeOldTracker(const rclcpp::Time & time)
 
   // Check elapsed time from last update
   for (auto itr = list_tracker_.begin(); itr != list_tracker_.end(); ++itr) {
-    const bool is_expired = (*itr)->isExpired(time);
     // If the tracker is expired, delete it
-    if (is_expired) {
+    if ((*itr)->isExpired(time)) {
       auto erase_itr = itr;
       --itr;
       list_tracker_.erase(erase_itr);
