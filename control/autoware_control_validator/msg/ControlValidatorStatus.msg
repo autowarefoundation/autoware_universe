@@ -2,6 +2,7 @@ builtin_interfaces/Time stamp
 
 # states
 bool is_valid_max_distance_deviation
+bool is_valid_acc
 bool is_rolling_back
 bool is_over_velocity
 bool has_overrun_stop_point
