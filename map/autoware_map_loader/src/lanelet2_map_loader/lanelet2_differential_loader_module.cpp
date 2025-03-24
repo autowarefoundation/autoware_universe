@@ -48,6 +48,11 @@ bool Lanelet2DifferentialLoaderModule::onServiceGetDifferentialLanelet2Map(
   GetDifferentialLanelet2Map::Request::SharedPtr req,
   GetDifferentialLanelet2Map::Response::SharedPtr res)
 {
+  if (!projector_info_) {
+    RCLCPP_ERROR(logger_, "Projector info is not set");
+    return false;
+  }
+
   // get the list of lanelet2 map paths from the requested cell_ids
   std::vector<std::string> lanelet2_paths;
   for (const auto & id : req->cell_ids) {
@@ -67,16 +72,23 @@ bool Lanelet2DifferentialLoaderModule::onServiceGetDifferentialLanelet2Map(
     return false;
   }
 
-  // load the lanelet2 maps
-  lanelet::LaneletMapPtr map = std::make_shared<lanelet::LaneletMap>();
+  // load lanelet2 map
+  // We have to keep all loaded maps until publishing the map bin msg
+  // because the loaded lanelets will be expired when map is destructed
+  std::vector<lanelet::LaneletMapPtr> maps;
   for (const auto & path : lanelet2_paths) {
-    auto map_tmp = utils::load_map(path, projector_info_.value());
+    auto map_tmp = utils::load_map(path, *projector_info_);
     if (!map_tmp) {
-      RCLCPP_ERROR(
-        rclcpp::get_logger("map_loader"), "Failed to load lanelet2_map %s", path.c_str());
+      RCLCPP_ERROR(logger_, "Failed to load lanelet2_map, %s", path.c_str());
       return false;
     }
-    utils::merge_lanelet2_maps(*map, *map_tmp);
+    maps.push_back(map_tmp);
+  }
+
+  // merge all maps
+  lanelet::LaneletMapPtr map = std::make_shared<lanelet::LaneletMap>();
+  for (const auto & map_i : maps) {
+    utils::merge_lanelet2_maps(*map, *map_i);
   }
 
   // overwrite centerline

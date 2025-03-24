@@ -14,10 +14,7 @@
   <arg name="map_projection_loader_param_path"/>
 
   <!-- Dynamic lanelet loading -->
-  <arg name="enable_differential_map_loading"/>
-
-  <!-- whether use intra-process -->
-  <arg name="use_intra_process" default="false"/>
+  <arg name="enable_differential_map_loading" default="false"/>
 
   <!-- select container type -->
   <arg name="use_multithread" default="false" unless="$(var enable_differential_map_loading)"/>
@@ -47,7 +44,6 @@
         <param name="enable_differential_map_loading" value="$(var enable_differential_map_loading)"/>
         <remap from="output/lanelet2_map" to="vector_map"/>
         <remap from="service/get_differential_lanelet_map" to="/map/get_differential_lanelet_map"/>
-        <extra_arg name="use_intra_process_comms" value="$(var use_intra_process)"/>
       </composable_node>
 
       <composable_node
@@ -60,7 +56,6 @@
         <remap from="input/odometry" to="/localization/kinematic_state"/>
         <remap from="output/lanelet2_map" to="dynamic_vector_map"/>
         <remap from="service/get_differential_lanelet_map" to="/map/get_differential_lanelet_map"/>
-        <extra_arg name="use_intra_process_comms" value="$(var use_intra_process)"/>
       </composable_node>
 
       <composable_node pkg="autoware_lanelet2_map_visualizer" plugin="autoware::lanelet2_map_visualizer::Lanelet2MapVisualizationNode" name="lanelet2_map_visualization">
@@ -68,10 +63,9 @@
         <remap from="output/lanelet2_map_marker" to="vector_map_marker"/>
       </composable_node>
 
-      <composable_node pkg="map_loader" plugin="Lanelet2MapVisualizationNode" name="dynamic_lanelet2_map_visualization" if="$(var enable_differential_map_loading)">
+      <composable_node pkg="autoware_lanelet2_map_visualizer" plugin="autoware::lanelet2_map_visualizer::Lanelet2MapVisualizationNode" name="dynamic_lanelet2_map_visualization" if="$(var enable_differential_map_loading)">
         <remap from="input/lanelet2_map" to="/map/dynamic_vector_map"/>
         <remap from="output/lanelet2_map_marker" to="/map/dynamic_vector_map_marker"/>
-        <extra_arg name="use_intra_process_comms" value="$(var use_intra_process)"/>
       </composable_node>
 
       <composable_node pkg="autoware_map_tf_generator" plugin="autoware::map_tf_generator::VectorMapTFGeneratorNode" name="vector_map_tf_generator">

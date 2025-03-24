@@ -141,19 +141,31 @@ void merge_lanelet2_maps(lanelet::LaneletMap & merge_target, lanelet::LaneletMap
   for (lanelet::Lanelet & lanelet : merge_source.laneletLayer) {
     merge_target.add(lanelet);
   }
-  for (const auto & area : merge_source.areaLayer) {
+
+  for (lanelet::Area & area : merge_source.areaLayer) {
     merge_target.add(area);
   }
-  for (const auto & regulatory_element : merge_source.regulatoryElementLayer) {
+
+  for (lanelet::RegulatoryElementPtr & regulatory_element : merge_source.regulatoryElementLayer) {
     merge_target.add(regulatory_element);
   }
-  for (const auto & line_string : merge_source.lineStringLayer) {
+
+  for (lanelet::LineString3d & line_string : merge_source.lineStringLayer) {
+    // we need a special handling for line_string to make sure that the points are not duplicated
+    // Otherwise, we cannot calculate the relationship of succeeding lanelets correctly
+    for (lanelet::Point3d & point : line_string) {
+      if (merge_target.pointLayer.find(point.id()) != merge_target.pointLayer.end()) {
+        point = merge_target.pointLayer.get(point.id());
+      }
+    }
     merge_target.add(line_string);
   }
-  for (const auto & polygon : merge_source.polygonLayer) {
+
+  for (lanelet::Polygon3d & polygon : merge_source.polygonLayer) {
     merge_target.add(polygon);
   }
-  for (const auto & point : merge_source.pointLayer) {
+
+  for (lanelet::Point3d & point : merge_source.pointLayer) {
     merge_target.add(point);
   }
 }

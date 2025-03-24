@@ -152,14 +152,22 @@ void Lanelet2MapLoaderNode::on_map_projector_info(
   }
 
   // load lanelet2 map
-  lanelet::LaneletMapPtr map = std::make_shared<lanelet::LaneletMap>();
+  // We have to keep all loaded maps until publishing the map bin msg
+  // because the loaded lanelets will be expired when map is destructed
+  std::vector<lanelet::LaneletMapPtr> maps;
   for (const auto & path : lanelet2_paths) {
     auto map_tmp = utils::load_map(path, *msg);
     if (!map_tmp) {
-      RCLCPP_ERROR(get_logger(), "Failed to load lanelet2_map. Not published.");
+      RCLCPP_ERROR(get_logger(), "Failed to load lanelet2_map, %s", path.c_str());
       return;
     }
-    utils::merge_lanelet2_maps(*map, *map_tmp);
+    maps.push_back(map_tmp);
+  }
+
+  // merge all maps
+  lanelet::LaneletMapPtr map = std::make_shared<lanelet::LaneletMap>();
+  for (const auto & map_i : maps) {
+    utils::merge_lanelet2_maps(*map, *map_i);
   }
 
   // we use first lanelet2 path to get format_version and map_version
