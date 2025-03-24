@@ -86,56 +86,6 @@ std::map<std::string, Lanelet2FileMetaData> replace_with_absolute_path(
   return absolute_path_map;
 }
 
-lanelet::LaneletMapPtr load_map(
-  const std::string & lanelet2_filename,
-  const autoware_map_msgs::msg::MapProjectorInfo & projector_info)
-{
-  lanelet::ErrorMessages errors{};
-  if (projector_info.projector_type != autoware_map_msgs::msg::MapProjectorInfo::LOCAL) {
-    std::unique_ptr<lanelet::Projector> projector =
-      autoware::geography_utils::get_lanelet2_projector(projector_info);
-    lanelet::LaneletMapPtr map = lanelet::load(lanelet2_filename, *projector, &errors);
-    if (errors.empty()) {
-      return map;
-    }
-  } else {
-    const autoware::map_loader::LocalProjector projector;
-    lanelet::LaneletMapPtr map = lanelet::load(lanelet2_filename, projector, &errors);
-
-    if (!errors.empty()) {
-      for (const auto & error : errors) {
-        RCLCPP_ERROR_STREAM(rclcpp::get_logger("map_loader"), error);
-      }
-    }
-
-    // overwrite local_x, local_y
-    for (lanelet::Point3d point : map->pointLayer) {
-      if (point.hasAttribute("local_x")) {
-        point.x() = point.attribute("local_x").asDouble().value();
-      }
-      if (point.hasAttribute("local_y")) {
-        point.y() = point.attribute("local_y").asDouble().value();
-      }
-    }
-
-    // realign lanelet borders using updated points
-    for (lanelet::Lanelet lanelet : map->laneletLayer) {
-      auto left = lanelet.leftBound();
-      auto right = lanelet.rightBound();
-      std::tie(left, right) = lanelet::geometry::align(left, right);
-      lanelet.setLeftBound(left);
-      lanelet.setRightBound(right);
-    }
-
-    return map;
-  }
-
-  for (const auto & error : errors) {
-    RCLCPP_ERROR_STREAM(rclcpp::get_logger("map_loader"), error);
-  }
-  return nullptr;
-}
-
 void merge_lanelet2_maps(lanelet::LaneletMap & merge_target, lanelet::LaneletMap & merge_source)
 {
   for (lanelet::Lanelet & lanelet : merge_source.laneletLayer) {
@@ -168,24 +118,6 @@ void merge_lanelet2_maps(lanelet::LaneletMap & merge_target, lanelet::LaneletMap
   for (lanelet::Point3d & point : merge_source.pointLayer) {
     merge_target.add(point);
   }
-}
-
-autoware_map_msgs::msg::LaneletMapBin create_map_bin_msg(
-  const lanelet::LaneletMapPtr map, const std::string & lanelet2_filename, const rclcpp::Time & now)
-{
-  std::string format_version{};
-  std::string map_version{};
-  lanelet::io_handlers::AutowareOsmParser::parseVersions(
-    lanelet2_filename, &format_version, &map_version);
-
-  autoware_map_msgs::msg::LaneletMapBin map_bin_msg;
-  map_bin_msg.header.stamp = now;
-  map_bin_msg.header.frame_id = "map";
-  map_bin_msg.version_map_format = format_version;
-  map_bin_msg.version_map = map_version;
-  lanelet::utils::conversion::toBinMsg(map, &map_bin_msg);
-
-  return map_bin_msg;
 }
 
 }  // namespace autoware::map_loader::utils

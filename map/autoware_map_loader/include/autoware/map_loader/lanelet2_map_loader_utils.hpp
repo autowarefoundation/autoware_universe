@@ -45,14 +45,6 @@ std::map<std::string, Lanelet2FileMetaData> replace_with_absolute_path(
 
 void merge_lanelet2_maps(lanelet::LaneletMap & merge_target, lanelet::LaneletMap & merge_source);
 
-lanelet::LaneletMapPtr load_map(
-  const std::string & lanelet2_filename,
-  const autoware_map_msgs::msg::MapProjectorInfo & projector_info);
-
-autoware_map_msgs::msg::LaneletMapBin create_map_bin_msg(
-  const lanelet::LaneletMapPtr map, const std::string & lanelet2_filename,
-  const rclcpp::Time & now);
-
 }  // namespace utils
 
 }  // namespace autoware::map_loader

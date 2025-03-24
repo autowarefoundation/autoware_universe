@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LANELET2_MAP_LOADER__LANELET2_DIFFERENTIAL_LOADER_MODULE_HPP_
-#define LANELET2_MAP_LOADER__LANELET2_DIFFERENTIAL_LOADER_MODULE_HPP_
+#ifndef AUTOWARE__MAP_LOADER__LANELET2_DIFFERENTIAL_LOADER_MODULE_HPP_
+#define AUTOWARE__MAP_LOADER__LANELET2_DIFFERENTIAL_LOADER_MODULE_HPP_
 
 #include <autoware/component_interface_specs_universe/map.hpp>
 #include <autoware/component_interface_utils/rclcpp.hpp>
@@ -83,4 +83,4 @@ private:
 };
 
 }  // namespace autoware::map_loader
-#endif  // LANELET2_MAP_LOADER__LANELET2_DIFFERENTIAL_LOADER_MODULE_HPP_
+#endif  // AUTOWARE__MAP_LOADER__LANELET2_DIFFERENTIAL_LOADER_MODULE_HPP_

@@ -31,12 +31,11 @@
  *
  */
 
-#include "lanelet2_map_loader_node.hpp"
-
 #include "lanelet2_local_projector.hpp"
 
 #include <ament_index_cpp/get_package_prefix.hpp>
 #include <autoware/geography_utils/lanelet2_projector.hpp>
+#include <autoware/map_loader/lanelet2_map_loader_node.hpp>
 #include <autoware/map_loader/lanelet2_map_loader_utils.hpp>
 #include <autoware_lanelet2_extension/io/autoware_osm_parser.hpp>
 #include <autoware_lanelet2_extension/projection/mgrs_projector.hpp>
@@ -50,7 +49,9 @@
 #include <lanelet2_io/Io.h>
 #include <lanelet2_projection/UTM.h>
 
+#include <algorithm>
 #include <filesystem>
+#include <limits>
 #include <map>
 #include <memory>
 #include <stdexcept>
@@ -134,7 +135,7 @@ void Lanelet2MapLoaderNode::on_map_projector_info(
   // because the loaded lanelets will be expired when map is destructed
   std::vector<lanelet::LaneletMapPtr> maps;
   for (const auto & path : lanelet2_paths) {
-    auto map_tmp = utils::load_map(path, *msg);
+    auto map_tmp = load_map(path, *msg);
     if (!map_tmp) {
       RCLCPP_ERROR(get_logger(), "Failed to load lanelet2_map, %s", path.c_str());
       return;
@@ -212,13 +213,81 @@ void Lanelet2MapLoaderNode::on_map_projector_info(
   }
 
   // create map bin msg
-  const auto map_bin_msg = utils::create_map_bin_msg(map, lanelet2_paths[0], now());
+  const auto map_bin_msg = create_map_bin_msg(map, lanelet2_paths[0], now());
 
   // create publisher and publish
   pub_map_bin_ =
     create_publisher<LaneletMapBin>("output/lanelet2_map", rclcpp::QoS{1}.transient_local());
   pub_map_bin_->publish(map_bin_msg);
   RCLCPP_INFO(get_logger(), "Succeeded to load lanelet2_map. Map is published.");
+}
+
+lanelet::LaneletMapPtr Lanelet2MapLoaderNode::load_map(
+  const std::string & lanelet2_filename,
+  const autoware_map_msgs::msg::MapProjectorInfo & projector_info)
+{
+  lanelet::ErrorMessages errors{};
+  if (projector_info.projector_type != autoware_map_msgs::msg::MapProjectorInfo::LOCAL) {
+    std::unique_ptr<lanelet::Projector> projector =
+      autoware::geography_utils::get_lanelet2_projector(projector_info);
+    lanelet::LaneletMapPtr map = lanelet::load(lanelet2_filename, *projector, &errors);
+    if (errors.empty()) {
+      return map;
+    }
+  } else {
+    const autoware::map_loader::LocalProjector projector;
+    lanelet::LaneletMapPtr map = lanelet::load(lanelet2_filename, projector, &errors);
+
+    if (!errors.empty()) {
+      for (const auto & error : errors) {
+        RCLCPP_ERROR_STREAM(rclcpp::get_logger("map_loader"), error);
+      }
+    }
+
+    // overwrite local_x, local_y
+    for (lanelet::Point3d point : map->pointLayer) {
+      if (point.hasAttribute("local_x")) {
+        point.x() = point.attribute("local_x").asDouble().value();
+      }
+      if (point.hasAttribute("local_y")) {
+        point.y() = point.attribute("local_y").asDouble().value();
+      }
+    }
+
+    // realign lanelet borders using updated points
+    for (lanelet::Lanelet lanelet : map->laneletLayer) {
+      auto left = lanelet.leftBound();
+      auto right = lanelet.rightBound();
+      std::tie(left, right) = lanelet::geometry::align(left, right);
+      lanelet.setLeftBound(left);
+      lanelet.setRightBound(right);
+    }
+
+    return map;
+  }
+
+  for (const auto & error : errors) {
+    RCLCPP_ERROR_STREAM(rclcpp::get_logger("map_loader"), error);
+  }
+  return nullptr;
+}
+
+autoware_map_msgs::msg::LaneletMapBin Lanelet2MapLoaderNode::create_map_bin_msg(
+  const lanelet::LaneletMapPtr map, const std::string & lanelet2_filename, const rclcpp::Time & now)
+{
+  std::string format_version{};
+  std::string map_version{};
+  lanelet::io_handlers::AutowareOsmParser::parseVersions(
+    lanelet2_filename, &format_version, &map_version);
+
+  autoware_map_msgs::msg::LaneletMapBin map_bin_msg;
+  map_bin_msg.header.stamp = now;
+  map_bin_msg.header.frame_id = "map";
+  map_bin_msg.version_map_format = format_version;
+  map_bin_msg.version_map = map_version;
+  lanelet::utils::conversion::toBinMsg(map, &map_bin_msg);
+
+  return map_bin_msg;
 }
 
 /**

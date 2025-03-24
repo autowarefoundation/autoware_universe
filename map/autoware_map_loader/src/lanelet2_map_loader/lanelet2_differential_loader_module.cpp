@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "lanelet2_differential_loader_module.hpp"
-
 #include "lanelet2_local_projector.hpp"
-#include "lanelet2_map_loader_node.hpp"
 
+#include <autoware/map_loader/lanelet2_differential_loader_module.hpp>
+#include <autoware/map_loader/lanelet2_map_loader_node.hpp>
 #include <autoware/map_loader/lanelet2_map_loader_utils.hpp>
 
 #include <map>
@@ -77,7 +76,7 @@ bool Lanelet2DifferentialLoaderModule::on_service_get_differential_lanelet2_map(
   // because the loaded lanelets will be expired when map is destructed
   std::vector<lanelet::LaneletMapPtr> maps;
   for (const auto & path : lanelet2_paths) {
-    auto map_tmp = utils::load_map(path, *projector_info_);
+    auto map_tmp = Lanelet2MapLoaderNode::load_map(path, *projector_info_);
     if (!map_tmp) {
       RCLCPP_ERROR(logger_, "Failed to load lanelet2_map, %s", path.c_str());
       return false;
@@ -99,7 +98,8 @@ bool Lanelet2DifferentialLoaderModule::on_service_get_differential_lanelet2_map(
   }
 
   // create the map bin message
-  const auto map_bin_msg = utils::create_map_bin_msg(map, lanelet2_paths[0], rclcpp::Clock().now());
+  const auto map_bin_msg =
+    Lanelet2MapLoaderNode::create_map_bin_msg(map, lanelet2_paths[0], rclcpp::Clock().now());
 
   res->lanelet2_cells = map_bin_msg;
   res->header.frame_id = "map";
