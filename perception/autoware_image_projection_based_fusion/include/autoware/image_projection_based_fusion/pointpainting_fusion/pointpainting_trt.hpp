@@ -23,7 +23,7 @@
 #include <string>
 #include <vector>
 
-#pragma clang diagnostic ignored "-Woverloaded-virtual"
+#pragma clang diagnostic ignored "-Woverloaded-virtual"  // cSpell:ignore Woverloaded
 
 namespace autoware::image_projection_based_fusion
 {
