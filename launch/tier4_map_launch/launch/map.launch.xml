@@ -63,7 +63,12 @@
         <remap from="output/lanelet2_map_marker" to="vector_map_marker"/>
       </composable_node>
 
-      <composable_node pkg="autoware_lanelet2_map_visualizer" plugin="autoware::lanelet2_map_visualizer::Lanelet2MapVisualizationNode" name="dynamic_lanelet2_map_visualization" if="$(var enable_differential_map_loading)">
+      <composable_node
+        pkg="autoware_lanelet2_map_visualizer"
+        plugin="autoware::lanelet2_map_visualizer::Lanelet2MapVisualizationNode"
+        name="dynamic_lanelet2_map_visualization"
+        if="$(var enable_differential_map_loading)"
+      >
         <remap from="input/lanelet2_map" to="/map/dynamic_vector_map"/>
         <remap from="output/lanelet2_map_marker" to="/map/dynamic_vector_map_marker"/>
       </composable_node>

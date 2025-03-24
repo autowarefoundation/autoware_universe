@@ -108,8 +108,8 @@ void Lanelet2MapLoaderNode::on_map_projector_info(
   const MapProjectorInfo::Message::ConstSharedPtr msg)
 {
   const auto allow_unsupported_version = get_parameter("allow_unsupported_version").as_bool();
-  const auto lanelet2_paths_or_directory = std::vector<std::string>{
-    get_parameter("lanelet2_map_path").as_string()};
+  const auto lanelet2_paths_or_directory =
+    std::vector<std::string>{get_parameter("lanelet2_map_path").as_string()};
   const auto center_line_resolution = get_parameter("center_line_resolution").as_double();
   const auto use_waypoints = get_parameter("use_waypoints").as_bool();
   const auto enable_differential_map_loading =

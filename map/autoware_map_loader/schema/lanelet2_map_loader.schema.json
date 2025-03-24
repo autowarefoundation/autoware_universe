@@ -37,7 +37,13 @@
           "default": ""
         }
       },
-      "required": ["enable_differential_map_loading", "allow_unsupported_version", "center_line_resolution", "use_waypoints", "lanelet2_map_path"],
+      "required": [
+        "enable_differential_map_loading",
+        "allow_unsupported_version",
+        "center_line_resolution",
+        "use_waypoints",
+        "lanelet2_map_path"
+      ],
       "additionalProperties": false
     }
   },
