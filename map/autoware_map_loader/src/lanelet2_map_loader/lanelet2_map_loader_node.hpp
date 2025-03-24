@@ -56,6 +56,9 @@ private:
 
   std::vector<std::string> get_lanelet2_paths(
     const std::vector<std::string> & lanelet2_paths_or_directory) const;
+  std::map<std::string, Lanelet2FileMetaData> get_dummy_metadata(
+    const std::string & lanelet2_path, const lanelet::LaneletMapPtr map, double & x_resolution,
+    double & y_resolution) const;
   std::map<std::string, Lanelet2FileMetaData> get_lanelet2_metadata(
     const std::string & lanelet2_metadata_path, const std::vector<std::string> & lanelet2_paths,
     double & x_resolution, double & y_resolution) const;

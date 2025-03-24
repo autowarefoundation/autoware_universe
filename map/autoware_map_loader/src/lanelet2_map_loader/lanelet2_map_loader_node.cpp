@@ -129,28 +129,6 @@ void Lanelet2MapLoaderNode::on_map_projector_info(
     return;
   }
 
-  // setup differential map loader module
-  if (enable_differential_map_loading) {
-    RCLCPP_INFO(get_logger(), "Differential lanelet2 map loading is enabled.");
-
-    // generate metadata
-    const auto lanelet2_metadata_path =
-      declare_parameter<std::string>("lanelet2_map_metadata_path");
-    double x_resolution, y_resolution;
-    std::map<std::string, Lanelet2FileMetaData> lanelet2_metadata_dict;
-    if (std::filesystem::exists(lanelet2_metadata_path)) {
-      lanelet2_metadata_dict =
-        get_lanelet2_metadata(lanelet2_metadata_path, lanelet2_paths, x_resolution, y_resolution);
-    } else {
-      throw std::runtime_error("Lanelet2 metadata file not found: " + lanelet2_metadata_path);
-    }
-
-    // set metadata and projection info to differential loader module
-    differential_loader_module_->setLaneletMapMetadata(
-      lanelet2_metadata_dict, x_resolution, y_resolution);
-    differential_loader_module_->setProjectionInfo(*msg);
-  }
-
   // load lanelet2 map
   // We have to keep all loaded maps until publishing the map bin msg
   // because the loaded lanelets will be expired when map is destructed
@@ -169,6 +147,33 @@ void Lanelet2MapLoaderNode::on_map_projector_info(
   for (const auto & map_i : maps) {
     utils::merge_lanelet2_maps(*map, *map_i);
   }
+
+  // setup differential map loader module
+  if (enable_differential_map_loading) {
+    RCLCPP_INFO(get_logger(), "Differential lanelet2 map loading is enabled.");
+
+    // generate metadata
+    const auto lanelet2_metadata_path =
+      declare_parameter<std::string>("lanelet2_map_metadata_path");
+    double x_resolution, y_resolution;
+    std::map<std::string, Lanelet2FileMetaData> lanelet2_metadata_dict;
+    if (std::filesystem::exists(lanelet2_metadata_path)) {
+      lanelet2_metadata_dict =
+        get_lanelet2_metadata(lanelet2_metadata_path, lanelet2_paths, x_resolution, y_resolution);
+    } else if (lanelet2_paths.size() == 1) {
+      // Create a dummy metadata for a single osm file
+      lanelet2_metadata_dict =
+        get_dummy_metadata(lanelet2_paths[0], map, x_resolution, y_resolution);
+    } else {
+      throw std::runtime_error("Lanelet2 metadata file not found: " + lanelet2_metadata_path);
+    }
+
+    // set metadata and projection info to differential loader module
+    differential_loader_module_->setLaneletMapMetadata(
+      lanelet2_metadata_dict, x_resolution, y_resolution);
+    differential_loader_module_->setProjectionInfo(*msg);
+  }
+
 
   // we use first lanelet2 path to get format_version and map_version
   std::string format_version{"null"}, map_version{""};
@@ -262,6 +267,31 @@ std::map<std::string, Lanelet2FileMetaData> Lanelet2MapLoaderNode::get_lanelet2_
   RCLCPP_INFO_STREAM(get_logger(), "Loaded Lanelet2 metadata: " << lanelet2_metadata_path);
 
   return lanelet2_metadata_dict;
+}
+
+std::map<std::string, Lanelet2FileMetaData> Lanelet2MapLoaderNode::get_dummy_metadata(
+  const std::string & lanelet2_path, const lanelet::LaneletMapPtr map, double & x_resolution,
+  double & y_resolution) const
+{
+  double min_x = std::numeric_limits<double>::max();
+  double min_y = std::numeric_limits<double>::max();
+  double max_x = std::numeric_limits<double>::min();
+  double max_y = std::numeric_limits<double>::min();
+  for (const auto & point : map->pointLayer) {
+    min_x = std::min(min_x, point.x());
+    min_y = std::min(min_y, point.y());
+    max_x = std::max(max_x, point.x());
+    max_y = std::max(max_y, point.y());
+  }
+
+  Lanelet2FileMetaData tile;
+  tile.id = "0";
+  tile.min_x = min_x;
+  tile.min_y = min_y;
+  x_resolution = (max_x - min_x);
+  y_resolution = (max_y - min_y);
+
+  return std::map<std::string, Lanelet2FileMetaData>{{lanelet2_path, tile}};
 }
 
 }  // namespace autoware::map_loader
