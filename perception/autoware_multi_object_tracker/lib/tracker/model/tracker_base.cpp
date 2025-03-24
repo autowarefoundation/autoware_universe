@@ -125,6 +125,9 @@ bool Tracker::updateWithMeasurement(
   // Update object
   measure(object, measurement_time, channel_info);
 
+  // Update object status
+  getTrackedObject(measurement_time, object_);
+
   return true;
 }
 
@@ -220,22 +223,45 @@ void Tracker::limitObjectExtension(const object_model::ObjectModel object_model)
     object_extension.z, object_model.size_limit.height_min, object_model.size_limit.height_max);
 }
 
-bool Tracker::isConfidentTracker(const types::DynamicObject & object) const
+bool Tracker::isConfident() const
 {
   // check the number of measurements
   const int count = getTotalMeasurementCount();
 
-  // check covariance ellipses size, if the size is too small, the tracker is not confident
+  // check covariance ellipses size, if the size is too large, the tracker is not confident
   using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-  auto & pose_cov = object.pose_covariance;
+  auto & pose_cov = object_.pose_covariance;
   const double area = pose_cov[XYZRPY_COV_IDX::X_X] * pose_cov[XYZRPY_COV_IDX::Y_Y] -
                       pose_cov[XYZRPY_COV_IDX::X_Y] * pose_cov[XYZRPY_COV_IDX::Y_X];
   const double ellipse_size = std::sqrt(area);
 
   // if the tracker has enough measurements and the ellipse size is small, the tracker is confident
-  if (count >= 3 && ellipse_size < 4.0) {
+  constexpr double ellipse_size_threshold = 4.0;
+  if (count >= 3 && ellipse_size < ellipse_size_threshold) {
     return true;
   }
+
+  return false;
+}
+
+bool Tracker::isExpired(const rclcpp::Time & now) const
+{
+  // check the number of no measurements
+  const double elapsed_time = getElapsedTimeFromLastUpdate(now);
+  if (elapsed_time > 1.0) {
+    return true;
+  }
+  // check covariance ellipses size, if the size is too large, the tracker is expired
+  using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  auto & pose_cov = object_.pose_covariance;
+  const double area = pose_cov[XYZRPY_COV_IDX::X_X] * pose_cov[XYZRPY_COV_IDX::Y_Y] -
+                      pose_cov[XYZRPY_COV_IDX::X_Y] * pose_cov[XYZRPY_COV_IDX::Y_X];
+  const double ellipse_size = std::sqrt(area);
+  constexpr double ellipse_size_threshold = 10.0;
+  if (elapsed_time > 0.5 && ellipse_size > ellipse_size_threshold) {
+    return true;
+  }
+
   return false;
 }
 

@@ -172,9 +172,9 @@ void TrackerProcessor::removeOldTracker(const rclcpp::Time & time)
 
   // Check elapsed time from last update
   for (auto itr = list_tracker_.begin(); itr != list_tracker_.end(); ++itr) {
-    const bool is_old = config_.tracker_lifetime < (*itr)->getElapsedTimeFromLastUpdate(time);
-    // If the tracker is old, delete it
-    if (is_old) {
+    const bool is_expired = (*itr)->isExpired(time);
+    // If the tracker is expired, delete it
+    if (is_expired) {
       auto erase_itr = itr;
       --itr;
       list_tracker_.erase(erase_itr);
@@ -275,11 +275,11 @@ void TrackerProcessor::getTrackedObjects(
   tracked_objects.header.stamp = time;
   types::DynamicObject tracked_object;
   for (const auto & tracker : list_tracker_) {
+    // check if the tracker is confident, if not, skip
+    if (!tracker->isConfident()) continue;
     // Get the tracked object, extrapolated to the given time
     if (tracker->getTrackedObject(time, tracked_object)) {
-      if (tracker->isConfidentTracker(tracked_object)) {
-        tracked_objects.objects.push_back(types::toTrackedObjectMsg(tracked_object));
-      }
+      tracked_objects.objects.push_back(types::toTrackedObjectMsg(tracked_object));
     }
   }
 }
@@ -294,10 +294,11 @@ void TrackerProcessor::getTentativeObjects(
   tentative_objects.header.stamp = time;
   types::DynamicObject tracked_object;
   for (const auto & tracker : list_tracker_) {
+    // check if the tracker is confident, if so, skip
+    if (tracker->isConfident()) continue;
+    // Get the tracked object, extrapolated to the given time
     if (tracker->getTrackedObject(time, tracked_object)) {
-      if (!tracker->isConfidentTracker(tracked_object)) {
-        tentative_objects.objects.push_back(types::toTrackedObjectMsg(tracked_object));
-      }
+      tentative_objects.objects.push_back(types::toTrackedObjectMsg(tracked_object));
     }
   }
 }

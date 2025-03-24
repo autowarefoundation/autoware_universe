@@ -65,7 +65,8 @@ public:
   bool updateWithoutMeasurement(const rclcpp::Time & now);
 
   // object life management
-  bool isConfidentTracker(const types::DynamicObject & object) const;
+  bool isConfident() const;
+  bool isExpired(const rclcpp::Time & time) const;
 
   std::uint8_t getHighestProbLabel() const
   {
