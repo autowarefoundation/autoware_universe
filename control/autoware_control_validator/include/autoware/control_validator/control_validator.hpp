@@ -61,6 +61,35 @@ struct ValidationParams
 };
 
 /**
+ * @class AccelerationValidator
+ * @brief Validates deviation between output acceleration and measured acceleration.
+ */
+class AccelerationValidator
+{
+public:
+  explicit AccelerationValidator(rclcpp::Node & node)
+  {
+    e_offset =
+      autoware_utils::get_or_declare_parameter<double>(node, "thresholds.acc_error_offset");
+    e_scale = autoware_utils::get_or_declare_parameter<double>(node, "thresholds.acc_error_scale");
+    const double acc_lpf_gain =
+      autoware_utils::get_or_declare_parameter<double>(node, "acc_lpf_gain");
+    desired_acc_lpf.setGain(acc_lpf_gain);
+    measured_acc_lpf.setGain(acc_lpf_gain);
+  };
+
+  bool validate(
+    const Odometry & kinematic_state, const Control & control_cmd,
+    const AccelWithCovarianceStamped & loc_acc);
+
+private:
+  double e_offset;
+  double e_scale;
+  autoware::signal_processing::LowpassFilter1d desired_acc_lpf{0.0};
+  autoware::signal_processing::LowpassFilter1d measured_acc_lpf{0.0};
+};
+
+/**
  * @class ControlValidator
  * @brief Validates control commands by comparing predicted trajectories against reference
  * trajectories.
@@ -146,32 +175,6 @@ private:
    */
   void display_status();
 
-  class AccelerationValidator
-  {
-  public:
-    void setup_parameters(rclcpp::Node & node)
-    {
-      e_offset =
-        autoware_utils::get_or_declare_parameter<double>(node, "thresholds.acc_error_offset");
-      e_scale =
-        autoware_utils::get_or_declare_parameter<double>(node, "thresholds.acc_error_scale");
-      const auto acc_lpf_gain =
-        autoware_utils::get_or_declare_parameter<double>(node, "acc_lpf_gain");
-      desired_acc_lpf.setGain(acc_lpf_gain);
-      measured_acc_lpf.setGain(acc_lpf_gain);
-    };
-
-    bool validate(
-      const Odometry & kinematic_state, const Control & control_cmd,
-      const AccelWithCovarianceStamped & loc_acc);
-
-  private:
-    double e_offset;
-    double e_scale;
-    autoware::signal_processing::LowpassFilter1d desired_acc_lpf{0.0};
-    autoware::signal_processing::LowpassFilter1d measured_acc_lpf{0.0};
-  } acceleration_validator;
-
   /**
    * @brief Set the diagnostic status
    * @param stat Diagnostic status wrapper
@@ -203,6 +206,7 @@ private:
   ValidationParams validation_params_;  // for thresholds
   autoware::signal_processing::LowpassFilter1d vehicle_vel_{0.0};
   autoware::signal_processing::LowpassFilter1d target_vel_{0.0};
+  AccelerationValidator acceleration_validator{*this};
 
   bool hold_velocity_error_until_stop_{false};
 

@@ -19,8 +19,6 @@
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 
-// #include <nav_msgs/msg/odometry.hpp>
-
 #include <algorithm>
 #include <cstdint>
 #include <memory>
@@ -80,7 +78,6 @@ void ControlValidator::setup_parameters()
     p.overrun_stop_point_dist = declare_parameter<double>(t + "overrun_stop_point_dist");
     p.nominal_latency_threshold = declare_parameter<double>(t + "nominal_latency");
   }
-  acceleration_validator.setup_parameters(*this);
 
   const auto vel_lpf_gain = declare_parameter<double>("vel_lpf_gain");
   vehicle_vel_.setGain(vel_lpf_gain);
@@ -181,9 +178,11 @@ bool ControlValidator::is_data_ready()
 void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
 {
   control_cmd_msg_ = msg;
+
   validation_status_.latency = (this->now() - msg->stamp).seconds();
   validation_status_.is_valid_latency =
     validation_status_.latency < validation_params_.nominal_latency_threshold;
+
   validation_status_.invalid_count =
     is_all_valid(validation_status_) ? 0 : validation_status_.invalid_count + 1;
 }
@@ -253,11 +252,9 @@ void ControlValidator::validate(
   std::tie(
     validation_status_.max_distance_deviation, validation_status_.is_valid_max_distance_deviation) =
     calc_lateral_deviation_status(predicted_trajectory, *current_reference_trajectory_);
-
-  calc_velocity_deviation_status(*current_reference_trajectory_, kinematics);
-  calc_stop_point_overrun_status(*current_reference_trajectory_, kinematics);
   validation_status_.is_valid_acc =
     acceleration_validator.validate(kinematics, control_cmd, measured_acc);
+  calc_velocity_deviation_status(*current_reference_trajectory_, kinematics);
   calc_stop_point_overrun_status(*current_reference_trajectory_, kinematics);
 
   validation_status_.invalid_count =
@@ -274,7 +271,7 @@ std::pair<double, bool> ControlValidator::calc_lateral_deviation_status(
     max_distance_deviation <= validation_params_.max_distance_deviation_threshold};
 }
 
-bool ControlValidator::AccelerationValidator::validate(
+bool AccelerationValidator::validate(
   const Odometry & kinematic_state, const Control & control_cmd,
   const AccelWithCovarianceStamped & loc_acc)
 {
