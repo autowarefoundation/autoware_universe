@@ -243,8 +243,7 @@ bool Tracker::isConfident() const
   const double minor_axis_sq = es.eigenvalues().real().minCoeff();
 
   // if the tracker has enough measurements and the ellipse size is small, the tracker is confident
-  // constexpr double ellipse_threshold = 0.1;
-  if (count >= 2 && major_axis_sq < 0.2) {
+  if (count >= 2 && major_axis_sq < 0.25) {
     // debug message
     std::cout << "Tracker is confident, axis_sq " << major_axis_sq << " x " << minor_axis_sq
               << std::endl;
@@ -276,8 +275,7 @@ bool Tracker::isExpired(const rclcpp::Time & now) const
   const double major_axis_sq = es.eigenvalues().real().maxCoeff();
   const double minor_axis_sq = es.eigenvalues().real().minCoeff();
 
-  // constexpr double ellipse_threshold = 0.13;
-  if (elapsed_time > 0.18 && (major_axis_sq > 0.7 || minor_axis_sq > 0.5)) {
+  if (elapsed_time > 0.18 && (major_axis_sq > 1.6 || minor_axis_sq > 0.7)) {
     // debug message
     std::cout << "Tracker is expired " << elapsed_time << " , axis_sq " << major_axis_sq << " x "
               << minor_axis_sq << std::endl;
