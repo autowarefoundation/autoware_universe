@@ -1103,8 +1103,9 @@ void sortPullOverPaths(
       continue;
     }
     // calculate the precise distance to object footprint from the path footprint
-    const double distance = utils::path_safety_checker::calculate_distance_to_objects_from_path(
-      path.parking_path(), target_objects, planner_data->parameters, true);
+    const double distance =
+      utils::path_safety_checker::shortest_distance_from_ego_footprint_to_objects_on_path(
+        path.parking_path(), target_objects, planner_data->parameters, true);
 
     const auto it = std::lower_bound(
       margins_with_zero.begin(), margins_with_zero.end(), distance, std::greater<double>());
