@@ -383,7 +383,7 @@ std::vector<TrajectoryPoint> PathOptimizer::optimizeTrajectory(const PlannerData
   //    with model predictive trajectory
   const auto mpt_traj = mpt_optimizer_ptr_->optimizeTrajectory(planner_data);
 
-  const bool optimized_traj_failed = static_cast<bool>(mpt_traj);
+  const bool optimized_traj_failed = !static_cast<bool>(mpt_traj);
 
   conditional_timer_->update(optimized_traj_failed);
 

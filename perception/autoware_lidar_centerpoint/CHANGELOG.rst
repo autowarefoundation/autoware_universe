@@ -2,16 +2,23 @@
 Changelog for package autoware_lidar_centerpoint
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* refactor: add autoware_cuda_dependency_meta (`#10073 <https://github.com/autowarefoundation/autoware_universe/issues/10073>`_)
+* Contributors: Esteve Fernandez, Hayato Mizushima, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware.universe/issues/10191>`_)
-* chore(autoware_lidar_centerpoint): add maintainer (`#10076 <https://github.com/autowarefoundation/autoware.universe/issues/10076>`_)
+* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware_universe/issues/10191>`_)
+* chore(autoware_lidar_centerpoint): add maintainer (`#10076 <https://github.com/autowarefoundation/autoware_universe/issues/10076>`_)
 * Contributors: Amadeusz Szymko, Fumiya Watanabe, 心刚
 
 0.41.2 (2025-02-19)
 -------------------
-* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware.universe/issues/10088>`_)
+* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware_universe/issues/10088>`_)
 * Contributors: Ryohsuke Mitsudome
 
 0.41.1 (2025-02-10)
@@ -20,7 +27,7 @@ Changelog for package autoware_lidar_centerpoint
 0.41.0 (2025-01-29)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* refactor(autoware_tensorrt_common): multi-TensorRT compatibility & tensorrt_common as unified lib for all perception components (`#9762 <https://github.com/autowarefoundation/autoware.universe/issues/9762>`_)
+* refactor(autoware_tensorrt_common): multi-TensorRT compatibility & tensorrt_common as unified lib for all perception components (`#9762 <https://github.com/autowarefoundation/autoware_universe/issues/9762>`_)
   * refactor(autoware_tensorrt_common): multi-TensorRT compatibility & tensorrt_common as unified lib for all perception components
   * style(pre-commit): autofix
   * style(autoware_tensorrt_common): linting
@@ -48,10 +55,10 @@ Changelog for package autoware_lidar_centerpoint
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
   Co-authored-by: Kenzo Lobos Tsunekawa <kenzo.lobos@tier4.jp>
   Co-authored-by: Kotaro Uetake <60615504+ktro2828@users.noreply.github.com>
-* feat(lidar_centerpoint, pointpainting): add diag publisher for max voxel size (`#9720 <https://github.com/autowarefoundation/autoware.universe/issues/9720>`_)
-* fix(autoware_lidar_centerpoint): fixed rounding errors that caused illegal memory access (`#9795 <https://github.com/autowarefoundation/autoware.universe/issues/9795>`_)
+* feat(lidar_centerpoint, pointpainting): add diag publisher for max voxel size (`#9720 <https://github.com/autowarefoundation/autoware_universe/issues/9720>`_)
+* fix(autoware_lidar_centerpoint): fixed rounding errors that caused illegal memory access (`#9795 <https://github.com/autowarefoundation/autoware_universe/issues/9795>`_)
   fix: fixed rounding errors that caused illegal memory address
-* feat(autoware_lidar_centerpoint): process front voxels first (`#9608 <https://github.com/autowarefoundation/autoware.universe/issues/9608>`_)
+* feat(autoware_lidar_centerpoint): process front voxels first (`#9608 <https://github.com/autowarefoundation/autoware_universe/issues/9608>`_)
   * feat: optimize voxel indexing in preprocess_kernel.cu
   * fix: remove redundant index check
   * fix: modify voxel index for better memory access
@@ -61,9 +68,9 @@ Changelog for package autoware_lidar_centerpoint
 0.40.0 (2024-12-12)
 -------------------
 * Merge branch 'main' into release-0.40.0
-* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware.universe/issues/9587>`_)"
+* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware_universe/issues/9587>`_)"
   This reverts commit c9f0f2688c57b0f657f5c1f28f036a970682e7f5.
-* fix(lidar_centerpoint): non-maximum suppression target decision logic (`#9595 <https://github.com/autowarefoundation/autoware.universe/issues/9595>`_)
+* fix(lidar_centerpoint): non-maximum suppression target decision logic (`#9595 <https://github.com/autowarefoundation/autoware_universe/issues/9595>`_)
   * refactor(lidar_centerpoint): optimize non-maximum suppression search distance calculation
   * feat(lidar_centerpoint): do not suppress if one side of the object is pedestrian
   * style(pre-commit): autofix
@@ -76,27 +83,27 @@ Changelog for package autoware_lidar_centerpoint
   fix: revert transfusion modification
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware.universe/issues/9588>`_)
-* chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware.universe/issues/9587>`_)
+* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware_universe/issues/9588>`_)
+* chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware_universe/issues/9587>`_)
   * chore(package.xml): bump version to 0.39.0
   * fix: fix ticket links in CHANGELOG.rst
   * fix: remove unnecessary diff
   ---------
   Co-authored-by: Yutaka Kondo <yutaka.kondo@youtalk.jp>
-* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware.universe/issues/9588>`_)
-* fix(cpplint): include what you use - perception (`#9569 <https://github.com/autowarefoundation/autoware.universe/issues/9569>`_)
-* fix(autoware_lidar_centerpoint): fix clang-diagnostic-delete-abstract-non-virtual-dtor (`#9515 <https://github.com/autowarefoundation/autoware.universe/issues/9515>`_)
-* feat(autoware_lidar_centerpoint): added a check to notify if we are dropping pillars (`#9488 <https://github.com/autowarefoundation/autoware.universe/issues/9488>`_)
+* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware_universe/issues/9588>`_)
+* fix(cpplint): include what you use - perception (`#9569 <https://github.com/autowarefoundation/autoware_universe/issues/9569>`_)
+* fix(autoware_lidar_centerpoint): fix clang-diagnostic-delete-abstract-non-virtual-dtor (`#9515 <https://github.com/autowarefoundation/autoware_universe/issues/9515>`_)
+* feat(autoware_lidar_centerpoint): added a check to notify if we are dropping pillars (`#9488 <https://github.com/autowarefoundation/autoware_universe/issues/9488>`_)
   * feat: added a check to notify if we are dropping pillars
   * chore: updated text
   * chore: throttled the message
   ---------
-* fix(autoware_lidar_centerpoint): fix clang-diagnostic-unused-private-field (`#9471 <https://github.com/autowarefoundation/autoware.universe/issues/9471>`_)
+* fix(autoware_lidar_centerpoint): fix clang-diagnostic-unused-private-field (`#9471 <https://github.com/autowarefoundation/autoware_universe/issues/9471>`_)
 * 0.39.0
 * update changelog
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware.universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware.universe/issues/9284>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware_universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware_universe/issues/9284>`_)
   * unify package.xml version to 0.37.0
   * remove system_monitor/CHANGELOG.rst
   * add changelog
@@ -106,9 +113,9 @@ Changelog for package autoware_lidar_centerpoint
 
 0.39.0 (2024-11-25)
 -------------------
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware.universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware.universe/issues/9284>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware_universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware_universe/issues/9284>`_)
   * unify package.xml version to 0.37.0
   * remove system_monitor/CHANGELOG.rst
   * add changelog
@@ -119,7 +126,7 @@ Changelog for package autoware_lidar_centerpoint
 0.38.0 (2024-11-08)
 -------------------
 * unify package.xml version to 0.37.0
-* refactor(tensorrt_common)!: fix namespace, directory structure & move to perception namespace (`#9099 <https://github.com/autowarefoundation/autoware.universe/issues/9099>`_)
+* refactor(tensorrt_common)!: fix namespace, directory structure & move to perception namespace (`#9099 <https://github.com/autowarefoundation/autoware_universe/issues/9099>`_)
   * refactor(tensorrt_common)!: fix namespace, directory structure & move to perception namespace
   * refactor(tensorrt_common): directory structure
   * style(pre-commit): autofix
@@ -127,19 +134,19 @@ Changelog for package autoware_lidar_centerpoint
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
   Co-authored-by: Kenzo Lobos Tsunekawa <kenzo.lobos@tier4.jp>
-* refactor(object_recognition_utils): add autoware prefix to object_recognition_utils (`#8946 <https://github.com/autowarefoundation/autoware.universe/issues/8946>`_)
-* fix(autoware_lidar_centerpoint): fix twist covariance orientation (`#8996 <https://github.com/autowarefoundation/autoware.universe/issues/8996>`_)
+* refactor(object_recognition_utils): add autoware prefix to object_recognition_utils (`#8946 <https://github.com/autowarefoundation/autoware_universe/issues/8946>`_)
+* fix(autoware_lidar_centerpoint): fix twist covariance orientation (`#8996 <https://github.com/autowarefoundation/autoware_universe/issues/8996>`_)
   * fix(autoware_lidar_centerpoint): fix covariance converter considering the twist covariance matrix is based on the object coordinate
   fix style
   * fix: update test of box3DToDetectedObject function
   ---------
-* fix(autoware_lidar_centerpoint): convert object's velocity to follow its definition (`#8980 <https://github.com/autowarefoundation/autoware.universe/issues/8980>`_)
+* fix(autoware_lidar_centerpoint): convert object's velocity to follow its definition (`#8980 <https://github.com/autowarefoundation/autoware_universe/issues/8980>`_)
   * fix: convert object's velocity to follow its definition in box3DToDetectedObject function
   * Update perception/autoware_lidar_centerpoint/lib/ros_utils.cpp
   Co-authored-by: Kenzo Lobos Tsunekawa <kenzo.lobos@tier4.jp>
   ---------
   Co-authored-by: Kenzo Lobos Tsunekawa <kenzo.lobos@tier4.jp>
-* feat(autoware_lidar_centerpoint): shuffled points before feeding them to the model (`#8814 <https://github.com/autowarefoundation/autoware.universe/issues/8814>`_)
+* feat(autoware_lidar_centerpoint): shuffled points before feeding them to the model (`#8814 <https://github.com/autowarefoundation/autoware_universe/issues/8814>`_)
   * feat: shuffling points before feeding them into the model to achieve uniform sampling into the voxels
   * Update perception/autoware_lidar_centerpoint/src/node.cpp
   Co-authored-by: kminoda <44218668+kminoda@users.noreply.github.com>
@@ -151,20 +158,20 @@ Changelog for package autoware_lidar_centerpoint
   Co-authored-by: kminoda <44218668+kminoda@users.noreply.github.com>
   ---------
   Co-authored-by: kminoda <44218668+kminoda@users.noreply.github.com>
-* refactor(autoware_lidar_centerpoint): use std::size_t instead of size_t (`#8820 <https://github.com/autowarefoundation/autoware.universe/issues/8820>`_)
+* refactor(autoware_lidar_centerpoint): use std::size_t instead of size_t (`#8820 <https://github.com/autowarefoundation/autoware_universe/issues/8820>`_)
   * refactor(autoware_lidar_centerpoint): use std::size_t instead of size_t
   * style(pre-commit): autofix
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* chore(autoware_lidar_centerpoint): add centerpoint sigma parameter (`#8731 <https://github.com/autowarefoundation/autoware.universe/issues/8731>`_)
+* chore(autoware_lidar_centerpoint): add centerpoint sigma parameter (`#8731 <https://github.com/autowarefoundation/autoware_universe/issues/8731>`_)
   add centerpoint sigma parameter
-* fix(autoware_lidar_centerpoint): fix unusedFunction (`#8572 <https://github.com/autowarefoundation/autoware.universe/issues/8572>`_)
+* fix(autoware_lidar_centerpoint): fix unusedFunction (`#8572 <https://github.com/autowarefoundation/autoware_universe/issues/8572>`_)
   fix:unusedFunction
-* fix(autoware_lidar_centerpoint): place device vector in CUDA device system (`#8272 <https://github.com/autowarefoundation/autoware.universe/issues/8272>`_)
-* docs(centerpoint): add description for ml package params (`#8187 <https://github.com/autowarefoundation/autoware.universe/issues/8187>`_)
-* chore(autoware_lidar_centerpoint): updated tests (`#8158 <https://github.com/autowarefoundation/autoware.universe/issues/8158>`_)
+* fix(autoware_lidar_centerpoint): place device vector in CUDA device system (`#8272 <https://github.com/autowarefoundation/autoware_universe/issues/8272>`_)
+* docs(centerpoint): add description for ml package params (`#8187 <https://github.com/autowarefoundation/autoware_universe/issues/8187>`_)
+* chore(autoware_lidar_centerpoint): updated tests (`#8158 <https://github.com/autowarefoundation/autoware_universe/issues/8158>`_)
   chore: updated centerpoin tests. they are currently commented out but they were not compiling (forgot to update them when I added the new cloud capacity parameter)
-* refactor(lidar_centerpoint)!: fix namespace and directory structure (`#8049 <https://github.com/autowarefoundation/autoware.universe/issues/8049>`_)
+* refactor(lidar_centerpoint)!: fix namespace and directory structure (`#8049 <https://github.com/autowarefoundation/autoware_universe/issues/8049>`_)
   * add prefix in lidar_centerpoint
   * add .gitignore
   * change include package name in image_projection_based fusion

@@ -95,7 +95,7 @@ If the path given to goal_planner covers the goal, `fixed_goal_planner` smoothly
 
 #### pull over on road lane
 
-`rough_goal_planner` is triggered following the [behavior_path_planner scene module interface](https://autowarefoundation.github.io/autoware.universe/main/planning/behavior_path_planner/autoware_behavior_path_planner/docs/behavior_path_planner_manager_design/) namely through `isExecutionRequested` function and it returns true when following two conditions are met.
+`rough_goal_planner` is triggered following the [behavior_path_planner scene module interface](https://autowarefoundation.github.io/autoware_universe/main/planning/behavior_path_planner/autoware_behavior_path_planner/docs/behavior_path_planner_manager_design/) namely through `isExecutionRequested` function and it returns true when following two conditions are met.
 
 - The distance between the goal and ego get shorter than $\max$(`pull_over_minimum_request_length`, stop distance with decel and jerk constraints).
 - Route is set with `allow_goal_modification=true` or is on a `road_shoulder` type lane.
@@ -205,7 +205,7 @@ Although the two threads are running periodically, the primary background proces
 - _arc forward_, _arc backward_ path planning
 - _bezier_ based path planning
 
-depending on the situation and configuration. If `use_bus_stop_area` is true and the goal is on a BusStopArea regulatory element and the estimated pull over angle(the difference of pose between the shift start and shift end) is larger than `bezier_parking.pull_over_angle_threshold`, [_bezier_ based path planner](https://autowarefoundation.github.io/autoware.universe/main/planning/sampling_based_planner/autoware_bezier_sampler/) works to generate path candidates. Otherwise [_shift_ based path planner](https://autowarefoundation.github.io/autoware.universe/main/planning/behavior_path_planner/autoware_behavior_path_planner_common/docs/behavior_path_planner_path_generation_design/) works. _bezier_ based path planner tends to generate more natural paths on a curved lane than _shift_ based path planner, so it is used if the shift requires a certain amount of pose rotation.
+depending on the situation and configuration. If `use_bus_stop_area` is true and the goal is on a BusStopArea regulatory element and the estimated pull over angle(the difference of pose between the shift start and shift end) is larger than `bezier_parking.pull_over_angle_threshold`, [_bezier_ based path planner](https://autowarefoundation.github.io/autoware_universe/main/planning/sampling_based_planner/autoware_bezier_sampler/) works to generate path candidates. Otherwise [_shift_ based path planner](https://autowarefoundation.github.io/autoware_universe/main/planning/behavior_path_planner/autoware_behavior_path_planner_common/docs/behavior_path_planner_path_generation_design/) works. _bezier_ based path planner tends to generate more natural paths on a curved lane than _shift_ based path planner, so it is used if the shift requires a certain amount of pose rotation.
 
 The overall flow is as follows.
 
@@ -223,7 +223,7 @@ the main thread inserts a stop pose either at `closest_start_pose` which is the 
 
 Once the main thread finally selected the best pull over path, goal_planner transits to `DECIDED` state and it sets `SAFE` as the RTC status(NOTE: this `SAFE` means that "a safe pull over path has been finally selected".)
 
-If there are no path candidates or the selected path is not SAFE and thus `the LaneParkingThread` causes ego to get stuck, the `FreespaceParkingThread` is triggered by the stuck detection and it starts generating path candidates using [freespace parking algorithms](https://autowarefoundation.github.io/autoware.universe/main/planning/autoware_freespace_planning_algorithms/). If a valid freespace path is found and ego is still stuck, the freespace path is used instead. If the selected lane parking pull over path becomes collision-free again in case the blocking parked objects moved, and the path is continuous from current freespace path, lane parking pull over path is selected again.
+If there are no path candidates or the selected path is not SAFE and thus `the LaneParkingThread` causes ego to get stuck, the `FreespaceParkingThread` is triggered by the stuck detection and it starts generating path candidates using [freespace parking algorithms](https://autowarefoundation.github.io/autoware_universe/main/planning/autoware_freespace_planning_algorithms/). If a valid freespace path is found and ego is still stuck, the freespace path is used instead. If the selected lane parking pull over path becomes collision-free again in case the blocking parked objects moved, and the path is continuous from current freespace path, lane parking pull over path is selected again.
 
 | Name                                  | Unit   | Type   | Description                                                                                                                                                                    | Default value                            |
 | :------------------------------------ | :----- | :----- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------- |
@@ -241,7 +241,7 @@ If there are no path candidates or the selected path is not SAFE and thus `the L
 Pull over distance is calculated by the speed, lateral deviation, and the lateral jerk. The lateral jerk is searched for among the predetermined minimum and maximum values.
 
 1. Apply uniform offset to centerline of shoulder lane for ensuring margin
-2. The interval of shift start and end is shifted by the [_shift_ based path planner](https://autowarefoundation.github.io/autoware.universe/main/planning/behavior_path_planner/autoware_behavior_path_planner_common/docs/behavior_path_planner_path_generation_design/)
+2. The interval of shift start and end is shifted by the [_shift_ based path planner](https://autowarefoundation.github.io/autoware_universe/main/planning/behavior_path_planner/autoware_behavior_path_planner_common/docs/behavior_path_planner_path_generation_design/)
 3. Combine this path with center line of road lane and the remaining shoulder lane centerline
 
 ![shift_parking](./images/shift_parking.drawio.svg)

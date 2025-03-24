@@ -2,15 +2,29 @@
 Changelog for package autoware_mpc_lateral_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* feat(path_optimizer): additional failure logging and failure mode handling (`#10276 <https://github.com/autowarefoundation/autoware_universe/issues/10276>`_)
+  MRM when MPT fails
+* fix(autoware_mpc_lateral_controller): replace Eigen::VectorXd with Eigen::Vector3d for state representation (`#10235 <https://github.com/autowarefoundation/autoware_universe/issues/10235>`_)
+  * fix(autoware_mpc_lateral_controller): replace Eigen::VectorXd with Eigen::Vector3d for state representation
+  * docs(autoware_mpc_lateral_controller): update comments for state representation and discretization considerations
+  ---------
+* chore(mpc_lateral_controller): add package maintainer (`#10239 <https://github.com/autowarefoundation/autoware_universe/issues/10239>`_)
+  add package maintainer
+* Contributors: Arjun Jagdish Ram, Hayato Mizushima, Kyoichi Sugahara, Yutaka Kondo, mkquda
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware.universe/issues/10191>`_)
+* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware_universe/issues/10191>`_)
 * Contributors: Fumiya Watanabe, 心刚
 
 0.41.2 (2025-02-19)
 -------------------
-* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware.universe/issues/10088>`_)
+* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware_universe/issues/10088>`_)
 * Contributors: Ryohsuke Mitsudome
 
 0.41.1 (2025-02-10)
@@ -19,50 +33,50 @@ Changelog for package autoware_mpc_lateral_controller
 0.41.0 (2025-01-29)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* feat: tier4_debug_msgs changed to autoware_internal_debug_msgs in fil… (`#9846 <https://github.com/autowarefoundation/autoware.universe/issues/9846>`_)
+* feat: tier4_debug_msgs changed to autoware_internal_debug_msgs in fil… (`#9846 <https://github.com/autowarefoundation/autoware_universe/issues/9846>`_)
   * feat: tier4_debug_msgs changed to autoware_internal_debug_msgs in files ontrol/autoware_mpc_lateral_controller
   * style(pre-commit): autofix
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* chore(autoware_mpc_lateral_controller): fix formula description in vehicle_model_bicycle_kinematics.hpp (`#8971 <https://github.com/autowarefoundation/autoware.universe/issues/8971>`_)
+* chore(autoware_mpc_lateral_controller): fix formula description in vehicle_model_bicycle_kinematics.hpp (`#8971 <https://github.com/autowarefoundation/autoware_universe/issues/8971>`_)
   fix formula description in vehicle_model_bicycle_kinematics.hpp
-* fix(mpc_lateral_controller): prevent unstable steering command while stopped (`#9690 <https://github.com/autowarefoundation/autoware.universe/issues/9690>`_)
+* fix(mpc_lateral_controller): prevent unstable steering command while stopped (`#9690 <https://github.com/autowarefoundation/autoware_universe/issues/9690>`_)
   * modify logic of function isStoppedState
   * use a constant distance margin instead of wheelbase length
   * add comment to implementation
   ---------
-* feat(mpc_lateral_controller): remove trans/rot deviation validation since the control_validator has the same feature (`#9684 <https://github.com/autowarefoundation/autoware.universe/issues/9684>`_)
-* docs: modified minor sign error (`#8140 <https://github.com/autowarefoundation/autoware.universe/issues/8140>`_)
+* feat(mpc_lateral_controller): remove trans/rot deviation validation since the control_validator has the same feature (`#9684 <https://github.com/autowarefoundation/autoware_universe/issues/9684>`_)
+* docs: modified minor sign error (`#8140 <https://github.com/autowarefoundation/autoware_universe/issues/8140>`_)
 * Contributors: Autumn60, Fumiya Watanabe, Takayuki Murooka, Vishal Chauhan, Yuki Kimura, mkquda
 
 0.40.0 (2024-12-12)
 -------------------
 * Merge branch 'main' into release-0.40.0
-* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware.universe/issues/9587>`_)"
+* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware_universe/issues/9587>`_)"
   This reverts commit c9f0f2688c57b0f657f5c1f28f036a970682e7f5.
-* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware.universe/issues/9588>`_)
-* chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware.universe/issues/9587>`_)
+* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware_universe/issues/9588>`_)
+* chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware_universe/issues/9587>`_)
   * chore(package.xml): bump version to 0.39.0
   * fix: fix ticket links in CHANGELOG.rst
   * fix: remove unnecessary diff
   ---------
   Co-authored-by: Yutaka Kondo <yutaka.kondo@youtalk.jp>
-* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware.universe/issues/9588>`_)
-* fix(cpplint): include what you use - control (`#9565 <https://github.com/autowarefoundation/autoware.universe/issues/9565>`_)
-* fix(autoware_mpc_lateral_controller): fix clang-tidy errors (`#9436 <https://github.com/autowarefoundation/autoware.universe/issues/9436>`_)
+* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware_universe/issues/9588>`_)
+* fix(cpplint): include what you use - control (`#9565 <https://github.com/autowarefoundation/autoware_universe/issues/9565>`_)
+* fix(autoware_mpc_lateral_controller): fix clang-tidy errors (`#9436 <https://github.com/autowarefoundation/autoware_universe/issues/9436>`_)
 * 0.39.0
 * update changelog
 * Merge commit '6a1ddbd08bd' into release-0.39.0
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* feat(mpc_lateral_controller): suppress rclcpp_warning/error (`#9382 <https://github.com/autowarefoundation/autoware.universe/issues/9382>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* feat(mpc_lateral_controller): suppress rclcpp_warning/error (`#9382 <https://github.com/autowarefoundation/autoware_universe/issues/9382>`_)
   * feat(mpc_lateral_controller): suppress rclcpp_warning/error
   * fix
   * fix test
   ---------
-* fix(autoware_mpc_lateral_controller): fix variableScope (`#9390 <https://github.com/autowarefoundation/autoware.universe/issues/9390>`_)
-* feat: suppress warning/error of the empty predicted trajectory by MPC (`#9373 <https://github.com/autowarefoundation/autoware.universe/issues/9373>`_)
-* chore(autoware_mpc_lateral_controller): add maintainer (`#9374 <https://github.com/autowarefoundation/autoware.universe/issues/9374>`_)
-* feat(trajectory_follower): publsih control horzion (`#8977 <https://github.com/autowarefoundation/autoware.universe/issues/8977>`_)
+* fix(autoware_mpc_lateral_controller): fix variableScope (`#9390 <https://github.com/autowarefoundation/autoware_universe/issues/9390>`_)
+* feat: suppress warning/error of the empty predicted trajectory by MPC (`#9373 <https://github.com/autowarefoundation/autoware_universe/issues/9373>`_)
+* chore(autoware_mpc_lateral_controller): add maintainer (`#9374 <https://github.com/autowarefoundation/autoware_universe/issues/9374>`_)
+* feat(trajectory_follower): publsih control horzion (`#8977 <https://github.com/autowarefoundation/autoware_universe/issues/8977>`_)
   * feat(trajectory_follower): publsih control horzion
   * fix typo
   * rename functions and minor refactor
@@ -71,86 +85,86 @@ Changelog for package autoware_mpc_lateral_controller
   * update docs
   * rename to ~/debug/control_cmd_horizon
   ---------
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* fix(autoware_mpc_lateral_controller): fix bugprone-misplaced-widening-cast (`#9224 <https://github.com/autowarefoundation/autoware.universe/issues/9224>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* fix(autoware_mpc_lateral_controller): fix bugprone-misplaced-widening-cast (`#9224 <https://github.com/autowarefoundation/autoware_universe/issues/9224>`_)
   * fix: bugprone-misplaced-widening-cast
   * fix: consider negative values
   ---------
-* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware.universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware.universe/issues/9284>`_)
+* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware_universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware_universe/issues/9284>`_)
   * unify package.xml version to 0.37.0
   * remove system_monitor/CHANGELOG.rst
   * add changelog
   * 0.38.0
   ---------
-* fix(mpc_lateral_controller): correctly resample the MPC trajectory yaws (`#9199 <https://github.com/autowarefoundation/autoware.universe/issues/9199>`_)
+* fix(mpc_lateral_controller): correctly resample the MPC trajectory yaws (`#9199 <https://github.com/autowarefoundation/autoware_universe/issues/9199>`_)
 * Contributors: Esteve Fernandez, Fumiya Watanabe, Kosuke Takeuchi, Kyoichi Sugahara, M. Fatih Cırıt, Maxime CLEMENT, Ryohsuke Mitsudome, Ryuta Kambe, Takayuki Murooka, Yutaka Kondo, kobayu858
 
 0.39.0 (2024-11-25)
 -------------------
 * Merge commit '6a1ddbd08bd' into release-0.39.0
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* fix(autoware_mpc_lateral_controller): fix bugprone-misplaced-widening-cast (`#9224 <https://github.com/autowarefoundation/autoware.universe/issues/9224>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* fix(autoware_mpc_lateral_controller): fix bugprone-misplaced-widening-cast (`#9224 <https://github.com/autowarefoundation/autoware_universe/issues/9224>`_)
   * fix: bugprone-misplaced-widening-cast
   * fix: consider negative values
   ---------
-* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware.universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware.universe/issues/9284>`_)
+* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware_universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware_universe/issues/9284>`_)
   * unify package.xml version to 0.37.0
   * remove system_monitor/CHANGELOG.rst
   * add changelog
   * 0.38.0
   ---------
-* fix(mpc_lateral_controller): correctly resample the MPC trajectory yaws (`#9199 <https://github.com/autowarefoundation/autoware.universe/issues/9199>`_)
+* fix(mpc_lateral_controller): correctly resample the MPC trajectory yaws (`#9199 <https://github.com/autowarefoundation/autoware_universe/issues/9199>`_)
 * Contributors: Esteve Fernandez, Maxime CLEMENT, Yutaka Kondo, kobayu858
 
 0.38.0 (2024-11-08)
 -------------------
 * unify package.xml version to 0.37.0
-* refactor(osqp_interface): added autoware prefix to osqp_interface (`#8958 <https://github.com/autowarefoundation/autoware.universe/issues/8958>`_)
-* fix(autoware_mpc_lateral_controller): fix calculation method of predicted trajectory (`#9048 <https://github.com/autowarefoundation/autoware.universe/issues/9048>`_)
+* refactor(osqp_interface): added autoware prefix to osqp_interface (`#8958 <https://github.com/autowarefoundation/autoware_universe/issues/8958>`_)
+* fix(autoware_mpc_lateral_controller): fix calculation method of predicted trajectory (`#9048 <https://github.com/autowarefoundation/autoware_universe/issues/9048>`_)
   * fix(vehicle_model): fix calculation method of predicted trajectory
   ---------
-* refactor(autoware_interpolation): prefix package and namespace with autoware (`#8088 <https://github.com/autowarefoundation/autoware.universe/issues/8088>`_)
+* refactor(autoware_interpolation): prefix package and namespace with autoware (`#8088 <https://github.com/autowarefoundation/autoware_universe/issues/8088>`_)
   Co-authored-by: kosuke55 <kosuke.tnp@gmail.com>
-* chore(mpc_lateral_controller): consistent parameters with autoware_launch (`#8914 <https://github.com/autowarefoundation/autoware.universe/issues/8914>`_)
-* chore: remove duplicate line in mpc_lateral_controller.cpp (`#8916 <https://github.com/autowarefoundation/autoware.universe/issues/8916>`_)
+* chore(mpc_lateral_controller): consistent parameters with autoware_launch (`#8914 <https://github.com/autowarefoundation/autoware_universe/issues/8914>`_)
+* chore: remove duplicate line in mpc_lateral_controller.cpp (`#8916 <https://github.com/autowarefoundation/autoware_universe/issues/8916>`_)
   remove duplicate line in mpc_lateral_controller.cpp
-* feat(autoware_mpc_lateral_controller): add predicted trajectory acconts for input delay (`#8436 <https://github.com/autowarefoundation/autoware.universe/issues/8436>`_)
+* feat(autoware_mpc_lateral_controller): add predicted trajectory acconts for input delay (`#8436 <https://github.com/autowarefoundation/autoware_universe/issues/8436>`_)
   * feat: enable delayed initial state for predicted trajectory
   * feat: enable debug publishing of predicted and resampled reference trajectories
   ---------
-* fix(autoware_mpc_lateral_controller): fix cppcheck warnings (`#8149 <https://github.com/autowarefoundation/autoware.universe/issues/8149>`_)
+* fix(autoware_mpc_lateral_controller): fix cppcheck warnings (`#8149 <https://github.com/autowarefoundation/autoware_universe/issues/8149>`_)
   * fix(autoware_mpc_lateral_controller): fix cppcheck warnings
   * Update control/autoware_mpc_lateral_controller/src/lowpass_filter.cpp
   Co-authored-by: Takayuki Murooka <takayuki5168@gmail.com>
   ---------
   Co-authored-by: Takayuki Murooka <takayuki5168@gmail.com>
-* fix(autoware_mpc_lateral_controller): add timestamp and frame ID to published trajectory (`#8164 <https://github.com/autowarefoundation/autoware.universe/issues/8164>`_)
+* fix(autoware_mpc_lateral_controller): add timestamp and frame ID to published trajectory (`#8164 <https://github.com/autowarefoundation/autoware_universe/issues/8164>`_)
   add timestamp and frame ID to published trajectory
-* fix(controller): revival of dry steering (`#7903 <https://github.com/autowarefoundation/autoware.universe/issues/7903>`_)
-  * Revert "fix(autoware_mpc_lateral_controller): delete the zero speed constraint (`#7673 <https://github.com/autowarefoundation/autoware.universe/issues/7673>`_)"
+* fix(controller): revival of dry steering (`#7903 <https://github.com/autowarefoundation/autoware_universe/issues/7903>`_)
+  * Revert "fix(autoware_mpc_lateral_controller): delete the zero speed constraint (`#7673 <https://github.com/autowarefoundation/autoware_universe/issues/7673>`_)"
   This reverts commit 69258bd92cb8a0ff8320df9b2302db72975e027f.
   * dry steering
   * add comments
   * add minor fix and modify unit test for dry steering
   ---------
-* fix(autoware_mpc_lateral_controller): delete the zero speed constraint (`#7673 <https://github.com/autowarefoundation/autoware.universe/issues/7673>`_)
+* fix(autoware_mpc_lateral_controller): delete the zero speed constraint (`#7673 <https://github.com/autowarefoundation/autoware_universe/issues/7673>`_)
   * delete steer rate limit when vel = 0
   * delete unnecessary variable
   * pre-commit
   ---------
-* fix(autoware_mpc_lateral_controller): relax the steering rate constraint at zero speed (`#7581 <https://github.com/autowarefoundation/autoware.universe/issues/7581>`_)
+* fix(autoware_mpc_lateral_controller): relax the steering rate constraint at zero speed (`#7581 <https://github.com/autowarefoundation/autoware_universe/issues/7581>`_)
   * constraint for zero velocity updated
   * correct the comment
   ---------
-* fix(autoware_mpc_lateral_controller): fix duplicateExpression warning (`#7542 <https://github.com/autowarefoundation/autoware.universe/issues/7542>`_)
+* fix(autoware_mpc_lateral_controller): fix duplicateExpression warning (`#7542 <https://github.com/autowarefoundation/autoware_universe/issues/7542>`_)
   * fix(autoware_mpc_lateral_controller): fix duplicateExpression warning
   * style(pre-commit): autofix
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* fix(autoware_mpc_lateral_controller): fix duplicateAssignExpression warning (`#7572 <https://github.com/autowarefoundation/autoware.universe/issues/7572>`_)
-* refactor(universe_utils/motion_utils)!: add autoware namespace (`#7594 <https://github.com/autowarefoundation/autoware.universe/issues/7594>`_)
-* fix(mpc_lateral_controller): align the MPC steering angle when the car is controlled manually. (`#7109 <https://github.com/autowarefoundation/autoware.universe/issues/7109>`_)
+* fix(autoware_mpc_lateral_controller): fix duplicateAssignExpression warning (`#7572 <https://github.com/autowarefoundation/autoware_universe/issues/7572>`_)
+* refactor(universe_utils/motion_utils)!: add autoware namespace (`#7594 <https://github.com/autowarefoundation/autoware_universe/issues/7594>`_)
+* fix(mpc_lateral_controller): align the MPC steering angle when the car is controlled manually. (`#7109 <https://github.com/autowarefoundation/autoware_universe/issues/7109>`_)
   * align the MPC steering angle when the car is controlled manually.
   * update the condition for is_driving_manually
   * STOP mode included
@@ -163,7 +177,7 @@ Changelog for package autoware_mpc_lateral_controller
   * unchange the unrelevant line
   * pre-commit
   ---------
-* feat(mpc_lateral_controller): signal a MRM when MPC fails. (`#7016 <https://github.com/autowarefoundation/autoware.universe/issues/7016>`_)
+* feat(mpc_lateral_controller): signal a MRM when MPC fails. (`#7016 <https://github.com/autowarefoundation/autoware_universe/issues/7016>`_)
   * mpc fail checker diagnostic added
   * fix some scope issues
   * member attribute added.
@@ -180,27 +194,27 @@ Changelog for package autoware_mpc_lateral_controller
   * pre-commit
   ---------
   Co-authored-by: Takamasa Horibe <horibe.takamasa@gmail.com>
-* refactor(motion_utils)!: add autoware prefix and include dir (`#7539 <https://github.com/autowarefoundation/autoware.universe/issues/7539>`_)
+* refactor(motion_utils)!: add autoware prefix and include dir (`#7539 <https://github.com/autowarefoundation/autoware_universe/issues/7539>`_)
   refactor(motion_utils): add autoware prefix and include dir
-* feat(autoware_universe_utils)!: rename from tier4_autoware_utils (`#7538 <https://github.com/autowarefoundation/autoware.universe/issues/7538>`_)
+* feat(autoware_universe_utils)!: rename from tier4_autoware_utils (`#7538 <https://github.com/autowarefoundation/autoware_universe/issues/7538>`_)
   Co-authored-by: kosuke55 <kosuke.tnp@gmail.com>
-* refactor(control)!: refactor directory structures of the trajectory followers (`#7521 <https://github.com/autowarefoundation/autoware.universe/issues/7521>`_)
+* refactor(control)!: refactor directory structures of the trajectory followers (`#7521 <https://github.com/autowarefoundation/autoware_universe/issues/7521>`_)
   * control_traj
   * add follower_node
   * fix
   ---------
-* refactor(trajectory_follower_node): trajectory follower node add autoware prefix (`#7344 <https://github.com/autowarefoundation/autoware.universe/issues/7344>`_)
+* refactor(trajectory_follower_node): trajectory follower node add autoware prefix (`#7344 <https://github.com/autowarefoundation/autoware_universe/issues/7344>`_)
   * rename trajectory follower node package
   * update dependencies, launch files, and README files
   * fix formats
   * remove autoware\_ prefix from launch arg option
   ---------
-* refactor(trajectory_follower_base): trajectory follower base add autoware prefix (`#7343 <https://github.com/autowarefoundation/autoware.universe/issues/7343>`_)
+* refactor(trajectory_follower_base): trajectory follower base add autoware prefix (`#7343 <https://github.com/autowarefoundation/autoware_universe/issues/7343>`_)
   * rename trajectory follower base package
   * update dependencies and includes
   * fix formats
   ---------
-* refactor(vehicle_info_utils)!: prefix package and namespace with autoware (`#7353 <https://github.com/autowarefoundation/autoware.universe/issues/7353>`_)
+* refactor(vehicle_info_utils)!: prefix package and namespace with autoware (`#7353 <https://github.com/autowarefoundation/autoware_universe/issues/7353>`_)
   * chore(autoware_vehicle_info_utils): rename header
   * chore(bpp-common): vehicle info
   * chore(path_optimizer): vehicle info
@@ -235,7 +249,7 @@ Changelog for package autoware_mpc_lateral_controller
   * chore(sensing): vehicle info
   * fix(autoware_joy_controller): remove unused deps
   ---------
-* refactor(mpc_lateral_controller, trajectory_follower_node)!: prefix package and namespace with autoware (`#7306 <https://github.com/autowarefoundation/autoware.universe/issues/7306>`_)
+* refactor(mpc_lateral_controller, trajectory_follower_node)!: prefix package and namespace with autoware (`#7306 <https://github.com/autowarefoundation/autoware_universe/issues/7306>`_)
   * add the prefix to the folder
   * named to autoware_mpc_lateral_controller
   * rename the folder in the include
