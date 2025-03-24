@@ -36,10 +36,10 @@ struct Lanelet2FileMetaData
 
 namespace utils
 {
-std::map<std::string, Lanelet2FileMetaData> loadLanelet2Metadata(
+std::map<std::string, Lanelet2FileMetaData> load_lanelet2_metadata(
   const std::string & lanelet2_metadata_path, double & x_resolution, double & y_resolution);
 
-std::map<std::string, Lanelet2FileMetaData> replaceWithAbsolutePath(
+std::map<std::string, Lanelet2FileMetaData> replace_with_absolute_path(
   const std::map<std::string, Lanelet2FileMetaData> & lanelet2_metadata_path,
   const std::vector<std::string> & lanelet2_paths);
 

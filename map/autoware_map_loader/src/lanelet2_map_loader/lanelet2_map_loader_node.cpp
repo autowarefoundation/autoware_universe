@@ -130,7 +130,7 @@ void Lanelet2MapLoaderNode::on_map_projector_info(
   }
 
   // load lanelet2 map
-  // We have to keep all loaded maps until publishing the map bin msg
+  // Note that we cannot destroy loaded maps even after merging them
   // because the loaded lanelets will be expired when map is destructed
   std::vector<lanelet::LaneletMapPtr> maps;
   for (const auto & path : lanelet2_paths) {
@@ -143,9 +143,9 @@ void Lanelet2MapLoaderNode::on_map_projector_info(
   }
 
   // merge all maps
-  lanelet::LaneletMapPtr map = std::make_shared<lanelet::LaneletMap>();
-  for (const auto & map_i : maps) {
-    utils::merge_lanelet2_maps(*map, *map_i);
+  lanelet::LaneletMapPtr map = maps.front();
+  for (size_t i = 1; i < maps.size(); ++i) {
+    utils::merge_lanelet2_maps(*map, *maps.at(i));
   }
 
   // setup differential map loader module
@@ -169,11 +169,10 @@ void Lanelet2MapLoaderNode::on_map_projector_info(
     }
 
     // set metadata and projection info to differential loader module
-    differential_loader_module_->setLaneletMapMetadata(
+    differential_loader_module_->set_lanelet2_map_metadata(
       lanelet2_metadata_dict, x_resolution, y_resolution);
-    differential_loader_module_->setProjectionInfo(*msg);
+    differential_loader_module_->set_projection_info(*msg);
   }
-
 
   // we use first lanelet2 path to get format_version and map_version
   std::string format_version{"null"}, map_version{""};
@@ -262,8 +261,9 @@ std::map<std::string, Lanelet2FileMetaData> Lanelet2MapLoaderNode::get_lanelet2_
 {
   std::map<std::string, Lanelet2FileMetaData> lanelet2_metadata_dict;
   lanelet2_metadata_dict =
-    utils::loadLanelet2Metadata(lanelet2_metadata_path, x_resolution, y_resolution);
-  lanelet2_metadata_dict = utils::replaceWithAbsolutePath(lanelet2_metadata_dict, lanelet2_paths);
+    utils::load_lanelet2_metadata(lanelet2_metadata_path, x_resolution, y_resolution);
+  lanelet2_metadata_dict =
+    utils::replace_with_absolute_path(lanelet2_metadata_dict, lanelet2_paths);
   RCLCPP_INFO_STREAM(get_logger(), "Loaded Lanelet2 metadata: " << lanelet2_metadata_path);
 
   return lanelet2_metadata_dict;

@@ -40,11 +40,11 @@ Lanelet2DifferentialLoaderModule::Lanelet2DifferentialLoaderModule(
   get_differential_lanelet2_maps_service_ = node->create_service<GetDifferentialLanelet2Map>(
     "service/get_differential_lanelet_map",
     std::bind(
-      &Lanelet2DifferentialLoaderModule::onServiceGetDifferentialLanelet2Map, this,
+      &Lanelet2DifferentialLoaderModule::on_service_get_differential_lanelet2_map, this,
       std::placeholders::_1, std::placeholders::_2));
 }
 
-bool Lanelet2DifferentialLoaderModule::onServiceGetDifferentialLanelet2Map(
+bool Lanelet2DifferentialLoaderModule::on_service_get_differential_lanelet2_map(
   GetDifferentialLanelet2Map::Request::SharedPtr req,
   GetDifferentialLanelet2Map::Response::SharedPtr res)
 {
@@ -107,24 +107,24 @@ bool Lanelet2DifferentialLoaderModule::onServiceGetDifferentialLanelet2Map(
   return true;
 }
 
-void Lanelet2DifferentialLoaderModule::setLaneletMapMetadata(
+void Lanelet2DifferentialLoaderModule::set_lanelet2_map_metadata(
   const std::map<std::string, Lanelet2FileMetaData> & lanelet2_metadata_dict, const double x_res,
   const double y_res)
 {
   lanelet2_file_metadata_dict_ = lanelet2_metadata_dict;
 
-  const auto msg = getLaneletMapMetaDataMsg(x_res, y_res);
+  const auto msg = get_lanelet_map_metadata_msg(x_res, y_res);
   pub_lanelet_map_meta_data_->publish(msg);
 }
 
-void Lanelet2DifferentialLoaderModule::setProjectionInfo(
+void Lanelet2DifferentialLoaderModule::set_projection_info(
   const autoware_map_msgs::msg::MapProjectorInfo & projector_info)
 {
   projector_info_ = projector_info;
 }
 
 autoware_map_msgs::msg::LaneletMapMetaData
-Lanelet2DifferentialLoaderModule::getLaneletMapMetaDataMsg(
+Lanelet2DifferentialLoaderModule::get_lanelet_map_metadata_msg(
   const double & x_res, const double & y_res) const
 {
   autoware_map_msgs::msg::LaneletMapMetaData metadata;

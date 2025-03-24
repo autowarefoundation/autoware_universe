@@ -38,7 +38,7 @@
 namespace autoware::map_loader::utils
 {
 
-std::map<std::string, Lanelet2FileMetaData> loadLanelet2Metadata(
+std::map<std::string, Lanelet2FileMetaData> load_lanelet2_metadata(
   const std::string & lanelet2_metadata_path, double & x_resolution, double & y_resolution)
 {
   YAML::Node config = YAML::LoadFile(lanelet2_metadata_path);
@@ -70,7 +70,7 @@ std::map<std::string, Lanelet2FileMetaData> loadLanelet2Metadata(
   return lanelet2_metadata;
 }
 
-std::map<std::string, Lanelet2FileMetaData> replaceWithAbsolutePath(
+std::map<std::string, Lanelet2FileMetaData> replace_with_absolute_path(
   const std::map<std::string, Lanelet2FileMetaData> & lanelet2_metadata_path,
   const std::vector<std::string> & lanelet2_paths)
 {
