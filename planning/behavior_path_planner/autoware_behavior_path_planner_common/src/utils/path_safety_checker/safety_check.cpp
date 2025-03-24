@@ -882,7 +882,6 @@ double calculateRoughDistanceToObjects(
 double shortest_distance_from_ego_footprint_to_objects_on_path(
   const PathWithLaneId & path, const PredictedObjects & objects,
   const BehaviorPathPlannerParameters & parameters, const bool use_offset_ego_pose)
-
 {
   const auto & p = parameters;
   double min_distance = std::numeric_limits<double>::max();
