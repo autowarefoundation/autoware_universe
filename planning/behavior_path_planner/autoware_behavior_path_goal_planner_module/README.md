@@ -267,10 +267,10 @@ See also [[1]](https://www.sciencedirect.com/science/article/pii/S14746670153474
 
 #### Parameters geometric parallel parking
 
-| Name                         | Unit  | Type   | Description                                                                                              | Default value |
-| :--------------------------- | :---- | :----- | :------------------------------------------------------------------------------------------------------- | :------------ |
-| arc_path_interval            | [m]   | double | interval between arc path points                                                                         | 1.0           |
-| max_steer_angle_margin_scale | [rad] | double | scaling factor applied to the maximum steering angle (max_steer_angle) defined in vehicle_info parameter | 0.72          |
+| Name                         | Unit | Type   | Description                                                                                              | Default value |
+| :--------------------------- | :--- | :----- | :------------------------------------------------------------------------------------------------------- | :------------ |
+| arc_path_interval            | [m]  | double | interval between arc path points                                                                         | 1.0           |
+| max_steer_angle_margin_scale | [-]  | double | scaling factor applied to the maximum steering angle (max_steer_angle) defined in vehicle_info parameter | 0.72          |
 
 #### arc forward parking
 
