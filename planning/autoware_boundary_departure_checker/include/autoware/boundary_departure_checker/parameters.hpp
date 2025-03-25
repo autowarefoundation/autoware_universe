@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__DEPARTURE_CHECKER__PARAMETERS_HPP_
-#define AUTOWARE__DEPARTURE_CHECKER__PARAMETERS_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__PARAMETERS_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__PARAMETERS_HPP_
 
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/pose_deviation.hpp>
@@ -80,4 +80,4 @@ struct Output
 };
 }  // namespace autoware::lane_departure_checker
 
-#endif  // AUTOWARE__DEPARTURE_CHECKER__PARAMETERS_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__PARAMETERS_HPP_

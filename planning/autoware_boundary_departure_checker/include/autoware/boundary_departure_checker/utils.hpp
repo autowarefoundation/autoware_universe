@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__DEPARTURE_CHECKER__UTILS_HPP_
-#define AUTOWARE__DEPARTURE_CHECKER__UTILS_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UTILS_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UTILS_HPP_
 
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/pose_deviation.hpp>
@@ -130,4 +130,4 @@ double calcMaxSearchLengthForBoundaries(
   const Trajectory & trajectory, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info);
 }  // namespace autoware::lane_departure_checker::utils
 
-#endif  // AUTOWARE__DEPARTURE_CHECKER__UTILS_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UTILS_HPP_
