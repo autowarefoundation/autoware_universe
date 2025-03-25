@@ -846,16 +846,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/main/planning/autoware_velocity_smoother/</loc>
-         <lastmod>2025-03-25</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/main/planning/autoware_velocity_smoother/README.ja/</loc>
-         <lastmod>2025-03-25</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/main/planning/behavior_path_planner/autoware_behavior_path_avoidance_by_lane_change_module/</loc>
          <lastmod>2025-03-25</lastmod>
          <changefreq>daily</changefreq>
