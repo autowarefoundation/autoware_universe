@@ -30,6 +30,10 @@
     soft_stop_deceleration: -1.0 # [m/s^2]
 
     validity_checks:
+      latency:
+        enable: true
+        threshold: 1.0
+        is_critical: false
       interval:
         enable: true
         threshold: 100.0
@@ -60,7 +64,7 @@
         lon_distance_th: 1.0
         yaw_th: 1.5708 # (= 90 degrees)
         is_critical: false
-      forward_length:
+      forward_trajectory_length:
         enable: true
         acceleration: -3.0
         margin: 2.0
