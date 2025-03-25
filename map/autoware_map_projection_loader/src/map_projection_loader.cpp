@@ -55,7 +55,7 @@ autoware_map_msgs::msg::MapProjectorInfo load_info_from_yaml(const std::string &
       "Load " << filename << "\n"
               << "DEPRECATED WARNING: projector type \"local\" is deprecated."
                  "Please use \"Local\" instead. For more info, visit "
-                 "https://github.com/autowarefoundation/autoware.universe/blob/main/map/"
+                 "https://github.com/autowarefoundation/autoware_universe/blob/main/map/"
                  "map_projection_loader README.md");
     msg.projector_type = autoware_map_msgs::msg::MapProjectorInfo::LOCAL;
   } else {
@@ -80,7 +80,7 @@ autoware_map_msgs::msg::MapProjectorInfo load_map_projector_info(
     std::cout
       << "DEPRECATED WARNING: Loading map projection info from lanelet2 map may soon be deleted. "
          "Please use map_projector_info.yaml instead. For more info, visit "
-         "https://github.com/autowarefoundation/autoware.universe/blob/main/map/"
+         "https://github.com/autowarefoundation/autoware_universe/blob/main/map/"
          "map_projection_loader/"
          "README.md"
       << std::endl;

@@ -881,6 +881,8 @@ autoware_internal_planning_msgs::msg::SafetyFactorArray to_safety_factor_array(
   const CollisionCheckDebugMap & debug_map)
 {
   autoware_internal_planning_msgs::msg::SafetyFactorArray safety_factors;
+  safety_factors.is_safe = std::all_of(
+    debug_map.begin(), debug_map.end(), [](const auto & result) { return result.second.is_safe; });
   for (const auto & [uuid, data] : debug_map) {
     autoware_internal_planning_msgs::msg::SafetyFactor safety_factor;
     safety_factor.type = autoware_internal_planning_msgs::msg::SafetyFactor::OBJECT;
