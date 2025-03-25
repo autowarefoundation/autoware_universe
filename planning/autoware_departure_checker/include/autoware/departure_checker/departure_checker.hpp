@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__LANE_DEPARTURE_CHECKER__LANE_DEPARTURE_CHECKER_HPP_
-#define AUTOWARE__LANE_DEPARTURE_CHECKER__LANE_DEPARTURE_CHECKER_HPP_
+#ifndef AUTOWARE__DEPARTURE_CHECKER__DEPARTURE_CHECKER_HPP_
+#define AUTOWARE__DEPARTURE_CHECKER__DEPARTURE_CHECKER_HPP_
 
-#include "autoware/lane_departure_checker/parameters.hpp"
+#include "autoware/departure_checker/parameters.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
@@ -125,4 +125,4 @@ private:
 };
 }  // namespace autoware::lane_departure_checker
 
-#endif  // AUTOWARE__LANE_DEPARTURE_CHECKER__LANE_DEPARTURE_CHECKER_HPP_
+#endif  // AUTOWARE__DEPARTURE_CHECKER__DEPARTURE_CHECKER_HPP_
