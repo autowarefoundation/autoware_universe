@@ -358,10 +358,12 @@ void PlanningValidator::validate(
   s.is_valid_velocity_deviation = checkValidVelocityDeviation(trajectory);
   s.is_valid_distance_deviation = checkValidDistanceDeviation(trajectory);
   s.is_valid_longitudinal_distance_deviation = checkValidLongitudinalDistanceDeviation(trajectory);
+  s.is_valid_yaw_deviation = checkValidYawDeviation(trajectory);
   s.is_valid_forward_trajectory_length = checkValidForwardTrajectoryLength(trajectory);
-  s.is_valid_trajectory_shift = params_.validation_params.trajectory_shift.enable && prev_trajectory
-                                  ? checkTrajectoryShift(trajectory, *prev_trajectory)
-                                  : true;
+  s.is_valid_latency = checkValidLatency(trajectory);
+  s.is_valid_trajectory_shift =
+    prev_trajectory ? checkTrajectoryShift(trajectory, *prev_trajectory) : true;
+
 
   // use resampled trajectory because the following metrics can not be evaluated for closed points.
   // Note: do not interpolate to keep original trajectory shape.
@@ -373,8 +375,6 @@ void PlanningValidator::validate(
   s.is_valid_lateral_acc = checkValidLateralAcceleration(resampled);
   s.is_valid_steering = checkValidSteering(resampled);
   s.is_valid_steering_rate = checkValidSteeringRate(resampled);
-  s.is_valid_latency = checkValidLatency(trajectory);
-  s.is_valid_yaw_deviation = checkValidYawDeviation(trajectory);
 
   s.invalid_count = isAllValid(s) ? 0 : s.invalid_count + 1;
 }
@@ -395,6 +395,10 @@ bool PlanningValidator::checkValidFiniteValue(const Trajectory & trajectory)
 
 bool PlanningValidator::checkValidInterval(const Trajectory & trajectory)
 {
+  if (!params_.validation_params.interval.enable) {
+    return true;
+  }
+
   const auto [max_interval_distance, i] = calcMaxIntervalDistance(trajectory);
   validation_status_.max_interval_distance = max_interval_distance;
 
@@ -412,6 +416,10 @@ bool PlanningValidator::checkValidInterval(const Trajectory & trajectory)
 
 bool PlanningValidator::checkValidRelativeAngle(const Trajectory & trajectory)
 {
+  if(!params_.validation_params.relative_angle.enable) {
+    return true;
+  }
+
   const auto [max_relative_angle, i] = calcMaxRelativeAngles(trajectory);
   validation_status_.max_relative_angle = max_relative_angle;
 
@@ -429,6 +437,10 @@ bool PlanningValidator::checkValidRelativeAngle(const Trajectory & trajectory)
 
 bool PlanningValidator::checkValidCurvature(const Trajectory & trajectory)
 {
+  if(!params_.validation_params.curvature.enable) {
+    return true;
+  }
+
   const auto [max_curvature, i] = calcMaxCurvature(trajectory);
   validation_status_.max_curvature = max_curvature;
   if (max_curvature > params_.validation_params.curvature.threshold) {
@@ -445,6 +457,10 @@ bool PlanningValidator::checkValidCurvature(const Trajectory & trajectory)
 
 bool PlanningValidator::checkValidLateralAcceleration(const Trajectory & trajectory)
 {
+  if (!params_.validation_params.acceleration.enable) {
+    return true;
+  }
+
   const auto [max_lateral_acc, i] = calcMaxLateralAcceleration(trajectory);
   validation_status_.max_lateral_acc = max_lateral_acc;
   if (max_lateral_acc > params_.validation_params.acceleration.lateral_th) {
@@ -456,6 +472,10 @@ bool PlanningValidator::checkValidLateralAcceleration(const Trajectory & traject
 
 bool PlanningValidator::checkValidMinLongitudinalAcceleration(const Trajectory & trajectory)
 {
+  if (!params_.validation_params.acceleration.enable) {
+    return true;
+  }
+
   const auto [min_longitudinal_acc, i] = getMinLongitudinalAcc(trajectory);
   validation_status_.min_longitudinal_acc = min_longitudinal_acc;
 
@@ -468,6 +488,10 @@ bool PlanningValidator::checkValidMinLongitudinalAcceleration(const Trajectory &
 
 bool PlanningValidator::checkValidMaxLongitudinalAcceleration(const Trajectory & trajectory)
 {
+  if (!params_.validation_params.acceleration.enable) {
+    return true;
+  }
+
   const auto [max_longitudinal_acc, i] = getMaxLongitudinalAcc(trajectory);
   validation_status_.max_longitudinal_acc = max_longitudinal_acc;
 
@@ -480,6 +504,10 @@ bool PlanningValidator::checkValidMaxLongitudinalAcceleration(const Trajectory &
 
 bool PlanningValidator::checkValidSteering(const Trajectory & trajectory)
 {
+  if (!params_.validation_params.steering.enable) {
+    return true;
+  }
+
   const auto [max_steering, i] = calcMaxSteeringAngles(trajectory, vehicle_info_.wheel_base_m);
   validation_status_.max_steering = max_steering;
 
@@ -492,6 +520,10 @@ bool PlanningValidator::checkValidSteering(const Trajectory & trajectory)
 
 bool PlanningValidator::checkValidSteeringRate(const Trajectory & trajectory)
 {
+  if (!params_.validation_params.steering.enable) {
+    return true;
+  }
+
   const auto [max_steering_rate, i] = calcMaxSteeringRates(trajectory, vehicle_info_.wheel_base_m);
   validation_status_.max_steering_rate = max_steering_rate;
 
@@ -504,6 +536,10 @@ bool PlanningValidator::checkValidSteeringRate(const Trajectory & trajectory)
 
 bool PlanningValidator::checkValidVelocityDeviation(const Trajectory & trajectory)
 {
+  if (!params_.validation_params.deviation.enable) {
+    return true;
+  }
+
   // TODO(horibe): set appropriate thresholds for index search
   const auto idx = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
     trajectory.points, current_kinematics_->pose.pose);
@@ -520,6 +556,10 @@ bool PlanningValidator::checkValidVelocityDeviation(const Trajectory & trajector
 
 bool PlanningValidator::checkValidDistanceDeviation(const Trajectory & trajectory)
 {
+  if (!params_.validation_params.deviation.enable) {
+    return true;
+  }
+
   // TODO(horibe): set appropriate thresholds for index search
   const auto idx = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
     trajectory.points, current_kinematics_->pose.pose);
@@ -535,6 +575,10 @@ bool PlanningValidator::checkValidDistanceDeviation(const Trajectory & trajector
 
 bool PlanningValidator::checkValidLongitudinalDistanceDeviation(const Trajectory & trajectory)
 {
+  if (!params_.validation_params.deviation.enable) {
+    return true;
+  }
+
   if (trajectory.points.size() < 2) {
     RCLCPP_ERROR(get_logger(), "Trajectory size is invalid to calculate distance deviation.");
     return false;
@@ -580,8 +624,26 @@ bool PlanningValidator::checkValidLongitudinalDistanceDeviation(const Trajectory
   return true;
 }
 
+bool PlanningValidator::checkValidYawDeviation(const Trajectory & trajectory)
+{
+  if(!params_.validation_params.deviation.enable) {
+    return true;
+  }
+
+  const auto interpolated_trajectory_point =
+    motion_utils::calcInterpolatedPoint(trajectory, current_kinematics_->pose.pose);
+  validation_status_.yaw_deviation = std::abs(angles::shortest_angular_distance(
+    tf2::getYaw(interpolated_trajectory_point.pose.orientation),
+    tf2::getYaw(current_kinematics_->pose.pose.orientation)));
+  return validation_status_.yaw_deviation <= params_.validation_params.deviation.yaw_th;
+}
+
 bool PlanningValidator::checkValidForwardTrajectoryLength(const Trajectory & trajectory)
 {
+  if (!params_.validation_params.forward_trajectory_length.enable) {
+    return true;
+  }
+
   const auto ego_speed = std::abs(current_kinematics_->twist.twist.linear.x);
   if (ego_speed < 1.0 / 3.6) {
     return true;  // Ego is almost stopped.
@@ -602,26 +664,18 @@ bool PlanningValidator::checkValidForwardTrajectoryLength(const Trajectory & tra
 
 bool PlanningValidator::checkValidLatency(const Trajectory & trajectory)
 {
+  if(!params_.validation_params.latency.enable) {
+    return true;
+  }
+
   validation_status_.latency = (this->now() - trajectory.header.stamp).seconds();
   return validation_status_.latency < params_.validation_params.latency.threshold;
-}
-
-bool PlanningValidator::checkValidYawDeviation(const Trajectory & trajectory)
-{
-  const auto interpolated_trajectory_point =
-    motion_utils::calcInterpolatedPoint(trajectory, current_kinematics_->pose.pose);
-  validation_status_.yaw_deviation = std::abs(angles::shortest_angular_distance(
-    tf2::getYaw(interpolated_trajectory_point.pose.orientation),
-    tf2::getYaw(current_kinematics_->pose.pose.orientation)));
-  return validation_status_.yaw_deviation <= params_.validation_params.deviation.yaw_th;
 }
 
 bool PlanningValidator::checkTrajectoryShift(
   const Trajectory & trajectory, const Trajectory & prev_trajectory)
 {
-  if (
-    trajectory.points.empty() || prev_trajectory.points.empty() ||
-    !params_.validation_params.trajectory_shift.enable) {
+  if (!params_.validation_params.trajectory_shift.enable) {
     return true;
   }
 
