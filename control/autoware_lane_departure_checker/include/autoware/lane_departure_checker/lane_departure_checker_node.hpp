@@ -119,7 +119,6 @@ private:
   diagnostic_updater::Updater updater_{this};
 
   void checkLaneDeparture(diagnostic_updater::DiagnosticStatusWrapper & stat);
-  void checkTrajectoryDeviation(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
   // Visualization
   visualization_msgs::msg::MarkerArray createMarkerArray() const;

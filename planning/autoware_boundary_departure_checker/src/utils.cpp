@@ -223,15 +223,6 @@ std::vector<LinearRing2d> createVehiclePassingAreas(
   return areas;
 }
 
-PoseDeviation calcTrajectoryDeviation(
-  const Trajectory & trajectory, const geometry_msgs::msg::Pose & pose, const double dist_threshold,
-  const double yaw_threshold)
-{
-  const auto nearest_idx = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
-    trajectory.points, pose, dist_threshold, yaw_threshold);
-  return autoware_utils::calc_pose_deviation(trajectory.points.at(nearest_idx).pose, pose);
-}
-
 double calcMaxSearchLengthForBoundaries(
   const Trajectory & trajectory, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info)
 {

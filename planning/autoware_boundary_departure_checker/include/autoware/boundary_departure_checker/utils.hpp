@@ -109,18 +109,6 @@ std::vector<LinearRing2d> createVehiclePassingAreas(
   const std::vector<LinearRing2d> & vehicle_footprints);
 
 /**
- * @brief calculate the deviation of the given pose from the nearest pose on the trajectory
- * @param trajectory target trajectory
- * @param pose vehicle pose
- * @param dist_threshold distance threshold used for searching for first nearest index to given pose
- * @param yaw_threshold yaw threshold used for searching for first nearest index to given pose
- * @return deviation of the given pose from the trajectory
- */
-PoseDeviation calcTrajectoryDeviation(
-  const Trajectory & trajectory, const geometry_msgs::msg::Pose & pose, const double dist_threshold,
-  const double yaw_threshold);
-
-/**
  * @brief calculate the maximum search length for boundaries considering the vehicle dimensions
  * @param trajectory target trajectory
  * @param vehicle_info vehicle information
