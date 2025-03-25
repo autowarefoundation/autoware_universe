@@ -14,8 +14,6 @@
 
 #include "autoware/external_cmd_selector/external_cmd_selector_node.hpp"
 
-#include <tier4_auto_msgs_converter/tier4_auto_msgs_converter.hpp>
-
 #include <chrono>
 #include <memory>
 #include <string>
