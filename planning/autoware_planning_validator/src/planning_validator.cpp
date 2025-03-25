@@ -76,6 +76,9 @@ void PlanningValidator::setupParameters()
   params_.diag_error_count_threshold = declare_parameter<int>("diag_error_count_threshold");
   params_.display_on_terminal = declare_parameter<bool>("display_on_terminal");
 
+  params_.enable_soft_stop_on_prev_traj = declare_parameter<bool>("enable_soft_stop_on_prev_traj");
+  params_.soft_stop_deceleration = declare_parameter<double>("soft_stop_deceleration");
+
   {
     auto set_validation_flags = [&](auto & param, const std::string & key){
         param.enable = declare_parameter<bool>(key + ".enable");
@@ -127,12 +130,23 @@ void PlanningValidator::setupParameters()
 }
 
 void PlanningValidator::setStatus(
-  DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg)
+  DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg, const bool is_critical)
 {
   if (is_ok) {
     stat.summary(DiagnosticStatus::OK, "validated.");
-  } else if (
-    validation_status_.invalid_count < params_.diag_error_count_threshold && !is_critical_error_) {
+    return;
+  }
+
+  const bool only_warn = std::invoke([&]() {
+    const auto handling_type = is_critical ? params_.inv_traj_critical_handling_type : params_.inv_traj_handling_type;
+    if (handling_type != InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT) {
+      return false;
+    }
+    return params_.enable_soft_stop_on_prev_traj;
+  });
+  
+  if (
+    validation_status_.invalid_count < params_.diag_error_count_threshold || only_warn) {
     const auto warn_msg = msg + " (invalid count is less than error threshold: " +
                           std::to_string(validation_status_.invalid_count) + " < " +
                           std::to_string(params_.diag_error_count_threshold) + ")";
@@ -148,6 +162,8 @@ void PlanningValidator::setupDiag()
   auto & d = diag_updater_;
   d->setHardwareID("planning_validator");
 
+  const auto & p = params_.validation_params;
+
   std::string ns = "trajectory_validation_";
   d->add(ns + "size", [&](auto & stat) {
     setStatus(stat, validation_status_.is_valid_size, "invalid trajectory size is found");
@@ -156,59 +172,59 @@ void PlanningValidator::setupDiag()
     setStatus(stat, validation_status_.is_valid_finite_value, "infinite value is found");
   });
   d->add(ns + "interval", [&](auto & stat) {
-    setStatus(stat, validation_status_.is_valid_interval, "points interval is too long");
+    setStatus(stat, validation_status_.is_valid_interval, "points interval is too long", p.interval.is_critical);
   });
   d->add(ns + "relative_angle", [&](auto & stat) {
-    setStatus(stat, validation_status_.is_valid_relative_angle, "relative angle is too large");
+    setStatus(stat, validation_status_.is_valid_relative_angle, "relative angle is too large", p.relative_angle.is_critical);
   });
   d->add(ns + "curvature", [&](auto & stat) {
-    setStatus(stat, validation_status_.is_valid_curvature, "curvature is too large");
+    setStatus(stat, validation_status_.is_valid_curvature, "curvature is too large", p.curvature.is_critical);
   });
   d->add(ns + "lateral_acceleration", [&](auto & stat) {
-    setStatus(stat, validation_status_.is_valid_lateral_acc, "lateral acceleration is too large");
+    setStatus(stat, validation_status_.is_valid_lateral_acc, "lateral acceleration is too large", p.acceleration.is_critical);
   });
   d->add(ns + "acceleration", [&](auto & stat) {
-    setStatus(stat, validation_status_.is_valid_longitudinal_max_acc, "acceleration is too large");
+    setStatus(stat, validation_status_.is_valid_longitudinal_max_acc, "acceleration is too large", p.acceleration.is_critical);
   });
   d->add(ns + "deceleration", [&](auto & stat) {
-    setStatus(stat, validation_status_.is_valid_longitudinal_min_acc, "deceleration is too large");
+    setStatus(stat, validation_status_.is_valid_longitudinal_min_acc, "deceleration is too large", p.acceleration.is_critical);
   });
   d->add(ns + "steering", [&](auto & stat) {
-    setStatus(stat, validation_status_.is_valid_steering, "expected steering is too large");
+    setStatus(stat, validation_status_.is_valid_steering, "expected steering is too large", p.steering.is_critical);
   });
   d->add(ns + "steering_rate", [&](auto & stat) {
     setStatus(
-      stat, validation_status_.is_valid_steering_rate, "expected steering rate is too large");
+      stat, validation_status_.is_valid_steering_rate, "expected steering rate is too large", p.steering.is_critical);
   });
   d->add(ns + "velocity_deviation", [&](auto & stat) {
     setStatus(
-      stat, validation_status_.is_valid_velocity_deviation, "velocity deviation is too large");
+      stat, validation_status_.is_valid_velocity_deviation, "velocity deviation is too large", p.deviation.is_critical);
   });
   d->add(ns + "distance_deviation", [&](auto & stat) {
     setStatus(
-      stat, validation_status_.is_valid_distance_deviation, "distance deviation is too large");
+      stat, validation_status_.is_valid_distance_deviation, "distance deviation is too large", p.deviation.is_critical);
   });
   d->add(ns + "longitudinal_distance_deviation", [&](auto & stat) {
     setStatus(
       stat, validation_status_.is_valid_longitudinal_distance_deviation,
-      "longitudinal distance deviation is too large");
+      "longitudinal distance deviation is too large", p.deviation.is_critical);
   });
   d->add(ns + "forward_trajectory_length", [&](auto & stat) {
     setStatus(
       stat, validation_status_.is_valid_forward_trajectory_length,
-      "trajectory length is too short");
+      "trajectory length is too short", p.forward_trajectory_length.is_critical);
   });
   d->add(ns + "latency", [&](auto & stat) {
-    setStatus(stat, validation_status_.is_valid_latency, "latency is larger than expected value.");
+    setStatus(stat, validation_status_.is_valid_latency, "latency is larger than expected value.", p.latency.is_critical);
   });
   d->add(ns + "yaw_deviation", [&](auto & stat) {
     setStatus(
       stat, validation_status_.is_valid_yaw_deviation,
-      "difference between vehicle yaw and closest trajectory yaw is too large.");
+      "difference between vehicle yaw and closest trajectory yaw is too large.", p.deviation.is_critical);
   });
   d->add(ns + "trajectory_shift", [&](auto & stat) {
     setStatus(
-      stat, validation_status_.is_valid_trajectory_shift, "detected sudden shift in trajectory.");
+      stat, validation_status_.is_valid_trajectory_shift, "detected sudden shift in trajectory.", p.trajectory_shift.is_critical);
   });
 }
 
@@ -269,6 +285,7 @@ void PlanningValidator::publishTrajectory()
     pub_traj_->publish(*current_trajectory_);
     published_time_publisher_->publish_if_subscribed(pub_traj_, current_trajectory_->header.stamp);
     previous_published_trajectory_ = current_trajectory_;
+    soft_stop_trajectory_ = nullptr;
     return;
   }
 
@@ -289,14 +306,19 @@ void PlanningValidator::publishTrajectory()
     return;
   }
 
-  if (handling_type == InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT) {
-    if (previous_published_trajectory_) {
-      pub_traj_->publish(*previous_published_trajectory_);
-      published_time_publisher_->publish_if_subscribed(
-        pub_traj_, previous_published_trajectory_->header.stamp);
-      RCLCPP_ERROR(get_logger(), "Invalid Trajectory detected. Use previous trajectory.");
-      return;
+  if (handling_type == InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT && previous_published_trajectory_) {
+    if (params_.enable_soft_stop_on_prev_traj && !soft_stop_trajectory_) {
+      const auto nearest_idx = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
+        previous_published_trajectory_->points, current_kinematics_->pose.pose);
+      soft_stop_trajectory_ = std::make_shared<Trajectory>(planning_validator::getStopTrajectory(
+        *previous_published_trajectory_, nearest_idx, current_kinematics_->twist.twist.linear.x, params_.soft_stop_deceleration));
     }
+    const auto & pub_trajectory = params_.enable_soft_stop_on_prev_traj ? *soft_stop_trajectory_ : *previous_published_trajectory_;
+    pub_traj_->publish(pub_trajectory);
+    published_time_publisher_->publish_if_subscribed(
+      pub_traj_, pub_trajectory.header.stamp);
+    RCLCPP_ERROR(get_logger(), "Invalid Trajectory detected. Use previous trajectory.");
+    return;
   }
 
   // trajectory is not published.
@@ -363,7 +385,6 @@ void PlanningValidator::validate(
   s.is_valid_latency = checkValidLatency(trajectory);
   s.is_valid_trajectory_shift =
     prev_trajectory ? checkTrajectoryShift(trajectory, *prev_trajectory) : true;
-
 
   // use resampled trajectory because the following metrics can not be evaluated for closed points.
   // Note: do not interpolate to keep original trajectory shape.
@@ -694,7 +715,6 @@ bool PlanningValidator::checkTrajectoryShift(
 
   const auto lat_shift =
     std::abs(autoware_utils::calc_lateral_deviation(prev_nearest_pose, nearest_pose.position));
-
 
   if (lat_shift > params_.validation_params.trajectory_shift.lat_shift_th) {
     is_critical_error_ = params_.validation_params.trajectory_shift.is_critical;
