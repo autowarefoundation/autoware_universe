@@ -15,7 +15,7 @@
 #include "autoware/behavior_velocity_planner/test_utils.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <autoware_planning_test_manager/autoware_planning_test_manager.hpp>
+#include <autoware/planning_test_manager/autoware_planning_test_manager.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
 
 #include <memory>
@@ -119,7 +119,7 @@ void publishMandatoryTopics(
     autoware_perception_msgs::msg::TrafficLightGroupArray{});
   test_manager->publishInput(
     test_target_node, "behavior_velocity_planner_node/input/external_velocity_limit_mps",
-    tier4_planning_msgs::msg::VelocityLimit{});
+    autoware_internal_planning_msgs::msg::VelocityLimit{});
   test_manager->publishInput(
     test_target_node, "behavior_velocity_planner_node/input/occupancy_grid",
     autoware::test_utils::makeCostMapMsg());

@@ -28,6 +28,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace autoware::multi_object_tracker
 {
@@ -35,8 +36,12 @@ namespace autoware::multi_object_tracker
 using Label = autoware_perception_msgs::msg::ObjectClassification;
 using LabelType = autoware_perception_msgs::msg::ObjectClassification::_label_type;
 
-TrackerProcessor::TrackerProcessor(const TrackerProcessorConfig & config) : config_(config)
+TrackerProcessor::TrackerProcessor(
+  const TrackerProcessorConfig & config, const AssociatorConfig & associator_config,
+  const std::vector<types::InputChannel> & channels_config)
+: config_(config), channels_config_(channels_config)
 {
+  association_ = std::make_unique<DataAssociation>(associator_config);
 }
 
 void TrackerProcessor::predict(const rclcpp::Time & time)
@@ -46,20 +51,35 @@ void TrackerProcessor::predict(const rclcpp::Time & time)
   }
 }
 
+void TrackerProcessor::associate(
+  const types::DynamicObjectList & detected_objects,
+  std::unordered_map<int, int> & direct_assignment,
+  std::unordered_map<int, int> & reverse_assignment) const
+{
+  const auto & tracker_list = list_tracker_;
+  // global nearest neighbor
+  Eigen::MatrixXd score_matrix = association_->calcScoreMatrix(
+    detected_objects, tracker_list);  // row : tracker, col : measurement
+  association_->assign(score_matrix, direct_assignment, reverse_assignment);
+}
+
 void TrackerProcessor::update(
   const types::DynamicObjectList & detected_objects,
-  const geometry_msgs::msg::Transform & self_transform,
   const std::unordered_map<int, int> & direct_assignment)
 {
   int tracker_idx = 0;
   const auto & time = detected_objects.header.stamp;
   for (auto tracker_itr = list_tracker_.begin(); tracker_itr != list_tracker_.end();
        ++tracker_itr, ++tracker_idx) {
-    if (direct_assignment.find(tracker_idx) != direct_assignment.end()) {  // found
+    if (direct_assignment.find(tracker_idx) != direct_assignment.end()) {
+      // found
       const auto & associated_object =
         detected_objects.objects.at(direct_assignment.find(tracker_idx)->second);
-      (*(tracker_itr))->updateWithMeasurement(associated_object, time, self_transform);
-    } else {  // not found
+      const types::InputChannel channel_info = channels_config_[associated_object.channel_index];
+      (*(tracker_itr))->updateWithMeasurement(associated_object, time, channel_info);
+
+    } else {
+      // not found
       (*(tracker_itr))->updateWithoutMeasurement(time);
     }
   }
@@ -69,6 +89,13 @@ void TrackerProcessor::spawn(
   const types::DynamicObjectList & detected_objects,
   const std::unordered_map<int, int> & reverse_assignment)
 {
+  const auto channel_config = channels_config_[detected_objects.channel_index];
+  // If spawn is disabled, return
+  if (!channel_config.is_spawn_enabled) {
+    return;
+  }
+
+  // Spawn new trackers for the objects that are not associated
   const auto & time = detected_objects.header.stamp;
   for (size_t i = 0; i < detected_objects.objects.size(); ++i) {
     if (reverse_assignment.find(i) != reverse_assignment.end()) {  // found
@@ -76,7 +103,17 @@ void TrackerProcessor::spawn(
     }
     const auto & new_object = detected_objects.objects.at(i);
     std::shared_ptr<Tracker> tracker = createNewTracker(new_object, time);
-    if (tracker) list_tracker_.push_back(tracker);
+
+    // Initialize existence probabilities
+    if (channel_config.trust_existence_probability) {
+      tracker->initializeExistenceProbabilities(
+        new_object.channel_index, new_object.existence_probability);
+    } else {
+      tracker->initializeExistenceProbabilities(new_object.channel_index, 0.5);
+    }
+
+    // Update the tracker with the new object
+    list_tracker_.push_back(tracker);
   }
 }
 
@@ -88,23 +125,20 @@ std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
   if (config_.tracker_map.count(label) != 0) {
     const auto tracker = config_.tracker_map.at(label);
     if (tracker == "bicycle_tracker")
-      return std::make_shared<BicycleTracker>(time, object, config_.channel_size);
+      return std::make_shared<VehicleTracker>(object_model::bicycle, time, object);
     if (tracker == "big_vehicle_tracker")
-      return std::make_shared<VehicleTracker>(
-        object_model::big_vehicle, time, object, config_.channel_size);
+      return std::make_shared<VehicleTracker>(object_model::big_vehicle, time, object);
     if (tracker == "multi_vehicle_tracker")
-      return std::make_shared<MultipleVehicleTracker>(time, object, config_.channel_size);
+      return std::make_shared<MultipleVehicleTracker>(time, object);
     if (tracker == "normal_vehicle_tracker")
-      return std::make_shared<VehicleTracker>(
-        object_model::normal_vehicle, time, object, config_.channel_size);
+      return std::make_shared<VehicleTracker>(object_model::normal_vehicle, time, object);
     if (tracker == "pass_through_tracker")
-      return std::make_shared<PassThroughTracker>(time, object, config_.channel_size);
+      return std::make_shared<PassThroughTracker>(time, object);
     if (tracker == "pedestrian_and_bicycle_tracker")
-      return std::make_shared<PedestrianAndBicycleTracker>(time, object, config_.channel_size);
-    if (tracker == "pedestrian_tracker")
-      return std::make_shared<PedestrianTracker>(time, object, config_.channel_size);
+      return std::make_shared<PedestrianAndBicycleTracker>(time, object);
+    if (tracker == "pedestrian_tracker") return std::make_shared<PedestrianTracker>(time, object);
   }
-  return std::make_shared<UnknownTracker>(time, object, config_.channel_size);
+  return std::make_shared<UnknownTracker>(time, object);
 }
 
 void TrackerProcessor::prune(const rclcpp::Time & time)
@@ -144,10 +178,8 @@ void TrackerProcessor::removeOverlappedTracker(const rclcpp::Time & time)
 
       // Calculate the distance between the two objects
       const double distance = std::hypot(
-        object1.kinematics.pose_with_covariance.pose.position.x -
-          object2.kinematics.pose_with_covariance.pose.position.x,
-        object1.kinematics.pose_with_covariance.pose.position.y -
-          object2.kinematics.pose_with_covariance.pose.position.y);
+        object1.pose.position.x - object2.pose.position.x,
+        object1.pose.position.y - object2.pose.position.y);
 
       // If the distance is too large, skip
       if (distance > config_.distance_threshold) {

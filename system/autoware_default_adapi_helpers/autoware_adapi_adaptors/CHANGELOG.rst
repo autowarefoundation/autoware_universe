@@ -2,12 +2,18 @@
 Changelog for package autoware_ad_api_adaptors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* Contributors: Hayato Mizushima, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 
 0.41.2 (2025-02-19)
 -------------------
-* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware.universe/issues/10088>`_)
+* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware_universe/issues/10088>`_)
 * Contributors: Ryohsuke Mitsudome
 
 0.41.1 (2025-02-10)
@@ -16,29 +22,29 @@ Changelog for package autoware_ad_api_adaptors
 0.41.0 (2025-01-29)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* feat: apply `autoware\_` prefix for `default_ad_api_helpers` (`#9965 <https://github.com/autowarefoundation/autoware.universe/issues/9965>`_)
+* feat: apply `autoware\_` prefix for `default_ad_api_helpers` (`#9965 <https://github.com/autowarefoundation/autoware_universe/issues/9965>`_)
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
   Co-authored-by: Takagi, Isamu <isamu.takagi@tier4.jp>
 * Contributors: Fumiya Watanabe, Junya Sasaki
 
 0.40.0 (2024-12-12)
 -------------------
-* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware.universe/issues/9587>`_)"
+* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware_universe/issues/9587>`_)"
   This reverts commit c9f0f2688c57b0f657f5c1f28f036a970682e7f5.
-* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware.universe/issues/9588>`_)
-* chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware.universe/issues/9587>`_)
+* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware_universe/issues/9588>`_)
+* chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware_universe/issues/9587>`_)
   * chore(package.xml): bump version to 0.39.0
   * fix: fix ticket links in CHANGELOG.rst
   * fix: remove unnecessary diff
   ---------
   Co-authored-by: Yutaka Kondo <yutaka.kondo@youtalk.jp>
-* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware.universe/issues/9588>`_)
+* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware_universe/issues/9588>`_)
 * 0.39.0
 * update changelog
 * Merge commit '6a1ddbd08bd' into release-0.39.0
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* refactor(autoware_ad_api_specs): prefix package and namespace with autoware (`#9250 <https://github.com/autowarefoundation/autoware.universe/issues/9250>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* refactor(autoware_ad_api_specs): prefix package and namespace with autoware (`#9250 <https://github.com/autowarefoundation/autoware_universe/issues/9250>`_)
   * refactor(autoware_ad_api_specs): prefix package and namespace with autoware
   * style(pre-commit): autofix
   * chore(autoware_adapi_specs): rename ad_api to adapi
@@ -48,21 +54,21 @@ Changelog for package autoware_ad_api_adaptors
   * chore(autoware_adapi_specs): rename ad_api_specs to adapi_specs
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware.universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware.universe/issues/9284>`_)
+* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware_universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware_universe/issues/9284>`_)
   * unify package.xml version to 0.37.0
   * remove system_monitor/CHANGELOG.rst
   * add changelog
   * 0.38.0
   ---------
-* refactor(component_interface_utils): prefix package and namespace with autoware (`#9092 <https://github.com/autowarefoundation/autoware.universe/issues/9092>`_)
+* refactor(component_interface_utils): prefix package and namespace with autoware (`#9092 <https://github.com/autowarefoundation/autoware_universe/issues/9092>`_)
 * Contributors: Esteve Fernandez, Fumiya Watanabe, Ryohsuke Mitsudome, Yutaka Kondo
 
 0.39.0 (2024-11-25)
 -------------------
 * Merge commit '6a1ddbd08bd' into release-0.39.0
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* refactor(autoware_ad_api_specs): prefix package and namespace with autoware (`#9250 <https://github.com/autowarefoundation/autoware.universe/issues/9250>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* refactor(autoware_ad_api_specs): prefix package and namespace with autoware (`#9250 <https://github.com/autowarefoundation/autoware_universe/issues/9250>`_)
   * refactor(autoware_ad_api_specs): prefix package and namespace with autoware
   * style(pre-commit): autofix
   * chore(autoware_adapi_specs): rename ad_api to adapi
@@ -72,19 +78,19 @@ Changelog for package autoware_ad_api_adaptors
   * chore(autoware_adapi_specs): rename ad_api_specs to adapi_specs
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware.universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware.universe/issues/9284>`_)
+* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware_universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware_universe/issues/9284>`_)
   * unify package.xml version to 0.37.0
   * remove system_monitor/CHANGELOG.rst
   * add changelog
   * 0.38.0
   ---------
-* refactor(component_interface_utils): prefix package and namespace with autoware (`#9092 <https://github.com/autowarefoundation/autoware.universe/issues/9092>`_)
+* refactor(component_interface_utils): prefix package and namespace with autoware (`#9092 <https://github.com/autowarefoundation/autoware_universe/issues/9092>`_)
 * Contributors: Esteve Fernandez, Yutaka Kondo
 
 0.38.0 (2024-11-08)
 -------------------
 * unify package.xml version to 0.37.0
-* refactor(ad_api_adaptors): rework parameter (`#8796 <https://github.com/autowarefoundation/autoware.universe/issues/8796>`_)
+* refactor(ad_api_adaptors): rework parameter (`#8796 <https://github.com/autowarefoundation/autoware_universe/issues/8796>`_)
   * refactor(ad_api_adaptors): rework parameter
   * <refactor(ad_api_adaptors): rework parameter>
   * ad_api_adaptors.schema.json
@@ -92,19 +98,19 @@ Changelog for package autoware_ad_api_adaptors
   * refactor(ad_api_adaptors): rework parameter
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* refactor(map_height_fitter)!: prefix package and namespace with autoware  (`#8421 <https://github.com/autowarefoundation/autoware.universe/issues/8421>`_)
+* refactor(map_height_fitter)!: prefix package and namespace with autoware  (`#8421 <https://github.com/autowarefoundation/autoware_universe/issues/8421>`_)
   * add autoware\_ prefix
   * style(pre-commit): autofix
   * remove duplicated dependency
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
   Co-authored-by: SakodaShintaro <shintaro.sakoda@tier4.jp>
-* feat(ad_api_adaptors): componentize nodes (`#7022 <https://github.com/autowarefoundation/autoware.universe/issues/7022>`_)
+* feat(ad_api_adaptors): componentize nodes (`#7022 <https://github.com/autowarefoundation/autoware_universe/issues/7022>`_)
 * Contributors: Masaki Baba, Prakash Kannaiah, Takagi, Isamu, Yutaka Kondo
 
 0.26.0 (2024-04-03)
 -------------------
-* feat(map_height_fitter): fitting by vector_map (`#6340 <https://github.com/autowarefoundation/autoware.universe/issues/6340>`_)
+* feat(map_height_fitter): fitting by vector_map (`#6340 <https://github.com/autowarefoundation/autoware_universe/issues/6340>`_)
   * Added fit_target
   * Fixed group
   * Fixed to run
@@ -128,22 +134,22 @@ Changelog for package autoware_ad_api_adaptors
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
   Co-authored-by: Takagi, Isamu <43976882+isamu-takagi@users.noreply.github.com>
-* chore: update api package maintainers (`#6086 <https://github.com/autowarefoundation/autoware.universe/issues/6086>`_)
+* chore: update api package maintainers (`#6086 <https://github.com/autowarefoundation/autoware_universe/issues/6086>`_)
   * update api maintainers
   * fix
   ---------
-* chore(default_ad_api_helpers): update readme topic (`#5258 <https://github.com/autowarefoundation/autoware.universe/issues/5258>`_)
+* chore(default_ad_api_helpers): update readme topic (`#5258 <https://github.com/autowarefoundation/autoware_universe/issues/5258>`_)
   * chore(default_ad_api_helpers): update readme topic
   * style(pre-commit): autofix
   * update readme
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* feat(map_height_fitter): add service node (`#4128 <https://github.com/autowarefoundation/autoware.universe/issues/4128>`_)
+* feat(map_height_fitter): add service node (`#4128 <https://github.com/autowarefoundation/autoware_universe/issues/4128>`_)
   * add map height fitter node
   * fix response success
   ---------
-* docs(ad_api_adaptors): fix readme to remove unused service (`#4117 <https://github.com/autowarefoundation/autoware.universe/issues/4117>`_)
-* build: mark autoware_cmake as <buildtool_depend> (`#3616 <https://github.com/autowarefoundation/autoware.universe/issues/3616>`_)
+* docs(ad_api_adaptors): fix readme to remove unused service (`#4117 <https://github.com/autowarefoundation/autoware_universe/issues/4117>`_)
+* build: mark autoware_cmake as <buildtool_depend> (`#3616 <https://github.com/autowarefoundation/autoware_universe/issues/3616>`_)
   * build: mark autoware_cmake as <buildtool_depend>
   with <build_depend>, autoware_cmake is automatically exported with ament_target_dependencies() (unecessary)
   * style(pre-commit): autofix
@@ -151,16 +157,16 @@ Changelog for package autoware_ad_api_adaptors
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
   Co-authored-by: Kenji Miyake <kenji.miyake@tier4.jp>
-* feat(default_ad_api): add route change api (`#3197 <https://github.com/autowarefoundation/autoware.universe/issues/3197>`_)
+* feat(default_ad_api): add route change api (`#3197 <https://github.com/autowarefoundation/autoware_universe/issues/3197>`_)
   * feat: add route change api
   * fix: reroute
   ---------
-* chore(default_ad_api): add yukkysaito and mitsudome-r to maintainer (`#3440 <https://github.com/autowarefoundation/autoware.universe/issues/3440>`_)
+* chore(default_ad_api): add yukkysaito and mitsudome-r to maintainer (`#3440 <https://github.com/autowarefoundation/autoware_universe/issues/3440>`_)
   * chore(default_ad_api): add yukkysaito to maintainer
   * add mitsudome-r instead of kenji-miyake
   ---------
-* feat(default_ad_api_helpers): support goal modification for rviz (`#3370 <https://github.com/autowarefoundation/autoware.universe/issues/3370>`_)
-* feat(map_height_fitter): change map height fitter to library (`#2724 <https://github.com/autowarefoundation/autoware.universe/issues/2724>`_)
+* feat(default_ad_api_helpers): support goal modification for rviz (`#3370 <https://github.com/autowarefoundation/autoware_universe/issues/3370>`_)
+* feat(map_height_fitter): change map height fitter to library (`#2724 <https://github.com/autowarefoundation/autoware_universe/issues/2724>`_)
   * feat: move map height fitter
   * feat: remove map height fitter dependency
   * apply to initial pose adaptor
@@ -173,12 +179,12 @@ Changelog for package autoware_ad_api_adaptors
   This reverts commit 71250342305aad6ac3710625ab2ea1dfd3eca11a.
   * feat: add map fit log
   ---------
-* chore: add api maintainers (`#2361 <https://github.com/autowarefoundation/autoware.universe/issues/2361>`_)
-* fix(ad_api_adaptors): fix to merge waypoint (`#2215 <https://github.com/autowarefoundation/autoware.universe/issues/2215>`_)
+* chore: add api maintainers (`#2361 <https://github.com/autowarefoundation/autoware_universe/issues/2361>`_)
+* fix(ad_api_adaptors): fix to merge waypoint (`#2215 <https://github.com/autowarefoundation/autoware_universe/issues/2215>`_)
   * fix(ad_api_adaptors): fix to merge waypoint
   * fix(ad_api_adaptors): update comments and variable name
-* feat(autoware_ad_api_msgs): replace adapi message (`#1897 <https://github.com/autowarefoundation/autoware.universe/issues/1897>`_)
-* feat(default_ad_api): add localization api  (`#1431 <https://github.com/autowarefoundation/autoware.universe/issues/1431>`_)
+* feat(autoware_ad_api_msgs): replace adapi message (`#1897 <https://github.com/autowarefoundation/autoware_universe/issues/1897>`_)
+* feat(default_ad_api): add localization api  (`#1431 <https://github.com/autowarefoundation/autoware_universe/issues/1431>`_)
   * feat(default_ad_api): add localization api
   * docs: add readme
   * feat: add auto initial pose
@@ -198,7 +204,7 @@ Changelog for package autoware_ad_api_adaptors
   * fix: remove needless keyword
   * feat: change api helper node namespace
   * fix: fix launch file path
-* feat(default_ad_api): add routing api (`#1494 <https://github.com/autowarefoundation/autoware.universe/issues/1494>`_)
+* feat(default_ad_api): add routing api (`#1494 <https://github.com/autowarefoundation/autoware_universe/issues/1494>`_)
   * feat(default_ad_api): add routing api
   * fix: build error
   * docs: add readme

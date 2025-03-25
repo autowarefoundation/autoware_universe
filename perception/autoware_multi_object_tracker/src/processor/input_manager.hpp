@@ -32,20 +32,12 @@ namespace autoware::multi_object_tracker
 {
 using ObjectsList = std::vector<types::DynamicObjectList>;
 
-struct InputChannel
-{
-  std::string input_topic;  // topic name of the detection, e.g. "/detection/lidar"
-  std::string long_name = "Detected Object";  // full name of the detection
-  std::string short_name = "DET";             // abbreviation of the name
-  bool is_spawn_enabled = true;               // enable spawn of the object
-};
-
 class InputStream
 {
 public:
-  explicit InputStream(rclcpp::Node & node, uint & index, std::shared_ptr<Odometry> odometry);
-
-  void init(const InputChannel & input_channel);
+  InputStream(
+    rclcpp::Node & node, const types::InputChannel & input_channel,
+    std::shared_ptr<Odometry> odometry);
 
   void setTriggerFunction(std::function<void(const uint &)> func_trigger)
   {
@@ -56,11 +48,11 @@ public:
   void updateTimingStatus(const rclcpp::Time & now, const rclcpp::Time & objects_time);
 
   bool isTimeInitialized() const { return initial_count_ > 0; }
-  uint getIndex() const { return index_; }
+  uint getIndex() const { return channel_.index; }
   void getObjectsOlderThan(
     const rclcpp::Time & object_latest_time, const rclcpp::Time & object_earliest_time,
     ObjectsList & objects_list);
-  bool isSpawnEnabled() const { return is_spawn_enabled_; }
+  bool isSpawnEnabled() const { return channel_.is_spawn_enabled; }
 
   void getTimeStatistics(
     double & latency_mean, double & latency_var, double & interval_mean,
@@ -75,13 +67,8 @@ public:
 
 private:
   rclcpp::Node & node_;
-  uint index_;
+  const types::InputChannel channel_;
   std::shared_ptr<Odometry> odometry_;
-
-  std::string input_topic_;
-  std::string long_name_;
-  std::string short_name_;
-  bool is_spawn_enabled_{};
 
   size_t que_size_{30};
   std::deque<types::DynamicObjectList> objects_que_;
@@ -102,7 +89,7 @@ class InputManager
 {
 public:
   InputManager(rclcpp::Node & node, std::shared_ptr<Odometry> odometry);
-  void init(const std::vector<InputChannel> & input_channels);
+  void init(const std::vector<types::InputChannel> & input_channels);
 
   void setTriggerFunction(std::function<void()> func_trigger) { func_trigger_ = func_trigger; }
   void onTrigger(const uint & index) const;

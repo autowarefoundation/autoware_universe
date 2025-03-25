@@ -23,11 +23,11 @@ The `autoware_obstacle_cruise_planner` package has following modules.
 
 ### Output topics
 
-| Name                            | Type                                           | Description                      |
-| ------------------------------- | ---------------------------------------------- | -------------------------------- |
-| `~/output/trajectory`           | autoware_planning_msgs::Trajectory             | output trajectory                |
-| `~/output/velocity_limit`       | tier4_planning_msgs::VelocityLimit             | velocity limit for cruising      |
-| `~/output/clear_velocity_limit` | tier4_planning_msgs::VelocityLimitClearCommand | clear command for velocity limit |
+| Name                            | Type                                                            | Description                      |
+| ------------------------------- | --------------------------------------------------------------- | -------------------------------- |
+| `~/output/trajectory`           | autoware_planning_msgs::Trajectory                              | output trajectory                |
+| `~/output/velocity_limit`       | autoware_internal_planning_msgs::msg::VelocityLimit             | velocity limit for cruising      |
+| `~/output/clear_velocity_limit` | autoware_internal_planning_msgs::msg::VelocityLimitClearCommand | clear command for velocity limit |
 
 ## Design
 

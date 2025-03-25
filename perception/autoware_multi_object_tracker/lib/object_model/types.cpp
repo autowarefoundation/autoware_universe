@@ -11,9 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-//
-// Author: v1.0 Taekjin Lee
 
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
@@ -29,12 +26,18 @@ DynamicObject toDynamicObject(
   const autoware_perception_msgs::msg::DetectedObject & det_object, const uint channel_index)
 {
   DynamicObject dynamic_object;
+
+  // initialize existence_probabilities, using channel information
   dynamic_object.channel_index = channel_index;
   dynamic_object.existence_probability = det_object.existence_probability;
+
   dynamic_object.classification = det_object.classification;
 
-  dynamic_object.kinematics.pose_with_covariance = det_object.kinematics.pose_with_covariance;
-  dynamic_object.kinematics.twist_with_covariance = det_object.kinematics.twist_with_covariance;
+  dynamic_object.pose = det_object.kinematics.pose_with_covariance.pose;
+  dynamic_object.pose_covariance = det_object.kinematics.pose_with_covariance.covariance;
+  dynamic_object.twist = det_object.kinematics.twist_with_covariance.twist;
+  dynamic_object.twist_covariance = det_object.kinematics.twist_with_covariance.covariance;
+
   dynamic_object.kinematics.has_position_covariance = det_object.kinematics.has_position_covariance;
   if (
     det_object.kinematics.orientation_availability ==
@@ -52,6 +55,7 @@ DynamicObject toDynamicObject(
   dynamic_object.kinematics.has_twist = det_object.kinematics.has_twist;
   dynamic_object.kinematics.has_twist_covariance = det_object.kinematics.has_twist_covariance;
 
+  // shape
   dynamic_object.shape = det_object.shape;
 
   return dynamic_object;
@@ -73,12 +77,15 @@ DynamicObjectList toDynamicObjectList(
 autoware_perception_msgs::msg::TrackedObject toTrackedObjectMsg(const DynamicObject & dyn_object)
 {
   autoware_perception_msgs::msg::TrackedObject tracked_object;
-  tracked_object.object_id = dyn_object.object_id;
+  tracked_object.object_id = dyn_object.uuid;
   tracked_object.existence_probability = dyn_object.existence_probability;
   tracked_object.classification = dyn_object.classification;
 
-  tracked_object.kinematics.pose_with_covariance = dyn_object.kinematics.pose_with_covariance;
-  tracked_object.kinematics.twist_with_covariance = dyn_object.kinematics.twist_with_covariance;
+  tracked_object.kinematics.pose_with_covariance.pose = dyn_object.pose;
+  tracked_object.kinematics.pose_with_covariance.covariance = dyn_object.pose_covariance;
+  tracked_object.kinematics.twist_with_covariance.twist = dyn_object.twist;
+  tracked_object.kinematics.twist_with_covariance.covariance = dyn_object.twist_covariance;
+
   if (dyn_object.kinematics.orientation_availability == OrientationAvailability::UNAVAILABLE) {
     tracked_object.kinematics.orientation_availability =
       autoware_perception_msgs::msg::TrackedObjectKinematics::UNAVAILABLE;

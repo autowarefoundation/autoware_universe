@@ -16,10 +16,12 @@
 
 #include "autoware/control_validator/utils.hpp"
 #include "autoware/motion_utils/trajectory/interpolation.hpp"
+#include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 
 #include <nav_msgs/msg/odometry.hpp>
 
+#include <algorithm>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -72,6 +74,7 @@ void ControlValidator::setup_parameters()
     p.rolling_back_velocity = declare_parameter<double>(t + "rolling_back_velocity");
     p.over_velocity_offset = declare_parameter<double>(t + "over_velocity_offset");
     p.over_velocity_ratio = declare_parameter<double>(t + "over_velocity_ratio");
+    p.overrun_stop_point_dist = declare_parameter<double>(t + "overrun_stop_point_dist");
     p.nominal_latency_threshold = declare_parameter<double>(t + "nominal_latency");
   }
   const auto lpf_gain = declare_parameter<double>("vel_lpf_gain");
@@ -128,6 +131,11 @@ void ControlValidator::setup_diag()
     set_status(
       stat, !validation_status_.is_over_velocity,
       "The vehicle is over-speeding against the target.");
+  });
+  d.add(ns + "overrun_stop_point", [&](auto & stat) {
+    set_status(
+      stat, !validation_status_.has_overrun_stop_point,
+      "The vehicle has overrun the front stop point on the trajectory.");
   });
   d.add(ns + "latency", [&](auto & stat) {
     set_status(
@@ -219,12 +227,14 @@ void ControlValidator::validate(
   }
 
   validation_status_.stamp = get_clock()->now();
+  validation_status_.vehicle_vel = vehicle_vel_.filter(kinematics.twist.twist.linear.x);
 
   std::tie(
     validation_status_.max_distance_deviation, validation_status_.is_valid_max_distance_deviation) =
     calc_lateral_deviation_status(predicted_trajectory, *current_reference_trajectory_);
 
   calc_velocity_deviation_status(*current_reference_trajectory_, kinematics);
+  calc_stop_point_overrun_status(*current_reference_trajectory_, kinematics);
 
   validation_status_.invalid_count =
     is_all_valid(validation_status_) ? 0 : validation_status_.invalid_count + 1;
@@ -245,7 +255,6 @@ void ControlValidator::calc_velocity_deviation_status(
 {
   auto & status = validation_status_;
   const auto & params = validation_params_;
-  status.vehicle_vel = vehicle_vel_.filter(kinematics.twist.twist.linear.x);
   status.target_vel = target_vel_.filter(
     autoware::motion_utils::calcInterpolatedPoint(reference_trajectory, kinematics.pose.pose)
       .longitudinal_velocity_mps);
@@ -268,10 +277,41 @@ void ControlValidator::calc_velocity_deviation_status(
   }
 }
 
+void ControlValidator::calc_stop_point_overrun_status(
+  const Trajectory & reference_trajectory, const Odometry & kinematics)
+{
+  auto & status = validation_status_;
+  const auto & params = validation_params_;
+
+  status.dist_to_stop = [](const Trajectory & traj, const geometry_msgs::msg::Pose & pose) {
+    const auto stop_idx_opt = autoware::motion_utils::searchZeroVelocityIndex(traj.points);
+
+    const size_t end_idx = stop_idx_opt ? *stop_idx_opt : traj.points.size() - 1;
+    const size_t seg_idx =
+      autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(traj.points, pose);
+    const double signed_length_on_traj = autoware::motion_utils::calcSignedArcLength(
+      traj.points, pose.position, seg_idx, traj.points.at(end_idx).pose.position,
+      std::min(end_idx, traj.points.size() - 2));
+
+    if (std::isnan(signed_length_on_traj)) {
+      return 0.0;
+    }
+    return signed_length_on_traj;
+  }(reference_trajectory, kinematics.pose.pose);
+
+  status.nearest_trajectory_vel =
+    autoware::motion_utils::calcInterpolatedPoint(reference_trajectory, kinematics.pose.pose)
+      .longitudinal_velocity_mps;
+
+  // NOTE: the same velocity threshold as autoware::motion_utils::searchZeroVelocity
+  status.has_overrun_stop_point = status.dist_to_stop < -params.overrun_stop_point_dist &&
+                                  status.nearest_trajectory_vel < 1e-3 && status.vehicle_vel > 1e-3;
+}
+
 bool ControlValidator::is_all_valid(const ControlValidatorStatus & s)
 {
   return s.is_valid_max_distance_deviation && !s.is_rolling_back && !s.is_over_velocity &&
-         s.is_valid_latency;
+         !s.has_overrun_stop_point;
 }
 
 void ControlValidator::display_status()

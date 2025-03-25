@@ -28,6 +28,7 @@
       distance_deviation: 100.0
       longitudinal_distance_deviation: 1.0
       nominal_latency: 1.0
+      yaw_deviation: 1.5708  # (= 90 degrees)
 
     parameters:
       # The required trajectory length is calculated as the distance needed

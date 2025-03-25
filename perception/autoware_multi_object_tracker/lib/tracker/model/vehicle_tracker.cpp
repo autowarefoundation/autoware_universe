@@ -40,55 +40,30 @@
 
 namespace autoware::multi_object_tracker
 {
-
-using Label = autoware_perception_msgs::msg::ObjectClassification;
-
 VehicleTracker::VehicleTracker(
   const object_model::ObjectModel & object_model, const rclcpp::Time & time,
-  const types::DynamicObject & object, const size_t channel_size)
-: Tracker(time, object.classification, channel_size),
+  const types::DynamicObject & object)
+: Tracker(time, object),
   object_model_(object_model),
   logger_(rclcpp::get_logger("VehicleTracker")),
-  z_(object.kinematics.pose_with_covariance.pose.position.z),
   tracking_offset_(Eigen::Vector2d::Zero())
 {
-  object_ = object;
-
-  // initialize existence probability
-  initializeExistenceProbabilities(object.channel_index, object.existence_probability);
-
   // velocity deviation threshold
   //   if the predicted velocity is close to the observed velocity,
   //   the observed velocity is used as the measurement.
   velocity_deviation_threshold_ = autoware_utils::kmph2mps(10);  // [m/s]
 
-  // OBJECT SHAPE MODEL
-  if (object.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
-    bounding_box_ = {
-      object.shape.dimensions.x, object.shape.dimensions.y, object.shape.dimensions.z};
-  } else {
-    types::DynamicObject bbox_object;
-    if (!shapes::convertConvexHullToBoundingBox(object, bbox_object)) {
-      RCLCPP_WARN(
-        logger_,
-        "VehicleTracker::VehicleTracker: Failed to convert convex hull to bounding "
-        "box.");
-      bounding_box_ = {
-        object_model_.init_size.length, object_model_.init_size.width,
-        object_model_.init_size.height};  // default value
-    } else {
-      bounding_box_ = {
-        bbox_object.shape.dimensions.x, bbox_object.shape.dimensions.y,
-        bbox_object.shape.dimensions.z};
-    }
+  if (object.shape.type != autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
+    // set default initial size
+    auto & object_extension = object_.shape.dimensions;
+    object_extension.x = object_model_.init_size.length;
+    object_extension.y = object_model_.init_size.width;
+    object_extension.z = object_model_.init_size.height;
   }
+  object_.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+
   // set maximum and minimum size
-  bounding_box_.length = std::clamp(
-    bounding_box_.length, object_model_.size_limit.length_min, object_model_.size_limit.length_max);
-  bounding_box_.width = std::clamp(
-    bounding_box_.width, object_model_.size_limit.width_min, object_model_.size_limit.width_max);
-  bounding_box_.height = std::clamp(
-    bounding_box_.height, object_model_.size_limit.height_min, object_model_.size_limit.height_max);
+  limitObjectExtension(object_model_);
 
   // Set motion model parameters
   {
@@ -119,11 +94,11 @@ VehicleTracker::VehicleTracker(
   // Set initial state
   {
     using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-    const double x = object.kinematics.pose_with_covariance.pose.position.x;
-    const double y = object.kinematics.pose_with_covariance.pose.position.y;
-    const double yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
+    const double x = object.pose.position.x;
+    const double y = object.pose.position.y;
+    const double yaw = tf2::getYaw(object.pose.orientation);
 
-    auto pose_cov = object.kinematics.pose_with_covariance.covariance;
+    auto pose_cov = object.pose_covariance;
     if (!object.kinematics.has_position_covariance) {
       // initial state covariance
       const auto & p0_cov_x = object_model_.initial_covariance.pos_x;
@@ -143,15 +118,15 @@ VehicleTracker::VehicleTracker(
     double vel = 0.0;
     double vel_cov = object_model_.initial_covariance.vel_long;
     if (object.kinematics.has_twist) {
-      vel = object.kinematics.twist_with_covariance.twist.linear.x;
+      vel = object.twist.linear.x;
     }
     if (object.kinematics.has_twist_covariance) {
-      vel_cov = object.kinematics.twist_with_covariance.covariance[XYZRPY_COV_IDX::X_X];
+      vel_cov = object.twist_covariance[XYZRPY_COV_IDX::X_X];
     }
 
     const double slip = 0.0;
     const double slip_cov = object_model_.bicycle_state.init_slip_angle_cov;
-    const double & length = bounding_box_.length;
+    const double & length = object_.shape.dimensions.x;
 
     // initialize motion model
     motion_model_.initialize(time, x, y, yaw, pose_cov, vel, vel_cov, slip, slip_cov, length);
@@ -163,48 +138,20 @@ bool VehicleTracker::predict(const rclcpp::Time & time)
   return motion_model_.predictState(time);
 }
 
-types::DynamicObject VehicleTracker::getUpdatingObject(
-  const types::DynamicObject & object, const geometry_msgs::msg::Transform & self_transform)
+bool VehicleTracker::measureWithPose(
+  const types::DynamicObject & object, const types::InputChannel & channel_info)
 {
-  types::DynamicObject updating_object = object;
-
-  // OBJECT SHAPE MODEL
-  // convert to bounding box if input is convex shape
-  types::DynamicObject bbox_object = object;
-  if (object.shape.type != autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
-    if (!shapes::convertConvexHullToBoundingBox(object, bbox_object)) {
-      RCLCPP_WARN(
-        logger_,
-        "VehicleTracker::getUpdatingObject: Failed to convert convex hull to bounding box.");
-      bbox_object = object;
-    }
-  }
-
-  // current (predicted) state
-  const double tracked_x = motion_model_.getStateElement(IDX::X);
-  const double tracked_y = motion_model_.getStateElement(IDX::Y);
-  const double tracked_yaw = motion_model_.getStateElement(IDX::YAW);
-
-  // get offset measurement
-  const int nearest_corner_index = shapes::getNearestCornerOrSurface(
-    tracked_x, tracked_y, tracked_yaw, bounding_box_.width, bounding_box_.length, self_transform);
-  shapes::calcAnchorPointOffset(
-    bounding_box_.width, bounding_box_.length, nearest_corner_index, bbox_object, tracked_yaw,
-    updating_object, tracking_offset_);
-
-  return updating_object;
-}
-
-bool VehicleTracker::measureWithPose(const types::DynamicObject & object)
-{
-  // current (predicted) state
-  const double tracked_vel = motion_model_.getStateElement(IDX::VEL);
+  // get measurement yaw angle to update
+  bool is_yaw_available =
+    object.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE &&
+    channel_info.trust_orientation;
 
   // velocity capability is checked only when the object has velocity measurement
   // and the predicted velocity is close to the observed velocity
   bool is_velocity_available = false;
   if (object.kinematics.has_twist) {
-    const double & observed_vel = object.kinematics.twist_with_covariance.twist.linear.x;
+    const double tracked_vel = motion_model_.getStateElement(IDX::VEL);
+    const double & observed_vel = object.twist.linear.x;
     if (std::fabs(tracked_vel - observed_vel) < velocity_deviation_threshold_) {
       // Velocity deviation is small
       is_velocity_available = true;
@@ -214,25 +161,33 @@ bool VehicleTracker::measureWithPose(const types::DynamicObject & object)
   // update
   bool is_updated = false;
   {
-    const double x = object.kinematics.pose_with_covariance.pose.position.x;
-    const double y = object.kinematics.pose_with_covariance.pose.position.y;
-    const double yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
-    const double vel = object.kinematics.twist_with_covariance.twist.linear.x;
+    const double x = object.pose.position.x;
+    const double y = object.pose.position.y;
+    const double yaw = tf2::getYaw(object.pose.orientation);
+    const double vel = object.twist.linear.x;
 
-    if (is_velocity_available) {
+    if (is_yaw_available && is_velocity_available) {
+      // update with yaw angle and velocity
       is_updated = motion_model_.updateStatePoseHeadVel(
-        x, y, yaw, object.kinematics.pose_with_covariance.covariance, vel,
-        object.kinematics.twist_with_covariance.covariance);
+        x, y, yaw, object.pose_covariance, vel, object.twist_covariance);
+    } else if (is_yaw_available && !is_velocity_available) {
+      // update with yaw angle, but without velocity
+      is_updated = motion_model_.updateStatePoseHead(x, y, yaw, object.pose_covariance);
+    } else if (!is_yaw_available && is_velocity_available) {
+      // update without yaw angle, but with velocity
+      is_updated = motion_model_.updateStatePoseVel(
+        x, y, object.pose_covariance, vel, object.twist_covariance);
     } else {
-      is_updated = motion_model_.updateStatePoseHead(
-        x, y, yaw, object.kinematics.pose_with_covariance.covariance);
+      // update without yaw angle and velocity
+      is_updated = motion_model_.updateStatePose(
+        x, y, object.pose_covariance);  // update without yaw angle and velocity
     }
     motion_model_.limitStates();
   }
 
   // position z
   constexpr double gain = 0.1;
-  z_ = (1.0 - gain) * z_ + gain * object.kinematics.pose_with_covariance.pose.position.z;
+  object_.pose.position.z = (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
 
   return is_updated;
 }
@@ -245,32 +200,32 @@ bool VehicleTracker::measureWithShape(const types::DynamicObject & object)
   }
 
   // check object size abnormality
-  constexpr double size_max = 35.0;  // [m]
-  constexpr double size_min = 1.0;   // [m]
-  bool is_size_valid =
-    (object.shape.dimensions.x <= size_max && object.shape.dimensions.y <= size_max &&
-     object.shape.dimensions.x >= size_min && object.shape.dimensions.y >= size_min);
-  if (!is_size_valid) {
+  constexpr double size_max_multiplier = 1.5;
+  constexpr double size_min_multiplier = 0.25;
+  if (
+    object.shape.dimensions.x > object_model_.size_limit.length_max * size_max_multiplier ||
+    object.shape.dimensions.x < object_model_.size_limit.length_min * size_min_multiplier ||
+    object.shape.dimensions.y > object_model_.size_limit.width_max * size_max_multiplier ||
+    object.shape.dimensions.y < object_model_.size_limit.width_min * size_min_multiplier) {
     return false;
   }
 
   // update object size
-  constexpr double gain = 0.5;
+  constexpr double gain = 0.4;
   constexpr double gain_inv = 1.0 - gain;
-  bounding_box_.length = gain_inv * bounding_box_.length + gain * object.shape.dimensions.x;
-  bounding_box_.width = gain_inv * bounding_box_.width + gain * object.shape.dimensions.y;
-  bounding_box_.height = gain_inv * bounding_box_.height + gain * object.shape.dimensions.z;
+  auto & object_extension = object_.shape.dimensions;
+  object_extension.x = gain_inv * object_extension.x + gain * object.shape.dimensions.x;
+  object_extension.y = gain_inv * object_extension.y + gain * object.shape.dimensions.y;
+  object_extension.z = gain_inv * object_extension.z + gain * object.shape.dimensions.z;
+
+  // set shape type, which is bounding box
+  object_.shape.type = object.shape.type;
 
   // set maximum and minimum size
-  bounding_box_.length = std::clamp(
-    bounding_box_.length, object_model_.size_limit.length_min, object_model_.size_limit.length_max);
-  bounding_box_.width = std::clamp(
-    bounding_box_.width, object_model_.size_limit.width_min, object_model_.size_limit.width_max);
-  bounding_box_.height = std::clamp(
-    bounding_box_.height, object_model_.size_limit.height_min, object_model_.size_limit.height_max);
+  limitObjectExtension(object_model_);
 
   // update motion model
-  motion_model_.updateExtendedState(bounding_box_.length);
+  motion_model_.updateExtendedState(object_extension.x);
 
   // update offset into object position
   {
@@ -290,20 +245,9 @@ bool VehicleTracker::measureWithShape(const types::DynamicObject & object)
 }
 
 bool VehicleTracker::measure(
-  const types::DynamicObject & object, const rclcpp::Time & time,
-  const geometry_msgs::msg::Transform & self_transform)
+  const types::DynamicObject & in_object, const rclcpp::Time & time,
+  const types::InputChannel & channel_info)
 {
-  // keep the latest input object
-  object_ = object;
-
-  // update classification
-  const auto & current_classification = getClassification();
-  if (
-    autoware::object_recognition_utils::getHighestProbLabel(object.classification) ==
-    Label::UNKNOWN) {
-    setClassification(current_classification);
-  }
-
   // check time gap
   const double dt = motion_model_.getDeltaTime(time);
   if (0.01 /*10msec*/ < dt) {
@@ -315,9 +259,12 @@ bool VehicleTracker::measure(
   }
 
   // update object
-  const types::DynamicObject updating_object = getUpdatingObject(object, self_transform);
-  measureWithPose(updating_object);
-  measureWithShape(updating_object);
+  types::DynamicObject updating_object = in_object;
+  shapes::calcAnchorPointOffset(object_, tracking_offset_, updating_object);
+  measureWithPose(updating_object, channel_info);
+  if (channel_info.trust_extension) {
+    measureWithShape(updating_object);
+  }
 
   return true;
 }
@@ -326,29 +273,20 @@ bool VehicleTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object) const
 {
   object = object_;
-  object.object_id = getUUID();
-  object.classification = getClassification();
-
-  auto & pose_with_cov = object.kinematics.pose_with_covariance;
-  auto & twist_with_cov = object.kinematics.twist_with_covariance;
 
   // predict from motion model
-  if (!motion_model_.getPredictedState(
-        time, pose_with_cov.pose, pose_with_cov.covariance, twist_with_cov.twist,
-        twist_with_cov.covariance)) {
+  auto & pose = object.pose;
+  auto & pose_cov = object.pose_covariance;
+  auto & twist = object.twist;
+  auto & twist_cov = object.twist_covariance;
+  if (!motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov)) {
     RCLCPP_WARN(logger_, "VehicleTracker::getTrackedObject: Failed to get predicted state.");
     return false;
   }
 
-  // position
-  pose_with_cov.pose.position.z = z_;
-
   // set shape
-  object.shape.dimensions.x = bounding_box_.length;
-  object.shape.dimensions.y = bounding_box_.width;
-  object.shape.dimensions.z = bounding_box_.height;
-  const auto origin_yaw = tf2::getYaw(object_.kinematics.pose_with_covariance.pose.orientation);
-  const auto ekf_pose_yaw = tf2::getYaw(pose_with_cov.pose.orientation);
+  const auto origin_yaw = tf2::getYaw(object_.pose.orientation);
+  const auto ekf_pose_yaw = tf2::getYaw(pose.orientation);
   object.shape.footprint =
     autoware_utils::rotate_polygon(object.shape.footprint, origin_yaw - ekf_pose_yaw);
 

@@ -23,6 +23,8 @@
 #include "autoware_utils/math/normalization.hpp"
 #include "tf2/utils.h"
 
+#include <rclcpp/logging.hpp>
+
 #include <algorithm>
 #include <chrono>
 #include <limits>
@@ -471,32 +473,20 @@ void MPTOptimizer::onParam(const std::vector<rclcpp::Parameter> & parameters)
   updateVehicleCircles();
   debug_data_ptr_->mpt_visualize_sampling_num = mpt_param_.mpt_visualize_sampling_num;
 }
-
-std::vector<TrajectoryPoint> MPTOptimizer::optimizeTrajectory(const PlannerData & planner_data)
+std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
+  const PlannerData & planner_data)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const auto & p = planner_data;
   const auto & traj_points = p.traj_points;
 
-  const auto get_prev_optimized_traj_points = [&]() {
-    if (prev_optimized_traj_points_ptr_) {
-      RCLCPP_WARN(logger_, "return the previous optimized_trajectory as exceptional behavior.");
-      return *prev_optimized_traj_points_ptr_;
-    }
-    RCLCPP_WARN(
-      logger_,
-      "Try to return the previous optimized_trajectory as exceptional behavior, "
-      "but this failure also. Then return path_smoother output.");
-    return traj_points;
-  };
-
   // 1. calculate reference points
   auto ref_points = calcReferencePoints(planner_data, traj_points);
   if (ref_points.size() < 2) {
     RCLCPP_INFO_EXPRESSION(
       logger_, enable_debug_info_, "return std::nullopt since ref_points size is less than 2.");
-    return get_prev_optimized_traj_points();
+    return std::nullopt;
   }
 
   // 2. calculate B and W matrices where x = B u + W
@@ -515,14 +505,15 @@ std::vector<TrajectoryPoint> MPTOptimizer::optimizeTrajectory(const PlannerData 
   const auto optimized_variables = calcOptimizedSteerAngles(ref_points, obj_mat, const_mat);
   if (!optimized_variables) {
     RCLCPP_WARN(logger_, "return std::nullopt since could not solve qp");
-    return get_prev_optimized_traj_points();
+
+    return std::nullopt;
   }
 
   // 7. convert to points with validation
-  const auto mpt_traj_points = calcMPTPoints(ref_points, *optimized_variables, mpt_mat);
+  auto mpt_traj_points = calcMPTPoints(ref_points, *optimized_variables, mpt_mat);
   if (!mpt_traj_points) {
     RCLCPP_WARN(logger_, "return std::nullopt since lateral or yaw error is too large.");
-    return get_prev_optimized_traj_points();
+    return std::nullopt;
   }
 
   // 8. publish trajectories for debug
@@ -533,7 +524,7 @@ std::vector<TrajectoryPoint> MPTOptimizer::optimizeTrajectory(const PlannerData 
   prev_optimized_traj_points_ptr_ =
     std::make_shared<std::vector<TrajectoryPoint>>(*mpt_traj_points);
 
-  return *mpt_traj_points;
+  return mpt_traj_points;
 }
 
 std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::getPrevOptimizedTrajectoryPoints() const
@@ -1524,11 +1515,11 @@ std::optional<Eigen::VectorXd> MPTOptimizer::calcOptimizedSteerAngles(
 
   // solve qp
   time_keeper_->start_track("solveOsqp");
-  const auto result = osqp_solver_ptr_->optimize();
+  const autoware::osqp_interface::OSQPResult osqp_result = osqp_solver_ptr_->optimize();
   time_keeper_->end_track("solveOsqp");
 
   // check solution status
-  const int solution_status = std::get<3>(result);
+  const int solution_status = osqp_result.solution_status;
   prev_solution_status_ = solution_status;
   if (solution_status != 1) {
     osqp_solver_ptr_->logUnsolvedStatus("[MPT]");
@@ -1536,17 +1527,17 @@ std::optional<Eigen::VectorXd> MPTOptimizer::calcOptimizedSteerAngles(
   }
 
   // print iteration
-  const int iteration_status = std::get<4>(result);
+  const int iteration_status = osqp_result.iteration_status;
   RCLCPP_INFO_EXPRESSION(logger_, enable_debug_info_, "iteration: %d", iteration_status);
 
   // get optimization result
   auto optimization_result =
-    std::get<0>(result);  // NOTE: const cannot be added due to the next operation.
+    osqp_result.primal_solution;  // NOTE: const cannot be added due to the next operation.
+
   const auto has_nan = std::any_of(
     optimization_result.begin(), optimization_result.end(),
     [](const auto v) { return std::isnan(v); });
   if (has_nan) {
-    RCLCPP_WARN(logger_, "optimization failed: result contains NaN values");
     return std::nullopt;
   }
   const Eigen::VectorXd optimized_variables =

@@ -113,6 +113,8 @@ GoalPlannerParameters GoalPlannerModuleManager::initGoalPlannerParameters(
     p.object_recognition_collision_check_max_extra_stopping_margin =
       node->declare_parameter<double>(
         ns + "object_recognition_collision_check_max_extra_stopping_margin");
+    p.collision_check_outer_margin_factor =
+      node->declare_parameter<double>(ns + "collision_check_outer_margin_factor");
     p.th_moving_object_velocity = node->declare_parameter<double>(ns + "th_moving_object_velocity");
     p.detection_bound_offset = node->declare_parameter<double>(ns + "detection_bound_offset");
     p.outer_road_detection_offset =

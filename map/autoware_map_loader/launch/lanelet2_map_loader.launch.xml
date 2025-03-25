@@ -8,7 +8,7 @@
     <param from="$(var lanelet2_map_loader_param_path)" allow_substs="true"/>
   </node>
 
-  <node pkg="autoware_map_loader" exec="lanelet2_map_loader" name="lanelet2_map_loader" output="both">
+  <node pkg="autoware_map_loader" exec="autoware_lanelet2_map_loader" name="lanelet2_map_loader" output="both">
     <remap from="output/lanelet2_map" to="$(var lanelet2_map_topic)"/>
     <param from="$(var lanelet2_map_loader_param_path)" allow_substs="true"/>
   </node>
