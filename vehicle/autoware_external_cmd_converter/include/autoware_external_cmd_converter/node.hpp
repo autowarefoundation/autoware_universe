@@ -76,7 +76,7 @@ private:
   GearCommand::ConstSharedPtr current_gear_cmd_{nullptr};
   GateMode::ConstSharedPtr current_gate_mode_{nullptr};
 
-  std::shared_ptr<rclcpp::Time> latest_emergency_stop_heartbeat_received_time_;
+  std::shared_ptr<rclcpp::Time> latest_heartbeat_received_time_;
   std::shared_ptr<rclcpp::Time> latest_cmd_received_time_;
 
   // Timer

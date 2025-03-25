@@ -79,7 +79,7 @@ void ExternalCmdConverterNode::on_timer()
 
 void ExternalCmdConverterNode::on_heartbeat(const Heartbeat::ConstSharedPtr)
 {
-  latest_emergency_stop_heartbeat_received_time_ = std::make_shared<rclcpp::Time>(this->now());
+  latest_heartbeat_received_time_ = std::make_shared<rclcpp::Time>(this->now());
   updater_.force_update();
 }
 
@@ -202,14 +202,14 @@ bool ExternalCmdConverterNode::check_emergency_stop_topic_timeout()
   }
 
   if (current_gate_mode_->data == tier4_control_msgs::msg::GateMode::AUTO) {
-    latest_emergency_stop_heartbeat_received_time_ = nullptr;
+    latest_heartbeat_received_time_ = nullptr;
   }
 
-  if (!latest_emergency_stop_heartbeat_received_time_) {
+  if (!latest_heartbeat_received_time_) {
     return wait_for_first_topic_;
   }
 
-  const auto duration = (this->now() - *latest_emergency_stop_heartbeat_received_time_);
+  const auto duration = (this->now() - *latest_heartbeat_received_time_);
   return duration.seconds() <= emergency_stop_timeout_;
 }
 
