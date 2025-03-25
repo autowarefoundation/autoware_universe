@@ -41,6 +41,7 @@ namespace autoware::behavior_path_planner::utils::path_safety_checker
 namespace bg = boost::geometry;
 
 using autoware::motion_utils::calcLongitudinalOffsetPoint;
+using autoware::motion_utils::calcLongitudinalOffsetPose;
 using autoware::motion_utils::calcLongitudinalOffsetToSegment;
 using autoware::motion_utils::findNearestIndex;
 using autoware::motion_utils::findNearestSegmentIndex;
@@ -774,8 +775,9 @@ double calc_obstacle_max_length(const Shape & shape)
 }
 
 std::pair<bool, bool> checkObjectsCollisionRough(
-  const PathWithLaneId & path, const PredictedObjects & objects, const double margin,
-  const BehaviorPathPlannerParameters & parameters, const bool use_offset_ego_point)
+  const PathWithLaneId & path, const PredictedObjects & objects, const double min_margin_threshold,
+  const double max_margin_threshold, const BehaviorPathPlannerParameters & parameters,
+  const bool use_offset_ego_point)
 {
   const auto & points = path.points;
 
@@ -815,10 +817,10 @@ std::pair<bool, bool> checkObjectsCollisionRough(
     const double min_distance = distance - object_max_length - ego_max_length;
     const double max_distance = distance - object_min_length - ego_min_length;
 
-    if (min_distance < margin) {
+    if (min_distance < min_margin_threshold) {
       has_collision.first = true;
     }
-    if (max_distance < margin) {
+    if (max_distance < max_margin_threshold) {
       has_collision.second = true;
     }
   }
@@ -874,6 +876,39 @@ double calculateRoughDistanceToObjects(
     });
     min_distance = std::min(min_distance, distance);
   }
+  return min_distance;
+}
+
+double shortest_distance_from_ego_footprint_to_objects_on_path(
+  const PathWithLaneId & path, const PredictedObjects & objects,
+  const BehaviorPathPlannerParameters & parameters, const bool use_offset_ego_pose)
+{
+  const auto & p = parameters;
+  double min_distance = std::numeric_limits<double>::max();
+  for (const auto & object : objects.objects) {
+    const auto & object_point = object.kinematics.initial_pose_with_covariance.pose.position;
+
+    const auto ego_pose = std::invoke([&]() -> Pose {
+      if (use_offset_ego_pose) {
+        const size_t nearest_segment_idx = findNearestSegmentIndex(path.points, object_point);
+        const double offset_length =
+          calcLongitudinalOffsetToSegment(path.points, nearest_segment_idx, object_point);
+        const auto ego_pose_opt =
+          calcLongitudinalOffsetPose(path.points, nearest_segment_idx, offset_length);
+        if (ego_pose_opt.has_value()) return ego_pose_opt.value();
+      }
+      const auto ego_nearest_idx = findNearestIndex(path.points, object_point);
+      return path.points.at(ego_nearest_idx).point.pose;
+    });
+
+    const auto ego_footprint =
+      autoware_utils::to_footprint(ego_pose, p.base_link2front, p.base_link2rear, p.vehicle_width);
+
+    const double distance =
+      boost::geometry::distance(ego_footprint, autoware_utils::to_polygon2d(object));
+    min_distance = std::min(min_distance, distance);
+  }
+
   return min_distance;
 }
 
