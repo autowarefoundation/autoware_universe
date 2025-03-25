@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/departure_checker/parameters.hpp"
+#include "autoware/lane_departure_checker/parameters.hpp"
 
 #include <autoware_utils/ros/parameter.hpp>
 #include <rclcpp/node.hpp>
@@ -23,7 +23,7 @@ namespace autoware::lane_departure_checker
 {
 using autoware_utils::get_or_declare_parameter;
 
-Param Param::init(rclcpp::Node & node)
+Param init(rclcpp::Node & node)
 {
   Param p;
   p.footprint_margin_scale = get_or_declare_parameter<double>(node, "footprint_margin_scale");

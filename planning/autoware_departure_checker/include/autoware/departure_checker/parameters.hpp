@@ -1,4 +1,4 @@
-// Copyright 2024 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__LANE_DEPARTURE_CHECKER__PARAMETERS_HPP_
-#define AUTOWARE__LANE_DEPARTURE_CHECKER__PARAMETERS_HPP_
+#ifndef AUTOWARE__DEPARTURE_CHECKER__PARAMETERS_HPP_
+#define AUTOWARE__DEPARTURE_CHECKER__PARAMETERS_HPP_
 
-#include <autoware/departure_checker/parameters.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/pose_deviation.hpp>
-#include <rclcpp/node.hpp>
 
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
@@ -27,6 +25,7 @@
 
 #include <lanelet2_core/LaneletMap.h>
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -39,23 +38,46 @@ using autoware_utils::PoseDeviation;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using autoware_utils::LinearRing2d;
 
-struct NodeParam
+struct Param
 {
-  static NodeParam init(rclcpp::Node & node);
-  bool will_out_of_lane_checker{};
-  bool out_of_lane_checker{};
-  bool boundary_departure_checker{};
+  double footprint_margin_scale{};
+  double footprint_extra_margin{};
+  double resample_interval{};
+  double max_deceleration{};
+  double delay_time{};
+  double max_lateral_deviation{};
+  double max_longitudinal_deviation{};
+  double max_yaw_deviation_deg{};
+  double min_braking_distance{};
+  // nearest search to ego
+  double ego_nearest_dist_threshold{};
+  double ego_nearest_yaw_threshold{};
+};
 
-  double update_rate{};
-  bool visualize_lanelet{};
-  bool include_right_lanes{};
-  bool include_left_lanes{};
-  bool include_opposite_lanes{};
-  bool include_conflicting_lanes{};
+struct Input
+{
+  nav_msgs::msg::Odometry::ConstSharedPtr current_odom;
+  lanelet::LaneletMapPtr lanelet_map;
+  LaneletRoute::ConstSharedPtr route;
+  lanelet::ConstLanelets route_lanelets;
+  lanelet::ConstLanelets shoulder_lanelets;
+  Trajectory::ConstSharedPtr reference_trajectory;
+  Trajectory::ConstSharedPtr predicted_trajectory;
   std::vector<std::string> boundary_types_to_detect;
 };
 
-Param init(rclcpp::Node & node);
+struct Output
+{
+  std::map<std::string, double> processing_time_map;
+  bool will_leave_lane{};
+  bool is_out_of_lane{};
+  bool will_cross_boundary{};
+  PoseDeviation trajectory_deviation{};
+  lanelet::ConstLanelets candidate_lanelets;
+  TrajectoryPoints resampled_trajectory;
+  std::vector<LinearRing2d> vehicle_footprints;
+  std::vector<LinearRing2d> vehicle_passing_areas;
+};
 }  // namespace autoware::lane_departure_checker
 
-#endif  // AUTOWARE__LANE_DEPARTURE_CHECKER__PARAMETERS_HPP_
+#endif  // AUTOWARE__DEPARTURE_CHECKER__PARAMETERS_HPP_
