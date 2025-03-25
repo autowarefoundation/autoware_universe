@@ -45,9 +45,6 @@ struct Param
   double resample_interval{};
   double max_deceleration{};
   double delay_time{};
-  double max_lateral_deviation{};
-  double max_longitudinal_deviation{};
-  double max_yaw_deviation_deg{};
   double min_braking_distance{};
   // nearest search to ego
   double ego_nearest_dist_threshold{};
@@ -72,7 +69,6 @@ struct Output
   bool will_leave_lane{};
   bool is_out_of_lane{};
   bool will_cross_boundary{};
-  PoseDeviation trajectory_deviation{};
   lanelet::ConstLanelets candidate_lanelets;
   TrajectoryPoints resampled_trajectory;
   std::vector<LinearRing2d> vehicle_footprints;
