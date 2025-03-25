@@ -309,6 +309,7 @@ bool checkObjectsCollision(
   const double collision_check_margin, const bool extract_static_objects,
   const double maximum_deceleration,
   const double object_recognition_collision_check_max_extra_stopping_margin,
+  const double collision_check_outer_margin_factor,
   std::vector<Polygon2d> & debug_ego_polygons_expanded, const bool update_debug_data)
 {
   if (path.points.size() != curvatures.size()) {
@@ -322,18 +323,6 @@ bool checkObjectsCollision(
     extract_static_objects ? static_target_objects : dynamic_target_objects;
   if (target_objects.objects.empty()) {
     return false;
-  }
-
-  // check collision roughly with {min_distance, max_distance} between ego footprint and objects
-  // footprint
-  std::pair<bool, bool> has_collision_rough =
-    utils::path_safety_checker::checkObjectsCollisionRough(
-      path, target_objects, collision_check_margin, behavior_path_parameters, false);
-  if (!has_collision_rough.first) {
-    return false;
-  }
-  if (has_collision_rough.second) {
-    return true;
   }
 
   std::vector<Polygon2d> obj_polygons;
@@ -352,20 +341,21 @@ bool checkObjectsCollision(
     const double extra_stopping_margin = std::min(
       std::pow(p.point.longitudinal_velocity_mps, 2) * 0.5 / maximum_deceleration,
       object_recognition_collision_check_max_extra_stopping_margin);
-
     // The square is meant to imply centrifugal force, but it is not a very well-founded formula.
-    // TODO(kosuke55): It is needed to consider better way because there is an inherently
-    // different conception of the inside and outside margins.
+    const double curvature = curvatures.at(i);
     const double extra_lateral_margin = std::min(
-      extra_stopping_margin,
-      std::abs(curvatures.at(i) * std::pow(p.point.longitudinal_velocity_mps, 2)));
-
+      extra_stopping_margin, std::abs(curvature * std::pow(p.point.longitudinal_velocity_mps, 2)));
+    // The outer margin is `collision_check_outer_margin_factor` times larger than the inner margin.
+    const double sign = curvature > 0.0 ? -1.0 : 1.0;
+    const auto ego_pose_offset = calc_offset_pose(
+      p.point.pose, 0.0, sign * (collision_check_outer_margin_factor - 1.0) * extra_lateral_margin,
+      0.0);
     const auto ego_polygon = autoware_utils::to_footprint(
-      p.point.pose,
+      ego_pose_offset,
       behavior_path_parameters.base_link2front + collision_check_margin + extra_stopping_margin,
       behavior_path_parameters.base_link2rear + collision_check_margin,
       behavior_path_parameters.vehicle_width + collision_check_margin * 2.0 +
-        extra_lateral_margin * 2.0);
+        extra_lateral_margin * (collision_check_outer_margin_factor + 1.0));
     ego_polygons_expanded.push_back(ego_polygon);
   }
 
