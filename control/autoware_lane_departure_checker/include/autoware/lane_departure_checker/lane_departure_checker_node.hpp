@@ -15,8 +15,8 @@
 #ifndef AUTOWARE__LANE_DEPARTURE_CHECKER__LANE_DEPARTURE_CHECKER_NODE_HPP_
 #define AUTOWARE__LANE_DEPARTURE_CHECKER__LANE_DEPARTURE_CHECKER_NODE_HPP_
 
-#include "autoware/lane_departure_checker/lane_departure_checker.hpp"
-#include "autoware/lane_departure_checker/parameters.hpp"
+#include "autoware/departure_checker/departure_checker.hpp"
+#include "autoware/departure_checker/parameters.hpp"
 #include "autoware_utils/ros/polling_subscriber.hpp"
 
 #include <autoware_utils/ros/debug_publisher.hpp>

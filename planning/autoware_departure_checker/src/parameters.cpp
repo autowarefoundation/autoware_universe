@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/lane_departure_checker/parameters.hpp"
+#include "autoware/departure_checker/parameters.hpp"
 
 #include <autoware_utils/ros/parameter.hpp>
 #include <rclcpp/node.hpp>
