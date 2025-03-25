@@ -35,24 +35,9 @@
 namespace autoware::multi_object_tracker
 {
 
-UnknownTracker::UnknownTracker(
-  const rclcpp::Time & time, const types::DynamicObject & object, const size_t channel_size)
-: Tracker(time, object.classification, channel_size),
-  logger_(rclcpp::get_logger("UnknownTracker")),
-  z_(object.kinematics.pose_with_covariance.pose.position.z)
+UnknownTracker::UnknownTracker(const rclcpp::Time & time, const types::DynamicObject & object)
+: Tracker(time, object), logger_(rclcpp::get_logger("UnknownTracker"))
 {
-  object_ = object;
-
-  // initialize existence probability
-  initializeExistenceProbabilities(object.channel_index, object.existence_probability);
-
-  // initialize params
-  // measurement noise covariance
-  constexpr double r_stddev_x = 1.0;  // [m]
-  constexpr double r_stddev_y = 1.0;  // [m]
-  ekf_params_.r_cov_x = std::pow(r_stddev_x, 2.0);
-  ekf_params_.r_cov_y = std::pow(r_stddev_y, 2.0);
-
   // Set motion model parameters
   {
     constexpr double q_stddev_x = 0.5;         // [m/s]
@@ -71,17 +56,17 @@ UnknownTracker::UnknownTracker(
   // Set initial state
   {
     using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-    const double x = object.kinematics.pose_with_covariance.pose.position.x;
-    const double y = object.kinematics.pose_with_covariance.pose.position.y;
-    auto pose_cov = object.kinematics.pose_with_covariance.covariance;
-    auto twist_cov = object.kinematics.twist_with_covariance.covariance;
-    const double yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
+    const double x = object.pose.position.x;
+    const double y = object.pose.position.y;
+    auto pose_cov = object.pose_covariance;
+    auto twist_cov = object.twist_covariance;
+    const double yaw = tf2::getYaw(object.pose.orientation);
 
     double vx = 0.0;
     double vy = 0.0;
     if (object.kinematics.has_twist) {
-      const double & vel_x = object.kinematics.twist_with_covariance.twist.linear.x;
-      const double & vel_y = object.kinematics.twist_with_covariance.twist.linear.y;
+      const double & vel_x = object.twist.linear.x;
+      const double & vel_y = object.twist.linear.y;
       vx = std::cos(yaw) * vel_x - std::sin(yaw) * vel_y;
       vy = std::sin(yaw) * vel_x + std::cos(yaw) * vel_y;
     }
@@ -136,58 +121,32 @@ bool UnknownTracker::predict(const rclcpp::Time & time)
   return motion_model_.predictState(time);
 }
 
-types::DynamicObject UnknownTracker::getUpdatingObject(
-  const types::DynamicObject & object, const geometry_msgs::msg::Transform & /*self_transform*/)
-{
-  types::DynamicObject updating_object = object;
-
-  // UNCERTAINTY MODEL
-  if (!object.kinematics.has_position_covariance) {
-    // fill covariance matrix
-    using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-    const double & r_cov_x = ekf_params_.r_cov_x;
-    const double & r_cov_y = ekf_params_.r_cov_y;
-    auto & pose_cov = updating_object.kinematics.pose_with_covariance.covariance;
-    const double pose_yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
-    const double cos_yaw = std::cos(pose_yaw);
-    const double sin_yaw = std::sin(pose_yaw);
-    const double sin_2yaw = std::sin(2.0f * pose_yaw);
-    pose_cov[XYZRPY_COV_IDX::X_X] =
-      r_cov_x * cos_yaw * cos_yaw + r_cov_y * sin_yaw * sin_yaw;            // x - x
-    pose_cov[XYZRPY_COV_IDX::X_Y] = 0.5f * (r_cov_x - r_cov_y) * sin_2yaw;  // x - y
-    pose_cov[XYZRPY_COV_IDX::Y_Y] =
-      r_cov_x * sin_yaw * sin_yaw + r_cov_y * cos_yaw * cos_yaw;    // y - y
-    pose_cov[XYZRPY_COV_IDX::Y_X] = pose_cov[XYZRPY_COV_IDX::X_Y];  // y - x
-  }
-  return updating_object;
-}
-
 bool UnknownTracker::measureWithPose(const types::DynamicObject & object)
 {
   // update motion model
   bool is_updated = false;
   {
-    const double x = object.kinematics.pose_with_covariance.pose.position.x;
-    const double y = object.kinematics.pose_with_covariance.pose.position.y;
+    const double x = object.pose.position.x;
+    const double y = object.pose.position.y;
 
-    is_updated =
-      motion_model_.updateStatePose(x, y, object.kinematics.pose_with_covariance.covariance);
+    is_updated = motion_model_.updateStatePose(x, y, object.pose_covariance);
     motion_model_.limitStates();
   }
 
   // position z
   constexpr double gain = 0.1;
-  z_ = (1.0 - gain) * z_ + gain * object.kinematics.pose_with_covariance.pose.position.z;
+  object_.pose.position.z = (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
 
   return is_updated;
 }
 
 bool UnknownTracker::measure(
   const types::DynamicObject & object, const rclcpp::Time & time,
-  const geometry_msgs::msg::Transform & self_transform)
+  const types::InputChannel & /*channel_info*/)
 {
-  // keep the latest input object
-  object_ = object;
+  // update object shape
+  object_.shape = object.shape;
+  object_.pose.orientation = object.pose.orientation;
 
   // check time gap
   const double dt = motion_model_.getDeltaTime(time);
@@ -200,8 +159,7 @@ bool UnknownTracker::measure(
   }
 
   // update object
-  const types::DynamicObject updating_object = getUpdatingObject(object, self_transform);
-  measureWithPose(updating_object);
+  measureWithPose(object);
 
   return true;
 }
@@ -210,22 +168,16 @@ bool UnknownTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object) const
 {
   object = object_;
-  object.object_id = getUUID();
-  object.classification = getClassification();
-
-  auto & pose_with_cov = object.kinematics.pose_with_covariance;
-  auto & twist_with_cov = object.kinematics.twist_with_covariance;
 
   // predict from motion model
-  if (!motion_model_.getPredictedState(
-        time, pose_with_cov.pose, pose_with_cov.covariance, twist_with_cov.twist,
-        twist_with_cov.covariance)) {
+  auto & pose = object.pose;
+  auto & pose_cov = object.pose_covariance;
+  auto & twist = object.twist;
+  auto & twist_cov = object.twist_covariance;
+  if (!motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov)) {
     RCLCPP_WARN(logger_, "UnknownTracker::getTrackedObject: Failed to get predicted state.");
     return false;
   }
-
-  // position
-  pose_with_cov.pose.position.z = z_;
 
   return true;
 }

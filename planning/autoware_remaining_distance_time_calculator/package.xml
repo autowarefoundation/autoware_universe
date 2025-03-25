@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_remaining_distance_time_calculator</name>
-  <version>0.42.0</version>
+  <version>0.43.0</version>
   <description>Calculates and publishes remaining distance and time of the mission.</description>
 
   <maintainer email="ahmed.ebrahim@leodrive.ai">Ahmed Ebrahim</maintainer>
@@ -12,6 +12,7 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
   <depend>autoware_internal_msgs</depend>
+  <depend>autoware_internal_planning_msgs</depend>
   <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_planning_msgs</depend>
@@ -24,7 +25,6 @@
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>
-  <depend>tier4_planning_msgs</depend>
 
   <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_lint_auto</test_depend>

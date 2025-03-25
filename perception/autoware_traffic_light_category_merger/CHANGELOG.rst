@@ -2,13 +2,19 @@
 Changelog for package autoware_traffic_light_category_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* Contributors: Hayato Mizushima, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 * fix: fix version
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware.universe/issues/10191>`_)
-* fix(autoware_traffic_light_category_merger): add missing dependency to autoware_universe_utils (`#10175 <https://github.com/autowarefoundation/autoware.universe/issues/10175>`_)
-* feat(traffic_light_category_merger): add new traffic_light_category_merger package (`#9748 <https://github.com/autowarefoundation/autoware.universe/issues/9748>`_)
+* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware_universe/issues/10191>`_)
+* fix(autoware_traffic_light_category_merger): add missing dependency to autoware_universe_utils (`#10175 <https://github.com/autowarefoundation/autoware_universe/issues/10175>`_)
+* feat(traffic_light_category_merger): add new traffic_light_category_merger package (`#9748 <https://github.com/autowarefoundation/autoware_universe/issues/9748>`_)
   * feat: init traffic light signal merger
   * fix: add tl merger launch
   * fix: cmake lt merger
@@ -36,9 +42,9 @@ Changelog for package autoware_traffic_light_category_merger
 
 * fix: fix version
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware.universe/issues/10191>`_)
-* fix(autoware_traffic_light_category_merger): add missing dependency to autoware_universe_utils (`#10175 <https://github.com/autowarefoundation/autoware.universe/issues/10175>`_)
-* feat(traffic_light_category_merger): add new traffic_light_category_merger package (`#9748 <https://github.com/autowarefoundation/autoware.universe/issues/9748>`_)
+* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware_universe/issues/10191>`_)
+* fix(autoware_traffic_light_category_merger): add missing dependency to autoware_universe_utils (`#10175 <https://github.com/autowarefoundation/autoware_universe/issues/10175>`_)
+* feat(traffic_light_category_merger): add new traffic_light_category_merger package (`#9748 <https://github.com/autowarefoundation/autoware_universe/issues/9748>`_)
   * feat: init traffic light signal merger
   * fix: add tl merger launch
   * fix: cmake lt merger

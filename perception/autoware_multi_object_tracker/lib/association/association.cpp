@@ -41,11 +41,10 @@ double getMahalanobisDistance(
   return std::sqrt(mahalanobis_squared(0));
 }
 
-Eigen::Matrix2d getXYCovariance(const geometry_msgs::msg::PoseWithCovariance & pose_covariance)
+Eigen::Matrix2d getXYCovariance(const std::array<double, 36> & pose_covariance)
 {
   Eigen::Matrix2d covariance;
-  covariance << pose_covariance.covariance[0], pose_covariance.covariance[1],
-    pose_covariance.covariance[6], pose_covariance.covariance[7];
+  covariance << pose_covariance[0], pose_covariance[1], pose_covariance[6], pose_covariance[7];
   return covariance;
 }
 
@@ -72,12 +71,15 @@ double getFormedYawAngle(
 namespace autoware::multi_object_tracker
 {
 
-DataAssociation::DataAssociation(
-  std::vector<int> can_assign_vector, std::vector<double> max_dist_vector,
-  std::vector<double> max_area_vector, std::vector<double> min_area_vector,
-  std::vector<double> max_rad_vector, std::vector<double> min_iou_vector)
-: score_threshold_(0.01)
+DataAssociation::DataAssociation(const AssociatorConfig & config) : score_threshold_(0.01)
 {
+  std::vector<int> can_assign_vector = config.can_assign_matrix;
+  std::vector<double> max_dist_vector = config.max_dist_matrix;
+  std::vector<double> max_area_vector = config.max_area_matrix;
+  std::vector<double> min_area_vector = config.min_area_matrix;
+  std::vector<double> max_rad_vector = config.max_rad_matrix;
+  std::vector<double> min_iou_vector = config.min_iou_matrix;
+
   {
     const int assign_label_num = static_cast<int>(std::sqrt(can_assign_vector.size()));
     Eigen::Map<Eigen::MatrixXi> can_assign_matrix_tmp(
@@ -154,11 +156,19 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
   const types::DynamicObjectList & measurements,
   const std::list<std::shared_ptr<Tracker>> & trackers)
 {
+  // Ensure that the detected_objects and list_tracker are not empty
+  if (measurements.objects.empty() || trackers.empty()) {
+    return Eigen::MatrixXd();
+  }
+  // Initialize the score matrix
   Eigen::MatrixXd score_matrix =
     Eigen::MatrixXd::Zero(trackers.size(), measurements.objects.size());
+
   size_t tracker_idx = 0;
   for (auto tracker_itr = trackers.begin(); tracker_itr != trackers.end();
        ++tracker_itr, ++tracker_idx) {
+    types::DynamicObject tracked_object;
+    (*tracker_itr)->getTrackedObject(measurements.header.stamp, tracked_object);
     const std::uint8_t tracker_label = (*tracker_itr)->getHighestProbLabel();
 
     for (size_t measurement_idx = 0; measurement_idx < measurements.objects.size();
@@ -167,65 +177,61 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
       const std::uint8_t measurement_label =
         autoware::object_recognition_utils::getHighestProbLabel(measurement_object.classification);
 
-      double score = 0.0;
-      if (can_assign_matrix_(tracker_label, measurement_label)) {
-        types::DynamicObject tracked_object;
-        (*tracker_itr)->getTrackedObject(measurements.header.stamp, tracked_object);
+      double score =
+        calculateScore(tracked_object, tracker_label, measurement_object, measurement_label);
 
-        const double max_dist = max_dist_matrix_(tracker_label, measurement_label);
-        const double dist = autoware_utils::calc_distance2d(
-          measurement_object.kinematics.pose_with_covariance.pose.position,
-          tracked_object.kinematics.pose_with_covariance.pose.position);
-
-        bool passed_gate = true;
-        // dist gate
-        {  // passed_gate is always true
-          if (max_dist < dist) passed_gate = false;
-        }
-        // area gate
-        if (passed_gate) {
-          const double max_area = max_area_matrix_(tracker_label, measurement_label);
-          const double min_area = min_area_matrix_(tracker_label, measurement_label);
-          const double area = autoware_utils::get_area(measurement_object.shape);
-          if (area < min_area || max_area < area) passed_gate = false;
-        }
-        // angle gate
-        if (passed_gate) {
-          const double max_rad = max_rad_matrix_(tracker_label, measurement_label);
-          const double angle = getFormedYawAngle(
-            measurement_object.kinematics.pose_with_covariance.pose.orientation,
-            tracked_object.kinematics.pose_with_covariance.pose.orientation, false);
-          if (std::fabs(max_rad) < M_PI && std::fabs(max_rad) < std::fabs(angle))
-            passed_gate = false;
-        }
-        // mahalanobis dist gate
-        if (passed_gate) {
-          const double mahalanobis_dist = getMahalanobisDistance(
-            measurement_object.kinematics.pose_with_covariance.pose.position,
-            tracked_object.kinematics.pose_with_covariance.pose.position,
-            getXYCovariance(tracked_object.kinematics.pose_with_covariance));
-          if (3.035 /*99%*/ <= mahalanobis_dist) passed_gate = false;
-        }
-        // 2d iou gate
-        if (passed_gate) {
-          const double min_iou = min_iou_matrix_(tracker_label, measurement_label);
-          const double min_union_iou_area = 1e-2;
-          const double iou =
-            shapes::get2dIoU(measurement_object, tracked_object, min_union_iou_area);
-          if (iou < min_iou) passed_gate = false;
-        }
-
-        // all gate is passed
-        if (passed_gate) {
-          score = (max_dist - std::min(dist, max_dist)) / max_dist;
-          if (score < score_threshold_) score = 0.0;
-        }
-      }
       score_matrix(tracker_idx, measurement_idx) = score;
     }
   }
 
   return score_matrix;
+}
+
+double DataAssociation::calculateScore(
+  const types::DynamicObject & tracked_object, const std::uint8_t tracker_label,
+  const types::DynamicObject & measurement_object, const std::uint8_t measurement_label) const
+{
+  if (!can_assign_matrix_(tracker_label, measurement_label)) {
+    return 0.0;
+  }
+
+  const double max_dist = max_dist_matrix_(tracker_label, measurement_label);
+  const double dist =
+    autoware_utils::calc_distance2d(measurement_object.pose.position, tracked_object.pose.position);
+
+  // dist gate
+  if (max_dist < dist) return 0.0;
+
+  // area gate
+  const double max_area = max_area_matrix_(tracker_label, measurement_label);
+  const double min_area = min_area_matrix_(tracker_label, measurement_label);
+  const double area = autoware_utils::get_area(measurement_object.shape);
+  if (area < min_area || max_area < area) return 0.0;
+
+  // angle gate
+  const double max_rad = max_rad_matrix_(tracker_label, measurement_label);
+  const double angle =
+    getFormedYawAngle(measurement_object.pose.orientation, tracked_object.pose.orientation, false);
+  if (std::fabs(max_rad) < M_PI && std::fabs(max_rad) < std::fabs(angle)) {
+    return 0.0;
+  }
+
+  // mahalanobis dist gate
+  const double mahalanobis_dist = getMahalanobisDistance(
+    measurement_object.pose.position, tracked_object.pose.position,
+    getXYCovariance(tracked_object.pose_covariance));
+  if (3.035 /*99%*/ <= mahalanobis_dist) return 0.0;
+
+  // 2d iou gate
+  const double min_iou = min_iou_matrix_(tracker_label, measurement_label);
+  const double min_union_iou_area = 1e-2;
+  const double iou = shapes::get2dIoU(measurement_object, tracked_object, min_union_iou_area);
+  if (iou < min_iou) return 0.0;
+
+  // all gate is passed
+  double score = (max_dist - std::min(dist, max_dist)) / max_dist;
+  if (score < score_threshold_) score = 0.0;
+  return score;
 }
 
 }  // namespace autoware::multi_object_tracker

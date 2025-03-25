@@ -22,6 +22,7 @@
 
 #include <autoware/signal_processing/lowpass_filter_1d.hpp>
 #include <autoware_control_validator/msg/control_validator_status.hpp>
+#include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -29,6 +30,7 @@
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
+#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
 #include <cstdint>
@@ -45,6 +47,7 @@ using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
+using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 
 struct ValidationParams
@@ -55,6 +58,35 @@ struct ValidationParams
   double over_velocity_offset;
   double overrun_stop_point_dist;
   double nominal_latency_threshold;
+};
+
+/**
+ * @class AccelerationValidator
+ * @brief Validates deviation between output acceleration and measured acceleration.
+ */
+class AccelerationValidator
+{
+public:
+  explicit AccelerationValidator(rclcpp::Node & node)
+  {
+    e_offset =
+      autoware_utils::get_or_declare_parameter<double>(node, "thresholds.acc_error_offset");
+    e_scale = autoware_utils::get_or_declare_parameter<double>(node, "thresholds.acc_error_scale");
+    const double acc_lpf_gain =
+      autoware_utils::get_or_declare_parameter<double>(node, "acc_lpf_gain");
+    desired_acc_lpf.setGain(acc_lpf_gain);
+    measured_acc_lpf.setGain(acc_lpf_gain);
+  };
+
+  void validate(
+    ControlValidatorStatus & res, const Odometry & kinematic_state, const Control & control_cmd,
+    const AccelWithCovarianceStamped & loc_acc);
+
+private:
+  double e_offset;
+  double e_scale;
+  autoware::signal_processing::LowpassFilter1d desired_acc_lpf{0.0};
+  autoware::signal_processing::LowpassFilter1d measured_acc_lpf{0.0};
 };
 
 /**
@@ -130,7 +162,8 @@ private:
    */
   void validate(
     const Trajectory & predicted_trajectory, const Trajectory & reference_trajectory,
-    const Odometry & kinematics);
+    const Odometry & kinematics, const Control & control_cmd,
+    const AccelWithCovarianceStamped & measured_acc);
 
   /**
    * @brief Publish debug information
@@ -156,6 +189,8 @@ private:
   rclcpp::Subscription<Trajectory>::SharedPtr sub_predicted_traj_;
   autoware_utils::InterProcessPollingSubscriber<Odometry>::SharedPtr sub_kinematics_;
   autoware_utils::InterProcessPollingSubscriber<Trajectory>::SharedPtr sub_reference_traj_;
+  autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped>::SharedPtr
+    sub_measured_acc_;
   rclcpp::Publisher<ControlValidatorStatus>::SharedPtr pub_status_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_markers_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
@@ -171,6 +206,8 @@ private:
   ValidationParams validation_params_;  // for thresholds
   autoware::signal_processing::LowpassFilter1d vehicle_vel_{0.0};
   autoware::signal_processing::LowpassFilter1d target_vel_{0.0};
+  AccelerationValidator acceleration_validator{*this};
+
   bool hold_velocity_error_until_stop_{false};
 
   vehicle_info_utils::VehicleInfo vehicle_info_;
@@ -186,6 +223,8 @@ private:
   Trajectory::ConstSharedPtr current_predicted_trajectory_;
 
   Odometry::ConstSharedPtr current_kinematics_;
+  AccelWithCovarianceStamped::ConstSharedPtr acceleration_msg_;
+  Control::ConstSharedPtr control_cmd_msg_;
 
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
 

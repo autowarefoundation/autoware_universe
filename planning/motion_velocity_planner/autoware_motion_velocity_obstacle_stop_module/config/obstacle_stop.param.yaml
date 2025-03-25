@@ -67,7 +67,7 @@
         obstacle_velocity_threshold_from_stop : 3.5 # stop planning is executed to the obstacle whose velocity is less than this value [m/s]
 
         max_lat_margin: 0.3 # lateral margin between the obstacles except for unknown and ego's footprint
-        max_lat_margin_against_unknown: 0.3 # lateral margin between the unknown obstacles and ego's footprint
+        max_lat_margin_against_predicted_object_unknown: 0.3 # lateral margin between the predicted object unknown obstacles and ego's footprint
 
         min_velocity_to_reach_collision_point: 2.0 # minimum velocity margin to calculate time to reach collision [m/s]
         stop_obstacle_hold_time_threshold : 1.0 # maximum time for holding closest stop obstacle

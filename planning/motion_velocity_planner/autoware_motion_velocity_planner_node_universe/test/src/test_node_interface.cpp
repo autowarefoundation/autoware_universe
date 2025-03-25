@@ -15,8 +15,8 @@
 #include "node.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <autoware_planning_test_manager/autoware_planning_test_manager.hpp>
-#include <autoware_planning_test_manager/autoware_planning_test_manager_utils.hpp>
+#include <autoware/planning_test_manager/autoware_planning_test_manager.hpp>
+#include <autoware/planning_test_manager/autoware_planning_test_manager_utils.hpp>
 
 #include <gtest/gtest.h>
 
