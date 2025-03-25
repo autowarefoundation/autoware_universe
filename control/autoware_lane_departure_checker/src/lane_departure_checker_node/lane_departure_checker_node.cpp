@@ -127,7 +127,7 @@ LaneDepartureCheckerNode::LaneDepartureCheckerNode(const rclcpp::NodeOptions & o
 {
   using std::placeholders::_1;
   node_param_ = NodeParam::init(*this);
-  param_ = Param::init(*this);
+  param_ = init(*this);
 
   // Vehicle Info
   const auto vehicle_info = autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo();

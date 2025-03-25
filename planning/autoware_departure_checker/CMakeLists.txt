@@ -7,7 +7,6 @@ autoware_package()
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/departure_checker.cpp
   src/utils.cpp
-  src/parameters.cpp
 )
 
 if(BUILD_TESTING)
