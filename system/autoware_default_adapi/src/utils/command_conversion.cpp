@@ -65,8 +65,8 @@ InternalHazardLights convert(const ExternalHazardLights & external)
     switch (status) {
       case ExternalHazardLightsType::DISABLE: return InternalHazardLights::DISABLE;
       case ExternalHazardLightsType::ENABLE:  return InternalHazardLights::ENABLE;
-      default:
-    }              return InternalHazardLights::NO_COMMAND;
+      default:                                return InternalHazardLights::NO_COMMAND;
+    }
     // clang-format on
   };
   InternalHazardLights internal;
