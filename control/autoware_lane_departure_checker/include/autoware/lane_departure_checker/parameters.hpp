@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__LANE_DEPARTURE_CHECKER__PARAMETERS_HPP_
 #define AUTOWARE__LANE_DEPARTURE_CHECKER__PARAMETERS_HPP_
 
-#include <autoware/departure_checker/parameters.hpp>
+#include <autoware/boundary_departure_checker/parameters.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/pose_deviation.hpp>
 #include <rclcpp/node.hpp>
