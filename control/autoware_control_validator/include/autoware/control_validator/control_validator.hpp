@@ -85,7 +85,7 @@ public:
 private:
   double e_offset;
   double e_scale;
-  autoware::signal_processing::LowpassFilter1d desired_acc_lpf{0.5};
+  autoware::signal_processing::LowpassFilter1d desired_acc_lpf{0.0};
   autoware::signal_processing::LowpassFilter1d measured_acc_lpf{0.0};
 };
 
