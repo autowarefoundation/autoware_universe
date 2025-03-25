@@ -107,9 +107,9 @@ bool Tracker::updateWithMeasurement(
 
     // update total existence probability
     const double existence_probability =
-      channel_info.trust_existence_probability ? object.existence_probability : 0.6;
+      channel_info.trust_existence_probability ? object.existence_probability : 0.9;
     total_existence_probability_ = updateProbability(
-      total_existence_probability_, existence_probability, probability_false_detection);
+      total_existence_probability_, existence_probability * probability_true_detection, probability_false_detection);
   }
 
   last_update_with_measurement_time_ = measurement_time;
@@ -254,7 +254,7 @@ bool Tracker::isConfident() const
     // debug message
     std::cout << "Tracker is confident, axis_sq " << major_axis_sq << " x " << minor_axis_sq
               << std::endl;
-    std::cout << "  known probability " << getKnownObjectProbability() << std::endl;
+    std::cout << "  known probability " << getKnownObjectProbability() << " " << total_existence_probability_ << std::endl;
     return true;
   }
 

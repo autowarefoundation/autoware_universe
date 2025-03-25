@@ -59,6 +59,7 @@ public:
     existence_vector = existence_probabilities_;
     return existence_vector.size() > 0;
   }
+  float getTotalExistenceProbability() const { return total_existence_probability_; }
   bool updateWithMeasurement(
     const types::DynamicObject & object, const rclcpp::Time & measurement_time,
     const types::InputChannel & channel_info);
