@@ -86,7 +86,9 @@ private:
   void publishDebugInfo();
   void displayStatus();
 
-  void setStatus(DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg, const bool is_critical = false);
+  void setStatus(
+    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg,
+    const bool is_critical = false);
 
   autoware_utils::InterProcessPollingSubscriber<Odometry> sub_kinematics_{
     this, "~/input/kinematics"};

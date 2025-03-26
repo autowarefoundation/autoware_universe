@@ -33,7 +33,8 @@ std::pair<double, size_t> getAbsMaxValAndIdx(const std::vector<double> & v);
 Trajectory resampleTrajectory(const Trajectory & trajectory, const double min_interval);
 
 Trajectory getStopTrajectory(
-  const Trajectory & trajectory, const int nearest_traj_idx, const double current_vel, const double decel);
+  const Trajectory & trajectory, const int nearest_traj_idx, const double current_vel,
+  const double decel);
 
 void calcCurvature(
   const Trajectory & trajectory, std::vector<double> & curvatures,
