@@ -109,7 +109,8 @@ bool Tracker::updateWithMeasurement(
     const double existence_probability =
       channel_info.trust_existence_probability ? object.existence_probability : 0.9;
     total_existence_probability_ = updateProbability(
-      total_existence_probability_, existence_probability * probability_true_detection, probability_false_detection);
+      total_existence_probability_, existence_probability * probability_true_detection,
+      probability_false_detection);
   }
 
   last_update_with_measurement_time_ = measurement_time;
@@ -243,17 +244,34 @@ bool Tracker::isConfident() const
 {
   // check the number of measurements
   const int count = getTotalMeasurementCount();
+  if (count < 2) {
+    return false;
+  }
 
   // check covariance ellipses size, if the size is too large, the tracker is not confident
+  // TODO: consider the velocity covariance
+  //       one of solution is extrapolate the tracker and check the position covariance
   double major_axis_sq = 0.0;
   double minor_axis_sq = 0.0;
   getPositionCovarianceEigenSq(major_axis_sq, minor_axis_sq);
 
-  // if the tracker has enough measurements and the ellipse size is small, the tracker is confident
-  if (count >= 2 && major_axis_sq < 0.25) {
+  // if the ellipse size is small or the existence probability is high, the tracker is confident
+  if (major_axis_sq < 0.25 || (getTotalExistenceProbability() > 0.7 && major_axis_sq < 1.6)) {
+    // debug message
+    // if (major_axis_sq > 0.5 || minor_axis_sq > 0.5)
+    {
+      std::cout << "Tracker is confident " << getUuidString().substr(0, 6) << " "
+                << getTotalExistenceProbability() << ", axis_sq " << major_axis_sq << " x "
+                << minor_axis_sq << std::endl;
+    }
     return true;
   }
-
+  // // debug message
+  // {
+  //   std::cout << "Tracker is not confident " << getUuidString().substr(0, 6) << " "
+  //             << getTotalExistenceProbability() << " , axis_sq " << major_axis_sq << " x "
+  //             << minor_axis_sq << std::endl;
+  // }
   return false;
 }
 
@@ -267,8 +285,8 @@ bool Tracker::isExpired(const rclcpp::Time & now) const
     double major_axis_sq = 0.0;
     double minor_axis_sq = 0.0;
     getPositionCovarianceEigenSq(major_axis_sq, minor_axis_sq);
-    std::cout << "Tracker is expired " << elapsed_time << " , axis_sq " << major_axis_sq << " x "
-              << minor_axis_sq << std::endl;
+    std::cout << "Tracker is expired " << getUuidString().substr(0, 6) << " " << elapsed_time
+              << " , axis_sq " << major_axis_sq << " x " << minor_axis_sq << std::endl;
     return true;
   }
 
@@ -278,9 +296,9 @@ bool Tracker::isExpired(const rclcpp::Time & now) const
     double major_axis_sq = 0.0;
     double minor_axis_sq = 0.0;
     getPositionCovarianceEigenSq(major_axis_sq, minor_axis_sq);
-    std::cout << "Tracker is expired " << elapsed_time << " , existence_probability "
-              << existence_probability << " , axis_sq " << major_axis_sq << " x "
-              << minor_axis_sq << std::endl;
+    std::cout << "Tracker is expired " << getUuidString().substr(0, 6) << " " << elapsed_time
+              << ", existence_probability " << existence_probability << " , axis_sq "
+              << major_axis_sq << " x " << minor_axis_sq << std::endl;
     return true;
   }
 
@@ -289,10 +307,13 @@ bool Tracker::isExpired(const rclcpp::Time & now) const
   double minor_axis_sq = 0.0;
   getPositionCovarianceEigenSq(major_axis_sq, minor_axis_sq);
 
-  if (elapsed_time > 0.18 && (major_axis_sq > 1.6 || minor_axis_sq > 0.6)) {
+  if (
+    elapsed_time > 0.18 && (major_axis_sq > 1.6 || minor_axis_sq > 0.6) &&
+    existence_probability < 0.5) {
     // debug message
-    std::cout << "Tracker is expired " << elapsed_time << " , axis_sq " << major_axis_sq << " x "
-              << minor_axis_sq << std::endl;
+    std::cout << "Tracker is expired " << getUuidString().substr(0, 6) << " " << elapsed_time
+              << ", existence_probability " << existence_probability << " , axis_sq "
+              << major_axis_sq << " x " << minor_axis_sq << std::endl;
     return true;
   }
 
@@ -318,7 +339,7 @@ double Tracker::getPositionCovarianceSizeSq() const
   using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
   auto & pose_cov = object_.pose_covariance;
   const double determinant = pose_cov[XYZRPY_COV_IDX::X_X] * pose_cov[XYZRPY_COV_IDX::Y_Y] -
-  pose_cov[XYZRPY_COV_IDX::X_Y] * pose_cov[XYZRPY_COV_IDX::Y_X];
+                             pose_cov[XYZRPY_COV_IDX::X_Y] * pose_cov[XYZRPY_COV_IDX::Y_X];
 
   // position covariance size is square root of the determinant
   return determinant;
