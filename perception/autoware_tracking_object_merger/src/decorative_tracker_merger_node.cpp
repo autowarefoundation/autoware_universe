@@ -137,6 +137,10 @@ DecorativeTrackerMergerNode::DecorativeTrackerMergerNode(const rclcpp::NodeOptio
   tracker_state_parameter_.decay_rate =
     declare_parameter<double>("tracker_state_parameter.decay_rate");
   tracker_state_parameter_.max_dt = declare_parameter<double>("tracker_state_parameter.max_dt");
+  delay_main_objects_tolerance_ = declare_parameter<double>("delay_main_objects_tolerance");
+  duration_empty_main_objects_tolerance_ =
+    declare_parameter<double>("duration_empty_main_objects_tolerance");
+  delay_sub_objects_tolerance_ = declare_parameter<double>("delay_sub_objects_tolerance");
 
   const std::string main_sensor_type = declare_parameter<std::string>("main_sensor_type");
   const std::string sub_sensor_type = declare_parameter<std::string>("sub_sensor_type");
@@ -168,6 +172,14 @@ DecorativeTrackerMergerNode::DecorativeTrackerMergerNode(const rclcpp::NodeOptio
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+
+  // diagnostics
+  diagnostics_interface_ptr_ = std::make_unique<autoware::universe_utils::DiagnosticsInterface>(
+    this, "decorative_object_merger_node");
+  stop_watch_ptr_->tic("delay_main_objects");
+  stop_watch_ptr_->tic("duration_empty_main_objects");
+  stop_watch_ptr_->tic("delay_sub_objects");
+  is_empty_previous_main_objects_ = false;
 }
 
 void DecorativeTrackerMergerNode::set3dDataAssociation(
@@ -200,6 +212,18 @@ void DecorativeTrackerMergerNode::mainObjectsCallback(
   const TrackedObjects::ConstSharedPtr & main_objects)
 {
   stop_watch_ptr_->toc("processing_time", true);
+  stop_watch_ptr_->toc("delay_main_objects", true);
+  diagnostics_interface_ptr_->clear();
+
+  // check if main objects is empty and duration
+  if (main_objects->objects.empty() && is_empty_previous_main_objects_) {
+    is_empty_previous_main_objects_ = true;
+  } else if (main_objects->objects.empty() && !is_empty_previous_main_objects_) {
+    stop_watch_ptr_->toc("duration_empty_main_objects", true);
+    is_empty_previous_main_objects_ = true;
+  } else {
+    is_empty_previous_main_objects_ = false;
+  }
 
   /* transform to target merge coordinate */
   TrackedObjects transformed_objects;
@@ -243,12 +267,16 @@ void DecorativeTrackerMergerNode::mainObjectsCallback(
   const auto & tracked_objects = getTrackedObjects(transformed_main_objects->header);
   merged_object_pub_->publish(tracked_objects);
 
+  // update diagnostics
+  updateDiagnostics();
+
   published_time_publisher_->publish_if_subscribed(
     merged_object_pub_, tracked_objects.header.stamp);
   processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/cyclic_time_ms", stop_watch_ptr_->toc("cyclic_time", true));
   processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/processing_time_ms", stop_watch_ptr_->toc("processing_time", true));
+  diagnostics_interface_ptr_->publish(tracked_objects.header.stamp);
 }
 
 /**
@@ -259,6 +287,9 @@ void DecorativeTrackerMergerNode::mainObjectsCallback(
  */
 void DecorativeTrackerMergerNode::subObjectsCallback(const TrackedObjects::ConstSharedPtr & msg)
 {
+  stop_watch_ptr_->toc("delay_sub_objects", true);
+  diagnostics_interface_ptr_->clear();
+
   /* transform to target merge coordinate */
   TrackedObjects transformed_objects;
   if (!autoware::object_recognition_utils::transformObjects(
@@ -277,6 +308,11 @@ void DecorativeTrackerMergerNode::subObjectsCallback(const TrackedObjects::Const
       return (now - rclcpp::Time(sub_object->header.stamp)).seconds() > sub_object_timeout_sec_;
     });
   sub_objects_buffer_.erase(remove_itr, sub_objects_buffer_.end());
+
+  // update diagnostics
+  updateDiagnostics();
+
+  diagnostics_interface_ptr_->publish(transformed_sub_objects->header.stamp);
 }
 
 /**
@@ -444,6 +480,46 @@ TrackerState DecorativeTrackerMergerNode::createNewTracker(
   auto new_tracker = TrackerState(input_index, current_time, input_object);
   new_tracker.setParameter(tracker_state_parameter_);
   return new_tracker;
+}
+
+void DecorativeTrackerMergerNode::updateDiagnostics()
+{
+  const double delay_main_objects = stop_watch_ptr_->toc("delay_main_objects", false) * 1e-3;
+  const double duration_empty_main_objects =
+    stop_watch_ptr_->toc("duration_empty_main_objects", false) * 1e-3;
+  const double delay_sub_objects = stop_watch_ptr_->toc("delay_sub_objects", false) * 1e-3;
+
+  diagnostics_interface_ptr_->add_key_value("delay_main_objects", delay_main_objects);
+  if (delay_main_objects > delay_main_objects_tolerance_) {
+    std::stringstream message;
+    message << "Main object is delayed for longer than tolerance " << delay_main_objects << " > "
+            << delay_main_objects_tolerance_;
+    diagnostics_interface_ptr_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, message.str());
+  }
+
+  if (is_empty_previous_main_objects_) {
+    diagnostics_interface_ptr_->add_key_value(
+      "duration_empty_main_objects", duration_empty_main_objects);
+    if (duration_empty_main_objects > duration_empty_main_objects_tolerance_) {
+      std::stringstream message;
+      message << "Main object continues to be empty for longer than tolerance "
+              << duration_empty_main_objects << " > " << duration_empty_main_objects_tolerance_;
+      diagnostics_interface_ptr_->update_level_and_message(
+        diagnostic_msgs::msg::DiagnosticStatus::WARN, message.str());
+    }
+  } else {
+    diagnostics_interface_ptr_->add_key_value("duration_empty_main_objects", 0.0);
+  }
+
+  diagnostics_interface_ptr_->add_key_value("delay_sub_objects", delay_sub_objects);
+  if (delay_sub_objects > delay_sub_objects_tolerance_) {
+    std::stringstream message;
+    message << "Sub object is delayed for longer than tolerance" << delay_sub_objects << " > "
+            << delay_sub_objects_tolerance_;
+    diagnostics_interface_ptr_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, message.str());
+  }
 }
 
 }  // namespace autoware::tracking_object_merger
