@@ -55,6 +55,14 @@ struct AstarParam
   double smoothness_weight;
   double obstacle_distance_weight;
   double goal_lat_distance_weight;
+  double final_segment_threshold;
+  double extra_steering_penalty_factor;
+  double yaw_weight;
+  double distance_to_goal_extension_weight;
+  double reparking_forward_first_weight;
+  double reparking_deviation_penalty;
+  double reparking_alignment_weight;
+  double min_out_distance;
 };
 
 struct AstarNode
@@ -116,7 +124,15 @@ public:
         node.declare_parameter<double>("astar.distance_heuristic_weight"),
         node.declare_parameter<double>("astar.smoothness_weight"),
         node.declare_parameter<double>("astar.obstacle_distance_weight"),
-        node.declare_parameter<double>("astar.goal_lat_distance_weight")},
+        node.declare_parameter<double>("astar.goal_lat_distance_weight"),
+        node.declare_parameter<double>("astar.final_segment_threshold"),
+        node.declare_parameter<double>("astar.extra_steering_penalty_factor"),
+        node.declare_parameter<double>("astar.yaw_weight"),
+        node.declare_parameter<double>("astar.distance_to_goal_extension_weight"),
+        node.declare_parameter<double>("astar.reparking_forward_first_weight"),
+        node.declare_parameter<double>("astar.reparking_deviation_penalty"),
+        node.declare_parameter<double>("astar.reparking_alignment_weight"),
+        node.declare_parameter<double>("astar.min_out_distance")},
       node.get_clock())
   {
   }
@@ -125,6 +141,8 @@ public:
   bool makePlan(const Pose & start_pose, const Pose & goal_pose) override;
 
   bool makePlan(const Pose & start_pose, const std::vector<Pose> & goal_candidates) override;
+
+  void setReparking(bool is_reparking) override;
 
   const PlannerWaypoints & getWaypoints() const { return waypoints_; }
 
@@ -151,6 +169,7 @@ private:
   double getDirectionChangeCost(const double dir_distance) const;
   double getObsDistanceCost(const IndexXYT & index, const EDTData & obs_edt) const;
   double getLatDistanceCost(const Pose & pose) const;
+  double computePathLength(const AstarNode & node) const;
 
   // Algorithm specific param
   AstarParam astar_param_;
@@ -178,8 +197,17 @@ private:
   double min_expansion_dist_;
   double max_expansion_dist_;
   double near_goal_dist_;
+  double final_segment_threshold_;
+  double extra_steering_penalty_factor_;
+  double yaw_weight_;
+  double distance_to_goal_extension_weight_;
+  double reparking_forward_first_weight_;
+  double reparking_deviation_penalty_;
+  double reparking_alignment_weight_;
+  double min_out_distance_;
   bool is_backward_search_;
   bool is_multiple_goals_;
+  bool is_reparking_;
 
   // the following constexpr values were found to be best by trial and error, through multiple
   // tests, and are not expected to be changed regularly, therefore they were not made into ros

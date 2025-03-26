@@ -29,6 +29,30 @@ ArrivalChecker::ArrivalChecker(rclcpp::Node * node) : vehicle_stop_checker_(node
   angle_ = autoware_utils::deg2rad(angle_deg);
   distance_ = node->declare_parameter<double>("arrival_check_distance");
   duration_ = node->declare_parameter<double>("arrival_check_duration");
+
+  // scenario subscriber
+  sub_scenario_ = node->create_subscription<autoware_internal_planning_msgs::msg::Scenario>(
+    "/planning/scenario_planning/scenario", rclcpp::QoS{1},
+    std::bind(&ArrivalChecker::onScenario, this, std::placeholders::_1));
+
+  // parking_state subscriber
+  sub_parking_state_ = node->create_subscription<std_msgs::msg::Bool>(
+    "/planning/scenario_planning/parking/is_completed", rclcpp::QoS{1},
+    std::bind(&ArrivalChecker::onParking, this, std::placeholders::_1));
+
+  // default
+  current_scenario_ = autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING;
+  parking_completed_ = false;
+}
+
+void ArrivalChecker::onScenario(const autoware_internal_planning_msgs::msg::Scenario::ConstSharedPtr msg)
+{
+  current_scenario_ = msg->current_scenario;  // "LANEDRIVING" or "PARKING"
+}
+
+void ArrivalChecker::onParking(const std_msgs::msg::Bool::ConstSharedPtr msg)
+{
+  parking_completed_ = msg->data;
 }
 
 void ArrivalChecker::set_goal()
@@ -66,6 +90,13 @@ bool ArrivalChecker::is_arrived(const PoseStamped & pose) const
   const double yaw_diff = autoware_utils::normalize_radian(yaw_pose - yaw_goal);
   if (angle_ < std::fabs(yaw_diff)) {
     return false;
+  }
+
+  if (current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::PARKING) {
+    if (!parking_completed_) {
+      return false;
+    }
+    RCLCPP_INFO_STREAM(rclcpp::get_logger("ArrivalChecker"), "Parking completed");
   }
 
   // Check vehicle stopped.

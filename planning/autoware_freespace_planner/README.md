@@ -56,6 +56,8 @@ None
 | `vehicle_shape_margin_m`     | double | vehicle margin                                                                  |
 | `replan_when_obstacle_found` | bool   | whether replanning when obstacle has found on the trajectory                    |
 | `replan_when_course_out`     | bool   | whether replanning when vehicle is out of course                                |
+| `parking_accuracy_tolerance` | double | the acceptable tolerance for the vehicle's final orientation                    |
+| `max_replan_count`           | int    | the maximum number of times the planner is allowed to replan                    |
 
 #### Planner common parameters
 
@@ -127,9 +129,13 @@ if (replan is required?) then (yes)
 else (no)
 endif
 
-
 if (vehicle is stopped?) then (yes)
-  stop
+  if (is parking accurate enough?) then (yes)
+    stop
+  else (no)
+    :replan for accurate parking;
+    stop
+  endif
 else (no)
 endif
 

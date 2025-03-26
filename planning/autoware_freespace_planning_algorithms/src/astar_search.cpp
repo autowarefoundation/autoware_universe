@@ -116,6 +116,16 @@ AstarSearch::AstarSearch(
   min_expansion_dist_ = astar_param_.expansion_distance;
   max_expansion_dist_ = collision_vehicle_shape_.base_length * base_length_max_expansion_factor_;
 
+  final_segment_threshold_ = astar_param_.final_segment_threshold;
+  extra_steering_penalty_factor_ = astar_param_.extra_steering_penalty_factor;
+  yaw_weight_ = astar_param_.yaw_weight;
+  distance_to_goal_extension_weight_ = astar_param_.distance_to_goal_extension_weight;
+  reparking_forward_first_weight_ = astar_param_.reparking_forward_first_weight;
+  reparking_deviation_penalty_ = astar_param_.reparking_deviation_penalty;
+  reparking_alignment_weight_ = astar_param_.reparking_alignment_weight;
+  min_out_distance_ = astar_param_.min_out_distance;
+  is_reparking_ = false;
+
   near_goal_dist_ =
     std::max(astar_param.near_goal_distance, planner_common_param.longitudinal_goal_range);
 }
@@ -216,6 +226,12 @@ bool AstarSearch::makePlan(
   }
 
   return true;
+}
+
+void AstarSearch::setReparking(bool is_reparking)
+{
+  is_reparking_ = is_reparking;
+  return;
 }
 
 void AstarSearch::setCollisionFreeDistanceMap()
@@ -357,6 +373,50 @@ void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
     move_cost += getObsDistanceCost(next_index, obs_edt);
     move_cost += getLatDistanceCost(next_pose);
     if (is_direction_switch) move_cost += getDirectionChangeCost(current_node.dir_distance);
+
+    double yaw_weight = yaw_weight_;
+    double distance_to_goal_extension_weight = distance_to_goal_extension_weight_;
+    double reparking_forward_first_weight = reparking_forward_first_weight_;
+    // is in reparking state
+    if (is_reparking_) {
+      // first forward then reverse
+      if (current_node.parent == nullptr && is_back) {
+        move_cost += reparking_forward_first_weight;
+      }
+      yaw_weight *= reparking_alignment_weight_;
+      distance_to_goal_extension_weight *= reparking_alignment_weight_;
+    }
+    if (is_reparking_ || current_node.dist_to_goal < final_segment_threshold_) {
+      // steering param
+      double steering_ratio = std::abs(static_cast<double>(steering_index)) /
+                              static_cast<double>(planner_common_param_.turning_steps);
+      double extra_steering_penalty = extra_steering_penalty_factor_ * steering_ratio;
+
+      // yaw deviation
+      double yaw_diff = autoware::universe_utils::normalize_radian(
+        tf2::getYaw(goal_pose_.orientation) - tf2::getYaw(next_pose.orientation));
+      double yaw_cost = std::abs(yaw_diff) * yaw_weight;
+
+      bool direction_switched =
+        (current_node.parent && (current_node.is_back != current_node.parent->is_back));
+
+      // parameter for straight backward motion during reparking
+      if (is_reparking_ && direction_switched) {
+        double deviation_penalty = reparking_deviation_penalty_ * yaw_weight;
+        move_cost += deviation_penalty;
+      }
+
+      // alignment
+      double dx = next_pose.position.x - goal_pose_.position.x;
+      double dy = next_pose.position.y - goal_pose_.position.y;
+      double lateral_offset = std::fabs(
+        -std::sin(tf2::getYaw(goal_pose_.orientation)) * dx +
+        std::cos(tf2::getYaw(goal_pose_.orientation)) * dy);
+      double distance_to_goal_extension_cost = lateral_offset * distance_to_goal_extension_weight;
+
+      // total cost
+      move_cost += extra_steering_penalty + distance_to_goal_extension_cost + yaw_cost;
+    }
 
     double total_cost = move_cost + estimateCost(next_pose, next_index);
     // Compare cost
@@ -539,11 +599,98 @@ bool AstarSearch::isGoal(const AstarNode & node) const
     return true;
   };
 
-  if (checkGoal(goal_pose_)) return true;
+  bool is_goal_position = false;
+  if (checkGoal(goal_pose_)) {
+    is_goal_position = true;
+  } else {
+    for (const auto & alt_goal : alternate_goals_) {
+      if (checkGoal(alt_goal)) {
+        is_goal_position = true;
+        break;
+      }
+    }
+  }
 
-  return std::any_of(
-    alternate_goals_.begin(), alternate_goals_.end(),
-    [&checkGoal](const Pose & pose) { return checkGoal(pose); });
+  if (!is_goal_position) {
+    return false;
+  }
+
+  if (!is_reparking_) {
+    return true;
+  }
+
+  // ------------------------------------------------------
+  //   [Additional Checks under Reparking Mode]
+  // ------------------------------------------------------
+  // Backtrack from this node to the start node and count:
+  //  a) Number of direction changes (EXACTLY 1)
+  //  b) Maximum distance from the trajectory to the target
+
+  int direction_switch_count = 0;
+  double max_dist_from_goal = 0.0;
+  const int required_switch_count = 1;                // direction_changed occurs exactly once
+  const double min_out_distance = min_out_distance_;  // 2.0
+
+  const AstarNode * current = &node;
+  bool prev_is_back = current->is_back;
+
+  while (current != nullptr) {
+    double dist_g = calc_distance2d(node2pose(*current), goal_pose_);
+    if (dist_g > max_dist_from_goal) {
+      max_dist_from_goal = dist_g;
+    }
+
+    // check whether the direction_changed has been excuted?
+    const AstarNode * parent = current->parent;
+    if (parent) {
+      bool direction_changed = (current->is_back != prev_is_back);
+      // direction_changed must occu outside the minimum pull-out distance from goal
+      if (direction_changed && dist_g >= min_out_distance) {
+        direction_switch_count++;
+      }
+      prev_is_back = current->is_back;
+    }
+
+    current = parent;
+  }
+
+  bool exactly_one_switch = (direction_switch_count == required_switch_count);
+
+  bool enough_move_out = (max_dist_from_goal >= min_out_distance);
+
+  if (!exactly_one_switch || !enough_move_out) {
+    RCLCPP_DEBUG(
+      rclcpp::get_logger("AstarSearch"),
+      "Reparking path found but direction_switch_count=%d (need == %d) or didn't move out enough "
+      "(%.2f < %.2f) => ignore",
+      direction_switch_count, required_switch_count, max_dist_from_goal, min_out_distance);
+
+    return false;
+  }
+
+  return true;
+}
+
+double AstarSearch::computePathLength(const AstarNode & node) const
+{
+  double total_length = 0.0;
+
+  const AstarNode * current = &node;
+
+  Pose current_pose = node2pose(*current);
+
+  while (current->parent != nullptr) {
+    const AstarNode * parent = current->parent;
+    Pose parent_pose = node2pose(*parent);
+
+    double dist = autoware::universe_utils::calc_distance2d(current_pose, parent_pose);
+    total_length += dist;
+
+    current = parent;
+    current_pose = parent_pose;
+  }
+
+  return total_length;
 }
 
 void AstarSearch::setShiftedGoalPose(const Pose & goal_pose, const double lat_offset) const
