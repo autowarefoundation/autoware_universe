@@ -12,8 +12,6 @@
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
 
-  <depend>autoware_test_utils</depend>
-  <depend>autoware_utils</depend>
   <depend>message_filters</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>

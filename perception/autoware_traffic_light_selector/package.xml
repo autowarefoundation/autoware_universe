@@ -13,18 +13,13 @@
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
 
-  <depend>autoware_test_utils</depend>
   <depend>autoware_utils</depend>
-  <depend>cgal</depend>
-  <depend>cv_bridge</depend>
-  <depend>geometry_msgs</depend>
-  <depend>libopencv-dev</depend>
   <depend>message_filters</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>
-  <depend>sophus</depend>
   <depend>tier4_perception_msgs</depend>
+  <build_depend>ament_cmake_gtest</build_depend>
   <build_depend>autoware_cmake</build_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
