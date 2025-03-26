@@ -257,26 +257,27 @@ std::vector<CruiseObstacle> ObstacleCruiseModule::filter_cruise_obstacle_for_pre
       cruise_obstacles.push_back(*cruise_obstacle);
       continue;
     }
+  }
 
-    // 3. precise filtering for yield cruise
-    if (obstacle_filtering_param_.enable_yield) {
-      const auto yield_obstacles = find_yield_cruise_obstacles(
-        odometry, objects, predicted_objects_stamp, traj_points, vehicle_info);
-      if (yield_obstacles) {
-        for (const auto & y : yield_obstacles.value()) {
-          // Check if there is no member with the same UUID in cruise_obstacles
-          auto it = std::find_if(
-            cruise_obstacles.begin(), cruise_obstacles.end(),
-            [&y](const auto & c) { return y.uuid == c.uuid; });
+  // 3. precise filtering for yield cruise
+  if (obstacle_filtering_param_.enable_yield) {
+    const auto yield_obstacles = find_yield_cruise_obstacles(
+      odometry, objects, predicted_objects_stamp, traj_points, vehicle_info);
+    if (yield_obstacles) {
+      for (const auto & y : yield_obstacles.value()) {
+        // Check if there is no member with the same UUID in cruise_obstacles
+        auto it = std::find_if(
+          cruise_obstacles.begin(), cruise_obstacles.end(),
+          [&y](const auto & c) { return y.uuid == c.uuid; });
 
-          // If no matching UUID found, insert yield obstacle into cruise_obstacles
-          if (it == cruise_obstacles.end()) {
-            cruise_obstacles.push_back(y);
-          }
+        // If no matching UUID found, insert yield obstacle into cruise_obstacles
+        if (it == cruise_obstacles.end()) {
+          cruise_obstacles.push_back(y);
         }
       }
     }
   }
+
   prev_cruise_object_obstacles_ = cruise_obstacles;
 
   return cruise_obstacles;
@@ -461,14 +462,14 @@ std::optional<std::vector<CruiseObstacle>> ObstacleCruiseModule::find_yield_crui
       obstacle_filtering_param_.stopped_obstacle_velocity_threshold;
     if (is_moving) {
       const bool is_within_lat_dist_threshold =
-        o->get_dist_to_traj_lateral(traj_points) <
+        std::abs(o->get_dist_to_traj_lateral(traj_points)) <
         obstacle_filtering_param_.yield_lat_distance_threshold;
       if (is_within_lat_dist_threshold) moving_objects.push_back(o);
       return;
     }
     // lat threshold is larger for stopped obstacles
     const bool is_within_lat_dist_threshold =
-      o->get_dist_to_traj_lateral(traj_points) <
+      std::abs(o->get_dist_to_traj_lateral(traj_points)) <
       obstacle_filtering_param_.yield_lat_distance_threshold +
         obstacle_filtering_param_.max_lat_dist_between_obstacles;
     if (is_within_lat_dist_threshold) stopped_objects.push_back(o);
@@ -517,8 +518,8 @@ std::optional<std::vector<CruiseObstacle>> ObstacleCruiseModule::find_yield_crui
         longitudinal_distance_between_obstacles / moving_object_speed <
         obstacle_filtering_param_.max_obstacles_collision_time;
       if (are_obstacles_aligned && obstacles_collide_within_threshold_time) {
-        const auto yield_obstacle =
-          create_yield_cruise_obstacle(moving_object, predicted_objects_stamp, traj_points);
+        const auto yield_obstacle = create_yield_cruise_obstacle(
+          moving_object, stopped_object, predicted_objects_stamp, traj_points);
         if (yield_obstacle) {
           yield_obstacles.push_back(*yield_obstacle);
           using autoware::objects_of_interest_marker_interface::ColorName;
@@ -703,8 +704,9 @@ ObstacleCruiseModule::create_collision_points_for_outside_cruise_obstacle(
 }
 
 std::optional<CruiseObstacle> ObstacleCruiseModule::create_yield_cruise_obstacle(
-  const std::shared_ptr<PlannerData::Object> object, const rclcpp::Time & predicted_objects_stamp,
-  const std::vector<TrajectoryPoint> & traj_points)
+  const std::shared_ptr<PlannerData::Object> object,
+  const std::shared_ptr<PlannerData::Object> stopped_object,
+  const rclcpp::Time & predicted_objects_stamp, const std::vector<TrajectoryPoint> & traj_points)
 {
   if (traj_points.empty()) return std::nullopt;
   // check label
@@ -715,6 +717,15 @@ std::optional<CruiseObstacle> ObstacleCruiseModule::create_yield_cruise_obstacle
   if (!is_outside_cruise_obstacle(object->predicted_object.classification.at(0).label)) {
     RCLCPP_DEBUG(
       logger_, "[Cruise] Ignore yield obstacle (%s) since its type is not designated.",
+      obj_uuid_str.substr(0, 4).c_str());
+    return std::nullopt;
+  }
+
+  if (!is_side_stopped_obstacle(stopped_object->predicted_object.classification.at(0).label)) {
+    RCLCPP_DEBUG(
+      logger_,
+      "[Cruise] Ignore yield obstacle (%s) since the corresponding stopped object type is not "
+      "designated as side_stopped.",
       obj_uuid_str.substr(0, 4).c_str());
     return std::nullopt;
   }
@@ -776,6 +787,12 @@ bool ObstacleCruiseModule::is_inside_cruise_obstacle(const uint8_t label) const
 bool ObstacleCruiseModule::is_outside_cruise_obstacle(const uint8_t label) const
 {
   const auto & types = obstacle_filtering_param_.outside_object_types;
+  return std::find(types.begin(), types.end(), label) != types.end();
+}
+
+bool ObstacleCruiseModule::is_side_stopped_obstacle(const uint8_t label) const
+{
+  const auto & types = obstacle_filtering_param_.side_stopped_object_types;
   return std::find(types.begin(), types.end(), label) != types.end();
 }
 

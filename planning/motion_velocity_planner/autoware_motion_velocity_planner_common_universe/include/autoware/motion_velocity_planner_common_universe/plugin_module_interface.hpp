@@ -32,8 +32,8 @@
 namespace autoware::motion_velocity_planner
 {
 
-using tier4_planning_msgs::msg::PlanningFactor;
-using tier4_planning_msgs::msg::SafetyFactorArray;
+using autoware_internal_planning_msgs::msg::PlanningFactor;
+using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 
 class PluginModuleInterface
 {

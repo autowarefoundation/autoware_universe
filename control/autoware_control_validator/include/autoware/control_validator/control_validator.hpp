@@ -25,6 +25,7 @@
 #include <autoware_utils/system/stop_watch.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_control_msgs/msg/control.hpp>
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
@@ -38,6 +39,7 @@
 
 namespace autoware::control_validator
 {
+using autoware_control_msgs::msg::Control;
 using autoware_control_validator::msg::ControlValidatorStatus;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
@@ -51,6 +53,8 @@ struct ValidationParams
   double rolling_back_velocity;
   double over_velocity_ratio;
   double over_velocity_offset;
+  double overrun_stop_point_dist;
+  double nominal_latency_threshold;
 };
 
 /**
@@ -66,6 +70,12 @@ public:
    * @param options Node options
    */
   explicit ControlValidator(const rclcpp::NodeOptions & options);
+
+  /**
+   * @brief Callback function for the control component output.
+   * @param msg Control message
+   */
+  void on_control_cmd(const Control::ConstSharedPtr msg);
 
   /**
    * @brief Callback function for the predicted trajectory.
@@ -84,6 +94,14 @@ public:
     const Trajectory & predicted_trajectory, const Trajectory & reference_trajectory) const;
 
   void calc_velocity_deviation_status(
+    const Trajectory & reference_trajectory, const Odometry & kinematics);
+
+  /**
+   * @brief Calculate whether the vehicle has overrun a stop point in the trajectory.
+   * @param reference_trajectory Reference trajectory
+   * @param kinematics Current vehicle odometry including pose and twist
+   */
+  void calc_stop_point_overrun_status(
     const Trajectory & reference_trajectory, const Odometry & kinematics);
 
 private:
@@ -134,6 +152,7 @@ private:
     DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg) const;
 
   // Subscribers and publishers
+  rclcpp::Subscription<Control>::SharedPtr sub_control_cmd_;
   rclcpp::Subscription<Trajectory>::SharedPtr sub_predicted_traj_;
   autoware_utils::InterProcessPollingSubscriber<Odometry>::SharedPtr sub_kinematics_;
   autoware_utils::InterProcessPollingSubscriber<Trajectory>::SharedPtr sub_reference_traj_;

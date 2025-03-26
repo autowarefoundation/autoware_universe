@@ -82,6 +82,7 @@ void TrafficLightModuleManager::modifyPathVelocity(
     virtual_wall_marker_creator_.add_virtual_walls(
       traffic_light_scene_module->createVirtualWalls());
   }
+  planning_factor_interface_->publish();
   pub_debug_->publish(debug_marker_array);
   pub_virtual_wall_->publish(virtual_wall_marker_creator_.create_markers(clock_->now()));
   pub_tl_state_->publish(tl_state);

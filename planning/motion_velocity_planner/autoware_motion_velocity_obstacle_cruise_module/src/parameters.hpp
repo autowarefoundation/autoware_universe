@@ -64,6 +64,7 @@ struct ObstacleFilteringParam
 {
   std::vector<uint8_t> inside_object_types{};
   std::vector<uint8_t> outside_object_types{};
+  std::vector<uint8_t> side_stopped_object_types{};
   // bool use_pointcloud{};
 
   double max_lat_margin{};
@@ -93,6 +94,8 @@ struct ObstacleFilteringParam
       utils::get_target_object_type(node, "obstacle_cruise.obstacle_filtering.object_type.inside.");
     outside_object_types = utils::get_target_object_type(
       node, "obstacle_cruise.obstacle_filtering.object_type.outside.");
+    side_stopped_object_types = utils::get_target_object_type(
+      node, "obstacle_cruise.obstacle_filtering.object_type.side_stopped.");
     // use_pointcloud = get_or_declare_parameter<bool>(
     //   node, "obstacle_cruise.obstacle_filtering.object_type.pointcloud");
 

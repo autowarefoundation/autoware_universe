@@ -66,10 +66,11 @@ bool StopLineModule::modifyPathVelocity(PathWithLaneId * path)
 
   // TODO(soblin): PlanningFactorInterface use trajectory class
   planning_factor_interface_->add(
-    path->points, trajectory->compute(*stop_point).point.pose,
-    planner_data_->current_odometry->pose, planner_data_->current_odometry->pose,
-    tier4_planning_msgs::msg::PlanningFactor::STOP, tier4_planning_msgs::msg::SafetyFactorArray{},
-    true /*is_driving_forward*/, 0.0, 0.0 /*shift distance*/, "stopline");
+    path->points, planner_data_->current_odometry->pose,
+    trajectory->compute(*stop_point).point.pose,
+    autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+    autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
+    0.0 /*shift distance*/, "stopline");
 
   updateStateAndStoppedTime(
     &state_, &stopped_time_, clock_->now(), *stop_point - ego_s, planner_data_->isVehicleStopped());

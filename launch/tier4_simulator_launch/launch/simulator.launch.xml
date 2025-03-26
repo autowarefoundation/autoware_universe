@@ -134,7 +134,58 @@
       <!-- traffic light module -->
       <group if="$(var perception/enable_traffic_light)">
         <push-ros-namespace namespace="traffic_light_recognition"/>
-        <include file="$(find-pkg-share tier4_perception_launch)/launch/traffic_light_recognition/traffic_light.launch.xml"/>
+        <include file="$(find-pkg-share tier4_perception_launch)/launch/traffic_light_recognition/traffic_light.launch.xml">
+          <arg name="fusion_only" value="$(var fusion_only)"/>
+          <arg name="camera_namespaces" value="[camera6, camera7]"/>
+          <arg name="use_high_accuracy_detection" value="true"/>
+          <arg name="high_accuracy_detection_type" value="fine_detection"/>
+          <arg
+            name="each_traffic_light_map_based_detector_param_path"
+            value="$(find-pkg-share autoware_launch)/config/perception/traffic_light_recognition/traffic_light_map_based_detector/TRAFFIC_LIGHT_RECOGNITION_CAMERA_NAMESPACE_traffic_light_map_based_detector.param.yaml"
+          />
+          <arg
+            name="traffic_light_fine_detector_param_path"
+            value="$(find-pkg-share autoware_launch)/config/perception/traffic_light_recognition/traffic_light_fine_detector/traffic_light_fine_detector.param.yaml"
+          />
+          <arg
+            name="yolox_traffic_light_detector_param_path"
+            value="$(find-pkg-share autoware_launch)/config/perception/traffic_light_recognition/tensorrt_yolox/yolox_traffic_light_detector.param.yaml"
+          />
+          <arg
+            name="car_traffic_light_classifier_param_path"
+            value="$(find-pkg-share autoware_launch)/config/perception/traffic_light_recognition/traffic_light_classifier/car_traffic_light_classifier.param.yaml"
+          />
+          <arg
+            name="pedestrian_traffic_light_classifier_param_path"
+            value="$(find-pkg-share autoware_launch)/config/perception/traffic_light_recognition/traffic_light_classifier/pedestrian_traffic_light_classifier.param.yaml"
+          />
+          <arg
+            name="traffic_light_roi_visualizer_param_path"
+            value="$(find-pkg-share autoware_launch)/config/perception/traffic_light_recognition/traffic_light_visualization/traffic_light_roi_visualizer.param.yaml"
+          />
+          <arg name="traffic_light_selector_param_path" value="$(find-pkg-share autoware_launch)/config/perception/traffic_light_recognition/traffic_light_selector/traffic_light_selector.param.yaml"/>
+          <arg
+            name="traffic_light_occlusion_predictor_param_path"
+            value="$(find-pkg-share autoware_launch)/config/perception/traffic_light_recognition/traffic_light_occlusion_predictor/traffic_light_occlusion_predictor.param.yaml"
+          />
+          <arg
+            name="traffic_light_multi_camera_fusion_param_path"
+            value="$(find-pkg-share autoware_launch)/config/perception/traffic_light_recognition/traffic_light_multi_camera_fusion/traffic_light_multi_camera_fusion.param.yaml"
+          />
+          <arg name="traffic_light_arbiter_param_path" value="$(find-pkg-share autoware_launch)/config/perception/traffic_light_recognition/traffic_light_arbiter/traffic_light_arbiter.param.yaml"/>
+          <arg
+            name="crosswalk_traffic_light_estimator_param_path"
+            value="$(find-pkg-share autoware_launch)/config/perception/traffic_light_recognition/crosswalk_traffic_light_estimator/crosswalk_traffic_light_estimator.param.yaml"
+          />
+          <arg name="whole_image_detection/model_path" value="$(env HOME)/autoware_data/tensorrt_yolox/yolox_s_car_ped_tl_detector_960_960_batch_1.onnx"/>
+          <arg name="whole_image_detection/label_path" value="$(env HOME)/autoware_data/tensorrt_yolox/car_ped_tl_detector_labels.txt"/>
+          <arg name="fine_detection/model_path" value="$(env HOME)/autoware_data/traffic_light_fine_detector/tlr_car_ped_yolox_s_batch_6.onnx"/>
+          <arg name="fine_detection/label_path" value="$(env HOME)/autoware_data/traffic_light_fine_detector/tlr_labels.txt"/>
+          <arg name="classification/car/model_path" value="$(env HOME)/autoware_data/traffic_light_classifier/traffic_light_classifier_mobilenetv2_batch_6.onnx"/>
+          <arg name="classification/car/label_path" value="$(env HOME)/autoware_data/traffic_light_classifier/lamp_labels.txt"/>
+          <arg name="classification/pedestrian/model_path" value="$(env HOME)/autoware_data/traffic_light_classifier/ped_traffic_light_classifier_mobilenetv2_batch_6.onnx"/>
+          <arg name="classification/pedestrian/label_path" value="$(env HOME)/autoware_data/traffic_light_classifier/lamp_labels_ped.txt"/>
+        </include>
       </group>
     </group>
   </group>

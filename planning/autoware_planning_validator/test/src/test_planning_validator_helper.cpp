@@ -28,6 +28,7 @@ Trajectory generateTrajectoryWithConstantAcceleration(
   const double acceleration)
 {
   Trajectory trajectory;
+  trajectory.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
   double s = 0.0, v = speed, a = acceleration;
   constexpr auto MAX_DT = 10.0;
   for (size_t i = 0; i < size; ++i) {
@@ -71,6 +72,7 @@ Trajectory generateTrajectoryWithConstantCurvature(
   const auto radius = 1.0 / curvature;
 
   Trajectory trajectory;
+  trajectory.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
   double x = 0.0, y = 0.0, yaw = 0.0;
 
   for (size_t i = 0; i <= size; ++i) {
@@ -106,6 +108,7 @@ Trajectory generateTrajectoryWithConstantSteeringRate(
   const double wheelbase)
 {
   Trajectory trajectory;
+  trajectory.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
   double x = 0.0, y = 0.0, yaw = 0.0, steering_angle_rad = 0.0;
 
   constexpr double MAX_STEERING_ANGLE_RAD = M_PI / 3.0;
@@ -158,6 +161,7 @@ Trajectory generateInfTrajectory()
 Trajectory generateBadCurvatureTrajectory()
 {
   Trajectory trajectory;
+  trajectory.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
 
   double y = 1.5;
   for (double s = 0.0; s <= 10.0; s += 1.0) {
@@ -206,6 +210,8 @@ rclcpp::NodeOptions getNodeOptionsWithDefaultParams()
     "thresholds.distance_deviation", THRESHOLD_DISTANCE_DEVIATION);
   node_options.append_parameter_override(
     "thresholds.longitudinal_distance_deviation", THRESHOLD_LONGITUDINAL_DISTANCE_DEVIATION);
+  node_options.append_parameter_override("thresholds.nominal_latency", THRESHOLD_NOMINAL_LATENCY);
+  node_options.append_parameter_override("thresholds.yaw_deviation", THRESHOLD_YAW_DEVIATION);
   node_options.append_parameter_override(
     "parameters.forward_trajectory_length_acceleration",
     PARAMETER_FORWARD_TRAJECTORY_LENGTH_ACCELERATION);

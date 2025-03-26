@@ -21,6 +21,7 @@
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware/path_optimizer/common_structs.hpp"
 #include "autoware/path_optimizer/type_alias.hpp"
+#include "autoware/path_optimizer/utils/geometry_utils.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 
 #include <Eigen/Core>
@@ -35,18 +36,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-
-namespace autoware_utils
-{
-template <>
-geometry_msgs::msg::Point get_point(const autoware::path_optimizer::ReferencePoint & p);
-
-template <>
-geometry_msgs::msg::Pose get_pose(const autoware::path_optimizer::ReferencePoint & p);
-
-template <>
-double get_longitudinal_velocity(const autoware::path_optimizer::ReferencePoint & p);
-}  // namespace autoware_utils
 
 namespace autoware::path_optimizer
 {
@@ -107,13 +96,7 @@ TrajectoryPoint convertToTrajectoryPoint(const T & point)
 }
 
 template <>
-inline TrajectoryPoint convertToTrajectoryPoint(const ReferencePoint & ref_point)
-{
-  TrajectoryPoint traj_point;
-  traj_point.pose = autoware_utils::get_pose(ref_point);
-  traj_point.longitudinal_velocity_mps = autoware_utils::get_longitudinal_velocity(ref_point);
-  return traj_point;
-}
+TrajectoryPoint convertToTrajectoryPoint(const ReferencePoint & ref_point);
 
 template <typename T>
 std::vector<TrajectoryPoint> convertToTrajectoryPoints(const std::vector<T> & points)

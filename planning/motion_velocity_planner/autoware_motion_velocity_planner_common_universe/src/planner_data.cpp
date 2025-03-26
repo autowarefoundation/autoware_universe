@@ -14,14 +14,16 @@
 
 #include "autoware/motion_velocity_planner_common_universe/planner_data.hpp"
 
-#include "autoware/motion_velocity_planner_common_universe/polygon_utils.hpp"
-#include "autoware/motion_velocity_planner_common_universe/utils.hpp"
 #include "autoware/object_recognition_utils/predicted_path_utils.hpp"
+#include "autoware_lanelet2_extension/utility/query.hpp"
 #include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
-#include "autoware_perception_msgs/msg/predicted_path.hpp"
+#include <autoware/motion_utils/trajectory/interpolation.hpp>
 
 #include <boost/geometry.hpp>
+
+#include <lanelet2_core/geometry/BoundingBox.h>
+#include <lanelet2_core/geometry/LineString.h>
 
 #include <algorithm>
 #include <limits>
@@ -67,6 +69,26 @@ std::optional<geometry_msgs::msg::Pose> get_predicted_object_pose_from_predicted
   return get_predicted_object_pose_from_predicted_path(*predicted_path, obj_stamp, current_stamp);
 }
 }  // namespace
+
+std::optional<TrafficSignalStamped> PlannerData::get_traffic_signal(
+  const lanelet::Id id, const bool keep_last_observation) const
+{
+  const auto & traffic_light_id_map =
+    keep_last_observation ? traffic_light_id_map_last_observed_ : traffic_light_id_map_raw_;
+  if (traffic_light_id_map.count(id) == 0) {
+    return std::nullopt;
+  }
+  return std::make_optional<TrafficSignalStamped>(traffic_light_id_map.at(id));
+}
+
+std::optional<double> PlannerData::calculate_min_deceleration_distance(
+  const double target_velocity) const
+{
+  return motion_utils::calcDecelDistWithJerkAndAccConstraints(
+    current_odometry.twist.twist.linear.x, target_velocity,
+    current_acceleration.accel.accel.linear.x, velocity_smoother_->getMinDecel(),
+    std::abs(velocity_smoother_->getMinJerk()), velocity_smoother_->getMinJerk());
+}
 
 double PlannerData::Object::get_dist_to_traj_poly(
   const std::vector<autoware_utils::Polygon2d> & decimated_traj_polys) const
@@ -184,5 +206,44 @@ void PlannerData::process_predicted_objects(
   for (const auto & predicted_object : predicted_objects.objects) {
     objects.push_back(std::make_shared<Object>(predicted_object));
   }
+}
+
+std::vector<StopPoint> PlannerData::calculate_map_stop_points(
+  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory) const
+{
+  std::vector<StopPoint> stop_points;
+  if (!route_handler) {
+    return stop_points;
+  }
+  autoware_utils::LineString2d trajectory_ls;
+  for (const auto & p : trajectory) {
+    trajectory_ls.emplace_back(p.pose.position.x, p.pose.position.y);
+  }
+  const auto candidates = route_handler->getLaneletMapPtr()->laneletLayer.search(
+    boost::geometry::return_envelope<lanelet::BoundingBox2d>(trajectory_ls));
+  for (const auto & candidate : candidates) {
+    const auto stop_lines = lanelet::utils::query::stopLinesLanelet(candidate);
+    for (const auto & stop_line : stop_lines) {
+      const auto stop_line_2d = lanelet::utils::to2D(stop_line).basicLineString();
+      autoware_utils::MultiPoint2d intersections;
+      boost::geometry::intersection(trajectory_ls, stop_line_2d, intersections);
+      for (const auto & intersection : intersections) {
+        const auto p =
+          geometry_msgs::msg::Point().set__x(intersection.x()).set__y(intersection.y());
+        const auto stop_line_arc_length = motion_utils::calcSignedArcLength(trajectory, 0UL, p);
+        StopPoint sp;
+        sp.ego_trajectory_arc_length =
+          stop_line_arc_length - vehicle_info_.max_longitudinal_offset_m;
+        if (sp.ego_trajectory_arc_length < 0.0) {
+          continue;
+        }
+        sp.stop_line = stop_line_2d;
+        sp.ego_stop_pose =
+          motion_utils::calcInterpolatedPose(trajectory, sp.ego_trajectory_arc_length);
+        stop_points.push_back(sp);
+      }
+    }
+  }
+  return stop_points;
 }
 }  // namespace autoware::motion_velocity_planner

@@ -95,6 +95,17 @@
             bicycle: false
             pedestrian: false
 
+          # If an object does not have this label, the ego vehicle does not assume that the yielded obstacle will cut in due to the object.
+          side_stopped:
+            unknown: false
+            car: true
+            truck: true
+            bus: true
+            trailer: true
+            motorcycle: true
+            bicycle: false
+            pedestrian: false
+
         max_lat_margin: 1.0 # lateral margin between obstacle and trajectory band with ego's width
 
         # if crossing vehicle is determined as target obstacles or not

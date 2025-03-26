@@ -68,7 +68,6 @@ private:
   // ros parameters
   bool ignore_crossing_obstacle_{};
   bool suppress_sudden_stop_{};
-  bool use_pointcloud_{false};
   CommonParam common_param_{};
   StopPlanningParam stop_planning_param_{};
   ObstacleFilteringParam obstacle_filtering_param_{};
@@ -132,6 +131,7 @@ private:
     const Odometry & odometry, const std::vector<TrajectoryPoint> & traj_points,
     const std::vector<TrajectoryPoint> & decimated_traj_points,
     const PlannerData::Pointcloud & point_cloud, const VehicleInfo & vehicle_info,
+    const double dist_to_bumper,
     const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check, size_t ego_idx);
 
   std::optional<geometry_msgs::msg::Point> plan_stop(
@@ -186,9 +186,9 @@ private:
     const VehicleInfo & vehicle_info, const double dist_to_bumper,
     const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check) const;
 
-  std::optional<StopObstacle> create_stop_obstacle_for_point_cloud(
+  StopObstacle create_stop_obstacle_for_point_cloud(
     const std::vector<TrajectoryPoint> & traj_points, const rclcpp::Time & stamp,
-    const geometry_msgs::msg::Point & stop_point) const;
+    const geometry_msgs::msg::Point & stop_point, const double dist_to_bumper) const;
 
   std::optional<std::pair<geometry_msgs::msg::Point, double>>
   create_collision_point_for_outside_stop_obstacle(

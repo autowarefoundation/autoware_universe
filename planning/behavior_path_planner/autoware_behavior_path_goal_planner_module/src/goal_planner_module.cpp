@@ -384,7 +384,7 @@ void LaneParkingPlanner::onTimer()
       closest_start_pose, path_candidates, sorted_indices_opt);
   } else {
     normal_pullover_planning_helper(
-      local_planner_data, goal_candidates, upstream_module_output, current_lanes,
+      local_planner_data, goal_candidates, upstream_module_output, use_bus_stop_area, current_lanes,
       closest_start_pose, path_candidates);
   }
 
@@ -405,7 +405,7 @@ void LaneParkingPlanner::onTimer()
 
 void LaneParkingPlanner::normal_pullover_planning_helper(
   const std::shared_ptr<PlannerData> planner_data, const GoalCandidates & goal_candidates,
-  const BehaviorModuleOutput & upstream_module_output,
+  const BehaviorModuleOutput & upstream_module_output, const bool use_bus_stop_area,
   const lanelet::ConstLanelets current_lanelets, std::optional<Pose> & closest_start_pose,
   std::vector<PullOverPath> & path_candidates)
 {
@@ -464,7 +464,7 @@ void LaneParkingPlanner::normal_pullover_planning_helper(
   if (closest_start_pose) {
     const auto original_pose = planner_data->route_handler->getOriginalGoalPose();
     if (
-      parameters_.bus_stop_area.use_bus_stop_area &&
+      use_bus_stop_area &&
       std::fabs(autoware_utils::normalize_radian(
         autoware_utils::get_rpy(original_pose).z -
         autoware_utils::get_rpy(closest_start_pose.value()).z)) > pull_over_angle_threshold) {
@@ -473,7 +473,7 @@ void LaneParkingPlanner::normal_pullover_planning_helper(
       path_candidates.clear();
       RCLCPP_INFO(getLogger(), "will generate Bezier Paths next");
     }
-  } else if (parameters_.bus_stop_area.use_bus_stop_area && path_candidates.size() == 0) {
+  } else if (use_bus_stop_area && path_candidates.size() == 0) {
     switch_bezier_ = true;
     RCLCPP_INFO(
       getLogger(), "Could not find any shift pull over paths, will generate Bezier Paths next");
@@ -649,8 +649,10 @@ std::pair<LaneParkingResponse, FreespaceParkingResponse> GoalPlannerModule::sync
   {
     std::lock_guard<std::mutex> guard(lane_parking_mutex_);
     if (!lane_parking_request_) {
+      const auto & goal_searcher = goal_searcher_.value();
       lane_parking_request_.emplace(
-        vehicle_footprint_, goal_candidates_, getPreviousModuleOutput(), use_bus_stop_area_);
+        vehicle_footprint_, goal_candidates_, getPreviousModuleOutput(),
+        use_bus_stop_area_ && goal_searcher.bus_stop_area_available());
     }
     // NOTE: for the above reasons, PlannerManager/behavior_path_planner_node ensure that
     // planner_data_ is not nullptr, so it is OK to copy as value
@@ -714,7 +716,7 @@ void GoalPlannerModule::updateData()
       parameters_.forward_goal_search_length);
     const auto bus_stop_area_polygons = goal_planner_utils::getBusStopAreaPolygons(pull_over_lanes);
     use_bus_stop_area_ =
-      parameters_.bus_stop_area.use_bus_stop_area &&
+      parameters_.bus_stop_area.use_bus_stop_area && goal_searcher.bus_stop_area_available() &&
       std::any_of(
         bus_stop_area_polygons.begin(), bus_stop_area_polygons.end(), [&](const auto & area) {
           const auto & goal_position = planner_data_->route_handler->getOriginalGoalPose().position;
@@ -964,7 +966,7 @@ bool GoalPlannerModule::canReturnToLaneParking(const PullOverContextData & conte
         parameters_.object_recognition_collision_check_hard_margins.back(),
         /*extract_static_objects=*/false, parameters_.maximum_deceleration,
         parameters_.object_recognition_collision_check_max_extra_stopping_margin,
-        debug_data_.ego_polygons_expanded)) {
+        parameters_.collision_check_outer_margin_factor, debug_data_.ego_polygons_expanded)) {
     return false;
   }
 
@@ -1083,9 +1085,29 @@ void sortPullOverPaths(
   const auto & target_objects = static_target_objects;
   for (const size_t i : sorted_path_indices) {
     const auto & path = pull_over_path_candidates[i];
-    const double distance = utils::path_safety_checker::calculateRoughDistanceToObjects(
-      path.parking_path(), target_objects, planner_data->parameters, false, "max");
-    auto it = std::lower_bound(
+
+    // check collision roughly with {min_distance, max_distance} between ego footprint and objects
+    // footprint
+    const std::pair<bool, bool> has_collision_rough =
+      utils::path_safety_checker::checkObjectsCollisionRough(
+        path.parking_path(), target_objects, soft_margins.front(), hard_margins.back(),
+        planner_data->parameters, false);
+    // min_distance > soft_margin.front() means no collision with any margin
+    if (!has_collision_rough.first) {
+      path_id_to_rough_margin_map[path.id()] = soft_margins.front();
+      continue;
+    }
+    // max_distance < hard_margin.front() means collision with any margin
+    if (has_collision_rough.second) {
+      path_id_to_rough_margin_map[path.id()] = 0.0;
+      continue;
+    }
+    // calculate the precise distance to object footprint from the path footprint
+    const double distance =
+      utils::path_safety_checker::shortest_distance_from_ego_footprint_to_objects_on_path(
+        path.parking_path(), target_objects, planner_data->parameters, true);
+
+    const auto it = std::lower_bound(
       margins_with_zero.begin(), margins_with_zero.end(), distance, std::greater<double>());
     if (it == margins_with_zero.end()) {
       path_id_to_rough_margin_map[path.id()] = margins_with_zero.back();
@@ -1256,7 +1278,8 @@ std::optional<PullOverPath> GoalPlannerModule::selectPullOverPath(
           context_data.dynamic_target_objects, planner_data_->parameters, collision_check_margin,
           true, parameters_.maximum_deceleration,
           parameters_.object_recognition_collision_check_max_extra_stopping_margin,
-          debug_data_.ego_polygons_expanded, true)) {
+          parameters_.collision_check_outer_margin_factor, debug_data_.ego_polygons_expanded,
+          true)) {
       continue;
     }
     if (
@@ -1931,7 +1954,7 @@ bool FreespaceParkingPlanner::isStuck(
         parameters.object_recognition_collision_check_hard_margins.back(),
         /*extract_static_objects=*/false, parameters.maximum_deceleration,
         parameters.object_recognition_collision_check_max_extra_stopping_margin,
-        ego_polygons_expanded)) {
+        parameters.collision_check_outer_margin_factor, ego_polygons_expanded)) {
     return true;
   }
 

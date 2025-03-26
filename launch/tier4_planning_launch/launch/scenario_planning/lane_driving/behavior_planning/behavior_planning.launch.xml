@@ -267,6 +267,8 @@
         <remap from="~/input/vector_map" to="$(var input_vector_map_topic_name)"/>
         <remap from="~/input/odometry" to="/localization/kinematic_state"/>
         <remap from="~/output/path" to="path_with_lane_id"/>
+        <remap from="~/output/turn_indicators_cmd" to="/planning/turn_indicators_cmd"/>
+        <remap from="~/output/hazard_lights_cmd" to="/planning/hazard_lights_cmd"/>
         <!-- params -->
         <param from="$(var vehicle_param_file)"/>
         <param from="$(var nearest_search_param_path)"/>

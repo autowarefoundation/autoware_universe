@@ -29,7 +29,7 @@ float updateProbability(
   constexpr float min_updated_probability = 0.100;
   const float probability =
     (prior * true_positive) / (prior * true_positive + (1 - prior) * false_positive);
-  return std::max(std::min(probability, max_updated_probability), min_updated_probability);
+  return std::clamp(probability, min_updated_probability, max_updated_probability);
 }
 float decayProbability(const float & prior, const float & delta_time)
 {
@@ -42,23 +42,22 @@ float decayProbability(const float & prior, const float & delta_time)
 namespace autoware::multi_object_tracker
 {
 
-Tracker::Tracker(
-  const rclcpp::Time & time,
-  const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification,
-  const size_t & channel_size)
-: classification_(classification),
-  no_measurement_count_(0),
+Tracker::Tracker(const rclcpp::Time & time, const types::DynamicObject & detected_object)
+: no_measurement_count_(0),
   total_no_measurement_count_(0),
   total_measurement_count_(1),
-  last_update_with_measurement_time_(time)
+  last_update_with_measurement_time_(time),
+  object_(detected_object)
 {
   // Generate random number
   std::mt19937 gen(std::random_device{}());
   std::independent_bits_engine<std::mt19937, 8, uint8_t> bit_eng(gen);
-  std::generate(uuid_.uuid.begin(), uuid_.uuid.end(), bit_eng);
+  unique_identifier_msgs::msg::UUID uuid_msg;
+  std::generate(uuid_msg.uuid.begin(), uuid_msg.uuid.end(), bit_eng);
+  object_.uuid = uuid_msg;
 
   // Initialize existence probabilities
-  existence_probabilities_.resize(channel_size, 0.001);
+  existence_probabilities_.resize(types::max_channel_size, 0.001);
   total_existence_probability_ = 0.001;
 }
 
@@ -80,7 +79,7 @@ void Tracker::initializeExistenceProbabilities(
 
 bool Tracker::updateWithMeasurement(
   const types::DynamicObject & object, const rclcpp::Time & measurement_time,
-  const geometry_msgs::msg::Transform & self_transform)
+  const types::InputChannel & channel_info)
 {
   // Update existence probability
   {
@@ -94,7 +93,7 @@ bool Tracker::updateWithMeasurement(
     constexpr float probability_false_detection = 0.2;
 
     // update measured channel probability without decay
-    const uint channel_index = object.channel_index;
+    const uint & channel_index = channel_info.index;
     existence_probabilities_[channel_index] = updateProbability(
       existence_probabilities_[channel_index], probability_true_detection,
       probability_false_detection);
@@ -107,14 +106,24 @@ bool Tracker::updateWithMeasurement(
     }
 
     // update total existence probability
+    const double existence_probability =
+      channel_info.trust_existence_probability ? object.existence_probability : 0.6;
     total_existence_probability_ = updateProbability(
-      total_existence_probability_, object.existence_probability, probability_false_detection);
+      total_existence_probability_, existence_probability, probability_false_detection);
   }
 
   last_update_with_measurement_time_ = measurement_time;
 
+  // Update classification
+  if (
+    channel_info.trust_classification &&
+    autoware::object_recognition_utils::getHighestProbLabel(object.classification) !=
+      autoware_perception_msgs::msg::ObjectClassification::UNKNOWN) {
+    updateClassification(object.classification);
+  }
+
   // Update object
-  measure(object, measurement_time, self_transform);
+  measure(object, measurement_time, channel_info);
 
   return true;
 }
@@ -168,6 +177,8 @@ void Tracker::updateClassification(
   auto classification_input = classification;
   normalizeProbabilities(classification_input);
 
+  auto & classification_ = object_.classification;
+
   // Update the matched classification probability with a gain
   for (const auto & new_class : classification_input) {
     bool found = false;
@@ -197,12 +208,16 @@ void Tracker::updateClassification(
   normalizeProbabilities(classification_);
 }
 
-geometry_msgs::msg::PoseWithCovariance Tracker::getPoseWithCovariance(
-  const rclcpp::Time & time) const
+void Tracker::limitObjectExtension(const object_model::ObjectModel object_model)
 {
-  types::DynamicObject object;
-  getTrackedObject(time, object);
-  return object.kinematics.pose_with_covariance;
+  auto & object_extension = object_.shape.dimensions;
+  // set maximum and minimum size
+  object_extension.x = std::clamp(
+    object_extension.x, object_model.size_limit.length_min, object_model.size_limit.length_max);
+  object_extension.y = std::clamp(
+    object_extension.y, object_model.size_limit.width_min, object_model.size_limit.width_max);
+  object_extension.z = std::clamp(
+    object_extension.z, object_model.size_limit.height_min, object_model.size_limit.height_max);
 }
 
 }  // namespace autoware::multi_object_tracker

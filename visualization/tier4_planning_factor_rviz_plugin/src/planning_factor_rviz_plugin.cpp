@@ -149,14 +149,14 @@ visualization_msgs::msg::MarkerArray createTargetMarker(
 }  // namespace
 
 void PlanningFactorRvizPlugin::processMessage(
-  const tier4_planning_msgs::msg::PlanningFactorArray::ConstSharedPtr msg)
+  const autoware_internal_planning_msgs::msg::PlanningFactorArray::ConstSharedPtr msg)
 {
   size_t i = 0L;
   for (const auto & factor : msg->factors) {
     const auto text = factor.module + (factor.detail.empty() ? "" : " (" + factor.detail + ")");
 
     switch (factor.behavior) {
-      case tier4_planning_msgs::msg::PlanningFactor::STOP:
+      case autoware_internal_planning_msgs::msg::PlanningFactor::STOP:
         for (const auto & control_point : factor.control_points) {
           const auto virtual_wall = createStopVirtualWallMarker(
             control_point.pose, text, msg->header.stamp, i++, baselink2front_.getFloat());
@@ -164,7 +164,7 @@ void PlanningFactorRvizPlugin::processMessage(
         }
         break;
 
-      case tier4_planning_msgs::msg::PlanningFactor::SLOW_DOWN:
+      case autoware_internal_planning_msgs::msg::PlanningFactor::SLOW_DOWN:
         for (const auto & control_point : factor.control_points) {
           const auto virtual_wall = createSlowDownVirtualWallMarker(
             control_point.pose, text, msg->header.stamp, i++, baselink2front_.getFloat());

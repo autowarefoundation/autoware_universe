@@ -86,7 +86,7 @@ struct ObstacleFilteringParam
   double obstacle_velocity_threshold_from_stop{};
 
   double max_lat_margin{};
-  double max_lat_margin_against_unknown{};
+  double max_lat_margin_against_predicted_object_unknown{};
 
   double min_velocity_to_reach_collision_point{};
   double stop_obstacle_hold_time_threshold{};
@@ -120,8 +120,6 @@ struct ObstacleFilteringParam
       utils::get_target_object_type(node, "obstacle_stop.obstacle_filtering.object_type.inside.");
     outside_stop_object_types =
       utils::get_target_object_type(node, "obstacle_stop.obstacle_filtering.object_type.outside.");
-    use_pointcloud = get_or_declare_parameter<bool>(
-      node, "obstacle_stop.obstacle_filtering.object_type.pointcloud");
 
     obstacle_velocity_threshold_to_stop = get_or_declare_parameter<double>(
       node, "obstacle_stop.obstacle_filtering.obstacle_velocity_threshold_to_stop");
@@ -130,8 +128,8 @@ struct ObstacleFilteringParam
 
     max_lat_margin =
       get_or_declare_parameter<double>(node, "obstacle_stop.obstacle_filtering.max_lat_margin");
-    max_lat_margin_against_unknown = get_or_declare_parameter<double>(
-      node, "obstacle_stop.obstacle_filtering.max_lat_margin_against_unknown");
+    max_lat_margin_against_predicted_object_unknown = get_or_declare_parameter<double>(
+      node, "obstacle_stop.obstacle_filtering.max_lat_margin_against_predicted_object_unknown");
 
     min_velocity_to_reach_collision_point = get_or_declare_parameter<double>(
       node, "obstacle_stop.obstacle_filtering.min_velocity_to_reach_collision_point");

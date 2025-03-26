@@ -336,8 +336,8 @@ std::vector<TrajectoryPoint> PlannerInterface::generateStopTrajectory(
     const auto stop_pose = output_traj_points.at(*zero_vel_idx).pose;
     planning_factor_interface_->add(
       output_traj_points, planner_data.ego_pose, stop_pose,
-      tier4_planning_msgs::msg::PlanningFactor::STOP,
-      tier4_planning_msgs::msg::SafetyFactorArray{});
+      autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+      autoware_internal_planning_msgs::msg::SafetyFactorArray{});
     // Store stop reason debug data
     debug_data_ptr_->stop_metrics =
       makeMetrics("PlannerInterface", "stop", planner_data, stop_pose, *determined_stop_obstacle);
@@ -594,8 +594,8 @@ std::vector<TrajectoryPoint> PlannerInterface::generateSlowDownTrajectory(
         slow_down_traj_points, planner_data.ego_pose,
         slow_down_traj_points.at(*slow_down_start_idx).pose,
         slow_down_traj_points.at(*slow_down_end_idx).pose,
-        tier4_planning_msgs::msg::PlanningFactor::SLOW_DOWN,
-        tier4_planning_msgs::msg::SafetyFactorArray{}, planner_data.is_driving_forward,
+        autoware_internal_planning_msgs::msg::PlanningFactor::SLOW_DOWN,
+        autoware_internal_planning_msgs::msg::SafetyFactorArray{}, planner_data.is_driving_forward,
         stable_slow_down_vel);
     }
 

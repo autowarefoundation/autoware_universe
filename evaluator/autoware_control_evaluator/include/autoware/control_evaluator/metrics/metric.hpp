@@ -36,6 +36,7 @@ enum class Metric {
   steering_angle,
   steering_rate,
   steering_acceleration,
+  stop_deviation,
   SIZE,
 };
 
@@ -50,6 +51,7 @@ static const std::unordered_map<std::string, Metric> str_to_metric = {
   {"steering_angle", Metric::steering_angle},
   {"steering_rate", Metric::steering_rate},
   {"steering_acceleration", Metric::steering_acceleration},
+  {"stop_deviation", Metric::stop_deviation},
 };
 
 static const std::unordered_map<Metric, std::string> metric_to_str = {
@@ -63,6 +65,7 @@ static const std::unordered_map<Metric, std::string> metric_to_str = {
   {Metric::steering_angle, "steering_angle"},
   {Metric::steering_rate, "steering_rate"},
   {Metric::steering_acceleration, "steering_acceleration"},
+  {Metric::stop_deviation, "stop_deviation"},
 };
 
 // Metrics descriptions
@@ -77,6 +80,7 @@ static const std::unordered_map<Metric, std::string> metric_descriptions = {
   {Metric::steering_angle, "Steering angle[rad]"},
   {Metric::steering_rate, "Steering angle rate[rad/s]"},
   {Metric::steering_acceleration, "Steering angle acceleration[rad/s^2]"},
+  {Metric::stop_deviation, "Deviation to the stop line when the ego stop by a module[m]"},
 };
 
 namespace details

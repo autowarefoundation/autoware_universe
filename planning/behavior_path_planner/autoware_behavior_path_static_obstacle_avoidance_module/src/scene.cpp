@@ -962,15 +962,13 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
   using autoware::motion_utils::calcSignedArcLength;
 
   const auto is_ignore_signal = [this](const UUID & uuid) {
-    if (!ignore_signal_.has_value()) {
-      return false;
-    }
-
-    return ignore_signal_.value() == uuid;
+    return ignore_signal_ids_.find(to_hex_string(uuid)) != ignore_signal_ids_.end();
   };
 
   const auto update_ignore_signal = [this](const UUID & uuid, const bool is_ignore) {
-    ignore_signal_ = is_ignore ? std::make_optional(uuid) : std::nullopt;
+    if (is_ignore) {
+      ignore_signal_ids_.insert(to_hex_string(uuid));
+    }
   };
 
   const auto is_large_deviation = [this](const auto & path) {
@@ -987,18 +985,6 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
   }
 
   if (is_large_deviation(spline_shift_path.path)) {
-    return getPreviousModuleOutput().turn_signal_info;
-  }
-
-  const auto itr =
-    std::remove_if(shift_lines.begin(), shift_lines.end(), [&, this](const auto & s) {
-      const auto threshold = planner_data_->parameters.turn_signal_shift_length_threshold;
-      return std::abs(s.start_shift_length - s.end_shift_length) < threshold ||
-             is_ignore_signal(s.id);
-    });
-  shift_lines.erase(itr, shift_lines.end());
-
-  if (shift_lines.empty()) {
     return getPreviousModuleOutput().turn_signal_info;
   }
 
@@ -1043,6 +1029,10 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
 
     return s1;
   }();
+
+  if (is_ignore_signal(target_shift_line.id)) {
+    return getPreviousModuleOutput().turn_signal_info;
+  }
 
   const auto original_signal = getPreviousModuleOutput().turn_signal_info;
 
@@ -1509,6 +1499,7 @@ void StaticObstacleAvoidanceModule::initVariables()
   resetPathCandidate();
   resetPathReference();
   arrived_path_end_ = false;
+  ignore_signal_ids_.clear();
 }
 
 void StaticObstacleAvoidanceModule::initRTCStatus()
@@ -1679,7 +1670,7 @@ void StaticObstacleAvoidanceModule::insertReturnDeadLine(
   const auto min_return_distance =
     helper_->getMinAvoidanceDistance(shift_length) + helper_->getNominalPrepareDistance(0.0);
   const auto to_stop_line = data.to_return_point - min_return_distance - buffer;
-  if (to_stop_line < 0.0) {
+  if (to_stop_line < -1.0 * parameters_->stop_buffer) {
     RCLCPP_WARN(getLogger(), "ego overran return shift dead line. do nothing.");
     return;
   }
@@ -1752,7 +1743,7 @@ void StaticObstacleAvoidanceModule::insertWaitPoint(
     return;
   }
 
-  if (data.to_stop_line < 0.0) {
+  if (data.to_stop_line < -1.0 * parameters_->stop_buffer) {
     RCLCPP_WARN(getLogger(), "ego overran avoidance dead line. do nothing.");
     return;
   }

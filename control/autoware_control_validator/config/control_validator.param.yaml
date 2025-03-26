@@ -12,6 +12,8 @@
       rolling_back_velocity: 0.5
       over_velocity_offset: 2.0
       over_velocity_ratio: 0.2
+      overrun_stop_point_dist: 0.8
+      nominal_latency: 0.01
 
     vel_lpf_gain: 0.9 # Time constant 0.33
     hold_velocity_error_until_stop: true
