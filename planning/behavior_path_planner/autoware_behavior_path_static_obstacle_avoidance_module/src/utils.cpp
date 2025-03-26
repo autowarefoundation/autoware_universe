@@ -1487,6 +1487,12 @@ lanelet::ConstLanelets getExtendLanes(
   const lanelet::ConstLanelets & lanelets, const Pose & ego_pose,
   const std::shared_ptr<const PlannerData> & planner_data)
 {
+  if (lanelets.empty()) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("static_obstacle_avoidance"), "Empty lanelets provided to getExtendLanes");
+    return lanelets;
+  }
+
   lanelet::ConstLanelets extend_lanelets = lanelets;
 
   while (rclcpp::ok()) {

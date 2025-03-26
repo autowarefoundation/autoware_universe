@@ -472,6 +472,14 @@ BehaviorModuleOutput getReferencePath(
     *route_handler, current_lanes_with_backward_margin, no_shift_pose, backward_length,
     p.forward_path_length, p);
 
+  if (reference_path.points.empty()) {
+    auto clock{rclcpp::Clock{RCL_ROS_TIME}};
+    RCLCPP_WARN_THROTTLE(
+      rclcpp::get_logger("path_utils"), clock, 5000, "Empty reference path detected.");
+    BehaviorModuleOutput output;
+    return output;
+  }
+
   // clip backward length
   // NOTE: In order to keep backward_path_length at least, resampling interval is added to the
   // backward.

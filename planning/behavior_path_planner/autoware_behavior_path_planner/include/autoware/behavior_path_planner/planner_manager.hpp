@@ -575,6 +575,8 @@ private:
   ModuleUpdateInfo debug_info_;
 
   std::shared_ptr<SceneModuleVisitor> debug_msg_ptr_;
+
+  mutable std::optional<BehaviorModuleOutput> last_valid_reference_path_;
 };
 }  // namespace autoware::behavior_path_planner
 
