@@ -133,6 +133,17 @@ void Converter::on_update(DiagGraph::ConstSharedPtr graph)
       diags->push_back(unit->create_diagnostic_status());
     }
   }
+
+  // Add external emergency to spf so that it is not ignored.
+  if (const auto external_emergency = sub_external_emergency_.take_data()) {
+    if (external_emergency->emergency) {
+      DiagnosticStatus status;
+      status.name = std::string(this->get_name()) + ": external_emergency";
+      status.level = DiagnosticStatus::ERROR;
+      hazard.status.diag_single_point_fault.push_back(status);
+    }
+  }
+
   hazard.stamp = graph->updated_stamp();
   hazard.status.level = get_system_level(hazard.status);
   hazard.status.emergency = hazard.status.level == HazardStatus::SINGLE_POINT_FAULT;

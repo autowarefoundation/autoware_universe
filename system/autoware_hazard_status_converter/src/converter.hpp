@@ -22,6 +22,7 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_system_msgs/msg/hazard_status_stamped.hpp>
+#include <tier4_external_api_msgs/msg/emergency.hpp>
 #include <tier4_system_msgs/msg/emergency_holding_state.hpp>
 
 #include <unordered_map>
@@ -45,6 +46,8 @@ private:
   rclcpp::Publisher<HazardStatusStamped>::SharedPtr pub_hazard_;
   autoware_utils::InterProcessPollingSubscriber<tier4_system_msgs::msg::EmergencyHoldingState>
     sub_emergency_holding_{this, "~/input/emergency_holding"};
+  autoware_utils::InterProcessPollingSubscriber<tier4_external_api_msgs::msg::Emergency>
+    sub_external_emergency_{this, "~/input/external_emergency"};
 
   struct ModeSubgraph
   {
