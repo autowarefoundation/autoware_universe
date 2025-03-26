@@ -19,8 +19,6 @@
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 
-#include <nav_msgs/msg/odometry.hpp>
-
 #include <algorithm>
 #include <cstdint>
 #include <memory>
@@ -30,6 +28,31 @@
 namespace autoware::control_validator
 {
 using diagnostic_msgs::msg::DiagnosticStatus;
+
+void AccelerationValidator::validate(
+  ControlValidatorStatus & res, const Odometry & kinematic_state, const Control & control_cmd,
+  const AccelWithCovarianceStamped & loc_acc)
+{
+  desired_acc_lpf.filter(
+    control_cmd.longitudinal.acceleration +
+    9.8 * autoware_utils::get_rpy(kinematic_state.pose.pose).y);
+  measured_acc_lpf.filter(loc_acc.accel.accel.linear.x);
+  if (std::abs(kinematic_state.twist.twist.linear.x) < 1e-3) {
+    desired_acc_lpf.reset(0.0);
+    measured_acc_lpf.reset(0.0);
+  }
+
+  res.desired_acc = desired_acc_lpf.getValue().value();
+  res.measured_acc = measured_acc_lpf.getValue().value();
+  res.is_valid_acc = [this]() {
+    const double des = desired_acc_lpf.getValue().value();
+    const double mes = measured_acc_lpf.getValue().value();
+    const int8_t des_sign = std::signbit(des) ? 1 : -1;
+
+    return mes <= des * (1 + des_sign * e_scale) + e_offset &&
+           mes >= des * (1 - des_sign * e_scale) + e_offset;
+  }();
+}
 
 ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)
 : Node("control_validator", options), validation_params_(), vehicle_info_()
@@ -47,6 +70,9 @@ ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)
   sub_reference_traj_ =
     autoware_utils::InterProcessPollingSubscriber<Trajectory>::create_subscription(
       this, "~/input/reference_trajectory", 1);
+  sub_measured_acc_ =
+    autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped>::create_subscription(
+      this, "~/input/measured_acceleration", 1);
 
   pub_status_ = create_publisher<ControlValidatorStatus>("~/output/validation_status", 1);
 
@@ -77,9 +103,10 @@ void ControlValidator::setup_parameters()
     p.overrun_stop_point_dist = declare_parameter<double>(t + "overrun_stop_point_dist");
     p.nominal_latency_threshold = declare_parameter<double>(t + "nominal_latency");
   }
-  const auto lpf_gain = declare_parameter<double>("vel_lpf_gain");
-  vehicle_vel_.setGain(lpf_gain);
-  target_vel_.setGain(lpf_gain);
+
+  const auto vel_lpf_gain = declare_parameter<double>("vel_lpf_gain");
+  vehicle_vel_.setGain(vel_lpf_gain);
+  target_vel_.setGain(vel_lpf_gain);
 
   hold_velocity_error_until_stop_ = declare_parameter<bool>("hold_velocity_error_until_stop");
 
@@ -122,6 +149,11 @@ void ControlValidator::setup_diag()
       stat, validation_status_.is_valid_max_distance_deviation,
       "control output is deviated from trajectory");
   });
+  d.add(ns + "acceleration_error", [&](auto & stat) {
+    set_status(
+      stat, validation_status_.is_valid_acc,
+      "Measured acceleration and desired acceleration is deviated");
+  });
   d.add(ns + "rolling_back", [&](auto & stat) {
     set_status(
       stat, !validation_status_.is_rolling_back,
@@ -159,14 +191,23 @@ bool ControlValidator::is_data_ready()
   if (!current_predicted_trajectory_) {
     return waiting(sub_predicted_traj_->get_topic_name());
   }
+  if (!acceleration_msg_) {
+    return waiting(sub_measured_acc_->subscriber()->get_topic_name());
+  }
+  if (!control_cmd_msg_) {
+    return waiting(sub_control_cmd_->get_topic_name());
+  }
   return true;
 }
 
 void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
 {
+  control_cmd_msg_ = msg;
+
   validation_status_.latency = (this->now() - msg->stamp).seconds();
   validation_status_.is_valid_latency =
     validation_status_.latency < validation_params_.nominal_latency_threshold;
+
   validation_status_.invalid_count =
     is_all_valid(validation_status_) ? 0 : validation_status_.invalid_count + 1;
 }
@@ -178,12 +219,15 @@ void ControlValidator::on_predicted_trajectory(const Trajectory::ConstSharedPtr 
   current_predicted_trajectory_ = msg;
   current_reference_trajectory_ = sub_reference_traj_->take_data();
   current_kinematics_ = sub_kinematics_->take_data();
+  acceleration_msg_ = sub_measured_acc_->take_data();
 
   if (!is_data_ready()) return;
 
   debug_pose_publisher_->clear_markers();
 
-  validate(*current_predicted_trajectory_, *current_reference_trajectory_, *current_kinematics_);
+  validate(
+    *current_predicted_trajectory_, *current_reference_trajectory_, *current_kinematics_,
+    *control_cmd_msg_, *acceleration_msg_);
 
   diag_updater_.force_update();
 
@@ -213,7 +257,8 @@ void ControlValidator::publish_debug_info()
 
 void ControlValidator::validate(
   const Trajectory & predicted_trajectory, const Trajectory & reference_trajectory,
-  const Odometry & kinematics)
+  const Odometry & kinematics, const Control & control_cmd,
+  const AccelWithCovarianceStamped & measured_acc)
 {
   if (predicted_trajectory.points.size() < 2) {
     RCLCPP_DEBUG(get_logger(), "predicted_trajectory size is less than 2. Cannot validate.");
@@ -232,7 +277,7 @@ void ControlValidator::validate(
   std::tie(
     validation_status_.max_distance_deviation, validation_status_.is_valid_max_distance_deviation) =
     calc_lateral_deviation_status(predicted_trajectory, *current_reference_trajectory_);
-
+  acceleration_validator.validate(validation_status_, kinematics, control_cmd, measured_acc);
   calc_velocity_deviation_status(*current_reference_trajectory_, kinematics);
   calc_stop_point_overrun_status(*current_reference_trajectory_, kinematics);
 
@@ -310,8 +355,8 @@ void ControlValidator::calc_stop_point_overrun_status(
 
 bool ControlValidator::is_all_valid(const ControlValidatorStatus & s)
 {
-  return s.is_valid_max_distance_deviation && !s.is_rolling_back && !s.is_over_velocity &&
-         !s.has_overrun_stop_point;
+  return s.is_valid_max_distance_deviation && s.is_valid_acc && !s.is_rolling_back &&
+         !s.is_over_velocity && !s.has_overrun_stop_point;
 }
 
 void ControlValidator::display_status()

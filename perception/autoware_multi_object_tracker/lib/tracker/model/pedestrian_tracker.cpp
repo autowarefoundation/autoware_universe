@@ -38,44 +38,18 @@
 
 namespace autoware::multi_object_tracker
 {
-
-using Label = autoware_perception_msgs::msg::ObjectClassification;
-
-PedestrianTracker::PedestrianTracker(
-  const rclcpp::Time & time, const types::DynamicObject & object, const size_t channel_size)
-: Tracker(time, object.classification, channel_size),
-  logger_(rclcpp::get_logger("PedestrianTracker")),
-  z_(object.kinematics.pose_with_covariance.pose.position.z)
+PedestrianTracker::PedestrianTracker(const rclcpp::Time & time, const types::DynamicObject & object)
+: Tracker(time, object), logger_(rclcpp::get_logger("PedestrianTracker"))
 {
-  object_ = object;
-
-  // initialize existence probability
-  initializeExistenceProbabilities(object.channel_index, object.existence_probability);
-
-  // OBJECT SHAPE MODEL
-  bounding_box_ = {
-    object_model_.init_size.length, object_model_.init_size.width,
-    object_model_.init_size.height};                                             // default value
-  cylinder_ = {object_model_.init_size.length, object_model_.init_size.height};  // default value
-  if (object.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
-    bounding_box_ = {
-      object.shape.dimensions.x, object.shape.dimensions.y, object.shape.dimensions.z};
-  } else if (object.shape.type == autoware_perception_msgs::msg::Shape::CYLINDER) {
-    cylinder_ = {object.shape.dimensions.x, object.shape.dimensions.z};
-  } else if (object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
-    // do not update polygon shape
+  if (object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
+    // set default initial size
+    auto & object_extension = object_.shape.dimensions;
+    object_extension.x = object_model_.init_size.length;
+    object_extension.y = object_model_.init_size.width;
+    object_extension.z = object_model_.init_size.height;
   }
   // set maximum and minimum size
-  bounding_box_.length = std::clamp(
-    bounding_box_.length, object_model_.size_limit.length_min, object_model_.size_limit.length_max);
-  bounding_box_.width = std::clamp(
-    bounding_box_.width, object_model_.size_limit.width_min, object_model_.size_limit.width_max);
-  bounding_box_.height = std::clamp(
-    bounding_box_.height, object_model_.size_limit.height_min, object_model_.size_limit.height_max);
-  cylinder_.width = std::clamp(
-    cylinder_.width, object_model_.size_limit.length_min, object_model_.size_limit.length_max);
-  cylinder_.height = std::clamp(
-    cylinder_.height, object_model_.size_limit.height_min, object_model_.size_limit.height_max);
+  limitObjectExtension(object_model_);
 
   // Set motion model parameters
   {
@@ -97,11 +71,11 @@ PedestrianTracker::PedestrianTracker(
   // Set initial state
   {
     using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-    const double x = object.kinematics.pose_with_covariance.pose.position.x;
-    const double y = object.kinematics.pose_with_covariance.pose.position.y;
-    const double yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
+    const double x = object.pose.position.x;
+    const double y = object.pose.position.y;
+    const double yaw = tf2::getYaw(object.pose.orientation);
 
-    auto pose_cov = object.kinematics.pose_with_covariance.covariance;
+    auto pose_cov = object.pose_covariance;
     if (!object.kinematics.has_position_covariance) {
       // initial state covariance
       const auto & p0_cov_x = object_model_.initial_covariance.pos_x;
@@ -121,15 +95,15 @@ PedestrianTracker::PedestrianTracker(
     double vel = 0.0;
     double wz = 0.0;
     if (object.kinematics.has_twist) {
-      vel = object.kinematics.twist_with_covariance.twist.linear.x;
-      wz = object.kinematics.twist_with_covariance.twist.angular.z;
+      vel = object.twist.linear.x;
+      wz = object.twist.angular.z;
     }
 
     double vel_cov = object_model_.initial_covariance.vel_long;
     double wz_cov = object_model_.initial_covariance.yaw_rate;
     if (object.kinematics.has_twist_covariance) {
-      vel_cov = object.kinematics.twist_with_covariance.covariance[XYZRPY_COV_IDX::X_X];
-      wz_cov = object.kinematics.twist_with_covariance.covariance[XYZRPY_COV_IDX::YAW_YAW];
+      vel_cov = object.twist_covariance[XYZRPY_COV_IDX::X_X];
+      wz_cov = object.twist_covariance[XYZRPY_COV_IDX::YAW_YAW];
     }
 
     // initialize motion model
@@ -142,104 +116,63 @@ bool PedestrianTracker::predict(const rclcpp::Time & time)
   return motion_model_.predictState(time);
 }
 
-types::DynamicObject PedestrianTracker::getUpdatingObject(
-  const types::DynamicObject & object,
-  const geometry_msgs::msg::Transform & /*self_transform*/) const
-{
-  types::DynamicObject updating_object = object;
-
-  return updating_object;
-}
-
 bool PedestrianTracker::measureWithPose(const types::DynamicObject & object)
 {
   // update motion model
   bool is_updated = false;
   {
-    const double x = object.kinematics.pose_with_covariance.pose.position.x;
-    const double y = object.kinematics.pose_with_covariance.pose.position.y;
+    const double x = object.pose.position.x;
+    const double y = object.pose.position.y;
 
-    is_updated =
-      motion_model_.updateStatePose(x, y, object.kinematics.pose_with_covariance.covariance);
+    is_updated = motion_model_.updateStatePose(x, y, object.pose_covariance);
     motion_model_.limitStates();
   }
 
   // position z
   constexpr double gain = 0.1;
-  z_ = (1.0 - gain) * z_ + gain * object.kinematics.pose_with_covariance.pose.position.z;
+  object_.pose.position.z = (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
 
   return is_updated;
 }
 
 bool PedestrianTracker::measureWithShape(const types::DynamicObject & object)
 {
-  constexpr double gain = 0.1;
-  constexpr double gain_inv = 1.0 - gain;
-
-  if (object.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
-    // check bound box size abnormality
+  if (object.shape.type != autoware_perception_msgs::msg::Shape::POLYGON) {
     constexpr double size_max = 30.0;  // [m]
     constexpr double size_min = 0.1;   // [m]
-    bool is_size_valid =
-      (object.shape.dimensions.x <= size_max && object.shape.dimensions.y <= size_max &&
-       object.shape.dimensions.z <= size_max && object.shape.dimensions.x >= size_min &&
-       object.shape.dimensions.y >= size_min && object.shape.dimensions.z >= size_min);
-    if (!is_size_valid) {
+    if (
+      object.shape.dimensions.x > size_max || object.shape.dimensions.x < size_min ||
+      object.shape.dimensions.y > size_max || object.shape.dimensions.y < size_min ||
+      object.shape.dimensions.z > size_max || object.shape.dimensions.z < size_min) {
       return false;
     }
-    // update bounding box size
-    bounding_box_.length = gain_inv * bounding_box_.length + gain * object.shape.dimensions.x;
-    bounding_box_.width = gain_inv * bounding_box_.width + gain * object.shape.dimensions.y;
-    bounding_box_.height = gain_inv * bounding_box_.height + gain * object.shape.dimensions.z;
+    constexpr double gain = 0.5;
+    constexpr double gain_inv = 1.0 - gain;
+    auto & object_extension = object_.shape.dimensions;
+    object_extension.x = gain_inv * object_extension.x + gain * object.shape.dimensions.x;
+    object_extension.y = gain_inv * object_extension.y + gain * object.shape.dimensions.y;
+    object_extension.z = gain_inv * object_extension.z + gain * object.shape.dimensions.z;
 
-  } else if (object.shape.type == autoware_perception_msgs::msg::Shape::CYLINDER) {
-    // check cylinder size abnormality
-    constexpr double size_max = 30.0;  // [m]
-    constexpr double size_min = 0.1;   // [m]
-    bool is_size_valid =
-      (object.shape.dimensions.x <= size_max && object.shape.dimensions.z <= size_max &&
-       object.shape.dimensions.x >= size_min && object.shape.dimensions.z >= size_min);
-    if (!is_size_valid) {
-      return false;
-    }
-    // update cylinder size
-    cylinder_.width = gain_inv * cylinder_.width + gain * object.shape.dimensions.x;
-    cylinder_.height = gain_inv * cylinder_.height + gain * object.shape.dimensions.z;
+    // update shape type, bounding box or cylinder
+    object_.shape.type = object.shape.type;
 
+    // set maximum and minimum size
+    limitObjectExtension(object_model_);
   } else {
     // do not update polygon shape
     return false;
   }
 
-  // set maximum and minimum size
-  bounding_box_.length = std::clamp(
-    bounding_box_.length, object_model_.size_limit.length_min, object_model_.size_limit.length_max);
-  bounding_box_.width = std::clamp(
-    bounding_box_.width, object_model_.size_limit.width_min, object_model_.size_limit.width_max);
-  bounding_box_.height = std::clamp(
-    bounding_box_.height, object_model_.size_limit.height_min, object_model_.size_limit.height_max);
-  cylinder_.width = std::clamp(
-    cylinder_.width, object_model_.size_limit.length_min, object_model_.size_limit.length_max);
-  cylinder_.height = std::clamp(
-    cylinder_.height, object_model_.size_limit.height_min, object_model_.size_limit.height_max);
+  // update shape type
+  object_.shape.type = object.shape.type;
 
   return true;
 }
 
 bool PedestrianTracker::measure(
   const types::DynamicObject & object, const rclcpp::Time & time,
-  const geometry_msgs::msg::Transform & self_transform)
+  const types::InputChannel & channel_info)
 {
-  // keep the latest input object
-  object_ = object;
-
-  const auto & current_classification = getClassification();
-  if (
-    autoware::object_recognition_utils::getHighestProbLabel(object.classification) ==
-    Label::UNKNOWN) {
-    setClassification(current_classification);
-  }
-
   // check time gap
   const double dt = motion_model_.getDeltaTime(time);
   if (0.01 /*10msec*/ < dt) {
@@ -251,11 +184,11 @@ bool PedestrianTracker::measure(
   }
 
   // update object
-  const types::DynamicObject updating_object = getUpdatingObject(object, self_transform);
-  measureWithPose(updating_object);
-  measureWithShape(updating_object);
+  measureWithPose(object);
+  if (channel_info.trust_extension) {
+    measureWithShape(object);
+  }
 
-  (void)self_transform;  // currently do not use self vehicle position
   return true;
 }
 
@@ -263,38 +196,22 @@ bool PedestrianTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object) const
 {
   object = object_;
-  object.object_id = getUUID();
-  object.classification = getClassification();
-
-  auto & pose_with_cov = object.kinematics.pose_with_covariance;
-  auto & twist_with_cov = object.kinematics.twist_with_covariance;
 
   // predict from motion model
-  if (!motion_model_.getPredictedState(
-        time, pose_with_cov.pose, pose_with_cov.covariance, twist_with_cov.twist,
-        twist_with_cov.covariance)) {
+  auto & pose = object.pose;
+  auto & pose_cov = object.pose_covariance;
+  auto & twist = object.twist;
+  auto & twist_cov = object.twist_covariance;
+  if (!motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov)) {
     RCLCPP_WARN(logger_, "PedestrianTracker::getTrackedObject: Failed to get predicted state.");
     return false;
   }
 
-  // position
-  pose_with_cov.pose.position.z = z_;
-
   // set shape
-  if (object.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
-    object.shape.dimensions.x = bounding_box_.length;
-    object.shape.dimensions.y = bounding_box_.width;
-    object.shape.dimensions.z = bounding_box_.height;
-  } else if (object.shape.type == autoware_perception_msgs::msg::Shape::CYLINDER) {
-    object.shape.dimensions.x = cylinder_.width;
-    object.shape.dimensions.y = cylinder_.width;
-    object.shape.dimensions.z = cylinder_.height;
-  } else if (object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
-    const auto origin_yaw = tf2::getYaw(object_.kinematics.pose_with_covariance.pose.orientation);
-    const auto ekf_pose_yaw = tf2::getYaw(pose_with_cov.pose.orientation);
-    object.shape.footprint =
-      autoware_utils::rotate_polygon(object.shape.footprint, origin_yaw - ekf_pose_yaw);
-  }
+  const auto origin_yaw = tf2::getYaw(object_.pose.orientation);
+  const auto ekf_pose_yaw = tf2::getYaw(pose.orientation);
+  object.shape.footprint =
+    autoware_utils::rotate_polygon(object.shape.footprint, origin_yaw - ekf_pose_yaw);
 
   return true;
 }

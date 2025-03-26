@@ -195,7 +195,7 @@ private:
   bool switch_bezier_{false};
   void normal_pullover_planning_helper(
     const std::shared_ptr<PlannerData> planner_data, const GoalCandidates & goal_candidates,
-    const BehaviorModuleOutput & upstream_module_output,
+    const BehaviorModuleOutput & upstream_module_output, const bool use_bus_stop_area,
     const lanelet::ConstLanelets current_lanelets, std::optional<Pose> & closest_start_pose,
     std::vector<PullOverPath> & path_candidates);
   void bezier_planning_helper(

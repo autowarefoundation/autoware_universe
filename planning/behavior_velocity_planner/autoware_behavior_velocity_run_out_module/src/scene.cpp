@@ -768,7 +768,7 @@ bool RunOutModule::insertStopPoint(
   planning_utils::insertVelocity(path, stop_point_with_lane_id, stop_point_velocity, insert_idx);
 
   planning_factor_interface_->add(
-    path.points, planner_data_->current_odometry->pose, stop_point.value(), stop_point.value(),
+    path.points, planner_data_->current_odometry->pose, stop_point.value(),
     autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
     autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/,
     0.0 /*velocity*/, 0.0 /*shift_distance*/, "run_out_stop");
@@ -884,7 +884,7 @@ void RunOutModule::insertApproachingVelocity(
 
   planning_factor_interface_->add(
     output_path.points, planner_data_->current_odometry->pose, stop_point.value(),
-    stop_point.value(), autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+    autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
     autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/,
     0.0 /*velocity*/, 0.0 /*shift_distance*/, "run_out_approaching_velocity");
 

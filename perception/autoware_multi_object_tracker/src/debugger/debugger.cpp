@@ -18,11 +18,14 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace autoware::multi_object_tracker
 {
-TrackerDebugger::TrackerDebugger(rclcpp::Node & node, const std::string & frame_id)
-: node_(node), diagnostic_updater_(&node), object_debugger_(frame_id)
+TrackerDebugger::TrackerDebugger(
+  rclcpp::Node & node, const std::string & frame_id,
+  const std::vector<types::InputChannel> & channels_config)
+: node_(node), diagnostic_updater_(&node), object_debugger_(frame_id, channels_config)
 {
   // declare debug parameters to decide whether to publish debug topics
   loadParameters();
@@ -200,6 +203,7 @@ void TrackerDebugger::publishObjectsMarkers()
   if (!debug_settings_.publish_debug_markers) return;
 
   visualization_msgs::msg::MarkerArray marker_message;
+  marker_message.markers.clear();
   // process data
   object_debugger_.process();
 

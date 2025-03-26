@@ -2,15 +2,21 @@
 Changelog for package autoware_topic_relay_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* Contributors: Hayato Mizushima, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
-* fix(autoware_topic_relay_controller): fix typo (`#10081 <https://github.com/autowarefoundation/autoware.universe/issues/10081>`_)
+* fix(autoware_topic_relay_controller): fix typo (`#10081 <https://github.com/autowarefoundation/autoware_universe/issues/10081>`_)
   fix typo
 * Contributors: Yutaka Kondo
 
 0.41.2 (2025-02-19)
 -------------------
-* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware.universe/issues/10088>`_)
+* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware_universe/issues/10088>`_)
 * Contributors: Ryohsuke Mitsudome
 
 0.41.1 (2025-02-10)
@@ -19,7 +25,7 @@ Changelog for package autoware_topic_relay_controller
 0.41.0 (2025-01-29)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* feat(autoware_topic_relay_controller): add topic relay controller node (`#9964 <https://github.com/autowarefoundation/autoware.universe/issues/9964>`_)
+* feat(autoware_topic_relay_controller): add topic relay controller node (`#9964 <https://github.com/autowarefoundation/autoware_universe/issues/9964>`_)
   * feat: add node base
   * modify: include guard
   * feat: delete schema
@@ -51,7 +57,7 @@ Changelog for package autoware_topic_relay_controller
 * Contributors: Fumiya Watanabe, TetsuKawa
 
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* feat(autoware_topic_relay_controller): add topic relay controller node (`#9964 <https://github.com/autowarefoundation/autoware.universe/issues/9964>`_)
+* feat(autoware_topic_relay_controller): add topic relay controller node (`#9964 <https://github.com/autowarefoundation/autoware_universe/issues/9964>`_)
   * feat: add node base
   * modify: include guard
   * feat: delete schema

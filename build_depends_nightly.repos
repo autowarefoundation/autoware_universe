@@ -6,9 +6,9 @@ repositories:
     type: git
     url: https://github.com/autowarefoundation/autoware_utils.git
     version: main
-  core/autoware.core:
+  core/autoware_core:
     type: git
-    url: https://github.com/autowarefoundation/autoware.core.git
+    url: https://github.com/autowarefoundation/autoware_core.git
     version: main
   core/autoware_adapi_msgs:
     type: git
