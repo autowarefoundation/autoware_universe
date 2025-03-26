@@ -51,6 +51,8 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <mutex>
+#include <ratio>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -486,10 +488,18 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
 
-  // diagnostics
-  diagnostics_interface_ptr_ =
-    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "map_based_prediction");
-  processing_time_tolerance_ms_ = declare_parameter<double>("processing_time_tolerance_ms");
+  {  // diagnostics
+    using std::chrono_literals::operator""ms;
+
+    diagnostics_interface_ptr_ =
+      std::make_unique<autoware_utils::DiagnosticsInterface>(this, "map_based_prediction");
+
+    diagnostics_timer_ =
+      create_wall_timer(100ms, std::bind(&MapBasedPredictionNode::diagnosticsTimerCallback, this));
+
+    processing_time_tolerance_ms_ = declare_parameter<double>("processing_time_tolerance_ms");
+    consecutive_delay_tolerance_ms_ = declare_parameter<double>("consecutive_delay_tolerance_ms");
+  }
 
   // debug publishers
   if (use_time_publisher) {
@@ -540,6 +550,30 @@ rcl_interfaces::msg::SetParametersResult MapBasedPredictionNode::onParam(
   result.successful = true;
   result.reason = "success";
   return result;
+}
+
+void MapBasedPredictionNode::diagnosticsTimerCallback()
+{
+  std::lock_guard<std::mutex> lock(diagnostics_mtx_);
+  if (last_intime_processing_timestamp_) {
+    diagnostics_interface_ptr_->clear();
+    const auto timestamp_now = get_clock()->now();
+    const double delay_duration =
+      std::chrono::duration<double, std::milli>(
+        std::chrono::nanoseconds(
+          (timestamp_now - last_intime_processing_timestamp_.value()).nanoseconds()))
+        .count();
+
+    bool is_processing_time_exceeds_consecutively =
+      delay_duration > consecutive_delay_tolerance_ms_;
+    diagnostics_interface_ptr_->add_key_value(
+      "is_processing_time_exceeds_consecutively", is_processing_time_exceeds_consecutively);
+    if (is_processing_time_exceeds_consecutively) {
+      diagnostics_interface_ptr_->update_level_and_message(
+        diagnostic_msgs::msg::DiagnosticStatus::ERROR, "");
+    }
+    diagnostics_interface_ptr_->publish(timestamp_now);
+  }
 }
 
 void MapBasedPredictionNode::mapCallback(const LaneletMapBin::ConstSharedPtr msg)
@@ -679,19 +713,28 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
   const auto cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
 
   // Diagnostics
-  diagnostics_interface_ptr_->clear();
-  diagnostics_interface_ptr_->add_key_value("processing_time_ms", processing_time_ms);
-  bool is_processing_time_exceeds_tolerance = processing_time_ms > processing_time_tolerance_ms_;
-  diagnostics_interface_ptr_->add_key_value(
-    "is_processing_time_exceeds_tolerance", is_processing_time_exceeds_tolerance);
-  if (is_processing_time_exceeds_tolerance) {
-    std::ostringstream oss;
-    oss << "Processing time exceeded " << processing_time_tolerance_ms_ << "[ms] < "
-        << processing_time_ms << "[ms]";
-    diagnostics_interface_ptr_->update_level_and_message(
-      diagnostic_msgs::msg::DiagnosticStatus::WARN, oss.str());
+  {
+    std::lock_guard<std::mutex> lock(diagnostics_mtx_);
+    diagnostics_interface_ptr_->clear();
+    diagnostics_interface_ptr_->add_key_value("processing_time_ms", processing_time_ms);
+    bool is_processing_time_exceeds_tolerance = processing_time_ms > processing_time_tolerance_ms_;
+    diagnostics_interface_ptr_->add_key_value(
+      "is_processing_time_exceeds_tolerance", is_processing_time_exceeds_tolerance);
+    if (is_processing_time_exceeds_tolerance) {
+      std::ostringstream oss;
+      oss << "Processing time exceeded " << processing_time_tolerance_ms_ << "[ms] < "
+          << processing_time_ms << "[ms]";
+      diagnostics_interface_ptr_->update_level_and_message(
+        diagnostic_msgs::msg::DiagnosticStatus::WARN, oss.str());
+
+      if (!last_intime_processing_timestamp_) {
+        last_intime_processing_timestamp_ = get_clock()->now();
+      }
+    } else {
+      last_intime_processing_timestamp_ = get_clock()->now();
+    }
+    diagnostics_interface_ptr_->publish(output.header.stamp);
   }
-  diagnostics_interface_ptr_->publish(output.header.stamp);
 
   // Publish Processing Time
   if (processing_time_publisher_) {

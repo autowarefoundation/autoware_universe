@@ -56,3 +56,4 @@
     publish_processing_time_detail: false
     publish_debug_markers: false
     processing_time_tolerance_ms: 500.0 #[ms]
+    consecutive_delay_tolerance_ms: 1000.0 #[ms]
