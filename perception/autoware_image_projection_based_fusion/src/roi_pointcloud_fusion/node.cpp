@@ -129,7 +129,7 @@ void RoiPointCloudFusionNode::fuse_on_single_image(
       *reinterpret_cast<const float *>(&transformed_cloud.data[offset + y_offset]);
     const float transformed_z =
       *reinterpret_cast<const float *>(&transformed_cloud.data[offset + z_offset]);
-    if (transformed_z <= 0.0) {
+    if (det2d_status.camera_projector_ptr->isOutsideHorizontalView(transformed_x, transformed_z)) {
       continue;
     }
 
