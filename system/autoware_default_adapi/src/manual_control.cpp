@@ -147,7 +147,7 @@ void ManualControlNode::enable_pedals_commands()
 {
   sub_pedals_ = create_subscription<PedalsCommand>(
     ns_ + "/command/pedals", rclcpp::QoS(1),
-    [this](const PedalsCommand::SharedPtr msg) { (void)msg; });
+    [this](const PedalsCommand & msg) { pub_pedals_->publish(msg); });
 }
 
 void ManualControlNode::enable_acceleration_commands()
@@ -155,15 +155,14 @@ void ManualControlNode::enable_acceleration_commands()
   // TODO(isamu-takagi): Currently not supported.
   sub_acceleration_ = create_subscription<AccelerationCommand>(
     ns_ + "/command/acceleration", rclcpp::QoS(1),
-    [this](const AccelerationCommand::SharedPtr msg) { (void)msg; });
+    [this](const AccelerationCommand & msg) { (void)msg; });
 }
 
 void ManualControlNode::enable_velocity_commands()
 {
   // TODO(isamu-takagi): Currently not supported.
   sub_velocity_ = create_subscription<VelocityCommand>(
-    ns_ + "/command/velocity", rclcpp::QoS(1),
-    [this](const VelocityCommand::SharedPtr msg) { (void)msg; });
+    ns_ + "/command/velocity", rclcpp::QoS(1), [this](const VelocityCommand & msg) { (void)msg; });
 }
 
 void ManualControlNode::enable_common_commands()
