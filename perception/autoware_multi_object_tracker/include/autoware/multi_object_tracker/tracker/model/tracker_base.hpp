@@ -86,6 +86,16 @@ public:
     return (current_time - last_update_with_measurement_time_).seconds();
   }
 
+  std::string getUuidString() const
+  {
+    const auto uuid_msg = object_.uuid;
+    std::stringstream ss;
+    for (auto i = 0; i < 16; ++i) {
+      ss << std::hex << std::setfill('0') << std::setw(2) << +uuid_msg.uuid[i];
+    }
+    return ss.str();
+  }
+
 protected:
   types::DynamicObject object_;
 

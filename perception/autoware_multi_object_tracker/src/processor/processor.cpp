@@ -232,37 +232,69 @@ void TrackerProcessor::removeOverlappedTracker(const rclcpp::Time & time)
       // Check the Intersection over Union (IoU) between the two objects
       constexpr double min_union_iou_area = 1e-2;
       const auto iou = shapes::get2dIoU(object1, object2, min_union_iou_area);
-      bool delete_candidate_tracker = false;
 
-      // If both trackers are UNKNOWN, delete the younger tracker
-      // If one side of the tracker is UNKNOWN, delete UNKNOWN objects
-      if (label1 == Label::UNKNOWN || label2 == Label::UNKNOWN) {
-        if (iou > config_.min_unknown_object_removal_iou) {
-          if (label2 == Label::UNKNOWN) {
-            delete_candidate_tracker = true;
-          }
-        }
-      } else {  // If neither object is UNKNOWN, delete the younger tracker
-        if (iou > config_.min_known_object_removal_iou) {
-          /* erase only when prioritized one has a measurement */
-          delete_candidate_tracker = true;
-        }
-      }
-
-      if (delete_candidate_tracker) {
-        /* erase only when prioritized one has later(or equal time) meas than the other's */
-        if (
-          sorted_list_tracker[i]->getElapsedTimeFromLastUpdate(time) <=
-          sorted_list_tracker[j]->getElapsedTimeFromLastUpdate(time)) {
-          // Remove from original list_tracker
-          list_tracker_.remove(sorted_list_tracker[j]);
-          // Remove from sorted list
-          sorted_list_tracker.erase(sorted_list_tracker.begin() + j);
-          --j;
-        }
+      // check if object2 should be removed
+      if (canRemoveOverlappedTarget(*(sorted_list_tracker[j]), *(sorted_list_tracker[i]), iou)) {
+        // Remove from original list_tracker
+        list_tracker_.remove(sorted_list_tracker[j]);
+        // Remove from sorted list
+        sorted_list_tracker.erase(sorted_list_tracker.begin() + j);
+        --j;
       }
     }
   }
+}
+
+bool TrackerProcessor::canRemoveOverlappedTarget(
+  const Tracker & target, const Tracker & other, const double iou) const
+{
+  // if the other is not confident, do not remove the target
+  if (!other.isConfident()) {
+    return false;
+  }
+
+  // 1. compare known class probability
+  const float target_known_prob = target.getKnownObjectProbability();
+  const float other_known_prob = other.getKnownObjectProbability();
+  constexpr float min_known_prob = 0.2;
+
+  // the target class is known
+  if (target_known_prob >= min_known_prob) {
+    // if other class is unknown, do not remove target
+    if (other_known_prob < min_known_prob) {
+      return false;
+    }
+    // both are known class, check the IoU
+    if (iou > config_.min_known_object_removal_iou) {
+      // compare probability vector, prioritize lower index of the probability vector
+      std::vector<float> target_existence_prob, other_existence_prob;
+      constexpr float prob_buffer = 0.4;
+      if (!target.getExistenceProbabilityVector(target_existence_prob)) {
+        return false;
+      }
+      if (!other.getExistenceProbabilityVector(other_existence_prob)) {
+        return false;
+      }
+      for (size_t i = 0; i < target_existence_prob.size(); ++i) {
+        if (target_existence_prob[i] + prob_buffer < other_existence_prob[i]) {
+          return true;
+        }
+      }
+
+      // compare the covariance size
+      return target.getPositionCovarianceSizeSq() > other.getPositionCovarianceSizeSq();
+    }
+  }
+  // the target class is unknown, check the IoU
+  if (iou > config_.min_unknown_object_removal_iou) {
+    if (other_known_prob < min_known_prob) {
+      // both are unknown, remove the larger uncertainty one
+      return target.getPositionCovarianceSizeSq() > other.getPositionCovarianceSizeSq();
+    }
+    // if the other class is known, remove the target
+    return true;
+  }
+  return false;
 }
 
 void TrackerProcessor::getTrackedObjects(
