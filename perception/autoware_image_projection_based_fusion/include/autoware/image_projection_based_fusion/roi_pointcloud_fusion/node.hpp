@@ -46,6 +46,7 @@ private:
   int max_cluster_size_{20};
   bool fuse_unknown_only_{true};
   double cluster_2d_tolerance_;
+  double roi_scale_factor_{1.0};
 
   std::vector<ClusterObjType> output_fused_objects_;
 };
