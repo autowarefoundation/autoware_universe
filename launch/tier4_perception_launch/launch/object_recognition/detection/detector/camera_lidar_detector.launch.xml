@@ -185,6 +185,7 @@
           <arg name="input/pointcloud" value="$(var roi_cluster/input/pointcloud)"/>
           <arg name="output/clusters" value="$(var roi_cluster/output/clusters)"/>
           <arg name="param_path" value="$(var roi_pointcloud_fusion_param_path)"/>
+          <arg name="pointcloud_container_name" value="$(var node/pointcloud_container)"/>
         </include>
       </group>
     </group>
