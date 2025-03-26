@@ -16,9 +16,8 @@
 #include "autoware/behavior_path_bidirectional_traffic_module/give_way.hpp"
 #include "autoware/behavior_path_bidirectional_traffic_module/keep_left.hpp"
 #include "autoware/behavior_path_bidirectional_traffic_module/parameter.hpp"
+#include "autoware/behavior_path_bidirectional_traffic_module/utils.hpp"
 #include "autoware/trajectory/path_point_with_lane_id.hpp"
-#include "autoware/trajectory/utils/find_intervals.hpp"
-#include "autoware/universe_utils/geometry/boost_geometry.hpp"
 
 #include <rclcpp/logging.hpp>
 
@@ -44,26 +43,21 @@ BidirectionalTrafficModule::BidirectionalTrafficModule(
     objects_of_interest_marker_interface_ptr_map,
   const std::shared_ptr<PlanningFactorInterface> & planning_factor_interface)
 : SceneModuleInterface{name.data(), node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface},
-  parameters_(parameters)
+  parameters_(parameters),
+  has_trajectory_bidirectional_lane_overlap_(false)
 {
 }
 
-autoware::universe_utils::Polygon2d BidirectionalTrafficModule::get_ego_polygon(
-  const geometry_msgs::msg::Pose & ego_pose) const
+void BidirectionalTrafficModule::initialize_all_member_variables()
 {
-  return autoware::universe_utils::toFootprint(
-    ego_pose, planner_data_->parameters.base_link2front, planner_data_->parameters.base_link2rear,
-    planner_data_->parameters.vehicle_width);
-}
-
-autoware::universe_utils::Polygon2d BidirectionalTrafficModule::get_ego_polygon() const
-{
-  return get_ego_polygon(getEgoPose());
+  bidirectional_lane_where_ego_was_ = std::nullopt;
+  has_trajectory_bidirectional_lane_overlap_ = false;
+  give_way_ = std::nullopt;
+  oncoming_cars_ = std::nullopt;
 }
 
 CandidateOutput BidirectionalTrafficModule::planCandidate() const
 {
-  // Implementation will be added here in the future.
   return CandidateOutput{};
 }
 
@@ -84,23 +78,13 @@ BehaviorModuleOutput BidirectionalTrafficModule::plan()
     return module_output;
   }
 
-  if (bidirectional_lane_intervals_in_current_trajectory_.empty()) {
-    return module_output;
-  }
-
   *trajectory = shift_trajectory_for_keep_left(
-    *trajectory, get_all_bidirectional_lanes_in_map(), parameters_->keep_left_ratio,
-    planner_data_->parameters.vehicle_width);
+    *trajectory, get_all_bidirectional_lanes_in_map(), *parameters_,
+    EgoParameters::from_planner_data(*planner_data_));
 
-  if (give_way_) {
+  if (give_way_ && oncoming_cars_) {
     const double speed = planner_data_->self_odometry->twist.twist.linear.x;
-    *trajectory = give_way_->modify_trajectory(*trajectory, oncoming_cars_, getEgoPose(), speed);
-    if (give_way_->is_stop_required()) {
-      PoseWithDetail stop_pose(*give_way_->get_stop_pose());
-      stop_pose_ = stop_pose;
-    } else {
-      stop_pose_ = std::nullopt;
-    }
+    *trajectory = give_way_->modify_trajectory(*trajectory, *oncoming_cars_, getEgoPose(), speed);
   }
 
   module_output.path.points = trajectory->restore();
@@ -110,13 +94,12 @@ BehaviorModuleOutput BidirectionalTrafficModule::plan()
 
 BehaviorModuleOutput BidirectionalTrafficModule::planWaitingApproval()
 {
-  // Implementation will be added here in the future.
-  return BehaviorModuleOutput{};
+  return plan();
 }
 
 bool BidirectionalTrafficModule::isExecutionRequested() const
 {
-  return !bidirectional_lane_intervals_in_current_trajectory_.empty();
+  return has_trajectory_bidirectional_lane_overlap_;
 }
 
 bool BidirectionalTrafficModule::isExecutionReady() const
@@ -148,50 +131,48 @@ void BidirectionalTrafficModule::updateData()
     return;
   }
 
-  // Update bidirectional lane intervals in trajectory
-  bidirectional_lane_intervals_in_current_trajectory_.clear();
-  for (auto & bidirectional_lanes : get_all_bidirectional_lanes_in_map()) {
-    std::optional<trajectory::Interval> interval =
-      bidirectional_lanes.get_overlap_interval(*trajectory);
-    if (interval.has_value()) {
-      bidirectional_lane_intervals_in_current_trajectory_.emplace_back(*interval);
-    }
-  }
+  // Check if the trajectory has bidirectional lanelet's id
+  has_trajectory_bidirectional_lane_overlap_ =
+    has_common_part(get_all_bidirectional_lane_ids_in_map(), trajectory->get_contained_lane_ids());
 
-  // Check if the ego vehicle is running on the bidirectional lane
-  auto new_current_bidirectional_lane = get_current_bidirectional_lane(
-    getEgoPose(), get_ego_polygon(), get_all_bidirectional_lanes_in_map());
-
-  if (!current_bidirectional_lane_.has_value() && new_current_bidirectional_lane.has_value()) {
-    give_way_.emplace(
-      *new_current_bidirectional_lane,  //
-      EgoParameters{
-        planner_data_->parameters.base_link2front, planner_data_->parameters.base_link2rear,
-        planner_data_->parameters.vehicle_width},
-      parameters_->time_to_prepare_pull_over,            //
-      parameters_->default_shift_distance_to_pull_over,  //
-      parameters_->pull_over_ratio);
-
-    RCLCPP_INFO(getLogger(), "Entered Bidirectional Lane");
-  }
-  if (current_bidirectional_lane_.has_value() && !new_current_bidirectional_lane.has_value()) {
-    give_way_.reset();
-    RCLCPP_INFO(getLogger(), "Exited Bidirectional Lane");
-  }
-  current_bidirectional_lane_ = new_current_bidirectional_lane;
-
-  if (!current_bidirectional_lane_.has_value()) {
+  if (!has_trajectory_bidirectional_lane_overlap_) {
+    initialize_all_member_variables();
     return;
   }
 
-  // Update Oncoming Cars
-  oncoming_cars_ = OncomingCar::update_oncoming_cars_in_bidirectional_lane(
-    oncoming_cars_, *planner_data_->dynamic_object, *current_bidirectional_lane_, getEgoPose(),
-    parameters_->forward_looking_distance,
-    [this](std::string_view msg) { RCLCPP_INFO(getLogger(), "%s", msg.data()); });
+  // Check if the ego vehicle is running on the bidirectional lane
+  auto bidirectional_lane_where_ego_is = get_bidirectional_lanelets_where_ego_is(
+    getEgoPose(), EgoParameters::from_planner_data(*planner_data_),
+    get_all_bidirectional_lanes_in_map());
+
+  if (
+    !bidirectional_lane_where_ego_was_.has_value() && bidirectional_lane_where_ego_is.has_value()) {
+    give_way_ = GiveWay(
+      *bidirectional_lane_where_ego_is, EgoParameters::from_planner_data(*planner_data_),
+      *parameters_, [this](geometry_msgs::msg::Pose pose) { stop_pose_ = PoseWithDetail(pose); });
+
+    oncoming_cars_ = OncomingCars(
+      *bidirectional_lane_where_ego_is, 0.1,
+      [this](std::string_view msg) { RCLCPP_INFO(getLogger(), "%s", msg.data()); });
+
+    RCLCPP_INFO(getLogger(), "Entered Bidirectional Lane");
+  }
+  if (
+    bidirectional_lane_where_ego_was_.has_value() && !bidirectional_lane_where_ego_is.has_value()) {
+    give_way_ = std::nullopt;
+    RCLCPP_INFO(getLogger(), "Exited Bidirectional Lane");
+  }
+  bidirectional_lane_where_ego_was_ = bidirectional_lane_where_ego_is;
+
+  if (!bidirectional_lane_where_ego_is.has_value()) {
+    return;
+  }
+  if (oncoming_cars_.has_value()) {
+    oncoming_cars_->update(*planner_data_->dynamic_object, getEgoPose(), clock_->now());
+  }
 }
 
-std::vector<ConnectedBidirectionalLanelets>
+std::vector<ConnectedBidirectionalLanelets::SharedConstPtr>
 BidirectionalTrafficModule::get_all_bidirectional_lanes_in_map() const
 {
   if (!all_bidirectional_lanes_in_map_.has_value()) {
@@ -199,22 +180,32 @@ BidirectionalTrafficModule::get_all_bidirectional_lanes_in_map() const
     auto get_next_lanelets = [this](const lanelet::ConstLanelet & lanelet) {
       return planner_data_->route_handler->getNextLanelets(lanelet);
     };
-    auto get_previous_lanelets = [this](const lanelet::ConstLanelet & lanelet) {
+    auto get_prev_lanelets = [this](const lanelet::ConstLanelet & lanelet) {
       return planner_data_->route_handler->getPreviousLanelets(lanelet);
     };
     all_bidirectional_lanes_in_map_ =
       ConnectedBidirectionalLanelets::search_bidirectional_lanes_on_map(
-        map, get_next_lanelets, get_previous_lanelets);
+        map, get_next_lanelets, get_prev_lanelets);
     RCLCPP_INFO(
       getLogger(), "Found %lu bidirectional lanes", all_bidirectional_lanes_in_map_->size() / 2);
   }
   return all_bidirectional_lanes_in_map_.value();
 }
 
+lanelet::Ids BidirectionalTrafficModule::get_all_bidirectional_lane_ids_in_map() const
+{
+  lanelet::Ids all_bidirectional_lane_ids;
+  for (const auto & lane : get_all_bidirectional_lanes_in_map()) {
+    for (const auto & lanelet : lane->get_lanelets()) {
+      all_bidirectional_lane_ids.emplace_back(lanelet.id());
+    }
+  }
+  return all_bidirectional_lane_ids;
+}
+
 void BidirectionalTrafficModule::acceptVisitor(
   const std::shared_ptr<SceneModuleVisitor> & /* visitor */) const
 {
-  // Implementation will be added here in the future.
 }
 
 void BidirectionalTrafficModule::updateModuleParams(const std::any & /* parameters */)
@@ -224,8 +215,7 @@ void BidirectionalTrafficModule::updateModuleParams(const std::any & /* paramete
 
 bool BidirectionalTrafficModule::canTransitSuccessState()
 {
-  // Implementation will be added here in the
-  return false;
+  return !has_trajectory_bidirectional_lane_overlap_;
 }
 
 bool BidirectionalTrafficModule::canTransitFailureState()

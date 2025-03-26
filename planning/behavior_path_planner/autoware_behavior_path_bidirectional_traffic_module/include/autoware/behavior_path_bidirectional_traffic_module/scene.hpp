@@ -15,14 +15,15 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__SCENE_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__SCENE_HPP_
 
-#include "autoware/behavior_path_bidirectional_traffic_module/connected_bidirectional_lanelets.hpp"
+#include "autoware/behavior_path_bidirectional_traffic_module/bidirectional_lanelets.hpp"
 #include "autoware/behavior_path_bidirectional_traffic_module/give_way.hpp"
 #include "autoware/behavior_path_bidirectional_traffic_module/oncoming_car.hpp"
 #include "autoware/behavior_path_bidirectional_traffic_module/parameter.hpp"
 #include "autoware/behavior_path_planner_common/interface/scene_module_interface.hpp"
-#include "autoware/trajectory/utils/find_intervals.hpp"
 
 #include <autoware/universe_utils/geometry/boost_geometry.hpp>
+
+#include <lanelet2_core/Forward.h>
 
 #include <memory>
 #include <optional>
@@ -59,27 +60,27 @@ public:
   bool canTransitFailureState() override;
   MarkerArray getModuleVirtualWall() override { return MarkerArray{}; }
 
-  autoware::universe_utils::Polygon2d get_ego_polygon(
-    const geometry_msgs::msg::Pose & ego_pose) const;
-  autoware::universe_utils::Polygon2d get_ego_polygon() const;
+  void initialize_all_member_variables();
+
+  std::vector<ConnectedBidirectionalLanelets::SharedConstPtr> get_all_bidirectional_lanes_in_map()
+    const;
+
+  lanelet::Ids get_all_bidirectional_lane_ids_in_map() const;
 
 private:
   const std::shared_ptr<const BidirectionalTrafficModuleParameters> parameters_;
 
-  mutable std::optional<std::vector<ConnectedBidirectionalLanelets>>
+  mutable std::optional<std::vector<ConnectedBidirectionalLanelets::SharedConstPtr>>
     all_bidirectional_lanes_in_map_;
 
-  std::vector<ConnectedBidirectionalLanelets> get_all_bidirectional_lanes_in_map() const;
+  std::optional<ConnectedBidirectionalLanelets::SharedConstPtr>
+    bidirectional_lane_where_ego_was_;  //!< current bidirectional lane
 
-  std::optional<ConnectedBidirectionalLanelets>
-    current_bidirectional_lane_;  //!< current bidirectional lane
-
-  std::vector<trajectory::Interval>
-    bidirectional_lane_intervals_in_current_trajectory_;  //!< bidirectional lane intervals in the
-                                                          //!< trajectory
-  std::vector<OncomingCar> oncoming_cars_;  //!< oncoming cars in the bidirectional lane
+  bool has_trajectory_bidirectional_lane_overlap_;
 
   std::optional<GiveWay> give_way_;  //!< give way state machine
+
+  std::optional<OncomingCars> oncoming_cars_;  //!< circumstance of the ego vehicle
 };
 
 }  // namespace autoware::behavior_path_planner

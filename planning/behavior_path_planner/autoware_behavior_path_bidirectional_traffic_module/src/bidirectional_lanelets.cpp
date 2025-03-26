@@ -12,21 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/behavior_path_bidirectional_traffic_module/connected_bidirectional_lanelets.hpp"
+#include "autoware/behavior_path_bidirectional_traffic_module/bidirectional_lanelets.hpp"
 
 #include "autoware/behavior_path_bidirectional_traffic_module/parameter.hpp"
+#include "autoware/behavior_path_bidirectional_traffic_module/utils.hpp"
 #include "autoware/trajectory/path_point_with_lane_id.hpp"
 #include "autoware/trajectory/utils/frenet_utils.hpp"
 #include "autoware/universe_utils/geometry/boost_geometry.hpp"
 #include "autoware/universe_utils/geometry/boost_polygon_utils.hpp"
+#include "autoware_utils/system/lru_cache.hpp"
 
 #include <Eigen/Core>
-#include <autoware_lanelet2_extension/utility/query.hpp>
-#include <autoware_lanelet2_extension/utility/utilities.hpp>
-#include <rclcpp/logging.hpp>
 
-#include <geometry_msgs/msg/detail/point__struct.hpp>
-#include <geometry_msgs/msg/detail/pose__struct.hpp>
+#include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 
 #include <boost/geometry/algorithms/area.hpp>
@@ -49,7 +47,7 @@
 namespace autoware::behavior_path_planner
 {
 
-bool is_bidirectional_lanes(
+bool is_bidirectional_lanelets_pair(
   const lanelet::ConstLanelet & lanelet_a, const lanelet::ConstLanelet & lanelet_b)
 {
   return (lanelet_a.leftBound().id() == lanelet_b.rightBound().id()) &&
@@ -70,106 +68,117 @@ void remove_lanelet_with_turn_direction(lanelet::ConstLanelets * lanelets)
 
 void search_connected_bidirectional_lanelet_in_one_direction(
   const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> & get_next_lanelets,
-  const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> &
-    get_previous_lanelets,
-  const lanelet::ConstLanelet & lanelet_a,                             //
-  const lanelet::ConstLanelet & lanelet_b,                             //
-  std::list<lanelet::ConstLanelet> * connected_bidirectional_lanes_a,  //
-  std::list<lanelet::ConstLanelet> * connected_bidirectional_lanes_b)
+  const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> & get_prev_lanelets,
+  const lanelet::ConstLanelet & lanelet_a,             //
+  const lanelet::ConstLanelet & lanelet_b,             //
+  std::list<lanelet::ConstLanelet> * lanelets_list_a,  //
+  std::list<lanelet::ConstLanelet> * lanelets_list_b)
 {
   auto next_lanelets_a = get_next_lanelets(lanelet_a);
-  auto prev_lanelets_b = get_previous_lanelets(lanelet_b);
+  auto prev_lanelets_b = get_prev_lanelets(lanelet_b);
   remove_lanelet_with_turn_direction(&next_lanelets_a);
   remove_lanelet_with_turn_direction(&prev_lanelets_b);
   if (next_lanelets_a.size() != 1 || prev_lanelets_b.size() != 1) return;
   auto next_lanelet_a = next_lanelets_a.front();
   auto prev_lanelet_b = prev_lanelets_b.front();
-  if (is_bidirectional_lanes(next_lanelet_a, prev_lanelet_b)) {
-    connected_bidirectional_lanes_a->emplace_back(next_lanelet_a);
-    connected_bidirectional_lanes_b->emplace_front(prev_lanelet_b);
+  if (is_bidirectional_lanelets_pair(next_lanelet_a, prev_lanelet_b)) {
+    lanelets_list_a->emplace_back(next_lanelet_a);
+    lanelets_list_b->emplace_front(prev_lanelet_b);
     search_connected_bidirectional_lanelet_in_one_direction(
-      get_next_lanelets, get_previous_lanelets, next_lanelet_a, prev_lanelet_b,
-      connected_bidirectional_lanes_a, connected_bidirectional_lanes_b);
+      get_next_lanelets, get_prev_lanelets, next_lanelet_a, prev_lanelet_b, lanelets_list_a,
+      lanelets_list_b);
   }
 }
 
-std::pair<ConnectedBidirectionalLanelets, ConnectedBidirectionalLanelets>
-ConnectedBidirectionalLanelets::search_connected_bidirectional_lanelets(
-  const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> & get_next_lanelets,
-  const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> &
-    get_previous_lanelets,
-  const lanelet::ConstLanelet & lanelet_a, const lanelet::ConstLanelet & lanelet_b)
+ConnectedBidirectionalLanelets::ConnectedBidirectionalLanelets(
+  lanelet::ConstLanelets bidirectional_lanelets, lanelet::ConstLanelets lanelets_before_entering,
+  lanelet::ConstLanelets lanelets_after_entering)
+: bidirectional_lanelets_(std::move(bidirectional_lanelets)),
+  lanelets_before_entering_(std::move(lanelets_before_entering)),
+  lanelets_after_entering_(std::move(lanelets_after_entering))
 {
-  std::list<lanelet::ConstLanelet> connected_bidirectional_lanes_a = {lanelet_a};
-  std::list<lanelet::ConstLanelet> connected_bidirectional_lanes_b = {lanelet_b};
-  search_connected_bidirectional_lanelet_in_one_direction(
-    get_next_lanelets, get_previous_lanelets, lanelet_a, lanelet_b,
-    &connected_bidirectional_lanes_a, &connected_bidirectional_lanes_b);
-  search_connected_bidirectional_lanelet_in_one_direction(
-    get_next_lanelets, get_previous_lanelets, lanelet_b, lanelet_a,
-    &connected_bidirectional_lanes_b, &connected_bidirectional_lanes_a);
-  ConnectedBidirectionalLanelets connected_bidirectional_lanelets_a(
-    connected_bidirectional_lanes_a.begin(), connected_bidirectional_lanes_a.end(),
-    get_next_lanelets, get_previous_lanelets);
-  ConnectedBidirectionalLanelets connected_bidirectional_lanelets_b(
-    connected_bidirectional_lanes_b.begin(), connected_bidirectional_lanes_b.end(),
-    get_next_lanelets, get_previous_lanelets);
-  connected_bidirectional_lanelets_a.set_opposite_bidirectional_lanes(
-    connected_bidirectional_lanelets_b);
-  connected_bidirectional_lanelets_b.set_opposite_bidirectional_lanes(
-    connected_bidirectional_lanelets_a);
-  return {connected_bidirectional_lanelets_a, connected_bidirectional_lanelets_b};
 }
 
-std::vector<ConnectedBidirectionalLanelets>
+std::pair<
+  ConnectedBidirectionalLanelets::SharedConstPtr, ConnectedBidirectionalLanelets::SharedConstPtr>
+ConnectedBidirectionalLanelets::make_bidirectional_lane_pair(
+  const std::pair<lanelet::ConstLanelet, lanelet::ConstLanelet> & one_bidirectional_lanelet_pair,
+  const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> & get_next_lanelets,
+  const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> & get_prev_lanelets)
+{
+  const auto & [lanelet_a, lanelet_b] = one_bidirectional_lanelet_pair;
+
+  std::list<lanelet::ConstLanelet> lanelets_list_a = {lanelet_a};
+  std::list<lanelet::ConstLanelet> lanelets_list_b = {lanelet_b};
+
+  search_connected_bidirectional_lanelet_in_one_direction(
+    get_next_lanelets, get_prev_lanelets, lanelet_a, lanelet_b, &lanelets_list_a, &lanelets_list_b);
+  search_connected_bidirectional_lanelet_in_one_direction(
+    get_next_lanelets, get_prev_lanelets, lanelet_b, lanelet_a, &lanelets_list_b, &lanelets_list_a);
+
+  lanelet::ConstLanelets lanelets_a(lanelets_list_a.begin(), lanelets_list_a.end());
+  lanelet::ConstLanelets lanelets_b(lanelets_list_b.begin(), lanelets_list_b.end());
+  lanelet::ConstLanelets lanelets_inflow_to_a = get_inflow_lanelets(lanelets_a, get_prev_lanelets);
+  lanelet::ConstLanelets lanelets_outflow_from_a =
+    get_outflow_lanelets(lanelets_a, get_next_lanelets);
+  lanelet::ConstLanelets lanelets_inflow_to_b = get_inflow_lanelets(lanelets_b, get_prev_lanelets);
+  lanelet::ConstLanelets lanelets_outflow_from_b =
+    get_outflow_lanelets(lanelets_b, get_next_lanelets);
+
+  auto bidirectional_lanelets_a = std::make_shared<ConnectedBidirectionalLanelets>(
+    ConnectedBidirectionalLanelets{lanelets_a, lanelets_inflow_to_a, lanelets_outflow_from_a});
+
+  auto bidirectional_lanelets_b = std::make_shared<ConnectedBidirectionalLanelets>(
+    ConnectedBidirectionalLanelets{lanelets_b, lanelets_inflow_to_b, lanelets_outflow_from_b});
+
+  bidirectional_lanelets_a->opposite_ = bidirectional_lanelets_b;
+  bidirectional_lanelets_b->opposite_ = bidirectional_lanelets_a;
+
+  return {bidirectional_lanelets_a, bidirectional_lanelets_b};
+}
+
+std::vector<ConnectedBidirectionalLanelets::SharedConstPtr>
 ConnectedBidirectionalLanelets::search_bidirectional_lanes_on_map(
   const lanelet::LaneletMap & map,
   const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> & get_next_lanelets,
-  const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> &
-    get_previous_lanelets)
+  const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> & get_prev_lanelets)
 {
-  std::vector<ConnectedBidirectionalLanelets> bidirectional_lanes;
+  std::vector<ConnectedBidirectionalLanelets::SharedConstPtr> bidirectional_lanelets;
 
-  auto contains = [&bidirectional_lanes](const lanelet::ConstLanelet & lanelet) -> bool {
-    return std::any_of(
-      bidirectional_lanes.begin(), bidirectional_lanes.end(),
-      [&](const ConnectedBidirectionalLanelets & lanelets) {
-        return std::any_of(
-          lanelets.bidirectional_lanes_.begin(), lanelets.bidirectional_lanes_.end(),
-          [&lanelet](const lanelet::ConstLanelet & bidirectional_lanelet) {
-            return bidirectional_lanelet.id() == lanelet.id();
-          });
-      });
-  };
+  std::unordered_set<lanelet::ConstLanelet> searched_lanelets;
 
   for (auto lanelet_itr_a = map.laneletLayer.begin(); lanelet_itr_a != map.laneletLayer.end();
        ++lanelet_itr_a) {
     for (auto lanelet_itr_b = std::next(lanelet_itr_a); lanelet_itr_b != map.laneletLayer.end();
          ++lanelet_itr_b) {
       if (
-        is_bidirectional_lanes(*lanelet_itr_a, *lanelet_itr_b) && !contains(*lanelet_itr_a) &&
-        !contains(*lanelet_itr_b)) {
-        auto [connected_bidirectional_lanes_a, connected_bidirectional_lanes_b] =
-          search_connected_bidirectional_lanelets(
-            get_next_lanelets, get_previous_lanelets, *lanelet_itr_a, *lanelet_itr_b);
-        bidirectional_lanes.emplace_back(std::move(connected_bidirectional_lanes_a));
-        bidirectional_lanes.emplace_back(std::move(connected_bidirectional_lanes_b));
+        is_bidirectional_lanelets_pair(*lanelet_itr_a, *lanelet_itr_b) &&
+        searched_lanelets.find(*lanelet_itr_a) == searched_lanelets.end() &&
+        searched_lanelets.find(*lanelet_itr_b) == searched_lanelets.end()) {
+        auto [bidirectional_lanelets_a, bidirectional_lanelets_b] = make_bidirectional_lane_pair(
+          {*lanelet_itr_a, *lanelet_itr_b}, get_next_lanelets, get_prev_lanelets);
+        searched_lanelets.insert(
+          bidirectional_lanelets_a->get_lanelets().begin(),
+          bidirectional_lanelets_a->get_lanelets().end());
+        searched_lanelets.insert(
+          bidirectional_lanelets_b->get_lanelets().begin(),
+          bidirectional_lanelets_b->get_lanelets().end());
+        bidirectional_lanelets.emplace_back(bidirectional_lanelets_a);
+        bidirectional_lanelets.emplace_back(bidirectional_lanelets_b);
       }
     }
   }
-  return bidirectional_lanes;
+  return bidirectional_lanelets;
 }
 
 std::optional<trajectory::Interval> ConnectedBidirectionalLanelets::get_overlap_interval(
   const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
     trajectory) const
 {
-  lanelet::Ids lane_ids(bidirectional_lanes_.size());
-  std::transform(
-    bidirectional_lanes_.begin(), bidirectional_lanes_.end(), lane_ids.begin(),
-    [](const lanelet::ConstLanelet & lanelet) { return lanelet.id(); });
-
-  std::unordered_set<lanelet::Id> lane_ids_set(lane_ids.begin(), lane_ids.end());
+  std::unordered_set<lanelet::Id> lane_ids_set;
+  for (const auto & lanelet : bidirectional_lanelets_) {
+    lane_ids_set.insert(lanelet.id());
+  }
 
   auto interval = trajectory::find_intervals(
     trajectory,
@@ -212,7 +221,7 @@ bool ConnectedBidirectionalLanelets::is_object_on_this_lane(
 {
   Eigen::Vector2d obj_direction = calc_pose_direction(obj_pose);
 
-  for (const auto & lanelet : bidirectional_lanes_) {
+  for (const auto & lanelet : bidirectional_lanelets_) {
     auto lanelet_polygon = lanelet.polygon2d().basicPolygon();
     if (boost::geometry::disjoint(obj_polygon, lanelet_polygon)) {
       continue;
@@ -232,38 +241,43 @@ bool ConnectedBidirectionalLanelets::is_object_on_this_lane(
   const geometry_msgs::msg::Pose obj_pose = obj.kinematics.initial_pose_with_covariance.pose;
   return is_object_on_this_lane(obj_pose, obj_polygon);
 }
-ConnectedBidirectionalLanelets::ConnectedBidirectionalLanelets(
-  const ConnectedBidirectionalLanelets & other)
+
+[[nodiscard]] ConnectedBidirectionalLanelets::SharedConstPtr
+ConnectedBidirectionalLanelets::get_opposite() const
 {
-  bidirectional_lanes_ = other.bidirectional_lanes_;
-  lanelets_before_bidirectional_lanes_ = other.lanelets_before_bidirectional_lanes_;
-  lanelets_after_bidirectional_lanes_ = other.lanelets_after_bidirectional_lanes_;
-  set_opposite_bidirectional_lanes(*other.opposite_bidirectional_lanes_);
-  opposite_bidirectional_lanes_->set_opposite_bidirectional_lanes(*this);
+  return opposite_.lock();
 }
 
-ConnectedBidirectionalLanelets & ConnectedBidirectionalLanelets::operator=(
-  const ConnectedBidirectionalLanelets & other)
+[[nodiscard]] const lanelet::ConstLanelets & ConnectedBidirectionalLanelets::get_lanelets() const
 {
-  if (this != &other) {
-    bidirectional_lanes_ = other.bidirectional_lanes_;
-    set_opposite_bidirectional_lanes(*other.opposite_bidirectional_lanes_);
-    opposite_bidirectional_lanes_->set_opposite_bidirectional_lanes(*this);
-  }
-  return *this;
+  return bidirectional_lanelets_;
 }
 
-[[nodiscard]] ConnectedBidirectionalLanelets
-ConnectedBidirectionalLanelets::get_opposite_bidirectional_lanes() const
+[[nodiscard]] const lanelet::ConstLanelets &
+ConnectedBidirectionalLanelets::get_lanelets_before_entering() const
 {
-  return *opposite_bidirectional_lanes_;
+  return lanelets_before_entering_;
+}
+
+[[nodiscard]] const lanelet::ConstLanelets &
+ConnectedBidirectionalLanelets::get_lanelets_after_exiting() const
+{
+  return lanelets_after_entering_;
 }
 
 [[nodiscard]] trajectory::Trajectory<geometry_msgs::msg::Pose>
 ConnectedBidirectionalLanelets::get_center_line() const
 {
+  // add cache
+  static autoware_utils::LRUCache<
+    lanelet::ConstLanelets, trajectory::Trajectory<geometry_msgs::msg::Point>, ConstLaneletsHashMap>
+    cache(1000);
+  if (cache.contains(bidirectional_lanelets_)) {
+    return trajectory::Trajectory<geometry_msgs::msg::Pose>{
+      cache.get(bidirectional_lanelets_).value()};
+  }
   std::vector<geometry_msgs::msg::Point> center_line;
-  for (const auto & lane : bidirectional_lanes_) {
+  for (const auto & lane : bidirectional_lanelets_) {
     for (const auto & point : lane.centerline()) {
       geometry_msgs::msg::Point p;
       p.x = point.x();
@@ -271,7 +285,7 @@ ConnectedBidirectionalLanelets::get_center_line() const
       p.z = point.z();
       center_line.emplace_back(p);
     }
-    if (lane != bidirectional_lanes_.back()) {
+    if (lane != bidirectional_lanelets_.back()) {
       center_line.pop_back();
     }
   }
@@ -281,57 +295,27 @@ ConnectedBidirectionalLanelets::get_center_line() const
     throw std::runtime_error("Failed to build trajectory in ConnectedBidirectionalLanelets");
   }
 
-  return trajectory::Trajectory<geometry_msgs::msg::Pose>(*trajectory);
-}
-
-[[nodiscard]] trajectory::Trajectory<geometry_msgs::msg::Pose>
-ConnectedBidirectionalLanelets::get_left_line() const
-{
-  std::vector<geometry_msgs::msg::Point> left_line;
-  for (const auto & lane : bidirectional_lanes_) {
-    for (const auto & point : lane.leftBound()) {
-      geometry_msgs::msg::Point p;
-      p.x = point.x();
-      p.y = point.y();
-      p.z = point.z();
-      left_line.push_back(p);
-    }
-    if (lane != bidirectional_lanes_.back()) {
-      left_line.pop_back();
-    }
-  }
-
-  auto trajectory = trajectory::Trajectory<geometry_msgs::msg::Point>::Builder{}.build(left_line);
-
-  if (!trajectory) {
-    throw std::runtime_error("Failed to build trajectory in ConnectedBidirectionalLanelets");
-  }
+  cache.put(bidirectional_lanelets_, *trajectory);
 
   return trajectory::Trajectory<geometry_msgs::msg::Pose>(*trajectory);
-}
-
-[[nodiscard]] std::vector<lanelet::ConstLanelet>
-ConnectedBidirectionalLanelets::get_intersection_lanelets() const
-{
-  std::vector<lanelet::ConstLanelet> intersection_lanelets;
-  for (const auto & lane : bidirectional_lanes_) {
-    std::string_view turn_direction = lane.attributeOr("turn_direction", "none");
-    if (turn_direction == "straight") {
-      intersection_lanelets.emplace_back(lane);
-    }
-  }
-  return intersection_lanelets;
 }
 
 [[nodiscard]] double ConnectedBidirectionalLanelets::average_lane_width() const
 {
+  static autoware_utils::LRUCache<lanelet::ConstLanelets, double, ConstLaneletsHashMap> cache(1000);
+  if (cache.contains(bidirectional_lanelets_)) {
+    return cache.get(bidirectional_lanelets_).value();
+  }
   long double length_sum = 0;
   double area_sum = 0;
-  for (const auto & lane : bidirectional_lanes_) {
+  for (const auto & lane : bidirectional_lanelets_) {
     length_sum += boost::geometry::length(lane.centerline2d());
     area_sum += boost::geometry::area(lane.polygon2d().basicPolygon());
   }
-  return static_cast<double>(area_sum / length_sum);
+
+  auto result = static_cast<double>(area_sum / length_sum);
+  cache.put(bidirectional_lanelets_, result);
+  return result;
 }
 
 [[nodiscard]] std::pair<bool, std::vector<geometry_msgs::msg::Pose>>
@@ -383,13 +367,13 @@ ConnectedBidirectionalLanelets::check_if_is_possible_to_stop_and_suggest_alterna
   return {true, {stopping_pose}};
 }
 
-std::optional<ConnectedBidirectionalLanelets> get_current_bidirectional_lane(
-  const geometry_msgs::msg::Pose & ego_pose,
-  const autoware::universe_utils::Polygon2d & ego_polygon,
-  const std::vector<ConnectedBidirectionalLanelets> & all_bidirectional_lanes)
+std::optional<ConnectedBidirectionalLanelets::SharedConstPtr>
+get_bidirectional_lanelets_where_ego_is(
+  const geometry_msgs::msg::Pose & ego_pose, const EgoParameters & ego_params,
+  const std::vector<ConnectedBidirectionalLanelets::SharedConstPtr> & all_bidirectional_lanes)
 {
   for (const auto & bidirectional_lane : all_bidirectional_lanes) {
-    if (bidirectional_lane.is_object_on_this_lane(ego_pose, ego_polygon)) {
+    if (bidirectional_lane->is_object_on_this_lane(ego_pose, ego_params.ego_polygon(ego_pose))) {
       return bidirectional_lane;
     }
   }

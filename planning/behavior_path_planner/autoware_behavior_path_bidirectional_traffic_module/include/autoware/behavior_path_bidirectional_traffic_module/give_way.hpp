@@ -15,143 +15,139 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__GIVE_WAY_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__GIVE_WAY_HPP_
 
-#include "autoware/behavior_path_bidirectional_traffic_module/connected_bidirectional_lanelets.hpp"
+#include "autoware/behavior_path_bidirectional_traffic_module/bidirectional_lanelets.hpp"
 #include "autoware/behavior_path_bidirectional_traffic_module/oncoming_car.hpp"
 #include "autoware/behavior_path_bidirectional_traffic_module/parameter.hpp"
-#include "autoware/trajectory/forward.hpp"
 #include "autoware/trajectory/path_point_with_lane_id.hpp"
 
-#include <tf2/LinearMath/Quaternion.hpp>
-#include <tf2/LinearMath/Vector3.hpp>
-#include <tf2/utils.hpp>
-
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
-#include <geometry_msgs/msg/point.hpp>
+#include <geometry_msgs/msg/detail/pose__struct.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 
 #include <cmath>
+#include <functional>
 #include <memory>
 #include <optional>
+#include <string>
 #include <utility>
-#include <vector>
+
 namespace autoware::behavior_path_planner
 {
 
 class GiveWay;
 class GiveWayState
 {
-protected:
-  GiveWay * give_way_;
-
 public:
-  explicit GiveWayState(GiveWay * give_way) : give_way_(give_way) {}
   virtual trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
   modify_trajectory(
+    GiveWay * give_way,
     const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
       trajectory,
-    const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
-    const double & vehicle_speed) = 0;
+    const OncomingCars & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
+    const double & ego_speed) = 0;
 
-  [[nodiscard]] virtual bool is_stop_required() const = 0;
+  [[nodiscard]] virtual std::string name() const = 0;
 };
 
 class NoNeedToGiveWay : public GiveWayState
 {
 public:
-  explicit NoNeedToGiveWay(GiveWay * give_way) : GiveWayState(give_way) {}
-
   trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
   modify_trajectory(
+    GiveWay * give_way,
     const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
       trajectory,
-    const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
-    const double & vehicle_speed) override;
+    const OncomingCars & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
+    const double & ego_speed) override;
 
-  [[nodiscard]] bool is_stop_required() const override { return false; }
+  [[nodiscard]] std::string name() const override { return "NoNeedToGiveWay"; }
 };
 
 class ApproachingToShift : public GiveWayState
 {
 public:
-  explicit ApproachingToShift(GiveWay * give_way) : GiveWayState(give_way) {}
   trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
   modify_trajectory(
+    GiveWay * give_way,
     const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
       trajectory,
-    const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
-    const double & vehicle_speed) override;
+    const OncomingCars & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
+    const double & ego_speed) override;
 
-  [[nodiscard]] bool is_stop_required() const override { return true; }
+  [[nodiscard]] std::string name() const override { return "ApproachingToShift"; }
 };
 
 class ShiftingRoadside : public GiveWayState
 {
 public:
-  explicit ShiftingRoadside(GiveWay * give_way) : GiveWayState(give_way) {}
   trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
   modify_trajectory(
+    GiveWay * give_way,
     const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
       trajectory,
-    const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
-    const double & vehicle_speed) override;
+    const OncomingCars & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
+    const double & ego_speed) override;
 
-  [[nodiscard]] bool is_stop_required() const override { return true; }
+  [[nodiscard]] std::string name() const override { return "ShiftingRoadside"; }
 };
 
 class WaitingForOncomingCarsToPass : public GiveWayState
 {
 public:
-  explicit WaitingForOncomingCarsToPass(GiveWay * give_way) : GiveWayState(give_way) {}
   trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
   modify_trajectory(
+    GiveWay * give_way,
     const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
       trajectory,
-    const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
-    const double & vehicle_speed) override;
+    const OncomingCars & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
+    const double & ego_speed) override;
 
-  [[nodiscard]] bool is_stop_required() const override { return true; }
+  [[nodiscard]] std::string name() const override { return "WaitingForOncomingCarsToPass"; }
 };
 
 class BackToNormalLane : public GiveWayState
 {
 public:
-  explicit BackToNormalLane(GiveWay * give_way) : GiveWayState(give_way) {}
   trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
   modify_trajectory(
+    GiveWay * give_way,
     const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
       trajectory,
-    const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
-    const double & vehicle_speed) override;
+    const OncomingCars & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
+    const double & ego_speed) override;
 
-  [[nodiscard]] bool is_stop_required() const override { return false; }
+  [[nodiscard]] std::string name() const override { return "BackToNormalLane"; }
 };
 
 class GiveWay
 {
 private:
-  ConnectedBidirectionalLanelets bidirectional_lanelets_;
+  ConnectedBidirectionalLanelets::SharedConstPtr bidirectional_lanelets_;
   std::shared_ptr<GiveWayState> state_;
-  std::optional<geometry_msgs::msg::Pose> ego_stop_point_for_waiting_;
-  EgoParameters ego_params_;
 
-  double time_to_prepare_pull_over_;
-  double default_shift_distance_to_pull_over_;
-  double shift_ratio_for_pull_over_;
+  std::optional<geometry_msgs::msg::Pose> ego_stop_point_for_waiting_;
+  std::optional<double> shift_distance_to_pull_over_;
+  std::optional<double> shift_distance_to_back_to_normal_lane_;
+
+  EgoParameters ego_params_;
+  BidirectionalTrafficModuleParameters parameters_;
+
+  std::function<void(geometry_msgs::msg::Pose)> insert_stop_wall_;
 
 public:
   GiveWay(
-    ConnectedBidirectionalLanelets bidirectional_lanelets,  //
-    const EgoParameters & ego_params,                       //
-    const double & time_to_prepare_pull_over_,              //
-    const double & default_shift_distance_to_pull_over,     //
-    const double & shift_ratio_for_pull_over);
+    ConnectedBidirectionalLanelets::SharedConstPtr bidirectional_lanelets,  //
+    const EgoParameters & ego_params,                                       //
+    const BidirectionalTrafficModuleParameters & parameters,
+    const std::function<void(geometry_msgs::msg::Pose)> & insert_stop_wall =
+      [](geometry_msgs::msg::Pose) {});
 
   [[nodiscard]] trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
   modify_trajectory(
     const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
       trajectory,
-    const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
-    const double & vehicle_speed);
+    const OncomingCars & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
+    const double & ego_speed);
 
   template <class State, class... Args>
   void transition_to(Args &&... args)
@@ -159,23 +155,20 @@ public:
     state_ = std::make_shared<State>(std::forward<Args>(args)...);
   }
 
-  void decide_ego_stop_pose(
-    const geometry_msgs::msg::Pose & ego_pose, const double & vehicle_speed);
+  bool decide_ego_stop_pose(
+    const geometry_msgs::msg::Pose & ego_pose, const double & ego_speed,
+    const CarObject & front_oncoming_car);
 
   [[nodiscard]] trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
   modify_trajectory_for_waiting(
     const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
       trajectory,
-    bool stop_at_stop_point = false) const;
+    const geometry_msgs::msg::Pose & ego_pose, bool stop_at_stop_point = false) const;
 
-  [[nodiscard]] bool is_stop_required() const { return state_->is_stop_required(); }
-
-  [[nodiscard]] auto get_stop_pose() const { return ego_stop_point_for_waiting_; }
-
-  [[nodiscard]] double get_shift_distance_to_pull_over() const
-  {
-    return default_shift_distance_to_pull_over_;
-  }
+  [[nodiscard]] std::optional<geometry_msgs::msg::Pose> get_pull_over_pose() const;
+  [[nodiscard]] std::string get_state_name() const;
+  [[nodiscard]] std::optional<double> get_shift_distance_to_pull_over() const;
+  [[nodiscard]] std::optional<double> get_shift_distance_to_back_to_normal_lane() const;
 };
 
 }  // namespace autoware::behavior_path_planner

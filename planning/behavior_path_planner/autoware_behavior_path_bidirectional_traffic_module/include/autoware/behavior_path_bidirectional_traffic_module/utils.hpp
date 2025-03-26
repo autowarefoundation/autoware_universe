@@ -15,22 +15,42 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__UTILS_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__UTILS_HPP_
 
-#include "autoware/trajectory/path_point_with_lane_id.hpp"
-
 #include <autoware/trajectory/forward.hpp>
 
 #include <geometry_msgs/msg/pose.hpp>
 
 #include <lanelet2_core/Forward.h>
 
+#include <functional>
+#include <unordered_map>
+
 namespace autoware::behavior_path_planner
 {
 
-lanelet::Ids get_lane_ids(
-  const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-    trajectory);
-
 double compute_length_of_lanelets(const lanelet::ConstLanelet & lanelet);
+
+bool has_common_part(const lanelet::Ids & lane_ids1, const lanelet::Ids & lane_ids2);
+
+lanelet::ConstLanelets filter_lanelets_by_ids(
+  const lanelet::ConstLanelets & all_lanelets, const lanelet::Ids & target_lane_ids);
+
+lanelet::ConstLanelets filter_intersection_lanelets(const lanelet::ConstLanelets & all_lanelets);
+
+lanelet::ConstLanelets get_inflow_lanelets(
+  const lanelet::ConstLanelets & lanelets,
+  const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> & get_prev_lanelets);
+
+lanelet::ConstLanelets get_outflow_lanelets(
+  const lanelet::ConstLanelets & lanelets,
+  const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> & get_next_lanelets);
+
+struct ConstLaneletsHash
+{
+  size_t operator()(const lanelet::ConstLanelets & lanelets) const;
+};
+
+template <typename KeyType, typename ValueType>
+using ConstLaneletsHashMap = std::unordered_map<KeyType, ValueType, ConstLaneletsHash>;
 
 }  // namespace autoware::behavior_path_planner
 
