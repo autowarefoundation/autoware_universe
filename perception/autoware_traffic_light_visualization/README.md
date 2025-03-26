@@ -10,7 +10,7 @@ The node shows traffic light's color and position on rviz as markers.
 
 ![traffic light map visualization](./images/map-visualization.png)
 
-- 
+-
 
 ### traffic_light_roi_visualizer
 
@@ -64,7 +64,6 @@ The node draws the result of traffic light recognition on the input image as sho
 None
 
 ### traffic_light_roi_visualizer
-
 
 #### Node Parameters
 
