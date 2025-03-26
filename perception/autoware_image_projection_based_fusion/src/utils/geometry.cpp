@@ -187,6 +187,23 @@ bool is_inside(
   }
   return true;
 }
+bool isPointInsideRoi(
+  const sensor_msgs::msg::RegionOfInterest & roi, const double camera_point_x,
+  const double camera_point_y, const double roi_scale_factor)
+{
+  const auto scaled_width = static_cast<double>(roi.width) * roi_scale_factor;
+  const auto scaled_heigh = static_cast<double>(roi.height) * roi_scale_factor;
+  const auto scaled_x_offset = static_cast<double>(roi.x_offset) - (scaled_width - roi.width) / 2.0;
+  const auto scaled_y_offset =
+    static_cast<double>(roi.y_offset) - (scaled_heigh - roi.height) / 2.0;
+  if (
+    scaled_x_offset <= camera_point_x && scaled_y_offset <= camera_point_y &&
+    scaled_x_offset + scaled_width >= camera_point_x &&
+    scaled_y_offset + scaled_heigh >= camera_point_y) {
+    return true;
+  }
+  return false;
+}
 
 void sanitizeROI(sensor_msgs::msg::RegionOfInterest & roi, const int width_, const int height_)
 {
