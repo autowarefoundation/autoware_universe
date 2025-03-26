@@ -170,7 +170,7 @@ private:
   void trafficSignalsCallback(const TrafficLightGroupArray::ConstSharedPtr msg);
   void objectsCallback(const TrackedObjects::ConstSharedPtr in_objects);
 
-  // Diagnostics procses
+  // Diagnostics proccess
   void updateDiagnostics(const rclcpp::Time & timestamp, double processing_time_ms);
 
   // Map process
