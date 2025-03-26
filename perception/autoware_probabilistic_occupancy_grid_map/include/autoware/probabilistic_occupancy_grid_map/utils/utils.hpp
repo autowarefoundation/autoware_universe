@@ -22,6 +22,7 @@
 #include "autoware/probabilistic_occupancy_grid_map/utils/utils_kernel.hpp"
 #endif
 
+#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <builtin_interfaces/msg/time.hpp>
 #include <pcl_ros/transforms.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -61,7 +62,9 @@ bool transformPointcloud(
 
 #ifdef USE_CUDA
 bool transformPointcloudAsync(
-  CudaPointCloud2 & input, const tf2_ros::Buffer & tf2, const std::string & target_frame);
+  CudaPointCloud2 & input, const tf2_ros::Buffer & tf2, const std::string & target_frame,
+  autoware::cuda_utils::CudaUniquePtr<Eigen::Matrix3f> & device_rotation,
+  autoware::cuda_utils::CudaUniquePtr<Eigen::Vector3f> & device_translation);
 #endif
 
 Eigen::Matrix4f getTransformMatrix(const geometry_msgs::msg::Pose & pose);
