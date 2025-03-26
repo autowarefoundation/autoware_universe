@@ -76,15 +76,15 @@ void PlanningValidator::setupParameters()
   params_.display_on_terminal = declare_parameter<bool>("display_on_terminal");
 
   {
-    auto set_validation_flags = [&](auto & param, const std::string & key){
-        param.enable = declare_parameter<bool>(key + ".enable");
-        param.is_critical = declare_parameter<bool>(key + ".is_critical");
-      };
+    auto set_validation_flags = [&](auto & param, const std::string & key) {
+      param.enable = declare_parameter<bool>(key + ".enable");
+      param.is_critical = declare_parameter<bool>(key + ".is_critical");
+    };
 
-    auto set_validation_params = [&](auto & param, const std::string & key){
-        set_validation_flags(param, key);
-        param.threshold = declare_parameter<double>(key + ".threshold");
-      };
+    auto set_validation_params = [&](auto & param, const std::string & key) {
+      set_validation_flags(param, key);
+      param.threshold = declare_parameter<double>(key + ".threshold");
+    };
 
     auto & p = params_.validation_params;
     const std::string t = "validity_checks.";
@@ -97,8 +97,10 @@ void PlanningValidator::setupParameters()
 
     set_validation_flags(p.acceleration, t + "acceleration");
     p.acceleration.lateral_th = declare_parameter<double>(t + "acceleration.lateral_th");
-    p.acceleration.longitudinal_max_th = declare_parameter<double>(t + "acceleration.longitudinal_max_th");
-    p.acceleration.longitudinal_min_th = declare_parameter<double>(t + "acceleration.longitudinal_min_th");
+    p.acceleration.longitudinal_max_th =
+      declare_parameter<double>(t + "acceleration.longitudinal_max_th");
+    p.acceleration.longitudinal_min_th =
+      declare_parameter<double>(t + "acceleration.longitudinal_min_th");
 
     set_validation_flags(p.deviation, t + "deviation");
     p.deviation.velocity_th = declare_parameter<double>(t + "deviation.velocity_th");
@@ -107,8 +109,10 @@ void PlanningValidator::setupParameters()
     p.deviation.yaw_th = declare_parameter<double>(t + "deviation.yaw_th");
 
     set_validation_flags(p.forward_trajectory_length, t + "forward_trajectory_length");
-    p.forward_trajectory_length.acceleration = declare_parameter<double>(t + "forward_trajectory_length.acceleration");
-    p.forward_trajectory_length.margin = declare_parameter<double>(t + "forward_trajectory_length.margin");
+    p.forward_trajectory_length.acceleration =
+      declare_parameter<double>(t + "forward_trajectory_length.acceleration");
+    p.forward_trajectory_length.margin =
+      declare_parameter<double>(t + "forward_trajectory_length.margin");
   }
 
   try {
@@ -308,8 +312,10 @@ void PlanningValidator::publishDebugInfo()
   if (!isAllValid(validation_status_)) {
     geometry_msgs::msg::Pose front_pose = current_kinematics_->pose.pose;
     shiftPose(front_pose, vehicle_info_.front_overhang_m + vehicle_info_.wheel_base_m);
+    auto offset_pose = front_pose;
+    shiftPose(offset_pose, 0.25);
     debug_pose_publisher_->pushVirtualWall(front_pose);
-    debug_pose_publisher_->pushWarningMsg(front_pose, "INVALID PLANNING");
+    debug_pose_publisher_->pushWarningMsg(offset_pose, "INVALID PLANNING");
   }
   debug_pose_publisher_->publish();
 }
@@ -398,7 +404,7 @@ bool PlanningValidator::checkValidInterval(const Trajectory & trajectory)
 
 bool PlanningValidator::checkValidRelativeAngle(const Trajectory & trajectory)
 {
-  if(!params_.validation_params.relative_angle.enable) {
+  if (!params_.validation_params.relative_angle.enable) {
     return true;
   }
 
@@ -419,7 +425,7 @@ bool PlanningValidator::checkValidRelativeAngle(const Trajectory & trajectory)
 
 bool PlanningValidator::checkValidCurvature(const Trajectory & trajectory)
 {
-  if(!params_.validation_params.curvature.enable) {
+  if (!params_.validation_params.curvature.enable) {
     return true;
   }
 
@@ -608,7 +614,7 @@ bool PlanningValidator::checkValidLongitudinalDistanceDeviation(const Trajectory
 
 bool PlanningValidator::checkValidYawDeviation(const Trajectory & trajectory)
 {
-  if(!params_.validation_params.deviation.enable) {
+  if (!params_.validation_params.deviation.enable) {
     return true;
   }
 
@@ -646,7 +652,7 @@ bool PlanningValidator::checkValidForwardTrajectoryLength(const Trajectory & tra
 
 bool PlanningValidator::checkValidLatency(const Trajectory & trajectory)
 {
-  if(!params_.validation_params.latency.enable) {
+  if (!params_.validation_params.latency.enable) {
     return true;
   }
 
