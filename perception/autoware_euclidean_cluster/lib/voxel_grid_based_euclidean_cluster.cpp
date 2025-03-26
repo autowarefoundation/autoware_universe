@@ -19,9 +19,9 @@
 #include <pcl/kdtree/kdtree.h>
 #include <pcl/segmentation/extract_clusters.h>
 
+#include <string>
 #include <unordered_map>
 #include <vector>
-#include <string>
 
 namespace autoware::euclidean_cluster
 {
