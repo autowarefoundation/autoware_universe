@@ -161,7 +161,6 @@ void ObstacleStopModule::init(rclcpp::Node & node, const std::string & module_na
   // module publisher
   debug_stop_planning_info_pub_ =
     node.create_publisher<Float32MultiArrayStamped>("~/debug/stop_planning_info", 1);
-  metrics_pub_ = node.create_publisher<MetricArray>("~/stop/metrics", 10);
   processing_time_detail_pub_ = node.create_publisher<autoware_utils::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms/obstacle_stop", 1);
   // interface publisher
@@ -196,7 +195,6 @@ VelocityPlanningResult ObstacleStopModule::plan(
   // 1. init variables
   stop_watch_.tic();
   debug_data_ptr_ = std::make_shared<DebugData>();
-  metrics_manager_.init();
   const double dist_to_bumper =
     calc_dist_to_bumper(planner_data->is_driving_forward, planner_data->vehicle_info_);
   stop_planning_debug_info_.reset();
@@ -1018,10 +1016,6 @@ std::optional<geometry_msgs::msg::Point> ObstacleStopModule::calc_stop_point(
     output_traj_points, planner_data->current_odometry.pose.pose, stop_pose, PlanningFactor::STOP,
     SafetyFactorArray{});
 
-  // Store stop reason debug data
-  metrics_manager_.calculate_metrics(
-    "PlannerInterface", "stop", planner_data, traj_points, stop_pose, *determined_stop_obstacle);
-
   prev_stop_distance_info_ = std::make_pair(output_traj_points, determined_zero_vel_dist.value());
 
   return stop_pose.position;
@@ -1107,14 +1101,10 @@ void ObstacleStopModule::publish_debug_info()
   // 4. objects of interest
   objects_of_interest_marker_interface_->publishMarkerArray();
 
-  // 5. metrics
-  const auto metrics_msg = metrics_manager_.create_metric_array(clock_->now());
-  metrics_pub_->publish(metrics_msg);
-
-  // 6. processing time
+  // 5. processing time
   processing_time_publisher_->publish(create_float64_stamped(clock_->now(), stop_watch_.toc()));
 
-  // 7. planning factor
+  // 6. planning factor
   planning_factor_interface_->publish();
 }
 

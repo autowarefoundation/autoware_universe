@@ -123,7 +123,6 @@ void ObstacleCruiseModule::init(rclcpp::Node & node, const std::string & module_
   debug_publisher_ = node.create_publisher<MarkerArray>("~/obstacle_cruise/debug_markers", 1);
 
   // module publisher
-  metrics_pub_ = node.create_publisher<MetricArray>("~/cruise/metrics", 10);
   debug_cruise_planning_info_pub_ =
     node.create_publisher<Float32MultiArrayStamped>("~/debug/cruise_planning_info", 1);
   processing_time_detail_pub_ = node.create_publisher<autoware_utils::ProcessingTimeDetail>(
@@ -160,7 +159,6 @@ VelocityPlanningResult ObstacleCruiseModule::plan(
   // 1. init variables
   stop_watch_.tic();
   debug_data_ptr_ = std::make_shared<DebugData>();
-  metrics_manager_.init();
 
   // filter obstacles of predicted objects
   const auto cruise_obstacles = filter_cruise_obstacle_for_predicted_object(
@@ -174,7 +172,6 @@ VelocityPlanningResult ObstacleCruiseModule::plan(
   [[maybe_unused]] const auto cruise_traj_points = cruise_planner_->plan_cruise(
     planner_data, raw_trajectory_points, cruise_obstacles, debug_data_ptr_,
     planning_factor_interface_, result.velocity_limit);
-  metrics_manager_.calculate_metrics("PlannerInterface", "cruise");
 
   // clear velocity limit if necessary
   if (result.velocity_limit) {
@@ -356,14 +353,10 @@ void ObstacleCruiseModule::publish_debug_info()
   // 4. objects of interest
   objects_of_interest_marker_interface_->publishMarkerArray();
 
-  // 5. metrics
-  const auto metrics_msg = metrics_manager_.create_metric_array(clock_->now());
-  metrics_pub_->publish(metrics_msg);
-
-  // 6. processing time
+  // 5. processing time
   processing_time_publisher_->publish(create_float64_stamped(clock_->now(), stop_watch_.toc()));
 
-  // 7. planning factor
+  // 6. planning factor
   planning_factor_interface_->publish();
 }
 

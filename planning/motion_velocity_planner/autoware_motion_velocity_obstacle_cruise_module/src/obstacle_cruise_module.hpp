@@ -20,7 +20,6 @@
 #include "autoware_utils/system/stop_watch.hpp"
 #include "autoware_utils/system/time_keeper.hpp"
 #include "cruise_planner_interface.hpp"
-#include "metrics_manager.hpp"
 #include "optimization_based_planner/optimization_based_planner.hpp"
 #include "parameters.hpp"
 #include "pid_based_planner/pid_based_planner.hpp"
@@ -65,7 +64,6 @@ private:
   rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr debug_cruise_planning_info_pub_;
 
   // module publisher
-  rclcpp::Publisher<MetricArray>::SharedPtr metrics_pub_;
   std::unique_ptr<autoware::objects_of_interest_marker_interface::ObjectsOfInterestMarkerInterface>
     objects_of_interest_marker_interface_;
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr processing_time_detail_pub_;
@@ -78,7 +76,6 @@ private:
   std::vector<CruiseObstacle> prev_cruise_object_obstacles_;
   mutable std::shared_ptr<DebugData> debug_data_ptr_;
   bool need_to_clear_velocity_limit_{false};
-  MetricsManager metrics_manager_;
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 
   std::unique_ptr<CruisePlannerInterface> create_cruise_planner(rclcpp::Node & node) const;

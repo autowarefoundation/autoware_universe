@@ -208,7 +208,6 @@ void ObstacleSlowDownModule::init(rclcpp::Node & node, const std::string & modul
   debug_publisher_ = node.create_publisher<MarkerArray>("~/obstacle_slow_down/debug_markers", 1);
 
   // module publisher
-  metrics_pub_ = node.create_publisher<MetricArray>("~/slow_down/metrics", 10);
   debug_slow_down_planning_info_pub_ =
     node.create_publisher<Float32MultiArrayStamped>("~/debug/slow_down_planning_info", 1);
   processing_time_detail_pub_ = node.create_publisher<autoware_utils::ProcessingTimeDetail>(
@@ -329,7 +328,6 @@ VelocityPlanningResult ObstacleSlowDownModule::plan(
 
   stop_watch_.tic();
   debug_data_ptr_ = std::make_shared<DebugData>();
-  metrics_manager_.init();
   decimated_traj_polys_ = std::nullopt;
 
   const auto decimated_traj_points = utils::decimate_trajectory_points_from_ego(
@@ -357,7 +355,6 @@ VelocityPlanningResult ObstacleSlowDownModule::plan(
   result.slowdown_intervals = plan_slow_down(
     planner_data, raw_trajectory_points, slow_down_obstacles, result.velocity_limit,
     planner_data->vehicle_info_);
-  metrics_manager_.calculate_metrics("PlannerInterface", "cruise");
 
   // clear velocity limit if necessary
   if (result.velocity_limit) {
@@ -886,14 +883,10 @@ void ObstacleSlowDownModule::publish_debug_info()
   // 4. objects of interest
   objects_of_interest_marker_interface_->publishMarkerArray();
 
-  // 5. metrics
-  const auto metrics_msg = metrics_manager_.create_metric_array(clock_->now());
-  metrics_pub_->publish(metrics_msg);
-
-  // 6. processing time
+  // 5. processing time
   processing_time_publisher_->publish(create_float64_stamped(clock_->now(), stop_watch_.toc()));
 
-  // 7. planning factor
+  // 6. planning factor
   planning_factor_interface_->publish();
 }
 

@@ -19,7 +19,6 @@
 #include "autoware/motion_velocity_planner_common_universe/utils.hpp"
 #include "autoware_utils/system/stop_watch.hpp"
 #include "autoware_utils/system/time_keeper.hpp"
-#include "metrics_manager.hpp"
 #include "parameters.hpp"
 #include "type_alias.hpp"
 #include "types.hpp"
@@ -70,7 +69,6 @@ private:
   ObstacleFilteringParam obstacle_filtering_param_;
 
   // module publisher
-  rclcpp::Publisher<MetricArray>::SharedPtr metrics_pub_;
   rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr debug_slow_down_planning_info_pub_;
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr processing_time_detail_pub_;
 
@@ -85,7 +83,6 @@ private:
   Float32MultiArrayStamped slow_down_debug_multi_array_;
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch_;
   mutable std::shared_ptr<DebugData> debug_data_ptr_;
-  MetricsManager metrics_manager_;
   bool need_to_clear_velocity_limit_{false};
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
   mutable std::optional<std::vector<Polygon2d>> decimated_traj_polys_{std::nullopt};
