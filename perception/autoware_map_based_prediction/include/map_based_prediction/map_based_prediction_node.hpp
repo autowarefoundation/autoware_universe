@@ -46,7 +46,6 @@
 #include <deque>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -119,11 +118,9 @@ private:
 
   // Diagnostics
   std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
-  rclcpp::TimerBase::SharedPtr diagnostics_timer_;
   double processing_time_tolerance_ms_;
-  double consecutive_delay_tolerance_ms_;
-  std::optional<rclcpp::Time> last_intime_processing_timestamp_;
-  std::mutex diagnostics_mtx_;
+  double processing_time_consecutive_excess_tolerance_ms_;
+  std::optional<rclcpp::Time> last_in_time_processing_timestamp_;
 
   ////// Parameters
 
@@ -173,8 +170,8 @@ private:
   void trafficSignalsCallback(const TrafficLightGroupArray::ConstSharedPtr msg);
   void objectsCallback(const TrackedObjects::ConstSharedPtr in_objects);
 
-  // Diagnostics callback
-  void diagnosticsTimerCallback();
+  // Diagnostics procses
+  void updateDiagnostics(const rclcpp::Time & timestamp, double processing_time_ms);
 
   // Map process
   bool doesPathCrossFence(
