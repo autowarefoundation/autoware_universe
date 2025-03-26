@@ -23,6 +23,7 @@
 #include <autoware_adapi_v1_msgs/msg/hazard_lights_command.hpp>
 #include <autoware_adapi_v1_msgs/msg/manual_control_mode.hpp>
 #include <autoware_adapi_v1_msgs/msg/manual_control_mode_status.hpp>
+#include <autoware_adapi_v1_msgs/msg/manual_operator_status.hpp>
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
 #include <autoware_adapi_v1_msgs/msg/pedals_command.hpp>
 #include <autoware_adapi_v1_msgs/msg/steering_command.hpp>
@@ -33,7 +34,6 @@
 #include <autoware_vehicle_msgs/msg/gear_command.hpp>
 #include <autoware_vehicle_msgs/msg/hazard_lights_command.hpp>
 #include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
-#include <tier4_external_api_msgs/msg/control_command_stamped.hpp>
 
 #include <string>
 
@@ -69,24 +69,27 @@ private:
   using GearCommand = autoware_adapi_v1_msgs::msg::GearCommand;
   using HazardLightsCommand = autoware_adapi_v1_msgs::msg::HazardLightsCommand;
   using TurnIndicatorsCommand = autoware_adapi_v1_msgs::msg::TurnIndicatorsCommand;
+  using ManualOperatorStatus = autoware_adapi_v1_msgs::msg::ManualOperatorStatus;
   void disable_all_commands();
   void enable_common_commands();
   void enable_pedals_commands();
   void enable_acceleration_commands();
   void enable_velocity_commands();
+  rclcpp::Subscription<ManualOperatorStatus>::SharedPtr sub_heartbeat_;
   rclcpp::Subscription<PedalsCommand>::SharedPtr sub_pedals_;
   rclcpp::Subscription<AccelerationCommand>::SharedPtr sub_acceleration_;
   rclcpp::Subscription<VelocityCommand>::SharedPtr sub_velocity_;
+  rclcpp::Subscription<SteeringCommand>::SharedPtr sub_steering_;
   rclcpp::Subscription<GearCommand>::SharedPtr sub_gear_;
   rclcpp::Subscription<TurnIndicatorsCommand>::SharedPtr sub_turn_indicators_;
   rclcpp::Subscription<HazardLightsCommand>::SharedPtr sub_hazard_lights_;
-  PollingSubscription<SteeringCommand>::SharedPtr sub_steering_;
 
-  using InternalControl = tier4_external_api_msgs::msg::ControlCommandStamped;
   using InternalGear = autoware_vehicle_msgs::msg::GearCommand;
   using InternalTurnIndicators = autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
   using InternalHazardLights = autoware_vehicle_msgs::msg::HazardLightsCommand;
-  rclcpp::Publisher<InternalControl>::SharedPtr pub_control_;
+  rclcpp::Publisher<ManualOperatorStatus>::SharedPtr pub_heartbeat_;
+  rclcpp::Publisher<PedalsCommand>::SharedPtr pub_pedals_;
+  rclcpp::Publisher<SteeringCommand>::SharedPtr pub_steering_;
   rclcpp::Publisher<InternalGear>::SharedPtr pub_gear_;
   rclcpp::Publisher<InternalTurnIndicators>::SharedPtr pub_turn_indicators_;
   rclcpp::Publisher<InternalHazardLights>::SharedPtr pub_hazard_lights_;

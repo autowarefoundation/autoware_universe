@@ -28,18 +28,32 @@ ManualControlNode::ManualControlNode(const rclcpp::NodeOptions & options)
   using std::placeholders::_2;
 
   // Handle target operation mode
+  const auto mode_name = declare_parameter<std::string>("mode");
   {
-    const auto convert_operation_mode = [](const std::string & mode) {
-      if (mode == "remote") return OperationModeState::REMOTE;
-      if (mode == "local") return OperationModeState::LOCAL;
+    const auto convert_operation_mode = [](const std::string & mode_name) {
+      if (mode_name == "remote") return OperationModeState::REMOTE;
+      if (mode_name == "local") return OperationModeState::LOCAL;
       throw std::invalid_argument("The target operation mode is invalid.");
     };
-    const auto mode = declare_parameter<std::string>("mode");
-    ns_ = "/api/manual/" + mode;
-    target_operation_mode_ = convert_operation_mode(mode);
+    ns_ = "/api/manual/" + mode_name;
+    target_operation_mode_ = convert_operation_mode(mode_name);
   }
 
-  // Interfaces for manual control mode.
+  // Interfaces for internal.
+  pub_heartbeat_ =
+    create_publisher<ManualOperatorStatus>("/external/" + mode_name + "/heartbeat", rclcpp::QoS(1));
+  pub_pedals_ =
+    create_publisher<PedalsCommand>("/external/" + mode_name + "/pedals_cmd", rclcpp::QoS(1));
+  pub_steering_ =
+    create_publisher<SteeringCommand>("/external/" + mode_name + "/steering_cmd", rclcpp::QoS(1));
+  pub_gear_ =
+    create_publisher<InternalGear>("/external/" + mode_name + "/gear_cmd", rclcpp::QoS(1));
+  pub_turn_indicators_ = create_publisher<InternalTurnIndicators>(
+    "/external/" + mode_name + "/turn_indicators_cmd", rclcpp::QoS(1));
+  pub_hazard_lights_ = create_publisher<InternalHazardLights>(
+    "/external/" + mode_name + "/hazard_lights_cmd", rclcpp::QoS(1));
+
+  // Interfaces for AD API.
   srv_list_mode_ = create_service<ListMode>(
     ns_ + "/control_mode/list", std::bind(&ManualControlNode::on_list_mode, this, _1, _2));
   srv_select_mode_ = create_service<SelectMode>(
@@ -122,7 +136,11 @@ void ManualControlNode::disable_all_commands()
   sub_acceleration_.reset();
   sub_velocity_.reset();
 
+  sub_heartbeat_.reset();
   sub_steering_.reset();
+  sub_gear_.reset();
+  sub_turn_indicators_.reset();
+  sub_hazard_lights_.reset();
 }
 
 void ManualControlNode::enable_pedals_commands()
@@ -134,7 +152,7 @@ void ManualControlNode::enable_pedals_commands()
 
 void ManualControlNode::enable_acceleration_commands()
 {
-  // TODO(isamu-takagi): Implement callback.
+  // TODO(isamu-takagi): Currently not supported.
   sub_acceleration_ = create_subscription<AccelerationCommand>(
     ns_ + "/command/acceleration", rclcpp::QoS(1),
     [this](const AccelerationCommand::SharedPtr msg) { (void)msg; });
@@ -142,7 +160,7 @@ void ManualControlNode::enable_acceleration_commands()
 
 void ManualControlNode::enable_velocity_commands()
 {
-  // TODO(isamu-takagi): Implement callback.
+  // TODO(isamu-takagi): Currently not supported.
   sub_velocity_ = create_subscription<VelocityCommand>(
     ns_ + "/command/velocity", rclcpp::QoS(1),
     [this](const VelocityCommand::SharedPtr msg) { (void)msg; });
@@ -150,10 +168,14 @@ void ManualControlNode::enable_velocity_commands()
 
 void ManualControlNode::enable_common_commands()
 {
-  using command_conversion::convert;
+  using autoware::default_adapi::command_conversion::convert;
 
-  sub_steering_ = PollingSubscription<SteeringCommand>::create_subscription(
-    this, ns_ + "/command/steering", rclcpp::QoS(1));
+  sub_heartbeat_ = create_subscription<ManualOperatorStatus>(
+    ns_ + "/operator/status", rclcpp::QoS(1),
+    [this](const ManualOperatorStatus & msg) { pub_heartbeat_->publish(msg); });
+  sub_steering_ = create_subscription<SteeringCommand>(
+    ns_ + "/command/steering", rclcpp::QoS(1),
+    [this](const SteeringCommand & msg) { pub_steering_->publish(msg); });
   sub_gear_ = create_subscription<GearCommand>(
     ns_ + "/command/gear", rclcpp::QoS(1).transient_local(),
     [this](const GearCommand & msg) { pub_gear_->publish(convert(msg)); });
