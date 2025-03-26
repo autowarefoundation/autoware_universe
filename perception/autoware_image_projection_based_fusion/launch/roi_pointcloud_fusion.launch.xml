@@ -34,7 +34,7 @@
   <arg name="input/image6" default="/image_raw6"/>
   <arg name="input/image7" default="/image_raw7"/>
   <group>
-    <node_container pkg="rclcpp_components" exec="component_container" name="$(var pointcloud_container_name)" namespace="/">
+    <load_composable_node target="$(var pointcloud_container_name)">
       <composable_node pkg="autoware_image_projection_based_fusion" plugin="autoware::image_projection_based_fusion::RoiPointCloudFusionNode" name="roi_pointcloud_fusion">
         <param name="rois_number" value="$(var input/rois_number)"/>
         <param from="$(var param_path)"/>
@@ -69,6 +69,6 @@
         <param name="input/camera_info7" value="$(var input/camera_info7)"/>
         <param name="input/image7" value="$(var input/image7)"/>
       </composable_node>
-    </node_container>
+    </load_composable_node>
   </group>
 </launch>
