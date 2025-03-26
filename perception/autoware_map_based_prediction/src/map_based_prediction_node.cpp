@@ -493,7 +493,8 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
 
     // [s] -> [ms]
     processing_time_tolerance_ms_ = declare_parameter<double>("processing_time_tolerance") * 1e3;
-    processing_time_consecutive_excess_tolerance_ms_ = declare_parameter<double>("processing_time_consecutive_excess_tolerance") * 1e3;
+    processing_time_consecutive_excess_tolerance_ms_ =
+      declare_parameter<double>("processing_time_consecutive_excess_tolerance") * 1e3;
   }
 
   // debug publishers
@@ -547,15 +548,15 @@ rcl_interfaces::msg::SetParametersResult MapBasedPredictionNode::onParam(
   return result;
 }
 
-void MapBasedPredictionNode::updateDiagnostics(const rclcpp::Time & timestamp, double processing_time_ms)
+void MapBasedPredictionNode::updateDiagnostics(
+  const rclcpp::Time & timestamp, double processing_time_ms)
 {
   diagnostics_interface_ptr_->clear();
   diagnostics_interface_ptr_->add_key_value("timestamp", timestamp.seconds());
   diagnostics_interface_ptr_->add_key_value("processing_time_ms", processing_time_ms);
   // check processing time is in time
   bool is_processing_in_time = processing_time_ms <= processing_time_tolerance_ms_;
-  diagnostics_interface_ptr_->add_key_value(
-    "is_processing_in_time", is_processing_in_time);
+  diagnostics_interface_ptr_->add_key_value("is_processing_in_time", is_processing_in_time);
   if (!is_processing_in_time) {
     // publish warning if the current processing time exceeded
     std::ostringstream oss;
@@ -571,24 +572,28 @@ void MapBasedPredictionNode::updateDiagnostics(const rclcpp::Time & timestamp, d
 
   // calculate consecutive excess duration
   const double consecutive_excess_duration_ms =
-  std::chrono::duration<double, std::milli>(
-    std::chrono::nanoseconds(
-      (timestamp - last_in_time_processing_timestamp_.value()).nanoseconds()))
-    .count();
+    std::chrono::duration<double, std::milli>(
+      std::chrono::nanoseconds(
+        (timestamp - last_in_time_processing_timestamp_.value()).nanoseconds()))
+      .count();
 
-  bool is_consecutive_excess_duration_ok = consecutive_excess_duration_ms < processing_time_consecutive_excess_tolerance_ms_;
-  diagnostics_interface_ptr_->add_key_value("consecutive_excess_duration_ms", consecutive_excess_duration_ms);
-  diagnostics_interface_ptr_->add_key_value("is_consecutive_excess_duration_ok", is_consecutive_excess_duration_ok);
+  bool is_consecutive_excess_duration_ok =
+    consecutive_excess_duration_ms < processing_time_consecutive_excess_tolerance_ms_;
+  diagnostics_interface_ptr_->add_key_value(
+    "consecutive_excess_duration_ms", consecutive_excess_duration_ms);
+  diagnostics_interface_ptr_->add_key_value(
+    "is_consecutive_excess_duration_ok", is_consecutive_excess_duration_ok);
   if (!is_consecutive_excess_duration_ok) {
     // publish error if the processing time exceeded in a long term
     std::ostringstream oss;
-    oss << "Processing time exceeded consecutively in a long term: " << processing_time_consecutive_excess_tolerance_ms_ << "[ms] < "
-      << consecutive_excess_duration_ms << "[ms]";
+    oss << "Processing time exceeded consecutively in a long term: "
+        << processing_time_consecutive_excess_tolerance_ms_ << "[ms] < "
+        << consecutive_excess_duration_ms << "[ms]";
     diagnostics_interface_ptr_->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::ERROR, oss.str());
   }
 
-  diagnostics_interface_ptr_->publish(timestamp);  
+  diagnostics_interface_ptr_->publish(timestamp);
 }
 
 void MapBasedPredictionNode::mapCallback(const LaneletMapBin::ConstSharedPtr msg)
