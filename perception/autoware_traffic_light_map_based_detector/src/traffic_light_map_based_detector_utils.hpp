@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef UTILS_HPP_
-#define UTILS_HPP_
+#ifndef TRAFFIC_LIGHT_MAP_BASED_DETECTOR_UTILS_HPP_
+#define TRAFFIC_LIGHT_MAP_BASED_DETECTOR_UTILS_HPP_
 
 #include <opencv2/core.hpp>
 
@@ -58,4 +58,4 @@ tf2::Vector3 getTrafficLightCenter(const lanelet::ConstLineString3d & traffic_li
 }  // namespace utils
 }  // namespace autoware::traffic_light
 
-#endif  // UTILS_HPP_
+#endif  // TRAFFIC_LIGHT_MAP_BASED_DETECTOR_UTILS_HPP_

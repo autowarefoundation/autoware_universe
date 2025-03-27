@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "utils.hpp"
+#include "traffic_light_map_based_detector_utils.hpp"
 
 #include <Eigen/Core>
 
