@@ -29,6 +29,23 @@ namespace autoware::control_validator
 {
 using diagnostic_msgs::msg::DiagnosticStatus;
 
+void LatencyValidator::validate(
+  ControlValidatorStatus & res, const Control & control_cmd, rclcpp::Node & node) const
+{
+  res.latency = (node.now() - control_cmd.stamp).seconds();
+  res.is_valid_latency = res.latency < nominal_latency_threshold;
+}
+
+void TrajectoryValidator::validate(
+  ControlValidatorStatus & res, const Trajectory & predicted_trajectory,
+  const Trajectory & reference_trajectory) const
+{
+  res.max_distance_deviation =
+    calc_max_lateral_distance(reference_trajectory, predicted_trajectory);
+  res.is_valid_max_distance_deviation =
+    res.max_distance_deviation < max_distance_deviation_threshold;
+}
+
 void AccelerationValidator::validate(
   ControlValidatorStatus & res, const Odometry & kinematic_state, const Control & control_cmd,
   const AccelWithCovarianceStamped & loc_acc)
@@ -54,6 +71,62 @@ bool AccelerationValidator::is_in_error_range() const
 
   return mes <= des + std::abs(e_scale * des) + e_offset &&
          mes >= des - std::abs(e_scale * des) - e_offset;
+}
+
+void VelocityValidator::validate(
+  ControlValidatorStatus & res, const Trajectory & reference_trajectory,
+  const Odometry & kinematics)
+{
+  const double v_vel = vehicle_vel_lpf.filter(kinematics.twist.twist.linear.x);
+  const double t_vel = target_vel_lpf.filter(
+    autoware::motion_utils::calcInterpolatedPoint(reference_trajectory, kinematics.pose.pose)
+      .longitudinal_velocity_mps);
+
+  const bool is_rolling_back =
+    std::signbit(v_vel * t_vel) && std::abs(v_vel) > rolling_back_velocity_th;
+  if (!hold_velocity_error_until_stop || !res.is_rolling_back || std::abs(v_vel) < 0.05) {
+    res.is_rolling_back = is_rolling_back;
+  }
+
+  const bool is_over_velocity =
+    std::abs(v_vel) > std::abs(t_vel) * (1.0 + over_velocity_ratio_th) + over_velocity_offset_th;
+  if (!hold_velocity_error_until_stop || !res.is_over_velocity || std::abs(v_vel) < 0.05) {
+    res.is_over_velocity = is_over_velocity;
+  }
+
+  res.vehicle_vel = v_vel;
+  res.target_vel = t_vel;
+}
+
+void OverrunValidator::validate(
+  ControlValidatorStatus & res, const Trajectory & reference_trajectory,
+  const Odometry & kinematics)
+{
+  res.dist_to_stop = [](const Trajectory & traj, const geometry_msgs::msg::Pose & pose) {
+    const auto stop_idx_opt = autoware::motion_utils::searchZeroVelocityIndex(traj.points);
+
+    const size_t end_idx = stop_idx_opt ? *stop_idx_opt : traj.points.size() - 1;
+    const size_t seg_idx =
+      autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints(traj.points, pose);
+    const double signed_length_on_traj = autoware::motion_utils::calcSignedArcLength(
+      traj.points, pose.position, seg_idx, traj.points.at(end_idx).pose.position,
+      std::min(end_idx, traj.points.size() - 2));
+
+    if (std::isnan(signed_length_on_traj)) {
+      return 0.0;
+    }
+    return signed_length_on_traj;
+  }(reference_trajectory, kinematics.pose.pose);
+
+  res.nearest_trajectory_vel =
+    autoware::motion_utils::calcInterpolatedPoint(reference_trajectory, kinematics.pose.pose)
+      .longitudinal_velocity_mps;
+
+  const double v_vel = vehicle_vel_lpf.filter(kinematics.twist.twist.linear.x);
+
+  // NOTE: the same velocity threshold as autoware::motion_utils::searchZeroVelocity
+  res.has_overrun_stop_point = res.dist_to_stop < -overrun_stop_point_dist_th &&
+                               res.nearest_trajectory_vel < 1e-3 && v_vel > 1e-3;
 }
 
 ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)

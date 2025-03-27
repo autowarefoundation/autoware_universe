@@ -63,6 +63,46 @@ struct ValidationParams
 };
 
 /**
+ * @class LatencyValidator
+ * @brief Validates latency of the control module.
+ */
+class LatencyValidator
+{
+public:
+  explicit LatencyValidator(rclcpp::Node & node)
+  {
+    nominal_latency_threshold = autoware_utils::get_or_declare_parameter<double>(
+      node, "thresholds.nominal_latency_threshold");
+  };
+  void validate(
+    ControlValidatorStatus & res, const Control & control_cmd, rclcpp::Node & node) const;
+
+private:
+  double nominal_latency_threshold;
+};
+
+/**
+ * @class TrajectoryValidator
+ * @brief Calculate the maximum lateral distance between the reference trajectory and predicted
+ * trajectory.
+ */
+class TrajectoryValidator
+{
+public:
+  explicit TrajectoryValidator(rclcpp::Node & node)
+  {
+    max_distance_deviation_threshold = autoware_utils::get_or_declare_parameter<double>(
+      node, "thresholds.max_distance_deviation_threshold");
+  };
+  void validate(
+    ControlValidatorStatus & res, const Trajectory & predicted_trajectory,
+    const Trajectory & reference_trajectory) const;
+
+private:
+  double max_distance_deviation_threshold;
+};
+
+/**
  * @class AccelerationValidator
  * @brief Validates deviation between output acceleration and measured acceleration.
  */
@@ -91,6 +131,65 @@ private:
   double e_scale;
   autoware::signal_processing::LowpassFilter1d desired_acc_lpf{0.0};
   autoware::signal_processing::LowpassFilter1d measured_acc_lpf{0.0};
+};
+
+/**
+ * @class VelocityValidator
+ * @brief Validates deviation between target velocity and measured velocity.
+ */
+class VelocityValidator
+{
+public:
+  explicit VelocityValidator(rclcpp::Node & node)
+  {
+    rolling_back_velocity_th =
+      autoware_utils::get_or_declare_parameter<double>(node, "thresholds.rolling_back_velocity");
+    over_velocity_ratio_th =
+      autoware_utils::get_or_declare_parameter<double>(node, "thresholds.over_velocity_ratio");
+    over_velocity_offset_th =
+      autoware_utils::get_or_declare_parameter<double>(node, "thresholds.over_velocity_offset");
+    const double vel_lpf_gain =
+      autoware_utils::get_or_declare_parameter<double>(node, "vel_lpf_gain");
+    vehicle_vel_lpf.setGain(vel_lpf_gain);
+    target_vel_lpf.setGain(vel_lpf_gain);
+  };
+
+  void validate(
+    ControlValidatorStatus & res, const Trajectory & reference_trajectory,
+    const Odometry & kinematics);
+
+private:
+  double rolling_back_velocity_th;
+  double over_velocity_ratio_th;
+  double over_velocity_offset_th;
+  autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf{0.0};
+  autoware::signal_processing::LowpassFilter1d target_vel_lpf{0.0};
+  bool hold_velocity_error_until_stop{false};
+};
+
+/**
+ * * @class OverrunValidator
+ * @brief Calculate whether the vehicle has overrun a stop point in the trajectory.
+ */
+class OverrunValidator
+{
+public:
+  explicit OverrunValidator(rclcpp::Node & node)
+  {
+    overrun_stop_point_dist_th =
+      autoware_utils::get_or_declare_parameter<double>(node, "thresholds.overrun_stop_point_dist");
+    const double vel_lpf_gain =
+      autoware_utils::get_or_declare_parameter<double>(node, "vel_lpf_gain");
+    vehicle_vel_lpf.setGain(vel_lpf_gain);
+  };
+
+  void validate(
+    ControlValidatorStatus & res, const Trajectory & reference_trajectory,
+    const Odometry & kinematics);
+
+private:
+  autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf{0.0};
+  double overrun_stop_point_dist_th;
 };
 
 /**
