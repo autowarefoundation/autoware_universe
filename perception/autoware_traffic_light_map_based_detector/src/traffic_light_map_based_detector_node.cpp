@@ -445,7 +445,8 @@ void MapBasedDetector::getVisibleTrafficLights(
     // for every possible transformation, check if the tl is visible.
     // If under any tf the tl is visible, keep it
     for (const auto & tf_map2camera : tf_map2camera_vec) {
-      if (!utils::isInDistanceRange(tl_center, tf_map2camera.getOrigin(), config_.max_detection_range)) {
+      if (!utils::isInDistanceRange(
+            tl_center, tf_map2camera.getOrigin(), config_.max_detection_range)) {
         continue;
       }
 
@@ -465,7 +466,8 @@ void MapBasedDetector::getVisibleTrafficLights(
 
       // check within image frame
       // cspell: ignore tltl
-      tf2::Vector3 tf_camera2tltl = tf_map2camera.inverse() * utils::getTrafficLightTopLeft(traffic_light);
+      tf2::Vector3 tf_camera2tltl =
+        tf_map2camera.inverse() * utils::getTrafficLightTopLeft(traffic_light);
       tf2::Vector3 tf_camera2tlbr =
         tf_map2camera.inverse() * utils::getTrafficLightBottomRight(traffic_light);
       if (

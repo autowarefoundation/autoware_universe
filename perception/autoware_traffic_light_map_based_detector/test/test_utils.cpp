@@ -14,9 +14,10 @@
 
 #include "../src/utils.hpp"
 
-#include <math.h>
 #include <sensor_msgs/msg/camera_info.hpp>
+
 #include <gtest/gtest.h>
+#include <math.h>
 
 image_geometry::PinholeCameraModel createPinholeCameraModel()
 {
@@ -78,7 +79,8 @@ TEST(isInAngleRange, in_range)
   const double tl_yaw = M_PI / 2;
   const double camera_yaw = M_PI;
   const double max_angle_range = M_PI;
-  const bool result = autoware::traffic_light::utils::isInAngleRange(tl_yaw, camera_yaw, max_angle_range);
+  const bool result =
+    autoware::traffic_light::utils::isInAngleRange(tl_yaw, camera_yaw, max_angle_range);
   EXPECT_TRUE(result);
 }
 

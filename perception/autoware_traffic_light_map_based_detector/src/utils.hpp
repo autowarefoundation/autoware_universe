@@ -13,9 +13,10 @@
 // limitations under the License.
 
 #include <opencv2/core.hpp>
-#include <tf2/LinearMath/Vector3.h>
+
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/Lanelet.h>
+#include <tf2/LinearMath/Vector3.h>
 
 #if __has_include(<image_geometry/pinhole_camera_model.hpp>)
 #include <image_geometry/pinhole_camera_model.hpp>  // for ROS 2 Jazzy or newer

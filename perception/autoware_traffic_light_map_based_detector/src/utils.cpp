@@ -14,10 +14,11 @@
 
 #include "utils.hpp"
 
+#include <Eigen/Core>
+
 #include <sensor_msgs/msg/camera_info.hpp>
-#include <Eigen/Core>
+
 #include <lanelet2_core/Attribute.h>
-#include <Eigen/Core>
 
 namespace autoware::traffic_light
 {
@@ -101,5 +102,5 @@ tf2::Vector3 getTrafficLightCenter(const lanelet::ConstLineString3d & traffic_li
   return (top_left + bottom_right) / 2;
 }
 
-}
-}
+}  // namespace utils
+}  // namespace autoware::traffic_light
