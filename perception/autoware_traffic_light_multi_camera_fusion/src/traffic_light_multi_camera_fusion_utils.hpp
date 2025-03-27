@@ -46,7 +46,7 @@ struct FusionRecordArr
 namespace utils
 {
 
-bool isUnknown(const tier4_perception_msgs::msg::TrafficLight & signal)
+inline bool isUnknown(const tier4_perception_msgs::msg::TrafficLight & signal)
 {
   return signal.elements.size() == 1 &&
          signal.elements[0].color == tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN &&

@@ -20,10 +20,39 @@ namespace autoware::traffic_light
 namespace utils
 {
 
+using T4Elem = tier4_perception_msgs::msg::TrafficLightElement;
+using AutowareElem = autoware_perception_msgs::msg::TrafficLightElement;
+const std::unordered_map<T4Elem::_color_type, AutowareElem::_color_type> color_map(
+  {{T4Elem::RED, AutowareElem::RED},
+    {T4Elem::AMBER, AutowareElem::AMBER},
+    {T4Elem::GREEN, AutowareElem::GREEN},
+    {T4Elem::WHITE, AutowareElem::WHITE}});
+const std::unordered_map<T4Elem::_shape_type, AutowareElem::_shape_type> shape_map(
+  {{T4Elem::CIRCLE, AutowareElem::CIRCLE},
+    {T4Elem::LEFT_ARROW, AutowareElem::LEFT_ARROW},
+    {T4Elem::RIGHT_ARROW, AutowareElem::RIGHT_ARROW},
+    {T4Elem::UP_ARROW, AutowareElem::UP_ARROW},
+    {T4Elem::UP_LEFT_ARROW, AutowareElem::UP_LEFT_ARROW},
+    {T4Elem::UP_RIGHT_ARROW, AutowareElem::UP_RIGHT_ARROW},
+    {T4Elem::DOWN_ARROW, AutowareElem::DOWN_ARROW},
+    {T4Elem::DOWN_LEFT_ARROW, AutowareElem::DOWN_LEFT_ARROW},
+    {T4Elem::DOWN_RIGHT_ARROW, AutowareElem::DOWN_RIGHT_ARROW},
+    {T4Elem::CROSS, AutowareElem::CROSS}});
+const std::unordered_map<T4Elem::_status_type, AutowareElem::_status_type> status_map(
+  {{T4Elem::SOLID_OFF, AutowareElem::SOLID_OFF},
+    {T4Elem::SOLID_ON, AutowareElem::SOLID_ON},
+    {T4Elem::FLASHING, AutowareElem::FLASHING}});
+
 int compareRecord(
   const autoware::traffic_light::FusionRecord & r1,
   const autoware::traffic_light::FusionRecord & r2)
 {
+  /*
+  r1 will be checked
+  return 1 if r1 is better than r2
+  return -1 if r1 is worse than r2
+  return 0 if r1 is equal to r2
+  */
   /*
   if both records are from the same sensor but different stamp, trust the latest one
   */
@@ -60,34 +89,12 @@ int compareRecord(
 autoware_perception_msgs::msg::TrafficLightElement convert(
   const tier4_perception_msgs::msg::TrafficLightElement & input)
 {
-  using OldElem = tier4_perception_msgs::msg::TrafficLightElement;
-  using NewElem = autoware_perception_msgs::msg::TrafficLightElement;
-  static const std::unordered_map<OldElem::_color_type, NewElem::_color_type> color_map(
-    {{OldElem::RED, NewElem::RED},
-     {OldElem::AMBER, NewElem::AMBER},
-     {OldElem::GREEN, NewElem::GREEN},
-     {OldElem::WHITE, NewElem::WHITE}});
-  static const std::unordered_map<OldElem::_shape_type, NewElem::_shape_type> shape_map(
-    {{OldElem::CIRCLE, NewElem::CIRCLE},
-     {OldElem::LEFT_ARROW, NewElem::LEFT_ARROW},
-     {OldElem::RIGHT_ARROW, NewElem::RIGHT_ARROW},
-     {OldElem::UP_ARROW, NewElem::UP_ARROW},
-     {OldElem::UP_LEFT_ARROW, NewElem::UP_LEFT_ARROW},
-     {OldElem::UP_RIGHT_ARROW, NewElem::UP_RIGHT_ARROW},
-     {OldElem::DOWN_ARROW, NewElem::DOWN_ARROW},
-     {OldElem::DOWN_LEFT_ARROW, NewElem::DOWN_LEFT_ARROW},
-     {OldElem::DOWN_RIGHT_ARROW, NewElem::DOWN_RIGHT_ARROW},
-     {OldElem::CROSS, NewElem::CROSS}});
-  static const std::unordered_map<OldElem::_status_type, NewElem::_status_type> status_map(
-    {{OldElem::SOLID_OFF, NewElem::SOLID_OFF},
-     {OldElem::SOLID_ON, NewElem::SOLID_ON},
-     {OldElem::FLASHING, NewElem::FLASHING}});
   // clang-format on
 
-  NewElem output;
-  output.color = at_or(color_map, input.color, NewElem::UNKNOWN);
-  output.shape = at_or(shape_map, input.shape, NewElem::UNKNOWN);
-  output.status = at_or(status_map, input.status, NewElem::UNKNOWN);
+  AutowareElem output;
+  output.color = at_or(color_map, input.color, AutowareElem::UNKNOWN);
+  output.shape = at_or(shape_map, input.shape, AutowareElem::UNKNOWN);
+  output.status = at_or(status_map, input.status, AutowareElem::UNKNOWN);
   output.confidence = input.confidence;
   return output;
 }
@@ -108,5 +115,5 @@ int calVisibleScore(const autoware::traffic_light::FusionRecord & record)
   }
 }
 
-}  // namespace
+}  // namespace utils
 }  // namespace autoware::traffic_light
