@@ -9,6 +9,21 @@
 
   <!-- assemble launch config for motion velocity planner -->
   <arg name="motion_velocity_planner_launch_modules" default="["/>
+    <let
+    name="motion_velocity_planner_launch_modules"
+    value="$(eval &quot;'$(var motion_velocity_planner_launch_modules)' + 'autoware::motion_velocity_planner::ObstacleStopModule, '&quot;)"
+    if="$(var launch_obstacle_stop_module)"
+  />
+  <let
+    name="motion_velocity_planner_launch_modules"
+    value="$(eval &quot;'$(var motion_velocity_planner_launch_modules)' + 'autoware::motion_velocity_planner::ObstacleSlowDownModule, '&quot;)"
+    if="$(var launch_obstacle_slow_down_module)"
+  />
+  <let
+    name="motion_velocity_planner_launch_modules"
+    value="$(eval &quot;'$(var motion_velocity_planner_launch_modules)' + 'autoware::motion_velocity_planner::ObstacleCruiseModule, '&quot;)"
+    if="$(var launch_obstacle_cruise_module)"
+  />
   <let
     name="motion_velocity_planner_launch_modules"
     value="$(eval &quot;'$(var motion_velocity_planner_launch_modules)' + 'autoware::motion_velocity_planner::OutOfLaneModule, '&quot;)"
@@ -119,7 +134,7 @@
   <!-- plan slowdown or stops on the final trajectory -->
   <group>
     <load_composable_node target="/planning/scenario_planning/lane_driving/motion_planning/motion_planning_container">
-      <composable_node pkg="autoware_motion_velocity_planner_node" plugin="autoware::motion_velocity_planner::MotionVelocityPlannerNode" name="motion_velocity_planner" namespace="">
+      <composable_node pkg="autoware_motion_velocity_planner_node_universe" plugin="autoware::motion_velocity_planner::MotionVelocityPlannerNode" name="motion_velocity_planner" namespace="">
         <!-- topic remap -->
         <remap from="~/input/trajectory" to="path_optimizer/trajectory"/>
         <remap from="~/input/vector_map" to="/map/vector_map"/>
@@ -131,6 +146,8 @@
         <remap from="~/input/virtual_traffic_light_states" to="/perception/virtual_traffic_light_states"/>
         <remap from="~/input/occupancy_grid" to="/perception/occupancy_grid_map/map"/>
         <remap from="~/output/trajectory" to="motion_velocity_planner/trajectory"/>
+        <remap from="~/output/velocity_limit" to="/planning/scenario_planning/max_velocity_candidates"/>
+        <remap from="~/output/clear_velocity_limit" to="/planning/scenario_planning/clear_velocity_limit"/>        
         <remap from="~/output/stop_reasons" to="/planning/scenario_planning/status/stop_reasons"/>
         <remap from="~/output/velocity_factors" to="/planning/velocity_factors/motion_velocity_planner"/>
         <!-- params -->
@@ -141,6 +158,9 @@
         <param from="$(var velocity_smoother_param_path)"/>
         <param from="$(var motion_velocity_planner_velocity_smoother_type_param_path)"/>
         <param from="$(var motion_velocity_planner_param_path)"/>
+        <param from="$(var motion_velocity_planner_obstacle_stop_module_param_path)"/>
+        <param from="$(var motion_velocity_planner_obstacle_slow_down_module_param_path)"/>
+        <param from="$(var motion_velocity_planner_obstacle_cruise_module_param_path)"/>
         <param from="$(var motion_velocity_planner_dynamic_obstacle_stop_module_param_path)"/>
         <param from="$(var motion_velocity_planner_out_of_lane_module_param_path)"/>
         <param from="$(var motion_velocity_planner_obstacle_velocity_limiter_param_path)"/>
