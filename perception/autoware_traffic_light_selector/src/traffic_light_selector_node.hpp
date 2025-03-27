@@ -15,7 +15,7 @@
 #ifndef TRAFFIC_LIGHT_SELECTOR_NODE_HPP_
 #define TRAFFIC_LIGHT_SELECTOR_NODE_HPP_
 
-#include "utils.hpp"
+#include "traffic_light_selector_utils.hpp"
 
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/system/stop_watch.hpp>

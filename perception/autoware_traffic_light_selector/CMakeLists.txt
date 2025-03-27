@@ -8,7 +8,7 @@ autoware_package()
 # Targets
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/traffic_light_selector_node.cpp
-  src/utils.cpp
+  src/traffic_light_selector_utils.cpp
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
