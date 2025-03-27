@@ -676,20 +676,22 @@ TEST(BehaviorPathPlanningSafetyUtilsTest, checkObjectsCollisionRough)
 
   auto path = generateTrajectory<PathWithLaneId>(10, 1.0);
   autoware_perception_msgs::msg::PredictedObjects objs;
-  double margin = 0.1;
+  double min_margin_threshold = 0.1;
+  double max_margin_threshold = 0.1;
   BehaviorPathPlannerParameters param;
   param.vehicle_width = 2.0;
   param.front_overhang = 1.0;
   param.rear_overhang = 1.0;
   bool use_offset_ego_point = true;
 
-  // Condition: no object
-  auto rough_object_collision =
-    checkObjectsCollisionRough(path, objs, margin, param, use_offset_ego_point);
+  // Condition: no objects
+  auto rough_object_collision = checkObjectsCollisionRough(
+    path, objs, min_margin_threshold, max_margin_threshold, param, use_offset_ego_point);
   EXPECT_FALSE(rough_object_collision.first);
   EXPECT_FALSE(rough_object_collision.second);
 
   // Condition: collides with minimum distance
+  // min_distance = 0.00464761, max_distance = 2.0
   autoware_perception_msgs::msg::PredictedObject obj;
   obj.kinematics.initial_pose_with_covariance.pose = createPose(8.0, 3.0, 0.0, 0.0, 0.0, 0.0);
   obj.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
@@ -697,25 +699,42 @@ TEST(BehaviorPathPlanningSafetyUtilsTest, checkObjectsCollisionRough)
   obj.shape.dimensions.y = 1.0;
   objs.objects.push_back(obj);
 
-  rough_object_collision =
-    checkObjectsCollisionRough(path, objs, margin, param, use_offset_ego_point);
+  rough_object_collision = checkObjectsCollisionRough(
+    path, objs, min_margin_threshold, max_margin_threshold, param, use_offset_ego_point);
   EXPECT_TRUE(rough_object_collision.first);
   EXPECT_FALSE(rough_object_collision.second);
 
   // Condition: collides with both distance
+  // min_distance: -1.99535, max_distance: 0.0
   obj.kinematics.initial_pose_with_covariance.pose = createPose(2.0, 1.0, 0.0, 0.0, 0.0, 0.0);
   objs.objects.clear();
   objs.objects.push_back(obj);
-  rough_object_collision =
-    checkObjectsCollisionRough(path, objs, margin, param, use_offset_ego_point);
+  rough_object_collision = checkObjectsCollisionRough(
+    path, objs, min_margin_threshold, max_margin_threshold, param, use_offset_ego_point);
   EXPECT_TRUE(rough_object_collision.first);
   EXPECT_TRUE(rough_object_collision.second);
 
   // Condition: use_offset_ego_point set to false
   use_offset_ego_point = false;
-  rough_object_collision =
-    checkObjectsCollisionRough(path, objs, margin, param, use_offset_ego_point);
+  rough_object_collision = checkObjectsCollisionRough(
+    path, objs, min_margin_threshold, max_margin_threshold, param, use_offset_ego_point);
   EXPECT_TRUE(rough_object_collision.first);
+  EXPECT_TRUE(rough_object_collision.second);
+
+  // Condition: no collision with lenient min_margin_threshold and
+  //            collision with strict max_margin_threshold.
+  // min_distance = 0.00464761, max_distance = 2.0
+  min_margin_threshold = 0.001;
+  max_margin_threshold = 2.1;
+  obj.kinematics.initial_pose_with_covariance.pose = createPose(8.0, 3.0, 0.0, 0.0, 0.0, 0.0);
+  obj.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+  obj.shape.dimensions.x = 3.0;
+  obj.shape.dimensions.y = 1.0;
+  objs.objects.clear();
+  objs.objects.push_back(obj);
+  rough_object_collision = checkObjectsCollisionRough(
+    path, objs, min_margin_threshold, max_margin_threshold, param, use_offset_ego_point);
+  EXPECT_FALSE(rough_object_collision.first);
   EXPECT_TRUE(rough_object_collision.second);
 }
 

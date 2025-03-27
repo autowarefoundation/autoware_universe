@@ -29,7 +29,7 @@ float updateProbability(
   constexpr float min_updated_probability = 0.100;
   const float probability =
     (prior * true_positive) / (prior * true_positive + (1 - prior) * false_positive);
-  return std::max(std::min(probability, max_updated_probability), min_updated_probability);
+  return std::clamp(probability, min_updated_probability, max_updated_probability);
 }
 float decayProbability(const float & prior, const float & delta_time)
 {
@@ -106,21 +106,24 @@ bool Tracker::updateWithMeasurement(
     }
 
     // update total existence probability
+    const double existence_probability =
+      channel_info.trust_existence_probability ? object.existence_probability : 0.6;
     total_existence_probability_ = updateProbability(
-      total_existence_probability_, object.existence_probability, probability_false_detection);
+      total_existence_probability_, existence_probability, probability_false_detection);
   }
 
   last_update_with_measurement_time_ = measurement_time;
 
   // Update classification
   if (
+    channel_info.trust_classification &&
     autoware::object_recognition_utils::getHighestProbLabel(object.classification) !=
-    autoware_perception_msgs::msg::ObjectClassification::UNKNOWN) {
+      autoware_perception_msgs::msg::ObjectClassification::UNKNOWN) {
     updateClassification(object.classification);
   }
 
   // Update object
-  measure(object, measurement_time);
+  measure(object, measurement_time, channel_info);
 
   return true;
 }

@@ -2,15 +2,21 @@
 Changelog for package autoware_freespace_planning_algorithms
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* Contributors: Hayato Mizushima, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware.universe/issues/10191>`_)
+* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware_universe/issues/10191>`_)
 * Contributors: Fumiya Watanabe, 心刚
 
 0.41.2 (2025-02-19)
 -------------------
-* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware.universe/issues/10088>`_)
+* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware_universe/issues/10088>`_)
 * Contributors: Ryohsuke Mitsudome
 
 0.41.1 (2025-02-10)
@@ -19,29 +25,29 @@ Changelog for package autoware_freespace_planning_algorithms
 0.41.0 (2025-01-29)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* fix(autoware_freespace_planning_algorithms): fix bugprone-errors (`#9670 <https://github.com/autowarefoundation/autoware.universe/issues/9670>`_)
+* fix(autoware_freespace_planning_algorithms): fix bugprone-errors (`#9670 <https://github.com/autowarefoundation/autoware_universe/issues/9670>`_)
   * fix: bugprone-error
   * fix: bugprone-error
   ---------
-* build(autoware_freespace_planning_algorithms): increase test timeout to 2 mins (`#9639 <https://github.com/autowarefoundation/autoware.universe/issues/9639>`_)
+* build(autoware_freespace_planning_algorithms): increase test timeout to 2 mins (`#9639 <https://github.com/autowarefoundation/autoware_universe/issues/9639>`_)
 * Contributors: Fumiya Watanabe, M. Fatih Cırıt, kobayu858
 
 0.40.0 (2024-12-12)
 -------------------
 * Merge branch 'main' into release-0.40.0
-* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware.universe/issues/9587>`_)"
+* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware_universe/issues/9587>`_)"
   This reverts commit c9f0f2688c57b0f657f5c1f28f036a970682e7f5.
-* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware.universe/issues/9588>`_)
-* chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware.universe/issues/9587>`_)
+* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware_universe/issues/9588>`_)
+* chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware_universe/issues/9587>`_)
   * chore(package.xml): bump version to 0.39.0
   * fix: fix ticket links in CHANGELOG.rst
   * fix: remove unnecessary diff
   ---------
   Co-authored-by: Yutaka Kondo <yutaka.kondo@youtalk.jp>
-* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware.universe/issues/9588>`_)
-* fix(cpplint): include what you use - planning (`#9570 <https://github.com/autowarefoundation/autoware.universe/issues/9570>`_)
-* refactor: correct spelling (`#9528 <https://github.com/autowarefoundation/autoware.universe/issues/9528>`_)
-* fix(autoware_freespace_planner, autoware_freespace_planning_algorithms): modify freespace planner to use node clock instead of system clock (`#9152 <https://github.com/autowarefoundation/autoware.universe/issues/9152>`_)
+* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware_universe/issues/9588>`_)
+* fix(cpplint): include what you use - planning (`#9570 <https://github.com/autowarefoundation/autoware_universe/issues/9570>`_)
+* refactor: correct spelling (`#9528 <https://github.com/autowarefoundation/autoware_universe/issues/9528>`_)
+* fix(autoware_freespace_planner, autoware_freespace_planning_algorithms): modify freespace planner to use node clock instead of system clock (`#9152 <https://github.com/autowarefoundation/autoware_universe/issues/9152>`_)
   * Modified the autoware_freespace_planner and autoware_freespace_planning_algorithms packages to use the node clock instead of rclcpp detached clock. This allows the module to make use of sim time. Previously during simulation the parking trajectory would have system time in trajectory header messages causing downstream issues like non-clearance of trajectory buffers in motion planning based on elapsed time.
   * style(pre-commit): autofix
   * Updated the freespace planner instantiation call in the path planning modules
@@ -51,49 +57,49 @@ Changelog for package autoware_freespace_planning_algorithms
   ---------
   Co-authored-by: Steven Brills <sbrills@oshkoshcorp.com>
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* fix(autoware_freespace_planning_algorithms): fix clang-diagnostic-unused-const-variable (`#9433 <https://github.com/autowarefoundation/autoware.universe/issues/9433>`_)
+* fix(autoware_freespace_planning_algorithms): fix clang-diagnostic-unused-const-variable (`#9433 <https://github.com/autowarefoundation/autoware_universe/issues/9433>`_)
 * 0.39.0
 * update changelog
 * Merge commit '6a1ddbd08bd' into release-0.39.0
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* fix(autoware_freespace_planning_algorithms): fix clang-diagnostic-ignored-optimization-argument (`#9418 <https://github.com/autowarefoundation/autoware.universe/issues/9418>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* fix(autoware_freespace_planning_algorithms): fix clang-diagnostic-ignored-optimization-argument (`#9418 <https://github.com/autowarefoundation/autoware_universe/issues/9418>`_)
   fix: clang-diagnostic-ignored-optimization-argument
-* fix(autoware_freespace_planning_algorithms): fix clang-diagnostic-unused-private-field (`#9396 <https://github.com/autowarefoundation/autoware.universe/issues/9396>`_)
+* fix(autoware_freespace_planning_algorithms): fix clang-diagnostic-unused-private-field (`#9396 <https://github.com/autowarefoundation/autoware_universe/issues/9396>`_)
   * fix: clang-diagnostic-unused-private-field
   * fix: build error
   ---------
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware.universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware.universe/issues/9284>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware_universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware_universe/issues/9284>`_)
   * unify package.xml version to 0.37.0
   * remove system_monitor/CHANGELOG.rst
   * add changelog
   * 0.38.0
   ---------
-* fix(/autoware_freespace_planning_algorithms): fix cppcheck unusedFunction (`#9274 <https://github.com/autowarefoundation/autoware.universe/issues/9274>`_)
-* fix(autoware_freespace_planning_algorithms): fix bugprone-unused-raii (`#9230 <https://github.com/autowarefoundation/autoware.universe/issues/9230>`_)
+* fix(/autoware_freespace_planning_algorithms): fix cppcheck unusedFunction (`#9274 <https://github.com/autowarefoundation/autoware_universe/issues/9274>`_)
+* fix(autoware_freespace_planning_algorithms): fix bugprone-unused-raii (`#9230 <https://github.com/autowarefoundation/autoware_universe/issues/9230>`_)
   fix: bugprone-unused-raii
 * Contributors: Esteve Fernandez, Fumiya Watanabe, M. Fatih Cırıt, Ryohsuke Mitsudome, Ryuta Kambe, Yutaka Kondo, kobayu858, stevenbrills
 
 0.39.0 (2024-11-25)
 -------------------
 * Merge commit '6a1ddbd08bd' into release-0.39.0
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware.universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware.universe/issues/9284>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware_universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware_universe/issues/9284>`_)
   * unify package.xml version to 0.37.0
   * remove system_monitor/CHANGELOG.rst
   * add changelog
   * 0.38.0
   ---------
-* fix(/autoware_freespace_planning_algorithms): fix cppcheck unusedFunction (`#9274 <https://github.com/autowarefoundation/autoware.universe/issues/9274>`_)
-* fix(autoware_freespace_planning_algorithms): fix bugprone-unused-raii (`#9230 <https://github.com/autowarefoundation/autoware.universe/issues/9230>`_)
+* fix(/autoware_freespace_planning_algorithms): fix cppcheck unusedFunction (`#9274 <https://github.com/autowarefoundation/autoware_universe/issues/9274>`_)
+* fix(autoware_freespace_planning_algorithms): fix bugprone-unused-raii (`#9230 <https://github.com/autowarefoundation/autoware_universe/issues/9230>`_)
   fix: bugprone-unused-raii
 * Contributors: Esteve Fernandez, Ryuta Kambe, Yutaka Kondo, kobayu858
 
 0.38.0 (2024-11-08)
 -------------------
 * unify package.xml version to 0.37.0
-* feat(freespace_planning_algorithms): implement support for multiple goal candidates in A star planner (`#8092 <https://github.com/autowarefoundation/autoware.universe/issues/8092>`_)
+* feat(freespace_planning_algorithms): implement support for multiple goal candidates in A star planner (`#8092 <https://github.com/autowarefoundation/autoware_universe/issues/8092>`_)
   * refactor freespace planning algorithms
   * fix error
   * use vector instead of map for a-star node graph
@@ -171,7 +177,7 @@ Changelog for package autoware_freespace_planning_algorithms
   * minor refactor
   ---------
   Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
-* feat(freespace_planning_algorithms): implement option for backward search from goal to start (`#8091 <https://github.com/autowarefoundation/autoware.universe/issues/8091>`_)
+* feat(freespace_planning_algorithms): implement option for backward search from goal to start (`#8091 <https://github.com/autowarefoundation/autoware_universe/issues/8091>`_)
   * refactor freespace planning algorithms
   * fix error
   * use vector instead of map for a-star node graph
@@ -237,11 +243,11 @@ Changelog for package autoware_freespace_planning_algorithms
   * minor refactor
   ---------
   Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
-* fix(autoware_freespace_planning_algorithms): fix variableScope (`#8431 <https://github.com/autowarefoundation/autoware.universe/issues/8431>`_)
+* fix(autoware_freespace_planning_algorithms): fix variableScope (`#8431 <https://github.com/autowarefoundation/autoware_universe/issues/8431>`_)
   fix: variableScope
   Co-authored-by: kobayu858 <129580202+kobayu858@users.noreply.github.com>
-* chore(autoware_freespace_planning_algorithms): add missing dependency (`#8494 <https://github.com/autowarefoundation/autoware.universe/issues/8494>`_)
-* feat(freespace_planning_algorithms): use distance to nearest obstacle to improve path planning (`#8089 <https://github.com/autowarefoundation/autoware.universe/issues/8089>`_)
+* chore(autoware_freespace_planning_algorithms): add missing dependency (`#8494 <https://github.com/autowarefoundation/autoware_universe/issues/8494>`_)
+* feat(freespace_planning_algorithms): use distance to nearest obstacle to improve path planning (`#8089 <https://github.com/autowarefoundation/autoware_universe/issues/8089>`_)
   * refactor freespace planning algorithms
   * fix error
   * use vector instead of map for a-star node graph
@@ -295,13 +301,13 @@ Changelog for package autoware_freespace_planning_algorithms
   * suppress spell check
   ---------
   Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
-* fix(autoware_freespace_planning_algorithms): fix unreadVariable (`#8360 <https://github.com/autowarefoundation/autoware.universe/issues/8360>`_)
+* fix(autoware_freespace_planning_algorithms): fix unreadVariable (`#8360 <https://github.com/autowarefoundation/autoware_universe/issues/8360>`_)
   * fix:unreadVariable
   * fix:clang format
   ---------
-* fix(autoware_freespace_planning_algorithms): fix functionConst (`#8281 <https://github.com/autowarefoundation/autoware.universe/issues/8281>`_)
+* fix(autoware_freespace_planning_algorithms): fix functionConst (`#8281 <https://github.com/autowarefoundation/autoware_universe/issues/8281>`_)
   fix:functionConst
-* refactor(freespace_planning_algorithm): refactor and improve astar search (`#8068 <https://github.com/autowarefoundation/autoware.universe/issues/8068>`_)
+* refactor(freespace_planning_algorithm): refactor and improve astar search (`#8068 <https://github.com/autowarefoundation/autoware_universe/issues/8068>`_)
   * refactor freespace planning algorithms
   * fix error
   * use vector instead of map for a-star node graph
@@ -334,28 +340,28 @@ Changelog for package autoware_freespace_planning_algorithms
   * check goal pose validity before setting collision free distance map
   * declare variables as const where necessary
   ---------
-* fix(autoware_freespace_planning_algorithms): fix shadowVariable (`#7949 <https://github.com/autowarefoundation/autoware.universe/issues/7949>`_)
+* fix(autoware_freespace_planning_algorithms): fix shadowVariable (`#7949 <https://github.com/autowarefoundation/autoware_universe/issues/7949>`_)
   * fix:shadowVariable
   * fix:shadowVariable
   * fix:shadowVariable
   ---------
-* chore(freespace_planning_algorithm): modify A* script for standalone running (`#7070 <https://github.com/autowarefoundation/autoware.universe/issues/7070>`_)
+* chore(freespace_planning_algorithm): modify A* script for standalone running (`#7070 <https://github.com/autowarefoundation/autoware_universe/issues/7070>`_)
   * modify astar for standalone running
   move clearNoe() from setMap to makePlan().
   * small modification
   * run pre-commit
   ---------
   Co-authored-by: Takumi Ito <takumi.ito@tier4.jp>
-* feat(freespace_planning_algorithms): add is_back flag into the return of A* python wrapper (`#7831 <https://github.com/autowarefoundation/autoware.universe/issues/7831>`_)
+* feat(freespace_planning_algorithms): add is_back flag into the return of A* python wrapper (`#7831 <https://github.com/autowarefoundation/autoware_universe/issues/7831>`_)
   add is_back flag to the return of getWaypoints
   Co-authored-by: Takumi Ito <takumi.ito@tier4.jp>
-* fix(autoware_freespace_planning_algorithms): fix syntaxError (`#7812 <https://github.com/autowarefoundation/autoware.universe/issues/7812>`_)
-* fix(autoware_freespace_planning_algorithms): fix constStatement warning (`#7580 <https://github.com/autowarefoundation/autoware.universe/issues/7580>`_)
-* fix(autoware_freespace_planning_algorithms): fix unusedScopedObject bug (`#7562 <https://github.com/autowarefoundation/autoware.universe/issues/7562>`_)
-* refactor(universe_utils/motion_utils)!: add autoware namespace (`#7594 <https://github.com/autowarefoundation/autoware.universe/issues/7594>`_)
-* feat(autoware_universe_utils)!: rename from tier4_autoware_utils (`#7538 <https://github.com/autowarefoundation/autoware.universe/issues/7538>`_)
+* fix(autoware_freespace_planning_algorithms): fix syntaxError (`#7812 <https://github.com/autowarefoundation/autoware_universe/issues/7812>`_)
+* fix(autoware_freespace_planning_algorithms): fix constStatement warning (`#7580 <https://github.com/autowarefoundation/autoware_universe/issues/7580>`_)
+* fix(autoware_freespace_planning_algorithms): fix unusedScopedObject bug (`#7562 <https://github.com/autowarefoundation/autoware_universe/issues/7562>`_)
+* refactor(universe_utils/motion_utils)!: add autoware namespace (`#7594 <https://github.com/autowarefoundation/autoware_universe/issues/7594>`_)
+* feat(autoware_universe_utils)!: rename from tier4_autoware_utils (`#7538 <https://github.com/autowarefoundation/autoware_universe/issues/7538>`_)
   Co-authored-by: kosuke55 <kosuke.tnp@gmail.com>
-* refactor(freespace_planner)!: rename to include/autoware/{package_name}  (`#7525 <https://github.com/autowarefoundation/autoware.universe/issues/7525>`_)
+* refactor(freespace_planner)!: rename to include/autoware/{package_name}  (`#7525 <https://github.com/autowarefoundation/autoware_universe/issues/7525>`_)
   refactor(freespace_planner)!: rename to include/autoware/{package_name}
   refactor(start_planner): make autoware include dir
   refactor(goal_planner): make autoware include dir
@@ -372,7 +378,7 @@ Changelog for package autoware_freespace_planning_algorithms
   fix build
   autoware_freespace_planner
   freespace_planning_algorithms
-* refactor(vehicle_info_utils)!: prefix package and namespace with autoware (`#7353 <https://github.com/autowarefoundation/autoware.universe/issues/7353>`_)
+* refactor(vehicle_info_utils)!: prefix package and namespace with autoware (`#7353 <https://github.com/autowarefoundation/autoware_universe/issues/7353>`_)
   * chore(autoware_vehicle_info_utils): rename header
   * chore(bpp-common): vehicle info
   * chore(path_optimizer): vehicle info
@@ -407,7 +413,7 @@ Changelog for package autoware_freespace_planning_algorithms
   * chore(sensing): vehicle info
   * fix(autoware_joy_controller): remove unused deps
   ---------
-* refactor(freespace_planning_algorithms)!: add autoware prefix (`#7375 <https://github.com/autowarefoundation/autoware.universe/issues/7375>`_)
+* refactor(freespace_planning_algorithms)!: add autoware prefix (`#7375 <https://github.com/autowarefoundation/autoware_universe/issues/7375>`_)
 * Contributors: Kosuke Takeuchi, M. Fatih Cırıt, Nagi70, Ryuta Kambe, Satoshi OTA, Takayuki Murooka, TakumIto, Yutaka Kondo, kobayu858, mkquda
 
 0.26.0 (2024-04-03)

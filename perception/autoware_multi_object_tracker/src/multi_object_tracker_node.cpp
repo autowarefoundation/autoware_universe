@@ -91,7 +91,23 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
     // required parameter, but can set a default value
     input_channel_config.is_spawn_enabled = declare_parameter<bool>(
-      "input_channels." + selected_input_channel + ".can_spawn_new_tracker", true);
+      "input_channels." + selected_input_channel + ".flags.can_spawn_new_tracker", true);
+
+    // trust object existence probability
+    input_channel_config.trust_existence_probability = declare_parameter<bool>(
+      "input_channels." + selected_input_channel + ".flags.can_trust_existence_probability", true);
+
+    // trust object extension, size beyond the visible area
+    input_channel_config.trust_extension = declare_parameter<bool>(
+      "input_channels." + selected_input_channel + ".flags.can_trust_extension", true);
+
+    // trust object classification
+    input_channel_config.trust_classification = declare_parameter<bool>(
+      "input_channels." + selected_input_channel + ".flags.can_trust_classification", true);
+
+    // trust object orientation(yaw)
+    input_channel_config.trust_orientation = declare_parameter<bool>(
+      "input_channels." + selected_input_channel + ".flags.can_trust_orientation", true);
 
     // optional parameters
     const std::string default_name = selected_input_channel;

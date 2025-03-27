@@ -2,11 +2,17 @@
 Changelog for package autoware_ground_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* Contributors: Hayato Mizushima, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware.universe/issues/10191>`_)
-* chore: refine maintainer list (`#10110 <https://github.com/autowarefoundation/autoware.universe/issues/10110>`_)
+* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware_universe/issues/10191>`_)
+* chore: refine maintainer list (`#10110 <https://github.com/autowarefoundation/autoware_universe/issues/10110>`_)
   * chore: remove Miura from maintainer
   * chore: add Taekjin-san to perception_utils package maintainer
   ---------
@@ -14,7 +20,7 @@ Changelog for package autoware_ground_segmentation
 
 0.41.2 (2025-02-19)
 -------------------
-* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware.universe/issues/10088>`_)
+* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware_universe/issues/10088>`_)
 * Contributors: Ryohsuke Mitsudome
 
 0.41.1 (2025-02-10)
@@ -23,32 +29,32 @@ Changelog for package autoware_ground_segmentation
 0.41.0 (2025-01-29)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* feat(autoware_ground_segmentation): tier4_debug_msgs changed to autoware_internal_debug_msgs in fil… (`#9878 <https://github.com/autowarefoundation/autoware.universe/issues/9878>`_)
+* feat(autoware_ground_segmentation): tier4_debug_msgs changed to autoware_internal_debug_msgs in fil… (`#9878 <https://github.com/autowarefoundation/autoware_universe/issues/9878>`_)
   feat: tier4_debug_msgs changed to autoware_internal_debug_msgs in files perception/autoware_ground_segmentation
-* fix(autoware_ground_segmentation): fix bugprone-branch-clone (`#9648 <https://github.com/autowarefoundation/autoware.universe/issues/9648>`_)
+* fix(autoware_ground_segmentation): fix bugprone-branch-clone (`#9648 <https://github.com/autowarefoundation/autoware_universe/issues/9648>`_)
   fix: bugprone-branch-clone
 * Contributors: Fumiya Watanabe, Vishal Chauhan, kobayu858
 
 0.40.0 (2024-12-12)
 -------------------
 * Merge branch 'main' into release-0.40.0
-* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware.universe/issues/9587>`_)"
+* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware_universe/issues/9587>`_)"
   This reverts commit c9f0f2688c57b0f657f5c1f28f036a970682e7f5.
-* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware.universe/issues/9588>`_)
-* chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware.universe/issues/9587>`_)
+* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware_universe/issues/9588>`_)
+* chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware_universe/issues/9587>`_)
   * chore(package.xml): bump version to 0.39.0
   * fix: fix ticket links in CHANGELOG.rst
   * fix: remove unnecessary diff
   ---------
   Co-authored-by: Yutaka Kondo <yutaka.kondo@youtalk.jp>
-* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware.universe/issues/9588>`_)
-* fix(cpplint): include what you use - perception (`#9569 <https://github.com/autowarefoundation/autoware.universe/issues/9569>`_)
-* fix(autoware_ground_segmentation): remove unused function (`#9536 <https://github.com/autowarefoundation/autoware.universe/issues/9536>`_)
-* fix(autoware_ground_segmentation): fix clang-diagnostic-inconsistent-missing-override (`#9517 <https://github.com/autowarefoundation/autoware.universe/issues/9517>`_)
+* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware_universe/issues/9588>`_)
+* fix(cpplint): include what you use - perception (`#9569 <https://github.com/autowarefoundation/autoware_universe/issues/9569>`_)
+* fix(autoware_ground_segmentation): remove unused function (`#9536 <https://github.com/autowarefoundation/autoware_universe/issues/9536>`_)
+* fix(autoware_ground_segmentation): fix clang-diagnostic-inconsistent-missing-override (`#9517 <https://github.com/autowarefoundation/autoware_universe/issues/9517>`_)
   * fix: clang-diagnostic-inconsistent-missing-override
   * fix: pre-commit error
   ---------
-* feat(autoware_ground_segmentation): grid data structure revision for efficiency improvement (`#9297 <https://github.com/autowarefoundation/autoware.universe/issues/9297>`_)
+* feat(autoware_ground_segmentation): grid data structure revision for efficiency improvement (`#9297 <https://github.com/autowarefoundation/autoware_universe/issues/9297>`_)
   * fix: replace point index to data index
   * feat: Use emplace_back instead of push_back for adding gnd_grids in node.cpp
   * fix: prep for non-sorted grid process
@@ -136,9 +142,9 @@ Changelog for package autoware_ground_segmentation
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
 * 0.39.0
 * update changelog
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware.universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware.universe/issues/9284>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware_universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware_universe/issues/9284>`_)
   * unify package.xml version to 0.37.0
   * remove system_monitor/CHANGELOG.rst
   * add changelog
@@ -148,9 +154,9 @@ Changelog for package autoware_ground_segmentation
 
 0.39.0 (2024-11-25)
 -------------------
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware.universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware.universe/issues/9284>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware_universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware_universe/issues/9284>`_)
   * unify package.xml version to 0.37.0
   * remove system_monitor/CHANGELOG.rst
   * add changelog
@@ -161,7 +167,7 @@ Changelog for package autoware_ground_segmentation
 0.38.0 (2024-11-08)
 -------------------
 * unify package.xml version to 0.37.0
-* feat(autoware_ground_segmentation): implementing linear least square fitting for local gradient calculation (`#9116 <https://github.com/autowarefoundation/autoware.universe/issues/9116>`_)
+* feat(autoware_ground_segmentation): implementing linear least square fitting for local gradient calculation (`#9116 <https://github.com/autowarefoundation/autoware_universe/issues/9116>`_)
   * refactor: calculate local ground gradient in classifyPointCloudGridScan
   Calculate the local ground gradient by fitting a line to the ground grids in the classifyPointCloudGridScan function. This improves the accuracy of the gradient calculation and ensures more precise extrapolation of the ground height.
   * refactor: calculate local ground gradient in classifyPointCloudGridScan
@@ -172,7 +178,7 @@ Changelog for package autoware_ground_segmentation
   * refactor: fix ground gradient calculation in checkContinuousGndGrid function
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* fix(autoware_ground_segmentation): fix scan ground filter logic  (`#9084 <https://github.com/autowarefoundation/autoware.universe/issues/9084>`_)
+* fix(autoware_ground_segmentation): fix scan ground filter logic  (`#9084 <https://github.com/autowarefoundation/autoware_universe/issues/9084>`_)
   * refactor: initialize gnd_grids in ScanGroundFilterComponent::initializeFirstGndGrids
   Initialize gnd_grids vector in the ScanGroundFilterComponent::initializeFirstGndGrids function to ensure it is empty and has the correct capacity. This improves the efficiency of the function and ensures accurate grid initialization.
   * refactor: initialize gnd_grids vector in initializeFirstGndGrids function
@@ -191,7 +197,7 @@ Changelog for package autoware_ground_segmentation
   * refactor: fix logic description comment
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* chore(autoware_ground_segmentation): scan ground filter refactoring (`#9061 <https://github.com/autowarefoundation/autoware.universe/issues/9061>`_)
+* chore(autoware_ground_segmentation): scan ground filter refactoring (`#9061 <https://github.com/autowarefoundation/autoware_universe/issues/9061>`_)
   * chore: Add comment classification logic for point cloud grid scan
   * chore: renamed horizontal angle to azimuth angle
   * chore: rename offset to data_index
@@ -210,7 +216,7 @@ Changelog for package autoware_ground_segmentation
   * chore: reduce scope
   * refactor: align structure between convertPointcloud and convertPointcloudGridScan
   ---------
-* feat(ground_segmentation): add time_keeper (`#8585 <https://github.com/autowarefoundation/autoware.universe/issues/8585>`_)
+* feat(ground_segmentation): add time_keeper (`#8585 <https://github.com/autowarefoundation/autoware_universe/issues/8585>`_)
   * add time_keeper
   * add timekeeper option
   * add autoware_universe_utils
@@ -219,17 +225,17 @@ Changelog for package autoware_ground_segmentation
   * remove debug code
   * remove some timekeeper and mod block comment
   ---------
-* fix(autoware_pointcloud_preprocessor): static TF listener as Filter option (`#8678 <https://github.com/autowarefoundation/autoware.universe/issues/8678>`_)
-* fix(ground-segmentation): missing ament_index_cpp dependency (`#8587 <https://github.com/autowarefoundation/autoware.universe/issues/8587>`_)
-* fix(autoware_ground_segmentation): fix unusedFunction (`#8566 <https://github.com/autowarefoundation/autoware.universe/issues/8566>`_)
+* fix(autoware_pointcloud_preprocessor): static TF listener as Filter option (`#8678 <https://github.com/autowarefoundation/autoware_universe/issues/8678>`_)
+* fix(ground-segmentation): missing ament_index_cpp dependency (`#8587 <https://github.com/autowarefoundation/autoware_universe/issues/8587>`_)
+* fix(autoware_ground_segmentation): fix unusedFunction (`#8566 <https://github.com/autowarefoundation/autoware_universe/issues/8566>`_)
   fix:unusedFunction
-* fix(ground_segmentation): missing default parameters ERROR (`#8538 <https://github.com/autowarefoundation/autoware.universe/issues/8538>`_)
+* fix(ground_segmentation): missing default parameters ERROR (`#8538 <https://github.com/autowarefoundation/autoware_universe/issues/8538>`_)
   fix(ground_segmentation): remove unused params
-* fix(autoware_ground_segmentation): fix unreadVariable (`#8353 <https://github.com/autowarefoundation/autoware.universe/issues/8353>`_)
+* fix(autoware_ground_segmentation): fix unreadVariable (`#8353 <https://github.com/autowarefoundation/autoware_universe/issues/8353>`_)
   * fix:unreadVariable
   * fix:unreadVariable
   ---------
-* perf(autoware_pointcloud_preprocessor): lazy & managed TF listeners (`#8174 <https://github.com/autowarefoundation/autoware.universe/issues/8174>`_)
+* perf(autoware_pointcloud_preprocessor): lazy & managed TF listeners (`#8174 <https://github.com/autowarefoundation/autoware_universe/issues/8174>`_)
   * perf(autoware_pointcloud_preprocessor): lazy & managed TF listeners
   * fix(autoware_pointcloud_preprocessor): param names & reverse frames transform logic
   * fix(autoware_ground_segmentation): add missing TF listener
@@ -239,11 +245,11 @@ Changelog for package autoware_ground_segmentation
   * fix(autoware_universe_utils): change checks order
   * doc(autoware_universe_utils): add docstring
   ---------
-* fix(autoware_ground_segmentation): fix uninitMemberVar (`#8336 <https://github.com/autowarefoundation/autoware.universe/issues/8336>`_)
+* fix(autoware_ground_segmentation): fix uninitMemberVar (`#8336 <https://github.com/autowarefoundation/autoware_universe/issues/8336>`_)
   fix:uninitMemberVar
-* fix(autoware_ground_segmentation): fix functionConst (`#8291 <https://github.com/autowarefoundation/autoware.universe/issues/8291>`_)
+* fix(autoware_ground_segmentation): fix functionConst (`#8291 <https://github.com/autowarefoundation/autoware_universe/issues/8291>`_)
   fix:functionConst
-* refactor(ground_segmentation)!: add package name prefix of autoware\_ (`#8135 <https://github.com/autowarefoundation/autoware.universe/issues/8135>`_)
+* refactor(ground_segmentation)!: add package name prefix of autoware\_ (`#8135 <https://github.com/autowarefoundation/autoware_universe/issues/8135>`_)
   * refactor(ground_segmentation): add package name prefix of autoware\_
   * fix: update prefix cmake
   ---------

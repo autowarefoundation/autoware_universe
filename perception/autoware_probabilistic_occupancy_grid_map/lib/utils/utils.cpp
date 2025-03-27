@@ -14,6 +14,10 @@
 
 #include "autoware/probabilistic_occupancy_grid_map/utils/utils.hpp"
 
+#ifdef USE_CUDA
+#include <autoware/cuda_utils/cuda_check_error.hpp>
+#endif
+
 #include <autoware_utils/geometry/geometry.hpp>
 
 #include <string>
@@ -49,7 +53,9 @@ bool transformPointcloud(
 
 #ifdef USE_CUDA
 bool transformPointcloudAsync(
-  CudaPointCloud2 & input, const tf2_ros::Buffer & tf2, const std::string & target_frame)
+  CudaPointCloud2 & input, const tf2_ros::Buffer & tf2, const std::string & target_frame,
+  autoware::cuda_utils::CudaUniquePtr<Eigen::Matrix3f> & device_rotation,
+  autoware::cuda_utils::CudaUniquePtr<Eigen::Vector3f> & device_translation)
 {
   geometry_msgs::msg::TransformStamped tf_stamped;
   // lookup transform
@@ -66,9 +72,18 @@ bool transformPointcloudAsync(
   Eigen::Matrix4f tf_matrix = tf2::transformToEigen(tf_stamped.transform).matrix().cast<float>();
   Eigen::Matrix3f rotation = tf_matrix.block<3, 3>(0, 0);
   Eigen::Vector3f translation = tf_matrix.block<3, 1>(0, 3);
+
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    device_rotation.get(), rotation.data(), sizeof(Eigen::Matrix3f), cudaMemcpyHostToDevice,
+    input.stream));
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    device_translation.get(), translation.data(), sizeof(Eigen::Vector3f), cudaMemcpyHostToDevice,
+    input.stream));
+
   transformPointCloudLaunch(
-    input.data.get(), input.width * input.height, input.point_step, rotation, translation,
-    input.stream);
+    input.data.get(), input.width * input.height, input.point_step, device_rotation.get(),
+    device_translation.get(), input.stream);
+
   input.header.frame_id = target_frame;
   return true;
 }

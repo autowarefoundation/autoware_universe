@@ -40,7 +40,8 @@ PlannerManager::PlannerManager(rclcpp::Node & node)
     "autoware_behavior_path_planner",
     "autoware::behavior_path_planner::SceneModuleManagerInterface"),
   logger_(node.get_logger().get_child("planner_manager")),
-  clock_(*node.get_clock())
+  clock_(*node.get_clock()),
+  last_valid_reference_path_(std::nullopt)
 {
   current_route_lanelet_ = std::make_shared<std::optional<lanelet::ConstLanelet>>(std::nullopt);
   processing_time_.emplace("total_time", 0.0);
@@ -272,6 +273,23 @@ BehaviorModuleOutput PlannerManager::getReferencePath(
   const std::shared_ptr<PlannerData> & data) const
 {
   const auto reference_path = utils::getReferencePath(current_route_lanelet_->value(), data);
+
+  if (reference_path.path.points.empty()) {
+    RCLCPP_WARN_THROTTLE(
+      logger_, clock_, 5000,
+      "Empty reference path detected. Using last valid reference path if available.");
+
+    if (last_valid_reference_path_.has_value()) {
+      return last_valid_reference_path_.value();
+    }
+
+    RCLCPP_WARN_THROTTLE(
+      logger_, clock_, 5000, "No valid previous reference path available. Creating empty path.");
+    return BehaviorModuleOutput{};
+  }
+
+  last_valid_reference_path_ = reference_path;
+
   publishDebugRootReferencePath(reference_path);
   return reference_path;
 }

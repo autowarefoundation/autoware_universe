@@ -37,6 +37,16 @@ public:
     Eigen::VectorXd W;
   };
 
+  friend std::ostream & operator<<(std::ostream & os, const Matrix & matrix)
+  {
+    os << "Matrix: {\n";
+    os << "\tA:\n" << matrix.A << "\n";
+    os << "\tB:\n" << matrix.B << "\n";
+    os << "\tW:\n" << matrix.W << "\n";
+    os << "}\n";
+    return os;
+  }
+
   StateEquationGenerator() = default;
   StateEquationGenerator(
     const double wheel_base, const double max_steer_rad,

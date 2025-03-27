@@ -2,15 +2,21 @@
 Changelog for package autoware_smart_mpc_trajectory_follower
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* Contributors: Hayato Mizushima, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware.universe/issues/10191>`_)
+* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware_universe/issues/10191>`_)
 * Contributors: Fumiya Watanabe, 心刚
 
 0.41.2 (2025-02-19)
 -------------------
-* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware.universe/issues/10088>`_)
+* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware_universe/issues/10088>`_)
 * Contributors: Ryohsuke Mitsudome
 
 0.41.1 (2025-02-10)
@@ -19,29 +25,29 @@ Changelog for package autoware_smart_mpc_trajectory_follower
 0.41.0 (2025-01-29)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* feat: tier4_debug_msgs changed to autoware_internal_debug_msgs in fil… (`#9851 <https://github.com/autowarefoundation/autoware.universe/issues/9851>`_)
+* feat: tier4_debug_msgs changed to autoware_internal_debug_msgs in fil… (`#9851 <https://github.com/autowarefoundation/autoware_universe/issues/9851>`_)
 * Contributors: Fumiya Watanabe, Vishal Chauhan
 
 0.40.0 (2024-12-12)
 -------------------
 * Merge branch 'main' into release-0.40.0
-* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware.universe/issues/9587>`_)"
+* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware_universe/issues/9587>`_)"
   This reverts commit c9f0f2688c57b0f657f5c1f28f036a970682e7f5.
-* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware.universe/issues/9588>`_)
-* chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware.universe/issues/9587>`_)
+* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware_universe/issues/9588>`_)
+* chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware_universe/issues/9587>`_)
   * chore(package.xml): bump version to 0.39.0
   * fix: fix ticket links in CHANGELOG.rst
   * fix: remove unnecessary diff
   ---------
   Co-authored-by: Yutaka Kondo <yutaka.kondo@youtalk.jp>
-* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware.universe/issues/9588>`_)
-* fix(cpplint): include what you use - control (`#9565 <https://github.com/autowarefoundation/autoware.universe/issues/9565>`_)
-* fix(autoware_smart_mpc_trajectory_follower): fix clang-diagnostic-ignored-optimization-argument (`#9437 <https://github.com/autowarefoundation/autoware.universe/issues/9437>`_)
+* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware_universe/issues/9588>`_)
+* fix(cpplint): include what you use - control (`#9565 <https://github.com/autowarefoundation/autoware_universe/issues/9565>`_)
+* fix(autoware_smart_mpc_trajectory_follower): fix clang-diagnostic-ignored-optimization-argument (`#9437 <https://github.com/autowarefoundation/autoware_universe/issues/9437>`_)
 * 0.39.0
 * update changelog
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware.universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware.universe/issues/9284>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware_universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware_universe/issues/9284>`_)
   * unify package.xml version to 0.37.0
   * remove system_monitor/CHANGELOG.rst
   * add changelog
@@ -51,9 +57,9 @@ Changelog for package autoware_smart_mpc_trajectory_follower
 
 0.39.0 (2024-11-25)
 -------------------
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware.universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware.universe/issues/9284>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware_universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware_universe/issues/9284>`_)
   * unify package.xml version to 0.37.0
   * remove system_monitor/CHANGELOG.rst
   * add changelog
@@ -64,12 +70,12 @@ Changelog for package autoware_smart_mpc_trajectory_follower
 0.38.0 (2024-11-08)
 -------------------
 * unify package.xml version to 0.37.0
-* fix(autoware_smart_mpc_trajectory_follower): fix unusedFunction (`#8553 <https://github.com/autowarefoundation/autoware.universe/issues/8553>`_)
+* fix(autoware_smart_mpc_trajectory_follower): fix unusedFunction (`#8553 <https://github.com/autowarefoundation/autoware_universe/issues/8553>`_)
   fix:unusedFunction
-* fix(autoware_smart_mpc_trajectory_follower): fix uninitMemberVar (`#8346 <https://github.com/autowarefoundation/autoware.universe/issues/8346>`_)
+* fix(autoware_smart_mpc_trajectory_follower): fix uninitMemberVar (`#8346 <https://github.com/autowarefoundation/autoware_universe/issues/8346>`_)
   fix: uninitMemberVar
   Co-authored-by: kobayu858 <129580202+kobayu858@users.noreply.github.com>
-* refactor(smart_mpc_trajectory_folower): modify pacakge structure and install without setup.py (`#8268 <https://github.com/autowarefoundation/autoware.universe/issues/8268>`_)
+* refactor(smart_mpc_trajectory_folower): modify pacakge structure and install without setup.py (`#8268 <https://github.com/autowarefoundation/autoware_universe/issues/8268>`_)
   * refactor(smart_mpc_trajectory_follower): modify pacakge structure and install without setup.py
   * import proxima calc
   * use ament_get_python_install_dir
@@ -78,7 +84,7 @@ Changelog for package autoware_smart_mpc_trajectory_follower
   * remove str conversion from open
   * sort in cmake
   ---------
-* feat(smart_mpc_trajectory_follower): enhance performance with LSTM and compensation, add compensator outside of MPC (`#7696 <https://github.com/autowarefoundation/autoware.universe/issues/7696>`_)
+* feat(smart_mpc_trajectory_follower): enhance performance with LSTM and compensation, add compensator outside of MPC (`#7696 <https://github.com/autowarefoundation/autoware_universe/issues/7696>`_)
   * update smart mpc package
   * Update control/autoware_smart_mpc_trajectory_follower/autoware_smart_mpc_trajectory_follower/python_simulator/data_collection_utils.py
   Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
@@ -118,14 +124,14 @@ Changelog for package autoware_smart_mpc_trajectory_follower
   Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
   Co-authored-by: asei-proxima <asei.inoue@proxima-ai-tech.com>
-* fix(smart_mpc_trajectory_folower): fix running by adding control_state and changing msg/package_name (`#7666 <https://github.com/autowarefoundation/autoware.universe/issues/7666>`_)
-* refactor(motion_utils)!: add autoware prefix and include dir (`#7539 <https://github.com/autowarefoundation/autoware.universe/issues/7539>`_)
+* fix(smart_mpc_trajectory_folower): fix running by adding control_state and changing msg/package_name (`#7666 <https://github.com/autowarefoundation/autoware_universe/issues/7666>`_)
+* refactor(motion_utils)!: add autoware prefix and include dir (`#7539 <https://github.com/autowarefoundation/autoware_universe/issues/7539>`_)
   refactor(motion_utils): add autoware prefix and include dir
-* feat(autoware_universe_utils)!: rename from tier4_autoware_utils (`#7538 <https://github.com/autowarefoundation/autoware.universe/issues/7538>`_)
+* feat(autoware_universe_utils)!: rename from tier4_autoware_utils (`#7538 <https://github.com/autowarefoundation/autoware_universe/issues/7538>`_)
   Co-authored-by: kosuke55 <kosuke.tnp@gmail.com>
-* ci(pre-commit): autoupdate (`#7499 <https://github.com/autowarefoundation/autoware.universe/issues/7499>`_)
+* ci(pre-commit): autoupdate (`#7499 <https://github.com/autowarefoundation/autoware_universe/issues/7499>`_)
   Co-authored-by: M. Fatih Cırıt <mfc@leodrive.ai>
-* chore(smart_mpc_trajectory_follower): add prefix autoware\_ to smart_mpc_trajectory_follower (`#7367 <https://github.com/autowarefoundation/autoware.universe/issues/7367>`_)
+* chore(smart_mpc_trajectory_follower): add prefix autoware\_ to smart_mpc_trajectory_follower (`#7367 <https://github.com/autowarefoundation/autoware_universe/issues/7367>`_)
   * add prefix
   * fix pre-commit
   ---------
