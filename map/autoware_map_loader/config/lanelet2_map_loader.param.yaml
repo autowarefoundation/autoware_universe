@@ -4,3 +4,5 @@
     center_line_resolution: 5.0                 # [m]
     use_waypoints: true                         # "centerline" in the Lanelet2 map will be used as a "waypoints" tag.
     lanelet2_map_path: $(var lanelet2_map_path) # The lanelet2 map path
+    enable_differential_map_loading: $(var enable_differential_map_loading)      # flag to enable loading of differential map
+    lanelet2_map_metadata_path: $(var lanelet2_map_metadata_path) # The lanelet2 map metadata used for differential map loading

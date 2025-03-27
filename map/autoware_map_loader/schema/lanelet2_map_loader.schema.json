@@ -6,6 +6,11 @@
     "lanelet2_map_loader": {
       "type": "object",
       "properties": {
+        "enable_differential_map_loading": {
+          "type": "string",
+          "description": "Flag to enable loading of differential map",
+          "default": "false"
+        },
         "allow_unsupported_version": {
           "type": "boolean",
           "description": "Flag to load unsupported format_version anyway. If true, just prints warning.",
@@ -23,11 +28,22 @@
         },
         "lanelet2_map_path": {
           "type": "string",
-          "description": "The lanelet2 map path pointing to the .osm file",
+          "description": "The lanelet2 map path pointing to the .osm file or directory that contains multiple .osm files",
+          "default": ""
+        },
+        "lanelet2_map_metadata_path": {
+          "type": "string",
+          "description": "The lanelet2 map metadata path used for differential map loading",
           "default": ""
         }
       },
-      "required": ["center_line_resolution", "use_waypoints", "lanelet2_map_path"],
+      "required": [
+        "enable_differential_map_loading",
+        "allow_unsupported_version",
+        "center_line_resolution",
+        "use_waypoints",
+        "lanelet2_map_path"
+      ],
       "additionalProperties": false
     }
   },
