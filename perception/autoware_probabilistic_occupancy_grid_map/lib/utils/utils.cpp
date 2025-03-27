@@ -14,7 +14,9 @@
 
 #include "autoware/probabilistic_occupancy_grid_map/utils/utils.hpp"
 
-#include "autoware/cuda_utils/cuda_check_error.hpp"
+#ifdef USE_CUDA
+#include <autoware/cuda_utils/cuda_check_error.hpp>
+#endif
 
 #include <autoware_utils/geometry/geometry.hpp>
 

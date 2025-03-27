@@ -20,9 +20,10 @@
 #ifdef USE_CUDA
 #include "autoware/probabilistic_occupancy_grid_map/utils/cuda_pointcloud.hpp"
 #include "autoware/probabilistic_occupancy_grid_map/utils/utils_kernel.hpp"
-#endif
 
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
+#endif
+
 #include <builtin_interfaces/msg/time.hpp>
 #include <pcl_ros/transforms.hpp>
 #include <rclcpp/rclcpp.hpp>
