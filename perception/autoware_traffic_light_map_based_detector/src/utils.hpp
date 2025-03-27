@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef UTILS_HPP_
+#define UTILS_HPP_
+
 #include <opencv2/core.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
@@ -54,3 +57,5 @@ tf2::Vector3 getTrafficLightCenter(const lanelet::ConstLineString3d & traffic_li
 
 }  // namespace utils
 }  // namespace autoware::traffic_light
+
+#endif  // UTILS_HPP_

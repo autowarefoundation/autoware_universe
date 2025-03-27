@@ -20,6 +20,8 @@
 
 #include <lanelet2_core/Attribute.h>
 
+#include <algorithm>
+
 namespace autoware::traffic_light
 {
 namespace utils
