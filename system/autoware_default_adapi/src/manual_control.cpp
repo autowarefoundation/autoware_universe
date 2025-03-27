@@ -146,7 +146,7 @@ void ManualControlNode::disable_all_commands()
 void ManualControlNode::enable_pedals_commands()
 {
   sub_pedals_ = create_subscription<PedalsCommand>(
-    ns_ + "/command/pedals", rclcpp::QoS(1),
+    ns_ + "/command/pedals", rclcpp::QoS(1).best_effort(),
     [this](const PedalsCommand & msg) { pub_pedals_->publish(msg); });
 }
 
@@ -154,7 +154,7 @@ void ManualControlNode::enable_acceleration_commands()
 {
   // TODO(isamu-takagi): Currently not supported.
   sub_acceleration_ = create_subscription<AccelerationCommand>(
-    ns_ + "/command/acceleration", rclcpp::QoS(1),
+    ns_ + "/command/acceleration", rclcpp::QoS(1).best_effort(),
     [this](const AccelerationCommand & msg) { (void)msg; });
 }
 
@@ -162,7 +162,8 @@ void ManualControlNode::enable_velocity_commands()
 {
   // TODO(isamu-takagi): Currently not supported.
   sub_velocity_ = create_subscription<VelocityCommand>(
-    ns_ + "/command/velocity", rclcpp::QoS(1), [this](const VelocityCommand & msg) { (void)msg; });
+    ns_ + "/command/velocity", rclcpp::QoS(1).best_effort(),
+    [this](const VelocityCommand & msg) { (void)msg; });
 }
 
 void ManualControlNode::enable_common_commands()
@@ -170,10 +171,10 @@ void ManualControlNode::enable_common_commands()
   using autoware::default_adapi::command_conversion::convert;
 
   sub_heartbeat_ = create_subscription<OperatorHeartbeat>(
-    ns_ + "/operator/status", rclcpp::QoS(1),
+    ns_ + "/operator/heartbeat", rclcpp::QoS(1).best_effort(),
     [this](const OperatorHeartbeat & msg) { pub_heartbeat_->publish(msg); });
   sub_steering_ = create_subscription<SteeringCommand>(
-    ns_ + "/command/steering", rclcpp::QoS(1),
+    ns_ + "/command/steering", rclcpp::QoS(1).best_effort(),
     [this](const SteeringCommand & msg) { pub_steering_->publish(msg); });
   sub_gear_ = create_subscription<GearCommand>(
     ns_ + "/command/gear", rclcpp::QoS(1).transient_local(),
