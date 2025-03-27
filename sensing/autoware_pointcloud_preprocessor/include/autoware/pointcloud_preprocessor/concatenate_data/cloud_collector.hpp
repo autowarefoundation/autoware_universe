@@ -63,7 +63,7 @@ public:
     std::shared_ptr<CombineCloudHandler<MsgTraits>> & combine_cloud_handler, int num_of_clouds,
     double timeout_sec, bool debug_mode);
   bool topic_exists(const std::string & topic_name);
-  bool process_pointcloud(
+  void process_pointcloud(
     const std::string & topic_name, typename MsgTraits::PointCloudMessage::ConstSharedPtr cloud);
   void concatenate_callback();
 

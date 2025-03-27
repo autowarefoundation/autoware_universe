@@ -70,13 +70,9 @@ bool CloudCollector<MsgTraits>::topic_exists(const std::string & topic_name)
 }
 
 template <typename MsgTraits>
-bool CloudCollector<MsgTraits>::process_pointcloud(
+void CloudCollector<MsgTraits>::process_pointcloud(
   const std::string & topic_name, typename MsgTraits::PointCloudMessage::ConstSharedPtr cloud)
 {
-  if (status_ == CollectorStatus::Finished) {
-    return false;
-  }
-
   if (status_ == CollectorStatus::Idle) {
     // Add first pointcloud to the collector, restart the timer
     status_ = CollectorStatus::Processing;
@@ -85,7 +81,7 @@ bool CloudCollector<MsgTraits>::process_pointcloud(
     // Check if the map already contains an entry for the same topic. This shouldn't happen if the
     // parameter 'lidar_timestamp_noise_window' is set correctly.
     if (topic_to_cloud_map_.find(topic_name) != topic_to_cloud_map_.end()) {
-      RCLCPP_ERROR_STREAM_THROTTLE(
+      RCLCPP_WARN_STREAM_THROTTLE(
         ros2_parent_node_->get_logger(), *ros2_parent_node_->get_clock(),
         std::chrono::milliseconds(10000).count(),
         "Topic '" << topic_name
@@ -97,8 +93,6 @@ bool CloudCollector<MsgTraits>::process_pointcloud(
   if (topic_to_cloud_map_.size() == num_of_clouds_) {
     concatenate_callback();
   }
-
-  return true;
 }
 
 template <typename MsgTraits>
