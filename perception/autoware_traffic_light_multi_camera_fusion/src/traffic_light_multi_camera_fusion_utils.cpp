@@ -16,6 +16,8 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <unordered_map>
+
 namespace autoware::traffic_light
 {
 namespace utils

@@ -18,6 +18,8 @@
 
 #include <gtest/gtest.h>
 
+#include <unordered_map>
+
 TEST(isUnknown, normal)
 {
   tier4_perception_msgs::msg::TrafficLight signal;

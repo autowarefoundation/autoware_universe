@@ -24,6 +24,8 @@
 #include <tier4_perception_msgs/msg/traffic_light_roi.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
 
+#include <unordered_map>
+
 namespace autoware::traffic_light
 {
 
