@@ -6,7 +6,7 @@ This package can merge multiple topics of [autoware_perception_msgs/msg/Detected
 
 ### Background
 
-[Object_merger](https://github.com/autowarefoundation/autoware.universe/tree/main/perception/object_merger) is mainly used for merge process with DetectedObjects. There are 2 characteristics in `Object_merger`. First, `object_merger` solve data association algorithm like Hungarian algorithm for matching problem, but it needs computational cost. Second, `object_merger` can handle only 2 DetectedObjects topics and cannot handle more than 2 topics in one node. To merge 6 DetectedObjects topics, 6 `object_merger` nodes need to stand for now.
+[Object_merger](https://github.com/autowarefoundation/autoware_universe/tree/main/perception/object_merger) is mainly used for merge process with DetectedObjects. There are 2 characteristics in `Object_merger`. First, `object_merger` solve data association algorithm like Hungarian algorithm for matching problem, but it needs computational cost. Second, `object_merger` can handle only 2 DetectedObjects topics and cannot handle more than 2 topics in one node. To merge 6 DetectedObjects topics, 6 `object_merger` nodes need to stand for now.
 
 Therefore, `autoware_simple_object_merger` aim to merge multiple DetectedObjects with low calculation cost.
 The package do not use data association algorithm to reduce the computational cost, and it can handle more than 2 topics in one node to prevent launching a large number of nodes.
@@ -25,7 +25,7 @@ Merged objects will not be published until all topic data is received when initi
 
 - Post-processing
 
-Because this package does not have matching processing, there are overlapping objects depending on the input objects. So output objects can be used only when post-processing is used. For now, [clustering processing](https://github.com/autowarefoundation/autoware.universe/tree/main/perception/autoware_radar_object_clustering) can be used as post-processing.
+Because this package does not have matching processing, there are overlapping objects depending on the input objects. So output objects can be used only when post-processing is used. For now, [clustering processing](https://github.com/autowarefoundation/autoware_universe/tree/main/perception/autoware_radar_object_clustering) can be used as post-processing.
 
 ## Interface
 

@@ -2,13 +2,20 @@
 Changelog for package autoware_probabilistic_occupancy_grid_map
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* refactor: add autoware_cuda_dependency_meta (`#10073 <https://github.com/autowarefoundation/autoware_universe/issues/10073>`_)
+* Contributors: Esteve Fernandez, Hayato Mizushima, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware.universe/issues/10191>`_)
-* chore(autoware_probabilistic_occupancy_grid_map): fixed cuda use on non-cuda settings (`#10099 <https://github.com/autowarefoundation/autoware.universe/issues/10099>`_)
+* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware_universe/issues/10191>`_)
+* chore(autoware_probabilistic_occupancy_grid_map): fixed cuda use on non-cuda settings (`#10099 <https://github.com/autowarefoundation/autoware_universe/issues/10099>`_)
   chore: fixed cuda use on non-cuda settings
-* fix(probabilistic_occupancy_grid_map): build and runtime on non-cuda environments (`#10061 <https://github.com/autowarefoundation/autoware.universe/issues/10061>`_)
+* fix(probabilistic_occupancy_grid_map): build and runtime on non-cuda environments (`#10061 <https://github.com/autowarefoundation/autoware_universe/issues/10061>`_)
   * feat: improved data handling in the ogm. When using the full concatenated pointcloud the processing time decreases from 8ms to 4ms
   * feat: added header blocks for non-cuda environments
   * chore: removed the cuda includes from the global includes
@@ -17,13 +24,13 @@ Changelog for package autoware_probabilistic_occupancy_grid_map
   * chore: lint errors
   * feat: fixed errors during merge
   ---------
-* feat(autoware_probabilistic_occupancy_grid_map): improved data handling on the ogm (`#10060 <https://github.com/autowarefoundation/autoware.universe/issues/10060>`_)
+* feat(autoware_probabilistic_occupancy_grid_map): improved data handling on the ogm (`#10060 <https://github.com/autowarefoundation/autoware_universe/issues/10060>`_)
   feat: improved data handling in the ogm. When using the full concatenated pointcloud the processing time decreases from 8ms to 4ms
 * Contributors: Fumiya Watanabe, Kenzo Lobos Tsunekawa, 心刚
 
 0.41.2 (2025-02-19)
 -------------------
-* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware.universe/issues/10088>`_)
+* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware_universe/issues/10088>`_)
 * Contributors: Ryohsuke Mitsudome
 
 0.41.1 (2025-02-10)
@@ -32,7 +39,7 @@ Changelog for package autoware_probabilistic_occupancy_grid_map
 0.41.0 (2025-01-29)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* feat(autoware_probabilistic_occupancy_grid_map): cuda accelerated implementation (`#9542 <https://github.com/autowarefoundation/autoware.universe/issues/9542>`_)
+* feat(autoware_probabilistic_occupancy_grid_map): cuda accelerated implementation (`#9542 <https://github.com/autowarefoundation/autoware_universe/issues/9542>`_)
   * feat: implemented a cuda accelerated ogm
   * chore: fixed cspells
   * chore: unused header and variable names
@@ -57,10 +64,10 @@ Changelog for package autoware_probabilistic_occupancy_grid_map
   ---------
   Co-authored-by: Yoshi Ri <yoshiyoshidetteiu@gmail.com>
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* feat(autoware_probabilistic_occupancy_grid_map): tier4_debug_msgs changed to autoware_internal_debug_msgs in autoware_probabilistic_occupancy_grid_map (`#9895 <https://github.com/autowarefoundation/autoware.universe/issues/9895>`_)
+* feat(autoware_probabilistic_occupancy_grid_map): tier4_debug_msgs changed to autoware_internal_debug_msgs in autoware_probabilistic_occupancy_grid_map (`#9895 <https://github.com/autowarefoundation/autoware_universe/issues/9895>`_)
   feat: tier4_debug_msgs changed to autoware_internal_debug_msgs in files perception/autoware_probabilistic_occupancy_grid_map
   Co-authored-by: Ryohsuke Mitsudome <43976834+mitsudome-r@users.noreply.github.com>
-* fix(perception): fix perception docs (`#9766 <https://github.com/autowarefoundation/autoware.universe/issues/9766>`_)
+* fix(perception): fix perception docs (`#9766 <https://github.com/autowarefoundation/autoware_universe/issues/9766>`_)
   * fix: fix perception docs
   * fix: fix missing parameter in schema
   * Update perception/autoware_object_merger/schema/data_association_matrix.schema.json
@@ -76,56 +83,56 @@ Changelog for package autoware_probabilistic_occupancy_grid_map
   ---------
   Co-authored-by: Taekjin LEE <technolojin@gmail.com>
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* fix(autoware_probabilistic_occupancy_grid_map): fix bugprone-branch-clone (`#9652 <https://github.com/autowarefoundation/autoware.universe/issues/9652>`_)
+* fix(autoware_probabilistic_occupancy_grid_map): fix bugprone-branch-clone (`#9652 <https://github.com/autowarefoundation/autoware_universe/issues/9652>`_)
   fix: bugprone-error
 * Contributors: Fumiya Watanabe, Kenzo Lobos Tsunekawa, Vishal Chauhan, Yi-Hsiang Fang (Vivid), kobayu858
 
 0.40.0 (2024-12-12)
 -------------------
-* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware.universe/issues/9587>`_)"
+* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware_universe/issues/9587>`_)"
   This reverts commit c9f0f2688c57b0f657f5c1f28f036a970682e7f5.
-* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware.universe/issues/9588>`_)
-* chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware.universe/issues/9587>`_)
+* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware_universe/issues/9588>`_)
+* chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware_universe/issues/9587>`_)
   * chore(package.xml): bump version to 0.39.0
   * fix: fix ticket links in CHANGELOG.rst
   * fix: remove unnecessary diff
   ---------
   Co-authored-by: Yutaka Kondo <yutaka.kondo@youtalk.jp>
-* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware.universe/issues/9588>`_)
+* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware_universe/issues/9588>`_)
 * 0.39.0
 * update changelog
 * Merge commit '6a1ddbd08bd' into release-0.39.0
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware.universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware.universe/issues/9284>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware_universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware_universe/issues/9284>`_)
   * unify package.xml version to 0.37.0
   * remove system_monitor/CHANGELOG.rst
   * add changelog
   * 0.38.0
   ---------
-* fix(autoware_probabilistic_occupancy_grid_map): fix bugprone-incorrect-roundings (`#9221 <https://github.com/autowarefoundation/autoware.universe/issues/9221>`_)
+* fix(autoware_probabilistic_occupancy_grid_map): fix bugprone-incorrect-roundings (`#9221 <https://github.com/autowarefoundation/autoware_universe/issues/9221>`_)
   fix: bugprone-incorrect-roundings
 * Contributors: Esteve Fernandez, Fumiya Watanabe, Ryohsuke Mitsudome, Yutaka Kondo, kobayu858
 
 0.39.0 (2024-11-25)
 -------------------
 * Merge commit '6a1ddbd08bd' into release-0.39.0
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware.universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware.universe/issues/9284>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware_universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware_universe/issues/9284>`_)
   * unify package.xml version to 0.37.0
   * remove system_monitor/CHANGELOG.rst
   * add changelog
   * 0.38.0
   ---------
-* fix(autoware_probabilistic_occupancy_grid_map): fix bugprone-incorrect-roundings (`#9221 <https://github.com/autowarefoundation/autoware.universe/issues/9221>`_)
+* fix(autoware_probabilistic_occupancy_grid_map): fix bugprone-incorrect-roundings (`#9221 <https://github.com/autowarefoundation/autoware_universe/issues/9221>`_)
   fix: bugprone-incorrect-roundings
 * Contributors: Esteve Fernandez, Yutaka Kondo, kobayu858
 
 0.38.0 (2024-11-08)
 -------------------
 * unify package.xml version to 0.37.0
-* feat(probabilistic_occupancy_grid_map): add time_keeper (`#8601 <https://github.com/autowarefoundation/autoware.universe/issues/8601>`_)
+* feat(probabilistic_occupancy_grid_map): add time_keeper (`#8601 <https://github.com/autowarefoundation/autoware_universe/issues/8601>`_)
   * add time_keeper
   * add option for time keeper
   * correct namespace
@@ -138,15 +145,15 @@ Changelog for package autoware_probabilistic_occupancy_grid_map
   * fix variable shadowing
   ---------
   Co-authored-by: Taekjin LEE <technolojin@gmail.com>
-* fix(autoware_probabilistic_occupancy_grid_map): fix unusedFunction (`#8574 <https://github.com/autowarefoundation/autoware.universe/issues/8574>`_)
+* fix(autoware_probabilistic_occupancy_grid_map): fix unusedFunction (`#8574 <https://github.com/autowarefoundation/autoware_universe/issues/8574>`_)
   fix:unusedFunction
-* fix(autoware_probabilistic_occupancy_grid_map): fix functionConst (`#8426 <https://github.com/autowarefoundation/autoware.universe/issues/8426>`_)
+* fix(autoware_probabilistic_occupancy_grid_map): fix functionConst (`#8426 <https://github.com/autowarefoundation/autoware_universe/issues/8426>`_)
   fix:functionConst
-* fix(autoware_probabilistic_occupancy_grid_map): fix uninitMemberVar (`#8333 <https://github.com/autowarefoundation/autoware.universe/issues/8333>`_)
+* fix(autoware_probabilistic_occupancy_grid_map): fix uninitMemberVar (`#8333 <https://github.com/autowarefoundation/autoware_universe/issues/8333>`_)
   fix:uninitMemberVar
-* fix(autoware_probabilistic_occupancy_grid_map): fix functionConst (`#8289 <https://github.com/autowarefoundation/autoware.universe/issues/8289>`_)
+* fix(autoware_probabilistic_occupancy_grid_map): fix functionConst (`#8289 <https://github.com/autowarefoundation/autoware_universe/issues/8289>`_)
   fix:functionConst
-* refactor(probabilistic_occupancy_grid_map, occupancy_grid_map_outlier_filter): add autoware\_ prefix to package name (`#8183 <https://github.com/autowarefoundation/autoware.universe/issues/8183>`_)
+* refactor(probabilistic_occupancy_grid_map, occupancy_grid_map_outlier_filter): add autoware\_ prefix to package name (`#8183 <https://github.com/autowarefoundation/autoware_universe/issues/8183>`_)
   * chore: fix package name probabilistic occupancy grid map
   * fix: solve launch error
   * chore: update occupancy_grid_map_outlier_filter

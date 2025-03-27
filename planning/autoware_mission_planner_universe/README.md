@@ -8,7 +8,7 @@ Dynamic objects (e.g. pedestrians and other vehicles) and dynamic map informatio
 Therefore, the output topic is only published when the goal pose or check points are given and will be latched until the new goal pose or check points are given.
 
 The core implementation does not depend on a map format. Any planning algorithms can be added as plugin modules.
-In current Autoware.universe, only the plugin for Lanelet2 map format is supported.
+In current Autoware Universe, only the plugin for Lanelet2 map format is supported.
 
 This package also manages routes for MRM. The `route_selector` node duplicates the `mission_planner` interface and provides it for normal and MRM respectively.
 It distributes route requests and planning results according to current MRM operation state.
