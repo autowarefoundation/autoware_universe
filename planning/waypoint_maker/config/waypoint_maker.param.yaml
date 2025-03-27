@@ -1,0 +1,11 @@
+/**:
+    ros__parameters:
+      map_frame: "map"
+      base_link_frame: "base_link"
+      update_rate: 10.0 # hz
+      save_interval: 0.5 # m
+      bound_margin: 1.0 # m
+      check_distance: 1.0 # m
+      check_angle_deg: 45.0 # deg
+      stop_duration: 1.0 # s
+

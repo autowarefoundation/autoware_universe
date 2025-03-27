@@ -1,0 +1,35 @@
+<launch>
+  <arg name="vehicle_param_file" default="$(find-pkg-share $(var vehicle_model)_description)/config/vehicle_info.param.yaml"/>
+  <arg name="config_file" default="$(find-pkg-share waypoint_maker)/config/waypoint_maker.param.yaml"/>
+
+  <arg name="lane_csv_position" default="./src/universe/autoware.universe/planning/waypoint_maker/data/"/>
+
+  <arg name="input_pose" default="/localization/kinematic_state"/>
+  <arg name="input_scenario" default="/planning/scenario_planning/scenario"/>
+
+  <arg name="output_path" default="/planning/scenario_planning/waypoint_following/path"/>
+  <arg name="output_path_visualization" default="/planning/scenario_planning/waypoint_following/path_visualization"/>
+
+  <arg name="output_waypoint_following_state" default="/planning/scenario_planning/waypoint_following/is_completed"/>
+
+  <arg name="node_name_for_max_velocity" default="/planning/scenario_planning/velocity_smoother"/>
+  <arg name="param_name_for_max_velocity" default="max_vel"/>
+
+  <node pkg="waypoint_maker" exec="waypoint_loader" name="waypoint_loader" output="screen">
+    <param from="$(var vehicle_param_file)"/>
+    <param from="$(var config_file)"/>
+
+    <param name="lane_csv_position" value="$(var lane_csv_position)"/>
+
+    <param name="node_name_for_max_velocity" value="$(var node_name_for_max_velocity)"/>
+    <param name="param_name_for_max_velocity" value="$(var param_name_for_max_velocity)"/>
+
+    <remap from="/input/pose" to="$(var input_pose)"/>
+    <remap from="/input/scenario" to="$(var input_scenario)"/>
+
+    <remap from="output/path" to="$(var output_path)"/>
+    <remap from="output/path_visualization" to="$(var output_path_visualization)"/>
+
+    <remap from="output/waypoint_following_state" to="$(var output_waypoint_following_state)"/>
+  </node>
+</launch>
