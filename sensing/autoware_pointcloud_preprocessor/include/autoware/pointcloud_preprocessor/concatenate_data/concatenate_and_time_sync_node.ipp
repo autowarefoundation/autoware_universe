@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//#include "autoware/pointcloud_preprocessor/concatenate_data/concatenate_and_time_sync_node.hpp"
-
 #include "autoware/pointcloud_preprocessor/concatenate_data/cloud_collector.hpp"
 #include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 
