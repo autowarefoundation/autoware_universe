@@ -17,7 +17,6 @@
 #include "traffic_light_map_based_detector_node.hpp"
 
 #include <Eigen/Core>
-#include <Eigen/Geometry>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
@@ -26,7 +25,6 @@
 
 #include <lanelet2_core/Exceptions.h>
 #include <lanelet2_core/geometry/Point.h>
-#include <lanelet2_projection/UTM.h>
 #include <lanelet2_routing/RoutingGraphContainer.h>
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Transform.h>
@@ -41,87 +39,6 @@
 #else
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #endif
-
-namespace
-{
-cv::Point2d calcRawImagePointFromPoint3D(
-  const image_geometry::PinholeCameraModel & pinhole_camera_model, const cv::Point3d & point3d)
-{
-  cv::Point2d rectified_image_point = pinhole_camera_model.project3dToPixel(point3d);
-  return pinhole_camera_model.unrectifyPoint(rectified_image_point);
-}
-
-cv::Point2d calcRawImagePointFromPoint3D(
-  const image_geometry::PinholeCameraModel & pinhole_camera_model, const tf2::Vector3 & point3d)
-{
-  return calcRawImagePointFromPoint3D(
-    pinhole_camera_model, cv::Point3d(point3d.x(), point3d.y(), point3d.z()));
-}
-
-void roundInImageFrame(
-  const image_geometry::PinholeCameraModel & pinhole_camera_model, cv::Point2d & point)
-{
-  const sensor_msgs::msg::CameraInfo camera_info = pinhole_camera_model.cameraInfo();
-  point.x =
-    std::max(std::min(point.x, static_cast<double>(static_cast<int>(camera_info.width) - 1)), 0.0);
-  point.y =
-    std::max(std::min(point.y, static_cast<double>(static_cast<int>(camera_info.height) - 1)), 0.0);
-}
-
-bool isInDistanceRange(
-  const tf2::Vector3 & p1, const tf2::Vector3 & p2, const double max_distance_range)
-{
-  const double sq_dist =
-    (p1.x() - p2.x()) * (p1.x() - p2.x()) + (p1.y() - p2.y()) * (p1.y() - p2.y());
-  return sq_dist < (max_distance_range * max_distance_range);
-}
-
-bool isInAngleRange(const double & tl_yaw, const double & camera_yaw, const double max_angle_range)
-{
-  Eigen::Vector2d vec1, vec2;
-  vec1 << std::cos(tl_yaw), std::sin(tl_yaw);
-  vec2 << std::cos(camera_yaw), std::sin(camera_yaw);
-  const double diff_angle = std::acos(vec1.dot(vec2));
-  return std::fabs(diff_angle) < max_angle_range;
-}
-
-bool isInImageFrame(
-  const image_geometry::PinholeCameraModel & pinhole_camera_model, const tf2::Vector3 & point)
-{
-  if (point.z() <= 0.0) {
-    return false;
-  }
-
-  cv::Point2d point2d = calcRawImagePointFromPoint3D(pinhole_camera_model, point);
-  if (0 <= point2d.x && point2d.x < pinhole_camera_model.cameraInfo().width) {
-    if (0 <= point2d.y && point2d.y < pinhole_camera_model.cameraInfo().height) {
-      return true;
-    }
-  }
-  return false;
-}
-
-tf2::Vector3 getTrafficLightTopLeft(const lanelet::ConstLineString3d & traffic_light)
-{
-  const auto & tl_bl = traffic_light.front();
-  const double tl_height = traffic_light.attributeOr("height", 0.0);
-  return tf2::Vector3(tl_bl.x(), tl_bl.y(), tl_bl.z() + tl_height);
-}
-
-tf2::Vector3 getTrafficLightBottomRight(const lanelet::ConstLineString3d & traffic_light)
-{
-  const auto & tl_bl = traffic_light.back();
-  return tf2::Vector3(tl_bl.x(), tl_bl.y(), tl_bl.z());
-}
-
-tf2::Vector3 getTrafficLightCenter(const lanelet::ConstLineString3d & traffic_light)
-{
-  tf2::Vector3 top_left = getTrafficLightTopLeft(traffic_light);
-  tf2::Vector3 bottom_right = getTrafficLightBottomRight(traffic_light);
-  return (top_left + bottom_right) / 2;
-}
-
-}  // namespace
 
 namespace autoware::traffic_light
 {
@@ -303,7 +220,7 @@ bool MapBasedDetector::getTrafficLightRoi(
 
   // for roi.x_offset and roi.y_offset
   {
-    tf2::Vector3 map2tl = getTrafficLightTopLeft(traffic_light);
+    tf2::Vector3 map2tl = utils::getTrafficLightTopLeft(traffic_light);
     tf2::Vector3 camera2tl = tf_map2camera.inverse() * map2tl;
     // max vibration
     const double max_vibration_x =
@@ -318,8 +235,8 @@ bool MapBasedDetector::getTrafficLightRoi(
       if (point3d.z() <= 0.0) {
         return false;
       }
-      cv::Point2d point2d = calcRawImagePointFromPoint3D(pinhole_camera_model, point3d);
-      roundInImageFrame(pinhole_camera_model, point2d);
+      cv::Point2d point2d = utils::calcRawImagePointFromPoint3D(pinhole_camera_model, point3d);
+      utils::roundInImageFrame(pinhole_camera_model, point2d);
       roi.roi.x_offset = point2d.x;
       roi.roi.y_offset = point2d.y;
     }
@@ -327,7 +244,7 @@ bool MapBasedDetector::getTrafficLightRoi(
 
   // for roi.width and roi.height
   {
-    tf2::Vector3 map2tl = getTrafficLightBottomRight(traffic_light);
+    tf2::Vector3 map2tl = utils::getTrafficLightBottomRight(traffic_light);
     tf2::Vector3 camera2tl = tf_map2camera.inverse() * map2tl;
     // max vibration
     const double max_vibration_x =
@@ -342,8 +259,8 @@ bool MapBasedDetector::getTrafficLightRoi(
       if (point3d.z() <= 0.0) {
         return false;
       }
-      cv::Point2d point2d = calcRawImagePointFromPoint3D(pinhole_camera_model, point3d);
-      roundInImageFrame(pinhole_camera_model, point2d);
+      cv::Point2d point2d = utils::calcRawImagePointFromPoint3D(pinhole_camera_model, point3d);
+      utils::roundInImageFrame(pinhole_camera_model, point2d);
       roi.roi.width = point2d.x - roi.roi.x_offset;
       roi.roi.height = point2d.y - roi.roi.y_offset;
     }
@@ -524,11 +441,11 @@ void MapBasedDetector::getVisibleTrafficLights(
     // traffic light bottom right
     const auto & tl_br = traffic_light.back();
     // check distance range
-    tf2::Vector3 tl_center = getTrafficLightCenter(traffic_light);
+    tf2::Vector3 tl_center = utils::getTrafficLightCenter(traffic_light);
     // for every possible transformation, check if the tl is visible.
     // If under any tf the tl is visible, keep it
     for (const auto & tf_map2camera : tf_map2camera_vec) {
-      if (!isInDistanceRange(tl_center, tf_map2camera.getOrigin(), config_.max_detection_range)) {
+      if (!utils::isInDistanceRange(tl_center, tf_map2camera.getOrigin(), config_.max_detection_range)) {
         continue;
       }
 
@@ -542,18 +459,18 @@ void MapBasedDetector::getVisibleTrafficLights(
       camera_z_dir = camera_rotation_matrix * camera_z_dir;
       double camera_yaw = std::atan2(camera_z_dir.y(), camera_z_dir.x());
       camera_yaw = autoware_utils::normalize_radian(camera_yaw);
-      if (!isInAngleRange(tl_yaw, camera_yaw, max_angle_range)) {
+      if (!utils::isInAngleRange(tl_yaw, camera_yaw, max_angle_range)) {
         continue;
       }
 
       // check within image frame
       // cspell: ignore tltl
-      tf2::Vector3 tf_camera2tltl = tf_map2camera.inverse() * getTrafficLightTopLeft(traffic_light);
+      tf2::Vector3 tf_camera2tltl = tf_map2camera.inverse() * utils::getTrafficLightTopLeft(traffic_light);
       tf2::Vector3 tf_camera2tlbr =
-        tf_map2camera.inverse() * getTrafficLightBottomRight(traffic_light);
+        tf_map2camera.inverse() * utils::getTrafficLightBottomRight(traffic_light);
       if (
-        !isInImageFrame(pinhole_camera_model, tf_camera2tltl) &&
-        !isInImageFrame(pinhole_camera_model, tf_camera2tlbr)) {
+        !utils::isInImageFrame(pinhole_camera_model, tf_camera2tltl) &&
+        !utils::isInImageFrame(pinhole_camera_model, tf_camera2tlbr)) {
         continue;
       }
       visible_traffic_lights.push_back(traffic_light);
@@ -570,7 +487,7 @@ void MapBasedDetector::publishVisibleTrafficLights(
   visualization_msgs::msg::MarkerArray output_msg;
   for (const auto & traffic_light : visible_traffic_lights) {
     const int id = traffic_light.id();
-    tf2::Vector3 tl_central_point = getTrafficLightCenter(traffic_light);
+    tf2::Vector3 tl_central_point = utils::getTrafficLightCenter(traffic_light);
     tf2::Vector3 camera2tl = tf_map2camera.inverse() * tl_central_point;
 
     visualization_msgs::msg::Marker marker;
