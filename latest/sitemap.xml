@@ -61,11 +61,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/latest/common/autoware_global_parameter_loader/Readme/</loc>
-         <lastmod>2025-03-27</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/latest/common/autoware_glog_component/</loc>
          <lastmod>2025-03-27</lastmod>
          <changefreq>daily</changefreq>
@@ -992,11 +987,6 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/motion_velocity_planner/autoware_motion_velocity_obstacle_slow_down_module/</loc>
-         <lastmod>2025-03-27</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/motion_velocity_planner/autoware_motion_velocity_obstacle_stop_module/</loc>
          <lastmod>2025-03-27</lastmod>
          <changefreq>daily</changefreq>
     </url>
