@@ -214,12 +214,12 @@ void LidarCenterPointNode::pointCloudCallback(
         diagnostic_msgs::msg::DiagnosticStatus::WARN, message.str());
 
       // just in case the processing starts with a delayed inference
-      if (!last_normal_processing_timestamp_) {
-        last_normal_processing_timestamp_ = this->get_clock()->now();
+      if (!last_in_time_processing_timestamp_) {
+        last_in_time_processing_timestamp_ = this->get_clock()->now();
       }
     } else {
       diagnostics_interface_ptr_->add_key_value("is_processing_time_ms_in_expected_range", true);
-      last_normal_processing_timestamp_ = this->get_clock()->now();
+      last_in_time_processing_timestamp_ = this->get_clock()->now();
     }
 
     // add processing time for debug
@@ -247,14 +247,14 @@ void LidarCenterPointNode::pointCloudCallback(
 void LidarCenterPointNode::diagnosticsTimerCallback()
 {
   // skip if the node has not performed inference yet
-  if (last_normal_processing_timestamp_) {
+  if (last_in_time_processing_timestamp_) {
     diagnostics_processing_delay_->clear();
 
     const rclcpp::Time timestamp_now = this->get_clock()->now();
     const double delayed_state_duration =
       std::chrono::duration<double, std::milli>(
         std::chrono::nanoseconds(
-          (timestamp_now - last_normal_processing_timestamp_.value()).nanoseconds()))
+          (timestamp_now - last_in_time_processing_timestamp_.value()).nanoseconds()))
         .count();
 
     if (delayed_state_duration > max_acceptable_consecutive_delay_ms_) {
