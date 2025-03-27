@@ -106,7 +106,8 @@ public:
     if (!received_data) {
       return external_cmd_converter_->check_emergency_stop_topic_timeout();
     }
-    ManualOperatorHeartbeat::ConstSharedPtr msg;
+    ManualOperatorHeartbeat::SharedPtr msg = std::make_shared<ManualOperatorHeartbeat>();
+    msg->ready = true;
     external_cmd_converter_->on_heartbeat(msg);
     GateMode gate;
     gate.data = (is_auto) ? tier4_control_msgs::msg::GateMode::AUTO
