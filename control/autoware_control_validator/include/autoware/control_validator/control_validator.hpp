@@ -52,16 +52,6 @@ using diagnostic_updater::Updater;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 
-struct ValidationParams
-{
-  double max_distance_deviation_threshold;
-  double rolling_back_velocity;
-  double over_velocity_ratio;
-  double over_velocity_offset;
-  double overrun_stop_point_dist;
-  double nominal_latency_threshold;
-};
-
 /**
  * @class LatencyValidator
  * @brief Validates latency of the control module.
@@ -168,7 +158,7 @@ private:
 };
 
 /**
- * * @class OverrunValidator
+ * @class OverrunValidator
  * @brief Calculate whether the vehicle has overrun a stop point in the trajectory.
  */
 class OverrunValidator
@@ -212,33 +202,6 @@ public:
    */
   void on_control_cmd(const Control::ConstSharedPtr msg);
 
-  /**
-   * @brief Callback function for the predicted trajectory.
-   * @param msg Predicted trajectory message
-   */
-  void on_predicted_trajectory(const Trajectory::ConstSharedPtr msg);
-
-  /**
-   * @brief Calculate the maximum lateral distance between the reference trajectory and predicted
-   * trajectory.
-   * @param predicted_trajectory Predicted trajectory
-   * @param reference_trajectory Reference trajectory
-   * @return A pair consisting of the maximum lateral deviation and a boolean indicating validity
-   */
-  std::pair<double, bool> calc_lateral_deviation_status(
-    const Trajectory & predicted_trajectory, const Trajectory & reference_trajectory) const;
-
-  void calc_velocity_deviation_status(
-    const Trajectory & reference_trajectory, const Odometry & kinematics);
-
-  /**
-   * @brief Calculate whether the vehicle has overrun a stop point in the trajectory.
-   * @param reference_trajectory Reference trajectory
-   * @param kinematics Current vehicle odometry including pose and twist
-   */
-  void calc_stop_point_overrun_status(
-    const Trajectory & reference_trajectory, const Odometry & kinematics);
-
 private:
   /**
    * @brief Setup diagnostic updater
@@ -251,27 +214,9 @@ private:
   void setup_parameters();
 
   /**
-   * @brief Check if all required data is ready for validation
-   * @return Boolean indicating readiness of data
-   */
-  bool is_data_ready();
-
-  /**
-   * @brief Validate the predicted trajectory against the reference trajectory and current
-   * kinematics
-   * @param predicted_trajectory Predicted trajectory
-   * @param reference_trajectory Reference trajectory
-   * @param kinematics Current vehicle kinematics
-   */
-  void validate(
-    const Trajectory & predicted_trajectory, const Trajectory & reference_trajectory,
-    const Odometry & kinematics, const Control & control_cmd,
-    const AccelWithCovarianceStamped & measured_acc);
-
-  /**
    * @brief Publish debug information
    */
-  void publish_debug_info();
+  void publish_debug_info(const geometry_msgs::msg::Pose & ego_pose);
 
   /**
    * @brief Display validation status on terminal
@@ -302,19 +247,9 @@ private:
   // system parameters
   int64_t diag_error_count_threshold_ = 0;
   bool display_on_terminal_ = true;
-
   Updater diag_updater_{this};
-
   ControlValidatorStatus validation_status_;
-  ValidationParams validation_params_;  // for thresholds
-  autoware::signal_processing::LowpassFilter1d vehicle_vel_{0.0};
-  autoware::signal_processing::LowpassFilter1d target_vel_{0.0};
-  AccelerationValidator acceleration_validator{*this};
-
-  bool hold_velocity_error_until_stop_{false};
-
   vehicle_info_utils::VehicleInfo vehicle_info_;
-
   /**
    * @brief Check if all validation criteria are met
    * @param status Validation status
@@ -322,16 +257,16 @@ private:
    */
   static bool is_all_valid(const ControlValidatorStatus & status);
 
-  Trajectory::ConstSharedPtr current_reference_trajectory_;
-  Trajectory::ConstSharedPtr current_predicted_trajectory_;
-
-  Odometry::ConstSharedPtr current_kinematics_;
-  AccelWithCovarianceStamped::ConstSharedPtr acceleration_msg_;
-  Control::ConstSharedPtr control_cmd_msg_;
-
+  // debug
+  std::shared_ptr<ControlValidatorDebugMarkerPublisher> debug_pose_publisher_;
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
 
-  std::shared_ptr<ControlValidatorDebugMarkerPublisher> debug_pose_publisher_;
+  // individual validators
+  LatencyValidator latency_validator{*this};
+  TrajectoryValidator trajectory_validator{*this};
+  AccelerationValidator acceleration_validator{*this};
+  VelocityValidator velocity_validator{*this};
+  OverrunValidator overrun_validator{*this};
 };
 }  // namespace autoware::control_validator
 
