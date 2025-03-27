@@ -190,9 +190,9 @@ private:
 
   // Subscribers and publishers
   rclcpp::Subscription<Control>::SharedPtr sub_control_cmd_;
-  rclcpp::Subscription<Trajectory>::SharedPtr sub_predicted_traj_;
   autoware_utils::InterProcessPollingSubscriber<Odometry>::SharedPtr sub_kinematics_;
   autoware_utils::InterProcessPollingSubscriber<Trajectory>::SharedPtr sub_reference_traj_;
+  autoware_utils::InterProcessPollingSubscriber<Trajectory>::SharedPtr sub_predicted_traj_;
   autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped>::SharedPtr
     sub_measured_acc_;
   rclcpp::Publisher<ControlValidatorStatus>::SharedPtr pub_status_;

@@ -63,15 +63,15 @@ ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)
 
   sub_control_cmd_ = create_subscription<Control>(
     "~/input/control_cmd", 1, std::bind(&ControlValidator::on_control_cmd, this, _1));
-  sub_predicted_traj_ = create_subscription<Trajectory>(
-    "~/input/predicted_trajectory", 1,
-    std::bind(&ControlValidator::on_predicted_trajectory, this, _1));
   sub_kinematics_ =
     autoware_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry>::create_subscription(
       this, "~/input/kinematics", 1);
   sub_reference_traj_ =
     autoware_utils::InterProcessPollingSubscriber<Trajectory>::create_subscription(
       this, "~/input/reference_trajectory", 1);
+  sub_predicted_traj_ =
+    autoware_utils::InterProcessPollingSubscriber<Trajectory>::create_subscription(
+      this, "~/input/predicted_trajectory", 1);
   sub_measured_acc_ =
     autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped>::create_subscription(
       this, "~/input/measured_acceleration", 1);
@@ -191,7 +191,7 @@ bool ControlValidator::is_data_ready()
     return waiting(sub_reference_traj_->subscriber()->get_topic_name());
   }
   if (!current_predicted_trajectory_) {
-    return waiting(sub_predicted_traj_->get_topic_name());
+    return waiting(sub_reference_traj_->subscriber()->get_topic_name());
   }
   if (!acceleration_msg_) {
     return waiting(sub_measured_acc_->subscriber()->get_topic_name());
@@ -204,21 +204,10 @@ bool ControlValidator::is_data_ready()
 
 void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
 {
-  control_cmd_msg_ = msg;
-
-  validation_status_.latency = (this->now() - msg->stamp).seconds();
-  validation_status_.is_valid_latency =
-    validation_status_.latency < validation_params_.nominal_latency_threshold;
-
-  validation_status_.invalid_count =
-    is_all_valid(validation_status_) ? 0 : validation_status_.invalid_count + 1;
-}
-
-void ControlValidator::on_predicted_trajectory(const Trajectory::ConstSharedPtr msg)
-{
   stop_watch.tic();
 
-  current_predicted_trajectory_ = msg;
+  control_cmd_msg_ = msg;
+  current_predicted_trajectory_ = sub_predicted_traj_->take_data();
   current_reference_trajectory_ = sub_reference_traj_->take_data();
   current_kinematics_ = sub_kinematics_->take_data();
   acceleration_msg_ = sub_measured_acc_->take_data();
@@ -226,6 +215,10 @@ void ControlValidator::on_predicted_trajectory(const Trajectory::ConstSharedPtr 
   if (!is_data_ready()) return;
 
   debug_pose_publisher_->clear_markers();
+
+  validation_status_.latency = (this->now() - msg->stamp).seconds();
+  validation_status_.is_valid_latency =
+    validation_status_.latency < validation_params_.nominal_latency_threshold;
 
   validate(
     *current_predicted_trajectory_, *current_reference_trajectory_, *current_kinematics_,
