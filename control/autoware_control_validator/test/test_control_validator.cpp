@@ -72,9 +72,19 @@ TrajectoryPoint make_trajectory_point(double x, double y)
   return point;
 }
 
-class TrajectoryDeviationTest
+namespace autoware::control_validator
+{
+class TrajectoryValidatorTest
 : public ::testing::TestWithParam<std::tuple<Trajectory, Trajectory, double, bool>>
 {
+public:
+  void validate(
+    ControlValidatorStatus & res, const Trajectory & predicted_trajectory,
+    const Trajectory & reference_trajectory)
+  {
+    return trajectory_validator_->validate(res, predicted_trajectory, reference_trajectory);
+  }
+
 protected:
   void SetUp() override
   {
@@ -88,27 +98,28 @@ protected:
        ament_index_cpp::get_package_share_directory("autoware_test_utils") +
          "/config/test_vehicle_info.param.yaml"});
 
-    node = std::make_shared<autoware::control_validator::ControlValidator>(options);
+    node_ = std::make_shared<ControlValidator>(options);
+    trajectory_validator_ = std::make_shared<TrajectoryValidator>(*node_);
   }
-
   void TearDown() override { rclcpp::shutdown(); }
 
-  std::shared_ptr<autoware::control_validator::ControlValidator> node;
+  std::shared_ptr<rclcpp::Node> node_;
+  std::shared_ptr<TrajectoryValidator> trajectory_validator_;
 };
 
-TEST_P(TrajectoryDeviationTest, test_calc_lateral_deviation_status)
+TEST_P(TrajectoryValidatorTest, test_calc_lateral_deviation_status)
 {
   auto [reference_trajectory, predicted_trajectory, expected_deviation, expected_condition] =
     GetParam();
-  auto [deviation, is_valid] =
-    node->calc_lateral_deviation_status(predicted_trajectory, reference_trajectory);
+  ControlValidatorStatus res;
+  validate(res, predicted_trajectory, reference_trajectory);
 
-  EXPECT_EQ(is_valid, expected_condition);
-  EXPECT_NEAR(deviation, expected_deviation, 1e-5);
+  EXPECT_EQ(res.is_valid_max_distance_deviation, expected_condition);
+  EXPECT_NEAR(res.max_distance_deviation, expected_deviation, 1e-5);
 }
 
 INSTANTIATE_TEST_SUITE_P(
-  TrajectoryDeviationTests, TrajectoryDeviationTest,
+  TrajectoryDeviationTests, TrajectoryValidatorTest,
   ::testing::Values(
 
     std::make_tuple(
@@ -190,14 +201,13 @@ protected:
        ament_index_cpp::get_package_share_directory("autoware_test_utils") +
          "/config/test_vehicle_info.param.yaml"});
 
-    node_ = std::make_shared<autoware::control_validator::ControlValidator>(options);
-    acceleration_validator_ =
-      std::make_shared<autoware::control_validator::AccelerationValidator>(*node_);
+    node_ = std::make_shared<ControlValidator>(options);
+    acceleration_validator_ = std::make_shared<AccelerationValidator>(*node_);
   }
   void TearDown() override { rclcpp::shutdown(); }
 
   std::shared_ptr<rclcpp::Node> node_;
-  std::shared_ptr<autoware::control_validator::AccelerationValidator> acceleration_validator_;
+  std::shared_ptr<AccelerationValidator> acceleration_validator_;
 };
 
 TEST_P(AccelerationValidatorTest, test_is_in_error_range)
@@ -217,3 +227,5 @@ INSTANTIATE_TEST_SUITE_P(
     std::make_tuple(false, 1.0, 5.0), std::make_tuple(false, 1.0, -5.0),
     std::make_tuple(true, -1.0, -1.0), std::make_tuple(false, -1.0, -5.0),
     std::make_tuple(false, -1.0, 5.0)));
+
+}  // namespace autoware::control_validator

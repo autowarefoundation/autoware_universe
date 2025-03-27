@@ -39,7 +39,7 @@
 #include <tuple>
 #include <utility>
 
-class AccelerationValidatorTest;
+// class AccelerationValidatorTest;
 
 namespace autoware::control_validator
 {
@@ -79,6 +79,7 @@ private:
 class TrajectoryValidator
 {
 public:
+  friend class TrajectoryValidatorTest;
   explicit TrajectoryValidator(rclcpp::Node & node)
   {
     max_distance_deviation_threshold = autoware_utils::get_or_declare_parameter<double>(
@@ -99,7 +100,7 @@ private:
 class AccelerationValidator
 {
 public:
-  friend class ::AccelerationValidatorTest;
+  friend class AccelerationValidatorTest;
   explicit AccelerationValidator(rclcpp::Node & node)
   {
     e_offset =
