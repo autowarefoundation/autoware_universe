@@ -31,7 +31,7 @@ ExternalCmdConverterNode::ExternalCmdConverterNode(const rclcpp::NodeOptions & n
   cmd_pub_ = create_publisher<Control>("out/control_cmd", rclcpp::QoS{1});
   pedals_cmd_sub_ = create_subscription<PedalsCommand>(
     "in/pedals_cmd", 1, std::bind(&ExternalCmdConverterNode::on_pedals_cmd, this, _1));
-  heartbeat_sub_ = create_subscription<Heartbeat>(
+  heartbeat_sub_ = create_subscription<ManualOperatorHeartbeat>(
     "in/heartbeat", 1, std::bind(&ExternalCmdConverterNode::on_heartbeat, this, _1));
 
   // Parameter
@@ -77,9 +77,11 @@ void ExternalCmdConverterNode::on_timer()
   updater_.force_update();
 }
 
-void ExternalCmdConverterNode::on_heartbeat(const Heartbeat::ConstSharedPtr)
+void ExternalCmdConverterNode::on_heartbeat(const ManualOperatorHeartbeat::ConstSharedPtr msg)
 {
-  latest_heartbeat_received_time_ = std::make_shared<rclcpp::Time>(this->now());
+  if (msg->ready) {
+    latest_heartbeat_received_time_ = std::make_shared<rclcpp::Time>(this->now());
+  }
   updater_.force_update();
 }
 
@@ -136,7 +138,7 @@ void ExternalCmdConverterNode::on_pedals_cmd(const PedalsCommand::ConstSharedPtr
 
 double ExternalCmdConverterNode::calculate_acc(const PedalsCommand & cmd, const double vel)
 {
-  const double desired_throttle = cmd.accelerator;
+  const double desired_throttle = cmd.throttle;
   const double desired_brake = cmd.brake;
   if (
     std::isnan(desired_throttle) || std::isnan(desired_brake) || std::isinf(desired_throttle) ||

@@ -19,7 +19,7 @@
 #include <diagnostic_updater/update_functions.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <autoware_adapi_v1_msgs/msg/heartbeat.hpp>
+#include <autoware_adapi_v1_msgs/msg/manual_operator_heartbeat.hpp>
 #include <autoware_adapi_v1_msgs/msg/pedals_command.hpp>
 #include <autoware_adapi_v1_msgs/msg/steering_command.hpp>
 #include <autoware_vehicle_msgs/msg/gear_command.hpp>
@@ -43,7 +43,7 @@ private:
 
   using PedalsCommand = autoware_adapi_v1_msgs::msg::PedalsCommand;
   using SteeringCommand = autoware_adapi_v1_msgs::msg::SteeringCommand;
-  using Heartbeat = autoware_adapi_v1_msgs::msg::Heartbeat;
+  using OperatorHeartbeat = autoware_adapi_v1_msgs::msg::ManualOperatorHeartbeat;
 
   using GearCommand = autoware_vehicle_msgs::msg::GearCommand;
   using TurnIndicatorsCommand = autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
@@ -57,7 +57,7 @@ private:
   rclcpp::Publisher<CommandSourceMode>::SharedPtr pub_current_selector_mode_;
   rclcpp::Publisher<PedalsCommand>::SharedPtr pub_pedals_cmd_;
   rclcpp::Publisher<SteeringCommand>::SharedPtr pub_steering_cmd_;
-  rclcpp::Publisher<Heartbeat>::SharedPtr pub_heartbeat_;
+  rclcpp::Publisher<OperatorHeartbeat>::SharedPtr pub_heartbeat_;
   rclcpp::Publisher<GearCommand>::SharedPtr pub_gear_cmd_;
   rclcpp::Publisher<TurnIndicatorsCommand>::SharedPtr pub_turn_indicators_cmd_;
   rclcpp::Publisher<HazardLightsCommand>::SharedPtr pub_hazard_lights_cmd_;
@@ -65,14 +65,14 @@ private:
   // Subscriber
   rclcpp::Subscription<PedalsCommand>::SharedPtr sub_local_pedals_cmd_;
   rclcpp::Subscription<SteeringCommand>::SharedPtr sub_local_steering_cmd_;
-  rclcpp::Subscription<Heartbeat>::SharedPtr sub_local_heartbeat_;
+  rclcpp::Subscription<OperatorHeartbeat>::SharedPtr sub_local_heartbeat_;
   rclcpp::Subscription<GearCommand>::SharedPtr sub_local_gear_cmd_;
   rclcpp::Subscription<TurnIndicatorsCommand>::SharedPtr sub_local_turn_indicators_cmd_;
   rclcpp::Subscription<HazardLightsCommand>::SharedPtr sub_local_hazard_lights_cmd_;
 
   rclcpp::Subscription<PedalsCommand>::SharedPtr sub_remote_pedals_cmd_;
   rclcpp::Subscription<SteeringCommand>::SharedPtr sub_remote_steering_cmd_;
-  rclcpp::Subscription<Heartbeat>::SharedPtr sub_remote_heartbeat_;
+  rclcpp::Subscription<OperatorHeartbeat>::SharedPtr sub_remote_heartbeat_;
   rclcpp::Subscription<GearCommand>::SharedPtr sub_remote_gear_cmd_;
   rclcpp::Subscription<TurnIndicatorsCommand>::SharedPtr sub_remote_turn_indicators_cmd_;
   rclcpp::Subscription<HazardLightsCommand>::SharedPtr sub_remote_hazard_lights_cmd_;
@@ -84,7 +84,7 @@ private:
   }
   void on_pedals_cmd(const PedalsCommand & msg, uint8_t mode);
   void on_steering_cmd(const SteeringCommand & msg, uint8_t mode);
-  void on_heartbeat(const Heartbeat & msg, uint8_t mode);
+  void on_heartbeat(const OperatorHeartbeat & msg, uint8_t mode);
   void on_gear_cmd(const GearCommand & msg, uint8_t mode);
   void on_turn_indicators_cmd(const TurnIndicatorsCommand & msg, uint8_t mode);
   void on_hazard_lights_cmd(const HazardLightsCommand & msg, uint8_t mode);

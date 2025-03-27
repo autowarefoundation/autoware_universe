@@ -23,7 +23,7 @@
 #include <autoware_adapi_v1_msgs/msg/hazard_lights_command.hpp>
 #include <autoware_adapi_v1_msgs/msg/manual_control_mode.hpp>
 #include <autoware_adapi_v1_msgs/msg/manual_control_mode_status.hpp>
-#include <autoware_adapi_v1_msgs/msg/manual_operator_status.hpp>
+#include <autoware_adapi_v1_msgs/msg/manual_operator_heartbeat.hpp>
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
 #include <autoware_adapi_v1_msgs/msg/pedals_command.hpp>
 #include <autoware_adapi_v1_msgs/msg/steering_command.hpp>
@@ -69,13 +69,13 @@ private:
   using GearCommand = autoware_adapi_v1_msgs::msg::GearCommand;
   using HazardLightsCommand = autoware_adapi_v1_msgs::msg::HazardLightsCommand;
   using TurnIndicatorsCommand = autoware_adapi_v1_msgs::msg::TurnIndicatorsCommand;
-  using ManualOperatorStatus = autoware_adapi_v1_msgs::msg::ManualOperatorStatus;
+  using OperatorHeartbeat = autoware_adapi_v1_msgs::msg::ManualOperatorHeartbeat;
   void disable_all_commands();
   void enable_common_commands();
   void enable_pedals_commands();
   void enable_acceleration_commands();
   void enable_velocity_commands();
-  rclcpp::Subscription<ManualOperatorStatus>::SharedPtr sub_heartbeat_;
+  rclcpp::Subscription<OperatorHeartbeat>::SharedPtr sub_heartbeat_;
   rclcpp::Subscription<PedalsCommand>::SharedPtr sub_pedals_;
   rclcpp::Subscription<AccelerationCommand>::SharedPtr sub_acceleration_;
   rclcpp::Subscription<VelocityCommand>::SharedPtr sub_velocity_;
@@ -87,7 +87,7 @@ private:
   using InternalGear = autoware_vehicle_msgs::msg::GearCommand;
   using InternalTurnIndicators = autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
   using InternalHazardLights = autoware_vehicle_msgs::msg::HazardLightsCommand;
-  rclcpp::Publisher<ManualOperatorStatus>::SharedPtr pub_heartbeat_;
+  rclcpp::Publisher<OperatorHeartbeat>::SharedPtr pub_heartbeat_;
   rclcpp::Publisher<PedalsCommand>::SharedPtr pub_pedals_;
   rclcpp::Publisher<SteeringCommand>::SharedPtr pub_steering_;
   rclcpp::Publisher<InternalGear>::SharedPtr pub_gear_;

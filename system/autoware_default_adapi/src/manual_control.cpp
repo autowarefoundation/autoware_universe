@@ -41,7 +41,7 @@ ManualControlNode::ManualControlNode(const rclcpp::NodeOptions & options)
 
   // Interfaces for internal.
   pub_heartbeat_ =
-    create_publisher<ManualOperatorStatus>("/external/" + mode_name + "/heartbeat", rclcpp::QoS(1));
+    create_publisher<OperatorHeartbeat>("/external/" + mode_name + "/heartbeat", rclcpp::QoS(1));
   pub_pedals_ =
     create_publisher<PedalsCommand>("/external/" + mode_name + "/pedals_cmd", rclcpp::QoS(1));
   pub_steering_ =
@@ -169,9 +169,9 @@ void ManualControlNode::enable_common_commands()
 {
   using autoware::default_adapi::command_conversion::convert;
 
-  sub_heartbeat_ = create_subscription<ManualOperatorStatus>(
+  sub_heartbeat_ = create_subscription<OperatorHeartbeat>(
     ns_ + "/operator/status", rclcpp::QoS(1),
-    [this](const ManualOperatorStatus & msg) { pub_heartbeat_->publish(msg); });
+    [this](const OperatorHeartbeat & msg) { pub_heartbeat_->publish(msg); });
   sub_steering_ = create_subscription<SteeringCommand>(
     ns_ + "/command/steering", rclcpp::QoS(1),
     [this](const SteeringCommand & msg) { pub_steering_->publish(msg); });

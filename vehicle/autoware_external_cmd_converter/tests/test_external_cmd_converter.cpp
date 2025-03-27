@@ -29,7 +29,7 @@
 using autoware::external_cmd_converter::ExternalCmdConverterNode;
 using autoware::raw_vehicle_cmd_converter::AccelMap;
 using autoware::raw_vehicle_cmd_converter::BrakeMap;
-using autoware_adapi_v1_msgs::msg::Heartbeat;
+using autoware_adapi_v1_msgs::msg::ManualOperatorHeartbeat;
 using autoware_adapi_v1_msgs::msg::PedalsCommand;
 using autoware_control_msgs::msg::Control;
 using autoware_vehicle_msgs::msg::GearCommand;
@@ -106,7 +106,7 @@ public:
     if (!received_data) {
       return external_cmd_converter_->check_emergency_stop_topic_timeout();
     }
-    Heartbeat::ConstSharedPtr msg;
+    ManualOperatorHeartbeat::ConstSharedPtr msg;
     external_cmd_converter_->on_heartbeat(msg);
     GateMode gate;
     gate.data = (is_auto) ? tier4_control_msgs::msg::GateMode::AUTO
@@ -214,19 +214,19 @@ TEST_F(TestExternalCmdConverter, testCalculateAcc)
   // test standard cases
   {
     PedalsCommand cmd;
-    cmd.accelerator = 1.0;
+    cmd.throttle = 1.0;
     cmd.brake = 0.0;
     double vel = 0.0;
     EXPECT_TRUE(test_calculate_acc(cmd, vel) > 0.0);
-    cmd.accelerator = 0.0;
+    cmd.throttle = 0.0;
     cmd.brake = 1.0;
     EXPECT_TRUE(test_calculate_acc(cmd, vel) < 0.0);
 
-    cmd.accelerator = 1.0;
+    cmd.throttle = 1.0;
     cmd.brake = 0.5;
     vel = 1.0;
     EXPECT_TRUE(test_calculate_acc(cmd, vel) > 0.0);
-    cmd.accelerator = 0.5;
+    cmd.throttle = 0.5;
     cmd.brake = 1.0;
     EXPECT_TRUE(test_calculate_acc(cmd, vel) < 0.0);
   }
@@ -234,12 +234,12 @@ TEST_F(TestExternalCmdConverter, testCalculateAcc)
   {
     // input brake or throttle are infinite. finite velocity.
     PedalsCommand cmd;
-    cmd.accelerator = std::numeric_limits<double>::infinity();
+    cmd.throttle = std::numeric_limits<double>::infinity();
     cmd.brake = 0.0;
     double vel = 0.0;
     double acc = test_calculate_acc(cmd, vel);
     EXPECT_DOUBLE_EQ(acc, 0.0);
-    cmd.accelerator = 0.0;
+    cmd.throttle = 0.0;
     cmd.brake = std::numeric_limits<double>::infinity();
     acc = test_calculate_acc(cmd, vel);
     EXPECT_DOUBLE_EQ(acc, 0.0);
@@ -248,34 +248,34 @@ TEST_F(TestExternalCmdConverter, testCalculateAcc)
     // Check that acc is not NaN and not infinite
 
     vel = std::numeric_limits<double>::infinity();
-    cmd.accelerator = std::numeric_limits<double>::infinity();
+    cmd.throttle = std::numeric_limits<double>::infinity();
     cmd.brake = 0.0;
     acc = test_calculate_acc(cmd, vel);
     EXPECT_FALSE(std::isnan(acc));
     EXPECT_FALSE(std::isinf(acc));
     EXPECT_DOUBLE_EQ(acc, 0.0);
-    cmd.accelerator = 0.0;
+    cmd.throttle = 0.0;
     cmd.brake = std::numeric_limits<double>::infinity();
     acc = test_calculate_acc(cmd, vel);
     EXPECT_FALSE(std::isnan(acc));
     EXPECT_FALSE(std::isinf(acc));
     EXPECT_DOUBLE_EQ(acc, 0.0);
 
-    cmd.accelerator = std::numeric_limits<double>::infinity();
+    cmd.throttle = std::numeric_limits<double>::infinity();
     cmd.brake = std::numeric_limits<double>::infinity();
     acc = test_calculate_acc(cmd, vel);
     EXPECT_FALSE(std::isnan(acc));
     EXPECT_FALSE(std::isinf(acc));
     EXPECT_DOUBLE_EQ(acc, 0.0);
 
-    cmd.accelerator = std::numeric_limits<double>::quiet_NaN();
+    cmd.throttle = std::numeric_limits<double>::quiet_NaN();
     cmd.brake = std::numeric_limits<double>::quiet_NaN();
     acc = test_calculate_acc(cmd, vel);
     EXPECT_FALSE(std::isnan(acc));
     EXPECT_FALSE(std::isinf(acc));
     EXPECT_DOUBLE_EQ(acc, 0.0);
 
-    cmd.accelerator = std::numeric_limits<double>::signaling_NaN();
+    cmd.throttle = std::numeric_limits<double>::signaling_NaN();
     cmd.brake = std::numeric_limits<double>::signaling_NaN();
     acc = test_calculate_acc(cmd, vel);
     EXPECT_FALSE(std::isnan(acc));

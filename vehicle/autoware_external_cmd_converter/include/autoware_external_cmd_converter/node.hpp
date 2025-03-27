@@ -22,7 +22,7 @@
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <autoware_adapi_v1_msgs/msg/heartbeat.hpp>
+#include <autoware_adapi_v1_msgs/msg/manual_operator_heartbeat.hpp>
 #include <autoware_adapi_v1_msgs/msg/pedals_command.hpp>
 #include <autoware_adapi_v1_msgs/msg/steering_command.hpp>
 #include <autoware_control_msgs/msg/control.hpp>
@@ -40,7 +40,7 @@ namespace autoware::external_cmd_converter
 
 using autoware::raw_vehicle_cmd_converter::AccelMap;
 using autoware::raw_vehicle_cmd_converter::BrakeMap;
-using autoware_adapi_v1_msgs::msg::Heartbeat;
+using autoware_adapi_v1_msgs::msg::ManualOperatorHeartbeat;
 using autoware_adapi_v1_msgs::msg::PedalsCommand;
 using autoware_adapi_v1_msgs::msg::SteeringCommand;
 using autoware_control_msgs::msg::Control;
@@ -59,7 +59,7 @@ private:
 
   // Subscriber
   rclcpp::Subscription<PedalsCommand>::SharedPtr pedals_cmd_sub_;
-  rclcpp::Subscription<Heartbeat>::SharedPtr heartbeat_sub_;
+  rclcpp::Subscription<ManualOperatorHeartbeat>::SharedPtr heartbeat_sub_;
 
   // Polling Subscriber
   template <typename T>
@@ -70,7 +70,7 @@ private:
   PollingSubscriber<GateMode> gate_mode_sub_{this, "in/current_gate_mode"};
 
   void on_pedals_cmd(const PedalsCommand::ConstSharedPtr cmd_ptr);
-  void on_heartbeat(const Heartbeat::ConstSharedPtr msg);
+  void on_heartbeat(const ManualOperatorHeartbeat::ConstSharedPtr msg);
 
   Odometry::ConstSharedPtr current_velocity_ptr_{nullptr};  // [m/s]
   GearCommand::ConstSharedPtr current_gear_cmd_{nullptr};

@@ -37,7 +37,7 @@ ExternalCmdSelector::ExternalCmdSelector(const rclcpp::NodeOptions & node_option
     create_publisher<CommandSourceMode>("~/output/current_selector_mode", 1);
   pub_pedals_cmd_ = create_publisher<PedalsCommand>("~/output/pedals_cmd", 1);
   pub_steering_cmd_ = create_publisher<SteeringCommand>("~/output/steering_cmd", 1);
-  pub_heartbeat_ = create_publisher<Heartbeat>("~/output/heartbeat", 1);
+  pub_heartbeat_ = create_publisher<OperatorHeartbeat>("~/output/heartbeat", 1);
   pub_gear_cmd_ = create_publisher<GearCommand>("~/output/gear_cmd", 1);
   pub_turn_indicators_cmd_ =
     create_publisher<TurnIndicatorsCommand>("~/output/turn_indicators_cmd", 1);
@@ -61,9 +61,9 @@ ExternalCmdSelector::ExternalCmdSelector(const rclcpp::NodeOptions & node_option
     "~/input/local/steering_cmd", 1,
     bind_on_cmd<SteeringCommand>(&ExternalCmdSelector::on_steering_cmd, CommandSourceMode::LOCAL),
     subscriber_option);
-  sub_local_heartbeat_ = create_subscription<Heartbeat>(
+  sub_local_heartbeat_ = create_subscription<OperatorHeartbeat>(
     "~/input/local/heartbeat", 1,
-    bind_on_cmd<Heartbeat>(&ExternalCmdSelector::on_heartbeat, CommandSourceMode::LOCAL),
+    bind_on_cmd<OperatorHeartbeat>(&ExternalCmdSelector::on_heartbeat, CommandSourceMode::LOCAL),
     subscriber_option);
   sub_local_gear_cmd_ = create_subscription<GearCommand>(
     "~/input/local/gear_cmd", 1,
@@ -88,9 +88,9 @@ ExternalCmdSelector::ExternalCmdSelector(const rclcpp::NodeOptions & node_option
     "~/input/remote/steering_cmd", 1,
     bind_on_cmd<SteeringCommand>(&ExternalCmdSelector::on_steering_cmd, CommandSourceMode::REMOTE),
     subscriber_option);
-  sub_remote_heartbeat_ = create_subscription<Heartbeat>(
+  sub_remote_heartbeat_ = create_subscription<OperatorHeartbeat>(
     "~/input/remote/heartbeat", 1,
-    bind_on_cmd<Heartbeat>(&ExternalCmdSelector::on_heartbeat, CommandSourceMode::REMOTE),
+    bind_on_cmd<OperatorHeartbeat>(&ExternalCmdSelector::on_heartbeat, CommandSourceMode::REMOTE),
     subscriber_option);
   sub_remote_gear_cmd_ = create_subscription<GearCommand>(
     "~/input/remote/gear_cmd", 1,
@@ -150,7 +150,7 @@ void ExternalCmdSelector::on_steering_cmd(const SteeringCommand & msg, uint8_t m
   pub_steering_cmd_->publish(msg);
 }
 
-void ExternalCmdSelector::on_heartbeat(const Heartbeat & msg, uint8_t mode)
+void ExternalCmdSelector::on_heartbeat(const OperatorHeartbeat & msg, uint8_t mode)
 {
   if (current_selector_mode_.data != mode) return;
   pub_heartbeat_->publish(msg);
