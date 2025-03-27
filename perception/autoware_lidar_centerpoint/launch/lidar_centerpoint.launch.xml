@@ -8,7 +8,7 @@
   <arg name="model_param_path" default="$(find-pkg-share autoware_lidar_centerpoint)/config/$(var model_name).param.yaml"/>
   <arg name="ml_package_param_path" default="$(var model_path)/$(var model_name)_ml_package.param.yaml"/>
   <arg name="class_remapper_param_path" default="$(var model_path)/detection_class_remapper.param.yaml"/>
-  <arg name="diagnostics_param_path" default="$(find-pkg-share autoware_lidar_centerpoint)/config/centerpoint_diagnostics.param.yaml"/>
+  <arg name="diagnostics_param_path" default="$(find-pkg-share autoware_lidar_centerpoint)/config/centerpoint_common.param.yaml"/>
   <arg name="build_only" default="false" description="shutdown node after TensorRT engine file is built"/>
 
   <arg name="use_pointcloud_container" default="false" description="use pointcloud_container"/>
