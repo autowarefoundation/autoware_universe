@@ -86,7 +86,7 @@ PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::
     throw std::runtime_error("Matching strategy must be 'advanced' or 'naive'");
   }
 
-  // Implementation independant subscribers
+  // Implementation independent subscribers
   if (params_.is_motion_compensated) {
     if (params_.input_twist_topic_type == "twist") {
       twist_sub_ = this->create_subscription<geometry_msgs::msg::TwistWithCovarianceStamped>(
