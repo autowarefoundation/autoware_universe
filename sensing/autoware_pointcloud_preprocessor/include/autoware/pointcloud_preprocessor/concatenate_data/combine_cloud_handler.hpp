@@ -14,11 +14,10 @@
 
 #pragma once
 
+#include "combine_cloud_handler_base.hpp"
 #include "traits.hpp"
 
-#include <deque>
 #include <memory>
-#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -26,78 +25,10 @@
 // ROS includes
 #include "autoware/point_types/types.hpp"
 
-#include <autoware_utils/ros/managed_transform_buffer.hpp>
-#include <diagnostic_updater/diagnostic_updater.hpp>
-#include <point_cloud_msg_wrapper/point_cloud_msg_wrapper.hpp>
-
-#include <diagnostic_msgs/msg/diagnostic_status.hpp>
-#include <geometry_msgs/msg/twist_stamped.hpp>
-#include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
-#include <nav_msgs/msg/odometry.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <sensor_msgs/point_cloud2_iterator.hpp>
-
-#include <message_filters/pass_through.h>
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <message_filters/sync_policies/exact_time.h>
-#include <message_filters/synchronizer.h>
-
 namespace autoware::pointcloud_preprocessor
 {
 using autoware::point_types::PointXYZIRC;
 using point_cloud_msg_wrapper::PointCloud2Modifier;
-
-template <typename MsgTraits>
-struct ConcatenatedCloudResult
-{
-  typename MsgTraits::PointCloudMessage::UniquePtr concatenate_cloud_ptr{nullptr};
-  std::optional<std::unordered_map<std::string, typename MsgTraits::PointCloudMessage::UniquePtr>>
-    topic_to_transformed_cloud_map;
-  std::unordered_map<std::string, double> topic_to_original_stamp_map;
-};
-
-class CombineCloudHandlerBase
-{
-public:
-  CombineCloudHandlerBase(
-    rclcpp::Node & node, const std::vector<std::string> & input_topics, std::string output_frame,
-    bool is_motion_compensated, bool publish_synchronized_pointcloud,
-    bool keep_input_frame_in_synchronized_pointcloud, bool has_static_tf_only)
-  : node_(node),
-    input_topics_(input_topics),
-    output_frame_(output_frame),
-    is_motion_compensated_(is_motion_compensated),
-    publish_synchronized_pointcloud_(publish_synchronized_pointcloud),
-    keep_input_frame_in_synchronized_pointcloud_(keep_input_frame_in_synchronized_pointcloud),
-    managed_tf_buffer_(
-      std::make_unique<autoware_utils::ManagedTransformBuffer>(&node_, has_static_tf_only))
-  {
-  }
-
-  void process_twist(
-    const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr & twist_msg);
-
-  void process_odometry(const nav_msgs::msg::Odometry::ConstSharedPtr & input);
-
-  std::deque<geometry_msgs::msg::TwistStamped> get_twist_queue();
-
-  Eigen::Matrix4f compute_transform_to_adjust_for_old_timestamp(
-    const rclcpp::Time & old_stamp, const rclcpp::Time & new_stamp);
-
-  virtual void allocate_pointclouds() = 0;
-
-protected:
-  rclcpp::Node & node_;
-  std::vector<std::string> input_topics_;
-  std::string output_frame_;
-  bool is_motion_compensated_;
-  bool publish_synchronized_pointcloud_;
-  bool keep_input_frame_in_synchronized_pointcloud_;
-  std::unique_ptr<autoware_utils::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
-
-  std::deque<geometry_msgs::msg::TwistStamped> twist_queue_;
-};
 
 template <typename MsgTraits>
 class CombineCloudHandler;
