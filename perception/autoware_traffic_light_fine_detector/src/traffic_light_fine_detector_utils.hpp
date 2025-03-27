@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <sensor_msgs/msg/region_of_interest.hpp>
 #include <autoware/tensorrt_yolox/tensorrt_yolox.hpp>
+
+#include <sensor_msgs/msg/region_of_interest.hpp>
 
 namespace autoware::traffic_light
 {
