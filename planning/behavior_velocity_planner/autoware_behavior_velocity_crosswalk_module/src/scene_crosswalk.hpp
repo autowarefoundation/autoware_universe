@@ -149,6 +149,7 @@ public:
     std::vector<double> ego_pass_later_margin_y;
     double ego_pass_later_additional_margin;
     double ego_min_assumed_speed;
+    bool consider_obj_on_crosswalk_on_red_light;
     double min_acc_for_no_stop_decision;
     double min_jerk_for_no_stop_decision;
     double overrun_threshold_length_for_no_stop_decision;

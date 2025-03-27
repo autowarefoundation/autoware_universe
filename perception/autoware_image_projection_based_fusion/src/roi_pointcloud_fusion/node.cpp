@@ -43,6 +43,7 @@ RoiPointCloudFusionNode::RoiPointCloudFusionNode(const rclcpp::NodeOptions & opt
   min_cluster_size_ = declare_parameter<int>("min_cluster_size");
   max_cluster_size_ = declare_parameter<int>("max_cluster_size");
   cluster_2d_tolerance_ = declare_parameter<double>("cluster_2d_tolerance");
+  roi_scale_factor_ = declare_parameter<double>("roi_scale_factor");
 
   // publisher
   pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
@@ -129,7 +130,7 @@ void RoiPointCloudFusionNode::fuse_on_single_image(
       *reinterpret_cast<const float *>(&transformed_cloud.data[offset + y_offset]);
     const float transformed_z =
       *reinterpret_cast<const float *>(&transformed_cloud.data[offset + z_offset]);
-    if (transformed_z <= 0.0) {
+    if (det2d_status.camera_projector_ptr->isOutsideHorizontalView(transformed_x, transformed_z)) {
       continue;
     }
 
@@ -149,10 +150,7 @@ void RoiPointCloudFusionNode::fuse_on_single_image(
           static_cast<size_t>(max_cluster_size_) * static_cast<size_t>(point_step)) {
           continue;
         }
-        if (
-          check_roi.x_offset <= px && check_roi.y_offset <= py &&
-          check_roi.x_offset + check_roi.width >= px &&
-          check_roi.y_offset + check_roi.height >= py) {
+        if (isPointInsideRoi(check_roi, px, py, roi_scale_factor_)) {
           std::memcpy(
             &cluster.data[clusters_data_size.at(i)], &input_pointcloud_msg.data[offset],
             point_step);
