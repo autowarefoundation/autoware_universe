@@ -126,7 +126,7 @@ PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::
   diagnostic_updater_.add(
     diagnostic_name, this, &PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::check_concat_status);
 
-  initialize();
+  initialize_pub_sub();
 }
 
 template <typename MsgTraits>

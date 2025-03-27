@@ -126,7 +126,7 @@ private:
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
   diagnostic_updater::Updater diagnostic_updater_{this};
 
-  void initialize();
+  void initialize_pub_sub();
 
   void cloud_callback(
     const typename PointCloudMessage::ConstSharedPtr & input_ptr, const std::string & topic_name);

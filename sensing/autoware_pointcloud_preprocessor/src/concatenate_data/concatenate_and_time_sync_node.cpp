@@ -34,7 +34,8 @@ namespace autoware::pointcloud_preprocessor
 {
 
 template <>
-void PointCloudConcatenateDataSynchronizerComponentTemplated<PointCloud2Traits>::initialize()
+void PointCloudConcatenateDataSynchronizerComponentTemplated<
+  PointCloud2Traits>::initialize_pub_sub()
 {
   // Publishers
   concatenated_cloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
