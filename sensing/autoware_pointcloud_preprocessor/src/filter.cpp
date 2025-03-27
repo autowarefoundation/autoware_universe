@@ -55,6 +55,8 @@
 
 #include <pcl_ros/transforms.hpp>
 
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
+
 #include <pcl/io/io.h>
 
 #include <memory>
@@ -106,6 +108,10 @@ autoware::pointcloud_preprocessor::Filter::Filter(
   // Set parameter service callback
   set_param_res_filter_ = this->add_on_set_parameters_callback(
     std::bind(&Filter::filterParamCallback, this, std::placeholders::_1));
+
+  // Set diagnostics
+  diagnostics_interface_ptr_ =
+    std::make_unique<autoware_utils_diagnostics::DiagnosticsInterface>(this, filter_name);
 
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
   RCLCPP_DEBUG(this->get_logger(), "[Filter Constructor] successfully created.");
@@ -204,6 +210,14 @@ void autoware::pointcloud_preprocessor::Filter::computePublish(
 
   // Copy timestamp to keep it
   output->header.stamp = input->header.stamp;
+
+  diagnostics_interface_ptr_->clear();
+  if (bool is_output_emtpy = output->data.empty(); is_output_emtpy) {
+    diagnostics_interface_ptr_->add_key_value("is_pointcloud_empty", is_output_emtpy);
+    diagnostics_interface_ptr_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, "Output pointcloud is empty.");
+    diagnostics_interface_ptr_->publish(output->header.stamp);
+  }
 
   // Publish a boost shared ptr
   pub_output_->publish(std::move(output));
@@ -439,6 +453,14 @@ void autoware::pointcloud_preprocessor::Filter::faster_input_indices_callback(
   faster_filter(cloud, vindices, *output, transform_info);
 
   if (!convert_output_costly(output)) return;
+
+  diagnostics_interface_ptr_->clear();
+  if (bool is_output_emtpy = output->data.empty(); is_output_emtpy) {
+    diagnostics_interface_ptr_->add_key_value("is_pointcloud_empty", is_output_emtpy);
+    diagnostics_interface_ptr_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, "Output pointcloud is empty.");
+    diagnostics_interface_ptr_->publish(output->header.stamp);
+  }
 
   output->header.stamp = cloud->header.stamp;
   pub_output_->publish(std::move(output));
