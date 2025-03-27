@@ -2,6 +2,28 @@
 Changelog for package autoware_behavior_path_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* feat!: replace VelocityLimit messages with autoware_internal_planning_msgs (`#10273 <https://github.com/autowarefoundation/autoware_universe/issues/10273>`_)
+* feat: adaption to ROS nodes guidelines about directory structure (`#10268 <https://github.com/autowarefoundation/autoware_universe/issues/10268>`_)
+* feat(behavior_path_planner_common): modify drivable area expansion to be able to avoid static objects (`#10220 <https://github.com/autowarefoundation/autoware_universe/issues/10220>`_)
+  * modify drivable area expansion to avoid static objects
+  * rename parameters and update drivable area design md
+  * Update planning/behavior_path_planner/autoware_behavior_path_planner_common/docs/behavior_path_planner_drivable_area_design.md
+  Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
+  * correct parameters description
+  ---------
+  Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
+* fix(planning, control): reuse stamp of subscribed topic to measure component latency (`#10201 <https://github.com/autowarefoundation/autoware_universe/issues/10201>`_)
+  * fix(behavior_velocity_planner): reuse timestamp of recieved path
+  * fix(behavior_path_planner): check timestamp first in timer driven callback
+  * fix(trajectory_follower_node): check timestamp first in timer driven callback
+  * fix(vehicle_cmd_gate): reuse timestamp of recieved path
+  ---------
+* Contributors: Hayato Mizushima, NorahXiong, Ryohsuke Mitsudome, Satoshi OTA, Yutaka Kondo, mkquda
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

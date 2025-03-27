@@ -201,6 +201,13 @@ void StaticObstacleAvoidanceModule::fillFundamentalData(
   AvoidancePlanningData & data, DebugData & debug)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  if (getPreviousModuleOutput().reference_path.points.empty()) {
+    RCLCPP_WARN_THROTTLE(
+      getLogger(), *clock_, 5000, "Previous module reference path is empty. Skip processing.");
+    return;
+  }
+
   // reference pose
   data.reference_pose =
     utils::getUnshiftedEgoPose(getEgoPose(), helper_->getPreviousSplineShiftPath());
@@ -208,6 +215,11 @@ void StaticObstacleAvoidanceModule::fillFundamentalData(
   // lanelet info
   data.current_lanelets = utils::static_obstacle_avoidance::getCurrentLanesFromPath(
     getPreviousModuleOutput().reference_path, planner_data_);
+
+  if (data.current_lanelets.empty()) {
+    RCLCPP_WARN_THROTTLE(getLogger(), *clock_, 5000, "Current lanelets is empty. Skip processing.");
+    return;
+  }
 
   data.extend_lanelets = utils::static_obstacle_avoidance::getExtendLanes(
     data.current_lanelets, getEgoPose(), planner_data_);
@@ -988,18 +1000,6 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
     return getPreviousModuleOutput().turn_signal_info;
   }
 
-  const auto itr =
-    std::remove_if(shift_lines.begin(), shift_lines.end(), [&, this](const auto & s) {
-      const auto threshold = planner_data_->parameters.turn_signal_shift_length_threshold;
-      return std::abs(s.start_shift_length - s.end_shift_length) < threshold ||
-             is_ignore_signal(s.id);
-    });
-  shift_lines.erase(itr, shift_lines.end());
-
-  if (shift_lines.empty()) {
-    return getPreviousModuleOutput().turn_signal_info;
-  }
-
   const auto target_shift_line = [&]() {
     const auto & s1 = shift_lines.front();
 
@@ -1041,6 +1041,10 @@ auto StaticObstacleAvoidanceModule::getTurnSignal(
 
     return s1;
   }();
+
+  if (is_ignore_signal(target_shift_line.id)) {
+    return getPreviousModuleOutput().turn_signal_info;
+  }
 
   const auto original_signal = getPreviousModuleOutput().turn_signal_info;
 

@@ -2,6 +2,12 @@
 Changelog for package autoware_map_height_fitter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* Contributors: Hayato Mizushima, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 * fix(autoware_map_height_fitter): find PCL package after autoware_package() is called (`#10070 <https://github.com/autowarefoundation/autoware_universe/issues/10070>`_)

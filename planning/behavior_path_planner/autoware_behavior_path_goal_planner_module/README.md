@@ -267,10 +267,10 @@ See also [[1]](https://www.sciencedirect.com/science/article/pii/S14746670153474
 
 #### Parameters geometric parallel parking
 
-| Name                    | Unit  | Type   | Description                                                                                                                         | Default value |
-| :---------------------- | :---- | :----- | :---------------------------------------------------------------------------------------------------------------------------------- | :------------ |
-| arc_path_interval       | [m]   | double | interval between arc path points                                                                                                    | 1.0           |
-| pull_over_max_steer_rad | [rad] | double | maximum steer angle for path generation. it may not be possible to control steer up to max_steer_angle in vehicle_info when stopped | 0.35          |
+| Name                         | Unit | Type   | Description                                                                                              | Default value |
+| :--------------------------- | :--- | :----- | :------------------------------------------------------------------------------------------------------- | :------------ |
+| arc_path_interval            | [m]  | double | interval between arc path points                                                                         | 1.0           |
+| max_steer_angle_margin_scale | [-]  | double | scaling factor applied to the maximum steering angle (max_steer_angle) defined in vehicle_info parameter | 0.72          |
 
 #### arc forward parking
 
@@ -310,7 +310,7 @@ Generate two backward arc paths.
 
 If the vehicle gets stuck with `LaneParkingPlanning`, `FreespaceParkingPlanner` is triggered.
 
-To run this feature, you need to set `parking_lot` to the map, `activate_by_scenario` of [costmap_generator](../costmap_generator/README.md) to `false` and `enable_freespace_parking` to `true`
+To run this feature, you need to set `parking_lot` to the map, `activate_by_scenario` of [costmap_generator](../../autoware_costmap_generator/README.md) to `false` and `enable_freespace_parking` to `true`
 
 ![pull_over_freespace_parking_flowchart](./images/pull_over_freespace_parking_flowchart.drawio.svg)
 
@@ -324,7 +324,7 @@ Simultaneous execution with `avoidance_module` in the flowchart is under develop
 | :----------------------- | :--- | :--- | :------------------------------------------------------------------------------------------------------------------- | :------------ |
 | enable_freespace_parking | [-]  | bool | This flag enables freespace parking, which runs when the vehicle is stuck due to e.g. obstacles in the parking area. | true          |
 
-See [freespace_planner](../autoware_freespace_planner/README.md) for other parameters.
+See [freespace_planner](../../autoware_freespace_planner/README.md) for other parameters.
 
 ### bezier parking
 
@@ -375,6 +375,7 @@ Then there is the concept of soft and hard margins. Although not currently param
 | object_recognition_collision_check_soft_margins              | [m]  | vector[double] | soft margins for collision check when path generation. It is not strictly the distance between footprints, but the maximum distance when ego and objects are oriented. | [5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0] |
 | object_recognition_collision_check_hard_margins              | [m]  | vector[double] | hard margins for collision check when path generation                                                                                                                  | [0.6]                                         |
 | object_recognition_collision_check_max_extra_stopping_margin | [m]  | double         | maximum value when adding longitudinal distance margin for collision check considering stopping distance                                                               | 1.0                                           |
+| collision_check_outer_margin_factor                          | [-]  | double         | factor to extend the collision check margin from the inside margin to the outside in the curved path                                                                   | 2.0                                           |
 | detection_bound_offset                                       | [m]  | double         | expand pull over lane with this offset to make detection area for collision check of path generation                                                                   | 15.0                                          |
 
 ## **safety check**

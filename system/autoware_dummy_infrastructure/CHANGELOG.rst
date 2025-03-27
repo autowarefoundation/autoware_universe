@@ -2,6 +2,16 @@
 Changelog for package autoware_dummy_infrastructure
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* feat(Autoware_planning_factor_interface): replace tier4_msgs with autoware_internal_msgs (`#10204 <https://github.com/autowarefoundation/autoware_universe/issues/10204>`_)
+* feat(dummy_infrastructure): auto approval when ego stops at stop line (`#10223 <https://github.com/autowarefoundation/autoware_universe/issues/10223>`_)
+  feat(dummy_infrastructur): auto approval when ego stops at stop line
+* chore(dummy_infrastructure): add maintainers kosuke55, 1222-takeshi, asa-naki (`#10228 <https://github.com/autowarefoundation/autoware_universe/issues/10228>`_)
+* Contributors: Hayato Mizushima, Kosuke Takeuchi, Yutaka Kondo, 心刚
+
 0.42.0 (2025-03-03)
 -------------------
 

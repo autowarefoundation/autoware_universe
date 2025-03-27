@@ -2,6 +2,17 @@
 Changelog for package autoware_default_adapi
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* feat(planning_factor): support new cruise planner's factor (`#10229 <https://github.com/autowarefoundation/autoware_universe/issues/10229>`_)
+  * support cruise planner's factor
+  * not slowdown but slow_down
+  ---------
+* feat(Autoware_planning_factor_interface): replace tier4_msgs with autoware_internal_msgs (`#10204 <https://github.com/autowarefoundation/autoware_universe/issues/10204>`_)
+* Contributors: Hayato Mizushima, Kento Yabuuchi, Yutaka Kondo, 心刚
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

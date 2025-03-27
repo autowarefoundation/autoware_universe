@@ -2,6 +2,15 @@
 Changelog for package tier4_planning_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* fix(tier4_planning_launch): remap topics for path_generator (`#10249 <https://github.com/autowarefoundation/autoware_universe/issues/10249>`_)
+  remap topics for path_generator
+* feat(behavior_planning): add behavior_path_planner_type to launch path_generator (`#10217 <https://github.com/autowarefoundation/autoware_universe/issues/10217>`_)
+* Contributors: Hayato Mizushima, Kosuke Takeuchi, Mitsuhiro Sakamoto, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

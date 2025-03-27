@@ -2,6 +2,16 @@
 Changelog for package tier4_control_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* feat(control_validator): add diag to check control component latency (`#10240 <https://github.com/autowarefoundation/autoware_universe/issues/10240>`_)
+  * feat(control_validator): add diag to check control component latency
+  * fix: missing param
+  ---------
+* Contributors: Hayato Mizushima, Satoshi OTA, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 

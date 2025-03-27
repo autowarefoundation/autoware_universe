@@ -2,6 +2,48 @@
 Changelog for package autoware_multi_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* fix(autoware_multi_object_tracker): unknown object orientation (`#10286 <https://github.com/autowarefoundation/autoware_universe/issues/10286>`_)
+  * fix(unknown_tracker): update object pose orientation and streamline uncertainty modeling in input manager
+  * fix(object_model): correct bounding box calculation by initializing limits and including min_z
+  ---------
+* refactor(multi_object_tracker): internal message driven process (`#10203 <https://github.com/autowarefoundation/autoware_universe/issues/10203>`_)
+  * refactor(multi_object_tracker): streamline input channel configuration handling
+  feat(multi_object_tracker): introduce InputChannel struct for input channel configuration
+  refactor(multi_object_tracker): improve marker handling and initialization in TrackerObjectDebugger
+  feat(multi_object_tracker): enhance InputChannel with trust flags for object properties
+  refactor(multi_object_tracker): remove unused channel_size parameter from tracker constructors
+  feat(multi_object_tracker): update InputChannel flags to trust object extension and classification
+  fix(multi_object_tracker): replace channel.index with channel_index for consistency
+  feat(multi_object_tracker): update TrackerObjectDebugger and TrackerProcessor to accept channels_config parameter
+  refactor(multi_object_tracker): remove redundant existence probability initialization from tracker constructors
+  feat(multi_object_tracker): integrate data association into TrackerProcessor and add associate method
+  feat(multi_object_tracker): enhance updateWithMeasurement to include channel_info for improved classification handling
+  refactor(multi_object_tracker): replace object_id with uuid in DynamicObject and related classes
+  fix(multi_object_tracker): update UUID handling in Tracker to use uuid_msg for consistency
+  refactor(multi_object_tracker): simplify pose and covariance handling in tracker classes
+  refactor(multi_object_tracker): replace pose_with_covariance with separate pose and covariance attributes in DynamicObject
+  refactor: remove z state from tracker. it will uses object state
+  refactor(multi_object_tracker): streamline object handling in trackers and remove unnecessary shape processing
+  refactor(multi_object_tracker): remove z position handling from trackers and update object kinematics structure
+  refactor(multi_object_tracker): remove BoundingBox structure from trackers and implement object extension limits
+  refactor(multi_object_tracker): remove unnecessary blank lines in tracker getTrackedObject methods
+  refactor(multi_object_tracker): simplify input channel configuration by removing trust flags and consolidating parameters
+  * refactor(multi_object_tracker): use const reference in loop and simplify tracker update logic
+  * refactor(multi_object_tracker): update shape handling and streamline object tracking logic
+  * refactor(multi_object_tracker): update shape handling to use geometry_msgs::msg::Point for anchor vectors
+  * style(pre-commit): autofix
+  * refactor(multi_object_tracker): modify getNearestCornerOrSurface function signature and update related logic
+  refactor(multi_object_tracker): remove self_transform parameter from measure and update methods
+  refactor(multi_object_tracker): update calcAnchorPointOffset function signature and streamline object handling
+  refactor(multi_object_tracker): set shape type to BOUNDING_BOX for object trackers
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Hayato Mizushima, Taekjin LEE, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

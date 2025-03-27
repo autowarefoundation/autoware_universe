@@ -2,6 +2,14 @@
 Changelog for package autoware_system_diagnostic_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* feat(path_optimizer): additional failure logging and failure mode handling (`#10276 <https://github.com/autowarefoundation/autoware_universe/issues/10276>`_)
+  MRM when MPT fails
+* Contributors: Arjun Jagdish Ram, Hayato Mizushima, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 

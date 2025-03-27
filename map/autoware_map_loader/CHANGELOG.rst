@@ -2,6 +2,16 @@
 Changelog for package autoware_map_loader
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* fix(autoware_map_loader): exec name renamed in 24652f8 (`#10247 <https://github.com/autowarefoundation/autoware_universe/issues/10247>`_)
+  * fix(autoware_map_loader): exec name renamed in 24652f834f73b13b3e4465bfc9ab8335cbe6cdcf
+  * restored node name
+  ---------
+* Contributors: Hayato Mizushima, Yutaka Kondo, ralwing
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

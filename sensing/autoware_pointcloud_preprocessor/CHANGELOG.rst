@@ -2,6 +2,17 @@
 Changelog for package autoware_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* feat(autoware_pointcloud_preprocessor): add missing vehicle msg depency (`#10313 <https://github.com/autowarefoundation/autoware_universe/issues/10313>`_)
+  feat(auotawre_pointcloud_preprocessor): add missing vehicle msg depency
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* chore(autoware_pointcloud_preprocessor): fix variable naming in distortion corrector (`#10185 <https://github.com/autowarefoundation/autoware_universe/issues/10185>`_)
+  chore: fix naming
+* feat(autoware_image_based_projection_fusion): redesign image based projection fusion node (`#10016 <https://github.com/autowarefoundation/autoware_universe/issues/10016>`_)
+* Contributors: Hayato Mizushima, Maxime CLEMENT, Yi-Hsiang Fang (Vivid), Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

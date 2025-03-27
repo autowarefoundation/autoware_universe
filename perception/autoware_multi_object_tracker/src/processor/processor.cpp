@@ -105,8 +105,12 @@ void TrackerProcessor::spawn(
     std::shared_ptr<Tracker> tracker = createNewTracker(new_object, time);
 
     // Initialize existence probabilities
-    tracker->initializeExistenceProbabilities(
-      new_object.channel_index, new_object.existence_probability);
+    if (channel_config.trust_existence_probability) {
+      tracker->initializeExistenceProbabilities(
+        new_object.channel_index, new_object.existence_probability);
+    } else {
+      tracker->initializeExistenceProbabilities(new_object.channel_index, 0.5);
+    }
 
     // Update the tracker with the new object
     list_tracker_.push_back(tracker);
@@ -120,7 +124,8 @@ std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
     autoware::object_recognition_utils::getHighestProbLabel(object.classification);
   if (config_.tracker_map.count(label) != 0) {
     const auto tracker = config_.tracker_map.at(label);
-    if (tracker == "bicycle_tracker") return std::make_shared<BicycleTracker>(time, object);
+    if (tracker == "bicycle_tracker")
+      return std::make_shared<VehicleTracker>(object_model::bicycle, time, object);
     if (tracker == "big_vehicle_tracker")
       return std::make_shared<VehicleTracker>(object_model::big_vehicle, time, object);
     if (tracker == "multi_vehicle_tracker")

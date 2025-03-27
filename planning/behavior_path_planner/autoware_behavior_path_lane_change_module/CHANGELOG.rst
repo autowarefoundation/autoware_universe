@@ -2,6 +2,18 @@
 Changelog for package autoware_behavior_path_lane_change_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* fix(lane_change_module): fix planning factor issue (`#10244 <https://github.com/autowarefoundation/autoware_universe/issues/10244>`_)
+  * when computing target lanes, don't include preceding lanes of lane change lane
+  * dont insert stop point on target lane if next lc dist buffer is zero
+  * return previous module output if LC module status is IDLE
+  * disable faulty test
+  ---------
+* Contributors: Hayato Mizushima, Yutaka Kondo, mkquda
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

@@ -140,7 +140,9 @@ bool UnknownTracker::measureWithPose(const types::DynamicObject & object)
   return is_updated;
 }
 
-bool UnknownTracker::measure(const types::DynamicObject & object, const rclcpp::Time & time)
+bool UnknownTracker::measure(
+  const types::DynamicObject & object, const rclcpp::Time & time,
+  const types::InputChannel & /*channel_info*/)
 {
   // update object shape
   object_.shape = object.shape;

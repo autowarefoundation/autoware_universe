@@ -2,6 +2,14 @@
 Changelog for package autoware_ndt_scan_matcher
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* fix(ndt_scan_matcher): fix the covariance calculation (`#10252 <https://github.com/autowarefoundation/autoware_universe/issues/10252>`_)
+  Fix the covariance calculation
+* Contributors: Anh Nguyen, Hayato Mizushima, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

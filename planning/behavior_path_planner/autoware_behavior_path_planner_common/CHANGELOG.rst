@@ -2,6 +2,24 @@
 Changelog for package autoware_behavior_path_planner_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* fix(safety_check): set safety condition properly (`#10307 <https://github.com/autowarefoundation/autoware_universe/issues/10307>`_)
+* feat!: replace VelocityLimit messages with autoware_internal_planning_msgs (`#10273 <https://github.com/autowarefoundation/autoware_universe/issues/10273>`_)
+* fix(autoware_behavior_path_planner_common): add explicit test dependency (`#10262 <https://github.com/autowarefoundation/autoware_universe/issues/10262>`_)
+* feat(behavior_path_planner_common): modify drivable area expansion to be able to avoid static objects (`#10220 <https://github.com/autowarefoundation/autoware_universe/issues/10220>`_)
+  * modify drivable area expansion to avoid static objects
+  * rename parameters and update drivable area design md
+  * Update planning/behavior_path_planner/autoware_behavior_path_planner_common/docs/behavior_path_planner_drivable_area_design.md
+  Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
+  * correct parameters description
+  ---------
+  Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
+* feat(Autoware_planning_factor_interface): replace tier4_msgs with autoware_internal_msgs (`#10204 <https://github.com/autowarefoundation/autoware_universe/issues/10204>`_)
+* Contributors: Hayato Mizushima, Mete Fatih Cırıt, Ryohsuke Mitsudome, Satoshi OTA, Yutaka Kondo, mkquda, 心刚
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

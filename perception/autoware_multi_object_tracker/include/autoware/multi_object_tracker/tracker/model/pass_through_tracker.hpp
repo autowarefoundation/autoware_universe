@@ -37,7 +37,9 @@ private:
 public:
   PassThroughTracker(const rclcpp::Time & time, const types::DynamicObject & object);
   bool predict(const rclcpp::Time & time) override;
-  bool measure(const types::DynamicObject & object, const rclcpp::Time & time) override;
+  bool measure(
+    const types::DynamicObject & object, const rclcpp::Time & time,
+    const types::InputChannel & channel_info) override;
   bool getTrackedObject(const rclcpp::Time & time, types::DynamicObject & object) const override;
 };
 

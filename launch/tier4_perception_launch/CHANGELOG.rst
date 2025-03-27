@@ -2,6 +2,43 @@
 Changelog for package tier4_perception_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* chore(perception): refactor perception launch (`#10186 <https://github.com/autowarefoundation/autoware_universe/issues/10186>`_)
+  * fundamental change
+  * style(pre-commit): autofix
+  * fix typo
+  * fix params and modify some packages
+  * pre-commit
+  * fix
+  * fix spell check
+  * fix typo
+  * integrate model and label path
+  * style(pre-commit): autofix
+  * for pre-commit
+  * run pre-commit
+  * for awsim
+  * for simulatior
+  * style(pre-commit): autofix
+  * fix grammer in launcher
+  * add schema for yolox_tlr
+  * style(pre-commit): autofix
+  * fix file name
+  * fix
+  * rename
+  * modify arg name  to
+  * fix typo
+  * change param name
+  * style(pre-commit): autofix
+  * chore
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Shintaro Tomie <58775300+Shin-kyoto@users.noreply.github.com>
+  Co-authored-by: Kenzo Lobos Tsunekawa <kenzo.lobos@tier4.jp>
+* Contributors: Hayato Mizushima, Masato Saeki, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
