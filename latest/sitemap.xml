@@ -951,16 +951,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/behavior_velocity_planner/autoware_behavior_velocity_planner/</loc>
-         <lastmod>2025-03-27</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/behavior_velocity_planner/autoware_behavior_velocity_planner_common/</loc>
-         <lastmod>2025-03-27</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/behavior_velocity_planner/autoware_behavior_velocity_rtc_interface/</loc>
          <lastmod>2025-03-27</lastmod>
          <changefreq>daily</changefreq>
@@ -972,11 +962,6 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/behavior_velocity_planner/autoware_behavior_velocity_speed_bump_module/</loc>
-         <lastmod>2025-03-27</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/behavior_velocity_planner/autoware_behavior_velocity_stop_line_module/</loc>
          <lastmod>2025-03-27</lastmod>
          <changefreq>daily</changefreq>
     </url>
