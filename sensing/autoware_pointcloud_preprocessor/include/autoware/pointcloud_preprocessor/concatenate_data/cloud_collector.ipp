@@ -154,7 +154,6 @@ CloudCollector<MsgTraits>::get_topic_to_cloud_map()
 template <typename MsgTraits>
 void CloudCollector<MsgTraits>::show_debug_message()
 {
-  RCLCPP_WARN(ros2_parent_node_->get_logger(), "start show_debug_message timer with timeout=%f", timeout_sec_);
   auto time_until_trigger = timer_->time_until_trigger();
   std::stringstream log_stream;
   log_stream << std::fixed << std::setprecision(6);
@@ -183,7 +182,6 @@ void CloudCollector<MsgTraits>::show_debug_message()
 
   log_stream << "]\n";
 
-  RCLCPP_WARN(ros2_parent_node_->get_logger(), "end show_debug_message timer with timeout=%f", timeout_sec_);
   RCLCPP_INFO(ros2_parent_node_->get_logger(), "%s", log_stream.str().c_str());
 }
 
