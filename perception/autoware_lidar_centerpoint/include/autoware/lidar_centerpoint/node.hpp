@@ -61,7 +61,7 @@ private:
   bool is_processing_delayed_{false};
   double max_allowed_processing_time_ms_;
   double max_acceptable_consecutive_delay_ms_;
-  // set optional to avoid sending the error diagnostics before node start processing
+  // set as optional to avoid sending error diagnostics before the node starts processing
   std::optional<rclcpp::Time> last_in_time_processing_timestamp_;
 
   NonMaximumSuppression iou_bev_nms_;
