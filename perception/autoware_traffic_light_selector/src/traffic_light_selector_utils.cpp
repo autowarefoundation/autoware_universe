@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "trafic_light_selector_utils.hpp"
+#include "traffic_light_selector_utils.hpp"
 
 #include <algorithm>
 #include <vector>
