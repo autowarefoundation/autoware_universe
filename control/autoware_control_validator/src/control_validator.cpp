@@ -237,6 +237,7 @@ void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
 {
   stop_watch.tic();
 
+  // prepare ros topics
   const auto waiting = [this](const auto topic_name) {
     RCLCPP_INFO_SKIPFIRST_THROTTLE(get_logger(), *get_clock(), 5000, "waiting for %s", topic_name);
     return;
@@ -270,9 +271,11 @@ void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
     return waiting(sub_measured_acc_->subscriber()->get_topic_name());
   }
 
+  // pre process
   debug_pose_publisher_->clear_markers();
   validation_status_.stamp = get_clock()->now();
 
+  // validation process
   latency_validator.validate(validation_status_, *control_cmd_msg, *this);
   trajectory_validator.validate(
     validation_status_, *predicted_trajectory_msg, *reference_trajectory_msg);
@@ -281,11 +284,11 @@ void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
   velocity_validator.validate(validation_status_, *reference_trajectory_msg, *kinematics_msg);
   overrun_validator.validate(validation_status_, *reference_trajectory_msg, *kinematics_msg);
 
+  // post process
   validation_status_.invalid_count =
     is_all_valid(validation_status_) ? 0 : validation_status_.invalid_count + 1;
   diag_updater_.force_update();
 
-  // for debug
   publish_debug_info(kinematics_msg->pose.pose);
   display_status();
 }
