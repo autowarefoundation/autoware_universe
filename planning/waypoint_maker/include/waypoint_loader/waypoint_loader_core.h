@@ -29,9 +29,10 @@
 
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_system_msgs/msg/autoware_state.hpp>
+#include <tier4_planning_msgs/msg/route_state.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
-#include <tier4_planning_msgs/msg/scenario.hpp>
+#include <autoware_internal_planning_msgs/msg/scenario.hpp>
 
 class WaypointLoaderNode : public rclcpp::Node
 {
@@ -46,13 +47,11 @@ private:
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr waypoint_following_state_pub_;
 
   autoware::component_interface_utils::Publisher<
-    autoware::component_interface_specs::planning::RouteState>::SharedPtr pub_state_;
-  autoware::component_interface_utils::Publisher<
     autoware::component_interface_specs::planning::LaneletRoute>::SharedPtr pub_route_;
 
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr file_subscriber_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr sub_odometry_;
-  rclcpp::Subscription<tier4_planning_msgs::msg::Scenario>::SharedPtr sub_scenario_;
+  rclcpp::Subscription<autoware_internal_planning_msgs::msg::Scenario>::SharedPtr sub_scenario_;
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
@@ -79,7 +78,7 @@ private:
 
   std::string current_scenario_;
 
-  autoware::component_interface_specs::planning::RouteState::Message route_state_;
+  tier4_planning_msgs::msg::RouteState route_state_;
   autoware_planning_msgs::msg::Trajectory basic_trajectory_;
   autoware_planning_msgs::msg::Trajectory ouput_trajectory_;
   geometry_msgs::msg::PoseStamped start_pose_;
@@ -90,7 +89,7 @@ private:
   // Callback function
   void csvFileCallback(std_msgs::msg::String::ConstSharedPtr msg);
   void onOdometry(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
-  void onScenario(const tier4_planning_msgs::msg::Scenario::ConstSharedPtr msg);
+  void onScenario(const autoware_internal_planning_msgs::msg::Scenario::ConstSharedPtr msg);
 
   // Timer
   rclcpp::TimerBase::SharedPtr timer_;
@@ -115,8 +114,6 @@ private:
   bool transformPose(
     const geometry_msgs::msg::PoseStamped & input_pose,
     geometry_msgs::msg::PoseStamped * output_pose, const std::string target_frame);
-  void changeState(
-    autoware::component_interface_specs::planning::RouteState::Message::_state_type state);
   bool isArrival(
     const geometry_msgs::msg::PoseStamped & pose, const geometry_msgs::msg::Pose & point);
   bool isVehicleStopped(const geometry_msgs::msg::TwistStamped & twist);

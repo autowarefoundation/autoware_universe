@@ -66,7 +66,7 @@ The Waypoint Loader node is **scenario-aware**, meaning it only activates trajec
 
 | Service                       | Type                               | Description                               |
 |------------------------------|------------------------------------|-------------------------------------------|
-| `/waypoint_maker/record`     | `waypoint_maker_msg/srv/Save`      | Start or stop recording to file           |
+| `/waypoint_maker/record`     | `tier4_planning_msgs/srv/SaveWaypoint`      | Start or stop recording to file           |
 
 ## Parameters
 

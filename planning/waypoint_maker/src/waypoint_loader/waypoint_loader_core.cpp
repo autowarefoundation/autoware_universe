@@ -26,7 +26,7 @@ WaypointLoaderNode::WaypointLoaderNode()
   sub_odometry_ = create_subscription<nav_msgs::msg::Odometry>(
     "/input/pose", rclcpp::QoS(1),
     std::bind(&WaypointLoaderNode::onOdometry, this, std::placeholders::_1));
-  sub_scenario_ = create_subscription<tier4_planning_msgs::msg::Scenario>(
+  sub_scenario_ = create_subscription<autoware_internal_planning_msgs::msg::Scenario>(
     "/input/scenario", rclcpp::QoS(1),
     std::bind(&WaypointLoaderNode::onScenario, this, std::placeholders::_1));
 
@@ -42,7 +42,6 @@ WaypointLoaderNode::WaypointLoaderNode()
     create_publisher<std_msgs::msg::Bool>("output/waypoint_following_state", rclcpp::QoS{1});
 
   const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
-  adaptor.init_pub(pub_state_);
   adaptor.init_pub(pub_route_);
 
   // Init variables
@@ -71,7 +70,7 @@ void WaypointLoaderNode::run()
   // if arrived, clear output_trajectory_ and return;
   if (
     route_state_.state ==
-    autoware::component_interface_specs::planning::RouteState::Message::ARRIVED) {
+    tier4_planning_msgs::msg::RouteState::ARRIVED) {
     ouput_trajectory_.header.stamp = this->now();
     ouput_trajectory_.points.clear();
 
@@ -86,7 +85,7 @@ void WaypointLoaderNode::run()
   // publish visualized trajectory
   path_visualization_pub_->publish(convertTrajectoryToPath(basic_trajectory_));
 
-  if (current_scenario_ == tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING) {
+  if (current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING) {
     // set start pose
     if (!getEgoVehiclePose(&start_pose_)) {
       RCLCPP_ERROR(get_logger(), "Failed to get ego vehicle pose in map frame.");
@@ -374,7 +373,7 @@ void WaypointLoaderNode::onOdometry(const nav_msgs::msg::Odometry::ConstSharedPt
 
   // check waypoint complete
   std_msgs::msg::Bool state;
-  if (current_scenario_ == tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING) {
+  if (current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING) {
     if ((is_arrival || is_empty_output_trajectory) && is_vehicle_stopped) {
       state.data = true;
     }
@@ -386,7 +385,7 @@ void WaypointLoaderNode::onOdometry(const nav_msgs::msg::Odometry::ConstSharedPt
   waypoint_following_state_pub_->publish(state);
 }
 
-void WaypointLoaderNode::onScenario(const tier4_planning_msgs::msg::Scenario::ConstSharedPtr msg)
+void WaypointLoaderNode::onScenario(const autoware_internal_planning_msgs::msg::Scenario::ConstSharedPtr msg)
 {
   if (msg) {
     current_scenario_ = msg->current_scenario;
@@ -412,7 +411,6 @@ void WaypointLoaderNode::publishRoute(
   route_msg.segments.push_back(s);
 
   pub_route_->publish(route_msg);
-  // changeState(autoware::component_interface_specs::planning::RouteState::Message::SET);
 }
 
 bool WaypointLoaderNode::getEgoVehiclePose(geometry_msgs::msg::PoseStamped * ego_vehicle_pose)
@@ -438,14 +436,6 @@ bool WaypointLoaderNode::transformPose(
     RCLCPP_WARN(get_logger(), "%s", ex.what());
     return false;
   }
-}
-
-void WaypointLoaderNode::changeState(
-  autoware::component_interface_specs::planning::RouteState::Message::_state_type state)
-{
-  route_state_.stamp = now();
-  route_state_.state = state;
-  pub_state_->publish(route_state_);
 }
 
 bool WaypointLoaderNode::isArrival(

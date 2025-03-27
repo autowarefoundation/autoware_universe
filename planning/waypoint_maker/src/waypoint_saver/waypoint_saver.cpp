@@ -20,7 +20,7 @@ WaypointSaver::WaypointSaver(const rclcpp::NodeOptions & node_options)
   pose_subscriber_ = create_subscription<nav_msgs::msg::Odometry>(
     "/input/pose", 1, std::bind(&WaypointSaver::poseCallBack, this, std::placeholders::_1));
 
-  srv_record_ = create_service<waypoint_maker_msg::srv::Save>(
+  srv_record_ = create_service<tier4_planning_msgs::srv::SaveWaypoint>(
     "/waypoint_maker/record",
     std::bind(&WaypointSaver::onRecordService, this, std::placeholders::_1, std::placeholders::_2));
 
@@ -79,8 +79,8 @@ void WaypointSaver::outputProcessing(
 }
 
 void WaypointSaver::onRecordService(
-  const waypoint_maker_msg::srv::Save::Request::SharedPtr request,
-  const waypoint_maker_msg::srv::Save::Response::SharedPtr response)
+  const tier4_planning_msgs::srv::SaveWaypoint::Request::SharedPtr request,
+  const tier4_planning_msgs::srv::SaveWaypoint::Response::SharedPtr response)
 {
   record_ = request->mode;
   interval_ = request->interval;

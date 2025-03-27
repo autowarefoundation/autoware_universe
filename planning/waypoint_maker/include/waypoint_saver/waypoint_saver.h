@@ -11,8 +11,7 @@
 
 // autoware
 #include <autoware/universe_utils/ros/self_pose_listener.hpp>
-#include <waypoint_maker_msg/srv/save.hpp>
-
+#include <tier4_planning_msgs/srv/save_waypoint.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -27,7 +26,7 @@ private:
   // ros
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr pose_subscriber_;
 
-  rclcpp::Service<waypoint_maker_msg::srv::Save>::SharedPtr srv_record_;
+  rclcpp::Service<tier4_planning_msgs::srv::SaveWaypoint>::SharedPtr srv_record_;
 
   // tf
   autoware::universe_utils::SelfPoseListener self_pose_listener_;
@@ -49,8 +48,8 @@ private:
   void poseCallBack(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
 
   void onRecordService(
-    const waypoint_maker_msg::srv::Save::Request::SharedPtr request,
-    const waypoint_maker_msg::srv::Save::Response::SharedPtr response);
+    const tier4_planning_msgs::srv::SaveWaypoint::Request::SharedPtr request,
+    const tier4_planning_msgs::srv::SaveWaypoint::Response::SharedPtr response);
 
   /**
    * @brief writing current pose and velocity
