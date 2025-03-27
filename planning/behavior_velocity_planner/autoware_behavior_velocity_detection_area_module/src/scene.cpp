@@ -181,7 +181,7 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
   // Create StopReason
   {
     planning_factor_interface_->add(
-      path->points, planner_data_->current_odometry->pose, stop_pose, stop_pose,
+      path->points, planner_data_->current_odometry->pose, stop_pose,
       autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
       autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
       0.0 /*shift distance*/, "");

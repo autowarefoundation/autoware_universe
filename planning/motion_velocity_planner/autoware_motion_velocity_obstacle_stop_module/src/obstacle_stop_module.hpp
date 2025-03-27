@@ -20,7 +20,6 @@
 #include "autoware/object_recognition_utils/predicted_path_utils.hpp"
 #include "autoware_utils/system/stop_watch.hpp"
 #include "autoware_utils/system/time_keeper.hpp"
-#include "metrics_manager.hpp"
 #include "parameters.hpp"
 #include "stop_planning_debug_info.hpp"
 #include "type_alias.hpp"
@@ -68,14 +67,12 @@ private:
   // ros parameters
   bool ignore_crossing_obstacle_{};
   bool suppress_sudden_stop_{};
-  bool use_pointcloud_{false};
   CommonParam common_param_{};
   StopPlanningParam stop_planning_param_{};
   ObstacleFilteringParam obstacle_filtering_param_{};
 
   // module publisher
   rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr debug_stop_planning_info_pub_{};
-  rclcpp::Publisher<MetricArray>::SharedPtr metrics_pub_{};
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr processing_time_detail_pub_{};
 
   // interface publisher
@@ -91,7 +88,6 @@ private:
   // PointCloud-based stop obstacle history
   std::vector<StopObstacle> stop_pointcloud_obstacle_history_;
 
-  MetricsManager metrics_manager_{};
   // previous trajectory and distance to stop
   // NOTE: Previous trajectory is memorized to deal with nearest index search for overlapping or
   // crossing lanes.
@@ -187,7 +183,7 @@ private:
     const VehicleInfo & vehicle_info, const double dist_to_bumper,
     const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check) const;
 
-  std::optional<StopObstacle> create_stop_obstacle_for_point_cloud(
+  StopObstacle create_stop_obstacle_for_point_cloud(
     const std::vector<TrajectoryPoint> & traj_points, const rclcpp::Time & stamp,
     const geometry_msgs::msg::Point & stop_point, const double dist_to_bumper) const;
 
