@@ -17,7 +17,6 @@
 #include "autoware/motion_utils/trajectory/conversion.hpp"
 
 #include <autoware_utils/ros/update_param.hpp>
-#include <autoware/universe_utils/ros/update_param.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
