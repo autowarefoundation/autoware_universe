@@ -327,6 +327,7 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::publish
           (*concatenated_cloud_result.topic_to_transformed_cloud_map).find(topic) !=
           (*concatenated_cloud_result.topic_to_transformed_cloud_map).end()) {
           auto transformed_cloud_output = std::move((*concatenated_cloud_result.topic_to_transformed_cloud_map).at(topic));
+          (*concatenated_cloud_result.topic_to_transformed_cloud_map).erase(topic);
           topic_to_transformed_cloud_publisher_map_[topic]->publish(
             std::move(transformed_cloud_output));
         } else {
