@@ -93,7 +93,7 @@ private:
 
   inline bool isCurrentWaypointFollowing() const
   {
-    return current_scenario_ == tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
+    return current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
   }
 
   rclcpp::TimerBase::SharedPtr timer_;
@@ -112,12 +112,10 @@ private:
     pub_processing_time_;
 
   // polling subscribers
-  universe_utils::InterProcessPollingSubscriber<
-    nav_msgs::msg::Odometry, autoware::universe_utils::polling_policy::All>::SharedPtr sub_odom_;
-  universe_utils::InterProcessPollingSubscriber<std_msgs::msg::Bool>::SharedPtr sub_parking_state_;
-  universe_utils::InterProcessPollingSubscriber<std_msgs::msg::Bool>::SharedPtr
-    sub_waypoint_following_state_;
-  universe_utils::InterProcessPollingSubscriber<
+  autoware_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry, autoware_utils::polling_policy::All>::SharedPtr sub_odom_;
+  autoware_utils::InterProcessPollingSubscriber<std_msgs::msg::Bool>::SharedPtr sub_parking_state_;
+  autoware_utils::InterProcessPollingSubscriber<std_msgs::msg::Bool>::SharedPtr sub_waypoint_following_state_;
+  autoware_utils::InterProcessPollingSubscriber<
     autoware_adapi_v1_msgs::msg::OperationModeState>::SharedPtr sub_operation_mode_state_;
 
   autoware_adapi_v1_msgs::msg::OperationModeState::ConstSharedPtr operation_mode_state_;

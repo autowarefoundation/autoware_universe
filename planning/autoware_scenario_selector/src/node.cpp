@@ -202,7 +202,7 @@ autoware_planning_msgs::msg::Trajectory::ConstSharedPtr ScenarioSelectorNode::ge
   if (scenario == autoware_internal_planning_msgs::msg::Scenario::PARKING) {
     return parking_trajectory_;
   }
-  if (scenario == tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING) {
+  if (scenario == autoware_internal_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING) {
     return waypoint_following_trajectory_;
   }
   RCLCPP_ERROR_STREAM(this->get_logger(), "invalid scenario argument: " << scenario);
@@ -220,20 +220,20 @@ std::string ScenarioSelectorNode::selectScenarioByPosition()
   const auto is_along_or_in_waypoint_zone =
     isAlongOrInWaypointZone(route_handler_->getLaneletMapPtr(), current_pose_->pose.pose);
 
-  if (current_scenario_ == tier4_planning_msgs::msg::Scenario::EMPTY) {
+  if (current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::EMPTY) {
     if (is_in_lane && is_goal_in_lane && !is_along_or_in_waypoint_zone) {
-      return tier4_planning_msgs::msg::Scenario::LANEDRIVING;
+      return autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING;
     } else if (is_along_or_in_waypoint_zone) {
-      return tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
+      return autoware_internal_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
     } else if (is_in_parking_lot) {
       return autoware_internal_planning_msgs::msg::Scenario::PARKING;
     }
     return autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING;
   }
 
-  if (current_scenario_ == tier4_planning_msgs::msg::Scenario::LANEDRIVING) {
+  if (current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING) {
     if (is_along_or_in_waypoint_zone) {
-      return tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
+      return autoware_internal_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
     }
     if (is_in_parking_lot && !is_goal_in_lane) {
       return autoware_internal_planning_msgs::msg::Scenario::PARKING;
@@ -247,16 +247,16 @@ std::string ScenarioSelectorNode::selectScenarioByPosition()
     }
     if (is_parking_completed_ && is_along_or_in_waypoint_zone) {
       is_parking_completed_ = false;
-      return tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
+      return autoware_internal_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
     }
   }
 
-  if (current_scenario_ == tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING) {
+  if (current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING) {
     if (is_in_lane && (!is_along_or_in_waypoint_zone || is_waypoint_following_completed_)) {
-      return tier4_planning_msgs::msg::Scenario::LANEDRIVING;
+      return autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING;
     }
     if (is_in_parking_lot && !is_goal_in_lane) {
-      return tier4_planning_msgs::msg::Scenario::PARKING;
+      return autoware_internal_planning_msgs::msg::Scenario::PARKING;
     }
   }
 
@@ -280,21 +280,21 @@ void ScenarioSelectorNode::updateCurrentScenario()
   if (enable_mode_switching_) {
     if (isCurrentLaneDriving()) {
       if (isSwitchToParking(is_stopped)) {
-        current_scenario_ = tier4_planning_msgs::msg::Scenario::PARKING;
+        current_scenario_ = autoware_internal_planning_msgs::msg::Scenario::PARKING;
       } else if (isSwitchToWaypointFollowing(is_stopped)) {
-        current_scenario_ = tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
+        current_scenario_ = autoware_internal_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
       }
     } else if (isCurrentParking()) {
       if (isSwitchToLaneDrivingFromParking()) {
-        current_scenario_ = tier4_planning_msgs::msg::Scenario::LANEDRIVING;
+        current_scenario_ = autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING;
       } else if (isSwitchToWaypointFollowing(is_stopped)) {
-        current_scenario_ = tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
+        current_scenario_ = autoware_internal_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING;
       }
     } else if (isCurrentWaypointFollowing()) {
       if (isSwitchToLaneDrivingFromWaypointFollowing(is_stopped)) {
-        current_scenario_ = tier4_planning_msgs::msg::Scenario::LANEDRIVING;
+        current_scenario_ = autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING;
       } else if (isSwitchToParking(is_stopped)) {
-        current_scenario_ = tier4_planning_msgs::msg::Scenario::PARKING;
+        current_scenario_ = autoware_internal_planning_msgs::msg::Scenario::PARKING;
       }
     }
   }
@@ -495,7 +495,7 @@ void ScenarioSelectorNode::updateData()
     is_parking_completed_ = msg ? msg->data : is_parking_completed_;
   }
   {
-    auto msg = sub_waypoint_following_state_->takeData();
+    auto msg = sub_waypoint_following_state_->take_data();
     is_waypoint_following_completed_ = msg ? msg->data : is_waypoint_following_completed_;
   }
   {
@@ -570,7 +570,7 @@ void ScenarioSelectorNode::onWaypointFollowingTrajectory(
 {
   waypoint_following_trajectory_ = msg;
 
-  if (current_scenario_ != tier4_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING) {
+  if (current_scenario_ != autoware_internal_planning_msgs::msg::Scenario::WAYPOINTFOLLOWING) {
     return;
   }
 
