@@ -81,6 +81,9 @@ private:
   CudaPointCloud2 raw_pointcloud_;
   CudaPointCloud2 obstacle_pointcloud_;
 
+  autoware::cuda_utils::CudaUniquePtr<Eigen::Matrix3f> device_rotation_;
+  autoware::cuda_utils::CudaUniquePtr<Eigen::Vector3f> device_translation_;
+
   // ROS Parameters
   std::string map_frame_;
   std::string base_link_frame_;

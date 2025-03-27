@@ -255,6 +255,10 @@ __global__ void fillUnknownSpaceKernel(
   int angle_bin_index = idx / range_bins;
   int range_bin_index = idx % range_bins;
 
+  if (range_bin_index == range_bins - 1) {
+    return;
+  }
+
   std::uint64_t obs_range_and_x =
     obstacle_points_tensor[6 * (angle_bin_index * range_bins + range_bin_index) + 0];
   std::uint64_t obs_range_and_y =
@@ -277,7 +281,7 @@ __global__ void fillUnknownSpaceKernel(
   int next_raw_range_bin_index = range_bin_index + 1;
   int next_obs_range_bin_index = range_bin_index + 1;
 
-  for (; next_raw_range_bin_index < range_bins; next_raw_range_bin_index++) {
+  for (; next_raw_range_bin_index < range_bins - 1; next_raw_range_bin_index++) {
     std::uint64_t next_raw_range_and_x =
       raw_points_tensor[6 * (angle_bin_index * range_bins + next_raw_range_bin_index) + 0];
     std::uint32_t next_raw_range_int = next_raw_range_and_x >> 32;
@@ -292,7 +296,7 @@ __global__ void fillUnknownSpaceKernel(
     }
   }
 
-  for (; next_obs_range_bin_index < range_bins; next_obs_range_bin_index++) {
+  for (; next_obs_range_bin_index < range_bins - 1; next_obs_range_bin_index++) {
     std::uint64_t next_obs_range_and_x =
       obstacle_points_tensor[6 * (angle_bin_index * range_bins + next_obs_range_bin_index) + 0];
     std::uint32_t next_obs_range_int = next_obs_range_and_x >> 32;
@@ -414,7 +418,7 @@ __global__ void fillObstaclesKernel(
 
   // Look for the next obstacle point
   int next_obs_range_bin_index = range_bin_index + 1;
-  for (; next_obs_range_bin_index < range_bins; next_obs_range_bin_index++) {
+  for (; next_obs_range_bin_index < range_bins - 1; next_obs_range_bin_index++) {
     std::uint64_t next_obs_range_and_x =
       obstacle_points_tensor[6 * (angle_bin_index * range_bins + next_obs_range_bin_index) + 0];
     std::uint32_t next_obs_range_int = next_obs_range_and_x >> 32;
@@ -423,6 +427,8 @@ __global__ void fillObstaclesKernel(
       break;
     }
   }
+
+  next_obs_range_bin_index = std::min<int>(next_obs_range_bin_index, range_bins - 1);
 
   std::uint64_t next_obs_range_and_x =
     obstacle_points_tensor[6 * (angle_bin_index * range_bins + range_bin_index) + 0];

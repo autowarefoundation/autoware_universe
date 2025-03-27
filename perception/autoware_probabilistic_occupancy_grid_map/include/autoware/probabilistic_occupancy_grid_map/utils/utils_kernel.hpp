@@ -44,7 +44,7 @@ void copyMapRegionLaunch(
 
 void transformPointCloudLaunch(
   std::uint8_t * points, std::size_t num_points, std::size_t points_step,
-  const Eigen::Matrix3f & rotation, const Eigen::Vector3f & translation, cudaStream_t stream);
+  const Eigen::Matrix3f * rotation, const Eigen::Vector3f * translation, cudaStream_t stream);
 
 }  // namespace utils
 }  // namespace autoware::occupancy_grid_map

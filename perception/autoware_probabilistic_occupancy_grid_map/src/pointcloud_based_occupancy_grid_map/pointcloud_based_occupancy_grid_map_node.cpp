@@ -122,6 +122,9 @@ PointcloudBasedOccupancyGridMapNode::PointcloudBasedOccupancyGridMapNode(
   occupancy_grid_map_ptr_->setCudaStream(stream_);
   occupancy_grid_map_updater_ptr_->setCudaStream(stream_);
 
+  device_rotation_ = autoware::cuda_utils::make_unique<Eigen::Matrix3f>();
+  device_translation_ = autoware::cuda_utils::make_unique<Eigen::Vector3f>();
+
   occupancy_grid_map_ptr_->initRosParam(*this);
   occupancy_grid_map_updater_ptr_->initRosParam(*this);
 
@@ -185,12 +188,14 @@ void PointcloudBasedOccupancyGridMapNode::onPointcloudWithObstacleAndRaw()
   if (use_height_filter_) {
     // Make sure that the frame is base_link
     if (raw_pointcloud_.header.frame_id != base_link_frame_) {
-      if (!utils::transformPointcloudAsync(raw_pointcloud_, *tf2_, base_link_frame_)) {
+      if (!utils::transformPointcloudAsync(
+            raw_pointcloud_, *tf2_, base_link_frame_, device_rotation_, device_translation_)) {
         return;
       }
     }
     if (obstacle_pointcloud_.header.frame_id != base_link_frame_) {
-      if (!utils::transformPointcloudAsync(obstacle_pointcloud_, *tf2_, base_link_frame_)) {
+      if (!utils::transformPointcloudAsync(
+            obstacle_pointcloud_, *tf2_, base_link_frame_, device_rotation_, device_translation_)) {
         return;
       }
     }
