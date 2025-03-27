@@ -21,8 +21,8 @@
 
 namespace autoware::pointcloud_preprocessor::utils
 {
-/** \brief Return whether the input PointCloud2 data has the same layout than PointXYZI. That is to
- * say whether you can memcpy from the PointCloud2 data buffer to a PointXYZI */
+/** \brief Return whether the input data has the same layout than PointXYZI. That is to
+ * say whether you can memcpy from the data buffer to a PointXYZI */
 bool is_data_layout_compatible_with_point_xyzi(
   const std::vector<sensor_msgs::msg::PointField> & fields);
 
@@ -30,8 +30,8 @@ bool is_data_layout_compatible_with_point_xyzi(
  * say whether you can memcpy from the PointCloud2 data buffer to a PointXYZI */
 bool is_data_layout_compatible_with_point_xyzi(const sensor_msgs::msg::PointCloud2 & input);
 
-/** \brief Return whether the input PointCloud2 data has the same layout than PointXYZIRC. That is
- * to say whether you can memcpy from the PointCloud2 data buffer to a PointXYZIRC */
+/** \brief Return whether the input data has the same layout than PointXYZIRC. That is
+ * to say whether you can memcpy from the data buffer to a PointXYZIRC */
 bool is_data_layout_compatible_with_point_xyzirc(
   const std::vector<sensor_msgs::msg::PointField> & fields);
 
@@ -39,8 +39,8 @@ bool is_data_layout_compatible_with_point_xyzirc(
  * to say whether you can memcpy from the PointCloud2 data buffer to a PointXYZIRC */
 bool is_data_layout_compatible_with_point_xyzirc(const sensor_msgs::msg::PointCloud2 & input);
 
-/** \brief Return whether the input PointCloud2 data has the same layout than PointXYZIRADRT. That
- * is to say whether you can memcpy from the PointCloud2 data buffer to a PointXYZIRADRT */
+/** \brief Return whether the input data has the same layout than PointXYZIRADRT. That
+ * is to say whether you can memcpy from the data buffer to a PointXYZIRADRT */
 bool is_data_layout_compatible_with_point_xyziradrt(
   const std::vector<sensor_msgs::msg::PointField> & fields);
 
@@ -48,8 +48,8 @@ bool is_data_layout_compatible_with_point_xyziradrt(
  * is to say whether you can memcpy from the PointCloud2 data buffer to a PointXYZIRADRT */
 bool is_data_layout_compatible_with_point_xyziradrt(const sensor_msgs::msg::PointCloud2 & input);
 
-/** \brief Return whether the input PointCloud2 data has the same layout than PointXYZIRCAEDT. That
- * is to say whether you can memcpy from the PointCloud2 data buffer to a PointXYZIRCAEDT */
+/** \brief Return whether the input data has the same layout than PointXYZIRCAEDT. That
+ * is to say whether you can memcpy from the data buffer to a PointXYZIRCAEDT */
 bool is_data_layout_compatible_with_point_xyzircaedt(
   const std::vector<sensor_msgs::msg::PointField> & fields);
 
