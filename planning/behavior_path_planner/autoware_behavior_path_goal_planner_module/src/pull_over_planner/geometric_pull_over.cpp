@@ -62,13 +62,12 @@ std::optional<PullOverPath> GeometricPullOver::plan(
   }
 
   const auto & p = parallel_parking_parameters_;
-  const double max_steer_angle =
-    is_forward_ ? p.forward_parking_max_steer_angle : p.backward_parking_max_steer_angle;
+  const double max_steer_angle = vehicle_info_.max_steer_angle_rad * p.max_steer_angle_margin_scale;
   planner_.setTurningRadius(planner_data->parameters, max_steer_angle);
   planner_.setPlannerData(planner_data);
 
-  const bool found_valid_path =
-    planner_.planPullOver(goal_pose, road_lanes, pull_over_lanes, is_forward_, left_side_parking_);
+  const bool found_valid_path = planner_.planPullOver(
+    goal_pose, road_lanes, pull_over_lanes, max_steer_angle, is_forward_, left_side_parking_);
   if (!found_valid_path) {
     return {};
   }
