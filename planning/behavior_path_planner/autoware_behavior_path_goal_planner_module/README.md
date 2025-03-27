@@ -267,10 +267,10 @@ See also [[1]](https://www.sciencedirect.com/science/article/pii/S14746670153474
 
 #### Parameters geometric parallel parking
 
-| Name                    | Unit  | Type   | Description                                                                                                                         | Default value |
-| :---------------------- | :---- | :----- | :---------------------------------------------------------------------------------------------------------------------------------- | :------------ |
-| arc_path_interval       | [m]   | double | interval between arc path points                                                                                                    | 1.0           |
-| pull_over_max_steer_rad | [rad] | double | maximum steer angle for path generation. it may not be possible to control steer up to max_steer_angle in vehicle_info when stopped | 0.35          |
+| Name                         | Unit | Type   | Description                                                                                              | Default value |
+| :--------------------------- | :--- | :----- | :------------------------------------------------------------------------------------------------------- | :------------ |
+| arc_path_interval            | [m]  | double | interval between arc path points                                                                         | 1.0           |
+| max_steer_angle_margin_scale | [-]  | double | scaling factor applied to the maximum steering angle (max_steer_angle) defined in vehicle_info parameter | 0.72          |
 
 #### arc forward parking
 
@@ -310,7 +310,7 @@ Generate two backward arc paths.
 
 If the vehicle gets stuck with `LaneParkingPlanning`, `FreespaceParkingPlanner` is triggered.
 
-To run this feature, you need to set `parking_lot` to the map, `activate_by_scenario` of [costmap_generator](../costmap_generator/README.md) to `false` and `enable_freespace_parking` to `true`
+To run this feature, you need to set `parking_lot` to the map, `activate_by_scenario` of [costmap_generator](../../autoware_costmap_generator/README.md) to `false` and `enable_freespace_parking` to `true`
 
 ![pull_over_freespace_parking_flowchart](./images/pull_over_freespace_parking_flowchart.drawio.svg)
 
@@ -324,7 +324,7 @@ Simultaneous execution with `avoidance_module` in the flowchart is under develop
 | :----------------------- | :--- | :--- | :------------------------------------------------------------------------------------------------------------------- | :------------ |
 | enable_freespace_parking | [-]  | bool | This flag enables freespace parking, which runs when the vehicle is stuck due to e.g. obstacles in the parking area. | true          |
 
-See [freespace_planner](../autoware_freespace_planner/README.md) for other parameters.
+See [freespace_planner](../../autoware_freespace_planner/README.md) for other parameters.
 
 ### bezier parking
 

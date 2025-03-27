@@ -65,9 +65,11 @@ std::optional<PullOutPath> GeometricPullOut::plan(
 
   // check if the ego is at left or right side of road lane center
   const bool left_side_start = 0 < getArcCoordinates(road_lanes, start_pose).distance;
+  const double max_steer_angle =
+    vehicle_info_.max_steer_angle_rad *
+    parallel_parking_parameters_.geometric_pull_out_max_steer_angle_margin_scale;
 
-  planner_.setTurningRadius(
-    planner_data->parameters, parallel_parking_parameters_.pull_out_max_steer_angle);
+  planner_.setTurningRadius(planner_data->parameters, max_steer_angle);
   planner_.setPlannerData(planner_data);
   const bool found_valid_path = planner_.planPullOut(
     start_pose, goal_pose, road_lanes, pull_out_lanes, left_side_start, lane_departure_checker_);
