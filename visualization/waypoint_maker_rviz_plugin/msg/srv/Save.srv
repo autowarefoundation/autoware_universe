@@ -1,0 +1,9 @@
+# Save.srv
+uint8 RECORD = 0
+uint8 CANCEL = 1
+
+uint8 type  
+float32 interval
+---
+string file_name
+bool success

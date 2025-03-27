@@ -1,0 +1,15 @@
+<library path="waypoint_maker_rviz_plugin">
+
+  <class
+    type="rviz_plugins::WaypointSaverPanel"
+    base_class_type="rviz_common::Panel">
+    <description>WaypointSaverPanel for RViz2.</description>
+  </class>
+
+  <class
+    type="rviz_plugins::WaypointLoaderPanel"
+    base_class_type="rviz_common::Panel">
+    <description>WaypointLoaderPanel for RViz2.</description>
+  </class>
+
+</library>
