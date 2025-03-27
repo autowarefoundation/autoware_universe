@@ -15,14 +15,14 @@
 #ifndef TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_UTILS_HPP_
 #define TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_UTILS_HPP_
 
+#include <autoware_perception_msgs/msg/traffic_light_element.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <std_msgs/msg/header.hpp>
 #include <tier4_perception_msgs/msg/traffic_light.hpp>
-#include <tier4_perception_msgs/msg/traffic_light_element.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
+#include <tier4_perception_msgs/msg/traffic_light_element.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
-#include <autoware_perception_msgs/msg/traffic_light_element.hpp>
 
 namespace autoware::traffic_light
 {
@@ -75,7 +75,7 @@ autoware_perception_msgs::msg::TrafficLightElement convert(
  */
 int calVisibleScore(const autoware::traffic_light::FusionRecord & record);
 
-}  // namespace
+}  // namespace utils
 }  // namespace autoware::traffic_light
 
 #endif  // TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_UTILS_HPP_

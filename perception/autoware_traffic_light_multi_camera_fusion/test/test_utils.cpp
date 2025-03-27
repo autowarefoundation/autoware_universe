@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "../src/traffic_light_multi_camera_fusion_utils.hpp"
+
 #include <rclcpp/rclcpp.hpp>
 
 #include <gtest/gtest.h>
@@ -475,7 +476,8 @@ TEST(compareRecord, visible_check)
     r1.cam_info.width = 1440;
     r1.cam_info.height = 1080;
     // roi
-    r1.roi.roi.x_offset = 1440 - (100 + boundary_thres);;
+    r1.roi.roi.x_offset = 1440 - (100 + boundary_thres);
+    ;
     r1.roi.roi.y_offset = 1080 - (100 + boundary_thres);
     r1.roi.roi.width = 100;
     r1.roi.roi.height = 100;
@@ -618,7 +620,6 @@ TEST(compareRecord, confidence_check)
 }
 
 }  // namespace same_camera
-
 
 namespace different_camera
 {
@@ -946,7 +947,8 @@ TEST(compareRecord, visible_check)
     r1.cam_info.width = 1440;
     r1.cam_info.height = 1080;
     // roi
-    r1.roi.roi.x_offset = 1440 - (100 + boundary_thres);;
+    r1.roi.roi.x_offset = 1440 - (100 + boundary_thres);
+    ;
     r1.roi.roi.y_offset = 1080 - (100 + boundary_thres);
     r1.roi.roi.width = 100;
     r1.roi.roi.height = 100;
@@ -1088,7 +1090,7 @@ TEST(compareRecord, confidence_check)
   EXPECT_EQ(autoware::traffic_light::utils::compareRecord(r1, r2), -1);
 }
 
-} // namespace different_camera
+}  // namespace different_camera
 
 int main(int argc, char ** argv)
 {
