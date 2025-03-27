@@ -46,6 +46,10 @@ using ProfileDimsPtr = std::unique_ptr<std::vector<ProfileDims>>;
 using TensorsVec = std::vector<std::pair<void *, nvinfer1::Dims>>;
 using TensorsMap = std::unordered_map<const char *, std::pair<void *, nvinfer1::Dims>>;
 
+constexpr int TRT_MAJOR_IDX = 24;
+constexpr int TRT_MINOR_IDX = 25;
+constexpr int TRT_PATCH_IDX = 26;
+
 /**
  * @class TrtCommon
  * @brief TensorRT common library.
@@ -316,6 +320,13 @@ private:
    * @return Whether building engine is successful.
    */
   bool buildEngineFromOnnx();
+
+  /**
+   * @brief Validate TensorRT engine.
+   *
+   * @return Whether TensorRT version used for building engine is compatible.
+   */
+  bool validateEngine();
 
   /**
    * @brief Load TensorRT engine.
