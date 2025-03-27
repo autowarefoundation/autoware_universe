@@ -77,13 +77,14 @@ target_include_directories(concatenate_data PUBLIC
 
 ament_target_dependencies(concatenate_data
   SYSTEM
+  autoware_point_types
+  autoware_utils
+  autoware_vehicle_msgs
   pcl_conversions
+  pcl_ros
   rclcpp
   sensor_msgs
   tf2_ros
-  autoware_utils
-  pcl_ros
-  autoware_point_types
 )
 
 ament_auto_add_library(pointcloud_preprocessor_filter SHARED
