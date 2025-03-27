@@ -92,3 +92,9 @@ TEST(isInAngleRange, out_of_range)
   bool result = autoware::traffic_light::utils::isInAngleRange(tl_yaw, camera_yaw, max_angle_range);
   EXPECT_FALSE(result);
 }
+
+int main(int argc, char ** argv)
+{
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}
