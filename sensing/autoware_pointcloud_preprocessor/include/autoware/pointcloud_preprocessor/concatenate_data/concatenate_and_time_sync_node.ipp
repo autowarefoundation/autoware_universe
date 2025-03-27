@@ -207,8 +207,8 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::cloud_c
     RCLCPP_INFO(
       this->get_logger(), " pointcloud %s  timestamp: %lf arrive time: %lf seconds, latency: %lf",
       topic_name.c_str(), rclcpp::Time(input_ptr->header.stamp).seconds(),
-      this->get_clock()->now().seconds(),
-      this->get_clock()->now().seconds() - rclcpp::Time(input_ptr->header.stamp).seconds());
+      cloud_arrival_time,
+      cloud_arrival_time - rclcpp::Time(input_ptr->header.stamp).seconds());
   }
 
   if (input_ptr->width * input_ptr->height == 0) {
