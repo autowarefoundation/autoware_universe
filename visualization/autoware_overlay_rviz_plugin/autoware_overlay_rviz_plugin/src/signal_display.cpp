@@ -121,7 +121,7 @@ void SignalDisplay::onInitialize()
 
   speed_limit_topic_property_ = std::make_unique<rviz_common::properties::RosTopicProperty>(
     "Speed Limit Topic", "/planning/scenario_planning/current_max_velocity",
-    "tier4_planning_msgs/msg/VelocityLimit", "Topic for Speed Limit Data", this,
+    "autoware_internal_planning_msgs/msg/VelocityLimit", "Topic for Speed Limit Data", this,
     SLOT(topic_updated_speed_limit()));
   speed_limit_topic_property_->initialize(rviz_ros_node);
 
@@ -217,7 +217,7 @@ void SignalDisplay::updateTrafficLightData(
 }
 
 void SignalDisplay::updateSpeedLimitData(
-  const tier4_planning_msgs::msg::VelocityLimit::ConstSharedPtr msg)
+  const autoware_internal_planning_msgs::msg::VelocityLimit::ConstSharedPtr msg)
 {
   std::lock_guard<std::mutex> lock(property_mutex_);
 
@@ -438,12 +438,13 @@ void SignalDisplay::topic_updated_speed_limit()
   speed_limit_sub_.reset();
   auto rviz_ros_node = context_->getRosNodeAbstraction().lock();
   speed_limit_sub_ =
-    rviz_ros_node->get_raw_node()->create_subscription<tier4_planning_msgs::msg::VelocityLimit>(
-      speed_limit_topic_property_->getTopicStd(),
-      rclcpp::QoS(rclcpp::KeepLast(10)).transient_local(),
-      [this](const tier4_planning_msgs::msg::VelocityLimit::ConstSharedPtr msg) {
-        updateSpeedLimitData(msg);
-      });
+    rviz_ros_node->get_raw_node()
+      ->create_subscription<autoware_internal_planning_msgs::msg::VelocityLimit>(
+        speed_limit_topic_property_->getTopicStd(),
+        rclcpp::QoS(rclcpp::KeepLast(10)).transient_local(),
+        [this](const autoware_internal_planning_msgs::msg::VelocityLimit::ConstSharedPtr msg) {
+          updateSpeedLimitData(msg);
+        });
 }
 
 void SignalDisplay::topic_updated_turn_signals()

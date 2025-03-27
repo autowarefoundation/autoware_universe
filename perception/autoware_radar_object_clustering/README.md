@@ -2,7 +2,7 @@
 
 This package contains a radar object clustering for [autoware_perception_msgs/msg/DetectedObject](https://github.com/autowarefoundation/autoware_msgs/tree/main/autoware_perception_msgs/msg/DetectedObject.idl) input.
 
-This package can make clustered objects from radar DetectedObjects, the objects which is converted from RadarTracks by [radar_tracks_msgs_converter](https://github.com/autowarefoundation/autoware.universe/tree/main/perception/autoware_radar_tracks_msgs_converter) and is processed by noise filter.
+This package can make clustered objects from radar DetectedObjects, the objects which is converted from RadarTracks by [radar_tracks_msgs_converter](https://github.com/autowarefoundation/autoware_universe/tree/main/perception/autoware_radar_tracks_msgs_converter) and is processed by noise filter.
 In other word, this package can combine multiple radar detections from one object into one and adjust class and size.
 
 ![radar_clustering](docs/radar_clustering.drawio.svg)
@@ -44,7 +44,7 @@ When the size information from radar outputs lack accuracy, `is_fixed_size` para
 If the parameter is true, the size of a clustered object is overwritten by the label set by `size_x`, `size_y`, and `size_z` parameters.
 If this package use for faraway dynamic object detection with radar, the parameter is recommended to set to
 `size_x`, `size_y`, `size_z`, as average of vehicle size.
-Note that to use for [multi_objects_tracker](https://github.com/autowarefoundation/autoware.universe/tree/main/perception/autoware_multi_object_tracker), the size parameters need to exceed `min_area_matrix` parameters of it.
+Note that to use for [multi_objects_tracker](https://github.com/autowarefoundation/autoware_universe/tree/main/perception/autoware_multi_object_tracker), the size parameters need to exceed `min_area_matrix` parameters of it.
 
 ### Limitation
 

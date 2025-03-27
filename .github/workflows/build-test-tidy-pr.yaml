@@ -28,7 +28,7 @@ jobs:
 
       - name: Check if relevant files changed
         id: check
-        uses: tj-actions/changed-files@v45
+        uses: step-security/changed-files@v45
         with:
           files: |
             perception/**

@@ -149,8 +149,6 @@ void ObstacleStopModule::init(rclcpp::Node & node, const std::string & module_na
   common_param_ = CommonParam(node);
   stop_planning_param_ = StopPlanningParam(node, common_param_);
   obstacle_filtering_param_ = ObstacleFilteringParam(node);
-  use_pointcloud_ =
-    get_or_declare_parameter<bool>(node, "obstacle_stop.obstacle_filtering.object_type.pointcloud");
 
   // common publisher
   processing_time_publisher_ =
@@ -163,7 +161,6 @@ void ObstacleStopModule::init(rclcpp::Node & node, const std::string & module_na
   // module publisher
   debug_stop_planning_info_pub_ =
     node.create_publisher<Float32MultiArrayStamped>("~/debug/stop_planning_info", 1);
-  metrics_pub_ = node.create_publisher<MetricArray>("~/stop/metrics", 10);
   processing_time_detail_pub_ = node.create_publisher<autoware_utils::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms/obstacle_stop", 1);
   // interface publisher
@@ -198,7 +195,6 @@ VelocityPlanningResult ObstacleStopModule::plan(
   // 1. init variables
   stop_watch_.tic();
   debug_data_ptr_ = std::make_shared<DebugData>();
-  metrics_manager_.init();
   const double dist_to_bumper =
     calc_dist_to_bumper(planner_data->is_driving_forward, planner_data->vehicle_info_);
   stop_planning_debug_info_.reset();
@@ -305,7 +301,7 @@ std::vector<geometry_msgs::msg::Point> ObstacleStopModule::convert_point_cloud_t
       const auto min_lat_dist_to_traj_poly =
         std::abs(current_lat_dist_from_obstacle_to_traj) - vehicle_info.vehicle_width_m;
 
-      if (min_lat_dist_to_traj_poly >= p.max_lat_margin_against_unknown) {
+      if (min_lat_dist_to_traj_poly >= p.max_lat_margin) {
         continue;
       }
       const auto current_ego_to_obstacle_distance =
@@ -332,14 +328,10 @@ std::vector<geometry_msgs::msg::Point> ObstacleStopModule::convert_point_cloud_t
   return stop_collision_points;
 }
 
-std::optional<StopObstacle> ObstacleStopModule::create_stop_obstacle_for_point_cloud(
+StopObstacle ObstacleStopModule::create_stop_obstacle_for_point_cloud(
   const std::vector<TrajectoryPoint> & traj_points, const rclcpp::Time & stamp,
   const geometry_msgs::msg::Point & stop_point, const double dist_to_bumper) const
 {
-  if (!use_pointcloud_) {
-    return std::nullopt;
-  }
-
   const auto dist_to_collide_on_traj =
     autoware::motion_utils::calcSignedArcLength(traj_points, 0, stop_point) - dist_to_bumper;
 
@@ -349,18 +341,19 @@ std::optional<StopObstacle> ObstacleStopModule::create_stop_obstacle_for_point_c
   autoware_perception_msgs::msg::Shape bounding_box_shape;
   bounding_box_shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
 
-  ObjectClassification unknown_object_classification;
-  unknown_object_classification.label = ObjectClassification::UNKNOWN;
-  unknown_object_classification.probability = 1.0;
+  ObjectClassification unconfigured_object_classification;
 
   const geometry_msgs::msg::Pose unconfigured_pose;
   const double unconfigured_lon_vel = 0.;
 
   return StopObstacle{
-    obj_uuid_str, stamp,
-    unknown_object_classification,  // Since the obstacle is obtained from the point-cloud, the type
-                                    // is UNKNOWN
-    unconfigured_pose, bounding_box_shape, unconfigured_lon_vel, stop_point,
+    obj_uuid_str,
+    stamp,
+    unconfigured_object_classification,
+    unconfigured_pose,
+    bounding_box_shape,
+    unconfigured_lon_vel,
+    stop_point,
     dist_to_collide_on_traj};
 }
 
@@ -448,6 +441,10 @@ std::vector<StopObstacle> ObstacleStopModule::filter_stop_obstacle_for_point_clo
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
+  if (!obstacle_filtering_param_.use_pointcloud) {
+    return std::vector<StopObstacle>{};
+  }
+
   const auto & tp = trajectory_polygon_collision_check;
 
   const std::vector<geometry_msgs::msg::Point> stop_points =
@@ -468,10 +465,7 @@ std::vector<StopObstacle> ObstacleStopModule::filter_stop_obstacle_for_point_clo
     // Filter obstacles for stop
     const auto stop_obstacle = create_stop_obstacle_for_point_cloud(
       decimated_traj_points, stop_obstacle_stamp, stop_point, dist_to_bumper);
-    if (stop_obstacle) {
-      stop_obstacles.push_back(*stop_obstacle);
-      continue;
-    }
+    stop_obstacles.push_back(stop_obstacle);
   }
 
   std::vector<StopObstacle> past_stop_obstacles;
@@ -491,7 +485,7 @@ std::vector<StopObstacle> ObstacleStopModule::filter_stop_obstacle_for_point_clo
     const auto min_lat_dist_to_traj_poly =
       std::abs(lat_dist_from_obstacle_to_traj) - vehicle_info.vehicle_width_m;
 
-    if (min_lat_dist_to_traj_poly < obstacle_filtering_param_.max_lat_margin_against_unknown) {
+    if (min_lat_dist_to_traj_poly < obstacle_filtering_param_.max_lat_margin) {
       auto stop_obstacle = *itr;
       stop_obstacle.dist_to_collide_on_decimated_traj =
         autoware::motion_utils::calcSignedArcLength(
@@ -674,9 +668,7 @@ std::optional<StopObstacle> ObstacleStopModule::filter_outside_stop_obstacle_for
   }
 
   // 2. filter by lateral distance
-  const double max_lat_margin = obj_label == ObjectClassification::UNKNOWN
-                                  ? obstacle_filtering_param_.max_lat_margin_against_unknown
-                                  : obstacle_filtering_param_.max_lat_margin;
+  const double max_lat_margin = get_max_lat_margin(obj_label);
   if (dist_from_obj_poly_to_traj_poly < std::max(max_lat_margin, 1e-3)) {
     // Obstacle that is not inside of trajectory
     return std::nullopt;
@@ -1024,10 +1016,6 @@ std::optional<geometry_msgs::msg::Point> ObstacleStopModule::calc_stop_point(
     output_traj_points, planner_data->current_odometry.pose.pose, stop_pose, PlanningFactor::STOP,
     SafetyFactorArray{});
 
-  // Store stop reason debug data
-  metrics_manager_.calculate_metrics(
-    "PlannerInterface", "stop", planner_data, traj_points, stop_pose, *determined_stop_obstacle);
-
   prev_stop_distance_info_ = std::make_pair(output_traj_points, determined_zero_vel_dist.value());
 
   return stop_pose.position;
@@ -1113,14 +1101,10 @@ void ObstacleStopModule::publish_debug_info()
   // 4. objects of interest
   objects_of_interest_marker_interface_->publishMarkerArray();
 
-  // 5. metrics
-  const auto metrics_msg = metrics_manager_.create_metric_array(clock_->now());
-  metrics_pub_->publish(metrics_msg);
-
-  // 6. processing time
+  // 5. processing time
   processing_time_publisher_->publish(create_float64_stamped(clock_->now(), stop_watch_.toc()));
 
-  // 7. planning factor
+  // 6. planning factor
   planning_factor_interface_->publish();
 }
 
@@ -1327,7 +1311,7 @@ std::vector<StopObstacle> ObstacleStopModule::get_closest_stop_obstacles(
 double ObstacleStopModule::get_max_lat_margin(const uint8_t obj_label) const
 {
   if (obj_label == ObjectClassification::UNKNOWN) {
-    return obstacle_filtering_param_.max_lat_margin_against_unknown;
+    return obstacle_filtering_param_.max_lat_margin_against_predicted_object_unknown;
   }
   return obstacle_filtering_param_.max_lat_margin;
 }

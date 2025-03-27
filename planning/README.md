@@ -2,11 +2,11 @@
 
 ## Getting Started
 
-The Autoware.Universe Planning Modules represent a cutting-edge component within the broader open-source autonomous driving software stack. These modules play a pivotal role in autonomous vehicle navigation, skillfully handling route planning, dynamic obstacle avoidance, and real-time adaptation to varied traffic conditions.
+The Autoware Universe Planning Modules represent a cutting-edge component within the broader open-source autonomous driving software stack. These modules play a pivotal role in autonomous vehicle navigation, skillfully handling route planning, dynamic obstacle avoidance, and real-time adaptation to varied traffic conditions.
 
 - For high level concept of Planning Components, please refer to [Planning Component Design Document](https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-architecture/planning/)
 - To understand how Planning Components interacts with other components, please refer to [Planning Component Interface Document](https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-interfaces/components/planning/)
-- The [Node Diagram](https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-architecture/node-diagram/) illustrates the interactions, inputs, and outputs of all modules in the Autoware.Universe, including planning modules.
+- The [Node Diagram](https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-architecture/node-diagram/) illustrates the interactions, inputs, and outputs of all modules in the Autoware Universe, including planning modules.
 
 ## Planning Module
 
@@ -27,7 +27,7 @@ The `default_preset.yaml` file acts as the primary configuration file, where pla
 
     Click [here](https://github.com/autowarefoundation/autoware_launch/blob/main/autoware_launch/config/planning/preset/default_preset.yaml) to view the `default_preset.yaml`.
 
-The [launch files](https://github.com/autowarefoundation/autoware.universe/tree/main/launch/tier4_planning_launch/launch/scenario_planning/lane_driving) reference the settings defined in `default_preset.yaml` to apply the configurations when the behavior path planner's node is running. For instance, the parameter `avoidance.enable_module` in
+The [launch files](https://github.com/autowarefoundation/autoware_universe/tree/main/launch/tier4_planning_launch/launch/scenario_planning/lane_driving) reference the settings defined in `default_preset.yaml` to apply the configurations when the behavior path planner's node is running. For instance, the parameter `avoidance.enable_module` in
 
 ```xml
 <param name="avoidance.enable_module" value="$(var launch_avoidance_module)"/>
@@ -51,7 +51,7 @@ This guide outlines the steps for integrating your custom module into Autoware:
   default: "true"
 ```
 
-- Incorporate your modules into the [launcher](https://github.com/autowarefoundation/autoware.universe/tree/main/launch/tier4_planning_launch/launch/scenario_planning). For example, in [behavior_planning.launch.xml](https://github.com/autowarefoundation/autoware.universe/blob/main/launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning.launch.xml):
+- Incorporate your modules into the [launcher](https://github.com/autowarefoundation/autoware_universe/tree/main/launch/tier4_planning_launch/launch/scenario_planning). For example, in [behavior_planning.launch.xml](https://github.com/autowarefoundation/autoware_universe/blob/main/launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning.launch.xml):
 
 ```xml
 <arg name="launch_intersection_module" default="true"/>
@@ -70,7 +70,7 @@ This guide outlines the steps for integrating your custom module into Autoware:
 <arg name="behavior_velocity_planner_intersection_module_param_path" value="$(var behavior_velocity_config_path)/intersection.param.yaml"/>
 ```
 
-- Define your parameter path variable within the corresponding launcher. For example, in [behavior_planning.launch.xml](https://github.com/autowarefoundation/autoware.universe/blob/04aa54bf5fb0c88e70198ca74b9ac343cc3457bf/launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning.launch.xml#L191)
+- Define your parameter path variable within the corresponding launcher. For example, in [behavior_planning.launch.xml](https://github.com/autowarefoundation/autoware_universe/blob/04aa54bf5fb0c88e70198ca74b9ac343cc3457bf/launch/tier4_planning_launch/launch/scenario_planning/lane_driving/behavior_planning/behavior_planning.launch.xml#L191)
 
 ```xml
 <param from="$(var behavior_velocity_planner_intersection_module_param_path)"/>

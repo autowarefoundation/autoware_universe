@@ -72,27 +72,6 @@ void MotionVelocityPlannerManager::update_module_parameters(
   for (auto & plugin : loaded_plugins_) plugin->update_parameters(parameters);
 }
 
-std::shared_ptr<Metric> MotionVelocityPlannerManager::make_decision_metric(
-  const std::string & module_name, const std::string & reason)
-{
-  auto metric = std::make_shared<Metric>();
-  metric->name = module_name + "/decision";
-  metric->value = reason;
-  return metric;
-}
-
-std::shared_ptr<MetricArray> MotionVelocityPlannerManager::get_metrics(
-  const rclcpp::Time & current_time) const
-{
-  auto metrics = std::make_shared<MetricArray>();
-  metrics->stamp = current_time;
-
-  for (const auto & mtr_ptr : metrics_) {
-    metrics->metric_array.push_back(*mtr_ptr);
-  }
-  return metrics;
-}
-
 std::vector<VelocityPlanningResult> MotionVelocityPlannerManager::plan_velocities(
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & raw_trajectory_points,
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
@@ -105,16 +84,6 @@ std::vector<VelocityPlanningResult> MotionVelocityPlannerManager::plan_velocitie
     results.push_back(res);
 
     plugin->publish_planning_factor();
-
-    if (res.stop_points.size() > 0) {
-      const auto stop_decision_metric = make_decision_metric(plugin->get_module_name(), "stop");
-      metrics_.push_back(stop_decision_metric);
-    }
-    if (res.slowdown_intervals.size() > 0) {
-      const auto slow_down_decision_metric =
-        make_decision_metric(plugin->get_module_name(), "slow_down");
-      metrics_.push_back(slow_down_decision_metric);
-    }
   }
   return results;
 }

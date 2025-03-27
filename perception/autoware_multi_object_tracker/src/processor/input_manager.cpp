@@ -56,6 +56,20 @@ void InputStream::onMessage(
 
   types::DynamicObjectList dynamic_objects = types::toDynamicObjectList(objects, channel_.index);
 
+  // Model the object uncertainty only if it is not available
+  types::DynamicObjectList objects_with_uncertainty =
+    uncertainty::modelUncertainty(dynamic_objects);
+
+  // Transform the objects to the world frame
+  auto transformed_objects = odometry_->transformObjects(objects_with_uncertainty);
+  if (!transformed_objects) {
+    RCLCPP_WARN(
+      node_.get_logger(), "InputManager::onMessage %s: Failed to transform objects.",
+      channel_.long_name.c_str());
+    return;
+  }
+  dynamic_objects = transformed_objects.value();
+
   // object shape processing
   for (auto & object : dynamic_objects.objects) {
     const auto label =
@@ -90,20 +104,6 @@ void InputStream::onMessage(
 
     // if object extension is not reliable, enlarge covariance of position and extend shape
   }
-
-  // Model the object uncertainty only if it is not available
-  types::DynamicObjectList objects_with_uncertainty =
-    uncertainty::modelUncertainty(dynamic_objects);
-
-  // Transform the objects to the world frame
-  auto transformed_objects = odometry_->transformObjects(objects_with_uncertainty);
-  if (!transformed_objects) {
-    RCLCPP_WARN(
-      node_.get_logger(), "InputManager::onMessage %s: Failed to transform objects.",
-      channel_.long_name.c_str());
-    return;
-  }
-  dynamic_objects = transformed_objects.value();
 
   // Normalize the object uncertainty
   uncertainty::normalizeUncertainty(dynamic_objects);

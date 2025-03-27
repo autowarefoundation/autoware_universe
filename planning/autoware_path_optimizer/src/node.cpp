@@ -27,6 +27,7 @@
 #include <limits>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::path_optimizer
@@ -89,7 +90,8 @@ std::vector<double> calcSegmentLengthVector(const std::vector<TrajectoryPoint> &
 PathOptimizer::PathOptimizer(const rclcpp::NodeOptions & node_options)
 : Node("path_optimizer", node_options),
   vehicle_info_(autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo()),
-  debug_data_ptr_(std::make_shared<DebugData>())
+  debug_data_ptr_(std::make_shared<DebugData>()),
+  conditional_timer_(std::make_shared<ConditionalTimer>())
 {
   // interface publisher
   traj_pub_ = create_publisher<Trajectory>("~/output/path", 1);
@@ -134,6 +136,13 @@ PathOptimizer::PathOptimizer(const rclcpp::NodeOptions & node_options)
 
     // parameters for trajectory
     traj_param_ = TrajectoryParam(this);
+
+    // Diagnostics
+    {
+      updater_.setHardwareID("path_optimizer");
+      updater_.add(
+        "path_optimizer_emergency_stop", this, &PathOptimizer::onCheckPathOptimizationValid);
+    }
   }
 
   time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(debug_processing_time_detail_pub_);
@@ -267,6 +276,7 @@ void PathOptimizer::onPath(const Path::ConstSharedPtr path_ptr)
 
   // 5. publish debug data
   publishDebugData(planner_data.header);
+  updater_.force_update();
 
   // publish calculation_time
   // NOTE: This function must be called after measuring onPath calculation time
@@ -294,6 +304,20 @@ bool PathOptimizer::checkInputPath(const Path & path, rclcpp::Clock clock) const
   return true;
 }
 
+void PathOptimizer::onCheckPathOptimizationValid(diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  if (is_optimization_failed_) {
+    const std::string error_msg =
+      "[Path Optimizer]: Emergency Brake due to prolonged MPT Optimizer failure";
+    const auto diag_level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+    stat.summary(diag_level, error_msg);
+  } else {
+    const std::string error_msg = "[Path Optimizer]: MPT Optimizer successful";
+    const auto diag_level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+    stat.summary(diag_level, error_msg);
+  }
+}
+
 PlannerData PathOptimizer::createPlannerData(
   const Path & path, const Odometry::ConstSharedPtr ego_odom_ptr) const
 {
@@ -315,22 +339,15 @@ std::vector<TrajectoryPoint> PathOptimizer::generateOptimizedTrajectory(
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  const auto & input_traj_points = planner_data.traj_points;
-
   // 1. calculate trajectory with MPT
   //    NOTE: This function may return previously optimized trajectory points.
   //          Also, velocity on some points will not be updated for a logic purpose.
   auto optimized_traj_points = optimizeTrajectory(planner_data);
 
-  // 2. update velocity
-  //    NOTE: When optimization failed or is skipped, velocity in trajectory points must
-  //          be updated since velocity in input trajectory (path) may change.
-  applyInputVelocity(optimized_traj_points, input_traj_points, planner_data.ego_pose);
-
-  // 3. insert zero velocity when trajectory is over drivable area
+  // 2. insert zero velocity when trajectory is over drivable area
   insertZeroVelocityOutsideDrivableArea(planner_data, optimized_traj_points);
 
-  // 4. publish debug marker
+  // 3. publish debug marker
   publishDebugMarkerOfOptimization(optimized_traj_points);
 
   return optimized_traj_points;
@@ -339,6 +356,7 @@ std::vector<TrajectoryPoint> PathOptimizer::generateOptimizedTrajectory(
 std::vector<TrajectoryPoint> PathOptimizer::optimizeTrajectory(const PlannerData & planner_data)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  is_optimization_failed_ = false;
   const auto & p = planner_data;
 
   // 1. check if replan (= optimization) is required
@@ -365,7 +383,23 @@ std::vector<TrajectoryPoint> PathOptimizer::optimizeTrajectory(const PlannerData
   //    with model predictive trajectory
   const auto mpt_traj = mpt_optimizer_ptr_->optimizeTrajectory(planner_data);
 
-  return mpt_traj;
+  const bool optimized_traj_failed = !static_cast<bool>(mpt_traj);
+
+  conditional_timer_->update(optimized_traj_failed);
+
+  const double elapsed_time = conditional_timer_->getElapsedTime().count();
+  const bool elapsed_time_over_three_seconds = (elapsed_time > 3.0);
+
+  auto optimized_traj_points =
+    optimized_traj_failed && elapsed_time_over_three_seconds ? p.traj_points : std::move(*mpt_traj);
+  is_optimization_failed_ = optimized_traj_failed && elapsed_time_over_three_seconds;
+
+  // 3. update velocity
+  //    NOTE: When optimization failed or is skipped, velocity in trajectory points must
+  //          be updated since velocity in input trajectory (path) may change.
+  applyInputVelocity(optimized_traj_points, p.traj_points, planner_data.ego_pose);
+
+  return optimized_traj_points;
 }
 
 std::vector<TrajectoryPoint> PathOptimizer::getPrevOptimizedTrajectory(

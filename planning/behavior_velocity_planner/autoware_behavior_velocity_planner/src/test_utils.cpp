@@ -119,7 +119,7 @@ void publishMandatoryTopics(
     autoware_perception_msgs::msg::TrafficLightGroupArray{});
   test_manager->publishInput(
     test_target_node, "behavior_velocity_planner_node/input/external_velocity_limit_mps",
-    tier4_planning_msgs::msg::VelocityLimit{});
+    autoware_internal_planning_msgs::msg::VelocityLimit{});
   test_manager->publishInput(
     test_target_node, "behavior_velocity_planner_node/input/occupancy_grid",
     autoware::test_utils::makeCostMapMsg());

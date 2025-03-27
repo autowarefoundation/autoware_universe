@@ -64,3 +64,5 @@ The input trajectory is detected as invalid if the index exceeds the following t
 | `thresholds.over_velocity_offset`    | double | threshold velocity offset to valid the vehicle velocity [m/s]                                               | 2.0           |
 | `thresholds.over_velocity_ratio`     | double | threshold ratio to valid the vehicle velocity [*]                                                           | 0.2           |
 | `thresholds.overrun_stop_point_dist` | double | threshold distance to overrun stop point [m]                                                                | 0.8           |
+| `thresholds.acc_error_offset`        | double | threshold ratio to valid the vehicle acceleration [*]                                                       | 0.8           |
+| `thresholds.acc_error_scale`         | double | threshold acceleration to valid the vehicle acceleration [m]                                                | 0.2           |

@@ -135,7 +135,7 @@ ament_auto_package(
 
 # test
 # Temporary disabled, tracked by:
-# https://github.com/autowarefoundation/autoware.universe/issues/7724
+# https://github.com/autowarefoundation/autoware_universe/issues/7724
 #if(BUILD_TESTING)
 #  # launch_testing
 #  find_package(launch_testing_ament_cmake REQUIRED)

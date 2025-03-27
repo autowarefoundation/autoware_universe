@@ -20,19 +20,17 @@
 #include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
 #include "autoware_internal_debug_msgs/msg/float32_stamped.hpp"
 #include "autoware_internal_debug_msgs/msg/float64_stamped.hpp"
+#include "autoware_internal_planning_msgs/msg/velocity_limit.hpp"
+#include "autoware_internal_planning_msgs/msg/velocity_limit_clear_command.hpp"
 #include "autoware_perception_msgs/msg/predicted_object.hpp"
 #include "autoware_perception_msgs/msg/predicted_objects.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
-#include "tier4_planning_msgs/msg/velocity_limit.hpp"
-#include "tier4_planning_msgs/msg/velocity_limit_clear_command.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include <autoware_internal_planning_msgs/msg/planning_factor.hpp>
 #include <autoware_internal_planning_msgs/msg/safety_factor_array.hpp>
-#include <tier4_metric_msgs/msg/metric.hpp>
-#include <tier4_metric_msgs/msg/metric_array.hpp>
 
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -43,6 +41,8 @@ using autoware::vehicle_info_utils::VehicleInfo;
 using autoware_internal_debug_msgs::msg::Float32MultiArrayStamped;
 using autoware_internal_debug_msgs::msg::Float32Stamped;
 using autoware_internal_debug_msgs::msg::Float64Stamped;
+using autoware_internal_planning_msgs::msg::VelocityLimit;
+using autoware_internal_planning_msgs::msg::VelocityLimitClearCommand;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
@@ -53,15 +53,11 @@ using autoware_planning_msgs::msg::TrajectoryPoint;
 using geometry_msgs::msg::Twist;
 using nav_msgs::msg::Odometry;
 using sensor_msgs::msg::PointCloud2;
-using tier4_planning_msgs::msg::VelocityLimit;
-using tier4_planning_msgs::msg::VelocityLimitClearCommand;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 namespace bg = boost::geometry;
 using autoware_utils::Point2d;
 using autoware_utils::Polygon2d;
-using Metric = tier4_metric_msgs::msg::Metric;
-using MetricArray = tier4_metric_msgs::msg::MetricArray;
 using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
 using autoware_internal_planning_msgs::msg::PlanningFactor;
 using autoware_internal_planning_msgs::msg::SafetyFactorArray;
