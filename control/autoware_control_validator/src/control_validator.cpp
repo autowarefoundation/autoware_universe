@@ -244,6 +244,9 @@ void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
   };
 
   Control::ConstSharedPtr control_cmd_msg = msg;
+  if (!control_cmd_msg) {
+    return waiting(sub_control_cmd_->get_topic_name());
+  }
   Trajectory::ConstSharedPtr predicted_trajectory_msg = sub_predicted_traj_->take_data();
   if (!predicted_trajectory_msg) {
     return waiting(sub_reference_traj_->subscriber()->get_topic_name());
