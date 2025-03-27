@@ -1151,11 +1151,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/latest/sensing/autoware_vehicle_velocity_converter/</loc>
-         <lastmod>2025-03-27</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/latest/sensing/livox/autoware_livox_tag_filter/</loc>
          <lastmod>2025-03-27</lastmod>
          <changefreq>daily</changefreq>
