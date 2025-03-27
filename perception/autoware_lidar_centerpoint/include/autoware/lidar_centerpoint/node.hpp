@@ -62,7 +62,7 @@ private:
   double max_allowed_processing_time_ms_;
   double max_acceptable_consecutive_delay_ms_;
   // set optional to avoid sending the error diagnostics before node start processing
-  std::optional<rclcpp::Time> last_normal_processing_timestamp_;
+  std::optional<rclcpp::Time> last_in_time_processing_timestamp_;
 
   NonMaximumSuppression iou_bev_nms_;
   DetectionClassRemapper detection_class_remapper_;
