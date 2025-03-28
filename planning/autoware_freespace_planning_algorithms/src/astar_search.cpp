@@ -393,7 +393,7 @@ void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
       double extra_steering_penalty = extra_steering_penalty_factor_ * steering_ratio;
 
       // yaw deviation
-      double yaw_diff = autoware::universe_utils::normalize_radian(
+      double yaw_diff = autoware_utils::normalize_radian(
         tf2::getYaw(goal_pose_.orientation) - tf2::getYaw(next_pose.orientation));
       double yaw_cost = std::abs(yaw_diff) * yaw_weight;
 
@@ -683,7 +683,7 @@ double AstarSearch::computePathLength(const AstarNode & node) const
     const AstarNode * parent = current->parent;
     Pose parent_pose = node2pose(*parent);
 
-    double dist = autoware::universe_utils::calc_distance2d(current_pose, parent_pose);
+    double dist = autoware_utils::calc_distance2d(current_pose, parent_pose);
     total_length += dist;
 
     current = parent;
