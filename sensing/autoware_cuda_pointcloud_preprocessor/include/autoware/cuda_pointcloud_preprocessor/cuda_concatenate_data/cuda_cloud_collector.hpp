@@ -12,7 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
+#ifndef AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_CONCATENATE_DATA__CUDA_CLOUD_COLLECTOR_HPP_
+#define AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_CONCATENATE_DATA__CUDA_CLOUD_COLLECTOR_HPP_
 
 #include "autoware/pointcloud_preprocessor/concatenate_data/cloud_collector.hpp"
 #include "cuda_combine_cloud_handler.hpp"
+
+#endif  // AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_CONCATENATE_DATA__CUDA_CLOUD_COLLECTOR_HPP_
