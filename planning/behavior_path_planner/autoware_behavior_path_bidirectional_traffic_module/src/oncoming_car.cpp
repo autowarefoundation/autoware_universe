@@ -105,13 +105,13 @@ std::optional<std::pair<size_t, T>> find(const std::map<size_t, T> & map, const 
   return std::nullopt;
 }
 
-void erase(std::vector<CarObject> * oncoming_cars, const CarObject & car)
+void erase(std::vector<CarObject> * oncoming_cars, const size_t & key)
 {
   oncoming_cars->erase(
     std::remove_if(
       oncoming_cars->begin(), oncoming_cars->end(),
-      [&car](const CarObject & oncoming_car) {
-        return get_key(oncoming_car.get_uuid().uuid) == get_key(car.get_uuid().uuid);
+      [&key](const CarObject & oncoming_car) {
+        return get_key(oncoming_car.get_uuid().uuid) == key;
       }),
     oncoming_cars->end());
 }
@@ -152,6 +152,8 @@ void OncomingCars::update(
   autoware_perception_msgs::msg::PredictedObjects current_car_objects =
     extract_car_objects(predicted_objects);
 
+  std::vector<size_t> keys_to_erase;
+
   for (const auto & object : current_car_objects.objects) {
     size_t object_key = get_key(object.object_id.uuid);
     bool running_opposite_lane =
@@ -175,20 +177,34 @@ void OncomingCars::update(
           object.kinematics.initial_pose_with_covariance.pose,
           object.kinematics.initial_twist_with_covariance.twist.linear.x, object.object_id,
           bidirectional_lanelets_);
-        oncoming_cars_candidates_.erase(object_key);
+        keys_to_erase.emplace_back(object_key);
         logger_(fmt::format("Added oncoming car: {:03X}", object_key));
       }
     }
   }
+
+  for (const auto & key : keys_to_erase) {
+    oncoming_cars_candidates_.erase(key);
+  }
+
+  keys_to_erase.clear();
+
   for (const auto & [oncoming_cars_candidate, _] : oncoming_cars_candidates_) {
     auto car_object = find(current_car_objects, oncoming_cars_candidate);
     bool shold_remove_from_candidates =
       !car_object.has_value() ||
       !bidirectional_lanelets_->get_opposite()->is_object_on_this_lane(car_object.value());
     if (shold_remove_from_candidates) {
-      oncoming_cars_candidates_.erase(oncoming_cars_candidate);
+      // oncoming_cars_candidates_.erase(oncoming_cars_candidate);
+      keys_to_erase.emplace_back(oncoming_cars_candidate);
     }
   }
+
+  for (const auto & key : keys_to_erase) {
+    oncoming_cars_candidates_.erase(key);
+  }
+
+  keys_to_erase.clear();
 
   for (auto & oncoming_car : oncoming_cars_) {
     auto car_object = find(current_car_objects, get_key(oncoming_car.get_uuid().uuid));
@@ -200,13 +216,18 @@ void OncomingCars::update(
       (distance_on_lane(ego_pose, oncoming_car.get_pose(), bidirectional_lanelets_) < 0.0);
 
     if (should_remove_from_oncoming_car) {
-      erase(&oncoming_cars_, oncoming_car);
+      // erase(&oncoming_cars_, oncoming_car);
+      keys_to_erase.emplace_back(get_key(oncoming_car.get_uuid().uuid));
       logger_(fmt::format("Removed oncoming car: {:03X}", get_key(oncoming_car.get_uuid().uuid)));
     } else {
       oncoming_car.update(
         car_object.value().kinematics.initial_pose_with_covariance.pose,
         car_object.value().kinematics.initial_twist_with_covariance.twist.linear.x);
     }
+  }
+
+  for (const auto & key : keys_to_erase) {
+    erase(&oncoming_cars_, key);
   }
 }
 
