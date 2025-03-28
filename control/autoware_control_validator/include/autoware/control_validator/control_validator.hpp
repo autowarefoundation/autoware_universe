@@ -68,7 +68,7 @@ public:
     ControlValidatorStatus & res, const Control & control_cmd, rclcpp::Node & node) const;
 
 private:
-  double nominal_latency_threshold;
+  double nominal_latency_threshold{0.0};
 };
 
 /**
@@ -82,15 +82,15 @@ public:
   friend class TrajectoryValidatorTest;
   explicit TrajectoryValidator(rclcpp::Node & node)
   {
-    max_distance_deviation_threshold = autoware_utils::get_or_declare_parameter<double>(
-      node, "thresholds.max_distance_deviation_threshold");
+    max_distance_deviation_threshold =
+      autoware_utils::get_or_declare_parameter<double>(node, "thresholds.max_distance_deviation");
   };
   void validate(
     ControlValidatorStatus & res, const Trajectory & predicted_trajectory,
     const Trajectory & reference_trajectory) const;
 
 private:
-  double max_distance_deviation_threshold;
+  double max_distance_deviation_threshold{0.0};
 };
 
 /**
@@ -118,8 +118,8 @@ public:
 
 private:
   bool is_in_error_range() const;
-  double e_offset;
-  double e_scale;
+  double e_offset{0.0};
+  double e_scale{0.0};
   autoware::signal_processing::LowpassFilter1d desired_acc_lpf{0.0};
   autoware::signal_processing::LowpassFilter1d measured_acc_lpf{0.0};
 };
@@ -150,9 +150,9 @@ public:
     const Odometry & kinematics);
 
 private:
-  double rolling_back_velocity_th;
-  double over_velocity_ratio_th;
-  double over_velocity_offset_th;
+  double rolling_back_velocity_th{0.0};
+  double over_velocity_ratio_th{0.0};
+  double over_velocity_offset_th{0.0};
   autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf{0.0};
   autoware::signal_processing::LowpassFilter1d target_vel_lpf{0.0};
   bool hold_velocity_error_until_stop{false};
@@ -180,7 +180,7 @@ public:
 
 private:
   autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf{0.0};
-  double overrun_stop_point_dist_th;
+  double overrun_stop_point_dist_th{0.0};
 };
 
 /**
