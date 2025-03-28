@@ -142,7 +142,7 @@
               "default": 2.0
             },
             "module_list": {
-              "description": "list of modules to be checked for stop deciation, the `topic_prefix`/`module` topic should be available and publish the `autoware_internal_planning_msgs::PlanningFactorArray` message",
+              "description": "list of modules to be checked for stop decision, the `topic_prefix`/`module` topic should be available and publish the `autoware_internal_planning_msgs::PlanningFactorArray` message",
               "type": "array",
               "items": {
                 "type": "string"
@@ -203,7 +203,7 @@
               "type": "number",
               "default": 5.0
             },
-            "steer_rate_margin_radps": {
+            "steer_rate_margin": {
               "description": "margin of steer_rate [rad/s] around 0 to count as steer change",
               "type": "number",
               "default": 0.1
@@ -231,12 +231,8 @@
           "$ref": "#/definitions/autoware_planning_evaluator"
         }
       },
-      "required": [
-        "ros__parameters"
-      ]
+      "required": ["ros__parameters"]
     }
   },
-  "required": [
-    "/**"
-  ]
+  "required": ["/**"]
 }
