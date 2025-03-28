@@ -24,7 +24,8 @@ All Rights Reserved 2019-2020.
 #include "autoware/lidar_centerpoint/cuda_utils.hpp"
 #include "autoware/lidar_centerpoint/postprocess/circle_nms_kernel.hpp"
 #include "autoware/lidar_centerpoint/utils.hpp"
-#include "thrust/host_vector.h"
+
+#include <thrust/host_vector.h>
 
 namespace
 {
