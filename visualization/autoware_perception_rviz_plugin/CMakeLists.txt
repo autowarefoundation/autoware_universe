@@ -4,6 +4,7 @@ project(autoware_perception_rviz_plugin)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
+find_package(pluginlib REQUIRED)
 find_package(Qt5 REQUIRED COMPONENTS Widgets)
 
 set(OD_PLUGIN_LIB_SRC
