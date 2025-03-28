@@ -73,8 +73,8 @@ PlanningEvaluatorNode::PlanningEvaluatorNode(const rclcpp::NodeOptions & node_op
 
   metrics_accumulator_.steer_accumulator.parameters.window_duration_s =
     declare_parameter<double>("steer_change_count.window_duration_s");
-  metrics_accumulator_.steer_accumulator.parameters.steer_rate_margin_radps =
-    declare_parameter<double>("steer_change_count.steer_rate_margin_radps");
+  metrics_accumulator_.steer_accumulator.parameters.steer_rate_margin =
+    declare_parameter<double>("steer_change_count.steer_rate_margin");
 
   metrics_accumulator_.blinker_accumulator.parameters.window_duration_s =
     declare_parameter<double>("blinker_change_count.window_duration_s");

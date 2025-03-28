@@ -117,7 +117,7 @@ static const std::unordered_map<OutputMetric, std::string> output_metric_to_str 
 static const std::unordered_map<OutputMetric, std::string> output_metric_descriptions = {
   {OutputMetric::curvature, "Statics of published curvature metrics"},
   {OutputMetric::point_interval, "Statics of published point_interval metrics"},
-  {OutputMetric::relative_angle, "Statics of published relative_anglemetrics"},
+  {OutputMetric::relative_angle, "Statics of published relative_angle metrics"},
   {OutputMetric::resampled_relative_angle, "Statics of published resampled_relative_angle metrics"},
   {OutputMetric::length, "Statics of published length metrics"},
   {OutputMetric::duration, "Statics of published duration metrics"},
