@@ -73,6 +73,8 @@ autoware::pointcloud_preprocessor::Filter::Filter(
     tf_input_frame_ = static_cast<std::string>(declare_parameter("input_frame", ""));
     tf_output_frame_ = static_cast<std::string>(declare_parameter("output_frame", ""));
     has_static_tf_only_ = static_cast<bool>(declare_parameter("has_static_tf_only", false));
+    use_pc_stamp_for_dynamic_transform_lookup_ =
+      static_cast<bool>(declare_parameter("use_pc_stamp_for_dynamic_transform_lookup", false));
     max_queue_size_ = static_cast<std::size_t>(declare_parameter("max_queue_size", 5));
 
     // ---[ Optional parameters
@@ -123,8 +125,8 @@ void autoware::pointcloud_preprocessor::Filter::setupTF()
     }
     has_static_tf_only_ = true;
   }
-  managed_tf_buffer_ =
-    std::make_unique<autoware_utils::ManagedTransformBuffer>(this, has_static_tf_only_);
+  managed_tf_buffer_ = std::make_unique<autoware_utils::ManagedTransformBuffer>(
+    this, has_static_tf_only_, use_pc_stamp_for_dynamic_transform_lookup_);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -307,9 +309,12 @@ bool autoware::pointcloud_preprocessor::Filter::calculate_transform_matrix(
   RCLCPP_DEBUG(
     this->get_logger(), "[get_transform_matrix] Transforming input dataset from %s to %s.",
     from.header.frame_id.c_str(), target_frame.c_str());
-
+  rclcpp::Time lookup_time = rclcpp::Time(0);
+  if (use_pc_stamp_for_dynamic_transform_lookup_) {
+    lookup_time = rclcpp::Time(from.header.stamp);
+  }
   if (!managed_tf_buffer_->get_transform(
-        target_frame, from.header.frame_id, transform_info.eigen_transform)) {
+        target_frame, from.header.frame_id, lookup_time, transform_info.eigen_transform)) {
     return false;
   }
 

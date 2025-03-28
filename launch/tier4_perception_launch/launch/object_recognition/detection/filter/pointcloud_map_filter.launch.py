@@ -110,6 +110,7 @@ class PointcloudMapFilterPipeline:
                     self.pointcloud_map_filter_param,
                     {
                         "input_frame": "map",
+                        "use_pc_stamp_for_dynamic_transform_lookup": True,
                     },
                 ],
                 extra_arguments=[
