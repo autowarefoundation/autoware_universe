@@ -17,7 +17,6 @@ from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import ComposableNodeContainer
-from launch_ros.actions import Node
 from launch_ros.descriptions import ComposableNode
 from launch_ros.parameter_descriptions import ParameterFile
 from launch_ros.substitutions import FindPackageShare
@@ -64,11 +63,5 @@ def generate_launch_description():
         ros_arguments=["--log-level", "adapi.container:=WARN"],
         composable_node_descriptions=components,
     )
-    web_server = Node(
-        namespace="adapi",
-        package="autoware_default_adapi",
-        name="web_server",
-        executable="web_server.py",
-    )
     argument = DeclareLaunchArgument("config", default_value=get_default_config())
-    return launch.LaunchDescription([argument, container, web_server])
+    return launch.LaunchDescription([argument, container])
