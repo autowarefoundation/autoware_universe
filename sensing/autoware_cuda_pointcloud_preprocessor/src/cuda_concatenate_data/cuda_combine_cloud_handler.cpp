@@ -129,7 +129,7 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
 
   concatenate_cloud_result.concatenate_cloud_ptr = std::move(concatenated_cloud_ptr_);
 
-  PointTypeStruct * output_points =
+  auto * output_points =
     reinterpret_cast<PointTypeStruct *>(concatenate_cloud_result.concatenate_cloud_ptr->data.get());
   std::size_t concatenated_start_index = 0;
 
