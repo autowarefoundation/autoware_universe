@@ -62,7 +62,7 @@ public:
   explicit LatencyValidator(rclcpp::Node & node)
   {
     nominal_latency_threshold = autoware_utils::get_or_declare_parameter<double>(
-      node, "thresholds.nominal_latency_threshold");
+      node, "thresholds.nominal_latency");
   };
   void validate(
     ControlValidatorStatus & res, const Control & control_cmd, rclcpp::Node & node) const;
