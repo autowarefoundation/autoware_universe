@@ -121,7 +121,7 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
   const auto point_fields = topic_to_cloud_map.begin()->second->fields;
 
   if (total_data_size > max_concat_pointcloud_size_ || !concatenated_cloud_ptr_) {
-    max_concat_pointcloud_size_ = (total_data_size + 1024) / 1024 * 1024;
+    max_concat_pointcloud_size_ = 1024 * (1 + total_data_size / 1024);
     concatenated_cloud_ptr_ = std::make_unique<cuda_blackboard::CudaPointCloud2>();
     concatenated_cloud_ptr_->data = cuda_blackboard::make_unique<std::uint8_t[]>(
       max_concat_pointcloud_size_ * input_topics_.size());
