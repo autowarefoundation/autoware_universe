@@ -3,6 +3,7 @@ project(autoware_freespace_planning_algorithms)
 
 find_package(autoware_cmake REQUIRED)
 find_package(python_cmake_module REQUIRED)
+find_package(autoware_utils REQUIRED)
 
 autoware_package()
 ament_python_install_package(${PROJECT_NAME})
@@ -27,6 +28,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 
 target_link_libraries(${PROJECT_NAME}
   reeds_shepp
+  autoware_utils
 )
 
 if(BUILD_TESTING)
