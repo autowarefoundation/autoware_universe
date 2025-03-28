@@ -66,14 +66,14 @@ ElevationMapLoaderNode::ElevationMapLoaderNode(const rclcpp::NodeOptions & optio
   param_file_path_ = this->declare_parameter("param_file_path", "path_default");
   map_frame_ = this->declare_parameter("map_frame", "map");
   bool use_sequential_load = this->declare_parameter<bool>("use_sequential_load", true);
-  int sequential_map_load_num_int = this->declare_parameter<int>("sequential_map_load_num", 1);
+  int sequential_map_load_num_int = this->declare_parameter<int>("sequential_map_load_num");
   if (sequential_map_load_num_int > 0) {
     sequential_map_load_num_ = (unsigned int)sequential_map_load_num_int;
   } else {
     throw std::runtime_error("sequential_map_load_num should be larger than 0.");
   }
   use_inpaint_ = this->declare_parameter("use_inpaint", true);
-  inpaint_radius_ = this->declare_parameter("inpaint_radius", 0.3);
+  inpaint_radius_ = this->declare_parameter("inpaint_radius");
   use_elevation_map_cloud_publisher_ =
     this->declare_parameter("use_elevation_map_cloud_publisher", false);
   elevation_map_directory_ = this->declare_parameter("elevation_map_directory", "path_default");
@@ -81,7 +81,7 @@ ElevationMapLoaderNode::ElevationMapLoaderNode(const rclcpp::NodeOptions & optio
   data_manager_.use_lane_filter_ = use_lane_filter;
 
   lane_filter_.use_lane_filter_ = use_lane_filter;
-  lane_filter_.lane_margin_ = this->declare_parameter("lane_margin", 0.0);
+  lane_filter_.lane_margin_ = this->declare_parameter("lane_margin");
 
   rclcpp::QoS durable_qos{1};
   durable_qos.transient_local();
