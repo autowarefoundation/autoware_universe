@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/lane_departure_checker/lane_departure_checker.hpp"
+#include "autoware/boundary_departure_checker/boundary_departure_checker.hpp"
 
-#include "autoware/lane_departure_checker/utils.hpp"
+#include "autoware/boundary_departure_checker/utils.hpp"
 
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
@@ -68,11 +68,6 @@ Output LaneDepartureChecker::update(const Input & input)
   Output output{};
 
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
-
-  output.trajectory_deviation = utils::calcTrajectoryDeviation(
-    *input.reference_trajectory, input.current_odom->pose.pose, param_.ego_nearest_dist_threshold,
-    param_.ego_nearest_yaw_threshold);
-  output.processing_time_map["calcTrajectoryDeviation"] = stop_watch.toc(true);
 
   {
     constexpr double min_velocity = 0.01;
