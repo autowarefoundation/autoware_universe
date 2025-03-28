@@ -22,6 +22,15 @@ The `downsample_filter` is a node that reduces the number of points.
 
 This algorithm samples a single actual point existing within the voxel, not the centroid. The computation cost is low compared to Centroid Based Voxel Grid Filter.
 
+### ROI Excluded Voxel Grid Downsample Filter
+
+This filter provides selective downsampling that preserves detailed point data in critical regions while reducing overall point cloud density:
+
+1. Points are classified based on their position relative to a defined Region of Interest (ROI)
+2. Points inside the ROI are preserved at their original density (no downsampling)
+3. Points outside the ROI undergo standard voxel grid downsampling
+4. The final output combines both sets of points
+
 ## Inputs / Outputs
 
 These implementations inherit `autoware::pointcloud_preprocessor::Filter` class, please refer [README](../README.md).
@@ -49,6 +58,10 @@ These implementations inherit `autoware::pointcloud_preprocessor::Filter` class,
 ### Pickup Based Voxel Grid Downsample Filter
 
 {{ json_to_markdown("sensing/autoware_pointcloud_preprocessor/schema/pickup_based_voxel_grid_downsample_filter_node.schema.json") }}
+
+### ROI Excluded Voxel Grid Downsample Filter
+
+{{ json_to_markdown("sensing/autoware_pointcloud_preprocessor/schema/roi_excluded_voxel_grid_downsample_filter_node.schema.json") }}
 
 ## Assumptions / Known limits
 

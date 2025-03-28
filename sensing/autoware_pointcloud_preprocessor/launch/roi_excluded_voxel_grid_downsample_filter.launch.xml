@@ -1,0 +1,23 @@
+<launch>
+  <arg name="input_topic" default="/sensing/lidar/concatenated/pointcloud"/>
+  <arg name="output_topic" default="/sensing/lidar/pointcloud/roi_excluded_downsampled"/>
+  <arg name="voxel_size_x" default="0.3"/>
+  <arg name="voxel_size_y" default="0.3"/>
+  <arg name="voxel_size_z" default="0.1"/>
+  <arg name="roi_x_min" default="-10.0"/>
+  <arg name="roi_x_max" default="10.0"/>
+  <arg name="roi_y_min" default="-10.0"/>
+  <arg name="roi_y_max" default="10.0"/>
+
+  <node pkg="autoware_pointcloud_preprocessor" exec="roi_excluded_voxel_grid_downsample_filter_node" name="roi_excluded_voxel_grid_downsample_filter_node" output="screen">
+    <remap from="input" to="$(var input_topic)"/>
+    <remap from="output" to="$(var output_topic)"/>
+    <param name="voxel_size_x" value="$(var voxel_size_x)"/>
+    <param name="voxel_size_y" value="$(var voxel_size_y)"/>
+    <param name="voxel_size_z" value="$(var voxel_size_z)"/>
+    <param name="roi_x_min" value="$(var roi_x_min)"/>
+    <param name="roi_x_max" value="$(var roi_x_max)"/>
+    <param name="roi_y_min" value="$(var roi_y_min)"/>
+    <param name="roi_y_max" value="$(var roi_y_max)"/>
+  </node>
+</launch>
