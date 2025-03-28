@@ -45,7 +45,7 @@ public:
   struct Parameters
   {
     double window_duration_s = 5.0;  // [s] Duration to count steer_rate changes for publishing
-    double steer_rate_margin_radps =
+    double steer_rate_margin =
       0.1;       // [rad/s] margin of steer_rate around 0 to count as steering change
   } parameters;  // struct Parameters
 

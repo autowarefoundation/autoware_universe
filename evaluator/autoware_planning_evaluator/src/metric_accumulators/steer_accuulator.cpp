@@ -32,7 +32,7 @@ void SteerAccumulator::update(const SteeringReport & msg)
   const double dt = cur_t - steer_state_.timestamp;
   const double cur_steer_rate = (cur_steer_angle - steer_state_.steer_angle) / dt;
   const SteerRateState cur_steer_rate_state =
-    std::abs(cur_steer_rate) < parameters.steer_rate_margin_radps
+    std::abs(cur_steer_rate) < parameters.steer_rate_margin
       ? SteerRateState::AROUND_ZERO
       : (cur_steer_rate > 0 ? SteerRateState::POSITIVE : SteerRateState::NEGATIVE);
 
