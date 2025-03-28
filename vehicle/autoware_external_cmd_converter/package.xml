@@ -13,6 +13,7 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
+  <depend>autoware_adapi_v1_msgs</depend>
   <depend>autoware_control_msgs</depend>
   <depend>autoware_raw_vehicle_cmd_converter</depend>
   <depend>autoware_test_utils</depend>
@@ -24,7 +25,6 @@
   <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>
   <depend>tier4_control_msgs</depend>
-  <depend>tier4_external_api_msgs</depend>
   <depend>tier4_system_msgs</depend>
 
   <test_depend>ament_cmake_ros</test_depend>

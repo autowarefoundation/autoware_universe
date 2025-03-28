@@ -14,3 +14,11 @@
 /adapi/node/vehicle_door:
   ros__parameters:
     check_autoware_control: true
+
+/adapi/node/manual/local:
+  ros__parameters:
+    mode: local
+
+/adapi/node/manual/remote:
+  ros__parameters:
+    mode: remote

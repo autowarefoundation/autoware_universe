@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pathlib
+
 import launch
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
@@ -22,10 +24,11 @@ from launch_ros.parameter_descriptions import ParameterFile
 from launch_ros.substitutions import FindPackageShare
 
 
-def create_api_node(node_name, class_name, **kwargs):
+def create_api_node(node_name, class_name):
+    fullname = pathlib.Path("adapi/node") / node_name
     return ComposableNode(
-        namespace="adapi/node",
-        name=node_name,
+        namespace=str(fullname.parent),
+        name=str(fullname.name),
         package="autoware_default_adapi",
         plugin="autoware::default_adapi::" + class_name,
         parameters=[ParameterFile(LaunchConfiguration("config"))],
@@ -46,6 +49,8 @@ def generate_launch_description():
         create_api_node("heartbeat", "HeartbeatNode"),
         create_api_node("interface", "InterfaceNode"),
         create_api_node("localization", "LocalizationNode"),
+        create_api_node("manual/local", "ManualControlNode"),
+        create_api_node("manual/remote", "ManualControlNode"),
         create_api_node("motion", "MotionNode"),
         create_api_node("operation_mode", "OperationModeNode"),
         create_api_node("perception", "PerceptionNode"),
