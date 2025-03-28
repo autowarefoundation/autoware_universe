@@ -24,7 +24,7 @@
 
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/motion_velocity_planner_common_universe/planner_data.hpp>
+#include <autoware/motion_velocity_planner_common/planner_data.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
