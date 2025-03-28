@@ -753,6 +753,11 @@ bool PlanningValidator::checkTrajectoryShift(
 
   const auto lat_shift =
     std::abs(autoware_utils::calc_lateral_deviation(prev_nearest_pose, nearest_pose.position));
+  const auto lon_shift =
+    autoware_utils::calc_longitudinal_deviation(prev_nearest_pose, nearest_pose.position);
+
+  validation_status_.lateral_shift = lat_shift;
+  validation_status_.longitudinal_shift = lon_shift;
 
   if (
     ego_lat_dist > params_.validation_params.trajectory_shift.lat_shift_th &&
@@ -766,9 +771,6 @@ bool PlanningValidator::checkTrajectoryShift(
   if (*nearest_seg_idx > 0 && *nearest_seg_idx < trajectory.points.size() - 1) {
     return true;
   }
-
-  const auto lon_shift =
-    autoware_utils::calc_longitudinal_deviation(prev_nearest_pose, nearest_pose.position);
 
   if (*nearest_seg_idx == 0) {
     if (lon_shift < std::numeric_limits<double>::epsilon()) {

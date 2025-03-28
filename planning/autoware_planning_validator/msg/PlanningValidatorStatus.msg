@@ -36,8 +36,7 @@ float64 forward_trajectory_length_required
 float64 forward_trajectory_length_measured
 float64 latency
 float64 yaw_deviation
-float64 max_lateral_shift
-float64 max_forward_shift
-float64 max_backward_shift
+float64 lateral_shift
+float64 longitudinal_shift
 
 int64 invalid_count
