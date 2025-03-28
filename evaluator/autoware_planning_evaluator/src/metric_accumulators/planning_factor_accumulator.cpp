@@ -111,8 +111,9 @@ bool PlanningFactorAccumulator::addMetricMsg(
   bool added = false;
   if (metric == Metric::stop_decision || metric == Metric::abnormal_stop_decision) {
     for (const auto & module : stop_decision_modules_) {
-      auto & state = metric == Metric::stop_decision ? stop_decision_state_.at(module)
-                                                     : abnormal_stop_decision_state_.at(module);
+      const auto & state = metric == Metric::stop_decision
+                             ? stop_decision_state_.at(module)
+                             : abnormal_stop_decision_state_.at(module);
       if (state.is_stop_decision) {
         metric_msg.name = base_name + module + "/keep_duration";
         metric_msg.value = std::to_string(state.stop_decision_keep_time);
@@ -132,7 +133,6 @@ json PlanningFactorAccumulator::getOutputJson(const OutputMetric & output_metric
 {
   json j;
 
-  const std::string base_name = output_metric_to_str.at(output_metric) + "/";
   if (
     output_metric == OutputMetric::stop_decision ||
     output_metric == OutputMetric::abnormal_stop_decision) {
