@@ -1,0 +1,114 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_ground_segmentation parameters",
+  "type": "object",
+  "definitions": {
+    "ransac_ground_filter": {
+      "type": "object",
+      "properties": {
+        "base_frame": {
+          "type": "string",
+          "description": "The reference coordinate frame for the base.",
+          "default": "base_link"
+        },
+        "unit_axis": {
+          "type": "string",
+          "description": "The primary axis used for unit vector computations.",
+          "default": "z"
+        },
+        "max_iterations": {
+          "type": "integer",
+          "description": "The maximum number of iterations for the segmentation algorithm.",
+          "default": 1000
+        },
+        "min_trial": {
+          "type": "integer",
+          "description": "The minimum number of trials required for segmentation.",
+          "default": 5000
+        },
+        "min_points": {
+          "type": "integer",
+          "description": "The minimum number of points required to fit a plane.",
+          "default": 1000
+        },
+        "outlier_threshold": {
+          "type": "number",
+          "description": "Threshold for detecting outliers in the plane segmentation process.",
+          "default": 0.01
+        },
+        "plane_slope_threshold": {
+          "type": "number",
+          "description": "Maximum allowable slope angle for detected planes (in degrees).",
+          "default": 10.0
+        },
+        "voxel_size_x": {
+          "type": "number",
+          "description": "Voxel grid size in the X direction.",
+          "default": 0.04
+        },
+        "voxel_size_y": {
+          "type": "number",
+          "description": "Voxel grid size in the Y direction.",
+          "default": 0.04
+        },
+        "voxel_size_z": {
+          "type": "number",
+          "description": "Voxel grid size in the Z direction.",
+          "default": 0.04
+        },
+        "height_threshold": {
+          "type": "number",
+          "description": "Height difference threshold for plane segmentation.",
+          "default": 0.01
+        },
+        "debug": {
+          "type": "boolean",
+          "description": "Enable debug mode for additional logging and output.",
+          "default": false
+        },
+        "publish_processing_time_detail": {
+          "type": "boolean",
+          "description": "Enable publishing of detailed processing time for debugging.",
+          "default": false
+        }
+      },
+      "required": [
+        "base_frame",
+        "unit_axis",
+        "max_iterations",
+        "min_trial",
+        "min_points",
+        "outlier_threshold",
+        "plane_slope_threshold",
+        "voxel_size_x",
+        "voxel_size_y",
+        "voxel_size_z",
+        "height_threshold",
+        "debug",
+        "publish_processing_time_detail"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "type": "object",
+          "properties": {
+            "plane_segmentation": {
+              "$ref": "#/definitions/ransac_ground_filter"
+            }
+          },
+          "required": ["plane_segmentation"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

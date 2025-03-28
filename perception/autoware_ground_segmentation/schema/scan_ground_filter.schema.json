@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_ground_segmentation",
+  "type": "object",
+  "definitions": {
+    "scan_ground_filter": {
+      "type": "object",
+      "properties": {
+        "global_slope_max_angle_deg": {
+          "type": "number",
+          "description": "Maximum allowable global slope angle in degrees.",
+          "default": 10.0
+        },
+        "local_slope_max_angle_deg": {
+          "type": "number",
+          "description": "Maximum allowable local slope angle in degrees. Recommended 30.0 for non-elevation grid mode.",
+          "default": 13.0
+        },
+        "split_points_distance_tolerance": {
+          "type": "number",
+          "description": "Distance tolerance for splitting points.",
+          "default": 0.2
+        },
+        "use_virtual_ground_point": {
+          "type": "boolean",
+          "description": "Enable the use of virtual ground points.",
+          "default": true
+        },
+        "split_height_distance": {
+          "type": "number",
+          "description": "Height distance threshold for point splitting.",
+          "default": 0.2
+        },
+        "non_ground_height_threshold": {
+          "type": "number",
+          "description": "Height threshold for classifying non-ground points.",
+          "default": 0.2
+        },
+        "grid_size_m": {
+          "type": "number",
+          "description": "Grid size in meters for ground segmentation.",
+          "default": 0.5
+        },
+        "grid_mode_switch_radius": {
+          "type": "number",
+          "description": "Radius at which to switch grid mode.",
+          "default": 20.0
+        },
+        "gnd_grid_buffer_size": {
+          "type": "integer",
+          "description": "Buffer size for ground grid processing.",
+          "default": 4
+        },
+        "detection_range_z_max": {
+          "type": "number",
+          "description": "Maximum detection range in the Z direction.",
+          "default": 2.5
+        },
+        "elevation_grid_mode": {
+          "type": "boolean",
+          "description": "Enable elevation grid mode for ground filtering.",
+          "default": true
+        },
+        "low_priority_region_x": {
+          "type": "number",
+          "description": "X-coordinate defining the low-priority region.",
+          "default": -20.0
+        },
+        "center_pcl_shift": {
+          "type": "number",
+          "description": "Shift applied to the center of the point cloud.",
+          "default": 0.0
+        },
+        "radial_divider_angle_deg": {
+          "type": "number",
+          "description": "Angle step for radial segmentation in degrees.",
+          "default": 1.0
+        },
+        "use_recheck_ground_cluster": {
+          "type": "boolean",
+          "description": "Enable rechecking of ground clusters for refinement.",
+          "default": true
+        },
+        "use_lowest_point": {
+          "type": "boolean",
+          "description": "Use the lowest point for ground estimation.",
+          "default": true
+        },
+        "publish_processing_time_detail": {
+          "type": "boolean",
+          "description": "Enable publishing of detailed processing time for debugging.",
+          "default": false
+        }
+      },
+      "required": [
+        "global_slope_max_angle_deg",
+        "local_slope_max_angle_deg",
+        "split_points_distance_tolerance",
+        "use_virtual_ground_point",
+        "split_height_distance",
+        "non_ground_height_threshold",
+        "grid_size_m",
+        "grid_mode_switch_radius",
+        "gnd_grid_buffer_size",
+        "detection_range_z_max",
+        "elevation_grid_mode",
+        "low_priority_region_x",
+        "center_pcl_shift",
+        "radial_divider_angle_deg",
+        "use_recheck_ground_cluster",
+        "use_lowest_point",
+        "publish_processing_time_detail"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "type": "object",
+          "properties": {
+            "ground_filtering": {
+              "$ref": "#/definitions/scan_ground_filter"
+            }
+          },
+          "required": ["ground_filtering"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
