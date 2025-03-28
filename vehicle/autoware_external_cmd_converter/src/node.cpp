@@ -128,8 +128,8 @@ void ExternalCmdConverterNode::on_pedals_cmd(const PedalsCommand::ConstSharedPtr
   // Publish ControlCommand
   autoware_control_msgs::msg::Control output;
   output.stamp = pedals->stamp;
-  output.lateral.steering_tire_angle = static_cast<float>(steering->steering_tire_angle);
-  output.lateral.steering_tire_rotation_rate = 0.0;
+  output.lateral.steering_tire_angle = steering->steering_tire_angle;
+  output.lateral.steering_tire_rotation_rate = steering->steering_tire_velocity;
   output.longitudinal.velocity = static_cast<float>(ref_velocity);
   output.longitudinal.acceleration = static_cast<float>(ref_acceleration);
 
