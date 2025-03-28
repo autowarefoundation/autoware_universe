@@ -76,7 +76,6 @@ ament_auto_add_library(cuda_pointcloud_preprocessor SHARED
 target_link_libraries(cuda_pointcloud_preprocessor
   ${CUDA_LIBRARIES}
   ${diagnostic_msgs_LIBRARIES}
-  ${diagnostic_msgs_LIBRARIES}
   cuda_pointcloud_preprocessor_lib
 )
 
