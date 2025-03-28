@@ -84,7 +84,7 @@ rclcpp_components_register_node(cuda_pointcloud_preprocessor
   PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaPointCloudConcatenateDataSynchronizerComponent"
   EXECUTABLE cuda_concatenate_and_time_sync_node)
 
-# ========== Concatenate and Sync data ==========
+# ========== Pointcloud preprocessor ==========
 rclcpp_components_register_node(cuda_pointcloud_preprocessor
   PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaPointcloudPreprocessorNode"
   EXECUTABLE cuda_pointcloud_preprocessor_node
