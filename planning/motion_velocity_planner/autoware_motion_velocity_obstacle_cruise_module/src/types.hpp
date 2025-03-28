@@ -15,8 +15,8 @@
 #ifndef TYPES_HPP_
 #define TYPES_HPP_
 
-#include "autoware/motion_velocity_planner_common_universe/planner_data.hpp"
-#include "autoware/motion_velocity_planner_common_universe/polygon_utils.hpp"
+#include "autoware/motion_velocity_planner_common/planner_data.hpp"
+#include "autoware/motion_velocity_planner_common/polygon_utils.hpp"
 #include "type_alias.hpp"
 
 #include <algorithm>
