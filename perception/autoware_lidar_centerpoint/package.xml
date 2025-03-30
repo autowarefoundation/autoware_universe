@@ -5,7 +5,6 @@
   <version>0.43.0</version>
   <description>The autoware_lidar_centerpoint package</description>
   <maintainer email="kenzo.lobos@tier4.jp">Kenzo Lobos-Tsunekawa</maintainer>
-  <maintainer email="koji.minoda@tier4.jp">Koji Minoda</maintainer>
   <maintainer email="amadeusz.szymko.2@tier4.jp">Amadeusz Szymko</maintainer>
   <license>Apache License 2.0</license>
 
