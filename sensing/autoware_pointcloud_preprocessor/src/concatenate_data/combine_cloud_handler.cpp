@@ -201,6 +201,3 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
 }
 
 }  // namespace autoware::pointcloud_preprocessor
-
-template class autoware::pointcloud_preprocessor::CombineCloudHandler<
-  autoware::pointcloud_preprocessor::PointCloud2Traits>;
