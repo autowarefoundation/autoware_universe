@@ -50,7 +50,7 @@ bool PointPaintingTRT::detect(
     cudaMemsetAsync(spatial_features_d_.get(), 0, spatial_features_size_ * sizeof(float), stream_));
   if (!preprocess(input_pointcloud_msg, tf_buffer)) {
     RCLCPP_WARN_STREAM(
-      rclcpp::get_logger("lidar_centerpoint"), "Fail to preprocess and skip to detect.");
+      rclcpp::get_logger("pointpainting"), "Fail to preprocess and skip to detect.");
     return false;
   }
   inference();
