@@ -48,7 +48,7 @@ RegionOfInterest getShiftedRoi(
   const RegionOfInterest & source, const RegionOfInterest & target, int32_t & shift_x,
   int32_t & shift_y)
 {
-  RegionOfInterest shifted_img = source;
+  RegionOfInterest shifted_ROI = source;
   const auto source_roi_center_x = static_cast<int32_t>(source.x_offset + source.width / 2);
   const auto source_roi_center_y = static_cast<int32_t>(source.y_offset + source.height / 2);
   const auto target_roi_center_x = static_cast<int32_t>(target.x_offset + target.width / 2);
@@ -56,18 +56,18 @@ RegionOfInterest getShiftedRoi(
   shift_x = source_roi_center_x - target_roi_center_x;
   shift_y = source_roi_center_y - target_roi_center_y;
 
-  const auto x_offset = static_cast<int32_t>(shifted_img.x_offset) - shift_x;
-  const auto y_offset = static_cast<int32_t>(shifted_img.y_offset) - shift_y;
+  const auto x_offset = static_cast<int32_t>(shifted_ROI.x_offset) - shift_x;
+  const auto y_offset = static_cast<int32_t>(shifted_ROI.y_offset) - shift_y;
   if (x_offset < 0 || y_offset < 0) {
-    shifted_img.x_offset = 0;
-    shifted_img.y_offset = 0;
-    shifted_img.width = 0;
-    shifted_img.height = 0;
+    shifted_ROI.x_offset = 0;
+    shifted_ROI.y_offset = 0;
+    shifted_ROI.width = 0;
+    shifted_ROI.height = 0;
   } else {
-    shifted_img.x_offset = static_cast<uint32_t>(x_offset);
-    shifted_img.y_offset = static_cast<uint32_t>(y_offset);
+    shifted_ROI.x_offset = static_cast<uint32_t>(x_offset);
+    shifted_ROI.y_offset = static_cast<uint32_t>(y_offset);
   }
-  return shifted_img;
+  return shifted_ROI;
 }
 
 double getIoU(const RegionOfInterest & bbox1, const RegionOfInterest & bbox2)
