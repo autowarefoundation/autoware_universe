@@ -18,6 +18,7 @@
 #include "tier4_planning_rviz_plugin/path/display_base.hpp"
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware_planning_msgs/msg/detail/trajectory__struct.hpp>
 #include <autoware_planning_msgs/msg/path.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 
@@ -223,6 +224,96 @@ class AutowareTrajectoryDisplay
 : public AutowarePathBaseDisplay<autoware_planning_msgs::msg::Trajectory>
 {
   Q_OBJECT
+  std::vector<rviz_rendering::MovableText *> time_texts_;
+  std::vector<Ogre::SceneNode *> time_text_nodes_;
+  rviz_common::properties::BoolProperty property_time_text_view_;
+  rviz_common::properties::FloatProperty property_time_text_scale_;
+
+public:
+  // time text
+  AutowareTrajectoryDisplay()
+  : property_time_text_view_{"View Text Time", false, "", this},
+    property_time_text_scale_{"Scale", 0.3, "", &property_time_text_view_}
+  {
+  }
+
+  ~AutowareTrajectoryDisplay() override
+  {
+    if (this->initialized()) {
+      for (auto node : time_text_nodes_) {
+        node->removeAndDestroyAllChildren();
+        node->detachAllObjects();
+        this->scene_manager_->destroySceneNode(node);
+      }
+    }
+  }
+
+  void reset() override
+  {
+    AutowarePathBaseDisplay<autoware_planning_msgs::msg::Trajectory>::reset();
+    for (size_t i = 0; i < time_texts_.size(); i++) {
+      Ogre::SceneNode * node = time_text_nodes_.at(i);
+      node->detachAllObjects();
+      node->removeAndDestroyAllChildren();
+      this->scene_manager_->destroySceneNode(node);
+    }
+    time_text_nodes_.clear();
+    time_texts_.clear();
+  }
+
+  void visualizeTrajectory(
+    const typename autoware_planning_msgs::msg::Trajectory::ConstSharedPtr msg_ptr) override
+  {
+    if (msg_ptr->points.size() > time_texts_.size()) {
+      for (size_t i = time_texts_.size(); i < msg_ptr->points.size(); i++) {
+        Ogre::SceneNode * node = this->scene_node_->createChildSceneNode();
+        auto * text = new rviz_rendering::MovableText("not initialized", "Liberation Sans", 0.1);
+        text->setVisible(false);
+        text->setTextAlignment(
+          rviz_rendering::MovableText::H_CENTER, rviz_rendering::MovableText::V_ABOVE);
+        node->attachObject(text);
+        time_texts_.push_back(text);
+        time_text_nodes_.push_back(node);
+      }
+    } else if (msg_ptr->points.size() < time_texts_.size()) {
+      for (size_t i = time_texts_.size() - 1; i >= msg_ptr->points.size(); i--) {
+        Ogre::SceneNode * node = time_text_nodes_.at(i);
+        node->detachAllObjects();
+        node->removeAndDestroyAllChildren();
+        this->scene_manager_->destroySceneNode(node);
+
+        rviz_rendering::MovableText * text = time_texts_.at(i);
+        delete text;
+      }
+      time_texts_.resize(msg_ptr->points.size());
+      time_text_nodes_.resize(msg_ptr->points.size());
+    }
+    for (size_t point_idx = 0; point_idx < msg_ptr->points.size(); point_idx++) {
+      const auto & trajectory_point = msg_ptr->points.at(point_idx);
+      const auto & pose = autoware_utils::get_pose(trajectory_point);
+      const auto & time = trajectory_point.time_from_start;
+      // time text
+      if (property_time_text_view_.getBool()) {
+        Ogre::Vector3 position;
+        position.x = pose.position.x;
+        position.y = pose.position.y;
+        position.z = pose.position.z;
+        Ogre::SceneNode * node = time_text_nodes_.at(point_idx);
+        node->setPosition(position);
+
+        rviz_rendering::MovableText * text = time_texts_.at(point_idx);
+        std::stringstream ss;
+        ss << std::fixed << std::setprecision(2) << rclcpp::Duration(time).seconds();
+        text->setCaption(ss.str());
+        text->setCharacterHeight(property_time_text_scale_.getFloat());
+        text->setVisible(true);
+      } else {
+        rviz_rendering::MovableText * text = time_texts_.at(point_idx);
+        text->setVisible(false);
+      }
+    }
+  }
+
 private:
   void preProcessMessageDetail() override;
 };
