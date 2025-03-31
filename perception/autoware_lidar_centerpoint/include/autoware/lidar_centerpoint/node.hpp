@@ -64,7 +64,6 @@ private:
   bool has_variance_{false};
   bool has_twist_{false};
 
-  bool is_processing_delayed_{false};
   double max_allowed_processing_time_ms_;
   double max_acceptable_consecutive_delay_ms_;
   // set as optional to avoid sending error diagnostics before the node starts processing
