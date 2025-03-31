@@ -61,11 +61,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/common/autoware_global_parameter_loader/Readme/</loc>
-         <lastmod>2025-03-31</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/common/autoware_glog_component/</loc>
          <lastmod>2025-03-31</lastmod>
          <changefreq>daily</changefreq>
@@ -87,16 +82,6 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/common/autoware_polar_grid/Readme/</loc>
-         <lastmod>2025-03-31</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/common/autoware_signal_processing/</loc>
-         <lastmod>2025-03-31</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/common/autoware_signal_processing/documentation/ButterworthFilter/</loc>
          <lastmod>2025-03-31</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -376,16 +361,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/localization/autoware_stop_filter/</loc>
-         <lastmod>2025-03-31</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/localization/autoware_twist2accel/</loc>
-         <lastmod>2025-03-31</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/localization/yabloc/</loc>
          <lastmod>2025-03-31</lastmod>
          <changefreq>daily</changefreq>
@@ -422,16 +397,6 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/map/autoware_map_height_fitter/</loc>
-         <lastmod>2025-03-31</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/map/autoware_map_loader/</loc>
-         <lastmod>2025-03-31</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/map/autoware_map_projection_loader/</loc>
          <lastmod>2025-03-31</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -826,11 +791,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/planning/autoware_planning_topic_converter/</loc>
-         <lastmod>2025-03-31</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/planning/autoware_planning_validator/</loc>
          <lastmod>2025-03-31</lastmod>
          <changefreq>daily</changefreq>
@@ -857,16 +817,6 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/planning/autoware_surround_obstacle_checker/surround_obstacle_checker-design.ja/</loc>
-         <lastmod>2025-03-31</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/planning/autoware_velocity_smoother/</loc>
-         <lastmod>2025-03-31</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/planning/autoware_velocity_smoother/README.ja/</loc>
          <lastmod>2025-03-31</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -986,16 +936,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/planning/behavior_velocity_planner/autoware_behavior_velocity_planner/</loc>
-         <lastmod>2025-03-31</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/planning/behavior_velocity_planner/autoware_behavior_velocity_planner_common/</loc>
-         <lastmod>2025-03-31</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/planning/behavior_velocity_planner/autoware_behavior_velocity_rtc_interface/</loc>
          <lastmod>2025-03-31</lastmod>
          <changefreq>daily</changefreq>
@@ -1007,11 +947,6 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/planning/behavior_velocity_planner/autoware_behavior_velocity_speed_bump_module/</loc>
-         <lastmod>2025-03-31</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/planning/behavior_velocity_planner/autoware_behavior_velocity_stop_line_module/</loc>
          <lastmod>2025-03-31</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -1047,11 +982,6 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/planning/motion_velocity_planner/autoware_motion_velocity_obstacle_slow_down_module/</loc>
-         <lastmod>2025-03-31</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/planning/motion_velocity_planner/autoware_motion_velocity_obstacle_stop_module/</loc>
          <lastmod>2025-03-31</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -1217,11 +1147,6 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/sensing/autoware_radar_tracks_noise_filter/</loc>
-         <lastmod>2025-03-31</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/sensing/autoware_vehicle_velocity_converter/</loc>
          <lastmod>2025-03-31</lastmod>
          <changefreq>daily</changefreq>
     </url>
