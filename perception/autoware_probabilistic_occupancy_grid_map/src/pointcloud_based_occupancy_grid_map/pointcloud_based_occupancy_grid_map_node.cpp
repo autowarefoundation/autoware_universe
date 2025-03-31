@@ -39,8 +39,8 @@
 #include <algorithm>
 #include <limits>
 #include <memory>
-#include <string>
 #include <sstream>
+#include <string>
 
 namespace autoware::occupancy_grid_map
 {
