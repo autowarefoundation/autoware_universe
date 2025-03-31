@@ -54,6 +54,7 @@ AutowareStateNode::AutowareStateNode(const rclcpp::NodeOptions & options)
   localization_state_.state = LocalizationState::UNKNOWN;
   routing_state_.state = RoutingState::UNKNOWN;
   operation_mode_state_.mode = OperationModeState::UNKNOWN;
+  prev_state_ = AutowareState::INITIALIZING;
 }
 
 void AutowareStateNode::on_localization(const LocalizationState::ConstSharedPtr msg)
@@ -134,9 +135,32 @@ void AutowareStateNode::on_timer()
     }
   }
 
+  const auto get_state_name = [](const uint8_t state) -> std::string {
+    // clang-format off
+    switch (state) {
+      case AutowareState::INITIALIZING:       return "Initializing";
+      case AutowareState::WAITING_FOR_ROUTE:  return "WaitingForRoute";
+      case AutowareState::PLANNING:           return "Planning";
+      case AutowareState::WAITING_FOR_ENGAGE: return "WaitingForEngage";
+      case AutowareState::DRIVING:            return "Driving";
+      case AutowareState::ARRIVED_GOAL:       return "ArrivedGoal";
+      case AutowareState::FINALIZING:         return "Finalizing";
+    }
+    // clang-format on
+    return "Unknown(" + std::to_string(state) + ")";
+  };
+
+  const auto state = convert_state();
+  if (prev_state_ != state) {
+    const auto prev_name = get_state_name(prev_state_);
+    const auto curr_name = get_state_name(state);
+    prev_state_ = state;
+    RCLCPP_INFO_STREAM(get_logger(), "AutowareState: " << prev_name << " => " << curr_name);
+  }
+
   AutowareState msg;
   msg.stamp = now();
-  msg.state = convert_state();
+  msg.state = state;
   pub_autoware_state_->publish(msg);
 }
 
