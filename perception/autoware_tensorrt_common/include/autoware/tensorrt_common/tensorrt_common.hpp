@@ -46,6 +46,8 @@ using ProfileDimsPtr = std::unique_ptr<std::vector<ProfileDims>>;
 using TensorsVec = std::vector<std::pair<void *, nvinfer1::Dims>>;
 using TensorsMap = std::unordered_map<const char *, std::pair<void *, nvinfer1::Dims>>;
 
+// TensorRT version, written in serialized engine file (source:
+// https://github.com/NVIDIA/TensorRT/issues/3073#issuecomment-1599934548)
 constexpr int TRT_MAJOR_IDX = 24;
 constexpr int TRT_MINOR_IDX = 25;
 constexpr int TRT_PATCH_IDX = 26;
