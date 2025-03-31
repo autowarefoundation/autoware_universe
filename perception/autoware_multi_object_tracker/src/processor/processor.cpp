@@ -166,10 +166,7 @@ void TrackerProcessor::removeOldTracker(const rclcpp::Time & time)
 void TrackerProcessor::removeOverlappedTracker(const rclcpp::Time & time)
 {
   // Create sorted list with non-UNKNOWN objects first, then by measurement count
-  std::vector<std::shared_ptr<Tracker>> sorted_list_tracker(
-    list_tracker_.begin(), list_tracker_.end());
-  std::sort(
-    sorted_list_tracker.begin(), sorted_list_tracker.end(),
+  list_tracker_.sort(
     [&time](const std::shared_ptr<Tracker> & a, const std::shared_ptr<Tracker> & b) {
       bool a_unknown = (a->getHighestProbLabel() == Label::UNKNOWN);
       bool b_unknown = (b->getHighestProbLabel() == Label::UNKNOWN);
@@ -184,14 +181,14 @@ void TrackerProcessor::removeOverlappedTracker(const rclcpp::Time & time)
              b->getElapsedTimeFromLastUpdate(time);  // Finally sort by elapsed time (smaller first)
     });
 
-  /* Iterate through the list of trackers */
-  for (size_t i = 0; i < sorted_list_tracker.size(); ++i) {
+  // Iterate through the list of trackers
+  for (auto itr1 = list_tracker_.begin(); itr1 != list_tracker_.end(); ++itr1) {
     types::DynamicObject object1;
-    if (!sorted_list_tracker[i]->getTrackedObject(time, object1)) continue;
+    if (!(*itr1)->getTrackedObject(time, object1)) continue;
     // Compare the current tracker with the remaining trackers
-    for (size_t j = i + 1; j < sorted_list_tracker.size(); ++j) {
+    for (auto itr2 = std::next(itr1); itr2 != list_tracker_.end(); ++itr2) {
       types::DynamicObject object2;
-      if (!sorted_list_tracker[j]->getTrackedObject(time, object2)) continue;
+      if (!(*itr2)->getTrackedObject(time, object2)) continue;
       // Calculate the distance between the two objects
       const double distance = std::hypot(
         object1.pose.position.x - object2.pose.position.x,
@@ -204,15 +201,13 @@ void TrackerProcessor::removeOverlappedTracker(const rclcpp::Time & time)
 
       // Check the Intersection over Union (IoU) between the two objects
       constexpr double min_union_iou_area = 1e-2;
-      const auto iou = shapes::get2dIoU(object1, object2, min_union_iou_area);
+      const auto iou = shapes::get2dIoU(object2, object1, min_union_iou_area);
 
       // check if object2 should be removed
-      if (canRemoveOverlappedTarget(*(sorted_list_tracker[j]), *(sorted_list_tracker[i]), iou)) {
+      if (canRemoveOverlappedTarget(*(*itr2), *(*itr1), iou)) {
         // Remove from original list_tracker
-        list_tracker_.remove(sorted_list_tracker[j]);
-        // Remove from sorted list
-        sorted_list_tracker.erase(sorted_list_tracker.begin() + j);
-        --j;
+        itr2 = list_tracker_.erase(itr2);
+        --itr2;
       }
     }
   }
