@@ -24,6 +24,7 @@
 #include <angles/angles/angles.h>
 #include <tf2/utils.h>
 
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
