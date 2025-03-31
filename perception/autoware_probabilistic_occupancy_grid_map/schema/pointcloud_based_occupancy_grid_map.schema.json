@@ -125,6 +125,11 @@
             },
             "OccupancyGridMapProjectiveBlindSpot": {
               "$ref": "#/definitions/occupancy_grid_map_projective_blind_spot_params"
+            },
+            "max_output_delay_ms": {
+              "type": "number",
+              "description": "Maximum warning output delay in milliseconds.",
+              "default": 50.0
             }
           },
           "required": [

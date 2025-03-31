@@ -40,6 +40,7 @@
 #include <limits>
 #include <memory>
 #include <string>
+#include <sstream>
 
 namespace autoware::occupancy_grid_map
 {
@@ -146,7 +147,7 @@ PointcloudBasedOccupancyGridMapNode::PointcloudBasedOccupancyGridMapNode(
     }
   }
 
-  max_output_delay_ms_ = this->declare_parameter<double>("max_output_delay_ms", 50.0);
+  max_output_delay_ms_ = this->declare_parameter<double>("max_output_delay_ms");
   diagnostics_interface_ptr_ = std::make_unique<autoware_utils::DiagnosticsInterface>(
     this, "pointcloud_based_probabilistic_occupancy_grid_map");
 }
