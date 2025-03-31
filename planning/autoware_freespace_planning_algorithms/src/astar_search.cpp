@@ -363,6 +363,7 @@ void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
     const auto obs_edt = getObstacleEDT(next_index);
     const bool is_direction_switch =
       (current_node.parent != nullptr) && (is_back != current_node.is_back);
+    bool next_reparking_dir_change = current_node.reparking_direction_change;
 
     double total_weight = 1.0;
     total_weight += getSteeringCost(steering_index);
@@ -402,8 +403,15 @@ void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
 
       // parameter for straight backward motion during reparking
       if (is_reparking_ && direction_switched) {
-        double deviation_penalty = reparking_deviation_penalty_ * yaw_weight;
+        next_reparking_dir_change = true;
+      }
+      if (next_reparking_dir_change) {
+        double deviation_penalty = reparking_deviation_penalty_ * std::abs(yaw_diff);
         move_cost += deviation_penalty;
+      }
+      if (is_reparking_ && !next_reparking_dir_change && !is_back) {
+        double align_penalty = 2.0 * reparking_deviation_penalty_ * std::abs(yaw_diff);
+        move_cost += align_penalty;
       }
 
       // alignment
@@ -428,6 +436,7 @@ void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
       next_node->dist_to_goal = calc_distance2d(next_pose, goal_pose_);
       next_node->dist_to_obs = obs_edt.distance;
       next_node->parent = &current_node;
+      next_node->reparking_direction_change = next_reparking_dir_change;
       openlist_.push(next_node);
       continue;
     }
