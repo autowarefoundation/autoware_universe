@@ -246,6 +246,10 @@ void MultiObjectTracker::onTrigger()
 void MultiObjectTracker::onTimer()
 {
   const rclcpp::Time current_time = this->now();
+  if (last_updated_time_.nanoseconds() == 0) {
+    // If the last updated time is not set, set it to the current time
+    last_updated_time_ = current_time;
+  }
   // Get minimum prediction time delta from all trackers
   const double min_extrapolation_time = (current_time - last_updated_time_).seconds();
   // ensure minimum interval: room for the next process(prediction)
