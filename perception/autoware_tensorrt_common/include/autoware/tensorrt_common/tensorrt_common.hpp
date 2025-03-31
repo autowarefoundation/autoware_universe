@@ -322,7 +322,7 @@ private:
   bool buildEngineFromOnnx();
 
   /**
-   * @brief Validate TensorRT engine.
+   * @brief Validate the TensorRT engine.
    *
    * @return Whether TensorRT version used for building engine is compatible.
    */
