@@ -996,11 +996,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/planning/motion_velocity_planner/autoware_motion_velocity_planner_node_universe/</loc>
-         <lastmod>2025-03-31</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/planning/sampling_based_planner/autoware_bezier_sampler/</loc>
          <lastmod>2025-03-31</lastmod>
          <changefreq>daily</changefreq>
