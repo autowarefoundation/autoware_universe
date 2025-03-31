@@ -14,12 +14,14 @@
 
   <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_perception_msgs</depend>
+  <depend>autoware_utils</depend>
   <depend>cv_bridge</depend>
   <depend>image_transport</depend>
   <depend>message_filters</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>
+  <depend>tf2</depend>
   <depend>tier4_perception_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
