@@ -78,6 +78,7 @@ struct AstarNode
   double dist_to_obs = 0.0;              // euclidean distance to nearest obstacle
   int steering_index;                    // steering index
   bool is_back;                          // true if the current direction of the vehicle is back
+  bool reparking_direction_change;
   AstarNode * parent = nullptr;          // parent node
 
   inline void set(
@@ -91,6 +92,7 @@ struct AstarNode
     fc = total_cost;
     steering_index = steer_ind;
     is_back = backward;
+    reparking_direction_change = false;
   }
 };
 
