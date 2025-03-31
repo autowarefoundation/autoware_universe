@@ -118,7 +118,7 @@ bool TrtCommon::setup(ProfileDimsPtr profile_dims, NetworkIOPtr network_io)
     if (!validateEngine()) {
       logger_->log(
         nvinfer1::ILogger::Severity::kWARNING,
-        "Engine validation failed for loaded engine from file. Rebuilding engine");
+        "Validation failed for the existing engine file. Rebuilding");
       // Rebuild engine if version mismatch occurred
       if (!build_engine_with_log()) {
         return false;
