@@ -318,12 +318,15 @@ void WaypointLoaderNode::csvFileCallback(std_msgs::msg::String::ConstSharedPtr m
 {
   std::string default_csv_file = lane_csv_position_ + "waypoint_default.csv";
   csv_file_ = msg->data;
-  readCsvFile();
-  RCLCPP_INFO(get_logger(), "Receive new file, reloading file");
 
-  std::filesystem::copy(
-    csv_file_, default_csv_file, std::filesystem::copy_options::overwrite_existing);
-  RCLCPP_INFO_STREAM(this->get_logger(), "The default output csv file has been copied");
+  if (!std::filesystem::equivalent(csv_file_, default_csv_file)){
+    RCLCPP_INFO(get_logger(), "Receive a new file. Reloading");
+    readCsvFile();
+
+    std::filesystem::copy(
+      csv_file_, default_csv_file, std::filesystem::copy_options::overwrite_existing);
+    RCLCPP_INFO_STREAM(this->get_logger(), "The default output csv file has been copied");
+  }
 }
 
 template <class T>
