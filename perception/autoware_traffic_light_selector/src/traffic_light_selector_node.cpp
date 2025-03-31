@@ -93,7 +93,7 @@ void TrafficLightSelectorNode::objectsCallback(
       // shift expect roi because the location of detected roi is better that it
       int32_t shift_x, shift_y;
       const auto expect_roi_shifted =
-        utils::getShiftedRoi(expect_roi, detected_roi, shift_x, shift_y);
+        utils::getShiftedRoi(expect_roi, detected_roi, image_width, image_height, shift_x, shift_y);
 
       const double iou = utils::getIoU(expect_roi_shifted, detected_roi);
       if (iou > max_matching_score) {
