@@ -4,6 +4,7 @@
   <name>waypoint_maker</name>
   <version>0.1.0</version>
   <description>The waypoint_maker package</description>
+  <maintainer email="nickyang@turing-drive.com">mitsudome-r</maintainer>
   <maintainer email="wei@turing-drive.com">mitsudome-r</maintainer>
   <license>Apache License 2.0</license>
 
