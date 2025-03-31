@@ -131,7 +131,7 @@ ObjectAssociationMergerNode::ObjectAssociationMergerNode(const rclcpp::NodeOptio
   stop_watch_ptr_->tic("processing_time");
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
   // Timeout process initialization
-  message_timeout_sec_ = this->declare_parameter<double>("message_timeout_sec", 0.15);
+  message_timeout_sec_ = this->declare_parameter<double>("message_timeout_sec");
   last_sync_time_ = this->now();
   timeout_sent_ = false;
   timeout_timer_ = this->create_wall_timer(
