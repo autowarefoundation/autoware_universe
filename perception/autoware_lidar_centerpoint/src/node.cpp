@@ -201,6 +201,7 @@ void LidarCenterPointNode::pointCloudCallback(
 
   if (stop_watch_ptr_) {
     const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
+    diagnostics_interface_ptr_->add_key_value("processing_time_ms", processing_time_ms);
 
     // check processing time is acceptable
     if (processing_time_ms > max_allowed_processing_time_ms_) {
@@ -257,6 +258,9 @@ void LidarCenterPointNode::diagnosticsTimerCallback()
         std::chrono::nanoseconds(
           (timestamp_now - last_in_time_processing_timestamp_.value()).nanoseconds()))
         .count();
+
+    diagnostics_processing_delay_->add_key_value(
+        "time_since_last_in_time_processing_ms", delayed_state_duration);
 
     if (delayed_state_duration > max_acceptable_consecutive_delay_ms_) {
       diagnostics_processing_delay_->add_key_value(
