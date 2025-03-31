@@ -21,7 +21,7 @@
 #include "autoware_utils/ros/marker_helper.hpp"
 #include "autoware_utils/ros/update_param.hpp"
 
-#include "tier4_planning_msgs/msg/velocity_limit.hpp"
+#include "autoware_internal_planning_msgs/msg/velocity_limit.hpp"
 
 #include <algorithm>
 #include <memory>

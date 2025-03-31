@@ -8,7 +8,7 @@ package_name = "autoware_carla_interface"
 
 setup(
     name=package_name,
-    version="0.42.0",
+    version="0.43.0",
     packages=find_packages(where="src"),
     data_files=[
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),

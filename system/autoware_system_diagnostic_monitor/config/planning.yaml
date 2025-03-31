@@ -9,6 +9,7 @@ units:
           - { type: link, link: /autoware/planning/topic_rate_check/route }
           - { type: link, link: /autoware/planning/topic_rate_check/trajectory }
           - { type: link, link: /autoware/planning/trajectory_validation }
+          - { type: link, link: /autoware/planning/emergency_stop }
 
   - path: /autoware/planning/trajectory_validation
     type: and
@@ -23,6 +24,11 @@ units:
       - { type: link, link: /autoware/planning/trajectory_validation/steering }
       - { type: link, link: /autoware/planning/trajectory_validation/steering_rate }
       - { type: link, link: /autoware/planning/trajectory_validation/velocity_deviation }
+
+  - path: /autoware/planning/emergency_stop
+    type: and
+    list:
+      - { type: link, link: /planning/path_optimizer_emergency_stop-error }
 
   - path: /autoware/planning/routing/state
     type: diag
@@ -88,3 +94,15 @@ units:
     type: diag
     node: planning_validator
     name: trajectory_validation_velocity_deviation
+
+  - path: /planning/path_optimizer_emergency_stop-error
+    type: warn-to-ok
+    item:
+      type: link
+      link: /planning/path_optimizer_emergency_stop
+
+  - path: /planning/path_optimizer_emergency_stop
+    type: diag
+    node: path_optimizer
+    name: path_optimizer_emergency_stop
+    timeout: 1.0

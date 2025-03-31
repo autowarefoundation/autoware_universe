@@ -296,7 +296,7 @@ autoware_internal_planning_msgs::msg::PathWithLaneId TrafficLightModule::insertS
 
   planning_factor_interface_->add(
     modified_path.points, planner_data_->current_odometry->pose,
-    target_point_with_lane_id.point.pose, target_point_with_lane_id.point.pose,
+    target_point_with_lane_id.point.pose,
     autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
     autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
     0.0 /*shift distance*/, "traffic_light");

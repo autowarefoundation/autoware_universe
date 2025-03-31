@@ -2,16 +2,23 @@
 Changelog for package tier4_planning_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* feat!: replace VelocityLimit messages with autoware_internal_planning_msgs (`#10273 <https://github.com/autowarefoundation/autoware_universe/issues/10273>`_)
+* Contributors: Hayato Mizushima, Ryohsuke Mitsudome, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware.universe/issues/10191>`_)
-* feat!: replace tier4_planning_msgs/PathWithLaneId with autoware_internal_planning_msgs/PathWithLaneId (`#10023 <https://github.com/autowarefoundation/autoware.universe/issues/10023>`_)
+* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware_universe/issues/10191>`_)
+* feat!: replace tier4_planning_msgs/PathWithLaneId with autoware_internal_planning_msgs/PathWithLaneId (`#10023 <https://github.com/autowarefoundation/autoware_universe/issues/10023>`_)
 * Contributors: Fumiya Watanabe, Ryohsuke Mitsudome, 心刚
 
 0.41.2 (2025-02-19)
 -------------------
-* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware.universe/issues/10088>`_)
+* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware_universe/issues/10088>`_)
 * Contributors: Ryohsuke Mitsudome
 
 0.41.1 (2025-02-10)
@@ -23,16 +30,16 @@ Changelog for package tier4_planning_rviz_plugin
 0.40.0 (2024-12-12)
 -------------------
 * Merge branch 'main' into release-0.40.0
-* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware.universe/issues/9587>`_)"
+* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware_universe/issues/9587>`_)"
   This reverts commit c9f0f2688c57b0f657f5c1f28f036a970682e7f5.
-* chore: move rviz plugins from common to visualization/ folder (`#9417 <https://github.com/autowarefoundation/autoware.universe/issues/9417>`_)
+* chore: move rviz plugins from common to visualization/ folder (`#9417 <https://github.com/autowarefoundation/autoware_universe/issues/9417>`_)
 * Contributors: Esteve Fernandez, Fumiya Watanabe
 
 0.39.0 (2024-11-25)
 -------------------
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware.universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware.universe/issues/9284>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware_universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware_universe/issues/9284>`_)
   * unify package.xml version to 0.37.0
   * remove system_monitor/CHANGELOG.rst
   * add changelog
@@ -43,22 +50,22 @@ Changelog for package tier4_planning_rviz_plugin
 0.38.0 (2024-11-08)
 -------------------
 * unify package.xml version to 0.37.0
-* feat(tier4_planning_rviz_plugin): set path colors from rviz and add fade_out feature (`#8972 <https://github.com/autowarefoundation/autoware.universe/issues/8972>`_)
+* feat(tier4_planning_rviz_plugin): set path colors from rviz and add fade_out feature (`#8972 <https://github.com/autowarefoundation/autoware_universe/issues/8972>`_)
   Co-authored-by: M. Fatih Cırıt <mfc@leodrive.ai>
-* style: update rviz plugin icons to match the theme (`#8868 <https://github.com/autowarefoundation/autoware.universe/issues/8868>`_)
-* fix(tier4_planning_rviz_plugin): fix unusedFunction (`#8616 <https://github.com/autowarefoundation/autoware.universe/issues/8616>`_)
+* style: update rviz plugin icons to match the theme (`#8868 <https://github.com/autowarefoundation/autoware_universe/issues/8868>`_)
+* fix(tier4_planning_rviz_plugin): fix unusedFunction (`#8616 <https://github.com/autowarefoundation/autoware_universe/issues/8616>`_)
   fix:unusedFunction
-* fix(tier4_planning_rviz_plugin): fix cppcheck warning of virtualCallInConstructor (`#8377 <https://github.com/autowarefoundation/autoware.universe/issues/8377>`_)
+* fix(tier4_planning_rviz_plugin): fix cppcheck warning of virtualCallInConstructor (`#8377 <https://github.com/autowarefoundation/autoware_universe/issues/8377>`_)
   fix: deal with virtualCallInConstructor warning
   Co-authored-by: Ryuta Kambe <ryuta.kambe@tier4.jp>
-* fix(tier4_planning_rviz_plugin): fix calculation of drivable area bounds (`#7815 <https://github.com/autowarefoundation/autoware.universe/issues/7815>`_)
+* fix(tier4_planning_rviz_plugin): fix calculation of drivable area bounds (`#7815 <https://github.com/autowarefoundation/autoware_universe/issues/7815>`_)
   change angle condition
-* refactor(universe_utils/motion_utils)!: add autoware namespace (`#7594 <https://github.com/autowarefoundation/autoware.universe/issues/7594>`_)
-* refactor(motion_utils)!: add autoware prefix and include dir (`#7539 <https://github.com/autowarefoundation/autoware.universe/issues/7539>`_)
+* refactor(universe_utils/motion_utils)!: add autoware namespace (`#7594 <https://github.com/autowarefoundation/autoware_universe/issues/7594>`_)
+* refactor(motion_utils)!: add autoware prefix and include dir (`#7539 <https://github.com/autowarefoundation/autoware_universe/issues/7539>`_)
   refactor(motion_utils): add autoware prefix and include dir
-* feat(autoware_universe_utils)!: rename from tier4_autoware_utils (`#7538 <https://github.com/autowarefoundation/autoware.universe/issues/7538>`_)
+* feat(autoware_universe_utils)!: rename from tier4_autoware_utils (`#7538 <https://github.com/autowarefoundation/autoware_universe/issues/7538>`_)
   Co-authored-by: kosuke55 <kosuke.tnp@gmail.com>
-* refactor(vehicle_info_utils)!: prefix package and namespace with autoware (`#7353 <https://github.com/autowarefoundation/autoware.universe/issues/7353>`_)
+* refactor(vehicle_info_utils)!: prefix package and namespace with autoware (`#7353 <https://github.com/autowarefoundation/autoware_universe/issues/7353>`_)
   * chore(autoware_vehicle_info_utils): rename header
   * chore(bpp-common): vehicle info
   * chore(path_optimizer): vehicle info
@@ -93,45 +100,45 @@ Changelog for package tier4_planning_rviz_plugin
   * chore(sensing): vehicle info
   * fix(autoware_joy_controller): remove unused deps
   ---------
-* feat!: replace autoware_auto_msgs with autoware_msgs for common modules (`#7239 <https://github.com/autowarefoundation/autoware.universe/issues/7239>`_)
+* feat!: replace autoware_auto_msgs with autoware_msgs for common modules (`#7239 <https://github.com/autowarefoundation/autoware_universe/issues/7239>`_)
   Co-authored-by: Cynthia Liu <cynthia.liu@autocore.ai>
   Co-authored-by: NorahXiong <norah.xiong@autocore.ai>
   Co-authored-by: beginningfan <beginning.fan@autocore.ai>
-* fix(tier4_planning_rviz_plugin): memory leak (`#7164 <https://github.com/autowarefoundation/autoware.universe/issues/7164>`_)
+* fix(tier4_planning_rviz_plugin): memory leak (`#7164 <https://github.com/autowarefoundation/autoware_universe/issues/7164>`_)
   fix memory leak
 * Contributors: Khalil Selyan, Kosuke Takeuchi, Ryohsuke Mitsudome, Satoshi OTA, Takayuki Murooka, Yukihiro Saito, Yutaka Kondo, beyzanurkaya, kobayu858, taisa1
 
 0.26.0 (2024-04-03)
 -------------------
-* fix(readme): add acknowledgement for material icons in tool plugins (`#6354 <https://github.com/autowarefoundation/autoware.universe/issues/6354>`_)
-* style(update): autoware tools icons (`#6351 <https://github.com/autowarefoundation/autoware.universe/issues/6351>`_)
-* fix(tier4_planning_rviz_plugin): move headers to tier4_planning_rviz_plugin directory (`#5927 <https://github.com/autowarefoundation/autoware.universe/issues/5927>`_)
+* fix(readme): add acknowledgement for material icons in tool plugins (`#6354 <https://github.com/autowarefoundation/autoware_universe/issues/6354>`_)
+* style(update): autoware tools icons (`#6351 <https://github.com/autowarefoundation/autoware_universe/issues/6351>`_)
+* fix(tier4_planning_rviz_plugin): move headers to tier4_planning_rviz_plugin directory (`#5927 <https://github.com/autowarefoundation/autoware_universe/issues/5927>`_)
   * fix(tier4_planning_rviz_plugin): move headers to tier4_planning_rviz_plugin directory
   * style(pre-commit): autofix
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* chore(planning modules): remove maintainer... (`#5458 <https://github.com/autowarefoundation/autoware.universe/issues/5458>`_)
+* chore(planning modules): remove maintainer... (`#5458 <https://github.com/autowarefoundation/autoware_universe/issues/5458>`_)
   remove shimizu-san from maintainer and add maintainer for stop line and turn signal decider
-* feat(tier4_planning_rviz_plugin): visualize text of slope angle (`#5091 <https://github.com/autowarefoundation/autoware.universe/issues/5091>`_)
-* refactor(common): extern template for motion_utils / remove tier4_autoware_utils.hpp / remove motion_utis.hpp (`#5027 <https://github.com/autowarefoundation/autoware.universe/issues/5027>`_)
-* fix(tier4_planning_rviz_plugin): update vehicle info parameters in panel received from global parameter (`#4907 <https://github.com/autowarefoundation/autoware.universe/issues/4907>`_)
-* fix: max velocity display (`#4203 <https://github.com/autowarefoundation/autoware.universe/issues/4203>`_)
+* feat(tier4_planning_rviz_plugin): visualize text of slope angle (`#5091 <https://github.com/autowarefoundation/autoware_universe/issues/5091>`_)
+* refactor(common): extern template for motion_utils / remove tier4_autoware_utils.hpp / remove motion_utis.hpp (`#5027 <https://github.com/autowarefoundation/autoware_universe/issues/5027>`_)
+* fix(tier4_planning_rviz_plugin): update vehicle info parameters in panel received from global parameter (`#4907 <https://github.com/autowarefoundation/autoware_universe/issues/4907>`_)
+* fix: max velocity display (`#4203 <https://github.com/autowarefoundation/autoware_universe/issues/4203>`_)
   fix max velocity display
   Co-authored-by: Ryohsuke Mitsudome <43976834+mitsudome-r@users.noreply.github.com>
-* fix(tier4_planning_rviz_plugin): fix plugin crash (`#3830 <https://github.com/autowarefoundation/autoware.universe/issues/3830>`_)
+* fix(tier4_planning_rviz_plugin): fix plugin crash (`#3830 <https://github.com/autowarefoundation/autoware_universe/issues/3830>`_)
   * preVisualizePathFootPrint is the cause
   * update ogre_node and text_ptr in each iteration
   ---------
-* fix(tier4_planning_rviz_plugin): fix drivable area width (`#3689 <https://github.com/autowarefoundation/autoware.universe/issues/3689>`_)
+* fix(tier4_planning_rviz_plugin): fix drivable area width (`#3689 <https://github.com/autowarefoundation/autoware_universe/issues/3689>`_)
   * fix(tier4_planning_rviz_plugin): fix drivable area width
   * fix
   ---------
-* build: proper eigen deps and include (`#3615 <https://github.com/autowarefoundation/autoware.universe/issues/3615>`_)
+* build: proper eigen deps and include (`#3615 <https://github.com/autowarefoundation/autoware_universe/issues/3615>`_)
   * build: proper eigen deps and include
   * style(pre-commit): autofix
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* build: mark autoware_cmake as <buildtool_depend> (`#3616 <https://github.com/autowarefoundation/autoware.universe/issues/3616>`_)
+* build: mark autoware_cmake as <buildtool_depend> (`#3616 <https://github.com/autowarefoundation/autoware_universe/issues/3616>`_)
   * build: mark autoware_cmake as <buildtool_depend>
   with <build_depend>, autoware_cmake is automatically exported with ament_target_dependencies() (unecessary)
   * style(pre-commit): autofix
@@ -139,53 +146,53 @@ Changelog for package tier4_planning_rviz_plugin
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
   Co-authored-by: Kenji Miyake <kenji.miyake@tier4.jp>
-* fix(tier4_planning_rviz_plugin): suppress warning (`#3578 <https://github.com/autowarefoundation/autoware.universe/issues/3578>`_)
-* feat(tier4_planning_rviz_plugin): remove z offset from the bound (`#3551 <https://github.com/autowarefoundation/autoware.universe/issues/3551>`_)
-* feat(tier4_planning_rviz_plugin): update path width by global parameters (`#3504 <https://github.com/autowarefoundation/autoware.universe/issues/3504>`_)
+* fix(tier4_planning_rviz_plugin): suppress warning (`#3578 <https://github.com/autowarefoundation/autoware_universe/issues/3578>`_)
+* feat(tier4_planning_rviz_plugin): remove z offset from the bound (`#3551 <https://github.com/autowarefoundation/autoware_universe/issues/3551>`_)
+* feat(tier4_planning_rviz_plugin): update path width by global parameters (`#3504 <https://github.com/autowarefoundation/autoware_universe/issues/3504>`_)
   * fix(tier4_planning_rviz_plugin): update vehicle info by global parameters
   * feat(tier4_planning_rviz_plugin): update path width by global parameters
   ---------
-* fix(tier4_planning_rviz_plugin): update vehicle info by global parameters (`#3503 <https://github.com/autowarefoundation/autoware.universe/issues/3503>`_)
+* fix(tier4_planning_rviz_plugin): update vehicle info by global parameters (`#3503 <https://github.com/autowarefoundation/autoware_universe/issues/3503>`_)
   * fix(tier4_planning_rviz_plugin): update vehicle info by global parameters
   * fix
   ---------
-* chore: sync files (`#3227 <https://github.com/autowarefoundation/autoware.universe/issues/3227>`_)
+* chore: sync files (`#3227 <https://github.com/autowarefoundation/autoware_universe/issues/3227>`_)
   * chore: sync files
   * style(pre-commit): autofix
   ---------
   Co-authored-by: kenji-miyake <kenji-miyake@users.noreply.github.com>
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* fix(tier4_planning_rviz_plugin): supress initial warning message (`#2960 <https://github.com/autowarefoundation/autoware.universe/issues/2960>`_)
+* fix(tier4_planning_rviz_plugin): supress initial warning message (`#2960 <https://github.com/autowarefoundation/autoware_universe/issues/2960>`_)
   fix(tier4_planning_rviz_plugin): remove initial warning message
-* fix(tier4_rviz_planning_plugin): clear objects before return (`#2995 <https://github.com/autowarefoundation/autoware.universe/issues/2995>`_)
+* fix(tier4_rviz_planning_plugin): clear objects before return (`#2995 <https://github.com/autowarefoundation/autoware_universe/issues/2995>`_)
   * fix(tier4_rviz_planning_plugin): clear objects before return
   * update
   ---------
-* feat(tier4_planning_rviz_plugin): add maintainer (`#2996 <https://github.com/autowarefoundation/autoware.universe/issues/2996>`_)
-* feat(tier4_planning_rviz_plugin): move footprint plugin to path (`#2971 <https://github.com/autowarefoundation/autoware.universe/issues/2971>`_)
+* feat(tier4_planning_rviz_plugin): add maintainer (`#2996 <https://github.com/autowarefoundation/autoware_universe/issues/2996>`_)
+* feat(tier4_planning_rviz_plugin): move footprint plugin to path (`#2971 <https://github.com/autowarefoundation/autoware_universe/issues/2971>`_)
   * feat(tier4_rviz_plugin): simplify tier4_planning_rviz_plugin
   * update
   ---------
-* feat(tier4_planning_rviz_plugin): add drivable area plugin (`#2868 <https://github.com/autowarefoundation/autoware.universe/issues/2868>`_)
+* feat(tier4_planning_rviz_plugin): add drivable area plugin (`#2868 <https://github.com/autowarefoundation/autoware_universe/issues/2868>`_)
   * feat(tier4_planning_rviz_plugin): add drivable area plugin
   * change default size and color
   * update
   * add drivable area to path
   * update
   ---------
-* feat(tier4_autoware_utils): remove drivable area plugin (`#2876 <https://github.com/autowarefoundation/autoware.universe/issues/2876>`_)
-* refactor(tier4_planning_rviz_plugin): clean up the code of path (`#2871 <https://github.com/autowarefoundation/autoware.universe/issues/2871>`_)
+* feat(tier4_autoware_utils): remove drivable area plugin (`#2876 <https://github.com/autowarefoundation/autoware_universe/issues/2876>`_)
+* refactor(tier4_planning_rviz_plugin): clean up the code of path (`#2871 <https://github.com/autowarefoundation/autoware_universe/issues/2871>`_)
   * refactor(tier4_planning_rviz_plugin): clean up the code of path
   * fix
   ---------
-* refactor(tier4_planning_rviz_plugin): create abstract class for footprint (`#2870 <https://github.com/autowarefoundation/autoware.universe/issues/2870>`_)
+* refactor(tier4_planning_rviz_plugin): create abstract class for footprint (`#2870 <https://github.com/autowarefoundation/autoware_universe/issues/2870>`_)
   * refactor(tier4_planning_rviz_plugin): create abstract class for footprint
   * fix
   * fix
   * fix
   * fix
   ---------
-* feat(tier4_planning_rviz_plugin): visualize pose_with_uuid_stamped (`#2662 <https://github.com/autowarefoundation/autoware.universe/issues/2662>`_)
+* feat(tier4_planning_rviz_plugin): visualize pose_with_uuid_stamped (`#2662 <https://github.com/autowarefoundation/autoware_universe/issues/2662>`_)
   * feat(tier4_planning_rviz_plugin): visualize pose_stamped_with_uuid
   * Update common/tier4_planning_rviz_plugin/include/pose_stamped_with_uuid/display.hpp
   Co-authored-by: Yukihiro Saito <yukky.saito@gmail.com>
@@ -195,7 +202,7 @@ Changelog for package tier4_planning_rviz_plugin
   * add icon
   * change default size
   Co-authored-by: Yukihiro Saito <yukky.saito@gmail.com>
-* feat(behavior_path_planner, obstacle_avoidance_planner): add new drivable area (`#2472 <https://github.com/autowarefoundation/autoware.universe/issues/2472>`_)
+* feat(behavior_path_planner, obstacle_avoidance_planner): add new drivable area (`#2472 <https://github.com/autowarefoundation/autoware_universe/issues/2472>`_)
   * update
   * update
   * update
@@ -216,68 +223,68 @@ Changelog for package tier4_planning_rviz_plugin
   * fix some codes
   * change to makerker array
   * change avoidance utils
-* feat(tier4_planning_rviz_plugin): add offset from baselink param (`#2384 <https://github.com/autowarefoundation/autoware.universe/issues/2384>`_)
-* fix(tier4_planning_rviz_plugin): correct velocity text (`#2179 <https://github.com/autowarefoundation/autoware.universe/issues/2179>`_)
-* fix(tier4_planning/vehicle_rviz_plugin): fixed license (`#2059 <https://github.com/autowarefoundation/autoware.universe/issues/2059>`_)
+* feat(tier4_planning_rviz_plugin): add offset from baselink param (`#2384 <https://github.com/autowarefoundation/autoware_universe/issues/2384>`_)
+* fix(tier4_planning_rviz_plugin): correct velocity text (`#2179 <https://github.com/autowarefoundation/autoware_universe/issues/2179>`_)
+* fix(tier4_planning/vehicle_rviz_plugin): fixed license (`#2059 <https://github.com/autowarefoundation/autoware_universe/issues/2059>`_)
   * fix(tier4_planning/vehicle_rviz_plugin): fixed license
   * fix build error
-* feat(tier4_planning_rviz_plugin): add owner (`#1953 <https://github.com/autowarefoundation/autoware.universe/issues/1953>`_)
-* refactor(tier4_planning_rviz_plugin): apply clang-tidy for path (`#1637 <https://github.com/autowarefoundation/autoware.universe/issues/1637>`_)
-* feat(tier4_planning_rviz_plugin): add velocity_text to path_with_lane_id (`#1735 <https://github.com/autowarefoundation/autoware.universe/issues/1735>`_)
+* feat(tier4_planning_rviz_plugin): add owner (`#1953 <https://github.com/autowarefoundation/autoware_universe/issues/1953>`_)
+* refactor(tier4_planning_rviz_plugin): apply clang-tidy for path (`#1637 <https://github.com/autowarefoundation/autoware_universe/issues/1637>`_)
+* feat(tier4_planning_rviz_plugin): add velocity_text to path_with_lane_id (`#1735 <https://github.com/autowarefoundation/autoware_universe/issues/1735>`_)
   * feat(tier4_planning_rviz_plugin): add velocity_text to path_with_lane_id
   * fix pre-commit
-* refactor(tier4_planning_rviz_plugin): apply clang-tidy for mission_checkpoint (`#1634 <https://github.com/autowarefoundation/autoware.universe/issues/1634>`_)
+* refactor(tier4_planning_rviz_plugin): apply clang-tidy for mission_checkpoint (`#1634 <https://github.com/autowarefoundation/autoware_universe/issues/1634>`_)
   refactor(tier4_planning_rviz_plugin): apply clang-tidy for mission_checkpoint
-* refactor(tier4_planning_rviz_plugin): apply clang-tidy for drivable_area (`#1625 <https://github.com/autowarefoundation/autoware.universe/issues/1625>`_)
-* fix: remove unused check of rviz plugin version (`#1474 <https://github.com/autowarefoundation/autoware.universe/issues/1474>`_)
-* fix(tier4_planning_rviz_plugin): fix initialize planning_rviz_plugin (`#1387 <https://github.com/autowarefoundation/autoware.universe/issues/1387>`_)
+* refactor(tier4_planning_rviz_plugin): apply clang-tidy for drivable_area (`#1625 <https://github.com/autowarefoundation/autoware_universe/issues/1625>`_)
+* fix: remove unused check of rviz plugin version (`#1474 <https://github.com/autowarefoundation/autoware_universe/issues/1474>`_)
+* fix(tier4_planning_rviz_plugin): fix initialize planning_rviz_plugin (`#1387 <https://github.com/autowarefoundation/autoware_universe/issues/1387>`_)
   * fix(tier4_planning_rviz_plugin): fix initialize planning_rviz_plugin
   * ci(pre-commit): autofix
   * remove comment out
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* fix(tier4_planning_rviz_plugin): support backward driving in path/traj plugin (`#1335 <https://github.com/autowarefoundation/autoware.universe/issues/1335>`_)
+* fix(tier4_planning_rviz_plugin): support backward driving in path/traj plugin (`#1335 <https://github.com/autowarefoundation/autoware_universe/issues/1335>`_)
   * fix(tier4_planning_rviz_plugin): support backward driving in path_with_lane_id/path/trajectory plugin
   * add utils.hpp
-* feat: view LaneId on PathWithLaneIdFootprint plugin (`#984 <https://github.com/autowarefoundation/autoware.universe/issues/984>`_)
+* feat: view LaneId on PathWithLaneIdFootprint plugin (`#984 <https://github.com/autowarefoundation/autoware_universe/issues/984>`_)
   * feat: view LaneId on PathWithLaneIdFootprint plugin
   * ci(pre-commit): autofix
   * fix: add utility
   * ci(pre-commit): autofix
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* fix: set Eigen include directory as SYSTEM for Humble arm64 (`#978 <https://github.com/autowarefoundation/autoware.universe/issues/978>`_)
-* feat(rviz_plugin): console meter is too large on the Rviz with FHD display, isn't it? (`#587 <https://github.com/autowarefoundation/autoware.universe/issues/587>`_)
+* fix: set Eigen include directory as SYSTEM for Humble arm64 (`#978 <https://github.com/autowarefoundation/autoware_universe/issues/978>`_)
+* feat(rviz_plugin): console meter is too large on the Rviz with FHD display, isn't it? (`#587 <https://github.com/autowarefoundation/autoware_universe/issues/587>`_)
   * feat(tier4_planning/vehicle_plugin): make plugins size scalable
   * remove space
   * scaling
-* chore: upgrade cmake_minimum_required to 3.14 (`#856 <https://github.com/autowarefoundation/autoware.universe/issues/856>`_)
-* refactor: simplify Rolling support (`#854 <https://github.com/autowarefoundation/autoware.universe/issues/854>`_)
-* refactor: use autoware cmake (`#849 <https://github.com/autowarefoundation/autoware.universe/issues/849>`_)
+* chore: upgrade cmake_minimum_required to 3.14 (`#856 <https://github.com/autowarefoundation/autoware_universe/issues/856>`_)
+* refactor: simplify Rolling support (`#854 <https://github.com/autowarefoundation/autoware_universe/issues/854>`_)
+* refactor: use autoware cmake (`#849 <https://github.com/autowarefoundation/autoware_universe/issues/849>`_)
   * remove autoware_auto_cmake
   * add build_depend of autoware_cmake
   * use autoware_cmake in CMakeLists.txt
   * fix bugs
   * fix cmake lint errors
-* fix: suppress compiler warnings (`#852 <https://github.com/autowarefoundation/autoware.universe/issues/852>`_)
-* style: fix format of package.xml (`#844 <https://github.com/autowarefoundation/autoware.universe/issues/844>`_)
-* fix(tier4_planning_rviz_plugins): modify build error in rolling (`#808 <https://github.com/autowarefoundation/autoware.universe/issues/808>`_)
-* feat(tier4_planning_rviz_plugins): add vehicle_info to *FootprintDisplay (`#712 <https://github.com/autowarefoundation/autoware.universe/issues/712>`_)
+* fix: suppress compiler warnings (`#852 <https://github.com/autowarefoundation/autoware_universe/issues/852>`_)
+* style: fix format of package.xml (`#844 <https://github.com/autowarefoundation/autoware_universe/issues/844>`_)
+* fix(tier4_planning_rviz_plugins): modify build error in rolling (`#808 <https://github.com/autowarefoundation/autoware_universe/issues/808>`_)
+* feat(tier4_planning_rviz_plugins): add vehicle_info to *FootprintDisplay (`#712 <https://github.com/autowarefoundation/autoware_universe/issues/712>`_)
   * feat(tier4_planning_rviz_plugins): add vehicle_info to PathFootprintDisplay
   * add vehicle_info to other footprint displays
   * fix the scope of local variables
   Co-authored-by: Takayuki Murooka <takayuki5168@gmail.com>
-* chore: sync files (`#629 <https://github.com/autowarefoundation/autoware.universe/issues/629>`_)
+* chore: sync files (`#629 <https://github.com/autowarefoundation/autoware_universe/issues/629>`_)
   * chore: sync files
   * ci(pre-commit): autofix
   Co-authored-by: kenji-miyake <kenji-miyake@users.noreply.github.com>
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* feat(tier4_planning_rviz_plugin): add PathWithLaneIdFootprint rviz plugin (`#594 <https://github.com/autowarefoundation/autoware.universe/issues/594>`_)
+* feat(tier4_planning_rviz_plugin): add PathWithLaneIdFootprint rviz plugin (`#594 <https://github.com/autowarefoundation/autoware_universe/issues/594>`_)
   * feat(tier4_planning_rviz_plugin): add PathWithLaneIdFootprint rviz plugin
   * ci(pre-commit): autofix
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* chore(tier4_planning_rviz_plugin): add PathWithLaneId icon (`#593 <https://github.com/autowarefoundation/autoware.universe/issues/593>`_)
-* feat(tier4_planning_rviz_plugin): add  PathWithLaneId rviz plugin (`#591 <https://github.com/autowarefoundation/autoware.universe/issues/591>`_)
-  * sync rc rc/v1.7.1 (`#2345 <https://github.com/autowarefoundation/autoware.universe/issues/2345>`_)
-  * add behavior_path_rviz_plugin (`#2343 <https://github.com/autowarefoundation/autoware.universe/issues/2343>`_)
+* chore(tier4_planning_rviz_plugin): add PathWithLaneId icon (`#593 <https://github.com/autowarefoundation/autoware_universe/issues/593>`_)
+* feat(tier4_planning_rviz_plugin): add  PathWithLaneId rviz plugin (`#591 <https://github.com/autowarefoundation/autoware_universe/issues/591>`_)
+  * sync rc rc/v1.7.1 (`#2345 <https://github.com/autowarefoundation/autoware_universe/issues/2345>`_)
+  * add behavior_path_rviz_plugin (`#2343 <https://github.com/autowarefoundation/autoware_universe/issues/2343>`_)
   * add behavior_path_rviz_plugin
   * edit README
   * fix for uncrustify
@@ -296,14 +303,14 @@ Changelog for package tier4_planning_rviz_plugin
   Co-authored-by: autoware-iv-sync-ci[bot] <87871706+autoware-iv-sync-ci[bot]@users.noreply.github.com>
   Co-authored-by: Hiroki OTA <hiroki.ota@tier4.jp>
   Co-authored-by: Kenji Miyake <31987104+kenji-miyake@users.noreply.github.com>
-* feat: add drivable area visualizer (`#779 <https://github.com/autowarefoundation/autoware.universe/issues/779>`_) (`#193 <https://github.com/autowarefoundation/autoware.universe/issues/193>`_)
+* feat: add drivable area visualizer (`#779 <https://github.com/autowarefoundation/autoware_universe/issues/779>`_) (`#193 <https://github.com/autowarefoundation/autoware_universe/issues/193>`_)
   * add drivable area visualizer
   * add license
   * modify pointed out in pre-commit
   * modify pointed out in pre-commit
   Co-authored-by: Yukihiro Saito <yukky.saito@gmail.com>
-* fix: fix typo plannnig -> planning (`#195 <https://github.com/autowarefoundation/autoware.universe/issues/195>`_)
-* feat: rename existing packages name starting with autoware to different names (`#180 <https://github.com/autowarefoundation/autoware.universe/issues/180>`_)
+* fix: fix typo plannnig -> planning (`#195 <https://github.com/autowarefoundation/autoware_universe/issues/195>`_)
+* feat: rename existing packages name starting with autoware to different names (`#180 <https://github.com/autowarefoundation/autoware_universe/issues/180>`_)
   * autoware_api_utils -> tier4_api_utils
   * autoware_debug_tools -> tier4_debug_tools
   * autoware_error_monitor -> system_error_monitor

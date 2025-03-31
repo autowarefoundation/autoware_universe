@@ -128,6 +128,23 @@ bool isWithinAreas(
  */
 std::vector<lanelet::BasicPolygon2d> getBusStopAreaPolygons(const lanelet::ConstLanelets & lanes);
 
+/**
+ * @brief check collision between objects and ego path footprints
+ * @param path ego path to check collision
+ * @param curvatures curvatures of ego path
+ * @param static_target_objects static objects to check collision
+ * @param dynamic_target_objects dynamic objects to check collision
+ * @param behavior_path_parameters behavior path parameters
+ * @param collision_check_margin margin to check collision
+ * @param extract_static_objects flag to extract static objects
+ * @param maximum_deceleration maximum deceleration
+ * @param object_recognition_collision_check_max_extra_stopping_margin maximum extra stopping margin
+ * @param collision_check_outer_margin_factor factor to extend the collision check margin from the
+ *                                            inside margin to the outside in the curved path
+ * @param ego_polygons_expanded expanded ego polygons
+ * @param update_debug_data flag to update debug data
+ * @return true if collision is detected
+ */
 bool checkObjectsCollision(
   const PathWithLaneId & path, const std::vector<double> & curvatures,
   const PredictedObjects & static_target_objects, const PredictedObjects & dynamic_target_objects,
@@ -135,7 +152,8 @@ bool checkObjectsCollision(
   const double collision_check_margin, const bool extract_static_objects,
   const double maximum_deceleration,
   const double object_recognition_collision_check_max_extra_stopping_margin,
-  std::vector<Polygon2d> & ego_polygons_expanded, const bool update_debug_data = false);
+  const double collision_check_outer_margin_factor, std::vector<Polygon2d> & ego_polygons_expanded,
+  const bool update_debug_data = false);
 
 // debug
 MarkerArray createPullOverAreaMarkerArray(

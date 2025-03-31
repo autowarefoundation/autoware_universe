@@ -2,10 +2,11 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_object_velocity_splitter</name>
-  <version>0.42.0</version>
+  <version>0.43.0</version>
   <description>autoware_object_velocity_splitter</description>
   <maintainer email="satoshi.tanaka@tier4.jp">Sathshi Tanaka</maintainer>
   <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
+  <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
   <license>Apache License 2.0</license>
   <author email="satoshi.tanaka@tier4.jp">Sathshi Tanaka</author>
 

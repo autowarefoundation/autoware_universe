@@ -26,6 +26,7 @@
 #include <tf2/utils.h>
 
 #include <algorithm>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -92,17 +93,20 @@ bool convertConvexHullToBoundingBox(
   }
 
   // look for bounding box boundary
-  float max_x = 0;
-  float max_y = 0;
-  float min_x = 0;
-  float min_y = 0;
-  float max_z = 0;
+  float max_x = -std::numeric_limits<float>::infinity();
+  float max_y = -std::numeric_limits<float>::infinity();
+  float min_x = std::numeric_limits<float>::infinity();
+  float min_y = std::numeric_limits<float>::infinity();
+  float max_z = -std::numeric_limits<float>::infinity();
+  float min_z = std::numeric_limits<float>::infinity();
+
   for (const auto & point : input_object.shape.footprint.points) {
     max_x = std::max(max_x, point.x);
     max_y = std::max(max_y, point.y);
     min_x = std::min(min_x, point.x);
     min_y = std::min(min_y, point.y);
     max_z = std::max(max_z, point.z);
+    min_z = std::min(min_z, point.z);
   }
 
   // calc new center
@@ -120,7 +124,7 @@ bool convertConvexHullToBoundingBox(
   output_object.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
   output_object.shape.dimensions.x = max_x - min_x;
   output_object.shape.dimensions.y = max_y - min_y;
-  output_object.shape.dimensions.z = max_z;
+  output_object.shape.dimensions.z = max_z - min_z;
 
   return true;
 }
