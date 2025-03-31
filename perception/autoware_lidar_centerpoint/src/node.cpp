@@ -260,7 +260,7 @@ void LidarCenterPointNode::diagnosticsTimerCallback()
         .count();
 
     diagnostics_processing_delay_->add_key_value(
-        "time_since_last_in_time_processing_ms", delayed_state_duration);
+      "time_since_last_in_time_processing_ms", delayed_state_duration);
 
     if (delayed_state_duration > max_acceptable_consecutive_delay_ms_) {
       diagnostics_processing_delay_->add_key_value(
