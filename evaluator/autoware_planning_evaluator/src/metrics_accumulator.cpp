@@ -23,7 +23,7 @@ void MetricsAccumulator::accumulate(const OutputMetric output_metric, const doub
 }
 
 void MetricsAccumulator::accumulate(
-  const OutputMetric output_metric, const Accumulator<double> & accumulator, const int count)
+  const OutputMetric output_metric, const Accumulator<double> & accumulator, const unsigned int count)
 {
   common_accumulators.emplace(output_metric, CommonAccumulator());
   common_accumulators[output_metric].update(accumulator, count);
