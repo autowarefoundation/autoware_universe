@@ -17,7 +17,7 @@
 
 #include "types.hpp"
 
-#include <autoware/motion_velocity_planner_common_universe/collision_checker.hpp>
+#include <autoware/motion_velocity_planner_common/collision_checker.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>

@@ -170,8 +170,6 @@ planning/motion_velocity_planner/autoware_motion_velocity_obstacle_slow_down_mod
 planning/motion_velocity_planner/autoware_motion_velocity_obstacle_stop_module/** berkay@leodrive.ai maxime.clement@tier4.jp takayuki.murooka@tier4.jp yuki.takagi@tier4.jp
 planning/motion_velocity_planner/autoware_motion_velocity_obstacle_velocity_limiter_module/** alqudah.mohammad@tier4.jp maxime.clement@tier4.jp
 planning/motion_velocity_planner/autoware_motion_velocity_out_of_lane_module/** alqudah.mohammad@tier4.jp mamoru.sobue@tier4.jp maxime.clement@tier4.jp shumpei.wakabayashi@tier4.jp takayuki.murooka@tier4.jp tomoya.kimura@tier4.jp
-planning/motion_velocity_planner/autoware_motion_velocity_planner_common_universe/** alqudah.mohammad@tier4.jp maxime.clement@tier4.jp takayuki.murooka@tier4.jp yuki.takagi@tier4.jp
-planning/motion_velocity_planner/autoware_motion_velocity_planner_node_universe/** alqudah.mohammad@tier4.jp maxime.clement@tier4.jp
 planning/sampling_based_planner/autoware_bezier_sampler/** maxime.clement@tier4.jp
 planning/sampling_based_planner/autoware_frenet_planner/** maxime.clement@tier4.jp
 planning/sampling_based_planner/autoware_path_sampler/** maxime.clement@tier4.jp

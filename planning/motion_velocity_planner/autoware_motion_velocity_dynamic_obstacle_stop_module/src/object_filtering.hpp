@@ -17,7 +17,7 @@
 
 #include "types.hpp"
 
-#include <autoware/motion_velocity_planner_common_universe/planner_data.hpp>
+#include <autoware/motion_velocity_planner_common/planner_data.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 
