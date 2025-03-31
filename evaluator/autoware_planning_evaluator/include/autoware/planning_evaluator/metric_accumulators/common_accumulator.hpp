@@ -40,7 +40,7 @@ public:
    * @param accumulator new metric data to add to the accumulator
    * @param count number of data points to count
    */
-  void update(const Accumulator<double> & accumulator, const int count);
+  void update(const Accumulator<double> & accumulator, const unsigned int count);
 
   /**
    * @brief update the accumulator with new statistics-based metrics with count of update times
@@ -63,8 +63,8 @@ public:
 private:
   Accumulator<double> min_accumulator_;
   Accumulator<double> max_accumulator_;
-  Accumulator<double> mean_accumulator_;
-  int count_ = 0;
+  Accumulator<long double> mean_accumulator_;
+  unsigned int count_ = 0;
 };
 
 }  // namespace planning_diagnostics

@@ -115,11 +115,11 @@ bool PlanningFactorAccumulator::addMetricMsg(
                              ? stop_decision_state_.at(module)
                              : abnormal_stop_decision_state_.at(module);
       if (state.is_stop_decision) {
-        metric_msg.name = base_name + module + "/keep_duration";
+        metric_msg.name = base_name + module + "/keep_duration/value";
         metric_msg.value = std::to_string(state.stop_decision_keep_time);
         metrics_msg.metric_array.push_back(metric_msg);
 
-        metric_msg.name = base_name + module + "/distance_to_stop";
+        metric_msg.name = base_name + module + "/distance_to_stop/value";
         metric_msg.value = std::to_string(state.distance_to_stop);
         metrics_msg.metric_array.push_back(metric_msg);
         added = true;

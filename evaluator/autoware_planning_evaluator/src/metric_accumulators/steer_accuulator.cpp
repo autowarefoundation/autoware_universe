@@ -80,11 +80,11 @@ json SteerAccumulator::getOutputJson(const OutputMetric & output_metric) const
 {
   json j;
   if (output_metric == OutputMetric::steer_change_count) {
-    j["total_count"] = steer_rate_change_count_total_;
-    j["min_count_in_duration"] = steer_rate_change_count_accumulator_.min();
-    j["max_count_in_duration"] = steer_rate_change_count_accumulator_.max();
-    j["mean_count_in_duration"] = steer_rate_change_count_accumulator_.mean();
-    j["window_duration_s"] = parameters.window_duration_s;
+    j["count"] = steer_rate_change_count_total_;
+    j["count_in_duration/min"] = steer_rate_change_count_accumulator_.min();
+    j["count_in_duration/max"] = steer_rate_change_count_accumulator_.max();
+    j["count_in_duration/mean"] = steer_rate_change_count_accumulator_.mean();
+    j["parameter/window_duration_s"] = parameters.window_duration_s;
     j["description"] = output_metric_descriptions.at(output_metric);
   }
   return j;

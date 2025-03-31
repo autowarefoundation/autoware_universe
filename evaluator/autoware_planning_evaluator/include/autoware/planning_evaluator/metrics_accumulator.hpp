@@ -44,7 +44,7 @@ public:
   void accumulate(const OutputMetric metric, const double value);
 
   void accumulate(
-    const OutputMetric metric, const Accumulator<double> & accumulator, const int count);
+    const OutputMetric metric, const Accumulator<double> & accumulator, const unsigned int count);
 
   void accumulate(const OutputMetric metric, const Accumulator<double> & accumulator);
 

@@ -17,7 +17,7 @@
 namespace planning_diagnostics
 {
 
-void CommonAccumulator::update(const Accumulator<double> & accumulator, const int count)
+void CommonAccumulator::update(const Accumulator<double> & accumulator, const unsigned int count)
 {
   min_accumulator_.add(accumulator.min());
   max_accumulator_.add(accumulator.max());
