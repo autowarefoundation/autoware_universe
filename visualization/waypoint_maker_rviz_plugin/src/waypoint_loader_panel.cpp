@@ -21,7 +21,7 @@ WaypointLoaderPanel::WaypointLoaderPanel(QWidget * parent) : rviz_common::Panel(
   }
 
   {
-    load_button_ = new QPushButton("loading");
+    load_button_ = new QPushButton("Load");
     load_button_->setToolTip("loading new trajectory");
     layout->addWidget(load_button_);
   }
@@ -56,7 +56,7 @@ void WaypointLoaderPanel::onInitialize()
       loadeFiles(QString::fromStdString(file_position_));
     });
 
-  path_file_pub_ = raw_node_->create_publisher<std_msgs::msg::String>("/path_file", rclcpp::QoS{1});
+  path_file_pub_ = raw_node_->create_publisher<std_msgs::msg::String>("/waypoint_loader/input_file_path", rclcpp::QoS{1});
 }
 
 void WaypointLoaderPanel::onRecordService(

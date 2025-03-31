@@ -11,7 +11,7 @@ namespace rviz_plugins
 WaypointSaverPanel::WaypointSaverPanel(QWidget * parent) : rviz_common::Panel(parent)
 {
   // Create a label for the spin box
-  QLabel * interval_label = new QLabel("Trajectory Interval:");
+  QLabel * interval_label = new QLabel("Distance Interval:");
 
   // interval spin box
   {
@@ -31,10 +31,10 @@ WaypointSaverPanel::WaypointSaverPanel(QWidget * parent) : rviz_common::Panel(pa
 
   // cancel button
   {
-    cancel_button_ = new QPushButton("Cancel");
-    cancel_button_->setToolTip("Stop recording trajectory.");
-    deactivateButton(cancel_button_);
-    connect(cancel_button_, SIGNAL(clicked()), SLOT(onClickCancel()));
+    finish_button_ = new QPushButton("Finish");
+    finish_button_->setToolTip("Stop recording trajectory.");
+    deactivateButton(finish_button_);
+    connect(finish_button_, SIGNAL(clicked()), SLOT(onClickCancel()));
   }
 
   // file lable
@@ -53,7 +53,7 @@ WaypointSaverPanel::WaypointSaverPanel(QWidget * parent) : rviz_common::Panel(pa
   bottom_layout->addWidget(save_button_, 0, 0);
   bottom_layout->addWidget(interval_label, 0, 1);
   bottom_layout->addWidget(interval_input_, 0, 2);
-  bottom_layout->addWidget(cancel_button_, 1, 0);
+  bottom_layout->addWidget(finish_button_, 1, 0);
 
   // Add the bottom layout to the main vertical layout
   main_layout->addLayout(bottom_layout);

@@ -33,7 +33,7 @@ protected:
 
   QDoubleSpinBox * interval_input_{nullptr};
   QPushButton * save_button_{nullptr};
-  QPushButton * cancel_button_{nullptr};
+  QPushButton * finish_button_{nullptr};
   QLabel * file_label_{nullptr};
 
   rclcpp::Node::SharedPtr raw_node_;
@@ -59,9 +59,9 @@ protected:
   {
     if (mode) {
       deactivateButton(save_button_);
-      activateButton(cancel_button_);
+      activateButton(finish_button_);
     } else {
-      deactivateButton(cancel_button_);
+      deactivateButton(finish_button_);
       activateButton(save_button_);
     }
   }
@@ -73,9 +73,9 @@ protected:
       [this, mode]() {
         if (mode) {
           activateButton(save_button_);
-          deactivateButton(cancel_button_);
+          deactivateButton(finish_button_);
         } else {
-          activateButton(cancel_button_);
+          activateButton(finish_button_);
           deactivateButton(save_button_);
         }
       },

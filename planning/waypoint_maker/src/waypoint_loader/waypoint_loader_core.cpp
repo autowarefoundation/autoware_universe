@@ -22,7 +22,7 @@ WaypointLoaderNode::WaypointLoaderNode()
 
   // subscriber
   file_subscriber_ = create_subscription<std_msgs::msg::String>(
-    "/path_file", 1, std::bind(&WaypointLoaderNode::csvFileCallback, this, std::placeholders::_1));
+    "/waypoint_loader/input_file_path", 1, std::bind(&WaypointLoaderNode::csvFileCallback, this, std::placeholders::_1));
   sub_odometry_ = create_subscription<nav_msgs::msg::Odometry>(
     "/input/pose", rclcpp::QoS(1),
     std::bind(&WaypointLoaderNode::onOdometry, this, std::placeholders::_1));
