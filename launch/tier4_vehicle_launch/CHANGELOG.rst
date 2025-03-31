@@ -2,6 +2,13 @@
 Changelog for package tier4_vehicle_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* fix(tier4_vehicle_launch): add missing exec_depend (`#10133 <https://github.com/autowarefoundation/autoware_universe/issues/10133>`_)
+* Contributors: Hayato Mizushima, Takagi, Isamu, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 

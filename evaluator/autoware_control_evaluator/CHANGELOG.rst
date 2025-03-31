@@ -2,6 +2,21 @@
 Changelog for package autoware_control_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* feat(control_evaluator): add a new stop_deviation metric (`#10246 <https://github.com/autowarefoundation/autoware_universe/issues/10246>`_)
+  * add metric of stop_deviation
+  * fix bug
+  * remove unused include.
+  * add unit test and schema
+  * pre-commit
+  * update planning_evaluator schema
+  ---------
+  Co-authored-by: t4-adc <grp-rd-1-adc-admin@tier4.jp>
+* Contributors: Hayato Mizushima, Kem (TiankuiXian), Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

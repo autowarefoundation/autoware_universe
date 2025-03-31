@@ -2,6 +2,18 @@
 Changelog for package autoware_behavior_path_goal_planner_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* fix(goal_planner): ignore use bus_stop_area flag if there are no BusStopArea on the pull over lanes (`#10274 <https://github.com/autowarefoundation/autoware_universe/issues/10274>`_)
+* docs(goal_planner): update README (`#10263 <https://github.com/autowarefoundation/autoware_universe/issues/10263>`_)
+* fix(goal_planner): invert lane boundary of neighbor opposite lanelets when generating departure check lane (`#10207 <https://github.com/autowarefoundation/autoware_universe/issues/10207>`_)
+  * fix(goal_planner): invert lane boundary of neighbor opposite lanelets when generating departure check lane
+  * remove unnecessary loop
+  ---------
+* Contributors: Hayato Mizushima, Mamoru Sobue, Mert Çolak, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

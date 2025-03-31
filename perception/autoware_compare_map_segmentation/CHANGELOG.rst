@@ -2,6 +2,21 @@
 Changelog for package autoware_compare_map_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* fix(compare_map_filter): deadlock bug fix (`#10222 <https://github.com/autowarefoundation/autoware_universe/issues/10222>`_)
+  * fix(compare_map_filter): deadlock bug fix
+  * fix: change to lock_guard
+  * fix: CI error
+  * reduce scope of mutex
+  * refactor
+  * chore: refactor
+  * fix: add missing mutex for map_grid_size_x
+  ---------
+* Contributors: Hayato Mizushima, Yutaka Kondo, badai nguyen
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

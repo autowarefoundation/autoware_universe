@@ -2,6 +2,16 @@
 Changelog for package autoware_motion_velocity_out_of_lane_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* fix(out_of_lane): fix object path time collision calculation (`#10267 <https://github.com/autowarefoundation/autoware_universe/issues/10267>`_)
+  fix collision time calculation
+* feat(out_of_lane): add option to use stop lines defined in the vector map (`#9584 <https://github.com/autowarefoundation/autoware_universe/issues/9584>`_)
+* fix(out_of_lane): fix condition to keep using previous stop pose within some time buffer (`#10140 <https://github.com/autowarefoundation/autoware_universe/issues/10140>`_)
+* Contributors: Hayato Mizushima, Maxime CLEMENT, Yutaka Kondo, mkquda
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

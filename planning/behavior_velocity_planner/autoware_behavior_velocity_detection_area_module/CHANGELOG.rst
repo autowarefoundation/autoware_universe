@@ -2,6 +2,26 @@
 Changelog for package autoware_behavior_velocity_detection_area_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* fix(behavior_velocity_planner): planning factor integration (`#10292 <https://github.com/autowarefoundation/autoware_universe/issues/10292>`_)
+  * fix: blind_spot
+  * fix: crosswalk
+  * fix: detection_area
+  * fix: intersection
+  * fix: no_drivable_lane
+  * fix: no_stopping_area
+  * fix: run_out
+  * fix: stop_line
+  * fix: traffic_light
+  * fix: virtual_traffic_light
+  * fix: walk_way
+  ---------
+* feat(Autoware_planning_factor_interface): replace tier4_msgs with autoware_internal_msgs (`#10204 <https://github.com/autowarefoundation/autoware_universe/issues/10204>`_)
+* Contributors: Hayato Mizushima, Satoshi OTA, Yutaka Kondo, 心刚
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

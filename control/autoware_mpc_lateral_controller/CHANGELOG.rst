@@ -2,6 +2,20 @@
 Changelog for package autoware_mpc_lateral_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* feat(path_optimizer): additional failure logging and failure mode handling (`#10276 <https://github.com/autowarefoundation/autoware_universe/issues/10276>`_)
+  MRM when MPT fails
+* fix(autoware_mpc_lateral_controller): replace Eigen::VectorXd with Eigen::Vector3d for state representation (`#10235 <https://github.com/autowarefoundation/autoware_universe/issues/10235>`_)
+  * fix(autoware_mpc_lateral_controller): replace Eigen::VectorXd with Eigen::Vector3d for state representation
+  * docs(autoware_mpc_lateral_controller): update comments for state representation and discretization considerations
+  ---------
+* chore(mpc_lateral_controller): add package maintainer (`#10239 <https://github.com/autowarefoundation/autoware_universe/issues/10239>`_)
+  add package maintainer
+* Contributors: Arjun Jagdish Ram, Hayato Mizushima, Kyoichi Sugahara, Yutaka Kondo, mkquda
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

@@ -2,6 +2,18 @@
 Changelog for package autoware_image_projection_based_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* fix(segmentation_pointcloud_fusion): fix typo of defaut camera info topic (`#10272 <https://github.com/autowarefoundation/autoware_universe/issues/10272>`_)
+  fix(segmentation_pointcloud_fusion): typo for defaut camera info topic
+* refactor: add autoware_cuda_dependency_meta (`#10073 <https://github.com/autowarefoundation/autoware_universe/issues/10073>`_)
+* fix(segmentation_pointcloud_fusion): set valid pointcloud field for output pointcloud (`#10196 <https://github.com/autowarefoundation/autoware_universe/issues/10196>`_)
+  set valid pointcloud field
+* feat(autoware_image_based_projection_fusion): redesign image based projection fusion node (`#10016 <https://github.com/autowarefoundation/autoware_universe/issues/10016>`_)
+* Contributors: Esteve Fernandez, Hayato Mizushima, Kento Yabuuchi, Yi-Hsiang Fang (Vivid), Yutaka Kondo, badai nguyen
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

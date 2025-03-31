@@ -11,7 +11,7 @@ package_name = "autoware_adapi_visualizers"
 
 setup(
     name=package_name,
-    version="0.42.0",
+    version="0.43.0",
     packages=[package_name],
     data_files=[
         ("share/ament_index/resource_index/packages", [f"resource/{package_name}"]),

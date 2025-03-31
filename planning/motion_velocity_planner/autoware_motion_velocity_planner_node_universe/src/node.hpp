@@ -102,7 +102,6 @@ private:
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
     processing_time_publisher_;
   autoware_utils::PublishedTimePublisher published_time_publisher_{this};
-  rclcpp::Publisher<MetricArray>::SharedPtr metrics_pub_;
 
   //  parameters
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr set_param_callback_;

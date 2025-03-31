@@ -2,6 +2,18 @@
 Changelog for package autoware_lane_departure_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* refactor(control): remove unimplemented function declarations (`#10314 <https://github.com/autowarefoundation/autoware_universe/issues/10314>`_)
+  remove unimplemented function declarations
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* fix(lane_departure_checker): fix trajectory resampling logic to keep given interval (`#10221 <https://github.com/autowarefoundation/autoware_universe/issues/10221>`_)
+  * fix(lane_departure_checker): fix trajectory resampling logic to keep given interval
+  * test(lane_departure_checker): add test case for consecutive small distances followed by large distance
+  ---------
+* Contributors: Autumn60, Hayato Mizushima, Kyoichi Sugahara, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base

@@ -2,6 +2,16 @@
 Changelog for package autoware_goal_distance_calculator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* fix(common): fix package name of find-pkg-share (`#10135 <https://github.com/autowarefoundation/autoware_universe/issues/10135>`_)
+  * fix(common): add missing exec_depend
+  * fix find-pkg-share
+  ---------
+* Contributors: Hayato Mizushima, Takagi, Isamu, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
