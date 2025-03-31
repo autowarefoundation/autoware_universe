@@ -324,7 +324,7 @@ private:
   /**
    * @brief Validate the TensorRT engine.
    *
-   * @return Whether TensorRT version used for building engine is compatible.
+   * @return Whether the TensorRT version used for building engine is compatible.
    */
   bool validateEngine();
 
