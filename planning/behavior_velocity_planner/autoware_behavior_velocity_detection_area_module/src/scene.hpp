@@ -23,8 +23,8 @@
 
 #define EIGEN_MPL2_ONLY
 #include <Eigen/Core>
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
+#include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/detection_area.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -38,7 +38,7 @@ using PathIndexWithPoint2d = std::pair<size_t, Point2d>;                // front
 using PathIndexWithOffset = std::pair<size_t, double>;                  // front index, offset
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
 
-class DetectionAreaModule : public SceneModuleInterface
+class DetectionAreaModule : public SceneModuleInterfaceWithRTC
 {
 public:
   enum class State { GO, STOP };
