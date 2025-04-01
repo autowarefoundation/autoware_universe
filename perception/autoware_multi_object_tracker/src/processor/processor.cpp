@@ -231,7 +231,7 @@ void TrackerProcessor::removeOverlappedTracker(const rclcpp::Time & time)
       const auto iou = shapes::get2dIoU(object2, object1, min_union_iou_area);
 
       // check if object2 should be removed
-      if (canRemoveOverlappedTarget(*(*itr2), *(*itr1), iou)) {
+      if (canRemoveOverlappedTarget(*(*itr2), *(*itr1), time, iou)) {
         // Remove from original list_tracker
         itr2 = list_tracker_.erase(itr2);
         --itr2;
@@ -241,10 +241,10 @@ void TrackerProcessor::removeOverlappedTracker(const rclcpp::Time & time)
 }
 
 bool TrackerProcessor::canRemoveOverlappedTarget(
-  const Tracker & target, const Tracker & other, const double iou) const
+  const Tracker & target, const Tracker & other, const rclcpp::Time & time, const double iou) const
 {
   // if the other is not confident, do not remove the target
-  if (!other.isConfident()) {
+  if (!other.isConfident(time)) {
     return false;
   }
 
@@ -297,7 +297,7 @@ void TrackerProcessor::getTrackedObjects(
   types::DynamicObject tracked_object;
   for (const auto & tracker : list_tracker_) {
     // check if the tracker is confident, if not, skip
-    if (!tracker->isConfident()) continue;
+    if (!tracker->isConfident(time)) continue;
     // Get the tracked object, extrapolated to the given time
     if (tracker->getTrackedObject(time, tracked_object)) {
       tracked_objects.objects.push_back(types::toTrackedObjectMsg(tracked_object));
@@ -316,7 +316,7 @@ void TrackerProcessor::getTentativeObjects(
   types::DynamicObject tracked_object;
   for (const auto & tracker : list_tracker_) {
     // check if the tracker is confident, if so, skip
-    if (tracker->isConfident()) continue;
+    if (tracker->isConfident(time)) continue;
     // Get the tracked object, extrapolated to the given time
     if (tracker->getTrackedObject(time, tracked_object)) {
       tentative_objects.objects.push_back(types::toTrackedObjectMsg(tracked_object));

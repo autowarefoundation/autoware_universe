@@ -90,7 +90,8 @@ private:
   void removeOldTracker(const rclcpp::Time & time);
   void removeOverlappedTracker(const rclcpp::Time & time);
   bool canRemoveOverlappedTarget(
-    const Tracker & target, const Tracker & other, const double iou) const;
+    const Tracker & target, const Tracker & other, const rclcpp::Time & time,
+    const double iou) const;
   std::shared_ptr<Tracker> createNewTracker(
     const types::DynamicObject & object, const rclcpp::Time & time) const;
 
