@@ -8,7 +8,7 @@ Metrics can be published in real time and saved to a JSON file when the node is 
 
 - `metrics_for_publish`:
 
-  - Metrics listed in `metrics_for_publish` are calclulated and published to the topic.
+  - Metrics listed in `metrics_for_publish` are calculated and published to the topic.
 
 - `metrics_for_output`:
   - Metrics listed in `metrics_for_output` are saved to a JSON file when the node shuts down (if `output_metrics` is set to `true`).

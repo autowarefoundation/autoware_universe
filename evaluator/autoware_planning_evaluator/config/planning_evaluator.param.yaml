@@ -110,8 +110,3 @@
     steer_change_count:
       window_duration_s: 5.0 # [s] window duration of counting steer change for publishing
       steer_rate_margin: 0.1 # [rad/s] margin of steer_rate around 0 to count as steer change
-
-# TODO：
-#  Check ReadMe.md， GPT润色。
-#  稍微改了一下代码， 单元测试一下。
-#  Psim测试，截图，做PR。
