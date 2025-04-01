@@ -743,10 +743,11 @@ Control VehicleCmdGate::createEmergencyStopControlCmd() const
   return cmd;
 }
 
-void VehicleCmdGate::onExternalEmergencyStopHeartbeat(
-  [[maybe_unused]] Heartbeat::ConstSharedPtr msg)
+void VehicleCmdGate::onExternalEmergencyStopHeartbeat(Heartbeat::ConstSharedPtr msg)
 {
-  external_emergency_stop_heartbeat_received_time_ = std::make_shared<rclcpp::Time>(this->now());
+  if (msg->ready) {
+    external_emergency_stop_heartbeat_received_time_ = std::make_shared<rclcpp::Time>(this->now());
+  }
 }
 
 void VehicleCmdGate::onGateMode(GateMode::ConstSharedPtr msg)

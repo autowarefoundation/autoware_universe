@@ -29,6 +29,7 @@
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_adapi_v1_msgs/msg/manual_operator_heartbeat.hpp>
 #include <autoware_adapi_v1_msgs/msg/mrm_state.hpp>
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
 #include <autoware_control_msgs/msg/control.hpp>
@@ -44,7 +45,6 @@
 #include <std_srvs/srv/trigger.hpp>
 #include <tier4_control_msgs/msg/gate_mode.hpp>
 #include <tier4_external_api_msgs/msg/emergency.hpp>
-#include <tier4_external_api_msgs/msg/heartbeat.hpp>
 #include <tier4_external_api_msgs/srv/engage.hpp>
 #include <tier4_external_api_msgs/srv/set_emergency.hpp>
 #include <tier4_system_msgs/msg/mrm_behavior_status.hpp>
@@ -72,7 +72,6 @@ using geometry_msgs::msg::AccelWithCovarianceStamped;
 using std_srvs::srv::Trigger;
 using tier4_control_msgs::msg::GateMode;
 using tier4_external_api_msgs::msg::Emergency;
-using tier4_external_api_msgs::msg::Heartbeat;
 using tier4_external_api_msgs::srv::SetEmergency;
 using tier4_system_msgs::msg::MrmBehaviorStatus;
 using tier4_vehicle_msgs::msg::VehicleEmergencyStamped;
@@ -81,6 +80,7 @@ using visualization_msgs::msg::MarkerArray;
 using diagnostic_msgs::msg::DiagnosticStatus;
 using nav_msgs::msg::Odometry;
 
+using Heartbeat = autoware_adapi_v1_msgs::msg::ManualOperatorHeartbeat;
 using EngageMsg = autoware_vehicle_msgs::msg::Engage;
 using EngageSrv = tier4_external_api_msgs::srv::Engage;
 

@@ -10,6 +10,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/heartbeat.cpp
   src/interface.cpp
   src/localization.cpp
+  src/manual_control.cpp
   src/motion.cpp
   src/operation_mode.cpp
   src/perception.cpp
@@ -18,6 +19,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/vehicle.cpp
   src/vehicle_info.cpp
   src/vehicle_door.cpp
+  src/utils/command_conversion.cpp
   src/utils/localization_conversion.cpp
   src/utils/route_conversion.cpp
   src/compatibility/autoware_state.cpp
@@ -30,6 +32,7 @@ rclcpp_components_register_nodes(${PROJECT_NAME}
   "autoware::default_adapi::HeartbeatNode"
   "autoware::default_adapi::InterfaceNode"
   "autoware::default_adapi::LocalizationNode"
+  "autoware::default_adapi::ManualControlNode"
   "autoware::default_adapi::MotionNode"
   "autoware::default_adapi::OperationModeNode"
   "autoware::default_adapi::PerceptionNode"
