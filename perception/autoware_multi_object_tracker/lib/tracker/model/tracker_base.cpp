@@ -227,10 +227,17 @@ void Tracker::limitObjectExtension(const object_model::ObjectModel object_model)
     object_extension.z, object_model.size_limit.height_min, object_model.size_limit.height_max);
 }
 
-void Tracker::getPositionCovarianceEigenSq(double & major_axis_sq, double & minor_axis_sq) const
+void Tracker::getPositionCovarianceEigenSq(
+  const rclcpp::Time & time, double & major_axis_sq, double & minor_axis_sq) const
 {
+  // estimate the covariance of the position at the given time
+  types::DynamicObject object = object_;
+  if (object.time.seconds() + 1e-6 < time.seconds()) {  // 1usec is allowed error
+    getTrackedObject(time, object);
+  }
   using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
-  auto & pose_cov = object_.pose_covariance;
+  auto & pose_cov = object.pose_covariance;
+
   // principal component of the position covariance matrix
   Eigen::Matrix2d covariance;
   covariance << pose_cov[XYZRPY_COV_IDX::X_X], pose_cov[XYZRPY_COV_IDX::X_Y],
@@ -240,7 +247,7 @@ void Tracker::getPositionCovarianceEigenSq(double & major_axis_sq, double & mino
   minor_axis_sq = es.eigenvalues().real().minCoeff();
 }
 
-bool Tracker::isConfident() const
+bool Tracker::isConfident(const rclcpp::Time & time) const
 {
   // check the number of measurements
   const int count = getTotalMeasurementCount();
@@ -253,7 +260,7 @@ bool Tracker::isConfident() const
   //       one of solution is extrapolate the tracker and check the position covariance
   double major_axis_sq = 0.0;
   double minor_axis_sq = 0.0;
-  getPositionCovarianceEigenSq(major_axis_sq, minor_axis_sq);
+  getPositionCovarianceEigenSq(time, major_axis_sq, minor_axis_sq);
 
   // if the ellipse size is small or the existence probability is high, the tracker is confident
   if (major_axis_sq < 0.25 || (getTotalExistenceProbability() > 0.7 && major_axis_sq < 1.6)) {
@@ -284,7 +291,7 @@ bool Tracker::isExpired(const rclcpp::Time & now) const
     // debug message
     double major_axis_sq = 0.0;
     double minor_axis_sq = 0.0;
-    getPositionCovarianceEigenSq(major_axis_sq, minor_axis_sq);
+    getPositionCovarianceEigenSq(now, major_axis_sq, minor_axis_sq);
     std::cout << "Tracker is expired " << getUuidString().substr(0, 6) << " " << elapsed_time
               << " , axis_sq " << major_axis_sq << " x " << minor_axis_sq << std::endl;
     return true;
@@ -295,7 +302,7 @@ bool Tracker::isExpired(const rclcpp::Time & now) const
     // debug message
     double major_axis_sq = 0.0;
     double minor_axis_sq = 0.0;
-    getPositionCovarianceEigenSq(major_axis_sq, minor_axis_sq);
+    getPositionCovarianceEigenSq(now, major_axis_sq, minor_axis_sq);
     std::cout << "Tracker is expired " << getUuidString().substr(0, 6) << " " << elapsed_time
               << ", existence_probability " << existence_probability << " , axis_sq "
               << major_axis_sq << " x " << minor_axis_sq << std::endl;
@@ -305,7 +312,7 @@ bool Tracker::isExpired(const rclcpp::Time & now) const
   // check covariance ellipses size, if the size is too large, the tracker is expired
   double major_axis_sq = 0.0;
   double minor_axis_sq = 0.0;
-  getPositionCovarianceEigenSq(major_axis_sq, minor_axis_sq);
+  getPositionCovarianceEigenSq(now, major_axis_sq, minor_axis_sq);
 
   if (
     elapsed_time > 0.18 && (major_axis_sq > 1.6 || minor_axis_sq > 0.6) &&
