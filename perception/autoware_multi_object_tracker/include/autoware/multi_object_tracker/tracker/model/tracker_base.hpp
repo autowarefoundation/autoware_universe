@@ -54,11 +54,7 @@ public:
 
   void initializeExistenceProbabilities(
     const uint & channel_index, const float & existence_probability);
-  bool getExistenceProbabilityVector(std::vector<float> & existence_vector) const
-  {
-    existence_vector = existence_probabilities_;
-    return existence_vector.size() > 0;
-  }
+  std::vector<float> getExistenceProbabilityVector() const { return existence_probabilities_; }
   float getTotalExistenceProbability() const { return total_existence_probability_; }
   bool updateWithMeasurement(
     const types::DynamicObject & object, const rclcpp::Time & measurement_time,
