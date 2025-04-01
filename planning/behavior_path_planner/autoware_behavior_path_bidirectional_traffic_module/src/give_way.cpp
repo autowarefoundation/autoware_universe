@@ -117,10 +117,6 @@ BackToNormalLane::modify_trajectory(
     trajectory,
   const OncomingCars &, const geometry_msgs::msg::Pose & ego_pose, const double &)
 {
-  // if (!oncoming_cars.empty()) {
-  //   return give_way->modify_trajectory_for_waiting(trajectory, ego_pose, true);
-  // }
-
   auto ego_stop_pose = give_way->get_pull_over_pose();
   if (!ego_stop_pose.has_value()) {
     return trajectory;
