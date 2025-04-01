@@ -16,6 +16,8 @@
 
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 
+#include <autoware_utils/geometry/geometry.hpp>
+
 #include <algorithm>
 #include <random>
 #include <vector>
@@ -249,30 +251,41 @@ void Tracker::getPositionCovarianceEigenSq(
 
 bool Tracker::isConfident(const rclcpp::Time & time) const
 {
-  // check the number of measurements
+  // check the number of measurements. if the measurement is too small, definitely not confident
   const int count = getTotalMeasurementCount();
   if (count < 2) {
     return false;
   }
 
-  // check covariance ellipses size, if the size is too large, the tracker is not confident
-  // TODO: consider the velocity covariance
-  //       one of solution is extrapolate the tracker and check the position covariance
   double major_axis_sq = 0.0;
   double minor_axis_sq = 0.0;
   getPositionCovarianceEigenSq(time, major_axis_sq, minor_axis_sq);
 
-  // if the ellipse size is small or the existence probability is high, the tracker is confident
-  if (major_axis_sq < 0.25 || (getTotalExistenceProbability() > 0.7 && major_axis_sq < 1.6)) {
-    // debug message
-    // if (major_axis_sq > 0.5 || minor_axis_sq > 0.5)
-    {
-      std::cout << "Tracker is confident " << getUuidString().substr(0, 6) << " "
-                << getTotalExistenceProbability() << ", axis_sq " << major_axis_sq << " x "
-                << minor_axis_sq << std::endl;
-    }
+  // if the covariance is very small, the tracker is confident
+  constexpr double STRONG_COV_SQ_THRESHOLD = 0.28;
+  if (major_axis_sq < STRONG_COV_SQ_THRESHOLD) {
+    // // debug message
+    // {
+    //   std::cout << "Tracker is strongly confident " << getUuidString().substr(0, 6) << " "
+    //             << getTotalExistenceProbability() << ", axis_sq " << major_axis_sq << " x "
+    //             << minor_axis_sq << std::endl;
+    // }
     return true;
   }
+
+  // if the existence probability is high and the covariance is small enough, the tracker is
+  // confident
+  constexpr double WEAK_COV_SQ_THRESHOLD = 1.6;
+  if (getTotalExistenceProbability() > 0.60 && major_axis_sq < WEAK_COV_SQ_THRESHOLD) {
+    // // debug message
+    // {
+    //   std::cout << "Tracker is weakly confident " << getUuidString().substr(0, 6) << " "
+    //             << getTotalExistenceProbability() << ", axis_sq " << major_axis_sq << " x "
+    //             << minor_axis_sq << std::endl;
+    // }
+    return true;
+  }
+
   // // debug message
   // {
   //   std::cout << "Tracker is not confident " << getUuidString().substr(0, 6) << " "
@@ -287,41 +300,45 @@ bool Tracker::isExpired(const rclcpp::Time & now) const
   // check the number of no measurements
   const double elapsed_time = getElapsedTimeFromLastUpdate(now);
 
+  // if the last measurement is too old, the tracker is expired
   if (elapsed_time > 1.0) {
-    // debug message
-    double major_axis_sq = 0.0;
-    double minor_axis_sq = 0.0;
-    getPositionCovarianceEigenSq(now, major_axis_sq, minor_axis_sq);
-    std::cout << "Tracker is expired " << getUuidString().substr(0, 6) << " " << elapsed_time
-              << " , axis_sq " << major_axis_sq << " x " << minor_axis_sq << std::endl;
+    // // debug message
+    // double major_axis_sq = 0.0;
+    // double minor_axis_sq = 0.0;
+    // getPositionCovarianceEigenSq(now, major_axis_sq, minor_axis_sq);
+    // std::cout << "Tracker is expired " << getUuidString().substr(0, 6) << " " << elapsed_time
+    //           << " , axis_sq " << major_axis_sq << " x " << minor_axis_sq << std::endl;
     return true;
   }
 
+  // if the tracker is not confident, the tracker is expired
   const float existence_probability = getTotalExistenceProbability();
-  if (existence_probability < 0.05) {
-    // debug message
-    double major_axis_sq = 0.0;
-    double minor_axis_sq = 0.0;
-    getPositionCovarianceEigenSq(now, major_axis_sq, minor_axis_sq);
-    std::cout << "Tracker is expired " << getUuidString().substr(0, 6) << " " << elapsed_time
-              << ", existence_probability " << existence_probability << " , axis_sq "
-              << major_axis_sq << " x " << minor_axis_sq << std::endl;
+  if (existence_probability < 0.015) {
+    // // debug message
+    // double major_axis_sq = 0.0;
+    // double minor_axis_sq = 0.0;
+    // getPositionCovarianceEigenSq(now, major_axis_sq, minor_axis_sq);
+    // std::cout << "Tracker is expired " << getUuidString().substr(0, 6) << " " << elapsed_time
+    //           << ", existence_probability " << existence_probability << " , axis_sq "
+    //           << major_axis_sq << " x " << minor_axis_sq << std::endl;
     return true;
   }
 
-  // check covariance ellipses size, if the size is too large, the tracker is expired
-  double major_axis_sq = 0.0;
-  double minor_axis_sq = 0.0;
-  getPositionCovarianceEigenSq(now, major_axis_sq, minor_axis_sq);
-
-  if (
-    elapsed_time > 0.18 && (major_axis_sq > 1.6 || minor_axis_sq > 0.6) &&
-    existence_probability < 0.5) {
-    // debug message
-    std::cout << "Tracker is expired " << getUuidString().substr(0, 6) << " " << elapsed_time
-              << ", existence_probability " << existence_probability << " , axis_sq "
-              << major_axis_sq << " x " << minor_axis_sq << std::endl;
-    return true;
+  // if the tracker is a bit old and the existence probability is low, check the covariance size
+  if (elapsed_time > 0.18 && existence_probability < 0.4) {
+    // if the tracker covariance is too large, the tracker is expired
+    double major_axis_sq = 0.0;
+    double minor_axis_sq = 0.0;
+    getPositionCovarianceEigenSq(now, major_axis_sq, minor_axis_sq);
+    constexpr double MAJOR_COV_SQ_THRESHOLD = 1.8;
+    constexpr double MINOR_COV_SQ_THRESHOLD = 1.2;
+    if (major_axis_sq > MAJOR_COV_SQ_THRESHOLD || minor_axis_sq > MINOR_COV_SQ_THRESHOLD) {
+      // // debug message
+      // std::cout << "Tracker is expired " << getUuidString().substr(0, 6) << " " << elapsed_time
+      //           << ", existence_probability " << existence_probability << " , axis_sq "
+      //           << major_axis_sq << " x " << minor_axis_sq << std::endl;
+      return true;
+    }
   }
 
   return false;

@@ -210,14 +210,14 @@ void TrackerProcessor::removeOverlappedTracker(const rclcpp::Time & time)
     // Compare the current tracker with the remaining trackers
     for (auto itr2 = std::next(itr1); itr2 != list_tracker_.end(); ++itr2) {
       types::DynamicObject object2;
-      if (!sorted_list_tracker[j]->getTrackedObject(time, object2)) continue;
+      if (!(*itr2)->getTrackedObject(time, object2)) continue;
 
       // Calculate the distance between the two objects
       const double distance = std::hypot(
         object1.pose.position.x - object2.pose.position.x,
         object1.pose.position.y - object2.pose.position.y);
-      const auto & label1 = sorted_list_tracker[i]->getHighestProbLabel();
-      const auto & label2 = sorted_list_tracker[j]->getHighestProbLabel();
+      const auto & label1 = !(*itr1)->getHighestProbLabel();
+      const auto & label2 = !(*itr2)->getHighestProbLabel();
       const double max_dist_matrix_value = config_.max_dist_matrix(
         label2, label1);  // Get the maximum distance threshold for the labels
 
@@ -275,7 +275,7 @@ bool TrackerProcessor::canRemoveOverlappedTarget(
       return target.getPositionCovarianceSizeSq() > other.getPositionCovarianceSizeSq();
     }
   }
-  // the target class is unknown, check the IoU
+  // 2. the target class is unknown, check the IoU
   if (iou > config_.min_unknown_object_removal_iou) {
     if (other_known_prob < min_known_prob) {
       // both are unknown, remove the larger uncertainty one
