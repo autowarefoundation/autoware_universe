@@ -73,8 +73,8 @@ public:
 private:
   // statistics
   uint8_t prev_blinker_ = TurnIndicatorsReport::DISABLE;
-  long blinker_change_count_total_ = 0;
-  long blinker_change_count_in_window_ = 0;
+  size_t blinker_change_count_total_ = 0;
+  size_t blinker_change_count_in_window_ = 0;
   std::deque<double> blinker_change_window_;
   Accumulator<double> blinker_change_count_accumulator_;
 };
