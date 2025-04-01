@@ -26,6 +26,7 @@
 #include <OgreTextureManager.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
@@ -37,8 +38,6 @@ namespace autoware_overlay_rviz_plugin
 
 TurnSignalsDisplay::TurnSignalsDisplay() : current_turn_signal_(0)
 {
-  last_toggle_time_ = std::chrono::steady_clock::now();
-
   // Load the arrow image
   std::string package_path =
     ament_index_cpp::get_package_share_directory("autoware_overlay_rviz_plugin");
@@ -70,6 +69,11 @@ void TurnSignalsDisplay::updateHazardLightsData(
   }
 }
 
+void TurnSignalsDisplay::setBlinkingMode(std::string_view mode)
+{
+  blinking_mode_ = mode;
+}
+
 void TurnSignalsDisplay::drawArrows(
   QPainter & painter, const QRectF & backgroundRect, const QColor & color)
 {
@@ -87,28 +91,20 @@ void TurnSignalsDisplay::drawArrows(
     (current_turn_signal_ == autoware_vehicle_msgs::msg::TurnIndicatorsReport::ENABLE_RIGHT ||
      current_hazard_lights_ == autoware_vehicle_msgs::msg::HazardLightsReport::ENABLE);
 
-  // Color the arrows based on the state of the turn signals and hazard lights by having them blink
-  // on and off
-  if (this->blink_on_) {
-    if (leftActive) {
-      scaledLeftArrow = coloredImage(scaledLeftArrow, color);
-    }
-    if (rightActive) {
-      scaledRightArrow = coloredImage(scaledRightArrow, color);
-    }
+  auto now = std::chrono::steady_clock::now().time_since_epoch();
+  auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now).count();
+
+  bool blink_off = blinking_mode_ == "Blinking" && (elapsed / 333) % 2 == 0;
+  if (leftActive && !blink_off) {
+    scaledLeftArrow = coloredImage(scaledLeftArrow, color);
+  }
+  if (rightActive && !blink_off) {
+    scaledRightArrow = coloredImage(scaledRightArrow, color);
   }
 
   // Draw the arrows
   painter.drawImage(QPointF(leftArrowXPos, arrowYPos), scaledLeftArrow);
   painter.drawImage(QPointF(rightArrowXPos, arrowYPos), scaledRightArrow);
-
-  auto now = std::chrono::steady_clock::now();
-  if (
-    std::chrono::duration_cast<std::chrono::milliseconds>(now - last_toggle_time_) >=
-    blink_interval_) {
-    blink_on_ = !blink_on_;  // Toggle the blink state
-    last_toggle_time_ = now;
-  }
 }
 
 QImage TurnSignalsDisplay::coloredImage(const QImage & source, const QColor & color)

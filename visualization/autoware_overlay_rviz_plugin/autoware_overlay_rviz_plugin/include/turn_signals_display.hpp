@@ -30,7 +30,8 @@
 #include <OgreMaterial.h>
 #include <OgreTexture.h>
 
-#include <chrono>
+#include <string>
+#include <string_view>
 
 namespace autoware_overlay_rviz_plugin
 {
@@ -44,18 +45,17 @@ public:
     const autoware_vehicle_msgs::msg::TurnIndicatorsReport::ConstSharedPtr & msg);
   void updateHazardLightsData(
     const autoware_vehicle_msgs::msg::HazardLightsReport::ConstSharedPtr & msg);
+  void setBlinkingMode(std::string_view mode);
 
 private:
   QImage arrowImage;
   QColor gray = QColor(79, 79, 79);
 
+  std::string blinking_mode_ = "Static";
+
   int current_turn_signal_;    // Internal variable to store turn signal state
   int current_hazard_lights_;  // Internal variable to store hazard lights state
   QImage coloredImage(const QImage & source, const QColor & color);
-
-  std::chrono::steady_clock::time_point last_toggle_time_;
-  bool blink_on_ = false;
-  const std::chrono::milliseconds blink_interval_{500};  // Blink interval in milliseconds
 };
 
 }  // namespace autoware_overlay_rviz_plugin
