@@ -54,8 +54,8 @@ void SteerAccumulator::update(const SteeringReport & msg)
          cur_t - steer_rate_change_window_.front() > parameters.window_duration_s) {
     steer_rate_change_window_.pop_front();
   }
-  steer_rate_change_count_in_window_ = static_cast<double>(steer_rate_change_window_.size());
-  steer_rate_change_count_accumulator_.add(steer_rate_change_count_in_window_);
+  steer_rate_change_count_in_window_ = steer_rate_change_window_.size();
+  steer_rate_change_count_accumulator_.add(static_cast<double>(steer_rate_change_count_in_window_));
 
   steer_state_.steer_angle = cur_steer_angle;
   steer_state_.steer_rate = cur_steer_rate;

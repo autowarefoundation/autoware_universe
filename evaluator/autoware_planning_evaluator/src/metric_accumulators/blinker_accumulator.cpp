@@ -31,8 +31,8 @@ void BlinkerAccumulator::update(const TurnIndicatorsReport & msg)
          cur_t - blinker_change_window_.front() > parameters.window_duration_s) {
     blinker_change_window_.pop_front();
   }
-  blinker_change_count_in_window_ = static_cast<double>(blinker_change_window_.size());
-  blinker_change_count_accumulator_.add(blinker_change_count_in_window_);
+  blinker_change_count_in_window_ = blinker_change_window_.size();
+  blinker_change_count_accumulator_.add(static_cast<double>(blinker_change_count_in_window_));
   prev_blinker_ = cur_blinker;
 }
 

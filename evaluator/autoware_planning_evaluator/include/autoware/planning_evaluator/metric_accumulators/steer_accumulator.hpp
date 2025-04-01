@@ -90,8 +90,8 @@ private:
     bool has_steer_angle() const { return std::isfinite(steer_angle); }
   } steer_state_;
 
-  double steer_rate_change_count_total_ = 0;
-  double steer_rate_change_count_in_window_ = 0;
+  size_t steer_rate_change_count_total_ = 0;
+  size_t steer_rate_change_count_in_window_ = 0;
   std::deque<double> steer_rate_change_window_;
   Accumulator<double> steer_rate_change_count_accumulator_;
 };
