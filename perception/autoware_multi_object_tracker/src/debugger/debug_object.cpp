@@ -125,8 +125,8 @@ void TrackerObjectDebugger::collect(
     object_data.is_associated = is_associated;
 
     // existence probabilities
-    object_data.existence_vector = (*(tracker_itr))->getExistenceProbabilityVector();
-    object_data.total_existence_probability = (*(tracker_itr))->getTotalExistenceProbability();
+    object_data.existence_vector = (*tracker_itr)->getExistenceProbabilityVector();
+    object_data.total_existence_probability = (*tracker_itr)->getTotalExistenceProbability();
 
     object_data_list_.push_back(object_data);
   }
