@@ -31,6 +31,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/common/autoware_agnocast_wrapper/</loc>
+         <lastmod>2025-04-01</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/common/autoware_auto_common/design/comparisons/</loc>
          <lastmod>2025-04-01</lastmod>
          <changefreq>daily</changefreq>
