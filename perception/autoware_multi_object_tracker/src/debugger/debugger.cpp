@@ -87,14 +87,13 @@ void TrackerDebugger::loadParameters()
 void TrackerDebugger::setupDiagnostics()
 {
   diagnostic_updater_.setHardwareID(node_.get_name());
-  diagnostic_updater_.add(
-    "Tracker Timing Diagnostics", this, &TrackerDebugger::checkAllTiming);
+  diagnostic_updater_.add("Tracker Timing Diagnostics", this, &TrackerDebugger::checkAllTiming);
   diagnostic_updater_.setPeriod(0.1);
 }
 
 void TrackerDebugger::updateMinExtrapolationTime(double min_extrapolation_time)
 {
-    diagnostic_values_.min_extrapolation_time = min_extrapolation_time;
+  diagnostic_values_.min_extrapolation_time = min_extrapolation_time;
 }
 
 void TrackerDebugger::publishTentativeObjects(
@@ -106,7 +105,7 @@ void TrackerDebugger::publishTentativeObjects(
 }
 
 // Time measurement functions
-void TrackerDebugger::checkAllTiming(diagnostic_updater::DiagnosticStatusWrapper &stat)
+void TrackerDebugger::checkAllTiming(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   // Check initialization status
   if (!is_initialized_) {
@@ -117,33 +116,36 @@ void TrackerDebugger::checkAllTiming(diagnostic_updater::DiagnosticStatusWrapper
 
   const double delay = pipeline_latency_ms_ / 1e3;  // [s]
   // Alias for cleaner code
-  const auto& settings = debug_settings_;  
-  const auto& values = diagnostic_values_; 
+  const auto & settings = debug_settings_;
+  const auto & values = diagnostic_values_;
 
   // Detection delay thresholds
-  const std::string delay_status = 
-  (delay == 0.0) ? "Not calculated" :
-  (delay < settings.diagnostics_warn_delay) ? "Within limits" :
-  (delay < settings.diagnostics_error_delay) ? "Exceeded warn threshold" :
-  "Exceeded error threshold";
+  const std::string delay_status = (delay == 0.0)                              ? "Not calculated"
+                                   : (delay < settings.diagnostics_warn_delay) ? "Within limits"
+                                   : (delay < settings.diagnostics_error_delay)
+                                     ? "Exceeded warn threshold"
+                                     : "Exceeded error threshold";
   // Extrapolation time thresholds
   const std::string extrapolation_status =
-  (values.min_extrapolation_time <= settings.diagnostics_warn_extrapolation_) ? "Within limits" :
-  (values.min_extrapolation_time <= settings.diagnostics_error_extrapolation_) ? "Exceeded warn threshold" :
-  "Exceeded error threshold";
+    (values.min_extrapolation_time <= settings.diagnostics_warn_extrapolation_) ? "Within limits"
+    : (values.min_extrapolation_time <= settings.diagnostics_error_extrapolation_)
+      ? "Exceeded warn threshold"
+      : "Exceeded error threshold";
 
   // Initialize with OK status
   int8_t overall_level = diagnostic_msgs::msg::DiagnosticStatus::OK;
   std::string overall_message = "All timings within normal limits";
   // Determine overall status
-  if (delay >= settings.diagnostics_error_delay || 
+  if (
+    delay >= settings.diagnostics_error_delay ||
     values.min_extrapolation_time > settings.diagnostics_error_extrapolation_) {
-      overall_level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
-      overall_message = "Critical timing thresholds exceeded";
-  } else if (delay >= settings.diagnostics_warn_delay || 
+    overall_level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+    overall_message = "Critical timing thresholds exceeded";
+  } else if (
+    delay >= settings.diagnostics_warn_delay ||
     values.min_extrapolation_time > settings.diagnostics_warn_extrapolation_) {
-      overall_level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
-      overall_message = "Warning timing thresholds exceeded";
+    overall_level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+    overall_message = "Warning timing thresholds exceeded";
   }
   stat.add("Detection delay (s)", delay);
   stat.add("Detection status", delay_status);

@@ -259,7 +259,7 @@ void MultiObjectTracker::onTimer()
   // Get minimum prediction time delta from all trackers
   const double min_extrapolation_time = (current_time - last_updated_time_).seconds();
   debugger_->updateMinExtrapolationTime(min_extrapolation_time);
-  //debugger_->updateDiagnosticValues(current_time);
+  // debugger_->updateDiagnosticValues(current_time);
 
   // Publish with delay compensation to the current time
   if (should_publish) checkAndPublish(current_time);

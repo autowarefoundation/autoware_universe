@@ -47,15 +47,17 @@ public:
   TrackerDebugger(
     rclcpp::Node & node, const std::string & frame_id,
     const std::vector<types::InputChannel> & channels_config);
-    struct DiagnosticValues {
-      double pipeline_latency = 0.0;
-      double min_extrapolation_time = 0.0;
-      double processing_time = 0.0;
-      double cycle_time = 0.0;
-    } diagnostic_values_;
+  struct DiagnosticValues
+  {
+    double pipeline_latency = 0.0;
+    double min_extrapolation_time = 0.0;
+    double processing_time = 0.0;
+    double cycle_time = 0.0;
+  } diagnostic_values_;
 
-    //void updateDiagnosticValues(const rclcpp::Time & current_time);
-    void updateMinExtrapolationTime(double min_extrapolation_time);
+  // void updateDiagnosticValues(const rclcpp::Time & current_time);
+  void updateMinExtrapolationTime(double min_extrapolation_time);
+
 private:
   struct DEBUG_SETTINGS
   {
@@ -104,7 +106,7 @@ public:
   void startPublishTime(const rclcpp::Time & now);
   void endPublishTime(const rclcpp::Time & now, const rclcpp::Time & object_time);
   // cppcheck-suppress functionConst
-  void checkAllTiming(diagnostic_updater::DiagnosticStatusWrapper &stat);
+  void checkAllTiming(diagnostic_updater::DiagnosticStatusWrapper & stat);
   // Debug object
   void collectObjectInfo(
     const rclcpp::Time & message_time, const std::list<std::shared_ptr<Tracker>> & list_tracker,
