@@ -14,6 +14,7 @@
 
 #include "autoware/planning_validator/debug_marker.hpp"
 #include "autoware/planning_validator/planning_validator.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 #include "test_parameter.hpp"
 #include "test_planning_validator_helper.hpp"
 
@@ -159,5 +160,44 @@ TEST(PlanningValidatorTestSuite, checkValidRelativeAngleFunction)
     invalid_traj.points[4].pose.position.x = 10;
     std::string valid_error_msg;
     ASSERT_FALSE(validator->checkValidRelativeAngle(invalid_traj));
+  }
+}
+
+TEST(PlanningValidatorTestSuite, checkTrajectoryShiftFunction)
+{
+  auto validator = std::make_shared<PlanningValidator>(getNodeOptionsWithDefaultParams());
+
+  /**
+   * x: 0 1 2 3 4 5 6 7 8 9 10
+   * y: 0 0 0 0 0 0 0 0 0 0  0
+   **/
+  constexpr auto interval = 1.0;
+  Trajectory base_traj = generateTrajectory(interval);
+
+  const auto ego_pose =
+    autoware_utils::calc_offset_pose(base_traj.points.front().pose, 2.5, 0.0, 0.0, 0.0);
+
+  // valid case
+  {
+    Trajectory valid_traj = generateShiftedTrajectory(base_traj, 0.1, 1.0);
+    ASSERT_TRUE(validator->checkTrajectoryShift(valid_traj, base_traj, ego_pose));
+  }
+
+  // invalid case (lateral shift)
+  {
+    Trajectory invalid_traj = generateShiftedTrajectory(base_traj, 1.0);
+    ASSERT_FALSE(validator->checkTrajectoryShift(invalid_traj, base_traj, ego_pose));
+  }
+
+  // invalid case (backward shift)
+  {
+    Trajectory invalid_traj = generateShiftedTrajectory(base_traj, 0.0, -1.0, 4);
+    ASSERT_FALSE(validator->checkTrajectoryShift(invalid_traj, base_traj, ego_pose));
+  }
+
+  // invalid case (forward shift)
+  {
+    Trajectory invalid_traj = generateShiftedTrajectory(base_traj, 0.0, 4.0);
+    ASSERT_FALSE(validator->checkTrajectoryShift(invalid_traj, base_traj, ego_pose));
   }
 }

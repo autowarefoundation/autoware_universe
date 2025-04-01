@@ -420,7 +420,9 @@ void PlanningValidator::validate(
   s.is_valid_forward_trajectory_length = checkValidForwardTrajectoryLength(trajectory);
   s.is_valid_latency = checkValidLatency(trajectory);
   s.is_valid_trajectory_shift =
-    prev_trajectory ? checkTrajectoryShift(trajectory, *prev_trajectory) : true;
+    prev_trajectory
+      ? checkTrajectoryShift(trajectory, *prev_trajectory, current_kinematics_->pose.pose)
+      : true;
 
   // use resampled trajectory because the following metrics can not be evaluated for closed points.
   // Note: do not interpolate to keep original trajectory shape.
@@ -730,13 +732,13 @@ bool PlanningValidator::checkValidLatency(const Trajectory & trajectory)
 }
 
 bool PlanningValidator::checkTrajectoryShift(
-  const Trajectory & trajectory, const Trajectory & prev_trajectory)
+  const Trajectory & trajectory, const Trajectory & prev_trajectory,
+  const geometry_msgs::msg::Pose & ego_pose)
 {
   if (!params_.validation_params.trajectory_shift.enable) {
     return true;
   }
 
-  const auto ego_pose = current_kinematics_->pose.pose;
   const auto nearest_seg_idx =
     autoware::motion_utils::findNearestSegmentIndex(trajectory.points, ego_pose);
   const auto prev_nearest_seg_idx =
@@ -749,8 +751,8 @@ bool PlanningValidator::checkTrajectoryShift(
   const auto & nearest_pose = trajectory.points.at(*nearest_seg_idx).pose;
   const auto & prev_nearest_pose = prev_trajectory.points.at(*prev_nearest_seg_idx).pose;
 
-  const auto & ego_lat_dist = std::abs(
-    autoware_utils::calc_lateral_deviation(current_kinematics_->pose.pose, nearest_pose.position));
+  const auto & ego_lat_dist =
+    std::abs(autoware_utils::calc_lateral_deviation(ego_pose, nearest_pose.position));
 
   const auto lat_shift =
     std::abs(autoware_utils::calc_lateral_deviation(prev_nearest_pose, nearest_pose.position));
@@ -769,7 +771,7 @@ bool PlanningValidator::checkTrajectoryShift(
   }
 
   // if nearest segment is within the trajectory no need to check longitudinal shift
-  if (*nearest_seg_idx > 0 && *nearest_seg_idx < trajectory.points.size() - 1) {
+  if (*nearest_seg_idx > 0 && *nearest_seg_idx < trajectory.points.size() - 2) {
     return true;
   }
 

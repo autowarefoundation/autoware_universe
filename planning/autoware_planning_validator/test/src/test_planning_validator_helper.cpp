@@ -19,6 +19,9 @@
 
 #include <math.h>
 
+#include <algorithm>
+#include <limits>
+
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_utils::create_quaternion_from_yaw;
@@ -142,6 +145,32 @@ Trajectory generateTrajectoryWithConstantSteeringRate(
   }
 
   return trajectory;
+}
+
+Trajectory generateShiftedTrajectory(
+  const Trajectory & trajectory, const double lat_shift, const double lon_shift, const size_t size)
+{
+  Trajectory shifted_traj;
+  shifted_traj.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
+  if (
+    abs(lat_shift) <= std::numeric_limits<double>::epsilon() &&
+    abs(lon_shift) <= std::numeric_limits<double>::epsilon() && size >= trajectory.points.size()) {
+    shifted_traj.points = trajectory.points;
+    return shifted_traj;
+  }
+
+  const auto nb_points = std::min(size, trajectory.points.size());
+  shifted_traj.points = {trajectory.points.begin(), trajectory.points.begin() + nb_points};
+
+  if (
+    abs(lat_shift) > std::numeric_limits<double>::epsilon() ||
+    abs(lon_shift) > std::numeric_limits<double>::epsilon()) {
+    for (auto & t_p : shifted_traj.points) {
+      t_p.pose = autoware_utils::calc_offset_pose(t_p.pose, lon_shift, lat_shift, 0.0, 0.0);
+    }
+  }
+
+  return shifted_traj;
 }
 
 Trajectory generateNanTrajectory()

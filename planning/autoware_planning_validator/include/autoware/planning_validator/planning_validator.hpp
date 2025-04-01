@@ -69,7 +69,9 @@ public:
   bool checkValidForwardTrajectoryLength(const Trajectory & trajectory);
   bool checkValidLatency(const Trajectory & trajectory);
   bool checkValidYawDeviation(const Trajectory & trajectory);
-  bool checkTrajectoryShift(const Trajectory & trajectory, const Trajectory & prev_trajectory);
+  bool checkTrajectoryShift(
+    const Trajectory & trajectory, const Trajectory & prev_trajectory,
+    const geometry_msgs::msg::Pose & ego_pose);
 
 private:
   void setupDiag();
