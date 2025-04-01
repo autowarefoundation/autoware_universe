@@ -262,14 +262,9 @@ bool TrackerProcessor::canRemoveOverlappedTarget(
     // both are known class, check the IoU
     if (iou > config_.min_known_object_removal_iou) {
       // compare probability vector, prioritize lower index of the probability vector
-      std::vector<float> target_existence_prob, other_existence_prob;
+      std::vector<float> target_existence_prob = target.getExistenceProbabilityVector();
+      std::vector<float> other_existence_prob = other.getExistenceProbabilityVector();
       constexpr float prob_buffer = 0.4;
-      if (!target.getExistenceProbabilityVector(target_existence_prob)) {
-        return false;
-      }
-      if (!other.getExistenceProbabilityVector(other_existence_prob)) {
-        return false;
-      }
       for (size_t i = 0; i < target_existence_prob.size(); ++i) {
         if (target_existence_prob[i] + prob_buffer < other_existence_prob[i]) {
           return true;
