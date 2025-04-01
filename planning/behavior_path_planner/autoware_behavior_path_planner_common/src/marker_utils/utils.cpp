@@ -514,12 +514,13 @@ MarkerArray showPredictedPath(const CollisionCheckDebugMap & obj_debug_vec, std:
   };
 
   MarkerArray marker_array;
-  marker_array.markers.reserve(std::accumulate(
-    obj_debug_vec.cbegin(), obj_debug_vec.cend(), 0UL,
-    [&](const auto current_sum, const auto & obj_debug) {
-      const auto & [uuid, info] = obj_debug;
-      return current_sum + info.ego_predicted_path.size() + info.obj_predicted_path.size() + 2;
-    }));
+  marker_array.markers.reserve(
+    std::accumulate(
+      obj_debug_vec.cbegin(), obj_debug_vec.cend(), 0UL,
+      [&](const auto current_sum, const auto & obj_debug) {
+        const auto & [uuid, info] = obj_debug;
+        return current_sum + info.ego_predicted_path.size() + info.obj_predicted_path.size() + 2;
+      }));
 
   for (const auto & [uuid, info] : obj_debug_vec) {
     const auto insert_marker = [&](const auto & path, const auto & color) {

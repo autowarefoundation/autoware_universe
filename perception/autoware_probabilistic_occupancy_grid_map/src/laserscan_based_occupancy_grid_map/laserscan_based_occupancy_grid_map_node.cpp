@@ -87,9 +87,10 @@ LaserscanBasedOccupancyGridMapNode::LaserscanBasedOccupancyGridMapNode(
     sync_ptr_ = std::make_shared<Sync>(SyncPolicy(3), laserscan_sub_, passthrough_, passthrough_);
   }
 
-  sync_ptr_->registerCallback(std::bind(
-    &LaserscanBasedOccupancyGridMapNode::onLaserscanPointCloud2WithObstacleAndRaw, this, _1, _2,
-    _3));
+  sync_ptr_->registerCallback(
+    std::bind(
+      &LaserscanBasedOccupancyGridMapNode::onLaserscanPointCloud2WithObstacleAndRaw, this, _1, _2,
+      _3));
   occupancy_grid_map_pub_ = create_publisher<OccupancyGrid>("~/output/occupancy_grid_map", 1);
 
   const std::string updater_type = this->declare_parameter<std::string>("updater_type");

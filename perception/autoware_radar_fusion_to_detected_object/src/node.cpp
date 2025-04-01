@@ -93,9 +93,10 @@ RadarObjectFusionToDetectedObjectNode::RadarObjectFusionToDetectedObjectNode(
   sub_radar_.subscribe(this, "~/input/radars", rclcpp::QoS{1}.get_rmw_qos_profile());
 
   sync_ptr_ = std::make_shared<Sync>(SyncPolicy(20), sub_object_, sub_radar_);
-  sync_ptr_->registerCallback(std::bind(
-    &RadarObjectFusionToDetectedObjectNode::onData, this, std::placeholders::_1,
-    std::placeholders::_2));
+  sync_ptr_->registerCallback(
+    std::bind(
+      &RadarObjectFusionToDetectedObjectNode::onData, this, std::placeholders::_1,
+      std::placeholders::_2));
 
   // Publisher
   pub_objects_ = create_publisher<DetectedObjects>("~/output/objects", 1);

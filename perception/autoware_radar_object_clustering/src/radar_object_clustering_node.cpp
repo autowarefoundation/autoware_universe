@@ -180,9 +180,10 @@ void RadarObjectClusteringNode::onObjects(const DetectedObjects::ConstSharedPtr 
 bool RadarObjectClusteringNode::isSameObject(
   const DetectedObject & object_1, const DetectedObject & object_2)
 {
-  const double angle_diff = std::abs(autoware_utils::normalize_radian(
-    tf2::getYaw(object_1.kinematics.pose_with_covariance.pose.orientation) -
-    tf2::getYaw(object_2.kinematics.pose_with_covariance.pose.orientation)));
+  const double angle_diff = std::abs(
+    autoware_utils::normalize_radian(
+      tf2::getYaw(object_1.kinematics.pose_with_covariance.pose.orientation) -
+      tf2::getYaw(object_2.kinematics.pose_with_covariance.pose.orientation)));
   const double velocity_diff = std::abs(
     object_1.kinematics.twist_with_covariance.twist.linear.x -
     object_2.kinematics.twist_with_covariance.twist.linear.x);
