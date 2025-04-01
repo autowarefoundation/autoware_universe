@@ -26,7 +26,6 @@
 #include "processor/input_manager.hpp"
 #include "processor/processor.hpp"
 
-#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
@@ -69,8 +68,6 @@ private:
   // debugger
   std::unique_ptr<TrackerDebugger> debugger_;
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
-  // diagnostics
-  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
 
   // publish timer
   rclcpp::TimerBase::SharedPtr publish_timer_;
@@ -79,8 +76,6 @@ private:
   double publisher_period_;
   static constexpr double minimum_publish_interval_ratio = 0.85;
   static constexpr double maximum_publish_interval_ratio = 1.05;
-  double diagnostics_warn_extrapolation_;
-  double diagnostics_error_extrapolation_;
 
   // internal states
   std::string world_frame_id_;  // tracking frame

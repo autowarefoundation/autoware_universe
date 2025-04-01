@@ -47,7 +47,15 @@ public:
   TrackerDebugger(
     rclcpp::Node & node, const std::string & frame_id,
     const std::vector<types::InputChannel> & channels_config);
+    struct DiagnosticValues {
+      double pipeline_latency = 0.0;
+      double min_extrapolation_time = 0.0;
+      double processing_time = 0.0;
+      double cycle_time = 0.0;
+    } diagnostic_values_;
 
+    //void updateDiagnosticValues(const rclcpp::Time & current_time);
+    void updateMinExtrapolationTime(double min_extrapolation_time);
 private:
   struct DEBUG_SETTINGS
   {
@@ -56,6 +64,8 @@ private:
     bool publish_debug_markers;
     double diagnostics_warn_delay;
     double diagnostics_error_delay;
+    double diagnostics_warn_extrapolation_;
+    double diagnostics_error_extrapolation_;
   } debug_settings_;
 
   // ROS node, publishers
@@ -68,7 +78,6 @@ private:
   diagnostic_updater::Updater diagnostic_updater_;
   // Object debugger
   TrackerObjectDebugger object_debugger_;
-
   // Time measurement
   bool is_initialized_ = false;
   double pipeline_latency_ms_ = 0.0;
@@ -95,8 +104,7 @@ public:
   void startPublishTime(const rclcpp::Time & now);
   void endPublishTime(const rclcpp::Time & now, const rclcpp::Time & object_time);
   // cppcheck-suppress functionConst
-  void checkDelay(diagnostic_updater::DiagnosticStatusWrapper & stat);
-
+  void checkAllTiming(diagnostic_updater::DiagnosticStatusWrapper &stat);
   // Debug object
   void collectObjectInfo(
     const rclcpp::Time & message_time, const std::list<std::shared_ptr<Tracker>> & list_tracker,
