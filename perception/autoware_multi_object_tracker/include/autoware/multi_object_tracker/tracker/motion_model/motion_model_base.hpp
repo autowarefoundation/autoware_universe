@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__MOTION_MODEL_BASE_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__MOTION_MODEL_BASE_HPP_
 
-#include <autoware/kalman_filter/kalman_filter.hpp>
-
 #include <Eigen/Core>
+#include <autoware/kalman_filter/kalman_filter.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #ifdef ROS_DISTRO_GALACTIC
