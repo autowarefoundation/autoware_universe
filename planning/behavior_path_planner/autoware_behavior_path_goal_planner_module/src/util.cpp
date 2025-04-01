@@ -496,8 +496,9 @@ double calcLateralDeviationBetweenPaths(
       reference_path.points, target_point.point.pose.position);
     lateral_deviation = std::max(
       lateral_deviation,
-      std::abs(autoware_utils::calc_lateral_deviation(
-        reference_path.points[nearest_index].point.pose, target_point.point.pose.position)));
+      std::abs(
+        autoware_utils::calc_lateral_deviation(
+          reference_path.points[nearest_index].point.pose, target_point.point.pose.position)));
   }
   return lateral_deviation;
 }

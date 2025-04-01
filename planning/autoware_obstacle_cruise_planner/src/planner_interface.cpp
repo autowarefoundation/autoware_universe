@@ -621,9 +621,11 @@ std::vector<TrajectoryPoint> PlannerInterface::generateSlowDownTrajectory(
     }
 
     // update prev_slow_down_output_
-    new_prev_slow_down_output.push_back(SlowDownOutput{
-      obstacle.uuid, slow_down_traj_points, slow_down_start_idx, slow_down_end_idx,
-      stable_slow_down_vel, feasible_slow_down_vel, obstacle.precise_lat_dist, is_obstacle_moving});
+    new_prev_slow_down_output.push_back(
+      SlowDownOutput{
+        obstacle.uuid, slow_down_traj_points, slow_down_start_idx, slow_down_end_idx,
+        stable_slow_down_vel, feasible_slow_down_vel, obstacle.precise_lat_dist,
+        is_obstacle_moving});
   }
 
   // update prev_slow_down_output_

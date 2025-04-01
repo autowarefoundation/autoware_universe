@@ -787,17 +787,17 @@ std::vector<Polygon2d> ObstacleCruisePlannerNode::createOneStepPolygons(
           idx_poly,
           autoware_utils::to_footprint(pose, front_length, rear_length, vehicle_width).outer());
         boost::geometry::append(
-          idx_poly,
-          autoware_utils::from_msg(autoware_utils::calc_offset_pose(
-                                     pose, front_length, vehicle_width * 0.5 + lat_margin, 0.0)
-                                     .position)
-            .to_2d());
+          idx_poly, autoware_utils::from_msg(
+                      autoware_utils::calc_offset_pose(
+                        pose, front_length, vehicle_width * 0.5 + lat_margin, 0.0)
+                        .position)
+                      .to_2d());
         boost::geometry::append(
-          idx_poly,
-          autoware_utils::from_msg(autoware_utils::calc_offset_pose(
-                                     pose, front_length, -vehicle_width * 0.5 - lat_margin, 0.0)
-                                     .position)
-            .to_2d());
+          idx_poly, autoware_utils::from_msg(
+                      autoware_utils::calc_offset_pose(
+                        pose, front_length, -vehicle_width * 0.5 - lat_margin, 0.0)
+                        .position)
+                      .to_2d());
       } else {
         boost::geometry::append(
           idx_poly, autoware_utils::to_footprint(
@@ -2252,8 +2252,9 @@ double ObstacleCruisePlannerNode::calcTimeToReachCollisionPoint(
 {
   const auto & p = behavior_determination_param_;
   const double dist_from_ego_to_obstacle =
-    std::abs(autoware::motion_utils::calcSignedArcLength(
-      traj_points, odometry.pose.pose.position, collision_point)) -
+    std::abs(
+      autoware::motion_utils::calcSignedArcLength(
+        traj_points, odometry.pose.pose.position, collision_point)) -
     abs_ego_offset;
   return dist_from_ego_to_obstacle /
          std::max(p.min_velocity_to_reach_collision_point, std::abs(odometry.twist.twist.linear.x));

@@ -1367,8 +1367,9 @@ IntersectionModule::PassJudgeStatus IntersectionModule::isOverPassJudgeLinesStat
   const auto second_pass_judge_line_idx_opt = intersection_stoplines.second_pass_judge_line;
   const std::optional<bool> is_over_2nd_pass_judge_line =
     second_pass_judge_line_idx_opt
-      ? std::make_optional(util::isOverTargetIndex(
-          path, closest_idx, current_pose, second_pass_judge_line_idx_opt.value()))
+      ? std::make_optional(
+          util::isOverTargetIndex(
+            path, closest_idx, current_pose, second_pass_judge_line_idx_opt.value()))
       : std::nullopt;
   bool safely_passed_2nd_judge_line_first_time = false;
   if (

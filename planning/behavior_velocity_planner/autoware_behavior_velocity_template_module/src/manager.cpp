@@ -42,9 +42,10 @@ void TemplateModuleManager::launchNewModules(
 {
   int64_t module_id = 0;
   if (!isModuleRegistered(module_id)) {
-    registerModule(std::make_shared<TemplateModule>(
-      module_id, logger_.get_child(getModuleName()), clock_, time_keeper_,
-      planning_factor_interface_));
+    registerModule(
+      std::make_shared<TemplateModule>(
+        module_id, logger_.get_child(getModuleName()), clock_, time_keeper_,
+        planning_factor_interface_));
   }
 }
 

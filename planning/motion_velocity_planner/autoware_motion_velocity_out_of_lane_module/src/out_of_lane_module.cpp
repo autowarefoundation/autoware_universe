@@ -337,8 +337,9 @@ VelocityPlanningResult OutOfLaneModule::plan(
     }) != ego_data.out_lanelets.end();
   if (is_already_overlapping) {
     RCLCPP_WARN(logger_, "Ego is already out of lane, skipping the module\n");
-    debug_publisher_->publish(out_of_lane::debug::create_debug_marker_array(
-      ego_data, out_of_lane_data, objects, debug_data_));
+    debug_publisher_->publish(
+      out_of_lane::debug::create_debug_marker_array(
+        ego_data, out_of_lane_data, objects, debug_data_));
     return result;
   }
 

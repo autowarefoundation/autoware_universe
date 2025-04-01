@@ -214,8 +214,8 @@ GoalCandidates GoalSearcher::search(
                         : -distance_from_bound.value() + sign * margin_from_boundary;
     // original means non lateral offset poses
     const Pose original_search_pose = calc_offset_pose(center_pose, 0, offset_from_center_line, 0);
-    const double longitudinal_distance_from_original_goal =
-      std::abs(autoware::motion_utils::calcSignedArcLength(
+    const double longitudinal_distance_from_original_goal = std::abs(
+      autoware::motion_utils::calcSignedArcLength(
         center_line_path.points, reference_goal_pose.position, original_search_pose.position));
     original_search_poses.push_back(original_search_pose);  // for createAreaPolygon
     Pose search_pose{};

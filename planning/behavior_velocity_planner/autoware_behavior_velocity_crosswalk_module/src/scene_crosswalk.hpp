@@ -233,10 +233,11 @@ public:
         if (
           isVehicleType(classification) && ego_crosswalk_passage_direction &&
           collision_point->crosswalk_passage_direction) {
-          double direction_diff = std::abs(std::fmod(
-            collision_point->crosswalk_passage_direction.value() -
-              ego_crosswalk_passage_direction.value(),
-            M_PI_2));
+          double direction_diff = std::abs(
+            std::fmod(
+              collision_point->crosswalk_passage_direction.value() -
+                ego_crosswalk_passage_direction.value(),
+              M_PI_2));
           direction_diff = std::min(direction_diff, M_PI_2 - direction_diff);
           if (direction_diff < planner_param.vehicle_object_cross_angle_threshold) {
             collision_state = CollisionState::IGNORE;

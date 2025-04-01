@@ -48,8 +48,8 @@ using autoware_utils::create_vector3;
 
 constexpr double epsilon = 1e-6;
 
-const auto intersection_map =
-  autoware::test_utils::make_map_bin_msg(autoware::test_utils::get_absolute_path_to_lanelet_map(
+const auto intersection_map = autoware::test_utils::make_map_bin_msg(
+  autoware::test_utils::get_absolute_path_to_lanelet_map(
     "autoware_test_utils", "intersection/lanelet2_map.osm"));
 
 PredictedObject create_bounding_box_object(
