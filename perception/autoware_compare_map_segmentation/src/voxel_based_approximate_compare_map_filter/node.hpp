@@ -15,7 +15,7 @@
 #ifndef VOXEL_BASED_APPROXIMATE_COMPARE_MAP_FILTER__NODE_HPP_  // NOLINT
 #define VOXEL_BASED_APPROXIMATE_COMPARE_MAP_FILTER__NODE_HPP_  // NOLINT
 
-#include "../voxel_grid_map_loader/voxel_grid_map_loader.hpp"
+#include "autoware/compare_map_segmentation/voxel_grid_map_loader.hpp"
 #include "autoware/pointcloud_preprocessor/filter.hpp"
 
 #include <pcl/filters/voxel_grid.h>

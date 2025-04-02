@@ -15,7 +15,7 @@
 #ifndef VOXEL_BASED_COMPARE_MAP_FILTER__NODE_HPP_
 #define VOXEL_BASED_COMPARE_MAP_FILTER__NODE_HPP_
 
-#include "../voxel_grid_map_loader/voxel_grid_map_loader.hpp"
+#include "autoware/compare_map_segmentation/voxel_grid_map_loader.hpp"
 #include "autoware/pointcloud_preprocessor/filter.hpp"
 
 #include <pcl/filters/voxel_grid.h>
