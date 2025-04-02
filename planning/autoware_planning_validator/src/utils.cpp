@@ -178,193 +178,36 @@ std::pair<double, size_t> calcMaxCurvature(const Trajectory & trajectory)
   return {*max_curvature_it, index};
 }
 
-void calc_interval_distance(
-  const Trajectory & trajectory, std::vector<double> & interval_distance_arr)
-{
-  if (trajectory.points.size() < 2) {
-    interval_distance_arr = std::vector<double>(trajectory.points.size() - 1, 0.0);
-    return;
-  }
-
-  interval_distance_arr = std::vector<double>(trajectory.points.size() - 1, 0.0);
-  for (size_t i = 0; i < trajectory.points.size() - 1; ++i) {
-    const auto d = calc_distance2d(trajectory.points.at(i), trajectory.points.at(i + 1));
-    interval_distance_arr.at(i) = d;
-  }
-}
-
 std::pair<double, size_t> calcMaxIntervalDistance(const Trajectory & trajectory)
 {
   if (trajectory.points.size() < 2) {
     return {0.0, 0};
   }
-  std::vector<double> interval_distance_arr;
-  calc_interval_distance(trajectory, interval_distance_arr);
 
-  const auto max_interval_it =
-    std::max_element(interval_distance_arr.begin(), interval_distance_arr.end());
-  const size_t max_index = std::distance(interval_distance_arr.begin(), max_interval_it);
-
-  return {*max_interval_it, max_index};
-}
-
-void calc_lateral_acceleration(
-  const Trajectory & trajectory, std::vector<double> & lateral_acceleration_arr)
-{
-  if (trajectory.points.size() < 2) {
-    lateral_acceleration_arr = std::vector<double>(trajectory.points.size(), 0.0);
-    return;
+  double max_interval_distances = 0.0;
+  size_t max_index = 0;
+  for (size_t i = 1; i < trajectory.points.size(); ++i) {
+    const auto d = calc_distance2d(trajectory.points.at(i), trajectory.points.at(i - 1));
+    if (max_interval_distances < std::abs(d)) {
+      takeBigger(max_interval_distances, max_index, std::abs(d), i);
+    }
   }
-
-  std::vector<double> curvatures;
-  calcCurvature(trajectory, curvatures);
-
-  lateral_acceleration_arr = std::vector<double>(trajectory.points.size(), 0.0);
-  for (size_t i = 0; i < trajectory.points.size(); ++i) {
-    const auto v_lon = trajectory.points.at(i).longitudinal_velocity_mps;
-    const auto a_lon = trajectory.points.at(i).acceleration_mps2;
-
-    // Component 1: Centrifugal acceleration from curvature (v^2 * κ)
-    const auto lat_acc_curve = v_lon * v_lon * curvatures.at(i);
-
-    // Component 2: Lateral projection of longitudinal acceleration
-    const auto theta = std::atan2(curvatures.at(i) * v_lon * v_lon, a_lon);
-    const auto lat_acc_from_lon = a_lon * std::sin(theta);
-
-    lateral_acceleration_arr.at(i) =
-      std::sqrt(lat_acc_curve * lat_acc_curve + lat_acc_from_lon * lat_acc_from_lon);
-  }
+  return {max_interval_distances, max_index};
 }
 
 std::pair<double, size_t> calcMaxLateralAcceleration(const Trajectory & trajectory)
 {
-  std::vector<double> lateral_acceleration_arr;
-  calc_lateral_acceleration(trajectory, lateral_acceleration_arr);
+  std::vector<double> curvatures;
+  calcCurvature(trajectory, curvatures);
 
-  const auto max_it =
-    std::max_element(lateral_acceleration_arr.begin(), lateral_acceleration_arr.end());
-  const size_t max_index = std::distance(lateral_acceleration_arr.begin(), max_it);
-
-  return {*max_it, max_index};
-}
-
-/**
- * @brief Calculate time interval between two points assuming constant acceleration
- * @param v1 Initial velocity [m/s]
- * @param v2 Final velocity [m/s]
- * @param a Acceleration [m/s^2]
- * @param ds Distance interval [m]
- * @return Time interval [s]
- */
-void calc_interval_time(const Trajectory & trajectory, std::vector<double> & time_interval_arr)
-{
-  // Return empty array if trajectory has less than 2 points
-  if (trajectory.points.size() < 2) {
-    time_interval_arr.clear();
-    return;
+  double max_lat_acc = 0.0;
+  size_t max_index = 0;
+  for (size_t i = 0; i < curvatures.size(); ++i) {
+    const auto v = trajectory.points.at(i).longitudinal_velocity_mps;
+    const auto lat_acc = v * v * curvatures.at(i);
+    takeBigger(max_lat_acc, max_index, std::abs(lat_acc), i);
   }
-
-  // Calculate distances between points
-  std::vector<double> interval_distance_arr;
-  calc_interval_distance(trajectory, interval_distance_arr);
-
-  // Reserve space for time intervals (one less than number of points)
-  time_interval_arr.resize(trajectory.points.size() - 1);
-
-  constexpr double epsilon = 1e-6;  // Threshold for near-zero values
-
-  // Calculate time interval for each segment
-  for (size_t i = 0; i < trajectory.points.size() - 1; ++i) {
-    const double v_current_lon = trajectory.points[i].longitudinal_velocity_mps;
-    const double v_next_lon = trajectory.points[i + 1].longitudinal_velocity_mps;
-    const double a_current_lon = trajectory.points[i].acceleration_mps2;
-    const double ds = interval_distance_arr[i];
-
-    // Handle zero distance case
-    if (std::abs(ds) < epsilon) {
-      time_interval_arr[i] = 0.0;
-      continue;
-    }
-
-    // Special case for near-zero acceleration
-    if (std::abs(a_current_lon) < epsilon) {
-      const double v_avg = (v_current_lon + v_next_lon) / 2.0;
-      time_interval_arr[i] = (std::abs(v_avg) < epsilon) ? 0.0 : ds / v_avg;
-      continue;
-    }
-
-    // For non-zero acceleration, use: ds = v_current_lon * dt + 0.5 * a_current_lon * dt^2
-    const double discriminant = v_current_lon * v_current_lon + 2.0 * a_current_lon * ds;
-
-    if (discriminant >= 0.0) {
-      // Standard solution from quadratic formula
-      const double dt = (std::sqrt(discriminant) - v_current_lon) / a_current_lon;
-      time_interval_arr[i] = std::max(0.0, dt);  // Ensure non-negative time
-    } else {
-      // Fallback to average velocity if quadratic solution fails
-      const double v_avg = (v_current_lon + v_next_lon) / 2.0;
-      time_interval_arr[i] = (std::abs(v_avg) < epsilon) ? 0.0 : ds / v_avg;
-    }
-  }
-}
-
-void calc_lateral_jerk(const Trajectory & trajectory, std::vector<double> & lateral_jerk_arr)
-{
-  // Handle trajectories with insufficient points
-  if (trajectory.points.size() < 2) {
-    lateral_jerk_arr = std::vector<double>(trajectory.points.size(), 0.0);
-    return;
-  }
-
-  // Calculate lateral acceleration for each point
-  std::vector<double> lateral_acceleration_arr;
-  calc_lateral_acceleration(trajectory, lateral_acceleration_arr);
-
-  // Calculate time intervals between consecutive points
-  std::vector<double> time_interval_arr;
-  calc_interval_time(trajectory, time_interval_arr);
-
-  // Initialize lateral jerk array with zeros
-  lateral_jerk_arr = std::vector<double>(trajectory.points.size() - 1, 0.0);
-
-  constexpr double epsilon = 1e-6;  // Threshold for near-zero values
-
-  // Calculate lateral jerk for each point (except the last one)
-  for (size_t i = 0; i < trajectory.points.size() - 1; ++i) {
-    const double dt = time_interval_arr[i];
-
-    // Skip calculation if time interval is too small
-    if (dt < epsilon) {
-      continue;
-    }
-
-    // Simple forward difference: jerk = Δacceleration / Δtime
-    lateral_jerk_arr[i] = (lateral_acceleration_arr[i + 1] - lateral_acceleration_arr[i]) / dt;
-  }
-}
-
-/**
- * @brief Calculate maximum lateral jerk and its position on trajectory
- * @param trajectory Target trajectory
- * @return Pair of maximum lateral jerk value and its index
- */
-std::pair<double, size_t> calc_max_lateral_jerk(const Trajectory & trajectory)
-{
-  std::vector<double> lateral_jerk_arr;
-  calc_lateral_jerk(trajectory, lateral_jerk_arr);
-
-  if (lateral_jerk_arr.empty()) {
-    return {0.0, 0};
-  }
-
-  // Find index of maximum absolute lateral jerk
-  const auto max_it = std::max_element(
-    lateral_jerk_arr.begin(), lateral_jerk_arr.end(),
-    [](double a, double b) { return std::abs(a) < std::abs(b); });
-
-  const size_t max_index = std::distance(lateral_jerk_arr.begin(), max_it);
-
-  return {std::abs(*max_it), max_index};
+  return {max_lat_acc, max_index};
 }
 
 std::pair<double, size_t> getMaxLongitudinalAcc(const Trajectory & trajectory)

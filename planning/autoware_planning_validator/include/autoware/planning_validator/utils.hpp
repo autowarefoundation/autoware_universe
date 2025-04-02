@@ -15,36 +15,18 @@
 #ifndef AUTOWARE__PLANNING_VALIDATOR__UTILS_HPP_
 #define AUTOWARE__PLANNING_VALIDATOR__UTILS_HPP_
 
-#include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
+#include <rclcpp/rclcpp.hpp>
 
-#include <autoware_utils/geometry/boost_geometry.hpp>
-
-#include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 
-#include <boost/geometry.hpp>
-#include <boost/geometry/geometries/box.hpp>
-#include <boost/geometry/geometries/point.hpp>
-#include <boost/geometry/index/rtree.hpp>
-
+#include <string>
 #include <utility>
 #include <vector>
 
 namespace autoware::planning_validator
 {
-using autoware::vehicle_info_utils::VehicleInfo;
-using autoware_perception_msgs::msg::PredictedObject;
-using autoware_perception_msgs::msg::PredictedObjects;
-using autoware_perception_msgs::msg::PredictedPath;
-using autoware_perception_msgs::msg::Shape;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
-using autoware_utils::Polygon2d;
-using Point = autoware_utils::Point2d;
-
-using Box = boost::geometry::model::box<Point>;
-using BoxTimeIndexPair = std::pair<Box, std::pair<double, std::size_t>>;
-using Rtree = boost::geometry::index::rtree<BoxTimeIndexPair, boost::geometry::index::rstar<16, 4>>;
 
 std::pair<double, size_t> getAbsMaxValAndIdx(const std::vector<double> & v);
 
