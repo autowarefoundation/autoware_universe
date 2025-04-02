@@ -256,9 +256,6 @@ void MultiObjectTracker::onTimer()
   // in this case, it will perform extrapolate/remove old objects
   const double maximum_publish_interval = publisher_period_ * maximum_publish_interval_ratio;
   should_publish = should_publish || elapsed_time > maximum_publish_interval;
-  // Get minimum prediction time delta from all trackers
-  const double min_extrapolation_time = (current_time - last_updated_time_).seconds();
-  debugger_->updateMinExtrapolationTime(min_extrapolation_time);
   // debugger_->updateDiagnosticValues(current_time);
 
   // Publish with delay compensation to the current time
@@ -324,6 +321,10 @@ void MultiObjectTracker::publish(const rclcpp::Time & time) const
 
   // Publish debugger information if enabled
   debugger_->endPublishTime(this->now(), time);
+
+  // Update the diagnostic values
+  const double min_extrapolation_time = (time - last_updated_time_).seconds();
+  debugger_->updateDiagnosticValues(min_extrapolation_time, output_msg.objects.size());
 
   if (debugger_->shouldPublishTentativeObjects()) {
     autoware_perception_msgs::msg::TrackedObjects tentative_output_msg;

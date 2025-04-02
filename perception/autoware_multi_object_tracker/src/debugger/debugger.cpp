@@ -91,9 +91,11 @@ void TrackerDebugger::setupDiagnostics()
   diagnostic_updater_.setPeriod(0.1);
 }
 
-void TrackerDebugger::updateMinExtrapolationTime(double min_extrapolation_time)
-{
+void TrackerDebugger::updateDiagnosticValues(double min_extrapolation_time, size_t published_count) {
   diagnostic_values_.min_extrapolation_time = min_extrapolation_time;
+  diagnostic_values_.published_trackers_count = published_count;
+  // Force update diagnostic values
+  diagnostic_updater_.force_update();
 }
 
 void TrackerDebugger::publishTentativeObjects(
@@ -118,6 +120,8 @@ void TrackerDebugger::checkAllTiming(diagnostic_updater::DiagnosticStatusWrapper
   // Alias for cleaner code
   const auto & settings = debug_settings_;
   const auto & values = diagnostic_values_;
+  // Check if we have any published trackers
+  const bool no_published_trackers = (values.published_trackers_count == 0);
 
   // Detection delay thresholds
   const std::string delay_status = (delay == 0.0)                              ? "Not calculated"
@@ -134,19 +138,25 @@ void TrackerDebugger::checkAllTiming(diagnostic_updater::DiagnosticStatusWrapper
 
   // Initialize with OK status
   int8_t overall_level = diagnostic_msgs::msg::DiagnosticStatus::OK;
-  std::string overall_message = "All timings within normal limits";
+  std::string overall_message = no_published_trackers ? 
+    "No objects being tracked (normal if no detections)" : 
+    "All timings within normal limits";
   // Determine overall status
-  if (
-    delay >= settings.diagnostics_error_delay ||
-    values.min_extrapolation_time > settings.diagnostics_error_extrapolation_) {
-    overall_level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
-    overall_message = "Critical timing thresholds exceeded";
-  } else if (
-    delay >= settings.diagnostics_warn_delay ||
-    values.min_extrapolation_time > settings.diagnostics_warn_extrapolation_) {
-    overall_level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
-    overall_message = "Warning timing thresholds exceeded";
+    // Only check extrapolation if we have published trackers
+  if (!no_published_trackers) {
+    if (
+      delay >= settings.diagnostics_error_delay ||
+      values.min_extrapolation_time > settings.diagnostics_error_extrapolation_) {
+      overall_level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+      overall_message = "Critical timing thresholds exceeded";
+    } else if (
+      delay >= settings.diagnostics_warn_delay ||
+      values.min_extrapolation_time > settings.diagnostics_warn_extrapolation_) {
+      overall_level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+      overall_message = "Warning timing thresholds exceeded";
+    }
   }
+
   stat.add("Detection delay (s)", delay);
   stat.add("Detection status", delay_status);
   stat.add("Extrapolation time (s)", values.min_extrapolation_time);
@@ -216,9 +226,6 @@ void TrackerDebugger::endPublishTime(const rclcpp::Time & now, const rclcpp::Tim
       "debug/meas_to_tracked_object_ms", measurement_to_object_ms);
   }
   stamp_publish_output_ = now;
-
-  // Force update diagnostic values
-  diagnostic_updater_.force_update();
 }
 
 void TrackerDebugger::collectObjectInfo(

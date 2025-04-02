@@ -49,15 +49,11 @@ public:
     const std::vector<types::InputChannel> & channels_config);
   struct DiagnosticValues
   {
-    double pipeline_latency = 0.0;
     double min_extrapolation_time = 0.0;
-    double processing_time = 0.0;
-    double cycle_time = 0.0;
+    size_t published_trackers_count = 0;
   } diagnostic_values_;
-
-  // void updateDiagnosticValues(const rclcpp::Time & current_time);
-  void updateMinExtrapolationTime(double min_extrapolation_time);
-
+  // Single update method for all diagnostic values
+  void updateDiagnosticValues(double min_extrapolation_time, size_t published_count);
 private:
   struct DEBUG_SETTINGS
   {
