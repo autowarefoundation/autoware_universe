@@ -22,7 +22,7 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/planning_behavior.hpp>
-#include <tier4_planning_msgs/msg/planning_factor_array.hpp>
+#include <autoware_internal_planning_msgs/msg/planning_factor_array.hpp>
 
 #include <memory>
 #include <string>
@@ -39,8 +39,8 @@ using autoware_adapi_v1_msgs::msg::SteeringFactor;
 using autoware_adapi_v1_msgs::msg::SteeringFactorArray;
 using autoware_adapi_v1_msgs::msg::VelocityFactor;
 using autoware_adapi_v1_msgs::msg::VelocityFactorArray;
-using tier4_planning_msgs::msg::PlanningFactor;
-using tier4_planning_msgs::msg::PlanningFactorArray;
+using autoware_internal_planning_msgs::msg::PlanningFactor;
+using autoware_internal_planning_msgs::msg::PlanningFactorArray;
 
 class PlanningNode : public rclcpp::Node
 {

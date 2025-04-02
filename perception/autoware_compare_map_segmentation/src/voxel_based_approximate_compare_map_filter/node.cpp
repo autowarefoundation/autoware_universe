@@ -45,29 +45,30 @@ bool VoxelBasedApproximateStaticMapLoader::is_close_to_map(
 bool VoxelBasedApproximateDynamicMapLoader::is_close_to_map(
   const pcl::PointXYZ & point, [[maybe_unused]] const double distance_threshold)
 {
-  if (current_voxel_grid_dict_.size() == 0) {
-    return false;
-  }
-
-  const int map_grid_index = static_cast<int>(
-    std::floor((point.x - origin_x_) / map_grid_size_x_) +
-    map_grids_x_ * std::floor((point.y - origin_y_) / map_grid_size_y_));
-
-  if (static_cast<size_t>(map_grid_index) >= current_voxel_grid_array_.size()) {
-    return false;
-  }
-  if (current_voxel_grid_array_.at(map_grid_index) != nullptr) {
-    const int index = current_voxel_grid_array_.at(map_grid_index)
-                        ->map_cell_voxel_grid.getCentroidIndexAt(
-                          current_voxel_grid_array_.at(map_grid_index)
-                            ->map_cell_voxel_grid.getGridCoordinates(point.x, point.y, point.z));
-    if (index == -1) {
+  VoxelGridPointXYZ map_cell_voxel_grid;
+  {
+    std::lock_guard<std::mutex> lock(dynamic_map_loader_mutex_);
+    if (current_voxel_grid_dict_.size() == 0) {
       return false;
-    } else {
-      return true;
     }
+
+    const int map_grid_index = static_cast<int>(
+      std::floor((point.x - origin_x_) / map_grid_size_x_) +
+      map_grids_x_ * std::floor((point.y - origin_y_) / map_grid_size_y_));
+
+    if (static_cast<size_t>(map_grid_index) >= current_voxel_grid_array_.size()) {
+      return false;
+    }
+    const auto & current_voxel_grid = current_voxel_grid_array_.at(map_grid_index);
+    if (current_voxel_grid == nullptr) {
+      return false;
+    }
+    map_cell_voxel_grid = current_voxel_grid_array_.at(map_grid_index)->map_cell_voxel_grid;
   }
-  return false;
+
+  const int index = map_cell_voxel_grid.getCentroidIndexAt(
+    map_cell_voxel_grid.getGridCoordinates(point.x, point.y, point.z));
+  return (index != -1);
 }
 
 VoxelBasedApproximateCompareMapFilterComponent::VoxelBasedApproximateCompareMapFilterComponent(

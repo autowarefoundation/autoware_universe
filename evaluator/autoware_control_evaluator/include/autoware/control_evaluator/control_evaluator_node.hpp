@@ -30,6 +30,8 @@
 #include "geometry_msgs/msg/accel_with_covariance_stamped.hpp"
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware_internal_planning_msgs/msg/planning_factor.hpp>
+#include <autoware_internal_planning_msgs/msg/planning_factor_array.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <tier4_metric_msgs/msg/metric.hpp>
@@ -38,6 +40,8 @@
 #include <deque>
 #include <optional>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace control_diagnostics
@@ -57,6 +61,8 @@ using geometry_msgs::msg::AccelWithCovarianceStamped;
 using MetricMsg = tier4_metric_msgs::msg::Metric;
 using MetricArrayMsg = tier4_metric_msgs::msg::MetricArray;
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
+using autoware_internal_planning_msgs::msg::PlanningFactor;
+using autoware_internal_planning_msgs::msg::PlanningFactorArray;
 
 /**
  * @brief Node for control evaluation
@@ -79,7 +85,8 @@ public:
   void AddKinematicStateMetricMsg(
     const Odometry & odom, const AccelWithCovarianceStamped & accel_stamped);
   void AddSteeringMetricMsg(const SteeringReport & steering_report);
-
+  void AddStopDeviationMetricMsg(
+    const PlanningFactorArray::ConstSharedPtr & planning_factors, const std::string & module_name);
   void onTimer();
 
 private:
@@ -97,6 +104,11 @@ private:
     this, "~/input/behavior_path"};
   autoware_utils::InterProcessPollingSubscriber<SteeringReport> steering_sub_{
     this, "~/input/steering_status"};
+
+  std::unordered_map<
+    std::string, autoware_utils::InterProcessPollingSubscriber<PlanningFactorArray>>
+    planning_factors_sub_;
+  std::unordered_set<std::string> stop_deviation_modules_;
 
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
     processing_time_pub_;

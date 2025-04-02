@@ -29,6 +29,7 @@
 
 #include <limits>
 #include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -459,7 +460,7 @@ private:
 
   bool safe_{true};
 
-  std::optional<UUID> ignore_signal_{std::nullopt};
+  std::set<std::string> ignore_signal_ids_;
 
   std::shared_ptr<AvoidanceHelper> helper_;
 

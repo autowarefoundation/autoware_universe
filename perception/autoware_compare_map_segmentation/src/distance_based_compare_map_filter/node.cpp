@@ -72,39 +72,40 @@ bool DistanceBasedStaticMapLoader::is_close_to_map(
   }
   return true;
 }
-
 bool DistanceBasedDynamicMapLoader::is_close_to_map(
   const pcl::PointXYZ & point, const double distance_threshold)
 {
-  if (current_voxel_grid_dict_.size() == 0) {
-    return false;
+  std::shared_ptr<pcl::search::Search<pcl::PointXYZ>> map_cell_kdtree;
+  {
+    std::lock_guard<std::mutex> lock(dynamic_map_loader_mutex_);
+    if (current_voxel_grid_dict_.size() == 0) {
+      return false;
+    }
+    if (!isFinite(point)) {
+      return false;
+    }
+
+    const int map_grid_index = static_cast<int>(
+      std::floor((point.x - origin_x_) / map_grid_size_x_) +
+      map_grids_x_ * std::floor((point.y - origin_y_) / map_grid_size_y_));
+
+    if (static_cast<size_t>(map_grid_index) >= current_voxel_grid_array_.size()) {
+      return false;
+    }
+    const auto & current_voxel_grid = current_voxel_grid_array_.at(map_grid_index);
+    if (current_voxel_grid == nullptr) {
+      return false;
+    }
+    map_cell_kdtree = current_voxel_grid->map_cell_kdtree;
   }
-  if (!isFinite(point)) {
+
+  std::vector<int> nn_indices(1);
+  std::vector<float> nn_distances(1);
+  if (!map_cell_kdtree->nearestKSearch(point, 1, nn_indices, nn_distances)) {
     return false;
   }
 
-  const int map_grid_index = static_cast<int>(
-    std::floor((point.x - origin_x_) / map_grid_size_x_) +
-    map_grids_x_ * std::floor((point.y - origin_y_) / map_grid_size_y_));
-
-  if (static_cast<size_t>(map_grid_index) >= current_voxel_grid_array_.size()) {
-    return false;
-  }
-  if (current_voxel_grid_array_.at(map_grid_index) != nullptr) {
-    if (current_voxel_grid_array_.at(map_grid_index)->map_cell_kdtree == nullptr) {
-      return false;
-    }
-    std::vector<int> nn_indices(1);
-    std::vector<float> nn_distances(1);
-    if (!current_voxel_grid_array_.at(map_grid_index)
-           ->map_cell_kdtree->nearestKSearch(point, 1, nn_indices, nn_distances)) {
-      return false;
-    }
-    if (nn_distances[0] <= distance_threshold) {
-      return true;
-    }
-  }
-  return false;
+  return nn_distances[0] <= distance_threshold;
 }
 
 DistanceBasedCompareMapFilterComponent::DistanceBasedCompareMapFilterComponent(

@@ -34,18 +34,11 @@
 
 namespace autoware::multi_object_tracker
 {
-
 PassThroughTracker::PassThroughTracker(
-  const rclcpp::Time & time, const types::DynamicObject & object, const size_t channel_size)
-: Tracker(time, object.classification, channel_size),
-  logger_(rclcpp::get_logger("PassThroughTracker")),
-  last_update_time_(time)
+  const rclcpp::Time & time, const types::DynamicObject & object)
+: Tracker(time, object), logger_(rclcpp::get_logger("PassThroughTracker")), last_update_time_(time)
 {
-  object_ = object;
   prev_observed_object_ = object;
-
-  // initialize existence probability
-  initializeExistenceProbabilities(object.channel_index, object.existence_probability);
 }
 
 bool PassThroughTracker::predict(const rclcpp::Time & time)
@@ -61,7 +54,7 @@ bool PassThroughTracker::predict(const rclcpp::Time & time)
 
 bool PassThroughTracker::measure(
   const types::DynamicObject & object, const rclcpp::Time & time,
-  const geometry_msgs::msg::Transform & self_transform)
+  const types::InputChannel & /*channel_info*/)
 {
   prev_observed_object_ = object_;
   object_ = object;
@@ -69,15 +62,12 @@ bool PassThroughTracker::measure(
   // Update Velocity if the observed object does not have twist information
   const double dt = (time - last_update_time_).seconds();
   if (!object_.kinematics.has_twist && dt > 1e-6) {
-    const double dx = object_.kinematics.pose_with_covariance.pose.position.x -
-                      prev_observed_object_.kinematics.pose_with_covariance.pose.position.x;
-    const double dy = object_.kinematics.pose_with_covariance.pose.position.y -
-                      prev_observed_object_.kinematics.pose_with_covariance.pose.position.y;
-    object_.kinematics.twist_with_covariance.twist.linear.x = std::hypot(dx, dy) / dt;
+    const double dx = object_.pose.position.x - prev_observed_object_.pose.position.x;
+    const double dy = object_.pose.position.y - prev_observed_object_.pose.position.y;
+    object_.twist.linear.x = std::hypot(dx, dy) / dt;
   }
   last_update_time_ = time;
 
-  (void)self_transform;  // currently do not use self vehicle position
   return true;
 }
 
@@ -86,24 +76,23 @@ bool PassThroughTracker::getTrackedObject(
 {
   using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
   object = object_;
-  object.object_id = getUUID();
-  object.classification = getClassification();
-  object.kinematics.pose_with_covariance.covariance[XYZRPY_COV_IDX::X_X] = 0.0;
-  object.kinematics.pose_with_covariance.covariance[XYZRPY_COV_IDX::X_Y] = 0.0;
-  object.kinematics.pose_with_covariance.covariance[XYZRPY_COV_IDX::Y_X] = 0.0;
-  object.kinematics.pose_with_covariance.covariance[XYZRPY_COV_IDX::Y_Y] = 0.0;
-  object.kinematics.pose_with_covariance.covariance[XYZRPY_COV_IDX::Z_Z] = 0.0;
-  object.kinematics.pose_with_covariance.covariance[XYZRPY_COV_IDX::ROLL_ROLL] = 0.0;
-  object.kinematics.pose_with_covariance.covariance[XYZRPY_COV_IDX::PITCH_PITCH] = 0.0;
-  object.kinematics.pose_with_covariance.covariance[XYZRPY_COV_IDX::YAW_YAW] = 0.0;
+
+  object.pose_covariance[XYZRPY_COV_IDX::X_X] = 0.0;
+  object.pose_covariance[XYZRPY_COV_IDX::X_Y] = 0.0;
+  object.pose_covariance[XYZRPY_COV_IDX::Y_X] = 0.0;
+  object.pose_covariance[XYZRPY_COV_IDX::Y_Y] = 0.0;
+  object.pose_covariance[XYZRPY_COV_IDX::Z_Z] = 0.0;
+  object.pose_covariance[XYZRPY_COV_IDX::ROLL_ROLL] = 0.0;
+  object.pose_covariance[XYZRPY_COV_IDX::PITCH_PITCH] = 0.0;
+  object.pose_covariance[XYZRPY_COV_IDX::YAW_YAW] = 0.0;
 
   // twist covariance
-  object.kinematics.twist_with_covariance.covariance[XYZRPY_COV_IDX::X_X] = 0.0;
-  object.kinematics.twist_with_covariance.covariance[XYZRPY_COV_IDX::Y_Y] = 0.0;
-  object.kinematics.twist_with_covariance.covariance[XYZRPY_COV_IDX::Z_Z] = 0.0;
-  object.kinematics.twist_with_covariance.covariance[XYZRPY_COV_IDX::ROLL_ROLL] = 0.0;
-  object.kinematics.twist_with_covariance.covariance[XYZRPY_COV_IDX::PITCH_PITCH] = 0.0;
-  object.kinematics.twist_with_covariance.covariance[XYZRPY_COV_IDX::YAW_YAW] = 0.0;
+  object.twist_covariance[XYZRPY_COV_IDX::X_X] = 0.0;
+  object.twist_covariance[XYZRPY_COV_IDX::Y_Y] = 0.0;
+  object.twist_covariance[XYZRPY_COV_IDX::Z_Z] = 0.0;
+  object.twist_covariance[XYZRPY_COV_IDX::ROLL_ROLL] = 0.0;
+  object.twist_covariance[XYZRPY_COV_IDX::PITCH_PITCH] = 0.0;
+  object.twist_covariance[XYZRPY_COV_IDX::YAW_YAW] = 0.0;
 
   const double dt = (time - last_update_time_).seconds();
   if (0.5 /*500msec*/ < dt) {

@@ -14,7 +14,7 @@
 // pull_out_test_utils.cpp
 #include "start_planner_test_helper.hpp"
 
-#include <autoware_planning_test_manager/autoware_planning_test_manager_utils.hpp>
+#include <autoware/planning_test_manager/autoware_planning_test_manager_utils.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
 
 #include <memory>

@@ -57,11 +57,11 @@ using autoware::objects_of_interest_marker_interface::ObjectsOfInterestMarkerInt
 using autoware::planning_factor_interface::PlanningFactorInterface;
 using autoware::rtc_interface::RTCInterface;
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
+using autoware_internal_planning_msgs::msg::PlanningFactor;
+using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 using autoware_utils::calc_offset_pose;
 using autoware_utils::generate_uuid;
 using tier4_planning_msgs::msg::AvoidanceDebugMsgArray;
-using tier4_planning_msgs::msg::PlanningFactor;
-using tier4_planning_msgs::msg::SafetyFactorArray;
 using tier4_rtc_msgs::msg::State;
 using unique_identifier_msgs::msg::UUID;
 using visualization_msgs::msg::MarkerArray;

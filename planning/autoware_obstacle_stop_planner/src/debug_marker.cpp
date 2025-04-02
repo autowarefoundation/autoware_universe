@@ -194,8 +194,9 @@ void ObstacleStopPlannerDebugNode::publish()
   if (stop_pose_ptr_) {
     planning_factor_interface_->add(
       std::numeric_limits<float>::quiet_NaN(), *stop_pose_ptr_,
-      tier4_planning_msgs::msg::PlanningFactor::STOP, tier4_planning_msgs::msg::SafetyFactorArray{},
-      true /*is_driving_forward*/, 0.0, 0.0 /*shift distance*/, "");
+      autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+      autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
+      0.0 /*shift distance*/, "");
   }
   planning_factor_interface_->publish();
 

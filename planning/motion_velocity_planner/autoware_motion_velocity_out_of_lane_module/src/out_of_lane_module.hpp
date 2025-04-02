@@ -18,8 +18,8 @@
 #include "types.hpp"
 
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
-#include <autoware/motion_velocity_planner_common_universe/plugin_module_interface.hpp>
-#include <autoware/motion_velocity_planner_common_universe/velocity_planning_result.hpp>
+#include <autoware/motion_velocity_planner_common/plugin_module_interface.hpp>
+#include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
@@ -54,6 +54,13 @@ private:
     out_of_lane::EgoData & ego_data,
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
     const double max_arc_length);
+  /// @brief calculate the first slowdown pose (if any)
+  std::optional<geometry_msgs::msg::Pose> calculate_slowdown_pose(
+    const out_of_lane::EgoData & ego_data, const out_of_lane::OutOfLaneData & out_of_lane_data);
+  /// @brief update the given planning result and some internal states of the module
+  void update_result(
+    VelocityPlanningResult & result, const std::optional<geometry_msgs::msg::Pose> & slowdown_pose,
+    const out_of_lane::EgoData & ego_data, const out_of_lane::OutOfLaneData & out_of_lane_data);
 
   out_of_lane::PlannerParam params_{};
 

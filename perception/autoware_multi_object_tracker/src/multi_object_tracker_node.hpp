@@ -19,7 +19,6 @@
 #ifndef MULTI_OBJECT_TRACKER_NODE_HPP_
 #define MULTI_OBJECT_TRACKER_NODE_HPP_
 
-#include "autoware/multi_object_tracker/association/association.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/odometry.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
@@ -65,8 +64,6 @@ public:
 private:
   // ROS interface
   rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr tracked_objects_pub_;
-  rclcpp::Subscription<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr
-    detected_object_sub_;
 
   // debugger
   std::unique_ptr<TrackerDebugger> debugger_;
@@ -82,15 +79,14 @@ private:
 
   // internal states
   std::string world_frame_id_;  // tracking frame
-  std::unique_ptr<DataAssociation> association_;
   std::unique_ptr<TrackerProcessor> processor_;
 
   // input manager
   std::unique_ptr<InputManager> input_manager_;
   std::shared_ptr<Odometry> odometry_;
 
-  std::vector<InputChannel> input_channels_{};
   size_t input_channel_size_{};
+  std::vector<types::InputChannel> input_channels_config_;
 
   // callback functions
   void onTimer();

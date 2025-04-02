@@ -20,6 +20,7 @@
 #include "autoware/path_optimizer/mpt_optimizer.hpp"
 #include "autoware/path_optimizer/replan_checker.hpp"
 #include "autoware/path_optimizer/type_alias.hpp"
+#include "autoware/path_optimizer/utils/conditional_timer.hpp"
 #include "autoware_utils/ros/logger_level_configure.hpp"
 #include "autoware_utils/ros/polling_subscriber.hpp"
 #include "autoware_utils/system/stop_watch.hpp"
@@ -27,6 +28,7 @@
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 
 #include <autoware_utils/ros/published_time_publisher.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/publisher.hpp>
 
 #include <algorithm>
@@ -68,6 +70,7 @@ protected:  // for the static_centerline_generator package
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_{};
   mutable std::shared_ptr<DebugData> debug_data_ptr_{nullptr};
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
+  mutable std::shared_ptr<ConditionalTimer> conditional_timer_{nullptr};
 
   // flags for some functions
   bool enable_pub_debug_marker_;
@@ -76,6 +79,7 @@ protected:  // for the static_centerline_generator package
   bool enable_outside_drivable_area_stop_;
   bool enable_skip_optimization_;
   bool enable_reset_prev_optimization_;
+  bool is_optimization_failed_{false};
   bool use_footprint_polygon_for_outside_drivable_area_check_;
 
   // core algorithms
@@ -123,6 +127,7 @@ protected:  // for the static_centerline_generator package
     const std::vector<TrajectoryPoint> & traj_points,
     const std::vector<TrajectoryPoint> & optimized_points) const;
   void publishDebugData(const Header & header) const;
+  void onCheckPathOptimizationValid(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
   // functions in generateOptimizedTrajectory
   std::vector<TrajectoryPoint> optimizeTrajectory(const PlannerData & planner_data);
@@ -145,6 +150,9 @@ private:
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
 
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch_;
+
+  // diag
+  diagnostic_updater::Updater updater_{this};
 };
 }  // namespace autoware::path_optimizer
 

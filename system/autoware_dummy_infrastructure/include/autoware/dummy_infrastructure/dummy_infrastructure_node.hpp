@@ -19,8 +19,8 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_planning_msgs/msg/planning_factor_array.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <tier4_planning_msgs/msg/planning_factor_array.hpp>
 #include <tier4_v2x_msgs/msg/infrastructure_command_array.hpp>
 #include <tier4_v2x_msgs/msg/virtual_traffic_light_state_array.hpp>
 
@@ -34,8 +34,8 @@
 
 namespace autoware::dummy_infrastructure
 {
+using autoware_internal_planning_msgs::msg::PlanningFactorArray;
 using nav_msgs::msg::Odometry;
-using tier4_planning_msgs::msg::PlanningFactorArray;
 using tier4_v2x_msgs::msg::InfrastructureCommand;
 using tier4_v2x_msgs::msg::InfrastructureCommandArray;
 using tier4_v2x_msgs::msg::VirtualTrafficLightState;
