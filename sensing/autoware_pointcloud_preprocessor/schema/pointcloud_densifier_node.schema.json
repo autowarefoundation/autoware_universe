@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for PointCloud Densifier Node",
+  "type": "object",
+  "properties": {
+    "num_previous_frames": {
+      "type": "integer",
+      "description": "Number of previous frames to use for densification",
+      "default": 1,
+      "minimum": 0
+    },
+    "x_min": {
+      "type": "number",
+      "description": "Minimum X coordinate (in meters) of the region of interest",
+      "default": 80.0
+    },
+    "x_max": {
+      "type": "number",
+      "description": "Maximum X coordinate (in meters) of the region of interest",
+      "default": 230.0
+    },
+    "y_min": {
+      "type": "number",
+      "description": "Minimum Y coordinate (in meters) of the region of interest",
+      "default": -20.0
+    },
+    "y_max": {
+      "type": "number",
+      "description": "Maximum Y coordinate (in meters) of the region of interest",
+      "default": 20.0
+    },
+    "grid_resolution": {
+      "type": "number",
+      "description": "Resolution (in meters) of the occupancy grid used for point selection",
+      "default": 0.3,
+      "exclusiveMinimum": 0
+    }
+  },
+  "required": ["num_previous_frames", "x_min", "x_max", "y_min", "y_max", "grid_resolution"],
+  "additionalProperties": false
+}

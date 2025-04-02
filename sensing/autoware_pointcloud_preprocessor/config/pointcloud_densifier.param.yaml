@@ -1,0 +1,8 @@
+/**:
+  ros__parameters:
+    num_previous_frames: 1
+    x_min: 80.0
+    x_max: 230.0
+    y_min: -20.0
+    y_max: 20.0
+    grid_resolution: 0.3
