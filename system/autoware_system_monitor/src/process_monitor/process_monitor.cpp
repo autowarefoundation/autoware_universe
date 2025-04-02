@@ -404,8 +404,9 @@ void updateProcessRanking(
   *tasks[order] = info;
 }
 
-const std::string NUM_OF_PROCS_DESCRIPTION{
-  "Number of processes in High-load[] and High-mem[]. Cannot be changed after initialization."};
+const char NUM_OF_PROCS_DESCRIPTION[] =
+  "Number of processes in High-load[] and High-mem[]. Cannot be changed after initialization.";
+
 }  // namespace
 
 ProcessMonitor::ProcessMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)

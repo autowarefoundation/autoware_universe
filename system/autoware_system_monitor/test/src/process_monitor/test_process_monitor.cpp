@@ -23,6 +23,7 @@
 #include <fmt/format.h>
 #include <gtest/gtest.h>
 
+#include <iostream>
 #include <memory>
 #include <string>
 
@@ -95,7 +96,7 @@ public:
     // The files will be closed by the destructors.
     std::ifstream expected_file(expected);
     if (!expected_file) {
-      std::cerr << "File 'expect' does not exist." << std::endl;
+      std::cerr << "File 'expected' does not exist." << std::endl;
       return false;
     }
     std::ifstream result_file(result);
@@ -350,7 +351,7 @@ TEST_P(ProcessMonitorTestSuiteWithDummyProc, dummyProcTest)
     &place_holder, [&](int *) { monitor_->cleanupTestData(test_data_dir); });
 
   int result = monitor_->prepareTestData(fileSetPath, test_data_dir);
-  ASSERT_TRUE(result == 0);
+  ASSERT_EQ(result,0);
 
   monitor_->forceTimerEvent();
 
@@ -388,7 +389,7 @@ TEST_P(ProcessMonitorTestSuiteWithDummyProcPair, dummyProcPairTest)
     &place_holder, [&](int *) { monitor_->cleanupTestData(test_data_dir); });
 
   int result1 = monitor_->prepareTestData(fileSetPath1, test_data_dir);
-  ASSERT_TRUE(result1 == 0);
+  ASSERT_EQ(result1, 0);
   monitor_->forceTimerEvent();
 
   // Need to clean up the test data before preparing the next test data.
@@ -396,7 +397,7 @@ TEST_P(ProcessMonitorTestSuiteWithDummyProcPair, dummyProcPairTest)
   monitor_->cleanupTestData(test_data_dir);
 
   int result2 = monitor_->prepareTestData(fileSetPath2, test_data_dir);
-  ASSERT_TRUE(result2 == 0);
+  ASSERT_EQ(result2, 0);
   monitor_->forceTimerEvent();
 
   // Publish topic
