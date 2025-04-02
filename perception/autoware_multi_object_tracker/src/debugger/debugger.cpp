@@ -107,57 +107,55 @@ void TrackerDebugger::publishTentativeObjects(
   }
 }
 
-TrackerDebugger::TimingCheckResult 
-TrackerDebugger::checkDelayTiming(double delay) const
+TrackerDebugger::TimingCheckResult TrackerDebugger::checkDelayTiming(double delay) const
 {
-    if (delay == 0.0) {
-        return {"Not calculated", diagnostic_msgs::msg::DiagnosticStatus::OK};
-    }
-    if (delay < debug_settings_.diagnostics_warn_delay) {
-        return {"Within limits", diagnostic_msgs::msg::DiagnosticStatus::OK};
-    }
-    if (delay < debug_settings_.diagnostics_error_delay) {
-        return {"Exceeded warn threshold", diagnostic_msgs::msg::DiagnosticStatus::WARN};
-    }
-    return {"Exceeded error threshold", diagnostic_msgs::msg::DiagnosticStatus::ERROR};
+  if (delay == 0.0) {
+    return {"Not calculated", diagnostic_msgs::msg::DiagnosticStatus::OK};
+  }
+  if (delay < debug_settings_.diagnostics_warn_delay) {
+    return {"Within limits", diagnostic_msgs::msg::DiagnosticStatus::OK};
+  }
+  if (delay < debug_settings_.diagnostics_error_delay) {
+    return {"Exceeded warn threshold", diagnostic_msgs::msg::DiagnosticStatus::WARN};
+  }
+  return {"Exceeded error threshold", diagnostic_msgs::msg::DiagnosticStatus::ERROR};
 }
 
-TrackerDebugger::TimingCheckResult 
-TrackerDebugger::checkExtrapolationTiming(double extrapolation_time) const
+TrackerDebugger::TimingCheckResult TrackerDebugger::checkExtrapolationTiming(
+  double extrapolation_time) const
 {
-    if (extrapolation_time <= debug_settings_.diagnostics_warn_extrapolation_) {
-        return {"Within limits", diagnostic_msgs::msg::DiagnosticStatus::OK};
-    }
-    if (extrapolation_time <= debug_settings_.diagnostics_error_extrapolation_) {
-        return {"Exceeded warn threshold", diagnostic_msgs::msg::DiagnosticStatus::WARN};
-    }
-    return {"Exceeded error threshold", diagnostic_msgs::msg::DiagnosticStatus::ERROR};
+  if (extrapolation_time <= debug_settings_.diagnostics_warn_extrapolation_) {
+    return {"Within limits", diagnostic_msgs::msg::DiagnosticStatus::OK};
+  }
+  if (extrapolation_time <= debug_settings_.diagnostics_error_extrapolation_) {
+    return {"Exceeded warn threshold", diagnostic_msgs::msg::DiagnosticStatus::WARN};
+  }
+  return {"Exceeded error threshold", diagnostic_msgs::msg::DiagnosticStatus::ERROR};
 }
 
-TrackerDebugger::TimingCheckResult 
-TrackerDebugger::determineOverallTimingStatus(bool no_published_trackers,
-                                            const TimingCheckResult& delay_result,
-                                            const TimingCheckResult& extrapolation_result) const
+TrackerDebugger::TimingCheckResult TrackerDebugger::determineOverallTimingStatus(
+  bool no_published_trackers, const TimingCheckResult & delay_result,
+  const TimingCheckResult & extrapolation_result) const
 {
-    if (no_published_trackers) {
-        return {"No objects being tracked (normal if no detections)", 
-                diagnostic_msgs::msg::DiagnosticStatus::OK};
-    }
+  if (no_published_trackers) {
+    return {
+      "No objects being tracked (normal if no detections)",
+      diagnostic_msgs::msg::DiagnosticStatus::OK};
+  }
 
-    if (delay_result.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR ||
-        extrapolation_result.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR) {
-        return {"Critical timing thresholds exceeded", 
-                diagnostic_msgs::msg::DiagnosticStatus::ERROR};
-    }
+  if (
+    delay_result.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR ||
+    extrapolation_result.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR) {
+    return {"Critical timing thresholds exceeded", diagnostic_msgs::msg::DiagnosticStatus::ERROR};
+  }
 
-    if (delay_result.level == diagnostic_msgs::msg::DiagnosticStatus::WARN ||
-        extrapolation_result.level == diagnostic_msgs::msg::DiagnosticStatus::WARN) {
-        return {"Warning timing thresholds exceeded", 
-                diagnostic_msgs::msg::DiagnosticStatus::WARN};
-    }
+  if (
+    delay_result.level == diagnostic_msgs::msg::DiagnosticStatus::WARN ||
+    extrapolation_result.level == diagnostic_msgs::msg::DiagnosticStatus::WARN) {
+    return {"Warning timing thresholds exceeded", diagnostic_msgs::msg::DiagnosticStatus::WARN};
+  }
 
-    return {"All timings within normal limits", 
-            diagnostic_msgs::msg::DiagnosticStatus::OK};
+  return {"All timings within normal limits", diagnostic_msgs::msg::DiagnosticStatus::OK};
 }
 
 // Time measurement functions
@@ -176,11 +174,11 @@ void TrackerDebugger::checkAllTiming(diagnostic_updater::DiagnosticStatusWrapper
 
   // Check individual timing components
   const auto delay_result = checkDelayTiming(delay);
-  const auto extrapolation_result = checkExtrapolationTiming(diagnostic_values_.min_extrapolation_time);
+  const auto extrapolation_result =
+    checkExtrapolationTiming(diagnostic_values_.min_extrapolation_time);
   // Determine overall status
-  const auto overall_result = determineOverallTimingStatus(no_published_trackers, 
-                                                          delay_result, 
-                                                           extrapolation_result);
+  const auto overall_result =
+    determineOverallTimingStatus(no_published_trackers, delay_result, extrapolation_result);
 
   stat.add("Detection delay (s)", delay);
   stat.add("Detection status", delay_result.message);

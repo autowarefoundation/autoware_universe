@@ -256,7 +256,6 @@ void MultiObjectTracker::onTimer()
   // in this case, it will perform extrapolate/remove old objects
   const double maximum_publish_interval = publisher_period_ * maximum_publish_interval_ratio;
   should_publish = should_publish || elapsed_time > maximum_publish_interval;
-  // debugger_->updateDiagnosticValues(current_time);
 
   // Publish with delay compensation to the current time
   if (should_publish) checkAndPublish(current_time);

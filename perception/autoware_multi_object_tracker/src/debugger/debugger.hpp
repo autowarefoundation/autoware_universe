@@ -50,7 +50,8 @@ public:
 
 private:
   // Timing check utilities
-  struct TimingCheckResult {
+  struct TimingCheckResult
+  {
     std::string message;
     diagnostic_msgs::msg::DiagnosticStatus::_level_type level;
   };
@@ -59,7 +60,7 @@ private:
   TimingCheckResult determineOverallTimingStatus(
     bool no_published_trackers, const TimingCheckResult & delay_result,
     const TimingCheckResult & extrapolation_result) const;
-  
+
   // Debug settings
   struct DEBUG_SETTINGS
   {
@@ -78,7 +79,7 @@ private:
     double min_extrapolation_time = 0.0;
     size_t published_trackers_count = 0;
   } diagnostic_values_;
-                                             
+
   // ROS node, publishers
   rclcpp::Node & node_;
   rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr
