@@ -122,6 +122,9 @@ bool PlanningFactorAccumulator::addMetricMsg(
         metric_msg.name = base_name + module + "/distance_to_stop";
         metric_msg.value = std::to_string(state.distance_to_stop);
         metrics_msg.metric_array.push_back(metric_msg);
+
+        metric_msg.name = base_name + module + "/count";
+        metric_msg.value = std::to_string(state.stop_decision_keep_time_accumulator.count());
         added = true;
       }
     }
