@@ -457,17 +457,16 @@ void PlanningEvaluatorNode::onBlinker(const TurnIndicatorsReport::ConstSharedPtr
 void PlanningEvaluatorNode::onPlanningFactors(
   const PlanningFactorArray::ConstSharedPtr planning_factors, const std::string & module_name)
 {
-  if (
-    !planning_factors || planning_factors->factors.empty() ||
-    stop_decision_modules_.count(module_name) == 0) {
+  if (!planning_factors || planning_factors->factors.empty()) {
     return;
   }
   metrics_accumulator_.setPlanningFactors(module_name, *planning_factors);
+
   if (metrics_for_publish_.count(Metric::stop_decision) != 0) {
-    metrics_accumulator_.addMetricMsg(Metric::stop_decision, metrics_msg_);
+    metrics_accumulator_.addMetricMsg(Metric::stop_decision, metrics_msg_, module_name);
   }
   if (metrics_for_publish_.count(Metric::abnormal_stop_decision) != 0) {
-    metrics_accumulator_.addMetricMsg(Metric::abnormal_stop_decision, metrics_msg_);
+    metrics_accumulator_.addMetricMsg(Metric::abnormal_stop_decision, metrics_msg_, module_name);
   }
 }
 
