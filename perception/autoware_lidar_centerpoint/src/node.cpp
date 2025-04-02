@@ -106,7 +106,7 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
     circle_nms_dist_threshold, yaw_norm_thresholds, has_variance_);
   detector_ptr_ =
     std::make_unique<CenterPointTRT>(encoder_param, head_param, densification_param, config);
-  diagnostics_interface_ptr_ =
+  diagnostics_centerpoint_trt_ =
     std::make_unique<autoware_utils::DiagnosticsInterface>(this, "centerpoint_trt");
   diagnostics_processing_delay_ =
     std::make_unique<autoware_utils::DiagnosticsInterface>(this, "node_processing_time_status");
@@ -116,8 +116,6 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
     declare_parameter<double>("diagnostics.max_allowed_processing_time_ms");
   max_acceptable_consecutive_delay_ms_ =
     declare_parameter<double>("diagnostics.max_acceptable_consecutive_delay_ms");
-  const int64_t validation_callback_interval_ms =
-    declare_parameter<int64_t>("diagnostics.validation_callback_interval_ms");
 
   pointcloud_sub_ =
     std::make_unique<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
@@ -137,6 +135,9 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
   }
 
   if (stop_watch_ptr_) {
+    const int64_t validation_callback_interval_ms =
+    declare_parameter<int64_t>("diagnostics.validation_callback_interval_ms");
+
     diagnostics_processing_time_timer_ = this->create_wall_timer(
       std::chrono::milliseconds(validation_callback_interval_ms),
       std::bind(&LidarCenterPointNode::diagnosticsTimerCallback, this));
@@ -147,6 +148,17 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
     rclcpp::shutdown();
   }
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+}
+
+double LidarCenterPointNode::calcConsecutiveDelay(const rclcpp::Time & timestamp)
+{
+  const double delayed_duration =
+    std::chrono::duration<double, std::milli>(
+      std::chrono::nanoseconds(
+        (timestamp - last_in_time_processing_timestamp_.value()).nanoseconds()))
+      .count();
+
+  return delayed_duration;
 }
 
 void LidarCenterPointNode::pointCloudCallback(
@@ -161,7 +173,7 @@ void LidarCenterPointNode::pointCloudCallback(
   if (stop_watch_ptr_) {
     stop_watch_ptr_->toc("processing_time", true);
   }
-  diagnostics_interface_ptr_->clear();
+  diagnostics_centerpoint_trt_->clear();
 
   std::vector<Box3D> det_boxes3d;
   bool is_num_pillars_within_range = true;
@@ -170,13 +182,13 @@ void LidarCenterPointNode::pointCloudCallback(
   if (!is_success) {
     return;
   }
-  diagnostics_interface_ptr_->add_key_value(
+  diagnostics_centerpoint_trt_->add_key_value(
     "is_num_pillars_within_range", is_num_pillars_within_range);
   if (!is_num_pillars_within_range) {
     std::stringstream message;
     message << "CenterPointTRT::detect: The actual number of pillars exceeds its maximum value, "
             << "which may limit the detection performance.";
-    diagnostics_interface_ptr_->update_level_and_message(
+    diagnostics_centerpoint_trt_->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::WARN, message.str());
   }
 
@@ -201,28 +213,47 @@ void LidarCenterPointNode::pointCloudCallback(
 
   if (stop_watch_ptr_) {
     const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
-    diagnostics_interface_ptr_->add_key_value("processing_time_ms", processing_time_ms);
+    const rclcpp::Time timestamp_now = this->get_clock()->now();
+
+    diagnostics_processing_delay_->clear();
 
     // check processing time is acceptable
     if (processing_time_ms > max_allowed_processing_time_ms_) {
-      diagnostics_interface_ptr_->add_key_value("is_processing_time_ms_in_expected_range", false);
+      diagnostics_processing_delay_->add_key_value(
+        "is_processing_time_ms_in_expected_range", false);
 
       std::stringstream message;
-      message << "CenterPoint processing time exceeds the acceptable limit of "
+      message << "Processing time exceeds the acceptable limit of "
               << max_allowed_processing_time_ms_ << " ms by "
               << (processing_time_ms - max_allowed_processing_time_ms_) << " ms.";
 
-      diagnostics_interface_ptr_->update_level_and_message(
+      diagnostics_processing_delay_->update_level_and_message(
         diagnostic_msgs::msg::DiagnosticStatus::WARN, message.str());
 
       // just in case the processing starts with a delayed inference
       if (!last_in_time_processing_timestamp_) {
-        last_in_time_processing_timestamp_ = this->get_clock()->now();
+        last_in_time_processing_timestamp_ = timestamp_now;
       }
     } else {
-      diagnostics_interface_ptr_->add_key_value("is_processing_time_ms_in_expected_range", true);
-      last_in_time_processing_timestamp_ = this->get_clock()->now();
+      diagnostics_processing_delay_->add_key_value("is_processing_time_ms_in_expected_range", true);
+      last_in_time_processing_timestamp_ = timestamp_now;
     }
+    diagnostics_processing_delay_->add_key_value("processing_time_ms", processing_time_ms);
+
+    // check consecutive delays
+    const double delayed_state_duration = calcConsecutiveDelay(timestamp_now);
+    if (delayed_state_duration > max_acceptable_consecutive_delay_ms_) {
+      diagnostics_processing_delay_->add_key_value(
+        "is_consecutive_processing_delay_in_range", false);
+      diagnostics_processing_delay_->update_level_and_message(
+        diagnostic_msgs::msg::DiagnosticStatus::ERROR,
+        "Processing delay has consecutively exceeded the acceptable limit continuously.");
+    } else {
+      diagnostics_processing_delay_->add_key_value(
+        "is_consecutive_processing_delay_in_range", true);
+    }
+    diagnostics_processing_delay_->add_key_value(
+        "consecutive_processing_delay_ms", delayed_state_duration);
 
     // add processing time for debug
     if (debug_publisher_ptr_) {
@@ -239,9 +270,11 @@ void LidarCenterPointNode::pointCloudCallback(
       debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
         "debug/pipeline_latency_ms", pipeline_latency_ms);
     }
+
+    diagnostics_processing_delay_->publish(input_pointcloud_msg->header.stamp);
   }
 
-  diagnostics_interface_ptr_->publish(input_pointcloud_msg->header.stamp);
+  diagnostics_centerpoint_trt_->publish(input_pointcloud_msg->header.stamp);
 }
 
 // Check the timestamp of consecutively delayed processing
@@ -250,29 +283,28 @@ void LidarCenterPointNode::diagnosticsTimerCallback()
 {
   // skip if the node has not performed inference yet
   if (last_in_time_processing_timestamp_) {
-    diagnostics_processing_delay_->clear();
-
     const rclcpp::Time timestamp_now = this->get_clock()->now();
-    const double delayed_state_duration =
-      std::chrono::duration<double, std::milli>(
-        std::chrono::nanoseconds(
-          (timestamp_now - last_in_time_processing_timestamp_.value()).nanoseconds()))
-        .count();
-
-    diagnostics_processing_delay_->add_key_value(
-      "time_since_last_in_time_processing_ms", delayed_state_duration);
+    const double delayed_state_duration = calcConsecutiveDelay(timestamp_now);
 
     if (delayed_state_duration > max_acceptable_consecutive_delay_ms_) {
+      diagnostics_processing_delay_->clear();
+
+      // feed dummy for processing time
       diagnostics_processing_delay_->add_key_value(
         "is_processing_time_ms_in_expected_range", false);
+      diagnostics_processing_delay_->add_key_value("processing_time_ms", 0.0);
+
+      // diagnostics for consecutive delays since the last in-time processing
+      diagnostics_processing_delay_->add_key_value(
+        "is_consecutive_processing_delay_in_range", false);
+      diagnostics_processing_delay_->add_key_value(
+        "consecutive_processing_delay_ms", delayed_state_duration);
       diagnostics_processing_delay_->update_level_and_message(
         diagnostic_msgs::msg::DiagnosticStatus::ERROR,
-        "CenterPoint processing delay has exceeded the acceptable limit continuously.");
-    } else {
-      diagnostics_processing_delay_->add_key_value("is_processing_time_ms_in_expected_range", true);
-    }
+        "Processing delay has exceeded the acceptable limit continuously.");
 
-    diagnostics_processing_delay_->publish(timestamp_now);
+      diagnostics_processing_delay_->publish(timestamp_now);
+    }
   }
 }
 
