@@ -47,15 +47,20 @@ public:
   TrackerDebugger(
     rclcpp::Node & node, const std::string & frame_id,
     const std::vector<types::InputChannel> & channels_config);
-  struct DiagnosticValues
-  {
-    double min_extrapolation_time = 0.0;
-    size_t published_trackers_count = 0;
-  } diagnostic_values_;
-  // Single update method for all diagnostic values
-  void updateDiagnosticValues(double min_extrapolation_time, size_t published_count);
 
 private:
+  // Timing check utilities
+  struct TimingCheckResult {
+    std::string message;
+    diagnostic_msgs::msg::DiagnosticStatus::_level_type level;
+  };
+  TimingCheckResult checkDelayTiming(double delay) const;
+  TimingCheckResult checkExtrapolationTiming(double extrapolation_time) const;
+  TimingCheckResult determineOverallTimingStatus(
+    bool no_published_trackers, const TimingCheckResult & delay_result,
+    const TimingCheckResult & extrapolation_result) const;
+  
+  // Debug settings
   struct DEBUG_SETTINGS
   {
     bool publish_processing_time;
@@ -67,6 +72,13 @@ private:
     double diagnostics_error_extrapolation_;
   } debug_settings_;
 
+  // Diagnostic values
+  struct DiagnosticValues
+  {
+    double min_extrapolation_time = 0.0;
+    size_t published_trackers_count = 0;
+  } diagnostic_values_;
+                                             
   // ROS node, publishers
   rclcpp::Node & node_;
   rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr
@@ -91,6 +103,9 @@ private:
   void loadParameters();
 
 public:
+  // Single update method for all diagnostic values
+  void updateDiagnosticValues(double min_extrapolation_time, size_t published_count);
+
   // Object publishing
   bool shouldPublishTentativeObjects() const { return debug_settings_.publish_tentative_objects; }
   void publishTentativeObjects(
