@@ -248,6 +248,10 @@ void FreespacePlannerNode::updateTargetIndex()
         is_completed_ = true;
         RCLCPP_INFO_THROTTLE(
           get_logger(), *get_clock(), 1000, " Reparking has reached the limit counts.");
+
+        std_msgs::msg::Bool is_completed_msg;
+        is_completed_msg.data = is_completed_;
+        parking_state_pub_->publish(is_completed_msg);
         return;
       }
     } else {
