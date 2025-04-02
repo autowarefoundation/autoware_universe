@@ -136,7 +136,7 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
 
   if (stop_watch_ptr_) {
     const int64_t validation_callback_interval_ms =
-    declare_parameter<int64_t>("diagnostics.validation_callback_interval_ms");
+      declare_parameter<int64_t>("diagnostics.validation_callback_interval_ms");
 
     diagnostics_processing_time_timer_ = this->create_wall_timer(
       std::chrono::milliseconds(validation_callback_interval_ms),
@@ -253,7 +253,7 @@ void LidarCenterPointNode::pointCloudCallback(
         "is_consecutive_processing_delay_in_range", true);
     }
     diagnostics_processing_delay_->add_key_value(
-        "consecutive_processing_delay_ms", delayed_state_duration);
+      "consecutive_processing_delay_ms", delayed_state_duration);
 
     // add processing time for debug
     if (debug_publisher_ptr_) {
