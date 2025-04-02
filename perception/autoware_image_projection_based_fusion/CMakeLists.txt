@@ -54,6 +54,12 @@ rclcpp_components_register_node(${PROJECT_NAME}
   EXECUTABLE roi_pointcloud_fusion_node
 )
 
+install(
+  TARGETS
+    ${PROJECT_NAME}
+  DESTINATION lib
+)
+
 set(CUDA_VERBOSE OFF)
 
 # set flags for CUDA availability
@@ -157,7 +163,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   )
 
   install(
-    TARGETS pointpainting_cuda_lib
+    TARGETS pointpainting_cuda_lib pointpainting_lib
     DESTINATION lib
   )
 else()
