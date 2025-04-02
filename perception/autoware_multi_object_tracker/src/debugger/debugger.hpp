@@ -56,7 +56,8 @@ private:
     diagnostic_msgs::msg::DiagnosticStatus::_level_type level;
   };
   TimingCheckResult checkDelayTiming(double delay) const;
-  TimingCheckResult checkExtrapolationTiming(double extrapolation_time, const rclcpp::Time &timestamp);
+  TimingCheckResult checkExtrapolationTiming(
+    double extrapolation_time, const rclcpp::Time & timestamp);
   TimingCheckResult determineOverallTimingStatus(
     bool no_published_trackers, const TimingCheckResult & delay_result,
     const TimingCheckResult & extrapolation_result) const;
