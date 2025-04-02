@@ -67,9 +67,18 @@ void MetricsAccumulator::addMetricMsg(const Metric & metric, MetricArrayMsg & me
     case Metric::steer_change_count:
       steer_accumulator.addMetricMsg(metric, metrics_msg);
       return;
+    default:
+      return;
+  }
+}
+
+void MetricsAccumulator::addMetricMsg(
+  const Metric & metric, MetricArrayMsg & metrics_msg, const std::string & module_name)
+{
+  switch (metric) {
     case Metric::stop_decision:
     case Metric::abnormal_stop_decision:
-      planning_factor_accumulator.addMetricMsg(metric, metrics_msg);
+      planning_factor_accumulator.addMetricMsg(metric, metrics_msg, module_name);
       return;
     default:
       return;

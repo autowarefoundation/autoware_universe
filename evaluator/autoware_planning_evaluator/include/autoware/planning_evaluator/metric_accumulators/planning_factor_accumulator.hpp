@@ -75,8 +75,10 @@ public:
    * @brief add the metric message to the MetricArrayMsg for the given Metric and module name
    * @param metric the metric to add to the MetricArrayMsg
    * @param metrics_msg the MetricArrayMsg to add the metric to
+   * @param module_name the planning module name
    */
-  bool addMetricMsg(const Metric & metric, MetricArrayMsg & metrics_msg) const;
+  bool addMetricMsg(
+    const Metric & metric, MetricArrayMsg & metrics_msg, const std::string & module_name);
 
   /**
    * @brief get the output json data for the OutputMetric
@@ -87,21 +89,64 @@ private:
   // Stop decision's state
   struct StopDecisionState
   {
-    double last_stop_time, last_stop_x, last_stop_y, last_stop_z;
+    // stop decision's state
+    double last_decision_time, last_stop_line_x, last_stop_line_y, last_stop_line_z;
     double stop_decision_keep_time, distance_to_stop;
-    bool is_stop_decision;
+
+    // stop decision's statistics for outputing metrics
     Accumulator<double> stop_decision_keep_time_accumulator;
 
+    // trigger if the state is updated
+    bool state_updated, state_inited;
+
     explicit StopDecisionState()
-    : last_stop_time(0.0),
-      last_stop_x(0.0),
-      last_stop_y(0.0),
-      last_stop_z(0.0),
-      stop_decision_keep_time(std::numeric_limits<double>::quiet_NaN()),
-      distance_to_stop(std::numeric_limits<double>::quiet_NaN()),
-      is_stop_decision(false),
-      stop_decision_keep_time_accumulator()
+    : last_decision_time(0.0),
+      last_stop_line_x(0.0),
+      last_stop_line_y(0.0),
+      last_stop_line_z(0.0),
+      stop_decision_keep_time(0.0),
+      distance_to_stop(0.0),
+      stop_decision_keep_time_accumulator(),
+      state_updated(false),
+      state_inited(false)
     {
+    }
+
+    void disable_current_stop_decision()
+    {
+      stop_decision_keep_time_accumulator.add(stop_decision_keep_time);
+      stop_decision_keep_time = 0.0;
+    }
+
+    void update_stop_decision(
+      const ControlPoint & cur_stop_point, const double cur_time, const Parameters & parameters)
+    {
+      const double time_to_last_stop_decision = cur_time - last_decision_time;
+      const double dist_to_last_stop_line = std::hypot(
+        cur_stop_point.pose.position.x - last_stop_line_x,
+        cur_stop_point.pose.position.y - last_stop_line_y,
+        cur_stop_point.pose.position.z - last_stop_line_z);
+      if (
+        time_to_last_stop_decision > parameters.time_count_threshold_s ||
+        dist_to_last_stop_line > parameters.dist_count_threshold_m) {
+        // set new stop decision
+        last_decision_time = cur_time;
+        if (state_inited) {
+          disable_current_stop_decision();
+        } else {
+          state_inited = true;
+        }
+
+      } else {
+        // keep the last stop decision
+        stop_decision_keep_time = time_to_last_stop_decision;
+      }
+      distance_to_stop = cur_stop_point.distance;
+      last_stop_line_x = cur_stop_point.pose.position.x;
+      last_stop_line_y = cur_stop_point.pose.position.y;
+      last_stop_line_z = cur_stop_point.pose.position.z;
+
+      state_updated = true;
     }
   };
   std::unordered_map<std::string, StopDecisionState> stop_decision_state_,

@@ -59,6 +59,9 @@ public:
 
   void addMetricMsg(const Metric & metric, MetricArrayMsg & metrics_msg) const;
 
+  void addMetricMsg(
+    const Metric & metric, MetricArrayMsg & metrics_msg, const std::string & module_name);
+
   json getOutputJson(const OutputMetric & output_metric);
 
   PlanningFactorAccumulator planning_factor_accumulator;
