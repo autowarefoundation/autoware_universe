@@ -71,9 +71,9 @@ void TrackerDebugger::loadParameters()
     debug_settings_.diagnostics_error_delay =
       node_.declare_parameter<double>("diagnostics_error_delay");
     debug_settings_.diagnostics_warn_extrapolation =
-      node_.declare_parameter<double>("diagnostics_warn_extrapolation_");
+      node_.declare_parameter<double>("diagnostics_warn_extrapolation");
     debug_settings_.diagnostics_error_extrapolation =
-      node_.declare_parameter<double>("diagnostics_error_extrapolation_");
+      node_.declare_parameter<double>("diagnostics_error_extrapolation");
   } catch (const std::exception & e) {
     RCLCPP_WARN(node_.get_logger(), "Failed to declare parameter: %s", e.what());
     debug_settings_.publish_processing_time = false;
@@ -110,15 +110,15 @@ void TrackerDebugger::publishTentativeObjects(
 TrackerDebugger::TimingCheckResult TrackerDebugger::checkDelayTiming(double delay) const
 {
   if (delay == 0.0) {
-    return {"Not calculated", diagnostic_msgs::msg::DiagnosticStatus::OK};
+    return {"[OK] Not calculated", diagnostic_msgs::msg::DiagnosticStatus::OK};
   }
   if (delay < debug_settings_.diagnostics_warn_delay) {
-    return {"Within limits", diagnostic_msgs::msg::DiagnosticStatus::OK};
+    return {"[OK] Within limits", diagnostic_msgs::msg::DiagnosticStatus::OK};
   }
   if (delay < debug_settings_.diagnostics_error_delay) {
-    return {"Exceeded warn threshold", diagnostic_msgs::msg::DiagnosticStatus::WARN};
+    return {"[WARN] Exceeded warn threshold", diagnostic_msgs::msg::DiagnosticStatus::WARN};
   }
-  return {"Exceeded error threshold", diagnostic_msgs::msg::DiagnosticStatus::ERROR};
+  return {"[ERROR] Exceeded error threshold", diagnostic_msgs::msg::DiagnosticStatus::ERROR};
 }
 
 TrackerDebugger::TimingCheckResult TrackerDebugger::checkExtrapolationTiming(
@@ -126,7 +126,7 @@ TrackerDebugger::TimingCheckResult TrackerDebugger::checkExtrapolationTiming(
 {
   if (extrapolation_time <= debug_settings_.diagnostics_warn_extrapolation) {
     last_non_warning_timestamp_ = timestamp;
-    return {"Within limits", diagnostic_msgs::msg::DiagnosticStatus::OK};
+    return {"[OK] Extrapolation time is within safe limits. ", diagnostic_msgs::msg::DiagnosticStatus::OK};
   }
 
   // If this is the first time a warning occurs, initialize the timestamp
@@ -134,18 +134,20 @@ TrackerDebugger::TimingCheckResult TrackerDebugger::checkExtrapolationTiming(
     last_non_warning_timestamp_ = timestamp;
   }
 
-  // Calculate consecutive warning duration
-  const double consecutive_warning_duration_ms =
-    std::chrono::duration<double, std::milli>(
+  // Calculate consecutive warning duration in seconds
+  const double consecutive_warning_duration_s =
+    std::chrono::duration<double>(
       std::chrono::nanoseconds((timestamp - last_non_warning_timestamp_).nanoseconds()))
       .count();
 
   // Check if warnings have persisted beyond the allowed duration
-  if (consecutive_warning_duration_ms > debug_settings_.diagnostics_error_extrapolation) {
-    return {"Warnings persisted for too long", diagnostic_msgs::msg::DiagnosticStatus::ERROR};
+  if (consecutive_warning_duration_s > debug_settings_.diagnostics_error_extrapolation) {
+    return {"[ERROR] Extrapolation time exceeded warning threshold "+ std::to_string(debug_settings_.diagnostics_warn_extrapolation) +  " too long for " + std::to_string(consecutive_warning_duration_s) + 
+            " seconds (Threshold " + std::to_string(debug_settings_.diagnostics_error_extrapolation) + ")", 
+            diagnostic_msgs::msg::DiagnosticStatus::ERROR};
   }
 
-  return {"Exceeded error threshold", diagnostic_msgs::msg::DiagnosticStatus::ERROR};
+  return {"[WARN] Extrapolation time exceeds warning threshold "+ std::to_string(debug_settings_.diagnostics_warn_extrapolation) , diagnostic_msgs::msg::DiagnosticStatus::WARN};
 }
 
 TrackerDebugger::TimingCheckResult TrackerDebugger::determineOverallTimingStatus(
@@ -154,23 +156,40 @@ TrackerDebugger::TimingCheckResult TrackerDebugger::determineOverallTimingStatus
 {
   if (no_published_trackers) {
     return {
-      "No objects being tracked (normal if no detections)",
+      "[OK] No objects currently being tracked (normal operation when no detections)",
       diagnostic_msgs::msg::DiagnosticStatus::OK};
   }
+  std::string message;
+  uint8_t status_level = diagnostic_msgs::msg::DiagnosticStatus::OK;
 
-  if (
-    delay_result.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR ||
-    extrapolation_result.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR) {
-    return {"Critical timing thresholds exceeded", diagnostic_msgs::msg::DiagnosticStatus::ERROR};
+  // Determine the most severe status level
+  if (delay_result.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR ||
+      extrapolation_result.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR) {
+    status_level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+    message = "[ERROR] Timing issue detected: ";
+  } 
+  else if (delay_result.level == diagnostic_msgs::msg::DiagnosticStatus::WARN ||
+           extrapolation_result.level == diagnostic_msgs::msg::DiagnosticStatus::WARN) {
+    status_level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+    message = "[WARN] Timing warning: ";
+  } 
+  else {
+    return {"[OK] All timing parameters are within safe limits.", diagnostic_msgs::msg::DiagnosticStatus::OK};
   }
 
-  if (
-    delay_result.level == diagnostic_msgs::msg::DiagnosticStatus::WARN ||
-    extrapolation_result.level == diagnostic_msgs::msg::DiagnosticStatus::WARN) {
-    return {"Warning timing thresholds exceeded", diagnostic_msgs::msg::DiagnosticStatus::WARN};
+  // Append specific reasons
+  if (delay_result.level >= status_level) {
+    message += "Detection delay exceeded threshold. ";
+  }
+  if (extrapolation_result.level >= status_level) {
+    if (extrapolation_result.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR) {
+      message += "Extrapolation warning persisted for too long! ";
+    } else {
+      message += "Extrapolation time exceeded warning threshold. ";
+    }
   }
 
-  return {"All timings within normal limits", diagnostic_msgs::msg::DiagnosticStatus::OK};
+  return {message, status_level};
 }
 
 // Time measurement functions
