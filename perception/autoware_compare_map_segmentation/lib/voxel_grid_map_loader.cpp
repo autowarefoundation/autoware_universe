@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "voxel_grid_map_loader.hpp"
+#include "autoware/compare_map_segmentation/voxel_grid_map_loader.hpp"
 
 #include <limits>
 #include <memory>
@@ -43,8 +43,10 @@ bool isFeasibleWithPCLVoxelGrid(
   const std::int64_t z_voxel_num = std::ceil(z_range * inv_voxel_z) + 1;
   const std::int64_t voxel_num = x_voxel_num * y_voxel_num * z_voxel_num;
   if (voxel_num > std::numeric_limits<std::int32_t>::max()) {
+    // voxel_num overflows
     return false;
   }
+  // voxel_num is within the range of int32_t
   return true;
 }
 
