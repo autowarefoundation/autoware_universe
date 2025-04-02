@@ -18,6 +18,8 @@
 #include "autoware/compare_map_segmentation/voxel_grid_map_loader.hpp"
 #include "autoware/pointcloud_preprocessor/filter.hpp"
 
+#include <autoware_utils/ros/diagnostics_interface.hpp>
+
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/search/pcl_search.h>
 

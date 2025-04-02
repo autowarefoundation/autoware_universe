@@ -62,6 +62,10 @@ VoxelGridMapLoader::VoxelGridMapLoader(
   downsampled_map_pub_ = node->create_publisher<sensor_msgs::msg::PointCloud2>(
     "debug/downsampled_map/pointcloud", rclcpp::QoS{1}.transient_local());
   debug_ = node->declare_parameter<bool>("publish_debug_pcd");
+
+  // initiate diagnostic status
+  diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+  diagnostics_status_.message = "VoxelGridMapLoader initialized.";
 }
 
 void VoxelGridMapLoader::publish_downsampled_map(
@@ -296,17 +300,21 @@ void VoxelGridStaticMapLoader::onMapCallback(
   pcl::fromROSMsg<pcl::PointXYZ>(*map, map_pcl);
   const auto map_pcl_ptr = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(map_pcl);
   *tf_map_input_frame_ = map_pcl_ptr->header.frame_id;
-  bool map_is_not_filtered = true;
   voxel_map_ptr_.reset(new pcl::PointCloud<pcl::PointXYZ>);
   voxel_grid_.setLeafSize(voxel_leaf_size_, voxel_leaf_size_, voxel_leaf_size_z_);
-  map_is_not_filtered = isFeasibleWithPCLVoxelGrid(map_pcl_ptr, voxel_grid_);
-  if (map_is_not_filtered) {
-    RCLCPP_ERROR(
-      logger_,
+  bool is_feasible = isFeasibleWithPCLVoxelGrid(map_pcl_ptr, voxel_grid_);
+  if (!is_feasible) {
+    diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+    diagnostics_status_.message =
       "Voxel grid filter is not feasible. Check the voxel grid filter parameters and input "
-      "pointcloud.");
-    throw std::runtime_error("Voxel grid filter is not feasible with input pointcloud.");
+      "pointcloud. (1) Consider to enable use_dynamic_map_loading to true (2) If static map is "
+      "only the option, consider to "
+      "enlarge distance_threshold to generate more larger leaf size";
+  } else {
+    diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+    diagnostics_status_.message = "Voxel grid filter is within the feasible range";
   }
+
   voxel_grid_.setInputCloud(map_pcl_ptr);
   voxel_grid_.setSaveLeafLayout(true);
   voxel_grid_.filter(*voxel_map_ptr_);

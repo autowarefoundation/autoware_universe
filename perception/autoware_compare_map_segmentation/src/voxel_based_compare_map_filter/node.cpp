@@ -20,6 +20,7 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/search/kdtree.h>
 #include <pcl/segmentation/segment_differences.h>
+
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
@@ -27,6 +28,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 #endif
+
 #include <memory>
 #include <string>
 #include <utility>
@@ -183,6 +185,20 @@ void VoxelBasedCompareMapFilterComponent::filter(
 {
   std::scoped_lock lock(mutex_);
   stop_watch_ptr_->toc("processing_time", true);
+
+  // check grid map loader status
+  DiagStatus diag_status = voxel_grid_map_loader_->get_diag_status();
+  if (diag_status.level != diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000, "Map loader status: %s",
+      diag_status.message.c_str());
+    std::cout << "Map loader status: " << diag_status.message << std::endl;
+
+    // return input point cloud, no filter implemented
+    output = *input;
+    return;
+  }
+
   int point_step = input->point_step;
   int offset_x = input->fields[pcl::getFieldIndex(*input, "x")].offset;
   int offset_y = input->fields[pcl::getFieldIndex(*input, "y")].offset;

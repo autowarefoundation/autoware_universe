@@ -41,11 +41,15 @@ void VoxelDistanceBasedStaticMapLoader::onMapCallback(
   voxel_grid_.setLeafSize(voxel_leaf_size_, voxel_leaf_size_, voxel_leaf_size_);
   const bool is_feasible = isFeasibleWithPCLVoxelGrid(map_pcl_ptr, voxel_grid_);
   if (!is_feasible) {
-    RCLCPP_ERROR(
-      logger_,
+    diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+    diagnostics_status_.message =
       "Voxel grid filter is not feasible. Check the voxel grid filter parameters and input "
-      "pointcloud.");
-    throw std::runtime_error("Voxel grid filter is not feasible with input pointcloud.");
+      "pointcloud. (1) Adjust map_loader_radius smaller (2) If static map is only the option, "
+      "consider to "
+      "enlarge distance_threshold to generate more larger leaf size";
+  } else {
+    diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+    diagnostics_status_.message = "Voxel grid filter is within the feasible range";
   }
   voxel_grid_.setInputCloud(map_pcl_ptr);
   voxel_grid_.setSaveLeafLayout(true);
@@ -153,6 +157,20 @@ void VoxelDistanceBasedCompareMapFilterComponent::filter(
 {
   std::scoped_lock lock(mutex_);
   stop_watch_ptr_->toc("processing_time", true);
+
+  // check grid map loader status
+  DiagStatus diag_status = voxel_distance_based_map_loader_->get_diag_status();
+  if (diag_status.level != diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000, "Map loader status: %s",
+      diag_status.message.c_str());
+    std::cout << "Map loader status: " << diag_status.message << std::endl;
+
+    // return input point cloud, no filter implemented
+    output = *input;
+    return;
+  }
+
   int point_step = input->point_step;
   int offset_x = input->fields[pcl::getFieldIndex(*input, "x")].offset;
   int offset_y = input->fields[pcl::getFieldIndex(*input, "y")].offset;
