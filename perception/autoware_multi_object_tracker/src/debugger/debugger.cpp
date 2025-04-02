@@ -70,9 +70,9 @@ void TrackerDebugger::loadParameters()
       node_.declare_parameter<double>("diagnostics_warn_delay");
     debug_settings_.diagnostics_error_delay =
       node_.declare_parameter<double>("diagnostics_error_delay");
-    debug_settings_.diagnostics_warn_extrapolation_ =
+    debug_settings_.diagnostics_warn_extrapolation =
       node_.declare_parameter<double>("diagnostics_warn_extrapolation_");
-    debug_settings_.diagnostics_error_extrapolation_ =
+    debug_settings_.diagnostics_error_extrapolation =
       node_.declare_parameter<double>("diagnostics_error_extrapolation_");
   } catch (const std::exception & e) {
     RCLCPP_WARN(node_.get_logger(), "Failed to declare parameter: %s", e.what());
@@ -122,14 +122,31 @@ TrackerDebugger::TimingCheckResult TrackerDebugger::checkDelayTiming(double dela
 }
 
 TrackerDebugger::TimingCheckResult TrackerDebugger::checkExtrapolationTiming(
-  double extrapolation_time) const
+  double extrapolation_time, const rclcpp::Time &timestamp)
 {
-  if (extrapolation_time <= debug_settings_.diagnostics_warn_extrapolation_) {
+  if (extrapolation_time <= debug_settings_.diagnostics_warn_extrapolation) {
+    last_non_warning_timestamp_ = timestamp;
     return {"Within limits", diagnostic_msgs::msg::DiagnosticStatus::OK};
   }
-  if (extrapolation_time <= debug_settings_.diagnostics_error_extrapolation_) {
-    return {"Exceeded warn threshold", diagnostic_msgs::msg::DiagnosticStatus::WARN};
+
+  // If this is the first time a warning occurs, initialize the timestamp
+  if (last_non_warning_timestamp_.nanoseconds() == 0) {
+    last_non_warning_timestamp_ = timestamp;
   }
+
+  // Calculate consecutive warning duration
+  const double consecutive_warning_duration_ms =
+    std::chrono::duration<double, std::milli>(
+      std::chrono::nanoseconds(
+        (timestamp - last_non_warning_timestamp_).nanoseconds()))
+      .count();
+
+
+  // Check if warnings have persisted beyond the allowed duration
+  if (consecutive_warning_duration_ms > debug_settings_.diagnostics_error_extrapolation) {
+    return {"Warnings persisted for too long", diagnostic_msgs::msg::DiagnosticStatus::ERROR};
+  }
+
   return {"Exceeded error threshold", diagnostic_msgs::msg::DiagnosticStatus::ERROR};
 }
 
@@ -175,7 +192,7 @@ void TrackerDebugger::checkAllTiming(diagnostic_updater::DiagnosticStatusWrapper
   // Check individual timing components
   const auto delay_result = checkDelayTiming(delay);
   const auto extrapolation_result =
-    checkExtrapolationTiming(diagnostic_values_.min_extrapolation_time);
+    checkExtrapolationTiming(diagnostic_values_.min_extrapolation_time,node_.now());
   // Determine overall status
   const auto overall_result =
     determineOverallTimingStatus(no_published_trackers, delay_result, extrapolation_result);
