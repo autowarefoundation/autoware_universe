@@ -19,6 +19,9 @@
 
 #include <math.h>
 
+#include <algorithm>
+#include <limits>
+
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_utils::create_quaternion_from_yaw;
@@ -144,6 +147,32 @@ Trajectory generateTrajectoryWithConstantSteeringRate(
   return trajectory;
 }
 
+Trajectory generateShiftedTrajectory(
+  const Trajectory & trajectory, const double lat_shift, const double lon_shift, const size_t size)
+{
+  Trajectory shifted_traj;
+  shifted_traj.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
+  if (
+    abs(lat_shift) <= std::numeric_limits<double>::epsilon() &&
+    abs(lon_shift) <= std::numeric_limits<double>::epsilon() && size >= trajectory.points.size()) {
+    shifted_traj.points = trajectory.points;
+    return shifted_traj;
+  }
+
+  const auto nb_points = std::min(size, trajectory.points.size());
+  shifted_traj.points = {trajectory.points.begin(), trajectory.points.begin() + nb_points};
+
+  if (
+    abs(lat_shift) > std::numeric_limits<double>::epsilon() ||
+    abs(lon_shift) > std::numeric_limits<double>::epsilon()) {
+    for (auto & t_p : shifted_traj.points) {
+      t_p.pose = autoware_utils::calc_offset_pose(t_p.pose, lon_shift, lat_shift, 0.0, 0.0);
+    }
+  }
+
+  return shifted_traj;
+}
+
 Trajectory generateNanTrajectory()
 {
   Trajectory trajectory = generateTrajectory(1.0);
@@ -190,33 +219,75 @@ rclcpp::NodeOptions getNodeOptionsWithDefaultParams()
   rclcpp::NodeOptions node_options;
 
   // for planning validator
+  node_options.append_parameter_override("handling_type.noncritical", 0);
+  node_options.append_parameter_override("handling_type.critical", 2);
   node_options.append_parameter_override("publish_diag", true);
-  node_options.append_parameter_override("invalid_trajectory_handling_type", 0);
   node_options.append_parameter_override("diag_error_count_threshold", 0);
   node_options.append_parameter_override("display_on_terminal", true);
-  node_options.append_parameter_override("thresholds.interval", THRESHOLD_INTERVAL);
-  node_options.append_parameter_override("thresholds.relative_angle", THRESHOLD_RELATIVE_ANGLE);
-  node_options.append_parameter_override("thresholds.curvature", THRESHOLD_CURVATURE);
-  node_options.append_parameter_override("thresholds.lateral_acc", THRESHOLD_LATERAL_ACC);
+  node_options.append_parameter_override("enable_soft_stop_on_prev_traj", false);
+  node_options.append_parameter_override("soft_stop_deceleration", -1.0);
+
+  node_options.append_parameter_override("validity_checks.latency.enable", true);
+  node_options.append_parameter_override("validity_checks.latency.threshold", THRESHOLD_LATENCY);
+  node_options.append_parameter_override("validity_checks.latency.is_critical", false);
+
+  node_options.append_parameter_override("validity_checks.interval.enable", true);
+  node_options.append_parameter_override("validity_checks.interval.threshold", THRESHOLD_INTERVAL);
+  node_options.append_parameter_override("validity_checks.interval.is_critical", false);
+
+  node_options.append_parameter_override("validity_checks.relative_angle.enable", true);
   node_options.append_parameter_override(
-    "thresholds.longitudinal_max_acc", THRESHOLD_LONGITUDINAL_MAX_ACC);
+    "validity_checks.relative_angle.threshold", THRESHOLD_RELATIVE_ANGLE);
+  node_options.append_parameter_override("validity_checks.relative_angle.is_critical", false);
+
+  node_options.append_parameter_override("validity_checks.curvature.enable", true);
   node_options.append_parameter_override(
-    "thresholds.longitudinal_min_acc", THRESHOLD_LONGITUDINAL_MIN_ACC);
-  node_options.append_parameter_override("thresholds.steering", THRESHOLD_STEERING);
-  node_options.append_parameter_override("thresholds.steering_rate", THRESHOLD_STEERING_RATE);
+    "validity_checks.curvature.threshold", THRESHOLD_CURVATURE);
+  node_options.append_parameter_override("validity_checks.curvature.is_critical", false);
+
+  node_options.append_parameter_override("validity_checks.acceleration.enable", true);
   node_options.append_parameter_override(
-    "thresholds.velocity_deviation", THRESHOLD_VELOCITY_DEVIATION);
+    "validity_checks.acceleration.lateral_th", THRESHOLD_LATERAL_ACC);
   node_options.append_parameter_override(
-    "thresholds.distance_deviation", THRESHOLD_DISTANCE_DEVIATION);
+    "validity_checks.acceleration.longitudinal_max_th", THRESHOLD_LONGITUDINAL_MAX_ACC);
   node_options.append_parameter_override(
-    "thresholds.longitudinal_distance_deviation", THRESHOLD_LONGITUDINAL_DISTANCE_DEVIATION);
-  node_options.append_parameter_override("thresholds.nominal_latency", THRESHOLD_NOMINAL_LATENCY);
-  node_options.append_parameter_override("thresholds.yaw_deviation", THRESHOLD_YAW_DEVIATION);
+    "validity_checks.acceleration.longitudinal_min_th", THRESHOLD_LONGITUDINAL_MIN_ACC);
+  node_options.append_parameter_override("validity_checks.acceleration.is_critical", false);
+
+  node_options.append_parameter_override("validity_checks.deviation.enable", true);
   node_options.append_parameter_override(
-    "parameters.forward_trajectory_length_acceleration",
+    "validity_checks.deviation.velocity_th", THRESHOLD_VELOCITY_DEVIATION);
+  node_options.append_parameter_override(
+    "validity_checks.deviation.distance_th", THRESHOLD_DISTANCE_DEVIATION);
+  node_options.append_parameter_override(
+    "validity_checks.deviation.lon_distance_th", THRESHOLD_LONGITUDINAL_DISTANCE_DEVIATION);
+  node_options.append_parameter_override(
+    "validity_checks.deviation.yaw_th", THRESHOLD_YAW_DEVIATION);
+  node_options.append_parameter_override("validity_checks.deviation.is_critical", false);
+
+  node_options.append_parameter_override("validity_checks.steering.enable", true);
+  node_options.append_parameter_override("validity_checks.steering.threshold", THRESHOLD_STEERING);
+  node_options.append_parameter_override(
+    "validity_checks.steering.rate_th", THRESHOLD_STEERING_RATE);
+  node_options.append_parameter_override("validity_checks.steering.is_critical", false);
+
+  node_options.append_parameter_override("validity_checks.forward_trajectory_length.enable", true);
+  node_options.append_parameter_override(
+    "validity_checks.forward_trajectory_length.acceleration",
     PARAMETER_FORWARD_TRAJECTORY_LENGTH_ACCELERATION);
   node_options.append_parameter_override(
-    "parameters.forward_trajectory_length_margin", PARAMETER_FORWARD_TRAJECTORY_LENGTH_MARGIN);
+    "validity_checks.forward_trajectory_length.margin", PARAMETER_FORWARD_TRAJECTORY_LENGTH_MARGIN);
+  node_options.append_parameter_override(
+    "validity_checks.forward_trajectory_length.is_critical", false);
+
+  node_options.append_parameter_override("validity_checks.trajectory_shift.enable", true);
+  node_options.append_parameter_override(
+    "validity_checks.trajectory_shift.lat_shift_th", THRESHOLD_LATERAL_SHIFT);
+  node_options.append_parameter_override(
+    "validity_checks.trajectory_shift.forward_shift_th", THRESHOLD_FORWARD_SHIFT);
+  node_options.append_parameter_override(
+    "validity_checks.trajectory_shift.backward_shift_th", THRESHOLD_BACKWARD_SHIFT);
+  node_options.append_parameter_override("validity_checks.trajectory_shift.is_critical", true);
 
   // for vehicle info
   node_options.append_parameter_override("wheel_radius", 0.5);
