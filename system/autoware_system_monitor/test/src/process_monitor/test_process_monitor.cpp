@@ -351,7 +351,7 @@ TEST_P(ProcessMonitorTestSuiteWithDummyProc, dummyProcTest)
     &place_holder, [&](int *) { monitor_->cleanupTestData(test_data_dir); });
 
   int result = monitor_->prepareTestData(fileSetPath, test_data_dir);
-  ASSERT_EQ(result,0);
+  ASSERT_EQ(result, 0);
 
   monitor_->forceTimerEvent();
 
