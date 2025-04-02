@@ -73,31 +73,6 @@ std::pair<double, size_t> calcMaxSteeringAngles(
 std::pair<double, size_t> calcMaxSteeringRates(
   const Trajectory & trajectory, const double wheelbase);
 
-std::optional<std::pair<std::vector<TrajectoryPoint>, std::vector<Box>>> check_collision(
-  const PredictedObjects & predicted_objects, const Trajectory & trajectory,
-  const geometry_msgs::msg::Point & current_ego_position, const VehicleInfo & vehicle_info,
-  const double trajectory_to_object_distance_threshold,
-  const double ego_to_object_distance_threshold, const double time_tolerance_threshold);
-
-Rtree make_ego_footprint_rtree(
-  std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
-  const VehicleInfo & vehicle_info);
-
-std::optional<PredictedObjects> filter_objects(
-  const PredictedObjects & objects,
-  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
-  const double trajectory_to_object_distance_threshold,
-  const double ego_to_object_distance_threshold);
-
-std::optional<PredictedPath> find_highest_confidence_path(const PredictedObject & object);
-
-void make_predicted_object_rtree(
-  const PredictedPath & highest_confidence_path, const Shape & object_shape,
-  const double predicted_time_step, std::vector<BoxTimeIndexPair> & predicted_object_rtree_nodes);
-
-std::vector<std::pair<size_t, Box>> detect_collisions(
-  const Rtree & ego_rtree, const Rtree & predicted_object_rtree, double time_tolerance);
-
 bool checkFinite(const TrajectoryPoint & point);
 
 void shiftPose(geometry_msgs::msg::Pose & pose, double longitudinal);
