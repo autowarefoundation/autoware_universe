@@ -231,8 +231,9 @@ The modules listed in the `module_list` in the parameter file are evaluated.
     - `stop_decision.topic_prefix`: topic prefix for planning factors
     - `stop_decision.module_list`: list of modules' names to check, the `{topic_prefix}/{module_name}` should be a valid topic.
   - Sub-metrics to publish:
-    - `/{module_name}/keep_duration`(value-based): the time that the module keeps the stop decision.
+    - `/{module_name}/keep_duration`(value-based): the time current stop decision keeps.
     - `/{module_name}/distance_to_stop`(value-based): the distance to the stop line.
+    - `/{module_name}/count`(count-based): the stop decision index, in other words, the number of stop decisions made by the module.
   - Sub-metrics to output:
     - `/{module_name}/keep_duration/mean`, `/{module_name}/keep_duration/min`, `/{module_name}/keep_duration/max`: the statistics of the published keep_duration.
     - `/{module_name}/count`: the total number of stop decisions.
