@@ -58,9 +58,9 @@ private:
   TimingCheckResult checkDelayTiming(double delay) const;
   TimingCheckResult checkExtrapolationTiming(
     double extrapolation_time, const rclcpp::Time & timestamp);
-  TimingCheckResult determineOverallTimingStatus(
+  static TimingCheckResult determineOverallTimingStatus(
     bool no_published_trackers, const TimingCheckResult & delay_result,
-    const TimingCheckResult & extrapolation_result) const;
+    const TimingCheckResult & extrapolation_result);
   // Debug settings
   struct DEBUG_SETTINGS
   {

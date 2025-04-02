@@ -151,45 +151,41 @@ TrackerDebugger::TimingCheckResult TrackerDebugger::checkExtrapolationTiming(
 }
 
 TrackerDebugger::TimingCheckResult TrackerDebugger::determineOverallTimingStatus(
-  bool no_published_trackers, const TimingCheckResult & delay_result,
-  const TimingCheckResult & extrapolation_result) const
+  bool no_published_trackers, const TimingCheckResult& delay_result,
+  const TimingCheckResult& extrapolation_result) 
 {
   if (no_published_trackers) {
     return {
       "[OK] No objects currently being tracked (normal operation when no detections)",
       diagnostic_msgs::msg::DiagnosticStatus::OK};
   }
-  std::string message;
-  uint8_t status_level = diagnostic_msgs::msg::DiagnosticStatus::OK;
 
-  // Determine the most severe status level
-  if (delay_result.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR ||
-      extrapolation_result.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR) {
-    status_level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
-    message = "[ERROR] Timing issue detected: ";
-  } 
-  else if (delay_result.level == diagnostic_msgs::msg::DiagnosticStatus::WARN ||
-           extrapolation_result.level == diagnostic_msgs::msg::DiagnosticStatus::WARN) {
-    status_level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
-    message = "[WARN] Timing warning: ";
-  } 
-  else {
-    return {"[OK] All timing parameters are within safe limits.", diagnostic_msgs::msg::DiagnosticStatus::OK};
+  const uint8_t max_level = std::max(delay_result.level, extrapolation_result.level);
+  
+  if (max_level == diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    return {"[OK] All timing parameters are within safe limits.", max_level};
   }
 
-  // Append specific reasons
-  if (delay_result.level >= status_level) {
+  // Determine base message based on max severity level
+  static const std::unordered_map<uint8_t, std::string> level_messages = {
+    {diagnostic_msgs::msg::DiagnosticStatus::WARN, "[WARN] Timing warning: "},
+    {diagnostic_msgs::msg::DiagnosticStatus::ERROR, "[ERROR] Timing issue detected: "}
+  };
+
+  std::string message = level_messages.at(max_level);
+  
+  // Append specific issues
+  if (delay_result.level == max_level) {
     message += "Detection delay exceeded threshold. ";
   }
-  if (extrapolation_result.level >= status_level) {
-    if (extrapolation_result.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR) {
-      message += "Extrapolation warning persisted for too long! ";
-    } else {
-      message += "Extrapolation time exceeded warning threshold. ";
-    }
+  
+  if (extrapolation_result.level == max_level) {
+    message += (extrapolation_result.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR)
+      ? "Extrapolation warning persisted for too long! "
+      : "Extrapolation time exceeded warning threshold. ";
   }
 
-  return {message, status_level};
+  return {message, max_level};
 }
 
 // Time measurement functions
