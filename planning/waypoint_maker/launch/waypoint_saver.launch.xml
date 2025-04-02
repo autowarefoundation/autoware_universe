@@ -1,7 +1,7 @@
 <launch>
   <arg name="config_file" default="$(find-pkg-share waypoint_maker)/config/waypoint_maker.param.yaml"/>
 
-  <arg name="output_file_position" default="./src/autoware/universe/planning/waypoint_maker/data/"/>
+  <arg name="output_file_position" default="$(find-pkg-share waypoint_maker)/data/"/>
 
   <arg name="input_pose" default="/localization/kinematic_state"/>
 

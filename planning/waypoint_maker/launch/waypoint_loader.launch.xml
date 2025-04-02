@@ -3,7 +3,7 @@
   <arg name="vehicle_param_file" default="$(find-pkg-share sample_vehicle_description)/config/vehicle_info.param.yaml"/>
   <arg name="config_file" default="$(find-pkg-share waypoint_maker)/config/waypoint_maker.param.yaml"/>
 
-  <arg name="lane_csv_position" default="./src/autoware/universe/planning/waypoint_maker/data/"/>
+  <arg name="lane_csv_position" default="$(find-pkg-share waypoint_maker)/data/"/>
 
   <arg name="input_pose" default="/localization/kinematic_state"/>
   <arg name="input_scenario" default="/planning/scenario_planning/scenario"/>
