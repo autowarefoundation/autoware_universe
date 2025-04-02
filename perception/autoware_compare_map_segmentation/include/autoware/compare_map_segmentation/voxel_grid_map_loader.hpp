@@ -17,7 +17,8 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include "autoware_map_msgs/srv/get_differential_point_cloud_map.hpp"
+#include <autoware_map_msgs/srv/get_differential_point_cloud_map.hpp>
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -48,6 +49,12 @@ double distance2D(const T p1, const U p2)
   double dy = p1.y - p2.y;
   return std::sqrt(dx * dx + dy * dy);
 }
+
+struct DiagStatus
+{
+  diagnostic_msgs::msg::DiagnosticStatus::_level_type level;
+  std::string message;
+};
 
 template <typename PointT>
 class VoxelGridEx : public pcl::VoxelGrid<PointT>
@@ -91,11 +98,16 @@ class VoxelGridMapLoader
 {
 protected:
   rclcpp::Logger logger_;
+  DiagStatus diagnostics_status_;
+
+  // parameters
   double voxel_leaf_size_;
   double voxel_leaf_size_z_{};
   double downsize_ratio_z_axis_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr downsampled_map_pub_;
   bool debug_ = false;
+
+  // interfaces
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr downsampled_map_pub_;
 
 public:
   using VoxelGridPointXYZ = VoxelGridEx<pcl::PointXYZ>;
@@ -121,15 +133,19 @@ public:
 
   void publish_downsampled_map(const pcl::PointCloud<pcl::PointXYZ> & downsampled_pc);
   std::string * tf_map_input_frame_;
+
+  DiagStatus get_diag_status() const { return diagnostics_status_; }
 };
 
 class VoxelGridStaticMapLoader : public VoxelGridMapLoader
 {
 protected:
-  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_map_;
   VoxelGridPointXYZ voxel_grid_;
   FilteredPointCloudPtr voxel_map_ptr_;
   std::atomic_bool is_initialized_{false};
+
+  // interface of map subscription
+  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_map_;
 
 public:
   explicit VoxelGridStaticMapLoader(
