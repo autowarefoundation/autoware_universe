@@ -228,7 +228,7 @@ std::unique_ptr<fpa::AbstractPlanningAlgorithm> configure_astar(bool use_multi)
   const double reparking_forward_first_weight = 100.0;
   const double reparking_deviation_penalty = 10.0;
   const double reparking_alignment_weight = 2.0;
-  const double min_out_distance = 2.0;
+  const double reparking_distance = 2.0;
   const auto astar_param = fpa::AstarParam{
     search_method,
     only_behind_solutions,
@@ -247,7 +247,7 @@ std::unique_ptr<fpa::AbstractPlanningAlgorithm> configure_astar(bool use_multi)
     reparking_forward_first_weight,
     reparking_deviation_penalty,
     reparking_alignment_weight,
-    min_out_distance};
+    reparking_distance};
 
   auto clock_ptr = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
   auto algo =

@@ -123,7 +123,7 @@ AstarSearch::AstarSearch(
   reparking_forward_first_weight_ = astar_param_.reparking_forward_first_weight;
   reparking_deviation_penalty_ = astar_param_.reparking_deviation_penalty;
   reparking_alignment_weight_ = astar_param_.reparking_alignment_weight;
-  min_out_distance_ = astar_param_.min_out_distance;
+  reparking_distance_ = astar_param_.reparking_distance;
   is_reparking_ = false;
 
   near_goal_dist_ =
@@ -638,7 +638,7 @@ bool AstarSearch::isGoal(const AstarNode & node) const
   int direction_switch_count = 0;
   double max_dist_from_goal = 0.0;
   const int required_switch_count = 1;                // direction_changed occurs exactly once
-  const double min_out_distance = min_out_distance_;  // 2.0
+  const double reparking_distance = reparking_distance_;  // 2.0
 
   const AstarNode * current = &node;
   bool prev_is_back = current->is_back;
@@ -654,7 +654,7 @@ bool AstarSearch::isGoal(const AstarNode & node) const
     if (parent) {
       bool direction_changed = (current->is_back != prev_is_back);
       // direction_changed must occu outside the minimum pull-out distance from goal
-      if (direction_changed && dist_g >= min_out_distance) {
+      if (direction_changed && dist_g >= reparking_distance) {
         direction_switch_count++;
       }
       prev_is_back = current->is_back;
@@ -665,14 +665,14 @@ bool AstarSearch::isGoal(const AstarNode & node) const
 
   bool exactly_one_switch = (direction_switch_count == required_switch_count);
 
-  bool enough_move_out = (max_dist_from_goal >= min_out_distance);
+  bool enough_move_out = (max_dist_from_goal >= reparking_distance);
 
   if (!exactly_one_switch || !enough_move_out) {
     RCLCPP_DEBUG(
       rclcpp::get_logger("AstarSearch"),
       "Reparking path found but direction_switch_count=%d (need == %d) or didn't move out enough "
       "(%.2f < %.2f) => ignore",
-      direction_switch_count, required_switch_count, max_dist_from_goal, min_out_distance);
+      direction_switch_count, required_switch_count, max_dist_from_goal, reparking_distance);
 
     return false;
   }

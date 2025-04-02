@@ -62,7 +62,7 @@ struct AstarParam
   double reparking_forward_first_weight;
   double reparking_deviation_penalty;
   double reparking_alignment_weight;
-  double min_out_distance;
+  double reparking_distance;
 };
 
 struct AstarNode
@@ -134,7 +134,7 @@ public:
         node.declare_parameter<double>("astar.reparking_forward_first_weight"),
         node.declare_parameter<double>("astar.reparking_deviation_penalty"),
         node.declare_parameter<double>("astar.reparking_alignment_weight"),
-        node.declare_parameter<double>("astar.min_out_distance")},
+        node.declare_parameter<double>("astar.reparking_distance")},
       node.get_clock())
   {
   }
@@ -206,7 +206,7 @@ private:
   double reparking_forward_first_weight_;
   double reparking_deviation_penalty_;
   double reparking_alignment_weight_;
-  double min_out_distance_;
+  double reparking_distance_;
   bool is_backward_search_;
   bool is_multiple_goals_;
   bool is_reparking_;
