@@ -54,6 +54,7 @@ public:
   } diagnostic_values_;
   // Single update method for all diagnostic values
   void updateDiagnosticValues(double min_extrapolation_time, size_t published_count);
+
 private:
   struct DEBUG_SETTINGS
   {

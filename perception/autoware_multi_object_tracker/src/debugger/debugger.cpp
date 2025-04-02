@@ -91,7 +91,8 @@ void TrackerDebugger::setupDiagnostics()
   diagnostic_updater_.setPeriod(0.1);
 }
 
-void TrackerDebugger::updateDiagnosticValues(double min_extrapolation_time, size_t published_count) {
+void TrackerDebugger::updateDiagnosticValues(double min_extrapolation_time, size_t published_count)
+{
   diagnostic_values_.min_extrapolation_time = min_extrapolation_time;
   diagnostic_values_.published_trackers_count = published_count;
   // Force update diagnostic values
@@ -138,11 +139,11 @@ void TrackerDebugger::checkAllTiming(diagnostic_updater::DiagnosticStatusWrapper
 
   // Initialize with OK status
   int8_t overall_level = diagnostic_msgs::msg::DiagnosticStatus::OK;
-  std::string overall_message = no_published_trackers ? 
-    "No objects being tracked (normal if no detections)" : 
-    "All timings within normal limits";
+  std::string overall_message = no_published_trackers
+                                  ? "No objects being tracked (normal if no detections)"
+                                  : "All timings within normal limits";
   // Determine overall status
-    // Only check extrapolation if we have published trackers
+  // Only check extrapolation if we have published trackers
   if (!no_published_trackers) {
     if (
       delay >= settings.diagnostics_error_delay ||
