@@ -19,6 +19,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <algorithm>
 
 namespace autoware::multi_object_tracker
 {
@@ -53,7 +54,7 @@ TrackerDebugger::TrackerDebugger(
   stamp_process_end_ = now;
   stamp_publish_start_ = now;
   stamp_publish_output_ = now;
-
+  last_non_warning_timestamp_ = now;
   // setup diagnostics
   setupDiagnostics();
 }
@@ -126,7 +127,9 @@ TrackerDebugger::TimingCheckResult TrackerDebugger::checkExtrapolationTiming(
 {
   if (extrapolation_time <= debug_settings_.diagnostics_warn_extrapolation) {
     last_non_warning_timestamp_ = timestamp;
-    return {"[OK] Extrapolation time is within safe limits. ", diagnostic_msgs::msg::DiagnosticStatus::OK};
+    return {
+      "[OK] Extrapolation time is within safe limits. ",
+      diagnostic_msgs::msg::DiagnosticStatus::OK};
   }
 
   // If this is the first time a warning occurs, initialize the timestamp
@@ -142,17 +145,23 @@ TrackerDebugger::TimingCheckResult TrackerDebugger::checkExtrapolationTiming(
 
   // Check if warnings have persisted beyond the allowed duration
   if (consecutive_warning_duration_s > debug_settings_.diagnostics_error_extrapolation) {
-    return {"[ERROR] Extrapolation time exceeded warning threshold "+ std::to_string(debug_settings_.diagnostics_warn_extrapolation) +  " too long for " + std::to_string(consecutive_warning_duration_s) + 
-            " seconds (Threshold " + std::to_string(debug_settings_.diagnostics_error_extrapolation) + ")", 
-            diagnostic_msgs::msg::DiagnosticStatus::ERROR};
+    return {
+      "[ERROR] Extrapolation time exceeded warning threshold " +
+        std::to_string(debug_settings_.diagnostics_warn_extrapolation) + " too long for " +
+        std::to_string(consecutive_warning_duration_s) + " seconds (Threshold " +
+        std::to_string(debug_settings_.diagnostics_error_extrapolation) + ")",
+      diagnostic_msgs::msg::DiagnosticStatus::ERROR};
   }
 
-  return {"[WARN] Extrapolation time exceeds warning threshold "+ std::to_string(debug_settings_.diagnostics_warn_extrapolation) , diagnostic_msgs::msg::DiagnosticStatus::WARN};
+  return {
+    "[WARN] Extrapolation time exceeds warning threshold " +
+      std::to_string(debug_settings_.diagnostics_warn_extrapolation),
+    diagnostic_msgs::msg::DiagnosticStatus::WARN};
 }
 
 TrackerDebugger::TimingCheckResult TrackerDebugger::determineOverallTimingStatus(
-  bool no_published_trackers, const TimingCheckResult& delay_result,
-  const TimingCheckResult& extrapolation_result) 
+  bool no_published_trackers, const TimingCheckResult & delay_result,
+  const TimingCheckResult & extrapolation_result)
 {
   if (no_published_trackers) {
     return {
@@ -161,7 +170,7 @@ TrackerDebugger::TimingCheckResult TrackerDebugger::determineOverallTimingStatus
   }
 
   const uint8_t max_level = std::max(delay_result.level, extrapolation_result.level);
-  
+
   if (max_level == diagnostic_msgs::msg::DiagnosticStatus::OK) {
     return {"[OK] All timing parameters are within safe limits.", max_level};
   }
@@ -169,20 +178,19 @@ TrackerDebugger::TimingCheckResult TrackerDebugger::determineOverallTimingStatus
   // Determine base message based on max severity level
   static const std::unordered_map<uint8_t, std::string> level_messages = {
     {diagnostic_msgs::msg::DiagnosticStatus::WARN, "[WARN] Timing warning: "},
-    {diagnostic_msgs::msg::DiagnosticStatus::ERROR, "[ERROR] Timing issue detected: "}
-  };
+    {diagnostic_msgs::msg::DiagnosticStatus::ERROR, "[ERROR] Timing issue detected: "}};
 
   std::string message = level_messages.at(max_level);
-  
+
   // Append specific issues
   if (delay_result.level == max_level) {
     message += "Detection delay exceeded threshold. ";
   }
-  
+
   if (extrapolation_result.level == max_level) {
     message += (extrapolation_result.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR)
-      ? "Extrapolation warning persisted for too long! "
-      : "Extrapolation time exceeded warning threshold. ";
+                 ? "Extrapolation warning persisted for too long! "
+                 : "Extrapolation time exceeded warning threshold. ";
   }
 
   return {message, max_level};
