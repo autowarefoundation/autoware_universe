@@ -467,6 +467,7 @@ bool PlanningValidator::checkValidInterval(const Trajectory & trajectory)
       debug_pose_publisher_->pushPoseMarker(p.at(i - 1), "trajectory_interval");
       debug_pose_publisher_->pushPoseMarker(p.at(i), "trajectory_interval");
     }
+    is_critical_error_ |= params_.validation_params.interval.is_critical;
     return false;
   }
 
@@ -489,6 +490,7 @@ bool PlanningValidator::checkValidRelativeAngle(const Trajectory & trajectory)
       debug_pose_publisher_->pushPoseMarker(p.at(i + 1), "trajectory_relative_angle", 1);
       debug_pose_publisher_->pushPoseMarker(p.at(i + 2), "trajectory_relative_angle", 2);
     }
+    is_critical_error_ |= params_.validation_params.relative_angle.is_critical;
     return false;
   }
   return true;
@@ -509,6 +511,7 @@ bool PlanningValidator::checkValidCurvature(const Trajectory & trajectory)
       debug_pose_publisher_->pushPoseMarker(p.at(i), "trajectory_curvature");
       debug_pose_publisher_->pushPoseMarker(p.at(i + 1), "trajectory_curvature");
     }
+    is_critical_error_ |= params_.validation_params.curvature.is_critical;
     return false;
   }
   return true;
@@ -524,6 +527,7 @@ bool PlanningValidator::checkValidLateralAcceleration(const Trajectory & traject
   validation_status_.max_lateral_acc = max_lateral_acc;
   if (max_lateral_acc > params_.validation_params.acceleration.lateral_th) {
     debug_pose_publisher_->pushPoseMarker(trajectory.points.at(i), "lateral_acceleration");
+    is_critical_error_ |= params_.validation_params.acceleration.is_critical;
     return false;
   }
   return true;
@@ -540,6 +544,7 @@ bool PlanningValidator::checkValidMinLongitudinalAcceleration(const Trajectory &
 
   if (min_longitudinal_acc < params_.validation_params.acceleration.longitudinal_min_th) {
     debug_pose_publisher_->pushPoseMarker(trajectory.points.at(i).pose, "min_longitudinal_acc");
+    is_critical_error_ |= params_.validation_params.acceleration.is_critical;
     return false;
   }
   return true;
@@ -556,6 +561,7 @@ bool PlanningValidator::checkValidMaxLongitudinalAcceleration(const Trajectory &
 
   if (max_longitudinal_acc > params_.validation_params.acceleration.longitudinal_max_th) {
     debug_pose_publisher_->pushPoseMarker(trajectory.points.at(i).pose, "max_longitudinal_acc");
+    is_critical_error_ |= params_.validation_params.acceleration.is_critical;
     return false;
   }
   return true;
@@ -572,6 +578,7 @@ bool PlanningValidator::checkValidSteering(const Trajectory & trajectory)
 
   if (max_steering > params_.validation_params.steering.threshold) {
     debug_pose_publisher_->pushPoseMarker(trajectory.points.at(i).pose, "max_steering");
+    is_critical_error_ |= params_.validation_params.steering.is_critical;
     return false;
   }
   return true;
@@ -588,6 +595,7 @@ bool PlanningValidator::checkValidSteeringRate(const Trajectory & trajectory)
 
   if (max_steering_rate > params_.validation_params.steering.rate_th) {
     debug_pose_publisher_->pushPoseMarker(trajectory.points.at(i).pose, "max_steering_rate");
+    is_critical_error_ |= params_.validation_params.steering.is_critical;
     return false;
   }
   return true;
@@ -608,6 +616,7 @@ bool PlanningValidator::checkValidVelocityDeviation(const Trajectory & trajector
     current_kinematics_->twist.twist.linear.x);
 
   if (validation_status_.velocity_deviation > params_.validation_params.deviation.velocity_th) {
+    is_critical_error_ |= params_.validation_params.deviation.is_critical;
     return false;
   }
   return true;
@@ -627,6 +636,7 @@ bool PlanningValidator::checkValidDistanceDeviation(const Trajectory & trajector
     autoware_utils::calc_distance2d(trajectory.points.at(idx), current_kinematics_->pose.pose);
 
   if (validation_status_.distance_deviation > params_.validation_params.deviation.distance_th) {
+    is_critical_error_ |= params_.validation_params.deviation.is_critical;
     return false;
   }
   return true;
@@ -671,13 +681,21 @@ bool PlanningValidator::checkValidLongitudinalDistanceDeviation(const Trajectory
   // Make sure the trajectory is far AHEAD from ego.
   if (idx == 0) {
     const auto seg_idx = 0;
-    return HasValidLongitudinalDeviation(seg_idx, false);
+    if (!HasValidLongitudinalDeviation(seg_idx, false)) {
+      is_critical_error_ |= params_.validation_params.deviation.is_critical;
+      return false;
+    }
+    return true;
   }
 
   // Make sure the trajectory is far BEHIND from ego.
   if (idx == trajectory.points.size() - 1) {
     const auto seg_idx = trajectory.points.size() - 2;
-    return HasValidLongitudinalDeviation(seg_idx, true);
+    if (!HasValidLongitudinalDeviation(seg_idx, true)) {
+      is_critical_error_ |= params_.validation_params.deviation.is_critical;
+      return false;
+    }
+    return true;
   }
 
   return true;
@@ -694,7 +712,12 @@ bool PlanningValidator::checkValidYawDeviation(const Trajectory & trajectory)
   validation_status_.yaw_deviation = std::abs(angles::shortest_angular_distance(
     tf2::getYaw(interpolated_trajectory_point.pose.orientation),
     tf2::getYaw(current_kinematics_->pose.pose.orientation)));
-  return validation_status_.yaw_deviation <= params_.validation_params.deviation.yaw_th;
+
+  if (validation_status_.yaw_deviation > params_.validation_params.deviation.yaw_th) {
+    is_critical_error_ |= params_.validation_params.deviation.is_critical;
+    return false;
+  }
+  return true;
 }
 
 bool PlanningValidator::checkValidForwardTrajectoryLength(const Trajectory & trajectory)
@@ -718,7 +741,11 @@ bool PlanningValidator::checkValidForwardTrajectoryLength(const Trajectory & tra
   validation_status_.forward_trajectory_length_required = forward_length_required;
   validation_status_.forward_trajectory_length_measured = forward_length;
 
-  return forward_length > forward_length_required;
+  if (forward_length < forward_length_required) {
+    is_critical_error_ |= params_.validation_params.forward_trajectory_length.is_critical;
+    return false;
+  }
+  return true;
 }
 
 bool PlanningValidator::checkValidLatency(const Trajectory & trajectory)
@@ -728,7 +755,12 @@ bool PlanningValidator::checkValidLatency(const Trajectory & trajectory)
   }
 
   validation_status_.latency = (this->now() - trajectory.header.stamp).seconds();
-  return validation_status_.latency < params_.validation_params.latency.threshold;
+
+  if (validation_status_.latency > params_.validation_params.latency.threshold) {
+    is_critical_error_ |= params_.validation_params.latency.is_critical;
+    return false;
+  }
+  return true;
 }
 
 bool PlanningValidator::checkTrajectoryShift(
@@ -765,7 +797,7 @@ bool PlanningValidator::checkTrajectoryShift(
   if (
     ego_lat_dist > params_.validation_params.trajectory_shift.lat_shift_th &&
     lat_shift > params_.validation_params.trajectory_shift.lat_shift_th) {
-    is_critical_error_ = params_.validation_params.trajectory_shift.is_critical;
+    is_critical_error_ |= params_.validation_params.trajectory_shift.is_critical;
     debug_pose_publisher_->pushPoseMarker(nearest_pose, "trajectory_shift");
     return false;
   }
@@ -780,7 +812,7 @@ bool PlanningValidator::checkTrajectoryShift(
       return true;
     }
     if (lon_shift > params_.validation_params.trajectory_shift.forward_shift_th) {
-      is_critical_error_ = params_.validation_params.trajectory_shift.is_critical;
+      is_critical_error_ |= params_.validation_params.trajectory_shift.is_critical;
       debug_pose_publisher_->pushPoseMarker(nearest_pose, "trajectory_shift");
       return false;
     }
@@ -790,7 +822,7 @@ bool PlanningValidator::checkTrajectoryShift(
   if (
     lon_shift < 0.0 &&
     std::abs(lon_shift) > params_.validation_params.trajectory_shift.backward_shift_th) {
-    is_critical_error_ = params_.validation_params.trajectory_shift.is_critical;
+    is_critical_error_ |= params_.validation_params.trajectory_shift.is_critical;
     debug_pose_publisher_->pushPoseMarker(nearest_pose, "trajectory_shift");
     return false;
   }
