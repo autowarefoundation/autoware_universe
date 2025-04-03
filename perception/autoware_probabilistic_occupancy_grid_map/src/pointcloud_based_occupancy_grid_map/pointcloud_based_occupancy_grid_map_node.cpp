@@ -151,6 +151,7 @@ PointcloudBasedOccupancyGridMapNode::PointcloudBasedOccupancyGridMapNode(
   }
 
   max_output_delay_ms_ = this->declare_parameter<double>("max_output_delay_ms");
+  max_acceptable_consecutive_delay_ms_ = this->declare_parameter<double>("max_acceptable_consecutive_delay_ms");
   diagnostics_interface_ptr_ = std::make_unique<autoware_utils::DiagnosticsInterface>(
     this, "pointcloud_based_probabilistic_occupancy_grid_map");
 }
@@ -173,6 +174,50 @@ void PointcloudBasedOccupancyGridMapNode::rawPointcloudCallback(
   if (obstacle_pointcloud_.header.stamp == raw_pointcloud_.header.stamp) {
     onPointcloudWithObstacleAndRaw();
   }
+}
+
+void PointcloudBasedOccupancyGridMapNode::checkLatency(double current_latency_ms)
+{
+  static rclcpp::Time last_normal_time = this->get_clock()->now();
+  const bool is_delay_within_range = (current_latency_ms <= max_output_delay_ms_);
+
+  // Update timestamp when latency is normal
+  if (is_delay_within_range) {
+    last_normal_time = this->get_clock()->now();
+  }
+
+  // Calculate duration of abnormal latency
+  const double abnormal_duration_ms = (this->get_clock()->now() - last_normal_time).seconds() * 1000.0;
+
+  uint8_t level;
+  std::string status_str;
+  std::string message;
+
+  if (is_delay_within_range) {
+    level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+    status_str = "OK";
+  } 
+  else if (abnormal_duration_ms > max_acceptable_consecutive_delay_ms_) {
+    status_str = "ERROR";
+    level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+    message = "Processing time exceeded the warning threshold of " + std::to_string(max_output_delay_ms_) + "ms for " +
+              std::to_string(abnormal_duration_ms/1000.0) + "s  (Threshold "+std::to_string(max_acceptable_consecutive_delay_ms_/1000.0) + ")";
+  }
+  else {
+    status_str = "WARN";
+    level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+    message = "Processing time exceeds the warning threshold of "  + std::to_string(max_output_delay_ms_)+ " ms.";
+  }
+
+  diagnostics_interface_ptr_->clear();
+  diagnostics_interface_ptr_->add_key_value("latency(ms)", current_latency_ms);
+  diagnostics_interface_ptr_->add_key_value(
+    "is_latency_within_threshold", is_delay_within_range);
+  diagnostics_interface_ptr_->add_key_value("abnormal_duration(ms)", abnormal_duration_ms);
+  diagnostics_interface_ptr_->add_key_value(
+    "is_abnormal_duration_within_threshold", abnormal_duration_ms <= max_acceptable_consecutive_delay_ms_);
+  diagnostics_interface_ptr_->update_level_and_message(level,  "[" + status_str + "] " +message);
+  diagnostics_interface_ptr_->publish(raw_pointcloud_.header.stamp);
 }
 
 void PointcloudBasedOccupancyGridMapNode::onPointcloudWithObstacleAndRaw()
@@ -281,21 +326,7 @@ void PointcloudBasedOccupancyGridMapNode::onPointcloudWithObstacleAndRaw()
     debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/pipeline_latency_ms", pipeline_latency_ms);
 
-    bool is_delay_within_range = (pipeline_latency_ms <= max_output_delay_ms_);
-    diagnostics_interface_ptr_->clear();
-    diagnostics_interface_ptr_->add_key_value(
-      "is_output_delay_within_range", is_delay_within_range);
-
-    std::stringstream message;
-    if (!is_delay_within_range) {
-      message << "Output delay (" << pipeline_latency_ms << " ms) exceeds allowed limit ("
-              << max_output_delay_ms_ << " ms).";
-    }
-    diagnostics_interface_ptr_->update_level_and_message(
-      is_delay_within_range ? diagnostic_msgs::msg::DiagnosticStatus::OK
-                            : diagnostic_msgs::msg::DiagnosticStatus::WARN,
-      message.str());
-    diagnostics_interface_ptr_->publish(raw_pointcloud_.header.stamp);
+    checkLatency(processing_time_ms);
   }
 }
 

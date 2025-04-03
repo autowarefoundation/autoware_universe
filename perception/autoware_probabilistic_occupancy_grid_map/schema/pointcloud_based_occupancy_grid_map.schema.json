@@ -130,6 +130,11 @@
               "type": "number",
               "description": "Maximum warning output delay in milliseconds.",
               "default": 50.0
+            },
+            "max_acceptable_consecutive_delay_ms": {
+              "type": "number",
+              "description": "Maximum acceptable consecutive delay warning in milliseconds.",
+              "default": 50.0
             }
           },
           "required": [

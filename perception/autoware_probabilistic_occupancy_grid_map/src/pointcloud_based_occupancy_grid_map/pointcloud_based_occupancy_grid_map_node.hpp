@@ -60,6 +60,7 @@ private:
   void obstaclePointcloudCallback(const PointCloud2::ConstSharedPtr & input_obstacle_msg);
   void rawPointcloudCallback(const PointCloud2::ConstSharedPtr & input_raw_msg);
   void onPointcloudWithObstacleAndRaw();
+  void checkLatency(double current_latency_ms);
 
   OccupancyGrid::UniquePtr OccupancyGridMapToMsgPtr(
     const std::string & frame_id, const Time & stamp, const float & robot_pose_z,
@@ -103,6 +104,7 @@ private:
   // diagnostics
   std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
   double max_output_delay_ms_;
+  double max_acceptable_consecutive_delay_ms_;
 };
 
 }  // namespace autoware::occupancy_grid_map
