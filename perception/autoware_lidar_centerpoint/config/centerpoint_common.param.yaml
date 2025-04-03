@@ -8,4 +8,4 @@
       # max_acceptable_consecutive_delay_ms, an error diagnostic message will be sent.
       max_acceptable_consecutive_delay_ms: 1000.0
       # interval of diagnostic callback in milliseconds
-      validation_callback_interval_ms: 100 # in milliseconds, in integer
+      validation_callback_interval_ms: 100.0 # in milliseconds
