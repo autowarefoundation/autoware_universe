@@ -233,7 +233,7 @@ void LidarCenterPointNode::diagnoseProcessingTime(
   std::stringstream message{"OK"};
 
   // check node has inferenced or not
-  if(last_processing_time_ms_) {
+  if (last_processing_time_ms_) {
     // check processing time is acceptable
     if (last_processing_time_ms_ > max_allowed_processing_time_ms_) {
       stat.add("is_processing_time_ms_in_expected_range", false);
@@ -255,17 +255,17 @@ void LidarCenterPointNode::diagnoseProcessingTime(
     }
     stat.add("processing_time_ms", last_processing_time_ms_.value());
 
-    const double delayed_state_duration = std::chrono::duration<double, std::milli>(
-      std::chrono::nanoseconds(
-        (timestamp_now - last_in_time_processing_timestamp_.value()).nanoseconds()))
-      .count();
+    const double delayed_state_duration =
+      std::chrono::duration<double, std::milli>(
+        std::chrono::nanoseconds(
+          (timestamp_now - last_in_time_processing_timestamp_.value()).nanoseconds()))
+        .count();
 
     // check consecutive delays
     if (delayed_state_duration > max_acceptable_consecutive_delay_ms_) {
       stat.add("is_consecutive_processing_delay_in_range", false);
 
-      message <<
-        " Processing delay has consecutively exceeded the acceptable limit continuously.";
+      message << " Processing delay has consecutively exceeded the acceptable limit continuously.";
 
       diag_level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
     } else {
