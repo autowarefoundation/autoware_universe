@@ -33,6 +33,12 @@ If the value is `default`, the default value will be set.
 | `required_diags.DIAGNOSTIC_NAME.is_active` | bool   | `true`        | Force update or not                     |
 | `required_diags.DIAGNOSTIC_NAME.status`    | string | `"OK"`        | diag status set by dummy diag publisher |
 
+### Example Parameters
+
+{{ json_to_markdown("system/dummy_diag_publisher/schema/_empty.schema.json") }}
+{{ json_to_markdown("system/dummy_diag_publisher/schema/dummy_diag_publisher.schema.json") }}
+{{ json_to_markdown("system/dummy_diag_publisher/schema/extra.schema.json") }}
+
 ## Assumptions / Known limits
 
 TBD.
