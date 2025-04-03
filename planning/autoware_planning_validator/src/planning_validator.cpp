@@ -76,6 +76,7 @@ void PlanningValidator::setupParameters()
   params_.publish_diag = declare_parameter<bool>("publish_diag");
   params_.diag_error_count_threshold = declare_parameter<int>("diag_error_count_threshold");
   params_.display_on_terminal = declare_parameter<bool>("display_on_terminal");
+  params_.debug_flag = declare_parameter<bool>("debug_flag");
 
   params_.enable_soft_stop_on_prev_traj = declare_parameter<bool>("enable_soft_stop_on_prev_traj");
   params_.soft_stop_deceleration = declare_parameter<double>("soft_stop_deceleration");
@@ -304,7 +305,7 @@ void PlanningValidator::onTrajectory(const Trajectory::ConstSharedPtr msg)
 
   // for debug
   publishProcessingTime(stop_watch_.toc(__func__));
-  publishDebugInfo();
+  publishDebugInfo(*current_trajectory_);
   displayStatus();
 }
 
@@ -371,7 +372,7 @@ void PlanningValidator::publishProcessingTime(const double processing_time_ms)
   pub_processing_time_ms_->publish(msg);
 }
 
-void PlanningValidator::publishDebugInfo()
+void PlanningValidator::publishDebugInfo(const Trajectory & trajectory)
 {
   validation_status_.stamp = get_clock()->now();
   pub_status_->publish(validation_status_);
@@ -383,6 +384,19 @@ void PlanningValidator::publishDebugInfo()
     shiftPose(offset_pose, 0.25);
     debug_pose_publisher_->pushVirtualWall(front_pose);
     debug_pose_publisher_->pushWarningMsg(offset_pose, "INVALID PLANNING");
+  }
+  if (params_.debug_flag) {
+    constexpr auto min_interval = 1.0;
+    const auto resampled = resampleTrajectory(trajectory, min_interval);
+    std::vector<double> lateral_acceleration_arr;
+    calc_lateral_acceleration(resampled, lateral_acceleration_arr);
+    debug_pose_publisher_->pushLateralAcc(lateral_acceleration_arr);
+    std::vector<double> lateral_jerk_arr;
+    calc_lateral_jerk(resampled, lateral_jerk_arr);
+    debug_pose_publisher_->pushLateralJerk(lateral_jerk_arr);
+    std::vector<double> curvatures;
+    calcCurvature(resampled, curvatures);
+    debug_pose_publisher_->pushCurvature(curvatures);
   }
   debug_pose_publisher_->publish();
 }
@@ -432,6 +446,7 @@ void PlanningValidator::validate(
   s.is_valid_relative_angle = checkValidRelativeAngle(resampled);
   s.is_valid_curvature = checkValidCurvature(resampled);
   s.is_valid_lateral_acc = checkValidLateralAcceleration(resampled);
+  s.is_valid_lateral_jerk = checkValidLateralJerk(resampled);
   s.is_valid_steering = checkValidSteering(resampled);
   s.is_valid_steering_rate = checkValidSteeringRate(resampled);
 
@@ -528,6 +543,23 @@ bool PlanningValidator::checkValidLateralAcceleration(const Trajectory & traject
   if (max_lateral_acc > params_.validation_params.acceleration.lateral_th) {
     debug_pose_publisher_->pushPoseMarker(trajectory.points.at(i), "lateral_acceleration");
     is_critical_error_ |= params_.validation_params.acceleration.is_critical;
+    return false;
+  }
+  return true;
+}
+
+bool PlanningValidator::checkValidLateralJerk(const Trajectory & trajectory)
+{
+  if (!params_.validation_params.acceleration.enable) {
+    return true;
+  }
+
+  const auto [max_lateral_jerk, i] = calc_max_lateral_jerk(trajectory);
+  validation_status_.max_lateral_jerk = max_lateral_jerk;
+
+  if (max_lateral_jerk > params_.validation_params.jerk.lateral_th) {
+    debug_pose_publisher_->pushPoseMarker(trajectory.points.at(i), "lateral_jerk");
+    is_critical_error_ |= params_.validation_params.jerk.is_critical;
     return false;
   }
   return true;

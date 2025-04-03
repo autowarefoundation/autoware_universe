@@ -15,6 +15,7 @@
     #  the next trajectory is valid.)
     diag_error_count_threshold: 0
     display_on_terminal: true # show error msg on terminal
+    debug_flag: false # visualize debug information
 
     # if handling type is 2 (use last valid traj), the following parameters are used to enable soft stop
     enable_soft_stop_on_prev_traj: true
@@ -43,6 +44,9 @@
         longitudinal_max_th: 9.8
         longitudinal_min_th: -9.8
         is_critical: false
+      jerk:
+        enable: true
+        lateral_th: 10.0
       steering:
         enable: true
         threshold: 1.414

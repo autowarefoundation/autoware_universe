@@ -31,9 +31,12 @@ PlanningValidatorDebugMarkerPublisher::PlanningValidatorDebugMarkerPublisher(rcl
 
   virtual_wall_pub_ =
     node_->create_publisher<visualization_msgs::msg::MarkerArray>("~/virtual_wall", 1);
-
+  debug_lateral_acc_pub_ =
+    node_->create_publisher<Float32MultiArrayStamped>("~/debug/lateral_acc", 1);
   debug_lateral_jerk_pub_ =
     node_->create_publisher<Float32MultiArrayStamped>("~/debug/lateral_jerk", 1);
+
+  debug_curvature_pub_ = node_->create_publisher<Float32MultiArrayStamped>("~/debug/curvature", 1);
 }
 
 void PlanningValidatorDebugMarkerPublisher::clearMarkers()
@@ -97,6 +100,18 @@ void PlanningValidatorDebugMarkerPublisher::pushVirtualWall(const geometry_msgs:
   autoware_utils::append_marker_array(stop_wall_marker, &marker_array_virtual_wall_, now);
 }
 
+void PlanningValidatorDebugMarkerPublisher::pushLateralAcc(
+  const std::vector<double> & lateral_acc_arr)
+{
+  const auto now = node_->get_clock()->now();
+  debug_lateral_acc_.stamp = now;
+  debug_lateral_acc_.data.clear();
+  debug_lateral_acc_.data.reserve(lateral_acc_arr.size());
+  for (const auto & acc : lateral_acc_arr) {
+    debug_lateral_acc_.data.push_back(acc);
+  }
+}
+
 void PlanningValidatorDebugMarkerPublisher::pushLateralJerk(const std::vector<double> & jerk_arr)
 {
   const auto now = node_->get_clock()->now();
@@ -108,9 +123,22 @@ void PlanningValidatorDebugMarkerPublisher::pushLateralJerk(const std::vector<do
   }
 }
 
+void PlanningValidatorDebugMarkerPublisher::pushCurvature(const std::vector<double> & curvature_arr)
+{
+  const auto now = node_->get_clock()->now();
+  debug_curvature_.stamp = now;
+  debug_curvature_.data.clear();
+  debug_curvature_.data.reserve(curvature_arr.size());
+  for (const auto & jerk : curvature_arr) {
+    debug_curvature_.data.push_back(jerk);
+  }
+}
+
 void PlanningValidatorDebugMarkerPublisher::publish()
 {
   debug_viz_pub_->publish(marker_array_);
   virtual_wall_pub_->publish(marker_array_virtual_wall_);
+  debug_lateral_acc_pub_->publish(debug_lateral_acc_);
   debug_lateral_jerk_pub_->publish(debug_lateral_jerk_);
+  debug_curvature_pub_->publish(debug_curvature_);
 }

@@ -51,6 +51,11 @@ struct ValidationParams
     double longitudinal_min_th;
   } acceleration;
 
+  struct JerkCheck : ValidityCheck
+  {
+    double lateral_th;
+  } jerk;
+
   struct DeviationCheck : ValidityCheck
   {
     double velocity_th;
@@ -78,6 +83,7 @@ struct Params
   bool enable_soft_stop_on_prev_traj = true;
   bool publish_diag = true;
   bool display_on_terminal = true;
+  bool debug_flag = false;
   double soft_stop_deceleration = -1.0;
   int diag_error_count_threshold = 0;
   ValidationParams validation_params;
