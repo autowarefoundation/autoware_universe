@@ -38,7 +38,7 @@
 
 #else
 
-#include "autoware/universe_utils/ros/polling_subscriber.hpp"
+#include "autoware_utils/ros/polling_subscriber.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -49,7 +49,7 @@
 #define AUTOWARE_PUBLISHER_PTR(MessageT) typename rclcpp::Publisher<MessageT>::SharedPtr
 
 #define AUTOWARE_POLLING_SUBSCRIBER(MessageT) \
-  typename autoware::universe_utils::InterProcessPollingSubscriber<MessageT>
+  typename autoware_utils::InterProcessPollingSubscriber<MessageT>
 
 #define AUTOWARE_CREATE_SUBSCRIPTION(message_type, topic, qos, callback, options) \
   this->create_subscription<message_type>(topic, qos, callback, options)
