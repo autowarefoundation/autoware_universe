@@ -550,7 +550,7 @@ bool ProcessMonitor::getCommandLineFromPid(const std::string & pid, std::string 
   std::copy(
     std::istream_iterator<uint8_t>(commandFile), std::istream_iterator<uint8_t>(),
     std::back_inserter(buffer));
-  if (buffer.size() <= 0) {  // cmdline is empty if it is a kernel process
+  if (buffer.size() == 0) {  // cmdline is empty if it is a kernel process
     return false;
   }
   // 0x00 is used as delimiter in /cmdline instead of 0x20 (space)
@@ -839,13 +839,10 @@ bool ProcessMonitor::scanProcFs()
     errno = 0;
     const struct dirent * dir_entry = readdir(directory.get());
     if (dir_entry == nullptr) {
-      if (errno == 0) {
-        // There is no more entry to read in the directory.
-        break;
-      } else {
-        // Error. Stop further processing.
-        break;
-      }
+      // If errno is 0, there is no more entry to read in the directory.
+      // If errno is not 0, there is an error.
+      // In either case, stop further processing.
+      break;
     }
 
     // The maximum length of string d_name is not fixed.
