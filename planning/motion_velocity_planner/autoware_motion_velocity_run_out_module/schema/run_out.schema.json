@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Run Out Module Configuration",
+  "description": "Schema for the parameters of the run_out module, which stops or slows down the ego vehicle before potential collisions",
+  "type": "object",
+  "definitions": {
+    "run_out": {
+      "type": "object",
+      "description": "Configuration for the run_out module.",
+      "properties": {
+        "ego_time_interval_expansion": {
+          "type": "number",
+          "description": "[s] Time to add to the ego time interval (on both the start and end times).",
+          "default": 0.0
+        },
+        "collision_time_margin": {
+          "type": "number",
+          "description": "[s] Margin used in collision checks (exact usage may depend on implementation details).",
+          "default": 0.0
+        },
+        "time_overlap_tolerance": {
+          "type": "number",
+          "description": "[s] When calculating overlap time intervals, intervals are grouped if they are separated by less than this tolerance value.",
+          "default": 0.1
+        },
+        "preventive_slowdown": {
+          "$ref": "sub/preventive_slowdown.sub_schema.json#/definitions/preventive_slowdown"
+        },
+        "stop": {
+          "$ref": "sub/stop.sub_schema.json#/definitions/stop"
+        },
+        "passing": {
+          "$ref": "sub/passing.sub_schema.json#/definitions/passing"
+        },
+        "ego": {
+          "$ref": "sub/ego.sub_schema.json#/definitions/ego"
+        },
+        "objects": {
+          "$ref": "sub/passing.sub_schema.json#/definitions/objects"
+        }
+      },
+      "required": [
+        "ego_time_interval_expansion",
+        "collision_time_margin",
+        "time_overlap_tolerance",
+        "preventive_slowdown",
+        "stop",
+        "passing",
+        "ego",
+        "objects"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
