@@ -35,8 +35,8 @@ VoxelGridMapLoader::VoxelGridMapLoader(
   debug_ = node->declare_parameter<bool>("publish_debug_pcd");
 
   // initiate diagnostic status
-  diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
-  diagnostics_status_.message = "VoxelGridMapLoader initialized.";
+  diagnostics_map_voxel_status_.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+  diagnostics_map_voxel_status_.message = "VoxelGridMapLoader initialized.";
 }
 
 // check if the pointcloud is filterable with PCL voxel grid
@@ -61,19 +61,20 @@ bool VoxelGridMapLoader::isFeasibleWithPCLVoxelGrid(
   const std::int64_t voxel_num = x_voxel_num * y_voxel_num * z_voxel_num;
   if (voxel_num > std::numeric_limits<std::int32_t>::max()) {
     // voxel_num overflows
-    diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
-    diagnostics_status_.message =
-      "Voxel grid filter is not feasible. (Number of voxel overflows int32_t limit) "
+    diagnostics_map_voxel_status_.level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+    diagnostics_map_voxel_status_.message =
+      "Given map voxel grid is not feasible. (Number of voxel overflows int32_t limit) "
       "Check the voxel grid filter parameters and input pointcloud map."
       "  (1) If use_dynamic_map_loading is false, consider to enable use_dynamic_map_loading"
       "  (2) If use_dynamic_map_loading is true, consider to adjust map_loader_radius smaller"
+      "     and confirm the given pointcloud map is separated sufficiently."
       "  (2) If static map is only the option, consider to enlarge distance_threshold to generate "
-      "more larger leaf size";
+      "     more larger leaf size";
     return false;
   }
   // voxel_num is within the range of int32_t
-  diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
-  diagnostics_status_.message = "Voxel grid filter is within the feasible range";
+  diagnostics_map_voxel_status_.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+  diagnostics_map_voxel_status_.message = "Given map voxel grid is within the feasible range";
   return true;
 }
 

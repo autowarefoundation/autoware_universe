@@ -133,9 +133,9 @@ public:
   void publish_downsampled_map(const pcl::PointCloud<pcl::PointXYZ> & downsampled_pc);
   std::string * tf_map_input_frame_;
 
-  DiagStatus diagnostics_status_;
+  DiagStatus diagnostics_map_voxel_status_;
 
-  DiagStatus get_diag_status() const { return diagnostics_status_; }
+  DiagStatus get_diag_status() const { return diagnostics_map_voxel_status_; }
 };
 
 class VoxelGridStaticMapLoader : public VoxelGridMapLoader

@@ -87,9 +87,26 @@ VoxelBasedCompareMapFilterComponent::VoxelBasedCompareMapFilterComponent(
 void VoxelBasedCompareMapFilterComponent::checkStatus(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
+  std::string diag_message = "";
+
   // map loader status
-  DiagStatus diag_status = voxel_grid_map_loader_->get_diag_status();
-  stat.summary(diag_status.level, diag_status.message);
+  DiagStatus & map_loader_status = (*voxel_grid_map_loader_).diagnostics_map_voxel_status_;
+  if (map_loader_status.level == diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    stat.add("Map loader status", "OK");
+    diag_message = "OK";
+  } else {
+    stat.add("Map loader status", "NG");
+    diag_message += map_loader_status.message;
+  }
+
+  // final status
+  if (map_loader_status.level == diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, diag_message);
+  } else if (map_loader_status.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR) {
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, diag_message);
+  } else {
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, diag_message);
+  }
 }
 
 // TODO(badai-nguyen): Temporary Implementation of input_indices_callback and  convert_output_costly

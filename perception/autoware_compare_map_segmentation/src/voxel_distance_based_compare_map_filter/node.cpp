@@ -154,9 +154,27 @@ VoxelDistanceBasedCompareMapFilterComponent::VoxelDistanceBasedCompareMapFilterC
 void VoxelDistanceBasedCompareMapFilterComponent::checkStatus(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
+  std::string diag_message = "";
+
   // map loader status
-  DiagStatus diag_status = voxel_distance_based_map_loader_->get_diag_status();
-  stat.summary(diag_status.level, diag_status.message);
+  DiagStatus & map_loader_status =
+    (*voxel_distance_based_map_loader_).diagnostics_map_voxel_status_;
+  if (map_loader_status.level == diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    stat.add("Map loader status", "OK");
+    diag_message = "OK";
+  } else {
+    stat.add("Map loader status", "NG");
+    diag_message += map_loader_status.message;
+  }
+
+  // final status
+  if (map_loader_status.level == diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, diag_message);
+  } else if (map_loader_status.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR) {
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, diag_message);
+  } else {
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, diag_message);
+  }
 }
 
 void VoxelDistanceBasedCompareMapFilterComponent::filter(
@@ -177,7 +195,8 @@ void VoxelDistanceBasedCompareMapFilterComponent::filter(
     output.data.resize(input->data.size());
     output.point_step = point_step;
     size_t output_size = 0;
-    for (size_t global_offset = 0; global_offset < input->data.size(); global_offset += point_step) {
+    for (size_t global_offset = 0; global_offset < input->data.size();
+         global_offset += point_step) {
       pcl::PointXYZ point{};
       std::memcpy(&point.x, &input->data[global_offset + offset_x], sizeof(float));
       std::memcpy(&point.y, &input->data[global_offset + offset_y], sizeof(float));
@@ -197,7 +216,7 @@ void VoxelDistanceBasedCompareMapFilterComponent::filter(
     output.row_step = output_size / output.height;
     output.is_bigendian = input->is_bigendian;
     output.is_dense = input->is_dense;
-  }else {
+  } else {
     // return input point cloud, no filter implemented
     output = *input;
   }
