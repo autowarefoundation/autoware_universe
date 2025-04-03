@@ -19,7 +19,7 @@
 
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/motion_velocity_planner_common_universe/velocity_planning_result.hpp>
+#include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
 #include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware/universe_utils/ros/marker_helper.hpp>
 #include <rclcpp/duration.hpp>
@@ -147,7 +147,6 @@ inline MarkerArray make_debug_object_markers(const std::vector<Object> & objects
     }
   }
   m.text = ss.str();
-  std::cout << ss.str() << std::endl;
   markers.markers.push_back(m);
   m.ns = "collisions_points";
   m.header.frame_id = "map";
@@ -228,7 +227,6 @@ inline MarkerArray make_debug_decisions_markers(const ObjectDecisionsTracker & d
     ss << "\n";
   }
   m.text = ss.str();
-  std::cout << ss.str() << std::endl;
   markers.markers.push_back(m);
 
   return markers;
