@@ -15,6 +15,10 @@ ament_export_include_directories(
   include
 )
 
+ament_export_dependencies(
+  agnocastlib
+)
+
 install(
   FILES cmake/agnocast_wrapper_config_extras.cmake
   DESTINATION share/${PROJECT_NAME}/cmake
