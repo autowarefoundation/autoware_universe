@@ -22,7 +22,7 @@
 #include "autoware/motion_utils/trajectory/conversion.hpp"
 #include "autoware/motion_utils/trajectory/interpolation.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
-#include "autoware/motion_velocity_planner_common_universe/utils.hpp"
+#include "autoware/motion_velocity_planner_common/utils.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 #include "autoware_utils/ros/marker_helper.hpp"
 

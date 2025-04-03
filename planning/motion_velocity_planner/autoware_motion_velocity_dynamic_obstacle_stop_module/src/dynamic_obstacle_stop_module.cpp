@@ -123,7 +123,7 @@ VelocityPlanningResult DynamicObstacleStopModule::plan(
   dynamic_obstacle_stop::EgoData ego_data;
   ego_data.pose = planner_data->current_odometry.pose.pose;
   ego_data.trajectory = smoothed_trajectory_points;
-  autoware::motion_utils::removeOverlapPoints(ego_data.trajectory);
+  ego_data.trajectory = autoware::motion_utils::removeOverlapPoints(ego_data.trajectory);
   ego_data.first_trajectory_idx =
     autoware::motion_utils::findNearestSegmentIndex(ego_data.trajectory, ego_data.pose.position);
   ego_data.longitudinal_offset_to_first_trajectory_idx =
