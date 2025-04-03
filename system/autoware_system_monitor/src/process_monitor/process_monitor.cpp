@@ -647,14 +647,15 @@ void ProcessMonitor::accumulateStateCount(const RawProcessInfo & info)
     case 'T':  // Stopped
       work_->state_stopped++;
       break;
-    case 'S':  // Sleeping
-    case 'I':  // Idle kenel task, not documented in "man 5 proc"
-    case 'D':  // Disk Sleep
-    case 'X':  // Dead
-    case 'x':  // Dead
-    case 'W':  // Paging/Waking
-    case 'K':  // Wakekill
-    case 'P':  // Parked
+    // To reduce case evaluation, the following states are handled in the default case.
+    // case 'S':  // Sleeping
+    // case 'I':  // Idle kenel task, not documented in "man 5 proc"
+    // case 'D':  // Disk Sleep
+    // case 'X':  // Dead
+    // case 'x':  // Dead
+    // case 'W':  // Paging/Waking
+    // case 'K':  // Wakekill
+    // case 'P':  // Parked
     default:
       work_->state_sleeping++;
       break;

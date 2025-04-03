@@ -91,6 +91,25 @@ public:
     }
   }
 
+  bool areLinesDifferent(const std::string & expected_line, const std::string & result_line)
+  {
+    if (expected_line.compare(result_line) == 0) {
+      // Lines are the same.
+      return false;
+    }
+    // These 3 lines depend on testing environment and they can be different.
+    if (
+      (expected_line.find("key: execution time value") != std::string::npos) ||
+      (expected_line.find("key: USER") != std::string::npos) ||
+      (expected_line.find("hardware_id:") != std::string::npos)) {
+      return false;
+    }
+    std::cerr << "File content mismatch." << std::endl;
+    std::cerr << "  Expected: " << expected_line << std::endl;
+    std::cerr << "  Result:   " << result_line << std::endl;
+    return true;
+  }
+
   bool compareStatusFiles(const std::string & expected, const std::string & result)
   {
     // The files will be closed by the destructors.
@@ -117,25 +136,19 @@ public:
         eof_result = true;
       }
       if (eof_expected && eof_result) {
+        // expected and result reached EOF at the same time.
         break;
-      } else if (eof_expected && !eof_result) {
+      }
+      if (eof_expected && !eof_result) {
         std::cerr << "File 'result' has extra lines." << std::endl;
         return false;
-      } else if (!eof_expected && eof_result) {
+      }
+      if (!eof_expected && eof_result) {
         std::cerr << "File 'result' has insufficient lines." << std::endl;
         return false;
       }
-      if (expected_line.compare(result_line) != 0) {
-        // These 3 lines depend on testing environment and they can be different.
-        if (
-          (expected_line.find("key: execution time value") == std::string::npos) &&
-          (expected_line.find("key: USER") == std::string::npos) &&
-          (expected_line.find("hardware_id:") == std::string::npos)) {
-          std::cerr << "File content mismatch." << std::endl;
-          std::cerr << "  Expected: " << expected_line << std::endl;  // '\n' is included.
-          std::cerr << "  Result:   " << result_line << std::endl;    // '\n' is included.
-          return false;
-        }
+      if (areLinesDifferent(expected_line, result_line)) {
+        return false;
       }
     }
     // Both files reached EOF without any difference.
