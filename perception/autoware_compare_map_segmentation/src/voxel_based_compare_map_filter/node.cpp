@@ -87,26 +87,16 @@ VoxelBasedCompareMapFilterComponent::VoxelBasedCompareMapFilterComponent(
 void VoxelBasedCompareMapFilterComponent::checkStatus(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  std::string diag_message = "";
-
   // map loader status
   DiagStatus & map_loader_status = (*voxel_grid_map_loader_).diagnostics_map_voxel_status_;
   if (map_loader_status.level == diagnostic_msgs::msg::DiagnosticStatus::OK) {
     stat.add("Map loader status", "OK");
-    diag_message = "OK";
   } else {
     stat.add("Map loader status", "NG");
-    diag_message += map_loader_status.message;
   }
 
-  // final status
-  if (map_loader_status.level == diagnostic_msgs::msg::DiagnosticStatus::OK) {
-    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, diag_message);
-  } else if (map_loader_status.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR) {
-    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, diag_message);
-  } else {
-    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, diag_message);
-  }
+  // final status = map loader status
+  stat.summary(map_loader_status.level, map_loader_status.message);
 }
 
 // TODO(badai-nguyen): Temporary Implementation of input_indices_callback and  convert_output_costly
@@ -222,18 +212,14 @@ void VoxelBasedCompareMapFilterComponent::filter(
   stop_watch_ptr_->toc("processing_time", true);
 
   // check grid map loader status
-  DiagStatus diag_status = voxel_grid_map_loader_->get_diag_status();
-  if (diag_status.level != diagnostic_msgs::msg::DiagnosticStatus::OK) {
+  auto & map_diag_status = (*voxel_grid_map_loader_).diagnostics_map_voxel_status_;
+  if (map_diag_status.level != diagnostic_msgs::msg::DiagnosticStatus::OK) {
     RCLCPP_WARN_THROTTLE(
       this->get_logger(), *this->get_clock(), 5000, "Map loader status: %s",
-      diag_status.message.c_str());
-    std::cout << "Map loader status: " << diag_status.message << std::endl;
-
+      map_diag_status.message.c_str());
     // return input point cloud, no filter implemented
     output = *input;
     return;
-  } else {
-    std::cout << "Map loader status: [OK] " << diag_status.message << std::endl;
   }
 
   int point_step = input->point_step;

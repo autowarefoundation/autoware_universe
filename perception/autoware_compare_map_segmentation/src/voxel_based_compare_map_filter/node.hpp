@@ -53,13 +53,13 @@ private:
   rclcpp::Subscription<PointCloud2>::SharedPtr sub_map_;
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
-  diagnostic_updater::Updater diagnostic_updater_;
 
   // parameters
   double distance_threshold_;
   bool set_map_in_voxel_grid_;
 
   // diagnostics
+  diagnostic_updater::Updater diagnostic_updater_;
   void checkStatus(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
 public:

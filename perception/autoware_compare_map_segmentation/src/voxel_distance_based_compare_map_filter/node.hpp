@@ -137,12 +137,12 @@ protected:
 private:
   // interfaces
   std::unique_ptr<VoxelGridMapLoader> voxel_distance_based_map_loader_;
-  diagnostic_updater::Updater diagnostic_updater_;
 
   // parameters
   double distance_threshold_;
 
   // diagnostics
+  diagnostic_updater::Updater diagnostic_updater_;
   void checkStatus(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
 public:

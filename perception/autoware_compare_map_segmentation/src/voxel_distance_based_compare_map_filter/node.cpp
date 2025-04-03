@@ -154,28 +154,19 @@ VoxelDistanceBasedCompareMapFilterComponent::VoxelDistanceBasedCompareMapFilterC
 void VoxelDistanceBasedCompareMapFilterComponent::checkStatus(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  std::string diag_message = "";
-
   // map loader status
   DiagStatus & map_loader_status =
     (*voxel_distance_based_map_loader_).diagnostics_map_voxel_status_;
   if (map_loader_status.level == diagnostic_msgs::msg::DiagnosticStatus::OK) {
     stat.add("Map loader status", "OK");
-    diag_message = "OK";
   } else {
     stat.add("Map loader status", "NG");
-    diag_message += map_loader_status.message;
   }
 
-  // final status
-  if (map_loader_status.level == diagnostic_msgs::msg::DiagnosticStatus::OK) {
-    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, diag_message);
-  } else if (map_loader_status.level == diagnostic_msgs::msg::DiagnosticStatus::ERROR) {
-    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, diag_message);
-  } else {
-    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, diag_message);
-  }
+  // final status = map loader status
+  stat.summary(map_loader_status.level, map_loader_status.message);
 }
+
 
 void VoxelDistanceBasedCompareMapFilterComponent::filter(
   const PointCloud2ConstPtr & input, [[maybe_unused]] const IndicesPtr & indices,
@@ -185,41 +176,44 @@ void VoxelDistanceBasedCompareMapFilterComponent::filter(
   stop_watch_ptr_->toc("processing_time", true);
 
   // check grid map loader status
-  DiagStatus diag_status = voxel_distance_based_map_loader_->get_diag_status();
-  if (diag_status.level == diagnostic_msgs::msg::DiagnosticStatus::OK) {
-    int point_step = input->point_step;
-    int offset_x = input->fields[pcl::getFieldIndex(*input, "x")].offset;
-    int offset_y = input->fields[pcl::getFieldIndex(*input, "y")].offset;
-    int offset_z = input->fields[pcl::getFieldIndex(*input, "z")].offset;
-
-    output.data.resize(input->data.size());
-    output.point_step = point_step;
-    size_t output_size = 0;
-    for (size_t global_offset = 0; global_offset < input->data.size();
-         global_offset += point_step) {
-      pcl::PointXYZ point{};
-      std::memcpy(&point.x, &input->data[global_offset + offset_x], sizeof(float));
-      std::memcpy(&point.y, &input->data[global_offset + offset_y], sizeof(float));
-      std::memcpy(&point.z, &input->data[global_offset + offset_z], sizeof(float));
-      if (voxel_distance_based_map_loader_->is_close_to_map(point, distance_threshold_)) {
-        continue;
-      }
-      std::memcpy(&output.data[output_size], &input->data[global_offset], point_step);
-      output_size += point_step;
-    }
-
-    output.header = input->header;
-    output.fields = input->fields;
-    output.data.resize(output_size);
-    output.height = input->height;
-    output.width = output_size / point_step / output.height;
-    output.row_step = output_size / output.height;
-    output.is_bigendian = input->is_bigendian;
-    output.is_dense = input->is_dense;
-  } else {
+  auto & map_diag_status = (*voxel_distance_based_map_loader_).diagnostics_map_voxel_status_;
+  if (map_diag_status.level != diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000, "Map loader status: %s",
+      map_diag_status.message.c_str());
     // return input point cloud, no filter implemented
     output = *input;
+    return;
   }
+
+  int point_step = input->point_step;
+  int offset_x = input->fields[pcl::getFieldIndex(*input, "x")].offset;
+  int offset_y = input->fields[pcl::getFieldIndex(*input, "y")].offset;
+  int offset_z = input->fields[pcl::getFieldIndex(*input, "z")].offset;
+
+  output.data.resize(input->data.size());
+  output.point_step = point_step;
+  size_t output_size = 0;
+  for (size_t global_offset = 0; global_offset < input->data.size(); global_offset += point_step) {
+    pcl::PointXYZ point{};
+    std::memcpy(&point.x, &input->data[global_offset + offset_x], sizeof(float));
+    std::memcpy(&point.y, &input->data[global_offset + offset_y], sizeof(float));
+    std::memcpy(&point.z, &input->data[global_offset + offset_z], sizeof(float));
+    if (voxel_distance_based_map_loader_->is_close_to_map(point, distance_threshold_)) {
+      continue;
+    }
+    std::memcpy(&output.data[output_size], &input->data[global_offset], point_step);
+    output_size += point_step;
+  }
+
+  output.header = input->header;
+  output.fields = input->fields;
+  output.data.resize(output_size);
+  output.height = input->height;
+  output.width = output_size / point_step / output.height;
+  output.row_step = output_size / output.height;
+  output.is_bigendian = input->is_bigendian;
+  output.is_dense = input->is_dense;
 
   // add processing time for debug
   if (debug_publisher_) {
