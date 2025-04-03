@@ -909,7 +909,11 @@ void SimplePlanningSimulator::publish_turn_indicators_report()
   }
   TurnIndicatorsReport msg;
   msg.stamp = get_clock()->now();
-  msg.report = current_turn_indicators_cmd_ptr_->command;
+  if (current_turn_indicators_cmd_ptr_->command == TurnIndicatorsCommand::NO_COMMAND) {
+    msg.report = TurnIndicatorsReport::DISABLE;
+  } else {
+    msg.report = current_turn_indicators_cmd_ptr_->command;
+  }
   pub_turn_indicators_report_->publish(msg);
 }
 
