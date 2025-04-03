@@ -146,8 +146,8 @@ TrackerDebugger::TimingCheckResult TrackerDebugger::checkExtrapolationTiming(
   // Check if warnings have persisted beyond the allowed duration
   if (consecutive_warning_duration_s > debug_settings_.diagnostics_error_extrapolation) {
     return {
-      "[ERROR] Extrapolation time exceeded warning threshold " +
-        std::to_string(debug_settings_.diagnostics_warn_extrapolation) + " too long for " +
+      "[ERROR] Extrapolation time exceeded the warning threshold of " +
+        std::to_string(debug_settings_.diagnostics_warn_extrapolation) + " for " +
         std::to_string(consecutive_warning_duration_s) + " seconds (Threshold " +
         std::to_string(debug_settings_.diagnostics_error_extrapolation) + ")",
       diagnostic_msgs::msg::DiagnosticStatus::ERROR};
