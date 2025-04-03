@@ -17,6 +17,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
@@ -25,6 +26,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+
+using autoware_internal_debug_msgs::msg::Float32MultiArrayStamped;
 
 class PlanningValidatorDebugMarkerPublisher
 {
@@ -36,6 +39,9 @@ public:
   void pushPoseMarker(const geometry_msgs::msg::Pose & pose, const std::string & ns, int id = 0);
   void pushVirtualWall(const geometry_msgs::msg::Pose & pose);
   void pushWarningMsg(const geometry_msgs::msg::Pose & pose, const std::string & msg);
+  void pushLateralAcc(const std::vector<double> & lateral_acc_arr);
+  void pushLateralJerk(const std::vector<double> & jerk_arr);
+  void pushCurvature(const std::vector<double> & curvature_arr);
   void publish();
 
   void clearMarkers();
@@ -44,8 +50,14 @@ private:
   rclcpp::Node * node_;
   visualization_msgs::msg::MarkerArray marker_array_;
   visualization_msgs::msg::MarkerArray marker_array_virtual_wall_;
+  Float32MultiArrayStamped debug_lateral_acc_;
+  Float32MultiArrayStamped debug_lateral_jerk_;
+  Float32MultiArrayStamped debug_curvature_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr debug_viz_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr virtual_wall_pub_;
+  rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr debug_lateral_acc_pub_;
+  rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr debug_lateral_jerk_pub_;
+  rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr debug_curvature_pub_;
   std::map<std::string, int> marker_id_;
 
   int getMarkerId(const std::string & ns)
