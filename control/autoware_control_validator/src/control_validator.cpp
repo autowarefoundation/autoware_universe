@@ -43,7 +43,7 @@ void TrajectoryValidator::validate(
   res.max_distance_deviation =
     calc_max_lateral_distance(reference_trajectory, predicted_trajectory);
   res.is_valid_max_distance_deviation =
-    res.max_distance_deviation < max_distance_deviation_threshold;
+    res.max_distance_deviation <= max_distance_deviation_threshold;
 }
 
 void AccelerationValidator::validate(

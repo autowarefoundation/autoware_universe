@@ -39,8 +39,6 @@
 #include <tuple>
 #include <utility>
 
-// class AccelerationValidatorTest;
-
 namespace autoware::control_validator
 {
 using autoware_control_msgs::msg::Control;
@@ -72,7 +70,7 @@ private:
 
 /**
  * @class TrajectoryValidator
- * @brief Calculate the maximum lateral distance between the reference trajectory and predicted
+ * @brief Calculate the maximum lateral distance between the reference trajectory and the predicted
  * trajectory.
  */
 class TrajectoryValidator
