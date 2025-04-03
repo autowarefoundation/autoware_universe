@@ -13,6 +13,7 @@ This package outputs a dummy diagnostic data for debugging and developing.
 | `/diagnostics` | `diagnostic_msgs::msgs::DiagnosticArray` | Diagnostics outputs |
 
 ## Parameters
+
 ### Node Parameters
 
 The parameter `DIAGNOSTIC_NAME` must be a name that exists in the parameter YAML file. If the parameter `status` is given from a command line, the parameter `is_active` is automatically set to `true`.
