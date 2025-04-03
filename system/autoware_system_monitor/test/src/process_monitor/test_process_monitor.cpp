@@ -188,7 +188,7 @@ void TestProcessMonitor::cleanupTestData(const std::string & dir)
     return;
   }
   const std::string cmd_line = fmt::format("rm -rf {}", dir);
-  ::system(cmd_line.c_str());
+  (void)::system(cmd_line.c_str());  // Ignore the return value.
   setRoot("/");
 }
 
