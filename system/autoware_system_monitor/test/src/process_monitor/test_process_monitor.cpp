@@ -292,7 +292,7 @@ DummyProcFilePair dummy_proc_pairs[] = {
   {"dummy_proc_base.tar.bz2",
    "dummy_proc_disappearing_process.tar.bz2"},  // A process disappears after 1 second.
   {"dummy_proc_base.tar.bz2",
-   "dummy_proc_replaced_processes.tar.bz2"},  // A process appeers, while another process
+   "dummy_proc_replaced_processes.tar.bz2"},  // A process appears, while another process
                                               // disappears.
 };
 
@@ -409,7 +409,7 @@ TEST_P(ProcessMonitorTestSuiteWithDummyProcPair, dummyProcPairTest)
   monitor_->forceTimerEvent();
 
   // Need to clean up the test data before preparing the next test data.
-  // Otherwise, files of disappered processes will be left in the test data directory.
+  // Otherwise, files of disappeared processes will be left in the test data directory.
   monitor_->cleanupTestData(test_data_dir);
 
   int result2 = monitor_->prepareTestData(fileSetPath2, test_data_dir);
@@ -432,7 +432,7 @@ TEST_P(ProcessMonitorTestSuiteWithDummyProcPair, dummyProcPairTest)
 
 // Instantiate the test for each dummy file pair.
 INSTANTIATE_TEST_SUITE_P(
-  TimelapseTest, ProcessMonitorTestSuiteWithDummyProcPair, ::testing::ValuesIn(dummy_proc_pairs));
+  TimeLapseTest, ProcessMonitorTestSuiteWithDummyProcPair, ::testing::ValuesIn(dummy_proc_pairs));
 
 int main(int argc, char ** argv)
 {

@@ -248,18 +248,18 @@ bool readStat(const std::string & proc_path, StatInfo & info)
 
   // command may include spaces. Ex. (UVM deferred release queue)
   // command may include multiple pairs of parentheses. Ex. ((XXX))
-  const std::size_t left_parentheisis_pos = line.find('(');
-  const std::size_t right_parentheisis_pos = line.find_last_of(')');
+  const std::size_t left_parenthesis_pos = line.find('(');
+  const std::size_t right_parenthesis_pos = line.find_last_of(')');
   if (
-    (left_parentheisis_pos == std::string::npos) || (right_parentheisis_pos == std::string::npos)) {
+    (left_parenthesis_pos == std::string::npos) || (right_parenthesis_pos == std::string::npos)) {
     return false;
   }
 
   const std::size_t command_len =
-    right_parentheisis_pos - left_parentheisis_pos + 1;  // includes parentheses.
+    right_parenthesis_pos - left_parenthesis_pos + 1;  // includes parentheses.
   try {  // Handle exceptions from std::string::substr(). Just in case.
-    const std::string command = line.substr(left_parentheisis_pos, command_len);
-    const std::string after_command = line.substr(right_parentheisis_pos + 1);
+    const std::string command = line.substr(left_parenthesis_pos, command_len);
+    const std::string after_command = line.substr(right_parenthesis_pos + 1);
     info_temp.command = command;
 
     try {
@@ -446,7 +446,7 @@ void ProcessMonitor::initialize()
   updater_.setHardwareID(hostname_);
   updater_.add("Tasks Summary", this, &ProcessMonitor::monitorProcesses);
 
-  // As long as the number of processes is less than EXPECTED_NUM_PROCESES,
+  // As long as the number of processes is less than EXPECTED_NUM_PROCESSES,
   // the size of the maps can be a compile-time constant.
   // This is to avoid the cost of rehashing when the map is resized.
   // When the number of processes exceeds EXPECTED_NUM_PROCESSES,
@@ -634,7 +634,7 @@ void ProcessMonitor::monitorProcesses(diagnostic_updater::DiagnosticStatusWrappe
 
 void ProcessMonitor::accumulateStateCount(const RawProcessInfo & info)
 {
-  // The difinitions of states are different among Linux versions.
+  // The definitions of states are different among Linux versions.
   // See /proc/[pid]/state of "man 5 proc".
   switch (info.stat_info.state) {
     case 'R':
@@ -649,7 +649,7 @@ void ProcessMonitor::accumulateStateCount(const RawProcessInfo & info)
       break;
     // To reduce case evaluation, the following states are handled in the default case.
     // case 'S':  // Sleeping
-    // case 'I':  // Idle kenel task, not documented in "man 5 proc"
+    // case 'I':  // Idle kernel task, not documented in "man 5 proc"
     // case 'D':  // Disk Sleep
     // case 'X':  // Dead
     // case 'x':  // Dead
