@@ -60,15 +60,14 @@ class LatencyValidator
 {
 public:
   explicit LatencyValidator(rclcpp::Node & node)
-  {
-    nominal_latency_threshold = autoware_utils::get_or_declare_parameter<double>(
-      node, "thresholds.nominal_latency");
-  };
+  : nominal_latency_threshold{
+      autoware_utils::get_or_declare_parameter<double>(node, "thresholds.nominal_latency")} {};
+
   void validate(
     ControlValidatorStatus & res, const Control & control_cmd, rclcpp::Node & node) const;
 
 private:
-  double nominal_latency_threshold{0.0};
+  const double nominal_latency_threshold;
 };
 
 /**
@@ -81,16 +80,15 @@ class TrajectoryValidator
 public:
   friend class TrajectoryValidatorTest;
   explicit TrajectoryValidator(rclcpp::Node & node)
-  {
-    max_distance_deviation_threshold =
-      autoware_utils::get_or_declare_parameter<double>(node, "thresholds.max_distance_deviation");
-  };
+  : max_distance_deviation_threshold{autoware_utils::get_or_declare_parameter<double>(
+      node, "thresholds.max_distance_deviation")} {};
+
   void validate(
     ControlValidatorStatus & res, const Trajectory & predicted_trajectory,
     const Trajectory & reference_trajectory) const;
 
 private:
-  double max_distance_deviation_threshold{0.0};
+  const double max_distance_deviation_threshold;
 };
 
 /**
@@ -102,15 +100,10 @@ class AccelerationValidator
 public:
   friend class AccelerationValidatorTest;
   explicit AccelerationValidator(rclcpp::Node & node)
-  {
-    e_offset =
-      autoware_utils::get_or_declare_parameter<double>(node, "thresholds.acc_error_offset");
-    e_scale = autoware_utils::get_or_declare_parameter<double>(node, "thresholds.acc_error_scale");
-    const double acc_lpf_gain =
-      autoware_utils::get_or_declare_parameter<double>(node, "acc_lpf_gain");
-    desired_acc_lpf.setGain(acc_lpf_gain);
-    measured_acc_lpf.setGain(acc_lpf_gain);
-  };
+  : e_offset{autoware_utils::get_or_declare_parameter<double>(node, "thresholds.acc_error_offset")},
+    e_scale{autoware_utils::get_or_declare_parameter<double>(node, "thresholds.acc_error_scale")},
+    desired_acc_lpf{autoware_utils::get_or_declare_parameter<double>(node, "acc_lpf_gain")},
+    measured_acc_lpf{autoware_utils::get_or_declare_parameter<double>(node, "acc_lpf_gain")} {};
 
   void validate(
     ControlValidatorStatus & res, const Odometry & kinematic_state, const Control & control_cmd,
@@ -118,10 +111,10 @@ public:
 
 private:
   bool is_in_error_range() const;
-  double e_offset{0.0};
-  double e_scale{0.0};
-  autoware::signal_processing::LowpassFilter1d desired_acc_lpf{0.0};
-  autoware::signal_processing::LowpassFilter1d measured_acc_lpf{0.0};
+  const double e_offset;
+  const double e_scale;
+  autoware::signal_processing::LowpassFilter1d desired_acc_lpf;
+  autoware::signal_processing::LowpassFilter1d measured_acc_lpf;
 };
 
 /**
@@ -132,30 +125,28 @@ class VelocityValidator
 {
 public:
   explicit VelocityValidator(rclcpp::Node & node)
-  {
-    rolling_back_velocity_th =
-      autoware_utils::get_or_declare_parameter<double>(node, "thresholds.rolling_back_velocity");
-    over_velocity_ratio_th =
-      autoware_utils::get_or_declare_parameter<double>(node, "thresholds.over_velocity_ratio");
-    over_velocity_offset_th =
-      autoware_utils::get_or_declare_parameter<double>(node, "thresholds.over_velocity_offset");
-    const double vel_lpf_gain =
-      autoware_utils::get_or_declare_parameter<double>(node, "vel_lpf_gain");
-    vehicle_vel_lpf.setGain(vel_lpf_gain);
-    target_vel_lpf.setGain(vel_lpf_gain);
-  };
+  : rolling_back_velocity_th{autoware_utils::get_or_declare_parameter<double>(
+      node, "thresholds.rolling_back_velocity")},
+    over_velocity_ratio_th{
+      autoware_utils::get_or_declare_parameter<double>(node, "thresholds.over_velocity_ratio")},
+    over_velocity_offset_th{
+      autoware_utils::get_or_declare_parameter<double>(node, "thresholds.over_velocity_offset")},
+    hold_velocity_error_until_stop{
+      autoware_utils::get_or_declare_parameter<bool>(node, "hold_velocity_error_until_stop")},
+    vehicle_vel_lpf{autoware_utils::get_or_declare_parameter<double>(node, "vel_lpf_gain")},
+    target_vel_lpf{autoware_utils::get_or_declare_parameter<double>(node, "vel_lpf_gain")} {};
 
   void validate(
     ControlValidatorStatus & res, const Trajectory & reference_trajectory,
     const Odometry & kinematics);
 
 private:
-  double rolling_back_velocity_th{0.0};
-  double over_velocity_ratio_th{0.0};
-  double over_velocity_offset_th{0.0};
-  autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf{0.0};
-  autoware::signal_processing::LowpassFilter1d target_vel_lpf{0.0};
-  bool hold_velocity_error_until_stop{false};
+  const double rolling_back_velocity_th;
+  const double over_velocity_ratio_th;
+  const double over_velocity_offset_th;
+  const bool hold_velocity_error_until_stop;
+  autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf;
+  autoware::signal_processing::LowpassFilter1d target_vel_lpf;
 };
 
 /**
@@ -166,21 +157,17 @@ class OverrunValidator
 {
 public:
   explicit OverrunValidator(rclcpp::Node & node)
-  {
-    overrun_stop_point_dist_th =
-      autoware_utils::get_or_declare_parameter<double>(node, "thresholds.overrun_stop_point_dist");
-    const double vel_lpf_gain =
-      autoware_utils::get_or_declare_parameter<double>(node, "vel_lpf_gain");
-    vehicle_vel_lpf.setGain(vel_lpf_gain);
-  };
+  : overrun_stop_point_dist_th{autoware_utils::get_or_declare_parameter<double>(
+      node, "thresholds.overrun_stop_point_dist")},
+    vehicle_vel_lpf{autoware_utils::get_or_declare_parameter<double>(node, "vel_lpf_gain")} {};
 
   void validate(
     ControlValidatorStatus & res, const Trajectory & reference_trajectory,
     const Odometry & kinematics);
 
 private:
-  autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf{0.0};
-  double overrun_stop_point_dist_th{0.0};
+  const double overrun_stop_point_dist_th;
+  autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf;
 };
 
 /**
