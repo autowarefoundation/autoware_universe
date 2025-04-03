@@ -44,6 +44,7 @@ bool VoxelGridMapLoader::isFeasibleWithPCLVoxelGrid(
   const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
   const pcl::VoxelGrid<pcl::PointXYZ> & voxel_grid)
 {
+  // obtain the total voxel number
   pcl::PointXYZ min_pt, max_pt;
   pcl::getMinMax3D(*pointcloud, min_pt, max_pt);
   const double x_range = max_pt.x - min_pt.x;
@@ -59,8 +60,10 @@ bool VoxelGridMapLoader::isFeasibleWithPCLVoxelGrid(
   const std::int64_t y_voxel_num = std::ceil(y_range * inv_voxel_y) + 1;
   const std::int64_t z_voxel_num = std::ceil(z_range * inv_voxel_z) + 1;
   const std::int64_t voxel_num = x_voxel_num * y_voxel_num * z_voxel_num;
+
+  // check if the voxel_num is within the range of int32_t
   if (voxel_num > std::numeric_limits<std::int32_t>::max()) {
-    // voxel_num overflows
+    // voxel_num overflows int32_t limit
     diagnostics_map_voxel_status_.level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
     diagnostics_map_voxel_status_.message =
       "Given map voxel grid is not feasible. (Number of voxel overflows int32_t limit) "
