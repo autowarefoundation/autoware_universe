@@ -76,7 +76,6 @@ private:
 class TrajectoryValidator
 {
 public:
-  friend class TrajectoryValidatorTest;
   explicit TrajectoryValidator(rclcpp::Node & node)
   : max_distance_deviation_threshold{autoware_utils::get_or_declare_parameter<double>(
       node, "thresholds.max_distance_deviation")} {};
