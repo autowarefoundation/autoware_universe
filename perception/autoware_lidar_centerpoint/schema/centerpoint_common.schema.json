@@ -23,10 +23,10 @@
               "minimum": 0.0
             },
             "validation_callback_interval_ms": {
-              "type": "integer",
+              "type": "number",
               "description": "An interval value for a timer callback that checks whether the current state meets the max_acceptable_consecutive_delay_ms condition. [ms]",
-              "default": 100,
-              "minimum": 1
+              "default": 100.0,
+              "minimum": 1.0
             }
           }
         }
