@@ -167,7 +167,6 @@ void VoxelDistanceBasedCompareMapFilterComponent::checkStatus(
   stat.summary(map_loader_status.level, map_loader_status.message);
 }
 
-
 void VoxelDistanceBasedCompareMapFilterComponent::filter(
   const PointCloud2ConstPtr & input, [[maybe_unused]] const IndicesPtr & indices,
   PointCloud2 & output)
