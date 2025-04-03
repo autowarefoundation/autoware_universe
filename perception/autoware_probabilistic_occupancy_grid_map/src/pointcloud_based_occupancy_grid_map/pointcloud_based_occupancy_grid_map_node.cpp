@@ -150,7 +150,6 @@ PointcloudBasedOccupancyGridMapNode::PointcloudBasedOccupancyGridMapNode(
     }
   }
 
-
   processing_time_tolerance_ms_ = this->declare_parameter<double>("processing_time_tolerance_ms");
   processing_time_consecutive_excess_tolerance_ms_ =
     this->declare_parameter<double>("processing_time_consecutive_excess_tolerance_ms");
@@ -181,7 +180,8 @@ void PointcloudBasedOccupancyGridMapNode::rawPointcloudCallback(
 void PointcloudBasedOccupancyGridMapNode::checkProcessingTime(double processing_time_ms)
 {
   static rclcpp::Time last_normal_time = this->get_clock()->now();
-  const bool is_processing_time_within_range = (processing_time_ms <= processing_time_tolerance_ms_);
+  const bool is_processing_time_within_range =
+    (processing_time_ms <= processing_time_tolerance_ms_);
 
   // Update timestamp when latency is normal
   if (is_processing_time_within_range) {
@@ -199,7 +199,8 @@ void PointcloudBasedOccupancyGridMapNode::checkProcessingTime(double processing_
   if (is_processing_time_within_range) {
     level = diagnostic_msgs::msg::DiagnosticStatus::OK;
     status_str = "OK";
-  } else if (processing_consecutive_excess_time > processing_time_consecutive_excess_tolerance_ms_) {
+  } else if (
+    processing_consecutive_excess_time > processing_time_consecutive_excess_tolerance_ms_) {
     status_str = "ERROR";
     level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
     message = "Processing time exceeded the warning threshold of " +
@@ -215,8 +216,10 @@ void PointcloudBasedOccupancyGridMapNode::checkProcessingTime(double processing_
 
   diagnostics_interface_ptr_->clear();
   diagnostics_interface_ptr_->add_key_value("processing time(ms)", processing_time_ms);
-  diagnostics_interface_ptr_->add_key_value("is processing time within threshold", is_processing_time_within_range);
-  diagnostics_interface_ptr_->add_key_value("processing time consecutive excess duration(ms)", processing_consecutive_excess_time);
+  diagnostics_interface_ptr_->add_key_value(
+    "is processing time within threshold", is_processing_time_within_range);
+  diagnostics_interface_ptr_->add_key_value(
+    "processing time consecutive excess duration(ms)", processing_consecutive_excess_time);
   diagnostics_interface_ptr_->add_key_value(
     "is processing time consecutive excess duration within threshold",
     processing_consecutive_excess_time <= processing_time_consecutive_excess_tolerance_ms_);
