@@ -13,11 +13,10 @@ This package outputs a dummy diagnostic data for debugging and developing.
 | `/diagnostics` | `diagnostic_msgs::msgs::DiagnosticArray` | Diagnostics outputs |
 
 ## Parameters
+
 {{ json_to_markdown("system/dummy_diag_publisher/schema/_empty.schema.json") }}
 {{ json_to_markdown("system/dummy_diag_publisher/schema/dummy_diag_publisher.schema.json") }}
 {{ json_to_markdown("system/dummy_diag_publisher/schema/extra.schema.json") }}
-
-
 
 ## Assumptions / Known limits
 
