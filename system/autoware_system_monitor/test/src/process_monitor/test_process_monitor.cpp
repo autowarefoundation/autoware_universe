@@ -188,7 +188,10 @@ void TestProcessMonitor::cleanupTestData(const std::string & dir)
     return;
   }
   const std::string cmd_line = fmt::format("rm -rf {}", dir);
-  (void)::system(cmd_line.c_str());  // Ignore the return value.
+  int result = ::system(cmd_line.c_str());
+  if (result != 0) {
+    std::cerr << "Failed to cleanup test data directory: " << dir << std::endl;
+  }
   setRoot("/");
 }
 
