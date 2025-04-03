@@ -21,9 +21,26 @@
 
 namespace autoware::compare_map_segmentation
 {
+VoxelGridMapLoader::VoxelGridMapLoader(
+  rclcpp::Node * node, double leaf_size, double downsize_ratio_z_axis,
+  std::string * tf_map_input_frame)
+: logger_(node->get_logger()),
+  voxel_leaf_size_(leaf_size),
+  downsize_ratio_z_axis_(downsize_ratio_z_axis)
+{
+  tf_map_input_frame_ = tf_map_input_frame;
+
+  downsampled_map_pub_ = node->create_publisher<sensor_msgs::msg::PointCloud2>(
+    "debug/downsampled_map/pointcloud", rclcpp::QoS{1}.transient_local());
+  debug_ = node->declare_parameter<bool>("publish_debug_pcd");
+
+  // initiate diagnostic status
+  diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+  diagnostics_status_.message = "VoxelGridMapLoader initialized.";
+}
 
 // check if the pointcloud is filterable with PCL voxel grid
-bool isFeasibleWithPCLVoxelGrid(
+bool VoxelGridMapLoader::isFeasibleWithPCLVoxelGrid(
   const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
   const pcl::VoxelGrid<pcl::PointXYZ> & voxel_grid)
 {
@@ -44,28 +61,20 @@ bool isFeasibleWithPCLVoxelGrid(
   const std::int64_t voxel_num = x_voxel_num * y_voxel_num * z_voxel_num;
   if (voxel_num > std::numeric_limits<std::int32_t>::max()) {
     // voxel_num overflows
+    diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+    diagnostics_status_.message =
+      "Voxel grid filter is not feasible. (Number of voxel overflows int32_t limit) "
+      "Check the voxel grid filter parameters and input pointcloud map."
+      "  (1) If use_dynamic_map_loading is false, consider to enable use_dynamic_map_loading"
+      "  (2) If use_dynamic_map_loading is true, consider to adjust map_loader_radius smaller"
+      "  (2) If static map is only the option, consider to enlarge distance_threshold to generate "
+      "more larger leaf size";
     return false;
   }
   // voxel_num is within the range of int32_t
-  return true;
-}
-
-VoxelGridMapLoader::VoxelGridMapLoader(
-  rclcpp::Node * node, double leaf_size, double downsize_ratio_z_axis,
-  std::string * tf_map_input_frame)
-: logger_(node->get_logger()),
-  voxel_leaf_size_(leaf_size),
-  downsize_ratio_z_axis_(downsize_ratio_z_axis)
-{
-  tf_map_input_frame_ = tf_map_input_frame;
-
-  downsampled_map_pub_ = node->create_publisher<sensor_msgs::msg::PointCloud2>(
-    "debug/downsampled_map/pointcloud", rclcpp::QoS{1}.transient_local());
-  debug_ = node->declare_parameter<bool>("publish_debug_pcd");
-
-  // initiate diagnostic status
   diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
-  diagnostics_status_.message = "VoxelGridMapLoader initialized.";
+  diagnostics_status_.message = "Voxel grid filter is within the feasible range";
+  return true;
 }
 
 void VoxelGridMapLoader::publish_downsampled_map(
@@ -296,8 +305,6 @@ VoxelGridStaticMapLoader::VoxelGridStaticMapLoader(
 void VoxelGridStaticMapLoader::onMapCallback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr map)
 {
-  std::cout << "VoxelGridStaticMapLoader::onMapCallback()" << std::endl;
-
   pcl::PointCloud<pcl::PointXYZ> map_pcl;
   pcl::fromROSMsg<pcl::PointXYZ>(*map, map_pcl);
   const auto map_pcl_ptr = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(map_pcl);
@@ -306,17 +313,7 @@ void VoxelGridStaticMapLoader::onMapCallback(
   voxel_grid_.setLeafSize(voxel_leaf_size_, voxel_leaf_size_, voxel_leaf_size_z_);
 
   // check if the pointcloud is filterable with PCL voxel grid
-  if (isFeasibleWithPCLVoxelGrid(map_pcl_ptr, voxel_grid_)) {
-    diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
-    diagnostics_status_.message = "Voxel grid filter is within the feasible range";
-  } else {
-    diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
-    diagnostics_status_.message =
-      "Voxel grid filter is not feasible. Check the voxel grid filter parameters and input "
-      "pointcloud. (1) Consider to enable use_dynamic_map_loading to true (2) If static map is "
-      "only the option, consider to "
-      "enlarge distance_threshold to generate more larger leaf size";
-  }
+  isFeasibleWithPCLVoxelGrid(map_pcl_ptr, voxel_grid_);
 
   voxel_grid_.setInputCloud(map_pcl_ptr);
   voxel_grid_.setSaveLeafLayout(true);

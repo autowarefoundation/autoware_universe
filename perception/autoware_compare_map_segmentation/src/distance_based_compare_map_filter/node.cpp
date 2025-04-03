@@ -30,7 +30,6 @@ namespace autoware::compare_map_segmentation
 void DistanceBasedStaticMapLoader::onMapCallback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr map)
 {
-  std::cout << "DistanceBasedStaticMapLoader::onMapCallback()" << std::endl;
   pcl::PointCloud<pcl::PointXYZ> map_pcl;
   pcl::fromROSMsg<pcl::PointXYZ>(*map, map_pcl);
   const auto map_pcl_ptr = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(map_pcl);

@@ -30,8 +30,6 @@ namespace autoware::compare_map_segmentation
 void VoxelDistanceBasedStaticMapLoader::onMapCallback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr map)
 {
-  std::cout << "VoxelDistanceBasedStaticMapLoader::onMapCallback()" << std::endl;
-
   pcl::PointCloud<pcl::PointXYZ> map_pcl;
   pcl::fromROSMsg<pcl::PointXYZ>(*map, map_pcl);
   const auto map_pcl_ptr = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(map_pcl);
@@ -41,17 +39,9 @@ void VoxelDistanceBasedStaticMapLoader::onMapCallback(
   // voxel
   voxel_map_ptr_.reset(new pcl::PointCloud<pcl::PointXYZ>);
   voxel_grid_.setLeafSize(voxel_leaf_size_, voxel_leaf_size_, voxel_leaf_size_);
-
   // check if the pointcloud is filterable with PCL voxel grid
-  if (isFeasibleWithPCLVoxelGrid(map_pcl_ptr, voxel_grid_)) {
-    diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
-    diagnostics_status_.message = "Voxel grid filter is within the feasible range";
-  } else {
-    diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
-    diagnostics_status_.message =
-      "Voxel grid filter is not feasible. Check the voxel grid filter parameters and input "
-      "pointcloud. Adjust map_loader_radius smaller";
-  }
+  isFeasibleWithPCLVoxelGrid(map_pcl_ptr, voxel_grid_);
+
   voxel_grid_.setInputCloud(map_pcl_ptr);
   voxel_grid_.setSaveLeafLayout(true);
   voxel_grid_.filter(*voxel_map_ptr_);
@@ -178,45 +168,39 @@ void VoxelDistanceBasedCompareMapFilterComponent::filter(
 
   // check grid map loader status
   DiagStatus diag_status = voxel_distance_based_map_loader_->get_diag_status();
-  if (diag_status.level != diagnostic_msgs::msg::DiagnosticStatus::OK) {
-    RCLCPP_WARN_THROTTLE(
-      this->get_logger(), *this->get_clock(), 5000, "Map loader status: %s",
-      diag_status.message.c_str());
-    std::cout << "Map loader status: " << diag_status.message << std::endl;
+  if (diag_status.level == diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    int point_step = input->point_step;
+    int offset_x = input->fields[pcl::getFieldIndex(*input, "x")].offset;
+    int offset_y = input->fields[pcl::getFieldIndex(*input, "y")].offset;
+    int offset_z = input->fields[pcl::getFieldIndex(*input, "z")].offset;
 
+    output.data.resize(input->data.size());
+    output.point_step = point_step;
+    size_t output_size = 0;
+    for (size_t global_offset = 0; global_offset < input->data.size(); global_offset += point_step) {
+      pcl::PointXYZ point{};
+      std::memcpy(&point.x, &input->data[global_offset + offset_x], sizeof(float));
+      std::memcpy(&point.y, &input->data[global_offset + offset_y], sizeof(float));
+      std::memcpy(&point.z, &input->data[global_offset + offset_z], sizeof(float));
+      if (voxel_distance_based_map_loader_->is_close_to_map(point, distance_threshold_)) {
+        continue;
+      }
+      std::memcpy(&output.data[output_size], &input->data[global_offset], point_step);
+      output_size += point_step;
+    }
+
+    output.header = input->header;
+    output.fields = input->fields;
+    output.data.resize(output_size);
+    output.height = input->height;
+    output.width = output_size / point_step / output.height;
+    output.row_step = output_size / output.height;
+    output.is_bigendian = input->is_bigendian;
+    output.is_dense = input->is_dense;
+  }else {
     // return input point cloud, no filter implemented
     output = *input;
-    return;
   }
-
-  int point_step = input->point_step;
-  int offset_x = input->fields[pcl::getFieldIndex(*input, "x")].offset;
-  int offset_y = input->fields[pcl::getFieldIndex(*input, "y")].offset;
-  int offset_z = input->fields[pcl::getFieldIndex(*input, "z")].offset;
-
-  output.data.resize(input->data.size());
-  output.point_step = point_step;
-  size_t output_size = 0;
-  for (size_t global_offset = 0; global_offset < input->data.size(); global_offset += point_step) {
-    pcl::PointXYZ point{};
-    std::memcpy(&point.x, &input->data[global_offset + offset_x], sizeof(float));
-    std::memcpy(&point.y, &input->data[global_offset + offset_y], sizeof(float));
-    std::memcpy(&point.z, &input->data[global_offset + offset_z], sizeof(float));
-    if (voxel_distance_based_map_loader_->is_close_to_map(point, distance_threshold_)) {
-      continue;
-    }
-    std::memcpy(&output.data[output_size], &input->data[global_offset], point_step);
-    output_size += point_step;
-  }
-
-  output.header = input->header;
-  output.fields = input->fields;
-  output.data.resize(output_size);
-  output.height = input->height;
-  output.width = output_size / point_step / output.height;
-  output.row_step = output_size / output.height;
-  output.is_bigendian = input->is_bigendian;
-  output.is_dense = input->is_dense;
 
   // add processing time for debug
   if (debug_publisher_) {
