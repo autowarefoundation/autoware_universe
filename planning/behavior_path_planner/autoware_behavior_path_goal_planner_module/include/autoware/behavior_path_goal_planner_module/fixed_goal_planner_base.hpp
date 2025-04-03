@@ -17,14 +17,14 @@
 
 #include "autoware/behavior_path_planner_common/data_manager.hpp"
 
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <memory>
 
-using autoware::universe_utils::LinearRing2d;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
+using autoware_utils::LinearRing2d;
 using geometry_msgs::msg::Pose;
-using tier4_planning_msgs::msg::PathWithLaneId;
 
 namespace autoware::behavior_path_planner
 {
@@ -38,15 +38,15 @@ public:
   virtual BehaviorModuleOutput plan(
     const std::shared_ptr<const PlannerData> & planner_data) const = 0;
 
-  void setPreviousModuleOutput(const BehaviorModuleOutput & previous_module_output)
+  void setPreviousModuleOutput(const BehaviorModuleOutput & upstream_module_output)
   {
-    previous_module_output_ = previous_module_output;
+    upstream_module_output_ = upstream_module_output;
   }
 
-  BehaviorModuleOutput getPreviousModuleOutput() const { return previous_module_output_; }
+  BehaviorModuleOutput getPreviousModuleOutput() const { return upstream_module_output_; }
 
 protected:
-  BehaviorModuleOutput previous_module_output_;
+  BehaviorModuleOutput upstream_module_output_;
 };
 }  // namespace autoware::behavior_path_planner
 

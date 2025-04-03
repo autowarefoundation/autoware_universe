@@ -16,7 +16,7 @@
 #define MOTION_HPP_
 
 #include <autoware/adapi_specs/motion.hpp>
-#include <autoware/component_interface_specs/control.hpp>
+#include <autoware/component_interface_specs_universe/control.hpp>
 #include <autoware/component_interface_utils/rclcpp.hpp>
 #include <autoware/component_interface_utils/status.hpp>
 #include <autoware/motion_utils/vehicle/vehicle_state_checker.hpp>
@@ -39,9 +39,10 @@ private:
   rclcpp::CallbackGroup::SharedPtr group_cli_;
   Srv<autoware::adapi_specs::motion::AcceptStart> srv_accept_;
   Pub<autoware::adapi_specs::motion::State> pub_state_;
-  Cli<autoware::component_interface_specs::control::SetPause> cli_set_pause_;
-  Sub<autoware::component_interface_specs::control::IsPaused> sub_is_paused_;
-  Sub<autoware::component_interface_specs::control::IsStartRequested> sub_is_start_requested_;
+  Cli<autoware::component_interface_specs_universe::control::SetPause> cli_set_pause_;
+  Sub<autoware::component_interface_specs_universe::control::IsPaused> sub_is_paused_;
+  Sub<autoware::component_interface_specs_universe::control::IsStartRequested>
+    sub_is_start_requested_;
 
   enum class State { Unknown, Pausing, Paused, Starting, Resuming, Resumed, Moving };
   State state_;
@@ -58,10 +59,10 @@ private:
   void change_pause(bool pause);
   void on_timer();
   void on_is_paused(
-    const autoware::component_interface_specs::control::IsPaused::Message::ConstSharedPtr msg);
-  void on_is_start_requested(
-    const autoware::component_interface_specs::control::IsStartRequested::Message::ConstSharedPtr
+    const autoware::component_interface_specs_universe::control::IsPaused::Message::ConstSharedPtr
       msg);
+  void on_is_start_requested(const autoware::component_interface_specs_universe::control::
+                               IsStartRequested::Message::ConstSharedPtr msg);
   void on_accept(
     const autoware::adapi_specs::motion::AcceptStart::Service::Request::SharedPtr req,
     const autoware::adapi_specs::motion::AcceptStart::Service::Response::SharedPtr res);

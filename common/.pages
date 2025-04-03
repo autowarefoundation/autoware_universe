@@ -46,6 +46,6 @@ nav:
     - 'Path Distance Calculator': common/autoware_path_distance_calculator/Readme
   - 'Others':
     - 'autoware_adapi_specs': common/autoware_adapi_specs
-    - 'autoware_component_interface_specs': common/autoware_component_interface_specs
+    - 'autoware_component_interface_specs_universe': common/autoware_component_interface_specs_universe
     - 'autoware_component_interface_tools': common/autoware_component_interface_tools
     - 'autoware_component_interface_utils': common/autoware_component_interface_utils

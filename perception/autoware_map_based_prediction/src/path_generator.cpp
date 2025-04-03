@@ -17,7 +17,7 @@
 #include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/interpolation/spline_interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <algorithm>
 #include <memory>
@@ -26,7 +26,7 @@
 
 namespace autoware::map_based_prediction
 {
-using autoware::universe_utils::ScopedTimeTrack;
+using autoware_utils::ScopedTimeTrack;
 
 PathGenerator::PathGenerator(const double sampling_time_interval)
 : sampling_time_interval_(sampling_time_interval)
@@ -41,8 +41,7 @@ PathGenerator::PathGenerator(
 {
 }
 
-void PathGenerator::setTimeKeeper(
-  std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_ptr)
+void PathGenerator::setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr)
 {
   time_keeper_ = std::move(time_keeper_ptr);
 }
@@ -73,9 +72,8 @@ PredictedPath PathGenerator::generatePathToTargetPoint(
   const auto arrival_time = pedestrian_to_entry_point.norm() / velocity;
 
   const auto pedestrian_to_entry_point_normalized = pedestrian_to_entry_point.normalized();
-  const auto pedestrian_to_entry_point_orientation =
-    autoware::universe_utils::createQuaternionFromYaw(std::atan2(
-      pedestrian_to_entry_point_normalized.y(), pedestrian_to_entry_point_normalized.x()));
+  const auto pedestrian_to_entry_point_orientation = autoware_utils::create_quaternion_from_yaw(
+    std::atan2(pedestrian_to_entry_point_normalized.y(), pedestrian_to_entry_point_normalized.x()));
 
   for (double dt = 0.0; dt < arrival_time + ep; dt += sampling_time_interval_) {
     geometry_msgs::msg::Pose world_frame_pose;
@@ -120,11 +118,10 @@ PredictedPath PathGenerator::generatePathForCrosswalkUser(
   const auto arrival_time = pedestrian_to_entry_point.norm() / velocity;
 
   const auto pedestrian_to_entry_point_normalized = pedestrian_to_entry_point.normalized();
-  const auto pedestrian_to_entry_point_orientation =
-    autoware::universe_utils::createQuaternionFromYaw(std::atan2(
-      pedestrian_to_entry_point_normalized.y(), pedestrian_to_entry_point_normalized.x()));
+  const auto pedestrian_to_entry_point_orientation = autoware_utils::create_quaternion_from_yaw(
+    std::atan2(pedestrian_to_entry_point_normalized.y(), pedestrian_to_entry_point_normalized.x()));
   const auto entry_to_exit_point_normalized = entry_to_exit_point.normalized();
-  const auto entry_to_exit_point_orientation = autoware::universe_utils::createQuaternionFromYaw(
+  const auto entry_to_exit_point_orientation = autoware_utils::create_quaternion_from_yaw(
     std::atan2(entry_to_exit_point_normalized.y(), entry_to_exit_point_normalized.x()));
 
   for (double dt = 0.0; dt < duration + ep; dt += sampling_time_interval_) {
@@ -230,7 +227,7 @@ PredictedPath PathGenerator::generateStraightPath(
   path.time_step = rclcpp::Duration::from_seconds(sampling_time_interval_);
   path.path.reserve(static_cast<size_t>((duration) / sampling_time_interval_));
   for (double dt = 0.0; dt < duration; dt += sampling_time_interval_) {
-    const auto future_obj_pose = autoware::universe_utils::calcOffsetPose(
+    const auto future_obj_pose = autoware_utils::calc_offset_pose(
       object_pose, object_twist.linear.x * dt, object_twist.linear.y * dt, 0.0);
     path.path.push_back(future_obj_pose);
   }
@@ -536,8 +533,8 @@ PosePath PathGenerator::interpolateReferencePath(
     tf2::fromMsg(base_path.at(i).orientation, src_tf);
     base_path_orientation.at(i) = src_tf;
     if (i > 0) {
-      base_path_s.at(i) = base_path_s.at(i - 1) + autoware::universe_utils::calcDistance2d(
-                                                    base_path.at(i - 1), base_path.at(i));
+      base_path_s.at(i) = base_path_s.at(i - 1) +
+                          autoware_utils::calc_distance2d(base_path.at(i - 1), base_path.at(i));
     }
   }
 
@@ -558,7 +555,7 @@ PosePath PathGenerator::interpolateReferencePath(
   interpolated_path.resize(interpolate_num);
   for (size_t i = 0; i < interpolate_num; ++i) {
     geometry_msgs::msg::Pose interpolated_pose;
-    interpolated_pose.position = autoware::universe_utils::createPoint(
+    interpolated_pose.position = autoware_utils::create_point(
       lerp_ref_path_x.at(i), lerp_ref_path_y.at(i), lerp_ref_path_z.at(i));
     interpolated_pose.orientation = tf2::toMsg(lerp_ref_path_orientation.at(i));
     interpolated_path.at(i) = interpolated_pose;
@@ -596,11 +593,11 @@ PredictedPath PathGenerator::convertToPredictedPath(
     double d_offset = frenet_point.d;
 
     // Converted Pose
-    auto predicted_pose = autoware::universe_utils::calcOffsetPose(ref_pose, 0.0, d_offset, 0.0);
+    auto predicted_pose = autoware_utils::calc_offset_pose(ref_pose, 0.0, d_offset, 0.0);
     predicted_pose.position.z += object_height;
-    const double yaw = autoware::universe_utils::calcAzimuthAngle(
+    const double yaw = autoware_utils::calc_azimuth_angle(
       predicted_path.path.at(i - 1).position, predicted_pose.position);
-    predicted_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(yaw);
+    predicted_pose.orientation = autoware_utils::create_quaternion_from_yaw(yaw);
 
     predicted_path.path.at(i) = predicted_pose;
   }

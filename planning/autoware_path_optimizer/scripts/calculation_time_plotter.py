@@ -17,10 +17,10 @@
 import argparse
 from collections import deque
 
+from autoware_internal_debug_msgs.msg import StringStamped
 import matplotlib.pyplot as plt
 import rclpy
 from rclpy.node import Node
-from tier4_debug_msgs.msg import StringStamped
 
 
 class CalculationCostAnalyzer(Node):

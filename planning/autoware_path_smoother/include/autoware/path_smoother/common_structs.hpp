@@ -16,8 +16,8 @@
 #define AUTOWARE__PATH_SMOOTHER__COMMON_STRUCTS_HPP_
 
 #include "autoware/path_smoother/type_alias.hpp"
-#include "autoware/universe_utils/ros/update_param.hpp"
-#include "autoware/universe_utils/system/stop_watch.hpp"
+#include "autoware_utils/ros/update_param.hpp"
+#include "autoware_utils/system/stop_watch.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 #include <memory>
@@ -83,7 +83,7 @@ struct TimeKeeper
 
   double accumulated_time{0.0};
 
-  autoware::universe_utils::StopWatch<
+  autoware_utils::StopWatch<
     std::chrono::milliseconds, std::chrono::microseconds, std::chrono::steady_clock>
     stop_watch_;
 };
@@ -100,12 +100,12 @@ struct CommonParam
 
   void onParam(const std::vector<rclcpp::Parameter> & parameters)
   {
-    using autoware::universe_utils::updateParam;
+    using autoware_utils::update_param;
 
     // common
-    updateParam<double>(
+    update_param<double>(
       parameters, "common.output_backward_traj_length", output_backward_traj_length);
-    updateParam<double>(parameters, "common.output_delta_arc_length", output_delta_arc_length);
+    update_param<double>(parameters, "common.output_delta_arc_length", output_delta_arc_length);
   }
 
   double output_delta_arc_length;
@@ -123,9 +123,9 @@ struct EgoNearestParam
 
   void onParam(const std::vector<rclcpp::Parameter> & parameters)
   {
-    using autoware::universe_utils::updateParam;
-    updateParam<double>(parameters, "ego_nearest_dist_threshold", dist_threshold);
-    updateParam<double>(parameters, "ego_nearest_yaw_threshold", yaw_threshold);
+    using autoware_utils::update_param;
+    update_param<double>(parameters, "ego_nearest_dist_threshold", dist_threshold);
+    update_param<double>(parameters, "ego_nearest_yaw_threshold", yaw_threshold);
   }
 
   double dist_threshold{0.0};

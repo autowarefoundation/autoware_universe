@@ -17,7 +17,8 @@
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/trajectory/conversion.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <diagnostic_msgs/msg/key_value.hpp>
 
@@ -41,10 +42,10 @@ namespace autoware::motion_planning
 using autoware::motion_utils::calcDecelDistWithJerkAndAccConstraints;
 using autoware::motion_utils::findFirstNearestIndexWithSoftConstraints;
 using autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints;
-using autoware::universe_utils::calcDistance2d;
-using autoware::universe_utils::getRPY;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
+using autoware_utils::calc_distance2d;
+using autoware_utils::get_rpy;
 
 std::optional<std::pair<double, double>> calcFeasibleMarginAndVelocity(
   const SlowDownParam & slow_down_param, const double dist_baselink_to_obstacle,
@@ -126,7 +127,7 @@ std::optional<std::pair<size_t, TrajectoryPoint>> getForwardInsertPointFromBaseP
     const auto & p_front = trajectory.at(i);
     const auto & p_back = trajectory.at(i + 1);
 
-    length_sum += calcDistance2d(p_front, p_back);
+    length_sum += calc_distance2d(p_front, p_back);
     length_residual = length_sum - margin;
 
     if (length_residual >= std::numeric_limits<double>::epsilon()) {
@@ -162,7 +163,7 @@ std::optional<std::pair<size_t, TrajectoryPoint>> getBackwardInsertPointFromBase
     const auto & p_front = trajectory.at(i - 1);
     const auto & p_back = trajectory.at(i);
 
-    length_sum += calcDistance2d(p_front, p_back);
+    length_sum += calc_distance2d(p_front, p_back);
     length_residual = length_sum - margin;
 
     if (length_residual >= std::numeric_limits<double>::epsilon()) {
@@ -186,7 +187,7 @@ std::optional<std::pair<size_t, double>> findNearestFrontIndex(
 {
   for (size_t i = start_idx; i < trajectory.size(); ++i) {
     const auto & p_traj = trajectory.at(i).pose;
-    const auto yaw = getRPY(p_traj).z;
+    const auto yaw = get_rpy(p_traj).z;
     const Point2d p_traj_direction(std::cos(yaw), std::sin(yaw));
     const Point2d p_traj_to_target(point.x - p_traj.position.x, point.y - p_traj.position.y);
 
@@ -204,7 +205,7 @@ std::optional<std::pair<size_t, double>> findNearestFrontIndex(
 
 bool isInFrontOfTargetPoint(const Pose & pose, const Point & point)
 {
-  const auto yaw = getRPY(pose).z;
+  const auto yaw = get_rpy(pose).z;
   const Point2d pose_direction(std::cos(yaw), std::sin(yaw));
   const Point2d to_target(point.x - pose.position.x, point.y - pose.position.y);
 
@@ -333,40 +334,35 @@ void createOneStepPolygon(
   {  // base step
     appendPointToPolygon(
       polygon,
-      autoware::universe_utils::calcOffsetPose(base_step_pose, longitudinal_offset, width, 0.0)
-        .position);
+      autoware_utils::calc_offset_pose(base_step_pose, longitudinal_offset, width, 0.0).position);
     appendPointToPolygon(
       polygon,
-      autoware::universe_utils::calcOffsetPose(base_step_pose, longitudinal_offset, -width, 0.0)
-        .position);
+      autoware_utils::calc_offset_pose(base_step_pose, longitudinal_offset, -width, 0.0).position);
     appendPointToPolygon(
-      polygon, autoware::universe_utils::calcOffsetPose(base_step_pose, -rear_overhang, -width, 0.0)
-                 .position);
+      polygon,
+      autoware_utils::calc_offset_pose(base_step_pose, -rear_overhang, -width, 0.0).position);
     appendPointToPolygon(
-      polygon, autoware::universe_utils::calcOffsetPose(base_step_pose, -rear_overhang, width, 0.0)
-                 .position);
+      polygon,
+      autoware_utils::calc_offset_pose(base_step_pose, -rear_overhang, width, 0.0).position);
   }
 
   {  // next step
     appendPointToPolygon(
       polygon,
-      autoware::universe_utils::calcOffsetPose(next_step_pose, longitudinal_offset, width, 0.0)
-        .position);
+      autoware_utils::calc_offset_pose(next_step_pose, longitudinal_offset, width, 0.0).position);
     appendPointToPolygon(
       polygon,
-      autoware::universe_utils::calcOffsetPose(next_step_pose, longitudinal_offset, -width, 0.0)
-        .position);
+      autoware_utils::calc_offset_pose(next_step_pose, longitudinal_offset, -width, 0.0).position);
     appendPointToPolygon(
-      polygon, autoware::universe_utils::calcOffsetPose(next_step_pose, -rear_overhang, -width, 0.0)
-                 .position);
+      polygon,
+      autoware_utils::calc_offset_pose(next_step_pose, -rear_overhang, -width, 0.0).position);
     appendPointToPolygon(
-      polygon, autoware::universe_utils::calcOffsetPose(next_step_pose, -rear_overhang, width, 0.0)
-                 .position);
+      polygon,
+      autoware_utils::calc_offset_pose(next_step_pose, -rear_overhang, width, 0.0).position);
   }
 
-  polygon = autoware::universe_utils::isClockwise(polygon)
-              ? polygon
-              : autoware::universe_utils::inverseClockwise(polygon);
+  polygon =
+    autoware_utils::is_clockwise(polygon) ? polygon : autoware_utils::inverse_clockwise(polygon);
 
   boost::geometry::convex_hull(polygon, hull_polygon);
 }
@@ -383,8 +379,8 @@ void insertStopPoint(
 
   constexpr double min_dist = 1e-3;
 
-  const auto is_p_base_and_p_insert_overlap = calcDistance2d(p_base, p_insert) < min_dist;
-  const auto is_p_next_and_p_insert_overlap = calcDistance2d(p_next, p_insert) < min_dist;
+  const auto is_p_base_and_p_insert_overlap = calc_distance2d(p_base, p_insert) < min_dist;
+  const auto is_p_next_and_p_insert_overlap = calc_distance2d(p_next, p_insert) < min_dist;
   const auto is_valid_index = checkValidIndex(p_base.pose, p_next.pose, p_insert.pose);
 
   auto update_stop_idx = stop_idx;
@@ -450,7 +446,7 @@ TrajectoryPoints decimateTrajectory(
       continue;
     }
 
-    trajectory_length_sum += calcDistance2d(p_front, p_back);
+    trajectory_length_sum += calc_distance2d(p_front, p_back);
   }
   if (!input.empty()) {
     output.push_back(input.back());
@@ -515,7 +511,7 @@ void getNearestPoint(
 {
   double min_norm = 0.0;
   bool is_init = false;
-  const auto yaw = getRPY(base_pose).z;
+  const auto yaw = get_rpy(base_pose).z;
   const Eigen::Vector2d base_pose_vec(std::cos(yaw), std::sin(yaw));
 
   for (const auto & p : pointcloud) {
@@ -535,7 +531,7 @@ void getLateralNearestPoint(
   double * deviation)
 {
   double min_norm = std::numeric_limits<double>::max();
-  const auto yaw = getRPY(base_pose).z;
+  const auto yaw = get_rpy(base_pose).z;
   const Eigen::Vector2d base_pose_vec(std::cos(yaw), std::sin(yaw));
   for (size_t i = 0; i < pointcloud.size(); ++i) {
     const Eigen::Vector2d pointcloud_vec(
@@ -558,7 +554,7 @@ double getNearestPointAndDistanceForPredictedObject(
   bool is_init = false;
 
   for (const auto & p : points.poses) {
-    double norm = autoware::universe_utils::calcDistance2d(p, base_pose);
+    double norm = autoware_utils::calc_distance2d(p, base_pose);
     if (norm < min_norm || !is_init) {
       min_norm = norm;
       *nearest_collision_point = p.position;
@@ -574,7 +570,7 @@ void getLateralNearestPointForPredictedObject(
 {
   double min_norm = std::numeric_limits<double>::max();
   for (const auto & pose : object.poses) {
-    double norm = calcDistance2d(pose, base_pose);
+    double norm = calc_distance2d(pose, base_pose);
     if (norm < min_norm) {
       min_norm = norm;
       *lateral_nearest_point = pointToPcl(pose.position.x, pose.position.y, base_pose.position.z);
@@ -586,7 +582,7 @@ void getLateralNearestPointForPredictedObject(
 Pose getVehicleCenterFromBase(const Pose & base_pose, const VehicleInfo & vehicle_info)
 {
   const auto & i = vehicle_info;
-  const auto yaw = getRPY(base_pose).z;
+  const auto yaw = get_rpy(base_pose).z;
 
   Pose center_pose;
   center_pose.position.x =
@@ -633,9 +629,9 @@ Polygon2d convertBoundingBoxObjectToGeometryPolygon(
   object_polygon.outer().emplace_back(p4_obj.x(), p4_obj.y());
 
   object_polygon.outer().push_back(object_polygon.outer().front());
-  object_polygon = autoware::universe_utils::isClockwise(object_polygon)
+  object_polygon = autoware_utils::is_clockwise(object_polygon)
                      ? object_polygon
-                     : autoware::universe_utils::inverseClockwise(object_polygon);
+                     : autoware_utils::inverse_clockwise(object_polygon);
   return object_polygon;
 }
 
@@ -656,9 +652,9 @@ Polygon2d convertCylindricalObjectToGeometryPolygon(
   }
 
   object_polygon.outer().push_back(object_polygon.outer().front());
-  object_polygon = autoware::universe_utils::isClockwise(object_polygon)
+  object_polygon = autoware_utils::is_clockwise(object_polygon)
                      ? object_polygon
-                     : autoware::universe_utils::inverseClockwise(object_polygon);
+                     : autoware_utils::inverse_clockwise(object_polygon);
   return object_polygon;
 }
 
@@ -676,9 +672,9 @@ Polygon2d convertPolygonObjectToGeometryPolygon(
     object_polygon.outer().emplace_back(tf_obj.x(), tf_obj.y());
   }
   object_polygon.outer().push_back(object_polygon.outer().front());
-  object_polygon = autoware::universe_utils::isClockwise(object_polygon)
+  object_polygon = autoware_utils::is_clockwise(object_polygon)
                      ? object_polygon
-                     : autoware::universe_utils::inverseClockwise(object_polygon);
+                     : autoware_utils::inverse_clockwise(object_polygon);
   return object_polygon;
 }
 
@@ -698,7 +694,7 @@ std::optional<PredictedObject> getObstacleFromUuid(
 
 bool isFrontObstacle(const Pose & ego_pose, const geometry_msgs::msg::Point & obstacle_pos)
 {
-  const auto yaw = autoware::universe_utils::getRPY(ego_pose).z;
+  const auto yaw = autoware_utils::get_rpy(ego_pose).z;
   const Eigen::Vector2d base_pose_vec(std::cos(yaw), std::sin(yaw));
   const Eigen::Vector2d obstacle_vec(
     obstacle_pos.x - ego_pose.position.x, obstacle_pos.y - ego_pose.position.y);

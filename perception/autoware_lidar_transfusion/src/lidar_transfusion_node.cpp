@@ -75,7 +75,6 @@ LidarTransfusionNode::LidarTransfusionNode(const rclcpp::NodeOptions & options)
   const float score_threshold =
     static_cast<float>(this->declare_parameter<double>("score_threshold", descriptor));
 
-  NetworkParam network_param(onnx_path, engine_path, trt_precision);
   DensificationParam densification_param(
     densification_world_frame_id, densification_num_past_frames);
   TransfusionConfig config(
@@ -91,7 +90,9 @@ LidarTransfusionNode::LidarTransfusionNode(const rclcpp::NodeOptions & options)
   detection_class_remapper_.setParameters(
     allow_remapping_by_area_matrix, min_area_matrix, max_area_matrix);
 
-  detector_ptr_ = std::make_unique<TransfusionTRT>(network_param, densification_param, config);
+  auto trt_config = tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path);
+
+  detector_ptr_ = std::make_unique<TransfusionTRT>(trt_config, densification_param, config);
 
   cloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "~/input/pointcloud", rclcpp::SensorDataQoS{}.keep_last(1),
@@ -100,12 +101,12 @@ LidarTransfusionNode::LidarTransfusionNode(const rclcpp::NodeOptions & options)
   objects_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
     "~/output/objects", rclcpp::QoS(1));
 
-  published_time_pub_ = std::make_unique<autoware::universe_utils::PublishedTimePublisher>(this);
+  published_time_pub_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 
   // initialize debug tool
   {
-    using autoware::universe_utils::DebugPublisher;
-    using autoware::universe_utils::StopWatch;
+    using autoware_utils::DebugPublisher;
+    using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ptr_ = std::make_unique<DebugPublisher>(this, this->get_name());
     stop_watch_ptr_->tic("cyclic");
@@ -155,7 +156,6 @@ void LidarTransfusionNode::cloudCallback(const sensor_msgs::msg::PointCloud2::Co
     objects_pub_->publish(output_msg);
     published_time_pub_->publish_if_subscribed(objects_pub_, output_msg.header.stamp);
   }
-
   // add processing time for debug
   if (debug_publisher_ptr_ && stop_watch_ptr_) {
     const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic", true);
@@ -165,14 +165,15 @@ void LidarTransfusionNode::cloudCallback(const sensor_msgs::msg::PointCloud2::Co
         std::chrono::nanoseconds(
           (this->get_clock()->now() - output_msg.header.stamp).nanoseconds()))
         .count();
-    debug_publisher_ptr_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
-    debug_publisher_ptr_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/pipeline_latency_ms", pipeline_latency_ms);
-    debug_publisher_ptr_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time/total_ms", processing_time_ms);
     for (const auto & [topic, time_ms] : proc_timing) {
-      debug_publisher_ptr_->publish<tier4_debug_msgs::msg::Float64Stamped>(topic, time_ms);
+      debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+        topic, time_ms);
     }
   }
 }

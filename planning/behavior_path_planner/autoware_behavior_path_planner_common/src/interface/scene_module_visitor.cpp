@@ -24,4 +24,10 @@ std::shared_ptr<AvoidanceDebugMsgArray> SceneModuleVisitor::getAvoidanceModuleDe
 {
   return avoidance_visitor_;
 }
+
+std::shared_ptr<DebugStringMsg> SceneModuleVisitor::getStartPlannerModuleDebugMsg() const
+{
+  return start_planner_visitor_;
+}
+
 }  // namespace autoware::behavior_path_planner

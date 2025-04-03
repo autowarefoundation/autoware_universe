@@ -14,8 +14,8 @@
 
 #include "autoware/collision_detector/node.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/uuid_helper.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/uuid_helper.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <boost/assert.hpp>
@@ -44,8 +44,8 @@ namespace autoware::collision_detector
 namespace bg = boost::geometry;
 using Point2d = bg::model::d2::point_xy<double>;
 using Polygon2d = bg::model::polygon<Point2d>;
-using autoware::universe_utils::createPoint;
-using autoware::universe_utils::pose2transform;
+using autoware_utils::create_point;
+using autoware_utils::pose2transform;
 
 namespace
 {
@@ -318,7 +318,7 @@ bool CollisionDetectorNode::shouldBeExcluded(
 
 void CollisionDetectorNode::checkCollision(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  odometry_ptr_ = sub_odometry_.takeData();
+  odometry_ptr_ = sub_odometry_.take_data();
 
   if (!odometry_ptr_) {
     RCLCPP_INFO_THROTTLE(
@@ -326,9 +326,9 @@ void CollisionDetectorNode::checkCollision(diagnostic_updater::DiagnosticStatusW
     return;
   }
 
-  pointcloud_ptr_ = sub_pointcloud_.takeData();
-  object_ptr_ = sub_dynamic_objects_.takeData();
-  operation_mode_ptr_ = sub_operation_mode_.takeData();
+  pointcloud_ptr_ = sub_pointcloud_.take_data();
+  object_ptr_ = sub_dynamic_objects_.take_data();
+  operation_mode_ptr_ = sub_operation_mode_.take_data();
 
   if (node_param_.use_pointcloud && !pointcloud_ptr_) {
     RCLCPP_WARN_THROTTLE(
@@ -431,7 +431,7 @@ boost::optional<Obstacle> CollisionDetectorNode::getNearestObstacleByPointCloud(
     const auto distance_to_object = bg::distance(ego_polygon, boost_point);
 
     if (distance_to_object < minimum_distance) {
-      nearest_point = createPoint(p.x, p.y, p.z);
+      nearest_point = create_point(p.x, p.y, p.z);
       minimum_distance = distance_to_object;
     }
   }

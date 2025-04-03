@@ -1,4 +1,4 @@
-// Copyright 2023 TIER IV, Inc.
+// Copyright 2024 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,10 @@
 #include "autoware/probabilistic_occupancy_grid_map/updater/log_odds_bayes_filter_updater.hpp"
 
 #include "autoware/probabilistic_occupancy_grid_map/cost_value/cost_value.hpp"
+
+#ifdef USE_CUDA
+#include "autoware/probabilistic_occupancy_grid_map/updater/log_odds_bayes_filter_updater_kernel.hpp"
+#endif
 
 #include <algorithm>
 
@@ -39,7 +43,7 @@ inline unsigned char OccupancyGridMapLOBFUpdater::applyLOBF(
 
   constexpr unsigned char unknown = cost_value::NO_INFORMATION;
   constexpr unsigned char unknown_margin = 1;
-  /* Tau and ST decides how fast the observation decay to the unknown status*/
+  // Tau and ST decides how fast the observation decay to the unknown status
   constexpr double tau = 0.75;
   constexpr double sample_time = 0.1;
 
@@ -58,16 +62,35 @@ inline unsigned char OccupancyGridMapLOBFUpdater::applyLOBF(
   }
 }
 
-bool OccupancyGridMapLOBFUpdater::update(const Costmap2D & single_frame_occupancy_grid_map)
+bool OccupancyGridMapLOBFUpdater::update(
+  const OccupancyGridMapInterface & single_frame_occupancy_grid_map)
 {
   updateOrigin(
     single_frame_occupancy_grid_map.getOriginX(), single_frame_occupancy_grid_map.getOriginY());
-  for (unsigned int x = 0; x < getSizeInCellsX(); x++) {
-    for (unsigned int y = 0; y < getSizeInCellsY(); y++) {
-      unsigned int index = getIndex(x, y);
-      costmap_[index] = applyLOBF(single_frame_occupancy_grid_map.getCost(x, y), costmap_[index]);
+
+  if (use_cuda_ != single_frame_occupancy_grid_map.isCudaEnabled()) {
+    throw std::runtime_error("The CUDA setting of the updater and the map do not match.");
+  }
+
+#ifdef USE_CUDA
+  if (use_cuda_) {
+    applyLOBFLaunch(
+      single_frame_occupancy_grid_map.getDeviceCostmap().get(), cost_value::NO_INFORMATION,
+      getSizeInCellsX() * getSizeInCellsY(), device_costmap_.get(), stream_);
+#else
+  if (use_cuda_) {
+    RCLCPP_ERROR(logger_, "The code was compiled without cuda.");
+    return;
+#endif
+  } else {
+    for (unsigned int x = 0; x < getSizeInCellsX(); x++) {
+      for (unsigned int y = 0; y < getSizeInCellsY(); y++) {
+        unsigned int index = getIndex(x, y);
+        costmap_[index] = applyLOBF(single_frame_occupancy_grid_map.getCost(x, y), costmap_[index]);
+      }
     }
   }
+
   return true;
 }
 

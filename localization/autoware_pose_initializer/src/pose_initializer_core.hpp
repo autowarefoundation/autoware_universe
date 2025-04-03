@@ -15,11 +15,10 @@
 #ifndef POSE_INITIALIZER_CORE_HPP_
 #define POSE_INITIALIZER_CORE_HPP_
 
-#include "autoware/localization_util/diagnostics_module.hpp"
-
-#include <autoware/component_interface_specs/localization.hpp>
+#include <autoware/component_interface_specs_universe/localization.hpp>
 #include <autoware/component_interface_utils/rclcpp.hpp>
-#include <autoware/universe_utils/ros/logger_level_configure.hpp>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
+#include <autoware_utils/ros/logger_level_configure.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
@@ -42,8 +41,8 @@ public:
 
 private:
   using ServiceException = autoware::component_interface_utils::ServiceException;
-  using Initialize = autoware::component_interface_specs::localization::Initialize;
-  using State = autoware::component_interface_specs::localization::InitializationState;
+  using Initialize = autoware::component_interface_specs_universe::localization::Initialize;
+  using State = autoware::component_interface_specs_universe::localization::InitializationState;
   using PoseWithCovarianceStamped = geometry_msgs::msg::PoseWithCovarianceStamped;
 
   rclcpp::CallbackGroup::SharedPtr group_srv_;
@@ -60,8 +59,8 @@ private:
   std::unique_ptr<PoseErrorCheckModule> pose_error_check_;
   std::unique_ptr<EkfLocalizationTriggerModule> ekf_localization_trigger_;
   std::unique_ptr<NdtLocalizationTriggerModule> ndt_localization_trigger_;
-  std::unique_ptr<autoware::universe_utils::LoggerLevelConfigure> logger_configure_;
-  std::unique_ptr<autoware::localization_util::DiagnosticsModule> diagnostics_pose_reliable_;
+  std::unique_ptr<autoware_utils::LoggerLevelConfigure> logger_configure_;
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_pose_reliable_;
   double stop_check_duration_;
 
   void change_node_trigger(bool flag, bool need_spin = false);

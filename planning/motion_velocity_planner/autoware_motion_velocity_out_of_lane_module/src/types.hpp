@@ -15,8 +15,9 @@
 #ifndef TYPES_HPP_
 #define TYPES_HPP_
 
+#include <autoware/motion_velocity_planner_common/planner_data.hpp>
 #include <autoware/route_handler/route_handler.hpp>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
@@ -66,6 +67,7 @@ struct PlannerParam
   double precision;            // [m] precision when inserting a stop pose in the trajectory
   double
     min_decision_duration;  // [s] duration needed before a stop or slowdown point can be removed
+  bool use_map_stop_lines;  // if true, try to stop at stop lines defined in the map
 
   // ego dimensions used to create its polygon footprint
   double front_offset;        // [m]  front offset (from vehicle info)
@@ -81,14 +83,14 @@ struct PlannerParam
 namespace bgi = boost::geometry::index;
 struct StopLine
 {
-  universe_utils::LineString2d stop_line;
+  autoware_utils::LineString2d stop_line;
   lanelet::ConstLanelets lanelets;
 };
-using StopLineNode = std::pair<universe_utils::Box2d, StopLine>;
+using StopLineNode = std::pair<autoware_utils::Box2d, StopLine>;
 using StopLinesRtree = bgi::rtree<StopLineNode, bgi::rstar<16>>;
-using OutAreaNode = std::pair<universe_utils::Box2d, size_t>;
+using OutAreaNode = std::pair<autoware_utils::Box2d, size_t>;
 using OutAreaRtree = bgi::rtree<OutAreaNode, bgi::rstar<16>>;
-using LaneletNode = std::pair<universe_utils::Box2d, size_t>;
+using LaneletNode = std::pair<autoware_utils::Box2d, size_t>;
 using OutLaneletRtree = bgi::rtree<LaneletNode, bgi::rstar<16>>;
 
 /// @brief data related to the ego vehicle
@@ -97,6 +99,7 @@ struct EgoData
   std::vector<autoware_planning_msgs::msg::TrajectoryPoint>
     trajectory_points;  // filtered trajectory starting from the 1st point behind ego
   geometry_msgs::msg::Pose pose;
+  double velocity{};              // [m/s] current longitudinal velocity of the ego vehicle
   size_t first_trajectory_idx{};  // segment index closest to ego on the original trajectory
   double
     longitudinal_offset_to_first_trajectory_index{};  // longitudinal offset of ego along the
@@ -112,14 +115,16 @@ struct EgoData
   std::vector<lanelet::BasicPolygon2d>
     trajectory_footprints;  // ego footprints along the filtered trajectory
 
-  StopLinesRtree stop_lines_rtree;
+  StopLinesRtree stop_lines_rtree;  // rtree with the stop lines for other vehicles
+  std::vector<StopPoint>
+    map_stop_points;  // ego stop points (and their corresponding stop lines) taken from the map
 };
 
 /// @brief data related to an out of lane trajectory point
 struct OutOfLanePoint
 {
   size_t trajectory_index;
-  universe_utils::MultiPolygon2d out_overlaps;
+  autoware_utils::MultiPolygon2d out_overlaps;
   std::set<double> collision_times;
   std::optional<double> min_object_arrival_time;
   std::optional<double> max_object_arrival_time;

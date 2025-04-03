@@ -63,8 +63,8 @@ CropBoxFilterComponent::CropBoxFilterComponent(const rclcpp::NodeOptions & optio
 {
   // initialize debug tool
   {
-    using autoware::universe_utils::DebugPublisher;
-    using autoware::universe_utils::StopWatch;
+    using autoware_utils::DebugPublisher;
+    using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ = std::make_unique<DebugPublisher>(this, this->get_name());
     stop_watch_ptr_->tic("cyclic_time");
@@ -194,9 +194,9 @@ void CropBoxFilterComponent::faster_filter(
   if (debug_publisher_) {
     const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
     const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
-    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
-    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time_ms", processing_time_ms);
 
     auto pipeline_latency_ms =
@@ -204,7 +204,7 @@ void CropBoxFilterComponent::faster_filter(
         std::chrono::nanoseconds((this->get_clock()->now() - input->header.stamp).nanoseconds()))
         .count();
 
-    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/pipeline_latency_ms", pipeline_latency_ms);
   }
 }

@@ -16,7 +16,7 @@
 
 #include "types.hpp"
 
-#include <autoware/universe_utils/ros/marker_helper.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
 
 #include <visualization_msgs/msg/marker.hpp>
 
@@ -59,8 +59,8 @@ std::vector<visualization_msgs::msg::Marker> make_collision_markers(
   marker.ns = ns;
   marker.id = 0;
   marker.action = visualization_msgs::msg::Marker::ADD;
-  marker.scale = autoware::universe_utils::createMarkerScale(0.2, 0.2, 0.5);
-  marker.color = autoware::universe_utils::createMarkerColor(0.6, 0.0, 0.6, 1.0);
+  marker.scale = autoware_utils::create_marker_scale(0.2, 0.2, 0.5);
+  marker.color = autoware_utils::create_marker_color(0.6, 0.0, 0.6, 1.0);
   for (const auto & [object_uuid, decision] : object_map) {
     marker.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
     marker.text = object_uuid.substr(0, 5) + "\n";
@@ -85,8 +85,7 @@ std::vector<visualization_msgs::msg::Marker> make_collision_markers(
 }
 
 std::vector<visualization_msgs::msg::Marker> make_polygon_markers(
-  const autoware::universe_utils::MultiPolygon2d & footprints, const std::string & ns,
-  const double z)
+  const autoware_utils::MultiPolygon2d & footprints, const std::string & ns, const double z)
 {
   std::vector<visualization_msgs::msg::Marker> markers;
   visualization_msgs::msg::Marker marker;
@@ -96,8 +95,8 @@ std::vector<visualization_msgs::msg::Marker> make_polygon_markers(
   marker.id = 0;
   marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
   marker.action = visualization_msgs::msg::Marker::ADD;
-  marker.scale = autoware::universe_utils::createMarkerScale(0.1, 0.1, 0.1);
-  marker.color = autoware::universe_utils::createMarkerColor(0.1, 1.0, 0.1, 0.8);
+  marker.scale = autoware_utils::create_marker_scale(0.1, 0.1, 0.1);
+  marker.color = autoware_utils::create_marker_color(0.1, 1.0, 0.1, 0.8);
   for (const auto & footprint : footprints) {
     marker.points.clear();
     for (const auto & p : footprint.outer()) {

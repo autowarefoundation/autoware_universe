@@ -15,12 +15,13 @@
 #include "autoware/planning_validator/planning_validator.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <autoware_planning_test_manager/autoware_planning_test_manager.hpp>
+#include <autoware/planning_test_manager/autoware_planning_test_manager.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
 
 #include <gtest/gtest.h>
 
 #include <memory>
+#include <string>
 #include <vector>
 
 using autoware::planning_test_manager::PlanningInterfaceTestManager;
@@ -31,12 +32,8 @@ std::shared_ptr<PlanningInterfaceTestManager> generateTestManager()
   auto test_manager = std::make_shared<PlanningInterfaceTestManager>();
 
   // set subscriber with topic name: planning_validator → test_node_
-  test_manager->setTrajectorySubscriber("planning_validator/output/trajectory");
-
-  // set planning_validator's input topic name(this topic is changed to test node)
-  test_manager->setTrajectoryInputTopicName("planning_validator/input/trajectory");
-
-  test_manager->setOdometryTopicName("planning_validator/input/kinematics");
+  test_manager->subscribeOutput<autoware_planning_msgs::msg::Trajectory>(
+    "planning_validator/output/trajectory");
 
   return test_manager;
 }
@@ -60,7 +57,8 @@ void publishMandatoryTopics(
   std::shared_ptr<PlanningValidator> test_target_node)
 {
   // publish necessary topics from test_manager
-  test_manager->publishOdometry(test_target_node, "planning_validator/input/kinematics");
+  test_manager->publishInput(
+    test_target_node, "planning_validator/input/kinematics", autoware::test_utils::makeOdometry());
 }
 
 TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectory)
@@ -70,12 +68,15 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectory)
 
   publishMandatoryTopics(test_manager, test_target_node);
 
+  const std::string input_trajectory_topic = "planning_validator/input/trajectory";
+
   // test for normal trajectory
-  ASSERT_NO_THROW(test_manager->testWithNominalTrajectory(test_target_node));
+  ASSERT_NO_THROW(test_manager->testWithNormalTrajectory(test_target_node, input_trajectory_topic));
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
   // test for trajectory with empty/one point/overlapping point
-  ASSERT_NO_THROW(test_manager->testWithAbnormalTrajectory(test_target_node));
+  ASSERT_NO_THROW(
+    test_manager->testWithAbnormalTrajectory(test_target_node, input_trajectory_topic));
 }
 
 TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
@@ -85,10 +86,13 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
 
   publishMandatoryTopics(test_manager, test_target_node);
 
+  const std::string input_trajectory_topic = "planning_validator/input/trajectory";
+  const std::string input_odometry_topic = "planning_validator/input/kinematics";
+
   // test for normal trajectory
-  ASSERT_NO_THROW(test_manager->testWithNominalTrajectory(test_target_node));
+  ASSERT_NO_THROW(test_manager->testWithNormalTrajectory(test_target_node, input_trajectory_topic));
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
   // test for trajectory with empty/one point/overlapping point
-  ASSERT_NO_THROW(test_manager->testTrajectoryWithInvalidEgoPose(test_target_node));
+  ASSERT_NO_THROW(test_manager->testWithOffTrackOdometry(test_target_node, input_odometry_topic));
 }

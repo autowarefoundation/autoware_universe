@@ -14,27 +14,28 @@
 
 #include "test_planning_validator_helper.hpp"
 
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 #include "test_parameter.hpp"
 
 #include <math.h>
 
-using autoware::universe_utils::createQuaternionFromYaw;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
+using autoware_utils::create_quaternion_from_yaw;
 
 Trajectory generateTrajectoryWithConstantAcceleration(
   const double interval_distance, const double speed, const double yaw, const size_t size,
   const double acceleration)
 {
   Trajectory trajectory;
+  trajectory.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
   double s = 0.0, v = speed, a = acceleration;
   constexpr auto MAX_DT = 10.0;
   for (size_t i = 0; i < size; ++i) {
     TrajectoryPoint p;
     p.pose.position.x = s * std::cos(yaw);
     p.pose.position.y = s * std::sin(yaw);
-    p.pose.orientation = createQuaternionFromYaw(yaw);
+    p.pose.orientation = create_quaternion_from_yaw(yaw);
     p.longitudinal_velocity_mps = v;
     p.acceleration_mps2 = a;
     p.front_wheel_angle_rad = 0.0;
@@ -71,13 +72,14 @@ Trajectory generateTrajectoryWithConstantCurvature(
   const auto radius = 1.0 / curvature;
 
   Trajectory trajectory;
+  trajectory.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
   double x = 0.0, y = 0.0, yaw = 0.0;
 
   for (size_t i = 0; i <= size; ++i) {
     TrajectoryPoint p;
     p.pose.position.x = x;
     p.pose.position.y = y;
-    p.pose.orientation = createQuaternionFromYaw(yaw);
+    p.pose.orientation = create_quaternion_from_yaw(yaw);
     p.longitudinal_velocity_mps = speed;
     p.front_wheel_angle_rad = steering;
     trajectory.points.push_back(p);
@@ -106,6 +108,7 @@ Trajectory generateTrajectoryWithConstantSteeringRate(
   const double wheelbase)
 {
   Trajectory trajectory;
+  trajectory.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
   double x = 0.0, y = 0.0, yaw = 0.0, steering_angle_rad = 0.0;
 
   constexpr double MAX_STEERING_ANGLE_RAD = M_PI / 3.0;
@@ -118,7 +121,7 @@ Trajectory generateTrajectoryWithConstantSteeringRate(
     TrajectoryPoint p;
     p.pose.position.x = x;
     p.pose.position.y = y;
-    p.pose.orientation = createQuaternionFromYaw(yaw);
+    p.pose.orientation = create_quaternion_from_yaw(yaw);
     p.longitudinal_velocity_mps = speed;
     p.front_wheel_angle_rad = steering_angle_rad;
     p.acceleration_mps2 = 0.0;
@@ -158,6 +161,7 @@ Trajectory generateInfTrajectory()
 Trajectory generateBadCurvatureTrajectory()
 {
   Trajectory trajectory;
+  trajectory.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
 
   double y = 1.5;
   for (double s = 0.0; s <= 10.0; s += 1.0) {
@@ -206,6 +210,8 @@ rclcpp::NodeOptions getNodeOptionsWithDefaultParams()
     "thresholds.distance_deviation", THRESHOLD_DISTANCE_DEVIATION);
   node_options.append_parameter_override(
     "thresholds.longitudinal_distance_deviation", THRESHOLD_LONGITUDINAL_DISTANCE_DEVIATION);
+  node_options.append_parameter_override("thresholds.nominal_latency", THRESHOLD_NOMINAL_LATENCY);
+  node_options.append_parameter_override("thresholds.yaw_deviation", THRESHOLD_YAW_DEVIATION);
   node_options.append_parameter_override(
     "parameters.forward_trajectory_length_acceleration",
     PARAMETER_FORWARD_TRAJECTORY_LENGTH_ACCELERATION);

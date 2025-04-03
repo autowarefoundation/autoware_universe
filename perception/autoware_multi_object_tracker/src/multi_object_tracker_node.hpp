@@ -19,7 +19,8 @@
 #ifndef MULTI_OBJECT_TRACKER_NODE_HPP_
 #define MULTI_OBJECT_TRACKER_NODE_HPP_
 
-#include "autoware/multi_object_tracker/association/association.hpp"
+#include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/odometry.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "debugger/debugger.hpp"
 #include "processor/input_manager.hpp"
@@ -55,10 +56,6 @@
 namespace autoware::multi_object_tracker
 {
 
-using DetectedObject = autoware_perception_msgs::msg::DetectedObject;
-using DetectedObjects = autoware_perception_msgs::msg::DetectedObjects;
-using TrackedObjects = autoware_perception_msgs::msg::TrackedObjects;
-
 class MultiObjectTracker : public rclcpp::Node
 {
 public:
@@ -66,14 +63,11 @@ public:
 
 private:
   // ROS interface
-  rclcpp::Publisher<TrackedObjects>::SharedPtr tracked_objects_pub_;
-  rclcpp::Subscription<DetectedObjects>::SharedPtr detected_object_sub_;
-  tf2_ros::Buffer tf_buffer_;
-  tf2_ros::TransformListener tf_listener_;
+  rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr tracked_objects_pub_;
 
   // debugger
   std::unique_ptr<TrackerDebugger> debugger_;
-  std::unique_ptr<autoware::universe_utils::PublishedTimePublisher> published_time_publisher_;
+  std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
 
   // publish timer
   rclcpp::TimerBase::SharedPtr publish_timer_;
@@ -85,22 +79,21 @@ private:
 
   // internal states
   std::string world_frame_id_;  // tracking frame
-  std::unique_ptr<DataAssociation> association_;
   std::unique_ptr<TrackerProcessor> processor_;
-  bool enable_odometry_uncertainty_;
 
   // input manager
   std::unique_ptr<InputManager> input_manager_;
+  std::shared_ptr<Odometry> odometry_;
 
-  std::vector<InputChannel> input_channels_{};
   size_t input_channel_size_{};
+  std::vector<types::InputChannel> input_channels_config_;
 
   // callback functions
   void onTimer();
   void onTrigger();
 
   // publish processes
-  void runProcess(const DetectedObjects & input_objects, const uint & channel_index);
+  void runProcess(const types::DynamicObjectList & detected_objects);
   void checkAndPublish(const rclcpp::Time & time);
   void publish(const rclcpp::Time & time) const;
   inline bool shouldTrackerPublish(const std::shared_ptr<const Tracker> tracker) const;

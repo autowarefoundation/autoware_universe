@@ -24,8 +24,6 @@
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <geometry_msgs/msg/pose.hpp>
-#include <tier4_planning_msgs/msg/path_point_with_lane_id.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 
@@ -40,9 +38,11 @@ class OutOfLaneModule : public PluginModuleInterface
 {
 public:
   void init(rclcpp::Node & node, const std::string & module_name) override;
+  void publish_planning_factor() override { planning_factor_interface_->publish(); };
   void update_parameters(const std::vector<rclcpp::Parameter> & parameters) override;
   VelocityPlanningResult plan(
-    const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & ego_trajectory_points,
+    const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & raw_trajectory_points,
+    const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> planner_data) override;
   std::string get_module_name() const override { return module_name_; }
 
@@ -52,8 +52,15 @@ private:
   /// given length
   static void limit_trajectory_size(
     out_of_lane::EgoData & ego_data,
-    const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & ego_trajectory_points,
+    const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
     const double max_arc_length);
+  /// @brief calculate the first slowdown pose (if any)
+  std::optional<geometry_msgs::msg::Pose> calculate_slowdown_pose(
+    const out_of_lane::EgoData & ego_data, const out_of_lane::OutOfLaneData & out_of_lane_data);
+  /// @brief update the given planning result and some internal states of the module
+  void update_result(
+    VelocityPlanningResult & result, const std::optional<geometry_msgs::msg::Pose> & slowdown_pose,
+    const out_of_lane::EgoData & ego_data, const out_of_lane::OutOfLaneData & out_of_lane_data);
 
   out_of_lane::PlannerParam params_{};
 

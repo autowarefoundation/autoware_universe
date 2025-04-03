@@ -15,7 +15,7 @@
 #include "autoware/lane_departure_checker/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <boost/geometry.hpp>
 
@@ -66,7 +66,7 @@ TrajectoryPoints cutTrajectory(const TrajectoryPoints & trajectory, const double
   TrajectoryPoints cut;
 
   double total_length = 0.0;
-  auto last_point = autoware::universe_utils::fromMsg(trajectory.front().pose.position);
+  auto last_point = autoware_utils::from_msg(trajectory.front().pose.position);
   auto end_it = std::next(trajectory.cbegin());
   for (; end_it != trajectory.cend(); ++end_it) {
     const auto remain_distance = length - total_length;
@@ -77,7 +77,7 @@ TrajectoryPoints cutTrajectory(const TrajectoryPoints & trajectory, const double
     }
 
     const auto & new_pose = end_it->pose;
-    const auto new_point = autoware::universe_utils::fromMsg(new_pose.position);
+    const auto new_point = autoware_utils::from_msg(new_pose.position);
     const auto points_distance = boost::geometry::distance(last_point.to_2d(), new_point.to_2d());
 
     // Require interpolation
@@ -112,17 +112,16 @@ TrajectoryPoints resampleTrajectory(const Trajectory & trajectory, const double 
   TrajectoryPoints resampled;
 
   resampled.push_back(trajectory.points.front());
-  auto prev_point = autoware::universe_utils::fromMsg(trajectory.points.front().pose.position);
+  auto prev_point = autoware_utils::from_msg(trajectory.points.front().pose.position);
   for (size_t i = 1; i < trajectory.points.size() - 1; ++i) {
     const auto & traj_point = trajectory.points.at(i);
 
-    const auto next_point = autoware::universe_utils::fromMsg(traj_point.pose.position);
+    const auto next_point = autoware_utils::from_msg(traj_point.pose.position);
 
     if (boost::geometry::distance(prev_point.to_2d(), next_point.to_2d()) >= interval) {
       resampled.push_back(traj_point);
+      prev_point = next_point;
     }
-
-    prev_point = next_point;
   }
   resampled.push_back(trajectory.points.back());
 
@@ -143,8 +142,8 @@ std::vector<LinearRing2d> createVehicleFootprints(
   // Create vehicle footprint on each TrajectoryPoint
   std::vector<LinearRing2d> vehicle_footprints;
   for (const auto & p : trajectory) {
-    vehicle_footprints.push_back(
-      transformVector(local_vehicle_footprint, autoware::universe_utils::pose2transform(p.pose)));
+    vehicle_footprints.push_back(autoware_utils::transform_vector(
+      local_vehicle_footprint, autoware_utils::pose2transform(p.pose)));
   }
 
   return vehicle_footprints;
@@ -160,8 +159,8 @@ std::vector<LinearRing2d> createVehicleFootprints(
   // Create vehicle footprint on each Path point
   std::vector<LinearRing2d> vehicle_footprints;
   for (const auto & p : path.points) {
-    vehicle_footprints.push_back(transformVector(
-      local_vehicle_footprint, autoware::universe_utils::pose2transform(p.point.pose)));
+    vehicle_footprints.push_back(autoware_utils::transform_vector(
+      local_vehicle_footprint, autoware_utils::pose2transform(p.point.pose)));
   }
 
   return vehicle_footprints;
@@ -230,7 +229,7 @@ PoseDeviation calcTrajectoryDeviation(
 {
   const auto nearest_idx = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
     trajectory.points, pose, dist_threshold, yaw_threshold);
-  return autoware::universe_utils::calcPoseDeviation(trajectory.points.at(nearest_idx).pose, pose);
+  return autoware_utils::calc_pose_deviation(trajectory.points.at(nearest_idx).pose, pose);
 }
 
 double calcMaxSearchLengthForBoundaries(

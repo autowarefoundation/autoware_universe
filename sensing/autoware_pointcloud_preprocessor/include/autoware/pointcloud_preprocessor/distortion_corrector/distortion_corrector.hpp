@@ -16,7 +16,7 @@
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__DISTORTION_CORRECTOR__DISTORTION_CORRECTOR_HPP_
 
 #include <Eigen/Core>
-#include <autoware/universe_utils/ros/managed_transform_buffer.hpp>
+#include <autoware_utils/ros/managed_transform_buffer.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sophus/se3.hpp>
 
@@ -66,7 +66,7 @@ protected:
   bool pointcloud_transform_needed_{false};
   bool pointcloud_transform_exists_{false};
   bool imu_transform_exists_{false};
-  std::unique_ptr<autoware::universe_utils::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
+  std::unique_ptr<autoware_utils::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
 
   std::deque<geometry_msgs::msg::TwistStamped> twist_queue_;
   std::deque<geometry_msgs::msg::Vector3Stamped> angular_velocity_queue_;
@@ -88,7 +88,7 @@ public:
   : node_(node)
   {
     managed_tf_buffer_ =
-      std::make_unique<autoware::universe_utils::ManagedTransformBuffer>(&node, has_static_tf_only);
+      std::make_unique<autoware_utils::ManagedTransformBuffer>(&node, has_static_tf_only);
   }
 
   virtual ~DistortionCorrectorBase() = default;

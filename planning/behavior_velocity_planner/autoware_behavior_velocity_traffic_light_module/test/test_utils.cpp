@@ -13,18 +13,18 @@
 // limitations under the License.
 
 #include "../src/utils.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 
 #include <gtest/gtest.h>
 
 namespace autoware::behavior_velocity_planner
 {
 
-using tier4_planning_msgs::msg::PathPointWithLaneId;
-using tier4_planning_msgs::msg::PathWithLaneId;
+using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 
-using autoware::universe_utils::createPoint;
-using autoware::universe_utils::createQuaternion;
+using autoware_utils::create_point;
+using autoware_utils::create_quaternion;
 
 PathWithLaneId generatePath(const geometry_msgs::msg::Pose & pose)
 {
@@ -81,8 +81,8 @@ TEST(BehaviorTrafficLightModuleUtilsTest, findNearestCollisionPoint)
 TEST(BehaviorTrafficLightModuleUtilsTest, createTargetPoint)
 {
   const auto pose = geometry_msgs::build<geometry_msgs::msg::Pose>()
-                      .position(createPoint(0.0, 0.0, 0.0))
-                      .orientation(createQuaternion(0.0, 0.0, 0.0, 1.0));
+                      .position(create_point(0.0, 0.0, 0.0))
+                      .orientation(create_quaternion(0.0, 0.0, 0.0, 1.0));
   const auto path = generatePath(pose);
 
   {
@@ -127,8 +127,8 @@ TEST(BehaviorTrafficLightModuleUtilsTest, createTargetPoint)
 TEST(BehaviorTrafficLightModuleUtilsTest, calcStopPointAndInsertIndex)
 {
   const auto pose = geometry_msgs::build<geometry_msgs::msg::Pose>()
-                      .position(createPoint(0.0, 0.0, 0.0))
-                      .orientation(createQuaternion(0.0, 0.0, 0.0, 1.0));
+                      .position(create_point(0.0, 0.0, 0.0))
+                      .orientation(create_quaternion(0.0, 0.0, 0.0, 1.0));
   const auto path = generatePath(pose);
   constexpr double offset = 1.75;
 

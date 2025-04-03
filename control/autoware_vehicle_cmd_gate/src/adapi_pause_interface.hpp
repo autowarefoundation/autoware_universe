@@ -15,7 +15,7 @@
 #ifndef ADAPI_PAUSE_INTERFACE_HPP_
 #define ADAPI_PAUSE_INTERFACE_HPP_
 
-#include <autoware/component_interface_specs/control.hpp>
+#include <autoware/component_interface_specs_universe/control.hpp>
 #include <autoware/component_interface_utils/rclcpp.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -29,9 +29,9 @@ class AdapiPauseInterface
 private:
   static constexpr double eps = 1e-3;
   using Control = autoware_control_msgs::msg::Control;
-  using SetPause = autoware::component_interface_specs::control::SetPause;
-  using IsPaused = autoware::component_interface_specs::control::IsPaused;
-  using IsStartRequested = autoware::component_interface_specs::control::IsStartRequested;
+  using SetPause = autoware::component_interface_specs_universe::control::SetPause;
+  using IsPaused = autoware::component_interface_specs_universe::control::IsPaused;
+  using IsStartRequested = autoware::component_interface_specs_universe::control::IsStartRequested;
 
 public:
   explicit AdapiPauseInterface(rclcpp::Node * node);

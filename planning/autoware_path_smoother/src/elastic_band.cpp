@@ -126,38 +126,38 @@ EBPathSmoother::EBParam::EBParam(rclcpp::Node * node)
 
 void EBPathSmoother::EBParam::onParam(const std::vector<rclcpp::Parameter> & parameters)
 {
-  using autoware::universe_utils::updateParam;
+  using autoware_utils::update_param;
 
   {  // option
-    updateParam<bool>(parameters, "elastic_band.option.enable_warm_start", enable_warm_start);
-    updateParam<bool>(
+    update_param<bool>(parameters, "elastic_band.option.enable_warm_start", enable_warm_start);
+    update_param<bool>(
       parameters, "elastic_band.option.enable_optimization_validation",
       enable_optimization_validation);
   }
 
   {  // common
-    updateParam<double>(parameters, "elastic_band.common.delta_arc_length", delta_arc_length);
-    updateParam<int>(parameters, "elastic_band.common.num_points", num_points);
+    update_param<double>(parameters, "elastic_band.common.delta_arc_length", delta_arc_length);
+    update_param<int>(parameters, "elastic_band.common.num_points", num_points);
   }
 
   {  // clearance
-    updateParam<int>(parameters, "elastic_band.clearance.num_joint_points", num_joint_points);
-    updateParam<double>(parameters, "elastic_band.clearance.clearance_for_fix", clearance_for_fix);
-    updateParam<double>(
+    update_param<int>(parameters, "elastic_band.clearance.num_joint_points", num_joint_points);
+    update_param<double>(parameters, "elastic_band.clearance.clearance_for_fix", clearance_for_fix);
+    update_param<double>(
       parameters, "elastic_band.clearance.clearance_for_joint", clearance_for_joint);
-    updateParam<double>(
+    update_param<double>(
       parameters, "elastic_band.clearance.clearance_for_smooth", clearance_for_smooth);
   }
 
   {  // weight
-    updateParam<double>(parameters, "elastic_band.weight.smooth_weight", smooth_weight);
-    updateParam<double>(parameters, "elastic_band.weight.lat_error_weight", lat_error_weight);
+    update_param<double>(parameters, "elastic_band.weight.smooth_weight", smooth_weight);
+    update_param<double>(parameters, "elastic_band.weight.lat_error_weight", lat_error_weight);
   }
 
   {  // qp
-    updateParam<int>(parameters, "elastic_band.qp.max_iteration", qp_param.max_iteration);
-    updateParam<double>(parameters, "elastic_band.qp.eps_abs", qp_param.eps_abs);
-    updateParam<double>(parameters, "elastic_band.qp.eps_rel", qp_param.eps_rel);
+    update_param<int>(parameters, "elastic_band.qp.max_iteration", qp_param.max_iteration);
+    update_param<double>(parameters, "elastic_band.qp.eps_abs", qp_param.eps_abs);
+    update_param<double>(parameters, "elastic_band.qp.eps_rel", qp_param.eps_rel);
   }
 }
 
@@ -403,9 +403,9 @@ std::optional<std::vector<double>> EBPathSmoother::calcSmoothedTrajectory()
 
   // solve QP
   const auto result = osqp_solver_ptr_->optimize();
-  const auto optimized_points = std::get<0>(result);
+  const auto optimized_points = result.primal_solution;
 
-  const auto status = std::get<3>(result);
+  const auto status = result.solution_status;
 
   // check status
   if (status != 1) {
@@ -443,8 +443,7 @@ std::optional<std::vector<TrajectoryPoint>> EBPathSmoother::convertOptimizedPoin
     }
 
     auto eb_traj_point = traj_points.at(i);
-    eb_traj_point.pose =
-      autoware::universe_utils::calcOffsetPose(eb_traj_point.pose, 0.0, lat_offset, 0.0);
+    eb_traj_point.pose = autoware_utils::calc_offset_pose(eb_traj_point.pose, 0.0, lat_offset, 0.0);
     eb_traj_points.push_back(eb_traj_point);
   }
 

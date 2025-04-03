@@ -98,7 +98,7 @@ SimpleObjectMergerNode::SimpleObjectMergerNode(const rclcpp::NodeOptions & node_
   }
 
   // Subscriber
-  transform_listener_ = std::make_shared<autoware::universe_utils::TransformListener>(this);
+  transform_listener_ = std::make_shared<autoware_utils::TransformListener>(this);
   sub_objects_array.resize(input_topic_size);
   objects_data_.resize(input_topic_size);
 
@@ -173,7 +173,7 @@ void SimpleObjectMergerNode::onTimer()
     double time_diff = rclcpp::Time(objects_data_.at(i)->header.stamp).seconds() -
                        rclcpp::Time(objects_data_.at(0)->header.stamp).seconds();
     if (std::abs(time_diff) < node_param_.timeout_threshold) {
-      transform_ = transform_listener_->getTransform(
+      transform_ = transform_listener_->get_transform(
         node_param_.new_frame_id, objects_data_.at(i)->header.frame_id,
         objects_data_.at(i)->header.stamp, rclcpp::Duration::from_seconds(0.01));
 

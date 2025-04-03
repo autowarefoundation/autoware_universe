@@ -39,6 +39,7 @@ public:
   {
     bool publish_amplitude_pointcloud{};
     bool publish_doppler_pointcloud{};
+    size_t max_queue_size{};
   };
 
 private:

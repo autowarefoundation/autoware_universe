@@ -15,7 +15,7 @@
 #include "autoware/planning_validator/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <algorithm>
 #include <memory>
@@ -25,9 +25,9 @@
 
 namespace autoware::planning_validator
 {
-using autoware::universe_utils::calcCurvature;
-using autoware::universe_utils::calcDistance2d;
-using autoware::universe_utils::getPoint;
+using autoware_utils::calc_curvature;
+using autoware_utils::calc_distance2d;
+using autoware_utils::get_point;
 
 namespace
 {
@@ -69,7 +69,7 @@ Trajectory resampleTrajectory(const Trajectory & trajectory, const double min_in
   for (size_t i = 1; i < trajectory.points.size(); ++i) {
     const auto prev = resampled.points.back();
     const auto curr = trajectory.points.at(i);
-    if (calcDistance2d(prev, curr) > min_interval) {
+    if (calc_distance2d(prev, curr) > min_interval) {
       resampled.points.push_back(curr);
     }
   }
@@ -90,7 +90,7 @@ void calcCurvature(
   std::vector<double> arc_length(trajectory.points.size(), 0.0);
   for (size_t i = 1; i < trajectory.points.size(); ++i) {
     arc_length.at(i) =
-      arc_length.at(i - 1) + calcDistance2d(trajectory.points.at(i - 1), trajectory.points.at(i));
+      arc_length.at(i - 1) + calc_distance2d(trajectory.points.at(i - 1), trajectory.points.at(i));
   }
 
   // initialize with 0 curvature
@@ -121,11 +121,11 @@ void calcCurvature(
       }
     }
 
-    const auto p1 = getPoint(trajectory.points.at(prev_idx));
-    const auto p2 = getPoint(trajectory.points.at(i));
-    const auto p3 = getPoint(trajectory.points.at(next_idx));
+    const auto p1 = get_point(trajectory.points.at(prev_idx));
+    const auto p2 = get_point(trajectory.points.at(i));
+    const auto p3 = get_point(trajectory.points.at(next_idx));
     try {
-      curvature_arr.at(i) = autoware::universe_utils::calcCurvature(p1, p2, p3);
+      curvature_arr.at(i) = autoware_utils::calc_curvature(p1, p2, p3);
     } catch (...) {
       curvature_arr.at(i) = 0.0;  // maybe distance is too close
     }
@@ -164,7 +164,7 @@ std::pair<double, size_t> calcMaxIntervalDistance(const Trajectory & trajectory)
   double max_interval_distances = 0.0;
   size_t max_index = 0;
   for (size_t i = 1; i < trajectory.points.size(); ++i) {
-    const auto d = calcDistance2d(trajectory.points.at(i), trajectory.points.at(i - 1));
+    const auto d = calc_distance2d(trajectory.points.at(i), trajectory.points.at(i - 1));
     if (max_interval_distances < std::abs(d)) {
       takeBigger(max_interval_distances, max_index, std::abs(d), i);
     }
@@ -223,12 +223,11 @@ std::pair<double, size_t> calcMaxRelativeAngles(const Trajectory & trajectory)
     const auto & p2 = trajectory.points.at(i + 1).pose.position;
     const auto & p3 = trajectory.points.at(i + 2).pose.position;
 
-    const auto angle_a = autoware::universe_utils::calcAzimuthAngle(p1, p2);
-    const auto angle_b = autoware::universe_utils::calcAzimuthAngle(p2, p3);
+    const auto angle_a = autoware_utils::calc_azimuth_angle(p1, p2);
+    const auto angle_b = autoware_utils::calc_azimuth_angle(p2, p3);
 
     // convert relative angle to [-pi ~ pi]
-    const auto relative_angle =
-      std::abs(autoware::universe_utils::normalizeRadian(angle_b - angle_a));
+    const auto relative_angle = std::abs(autoware_utils::normalize_radian(angle_b - angle_a));
 
     takeBigger(max_relative_angles, max_index, std::abs(relative_angle), i);
   }
@@ -276,7 +275,7 @@ std::pair<double, size_t> calcMaxSteeringRates(
   for (size_t i = 0; i < trajectory.points.size() - 1; ++i) {
     const auto & p_prev = trajectory.points.at(i);
     const auto & p_next = trajectory.points.at(i + 1);
-    const auto delta_s = calcDistance2d(p_prev, p_next);
+    const auto delta_s = calc_distance2d(p_prev, p_next);
     const auto v = 0.5 * (p_next.longitudinal_velocity_mps + p_prev.longitudinal_velocity_mps);
     const auto dt = delta_s / std::max(v, 1.0e-5);
 

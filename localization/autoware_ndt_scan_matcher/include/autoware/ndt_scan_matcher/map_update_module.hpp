@@ -15,14 +15,14 @@
 #ifndef AUTOWARE__NDT_SCAN_MATCHER__MAP_UPDATE_MODULE_HPP_
 #define AUTOWARE__NDT_SCAN_MATCHER__MAP_UPDATE_MODULE_HPP_
 
-#include "autoware/localization_util/diagnostics_module.hpp"
 #include "autoware/localization_util/util_func.hpp"
+#include "autoware_utils/ros/diagnostics_interface.hpp"
 #include "hyper_parameters.hpp"
 #include "ndt_omp/multigrid_ndt_omp.h"
 #include "particle.hpp"
 
-#include <autoware/universe_utils/ros/marker_helper.hpp>
-#include <autoware/universe_utils/transform/transforms.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
+#include <autoware_utils/transform/transforms.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_map_msgs/srv/get_differential_point_cloud_map.hpp>
@@ -42,7 +42,7 @@
 
 namespace autoware::ndt_scan_matcher
 {
-using DiagnosticsModule = autoware::localization_util::DiagnosticsModule;
+using DiagnosticsInterface = autoware_utils::DiagnosticsInterface;
 
 class MapUpdateModule
 {
@@ -63,19 +63,19 @@ private:
 
   void callback_timer(
     const bool is_activated, const std::optional<geometry_msgs::msg::Point> & position,
-    std::unique_ptr<DiagnosticsModule> & diagnostics_ptr);
+    std::unique_ptr<DiagnosticsInterface> & diagnostics_ptr);
 
   [[nodiscard]] bool should_update_map(
     const geometry_msgs::msg::Point & position,
-    std::unique_ptr<DiagnosticsModule> & diagnostics_ptr);
+    std::unique_ptr<DiagnosticsInterface> & diagnostics_ptr);
 
   void update_map(
     const geometry_msgs::msg::Point & position,
-    std::unique_ptr<DiagnosticsModule> & diagnostics_ptr);
+    std::unique_ptr<DiagnosticsInterface> & diagnostics_ptr);
   // Update the specified NDT
   bool update_ndt(
     const geometry_msgs::msg::Point & position, NdtType & ndt,
-    std::unique_ptr<DiagnosticsModule> & diagnostics_ptr);
+    std::unique_ptr<DiagnosticsInterface> & diagnostics_ptr);
   void publish_partial_pcd_map();
 
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr loaded_pcd_pub_;

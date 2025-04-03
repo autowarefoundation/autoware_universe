@@ -20,8 +20,9 @@
 #include "autoware/obstacle_cruise_planner/stop_planning_debug_info.hpp"
 #include "autoware/obstacle_cruise_planner/type_alias.hpp"
 #include "autoware/obstacle_cruise_planner/utils.hpp"
-#include "autoware/universe_utils/ros/update_param.hpp"
-#include "autoware/universe_utils/system/stop_watch.hpp"
+#include "autoware/planning_factor_interface/planning_factor_interface.hpp"
+#include "autoware_utils/ros/update_param.hpp"
+#include "autoware_utils/system/stop_watch.hpp"
 
 #include <tier4_metric_msgs/msg/metric.hpp>
 #include <tier4_metric_msgs/msg/metric_array.hpp>
@@ -47,15 +48,16 @@ public:
     rclcpp::Node & node, const LongitudinalInfo & longitudinal_info,
     const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
     const EgoNearestParam & ego_nearest_param, const std::shared_ptr<DebugData> debug_data_ptr)
-  : longitudinal_info_(longitudinal_info),
+  : planning_factor_interface_{std::make_unique<
+      autoware::planning_factor_interface::PlanningFactorInterface>(
+      &node, "obstacle_cruise_planner")},
+    longitudinal_info_(longitudinal_info),
     vehicle_info_(vehicle_info),
     ego_nearest_param_(ego_nearest_param),
     debug_data_ptr_(debug_data_ptr),
     slow_down_param_(SlowDownParam(node)),
     stop_param_(StopParam(node, longitudinal_info))
   {
-    velocity_factors_pub_ =
-      node.create_publisher<VelocityFactorArray>("/planning/velocity_factors/obstacle_cruise", 1);
     stop_speed_exceeded_pub_ =
       node.create_publisher<StopSpeedExceeded>("~/output/stop_speed_exceeded", 1);
     metrics_pub_ = node.create_publisher<MetricArray>("~/metrics", 10);
@@ -101,6 +103,7 @@ public:
     const std::optional<geometry_msgs::msg::Pose> & stop_pose = std::nullopt,
     const std::optional<StopObstacle> & stop_obstacle = std::nullopt);
   void publishMetrics(const rclcpp::Time & current_time);
+  void publishPlanningFactors() { planning_factor_interface_->publish(); }
   void clearMetrics();
 
   void onParam(const std::vector<rclcpp::Parameter> & parameters)
@@ -128,6 +131,9 @@ public:
   double getSafeDistanceMargin() const { return longitudinal_info_.safe_distance_margin; }
 
 protected:
+  std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
+    planning_factor_interface_;
+
   // Parameters
   bool enable_debug_info_{false};
   bool enable_calculation_time_info_{false};
@@ -140,12 +146,11 @@ protected:
   bool suppress_sudden_obstacle_stop_;
 
   // stop watch
-  autoware::universe_utils::StopWatch<
+  autoware_utils::StopWatch<
     std::chrono::milliseconds, std::chrono::microseconds, std::chrono::steady_clock>
     stop_watch_;
 
   // Publishers
-  rclcpp::Publisher<VelocityFactorArray>::SharedPtr velocity_factors_pub_;
   rclcpp::Publisher<StopSpeedExceeded>::SharedPtr stop_speed_exceeded_pub_;
   rclcpp::Publisher<MetricArray>::SharedPtr metrics_pub_;
 
@@ -318,29 +323,29 @@ private:
           if (obstacle_to_param_struct_map.count(label + "." + movement_postfix) < 1) continue;
           auto & param_by_obstacle_label =
             obstacle_to_param_struct_map.at(label + "." + movement_postfix);
-          autoware::universe_utils::updateParam<double>(
+          autoware_utils::update_param<double>(
             parameters, "slow_down." + label + "." + movement_postfix + ".max_lat_margin",
             param_by_obstacle_label.max_lat_margin);
-          autoware::universe_utils::updateParam<double>(
+          autoware_utils::update_param<double>(
             parameters, "slow_down." + label + "." + movement_postfix + ".min_lat_margin",
             param_by_obstacle_label.min_lat_margin);
-          autoware::universe_utils::updateParam<double>(
+          autoware_utils::update_param<double>(
             parameters, "slow_down." + label + "." + movement_postfix + ".max_ego_velocity",
             param_by_obstacle_label.max_ego_velocity);
-          autoware::universe_utils::updateParam<double>(
+          autoware_utils::update_param<double>(
             parameters, "slow_down." + label + "." + movement_postfix + ".min_ego_velocity",
             param_by_obstacle_label.min_ego_velocity);
         }
       }
 
       // common parameters
-      autoware::universe_utils::updateParam<double>(
+      autoware_utils::update_param<double>(
         parameters, "slow_down.time_margin_on_target_velocity", time_margin_on_target_velocity);
-      autoware::universe_utils::updateParam<double>(
+      autoware_utils::update_param<double>(
         parameters, "slow_down.lpf_gain_slow_down_vel", lpf_gain_slow_down_vel);
-      autoware::universe_utils::updateParam<double>(
+      autoware_utils::update_param<double>(
         parameters, "slow_down.lpf_gain_lat_dist", lpf_gain_lat_dist);
-      autoware::universe_utils::updateParam<double>(
+      autoware_utils::update_param<double>(
         parameters, "slow_down.lpf_gain_dist_to_slow_down", lpf_gain_dist_to_slow_down);
     }
 
@@ -400,15 +405,15 @@ private:
         if (type_str == "default") {
           continue;
         }
-        autoware::universe_utils::updateParam<double>(
+        autoware_utils::update_param<double>(
           parameters, param_prefix + type_str + ".limit_min_acc", param.limit_min_acc);
-        autoware::universe_utils::updateParam<double>(
+        autoware_utils::update_param<double>(
           parameters, param_prefix + type_str + ".sudden_object_acc_threshold",
           param.sudden_object_acc_threshold);
-        autoware::universe_utils::updateParam<double>(
+        autoware_utils::update_param<double>(
           parameters, param_prefix + type_str + ".sudden_object_dist_threshold",
           param.sudden_object_dist_threshold);
-        autoware::universe_utils::updateParam<bool>(
+        autoware_utils::update_param<bool>(
           parameters, param_prefix + type_str + ".abandon_to_stop", param.abandon_to_stop);
 
         param.sudden_object_acc_threshold =

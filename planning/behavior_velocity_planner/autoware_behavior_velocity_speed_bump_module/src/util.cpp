@@ -18,7 +18,7 @@
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/linestring.hpp>
@@ -44,7 +44,7 @@ using autoware::motion_utils::calcLongitudinalOffsetPoint;
 using autoware::motion_utils::calcSignedArcLength;
 using autoware::motion_utils::findNearestSegmentIndex;
 using autoware::motion_utils::insertTargetPoint;
-using autoware::universe_utils::createPoint;
+using autoware_utils::create_point;
 
 PathPolygonIntersectionStatus getPathPolygonIntersectionStatus(
   const PathWithLaneId & ego_path, const lanelet::BasicPolygon2d & polygon,
@@ -77,10 +77,10 @@ PathPolygonIntersectionStatus getPathPolygonIntersectionStatus(
 
   const auto compare = [&](const Point & p1, const Point & p2) {
     const auto dist_l1 =
-      calcSignedArcLength(ego_path.points, size_t(0), createPoint(p1.x(), p1.y(), ego_pos.z));
+      calcSignedArcLength(ego_path.points, size_t(0), create_point(p1.x(), p1.y(), ego_pos.z));
 
     const auto dist_l2 =
-      calcSignedArcLength(ego_path.points, size_t(0), createPoint(p2.x(), p2.y(), ego_pos.z));
+      calcSignedArcLength(ego_path.points, size_t(0), create_point(p2.x(), p2.y(), ego_pos.z));
 
     return dist_l1 < dist_l2;
   };
@@ -105,17 +105,17 @@ PathPolygonIntersectionStatus getPathPolygonIntersectionStatus(
   } else if (intersects.size() == 1) {
     const auto & p = intersects.at(0);
     if (is_last_path_point_inside_polygon) {
-      polygon_intersection_status.first_intersection_point = createPoint(p.x(), p.y(), ego_pos.z);
+      polygon_intersection_status.first_intersection_point = create_point(p.x(), p.y(), ego_pos.z);
     } else if (is_first_path_point_inside_polygon) {
-      polygon_intersection_status.second_intersection_point = createPoint(p.x(), p.y(), ego_pos.z);
+      polygon_intersection_status.second_intersection_point = create_point(p.x(), p.y(), ego_pos.z);
     } else {
       // do nothing
     }
   } else if (intersects.size() == 2) {
     const auto & p0 = intersects.at(0);
     const auto & p1 = intersects.at(1);
-    polygon_intersection_status.first_intersection_point = createPoint(p0.x(), p0.y(), ego_pos.z);
-    polygon_intersection_status.second_intersection_point = createPoint(p1.x(), p1.y(), ego_pos.z);
+    polygon_intersection_status.first_intersection_point = create_point(p0.x(), p0.y(), ego_pos.z);
+    polygon_intersection_status.second_intersection_point = create_point(p1.x(), p1.y(), ego_pos.z);
   } else {
     // do nothing
   }

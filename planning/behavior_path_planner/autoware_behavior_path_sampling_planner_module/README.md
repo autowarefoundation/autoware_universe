@@ -4,7 +4,7 @@ WARNING: This module is experimental and has not been properly tested on a real 
 
 ## Purpose
 
-This package implements a node that uses sampling based planning to generate a drivable trajectory for the behavior path planner. It is heavily based off the [sampling_based_planner module](https://github.com/autowarefoundation/autoware.universe/tree/main/planning/sampling_based_planner).
+This package implements a node that uses sampling based planning to generate a drivable trajectory for the behavior path planner. It is heavily based off the [sampling_based_planner module](https://github.com/autowarefoundation/autoware_universe/tree/main/planning/sampling_based_planner).
 
 ## Features
 
@@ -67,7 +67,7 @@ Some possible improvements for this module include:
 
 -Implementing multi-objective optimization to improve computing time and possibly make a more dynamic soft constraints weight tuning. [Related publication](https://ieeexplore.ieee.org/abstract/document/10180226).
 
--Implement bezier curves as another method to obtain samples, see the [sampling_based_planner module](https://github.com/autowarefoundation/autoware.universe/tree/main/planning/sampling_based_planner).
+-Implement bezier curves as another method to obtain samples, see the [sampling_based_planner module](https://github.com/autowarefoundation/autoware_universe/tree/main/planning/sampling_based_planner).
 
 -Explore the possibility to replace several or other behavior path modules with the sampling based behavior path module.
 

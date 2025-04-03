@@ -41,9 +41,9 @@ ShiftDecider::ShiftDecider(const rclcpp::NodeOptions & node_options)
 
 void ShiftDecider::onTimer()
 {
-  control_cmd_ = sub_control_cmd_.takeData();
-  autoware_state_ = sub_autoware_state_.takeData();
-  current_gear_ptr_ = sub_current_gear_.takeData();
+  control_cmd_ = sub_control_cmd_.take_data();
+  autoware_state_ = sub_autoware_state_.take_data();
+  current_gear_ptr_ = sub_current_gear_.take_data();
   if (!autoware_state_ || !control_cmd_ || !current_gear_ptr_) {
     return;
   }

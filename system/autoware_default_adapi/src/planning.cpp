@@ -18,12 +18,45 @@
 
 #include <autoware_adapi_v1_msgs/msg/planning_behavior.hpp>
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
 namespace autoware::default_adapi
 {
+
+const std::map<std::uint16_t, std::uint16_t> direction_map = {
+  {PlanningFactor::SHIFT_RIGHT, SteeringFactor::RIGHT},
+  {PlanningFactor::SHIFT_LEFT, SteeringFactor::LEFT},
+  {PlanningFactor::TURN_RIGHT, SteeringFactor::RIGHT},
+  {PlanningFactor::TURN_LEFT, SteeringFactor::LEFT}};
+
+const std::map<std::string, std::string> conversion_map = {
+  {"behavior_path_planner", PlanningBehavior::INTERSECTION},
+  {"static_obstacle_avoidance", PlanningBehavior::AVOIDANCE},
+  {"crosswalk", PlanningBehavior::CROSSWALK},
+  {"goal_planner", PlanningBehavior::GOAL_PLANNER},
+  {"intersection", PlanningBehavior::INTERSECTION},
+  {"lane_change_left", PlanningBehavior::LANE_CHANGE},
+  {"lane_change_right", PlanningBehavior::LANE_CHANGE},
+  {"merge_from_private", PlanningBehavior::MERGE},
+  {"no_stopping_area", PlanningBehavior::NO_STOPPING_AREA},
+  {"blind_spot", PlanningBehavior::REAR_CHECK},
+  {"obstacle_cruise_planner", PlanningBehavior::ROUTE_OBSTACLE},
+  {"obstacle_stop_planner", PlanningBehavior::ROUTE_OBSTACLE},
+  {"obstacle_stop", PlanningBehavior::ROUTE_OBSTACLE},
+  {"obstacle_slow_down", PlanningBehavior::ROUTE_OBSTACLE},
+  {"obstacle_cruise", PlanningBehavior::ROUTE_OBSTACLE},
+  {"motion_velocity_planner", PlanningBehavior::ROUTE_OBSTACLE},
+  {"walkway", PlanningBehavior::SIDEWALK},
+  {"start_planner", PlanningBehavior::START_PLANNER},
+  {"stop_line", PlanningBehavior::STOP_SIGN},
+  {"surround_obstacle_checker", PlanningBehavior::SURROUNDING_OBSTACLE},
+  {"traffic_light", PlanningBehavior::TRAFFIC_SIGNAL},
+  {"detection_area", PlanningBehavior::USER_DEFINED_DETECTION_AREA},
+  {"virtual_traffic_light", PlanningBehavior::VIRTUAL_TRAFFIC_LIGHT},
+  {"run_out", PlanningBehavior::RUN_OUT}};
 
 template <class T>
 void concat(std::vector<T> & v1, const std::vector<T> & v2)
@@ -49,16 +82,122 @@ std::vector<typename rclcpp::Subscription<T>::SharedPtr> init_factors(
 }
 
 template <class T>
-T merge_factors(const rclcpp::Time stamp, const std::vector<typename T::ConstSharedPtr> & factors)
+std::vector<T> convert([[maybe_unused]] const std::vector<PlanningFactor> & factors)
 {
-  T message;
+  static_assert(sizeof(T) == 0, "Only specializations of convert can be used.");
+  throw std::logic_error("Only specializations of convert can be used.");
+}
+
+template <>
+std::vector<VelocityFactor> convert(const std::vector<PlanningFactor> & factors)
+{
+  std::vector<VelocityFactor> velocity_factors;
+
+  for (const auto & factor : factors) {
+    if (factor.behavior != PlanningFactor::SLOW_DOWN && factor.behavior != PlanningFactor::STOP) {
+      continue;
+    }
+
+    if (factor.control_points.empty()) {
+      continue;
+    }
+
+    if (conversion_map.count(factor.module) == 0) {
+      continue;
+    }
+
+    VelocityFactor velocity_factor;
+    velocity_factor.behavior = conversion_map.at(factor.module);
+    velocity_factor.pose = factor.control_points.front().pose;
+    velocity_factor.distance = factor.control_points.front().distance;
+
+    velocity_factors.push_back(velocity_factor);
+  }
+
+  return velocity_factors;
+}
+
+template <>
+std::vector<SteeringFactor> convert(const std::vector<PlanningFactor> & factors)
+{
+  std::vector<SteeringFactor> steering_factors;
+
+  for (const auto & factor : factors) {
+    if (
+      factor.behavior != PlanningFactor::SHIFT_RIGHT &&
+      factor.behavior != PlanningFactor::SHIFT_LEFT &&
+      factor.behavior != PlanningFactor::TURN_RIGHT &&
+      factor.behavior != PlanningFactor::TURN_LEFT) {
+      continue;
+    }
+
+    if (factor.control_points.size() < 2) {
+      continue;
+    }
+
+    if (conversion_map.count(factor.module) == 0) {
+      continue;
+    }
+
+    if (direction_map.count(factor.behavior) == 0) {
+      continue;
+    }
+
+    SteeringFactor steering_factor;
+    steering_factor.behavior = conversion_map.at(factor.module);
+    steering_factor.direction = direction_map.at(factor.behavior);
+    steering_factor.pose = std::array<geometry_msgs::msg::Pose, 2>{
+      factor.control_points.front().pose, factor.control_points.back().pose};
+    steering_factor.distance = std::array<float, 2>{
+      factor.control_points.front().distance, factor.control_points.back().distance};
+
+    steering_factors.push_back(steering_factor);
+  }
+
+  return steering_factors;
+}
+
+template <class T>
+T merge_factors(
+  [[maybe_unused]] const rclcpp::Time stamp,
+  [[maybe_unused]] const std::vector<PlanningFactorArray::ConstSharedPtr> & factors)
+{
+  static_assert(sizeof(T) == 0, "Only specializations of merge_factors can be used.");
+  throw std::logic_error("Only specializations of merge_factors can be used.");
+}
+
+template <>
+VelocityFactorArray merge_factors(
+  const rclcpp::Time stamp, const std::vector<PlanningFactorArray::ConstSharedPtr> & factors)
+{
+  VelocityFactorArray message;
   message.header.stamp = stamp;
   message.header.frame_id = "map";
 
   for (const auto & factor : factors) {
-    if (factor) {
-      concat(message.factors, factor->factors);
+    if (!factor) {
+      continue;
     }
+
+    concat<VelocityFactor>(message.factors, convert<VelocityFactor>(factor->factors));
+  }
+  return message;
+}
+
+template <>
+SteeringFactorArray merge_factors(
+  const rclcpp::Time stamp, const std::vector<PlanningFactorArray::ConstSharedPtr> & factors)
+{
+  SteeringFactorArray message;
+  message.header.stamp = stamp;
+  message.header.frame_id = "map";
+
+  for (const auto & factor : factors) {
+    if (!factor) {
+      continue;
+    }
+
+    concat<SteeringFactor>(message.factors, convert<SteeringFactor>(factor->factors));
   }
   return message;
 }
@@ -70,46 +209,37 @@ PlanningNode::PlanningNode(const rclcpp::NodeOptions & options) : Node("planning
   stop_duration_ = declare_parameter<double>("stop_duration", 1.0);
   stop_checker_ = std::make_unique<VehicleStopChecker>(this, stop_duration_ + 1.0);
 
-  std::vector<std::string> velocity_factor_topics = {
-    "/planning/velocity_factors/blind_spot",
-    "/planning/velocity_factors/crosswalk",
-    "/planning/velocity_factors/detection_area",
-    "/planning/velocity_factors/dynamic_obstacle_stop",
-    "/planning/velocity_factors/intersection",
-    "/planning/velocity_factors/merge_from_private",
-    "/planning/velocity_factors/no_stopping_area",
-    "/planning/velocity_factors/obstacle_stop",
-    "/planning/velocity_factors/obstacle_cruise",
-    "/planning/velocity_factors/occlusion_spot",
-    "/planning/velocity_factors/run_out",
-    "/planning/velocity_factors/stop_line",
-    "/planning/velocity_factors/surround_obstacle",
-    "/planning/velocity_factors/traffic_light",
-    "/planning/velocity_factors/virtual_traffic_light",
-    "/planning/velocity_factors/walkway",
-    "/planning/velocity_factors/motion_velocity_planner",
-    "/planning/velocity_factors/static_obstacle_avoidance",
-    "/planning/velocity_factors/dynamic_obstacle_avoidance",
-    "/planning/velocity_factors/avoidance_by_lane_change",
-    "/planning/velocity_factors/lane_change_left",
-    "/planning/velocity_factors/lane_change_right",
-    "/planning/velocity_factors/start_planner",
-    "/planning/velocity_factors/goal_planner"};
+  std::vector<std::string> factor_topics = {
+    "/planning/planning_factors/behavior_path_planner",
+    "/planning/planning_factors/blind_spot",
+    "/planning/planning_factors/crosswalk",
+    "/planning/planning_factors/detection_area",
+    "/planning/planning_factors/dynamic_obstacle_stop",
+    "/planning/planning_factors/intersection",
+    "/planning/planning_factors/merge_from_private",
+    "/planning/planning_factors/no_stopping_area",
+    "/planning/planning_factors/obstacle_cruise_planner",
+    "/planning/planning_factors/obstacle_stop_planner",
+    "/planning/planning_factors/obstacle_stop",
+    "/planning/planning_factors/obstacle_cruise",
+    "/planning/planning_factors/obstacle_slow_down",
+    "/planning/planning_factors/occlusion_spot",
+    "/planning/planning_factors/run_out",
+    "/planning/planning_factors/stop_line",
+    "/planning/planning_factors/surround_obstacle_checker",
+    "/planning/planning_factors/traffic_light",
+    "/planning/planning_factors/virtual_traffic_light",
+    "/planning/planning_factors/walkway",
+    "/planning/planning_factors/motion_velocity_planner",
+    "/planning/planning_factors/static_obstacle_avoidance",
+    "/planning/planning_factors/dynamic_obstacle_avoidance",
+    "/planning/planning_factors/avoidance_by_lane_change",
+    "/planning/planning_factors/lane_change_left",
+    "/planning/planning_factors/lane_change_right",
+    "/planning/planning_factors/start_planner",
+    "/planning/planning_factors/goal_planner"};
 
-  std::vector<std::string> steering_factor_topics = {
-    "/planning/steering_factor/static_obstacle_avoidance",
-    "/planning/steering_factor/dynamic_obstacle_avoidance",
-    "/planning/steering_factor/avoidance_by_lane_change",
-    "/planning/steering_factor/intersection",
-    "/planning/steering_factor/lane_change_left",
-    "/planning/steering_factor/lane_change_right",
-    "/planning/steering_factor/start_planner",
-    "/planning/steering_factor/goal_planner"};
-
-  sub_velocity_factors_ =
-    init_factors<VelocityFactorArray>(this, velocity_factors_, velocity_factor_topics);
-  sub_steering_factors_ =
-    init_factors<SteeringFactorArray>(this, steering_factors_, steering_factor_topics);
+  sub_factors_ = init_factors<PlanningFactorArray>(this, factors_, factor_topics);
 
   const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
   adaptor.init_pub(pub_velocity_factors_);
@@ -139,8 +269,8 @@ void PlanningNode::on_kinematic_state(const KinematicState::ConstSharedPtr msg)
 void PlanningNode::on_timer()
 {
   using autoware_adapi_v1_msgs::msg::VelocityFactor;
-  auto velocity = merge_factors<VelocityFactorArray>(now(), velocity_factors_);
-  auto steering = merge_factors<SteeringFactorArray>(now(), steering_factors_);
+  auto velocity = merge_factors<VelocityFactorArray>(now(), factors_);
+  auto steering = merge_factors<SteeringFactorArray>(now(), factors_);
 
   // Set the distance if it is nan.
   if (trajectory_ && kinematic_state_) {
@@ -161,6 +291,13 @@ void PlanningNode::on_timer()
     if ((factor.status == VelocityFactor::UNKNOWN) && (!std::isnan(factor.distance))) {
       const auto is_stopped = is_vehicle_stopped && (factor.distance < stop_distance_);
       factor.status = is_stopped ? VelocityFactor::STOPPED : VelocityFactor::APPROACHING;
+    }
+  }
+
+  for (auto & factor : steering.factors) {
+    if ((factor.status == SteeringFactor::UNKNOWN) && (!std::isnan(factor.distance.front()))) {
+      const auto is_turning = factor.distance.front() < 0.0;
+      factor.status = is_turning ? SteeringFactor::TURNING : SteeringFactor::APPROACHING;
     }
   }
 

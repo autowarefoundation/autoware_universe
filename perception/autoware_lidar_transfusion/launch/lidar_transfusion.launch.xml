@@ -23,7 +23,7 @@
         <param from="$(var ml_package_param_path)" allow_substs="true"/>
         <param from="$(var class_remapper_param_path)"/>
 
-        <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware.universe/pull/6167 -->
+        <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware_universe/pull/6167 -->
         <param name="build_only" value="$(var build_only)"/>
       </composable_node>
     </load_composable_node>
@@ -36,7 +36,7 @@
       <param from="$(var ml_package_param_path)" allow_substs="true"/>
       <param from="$(var class_remapper_param_path)"/>
 
-      <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware.universe/pull/6167 -->
+      <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware_universe/pull/6167 -->
       <param name="build_only" value="$(var build_only)"/>
     </node>
   </group>

@@ -1,7 +1,3 @@
-# This file is automatically synced from:
-# https://github.com/autowarefoundation/sync-file-templates
-# To make changes, update the source repository and follow the guidelines in its README.
-
 name: check-build-depends
 
 on:
@@ -21,7 +17,6 @@ jobs:
         include:
           - rosdistro: humble
             container: ros:humble
-            build-depends-repos: build_depends.repos
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -33,9 +28,22 @@ jobs:
         id: get-self-packages
         uses: autowarefoundation/autoware-github-actions/get-self-packages@v1
 
+      - name: Prepare build_depends.repos file (main branch)
+        if: ${{ github.event.pull_request.base.ref == 'main' }}
+        uses: ./.github/actions/combine-repos-action
+        with:
+          base_file: build_depends_humble.repos
+          overlay_file: build_depends_nightly.repos
+          output_file: build_depends.repos
+
+      - name: Prepare build_depends.repos file (humble branch)
+        if: ${{ github.event.pull_request.base.ref == 'humble' }}
+        run: cp build_depends_humble.repos build_depends.repos
+        shell: bash
+
       - name: Build
         uses: autowarefoundation/autoware-github-actions/colcon-build@v1
         with:
           rosdistro: ${{ matrix.rosdistro }}
           target-packages: ${{ steps.get-self-packages.outputs.self-packages }}
-          build-depends-repos: ${{ matrix.build-depends-repos }}
+          build-depends-repos: build_depends.repos

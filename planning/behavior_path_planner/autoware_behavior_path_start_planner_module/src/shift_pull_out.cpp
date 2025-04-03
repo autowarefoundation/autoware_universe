@@ -20,7 +20,7 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 #include "autoware/behavior_path_start_planner_module/util.hpp"
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
-#include "autoware/universe_utils/geometry/boost_polygon_utils.hpp"
+#include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
@@ -32,8 +32,8 @@
 #include <vector>
 
 using autoware::motion_utils::findNearestIndex;
-using autoware::universe_utils::calcDistance2d;
-using autoware::universe_utils::calcOffsetPose;
+using autoware_utils::calc_distance2d;
+using autoware_utils::calc_offset_pose;
 using lanelet::utils::getArcCoordinates;
 namespace autoware::behavior_path_planner
 {
@@ -41,40 +41,47 @@ using start_planner_utils::getPullOutLanes;
 
 ShiftPullOut::ShiftPullOut(
   rclcpp::Node & node, const StartPlannerParameters & parameters,
-  std::shared_ptr<LaneDepartureChecker> & lane_departure_checker,
-  std::shared_ptr<universe_utils::TimeKeeper> time_keeper)
-: PullOutPlannerBase{node, parameters, time_keeper}, lane_departure_checker_{lane_departure_checker}
+  std::shared_ptr<autoware_utils::TimeKeeper> time_keeper)
+: PullOutPlannerBase{node, parameters, time_keeper}
 {
+  autoware::lane_departure_checker::Param lane_departure_checker_params;
+  lane_departure_checker_params.footprint_extra_margin =
+    parameters.lane_departure_check_expansion_margin;
+  lane_departure_checker_ =
+    std::make_shared<autoware::lane_departure_checker::LaneDepartureChecker>(
+      lane_departure_checker_params, vehicle_info_, time_keeper_);
 }
 
 std::optional<PullOutPath> ShiftPullOut::plan(
-  const Pose & start_pose, const Pose & goal_pose, PlannerDebugData & planner_debug_data)
+  const Pose & start_pose, const Pose & goal_pose,
+  const std::shared_ptr<const PlannerData> & planner_data, PlannerDebugData & planner_debug_data)
 {
-  const auto & route_handler = planner_data_->route_handler;
-  const auto & common_parameters = planner_data_->parameters;
+  const auto & route_handler = planner_data->route_handler;
+  const auto & common_parameters = planner_data->parameters;
 
   const double backward_path_length =
-    planner_data_->parameters.backward_path_length + parameters_.max_back_distance;
+    planner_data->parameters.backward_path_length + parameters_.max_back_distance;
   const auto road_lanes = utils::getExtendedCurrentLanes(
-    planner_data_, backward_path_length, std::numeric_limits<double>::max(),
+    planner_data, backward_path_length, std::numeric_limits<double>::max(),
     /*forward_only_in_route*/ true);
   // find candidate paths
-  auto pull_out_paths = calcPullOutPaths(*route_handler, road_lanes, start_pose, goal_pose);
+  auto pull_out_paths =
+    calcPullOutPaths(*route_handler, road_lanes, start_pose, goal_pose, common_parameters);
   if (pull_out_paths.empty()) {
     planner_debug_data.conditions_evaluation.emplace_back("no path found");
     return std::nullopt;
   }
 
-  const auto lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
+  const auto lanelet_map_ptr = planner_data->route_handler->getLaneletMapPtr();
 
   std::vector<lanelet::Id> fused_id_start_to_end{};
-  std::optional<autoware::universe_utils::Polygon2d> fused_polygon_start_to_end = std::nullopt;
+  std::optional<autoware_utils::Polygon2d> fused_polygon_start_to_end = std::nullopt;
 
   std::vector<lanelet::Id> fused_id_crop_points{};
-  std::optional<autoware::universe_utils::Polygon2d> fused_polygon_crop_points = std::nullopt;
+  std::optional<autoware_utils::Polygon2d> fused_polygon_crop_points = std::nullopt;
   // get safe path
   for (auto & pull_out_path : pull_out_paths) {
-    universe_utils::ScopedTimeTrack st("get safe path", *time_keeper_);
+    autoware_utils::ScopedTimeTrack st("get safe path", *time_keeper_);
 
     // shift path is not separate but only one.
     auto & shift_path = pull_out_path.partial_paths.front();
@@ -159,9 +166,10 @@ std::optional<PullOutPath> ShiftPullOut::plan(
       continue;
     }
     shift_path.points = cropped_path.points;
-    shift_path.header = planner_data_->route_handler->getRouteHeader();
+    shift_path.header = planner_data->route_handler->getRouteHeader();
 
-    if (isPullOutPathCollided(pull_out_path, parameters_.shift_collision_check_distance_from_end)) {
+    if (isPullOutPathCollided(
+          pull_out_path, planner_data, parameters_.shift_collision_check_distance_from_end)) {
       planner_debug_data.conditions_evaluation.emplace_back("collision");
       continue;
     }
@@ -227,9 +235,10 @@ bool ShiftPullOut::refineShiftedPathToStartPose(
 
 std::vector<PullOutPath> ShiftPullOut::calcPullOutPaths(
   const RouteHandler & route_handler, const lanelet::ConstLanelets & road_lanes,
-  const Pose & start_pose, const Pose & goal_pose)
+  const Pose & start_pose, const Pose & goal_pose,
+  const BehaviorPathPlannerParameters & behavior_path_parameters)
 {
-  universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   std::vector<PullOutPath> candidate_paths{};
 
@@ -238,9 +247,8 @@ std::vector<PullOutPath> ShiftPullOut::calcPullOutPaths(
   }
 
   // rename parameter
-  const auto & common_parameters = planner_data_->parameters;
-  const double forward_path_length = common_parameters.forward_path_length;
-  const double backward_path_length = common_parameters.backward_path_length;
+  const double forward_path_length = behavior_path_parameters.forward_path_length;
+  const double backward_path_length = behavior_path_parameters.backward_path_length;
   const double lateral_jerk = parameters_.lateral_jerk;
   const double minimum_lateral_acc = parameters_.minimum_lateral_acc;
   const double maximum_lateral_acc = parameters_.maximum_lateral_acc;

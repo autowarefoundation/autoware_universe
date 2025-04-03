@@ -39,8 +39,8 @@ PointCloudConcatenationComponent::PointCloudConcatenationComponent(
 {
   // initialize debug tool
   {
-    using autoware::universe_utils::DebugPublisher;
-    using autoware::universe_utils::StopWatch;
+    using autoware_utils::DebugPublisher;
+    using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ = std::make_unique<DebugPublisher>(this, "concatenate_pointclouds_debug");
     stop_watch_ptr_->tic("cyclic_time");
@@ -96,7 +96,7 @@ PointCloudConcatenationComponent::PointCloudConcatenationComponent(
   // tf2 listener
   {
     managed_tf_buffer_ =
-      std::make_unique<autoware::universe_utils::ManagedTransformBuffer>(this, has_static_tf_only_);
+      std::make_unique<autoware_utils::ManagedTransformBuffer>(this, has_static_tf_only_);
   }
 
   // Output Publishers
@@ -240,7 +240,7 @@ void PointCloudConcatenationComponent::combineClouds(
       // transform to output frame
       sensor_msgs::msg::PointCloud2::SharedPtr transformed_cloud_ptr(
         new sensor_msgs::msg::PointCloud2());
-      managed_tf_buffer_->transformPointcloud(output_frame_, *e.second, *transformed_cloud_ptr);
+      managed_tf_buffer_->transform_pointcloud(output_frame_, *e.second, *transformed_cloud_ptr);
 
       // concatenate
       if (concat_cloud_ptr == nullptr) {
@@ -271,7 +271,7 @@ void PointCloudConcatenationComponent::publish()
             std::chrono::nanoseconds(
               (this->get_clock()->now() - e.second->header.stamp).nanoseconds()))
             .count();
-        debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+        debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
           "debug" + e.first + "/pipeline_latency_ms", pipeline_latency_ms);
       }
     }
@@ -297,9 +297,9 @@ void PointCloudConcatenationComponent::publish()
   if (debug_publisher_) {
     const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
     const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
-    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
-    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time_ms", processing_time_ms);
   }
 }

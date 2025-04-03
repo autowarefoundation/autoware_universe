@@ -53,7 +53,7 @@ protected:
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output,
     const TransformInfo & transform_info) override;
 
-  rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr visibility_pub_;
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr visibility_pub_;
 
 private:
   /** \brief publisher of excluded pointcloud for debug reason. **/

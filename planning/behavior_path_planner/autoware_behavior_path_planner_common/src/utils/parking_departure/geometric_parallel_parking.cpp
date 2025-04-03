@@ -18,10 +18,10 @@
 #include <autoware/behavior_path_planner_common/utils/utils.hpp>
 #include <autoware/interpolation/spline_interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/math/unit_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 
 #include <boost/geometry/algorithms/within.hpp>
 
@@ -34,15 +34,15 @@
 #include <utility>
 #include <vector>
 
-using autoware::universe_utils::calcDistance2d;
-using autoware::universe_utils::calcOffsetPose;
-using autoware::universe_utils::inverseTransformPoint;
-using autoware::universe_utils::normalizeRadian;
-using autoware::universe_utils::transformPose;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
+using autoware_utils::calc_distance2d;
+using autoware_utils::calc_offset_pose;
+using autoware_utils::inverse_transform_point;
+using autoware_utils::normalize_radian;
+using autoware_utils::transform_pose;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
 using lanelet::utils::getArcCoordinates;
-using tier4_planning_msgs::msg::PathWithLaneId;
 
 namespace autoware::behavior_path_planner
 {
@@ -135,10 +135,10 @@ std::vector<PathWithLaneId> GeometricParallelParking::generatePullOverPaths(
   // check the continuity of straight path and arc path
   const Pose & road_path_last_pose = straight_path.points.back().point.pose;
   const Pose & arc_path_first_pose = arc_paths.front().points.front().point.pose;
-  const double yaw_diff = std::abs(autoware::universe_utils::normalizeRadian(
+  const double yaw_diff = std::abs(autoware_utils::normalize_radian(
     tf2::getYaw(road_path_last_pose.orientation) - tf2::getYaw(arc_path_first_pose.orientation)));
-  const double distance = calcDistance2d(road_path_last_pose, arc_path_first_pose);
-  if (yaw_diff > autoware::universe_utils::deg2rad(5.0) || distance > 0.1) {
+  const double distance = calc_distance2d(road_path_last_pose, arc_path_first_pose);
+  if (yaw_diff > autoware_utils::deg2rad(5.0) || distance > 0.1) {
     return std::vector<PathWithLaneId>{};
   }
 
@@ -159,13 +159,13 @@ void GeometricParallelParking::clearPaths()
 
 bool GeometricParallelParking::planPullOver(
   const Pose & goal_pose, const lanelet::ConstLanelets & road_lanes,
-  const lanelet::ConstLanelets & pull_over_lanes, const bool is_forward,
-  const bool left_side_parking)
+  const lanelet::ConstLanelets & pull_over_lanes, const double max_steer_angle,
+  const bool is_forward, const bool left_side_parking)
 {
   const auto & common_params = planner_data_->parameters;
   const double end_pose_offset = is_forward ? -parameters_.after_forward_parking_straight_distance
                                             : parameters_.after_backward_parking_straight_distance;
-  const Pose arc_end_pose = calcOffsetPose(goal_pose, end_pose_offset, 0, 0);
+  const Pose arc_end_pose = calc_offset_pose(goal_pose, end_pose_offset, 0, 0);
 
   // not plan after parking has started
   if (isParking()) {
@@ -175,12 +175,10 @@ bool GeometricParallelParking::planPullOver(
   if (is_forward) {
     // When turning forward to the right, the front left goes out,
     // so reduce the steer angle at that time for seach no lane departure path.
-    // TODO(Sugahara): define in the config
     constexpr double start_pose_offset = 0.0;
     constexpr double min_steer_rad = 0.05;
     constexpr double steer_interval = 0.1;
-    for (double steer = parameters_.forward_parking_max_steer_angle; steer > min_steer_rad;
-         steer -= steer_interval) {
+    for (double steer = max_steer_angle; steer > min_steer_rad; steer -= steer_interval) {
       const double R_E_far = common_params.wheel_base / std::tan(steer);
       const auto start_pose = calcStartPose(
         arc_end_pose, road_lanes, start_pose_offset, R_E_far, is_forward, left_side_parking);
@@ -285,10 +283,10 @@ bool GeometricParallelParking::planPullOut(
     // check the continuity of straight path and arc path
     const Pose & road_path_first_pose = road_center_line_path.points.front().point.pose;
     const Pose & arc_path_last_pose = arc_paths.back().points.back().point.pose;
-    const double yaw_diff = std::abs(autoware::universe_utils::normalizeRadian(
+    const double yaw_diff = std::abs(autoware_utils::normalize_radian(
       tf2::getYaw(road_path_first_pose.orientation) - tf2::getYaw(arc_path_last_pose.orientation)));
-    const double distance = calcDistance2d(road_path_first_pose, arc_path_last_pose);
-    if (yaw_diff > autoware::universe_utils::deg2rad(5.0) || distance > 0.1) {
+    const double distance = calc_distance2d(road_path_first_pose, arc_path_last_pose);
+    if (yaw_diff > autoware_utils::deg2rad(5.0) || distance > 0.1) {
       continue;
     }
 
@@ -339,7 +337,7 @@ std::optional<Pose> GeometricParallelParking::calcStartPose(
 
   // Assuming parallel poses, calculate the approximate start pose on the centerline from the goal
   // pose
-  const Pose approximate_start_pose = calcOffsetPose(goal_pose, dx, -arc_coordinates.distance, 0);
+  const Pose approximate_start_pose = calc_offset_pose(goal_pose, dx, -arc_coordinates.distance, 0);
   lanelet::ConstLanelet closest_road_lane{};
 
   // Calculate start pose on the centerline, then offset it.
@@ -388,17 +386,17 @@ std::vector<PathWithLaneId> GeometricParallelParking::planOneTrial(
   const auto & common_params = planner_data_->parameters;
   const auto & route_handler = planner_data_->route_handler;
 
-  const Pose arc_end_pose = calcOffsetPose(goal_pose, end_pose_offset, 0, 0);
+  const Pose arc_end_pose = calc_offset_pose(goal_pose, end_pose_offset, 0, 0);
   const double self_yaw = tf2::getYaw(start_pose.orientation);
   const double goal_yaw = tf2::getYaw(arc_end_pose.orientation);
-  const double psi = normalizeRadian(self_yaw - goal_yaw);
+  const double psi = normalize_radian(self_yaw - goal_yaw);
 
-  const Pose C_far = left_side_parking ? calcOffsetPose(arc_end_pose, 0, -R_E_far, 0)
-                                       : calcOffsetPose(arc_end_pose, 0, R_E_far, 0);
-  const double d_C_far_Einit = calcDistance2d(C_far, start_pose);
+  const Pose C_far = left_side_parking ? calc_offset_pose(arc_end_pose, 0, -R_E_far, 0)
+                                       : calc_offset_pose(arc_end_pose, 0, R_E_far, 0);
+  const double d_C_far_Einit = calc_distance2d(C_far, start_pose);
 
-  const Point C_far_goal_coords = inverseTransformPoint(C_far.position, arc_end_pose);
-  const Point self_point_goal_coords = inverseTransformPoint(start_pose.position, arc_end_pose);
+  const Point C_far_goal_coords = inverse_transform_point(C_far.position, arc_end_pose);
+  const Point self_point_goal_coords = inverse_transform_point(start_pose.position, arc_end_pose);
 
   const double alpha =
     left_side_parking
@@ -414,7 +412,7 @@ std::vector<PathWithLaneId> GeometricParallelParking::planOneTrial(
   // combine road and shoulder lanes
   // cut the road lanes up to start_pose to prevent unintended processing for overlapped lane
   lanelet::ConstLanelets lanes{};
-  autoware::universe_utils::Point2d start_point2d(start_pose.position.x, start_pose.position.y);
+  autoware_utils::Point2d start_point2d(start_pose.position.x, start_pose.position.y);
   for (const auto & lane : road_lanes) {
     if (boost::geometry::within(start_point2d, lane.polygon2d().basicPolygon())) {
       lanes.push_back(lane);
@@ -447,8 +445,8 @@ std::vector<PathWithLaneId> GeometricParallelParking::planOneTrial(
   }
 
   // Generate arc path(first turn -> second turn)
-  const Pose C_near = left_side_parking ? calcOffsetPose(start_pose, 0, R_E_near, 0)
-                                        : calcOffsetPose(start_pose, 0, -R_E_near, 0);
+  const Pose C_near = left_side_parking ? calc_offset_pose(start_pose, 0, R_E_near, 0)
+                                        : calc_offset_pose(start_pose, 0, -R_E_near, 0);
   const double theta_near =
     std::acos(
       (std::pow(R_E_near, 2) + std::pow(R_E_near + R_E_far, 2) - std::pow(d_C_far_Einit, 2)) /
@@ -468,16 +466,16 @@ std::vector<PathWithLaneId> GeometricParallelParking::planOneTrial(
   PathWithLaneId path_turn_first =
     left_side_parking
       ? generateArcPathWithHeader(
-          C_near, R_E_near, -M_PI_2, normalizeRadian(-M_PI_2 + theta_near), is_forward, is_forward)
+          C_near, R_E_near, -M_PI_2, normalize_radian(-M_PI_2 + theta_near), is_forward, is_forward)
       : generateArcPathWithHeader(
-          C_near, R_E_near, M_PI_2, normalizeRadian(M_PI_2 + theta_near), !is_forward, is_forward);
+          C_near, R_E_near, M_PI_2, normalize_radian(M_PI_2 + theta_near), !is_forward, is_forward);
 
   PathWithLaneId path_turn_second =
     left_side_parking ? generateArcPathWithHeader(
-                          C_far, R_E_far, normalizeRadian(psi + M_PI_2 + theta_near), M_PI_2,
+                          C_far, R_E_far, normalize_radian(psi + M_PI_2 + theta_near), M_PI_2,
                           !is_forward, is_forward)
                       : generateArcPathWithHeader(
-                          C_far, R_E_far, normalizeRadian(psi - M_PI_2 + theta_near), -M_PI_2,
+                          C_far, R_E_far, normalize_radian(psi - M_PI_2 + theta_near), -M_PI_2,
                           is_forward, is_forward);
 
   // Need to add straight path to last right_turning for parking in parallel
@@ -586,7 +584,7 @@ PathWithLaneId GeometricParallelParking::generateArcPath(
   // insert the last point exactly
   const auto p = generateArcPathPoint(center, radius, end_yaw, is_left_turn, is_forward);
   constexpr double min_dist = 0.01;
-  if (path.points.empty() || calcDistance2d(path.points.back(), p) > min_dist) {
+  if (path.points.empty() || calc_distance2d(path.points.back(), p) > min_dist) {
     path.points.push_back(p);
   }
 
@@ -605,15 +603,15 @@ PathPointWithLaneId GeometricParallelParking::generateArcPathPoint(
   // set orientation
   tf2::Quaternion quat;
   if ((is_left_turn && !is_forward) || (!is_left_turn && is_forward)) {
-    quat.setRPY(0, 0, normalizeRadian(yaw - M_PI_2));
+    quat.setRPY(0, 0, normalize_radian(yaw - M_PI_2));
   } else {
-    quat.setRPY(0, 0, normalizeRadian(yaw + M_PI_2));
+    quat.setRPY(0, 0, normalize_radian(yaw + M_PI_2));
   }
   pose_center_coords.orientation = tf2::toMsg(quat);
 
   // get pose in map coords
   PathPointWithLaneId p{};
-  p.point.pose = transformPose(pose_center_coords, center);
+  p.point.pose = transform_pose(pose_center_coords, center);
 
   return p;
 }

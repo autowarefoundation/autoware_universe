@@ -54,7 +54,7 @@
         <param from="$(var class_remapper_param_path)"/>
         <param name="rois_number" value="$(var input/rois_number)"/>
 
-        <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware.universe/pull/6169 -->
+        <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware_universe/pull/6169 -->
         <param name="build_only" value="$(var build_only)"/>
 
         <!-- rois, camera and info -->
@@ -96,7 +96,7 @@
       <param from="$(var class_remapper_param_path)"/>
       <param name="rois_number" value="$(var input/rois_number)"/>
 
-      <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware.universe/pull/6169 -->
+      <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware_universe/pull/6169 -->
       <param name="build_only" value="$(var build_only)"/>
 
       <!-- rois, camera and info -->

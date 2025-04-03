@@ -52,7 +52,8 @@
 #ifndef AUTOWARE__PROBABILISTIC_OCCUPANCY_GRID_MAP__COSTMAP_2D__OCCUPANCY_GRID_MAP_HPP_
 #define AUTOWARE__PROBABILISTIC_OCCUPANCY_GRID_MAP__COSTMAP_2D__OCCUPANCY_GRID_MAP_HPP_
 
-#include <nav2_costmap_2d/costmap_2d.hpp>
+#include "autoware/probabilistic_occupancy_grid_map/costmap_2d/occupancy_grid_map_base.hpp"
+
 #include <rclcpp/rclcpp.hpp>
 
 #include <nav_msgs/msg/occupancy_grid.hpp>
@@ -66,7 +67,7 @@ namespace costmap_2d
 using geometry_msgs::msg::Pose;
 using sensor_msgs::msg::PointCloud2;
 
-class OccupancyGridMap : public nav2_costmap_2d::Costmap2D
+class OccupancyGridMap : public OccupancyGridMapInterface
 {
 public:
   OccupancyGridMap(
@@ -78,14 +79,14 @@ public:
 
   void updateOccupiedCells(const PointCloud2 & pointcloud);
 
-  void updateOrigin(double new_origin_x, double new_origin_y) override;
-
 private:
   void raytraceFreespace(const PointCloud2 & pointcloud, const Pose & robot_pose);
 
   void updateCellsByPointCloud(const PointCloud2 & pointcloud, const unsigned char cost);
 
   bool worldToMap(double wx, double wy, unsigned int & mx, unsigned int & my) const;
+
+  void initRosParam([[maybe_unused]] rclcpp::Node & node) override {}
 
   rclcpp::Logger logger_{rclcpp::get_logger("laserscan_based_occupancy_grid_map")};
   rclcpp::Clock clock_{RCL_ROS_TIME};

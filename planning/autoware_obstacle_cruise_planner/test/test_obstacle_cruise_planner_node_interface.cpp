@@ -15,12 +15,13 @@
 #include "autoware/obstacle_cruise_planner/node.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <autoware_planning_test_manager/autoware_planning_test_manager.hpp>
+#include <autoware/planning_test_manager/autoware_planning_test_manager.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
 
 #include <gtest/gtest.h>
 
 #include <memory>
+#include <string>
 #include <vector>
 
 using autoware::motion_planning::ObstacleCruisePlannerNode;
@@ -31,12 +32,8 @@ std::shared_ptr<PlanningInterfaceTestManager> generateTestManager()
   auto test_manager = std::make_shared<PlanningInterfaceTestManager>();
 
   // set subscriber with topic name: obstacle_cruise_planner → test_node_
-  test_manager->setTrajectorySubscriber("obstacle_cruise_planner/output/trajectory");
-
-  // set obstacle_cruise_planners input topic name(this topic is changed to test node):
-  test_manager->setTrajectoryInputTopicName("obstacle_cruise_planner/input/trajectory");
-
-  test_manager->setOdometryTopicName("obstacle_cruise_planner/input/odometry");
+  test_manager->subscribeOutput<autoware_planning_msgs::msg::Trajectory>(
+    "obstacle_cruise_planner/output/trajectory");
 
   return test_manager;
 }
@@ -63,9 +60,15 @@ void publishMandatoryTopics(
   std::shared_ptr<ObstacleCruisePlannerNode> test_target_node)
 {
   // publish necessary topics from test_manager
-  test_manager->publishOdometry(test_target_node, "obstacle_cruise_planner/input/odometry");
-  test_manager->publishPredictedObjects(test_target_node, "obstacle_cruise_planner/input/objects");
-  test_manager->publishAcceleration(test_target_node, "obstacle_cruise_planner/input/acceleration");
+  test_manager->publishInput(
+    test_target_node, "obstacle_cruise_planner/input/odometry",
+    autoware::test_utils::makeOdometry());
+  test_manager->publishInput(
+    test_target_node, "obstacle_cruise_planner/input/objects",
+    autoware_perception_msgs::msg::PredictedObjects{});
+  test_manager->publishInput(
+    test_target_node, "obstacle_cruise_planner/input/acceleration",
+    geometry_msgs::msg::AccelWithCovarianceStamped{});
 }
 
 TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectory)
@@ -76,12 +79,16 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectory)
 
   publishMandatoryTopics(test_manager, test_target_node);
 
+  const std::string input_trajectory_topic = "obstacle_cruise_planner/input/trajectory";
+
   // test for normal trajectory
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testWithNominalTrajectory(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithNormalTrajectory(test_target_node, input_trajectory_topic));
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
   // test for trajectory with empty/one point/overlapping point
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testWithAbnormalTrajectory(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithAbnormalTrajectory(test_target_node, input_trajectory_topic));
 
   rclcpp::shutdown();
 }
@@ -94,12 +101,17 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
 
   publishMandatoryTopics(test_manager, test_target_node);
 
+  const std::string input_trajectory_topic = "obstacle_cruise_planner/input/trajectory";
+  const std::string input_odometry_topic = "obstacle_cruise_planner/input/odometry";
+
   // test for normal trajectory
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testWithNominalTrajectory(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithNormalTrajectory(test_target_node, input_trajectory_topic));
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
   // test for trajectory with empty/one point/overlapping point
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testTrajectoryWithInvalidEgoPose(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithOffTrackOdometry(test_target_node, input_odometry_topic));
 
   rclcpp::shutdown();
 }

@@ -29,9 +29,9 @@ This module is activated when there is traffic light in ego lane.
 
 3. When vehicle current velocity is
 
-   - higher than 2.0m/s ⇒ pass judge(using next slide formula)
+   - higher than `yellow_light_stop_velocity` m/s ⇒ pass judge(using next slide formula)
 
-   - lower than 2.0m/s ⇒ stop
+   - lower than `yellow_light_stop_velocity` m/s ⇒ stop
 
 4. When it to be judged that vehicle can’t stop before stop line, autoware chooses one of the following behaviors
 
@@ -69,13 +69,14 @@ This module is activated when there is traffic light in ego lane.
 
 #### Module Parameters
 
-| Parameter              | Type   | Description                                                          |
-| ---------------------- | ------ | -------------------------------------------------------------------- |
-| `stop_margin`          | double | [m] margin before stop point                                         |
-| `tl_state_timeout`     | double | [s] time out for detected traffic light result.                      |
-| `stop_time_hysteresis` | double | [s] time threshold to decide stop planning for chattering prevention |
-| `yellow_lamp_period`   | double | [s] time for yellow lamp                                             |
-| `enable_pass_judge`    | bool   | [-] whether to use pass judge                                        |
+| Parameter                    | Type   | Description                                                          |
+| ---------------------------- | ------ | -------------------------------------------------------------------- |
+| `stop_margin`                | double | [m] margin before stop point                                         |
+| `tl_state_timeout`           | double | [s] time out for detected traffic light result.                      |
+| `stop_time_hysteresis`       | double | [s] time threshold to decide stop planning for chattering prevention |
+| `yellow_lamp_period`         | double | [s] time for yellow lamp                                             |
+| `yellow_light_stop_velocity` | double | [m/s] velocity threshold for always stopping at a yellow light.      |
+| `enable_pass_judge`          | bool   | [-] whether to use pass judge                                        |
 
 #### Flowchart
 

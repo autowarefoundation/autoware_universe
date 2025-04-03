@@ -19,9 +19,9 @@
 #include "autoware/motion_utils/trajectory/interpolation.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware/obstacle_cruise_planner/type_alias.hpp"
-#include "autoware/universe_utils/geometry/boost_polygon_utils.hpp"
-#include "autoware/universe_utils/ros/update_param.hpp"
-#include "autoware/universe_utils/ros/uuid_helper.hpp"
+#include "autoware_utils/geometry/boost_polygon_utils.hpp"
+#include "autoware_utils/ros/update_param.hpp"
+#include "autoware_utils/ros/uuid_helper.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -74,7 +74,7 @@ struct Obstacle
     twist(object.kinematics.initial_twist_with_covariance.twist),
     twist_reliable(true),
     classification(object.classification.at(0)),
-    uuid(autoware::universe_utils::toHexString(object.object_id)),
+    uuid(autoware_utils::to_hex_string(object.object_id)),
     shape(object.shape)
   {
     predicted_paths.clear();
@@ -232,33 +232,33 @@ struct LongitudinalInfo
 
   void onParam(const std::vector<rclcpp::Parameter> & parameters)
   {
-    autoware::universe_utils::updateParam<double>(parameters, "normal.max_accel", max_accel);
-    autoware::universe_utils::updateParam<double>(parameters, "normal.min_accel", min_accel);
-    autoware::universe_utils::updateParam<double>(parameters, "normal.max_jerk", max_jerk);
-    autoware::universe_utils::updateParam<double>(parameters, "normal.min_jerk", min_jerk);
-    autoware::universe_utils::updateParam<double>(parameters, "limit.max_accel", limit_max_accel);
-    autoware::universe_utils::updateParam<double>(parameters, "limit.min_accel", limit_min_accel);
-    autoware::universe_utils::updateParam<double>(parameters, "limit.max_jerk", limit_max_jerk);
-    autoware::universe_utils::updateParam<double>(parameters, "limit.min_jerk", limit_min_jerk);
-    autoware::universe_utils::updateParam<double>(
+    autoware_utils::update_param<double>(parameters, "normal.max_accel", max_accel);
+    autoware_utils::update_param<double>(parameters, "normal.min_accel", min_accel);
+    autoware_utils::update_param<double>(parameters, "normal.max_jerk", max_jerk);
+    autoware_utils::update_param<double>(parameters, "normal.min_jerk", min_jerk);
+    autoware_utils::update_param<double>(parameters, "limit.max_accel", limit_max_accel);
+    autoware_utils::update_param<double>(parameters, "limit.min_accel", limit_min_accel);
+    autoware_utils::update_param<double>(parameters, "limit.max_jerk", limit_max_jerk);
+    autoware_utils::update_param<double>(parameters, "limit.min_jerk", limit_min_jerk);
+    autoware_utils::update_param<double>(
       parameters, "common.slow_down_min_accel", slow_down_min_accel);
-    autoware::universe_utils::updateParam<double>(
+    autoware_utils::update_param<double>(
       parameters, "common.slow_down_min_jerk", slow_down_min_jerk);
 
-    autoware::universe_utils::updateParam<double>(parameters, "common.idling_time", idling_time);
-    autoware::universe_utils::updateParam<double>(
+    autoware_utils::update_param<double>(parameters, "common.idling_time", idling_time);
+    autoware_utils::update_param<double>(
       parameters, "common.min_ego_accel_for_rss", min_ego_accel_for_rss);
-    autoware::universe_utils::updateParam<double>(
+    autoware_utils::update_param<double>(
       parameters, "common.min_object_accel_for_rss", min_object_accel_for_rss);
 
-    autoware::universe_utils::updateParam<double>(
+    autoware_utils::update_param<double>(
       parameters, "common.safe_distance_margin", safe_distance_margin);
-    autoware::universe_utils::updateParam<double>(
+    autoware_utils::update_param<double>(
       parameters, "common.terminal_safe_distance_margin", terminal_safe_distance_margin);
 
-    autoware::universe_utils::updateParam<double>(
+    autoware_utils::update_param<double>(
       parameters, "common.hold_stop_velocity_threshold", hold_stop_velocity_threshold);
-    autoware::universe_utils::updateParam<double>(
+    autoware_utils::update_param<double>(
       parameters, "common.hold_stop_distance_threshold", hold_stop_distance_threshold);
   }
 
@@ -299,7 +299,7 @@ struct DebugData
   MarkerArray stop_wall_marker;
   MarkerArray cruise_wall_marker;
   MarkerArray slow_down_wall_marker;
-  std::vector<autoware::universe_utils::Polygon2d> detection_polygons;
+  std::vector<autoware_utils::Polygon2d> detection_polygons;
   std::optional<std::vector<Metric>> stop_metrics{std::nullopt};
   std::optional<std::vector<Metric>> slow_down_metrics{std::nullopt};
   std::optional<std::vector<Metric>> cruise_metrics{std::nullopt};

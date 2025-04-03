@@ -16,8 +16,8 @@
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/marker_helper.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #else
@@ -41,13 +41,13 @@ autoware::motion_utils::VirtualWalls TrafficLightModule::createVirtualWalls()
 
   wall.style = autoware::motion_utils::VirtualWallType::deadline;
   for (const auto & p : debug_data_.dead_line_poses) {
-    wall.pose = autoware::universe_utils::calcOffsetPose(p, debug_data_.base_link2front, 0.0, 0.0);
+    wall.pose = autoware_utils::calc_offset_pose(p, debug_data_.base_link2front, 0.0, 0.0);
     virtual_walls.push_back(wall);
   }
 
   wall.style = autoware::motion_utils::VirtualWallType::stop;
   for (const auto & p : debug_data_.stop_poses) {
-    wall.pose = autoware::universe_utils::calcOffsetPose(p, debug_data_.base_link2front, 0.0, 0.0);
+    wall.pose = autoware_utils::calc_offset_pose(p, debug_data_.base_link2front, 0.0, 0.0);
     virtual_walls.push_back(wall);
   }
 

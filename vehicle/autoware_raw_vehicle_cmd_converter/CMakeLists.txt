@@ -21,7 +21,10 @@ ament_auto_add_library(autoware_raw_vehicle_cmd_converter_node_component SHARED
   src/node.cpp
 )
 
-target_link_libraries(autoware_raw_vehicle_cmd_converter_node_component actuation_map_converter vehicle_adaptor)
+target_link_libraries(autoware_raw_vehicle_cmd_converter_node_component
+  actuation_map_converter
+  vehicle_adaptor
+)
 
 rclcpp_components_register_node(autoware_raw_vehicle_cmd_converter_node_component
   PLUGIN "autoware::raw_vehicle_cmd_converter::RawVehicleCommandConverterNode"
@@ -34,7 +37,11 @@ if(BUILD_TESTING)
   )
   set(TEST_RAW_VEHICLE_CMD_CONVERTER_EXE test_autoware_raw_vehicle_cmd_converter)
   ament_add_ros_isolated_gtest(${TEST_RAW_VEHICLE_CMD_CONVERTER_EXE} ${TEST_SOURCES})
-  target_link_libraries(${TEST_RAW_VEHICLE_CMD_CONVERTER_EXE} actuation_map_converter vehicle_adaptor autoware_raw_vehicle_cmd_converter_node_component)
+  target_link_libraries(${TEST_RAW_VEHICLE_CMD_CONVERTER_EXE}
+    actuation_map_converter
+    vehicle_adaptor
+    autoware_raw_vehicle_cmd_converter_node_component
+  )
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE

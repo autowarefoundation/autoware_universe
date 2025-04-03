@@ -1,0 +1,9 @@
+<launch>
+  <arg name="route_topic_name" default="/planning/mission_planning/route"/>
+  <arg name="echo_back_goal_pose_topic_name" default="/planning/mission_planning/echo_back_goal_pose"/>
+
+  <node pkg="autoware_mission_planner_universe" exec="goal_pose_visualizer" name="goal_pose_visualizer" output="screen">
+    <remap from="input/route" to="$(var route_topic_name)"/>
+    <remap from="output/goal_pose" to="$(var echo_back_goal_pose_topic_name)"/>
+  </node>
+</launch>

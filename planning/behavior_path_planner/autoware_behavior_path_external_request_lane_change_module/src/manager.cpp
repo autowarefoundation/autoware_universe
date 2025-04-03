@@ -28,7 +28,7 @@ ExternalRequestLaneChangeRightModuleManager::createNewSceneModuleInstance()
 {
   return std::make_unique<LaneChangeInterface>(
     name_, *node_, parameters_, rtc_interface_ptr_map_,
-    objects_of_interest_marker_interface_ptr_map_,
+    objects_of_interest_marker_interface_ptr_map_, planning_factor_interface_,
     std::make_unique<ExternalRequestLaneChange>(parameters_, direction_));
 }
 
@@ -37,7 +37,7 @@ ExternalRequestLaneChangeLeftModuleManager::createNewSceneModuleInstance()
 {
   return std::make_unique<LaneChangeInterface>(
     name_, *node_, parameters_, rtc_interface_ptr_map_,
-    objects_of_interest_marker_interface_ptr_map_,
+    objects_of_interest_marker_interface_ptr_map_, planning_factor_interface_,
     std::make_unique<ExternalRequestLaneChange>(parameters_, direction_));
 }
 

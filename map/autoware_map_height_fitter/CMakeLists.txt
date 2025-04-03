@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.14)
 project(autoware_map_height_fitter)
 
 find_package(autoware_cmake REQUIRED)
-find_package(PCL REQUIRED COMPONENTS common)
 autoware_package()
+find_package(PCL REQUIRED COMPONENTS common)
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/map_height_fitter.cpp

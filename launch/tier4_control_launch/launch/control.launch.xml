@@ -201,7 +201,9 @@
       <group if="$(var launch_control_validator)">
         <load_composable_node target="/control/control_check_container">
           <composable_node pkg="autoware_control_validator" plugin="autoware::control_validator::ControlValidator" name="control_validator">
+            <remap from="~/input/control_cmd" to="/control/command/control_cmd"/>
             <remap from="~/input/kinematics" to="/localization/kinematic_state"/>
+            <remap from="~/input/measured_acceleration" to="/localization/acceleration"/>
             <remap from="~/input/reference_trajectory" to="/planning/scenario_planning/trajectory"/>
             <remap from="~/input/predicted_trajectory" to="/control/trajectory_follower/lateral/predicted_trajectory"/>
             <remap from="~/output/validation_status" to="~/validation_status"/>
@@ -257,7 +259,7 @@
       <!-- predicted path checker -->
       <group if="$(var launch_predicted_path_checker)">
         <load_composable_node target="/control/control_check_container">
-          <composable_node pkg="predicted_path_checker" plugin="autoware::motion::control::predicted_path_checker::PredictedPathCheckerNode" name="predicted_path_checker">
+          <composable_node pkg="autoware_predicted_path_checker" plugin="autoware::predicted_path_checker::PredictedPathCheckerNode" name="predicted_path_checker">
             <remap from="~/input/objects" to="/perception/object_recognition/objects"/>
             <remap from="~/input/reference_trajectory" to="/planning/scenario_planning/trajectory"/>
             <remap from="~/input/current_accel" to="/localization/acceleration"/>

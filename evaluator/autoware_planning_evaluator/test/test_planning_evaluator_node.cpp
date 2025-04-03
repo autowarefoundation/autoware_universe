@@ -1,4 +1,4 @@
-// Copyright 2024 Tier IV, Inc.
+// Copyright 2025 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -53,9 +54,12 @@ protected:
     rclcpp::NodeOptions options;
     const auto share_dir =
       ament_index_cpp::get_package_share_directory("autoware_planning_evaluator");
+    const auto autoware_test_utils_dir =
+      ament_index_cpp::get_package_share_directory("autoware_test_utils");
     options.arguments(
-      {"--ros-args", "--params-file", share_dir + "/config/planning_evaluator.param.yaml", "-p",
-       "output_metrics:=false"});
+      {"--ros-args", "-p", "output_metrics:=false", "--params-file",
+       share_dir + "/config/planning_evaluator.param.yaml", "--params-file",
+       autoware_test_utils_dir + "/config/test_vehicle_info.param.yaml"});
 
     dummy_node = std::make_shared<rclcpp::Node>("planning_evaluator_test_node");
     eval_node = std::make_shared<EvalNode>(options);
@@ -83,6 +87,7 @@ protected:
       dummy_node, "/planning_evaluator/input/modified_goal", 1);
 
     tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(dummy_node);
+    vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*eval_node).getVehicleInfo();
     publishEgoPose(0.0, 0.0, 0.0);
   }
 
@@ -113,6 +118,25 @@ protected:
     for (const std::pair<double, double> & point : traj) {
       p.pose.position.x = point.first;
       p.pose.position.y = point.second;
+      t.points.push_back(p);
+    }
+    return t;
+  }
+
+  Trajectory makeTrajectory(const std::vector<std::tuple<double, double, double>> & traj)
+  {
+    Trajectory t;
+    t.header.frame_id = "map";
+    TrajectoryPoint p;
+    for (const std::tuple<double, double, double> & point : traj) {
+      p.pose.position.x = std::get<0>(point);
+      p.pose.position.y = std::get<1>(point);
+      tf2::Quaternion q;
+      q.setRPY(0.0, 0.0, std::get<2>(point));
+      p.pose.orientation.x = q.x();
+      p.pose.orientation.y = q.y();
+      p.pose.orientation.z = q.z();
+      p.pose.orientation.w = q.w();
       t.points.push_back(p);
     }
     return t;
@@ -213,6 +237,9 @@ protected:
   rclcpp::Subscription<MetricArrayMsg>::SharedPtr metric_sub_;
   // TF broadcaster
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+
+public:
+  autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
 };
 
 TEST_F(EvalTest, TestCurvature)
@@ -248,6 +275,16 @@ TEST_F(EvalTest, TestRelativeAngle)
   p.pose.position.y = 2.0;
   t.points.push_back(p);
   EXPECT_DOUBLE_EQ(publishTrajectoryAndGetMetric(t), 0.0);
+}
+
+TEST_F(EvalTest, TestResampledRelativeAngle)
+{
+  setTargetMetric(planning_diagnostics::Metric::resampled_relative_angle);
+  Trajectory t = makeTrajectory({{0.0, 0.0, 0.0}, {vehicle_info_.vehicle_length_m, 0.0, 0.0}});
+  EXPECT_DOUBLE_EQ(publishTrajectoryAndGetMetric(t), 0.0);
+  t = makeTrajectory(
+    {{0.0, 0.0, 0.0}, {vehicle_info_.vehicle_length_m, vehicle_info_.vehicle_length_m, M_PI_4}});
+  EXPECT_DOUBLE_EQ(publishTrajectoryAndGetMetric(t), M_PI_4);
 }
 
 TEST_F(EvalTest, TestLength)

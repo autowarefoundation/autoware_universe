@@ -44,7 +44,7 @@ ament_target_dependencies(${PROJECT_NAME}
   rclcpp
   rclcpp_components
   sensor_msgs
-  autoware_universe_utils
+  autoware_utils
   autoware_map_msgs
   nav_msgs
 )

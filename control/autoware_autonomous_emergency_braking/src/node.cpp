@@ -16,12 +16,12 @@
 #include <autoware/autonomous_emergency_braking/utils.hpp>
 #include <autoware/motion_utils/marker/marker_helper.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
-#include <autoware/universe_utils/geometry/boost_polygon_utils.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/marker_helper.hpp>
-#include <autoware/universe_utils/ros/update_param.hpp>
 #include <autoware_utils/autoware_utils.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
+#include <autoware_utils/ros/update_param.hpp>
 #include <pcl_ros/transforms.hpp>
 #include <rclcpp/node.hpp>
 
@@ -73,8 +73,8 @@ constexpr colorTuple MPC_PATH_COLOR = {0.0 / 256.0, 100.0 / 256.0, 0.0 / 256.0, 
 namespace autoware::motion::control::autonomous_emergency_braking
 {
 using autoware::motion::control::autonomous_emergency_braking::utils::convertObjToPolygon;
-using autoware::universe_utils::Point2d;
-using autoware::universe_utils::Point3d;
+using autoware_utils::Point2d;
+using autoware_utils::Point3d;
 using diagnostic_msgs::msg::DiagnosticStatus;
 namespace bg = boost::geometry;
 
@@ -108,34 +108,27 @@ Polygon2d createPolygon(
   const double rear_overhang = vehicle_info.rear_overhang_m;
 
   appendPointToPolygon(
-    polygon,
-    autoware::universe_utils::calcOffsetPose(base_pose, longitudinal_offset, width, 0.0).position);
+    polygon, autoware_utils::calc_offset_pose(base_pose, longitudinal_offset, width, 0.0).position);
   appendPointToPolygon(
     polygon,
-    autoware::universe_utils::calcOffsetPose(base_pose, longitudinal_offset, -width, 0.0).position);
+    autoware_utils::calc_offset_pose(base_pose, longitudinal_offset, -width, 0.0).position);
   appendPointToPolygon(
-    polygon,
-    autoware::universe_utils::calcOffsetPose(base_pose, -rear_overhang, -width, 0.0).position);
+    polygon, autoware_utils::calc_offset_pose(base_pose, -rear_overhang, -width, 0.0).position);
   appendPointToPolygon(
-    polygon,
-    autoware::universe_utils::calcOffsetPose(base_pose, -rear_overhang, width, 0.0).position);
+    polygon, autoware_utils::calc_offset_pose(base_pose, -rear_overhang, width, 0.0).position);
 
   appendPointToPolygon(
-    polygon,
-    autoware::universe_utils::calcOffsetPose(next_pose, longitudinal_offset, width, 0.0).position);
+    polygon, autoware_utils::calc_offset_pose(next_pose, longitudinal_offset, width, 0.0).position);
   appendPointToPolygon(
     polygon,
-    autoware::universe_utils::calcOffsetPose(next_pose, longitudinal_offset, -width, 0.0).position);
+    autoware_utils::calc_offset_pose(next_pose, longitudinal_offset, -width, 0.0).position);
   appendPointToPolygon(
-    polygon,
-    autoware::universe_utils::calcOffsetPose(next_pose, -rear_overhang, -width, 0.0).position);
+    polygon, autoware_utils::calc_offset_pose(next_pose, -rear_overhang, -width, 0.0).position);
   appendPointToPolygon(
-    polygon,
-    autoware::universe_utils::calcOffsetPose(next_pose, -rear_overhang, width, 0.0).position);
+    polygon, autoware_utils::calc_offset_pose(next_pose, -rear_overhang, width, 0.0).position);
 
-  polygon = autoware::universe_utils::isClockwise(polygon)
-              ? polygon
-              : autoware::universe_utils::inverseClockwise(polygon);
+  polygon =
+    autoware_utils::is_clockwise(polygon) ? polygon : autoware_utils::inverse_clockwise(polygon);
 
   Polygon2d hull_polygon;
   bg::convex_hull(polygon, hull_polygon);
@@ -219,59 +212,57 @@ AEB::AEB(const rclcpp::NodeOptions & node_options)
   timer_ = rclcpp::create_timer(this, this->get_clock(), period_ns, std::bind(&AEB::onTimer, this));
 
   debug_processing_time_detail_pub_ =
-    create_publisher<autoware::universe_utils::ProcessingTimeDetail>(
-      "~/debug/processing_time_detail_ms", 1);
-  time_keeper_ =
-    std::make_shared<autoware::universe_utils::TimeKeeper>(debug_processing_time_detail_pub_);
+    create_publisher<autoware_utils::ProcessingTimeDetail>("~/debug/processing_time_detail_ms", 1);
+  time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(debug_processing_time_detail_pub_);
 }
 
 rcl_interfaces::msg::SetParametersResult AEB::onParameter(
   const std::vector<rclcpp::Parameter> & parameters)
 {
-  using autoware::universe_utils::updateParam;
-  updateParam<bool>(parameters, "publish_debug_pointcloud", publish_debug_pointcloud_);
-  updateParam<bool>(parameters, "publish_debug_markers", publish_debug_markers_);
-  updateParam<bool>(parameters, "use_predicted_trajectory", use_predicted_trajectory_);
-  updateParam<bool>(parameters, "use_imu_path", use_imu_path_);
-  updateParam<bool>(parameters, "limit_imu_path_lat_dev", limit_imu_path_lat_dev_);
-  updateParam<bool>(parameters, "limit_imu_path_length", limit_imu_path_length_);
-  updateParam<bool>(parameters, "use_pointcloud_data", use_pointcloud_data_);
-  updateParam<bool>(parameters, "use_predicted_object_data", use_predicted_object_data_);
-  updateParam<bool>(
+  using autoware_utils::update_param;
+  update_param<bool>(parameters, "publish_debug_pointcloud", publish_debug_pointcloud_);
+  update_param<bool>(parameters, "publish_debug_markers", publish_debug_markers_);
+  update_param<bool>(parameters, "use_predicted_trajectory", use_predicted_trajectory_);
+  update_param<bool>(parameters, "use_imu_path", use_imu_path_);
+  update_param<bool>(parameters, "limit_imu_path_lat_dev", limit_imu_path_lat_dev_);
+  update_param<bool>(parameters, "limit_imu_path_length", limit_imu_path_length_);
+  update_param<bool>(parameters, "use_pointcloud_data", use_pointcloud_data_);
+  update_param<bool>(parameters, "use_predicted_object_data", use_predicted_object_data_);
+  update_param<bool>(
     parameters, "use_object_velocity_calculation", use_object_velocity_calculation_);
-  updateParam<bool>(parameters, "check_autoware_state", check_autoware_state_);
-  updateParam<double>(parameters, "path_footprint_extra_margin", path_footprint_extra_margin_);
-  updateParam<double>(parameters, "imu_path_lat_dev_threshold", imu_path_lat_dev_threshold_);
-  updateParam<double>(
+  update_param<bool>(parameters, "check_autoware_state", check_autoware_state_);
+  update_param<double>(parameters, "path_footprint_extra_margin", path_footprint_extra_margin_);
+  update_param<double>(parameters, "imu_path_lat_dev_threshold", imu_path_lat_dev_threshold_);
+  update_param<double>(
     parameters, "speed_calculation_expansion_margin", speed_calculation_expansion_margin_);
-  updateParam<double>(parameters, "detection_range_min_height", detection_range_min_height_);
-  updateParam<double>(
+  update_param<double>(parameters, "detection_range_min_height", detection_range_min_height_);
+  update_param<double>(
     parameters, "detection_range_max_height_margin", detection_range_max_height_margin_);
-  updateParam<double>(parameters, "voxel_grid_x", voxel_grid_x_);
-  updateParam<double>(parameters, "voxel_grid_y", voxel_grid_y_);
-  updateParam<double>(parameters, "voxel_grid_z", voxel_grid_z_);
-  updateParam<double>(parameters, "min_generated_imu_path_length", min_generated_imu_path_length_);
-  updateParam<double>(parameters, "max_generated_imu_path_length", max_generated_imu_path_length_);
-  updateParam<double>(parameters, "expand_width", expand_width_);
-  updateParam<double>(parameters, "longitudinal_offset_margin", longitudinal_offset_margin_);
-  updateParam<double>(parameters, "t_response", t_response_);
-  updateParam<double>(parameters, "a_ego_min", a_ego_min_);
-  updateParam<double>(parameters, "a_obj_min", a_obj_min_);
+  update_param<double>(parameters, "voxel_grid_x", voxel_grid_x_);
+  update_param<double>(parameters, "voxel_grid_y", voxel_grid_y_);
+  update_param<double>(parameters, "voxel_grid_z", voxel_grid_z_);
+  update_param<double>(parameters, "min_generated_imu_path_length", min_generated_imu_path_length_);
+  update_param<double>(parameters, "max_generated_imu_path_length", max_generated_imu_path_length_);
+  update_param<double>(parameters, "expand_width", expand_width_);
+  update_param<double>(parameters, "longitudinal_offset_margin", longitudinal_offset_margin_);
+  update_param<double>(parameters, "t_response", t_response_);
+  update_param<double>(parameters, "a_ego_min", a_ego_min_);
+  update_param<double>(parameters, "a_obj_min", a_obj_min_);
 
-  updateParam<double>(parameters, "cluster_tolerance", cluster_tolerance_);
-  updateParam<double>(parameters, "cluster_minimum_height", cluster_minimum_height_);
-  updateParam<int>(parameters, "minimum_cluster_size", minimum_cluster_size_);
-  updateParam<int>(parameters, "maximum_cluster_size", maximum_cluster_size_);
+  update_param<double>(parameters, "cluster_tolerance", cluster_tolerance_);
+  update_param<double>(parameters, "cluster_minimum_height", cluster_minimum_height_);
+  update_param<int>(parameters, "minimum_cluster_size", minimum_cluster_size_);
+  update_param<int>(parameters, "maximum_cluster_size", maximum_cluster_size_);
 
-  updateParam<double>(parameters, "imu_prediction_time_horizon", imu_prediction_time_horizon_);
-  updateParam<double>(parameters, "imu_prediction_time_interval", imu_prediction_time_interval_);
-  updateParam<double>(parameters, "mpc_prediction_time_horizon", mpc_prediction_time_horizon_);
-  updateParam<double>(parameters, "mpc_prediction_time_interval", mpc_prediction_time_interval_);
+  update_param<double>(parameters, "imu_prediction_time_horizon", imu_prediction_time_horizon_);
+  update_param<double>(parameters, "imu_prediction_time_interval", imu_prediction_time_interval_);
+  update_param<double>(parameters, "mpc_prediction_time_horizon", mpc_prediction_time_horizon_);
+  update_param<double>(parameters, "mpc_prediction_time_interval", mpc_prediction_time_interval_);
 
   {  // Object history data keeper setup
     auto [previous_obstacle_keep_time, collision_keeping_sec] = collision_data_keeper_.getTimeout();
-    updateParam<double>(parameters, "previous_obstacle_keep_time", previous_obstacle_keep_time);
-    updateParam<double>(parameters, "collision_keeping_sec", collision_keeping_sec);
+    update_param<double>(parameters, "previous_obstacle_keep_time", previous_obstacle_keep_time);
+    update_param<double>(parameters, "collision_keeping_sec", collision_keeping_sec);
     collision_data_keeper_.setTimeout(collision_keeping_sec, previous_obstacle_keep_time);
   }
 
@@ -300,7 +291,7 @@ void AEB::onImu(const Imu::ConstSharedPtr input_msg)
 
 void AEB::onPointCloud(const PointCloud2::ConstSharedPtr input_msg)
 {
-  autoware::universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   PointCloud::Ptr pointcloud_ptr(new PointCloud);
   pcl::fromROSMsg(*input_msg, *pointcloud_ptr);
 
@@ -351,13 +342,13 @@ bool AEB::fetchLatestData()
     return false;
   };
 
-  current_velocity_ptr_ = sub_velocity_.takeData();
+  current_velocity_ptr_ = sub_velocity_.take_data();
   if (!current_velocity_ptr_) {
     return missing("ego velocity");
   }
 
   if (use_pointcloud_data_) {
-    const auto pointcloud_ptr = sub_point_cloud_.takeData();
+    const auto pointcloud_ptr = sub_point_cloud_.take_data();
     if (!pointcloud_ptr) {
       return missing("object pointcloud message");
     }
@@ -371,7 +362,7 @@ bool AEB::fetchLatestData()
   }
 
   if (use_predicted_object_data_) {
-    predicted_objects_ptr_ = predicted_objects_sub_.takeData();
+    predicted_objects_ptr_ = predicted_objects_sub_.take_data();
     if (!predicted_objects_ptr_) {
       return missing("predicted objects");
     }
@@ -385,7 +376,7 @@ bool AEB::fetchLatestData()
 
   const bool has_imu_path = std::invoke([&]() {
     if (!use_imu_path_) return false;
-    const auto imu_ptr = sub_imu_.takeData();
+    const auto imu_ptr = sub_imu_.take_data();
     if (!imu_ptr) {
       return missing("imu message");
     }
@@ -398,7 +389,7 @@ bool AEB::fetchLatestData()
     if (!use_predicted_trajectory_) {
       return false;
     }
-    predicted_traj_ptr_ = sub_predicted_traj_.takeData();
+    predicted_traj_ptr_ = sub_predicted_traj_.take_data();
     return (!predicted_traj_ptr_) ? missing("control predicted trajectory") : true;
   });
 
@@ -409,7 +400,7 @@ bool AEB::fetchLatestData()
     return false;
   }
 
-  autoware_state_ = sub_autoware_state_.takeData();
+  autoware_state_ = sub_autoware_state_.take_data();
   if (check_autoware_state_ && !autoware_state_) {
     return missing("autoware_state");
   }
@@ -462,7 +453,7 @@ void AEB::onCheckCollision(DiagnosticStatusWrapper & stat)
 
 bool AEB::checkCollision(MarkerArray & debug_markers)
 {
-  autoware::universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   // step1. check data
   if (!fetchLatestData()) {
@@ -634,7 +625,7 @@ bool AEB::checkCollision(MarkerArray & debug_markers)
 
 bool AEB::hasCollision(const double current_v, const ObjectData & closest_object)
 {
-  autoware::universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   const double rss_dist = std::invoke([&]() {
     const double & obj_v = closest_object.velocity;
     const double & t = t_response_;
@@ -663,7 +654,7 @@ bool AEB::hasCollision(const double current_v, const ObjectData & closest_object
 
 Path AEB::generateEgoPath(const double curr_v, const double curr_w)
 {
-  autoware::universe_utils::ScopedTimeTrack st(std::string(__func__) + "(IMU)", *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(std::string(__func__) + "(IMU)", *time_keeper_);
   const double & dt = imu_prediction_time_interval_;
   const double distance_between_points = std::abs(curr_v) * dt;
   constexpr double minimum_distance_between_points{1e-2};
@@ -675,8 +666,8 @@ Path AEB::generateEgoPath(const double curr_v, const double curr_w)
 
   // The initial pose is always aligned with the local reference frame.
   geometry_msgs::msg::Pose initial_pose;
-  initial_pose.position = autoware::universe_utils::createPoint(0.0, 0.0, 0.0);
-  initial_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(0.0);
+  initial_pose.position = autoware_utils::create_point(0.0, 0.0, 0.0);
+  initial_pose.orientation = autoware_utils::create_quaternion_from_yaw(0.0);
 
   const double horizon = imu_prediction_time_horizon_;
   const double base_link_to_front_offset = vehicle_info_.max_longitudinal_offset_m;
@@ -701,13 +692,13 @@ Path AEB::generateEgoPath(const double curr_v, const double curr_w)
     curr_y = curr_y + curr_v * std::sin(curr_yaw) * dt;
     curr_yaw = curr_yaw + curr_w * dt;
     geometry_msgs::msg::Pose current_pose =
-      autoware::universe_utils::calcOffsetPose(initial_pose, curr_x, curr_y, 0.0, curr_yaw);
+      autoware_utils::calc_offset_pose(initial_pose, curr_x, curr_y, 0.0, curr_yaw);
 
     t += dt;
     path_arc_length += distance_between_points;
-    const auto edge_of_ego_vehicle = autoware::universe_utils::calcOffsetPose(
-                                       current_pose, longitudinal_offset, lateral_offset, 0.0)
-                                       .position;
+    const auto edge_of_ego_vehicle =
+      autoware_utils::calc_offset_pose(current_pose, longitudinal_offset, lateral_offset, 0.0)
+        .position;
 
     const bool basic_path_conditions_satisfied =
       (t > horizon) && (path_arc_length > min_generated_imu_path_length_);
@@ -729,7 +720,7 @@ Path AEB::generateEgoPath(const double curr_v, const double curr_w)
 
 std::optional<Path> AEB::generateEgoPath(const Trajectory & predicted_traj)
 {
-  autoware::universe_utils::ScopedTimeTrack st(std::string(__func__) + "(MPC)", *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(std::string(__func__) + "(MPC)", *time_keeper_);
   if (predicted_traj.points.empty()) {
     return std::nullopt;
   }
@@ -747,9 +738,7 @@ std::optional<Path> AEB::generateEgoPath(const Trajectory & predicted_traj)
     tf2::doTransform(predicted_traj.points.at(i).pose, map_pose, transform_stamped.value());
 
     // skip points that are too close to the last point in the path
-    if (
-      autoware::universe_utils::calcDistance2d(path.back(), map_pose) <
-      minimum_distance_between_points) {
+    if (autoware_utils::calc_distance2d(path.back(), map_pose) < minimum_distance_between_points) {
       continue;
     }
 
@@ -766,7 +755,7 @@ std::optional<Path> AEB::generateEgoPath(const Trajectory & predicted_traj)
 void AEB::generatePathFootprint(
   const Path & path, const double extra_width_margin, std::vector<Polygon2d> & polygons)
 {
-  autoware::universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   if (path.empty()) {
     return;
   }
@@ -779,7 +768,7 @@ void AEB::generatePathFootprint(
 std::vector<Polygon2d> AEB::generatePathFootprint(
   const Path & path, const double extra_width_margin)
 {
-  autoware::universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   if (path.empty()) {
     return {};
   }
@@ -795,7 +784,7 @@ void AEB::createObjectDataUsingPredictedObjects(
   const Path & ego_path, const std::vector<Polygon2d> & ego_polys,
   std::vector<ObjectData> & object_data_vector)
 {
-  autoware::universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   if (predicted_objects_ptr_->objects.empty() || ego_polys.empty()) return;
 
   const double current_ego_speed = current_velocity_ptr_->longitudinal_velocity;
@@ -806,7 +795,7 @@ void AEB::createObjectDataUsingPredictedObjects(
   const auto current_p = [&]() {
     const auto & first_point_of_path = ego_path.front();
     const auto & p = first_point_of_path.position;
-    return autoware::universe_utils::createPoint(p.x, p.y, p.z);
+    return autoware_utils::create_point(p.x, p.y, p.z);
   }();
 
   auto get_object_tangent_velocity =
@@ -854,7 +843,7 @@ void AEB::createObjectDataUsingPredictedObjects(
       bool collision_points_added{false};
       for (const auto & collision_point : collision_points_bg) {
         const auto obj_position =
-          autoware::universe_utils::createPoint(collision_point.x(), collision_point.y(), 0.0);
+          autoware_utils::create_point(collision_point.x(), collision_point.y(), 0.0);
         const double obj_arc_length =
           autoware::motion_utils::calcSignedArcLength(ego_path, current_p, obj_position);
         if (std::isnan(obj_arc_length)) continue;
@@ -883,7 +872,7 @@ void AEB::getPointsBelongingToClusterHulls(
   const PointCloud::Ptr obstacle_points_ptr,
   const PointCloud::Ptr points_belonging_to_cluster_hulls, MarkerArray & debug_markers)
 {
-  autoware::universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   // eliminate noisy points by only considering points belonging to clusters of at least a certain
   // size
   if (obstacle_points_ptr->empty()) return;
@@ -923,7 +912,7 @@ void AEB::getPointsBelongingToClusterHulls(
     for (const auto & p : *surface_hull) {
       points_belonging_to_cluster_hulls->push_back(p);
       if (publish_debug_markers_) {
-        const auto geom_point = autoware::universe_utils::createPoint(p.x, p.y, p.z);
+        const auto geom_point = autoware_utils::create_point(p.x, p.y, p.z);
         appendPointToPolygon(hull_polygon, geom_point);
       }
     }
@@ -939,7 +928,7 @@ void AEB::getClosestObjectsOnPath(
   const Path & ego_path, const rclcpp::Time & stamp,
   const PointCloud::Ptr points_belonging_to_cluster_hulls, std::vector<ObjectData> & objects)
 {
-  autoware::universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   // check if the predicted path has a valid number of points
   if (ego_path.size() < 2 || points_belonging_to_cluster_hulls->empty()) {
     return;
@@ -954,7 +943,7 @@ void AEB::getClosestObjectsOnPath(
   const auto path_width = vehicle_info_.vehicle_width_m / 2.0 + expand_width_;
   // select points inside the ego footprint path
   for (const auto & p : *points_belonging_to_cluster_hulls) {
-    const auto obj_position = autoware::universe_utils::createPoint(p.x, p.y, p.z);
+    const auto obj_position = autoware_utils::create_point(p.x, p.y, p.z);
     auto obj_data_opt = utils::getObjectOnPathData(
       ego_path, obj_position, stamp, path_length, path_width, speed_calculation_expansion_margin_,
       longitudinal_offset, 0.0);
@@ -965,7 +954,7 @@ void AEB::getClosestObjectsOnPath(
 void AEB::cropPointCloudWithEgoFootprintPath(
   const std::vector<Polygon2d> & ego_polys, PointCloud::Ptr filtered_objects)
 {
-  autoware::universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   if (ego_polys.empty()) {
     return;
   }
@@ -1000,13 +989,13 @@ void AEB::addClusterHullMarkers(
   const rclcpp::Time & current_time, const std::vector<Polygon3d> & hulls,
   const colorTuple & debug_colors, const std::string & ns, MarkerArray & debug_markers)
 {
-  autoware::universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   const auto [color_r, color_g, color_b, color_a] = debug_colors;
 
-  auto hull_marker = autoware::universe_utils::createDefaultMarker(
+  auto hull_marker = autoware_utils::create_default_marker(
     "base_link", current_time, ns, 0, Marker::LINE_LIST,
-    autoware::universe_utils::createMarkerScale(0.03, 0.0, 0.0),
-    autoware::universe_utils::createMarkerColor(color_r, color_g, color_b, color_a));
+    autoware_utils::create_marker_scale(0.03, 0.0, 0.0),
+    autoware_utils::create_marker_color(color_r, color_g, color_b, color_a));
   utils::fillMarkerFromPolygon(hulls, hull_marker);
   debug_markers.markers.push_back(hull_marker);
 }
@@ -1016,30 +1005,30 @@ void AEB::addMarker(
   const std::vector<ObjectData> & objects, const std::optional<ObjectData> & closest_object,
   const colorTuple & debug_colors, const std::string & ns, MarkerArray & debug_markers)
 {
-  autoware::universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   const auto [color_r, color_g, color_b, color_a] = debug_colors;
 
-  auto path_marker = autoware::universe_utils::createDefaultMarker(
+  auto path_marker = autoware_utils::create_default_marker(
     "base_link", current_time, ns + "_path", 0L, Marker::LINE_STRIP,
-    autoware::universe_utils::createMarkerScale(0.2, 0.2, 0.2),
-    autoware::universe_utils::createMarkerColor(color_r, color_g, color_b, color_a));
+    autoware_utils::create_marker_scale(0.2, 0.2, 0.2),
+    autoware_utils::create_marker_color(color_r, color_g, color_b, color_a));
   path_marker.points.reserve(path.size());
   for (const auto & p : path) {
     path_marker.points.push_back(p.position);
   }
   debug_markers.markers.push_back(path_marker);
 
-  auto polygon_marker = autoware::universe_utils::createDefaultMarker(
+  auto polygon_marker = autoware_utils::create_default_marker(
     "base_link", current_time, ns + "_polygon", 0, Marker::LINE_LIST,
-    autoware::universe_utils::createMarkerScale(0.03, 0.0, 0.0),
-    autoware::universe_utils::createMarkerColor(color_r, color_g, color_b, color_a));
+    autoware_utils::create_marker_scale(0.03, 0.0, 0.0),
+    autoware_utils::create_marker_color(color_r, color_g, color_b, color_a));
   utils::fillMarkerFromPolygon(polygons, polygon_marker);
   debug_markers.markers.push_back(polygon_marker);
 
-  auto object_data_marker = autoware::universe_utils::createDefaultMarker(
+  auto object_data_marker = autoware_utils::create_default_marker(
     "base_link", current_time, ns + "_objects", 0, Marker::SPHERE_LIST,
-    autoware::universe_utils::createMarkerScale(0.5, 0.5, 0.5),
-    autoware::universe_utils::createMarkerColor(color_r, color_g, color_b, color_a));
+    autoware_utils::create_marker_scale(0.5, 0.5, 0.5),
+    autoware_utils::create_marker_color(color_r, color_g, color_b, color_a));
   for (const auto & e : objects) {
     object_data_marker.points.push_back(e.position);
   }
@@ -1048,11 +1037,11 @@ void AEB::addMarker(
   // Visualize planner type text
   if (closest_object.has_value()) {
     const auto & obj = closest_object.value();
-    const auto color = autoware::universe_utils::createMarkerColor(0.95, 0.95, 0.95, 0.999);
-    auto closest_object_velocity_marker_array = autoware::universe_utils::createDefaultMarker(
+    const auto color = autoware_utils::create_marker_color(0.95, 0.95, 0.95, 0.999);
+    auto closest_object_velocity_marker_array = autoware_utils::create_default_marker(
       "base_link", obj.stamp, ns + "_closest_object_velocity", 0,
       visualization_msgs::msg::Marker::TEXT_VIEW_FACING,
-      autoware::universe_utils::createMarkerScale(0.0, 0.0, 0.7), color);
+      autoware_utils::create_marker_scale(0.0, 0.0, 0.7), color);
     closest_object_velocity_marker_array.pose.position = obj.position;
     const auto ego_velocity = current_velocity_ptr_->longitudinal_velocity;
     closest_object_velocity_marker_array.text =
@@ -1070,7 +1059,7 @@ void AEB::addMarker(
 
 void AEB::addVirtualStopWallMarker(MarkerArray & markers)
 {
-  autoware::universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   const auto ego_map_pose = std::invoke([this]() -> std::optional<geometry_msgs::msg::Pose> {
     const auto logger = get_logger();
     const auto tf_current_pose = utils::getTransform("map", "base_link", tf_buffer_, logger);
@@ -1086,21 +1075,21 @@ void AEB::addVirtualStopWallMarker(MarkerArray & markers)
 
   if (ego_map_pose.has_value()) {
     const double base_link_to_front_offset = vehicle_info_.max_longitudinal_offset_m;
-    const auto ego_front_pose = autoware::universe_utils::calcOffsetPose(
+    const auto ego_front_pose = autoware_utils::calc_offset_pose(
       ego_map_pose.value(), base_link_to_front_offset, 0.0, 0.0, 0.0);
     const auto virtual_stop_wall = autoware::motion_utils::createStopVirtualWallMarker(
       ego_front_pose, "autonomous_emergency_braking", this->now(), 0);
-    autoware::universe_utils::appendMarkerArray(virtual_stop_wall, &markers);
+    autoware_utils::append_marker_array(virtual_stop_wall, &markers);
   }
 }
 
 void AEB::addCollisionMarker(const ObjectData & data, MarkerArray & debug_markers)
 {
-  autoware::universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
-  auto point_marker = autoware::universe_utils::createDefaultMarker(
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  auto point_marker = autoware_utils::create_default_marker(
     "base_link", data.stamp, "collision_point", 0, Marker::SPHERE,
-    autoware::universe_utils::createMarkerScale(0.3, 0.3, 0.3),
-    autoware::universe_utils::createMarkerColor(1.0, 0.0, 0.0, 0.3));
+    autoware_utils::create_marker_scale(0.3, 0.3, 0.3),
+    autoware_utils::create_marker_color(1.0, 0.0, 0.0, 0.3));
   point_marker.pose.position = data.position;
   debug_markers.markers.push_back(point_marker);
 }

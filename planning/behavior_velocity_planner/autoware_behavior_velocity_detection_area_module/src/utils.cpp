@@ -16,8 +16,8 @@
 
 #include <autoware/behavior_velocity_planner_common/utilization/arc_lane_util.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/detection_area.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/geometry/Point.h>
@@ -98,7 +98,7 @@ std::pair<lanelet::BasicPoint2d, double> get_smallest_enclosing_circle(
 
 namespace autoware::behavior_velocity_planner::detection_area
 {
-universe_utils::LineString2d get_stop_line_geometry2d(
+autoware_utils::LineString2d get_stop_line_geometry2d(
   const lanelet::autoware::DetectionArea & detection_area, const double extend_length)
 {
   const auto stop_line = detection_area.stopLine();
@@ -117,7 +117,7 @@ std::vector<geometry_msgs::msg::Point> get_obstacle_points(
                                   (circle.first.y() - p.y) * (circle.first.y() - p.y);
       if (squared_dist <= circle.second) {
         if (boost::geometry::within(Point2d{p.x, p.y}, poly.basicPolygon())) {
-          obstacle_points.push_back(autoware::universe_utils::createPoint(p.x, p.y, p.z));
+          obstacle_points.push_back(autoware_utils::create_point(p.x, p.y, p.z));
           // get all obstacle point becomes high computation cost so skip if any point is found
           break;
         }

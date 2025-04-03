@@ -20,10 +20,10 @@
 
 #include <autoware/lane_departure_checker/lane_departure_checker.hpp>
 
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <lanelet2_core/Forward.h>
 
@@ -33,35 +33,34 @@
 
 namespace autoware::behavior_path_planner
 {
+using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
-using tier4_planning_msgs::msg::PathPointWithLaneId;
-using tier4_planning_msgs::msg::PathWithLaneId;
 
 struct ParallelParkingParameters
 {
   // common
   double center_line_path_interval{0.0};
+  double max_steer_angle_margin_scale{0.0};
 
   // forward parking
   double after_forward_parking_straight_distance{0.0};
   double forward_parking_velocity{0.0};
   double forward_parking_lane_departure_margin{0.0};
   double forward_parking_path_interval{0.0};
-  double forward_parking_max_steer_angle{0.0};
 
   // backward parking
   double after_backward_parking_straight_distance{0.0};
   double backward_parking_velocity{0.0};
   double backward_parking_lane_departure_margin{0.0};
   double backward_parking_path_interval{0.0};
-  double backward_parking_max_steer_angle{0.0};
 
   // pull_out
   double pull_out_velocity{0.0};
   double pull_out_lane_departure_margin{0.0};
   double pull_out_arc_path_interval{0.0};
-  double pull_out_max_steer_angle{0.0};
+  double geometric_pull_out_max_steer_angle_margin_scale{0.0};
 };
 
 class GeometricParallelParking
@@ -70,8 +69,8 @@ public:
   bool isParking() const;
   bool planPullOver(
     const Pose & goal_pose, const lanelet::ConstLanelets & road_lanes,
-    const lanelet::ConstLanelets & pull_over_lanes, const bool is_forward,
-    const bool left_side_parking);
+    const lanelet::ConstLanelets & pull_over_lanes, const double max_steer_angle,
+    const bool is_forward, const bool left_side_parking);
   bool planPullOut(
     const Pose & start_pose, const Pose & goal_pose, const lanelet::ConstLanelets & road_lanes,
     const lanelet::ConstLanelets & pull_over_lanes, const bool left_side_start,

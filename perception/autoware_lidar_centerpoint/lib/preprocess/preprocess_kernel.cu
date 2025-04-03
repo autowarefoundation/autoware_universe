@@ -148,6 +148,8 @@ __global__ void generateVoxels_random_kernel(
 
   int voxel_idx = floorf((point.x - min_x_range) / pillar_x_size);
   int voxel_idy = floorf((point.y - min_y_range) / pillar_y_size);
+  voxel_idx = voxel_idx < 0 ? 0 : voxel_idx >= grid_x_size ? grid_x_size - 1 : voxel_idx;
+  voxel_idy = voxel_idy < 0 ? 0 : voxel_idy >= grid_y_size ? grid_y_size - 1 : voxel_idy;
   unsigned int voxel_index = (grid_x_size - 1 - voxel_idx) * grid_y_size + voxel_idy;
 
   unsigned int point_id = atomicAdd(&(mask[voxel_index]), 1);

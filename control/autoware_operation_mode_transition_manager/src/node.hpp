@@ -18,9 +18,9 @@
 #include "compatibility.hpp"
 #include "state.hpp"
 
-#include <autoware/component_interface_specs/system.hpp>
+#include <autoware/component_interface_specs_universe/system.hpp>
 #include <autoware/component_interface_utils/rclcpp.hpp>
-#include <autoware/universe_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils/ros/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <memory>
@@ -36,9 +36,11 @@ public:
 
 private:
   using ChangeAutowareControlAPI =
-    autoware::component_interface_specs::system::ChangeAutowareControl;
-  using ChangeOperationModeAPI = autoware::component_interface_specs::system::ChangeOperationMode;
-  using OperationModeStateAPI = autoware::component_interface_specs::system::OperationModeState;
+    autoware::component_interface_specs_universe::system::ChangeAutowareControl;
+  using ChangeOperationModeAPI =
+    autoware::component_interface_specs_universe::system::ChangeOperationMode;
+  using OperationModeStateAPI =
+    autoware::component_interface_specs_universe::system::OperationModeState;
   autoware::component_interface_utils::Service<ChangeAutowareControlAPI>::SharedPtr
     srv_autoware_control_;
   autoware::component_interface_utils::Service<ChangeOperationModeAPI>::SharedPtr
@@ -53,10 +55,10 @@ private:
     const ChangeOperationModeAPI::Service::Response::SharedPtr response);
 
   using ControlModeCommandType = ControlModeCommand::Request::_mode_type;
-  autoware::universe_utils::InterProcessPollingSubscriber<ControlModeReport>
-    sub_control_mode_report_{this, "control_mode_report"};
-  autoware::universe_utils::InterProcessPollingSubscriber<OperationModeState>
-    sub_gate_operation_mode_{this, "gate_operation_mode"};
+  autoware_utils::InterProcessPollingSubscriber<ControlModeReport> sub_control_mode_report_{
+    this, "control_mode_report"};
+  autoware_utils::InterProcessPollingSubscriber<OperationModeState> sub_gate_operation_mode_{
+    this, "gate_operation_mode"};
   rclcpp::Client<ControlModeCommand>::SharedPtr cli_control_mode_;
   rclcpp::Publisher<ModeChangeBase::DebugInfo>::SharedPtr pub_debug_info_;
   rclcpp::TimerBase::SharedPtr timer_;

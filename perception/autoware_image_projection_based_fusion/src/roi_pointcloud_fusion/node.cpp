@@ -17,7 +17,7 @@
 #include "autoware/image_projection_based_fusion/utils/geometry.hpp"
 #include "autoware/image_projection_based_fusion/utils/utils.hpp"
 
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 
 #include <memory>
 #include <vector>
@@ -34,63 +34,26 @@
 
 namespace autoware::image_projection_based_fusion
 {
-using autoware::universe_utils::ScopedTimeTrack;
+using autoware_utils::ScopedTimeTrack;
 
 RoiPointCloudFusionNode::RoiPointCloudFusionNode(const rclcpp::NodeOptions & options)
-: FusionNode<PointCloud2, DetectedObjectWithFeature, DetectedObjectsWithFeature>(
-    "roi_pointcloud_fusion", options)
+: FusionNode<PointCloudMsgType, RoiMsgType, ClusterMsgType>("roi_pointcloud_fusion", options)
 {
   fuse_unknown_only_ = declare_parameter<bool>("fuse_unknown_only");
   min_cluster_size_ = declare_parameter<int>("min_cluster_size");
   max_cluster_size_ = declare_parameter<int>("max_cluster_size");
   cluster_2d_tolerance_ = declare_parameter<double>("cluster_2d_tolerance");
-  pub_objects_ptr_ =
-    this->create_publisher<DetectedObjectsWithFeature>("output_clusters", rclcpp::QoS{1});
-  cluster_debug_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("debug/clusters", 1);
+  roi_scale_factor_ = declare_parameter<double>("roi_scale_factor");
+
+  // publisher
+  pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
+  cluster_debug_pub_ = this->create_publisher<PointCloudMsgType>("debug/clusters", 1);
 }
 
-void RoiPointCloudFusionNode::preprocess(
-  __attribute__((unused)) sensor_msgs::msg::PointCloud2 & pointcloud_msg)
-{
-  std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
-
-  return;
-}
-
-void RoiPointCloudFusionNode::postprocess(
-  __attribute__((unused)) sensor_msgs::msg::PointCloud2 & pointcloud_msg)
-{
-  std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
-
-  const auto objects_sub_count = pub_objects_ptr_->get_subscription_count() +
-                                 pub_objects_ptr_->get_intra_process_subscription_count();
-  if (objects_sub_count < 1) {
-    return;
-  }
-
-  DetectedObjectsWithFeature output_msg;
-  output_msg.header = pointcloud_msg.header;
-  output_msg.feature_objects = output_fused_objects_;
-
-  if (objects_sub_count > 0) {
-    pub_objects_ptr_->publish(output_msg);
-  }
-  output_fused_objects_.clear();
-  // publish debug cluster
-  if (cluster_debug_pub_->get_subscription_count() > 0) {
-    sensor_msgs::msg::PointCloud2 debug_cluster_msg;
-    autoware::euclidean_cluster::convertObjectMsg2SensorMsg(output_msg, debug_cluster_msg);
-    cluster_debug_pub_->publish(debug_cluster_msg);
-  }
-}
-void RoiPointCloudFusionNode::fuseOnSingleImage(
-  const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg,
-  __attribute__((unused)) const std::size_t image_id,
-  const DetectedObjectsWithFeature & input_roi_msg,
-  const sensor_msgs::msg::CameraInfo & camera_info,
-  __attribute__((unused)) sensor_msgs::msg::PointCloud2 & output_pointcloud_msg)
+void RoiPointCloudFusionNode::fuse_on_single_image(
+  const PointCloudMsgType & input_pointcloud_msg, const Det2dStatus<RoiMsgType> & det2d_status,
+  const RoiMsgType & input_rois_msg,
+  __attribute__((unused)) PointCloudMsgType & output_pointcloud_msg)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -98,13 +61,12 @@ void RoiPointCloudFusionNode::fuseOnSingleImage(
   if (input_pointcloud_msg.data.empty()) {
     return;
   }
-  if (!checkCameraInfo(camera_info)) return;
 
   std::vector<DetectedObjectWithFeature> output_objs;
   std::vector<sensor_msgs::msg::RegionOfInterest> debug_image_rois;
   std::vector<Eigen::Vector2d> debug_image_points;
   // select ROIs for fusion
-  for (const auto & feature_obj : input_roi_msg.feature_objects) {
+  for (const auto & feature_obj : input_rois_msg.feature_objects) {
     if (fuse_unknown_only_) {
       bool is_roi_label_unknown = feature_obj.object.classification.front().label ==
                                   autoware_perception_msgs::msg::ObjectClassification::UNKNOWN;
@@ -118,33 +80,40 @@ void RoiPointCloudFusionNode::fuseOnSingleImage(
       debug_image_rois.push_back(feature_obj.feature.roi);
     }
   }
+
+  // check if there is no object to fuse
   if (output_objs.empty()) {
+    // publish debug image, which is empty
+    if (debugger_) {
+      debugger_->image_rois_ = debug_image_rois;
+      debugger_->obstacle_points_ = debug_image_points;
+      debugger_->publishImage(det2d_status.id, input_rois_msg.header.stamp);
+    }
     return;
   }
-
-  // transform pointcloud to camera optical frame id
-  image_geometry::PinholeCameraModel pinhole_camera_model;
-  pinhole_camera_model.fromCameraInfo(camera_info);
 
   geometry_msgs::msg::TransformStamped transform_stamped;
   {
     const auto transform_stamped_optional = getTransformStamped(
-      tf_buffer_, input_roi_msg.header.frame_id, input_pointcloud_msg.header.frame_id,
-      input_roi_msg.header.stamp);
+      tf_buffer_, input_rois_msg.header.frame_id, input_pointcloud_msg.header.frame_id,
+      input_rois_msg.header.stamp);
     if (!transform_stamped_optional) {
       return;
     }
     transform_stamped = transform_stamped_optional.value();
   }
-  int point_step = input_pointcloud_msg.point_step;
-  int x_offset = input_pointcloud_msg.fields[pcl::getFieldIndex(input_pointcloud_msg, "x")].offset;
-  int y_offset = input_pointcloud_msg.fields[pcl::getFieldIndex(input_pointcloud_msg, "y")].offset;
-  int z_offset = input_pointcloud_msg.fields[pcl::getFieldIndex(input_pointcloud_msg, "z")].offset;
+  const int point_step = input_pointcloud_msg.point_step;
+  const int x_offset =
+    input_pointcloud_msg.fields[pcl::getFieldIndex(input_pointcloud_msg, "x")].offset;
+  const int y_offset =
+    input_pointcloud_msg.fields[pcl::getFieldIndex(input_pointcloud_msg, "y")].offset;
+  const int z_offset =
+    input_pointcloud_msg.fields[pcl::getFieldIndex(input_pointcloud_msg, "z")].offset;
 
-  sensor_msgs::msg::PointCloud2 transformed_cloud;
+  PointCloudMsgType transformed_cloud;
   tf2::doTransform(input_pointcloud_msg, transformed_cloud, transform_stamped);
 
-  std::vector<sensor_msgs::msg::PointCloud2> clusters;
+  std::vector<PointCloudMsgType> clusters;
   std::vector<size_t> clusters_data_size;
   clusters.resize(output_objs.size());
   for (auto & cluster : clusters) {
@@ -161,36 +130,36 @@ void RoiPointCloudFusionNode::fuseOnSingleImage(
       *reinterpret_cast<const float *>(&transformed_cloud.data[offset + y_offset]);
     const float transformed_z =
       *reinterpret_cast<const float *>(&transformed_cloud.data[offset + z_offset]);
-    if (transformed_z <= 0.0) {
+    if (det2d_status.camera_projector_ptr->isOutsideHorizontalView(transformed_x, transformed_z)) {
       continue;
     }
-    Eigen::Vector2d projected_point = calcRawImageProjectedPoint(
-      pinhole_camera_model, cv::Point3d(transformed_x, transformed_y, transformed_z),
-      point_project_to_unrectified_image_);
-    for (std::size_t i = 0; i < output_objs.size(); ++i) {
-      auto & feature_obj = output_objs.at(i);
-      const auto & check_roi = feature_obj.feature.roi;
-      auto & cluster = clusters.at(i);
 
-      if (
-        clusters_data_size.at(i) >=
-        static_cast<size_t>(max_cluster_size_) * static_cast<size_t>(point_step)) {
-        continue;
+    Eigen::Vector2d projected_point;
+    if (det2d_status.camera_projector_ptr->calcImageProjectedPoint(
+          cv::Point3d(transformed_x, transformed_y, transformed_z), projected_point)) {
+      for (std::size_t i = 0; i < output_objs.size(); ++i) {
+        auto & feature_obj = output_objs.at(i);
+        const auto & check_roi = feature_obj.feature.roi;
+        auto & cluster = clusters.at(i);
+
+        const double px = projected_point.x();
+        const double py = projected_point.y();
+
+        if (
+          clusters_data_size.at(i) >=
+          static_cast<size_t>(max_cluster_size_) * static_cast<size_t>(point_step)) {
+          continue;
+        }
+        if (isPointInsideRoi(check_roi, px, py, roi_scale_factor_)) {
+          std::memcpy(
+            &cluster.data[clusters_data_size.at(i)], &input_pointcloud_msg.data[offset],
+            point_step);
+          clusters_data_size.at(i) += point_step;
+        }
       }
-      if (
-        check_roi.x_offset <= projected_point.x() && check_roi.y_offset <= projected_point.y() &&
-        check_roi.x_offset + check_roi.width >= projected_point.x() &&
-        check_roi.y_offset + check_roi.height >= projected_point.y()) {
-        std::memcpy(
-          &cluster.data[clusters_data_size.at(i)], &input_pointcloud_msg.data[offset], point_step);
-        clusters_data_size.at(i) += point_step;
-      }
-    }
-    if (debugger_) {
-      // add all points inside image to debug
-      if (
-        projected_point.x() > 0 && projected_point.x() < camera_info.width &&
-        projected_point.y() > 0 && projected_point.y() < camera_info.height) {
+
+      if (debugger_) {
+        // add all points inside image to debug
         debug_image_points.push_back(projected_point);
       }
     }
@@ -198,19 +167,44 @@ void RoiPointCloudFusionNode::fuseOnSingleImage(
 
   // refine and update output_fused_objects_
   updateOutputFusedObjects(
-    output_objs, clusters, clusters_data_size, input_pointcloud_msg, input_roi_msg.header,
+    output_objs, clusters, clusters_data_size, input_pointcloud_msg, input_rois_msg.header,
     tf_buffer_, min_cluster_size_, max_cluster_size_, cluster_2d_tolerance_, output_fused_objects_);
+
+  // publish debug image
   if (debugger_) {
     debugger_->image_rois_ = debug_image_rois;
     debugger_->obstacle_points_ = debug_image_points;
-    debugger_->publishImage(image_id, input_roi_msg.header.stamp);
+    debugger_->publishImage(det2d_status.id, input_rois_msg.header.stamp);
   }
 }
 
-bool RoiPointCloudFusionNode::out_of_scope(__attribute__((unused))
-                                           const DetectedObjectWithFeature & obj)
+void RoiPointCloudFusionNode::postprocess(
+  const PointCloudMsgType & pointcloud_msg, ClusterMsgType & output_msg)
 {
-  return false;
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
+  output_msg.header = pointcloud_msg.header;
+  output_msg.feature_objects = output_fused_objects_;
+
+  output_fused_objects_.clear();
+
+  // publish debug cluster
+  if (cluster_debug_pub_->get_subscription_count() > 0) {
+    PointCloudMsgType debug_cluster_msg;
+    autoware::euclidean_cluster::convertObjectMsg2SensorMsg(output_msg, debug_cluster_msg);
+    cluster_debug_pub_->publish(debug_cluster_msg);
+  }
+}
+
+void RoiPointCloudFusionNode::publish(const ClusterMsgType & output_msg)
+{
+  const auto objects_sub_count =
+    pub_ptr_->get_subscription_count() + pub_ptr_->get_intra_process_subscription_count();
+  if (objects_sub_count < 1) {
+    return;
+  }
+  pub_ptr_->publish(output_msg);
 }
 }  // namespace autoware::image_projection_based_fusion
 

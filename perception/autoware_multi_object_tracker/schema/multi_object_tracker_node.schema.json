@@ -86,38 +86,45 @@
           "properties": {
             "UNKNOWN": {
               "type": "number",
+              "description": "Number of measurements to consider tracker as confident for unknown object classes.",
               "default": 3
             },
             "CAR": {
               "type": "number",
+              "description": "Number of measurements to consider tracker as confident for car object classes.",
               "default": 3
             },
             "TRUCK": {
               "type": "number",
+              "description": "Number of measurements to consider tracker as confident for truck object classes.",
               "default": 3
             },
             "BUS": {
               "type": "number",
+              "description": "Number of measurements to consider tracker as confident for bus object classes.",
               "default": 3
             },
             "TRAILER": {
               "type": "number",
+              "description": "Number of measurements to consider tracker as confident for trailer object classes.",
               "default": 3
             },
             "MOTORBIKE": {
               "type": "number",
+              "description": "Number of measurements to consider tracker as confident for motorbike object classes.",
               "default": 3
             },
             "BICYCLE": {
               "type": "number",
+              "description": "Number of measurements to consider tracker as confident for bicycle object classes.",
               "default": 3
             },
             "PEDESTRIAN": {
               "type": "number",
+              "description": "Number of measurements to consider tracker as confident for pedestrian object classes.",
               "default": 3
             }
-          },
-          "description": "Number of measurements to consider tracker as confident for different object classes."
+          }
         },
         "publish_processing_time": {
           "type": "boolean",
@@ -142,6 +149,16 @@
         "diagnostics_error_delay": {
           "type": "number",
           "description": "Delay threshold for error diagnostics in seconds.",
+          "default": 1.0
+        },
+        "diagnostics_warn_extrapolation": {
+          "type": "number",
+          "description": "Delay extrapolation threshold for warning diagnostics in seconds.",
+          "default": 0.5
+        },
+        "diagnostics_error_extrapolation": {
+          "type": "number",
+          "description": "Delay extrapolation threshold for error diagnostics in seconds.",
           "default": 1.0
         }
       },

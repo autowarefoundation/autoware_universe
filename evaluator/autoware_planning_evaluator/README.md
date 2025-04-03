@@ -13,6 +13,7 @@ Metrics are calculated using the following information:
 - the previous trajectory `T(-1)`.
 - the _reference_ trajectory assumed to be used as the reference to plan `T(0)`.
 - the current ego pose.
+- the current ego odometry.
 - the set of objects in the environment.
 
 These information are maintained by an instance of class `MetricsCalculator`
@@ -20,7 +21,7 @@ which is also responsible for calculating metrics.
 
 ### Stat
 
-Each metric is calculated using a `autoware::universe_utils::Accumulator` instance which contains
+Each metric is calculated using a `autoware_utils::Accumulator` instance which contains
 the minimum, maximum, and mean values calculated for the metric
 as well as the number of values measured.
 

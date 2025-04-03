@@ -195,7 +195,7 @@ Although it has a cons to converge to the local minima, it can get a good soluti
   - The point on the vehicle, offset forward with this parameter from the base link` tries to follow the reference path.
 
 - change or tune the method to approximate footprints with a set of circles.
-  - See [here](https://autowarefoundation.github.io/autoware.universe/main/planning/path_optimizer/docs/mpt/#collision-free)
+  - See [here](https://autowarefoundation.github.io/autoware_universe/main/planning/path_optimizer/docs/mpt/#collision-free)
   - Tuning means changing the ratio of circle's radius.
 
 ### Computation time
