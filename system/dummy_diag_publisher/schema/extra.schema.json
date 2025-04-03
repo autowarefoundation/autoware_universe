@@ -1,58 +1,57 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "dummy_diag_publisher parameter",
-    "type": "object",
-    "definitions": {
-      "extra": {
-        "type": "object",
-        "properties": {
-          "required_diags": {
-            "type": "object",
-            "properties": {
-              "camera_connection": {
-                "type": "object",
-                "properties": {
-                  "is_active": {
-                    "type": "string",
-                    "description": "Camera connection active status",
-                    "default": "true"
-                  },
-                  "status": {
-                    "type": "string",
-                    "description": "Camera connection status",
-                    "default": "Warn"
-                  }
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "dummy_diag_publisher parameter",
+  "type": "object",
+  "definitions": {
+    "extra": {
+      "type": "object",
+      "properties": {
+        "required_diags": {
+          "type": "object",
+          "properties": {
+            "camera_connection": {
+              "type": "object",
+              "properties": {
+                "is_active": {
+                  "type": "string",
+                  "description": "Camera connection active status",
+                  "default": "true"
                 },
-                "required": ["is_active", "status"],
-                "additionalProperties": false
+                "status": {
+                  "type": "string",
+                  "description": "Camera connection status",
+                  "default": "Warn"
+                }
               },
-              "extra": {
-                "type": "string",
-                "description": "Extra diagnostic status",
-                "default": "default"
-              }
+              "required": ["is_active", "status"],
+              "additionalProperties": false
             },
-            "required": ["camera_connection", "extra"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["required_diags"],
-        "additionalProperties": false
-      }
-    },
-    "properties": {
-      "/**": {
-        "type": "object",
-        "properties": {
-          "ros__parameters": {
-            "$ref": "#/definitions/extra"
-          }
-        },
-        "required": ["ros__parameters"],
-        "additionalProperties": false
-      }
-    },
-    "required": ["/**"],
-    "additionalProperties": false
-  }
-  
+            "extra": {
+              "type": "string",
+              "description": "Extra diagnostic status",
+              "default": "default"
+            }
+          },
+          "required": ["camera_connection", "extra"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["required_diags"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/extra"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
