@@ -12,9 +12,9 @@ repositories:
     type: git
     url: https://github.com/autowarefoundation/autoware_lanelet2_extension.git
     version: 0.6.2
-  core/autoware.core:
+  core/autoware_core:
     type: git
-    url: https://github.com/autowarefoundation/autoware.core.git
+    url: https://github.com/autowarefoundation/autoware_core.git
     version: 0.2.0
   core/autoware_msgs:
     type: git
@@ -46,3 +46,20 @@ repositories:
     type: git
     url: https://github.com/tier4/glog.git
     version: v0.6.0_t4-ros
+  universe/external/cuda_blackboard:
+    type: git
+    url: https://github.com/autowarefoundation/cuda_blackboard.git
+    version: v0.2.0
+  universe/external/negotiated:
+    type: git
+    url: https://github.com/osrf/negotiated.git
+    version: eac198b55dcd052af5988f0f174902913c5f20e7
+  # middleware
+  # TODO(TIER IV): During the transition period of Agnocast introduction,
+  # the Agnocast ROS packages are provided as a source build.
+  # Once the transition stabilizes, use the packages released from the official ROS repository.
+  # Issue: https://github.com/autowarefoundation/autoware/issues/5968
+  middleware/external/agnocast:
+    type: git
+    url: https://github.com/tier4/agnocast.git
+    version: main # TODO(TIER IV): to be updated to v1.1.0

@@ -2,15 +2,21 @@
 Changelog for package tier4_system_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* Contributors: Hayato Mizushima, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware.universe/issues/10191>`_)
+* feat(autoware_utils): replace autoware_universe_utils with autoware_utils  (`#10191 <https://github.com/autowarefoundation/autoware_universe/issues/10191>`_)
 * Contributors: Fumiya Watanabe, 心刚
 
 0.41.2 (2025-02-19)
 -------------------
-* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware.universe/issues/10088>`_)
+* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware_universe/issues/10088>`_)
 * Contributors: Ryohsuke Mitsudome
 
 0.41.1 (2025-02-10)
@@ -22,16 +28,16 @@ Changelog for package tier4_system_rviz_plugin
 0.40.0 (2024-12-12)
 -------------------
 * Merge branch 'main' into release-0.40.0
-* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware.universe/issues/9587>`_)"
+* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware_universe/issues/9587>`_)"
   This reverts commit c9f0f2688c57b0f657f5c1f28f036a970682e7f5.
-* chore: move rviz plugins from common to visualization/ folder (`#9417 <https://github.com/autowarefoundation/autoware.universe/issues/9417>`_)
+* chore: move rviz plugins from common to visualization/ folder (`#9417 <https://github.com/autowarefoundation/autoware_universe/issues/9417>`_)
 * Contributors: Esteve Fernandez, Fumiya Watanabe
 
 0.39.0 (2024-11-25)
 -------------------
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware.universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware.universe/issues/9284>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* chore(package.xml): bump version to 0.38.0 (`#9266 <https://github.com/autowarefoundation/autoware_universe/issues/9266>`_) (`#9284 <https://github.com/autowarefoundation/autoware_universe/issues/9284>`_)
   * unify package.xml version to 0.37.0
   * remove system_monitor/CHANGELOG.rst
   * add changelog
@@ -42,16 +48,16 @@ Changelog for package tier4_system_rviz_plugin
 0.38.0 (2024-11-08)
 -------------------
 * unify package.xml version to 0.37.0
-* feat(system_error_monitor): remove system error monitor (`#8929 <https://github.com/autowarefoundation/autoware.universe/issues/8929>`_)
+* feat(system_error_monitor): remove system error monitor (`#8929 <https://github.com/autowarefoundation/autoware_universe/issues/8929>`_)
   * feat: delete-system-error-monitor-from-autoware
   * feat: remove unnecessary params
   ---------
-* fix(tier4_system_rviz_plugin): fix cppcheck warning of virtualCallInConstructor (`#8378 <https://github.com/autowarefoundation/autoware.universe/issues/8378>`_)
+* fix(tier4_system_rviz_plugin): fix cppcheck warning of virtualCallInConstructor (`#8378 <https://github.com/autowarefoundation/autoware_universe/issues/8378>`_)
   fix: deal with virtualCallInConstructor warning
   Co-authored-by: kminoda <44218668+kminoda@users.noreply.github.com>
-* feat(autoware_universe_utils)!: rename from tier4_autoware_utils (`#7538 <https://github.com/autowarefoundation/autoware.universe/issues/7538>`_)
+* feat(autoware_universe_utils)!: rename from tier4_autoware_utils (`#7538 <https://github.com/autowarefoundation/autoware_universe/issues/7538>`_)
   Co-authored-by: kosuke55 <kosuke.tnp@gmail.com>
-* feat!: replace autoware_auto_msgs with autoware_msgs for common modules (`#7239 <https://github.com/autowarefoundation/autoware.universe/issues/7239>`_)
+* feat!: replace autoware_auto_msgs with autoware_msgs for common modules (`#7239 <https://github.com/autowarefoundation/autoware_universe/issues/7239>`_)
   Co-authored-by: Cynthia Liu <cynthia.liu@autocore.ai>
   Co-authored-by: NorahXiong <norah.xiong@autocore.ai>
   Co-authored-by: beginningfan <beginning.fan@autocore.ai>
@@ -59,7 +65,7 @@ Changelog for package tier4_system_rviz_plugin
 
 0.26.0 (2024-04-03)
 -------------------
-* feat(tier4_system_rviz_plugin): improve visualization results and logics (`#5222 <https://github.com/autowarefoundation/autoware.universe/issues/5222>`_)
+* feat(tier4_system_rviz_plugin): improve visualization results and logics (`#5222 <https://github.com/autowarefoundation/autoware_universe/issues/5222>`_)
   * Add Init Localization and Init Planning Check; Add error list check
   * style(pre-commit): autofix
   * int casting problem updated
@@ -76,8 +82,8 @@ Changelog for package tier4_system_rviz_plugin
   ---------
   Co-authored-by: Owen-Liuyuxuan <uken.ryu@tier4.jp>
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* refactor(common): extern template for motion_utils / remove tier4_autoware_utils.hpp / remove motion_utis.hpp (`#5027 <https://github.com/autowarefoundation/autoware.universe/issues/5027>`_)
-* feat(tier4_system_rviz_plugin): add package (`#4945 <https://github.com/autowarefoundation/autoware.universe/issues/4945>`_)
+* refactor(common): extern template for motion_utils / remove tier4_autoware_utils.hpp / remove motion_utis.hpp (`#5027 <https://github.com/autowarefoundation/autoware_universe/issues/5027>`_)
+* feat(tier4_system_rviz_plugin): add package (`#4945 <https://github.com/autowarefoundation/autoware_universe/issues/4945>`_)
   * feat(tier4_system_rviz_plugin): add package
   * update maintainer
   * style(pre-commit): autofix

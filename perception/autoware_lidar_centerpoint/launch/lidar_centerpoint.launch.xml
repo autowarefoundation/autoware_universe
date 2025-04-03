@@ -17,12 +17,13 @@
     <load_composable_node target="$(var pointcloud_container_name)">
       <composable_node pkg="autoware_lidar_centerpoint" plugin="autoware::lidar_centerpoint::LidarCenterPointNode" name="lidar_centerpoint">
         <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+        <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda"/>
         <remap from="~/output/objects" to="$(var output/objects)"/>
         <param from="$(var model_param_path)" allow_substs="true"/>
         <param from="$(var ml_package_param_path)" allow_substs="true"/>
         <param from="$(var class_remapper_param_path)"/>
 
-        <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware.universe/pull/6167 -->
+        <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware_universe/pull/6167 -->
         <param name="build_only" value="$(var build_only)"/>
       </composable_node>
     </load_composable_node>
@@ -30,12 +31,13 @@
   <group unless="$(var use_pointcloud_container)">
     <node pkg="autoware_lidar_centerpoint" exec="autoware_lidar_centerpoint_node" name="lidar_centerpoint" output="screen">
       <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+      <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda"/>
       <remap from="~/output/objects" to="$(var output/objects)"/>
       <param from="$(var model_param_path)" allow_substs="true"/>
       <param from="$(var ml_package_param_path)" allow_substs="true"/>
       <param from="$(var class_remapper_param_path)"/>
 
-      <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware.universe/pull/6167 -->
+      <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware_universe/pull/6167 -->
       <param name="build_only" value="$(var build_only)"/>
     </node>
   </group>

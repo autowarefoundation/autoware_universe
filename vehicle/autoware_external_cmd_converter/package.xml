@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_external_cmd_converter</name>
-  <version>0.42.0</version>
+  <version>0.43.0</version>
   <description>The autoware_external_cmd_converter package</description>
   <maintainer email="takamasa.horibe@tier4.jp">Takamasa Horibe</maintainer>
   <maintainer email="eiki.nagata.2@tier4.jp">Eiki Nagata</maintainer>
@@ -13,6 +13,7 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
+  <depend>autoware_adapi_v1_msgs</depend>
   <depend>autoware_control_msgs</depend>
   <depend>autoware_raw_vehicle_cmd_converter</depend>
   <depend>autoware_test_utils</depend>
@@ -24,7 +25,6 @@
   <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>
   <depend>tier4_control_msgs</depend>
-  <depend>tier4_external_api_msgs</depend>
   <depend>tier4_system_msgs</depend>
 
   <test_depend>ament_cmake_ros</test_depend>

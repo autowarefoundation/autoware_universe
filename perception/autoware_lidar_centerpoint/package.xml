@@ -2,11 +2,11 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_lidar_centerpoint</name>
-  <version>0.42.0</version>
+  <version>0.43.0</version>
   <description>The autoware_lidar_centerpoint package</description>
   <maintainer email="kenzo.lobos@tier4.jp">Kenzo Lobos-Tsunekawa</maintainer>
-  <maintainer email="koji.minoda@tier4.jp">Koji Minoda</maintainer>
   <maintainer email="amadeusz.szymko.2@tier4.jp">Amadeusz Szymko</maintainer>
+  <maintainer email="satoshi.tanaka@tier4.jp">Satoshi Tanaka</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
@@ -18,6 +18,7 @@
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_tensorrt_common</depend>
   <depend>autoware_utils</depend>
+  <depend>cuda_blackboard</depend>
   <depend>pcl_ros</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>

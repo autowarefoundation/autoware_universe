@@ -36,14 +36,19 @@
 #include <string>
 #include <vector>
 
-namespace autoware_utils
+namespace autoware_utils_geometry
 {
+
 template <>
 geometry_msgs::msg::Point get_point(const autoware::path_optimizer::ReferencePoint & p);
 
 template <>
 geometry_msgs::msg::Pose get_pose(const autoware::path_optimizer::ReferencePoint & p);
-}  // namespace autoware_utils
+
+template <>
+double get_longitudinal_velocity(const autoware::path_optimizer::ReferencePoint & p);
+
+}  // namespace autoware_utils_geometry
 
 namespace autoware::path_optimizer
 {

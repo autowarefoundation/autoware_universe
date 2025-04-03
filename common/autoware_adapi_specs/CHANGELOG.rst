@@ -2,12 +2,18 @@
 Changelog for package autoware_adapi_specs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.43.0 (2025-03-21)
+-------------------
+* Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
+* chore: rename from `autoware.universe` to `autoware_universe` (`#10306 <https://github.com/autowarefoundation/autoware_universe/issues/10306>`_)
+* Contributors: Hayato Mizushima, Yutaka Kondo
+
 0.42.0 (2025-03-03)
 -------------------
 
 0.41.2 (2025-02-19)
 -------------------
-* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware.universe/issues/10088>`_)
+* chore: bump version to 0.41.1 (`#10088 <https://github.com/autowarefoundation/autoware_universe/issues/10088>`_)
 * Contributors: Ryohsuke Mitsudome
 
 0.41.1 (2025-02-10)
@@ -16,7 +22,7 @@ Changelog for package autoware_adapi_specs
 0.41.0 (2025-01-29)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/bot/bump_version_base
-* feat(autoware_default_adapi): release adapi v1.6.0 (`#9704 <https://github.com/autowarefoundation/autoware.universe/issues/9704>`_)
+* feat(autoware_default_adapi): release adapi v1.6.0 (`#9704 <https://github.com/autowarefoundation/autoware_universe/issues/9704>`_)
   * feat: reject clearing route during autonomous mode
   * feat: modify check and relay door service
   * fix door condition
@@ -28,22 +34,22 @@ Changelog for package autoware_adapi_specs
 0.40.0 (2024-12-12)
 -------------------
 * Merge branch 'main' into release-0.40.0
-* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware.universe/issues/9587>`_)"
+* Revert "chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware_universe/issues/9587>`_)"
   This reverts commit c9f0f2688c57b0f657f5c1f28f036a970682e7f5.
-* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware.universe/issues/9588>`_)
-* chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware.universe/issues/9587>`_)
+* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware_universe/issues/9588>`_)
+* chore(package.xml): bump version to 0.39.0 (`#9587 <https://github.com/autowarefoundation/autoware_universe/issues/9587>`_)
   * chore(package.xml): bump version to 0.39.0
   * fix: fix ticket links in CHANGELOG.rst
   * fix: remove unnecessary diff
   ---------
   Co-authored-by: Yutaka Kondo <yutaka.kondo@youtalk.jp>
-* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware.universe/issues/9588>`_)
-* fix: fix package names in changelog files (`#9500 <https://github.com/autowarefoundation/autoware.universe/issues/9500>`_)
+* fix: fix ticket links in CHANGELOG.rst (`#9588 <https://github.com/autowarefoundation/autoware_universe/issues/9588>`_)
+* fix: fix package names in changelog files (`#9500 <https://github.com/autowarefoundation/autoware_universe/issues/9500>`_)
 * 0.39.0
 * update changelog
 * Merge commit '6a1ddbd08bd' into release-0.39.0
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* refactor(autoware_ad_api_specs): prefix package and namespace with autoware (`#9250 <https://github.com/autowarefoundation/autoware.universe/issues/9250>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* refactor(autoware_ad_api_specs): prefix package and namespace with autoware (`#9250 <https://github.com/autowarefoundation/autoware_universe/issues/9250>`_)
   * refactor(autoware_ad_api_specs): prefix package and namespace with autoware
   * style(pre-commit): autofix
   * chore(autoware_adapi_specs): rename ad_api to adapi
@@ -58,8 +64,8 @@ Changelog for package autoware_adapi_specs
 0.39.0 (2024-11-25)
 -------------------
 * Merge commit '6a1ddbd08bd' into release-0.39.0
-* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware.universe (`#9304 <https://github.com/autowarefoundation/autoware.universe/issues/9304>`_)
-* refactor(autoware_ad_api_specs): prefix package and namespace with autoware (`#9250 <https://github.com/autowarefoundation/autoware.universe/issues/9250>`_)
+* fix: fix ticket links to point to https://github.com/autowarefoundation/autoware_universe (`#9304 <https://github.com/autowarefoundation/autoware_universe/issues/9304>`_)
+* refactor(autoware_ad_api_specs): prefix package and namespace with autoware (`#9250 <https://github.com/autowarefoundation/autoware_universe/issues/9250>`_)
   * refactor(autoware_ad_api_specs): prefix package and namespace with autoware
   * style(pre-commit): autofix
   * chore(autoware_adapi_specs): rename ad_api to adapi
@@ -74,8 +80,8 @@ Changelog for package autoware_adapi_specs
 0.38.0 (2024-11-08)
 -------------------
 * unify package.xml version to 0.37.0
-* fix: adapi vehicle topic qos (`#7847 <https://github.com/autowarefoundation/autoware.universe/issues/7847>`_)
-* feat(default_ad_api): add heratbeat api (`#6969 <https://github.com/autowarefoundation/autoware.universe/issues/6969>`_)
+* fix: adapi vehicle topic qos (`#7847 <https://github.com/autowarefoundation/autoware_universe/issues/7847>`_)
+* feat(default_ad_api): add heratbeat api (`#6969 <https://github.com/autowarefoundation/autoware_universe/issues/6969>`_)
   * feat(default_ad_api): add heratbeat api
   * fix node dying
   ---------
@@ -83,12 +89,12 @@ Changelog for package autoware_adapi_specs
 
 0.26.0 (2024-04-03)
 -------------------
-* feat(default_ad_api): add door api (`#5737 <https://github.com/autowarefoundation/autoware.universe/issues/5737>`_)
-* chore: update api package maintainers (`#6086 <https://github.com/autowarefoundation/autoware.universe/issues/6086>`_)
+* feat(default_ad_api): add door api (`#5737 <https://github.com/autowarefoundation/autoware_universe/issues/5737>`_)
+* chore: update api package maintainers (`#6086 <https://github.com/autowarefoundation/autoware_universe/issues/6086>`_)
   * update api maintainers
   * fix
   ---------
-* feat(default_ad_api): add object recognition api (`#2887 <https://github.com/autowarefoundation/autoware.universe/issues/2887>`_)
+* feat(default_ad_api): add object recognition api (`#2887 <https://github.com/autowarefoundation/autoware_universe/issues/2887>`_)
   * add object recognition api
   * add unorder map
   * pre-commit
@@ -99,9 +105,9 @@ Changelog for package autoware_adapi_specs
   * change topic naming
   ---------
   Co-authored-by: Takagi, Isamu <43976882+isamu-takagi@users.noreply.github.com>
-* docs: add readme for interface packages (`#4235 <https://github.com/autowarefoundation/autoware.universe/issues/4235>`_)
+* docs: add readme for interface packages (`#4235 <https://github.com/autowarefoundation/autoware_universe/issues/4235>`_)
   add readme for interface packages
-* feat: add vehicle status api (`#2930 <https://github.com/autowarefoundation/autoware.universe/issues/2930>`_)
+* feat: add vehicle status api (`#2930 <https://github.com/autowarefoundation/autoware_universe/issues/2930>`_)
   * add vehicle status api
   * update msgs
   * change naming
@@ -126,14 +132,14 @@ Changelog for package autoware_adapi_specs
   * added checking message valid
   * fix msgs
   ---------
-* feat(default_ad_api): add vehicle info api (`#2984 <https://github.com/autowarefoundation/autoware.universe/issues/2984>`_)
+* feat(default_ad_api): add vehicle info api (`#2984 <https://github.com/autowarefoundation/autoware_universe/issues/2984>`_)
   * feat(default_ad_api): add vehicle dimensions api
   * feat: add footprint
   * update api name
   ---------
-* feat(autoware_api_specs): change topic depth of route state api and localization state api (`#3757 <https://github.com/autowarefoundation/autoware.universe/issues/3757>`_)
+* feat(autoware_api_specs): change topic depth of route state api and localization state api (`#3757 <https://github.com/autowarefoundation/autoware_universe/issues/3757>`_)
   fix depth
-* build: mark autoware_cmake as <buildtool_depend> (`#3616 <https://github.com/autowarefoundation/autoware.universe/issues/3616>`_)
+* build: mark autoware_cmake as <buildtool_depend> (`#3616 <https://github.com/autowarefoundation/autoware_universe/issues/3616>`_)
   * build: mark autoware_cmake as <buildtool_depend>
   with <build_depend>, autoware_cmake is automatically exported with ament_target_dependencies() (unecessary)
   * style(pre-commit): autofix
@@ -141,21 +147,21 @@ Changelog for package autoware_adapi_specs
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
   Co-authored-by: Kenji Miyake <kenji.miyake@tier4.jp>
-* chore: update codeowners (`#3513 <https://github.com/autowarefoundation/autoware.universe/issues/3513>`_)
-* feat(default_ad_api): add route change api (`#3197 <https://github.com/autowarefoundation/autoware.universe/issues/3197>`_)
+* chore: update codeowners (`#3513 <https://github.com/autowarefoundation/autoware_universe/issues/3513>`_)
+* feat(default_ad_api): add route change api (`#3197 <https://github.com/autowarefoundation/autoware_universe/issues/3197>`_)
   * feat: add route change api
   * fix: reroute
   ---------
-* feat(default_ad_api): add planning api (`#2481 <https://github.com/autowarefoundation/autoware.universe/issues/2481>`_)
+* feat(default_ad_api): add planning api (`#2481 <https://github.com/autowarefoundation/autoware_universe/issues/2481>`_)
   * feat(default_ad_api): add planning api
   * feat: complement velocity factor
   * feat: add stop check
   * feat: make the same process into a function
   * feat: update visualizer
   * fix: remove flake8 test
-* chore: add api maintainers (`#2361 <https://github.com/autowarefoundation/autoware.universe/issues/2361>`_)
-* feat(default_ad_api): add fail-safe api (`#2295 <https://github.com/autowarefoundation/autoware.universe/issues/2295>`_)
-* feat(default_ad_api): add motion api  (`#1809 <https://github.com/autowarefoundation/autoware.universe/issues/1809>`_)
+* chore: add api maintainers (`#2361 <https://github.com/autowarefoundation/autoware_universe/issues/2361>`_)
+* feat(default_ad_api): add fail-safe api (`#2295 <https://github.com/autowarefoundation/autoware_universe/issues/2295>`_)
+* feat(default_ad_api): add motion api  (`#1809 <https://github.com/autowarefoundation/autoware_universe/issues/1809>`_)
   * feat(autoware_ad_api_specs): define motion interface
   * feat(default_ad_api): add motion api
   * feat: modify motion api
@@ -171,7 +177,7 @@ Changelog for package autoware_adapi_specs
   * feat: add option
   * feat: modify state name
   Co-authored-by: Kenji Miyake <31987104+kenji-miyake@users.noreply.github.com>
-* feat(autoware_ad_api_specs): define operation mode interface (`#1570 <https://github.com/autowarefoundation/autoware.universe/issues/1570>`_)
+* feat(autoware_ad_api_specs): define operation mode interface (`#1570 <https://github.com/autowarefoundation/autoware_universe/issues/1570>`_)
   * feat(autoware_ad_api_msgs): define operation mode interface
   * fix: add message
   * Update common/autoware_ad_api_msgs/operation_mode/msg/OperationModeState.msg
@@ -181,18 +187,18 @@ Changelog for package autoware_adapi_specs
   * feat: move adapi message
   * feat: change message type
   Co-authored-by: Kenji Miyake <31987104+kenji-miyake@users.noreply.github.com>
-* feat(autoware_ad_api_specs): define motion interface (`#1808 <https://github.com/autowarefoundation/autoware.universe/issues/1808>`_)
+* feat(autoware_ad_api_specs): define motion interface (`#1808 <https://github.com/autowarefoundation/autoware_universe/issues/1808>`_)
   * feat(autoware_ad_api_specs): define motion interface
   * feat: add error code
   * feat: move adapi messages
   * feat(component_interface_utils): apply message change
   * feat: change message type
-* feat(autoware_ad_api_msgs): replace adapi message (`#1897 <https://github.com/autowarefoundation/autoware.universe/issues/1897>`_)
-* feat(autoware_ad_api_specs): define localization interface (`#1560 <https://github.com/autowarefoundation/autoware.universe/issues/1560>`_)
+* feat(autoware_ad_api_msgs): replace adapi message (`#1897 <https://github.com/autowarefoundation/autoware_universe/issues/1897>`_)
+* feat(autoware_ad_api_specs): define localization interface (`#1560 <https://github.com/autowarefoundation/autoware_universe/issues/1560>`_)
   feat(autoware_ad_api_msgs): define localization interface
-* feat(autoware_ad_api_specs): define routing interface (`#1559 <https://github.com/autowarefoundation/autoware.universe/issues/1559>`_)
+* feat(autoware_ad_api_specs): define routing interface (`#1559 <https://github.com/autowarefoundation/autoware_universe/issues/1559>`_)
   * feat(autoware_ad_api_msgs): define routing interface
   * feat: rename route body message
   * feat: rename route state
-* feat(autoware_ad_api_specs): modify interface version api to use spec package  (`#1677 <https://github.com/autowarefoundation/autoware.universe/issues/1677>`_)
+* feat(autoware_ad_api_specs): modify interface version api to use spec package  (`#1677 <https://github.com/autowarefoundation/autoware_universe/issues/1677>`_)
 * Contributors: Kah Hooi Tan, Takagi, Isamu, Vincent Richard, yabuta

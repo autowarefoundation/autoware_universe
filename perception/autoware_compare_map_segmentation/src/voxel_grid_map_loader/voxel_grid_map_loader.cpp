@@ -428,8 +428,8 @@ void VoxelGridDynamicMapLoader::timer_callback()
     should_update_map(
       current_position.value(), last_updated_position_.value(), map_update_distance_threshold_)) {
     request_update_map(current_position.value());
+    last_updated_position_ = current_position;
   }
-  last_updated_position_ = current_position;
 }
 
 bool VoxelGridDynamicMapLoader::should_update_map(

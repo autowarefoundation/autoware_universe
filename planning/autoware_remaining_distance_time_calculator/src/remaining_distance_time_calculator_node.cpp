@@ -21,7 +21,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/timer.hpp>
 
-#include <tier4_planning_msgs/msg/velocity_limit.hpp>
+#include <autoware_internal_planning_msgs/msg/velocity_limit.hpp>
 
 #include <chrono>
 #include <functional>
@@ -55,7 +55,7 @@ RemainingDistanceTimeCalculatorNode::RemainingDistanceTimeCalculatorNode(
   sub_route_ = create_subscription<LaneletRoute>(
     "~/input/route", qos_transient_local,
     std::bind(&RemainingDistanceTimeCalculatorNode::on_route, this, _1));
-  sub_planning_velocity_ = create_subscription<tier4_planning_msgs::msg::VelocityLimit>(
+  sub_planning_velocity_ = create_subscription<autoware_internal_planning_msgs::msg::VelocityLimit>(
     "/planning/scenario_planning/current_max_velocity", qos_transient_local,
     std::bind(&RemainingDistanceTimeCalculatorNode::on_velocity_limit, this, _1));
   sub_scenario_ = this->create_subscription<autoware_internal_planning_msgs::msg::Scenario>(
