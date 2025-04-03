@@ -232,7 +232,7 @@ void LidarCenterPointNode::diagnoseProcessingTime(
     diagnostic_msgs::msg::DiagnosticStatus::OK;
   std::stringstream message{"OK"};
 
-  // check node has inferenced or not
+  // Check if the node has performed inference
   if (last_processing_time_ms_) {
     // check processing time is acceptable
     if (last_processing_time_ms_ > max_allowed_processing_time_ms_) {
