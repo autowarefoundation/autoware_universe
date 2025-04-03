@@ -27,6 +27,7 @@
 #include <cuda_blackboard/cuda_blackboard_subscriber.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <cuda_blackboard/negotiated_types.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_object_kinematics.hpp>
@@ -34,6 +35,7 @@
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <autoware_perception_msgs/msg/shape.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <std_msgs/msg/header.hpp>
 
 #include <memory>
 #include <string>
@@ -50,6 +52,7 @@ public:
 private:
   void pointCloudCallback(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & input_pointcloud_msg);
+  void diagnoseProcessingTime(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_{tf_buffer_};
@@ -62,11 +65,19 @@ private:
   bool has_variance_{false};
   bool has_twist_{false};
 
+  // for diagnostics
+  double max_allowed_processing_time_ms_;
+  double max_acceptable_consecutive_delay_ms_;
+  // set as optional to avoid sending error diagnostics before the node starts processing
+  std::optional<double> last_processing_time_ms_;
+  std::optional<rclcpp::Time> last_in_time_processing_timestamp_;
+  diagnostic_updater::Updater diagnostic_processing_time_updater_{this};
+
   NonMaximumSuppression iou_bev_nms_;
   DetectionClassRemapper detection_class_remapper_;
 
   std::unique_ptr<CenterPointTRT> detector_ptr_{nullptr};
-  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_centerpoint_trt_;
 
   // debugger
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
