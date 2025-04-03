@@ -19,6 +19,7 @@
 #include "autoware/pointcloud_preprocessor/filter.hpp"
 
 #include <autoware_utils/ros/diagnostics_interface.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/search/pcl_search.h>
@@ -134,8 +135,15 @@ protected:
   void input_target_callback(const PointCloud2ConstPtr map);
 
 private:
+  // interfaces
   std::unique_ptr<VoxelGridMapLoader> voxel_distance_based_map_loader_;
+  diagnostic_updater::Updater diagnostic_updater_;
+
+  // parameters
   double distance_threshold_;
+
+  // diagnostics
+  void checkStatus(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
 public:
   PCL_MAKE_ALIGNED_OPERATOR_NEW

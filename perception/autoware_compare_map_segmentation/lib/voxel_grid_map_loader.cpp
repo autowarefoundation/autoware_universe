@@ -296,23 +296,26 @@ VoxelGridStaticMapLoader::VoxelGridStaticMapLoader(
 void VoxelGridStaticMapLoader::onMapCallback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr map)
 {
+  std::cout << "VoxelGridStaticMapLoader::onMapCallback()" << std::endl;
+
   pcl::PointCloud<pcl::PointXYZ> map_pcl;
   pcl::fromROSMsg<pcl::PointXYZ>(*map, map_pcl);
   const auto map_pcl_ptr = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(map_pcl);
   *tf_map_input_frame_ = map_pcl_ptr->header.frame_id;
   voxel_map_ptr_.reset(new pcl::PointCloud<pcl::PointXYZ>);
   voxel_grid_.setLeafSize(voxel_leaf_size_, voxel_leaf_size_, voxel_leaf_size_z_);
-  bool is_feasible = isFeasibleWithPCLVoxelGrid(map_pcl_ptr, voxel_grid_);
-  if (!is_feasible) {
+
+  // check if the pointcloud is filterable with PCL voxel grid
+  if (isFeasibleWithPCLVoxelGrid(map_pcl_ptr, voxel_grid_)) {
+    diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+    diagnostics_status_.message = "Voxel grid filter is within the feasible range";
+  } else {
     diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
     diagnostics_status_.message =
       "Voxel grid filter is not feasible. Check the voxel grid filter parameters and input "
       "pointcloud. (1) Consider to enable use_dynamic_map_loading to true (2) If static map is "
       "only the option, consider to "
       "enlarge distance_threshold to generate more larger leaf size";
-  } else {
-    diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
-    diagnostics_status_.message = "Voxel grid filter is within the feasible range";
   }
 
   voxel_grid_.setInputCloud(map_pcl_ptr);

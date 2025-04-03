@@ -30,6 +30,8 @@ namespace autoware::compare_map_segmentation
 void VoxelDistanceBasedStaticMapLoader::onMapCallback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr map)
 {
+  std::cout << "VoxelDistanceBasedStaticMapLoader::onMapCallback()" << std::endl;
+
   pcl::PointCloud<pcl::PointXYZ> map_pcl;
   pcl::fromROSMsg<pcl::PointXYZ>(*map, map_pcl);
   const auto map_pcl_ptr = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(map_pcl);
@@ -39,17 +41,16 @@ void VoxelDistanceBasedStaticMapLoader::onMapCallback(
   // voxel
   voxel_map_ptr_.reset(new pcl::PointCloud<pcl::PointXYZ>);
   voxel_grid_.setLeafSize(voxel_leaf_size_, voxel_leaf_size_, voxel_leaf_size_);
-  const bool is_feasible = isFeasibleWithPCLVoxelGrid(map_pcl_ptr, voxel_grid_);
-  if (!is_feasible) {
+
+  // check if the pointcloud is filterable with PCL voxel grid
+  if (isFeasibleWithPCLVoxelGrid(map_pcl_ptr, voxel_grid_)) {
+    diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+    diagnostics_status_.message = "Voxel grid filter is within the feasible range";
+  } else {
     diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
     diagnostics_status_.message =
       "Voxel grid filter is not feasible. Check the voxel grid filter parameters and input "
-      "pointcloud. (1) Adjust map_loader_radius smaller (2) If static map is only the option, "
-      "consider to "
-      "enlarge distance_threshold to generate more larger leaf size";
-  } else {
-    diagnostics_status_.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
-    diagnostics_status_.message = "Voxel grid filter is within the feasible range";
+      "pointcloud. Adjust map_loader_radius smaller";
   }
   voxel_grid_.setInputCloud(map_pcl_ptr);
   voxel_grid_.setSaveLeafLayout(true);
@@ -120,7 +121,7 @@ bool VoxelDistanceBasedDynamicMapLoader::is_close_to_map(
 
 VoxelDistanceBasedCompareMapFilterComponent::VoxelDistanceBasedCompareMapFilterComponent(
   const rclcpp::NodeOptions & options)
-: Filter("VoxelDistanceBasedCompareMapFilter", options)
+: Filter("VoxelDistanceBasedCompareMapFilter", options), diagnostic_updater_(this)
 {
   // initialize debug tool
   {
@@ -133,6 +134,15 @@ VoxelDistanceBasedCompareMapFilterComponent::VoxelDistanceBasedCompareMapFilterC
     stop_watch_ptr_->tic("processing_time");
   }
 
+  // setup diagnostics
+  {
+    diagnostic_updater_.setHardwareID(this->get_name());
+    diagnostic_updater_.add(
+      "Compare map filter status", this, &VoxelDistanceBasedCompareMapFilterComponent::checkStatus);
+    diagnostic_updater_.setPeriod(0.1);
+  }
+
+  // Declare parameters
   distance_threshold_ = declare_parameter<double>("distance_threshold");
   bool use_dynamic_map_loading = declare_parameter<bool>("use_dynamic_map_loading");
   double downsize_ratio_z_axis = declare_parameter<double>("downsize_ratio_z_axis");
@@ -149,6 +159,14 @@ VoxelDistanceBasedCompareMapFilterComponent::VoxelDistanceBasedCompareMapFilterC
     voxel_distance_based_map_loader_ = std::make_unique<VoxelDistanceBasedStaticMapLoader>(
       this, distance_threshold_, downsize_ratio_z_axis, &tf_input_frame_);
   }
+}
+
+void VoxelDistanceBasedCompareMapFilterComponent::checkStatus(
+  diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  // map loader status
+  DiagStatus diag_status = voxel_distance_based_map_loader_->get_diag_status();
+  stat.summary(diag_status.level, diag_status.message);
 }
 
 void VoxelDistanceBasedCompareMapFilterComponent::filter(

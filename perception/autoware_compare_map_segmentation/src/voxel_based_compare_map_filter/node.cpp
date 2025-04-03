@@ -41,7 +41,8 @@ VoxelBasedCompareMapFilterComponent::VoxelBasedCompareMapFilterComponent(
   const rclcpp::NodeOptions & options)
 : Filter("VoxelBasedCompareMapFilter", options),
   tf_buffer_(this->get_clock()),
-  tf_listener_(tf_buffer_)
+  tf_listener_(tf_buffer_),
+  diagnostic_updater_(this)
 {
   // initialize debug tool
   {
@@ -53,6 +54,15 @@ VoxelBasedCompareMapFilterComponent::VoxelBasedCompareMapFilterComponent(
     stop_watch_ptr_->tic("processing_time");
   }
 
+  // setup diagnostics
+  {
+    diagnostic_updater_.setHardwareID(this->get_name());
+    diagnostic_updater_.add(
+      "Compare map filter status", this, &VoxelBasedCompareMapFilterComponent::checkStatus);
+    diagnostic_updater_.setPeriod(0.1);
+  }
+
+  // Declare parameters
   distance_threshold_ = declare_parameter<double>("distance_threshold");
   bool use_dynamic_map_loading = declare_parameter<bool>("use_dynamic_map_loading");
   double downsize_ratio_z_axis = declare_parameter<double>("downsize_ratio_z_axis");
@@ -72,6 +82,14 @@ VoxelBasedCompareMapFilterComponent::VoxelBasedCompareMapFilterComponent(
   }
   tf_input_frame_ = *(voxel_grid_map_loader_->tf_map_input_frame_);
   RCLCPP_INFO(this->get_logger(), "tf_map_input_frame: %s", tf_input_frame_.c_str());
+}
+
+void VoxelBasedCompareMapFilterComponent::checkStatus(
+  diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  // map loader status
+  DiagStatus diag_status = voxel_grid_map_loader_->get_diag_status();
+  stat.summary(diag_status.level, diag_status.message);
 }
 
 // TODO(badai-nguyen): Temporary Implementation of input_indices_callback and  convert_output_costly
@@ -197,6 +215,8 @@ void VoxelBasedCompareMapFilterComponent::filter(
     // return input point cloud, no filter implemented
     output = *input;
     return;
+  } else {
+    std::cout << "Map loader status: [OK] " << diag_status.message << std::endl;
   }
 
   int point_step = input->point_step;
