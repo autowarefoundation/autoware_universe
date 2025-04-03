@@ -347,7 +347,7 @@ bool StartPlannerModule::isExecutionRequested() const
   // - The vehicle has reached the goal position.
   // - The vehicle is still moving.
   if (
-    isCurrentPoseOnCenterline() || isCloseToOriginalStartPose() || hasArrivedAtGoal() ||
+    isCurrentPoseOnEgoCenterline() || isCloseToOriginalStartPose() || hasArrivedAtGoal() ||
     isMoving()) {
     return false;
   }
@@ -367,7 +367,7 @@ bool StartPlannerModule::isModuleRunning() const
   return getCurrentStatus() == ModuleStatus::RUNNING;
 }
 
-bool StartPlannerModule::isCurrentPoseOnCenterline() const
+bool StartPlannerModule::isCurrentPoseOnEgoCenterline() const
 {
   const auto & lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
   const Pose & current_pose = planner_data_->self_odometry->pose.pose;
