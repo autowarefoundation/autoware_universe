@@ -150,8 +150,10 @@ PointcloudBasedOccupancyGridMapNode::PointcloudBasedOccupancyGridMapNode(
     }
   }
 
-  max_output_delay_ms_ = this->declare_parameter<double>("max_output_delay_ms");
-  max_acceptable_consecutive_delay_ms_ = this->declare_parameter<double>("max_acceptable_consecutive_delay_ms");
+
+  processing_time_tolerance_ms_ = this->declare_parameter<double>("processing_time_tolerance_ms");
+  processing_time_consecutive_excess_tolerance_ms_ =
+    this->declare_parameter<double>("processing_time_consecutive_excess_tolerance_ms");
   diagnostics_interface_ptr_ = std::make_unique<autoware_utils::DiagnosticsInterface>(
     this, "pointcloud_based_probabilistic_occupancy_grid_map");
 }
@@ -176,47 +178,49 @@ void PointcloudBasedOccupancyGridMapNode::rawPointcloudCallback(
   }
 }
 
-void PointcloudBasedOccupancyGridMapNode::checkLatency(double current_latency_ms)
+void PointcloudBasedOccupancyGridMapNode::checkProcessingTime(double processing_time_ms)
 {
   static rclcpp::Time last_normal_time = this->get_clock()->now();
-  const bool is_delay_within_range = (current_latency_ms <= max_output_delay_ms_);
+  const bool is_processing_time_within_range = (processing_time_ms <= processing_time_tolerance_ms_);
 
   // Update timestamp when latency is normal
-  if (is_delay_within_range) {
+  if (is_processing_time_within_range) {
     last_normal_time = this->get_clock()->now();
   }
 
   // Calculate duration of abnormal latency
-  const double abnormal_duration_ms = (this->get_clock()->now() - last_normal_time).seconds() * 1000.0;
+  const double processing_consecutive_excess_time =
+    (this->get_clock()->now() - last_normal_time).seconds() * 1000.0;
 
   uint8_t level;
   std::string status_str;
   std::string message;
 
-  if (is_delay_within_range) {
+  if (is_processing_time_within_range) {
     level = diagnostic_msgs::msg::DiagnosticStatus::OK;
     status_str = "OK";
-  } 
-  else if (abnormal_duration_ms > max_acceptable_consecutive_delay_ms_) {
+  } else if (processing_consecutive_excess_time > processing_time_consecutive_excess_tolerance_ms_) {
     status_str = "ERROR";
     level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
-    message = "Processing time exceeded the warning threshold of " + std::to_string(max_output_delay_ms_) + "ms for " +
-              std::to_string(abnormal_duration_ms/1000.0) + "s  (Threshold "+std::to_string(max_acceptable_consecutive_delay_ms_/1000.0) + ")";
-  }
-  else {
+    message = "Processing time exceeded the warning threshold of " +
+              std::to_string(processing_time_tolerance_ms_) + "ms for " +
+              std::to_string(processing_consecutive_excess_time / 1000.0) + "s  (Threshold " +
+              std::to_string(processing_time_consecutive_excess_tolerance_ms_ / 1000.0) + "s)";
+  } else {
     status_str = "WARN";
     level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
-    message = "Processing time exceeds the warning threshold of "  + std::to_string(max_output_delay_ms_)+ " ms.";
+    message = "Processing time exceeds the warning threshold of " +
+              std::to_string(processing_time_tolerance_ms_) + " ms.";
   }
 
   diagnostics_interface_ptr_->clear();
-  diagnostics_interface_ptr_->add_key_value("latency(ms)", current_latency_ms);
+  diagnostics_interface_ptr_->add_key_value("processing time(ms)", processing_time_ms);
+  diagnostics_interface_ptr_->add_key_value("is processing time within threshold", is_processing_time_within_range);
+  diagnostics_interface_ptr_->add_key_value("processing time consecutive excess duration(ms)", processing_consecutive_excess_time);
   diagnostics_interface_ptr_->add_key_value(
-    "is_latency_within_threshold", is_delay_within_range);
-  diagnostics_interface_ptr_->add_key_value("abnormal_duration(ms)", abnormal_duration_ms);
-  diagnostics_interface_ptr_->add_key_value(
-    "is_abnormal_duration_within_threshold", abnormal_duration_ms <= max_acceptable_consecutive_delay_ms_);
-  diagnostics_interface_ptr_->update_level_and_message(level,  "[" + status_str + "] " +message);
+    "is processing time consecutive excess duration within threshold",
+    processing_consecutive_excess_time <= processing_time_consecutive_excess_tolerance_ms_);
+  diagnostics_interface_ptr_->update_level_and_message(level, "[" + status_str + "] " + message);
   diagnostics_interface_ptr_->publish(raw_pointcloud_.header.stamp);
 }
 
@@ -326,7 +330,7 @@ void PointcloudBasedOccupancyGridMapNode::onPointcloudWithObstacleAndRaw()
     debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/pipeline_latency_ms", pipeline_latency_ms);
 
-    checkLatency(processing_time_ms);
+    checkProcessingTime(processing_time_ms);
   }
 }
 

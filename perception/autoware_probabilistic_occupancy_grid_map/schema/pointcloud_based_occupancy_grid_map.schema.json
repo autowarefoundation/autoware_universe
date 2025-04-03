@@ -126,15 +126,15 @@
             "OccupancyGridMapProjectiveBlindSpot": {
               "$ref": "#/definitions/occupancy_grid_map_projective_blind_spot_params"
             },
-            "max_output_delay_ms": {
+            "processing_time_tolerance_ms": {
               "type": "number",
-              "description": "Maximum warning output delay in milliseconds.",
+              "description": "Maximum warning processing time delay in milliseconds.",
               "default": 50.0
             },
-            "max_acceptable_consecutive_delay_ms": {
+            "processing_time_consecutive_excess_tolerance_ms": {
               "type": "number",
-              "description": "Maximum acceptable consecutive delay warning in milliseconds.",
-              "default": 50.0
+              "description": "Maximum acceptable consecutive processing time delay warning in milliseconds.",
+              "default": 1000.0
             }
           },
           "required": [
