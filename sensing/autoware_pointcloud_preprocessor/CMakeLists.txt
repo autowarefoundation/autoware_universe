@@ -46,6 +46,7 @@ ament_target_dependencies(pointcloud_preprocessor_filter_base
   autoware_utils
   pcl_ros
   autoware_point_types
+  managed_transform_buffer
 )
 
 add_library(faster_voxel_grid_downsample_filter SHARED
