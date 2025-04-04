@@ -27,6 +27,8 @@
 #include <autoware_utils/system/time_keeper.hpp>
 #include <pcl_ros/transforms.hpp>
 
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
+
 #include <omp.h>
 
 #include <chrono>
