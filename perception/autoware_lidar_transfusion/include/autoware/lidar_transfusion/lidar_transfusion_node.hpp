@@ -24,6 +24,7 @@
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_object_kinematics.hpp>
@@ -47,6 +48,8 @@ public:
 private:
   void cloudCallback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr msg);
 
+  void diagnoseProcessingTime(diagnostic_updater::DiagnosticStatusWrapper & stat);
+
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::ConstSharedPtr cloud_sub_{nullptr};
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr objects_pub_{
     nullptr};
@@ -60,6 +63,14 @@ private:
   NonMaximumSuppression iou_bev_nms_;
 
   std::unique_ptr<TransfusionTRT> detector_ptr_{nullptr};
+
+  // for diagnostics
+  double max_allowed_processing_time_ms_;
+  double max_acceptable_consecutive_delay_ms_;
+  // set as optional to avoid sending error diagnostics before the node starts processing
+  std::optional<double> last_processing_time_ms_;
+  std::optional<rclcpp::Time> last_in_time_processing_timestamp_;
+  diagnostic_updater::Updater diagnostic_processing_time_updater_{this};
 
   // debugger
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
