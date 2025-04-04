@@ -19,7 +19,7 @@
 
 #include <NvInfer.h>
 #include <NvInferPlugin.h>
-#include <NvInferRuntimeBase.h>
+#include <NvInferRuntime.h>
 #include <dlfcn.h>
 
 #include <cmath>
