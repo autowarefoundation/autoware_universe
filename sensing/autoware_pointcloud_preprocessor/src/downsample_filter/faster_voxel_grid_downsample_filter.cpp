@@ -15,7 +15,9 @@
 #include "autoware/pointcloud_preprocessor/downsample_filter/faster_voxel_grid_downsample_filter.hpp"
 
 #include <cfloat>
+#include <memory>
 #include <unordered_map>
+#include <vector>
 
 namespace autoware::pointcloud_preprocessor
 {
@@ -23,6 +25,11 @@ namespace autoware::pointcloud_preprocessor
 FasterVoxelGridDownsampleFilter::FasterVoxelGridDownsampleFilter()
 {
   offset_initialized_ = false;
+  enable_roi_exclusion_ = false;
+  roi_x_min_ = 80.0f;
+  roi_x_max_ = 220.0f;
+  roi_y_min_ = -20.0f;
+  roi_y_max_ = 20.0f;
 }
 
 void FasterVoxelGridDownsampleFilter::set_voxel_size(
@@ -57,6 +64,16 @@ void FasterVoxelGridDownsampleFilter::set_field_offsets(
   offset_initialized_ = true;
 }
 
+void FasterVoxelGridDownsampleFilter::set_roi_parameters(
+  float x_min, float x_max, float y_min, float y_max, bool enable_roi_exclusion)
+{
+  roi_x_min_ = x_min;
+  roi_x_max_ = x_max;
+  roi_y_min_ = y_min;
+  roi_y_max_ = y_max;
+  enable_roi_exclusion_ = enable_roi_exclusion;
+}
+
 void FasterVoxelGridDownsampleFilter::filter(
   const PointCloud2ConstPtr & input, PointCloud2 & output, const TransformInfo & transform_info,
   const rclcpp::Logger & logger)
@@ -66,33 +83,112 @@ void FasterVoxelGridDownsampleFilter::filter(
     set_field_offsets(input, logger);
   }
 
-  // Compute the minimum and maximum voxel coordinates
-  Eigen::Vector3i min_voxel, max_voxel;
-  if (!get_min_max_voxel(input, min_voxel, max_voxel)) {
-    RCLCPP_ERROR(
-      logger,
-      "Voxel size is too small for the input dataset. "
-      "Integer indices would overflow.");
-    output = *input;
-    return;
+  if (!enable_roi_exclusion_) {
+    // Compute the minimum and maximum voxel coordinates
+    Eigen::Vector3i min_voxel, max_voxel;
+    if (!get_min_max_voxel(input, min_voxel, max_voxel)) {
+      RCLCPP_ERROR(
+        logger,
+        "Voxel size is too small for the input dataset. "
+        "Integer indices would overflow.");
+      output = *input;
+      return;
+    }
+
+    // Storage for mapping voxel coordinates to centroids
+    auto voxel_centroid_map = calc_centroids_each_voxel(input, max_voxel, min_voxel);
+
+    // Initialize the output
+    output.row_step = voxel_centroid_map.size() * input->point_step;
+    output.data.resize(output.row_step);
+    output.width = voxel_centroid_map.size();
+    output.fields = input->fields;
+    output.is_dense = true;  // we filter out invalid points
+    output.height = input->height;
+    output.is_bigendian = input->is_bigendian;
+    output.point_step = input->point_step;
+    output.header = input->header;
+
+    // Copy the centroids to the output
+    copy_centroids_to_output(voxel_centroid_map, output, transform_info);
+  } else {
+    // ROI excluded implementation
+    // Partition the input into points for voxel filtering and points to pass directly
+    std::vector<uint8_t> filtered_buffer;
+    std::vector<uint8_t> direct_buffer;
+    const size_t point_step = input->point_step;
+
+    for (size_t offset = 0; offset + point_step <= input->data.size(); offset += point_step) {
+      Eigen::Vector4f point = get_point_from_global_offset(input, offset);
+      // If point is inside ROI, bypass filtering
+      if (
+        (point[0] >= roi_x_min_ && point[0] <= roi_x_max_) &&
+        (point[1] >= roi_y_min_ && point[1] <= roi_y_max_)) {
+        direct_buffer.insert(
+          direct_buffer.end(), input->data.begin() + offset,
+          input->data.begin() + offset + point_step);
+      } else {
+        filtered_buffer.insert(
+          filtered_buffer.end(), input->data.begin() + offset,
+          input->data.begin() + offset + point_step);
+      }
+    }
+
+    // Build a temporary cloud for filtered points
+    PointCloud2 filtered_cloud;
+    filtered_cloud.header = input->header;
+    filtered_cloud.fields = input->fields;
+    filtered_cloud.is_bigendian = input->is_bigendian;
+    filtered_cloud.point_step = point_step;
+    filtered_cloud.data = filtered_buffer;
+    filtered_cloud.width = filtered_buffer.size() / point_step;
+    filtered_cloud.height = 1;
+
+    // Process voxel filtering on the filtered_cloud if not empty
+    PointCloud2 downsampled_filtered;
+    if (!filtered_cloud.data.empty()) {
+      Eigen::Vector3i min_voxel, max_voxel;
+      if (!get_min_max_voxel(std::make_shared<PointCloud2>(filtered_cloud), min_voxel, max_voxel)) {
+        RCLCPP_ERROR(logger, "Voxel size too small or data error in filtered cloud.");
+        downsampled_filtered = filtered_cloud;  // fallback to unfiltered
+      } else {
+        auto voxel_map = calc_centroids_each_voxel(
+          std::make_shared<PointCloud2>(filtered_cloud), max_voxel, min_voxel);
+        size_t num_points = voxel_map.size();
+        downsampled_filtered.header = filtered_cloud.header;
+        downsampled_filtered.fields = filtered_cloud.fields;
+        downsampled_filtered.is_bigendian = filtered_cloud.is_bigendian;
+        downsampled_filtered.point_step = point_step;
+        downsampled_filtered.width = num_points;
+        downsampled_filtered.height = 1;
+        downsampled_filtered.row_step = num_points * point_step;
+        downsampled_filtered.data.resize(downsampled_filtered.row_step);
+        copy_centroids_to_output(voxel_map, downsampled_filtered, transform_info);
+      }
+    }
+
+    // Create final output by concatenating downsampled filtered points and direct points
+    size_t num_downsampled = downsampled_filtered.data.size() / point_step;
+    size_t num_direct = direct_buffer.size() / point_step;
+    size_t total_points = num_downsampled + num_direct;
+
+    output.header = input->header;
+    output.fields = input->fields;
+    output.is_bigendian = input->is_bigendian;
+    output.point_step = point_step;
+    output.width = total_points;
+    output.height = 1;
+    output.row_step = total_points * point_step;
+    output.data.resize(output.row_step);
+
+    // Copy voxel filtered points first
+    std::copy(
+      downsampled_filtered.data.begin(), downsampled_filtered.data.end(), output.data.begin());
+    // Then append direct points
+    std::copy(
+      direct_buffer.begin(), direct_buffer.end(),
+      output.data.begin() + downsampled_filtered.data.size());
   }
-
-  // Storage for mapping voxel coordinates to centroids
-  auto voxel_centroid_map = calc_centroids_each_voxel(input, max_voxel, min_voxel);
-
-  // Initialize the output
-  output.row_step = voxel_centroid_map.size() * input->point_step;
-  output.data.resize(output.row_step);
-  output.width = voxel_centroid_map.size();
-  output.fields = input->fields;
-  output.is_dense = true;  // we filter out invalid points
-  output.height = input->height;
-  output.is_bigendian = input->is_bigendian;
-  output.point_step = input->point_step;
-  output.header = input->header;
-
-  // Copy the centroids to the output
-  copy_centroids_to_output(voxel_centroid_map, output, transform_info);
 }
 
 Eigen::Vector4f FasterVoxelGridDownsampleFilter::get_point_from_global_offset(
