@@ -9,6 +9,7 @@
   <arg name="lidar_detection_model_type"/>
   <arg name="use_radar_tracking_fusion"/>
   <arg name="use_detection_by_tracker"/>
+  <arg name="use_irregular_object_detector"/>
 
   <arg name="use_object_filter" description="use object filter"/>
   <arg name="objects_filter_method"/>
@@ -55,7 +56,12 @@
   <let name="detected_object_roi_filter/input/objects" value="$(var input/lidar_ml/objects)"/>
   <let name="detected_object_roi_filter/output/objects" value="$(var lidar_detection_model_type)/roi_fusion/objects"/>
 
-  <let name="merger1/input/objects0" value="$(var detected_object_roi_filter/output/objects)"/>
+  <let name="merger0/input/objects0" value="$(var detected_object_roi_filter/output/objects)"/>
+  <let name="merger0/input/objects1" value="$(var detected_irregular_object/output/objects)"/>
+  <let name="merger0/output/objects" value="$(var lidar_detection_model_type)_irregular_object_merger/objects"/>
+
+  <let name="merger1/input/objects0" value="$(var detected_object_roi_filter/output/objects)" unless="$(var use_irregular_object_detector)"/>
+  <let name="merger1/input/objects0" value="$(var merger0/output/objects)" if="$(var use_irregular_object_detector)"/>
   <let name="merger1/input/objects1" value="$(var input/lidar_rule/objects)"/>
   <let name="merger1/output/objects" value="$(var output/objects)" if="$(var without_dbt_and_filter)"/>
   <let name="merger1/output/objects" value="$(var lidar_detection_model_type)_roi_cluster_fusion/objects" unless="$(var without_dbt_and_filter)"/>
@@ -105,6 +111,17 @@
       <arg name="output/objects" value="$(var detected_object_roi_filter/output/objects)"/>
       <arg name="param_path" value="$(var roi_detected_object_fusion_param_path)"/>
     </include>
+  </group>
+
+  <!-- merger: irregular_objects + ml_lidar -->
+  <group if="$(var use_irregular_object_detector)">
+    <let name="simple_object_merger_param_path" value="$(find-pkg-share autoware_simple_object_merger)/config/simple_object_merger.param.yaml"/>
+    <node pkg="autoware_simple_object_merger" exec="simple_object_merger_node" name="simple_object_merger" output="screen">
+      <remap from="~/output/objects" to="$(var merger0/output/objects)"/>
+      <param from="$(var simple_object_merger_param_path)" allow_substs="true"/>
+      <param name="update_rate_hz" value="10.0"/>
+      <param name="input_topics" value="[$(var merger0/input/objects0),$(var merger0/input/objects1)]"/>
+    </node>
   </group>
 
   <!-- 1st merger -->
