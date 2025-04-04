@@ -54,15 +54,20 @@ public:
 
   void initializeExistenceProbabilities(
     const uint & channel_index, const float & existence_probability);
-  bool getExistenceProbabilityVector(std::vector<float> & existence_vector) const
-  {
-    existence_vector = existence_probabilities_;
-    return existence_vector.size() > 0;
-  }
+  std::vector<float> getExistenceProbabilityVector() const { return existence_probabilities_; }
+  float getTotalExistenceProbability() const { return total_existence_probability_; }
   bool updateWithMeasurement(
     const types::DynamicObject & object, const rclcpp::Time & measurement_time,
     const types::InputChannel & channel_info);
   bool updateWithoutMeasurement(const rclcpp::Time & now);
+
+  // object life management
+  void getPositionCovarianceEigenSq(
+    const rclcpp::Time & time, double & major_axis_sq, double & minor_axis_sq) const;
+  bool isConfident(const rclcpp::Time & time) const;
+  bool isExpired(const rclcpp::Time & time) const;
+  float getKnownObjectProbability() const;
+  double getPositionCovarianceSizeSq() const;
 
   std::uint8_t getHighestProbLabel() const
   {
@@ -76,6 +81,16 @@ public:
   double getElapsedTimeFromLastUpdate(const rclcpp::Time & current_time) const
   {
     return (current_time - last_update_with_measurement_time_).seconds();
+  }
+
+  std::string getUuidString() const
+  {
+    const auto uuid_msg = object_.uuid;
+    std::stringstream ss;
+    for (auto i = 0; i < 16; ++i) {
+      ss << std::hex << std::setfill('0') << std::setw(2) << +uuid_msg.uuid[i];
+    }
+    return ss.str();
   }
 
 protected:
