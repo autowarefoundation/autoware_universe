@@ -404,6 +404,16 @@ void updateProcessRanking(
   *tasks[order] = info;
 }
 
+void invalidateRankingEntry(const std::unique_ptr<RawProcessInfo> & entry)
+{
+  // Clear only the members used for comparison.
+  if (entry) {
+    // -1 is used here so that the ranking works even if all processes' CPU/memory usage is 0.
+    entry->diff_info.cpu_usage = -1;
+    entry->statm_info.resident_page = -1;
+  }
+}
+
 const char NUM_OF_PROCS_DESCRIPTION[] =
   "Number of processes in High-load[] and High-mem[]. Cannot be changed after initialization.";
 
@@ -664,22 +674,12 @@ void ProcessMonitor::accumulateStateCount(const RawProcessInfo & info)
 
 void ProcessMonitor::initializeProcessStatistics()
 {
-  // Clear only the members used for comparison.
-  for (const auto & entry : work_->load_tasks_raw) {
-    if (entry) {
-      // -1 is used here so that the ranking works even if all processes' CPU/memory usage is 0.
-      entry->diff_info.cpu_usage = -1;
-      entry->statm_info.resident_page = -1;
-    }
+  for (const std::unique_ptr<RawProcessInfo> & entry : work_->load_tasks_raw) {
+    invalidateRankingEntry(entry);
   }
-  for (const auto & entry : work_->memory_tasks_raw) {
-    if (entry) {
-      // -1 is used here so that the ranking works even if all processes' CPU/memory usage is 0.
-      entry->diff_info.cpu_usage = -1;
-      entry->statm_info.resident_page = -1;
-    }
+  for (const std::unique_ptr<RawProcessInfo> & entry : work_->memory_tasks_raw) {
+    invalidateRankingEntry(entry);
   }
-
   work_->state_running = 0;
   work_->state_zombie = 0;
   work_->state_stopped = 0;
