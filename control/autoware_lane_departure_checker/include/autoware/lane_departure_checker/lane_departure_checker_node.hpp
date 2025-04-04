@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__LANE_DEPARTURE_CHECKER__LANE_DEPARTURE_CHECKER_NODE_HPP_
 #define AUTOWARE__LANE_DEPARTURE_CHECKER__LANE_DEPARTURE_CHECKER_NODE_HPP_
 
-#include "autoware/lane_departure_checker/lane_departure_checker.hpp"
+#include "autoware/boundary_departure_checker/boundary_departure_checker.hpp"
 #include "autoware/lane_departure_checker/parameters.hpp"
 #include "autoware_utils/ros/polling_subscriber.hpp"
 
@@ -119,7 +119,6 @@ private:
   diagnostic_updater::Updater updater_{this};
 
   void checkLaneDeparture(diagnostic_updater::DiagnosticStatusWrapper & stat);
-  void checkTrajectoryDeviation(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
   // Visualization
   visualization_msgs::msg::MarkerArray createMarkerArray() const;
