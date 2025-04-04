@@ -205,7 +205,7 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
     stop_watch_ptr_->tic("pointpainting_processing_time");
 
     const double validation_callback_interval_ms =
-        declare_parameter<double>("diagnostics.pointpainting_validation_callback_interval_ms");
+      declare_parameter<double>("diagnostics.pointpainting_validation_callback_interval_ms");
     diagnostic_processing_time_updater_.setHardwareID(this->get_name());
     diagnostic_processing_time_updater_.add(
       "pointpainting_processing_time_status", this,
