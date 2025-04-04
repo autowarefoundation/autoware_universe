@@ -1,9 +1,9 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Parameters for Lidar Centerpoint Diagnostics",
+  "title": "Parameters for PointPainting Diagnostics",
   "type": "object",
   "definitions": {
-    "centerpoint_common": {
+    "pointpainting_common": {
       "type": "object",
       "properties": {
         "diagnostics": {
@@ -39,7 +39,7 @@
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "$ref": "#/definitions/centerpoint_common"
+          "$ref": "#/definitions/pointpainting_common"
         }
       },
       "required": ["ros__parameters"]
