@@ -114,12 +114,11 @@ LidarTransfusionNode::LidarTransfusionNode(const rclcpp::NodeOptions & options)
   // setup diagnostics
   {
     const double validation_callback_interval_ms =
-        declare_parameter<double>("diagnostics.validation_callback_interval_ms");
+      declare_parameter<double>("diagnostics.validation_callback_interval_ms");
 
     diagnostic_processing_time_updater_.setHardwareID(this->get_name());
     diagnostic_processing_time_updater_.add(
-      "processing_time_status", this,
-      &LidarTransfusionNode::diagnoseProcessingTime);
+      "processing_time_status", this, &LidarTransfusionNode::diagnoseProcessingTime);
     // msec -> sec
     diagnostic_processing_time_updater_.setPeriod(validation_callback_interval_ms / 1e3);
   }
