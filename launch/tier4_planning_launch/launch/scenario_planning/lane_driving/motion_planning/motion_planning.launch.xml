@@ -137,7 +137,7 @@
   <!-- plan slowdown or stops on the final trajectory -->
   <group>
     <load_composable_node target="/planning/scenario_planning/lane_driving/motion_planning/motion_planning_container">
-      <composable_node pkg="autoware_motion_velocity_planner_node_universe" plugin="autoware::motion_velocity_planner::MotionVelocityPlannerNode" name="motion_velocity_planner" namespace="">
+      <composable_node pkg="autoware_motion_velocity_planner" plugin="autoware::motion_velocity_planner::MotionVelocityPlannerNode" name="motion_velocity_planner" namespace="">
         <!-- topic remap -->
         <remap from="~/input/trajectory" to="path_optimizer/trajectory"/>
         <remap from="~/input/vector_map" to="/map/vector_map"/>

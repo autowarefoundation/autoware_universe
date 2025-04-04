@@ -61,9 +61,9 @@ nav:
       - 'About Surround Obstacle Checker': planning/autoware_surround_obstacle_checker
       - 'About Surround Obstacle Checker (Japanese)': planning/autoware_surround_obstacle_checker/surround_obstacle_checker-design.ja
     - 'Motion Velocity Planner':
-      - 'About Motion Velocity Planner': planning/motion_velocity_planner/autoware_motion_velocity_planner_node_universe/
+      - 'About Motion Velocity Planner': https://autowarefoundation.github.io/autoware_core/main/planning/motion_velocity_planner/autoware_motion_velocity_planner/
       - 'Available Modules':
-        - 'Obstacle Stop': planning/motion_velocity_planner/autoware_motion_velocity_obstacle_stop_module/
+        - 'Obstacle Stop': https://autowarefoundation.github.io/autoware_core/main/planning/motion_velocity_planner/autoware_motion_velocity_obstacle_stop_module/
         - 'Obstacle Slow Down': planning/motion_velocity_planner/autoware_motion_velocity_obstacle_slow_down_module/
         - 'Obstacle Cruise': planning/motion_velocity_planner/autoware_motion_velocity_obstacle_cruise_module/
         - 'Dynamic Obstacle Stop': planning/motion_velocity_planner/autoware_motion_velocity_dynamic_obstacle_stop_module/

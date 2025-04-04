@@ -18,7 +18,7 @@
 #include "autoware/motion_utils/marker/marker_helper.hpp"
 #include "autoware/motion_utils/resample/resample.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
-#include "autoware/motion_velocity_planner_common_universe/utils.hpp"
+#include "autoware/motion_velocity_planner_common/utils.hpp"
 #include "autoware/object_recognition_utils/predicted_path_utils.hpp"
 #include "autoware_utils/ros/parameter.hpp"
 #include "autoware_utils/ros/update_param.hpp"

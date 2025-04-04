@@ -27,6 +27,7 @@
 #include <QString>
 #include <rviz_common/display.hpp>
 #include <rviz_common/properties/color_property.hpp>
+#include <rviz_common/properties/enum_property.hpp>
 #include <rviz_common/properties/float_property.hpp>
 #include <rviz_common/properties/int_property.hpp>
 #include <rviz_common/properties/ros_topic_property.hpp>
@@ -60,6 +61,7 @@ private Q_SLOTS:
   void updateSmallOverlaySize();
   void updateOverlayPosition();
   void updateOverlayColor();
+  void updateTurnSignalBlinkingMode();
   void topic_updated_gear();
   void topic_updated_steering();
   void topic_updated_speed();
@@ -82,6 +84,8 @@ private:
   rviz_common::properties::ColorProperty * property_primary_color_;
   rviz_common::properties::ColorProperty * property_light_limit_color_;
   rviz_common::properties::ColorProperty * property_dark_limit_color_;
+
+  rviz_common::properties::EnumProperty * property_turn_signal_blinking_mode_;
 
   std::unique_ptr<rviz_common::properties::RosTopicProperty> steering_topic_property_;
   std::unique_ptr<rviz_common::properties::RosTopicProperty> gear_topic_property_;

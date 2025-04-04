@@ -49,6 +49,19 @@ public:
     const std::vector<types::InputChannel> & channels_config);
 
 private:
+  // Timing check utilities
+  struct TimingCheckResult
+  {
+    std::string message;
+    diagnostic_msgs::msg::DiagnosticStatus::_level_type level;
+  };
+  TimingCheckResult checkDelayTiming(double delay) const;
+  TimingCheckResult checkExtrapolationTiming(
+    double extrapolation_time, const rclcpp::Time & timestamp);
+  static TimingCheckResult determineOverallTimingStatus(
+    bool no_published_trackers, const TimingCheckResult & delay_result,
+    const TimingCheckResult & extrapolation_result);
+  // Debug settings
   struct DEBUG_SETTINGS
   {
     bool publish_processing_time;
@@ -56,7 +69,16 @@ private:
     bool publish_debug_markers;
     double diagnostics_warn_delay;
     double diagnostics_error_delay;
+    double diagnostics_warn_extrapolation;
+    double diagnostics_error_extrapolation;
   } debug_settings_;
+
+  // Diagnostic values
+  struct DiagnosticValues
+  {
+    double min_extrapolation_time = 0.0;
+    size_t published_trackers_count = 0;
+  } diagnostic_values_;
 
   // ROS node, publishers
   rclcpp::Node & node_;
@@ -68,7 +90,6 @@ private:
   diagnostic_updater::Updater diagnostic_updater_;
   // Object debugger
   TrackerObjectDebugger object_debugger_;
-
   // Time measurement
   bool is_initialized_ = false;
   double pipeline_latency_ms_ = 0.0;
@@ -77,12 +98,16 @@ private:
   rclcpp::Time stamp_process_end_;
   rclcpp::Time stamp_publish_start_;
   rclcpp::Time stamp_publish_output_;
+  rclcpp::Time last_non_warning_timestamp_;
 
   // Configuration
   void setupDiagnostics();
   void loadParameters();
 
 public:
+  // Single update method for all diagnostic values
+  void updateDiagnosticValues(double min_extrapolation_time, size_t published_count);
+
   // Object publishing
   bool shouldPublishTentativeObjects() const { return debug_settings_.publish_tentative_objects; }
   void publishTentativeObjects(
@@ -95,8 +120,7 @@ public:
   void startPublishTime(const rclcpp::Time & now);
   void endPublishTime(const rclcpp::Time & now, const rclcpp::Time & object_time);
   // cppcheck-suppress functionConst
-  void checkDelay(diagnostic_updater::DiagnosticStatusWrapper & stat);
-
+  void checkAllTiming(diagnostic_updater::DiagnosticStatusWrapper & stat);
   // Debug object
   void collectObjectInfo(
     const rclcpp::Time & message_time, const std::list<std::shared_ptr<Tracker>> & list_tracker,

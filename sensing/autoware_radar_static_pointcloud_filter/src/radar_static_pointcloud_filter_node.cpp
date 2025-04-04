@@ -138,14 +138,13 @@ rcl_interfaces::msg::SetParametersResult RadarStaticPointcloudFilterNode::onSetP
 void RadarStaticPointcloudFilterNode::onData(
   const RadarScan::ConstSharedPtr radar_msg, const Odometry::ConstSharedPtr odom_msg)
 {
-  geometry_msgs::msg::TransformStamped::ConstSharedPtr transform;
-
-  try {
-    transform = transform_listener_->get_transform(
-      odom_msg->header.frame_id, radar_msg->header.frame_id, odom_msg->header.stamp,
+  const geometry_msgs::msg::TransformStamped::ConstSharedPtr transform =
+    transform_listener_->get_transform(
+      odom_msg->header.frame_id, radar_msg->header.frame_id, radar_msg->header.stamp,
       rclcpp::Duration::from_seconds(0.2));
-  } catch (tf2::TransformException & ex) {
-    RCLCPP_INFO(this->get_logger(), "Could not transform");
+
+  if (!transform) {
+    RCLCPP_WARN(this->get_logger(), "Could not transform");
     return;
   }
 

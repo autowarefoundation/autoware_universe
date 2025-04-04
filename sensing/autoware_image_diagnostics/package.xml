@@ -6,6 +6,7 @@
   <description>The autoware_image_diagnostics package</description>
   <maintainer email="dai.nguyen@tier4.jp">Dai Nguyen</maintainer>
   <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
+  <maintainer email="masato.saeki@tier4.jp">Masato Saeki</maintainer>
   <license>Apache License 2.0</license>
 
   <author email="dai.nguyen@tier4.jp">Dai Nguyen</author>
