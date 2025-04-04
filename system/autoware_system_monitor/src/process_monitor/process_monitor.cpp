@@ -250,8 +250,7 @@ bool readStat(const std::string & proc_path, StatInfo & info)
   // command may include multiple pairs of parentheses. Ex. ((XXX))
   const std::size_t left_parenthesis_pos = line.find('(');
   const std::size_t right_parenthesis_pos = line.find_last_of(')');
-  if (
-    (left_parenthesis_pos == std::string::npos) || (right_parenthesis_pos == std::string::npos)) {
+  if ((left_parenthesis_pos == std::string::npos) || (right_parenthesis_pos == std::string::npos)) {
     return false;
   }
 
