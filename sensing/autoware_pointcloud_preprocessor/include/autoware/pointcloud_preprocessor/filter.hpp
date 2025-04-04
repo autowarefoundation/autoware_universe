@@ -79,6 +79,7 @@
 #include <autoware_utils/ros/managed_transform_buffer.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils_diagnostics/diagnostics_interface.hpp>
 
 namespace autoware::pointcloud_preprocessor
 {
@@ -179,6 +180,9 @@ protected:
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
+
+  /** \brief Diagnostics handler. **/
+  std::unique_ptr<autoware_utils_diagnostics::DiagnosticsInterface> diagnostics_interface_ptr_;
 
   /** \brief Virtual abstract filter method. To be implemented by every child.
    * \param input the input point cloud dataset.
