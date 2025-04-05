@@ -32,7 +32,7 @@ In the second step, we extract geometric information from the vector map that wi
 For each object classification label,
 we prepare geometries based on the parameters defined for that label (`objects.{CLASSIFICATION_LABEL}`).
 
-Two sets of geometries (polygons and segments) will be prepared and stored in Rtrees for efficient spatial queries in the next step.
+Two sets of geometries (polygons and segments) will be prepared and stored in Rtree objects for efficient spatial queries in the next step.
 
 #### Polygons to ignore objects
 
@@ -149,7 +149,7 @@ along with the corresponding trajectory point index.
 This allows to efficiently find intersections with an object's predicted path along with the corresponding ego trajectory segment
 from which the interpolated `time_from_start` can be calculated.
 
-In step 2, the polygons and linestrings used for filtering the objects are stored in Rtrees to efficiently find whether
+In step 2, the polygons and linestrings used for filtering the objects are stored in Rtree objects to efficiently find whether
 an object is inside a polygon or if its predicted path intersects a linestring.
 
 ### Accounting for prediction inaccuracies

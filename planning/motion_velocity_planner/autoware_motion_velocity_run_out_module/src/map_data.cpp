@@ -139,7 +139,7 @@ FilteringDataPerLabel calculate_filtering_data(
       data.ignore_polygons.push_back(ego_footprint.rear_polygon.outer());
     }
   }
-  // prepare rtrees
+  // prepare rtree objects
   for (const auto label : all_labels) {
     auto & data = data_per_label[label];
     std::vector<SegmentNode> nodes;
