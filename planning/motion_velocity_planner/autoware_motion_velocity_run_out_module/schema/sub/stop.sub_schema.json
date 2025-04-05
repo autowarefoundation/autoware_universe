@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Run Out module configuration for the stop feature",
+  "type": "object",
+  "definitions": {
+    "stop": {
+      "type": "object",
+      "description": "Parameters for emergency stop behavior when detecting a collision.",
+      "properties": {
+        "on_time_buffer": {
+          "type": "number",
+          "description": "[s] Successive collision detection time required to start the stopping decision.",
+          "default": 0.5
+        },
+        "off_time_buffer": {
+          "type": "number",
+          "description": "[s] Successive non-collision detection time required to remove a stopping decision.",
+          "default": 0.5
+        },
+        "distance_buffer": {
+          "type": "number",
+          "description": "[m] Longitudinal safety distance to keep between ego and the collision position.",
+          "default": 2.0
+        },
+        "calculate_earliest_position_within_history": {
+          "type": "boolean",
+          "description": "If true, use the earliest stop position within the history, otherwise the stop position is calculated only from the currently detected collision.",
+          "default": false
+        },
+        "keep_until_object_is_gone": {
+          "type": "boolean",
+          "description": "If true, once ego stopped for an object we keep the stop decision until the object is gone.",
+          "default": true
+        }
+      },
+      "required": [
+        "on_time_buffer",
+        "off_time_buffer",
+        "distance_buffer",
+        "calculate_earliest_position_within_history",
+        "keep_until_object_is_gone"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
