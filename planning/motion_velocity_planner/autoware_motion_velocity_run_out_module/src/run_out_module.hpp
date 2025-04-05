@@ -40,6 +40,7 @@ namespace autoware::motion_velocity_planner
 class RunOutModule : public PluginModuleInterface
 {
 public:
+  RunOutModule() = default;
   /// @brief initialize the module
   void init(rclcpp::Node & node, const std::string & module_name) override;
   /// @brief initialize the parameters
@@ -66,7 +67,7 @@ private:
   std::optional<run_out::UnavoidableCollision> unavoidable_collision_;
 
   run_out::ObjectDecisionsTracker decisions_tracker_;
-  run_out::Parameters params_;
+  run_out::Parameters params_{};
 
   /// @brief update whether we are currently detecting collisions that cannot be avoided
   void update_unavoidable_collision_status(diagnostic_updater::DiagnosticStatusWrapper & stat);
