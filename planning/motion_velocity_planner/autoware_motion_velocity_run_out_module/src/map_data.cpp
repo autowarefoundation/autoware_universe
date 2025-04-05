@@ -82,12 +82,11 @@ void add_cut_segments(
   for (const auto & p : polygons) {
     const auto attribute = p.attributeOr(lanelet::AttributeName::Subtype, std::string());
     for (const auto label : all_labels) {
-      auto & data = data_per_label[label];
       const auto & params = params_per_label[label];
       const auto & types = params.cut_polygon_types;
       if (std::find(types.begin(), types.end(), attribute) != types.end()) {
         for (auto i = 0UL; i < p.numSegments(); ++i) {
-          data.cut_predicted_paths_segments.push_back(convert(p.segment(i)));
+          data_per_label[label].cut_predicted_paths_segments.push_back(convert(p.segment(i)));
         }
       }
     }
@@ -100,13 +99,12 @@ void add_cut_segments(
 {
   for (const auto & ls : linestrings) {
     for (const auto label : all_labels) {
-      auto & data = data_per_label[label];
       const auto & params = params_per_label[label];
       const auto attribute = ls.attributeOr(lanelet::AttributeName::Subtype, std::string());
       const auto & types = params.cut_linestring_types;
       if (std::find(types.begin(), types.end(), attribute) != types.end()) {
         for (auto i = 0UL; i < ls.numSegments(); ++i) {
-          data.cut_predicted_paths_segments.push_back(convert(ls.segment(i)));
+          data_per_label[label].cut_predicted_paths_segments.push_back(convert(ls.segment(i)));
         }
       }
     }
@@ -132,9 +130,9 @@ FilteringDataPerLabel calculate_filtering_data(
   const auto linestrings_in_range = map_ptr->lineStringLayer.search(bounding_box);
   add_cut_segments(data_per_label, linestrings_in_range, all_labels, params_per_label);
   for (const auto label : all_labels) {
-    auto & data = data_per_label[label];
     const auto & params = parameters.object_parameters_per_label[label];
     if (params.ignore_if_on_ego_trajectory) {
+      auto & data = data_per_label[label];
       data.ignore_polygons.push_back(ego_footprint.front_polygon.outer());
       data.ignore_polygons.push_back(ego_footprint.rear_polygon.outer());
     }
