@@ -14254,7 +14254,7 @@ These times are then used to decide whether to stop before the overlap or not.</
 <p>In the second step, we extract geometric information from the vector map that will be used to filter dynamic objects.
 For each object classification label,
 we prepare geometries based on the parameters defined for that label (<code>objects.{CLASSIFICATION_LABEL}</code>).</p>
-<p>Two sets of geometries (polygons and segments) will be prepared and stored in Rtrees for efficient spatial queries in the next step.</p>
+<p>Two sets of geometries (polygons and segments) will be prepared and stored in Rtree objects for efficient spatial queries in the next step.</p>
 <h4 id="polygons-to-ignore-objects">Polygons to ignore objects<a class="headerlink" href="#polygons-to-ignore-objects" title="Permanent link">#</a></h4>
 <p>2D polygons are extracted from crosswalk polygons if parameter <code>ignore.if_on_crosswalk</code> is <code>true</code>.
 Additionally, two polygons built from the ego trajectory footprint's front and rear linestrings are used if <code>ignore.if_on_trajectory</code> is <code>true</code>.</p>
@@ -14348,7 +14348,7 @@ and first check if it satisfies the following conditions to stop:</p>
 along with the corresponding trajectory point index.
 This allows to efficiently find intersections with an object's predicted path along with the corresponding ego trajectory segment
 from which the interpolated <code>time_from_start</code> can be calculated.</p>
-<p>In step 2, the polygons and linestrings used for filtering the objects are stored in Rtrees to efficiently find whether
+<p>In step 2, the polygons and linestrings used for filtering the objects are stored in Rtree objects to efficiently find whether
 an object is inside a polygon or if its predicted path intersects a linestring.</p>
 <h3 id="accounting-for-prediction-inaccuracies">Accounting for prediction inaccuracies<a class="headerlink" href="#accounting-for-prediction-inaccuracies" title="Permanent link">#</a></h3>
 <p>When calculating predicted collisions between ego and the objects,
