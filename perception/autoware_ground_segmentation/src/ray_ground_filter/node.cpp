@@ -57,7 +57,7 @@ RayGroundFilterComponent::RayGroundFilterComponent(const rclcpp::NodeOptions & o
 
     setVehicleFootprint(min_x_, max_x_, min_y_, max_y_);
 
-    use_vehicle_footprint_ = declare_parameter<bool>("use_vehicle_footprint", false);
+    use_vehicle_footprint_ = declare_parameter<bool>("use_vehicle_footprint");
 
     general_max_slope_ = declare_parameter<double>("general_max_slope");
     local_max_slope_ = declare_parameter<double>("local_max_slope");
