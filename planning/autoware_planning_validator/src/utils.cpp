@@ -76,6 +76,29 @@ Trajectory resampleTrajectory(const Trajectory & trajectory, const double min_in
   return resampled;
 }
 
+Trajectory getStopTrajectory(
+  const Trajectory & trajectory, const int nearest_traj_idx, const double current_vel,
+  const double decel)
+{
+  const auto stopping_distance = std::abs((current_vel * current_vel) / (2 * decel));
+  Trajectory soft_stop_traj = trajectory;
+  soft_stop_traj.header = trajectory.header;
+  double accumulated_distance = 0.0;
+  for (size_t i = nearest_traj_idx + 1; i < trajectory.points.size(); ++i) {
+    accumulated_distance += calc_distance2d(trajectory.points.at(i - 1), trajectory.points.at(i));
+    if (accumulated_distance >= stopping_distance) {
+      soft_stop_traj.points.at(i).longitudinal_velocity_mps = 0.0;
+      continue;
+    }
+    const float interpolated_velocity =
+      current_vel * (stopping_distance - accumulated_distance) / stopping_distance;
+    soft_stop_traj.points.at(i).longitudinal_velocity_mps =
+      std::min(interpolated_velocity, soft_stop_traj.points.at(i).longitudinal_velocity_mps);
+  }
+  soft_stop_traj.points.back().longitudinal_velocity_mps = 0.0;
+  return soft_stop_traj;
+}
+
 // calculate curvature from three points with curvature_distance
 void calcCurvature(
   const Trajectory & trajectory, std::vector<double> & curvature_arr,

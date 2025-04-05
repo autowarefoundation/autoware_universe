@@ -21,6 +21,8 @@
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
+#include <limits>
+
 using autoware_planning_msgs::msg::Trajectory;
 using nav_msgs::msg::Odometry;
 
@@ -43,6 +45,10 @@ Trajectory generateTrajectoryWithConstantSteering(
 Trajectory generateTrajectoryWithConstantSteeringRate(
   const double interval_distance, const double speed, const double steering_rate, const size_t size,
   const double wheelbase);
+
+Trajectory generateShiftedTrajectory(
+  const Trajectory & trajectory, const double lat_shift = 0.0, const double lon_shift = 0.0,
+  const size_t size = std::numeric_limits<size_t>::max());
 
 Trajectory generateNanTrajectory();
 
