@@ -352,7 +352,6 @@ void PlanningValidator::validate(const Trajectory & trajectory)
   s.is_valid_forward_trajectory_length = checkValidForwardTrajectoryLength(trajectory);
   s.is_valid_latency = checkValidLatency(trajectory);
 
-
   // use resampled trajectory because the following metrics can not be evaluated for closed points.
   // Note: do not interpolate to keep original trajectory shape.
   constexpr auto min_interval = 1.0;
