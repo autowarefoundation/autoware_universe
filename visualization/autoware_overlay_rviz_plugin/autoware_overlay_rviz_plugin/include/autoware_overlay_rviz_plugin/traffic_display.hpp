@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SPEED_LIMIT_DISPLAY_HPP_
-#define SPEED_LIMIT_DISPLAY_HPP_
-#include "overlay_utils.hpp"
+#ifndef TRAFFIC_DISPLAY_HPP_
+#define TRAFFIC_DISPLAY_HPP_
+#include "autoware_overlay_rviz_plugin/overlay_utils.hpp"
 
 #include <QImage>
 #include <QString>
@@ -23,8 +23,8 @@
 #include <rviz_common/properties/int_property.hpp>
 #include <rviz_common/ros_topic_display.hpp>
 
-#include "autoware_vehicle_msgs/msg/velocity_report.hpp"
-#include <tier4_planning_msgs/msg/velocity_limit.hpp>
+#include <autoware_perception_msgs/msg/traffic_light_element.hpp>
+#include <autoware_perception_msgs/msg/traffic_light_group.hpp>
 
 #include <OgreColourValue.h>
 #include <OgreMaterial.h>
@@ -33,22 +33,26 @@
 namespace autoware_overlay_rviz_plugin
 {
 
-class SpeedLimitDisplay
+class TrafficDisplay
 {
 public:
-  SpeedLimitDisplay();
-  void drawSpeedLimitIndicator(
-    QPainter & painter, const QRectF & backgroundRect, const QColor & color,
-    const QColor & light_color, const QColor & dark_color, const QColor & bg_color,
-    const float bg_alpha);
-  void updateSpeedLimitData(const tier4_planning_msgs::msg::VelocityLimit::ConstSharedPtr msg);
-  void updateSpeedData(const autoware_vehicle_msgs::msg::VelocityReport::ConstSharedPtr & msg);
+  TrafficDisplay();
+  void drawTrafficLightIndicator(QPainter & painter, const QRectF & backgroundRect);
+  void updateTrafficLightData(
+    const autoware_perception_msgs::msg::TrafficLightGroup::ConstSharedPtr & msg);
+  autoware_perception_msgs::msg::TrafficLightGroup current_traffic_;
 
 private:
-  float current_limit;   // Internal variable to store current gear
-  float current_speed_;  // Internal variable to store current speed
+  QImage traffic_light_image_;
+
+  const QColor tl_red_;
+  const QColor tl_yellow_;
+  const QColor tl_green_;
+  const QColor tl_gray_;
+
+  QImage coloredImage(const QImage & source, const QColor & color);
 };
 
 }  // namespace autoware_overlay_rviz_plugin
 
-#endif  // SPEED_LIMIT_DISPLAY_HPP_
+#endif  // TRAFFIC_DISPLAY_HPP_

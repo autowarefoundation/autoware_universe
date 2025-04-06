@@ -15,13 +15,13 @@
 #ifndef SIGNAL_DISPLAY_HPP_
 #define SIGNAL_DISPLAY_HPP_
 #ifndef Q_MOC_RUN
-#include "gear_display.hpp"
-#include "overlay_utils.hpp"
-#include "speed_display.hpp"
-#include "speed_limit_display.hpp"
-#include "steering_wheel_display.hpp"
-#include "traffic_display.hpp"
-#include "turn_signals_display.hpp"
+#include "autoware_overlay_rviz_plugin/gear_display.hpp"
+#include "autoware_overlay_rviz_plugin/overlay_utils.hpp"
+#include "autoware_overlay_rviz_plugin/speed_display.hpp"
+#include "autoware_overlay_rviz_plugin/speed_limit_display.hpp"
+#include "autoware_overlay_rviz_plugin/steering_wheel_display.hpp"
+#include "autoware_overlay_rviz_plugin/traffic_display.hpp"
+#include "autoware_overlay_rviz_plugin/turn_signals_display.hpp"
 
 #include <QImage>
 #include <QString>

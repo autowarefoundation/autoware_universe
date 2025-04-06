@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef STEERING_WHEEL_DISPLAY_HPP_
-#define STEERING_WHEEL_DISPLAY_HPP_
-#include "overlay_utils.hpp"
+#ifndef SPEED_LIMIT_DISPLAY_HPP_
+#define SPEED_LIMIT_DISPLAY_HPP_
+#include "autoware_overlay_rviz_plugin/overlay_utils.hpp"
 
 #include <QImage>
 #include <QString>
@@ -23,7 +23,8 @@
 #include <rviz_common/properties/int_property.hpp>
 #include <rviz_common/ros_topic_display.hpp>
 
-#include "autoware_vehicle_msgs/msg/steering_report.hpp"
+#include "autoware_vehicle_msgs/msg/velocity_report.hpp"
+#include <tier4_planning_msgs/msg/velocity_limit.hpp>
 
 #include <OgreColourValue.h>
 #include <OgreMaterial.h>
@@ -32,24 +33,22 @@
 namespace autoware_overlay_rviz_plugin
 {
 
-class SteeringWheelDisplay
+class SpeedLimitDisplay
 {
 public:
-  SteeringWheelDisplay();
-  void drawSteeringWheel(
-    QPainter & painter, const QRectF & backgroundRect, float handle_angle_scale_);
-  void updateSteeringData(const autoware_vehicle_msgs::msg::SteeringReport::ConstSharedPtr & msg);
+  SpeedLimitDisplay();
+  void drawSpeedLimitIndicator(
+    QPainter & painter, const QRectF & backgroundRect, const QColor & color,
+    const QColor & light_color, const QColor & dark_color, const QColor & bg_color,
+    const float bg_alpha);
+  void updateSpeedLimitData(const tier4_planning_msgs::msg::VelocityLimit::ConstSharedPtr msg);
+  void updateSpeedData(const autoware_vehicle_msgs::msg::VelocityReport::ConstSharedPtr & msg);
 
 private:
-  float steering_angle_ = 0.0f;
-  QColor gray = QColor(194, 194, 194);
-
-  QImage wheelImage;
-  QImage scaledWheelImage;
-  QImage coloredImage(const QImage & source, const QColor & color);
-  autoware_vehicle_msgs::msg::SteeringReport::ConstSharedPtr last_msg_ptr_;
+  float current_limit;   // Internal variable to store current gear
+  float current_speed_;  // Internal variable to store current speed
 };
 
 }  // namespace autoware_overlay_rviz_plugin
 
-#endif  // STEERING_WHEEL_DISPLAY_HPP_
+#endif  // SPEED_LIMIT_DISPLAY_HPP_

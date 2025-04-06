@@ -48,7 +48,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-#include "overlay_utils.hpp"
+#include "autoware_mission_details_overlay_rviz_plugin/overlay_utils.hpp"
 
 #include <rviz_common/logging.hpp>
 

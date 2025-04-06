@@ -6,16 +6,16 @@ find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies()
 
 set(headers_to_moc
-  include/signal_display.hpp
+  include/autoware_overlay_rviz_plugin/signal_display.hpp
 )
 
 set(headers_to_not_moc
-  include/steering_wheel_display.hpp
-  include/gear_display.hpp
-  include/speed_display.hpp
-  include/turn_signals_display.hpp
-  include/traffic_display.hpp
-  include/speed_limit_display.hpp
+  include/autoware_overlay_rviz_plugin/steering_wheel_display.hpp
+  include/autoware_overlay_rviz_plugin/gear_display.hpp
+  include/autoware_overlay_rviz_plugin/speed_display.hpp
+  include/autoware_overlay_rviz_plugin/turn_signals_display.hpp
+  include/autoware_overlay_rviz_plugin/traffic_display.hpp
+  include/autoware_overlay_rviz_plugin/speed_limit_display.hpp
 )
 
 

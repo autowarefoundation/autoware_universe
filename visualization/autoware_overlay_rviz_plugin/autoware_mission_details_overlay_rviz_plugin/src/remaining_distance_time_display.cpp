@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "remaining_distance_time_display.hpp"
+#include "autoware_mission_details_overlay_rviz_plugin/remaining_distance_time_display.hpp"
 
 #include <QColor>
 #include <QFontDatabase>

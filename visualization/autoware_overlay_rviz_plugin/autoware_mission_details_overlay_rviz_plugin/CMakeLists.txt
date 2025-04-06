@@ -6,12 +6,12 @@ ament_auto_find_build_dependencies()
 
 set(
   headers_to_moc
-  include/mission_details_display.hpp
+  include/autoware_mission_details_overlay_rviz_plugin/mission_details_display.hpp
 )
 
 set(
   headers_to_not_moc
-  include/remaining_distance_time_display.hpp
+  include/autoware_mission_details_overlay_rviz_plugin/remaining_distance_time_display.hpp
 )
 
 foreach(header "${headers_to_moc}")

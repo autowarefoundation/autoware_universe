@@ -15,8 +15,8 @@
 #ifndef MISSION_DETAILS_DISPLAY_HPP_
 #define MISSION_DETAILS_DISPLAY_HPP_
 #ifndef Q_MOC_RUN
-#include "overlay_utils.hpp"
-#include "remaining_distance_time_display.hpp"
+#include "autoware_mission_details_overlay_rviz_plugin/overlay_utils.hpp"
+#include "autoware_mission_details_overlay_rviz_plugin/remaining_distance_time_display.hpp"
 
 #include <QImage>
 #include <QString>

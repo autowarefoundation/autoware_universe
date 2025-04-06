@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "turn_signals_display.hpp"
+#include "autoware_overlay_rviz_plugin/turn_signals_display.hpp"
 
 #include <QFontDatabase>
 #include <QPainter>

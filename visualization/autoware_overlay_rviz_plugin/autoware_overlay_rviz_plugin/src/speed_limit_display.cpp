@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "speed_limit_display.hpp"
+#include "autoware_overlay_rviz_plugin/speed_limit_display.hpp"
 
 #include <QFontDatabase>
 #include <QPainter>

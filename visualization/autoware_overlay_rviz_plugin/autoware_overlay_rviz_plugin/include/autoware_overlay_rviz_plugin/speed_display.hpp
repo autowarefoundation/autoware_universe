@@ -14,7 +14,7 @@
 
 #ifndef SPEED_DISPLAY_HPP_
 #define SPEED_DISPLAY_HPP_
-#include "overlay_utils.hpp"
+#include "autoware_overlay_rviz_plugin/overlay_utils.hpp"
 
 #include <QImage>
 #include <QString>

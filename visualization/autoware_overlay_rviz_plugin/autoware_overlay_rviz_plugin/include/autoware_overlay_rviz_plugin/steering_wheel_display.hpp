@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TRAFFIC_DISPLAY_HPP_
-#define TRAFFIC_DISPLAY_HPP_
-#include "overlay_utils.hpp"
+#ifndef STEERING_WHEEL_DISPLAY_HPP_
+#define STEERING_WHEEL_DISPLAY_HPP_
+#include "autoware_overlay_rviz_plugin/overlay_utils.hpp"
 
 #include <QImage>
 #include <QString>
@@ -23,8 +23,7 @@
 #include <rviz_common/properties/int_property.hpp>
 #include <rviz_common/ros_topic_display.hpp>
 
-#include <autoware_perception_msgs/msg/traffic_light_element.hpp>
-#include <autoware_perception_msgs/msg/traffic_light_group.hpp>
+#include "autoware_vehicle_msgs/msg/steering_report.hpp"
 
 #include <OgreColourValue.h>
 #include <OgreMaterial.h>
@@ -33,26 +32,24 @@
 namespace autoware_overlay_rviz_plugin
 {
 
-class TrafficDisplay
+class SteeringWheelDisplay
 {
 public:
-  TrafficDisplay();
-  void drawTrafficLightIndicator(QPainter & painter, const QRectF & backgroundRect);
-  void updateTrafficLightData(
-    const autoware_perception_msgs::msg::TrafficLightGroup::ConstSharedPtr & msg);
-  autoware_perception_msgs::msg::TrafficLightGroup current_traffic_;
+  SteeringWheelDisplay();
+  void drawSteeringWheel(
+    QPainter & painter, const QRectF & backgroundRect, float handle_angle_scale_);
+  void updateSteeringData(const autoware_vehicle_msgs::msg::SteeringReport::ConstSharedPtr & msg);
 
 private:
-  QImage traffic_light_image_;
+  float steering_angle_ = 0.0f;
+  QColor gray = QColor(194, 194, 194);
 
-  const QColor tl_red_;
-  const QColor tl_yellow_;
-  const QColor tl_green_;
-  const QColor tl_gray_;
-
+  QImage wheelImage;
+  QImage scaledWheelImage;
   QImage coloredImage(const QImage & source, const QColor & color);
+  autoware_vehicle_msgs::msg::SteeringReport::ConstSharedPtr last_msg_ptr_;
 };
 
 }  // namespace autoware_overlay_rviz_plugin
 
-#endif  // TRAFFIC_DISPLAY_HPP_
+#endif  // STEERING_WHEEL_DISPLAY_HPP_

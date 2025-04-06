@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "mission_details_display.hpp"
+#include "autoware_mission_details_overlay_rviz_plugin/mission_details_display.hpp"
 
 #include <QFontDatabase>
 #include <QPainter>
