@@ -273,12 +273,12 @@ void PlanningValidator::publishTrajectory()
     return;
   }
 
-  if (invalid_trajectory_handling_type_ == InvalidTrajectoryHandlingType::STOP_PUBLISHING) {
+  if (handling_type == InvalidTrajectoryHandlingType::STOP_PUBLISHING) {
     RCLCPP_ERROR(get_logger(), "Invalid Trajectory detected. Trajectory is not published.");
     return;
   }
 
-  if (invalid_trajectory_handling_type_ == InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT) {
+  if (handling_type == InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT) {
     if (previous_published_trajectory_) {
       pub_traj_->publish(*previous_published_trajectory_);
       published_time_publisher_->publish_if_subscribed(
