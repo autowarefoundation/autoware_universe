@@ -51,9 +51,9 @@ using Matrix3fRowM = Eigen::Matrix<float, 3, 3, Eigen::RowMajor>;
 
 using Vector3fRowM = Eigen::Matrix<float, 1, 3, Eigen::RowMajor>;
 
-Tensor4D create_frustum(const BEVFusionConfig & config);
+Tensor4D createFrustum(const BEVFusionConfig & config);
 
-Tensor5D get_geometry(
+Tensor5D getGeometry(
   const Tensor4D & frustum,             // [D, H, W, 3]
   const Tensor3D & camera2lidar_rots,   // [N, 3, 3]
   const Tensor2D & camera2lidar_trans,  // [N, 3]
@@ -68,7 +68,7 @@ std::tuple<
   Eigen::Matrix<std::uint8_t, 1, Eigen::Dynamic, Eigen::RowMajor>,
   Eigen::Matrix<std::int64_t, 1, Eigen::Dynamic, Eigen::RowMajor>,
   Eigen::Matrix<std::int64_t, 1, Eigen::Dynamic, Eigen::RowMajor> >
-bev_pool_aux(const Tensor5D & geom_feats_input, const BEVFusionConfig & config);
+bevPoolAux(const Tensor5D & geom_feats_input, const BEVFusionConfig & config);
 
 std::tuple<
   Eigen::VectorXf,  // lidar2image
@@ -76,7 +76,7 @@ std::tuple<
   Eigen::Matrix<std::uint8_t, 1, Eigen::Dynamic, Eigen::RowMajor>,
   Eigen::Matrix<std::int64_t, 1, Eigen::Dynamic, Eigen::RowMajor>,
   Eigen::Matrix<std::int64_t, 1, Eigen::Dynamic, Eigen::RowMajor> >
-precompute_features(
+precomputeFeatures(
   const std::vector<Matrix4fRowM> & lidar2camera_transforms,
   const std::vector<Matrix4fRowM> & camera_aug_matrices,
   const std::vector<sensor_msgs::msg::CameraInfo> & camera_info_vector,

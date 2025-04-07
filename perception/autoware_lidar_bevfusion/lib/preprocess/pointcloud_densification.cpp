@@ -65,9 +65,9 @@ bool PointCloudDensification::enqueuePointCloud(
 {
   const auto header = pointcloud_msg.header;
 
-  if (param_.pointcloud_cache_size() > 1) {
+  if (param_.getPointcloudCacheSize() > 1) {
     auto transform_world2current =
-      getTransform(tf_buffer, header.frame_id, param_.world_frame_id(), header.stamp);
+      getTransform(tf_buffer, header.frame_id, param_.getWorldFrameId(), header.stamp);
     if (!transform_world2current) {
       return false;
     }
@@ -103,7 +103,7 @@ void PointCloudDensification::enqueue(
 
 void PointCloudDensification::dequeue()
 {
-  if (pointcloud_cache_.size() > param_.pointcloud_cache_size()) {
+  if (pointcloud_cache_.size() > param_.getPointcloudCacheSize()) {
     pointcloud_cache_.pop_back();
   }
 }

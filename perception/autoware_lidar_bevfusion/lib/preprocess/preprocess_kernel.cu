@@ -142,7 +142,7 @@ std::size_t PreprocessCuda::generateVoxels(
   return real_num_voxels;
 }
 
-__global__ void resize_and_extract_roi(
+__global__ void resizeAndExtractRoi_kernel(
   const std::uint8_t * __restrict__ input_img, std::uint8_t * __restrict__ output_img, int H,
   int W,                     // Original image dimensions (Height, Width)
   int H2, int W2,            // Resized image dimensions (Height, Width)
@@ -205,7 +205,7 @@ __global__ void resize_and_extract_roi(
   }
 }
 
-cudaError_t PreprocessCuda::resize_and_extract_roi_launch(
+cudaError_t PreprocessCuda::resizeAndExtractRoi_launch(
   const std::uint8_t * input_img, std::uint8_t * output_img, int H,
   int W,                     // Original image dimensions
   int H2, int W2,            // Resized image dimensions
@@ -218,7 +218,7 @@ cudaError_t PreprocessCuda::resize_and_extract_roi_launch(
   dim3 blocks(divup(W3, threads.x), divup(H3, threads.y));
 
   // Launch the kernel
-  resize_and_extract_roi<<<blocks, threads, 0, stream>>>(
+  resizeAndExtractRoi_kernel<<<blocks, threads, 0, stream>>>(
     input_img, output_img, H, W, H2, W2, H3, W3, y_start, x_start);
 
   // Check for errors

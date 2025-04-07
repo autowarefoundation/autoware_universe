@@ -44,8 +44,8 @@ public:
   {
   }
 
-  std::string world_frame_id() const { return world_frame_id_; }
-  unsigned int pointcloud_cache_size() const { return pointcloud_cache_size_; }
+  std::string getWorldFrameId() const { return world_frame_id_; }
+  unsigned int getPointcloudCacheSize() const { return pointcloud_cache_size_; }
 
 private:
   std::string world_frame_id_;
@@ -86,7 +86,7 @@ public:
   {
     return std::distance(pointcloud_cache_.begin(), pointcloud_cache_.end());
   }
-  unsigned int pointcloud_cache_size() const { return param_.pointcloud_cache_size(); }
+  unsigned int getPointcloudCacheSize() const { return param_.getPointcloudCacheSize(); }
 
 private:
   void enqueue(const sensor_msgs::msg::PointCloud2 & msg, const Eigen::Affine3f & affine);

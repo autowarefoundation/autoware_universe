@@ -59,7 +59,7 @@ public:
     const float * points, unsigned int points_size, float * voxel_features,
     std::int32_t * voxel_coords, std::int32_t * num_points_per_voxel);
 
-  cudaError_t resize_and_extract_roi_launch(
+  cudaError_t resizeAndExtractRoi_launch(
     const std::uint8_t * input_img, std::uint8_t * output_img, int H, int W, int H2, int W2, int H3,
     int W3, int y_start, int x_start, cudaStream_t stream);
 

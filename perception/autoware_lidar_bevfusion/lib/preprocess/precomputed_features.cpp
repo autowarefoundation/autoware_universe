@@ -26,7 +26,7 @@
 namespace autoware::lidar_bevfusion
 {
 
-Tensor4D create_frustum(const BEVFusionConfig & config)
+Tensor4D createFrustum(const BEVFusionConfig & config)
 {
   const float dbound_start = config.d_bound_[0];
   const float dbound_end = config.d_bound_[1];
@@ -78,7 +78,7 @@ Tensor4D create_frustum(const BEVFusionConfig & config)
   return frustum;
 }
 
-Tensor5D get_geometry(
+Tensor5D getGeometry(
   const Tensor4D & frustum,             // [D, H, W, 3]
   const Tensor3D & camera2lidar_rots,   // [N, 3, 3]
   const Tensor2D & camera2lidar_trans,  // [N, 3]
@@ -190,7 +190,7 @@ std::tuple<
     Eigen::Matrix<std::uint8_t, 1, Eigen::Dynamic, Eigen::RowMajor>,  // kept
     Eigen::Matrix<std::int64_t, 1, Eigen::Dynamic, Eigen::RowMajor>,  // ranks
     Eigen::Matrix<std::int64_t, 1, Eigen::Dynamic, Eigen::RowMajor>   // indices
-> bev_pool_aux(
+> bevPoolAux(
     const Tensor5D& geom_feats_input,
     const BEVFusionConfig & config)
 {
@@ -306,7 +306,7 @@ std::tuple<
   Eigen::Matrix<std::uint8_t, 1, Eigen::Dynamic, Eigen::RowMajor>,
   Eigen::Matrix<std::int64_t, 1, Eigen::Dynamic, Eigen::RowMajor>,
   Eigen::Matrix<std::int64_t, 1, Eigen::Dynamic, Eigen::RowMajor>>
-precompute_features(
+precomputeFeatures(
   const std::vector<Matrix4fRowM> & lidar2camera_transforms,
   const std::vector<Matrix4fRowM> & camera_aug_matrices,
   const std::vector<sensor_msgs::msg::CameraInfo> & camera_info_vector,
@@ -314,7 +314,7 @@ precompute_features(
 {
   Eigen::VectorXf lidar2images_flat(config.num_cameras_ * 4 * 4);
 
-  Tensor4D frustum = autoware::lidar_bevfusion::create_frustum(config);
+  Tensor4D frustum = autoware::lidar_bevfusion::createFrustum(config);
 
   Tensor3D camera2lidar_rotations(config.num_cameras_, 3, 3);
   Tensor2D camera2lidar_translations(config.num_cameras_, 3);
@@ -358,7 +358,7 @@ precompute_features(
     post_trans.chip(camera_id, 0) = post_trans_tensor;
   }
 
-  Tensor5D geometry = get_geometry(
+  Tensor5D geometry = getGeometry(
     frustum,                    // [D, H, W, 3]
     camera2lidar_rotations,     // [N, 3, 3]
     camera2lidar_translations,  // [N, 3]
@@ -367,7 +367,7 @@ precompute_features(
     post_trans                  // [N, 3]
   );
 
-  auto [geom_feats, kept, ranks, indices] = bev_pool_aux(geometry, config);
+  auto [geom_feats, kept, ranks, indices] = bevPoolAux(geometry, config);
 
   return std::make_tuple(lidar2images_flat, geom_feats, kept, ranks, indices);
 }

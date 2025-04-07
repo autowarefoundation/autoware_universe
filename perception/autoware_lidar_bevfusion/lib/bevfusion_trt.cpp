@@ -359,7 +359,7 @@ void BEVFusionTRT::setIntrinsicsExtrinsics(
   }
 
   auto [lidar2images_flattened, geom_feats, kept, ranks, indices] =
-    precompute_features(lidar2camera_vector, img_aug_matrices, camera_info_vector, config_);
+    precomputeFeatures(lidar2camera_vector, img_aug_matrices, camera_info_vector, config_);
 
   assert(static_cast<std::int64_t>(lidar2images_flattened.size()) == config_.num_cameras_ * 4 * 4);
 
@@ -441,7 +441,7 @@ bool BEVFusionTRT::preProcess(
         image_buffers_d_[camera_id].get(), image_msgs[camera_id]->data.data(),
         config_.raw_image_height_ * config_.raw_image_width_ * 3, cudaMemcpyHostToDevice, stream_);
 
-      pre_ptr_->resize_and_extract_roi_launch(
+      pre_ptr_->resizeAndExtractRoi_launch(
         image_buffers_d_[camera_id].get(),
         &roi_tensor_d_[camera_id * config_.roi_height_ * config_.roi_width_ * 3],
         config_.raw_image_height_, config_.raw_image_width_, config_.resized_height_,
