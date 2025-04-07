@@ -227,9 +227,10 @@ void LidarBEVFusionNode::cloudCallback(const sensor_msgs::msg::PointCloud2::Cons
   double lidar_stamp = rclcpp::Time(pc_msg->header.stamp).seconds();
   camera_masks_.resize(camera_info_msgs_.size());
   for (std::size_t i = 0; i < camera_masks_.size(); ++i) {
-    camera_masks_[i] = 1.f ? (lidar_stamp - rclcpp::Time(image_msgs_[i]->header.stamp).seconds()) <
-                               max_camera_lidar_delay_
-                           : 0.f;
+    camera_masks_[i] =
+      (lidar_stamp - rclcpp::Time(image_msgs_[i]->header.stamp).seconds()) < max_camera_lidar_delay_
+        ? 1.0
+        : 0.f;
   }
 
   std::vector<Box3D> det_boxes3d;
