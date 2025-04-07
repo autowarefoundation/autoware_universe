@@ -81,8 +81,8 @@ void calcCurvature(
   const Trajectory & trajectory, std::vector<double> & curvature_vector,
   const double curvature_distance)
 {
+  curvature_vector = std::vector<double>(trajectory.points.size(), 0.0);
   if (trajectory.points.size() < 3) {
-    curvature_vector = std::vector<double>(trajectory.points.size(), 0.0);
     return;
   }
 
@@ -92,9 +92,6 @@ void calcCurvature(
     arc_length.at(i) =
       arc_length.at(i - 1) + calc_distance2d(trajectory.points.at(i - 1), trajectory.points.at(i));
   }
-
-  // initialize with 0 curvature
-  curvature_vector = std::vector<double>(trajectory.points.size(), 0.0);
 
   size_t first_distant_index = 0;
   size_t last_distant_index = trajectory.points.size() - 1;
@@ -194,18 +191,16 @@ std::pair<double, size_t> calcMaxIntervalDistance(const Trajectory & trajectory)
 void calc_lateral_acceleration(
   const Trajectory & trajectory, std::vector<double> & lateral_acceleration_vector)
 {
-  lateral_acceleration_vector.clear();
+  lateral_acceleration_vector.resize(trajectory.points.size(), 0.0);
 
   // We need at least three points to compute curvature
   if (trajectory.points.size() < 3) {
-    lateral_acceleration_vector.resize(trajectory.points.size(), 0.0);
     return;
   }
 
   std::vector<double> curvature_vector;
   calcCurvature(trajectory, curvature_vector);
 
-  lateral_acceleration_vector.resize(trajectory.points.size(), 0.0);
   for (size_t i = 0; i < trajectory.points.size(); ++i) {
     const auto v_lon = trajectory.points.at(i).longitudinal_velocity_mps;
     const auto a_lon = trajectory.points.at(i).acceleration_mps2;
