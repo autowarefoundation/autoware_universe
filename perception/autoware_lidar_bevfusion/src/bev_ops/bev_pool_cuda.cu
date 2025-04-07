@@ -4,9 +4,6 @@
 // https://github.com/mit-han-lab/bevfusion/blob/main/mmdet3d/ops/bev_pool/src/bev_pool_cuda.cu
 // Available under Apache-2.0 license
 
-#include <stdio.h>
-#include <stdlib.h>
-
 /*
   Function: pillar pooling
   Args:
