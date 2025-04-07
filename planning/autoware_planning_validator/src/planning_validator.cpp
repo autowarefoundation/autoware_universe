@@ -129,8 +129,7 @@ void PlanningValidator::setStatus(
 {
   if (is_ok) {
     stat.summary(DiagnosticStatus::OK, "validated.");
-  } else if (
-    validation_status_.invalid_count < params_.diag_error_count_threshold && !is_critical_error_) {
+  } else if (validation_status_.invalid_count < params_.diag_error_count_threshold) {
     const auto warn_msg = msg + " (invalid count is less than error threshold: " +
                           std::to_string(validation_status_.invalid_count) + " < " +
                           std::to_string(params_.diag_error_count_threshold) + ")";
@@ -312,10 +311,8 @@ void PlanningValidator::publishDebugInfo()
   if (!isAllValid(validation_status_)) {
     geometry_msgs::msg::Pose front_pose = current_kinematics_->pose.pose;
     shiftPose(front_pose, vehicle_info_.front_overhang_m + vehicle_info_.wheel_base_m);
-    auto offset_pose = front_pose;
-    shiftPose(offset_pose, 0.25);
     debug_pose_publisher_->pushVirtualWall(front_pose);
-    debug_pose_publisher_->pushWarningMsg(offset_pose, "INVALID PLANNING");
+    debug_pose_publisher_->pushWarningMsg(front_pose, "INVALID PLANNING");
   }
   debug_pose_publisher_->publish();
 }
