@@ -297,7 +297,7 @@ bool readStatMemory(const std::string & proc_path, StatMemoryInfo & info)
     stat_memory_file.exceptions();  // Reset to default state
   } catch (...) {
     stat_memory_file.exceptions();  // Reset even if exception occurs
-    return false;            // Failed to read all values
+    return false;                   // Failed to read all values
   }
   info = info_temp;
   return true;
