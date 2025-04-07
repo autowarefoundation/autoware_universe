@@ -120,8 +120,6 @@ std::size_t PreprocessCuda::generateVoxels(
     points, {static_cast<std::int64_t>(points_size), config_.num_point_feature_size_}, tv::float32,
     0);
 
-  auto point_limit = pc.dim(0);
-
   tv::Tensor voxels_padded = tv::from_blob(
     voxel_features, {config_.max_num_voxels_, config_.max_points_per_voxel_, pc.dim(1)},
     tv::float32, 0);
