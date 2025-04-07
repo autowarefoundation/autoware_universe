@@ -415,6 +415,12 @@ bool BEVFusionTRT::preProcess(
     return false;
   }
 
+  if (pc_msg->height * pc_msg->width == 0) {
+    RCLCPP_WARN_STREAM(
+      rclcpp::get_logger("lidar_bevfusion"), "Empty pointcloud. Skipping detection.");
+    return false;
+  }
+
   if (!vg_ptr_->enqueuePointCloud(*pc_msg, tf_buffer)) {
     return false;
   }
