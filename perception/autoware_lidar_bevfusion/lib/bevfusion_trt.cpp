@@ -268,24 +268,21 @@ bool BEVFusionTRT::detect(
 {
   stop_watch_ptr_->toc("processing/inner", true);
   if (!preProcess(pc_msg, image_msgs, camera_masks, tf_buffer)) {
-    RCLCPP_WARN_STREAM(
-      rclcpp::get_logger("lidar_bevfusion"), "Pre-process failed. Skipping detection.");
+    RCLCPP_ERROR(rclcpp::get_logger("lidar_bevfusion"), "Pre-process failed. Skipping detection.");
     return false;
   }
   proc_timing.emplace(
     "debug/processing_time/preprocess_ms", stop_watch_ptr_->toc("processing/inner", true));
 
   if (!inference()) {
-    RCLCPP_WARN_STREAM(
-      rclcpp::get_logger("lidar_bevfusion"), "Inference failed. Skipping detection.");
+    RCLCPP_ERROR(rclcpp::get_logger("lidar_bevfusion"), "Inference failed. Skipping detection.");
     return false;
   }
   proc_timing.emplace(
     "debug/processing_time/inference_ms", stop_watch_ptr_->toc("processing/inner", true));
 
   if (!postProcess(det_boxes3d)) {
-    RCLCPP_WARN_STREAM(
-      rclcpp::get_logger("lidar_bevfusion"), "Post-process failed. Skipping detection");
+    RCLCPP_ERROR(rclcpp::get_logger("lidar_bevfusion"), "Post-process failed. Skipping detection");
     return false;
   }
   proc_timing.emplace(
@@ -380,12 +377,12 @@ bool BEVFusionTRT::preProcess(
   using autoware::cuda_utils::clear_async;
 
   if (!autoware::point_types::is_data_layout_compatible_with_point_xyzirc(pc_msg->fields)) {
-    RCLCPP_WARN(rclcpp::get_logger("lidar_bevfusion"), "Invalid point type. Skipping detection.");
+    RCLCPP_ERROR(rclcpp::get_logger("lidar_bevfusion"), "Invalid point type. Skipping detection.");
     return false;
   }
 
   if (pc_msg->height * pc_msg->width == 0) {
-    RCLCPP_WARN(rclcpp::get_logger("lidar_bevfusion"), "Empty pointcloud. Skipping detection.");
+    RCLCPP_ERROR(rclcpp::get_logger("lidar_bevfusion"), "Empty pointcloud. Skipping detection.");
     return false;
   }
 
@@ -432,7 +429,7 @@ bool BEVFusionTRT::preProcess(
   const auto num_points = vg_ptr_->generateSweepPoints(points_d_);
 
   if (num_points == 0) {
-    RCLCPP_WARN(
+    RCLCPP_ERROR(
       rclcpp::get_logger("lidar_bevfusion"),
       "Empty sweep points (check the capacity of the buffer) . Skipping detection.");
     return false;
@@ -447,14 +444,14 @@ bool BEVFusionTRT::preProcess(
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   if (num_voxels < config_.min_num_voxels_) {
-    RCLCPP_WARN_STREAM(
+    RCLCPP_ERROR_STREAM(
       rclcpp::get_logger("lidar_bevfusion"),
       "Too few voxels (" << num_voxels << ") for the actual optimization profile ("
                          << config_.min_num_voxels_ << ")");
     return false;
   }
   if (num_voxels > config_.max_num_voxels_) {
-    RCLCPP_ERROR_STREAM(
+    RCLCPP_WARN_STREAM(
       rclcpp::get_logger("lidar_bevfusion"),
       "Actual number of voxels (" << num_voxels
                                   << ") is over the limit for the actual optimization profile ("
@@ -490,8 +487,7 @@ bool BEVFusionTRT::inference()
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   if (!status) {
-    RCLCPP_WARN_STREAM(
-      rclcpp::get_logger("lidar_bevfusion"), "Fail to enqueue and skip to detect.");
+    RCLCPP_ERROR(rclcpp::get_logger("lidar_bevfusion"), "Fail to enqueue and skip to detect.");
     return false;
   }
 

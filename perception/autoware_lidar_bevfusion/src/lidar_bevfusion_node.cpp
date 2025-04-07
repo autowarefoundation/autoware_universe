@@ -89,14 +89,14 @@ LidarBEVFusionNode::LidarBEVFusionNode(const rclcpp::NodeOptions & options)
   class_names_ = this->declare_parameter<std::vector<std::string>>("class_names", descriptor);
 
   if (point_cloud_range.size() != 6) {
-    RCLCPP_WARN_STREAM(
-      rclcpp::get_logger("lidar_bevfusion"),
-      "The size of point_cloud_range != 6: use the default parameters.");
+    RCLCPP_ERROR(rclcpp::get_logger("lidar_bevfusion"), "The size of point_cloud_range != 6");
+
+    throw std::runtime_error("The size of point_cloud_range != 6");
   }
   if (voxel_size.size() != 3) {
-    RCLCPP_WARN_STREAM(
-      rclcpp::get_logger("lidar_bevfusion"),
-      "The size of voxel_size != 3: use the default parameters.");
+    RCLCPP_WARN_STREAM(rclcpp::get_logger("lidar_bevfusion"), "The size of voxel_size != 3");
+
+    throw std::runtime_error("The size of voxel_size != 3");
   }
 
   // pre-process
