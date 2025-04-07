@@ -284,6 +284,7 @@ bool readStat(const std::string & proc_path, StatInfo & info)
 
 bool readStatMemory(const std::string & proc_path, StatMemoryInfo & info)
 {
+  // cspell:ignore statm
   const std::string stat_memory_path = proc_path + "statm";
 
   std::ifstream stat_memory_file(stat_memory_path);
