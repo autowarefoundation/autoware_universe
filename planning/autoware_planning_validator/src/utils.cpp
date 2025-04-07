@@ -78,11 +78,11 @@ Trajectory resampleTrajectory(const Trajectory & trajectory, const double min_in
 
 // calculate curvature from three points with curvature_distance
 void calcCurvature(
-  const Trajectory & trajectory, std::vector<double> & curvature_arr,
+  const Trajectory & trajectory, std::vector<double> & curvature_vector,
   const double curvature_distance)
 {
   if (trajectory.points.size() < 3) {
-    curvature_arr = std::vector<double>(trajectory.points.size(), 0.0);
+    curvature_vector = std::vector<double>(trajectory.points.size(), 0.0);
     return;
   }
 
@@ -94,7 +94,7 @@ void calcCurvature(
   }
 
   // initialize with 0 curvature
-  curvature_arr = std::vector<double>(trajectory.points.size(), 0.0);
+  curvature_vector = std::vector<double>(trajectory.points.size(), 0.0);
 
   size_t first_distant_index = 0;
   size_t last_distant_index = trajectory.points.size() - 1;
@@ -125,18 +125,18 @@ void calcCurvature(
     const auto p2 = get_point(trajectory.points.at(i));
     const auto p3 = get_point(trajectory.points.at(next_idx));
     try {
-      curvature_arr.at(i) = autoware_utils::calc_curvature(p1, p2, p3);
+      curvature_vector.at(i) = autoware_utils::calc_curvature(p1, p2, p3);
     } catch (...) {
-      curvature_arr.at(i) = 0.0;  // maybe distance is too close
+      curvature_vector.at(i) = 0.0;  // maybe distance is too close
     }
   }
 
   // use previous or last curvature where the distance is not enough
   for (size_t i = first_distant_index; i > 0; --i) {
-    curvature_arr.at(i - 1) = curvature_arr.at(i);
+    curvature_vector.at(i - 1) = curvature_vector.at(i);
   }
-  for (size_t i = last_distant_index; i < curvature_arr.size() - 1; ++i) {
-    curvature_arr.at(i + 1) = curvature_arr.at(i);
+  for (size_t i = last_distant_index; i < curvature_vector.size() - 1; ++i) {
+    curvature_vector.at(i + 1) = curvature_vector.at(i);
   }
 }
 
@@ -146,27 +146,27 @@ std::pair<double, size_t> calcMaxCurvature(const Trajectory & trajectory)
     return {0.0, 0};
   }
 
-  std::vector<double> curvature_arr;
-  calcCurvature(trajectory, curvature_arr);
+  std::vector<double> curvature_vector;
+  calcCurvature(trajectory, curvature_vector);
 
-  const auto max_curvature_it = std::max_element(curvature_arr.begin(), curvature_arr.end());
-  const size_t index = std::distance(curvature_arr.begin(), max_curvature_it);
+  const auto max_curvature_it = std::max_element(curvature_vector.begin(), curvature_vector.end());
+  const size_t index = std::distance(curvature_vector.begin(), max_curvature_it);
 
   return {*max_curvature_it, index};
 }
 
 void calc_interval_distance(
-  const Trajectory & trajectory, std::vector<double> & interval_distance_arr)
+  const Trajectory & trajectory, std::vector<double> & interval_distance_vector)
 {
   if (trajectory.points.size() < 2) {
-    interval_distance_arr = std::vector<double>(trajectory.points.size() - 1, 0.0);
+    interval_distance_vector = std::vector<double>(trajectory.points.size() - 1, 0.0);
     return;
   }
 
-  interval_distance_arr = std::vector<double>(trajectory.points.size() - 1, 0.0);
+  interval_distance_vector = std::vector<double>(trajectory.points.size() - 1, 0.0);
   for (size_t i = 0; i < trajectory.points.size() - 1; ++i) {
     const auto d = calc_distance2d(trajectory.points.at(i), trajectory.points.at(i + 1));
-    interval_distance_arr.at(i) = d;
+    interval_distance_vector.at(i) = d;
   }
 }
 
@@ -175,52 +175,52 @@ std::pair<double, size_t> calcMaxIntervalDistance(const Trajectory & trajectory)
   if (trajectory.points.size() < 2) {
     return {0.0, 0};
   }
-  std::vector<double> interval_distance_arr;
-  calc_interval_distance(trajectory, interval_distance_arr);
+  std::vector<double> interval_distance_vector;
+  calc_interval_distance(trajectory, interval_distance_vector);
 
   const auto max_interval_it =
-    std::max_element(interval_distance_arr.begin(), interval_distance_arr.end());
-  const size_t max_index = std::distance(interval_distance_arr.begin(), max_interval_it);
+    std::max_element(interval_distance_vector.begin(), interval_distance_vector.end());
+  const size_t max_index = std::distance(interval_distance_vector.begin(), max_interval_it);
 
   return {*max_interval_it, max_index};
 }
 
 void calc_lateral_acceleration(
-  const Trajectory & trajectory, std::vector<double> & lateral_acceleration_arr)
+  const Trajectory & trajectory, std::vector<double> & lateral_acceleration_vector)
 {
   if (trajectory.points.size() < 2) {
-    lateral_acceleration_arr = std::vector<double>(trajectory.points.size(), 0.0);
+    lateral_acceleration_vector = std::vector<double>(trajectory.points.size(), 0.0);
     return;
   }
 
-  std::vector<double> curvatures;
-  calcCurvature(trajectory, curvatures);
+  std::vector<double> curvature_vector;
+  calcCurvature(trajectory, curvature_vector);
 
-  lateral_acceleration_arr = std::vector<double>(trajectory.points.size(), 0.0);
+  lateral_acceleration_vector = std::vector<double>(trajectory.points.size(), 0.0);
   for (size_t i = 0; i < trajectory.points.size(); ++i) {
     const auto v_lon = trajectory.points.at(i).longitudinal_velocity_mps;
     const auto a_lon = trajectory.points.at(i).acceleration_mps2;
 
     // Component 1: Centrifugal acceleration from curvature (v^2 * κ)
-    const auto lat_acc_curve = v_lon * v_lon * curvatures.at(i);
+    const auto lat_acc_curve = v_lon * v_lon * curvature_vector.at(i);
 
     // Component 2: Lateral projection of longitudinal acceleration
-    const auto theta = std::atan2(curvatures.at(i) * v_lon * v_lon, a_lon);
+    const auto theta = std::atan2(curvature_vector.at(i) * v_lon * v_lon, a_lon);
     const auto lat_acc_from_lon = a_lon * std::sin(theta);
 
-    lateral_acceleration_arr.at(i) =
+    lateral_acceleration_vector.at(i) =
       std::sqrt(lat_acc_curve * lat_acc_curve + lat_acc_from_lon * lat_acc_from_lon);
   }
 }
 
 std::pair<double, size_t> calcMaxLateralAcceleration(const Trajectory & trajectory)
 {
-  std::vector<double> lateral_acceleration_arr;
-  calc_lateral_acceleration(trajectory, lateral_acceleration_arr);
+  std::vector<double> lateral_acceleration_vector;
+  calc_lateral_acceleration(trajectory, lateral_acceleration_vector);
 
   const auto max_it =
-    std::max_element(lateral_acceleration_arr.begin(), lateral_acceleration_arr.end());
-  const size_t max_index = std::distance(lateral_acceleration_arr.begin(), max_it);
+    std::max_element(lateral_acceleration_vector.begin(), lateral_acceleration_vector.end());
+  const size_t max_index = std::distance(lateral_acceleration_vector.begin(), max_it);
 
   return {*max_it, max_index};
 }
@@ -274,28 +274,28 @@ std::pair<double, size_t> calcMaxRelativeAngles(const Trajectory & trajectory)
 }
 
 void calcSteeringAngles(
-  const Trajectory & trajectory, const double wheelbase, std::vector<double> & steering_array)
+  const Trajectory & trajectory, const double wheelbase, std::vector<double> & steering_vector)
 {
   const auto curvatureToSteering = [](const auto k, const auto wheelbase) {
     return std::atan(k * wheelbase);
   };
 
-  std::vector<double> curvatures;
-  calcCurvature(trajectory, curvatures);
+  std::vector<double> curvature_vector;
+  calcCurvature(trajectory, curvature_vector);
 
-  steering_array.clear();
-  for (const auto k : curvatures) {
-    steering_array.push_back(curvatureToSteering(k, wheelbase));
+  steering_vector.clear();
+  for (const auto k : curvature_vector) {
+    steering_vector.push_back(curvatureToSteering(k, wheelbase));
   }
 }
 
 std::pair<double, size_t> calcMaxSteeringAngles(
   const Trajectory & trajectory, const double wheelbase)
 {
-  std::vector<double> steering_array;
-  calcSteeringAngles(trajectory, wheelbase, steering_array);
+  std::vector<double> steering_vector;
+  calcSteeringAngles(trajectory, wheelbase, steering_vector);
 
-  return getAbsMaxValAndIdx(steering_array);
+  return getAbsMaxValAndIdx(steering_vector);
 }
 
 std::pair<double, size_t> calcMaxSteeringRates(
@@ -305,8 +305,8 @@ std::pair<double, size_t> calcMaxSteeringRates(
     return {0.0, 0};
   }
 
-  std::vector<double> steering_array;
-  calcSteeringAngles(trajectory, wheelbase, steering_array);
+  std::vector<double> steering_vector;
+  calcSteeringAngles(trajectory, wheelbase, steering_vector);
 
   double max_steering_rate = 0.0;
   size_t max_index = 0;
@@ -317,8 +317,8 @@ std::pair<double, size_t> calcMaxSteeringRates(
     const auto v = 0.5 * (p_next.longitudinal_velocity_mps + p_prev.longitudinal_velocity_mps);
     const auto dt = delta_s / std::max(v, 1.0e-5);
 
-    const auto steer_prev = steering_array.at(i);
-    const auto steer_next = steering_array.at(i + 1);
+    const auto steer_prev = steering_vector.at(i);
+    const auto steer_next = steering_vector.at(i + 1);
 
     const auto steer_rate = (steer_next - steer_prev) / dt;
     takeBigger(max_steering_rate, max_index, std::abs(steer_rate), i);
