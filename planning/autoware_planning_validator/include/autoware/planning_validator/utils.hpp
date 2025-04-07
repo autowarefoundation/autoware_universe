@@ -37,11 +37,17 @@ void calcCurvature(
   const double curvature_distance = 1.0);
 
 void calcSteeringAngles(
-  const Trajectory & trajectory, const double wheelbase, std::vector<double> & steering_array);
+  const Trajectory & trajectory, const double wheelbase, std::vector<double> & steering_vector);
 
 std::pair<double, size_t> calcMaxCurvature(const Trajectory & trajectory);
 
+void calc_interval_distance(
+  const Trajectory & trajectory, std::vector<double> & interval_distance_vector);
+
 std::pair<double, size_t> calcMaxIntervalDistance(const Trajectory & trajectory);
+
+void calc_lateral_acceleration(
+  const Trajectory & trajectory, std::vector<double> & lateral_acceleration_vector);
 
 std::pair<double, size_t> calcMaxLateralAcceleration(const Trajectory & trajectory);
 
