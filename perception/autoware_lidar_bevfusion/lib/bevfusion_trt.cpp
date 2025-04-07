@@ -410,14 +410,12 @@ bool BEVFusionTRT::preProcess(
   using autoware::cuda_utils::clear_async;
 
   if (!autoware::point_types::is_data_layout_compatible_with_point_xyzirc(pc_msg->fields)) {
-    RCLCPP_WARN_STREAM(
-      rclcpp::get_logger("lidar_bevfusion"), "Invalid point type. Skipping detection.");
+    RCLCPP_WARN(rclcpp::get_logger("lidar_bevfusion"), "Invalid point type. Skipping detection.");
     return false;
   }
 
   if (pc_msg->height * pc_msg->width == 0) {
-    RCLCPP_WARN_STREAM(
-      rclcpp::get_logger("lidar_bevfusion"), "Empty pointcloud. Skipping detection.");
+    RCLCPP_WARN(rclcpp::get_logger("lidar_bevfusion"), "Empty pointcloud. Skipping detection.");
     return false;
   }
 
