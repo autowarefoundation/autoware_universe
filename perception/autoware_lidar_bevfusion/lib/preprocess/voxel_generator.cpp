@@ -55,7 +55,7 @@ std::size_t VoxelGenerator::generateSweepPoints(CudaUniquePtr<float[]> & points_
     auto sweep_num_points = pc_cache_iter->num_points;
     auto output_offset = point_counter * config_.num_point_feature_size_;
 
-    if (point_counter + sweep_num_points >= static_cast<std::size_t>(config_.cloud_capacity_)) {
+    if (point_counter + sweep_num_points > static_cast<std::size_t>(config_.cloud_capacity_)) {
       RCLCPP_WARN_STREAM(
         rclcpp::get_logger("lidar_bevfusion"), "Exceeding cloud capacity. Used "
                                                  << pd_ptr_->getIdx(pc_cache_iter) << " out of "
