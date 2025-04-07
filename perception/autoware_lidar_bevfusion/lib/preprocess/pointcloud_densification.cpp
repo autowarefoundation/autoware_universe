@@ -17,17 +17,16 @@
 #include <pcl_ros/transforms.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
-#include <boost/optional.hpp>
-
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <optional>
 #include <string>
 #include <utility>
 
 namespace
 {
 
-boost::optional<geometry_msgs::msg::Transform> getTransform(
+std::optional<geometry_msgs::msg::Transform> getTransform(
   const tf2_ros::Buffer & tf_buffer, const std::string & target_frame_id,
   const std::string & source_frame_id, const rclcpp::Time & time)
 {
@@ -38,7 +37,7 @@ boost::optional<geometry_msgs::msg::Transform> getTransform(
     return transform_stamped.transform;
   } catch (tf2::TransformException & ex) {
     RCLCPP_WARN_STREAM(rclcpp::get_logger("lidar_bevfusion"), ex.what());
-    return boost::none;
+    return std::nullopt;
   }
 }
 
@@ -71,7 +70,7 @@ bool PointCloudDensification::enqueuePointCloud(
     if (!transform_world2current) {
       return false;
     }
-    auto affine_world2current = transformToEigen(transform_world2current.get());
+    auto affine_world2current = transformToEigen(transform_world2current.value());
 
     enqueue(pointcloud_msg, affine_world2current);
   } else {
