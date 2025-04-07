@@ -28,7 +28,7 @@ namespace autoware::lidar_bevfusion
 
 VoxelGenerator::VoxelGenerator(
   const DensificationParam & densification_param, const BEVFusionConfig & config,
-  cudaStream_t & stream)
+  cudaStream_t stream)
 : config_(config), stream_(stream)
 {
   pd_ptr_ = std::make_unique<PointCloudDensification>(densification_param, stream_);

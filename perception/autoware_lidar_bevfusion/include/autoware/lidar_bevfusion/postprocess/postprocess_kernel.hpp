@@ -29,7 +29,7 @@ namespace autoware::lidar_bevfusion
 class PostprocessCuda
 {
 public:
-  explicit PostprocessCuda(const BEVFusionConfig & config, cudaStream_t & stream);
+  explicit PostprocessCuda(const BEVFusionConfig & config, cudaStream_t stream);
 
   cudaError_t generateDetectedBoxes3D_launch(
     const std::int64_t * label_pred_output, const float * bbox_pred_output,
@@ -38,8 +38,6 @@ public:
 private:
   BEVFusionConfig config_;
   cudaStream_t stream_;
-  cudaStream_t stream_event_;
-  cudaEvent_t start_, stop_;
 };
 
 }  // namespace autoware::lidar_bevfusion

@@ -83,7 +83,7 @@ __global__ void generateBoxes3D_kernel(
   det_boxes3d[point_idx].vy = bbox_pred_output[9 * num_proposals + point_idx];
 }
 
-PostprocessCuda::PostprocessCuda(const BEVFusionConfig & config, cudaStream_t & stream)
+PostprocessCuda::PostprocessCuda(const BEVFusionConfig & config, cudaStream_t stream)
 : config_(config), stream_(stream)
 {
 }

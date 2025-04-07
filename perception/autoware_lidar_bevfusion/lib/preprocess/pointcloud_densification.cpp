@@ -55,7 +55,7 @@ namespace autoware::lidar_bevfusion
 {
 
 PointCloudDensification::PointCloudDensification(
-  const DensificationParam & param, cudaStream_t & stream)
+  const DensificationParam & param, cudaStream_t stream)
 : param_(param), stream_(stream)
 {
 }

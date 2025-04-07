@@ -49,7 +49,7 @@ namespace autoware::lidar_bevfusion
 class PreprocessCuda
 {
 public:
-  PreprocessCuda(const BEVFusionConfig & config, cudaStream_t & stream, bool allocate_buffers);
+  PreprocessCuda(const BEVFusionConfig & config, cudaStream_t stream, bool allocate_buffers);
 
   cudaError_t generateSweepPoints_launch(
     const InputPointType * input_data, std::size_t points_size, float time_lag,

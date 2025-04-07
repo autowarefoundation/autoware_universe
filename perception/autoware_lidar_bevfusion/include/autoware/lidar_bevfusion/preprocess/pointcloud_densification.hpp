@@ -63,7 +63,7 @@ struct PointCloudWithTransform
 class PointCloudDensification
 {
 public:
-  explicit PointCloudDensification(const DensificationParam & param, cudaStream_t & stream);
+  explicit PointCloudDensification(const DensificationParam & param, cudaStream_t stream);
 
   bool enqueuePointCloud(
     const sensor_msgs::msg::PointCloud2 & msg, const tf2_ros::Buffer & tf_buffer);

@@ -42,7 +42,7 @@ class VoxelGenerator
 public:
   explicit VoxelGenerator(
     const DensificationParam & densification_param, const BEVFusionConfig & config,
-    cudaStream_t & stream);
+    cudaStream_t stream);
   std::size_t generateSweepPoints(CudaUniquePtr<float[]> & points_d);
   bool enqueuePointCloud(
     const sensor_msgs::msg::PointCloud2 & msg, const tf2_ros::Buffer & tf_buffer);

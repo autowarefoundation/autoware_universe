@@ -43,7 +43,7 @@ namespace autoware::lidar_bevfusion
 {
 
 PreprocessCuda::PreprocessCuda(
-  const BEVFusionConfig & config, cudaStream_t & stream, bool allocate_buffers)
+  const BEVFusionConfig & config, cudaStream_t stream, bool allocate_buffers)
 : stream_(stream), config_(config)
 {
   if (allocate_buffers) {
