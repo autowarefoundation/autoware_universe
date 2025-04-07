@@ -341,29 +341,75 @@ void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
   const auto current_pose = node2pose(current_node);
   const double direction = (is_back == is_backward_search_) ? 1.0 : -1.0;
   const double distance = getExpansionDistance(current_node) * direction;
-  int steering_index = -1 * planner_common_param_.turning_steps;
-  for (; steering_index <= planner_common_param_.turning_steps; ++steering_index) {
-    // skip expansion back to parent
+
+  // Current distance from the goal
+  double dist_g = calc_distance2d(current_pose, goal_pose_);
+
+  // Check if the node have already switched direction
+  bool already_switched_dir = current_node.reparking_direction_change;
+
+  const double straight_yaw_tolerance = 0.05;  // e.g. ±~3 degrees. Adjust as needed.
+
+  const double node_yaw = tf2::getYaw(current_pose.orientation);
+  const double goal_yaw = tf2::getYaw(goal_pose_.orientation);
+
+  // Forward alignment: node_yaw ≈ goal_yaw
+  const double yaw_diff_forward = std::fabs(autoware_utils::normalize_radian(node_yaw - goal_yaw));
+
+  // Backward alignment: node_yaw ≈ goal_yaw + π
+  const double yaw_diff_backward =
+    std::fabs(autoware_utils::normalize_radian(node_yaw - (goal_yaw + M_PI)));
+
+  // "aligned" if either forward or backward difference is small
+  bool aligned_with_goal_yaw = false;
+  if (yaw_diff_forward < straight_yaw_tolerance || yaw_diff_backward < straight_yaw_tolerance) {
+    aligned_with_goal_yaw = true;
+  }
+
+  for (int steering_index = -planner_common_param_.turning_steps;
+       steering_index <= planner_common_param_.turning_steps; ++steering_index) {
+    // Skip expansions that reverse direction with same steering
     if (
-      current_node.parent != nullptr && is_back != current_node.is_back &&
+      current_node.parent != nullptr && (is_back != current_node.is_back) &&
       steering_index == current_node.steering_index) {
       continue;
     }
 
+    if (is_reparking_ && !already_switched_dir && (dist_g < min_out_distance_)) {
+      // if the node aligned with the goal yaw, skip nonzero steering
+      if (aligned_with_goal_yaw && std::abs(steering_index) > 0) {
+        continue;  // don't allow turning expansions if aligned
+      }
+    }
     const double steering = static_cast<double>(steering_index) * steering_resolution_;
     const auto next_pose = kinematic_bicycle_model::getPose(
       current_pose, collision_vehicle_shape_.base_length, steering, distance);
     const auto next_index = pose2index(costmap_, next_pose, planner_common_param_.theta_size);
 
-    if (isOutOfRange(next_index) || isObs(next_index)) continue;
+    if (isOutOfRange(next_index) || isObs(next_index) || detectCollision(next_index)) {
+      continue;
+    }
 
     AstarNode * next_node = &graph_[getKey(next_index)];
-    if (next_node->status == NodeStatus::Closed || detectCollision(next_index)) continue;
+    if (next_node->status == NodeStatus::Closed) {
+      continue;
+    }
 
-    const auto obs_edt = getObstacleEDT(next_index);
-    const bool is_direction_switch =
+    double next_dist_g = calc_distance2d(next_pose, goal_pose_);
+
+    // Check if direction switched
+    const bool direction_switched =
       (current_node.parent != nullptr) && (is_back != current_node.is_back);
-    bool next_reparking_dir_change = current_node.reparking_direction_change;
+    bool next_reparking_dir_change =
+      (current_node.reparking_direction_change || direction_switched);
+
+    // "pull‐out" phase, ensure next_dist_g > dist_g to keep moving away
+    if (is_reparking_ && !already_switched_dir && (dist_g < min_out_distance_)) {
+      if (next_dist_g <= dist_g) {
+        // skip expansions that don't move us further from the goal
+        continue;
+      }
+    }
 
     double total_weight = 1.0;
     total_weight += getSteeringCost(steering_index);
@@ -371,10 +417,18 @@ void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
 
     double move_cost = current_node.gc + (total_weight * std::abs(distance));
     move_cost += getSteeringChangeCost(steering_index, current_node.steering_index);
+
+    // Obstacle and lateral distance cost
+    const auto obs_edt = getObstacleEDT(next_index);
     move_cost += getObsDistanceCost(next_index, obs_edt);
     move_cost += getLatDistanceCost(next_pose);
-    if (is_direction_switch) move_cost += getDirectionChangeCost(current_node.dir_distance);
 
+    // Direction change penalty
+    if (direction_switched) {
+      move_cost += getDirectionChangeCost(current_node.dir_distance);
+    }
+
+    // Re‐parking alignment logic for the final approach
     double yaw_weight = yaw_weight_;
     double distance_to_goal_extension_weight = distance_to_goal_extension_weight_;
     double reparking_forward_first_weight = reparking_forward_first_weight_;
@@ -397,19 +451,13 @@ void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
       double yaw_diff = autoware_utils::normalize_radian(
         tf2::getYaw(goal_pose_.orientation) - tf2::getYaw(next_pose.orientation));
       double yaw_cost = std::abs(yaw_diff) * yaw_weight;
-
-      bool direction_switched =
-        (current_node.parent && (current_node.is_back != current_node.parent->is_back));
-
-      // parameter for straight backward motion during reparking
-      if (is_reparking_ && direction_switched) {
-        next_reparking_dir_change = true;
-      }
+      // reparking reverse phase
       if (next_reparking_dir_change) {
         double deviation_penalty = reparking_deviation_penalty_ * std::abs(yaw_diff);
         move_cost += deviation_penalty;
       }
-      if (is_reparking_ && !next_reparking_dir_change && !is_back) {
+      // reparking pull-out phase
+      if (is_reparking_ && !current_node.reparking_direction_change && !is_back) {
         double align_penalty = 2.0 * reparking_deviation_penalty_ * std::abs(yaw_diff);
         move_cost += align_penalty;
       }
@@ -417,13 +465,12 @@ void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
       // alignment
       double dx = next_pose.position.x - goal_pose_.position.x;
       double dy = next_pose.position.y - goal_pose_.position.y;
-      double lateral_offset = std::fabs(
-        -std::sin(tf2::getYaw(goal_pose_.orientation)) * dx +
-        std::cos(tf2::getYaw(goal_pose_.orientation)) * dy);
+      double goal_yaw = tf2::getYaw(goal_pose_.orientation);
+      double lateral_offset = std::fabs(-std::sin(goal_yaw) * dx + std::cos(goal_yaw) * dy);
       double distance_to_goal_extension_cost = lateral_offset * distance_to_goal_extension_weight;
 
       // total cost
-      move_cost += extra_steering_penalty + distance_to_goal_extension_cost + yaw_cost;
+      move_cost += (extra_steering_penalty + distance_to_goal_extension_cost + yaw_cost);
     }
 
     double total_cost = move_cost + estimateCost(next_pose, next_index);
@@ -432,13 +479,12 @@ void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
       next_node->status = NodeStatus::Open;
       next_node->set(next_pose, move_cost, total_cost, steering_index, is_back);
       next_node->dir_distance =
-        std::abs(distance) + (is_direction_switch ? 0.0 : current_node.dir_distance);
-      next_node->dist_to_goal = calc_distance2d(next_pose, goal_pose_);
+        std::abs(distance) + (direction_switched ? 0.0 : current_node.dir_distance);
+      next_node->dist_to_goal = next_dist_g;
       next_node->dist_to_obs = obs_edt.distance;
       next_node->parent = &current_node;
       next_node->reparking_direction_change = next_reparking_dir_change;
       openlist_.push(next_node);
-      continue;
     }
   }
 }
