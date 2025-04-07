@@ -69,6 +69,7 @@ add_library(concatenate_data SHARED
   src/concatenate_data/cloud_collector.cpp
   src/concatenate_data/collector_matching_strategy.cpp
   src/concatenate_data/concatenate_pointclouds.cpp
+  src/concatenate_data/utils.cpp
 )
 
 target_include_directories(concatenate_data PUBLIC

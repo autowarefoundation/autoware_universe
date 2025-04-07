@@ -134,7 +134,6 @@ private:
   void twist_callback(const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr input);
   void odom_callback(const nav_msgs::msg::Odometry::ConstSharedPtr input);
 
-  static std::string format_timestamp(double timestamp);
   std::string replace_sync_topic_name_postfix(
     const std::string & original_topic_name, const std::string & postfix);
   void initialize_collector_list();

@@ -13,18 +13,17 @@
 // limitations under the License.
 
 #include "autoware/pointcloud_preprocessor/concatenate_data/cloud_collector.hpp"
+#include "autoware/pointcloud_preprocessor/concatenate_data/utils.hpp"
 #include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 
 #include <pcl_ros/transforms.hpp>
 
 #include <pcl_conversions/pcl_conversions.h>
 
-#include <iomanip>
 #include <limits>
 #include <list>
 #include <memory>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -410,15 +409,6 @@ PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::find_and_res
   }
 
   return min_it;
-}
-
-template <typename MsgTraits>
-std::string PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::format_timestamp(
-  double timestamp)
-{
-  std::ostringstream oss;
-  oss << std::fixed << std::setprecision(9) << timestamp;
-  return oss.str();
 }
 
 template <typename MsgTraits>
