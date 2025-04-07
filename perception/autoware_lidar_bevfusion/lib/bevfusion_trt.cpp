@@ -431,7 +431,7 @@ bool BEVFusionTRT::preProcess(
   if (num_points == 0) {
     RCLCPP_ERROR(
       rclcpp::get_logger("lidar_bevfusion"),
-      "Empty sweep points (check the capacity of the buffer) . Skipping detection.");
+      "Empty sweep points (check the capacity of the buffer). Skipping detection.");
     return false;
   }
 
