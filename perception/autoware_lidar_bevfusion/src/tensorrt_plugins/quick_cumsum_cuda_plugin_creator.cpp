@@ -35,14 +35,10 @@ REGISTER_TENSORRT_PLUGIN(QuickCumsumCudaPluginCreator);
 QuickCumsumCudaPluginCreator::QuickCumsumCudaPluginCreator()
 {
   plugin_attributes_.clear();
-  plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("batch_size", nullptr, PluginFieldType::kINT32, 1));
-  plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("dimension", nullptr, PluginFieldType::kINT32, 1));
-  plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("height", nullptr, PluginFieldType::kINT32, 1));
-  plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("width", nullptr, PluginFieldType::kINT32, 1));
+  plugin_attributes_.emplace_back("batch_size", nullptr, PluginFieldType::kINT32, 1);
+  plugin_attributes_.emplace_back("dimension", nullptr, PluginFieldType::kINT32, 1);
+  plugin_attributes_.emplace_back("height", nullptr, PluginFieldType::kINT32, 1);
+  plugin_attributes_.emplace_back("width", nullptr, PluginFieldType::kINT32, 1);
 
   fc_.nbFields = plugin_attributes_.size();
   fc_.fields = plugin_attributes_.data();

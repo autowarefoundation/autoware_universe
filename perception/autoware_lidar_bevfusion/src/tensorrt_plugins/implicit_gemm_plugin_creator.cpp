@@ -36,18 +36,13 @@ REGISTER_TENSORRT_PLUGIN(ImplicitGemmPluginCreator);
 ImplicitGemmPluginCreator::ImplicitGemmPluginCreator()
 {
   plugin_attributes_.clear();
+  plugin_attributes_.emplace_back("act_alpha", nullptr, PluginFieldType::kFLOAT32, 1);
+  plugin_attributes_.emplace_back("act_beta", nullptr, PluginFieldType::kFLOAT32, 1);
   plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("act_alpha", nullptr, PluginFieldType::kFLOAT32, 1));
-  plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("act_beta", nullptr, PluginFieldType::kFLOAT32, 1));
-  plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("is_subm", nullptr, PluginFieldType::kINT32, 1));  // cSpell:ignore subm
-  plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("is_train", nullptr, PluginFieldType::kINT32, 1));
-  plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("output_add_scale", nullptr, PluginFieldType::kFLOAT32, 1));
-  plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("output_scale", nullptr, PluginFieldType::kFLOAT32, 1));
+    "is_subm", nullptr, PluginFieldType::kINT32, 1);  // cSpell:ignore subm
+  plugin_attributes_.emplace_back("is_train", nullptr, PluginFieldType::kINT32, 1);
+  plugin_attributes_.emplace_back("output_add_scale", nullptr, PluginFieldType::kFLOAT32, 1);
+  plugin_attributes_.emplace_back("output_scale", nullptr, PluginFieldType::kFLOAT32, 1);
 
   fc_.nbFields = plugin_attributes_.size();
   fc_.fields = plugin_attributes_.data();

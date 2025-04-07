@@ -37,28 +37,18 @@ REGISTER_TENSORRT_PLUGIN(GetIndicesPairsImplicitGemmPluginCreator);
 GetIndicesPairsImplicitGemmPluginCreator::GetIndicesPairsImplicitGemmPluginCreator()
 {
   plugin_attributes_.clear();
+  plugin_attributes_.emplace_back("algo", nullptr, PluginFieldType::kINT32, 1);
+  plugin_attributes_.emplace_back("batch_size", nullptr, PluginFieldType::kINT32, 1);
+  plugin_attributes_.emplace_back("dilation", nullptr, PluginFieldType::kINT32, 3);
+  plugin_attributes_.emplace_back("is_train", nullptr, PluginFieldType::kINT32, 1);
+  plugin_attributes_.emplace_back("ksize", nullptr, PluginFieldType::kINT32, 3);
+  plugin_attributes_.emplace_back("out_padding", nullptr, PluginFieldType::kINT32, 3);
+  plugin_attributes_.emplace_back("padding", nullptr, PluginFieldType::kINT32, 3);
+  plugin_attributes_.emplace_back("spatial_shape", nullptr, PluginFieldType::kINT32, 3);
+  plugin_attributes_.emplace_back("stride", nullptr, PluginFieldType::kINT32, 3);
   plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("algo", nullptr, PluginFieldType::kINT32, 1));
-  plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("batch_size", nullptr, PluginFieldType::kINT32, 1));
-  plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("dilation", nullptr, PluginFieldType::kINT32, 3));
-  plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("is_train", nullptr, PluginFieldType::kINT32, 1));
-  plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("ksize", nullptr, PluginFieldType::kINT32, 3));
-  plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("out_padding", nullptr, PluginFieldType::kINT32, 3));
-  plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("padding", nullptr, PluginFieldType::kINT32, 3));
-  plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("spatial_shape", nullptr, PluginFieldType::kINT32, 3));
-  plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("stride", nullptr, PluginFieldType::kINT32, 3));
-  plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("subm", nullptr, PluginFieldType::kINT32, 1));  // cSpell:ignore subm
-  plugin_attributes_.emplace_back(
-    nvinfer1::PluginField("transpose", nullptr, PluginFieldType::kINT32, 1));
+    "subm", nullptr, PluginFieldType::kINT32, 1);  // cSpell:ignore subm
+  plugin_attributes_.emplace_back("transpose", nullptr, PluginFieldType::kINT32, 1);
 
   fc_.nbFields = plugin_attributes_.size();
   fc_.fields = plugin_attributes_.data();
