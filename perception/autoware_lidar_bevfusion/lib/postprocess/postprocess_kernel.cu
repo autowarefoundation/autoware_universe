@@ -20,8 +20,6 @@
 #include <thrust/host_vector.h>
 #include <thrust/sort.h>
 
-#include <cstddef>
-
 namespace autoware::lidar_bevfusion
 {
 struct is_score_greater

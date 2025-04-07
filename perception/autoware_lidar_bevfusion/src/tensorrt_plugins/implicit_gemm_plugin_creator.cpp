@@ -23,7 +23,6 @@
 #include <cstring>
 #include <exception>
 #include <iostream>
-#include <mutex>
 #include <sstream>
 #include <string>
 
@@ -36,8 +35,6 @@ REGISTER_TENSORRT_PLUGIN(ImplicitGemmPluginCreator);
 
 ImplicitGemmPluginCreator::ImplicitGemmPluginCreator()
 {
-  std::cout << "ImplicitGemmPluginCreator::ImplicitGemmPluginCreator" << std::endl << std::flush;
-
   plugin_attributes_.clear();
   plugin_attributes_.emplace_back(
     nvinfer1::PluginField("act_alpha", nullptr, PluginFieldType::kFLOAT32, 1));

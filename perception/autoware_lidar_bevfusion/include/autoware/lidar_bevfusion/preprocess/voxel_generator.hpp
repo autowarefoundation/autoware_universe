@@ -18,7 +18,6 @@
 #include "autoware/lidar_bevfusion/bevfusion_config.hpp"
 #include "autoware/lidar_bevfusion/preprocess/pointcloud_densification.hpp"
 #include "autoware/lidar_bevfusion/preprocess/preprocess_kernel.hpp"
-#include "autoware/lidar_bevfusion/ros_utils.hpp"
 
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>

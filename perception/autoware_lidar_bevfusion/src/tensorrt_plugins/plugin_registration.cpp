@@ -19,7 +19,6 @@
 #include <NvInferRuntime.h>
 
 #include <cstdint>
-#include <iostream>
 #include <mutex>
 
 class ThreadSafeLoggerFinder

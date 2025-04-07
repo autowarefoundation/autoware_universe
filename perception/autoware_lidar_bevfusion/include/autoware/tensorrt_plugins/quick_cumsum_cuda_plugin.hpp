@@ -19,7 +19,6 @@
 #include <NvInferRuntimePlugin.h>
 #include <cuda_runtime.h>
 
-#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <string>

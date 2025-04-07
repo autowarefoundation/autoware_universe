@@ -18,7 +18,7 @@
 #include <NvInferRuntime.h>
 
 #include <cstdint>
-#include <stdexcept>
+#include <exception>
 
 void caughtError(std::exception const & e);
 

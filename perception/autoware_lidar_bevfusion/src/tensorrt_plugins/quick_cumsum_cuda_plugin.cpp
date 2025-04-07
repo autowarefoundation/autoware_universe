@@ -23,12 +23,10 @@
 #include <NvInferRuntime.h>
 #include <NvInferRuntimePlugin.h>
 
-#include <algorithm>  // NOTE(knzo25): temporary
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
-#include <iostream>
 #include <vector>
 
 namespace nvinfer1

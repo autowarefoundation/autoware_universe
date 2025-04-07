@@ -21,7 +21,6 @@
 #include <spconvlib/spconv/csrc/sparse/convops/gemmops/GemmTunerSimple.h>  // cSpell:ignore spconvlib
 #include <spconvlib/spconv/csrc/sparse/convops/spops/ConvGemmOps.h>
 
-#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <memory>

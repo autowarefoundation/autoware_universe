@@ -31,12 +31,9 @@
 #include <cstring>
 #include <exception>
 #include <functional>
-#include <iostream>
 #include <string>
 #include <tuple>
 #include <vector>
-
-// GetIndicesPairsImplicitGemm
 
 namespace nvinfer1
 {

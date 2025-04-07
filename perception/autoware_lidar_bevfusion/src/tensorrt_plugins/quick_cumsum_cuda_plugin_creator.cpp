@@ -23,7 +23,6 @@
 #include <cstring>
 #include <exception>
 #include <iostream>
-#include <mutex>
 #include <sstream>
 
 namespace nvinfer1

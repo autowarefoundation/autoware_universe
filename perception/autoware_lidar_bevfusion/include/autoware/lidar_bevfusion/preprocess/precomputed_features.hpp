@@ -22,10 +22,8 @@
 
 #include <sensor_msgs/msg/camera_info.hpp>
 
-#include <algorithm>
 #include <cmath>
 #include <cstdint>
-#include <iostream>
 #include <tuple>
 #include <vector>
 

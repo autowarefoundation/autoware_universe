@@ -18,6 +18,7 @@
 #include "autoware/lidar_bevfusion/preprocess/point_type.hpp"
 #include "autoware/lidar_bevfusion/preprocess/precomputed_features.hpp"
 #include "autoware/lidar_bevfusion/preprocess/preprocess_kernel.hpp"
+#include "autoware/lidar_bevfusion/ros_utils.hpp"
 
 #include <autoware/cuda_utils/cuda_utils.hpp>
 #include <autoware/universe_utils/math/constants.hpp>
@@ -27,10 +28,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <ctime>
-#include <fstream>
-#include <iostream>
 #include <memory>
-#include <random>
 #include <string>
 #include <unordered_map>
 #include <utility>
