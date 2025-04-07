@@ -2,11 +2,9 @@
 <launch>
   <arg name="input/pointcloud" default="/sensing/lidar/concatenated/pointcloud"/>
   <arg name="output/objects" default="objects"/>
-  <!-- <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/> -->
-  <arg name="data_path" default="$(find-pkg-share autoware_lidar_bevfusion)/autoware_data" description="packages data and artifacts directory path"/>
+  <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
   <arg name="model_name" default="bevfusion" description="options: `bevfusion`"/>
-  <!-- <arg name="model_path" default="$(var data_path)/lidar_bevfusion"/> -->
-  <arg name="model_path" default="$(find-pkg-share autoware_lidar_bevfusion)/config"/>
+  <arg name="model_path" default="$(var data_path)/lidar_bevfusion"/>
   <arg name="model_param_path" default="$(find-pkg-share autoware_lidar_bevfusion)/config/$(var model_name).param.yaml"/>
   <arg name="ml_package_param_path" default="$(var model_path)/$(var model_name)_ml_package.param.yaml"/>
   <arg name="class_remapper_param_path" default="$(find-pkg-share autoware_lidar_bevfusion)/config/detection_class_remapper.param.yaml"/>
