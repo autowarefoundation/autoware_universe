@@ -71,7 +71,7 @@
 
   <group if="$(var use_pointcloud_container)">
     <load_composable_node target="$(var pointcloud_container_name)">
-      <composable_node pkg="autoware_lidar_bevfusion" plugin="autoware::lidar_bevfusion::LidarTransfusionNode" name="lidar_bevfusion">
+      <composable_node pkg="autoware_lidar_bevfusion" plugin="autoware::lidar_bevfusion::LidarBEVFusionNode" name="lidar_bevfusion">
         <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
         <remap from="~/output/objects" to="$(var output/objects)"/>
         <param from="$(var model_param_path)" allow_substs="true"/>
