@@ -158,12 +158,14 @@ std::pair<double, size_t> calcMaxCurvature(const Trajectory & trajectory)
 void calc_interval_distance(
   const Trajectory & trajectory, std::vector<double> & interval_distance_vector)
 {
-  if (trajectory.points.size() < 2) {
-    interval_distance_vector = std::vector<double>(trajectory.points.size() - 1, 0.0);
+  interval_distance_vector.clear();
+
+  if (trajectory.points.size() <= 1) {
     return;
   }
 
-  interval_distance_vector = std::vector<double>(trajectory.points.size() - 1, 0.0);
+  interval_distance_vector.resize(trajectory.points.size() - 1, 0.0);
+
   for (size_t i = 0; i < trajectory.points.size() - 1; ++i) {
     const auto d = calc_distance2d(trajectory.points.at(i), trajectory.points.at(i + 1));
     interval_distance_vector.at(i) = d;
@@ -172,11 +174,15 @@ void calc_interval_distance(
 
 std::pair<double, size_t> calcMaxIntervalDistance(const Trajectory & trajectory)
 {
-  if (trajectory.points.size() < 2) {
+  if (trajectory.points.size() <= 1) {
     return {0.0, 0};
   }
   std::vector<double> interval_distance_vector;
   calc_interval_distance(trajectory, interval_distance_vector);
+
+  if (interval_distance_vector.empty()) {
+    return {0.0, 0};
+  }
 
   const auto max_interval_it =
     std::max_element(interval_distance_vector.begin(), interval_distance_vector.end());
@@ -188,15 +194,18 @@ std::pair<double, size_t> calcMaxIntervalDistance(const Trajectory & trajectory)
 void calc_lateral_acceleration(
   const Trajectory & trajectory, std::vector<double> & lateral_acceleration_vector)
 {
-  if (trajectory.points.size() < 2) {
-    lateral_acceleration_vector = std::vector<double>(trajectory.points.size(), 0.0);
+  lateral_acceleration_vector.clear();
+
+  // We need at least three points to compute curvature
+  if (trajectory.points.size() < 3) {
+    lateral_acceleration_vector.resize(trajectory.points.size(), 0.0);
     return;
   }
 
   std::vector<double> curvature_vector;
   calcCurvature(trajectory, curvature_vector);
 
-  lateral_acceleration_vector = std::vector<double>(trajectory.points.size(), 0.0);
+  lateral_acceleration_vector.resize(trajectory.points.size(), 0.0);
   for (size_t i = 0; i < trajectory.points.size(); ++i) {
     const auto v_lon = trajectory.points.at(i).longitudinal_velocity_mps;
     const auto a_lon = trajectory.points.at(i).acceleration_mps2;
@@ -215,8 +224,16 @@ void calc_lateral_acceleration(
 
 std::pair<double, size_t> calcMaxLateralAcceleration(const Trajectory & trajectory)
 {
+  if (trajectory.points.empty()) {
+    return {0.0, 0};
+  }
+
   std::vector<double> lateral_acceleration_vector;
   calc_lateral_acceleration(trajectory, lateral_acceleration_vector);
+
+  if (lateral_acceleration_vector.empty()) {
+    return {0.0, 0};
+  }
 
   const auto max_it =
     std::max_element(lateral_acceleration_vector.begin(), lateral_acceleration_vector.end());
