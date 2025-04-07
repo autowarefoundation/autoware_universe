@@ -21,6 +21,7 @@
 #include "autoware/lidar_bevfusion/ros_utils.hpp"
 
 #include <autoware/cuda_utils/cuda_utils.hpp>
+#include <autoware/point_types/memory.hpp>
 #include <autoware/universe_utils/math/constants.hpp>
 
 #include <algorithm>
@@ -408,7 +409,7 @@ bool BEVFusionTRT::preProcess(
 {
   using autoware::cuda_utils::clear_async;
 
-  if (!is_data_layout_compatible_with_point_xyzirc(*pc_msg)) {
+  if (!autoware::point_types::is_data_layout_compatible_with_point_xyzirc(pc_msg->fields)) {
     RCLCPP_WARN_STREAM(
       rclcpp::get_logger("lidar_bevfusion"), "Invalid point type. Skipping detection.");
     return false;

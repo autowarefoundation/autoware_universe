@@ -52,10 +52,6 @@ CHECK_FIELD(InputPointType, autoware::point_types::PointXYZIRC, z);
 CHECK_FIELD(InputPointType, autoware::point_types::PointXYZIRC, intensity);
 static_assert(sizeof(InputPointType) == sizeof(autoware::point_types::PointXYZIRC));
 
-// TODO(knzo25): will move this from the pointcloud preprocessor to aut autoware_point_types after
-// this is merged
-bool is_data_layout_compatible_with_point_xyzirc(const sensor_msgs::msg::PointCloud2 & input);
-
 void box3DToDetectedObject(
   const Box3D & box3d, const std::vector<std::string> & class_names,
   autoware_perception_msgs::msg::DetectedObject & obj);
