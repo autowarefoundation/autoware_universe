@@ -21,6 +21,7 @@ constexpr double kmph2mps = 1.0 / 3.6;
 
 constexpr double WHEELBASE = 3.5;
 
+constexpr double THRESHOLD_LATENCY = 1.0;
 constexpr double THRESHOLD_INTERVAL = 1.0;
 constexpr double THRESHOLD_RELATIVE_ANGLE = 115.0 * deg2rad;
 constexpr double THRESHOLD_CURVATURE = 0.3;
