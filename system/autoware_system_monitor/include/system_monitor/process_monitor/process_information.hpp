@@ -79,10 +79,10 @@ struct DiffInfo
 
 struct RawProcessInfo
 {
-  StatInfo       stat_info;
+  StatInfo stat_info;
   StatMemoryInfo stat_memory_info;
-  StatusInfo     status_info;
-  DiffInfo       diff_info;
+  StatusInfo status_info;
+  DiffInfo diff_info;
 };
 
 struct ProcessStatistics
