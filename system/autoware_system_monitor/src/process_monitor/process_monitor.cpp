@@ -225,14 +225,14 @@ bool isProcessID(const char * entry)
 
 bool readStat(const std::string & proc_path, StatInfo & info)
 {
-  std::string statPath = proc_path + "stat";
+  std::string stat_path = proc_path + "stat";
 
-  std::ifstream statFile(statPath);
-  if (!statFile) {
+  std::ifstream stat_file(stat_path);
+  if (!stat_file) {
     return false;
   }
   std::string line;
-  if (!std::getline(statFile, line, '\n')) {
+  if (!std::getline(stat_file, line, '\n')) {
     return false;
   }
 
@@ -266,10 +266,10 @@ bool readStat(const std::string & proc_path, StatInfo & info)
       after_command_stream.exceptions(std::ios::failbit | std::ios::badbit);
       after_command_stream >> info_temp.state >> info_temp.ppid >> info_temp.pgrp >>
         info_temp.session >> info_temp.tty_nr >> info_temp.tpgid >> info_temp.flags >>
-        info_temp.minflt >> info_temp.cminflt >> info_temp.majflt >> info_temp.cmajflt >>
-        info_temp.utime_tick >> info_temp.stime_tick >> info_temp.cutime_tick >>
-        info_temp.cstime_tick >> info_temp.priority >> info_temp.nice >> info_temp.num_threads >>
-        info_temp.itrealvalue >> info_temp.starttime_tick >> info_temp.vsize_byte >>
+        info_temp.min_flt >> info_temp.c_min_flt >> info_temp.maj_flt >> info_temp.c_maj_flt >>
+        info_temp.utime_tick >> info_temp.stime_tick >> info_temp.c_utime_tick >>
+        info_temp.c_stime_tick >> info_temp.priority >> info_temp.nice >> info_temp.num_threads >>
+        info_temp.it_real_value >> info_temp.starttime_tick >> info_temp.vsize_byte >>
         info_temp.rss_page;
       after_command_stream.exceptions();  // Reset to default state
     } catch (...) {
@@ -282,21 +282,21 @@ bool readStat(const std::string & proc_path, StatInfo & info)
   }
 }
 
-bool readStatm(const std::string & proc_path, StatmInfo & info)
+bool readStatMemory(const std::string & proc_path, StatMemoryInfo & info)
 {
-  const std::string statmPath = proc_path + "statm";
+  const std::string stat_memory_path = proc_path + "statm";
 
-  std::ifstream statmFile(statmPath);
-  if (!statmFile) {
+  std::ifstream stat_memory_file(stat_memory_path);
+  if (!stat_memory_file) {
     return false;
   }
-  StatmInfo info_temp{};
+  StatMemoryInfo info_temp{};
   try {
-    statmFile.exceptions(std::ios::failbit | std::ios::badbit);
-    statmFile >> info_temp.size_page >> info_temp.resident_page >> info_temp.share_page;
-    statmFile.exceptions();  // Reset to default state
+    stat_memory_file.exceptions(std::ios::failbit | std::ios::badbit);
+    stat_memory_file >> info_temp.size_page >> info_temp.resident_page >> info_temp.share_page;
+    stat_memory_file.exceptions();  // Reset to default state
   } catch (...) {
-    statmFile.exceptions();  // Reset even if exception occurs
+    stat_memory_file.exceptions();  // Reset even if exception occurs
     return false;            // Failed to read all values
   }
   info = info_temp;
@@ -305,10 +305,10 @@ bool readStatm(const std::string & proc_path, StatmInfo & info)
 
 bool readStatus(const std::string & proc_path, StatusInfo & info)
 {
-  std::string statusPath = proc_path + "status";
+  std::string status_path = proc_path + "status";
 
-  std::ifstream statusFile(statusPath);
-  if (!statusFile) {
+  std::ifstream status_file(status_path);
+  if (!status_file) {
     return false;
   }
   StatusInfo info_temp{};
@@ -317,7 +317,7 @@ bool readStatus(const std::string & proc_path, StatusInfo & info)
   constexpr uint FOUND_ALL = FOUND_NAME | FOUND_UID;
   uint found_entries = 0x0;
   std::string line;
-  while (std::getline(statusFile, line, '\n')) {
+  while (std::getline(status_file, line, '\n')) {
     if (found_entries == FOUND_ALL) {
       break;
     }
@@ -332,8 +332,8 @@ bool readStatus(const std::string & proc_path, StatusInfo & info)
           line.find_first_not_of("\t ", first_delimiter_pos);  // Not TABs or spaces
         // "Name:" line may contain multiple words delimited by spaces.
         // Ex. "Name: UVM deferred release queue"
-        std::string commandLine = line.substr(cmd_pos);
-        info_temp.command = commandLine;
+        std::string command_line = line.substr(cmd_pos);
+        info_temp.command = command_line;
         found_entries |= FOUND_NAME;
       } else if (header == "Uid:") {
         try {
@@ -348,7 +348,7 @@ bool readStatus(const std::string & proc_path, StatusInfo & info)
         }
         found_entries |= FOUND_UID;
       }
-    } catch (const std::out_of_range &) {
+    } catch (...) {
       return false;  // Exception is not expected. Further processing is meaningless.
     }
   }
@@ -368,7 +368,7 @@ int64_t getCpuUsage(const RawProcessInfo & info)
 // Helper function for process rankin about memory usage
 int64_t getMemoryUsage(const RawProcessInfo & info)
 {
-  return info.statm_info.resident_page;
+  return info.stat_memory_info.resident_page;
 }
 
 void updateProcessRanking(
@@ -409,7 +409,7 @@ void invalidateRankingEntry(const std::unique_ptr<RawProcessInfo> & entry)
   if (entry) {
     // -1 is used here so that the ranking works even if all processes' CPU/memory usage is 0.
     entry->diff_info.cpu_usage = -1;
-    entry->statm_info.resident_page = -1;
+    entry->stat_memory_info.resident_page = -1;
   }
 }
 
@@ -586,9 +586,9 @@ void ProcessMonitor::fillTaskInfo(
   info.userName = convertUidToUserName(raw_p->status_info.real_uid);
   info.priority = std::to_string(raw_p->stat_info.priority);
   info.niceValue = std::to_string(raw_p->stat_info.nice);
-  auto virtual_image_size_kb = raw_p->statm_info.size_page * page_size_kb_;
-  auto resident_size_kb = raw_p->statm_info.resident_page * page_size_kb_;
-  auto shared_mem_size_kb = raw_p->statm_info.share_page * page_size_kb_;
+  auto virtual_image_size_kb = raw_p->stat_memory_info.size_page * page_size_kb_;
+  auto resident_size_kb = raw_p->stat_memory_info.resident_page * page_size_kb_;
+  auto shared_mem_size_kb = raw_p->stat_memory_info.share_page * page_size_kb_;
   info.virtualImage = to7DigitString(virtual_image_size_kb);
   info.residentSize = to6DigitString(resident_size_kb);
   info.sharedMemSize = to6DigitString(shared_mem_size_kb);
@@ -695,7 +695,7 @@ void ProcessMonitor::updateHighLoadProcessRanking(const RawProcessInfo & info)
 void ProcessMonitor::updateHighMemoryProcessRanking(const RawProcessInfo & info)
 {
   updateProcessRanking(
-    info, work_->memory_tasks_raw, info.statm_info.resident_page, getMemoryUsage);
+    info, work_->memory_tasks_raw, info.stat_memory_info.resident_page, getMemoryUsage);
 }
 
 void ProcessMonitor::registerProcessInfoToNewMap(const pid_t pid, const RawProcessInfo & info)
@@ -796,7 +796,7 @@ void ProcessMonitor::collectProcessInfo(const char * pid_str)
   if (!readStat(procPath, info.stat_info)) {
     return;
   }
-  if (!readStatm(procPath, info.statm_info)) {
+  if (!readStatMemory(procPath, info.stat_memory_info)) {
     return;
   }
   if (!readStatus(procPath, info.status_info)) {

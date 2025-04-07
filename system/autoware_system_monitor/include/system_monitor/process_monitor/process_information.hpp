@@ -36,25 +36,25 @@ struct StatInfo
   int32_t tty_nr;
   int32_t tpgid;
   uint64_t flags;  // %u (%lu before Linux 2.6.22)
-  uint64_t minflt;
-  uint64_t cminflt;
-  uint64_t majflt;
-  uint64_t cmajflt;
+  uint64_t min_flt;
+  uint64_t c_min_flt;
+  uint64_t maj_flt;
+  uint64_t c_maj_flt;
   uint64_t utime_tick;
   uint64_t stime_tick;
-  uint64_t cutime_tick;
-  uint64_t cstime_tick;
+  uint64_t c_utime_tick;
+  uint64_t c_stime_tick;
   uint64_t priority;
   int64_t nice;
   int32_t num_threads;
-  int64_t itrealvalue;
+  int64_t it_real_value;    // not maintained since kernel 2.6.17
   uint64_t starttime_tick;  // %llu (%lu before Linux 2.6)
   uint64_t vsize_byte;      // bytes
   int64_t rss_page;         // pages, inaccurate : See "man 5 proc"
   // The following fields are not used in this implementation.
 };
 
-struct StatmInfo
+struct StatMemoryInfo
 {
   int64_t size_page;      // pages
   int64_t resident_page;  // pages
@@ -79,10 +79,10 @@ struct DiffInfo
 
 struct RawProcessInfo
 {
-  StatInfo stat_info;
-  StatmInfo statm_info;
-  StatusInfo status_info;
-  DiffInfo diff_info;
+  StatInfo       stat_info;
+  StatMemoryInfo stat_memory_info;
+  StatusInfo     status_info;
+  DiffInfo       diff_info;
 };
 
 struct ProcessStatistics

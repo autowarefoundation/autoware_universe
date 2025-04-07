@@ -216,7 +216,7 @@ private:
   // Constant
   static constexpr int32_t kDefaultNumProcs = 5;
 
-  // ROS2 Node Parameter
+  // Node Parameter
   int32_t num_of_procs_;  //!< @brief number of processes to show
 
   char hostname_[HOST_NAME_MAX + 1]{'\0'};  //!< @brief host name
@@ -227,7 +227,7 @@ private:
   int64_t clock_tick_{0};    //!< @brief clock tick
 
   std::vector<std::shared_ptr<DiagTask>>
-    load_tasks_{};  //!< @brief list of diagnostics tasks for high load procs
+    load_tasks_{};    //!< @brief list of diagnostics tasks for high load procs
   std::vector<std::shared_ptr<DiagTask>>
     memory_tasks_{};  //!< @brief list of diagnostics tasks for high memory procs
 
