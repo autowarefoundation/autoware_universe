@@ -64,7 +64,7 @@ __global__ void generateSweepPoints_kernel(
   float input_x = input_point->x;
   float input_y = input_point->y;
   float input_z = input_point->z;
-  float input_intensity = static_cast<float>(input_point->intensity);
+  auto input_intensity = static_cast<float>(input_point->intensity);
 
   output_points[point_idx * num_features] = transform_array[0] * input_x +
                                             transform_array[4] * input_y +
@@ -135,7 +135,7 @@ std::size_t PreprocessCuda::generateVoxels(
     point_indices_data_, points_voxel_id_, vsize_xyz, grid_size, grid_stride, coors_range, true,
     false, reinterpret_cast<std::uintptr_t>(stream_));
 
-  std::size_t real_num_voxels = static_cast<std::size_t>(std::get<0>(p2v_res).dim(0));
+  auto real_num_voxels = static_cast<std::size_t>(std::get<0>(p2v_res).dim(0));
 
   return real_num_voxels;
 }
@@ -155,8 +155,8 @@ __global__ void resizeAndExtractRoi_kernel(
   if (i >= W3 || j >= H3) return;
 
   // Compute scaling factors from original to resized image
-  float scale_y = static_cast<float>(H) / H2;
-  float scale_x = static_cast<float>(W) / W2;
+  auto scale_y = static_cast<float>(H) / H2;
+  auto scale_x = static_cast<float>(W) / W2;
 
   // Map output pixel (i, j) in ROI to position in resized image
   int i_resized = i + x_start;
@@ -167,8 +167,8 @@ __global__ void resizeAndExtractRoi_kernel(
   float j_original = (j_resized + 0.5f) * scale_y - 0.5f;
 
   // Compute coordinates for bilinear interpolation
-  int i0 = static_cast<int>(floorf(i_original));
-  int j0 = static_cast<int>(floorf(j_original));
+  auto i0 = static_cast<int>(floorf(i_original));
+  auto j0 = static_cast<int>(floorf(j_original));
   int i1 = i0 + 1;
   int j1 = j0 + 1;
 
