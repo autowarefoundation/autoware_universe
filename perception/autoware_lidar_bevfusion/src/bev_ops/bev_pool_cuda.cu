@@ -55,6 +55,6 @@ void bev_pool(
     return;
   }
 
-  bev_pool_kernel<<<(int)ceil(((double)n_intervals * c / 256)), 256, 0, stream>>>(
+  bev_pool_kernel<<<num_blocks, block_size, 0, stream>>>(
     d, h, w, c, n_intervals, x, geom_feats, interval_starts, interval_lengths, out);
 }
