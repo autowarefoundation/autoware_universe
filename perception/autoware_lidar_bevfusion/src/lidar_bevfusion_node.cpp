@@ -185,7 +185,7 @@ LidarBEVFusionNode::LidarBEVFusionNode(const rclcpp::NodeOptions & options)
   }
 
   if (this->declare_parameter<bool>("build_only", false, descriptor)) {
-    RCLCPP_INFO(this->get_logger(), "TensorRT engine was built Shutting down the node.");
+    RCLCPP_INFO(this->get_logger(), "TensorRT engine was built. Shutting down the node.");
     rclcpp::shutdown();
   }
 }
