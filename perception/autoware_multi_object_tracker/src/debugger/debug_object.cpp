@@ -54,11 +54,10 @@ int32_t uuidToInt(const boost::uuids::uuid & uuid)
 namespace autoware::multi_object_tracker
 {
 
-TrackerObjectDebugger::TrackerObjectDebugger(const std::string & frame_id)
+TrackerObjectDebugger::TrackerObjectDebugger(
+  const std::string & frame_id, const std::vector<types::InputChannel> & channels_config)
+: frame_id_(frame_id), channels_config_(channels_config)
 {
-  // set frame id
-  frame_id_ = frame_id;
-
   // initialize markers
   markers_.markers.clear();
   current_ids_.clear();
@@ -96,32 +95,30 @@ void TrackerObjectDebugger::collect(
 
     types::DynamicObject tracked_object;
     (*(tracker_itr))->getTrackedObject(message_time, tracked_object);
-    object_data.uuid = uuidToBoostUuid(tracked_object.object_id);
-    object_data.uuid_int = uuidToInt(object_data.uuid);
-    object_data.uuid_str = uuidToString(tracked_object.object_id);
-    object_data.channel_id = tracked_object.channel_index;
+    object_data.uuid = uuidToBoostUuid(tracked_object.uuid);
+    object_data.uuid_str = uuidToString(tracked_object.uuid);
 
     // tracker
     bool is_associated = false;
     geometry_msgs::msg::Point tracker_point, detection_point;
-    tracker_point.x = tracked_object.kinematics.pose_with_covariance.pose.position.x;
-    tracker_point.y = tracked_object.kinematics.pose_with_covariance.pose.position.y;
-    tracker_point.z = tracked_object.kinematics.pose_with_covariance.pose.position.z;
+    tracker_point.x = tracked_object.pose.position.x;
+    tracker_point.y = tracked_object.pose.position.y;
+    tracker_point.z = tracked_object.pose.position.z;
 
     // detection
     if (direct_assignment.find(tracker_idx) != direct_assignment.end()) {
       const auto & associated_object =
         detected_objects.objects.at(direct_assignment.find(tracker_idx)->second);
-      detection_point.x = associated_object.kinematics.pose_with_covariance.pose.position.x;
-      detection_point.y = associated_object.kinematics.pose_with_covariance.pose.position.y;
-      detection_point.z = associated_object.kinematics.pose_with_covariance.pose.position.z;
+      detection_point.x = associated_object.pose.position.x;
+      detection_point.y = associated_object.pose.position.y;
+      detection_point.z = associated_object.pose.position.z;
       is_associated = true;
     } else {
       detection_point.x = tracker_point.x;
       detection_point.y = tracker_point.y;
       detection_point.z = tracker_point.z;
     }
-
+    object_data.channel_id = detected_objects.channel_index;
     object_data.tracker_point = tracker_point;
     object_data.detection_point = detection_point;
     object_data.is_associated = is_associated;
@@ -143,8 +140,8 @@ void TrackerObjectDebugger::process()
   if (object_data_list_.empty()) return;
 
   // update uuid_int
-  for (auto & object_data : object_data_list_) {
-    current_ids_.insert(object_data.uuid_int);
+  for (const auto & object_data : object_data_list_) {
+    current_ids_.insert(uuidToInt(object_data.uuid));
   }
 
   // sort by uuid, collect the same uuid object_data as a group, and loop for the groups
@@ -156,7 +153,7 @@ void TrackerObjectDebugger::process()
       [](const ObjectData & a, const ObjectData & b) { return a.uuid < b.uuid; });
 
     // collect the same uuid object_data as a group
-    std::vector<ObjectData> object_data_group;
+    std::vector<ObjectData> object_data_group{};
     boost::uuids::uuid previous_uuid = object_data_list_.front().uuid;
     for (const auto & object_data : object_data_list_) {
       // if the uuid is different, push the group and clear the group
@@ -210,7 +207,7 @@ void TrackerObjectDebugger::draw(
     visualization_msgs::msg::Marker marker;
     marker.header.frame_id = frame_id_;
     marker.header.stamp = object_data_front.time;
-    marker.id = object_data_front.uuid_int;
+    marker.id = uuidToInt(object_data_front.uuid);
     marker.pose.position.x = 0;
     marker.pose.position.y = 0;
     marker.pose.position.z = 0;
@@ -236,10 +233,12 @@ void TrackerObjectDebugger::draw(
     // print existence probability with channel name
     // probability to text, two digits of percentage
     std::string existence_probability_text = "";
-    for (size_t i = 0; i < object_data_front.existence_vector.size(); ++i) {
+    const size_t channel_size = channels_config_.size();
+    for (size_t i = 0; i < channel_size; ++i) {
+      if (object_data_front.existence_vector[i] < 0.00101) continue;
       std::stringstream stream;
       stream << std::fixed << std::setprecision(0) << object_data_front.existence_vector[i] * 100;
-      existence_probability_text += channel_names_[i] + stream.str() + ":";
+      existence_probability_text += channels_config_[i].short_name + stream.str() + ":";
     }
     if (!existence_probability_text.empty()) {
       existence_probability_text.pop_back();
@@ -247,7 +246,6 @@ void TrackerObjectDebugger::draw(
     existence_probability_text += "\n" + object_data_front.uuid_str.substr(0, 6);
 
     text_marker.text = existence_probability_text;
-    marker_array.markers.push_back(text_marker);
 
     // loop for each object_data in the group
     // boxed to tracker positions
@@ -263,22 +261,26 @@ void TrackerObjectDebugger::draw(
     marker_track_boxes.scale.x = 0.4;
     marker_track_boxes.scale.y = 0.4;
     marker_track_boxes.scale.z = 0.4;
+    marker_track_boxes.color.a = 0.9;
+    marker_track_boxes.color.r = 1.0;
+    marker_track_boxes.color.g = 1.0;
+    marker_track_boxes.color.b = 1.0;
 
     // make detected object markers per channel
     std::vector<visualization_msgs::msg::Marker> marker_detect_boxes_per_channel;
     std::vector<visualization_msgs::msg::Marker> marker_detect_lines_per_channel;
 
-    for (size_t idx = 0; idx < channel_names_.size(); idx++) {
+    for (size_t idx = 0; idx < channels_config_.size(); idx++) {
       // get color - by channel index
       std_msgs::msg::ColorRGBA color;
-      color.a = 1.0;
+      color.a = 0.9;
       color.r = color_array[idx % PALETTE_SIZE][0];
       color.g = color_array[idx % PALETTE_SIZE][1];
       color.b = color_array[idx % PALETTE_SIZE][2];
 
       visualization_msgs::msg::Marker marker_detect_boxes;
       marker_detect_boxes = marker;
-      marker_detect_boxes.ns = "detect_boxes_" + channel_names_[idx];
+      marker_detect_boxes.ns = "detect_boxes_" + channels_config_[idx].short_name;
       marker_detect_boxes.type = visualization_msgs::msg::Marker::CUBE_LIST;
       marker_detect_boxes.action = visualization_msgs::msg::Marker::ADD;
       marker_detect_boxes.scale.x = 0.2;
@@ -289,7 +291,7 @@ void TrackerObjectDebugger::draw(
 
       visualization_msgs::msg::Marker marker_lines;
       marker_lines = marker;
-      marker_lines.ns = "association_lines_" + channel_names_[idx];
+      marker_lines.ns = "association_lines_" + channels_config_[idx].short_name;
       marker_lines.type = visualization_msgs::msg::Marker::LINE_LIST;
       marker_lines.action = visualization_msgs::msg::Marker::ADD;
       marker_lines.scale.x = 0.15;
@@ -298,8 +300,7 @@ void TrackerObjectDebugger::draw(
       marker_detect_lines_per_channel.push_back(marker_lines);
     }
 
-    bool is_any_associated = false;
-
+    bool is_associated = false;
     for (const auto & object_data : object_data_group) {
       int channel_id = object_data.channel_id;
 
@@ -312,7 +313,7 @@ void TrackerObjectDebugger::draw(
 
       // set association marker, if exists
       if (!object_data.is_associated) continue;
-      is_any_associated = true;
+      is_associated = true;
 
       // associated object box
       visualization_msgs::msg::Marker & marker_detect_boxes =
@@ -337,26 +338,32 @@ void TrackerObjectDebugger::draw(
     }
 
     // add markers
-    marker_array.markers.push_back(marker_track_boxes);
-    if (is_any_associated) {
-      for (size_t i = 0; i < channel_names_.size(); i++) {
-        if (marker_detect_boxes_per_channel.at(i).points.empty()) continue;
-        marker_array.markers.push_back(marker_detect_boxes_per_channel.at(i));
-      }
-      for (size_t i = 0; i < channel_names_.size(); i++) {
-        if (marker_detect_lines_per_channel.at(i).points.empty()) continue;
-        marker_array.markers.push_back(marker_detect_lines_per_channel.at(i));
-      }
-    } else {
-      for (size_t i = 0; i < channel_names_.size(); i++) {
+    for (size_t i = 0; i < channels_config_.size(); i++) {
+      if (marker_detect_boxes_per_channel.at(i).points.empty()) {
         marker_detect_boxes_per_channel.at(i).action = visualization_msgs::msg::Marker::DELETE;
-        marker_array.markers.push_back(marker_detect_boxes_per_channel.at(i));
       }
-      for (size_t i = 0; i < channel_names_.size(); i++) {
-        marker_detect_lines_per_channel.at(i).action = visualization_msgs::msg::Marker::DELETE;
-        marker_array.markers.push_back(marker_detect_lines_per_channel.at(i));
-      }
+      marker_array.markers.push_back(marker_detect_boxes_per_channel.at(i));
     }
+    for (size_t i = 0; i < channels_config_.size(); i++) {
+      if (marker_detect_lines_per_channel.at(i).points.empty()) {
+        marker_detect_lines_per_channel.at(i).action = visualization_msgs::msg::Marker::DELETE;
+      }
+      marker_array.markers.push_back(marker_detect_lines_per_channel.at(i));
+    }
+
+    // if not associated, gray out the track box and text
+    if (!is_associated) {
+      marker_track_boxes.color.r = 0.5;
+      marker_track_boxes.color.g = 0.5;
+      marker_track_boxes.color.b = 0.5;
+      marker_track_boxes.color.a = 0.5;
+      text_marker.color.r = 0.5;
+      text_marker.color.g = 0.5;
+      text_marker.color.b = 0.5;
+      text_marker.color.a = 0.5;
+    }
+    marker_array.markers.push_back(text_marker);
+    marker_array.markers.push_back(marker_track_boxes);
   }
 
   return;
@@ -378,18 +385,19 @@ void TrackerObjectDebugger::getMessage(visualization_msgs::msg::MarkerArray & ma
     visualization_msgs::msg::Marker delete_marker;
     delete_marker.header.frame_id = frame_id_;
     delete_marker.header.stamp = message_time_;
-    delete_marker.ns = "existence_probability";
     delete_marker.id = previous_id;
     delete_marker.action = visualization_msgs::msg::Marker::DELETE;
+
+    delete_marker.ns = "existence_probability";
     marker_array.markers.push_back(delete_marker);
 
     delete_marker.ns = "track_boxes";
     marker_array.markers.push_back(delete_marker);
 
-    for (size_t idx = 0; idx < channel_names_.size(); idx++) {
-      delete_marker.ns = "detect_boxes_" + channel_names_[idx];
+    for (size_t idx = 0; idx < channels_config_.size(); idx++) {
+      delete_marker.ns = "detect_boxes_" + channels_config_[idx].short_name;
       marker_array.markers.push_back(delete_marker);
-      delete_marker.ns = "association_lines_" + channel_names_[idx];
+      delete_marker.ns = "association_lines_" + channels_config_[idx].short_name;
       marker_array.markers.push_back(delete_marker);
     }
   }

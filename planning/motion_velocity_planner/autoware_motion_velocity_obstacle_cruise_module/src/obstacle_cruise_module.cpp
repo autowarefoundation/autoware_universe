@@ -123,9 +123,8 @@ void ObstacleCruiseModule::init(rclcpp::Node & node, const std::string & module_
   debug_publisher_ = node.create_publisher<MarkerArray>("~/obstacle_cruise/debug_markers", 1);
 
   // module publisher
-  metrics_pub_ = node.create_publisher<MetricArray>("~/cruise/metrics", 10);
   debug_cruise_planning_info_pub_ =
-    node.create_publisher<Float32MultiArrayStamped>("~/debug/cruise_planning_info", 1);
+    node.create_publisher<Float32MultiArrayStamped>("~/debug/obstacle_cruise/planning_info", 1);
   processing_time_detail_pub_ = node.create_publisher<autoware_utils::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms/obstacle_cruise", 1);
 
@@ -160,7 +159,6 @@ VelocityPlanningResult ObstacleCruiseModule::plan(
   // 1. init variables
   stop_watch_.tic();
   debug_data_ptr_ = std::make_shared<DebugData>();
-  metrics_manager_.init();
 
   // filter obstacles of predicted objects
   const auto cruise_obstacles = filter_cruise_obstacle_for_predicted_object(
@@ -174,7 +172,6 @@ VelocityPlanningResult ObstacleCruiseModule::plan(
   [[maybe_unused]] const auto cruise_traj_points = cruise_planner_->plan_cruise(
     planner_data, raw_trajectory_points, cruise_obstacles, debug_data_ptr_,
     planning_factor_interface_, result.velocity_limit);
-  metrics_manager_.calculate_metrics("PlannerInterface", "cruise");
 
   // clear velocity limit if necessary
   if (result.velocity_limit) {
@@ -257,26 +254,27 @@ std::vector<CruiseObstacle> ObstacleCruiseModule::filter_cruise_obstacle_for_pre
       cruise_obstacles.push_back(*cruise_obstacle);
       continue;
     }
+  }
 
-    // 3. precise filtering for yield cruise
-    if (obstacle_filtering_param_.enable_yield) {
-      const auto yield_obstacles = find_yield_cruise_obstacles(
-        odometry, objects, predicted_objects_stamp, traj_points, vehicle_info);
-      if (yield_obstacles) {
-        for (const auto & y : yield_obstacles.value()) {
-          // Check if there is no member with the same UUID in cruise_obstacles
-          auto it = std::find_if(
-            cruise_obstacles.begin(), cruise_obstacles.end(),
-            [&y](const auto & c) { return y.uuid == c.uuid; });
+  // 3. precise filtering for yield cruise
+  if (obstacle_filtering_param_.enable_yield) {
+    const auto yield_obstacles = find_yield_cruise_obstacles(
+      odometry, objects, predicted_objects_stamp, traj_points, vehicle_info);
+    if (yield_obstacles) {
+      for (const auto & y : yield_obstacles.value()) {
+        // Check if there is no member with the same UUID in cruise_obstacles
+        auto it = std::find_if(
+          cruise_obstacles.begin(), cruise_obstacles.end(),
+          [&y](const auto & c) { return y.uuid == c.uuid; });
 
-          // If no matching UUID found, insert yield obstacle into cruise_obstacles
-          if (it == cruise_obstacles.end()) {
-            cruise_obstacles.push_back(y);
-          }
+        // If no matching UUID found, insert yield obstacle into cruise_obstacles
+        if (it == cruise_obstacles.end()) {
+          cruise_obstacles.push_back(y);
         }
       }
     }
   }
+
   prev_cruise_object_obstacles_ = cruise_obstacles;
 
   return cruise_obstacles;
@@ -355,14 +353,10 @@ void ObstacleCruiseModule::publish_debug_info()
   // 4. objects of interest
   objects_of_interest_marker_interface_->publishMarkerArray();
 
-  // 5. metrics
-  const auto metrics_msg = metrics_manager_.create_metric_array(clock_->now());
-  metrics_pub_->publish(metrics_msg);
-
-  // 6. processing time
+  // 5. processing time
   processing_time_publisher_->publish(create_float64_stamped(clock_->now(), stop_watch_.toc()));
 
-  // 7. planning factor
+  // 6. planning factor
   planning_factor_interface_->publish();
 }
 
@@ -461,14 +455,14 @@ std::optional<std::vector<CruiseObstacle>> ObstacleCruiseModule::find_yield_crui
       obstacle_filtering_param_.stopped_obstacle_velocity_threshold;
     if (is_moving) {
       const bool is_within_lat_dist_threshold =
-        o->get_dist_to_traj_lateral(traj_points) <
+        std::abs(o->get_dist_to_traj_lateral(traj_points)) <
         obstacle_filtering_param_.yield_lat_distance_threshold;
       if (is_within_lat_dist_threshold) moving_objects.push_back(o);
       return;
     }
     // lat threshold is larger for stopped obstacles
     const bool is_within_lat_dist_threshold =
-      o->get_dist_to_traj_lateral(traj_points) <
+      std::abs(o->get_dist_to_traj_lateral(traj_points)) <
       obstacle_filtering_param_.yield_lat_distance_threshold +
         obstacle_filtering_param_.max_lat_dist_between_obstacles;
     if (is_within_lat_dist_threshold) stopped_objects.push_back(o);

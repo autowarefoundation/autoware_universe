@@ -263,28 +263,30 @@ bool covered_by(const alt::Point2d & point, const alt::ConvexPolygon2d & poly)
     return false;
   }
 
-  double cross;
   for (auto it = vertices.cbegin(); it != std::prev(vertices.cend()); ++it) {
     const auto & p1 = *it;
     const auto & p2 = *std::next(it);
 
-    if (p1.y() <= point.y() && p2.y() >= point.y()) {  // upward edge
-      cross = (p2 - p1).cross(point - p1);
-      if (cross > 0) {  // point is to the left of edge
-        winding_number++;
-        continue;
-      }
-    } else if (p1.y() >= point.y() && p2.y() <= point.y()) {  // downward edge
-      cross = (p2 - p1).cross(point - p1);
-      if (cross < 0) {  // point is to the left of edge
-        winding_number--;
-        continue;
-      }
-    } else {
+    const auto is_upward_edge = p1.y() <= point.y() && p2.y() >= point.y();
+    const auto is_downward_edge = p1.y() >= point.y() && p2.y() <= point.y();
+
+    if (!is_upward_edge && !is_downward_edge) {
       continue;
     }
 
-    if (std::abs(cross) < epsilon) {  // point is on edge
+    const auto start_vec = point - p1;
+    const auto end_vec = point - p2;
+    const auto cross = start_vec.cross(end_vec);
+
+    if (is_upward_edge && cross > 0) {  // point is to the left of edge
+      winding_number++;
+      continue;
+    } else if (is_downward_edge && cross < 0) {  // point is to the left of edge
+      winding_number--;
+      continue;
+    }
+
+    if (std::abs(cross) < epsilon && start_vec.dot(end_vec) <= 0.) {  // point is on edge
       return true;
     }
   }
@@ -600,28 +602,30 @@ bool within(const alt::Point2d & point, const alt::ConvexPolygon2d & poly)
     return false;
   }
 
-  double cross;
   for (auto it = vertices.cbegin(); it != std::prev(vertices.cend()); ++it) {
     const auto & p1 = *it;
     const auto & p2 = *std::next(it);
 
-    if (p1.y() < point.y() && p2.y() > point.y()) {  // upward edge
-      cross = (p2 - p1).cross(point - p1);
-      if (cross > 0) {  // point is to the left of edge
-        winding_number++;
-        continue;
-      }
-    } else if (p1.y() > point.y() && p2.y() < point.y()) {  // downward edge
-      cross = (p2 - p1).cross(point - p1);
-      if (cross < 0) {  // point is to the left of edge
-        winding_number--;
-        continue;
-      }
-    } else {
+    const auto is_upward_edge = p1.y() < point.y() && p2.y() > point.y();
+    const auto is_downward_edge = p1.y() > point.y() && p2.y() < point.y();
+
+    if (!is_upward_edge && !is_downward_edge) {
       continue;
     }
 
-    if (std::abs(cross) < epsilon) {  // point is on edge
+    const auto start_vec = point - p1;
+    const auto end_vec = point - p2;
+    const auto cross = start_vec.cross(end_vec);
+
+    if (is_upward_edge && cross > 0) {  // point is to the left of edge
+      winding_number++;
+      continue;
+    } else if (is_downward_edge && cross < 0) {  // point is to the left of edge
+      winding_number--;
+      continue;
+    }
+
+    if (std::abs(cross) < epsilon && start_vec.dot(end_vec) <= 0.) {  // point is on edge
       return false;
     }
   }

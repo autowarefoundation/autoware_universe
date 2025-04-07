@@ -881,7 +881,7 @@ void CrosswalkModule::applySlowDown(
   }
   if (slowdown_pose)
     planning_factor_interface_->add(
-      output.points, planner_data_->current_odometry->pose, *slowdown_pose, *slowdown_pose,
+      output.points, planner_data_->current_odometry->pose, *slowdown_pose,
       autoware_internal_planning_msgs::msg::PlanningFactor::SLOW_DOWN,
       autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/,
       safety_slow_down_speed, 0.0 /*shift distance*/, "crosswalk_safety_slowdown_for_approaching");
@@ -1112,6 +1112,7 @@ void CrosswalkModule::updateObjectState(
   const double dist_ego_to_stop, const PathWithLaneId & sparse_resample_path,
   const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area)
 {
+  const auto & p = planner_param_;
   const auto & objects_ptr = planner_data_->predicted_objects;
 
   const auto traffic_lights_reg_elems =
@@ -1120,37 +1121,48 @@ void CrosswalkModule::updateObjectState(
 
   // Check if ego is yielding
   const bool is_ego_yielding = [&]() {
-    const auto has_reached_stop_point = dist_ego_to_stop < planner_param_.stop_position_threshold;
+    const auto has_reached_stop_point = dist_ego_to_stop < p.stop_position_threshold;
 
-    return planner_data_->isVehicleStopped(planner_param_.timeout_ego_stop_for_yield) &&
-           has_reached_stop_point;
+    return planner_data_->isVehicleStopped(p.timeout_ego_stop_for_yield) && has_reached_stop_point;
   }();
 
-  const auto ignore_crosswalk = isRedSignalForPedestrians();
-  debug_data_.ignore_crosswalk = ignore_crosswalk;
+  const auto is_red_signal_for_pedestrians = isRedSignalForPedestrians();
+  auto ignore_crosswalk = is_red_signal_for_pedestrians;
 
   // Update object state
   object_info_manager_.init();
   for (const auto & object : objects_ptr->objects) {
+    if (!isCrosswalkUserType(object)) {
+      continue;
+    }
+
+    auto ignore_obj = is_red_signal_for_pedestrians;
+    if (p.consider_obj_on_crosswalk_on_red_light && is_red_signal_for_pedestrians) {
+      const auto is_object_on_crosswalk =
+        bg::intersects(autoware_utils::to_polygon2d(object), crosswalk_.polygon2d().basicPolygon());
+
+      if (is_object_on_crosswalk) {
+        ignore_obj = false;
+        ignore_crosswalk = false;
+      }
+    }
+
+    if (ignore_obj) {
+      continue;
+    }
+
     const auto obj_uuid = to_hex_string(object.object_id);
     const auto & obj_pos = object.kinematics.initial_pose_with_covariance.pose.position;
     const auto & obj_vel = object.kinematics.initial_twist_with_covariance.twist.linear;
 
     // calculate collision point and state
-    if (!isCrosswalkUserType(object)) {
-      continue;
-    }
-    if (ignore_crosswalk) {
-      continue;
-    }
-
     const auto collision_point =
       getCollisionPoint(sparse_resample_path, object, crosswalk_attention_range, attention_area);
     const std::optional<double> ego_crosswalk_passage_direction =
       findEgoPassageDirectionAlongPath(sparse_resample_path);
     object_info_manager_.update(
       obj_uuid, obj_pos, std::hypot(obj_vel.x, obj_vel.y), clock_->now(), is_ego_yielding,
-      has_traffic_light, collision_point, object.classification.front().label, planner_param_,
+      has_traffic_light, collision_point, object.classification.front().label, p,
       crosswalk_.polygon2d().basicPolygon(), attention_area, ego_crosswalk_passage_direction);
 
     const auto collision_state = object_info_manager_.getCollisionState(obj_uuid);
@@ -1178,6 +1190,7 @@ void CrosswalkModule::updateObjectState(
       getLabelColor(collision_state));
   }
 
+  debug_data_.ignore_crosswalk = ignore_crosswalk;
   object_info_manager_.finalize();
 }
 
@@ -1365,7 +1378,7 @@ void CrosswalkModule::planStop(
   insertDecelPointWithDebugInfo(stop_factor->stop_pose.position, 0.0, ego_path);
   planning_factor_interface_->add(
     ego_path.points, planner_data_->current_odometry->pose, stop_factor->stop_pose,
-    stop_factor->stop_pose, autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+    autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
     autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/,
     0.0 /*velocity*/, 0.0 /*shift distance*/, "crosswalk_stop");
 }

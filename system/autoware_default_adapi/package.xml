@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_default_adapi</name>
-  <version>0.42.0</version>
+  <version>0.43.0</version>
   <description>The autoware_default_adapi package</description>
   <maintainer email="isamu.takagi@tier4.jp">Takagi, Isamu</maintainer>
   <maintainer email="ryohsuke.mitsudome@tier4.jp">Ryohsuke Mitsudome</maintainer>
@@ -23,6 +23,7 @@
   <depend>autoware_motion_utils</depend>
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_system_msgs</depend>
+  <depend>autoware_utils_rclcpp</depend>
   <depend>autoware_vehicle_info_utils</depend>
   <depend>autoware_vehicle_msgs</depend>
   <depend>geographic_msgs</depend>

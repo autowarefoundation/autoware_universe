@@ -57,9 +57,12 @@ The following parameters can be set for the `control_validator`:
 
 The input trajectory is detected as invalid if the index exceeds the following thresholds.
 
-| Name                                | Type   | Description                                                                                                 | Default value |
-| :---------------------------------- | :----- | :---------------------------------------------------------------------------------------------------------- | :------------ |
-| `thresholds.max_distance_deviation` | double | invalid threshold of the max distance deviation between the predicted path and the reference trajectory [m] | 1.0           |
-| `thresholds.rolling_back_velocity`  | double | threshold velocity to valid the vehicle velocity [m/s]                                                      | 0.5           |
-| `thresholds.over_velocity_offset`   | double | threshold velocity offset to valid the vehicle velocity [m/s]                                               | 2.0           |
-| `thresholds.over_velocity_ratio`    | double | threshold ratio to valid the vehicle velocity [*]                                                           | 0.2           |
+| Name                                 | Type   | Description                                                                                                 | Default value |
+| :----------------------------------- | :----- | :---------------------------------------------------------------------------------------------------------- | :------------ |
+| `thresholds.max_distance_deviation`  | double | invalid threshold of the max distance deviation between the predicted path and the reference trajectory [m] | 1.0           |
+| `thresholds.rolling_back_velocity`   | double | threshold velocity to valid the vehicle velocity [m/s]                                                      | 0.5           |
+| `thresholds.over_velocity_offset`    | double | threshold velocity offset to valid the vehicle velocity [m/s]                                               | 2.0           |
+| `thresholds.over_velocity_ratio`     | double | threshold ratio to valid the vehicle velocity [*]                                                           | 0.2           |
+| `thresholds.overrun_stop_point_dist` | double | threshold distance to overrun stop point [m]                                                                | 0.8           |
+| `thresholds.acc_error_offset`        | double | threshold ratio to valid the vehicle acceleration [*]                                                       | 0.8           |
+| `thresholds.acc_error_scale`         | double | threshold acceleration to valid the vehicle acceleration [m]                                                | 0.2           |

@@ -40,7 +40,7 @@ DetectionAreaModule::DetectionAreaModule(
   const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface)
-: SceneModuleInterface(module_id, logger, clock, time_keeper, planning_factor_interface),
+: SceneModuleInterfaceWithRTC(module_id, logger, clock, time_keeper, planning_factor_interface),
   lane_id_(lane_id),
   detection_area_reg_elem_(detection_area_reg_elem),
   state_(State::GO),
@@ -107,10 +107,12 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
     modified_stop_line_seg_idx = current_seg_idx;
   }
 
+  setDistance(stop_dist);
+
   // Check state
-  const bool is_safe = detection_area::can_clear_stop_state(
-    last_obstacle_found_time_, clock_->now(), planner_param_.state_clear_time);
-  if (is_safe) {
+  setSafe(detection_area::can_clear_stop_state(
+    last_obstacle_found_time_, clock_->now(), planner_param_.state_clear_time));
+  if (isActivated()) {
     last_obstacle_found_time_ = {};
     if (!planner_param_.suppress_pass_judge_when_stopping || !is_stopped) {
       state_ = State::GO;
@@ -139,6 +141,7 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
         dead_line_seg_idx);
       if (dist_from_ego_to_dead_line < 0.0) {
         RCLCPP_WARN(logger_, "[detection_area] vehicle is over dead line");
+        setSafe(true);
         return true;
       }
     }
@@ -151,6 +154,7 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
   if (
     state_ != State::STOP &&
     dist_from_ego_to_stop < -planner_param_.distance_to_judge_over_stop_line) {
+    setSafe(true);
     return true;
   }
 
@@ -167,6 +171,7 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
       RCLCPP_WARN_THROTTLE(
         logger_, *clock_, std::chrono::milliseconds(1000).count(),
         "[detection_area] vehicle is over stop border");
+      setSafe(true);
       return true;
     }
   }
@@ -181,7 +186,7 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
   // Create StopReason
   {
     planning_factor_interface_->add(
-      path->points, planner_data_->current_odometry->pose, stop_pose, stop_pose,
+      path->points, planner_data_->current_odometry->pose, stop_pose,
       autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
       autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
       0.0 /*shift distance*/, "");

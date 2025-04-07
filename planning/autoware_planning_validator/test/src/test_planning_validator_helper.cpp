@@ -211,6 +211,7 @@ rclcpp::NodeOptions getNodeOptionsWithDefaultParams()
   node_options.append_parameter_override(
     "thresholds.longitudinal_distance_deviation", THRESHOLD_LONGITUDINAL_DISTANCE_DEVIATION);
   node_options.append_parameter_override("thresholds.nominal_latency", THRESHOLD_NOMINAL_LATENCY);
+  node_options.append_parameter_override("thresholds.yaw_deviation", THRESHOLD_YAW_DEVIATION);
   node_options.append_parameter_override(
     "parameters.forward_trajectory_length_acceleration",
     PARAMETER_FORWARD_TRAJECTORY_LENGTH_ACCELERATION);

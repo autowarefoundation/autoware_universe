@@ -20,6 +20,7 @@ The following features are supported for trajectory validation and can have thre
 - **Distance deviation** : invalid if the ego is too far from the trajectory
 - **Longitudinal distance deviation** : invalid if the trajectory is too far from ego in longitudinal direction
 - **Forward trajectory length** : invalid if the trajectory length is not enough to stop within a given deceleration
+- **Yaw difference** : invalid if the difference between the ego yaw and closest trajectory yaw is too large
 
 The following features are to be implemented.
 
@@ -77,6 +78,7 @@ The input trajectory is detected as invalid if the index exceeds the following t
 | `thresholds.steering_rate`                   | double | invalid threshold of the steering angle rate in each trajectory point [rad/s]                                      | 10.0          |
 | `thresholds.velocity_deviation`              | double | invalid threshold of the velocity deviation between the ego velocity and the trajectory point closest to ego [m/s] | 100.0         |
 | `thresholds.distance_deviation`              | double | invalid threshold of the distance deviation between the ego position and the trajectory point closest to ego [m]   | 100.0         |
+| `thresholds.yaw_deviation`                   | double | invalid threshold of the difference between the ego yaw and the closest trajectory yaw [rad]                       | 1.5708        |
 | `parameters.longitudinal_distance_deviation` | double | invalid threshold of the longitudinal distance deviation between the ego position and the trajectory [m]           | 2.0           |
 
 #### Parameters

@@ -100,7 +100,7 @@ The Planner Manager's responsibilities include:
 | ~/input/route                 |     ○     | `autoware_planning_msgs::msg::LaneletRoute`             | Current route from start to goal                                                                                                                                                                                                           |
 | ~/input/scenario              |     ○     | `autoware_internal_planning_msgs::msg::Scenario`        | Launches Behavior Path Planner if current scenario == `Scenario:LaneDriving`                                                                                                                                                               |
 | ~/input/lateral_offset        |     △     | `tier4_planning_msgs::msg::LateralOffset`               | Lateral offset to trigger side shift                                                                                                                                                                                                       |
-| ~/system/operation_mode/state |     ○     | `autoware_adapi_v1_msgs::msg::OperationModeState`       | Allows the planning module to know if vehicle is in autonomous mode or if it can be controlled<sup>[ref](https://github.com/autowarefoundation/autoware.universe/blob/main/system/autoware_default_adapi/document/operation-mode.md)</sup> |
+| ~/system/operation_mode/state |     ○     | `autoware_adapi_v1_msgs::msg::OperationModeState`       | Allows the planning module to know if vehicle is in autonomous mode or if it can be controlled<sup>[ref](https://github.com/autowarefoundation/autoware_universe/blob/main/system/autoware_default_adapi/document/operation-mode.md)</sup> |
 
 - ○ Mandatory: The planning module would not work if anyone of these were not present.
 - △ Optional: Some modules would not work, but the planning module can still be operated.
@@ -129,7 +129,7 @@ The Planner Manager's responsibilities include:
 
 !!! note
 
-    For specific information about which topics are being subscribed to and published, refer to [behavior_path_planner.xml](https://github.com/autowarefoundation/autoware.universe/blob/9000f430c937764c14e43109539302f1f878ed70/planning/behavior_path_planner/launch/behavior_path_planner.launch.xml#L36-L49).
+    For specific information about which topics are being subscribed to and published, refer to [behavior_path_planner.xml](https://github.com/autowarefoundation/autoware_universe/blob/9000f430c937764c14e43109539302f1f878ed70/planning/behavior_path_planner/launch/behavior_path_planner.launch.xml#L36-L49).
 
 ## How to Enable or Disable Modules
 
@@ -157,7 +157,7 @@ A sophisticated methodology is used for path generation, particularly focusing o
 
 The design involves complex mathematical formulations for calculating the lateral shift of the vehicle's path over time. These calculations include determining lateral displacement, velocity, and acceleration, while considering the vehicle's lateral acceleration and velocity limits. This is essential for ensuring that the vehicle's movements remain safe and manageable.
 
-The `ShiftLine` struct (as seen [here](https://github.com/autowarefoundation/autoware.universe/blob/9000f430c937764c14e43109539302f1f878ed70/planning/behavior_path_planner/include/behavior_path_planner/utils/path_shifter/path_shifter.hpp#L35-L48)) is utilized to represent points along the path where the lateral shift starts and ends. It includes details like the start and end points in absolute coordinates, the relative shift lengths at these points compared to the reference path, and the associated indexes on the reference path. This struct is integral to managing the path shifts, as it allows the path planner to dynamically adjust the trajectory based on the vehicle's current position and planned maneuver.
+The `ShiftLine` struct (as seen [here](https://github.com/autowarefoundation/autoware_universe/blob/9000f430c937764c14e43109539302f1f878ed70/planning/behavior_path_planner/include/behavior_path_planner/utils/path_shifter/path_shifter.hpp#L35-L48)) is utilized to represent points along the path where the lateral shift starts and ends. It includes details like the start and end points in absolute coordinates, the relative shift lengths at these points compared to the reference path, and the associated indexes on the reference path. This struct is integral to managing the path shifts, as it allows the path planner to dynamically adjust the trajectory based on the vehicle's current position and planned maneuver.
 
 Furthermore, the design and its implementation incorporate various equations and mathematical models to calculate essential parameters for the path shift. These include the total distance of the lateral shift, the maximum allowable lateral acceleration and jerk, and the total time required for the shift. Practical considerations are also noted, such as simplifying assumptions in the absence of a specific time interval for most lane change and avoidance cases.
 

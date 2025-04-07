@@ -28,7 +28,7 @@ jobs:
 
       - name: Check if relevant files changed
         id: check
-        uses: tj-actions/changed-files@v45
+        uses: step-security/changed-files@v45
         with:
           files: |
             perception/**
@@ -44,6 +44,17 @@ jobs:
     needs:
       - require-label
     uses: ./.github/workflows/build-and-test-differential.yaml
+    with:
+      container: ghcr.io/autowarefoundation/autoware:universe-devel
+      run-condition: ${{ needs.require-label.outputs.result == 'true' }}
+    secrets:
+      codecov-token: ${{ secrets.CODECOV_TOKEN }}
+
+  build-and-test-packages-above-differential:
+    if: ${{ always() }}
+    needs:
+      - require-label
+    uses: ./.github/workflows/build-and-test-packages-above-differential.yaml
     with:
       container: ghcr.io/autowarefoundation/autoware:universe-devel
       run-condition: ${{ needs.require-label.outputs.result == 'true' }}

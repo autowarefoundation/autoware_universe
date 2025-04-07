@@ -206,7 +206,11 @@ protected:
    * \param input the input point cloud dataset.
    * \param indices a pointer to the vector of point indices to use.
    */
-  void computePublish(const PointCloud2ConstPtr & input, const IndicesPtr & indices);
+  virtual void computePublish(const PointCloud2ConstPtr & input, const IndicesPtr & indices);
+  /** \brief PointCloud2 + Indices data callback. */
+  virtual void input_indices_callback(
+    const PointCloud2ConstPtr cloud, const PointIndicesConstPtr indices);
+  virtual bool convert_output_costly(std::unique_ptr<PointCloud2> & output);
 
   //////////////////////
   // from PCLNodelet //
@@ -279,15 +283,10 @@ private:
   std::shared_ptr<ExactTimeSyncPolicy> sync_input_indices_e_;
   std::shared_ptr<ApproximateTimeSyncPolicy> sync_input_indices_a_;
 
-  /** \brief PointCloud2 + Indices data callback. */
-  void input_indices_callback(const PointCloud2ConstPtr cloud, const PointIndicesConstPtr indices);
-
   /** \brief Get a matrix for conversion from the original frame to the target frame */
   bool calculate_transform_matrix(
     const std::string & target_frame, const sensor_msgs::msg::PointCloud2 & from,
     TransformInfo & transform_info /*output*/);
-
-  bool convert_output_costly(std::unique_ptr<PointCloud2> & output);
 
   // TODO(sykwer): Temporary Implementation: Remove this interface when all the filter nodes conform
   // to new API.
