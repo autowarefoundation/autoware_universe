@@ -116,6 +116,8 @@ void CloudCollector<MsgTraits>::concatenate_callback()
 
   ros2_parent_node_->publish_clouds(std::move(concatenated_cloud_result), collector_info_);
 
+  // Optional allocation happens immediately after the publisher
+  // since it is one of th heavier operations.
   combine_cloud_handler_->allocate_pointclouds();
 
   status_ = CollectorStatus::Finished;
