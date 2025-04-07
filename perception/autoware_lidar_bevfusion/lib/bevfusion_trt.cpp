@@ -461,6 +461,13 @@ bool BEVFusionTRT::preProcess(
 
   const auto num_points = vg_ptr_->generateSweepPoints(points_d_);
 
+  if (num_points == 0) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("lidar_bevfusion"),
+      "Empty sweep points (check the capacity of the buffer) . Skipping detection.");
+    return false;
+  }
+
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   auto num_voxels = static_cast<std::int64_t>(pre_ptr_->generateVoxels(
