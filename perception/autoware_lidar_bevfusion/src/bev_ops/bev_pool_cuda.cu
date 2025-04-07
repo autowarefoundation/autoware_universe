@@ -21,7 +21,7 @@
     out              : output features, FloatTensor[b, d, h, w, c]
 */
 __global__ void bev_pool_kernel(
-  int b, int d, int h, int w, int n, int c, int n_intervals, const float * __restrict__ x,
+  int d, int h, int w, int c, int n_intervals, const float * __restrict__ x,
   const int * __restrict__ geom_feats, const int * __restrict__ interval_starts,
   const int * __restrict__ interval_lengths, float * __restrict__ out)
 {
@@ -45,9 +45,8 @@ __global__ void bev_pool_kernel(
 }
 
 void bev_pool(
-  int b, int d, int h, int w, int n, int c, int n_intervals, const float * x,
-  const int * geom_feats, const int * interval_starts, const int * interval_lengths, float * out,
-  cudaStream_t stream)
+  int d, int h, int w, int c, int n_intervals, const float * x, const int * geom_feats,
+  const int * interval_starts, const int * interval_lengths, float * out, cudaStream_t stream)
 {
   constexpr int block_size = 256;
   const int num_blocks = (n_intervals * c + block_size - 1) / block_size;
@@ -57,5 +56,5 @@ void bev_pool(
   }
 
   bev_pool_kernel<<<(int)ceil(((double)n_intervals * c / 256)), 256, 0, stream>>>(
-    b, d, h, w, n, c, n_intervals, x, geom_feats, interval_starts, interval_lengths, out);
+    d, h, w, c, n_intervals, x, geom_feats, interval_starts, interval_lengths, out);
 }

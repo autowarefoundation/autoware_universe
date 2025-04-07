@@ -194,7 +194,6 @@ std::int32_t QuickCumsumCudaPlugin::enqueue(
   void const * const * inputs, void * const * outputs, [[maybe_unused]] void * workspace,
   cudaStream_t stream) noexcept
 {
-  const auto output_features_num = input_desc[0].dims.d[0];
   const auto output_features_dim = input_desc[0].dims.d[1];
   const auto intervals_num = input_desc[2].dims.d[0];
 
@@ -205,11 +204,11 @@ std::int32_t QuickCumsumCudaPlugin::enqueue(
     stream);
 
   bev_pool(
-    static_cast<std::int32_t>(params_.batch_size), static_cast<std::int32_t>(params_.dimension),
-    static_cast<std::int32_t>(params_.height), static_cast<std::int32_t>(params_.width),
-    output_features_num, output_features_dim, intervals_num, static_cast<const float *>(inputs[0]),
-    static_cast<const std::int32_t *>(inputs[1]), static_cast<const std::int32_t *>(inputs[3]),
-    static_cast<const std::int32_t *>(inputs[2]), static_cast<float *>(outputs[0]), stream);
+    static_cast<std::int32_t>(params_.dimension), static_cast<std::int32_t>(params_.height),
+    static_cast<std::int32_t>(params_.width), output_features_dim, intervals_num,
+    static_cast<const float *>(inputs[0]), static_cast<const std::int32_t *>(inputs[1]),
+    static_cast<const std::int32_t *>(inputs[3]), static_cast<const std::int32_t *>(inputs[2]),
+    static_cast<float *>(outputs[0]), stream);
 
   return cudaSuccess;
 }
