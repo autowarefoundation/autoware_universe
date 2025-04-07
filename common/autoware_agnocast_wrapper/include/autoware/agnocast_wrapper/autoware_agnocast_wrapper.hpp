@@ -18,7 +18,8 @@
 
 #include <agnocast/agnocast.hpp>
 
-#define AUTOWARE_MESSAGE_PTR(MessageT) agnocast::ipc_shared_ptr<MessageT>
+#define AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) agnocast::ipc_shared_ptr<MessageT>
+#define AUTOWARE_MESSAGE_SHARED_PTR(MessageT) agnocast::ipc_shared_ptr<MessageT>
 #define AUTOWARE_SUBSCRIPTION_PTR(MessageT) typename agnocast::Subscription<MessageT>::SharedPtr
 #define AUTOWARE_PUBLISHER_PTR(MessageT) typename agnocast::Publisher<MessageT>::SharedPtr
 
@@ -34,22 +35,24 @@
 #define AUTOWARE_SUBSCRIPTION_OPTIONS agnocast::SubscriptionOptions
 #define AUTOWARE_PUBLISHER_OPTIONS agnocast::PublisherOptions
 
-#define ALLOCATE_OUTPUT_MESSAGE(publisher) publisher->borrow_loaned_message()
+#define ALLOCATE_OUTPUT_MESSAGE_UNIQUE(publisher) publisher->borrow_loaned_message()
+#define ALLOCATE_OUTPUT_MESSAGE_SHARED(publisher) publisher->borrow_loaned_message()
 
 #else
 
-#include "autoware/universe_utils/ros/polling_subscriber.hpp"
+#include "autoware_utils/ros/polling_subscriber.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
 #include <memory>
 
-#define AUTOWARE_MESSAGE_PTR(MessageT) std::shared_ptr<MessageT>
+#define AUTOWARE_MESSAGE_UNIQUE_PTR(MessageT) std::unique_ptr<MessageT>
+#define AUTOWARE_MESSAGE_SHARED_PTR(MessageT) std::shared_ptr<MessageT>
 #define AUTOWARE_SUBSCRIPTION_PTR(MessageT) typename rclcpp::Subscription<MessageT>::SharedPtr
 #define AUTOWARE_PUBLISHER_PTR(MessageT) typename rclcpp::Publisher<MessageT>::SharedPtr
 
 #define AUTOWARE_POLLING_SUBSCRIBER(MessageT) \
-  typename autoware::universe_utils::InterProcessPollingSubscriber<MessageT>
+  typename autoware_utils::InterProcessPollingSubscriber<MessageT>
 
 #define AUTOWARE_CREATE_SUBSCRIPTION(message_type, topic, qos, callback, options) \
   this->create_subscription<message_type>(topic, qos, callback, options)
@@ -61,7 +64,9 @@
 #define AUTOWARE_SUBSCRIPTION_OPTIONS rclcpp::SubscriptionOptions
 #define AUTOWARE_PUBLISHER_OPTIONS rclcpp::PublisherOptions
 
-#define ALLOCATE_OUTPUT_MESSAGE(publisher) \
+#define ALLOCATE_OUTPUT_MESSAGE_UNIQUE(publisher) \
   std::make_unique<typename std::remove_reference<decltype(*publisher)>::type::ROSMessageType>()
+#define ALLOCATE_OUTPUT_MESSAGE_SHARED(publisher) \
+  std::make_shared<typename std::remove_reference<decltype(*publisher)>::type::ROSMessageType>()
 
 #endif

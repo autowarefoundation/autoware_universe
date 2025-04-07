@@ -54,6 +54,11 @@ PathWithLaneId getBackwardPath(
     // forward center line path
     backward_path = route_handler.getCenterLinePath(shoulder_lanes, s_start, s_end, true);
 
+    // If the returned path is empty, return an empty path
+    if (backward_path.points.empty()) {
+      return backward_path;
+    }
+
     // backward center line path
     std::reverse(backward_path.points.begin(), backward_path.points.end());
     for (auto & p : backward_path.points) {
