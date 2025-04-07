@@ -15,32 +15,42 @@
 #ifndef AUTOWARE__PLANNING_EVALUATOR__PLANNING_EVALUATOR_NODE_HPP_
 #define AUTOWARE__PLANNING_EVALUATOR__PLANNING_EVALUATOR_NODE_HPP_
 
+#include "autoware/planning_evaluator/metrics/metric.hpp"
+#include "autoware/planning_evaluator/metrics/output_metric.hpp"
+#include "autoware/planning_evaluator/metrics_accumulator.hpp"
 #include "autoware/planning_evaluator/metrics_calculator.hpp"
-#include "autoware_utils/math/accumulator.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
 
 #include <autoware/route_handler/route_handler.hpp>
+#include <autoware_utils/math/accumulator.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
-#include "autoware_perception_msgs/msg/predicted_objects.hpp"
-#include "autoware_planning_msgs/msg/pose_with_uuid_stamped.hpp"
-#include "autoware_planning_msgs/msg/trajectory.hpp"
-#include "autoware_planning_msgs/msg/trajectory_point.hpp"
-#include "geometry_msgs/msg/accel_with_covariance_stamped.hpp"
-#include "nav_msgs/msg/odometry.hpp"
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
+#include <autoware_internal_planning_msgs/msg/planning_factor.hpp>
+#include <autoware_internal_planning_msgs/msg/planning_factor_array.hpp>
+#include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
+#include <autoware_planning_msgs/msg/pose_with_uuid_stamped.hpp>
+#include <autoware_planning_msgs/msg/trajectory.hpp>
+#include <autoware_planning_msgs/msg/trajectory_point.hpp>
+#include <autoware_vehicle_msgs/msg/detail/steering_report__struct.hpp>
+#include <autoware_vehicle_msgs/msg/detail/turn_indicators_report__struct.hpp>
+#include <autoware_vehicle_msgs/msg/steering_report.hpp>
+#include <autoware_vehicle_msgs/msg/turn_indicators_report.hpp>
+#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 #include <tier4_metric_msgs/msg/metric.hpp>
 #include <tier4_metric_msgs/msg/metric_array.hpp>
 
 #include <array>
-#include <deque>
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 namespace planning_diagnostics
 {
@@ -50,10 +60,14 @@ using autoware_planning_msgs::msg::PoseWithUuidStamped;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_utils::Accumulator;
+using autoware_vehicle_msgs::msg::SteeringReport;
+using autoware_vehicle_msgs::msg::TurnIndicatorsReport;
 using MetricMsg = tier4_metric_msgs::msg::Metric;
 using MetricArrayMsg = tier4_metric_msgs::msg::MetricArray;
 using nav_msgs::msg::Odometry;
 using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
+using autoware_internal_planning_msgs::msg::PlanningFactor;
+using autoware_internal_planning_msgs::msg::PlanningFactorArray;
 using autoware_planning_msgs::msg::LaneletRoute;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 /**
@@ -71,7 +85,7 @@ public:
    */
   void onOdometry(const Odometry::ConstSharedPtr odometry_msg);
 
-  /**
+  /**parameters
    * @brief callback on receiving a trajectory
    * @param [in] traj_msg received trajectory message
    */
@@ -99,6 +113,26 @@ public:
     const Odometry::ConstSharedPtr ego_state_ptr);
 
   /**
+   * @brief callback on receiving an steering status message
+   * @param [in] steering_msg received steering status message
+   */
+  void onSteering(const SteeringReport::ConstSharedPtr steering_msg);
+
+  /**
+   * @brief callback on receiving a turn indicators message
+   * @param [in] blinker_msg received turn indicators message
+   */
+  void onBlinker(const TurnIndicatorsReport::ConstSharedPtr blinker_msg);
+
+  /**
+   * @brief callback on receiving a planning factors
+   * @param [in] planning_factors received planning factor message
+   * @param [in] module_name module name of the planning factor
+   */
+  void onPlanningFactors(
+    const PlanningFactorArray::ConstSharedPtr planning_factors, const std::string & module_name);
+
+  /**
    * @brief add the given metric statistic
    */
   void AddMetricMsg(const Metric & metric, const Accumulator<double> & metric_stat);
@@ -114,6 +148,10 @@ public:
   void AddKinematicStateMetricMsg(
     const AccelWithCovarianceStamped & accel_stamped, const Odometry::ConstSharedPtr ego_state_ptr);
 
+  void AddStopCountMetricMsg(
+    const PlanningFactorArray::ConstSharedPtr & planning_factors,
+    const Odometry::ConstSharedPtr ego_state_ptr, const std::string & module_name);
+
 private:
   static bool isFinite(const TrajectoryPoint & p);
 
@@ -127,7 +165,7 @@ private:
    */
   void onTimer();
 
-  // ROS
+  // ROS subscribers
   autoware_utils::InterProcessPollingSubscriber<Trajectory> traj_sub_{this, "~/input/trajectory"};
   autoware_utils::InterProcessPollingSubscriber<Trajectory> ref_sub_{
     this, "~/input/reference_trajectory"};
@@ -144,7 +182,17 @@ private:
     vector_map_subscriber_{this, "~/input/vector_map", rclcpp::QoS{1}.transient_local()};
   autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped> accel_sub_{
     this, "~/input/acceleration"};
+  autoware_utils::InterProcessPollingSubscriber<SteeringReport> steering_sub_{
+    this, "~/input/steering_status"};
+  autoware_utils::InterProcessPollingSubscriber<TurnIndicatorsReport> blinker_sub_{
+    this, "~/input/turn_indicators_status"};
 
+  std::unordered_map<
+    std::string, autoware_utils::InterProcessPollingSubscriber<PlanningFactorArray>>
+    planning_factors_sub_;
+  std::unordered_set<std::string> stop_decision_modules_;
+
+  // ROS publishers
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
     processing_time_pub_;
   rclcpp::Publisher<MetricArrayMsg>::SharedPtr metrics_pub_;
@@ -159,12 +207,14 @@ private:
   bool output_metrics_;
   std::string ego_frame_str_;
 
-  // Calculator
+  // Calculator and accumulator
   MetricsCalculator metrics_calculator_;
-  // Metrics
-  std::vector<Metric> metrics_;
-  std::array<std::array<Accumulator<double>, 3>, static_cast<size_t>(Metric::SIZE)>
-    metric_accumulators_;  // 3(min, max, mean) * metric_size
+  MetricsAccumulator metrics_accumulator_;
+
+  // Metrics for publishing
+
+  std::unordered_set<Metric> metrics_for_publish_;
+  std::unordered_set<OutputMetric> metrics_for_output_;
 
   rclcpp::TimerBase::SharedPtr timer_;
   VehicleInfo vehicle_info_;

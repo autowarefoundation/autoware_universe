@@ -19,10 +19,14 @@
 #include "tf2_ros/transform_broadcaster.h"
 
 #include <autoware/planning_evaluator/planning_evaluator_node.hpp>
+#include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 
 #include "autoware_perception_msgs/msg/predicted_objects.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
+#include <autoware_vehicle_msgs/msg/steering_report.hpp>
+#include <autoware_vehicle_msgs/msg/turn_indicators_report.hpp>
+#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <tier4_metric_msgs/msg/metric_array.hpp>
 
 #include "boost/lexical_cast.hpp"
@@ -40,6 +44,12 @@ using TrajectoryPoint = autoware_planning_msgs::msg::TrajectoryPoint;
 using Objects = autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::PoseWithUuidStamped;
 using MetricArrayMsg = tier4_metric_msgs::msg::MetricArray;
+using autoware_internal_planning_msgs::msg::PlanningFactor;
+using autoware_internal_planning_msgs::msg::PlanningFactorArray;
+using autoware_internal_planning_msgs::msg::SafetyFactorArray;
+using autoware_vehicle_msgs::msg::SteeringReport;
+using autoware_vehicle_msgs::msg::TurnIndicatorsReport;
+using geometry_msgs::msg::Pose;
 using nav_msgs::msg::Odometry;
 
 constexpr double epsilon = 1e-6;
@@ -57,7 +67,7 @@ protected:
     const auto autoware_test_utils_dir =
       ament_index_cpp::get_package_share_directory("autoware_test_utils");
     options.arguments(
-      {"--ros-args", "-p", "output_metrics:=false", "--params-file",
+      {"--ros-args", "-p", "output_metrics:=true", "--params-file",
        share_dir + "/config/planning_evaluator.param.yaml", "--params-file",
        autoware_test_utils_dir + "/config/test_vehicle_info.param.yaml"});
 
@@ -85,10 +95,17 @@ protected:
       rclcpp::create_publisher<Odometry>(dummy_node, "/planning_evaluator/input/odometry", 1);
     modified_goal_pub_ = rclcpp::create_publisher<PoseWithUuidStamped>(
       dummy_node, "/planning_evaluator/input/modified_goal", 1);
+    blinker_pub_ = rclcpp::create_publisher<TurnIndicatorsReport>(
+      dummy_node, "/planning_evaluator/input/turn_indicators_status", 1);
+    steering_pub_ = rclcpp::create_publisher<SteeringReport>(
+      dummy_node, "/planning_evaluator/input/steering_status", 1);
+    planning_factor_interface_ =
+      std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
+        dummy_node.get(), stop_decision_module_name);
 
     tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(dummy_node);
     vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*eval_node).getVehicleInfo();
-    publishEgoPose(0.0, 0.0, 0.0);
+    publishEgoPose(0.0, 0.0, 0.0, 0.0, 0.0);
   }
 
   ~EvalTest() override { rclcpp::shutdown(); }
@@ -109,7 +126,6 @@ protected:
         }
       });
   }
-
   Trajectory makeTrajectory(const std::vector<std::pair<double, double>> & traj)
   {
     Trajectory t;
@@ -201,7 +217,8 @@ protected:
     return metric_value_;
   }
 
-  void publishEgoPose(const double x, const double y, const double yaw)
+  void publishEgoPose(
+    const double x, const double y, const double yaw, const double x_vel, const double y_vel)
   {
     Odometry odom;
     odom.header.frame_id = "map";
@@ -216,10 +233,55 @@ protected:
     odom.pose.pose.orientation.z = q.z();
     odom.pose.pose.orientation.w = q.w();
 
+    odom.twist.twist.linear.x = x_vel;
+    odom.twist.twist.linear.y = y_vel;
+
     odom_pub_->publish(odom);
     rclcpp::spin_some(eval_node);
     rclcpp::spin_some(dummy_node);
     rclcpp::sleep_for(std::chrono::milliseconds(100));
+  }
+
+  void publishStopPlanningFactor(
+    const double distance, const double stop_point_x, const double stop_point_y,
+    const size_t sleep_time = 100)
+  {
+    Pose stop_point = Pose();
+    stop_point.position.x = stop_point_x;
+    stop_point.position.y = stop_point_y;
+
+    planning_factor_interface_->add(
+      distance, stop_point, PlanningFactor::STOP, SafetyFactorArray({}));
+    planning_factor_interface_->publish();
+
+    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(dummy_node);
+    rclcpp::sleep_for(std::chrono::milliseconds(sleep_time));
+  }
+
+  void publishTurnIndicatorsReport(bool enable, bool is_left, const size_t sleep_time = 100)
+  {
+    TurnIndicatorsReport msg;
+    msg.stamp = dummy_node->now();
+    msg.report =
+      enable ? (is_left ? TurnIndicatorsReport::ENABLE_LEFT : TurnIndicatorsReport::ENABLE_RIGHT)
+             : TurnIndicatorsReport::DISABLE;
+    blinker_pub_->publish(msg);
+
+    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(dummy_node);
+    rclcpp::sleep_for(std::chrono::milliseconds(sleep_time));
+  }
+
+  void publishSteeringAngle(const float angle, const size_t sleep_time = 100)
+  {
+    SteeringReport msg;
+    msg.stamp = dummy_node->now();
+    msg.steering_tire_angle = angle;
+    steering_pub_->publish(msg);
+    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(dummy_node);
+    rclcpp::sleep_for(std::chrono::milliseconds(sleep_time));
   }
 
   // Latest metric value
@@ -235,6 +297,12 @@ protected:
   rclcpp::Publisher<PoseWithUuidStamped>::SharedPtr modified_goal_pub_;
   rclcpp::Publisher<Odometry>::SharedPtr odom_pub_;
   rclcpp::Subscription<MetricArrayMsg>::SharedPtr metric_sub_;
+  rclcpp::Publisher<SteeringReport>::SharedPtr steering_pub_;
+  rclcpp::Publisher<TurnIndicatorsReport>::SharedPtr blinker_pub_;
+  std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
+    planning_factor_interface_;
+  std::string stop_decision_module_name = "out_of_lane";
+
   // TF broadcaster
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
@@ -506,4 +574,202 @@ TEST_F(EvalTest, TestModifiedGoalYawDeviation)
   EXPECT_NEAR(publishModifiedGoalAndGetMetric(0.0, 0.0, M_PI_2), M_PI_2, epsilon);
   EXPECT_NEAR(publishModifiedGoalAndGetMetric(1.0, 1.0, -M_PI_2), M_PI_2, epsilon);
   EXPECT_NEAR(publishModifiedGoalAndGetMetric(1.0, 1.0, -M_PI_4), M_PI_4, epsilon);
+}
+
+TEST_F(EvalTest, TestStopDecisionDistance)
+{
+  setTargetMetric(
+    planning_diagnostics::Metric::stop_decision,
+    "/" + stop_decision_module_name + "/distance_to_stop");
+  metric_updated_ = false;
+  publishEgoPose(0.0, 0.0, 0.0, 2.0, 0.0);
+  publishStopPlanningFactor(10.0, 10.0, 0.0);
+  while (!metric_updated_) {
+    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(dummy_node);
+    rclcpp::sleep_for(std::chrono::milliseconds(100));
+  }
+  EXPECT_DOUBLE_EQ(metric_value_, 10.0);
+}
+
+TEST_F(EvalTest, TestStopDecisionDuration)
+{
+  setTargetMetric(
+    planning_diagnostics::Metric::stop_decision,
+    "/" + stop_decision_module_name + "/keep_duration");
+  metric_updated_ = false;
+  publishEgoPose(0.0, 0.0, 0.0, 2.0, 0.0);
+  publishStopPlanningFactor(10.0, 10.0, 0.0, 500);
+  while (!metric_updated_) {
+    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(dummy_node);
+    rclcpp::sleep_for(std::chrono::milliseconds(100));
+  }
+  EXPECT_NEAR(metric_value_, 0.0, 0.1);
+
+  metric_updated_ = false;
+  publishStopPlanningFactor(100.0, 100.0, 0.0, 500);
+  publishStopPlanningFactor(100.0, 100.0, 0.0);
+  while (!metric_updated_) {
+    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(dummy_node);
+    rclcpp::sleep_for(std::chrono::milliseconds(100));
+  }
+  EXPECT_NEAR(metric_value_, 0.5, 0.1);
+}
+
+TEST_F(EvalTest, TestStopDecisionChange)
+{
+  setTargetMetric(
+    planning_diagnostics::Metric::stop_decision,
+    "/" + stop_decision_module_name + "/keep_duration");
+  metric_updated_ = false;
+  publishEgoPose(0.0, 0.0, 0.0, 2.0, 0.0);
+  publishStopPlanningFactor(5.0, 5.0, 0.0, 200);
+  publishStopPlanningFactor(100.0, 100.0, 0.0, 200);
+  publishStopPlanningFactor(5.0, 5.0, 0.0, 1000);
+  publishStopPlanningFactor(5.0, 5.0, 0.0);
+  while (!metric_updated_) {
+    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(dummy_node);
+    rclcpp::sleep_for(std::chrono::milliseconds(100));
+  }
+  EXPECT_NEAR(metric_value_, 1.0, 0.1);
+}
+
+TEST_F(EvalTest, TestAbnormalStopDecisionDistance)
+{
+  setTargetMetric(
+    planning_diagnostics::Metric::stop_decision,
+    "/" + stop_decision_module_name + "/distance_to_stop");
+  metric_updated_ = false;
+  publishEgoPose(0.0, 0.0, 0.0, 10.0, 0.0);
+  publishStopPlanningFactor(5.0, 5.0, 0.0);
+  while (!metric_updated_) {
+    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(dummy_node);
+    rclcpp::sleep_for(std::chrono::milliseconds(100));
+  }
+  EXPECT_DOUBLE_EQ(metric_value_, 5.0);
+}
+
+TEST_F(EvalTest, TestAbnormalStopDecisionDuration)
+{
+  setTargetMetric(
+    planning_diagnostics::Metric::stop_decision,
+    "/" + stop_decision_module_name + "/keep_duration");
+  metric_updated_ = false;
+  publishEgoPose(0.0, 0.0, 0.0, 10.0, 0.0);
+  publishStopPlanningFactor(15.0, 15.0, 0.0, 500);
+  while (!metric_updated_) {
+    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(dummy_node);
+    rclcpp::sleep_for(std::chrono::milliseconds(100));
+  }
+  EXPECT_NEAR(metric_value_, 0.0, 0.1);
+
+  metric_updated_ = false;
+  publishStopPlanningFactor(5.0, 5.0, 0.0, 1000);
+  publishStopPlanningFactor(5.0, 5.0, 0.0);
+  while (!metric_updated_) {
+    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(dummy_node);
+    rclcpp::sleep_for(std::chrono::milliseconds(100));
+  }
+  EXPECT_NEAR(metric_value_, 1.0, 0.1);
+}
+
+TEST_F(EvalTest, TestBlinkerChangeCount)
+{
+  setTargetMetric(planning_diagnostics::Metric::blinker_change_count, "/count_in_duration");
+  metric_updated_ = false;
+  publishTurnIndicatorsReport(false, false);  // no blinker
+  publishTurnIndicatorsReport(true, true);    // left blinker
+  publishTurnIndicatorsReport(true, true);    // keep left blinker
+  publishTurnIndicatorsReport(true, true);    // keep left blinker
+  publishTurnIndicatorsReport(false, false);  // no blinker
+  while (!metric_updated_) {
+    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(dummy_node);
+    rclcpp::sleep_for(std::chrono::milliseconds(100));
+  }
+  EXPECT_DOUBLE_EQ(metric_value_, 1.0);
+
+  metric_updated_ = false;
+  publishTurnIndicatorsReport(false, false);  // no blinker
+  publishTurnIndicatorsReport(true, true);    // left blinker
+  publishTurnIndicatorsReport(true, true);    // left blinker
+  publishTurnIndicatorsReport(true, false);   // right blinker
+  publishTurnIndicatorsReport(true, true);    // left blinker
+  publishTurnIndicatorsReport(true, false);   // right blinker
+  publishTurnIndicatorsReport(true, false);   // right blinker
+  publishTurnIndicatorsReport(false, false);  // no blinker
+  while (!metric_updated_) {
+    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(dummy_node);
+    rclcpp::sleep_for(std::chrono::milliseconds(100));
+  }
+  EXPECT_DOUBLE_EQ(metric_value_, 5.0);
+}
+
+TEST_F(EvalTest, TestBlinkerChangeCountTimeOut)
+{
+  setTargetMetric(planning_diagnostics::Metric::blinker_change_count, "/count_in_duration");
+  metric_updated_ = false;
+  publishTurnIndicatorsReport(false, false);  // no blinker
+  publishTurnIndicatorsReport(true, true);    // left blinker
+  publishTurnIndicatorsReport(false, false);  // no blinker
+  publishTurnIndicatorsReport(true, false);   // right blinker
+
+  rclcpp::sleep_for(std::chrono::milliseconds(10000));  // wait for 10 seconds to time out
+  publishTurnIndicatorsReport(false, false);            // no blinker
+  while (!metric_updated_) {
+    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(dummy_node);
+    rclcpp::sleep_for(std::chrono::milliseconds(100));
+  }
+  EXPECT_DOUBLE_EQ(metric_value_, 0.0);
+}
+
+TEST_F(EvalTest, TestSteeringChangeCount)
+{
+  setTargetMetric(planning_diagnostics::Metric::steer_change_count, "/count_in_duration");
+  metric_updated_ = false;
+  publishSteeringAngle(0.0, 100);   // init
+  publishSteeringAngle(0.0, 100);   // steer_rate around 0
+  publishSteeringAngle(0.05, 100);  // steer_rate positive
+  publishSteeringAngle(0.10, 100);  // steer_rate positive
+  publishSteeringAngle(0.10, 100);  // steer_rate around 0
+  publishSteeringAngle(0.05, 100);  // steer_rate negative
+  publishSteeringAngle(0.0, 100);   // steer_rate negative
+  publishSteeringAngle(0.0, 100);   // steer_rate around 0
+
+  while (!metric_updated_) {
+    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(dummy_node);
+    rclcpp::sleep_for(std::chrono::milliseconds(100));
+  }
+  EXPECT_DOUBLE_EQ(metric_value_, 2.0);
+}
+
+TEST_F(EvalTest, TestSteeringChangeCountTimeOut)
+{
+  setTargetMetric(planning_diagnostics::Metric::steer_change_count, "/count_in_duration");
+  metric_updated_ = false;
+  publishSteeringAngle(0.0, 100);   // init
+  publishSteeringAngle(0.0, 100);   // steer_rate around 0
+  publishSteeringAngle(0.05, 100);  // steer_rate positive
+  publishSteeringAngle(0.0, 100);   // steer_rate negative
+
+  rclcpp::sleep_for(std::chrono::milliseconds(10000));  // wait for 10 seconds to time out
+  publishSteeringAngle(0.0, 100);                       // steer_rate around 0
+  publishSteeringAngle(0.05, 100);                      // steer_rate positive
+  publishSteeringAngle(0.05, 100);                      // steer_rate around 0
+
+  while (!metric_updated_) {
+    rclcpp::spin_some(eval_node);
+    rclcpp::spin_some(dummy_node);
+    rclcpp::sleep_for(std::chrono::milliseconds(100));
+  }
+  EXPECT_DOUBLE_EQ(metric_value_, 1.0);
 }
