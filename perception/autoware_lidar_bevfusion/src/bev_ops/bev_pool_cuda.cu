@@ -49,6 +49,13 @@ void bev_pool(
   const int * geom_feats, const int * interval_starts, const int * interval_lengths, float * out,
   cudaStream_t stream)
 {
+  constexpr int block_size = 256;
+  const int num_blocks = (n_intervals * c + block_size - 1) / block_size;
+
+  if (num_blocks == 0) {
+    return;
+  }
+
   bev_pool_kernel<<<(int)ceil(((double)n_intervals * c / 256)), 256, 0, stream>>>(
     b, d, h, w, n, c, n_intervals, x, geom_feats, interval_starts, interval_lengths, out);
 }
