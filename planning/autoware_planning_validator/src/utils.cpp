@@ -217,8 +217,7 @@ void calc_lateral_acceleration(
     const auto theta = std::atan2(curvature_vector.at(i) * v_lon * v_lon, a_lon);
     const auto lat_acc_from_lon = a_lon * std::sin(theta);
 
-    lateral_acceleration_vector.at(i) =
-      std::sqrt(lat_acc_curve * lat_acc_curve + lat_acc_from_lon * lat_acc_from_lon);
+    lateral_acceleration_vector.at(i) = std::hypot(lat_acc_curve, lat_acc_from_lon);
   }
 }
 
