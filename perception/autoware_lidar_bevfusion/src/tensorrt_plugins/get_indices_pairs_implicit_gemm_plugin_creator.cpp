@@ -27,9 +27,7 @@
 #include <sstream>
 #include <string>
 
-namespace nvinfer1
-{
-namespace plugin
+namespace nvinfer1::plugin
 {
 
 REGISTER_TENSORRT_PLUGIN(GetIndicesPairsImplicitGemmPluginCreator);
@@ -306,5 +304,4 @@ IPluginV3 * GetIndicesPairsImplicitGemmPluginCreator::createPlugin(
   }
 }
 
-}  // namespace plugin
-}  // namespace nvinfer1
+}  // namespace nvinfer1::plugin

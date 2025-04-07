@@ -34,9 +34,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace nvinfer1
-{
-namespace plugin
+namespace nvinfer1::plugin
 {
 
 ImplicitGemmPlugin::ImplicitGemmPlugin(
@@ -324,5 +322,4 @@ std::size_t ImplicitGemmPlugin::getWorkspaceSize(
   return 0;
 }
 
-}  // namespace plugin
-}  // namespace nvinfer1
+}  // namespace nvinfer1::plugin

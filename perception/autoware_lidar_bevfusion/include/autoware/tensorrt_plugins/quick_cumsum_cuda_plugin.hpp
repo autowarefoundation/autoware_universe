@@ -28,9 +28,7 @@ constexpr char const * const kQUICK_CUMSUM_CUDA_PLUGIN_NAME{"QuickCumsumCuda"};
 constexpr char const * const kQUICK_CUMSUM_CUDA_PLUGIN_VERSION{"1"};
 constexpr char const * const kQUICK_CUMSUM_CUDA_PLUGIN_NAMESPACE{""};
 
-namespace nvinfer1
-{
-namespace plugin
+namespace nvinfer1::plugin
 {
 
 struct QuickCumsumCudaParameters
@@ -116,7 +114,6 @@ private:
   nvinfer1::PluginFieldCollection fc_to_serialize_;
 };
 
-}  // namespace plugin
-}  // namespace nvinfer1
+}  // namespace nvinfer1::plugin
 
 #endif  // AUTOWARE__TENSORRT_PLUGINS__QUICK_CUMSUM_CUDA_PLUGIN_HPP_

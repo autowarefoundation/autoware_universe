@@ -25,9 +25,7 @@
 #include <iostream>
 #include <sstream>
 
-namespace nvinfer1
-{
-namespace plugin
+namespace nvinfer1::plugin
 {
 
 REGISTER_TENSORRT_PLUGIN(QuickCumsumCudaPluginCreator);
@@ -134,5 +132,4 @@ IPluginV3 * QuickCumsumCudaPluginCreator::createPlugin(
   }
 }
 
-}  // namespace plugin
-}  // namespace nvinfer1
+}  // namespace nvinfer1::plugin

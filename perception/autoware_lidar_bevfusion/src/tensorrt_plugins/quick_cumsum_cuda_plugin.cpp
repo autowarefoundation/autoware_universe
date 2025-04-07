@@ -29,9 +29,7 @@
 #include <exception>
 #include <vector>
 
-namespace nvinfer1
-{
-namespace plugin
+namespace nvinfer1::plugin
 {
 
 QuickCumsumCudaPlugin::QuickCumsumCudaPlugin(
@@ -242,5 +240,4 @@ std::size_t QuickCumsumCudaPlugin::getWorkspaceSize(
   return 0;
 }
 
-}  // namespace plugin
-}  // namespace nvinfer1
+}  // namespace nvinfer1::plugin

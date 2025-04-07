@@ -26,9 +26,7 @@
 #include <sstream>
 #include <string>
 
-namespace nvinfer1
-{
-namespace plugin
+namespace nvinfer1::plugin
 {
 
 REGISTER_TENSORRT_PLUGIN(ImplicitGemmPluginCreator);
@@ -162,5 +160,4 @@ IPluginV3 * ImplicitGemmPluginCreator::createPlugin(
   }
 }
 
-}  // namespace plugin
-}  // namespace nvinfer1
+}  // namespace nvinfer1::plugin

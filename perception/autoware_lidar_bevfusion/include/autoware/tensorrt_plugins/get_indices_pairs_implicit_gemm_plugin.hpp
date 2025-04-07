@@ -29,9 +29,7 @@ constexpr char const * const kGET_INDICES_PAIRS_IMPLICIT_GEMM_PLUGIN_NAME{
 constexpr char const * const kGET_INDICES_PAIRS_IMPLICIT_GEMM_PLUGIN_VERSION{"1"};
 constexpr char const * const kGET_INDICES_PAIRS_IMPLICIT_GEMM_PLUGIN_NAMESPACE{""};
 
-namespace nvinfer1
-{
-namespace plugin
+namespace nvinfer1::plugin
 {
 
 struct GetIndicesPairsImplicitGemmParameters
@@ -133,7 +131,6 @@ private:
   nvinfer1::PluginFieldCollection fc_to_serialize_;
 };
 
-}  // namespace plugin
-}  // namespace nvinfer1
+}  // namespace nvinfer1::plugin
 
 #endif  // AUTOWARE__TENSORRT_PLUGINS__GET_INDICES_PAIRS_IMPLICIT_GEMM_PLUGIN_HPP_

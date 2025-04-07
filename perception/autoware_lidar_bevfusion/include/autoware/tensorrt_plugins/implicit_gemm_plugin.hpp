@@ -32,9 +32,7 @@ constexpr char const * const kIMPLICIT_GEMM_PLUGIN_NAME{"ImplicitGemm"};
 constexpr char const * const kIMPLICIT_GEMM_PLUGIN_VERSION{"1"};
 constexpr char const * const kIMPLICIT_GEMM_PLUGIN_NAMESPACE{""};
 
-namespace nvinfer1
-{
-namespace plugin
+namespace nvinfer1::plugin
 {
 
 struct ImplicitGemmParameters
@@ -113,12 +111,12 @@ public:
     DynamicPluginTensorDesc const * outputs, std::int32_t num_outputs) const noexcept override;
 
 private:
-  static constexpr std::int32_t INOUT_IN_FEATURES_INDEX = 0;
-  static constexpr std::int32_t INOUT_FILTERS_INDEX = 1;
-  static constexpr std::int32_t INOUT_PAIR_FWD_INDEX = 2;
-  static constexpr std::int32_t INOUT_PAIR_MASK_FWD_SPLITS_INDEX = 3;
-  static constexpr std::int32_t INOUT_MASK_ARGSORT_FWD_SPLITS_INDEX = 4;
-  static constexpr std::int32_t INOUT_OUT_FEATURES_INDEX = 5;
+  static constexpr std::int32_t INOUT_IN_FEATURES_INDEX{0};
+  static constexpr std::int32_t INOUT_FILTERS_INDEX{1};
+  static constexpr std::int32_t INOUT_PAIR_FWD_INDEX{2};
+  static constexpr std::int32_t INOUT_PAIR_MASK_FWD_SPLITS_INDEX{3};
+  static constexpr std::int32_t INOUT_MASK_ARGSORT_FWD_SPLITS_INDEX{4};
+  static constexpr std::int32_t INOUT_OUT_FEATURES_INDEX{5};
 
   void initFieldsToSerialize();
 
@@ -132,7 +130,6 @@ private:
   std::unique_ptr<ConvTunerSimple> tuner_fp16_ptr_{};
 };
 
-}  // namespace plugin
-}  // namespace nvinfer1
+}  // namespace nvinfer1::plugin
 
 #endif  // AUTOWARE__TENSORRT_PLUGINS__IMPLICIT_GEMM_PLUGIN_HPP_

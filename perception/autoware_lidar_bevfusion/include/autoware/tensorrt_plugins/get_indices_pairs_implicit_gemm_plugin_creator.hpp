@@ -21,9 +21,7 @@
 
 #include <vector>
 
-namespace nvinfer1
-{
-namespace plugin
+namespace nvinfer1::plugin
 {
 
 // Plugin factory class.
@@ -59,7 +57,6 @@ private:
   std::vector<nvinfer1::PluginField> plugin_attributes_;
 };
 
-}  // namespace plugin
-}  // namespace nvinfer1
+}  // namespace nvinfer1::plugin
 
 #endif  // AUTOWARE__TENSORRT_PLUGINS__GET_INDICES_PAIRS_IMPLICIT_GEMM_PLUGIN_CREATOR_HPP_

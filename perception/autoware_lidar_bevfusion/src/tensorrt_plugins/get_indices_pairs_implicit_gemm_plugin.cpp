@@ -35,9 +35,7 @@
 #include <tuple>
 #include <vector>
 
-namespace nvinfer1
-{
-namespace plugin
+namespace nvinfer1::plugin
 {
 
 GetIndicesPairsImplicitGemmPlugin::GetIndicesPairsImplicitGemmPlugin(
@@ -414,5 +412,4 @@ std::size_t GetIndicesPairsImplicitGemmPlugin::getWorkspaceSize(
   return static_cast<std::size_t>(workspace_size);
 }
 
-}  // namespace plugin
-}  // namespace nvinfer1
+}  // namespace nvinfer1::plugin
