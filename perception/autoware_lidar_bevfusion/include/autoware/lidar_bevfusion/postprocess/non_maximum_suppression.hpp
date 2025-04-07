@@ -29,35 +29,11 @@ namespace autoware::lidar_bevfusion
 {
 using autoware_perception_msgs::msg::DetectedObject;
 
-// TODO(knzo25): Update this implementation to mach changes from centerpoint
-enum class NMS_TYPE {
-  IoU_BEV
-  // IoU_3D
-  // Distance_2D
-  // Distance_3D
-};
-
 struct NMSParams
 {
-  NMS_TYPE nms_type_{};
-  std::vector<std::string> target_class_names_{};
   double search_distance_2d_{};
   double iou_threshold_{};
-  // double distance_threshold_{};
 };
-
-std::vector<bool> classNamesToBooleanMask(const std::vector<std::string> & class_names)
-{
-  std::vector<bool> mask;
-  constexpr std::size_t num_object_classification = 8;
-  mask.resize(num_object_classification);
-  for (const auto & class_name : class_names) {
-    const auto semantic_type = getSemanticType(class_name);
-    mask.at(semantic_type) = true;
-  }
-
-  return mask;
-}
 
 class NonMaximumSuppression
 {
@@ -74,7 +50,7 @@ private:
   Eigen::MatrixXd generateIoUMatrix(const std::vector<DetectedObject> &);
 
   NMSParams params_{};
-  std::vector<bool> target_class_mask_{};
+  double search_distance_2d_sq_{};
 };
 
 }  // namespace autoware::lidar_bevfusion
