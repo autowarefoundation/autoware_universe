@@ -224,36 +224,6 @@ void BEVFusionTRT::initTrt(const tensorrt_common::TrtCommonConfig & trt_config)
   }
 
   if (config_.sensor_fusion_) {
-    /* nvinfer1::Dims input_imgs_shape;
-    input_imgs_shape.nbDims = 4;
-    input_imgs_shape.d[0] = config_.num_cameras_;
-    input_imgs_shape.d[1] = 3;
-    input_imgs_shape.d[2] = config_.roi_height_;
-    input_imgs_shape.d[3] = config_.roi_width_;
-
-    nvinfer1::Dims input_lidar2image_shape;
-    input_lidar2image_shape.nbDims = 3;
-    input_lidar2image_shape.d[0] = config_.num_cameras_;
-    input_lidar2image_shape.d[1] = 4;
-    input_lidar2image_shape.d[2] = 4;
-
-    nvinfer1::Dims input_geom_feats_shape;
-    input_geom_feats_shape.nbDims = 2;
-    input_geom_feats_shape.d[0] = num_ranks_;
-    input_geom_feats_shape.d[1] = 4;
-
-    nvinfer1::Dims input_kept_shape;
-    input_kept_shape.nbDims = 1;
-    input_kept_shape.d[0] = num_kept_;
-
-    nvinfer1::Dims input_ranks_shape;
-    input_ranks_shape.nbDims = 1;
-    input_ranks_shape.d[0] = num_ranks_;
-
-    nvinfer1::Dims input_indices_shape;
-    input_indices_shape.nbDims = 1;
-    input_indices_shape.d[0] = num_indices_; */
-
     std::vector<float> lidar2image_host(config_.num_cameras_ * 4 * 4);
     cudaMemcpy(
       lidar2image_host.data(), lidar2image_d_.get(), config_.num_cameras_ * 4 * 4 * sizeof(float),
