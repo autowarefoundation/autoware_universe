@@ -100,7 +100,7 @@ void add_cut_segments(
   for (const auto & ls : linestrings) {
     for (const auto label : all_labels) {
       const auto & params = params_per_label[label];
-      const auto attribute = ls.attributeOr(lanelet::AttributeName::Subtype, std::string());
+      const auto attribute = ls.attributeOr(lanelet::AttributeName::Type, std::string());
       const auto & types = params.cut_linestring_types;
       if (std::find(types.begin(), types.end(), attribute) != types.end()) {
         for (auto i = 0UL; i < ls.numSegments(); ++i) {
