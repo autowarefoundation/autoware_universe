@@ -19,6 +19,9 @@
 #include "autoware/pointcloud_preprocessor/pointcloud_densifier/occupancy_grid.hpp"
 #include "autoware/pointcloud_preprocessor/transform_info.hpp"
 
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
+
 #include <deque>
 #include <memory>
 #include <string>
