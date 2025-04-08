@@ -245,7 +245,7 @@ void OutOfLaneModule::update_slowdown_pose_buffer(
 {
   std::vector<out_of_lane::SlowdownPose> valid_poses;
   for (auto & sp : slowdown_pose_buffer_) {
-    if ((clock_->now() - sp.start_time).seconds() <= params_.min_decision_duration)
+    if ((clock_->now() - sp.start_time).seconds() > params_.min_decision_duration)
       continue;
     sp.arc_length = motion_utils::calcSignedArcLength(ego_data.trajectory_points, 0LU, sp.pose.position);
     valid_poses.push_back(sp);
