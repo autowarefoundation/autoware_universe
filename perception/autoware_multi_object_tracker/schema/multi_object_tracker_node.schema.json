@@ -150,6 +150,16 @@
           "type": "number",
           "description": "Delay threshold for error diagnostics in seconds.",
           "default": 1.0
+        },
+        "diagnostics_warn_extrapolation": {
+          "type": "number",
+          "description": "Delay extrapolation threshold for warning diagnostics in seconds.",
+          "default": 0.5
+        },
+        "diagnostics_error_extrapolation": {
+          "type": "number",
+          "description": "Delay extrapolation threshold for error diagnostics in seconds.",
+          "default": 1.0
         }
       },
       "required": [
