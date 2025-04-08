@@ -1491,7 +1491,7 @@ BehaviorModuleOutput GoalPlannerModule::planPullOverAsCandidate(
       // if the final path is not decided and enough time has passed since last path update,
       // select safe path from lane parking pull over path candidates
       // and set it to thread_safe_data_
-      RCLCPP_INFO(getLogger(), "Update pull over path candidates");
+      RCLCPP_INFO_THROTTLE(getLogger(), *clock_, 3000, "Update pull over path candidates");
 
       context_data.pull_over_path_opt = std::nullopt;
       context_data.last_path_update_time = std::nullopt;
