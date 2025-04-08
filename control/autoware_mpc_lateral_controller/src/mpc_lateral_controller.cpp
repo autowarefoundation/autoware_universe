@@ -214,7 +214,7 @@ std::shared_ptr<QPSolverInterface> MpcLateralController::createQPSolverInterface
     return qpsolver_ptr;
   }
 
-  RCLCPP_ERROR(logger_, clock_, "qp_solver_type is undefined");
+  RCLCPP_ERROR(logger_, "qp_solver_type is undefined");
   return qpsolver_ptr;
 }
 

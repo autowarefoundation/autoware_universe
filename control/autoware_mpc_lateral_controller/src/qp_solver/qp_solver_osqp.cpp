@@ -77,7 +77,8 @@ bool QPSolverOSQP::solve(
     const auto s = (status_polish == 0) ? "Polish process is not performed in osqp."
                                         : "Polish process failed in osqp.";
     RCLCPP_WARN_THROTTLE(
-      logger_, *clock_, "%s The required accuracy is met, but the solution can be inaccurate.", s);
+      logger_, *clock_, 1000,
+      "%s The required accuracy is met, but the solution can be inaccurate.", s);
     return true;
   }
   return true;
