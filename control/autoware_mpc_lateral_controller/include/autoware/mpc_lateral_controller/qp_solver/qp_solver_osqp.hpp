@@ -29,7 +29,7 @@ public:
   /**
    * @brief constructor
    */
-  explicit QPSolverOSQP(const rclcpp::Logger & logger);
+  QPSolverOSQP(const rclcpp::Logger & logger, rclcpp::Clock::SharedPtr clock_);
 
   /**
    * @brief destructor
