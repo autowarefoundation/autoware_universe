@@ -5,6 +5,7 @@ find_package(autoware_cmake REQUIRED)
 autoware_package()
 
 find_package(OpenCV REQUIRED)
+find_package(tinyxml2_vendor REQUIRED)
 
 ament_auto_add_library(traffic_light_roi_visualizer SHARED
   src/traffic_light_roi_visualizer/node.cpp
