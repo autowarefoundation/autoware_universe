@@ -65,6 +65,12 @@ ColoredPoseWithCovarianceHistory::ColoredPoseWithCovarianceHistory()
   property_line_max_color_ =
     new rviz_common::properties::ColorProperty("Max Color", Qt::red, "", property_line_view_);
 
+  property_line_less_color_ =
+    new rviz_common::properties::ColorProperty("Less Color", Qt::blue, "", property_line_view_);
+      
+  property_line_greater_color_ =
+    new rviz_common::properties::ColorProperty("Greater Color", Qt::red, "", property_line_view_);
+
   property_auto_min_max_ =
     new rviz_common::properties::BoolProperty("Auto Set Min/Max", true, "", this);
 
@@ -269,10 +275,19 @@ Ogre::ColourValue ColoredPoseWithCovarianceHistory::get_color_from_value(double 
 {
   const auto min_value = property_min_value_->getFloat();
   const auto max_value = property_max_value_->getFloat();
+  if (value < min_value) {
+    return property_line_less_color_->getOgreColor();
+  }
+  if (value > max_value) {
+    return property_line_greater_color_->getOgreColor();
+  }
+  if (min_value == max_value) {
+    return property_line_min_color_->getOgreColor();  // Avoid division by zero
+  }
   const auto ratio = (value - min_value) / (max_value - min_value);
   const auto min_color = property_line_min_color_->getOgreColor();
   const auto max_color = property_line_max_color_->getOgreColor();
-  const auto color = min_color * (1.0 - ratio) + max_color * ratio;
+  const auto color = min_color * (1.0f - static_cast<float>(ratio)) + max_color * static_cast<float>(ratio);
   return color;
 }
 

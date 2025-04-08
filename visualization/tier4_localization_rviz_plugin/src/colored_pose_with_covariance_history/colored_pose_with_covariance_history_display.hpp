@@ -109,6 +109,8 @@ private:  // NOLINT : suppress redundancy warnings
   rviz_common::properties::FloatProperty * property_line_alpha_;
   rviz_common::properties::ColorProperty * property_line_min_color_;
   rviz_common::properties::ColorProperty * property_line_max_color_;
+  rviz_common::properties::ColorProperty * property_line_less_color_;
+  rviz_common::properties::ColorProperty * property_line_greater_color_;
   rviz_common::properties::BoolProperty * property_auto_min_max_;
   rviz_common::properties::FloatProperty * property_min_value_;
   rviz_common::properties::FloatProperty * property_max_value_;
