@@ -67,7 +67,7 @@ ColoredPoseWithCovarianceHistory::ColoredPoseWithCovarianceHistory()
 
   property_line_less_color_ =
     new rviz_common::properties::ColorProperty("Less Color", Qt::blue, "", property_line_view_);
-      
+
   property_line_greater_color_ =
     new rviz_common::properties::ColorProperty("Greater Color", Qt::red, "", property_line_view_);
 
@@ -287,7 +287,8 @@ Ogre::ColourValue ColoredPoseWithCovarianceHistory::get_color_from_value(double 
   const auto ratio = (value - min_value) / (max_value - min_value);
   const auto min_color = property_line_min_color_->getOgreColor();
   const auto max_color = property_line_max_color_->getOgreColor();
-  const auto color = min_color * (1.0f - static_cast<float>(ratio)) + max_color * static_cast<float>(ratio);
+  const auto color =
+    min_color * (1.0f - static_cast<float>(ratio)) + max_color * static_cast<float>(ratio);
   return color;
 }
 
