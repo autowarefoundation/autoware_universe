@@ -37,10 +37,10 @@
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using autoware_utils::calc_distance2d;
 using autoware_utils::calc_offset_pose;
+using autoware_utils::create_quaternion_from_yaw;
 using autoware_utils::inverse_transform_point;
 using autoware_utils::normalize_radian;
 using autoware_utils::transform_pose;
-using autoware_utils::create_quaternion_from_yaw;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
 using lanelet::utils::getArcCoordinates;
@@ -121,14 +121,14 @@ std::vector<PathWithLaneId> GeometricParallelParking::generatePullOverPaths(
   std::vector<PathWithLaneId> arc_paths;
   if (is_forward && use_clothoid) {  // clothoid parking only supports
                                      // forward for now
-    const double L_min =
-      is_forward
-        ? std::abs(
-            parameters_.clothoid_forward_parking_velocity * (parameters_.forward_parking_max_steer_angle /
-                                                    parameters_.forward_parking_steer_rate_lim))
-        : std::abs(
-            parameters_.clothoid_backward_parking_velocity * (parameters_.backward_parking_max_steer_angle /
-                                                     parameters_.backward_parking_steer_rate_lim));
+    const double L_min = is_forward ? std::abs(
+                                        parameters_.clothoid_forward_parking_velocity *
+                                        (parameters_.forward_parking_max_steer_angle /
+                                         parameters_.forward_parking_steer_rate_lim))
+                                    : std::abs(
+                                        parameters_.clothoid_backward_parking_velocity *
+                                        (parameters_.backward_parking_max_steer_angle /
+                                         parameters_.backward_parking_steer_rate_lim));
     arc_paths = planOneTrialClothoid(
       start_pose, goal_pose, R_E_far, L_min, road_lanes, pull_over_lanes, is_forward,
       left_side_parking, end_pose_offset, lane_departure_margin, arc_path_interval, {});
@@ -216,7 +216,7 @@ bool GeometricParallelParking::planPullOver(
         continue;
       }
 
-      const auto velocity = use_clothoid ? parameters_.clothoid_forward_parking_velocity 
+      const auto velocity = use_clothoid ? parameters_.clothoid_forward_parking_velocity
                                          : parameters_.forward_parking_velocity;
       const auto paths = generatePullOverPaths(
         *start_pose, goal_pose, R_E_far, road_lanes, pull_over_lanes, is_forward, left_side_parking,
@@ -240,7 +240,7 @@ bool GeometricParallelParking::planPullOver(
         continue;
       }
 
-      const auto velocity = use_clothoid ? parameters_.clothoid_backward_parking_velocity 
+      const auto velocity = use_clothoid ? parameters_.clothoid_backward_parking_velocity
                                          : parameters_.backward_parking_velocity;
       const auto paths = generatePullOverPaths(
         *start_pose, goal_pose, R_E_min_, road_lanes, pull_over_lanes, is_forward,
@@ -669,8 +669,7 @@ std::vector<PathWithLaneId> GeometricParallelParking::planOneTrialClothoid(
   // combine road and shoulder lanes
   // cut the road lanes up to start_pose to prevent unintended processing for overlapped lane
   lanelet::ConstLanelets lanes{};
-  autoware_utils::Point2d start_point2d(
-    start_pose_dummy.position.x, start_pose_dummy.position.y);
+  autoware_utils::Point2d start_point2d(start_pose_dummy.position.x, start_pose_dummy.position.y);
   for (const auto & lane : road_lanes) {
     if (boost::geometry::within(start_point2d, lane.polygon2d().basicPolygon())) {
       lanes.push_back(lane);
@@ -877,11 +876,15 @@ std::vector<PathWithLaneId> GeometricParallelParking::planOneTrialClothoid(
 
   // set terminal velocity and acceleration(temporary implementation)
   if (is_forward) {
-    pairs_terminal_velocity_and_accel_.emplace_back(parameters_.clothoid_forward_parking_velocity, 0.0);
-    pairs_terminal_velocity_and_accel_.emplace_back(parameters_.clothoid_forward_parking_velocity, 0.0);
+    pairs_terminal_velocity_and_accel_.emplace_back(
+      parameters_.clothoid_forward_parking_velocity, 0.0);
+    pairs_terminal_velocity_and_accel_.emplace_back(
+      parameters_.clothoid_forward_parking_velocity, 0.0);
   } else {
-    pairs_terminal_velocity_and_accel_.emplace_back(parameters_.clothoid_backward_parking_velocity, 0.0);
-    pairs_terminal_velocity_and_accel_.emplace_back(parameters_.clothoid_backward_parking_velocity, 0.0);
+    pairs_terminal_velocity_and_accel_.emplace_back(
+      parameters_.clothoid_backward_parking_velocity, 0.0);
+    pairs_terminal_velocity_and_accel_.emplace_back(
+      parameters_.clothoid_backward_parking_velocity, 0.0);
   }
 
   // set pull_over start and end pose

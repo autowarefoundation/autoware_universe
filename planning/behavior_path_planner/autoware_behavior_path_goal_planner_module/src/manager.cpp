@@ -585,7 +585,8 @@ void GoalPlannerModuleManager::updateModuleParams(
   // forward parallel parking forward
   {
     const std::string ns = base_ns + "pull_over.parallel_parking.forward.";
-    update_param<bool>(parameters, ns + "enable_arc_forward_parking", p->enable_arc_forward_parking);
+    update_param<bool>(
+      parameters, ns + "enable_arc_forward_parking", p->enable_arc_forward_parking);
     update_param<bool>(
       parameters, ns + "enable_clothoid_forward_parking", p->enable_clothoid_forward_parking);
     update_param<double>(
