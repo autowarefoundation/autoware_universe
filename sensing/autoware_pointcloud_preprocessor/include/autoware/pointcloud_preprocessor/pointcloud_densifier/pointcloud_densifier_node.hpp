@@ -19,6 +19,8 @@
 #include "autoware/pointcloud_preprocessor/pointcloud_densifier/occupancy_grid.hpp"
 #include "autoware/pointcloud_preprocessor/transform_info.hpp"
 
+#include <managed_transform_buffer/managed_transform_buffer.hpp>
+
 #include <deque>
 #include <memory>
 #include <string>
@@ -64,8 +66,7 @@ private:
 
   std::deque<sensor_msgs::msg::PointCloud2::SharedPtr> previous_pointclouds_;
 
-  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
-  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+  std::shared_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_;
 
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
   rcl_interfaces::msg::SetParametersResult paramCallback(const std::vector<rclcpp::Parameter> & p);
