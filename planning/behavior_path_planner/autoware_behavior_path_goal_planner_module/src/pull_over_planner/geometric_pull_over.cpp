@@ -69,7 +69,8 @@ std::optional<PullOverPath> GeometricPullOver::plan(
   planner_.setPlannerData(planner_data);
 
   const bool found_valid_path = planner_.planPullOver(
-    goal_pose, road_lanes, pull_over_lanes, max_steer_angle, is_forward_, left_side_parking_, use_clothoid_);
+    goal_pose, road_lanes, pull_over_lanes, max_steer_angle, is_forward_, left_side_parking_,
+    use_clothoid_);
   if (!found_valid_path) {
     return {};
   }
