@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.14)
 project(autoware_pointcloud_preprocessor)
 
-# TODO(youtalk): workaround to avoid 'missing tinyxml2::tinyxml2'
-# See also https://github.com/autowarefoundation/autoware_universe/blob/main/visualization/tier4_traffic_light_rviz_plugin/CMakeLists.txt#L5-L20
+find_package(autoware_cmake REQUIRED)
+# TODO(youtalk): Remove this workaround once https://github.com/autowarefoundation/autoware_universe/issues/10410 is fixed
 find_package(TinyXML2 CONFIG QUIET)
 if(NOT TinyXML2_FOUND)
   find_path(TINYXML2_INCLUDE_DIR NAMES tinyxml2.h)
@@ -18,7 +18,6 @@ if(NOT TinyXML2_FOUND)
   endif()
 endif()
 
-find_package(autoware_cmake REQUIRED)
 autoware_package()
 
 # Suppress CGAL warning
