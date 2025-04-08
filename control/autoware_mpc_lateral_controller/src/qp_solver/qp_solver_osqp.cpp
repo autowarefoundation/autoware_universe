@@ -19,7 +19,7 @@
 
 namespace autoware::motion::control::mpc_lateral_controller
 {
-QPSolverOSQP::QPSolverOSQP(const rclcpp::Logger & logger, rclcpp::Clock::SharedPtr clock_)
+QPSolverOSQP::QPSolverOSQP(const rclcpp::Logger & logger, rclcpp::Clock::SharedPtr clock)
 : logger_{logger}, clock_{clock}
 {
 }
