@@ -1,9 +1,8 @@
 # Bidirectional Traffic
 
-
 This module enables trajectory planning for vehicles on "single-lane bidirectional traffic" roads in autonomous driving systems. Here, "single-lane bidirectional traffic" refers to roads without a centerline, such as those commonly found in residential areas, as shown in the image below．
 
-![](assets/bidirectional-traffic-shiojiri.png)
+![BidirectionalTrafficShiojiri](assets/BidirectionalTrafficShiojiri.png)
 
 In the following descriptions, the term bidirectional traffic refers specifically to such single-lane bidirectional roads as shown in the image above.
 
@@ -27,7 +26,7 @@ The following video shows a demonstration of this module.
 
 Bidirectional lanelets are represented on a Lanelet map as two lanes with opposite directions that share the same LineString as their boundary. There is no need to assign any special tags to the lanelets.
 
-![](assets/bidirectional-traffic-map.png)
+![BidirectionalTrafficMap](assets/BidirectionalTrafficMap.png)
 
 ## Limitations
 
@@ -53,9 +52,7 @@ This module does not support the following situations or functionalities.
 
 This module detects bidirectional lanelets from the lanelet map and performs a keep left maneuver. When keeping left, the shift starts from the beginning of the lanelet immediately before the bidirectional lanelet, and ends at the end of the bidirectional lanelet.
 
-
-![keep-left](assets/keep-left.drawio.svg)
-
+![KeepLeft](assets/KeepLeft.drawio.svg)
 
 ### Give Way
 
@@ -63,7 +60,7 @@ This module detects bidirectional lanelets from the lanelet map and performs a k
 
 To perform the give way maneuver, the GiveWay module has five internal states.
 
-- **NoNeedToGiveWay**  
+- **NoNeedToGiveWay**
 
   No oncoming vehicles present and driving normally or oncoming vehicles are far away.
 
@@ -75,17 +72,17 @@ To perform the give way maneuver, the GiveWay module has five internal states.
 
   ![ApproachingToShift](assets/ApproachingToShift.drawio.svg)
 
-- **ShiftingRoadside**  
-  
+- **ShiftingRoadside**
+
   ![ShiftingRoadside](assets/ShiftingRoadside.drawio.svg)
 
-- **WaitingForOncomingCarsToPass**  
+- **WaitingForOncomingCarsToPass**
 
   The ego vehicle stops and waits until all oncoming vehicles have passed.
 
   ![WaitingForOncomingCarsToPass](assets/WaitingForOncomingCarsToPass.drawio.svg)
 
-- **BackToNormalLane**  
+- **BackToNormalLane**
 
   After the oncoming vehicle has passed, the ego vehicle performs a shift to return to its original driving lane.
 
@@ -110,12 +107,12 @@ state WaitingForOncomingCarsToPass : Ego stopped,\nwaiting for oncoming vehicles
 state BackToNormalLane : Returning to original lane,\nafter oncoming vehicle passed
 
 
-NoNeedToGiveWay --> ApproachingToShift : Oncoming vehicle detected  
-ApproachingToShift --> NoNeedToGiveWay : Oncoming vehicle disappeared  
-ApproachingToShift --> ShiftingRoadside : Passed shift start point  
-ShiftingRoadside --> WaitingForOncomingCarsToPass : Ego stopped  
-ShiftingRoadside --> BackToNormalLane : Oncoming vehicle disappeared  
-WaitingForOncomingCarsToPass --> BackToNormalLane : Oncoming vehicle disappeared  
+NoNeedToGiveWay --> ApproachingToShift : Oncoming vehicle detected
+ApproachingToShift --> NoNeedToGiveWay : Oncoming vehicle disappeared
+ApproachingToShift --> ShiftingRoadside : Passed shift start point
+ShiftingRoadside --> WaitingForOncomingCarsToPass : Ego stopped
+ShiftingRoadside --> BackToNormalLane : Oncoming vehicle disappeared
+WaitingForOncomingCarsToPass --> BackToNormalLane : Oncoming vehicle disappeared
 BackToNormalLane --> NoNeedToGiveWay : Passed shift end point
 @enduml
 ```
@@ -163,37 +160,37 @@ stop
 
 We now provide a detailed explanation of the following four calculations:
 
-1. **Calculate `lateral_shift_distance`**  
+##### 1. Calculate `lateral_shift_distance`
 
-  `lateral_shift_distance` is the lateral distance that the ego vehicle needs to shift. This value is calculated from `min_distance_from_roadside` and `shift_distance_to_pull_over_from_center_line`, based on `road_width` and `vehicle_width`, as follows:
+`lateral_shift_distance` is the lateral distance that the ego vehicle needs to shift. This value is calculated from `min_distance_from_roadside` and `shift_distance_to_pull_over_from_center_line`, based on `road_width` and `vehicle_width`, as follows:
 
-  $$
-    \text{lateral_shift_distance} = \text{max}(\text{road_width} / 2 - \text{vehicle_width} / 2 - \text{min_distance_from_roadside}, \text{shift_distance_to_pull_over_from_center_line})
-  $$
+$$
+  \text{lateral_shift_distance} = \text{max}(\text{road_width} / 2 - \text{vehicle_width} / 2 - \text{min_distance_from_roadside}, \text{shift_distance_to_pull_over_from_center_line})
+$$
 
-2. **Calculate `allowed_longitudinal_distance`**  
+##### 2. Calculate `allowed_longitudinal_distance`
 
-  `allowed_longitudinal_distance` is the minimum longitudinal distance required for the ego vehicle to perform the shift. Shifting in a shorter distance would require a sharp steering maneuver, which is unsafe. This distance is calculated such that the lateral jerk derived from `lateral_shift_distance` and `ego_velocity` does not exceed `max_lateral_jerk`:
+`allowed_longitudinal_distance` is the minimum longitudinal distance required for the ego vehicle to perform the shift. Shifting in a shorter distance would require a sharp steering maneuver, which is unsafe. This distance is calculated such that the lateral jerk derived from `lateral_shift_distance` and `ego_velocity` does not exceed `max_lateral_jerk`:
 
-  $$
-    \text{allowed_longitudinal_distance} = \text{calc_longitudinal_dist_from_jerk}(\text{lateral_shift_distance}, \text{max_lateral_jerk}, \text{ego_velocity})
-  $$
+$$
+  \text{allowed_longitudinal_distance} = \text{calc_longitudinal_dist_from_jerk}(\text{lateral_shift_distance}, \text{max_lateral_jerk}, \text{ego_velocity})
+$$
 
-3. **Calculate `desired_pull_over_point`**  
+##### 3. Calculate `desired_pull_over_point`
 
-  If the shift starts too early, the ego vehicle may have to wait a long time for the oncoming vehicle to pass. If it starts too late, there is a risk of collision. To avoid both, the ideal point to begin the pull-over is calculated based on the ego speed and the oncoming vehicle's speed, assuming the ego vehicle will stop and wait for `wait_time_for_oncoming_car` seconds:
+If the shift starts too early, the ego vehicle may have to wait a long time for the oncoming vehicle to pass. If it starts too late, there is a risk of collision. To avoid both, the ideal point to begin the pull-over is calculated based on the ego speed and the oncoming vehicle's speed, assuming the ego vehicle will stop and wait for `wait_time_for_oncoming_car` seconds:
 
-  $$
-    \text{desired_pull_over_point} = \frac{(\text{distance_to_oncoming_car} - \text{oncoming_car_speed} \cdot \text{wait_time_for_oncoming_car}) \cdot \text{ego_speed}}{\text{ego_speed} + \text{oncoming_car_speed}}
-  $$
+$$
+  \text{desired_pull_over_point} = \frac{(\text{distance_to_oncoming_car} - \text{oncoming_car_speed} \cdot \text{wait_time_for_oncoming_car}) \cdot \text{ego_speed}}{\text{ego_speed} + \text{oncoming_car_speed}}
+$$
 
-4. **Calculate `max_longitudinal_distance`**  
+##### 4. Calculate `max_longitudinal_distance`
 
-   An overly long shift distance may appear unnatural. To prevent this, the maximum longitudinal distance is calculated based on the minimum lateral jerk:
+An overly long shift distance may appear unnatural. To prevent this, the maximum longitudinal distance is calculated based on the minimum lateral jerk:
 
-  $$
-    \text{max_longitudinal_distance} = \text{calc_longitudinal_dist_from_jerk}(\text{lateral_shift_distance}, \text{min_lateral_jerk}, \text{ego_velocity})
-  $$
+$$
+  \text{max_longitudinal_distance} = \text{calc_longitudinal_dist_from_jerk}(\text{lateral_shift_distance}, \text{min_lateral_jerk}, \text{ego_velocity})
+$$
 
 ## Parameters
 
