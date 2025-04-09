@@ -342,12 +342,12 @@ bool StartPlannerModule::isExecutionRequested() const
   }
 
   // Return false and do not request execution if any of the following conditions are true:
-  // - The start pose is on the middle of the road.
+  // - The start pose is on the centerline or on "waypoints" (custom centerline)
   // - The vehicle has already arrived at the start position planner.
   // - The vehicle has reached the goal position.
   // - The vehicle is still moving.
   if (
-    isCurrentPoseOnMiddleOfTheRoad() || isCloseToOriginalStartPose() || hasArrivedAtGoal() ||
+    isCurrentPoseOnEgoCenterline() || isCloseToOriginalStartPose() || hasArrivedAtGoal() ||
     isMoving()) {
     return false;
   }
@@ -367,12 +367,14 @@ bool StartPlannerModule::isModuleRunning() const
   return getCurrentStatus() == ModuleStatus::RUNNING;
 }
 
-bool StartPlannerModule::isCurrentPoseOnMiddleOfTheRoad() const
+bool StartPlannerModule::isCurrentPoseOnEgoCenterline() const
 {
+  const auto & lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
   const Pose & current_pose = planner_data_->self_odometry->pose.pose;
   const lanelet::ConstLanelets current_lanes = utils::getCurrentLanes(planner_data_);
   const double lateral_distance_to_center_lane =
-    lanelet::utils::getArcCoordinates(current_lanes, current_pose).distance;
+    lanelet::utils::getArcCoordinatesOnEgoCenterline(current_lanes, current_pose, lanelet_map_ptr)
+      .distance;
 
   return std::abs(lateral_distance_to_center_lane) < parameters_->th_distance_to_middle_of_the_road;
 }

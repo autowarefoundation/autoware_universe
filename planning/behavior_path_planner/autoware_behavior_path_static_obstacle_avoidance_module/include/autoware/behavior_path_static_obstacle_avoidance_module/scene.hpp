@@ -405,7 +405,8 @@ private:
   {
     constexpr double threshold = 0.1;
     if (std::abs(path_shifter_.getBaseOffset()) > threshold) {
-      RCLCPP_INFO(getLogger(), "base offset is not zero. can't reset registered shift lines.");
+      RCLCPP_INFO_THROTTLE(
+        getLogger(), *clock_, 3000, "base offset is not zero. can't reset registered shift lines.");
       return;
     }
 

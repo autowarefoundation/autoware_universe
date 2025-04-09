@@ -171,7 +171,7 @@ bool StaticObstacleAvoidanceModule::canTransitSuccessState()
 
   // Change input lane. -> EXIT.
   if (!isDrivingSameLane(helper_->getPreviousDrivingLanes(), data.current_lanelets)) {
-    RCLCPP_WARN(getLogger(), "Previous module lane is updated. Exit.");
+    RCLCPP_WARN_THROTTLE(getLogger(), *clock_, 3000, "Previous module lane is updated. Exit.");
     return true;
   }
 
@@ -189,7 +189,7 @@ bool StaticObstacleAvoidanceModule::canTransitSuccessState()
       calc_distance2d(getEgoPose(), autoware_utils::get_pose(data.reference_path.points.back())) >
       THRESHOLD;
     if (is_further_than_threshold && arrived_path_end_) {
-      RCLCPP_WARN(getLogger(), "Reach path end point. Exit.");
+      RCLCPP_WARN_THROTTLE(getLogger(), *clock_, 3000, "Reach path end point. Exit.");
       return true;
     }
   }
@@ -285,7 +285,9 @@ void StaticObstacleAvoidanceModule::fillFundamentalData(
     data.reference_path_rough = extendBackwardLength(getPreviousModuleOutput().path);
   } else {
     data.reference_path_rough = getPreviousModuleOutput().path;
-    RCLCPP_WARN(getLogger(), "Previous module lane is updated. Don't use latest reference path.");
+    RCLCPP_WARN_THROTTLE(
+      getLogger(), *clock_, 3000,
+      "Previous module lane is updated. Don't use latest reference path.");
   }
 
   // resampled reference path
@@ -609,7 +611,8 @@ void StaticObstacleAvoidanceModule::fillEgoStatus(
     data.yield_required = true;
     data.safe_shift_line = data.new_shift_line;
     data.force_deactivated = true;
-    RCLCPP_INFO(getLogger(), "this module is force deactivated. wait until reactivation");
+    RCLCPP_INFO_THROTTLE(
+      getLogger(), *clock_, 3000, "this module is force deactivated. wait until reactivation");
     return;
   }
 
@@ -1131,7 +1134,8 @@ BehaviorModuleOutput StaticObstacleAvoidanceModule::plan()
     output.path = spline_shift_path.path;
   } else {
     output.path = getPreviousModuleOutput().path;
-    RCLCPP_WARN(getLogger(), "Previous module lane is updated. Do nothing.");
+    RCLCPP_WARN_THROTTLE(
+      getLogger(), *clock_, 3000, "Previous module lane is updated. Do nothing.");
   }
 
   output.reference_path = getPreviousModuleOutput().reference_path;
@@ -1485,7 +1489,7 @@ void StaticObstacleAvoidanceModule::updateData()
   if (
     (clock_->now() - last_deactivation_triggered_time_).seconds() >
     parameters_->force_deactivate_duration_time) {
-    RCLCPP_INFO(getLogger(), "The force deactivation is released");
+    RCLCPP_INFO_THROTTLE(getLogger(), *clock_, 3000, "The force deactivation is released");
     force_deactivated_ = false;
   }
 }
@@ -1663,12 +1667,13 @@ void StaticObstacleAvoidanceModule::insertReturnDeadLine(
   }
 
   if (data.new_shift_line.empty()) {
-    RCLCPP_WARN(getLogger(), "module doesn't have return shift line.");
+    RCLCPP_WARN_THROTTLE(getLogger(), *clock_, 3000, "module doesn't have return shift line.");
     return;
   }
 
   if (!helper_->isFeasible(data.new_shift_line)) {
-    RCLCPP_WARN(getLogger(), "return shift line is not feasible. do nothing..");
+    RCLCPP_WARN_THROTTLE(
+      getLogger(), *clock_, 3000, "return shift line is not feasible. do nothing..");
     return;
   }
 
@@ -1683,7 +1688,8 @@ void StaticObstacleAvoidanceModule::insertReturnDeadLine(
     helper_->getMinAvoidanceDistance(shift_length) + helper_->getNominalPrepareDistance(0.0);
   const auto to_stop_line = data.to_return_point - min_return_distance - buffer;
   if (to_stop_line < -1.0 * parameters_->stop_buffer) {
-    RCLCPP_WARN(getLogger(), "ego overran return shift dead line. do nothing.");
+    RCLCPP_WARN_THROTTLE(
+      getLogger(), *clock_, 3000, "ego overran return shift dead line. do nothing.");
     return;
   }
 
@@ -1756,7 +1762,8 @@ void StaticObstacleAvoidanceModule::insertWaitPoint(
   }
 
   if (data.to_stop_line < -1.0 * parameters_->stop_buffer) {
-    RCLCPP_WARN(getLogger(), "ego overran avoidance dead line. do nothing.");
+    RCLCPP_WARN_THROTTLE(
+      getLogger(), *clock_, 3000, "ego overran avoidance dead line. do nothing.");
     return;
   }
 
@@ -1772,7 +1779,7 @@ void StaticObstacleAvoidanceModule::insertWaitPoint(
   const auto is_comfortable_stop = helper_->getFeasibleDecelDistance(0.0) < data.to_stop_line;
   const auto is_slow_speed = getEgoSpeed() < parameters_->min_slow_down_speed;
   if (!is_comfortable_stop && !is_slow_speed) {
-    RCLCPP_WARN_THROTTLE(getLogger(), *clock_, 500, "not execute uncomfortable deceleration.");
+    RCLCPP_WARN_THROTTLE(getLogger(), *clock_, 3000, "not execute uncomfortable deceleration.");
     return;
   }
 
