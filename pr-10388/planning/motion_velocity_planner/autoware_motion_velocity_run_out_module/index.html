@@ -14248,8 +14248,26 @@ These times are then used to decide whether to stop before the overlap or not.</
 <p>In this first step, the trajectory footprint is constructed from the corner points of the vehicle.
 4 linestrings are constructed from the 4 corners (front left, front right, rear left, rear right) projected at each trajectory point.</p>
 <p>At this step, the footprint size can be adjusted using the <code>ego.lateral_margin</code> and <code>ego.longitudinal_margin</code> parameters.</p>
-<p><img alt="ego_footprint" src="./docs/ego_footprint.png"></p>
-<p>TODO: add debug marker explanation</p>
+<p>The following figures show the 4 corner linestrings corresponding calculate for the red trajectory.</p>
+<table>
+<thead>
+<tr>
+<th>front left</th>
+<th>front right</th>
+<th>rear left</th>
+<th>rear right</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><img alt="ego_front_left_footprint" src="docs/front_left_ego_ls.png"></td>
+<td><img alt="ego_front_right_footprint" src="docs/front_right_ego_ls.png"></td>
+<td><img alt="ego_rear_left_footprint" src="docs/rear_left_ego_ls.png"></td>
+<td><img alt="ego_rear_right_footprint" src="docs/rear_right_ego_ls.png"></td>
+</tr>
+</tbody>
+</table>
+<p>These can be visualized with the debug markers with the <code>ego_footprint_(front|rear)_(left|right)</code> namespaces.</p>
 <h3 id="2-extracting-map-filtering-data">2. Extracting map filtering data<a class="headerlink" href="#2-extracting-map-filtering-data" title="Permanent link">#</a></h3>
 <p>In the second step, we extract geometric information from the vector map that will be used to filter dynamic objects.
 For each object classification label,
@@ -14277,8 +14295,6 @@ or if a collision was detected with the object, then it cannot be ignored.</p>
 First, we only keep predicted paths that have a confidence value above the <code>confidence_filtering.threshold</code> parameter.
 If, <code>confidence_filtering.only_use_highest</code> is set to <code>true</code> then for each object only the predicted paths that have the higher confidence value are kept.
 Next, the remaining predicted paths are cut according to the segments prepared in the previous step.</p>
-<p>TODO: figure</p>
-<p>TODO: add debug marker explanation</p>
 <h3 id="4-collision-detection">4. Collision detection<a class="headerlink" href="#4-collision-detection" title="Permanent link">#</a></h3>
 <p>Now that we prepared the ego trajectory footprint, the dynamic objects, and their predicted paths,
 we will calculate the times when they are predicted to collide.</p>
@@ -14341,8 +14357,8 @@ and first check if it satisfies the following conditions to stop:</p>
 </ul>
 </li>
 </ul>
-<p>TODO: figure</p>
-<p>TODO: add debug marker explanation</p>
+<p>The slowdowns and stops inserted in the trajectory are visualized with the virtual walls.</p>
+<p><img alt="virtual_walls" src="docs/stop_slow_virtual_walls.png"></p>
 <h3 id="use-of-rtree-for-fast-spatial-queries">Use of Rtree for fast spatial queries<a class="headerlink" href="#use-of-rtree-for-fast-spatial-queries" title="Permanent link">#</a></h3>
 <p>In step 1, each segment of the 4 linestrings of the ego trajectory footprint are stored in a Rtree
 along with the corresponding trajectory point index.
@@ -14568,92 +14584,7 @@ Higher values of this parameter will make it more likely to detect a collision a
 </tbody>
 </table>
 <h2 id="flow-diagram">Flow Diagram<a class="headerlink" href="#flow-diagram" title="Permanent link">#</a></h2>
-<pre class="mermaid"><code>%%{init: {
-    "flowchart": {
-        "defaultRenderer": "elk",
-        "wrappingWidth": "600"
-    }}
-}%%
-flowchart LR
-    subgraph Inputs
-        Trajectory[Ego Trajectory]
-        State[Ego State]
-        Info[Vehicle Info]
-        Map[Vector Map]
-    end
-    subgraph Module[Module data]
-        Parameters
-        tracker[Decision Tracker]
-    end
-
-
-    Trajectory -- ego poses along the trajectory--&gt; ego_footprint
-    Info -- footprint dimensions--&gt; ego_footprint
-    Map -- linestring and polygons --&gt; map_data --&gt; filter_objects
-
-    Trajectory -- predicted times when ego reaches each point --&gt; Collisions
-    filter_objects -- predicted path footprints --&gt; Collisions
-    ego_footprint --&gt; Collisions
-
-    Collisions --&gt; Decisions
-    %% filter_objects --&gt; Decisions
-    tracker &lt;-- to get and update the decision history of each object--&gt; Decisions
-
-    Decisions --&gt; Slowdowns
-    tracker -- to get the current decision for each object --&gt; Slowdowns
-    Trajectory -- to interpolate poses on the trajectory --&gt; Slowdowns
-    State -- to calculate nearest deceleration pose --&gt; Slowdowns
-
-
-    subgraph ego_footprint[Ego Footprint]
-        EgoFP[Calculate footprint] --&gt;
-        EgoRtree[Construct Rtree for efficient space queries]
-    end
-
-    subgraph map_data["Map filtering data"]
-        subgraph mad_data_for_each["(for each object class)"]
-            Segments[Segments to cut predicted paths]
-            Poly[Polygons where objects are ignored]
-        end
-    end
-
-    subgraph filter_objects[Filtered Objects]
-        subgraph filter["(for each object)"]
-            direction TB
-            classify[Classify Objects] --&gt; IgnoreObj[Ignore objects]
-            --&gt; ObjFP[Calculate footprints]
-            --&gt; IgnorePath[Filter predicted paths&lt;br/&gt;ignore or cut]
-        end
-    end
-
-    subgraph Collisions
-        subgraph CollForEachObj["(for each object)"]
-            direction TB
-            inter[Intersections between object and ego footprints]
-            --&gt; time_intervals[Overlap time intervals]
-            --&gt; Coll["Collision type (ego pass first with/without collision, collision, no collision)"]
-        end
-    end
-
-    subgraph Decisions
-        subgraph DecForEach["(for each collision / object)"]
-            direction TB
-            calcDecType["Calculate decision type (stop, slow, nothing)"]
-            --&gt; UpdateDec["Update decision towards the object (stop &gt; slowdown &gt; nothing)"]
-            --&gt; UpdateTracker["Update the decision tracker with the new decisions"]
-        end
-    end
-
-    subgraph Slowdowns
-        subgraph SlowForEach["(for each object)"]
-            direction LR
-            currDecision["Retrieve current decision"]
-            currDecision --&gt; calcStop["If stop decision: calculate stop pose"]
-            currDecision --&gt; calcSlow["If slowdown decision: calculate slowdown interval"]
-        end
-    end
-    classDef Title font-size:18pt;
-    class Inputs,filter_objects,Slowdowns,Decisions,Collisions,map_data,ego_footprint,Module Title;</code></pre></div>
+<p><img alt="Flow diagram" src="docs/flow_mermaid_diagram.svg"></p></div>
 
 
 
