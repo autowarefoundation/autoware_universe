@@ -123,10 +123,18 @@ void OverrunValidator::validate(
       .longitudinal_velocity_mps;
 
   const double v_vel = vehicle_vel_lpf.filter(kinematics.twist.twist.linear.x);
+  res.pred_dist_to_stop =
+    res.dist_to_stop - v_vel * assumed_delay_time - v_vel * v_vel / (2.0 * assumed_limit_acc);
 
   // NOTE: the same velocity threshold as autoware::motion_utils::searchZeroVelocity
-  res.has_overrun_stop_point = res.dist_to_stop < -overrun_stop_point_dist_th &&
-                               res.nearest_trajectory_vel < 1e-3 && v_vel > 1e-3;
+  if (v_vel < 1e-3) {
+    res.has_overrun_stop_point = false;
+    res.will_overrun_stop_point = false;
+    return;
+  }
+  res.has_overrun_stop_point =
+    res.dist_to_stop < -overrun_stop_point_dist_th && res.nearest_trajectory_vel < 1e-3;
+  res.will_overrun_stop_point = res.pred_dist_to_stop < -will_overrun_stop_point_dist_th;
 }
 
 ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)
@@ -227,6 +235,12 @@ void ControlValidator::setup_diag()
       stat, !validation_status_.has_overrun_stop_point,
       "The vehicle has overrun the front stop point on the trajectory.");
   });
+  d.add(ns + "will_overrun_stop_point", [&](auto & stat) {
+    set_status(
+      stat, !validation_status_.has_overrun_stop_point,
+      "In a few seconds ago, the vehicle will overrun the front stop point on the trajectory.");
+  });
+
   d.add(ns + "latency", [&](auto & stat) {
     set_status(
       stat, validation_status_.is_valid_latency, "The latency is larger than expected value.");
@@ -318,7 +332,7 @@ void ControlValidator::publish_debug_info(const geometry_msgs::msg::Pose & ego_p
 bool ControlValidator::is_all_valid(const ControlValidatorStatus & s)
 {
   return s.is_valid_max_distance_deviation && s.is_valid_acc && !s.is_rolling_back &&
-         !s.is_over_velocity && !s.has_overrun_stop_point;
+         !s.is_over_velocity && !s.has_overrun_stop_point && !s.will_overrun_stop_point;
 }
 
 void ControlValidator::display_status()
