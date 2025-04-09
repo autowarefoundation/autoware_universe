@@ -227,17 +227,10 @@ void ControlEvaluatorNode::AddBoundaryDistanceMetricMsg(
 void ControlEvaluatorNode::AddKinematicStateMetricMsg(
   const Odometry & odom, const AccelWithCovarianceStamped & accel_stamped)
 {
-  const std::string base_name = "kinematic_state/";
-  MetricMsg metric_msg;
+  AddMetricMsg(Metric::velocity, odom.twist.twist.linear.x);
 
-  metric_msg.name = base_name + "vel";
-  metric_msg.value = std::to_string(odom.twist.twist.linear.x);
-  metrics_msg_.metric_array.push_back(metric_msg);
-
-  metric_msg.name = base_name + "acc";
   const auto & acc = accel_stamped.accel.accel.linear.x;
-  metric_msg.value = std::to_string(acc);
-  metrics_msg_.metric_array.push_back(metric_msg);
+  AddMetricMsg(Metric::acceleration, acc);
 
   const auto jerk = [&]() {
     if (!prev_acc_stamped_.has_value()) {
@@ -255,11 +248,7 @@ void ControlEvaluatorNode::AddKinematicStateMetricMsg(
     prev_acc_stamped_ = accel_stamped;
     return (acc - prev_acc) / dt;
   }();
-
-  metric_msg.name = base_name + "jerk";
-  metric_msg.value = std::to_string(jerk);
-  metrics_msg_.metric_array.push_back(metric_msg);
-  return;
+  AddMetricMsg(Metric::jerk, jerk);
 }
 
 void ControlEvaluatorNode::AddSteeringMetricMsg(const SteeringReport & steering_status)
