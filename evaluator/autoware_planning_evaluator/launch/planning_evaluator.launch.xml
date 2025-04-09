@@ -9,6 +9,8 @@
   <arg name="input/modified_goal" default="/planning/scenario_planning/modified_goal"/>
   <arg name="input/map_topic" default="/map/vector_map"/>
   <arg name="input/route_topic" default="/planning/mission_planning/route"/>
+  <arg name="input/turn_indicators_status" default="/vehicle/status/turn_indicators_status"/>
+  <arg name="input/steering_status" default="/vehicle/status/steering_status"/>
 
   <!-- planning evaluator -->
   <group>
@@ -23,6 +25,8 @@
       <remap from="~/input/modified_goal" to="$(var input/modified_goal)"/>
       <remap from="~/input/route" to="$(var input/route_topic)"/>
       <remap from="~/input/vector_map" to="$(var input/map_topic)"/>
+      <remap from="~/input/turn_indicators_status" to="$(var input/turn_indicators_status)"/>
+      <remap from="~/input/steering_status" to="$(var input/steering_status)"/>
     </node>
   </group>
 </launch>

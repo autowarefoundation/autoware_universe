@@ -327,7 +327,8 @@ void PlanningValidator::publishTrajectory()
   if (handling_type == InvalidTrajectoryHandlingType::PUBLISH_AS_IT_IS) {
     pub_traj_->publish(*current_trajectory_);
     published_time_publisher_->publish_if_subscribed(pub_traj_, current_trajectory_->header.stamp);
-    RCLCPP_ERROR(get_logger(), "Caution! Invalid Trajectory published.");
+    RCLCPP_ERROR_THROTTLE(
+      get_logger(), *get_clock(), 3000, "Caution! Invalid Trajectory published.");
     return;
   }
 
@@ -356,8 +357,8 @@ void PlanningValidator::publishTrajectory()
   }
 
   // trajectory is not published.
-  RCLCPP_ERROR(
-    get_logger(),
+  RCLCPP_ERROR_THROTTLE(
+    get_logger(), *get_clock(), 3000,
     "Invalid Trajectory detected, no valid trajectory found in the past. Trajectory is not "
     "published.");
   return;
@@ -393,7 +394,7 @@ void PlanningValidator::validate(
   auto & s = validation_status_;
 
   const auto terminateValidation = [&](const auto & ss) {
-    RCLCPP_ERROR_STREAM(get_logger(), ss);
+    RCLCPP_ERROR_STREAM_THROTTLE(get_logger(), *get_clock(), 3000, ss);
     s.invalid_count += 1;
   };
 
@@ -649,7 +650,9 @@ bool PlanningValidator::checkValidLongitudinalDistanceDeviation(const Trajectory
   }
 
   if (trajectory.points.size() < 2) {
-    RCLCPP_ERROR(get_logger(), "Trajectory size is invalid to calculate distance deviation.");
+    RCLCPP_ERROR_THROTTLE(
+      get_logger(), *get_clock(), 3000,
+      "Trajectory size is invalid to calculate distance deviation.");
     return false;
   }
 
@@ -847,7 +850,7 @@ void PlanningValidator::displayStatus()
 
   const auto warn = [this](const bool status, const std::string & msg) {
     if (!status) {
-      RCLCPP_WARN(get_logger(), "%s", msg.c_str());
+      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 3000, "%s", msg.c_str());
     }
   };
 
