@@ -116,6 +116,7 @@ void StartPlannerModuleManager::updateModuleParams(
     update_param<double>(
       parameters, ns + "maximum_longitudinal_deviation", p->maximum_longitudinal_deviation);
     update_param<bool>(parameters, ns + "enable_geometric_pull_out", p->enable_geometric_pull_out);
+    update_param<bool>(parameters, ns + "enable_clothoid_pull_out", p->enable_clothoid_pull_out);
     update_param<bool>(parameters, ns + "divide_pull_out_path", p->divide_pull_out_path);
     update_param<double>(
       parameters, ns + "arc_path_interval",
@@ -129,32 +130,37 @@ void StartPlannerModuleManager::updateModuleParams(
     update_param<double>(
       parameters, ns + "geometric_pull_out_max_steer_angle_margin_scale",
       p->parallel_parking_parameters.geometric_pull_out_max_steer_angle_margin_scale);
-    update_param<bool>(parameters, ns + "enable_back", p->enable_back);
-    update_param<double>(parameters, ns + "backward_velocity", p->backward_velocity);
-    update_param<double>(
-      parameters, ns + "geometric_pull_out_velocity",
-      p->parallel_parking_parameters.pull_out_velocity);
-    update_param<double>(
-      parameters, ns + "geometric_collision_check_distance_from_end",
-      p->geometric_collision_check_distance_from_end);
-    update_param<bool>(
-      parameters, ns + "check_shift_path_lane_departure", p->check_shift_path_lane_departure);
-    update_param<bool>(
-      parameters, ns + "allow_check_shift_path_lane_departure_override",
-      p->allow_check_shift_path_lane_departure_override);
-    update_param<std::string>(parameters, ns + "search_priority", p->search_priority);
-    update_param<double>(parameters, ns + "max_back_distance", p->max_back_distance);
-    update_param<double>(
-      parameters, ns + "backward_search_resolution", p->backward_search_resolution);
-    update_param<double>(
-      parameters, ns + "backward_path_update_duration", p->backward_path_update_duration);
-    update_param<double>(
-      parameters, ns + "ignore_distance_from_lane_end", p->ignore_distance_from_lane_end);
-    update_param<double>(
-      parameters, ns + "stop_condition.maximum_deceleration_for_stop",
-      p->maximum_deceleration_for_stop);
-    update_param<double>(
-      parameters, ns + "stop_condition.maximum_jerk_for_stop", p->maximum_jerk_for_stop);
+      parameters, ns + "pull_out_max_steer_angle",
+      p->parallel_parking_parameters.pull_out_max_steer_angle);
+      update_param<double>(
+        parameters, ns + "pull_out_steer_rate_lim",
+        p->parallel_parking_parameters.pull_out_steer_rate_lim);
+      update_param<bool>(parameters, ns + "enable_back", p->enable_back);
+      update_param<double>(parameters, ns + "backward_velocity", p->backward_velocity);
+      update_param<double>(
+        parameters, ns + "geometric_pull_out_velocity",
+        p->parallel_parking_parameters.pull_out_velocity);
+      update_param<double>(
+        parameters, ns + "geometric_collision_check_distance_from_end",
+        p->geometric_collision_check_distance_from_end);
+      update_param<bool>(
+        parameters, ns + "check_shift_path_lane_departure", p->check_shift_path_lane_departure);
+      update_param<bool>(
+        parameters, ns + "allow_check_shift_path_lane_departure_override",
+        p->allow_check_shift_path_lane_departure_override);
+      update_param<std::string>(parameters, ns + "search_priority", p->search_priority);
+      update_param<double>(parameters, ns + "max_back_distance", p->max_back_distance);
+      update_param<double>(
+        parameters, ns + "backward_search_resolution", p->backward_search_resolution);
+      update_param<double>(
+        parameters, ns + "backward_path_update_duration", p->backward_path_update_duration);
+      update_param<double>(
+        parameters, ns + "ignore_distance_from_lane_end", p->ignore_distance_from_lane_end);
+      update_param<double>(
+        parameters, ns + "stop_condition.maximum_deceleration_for_stop",
+        p->maximum_deceleration_for_stop);
+      update_param<double>(
+        parameters, ns + "stop_condition.maximum_jerk_for_stop", p->maximum_jerk_for_stop);
   }
   {
     const std::string ns = "start_planner.freespace_planner.";
