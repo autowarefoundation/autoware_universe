@@ -31,10 +31,13 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/synchronizer.h>
 
+#include <map>
 #include <memory>
+#include <vector>
 
 namespace autoware::traffic_light
 {
+using sensor_msgs::msg::RegionOfInterest;
 using tier4_perception_msgs::msg::DetectedObjectsWithFeature;
 using tier4_perception_msgs::msg::DetectedObjectWithFeature;
 using tier4_perception_msgs::msg::TrafficLightRoi;
@@ -57,19 +60,23 @@ private:
     SyncPolicy;
   typedef message_filters::Synchronizer<SyncPolicy> Sync;
   Sync sync_;
+
+  // Publisher
+  rclcpp::Publisher<TrafficLightRoiArray>::SharedPtr pub_traffic_light_rois_;
+  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
+  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
+
   void objectsCallback(
     const DetectedObjectsWithFeature::ConstSharedPtr & detected_rois_msg,
     const TrafficLightRoiArray::ConstSharedPtr & rough_rois_msg,
     const TrafficLightRoiArray::ConstSharedPtr & expect_rois_msg,
     const sensor_msgs::msg::CameraInfo::ConstSharedPtr & camera_info_msg);
 
-  // Publisher
-  rclcpp::Publisher<TrafficLightRoiArray>::SharedPtr pub_traffic_light_rois_;
-
-  double max_iou_threshold_;
-
-  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
-  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
+  void evaluateWholeRois(
+    const std::vector<RegionOfInterest> & detected_rois,
+    const std::map<uint8_t, RegionOfInterest> & expect_rois_shifted_map,
+    double & total_max_iou,
+    std::map<uint8_t, RegionOfInterest> & total_max_iou_rois_map);
 };
 
 }  // namespace autoware::traffic_light
