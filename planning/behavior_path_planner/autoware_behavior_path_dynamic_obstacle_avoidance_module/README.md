@@ -8,16 +8,14 @@ This module provides avoidance functions for vehicles, pedestrians, and obstacle
 The Dynamic Avoidance module adjusts the drivable area based on the position and velocity of the target to be avoided.
 The Obstacle Avoidance module modifies the path so that it stays within the received drivable area.
 
-
 Avoidance of static obstacles is handled by the [Static Avoidance module](https://autowarefoundation.github.io/autoware_universe/main/planning/behavior_path_planner/autoware_behavior_path_static_obstacle_avoidance_module/), but its role is different.
 The Static Avoidance module generates paths that avoid static obstacles by changing lanes. It does not handle moving objects.
 The table below shows which modules are used for each case:
 
-
-|                          |                         Avoid within ego lane                          | Avoid by deviating from lane |
-| :----------------------- | :------------------------------------------------------------------------: | :------------------------------------: |
-| Static (not-moving) objects | Avoidance Module <br> Dynamic Avoidance Module + Obstacle Avoidance Module |            Static Avoidance Module            |
-| Moving objects     |            Dynamic Avoidance Module + Obstacle Avoidance Module            |     (Module under development)      |
+|                             |                           Avoid within ego lane                            | Avoid by deviating from lane |
+| :-------------------------- | :------------------------------------------------------------------------: | :--------------------------: |
+| Static (not-moving) objects | Avoidance Module <br> Dynamic Avoidance Module + Obstacle Avoidance Module |   Static Avoidance Module    |
+| Moving objects              |            Dynamic Avoidance Module + Obstacle Avoidance Module            |  (Module under development)  |
 
 ## Inner workings/Algorithms
 
