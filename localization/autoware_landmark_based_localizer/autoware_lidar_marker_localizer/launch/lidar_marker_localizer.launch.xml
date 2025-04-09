@@ -1,5 +1,5 @@
 <launch>
-  <arg name="param_file" default="$(find-pkg-share lidar_marker_localizer)/config/lidar_marker_localizer.param.yaml"/>
+  <arg name="param_file" default="$(find-pkg-share autoware_lidar_marker_localizer)/config/lidar_marker_localizer.param.yaml"/>
 
   <!-- Topic names -->
   <arg name="input_lanelet2_map" default="~/input/lanelet2_map"/>

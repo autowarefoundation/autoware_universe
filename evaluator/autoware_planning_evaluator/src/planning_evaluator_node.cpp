@@ -14,6 +14,9 @@
 
 #include "autoware/planning_evaluator/planning_evaluator_node.hpp"
 
+#include "autoware/planning_evaluator/metrics/metric.hpp"
+#include "autoware/planning_evaluator/metrics/output_metric.hpp"
+
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <nlohmann/json.hpp>
@@ -29,6 +32,7 @@
 #include <limits>
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace planning_diagnostics
@@ -37,6 +41,7 @@ PlanningEvaluatorNode::PlanningEvaluatorNode(const rclcpp::NodeOptions & node_op
 : Node("planning_evaluator", node_options),
   vehicle_info_(autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo())
 {
+  // ros2
   using std::placeholders::_1;
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   transform_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
@@ -45,7 +50,8 @@ PlanningEvaluatorNode::PlanningEvaluatorNode(const rclcpp::NodeOptions & node_op
   using namespace std::literals::chrono_literals;
   timer_ = rclcpp::create_timer(
     this, get_clock(), 100ms, std::bind(&PlanningEvaluatorNode::onTimer, this));
-  // Parameters
+
+  // Parameters for metrics_calculator
   metrics_calculator_.parameters.trajectory.min_point_dist_m =
     declare_parameter<double>("trajectory.min_point_dist_m");
   metrics_calculator_.parameters.trajectory.lookahead.max_dist_m =
@@ -57,19 +63,57 @@ PlanningEvaluatorNode::PlanningEvaluatorNode(const rclcpp::NodeOptions & node_op
   metrics_calculator_.parameters.obstacle.dist_thr_m =
     declare_parameter<double>("obstacle.dist_thr_m");
 
+  // Parameters for metrics_accumulator
+  metrics_accumulator_.planning_factor_accumulator.parameters.time_count_threshold_s =
+    declare_parameter<double>("stop_decision.time_count_threshold_s");
+  metrics_accumulator_.planning_factor_accumulator.parameters.dist_count_threshold_m =
+    declare_parameter<double>("stop_decision.dist_count_threshold_m");
+  metrics_accumulator_.planning_factor_accumulator.parameters.abnormal_deceleration_threshold_mps2 =
+    declare_parameter<double>("stop_decision.abnormal_deceleration_threshold_mps2");
+
+  metrics_accumulator_.steer_accumulator.parameters.window_duration_s =
+    declare_parameter<double>("steer_change_count.window_duration_s");
+  metrics_accumulator_.steer_accumulator.parameters.steer_rate_margin =
+    declare_parameter<double>("steer_change_count.steer_rate_margin");
+
+  metrics_accumulator_.blinker_accumulator.parameters.window_duration_s =
+    declare_parameter<double>("blinker_change_count.window_duration_s");
+
+  // Parameters for node
   output_metrics_ = declare_parameter<bool>("output_metrics");
   ego_frame_str_ = declare_parameter<std::string>("ego_frame");
 
+  // List of metrics to publish and to output
+
+  for (const std::string & metric_name :
+       declare_parameter<std::vector<std::string>>("metrics_for_publish")) {
+    Metric metric = str_to_metric.at(metric_name);
+    metrics_for_publish_.insert(metric);
+  }
+
+  for (const std::string & metric_name :
+       declare_parameter<std::vector<std::string>>("metrics_for_output")) {
+    OutputMetric output_metric = str_to_output_metric.at(metric_name);
+    metrics_for_output_.insert(output_metric);
+  }
+
+  // Subscribers of planning_factors for stop decision
+  std::vector<std::string> stop_decision_modules_list =
+    declare_parameter<std::vector<std::string>>("stop_decision.module_list");
+  stop_decision_modules_ = std::unordered_set<std::string>(
+    stop_decision_modules_list.begin(), stop_decision_modules_list.end());
+
+  const std::string topic_prefix = declare_parameter<std::string>("stop_decision.topic_prefix");
+  for (const auto & module_name : stop_decision_modules_) {
+    planning_factors_sub_.emplace(
+      module_name, autoware_utils::InterProcessPollingSubscriber<PlanningFactorArray>(
+                     this, topic_prefix + module_name));
+  }
+
+  // Publisher
+  metrics_pub_ = create_publisher<MetricArrayMsg>("~/metrics", 1);
   processing_time_pub_ = this->create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "~/debug/processing_time_ms", 1);
-
-  // List of metrics to calculate and publish
-  metrics_pub_ = create_publisher<MetricArrayMsg>("~/metrics", 1);
-  for (const std::string & selected_metric :
-       declare_parameter<std::vector<std::string>>("selected_metrics")) {
-    Metric metric = str_to_metric.at(selected_metric);
-    metrics_.push_back(metric);
-  }
 }
 
 PlanningEvaluatorNode::~PlanningEvaluatorNode()
@@ -81,14 +125,12 @@ PlanningEvaluatorNode::~PlanningEvaluatorNode()
   try {
     // generate json data
     using json = nlohmann::json;
-    json j;
-    for (Metric metric : metrics_) {
-      const std::string base_name = metric_to_str.at(metric) + "/";
-      j[base_name + "min"] = metric_accumulators_[static_cast<size_t>(metric)][0].min();
-      j[base_name + "max"] = metric_accumulators_[static_cast<size_t>(metric)][1].max();
-      j[base_name + "mean"] = metric_accumulators_[static_cast<size_t>(metric)][2].mean();
-      j[base_name + "count"] = metric_accumulators_[static_cast<size_t>(metric)][2].count();
-      j[base_name + "description"] = metric_descriptions.at(metric);
+    json output_json;
+    for (OutputMetric metric : metrics_for_output_) {
+      const json j = metrics_accumulator_.getOutputJson(metric);
+      if (!j.empty()) {
+        output_json[output_metric_to_str.at(metric)] = j;
+      }
     }
 
     // get output folder
@@ -114,7 +156,7 @@ PlanningEvaluatorNode::~PlanningEvaluatorNode()
       output_folder_str + "/autoware_planning_evaluator-" + cur_time_str + ".json";
     std::ofstream f(output_file_str);
     if (f.is_open()) {
-      f << j.dump(4);
+      f << output_json.dump(4);
       f.close();
     } else {
       RCLCPP_ERROR(this->get_logger(), "Failed to open file: %s", output_file_str.c_str());
@@ -276,7 +318,20 @@ void PlanningEvaluatorNode::onTimer()
     const auto modified_goal_msg = modified_goal_sub_.take_data();
     onModifiedGoal(modified_goal_msg, ego_state_ptr);
   }
-
+  {
+    const auto steering_msg = steering_sub_.take_data();
+    onSteering(steering_msg);
+  }
+  {
+    const auto blinker_msg = blinker_sub_.take_data();
+    onBlinker(blinker_msg);
+  }
+  {
+    for (auto & [module_name, planning_factor_sub_] : planning_factors_sub_) {
+      const auto planning_factors = planning_factor_sub_.take_data();
+      onPlanningFactors(planning_factors, module_name);
+    }
+  }
   // Publish metrics
   metrics_msg_.stamp = now();
   metrics_pub_->publish(metrics_msg_);
@@ -298,21 +353,16 @@ void PlanningEvaluatorNode::onTrajectory(
 
   auto start = now();
 
-  for (Metric metric : metrics_) {
+  for (Metric metric : metrics_for_publish_) {
     const auto metric_stat =
       metrics_calculator_.calculate(Metric(metric), *traj_msg, vehicle_info_.vehicle_length_m);
-    if (!metric_stat) {
+    if (!metric_stat || metric_stat->count() <= 0) {
       continue;
     }
-
+    AddMetricMsg(metric, *metric_stat);
     if (output_metrics_) {
-      metric_accumulators_[static_cast<size_t>(metric)][0].add(metric_stat->min());
-      metric_accumulators_[static_cast<size_t>(metric)][1].add(metric_stat->max());
-      metric_accumulators_[static_cast<size_t>(metric)][2].add(metric_stat->mean());
-    }
-
-    if (metric_stat->count() > 0) {
-      AddMetricMsg(metric, *metric_stat);
+      const OutputMetric output_metric = str_to_output_metric.at(metric_to_str.at(metric));
+      metrics_accumulator_.accumulate(output_metric, *metric_stat);
     }
   }
 
@@ -330,19 +380,16 @@ void PlanningEvaluatorNode::onModifiedGoal(
   }
   auto start = now();
 
-  for (Metric metric : metrics_) {
+  for (Metric metric : metrics_for_publish_) {
     const auto metric_stat = metrics_calculator_.calculate(
       Metric(metric), modified_goal_msg->pose, ego_state_ptr->pose.pose);
-    if (!metric_stat) {
+    if (!metric_stat || metric_stat->count() <= 0) {
       continue;
     }
+    AddMetricMsg(metric, *metric_stat);
     if (output_metrics_) {
-      metric_accumulators_[static_cast<size_t>(metric)][0].add(metric_stat->min());
-      metric_accumulators_[static_cast<size_t>(metric)][1].add(metric_stat->max());
-      metric_accumulators_[static_cast<size_t>(metric)][2].add(metric_stat->mean());
-    }
-    if (metric_stat->count() > 0) {
-      AddMetricMsg(metric, *metric_stat);
+      const OutputMetric output_metric = str_to_output_metric.at(metric_to_str.at(metric));
+      metrics_accumulator_.accumulate(output_metric, *metric_stat);
     }
   }
   auto runtime = (now() - start).seconds();
@@ -355,6 +402,7 @@ void PlanningEvaluatorNode::onOdometry(const Odometry::ConstSharedPtr odometry_m
 {
   if (!odometry_msg) return;
   metrics_calculator_.setEgoPose(*odometry_msg);
+  metrics_accumulator_.setEgoPose(*odometry_msg);
   {
     getRouteData();
     if (route_handler_.isHandlerReady() && odometry_msg) {
@@ -382,6 +430,44 @@ void PlanningEvaluatorNode::onObjects(const PredictedObjects::ConstSharedPtr obj
     return;
   }
   metrics_calculator_.setPredictedObjects(*objects_msg);
+}
+
+void PlanningEvaluatorNode::onSteering(const SteeringReport::ConstSharedPtr steering_msg)
+{
+  if (!steering_msg) {
+    return;
+  }
+  metrics_accumulator_.setSteerData(*steering_msg);
+  if (metrics_for_publish_.count(Metric::steer_change_count) != 0) {
+    metrics_accumulator_.addMetricMsg(Metric::steer_change_count, metrics_msg_);
+  }
+}
+
+void PlanningEvaluatorNode::onBlinker(const TurnIndicatorsReport::ConstSharedPtr blinker_msg)
+{
+  if (!blinker_msg) {
+    return;
+  }
+  metrics_accumulator_.setBlinkerData(*blinker_msg);
+  if (metrics_for_publish_.count(Metric::blinker_change_count) != 0) {
+    metrics_accumulator_.addMetricMsg(Metric::blinker_change_count, metrics_msg_);
+  }
+}
+
+void PlanningEvaluatorNode::onPlanningFactors(
+  const PlanningFactorArray::ConstSharedPtr planning_factors, const std::string & module_name)
+{
+  if (!planning_factors || planning_factors->factors.empty()) {
+    return;
+  }
+  metrics_accumulator_.setPlanningFactors(module_name, *planning_factors);
+
+  if (metrics_for_publish_.count(Metric::stop_decision) != 0) {
+    metrics_accumulator_.addMetricMsg(Metric::stop_decision, metrics_msg_, module_name);
+  }
+  if (metrics_for_publish_.count(Metric::abnormal_stop_decision) != 0) {
+    metrics_accumulator_.addMetricMsg(Metric::abnormal_stop_decision, metrics_msg_, module_name);
+  }
 }
 
 bool PlanningEvaluatorNode::isFinite(const TrajectoryPoint & point)
