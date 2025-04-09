@@ -17,7 +17,6 @@
 #include "autoware/behavior_path_bidirectional_traffic_module/parameter.hpp"
 #include "autoware/behavior_path_bidirectional_traffic_module/utils.hpp"
 #include "autoware/trajectory/path_point_with_lane_id.hpp"
-#include "autoware/trajectory/utils/frenet_utils.hpp"
 #include "autoware/universe_utils/geometry/boost_geometry.hpp"
 #include "autoware/universe_utils/geometry/boost_polygon_utils.hpp"
 #include "autoware_utils/system/lru_cache.hpp"
@@ -38,6 +37,7 @@
 
 #include <algorithm>
 #include <list>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <unordered_set>
@@ -50,6 +50,14 @@ namespace autoware::behavior_path_planner
 bool is_bidirectional_lanelets_pair(
   const lanelet::ConstLanelet & lanelet_a, const lanelet::ConstLanelet & lanelet_b)
 {
+  std::string_view turn_direction_a = lanelet_a.attributeOr("turn_direction", "none");
+  if (turn_direction_a == "right" || turn_direction_a == "left") {
+    return false;
+  }
+  std::string_view turn_direction_b = lanelet_b.attributeOr("turn_direction", "none");
+  if (turn_direction_b == "right" || turn_direction_b == "left") {
+    return false;
+  }
   return (lanelet_a.leftBound().id() == lanelet_b.rightBound().id()) &&
          (lanelet_a.rightBound().id() == lanelet_b.leftBound().id());
 }
@@ -316,55 +324,6 @@ ConnectedBidirectionalLanelets::get_center_line() const
   auto result = static_cast<double>(area_sum / length_sum);
   cache.put(bidirectional_lanelets_, result);
   return result;
-}
-
-[[nodiscard]] std::pair<bool, std::vector<geometry_msgs::msg::Pose>>
-ConnectedBidirectionalLanelets::check_if_is_possible_to_stop_and_suggest_alternative_stop_poses(
-  const geometry_msgs::msg::Pose & stopping_pose, const EgoParameters & ego_params) const
-{
-  for (const auto & lane : get_intersection_lanelets()) {
-    if (!boost::geometry::disjoint(
-          ego_params.ego_polygon(stopping_pose), lane.polygon2d().basicPolygon())) {
-      auto center_line = get_center_line();
-      auto ego_frenet = trajectory::compute_frenet_coordinate(center_line, stopping_pose);
-      if (!ego_frenet) {
-        return {false, {}};
-      }
-
-      std::vector<geometry_msgs::msg::Pose> alternative_stop_poses;
-
-      geometry_msgs::msg::Pose intersection_start_point;
-      intersection_start_point.position.x = lane.centerline2d().front().x();
-      intersection_start_point.position.y = lane.centerline2d().front().y();
-
-      auto intersection_start_point_frenet =
-        trajectory::compute_frenet_coordinate(center_line, intersection_start_point);
-
-      if (intersection_start_point_frenet) {
-        geometry_msgs::msg::Pose pose = stopping_pose;
-        pose.position.x = intersection_start_point.position.x;
-        pose.position.y = intersection_start_point.position.y;
-        alternative_stop_poses.emplace_back(pose);
-      }
-
-      geometry_msgs::msg::Pose intersection_end_point;
-      intersection_end_point.position.x = lane.centerline2d().back().x();
-      intersection_end_point.position.y = lane.centerline2d().back().y();
-
-      auto intersection_end_point_frenet =
-        trajectory::compute_frenet_coordinate(center_line, intersection_end_point);
-
-      if (intersection_end_point_frenet) {
-        geometry_msgs::msg::Pose pose = stopping_pose;
-        pose.position.x = intersection_end_point.position.x;
-        pose.position.y = intersection_end_point.position.y;
-        alternative_stop_poses.emplace_back(pose);
-      }
-
-      return {false, alternative_stop_poses};
-    }
-  }
-  return {true, {stopping_pose}};
 }
 
 std::optional<ConnectedBidirectionalLanelets::SharedConstPtr>

@@ -6,6 +6,7 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
+// Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
@@ -24,6 +25,7 @@
 #include <cstddef>
 #include <functional>
 #include <map>
+#include <set>
 #include <string_view>
 #include <vector>
 
@@ -65,7 +67,7 @@ class OncomingCars
 {
 private:
   std::vector<CarObject> oncoming_cars_;
-    std::map<size_t, rclcpp::Time> oncoming_cars_candidates_;
+  std::map<size_t, rclcpp::Time> oncoming_cars_candidates_;
 
   ConnectedBidirectionalLanelets::SharedConstPtr bidirectional_lanelets_;
 
@@ -86,7 +88,7 @@ public:
     const autoware_perception_msgs::msg::PredictedObjects & predicted_objects,
     const geometry_msgs::msg::Pose & ego_pose, const rclcpp::Time & time);
 
-    [[nodiscard]] const std::vector<CarObject> & get_oncoming_cars() const;
+  [[nodiscard]] const std::vector<CarObject> & get_oncoming_cars() const;
 
   [[nodiscard]] std::optional<CarObject> get_front_oncoming_car() const;
 

@@ -24,6 +24,8 @@
 #include <fmt/core.h>
 
 #include <algorithm>
+#include <limits>
+#include <map>
 #include <utility>
 #include <vector>
 
@@ -182,9 +184,8 @@ void OncomingCars::update(
       }
     }
     if (running_opposite_lane && find_in_candidates && !find_in_oncoming_cars) {
-      if (
-        time - oncoming_cars_candidates_[object_key] >
-        rclcpp::Duration::from_seconds(time_to_include_in_oncoming_car_)) {
+      const double elapsed_time = (time - oncoming_cars_candidates_[object_key]).seconds();
+      if (elapsed_time > time_to_include_in_oncoming_car_) {
         oncoming_cars_.emplace_back(
           object.kinematics.initial_pose_with_covariance.pose,
           object.kinematics.initial_twist_with_covariance.twist.linear.x, object.object_id,

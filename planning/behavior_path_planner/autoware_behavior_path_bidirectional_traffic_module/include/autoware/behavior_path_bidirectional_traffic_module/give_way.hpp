@@ -21,7 +21,6 @@
 #include "autoware/trajectory/path_point_with_lane_id.hpp"
 
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
-#include <geometry_msgs/msg/detail/pose__struct.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 
 #include <cmath>
@@ -33,7 +32,6 @@
 
 namespace autoware::behavior_path_planner
 {
-
 class GiveWay;
 class GiveWayState
 {
