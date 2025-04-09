@@ -14,6 +14,10 @@
 
 // cspell:ignore BEVDET, thre, TRTBEV, bevdet, caminfo, intrin, Ncams, bevfeat, dlongterm
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "autoware/tensorrt_bevdet/bevdet_node.hpp"
 
 namespace autoware

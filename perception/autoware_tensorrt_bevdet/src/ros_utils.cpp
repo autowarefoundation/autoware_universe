@@ -14,6 +14,9 @@
 
 // cspell:ignore bevdet, RGBHWC, BGRCHW
 
+#include <string>
+#include <vector>
+
 #include "autoware/tensorrt_bevdet/ros_utils.hpp"
 
 #include <autoware_perception_msgs/msg/detected_object_kinematics.hpp>
