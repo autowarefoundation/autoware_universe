@@ -74,8 +74,7 @@ private:
 
   void evaluateWholeRois(
     const std::vector<RegionOfInterest> & detected_rois,
-    const std::map<uint8_t, RegionOfInterest> & expect_rois_shifted_map,
-    double & total_max_iou,
+    const std::map<uint8_t, RegionOfInterest> & expect_rois_shifted_map, double & total_max_iou,
     std::map<uint8_t, RegionOfInterest> & total_max_iou_rois_map);
 };
 

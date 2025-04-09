@@ -90,8 +90,8 @@ void TrafficLightSelectorNode::objectsCallback(
 
       std::map<uint8_t, RegionOfInterest> expect_rois_shifted_map;
       for (const auto & expected_rois_msg_rois : expected_rois_msg->rois) {
-        const auto expect_roi_shifted =
-          utils::getShiftedRoi(expected_rois_msg_rois.roi, image_width, image_height, shift_x, shift_y);
+        const auto expect_roi_shifted = utils::getShiftedRoi(
+          expected_rois_msg_rois.roi, image_width, image_height, shift_x, shift_y);
         expect_rois_shifted_map[expected_rois_msg_rois.traffic_light_id] = expect_roi_shifted;
       }
 
@@ -148,8 +148,7 @@ void TrafficLightSelectorNode::objectsCallback(
 
 void TrafficLightSelectorNode::evaluateWholeRois(
   const std::vector<RegionOfInterest> & detected_rois,
-  const std::map<uint8_t, RegionOfInterest> & expect_rois_shifted_map,
-  double & total_max_iou,
+  const std::map<uint8_t, RegionOfInterest> & expect_rois_shifted_map, double & total_max_iou,
   std::map<uint8_t, RegionOfInterest> & total_max_iou_rois_map)
 {
   for (const auto & expect_roi_shifted : expect_rois_shifted_map) {
