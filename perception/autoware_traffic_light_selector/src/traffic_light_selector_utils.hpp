@@ -27,9 +27,13 @@ using sensor_msgs::msg::RegionOfInterest;
 
 bool isInsideRoughRoi(const RegionOfInterest & detected_roi, const RegionOfInterest & rough_roi);
 
+void computeCenterOffset(
+  const RegionOfInterest & source, const RegionOfInterest & target, int32_t & shift_x,
+  int32_t & shift_y);
+
 RegionOfInterest getShiftedRoi(
-  const RegionOfInterest & source, const RegionOfInterest & target, const uint32_t & image_width,
-  const uint32_t & image_height, int32_t & shift_x, int32_t & shift_y);
+  const RegionOfInterest & source, const uint32_t & image_width, const uint32_t & image_height,
+  const int32_t & shift_x, const int32_t & shift_y);
 
 double getIoU(const RegionOfInterest & bbox1, const RegionOfInterest & bbox2);
 

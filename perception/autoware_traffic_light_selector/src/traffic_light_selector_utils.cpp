@@ -44,23 +44,28 @@ bool isInsideRoughRoi(const RegionOfInterest & detected_roi, const RegionOfInter
   return true;
 }
 
-RegionOfInterest getShiftedRoi(
-  const RegionOfInterest & source, const RegionOfInterest & target, const uint32_t & image_width,
-  const uint32_t & image_height, int32_t & shift_x, int32_t & shift_y)
+void computeCenterOffset(
+  const RegionOfInterest & source, const RegionOfInterest & target, int32_t & shift_x,
+  int32_t & shift_y)
 {
-  RegionOfInterest shifted_ROI = source;
   const auto source_roi_center_x = static_cast<int32_t>(source.x_offset + source.width / 2);
   const auto source_roi_center_y = static_cast<int32_t>(source.y_offset + source.height / 2);
   const auto target_roi_center_x = static_cast<int32_t>(target.x_offset + target.width / 2);
   const auto target_roi_center_y = static_cast<int32_t>(target.y_offset + target.height / 2);
   shift_x = source_roi_center_x - target_roi_center_x;
   shift_y = source_roi_center_y - target_roi_center_y;
+}
 
-  const auto x_offset = static_cast<int32_t>(shifted_ROI.x_offset) - shift_x;
-  const auto y_offset = static_cast<int32_t>(shifted_ROI.y_offset) - shift_y;
+RegionOfInterest getShiftedRoi(
+  const RegionOfInterest & image, const uint32_t & image_width, const uint32_t & image_height,
+  const int32_t & shift_x, const int32_t & shift_y)
+{
+  RegionOfInterest shifted_ROI = image;
+  const auto x_offset = static_cast<int32_t>(image.x_offset) + shift_x;
+  const auto y_offset = static_cast<int32_t>(image.y_offset) + shift_y;
   if (
-    x_offset < 0 || y_offset < 0 || x_offset + source.width > image_width ||
-    y_offset + source.height > image_height) {
+    x_offset < 0 || y_offset < 0 || x_offset + image.width > image_width ||
+    y_offset + image.height > image_height) {
     shifted_ROI.x_offset = 0;
     shifted_ROI.y_offset = 0;
     shifted_ROI.width = 0;
