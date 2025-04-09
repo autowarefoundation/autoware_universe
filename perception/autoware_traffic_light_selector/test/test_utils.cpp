@@ -70,6 +70,66 @@ TEST(isInsideRoughRoi, outside)
   EXPECT_FALSE(is_inside);
 }
 
+TEST(computeCenterOffset, normal)
+{
+  sensor_msgs::msg::RegionOfInterest source;
+  source.x_offset = 40;
+  source.y_offset = 35;
+  source.width = 10;
+  source.height = 10;
+
+  sensor_msgs::msg::RegionOfInterest target;
+  target.x_offset = 20;
+  target.y_offset = 5;
+  target.width = 30;
+  target.height = 20;
+
+  int32_t shift_x, shift_y;
+  autoware::traffic_light::utils::computeCenterOffset(source, target, shift_x, shift_y);
+  EXPECT_EQ(shift_x, 10);
+  EXPECT_EQ(shift_y, 25);
+}
+
+TEST(computeCenterOffset, same)
+{
+  sensor_msgs::msg::RegionOfInterest source;
+  source.x_offset = 0;
+  source.y_offset = 0;
+  source.width = 10;
+  source.height = 10;
+
+  sensor_msgs::msg::RegionOfInterest target;
+  target.x_offset = 0;
+  target.y_offset = 0;
+  target.width = 10;
+  target.height = 10;
+
+  int32_t shift_x, shift_y;
+  autoware::traffic_light::utils::computeCenterOffset(source, target, shift_x, shift_y);
+  EXPECT_EQ(shift_x, 0);
+  EXPECT_EQ(shift_y, 0);
+}
+
+TEST(computeCenterOffset, out_of_natural_range)
+{
+  sensor_msgs::msg::RegionOfInterest source;
+  source.x_offset = 5;
+  source.y_offset = 10;
+  source.width = 10;
+  source.height = 10;
+
+  sensor_msgs::msg::RegionOfInterest target;
+  target.x_offset = 40;
+  target.y_offset = 55;
+  target.width = 10;
+  target.height = 10;
+
+  int32_t shift_x, shift_y;
+  autoware::traffic_light::utils::computeCenterOffset(source, target, shift_x, shift_y);
+  EXPECT_EQ(shift_x, -35);
+  EXPECT_EQ(shift_y, -45);
+}
+
 TEST(getShiftedRoi, normal)
 {
   const uint32_t image_width = 100;
@@ -81,18 +141,11 @@ TEST(getShiftedRoi, normal)
   source.width = 10;
   source.height = 10;
 
-  sensor_msgs::msg::RegionOfInterest target;
-  target.x_offset = 5;
-  target.y_offset = 5;
-  target.width = 10;
-  target.height = 10;
-
-  int32_t shift_x, shift_y;
+  const int32_t shift_x = 5;
+  const int32_t shift_y = 5;
   const sensor_msgs::msg::RegionOfInterest source_shifted =
     autoware::traffic_light::utils::getShiftedRoi(
-      source, target, image_width, image_height, shift_x, shift_y);
-  EXPECT_EQ(shift_x, -5);
-  EXPECT_EQ(shift_y, -5);
+      source, image_width, image_height, shift_x, shift_y);
   EXPECT_EQ(source_shifted.x_offset, 5);
   EXPECT_EQ(source_shifted.y_offset, 5);
   EXPECT_EQ(source_shifted.width, 10);
@@ -106,22 +159,15 @@ TEST(getShiftedRoi, out_of_range_in_top)
 
   sensor_msgs::msg::RegionOfInterest source;
   source.x_offset = 70;
-  source.y_offset = 55;
+  source.y_offset = 15;
   source.width = 20;
   source.height = 40;
 
-  sensor_msgs::msg::RegionOfInterest target;
-  target.x_offset = 10;
-  target.y_offset = 5;
-  target.width = 20;
-  target.height = 10;
-
-  int32_t shift_x, shift_y;
+  const int32_t shift_x = 5;
+  const int32_t shift_y = -20;
   const sensor_msgs::msg::RegionOfInterest source_shifted =
     autoware::traffic_light::utils::getShiftedRoi(
-      source, target, image_width, image_height, shift_x, shift_y);
-  EXPECT_EQ(shift_x, 60);
-  EXPECT_EQ(shift_y, 65);
+      source, image_width, image_height, shift_x, shift_y);
   EXPECT_EQ(source_shifted.x_offset, 0);
   EXPECT_EQ(source_shifted.y_offset, 0);
   EXPECT_EQ(source_shifted.width, 0);
@@ -134,23 +180,16 @@ TEST(getShiftedRoi, out_of_range_in_right)
   const uint32_t image_height = 100;
 
   sensor_msgs::msg::RegionOfInterest source;
-  source.x_offset = 5;
+  source.x_offset = 30;
   source.y_offset = 5;
   source.width = 60;
   source.height = 30;
 
-  sensor_msgs::msg::RegionOfInterest target;
-  target.x_offset = 85;
-  target.y_offset = 70;
-  target.width = 10;
-  target.height = 20;
-
-  int32_t shift_x, shift_y;
+  const int32_t shift_x = 20;
+  const int32_t shift_y = 5;
   const sensor_msgs::msg::RegionOfInterest source_shifted =
     autoware::traffic_light::utils::getShiftedRoi(
-      source, target, image_width, image_height, shift_x, shift_y);
-  EXPECT_EQ(shift_x, -55);
-  EXPECT_EQ(shift_y, -60);
+      source, image_width, image_height, shift_x, shift_y);
   EXPECT_EQ(source_shifted.x_offset, 0);
   EXPECT_EQ(source_shifted.y_offset, 0);
   EXPECT_EQ(source_shifted.width, 0);
@@ -163,23 +202,16 @@ TEST(getShiftedRoi, out_of_range_in_left)
   const uint32_t image_height = 100;
 
   sensor_msgs::msg::RegionOfInterest source;
-  source.x_offset = 55;
-  source.y_offset = 85;
+  source.x_offset = 5;
+  source.y_offset = 55;
   source.width = 40;
   source.height = 10;
 
-  sensor_msgs::msg::RegionOfInterest target;
-  target.x_offset = 5;
-  target.y_offset = 10;
-  target.width = 20;
-  target.height = 40;
-
-  int32_t shift_x, shift_y;
+  const int32_t shift_x = -30;
+  const int32_t shift_y = 5;
   const sensor_msgs::msg::RegionOfInterest source_shifted =
     autoware::traffic_light::utils::getShiftedRoi(
-      source, target, image_width, image_height, shift_x, shift_y);
-  EXPECT_EQ(shift_x, 60);
-  EXPECT_EQ(shift_y, 60);
+      source, image_width, image_height, shift_x, shift_y);
   EXPECT_EQ(source_shifted.x_offset, 0);
   EXPECT_EQ(source_shifted.y_offset, 0);
   EXPECT_EQ(source_shifted.width, 0);
@@ -193,22 +225,15 @@ TEST(getShiftedRoi, out_of_range_in_bottom)
 
   sensor_msgs::msg::RegionOfInterest source;
   source.x_offset = 5;
-  source.y_offset = 10;
+  source.y_offset = 60;
   source.width = 30;
-  source.height = 50;
+  source.height = 30;
 
-  sensor_msgs::msg::RegionOfInterest target;
-  target.x_offset = 50;
-  target.y_offset = 75;
-  target.width = 40;
-  target.height = 20;
-
-  int32_t shift_x, shift_y;
+  const int32_t shift_x = 10;
+  const int32_t shift_y = 50;
   const sensor_msgs::msg::RegionOfInterest source_shifted =
     autoware::traffic_light::utils::getShiftedRoi(
-      source, target, image_width, image_height, shift_x, shift_y);
-  EXPECT_EQ(shift_x, -50);
-  EXPECT_EQ(shift_y, -50);
+      source, image_width, image_height, shift_x, shift_y);
   EXPECT_EQ(source_shifted.x_offset, 0);
   EXPECT_EQ(source_shifted.y_offset, 0);
   EXPECT_EQ(source_shifted.width, 0);
@@ -230,10 +255,10 @@ TEST(getIoUgetGenIoU, a_part_of_overlap)
   bbox2.height = 10;
 
   const double iou = autoware::traffic_light::utils::getIoU(bbox1, bbox2);
-  EXPECT_NEAR(iou, 0.14285714285, 1e-6);
+  EXPECT_FLOAT_EQ(iou, 0.14285714285);
 
   const double gen_iou = autoware::traffic_light::utils::getGenIoU(bbox1, bbox2);
-  EXPECT_NEAR(gen_iou, -0.07936507937, 1e-6);
+  EXPECT_FLOAT_EQ(gen_iou, -0.07936507937);
 }
 
 TEST(getIoUgetGenIoU, overlap)
@@ -251,10 +276,10 @@ TEST(getIoUgetGenIoU, overlap)
   bbox2.height = 5;
 
   const double iou = autoware::traffic_light::utils::getIoU(bbox1, bbox2);
-  EXPECT_NEAR(iou, 0.25, 1e-6);
+  EXPECT_FLOAT_EQ(iou, 0.25);
 
   const double gen_iou = autoware::traffic_light::utils::getGenIoU(bbox1, bbox2);
-  EXPECT_NEAR(gen_iou, 0.25, 1e-6);
+  EXPECT_FLOAT_EQ(gen_iou, 0.25);
 }
 
 TEST(getIoUgetGenIoU, no_overlap)
@@ -272,10 +297,10 @@ TEST(getIoUgetGenIoU, no_overlap)
   bbox2.height = 10;
 
   const double iou = autoware::traffic_light::utils::getIoU(bbox1, bbox2);
-  EXPECT_NEAR(iou, 0.0, 1e-6);
+  EXPECT_FLOAT_EQ(iou, 0.0);
 
   const double gen_iou = autoware::traffic_light::utils::getGenIoU(bbox1, bbox2);
-  EXPECT_NEAR(gen_iou, -0.68, 1e-6);
+  EXPECT_FLOAT_EQ(gen_iou, -0.68);
 }
 
 int main(int argc, char ** argv)
