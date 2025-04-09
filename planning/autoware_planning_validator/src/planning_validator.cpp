@@ -770,8 +770,9 @@ bool PlanningValidator::checkTrajectoryShift(
   const Trajectory & trajectory, const Trajectory & prev_trajectory,
   const geometry_msgs::msg::Pose & ego_pose)
 {
+  bool is_valid = true;
   if (!params_.validation_params.trajectory_shift.enable) {
-    return true;
+    return is_valid;
   }
 
   const auto nearest_seg_idx =
@@ -780,7 +781,7 @@ bool PlanningValidator::checkTrajectoryShift(
     autoware::motion_utils::findNearestSegmentIndex(prev_trajectory.points, ego_pose);
 
   if (!nearest_seg_idx || !prev_nearest_seg_idx) {
-    return true;
+    return is_valid;
   }
 
   const auto & nearest_pose = trajectory.points.at(*nearest_seg_idx).pose;
@@ -791,46 +792,48 @@ bool PlanningValidator::checkTrajectoryShift(
 
   const auto lat_shift =
     std::abs(autoware_utils::calc_lateral_deviation(prev_nearest_pose, nearest_pose.position));
-  const auto lon_shift =
-    autoware_utils::calc_longitudinal_deviation(prev_nearest_pose, nearest_pose.position);
 
-  validation_status_.lateral_shift = lat_shift;
-  validation_status_.longitudinal_shift = lon_shift;
+  static constexpr auto epsilon = 0.01;
+  validation_status_.lateral_shift = lat_shift > epsilon ? lat_shift : 0.0;
 
   if (
     ego_lat_dist > params_.validation_params.trajectory_shift.lat_shift_th &&
     lat_shift > params_.validation_params.trajectory_shift.lat_shift_th) {
     is_critical_error_ |= params_.validation_params.trajectory_shift.is_critical;
     debug_pose_publisher_->pushPoseMarker(nearest_pose, "trajectory_shift");
-    return false;
+    is_valid = false;
   }
 
   // if nearest segment is within the trajectory no need to check longitudinal shift
   if (*nearest_seg_idx > 0 && *nearest_seg_idx < trajectory.points.size() - 2) {
-    return true;
+    validation_status_.longitudinal_shift = 0.0;
+    return is_valid;
   }
 
+  const auto lon_shift =
+    autoware_utils::calc_longitudinal_deviation(prev_nearest_pose, nearest_pose.position);
+    validation_status_.longitudinal_shift = std::abs(lon_shift) > epsilon ? lon_shift : 0.0;
+
+  // if the nearest segment is the first segment, check forward shift
   if (*nearest_seg_idx == 0) {
-    if (lon_shift < std::numeric_limits<double>::epsilon()) {
-      return true;
-    }
     if (lon_shift > params_.validation_params.trajectory_shift.forward_shift_th) {
       is_critical_error_ |= params_.validation_params.trajectory_shift.is_critical;
       debug_pose_publisher_->pushPoseMarker(nearest_pose, "trajectory_shift");
-      return false;
+      is_valid = false;
     }
-    return true;
+    return is_valid;
   }
 
+  // if the nearest segment is the last segment, check backward shift
   if (
     lon_shift < 0.0 &&
     std::abs(lon_shift) > params_.validation_params.trajectory_shift.backward_shift_th) {
     is_critical_error_ |= params_.validation_params.trajectory_shift.is_critical;
     debug_pose_publisher_->pushPoseMarker(nearest_pose, "trajectory_shift");
-    return false;
+    is_valid = false;
   }
 
-  return true;
+  return is_valid;
 }
 
 bool PlanningValidator::isAllValid(const PlanningValidatorStatus & s) const
