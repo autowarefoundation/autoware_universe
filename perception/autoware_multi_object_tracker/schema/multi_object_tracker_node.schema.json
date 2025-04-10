@@ -51,6 +51,11 @@
           "description": "Object kinematics definition frame.",
           "default": "map"
         },
+        "ego_frame_id": {
+          "type": "string",
+          "description": "Vehicle's ego frame.",
+          "default": "base_link"
+        },
         "enable_delay_compensation": {
           "type": "boolean",
           "description": "If True, tracker use timers to schedule publishers and use prediction step to extrapolate object state at desired timestamp.",
@@ -172,6 +177,7 @@
         "motorcycle_tracker",
         "publish_rate",
         "world_frame_id",
+        "ego_frame_id",
         "enable_delay_compensation",
         "consider_odometry_uncertainty",
         "tracker_lifetime",

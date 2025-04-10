@@ -4,7 +4,9 @@
     #  0: publish the trajectory even if it is invalid
     #  1: stop publishing the trajectory
     #  2: publish the last validated trajectory
-    invalid_trajectory_handling_type: 0
+    handling_type:
+      noncritical: 0
+      critical: 2
 
     publish_diag: true  # if true, diagnostic msg is published
 
@@ -12,30 +14,45 @@
     # (For example, threshold = 1 means, even if the trajectory is invalid, Diag will not be ERROR if
     #  the next trajectory is valid.)
     diag_error_count_threshold: 0
-
     display_on_terminal: true # show error msg on terminal
 
-    thresholds:
-      interval: 100.0
-      relative_angle: 2.0  # (= 115 degree)
-      curvature: 1.0
-      lateral_acc: 9.8
-      longitudinal_max_acc: 9.8
-      longitudinal_min_acc: -9.8
-      steering: 1.414
-      steering_rate: 10.0
-      velocity_deviation: 100.0
-      distance_deviation: 100.0
-      longitudinal_distance_deviation: 1.0
-      nominal_latency: 1.0
-      yaw_deviation: 1.5708  # (= 90 degrees)
-
-    parameters:
-      # The required trajectory length is calculated as the distance needed
-      # to stop from the current speed at this deceleration.
-      forward_trajectory_length_acceleration: -3.0
-
-      # An error is raised if the required trajectory length is less than this distance.
-      # Setting it to 0 means an error will occur if even slightly exceeding the end of the path,
-      # therefore, a certain margin is necessary.
-      forward_trajectory_length_margin: 2.0
+    validity_checks:
+      latency:
+        enable: true
+        threshold: 1.0
+        is_critical: false
+      interval:
+        enable: true
+        threshold: 100.0
+        is_critical: false
+      curvature:
+        enable: true
+        threshold: 1.0
+        is_critical: false
+      relative_angle:
+        enable: true
+        threshold: 2.0 # (= 115 degree)
+        is_critical: false
+      acceleration:
+        enable: true
+        lateral_th: 9.8
+        longitudinal_max_th: 9.8
+        longitudinal_min_th: -9.8
+        is_critical: false
+      steering:
+        enable: true
+        threshold: 1.414
+        rate_th: 10.0
+        is_critical: false
+      deviation:
+        enable: true
+        velocity_th: 100.0
+        distance_th: 100.0
+        lon_distance_th: 1.0
+        yaw_th: 1.5708 # (= 90 degrees)
+        is_critical: false
+      forward_trajectory_length:
+        enable: true
+        acceleration: -3.0
+        margin: 2.0
+        is_critical: false

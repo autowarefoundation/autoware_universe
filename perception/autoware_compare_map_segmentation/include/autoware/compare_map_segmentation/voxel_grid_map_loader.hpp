@@ -12,16 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VOXEL_GRID_MAP_LOADER__VOXEL_GRID_MAP_LOADER_HPP_
-#define VOXEL_GRID_MAP_LOADER__VOXEL_GRID_MAP_LOADER_HPP_
+#ifndef AUTOWARE__COMPARE_MAP_SEGMENTATION__VOXEL_GRID_MAP_LOADER_HPP_
+#define AUTOWARE__COMPARE_MAP_SEGMENTATION__VOXEL_GRID_MAP_LOADER_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 
-#include "autoware_map_msgs/srv/get_differential_point_cloud_map.hpp"
+#include <autoware_map_msgs/srv/get_differential_point_cloud_map.hpp>
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
+#include <pcl/common/common.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/search/pcl_search.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -42,6 +44,12 @@ double distance2D(const T p1, const U p2)
   double dy = p1.y - p2.y;
   return std::sqrt(dx * dx + dy * dy);
 }
+
+struct DiagStatus
+{
+  diagnostic_msgs::msg::DiagnosticStatus::_level_type level;
+  std::string message;
+};
 
 template <typename PointT>
 class VoxelGridEx : public pcl::VoxelGrid<PointT>
@@ -85,11 +93,20 @@ class VoxelGridMapLoader
 {
 protected:
   rclcpp::Logger logger_;
+
+  // parameters
   double voxel_leaf_size_;
   double voxel_leaf_size_z_{};
   double downsize_ratio_z_axis_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr downsampled_map_pub_;
   bool debug_ = false;
+
+  // interfaces
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr downsampled_map_pub_;
+
+  // diagnostics
+  bool isFeasibleWithPCLVoxelGrid(
+    const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
+    const pcl::VoxelGrid<pcl::PointXYZ> & voxel_grid);
 
 public:
   using VoxelGridPointXYZ = VoxelGridEx<pcl::PointXYZ>;
@@ -115,15 +132,21 @@ public:
 
   void publish_downsampled_map(const pcl::PointCloud<pcl::PointXYZ> & downsampled_pc);
   std::string * tf_map_input_frame_;
+
+  DiagStatus diagnostics_map_voxel_status_;
+
+  DiagStatus get_diag_status() const { return diagnostics_map_voxel_status_; }
 };
 
 class VoxelGridStaticMapLoader : public VoxelGridMapLoader
 {
 protected:
-  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_map_;
   VoxelGridPointXYZ voxel_grid_;
   FilteredPointCloudPtr voxel_map_ptr_;
   std::atomic_bool is_initialized_{false};
+
+  // interface of map subscription
+  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_map_;
 
 public:
   explicit VoxelGridStaticMapLoader(
@@ -306,6 +329,9 @@ public:
     auto map_cell_voxel_input_tmp_ptr =
       std::make_shared<pcl::PointCloud<pcl::PointXYZ>>(map_cell_pc_tmp);
     map_cell_voxel_grid_tmp.setLeafSize(voxel_leaf_size_, voxel_leaf_size_, voxel_leaf_size_z_);
+    // check if the pointcloud is filterable with PCL voxel grid
+    isFeasibleWithPCLVoxelGrid(map_cell_voxel_input_tmp_ptr, map_cell_voxel_grid_tmp);
+
     map_cell_downsampled_pc_ptr_tmp.reset(new pcl::PointCloud<pcl::PointXYZ>);
     map_cell_voxel_grid_tmp.setInputCloud(map_cell_voxel_input_tmp_ptr);
     map_cell_voxel_grid_tmp.setSaveLeafLayout(true);
@@ -332,4 +358,4 @@ public:
 
 }  // namespace autoware::compare_map_segmentation
 
-#endif  // VOXEL_GRID_MAP_LOADER__VOXEL_GRID_MAP_LOADER_HPP_
+#endif  // AUTOWARE__COMPARE_MAP_SEGMENTATION__VOXEL_GRID_MAP_LOADER_HPP_

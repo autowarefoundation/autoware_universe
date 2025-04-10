@@ -15,4 +15,9 @@
     base_class_type="rviz_common::Display">
     <description>Display geometry_msgs::PoseWithCovarianceStamped</description>
   </class>
+  <class name="rviz_plugins::ColoredPoseWithCovarianceHistory"
+    type="rviz_plugins::ColoredPoseWithCovarianceHistory"
+    base_class_type="rviz_common::Display">
+    <description>Display geometry_msgs::PoseWithCovarianceStamped colored by (autoware_internal_debug_msgs::Int32 or Float32)</description>
+  </class>
 </library>

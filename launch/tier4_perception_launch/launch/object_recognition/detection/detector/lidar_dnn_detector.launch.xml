@@ -49,6 +49,7 @@
         <arg name="model_param_path" value="$(var lidar_model_param_path)/$(var lidar_detection_model_name).param.yaml"/>
         <arg name="ml_package_param_path" value="$(var centerpoint_model_path)/$(var lidar_detection_model_name)_ml_package.param.yaml"/>
         <arg name="class_remapper_param_path" value="$(var centerpoint_model_path)/detection_class_remapper.param.yaml"/>
+        <arg name="common_param_path" value="$(var lidar_model_param_path)/centerpoint_common.param.yaml"/>
 
         <arg name="use_pointcloud_container" value="true"/>
         <arg name="pointcloud_container_name" value="$(var node/pointcloud_container)"/>

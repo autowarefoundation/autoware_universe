@@ -12,6 +12,7 @@
     # default tracker node parameters
     publish_rate: 10.0
     world_frame_id: map
+    ego_frame_id: base_link
     enable_delay_compensation: false
     consider_odometry_uncertainty: false
 

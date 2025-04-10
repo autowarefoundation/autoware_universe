@@ -23,6 +23,7 @@
   <depend>autoware_pointcloud_preprocessor</depend>
   <depend>autoware_test_utils</depend>
   <depend>autoware_utils</depend>
+  <depend>diagnostic_updater</depend>
   <depend>grid_map_pcl</depend>
   <depend>grid_map_ros</depend>
   <depend>nav_msgs</depend>
