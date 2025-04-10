@@ -3,18 +3,21 @@
   <arg name="input/pointcloud" default="/sensing/lidar/concatenated/pointcloud"/>
   <arg name="output/objects" default="objects"/>
   <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
-  <arg name="model_name" default="bevfusion" description="options: `bevfusion`"/>
+  <arg name="model_name" default="bevfusion_lidar">
+    <choice value="bevfusion_lidar"/>
+    <choice value="bevfusion_camera_lidar"/>
+  </arg>
   <arg name="model_path" default="$(var data_path)/bevfusion"/>
   <arg name="model_param_path" default="$(find-pkg-share autoware_bevfusion)/config/$(var model_name).param.yaml"/>
   <arg name="ml_package_param_path" default="$(var model_path)/$(var model_name)_ml_package.param.yaml"/>
-  <arg name="class_remapper_param_path" default="$(find-pkg-share autoware_bevfusion)/config/detection_class_remapper.param.yaml"/>
+  <arg name="class_remapper_param_path" default="$(var model_path)/detection_class_remapper.param.yaml"/>
   <arg name="build_only" default="false" description="shutdown node after TensorRT engine file is built"/>
   <arg name="log_level" default="info"/>
 
   <arg name="use_pointcloud_container" default="false" description="use pointcloud_container"/>
   <arg name="pointcloud_container_name" default="pointcloud_container" description="pointcloud_container name"/>
 
-  <arg name="use_decompress" default="true" description="use image_transport_decompressor"/>
+  <arg name="use_decompress" default="false" description="use image_transport_decompressor"/>
 
   <arg name="camera_info0" default="/sensing/camera/camera0/camera_info"/>
   <arg name="camera_info1" default="/sensing/camera/camera1/camera_info"/>
