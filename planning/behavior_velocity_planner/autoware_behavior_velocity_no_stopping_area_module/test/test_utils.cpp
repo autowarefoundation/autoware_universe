@@ -404,7 +404,6 @@ TEST(NoStoppingAreaTest, getStopLineGeometry2d)
   no_stopping_area.push_back(lanelet::Point3d(lanelet::InvalId, 5.0, 1.0));
   no_stopping_area.push_back(lanelet::Point3d(lanelet::InvalId, 5.0, -1.0));
   double stop_line_margin = 1.0;
-  double stop_line_extend_length = 1.0;
   double vehicle_width = 1.0;
   {  // get stop line of the regulatory element extended by the extend length
     lanelet::LineString3d reg_elem_stop_line;
@@ -412,8 +411,8 @@ TEST(NoStoppingAreaTest, getStopLineGeometry2d)
     reg_elem_stop_line.push_back(lanelet::Point3d(lanelet::InvalId, 1.0, 0.0));
     const auto no_stopping_area_reg_elem = lanelet::autoware::NoStoppingArea::make(
       lanelet::InvalId, {}, {no_stopping_area}, reg_elem_stop_line);
-    const auto stop_line = get_stop_line_geometry2d(
-      path, *no_stopping_area_reg_elem, stop_line_margin, stop_line_extend_length, vehicle_width);
+    const auto stop_line =
+      get_stop_line_geometry2d(path, *no_stopping_area_reg_elem, stop_line_margin, vehicle_width);
     ASSERT_TRUE(stop_line.has_value());
     ASSERT_EQ(stop_line->size(), 2UL);
     EXPECT_EQ(stop_line->front().x(), -1.0);
@@ -424,8 +423,8 @@ TEST(NoStoppingAreaTest, getStopLineGeometry2d)
   {  // regulatory element has no stop line -> get the same stop line as generate_stop_line
     const auto no_stopping_area_reg_elem =
       lanelet::autoware::NoStoppingArea::make(lanelet::InvalId, {}, {no_stopping_area}, {});
-    const auto stop_line = get_stop_line_geometry2d(
-      path, *no_stopping_area_reg_elem, stop_line_margin, stop_line_extend_length, vehicle_width);
+    const auto stop_line =
+      get_stop_line_geometry2d(path, *no_stopping_area_reg_elem, stop_line_margin, vehicle_width);
     const auto generated_stop_line =
       generate_stop_line(path, {no_stopping_area}, vehicle_width, stop_line_margin);
     ASSERT_TRUE(stop_line.has_value());

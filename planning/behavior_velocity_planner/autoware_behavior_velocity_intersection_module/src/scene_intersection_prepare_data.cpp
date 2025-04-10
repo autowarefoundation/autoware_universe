@@ -324,7 +324,7 @@ std::optional<size_t> IntersectionModule::getStopLineIndexFromMap(
   const auto p_start = stopline.front().front();
   const auto p_end = stopline.front().back();
   const LineString2d extended_stopline =
-    planning_utils::extendLine(p_start, p_end, planner_data_->stop_line_extend_length);
+    planning_utils::extendLineToPathBound(p_start, p_end, path);
 
   for (size_t i = lane_interval.first; i < lane_interval.second; i++) {
     const auto & p_front = path.points.at(i).point.pose.position;
