@@ -49,7 +49,6 @@
           "default": 500,
           "minimum": 1
         },
-
         "out_size_factor": {
           "type": "integer",
           "description": "Output size factor using in the network.",
@@ -171,6 +170,8 @@
         "point_cloud_range",
         "voxel_size",
         "num_proposals",
+        "out_size_factor",
+        "max_points_per_voxel",
         "d_bound",
         "x_bound",
         "y_bound",

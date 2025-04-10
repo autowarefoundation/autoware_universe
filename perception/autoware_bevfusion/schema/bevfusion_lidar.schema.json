@@ -6,25 +6,23 @@
   "definitions": {
     "bevfusion": {
       "type": "object",
-
-      "sensor_fusion": {
-        "type": "boolean",
-        "description": "Whether to use camera-lidar fusion or not."
-      },
-      "max_camera_lidar_delay": {
-        "type": "number",
-        "description": "Maximum delay between the lidar and the latest camera in seconds.",
-        "default": 0.0,
-        "minimum": 0.0
-      },
-      "plugins_path": {
-        "type": "string",
-        "description": "A path to the TensorRT plugins.",
-        "default": "$(find-pkg-share autoware_bevfusion)/plugins/libautoware_tensorrt_plugins.so",
-        "pattern": "\\.so$"
-      },
-
       "properties": {
+        "sensor_fusion": {
+          "type": "boolean",
+          "description": "Whether to use camera-lidar fusion or not."
+        },
+        "max_camera_lidar_delay": {
+          "type": "number",
+          "description": "Maximum delay between the lidar and the latest camera in seconds.",
+          "default": 0.0,
+          "minimum": 0.0
+        },
+        "plugins_path": {
+          "type": "string",
+          "description": "A path to the TensorRT plugins.",
+          "default": "$(find-pkg-share autoware_bevfusion)/plugins/libautoware_tensorrt_plugins.so",
+          "pattern": "\\.so$"
+        },
         "trt_precision": {
           "type": "string",
           "description": "A precision of TensorRT engine.",
