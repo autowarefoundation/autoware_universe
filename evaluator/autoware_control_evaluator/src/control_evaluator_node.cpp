@@ -54,6 +54,7 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
     planning_factors_sub_.emplace(
       module_name, autoware_utils::InterProcessPollingSubscriber<PlanningFactorArray>(
                      this, topic_prefix + module_name));
+    stop_deviation_accumulators_.emplace(module_name, Accumulator<double>());
   }
 
   // Publisher
@@ -81,12 +82,27 @@ ControlEvaluatorNode::~ControlEvaluatorNode()
     using json = nlohmann::json;
     json j;
     for (Metric metric : metrics_) {
+      if (metric_accumulators_[static_cast<size_t>(metric)].count() == 0) {
+        continue;
+      }
       const std::string base_name = metric_to_str.at(metric) + "/";
       j[base_name + "min"] = metric_accumulators_[static_cast<size_t>(metric)].min();
       j[base_name + "max"] = metric_accumulators_[static_cast<size_t>(metric)].max();
       j[base_name + "mean"] = metric_accumulators_[static_cast<size_t>(metric)].mean();
       j[base_name + "count"] = metric_accumulators_[static_cast<size_t>(metric)].count();
       j[base_name + "description"] = metric_descriptions.at(metric);
+    }
+    // processing json for stop_deviation
+    j["stop_deviation/description"] = metric_descriptions.at(Metric::stop_deviation);
+    for (const auto & [module_name, stop_deviation_accumulator] : stop_deviation_accumulators_) {
+      if (stop_deviation_accumulator.count() == 0) {
+        continue;
+      }
+      const std::string base_name = "stop_deviation/" + module_name + "/";
+      j[base_name + "min"] = stop_deviation_accumulator.min();
+      j[base_name + "max"] = stop_deviation_accumulator.max();
+      j[base_name + "mean"] = stop_deviation_accumulator.mean();
+      j[base_name + "count"] = stop_deviation_accumulator.count();
     }
 
     // get output folder
@@ -147,7 +163,8 @@ void ControlEvaluatorNode::getRouteData()
   }
 }
 
-void ControlEvaluatorNode::AddMetricMsg(const Metric & metric, const double & metric_value, const bool & accumulate_metric)
+void ControlEvaluatorNode::AddMetricMsg(
+  const Metric & metric, const double & metric_value, const bool & accumulate_metric)
 {
   MetricMsg metric_msg;
   metric_msg.name = metric_to_str.at(metric);
@@ -322,32 +339,67 @@ void ControlEvaluatorNode::AddGoalDeviationMetricMsg(const Odometry & odom)
   const bool is_ego_stopped_near_goal =
     std::abs(longitudinal_deviation_value) < 3.0 && std::abs(odom.twist.twist.linear.x) < 0.001;
 
-  AddMetricMsg(Metric::goal_longitudinal_deviation, longitudinal_deviation_value, is_ego_stopped_near_goal);
+  AddMetricMsg(
+    Metric::goal_longitudinal_deviation, longitudinal_deviation_value, is_ego_stopped_near_goal);
   AddMetricMsg(Metric::goal_lateral_deviation, lateral_deviation_value, is_ego_stopped_near_goal);
   AddMetricMsg(Metric::goal_yaw_deviation, yaw_deviation_value, is_ego_stopped_near_goal);
 }
 
-void ControlEvaluatorNode::AddStopDeviationMetricMsg(
-  const PlanningFactorArray::ConstSharedPtr & planning_factors, const std::string & module_name)
+void ControlEvaluatorNode::AddStopDeviationMetricMsg(const Odometry & odom)
 {
-  std::optional<double> min_distance = std::nullopt;
-  for (const auto & factor : planning_factors->factors) {
-    if (factor.behavior == PlanningFactor::STOP) {
-      for (const auto & control_point : factor.control_points) {
-        if (!min_distance || std::abs(control_point.distance) < std::abs(*min_distance)) {
-          min_distance = control_point.distance;
+  auto get_min_distance =
+    [](const PlanningFactorArray::ConstSharedPtr & planning_factors) -> std::optional<double> {
+    std::optional<double> min_distance = std::nullopt;
+    for (const auto & factor : planning_factors->factors) {
+      if (factor.behavior == PlanningFactor::STOP) {
+        for (const auto & control_point : factor.control_points) {
+          const auto cur_distance = std::abs(control_point.distance);
+          if (!min_distance || cur_distance < *min_distance) {
+            min_distance = cur_distance;
+          }
         }
       }
     }
+    return min_distance;
+  };
+
+  // get min_distance from each module
+  std::vector<std::pair<std::string, double>> min_distances;
+  for (auto & [module_name, planning_factor_sub_] : planning_factors_sub_) {
+    const auto planning_factors = planning_factor_sub_.take_data();
+    if (
+      !planning_factors || planning_factors->factors.empty() ||
+      stop_deviation_modules_.count(module_name) == 0) {
+      continue;
+    }
+    auto min_distance = get_min_distance(planning_factors);
+    if (min_distance) {
+      min_distances.emplace_back(module_name, *min_distance);
+    }
   }
-  if (!min_distance) {
+  if (min_distances.empty()) {
     return;
   }
 
-  MetricMsg metric_msg;
-  metric_msg.name = "stop_deviation/" + module_name;
-  metric_msg.value = std::to_string(*min_distance);
-  metrics_msg_.metric_array.push_back(metric_msg);
+  // find the stop decision closest to the ego, accumulate its metric
+  auto min_distance_pair = std::min_element(
+    min_distances.begin(), min_distances.end(),
+    [](const auto & a, const auto & b) { return a.second < b.second; });
+
+  const auto [closest_module_name, closest_min_distance] = *min_distance_pair;
+  const bool is_ego_stopped_near_stop_decision =
+    std::abs(closest_min_distance) < 3.0 && std::abs(odom.twist.twist.linear.x) < 0.001;
+  if (output_metrics_ && is_ego_stopped_near_stop_decision) {
+    stop_deviation_accumulators_[closest_module_name].add(closest_min_distance);
+  }
+
+  // add metrics
+  for (const auto & [module_name, min_distance] : min_distances) {
+    MetricMsg metric_msg;
+    metric_msg.name = "stop_deviation/" + module_name;
+    metric_msg.value = std::to_string(min_distance);
+    metrics_msg_.metric_array.push_back(metric_msg);
+  }
 }
 
 void ControlEvaluatorNode::onTimer()
@@ -375,16 +427,7 @@ void ControlEvaluatorNode::onTimer()
   }
 
   // add planning_factor related metrics
-  for (auto & [module_name, planning_factor_sub_] : planning_factors_sub_) {
-    const auto planning_factors = planning_factor_sub_.take_data();
-    if (!planning_factors || planning_factors->factors.empty()) {
-      continue;
-    }
-
-    if (stop_deviation_modules_.count(module_name) > 0) {
-      AddStopDeviationMetricMsg(planning_factors, module_name);
-    }
-  }
+  AddStopDeviationMetricMsg(*odom);
 
   // add kinematic info
   if (odom && acc) {
