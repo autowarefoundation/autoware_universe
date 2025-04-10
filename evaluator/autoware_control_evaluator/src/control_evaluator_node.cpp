@@ -347,7 +347,7 @@ void ControlEvaluatorNode::AddGoalDeviationMetricMsg(const Odometry & odom)
 
 void ControlEvaluatorNode::AddStopDeviationMetricMsg(const Odometry & odom)
 {
-  auto get_min_distance =
+  const auto get_min_distance =
     [](const PlanningFactorArray::ConstSharedPtr & planning_factors) -> std::optional<double> {
     std::optional<double> min_distance = std::nullopt;
     for (const auto & factor : planning_factors->factors) {
@@ -372,7 +372,7 @@ void ControlEvaluatorNode::AddStopDeviationMetricMsg(const Odometry & odom)
       stop_deviation_modules_.count(module_name) == 0) {
       continue;
     }
-    auto min_distance = get_min_distance(planning_factors);
+    const auto min_distance = get_min_distance(planning_factors);
     if (min_distance) {
       min_distances.emplace_back(module_name, *min_distance);
     }
@@ -382,7 +382,7 @@ void ControlEvaluatorNode::AddStopDeviationMetricMsg(const Odometry & odom)
   }
 
   // find the stop decision closest to the ego, accumulate its metric
-  auto min_distance_pair = std::min_element(
+  const auto min_distance_pair = std::min_element(
     min_distances.begin(), min_distances.end(),
     [](const auto & a, const auto & b) { return a.second < b.second; });
 
