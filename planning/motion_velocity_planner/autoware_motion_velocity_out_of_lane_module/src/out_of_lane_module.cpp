@@ -245,36 +245,34 @@ std::optional<geometry_msgs::msg::Pose> OutOfLaneModule::calculate_slowdown_pose
 void OutOfLaneModule::update_slowdown_pose_buffer(
   const out_of_lane::EgoData & ego_data, const std::optional<geometry_msgs::msg::Pose> & slowdown_pose)
 {
+  const double slowdown_pose_arc_length = slowdown_pose ?
+    motion_utils::calcSignedArcLength(ego_data.trajectory_points, 0LU, slowdown_pose->position) :
+    std::numeric_limits<double>::max();
+
+  // remove no longer valid slowdown poses in the buffer:
+  //  slowdown poses that are active but have exceeded the duration threshold since last detection
+  //  slowdown poses that are invalid and not near the new slowdown pose
   std::vector<out_of_lane::SlowdownPose> valid_poses;
   for (auto & sp : slowdown_pose_buffer_) {
-    if (sp.is_active && (clock_->now() - sp.start_time).seconds() > params_.min_off_duration)
+    const auto sp_duration = (clock_->now() - sp.start_time).seconds();
+    if (sp.is_active && sp_duration > params_.min_off_duration) continue;
+    if (!sp.is_active && !slowdown_pose) continue;
+
+    sp.arc_length = motion_utils::calcSignedArcLength(ego_data.trajectory_points, 0LU, sp.pose.position);
+    if (!sp.is_active && abs(sp.arc_length - slowdown_pose_arc_length) > params_.min_update_distance) {
       continue;
-    if (!sp.is_active && !slowdown_pose)
-      continue;
+    }
+
     if (!sp.is_active && (clock_->now() - sp.start_time).seconds() > params_.min_on_duration) {
       sp.is_active = true;
       sp.start_time = clock_->now();
     }
-    sp.arc_length = motion_utils::calcSignedArcLength(ego_data.trajectory_points, 0LU, sp.pose.position);
     valid_poses.push_back(sp);
   }
 
-  if (!slowdown_pose) {
-    slowdown_pose_buffer_ = valid_poses;
-    return;
-  }
+  slowdown_pose_buffer_ = valid_poses;
 
-  slowdown_pose_buffer_.clear();
-
-  const auto slowdown_pose_arc_length =
-    motion_utils::calcSignedArcLength(ego_data.trajectory_points, 0LU, slowdown_pose->position);
-
-  std::copy_if(
-    valid_poses.begin(), valid_poses.end(), std::back_inserter(slowdown_pose_buffer_),
-    [&] (const auto & vp) {
-      return vp.is_active || abs(vp.arc_length - slowdown_pose_arc_length) < params_.min_update_distance;
-    }
-  );
+  if (!slowdown_pose) return;
 
   if (slowdown_pose_buffer_.empty()) {
     slowdown_pose_buffer_.emplace_back(slowdown_pose_arc_length, clock_->now(), *slowdown_pose, false);
