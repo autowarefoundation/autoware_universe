@@ -127,7 +127,7 @@ RadarObjectTrackerNode::RadarObjectTrackerNode(const rclcpp::NodeOptions & node_
   tracker_map_.insert(
     std::make_pair(Label::MOTORCYCLE, this->declare_parameter<std::string>("motorcycle_tracker")));
 
-  { // diagnostics
+  {  // diagnostics
     radar_data_stale_th_ms_ =
       declare_parameter<double>("diagnostics.radar_data_stale_threshold_ms");
     const double validation_callback_interval_ms =
@@ -451,7 +451,7 @@ void RadarObjectTrackerNode::diagnoseRadarInputInterval(
     diagnostic_msgs::msg::DiagnosticStatus::OK;
   std::stringstream message{"OK"};
 
-  if (last_processing_timestamp_) { // Check if the first input arrived
+  if (last_processing_timestamp_) {  // Check if the first input arrived
     const double elapsed_since_last_input_ms =
       std::chrono::duration<double, std::milli>(
         std::chrono::nanoseconds(
@@ -463,8 +463,8 @@ void RadarObjectTrackerNode::diagnoseRadarInputInterval(
 
       message.clear();
       message << "The duration of radar input since the last reception has exceeded"
-        << " the stale threshold " << radar_data_stale_th_ms_ << " ms by"
-        << elapsed_since_last_input_ms - radar_data_stale_th_ms_ << " ms.";
+              << " the stale threshold " << radar_data_stale_th_ms_ << " ms by"
+              << elapsed_since_last_input_ms - radar_data_stale_th_ms_ << " ms.";
 
       diag_level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
     } else {
