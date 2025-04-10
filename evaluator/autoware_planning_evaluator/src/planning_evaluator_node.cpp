@@ -388,7 +388,7 @@ void PlanningEvaluatorNode::onModifiedGoal(
     }
     AddMetricMsg(metric, *metric_stat);
     if (output_metrics_ 
-      && ego_state_ptr->twist.twist.linear.x < 0.01
+      && ego_state_ptr->twist.twist.linear.x < 0.001
       && metric_stat->mean() < 3.0
     ) { // only record when ego stop close to the target in 3m
       const OutputMetric output_metric = str_to_output_metric.at(metric_to_str.at(metric));
