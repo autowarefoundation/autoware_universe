@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "voxel_grid_map_loader.hpp"
+#include "autoware/compare_map_segmentation/voxel_grid_map_loader.hpp"
 
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -32,6 +33,53 @@ VoxelGridMapLoader::VoxelGridMapLoader(
   downsampled_map_pub_ = node->create_publisher<sensor_msgs::msg::PointCloud2>(
     "debug/downsampled_map/pointcloud", rclcpp::QoS{1}.transient_local());
   debug_ = node->declare_parameter<bool>("publish_debug_pcd");
+
+  // initiate diagnostic status
+  diagnostics_map_voxel_status_.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+  diagnostics_map_voxel_status_.message = "VoxelGridMapLoader initialized.";
+}
+
+// check if the pointcloud is filterable with PCL voxel grid
+bool VoxelGridMapLoader::isFeasibleWithPCLVoxelGrid(
+  const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
+  const pcl::VoxelGrid<pcl::PointXYZ> & voxel_grid)
+{
+  // obtain the total voxel number
+  pcl::PointXYZ min_pt, max_pt;
+  pcl::getMinMax3D(*pointcloud, min_pt, max_pt);
+  const double x_range = max_pt.x - min_pt.x;
+  const double y_range = max_pt.y - min_pt.y;
+  const double z_range = max_pt.z - min_pt.z;
+
+  const auto voxel_leaf_size = voxel_grid.getLeafSize();
+  const double inv_voxel_x = 1.0 / voxel_leaf_size[0];
+  const double inv_voxel_y = 1.0 / voxel_leaf_size[1];
+  const double inv_voxel_z = 1.0 / voxel_leaf_size[2];
+
+  const std::int64_t x_voxel_num = std::ceil(x_range * inv_voxel_x) + 1;
+  const std::int64_t y_voxel_num = std::ceil(y_range * inv_voxel_y) + 1;
+  const std::int64_t z_voxel_num = std::ceil(z_range * inv_voxel_z) + 1;
+  const std::int64_t voxel_num = x_voxel_num * y_voxel_num * z_voxel_num;
+
+  // check if the voxel_num is within the range of int32_t
+  if (voxel_num > std::numeric_limits<std::int32_t>::max()) {
+    // voxel_num overflows int32_t limit
+    diagnostics_map_voxel_status_.level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+    diagnostics_map_voxel_status_.message =
+      "Given map voxel grid is not feasible. (Number of voxel overflows int32_t limit) "
+      "Check the voxel grid filter parameters and input pointcloud map."
+      "  (1) If use_dynamic_map_loading is false, consider to enable use_dynamic_map_loading"
+      "  (2) If use_dynamic_map_loading is true, consider to adjust map pointcloud split size "
+      "smaller"
+      "     and confirm the given pointcloud map is separated sufficiently."
+      "  (2) If static map is only the option, consider to enlarge distance_threshold to generate "
+      "     more larger leaf size";
+    return false;
+  }
+  // voxel_num is within the range of int32_t
+  diagnostics_map_voxel_status_.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+  diagnostics_map_voxel_status_.message = "Given map voxel grid is within the feasible range";
+  return true;
 }
 
 void VoxelGridMapLoader::publish_downsampled_map(
@@ -268,6 +316,10 @@ void VoxelGridStaticMapLoader::onMapCallback(
   *tf_map_input_frame_ = map_pcl_ptr->header.frame_id;
   voxel_map_ptr_.reset(new pcl::PointCloud<pcl::PointXYZ>);
   voxel_grid_.setLeafSize(voxel_leaf_size_, voxel_leaf_size_, voxel_leaf_size_z_);
+
+  // check if the pointcloud is filterable with PCL voxel grid
+  isFeasibleWithPCLVoxelGrid(map_pcl_ptr, voxel_grid_);
+
   voxel_grid_.setInputCloud(map_pcl_ptr);
   voxel_grid_.setSaveLeafLayout(true);
   voxel_grid_.filter(*voxel_map_ptr_);
