@@ -132,10 +132,11 @@ ObjectAssociationMergerNode::ObjectAssociationMergerNode(const rclcpp::NodeOptio
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
   // Timeout process initialization
   message_timeout_sec_ = this->declare_parameter<double>("message_timeout_sec");
+  initialization_timeout_sec_ = this->declare_parameter<double>("initialization_timeout_sec");
   last_sync_time_ = this->now();
-  timeout_sent_ = false;
+  received_first_message_ = false;
   timeout_timer_ = this->create_wall_timer(
-    std::chrono::duration<double>(message_timeout_sec_),
+    std::chrono::duration<double>(message_timeout_sec_ / 2),
     std::bind(&ObjectAssociationMergerNode::timeoutCallback, this));
   diagnostics_interface_ptr_ =
     std::make_unique<autoware_utils::DiagnosticsInterface>(this, "object_association_merger");
@@ -151,6 +152,10 @@ void ObjectAssociationMergerNode::objectsCallback(
   }
   stop_watch_ptr_->toc("processing_time", true);
 
+  // To handle the case where the time source is not initialized in the constructor
+  if (last_sync_time_.nanoseconds() == 0) {
+    last_sync_time_ = this->now();
+  }
   // If messages normally synced
   diagnostics_interface_ptr_->clear();
   diagnostics_interface_ptr_->add_key_value("timeout_occurred", false);
@@ -158,10 +163,10 @@ void ObjectAssociationMergerNode::objectsCallback(
     "messages_interval", (this->now() - last_sync_time_).seconds());
   diagnostics_interface_ptr_->update_level_and_message(
     diagnostic_msgs::msg::DiagnosticStatus::OK,
-    "ObjectAssociationMergerNode OK: Messages merged successfully");
+    "[OK] ObjectAssociationMergerNode OK: Messages merged successfully");
   diagnostics_interface_ptr_->publish(input_objects0_msg->header.stamp);
   last_sync_time_ = this->now();
-  timeout_sent_ = false;
+  received_first_message_ = true;
 
   /* transform to base_link coordinate */
   autoware_perception_msgs::msg::DetectedObjects transformed_objects0, transformed_objects1;
@@ -263,18 +268,47 @@ void ObjectAssociationMergerNode::objectsCallback(
 void ObjectAssociationMergerNode::timeoutCallback()
 {
   rclcpp::Time now = this->now();
-  if ((now - last_sync_time_).seconds() >= message_timeout_sec_ && !timeout_sent_) {
+  // If the time source is not initialized, return early
+  if (now.nanoseconds() == 0) {
+    return;
+  }
+  // Initialize the time source if it hasn't been initialized yet
+  if (!time_source_initialized_) {
+    node_start_time_ = now;
+    time_source_initialized_ = true;
+    return;
+  }
+
+  // Check if the first message has been received
+  if (!received_first_message_) {
+    // If no message has been received within the initialization timeout, publish a warning
+    double time_since_startup = (now - node_start_time_).seconds();
+    if (time_since_startup >= initialization_timeout_sec_) {
+      diagnostics_interface_ptr_->clear();
+      diagnostics_interface_ptr_->add_key_value("timeout_occurred", true);
+      diagnostics_interface_ptr_->add_key_value("messages_interval", time_since_startup);
+      std::stringstream message;
+      message << "[WARN] No synchronized messages received within " << initialization_timeout_sec_
+              << "s (time since startup: " << time_since_startup << "s).";
+      diagnostics_interface_ptr_->update_level_and_message(
+        diagnostic_msgs::msg::DiagnosticStatus::WARN, message.str());
+      diagnostics_interface_ptr_->publish(now);
+    }
+    return;
+  }
+
+  // Check if a timeout has occurred due to no synchronized messages being received
+  const double time_since_last_sync = (now - last_sync_time_).seconds();
+  if (time_since_last_sync >= message_timeout_sec_) {
     diagnostics_interface_ptr_->clear();
     diagnostics_interface_ptr_->add_key_value("timeout_occurred", true);
-    diagnostics_interface_ptr_->add_key_value(
-      "messages_interval", (now - last_sync_time_).seconds());
+    diagnostics_interface_ptr_->add_key_value("messages_interval", time_since_last_sync);
     std::stringstream message;
-    message << "Timeout occurred: No synchronized messages received within " << message_timeout_sec_
-            << "s.";
+    message << "[WARN] No synchronized messages received within " << message_timeout_sec_
+            << "s (time since last message: " << time_since_last_sync << "s).";
     diagnostics_interface_ptr_->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::WARN, message.str());
     diagnostics_interface_ptr_->publish(now);
-    timeout_sent_ = true;
   }
 }
 
