@@ -14091,7 +14091,7 @@
 
 <div><h1 id="macro-rendering-error"><em>Macro Rendering Error</em><a class="headerlink" href="#macro-rendering-error" title="Permanent link">#</a></h1>
 <p><em>File</em>: <code>planning/autoware_external_velocity_limit_selector/README.md</code></p>
-<p><em>KeyError</em>: 'default'</p>
+<p><em>JSONDecodeError</em>: Expecting property name enclosed in double quotes: line 13 column 9 (char 395)</p>
 <div class="highlight"><pre><span></span><code>Traceback (most recent call last):
   File "/opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages/mkdocs_macros/plugin.py", line 688, in render
     return md_template.render(**page_variables)
@@ -14100,13 +14100,17 @@
   File "/opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages/jinja2/environment.py", line 942, in handle_exception
     raise rewrite_traceback_stack(source=source)
   File "&lt;template&gt;", line 54, in top-level template code
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 73, in json_to_markdown
-    return format_json(data)
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 64, in format_json
-    markdown_table = tabulate(extract_parameter_info(parameters), headers="keys", tablefmt="github")
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 53, in extract_parameter_info
-    param["Default"] = v["default"]
-KeyError: 'default'
+  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 72, in json_to_markdown
+    data = json.load(f)
+  File "/opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/json/__init__.py", line 293, in load
+    return loads(fp.read(),
+  File "/opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/json/__init__.py", line 357, in loads
+    return _default_decoder.decode(s)
+  File "/opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/json/decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "/opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/json/decoder.py", line 353, in raw_decode
+    obj, end = self.scan_once(s, idx)
+json.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 13 column 9 (char 395)
 </code></pre></div></div>
 
 
