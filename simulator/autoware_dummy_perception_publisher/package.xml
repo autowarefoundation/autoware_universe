@@ -13,6 +13,8 @@
 
   <build_depend>rosidl_default_generators</build_depend>
 
+  <exec_depend>autoware_detected_object_feature_remover</exec_depend>
+  <exec_depend>autoware_shape_estimation</exec_depend>
   <exec_depend>rosidl_default_runtime</exec_depend>
 
   <test_depend>ament_cmake_ros</test_depend>
