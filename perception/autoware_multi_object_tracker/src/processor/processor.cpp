@@ -248,7 +248,7 @@ bool TrackerProcessor::canRemoveOverlappedTarget(
       return target.getPositionCovarianceSizeSq() > other.getPositionCovarianceSizeSq();
     }
   }
-  // the target class is unknown, check the IoU
+  // 2. the target class is unknown, check the IoU
   if (iou > config_.min_unknown_object_removal_iou) {
     if (other_known_prob < min_known_prob) {
       // both are unknown, remove the larger uncertainty one
