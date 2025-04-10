@@ -78,8 +78,11 @@ private:
 
   // Timeout Related
   double message_timeout_sec_;
+  double initialization_timeout_sec_;
   rclcpp::Time last_sync_time_;
-  bool timeout_sent_;
+  bool received_first_message_;
+  bool time_source_initialized_;
+  rclcpp::Time node_start_time_;
   rclcpp::TimerBase::SharedPtr timeout_timer_;
   std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
 
