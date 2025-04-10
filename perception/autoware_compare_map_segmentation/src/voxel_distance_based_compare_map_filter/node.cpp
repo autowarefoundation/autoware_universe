@@ -14,13 +14,14 @@
 
 #include "node.hpp"
 
-#include "autoware/universe_utils/ros/debug_publisher.hpp"
-#include "autoware/universe_utils/system/stop_watch.hpp"
+#include "autoware_utils/ros/debug_publisher.hpp"
+#include "autoware_utils/system/stop_watch.hpp"
 
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/search/kdtree.h>
 #include <pcl/segmentation/segment_differences.h>
 
+#include <memory>
 #include <vector>
 
 namespace autoware::compare_map_segmentation
@@ -33,15 +34,18 @@ void VoxelDistanceBasedStaticMapLoader::onMapCallback(
   pcl::fromROSMsg<pcl::PointXYZ>(*map, map_pcl);
   const auto map_pcl_ptr = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(map_pcl);
 
-  (*mutex_ptr_).lock();
   map_ptr_ = map_pcl_ptr;
   *tf_map_input_frame_ = map_ptr_->header.frame_id;
   // voxel
   voxel_map_ptr_.reset(new pcl::PointCloud<pcl::PointXYZ>);
   voxel_grid_.setLeafSize(voxel_leaf_size_, voxel_leaf_size_, voxel_leaf_size_);
+  // check if the pointcloud is filterable with PCL voxel grid
+  isFeasibleWithPCLVoxelGrid(map_pcl_ptr, voxel_grid_);
+
   voxel_grid_.setInputCloud(map_pcl_ptr);
   voxel_grid_.setSaveLeafLayout(true);
   voxel_grid_.filter(*voxel_map_ptr_);
+
   // kdtree
   map_ptr_ = map_pcl_ptr;
 
@@ -53,19 +57,22 @@ void VoxelDistanceBasedStaticMapLoader::onMapCallback(
     }
   }
   tree_->setInputCloud(map_ptr_);
-  (*mutex_ptr_).unlock();
+  is_initialized_.store(true, std::memory_order_release);
 }
 
 bool VoxelDistanceBasedStaticMapLoader::is_close_to_map(
   const pcl::PointXYZ & point, const double distance_threshold)
 {
-  if (voxel_map_ptr_ == NULL) {
+  if (!is_initialized_.load(std::memory_order_acquire)) {
     return false;
   }
-  if (map_ptr_ == NULL) {
+  if (voxel_map_ptr_ == nullptr) {
     return false;
   }
-  if (tree_ == NULL) {
+  if (map_ptr_ == nullptr) {
+    return false;
+  }
+  if (tree_ == nullptr) {
     return false;
   }
   if (is_close_to_neighbor_voxels(point, distance_threshold, voxel_grid_, tree_)) {
@@ -77,35 +84,39 @@ bool VoxelDistanceBasedStaticMapLoader::is_close_to_map(
 bool VoxelDistanceBasedDynamicMapLoader::is_close_to_map(
   const pcl::PointXYZ & point, const double distance_threshold)
 {
-  if (current_voxel_grid_dict_.size() == 0) {
-    return false;
-  }
+  std::shared_ptr<pcl::search::Search<pcl::PointXYZ>> map_cell_kdtree;
+  VoxelGridPointXYZ map_cell_voxel_grid;
+  {
+    std::lock_guard<std::mutex> lock(dynamic_map_loader_mutex_);
+    if (current_voxel_grid_dict_.size() == 0) {
+      return false;
+    }
 
-  const int map_grid_index = static_cast<int>(
-    std::floor((point.x - origin_x_) / map_grid_size_x_) +
-    map_grids_x_ * std::floor((point.y - origin_y_) / map_grid_size_y_));
+    const int map_grid_index = static_cast<int>(
+      std::floor((point.x - origin_x_) / map_grid_size_x_) +
+      map_grids_x_ * std::floor((point.y - origin_y_) / map_grid_size_y_));
 
-  if (static_cast<size_t>(map_grid_index) >= current_voxel_grid_array_.size()) {
-    return false;
+    if (static_cast<size_t>(map_grid_index) >= current_voxel_grid_array_.size()) {
+      return false;
+    }
+    if (current_voxel_grid_array_.at(map_grid_index) == nullptr) {
+      return false;
+    }
+    map_cell_voxel_grid = current_voxel_grid_array_.at(map_grid_index)->map_cell_voxel_grid;
+    map_cell_kdtree = current_voxel_grid_array_.at(map_grid_index)->map_cell_kdtree;
   }
-  if (
-    current_voxel_grid_array_.at(map_grid_index) != NULL &&
-    is_close_to_neighbor_voxels(
-      point, distance_threshold, current_voxel_grid_array_.at(map_grid_index)->map_cell_voxel_grid,
-      current_voxel_grid_array_.at(map_grid_index)->map_cell_kdtree)) {
-    return true;
-  }
-  return false;
+  return is_close_to_neighbor_voxels(
+    point, distance_threshold, map_cell_voxel_grid, map_cell_kdtree);
 }
 
 VoxelDistanceBasedCompareMapFilterComponent::VoxelDistanceBasedCompareMapFilterComponent(
   const rclcpp::NodeOptions & options)
-: Filter("VoxelDistanceBasedCompareMapFilter", options)
+: Filter("VoxelDistanceBasedCompareMapFilter", options), diagnostic_updater_(this)
 {
   // initialize debug tool
   {
-    using autoware::universe_utils::DebugPublisher;
-    using autoware::universe_utils::StopWatch;
+    using autoware_utils::DebugPublisher;
+    using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ =
       std::make_unique<DebugPublisher>(this, "voxel_distance_based_compare_map_filter");
@@ -113,6 +124,15 @@ VoxelDistanceBasedCompareMapFilterComponent::VoxelDistanceBasedCompareMapFilterC
     stop_watch_ptr_->tic("processing_time");
   }
 
+  // setup diagnostics
+  {
+    diagnostic_updater_.setHardwareID(this->get_name());
+    diagnostic_updater_.add(
+      "Compare map filter status", this, &VoxelDistanceBasedCompareMapFilterComponent::checkStatus);
+    diagnostic_updater_.setPeriod(0.1);
+  }
+
+  // Declare parameters
   distance_threshold_ = declare_parameter<double>("distance_threshold");
   bool use_dynamic_map_loading = declare_parameter<bool>("use_dynamic_map_loading");
   double downsize_ratio_z_axis = declare_parameter<double>("downsize_ratio_z_axis");
@@ -124,12 +144,27 @@ VoxelDistanceBasedCompareMapFilterComponent::VoxelDistanceBasedCompareMapFilterC
     rclcpp::CallbackGroup::SharedPtr main_callback_group;
     main_callback_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
     voxel_distance_based_map_loader_ = std::make_unique<VoxelDistanceBasedDynamicMapLoader>(
-      this, distance_threshold_, downsize_ratio_z_axis, &tf_input_frame_, &mutex_,
-      main_callback_group);
+      this, distance_threshold_, downsize_ratio_z_axis, &tf_input_frame_, main_callback_group);
   } else {
     voxel_distance_based_map_loader_ = std::make_unique<VoxelDistanceBasedStaticMapLoader>(
-      this, distance_threshold_, downsize_ratio_z_axis, &tf_input_frame_, &mutex_);
+      this, distance_threshold_, downsize_ratio_z_axis, &tf_input_frame_);
   }
+}
+
+void VoxelDistanceBasedCompareMapFilterComponent::checkStatus(
+  diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  // map loader status
+  DiagStatus & map_loader_status =
+    (*voxel_distance_based_map_loader_).diagnostics_map_voxel_status_;
+  if (map_loader_status.level == diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    stat.add("Map loader status", "OK");
+  } else {
+    stat.add("Map loader status", "NG");
+  }
+
+  // final status = map loader status
+  stat.summary(map_loader_status.level, map_loader_status.message);
 }
 
 void VoxelDistanceBasedCompareMapFilterComponent::filter(
@@ -138,6 +173,18 @@ void VoxelDistanceBasedCompareMapFilterComponent::filter(
 {
   std::scoped_lock lock(mutex_);
   stop_watch_ptr_->toc("processing_time", true);
+
+  // check grid map loader status
+  auto & map_diag_status = (*voxel_distance_based_map_loader_).diagnostics_map_voxel_status_;
+  if (map_diag_status.level != diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000, "Map loader status: %s",
+      map_diag_status.message.c_str());
+    // return input point cloud, no filter implemented
+    output = *input;
+    return;
+  }
+
   int point_step = input->point_step;
   int offset_x = input->fields[pcl::getFieldIndex(*input, "x")].offset;
   int offset_y = input->fields[pcl::getFieldIndex(*input, "y")].offset;
@@ -171,9 +218,9 @@ void VoxelDistanceBasedCompareMapFilterComponent::filter(
   if (debug_publisher_) {
     const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
     const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
-    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
-    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time_ms", processing_time_ms);
   }
 }

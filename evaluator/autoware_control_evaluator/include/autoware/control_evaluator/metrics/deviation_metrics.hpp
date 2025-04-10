@@ -1,4 +1,4 @@
-// Copyright 2024 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,6 +41,30 @@ double calcLateralDeviation(const Trajectory & traj, const Point & point);
  * @return yaw deviation
  */
 double calcYawDeviation(const Trajectory & traj, const Pose & pose);
+
+/**
+ * @brief calculate longitudinal deviation from target_point to base_pose
+ * @param [in] pose input base_pose
+ * @param [in] point input target_point
+ * @return longitudinal deviation from base_pose to target_point
+ */
+double calcLongitudinalDeviation(const Pose & base_pose, const Point & target_point);
+
+/**
+ * @brief calculate lateral deviation from target_point to base_pose
+ * @param [in] pose input base_pose
+ * @param [in] point input target_point
+ * @return lateral deviation from base_pose to target_point
+ */
+double calcLateralDeviation(const Pose & base_pose, const Point & target_point);
+
+/**
+ * @brief calculate yaw deviation from base_pose to target_pose
+ * @param [in] pose input base_pose
+ * @param [in] pose input target_pose
+ * @return yaw deviation from base_pose to target_pose
+ */
+double calcYawDeviation(const Pose & base_pose, const Pose & target_pose);
 
 }  // namespace metrics
 }  // namespace control_diagnostics

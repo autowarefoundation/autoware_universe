@@ -15,7 +15,7 @@
 #define AUTOWARE__OBSTACLE_CRUISE_PLANNER__OPTIMIZATION_BASED_PLANNER__VELOCITY_OPTIMIZER_HPP_
 
 #include "autoware/obstacle_cruise_planner/optimization_based_planner/s_boundary.hpp"
-#include "osqp_interface/osqp_interface.hpp"
+#include "autoware/osqp_interface/osqp_interface.hpp"
 
 #include <vector>
 
@@ -69,7 +69,7 @@ private:
   double over_j_weight_;
 
   // QPSolver
-  autoware::common::osqp::OSQPInterface qp_solver_;
+  autoware::osqp_interface::OSQPInterface qp_solver_;
 };
 
 #endif  // AUTOWARE__OBSTACLE_CRUISE_PLANNER__OPTIMIZATION_BASED_PLANNER__VELOCITY_OPTIMIZER_HPP_

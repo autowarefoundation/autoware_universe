@@ -15,22 +15,25 @@
 #include "autoware/behavior_path_planner_common/utils/path_safety_checker/objects_filtering.hpp"
 
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
-#include "object_recognition_utils/predicted_path_utils.hpp"
+#include "autoware/object_recognition_utils/predicted_path_utils.hpp"
 
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
-#include <autoware/universe_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils/geometry/pose_deviation.hpp>
 
 #include <boost/geometry/algorithms/distance.hpp>
 
 #include <algorithm>
+#include <limits>
+#include <memory>
+#include <utility>
+#include <vector>
 
 namespace autoware::behavior_path_planner::utils::path_safety_checker::filter
 {
-bool velocity_filter(const PredictedObject & object, double velocity_threshold, double max_velocity)
+bool velocity_filter(const Twist & object_twist, double velocity_threshold, double max_velocity)
 {
-  const auto v_norm = std::hypot(
-    object.kinematics.initial_twist_with_covariance.twist.linear.x,
-    object.kinematics.initial_twist_with_covariance.twist.linear.y);
+  const auto v_norm = std::hypot(object_twist.linear.x, object_twist.linear.y);
   return (velocity_threshold < v_norm && v_norm < max_velocity);
 }
 
@@ -39,6 +42,8 @@ bool position_filter(
   const geometry_msgs::msg::Point & current_pose, const double forward_distance,
   const double backward_distance)
 {
+  if (path_points.empty()) return false;
+
   const auto dist_ego_to_obj = autoware::motion_utils::calcSignedArcLength(
     path_points, current_pose, object.kinematics.initial_pose_with_covariance.pose.position);
 
@@ -52,6 +57,20 @@ bool is_within_circle(
   const double dist =
     std::hypot(reference_point.x - object_pos.x, reference_point.y - object_pos.y);
   return dist < search_radius;
+}
+
+bool is_vehicle(const ObjectClassification & classification)
+{
+  switch (classification.label) {
+    case ObjectClassification::CAR:
+    case ObjectClassification::TRUCK:
+    case ObjectClassification::BUS:
+    case ObjectClassification::TRAILER:
+    case ObjectClassification::MOTORCYCLE:
+      return true;
+    default:
+      return false;
+  }
 }
 }  // namespace autoware::behavior_path_planner::utils::path_safety_checker::filter
 
@@ -69,8 +88,7 @@ bool isCentroidWithinLanelet(
   }
 
   const auto closest_pose = lanelet::utils::getClosestCenterPose(lanelet, object_pose.position);
-  return std::abs(autoware::universe_utils::calcYawDeviation(closest_pose, object_pose)) <
-         yaw_threshold;
+  return std::abs(autoware_utils::calc_yaw_deviation(closest_pose, object_pose)) < yaw_threshold;
 }
 
 bool isPolygonOverlapLanelet(
@@ -83,21 +101,20 @@ bool isPolygonOverlapLanelet(
 
   const auto & object_pose = object.kinematics.initial_pose_with_covariance.pose;
   const auto closest_pose = lanelet::utils::getClosestCenterPose(lanelet, object_pose.position);
-  return std::abs(autoware::universe_utils::calcYawDeviation(closest_pose, object_pose)) <
-         yaw_threshold;
+  return std::abs(autoware_utils::calc_yaw_deviation(closest_pose, object_pose)) < yaw_threshold;
 }
 
 bool isPolygonOverlapLanelet(
-  const PredictedObject & object, const autoware::universe_utils::Polygon2d & lanelet_polygon)
+  const PredictedObject & object, const autoware_utils::Polygon2d & lanelet_polygon)
 {
-  const auto object_polygon = autoware::universe_utils::toPolygon2d(object);
+  const auto object_polygon = autoware_utils::to_polygon2d(object);
   return !boost::geometry::disjoint(lanelet_polygon, object_polygon);
 }
 
 bool isPolygonOverlapLanelet(
   const PredictedObject & object, const lanelet::BasicPolygon2d & lanelet_polygon)
 {
-  const auto object_polygon = autoware::universe_utils::toPolygon2d(object);
+  const auto object_polygon = autoware_utils::to_polygon2d(object);
   return !boost::geometry::disjoint(lanelet_polygon, object_polygon);
 }
 
@@ -118,7 +135,7 @@ PredictedObjects filterObjects(
   const ObjectTypesToCheck & target_object_types = params->object_types_to_check;
 
   PredictedObjects filtered_objects =
-    filterObjectsByVelocity(*objects, ignore_object_velocity_threshold, false);
+    filterObjectsByVelocity(*objects, ignore_object_velocity_threshold, true);
 
   filterObjectsByClass(filtered_objects, target_object_types);
 
@@ -136,7 +153,7 @@ PredictedObjects filterObjectsByVelocity(
   const PredictedObjects & objects, const double velocity_threshold,
   const bool remove_above_threshold)
 {
-  if (remove_above_threshold) {
+  if (!remove_above_threshold) {
     return filterObjectsByVelocity(objects, -velocity_threshold, velocity_threshold);
   }
   return filterObjectsByVelocity(objects, velocity_threshold, std::numeric_limits<double>::max());
@@ -146,7 +163,8 @@ PredictedObjects filterObjectsByVelocity(
   const PredictedObjects & objects, double velocity_threshold, double max_velocity)
 {
   const auto filter = [&](const auto & object) {
-    return filter::velocity_filter(object, velocity_threshold, max_velocity);
+    return filter::velocity_filter(
+      object.kinematics.initial_twist_with_covariance.twist, velocity_threshold, max_velocity);
   };
 
   auto filtered = objects;
@@ -327,7 +345,7 @@ ExtendedPredictedObject transform(
 {
   ExtendedPredictedObject extended_object(object);
 
-  const auto obj_velocity = extended_object.initial_twist.twist.linear.x;
+  const auto obj_velocity = extended_object.initial_twist.linear.x;
 
   extended_object.predicted_paths.resize(object.kinematics.predicted_paths.size());
   for (size_t i = 0; i < object.kinematics.predicted_paths.size(); ++i) {
@@ -336,9 +354,9 @@ ExtendedPredictedObject transform(
 
     // Create path based on time horizon and resolution
     for (double t = 0.0; t < safety_check_time_horizon + 1e-3; t += safety_check_time_resolution) {
-      const auto obj_pose = object_recognition_utils::calcInterpolatedPose(path, t);
+      const auto obj_pose = autoware::object_recognition_utils::calcInterpolatedPose(path, t);
       if (obj_pose) {
-        const auto obj_polygon = autoware::universe_utils::toPolygon2d(*obj_pose, object.shape);
+        const auto obj_polygon = autoware_utils::to_polygon2d(*obj_pose, object.shape);
         extended_object.predicted_paths[i].path.emplace_back(
           t, *obj_pose, obj_velocity, obj_polygon);
       }

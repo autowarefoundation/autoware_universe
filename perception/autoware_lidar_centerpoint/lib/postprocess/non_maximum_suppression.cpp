@@ -14,12 +14,15 @@
 
 #include "autoware/lidar_centerpoint/postprocess/non_maximum_suppression.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <object_recognition_utils/geometry.hpp>
-#include <object_recognition_utils/object_recognition_utils.hpp>
+#include <autoware/object_recognition_utils/geometry.hpp>
+#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+
+#include <vector>
 
 namespace autoware::lidar_centerpoint
 {
+using Label = autoware_perception_msgs::msg::ObjectClassification;
 
 void NonMaximumSuppression::setParameters(const NMSParams & params)
 {
@@ -27,31 +30,26 @@ void NonMaximumSuppression::setParameters(const NMSParams & params)
   assert(params.iou_threshold_ >= 0.0 && params.iou_threshold_ <= 1.0);
 
   params_ = params;
-  target_class_mask_ = classNamesToBooleanMask(params.target_class_names_);
-}
-
-bool NonMaximumSuppression::isTargetLabel(const uint8_t label)
-{
-  if (label >= target_class_mask_.size()) {
-    return false;
-  }
-  return target_class_mask_.at(label);
+  search_distance_2d_sq_ = params.search_distance_2d_ * params.search_distance_2d_;
 }
 
 bool NonMaximumSuppression::isTargetPairObject(
   const DetectedObject & object1, const DetectedObject & object2)
 {
-  const auto label1 = object_recognition_utils::getHighestProbLabel(object1.classification);
-  const auto label2 = object_recognition_utils::getHighestProbLabel(object2.classification);
+  const auto label1 =
+    autoware::object_recognition_utils::getHighestProbLabel(object1.classification);
+  const auto label2 =
+    autoware::object_recognition_utils::getHighestProbLabel(object2.classification);
 
-  if (isTargetLabel(label1) && isTargetLabel(label2)) {
-    return true;
+  // if labels are not the same, and one of them is pedestrian, do not suppress
+  if (label1 != label2 && (label1 == Label::PEDESTRIAN || label2 == Label::PEDESTRIAN)) {
+    return false;
   }
 
-  const auto search_sqr_dist_2d = params_.search_distance_2d_ * params_.search_distance_2d_;
-  const auto sqr_dist_2d = autoware::universe_utils::calcSquaredDistance2d(
-    object_recognition_utils::getPose(object1), object_recognition_utils::getPose(object2));
-  return sqr_dist_2d <= search_sqr_dist_2d;
+  const auto sqr_dist_2d = autoware_utils::calc_squared_distance2d(
+    autoware::object_recognition_utils::getPose(object1),
+    autoware::object_recognition_utils::getPose(object2));
+  return sqr_dist_2d <= search_distance_2d_sq_;
 }
 
 Eigen::MatrixXd NonMaximumSuppression::generateIoUMatrix(
@@ -68,14 +66,12 @@ Eigen::MatrixXd NonMaximumSuppression::generateIoUMatrix(
         continue;
       }
 
-      if (params_.nms_type_ == NMS_TYPE::IoU_BEV) {
-        const double iou = object_recognition_utils::get2dIoU(target_obj, source_obj);
-        triangular_matrix(target_i, source_i) = iou;
-        // NOTE: If the target object has any objects with iou > iou_threshold, it
-        // will be suppressed regardless of later results.
-        if (iou > params_.iou_threshold_) {
-          break;
-        }
+      const double iou = autoware::object_recognition_utils::get2dIoU(target_obj, source_obj);
+      triangular_matrix(target_i, source_i) = iou;
+      // NOTE: If the target object has any objects with iou > iou_threshold, it
+      // will be suppressed regardless of later results.
+      if (iou > params_.iou_threshold_) {
+        break;
       }
     }
   }
@@ -92,10 +88,9 @@ std::vector<DetectedObject> NonMaximumSuppression::apply(
   output_objects.reserve(input_objects.size());
   for (std::size_t i = 0; i < input_objects.size(); ++i) {
     const auto value = iou_matrix.row(i).maxCoeff();
-    if (params_.nms_type_ == NMS_TYPE::IoU_BEV) {
-      if (value <= params_.iou_threshold_) {
-        output_objects.emplace_back(input_objects.at(i));
-      }
+
+    if (value <= params_.iou_threshold_) {
+      output_objects.emplace_back(input_objects.at(i));
     }
   }
 

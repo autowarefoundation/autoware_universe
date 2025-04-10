@@ -20,16 +20,20 @@
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/math/normalization.hpp>
-#include <autoware/universe_utils/math/unit_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/normalization.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 
+#include <algorithm>
 #include <limits>
+#include <memory>
 #include <queue>
+#include <set>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace autoware::behavior_path_planner
 {
@@ -138,11 +142,12 @@ std::optional<TurnSignalInfo> TurnSignalDecider::getIntersectionTurnSignalInfo(
   const size_t current_seg_idx, const RouteHandler & route_handler,
   const double nearest_dist_threshold, const double nearest_yaw_threshold)
 {
-  const auto requires_turn_signal = [&](const auto & lane_attribute) {
+  const auto requires_turn_signal = [&current_vel](
+                                      const auto & turn_direction, const bool is_in_turn_lane) {
     constexpr double stop_velocity_threshold = 0.1;
     return (
-      lane_attribute == "right" || lane_attribute == "left" ||
-      (lane_attribute == "straight" && current_vel < stop_velocity_threshold));
+      turn_direction == "right" || turn_direction == "left" ||
+      (turn_direction == "straight" && current_vel < stop_velocity_threshold && !is_in_turn_lane));
   };
   // base search distance
   const double base_search_distance =
@@ -160,6 +165,19 @@ std::optional<TurnSignalInfo> TurnSignalDecider::getIntersectionTurnSignalInfo(
     }
   }
 
+  bool is_in_turn_lane = false;
+  for (const auto & lane_id : unique_lane_ids) {
+    const auto lanelet = route_handler.getLaneletsFromId(lane_id);
+    const std::string turn_direction = lanelet.attributeOr("turn_direction", "none");
+    if (turn_direction == "left" || turn_direction == "right") {
+      const auto & position = current_pose.position;
+      const lanelet::BasicPoint2d point(position.x, position.y);
+      if (lanelet::geometry::inside(lanelet, point)) {
+        is_in_turn_lane = true;
+        break;
+      }
+    }
+  }
   // combine consecutive lanes of the same turn direction
   // stores lanes that have already been combine
   std::set<int> processed_lanes;
@@ -175,7 +193,7 @@ std::optional<TurnSignalInfo> TurnSignalDecider::getIntersectionTurnSignalInfo(
     // Get the lane and its attribute
     const std::string lane_attribute =
       current_lane.attributeOr("turn_direction", std::string("none"));
-    if (!requires_turn_signal(lane_attribute)) continue;
+    if (!requires_turn_signal(lane_attribute, is_in_turn_lane)) continue;
 
     do {
       processed_lanes.insert(current_lane.id());
@@ -256,7 +274,7 @@ std::optional<TurnSignalInfo> TurnSignalDecider::getIntersectionTurnSignalInfo(
     } else if (search_distance <= dist_to_front_point) {
       continue;
     }
-    if (requires_turn_signal(lane_attribute)) {
+    if (requires_turn_signal(lane_attribute, is_in_turn_lane)) {
       // update map if necessary
       if (desired_start_point_map_.find(lane_id) == desired_start_point_map_.end()) {
         desired_start_point_map_.emplace(lane_id, current_pose);
@@ -582,9 +600,8 @@ geometry_msgs::msg::Pose TurnSignalDecider::get_required_end_point(
   const double terminal_yaw = tf2::getYaw(resampled_centerline.back().orientation);
   for (size_t i = 0; i < resampled_centerline.size(); ++i) {
     const double yaw = tf2::getYaw(resampled_centerline.at(i).orientation);
-    const double yaw_diff = autoware::universe_utils::normalizeRadian(yaw - terminal_yaw);
-    if (
-      std::fabs(yaw_diff) < autoware::universe_utils::deg2rad(intersection_angle_threshold_deg_)) {
+    const double yaw_diff = autoware_utils::normalize_radian(yaw - terminal_yaw);
+    if (std::fabs(yaw_diff) < autoware_utils::deg2rad(intersection_angle_threshold_deg_)) {
       return resampled_centerline.at(i);
     }
   }
@@ -641,9 +658,9 @@ void TurnSignalDecider::initialize_intersection_info()
 geometry_msgs::msg::Quaternion TurnSignalDecider::calc_orientation(
   const Point & src_point, const Point & dst_point)
 {
-  const double pitch = autoware::universe_utils::calcElevationAngle(src_point, dst_point);
-  const double yaw = autoware::universe_utils::calcAzimuthAngle(src_point, dst_point);
-  return autoware::universe_utils::createQuaternionFromRPY(0.0, pitch, yaw);
+  const double pitch = autoware_utils::calc_elevation_angle(src_point, dst_point);
+  const double yaw = autoware_utils::calc_azimuth_angle(src_point, dst_point);
+  return autoware_utils::create_quaternion_from_rpy(0.0, pitch, yaw);
 }
 
 std::pair<TurnSignalInfo, bool> TurnSignalDecider::getBehaviorTurnSignalInfo(
@@ -655,7 +672,7 @@ std::pair<TurnSignalInfo, bool> TurnSignalDecider::getBehaviorTurnSignalInfo(
   const bool override_ego_stopped_check, const bool is_pull_out, const bool is_lane_change,
   const bool is_pull_over) const
 {
-  using autoware::universe_utils::getPose;
+  using autoware_utils::get_pose;
 
   const auto & p = parameters;
   const auto & rh = route_handler;
@@ -709,8 +726,8 @@ std::pair<TurnSignalInfo, bool> TurnSignalDecider::getBehaviorTurnSignalInfo(
 
   const auto relative_shift_length = end_shift_length - start_shift_length;
 
-  const auto p_path_start = getPose(path.path.points.front());
-  const auto p_path_end = getPose(path.path.points.back());
+  const auto p_path_start = get_pose(path.path.points.front());
+  const auto p_path_end = get_pose(path.path.points.back());
 
   // If shift length is shorter than the threshold, it does not need to turn on blinkers
   if (std::fabs(relative_shift_length) < p.turn_signal_shift_length_threshold) {

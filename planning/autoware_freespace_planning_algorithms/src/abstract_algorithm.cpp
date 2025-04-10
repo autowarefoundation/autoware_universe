@@ -16,15 +16,17 @@
 
 #include "autoware/freespace_planning_algorithms/kinematic_bicycle_model.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/math/normalization.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/normalization.hpp>
 
+#include <algorithm>
+#include <iostream>
 #include <limits>
 #include <vector>
 
 namespace autoware::freespace_planning_algorithms
 {
-using autoware::universe_utils::createQuaternionFromYaw;
+using autoware_utils::create_quaternion_from_yaw;
 
 geometry_msgs::msg::Pose transformPose(
   const geometry_msgs::msg::Pose & pose, const geometry_msgs::msg::TransformStamped & transform)
@@ -38,7 +40,7 @@ geometry_msgs::msg::Pose transformPose(
 int discretizeAngle(const double theta, const int theta_size)
 {
   const double angle_resolution = 2.0 * M_PI / theta_size;
-  return static_cast<int>(std::round(normalizeRadian(theta, 0.0) / angle_resolution)) % theta_size;
+  return static_cast<int>(std::round(normalize_radian(theta, 0.0) / angle_resolution)) % theta_size;
 }
 
 IndexXYT pose2index(
@@ -61,7 +63,7 @@ geometry_msgs::msg::Pose index2pose(
 
   const double angle_resolution = 2.0 * M_PI / theta_size;
   const double yaw = index.theta * angle_resolution;
-  pose_local.orientation = createQuaternionFromYaw(yaw);
+  pose_local.orientation = create_quaternion_from_yaw(yaw);
 
   return pose_local;
 }
@@ -99,7 +101,7 @@ double PlannerWaypoints::compute_length() const
   for (size_t i = 0; i < waypoints.size() - 1; ++i) {
     const auto pose_a = waypoints.at(i);
     const auto pose_b = waypoints.at(i + 1);
-    total_cost += autoware::universe_utils::calcDistance2d(pose_a.pose, pose_b.pose);
+    total_cost += autoware_utils::calc_distance2d(pose_a.pose, pose_b.pose);
   }
   return total_cost;
 }
@@ -113,7 +115,7 @@ void AbstractPlanningAlgorithm::setMap(const nav_msgs::msg::OccupancyGrid & cost
   std::vector<bool> is_obstacle_table;
   is_obstacle_table.resize(nb_of_cells);
   for (uint32_t i = 0; i < nb_of_cells; ++i) {
-    const int cost = costmap_.data[i];
+    const int cost = costmap_.data[i];  // NOLINT
     if (cost < 0 || planner_common_param_.obstacle_threshold <= cost) {
       is_obstacle_table[i] = true;
     }

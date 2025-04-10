@@ -27,7 +27,7 @@
 #include <tf2_eigen/tf2_eigen.hpp>
 #endif
 
-#include <autoware_point_types/types.hpp>
+#include <autoware/point_types/types.hpp>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
@@ -38,8 +38,8 @@
 
 namespace autoware::lidar_transfusion
 {
-constexpr size_t AFF_MAT_SIZE = 16;  // 4x4 matrix
-constexpr size_t MAX_CLOUD_STEP_SIZE = sizeof(autoware_point_types::PointXYZIRCAEDT);
+constexpr std::size_t AFF_MAT_SIZE = 16;  // 4x4 matrix
+constexpr std::size_t MAX_CLOUD_STEP_SIZE = sizeof(autoware::point_types::PointXYZIRCAEDT);
 
 class VoxelGenerator
 {

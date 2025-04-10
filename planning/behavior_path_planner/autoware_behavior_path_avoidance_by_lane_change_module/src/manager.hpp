@@ -32,6 +32,8 @@ using autoware::behavior_path_planner::LaneChangeModuleManager;
 using autoware::behavior_path_planner::LaneChangeModuleType;
 using autoware::behavior_path_planner::SceneModuleInterface;
 
+using SMIPtr = std::unique_ptr<SceneModuleInterface>;
+
 class AvoidanceByLaneChangeModuleManager : public LaneChangeModuleManager
 {
 public:
@@ -44,7 +46,7 @@ public:
 
   void init(rclcpp::Node * node) override;
 
-  std::unique_ptr<SceneModuleInterface> createNewSceneModuleInstance() override;
+  SMIPtr createNewSceneModuleInstance() override;
 
 private:
   std::shared_ptr<AvoidanceByLCParameters> avoidance_parameters_;

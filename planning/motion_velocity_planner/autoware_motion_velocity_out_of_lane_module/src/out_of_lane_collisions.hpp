@@ -20,7 +20,7 @@
 #include <autoware/motion_velocity_planner_common/collision_checker.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
-#include <autoware_planning_msgs/msg/detail/trajectory_point__struct.hpp>
+#include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
 #include <vector>
 

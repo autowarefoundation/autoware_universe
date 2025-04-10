@@ -16,10 +16,13 @@
 
 #include "obstacle_pointcloud_validator.hpp"
 
-#include <autoware/universe_utils/geometry/boost_polygon_utils.hpp>
-#include <object_recognition_utils/object_recognition_utils.hpp>
+#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 
 #include <boost/geometry.hpp>
+
+#include <memory>
+#include <vector>
 
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -30,13 +33,15 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
+#include <cmath>
+
 namespace autoware::detected_object_validation
 {
 namespace obstacle_pointcloud
 {
 namespace bg = boost::geometry;
 using Shape = autoware_perception_msgs::msg::Shape;
-using Polygon2d = autoware::universe_utils::Polygon2d;
+using Polygon2d = autoware_utils::Polygon2d;
 
 Validator::Validator(const PointsNumThresholdParam & points_num_threshold_param)
 {
@@ -54,10 +59,9 @@ size_t Validator::getThresholdPointCloud(
     object.kinematics.pose_with_covariance.pose.position.x,
     object.kinematics.pose_with_covariance.pose.position.y);
   size_t threshold_pc = std::clamp(
-    static_cast<size_t>(
+    static_cast<size_t>(std::lround(
       points_num_threshold_param_.min_points_and_distance_ratio.at(object_label_id) /
-        object_distance +
-      0.5f),
+      object_distance)),
     static_cast<size_t>(points_num_threshold_param_.min_points_num.at(object_label_id)),
     static_cast<size_t>(points_num_threshold_param_.max_points_num.at(object_label_id)));
   return threshold_pc;
@@ -99,8 +103,8 @@ std::optional<size_t> Validator2D::getPointCloudWithinObject(
 {
   std::vector<pcl::Vertices> vertices_array;
   pcl::Vertices vertices;
-  Polygon2d poly2d = autoware::universe_utils::toPolygon2d(
-    object.kinematics.pose_with_covariance.pose, object.shape);
+  Polygon2d poly2d =
+    autoware_utils::to_polygon2d(object.kinematics.pose_with_covariance.pose, object.shape);
   if (bg::is_empty(poly2d)) return std::nullopt;
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr poly3d(new pcl::PointCloud<pcl::PointXYZ>);
@@ -214,8 +218,8 @@ std::optional<size_t> Validator3D::getPointCloudWithinObject(
   auto const object_height = object.shape.dimensions.x;
   auto z_min = object_position.z - object_height / 2.0f;
   auto z_max = object_position.z + object_height / 2.0f;
-  Polygon2d poly2d = autoware::universe_utils::toPolygon2d(
-    object.kinematics.pose_with_covariance.pose, object.shape);
+  Polygon2d poly2d =
+    autoware_utils::to_polygon2d(object.kinematics.pose_with_covariance.pose, object.shape);
   if (bg::is_empty(poly2d)) return std::nullopt;
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr poly3d(new pcl::PointCloud<pcl::PointXYZ>);
@@ -291,6 +295,8 @@ ObstaclePointCloudBasedValidator::ObstaclePointCloudBasedValidator(
     declare_parameter<std::vector<int64_t>>("max_points_num");
   points_num_threshold_param_.min_points_and_distance_ratio =
     declare_parameter<std::vector<double>>("min_points_and_distance_ratio");
+  const double validate_max_distance = declare_parameter<double>("validate_max_distance_m");
+  validate_max_distance_sq_ = validate_max_distance * validate_max_distance;
 
   using_2d_validator_ = declare_parameter<bool>("using_2d_validator");
 
@@ -307,13 +313,12 @@ ObstaclePointCloudBasedValidator::ObstaclePointCloudBasedValidator(
 
   objects_pub_ = create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
     "~/output/objects", rclcpp::QoS{1});
-  debug_publisher_ = std::make_unique<autoware::universe_utils::DebugPublisher>(
-    this, "obstacle_pointcloud_based_validator");
+  debug_publisher_ =
+    std::make_unique<autoware_utils::DebugPublisher>(this, "obstacle_pointcloud_based_validator");
 
-  const bool enable_debugger = declare_parameter<bool>("enable_debugger", false);
+  const bool enable_debugger = declare_parameter<bool>("enable_debugger");
   if (enable_debugger) debugger_ = std::make_shared<Debugger>(this);
-  published_time_publisher_ =
-    std::make_unique<autoware::universe_utils::PublishedTimePublisher>(this);
+  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 }
 void ObstaclePointCloudBasedValidator::onObjectsAndObstaclePointCloud(
   const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr & input_objects,
@@ -325,7 +330,7 @@ void ObstaclePointCloudBasedValidator::onObjectsAndObstaclePointCloud(
 
   // Transform to pointcloud frame
   autoware_perception_msgs::msg::DetectedObjects transformed_objects;
-  if (!object_recognition_utils::transformObjects(
+  if (!autoware::object_recognition_utils::transformObjects(
         *input_objects, input_obstacle_pointcloud->header.frame_id, tf_buffer_,
         transformed_objects)) {
     // objects_pub_->publish(*input_objects);
@@ -342,6 +347,18 @@ void ObstaclePointCloudBasedValidator::onObjectsAndObstaclePointCloud(
   for (size_t i = 0; i < transformed_objects.objects.size(); ++i) {
     const auto & transformed_object = transformed_objects.objects.at(i);
     const auto & object = input_objects->objects.at(i);
+    // check object distance
+    const double distance_sq =
+      transformed_object.kinematics.pose_with_covariance.pose.position.x *
+        transformed_object.kinematics.pose_with_covariance.pose.position.x +
+      transformed_object.kinematics.pose_with_covariance.pose.position.y *
+        transformed_object.kinematics.pose_with_covariance.pose.position.y;
+    if (distance_sq > validate_max_distance_sq_) {
+      // pass to output
+      output.objects.push_back(object);
+      continue;
+    }
+
     const auto validated =
       validation_is_ready ? validator_->validate_object(transformed_object) : false;
     if (debugger_) {
@@ -368,7 +385,7 @@ void ObstaclePointCloudBasedValidator::onObjectsAndObstaclePointCloud(
     std::chrono::duration<double, std::milli>(
       std::chrono::nanoseconds((this->get_clock()->now() - output.header.stamp).nanoseconds()))
       .count();
-  debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+  debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/pipeline_latency_ms", pipeline_latency);
 }
 

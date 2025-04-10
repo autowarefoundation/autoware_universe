@@ -14,10 +14,6 @@ endif()
 
 ament_export_dependencies(rclpy)
 
-find_package(ros_environment REQUIRED)
-set(ROS_VERSION $ENV{ROS_VERSION})
-
-
 # Install launch files.
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME}/)
 

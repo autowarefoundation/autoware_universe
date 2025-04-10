@@ -63,7 +63,7 @@ private:
   void fillAvoidanceTargetObjects(AvoidancePlanningData & data, AvoidanceDebugData & debug) const;
 
   double calcMinAvoidanceLength(const ObjectData & nearest_object) const;
-  double calcMinimumLaneChangeLength() const;
+  double calc_minimum_dist_buffer() const;
   double calcLateralOffset() const;
 };
 }  // namespace autoware::behavior_path_planner

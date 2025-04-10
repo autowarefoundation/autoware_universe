@@ -48,3 +48,17 @@ ros2 launch autoware_pointcloud_preprocessor distortion_corrector.launch.xml
 
 - The node requires time synchronization between the topics from lidars, twist, and IMU.
 - If you want to use a 3D distortion corrector without IMU, please check that the linear and angular velocity fields of your twist message are not empty.
+- The node updates the per-point azimuth and distance values based on the undistorted XYZ coordinates when the input point cloud is in the sensor frame (not in the `base_link`) and the `update_azimuth_and_distance` parameter is set to `true`. The azimuth values are calculated using a modified version of OpenCV's `cv::fastAtan2` function.
+- Please note that updating the azimuth and distance fields increases the execution time by approximately 20%. Additionally, due to the `cv::fastAtan2` algorithm's has a maximum error of 0.3 degrees, there is a **possibility of changing the beam order for high azimuth resolution LiDAR**.
+- LiDARs from different vendors have different azimuth coordinates, as shown in the images below. Currently, the coordinate systems listed below have been tested, and the node will update the azimuth based on the input coordinate system.
+  - `velodyne`: (x: 0 degrees, y: 270 degrees)
+  - `hesai`: (x: 90 degrees, y: 0 degrees)
+  - `others`: (x: 0 degrees, y: 90 degrees) and (x: 270 degrees, y: 0 degrees)
+
+| ![Velodyne Azimuth Coordinate](./image/velodyne.drawio.png) | ![Hesai Azimuth Coordinate](./image/hesai.drawio.png) |
+| :---------------------------------------------------------: | :---------------------------------------------------: |
+|               **Velodyne azimuth coordinate**               |             **Hesai azimuth coordinate**              |
+
+## References/External links
+
+<https://docs.opencv.org/3.4/db/de0/group__core__utils.html#ga7b356498dd314380a0c386b059852270>

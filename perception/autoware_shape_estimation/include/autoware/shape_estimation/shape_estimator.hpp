@@ -61,6 +61,7 @@ private:
   bool applyCorrector(
     const uint8_t label, const bool use_reference_yaw,
     const boost::optional<ReferenceShapeSizeInfo> & ref_shape_size_info,
+    const boost::optional<geometry_msgs::msg::Pose> & ref_pose,
     autoware_perception_msgs::msg::Shape & shape, geometry_msgs::msg::Pose & pose);
 
   bool use_corrector_;
@@ -76,6 +77,7 @@ public:
     const uint8_t label, const pcl::PointCloud<pcl::PointXYZ> & cluster,
     const boost::optional<ReferenceYawInfo> & ref_yaw_info,
     const boost::optional<ReferenceShapeSizeInfo> & ref_shape_size_info,
+    const boost::optional<geometry_msgs::msg::Pose> & ref_pose,
     autoware_perception_msgs::msg::Shape & shape_output, geometry_msgs::msg::Pose & pose_output);
 };
 }  // namespace autoware::shape_estimation

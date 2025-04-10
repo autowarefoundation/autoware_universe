@@ -81,7 +81,7 @@ start to test. After the test is completed, the results will be stored in the `o
 #### Perception Planning Mode
 
 - Download the rosbag files from the Google Drive
-  link [here](https://drive.google.com/file/d/1-Qcv7gYfR-usKOjUH8I997w8I4NMhXlX/view?usp=sharing).
+  link [here](https://drive.google.com/drive/folders/1eJMEdt4WbU-W6MPXlNTkIhZtwpof0HcO?usp=sharing).
 - Extract the zip file and set the path of the `.db3` files to parameters `path_bag_without_object`
   and `path_bag_with_object`.
 - You can start to test with the following command:
@@ -89,6 +89,8 @@ start to test. After the test is completed, the results will be stored in the `o
 ```bash
 ros2 launch reaction_analyzer reaction_analyzer.launch.xml running_mode:=perception_planning vehicle_model:=sample_vehicle sensor_model:=awsim_labs_sensor_kit map_path:=[MAP_PATH]
 ```
+
+- On the first run of the tool in perception_planning mode, initialization might take longer than expected. Please allow some time for the process to complete.
 
 After the command, the `e2e_simulator` and the `reaction_analyzer` will be launched. It will automatically start
 to test. After the test is completed, the results will be stored in the `output_file_path` you defined.
@@ -119,10 +121,8 @@ for `perception_planning` mode) parameters.**
 ros2 launch autoware_launch e2e_simulator.launch.xml vehicle_model:=sample_vehicle sensor_model:=awsim_labs_sensor_kit map_path:=[MAP_PATH]
 ```
 
-- After EGO is initialized, you can move the ego vehicle to the desired position by using the `SetGoal` button in the
-  RViz.
-- After the EGO stopped in desired position, please localize the dummy obstacle by using the traffic controller. You can
-  control the traffic by pressing `ESC` button.
+- After the EGO is initialized, you can position the ego vehicle in the desired location using the `2D Pose Estimate` button in RViz.
+- After the EGO located in desired position, please localize the dummy obstacle by using the traffic controller. You can access the traffic control section by pressing the 'ESC' key.
 
 **After localize EGO and dummy vehicle, we should write the positions of these entities in the map frame
 in `reaction_analyzer.param.yaml`. To achieve this:**

@@ -19,10 +19,12 @@
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <lanelet2_core/geometry/Polygon.h>
 
 #include <algorithm>
+#include <vector>
 
 namespace autoware::behavior_velocity_planner
 {
@@ -33,7 +35,7 @@ using Polygon = bg::model::polygon<Point>;
 using Line = bg::model::linestring<Point>;
 
 using autoware::motion_utils::calcSignedArcLength;
-using autoware::universe_utils::createPoint;
+using autoware_utils::create_point;
 
 PathWithNoDrivableLanePolygonIntersection getPathIntersectionWithNoDrivableLanePolygon(
   const PathWithLaneId & ego_path, const lanelet::BasicPolygon2d & polygon,
@@ -66,10 +68,10 @@ PathWithNoDrivableLanePolygonIntersection getPathIntersectionWithNoDrivableLaneP
 
   const auto compare = [&](const Point & p1, const Point & p2) {
     const auto dist_l1 =
-      calcSignedArcLength(ego_path.points, size_t(0), createPoint(p1.x(), p1.y(), ego_pos.z));
+      calcSignedArcLength(ego_path.points, size_t(0), create_point(p1.x(), p1.y(), ego_pos.z));
 
     const auto dist_l2 =
-      calcSignedArcLength(ego_path.points, size_t(0), createPoint(p2.x(), p2.y(), ego_pos.z));
+      calcSignedArcLength(ego_path.points, size_t(0), create_point(p2.x(), p2.y(), ego_pos.z));
 
     return dist_l1 < dist_l2;
   };
@@ -97,10 +99,10 @@ PathWithNoDrivableLanePolygonIntersection getPathIntersectionWithNoDrivableLaneP
     const auto & p = intersects.at(0);
     if (is_last_path_point_inside_polygon) {
       path_no_drivable_lane_polygon_intersection.first_intersection_point =
-        createPoint(p.x(), p.y(), ego_pos.z);
+        create_point(p.x(), p.y(), ego_pos.z);
     } else if (path_no_drivable_lane_polygon_intersection.is_first_path_point_inside_polygon) {
       path_no_drivable_lane_polygon_intersection.second_intersection_point =
-        createPoint(p.x(), p.y(), ego_pos.z);
+        create_point(p.x(), p.y(), ego_pos.z);
     } else {
       // do nothing
     }
@@ -109,9 +111,9 @@ PathWithNoDrivableLanePolygonIntersection getPathIntersectionWithNoDrivableLaneP
     const auto & p0 = intersects.at(0);
     const auto & p1 = intersects.at(1);
     path_no_drivable_lane_polygon_intersection.first_intersection_point =
-      createPoint(p0.x(), p0.y(), ego_pos.z);
+      create_point(p0.x(), p0.y(), ego_pos.z);
     path_no_drivable_lane_polygon_intersection.second_intersection_point =
-      createPoint(p1.x(), p1.y(), ego_pos.z);
+      create_point(p1.x(), p1.y(), ego_pos.z);
   } else {
     // do nothing
   }

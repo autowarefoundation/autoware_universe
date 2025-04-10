@@ -23,8 +23,8 @@
 
 #define EIGEN_MPL2_ONLY
 #include <Eigen/Core>
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
+#include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/detection_area.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -36,9 +36,9 @@ namespace autoware::behavior_velocity_planner
 using PathIndexWithPose = std::pair<size_t, geometry_msgs::msg::Pose>;  // front index, pose
 using PathIndexWithPoint2d = std::pair<size_t, Point2d>;                // front index, point2d
 using PathIndexWithOffset = std::pair<size_t, double>;                  // front index, offset
-using tier4_planning_msgs::msg::PathWithLaneId;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 
-class DetectionAreaModule : public SceneModuleInterface
+class DetectionAreaModule : public SceneModuleInterfaceWithRTC
 {
 public:
   enum class State { GO, STOP };
@@ -61,30 +61,24 @@ public:
     double state_clear_time;
     double hold_stop_margin_distance;
     double distance_to_judge_over_stop_line;
+    bool suppress_pass_judge_when_stopping;
   };
 
-public:
   DetectionAreaModule(
     const int64_t module_id, const int64_t lane_id,
     const lanelet::autoware::DetectionArea & detection_area_reg_elem,
-    const PlannerParam & planner_param, const rclcpp::Logger logger,
-    const rclcpp::Clock::SharedPtr clock);
+    const PlannerParam & planner_param, const rclcpp::Logger & logger,
+    const rclcpp::Clock::SharedPtr clock,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+      planning_factor_interface);
 
-  bool modifyPathVelocity(PathWithLaneId * path, StopReason * stop_reason) override;
+  bool modifyPathVelocity(PathWithLaneId * path) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
 
 private:
-  LineString2d getStopLineGeometry2d() const;
-
-  std::vector<geometry_msgs::msg::Point> getObstaclePoints() const;
-
-  bool canClearStopState() const;
-
-  bool hasEnoughBrakingDistance(
-    const geometry_msgs::msg::Pose & self_pose, const geometry_msgs::msg::Pose & line_pose) const;
-
   // Lane id
   int64_t lane_id_;
 

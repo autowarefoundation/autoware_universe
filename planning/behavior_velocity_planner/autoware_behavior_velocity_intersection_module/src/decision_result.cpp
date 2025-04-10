@@ -14,55 +14,62 @@
 
 #include "decision_result.hpp"
 
+#include <string>
+
 namespace autoware::behavior_velocity_planner
 {
-std::string formatDecisionResult(const DecisionResult & decision_result)
+std::string formatDecisionResult(
+  const DecisionResult & decision_result, const bool int_activated, const bool int_occ_activated)
 {
+  const auto rtc = "RTC: intersection activated_ = " + std::to_string(int_activated) +
+                   ", intersection_occlusion activated_ = " + std::to_string(int_occ_activated) +
+                   "\n";
+
   if (std::holds_alternative<InternalError>(decision_result)) {
     const auto & state = std::get<InternalError>(decision_result);
-    return "InternalError because " + state.error;
+    return rtc + "InternalError because " + state.error;
   }
   if (std::holds_alternative<OverPassJudge>(decision_result)) {
     const auto & state = std::get<OverPassJudge>(decision_result);
-    return "OverPassJudge:\nsafety_report:" + state.safety_report +
+    return rtc + "OverPassJudge:\nsafety_report:" + state.safety_report +
            "\nevasive_report:" + state.evasive_report;
   }
   if (std::holds_alternative<StuckStop>(decision_result)) {
-    return "StuckStop";
+    return rtc + "StuckStop";
   }
   if (std::holds_alternative<YieldStuckStop>(decision_result)) {
     const auto & state = std::get<YieldStuckStop>(decision_result);
-    return "YieldStuckStop:\nocclusion_report:" + state.occlusion_report;
+    return rtc + "YieldStuckStop:\nocclusion_report:" + state.occlusion_report;
   }
   if (std::holds_alternative<NonOccludedCollisionStop>(decision_result)) {
     const auto & state = std::get<NonOccludedCollisionStop>(decision_result);
-    return "NonOccludedCollisionStop:\nocclusion_report:" + state.occlusion_report;
+    return rtc + "NonOccludedCollisionStop:\nocclusion_report:" + state.occlusion_report;
   }
   if (std::holds_alternative<FirstWaitBeforeOcclusion>(decision_result)) {
     const auto & state = std::get<FirstWaitBeforeOcclusion>(decision_result);
-    return "FirstWaitBeforeOcclusion:\nocclusion_report:" + state.occlusion_report;
+    return rtc + "FirstWaitBeforeOcclusion:\nocclusion_report:" + state.occlusion_report;
   }
   if (std::holds_alternative<PeekingTowardOcclusion>(decision_result)) {
     const auto & state = std::get<PeekingTowardOcclusion>(decision_result);
-    return "PeekingTowardOcclusion:\nocclusion_report:" + state.occlusion_report;
+    return rtc + "PeekingTowardOcclusion:\nocclusion_report:" + state.occlusion_report;
   }
   if (std::holds_alternative<OccludedCollisionStop>(decision_result)) {
     const auto & state = std::get<OccludedCollisionStop>(decision_result);
-    return "OccludedCollisionStop:\nocclusion_report:" + state.occlusion_report;
+    return rtc + "OccludedCollisionStop:\nocclusion_report:" + state.occlusion_report;
   }
   if (std::holds_alternative<OccludedAbsenceTrafficLight>(decision_result)) {
     const auto & state = std::get<OccludedAbsenceTrafficLight>(decision_result);
-    return "OccludedAbsenceTrafficLight:\nocclusion_report:" + state.occlusion_report;
+    return rtc + "OccludedAbsenceTrafficLight:\nocclusion_report:" + state.occlusion_report;
   }
   if (std::holds_alternative<Safe>(decision_result)) {
     const auto & state = std::get<Safe>(decision_result);
-    return "Safe:\nocclusion_report:" + state.occlusion_report;
+    return rtc + "Safe:\nocclusion_report:" + state.occlusion_report;
   }
   if (std::holds_alternative<FullyPrioritized>(decision_result)) {
     const auto & state = std::get<FullyPrioritized>(decision_result);
-    return "FullyPrioritized\nsafety_report:" + state.safety_report;
+    return rtc + "FullyPrioritized\nsafety_report:" + state.safety_report;
   }
-  return "";
+  return rtc + "";
 }
 
 }  // namespace autoware::behavior_velocity_planner

@@ -1,0 +1,9 @@
+/**:
+  ros__parameters:
+    min_x: -1.0
+    min_y: -1.0
+    min_z: -1.0
+    max_x: 1.0
+    max_y: 1.0
+    max_z: 1.0
+    negative: false

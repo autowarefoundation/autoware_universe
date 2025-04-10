@@ -14,15 +14,16 @@
 
 #include "manager.hpp"
 
-#include <autoware/universe_utils/ros/parameter.hpp>
+#include <autoware_utils/ros/parameter.hpp>
 
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace autoware::behavior_velocity_planner
 {
-using autoware::universe_utils::getOrDeclareParameter;
+using autoware_utils::get_or_declare_parameter;
 RunOutModuleManager::RunOutModuleManager(rclcpp::Node & node)
 : SceneModuleManagerInterface(node, getModuleName())
 {
@@ -48,104 +49,105 @@ RunOutModuleManager::RunOutModuleManager(rclcpp::Node & node)
 
   {
     auto & p = planner_param_.common;
-    p.normal_min_jerk = getOrDeclareParameter<double>(node, "normal.min_jerk");
-    p.normal_min_acc = getOrDeclareParameter<double>(node, "normal.min_acc");
-    p.limit_min_jerk = getOrDeclareParameter<double>(node, "limit.min_jerk");
-    p.limit_min_acc = getOrDeclareParameter<double>(node, "limit.min_acc");
+    p.normal_min_jerk = get_or_declare_parameter<double>(node, "normal.min_jerk");
+    p.normal_min_acc = get_or_declare_parameter<double>(node, "normal.min_acc");
+    p.limit_min_jerk = get_or_declare_parameter<double>(node, "limit.min_jerk");
+    p.limit_min_acc = get_or_declare_parameter<double>(node, "limit.min_acc");
   }
 
   {
     auto & p = planner_param_.run_out;
-    p.detection_method = getOrDeclareParameter<std::string>(node, ns + ".detection_method");
+    p.detection_method = get_or_declare_parameter<std::string>(node, ns + ".detection_method");
     p.target_obstacle_types =
-      getOrDeclareParameter<std::vector<std::string>>(node, ns + ".target_obstacle_types");
-    p.use_partition_lanelet = getOrDeclareParameter<bool>(node, ns + ".use_partition_lanelet");
-    p.use_ego_cut_line = getOrDeclareParameter<bool>(node, ns + ".use_ego_cut_line");
+      get_or_declare_parameter<std::vector<std::string>>(node, ns + ".target_obstacle_types");
+    p.use_partition_lanelet = get_or_declare_parameter<bool>(node, ns + ".use_partition_lanelet");
+    p.use_ego_cut_line = get_or_declare_parameter<bool>(node, ns + ".use_ego_cut_line");
     p.exclude_obstacles_already_in_path =
-      getOrDeclareParameter<bool>(node, ns + ".exclude_obstacles_already_in_path");
-    p.suppress_on_crosswalk = getOrDeclareParameter<bool>(node, ns + ".suppress_on_crosswalk");
-    p.specify_decel_jerk = getOrDeclareParameter<bool>(node, ns + ".specify_decel_jerk");
-    p.stop_margin = getOrDeclareParameter<double>(node, ns + ".stop_margin");
-    p.passing_margin = getOrDeclareParameter<double>(node, ns + ".passing_margin");
-    p.deceleration_jerk = getOrDeclareParameter<double>(node, ns + ".deceleration_jerk");
-    p.detection_distance = getOrDeclareParameter<double>(node, ns + ".detection_distance");
-    p.detection_span = getOrDeclareParameter<double>(node, ns + ".detection_span");
-    p.min_vel_ego_kmph = getOrDeclareParameter<double>(node, ns + ".min_vel_ego_kmph");
-    p.ego_cut_line_length = getOrDeclareParameter<double>(node, ns + ".ego_cut_line_length");
+      get_or_declare_parameter<bool>(node, ns + ".exclude_obstacles_already_in_path");
+    p.suppress_on_crosswalk = get_or_declare_parameter<bool>(node, ns + ".suppress_on_crosswalk");
+    p.specify_decel_jerk = get_or_declare_parameter<bool>(node, ns + ".specify_decel_jerk");
+    p.stop_margin = get_or_declare_parameter<double>(node, ns + ".stop_margin");
+    p.passing_margin = get_or_declare_parameter<double>(node, ns + ".passing_margin");
+    p.deceleration_jerk = get_or_declare_parameter<double>(node, ns + ".deceleration_jerk");
+    p.detection_distance = get_or_declare_parameter<double>(node, ns + ".detection_distance");
+    p.detection_span = get_or_declare_parameter<double>(node, ns + ".detection_span");
+    p.min_vel_ego_kmph = get_or_declare_parameter<double>(node, ns + ".min_vel_ego_kmph");
+    p.ego_cut_line_length = get_or_declare_parameter<double>(node, ns + ".ego_cut_line_length");
     p.ego_footprint_extra_margin =
-      getOrDeclareParameter<double>(node, ns + ".ego_footprint_extra_margin");
+      get_or_declare_parameter<double>(node, ns + ".ego_footprint_extra_margin");
     p.keep_obstacle_on_path_time_threshold =
-      getOrDeclareParameter<double>(node, ns + ".keep_obstacle_on_path_time_threshold");
-    p.keep_stop_point_time = getOrDeclareParameter<double>(node, ns + ".keep_stop_point_time");
+      get_or_declare_parameter<double>(node, ns + ".keep_obstacle_on_path_time_threshold");
+    p.keep_stop_point_time = get_or_declare_parameter<double>(node, ns + ".keep_stop_point_time");
   }
 
   {
     auto & p = planner_param_.detection_area;
     const std::string ns_da = ns + ".detection_area";
-    p.margin_ahead = getOrDeclareParameter<double>(node, ns_da + ".margin_ahead");
-    p.margin_behind = getOrDeclareParameter<double>(node, ns_da + ".margin_behind");
+    p.margin_ahead = get_or_declare_parameter<double>(node, ns_da + ".margin_ahead");
+    p.margin_behind = get_or_declare_parameter<double>(node, ns_da + ".margin_behind");
   }
 
   {
     auto & p = planner_param_.mandatory_area;
     const std::string ns_da = ns + ".mandatory_area";
-    p.decel_jerk = getOrDeclareParameter<double>(node, ns_da + ".decel_jerk");
+    p.decel_jerk = get_or_declare_parameter<double>(node, ns_da + ".decel_jerk");
   }
 
   {
     auto & p = planner_param_.dynamic_obstacle;
     const std::string ns_do = ns + ".dynamic_obstacle";
-    p.use_mandatory_area = getOrDeclareParameter<bool>(node, ns_do + ".use_mandatory_area");
+    p.use_mandatory_area = get_or_declare_parameter<bool>(node, ns_do + ".use_mandatory_area");
     p.assume_fixed_velocity =
-      getOrDeclareParameter<bool>(node, ns_do + ".assume_fixed_velocity.enable");
+      get_or_declare_parameter<bool>(node, ns_do + ".assume_fixed_velocity.enable");
     p.min_vel_kmph =
-      getOrDeclareParameter<double>(node, ns_do + ".assume_fixed_velocity.min_vel_kmph");
+      get_or_declare_parameter<double>(node, ns_do + ".assume_fixed_velocity.min_vel_kmph");
     p.max_vel_kmph =
-      getOrDeclareParameter<double>(node, ns_do + ".assume_fixed_velocity.max_vel_kmph");
-    p.std_dev_multiplier = getOrDeclareParameter<double>(node, ns_do + ".std_dev_multiplier");
-    p.diameter = getOrDeclareParameter<double>(node, ns_do + ".diameter");
-    p.height = getOrDeclareParameter<double>(node, ns_do + ".height");
-    p.max_prediction_time = getOrDeclareParameter<double>(node, ns_do + ".max_prediction_time");
-    p.time_step = getOrDeclareParameter<double>(node, ns_do + ".time_step");
-    p.points_interval = getOrDeclareParameter<double>(node, ns_do + ".points_interval");
+      get_or_declare_parameter<double>(node, ns_do + ".assume_fixed_velocity.max_vel_kmph");
+    p.std_dev_multiplier = get_or_declare_parameter<double>(node, ns_do + ".std_dev_multiplier");
+    p.diameter = get_or_declare_parameter<double>(node, ns_do + ".diameter");
+    p.height = get_or_declare_parameter<double>(node, ns_do + ".height");
+    p.max_prediction_time = get_or_declare_parameter<double>(node, ns_do + ".max_prediction_time");
+    p.time_step = get_or_declare_parameter<double>(node, ns_do + ".time_step");
+    p.points_interval = get_or_declare_parameter<double>(node, ns_do + ".points_interval");
   }
 
   {
     auto & p = planner_param_.approaching;
     const std::string ns_a = ns + ".approaching";
-    p.enable = getOrDeclareParameter<bool>(node, ns_a + ".enable");
-    p.margin = getOrDeclareParameter<double>(node, ns_a + ".margin");
-    p.limit_vel_kmph = getOrDeclareParameter<double>(node, ns_a + ".limit_vel_kmph");
+    p.enable = get_or_declare_parameter<bool>(node, ns_a + ".enable");
+    p.margin = get_or_declare_parameter<double>(node, ns_a + ".margin");
+    p.limit_vel_kmph = get_or_declare_parameter<double>(node, ns_a + ".limit_vel_kmph");
 
     const std::string ns_as = ns_a + ".state";
-    p.state.stop_thresh = getOrDeclareParameter<double>(node, ns_as + ".stop_thresh");
-    p.state.stop_time_thresh = getOrDeclareParameter<double>(node, ns_as + ".stop_time_thresh");
+    p.state.stop_thresh = get_or_declare_parameter<double>(node, ns_as + ".stop_thresh");
+    p.state.stop_time_thresh = get_or_declare_parameter<double>(node, ns_as + ".stop_time_thresh");
     p.state.disable_approach_dist =
-      getOrDeclareParameter<double>(node, ns_as + ".disable_approach_dist");
+      get_or_declare_parameter<double>(node, ns_as + ".disable_approach_dist");
     p.state.keep_approach_duration =
-      getOrDeclareParameter<double>(node, ns_as + ".keep_approach_duration");
+      get_or_declare_parameter<double>(node, ns_as + ".keep_approach_duration");
   }
 
   {
     auto & p = planner_param_.slow_down_limit;
     const std::string ns_m = ns + ".slow_down_limit";
-    p.enable = getOrDeclareParameter<bool>(node, ns_m + ".enable");
-    p.max_jerk = getOrDeclareParameter<double>(node, ns_m + ".max_jerk");
-    p.max_acc = getOrDeclareParameter<double>(node, ns_m + ".max_acc");
+    p.enable = get_or_declare_parameter<bool>(node, ns_m + ".enable");
+    p.max_jerk = get_or_declare_parameter<double>(node, ns_m + ".max_jerk");
+    p.max_acc = get_or_declare_parameter<double>(node, ns_m + ".max_acc");
   }
 
   {
     auto & p = planner_param_.ignore_momentary_detection;
     const std::string ns_param = ns + ".ignore_momentary_detection";
-    p.enable = getOrDeclareParameter<bool>(node, ns_param + ".enable");
-    p.time_threshold = getOrDeclareParameter<double>(node, ns_param + ".time_threshold");
+    p.enable = get_or_declare_parameter<bool>(node, ns_param + ".enable");
+    p.time_threshold = get_or_declare_parameter<double>(node, ns_param + ".time_threshold");
   }
 
   debug_ptr_ = std::make_shared<RunOutDebug>(node);
   setDynamicObstacleCreator(node, debug_ptr_);
 }
 
-void RunOutModuleManager::launchNewModules(const tier4_planning_msgs::msg::PathWithLaneId & path)
+void RunOutModuleManager::launchNewModules(
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   if (path.points.empty()) {
     return;
@@ -155,17 +157,18 @@ void RunOutModuleManager::launchNewModules(const tier4_planning_msgs::msg::PathW
   if (!isModuleRegistered(module_id)) {
     registerModule(std::make_shared<RunOutModule>(
       module_id, planner_data_, planner_param_, logger_.get_child("run_out_module"),
-      std::move(dynamic_obstacle_creator_), debug_ptr_, clock_));
+      std::move(dynamic_obstacle_creator_), debug_ptr_, clock_, time_keeper_,
+      planning_factor_interface_));
   }
 }
 
 std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
-RunOutModuleManager::getModuleExpiredFunction(const tier4_planning_msgs::msg::PathWithLaneId & path)
+RunOutModuleManager::getModuleExpiredFunction(
+  [[maybe_unused]] const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
-  return
-    [&path]([[maybe_unused]] const std::shared_ptr<SceneModuleInterface> & scene_module) -> bool {
-      return false;
-    };
+  return []([[maybe_unused]] const std::shared_ptr<SceneModuleInterface> & scene_module) -> bool {
+    return false;
+  };
 }
 
 void RunOutModuleManager::setDynamicObstacleCreator(

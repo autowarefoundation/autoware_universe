@@ -15,10 +15,10 @@
 #ifndef AUTOWARE_SAMPLER_COMMON__STRUCTURES_HPP_
 #define AUTOWARE_SAMPLER_COMMON__STRUCTURES_HPP_
 
-#include "autoware/universe_utils/geometry/boost_geometry.hpp"
+#include "autoware_utils/geometry/boost_geometry.hpp"
 
+#include <autoware/interpolation/linear_interpolation.hpp>
 #include <eigen3/Eigen/Core>
-#include <interpolation/linear_interpolation.hpp>
 
 #include <geometry_msgs/msg/pose.hpp>
 
@@ -38,13 +38,13 @@
 
 namespace autoware::sampler_common
 {
-using autoware::universe_utils::LinearRing2d;
-using autoware::universe_utils::MultiPoint2d;
-using autoware::universe_utils::MultiPolygon2d;
-using autoware::universe_utils::Point2d;
-using autoware::universe_utils::Polygon2d;
+using autoware_utils::LinearRing2d;
+using autoware_utils::MultiPoint2d;
+using autoware_utils::MultiPolygon2d;
+using autoware_utils::Point2d;
+using autoware_utils::Polygon2d;
 
-typedef std::pair<autoware::universe_utils::Box2d, size_t> BoxIndexPair;
+typedef std::pair<autoware_utils::Box2d, size_t> BoxIndexPair;
 typedef boost::geometry::index::rtree<BoxIndexPair, boost::geometry::index::rstar<16, 4>> Rtree;
 
 /// @brief data about constraint check results of a given path
@@ -269,7 +269,7 @@ struct Trajectory : Path
     t.lengths.reserve(new_size);
     for (auto i = 0lu; i < new_size; ++i)
       t.lengths.push_back(lengths.front() + static_cast<double>(i) * fixed_interval);
-    t.times = interpolation::lerp(lengths, times, t.lengths);
+    t.times = autoware::interpolation::lerp(lengths, times, t.lengths);
     std::vector<double> xs;
     std::vector<double> ys;
     xs.reserve(points.size());
@@ -278,16 +278,18 @@ struct Trajectory : Path
       xs.push_back(p.x());
       ys.push_back(p.y());
     }
-    const auto new_xs = interpolation::lerp(times, xs, t.times);
-    const auto new_ys = interpolation::lerp(times, ys, t.times);
+    const auto new_xs = autoware::interpolation::lerp(times, xs, t.times);
+    const auto new_ys = autoware::interpolation::lerp(times, ys, t.times);
     for (auto i = 0lu; i < new_xs.size(); ++i) t.points.emplace_back(new_xs[i], new_ys[i]);
-    t.curvatures = interpolation::lerp(times, curvatures, t.times);
-    t.jerks = interpolation::lerp(times, jerks, t.times);
-    t.yaws = interpolation::lerp(times, yaws, t.times);
-    t.longitudinal_velocities = interpolation::lerp(times, longitudinal_velocities, t.times);
-    t.longitudinal_accelerations = interpolation::lerp(times, longitudinal_accelerations, t.times);
-    t.lateral_velocities = interpolation::lerp(times, lateral_velocities, t.times);
-    t.lateral_accelerations = interpolation::lerp(times, lateral_accelerations, t.times);
+    t.curvatures = autoware::interpolation::lerp(times, curvatures, t.times);
+    t.jerks = autoware::interpolation::lerp(times, jerks, t.times);
+    t.yaws = autoware::interpolation::lerp(times, yaws, t.times);
+    t.longitudinal_velocities =
+      autoware::interpolation::lerp(times, longitudinal_velocities, t.times);
+    t.longitudinal_accelerations =
+      autoware::interpolation::lerp(times, longitudinal_accelerations, t.times);
+    t.lateral_velocities = autoware::interpolation::lerp(times, lateral_velocities, t.times);
+    t.lateral_accelerations = autoware::interpolation::lerp(times, lateral_accelerations, t.times);
     t.constraint_results = constraint_results;
     t.cost = cost;
     return t;
@@ -305,7 +307,7 @@ struct Trajectory : Path
     t.lengths.reserve(new_size);
     for (auto i = 0lu; i < new_size; ++i)
       t.times.push_back(static_cast<double>(i) * fixed_interval);
-    t.lengths = interpolation::lerp(times, lengths, t.times);
+    t.lengths = autoware::interpolation::lerp(times, lengths, t.times);
     std::vector<double> xs;
     std::vector<double> ys;
     xs.reserve(points.size());
@@ -314,16 +316,18 @@ struct Trajectory : Path
       xs.push_back(p.x());
       ys.push_back(p.y());
     }
-    const auto new_xs = interpolation::lerp(times, xs, t.times);
-    const auto new_ys = interpolation::lerp(times, ys, t.times);
+    const auto new_xs = autoware::interpolation::lerp(times, xs, t.times);
+    const auto new_ys = autoware::interpolation::lerp(times, ys, t.times);
     for (auto i = 0lu; i < new_xs.size(); ++i) t.points.emplace_back(new_xs[i], new_ys[i]);
-    t.curvatures = interpolation::lerp(times, curvatures, t.times);
-    t.jerks = interpolation::lerp(times, jerks, t.times);
-    t.yaws = interpolation::lerp(times, yaws, t.times);
-    t.longitudinal_velocities = interpolation::lerp(times, longitudinal_velocities, t.times);
-    t.longitudinal_accelerations = interpolation::lerp(times, longitudinal_accelerations, t.times);
-    t.lateral_velocities = interpolation::lerp(times, lateral_velocities, t.times);
-    t.lateral_accelerations = interpolation::lerp(times, lateral_accelerations, t.times);
+    t.curvatures = autoware::interpolation::lerp(times, curvatures, t.times);
+    t.jerks = autoware::interpolation::lerp(times, jerks, t.times);
+    t.yaws = autoware::interpolation::lerp(times, yaws, t.times);
+    t.longitudinal_velocities =
+      autoware::interpolation::lerp(times, longitudinal_velocities, t.times);
+    t.longitudinal_accelerations =
+      autoware::interpolation::lerp(times, longitudinal_accelerations, t.times);
+    t.lateral_velocities = autoware::interpolation::lerp(times, lateral_velocities, t.times);
+    t.lateral_accelerations = autoware::interpolation::lerp(times, lateral_accelerations, t.times);
     t.constraint_results = constraint_results;
     t.cost = cost;
     return t;

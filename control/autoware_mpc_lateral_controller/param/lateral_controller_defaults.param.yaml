@@ -3,8 +3,7 @@
     # -- system --
     traj_resample_dist: 0.1         # path resampling interval [m]
     use_steer_prediction: false     # flag for using steer prediction (do not use steer measurement)
-    admissible_position_error: 5.0  # stop mpc calculation when error is larger than the following value
-    admissible_yaw_error_rad: 1.57  # stop mpc calculation when error is larger than the following value
+    use_delayed_initial_state: true # flag to use x0_delayed as initial state for predicted trajectory
 
     # -- path smoothing --
     enable_path_smoothing: false   # flag for path smoothing
@@ -46,7 +45,7 @@
     # -- vehicle model --
     vehicle_model_type: "kinematics" # vehicle model type for mpc prediction. option is kinematics, kinematics_no_delay, and dynamics
     input_delay: 0.24                # steering input delay time for delay compensation
-    vehicle_model_steer_tau: 0.3     # steering dynamics time constant (1d approximation) [s]
+    vehicle_model_steer_tau: 0.27     # steering dynamics time constant (1d approximation) [s]
     steer_rate_lim_dps_list_by_curvature: [40.0, 50.0, 60.0]            # steering angle rate limit list depending on curvature [deg/s]
     curvature_list_for_steer_rate_lim: [0.001, 0.002, 0.01]              # curvature list for steering angle rate limit interpolation in ascending order [/m]
     steer_rate_lim_dps_list_by_velocity: [60.0, 50.0, 40.0]             # steering angle rate limit list depending on velocity [deg/s]
@@ -75,13 +74,4 @@
       average_num: 1000
       steering_offset_limit: 0.02
 
-    # vehicle parameters
-    mass_kg: 2400.0
-    mass_fl: 600.0
-    mass_fr: 600.0
-    mass_rl: 600.0
-    mass_rr: 600.0
-    cf: 155494.663
-    cr: 155494.663
-
-    debug_publish_predicted_trajectory: false  # publish debug predicted trajectory in Frenet coordinate
+    publish_debug_trajectories: true # flag to publish predicted trajectory and resampled reference trajectory for debug purpose

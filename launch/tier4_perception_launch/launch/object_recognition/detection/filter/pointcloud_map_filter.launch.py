@@ -35,15 +35,6 @@ class PointcloudMapFilterPipeline:
         with open(pointcloud_map_filter_param_path, "r") as f:
             self.pointcloud_map_filter_param = yaml.safe_load(f)["/**"]["ros__parameters"]
         self.voxel_size = self.pointcloud_map_filter_param["down_sample_voxel_size"]
-        self.distance_threshold = self.pointcloud_map_filter_param["distance_threshold"]
-        self.downsize_ratio_z_axis = self.pointcloud_map_filter_param["downsize_ratio_z_axis"]
-        self.timer_interval_ms = self.pointcloud_map_filter_param["timer_interval_ms"]
-        self.use_dynamic_map_loading = self.pointcloud_map_filter_param["use_dynamic_map_loading"]
-        self.map_update_distance_threshold = self.pointcloud_map_filter_param[
-            "map_update_distance_threshold"
-        ]
-        self.map_loader_radius = self.pointcloud_map_filter_param["map_loader_radius"]
-        self.publish_debug_pcd = self.pointcloud_map_filter_param["publish_debug_pcd"]
         self.use_pointcloud_map = LaunchConfiguration("use_pointcloud_map").perform(context)
 
     def create_pipeline(self):
@@ -116,16 +107,10 @@ class PointcloudMapFilterPipeline:
                     ("kinematic_state", "/localization/kinematic_state"),
                 ],
                 parameters=[
+                    self.pointcloud_map_filter_param,
                     {
-                        "distance_threshold": self.distance_threshold,
-                        "downsize_ratio_z_axis": self.downsize_ratio_z_axis,
-                        "timer_interval_ms": self.timer_interval_ms,
-                        "use_dynamic_map_loading": self.use_dynamic_map_loading,
-                        "map_update_distance_threshold": self.map_update_distance_threshold,
-                        "map_loader_radius": self.map_loader_radius,
-                        "publish_debug_pcd": self.publish_debug_pcd,
                         "input_frame": "map",
-                    }
+                    },
                 ],
                 extra_arguments=[
                     {"use_intra_process_comms": False},

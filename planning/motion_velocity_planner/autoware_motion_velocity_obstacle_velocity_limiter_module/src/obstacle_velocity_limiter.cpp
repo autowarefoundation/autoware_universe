@@ -17,18 +17,19 @@
 #include "distance.hpp"
 #include "forward_projection.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <boost/geometry.hpp>
 #include <boost/geometry/algorithms/correct.hpp>
 
 #include <algorithm>
+#include <vector>
 
 namespace autoware::motion_velocity_planner::obstacle_velocity_limiter
 {
 
 multi_polygon_t createPolygonMasks(
-  const autoware_perception_msgs::msg::PredictedObjects & dynamic_obstacles, const double buffer,
+  const std::vector<std::shared_ptr<PlannerData::Object>> & dynamic_obstacles, const double buffer,
   const double min_vel)
 {
   return createObjectPolygons(dynamic_obstacles, buffer, min_vel);

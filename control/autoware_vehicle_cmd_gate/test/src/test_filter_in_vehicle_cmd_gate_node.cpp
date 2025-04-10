@@ -17,9 +17,11 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -67,7 +69,7 @@ using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 using tier4_control_msgs::msg::GateMode;
 using tier4_external_api_msgs::msg::Emergency;
-using tier4_external_api_msgs::msg::Heartbeat;
+using Heartbeat = autoware_adapi_v1_msgs::msg::ManualOperatorHeartbeat;
 using EngageMsg = autoware_vehicle_msgs::msg::Engage;
 
 class PubSubNode : public rclcpp::Node

@@ -14,17 +14,18 @@
 
 #include "autoware_path_sampler/prepare_inputs.hpp"
 
-#include "autoware/universe_utils/geometry/boost_polygon_utils.hpp"
 #include "autoware_frenet_planner/structures.hpp"
 #include "autoware_path_sampler/utils/geometry_utils.hpp"
 #include "autoware_sampler_common/structures.hpp"
 #include "autoware_sampler_common/transform/spline_transform.hpp"
+#include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
 #include <eigen3/unsupported/Eigen/Splines>
 
 #include <boost/geometry/geometry.hpp>
 
 #include <algorithm>
+#include <limits>
 #include <list>
 #include <memory>
 #include <vector>
@@ -40,7 +41,7 @@ void prepareConstraints(
   constraints.obstacle_polygons = autoware::sampler_common::MultiPolygon2d();
   for (const auto & o : predicted_objects.objects)
     if (o.kinematics.initial_twist_with_covariance.twist.linear.x < 0.5)  // TODO(Maxime): param
-      constraints.obstacle_polygons.push_back(autoware::universe_utils::toPolygon2d(o));
+      constraints.obstacle_polygons.push_back(autoware_utils::to_polygon2d(o));
   constraints.dynamic_obstacles = {};  // TODO(Maxime): not implemented
 
   // TODO(Maxime): directly use lines instead of polygon
@@ -82,7 +83,7 @@ autoware::frenet_planner::SamplingParameters prepareSamplingParameters(
     max_d -= params.constraints.ego_width / 2.0;
     if (min_d < max_d) {
       for (auto r = 0.0; r <= 1.0; r += 1.0 / (params.sampling.nb_target_lateral_positions - 1))
-        target_lateral_positions.push_back(interpolation::lerp(min_d, max_d, r));
+        target_lateral_positions.push_back(autoware::interpolation::lerp(min_d, max_d, r));
     }
   } else {
     target_lateral_positions = params.sampling.target_lateral_positions;

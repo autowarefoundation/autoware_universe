@@ -22,6 +22,14 @@
 
 #include <magic_enum.hpp>
 
+#include <memory>
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
 namespace autoware::pose_estimator_arbiter
 {
 // Parses ros param to get the estimator set that is running
@@ -46,7 +54,7 @@ PoseEstimatorArbiter::PoseEstimatorArbiter(const rclcpp::NodeOptions & options)
 : rclcpp::Node("pose_estimator_arbiter", options),
   running_estimator_list_(parse_estimator_name_args(
     declare_parameter<std::vector<std::string>>("pose_sources"), get_logger())),
-  logger_configure_(std::make_unique<autoware::universe_utils::LoggerLevelConfigure>(this))
+  logger_configure_(std::make_unique<autoware_utils::LoggerLevelConfigure>(this))
 {
   // Shared data
   shared_data_ = std::make_shared<SharedData>();

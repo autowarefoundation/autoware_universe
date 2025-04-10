@@ -35,6 +35,11 @@
           "type": "boolean",
           "default": "false",
           "description": "Publish a downsampled map pointcloud for debugging"
+        },
+        "max_map_grid_size": {
+          "type": "number",
+          "default": "100.0",
+          "description": "Threshold of grid size to split map pointcloud"
         }
       },
       "required": [
@@ -43,7 +48,8 @@
         "timer_interval_ms",
         "map_update_distance_threshold",
         "map_loader_radius",
-        "publish_debug_pcd"
+        "publish_debug_pcd",
+        "max_map_grid_size"
       ],
       "additionalProperties": false
     }

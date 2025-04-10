@@ -14,8 +14,12 @@
 
 #include "autoware/obstacle_cruise_planner/utils.hpp"
 
-#include "autoware/universe_utils/ros/marker_helper.hpp"
-#include "object_recognition_utils/predicted_path_utils.hpp"
+#include "autoware/object_recognition_utils/predicted_path_utils.hpp"
+#include "autoware_utils/ros/marker_helper.hpp"
+
+#include <limits>
+#include <string>
+#include <vector>
 
 namespace obstacle_cruise_utils
 {
@@ -30,7 +34,8 @@ std::optional<geometry_msgs::msg::Pose> getCurrentObjectPoseFromPredictedPath(
     return std::nullopt;
   }
 
-  const auto pose = object_recognition_utils::calcInterpolatedPose(predicted_path, rel_time);
+  const auto pose =
+    autoware::object_recognition_utils::calcInterpolatedPose(predicted_path, rel_time);
   if (!pose) {
     return std::nullopt;
   }
@@ -59,10 +64,10 @@ visualization_msgs::msg::Marker getObjectMarker(
 {
   const auto current_time = rclcpp::Clock().now();
 
-  auto marker = autoware::universe_utils::createDefaultMarker(
+  auto marker = autoware_utils::create_default_marker(
     "map", current_time, ns, idx, visualization_msgs::msg::Marker::SPHERE,
-    autoware::universe_utils::createMarkerScale(2.0, 2.0, 2.0),
-    autoware::universe_utils::createMarkerColor(r, g, b, 0.8));
+    autoware_utils::create_marker_scale(2.0, 2.0, 2.0),
+    autoware_utils::create_marker_color(r, g, b, 0.8));
 
   marker.pose = obj_pose;
 
@@ -87,7 +92,7 @@ PoseWithStamp getCurrentObjectPose(
     getCurrentObjectPoseFromPredictedPaths(predicted_paths, obj_base_time, current_time);
 
   if (!interpolated_pose) {
-    RCLCPP_WARN(
+    RCLCPP_DEBUG(
       rclcpp::get_logger("ObstacleCruisePlanner"), "Failed to find the interpolated obstacle pose");
     return PoseWithStamp{obj_base_time, pose};
   }
@@ -112,4 +117,5 @@ std::vector<StopObstacle> getClosestStopObstacles(const std::vector<StopObstacle
   }
   return candidates;
 }
+
 }  // namespace obstacle_cruise_utils

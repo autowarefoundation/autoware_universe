@@ -22,12 +22,12 @@ include_directories(
 )
 
 add_library(${PROJECT_NAME} SHARED
+  lib/voxel_grid_map_loader.cpp
   src/distance_based_compare_map_filter/node.cpp
   src/voxel_based_approximate_compare_map_filter/node.cpp
   src/voxel_based_compare_map_filter/node.cpp
   src/voxel_distance_based_compare_map_filter/node.cpp
   src/compare_elevation_map_filter/node.cpp
-  src/voxel_grid_map_loader/voxel_grid_map_loader.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -44,7 +44,7 @@ ament_target_dependencies(${PROJECT_NAME}
   rclcpp
   rclcpp_components
   sensor_msgs
-  autoware_universe_utils
+  autoware_utils
   autoware_map_msgs
   nav_msgs
 )
@@ -89,6 +89,30 @@ install(
   RUNTIME DESTINATION bin
 )
 
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+  ament_auto_add_gtest(test_voxel_based_compare_map_filter
+    test/test_voxel_based_compare_map_filter.cpp
+  )
+  target_link_libraries(test_voxel_based_compare_map_filter ${PROJECT_NAME})
+
+  ament_auto_add_gtest(test_distance_based_compare_map_filter
+    test/test_distance_based_compare_map_filter.cpp
+  )
+  target_link_libraries(test_distance_based_compare_map_filter ${PROJECT_NAME})
+
+  ament_auto_add_gtest(test_voxel_based_approximate_compare_map_filter
+    test/test_voxel_based_approximate_compare_map_filter.cpp
+  )
+  target_link_libraries(test_voxel_based_approximate_compare_map_filter ${PROJECT_NAME})
+
+  ament_auto_add_gtest(test_voxel_distance_based_compare_map_filter
+    test/test_voxel_distance_based_compare_map_filter.cpp
+  )
+  target_link_libraries(test_voxel_distance_based_compare_map_filter ${PROJECT_NAME})
+
+endif()
 ament_auto_package(
   INSTALL_TO_SHARE
   launch

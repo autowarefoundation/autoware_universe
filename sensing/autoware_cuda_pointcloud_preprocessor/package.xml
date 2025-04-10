@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>autoware_cuda_pointcloud_preprocessor</name>
+  <version>0.43.0</version>
+  <description>autoware_cuda_pointcloud_preprocessor</description>
+  <maintainer email="kenzo.lobos@tier4.jp">Kenzo Lobos-Tsunekawa</maintainer>
+  <maintainer email="amadeusz.szymko.2@tier4.jp">Amadeusz Szymko</maintainer>
+  <author email="kenzo.lobos@tier4.jp">Kenzo Lobos-Tsunekawa</author>
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+
+  <depend>autoware_cuda_dependency_meta</depend>
+  <depend>autoware_point_types</depend>
+  <depend>autoware_pointcloud_preprocessor</depend>
+  <depend>autoware_universe_utils</depend>
+  <depend>cuda_blackboard</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_msgs</depend>
+  <depend>tier4_debug_msgs</depend>
+
+  <test_depend>ament_clang_format</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

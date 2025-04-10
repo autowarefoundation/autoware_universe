@@ -16,8 +16,8 @@
 #define LOW_INTENSITY_CLUSTER_FILTER_NODE_HPP_
 
 #include "autoware/detected_object_validation/utils/utils.hpp"
-#include "autoware/universe_utils/ros/debug_publisher.hpp"
-#include "autoware/universe_utils/system/stop_watch.hpp"
+#include "autoware_utils/ros/debug_publisher.hpp"
+#include "autoware_utils/system/stop_watch.hpp"
 
 #include <Eigen/Eigen>
 #include <rclcpp/rclcpp.hpp>
@@ -56,20 +56,14 @@ private:
   double max_y_;
   double min_y_;
 
-  double max_x_transformed_;
-  double min_x_transformed_;
-  double max_y_transformed_;
-  double min_y_transformed_;
   // Eigen::Vector4f min_boundary_transformed_;
   // Eigen::Vector4f max_boundary_transformed_;
-  bool is_validation_range_transformed_ = false;
   const std::string base_link_frame_id_ = "base_link";
   autoware::detected_object_validation::utils::FilterTargetLabel filter_target_;
 
   // debugger
-  std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{
-    nullptr};
-  std::unique_ptr<autoware::universe_utils::DebugPublisher> debug_publisher_ptr_{nullptr};
+  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
+  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{nullptr};
 };
 
 }  // namespace autoware::low_intensity_cluster_filter

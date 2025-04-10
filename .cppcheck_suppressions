@@ -1,9 +1,10 @@
 *:*/test/*
+*:*/examples/*
+*:*/benchmarks/*
 
 checkersReport
 missingInclude
 missingIncludeSystem
-unknownMacro
 unmatchedSuppression
 unusedFunction
 useInitializationList

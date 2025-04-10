@@ -18,17 +18,17 @@
 
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
 
-#include <tier4_debug_msgs/msg/float32_multi_array_stamped.hpp>
-#include <tier4_debug_msgs/msg/int32_stamped.hpp>
+#include <autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp>
+#include <autoware_internal_debug_msgs/msg/int32_stamped.hpp>
 
 #include <memory>
 #include <string>
 #include <vector>
 namespace autoware::behavior_velocity_planner
 {
+using autoware_internal_debug_msgs::msg::Float32MultiArrayStamped;
+using autoware_internal_debug_msgs::msg::Int32Stamped;
 using sensor_msgs::msg::PointCloud2;
-using tier4_debug_msgs::msg::Float32MultiArrayStamped;
-using tier4_debug_msgs::msg::Int32Stamped;
 
 class DebugValues
 {
@@ -49,12 +49,6 @@ public:
     SIZE,  // this is the number of enum elements
   };
 
-  /**
-   * @brief get the index corresponding to the given value TYPE
-   * @param [in] type the TYPE enum for which to get the index
-   * @return index of the type
-   */
-  static int getValuesIdx(const TYPE type) { return static_cast<int>(type); }
   /**
    * @brief get all the debug values as an std::array
    * @return array of all debug values

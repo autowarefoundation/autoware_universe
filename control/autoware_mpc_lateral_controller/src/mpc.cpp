@@ -14,30 +14,39 @@
 
 #include "autoware/mpc_lateral_controller/mpc.hpp"
 
+#include "autoware/interpolation/linear_interpolation.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware/mpc_lateral_controller/mpc_utils.hpp"
-#include "autoware/universe_utils/math/unit_conversion.hpp"
-#include "interpolation/linear_interpolation.hpp"
+#include "autoware_utils/math/unit_conversion.hpp"
 #include "rclcpp/rclcpp.hpp"
 
+#include <fmt/format.h>
+
 #include <algorithm>
+#include <iostream>
 #include <limits>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace autoware::motion::control::mpc_lateral_controller
 {
-using autoware::universe_utils::calcDistance2d;
-using autoware::universe_utils::normalizeRadian;
-using autoware::universe_utils::rad2deg;
+using autoware_utils::calc_distance2d;
+using autoware_utils::normalize_radian;
+using autoware_utils::rad2deg;
 
 MPC::MPC(rclcpp::Node & node)
 {
   m_debug_frenet_predicted_trajectory_pub = node.create_publisher<Trajectory>(
     "~/debug/predicted_trajectory_in_frenet_coordinate", rclcpp::QoS(1));
+  m_debug_resampled_reference_trajectory_pub =
+    node.create_publisher<Trajectory>("~/debug/resampled_reference_trajectory", rclcpp::QoS(1));
 }
 
-bool MPC::calculateMPC(
+ResultWithReason MPC::calculateMPC(
   const SteeringReport & current_steer, const Odometry & current_kinematics, Lateral & ctrl_cmd,
-  Trajectory & predicted_trajectory, Float32MultiArrayStamped & diagnostic)
+  Trajectory & predicted_trajectory, Float32MultiArrayStamped & diagnostic,
+  LateralHorizon & ctrl_cmd_horizon)
 {
   // since the reference trajectory does not take into account the current velocity of the ego
   // vehicle, it needs to calculate the trajectory velocity considering the longitudinal dynamics.
@@ -45,10 +54,10 @@ bool MPC::calculateMPC(
     applyVelocityDynamicsFilter(m_reference_trajectory, current_kinematics);
 
   // get the necessary data
-  const auto [success_data, mpc_data] =
+  const auto [get_data_result, mpc_data] =
     getData(reference_trajectory, current_steer, current_kinematics);
-  if (!success_data) {
-    return fail_warn_throttle("fail to get MPC Data. Stop MPC.");
+  if (!get_data_result.result) {
+    return ResultWithReason{false, fmt::format("getting MPC Data ({}).", get_data_result.reason)};
   }
 
   // calculate initial state of the error dynamics
@@ -58,7 +67,7 @@ bool MPC::calculateMPC(
   const auto [success_delay, x0_delayed] =
     updateStateForDelayCompensation(reference_trajectory, mpc_data.nearest_time, x0);
   if (!success_delay) {
-    return fail_warn_throttle("delay compensation failed. Stop MPC.");
+    return ResultWithReason{false, "delay compensation."};
   }
 
   // resample reference trajectory with mpc sampling time
@@ -66,21 +75,22 @@ bool MPC::calculateMPC(
   const double prediction_dt =
     getPredictionDeltaTime(mpc_start_time, reference_trajectory, current_kinematics);
 
-  const auto [success_resample, mpc_resampled_ref_trajectory] =
+  const auto [resample_result, mpc_resampled_ref_trajectory] =
     resampleMPCTrajectoryByTime(mpc_start_time, prediction_dt, reference_trajectory);
-  if (!success_resample) {
-    return fail_warn_throttle("trajectory resampling failed. Stop MPC.");
+  if (!resample_result.result) {
+    return ResultWithReason{
+      false, fmt::format("trajectory resampling ({}).", resample_result.reason)};
   }
 
   // generate mpc matrix : predict equation Xec = Aex * x0 + Bex * Uex + Wex
   const auto mpc_matrix = generateMPCMatrix(mpc_resampled_ref_trajectory, prediction_dt);
 
   // solve Optimization problem
-  const auto [success_opt, Uex] = executeOptimization(
+  const auto [opt_result, Uex] = executeOptimization(
     mpc_matrix, x0_delayed, prediction_dt, mpc_resampled_ref_trajectory,
     current_kinematics.twist.twist.linear.x);
-  if (!success_opt) {
-    return fail_warn_throttle("optimization failed. Stop MPC.");
+  if (!opt_result.result) {
+    return ResultWithReason{false, fmt::format("optimization failure ({}).", opt_result.reason)};
   }
 
   // apply filters for the input limitation and low pass filter
@@ -104,14 +114,38 @@ bool MPC::calculateMPC(
   m_raw_steer_cmd_prev = Uex(0);
 
   /* calculate predicted trajectory */
-  predicted_trajectory =
-    calculatePredictedTrajectory(mpc_matrix, x0, Uex, mpc_resampled_ref_trajectory, prediction_dt);
+  Eigen::VectorXd initial_state = m_use_delayed_initial_state ? x0_delayed : x0;
+  predicted_trajectory = calculatePredictedTrajectory(
+    mpc_matrix, initial_state, Uex, mpc_resampled_ref_trajectory, prediction_dt, "world");
+
+  // Publish predicted trajectories in different coordinates for debugging purposes
+  if (m_publish_debug_trajectories) {
+    // Calculate and publish predicted trajectory in Frenet coordinate
+    auto predicted_trajectory_frenet = calculatePredictedTrajectory(
+      mpc_matrix, initial_state, Uex, mpc_resampled_ref_trajectory, prediction_dt, "frenet");
+    predicted_trajectory_frenet.header.stamp = m_clock->now();
+    predicted_trajectory_frenet.header.frame_id = "map";
+    m_debug_frenet_predicted_trajectory_pub->publish(predicted_trajectory_frenet);
+  }
 
   // prepare diagnostic message
   diagnostic =
     generateDiagData(reference_trajectory, mpc_data, mpc_matrix, ctrl_cmd, Uex, current_kinematics);
 
-  return true;
+  // create LateralHorizon command
+  ctrl_cmd_horizon.time_step_ms = prediction_dt * 1000.0;
+  ctrl_cmd_horizon.controls.clear();
+  ctrl_cmd_horizon.controls.push_back(ctrl_cmd);
+  for (auto it = std::next(Uex.begin()); it != Uex.end(); ++it) {
+    Lateral lateral{};
+    lateral.steering_tire_angle = static_cast<float>(std::clamp(*it, -m_steer_lim, m_steer_lim));
+    lateral.steering_tire_rotation_rate =
+      (lateral.steering_tire_angle - ctrl_cmd_horizon.controls.back().steering_tire_angle) /
+      m_ctrl_period;
+    ctrl_cmd_horizon.controls.push_back(lateral);
+  }
+
+  return ResultWithReason{true};
 }
 
 Float32MultiArrayStamped MPC::generateDiagData(
@@ -251,7 +285,7 @@ void MPC::resetPrevResult(const SteeringReport & current_steer)
   m_raw_steer_cmd_pprev = std::clamp(current_steer.steering_tire_angle, -steer_lim_f, steer_lim_f);
 }
 
-std::pair<bool, MPCData> MPC::getData(
+std::pair<ResultWithReason, MPCData> MPC::getData(
   const MPCTrajectory & traj, const SteeringReport & current_steer,
   const Odometry & current_kinematics)
 {
@@ -261,44 +295,29 @@ std::pair<bool, MPCData> MPC::getData(
   if (!MPCUtils::calcNearestPoseInterp(
         traj, current_pose, &(data.nearest_pose), &(data.nearest_idx), &(data.nearest_time),
         ego_nearest_dist_threshold, ego_nearest_yaw_threshold)) {
-    warn_throttle("calculateMPC: error in calculating nearest pose. stop mpc.");
-    return {false, MPCData{}};
+    return {ResultWithReason{false, "error in calculating nearest pose"}, MPCData{}};
   }
 
   // get data
   data.steer = static_cast<double>(current_steer.steering_tire_angle);
   data.lateral_err = MPCUtils::calcLateralError(current_pose, data.nearest_pose);
-  data.yaw_err = normalizeRadian(
+  data.yaw_err = normalize_radian(
     tf2::getYaw(current_pose.orientation) - tf2::getYaw(data.nearest_pose.orientation));
 
   // get predicted steer
   data.predicted_steer = m_steering_predictor->calcSteerPrediction();
-
-  // check error limit
-  const double dist_err = calcDistance2d(current_pose, data.nearest_pose);
-  if (dist_err > m_admissible_position_error) {
-    warn_throttle("Too large position error: %fm > %fm", dist_err, m_admissible_position_error);
-    return {false, MPCData{}};
-  }
-
-  // check yaw error limit
-  if (std::fabs(data.yaw_err) > m_admissible_yaw_error_rad) {
-    warn_throttle("Too large yaw error: %f > %f", data.yaw_err, m_admissible_yaw_error_rad);
-    return {false, MPCData{}};
-  }
 
   // check trajectory time length
   const double max_prediction_time =
     m_param.min_prediction_length / static_cast<double>(m_param.prediction_horizon - 1);
   auto end_time = data.nearest_time + m_param.input_delay + m_ctrl_period + max_prediction_time;
   if (end_time > traj.relative_time.back()) {
-    warn_throttle("path is too short for prediction.");
-    return {false, MPCData{}};
+    return {ResultWithReason{false, "path is too short for prediction."}, MPCData{}};
   }
-  return {true, data};
+  return {ResultWithReason{true}, data};
 }
 
-std::pair<bool, MPCTrajectory> MPC::resampleMPCTrajectoryByTime(
+std::pair<ResultWithReason, MPCTrajectory> MPC::resampleMPCTrajectoryByTime(
   const double ts, const double prediction_dt, const MPCTrajectory & input) const
 {
   MPCTrajectory output;
@@ -307,10 +326,16 @@ std::pair<bool, MPCTrajectory> MPC::resampleMPCTrajectoryByTime(
     mpc_time_v.push_back(ts + i * prediction_dt);
   }
   if (!MPCUtils::linearInterpMPCTrajectory(input.relative_time, input, mpc_time_v, output)) {
-    warn_throttle("calculateMPC: mpc resample error. stop mpc calculation. check code!");
-    return {false, {}};
+    return {ResultWithReason{false, "mpc resample error"}, {}};
   }
-  return {true, output};
+  // Publish resampled reference trajectory for debug purpose.
+  if (m_publish_debug_trajectories) {
+    auto converted_output = MPCUtils::convertToAutowareTrajectory(output);
+    converted_output.header.stamp = m_clock->now();
+    converted_output.header.frame_id = "map";
+    m_debug_resampled_reference_trajectory_pub->publish(converted_output);
+  }
+  return {ResultWithReason{true}, output};
 }
 
 VectorXd MPC::getInitialState(const MPCData & data)
@@ -363,8 +388,8 @@ std::pair<bool, VectorXd> MPC::updateStateForDelayCompensation(
     double k, v = 0.0;
     try {
       // NOTE: When driving backward, the curvature's sign should be reversed.
-      k = interpolation::lerp(traj.relative_time, traj.k, mpc_curr_time) * sign_vx;
-      v = interpolation::lerp(traj.relative_time, traj.vx, mpc_curr_time);
+      k = autoware::interpolation::lerp(traj.relative_time, traj.k, mpc_curr_time) * sign_vx;
+      v = autoware::interpolation::lerp(traj.relative_time, traj.vx, mpc_curr_time);
     } catch (const std::exception & e) {
       RCLCPP_ERROR(m_logger, "mpc resample failed at delay compensation, stop mpc: %s", e.what());
       return {false, {}};
@@ -477,7 +502,6 @@ MPCMatrix MPC::generateMPCMatrix(
 
     // update mpc matrix
     int idx_x_i = i * DIM_X;
-    int idx_x_i_prev = (i - 1) * DIM_X;
     int idx_u_i = i * DIM_U;
     int idx_y_i = i * DIM_Y;
     if (i == 0) {
@@ -485,6 +509,7 @@ MPCMatrix MPC::generateMPCMatrix(
       m.Bex.block(0, 0, DIM_X, DIM_U) = Bd;
       m.Wex.block(0, 0, DIM_X, 1) = Wd;
     } else {
+      int idx_x_i_prev = (i - 1) * DIM_X;
       m.Aex.block(idx_x_i, 0, DIM_X, DIM_X) = Ad * m.Aex.block(idx_x_i_prev, 0, DIM_X, DIM_X);
       for (int j = 0; j < i; ++j) {
         int idx_u_j = j * DIM_U;
@@ -501,7 +526,7 @@ MPCMatrix MPC::generateMPCMatrix(
     // get reference input (feed-forward)
     m_vehicle_model_ptr->setCurvature(ref_smooth_k);
     m_vehicle_model_ptr->calculateReferenceInput(Uref);
-    if (std::fabs(Uref(0, 0)) < autoware::universe_utils::deg2rad(m_param.zero_ff_steer_deg)) {
+    if (std::fabs(Uref(0, 0)) < autoware_utils::deg2rad(m_param.zero_ff_steer_deg)) {
       Uref(0, 0) = 0.0;  // ignore curvature noise
     }
     m.Uref_ex.block(i * DIM_U, 0, DIM_U, 1) = Uref;
@@ -543,15 +568,14 @@ MPCMatrix MPC::generateMPCMatrix(
  *                            ~~~
  * [    -au_lim * dt    ] < [uN-uN-1] < [     au_lim * dt    ] (*N... DIM_U)
  */
-std::pair<bool, VectorXd> MPC::executeOptimization(
+std::pair<ResultWithReason, VectorXd> MPC::executeOptimization(
   const MPCMatrix & m, const VectorXd & x0, const double prediction_dt, const MPCTrajectory & traj,
   const double current_velocity)
 {
   VectorXd Uex;
 
   if (!isValid(m)) {
-    warn_throttle("model matrix is invalid. stop MPC.");
-    return {false, {}};
+    return {ResultWithReason{false, "invalid model matrix"}, {}};
   }
 
   const int DIM_U_N = m_param.prediction_horizon * m_vehicle_model_ptr->getDimU();
@@ -588,8 +612,7 @@ std::pair<bool, VectorXd> MPC::executeOptimization(
   bool solve_result = m_qpsolver_ptr->solve(H, f.transpose(), A, lb, ub, lbA, ubA, Uex);
   auto t_end = std::chrono::system_clock::now();
   if (!solve_result) {
-    warn_throttle("qp solver error");
-    return {false, {}};
+    return {ResultWithReason{false, "qp solver error"}, {}};
   }
 
   {
@@ -598,10 +621,9 @@ std::pair<bool, VectorXd> MPC::executeOptimization(
   }
 
   if (Uex.array().isNaN().any()) {
-    warn_throttle("model Uex includes NaN, stop MPC.");
-    return {false, {}};
+    return {ResultWithReason{false, "model Uex including NaN"}, {}};
   }
-  return {true, Uex};
+  return {ResultWithReason{true}, Uex};
 }
 
 void MPC::addSteerWeightR(const double prediction_dt, MatrixXd & R) const
@@ -785,12 +807,21 @@ VectorXd MPC::calcSteerRateLimitOnTrajectory(
 
 Trajectory MPC::calculatePredictedTrajectory(
   const MPCMatrix & mpc_matrix, const Eigen::MatrixXd & x0, const Eigen::MatrixXd & Uex,
-  const MPCTrajectory & reference_trajectory, const double dt) const
+  const MPCTrajectory & reference_trajectory, const double dt, const std::string & coordinate) const
 {
-  const auto predicted_mpc_trajectory =
-    m_vehicle_model_ptr->calculatePredictedTrajectoryInWorldCoordinate(
+  MPCTrajectory predicted_mpc_trajectory;
+
+  if (coordinate == "world") {
+    predicted_mpc_trajectory = m_vehicle_model_ptr->calculatePredictedTrajectoryInWorldCoordinate(
       mpc_matrix.Aex, mpc_matrix.Bex, mpc_matrix.Cex, mpc_matrix.Wex, x0, Uex, reference_trajectory,
       dt);
+  } else if (coordinate == "frenet") {
+    predicted_mpc_trajectory = m_vehicle_model_ptr->calculatePredictedTrajectoryInFrenetCoordinate(
+      mpc_matrix.Aex, mpc_matrix.Bex, mpc_matrix.Cex, mpc_matrix.Wex, x0, Uex, reference_trajectory,
+      dt);
+  } else {
+    throw std::invalid_argument("Invalid coordinate system specified. Use 'world' or 'frenet'.");
+  }
 
   // do not over the reference trajectory
   const auto predicted_length = MPCUtils::calcMPCTrajectoryArcLength(reference_trajectory);
@@ -798,18 +829,6 @@ Trajectory MPC::calculatePredictedTrajectory(
     MPCUtils::clipTrajectoryByLength(predicted_mpc_trajectory, predicted_length);
 
   const auto predicted_trajectory = MPCUtils::convertToAutowareTrajectory(clipped_trajectory);
-
-  // Publish trajectory in relative coordinate for debug purpose.
-  if (m_debug_publish_predicted_trajectory) {
-    const auto frenet = m_vehicle_model_ptr->calculatePredictedTrajectoryInFrenetCoordinate(
-      mpc_matrix.Aex, mpc_matrix.Bex, mpc_matrix.Cex, mpc_matrix.Wex, x0, Uex, reference_trajectory,
-      dt);
-    auto frenet_clipped = MPCUtils::convertToAutowareTrajectory(
-      MPCUtils::clipTrajectoryByLength(frenet, predicted_length));
-    frenet_clipped.header.stamp = m_clock->now();
-    frenet_clipped.header.frame_id = "map";
-    m_debug_frenet_predicted_trajectory_pub->publish(frenet_clipped);
-  }
 
   return predicted_trajectory;
 }

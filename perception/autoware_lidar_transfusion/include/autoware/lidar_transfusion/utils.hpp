@@ -36,7 +36,7 @@ struct Box3D
   float yaw;
 };
 
-enum NetworkIO { voxels = 0, num_points, coors, cls_score, dir_pred, bbox_pred, ENUM_SIZE };
+enum NetworkIO { voxels = 0, num_points, coors, cls_score, bbox_pred, dir_pred, ENUM_SIZE };
 
 // cspell: ignore divup
 template <typename T1, typename T2>

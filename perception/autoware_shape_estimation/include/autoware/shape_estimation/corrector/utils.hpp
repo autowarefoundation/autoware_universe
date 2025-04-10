@@ -47,6 +47,10 @@ bool correctWithReferenceYaw(
   const CorrectionBBParameters & param, autoware_perception_msgs::msg::Shape & shape_output,
   geometry_msgs::msg::Pose & pose_output);
 
+bool correctWithReferenceShapeAndPose(
+  const ReferenceShapeSizeInfo & ref_shape_size_info, const geometry_msgs::msg::Pose & ref_pose,
+  autoware_perception_msgs::msg::Shape & shape, geometry_msgs::msg::Pose & pose);
+
 }  // namespace corrector_utils
 
 }  // namespace autoware::shape_estimation

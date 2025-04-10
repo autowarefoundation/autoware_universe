@@ -16,9 +16,9 @@
 
 #include "detection_by_tracker_node.hpp"
 
-#include "autoware/universe_utils/geometry/geometry.hpp"
-#include "autoware/universe_utils/math/unit_conversion.hpp"
-#include "object_recognition_utils/object_recognition_utils.hpp"
+#include "autoware/object_recognition_utils/object_recognition_utils.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
+#include "autoware_utils/math/unit_conversion.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -62,7 +62,7 @@ boost::optional<autoware::shape_estimation::ReferenceYawInfo> getReferenceYawInf
   const bool is_vehicle =
     Label::CAR == label || Label::TRUCK == label || Label::BUS == label || Label::TRAILER == label;
   if (is_vehicle) {
-    return autoware::shape_estimation::ReferenceYawInfo{yaw, autoware::universe_utils::deg2rad(30)};
+    return autoware::shape_estimation::ReferenceYawInfo{yaw, autoware_utils::deg2rad(30)};
   } else {
     return boost::none;
   }
@@ -118,8 +118,7 @@ DetectionByTracker::DetectionByTracker(const rclcpp::NodeOptions & node_options)
   cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
     false, 10, 10000, 0.7, 0.3, 0);
   debugger_ = std::make_shared<Debugger>(this);
-  published_time_publisher_ =
-    std::make_unique<autoware::universe_utils::PublishedTimePublisher>(this);
+  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 }
 
 void DetectionByTracker::setMaxSearchRange()
@@ -161,14 +160,14 @@ void DetectionByTracker::onObjects(
       tracker_handler_.estimateTrackedObjects(input_msg->header.stamp, objects);
     if (
       !available_trackers ||
-      !object_recognition_utils::transformObjects(
+      !autoware::object_recognition_utils::transformObjects(
         objects, input_msg->header.frame_id, tf_buffer_, transformed_objects)) {
       objects_pub_->publish(detected_objects);
       published_time_publisher_->publish_if_subscribed(objects_pub_, detected_objects.header.stamp);
       return;
     }
     // to simplify post processes, convert tracked_objects to DetectedObjects message.
-    tracked_objects = object_recognition_utils::toDetectedObjects(transformed_objects);
+    tracked_objects = autoware::object_recognition_utils::toDetectedObjects(transformed_objects);
   }
   debugger_->publishInitialObjects(*input_msg);
   debugger_->publishTrackedObjects(tracked_objects);
@@ -225,7 +224,7 @@ void DetectionByTracker::divideUnderSegmentedObjects(
 
     for (const auto & initial_object : in_cluster_objects.feature_objects) {
       // search near object
-      const float distance = autoware::universe_utils::calcDistance2d(
+      const float distance = autoware_utils::calc_distance2d(
         tracked_object.kinematics.pose_with_covariance.pose,
         initial_object.object.kinematics.pose_with_covariance.pose);
       if (max_search_range < distance) {
@@ -233,9 +232,9 @@ void DetectionByTracker::divideUnderSegmentedObjects(
       }
       // detect under segmented cluster
       const float recall =
-        object_recognition_utils::get2dRecall(initial_object.object, tracked_object);
+        autoware::object_recognition_utils::get2dRecall(initial_object.object, tracked_object);
       const float precision =
-        object_recognition_utils::get2dPrecision(initial_object.object, tracked_object);
+        autoware::object_recognition_utils::get2dPrecision(initial_object.object, tracked_object);
       const bool is_under_segmented =
         (recall_min_threshold < recall && precision < precision_max_threshold);
       if (!is_under_segmented) {
@@ -287,6 +286,7 @@ float DetectionByTracker::optimizeUnderSegmentedObject(
   // iterate to find best fit divided object
   float highest_iou = 0.0;
   tier4_perception_msgs::msg::DetectedObjectWithFeature highest_iou_object;
+  boost::optional<geometry_msgs::msg::Pose> ref_pose = boost::none;
   for (int iter_count = 0; iter_count < iter_max_count;
        ++iter_count, cluster_range *= iter_rate, voxel_size *= iter_rate) {
     // divide under segmented cluster
@@ -304,13 +304,13 @@ float DetectionByTracker::optimizeUnderSegmentedObject(
         label, divided_cluster,
         getReferenceYawInfo(
           label, tf2::getYaw(target_object.kinematics.pose_with_covariance.pose.orientation)),
-        getReferenceShapeSizeInfo(label, target_object.shape),
+        getReferenceShapeSizeInfo(label, target_object.shape), ref_pose,
         highest_iou_object_in_current_iter.object.shape,
         highest_iou_object_in_current_iter.object.kinematics.pose_with_covariance.pose);
       if (!is_shape_estimated) {
         continue;
       }
-      const float iou = object_recognition_utils::get2dIoU(
+      const float iou = autoware::object_recognition_utils::get2dIoU(
         highest_iou_object_in_current_iter.object, target_object);
       if (highest_iou_in_current_iter < iou) {
         highest_iou_in_current_iter = iou;
@@ -332,7 +332,7 @@ float DetectionByTracker::optimizeUnderSegmentedObject(
   // build output
   highest_iou_object.object.classification = target_object.classification;
   highest_iou_object.object.existence_probability =
-    object_recognition_utils::get2dIoU(target_object, highest_iou_object.object);
+    autoware::object_recognition_utils::get2dIoU(target_object, highest_iou_object.object);
 
   output = highest_iou_object;
   return highest_iou;
@@ -361,7 +361,7 @@ void DetectionByTracker::mergeOverSegmentedObjects(
 
     pcl::PointCloud<pcl::PointXYZ> pcl_merged_cluster;
     for (const auto & initial_object : in_cluster_objects.feature_objects) {
-      const float distance = autoware::universe_utils::calcDistance2d(
+      const float distance = autoware_utils::calc_distance2d(
         tracked_object.kinematics.pose_with_covariance.pose,
         initial_object.object.kinematics.pose_with_covariance.pose);
 
@@ -370,8 +370,8 @@ void DetectionByTracker::mergeOverSegmentedObjects(
       }
 
       // If there is an initial object in the tracker, it will be merged.
-      const float precision =
-        object_recognition_utils::get2dPrecision(initial_object.object, extended_tracked_object);
+      const float precision = autoware::object_recognition_utils::get2dPrecision(
+        initial_object.object, extended_tracked_object);
       if (precision < precision_threshold) {
         continue;
       }
@@ -393,7 +393,8 @@ void DetectionByTracker::mergeOverSegmentedObjects(
       label, pcl_merged_cluster,
       getReferenceYawInfo(
         label, tf2::getYaw(tracked_object.kinematics.pose_with_covariance.pose.orientation)),
-      getReferenceShapeSizeInfo(label, tracked_object.shape), feature_object.object.shape,
+      getReferenceShapeSizeInfo(label, tracked_object.shape),
+      tracked_object.kinematics.pose_with_covariance.pose, feature_object.object.shape,
       feature_object.object.kinematics.pose_with_covariance.pose);
     if (!is_shape_estimated) {
       out_no_found_tracked_objects.objects.push_back(tracked_object);
@@ -401,7 +402,7 @@ void DetectionByTracker::mergeOverSegmentedObjects(
     }
 
     feature_object.object.existence_probability =
-      object_recognition_utils::get2dIoU(tracked_object, feature_object.object);
+      autoware::object_recognition_utils::get2dIoU(tracked_object, feature_object.object);
     setClusterInObjectWithFeature(in_cluster_objects.header, pcl_merged_cluster, feature_object);
     out_objects.feature_objects.push_back(feature_object);
   }

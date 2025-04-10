@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Ring Outlier Filter Node",
+  "type": "object",
+  "definitions": {
+    "ring_outlier_filter": {
+      "type": "object",
+      "properties": {
+        "distance_ratio": {
+          "type": "number",
+          "description": "distance_ratio",
+          "default": "1.03",
+          "minimum": 0.0
+        },
+        "object_length_threshold": {
+          "type": "number",
+          "description": "object_length_threshold",
+          "default": "0.1",
+          "minimum": 0.0
+        },
+        "num_points_threshold": {
+          "type": "integer",
+          "description": "num_points_threshold",
+          "default": "4",
+          "minimum": 0
+        },
+        "max_rings_num": {
+          "type": "integer",
+          "description": "max_rings_num",
+          "default": "128",
+          "minimum": 1
+        },
+        "max_points_num_per_ring": {
+          "type": "integer",
+          "description": "Set this value large enough such that HFoV / resolution < max_points_num_per_ring",
+          "default": "4000",
+          "minimum": 0
+        },
+        "publish_outlier_pointcloud": {
+          "type": "boolean",
+          "description": "Flag to publish outlier pointcloud and visibility score. Due to performance concerns, please set to false during experiments.",
+          "default": "false"
+        },
+        "min_azimuth_deg": {
+          "type": "number",
+          "description": "The left limit of azimuth for visibility score calculation",
+          "default": "0.0",
+          "minimum": 0.0
+        },
+        "max_azimuth_deg": {
+          "type": "number",
+          "description": "The right limit of azimuth for visibility score calculation",
+          "default": "360.0",
+          "minimum": 0.0,
+          "maximum": 360.0
+        },
+        "max_distance": {
+          "type": "number",
+          "description": "The limit distance for visibility score calculation",
+          "default": "12.0",
+          "minimum": 0.0
+        },
+        "vertical_bins": {
+          "type": "integer",
+          "description": "The number of vertical bin for visibility histogram",
+          "default": "128",
+          "minimum": 1
+        },
+        "horizontal_bins": {
+          "type": "integer",
+          "description": "The number of horizontal bin for visibility histogram",
+          "default": "36",
+          "minimum": 1
+        },
+        "noise_threshold": {
+          "type": "integer",
+          "description": "The threshold value for distinguishing noise from valid points in the frequency image",
+          "default": "2",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "distance_ratio",
+        "object_length_threshold",
+        "num_points_threshold",
+        "max_rings_num",
+        "max_points_num_per_ring",
+        "publish_outlier_pointcloud",
+        "min_azimuth_deg",
+        "max_azimuth_deg",
+        "max_distance",
+        "vertical_bins",
+        "horizontal_bins",
+        "noise_threshold"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/ring_outlier_filter"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

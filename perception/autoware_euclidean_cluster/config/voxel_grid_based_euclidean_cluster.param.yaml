@@ -15,3 +15,4 @@
     min_y: -200.0
     max_z: 2.0
     min_z: -10.0
+    negative: false

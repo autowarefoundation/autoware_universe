@@ -20,8 +20,8 @@
 #define AUTOWARE_RADAR_OBJECT_TRACKER__TRACKER__MODEL__TRACKER_BASE_HPP_
 
 #define EIGEN_MPL2_ONLY
+#include "autoware/object_recognition_utils/object_recognition_utils.hpp"
 #include "autoware_radar_object_tracker/utils/utils.hpp"
-#include "object_recognition_utils/object_recognition_utils.hpp"
 
 #include <Eigen/Core>
 #include <rclcpp/rclcpp.hpp>
@@ -68,7 +68,7 @@ public:
   }
   std::uint8_t getHighestProbLabel() const
   {
-    return object_recognition_utils::getHighestProbLabel(classification_);
+    return autoware::object_recognition_utils::getHighestProbLabel(classification_);
   }
   int getNoMeasurementCount() const { return no_measurement_count_; }
   int getTotalNoMeasurementCount() const { return total_no_measurement_count_; }

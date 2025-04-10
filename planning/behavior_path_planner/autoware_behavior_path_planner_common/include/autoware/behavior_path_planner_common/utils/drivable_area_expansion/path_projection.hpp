@@ -17,7 +17,7 @@
 
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/types.hpp"
 
-#include <interpolation/linear_interpolation.hpp>
+#include <autoware/interpolation/linear_interpolation.hpp>
 
 #include <boost/geometry/algorithms/distance.hpp>
 
@@ -108,7 +108,8 @@ inline Point2d normal_at_distance(const Point2d & p1, const Point2d & p2, const 
 /// @return point interpolated between a and b as per the given ratio
 inline Point2d lerp_point(const Point2d & a, const Point2d & b, const double ratio)
 {
-  return {interpolation::lerp(a.x(), b.x(), ratio), interpolation::lerp(a.y(), b.y(), ratio)};
+  return {
+    interpolation::lerp(a.x(), b.x(), ratio), autoware::interpolation::lerp(a.y(), b.y(), ratio)};
 }
 
 /// @brief calculate the point with distance and arc length relative to a linestring

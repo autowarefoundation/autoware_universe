@@ -1,3 +1,7 @@
+# This file is automatically synced from:
+# https://github.com/autowarefoundation/sync-file-templates
+# To make changes, update the source repository and follow the guidelines in its README.
+
 name: cancel-previous-workflows
 
 on:
@@ -5,7 +9,7 @@ on:
 
 jobs:
   cancel-previous-workflows:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Cancel previous runs
         uses: styfle/cancel-workflow-action@0.12.1

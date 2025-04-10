@@ -16,7 +16,7 @@
 
 #include "elevation_map_loader_node.hpp"
 
-#include "autoware_grid_map_utils/polygon_iterator.hpp"
+#include "autoware/grid_map_utils/polygon_iterator.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -148,7 +148,7 @@ void ElevationMapLoaderNode::publish()
       is_bag_loaded = grid_map::GridMapRosConverter::loadFromBag(
         *data_manager_.elevation_map_path_, "elevation_map", elevation_map_);
     } catch (const std::runtime_error & e) {
-      RCLCPP_ERROR(this->get_logger(), e.what());
+      RCLCPP_ERROR(this->get_logger(), "%s", e.what());
       is_bag_loaded = false;
     }
     if (!is_bag_loaded) {
@@ -360,7 +360,7 @@ void ElevationMapLoaderNode::inpaintElevationMap(const float radius)
   // Convert elevation layer to OpenCV image to fill in holes.
   // Get the inpaint mask (nonzero pixels indicate where values need to be filled in).
   namespace bg = boost::geometry;
-  using autoware::universe_utils::Point2d;
+  using autoware_utils::Point2d;
 
   elevation_map_.add("inpaint_mask", 0.0);
 

@@ -14,8 +14,13 @@
 
 #include "reaction_analyzer_node.hpp"
 
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/pose_deviation.hpp>
+
 #include <functional>
+#include <map>
 #include <memory>
+#include <string>
 
 namespace reaction_analyzer
 {
@@ -205,7 +210,7 @@ void ReactionAnalyzerNode::spawn_obstacle(const geometry_msgs::msg::Point & ego_
     }
   } else {
     if (
-      autoware::universe_utils::calcDistance3d(ego_pose, entity_pose_.position) <
+      autoware_utils::calc_distance3d(ego_pose, entity_pose_.position) <
       node_params_.spawn_distance_threshold) {
       if (!spawn_object_cmd_) {
         spawn_object_cmd_ = true;
@@ -394,8 +399,8 @@ bool ReactionAnalyzerNode::check_ego_init_correctly(
   }
 
   constexpr double deviation_threshold = 0.1;
-  const auto deviation = autoware::universe_utils::calcPoseDeviation(
-    ground_truth_pose_ptr->pose, odometry_ptr->pose.pose);
+  const auto deviation =
+    autoware_utils::calc_pose_deviation(ground_truth_pose_ptr->pose, odometry_ptr->pose.pose);
   const bool is_position_initialized_correctly = deviation.longitudinal < deviation_threshold &&
                                                  deviation.lateral < deviation_threshold &&
                                                  deviation.yaw < deviation_threshold;

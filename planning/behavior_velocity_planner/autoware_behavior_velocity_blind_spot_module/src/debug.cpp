@@ -12,25 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "scene.hpp"
+#include "autoware/behavior_velocity_blind_spot_module/scene.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/debug.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
-#include <autoware/universe_utils/ros/marker_helper.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <tf2/utils.h>
 
 #include <string>
+#include <vector>
 
 namespace autoware::behavior_velocity_planner
 {
-using autoware::universe_utils::appendMarkerArray;
-using autoware::universe_utils::createMarkerColor;
-using autoware::universe_utils::createMarkerOrientation;
-using autoware::universe_utils::createMarkerScale;
+using autoware_utils::append_marker_array;
+using autoware_utils::create_marker_color;
+using autoware_utils::create_marker_orientation;
+using autoware_utils::create_marker_scale;
 
 namespace
 {
@@ -52,9 +53,9 @@ visualization_msgs::msg::MarkerArray createLaneletPolygonsMarkerArray(
     marker.lifetime = rclcpp::Duration::from_seconds(0.3);
     marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
     marker.action = visualization_msgs::msg::Marker::ADD;
-    marker.pose.orientation = createMarkerOrientation(0, 0, 0, 1.0);
-    marker.scale = createMarkerScale(0.1, 0.0, 0.0);
-    marker.color = createMarkerColor(r, g, b, 0.999);
+    marker.pose.orientation = create_marker_orientation(0, 0, 0, 1.0);
+    marker.scale = create_marker_scale(0.1, 0.0, 0.0);
+    marker.color = create_marker_color(r, g, b, 0.999);
     for (const auto & p : polygon) {
       geometry_msgs::msg::Point point;
       point.x = p.x();
@@ -94,13 +95,13 @@ visualization_msgs::msg::MarkerArray BlindSpotModule::createDebugMarkerArray()
   const auto now = this->clock_->now();
 
   if (debug_data_.detection_area) {
-    appendMarkerArray(
+    append_marker_array(
       createLaneletPolygonsMarkerArray(
         {debug_data_.detection_area.value()}, "detection_area", module_id_, 0.5, 0.0, 0.0),
       &debug_marker_array, now);
   }
 
-  appendMarkerArray(
+  append_marker_array(
     debug::createObjectsMarkerArray(
       debug_data_.conflicting_targets, "conflicting_targets", module_id_, now, 0.99, 0.4, 0.0),
     &debug_marker_array, now);

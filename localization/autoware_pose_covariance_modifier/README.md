@@ -73,19 +73,19 @@ Here is a flowchart depicting the process and the predefined thresholds:
 
 ```mermaid
 graph TD
-    gnss_poser["gnss_poser"] --> |"/sensing/gnss/\npose_with_covariance"| pose_covariance_modifier_node
-    ndt_scan_matcher["ndt_scan_matcher"] --> |"/localization/pose_estimator/ndt_scan_matcher/\npose_with_covariance"| pose_covariance_modifier_node
+    gnss_poser["gnss_poser"] --> |"/sensing/gnss/<br/>pose_with_covariance"| pose_covariance_modifier_node
+    ndt_scan_matcher["ndt_scan_matcher"] --> |"/localization/pose_estimator/ndt_scan_matcher/<br/>pose_with_covariance"| pose_covariance_modifier_node
 
     subgraph pose_covariance_modifier_node ["Pose Covariance Modifier Node"]
-        pc1{{"gnss_pose_yaw\nstddev"}}
-        pc1 -->|"<= 0.3 rad"| pc2{{"gnss_pose_z\nstddev"}}
-        pc2 -->|"<= 0.1 m"| pc3{{"gnss_pose_xy\nstddev"}}
-        pc2 -->|"> 0.1 m"| ndt_pose("NDT Pose")
+        pc1{{"gnss_pose_yaw<br/>stddev"}}
+        pc1 -->|"<= 0.3 rad"| pc2{{"gnss_pose_z<br/>stddev"}}
+        pc2 -->|"<= 0.1 m"| pc3{{"gnss_pose_xy<br/>stddev"}}
+        pc2 -->|"&gt; 0.1 m"| ndt_pose("NDT Pose")
         pc3 -->|"<= 0.1 m"| gnss_pose("GNSS Pose")
         pc3 -->|"0.1 m < x <= 0.2 m"| gnss_ndt_pose("`Both GNSS and NDT Pose
         (_with modified covariance_)`")
-        pc3 -->|"> 0.2 m"| ndt_pose
-        pc1 -->|"> 0.3 rad"| ndt_pose
+        pc3 -->|"&gt; 0.2 m"| ndt_pose
+        pc1 -->|"&gt; 0.3 rad"| ndt_pose
     end
 
     pose_covariance_modifier_node -->|"/localization/pose_estimator/pose_with_covariance"| ekf_localizer["ekf_localizer"]
@@ -117,8 +117,8 @@ the [pose_twist_estimator.launch.xml](../../launch/tier4_localization_launch/lau
 
 ### Without this condition (default)
 
-- The output of the [ndt_scan_matcher](../../localization/ndt_scan_matcher) is directly sent
-  to [ekf_localizer](../../localization/ekf_localizer).
+- The output of the [ndt_scan_matcher](../../localization/autoware_ndt_scan_matcher) is directly sent
+  to [ekf_localizer](https://github.com/autowarefoundation/autoware_core/tree/main/localization/autoware_ekf_localizer).
   - It has a preset covariance value.
   - **topic name:** `/localization/pose_estimator/pose_with_covariance`
 - The GNSS pose does not enter the ekf_localizer.
@@ -126,11 +126,11 @@ the [pose_twist_estimator.launch.xml](../../launch/tier4_localization_launch/lau
 
 ### With this condition
 
-- The output of the [ndt_scan_matcher](../../localization/ndt_scan_matcher) is renamed
+- The output of the [ndt_scan_matcher](../../localization/autoware_ndt_scan_matcher) is renamed
   - **from:** `/localization/pose_estimator/pose_with_covariance`.
   - **to:** `/localization/pose_estimator/ndt_scan_matcher/pose_with_covariance`.
 - The `ndt_scan_matcher` output enters the `autoware_pose_covariance_modifier`.
-- The output of this package goes to [ekf_localizer](../../localization/ekf_localizer) with:
+- The output of this package goes to [ekf_localizer](https://github.com/autowarefoundation/autoware_core/tree/main/localization/autoware_ekf_localizer) with:
   - **topic name:** `/localization/pose_estimator/pose_with_covariance`.
 
 ## Node

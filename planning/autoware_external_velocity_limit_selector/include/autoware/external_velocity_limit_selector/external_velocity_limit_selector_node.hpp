@@ -15,13 +15,13 @@
 #ifndef AUTOWARE__EXTERNAL_VELOCITY_LIMIT_SELECTOR__EXTERNAL_VELOCITY_LIMIT_SELECTOR_NODE_HPP_
 #define AUTOWARE__EXTERNAL_VELOCITY_LIMIT_SELECTOR__EXTERNAL_VELOCITY_LIMIT_SELECTOR_NODE_HPP_
 
+#include <external_velocity_limit_selector_parameters.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <tier4_debug_msgs/msg/string_stamped.hpp>
-#include <tier4_planning_msgs/msg/velocity_limit.hpp>
-#include <tier4_planning_msgs/msg/velocity_limit_clear_command.hpp>
+#include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
+#include <autoware_internal_planning_msgs/msg/velocity_limit.hpp>
+#include <autoware_internal_planning_msgs/msg/velocity_limit_clear_command.hpp>
 
-#include <deque>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -29,10 +29,10 @@
 namespace autoware::external_velocity_limit_selector
 {
 
-using tier4_debug_msgs::msg::StringStamped;
-using tier4_planning_msgs::msg::VelocityLimit;
-using tier4_planning_msgs::msg::VelocityLimitClearCommand;
-using tier4_planning_msgs::msg::VelocityLimitConstraints;
+using autoware_internal_debug_msgs::msg::StringStamped;
+using autoware_internal_planning_msgs::msg::VelocityLimit;
+using autoware_internal_planning_msgs::msg::VelocityLimitClearCommand;
+using autoware_internal_planning_msgs::msg::VelocityLimitConstraints;
 
 using VelocityLimitTable = std::unordered_map<std::string, VelocityLimit>;
 
@@ -44,21 +44,6 @@ public:
   void onVelocityLimitFromAPI(const VelocityLimit::ConstSharedPtr msg);
   void onVelocityLimitFromInternal(const VelocityLimit::ConstSharedPtr msg);
   void onVelocityLimitClearCommand(const VelocityLimitClearCommand::ConstSharedPtr msg);
-
-  struct NodeParam
-  {
-    double max_velocity;
-    // constraints for normal driving
-    double normal_min_acc;
-    double normal_max_acc;
-    double normal_min_jerk;
-    double normal_max_jerk;
-    // constraints to be observed
-    double limit_min_acc;
-    double limit_max_acc;
-    double limit_min_jerk;
-    double limit_max_jerk;
-  };
 
 private:
   rclcpp::Subscription<VelocityLimit>::SharedPtr sub_external_velocity_limit_from_api_;
@@ -76,7 +61,7 @@ private:
   VelocityLimit getCurrentVelocityLimit() { return hardest_limit_; }
 
   // Parameters
-  NodeParam node_param_{};
+  std::shared_ptr<::external_velocity_limit_selector::ParamListener> param_listener_;
   VelocityLimit hardest_limit_{};
   VelocityLimitTable velocity_limit_table_;
 };

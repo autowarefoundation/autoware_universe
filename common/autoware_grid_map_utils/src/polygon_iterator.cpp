@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware_grid_map_utils/polygon_iterator.hpp"
+#include "autoware/grid_map_utils/polygon_iterator.hpp"
 
 #include "grid_map_core/GridMap.hpp"
 #include "grid_map_core/Polygon.hpp"
@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <functional>
 #include <utility>
+#include <vector>
 
 namespace autoware::grid_map_utils
 {

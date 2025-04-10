@@ -6,6 +6,8 @@
 
     gnss_pose_timeout: 3.0 # [sec]
     stop_check_duration: 3.0 # [sec]
+    pose_error_threshold: 5.0 # [m]
+    pose_error_check_enabled: false # check initial pose error with gnss
     ekf_enabled: $(var ekf_enabled)
     gnss_enabled: $(var gnss_enabled)
     yabloc_enabled: $(var yabloc_enabled)

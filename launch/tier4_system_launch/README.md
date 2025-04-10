@@ -23,5 +23,3 @@ Note that you should provide parameter paths as `PACKAGE_param_path`. The list o
     ...
   </include>
 ```
-
-The sensing configuration parameters used in system_error_monitor are loaded from "config/diagnostic_aggregator/sensor_kit.param.yaml" in the "`SENSOR_MODEL`\_description" package.

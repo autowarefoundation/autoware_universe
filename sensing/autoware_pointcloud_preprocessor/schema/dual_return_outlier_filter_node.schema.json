@@ -1,0 +1,146 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Dual Return Outlier Filter Node",
+  "type": "object",
+  "definitions": {
+    "dual_return_outlier_filter": {
+      "type": "object",
+      "properties": {
+        "x_max": {
+          "type": "number",
+          "description": "Maximum of x in meters for `Fixed_xyz_ROI` mode",
+          "default": "18.0"
+        },
+        "x_min": {
+          "type": "number",
+          "description": "Minimum of x in meters for `Fixed_xyz_ROI` mode",
+          "default": "-12.0"
+        },
+        "y_max": {
+          "type": "number",
+          "description": "Maximum of y in meters for `Fixed_xyz_ROI` mode",
+          "default": "2.0"
+        },
+        "y_min": {
+          "type": "number",
+          "description": "Minimum of y in meters for `Fixed_xyz_ROI` mode",
+          "default": "-2.0"
+        },
+        "z_max": {
+          "type": "number",
+          "description": "Maximum of z in meters for `Fixed_xyz_ROI` mode",
+          "default": "10.0"
+        },
+        "z_min": {
+          "type": "number",
+          "description": "Minimum of z in meters for `Fixed_xyz_ROI` mode",
+          "default": "0.0"
+        },
+        "min_azimuth_deg": {
+          "type": "number",
+          "description": "The left limit of azimuth in degrees for `Fixed_azimuth_ROI` mode",
+          "default": "135.0",
+          "minimum": 0,
+          "maximum": 360
+        },
+        "max_azimuth_deg": {
+          "type": "number",
+          "description": "The right limit of azimuth in degrees for `Fixed_azimuth_ROI` mode",
+          "default": "225.0",
+          "minimum": 0,
+          "maximum": 360
+        },
+        "max_distance": {
+          "type": "number",
+          "description": "The limit distance in meters for `Fixed_azimuth_ROI` mode",
+          "default": "12.0",
+          "minimum": 0.0
+        },
+        "vertical_bins": {
+          "type": "integer",
+          "description": "The number of vertical bins for the visibility histogram",
+          "default": "128",
+          "minimum": 1
+        },
+        "max_azimuth_diff": {
+          "type": "number",
+          "description": "The azimuth difference threshold in degrees for ring_outlier_filter",
+          "default": "50.0",
+          "minimum": 0.0
+        },
+        "weak_first_distance_ratio": {
+          "type": "number",
+          "description": "The maximum allowed ratio between consecutive weak point distances",
+          "default": "1.004",
+          "minimum": 0.0
+        },
+        "general_distance_ratio": {
+          "type": "number",
+          "description": "The maximum allowed ratio between consecutive normal point distances",
+          "default": "1.03",
+          "minimum": 0.0
+        },
+        "weak_first_local_noise_threshold": {
+          "type": "integer",
+          "description": "If the number of outliers among weak points is less than the weak_first_local_noise_threshold in the (max_azimuth - min_azimuth) / horizontal_bins interval, all points within the interval will not be filtered out.",
+          "default": "2",
+          "minimum": 0
+        },
+        "roi_mode": {
+          "type": "string",
+          "description": "roi mode",
+          "default": "Fixed_xyz_ROI",
+          "enum": ["Fixed_xyz_ROI", "No_ROI", "Fixed_azimuth_ROI"]
+        },
+        "visibility_error_threshold": {
+          "type": "number",
+          "description": "When the proportion of white pixels in the binary histogram falls below this parameter the diagnostic status becomes ERR",
+          "default": "0.5",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "visibility_warn_threshold": {
+          "type": "number",
+          "description": "When the proportion of white pixels in the binary histogram falls below this parameter the diagnostic status becomes WARN",
+          "default": "0.7",
+          "minimum": 0.0,
+          "maximum": 1.0
+        }
+      },
+      "required": [
+        "x_max",
+        "x_min",
+        "y_max",
+        "y_min",
+        "z_max",
+        "z_min",
+        "min_azimuth_deg",
+        "max_azimuth_deg",
+        "max_distance",
+        "vertical_bins",
+        "max_azimuth_diff",
+        "weak_first_distance_ratio",
+        "general_distance_ratio",
+        "weak_first_local_noise_threshold",
+        "roi_mode",
+        "visibility_error_threshold",
+        "visibility_warn_threshold"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/dual_return_outlier_filter"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

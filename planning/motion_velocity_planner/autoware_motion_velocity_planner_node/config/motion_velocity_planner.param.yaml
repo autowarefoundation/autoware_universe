@@ -1,3 +1,0 @@
-/**:
-  ros__parameters:
-    smooth_velocity_before_planning: true  # [-] if true, smooth the velocity profile of the input trajectory before planning

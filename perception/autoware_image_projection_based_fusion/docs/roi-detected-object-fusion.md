@@ -30,12 +30,12 @@ The DetectedObject has three possible shape choices/implementations, where the p
 
 ### Output
 
-| Name                      | Type                                             | Description                |
-| ------------------------- | ------------------------------------------------ | -------------------------- |
-| `output`                  | `autoware_perception_msgs::msg::DetectedObjects` | detected objects           |
-| `~/debug/image_raw[0-7]`  | `sensor_msgs::msg::Image`                        | images for visualization,  |
-| `~/debug/fused_objects`   | `autoware_perception_msgs::msg::DetectedObjects` | fused detected objects     |
-| `~/debug/ignored_objects` | `autoware_perception_msgs::msg::DetectedObjects` | not fused detected objects |
+| Name                    | Type                                             | Description                |
+| ----------------------- | ------------------------------------------------ | -------------------------- |
+| `output`                | `autoware_perception_msgs::msg::DetectedObjects` | detected objects           |
+| `debug/image_raw[0-7]`  | `sensor_msgs::msg::Image`                        | images for visualization,  |
+| `debug/fused_objects`   | `autoware_perception_msgs::msg::DetectedObjects` | fused detected objects     |
+| `debug/ignored_objects` | `autoware_perception_msgs::msg::DetectedObjects` | not fused detected objects |
 
 ## Parameters
 

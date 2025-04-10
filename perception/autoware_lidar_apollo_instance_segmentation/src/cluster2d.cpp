@@ -72,6 +72,11 @@ geometry_msgs::msg::Quaternion getQuaternionFromRPY(const double r, const double
   return tf2::toMsg(q);
 }
 
+double sigmoid(const double x)
+{
+  return 1.0 / (1.0 + std::exp(-x));
+}
+
 Cluster2D::Cluster2D(const int rows, const int cols, const float range)
 {
   rows_ = rows;
@@ -220,7 +225,7 @@ void Cluster2D::filter(const float * inferred_data)
     double vec_x = 0.0;
     double vec_y = 0.0;
     for (int grid : obs->grids) {
-      score += static_cast<double>(confidence_pt_data[grid]);
+      score += sigmoid(static_cast<double>(confidence_pt_data[grid]));
       height += static_cast<double>(height_pt_data[grid]);
       vec_x += heading_pt_x_data[grid];
       vec_y += heading_pt_y_data[grid];
@@ -264,6 +269,8 @@ tier4_perception_msgs::msg::DetectedObjectWithFeature Cluster2D::obstacleToObjec
 
   tier4_perception_msgs::msg::DetectedObjectWithFeature resulting_object;
   // pcl::PointCloud<pcl::PointXYZI> in_cluster = *(in_obstacle.cloud_ptr);
+
+  resulting_object.object.existence_probability = in_obstacle.score;
 
   resulting_object.object.classification.emplace_back(
     autoware_perception_msgs::build<ObjectClassification>()

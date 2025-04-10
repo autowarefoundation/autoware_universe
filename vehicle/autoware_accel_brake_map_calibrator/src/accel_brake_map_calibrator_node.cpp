@@ -19,6 +19,7 @@
 #include "rclcpp/logging.hpp"
 
 #include <algorithm>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <queue>
@@ -32,7 +33,7 @@ namespace autoware::accel_brake_map_calibrator
 AccelBrakeMapCalibrator::AccelBrakeMapCalibrator(const rclcpp::NodeOptions & node_options)
 : Node("accel_brake_map_calibrator", node_options)
 {
-  transform_listener_ = std::make_shared<autoware::universe_utils::TransformListener>(this);
+  transform_listener_ = std::make_shared<autoware_utils::TransformListener>(this);
   // get parameter
   update_hz_ = declare_parameter<double>("update_hz", 10.0);
   covariance_ = declare_parameter<double>("initial_covariance", 0.05);
@@ -217,7 +218,7 @@ AccelBrakeMapCalibrator::AccelBrakeMapCalibrator(const rclcpp::NodeOptions & nod
   init_timer(1.0 / update_hz_);
   init_output_csv_timer(30.0);
 
-  logger_configure_ = std::make_unique<autoware::universe_utils::LoggerLevelConfigure>(this);
+  logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
 }
 
 void AccelBrakeMapCalibrator::init_output_csv_timer(double period_s)
@@ -246,7 +247,7 @@ bool AccelBrakeMapCalibrator::get_current_pitch_from_tf(double * pitch)
   }
 
   // get tf
-  const auto transform = transform_listener_->getTransform(
+  const auto transform = transform_listener_->get_transform(
     "map", "base_link", rclcpp::Time(0), rclcpp::Duration::from_seconds(0.5));
   if (!transform) {
     RCLCPP_WARN_STREAM_THROTTLE(
@@ -267,24 +268,24 @@ bool AccelBrakeMapCalibrator::take_data()
 {
   // take data from subscribers
   if (accel_brake_value_source_ == ACCEL_BRAKE_SOURCE::STATUS) {
-    ActuationStatusStamped::ConstSharedPtr actuation_status_ptr = actuation_status_sub_.takeData();
+    ActuationStatusStamped::ConstSharedPtr actuation_status_ptr = actuation_status_sub_.take_data();
     if (!actuation_status_ptr) return false;
     take_actuation_status(actuation_status_ptr);
   }
   // take actuation data
   if (accel_brake_value_source_ == ACCEL_BRAKE_SOURCE::COMMAND) {
-    ActuationCommandStamped::ConstSharedPtr actuation_cmd_ptr = actuation_cmd_sub_.takeData();
+    ActuationCommandStamped::ConstSharedPtr actuation_cmd_ptr = actuation_cmd_sub_.take_data();
     if (!actuation_cmd_ptr) return false;
     take_actuation_command(actuation_cmd_ptr);
   }
 
   // take velocity data
-  VelocityReport::ConstSharedPtr velocity_ptr = velocity_sub_.takeData();
+  VelocityReport::ConstSharedPtr velocity_ptr = velocity_sub_.take_data();
   if (!velocity_ptr) return false;
   take_velocity(velocity_ptr);
 
   // take steer data
-  steer_ptr_ = steer_sub_.takeData();
+  steer_ptr_ = steer_sub_.take_data();
 
   /* valid check */
   // data check

@@ -24,6 +24,11 @@
 
 #include <gtest/gtest.h>
 
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
+
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
@@ -152,6 +157,7 @@ TEST_F(RansacGroundFilterTestSuite, TestCase1)
   double voxel_size_z = params["voxel_size_z"].as<float>();
   double height_threshold = params["height_threshold"].as<float>();
   bool debug = params["debug"].as<bool>();
+  bool publish_processing_time_detail = params["publish_processing_time_detail"].as<bool>();
 
   const auto pcd_path = share_dir + "/data/test.pcd";
   pcl::PointCloud<pcl::PointXYZI> cloud;
@@ -191,6 +197,7 @@ TEST_F(RansacGroundFilterTestSuite, TestCase1)
   parameters.emplace_back("voxel_size_z", voxel_size_z);
   parameters.emplace_back("height_threshold", height_threshold);
   parameters.emplace_back("debug", debug);
+  parameters.emplace_back("publish_processing_time_detail", publish_processing_time_detail);
 
   rclcpp::NodeOptions node_options;
   node_options.parameter_overrides(parameters);

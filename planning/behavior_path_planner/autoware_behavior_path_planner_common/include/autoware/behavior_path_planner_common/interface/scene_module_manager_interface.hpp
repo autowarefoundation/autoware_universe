@@ -16,8 +16,9 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__INTERFACE__SCENE_MODULE_MANAGER_INTERFACE_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__INTERFACE__SCENE_MODULE_MANAGER_INTERFACE_HPP_
 
+#include "autoware/behavior_path_planner_common/data_manager.hpp"
 #include "autoware/behavior_path_planner_common/interface/scene_module_interface.hpp"
-#include "autoware/universe_utils/ros/parameter.hpp"
+#include "autoware_utils/ros/parameter.hpp"
 
 #include <rclcpp/node.hpp>
 #include <rclcpp/parameter.hpp>
@@ -32,14 +33,13 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
 namespace autoware::behavior_path_planner
 {
 
 using autoware::motion_utils::createDeadLineVirtualWallMarker;
 using autoware::motion_utils::createSlowDownVirtualWallMarker;
 using autoware::motion_utils::createStopVirtualWallMarker;
-using autoware::universe_utils::toHexString;
+using autoware_utils::to_hex_string;
 using unique_identifier_msgs::msg::UUID;
 using SceneModulePtr = std::shared_ptr<SceneModuleInterface>;
 using SceneModuleObserver = std::weak_ptr<SceneModuleInterface>;
@@ -102,9 +102,11 @@ public:
     }
   }
 
+  void publish_planning_factors() { planning_factor_interface_->publish(); }
+
   void publishVirtualWall() const
   {
-    using autoware::universe_utils::appendMarkerArray;
+    using autoware_utils::append_marker_array;
 
     MarkerArray markers{};
 
@@ -116,29 +118,27 @@ public:
         continue;
       }
 
-      const auto opt_stop_pose = m.lock()->getStopPose();
-      if (!!opt_stop_pose) {
-        const auto virtual_wall = createStopVirtualWallMarker(
-          opt_stop_pose.value(), m.lock()->name(), rclcpp::Clock().now(), marker_id);
-        appendMarkerArray(virtual_wall, &markers);
-      }
+      const std::vector<std::pair<
+        PoseWithDetailOpt, std::function<MarkerArray(
+                             const geometry_msgs::msg::Pose &, const std::string &, rclcpp::Time,
+                             uint32_t, double, const std::string &, bool)>>>
+        pose_and_func_vec = {
+          {m.lock()->getStopPose(), createStopVirtualWallMarker},
+          {m.lock()->getSlowPose(), createSlowDownVirtualWallMarker},
+          {m.lock()->getDeadPose(), createDeadLineVirtualWallMarker}};
 
-      const auto opt_slow_pose = m.lock()->getSlowPose();
-      if (!!opt_slow_pose) {
-        const auto virtual_wall = createSlowDownVirtualWallMarker(
-          opt_slow_pose.value(), m.lock()->name(), rclcpp::Clock().now(), marker_id);
-        appendMarkerArray(virtual_wall, &markers);
-      }
-
-      const auto opt_dead_pose = m.lock()->getDeadPose();
-      if (!!opt_dead_pose) {
-        const auto virtual_wall = createDeadLineVirtualWallMarker(
-          opt_dead_pose.value(), m.lock()->name(), rclcpp::Clock().now(), marker_id);
-        appendMarkerArray(virtual_wall, &markers);
+      for (const auto & [opt_pose, create_virtual_wall] : pose_and_func_vec) {
+        if (!!opt_pose) {
+          const auto detail = opt_pose.value().detail;
+          const auto text = m.lock()->name() + (detail.empty() ? "" : " (" + detail + ")");
+          const auto virtual_wall = create_virtual_wall(
+            opt_pose.value().pose, text, rclcpp::Clock().now(), marker_id, 0.0, "", true);
+          append_marker_array(virtual_wall, &markers);
+        }
       }
 
       const auto module_specific_wall = m.lock()->getModuleVirtualWall();
-      appendMarkerArray(module_specific_wall, &markers);
+      append_marker_array(module_specific_wall, &markers);
 
       m.lock()->resetWallPoses();
     }
@@ -148,7 +148,7 @@ public:
 
   void publishMarker() const
   {
-    using autoware::universe_utils::appendMarkerArray;
+    using autoware_utils::append_marker_array;
 
     MarkerArray info_markers{};
     MarkerArray debug_markers{};
@@ -181,9 +181,9 @@ public:
     }
 
     if (observers_.empty() && idle_module_ptr_ != nullptr) {
-      appendMarkerArray(idle_module_ptr_->getInfoMarkers(), &info_markers);
-      appendMarkerArray(idle_module_ptr_->getDebugMarkers(), &debug_markers);
-      appendMarkerArray(idle_module_ptr_->getDrivableLanesMarkers(), &drivable_lanes_markers);
+      append_marker_array(idle_module_ptr_->getInfoMarkers(), &info_markers);
+      append_marker_array(idle_module_ptr_->getDebugMarkers(), &debug_markers);
+      append_marker_array(idle_module_ptr_->getDrivableLanesMarkers(), &drivable_lanes_markers);
     }
 
     pub_info_marker_->publish(info_markers);
@@ -247,9 +247,9 @@ public:
 
   virtual void updateModuleParams(const std::vector<rclcpp::Parameter> & parameters) = 0;
 
-protected:
   void initInterface(rclcpp::Node * node, const std::vector<std::string> & rtc_types);
 
+protected:
   virtual std::unique_ptr<SceneModuleInterface> createNewSceneModuleInstance() = 0;
 
   rclcpp::Node * node_ = nullptr;
@@ -262,17 +262,17 @@ protected:
 
   rclcpp::Publisher<MarkerArray>::SharedPtr pub_drivable_lanes_;
 
-  rclcpp::Publisher<universe_utils::ProcessingTimeDetail>::SharedPtr pub_processing_time_;
+  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr pub_processing_time_;
 
   std::string name_;
 
   std::shared_ptr<PlannerData> planner_data_;
 
-  std::shared_ptr<SteeringFactorInterface> steering_factor_interface_ptr_;
-
   std::vector<SceneModuleObserver> observers_;
 
   std::unique_ptr<SceneModuleInterface> idle_module_ptr_;
+
+  std::shared_ptr<PlanningFactorInterface> planning_factor_interface_;
 
   std::unordered_map<std::string, std::shared_ptr<RTCInterface>> rtc_interface_ptr_map_;
 

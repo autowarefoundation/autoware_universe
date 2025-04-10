@@ -24,11 +24,10 @@ The node `roi_pointcloud_fusion` is to cluster the pointcloud based on Region Of
 
 ### Output
 
-| Name              | Type                                                     | Description                                  |
-| ----------------- | -------------------------------------------------------- | -------------------------------------------- |
-| `output`          | `sensor_msgs::msg::PointCloud2`                          | output pointcloud as default of interface    |
-| `output_clusters` | `tier4_perception_msgs::msg::DetectedObjectsWithFeature` | output clusters                              |
-| `debug/clusters`  | `sensor_msgs/msg/PointCloud2`                            | colored cluster pointcloud for visualization |
+| Name             | Type                                                     | Description                                  |
+| ---------------- | -------------------------------------------------------- | -------------------------------------------- |
+| `output`         | `tier4_perception_msgs::msg::DetectedObjectsWithFeature` | output clusters                              |
+| `debug/clusters` | `sensor_msgs/msg/PointCloud2`                            | colored cluster pointcloud for visualization |
 
 ## Parameters
 

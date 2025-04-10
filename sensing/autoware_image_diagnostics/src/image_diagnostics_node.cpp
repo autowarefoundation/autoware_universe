@@ -16,6 +16,7 @@
 
 #include <std_msgs/msg/header.hpp>
 
+#include <string>
 #include <vector>
 
 namespace autoware::image_diagnostics
@@ -32,7 +33,7 @@ ImageDiagNode::ImageDiagNode(const rclcpp::NodeOptions & node_options)
   dft_image_pub_ = image_transport::create_publisher(this, "image_diag/debug/dft_image");
   gray_image_pub_ = image_transport::create_publisher(this, "image_diag/debug/gray_image");
 
-  image_state_pub_ = create_publisher<tier4_debug_msgs::msg::Int32Stamped>(
+  image_state_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Int32Stamped>(
     "image_diag/image_state_diag", rclcpp::SensorDataQoS());
 
   updater_.setHardwareID("Image_Diagnostics");
@@ -170,11 +171,9 @@ void ImageDiagNode::ImageChecker(const sensor_msgs::msg::Image::ConstSharedPtr i
         cv::rectangle(
           diag_block_image, cv::Point(x, y), cv::Point(x + block_size_h, y + block_size_v),
           state_color_map_["BLOCKAGE"], -1, cv::LINE_AA);
-      } else if (region_state_vec[j] == Image_State::LOW_VIS) {
-        cv::rectangle(
-          diag_block_image, cv::Point(x, y), cv::Point(x + block_size_h, y + block_size_v),
-          state_color_map_["BACKLIGHT"], -1, cv::LINE_AA);
-      } else if (region_state_vec[j] == Image_State::BACKLIGHT) {
+      } else if (
+        region_state_vec[j] == Image_State::LOW_VIS ||
+        region_state_vec[j] == Image_State::BACKLIGHT) {
         cv::rectangle(
           diag_block_image, cv::Point(x, y), cv::Point(x + block_size_h, y + block_size_v),
           state_color_map_["BACKLIGHT"], -1, cv::LINE_AA);
@@ -226,7 +225,7 @@ void ImageDiagNode::ImageChecker(const sensor_msgs::msg::Image::ConstSharedPtr i
   } else {
     params_.diagnostic_status = 0;
   }
-  tier4_debug_msgs::msg::Int32Stamped image_state_out;
+  autoware_internal_debug_msgs::msg::Int32Stamped image_state_out;
   image_state_out.data = params_.diagnostic_status;
   image_state_pub_->publish(image_state_out);
 

@@ -15,48 +15,25 @@
 #ifndef SCENE_NO_STOPPING_AREA_HPP_
 #define SCENE_NO_STOPPING_AREA_HPP_
 
-#define EIGEN_MPL2_ONLY
+#include "utils.hpp"
 
-#include <Eigen/Core>
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/state_machine.hpp>
+#include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/no_stopping_area.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <autoware_perception_msgs/msg/object_classification.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
-
-#include <boost/optional.hpp>
-
-#include <lanelet2_core/LaneletMap.h>
-#include <tf2/LinearMath/Transform.h>
 
 #include <memory>
-#include <utility>
-#include <vector>
 
 namespace autoware::behavior_velocity_planner
 {
-using PathIndexWithPose = std::pair<size_t, geometry_msgs::msg::Pose>;  // front index, pose
-using PathIndexWithPoint2d = std::pair<size_t, Point2d>;                // front index, point2d
-using PathIndexWithOffset = std::pair<size_t, double>;                  // front index, offset
-
-class NoStoppingAreaModule : public SceneModuleInterface
+class NoStoppingAreaModule : public SceneModuleInterfaceWithRTC
 {
 public:
-  struct DebugData
-  {
-    double base_link2front;
-    std::vector<geometry_msgs::msg::Pose> stop_poses;
-    geometry_msgs::msg::Pose first_stop_pose;
-    std::vector<geometry_msgs::msg::Point> stuck_points;
-    geometry_msgs::msg::Polygon stuck_vehicle_detect_area;
-    geometry_msgs::msg::Polygon stop_line_detect_area;
-  };
-
   struct PlannerParam
   {
     /**
@@ -76,14 +53,16 @@ public:
     double path_expand_width;           //! [m] path width to calculate the edge line for both side
   };
 
-public:
   NoStoppingAreaModule(
     const int64_t module_id, const int64_t lane_id,
     const lanelet::autoware::NoStoppingArea & no_stopping_area_reg_elem,
-    const PlannerParam & planner_param, const rclcpp::Logger logger,
-    const rclcpp::Clock::SharedPtr clock);
+    const PlannerParam & planner_param, const rclcpp::Logger & logger,
+    const rclcpp::Clock::SharedPtr clock,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+      planning_factor_interface);
 
-  bool modifyPathVelocity(PathWithLaneId * path, StopReason * stop_reason) override;
+  bool modifyPathVelocity(PathWithLaneId * path) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
@@ -91,17 +70,8 @@ public:
 private:
   const int64_t lane_id_;
 
-  mutable bool pass_judged_ = false;
-  mutable bool is_stoppable_ = true;
+  no_stopping_area::PassJudge pass_judge_;
   StateMachine state_machine_;  //! for state
-
-  /**
-   * @brief check if the object has a target type for stuck check
-   * @param object target object
-   * @return true if the object has a target type
-   */
-  bool isTargetStuckVehicleType(
-    const autoware_perception_msgs::msg::PredictedObject & object) const;
 
   /**
    * @brief Check if there is a stopped vehicle in stuck vehicle detect area.
@@ -109,58 +79,9 @@ private:
    * @param objects_ptr     target objects
    * @return true if exists
    */
-  bool checkStuckVehiclesInNoStoppingArea(
+  bool check_stuck_vehicles_in_no_stopping_area(
     const Polygon2d & poly,
     const autoware_perception_msgs::msg::PredictedObjects::ConstSharedPtr & predicted_obj_arr_ptr);
-
-  /**
-   * @brief Check if there is a stop line in "stop line detect area".
-   * @param path            ego-car lane
-   * @param poly            ego focusing area polygon
-   * @return true if exists
-   */
-  bool checkStopLinesInNoStoppingArea(
-    const tier4_planning_msgs::msg::PathWithLaneId & path, const Polygon2d & poly);
-
-  /**
-   * @brief Calculate the polygon of the path from the ego-car position to the end of the
-   * no stopping lanelet (+ extra distance).
-   * @param path           ego-car lane
-   * @param ego_pose       ego-car pose
-   * @param margin         margin from the end point of the ego-no stopping area lane
-   * @param extra_dist     extra distance from the end point of the no stopping area lanelet
-   * @return generated polygon
-   */
-  Polygon2d generateEgoNoStoppingAreaLanePolygon(
-    const tier4_planning_msgs::msg::PathWithLaneId & path,
-    const geometry_msgs::msg::Pose & ego_pose, const double margin, const double extra_dist) const;
-
-  /**
-   * @brief Calculate the polygon of the path from the ego-car position to the end of the
-   * no stopping lanelet (+ extra distance).
-   * @param path                  ego-car lane
-   * @param stop_line_margin      stop line margin from the stopping area lane
-   * @return generated stop line
-   */
-  boost::optional<LineString2d> getStopLineGeometry2d(
-    const tier4_planning_msgs::msg::PathWithLaneId & path, const double stop_line_margin) const;
-
-  /**
-   * @brief Calculate if it's possible for ego-vehicle to stop before area consider jerk limit
-   * @param self_pose       ego-car pose
-   * @param line_pose       stop line pose on the lane
-   * @return is stoppable in front of no stopping area
-   */
-  bool isStoppable(
-    const geometry_msgs::msg::Pose & self_pose, const geometry_msgs::msg::Pose & line_pose) const;
-
-  /**
-   * @brief insert stop point on ego path
-   * @param path          original path
-   * @param stop_point    stop line point on the lane
-   */
-  void insertStopPoint(
-    tier4_planning_msgs::msg::PathWithLaneId & path, const PathIndexWithPose & stop_point);
 
   // Key Feature
   const lanelet::autoware::NoStoppingArea & no_stopping_area_reg_elem_;
@@ -170,7 +91,7 @@ private:
   PlannerParam planner_param_;
 
   // Debug
-  DebugData debug_data_;
+  no_stopping_area::DebugData debug_data_;
 };
 }  // namespace autoware::behavior_velocity_planner
 

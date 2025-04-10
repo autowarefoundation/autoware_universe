@@ -1,8 +1,12 @@
+# This file is automatically synced from:
+# https://github.com/autowarefoundation/sync-file-templates
+# To make changes, update the source repository and follow the guidelines in its README.
+
 name: pre-commit-autoupdate
 
 on:
   schedule:
-    - cron: 0 0 * * *
+    - cron: 0 0 1 1,4,7,10 * # quarterly
   workflow_dispatch:
 
 jobs:
@@ -14,7 +18,7 @@ jobs:
   pre-commit-autoupdate:
     needs: check-secret
     if: ${{ needs.check-secret.outputs.set == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Generate token
         id: generate-token

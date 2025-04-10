@@ -1,4 +1,4 @@
-// Copyright 2021 Tier IV, Inc.
+// Copyright 2025 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,41 +15,59 @@
 #ifndef AUTOWARE__PLANNING_EVALUATOR__PLANNING_EVALUATOR_NODE_HPP_
 #define AUTOWARE__PLANNING_EVALUATOR__PLANNING_EVALUATOR_NODE_HPP_
 
+#include "autoware/planning_evaluator/metrics/metric.hpp"
+#include "autoware/planning_evaluator/metrics/output_metric.hpp"
+#include "autoware/planning_evaluator/metrics_accumulator.hpp"
 #include "autoware/planning_evaluator/metrics_calculator.hpp"
-#include "autoware/planning_evaluator/stat.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
 
 #include <autoware/route_handler/route_handler.hpp>
-#include <autoware/universe_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils/math/accumulator.hpp>
+#include <autoware_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
-#include "autoware_perception_msgs/msg/predicted_objects.hpp"
-#include "autoware_planning_msgs/msg/pose_with_uuid_stamped.hpp"
-#include "autoware_planning_msgs/msg/trajectory.hpp"
-#include "autoware_planning_msgs/msg/trajectory_point.hpp"
-#include "diagnostic_msgs/msg/diagnostic_array.hpp"
-#include "geometry_msgs/msg/accel_with_covariance_stamped.hpp"
-#include "nav_msgs/msg/odometry.hpp"
+#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
+#include <autoware_internal_planning_msgs/msg/planning_factor.hpp>
+#include <autoware_internal_planning_msgs/msg/planning_factor_array.hpp>
+#include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
-#include <diagnostic_msgs/msg/detail/diagnostic_status__struct.hpp>
+#include <autoware_planning_msgs/msg/pose_with_uuid_stamped.hpp>
+#include <autoware_planning_msgs/msg/trajectory.hpp>
+#include <autoware_planning_msgs/msg/trajectory_point.hpp>
+#include <autoware_vehicle_msgs/msg/detail/steering_report__struct.hpp>
+#include <autoware_vehicle_msgs/msg/detail/turn_indicators_report__struct.hpp>
+#include <autoware_vehicle_msgs/msg/steering_report.hpp>
+#include <autoware_vehicle_msgs/msg/turn_indicators_report.hpp>
+#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#include <tier4_metric_msgs/msg/metric.hpp>
+#include <tier4_metric_msgs/msg/metric_array.hpp>
 
 #include <array>
-#include <deque>
 #include <memory>
 #include <string>
-#include <utility>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 namespace planning_diagnostics
 {
+using autoware::vehicle_info_utils::VehicleInfo;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::PoseWithUuidStamped;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
-using diagnostic_msgs::msg::DiagnosticArray;
-using diagnostic_msgs::msg::DiagnosticStatus;
+using autoware_utils::Accumulator;
+using autoware_vehicle_msgs::msg::SteeringReport;
+using autoware_vehicle_msgs::msg::TurnIndicatorsReport;
+using MetricMsg = tier4_metric_msgs::msg::Metric;
+using MetricArrayMsg = tier4_metric_msgs::msg::MetricArray;
 using nav_msgs::msg::Odometry;
 using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
+using autoware_internal_planning_msgs::msg::PlanningFactor;
+using autoware_internal_planning_msgs::msg::PlanningFactorArray;
 using autoware_planning_msgs::msg::LaneletRoute;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 /**
@@ -59,7 +77,7 @@ class PlanningEvaluatorNode : public rclcpp::Node
 {
 public:
   explicit PlanningEvaluatorNode(const rclcpp::NodeOptions & node_options);
-  ~PlanningEvaluatorNode();
+  ~PlanningEvaluatorNode() override;
 
   /**
    * @brief callback on receiving an odometry
@@ -67,7 +85,7 @@ public:
    */
   void onOdometry(const Odometry::ConstSharedPtr odometry_msg);
 
-  /**
+  /**parameters
    * @brief callback on receiving a trajectory
    * @param [in] traj_msg received trajectory message
    */
@@ -95,31 +113,44 @@ public:
     const Odometry::ConstSharedPtr ego_state_ptr);
 
   /**
-   * @brief obtain diagnostics information
+   * @brief callback on receiving an steering status message
+   * @param [in] steering_msg received steering status message
    */
-  void onDiagnostics(const DiagnosticArray::ConstSharedPtr diag_msg);
+  void onSteering(const SteeringReport::ConstSharedPtr steering_msg);
 
   /**
-   * @brief publish the given metric statistic
+   * @brief callback on receiving a turn indicators message
+   * @param [in] blinker_msg received turn indicators message
    */
-  DiagnosticStatus generateDiagnosticStatus(
-    const Metric & metric, const Stat<double> & metric_stat) const;
+  void onBlinker(const TurnIndicatorsReport::ConstSharedPtr blinker_msg);
 
   /**
-   * @brief publish current ego lane info
+   * @brief callback on receiving a planning factors
+   * @param [in] planning_factors received planning factor message
+   * @param [in] module_name module name of the planning factor
    */
-  DiagnosticStatus generateDiagnosticEvaluationStatus(const DiagnosticStatus & diag);
+  void onPlanningFactors(
+    const PlanningFactorArray::ConstSharedPtr planning_factors, const std::string & module_name);
 
   /**
-   * @brief publish current ego lane info
+   * @brief add the given metric statistic
    */
-  DiagnosticStatus generateLaneletDiagnosticStatus(const Odometry::ConstSharedPtr ego_state_ptr);
+  void AddMetricMsg(const Metric & metric, const Accumulator<double> & metric_stat);
 
   /**
-   * @brief publish current ego kinematic state
+   * @brief add current ego lane info
    */
-  DiagnosticStatus generateKinematicStateDiagnosticStatus(
+  void AddLaneletMetricMsg(const Odometry::ConstSharedPtr ego_state_ptr);
+
+  /**
+   * @brief add current ego kinematic state
+   */
+  void AddKinematicStateMetricMsg(
     const AccelWithCovarianceStamped & accel_stamped, const Odometry::ConstSharedPtr ego_state_ptr);
+
+  void AddStopCountMetricMsg(
+    const PlanningFactorArray::ConstSharedPtr & planning_factors,
+    const Odometry::ConstSharedPtr ego_state_ptr, const std::string & module_name);
 
 private:
   static bool isFinite(const TrajectoryPoint & p);
@@ -134,66 +165,59 @@ private:
    */
   void onTimer();
 
-  /**
-   * @brief fetch topic data
-   */
-  void fetchData();
-  // The diagnostics cycle is faster than timer, and each node publishes diagnostic separately.
-  // takeData() in onTimer() with a polling subscriber will miss a topic, so save all topics with
-  // onDiagnostics().
-  rclcpp::Subscription<DiagnosticArray>::SharedPtr planning_diag_sub_;
-
-  // ROS
-  autoware::universe_utils::InterProcessPollingSubscriber<Trajectory> traj_sub_{
-    this, "~/input/trajectory"};
-  autoware::universe_utils::InterProcessPollingSubscriber<Trajectory> ref_sub_{
+  // ROS subscribers
+  autoware_utils::InterProcessPollingSubscriber<Trajectory> traj_sub_{this, "~/input/trajectory"};
+  autoware_utils::InterProcessPollingSubscriber<Trajectory> ref_sub_{
     this, "~/input/reference_trajectory"};
-  autoware::universe_utils::InterProcessPollingSubscriber<PredictedObjects> objects_sub_{
+  autoware_utils::InterProcessPollingSubscriber<PredictedObjects> objects_sub_{
     this, "~/input/objects"};
-  autoware::universe_utils::InterProcessPollingSubscriber<PoseWithUuidStamped> modified_goal_sub_{
+  autoware_utils::InterProcessPollingSubscriber<PoseWithUuidStamped> modified_goal_sub_{
     this, "~/input/modified_goal"};
-  autoware::universe_utils::InterProcessPollingSubscriber<Odometry> odometry_sub_{
-    this, "~/input/odometry"};
-  autoware::universe_utils::InterProcessPollingSubscriber<
-    LaneletRoute, autoware::universe_utils::polling_policy::Newest>
+  autoware_utils::InterProcessPollingSubscriber<Odometry> odometry_sub_{this, "~/input/odometry"};
+  autoware_utils::InterProcessPollingSubscriber<
+    LaneletRoute, autoware_utils::polling_policy::Newest>
     route_subscriber_{this, "~/input/route", rclcpp::QoS{1}.transient_local()};
-  autoware::universe_utils::InterProcessPollingSubscriber<
-    LaneletMapBin, autoware::universe_utils::polling_policy::Newest>
+  autoware_utils::InterProcessPollingSubscriber<
+    LaneletMapBin, autoware_utils::polling_policy::Newest>
     vector_map_subscriber_{this, "~/input/vector_map", rclcpp::QoS{1}.transient_local()};
-  autoware::universe_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped> accel_sub_{
+  autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped> accel_sub_{
     this, "~/input/acceleration"};
+  autoware_utils::InterProcessPollingSubscriber<SteeringReport> steering_sub_{
+    this, "~/input/steering_status"};
+  autoware_utils::InterProcessPollingSubscriber<TurnIndicatorsReport> blinker_sub_{
+    this, "~/input/turn_indicators_status"};
 
-  rclcpp::Publisher<DiagnosticArray>::SharedPtr metrics_pub_;
+  std::unordered_map<
+    std::string, autoware_utils::InterProcessPollingSubscriber<PlanningFactorArray>>
+    planning_factors_sub_;
+  std::unordered_set<std::string> stop_decision_modules_;
+
+  // ROS publishers
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
+    processing_time_pub_;
+  rclcpp::Publisher<MetricArrayMsg>::SharedPtr metrics_pub_;
   std::shared_ptr<tf2_ros::TransformListener> transform_listener_{nullptr};
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   autoware::route_handler::RouteHandler route_handler_;
 
-  DiagnosticArray metrics_msg_;
+  // Message to publish
+  MetricArrayMsg metrics_msg_;
+
   // Parameters
-  std::string output_file_str_;
+  bool output_metrics_;
   std::string ego_frame_str_;
 
-  // Calculator
+  // Calculator and accumulator
   MetricsCalculator metrics_calculator_;
-  // Metrics
-  std::vector<Metric> metrics_;
-  std::deque<rclcpp::Time> stamps_;
-  std::array<std::deque<Stat<double>>, static_cast<size_t>(Metric::SIZE)> metric_stats_;
+  MetricsAccumulator metrics_accumulator_;
+
+  // Metrics for publishing
+
+  std::unordered_set<Metric> metrics_for_publish_;
+  std::unordered_set<OutputMetric> metrics_for_output_;
 
   rclcpp::TimerBase::SharedPtr timer_;
-  // queue for diagnostics and time stamp
-  std::deque<std::pair<DiagnosticStatus, rclcpp::Time>> diag_queue_;
-  const std::vector<std::string> target_functions_ = {
-    "obstacle_cruise_planner_stop",
-    "obstacle_cruise_planner_slow_down",
-    "obstacle_cruise_planner_cruise",
-    "autoware::motion_velocity_planner::OutOfLaneModule.stop",
-    "autoware::motion_velocity_planner::OutOfLaneModule.slow_down",
-    "autoware::motion_velocity_planner::ObstacleVelocityLimiterModule.stop",
-    "autoware::motion_velocity_planner::ObstacleVelocityLimiterModule.slow_down",
-    "autoware::motion_velocity_planner::DynamicObstacleStopModule.stop",
-    "autoware::motion_velocity_planner::DynamicObstacleStopModule.slow_down",
-  };
+  VehicleInfo vehicle_info_;
   std::optional<AccelWithCovarianceStamped> prev_acc_stamped_{std::nullopt};
 };
 }  // namespace planning_diagnostics

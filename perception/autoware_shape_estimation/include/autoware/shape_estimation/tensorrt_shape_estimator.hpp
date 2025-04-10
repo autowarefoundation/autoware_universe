@@ -15,11 +15,11 @@
 #ifndef AUTOWARE__SHAPE_ESTIMATION__TENSORRT_SHAPE_ESTIMATOR_HPP_
 #define AUTOWARE__SHAPE_ESTIMATION__TENSORRT_SHAPE_ESTIMATOR_HPP_
 
-#include <cuda_utils/cuda_check_error.hpp>
-#include <cuda_utils/cuda_unique_ptr.hpp>
-#include <cuda_utils/stream_unique_ptr.hpp>
+#include <autoware/cuda_utils/cuda_check_error.hpp>
+#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
+#include <autoware/cuda_utils/stream_unique_ptr.hpp>
+#include <autoware/tensorrt_common/tensorrt_common.hpp>
 #include <pcl_ros/transforms.hpp>
-#include <tensorrt_common/tensorrt_common.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <geometry_msgs/msg/transform.hpp>
@@ -34,10 +34,10 @@
 
 namespace autoware::shape_estimation
 {
-using cuda_utils::CudaUniquePtr;
-using cuda_utils::CudaUniquePtrHost;
-using cuda_utils::makeCudaStream;
-using cuda_utils::StreamUniquePtr;
+using autoware::cuda_utils::CudaUniquePtr;
+using autoware::cuda_utils::CudaUniquePtrHost;
+using autoware::cuda_utils::makeCudaStream;
+using autoware::cuda_utils::StreamUniquePtr;
 
 using autoware_perception_msgs::msg::DetectedObject;
 using autoware_perception_msgs::msg::DetectedObjects;
@@ -48,10 +48,7 @@ class TrtShapeEstimator
 {
 public:
   TrtShapeEstimator(
-    const std::string & model_path, const std::string & precision,
-    const tensorrt_common::BatchConfig & batch_config, const size_t max_workspace_size = (1 << 30),
-    const tensorrt_common::BuildConfig build_config =
-      tensorrt_common::BuildConfig("MinMax", -1, false, false, false, 0.0));
+    const std::string & model_path, const std::string & precision, const int batch_size);
 
   ~TrtShapeEstimator() = default;
 
@@ -68,7 +65,7 @@ private:
   static double class2angle(int pred_cls, double residual, int num_class);
 
   StreamUniquePtr stream_{makeCudaStream()};
-  std::unique_ptr<tensorrt_common::TrtCommon> trt_common_;
+  std::unique_ptr<autoware::tensorrt_common::TrtCommon> trt_common_;
 
   std::vector<float> input_pc_h_;
   CudaUniquePtr<float[]> input_pc_d_;

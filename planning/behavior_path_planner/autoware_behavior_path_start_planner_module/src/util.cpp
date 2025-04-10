@@ -19,8 +19,8 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <boost/geometry/algorithms/dispatch/distance.hpp>
@@ -54,6 +54,11 @@ PathWithLaneId getBackwardPath(
     // forward center line path
     backward_path = route_handler.getCenterLinePath(shoulder_lanes, s_start, s_end, true);
 
+    // If the returned path is empty, return an empty path
+    if (backward_path.points.empty()) {
+      return backward_path;
+    }
+
     // backward center line path
     std::reverse(backward_path.points.begin(), backward_path.points.end());
     for (auto & p : backward_path.points) {
@@ -65,7 +70,7 @@ PathWithLaneId getBackwardPath(
     const double lateral_distance_to_shoulder_center = current_pose_arc_coords.distance;
     for (size_t i = 0; i < backward_path.points.size(); ++i) {
       auto & p = backward_path.points.at(i).point.pose;
-      p = autoware::universe_utils::calcOffsetPose(p, 0, lateral_distance_to_shoulder_center, 0);
+      p = autoware_utils::calc_offset_pose(p, 0, lateral_distance_to_shoulder_center, 0);
     }
   }
 

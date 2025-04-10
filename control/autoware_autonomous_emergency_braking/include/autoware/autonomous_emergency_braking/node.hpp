@@ -15,11 +15,11 @@
 #ifndef AUTOWARE__AUTONOMOUS_EMERGENCY_BRAKING__NODE_HPP_
 #define AUTOWARE__AUTONOMOUS_EMERGENCY_BRAKING__NODE_HPP_
 
-#include "autoware/universe_utils/system/time_keeper.hpp"
+#include "autoware_utils/system/time_keeper.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <pcl_ros/transforms.hpp>
@@ -33,6 +33,9 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <tier4_debug_msgs/msg/float32_stamped.hpp>
+#include <tier4_metric_msgs/msg/metric.hpp>
+#include <tier4_metric_msgs/msg/metric_array.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
@@ -41,6 +44,7 @@
 #include <pcl/common/transforms.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <pcl/surface/convex_hull.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
@@ -50,6 +54,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 namespace autoware::motion::control::autonomous_emergency_braking
@@ -62,8 +67,9 @@ using nav_msgs::msg::Odometry;
 using sensor_msgs::msg::Imu;
 using sensor_msgs::msg::PointCloud2;
 using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
-using autoware::universe_utils::Polygon2d;
 using autoware::vehicle_info_utils::VehicleInfo;
+using autoware_utils::Polygon2d;
+using autoware_utils::Polygon3d;
 using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
 using visualization_msgs::msg::Marker;
@@ -72,6 +78,9 @@ using Path = std::vector<geometry_msgs::msg::Pose>;
 using Vector3 = geometry_msgs::msg::Vector3;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
+using colorTuple = std::tuple<double, double, double, double>;
+using Metric = tier4_metric_msgs::msg::Metric;
+using MetricArray = tier4_metric_msgs::msg::MetricArray;
 
 /**
  * @brief Struct to store object data
@@ -83,6 +92,7 @@ struct ObjectData
   double velocity{0.0};
   double rss{0.0};
   double distance_to_object{0.0};
+  bool is_target{true};
 };
 
 /**
@@ -321,26 +331,28 @@ public:
   explicit AEB(const rclcpp::NodeOptions & node_options);
 
   // subscriber
-  autoware::universe_utils::InterProcessPollingSubscriber<PointCloud2> sub_point_cloud_{
-    this, "~/input/pointcloud", autoware::universe_utils::SingleDepthSensorQoS()};
-  autoware::universe_utils::InterProcessPollingSubscriber<VelocityReport> sub_velocity_{
+  autoware_utils::InterProcessPollingSubscriber<PointCloud2> sub_point_cloud_{
+    this, "~/input/pointcloud", autoware_utils::single_depth_sensor_qos()};
+  autoware_utils::InterProcessPollingSubscriber<VelocityReport> sub_velocity_{
     this, "~/input/velocity"};
-  autoware::universe_utils::InterProcessPollingSubscriber<Imu> sub_imu_{this, "~/input/imu"};
-  autoware::universe_utils::InterProcessPollingSubscriber<Trajectory> sub_predicted_traj_{
+  autoware_utils::InterProcessPollingSubscriber<Imu> sub_imu_{this, "~/input/imu"};
+  autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_predicted_traj_{
     this, "~/input/predicted_trajectory"};
-  autoware::universe_utils::InterProcessPollingSubscriber<PredictedObjects> predicted_objects_sub_{
+  autoware_utils::InterProcessPollingSubscriber<PredictedObjects> predicted_objects_sub_{
     this, "~/input/objects"};
-  autoware::universe_utils::InterProcessPollingSubscriber<AutowareState> sub_autoware_state_{
+  autoware_utils::InterProcessPollingSubscriber<AutowareState> sub_autoware_state_{
     this, "/autoware/state"};
   // publisher
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_obstacle_pointcloud_;
   rclcpp::Publisher<MarkerArray>::SharedPtr debug_marker_publisher_;
-  rclcpp::Publisher<MarkerArray>::SharedPtr info_marker_publisher_;
-  rclcpp::Publisher<autoware::universe_utils::ProcessingTimeDetail>::SharedPtr
+  rclcpp::Publisher<MarkerArray>::SharedPtr virtual_wall_publisher_;
+  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_pub_;
+  rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr debug_rss_distance_publisher_;
+  rclcpp::Publisher<MetricArray>::SharedPtr metrics_pub_;
   // timer
   rclcpp::TimerBase::SharedPtr timer_;
-  mutable std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_{nullptr};
+  mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
 
   // callback
   /**
@@ -414,6 +426,16 @@ public:
    * @brief Generate the footprint of the path with extra width margin
    * @param path Ego vehicle path
    * @param extra_width_margin Extra width margin for the footprint
+   * @param polygons vector to be filled with the polygons
+   * @return Vector of polygons representing the path footprint
+   */
+  void generatePathFootprint(
+    const Path & path, const double extra_width_margin, std::vector<Polygon2d> & polygons);
+
+  /**
+   * @brief Generate the footprint of the path with extra width margin
+   * @param path Ego vehicle path
+   * @param extra_width_margin Extra width margin for the footprint
    * @return Vector of polygons representing the path footprint
    */
   std::vector<Polygon2d> generatePathFootprint(const Path & path, const double extra_width_margin);
@@ -422,14 +444,25 @@ public:
    * @brief Create object data using point cloud clusters
    * @param ego_path Ego vehicle path
    * @param ego_polys Polygons representing the ego vehicle footprint
+   * @param speed_calc_ego_polys Polygons representing the expanded ego vehicle footprint for speed
+   * calculation area
    * @param stamp Timestamp of the data
    * @param objects Vector to store the created object data
    * @param obstacle_points_ptr Pointer to the point cloud of obstacles
    */
-  void createObjectDataUsingPointCloudClusters(
-    const Path & ego_path, const std::vector<Polygon2d> & ego_polys, const rclcpp::Time & stamp,
-    std::vector<ObjectData> & objects,
-    const pcl::PointCloud<pcl::PointXYZ>::Ptr obstacle_points_ptr);
+  void getClosestObjectsOnPath(
+    const Path & ego_path, const rclcpp::Time & stamp,
+    const PointCloud::Ptr points_belonging_to_cluster_hulls, std::vector<ObjectData> & objects);
+
+  /**
+   * @brief Create object data using point cloud clusters
+   * @param obstacle_points_ptr Pointer to the point cloud of obstacles
+   * @param points_belonging_to_cluster_hulls output: pointer to the point cloud of points belonging
+   * to cluster hulls
+   */
+  void getPointsBelongingToClusterHulls(
+    const PointCloud::Ptr obstacle_points_ptr,
+    const PointCloud::Ptr points_belonging_to_cluster_hulls, MarkerArray & debug_markers);
 
   /**
    * @brief Create object data using predicted objects
@@ -456,18 +489,26 @@ public:
    * @param polygons Polygons representing the ego vehicle footprint
    * @param objects Vector of object data
    * @param closest_object Optional data of the closest object
-   * @param color_r Red color component
-   * @param color_g Green color component
-   * @param color_b Blue color component
-   * @param color_a Alpha (transparency) component
+   * @param debug_colors Tuple of RGBA colors
    * @param ns Namespace for the marker
    * @param debug_markers Marker array for debugging
    */
   void addMarker(
     const rclcpp::Time & current_time, const Path & path, const std::vector<Polygon2d> & polygons,
     const std::vector<ObjectData> & objects, const std::optional<ObjectData> & closest_object,
-    const double color_r, const double color_g, const double color_b, const double color_a,
-    const std::string & ns, MarkerArray & debug_markers);
+    const colorTuple & debug_colors, const std::string & ns, MarkerArray & debug_markers);
+
+  /**
+   * @brief Add a marker of convex hulls for debugging
+   * @param current_time Current time
+   * @param hulls vector of polygons of the convex hulls
+   * @param debug_colors Tuple of RGBA colors
+   * @param ns Namespace for the marker
+   * @param debug_markers Marker array for debugging
+   */
+  void addClusterHullMarkers(
+    const rclcpp::Time & current_time, const std::vector<Polygon3d> & hulls,
+    const colorTuple & debug_colors, const std::string & ns, MarkerArray & debug_markers);
 
   /**
    * @brief Add a collision marker for debugging
@@ -512,22 +553,26 @@ public:
   // Member variables
   bool publish_debug_pointcloud_;
   bool publish_debug_markers_;
-  bool publish_debug_time_;
   bool use_predicted_trajectory_;
   bool use_imu_path_;
+  bool limit_imu_path_lat_dev_;
+  bool limit_imu_path_length_;
   bool use_pointcloud_data_;
   bool use_predicted_object_data_;
   bool use_object_velocity_calculation_;
   bool check_autoware_state_;
+  double imu_path_lat_dev_threshold_;
   double path_footprint_extra_margin_;
+  double speed_calculation_expansion_margin_;
   double detection_range_min_height_;
   double detection_range_max_height_margin_;
   double voxel_grid_x_;
   double voxel_grid_y_;
   double voxel_grid_z_;
-  double min_generated_path_length_;
+  double min_generated_imu_path_length_;
+  double max_generated_imu_path_length_;
   double expand_width_;
-  double longitudinal_offset_;
+  double longitudinal_offset_margin_;
   double t_response_;
   double a_ego_min_;
   double a_obj_min_;

@@ -19,6 +19,7 @@
 #include "gnss_module.hpp"
 #include "localization_module.hpp"
 #include "ndt_localization_trigger_module.hpp"
+#include "pose_error_check_module.hpp"
 #include "stop_check_module.hpp"
 
 #include <memory>
@@ -30,7 +31,7 @@ namespace autoware::pose_initializer
 PoseInitializer::PoseInitializer(const rclcpp::NodeOptions & options)
 : rclcpp::Node("pose_initializer", options)
 {
-  const auto node = component_interface_utils::NodeAdaptor(this);
+  const auto node = autoware::component_interface_utils::NodeAdaptor(this);
   group_srv_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   node.init_pub(pub_state_);
   node.init_srv(srv_initialize_, this, &PoseInitializer::on_initialize, group_srv_);
@@ -39,7 +40,8 @@ PoseInitializer::PoseInitializer(const rclcpp::NodeOptions & options)
   output_pose_covariance_ = get_covariance_parameter(this, "output_pose_covariance");
   gnss_particle_covariance_ = get_covariance_parameter(this, "gnss_particle_covariance");
 
-  diagnostics_pose_reliable_ = std::make_unique<DiagnosticsModule>(this, "pose_initializer_status");
+  diagnostics_pose_reliable_ =
+    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "pose_initializer_status");
 
   if (declare_parameter<bool>("ekf_enabled")) {
     ekf_localization_trigger_ = std::make_unique<EkfLocalizationTriggerModule>(this);
@@ -59,7 +61,10 @@ PoseInitializer::PoseInitializer(const rclcpp::NodeOptions & options)
     stop_check_duration_ = declare_parameter<double>("stop_check_duration");
     stop_check_ = std::make_unique<StopCheckModule>(this, stop_check_duration_ + 1.0);
   }
-  logger_configure_ = std::make_unique<autoware::universe_utils::LoggerLevelConfigure>(this);
+  if (declare_parameter<bool>("pose_error_check_enabled")) {
+    pose_error_check_ = std::make_unique<PoseErrorCheckModule>(this);
+  }
+  logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
 
   change_state(State::Message::UNINITIALIZED);
 
@@ -166,8 +171,26 @@ void PoseInitializer::on_initialize(
 
       diagnostics_pose_reliable_->clear();
 
+      // check pose error between gnss pose and initial pose result
+      if (pose_error_check_ && gnss_) {
+        const auto latest_gnss_pose = get_gnss_pose();
+
+        double gnss_error_2d;
+        const bool is_gnss_pose_error_small = pose_error_check_->check_pose_error(
+          latest_gnss_pose.pose.pose, pose.pose.pose, gnss_error_2d);
+
+        diagnostics_pose_reliable_->add_key_value("gnss_pose_error_2d", gnss_error_2d);
+        diagnostics_pose_reliable_->add_key_value(
+          "is_gnss_pose_error_small", is_gnss_pose_error_small);
+        if (!is_gnss_pose_error_small) {
+          std::stringstream message;
+          message << " Large error between Initial Pose and GNSS Pose.";
+          diagnostics_pose_reliable_->update_level_and_message(
+            diagnostic_msgs::msg::DiagnosticStatus::WARN, message.str());
+        }
+      }
       // check initial pose result and publish diagnostics
-      diagnostics_pose_reliable_->add_key_value("initial_pose_reliable", reliable);
+      diagnostics_pose_reliable_->add_key_value("is_initial_pose_reliable", reliable);
       if (!reliable) {
         std::stringstream message;
         message << "Initial Pose Estimation is Unstable.";

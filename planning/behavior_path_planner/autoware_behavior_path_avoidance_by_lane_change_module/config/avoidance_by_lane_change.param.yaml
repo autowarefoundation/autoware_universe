@@ -7,7 +7,6 @@
       # avoidance is performed for the object type with true
       target_object:
         car:
-          execute_num: 2                               # [-]
           th_moving_speed: 1.0                         # [m/s]
           th_moving_time: 1.0                          # [s]
           max_expand_ratio: 0.0                        # [-]
@@ -17,7 +16,6 @@
             hard_margin: 0.0                           # [m]
             hard_margin_for_parked_vehicle: 0.0        # [m]
         truck:
-          execute_num: 2
           th_moving_speed: 1.0                         # 3.6km/h
           th_moving_time: 1.0
           max_expand_ratio: 0.0
@@ -27,7 +25,6 @@
             hard_margin: 0.0                           # [m]
             hard_margin_for_parked_vehicle: 0.0        # [m]
         bus:
-          execute_num: 2
           th_moving_speed: 1.0                         # 3.6km/h
           th_moving_time: 1.0
           max_expand_ratio: 0.0
@@ -37,7 +34,6 @@
             hard_margin: 0.0                           # [m]
             hard_margin_for_parked_vehicle: 0.0        # [m]
         trailer:
-          execute_num: 2
           th_moving_speed: 1.0                         # 3.6km/h
           th_moving_time: 1.0
           max_expand_ratio: 0.0
@@ -47,7 +43,6 @@
             hard_margin: 0.0                           # [m]
             hard_margin_for_parked_vehicle: 0.0        # [m]
         unknown:
-          execute_num: 1
           th_moving_speed: 0.28                        # 1.0km/h
           th_moving_time: 1.0
           max_expand_ratio: 0.0
@@ -57,7 +52,6 @@
             hard_margin: 0.0                           # [m]
             hard_margin_for_parked_vehicle: 0.0        # [m]
         bicycle:
-          execute_num: 2
           th_moving_speed: 0.28                        # 1.0km/h
           th_moving_time: 1.0
           max_expand_ratio: 0.0
@@ -67,7 +61,6 @@
             hard_margin: 1.0                           # [m]
             hard_margin_for_parked_vehicle: 1.0        # [m]
         motorcycle:
-          execute_num: 2
           th_moving_speed: 1.0                         # 3.6km/h
           th_moving_time: 1.0
           max_expand_ratio: 0.0
@@ -77,7 +70,6 @@
             hard_margin: 1.0                           # [m]
             hard_margin_for_parked_vehicle: 1.0        # [m]
         pedestrian:
-          execute_num: 2
           th_moving_speed: 0.28                        # 1.0km/h
           th_moving_time: 1.0
           max_expand_ratio: 0.0

@@ -16,7 +16,7 @@
 
 #include "autoware/shape_estimation/corrector/utils.hpp"
 
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
@@ -163,7 +163,7 @@ bool correctWithDefaultValue(
     (param.min_width < (v_point.at(second_most_distant_index) * 2.0).norm() &&
      (v_point.at(second_most_distant_index) * 2.0).norm() <
        param.max_width))  // both of edge is within width threshold
-  {
+  {                       // NOLINT
     correction_vector = v_point.at(first_most_distant_index);
     if (correction_vector.x() == 0.0) {
       correction_vector.y() =
@@ -250,9 +250,9 @@ bool correctWithDefaultValue(
 
   // correct to set long length is x, short length is y
   if (shape.dimensions.x < shape.dimensions.y) {
-    geometry_msgs::msg::Vector3 rpy = autoware::universe_utils::getRPY(pose.orientation);
+    geometry_msgs::msg::Vector3 rpy = autoware_utils::get_rpy(pose.orientation);
     rpy.z = rpy.z + M_PI_2;
-    pose.orientation = autoware::universe_utils::createQuaternionFromRPY(rpy.x, rpy.y, rpy.z);
+    pose.orientation = autoware_utils::create_quaternion_from_rpy(rpy.x, rpy.y, rpy.z);
     double temp = shape.dimensions.x;
     shape.dimensions.x = shape.dimensions.y;
     shape.dimensions.y = temp;
@@ -399,6 +399,81 @@ bool correctWithReferenceYawAndShapeSize(
   pose.position.x = new_centroid.x();
   pose.position.y = new_centroid.y();
   pose.position.z = new_centroid.z();
+  return true;
+}
+
+// use the reference object to correct the initial bounding box
+bool correctWithReferenceShapeAndPose(
+  const ReferenceShapeSizeInfo & ref_shape_size_info, const geometry_msgs::msg::Pose & ref_pose,
+  autoware_perception_msgs::msg::Shape & shape, geometry_msgs::msg::Pose & pose)
+{
+  /*
+  c1 is farthest point from ref_pose and other points are arranged like below
+  c is center of bounding box
+         width
+         4---2
+         |   |
+  length | c | → ey
+         |   |
+         3---1
+           ↓
+           ex
+ */
+
+  Eigen::Affine3d base2obj_transform;
+  tf2::fromMsg(pose, base2obj_transform);
+
+  Eigen::Vector3d local_c1;
+  Eigen::Vector3d ref_center = Eigen::Vector3d(ref_pose.position.x, ref_pose.position.y, 0.0);
+  // local points
+  std::vector<Eigen::Vector3d> v_points;
+  v_points.push_back(Eigen::Vector3d(shape.dimensions.x * 0.5, shape.dimensions.y * 0.5, 0.0));
+  v_points.push_back(Eigen::Vector3d(-shape.dimensions.x * 0.5, shape.dimensions.y * 0.5, 0.0));
+  v_points.push_back(Eigen::Vector3d(shape.dimensions.x * 0.5, -shape.dimensions.y * 0.5, 0.0));
+  v_points.push_back(Eigen::Vector3d(-shape.dimensions.x * 0.5, -shape.dimensions.y * 0.5, 0.0));
+
+  double max_dist = -1.0;
+  // search the most distant index (c1) from the reference object's center
+  for (std::size_t i = 0; i < v_points.size(); ++i) {
+    const double tmp_dist = ((base2obj_transform * v_points[i]) - ref_center).squaredNorm();
+    if (tmp_dist > max_dist) {
+      local_c1 = v_points[i];
+      max_dist = tmp_dist;
+    }
+  }
+
+  Eigen::Vector3d ex = (Eigen::Vector3d(local_c1.x() / std::abs(local_c1.x()), 0, 0));
+  Eigen::Vector3d ey = (Eigen::Vector3d(0, local_c1.y() / std::abs(local_c1.y()), 0));
+
+  double length;
+  if (
+    ref_shape_size_info.mode == ReferenceShapeSizeInfo::Mode::Min &&
+    ref_shape_size_info.shape.dimensions.x < shape.dimensions.x) {
+    length = shape.dimensions.x;
+  } else {
+    length = ref_shape_size_info.shape.dimensions.x;
+  }
+
+  double width;
+  if (
+    ref_shape_size_info.mode == ReferenceShapeSizeInfo::Mode::Min &&
+    ref_shape_size_info.shape.dimensions.y < shape.dimensions.y) {
+    width = shape.dimensions.y;
+  } else {
+    width = ref_shape_size_info.shape.dimensions.y;
+  }
+
+  shape.dimensions.x = length;
+  shape.dimensions.y = width;
+
+  // compute a new center with correction vector
+  Eigen::Vector3d new_centroid =
+    (base2obj_transform * local_c1) -
+    (base2obj_transform.rotation() * (ex * length * 0.5 + ey * width * 0.5));
+  pose.position.x = new_centroid.x();
+  pose.position.y = new_centroid.y();
+  pose.position.z = new_centroid.z();
+
   return true;
 }
 }  // namespace corrector_utils

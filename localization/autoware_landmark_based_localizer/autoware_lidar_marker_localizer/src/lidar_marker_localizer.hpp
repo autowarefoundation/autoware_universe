@@ -15,8 +15,8 @@
 #ifndef LIDAR_MARKER_LOCALIZER_HPP_
 #define LIDAR_MARKER_LOCALIZER_HPP_
 
-#include "localization_util/diagnostics_module.hpp"
-#include "localization_util/smart_pose_buffer.hpp"
+#include "autoware/localization_util/smart_pose_buffer.hpp"
+#include "autoware_utils/ros/diagnostics_interface.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -134,11 +134,11 @@ private:
   rclcpp::Publisher<PoseWithCovarianceStamped>::SharedPtr pub_debug_pose_with_covariance_;
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_marker_pointcloud_;
 
-  std::shared_ptr<DiagnosticsModule> diagnostics_module_;
+  std::shared_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_;
 
   Param param_;
   bool is_activated_;
-  std::unique_ptr<SmartPoseBuffer> ekf_pose_buffer_;
+  std::unique_ptr<autoware::localization_util::SmartPoseBuffer> ekf_pose_buffer_;
 
   landmark_manager::LandmarkManager landmark_manager_;
 };

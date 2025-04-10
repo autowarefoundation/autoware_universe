@@ -17,9 +17,9 @@
 
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/math/normalization.hpp>
-#include <autoware_grid_map_utils/polygon_iterator.hpp>
+#include <autoware/grid_map_utils/polygon_iterator.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/normalization.hpp>
 #include <grid_map_core/GridMap.hpp>
 #include <grid_map_core/iterators/LineIterator.hpp>
 #include <grid_map_ros/GridMapRosConverter.hpp>
@@ -55,11 +55,11 @@ using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::PoseStamped;
 namespace grid_utils
 {
-using autoware::universe_utils::LineString2d;
-using autoware::universe_utils::Point2d;
-using autoware::universe_utils::Polygon2d;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
+using autoware_utils::LineString2d;
+using autoware_utils::Point2d;
+using autoware_utils::Polygon2d;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::TransformStamped;
 using nav_msgs::msg::MapMetaData;

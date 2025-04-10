@@ -16,6 +16,8 @@
 #include "occlusion_predictor.hpp"
 
 #include <algorithm>
+#include <map>
+#include <vector>
 namespace
 {
 
@@ -103,7 +105,7 @@ void CloudOcclusionPredictor::predict(
   pcl::PointCloud<pcl::PointXYZ> cloud_camera;
   // points within roi
   pcl::PointCloud<pcl::PointXYZ> cloud_roi;
-  autoware::universe_utils::transformPointCloudFromROSMsg(*cloud_msg, cloud_camera, camera2cloud);
+  autoware_utils::transform_point_cloud_from_ros_msg(*cloud_msg, cloud_camera, camera2cloud);
 
   filterCloud(cloud_camera, roi_tls, roi_brs, cloud_roi);
 

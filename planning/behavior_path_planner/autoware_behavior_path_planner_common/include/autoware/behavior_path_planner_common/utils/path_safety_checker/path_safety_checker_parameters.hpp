@@ -15,7 +15,8 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__PATH_SAFETY_CHECKER__PATH_SAFETY_CHECKER_PARAMETERS_HPP_  // NOLINT
 #define AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__PATH_SAFETY_CHECKER__PATH_SAFETY_CHECKER_PARAMETERS_HPP_  // NOLINT
 
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <geometry_msgs/msg/pose.hpp>
@@ -23,7 +24,7 @@
 
 #include <boost/uuid/uuid_hash.hpp>
 
-#include <cmath>
+#include <algorithm>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -32,8 +33,10 @@
 namespace autoware::behavior_path_planner::utils::path_safety_checker
 {
 
-using autoware::universe_utils::Polygon2d;
+using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObject;
+using autoware_perception_msgs::msg::Shape;
+using autoware_utils::Polygon2d;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::Twist;
 
@@ -60,8 +63,8 @@ struct PoseWithVelocityAndPolygonStamped : public PoseWithVelocityStamped
   Polygon2d poly;
 
   PoseWithVelocityAndPolygonStamped(
-    const double time, const Pose & pose, const double velocity, const Polygon2d & poly)
-  : PoseWithVelocityStamped(time, pose, velocity), poly(poly)
+    const double time, const Pose & pose, const double velocity, Polygon2d poly)
+  : PoseWithVelocityStamped(time, pose, velocity), poly(std::move(poly))
   {
   }
 };
@@ -75,22 +78,30 @@ struct PredictedPathWithPolygon
 struct ExtendedPredictedObject
 {
   unique_identifier_msgs::msg::UUID uuid;
-  geometry_msgs::msg::PoseWithCovariance initial_pose;
-  geometry_msgs::msg::TwistWithCovariance initial_twist;
-  geometry_msgs::msg::AccelWithCovariance initial_acceleration;
-  autoware_perception_msgs::msg::Shape shape;
-  std::vector<autoware_perception_msgs::msg::ObjectClassification> classification;
+  Pose initial_pose;
+  Twist initial_twist;
+  Shape shape;
+  ObjectClassification classification;
+  Polygon2d initial_polygon;
   std::vector<PredictedPathWithPolygon> predicted_paths;
+  double dist_from_ego{0.0};  ///< Distance from ego to obj, can be arc length or euclidean.
 
   ExtendedPredictedObject() = default;
   explicit ExtendedPredictedObject(const PredictedObject & object)
   : uuid(object.object_id),
-    initial_pose(object.kinematics.initial_pose_with_covariance),
-    initial_twist(object.kinematics.initial_twist_with_covariance),
-    initial_acceleration(object.kinematics.initial_acceleration_with_covariance),
-    shape(object.shape),
-    classification(object.classification)
+    initial_pose(object.kinematics.initial_pose_with_covariance.pose),
+    initial_twist(object.kinematics.initial_twist_with_covariance.twist),
+    shape(object.shape)
   {
+    classification.label = std::invoke([&]() {
+      auto max_elem = std::max_element(
+        object.classification.begin(), object.classification.end(),
+        [](const auto & a, const auto & b) { return a.probability < b.probability; });
+
+      return (max_elem != object.classification.end()) ? max_elem->label
+                                                       : ObjectClassification::UNKNOWN;
+    });
+    initial_polygon = autoware_utils::to_polygon2d(initial_pose, shape);
   }
 };
 using ExtendedPredictedObjects = std::vector<ExtendedPredictedObject>;

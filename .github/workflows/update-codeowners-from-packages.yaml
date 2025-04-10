@@ -1,3 +1,7 @@
+# This file is automatically synced from:
+# https://github.com/autowarefoundation/sync-file-templates
+# To make changes, update the source repository and follow the guidelines in its README.
+
 name: update-codeowners-from-packages
 
 on:
@@ -14,7 +18,7 @@ jobs:
   update-codeowners-from-packages:
     needs: check-secret
     if: ${{ needs.check-secret.outputs.set == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Generate token
         id: generate-token

@@ -17,6 +17,8 @@
 #include "types.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/pose_deviation.hpp>
 
 #include <geometry_msgs/msg/detail/pose__struct.hpp>
 
@@ -72,21 +74,21 @@ bool is_unavoidable(
   const auto & o_pose = object.kinematics.initial_pose_with_covariance.pose;
   const auto o_yaw = tf2::getYaw(o_pose.orientation);
   const auto ego_yaw = tf2::getYaw(ego_pose.orientation);
-  const auto yaw_diff = std::abs(universe_utils::normalizeRadian(o_yaw - ego_yaw));
+  const auto yaw_diff = std::abs(autoware_utils::normalize_radian(o_yaw - ego_yaw));
   const auto opposite_heading = yaw_diff > same_direction_diff_threshold;
   const auto collision_distance_threshold =
     params.ego_lateral_offset + object.shape.dimensions.y / 2.0 + params.hysteresis;
   const auto lat_distance =
-    std::abs(universe_utils::calcLateralDeviation(o_pose, ego_pose.position));
+    std::abs(autoware_utils::calc_lateral_deviation(o_pose, ego_pose.position));
   auto has_collision = opposite_heading && lat_distance <= collision_distance_threshold;
   if (ego_earliest_stop_pose) {
     const auto direction_yaw = std::atan2(
       o_pose.position.y - ego_earliest_stop_pose->position.y,
       o_pose.position.x - ego_earliest_stop_pose->position.x);
     const auto yaw_diff_at_earliest_stop_pose =
-      std::abs(universe_utils::normalizeRadian(o_yaw - direction_yaw));
+      std::abs(autoware_utils::normalize_radian(o_yaw - direction_yaw));
     const auto lat_distance_at_earliest_stop_pose =
-      std::abs(universe_utils::calcLateralDeviation(o_pose, ego_earliest_stop_pose->position));
+      std::abs(autoware_utils::calc_lateral_deviation(o_pose, ego_earliest_stop_pose->position));
     const auto collision_at_earliest_stop_pose =
       yaw_diff_at_earliest_stop_pose > same_direction_diff_threshold &&
       lat_distance_at_earliest_stop_pose <= collision_distance_threshold;
@@ -96,20 +98,22 @@ bool is_unavoidable(
 };
 
 std::vector<autoware_perception_msgs::msg::PredictedObject> filter_predicted_objects(
-  const autoware_perception_msgs::msg::PredictedObjects & objects, const EgoData & ego_data,
+  const std::vector<std::shared_ptr<PlannerData::Object>> & objects, const EgoData & ego_data,
   const PlannerParam & params, const double hysteresis)
 {
   std::vector<autoware_perception_msgs::msg::PredictedObject> filtered_objects;
-  for (const auto & object : objects.objects) {
-    const auto is_not_too_slow = object.kinematics.initial_twist_with_covariance.twist.linear.x >=
-                                 params.minimum_object_velocity;
+  for (const auto & object : objects) {
+    const auto & predicted_object = object->predicted_object;
+    const auto is_not_too_slow =
+      predicted_object.kinematics.initial_twist_with_covariance.twist.linear.x >=
+      params.minimum_object_velocity;
     if (
-      is_vehicle(object) && is_not_too_slow &&
-      is_in_range(object, ego_data.trajectory, params, hysteresis) &&
-      is_not_too_close(object, ego_data, params.ego_longitudinal_offset) &&
+      is_vehicle(predicted_object) && is_not_too_slow &&
+      is_in_range(predicted_object, ego_data.trajectory, params, hysteresis) &&
+      is_not_too_close(predicted_object, ego_data, params.ego_longitudinal_offset) &&
       (!params.ignore_unavoidable_collisions ||
-       !is_unavoidable(object, ego_data.pose, ego_data.earliest_stop_pose, params)))
-      filtered_objects.push_back(object);
+       !is_unavoidable(predicted_object, ego_data.pose, ego_data.earliest_stop_pose, params)))
+      filtered_objects.push_back(predicted_object);
   }
   return filtered_objects;
 }

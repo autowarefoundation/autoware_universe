@@ -29,9 +29,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <rcutils/filesystem.h>  // To be replaced by std::filesystem in C++17
 
-#include <memory>
 #include <string>
-#include <utility>
 
 namespace autoware::compare_map_segmentation
 {

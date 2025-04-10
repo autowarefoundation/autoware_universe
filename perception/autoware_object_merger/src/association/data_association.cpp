@@ -15,8 +15,8 @@
 #include "autoware/object_merger/association/data_association.hpp"
 
 #include "autoware/object_merger/association/solver/gnn_solver.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
-#include "object_recognition_utils/object_recognition_utils.hpp"
+#include "autoware/object_recognition_utils/object_recognition_utils.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 
 #include <algorithm>
 #include <list>
@@ -30,8 +30,8 @@ double getFormedYawAngle(
   const geometry_msgs::msg::Quaternion & quat0, const geometry_msgs::msg::Quaternion & quat1,
   const bool distinguish_front_or_back = true)
 {
-  const double yaw0 = autoware::universe_utils::normalizeRadian(tf2::getYaw(quat0));
-  const double yaw1 = autoware::universe_utils::normalizeRadian(tf2::getYaw(quat1));
+  const double yaw0 = autoware_utils::normalize_radian(tf2::getYaw(quat0));
+  const double yaw1 = autoware_utils::normalize_radian(tf2::getYaw(quat1));
   const double angle_range = distinguish_front_or_back ? M_PI : M_PI_2;
   const double angle_step = distinguish_front_or_back ? 2.0 * M_PI : M_PI;
   // Fixed yaw0 to be in the range of +-90 or 180 degrees of yaw1
@@ -124,18 +124,18 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
     const autoware_perception_msgs::msg::DetectedObject & object1 =
       objects1.objects.at(objects1_idx);
     const std::uint8_t object1_label =
-      object_recognition_utils::getHighestProbLabel(object1.classification);
+      autoware::object_recognition_utils::getHighestProbLabel(object1.classification);
 
     for (size_t objects0_idx = 0; objects0_idx < objects0.objects.size(); ++objects0_idx) {
       const autoware_perception_msgs::msg::DetectedObject & object0 =
         objects0.objects.at(objects0_idx);
       const std::uint8_t object0_label =
-        object_recognition_utils::getHighestProbLabel(object0.classification);
+        autoware::object_recognition_utils::getHighestProbLabel(object0.classification);
 
       double score = 0.0;
       if (can_assign_matrix_(object1_label, object0_label)) {
         const double max_dist = max_dist_matrix_(object1_label, object0_label);
-        const double dist = autoware::universe_utils::calcDistance2d(
+        const double dist = autoware_utils::calc_distance2d(
           object0.kinematics.pose_with_covariance.pose.position,
           object1.kinematics.pose_with_covariance.pose.position);
 
@@ -158,7 +158,7 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
           const double min_iou = min_iou_matrix_(object1_label, object0_label);
           const double min_union_iou_area = 1e-2;
           const double iou =
-            object_recognition_utils::get2dIoU(object0, object1, min_union_iou_area);
+            autoware::object_recognition_utils::get2dIoU(object0, object1, min_union_iou_area);
           if (iou < min_iou) passed_gate = false;
         }
 

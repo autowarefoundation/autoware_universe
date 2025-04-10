@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
   <group>
-    <include file="$(find-pkg-share ekf_localizer)/launch/ekf_localizer.launch.xml">
+    <include file="$(find-pkg-share autoware_ekf_localizer)/launch/ekf_localizer.launch.xml">
       <arg name="input_initial_pose_name" value="/initialpose3d"/>
       <arg name="input_pose_with_cov_name" value="/localization/pose_estimator/pose_with_covariance"/>
       <arg name="input_twist_with_cov_name" value="/localization/twist_estimator/twist_with_covariance"/>

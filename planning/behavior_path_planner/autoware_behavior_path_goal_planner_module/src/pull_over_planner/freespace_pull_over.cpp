@@ -20,14 +20,19 @@
 #include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
+#include <autoware/freespace_planning_algorithms/astar_search.hpp>
+#include <autoware/freespace_planning_algorithms/rrtstar.hpp>
+
 #include <memory>
 #include <vector>
 
 namespace autoware::behavior_path_planner
 {
-FreespacePullOver::FreespacePullOver(
-  rclcpp::Node & node, const GoalPlannerParameters & parameters,
-  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info)
+
+using autoware::freespace_planning_algorithms::AstarSearch;
+using autoware::freespace_planning_algorithms::RRTStar;
+
+FreespacePullOver::FreespacePullOver(rclcpp::Node & node, const GoalPlannerParameters & parameters)
 : PullOverPlannerBase{node, parameters},
   velocity_{parameters.freespace_parking_velocity},
   left_side_parking_{parameters.parking_policy == ParkingPolicy::LEFT_SIDE},
@@ -38,31 +43,32 @@ FreespacePullOver::FreespacePullOver(
   }
 {
   autoware::freespace_planning_algorithms::VehicleShape vehicle_shape(
-    vehicle_info, parameters.vehicle_shape_margin);
+    vehicle_info_, parameters.vehicle_shape_margin);
   if (parameters.freespace_parking_algorithm == "astar") {
     planner_ = std::make_unique<AstarSearch>(
-      parameters.freespace_parking_common_parameters, vehicle_shape, parameters.astar_parameters);
+      parameters.freespace_parking_common_parameters, vehicle_shape, parameters.astar_parameters,
+      node.get_clock());
   } else if (parameters.freespace_parking_algorithm == "rrtstar") {
     planner_ = std::make_unique<RRTStar>(
-      parameters.freespace_parking_common_parameters, vehicle_shape,
-      parameters.rrt_star_parameters);
+      parameters.freespace_parking_common_parameters, vehicle_shape, parameters.rrt_star_parameters,
+      node.get_clock());
   }
 }
 
 std::optional<PullOverPath> FreespacePullOver::plan(
+  const GoalCandidate & modified_goal_pose, const size_t id,
   const std::shared_ptr<const PlannerData> planner_data,
-  [[maybe_unused]] const BehaviorModuleOutput & previous_module_output, const Pose & goal_pose)
+  [[maybe_unused]] const BehaviorModuleOutput & upstream_module_output)
 {
   const Pose & current_pose = planner_data->self_odometry->pose.pose;
-
-  planner_->setMap(*planner_data->costmap);
 
   // offset goal pose to make straight path near goal for improving parking precision
   // todo: support straight path when using back
   constexpr double straight_distance = 1.0;
+  const auto & goal_pose = modified_goal_pose.goal_pose;
   const Pose end_pose =
     use_back_ ? goal_pose
-              : autoware::universe_utils::calcOffsetPose(goal_pose, -straight_distance, 0.0, 0.0);
+              : autoware_utils::calc_offset_pose(goal_pose, -straight_distance, 0.0, 0.0);
 
   try {
     if (!planner_->makePlan(current_pose, end_pose)) {
@@ -95,7 +101,7 @@ std::optional<PullOverPath> FreespacePullOver::plan(
     size_t index = std::distance(last_path.points.begin(), it);
     if (index == 0) continue;
     const double distance =
-      autoware::universe_utils::calcDistance2d(end_pose.position, it->point.pose.position);
+      autoware_utils::calc_distance2d(end_pose.position, it->point.pose.position);
     if (distance < th_goal_distance) {
       last_path.points.erase(it, last_path.points.end());
       break;
@@ -138,11 +144,12 @@ std::optional<PullOverPath> FreespacePullOver::plan(
     }
   }
 
-  PullOverPath pull_over_path{};
-  pull_over_path.pairs_terminal_velocity_and_accel = pairs_terminal_velocity_and_accel;
-  pull_over_path.setPaths(partial_paths, current_pose, goal_pose);
-  pull_over_path.type = getPlannerType();
-
-  return pull_over_path;
+  auto pull_over_path_opt = PullOverPath::create(
+    getPlannerType(), id, partial_paths, current_pose, modified_goal_pose,
+    pairs_terminal_velocity_and_accel);
+  if (!pull_over_path_opt) {
+    return {};
+  }
+  return pull_over_path_opt.value();
 }
 }  // namespace autoware::behavior_path_planner

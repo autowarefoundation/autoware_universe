@@ -4,11 +4,11 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: true
+  # Ensures sequential execution of this workflow
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
 
 env:
   CC: /usr/lib/ccache/gcc
@@ -16,7 +16,7 @@ env:
 
 jobs:
   build-and-test:
-    runs-on: codebuild-autoware-us-east-1-${{ github.run_id }}-${{ github.run_attempt }}-ubuntu-7.0-large
+    runs-on: [self-hosted, Linux, X64]
     container: ${{ matrix.container }}${{ matrix.container-suffix }}
     strategy:
       fail-fast: false
@@ -27,8 +27,7 @@ jobs:
           - -cuda
         include:
           - rosdistro: humble
-            container: ghcr.io/autowarefoundation/autoware:latest-autoware-universe
-            build-depends-repos: build_depends.repos
+            container: ghcr.io/autowarefoundation/autoware:universe-devel
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -69,8 +68,10 @@ jobs:
           echo -e "# Set maximum cache size\nmax_size = 600MB" >> "${CCACHE_DIR}/ccache.conf"
         shell: bash
 
-      - name: Show ccache stats before build
-        run: du -sh ${CCACHE_DIR} && ccache -s
+      - name: Show ccache stats before build and reset stats
+        run: |
+          du -sh ${CCACHE_DIR} && ccache -s
+          ccache --zero-stats
         shell: bash
 
       - name: Export CUDA state as a variable for adding to cache key
@@ -83,15 +84,22 @@ jobs:
           echo "::notice::BUILD_TYPE_CUDA_STATE=$build_type_cuda_state"
         shell: bash
 
+      - name: Prepare build_depends.repos file
+        uses: ./.github/actions/combine-repos-action
+        with:
+          base_file: build_depends_humble.repos
+          overlay_file: build_depends_nightly.repos
+          output_file: build_depends.repos
+
       - name: Build
         if: ${{ steps.get-self-packages.outputs.self-packages != '' }}
         uses: autowarefoundation/autoware-github-actions/colcon-build@v1
         with:
           rosdistro: ${{ matrix.rosdistro }}
           target-packages: ${{ steps.get-self-packages.outputs.self-packages }}
-          build-depends-repos: ${{ matrix.build-depends-repos }}
+          build-depends-repos: build_depends.repos
           cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
-          build-pre-command: taskset --cpu-list 0-6
+          build-pre-command: taskset --cpu-list 0-5
 
       - name: Show ccache stats after build
         run: du -sh ${CCACHE_DIR} && ccache -s
@@ -113,7 +121,7 @@ jobs:
         with:
           rosdistro: ${{ matrix.rosdistro }}
           target-packages: ${{ steps.get-self-packages.outputs.self-packages }}
-          build-depends-repos: ${{ matrix.build-depends-repos }}
+          build-depends-repos: build_depends.repos
 
       - name: Upload coverage to CodeCov
         if: ${{ steps.test.outputs.coverage-report-files != '' }}

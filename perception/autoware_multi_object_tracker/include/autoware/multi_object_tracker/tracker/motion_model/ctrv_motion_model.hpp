@@ -42,16 +42,17 @@ private:
   // attributes
   rclcpp::Logger logger_;
 
-  // motion parameters
+  // motion parameters: process noise and motion limits
   struct MotionParams
   {
-    double q_cov_x;
-    double q_cov_y;
-    double q_cov_yaw;
-    double q_cov_vel;
-    double q_cov_wz;
-    double max_vel;
-    double max_wz;
+    double q_cov_x = 0.025;          // [m^2/s^2] uncertain position in x, 0.5m/s
+    double q_cov_y = 0.025;          // [m^2/s^2] uncertain position in y, 0.5m/s
+    double q_cov_yaw = 0.1218;       // [rad^2/s^2] uncertain yaw angle, 20deg/s
+    double q_cov_vel = 8.6436;       // [m^2/s^4] uncertain velocity, 0.3G m/s^2
+    double q_cov_wz = 0.5236;        // [rad^2/s^4] uncertain yaw rate, 30deg/s^2
+    double max_vel = 2.78;           // [m/s] maximum velocity
+    double max_wz = 0.5236;          // [rad/s] maximum yaw rate, 30deg/s
+    double max_reverse_vel = -1.38;  // [m/s] maximum reverse velocity, -5km/h
   } motion_params_;
 
 public:
@@ -64,8 +65,6 @@ public:
     const rclcpp::Time & time, const double & x, const double & y, const double & yaw,
     const std::array<double, 36> & pose_cov, const double & vel, const double & vel_cov,
     const double & wz, const double & wz_cov);
-
-  void setDefaultParams();
 
   void setMotionParams(
     const double & q_stddev_x, const double & q_stddev_y, const double & q_stddev_yaw,

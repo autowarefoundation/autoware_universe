@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_traffic_light_classifier parameter",
+  "type": "object",
+  "definitions": {
+    "car_traffic_light_classifier": {
+      "type": "object",
+      "properties": {
+        "approximate_sync": {
+          "type": "boolean",
+          "description": "Enable or disable approximate synchronization.",
+          "default": false
+        },
+        "precision": {
+          "type": "string",
+          "description": "Precision used for traffic light classifier inference. Valid values: [fp32, fp16, int8].",
+          "default": "fp16"
+        },
+        "mean": {
+          "type": "array",
+          "description": "Mean values used for input normalization [R, G, B].",
+          "items": {
+            "type": "number"
+          },
+          "default": [123.675, 116.28, 103.53]
+        },
+        "std": {
+          "type": "array",
+          "description": "Standard deviation values used for input normalization [R, G, B].",
+          "items": {
+            "type": "number"
+          },
+          "default": [58.395, 57.12, 57.375]
+        },
+        "backlight_threshold": {
+          "type": "number",
+          "description": "If the intensity get grater than this overwrite with UNKNOWN in corresponding RoI. Note that, if the value is much higher, the node only overwrites in the harsher backlight situations. Therefore, If you wouldn't like to use this feature set this value to `1.0`. The value can be `[0.0, 1.0]`. The confidence of overwritten signal is set to `0.0`.",
+          "default": 0.85
+        },
+        "classifier_type": {
+          "type": "integer",
+          "description": "Type of classifier used. {0: hsv_filter, 1: cnn}.",
+          "default": 1
+        },
+        "traffic_light_type": {
+          "type": "integer",
+          "description": "Type of traffic light to classify. {0: car, 1: pedestrian}.",
+          "default": 0
+        }
+      },
+      "required": [
+        "approximate_sync",
+        "precision",
+        "mean",
+        "std",
+        "backlight_threshold",
+        "classifier_type",
+        "traffic_light_type"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/car_traffic_light_classifier"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

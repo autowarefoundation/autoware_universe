@@ -22,9 +22,6 @@
       PEDESTRIAN : true
       ANIMAL: true
 
-    model_path: "$(var data_path)/tensorrt_yolox/$(var model_name).onnx" # The onnx file name for YOLOX model.
-    label_path: "$(var data_path)/tensorrt_yolox/label.txt" # The label file path for YOLOX model.
-    color_map_path: "$(var data_path)/tensorrt_yolox/semseg_color_map.csv"
     score_threshold: 0.35 # Objects with a score lower than this value will be ignored. This threshold will be ignored if specified model contains EfficientNMS_TRT module in it.
     nms_threshold: 0.7 # Detection results will be ignored if IoU over this value. This threshold will be ignored if specified model contains EfficientNMS_TRT module in it.
 

@@ -207,6 +207,7 @@ TEST(ShapeEstimator, test_estimateShapeAndPose)
   boost::optional<autoware::shape_estimation::ReferenceYawInfo> ref_yaw_info = boost::none;
   boost::optional<autoware::shape_estimation::ReferenceShapeSizeInfo> ref_shape_size_info =
     boost::none;
+  boost::optional<geometry_msgs::msg::Pose> ref_shape = boost::none;
 
   ref_yaw_info = autoware::shape_estimation::ReferenceYawInfo{
     static_cast<float>(yaw), static_cast<float>(deg2rad(10.0))};
@@ -218,7 +219,7 @@ TEST(ShapeEstimator, test_estimateShapeAndPose)
 
   // Test estimateShapeAndPose
   const bool result = shape_estimator.estimateShapeAndPose(
-    label, cluster, ref_yaw_info, ref_shape_size_info, shape_output, pose_output);
+    label, cluster, ref_yaw_info, ref_shape_size_info, ref_shape, shape_output, pose_output);
   EXPECT_TRUE(result);
 
   // Check shape_output

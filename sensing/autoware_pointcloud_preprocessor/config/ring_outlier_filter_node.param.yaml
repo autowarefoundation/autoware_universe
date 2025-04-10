@@ -1,0 +1,14 @@
+/**:
+  ros__parameters:
+    distance_ratio: 1.03
+    object_length_threshold: 0.1
+    num_points_threshold: 4
+    max_rings_num: 128
+    max_points_num_per_ring: 4000
+    publish_outlier_pointcloud: false
+    min_azimuth_deg: 0.0
+    max_azimuth_deg: 360.0
+    max_distance: 12.0
+    vertical_bins: 128
+    horizontal_bins: 36
+    noise_threshold: 2

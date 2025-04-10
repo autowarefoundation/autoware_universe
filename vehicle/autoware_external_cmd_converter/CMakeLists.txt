@@ -13,6 +13,16 @@ rclcpp_components_register_node(autoware_external_cmd_converter
   EXECUTABLE external_cmd_converter_node
 )
 
+if(BUILD_TESTING)
+  ament_add_ros_isolated_gtest(test_${PROJECT_NAME}
+    tests/test_external_cmd_converter.cpp
+  )
+  target_link_libraries(test_${PROJECT_NAME}
+    autoware_external_cmd_converter
+  )
+endif()
+
+
 ament_auto_package(INSTALL_TO_SHARE
   launch
   config

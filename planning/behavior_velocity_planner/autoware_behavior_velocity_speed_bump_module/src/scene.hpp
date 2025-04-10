@@ -21,12 +21,13 @@
 #include <autoware_lanelet2_extension/regulatory_elements/speed_bump.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <memory>
 #include <utility>
 #include <vector>
 
 namespace autoware::behavior_velocity_planner
 {
-using tier4_planning_msgs::msg::PathWithLaneId;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 
 class SpeedBumpModule : public SceneModuleInterface
 {
@@ -54,9 +55,12 @@ public:
   SpeedBumpModule(
     const int64_t module_id, const int64_t lane_id,
     const lanelet::autoware::SpeedBump & speed_bump_reg_elem, const PlannerParam & planner_param,
-    const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock);
+    const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+      planning_factor_interface);
 
-  bool modifyPathVelocity(PathWithLaneId * path, StopReason * stop_reason) override;
+  bool modifyPathVelocity(PathWithLaneId * path) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;

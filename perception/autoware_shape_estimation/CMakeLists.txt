@@ -4,6 +4,9 @@ project(autoware_shape_estimation)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
+# TODO(amadeuszsz): Remove -Wno-deprecated-declarations once removing implicit quantization
+add_compile_options(-Wno-deprecated-declarations)
+
 find_package(PCL REQUIRED COMPONENTS common)
 find_package(pcl_conversions REQUIRED)
 
@@ -34,6 +37,7 @@ set(${PROJECT_NAME}_SOURCES
   lib/corrector/utils.cpp
   lib/corrector/no_corrector.cpp
   lib/corrector/vehicle_corrector.cpp
+  lib/corrector/reference_object_based_corrector.cpp
   lib/corrector/reference_shape_size_corrector.cpp
 )
 
@@ -106,15 +110,15 @@ ament_auto_package(INSTALL_TO_SHARE
 ## Tests
 if(BUILD_TESTING)
   find_package(ament_cmake_ros REQUIRED)
-  list(APPEND AMENT_LINT_AUTO_EXCLUDE ament_cmake_uncrustify)
+  set(ament_cmake_uncrustify_FOUND TRUE)
 
-  find_package(ament_lint_auto REQUIRED)
-  ament_lint_auto_find_test_dependencies()
+  file(GLOB_RECURSE test_files test/*.cpp test/**/*.cpp)
+  ament_add_ros_isolated_gtest(test_${PROJECT_NAME} ${test_files})
 
-  file(GLOB_RECURSE test_files test/**/*.cpp)
-  ament_add_ros_isolated_gtest(test_shape_estimation ${test_files})
-
-  target_link_libraries(test_shape_estimation
-    ${PROJECT_NAME}
+  target_include_directories(test_${PROJECT_NAME} PRIVATE src)
+  target_link_libraries(test_${PROJECT_NAME} ${${PROJECT_NAME}_LIBRARIES})
+  ament_target_dependencies(test_${PROJECT_NAME}
+    ${${PROJECT_NAME}_FOUND_BUILD_DEPENDS}
+    ${${PROJECT_NAME}_FOUND_TEST_DEPENDS}
   )
 endif()

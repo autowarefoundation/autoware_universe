@@ -24,11 +24,7 @@
 
 #include <grid_map_msgs/msg/grid_map.hpp>
 
-#include <iostream>
-#include <memory>
-#include <mutex>
 #include <string>
-#include <vector>
 namespace autoware::compare_map_segmentation
 {
 class CompareElevationMapFilterComponent : public autoware::pointcloud_preprocessor::Filter

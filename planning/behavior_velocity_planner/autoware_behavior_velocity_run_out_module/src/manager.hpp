@@ -25,7 +25,7 @@
 
 namespace autoware::behavior_velocity_planner
 {
-class RunOutModuleManager : public SceneModuleManagerInterface
+class RunOutModuleManager : public SceneModuleManagerInterface<>
 {
 public:
   explicit RunOutModuleManager(rclcpp::Node & node);
@@ -37,10 +37,10 @@ private:
   std::shared_ptr<RunOutDebug> debug_ptr_;
   std::unique_ptr<DynamicObstacleCreator> dynamic_obstacle_creator_;
 
-  void launchNewModules(const tier4_planning_msgs::msg::PathWithLaneId & path) override;
+  void launchNewModules(const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
 
   std::function<bool(const std::shared_ptr<SceneModuleInterface> &)> getModuleExpiredFunction(
-    const tier4_planning_msgs::msg::PathWithLaneId & path) override;
+    const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
 
   void setDynamicObstacleCreator(rclcpp::Node & node, std::shared_ptr<RunOutDebug> & debug_ptr);
 };

@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_traffic_light_fine_detector parameter",
+  "type": "object",
+  "definitions": {
+    "traffic_light_fine_detector": {
+      "type": "object",
+      "properties": {
+        "precision": {
+          "type": "string",
+          "description": "Precision used for traffic light fine detector inference. Valid values: [fp32, fp16].",
+          "default": "fp16"
+        },
+        "score_thresh": {
+          "type": "number",
+          "description": "If the objectness score is less than this value, the object is ignored.",
+          "default": 0.3
+        },
+        "nms_thresh": {
+          "type": "number",
+          "description": "IoU threshold to perform Non-Maximum Suppression (NMS).",
+          "default": 0.65
+        },
+        "approximate_sync": {
+          "type": "boolean",
+          "description": "Flag for whether to use approximate sync policy.",
+          "default": false
+        },
+        "gpu_id": {
+          "type": "integer",
+          "description": "ID for selecting the CUDA GPU device.",
+          "default": 0
+        }
+      },
+      "required": ["precision", "score_thresh", "nms_thresh", "approximate_sync", "gpu_id"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/traffic_light_fine_detector"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

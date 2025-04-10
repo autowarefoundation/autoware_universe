@@ -20,13 +20,12 @@
 #include "autoware/multi_object_tracker/tracker/motion_model/cv_motion_model.hpp"
 
 #include "autoware/multi_object_tracker/tracker/motion_model/motion_model_base.hpp"
-#include "autoware/multi_object_tracker/utils/utils.hpp"
-#include "autoware/universe_utils/math/normalization.hpp"
-#include "autoware/universe_utils/math/unit_conversion.hpp"
-#include "autoware/universe_utils/ros/msg_covariance.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <autoware_utils/math/normalization.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
+#include <autoware_utils/ros/msg_covariance.hpp>
 
 #include <tf2/utils.h>
 
@@ -34,28 +33,10 @@ namespace autoware::multi_object_tracker
 {
 // cspell: ignore CV
 // Constant Velocity (CV) motion model
-using autoware::universe_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
 
 CVMotionModel::CVMotionModel() : logger_(rclcpp::get_logger("CVMotionModel"))
 {
-  // Initialize motion parameters
-  setDefaultParams();
-}
-
-void CVMotionModel::setDefaultParams()
-{
-  // process noise covariance
-  constexpr double q_stddev_x = 0.5;         // [m/s] standard deviation of x
-  constexpr double q_stddev_y = 0.5;         // [m/s] standard deviation of y
-  constexpr double q_stddev_vx = 9.8 * 0.3;  // [m/(s*s)] standard deviation of vx
-  constexpr double q_stddev_vy = 9.8 * 0.3;  // [m/(s*s)] standard deviation of vy
-  setMotionParams(q_stddev_x, q_stddev_y, q_stddev_vx, q_stddev_vy);
-
-  // set motion limitations
-  constexpr double max_vx = autoware::universe_utils::kmph2mps(60);  // [m/s] maximum x velocity
-  constexpr double max_vy = autoware::universe_utils::kmph2mps(60);  // [m/s] maximum y velocity
-  setMotionLimits(max_vx, max_vy);
-
   // set prediction parameters
   constexpr double dt_max = 0.11;  // [s] maximum time interval for prediction
   setMaxDeltaTime(dt_max);
@@ -260,7 +241,7 @@ bool CVMotionModel::getPredictedState(
   // set position
   pose.position.x = X(IDX::X);
   pose.position.y = X(IDX::Y);
-  pose.position.z = 0.0;
+  // do not change z
 
   // set twist
   twist.linear.x = X(IDX::VX) * std::cos(-yaw) - X(IDX::VY) * std::sin(-yaw);

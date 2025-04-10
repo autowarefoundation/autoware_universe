@@ -14,14 +14,10 @@
 
 #include "autoware_raw_vehicle_cmd_converter/accel_map.hpp"
 
-#include "interpolation/linear_interpolation.hpp"
+#include "autoware/interpolation/linear_interpolation.hpp"
 
-#include <algorithm>
-#include <chrono>
 #include <string>
 #include <vector>
-
-using namespace std::literals::chrono_literals;
 
 namespace autoware::raw_vehicle_cmd_converter
 {
@@ -35,13 +31,10 @@ bool AccelMap::readAccelMapFromCSV(const std::string & csv_path, const bool vali
   }
 
   vehicle_name_ = table[0][0];
-  vel_index_ = CSVLoader::getRowIndex(table);
-  throttle_index_ = CSVLoader::getColumnIndex(table);
+  vel_index_ = CSVLoader::getColumnIndex(table);
+  throttle_index_ = CSVLoader::getRowIndex(table);
   accel_map_ = CSVLoader::getMap(table);
-  if (validation && !CSVLoader::validateMap(accel_map_, true)) {
-    return false;
-  }
-  return true;
+  return !validation || CSVLoader::validateMap(accel_map_, true);
 }
 
 bool AccelMap::getThrottle(const double acc, double vel, double & throttle) const
@@ -49,19 +42,22 @@ bool AccelMap::getThrottle(const double acc, double vel, double & throttle) cons
   std::vector<double> interpolated_acc_vec;
   const double clamped_vel = CSVLoader::clampValue(vel, vel_index_, "throttle: vel");
   // (throttle, vel, acc) map => (throttle, acc) map by fixing vel
-  for (std::vector<double> accelerations : accel_map_) {
-    interpolated_acc_vec.push_back(interpolation::lerp(vel_index_, accelerations, clamped_vel));
+  interpolated_acc_vec.reserve(accel_map_.size());
+  for (const std::vector<double> & accelerations : accel_map_) {
+    interpolated_acc_vec.push_back(
+      autoware::interpolation::lerp(vel_index_, accelerations, clamped_vel));
   }
   // calculate throttle
   // When the desired acceleration is smaller than the throttle area, return false => brake sequence
   // When the desired acceleration is greater than the throttle area, return max throttle
   if (acc < interpolated_acc_vec.front()) {
     return false;
-  } else if (interpolated_acc_vec.back() < acc) {
+  }
+  if (interpolated_acc_vec.back() < acc) {
     throttle = throttle_index_.back();
     return true;
   }
-  throttle = interpolation::lerp(interpolated_acc_vec, throttle_index_, acc);
+  throttle = autoware::interpolation::lerp(interpolated_acc_vec, throttle_index_, acc);
   return true;
 }
 
@@ -71,15 +67,16 @@ bool AccelMap::getAcceleration(const double throttle, const double vel, double &
   const double clamped_vel = CSVLoader::clampValue(vel, vel_index_, "throttle: vel");
 
   // (throttle, vel, acc) map => (throttle, acc) map by fixing vel
+  interpolated_acc_vec.reserve(accel_map_.size());
   for (const auto & acc_vec : accel_map_) {
-    interpolated_acc_vec.push_back(interpolation::lerp(vel_index_, acc_vec, clamped_vel));
+    interpolated_acc_vec.push_back(autoware::interpolation::lerp(vel_index_, acc_vec, clamped_vel));
   }
 
   // calculate throttle
   // When the desired acceleration is smaller than the throttle area, return min acc
   // When the desired acceleration is greater than the throttle area, return max acc
   const double clamped_throttle = CSVLoader::clampValue(throttle, throttle_index_, "throttle: acc");
-  acc = interpolation::lerp(throttle_index_, interpolated_acc_vec, clamped_throttle);
+  acc = autoware::interpolation::lerp(throttle_index_, interpolated_acc_vec, clamped_throttle);
 
   return true;
 }

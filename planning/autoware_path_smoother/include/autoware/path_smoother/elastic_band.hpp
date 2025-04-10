@@ -15,9 +15,9 @@
 #ifndef AUTOWARE__PATH_SMOOTHER__ELASTIC_BAND_HPP_
 #define AUTOWARE__PATH_SMOOTHER__ELASTIC_BAND_HPP_
 
+#include "autoware/osqp_interface/osqp_interface.hpp"
 #include "autoware/path_smoother/common_structs.hpp"
 #include "autoware/path_smoother/type_alias.hpp"
-#include "osqp_interface/osqp_interface.hpp"
 
 #include <Eigen/Core>
 
@@ -109,7 +109,7 @@ private:
   rclcpp::Publisher<Trajectory>::SharedPtr debug_eb_traj_pub_;
   rclcpp::Publisher<Trajectory>::SharedPtr debug_eb_fixed_traj_pub_;
 
-  std::unique_ptr<autoware::common::osqp::OSQPInterface> osqp_solver_ptr_;
+  std::unique_ptr<autoware::osqp_interface::OSQPInterface> osqp_solver_ptr_;
   std::shared_ptr<std::vector<TrajectoryPoint>> prev_eb_traj_points_ptr_{nullptr};
 
   std::vector<TrajectoryPoint> insertFixedPoint(

@@ -14,14 +14,14 @@
 
 #include "remaining_distance_time_calculator_node.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/timer.hpp>
 
-#include <tier4_planning_msgs/msg/velocity_limit.hpp>
+#include <autoware_internal_planning_msgs/msg/velocity_limit.hpp>
 
 #include <chrono>
 #include <functional>
@@ -37,6 +37,7 @@ RemainingDistanceTimeCalculatorNode::RemainingDistanceTimeCalculatorNode(
 : Node("remaining_distance_time_calculator", options),
   is_graph_ready_{false},
   has_received_route_{false},
+  has_received_scenario_{false},
   velocity_limit_{99.99},
   remaining_distance_{0.0},
   remaining_time_{0.0}
@@ -54,17 +55,21 @@ RemainingDistanceTimeCalculatorNode::RemainingDistanceTimeCalculatorNode(
   sub_route_ = create_subscription<LaneletRoute>(
     "~/input/route", qos_transient_local,
     std::bind(&RemainingDistanceTimeCalculatorNode::on_route, this, _1));
-  sub_planning_velocity_ = create_subscription<tier4_planning_msgs::msg::VelocityLimit>(
+  sub_planning_velocity_ = create_subscription<autoware_internal_planning_msgs::msg::VelocityLimit>(
     "/planning/scenario_planning/current_max_velocity", qos_transient_local,
     std::bind(&RemainingDistanceTimeCalculatorNode::on_velocity_limit, this, _1));
+  sub_scenario_ = this->create_subscription<autoware_internal_planning_msgs::msg::Scenario>(
+    "~/input/scenario", 1, std::bind(&RemainingDistanceTimeCalculatorNode::on_scenario, this, _1));
 
   pub_mission_remaining_distance_time_ = create_publisher<MissionRemainingDistanceTime>(
     "~/output/mission_remaining_distance_time",
     rclcpp::QoS(rclcpp::KeepLast(10)).durability_volatile().reliable());
 
-  node_param_.update_rate = declare_parameter<double>("update_rate");
+  param_listener_ = std::make_shared<::remaining_distance_time_calculator::ParamListener>(
+    this->get_node_parameters_interface());
+  const auto param = param_listener_->get_params();
 
-  const auto period_ns = rclcpp::Rate(node_param_.update_rate).period();
+  const auto period_ns = rclcpp::Rate(param.update_rate).period();
   timer_ = rclcpp::create_timer(
     this, get_clock(), period_ns, std::bind(&RemainingDistanceTimeCalculatorNode::on_timer, this));
 }
@@ -100,9 +105,25 @@ void RemainingDistanceTimeCalculatorNode::on_velocity_limit(
   }
 }
 
+void RemainingDistanceTimeCalculatorNode::on_scenario(
+  const autoware_internal_planning_msgs::msg::Scenario::ConstSharedPtr & msg)
+{
+  scenario_ = msg;
+  has_received_scenario_ = true;
+}
+
 void RemainingDistanceTimeCalculatorNode::on_timer()
 {
-  if (is_graph_ready_ && has_received_route_) {
+  if (!has_received_scenario_) {
+    return;
+  }
+
+  // check if the scenario is parking or not
+  if (scenario_->current_scenario == autoware_internal_planning_msgs::msg::Scenario::PARKING) {
+    remaining_distance_ = 0.0;
+    remaining_time_ = 0.0;
+    publish_mission_remaining_distance_time();
+  } else if (is_graph_ready_ && has_received_route_) {
     calculate_remaining_distance();
     calculate_remaining_time();
     publish_mission_remaining_distance_time();
@@ -116,14 +137,16 @@ void RemainingDistanceTimeCalculatorNode::calculate_remaining_distance()
   lanelet::ConstLanelet current_lanelet;
   if (!lanelet::utils::query::getClosestLanelet(
         road_lanelets_, current_vehicle_pose_, &current_lanelet)) {
-    RCLCPP_WARN_STREAM(this->get_logger(), "Failed to find current lanelet.");
+    RCLCPP_WARN_STREAM_THROTTLE(
+      this->get_logger(), *get_clock(), 3000, "Failed to find current lanelet.");
 
     return;
   }
 
   lanelet::ConstLanelet goal_lanelet;
   if (!lanelet::utils::query::getClosestLanelet(road_lanelets_, goal_pose_, &goal_lanelet)) {
-    RCLCPP_WARN_STREAM(this->get_logger(), "Failed to find goal lanelet.");
+    RCLCPP_WARN_STREAM_THROTTLE(
+      this->get_logger(), *get_clock(), 3000, "Failed to find goal lanelet.");
 
     return;
   }
@@ -131,7 +154,8 @@ void RemainingDistanceTimeCalculatorNode::calculate_remaining_distance()
   const lanelet::Optional<lanelet::routing::Route> optional_route =
     routing_graph_ptr_->getRoute(current_lanelet, goal_lanelet, 0);
   if (!optional_route) {
-    RCLCPP_WARN_STREAM(this->get_logger(), "Failed to find proper route.");
+    RCLCPP_WARN_STREAM_THROTTLE(
+      this->get_logger(), *get_clock(), 3000, "Failed to find proper route.");
 
     return;
   }
@@ -143,8 +167,9 @@ void RemainingDistanceTimeCalculatorNode::calculate_remaining_distance()
 
   for (auto & llt : remaining_shortest_path) {
     if (remaining_shortest_path.size() == 1) {
-      remaining_distance_ += autoware::universe_utils::calcDistance2d(
-        current_vehicle_pose_.position, goal_pose_.position);
+      auto arc_coord_cur = lanelet::utils::getArcCoordinates({llt}, current_vehicle_pose_);
+      auto arc_coord_goal = lanelet::utils::getArcCoordinates({llt}, goal_pose_);
+      remaining_distance_ += arc_coord_goal.length - arc_coord_cur.length;
       break;
     }
 

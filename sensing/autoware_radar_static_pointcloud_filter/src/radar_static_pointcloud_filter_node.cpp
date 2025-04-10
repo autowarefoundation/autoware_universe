@@ -18,6 +18,7 @@
 #include <geometry_msgs/msg/twist_with_covariance.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
 #include <geometry_msgs/msg/vector3_stamped.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <memory>
 #include <string>
@@ -94,19 +95,26 @@ RadarStaticPointcloudFilterNode::RadarStaticPointcloudFilterNode(
 
   // Node Parameter
   node_param_.doppler_velocity_sd = declare_parameter<double>("doppler_velocity_sd");
+  node_param_.max_queue_size = declare_parameter<int64_t>("max_queue_size");
 
   // Subscriber
-  transform_listener_ = std::make_shared<autoware::universe_utils::TransformListener>(this);
+  transform_listener_ = std::make_shared<autoware_utils::TransformListener>(this);
 
-  sub_radar_.subscribe(this, "~/input/radar", rclcpp::QoS{1}.get_rmw_qos_profile());
-  sub_odometry_.subscribe(this, "~/input/odometry", rclcpp::QoS{1}.get_rmw_qos_profile());
+  sub_radar_.subscribe(
+    this, "~/input/radar",
+    rclcpp::SensorDataQoS().keep_last(node_param_.max_queue_size).get_rmw_qos_profile());
+  sub_odometry_.subscribe(
+    this, "~/input/odometry",
+    rclcpp::SensorDataQoS().keep_last(node_param_.max_queue_size).get_rmw_qos_profile());
 
   sync_ptr_ = std::make_shared<Sync>(SyncPolicy(10), sub_radar_, sub_odometry_);
   sync_ptr_->registerCallback(std::bind(&RadarStaticPointcloudFilterNode::onData, this, _1, _2));
 
   // Publisher
-  pub_static_radar_ = create_publisher<RadarScan>("~/output/static_radar_scan", 1);
-  pub_dynamic_radar_ = create_publisher<RadarScan>("~/output/dynamic_radar_scan", 1);
+  pub_static_radar_ = create_publisher<RadarScan>(
+    "~/output/static_radar_scan", rclcpp::SensorDataQoS().keep_last(node_param_.max_queue_size));
+  pub_dynamic_radar_ = create_publisher<RadarScan>(
+    "~/output/dynamic_radar_scan", rclcpp::SensorDataQoS().keep_last(node_param_.max_queue_size));
 }
 
 rcl_interfaces::msg::SetParametersResult RadarStaticPointcloudFilterNode::onSetParam(
@@ -116,6 +124,7 @@ rcl_interfaces::msg::SetParametersResult RadarStaticPointcloudFilterNode::onSetP
   try {
     auto & p = node_param_;
     update_param(params, "doppler_velocity_sd", p.doppler_velocity_sd);
+    update_param(params, "max_queue_size", p.max_queue_size);
   } catch (const rclcpp::exceptions::InvalidParameterTypeException & e) {
     result.successful = false;
     result.reason = e.what();
@@ -129,14 +138,13 @@ rcl_interfaces::msg::SetParametersResult RadarStaticPointcloudFilterNode::onSetP
 void RadarStaticPointcloudFilterNode::onData(
   const RadarScan::ConstSharedPtr radar_msg, const Odometry::ConstSharedPtr odom_msg)
 {
-  geometry_msgs::msg::TransformStamped::ConstSharedPtr transform;
-
-  try {
-    transform = transform_listener_->getTransform(
-      odom_msg->header.frame_id, radar_msg->header.frame_id, odom_msg->header.stamp,
+  const geometry_msgs::msg::TransformStamped::ConstSharedPtr transform =
+    transform_listener_->get_transform(
+      odom_msg->header.frame_id, radar_msg->header.frame_id, radar_msg->header.stamp,
       rclcpp::Duration::from_seconds(0.2));
-  } catch (tf2::TransformException & ex) {
-    RCLCPP_INFO(this->get_logger(), "Could not transform");
+
+  if (!transform) {
+    RCLCPP_WARN(this->get_logger(), "Could not transform");
     return;
   }
 

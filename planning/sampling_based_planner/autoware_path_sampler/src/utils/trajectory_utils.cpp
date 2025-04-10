@@ -65,7 +65,7 @@ void insertStopPoint(
   const double offset_to_segment = autoware::motion_utils::calcLongitudinalOffsetToSegment(
     traj_points, stop_seg_idx, input_stop_pose.position);
 
-  const auto traj_spline = SplineInterpolationPoints2d(traj_points);
+  const auto traj_spline = autoware::interpolation::SplineInterpolationPoints2d(traj_points);
   const auto stop_pose = traj_spline.getSplineInterpolatedPose(stop_seg_idx, offset_to_segment);
 
   if (geometry_utils::isSamePoint(traj_points.at(stop_seg_idx), stop_pose)) {

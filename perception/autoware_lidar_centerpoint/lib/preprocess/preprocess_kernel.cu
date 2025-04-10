@@ -33,6 +33,7 @@
 #include "autoware/lidar_centerpoint/utils.hpp"
 
 #include <cassert>
+#include <cmath>
 
 namespace
 {
@@ -45,7 +46,7 @@ namespace autoware::lidar_centerpoint
 {
 
 __global__ void generateSweepPoints_kernel(
-  const float * input_points, size_t points_size, int input_point_step, float time_lag,
+  const float * input_points, std::size_t points_size, int input_point_step, float time_lag,
   const float * transform_array, int num_features, float * output_points)
 {
   int point_idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -69,7 +70,7 @@ __global__ void generateSweepPoints_kernel(
 }
 
 cudaError_t generateSweepPoints_launch(
-  const float * input_points, size_t points_size, int input_point_step, float time_lag,
+  const float * input_points, std::size_t points_size, int input_point_step, float time_lag,
   const float * transform_array, int num_features, float * output_points, cudaStream_t stream)
 {
   auto transform_d = cuda::make_unique<float[]>(16);
@@ -88,10 +89,52 @@ cudaError_t generateSweepPoints_launch(
   return err;
 }
 
+__global__ void shufflePoints_kernel(
+  const float * points, const unsigned int * indices, float * shuffled_points,
+  const std::size_t points_size, const std::size_t max_size, const std::size_t offset)
+{
+  int point_idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (point_idx >= max_size) return;
+
+  int src_idx = indices[(point_idx + offset) % max_size];
+  int dst_idx = point_idx;
+
+  if (dst_idx >= points_size) {
+    shuffled_points[4 * dst_idx + 0] = INFINITY;
+    shuffled_points[4 * dst_idx + 1] = INFINITY;
+    shuffled_points[4 * dst_idx + 2] = INFINITY;
+    shuffled_points[4 * dst_idx + 3] = INFINITY;
+  } else {
+    shuffled_points[4 * dst_idx + 0] = points[4 * src_idx + 0];
+    shuffled_points[4 * dst_idx + 1] = points[4 * src_idx + 1];
+    shuffled_points[4 * dst_idx + 2] = points[4 * src_idx + 2];
+    shuffled_points[4 * dst_idx + 3] = points[4 * src_idx + 3];
+  }
+}
+
+cudaError_t shufflePoints_launch(
+  const float * points, const unsigned int * indices, float * shuffled_points,
+  const std::size_t points_size, const std::size_t max_size, const std::size_t offset,
+  cudaStream_t stream)
+{
+  dim3 blocks((max_size + 256 - 1) / 256);
+  dim3 threads(256);
+
+  if (blocks.x == 0) {
+    return cudaGetLastError();
+  }
+
+  shufflePoints_kernel<<<blocks, threads, 0, stream>>>(
+    points, indices, shuffled_points, points_size, max_size, offset);
+  cudaError_t err = cudaGetLastError();
+  return err;
+}
+
 __global__ void generateVoxels_random_kernel(
-  const float * points, size_t points_size, float min_x_range, float max_x_range, float min_y_range,
-  float max_y_range, float min_z_range, float max_z_range, float pillar_x_size, float pillar_y_size,
-  float pillar_z_size, int grid_y_size, int grid_x_size, unsigned int * mask, float * voxels)
+  const float * points, std::size_t points_size, float min_x_range, float max_x_range,
+  float min_y_range, float max_y_range, float min_z_range, float max_z_range, float pillar_x_size,
+  float pillar_y_size, float pillar_z_size, int grid_y_size, int grid_x_size, unsigned int * mask,
+  float * voxels)
 {
   int point_idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (point_idx >= points_size) return;
@@ -105,7 +148,9 @@ __global__ void generateVoxels_random_kernel(
 
   int voxel_idx = floorf((point.x - min_x_range) / pillar_x_size);
   int voxel_idy = floorf((point.y - min_y_range) / pillar_y_size);
-  unsigned int voxel_index = voxel_idy * grid_x_size + voxel_idx;
+  voxel_idx = voxel_idx < 0 ? 0 : voxel_idx >= grid_x_size ? grid_x_size - 1 : voxel_idx;
+  voxel_idy = voxel_idy < 0 ? 0 : voxel_idy >= grid_y_size ? grid_y_size - 1 : voxel_idy;
+  unsigned int voxel_index = (grid_x_size - 1 - voxel_idx) * grid_y_size + voxel_idy;
 
   unsigned int point_id = atomicAdd(&(mask[voxel_index]), 1);
 
@@ -118,10 +163,10 @@ __global__ void generateVoxels_random_kernel(
 }
 
 cudaError_t generateVoxels_random_launch(
-  const float * points, size_t points_size, float min_x_range, float max_x_range, float min_y_range,
-  float max_y_range, float min_z_range, float max_z_range, float pillar_x_size, float pillar_y_size,
-  float pillar_z_size, int grid_y_size, int grid_x_size, unsigned int * mask, float * voxels,
-  cudaStream_t stream)
+  const float * points, std::size_t points_size, float min_x_range, float max_x_range,
+  float min_y_range, float max_y_range, float min_z_range, float max_z_range, float pillar_x_size,
+  float pillar_y_size, float pillar_z_size, int grid_y_size, int grid_x_size, unsigned int * mask,
+  float * voxels, cudaStream_t stream)
 {
   dim3 blocks((points_size + 256 - 1) / 256);
   dim3 threads(256);
@@ -142,12 +187,14 @@ __global__ void generateBaseFeatures_kernel(
   unsigned int * mask, float * voxels, int grid_y_size, int grid_x_size, int max_voxel_size,
   unsigned int * pillar_num, float * voxel_features, float * voxel_num, int * voxel_idxs)
 {
-  unsigned int voxel_idx = blockIdx.x * blockDim.x + threadIdx.x;
-  unsigned int voxel_idy = blockIdx.y * blockDim.y + threadIdx.y;
+  // exchange x and y to process in a row-major order
+  // flip x axis direction to process front to back
+  unsigned int voxel_idx_inverted = blockIdx.y * blockDim.y + threadIdx.y;
+  unsigned int voxel_idy = blockIdx.x * blockDim.x + threadIdx.x;
+  if (voxel_idx_inverted >= grid_x_size || voxel_idy >= grid_y_size) return;
+  unsigned int voxel_idx = grid_x_size - 1 - voxel_idx_inverted;
 
-  if (voxel_idx >= grid_x_size || voxel_idy >= grid_y_size) return;
-
-  unsigned int voxel_index = voxel_idy * grid_x_size + voxel_idx;
+  unsigned int voxel_index = voxel_idx_inverted * grid_y_size + voxel_idy;
   unsigned int count = mask[voxel_index];
   if (!(count > 0)) return;
   count = count < MAX_POINT_IN_VOXEL_SIZE ? count : MAX_POINT_IN_VOXEL_SIZE;
@@ -177,9 +224,10 @@ cudaError_t generateBaseFeatures_launch(
   unsigned int * pillar_num, float * voxel_features, float * voxel_num, int * voxel_idxs,
   cudaStream_t stream)
 {
+  // exchange x and y to process in a row-major order
   dim3 threads = {32, 32};
   dim3 blocks = {
-    (grid_x_size + threads.x - 1) / threads.x, (grid_y_size + threads.y - 1) / threads.y};
+    (grid_y_size + threads.x - 1) / threads.x, (grid_x_size + threads.y - 1) / threads.y};
 
   generateBaseFeatures_kernel<<<blocks, threads, 0, stream>>>(
     mask, voxels, grid_y_size, grid_x_size, max_voxel_size, pillar_num, voxel_features, voxel_num,

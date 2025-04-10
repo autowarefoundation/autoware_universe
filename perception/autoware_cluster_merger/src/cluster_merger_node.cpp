@@ -14,7 +14,7 @@
 
 #include "cluster_merger_node.hpp"
 
-#include "object_recognition_utils/object_recognition_utils.hpp"
+#include "autoware/object_recognition_utils/object_recognition_utils.hpp"
 
 #include <memory>
 #include <string>
@@ -37,7 +37,7 @@ ClusterMergerNode::ClusterMergerNode(const rclcpp::NodeOptions & node_options)
   sync_.registerCallback(std::bind(&ClusterMergerNode::objectsCallback, this, _1, _2));
 
   // Publisher
-  pub_objects_ = create_publisher<DetectedObjectsWithFeature>("~/output/clusters", rclcpp::QoS{1});
+  pub_objects_ = create_publisher<DetectedObjectsWithFeature>("output/clusters", rclcpp::QoS{1});
 }
 
 void ClusterMergerNode::objectsCallback(
@@ -52,9 +52,9 @@ void ClusterMergerNode::objectsCallback(
   DetectedObjectsWithFeature transformed_objects0;
   DetectedObjectsWithFeature transformed_objects1;
   if (
-    !object_recognition_utils::transformObjectsWithFeature(
+    !autoware::object_recognition_utils::transformObjectsWithFeature(
       *input_objects0_msg, output_frame_id_, tf_buffer_, transformed_objects0) ||
-    !object_recognition_utils::transformObjectsWithFeature(
+    !autoware::object_recognition_utils::transformObjectsWithFeature(
       *input_objects1_msg, output_frame_id_, tf_buffer_, transformed_objects1)) {
     return;
   }

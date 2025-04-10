@@ -29,6 +29,17 @@
           "default": "3.0",
           "minimum": 0.0
         },
+        "pose_error_check_enabled": {
+          "type": "boolean",
+          "description": "If true, check error between initial pose result and GNSS pose.",
+          "default": "false"
+        },
+        "pose_error_threshold": {
+          "type": "number",
+          "description": "The error threshold between GNSS and initial pose",
+          "default": "5.0",
+          "minimum": 0.0
+        },
         "stop_check_enabled": {
           "type": "string",
           "description": "If true, initialization is accepted only when the vehicle is stopped.",
@@ -75,11 +86,13 @@
         "user_defined_initial_pose",
         "gnss_pose_timeout",
         "stop_check_duration",
+        "pose_error_threshold",
         "ekf_enabled",
         "gnss_enabled",
         "yabloc_enabled",
         "ndt_enabled",
         "stop_check_enabled",
+        "pose_error_check_enabled",
         "gnss_particle_covariance",
         "output_pose_covariance"
       ],

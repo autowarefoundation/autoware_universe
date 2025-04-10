@@ -14,14 +14,17 @@
 
 #include "autoware/path_smoother/elastic_band_smoother.hpp"
 
+#include "autoware/interpolation/spline_interpolation_points_2d.hpp"
 #include "autoware/motion_utils/trajectory/conversion.hpp"
 #include "autoware/path_smoother/utils/geometry_utils.hpp"
 #include "autoware/path_smoother/utils/trajectory_utils.hpp"
-#include "interpolation/spline_interpolation_points_2d.hpp"
 #include "rclcpp/time.hpp"
 
 #include <chrono>
 #include <limits>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace autoware::path_smoother
 {
@@ -105,15 +108,14 @@ ElasticBandSmoother::ElasticBandSmoother(const rclcpp::NodeOptions & node_option
   set_param_res_ = this->add_on_set_parameters_callback(
     std::bind(&ElasticBandSmoother::onParam, this, std::placeholders::_1));
 
-  logger_configure_ = std::make_unique<autoware::universe_utils::LoggerLevelConfigure>(this);
-  published_time_publisher_ =
-    std::make_unique<autoware::universe_utils::PublishedTimePublisher>(this);
+  logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
+  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 }
 
 rcl_interfaces::msg::SetParametersResult ElasticBandSmoother::onParam(
   const std::vector<rclcpp::Parameter> & parameters)
 {
-  using autoware::universe_utils::updateParam;
+  using autoware_utils::update_param;
 
   // parameters for ego nearest search
   ego_nearest_param_.onParam(parameters);
@@ -155,7 +157,7 @@ void ElasticBandSmoother::onPath(const Path::ConstSharedPtr path_ptr)
   time_keeper_ptr_->tic(__func__);
 
   // check if data is ready and valid
-  const auto ego_state_ptr = odom_sub_.takeData();
+  const auto ego_state_ptr = odom_sub_.take_data();
   if (!isDataReady(*path_ptr, ego_state_ptr, *get_clock())) {
     return;
   }

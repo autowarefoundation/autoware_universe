@@ -44,12 +44,16 @@
 
 #include "ar_tag_based_localizer.hpp"
 
-#include "localization_util/util_func.hpp"
+#include "autoware/localization_util/util_func.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <opencv4/opencv2/calib3d.hpp>
 #include <opencv4/opencv2/core/quaternion.hpp>
+
+#include <memory>
+#include <string>
+#include <vector>
 
 #if __has_include(<cv_bridge/cv_bridge.hpp>)
 #include <cv_bridge/cv_bridge.hpp>  // for ROS 2 Jazzy or newer
@@ -66,7 +70,7 @@
 #include <tf2_eigen/tf2_eigen.hpp>
 #endif
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 ArTagBasedLocalizer::ArTagBasedLocalizer(const rclcpp::NodeOptions & options)
 : rclcpp::Node("ar_tag_based_localizer", options), cam_info_received_(false)
@@ -94,7 +98,7 @@ ArTagBasedLocalizer::ArTagBasedLocalizer(const rclcpp::NodeOptions & options)
     RCLCPP_ERROR_STREAM(this->get_logger(), "Invalid detection_mode: " << detection_mode);
     return;
   }
-  ekf_pose_buffer_ = std::make_unique<SmartPoseBuffer>(
+  ekf_pose_buffer_ = std::make_unique<autoware::localization_util::SmartPoseBuffer>(
     this->get_logger(), ekf_time_tolerance_, ekf_position_tolerance_);
 
   /*
@@ -168,8 +172,8 @@ void ArTagBasedLocalizer::image_callback(const Image::ConstSharedPtr & msg)
   const builtin_interfaces::msg::Time sensor_stamp = msg->header.stamp;
 
   // get self pose
-  const std::optional<SmartPoseBuffer::InterpolateResult> interpolate_result =
-    ekf_pose_buffer_->interpolate(sensor_stamp);
+  const std::optional<autoware::localization_util::SmartPoseBuffer::InterpolateResult>
+    interpolate_result = ekf_pose_buffer_->interpolate(sensor_stamp);
   if (!interpolate_result) {
     return;
   }
@@ -188,8 +192,7 @@ void ArTagBasedLocalizer::image_callback(const Image::ConstSharedPtr & msg)
     pose_array_msg.header.stamp = sensor_stamp;
     pose_array_msg.header.frame_id = "map";
     for (const Landmark & landmark : landmarks) {
-      const Pose detected_marker_on_map =
-        autoware::universe_utils::transformPose(landmark.pose, self_pose);
+      const Pose detected_marker_on_map = autoware_utils::transform_pose(landmark.pose, self_pose);
       pose_array_msg.poses.push_back(detected_marker_on_map);
     }
     detected_tag_pose_pub_->publish(pose_array_msg);
@@ -198,7 +201,7 @@ void ArTagBasedLocalizer::image_callback(const Image::ConstSharedPtr & msg)
   // calc new_self_pose
   const Pose new_self_pose =
     landmark_manager_.calculate_new_self_pose(landmarks, self_pose, consider_orientation_);
-  const Pose diff_pose = autoware::universe_utils::inverseTransformPose(new_self_pose, self_pose);
+  const Pose diff_pose = autoware_utils::inverse_transform_pose(new_self_pose, self_pose);
   const double distance =
     std::hypot(diff_pose.position.x, diff_pose.position.y, diff_pose.position.z);
 

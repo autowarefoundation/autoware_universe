@@ -17,8 +17,8 @@
 
 #include "yabloc_common/ground_server/filter/moving_averaging.hpp"
 
+#include <autoware/signal_processing/lowpass_filter_1d.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <signal_processing/lowpass_filter_1d.hpp>
 #include <yabloc_common/ground_plane.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
@@ -37,6 +37,8 @@
 #include <pcl/point_types.h>
 
 #include <vector>
+
+using autoware::signal_processing::LowpassFilter1d;
 
 namespace yabloc::ground_server
 {

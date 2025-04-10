@@ -15,24 +15,25 @@
 #include "manager.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware/universe_utils/ros/parameter.hpp>
+#include <autoware_utils/ros/parameter.hpp>
 
+#include <memory>
 #include <string>
 
 namespace autoware::behavior_velocity_planner
 {
-using autoware::universe_utils::getOrDeclareParameter;
+using autoware_utils::get_or_declare_parameter;
 
 NoDrivableLaneModuleManager::NoDrivableLaneModuleManager(rclcpp::Node & node)
 : SceneModuleManagerInterface(node, getModuleName())
 {
   const std::string ns(NoDrivableLaneModuleManager::getModuleName());
-  planner_param_.stop_margin = getOrDeclareParameter<double>(node, ns + ".stop_margin");
-  planner_param_.print_debug_info = getOrDeclareParameter<bool>(node, ns + ".print_debug_info");
+  planner_param_.stop_margin = get_or_declare_parameter<double>(node, ns + ".stop_margin");
+  planner_param_.print_debug_info = get_or_declare_parameter<bool>(node, ns + ".print_debug_info");
 }
 
 void NoDrivableLaneModuleManager::launchNewModules(
-  const tier4_planning_msgs::msg::PathWithLaneId & path)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   for (const auto & ll : planning_utils::getLaneletsOnPath(
          path, planner_data_->route_handler_->getLaneletMapPtr(),
@@ -50,13 +51,14 @@ void NoDrivableLaneModuleManager::launchNewModules(
     }
 
     registerModule(std::make_shared<NoDrivableLaneModule>(
-      module_id, lane_id, planner_param_, logger_.get_child("no_drivable_lane_module"), clock_));
+      module_id, lane_id, planner_param_, logger_.get_child("no_drivable_lane_module"), clock_,
+      time_keeper_, planning_factor_interface_));
   }
 }
 
 std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
 NoDrivableLaneModuleManager::getModuleExpiredFunction(
-  const tier4_planning_msgs::msg::PathWithLaneId & path)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   const auto lane_id_set = planning_utils::getLaneIdSetOnPath(
     path, planner_data_->route_handler_->getLaneletMapPtr(), planner_data_->current_odometry->pose);

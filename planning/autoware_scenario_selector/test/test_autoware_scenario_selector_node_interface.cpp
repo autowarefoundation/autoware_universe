@@ -15,13 +15,16 @@
 #include "autoware/scenario_selector/node.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <autoware_planning_test_manager/autoware_planning_test_manager.hpp>
+#include <autoware/planning_test_manager/autoware_planning_test_manager.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
 
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <memory>
+#include <string>
 #include <vector>
+
 namespace autoware::scenario_selector
 {
 using autoware::planning_test_manager::PlanningInterfaceTestManager;
@@ -31,9 +34,7 @@ std::shared_ptr<PlanningInterfaceTestManager> generateTestManager()
   auto test_manager = std::make_shared<PlanningInterfaceTestManager>();
 
   // set subscriber with topic name: scenario_selector → test_node_
-  test_manager->setScenarioSubscriber("output/scenario");
-
-  test_manager->setOdometryTopicName("input/odometry");
+  test_manager->subscribeOutput<autoware_internal_planning_msgs::msg::Scenario>("output/scenario");
 
   return test_manager;
 }
@@ -57,12 +58,18 @@ void publishMandatoryTopics(
   std::shared_ptr<ScenarioSelectorNode> test_target_node)
 {
   // publish necessary topics from test_manager
-  test_manager->publishOdometry(test_target_node, "input/odometry");
-  test_manager->publishParkingState(test_target_node, "is_parking_completed");
-  test_manager->publishTrajectory(test_target_node, "input/parking/trajectory");
-  test_manager->publishMap(test_target_node, "input/lanelet_map");
-  test_manager->publishRoute(test_target_node, "input/route");
-  test_manager->publishOperationModeState(test_target_node, "input/operation_mode_state");
+  test_manager->publishInput(
+    test_target_node, "input/odometry", autoware::test_utils::makeOdometry());
+  test_manager->publishInput(test_target_node, "is_parking_completed", std_msgs::msg::Bool{});
+  test_manager->publishInput(
+    test_target_node, "input/parking/trajectory", autoware_planning_msgs::msg::Trajectory{});
+  test_manager->publishInput(
+    test_target_node, "input/lanelet_map", autoware::test_utils::makeMapBinMsg());
+  test_manager->publishInput(
+    test_target_node, "input/route", autoware::test_utils::makeNormalRoute());
+  test_manager->publishInput(
+    test_target_node, "input/operation_mode_state",
+    autoware_adapi_v1_msgs::msg::OperationModeState{});
 }
 
 TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectoryLaneDrivingMode)
@@ -73,15 +80,15 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectoryLaneDrivingMode
 
   publishMandatoryTopics(test_manager, test_target_node);
 
-  // set scenario_selector's input topic name(this topic is changed to test node)
-  test_manager->setTrajectoryInputTopicName("input/lane_driving/trajectory");
+  const std::string input_trajectory_topic = "input/lane_driving/trajectory";
 
   // test for normal trajectory
-  ASSERT_NO_THROW(test_manager->testWithNominalTrajectory(test_target_node));
+  ASSERT_NO_THROW(test_manager->testWithNormalTrajectory(test_target_node, input_trajectory_topic));
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
   // test for trajectory with empty/one point/overlapping point
-  ASSERT_NO_THROW(test_manager->testWithAbnormalTrajectory(test_target_node));
+  ASSERT_NO_THROW(
+    test_manager->testWithAbnormalTrajectory(test_target_node, input_trajectory_topic));
   rclcpp::shutdown();
 }
 
@@ -94,15 +101,15 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectoryParkingMode)
 
   publishMandatoryTopics(test_manager, test_target_node);
 
-  // set scenario_selector's input topic name(this topic is changed to test node)
-  test_manager->setTrajectoryInputTopicName("input/parking/trajectory");
+  const std::string input_trajectory_topic = "input/parking/trajectory";
 
   // test for normal trajectory
-  ASSERT_NO_THROW(test_manager->testWithNominalTrajectory(test_target_node));
+  ASSERT_NO_THROW(test_manager->testWithNormalTrajectory(test_target_node, input_trajectory_topic));
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
   // test for trajectory with empty/one point/overlapping point
-  ASSERT_NO_THROW(test_manager->testWithAbnormalTrajectory(test_target_node));
+  ASSERT_NO_THROW(
+    test_manager->testWithAbnormalTrajectory(test_target_node, input_trajectory_topic));
   rclcpp::shutdown();
 }
 
@@ -114,14 +121,14 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
 
   publishMandatoryTopics(test_manager, test_target_node);
 
-  // set scenario_selector's input topic name(this topic is changed to test node)
-  test_manager->setTrajectoryInputTopicName("input/lane_driving/trajectory");
+  const std::string input_trajectory_topic = "input/lane_driving/trajectory";
+  const std::string input_odometry_topic = "input/odometry";
 
   // test for normal trajectory
-  ASSERT_NO_THROW(test_manager->testWithNominalTrajectory(test_target_node));
+  ASSERT_NO_THROW(test_manager->testWithNormalTrajectory(test_target_node, input_trajectory_topic));
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
-  ASSERT_NO_THROW(test_manager->testTrajectoryWithInvalidEgoPose(test_target_node));
+  ASSERT_NO_THROW(test_manager->testWithOffTrackOdometry(test_target_node, input_odometry_topic));
   rclcpp::shutdown();
 }
 }  // namespace autoware::scenario_selector

@@ -18,13 +18,15 @@
 #include "autoware/obstacle_cruise_planner/pid_based_planner/cruise_planning_debug_info.hpp"
 #include "autoware/obstacle_cruise_planner/pid_based_planner/pid_controller.hpp"
 #include "autoware/obstacle_cruise_planner/planner_interface.hpp"
-#include "signal_processing/lowpass_filter_1d.hpp"
+#include "autoware/signal_processing/lowpass_filter_1d.hpp"
 
 #include "visualization_msgs/msg/marker_array.hpp"
 
 #include <memory>
 #include <optional>
 #include <vector>
+
+using autoware::signal_processing::LowpassFilter1d;
 
 class PIDBasedPlanner : public PlannerInterface
 {

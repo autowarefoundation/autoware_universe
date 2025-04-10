@@ -26,7 +26,6 @@
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/Point.h>
 
-#include <optional>
 #include <vector>
 
 namespace autoware::behavior_velocity_planner
@@ -39,7 +38,7 @@ namespace autoware::behavior_velocity_planner
 /// @param [in] params parameters
 /// @return true if the index is occluded
 bool is_occluded(
-  const grid_map::GridMap & grid_map, const int min_nb_of_cells, const grid_map::Index idx,
+  const grid_map::GridMap & grid_map, const int min_nb_of_cells, const grid_map::Index & idx,
   const autoware::behavior_velocity_planner::CrosswalkModule::PlannerParam & params);
 
 /// @brief interpolate a point beyond the end of the given segment
@@ -50,17 +49,14 @@ lanelet::BasicPoint2d interpolate_point(
   const lanelet::BasicSegment2d & segment, const double extra_distance);
 
 /// @brief check if the crosswalk is occluded
-/// @param crosswalk_lanelet lanelet of the crosswalk
 /// @param occupancy_grid occupancy grid with the occlusion information
-/// @param path_intersection intersection between the crosswalk and the ego path
-/// @param detection_range range away from the crosswalk until occlusions are considered
+/// @param detection_areas areas to check for occlusions
 /// @param dynamic_objects dynamic objects
 /// @param params parameters
 /// @return true if the crosswalk is occluded
 bool is_crosswalk_occluded(
-  const lanelet::ConstLanelet & crosswalk_lanelet,
   const nav_msgs::msg::OccupancyGrid & occupancy_grid,
-  const geometry_msgs::msg::Point & path_intersection, const double detection_range,
+  const std::vector<lanelet::BasicPolygon2d> & detection_areas,
   const std::vector<autoware_perception_msgs::msg::PredictedObject> & dynamic_objects,
   const autoware::behavior_velocity_planner::CrosswalkModule::PlannerParam & params);
 
@@ -89,6 +85,15 @@ std::vector<autoware_perception_msgs::msg::PredictedObject> select_and_inflate_o
 void clear_occlusions_behind_objects(
   grid_map::GridMap & grid_map,
   const std::vector<autoware_perception_msgs::msg::PredictedObject> & objects);
+
+/// @brief calculate areas to check for occlusions around the given crosswalk
+/// @param crosswalk_lanelet crosswalk lanelet
+/// @param crosswalk_origin crosswalk point from which to calculate the distances
+/// @param detection_range [m] desired distance from the crosswalk origin
+/// @return detection areas within the detection range of the crosswalk
+std::vector<lanelet::BasicPolygon2d> calculate_detection_areas(
+  const lanelet::ConstLanelet & crosswalk_lanelet, const lanelet::BasicPoint2d & crosswalk_origin,
+  const double detection_range);
 }  // namespace autoware::behavior_velocity_planner
 
 #endif  // OCCLUDED_CROSSWALK_HPP_

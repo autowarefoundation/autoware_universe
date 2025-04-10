@@ -15,10 +15,10 @@
 #ifndef AUTOWARE__PID_LONGITUDINAL_CONTROLLER__LONGITUDINAL_CONTROLLER_UTILS_HPP_
 #define AUTOWARE__PID_LONGITUDINAL_CONTROLLER__LONGITUDINAL_CONTROLLER_UTILS_HPP_
 
+#include "autoware/interpolation/linear_interpolation.hpp"
+#include "autoware/interpolation/spherical_linear_interpolation.hpp"
 #include "autoware/motion_utils/trajectory/conversion.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
-#include "interpolation/linear_interpolation.hpp"
-#include "interpolation/spherical_linear_interpolation.hpp"
 #include "tf2/utils.h"
 
 #include <Eigen/Core>
@@ -99,22 +99,22 @@ std::pair<TrajectoryPoint, size_t> lerpTrajectoryPoint(
   {
     const size_t i = seg_idx;
 
-    interpolated_point.pose.position.x = interpolation::lerp(
+    interpolated_point.pose.position.x = autoware::interpolation::lerp(
       points.at(i).pose.position.x, points.at(i + 1).pose.position.x, interpolate_ratio);
-    interpolated_point.pose.position.y = interpolation::lerp(
+    interpolated_point.pose.position.y = autoware::interpolation::lerp(
       points.at(i).pose.position.y, points.at(i + 1).pose.position.y, interpolate_ratio);
-    interpolated_point.pose.position.z = interpolation::lerp(
+    interpolated_point.pose.position.z = autoware::interpolation::lerp(
       points.at(i).pose.position.z, points.at(i + 1).pose.position.z, interpolate_ratio);
-    interpolated_point.pose.orientation = interpolation::lerpOrientation(
+    interpolated_point.pose.orientation = autoware::interpolation::lerpOrientation(
       points.at(i).pose.orientation, points.at(i + 1).pose.orientation, interpolate_ratio);
-    interpolated_point.longitudinal_velocity_mps = interpolation::lerp(
+    interpolated_point.longitudinal_velocity_mps = autoware::interpolation::lerp(
       points.at(i).longitudinal_velocity_mps, points.at(i + 1).longitudinal_velocity_mps,
       interpolate_ratio);
-    interpolated_point.lateral_velocity_mps = interpolation::lerp(
+    interpolated_point.lateral_velocity_mps = autoware::interpolation::lerp(
       points.at(i).lateral_velocity_mps, points.at(i + 1).lateral_velocity_mps, interpolate_ratio);
-    interpolated_point.acceleration_mps2 = interpolation::lerp(
+    interpolated_point.acceleration_mps2 = autoware::interpolation::lerp(
       points.at(i).acceleration_mps2, points.at(i + 1).acceleration_mps2, interpolate_ratio);
-    interpolated_point.heading_rate_rps = interpolation::lerp(
+    interpolated_point.heading_rate_rps = autoware::interpolation::lerp(
       points.at(i).heading_rate_rps, points.at(i + 1).heading_rate_rps, interpolate_ratio);
   }
 

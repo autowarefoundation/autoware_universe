@@ -15,6 +15,8 @@
 #include <autoware/tensorrt_yolox/tensorrt_yolox.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <vector>
+
 #if (defined(_MSC_VER) or (defined(__GNUC__) and (7 <= __GNUC_MAJOR__)))
 #include <filesystem>
 namespace fs = ::std::filesystem;
@@ -44,7 +46,9 @@ public:
     const auto output_image_path =
       declare_parameter("output_image_path", p.string() + "_detect" + ext);
 
-    auto trt_yolox = std::make_unique<tensorrt_yolox::TrtYoloX>(model_path, precision);
+    auto trt_config = tensorrt_common::TrtCommonConfig(model_path, precision);
+
+    auto trt_yolox = std::make_unique<tensorrt_yolox::TrtYoloX>(trt_config);
     auto image = cv::imread(image_path);
     tensorrt_yolox::ObjectArrays objects;
     std::vector<cv::Mat> masks;

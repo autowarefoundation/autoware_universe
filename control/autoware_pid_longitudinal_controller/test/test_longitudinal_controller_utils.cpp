@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/interpolation/spherical_linear_interpolation.hpp"
 #include "autoware/motion_utils/trajectory/conversion.hpp"
 #include "autoware/pid_longitudinal_controller/longitudinal_controller_utils.hpp"
 #include "gtest/gtest.h"
-#include "interpolation/spherical_linear_interpolation.hpp"
 #include "tf2/LinearMath/Quaternion.h"
 
 #include "autoware_planning_msgs/msg/trajectory.hpp"
@@ -303,7 +303,7 @@ TEST(TestLongitudinalControllerUtils, lerpOrientation)
   o_to.setRPY(M_PI_4, M_PI_4, M_PI_4);
 
   ratio = 0.0;
-  result = interpolation::lerpOrientation(tf2::toMsg(o_from), tf2::toMsg(o_to), ratio);
+  result = autoware::interpolation::lerpOrientation(tf2::toMsg(o_from), tf2::toMsg(o_to), ratio);
   tf2::convert(result, o_result);
   tf2::Matrix3x3(o_result).getRPY(roll, pitch, yaw);
   EXPECT_DOUBLE_EQ(roll, 0.0);
@@ -311,7 +311,7 @@ TEST(TestLongitudinalControllerUtils, lerpOrientation)
   EXPECT_DOUBLE_EQ(yaw, 0.0);
 
   ratio = 1.0;
-  result = interpolation::lerpOrientation(tf2::toMsg(o_from), tf2::toMsg(o_to), ratio);
+  result = autoware::interpolation::lerpOrientation(tf2::toMsg(o_from), tf2::toMsg(o_to), ratio);
   tf2::convert(result, o_result);
   tf2::Matrix3x3(o_result).getRPY(roll, pitch, yaw);
   EXPECT_DOUBLE_EQ(roll, M_PI_4);
@@ -320,7 +320,7 @@ TEST(TestLongitudinalControllerUtils, lerpOrientation)
 
   ratio = 0.5;
   o_to.setRPY(M_PI_4, 0.0, 0.0);
-  result = interpolation::lerpOrientation(tf2::toMsg(o_from), tf2::toMsg(o_to), ratio);
+  result = autoware::interpolation::lerpOrientation(tf2::toMsg(o_from), tf2::toMsg(o_to), ratio);
   tf2::convert(result, o_result);
   tf2::Matrix3x3(o_result).getRPY(roll, pitch, yaw);
   EXPECT_DOUBLE_EQ(roll, M_PI_4 / 2);
@@ -328,7 +328,7 @@ TEST(TestLongitudinalControllerUtils, lerpOrientation)
   EXPECT_DOUBLE_EQ(yaw, 0.0);
 
   o_to.setRPY(0.0, M_PI_4, 0.0);
-  result = interpolation::lerpOrientation(tf2::toMsg(o_from), tf2::toMsg(o_to), ratio);
+  result = autoware::interpolation::lerpOrientation(tf2::toMsg(o_from), tf2::toMsg(o_to), ratio);
   tf2::convert(result, o_result);
   tf2::Matrix3x3(o_result).getRPY(roll, pitch, yaw);
   EXPECT_DOUBLE_EQ(roll, 0.0);
@@ -336,7 +336,7 @@ TEST(TestLongitudinalControllerUtils, lerpOrientation)
   EXPECT_DOUBLE_EQ(yaw, 0.0);
 
   o_to.setRPY(0.0, 0.0, M_PI_4);
-  result = interpolation::lerpOrientation(tf2::toMsg(o_from), tf2::toMsg(o_to), ratio);
+  result = autoware::interpolation::lerpOrientation(tf2::toMsg(o_from), tf2::toMsg(o_to), ratio);
   tf2::convert(result, o_result);
   tf2::Matrix3x3(o_result).getRPY(roll, pitch, yaw);
   EXPECT_DOUBLE_EQ(roll, 0.0);

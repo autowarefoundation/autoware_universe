@@ -28,22 +28,24 @@ set(${PROJECT_NAME}_src
   src/processor/input_manager.cpp
 )
 set(${PROJECT_NAME}_lib
+  lib/odometry.cpp
   lib/association/association.cpp
   lib/association/mu_successive_shortest_path/mu_ssp.cpp
+  lib/object_model/types.cpp
+  lib/object_model/shapes.cpp
   lib/tracker/motion_model/motion_model_base.cpp
   lib/tracker/motion_model/bicycle_motion_model.cpp
   # cspell: ignore ctrv
   lib/tracker/motion_model/ctrv_motion_model.cpp
   lib/tracker/motion_model/cv_motion_model.cpp
   lib/tracker/model/tracker_base.cpp
-  lib/tracker/model/big_vehicle_tracker.cpp
-  lib/tracker/model/normal_vehicle_tracker.cpp
+  lib/tracker/model/vehicle_tracker.cpp
   lib/tracker/model/multiple_vehicle_tracker.cpp
-  lib/tracker/model/bicycle_tracker.cpp
   lib/tracker/model/pedestrian_tracker.cpp
   lib/tracker/model/pedestrian_and_bicycle_tracker.cpp
   lib/tracker/model/unknown_tracker.cpp
   lib/tracker/model/pass_through_tracker.cpp
+  lib/uncertainty/uncertainty_processor.cpp
 )
 ament_auto_add_library(${PROJECT_NAME} SHARED
   ${${PROJECT_NAME}_src}

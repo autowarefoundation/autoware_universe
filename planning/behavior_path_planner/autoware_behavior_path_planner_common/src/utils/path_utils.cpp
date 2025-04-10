@@ -17,18 +17,19 @@
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/static_drivable_area.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
+#include <autoware/interpolation/spline_interpolation.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
-#include <interpolation/spline_interpolation.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <tf2/utils.h>
 
 #include <algorithm>
-#include <limits>
+#include <memory>
 #include <optional>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -49,8 +50,7 @@ std::vector<double> calcPathArcLengthArray(
   out.push_back(sum);
 
   for (size_t i = bounded_start + 1; i < bounded_end; ++i) {
-    sum += autoware::universe_utils::calcDistance2d(
-      path.points.at(i).point, path.points.at(i - 1).point);
+    sum += autoware_utils::calc_distance2d(path.points.at(i).point, path.points.at(i - 1).point);
     out.push_back(sum);
   }
   return out;
@@ -102,6 +102,7 @@ PathWithLaneId resamplePathWithSpline(
     transformed_path, 0, transformed_path.size());
   for (size_t i = 0; i < path.points.size(); ++i) {
     const double s = s_vec.at(i);
+
     for (const auto & lane_id : path.points.at(i).lane_ids) {
       if (!keep_input_points && (unique_lane_ids.find(lane_id) != unique_lane_ids.end())) {
         continue;
@@ -163,12 +164,12 @@ size_t getIdxByArclength(
     throw std::runtime_error("[getIdxByArclength] path points must be > 0");
   }
 
-  using autoware::universe_utils::calcDistance2d;
+  using autoware_utils::calc_distance2d;
   double sum_length = 0.0;
   if (signed_arc >= 0.0) {
     for (size_t i = target_idx; i < path.points.size() - 1; ++i) {
       const auto next_i = i + 1;
-      sum_length += calcDistance2d(path.points.at(i), path.points.at(next_i));
+      sum_length += calc_distance2d(path.points.at(i), path.points.at(next_i));
       if (sum_length > signed_arc) {
         return next_i;
       }
@@ -177,7 +178,7 @@ size_t getIdxByArclength(
   }
   for (size_t i = target_idx; i > 0; --i) {
     const auto next_i = i - 1;
-    sum_length -= calcDistance2d(path.points.at(i), path.points.at(next_i));
+    sum_length -= calc_distance2d(path.points.at(i), path.points.at(next_i));
     if (sum_length < signed_arc) {
       return next_i;
     }
@@ -200,13 +201,6 @@ void clipPathLength(
     path.points.begin() + start_idx, path.points.begin() + end_idx + 1};
 
   path.points = clipped_points;
-}
-
-// TODO(murooka) This function should be replaced with autoware::motion_utils::cropPoints
-void clipPathLength(
-  PathWithLaneId & path, const size_t target_idx, const BehaviorPathPlannerParameters & params)
-{
-  clipPathLength(path, target_idx, params.forward_path_length, params.backward_path_length);
 }
 
 PathWithLaneId convertWayPointsToPathWithLaneId(
@@ -311,7 +305,7 @@ void correctDividedPathVelocity(std::vector<PathWithLaneId> & divided_paths)
 }
 
 // only two points is supported
-std::vector<double> splineTwoPoints(
+std::vector<double> spline_two_points(
   const std::vector<double> & base_s, const std::vector<double> & base_x, const double begin_diff,
   const double end_diff, const std::vector<double> & new_s)
 {
@@ -336,10 +330,11 @@ std::vector<double> splineTwoPoints(
 std::vector<Pose> interpolatePose(
   const Pose & start_pose, const Pose & end_pose, const double resample_interval)
 {
+  using autoware_utils::calc_azimuth_angle;
+
   std::vector<Pose> interpolated_poses{};  // output
 
-  const double distance =
-    autoware::universe_utils::calcDistance2d(start_pose.position, end_pose.position);
+  const double distance = autoware_utils::calc_distance2d(start_pose.position, end_pose.position);
   const std::vector<double> base_s{0.0, distance};
   const std::vector<double> base_x{start_pose.position.x, end_pose.position.x};
   const std::vector<double> base_y{start_pose.position.y, end_pose.position.y};
@@ -350,20 +345,27 @@ std::vector<Pose> interpolatePose(
     new_s.push_back(s);
   }
 
-  const std::vector<double> interpolated_x = splineTwoPoints(
+  const std::vector<double> interpolated_x = spline_two_points(
     base_s, base_x, std::cos(tf2::getYaw(start_pose.orientation)),
     std::cos(tf2::getYaw(end_pose.orientation)), new_s);
-  const std::vector<double> interpolated_y = splineTwoPoints(
+  const std::vector<double> interpolated_y = spline_two_points(
     base_s, base_y, std::sin(tf2::getYaw(start_pose.orientation)),
     std::sin(tf2::getYaw(end_pose.orientation)), new_s);
   for (size_t i = 0; i < interpolated_x.size(); ++i) {
     Pose pose{};
-    pose = autoware::universe_utils::calcInterpolatedPose(
-      end_pose, start_pose, (distance - new_s.at(i)) / distance);
     pose.position.x = interpolated_x.at(i);
     pose.position.y = interpolated_y.at(i);
     pose.position.z = end_pose.position.z;
     interpolated_poses.push_back(pose);
+  }
+
+  // insert orientation
+  for (size_t i = 0; i < interpolated_poses.size(); ++i) {
+    const double yaw = calc_azimuth_angle(
+      interpolated_poses.at(i).position, i < interpolated_poses.size() - 1
+                                           ? interpolated_poses.at(i + 1).position
+                                           : end_pose.position);
+    interpolated_poses.at(i).orientation = autoware_utils::create_quaternion_from_yaw(yaw);
   }
 
   return interpolated_poses;
@@ -384,7 +386,7 @@ Pose getUnshiftedEgoPose(const Pose & ego_pose, const ShiftedPath & prev_path)
   auto unshifted_pose =
     autoware::motion_utils::calcInterpolatedPoint(prev_path.path, ego_pose).point.pose;
 
-  unshifted_pose = autoware::universe_utils::calcOffsetPose(
+  unshifted_pose = autoware_utils::calc_offset_pose(
     unshifted_pose, 0.0, -prev_path.shift_length.at(closest_idx), 0.0);
   unshifted_pose.orientation = ego_pose.orientation;
 
@@ -469,6 +471,14 @@ BehaviorModuleOutput getReferencePath(
   reference_path = getCenterLinePath(
     *route_handler, current_lanes_with_backward_margin, no_shift_pose, backward_length,
     p.forward_path_length, p);
+
+  if (reference_path.points.empty()) {
+    auto clock{rclcpp::Clock{RCL_ROS_TIME}};
+    RCLCPP_WARN_THROTTLE(
+      rclcpp::get_logger("path_utils"), clock, 5000, "Empty reference path detected.");
+    BehaviorModuleOutput output;
+    return output;
+  }
 
   // clip backward length
   // NOTE: In order to keep backward_path_length at least, resampling interval is added to the

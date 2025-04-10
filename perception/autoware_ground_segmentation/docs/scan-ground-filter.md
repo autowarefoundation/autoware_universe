@@ -8,14 +8,16 @@ The purpose of this node is that remove the ground points from the input pointcl
 
 This algorithm works by following steps,
 
-1. Divide whole pointclouds into groups by horizontal angle and sort by xy-distance.
-2. Divide sorted pointclouds of each ray into grids
-3. Check the xy distance to previous pointcloud, if the distance is large and previous pointcloud is "no ground" and the height level of current point greater than previous point, the current pointcloud is classified as no ground.
-4. Check vertical angle of the point compared with previous ground grid
-5. Check the height of the point compared with predicted ground level
-6. If vertical angle is greater than local_slope_max and related height to predicted ground level is greater than "non ground height threshold", the point is classified as "non ground"
-7. If the vertical angle is in range of [-local_slope_max, local_slope_max] or related height to predicted ground level is smaller than non_ground_height_threshold, the point is classified as "ground"
-8. If the vertical angle is lower than -local_slope_max or the related height to ground level is greater than detection_range_z_max, the point will be classified as out of range
+1. Divide whole pointclouds into groups by azimuth angle (so-called ray)
+2. Sort points by radial distance (xy-distance), on each ray.
+3. Divide pointcloud into grids, on each ray.
+4. Classify the point
+   1. Check radial distance to previous pointcloud, if the distance is large and previous pointcloud is "no ground" and the height level of current point greater than previous point, the current pointcloud is classified as no ground.
+   2. Check vertical angle of the point compared with previous ground grid
+   3. Check the height of the point compared with predicted ground level
+   4. If vertical angle is greater than local_slope_max and related height to predicted ground level is greater than "non ground height threshold", the point is classified as "non ground"
+   5. If the vertical angle is in range of [-local_slope_max, local_slope_max] or related height to predicted ground level is smaller than non_ground_height_threshold, the point is classified as "ground"
+   6. If the vertical angle is lower than -local_slope_max or the related height to ground level is greater than detection_range_z_max, the point will be classified as out of range
 
 ## Inputs / Outputs
 
@@ -35,6 +37,7 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 | --------------------------------- | ------ | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `input_frame`                     | string | "base_link"   | frame id of input pointcloud                                                                                                                                                                                                                                                                                                                                     |
 | `output_frame`                    | string | "base_link"   | frame id of output pointcloud                                                                                                                                                                                                                                                                                                                                    |
+| `has_static_tf_only`              | bool   | false         | Flag to listen TF only once                                                                                                                                                                                                                                                                                                                                      |
 | `global_slope_max_angle_deg`      | double | 8.0           | The global angle to classify as the ground or object [deg].<br/>A large threshold may reduce false positive of high slope road classification but it may lead to increase false negative of non-ground classification, particularly for small objects.                                                                                                           |
 | `local_slope_max_angle_deg`       | double | 10.0          | The local angle to classify as the ground or object [deg] when comparing with adjacent point.<br/>A small value enhance accuracy classification of object with inclined surface. This should be considered together with `split_points_distance_tolerance` value.                                                                                                |
 | `radial_divider_angle_deg`        | double | 1.0           | The angle which divide the whole pointcloud to sliced group [deg]                                                                                                                                                                                                                                                                                                |

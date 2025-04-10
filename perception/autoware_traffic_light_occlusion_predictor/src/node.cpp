@@ -18,10 +18,10 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <autoware/universe_utils/system/stop_watch.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <lanelet2_core/Exceptions.h>
@@ -62,13 +62,13 @@ TrafficLightOcclusionPredictorNode::TrafficLightOcclusionPredictorNode(
 
   // configuration parameters
   config_.azimuth_occlusion_resolution_deg =
-    declare_parameter<double>("azimuth_occlusion_resolution_deg", 0.15);
+    declare_parameter<double>("azimuth_occlusion_resolution_deg");
   config_.elevation_occlusion_resolution_deg =
-    declare_parameter<double>("elevation_occlusion_resolution_deg", 0.08);
-  config_.max_valid_pt_dist = declare_parameter<double>("max_valid_pt_dist", 50.0);
-  config_.max_image_cloud_delay = declare_parameter<double>("max_image_cloud_delay", 1.0);
-  config_.max_wait_t = declare_parameter<double>("max_wait_t", 0.02);
-  config_.max_occlusion_ratio = declare_parameter<int>("max_occlusion_ratio", 50);
+    declare_parameter<double>("elevation_occlusion_resolution_deg");
+  config_.max_valid_pt_dist = declare_parameter<double>("max_valid_pt_dist");
+  config_.max_image_cloud_delay = declare_parameter<double>("max_image_cloud_delay");
+  config_.max_wait_t = declare_parameter<double>("max_wait_t");
+  config_.max_occlusion_ratio = declare_parameter<int>("max_occlusion_ratio");
 
   cloud_occlusion_predictor_ = std::make_shared<CloudOcclusionPredictor>(
     this, config_.max_valid_pt_dist, config_.azimuth_occlusion_resolution_deg,
@@ -117,7 +117,8 @@ void TrafficLightOcclusionPredictorNode::mapCallback(
         continue;
       }
       lanelet::ConstLineString3d string3d = static_cast<lanelet::ConstLineString3d>(lsp);
-      traffic_light_position_map_[lsp.id()] = traffic_light_utils::getTrafficLightCenter(string3d);
+      traffic_light_position_map_[lsp.id()] =
+        autoware::traffic_light_utils::getTrafficLightCenter(string3d);
     }
   }
 }
@@ -166,7 +167,7 @@ void TrafficLightOcclusionPredictorNode::syncCallback(
     out_msg_.signals.push_back(in_signal_msg->signals.at(i));
 
     if (occlusion_ratios[i] >= config_.max_occlusion_ratio) {
-      traffic_light_utils::setSignalUnknown(out_msg_.signals.at(predicted_num + i), 0.0);
+      autoware::traffic_light_utils::setSignalUnknown(out_msg_.signals.at(predicted_num + i), 0.0);
     }
   }
 

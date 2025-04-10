@@ -14,7 +14,10 @@
 
 #include "autoware_raw_vehicle_cmd_converter/pid.hpp"
 
+#include <math.h>
+
 #include <algorithm>
+#include <iostream>
 #include <vector>
 
 namespace autoware::raw_vehicle_cmd_converter
@@ -25,7 +28,7 @@ double PIDController::calculateFB(
   const double current_value, std::vector<double> & pid_contributions, std::vector<double> & errors)
 {
   const double error = target_value - current_value;
-  const bool enable_integration = (std::abs(reset_trigger_value) < 0.01) ? false : true;
+  const bool enable_integration = std::abs(reset_trigger_value) >= 0.01;
   return calculatePID(error, dt, enable_integration, pid_contributions, errors, false);
 }
 
@@ -48,7 +51,7 @@ double PIDController::calculatePID(
   }
   double ret_i = ki_ * error_integral_;
 
-  double error_differential;
+  double error_differential = 0.0;
   if (is_first_time_) {
     error_differential = 0;
     is_first_time_ = false;

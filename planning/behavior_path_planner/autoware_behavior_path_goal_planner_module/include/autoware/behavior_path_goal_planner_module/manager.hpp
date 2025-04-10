@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_GOAL_PLANNER_MODULE__MANAGER_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_GOAL_PLANNER_MODULE__MANAGER_HPP_
 
-#include "autoware/behavior_path_goal_planner_module/goal_planner_module.hpp"
+#include "autoware/behavior_path_goal_planner_module/goal_planner_parameters.hpp"
 #include "autoware/behavior_path_planner_common/interface/scene_module_manager_interface.hpp"
 
 #include <rclcpp/rclcpp.hpp>
@@ -29,6 +29,7 @@ namespace autoware::behavior_path_planner
 
 class GoalPlannerModuleManager : public SceneModuleManagerInterface
 {
+public:
   static GoalPlannerParameters initGoalPlannerParameters(
     rclcpp::Node * node, const std::string & base_ns);
 
@@ -37,12 +38,7 @@ public:
 
   void init(rclcpp::Node * node) override;
 
-  std::unique_ptr<SceneModuleInterface> createNewSceneModuleInstance() override
-  {
-    return std::make_unique<GoalPlannerModule>(
-      name_, *node_, parameters_, rtc_interface_ptr_map_,
-      objects_of_interest_marker_interface_ptr_map_, steering_factor_interface_ptr_);
-  }
+  std::unique_ptr<SceneModuleInterface> createNewSceneModuleInstance() override;
 
   void updateModuleParams(const std::vector<rclcpp::Parameter> & parameters) override;
 

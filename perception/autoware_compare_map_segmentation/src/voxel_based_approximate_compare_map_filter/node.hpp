@@ -15,15 +15,17 @@
 #ifndef VOXEL_BASED_APPROXIMATE_COMPARE_MAP_FILTER__NODE_HPP_  // NOLINT
 #define VOXEL_BASED_APPROXIMATE_COMPARE_MAP_FILTER__NODE_HPP_  // NOLINT
 
-#include "../voxel_grid_map_loader/voxel_grid_map_loader.hpp"
+#include "autoware/compare_map_segmentation/voxel_grid_map_loader.hpp"
 #include "autoware/pointcloud_preprocessor/filter.hpp"
+
+#include <autoware_utils/ros/diagnostics_interface.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/search/pcl_search.h>
 
 #include <memory>
 #include <string>
-#include <vector>
 
 namespace autoware::compare_map_segmentation
 {
@@ -33,8 +35,8 @@ class VoxelBasedApproximateStaticMapLoader : public VoxelGridStaticMapLoader
 public:
   explicit VoxelBasedApproximateStaticMapLoader(
     rclcpp::Node * node, double leaf_size, double downsize_ratio_z_axis,
-    std::string * tf_map_input_frame, std::mutex * mutex)
-  : VoxelGridStaticMapLoader(node, leaf_size, downsize_ratio_z_axis, tf_map_input_frame, mutex)
+    std::string * tf_map_input_frame)
+  : VoxelGridStaticMapLoader(node, leaf_size, downsize_ratio_z_axis, tf_map_input_frame)
   {
     RCLCPP_INFO(logger_, "VoxelBasedApproximateStaticMapLoader initialized.\n");
   }
@@ -46,10 +48,9 @@ class VoxelBasedApproximateDynamicMapLoader : public VoxelGridDynamicMapLoader
 public:
   VoxelBasedApproximateDynamicMapLoader(
     rclcpp::Node * node, double leaf_size, double downsize_ratio_z_axis,
-    std::string * tf_map_input_frame, std::mutex * mutex,
-    rclcpp::CallbackGroup::SharedPtr main_callback_group)
+    std::string * tf_map_input_frame, rclcpp::CallbackGroup::SharedPtr main_callback_group)
   : VoxelGridDynamicMapLoader(
-      node, leaf_size, downsize_ratio_z_axis, tf_map_input_frame, mutex, main_callback_group)
+      node, leaf_size, downsize_ratio_z_axis, tf_map_input_frame, main_callback_group)
   {
     RCLCPP_INFO(logger_, "VoxelBasedApproximateDynamicMapLoader initialized.\n");
   }
@@ -60,12 +61,16 @@ class VoxelBasedApproximateCompareMapFilterComponent
 : public autoware::pointcloud_preprocessor::Filter
 {
 protected:
-  virtual void filter(
-    const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output);
+  void filter(
+    const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
 
 private:
   double distance_threshold_;
   std::unique_ptr<VoxelGridMapLoader> voxel_based_approximate_map_loader_;
+
+  // diagnostics
+  diagnostic_updater::Updater diagnostic_updater_;
+  void checkStatus(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
 public:
   PCL_MAKE_ALIGNED_OPERATOR_NEW

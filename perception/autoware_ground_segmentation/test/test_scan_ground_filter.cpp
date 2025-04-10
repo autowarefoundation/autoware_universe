@@ -20,6 +20,9 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
+#include <vector>
+
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
@@ -122,6 +125,8 @@ protected:
     parameters.emplace_back(
       rclcpp::Parameter("use_recheck_ground_cluster", use_recheck_ground_cluster_));
     parameters.emplace_back(rclcpp::Parameter("use_lowest_point", use_lowest_point_));
+    parameters.emplace_back(
+      rclcpp::Parameter("publish_processing_time_detail", publish_processing_time_detail_));
 
     options.parameter_overrides(parameters);
 
@@ -200,6 +205,7 @@ public:
     radial_divider_angle_deg_ = params["radial_divider_angle_deg"].as<float>();
     use_recheck_ground_cluster_ = params["use_recheck_ground_cluster"].as<bool>();
     use_lowest_point_ = params["use_lowest_point"].as<bool>();
+    publish_processing_time_detail_ = params["publish_processing_time_detail"].as<bool>();
   }
 
   float global_slope_max_angle_deg_ = 0.0;
@@ -218,6 +224,7 @@ public:
   float radial_divider_angle_deg_;
   bool use_recheck_ground_cluster_;
   bool use_lowest_point_;
+  bool publish_processing_time_detail_;
 };
 
 TEST_F(ScanGroundFilterTest, TestCase1)

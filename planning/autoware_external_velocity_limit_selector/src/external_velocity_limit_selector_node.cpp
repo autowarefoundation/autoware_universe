@@ -14,12 +14,11 @@
 
 #include "autoware/external_velocity_limit_selector/external_velocity_limit_selector_node.hpp"
 
-#include <deque>
 #include <memory>
+#include <ostream>
 #include <string>
 #include <unordered_map>
 #include <utility>
-#include <vector>
 
 namespace autoware::external_velocity_limit_selector
 {
@@ -28,23 +27,28 @@ namespace
 {
 VelocityLimit getHardestLimit(
   const VelocityLimitTable & velocity_limits,
-  const ExternalVelocityLimitSelectorNode::NodeParam & node_param)
+  const ::external_velocity_limit_selector::Params & node_param)
 {
   VelocityLimit hardest_limit{};
-  hardest_limit.max_velocity = node_param.max_velocity;
+  hardest_limit.max_velocity = node_param.max_vel;
 
   VelocityLimitConstraints normal_constraints{};
-  normal_constraints.min_acceleration = node_param.normal_min_acc;
-  normal_constraints.min_jerk = node_param.normal_min_jerk;
-  normal_constraints.max_jerk = node_param.normal_max_jerk;
+  normal_constraints.max_acceleration = node_param.normal.max_acc;
+  normal_constraints.min_acceleration = node_param.normal.min_acc;
+  normal_constraints.min_jerk = node_param.normal.min_jerk;
+  normal_constraints.max_jerk = node_param.normal.max_jerk;
 
-  double hardest_max_velocity = node_param.max_velocity;
+  double hardest_max_velocity = node_param.max_vel;
   double hardest_max_jerk = 0.0;
+  double hardest_max_acceleration = 0.0;
+  std::string hardest_max_acceleration_key;
+  size_t constraint_num = 0;
+  size_t acceleration_constraint_num = 0;
 
   for (const auto & limit : velocity_limits) {
     // guard nan, inf
-    const auto max_velocity = std::isfinite(limit.second.max_velocity) ? limit.second.max_velocity
-                                                                       : node_param.max_velocity;
+    const auto max_velocity =
+      std::isfinite(limit.second.max_velocity) ? limit.second.max_velocity : node_param.max_vel;
 
     // find hardest max velocity
     if (max_velocity < hardest_max_velocity) {
@@ -59,11 +63,32 @@ VelocityLimit getHardestLimit(
         ? limit.second.constraints
         : normal_constraints;
 
+    if (limit.second.use_constraints) {
+      constraint_num++;
+      if (limit.second.constraints.max_acceleration > normal_constraints.max_acceleration) {
+        acceleration_constraint_num++;
+        hardest_max_acceleration_key = limit.first;
+      }
+    }
+
+    if (hardest_max_acceleration < limit.second.constraints.max_acceleration) {
+      hardest_max_acceleration_key = limit.first;
+      hardest_max_acceleration = limit.second.constraints.max_acceleration;
+    }
+
     // find hardest jerk
     if (hardest_max_jerk < constraints.max_jerk) {
       hardest_limit.constraints = constraints;
       hardest_limit.use_constraints = true;
       hardest_max_jerk = constraints.max_jerk;
+    }
+  }
+
+  if (constraint_num > 0 && constraint_num == acceleration_constraint_num) {
+    if (velocity_limits.find(hardest_max_acceleration_key) != velocity_limits.end()) {
+      const auto constraints = velocity_limits.at(hardest_max_acceleration_key).constraints;
+      hardest_limit.constraints = constraints;
+      hardest_limit.use_constraints = true;
     }
   }
 
@@ -113,18 +138,8 @@ ExternalVelocityLimitSelectorNode::ExternalVelocityLimitSelectorNode(
   pub_debug_string_ = this->create_publisher<StringStamped>("output/debug", 1);
 
   // Params
-  {
-    auto & p = node_param_;
-    p.max_velocity = this->declare_parameter<double>("max_vel");
-    p.normal_min_acc = this->declare_parameter<double>("normal.min_acc");
-    p.normal_max_acc = this->declare_parameter<double>("normal.max_acc");
-    p.normal_min_jerk = this->declare_parameter<double>("normal.min_jerk");
-    p.normal_max_jerk = this->declare_parameter<double>("normal.max_jerk");
-    p.limit_min_acc = this->declare_parameter<double>("limit.min_acc");
-    p.limit_max_acc = this->declare_parameter<double>("limit.max_acc");
-    p.limit_min_jerk = this->declare_parameter<double>("limit.min_jerk");
-    p.limit_max_jerk = this->declare_parameter<double>("limit.max_jerk");
-  }
+  param_listener_ = std::make_shared<::external_velocity_limit_selector::ParamListener>(
+    this->get_node_parameters_interface());
 }
 
 void ExternalVelocityLimitSelectorNode::onVelocityLimitFromAPI(
@@ -223,10 +238,12 @@ void ExternalVelocityLimitSelectorNode::clearVelocityLimit(const std::string & s
 
 void ExternalVelocityLimitSelectorNode::updateVelocityLimit()
 {
+  const auto param = param_listener_->get_params();
+
   if (velocity_limit_table_.empty()) {
     VelocityLimit default_velocity_limit{};
     default_velocity_limit.stamp = this->now();
-    default_velocity_limit.max_velocity = node_param_.max_velocity;
+    default_velocity_limit.max_velocity = param.max_vel;
 
     hardest_limit_ = default_velocity_limit;
 
@@ -237,7 +254,7 @@ void ExternalVelocityLimitSelectorNode::updateVelocityLimit()
     return;
   }
 
-  hardest_limit_ = getHardestLimit(velocity_limit_table_, node_param_);
+  hardest_limit_ = getHardestLimit(velocity_limit_table_, param);
 }
 }  // namespace autoware::external_velocity_limit_selector
 

@@ -16,16 +16,18 @@
 
 #include <autoware/motion_utils/marker/marker_helper.hpp>
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
-#include <autoware/universe_utils/math/constants.hpp>
-#include <autoware/universe_utils/ros/marker_helper.hpp>
+#include <autoware_utils/math/constants.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
+
+#include <vector>
 using autoware::motion_utils::createStopVirtualWallMarker;
-using autoware::universe_utils::appendMarkerArray;
-using autoware::universe_utils::createDefaultMarker;
-using autoware::universe_utils::createMarkerColor;
-using autoware::universe_utils::createMarkerOrientation;
-using autoware::universe_utils::createMarkerPosition;
-using autoware::universe_utils::createMarkerScale;
-using autoware::universe_utils::toMsg;
+using autoware_utils::append_marker_array;
+using autoware_utils::create_default_marker;
+using autoware_utils::create_marker_color;
+using autoware_utils::create_marker_orientation;
+using autoware_utils::create_marker_position;
+using autoware_utils::create_marker_scale;
+using autoware_utils::to_msg;
 using namespace std::literals::string_literals;
 
 namespace autoware::behavior_velocity_planner
@@ -62,11 +64,11 @@ visualization_msgs::msg::MarkerArray VirtualTrafficLightModule::createDebugMarke
 
   // instrument_id
   {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", now, "instrument_id", module_id_, visualization_msgs::msg::Marker::TEXT_VIEW_FACING,
-      createMarkerScale(0.0, 0.0, 1.0), createMarkerColor(1.0, 1.0, 1.0, 0.999));
+      create_marker_scale(0.0, 0.0, 1.0), create_marker_color(1.0, 1.0, 1.0, 0.999));
 
-    marker.pose.position = toMsg(m.instrument_center);
+    marker.pose.position = to_msg(m.instrument_center);
     marker.text = m.instrument_id;
 
     debug_marker_array.markers.push_back(marker);
@@ -74,23 +76,23 @@ visualization_msgs::msg::MarkerArray VirtualTrafficLightModule::createDebugMarke
 
   // instrument_center
   {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", now, "instrument_center", module_id_, visualization_msgs::msg::Marker::SPHERE,
-      createMarkerScale(0.3, 0.3, 0.3), createMarkerColor(1.0, 0.0, 0.0, 0.999));
+      create_marker_scale(0.3, 0.3, 0.3), create_marker_color(1.0, 0.0, 0.0, 0.999));
 
-    marker.pose.position = toMsg(m.instrument_center);
+    marker.pose.position = to_msg(m.instrument_center);
 
     debug_marker_array.markers.push_back(marker);
   }
 
   // stop_line
   if (m.stop_line) {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", now, "stop_line", module_id_, visualization_msgs::msg::Marker::LINE_STRIP,
-      createMarkerScale(0.3, 0.0, 0.0), createMarkerColor(1.0, 1.0, 1.0, 0.999));
+      create_marker_scale(0.3, 0.0, 0.0), create_marker_color(1.0, 1.0, 1.0, 0.999));
 
     for (const auto & p : *m.stop_line) {
-      marker.points.push_back(toMsg(p));
+      marker.points.push_back(to_msg(p));
     }
 
     debug_marker_array.markers.push_back(marker);
@@ -98,12 +100,12 @@ visualization_msgs::msg::MarkerArray VirtualTrafficLightModule::createDebugMarke
 
   // start_line
   {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", now, "start_line", module_id_, visualization_msgs::msg::Marker::LINE_STRIP,
-      createMarkerScale(0.3, 0.0, 0.0), createMarkerColor(0.0, 1.0, 0.0, 0.999));
+      create_marker_scale(0.3, 0.0, 0.0), create_marker_color(0.0, 1.0, 0.0, 0.999));
 
     for (const auto & p : m.start_line) {
-      marker.points.push_back(toMsg(p));
+      marker.points.push_back(to_msg(p));
     }
 
     debug_marker_array.markers.push_back(marker);
@@ -111,14 +113,14 @@ visualization_msgs::msg::MarkerArray VirtualTrafficLightModule::createDebugMarke
 
   // end_lines
   {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", now, "end_lines", module_id_, visualization_msgs::msg::Marker::LINE_LIST,
-      createMarkerScale(0.3, 0.0, 0.0), createMarkerColor(0.0, 1.0, 1.0, 0.999));
+      create_marker_scale(0.3, 0.0, 0.0), create_marker_color(0.0, 1.0, 1.0, 0.999));
 
     for (const auto & line : m.end_lines) {
       for (size_t i = 1; i < line.size(); ++i) {
-        marker.points.push_back(toMsg(line.at(i - 1)));
-        marker.points.push_back(toMsg(line.at(i)));
+        marker.points.push_back(to_msg(line.at(i - 1)));
+        marker.points.push_back(to_msg(line.at(i)));
       }
     }
 

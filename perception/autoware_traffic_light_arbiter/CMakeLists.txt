@@ -9,8 +9,15 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/signal_match_validator.cpp
 )
 
-rclcpp_components_register_nodes(${PROJECT_NAME}
-  "autoware::TrafficLightArbiter"
+rclcpp_components_register_node(${PROJECT_NAME}
+  PLUGIN "autoware::TrafficLightArbiter"
+  EXECUTABLE traffic_light_arbiter_node
 )
+
+if(BUILD_TESTING)
+  ament_auto_add_gtest(${PROJECT_NAME}_test
+    test/test_node.cpp
+  )
+endif()
 
 ament_auto_package(INSTALL_TO_SHARE launch config)

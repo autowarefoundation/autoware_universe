@@ -83,8 +83,8 @@ __global__ void generateBoxes3D_kernel(
   det_boxes3d[point_idx].y =
     box_output[point_idx + num_proposals] * num_point_values * voxel_size_y + min_y_range;
   det_boxes3d[point_idx].z = box_output[point_idx + 2 * num_proposals];
-  det_boxes3d[point_idx].width = expf(box_output[point_idx + 3 * num_proposals]);
-  det_boxes3d[point_idx].length = expf(box_output[point_idx + 4 * num_proposals]);
+  det_boxes3d[point_idx].length = expf(box_output[point_idx + 3 * num_proposals]);
+  det_boxes3d[point_idx].width = expf(box_output[point_idx + 4 * num_proposals]);
   det_boxes3d[point_idx].height = expf(box_output[point_idx + 5 * num_proposals]);
   det_boxes3d[point_idx].yaw =
     atan2f(dir_cls_output[point_idx], dir_cls_output[point_idx + num_proposals]);

@@ -170,7 +170,8 @@ using DecisionResult = std::variant<
   FullyPrioritized              //! only detect vehicles violating traffic rules
   >;
 
-std::string formatDecisionResult(const DecisionResult & decision_result);
+std::string formatDecisionResult(
+  const DecisionResult & decision_result, const bool int_activated, const bool int_occ_activated);
 
 }  // namespace autoware::behavior_velocity_planner
 

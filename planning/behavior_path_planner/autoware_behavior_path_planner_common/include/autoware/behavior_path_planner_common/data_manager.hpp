@@ -23,10 +23,12 @@
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/Forward.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
-#include <rclcpp/rclcpp/clock.hpp>
-#include <rclcpp/rclcpp/time.hpp>
+#include <rclcpp/clock.hpp>
+#include <rclcpp/time.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
+#include <autoware_internal_planning_msgs/msg/detail/velocity_limit__struct.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/traffic_light_group_array.hpp>
 #include <autoware_planning_msgs/msg/pose_with_uuid_stamped.hpp>
@@ -37,9 +39,7 @@
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <nav_msgs/msg/occupancy_grid.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <tier4_planning_msgs/msg/detail/velocity_limit__struct.hpp>
 #include <tier4_planning_msgs/msg/lateral_offset.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <limits>
 #include <map>
@@ -52,6 +52,7 @@ namespace autoware::behavior_path_planner
 {
 using autoware::route_handler::RouteHandler;
 using autoware_adapi_v1_msgs::msg::OperationModeState;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_perception_msgs::msg::TrafficLightGroup;
@@ -63,10 +64,9 @@ using geometry_msgs::msg::PoseStamped;
 using nav_msgs::msg::OccupancyGrid;
 using nav_msgs::msg::Odometry;
 using tier4_planning_msgs::msg::LateralOffset;
-using tier4_planning_msgs::msg::PathWithLaneId;
 using PlanResult = PathWithLaneId::SharedPtr;
+using autoware_internal_planning_msgs::msg::VelocityLimit;
 using lanelet::TrafficLight;
-using tier4_planning_msgs::msg::VelocityLimit;
 using unique_identifier_msgs::msg::UUID;
 
 struct TrafficSignalStamped
@@ -102,7 +102,7 @@ struct DrivableAreaInfo
   struct Obstacle
   {
     geometry_msgs::msg::Pose pose;
-    autoware::universe_utils::Polygon2d poly;
+    autoware_utils::Polygon2d poly;
     bool is_left{true};
   };
   std::vector<DrivableLanes> drivable_lanes{};
@@ -146,6 +146,17 @@ struct CandidateOutput
   double start_distance_to_path_change{std::numeric_limits<double>::lowest()};
   double finish_distance_to_path_change{std::numeric_limits<double>::lowest()};
 };
+
+/**
+ * @brief Adds detail text to stop/slow/dead_pose virtual walls.
+ */
+struct PoseWithDetail
+{
+  Pose pose;
+  std::string detail;
+  explicit PoseWithDetail(const Pose & p, const std::string & d = "") : pose(p), detail(d) {}
+};
+using PoseWithDetailOpt = std::optional<PoseWithDetail>;
 
 struct PlannerData
 {

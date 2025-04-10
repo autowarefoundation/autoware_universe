@@ -1,10 +1,14 @@
+# This file is automatically synced from:
+# https://github.com/autowarefoundation/sync-file-templates
+# To make changes, update the source repository and follow the guidelines in its README.
+
 name: comment-on-pr
 on:
   pull_request_target:
 
 jobs:
   comment-on-pr:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       pull-requests: write
     steps:

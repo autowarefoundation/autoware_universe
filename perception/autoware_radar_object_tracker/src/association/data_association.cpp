@@ -22,6 +22,7 @@
 #include <fstream>
 #include <list>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -52,9 +53,8 @@ double getFormedYawAngle(
   const geometry_msgs::msg::Quaternion & measurement_quat,
   const geometry_msgs::msg::Quaternion & tracker_quat, const bool distinguish_front_or_back = true)
 {
-  const double measurement_yaw =
-    autoware::universe_utils::normalizeRadian(tf2::getYaw(measurement_quat));
-  const double tracker_yaw = autoware::universe_utils::normalizeRadian(tf2::getYaw(tracker_quat));
+  const double measurement_yaw = autoware_utils::normalize_radian(tf2::getYaw(measurement_quat));
+  const double tracker_yaw = autoware_utils::normalize_radian(tf2::getYaw(tracker_quat));
   const double angle_range = distinguish_front_or_back ? M_PI : M_PI_2;
   const double angle_step = distinguish_front_or_back ? 2.0 * M_PI : M_PI;
   // Fixed measurement_yaw to be in the range of +-90 or 180 degrees of X_t(IDX::YAW)
@@ -176,7 +176,7 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
       const autoware_perception_msgs::msg::DetectedObject & measurement_object =
         measurements.objects.at(measurement_idx);
       const std::uint8_t measurement_label =
-        object_recognition_utils::getHighestProbLabel(measurement_object.classification);
+        autoware::object_recognition_utils::getHighestProbLabel(measurement_object.classification);
       // Create a JSON object to hold the log data for this pair
       nlohmann::json pair_log_data;
 
@@ -203,7 +203,7 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
       double score = 0.0;
       if (can_assign_matrix_(tracker_label, measurement_label)) {
         const double max_dist = max_dist_matrix_(tracker_label, measurement_label);
-        const double dist = autoware::universe_utils::calcDistance2d(
+        const double dist = autoware_utils::calc_distance2d(
           measurement_object.kinematics.pose_with_covariance.pose.position,
           tracked_object.kinematics.pose_with_covariance.pose.position);
 
@@ -221,7 +221,7 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
         if (passed_gate) {
           const double max_area = max_area_matrix_(tracker_label, measurement_label);
           const double min_area = min_area_matrix_(tracker_label, measurement_label);
-          const double area = autoware::universe_utils::getArea(measurement_object.shape);
+          const double area = autoware_utils::get_area(measurement_object.shape);
           if (area < min_area || max_area < area) {
             passed_gate = false;
           }
@@ -259,7 +259,7 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
         if (passed_gate) {
           const double min_iou = min_iou_matrix_(tracker_label, measurement_label);
           const double min_union_iou_area = 1e-2;
-          const double iou = object_recognition_utils::get2dIoU(
+          const double iou = autoware::object_recognition_utils::get2dIoU(
             measurement_object, tracked_object, min_union_iou_area);
           if (iou < min_iou) {
             passed_gate = false;

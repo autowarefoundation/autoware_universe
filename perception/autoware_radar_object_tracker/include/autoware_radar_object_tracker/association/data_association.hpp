@@ -21,9 +21,9 @@
 
 #define EIGEN_MPL2_ONLY
 
+#include "autoware/object_recognition_utils/object_recognition_utils.hpp"
 #include "autoware_radar_object_tracker/association/solver/gnn_solver.hpp"
 #include "autoware_radar_object_tracker/tracker/tracker.hpp"
-#include "object_recognition_utils/object_recognition_utils.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>

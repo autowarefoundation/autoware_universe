@@ -14,6 +14,12 @@
 
 #include "utils.hpp"
 
+#include <algorithm>
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
+
 namespace reaction_analyzer
 {
 SubscriberMessageType get_subscriber_message_type(const std::string & message_type)
@@ -136,8 +142,8 @@ visualization_msgs::msg::Marker create_polyhedron_marker(const EntityParams & pa
 
   tf2::Quaternion quaternion;
   quaternion.setRPY(
-    autoware::universe_utils::deg2rad(params.roll), autoware::universe_utils::deg2rad(params.pitch),
-    autoware::universe_utils::deg2rad(params.yaw));
+    autoware_utils::deg2rad(params.roll), autoware_utils::deg2rad(params.pitch),
+    autoware_utils::deg2rad(params.yaw));
   marker.pose.orientation = tf2::toMsg(quaternion);
 
   marker.scale.x = 0.1;  // Line width
@@ -224,7 +230,7 @@ size_t get_index_after_distance(
   size_t target_id = curr_id;
   for (size_t traj_id = curr_id + 1; traj_id < traj.points.size(); ++traj_id) {
     const double current_distance =
-      autoware::universe_utils::calcDistance3d(traj.points.at(traj_id), curr_p);
+      autoware_utils::calc_distance3d(traj.points.at(traj_id), curr_p);
     if (current_distance >= distance) {
       break;
     }
@@ -286,9 +292,8 @@ geometry_msgs::msg::Pose create_entity_pose(const EntityParams & entity_params)
 
   tf2::Quaternion entity_q_orientation;
   entity_q_orientation.setRPY(
-    autoware::universe_utils::deg2rad(entity_params.roll),
-    autoware::universe_utils::deg2rad(entity_params.pitch),
-    autoware::universe_utils::deg2rad(entity_params.yaw));
+    autoware_utils::deg2rad(entity_params.roll), autoware_utils::deg2rad(entity_params.pitch),
+    autoware_utils::deg2rad(entity_params.yaw));
   entity_pose.orientation = tf2::toMsg(entity_q_orientation);
   return entity_pose;
 }
@@ -302,9 +307,8 @@ geometry_msgs::msg::Pose pose_params_to_pose(const PoseParams & pose_params)
 
   tf2::Quaternion pose_q_orientation;
   pose_q_orientation.setRPY(
-    autoware::universe_utils::deg2rad(pose_params.roll),
-    autoware::universe_utils::deg2rad(pose_params.pitch),
-    autoware::universe_utils::deg2rad(pose_params.yaw));
+    autoware_utils::deg2rad(pose_params.roll), autoware_utils::deg2rad(pose_params.pitch),
+    autoware_utils::deg2rad(pose_params.yaw));
   pose.orientation = tf2::toMsg(pose_q_orientation);
   return pose;
 }
@@ -316,9 +320,8 @@ PointCloud2::SharedPtr create_entity_pointcloud_ptr(
   tf2::Quaternion entity_q_orientation;
 
   entity_q_orientation.setRPY(
-    autoware::universe_utils::deg2rad(entity_params.roll),
-    autoware::universe_utils::deg2rad(entity_params.pitch),
-    autoware::universe_utils::deg2rad(entity_params.yaw));
+    autoware_utils::deg2rad(entity_params.roll), autoware_utils::deg2rad(entity_params.pitch),
+    autoware_utils::deg2rad(entity_params.yaw));
   tf2::Transform tf(entity_q_orientation);
   const auto origin = tf2::Vector3(entity_params.x, entity_params.y, entity_params.z);
   tf.setOrigin(origin);
@@ -395,7 +398,7 @@ bool search_pointcloud_near_pose(
   return std::any_of(
     pcl_pointcloud.points.begin(), pcl_pointcloud.points.end(),
     [pose, search_radius](const auto & point) {
-      return autoware::universe_utils::calcDistance3d(pose.position, point) <= search_radius;
+      return autoware_utils::calc_distance3d(pose.position, point) <= search_radius;
     });
 }
 
@@ -406,7 +409,7 @@ bool search_predicted_objects_near_pose(
   return std::any_of(
     predicted_objects.objects.begin(), predicted_objects.objects.end(),
     [pose, search_radius](const PredictedObject & object) {
-      return autoware::universe_utils::calcDistance3d(
+      return autoware_utils::calc_distance3d(
                pose.position, object.kinematics.initial_pose_with_covariance.pose.position) <=
              search_radius;
     });
@@ -420,7 +423,7 @@ bool search_detected_objects_near_pose(
   return std::any_of(
     detected_objects.objects.begin(), detected_objects.objects.end(),
     [pose, search_radius](const DetectedObject & object) {
-      return autoware::universe_utils::calcDistance3d(
+      return autoware_utils::calc_distance3d(
                pose.position, object.kinematics.pose_with_covariance.pose.position) <=
              search_radius;
     });
@@ -433,7 +436,7 @@ bool search_tracked_objects_near_pose(
   return std::any_of(
     tracked_objects.objects.begin(), tracked_objects.objects.end(),
     [pose, search_radius](const TrackedObject & object) {
-      return autoware::universe_utils::calcDistance3d(
+      return autoware_utils::calc_distance3d(
                pose.position, object.kinematics.pose_with_covariance.pose.position) <=
              search_radius;
     });

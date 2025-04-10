@@ -1,4 +1,4 @@
-// Copyright 2021 Tier IV, Inc.
+// Copyright 2024 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,9 +15,12 @@
 #include "autoware/probabilistic_occupancy_grid_map/costmap_2d/occupancy_grid_map_fixed.hpp"
 
 #include "autoware/probabilistic_occupancy_grid_map/cost_value/cost_value.hpp"
+#include "autoware/probabilistic_occupancy_grid_map/costmap_2d/occupancy_grid_map_fixed_kernel.hpp"
 #include "autoware/probabilistic_occupancy_grid_map/utils/utils.hpp"
+#include "autoware/probabilistic_occupancy_grid_map/utils/utils_kernel.hpp"
 
-#include <autoware/universe_utils/math/unit_conversion.hpp>
+#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 #include <grid_map_costmap_2d/grid_map_costmap_2d.hpp>
 #include <pcl_ros/transforms.hpp>
 
@@ -41,9 +44,24 @@ namespace costmap_2d
 using sensor_msgs::PointCloud2ConstIterator;
 
 OccupancyGridMapFixedBlindSpot::OccupancyGridMapFixedBlindSpot(
-  const unsigned int cells_size_x, const unsigned int cells_size_y, const float resolution)
-: OccupancyGridMapInterface(cells_size_x, cells_size_y, resolution)
+  const bool use_cuda, const unsigned int cells_size_x, const unsigned int cells_size_y,
+  const float resolution)
+: OccupancyGridMapInterface(use_cuda, cells_size_x, cells_size_y, resolution)
 {
+  if (use_cuda_) {
+    const size_t angle_bin_size =
+      ((max_angle_ - min_angle_) * angle_increment_inv_) + size_t(1 /*margin*/);
+
+    const auto num_cells_x = this->getSizeInCellsX();
+    const auto num_cells_y = this->getSizeInCellsY();
+    const std::size_t range_bin_size =
+      static_cast<std::size_t>(std::sqrt(2) * std::max(num_cells_x, num_cells_y) / 2.0) + 1;
+
+    raw_points_tensor_ =
+      autoware::cuda_utils::make_unique<std::uint64_t[]>(2 * angle_bin_size * range_bin_size);
+    obstacle_points_tensor_ =
+      autoware::cuda_utils::make_unique<std::uint64_t[]>(2 * angle_bin_size * range_bin_size);
+  }
 }
 
 /**
@@ -55,7 +73,7 @@ OccupancyGridMapFixedBlindSpot::OccupancyGridMapFixedBlindSpot(
  * @param scan_origin manually chosen grid map origin frame
  */
 void OccupancyGridMapFixedBlindSpot::updateWithPointCloud(
-  const PointCloud2 & raw_pointcloud, const PointCloud2 & obstacle_pointcloud,
+  const CudaPointCloud2 & raw_pointcloud, const CudaPointCloud2 & obstacle_pointcloud,
   const Pose & robot_pose, const Pose & scan_origin)
 {
   const size_t angle_bin_size =
@@ -69,189 +87,75 @@ void OccupancyGridMapFixedBlindSpot::updateWithPointCloud(
   // Transform Matrix from map frame to scan frame
   mat_scan_ = utils::getTransformMatrix(scan2map_pose);
 
-  if (!offset_initialized_) {
-    setFieldOffsets(raw_pointcloud, obstacle_pointcloud);
-  }
+  const auto map_res = this->getResolution();
+  const auto num_cells_x = this->getSizeInCellsX();
+  const auto num_cells_y = this->getSizeInCellsY();
+  const std::size_t range_bin_size =
+    static_cast<std::size_t>(std::sqrt(2) * std::max(num_cells_x, num_cells_y) / 2.0) + 1;
 
-  // Create angle bins and sort by distance
-  struct BinInfo
-  {
-    BinInfo() = default;
-    BinInfo(const double _range, const double _wx, const double _wy)
-    : range(_range), wx(_wx), wy(_wy)
-    {
-    }
-    double range{};
-    double wx{};
-    double wy{};
-  };
+  cudaMemsetAsync(
+    raw_points_tensor_.get(), 0xFF, 2 * angle_bin_size * range_bin_size * sizeof(std::int64_t),
+    stream_);
+  cudaMemsetAsync(
+    obstacle_points_tensor_.get(), 0xFF, 2 * angle_bin_size * range_bin_size * sizeof(std::int64_t),
+    stream_);
+  cudaMemsetAsync(
+    device_costmap_.get(), cost_value::NO_INFORMATION,
+    num_cells_x * num_cells_y * sizeof(std::uint8_t), stream_);
 
-  std::vector</*angle bin*/ std::vector<BinInfo>> obstacle_pointcloud_angle_bins(angle_bin_size);
-  std::vector</*angle bin*/ std::vector<BinInfo>> raw_pointcloud_angle_bins(angle_bin_size);
+  Eigen::Matrix3f rotation_map = mat_map_.block<3, 3>(0, 0);
+  Eigen::Vector3f translation_map = mat_map_.block<3, 1>(0, 3);
 
-  const size_t raw_pointcloud_size = raw_pointcloud.width * raw_pointcloud.height;
-  const size_t obstacle_pointcloud_size = obstacle_pointcloud.width * obstacle_pointcloud.height;
+  Eigen::Matrix3f rotation_scan = mat_scan_.block<3, 3>(0, 0);
+  Eigen::Vector3f translation_scan = mat_scan_.block<3, 1>(0, 3);
 
-  // Reserve a certain amount of memory in advance for performance reasons
-  const size_t raw_reserve_size = raw_pointcloud_size / angle_bin_size;
-  const size_t obstacle_reserve_size = obstacle_pointcloud_size / angle_bin_size;
-  for (size_t i = 0; i < angle_bin_size; i++) {
-    raw_pointcloud_angle_bins[i].reserve(raw_reserve_size);
-    obstacle_pointcloud_angle_bins[i].reserve(obstacle_reserve_size);
-  }
+  cudaMemcpyAsync(
+    device_rotation_map_.get(), &rotation_map, sizeof(Eigen::Matrix3f), cudaMemcpyHostToDevice,
+    stream_);
+  cudaMemcpyAsync(
+    device_translation_map_.get(), &translation_map, sizeof(Eigen::Vector3f),
+    cudaMemcpyHostToDevice, stream_);
+  cudaMemcpyAsync(
+    device_rotation_scan_.get(), &rotation_scan, sizeof(Eigen::Matrix3f), cudaMemcpyHostToDevice,
+    stream_);
+  cudaMemcpyAsync(
+    device_translation_scan_.get(), &translation_scan, sizeof(Eigen::Vector3f),
+    cudaMemcpyHostToDevice, stream_);
 
-  // Updated every loop inside transformPointAndCalculate()
-  Eigen::Vector4f pt_map;
-  int angle_bin_index;
-  double range;
+  const std::size_t num_raw_points = raw_pointcloud.width * raw_pointcloud.height;
+  float range_resolution_inv = 1.0 / map_res;
 
-  size_t global_offset = 0;
-  for (size_t i = 0; i < raw_pointcloud_size; ++i) {
-    Eigen::Vector4f pt(
-      *reinterpret_cast<const float *>(&raw_pointcloud.data[global_offset + x_offset_raw_]),
-      *reinterpret_cast<const float *>(&raw_pointcloud.data[global_offset + y_offset_raw_]),
-      *reinterpret_cast<const float *>(&raw_pointcloud.data[global_offset + z_offset_raw_]), 1);
-    global_offset += raw_pointcloud.point_step;
-    if (!isPointValid(pt)) {
-      continue;
-    }
-    transformPointAndCalculate(pt, pt_map, angle_bin_index, range);
+  map_fixed::prepareTensorLaunch(
+    reinterpret_cast<const float *>(raw_pointcloud.data.get()), num_raw_points,
+    raw_pointcloud.point_step / sizeof(float), angle_bin_size, range_bin_size, min_height_,
+    max_height_, min_angle_, angle_increment_inv_, range_resolution_inv, device_rotation_map_.get(),
+    device_translation_map_.get(), device_rotation_scan_.get(), device_translation_scan_.get(),
+    raw_points_tensor_.get(), stream_);
 
-    raw_pointcloud_angle_bins.at(angle_bin_index).emplace_back(range, pt_map[0], pt_map[1]);
-  }
+  const std::size_t num_obstacle_points = obstacle_pointcloud.width * obstacle_pointcloud.height;
 
-  for (auto & raw_pointcloud_angle_bin : raw_pointcloud_angle_bins) {
-    std::sort(raw_pointcloud_angle_bin.begin(), raw_pointcloud_angle_bin.end(), [](auto a, auto b) {
-      return a.range < b.range;
-    });
-  }
+  map_fixed::prepareTensorLaunch(
+    reinterpret_cast<const float *>(obstacle_pointcloud.data.get()), num_obstacle_points,
+    obstacle_pointcloud.point_step / sizeof(float), angle_bin_size, range_bin_size, min_height_,
+    max_height_, min_angle_, angle_increment_inv_, range_resolution_inv, device_rotation_map_.get(),
+    device_translation_map_.get(), device_rotation_scan_.get(), device_translation_scan_.get(),
+    obstacle_points_tensor_.get(), stream_);
 
-  // Create obstacle angle bins and sort points by range
-  global_offset = 0;
-  for (size_t i = 0; i < obstacle_pointcloud_size; ++i) {
-    Eigen::Vector4f pt(
-      *reinterpret_cast<const float *>(
-        &obstacle_pointcloud.data[global_offset + x_offset_obstacle_]),
-      *reinterpret_cast<const float *>(
-        &obstacle_pointcloud.data[global_offset + y_offset_obstacle_]),
-      *reinterpret_cast<const float *>(
-        &obstacle_pointcloud.data[global_offset + z_offset_obstacle_]),
-      1);
-    global_offset += obstacle_pointcloud.point_step;
-    if (!isPointValid(pt)) {
-      continue;
-    }
-    transformPointAndCalculate(pt, pt_map, angle_bin_index, range);
+  map_fixed::fillEmptySpaceLaunch(
+    raw_points_tensor_.get(), angle_bin_size, range_bin_size, range_resolution_inv,
+    scan_origin.position.x, scan_origin.position.y, origin_x_, origin_y_, num_cells_x, num_cells_y,
+    cost_value::FREE_SPACE, device_costmap_.get(), stream_);
 
-    // Ignore obstacle points exceed the range of the raw points
-    if (raw_pointcloud_angle_bins.at(angle_bin_index).empty()) {
-      continue;  // No raw point in this angle bin
-    } else if (range > raw_pointcloud_angle_bins.at(angle_bin_index).back().range) {
-      continue;  // Obstacle point exceeds the range of the raw points
-    }
-    obstacle_pointcloud_angle_bins.at(angle_bin_index).emplace_back(range, pt_map[0], pt_map[1]);
-  }
+  map_fixed::fillUnknownSpaceLaunch(
+    raw_points_tensor_.get(), obstacle_points_tensor_.get(), distance_margin_, angle_bin_size,
+    range_bin_size, range_resolution_inv, scan_origin.position.x, scan_origin.position.y, origin_x_,
+    origin_y_, num_cells_x, num_cells_y, cost_value::FREE_SPACE, cost_value::NO_INFORMATION,
+    device_costmap_.get(), stream_);
 
-  for (auto & obstacle_pointcloud_angle_bin : obstacle_pointcloud_angle_bins) {
-    std::sort(
-      obstacle_pointcloud_angle_bin.begin(), obstacle_pointcloud_angle_bin.end(),
-      [](auto a, auto b) { return a.range < b.range; });
-  }
-
-  // First step: Initialize cells to the final point with freespace
-  for (size_t bin_index = 0; bin_index < obstacle_pointcloud_angle_bins.size(); ++bin_index) {
-    const auto & raw_pointcloud_angle_bin = raw_pointcloud_angle_bins.at(bin_index);
-
-    BinInfo end_distance;
-    if (raw_pointcloud_angle_bin.empty()) {
-      continue;
-    } else {
-      end_distance = raw_pointcloud_angle_bin.back();
-    }
-    raytrace(
-      scan_origin.position.x, scan_origin.position.y, end_distance.wx, end_distance.wy,
-      cost_value::FREE_SPACE);
-  }
-
-  // Second step: Add unknown cell
-  for (size_t bin_index = 0; bin_index < obstacle_pointcloud_angle_bins.size(); ++bin_index) {
-    const auto & obstacle_pointcloud_angle_bin = obstacle_pointcloud_angle_bins.at(bin_index);
-    const auto & raw_pointcloud_angle_bin = raw_pointcloud_angle_bins.at(bin_index);
-    auto raw_distance_iter = raw_pointcloud_angle_bin.begin();
-    for (size_t dist_index = 0; dist_index < obstacle_pointcloud_angle_bin.size(); ++dist_index) {
-      // Calculate next raw point from obstacle point
-      while (raw_distance_iter != raw_pointcloud_angle_bin.end()) {
-        if (
-          raw_distance_iter->range <
-          obstacle_pointcloud_angle_bin.at(dist_index).range + distance_margin_)
-          raw_distance_iter++;
-        else
-          break;
-      }
-
-      // There is no point far than the obstacle point.
-      const bool no_freespace_point = (raw_distance_iter == raw_pointcloud_angle_bin.end());
-
-      if (dist_index + 1 == obstacle_pointcloud_angle_bin.size()) {
-        const auto & source = obstacle_pointcloud_angle_bin.at(dist_index);
-        if (!no_freespace_point) {
-          const auto & target = *raw_distance_iter;
-          raytrace(source.wx, source.wy, target.wx, target.wy, cost_value::NO_INFORMATION);
-          setCellValue(target.wx, target.wy, cost_value::FREE_SPACE);
-        }
-        continue;
-      }
-
-      auto next_obstacle_point_distance = std::abs(
-        obstacle_pointcloud_angle_bin.at(dist_index + 1).range -
-        obstacle_pointcloud_angle_bin.at(dist_index).range);
-      if (next_obstacle_point_distance <= distance_margin_) {
-        continue;
-      } else if (no_freespace_point) {
-        const auto & source = obstacle_pointcloud_angle_bin.at(dist_index);
-        const auto & target = obstacle_pointcloud_angle_bin.at(dist_index + 1);
-        raytrace(source.wx, source.wy, target.wx, target.wy, cost_value::NO_INFORMATION);
-        continue;
-      }
-
-      auto next_raw_distance =
-        std::abs(obstacle_pointcloud_angle_bin.at(dist_index).range - raw_distance_iter->range);
-      if (next_raw_distance < next_obstacle_point_distance) {
-        const auto & source = obstacle_pointcloud_angle_bin.at(dist_index);
-        const auto & target = *raw_distance_iter;
-        raytrace(source.wx, source.wy, target.wx, target.wy, cost_value::NO_INFORMATION);
-        setCellValue(target.wx, target.wy, cost_value::FREE_SPACE);
-        continue;
-      } else {
-        const auto & source = obstacle_pointcloud_angle_bin.at(dist_index);
-        const auto & target = obstacle_pointcloud_angle_bin.at(dist_index + 1);
-        raytrace(source.wx, source.wy, target.wx, target.wy, cost_value::NO_INFORMATION);
-        continue;
-      }
-    }
-  }
-
-  // Third step: Overwrite occupied cell
-  for (const auto & obstacle_pointcloud_angle_bin : obstacle_pointcloud_angle_bins) {
-    for (size_t dist_index = 0; dist_index < obstacle_pointcloud_angle_bin.size(); ++dist_index) {
-      const auto & obstacle_point = obstacle_pointcloud_angle_bin.at(dist_index);
-      setCellValue(obstacle_point.wx, obstacle_point.wy, cost_value::LETHAL_OBSTACLE);
-
-      if (dist_index + 1 == obstacle_pointcloud_angle_bin.size()) {
-        continue;
-      }
-
-      auto next_obstacle_point_distance = std::abs(
-        obstacle_pointcloud_angle_bin.at(dist_index + 1).range -
-        obstacle_pointcloud_angle_bin.at(dist_index).range);
-      if (next_obstacle_point_distance <= distance_margin_) {
-        const auto & source = obstacle_pointcloud_angle_bin.at(dist_index);
-        const auto & target = obstacle_pointcloud_angle_bin.at(dist_index + 1);
-        raytrace(source.wx, source.wy, target.wx, target.wy, cost_value::LETHAL_OBSTACLE);
-        continue;
-      }
-    }
-  }
+  map_fixed::fillObstaclesLaunch(
+    obstacle_points_tensor_.get(), distance_margin_, angle_bin_size, range_bin_size,
+    range_resolution_inv, origin_x_, origin_y_, num_cells_x, num_cells_y,
+    cost_value::LETHAL_OBSTACLE, device_costmap_.get(), stream_);
 }
 
 void OccupancyGridMapFixedBlindSpot::initRosParam(rclcpp::Node & node)

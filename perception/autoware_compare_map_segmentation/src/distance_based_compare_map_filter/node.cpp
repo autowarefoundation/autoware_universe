@@ -14,13 +14,14 @@
 
 #include "node.hpp"
 
-#include "autoware/universe_utils/ros/debug_publisher.hpp"
-#include "autoware/universe_utils/system/stop_watch.hpp"
+#include "autoware_utils/ros/debug_publisher.hpp"
+#include "autoware_utils/system/stop_watch.hpp"
 
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/search/kdtree.h>
 #include <pcl/segmentation/segment_differences.h>
 
+#include <memory>
 #include <vector>
 
 namespace autoware::compare_map_segmentation
@@ -32,8 +33,6 @@ void DistanceBasedStaticMapLoader::onMapCallback(
   pcl::PointCloud<pcl::PointXYZ> map_pcl;
   pcl::fromROSMsg<pcl::PointXYZ>(*map, map_pcl);
   const auto map_pcl_ptr = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(map_pcl);
-
-  (*mutex_ptr_).lock();
   map_ptr_ = map_pcl_ptr;
   *tf_map_input_frame_ = map_ptr_->header.frame_id;
   if (!tree_) {
@@ -44,17 +43,19 @@ void DistanceBasedStaticMapLoader::onMapCallback(
     }
   }
   tree_->setInputCloud(map_ptr_);
-
-  (*mutex_ptr_).unlock();
+  is_initialized_.store(true, std::memory_order_release);
 }
 
 bool DistanceBasedStaticMapLoader::is_close_to_map(
   const pcl::PointXYZ & point, const double distance_threshold)
 {
-  if (map_ptr_ == NULL) {
+  if (!is_initialized_.load(std::memory_order_acquire)) {
     return false;
   }
-  if (tree_ == NULL) {
+  if (map_ptr_ == nullptr) {
+    return false;
+  }
+  if (tree_ == nullptr) {
     return false;
   }
 
@@ -71,39 +72,40 @@ bool DistanceBasedStaticMapLoader::is_close_to_map(
   }
   return true;
 }
-
 bool DistanceBasedDynamicMapLoader::is_close_to_map(
   const pcl::PointXYZ & point, const double distance_threshold)
 {
-  if (current_voxel_grid_dict_.size() == 0) {
-    return false;
+  std::shared_ptr<pcl::search::Search<pcl::PointXYZ>> map_cell_kdtree;
+  {
+    std::lock_guard<std::mutex> lock(dynamic_map_loader_mutex_);
+    if (current_voxel_grid_dict_.size() == 0) {
+      return false;
+    }
+    if (!isFinite(point)) {
+      return false;
+    }
+
+    const int map_grid_index = static_cast<int>(
+      std::floor((point.x - origin_x_) / map_grid_size_x_) +
+      map_grids_x_ * std::floor((point.y - origin_y_) / map_grid_size_y_));
+
+    if (static_cast<size_t>(map_grid_index) >= current_voxel_grid_array_.size()) {
+      return false;
+    }
+    const auto & current_voxel_grid = current_voxel_grid_array_.at(map_grid_index);
+    if (current_voxel_grid == nullptr) {
+      return false;
+    }
+    map_cell_kdtree = current_voxel_grid->map_cell_kdtree;
   }
-  if (!isFinite(point)) {
+
+  std::vector<int> nn_indices(1);
+  std::vector<float> nn_distances(1);
+  if (!map_cell_kdtree->nearestKSearch(point, 1, nn_indices, nn_distances)) {
     return false;
   }
 
-  const int map_grid_index = static_cast<int>(
-    std::floor((point.x - origin_x_) / map_grid_size_x_) +
-    map_grids_x_ * std::floor((point.y - origin_y_) / map_grid_size_y_));
-
-  if (static_cast<size_t>(map_grid_index) >= current_voxel_grid_array_.size()) {
-    return false;
-  }
-  if (current_voxel_grid_array_.at(map_grid_index) != NULL) {
-    if (current_voxel_grid_array_.at(map_grid_index)->map_cell_kdtree == NULL) {
-      return false;
-    }
-    std::vector<int> nn_indices(1);
-    std::vector<float> nn_distances(1);
-    if (!current_voxel_grid_array_.at(map_grid_index)
-           ->map_cell_kdtree->nearestKSearch(point, 1, nn_indices, nn_distances)) {
-      return false;
-    }
-    if (nn_distances[0] <= distance_threshold) {
-      return true;
-    }
-  }
-  return false;
+  return nn_distances[0] <= distance_threshold;
 }
 
 DistanceBasedCompareMapFilterComponent::DistanceBasedCompareMapFilterComponent(
@@ -112,8 +114,8 @@ DistanceBasedCompareMapFilterComponent::DistanceBasedCompareMapFilterComponent(
 {
   // initialize debug tool
   {
-    using autoware::universe_utils::DebugPublisher;
-    using autoware::universe_utils::StopWatch;
+    using autoware_utils::DebugPublisher;
+    using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ = std::make_unique<DebugPublisher>(this, "distance_based_compare_map_filter");
     stop_watch_ptr_->tic("cyclic_time");
@@ -126,10 +128,10 @@ DistanceBasedCompareMapFilterComponent::DistanceBasedCompareMapFilterComponent(
     rclcpp::CallbackGroup::SharedPtr main_callback_group;
     main_callback_group = this->create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
     distance_based_map_loader_ = std::make_unique<DistanceBasedDynamicMapLoader>(
-      this, distance_threshold_, &tf_input_frame_, &mutex_, main_callback_group);
+      this, distance_threshold_, &tf_input_frame_, main_callback_group);
   } else {
-    distance_based_map_loader_ = std::make_unique<DistanceBasedStaticMapLoader>(
-      this, distance_threshold_, &tf_input_frame_, &mutex_);
+    distance_based_map_loader_ =
+      std::make_unique<DistanceBasedStaticMapLoader>(this, distance_threshold_, &tf_input_frame_);
   }
 }
 
@@ -172,9 +174,9 @@ void DistanceBasedCompareMapFilterComponent::filter(
   if (debug_publisher_) {
     const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
     const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
-    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
-    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time_ms", processing_time_ms);
   }
 }

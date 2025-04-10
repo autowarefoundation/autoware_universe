@@ -1,7 +1,11 @@
+# This file is automatically synced from:
+# https://github.com/autowarefoundation/sync-file-templates
+# To make changes, update the source repository and follow the guidelines in its README.
+
 site_name: Autoware Universe Documentation
-site_url: https://autowarefoundation.github.io/autoware.universe
-repo_url: https://github.com/autowarefoundation/autoware.universe
-edit_uri: https://github.com/autowarefoundation/autoware.universe/edit/main/
+site_url: https://autowarefoundation.github.io/autoware_universe
+repo_url: https://github.com/autowarefoundation/autoware_universe
+edit_uri: https://github.com/autowarefoundation/autoware_universe/edit/main/
 docs_dir: .
 copyright: Copyright &copy; 2023 The Autoware Foundation
 
@@ -59,7 +63,9 @@ plugins:
       module_name: mkdocs_macros
   - mkdocs-video
   - same-dir
-  - search
+  # https://squidfunk.github.io/mkdocs-material/plugins/search/#config.separator
+  - search:
+      separator: '[\s\-_,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
 
 markdown_extensions:
   - abbr

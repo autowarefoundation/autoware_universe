@@ -26,12 +26,13 @@
 #include "autoware/behavior_path_start_planner_module/geometric_pull_out.hpp"
 #include "autoware/behavior_path_start_planner_module/pull_out_path.hpp"
 #include "autoware/behavior_path_start_planner_module/shift_pull_out.hpp"
+#include "data_structs.hpp"
 
-#include <autoware/lane_departure_checker/lane_departure_checker.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <lanelet2_core/Forward.h>
 #include <tf2/utils.h>
@@ -51,9 +52,9 @@ using autoware::behavior_path_planner::utils::path_safety_checker::ObjectsFilter
 using autoware::behavior_path_planner::utils::path_safety_checker::PoseWithVelocityStamped;
 using autoware::behavior_path_planner::utils::path_safety_checker::SafetyCheckParams;
 using autoware::behavior_path_planner::utils::path_safety_checker::TargetObjectsOnLane;
-using autoware::lane_departure_checker::LaneDepartureChecker;
 using geometry_msgs::msg::PoseArray;
 using PriorityOrder = std::vector<std::pair<size_t, std::shared_ptr<PullOutPlannerBase>>>;
+using DebugStringMsg = autoware_internal_debug_msgs::msg::StringStamped;
 
 struct PullOutStatus
 {
@@ -70,7 +71,7 @@ struct PullOutStatus
   Pose pull_out_start_pose{};
   bool prev_is_safe_dynamic_objects{false};
   std::shared_ptr<PathWithLaneId> prev_stop_path_after_approval{nullptr};
-  std::optional<Pose> stop_pose{std::nullopt};
+  PoseWithDetailOpt stop_pose{std::nullopt};
   //! record the first time when ego started forward-driving (maybe after backward driving
   //! completion) in AUTONOMOUS operation mode
   std::optional<rclcpp::Time> first_engaged_and_driving_forward_time{std::nullopt};
@@ -89,7 +90,7 @@ public:
     const std::unordered_map<std::string, std::shared_ptr<RTCInterface>> & rtc_interface_ptr_map,
     std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
       objects_of_interest_marker_interface_ptr_map,
-    std::shared_ptr<SteeringFactorInterface> & steering_factor_interface_ptr);
+    const std::shared_ptr<PlanningFactorInterface> planning_factor_interface);
 
   ~StartPlannerModule() override
   {
@@ -148,16 +149,16 @@ public:
   }
   void resetStatus();
 
-  void acceptVisitor(
-    [[maybe_unused]] const std::shared_ptr<SceneModuleVisitor> & visitor) const override
-  {
-  }
+  void acceptVisitor(const std::shared_ptr<SceneModuleVisitor> & visitor) const override;
 
   // Condition to disable simultaneous execution
   bool isDrivingForward() const { return status_.driving_forward; }
   bool isFreespacePlanning() const { return status_.planner_type == PlannerType::FREESPACE; }
 
+  std::string get_planner_evaluation_table() const { return planner_evaluation_table_; }
+
 private:
+  friend class SceneModuleVisitor;
   struct StartPlannerData
   {
     StartPlannerParameters parameters;
@@ -201,18 +202,18 @@ private:
 
   bool requiresDynamicObjectsCollisionDetection() const;
 
-  uint16_t getSteeringFactorDirection(
+  uint16_t getPlanningFactorDirection(
     const autoware::behavior_path_planner::BehaviorModuleOutput & output) const
   {
     switch (output.turn_signal_info.turn_signal.command) {
       case TurnIndicatorsCommand::ENABLE_LEFT:
-        return SteeringFactor::LEFT;
+        return PlanningFactor::SHIFT_LEFT;
 
       case TurnIndicatorsCommand::ENABLE_RIGHT:
-        return SteeringFactor::RIGHT;
+        return PlanningFactor::SHIFT_RIGHT;
 
       default:
-        return SteeringFactor::STRAIGHT;
+        return PlanningFactor::NONE;
     }
   };
 
@@ -229,7 +230,7 @@ private:
   bool receivedNewRoute() const;
 
   bool isModuleRunning() const;
-  bool isCurrentPoseOnMiddleOfTheRoad() const;
+  bool isCurrentPoseOnEgoCenterline() const;
 
   /**
    * @brief Check if the ego vehicle is preventing the rear vehicle from passing through.
@@ -285,6 +286,7 @@ ego pose.
   std::vector<std::shared_ptr<PullOutPlannerBase>> start_planners_;
   PullOutStatus status_;
   mutable StartPlannerDebugData debug_data_;
+  std::string planner_evaluation_table_;
 
   // Keeps track of lanelets that should be ignored when calculating the turnSignalInfo for this
   // module's output. If the ego vehicle is in this lanelet, the calculation is skipped.
@@ -310,8 +312,6 @@ ego pose.
   PathWithLaneId calcBackwardPathFromStartPose() const;
   std::vector<Pose> searchPullOutStartPoseCandidates(
     const PathWithLaneId & back_path_from_start_pose) const;
-
-  std::shared_ptr<LaneDepartureChecker> lane_departure_checker_;
 
   // turn signal
   TurnSignalInfo calcTurnSignalInfo();
@@ -355,6 +355,10 @@ ego pose.
   std::optional<PullOutStatus> planFreespacePath(
     const StartPlannerParameters & parameters,
     const std::shared_ptr<const PlannerData> & planner_data, const PullOutStatus & pull_out_status);
+
+  std::string create_planner_evaluation_table(
+    const std::vector<PlannerDebugData> & planner_debug_data_vector) const;
+  void set_planner_evaluation_table(const std::vector<PlannerDebugData> & debug_data_vector);
 
   void setDebugData();
   void logPullOutStatus(rclcpp::Logger::Level log_level = rclcpp::Logger::Level::Info) const;

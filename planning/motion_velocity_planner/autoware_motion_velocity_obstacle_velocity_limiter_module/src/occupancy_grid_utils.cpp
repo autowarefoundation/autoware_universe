@@ -14,7 +14,7 @@
 
 #include "occupancy_grid_utils.hpp"
 
-#include <autoware_grid_map_utils/polygon_iterator.hpp>
+#include <autoware/grid_map_utils/polygon_iterator.hpp>
 #include <grid_map_core/Polygon.hpp>
 #include <grid_map_core/iterators/GridMapIterator.hpp>
 #include <grid_map_cv/GridMapCvConverter.hpp>

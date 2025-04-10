@@ -14,10 +14,11 @@
 
 #include "occluded_crosswalk.hpp"
 
-#include "autoware/behavior_velocity_crosswalk_module/util.hpp"
-
-#include <autoware_grid_map_utils/polygon_iterator.hpp>
+#include <autoware/grid_map_utils/polygon_iterator.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <grid_map_ros/GridMapRosConverter.hpp>
+
+#include <lanelet2_core/primitives/Polygon.h>
 
 #include <algorithm>
 #include <vector>
@@ -25,7 +26,7 @@
 namespace autoware::behavior_velocity_planner
 {
 bool is_occluded(
-  const grid_map::GridMap & grid_map, const int min_nb_of_cells, const grid_map::Index idx,
+  const grid_map::GridMap & grid_map, const int min_nb_of_cells, const grid_map::Index & idx,
   const autoware::behavior_velocity_planner::CrosswalkModule::PlannerParam & params)
 {
   grid_map::Index idx_offset;
@@ -112,13 +113,13 @@ void clear_occlusions_behind_objects(
   };
   const lanelet::BasicPoint2d grid_map_position = grid_map.getPosition();
   const auto range = grid_map.getLength().maxCoeff() / 2.0;
-  for (auto object : objects) {
+  for (auto & object : objects) {
     const lanelet::BasicPoint2d object_position = {
       object.kinematics.initial_pose_with_covariance.pose.position.x,
       object.kinematics.initial_pose_with_covariance.pose.position.y};
     if (lanelet::geometry::distance2d(grid_map_position, object_position) < range) {
       lanelet::BasicPoints2d edge_points;
-      const auto object_polygon = autoware::universe_utils::toPolygon2d(object);
+      const auto object_polygon = autoware_utils::to_polygon2d(object);
       for (const auto & edge_point : object_polygon.outer()) edge_points.push_back(edge_point);
       std::sort(edge_points.begin(), edge_points.end(), angle_cmp);
       // points.push_back(interpolate_point({object_position, edge_point}, 10.0 * range));
@@ -137,9 +138,8 @@ void clear_occlusions_behind_objects(
 }
 
 bool is_crosswalk_occluded(
-  const lanelet::ConstLanelet & crosswalk_lanelet,
   const nav_msgs::msg::OccupancyGrid & occupancy_grid,
-  const geometry_msgs::msg::Point & path_intersection, const double detection_range,
+  const std::vector<lanelet::BasicPolygon2d> & detection_areas,
   const std::vector<autoware_perception_msgs::msg::PredictedObject> & dynamic_objects,
   const autoware::behavior_velocity_planner::CrosswalkModule::PlannerParam & params)
 {
@@ -153,8 +153,7 @@ bool is_crosswalk_occluded(
     clear_occlusions_behind_objects(grid_map, objects);
   }
   const auto min_nb_of_cells = std::ceil(params.occlusion_min_size / grid_map.getResolution());
-  for (const auto & detection_area : calculate_detection_areas(
-         crosswalk_lanelet, {path_intersection.x, path_intersection.y}, detection_range)) {
+  for (const auto & detection_area : detection_areas) {
     grid_map::Polygon poly;
     for (const auto & p : detection_area) poly.addVertex(grid_map::Position(p.x(), p.y()));
     for (autoware::grid_map_utils::PolygonIterator iter(grid_map, poly); !iter.isPastEnd(); ++iter)
@@ -169,6 +168,6 @@ double calculate_detection_range(
 {
   constexpr double min_ego_velocity = 1.0;
   const auto time_to_crosswalk = dist_ego_to_crosswalk / std::max(min_ego_velocity, ego_velocity);
-  return time_to_crosswalk > 0.0 ? time_to_crosswalk / occluded_object_velocity : 20.0;
+  return time_to_crosswalk > 0.0 ? time_to_crosswalk * occluded_object_velocity : 20.0;
 }
 }  // namespace autoware::behavior_velocity_planner

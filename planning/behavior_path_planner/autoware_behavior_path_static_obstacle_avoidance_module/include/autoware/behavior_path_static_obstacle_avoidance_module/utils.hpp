@@ -36,17 +36,42 @@ using autoware::behavior_path_planner::utils::path_safety_checker::PredictedPath
 static constexpr const char * logger_namespace =
   "planning.scenario_planning.lane_driving.behavior_planning.behavior_path_planner.static_obstacle_"
   "avoidance.utils";
-
+/**
+ * @brief check object offset direction.
+ * @param object data.
+ * @return if the object is on right side of ego path, return true.
+ */
 bool isOnRight(const ObjectData & obj);
 
+/**
+ * @brief calculate shift length from centerline of current lane.
+ * @param object offset direction.
+ * @param distance between object polygon and centerline of current lane. (signed)
+ * @param margin distance between ego and object.
+ * @return necessary shift length. (signed)
+ */
 double calcShiftLength(
   const bool & is_object_on_right, const double & overhang_dist, const double & avoid_margin);
 
 bool isWithinLanes(
-  const lanelet::ConstLanelets & lanelets, const std::shared_ptr<const PlannerData> & planner_data);
+  const std::optional<lanelet::ConstLanelet> & closest_lanelet,
+  const std::shared_ptr<const PlannerData> & planner_data);
 
+/**
+ * @brief check if the ego has to shift driving position.
+ * @param if object is on right side of ego path.
+ * @param ego shift length.
+ * @return necessity of shifting.
+ */
 bool isShiftNecessary(const bool & is_object_on_right, const double & shift_length);
 
+/**
+ * @brief check if the ego has to avoid object with the trajectory whose shift direction is same as
+ * object offset.
+ * @param object offset direction.
+ * @param ego shift length.
+ * @return if the direction of shift and object offset, return true.
+ */
 bool isSameDirectionShift(const bool & is_object_on_right, const double & shift_length);
 
 size_t findPathIndexFromArclength(
@@ -62,9 +87,23 @@ std::vector<UUID> calcParentIds(const AvoidLineArray & lines1, const AvoidLine &
 
 double lerpShiftLengthOnArc(double arc, const AvoidLine & al);
 
+/**
+ * @brief calculate distance between ego and object. object length along with the path is calculated
+ * as well.
+ * @param current path.
+ * @param ego position.
+ * @param object data.
+ */
 void fillLongitudinalAndLengthByClosestEnvelopeFootprint(
   const PathWithLaneId & path, const Point & ego_pos, ObjectData & obj);
 
+/**
+ * @brief calculate overhang distance for all of the envelope polygon outer points.
+ * @param object data.
+ * @param current path.
+ * @return first: overhang distance, second: outer point. this vector is sorted by overhang
+ * distance.
+ */
 std::vector<std::pair<double, Point>> calcEnvelopeOverhangDistance(
   const ObjectData & object_data, const PathWithLaneId & path);
 
@@ -76,12 +115,33 @@ void setStartData(
   AvoidLine & al, const double start_shift_length, const geometry_msgs::msg::Pose & start,
   const size_t start_idx, const double start_dist);
 
+/**
+ * @brief create envelope polygon which is parallel to current path.
+ * @param object polygon.
+ * @param closest point pose of the current path.
+ * @param buffer.
+ * @return envelope polygon.
+ */
 Polygon2d createEnvelopePolygon(
   const Polygon2d & object_polygon, const Pose & closest_pose, const double envelope_buffer);
 
+/**
+ * @brief create envelope polygon which is parallel to current path.
+ * @param object data.
+ * @param closest point pose of the current path.
+ * @param buffer.
+ * @return envelope polygon.
+ */
 Polygon2d createEnvelopePolygon(
   const ObjectData & object_data, const Pose & closest_pose, const double envelope_buffer);
 
+/**
+ * @brief create data structs which are used in clipping drivable area process.
+ * @param objects.
+ * @param avoidance module parameters.
+ * @param ego vehicle width.
+ * @return struct which includes expanded polygon.
+ */
 std::vector<DrivableAreaInfo::Obstacle> generateObstaclePolygonsForDrivableArea(
   const ObjectDataArray & objects, const std::shared_ptr<AvoidanceParameters> & parameters,
   const double vehicle_width);
@@ -98,18 +158,45 @@ lanelet::ConstLanelets getExtendLanes(
   const lanelet::ConstLanelets & lanelets, const Pose & ego_pose,
   const std::shared_ptr<const PlannerData> & planner_data);
 
+/**
+ * @brief insert target stop/decel point.
+ * @param ego current position.
+ * @param distance between ego and stop/decel position.
+ * @param target velocity.
+ * @param target path.
+ * @param insert point.
+ */
 void insertDecelPoint(
   const Point & p_src, const double offset, const double velocity, PathWithLaneId & path,
-  std::optional<Pose> & p_out);
+  PoseWithDetailOpt & p_out);
 
+/**
+ * @brief update envelope polygon based on object position reliability.
+ * @param current detected object.
+ * @param previous stopped objects.
+ * @param base pose to create envelope polygon.
+ * @param threshold parameters.
+ */
 void fillObjectEnvelopePolygon(
   ObjectData & object_data, const ObjectDataArray & registered_objects, const Pose & closest_pose,
   const std::shared_ptr<AvoidanceParameters> & parameters);
 
+/**
+ * @brief fill stopping duration.
+ * @param current detected object.
+ * @param previous stopped objects.
+ * @param threshold parameters.
+ */
 void fillObjectMovingTime(
   ObjectData & object_data, ObjectDataArray & stopped_objects,
   const std::shared_ptr<AvoidanceParameters> & parameters);
 
+/**
+ * @brief check whether ego has to avoid the objects.
+ * @param current detected object.
+ * @param previous stopped objects.
+ * @param threshold parameters.
+ */
 void fillAvoidanceNecessity(
   ObjectData & object_data, const ObjectDataArray & registered_objects, const double vehicle_width,
   const std::shared_ptr<AvoidanceParameters> & parameters);
@@ -120,6 +207,13 @@ void fillObjectStoppableJudge(
 
 void updateClipObject(ObjectDataArray & clip_objects, AvoidancePlanningData & data);
 
+/**
+ * @brief compensate lost objects until a certain time elapses.
+ * @param previous stopped object.
+ * @param avoidance planning data.
+ * @param current time.
+ * @param avoidance parameters which includes duration of compensation.
+ */
 void compensateLostTargetObjects(
   ObjectDataArray & stored_objects, AvoidancePlanningData & data, const rclcpp::Time & now,
   const std::shared_ptr<const PlannerData> & planner_data,
@@ -168,13 +262,18 @@ DrivableLanes generateExpandedDrivableLanes(
 double calcDistanceToReturnDeadLine(
   const lanelet::ConstLanelets & lanelets, const PathWithLaneId & path,
   const std::shared_ptr<const PlannerData> & planner_data,
-  const std::shared_ptr<AvoidanceParameters> & parameters);
+  const std::shared_ptr<AvoidanceParameters> & parameters,
+  const std::optional<double> distance_to_red_traffic, const bool is_allowed_goal_modification);
 
 double calcDistanceToAvoidStartLine(
-  const lanelet::ConstLanelets & lanelets, const PathWithLaneId & path,
-  const std::shared_ptr<const PlannerData> & planner_data,
-  const std::shared_ptr<AvoidanceParameters> & parameters);
+  const lanelet::ConstLanelets & lanelets, const std::shared_ptr<AvoidanceParameters> & parameters,
+  const std::optional<double> distance_to_red_traffic);
 
+/**
+ * @brief calculate error eclipse radius based on object pose covariance.
+ * @param pose with covariance.
+ * @return error eclipse long radius.
+ */
 double calcErrorEclipseLongRadius(const PoseWithCovariance & pose);
 
 }  // namespace autoware::behavior_path_planner::utils::static_obstacle_avoidance

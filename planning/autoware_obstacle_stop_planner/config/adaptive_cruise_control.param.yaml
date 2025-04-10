@@ -10,16 +10,16 @@
       obstacle_velocity_thresh_to_start_acc: 1.5 # start adaptive cruise control when the velocity of the forward obstacle exceeds this value [m/s]
       obstacle_velocity_thresh_to_stop_acc: 1.0 # stop adaptive cruise control when the velocity of the forward obstacle falls below this value [m/s]
       emergency_stop_acceleration: -5.0 # supposed minimum acceleration (deceleration) in emergency stop [m/ss]
+      obstacle_emergency_stop_acceleration: -5.0
       emergency_stop_idling_time: 0.5 # supposed idling time to start emergency stop [s]
       min_dist_stop: 4.0 # minimum distance of emergency stop [m]
-      obstacle_emergency_stop_acceleration: -5.0 # supposed minimum acceleration (deceleration) in emergency stop [m/ss]
       max_standard_acceleration: 0.5 # supposed maximum acceleration in active cruise control [m/ss]
       min_standard_acceleration: -1.0 # supposed minimum acceleration (deceleration) in active cruise control
       standard_idling_time: 0.5 # supposed idling time to react object in active cruise control [s]
       min_dist_standard: 4.0 # minimum distance in active cruise control [m]
       obstacle_min_standard_acceleration: -1.5 # supposed minimum acceleration of forward obstacle [m/ss]
       margin_rate_to_change_vel: 0.3 # margin to insert upper velocity [-]
-      use_time_compensation_to_calc_distance: true # use time-compensation to calculate distance to forward vehicle
+      use_time_compensation_to_calc_distance: true
 
       # pid parameter for ACC
       p_coefficient_positive: 0.1 # coefficient P in PID control (used when target dist -current_dist >=0) [-]

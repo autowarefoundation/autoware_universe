@@ -21,6 +21,9 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
+#include <vector>
+
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.h>
@@ -121,6 +124,7 @@ TEST_F(RayGroundFilterComponentTestSuite, TestCase1)
   double min_height_threshold_ = params["min_height_threshold"].as<float>();
   double concentric_divider_distance_ = params["concentric_divider_distance"].as<float>();
   double reclass_distance_threshold_ = params["reclass_distance_threshold"].as<float>();
+  bool publish_processing_time_detail_ = params["publish_processing_time_detail"].as<bool>();
 
   const auto pcd_path = share_dir + "/data/test.pcd";
   pcl::PointCloud<pcl::PointXYZI> cloud;
@@ -167,6 +171,8 @@ TEST_F(RayGroundFilterComponentTestSuite, TestCase1)
   parameters.emplace_back(rclcpp::Parameter("min_y", min_y_));
   parameters.emplace_back(rclcpp::Parameter("max_y", max_y_));
   parameters.emplace_back(rclcpp::Parameter("use_vehicle_footprint", use_vehicle_footprint_));
+  parameters.emplace_back(
+    rclcpp::Parameter("publish_processing_time_detail", publish_processing_time_detail_));
 
   node_options.parameter_overrides(parameters);
   auto ray_ground_filter_test = std::make_shared<RayGroundFilterComponentTest>(node_options);

@@ -14,6 +14,8 @@
 
 #include "detected_object_feature_remover_node.hpp"
 
+#include <memory>
+
 namespace autoware::detected_object_feature_remover
 {
 DetectedObjectFeatureRemover::DetectedObjectFeatureRemover(const rclcpp::NodeOptions & node_options)
@@ -23,8 +25,7 @@ DetectedObjectFeatureRemover::DetectedObjectFeatureRemover(const rclcpp::NodeOpt
   pub_ = this->create_publisher<DetectedObjects>("~/output", rclcpp::QoS(1));
   sub_ = this->create_subscription<DetectedObjectsWithFeature>(
     "~/input", 1, std::bind(&DetectedObjectFeatureRemover::objectCallback, this, _1));
-  published_time_publisher_ =
-    std::make_unique<autoware::universe_utils::PublishedTimePublisher>(this);
+  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 }
 
 void DetectedObjectFeatureRemover::objectCallback(

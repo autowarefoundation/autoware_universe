@@ -1,0 +1,19 @@
+/**:
+  ros__parameters:
+    x_max: 18.0
+    x_min: -12.0
+    y_max: 2.0
+    y_min: -2.0
+    z_max: 10.0
+    z_min: 0.0
+    min_azimuth_deg: 135.0
+    max_azimuth_deg: 225.0
+    max_distance: 12.0
+    vertical_bins: 128
+    max_azimuth_diff: 50.0
+    weak_first_distance_ratio: 1.004
+    general_distance_ratio: 1.03
+    weak_first_local_noise_threshold: 2
+    roi_mode: "Fixed_xyz_ROI"
+    visibility_error_threshold: 0.5
+    visibility_warn_threshold: 0.7

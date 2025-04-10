@@ -20,14 +20,7 @@ This implementation inherit `autoware::pointcloud_preprocessor::Filter` class, p
 
 ### Core Parameters
 
-| Name    | Type   | Default Value | Description                               |
-| ------- | ------ | ------------- | ----------------------------------------- |
-| `min_x` | double | -1.0          | x-coordinate minimum value for crop range |
-| `max_x` | double | 1.0           | x-coordinate maximum value for crop range |
-| `min_y` | double | -1.0          | y-coordinate minimum value for crop range |
-| `max_y` | double | 1.0           | y-coordinate maximum value for crop range |
-| `min_z` | double | -1.0          | z-coordinate minimum value for crop range |
-| `max_z` | double | 1.0           | z-coordinate maximum value for crop range |
+{{ json_to_markdown("sensing/autoware_pointcloud_preprocessor/schema/crop_box_filter_node.schema.json") }}
 
 ## Assumptions / Known limits
 

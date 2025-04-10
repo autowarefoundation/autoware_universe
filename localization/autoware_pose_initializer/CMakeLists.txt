@@ -9,6 +9,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/gnss_module.cpp
   src/localization_module.cpp
   src/stop_check_module.cpp
+  src/pose_error_check_module.cpp
   src/ekf_localization_trigger_module.cpp
   src/ndt_localization_trigger_module.cpp
 )

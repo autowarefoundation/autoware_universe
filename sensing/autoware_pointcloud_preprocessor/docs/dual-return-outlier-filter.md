@@ -36,11 +36,11 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 
 ### Output
 
-| Name                                           | Type                                    | Description                                             |
-| ---------------------------------------------- | --------------------------------------- | ------------------------------------------------------- |
-| `/dual_return_outlier_filter/frequency_image`  | `sensor_msgs::msg::Image`               | The histogram image that represent visibility           |
-| `/dual_return_outlier_filter/visibility`       | `tier4_debug_msgs::msg::Float32Stamped` | A representation of visibility with a value from 0 to 1 |
-| `/dual_return_outlier_filter/pointcloud_noise` | `sensor_msgs::msg::Pointcloud2`         | The pointcloud removed as noise                         |
+| Name                                           | Type                                                | Description                                             |
+| ---------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------- |
+| `/dual_return_outlier_filter/frequency_image`  | `sensor_msgs::msg::Image`                           | The histogram image that represent visibility           |
+| `/dual_return_outlier_filter/visibility`       | `autoware_internal_debug_msgs::msg::Float32Stamped` | A representation of visibility with a value from 0 to 1 |
+| `/dual_return_outlier_filter/pointcloud_noise` | `sensor_msgs::msg::Pointcloud2`                     | The pointcloud removed as noise                         |
 
 ## Parameters
 
@@ -50,25 +50,7 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 
 ### Core Parameters
 
-| Name                               | Type   | Description                                                                                                               |
-| ---------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------- |
-| `vertical_bins`                    | int    | The number of vertical bin for visibility histogram                                                                       |
-| `max_azimuth_diff`                 | float  | Threshold for ring_outlier_filter                                                                                         |
-| `weak_first_distance_ratio`        | double | Threshold for ring_outlier_filter                                                                                         |
-| `general_distance_ratio`           | double | Threshold for ring_outlier_filter                                                                                         |
-| `weak_first_local_noise_threshold` | int    | The parameter for determining whether it is noise                                                                         |
-| `visibility_error_threshold`       | float  | When the percentage of white pixels in the binary histogram falls below this parameter the diagnostic status becomes ERR  |
-| `visibility_warn_threshold`        | float  | When the percentage of white pixels in the binary histogram falls below this parameter the diagnostic status becomes WARN |
-| `roi_mode`                         | string | The name of ROI mode for switching                                                                                        |
-| `min_azimuth_deg`                  | float  | The left limit of azimuth for `Fixed_azimuth_ROI` mode                                                                    |
-| `max_azimuth_deg`                  | float  | The right limit of azimuth for `Fixed_azimuth_ROI` mode                                                                   |
-| `max_distance`                     | float  | The limit distance for for `Fixed_azimuth_ROI` mode                                                                       |
-| `x_max`                            | float  | Maximum of x for `Fixed_xyz_ROI` mode                                                                                     |
-| `x_min`                            | float  | Minimum of x for `Fixed_xyz_ROI` mode                                                                                     |
-| `y_max`                            | float  | Maximum of y for `Fixed_xyz_ROI` mode                                                                                     |
-| `y_min`                            | float  | Minimum of y for `Fixed_xyz_ROI` mode                                                                                     |
-| `z_max`                            | float  | Maximum of z for `Fixed_xyz_ROI` mode                                                                                     |
-| `z_min`                            | float  | Minimum of z for `Fixed_xyz_ROI` mode                                                                                     |
+{{ json_to_markdown("sensing/autoware_pointcloud_preprocessor/schema/dual_return_outlier_filter_node.schema.json") }}
 
 ## Assumptions / Known limits
 

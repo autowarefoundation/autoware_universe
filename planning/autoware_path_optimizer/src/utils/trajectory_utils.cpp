@@ -33,31 +33,21 @@
 #include <stack>
 #include <vector>
 
-namespace autoware::universe_utils
-{
-template <>
-geometry_msgs::msg::Point getPoint(const autoware::path_optimizer::ReferencePoint & p)
-{
-  return p.pose.position;
-}
-
-template <>
-geometry_msgs::msg::Pose getPose(const autoware::path_optimizer::ReferencePoint & p)
-{
-  return p.pose;
-}
-
-template <>
-double getLongitudinalVelocity(const autoware::path_optimizer::ReferencePoint & p)
-{
-  return p.longitudinal_velocity_mps;
-}
-}  // namespace autoware::universe_utils
-
 namespace autoware::path_optimizer
 {
+
 namespace trajectory_utils
 {
+
+template <>
+TrajectoryPoint convertToTrajectoryPoint(const ReferencePoint & ref_point)
+{
+  TrajectoryPoint traj_point;
+  traj_point.pose = autoware_utils::get_pose(ref_point);
+  traj_point.longitudinal_velocity_mps = autoware_utils::get_longitudinal_velocity(ref_point);
+  return traj_point;
+}
+
 ReferencePoint convertToReferencePoint(const TrajectoryPoint & traj_point)
 {
   ReferencePoint ref_point;
@@ -152,7 +142,7 @@ std::vector<ReferencePoint> resampleReferencePoints(
       base_keys.push_back(0.0);
     } else {
       const double delta_arc_length =
-        autoware::universe_utils::calcDistance2d(ref_points.at(i), ref_points.at(i - 1));
+        autoware_utils::calc_distance2d(ref_points.at(i), ref_points.at(i - 1));
       base_keys.push_back(base_keys.back() + delta_arc_length);
     }
 
@@ -164,8 +154,8 @@ std::vector<ReferencePoint> resampleReferencePoints(
     if (i == 0) {
       query_keys.push_back(0.0);
     } else {
-      const double delta_arc_length = autoware::universe_utils::calcDistance2d(
-        resampled_ref_points.at(i), resampled_ref_points.at(i - 1));
+      const double delta_arc_length =
+        autoware_utils::calc_distance2d(resampled_ref_points.at(i), resampled_ref_points.at(i - 1));
       const double key = query_keys.back() + delta_arc_length;
       if (base_keys.back() < key) {
         break;
@@ -181,7 +171,7 @@ std::vector<ReferencePoint> resampleReferencePoints(
     query_keys.push_back(base_keys.back() - epsilon);
   }
 
-  const auto query_values = interpolation::lerp(base_keys, base_values, query_keys);
+  const auto query_values = autoware::interpolation::lerp(base_keys, base_values, query_keys);
 
   // create output reference points by updating curvature with resampled one
   std::vector<ReferencePoint> output_ref_points;
@@ -200,7 +190,7 @@ void insertStopPoint(
   const double offset_to_segment = autoware::motion_utils::calcLongitudinalOffsetToSegment(
     traj_points, stop_seg_idx, input_stop_pose.position);
 
-  const auto traj_spline = SplineInterpolationPoints2d(traj_points);
+  const auto traj_spline = autoware::interpolation::SplineInterpolationPoints2d(traj_points);
   const auto stop_pose = traj_spline.getSplineInterpolatedPose(stop_seg_idx, offset_to_segment);
 
   if (geometry_utils::isSamePoint(traj_points.at(stop_seg_idx), stop_pose)) {

@@ -1,3 +1,7 @@
+# This file is automatically synced from:
+# https://github.com/autowarefoundation/sync-file-templates
+# To make changes, update the source repository and follow the guidelines in its README.
+
 name: pre-commit
 
 on:
@@ -6,7 +10,7 @@ on:
 jobs:
   pre-commit:
     if: ${{ github.event.repository.private }} # Use pre-commit.ci for public repositories
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Generate token
         id: generate-token

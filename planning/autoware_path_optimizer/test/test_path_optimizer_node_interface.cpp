@@ -15,11 +15,13 @@
 #include "autoware/path_optimizer/node.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <autoware_planning_test_manager/autoware_planning_test_manager.hpp>
+#include <autoware/planning_test_manager/autoware_planning_test_manager.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
 
 #include <gtest/gtest.h>
 
+#include <memory>
+#include <string>
 #include <vector>
 
 TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectory)
@@ -46,21 +48,24 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectory)
   auto test_target_node = std::make_shared<autoware::path_optimizer::PathOptimizer>(node_options);
 
   // publish necessary topics from test_manager
-  test_manager->publishOdometry(test_target_node, "path_optimizer/input/odometry");
+  test_manager->publishInput(
+    test_target_node, "path_optimizer/input/odometry", autoware::test_utils::makeOdometry());
 
   // set subscriber with topic name: path_optimizer → test_node_
-  test_manager->setTrajectorySubscriber("path_optimizer/output/path");
+  test_manager->subscribeOutput<autoware_planning_msgs::msg::Trajectory>(
+    "path_optimizer/output/path");
 
-  // set path_optimizer's input topic name(this topic is changed to test node)
-  test_manager->setPathInputTopicName("path_optimizer/input/path");
+  const std::string input_trajectory_topic = "path_optimizer/input/path";
 
   // test with normal trajectory
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testWithNominalPath(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithNormalPath(test_target_node, input_trajectory_topic));
 
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
   // test with trajectory with empty/one point/overlapping point
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testWithAbnormalPath(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithAbnormalPath(test_target_node, input_trajectory_topic));
 
   rclcpp::shutdown();
 }

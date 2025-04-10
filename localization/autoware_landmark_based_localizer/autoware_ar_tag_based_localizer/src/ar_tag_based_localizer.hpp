@@ -46,7 +46,7 @@
 #define AR_TAG_BASED_LOCALIZER_HPP_
 
 #include "autoware/landmark_manager/landmark_manager.hpp"
-#include "localization_util/smart_pose_buffer.hpp"
+#include "autoware/localization_util/smart_pose_buffer.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -122,7 +122,7 @@ private:
   aruco::MarkerDetector detector_;
   aruco::CameraParameters cam_param_;
   bool cam_info_received_;
-  std::unique_ptr<SmartPoseBuffer> ekf_pose_buffer_;
+  std::unique_ptr<autoware::localization_util::SmartPoseBuffer> ekf_pose_buffer_;
   landmark_manager::LandmarkManager landmark_manager_;
 };
 

@@ -45,24 +45,27 @@ private:
   double lf_;
   double lr_;
 
-  // motion parameters
+  // motion parameters: process noise and motion limits
   struct MotionParams
   {
-    double q_stddev_acc_long;
-    double q_stddev_acc_lat;
-    double q_cov_acc_long;
-    double q_cov_acc_lat;
-    double q_stddev_yaw_rate_min;
-    double q_stddev_yaw_rate_max;
-    double q_cov_slip_rate_min;
-    double q_cov_slip_rate_max;
-    double q_max_slip_angle;
-    double lf_ratio;
-    double lr_ratio;
-    double lf_min;
-    double lr_min;
-    double max_vel;
-    double max_slip;
+    double q_stddev_acc_long = 3.43;         // [m/s^2] uncertain longitudinal acceleration, 0.35G
+    double q_stddev_acc_lat = 1.47;          // [m/s^2] uncertain longitudinal acceleration, 0.15G
+    double q_cov_acc_long = 11.8;            // [m/s^2] uncertain longitudinal acceleration, 0.35G
+    double q_cov_acc_lat = 2.16;             // [m/s^2] uncertain lateral acceleration, 0.15G
+    double q_stddev_yaw_rate_min = 0.02618;  // [rad/s] uncertain yaw change rate, 1.5deg/s
+    double q_stddev_yaw_rate_max = 0.2618;   // [rad/s] uncertain yaw change rate, 15deg/s
+    double q_cov_slip_rate_min =
+      2.7416e-5;  // [rad^2/s^2] uncertain slip angle change rate, 0.3 deg/s
+    double q_cov_slip_rate_max = 0.03046;  // [rad^2/s^2] uncertain slip angle change rate, 10 deg/s
+    double q_max_slip_angle = 0.5236;      // [rad] max slip angle, 30deg
+    double lf_ratio = 0.3;     // [-] ratio of the distance from the center to the front wheel
+    double lr_ratio = 0.25;    // [-] ratio of the distance from the center to the rear wheel
+    double lf_min = 1.0;       // [m] minimum distance from the center to the front wheel
+    double lr_min = 1.0;       // [m] minimum distance from the center to the rear wheel
+    double max_vel = 27.8;     // [m/s] maximum velocity, 100km/h
+    double max_slip = 0.5236;  // [rad] maximum slip angle, 30deg
+    double max_reverse_vel =
+      -1.389;  // [m/s] maximum reverse velocity, -5km/h. The value is expected to be negative
   } motion_params_;
 
 public:
@@ -75,8 +78,6 @@ public:
     const rclcpp::Time & time, const double & x, const double & y, const double & yaw,
     const std::array<double, 36> & pose_cov, const double & vel, const double & vel_cov,
     const double & slip, const double & slip_cov, const double & length);
-
-  void setDefaultParams();
 
   void setMotionParams(
     const double & q_stddev_acc_long, const double & q_stddev_acc_lat,
@@ -92,6 +93,10 @@ public:
   bool updateStatePoseHead(
     const double & x, const double & y, const double & yaw,
     const std::array<double, 36> & pose_cov);
+
+  bool updateStatePoseVel(
+    const double & x, const double & y, const std::array<double, 36> & pose_cov, const double & vel,
+    const std::array<double, 36> & twist_cov);
 
   bool updateStatePoseHeadVel(
     const double & x, const double & y, const double & yaw, const std::array<double, 36> & pose_cov,

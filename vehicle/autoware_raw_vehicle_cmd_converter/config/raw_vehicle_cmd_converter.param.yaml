@@ -5,7 +5,7 @@
     csv_path_steer_map: $(find-pkg-share autoware_raw_vehicle_cmd_converter)/data/default/steer_map.csv
     convert_accel_cmd: true
     convert_brake_cmd: true
-    convert_steer_cmd: true
+    convert_steer_cmd: false
     use_steer_ff: true
     use_steer_fb: true
     is_debugging: false

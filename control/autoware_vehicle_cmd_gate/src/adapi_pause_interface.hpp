@@ -15,8 +15,8 @@
 #ifndef ADAPI_PAUSE_INTERFACE_HPP_
 #define ADAPI_PAUSE_INTERFACE_HPP_
 
-#include <component_interface_specs/control.hpp>
-#include <component_interface_utils/rclcpp.hpp>
+#include <autoware/component_interface_specs_universe/control.hpp>
+#include <autoware/component_interface_utils/rclcpp.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_control_msgs/msg/control.hpp>
@@ -29,9 +29,9 @@ class AdapiPauseInterface
 private:
   static constexpr double eps = 1e-3;
   using Control = autoware_control_msgs::msg::Control;
-  using SetPause = control_interface::SetPause;
-  using IsPaused = control_interface::IsPaused;
-  using IsStartRequested = control_interface::IsStartRequested;
+  using SetPause = autoware::component_interface_specs_universe::control::SetPause;
+  using IsPaused = autoware::component_interface_specs_universe::control::IsPaused;
+  using IsStartRequested = autoware::component_interface_specs_universe::control::IsStartRequested;
 
 public:
   explicit AdapiPauseInterface(rclcpp::Node * node);
@@ -46,9 +46,10 @@ private:
   std::optional<bool> prev_is_start_requested_;
 
   rclcpp::Node * node_;
-  component_interface_utils::Service<SetPause>::SharedPtr srv_set_pause_;
-  component_interface_utils::Publisher<IsPaused>::SharedPtr pub_is_paused_;
-  component_interface_utils::Publisher<IsStartRequested>::SharedPtr pub_is_start_requested_;
+  autoware::component_interface_utils::Service<SetPause>::SharedPtr srv_set_pause_;
+  autoware::component_interface_utils::Publisher<IsPaused>::SharedPtr pub_is_paused_;
+  autoware::component_interface_utils::Publisher<IsStartRequested>::SharedPtr
+    pub_is_start_requested_;
 
   void on_pause(
     const SetPause::Service::Request::SharedPtr req,

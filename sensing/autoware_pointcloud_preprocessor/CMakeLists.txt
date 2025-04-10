@@ -13,6 +13,7 @@ find_package(Sophus REQUIRED)
 find_package(Boost REQUIRED)
 find_package(PCL REQUIRED)
 find_package(CGAL REQUIRED COMPONENTS Core)
+find_package(tf2_sensor_msgs REQUIRED)
 
 include_directories(
   include
@@ -36,12 +37,13 @@ target_include_directories(pointcloud_preprocessor_filter_base PUBLIC
 )
 
 ament_target_dependencies(pointcloud_preprocessor_filter_base
+  SYSTEM
   message_filters
   pcl_conversions
   rclcpp
   sensor_msgs
   tf2_ros
-  autoware_universe_utils
+  autoware_utils
   pcl_ros
   autoware_point_types
 )
@@ -56,28 +58,32 @@ target_include_directories(faster_voxel_grid_downsample_filter PUBLIC
 )
 
 ament_target_dependencies(faster_voxel_grid_downsample_filter
+  SYSTEM
   pcl_conversions
   rclcpp
   sensor_msgs
 )
 
 ament_auto_add_library(pointcloud_preprocessor_filter SHARED
-  src/concatenate_data/concatenate_and_time_sync_nodelet.cpp
+  src/concatenate_data/concatenate_and_time_sync_node.cpp
+  src/concatenate_data/combine_cloud_handler.cpp
+  src/concatenate_data/cloud_collector.cpp
+  src/concatenate_data/collector_matching_strategy.cpp
   src/concatenate_data/concatenate_pointclouds.cpp
+  src/crop_box_filter/crop_box_filter_node.cpp
   src/time_synchronizer/time_synchronizer_node.cpp
-  src/crop_box_filter/crop_box_filter_nodelet.cpp
   src/downsample_filter/voxel_grid_downsample_filter_node.cpp
-  src/downsample_filter/random_downsample_filter_nodelet.cpp
-  src/downsample_filter/approximate_downsample_filter_nodelet.cpp
-  src/downsample_filter/pickup_based_voxel_grid_downsample_filter.cpp
-  src/outlier_filter/ring_outlier_filter_nodelet.cpp
+  src/downsample_filter/random_downsample_filter_node.cpp
+  src/downsample_filter/approximate_downsample_filter_node.cpp
+  src/downsample_filter/pickup_based_voxel_grid_downsample_filter_node.cpp
+  src/outlier_filter/ring_outlier_filter_node.cpp
+  src/outlier_filter/radius_search_2d_outlier_filter_node.cpp
   src/outlier_filter/voxel_grid_outlier_filter_node.cpp
-  src/outlier_filter/radius_search_2d_outlier_filter_nodelet.cpp
-  src/outlier_filter/dual_return_outlier_filter_nodelet.cpp
-  src/passthrough_filter/passthrough_filter_nodelet.cpp
-  src/passthrough_filter/passthrough_filter_uint16_nodelet.cpp
+  src/outlier_filter/dual_return_outlier_filter_node.cpp
+  src/passthrough_filter/passthrough_filter_node.cpp
+  src/passthrough_filter/passthrough_filter_uint16_node.cpp
   src/passthrough_filter/passthrough_uint16.cpp
-  src/pointcloud_accumulator/pointcloud_accumulator_nodelet.cpp
+  src/pointcloud_accumulator/pointcloud_accumulator_node.cpp
   src/vector_map_filter/lanelet2_map_filter_node.cpp
   src/distortion_corrector/distortion_corrector.cpp
   src/distortion_corrector/distortion_corrector_node.cpp
@@ -85,6 +91,8 @@ ament_auto_add_library(pointcloud_preprocessor_filter SHARED
   src/polygon_remover/polygon_remover.cpp
   src/vector_map_filter/vector_map_inside_area_filter_node.cpp
   src/utility/geometry.cpp
+  src/pointcloud_densifier/pointcloud_densifier_node.cpp
+  src/pointcloud_densifier/occupancy_grid.cpp
 )
 
 target_link_libraries(pointcloud_preprocessor_filter
@@ -94,6 +102,7 @@ target_link_libraries(pointcloud_preprocessor_filter
   ${OpenCV_LIBRARIES}
   ${Sophus_LIBRARIES}
   ${PCL_LIBRARIES}
+  ${tf2_sensor_msgs_LIBRARIES}
 )
 
 # ========== Time synchronizer ==========
@@ -109,7 +118,7 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
 # ========== Concatenate and Sync data ==========
 rclcpp_components_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::PointCloudConcatenateDataSynchronizerComponent"
-  EXECUTABLE concatenate_data_node)
+  EXECUTABLE concatenate_and_time_sync_node)
 
 # ========== CropBox ==========
 rclcpp_components_register_node(pointcloud_preprocessor_filter
@@ -201,6 +210,17 @@ rclcpp_components_register_node(pointcloud_preprocessor_filter
   PLUGIN "autoware::pointcloud_preprocessor::VectorMapInsideAreaFilterComponent"
   EXECUTABLE vector_map_inside_area_filter_node)
 
+# ========== Pointcloud Densifier ==========
+rclcpp_components_register_node(pointcloud_preprocessor_filter
+  PLUGIN "autoware::pointcloud_preprocessor::PointCloudDensifierNode"
+  EXECUTABLE pointcloud_densifier_node)
+
+# Make sure launch directory is installed
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}/
+)
+
 install(
   TARGETS pointcloud_preprocessor_filter_base EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
@@ -241,8 +261,17 @@ if(BUILD_TESTING)
     test/test_distortion_corrector_node.cpp
   )
 
+  ament_add_gtest(test_concatenate_node_unit
+    test/test_concatenate_node_unit.cpp
+  )
+
   target_link_libraries(test_utilities pointcloud_preprocessor_filter)
   target_link_libraries(test_distortion_corrector_node pointcloud_preprocessor_filter)
+  target_link_libraries(test_concatenate_node_unit pointcloud_preprocessor_filter)
 
+  add_ros_test(
+    test/test_concatenate_node_component.py
+    TIMEOUT "50"
+  )
 
 endif()

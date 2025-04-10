@@ -45,12 +45,12 @@ using autoware::motion_utils::calcLongitudinalOffsetToSegment;
 using autoware::motion_utils::calcSignedArcLength;
 using autoware::motion_utils::findFirstNearestIndexWithSoftConstraints;
 using autoware::motion_utils::findFirstNearestSegmentIndexWithSoftConstraints;
-using autoware::universe_utils::calcDistance2d;
-using autoware::universe_utils::createPoint;
-using autoware::universe_utils::getPoint;
-using autoware::universe_utils::getPose;
-using autoware::universe_utils::getRPY;
 using autoware_perception_msgs::msg::PredictedObject;
+using autoware_utils::calc_distance2d;
+using autoware_utils::create_point;
+using autoware_utils::get_point;
+using autoware_utils::get_pose;
+using autoware_utils::get_rpy;
 
 ObstacleStopPlannerNode::ObstacleStopPlannerNode(const rclcpp::NodeOptions & node_options)
 : Node("obstacle_stop_planner", node_options)
@@ -245,9 +245,8 @@ ObstacleStopPlannerNode::ObstacleStopPlannerNode(const rclcpp::NodeOptions & nod
     std::bind(&ObstacleStopPlannerNode::onExpandStopRange, this, std::placeholders::_1),
     createSubscriptionOptions(this));
 
-  logger_configure_ = std::make_unique<autoware::universe_utils::LoggerLevelConfigure>(this);
-  published_time_publisher_ =
-    std::make_unique<autoware::universe_utils::PublishedTimePublisher>(this);
+  logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
+  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 }
 
 void ObstacleStopPlannerNode::onPointCloud(const PointCloud2::ConstSharedPtr input_msg)
@@ -1004,7 +1003,7 @@ void ObstacleStopPlannerNode::insertVelocity(
 
     index_with_dist_remain = findNearestFrontIndex(
       std::min(idx, traj_end_idx), output,
-      createPoint(
+      create_point(
         planner_data.nearest_collision_point.x, planner_data.nearest_collision_point.y, 0));
 
     if (index_with_dist_remain) {
@@ -1037,7 +1036,7 @@ void ObstacleStopPlannerNode::insertVelocity(
         size_t stop_seg_idx = 0;
         if (stop_point.index < output.size() - 1) {
           const double lon_offset =
-            calcLongitudinalOffsetToSegment(output, stop_point.index, getPoint(stop_point.point));
+            calcLongitudinalOffsetToSegment(output, stop_point.index, get_point(stop_point.point));
           if (lon_offset < 0) {
             stop_seg_idx = std::max(static_cast<size_t>(0), stop_point.index - 1);
           } else {
@@ -1048,7 +1047,7 @@ void ObstacleStopPlannerNode::insertVelocity(
         }
 
         return calcSignedArcLength(
-          output, ego_pose.position, ego_seg_idx, getPoint(stop_point.point), stop_seg_idx);
+          output, ego_pose.position, ego_seg_idx, get_point(stop_point.point), stop_seg_idx);
       }();
       const auto is_stopped = current_vel < 0.01;
 
@@ -1065,15 +1064,15 @@ void ObstacleStopPlannerNode::insertVelocity(
 
           insertStopPoint(current_stop_pos, output, planner_data.stop_reason_diag);
 
-          debug_ptr_->pushPose(getPose(stop_point.point), PoseType::TargetStop);
-          debug_ptr_->pushPose(getPose(current_stop_pos.point), PoseType::Stop);
+          debug_ptr_->pushPose(get_pose(stop_point.point), PoseType::TargetStop);
+          debug_ptr_->pushPose(get_pose(current_stop_pos.point), PoseType::Stop);
         }
 
       } else {
         insertStopPoint(stop_point, output, planner_data.stop_reason_diag);
 
-        debug_ptr_->pushPose(getPose(stop_point.point), PoseType::TargetStop);
-        debug_ptr_->pushPose(getPose(stop_point.point), PoseType::Stop);
+        debug_ptr_->pushPose(get_pose(stop_point.point), PoseType::TargetStop);
+        debug_ptr_->pushPose(get_pose(stop_point.point), PoseType::Stop);
       }
     }
   }
@@ -1085,7 +1084,7 @@ void ObstacleStopPlannerNode::insertVelocity(
       planner_data.decimate_trajectory_slow_down_index);
     const auto index_with_dist_remain = findNearestFrontIndex(
       std::min(idx, traj_end_idx), output,
-      createPoint(
+      create_point(
         planner_data.nearest_slow_down_point.x, planner_data.nearest_slow_down_point.y, 0));
 
     if (index_with_dist_remain) {
@@ -1361,9 +1360,9 @@ void ObstacleStopPlannerNode::insertSlowDownSection(
   const auto is_valid_index_start =
     checkValidIndex(p_base_start.pose, p_next_start.pose, p_insert_start.pose);
   const auto is_start_p_base_and_p_insert_overlap =
-    calcDistance2d(p_base_start, p_insert_start) < min_dist;
+    calc_distance2d(p_base_start, p_insert_start) < min_dist;
   const auto is_start_p_next_and_p_insert_overlap =
-    calcDistance2d(p_next_start, p_insert_start) < min_dist;
+    calc_distance2d(p_next_start, p_insert_start) < min_dist;
 
   auto update_start_idx = start_idx;
   auto update_end_idx = end_idx;
@@ -1381,9 +1380,9 @@ void ObstacleStopPlannerNode::insertSlowDownSection(
   }
 
   const auto is_end_p_base_and_p_insert_overlap =
-    calcDistance2d(p_base_end, p_insert_end) < min_dist;
+    calc_distance2d(p_base_end, p_insert_end) < min_dist;
   const auto is_end_p_next_and_p_insert_overlap =
-    calcDistance2d(p_next_end, p_insert_end) < min_dist;
+    calc_distance2d(p_next_end, p_insert_end) < min_dist;
   const auto is_valid_index_end =
     checkValidIndex(p_base_end.pose, p_next_end.pose, p_insert_end.pose);
 
@@ -1559,8 +1558,8 @@ void ObstacleStopPlannerNode::filterObstacles(
     const double max_length = calcObstacleMaxLength(object.shape);
     const size_t seg_idx = autoware::motion_utils::findNearestSegmentIndex(
       traj, object.kinematics.initial_pose_with_covariance.pose.position);
-    const auto p_front = autoware::universe_utils::getPoint(traj.at(seg_idx));
-    const auto p_back = autoware::universe_utils::getPoint(traj.at(seg_idx + 1));
+    const auto p_front = autoware_utils::get_point(traj.at(seg_idx));
+    const auto p_back = autoware_utils::get_point(traj.at(seg_idx + 1));
     const auto & p_target = object.kinematics.initial_pose_with_covariance.pose.position;
     const Eigen::Vector3d segment_vec{p_back.x - p_front.x, p_back.y - p_front.y, 0.0};
     const Eigen::Vector3d target_vec{p_target.x - p_front.x, p_target.y - p_front.y, 0.0};

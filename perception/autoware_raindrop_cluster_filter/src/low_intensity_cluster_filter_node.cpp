@@ -14,13 +14,15 @@
 
 #include "low_intensity_cluster_filter_node.hpp"
 
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 
 #include <pcl_ros/transforms.hpp>
 
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
 #include <pcl_conversions/pcl_conversions.h>
+
+#include <memory>
 
 namespace autoware::low_intensity_cluster_filter
 {
@@ -54,8 +56,8 @@ LowIntensityClusterFilter::LowIntensityClusterFilter(const rclcpp::NodeOptions &
     "output/objects", rclcpp::QoS{1});
   // initialize debug tool
   {
-    using autoware::universe_utils::DebugPublisher;
-    using autoware::universe_utils::StopWatch;
+    using autoware_utils::DebugPublisher;
+    using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ptr_ =
       std::make_unique<DebugPublisher>(this, "low_intensity_cluster_filter_node");
@@ -87,8 +89,8 @@ void LowIntensityClusterFilter::objectCallback(
   geometry_msgs::msg::Pose max_pose;
   max_pose.position.x = max_x_;
   max_pose.position.y = max_y_;
-  auto min_ranged_transformed = autoware::universe_utils::transformPose(min_range, transform_stamp);
-  auto max_range_transformed = autoware::universe_utils::transformPose(max_pose, transform_stamp);
+  auto min_ranged_transformed = autoware_utils::transform_pose(min_range, transform_stamp);
+  auto max_range_transformed = autoware_utils::transform_pose(max_pose, transform_stamp);
   for (const auto & feature_object : input_msg->feature_objects) {
     const auto & object = feature_object.object;
     const auto & label = object.classification.front().label;
@@ -112,9 +114,9 @@ void LowIntensityClusterFilter::objectCallback(
   if (debug_publisher_ptr_ && stop_watch_ptr_) {
     const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
     const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
-    debug_publisher_ptr_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
-    debug_publisher_ptr_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time_ms", processing_time_ms);
   }
 }

@@ -41,15 +41,15 @@ private:
   // attributes
   rclcpp::Logger logger_;
 
-  // motion parameters
+  // motion parameters: process noise and motion limits
   struct MotionParams
   {
-    double q_cov_x;
-    double q_cov_y;
-    double q_cov_vx;
-    double q_cov_vy;
-    double max_vx;
-    double max_vy;
+    double q_cov_x = 0.025;    // [m^2/s^2] uncertain position in x, 0.5m/s
+    double q_cov_y = 0.025;    // [m^2/s^2] uncertain position in y, 0.5m/s
+    double q_cov_vx = 8.6436;  // [m^2/s^4] uncertain velocity, 0.3G m/s^2
+    double q_cov_vy = 8.6436;  // [m^2/s^4] uncertain velocity, 0.3G m/s^2
+    double max_vx = 16.67;     // [m/s] maximum velocity, 60km/h
+    double max_vy = 16.67;     // [m/s] maximum velocity, 60km/h
   } motion_params_;
 
 public:
@@ -62,8 +62,6 @@ public:
     const rclcpp::Time & time, const double & x, const double & y,
     const std::array<double, 36> & pose_cov, const double & vx, const double & vy,
     const std::array<double, 36> & twist_cov);
-
-  void setDefaultParams();
 
   void setMotionParams(
     const double & q_stddev_x, const double & q_stddev_y, const double & q_stddev_vx,

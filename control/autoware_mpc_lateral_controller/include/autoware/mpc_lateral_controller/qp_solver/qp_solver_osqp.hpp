@@ -16,7 +16,7 @@
 #define AUTOWARE__MPC_LATERAL_CONTROLLER__QP_SOLVER__QP_SOLVER_OSQP_HPP_
 
 #include "autoware/mpc_lateral_controller/qp_solver/qp_solver_interface.hpp"
-#include "osqp_interface/osqp_interface.hpp"
+#include "autoware/osqp_interface/osqp_interface.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 namespace autoware::motion::control::mpc_lateral_controller
@@ -58,7 +58,7 @@ public:
   double getObjVal() const override { return osqpsolver_.getObjVal(); }
 
 private:
-  autoware::common::osqp::OSQPInterface osqpsolver_;
+  autoware::osqp_interface::OSQPInterface osqpsolver_;
   rclcpp::Logger logger_;
 };
 }  // namespace autoware::motion::control::mpc_lateral_controller

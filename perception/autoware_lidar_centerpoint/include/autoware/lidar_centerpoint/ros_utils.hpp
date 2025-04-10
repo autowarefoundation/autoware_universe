@@ -35,7 +35,7 @@ uint8_t getSemanticType(const std::string & class_name);
 
 std::array<double, 36> convertPoseCovarianceMatrix(const Box3D & box3d);
 
-std::array<double, 36> convertTwistCovarianceMatrix(const Box3D & box3d);
+std::array<double, 36> convertTwistCovarianceMatrix(const Box3D & box3d, const float yaw);
 
 bool isCarLikeVehicleLabel(const uint8_t label);
 
