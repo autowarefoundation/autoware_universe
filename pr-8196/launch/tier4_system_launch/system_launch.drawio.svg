@@ -287,15 +287,15 @@
           >
             <div data-drawio-colors="color: #000000; " style="box-sizing: border-box; font-size: 0px; text-align: center;">
               <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">
-                emergency_handler.launch.xml
+                mrm_handler.launch.xml
                 <br/>
                 <br/>
-                <div style="text-align: left">package: emergency_handler</div>
+                <div style="text-align: left">package: mrm_handler</div>
               </div>
             </div>
           </div>
         </foreignObject>
-        <text x="820" y="824" fill="#000000" font-family="Helvetica" font-size="12px" text-anchor="middle">emergency_handler.launch.xml...</text>
+        <text x="820" y="824" fill="#000000" font-family="Helvetica" font-size="12px" text-anchor="middle">mrm_handler.launch.xml...</text>
       </switch>
     </g>
   </g>
