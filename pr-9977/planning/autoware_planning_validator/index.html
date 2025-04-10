@@ -14248,22 +14248,28 @@
 </thead>
 <tbody>
 <tr>
-<td align="left"><code>invalid_trajectory_handling_type</code></td>
+<td align="left"><code>handling_type.noncritical</code></td>
 <td align="left">int</td>
-<td align="left">set the operation when the invalid trajectory is detected. <br>0: publish the trajectory even if it is invalid, <br>1: stop publishing the trajectory, <br>2: publish the last validated trajectory.</td>
+<td align="left">set the handling type for noncritical invalid trajectory. <br>0: publish invalid trajectory as it is, <br>1: stop publishing the trajectory, <br>2: publish last valid trajectory.</td>
+<td align="left">0</td>
+</tr>
+<tr>
+<td align="left"><code>handling_type.critical</code></td>
+<td align="left">int</td>
+<td align="left">set the handling type for critical invalid trajectory. <br>0: publish the trajectory even if it is invalid, <br>1: stop publishing the trajectory, <br>2: publish the last validated trajectory.</td>
 <td align="left">0</td>
 </tr>
 <tr>
 <td align="left"><code>publish_diag</code></td>
 <td align="left">bool</td>
-<td align="left">the Diag will be set to ERROR when the number of consecutive invalid trajectory exceeds this threshold. (For example, threshold = 1 means, even if the trajectory is invalid, the Diag will not be ERROR if the next trajectory is valid.)</td>
+<td align="left">if true, diagnostics msg is published.</td>
 <td align="left">true</td>
 </tr>
 <tr>
 <td align="left"><code>diag_error_count_threshold</code></td>
 <td align="left">int</td>
-<td align="left">if true, diagnostics msg is published.</td>
-<td align="left">true</td>
+<td align="left">Number of consecutive invalid trajectories to set the Diag to ERROR. (Fe.g, threshold = 1 means, even if the trajectory is invalid, the Diag will not be ERROR if the next trajectory is valid.)</td>
+<td align="left">0</td>
 </tr>
 <tr>
 <td align="left"><code>display_on_terminal</code></td>
@@ -14274,8 +14280,7 @@
 </tbody>
 </table>
 <h3 id="algorithm-parameters">Algorithm parameters<a class="headerlink" href="#algorithm-parameters" title="Permanent link">#</a></h3>
-<h4 id="thresholds">Thresholds<a class="headerlink" href="#thresholds" title="Permanent link">#</a></h4>
-<p>The input trajectory is detected as invalid if the index exceeds the following thresholds.</p>
+<h4 id="latency-check">Latency Check<a class="headerlink" href="#latency-check" title="Permanent link">#</a></h4>
 <table>
 <thead>
 <tr>
@@ -14287,83 +14292,284 @@
 </thead>
 <tbody>
 <tr>
-<td align="left"><code>thresholds.interval</code></td>
-<td align="left">double</td>
-<td align="left">invalid threshold of the distance of two neighboring trajectory points [m]</td>
-<td align="left">100.0</td>
+<td align="left"><code>validity_checks.latency.enable</code></td>
+<td align="left">bool</td>
+<td align="left">flag to enable/disable latency validation check</td>
+<td align="left">true</td>
 </tr>
 <tr>
-<td align="left"><code>thresholds.relative_angle</code></td>
+<td align="left"><code>validity_checks.latency.threshold</code></td>
 <td align="left">double</td>
-<td align="left">invalid threshold of the relative angle of two neighboring trajectory points [rad]</td>
-<td align="left">2.0</td>
-</tr>
-<tr>
-<td align="left"><code>thresholds.curvature</code></td>
-<td align="left">double</td>
-<td align="left">invalid threshold of the curvature in each trajectory point [1/m]</td>
+<td align="left">max valid value for the age of the trajectory msg [s]</td>
 <td align="left">1.0</td>
 </tr>
 <tr>
-<td align="left"><code>thresholds.lateral_acc</code></td>
-<td align="left">double</td>
-<td align="left">invalid threshold of the lateral acceleration in each trajectory point [m/ss]</td>
-<td align="left">9.8</td>
-</tr>
-<tr>
-<td align="left"><code>thresholds.longitudinal_max_acc</code></td>
-<td align="left">double</td>
-<td align="left">invalid threshold of the maximum longitudinal acceleration in each trajectory point [m/ss]</td>
-<td align="left">9.8</td>
-</tr>
-<tr>
-<td align="left"><code>thresholds.longitudinal_min_acc</code></td>
-<td align="left">double</td>
-<td align="left">invalid threshold of the minimum longitudinal deceleration in each trajectory point [m/ss]</td>
-<td align="left">-9.8</td>
-</tr>
-<tr>
-<td align="left"><code>thresholds.steering</code></td>
-<td align="left">double</td>
-<td align="left">invalid threshold of the steering angle in each trajectory point [rad]</td>
-<td align="left">1.414</td>
-</tr>
-<tr>
-<td align="left"><code>thresholds.steering_rate</code></td>
-<td align="left">double</td>
-<td align="left">invalid threshold of the steering angle rate in each trajectory point [rad/s]</td>
-<td align="left">10.0</td>
-</tr>
-<tr>
-<td align="left"><code>thresholds.velocity_deviation</code></td>
-<td align="left">double</td>
-<td align="left">invalid threshold of the velocity deviation between the ego velocity and the trajectory point closest to ego [m/s]</td>
-<td align="left">100.0</td>
-</tr>
-<tr>
-<td align="left"><code>thresholds.distance_deviation</code></td>
-<td align="left">double</td>
-<td align="left">invalid threshold of the distance deviation between the ego position and the trajectory point closest to ego [m]</td>
-<td align="left">100.0</td>
-</tr>
-<tr>
-<td align="left"><code>thresholds.yaw_deviation</code></td>
-<td align="left">double</td>
-<td align="left">invalid threshold of the difference between the ego yaw and the closest trajectory yaw [rad]</td>
-<td align="left">1.5708</td>
-</tr>
-<tr>
-<td align="left"><code>parameters.longitudinal_distance_deviation</code></td>
-<td align="left">double</td>
-<td align="left">invalid threshold of the longitudinal distance deviation between the ego position and the trajectory [m]</td>
-<td align="left">2.0</td>
+<td align="left"><code>validity_checks.latency.is_critical</code></td>
+<td align="left">bool</td>
+<td align="left">if true, will use handling type specified for critical checks</td>
+<td align="left">false</td>
 </tr>
 </tbody>
 </table>
-<h4 id="parameters_1">Parameters<a class="headerlink" href="#parameters_1" title="Permanent link">#</a></h4>
-<p>For parameters used e.g. to calculate threshold.</p>
-<p>| <code>parameters.forward_trajectory_length_acceleration</code> | double | This value is used to calculate required trajectory length. | -5.0 |
-| <code>parameters.forward_trajectory_length_margin</code> | double | A margin of the required trajectory length not to raise an error when the ego slightly exceeds the trajectory end point. | 2.0 |</p></div>
+<h4 id="interval-check">Interval Check<a class="headerlink" href="#interval-check" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th align="left">Name</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+<th align="left">Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><code>validity_checks.interval.enable</code></td>
+<td align="left">bool</td>
+<td align="left">flag to enable/disable interval validation check</td>
+<td align="left">true</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.interval.threshold</code></td>
+<td align="left">double</td>
+<td align="left">max valid distance between two consecutive trajectory points [m]</td>
+<td align="left">100.0</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.interval.is_critical</code></td>
+<td align="left">bool</td>
+<td align="left">if true, will use handling type specified for critical checks</td>
+<td align="left">false</td>
+</tr>
+</tbody>
+</table>
+<h4 id="curvature-check">Curvature Check<a class="headerlink" href="#curvature-check" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th align="left">Name</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+<th align="left">Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><code>validity_checks.curvature.enable</code></td>
+<td align="left">bool</td>
+<td align="left">flag to enable/disable curvature validation check</td>
+<td align="left">true</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.curvature.threshold</code></td>
+<td align="left">double</td>
+<td align="left">max valid value for the trajectory curvature [1/m]</td>
+<td align="left">2.0</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.curvature.is_critical</code></td>
+<td align="left">bool</td>
+<td align="left">if true, will use handling type specified for critical checks</td>
+<td align="left">false</td>
+</tr>
+</tbody>
+</table>
+<h4 id="relative-angle-check">Relative Angle Check<a class="headerlink" href="#relative-angle-check" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th align="left">Name</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+<th align="left">Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><code>validity_checks.relative_angle.enable</code></td>
+<td align="left">bool</td>
+<td align="left">flag to enable/disable relative angle validation check</td>
+<td align="left">true</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.relative_angle.threshold</code></td>
+<td align="left">double</td>
+<td align="left">max valid angle difference between two consecutive trajectory points [rad]</td>
+<td align="left">2.0</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.relative_angle.is_critical</code></td>
+<td align="left">bool</td>
+<td align="left">if true, will use handling type specified for critical checks</td>
+<td align="left">false</td>
+</tr>
+</tbody>
+</table>
+<h4 id="acceleration-check">Acceleration Check<a class="headerlink" href="#acceleration-check" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th align="left">Name</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+<th align="left">Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><code>validity_checks.acceleration.enable</code></td>
+<td align="left">bool</td>
+<td align="left">flag to enable/disable acceleration validation check</td>
+<td align="left">true</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.acceleration.lateral_th</code></td>
+<td align="left">double</td>
+<td align="left">max valid value for the lateral acceleration along the trajectory [m/ss]</td>
+<td align="left">9.8</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.acceleration.longitudinal_max_th</code></td>
+<td align="left">double</td>
+<td align="left">max valid value for the longitudinal acceleration along the trajectory [m/ss]</td>
+<td align="left">9.8</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.acceleration.longitudinal_min_th</code></td>
+<td align="left">double</td>
+<td align="left">min valid value for the longitudinal acceleration along the trajectory [m/ss]</td>
+<td align="left">-9.8</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.acceleration.is_critical</code></td>
+<td align="left">bool</td>
+<td align="left">if true, will use handling type specified for critical checks</td>
+<td align="left">false</td>
+</tr>
+</tbody>
+</table>
+<h4 id="steering-check">Steering Check<a class="headerlink" href="#steering-check" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th align="left">Name</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+<th align="left">Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><code>validity_checks.steering.enable</code></td>
+<td align="left">bool</td>
+<td align="left">flag to enable/disable steering validation check</td>
+<td align="left">true</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.steering.threshold</code></td>
+<td align="left">double</td>
+<td align="left">max valid steering value along the trajectory [rad]</td>
+<td align="left">1.414</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.steering.rate_th</code></td>
+<td align="left">double</td>
+<td align="left">max valid steering rate along the trajectory [rad/s]</td>
+<td align="left">10.0</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.steering.is_critical</code></td>
+<td align="left">bool</td>
+<td align="left">if true, will use handling type specified for critical checks</td>
+<td align="left">false</td>
+</tr>
+</tbody>
+</table>
+<h4 id="deviation-check">Deviation Check<a class="headerlink" href="#deviation-check" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th align="left">Name</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+<th align="left">Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><code>validity_checks.deviation.enable</code></td>
+<td align="left">bool</td>
+<td align="left">flag to enable/disable deviation validation check</td>
+<td align="left">true</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.deviation.velocity_th</code></td>
+<td align="left">double</td>
+<td align="left">max valid velocity deviation between ego and nearest trajectory point [m/s]</td>
+<td align="left">100.0</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.deviation.distance_th</code></td>
+<td align="left">double</td>
+<td align="left">max valid euclidean distance between ego and nearest trajectory point [m]</td>
+<td align="left">100.0</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.deviation.lon_distance_th</code></td>
+<td align="left">double</td>
+<td align="left">max valid longitudinal distance between ego and nearest trajectory point [m]</td>
+<td align="left">2.0</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.deviation.yaw_th</code></td>
+<td align="left">double</td>
+<td align="left">max valid yaw deviation between ego and nearest trajectory point [rad]</td>
+<td align="left">1.5708</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.deviation.is_critical</code></td>
+<td align="left">bool</td>
+<td align="left">if true, will use handling type specified for critical checks</td>
+<td align="left">false</td>
+</tr>
+</tbody>
+</table>
+<h4 id="forward-trajectory-length-check">Forward Trajectory Length Check<a class="headerlink" href="#forward-trajectory-length-check" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th align="left">Name</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+<th align="left">Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><code>validity_checks.forward_trajectory_length.enable</code></td>
+<td align="left">bool</td>
+<td align="left">flag to enable/disable latency validation check</td>
+<td align="left">true</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.forward_trajectory_length.acceleration</code></td>
+<td align="left">double</td>
+<td align="left">acceleration value used to calculate required trajectory length. [m/ss]</td>
+<td align="left">-5.0</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.forward_trajectory_length.margin</code></td>
+<td align="left">double</td>
+<td align="left">margin of the required length not to raise an error when ego slightly exceeds the end point. [m]</td>
+<td align="left">2.0</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.forward_trajectory_length.is_critical</code></td>
+<td align="left">bool</td>
+<td align="left">if true, will use handling type specified for critical checks</td>
+<td align="left">false</td>
+</tr>
+</tbody>
+</table></div>
 
 
 
