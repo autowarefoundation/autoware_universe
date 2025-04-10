@@ -458,7 +458,7 @@ void RadarObjectTrackerNode::diagnoseRadarInputInterval(
           (timestamp_now - last_processing_timestamp_.value()).nanoseconds()))
         .count();
 
-    if (elapsed_since_last_input_ms > radar_data_stale_th_ms_) {
+    if (elapsed_since_last_input_ms > radar_input_stale_threshold_ms_) {
       stat.add("is_radar_input_alive", false);
 
       message.clear();
