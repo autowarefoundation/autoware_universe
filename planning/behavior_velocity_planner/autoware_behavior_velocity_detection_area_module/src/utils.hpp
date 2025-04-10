@@ -15,8 +15,8 @@
 #ifndef UTILS_HPP_
 #define UTILS_HPP_
 
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/detection_area.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 #include <rclcpp/time.hpp>
 
 #include <geometry_msgs/msg/pose.hpp>
@@ -36,7 +36,7 @@ namespace autoware::behavior_velocity_planner::detection_area
 /// @param [in] detection_area detection area
 /// @param [in] extend_length [m] extension length to add on each edge of the stop line
 /// @return extended stop line
-universe_utils::LineString2d get_stop_line_geometry2d(
+autoware_utils::LineString2d get_stop_line_geometry2d(
   const lanelet::autoware::DetectionArea & detection_area, const double extend_length);
 
 /// @brief get the obstacle points found inside a detection area

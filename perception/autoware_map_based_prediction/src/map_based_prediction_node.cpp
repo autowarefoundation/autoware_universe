@@ -19,17 +19,18 @@
 #include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/math/constants.hpp>
-#include <autoware/universe_utils/math/normalization.hpp>
-#include <autoware/universe_utils/math/unit_conversion.hpp>
-#include <autoware/universe_utils/ros/uuid_helper.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/autoware_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/constants.hpp>
+#include <autoware_utils/math/normalization.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
+#include <autoware_utils/ros/uuid_helper.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <boost/geometry.hpp>
@@ -50,13 +51,15 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <ratio>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace autoware::map_based_prediction
 {
-using autoware::universe_utils::ScopedTimeTrack;
+using autoware_utils::ScopedTimeTrack;
 
 namespace
 {
@@ -97,7 +100,7 @@ double calcAbsLateralOffset(
   for (size_t i = 0; i < boundary_path.size(); ++i) {
     const double x = boundary_line[i].x();
     const double y = boundary_line[i].y();
-    boundary_path[i] = autoware::universe_utils::createPoint(x, y, 0.0);
+    boundary_path[i] = autoware_utils::create_point(x, y, 0.0);
   }
 
   return std::fabs(autoware::motion_utils::calcLateralOffset(boundary_path, search_pose.position));
@@ -364,7 +367,6 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
     google::InitGoogleLogging("map_based_prediction_node");
     google::InstallFailureSignalHandler();
   }
-  enable_delay_compensation_ = declare_parameter<bool>("enable_delay_compensation");
   prediction_time_horizon_.vehicle = declare_parameter<double>("prediction_time_horizon.vehicle");
   prediction_time_horizon_.pedestrian =
     declare_parameter<double>("prediction_time_horizon.pedestrian");
@@ -480,28 +482,40 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
   // publishers
   pub_objects_ = this->create_publisher<PredictedObjects>("~/output/objects", rclcpp::QoS{1});
 
+  // stopwatch
+  stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
+  stop_watch_ptr_->tic("cyclic_time");
+  stop_watch_ptr_->tic("processing_time");
+
+  {  // diagnostics
+    diagnostics_interface_ptr_ =
+      std::make_unique<autoware_utils::DiagnosticsInterface>(this, "map_based_prediction");
+
+    // [s] -> [ms]
+    processing_time_tolerance_ms_ = declare_parameter<double>("processing_time_tolerance") * 1e3;
+    processing_time_consecutive_excess_tolerance_ms_ =
+      declare_parameter<double>("processing_time_consecutive_excess_tolerance") * 1e3;
+  }
+
   // debug publishers
   if (use_time_publisher) {
     processing_time_publisher_ =
-      std::make_unique<autoware::universe_utils::DebugPublisher>(this, "map_based_prediction");
-    published_time_publisher_ =
-      std::make_unique<autoware::universe_utils::PublishedTimePublisher>(this);
-    stop_watch_ptr_ =
-      std::make_unique<autoware::universe_utils::StopWatch<std::chrono::milliseconds>>();
-    stop_watch_ptr_->tic("cyclic_time");
-    stop_watch_ptr_->tic("processing_time");
+      std::make_unique<autoware_utils::DebugPublisher>(this, "map_based_prediction");
+    published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
   }
 
+  // debug time keeper
   if (use_time_keeper) {
     detailed_processing_time_publisher_ =
-      this->create_publisher<autoware::universe_utils::ProcessingTimeDetail>(
+      this->create_publisher<autoware_utils::ProcessingTimeDetail>(
         "~/debug/processing_time_detail_ms", 1);
-    auto time_keeper = autoware::universe_utils::TimeKeeper(detailed_processing_time_publisher_);
-    time_keeper_ = std::make_shared<autoware::universe_utils::TimeKeeper>(time_keeper);
+    auto time_keeper = autoware_utils::TimeKeeper(detailed_processing_time_publisher_);
+    time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(time_keeper);
     path_generator_->setTimeKeeper(time_keeper_);
     predictor_vru_->setTimeKeeper(time_keeper_);
   }
 
+  // debug marker
   if (use_debug_marker) {
     pub_debug_markers_ =
       this->create_publisher<visualization_msgs::msg::MarkerArray>("maneuver", rclcpp::QoS{1});
@@ -514,15 +528,15 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
 rcl_interfaces::msg::SetParametersResult MapBasedPredictionNode::onParam(
   const std::vector<rclcpp::Parameter> & parameters)
 {
-  using autoware::universe_utils::updateParam;
+  using autoware_utils::update_param;
 
-  updateParam(parameters, "max_lateral_accel", max_lateral_accel_);
-  updateParam(parameters, "min_acceleration_before_curve", min_acceleration_before_curve_);
-  updateParam(
+  update_param(parameters, "max_lateral_accel", max_lateral_accel_);
+  update_param(parameters, "min_acceleration_before_curve", min_acceleration_before_curve_);
+  update_param(
     parameters, "check_lateral_acceleration_constraints", check_lateral_acceleration_constraints_);
-  updateParam(parameters, "use_vehicle_acceleration", use_vehicle_acceleration_);
-  updateParam(parameters, "speed_limit_multiplier", speed_limit_multiplier_);
-  updateParam(
+  update_param(parameters, "use_vehicle_acceleration", use_vehicle_acceleration_);
+  update_param(parameters, "speed_limit_multiplier", speed_limit_multiplier_);
+  update_param(
     parameters, "acceleration_exponential_half_life", acceleration_exponential_half_life_);
 
   path_generator_->setUseVehicleAcceleration(use_vehicle_acceleration_);
@@ -532,6 +546,54 @@ rcl_interfaces::msg::SetParametersResult MapBasedPredictionNode::onParam(
   result.successful = true;
   result.reason = "success";
   return result;
+}
+
+void MapBasedPredictionNode::updateDiagnostics(
+  const rclcpp::Time & timestamp, double processing_time_ms)
+{
+  diagnostics_interface_ptr_->clear();
+  diagnostics_interface_ptr_->add_key_value("timestamp", timestamp.seconds());
+  diagnostics_interface_ptr_->add_key_value("processing_time_ms", processing_time_ms);
+  // check processing time is in time
+  bool is_processing_in_time = processing_time_ms <= processing_time_tolerance_ms_;
+  diagnostics_interface_ptr_->add_key_value("is_processing_in_time", is_processing_in_time);
+  if (!is_processing_in_time) {
+    // publish warning if the current processing time exceeded
+    std::ostringstream oss;
+    oss << "Processing time exceeded: " << processing_time_tolerance_ms_ << "[ms] < "
+        << processing_time_ms << "[ms]";
+    diagnostics_interface_ptr_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, oss.str());
+  }
+
+  if (is_processing_in_time || !last_in_time_processing_timestamp_) {
+    last_in_time_processing_timestamp_ = timestamp;
+  }
+
+  // calculate consecutive excess duration
+  const double consecutive_excess_duration_ms =
+    std::chrono::duration<double, std::milli>(
+      std::chrono::nanoseconds(
+        (timestamp - last_in_time_processing_timestamp_.value()).nanoseconds()))
+      .count();
+
+  bool is_consecutive_excess_duration_ok =
+    consecutive_excess_duration_ms < processing_time_consecutive_excess_tolerance_ms_;
+  diagnostics_interface_ptr_->add_key_value(
+    "consecutive_excess_duration_ms", consecutive_excess_duration_ms);
+  diagnostics_interface_ptr_->add_key_value(
+    "is_consecutive_excess_duration_ok", is_consecutive_excess_duration_ok);
+  if (!is_consecutive_excess_duration_ok) {
+    // publish error if the processing time exceeded in a long term
+    std::ostringstream oss;
+    oss << "Processing time exceeded consecutively in a long term: "
+        << processing_time_consecutive_excess_tolerance_ms_ << "[ms] < "
+        << consecutive_excess_duration_ms << "[ms]";
+    diagnostics_interface_ptr_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::ERROR, oss.str());
+  }
+
+  diagnostics_interface_ptr_->publish(timestamp);
 }
 
 void MapBasedPredictionNode::mapCallback(const LaneletMapBin::ConstSharedPtr msg)
@@ -558,11 +620,11 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  if (stop_watch_ptr_) stop_watch_ptr_->toc("processing_time", true);
+  stop_watch_ptr_->toc("processing_time", true);
 
   // take traffic_signal
   {
-    const auto msg = sub_traffic_signals_.takeData();
+    const auto msg = sub_traffic_signals_.take_data();
     if (msg) {
       trafficSignalsCallback(msg);
     }
@@ -577,7 +639,7 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
   geometry_msgs::msg::TransformStamped::ConstSharedPtr world2map_transform;
   bool is_object_not_in_map_frame = in_objects->header.frame_id != "map";
   if (is_object_not_in_map_frame) {
-    world2map_transform = transform_listener_.getTransform(
+    world2map_transform = transform_listener_.get_transform(
       "map",                        // target
       in_objects->header.frame_id,  // src
       in_objects->header.stamp, rclcpp::Duration::from_seconds(0.1));
@@ -666,10 +728,15 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
   // Publish Results
   publish(output, debug_markers);
 
+  // Processing time
+  const auto processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
+  const auto cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
+
+  // Diagnostics
+  updateDiagnostics(output.header.stamp, processing_time_ms);
+
   // Publish Processing Time
-  if (stop_watch_ptr_) {
-    const auto processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
-    const auto cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
+  if (processing_time_publisher_) {
     processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
     processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
@@ -703,7 +770,7 @@ void MapBasedPredictionNode::updateObjectData(TrackedObject & object)
   // Compute yaw angle from the velocity and position of the object
   const auto & object_pose = object.kinematics.pose_with_covariance.pose;
   const auto & object_twist = object.kinematics.twist_with_covariance.twist;
-  const auto future_object_pose = autoware::universe_utils::calcOffsetPose(
+  const auto future_object_pose = autoware_utils::calc_offset_pose(
     object_pose, object_twist.linear.x * 0.1, object_twist.linear.y * 0.1, 0.0);
 
   // assumption: the object vx is much larger than vy
@@ -722,16 +789,15 @@ void MapBasedPredictionNode::updateObjectData(TrackedObject & object)
         tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
       // flip the angle
       object.kinematics.pose_with_covariance.pose.orientation =
-        autoware::universe_utils::createQuaternionFromYaw(
-          autoware::universe_utils::pi + original_yaw);
+        autoware_utils::create_quaternion_from_yaw(autoware_utils::pi + original_yaw);
       break;
     }
     default: {
-      const auto updated_object_yaw = autoware::universe_utils::calcAzimuthAngle(
-        object_pose.position, future_object_pose.position);
+      const auto updated_object_yaw =
+        autoware_utils::calc_azimuth_angle(object_pose.position, future_object_pose.position);
 
       object.kinematics.pose_with_covariance.pose.orientation =
-        autoware::universe_utils::createQuaternionFromYaw(updated_object_yaw);
+        autoware_utils::create_quaternion_from_yaw(updated_object_yaw);
       break;
     }
   }
@@ -758,7 +824,7 @@ void MapBasedPredictionNode::updateRoadUsersHistory(
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  std::string object_id = autoware::universe_utils::toHexString(object.object_id);
+  std::string object_id = autoware_utils::to_hex_string(object.object_id);
   const auto current_lanelets = getLanelets(current_lanelets_data);
 
   ObjectData single_object_data;
@@ -767,8 +833,7 @@ void MapBasedPredictionNode::updateRoadUsersHistory(
   single_object_data.future_possible_lanelets = current_lanelets;
   single_object_data.pose = object.kinematics.pose_with_covariance.pose;
   const double object_yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
-  single_object_data.pose.orientation =
-    autoware::universe_utils::createQuaternionFromYaw(object_yaw);
+  single_object_data.pose.orientation = autoware_utils::create_quaternion_from_yaw(object_yaw);
   single_object_data.time_delay = std::fabs((this->get_clock()->now() - header.stamp).seconds());
   single_object_data.twist = object.kinematics.twist_with_covariance.twist;
 
@@ -846,7 +911,7 @@ std::vector<LaneletPathWithPathInfo> MapBasedPredictionNode::getPredictedReferen
     return search_dist;
   };
 
-  std::string object_id = autoware::universe_utils::toHexString(object.object_id);
+  std::string object_id = autoware_utils::to_hex_string(object.object_id);
   geometry_msgs::msg::Pose object_pose = object.kinematics.pose_with_covariance.pose;
 
   // Step 2. Get possible paths for each lanelet
@@ -1181,7 +1246,7 @@ Maneuver MapBasedPredictionNode::predictObjectManeuverByLatDiffDistance(
   for (const auto & lanelet : prev_lanelets) {
     const double lane_yaw = lanelet::utils::getLaneletAngle(lanelet, prev_pose.position);
     const double delta_yaw = tf2::getYaw(prev_pose.orientation) - lane_yaw;
-    const double normalized_delta_yaw = autoware::universe_utils::normalizeRadian(delta_yaw);
+    const double normalized_delta_yaw = autoware_utils::normalize_radian(delta_yaw);
     if (normalized_delta_yaw < closest_prev_yaw) {
       closest_prev_yaw = normalized_delta_yaw;
       prev_lanelet = lanelet;
@@ -1191,7 +1256,7 @@ Maneuver MapBasedPredictionNode::predictObjectManeuverByLatDiffDistance(
   // Step4. Check if the vehicle has changed lane
   const auto current_lanelet = current_lanelet_data.lanelet;
   const auto current_pose = object_pose;
-  const double dist = autoware::universe_utils::calcDistance2d(prev_pose, current_pose);
+  const double dist = autoware_utils::calc_distance2d(prev_pose, current_pose);
   lanelet::routing::LaneletPaths possible_paths =
     routing_graph_ptr_->possiblePaths(prev_lanelet, dist + 2.0, 0, false);
   bool has_lane_changed = true;
@@ -1246,42 +1311,6 @@ Maneuver MapBasedPredictionNode::predictObjectManeuverByLatDiffDistance(
   return Maneuver::LANE_FOLLOW;
 }
 
-geometry_msgs::msg::Pose MapBasedPredictionNode::compensateTimeDelay(
-  const geometry_msgs::msg::Pose & delayed_pose, const geometry_msgs::msg::Twist & twist,
-  const double dt) const
-{
-  if (!enable_delay_compensation_) {
-    return delayed_pose;
-  }
-
-  /*  == Nonlinear model ==
-   *
-   * x_{k+1}   = x_k + vx_k * cos(yaw_k) * dt - vy_k * sin(yaw_k) * dt
-   * y_{k+1}   = y_k + vx_k * sin(yaw_k) * dt + vy_k * cos(yaw_k) * dt
-   * yaw_{k+1} = yaw_k + (wz_k) * dt
-   *
-   */
-
-  const double vx = twist.linear.x;
-  const double vy = twist.linear.y;
-  const double wz = twist.angular.z;
-  const double prev_yaw = tf2::getYaw(delayed_pose.orientation);
-  const double prev_x = delayed_pose.position.x;
-  const double prev_y = delayed_pose.position.y;
-  const double prev_z = delayed_pose.position.z;
-
-  const double curr_x = prev_x + vx * std::cos(prev_yaw) * dt - vy * std::sin(prev_yaw) * dt;
-  const double curr_y = prev_y + vx * std::sin(prev_yaw) * dt + vy * std::cos(prev_yaw) * dt;
-  const double curr_z = prev_z;
-  const double curr_yaw = prev_yaw + wz * dt;
-
-  geometry_msgs::msg::Pose current_pose;
-  current_pose.position = autoware::universe_utils::createPoint(curr_x, curr_y, curr_z);
-  current_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(curr_yaw);
-
-  return current_pose;
-}
-
 double MapBasedPredictionNode::calcRightLateralOffset(
   const lanelet::ConstLineString2d & boundary_line, const geometry_msgs::msg::Pose & search_pose)
 {
@@ -1289,7 +1318,7 @@ double MapBasedPredictionNode::calcRightLateralOffset(
   for (size_t i = 0; i < boundary_path.size(); ++i) {
     const double x = boundary_line[i].x();
     const double y = boundary_line[i].y();
-    boundary_path[i] = autoware::universe_utils::createPoint(x, y, 0.0);
+    boundary_path[i] = autoware_utils::create_point(x, y, 0.0);
   }
 
   return std::fabs(autoware::motion_utils::calcLateralOffset(boundary_path, search_pose.position));
@@ -1475,7 +1504,7 @@ std::pair<PosePath, double> MapBasedPredictionNode::convertLaneletPathToPosePath
         // Prevent from inserting same points
         if (!converted_path.empty()) {
           const auto last_p = converted_path.back();
-          const double tmp_dist = autoware::universe_utils::calcDistance2d(last_p, current_p);
+          const double tmp_dist = autoware_utils::calc_distance2d(last_p, current_p);
           if (tmp_dist < 1e-6) {
             prev_p = current_p;
             continue;

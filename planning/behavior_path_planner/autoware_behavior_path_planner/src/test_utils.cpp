@@ -15,7 +15,7 @@
 #include "autoware/behavior_path_planner/test_utils.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <autoware_planning_test_manager/autoware_planning_test_manager.hpp>
+#include <autoware/planning_test_manager/autoware_planning_test_manager.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
 
 #include <tier4_planning_msgs/msg/lateral_offset.hpp>
@@ -26,33 +26,13 @@
 
 namespace autoware::behavior_path_planner
 {
-namespace
-{
-using tier4_planning_msgs::msg::LateralOffset;
-
-void publishLateralOffset(
-  std::shared_ptr<PlanningInterfaceTestManager> test_manager,
-  std::shared_ptr<BehaviorPathPlannerNode> test_target_node)
-{
-  auto test_node = test_manager->getTestNode();
-  const auto pub_lateral_offset = test_manager->getTestNode()->create_publisher<LateralOffset>(
-    "behavior_path_planner/input/lateral_offset", 1);
-  pub_lateral_offset->publish(LateralOffset{});
-  autoware::test_utils::spinSomeNodes(test_node, test_target_node, 3);
-}
-}  // namespace
-
 std::shared_ptr<PlanningInterfaceTestManager> generateTestManager()
 {
   auto test_manager = std::make_shared<PlanningInterfaceTestManager>();
 
   // set subscriber with topic name: behavior_path_planner → test_node_
-  test_manager->setPathWithLaneIdSubscriber("behavior_path_planner/output/path");
-
-  // set behavior_path_planner's input topic name(this topic is changed to test node)
-  test_manager->setRouteInputTopicName("behavior_path_planner/input/route");
-
-  test_manager->setInitialPoseTopicName("behavior_path_planner/input/odometry");
+  test_manager->subscribeOutput<autoware_internal_planning_msgs::msg::PathWithLaneId>(
+    "behavior_path_planner/output/path");
 
   return test_manager;
 }
@@ -103,16 +83,33 @@ void publishMandatoryTopics(
   std::shared_ptr<BehaviorPathPlannerNode> test_target_node)
 {
   // publish necessary topics from test_manager
-  test_manager->publishInitialPose(test_target_node, "behavior_path_planner/input/odometry");
-  test_manager->publishAcceleration(test_target_node, "behavior_path_planner/input/accel");
-  test_manager->publishPredictedObjects(test_target_node, "behavior_path_planner/input/perception");
-  test_manager->publishOccupancyGrid(
-    test_target_node, "behavior_path_planner/input/occupancy_grid_map");
-  test_manager->publishLaneDrivingScenario(
-    test_target_node, "behavior_path_planner/input/scenario");
-  test_manager->publishMap(test_target_node, "behavior_path_planner/input/vector_map");
-  test_manager->publishCostMap(test_target_node, "behavior_path_planner/input/costmap");
-  test_manager->publishOperationModeState(test_target_node, "system/operation_mode/state");
-  publishLateralOffset(test_manager, test_target_node);
+  test_manager->publishInput(
+    test_target_node, "behavior_path_planner/input/odometry",
+    autoware::test_utils::makeInitialPose());
+  test_manager->publishInput(
+    test_target_node, "behavior_path_planner/input/accel",
+    geometry_msgs::msg::AccelWithCovarianceStamped{});
+  test_manager->publishInput(
+    test_target_node, "behavior_path_planner/input/perception",
+    autoware_perception_msgs::msg::PredictedObjects{});
+  test_manager->publishInput(
+    test_target_node, "behavior_path_planner/input/occupancy_grid_map",
+    autoware::test_utils::makeCostMapMsg());
+  test_manager->publishInput(
+    test_target_node, "behavior_path_planner/input/scenario",
+    autoware::test_utils::makeScenarioMsg(
+      autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING));
+  test_manager->publishInput(
+    test_target_node, "behavior_path_planner/input/vector_map",
+    autoware::test_utils::makeMapBinMsg());
+  test_manager->publishInput(
+    test_target_node, "behavior_path_planner/input/costmap",
+    autoware::test_utils::makeCostMapMsg());
+  test_manager->publishInput(
+    test_target_node, "system/operation_mode/state",
+    autoware_adapi_v1_msgs::msg::OperationModeState{});
+  test_manager->publishInput(
+    test_target_node, "behavior_path_planner/input/lateral_offset",
+    tier4_planning_msgs::msg::LateralOffset{});
 }
 }  // namespace autoware::behavior_path_planner

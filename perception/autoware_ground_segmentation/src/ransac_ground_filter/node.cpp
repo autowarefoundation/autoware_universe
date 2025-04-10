@@ -82,7 +82,7 @@ PlaneBasis getPlaneBasis(const Eigen::Vector3d & plane_normal)
 }
 
 using autoware::pointcloud_preprocessor::get_param;
-using autoware::universe_utils::ScopedTimeTrack;
+using autoware_utils::ScopedTimeTrack;
 
 RANSACGroundFilterComponent::RANSACGroundFilterComponent(const rclcpp::NodeOptions & options)
 : Filter("RANSACGroundFilter", options)
@@ -119,15 +119,15 @@ RANSACGroundFilterComponent::RANSACGroundFilterComponent(const rclcpp::NodeOptio
   pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS);
 
   managed_tf_buffer_ =
-    std::make_unique<autoware::universe_utils::ManagedTransformBuffer>(this, has_static_tf_only_);
+    std::make_unique<autoware_utils::ManagedTransformBuffer>(this, has_static_tf_only_);
 
   bool use_time_keeper = declare_parameter<bool>("publish_processing_time_detail");
   if (use_time_keeper) {
     detailed_processing_time_publisher_ =
-      this->create_publisher<autoware::universe_utils::ProcessingTimeDetail>(
+      this->create_publisher<autoware_utils::ProcessingTimeDetail>(
         "~/debug/processing_time_detail_ms", 1);
-    auto time_keeper = autoware::universe_utils::TimeKeeper(detailed_processing_time_publisher_);
-    time_keeper_ = std::make_shared<autoware::universe_utils::TimeKeeper>(time_keeper);
+    auto time_keeper = autoware_utils::TimeKeeper(detailed_processing_time_publisher_);
+    time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(time_keeper);
   }
 }
 
@@ -175,7 +175,7 @@ bool RANSACGroundFilterComponent::transformPointCloud(
     return true;
   }
 
-  return managed_tf_buffer_->transformPointcloud(in_target_frame, *in_cloud_ptr, *out_cloud_ptr);
+  return managed_tf_buffer_->transform_pointcloud(in_target_frame, *in_cloud_ptr, *out_cloud_ptr);
 }
 
 void RANSACGroundFilterComponent::extractPointsIndices(

@@ -22,9 +22,9 @@
 #include <autoware/lidar_centerpoint/preprocess/pointcloud_densification.hpp>
 #include <autoware/lidar_centerpoint/ros_utils.hpp>
 #include <autoware/lidar_centerpoint/utils.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/math/constants.hpp>
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/constants.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <pcl_ros/transforms.hpp>
 
 #include <omp.h>
@@ -36,7 +36,7 @@
 
 namespace
 {
-using autoware::universe_utils::ScopedTimeTrack;
+using autoware_utils::ScopedTimeTrack;
 
 Eigen::Affine3f _transformToEigen(const geometry_msgs::msg::Transform & t)
 {
@@ -157,8 +157,8 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
 
   // subscriber
   std::function<void(const PointCloudMsgType::ConstSharedPtr msg)> sub_callback =
-    std::bind(&PointPaintingFusionNode::subCallback, this, std::placeholders::_1);
-  det3d_sub_ = this->create_subscription<PointCloudMsgType>(
+    std::bind(&PointPaintingFusionNode::sub_callback, this, std::placeholders::_1);
+  msg3d_sub_ = this->create_subscription<PointCloudMsgType>(
     "~/input/pointcloud", rclcpp::SensorDataQoS().keep_last(3), sub_callback);
 
   // publisher
@@ -192,7 +192,7 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
   detector_ptr_ = std::make_unique<image_projection_based_fusion::PointPaintingTRT>(
     encoder_param, head_param, densification_param, config);
   diagnostics_interface_ptr_ =
-    std::make_unique<autoware::universe_utils::DiagnosticsInterface>(this, "pointpainting_trt");
+    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "pointpainting_trt");
 
   if (this->declare_parameter("build_only", false)) {
     RCLCPP_INFO(this->get_logger(), "TensorRT engine is built and shutdown node.");
@@ -234,8 +234,7 @@ void PointPaintingFusionNode::preprocess(PointCloudMsgType & painted_pointcloud_
   sensor_msgs::PointCloud2Iterator<float> iter_painted_z(painted_pointcloud_msg, "z");
   for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(tmp, "x"), iter_y(tmp, "y"),
        iter_z(tmp, "z");
-       iter_x != iter_x.end();
-       ++iter_x, ++iter_y, ++iter_z, ++iter_painted_x, ++iter_painted_y, ++iter_painted_z) {
+       iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z) {
     if (
       *iter_x <= pointcloud_range.at(0) || *iter_x >= pointcloud_range.at(3) ||
       *iter_y <= pointcloud_range.at(1) || *iter_y >= pointcloud_range.at(4)) {
@@ -245,6 +244,9 @@ void PointPaintingFusionNode::preprocess(PointCloudMsgType & painted_pointcloud_
       *iter_painted_y = *iter_y;
       *iter_painted_z = *iter_z;
       j += painted_point_step;
+      ++iter_painted_x;
+      ++iter_painted_y;
+      ++iter_painted_z;
     }
   }
 
@@ -256,9 +258,9 @@ void PointPaintingFusionNode::preprocess(PointCloudMsgType & painted_pointcloud_
     static_cast<uint32_t>(painted_pointcloud_msg.data.size() / painted_pointcloud_msg.height);
 }
 
-void PointPaintingFusionNode::fuseOnSingleImage(
+void PointPaintingFusionNode::fuse_on_single_image(
   __attribute__((unused)) const PointCloudMsgType & input_pointcloud_msg,
-  const Det2dStatus<RoiMsgType> & det2d, const RoiMsgType & input_roi_msg,
+  const Det2dStatus<RoiMsgType> & det2d_status, const RoiMsgType & input_rois_msg,
   PointCloudMsgType & painted_pointcloud_msg)
 {
   if (painted_pointcloud_msg.data.empty() || painted_pointcloud_msg.fields.empty()) {
@@ -267,7 +269,7 @@ void PointPaintingFusionNode::fuseOnSingleImage(
     return;
   }
 
-  auto num_bbox = (input_roi_msg.feature_objects).size();
+  auto num_bbox = (input_rois_msg.feature_objects).size();
   if (num_bbox == 0) {
     return;
   }
@@ -283,8 +285,8 @@ void PointPaintingFusionNode::fuseOnSingleImage(
   Eigen::Affine3f lidar2cam_affine;
   {
     const auto transform_stamped_optional = getTransformStamped(
-      tf_buffer_, /*target*/ input_roi_msg.header.frame_id,
-      /*source*/ painted_pointcloud_msg.header.frame_id, input_roi_msg.header.stamp);
+      tf_buffer_, /*target*/ input_rois_msg.header.frame_id,
+      /*source*/ painted_pointcloud_msg.header.frame_id, input_rois_msg.header.stamp);
     if (!transform_stamped_optional) {
       return;
     }
@@ -312,7 +314,7 @@ dc   | dc dc dc  dc ||zc|
                      |dc|
    **/
 
-  auto objects = input_roi_msg.feature_objects;
+  auto objects = input_rois_msg.feature_objects;
   int iterations = painted_pointcloud_msg.data.size() / painted_pointcloud_msg.point_step;
   // iterate points
   // Requires 'OMP_NUM_THREADS=N'
@@ -336,13 +338,13 @@ dc   | dc dc dc  dc ||zc|
       p_y = point_camera.y();
       p_z = point_camera.z();
 
-      if (det2d.camera_projector_ptr->isOutsideHorizontalView(p_x, p_z)) {
+      if (det2d_status.camera_projector_ptr->isOutsideHorizontalView(p_x, p_z)) {
         continue;
       }
 
       // project
       Eigen::Vector2d projected_point;
-      if (det2d.camera_projector_ptr->calcImageProjectedPoint(
+      if (det2d_status.camera_projector_ptr->calcImageProjectedPoint(
             cv::Point3d(p_x, p_y, p_z), projected_point)) {
         // iterate 2d bbox
         for (const auto & feature_object : objects) {
@@ -371,7 +373,7 @@ dc   | dc dc dc  dc ||zc|
       if (time_keeper_)
         inner_st_ptr = std::make_unique<ScopedTimeTrack>("publish debug message", *time_keeper_);
 
-      for (const auto & feature_object : input_roi_msg.feature_objects) {
+      for (const auto & feature_object : input_rois_msg.feature_objects) {
         debug_image_rois.push_back(feature_object.feature.roi);
       }
 
@@ -381,7 +383,7 @@ dc   | dc dc dc  dc ||zc|
 
       debugger_->image_rois_ = debug_image_rois;
       debugger_->obstacle_points_ = debug_image_points;
-      debugger_->publishImage(det2d.id, input_roi_msg.header.stamp);
+      debugger_->publishImage(det2d_status.id, input_rois_msg.header.stamp);
     }
   }
 }

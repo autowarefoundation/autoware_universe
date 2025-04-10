@@ -95,9 +95,42 @@
                 }
               },
               "required": ["enabled", "velocity_yaw_threshold", "object_speed_threshold"]
+            },
+            "debug": {
+              "type": "boolean",
+              "default": false,
+              "description": "If true, debug information is enabled."
+            },
+            "lanelet_extra_margin": {
+              "type": "number",
+              "default": 0.0,
+              "description": "Extra margin added to the lanelet boundaries."
+            },
+            "use_height_threshold": {
+              "type": "boolean",
+              "default": false,
+              "description": "If true, height thresholds are used to filter objects."
+            },
+            "max_height_threshold": {
+              "type": "number",
+              "default": 10.0,
+              "description": "Maximum height threshold for filtering objects (in meters)."
+            },
+            "min_height_threshold": {
+              "type": "number",
+              "default": -1.0,
+              "description": "Minimum height threshold for filtering objects (in meters)."
             }
           },
-          "required": ["polygon_overlap_filter", "lanelet_direction_filter"]
+          "required": [
+            "polygon_overlap_filter",
+            "lanelet_direction_filter",
+            "debug",
+            "lanelet_extra_margin",
+            "use_height_threshold",
+            "max_height_threshold",
+            "min_height_threshold"
+          ]
         }
       },
       "required": ["filter_target_label", "filter_settings"],

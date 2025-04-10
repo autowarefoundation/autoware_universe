@@ -14,7 +14,7 @@
 
 #include <autoware/autonomous_emergency_braking/utils.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <optional>
 #include <string>
@@ -22,9 +22,9 @@
 
 namespace autoware::motion::control::autonomous_emergency_braking::utils
 {
-using autoware::universe_utils::Polygon2d;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
+using autoware_utils::Polygon2d;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::TransformStamped;
@@ -37,7 +37,7 @@ std::optional<ObjectData> getObjectOnPathData(
 {
   const auto current_p = [&]() {
     const auto & p = ego_path.front().position;
-    return autoware::universe_utils::createPoint(p.x, p.y, p.z);
+    return autoware_utils::create_point(p.x, p.y, p.z);
   }();
   const double obj_arc_length =
     autoware::motion_utils::calcSignedArcLength(ego_path, current_p, obj_position);
@@ -228,10 +228,8 @@ void fillMarkerFromPolygon(
     for (size_t dp_idx = 0; dp_idx < poly.outer().size(); ++dp_idx) {
       const auto & boost_cp = poly.outer().at(dp_idx);
       const auto & boost_np = poly.outer().at((dp_idx + 1) % poly.outer().size());
-      const auto curr_point =
-        autoware::universe_utils::createPoint(boost_cp.x(), boost_cp.y(), 0.0);
-      const auto next_point =
-        autoware::universe_utils::createPoint(boost_np.x(), boost_np.y(), 0.0);
+      const auto curr_point = autoware_utils::create_point(boost_cp.x(), boost_cp.y(), 0.0);
+      const auto next_point = autoware_utils::create_point(boost_np.x(), boost_np.y(), 0.0);
       polygon_marker.points.push_back(curr_point);
       polygon_marker.points.push_back(next_point);
     }
@@ -246,9 +244,9 @@ void fillMarkerFromPolygon(
       const auto & boost_cp = poly.outer().at(dp_idx);
       const auto & boost_np = poly.outer().at((dp_idx + 1) % poly.outer().size());
       const auto curr_point =
-        autoware::universe_utils::createPoint(boost_cp.x(), boost_cp.y(), boost_cp.z());
+        autoware_utils::create_point(boost_cp.x(), boost_cp.y(), boost_cp.z());
       const auto next_point =
-        autoware::universe_utils::createPoint(boost_np.x(), boost_np.y(), boost_np.z());
+        autoware_utils::create_point(boost_np.x(), boost_np.y(), boost_np.z());
       polygon_marker.points.push_back(curr_point);
       polygon_marker.points.push_back(next_point);
     }

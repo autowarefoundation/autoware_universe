@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- cspell: ignore semseg -->
+  <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
+
+  <arg name="input/image" default="/sensing/camera/camera6/image_raw"/>
+  <arg name="output/objects" default="/perception/traffic_light_recognition/camera6/detection/rois"/>
+  <arg name="yolox_param_path" default="$(find-pkg-share autoware_tensorrt_yolox)/config/yolox_traffic_light_detector.param.yaml"/>
+  <arg name="model_path" default="$(var data_path)/tensorrt_yolox/yolox_s_car_ped_tl_detector_960_960_batch_1.onnx" description="model path for traffic light detection"/>
+  <arg name="label_path" default="$(var data_path)/tensorrt_yolox/car_ped_tl_detector_labels.txt" description="path name for traffic light detection"/>
+  <arg name="color_map_path" default="$(var data_path)/tensorrt_yolox/semseg_color_map.csv" description="color map path"/>
+
+  <arg name="use_decompress" default="true" description="use image decompress"/>
+  <arg name="build_only" default="false" description="exit after trt engine is built"/>
+
+  <arg name="decompressor_param_path" default="$(find-pkg-share autoware_image_transport_decompressor)/config/image_transport_decompressor.param.yaml"/>
+  <node pkg="autoware_image_transport_decompressor" exec="image_transport_decompressor_node" name="image_transport_decompressor_node" if="$(var use_decompress)">
+    <remap from="~/input/compressed_image" to="$(var input/image)/compressed"/>
+    <remap from="~/output/raw_image" to="$(var input/image)"/>
+    <param from="$(var decompressor_param_path)"/>
+  </node>
+
+  <node pkg="autoware_tensorrt_yolox" exec="autoware_tensorrt_yolox_node_exe" name="tensorrt_yolox_traffic_light_detector" output="screen">
+    <remap from="~/in/image" to="$(var input/image)"/>
+    <remap from="~/out/objects" to="$(var output/objects)"/>
+    <param from="$(var yolox_param_path)" allow_substs="true"/>
+    <param name="model_path" value="$(var model_path)"/>
+    <param name="label_path" value="$(var label_path)"/>
+    <param name="color_map_path" value="$(var color_map_path)"/>
+    <param name="build_only" value="$(var build_only)"/>
+  </node>
+</launch>

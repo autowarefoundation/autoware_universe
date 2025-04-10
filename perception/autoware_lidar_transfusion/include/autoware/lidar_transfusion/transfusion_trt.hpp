@@ -24,7 +24,7 @@
 #include "autoware/lidar_transfusion/visibility_control.hpp"
 
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
@@ -64,8 +64,7 @@ protected:
 
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
   std::unique_ptr<VoxelGenerator> vg_ptr_{nullptr};
-  std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{
-    nullptr};
+  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
   std::unique_ptr<PreprocessCuda> pre_ptr_{nullptr};
   std::unique_ptr<PostprocessCuda> post_ptr_{nullptr};
   cudaStream_t stream_{nullptr};

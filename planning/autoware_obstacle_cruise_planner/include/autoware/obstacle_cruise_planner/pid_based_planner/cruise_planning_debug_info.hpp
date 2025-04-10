@@ -17,11 +17,11 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include "tier4_debug_msgs/msg/float32_multi_array_stamped.hpp"
+#include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
 
 #include <array>
 
-using tier4_debug_msgs::msg::Float32MultiArrayStamped;
+using autoware_internal_debug_msgs::msg::Float32MultiArrayStamped;
 
 class CruisePlanningDebugInfo
 {

@@ -21,9 +21,10 @@ This module works without `~/input/route`, but its behavior is outputting the su
 
 ### Output
 
-| Name                       | Type                                                  | Description                                               |
-| -------------------------- | ----------------------------------------------------- | --------------------------------------------------------- |
-| `~/output/traffic_signals` | autoware_perception_msgs::msg::TrafficLightGroupArray | output that contains estimated pedestrian traffic signals |
+| Name                         | Type                                                  | Description                                               |
+| ---------------------------- | ----------------------------------------------------- | --------------------------------------------------------- |
+| `~/output/traffic_signals`   | autoware_perception_msgs::msg::TrafficLightGroupArray | output that contains estimated pedestrian traffic signals |
+| `~/debug/processing_time_ms` | autoware_internal_debug_msgs::msg::Float64Stamped     | pipeline latency time (ms)                                |
 
 ## Parameters
 

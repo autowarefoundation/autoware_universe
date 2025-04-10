@@ -14,7 +14,7 @@
 
 #include "autoware/behavior_path_sampling_planner_module/manager.hpp"
 
-#include "autoware/universe_utils/ros/update_param.hpp"
+#include "autoware_utils/ros/update_param.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -77,48 +77,48 @@ void SamplingPlannerModuleManager::init(rclcpp::Node * node)
 void SamplingPlannerModuleManager::updateModuleParams(
   [[maybe_unused]] const std::vector<rclcpp::Parameter> & parameters)
 {
-  using autoware::universe_utils::updateParam;
+  using autoware_utils::update_param;
 
   auto & p = parameters_;
 
   {
     std::string ns{"constraints.hard"};
-    updateParam<double>(parameters, ns + ".max_curvature", p->max_curvature);
-    updateParam<double>(parameters, ns + ".min_curvature", p->min_curvature);
+    update_param<double>(parameters, ns + ".max_curvature", p->max_curvature);
+    update_param<double>(parameters, ns + ".min_curvature", p->min_curvature);
     ns = std::string{"constraints.soft"};
-    updateParam<double>(parameters, ns + ".lateral_deviation_weight", p->lateral_deviation_weight);
-    updateParam<double>(parameters, ns + ".length_weight", p->length_weight);
-    updateParam<double>(parameters, ns + ".curvature_weight", p->curvature_weight);
-    updateParam<std::vector<double>>(parameters, ns + ".weights", p->weights);
+    update_param<double>(parameters, ns + ".lateral_deviation_weight", p->lateral_deviation_weight);
+    update_param<double>(parameters, ns + ".length_weight", p->length_weight);
+    update_param<double>(parameters, ns + ".curvature_weight", p->curvature_weight);
+    update_param<std::vector<double>>(parameters, ns + ".weights", p->weights);
   }
   {
     std::string ns{"sampling"};
-    updateParam<bool>(parameters, ns + ".enable_frenet", p->enable_frenet);
-    updateParam<bool>(parameters, ns + ".enable_bezier", p->enable_bezier);
-    updateParam<double>(parameters, ns + ".resolution", p->resolution);
+    update_param<bool>(parameters, ns + ".enable_frenet", p->enable_frenet);
+    update_param<bool>(parameters, ns + ".enable_bezier", p->enable_bezier);
+    update_param<double>(parameters, ns + ".resolution", p->resolution);
 
-    updateParam<int>(
+    update_param<int>(
       parameters, ns + ".previous_path_reuse_points_nb", p->previous_path_reuse_points_nb);
 
-    updateParam<int>(
+    update_param<int>(
       parameters, ns + ".nb_target_lateral_positions", p->nb_target_lateral_positions);
-    updateParam<std::vector<double>>(parameters, ns + ".target_lengths", p->target_lengths);
+    update_param<std::vector<double>>(parameters, ns + ".target_lengths", p->target_lengths);
 
-    updateParam<std::vector<double>>(
+    update_param<std::vector<double>>(
       parameters, ns + ".target_lateral_positions", p->target_lateral_positions);
 
     ns += ".frenet";
-    updateParam<std::vector<double>>(
+    update_param<std::vector<double>>(
       parameters, ns + ".target_lateral_velocities", p->target_lateral_velocities);
 
-    updateParam<std::vector<double>>(
+    update_param<std::vector<double>>(
       parameters, ns + ".target_lateral_accelerations", p->target_lateral_accelerations);
   }
   {
     std::string ns{"preprocessing"};
-    updateParam<bool>(parameters, ns + ".force_zero_initial_deviation", p->force_zero_deviation);
-    updateParam<bool>(parameters, ns + ".force_zero_initial_heading", p->force_zero_heading);
-    updateParam<bool>(parameters, ns + ".smooth_reference_trajectory", p->smooth_reference);
+    update_param<bool>(parameters, ns + ".force_zero_initial_deviation", p->force_zero_deviation);
+    update_param<bool>(parameters, ns + ".force_zero_initial_heading", p->force_zero_heading);
+    update_param<bool>(parameters, ns + ".smooth_reference_trajectory", p->smooth_reference);
   }
 
   std::for_each(observers_.begin(), observers_.end(), [&](const auto & observer) {

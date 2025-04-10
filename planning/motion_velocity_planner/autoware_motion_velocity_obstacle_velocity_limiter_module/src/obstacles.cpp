@@ -59,11 +59,12 @@ polygon_t createObjectPolygon(
 }
 
 multi_polygon_t createObjectPolygons(
-  const std::vector<PlannerData::Object> & objects, const double buffer, const double min_velocity)
+  const std::vector<std::shared_ptr<PlannerData::Object>> & objects, const double buffer,
+  const double min_velocity)
 {
   multi_polygon_t polygons;
   for (const auto & object : objects) {
-    const auto & predicted_object = object.predicted_object;
+    const auto & predicted_object = object->predicted_object;
     const double obj_vel_norm = std::hypot(
       predicted_object.kinematics.initial_twist_with_covariance.twist.linear.x,
       predicted_object.kinematics.initial_twist_with_covariance.twist.linear.y);

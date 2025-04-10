@@ -15,7 +15,7 @@
 #ifndef TYPES_HPP_
 #define TYPES_HPP_
 
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 #include <rclcpp/time.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
@@ -32,7 +32,7 @@
 namespace autoware::motion_velocity_planner::dynamic_obstacle_stop
 {
 using TrajectoryPoints = std::vector<autoware_planning_msgs::msg::TrajectoryPoint>;
-using BoxIndexPair = std::pair<autoware::universe_utils::Box2d, size_t>;
+using BoxIndexPair = std::pair<autoware_utils::Box2d, size_t>;
 using Rtree = boost::geometry::index::rtree<BoxIndexPair, boost::geometry::index::rstar<16, 4>>;
 
 /// @brief parameters for the "out of lane" module
@@ -53,23 +53,23 @@ struct PlannerParam
 
 struct EgoData
 {
-  TrajectoryPoints trajectory;
+  TrajectoryPoints trajectory{};
   size_t first_trajectory_idx{};
-  double longitudinal_offset_to_first_trajectory_idx;  // [m]
-  geometry_msgs::msg::Pose pose;
-  autoware::universe_utils::MultiPolygon2d trajectory_footprints;
-  Rtree rtree;
-  std::optional<geometry_msgs::msg::Pose> earliest_stop_pose;
+  double longitudinal_offset_to_first_trajectory_idx{};  // [m]
+  geometry_msgs::msg::Pose pose{};
+  autoware_utils::MultiPolygon2d trajectory_footprints{};
+  Rtree rtree{};
+  std::optional<geometry_msgs::msg::Pose> earliest_stop_pose{};
 };
 
 /// @brief debug data
 struct DebugData
 {
-  autoware::universe_utils::MultiPolygon2d obstacle_footprints;
+  autoware_utils::MultiPolygon2d obstacle_footprints{};
   size_t prev_dynamic_obstacles_nb{};
-  autoware::universe_utils::MultiPolygon2d ego_footprints;
+  autoware_utils::MultiPolygon2d ego_footprints{};
   size_t prev_ego_footprints_nb{};
-  std::optional<geometry_msgs::msg::Pose> stop_pose;
+  std::optional<geometry_msgs::msg::Pose> stop_pose{};
   size_t prev_collisions_nb{};
   double z{};
   void reset_data()
@@ -82,8 +82,8 @@ struct DebugData
 
 struct Collision
 {
-  geometry_msgs::msg::Point point;
-  std::string object_uuid;
+  geometry_msgs::msg::Point point{};
+  std::string object_uuid{};
 };
 }  // namespace autoware::motion_velocity_planner::dynamic_obstacle_stop
 

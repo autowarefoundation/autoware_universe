@@ -16,10 +16,10 @@
 #define LOCALIZATION_ERROR_MONITOR_HPP_
 
 #include "autoware/localization_util/covariance_ellipse.hpp"
-#include "autoware/universe_utils/ros/diagnostics_interface.hpp"
+#include "autoware_utils/ros/diagnostics_interface.hpp"
 
 #include <Eigen/Dense>
-#include <autoware/universe_utils/ros/logger_level_configure.hpp>
+#include <autoware_utils/ros/logger_level_configure.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <nav_msgs/msg/odometry.hpp>
@@ -37,9 +37,9 @@ private:
 
   rclcpp::TimerBase::SharedPtr timer_;
 
-  std::unique_ptr<autoware::universe_utils::LoggerLevelConfigure> logger_configure_;
+  std::unique_ptr<autoware_utils::LoggerLevelConfigure> logger_configure_;
 
-  std::unique_ptr<autoware::universe_utils::DiagnosticsInterface> diagnostics_error_monitor_;
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_error_monitor_;
 
   double scale_;
   double error_ellipse_size_;

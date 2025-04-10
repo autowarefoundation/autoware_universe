@@ -1,4 +1,4 @@
-// Copyright 2023 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 #include <list>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -26,8 +25,8 @@
 #include "collector_matching_strategy.hpp"
 #include "combine_cloud_handler.hpp"
 
-#include <autoware/universe_utils/ros/debug_publisher.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <point_cloud_msg_wrapper/point_cloud_msg_wrapper.hpp>
 
@@ -91,7 +90,8 @@ private:
   std::shared_ptr<CombineCloudHandler> combine_cloud_handler_;
   std::list<std::shared_ptr<CloudCollector>> cloud_collectors_;
   std::unique_ptr<CollectorMatchingStrategy> collector_matching_strategy_;
-  std::mutex cloud_collectors_mutex_;
+  bool init_collector_list_ = false;
+  static constexpr const int num_of_collectors = 3;
 
   // default postfix name for synchronized pointcloud
   static constexpr const char * default_sync_topic_postfix = "_synchronized";
@@ -105,9 +105,9 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr concatenated_cloud_publisher_;
   std::unordered_map<std::string, rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr>
     topic_to_transformed_cloud_publisher_map_;
-  std::unique_ptr<autoware::universe_utils::DebugPublisher> debug_publisher_;
+  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
 
-  std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
+  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
   diagnostic_updater::Updater diagnostic_updater_{this};
 
   void cloud_callback(
@@ -119,6 +119,8 @@ private:
   void check_concat_status(diagnostic_updater::DiagnosticStatusWrapper & stat);
   std::string replace_sync_topic_name_postfix(
     const std::string & original_topic_name, const std::string & postfix);
+  void initialize_collector_list();
+  std::list<std::shared_ptr<CloudCollector>>::iterator find_and_reset_oldest_collector();
 };
 
 }  // namespace autoware::pointcloud_preprocessor

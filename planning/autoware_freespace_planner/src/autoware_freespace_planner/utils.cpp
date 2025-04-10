@@ -15,6 +15,8 @@
 #include "autoware/freespace_planner/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/pose_deviation.hpp>
 
 #include <deque>
 #include <vector>
@@ -37,7 +39,7 @@ PoseArray trajectory_to_pose_array(const Trajectory & trajectory)
 double calc_distance_2d(const Trajectory & trajectory, const Pose & pose)
 {
   const auto idx = autoware::motion_utils::findNearestIndex(trajectory.points, pose.position);
-  return autoware::universe_utils::calcDistance2d(trajectory.points.at(idx), pose);
+  return autoware_utils::calc_distance2d(trajectory.points.at(idx), pose);
 }
 
 Pose transform_pose(const Pose & pose, const TransformStamped & transform)
@@ -176,7 +178,7 @@ bool is_stopped(
 
 bool is_near_target(const Pose & target_pose, const Pose & current_pose, const double th_distance_m)
 {
-  const auto pose_dev = autoware::universe_utils::calcPoseDeviation(target_pose, current_pose);
+  const auto pose_dev = autoware_utils::calc_pose_deviation(target_pose, current_pose);
   return abs(pose_dev.yaw) < M_PI_2 && abs(pose_dev.longitudinal) < th_distance_m &&
          abs(pose_dev.lateral) < th_distance_m;
 }

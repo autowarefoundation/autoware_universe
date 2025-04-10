@@ -1,10 +1,10 @@
-# Path Generation design
+# Path Generation Design
 
-This document explains how the path is generated for lane change and avoidance, etc. The implementation can be found in [path_shifter.hpp](https://github.com/autowarefoundation/autoware.universe/blob/main/planning/autoware_behavior_path_planner_common/include/autoware_behavior_path_planner_common/utils/path_shifter/path_shifter.hpp).
+This document explains how the path is generated for lane change and avoidance, etc. The implementation can be found in [path_shifter.hpp](https://github.com/autowarefoundation/autoware_universe/blob/fcd1c7bdbb7bef749b57e8c13ba255fa4e7de2ae/planning/behavior_path_planner/autoware_behavior_path_planner_common/include/autoware/behavior_path_planner_common/utils/path_shifter/path_shifter.hpp).
 
 ## Overview
 
-The base idea of the path generation in lane change and avoidance is to smoothly shift the reference path, such as the center line, in the lateral direction. This is achieved by using a constant-jerk profile as in the figure below. More details on how it is used can be found in [README](https://github.com/autowarefoundation/autoware.universe/blob/main/planning/behavior_path_planner/README.md). It is assumed that the reference path is smooth enough for this algorithm.
+The base idea of the path generation in lane change and avoidance is to smoothly shift the reference path, such as the center line, in the lateral direction. This is achieved by using a constant-jerk profile as in the figure below. More details on how it is used can be found in [README](https://github.com/autowarefoundation/autoware_universe/blob/fcd1c7bdbb7bef749b57e8c13ba255fa4e7de2ae/planning/behavior_path_planner/autoware_behavior_path_planner/README.md). It is assumed that the reference path is smooth enough for this algorithm.
 
 The figure below explains how the application of a constant lateral jerk $l^{'''}(s)$ can be used to induce lateral shifting. In order to comply with the limits on lateral acceleration and velocity, zero-jerk time is employed in the figure ( $T_a$ and $T_v$ ). In each interval where constant jerk is applied, the shift position $l(s)$ can be characterized by a third-degree polynomial. Therefore the shift length from the reference path can then be calculated by combining spline curves.
 
@@ -12,7 +12,7 @@ The figure below explains how the application of a constant lateral jerk $l^{'''
 
 Note that, due to the rarity of the $T_v$ in almost all cases of lane change and avoidance, $T_v$ is not considered in the current implementation.
 
-## Mathematical Derivation
+## Mathematical derivation
 
 With initial longitudinal velocity $v_0^{\rm lon}$ and longitudinal acceleration $a^{\rm lon}$, longitudinal position $s(t)$ and longitudinal velocity at each time $v^{\rm lon}(t)$ can be derived as:
 
@@ -51,9 +51,9 @@ $$
 
 These equations are used to determine the shape of a path. Additionally, by applying further mathematical operations to these basic equations, the expressions of the following subsections can be derived.
 
-### Calculation of Maximum Acceleration from transition time and final shift length
+### Calculation of maximum acceleration from transition time and final shift length
 
-In the case where there are no limitations on lateral velocity and lateral acceleration, the maximum lateral acceleration during the shifting can be calculated as follows. The constant-jerk time is given by $T_j = T_{\rm total}/4$ because of its symmetric property. Since $T_a=T_v=0$, the final shift length $L=l_7=2jT_j^3$ can be determined using the above equation. The maximum lateral acceleration is then given by $a_{\rm max} =jT_j$. This results in the following expression for the maximum lateral acceleration:
+In cases where there are no limitations on lateral velocity and lateral acceleration, the maximum lateral acceleration during the shifting can be calculated as follows. The constant-jerk time is given by $T_j = T_{\rm total}/4$ because of its symmetric property. Since $T_a=T_v=0$, the final shift length $L=l_7=2jT_j^3$ can be determined using the above equation. The maximum lateral acceleration is then given by $a_{\rm max} =jT_j$. This results in the following expression for the maximum lateral acceleration:
 
 $$
 \begin{align}
@@ -63,7 +63,7 @@ $$
 
 ### Calculation of Ta, Tj and jerk from acceleration limit
 
-In the case where there are no limitations on lateral velocity, the constant-jerk and acceleration times, as well as the required jerk can be calculated from the acceleration limit, total time, and final shift length as follows. Since $T_v=0$, the final shift length is given by:
+In cases where there are no limitations on lateral velocity, the constant-jerk and acceleration times, as well as the required jerk can be calculated from the acceleration limit, total time, and final shift length as follows. Since $T_v=0$, the final shift length is given by:
 
 $$
 \begin{align}
@@ -90,17 +90,17 @@ jerk&=\frac{2a_{\rm lim} ^2T_{\rm total}}{a_{\rm lim}^{\rm lat} T_{\rm total}^2-
 \end{align}
 $$
 
-where $T_j$ is the constant-jerk time, $T_a$ is the constant acceleration time, $j$ is the required jerk, $a_{\rm lim}^{\rm lat}$ is the lateral acceleration limit, and $L$ is the final shift length.
+Where $T_j$ is the constant-jerk time, $T_a$ is the constant acceleration time, $j$ is the required jerk, $a_{\rm lim}^{\rm lat}$ is the lateral acceleration limit, and $L$ is the final shift length.
 
-### Calculation of Required Time from Jerk and Acceleration Constraint
+### Calculation of required time from jerk and acceleration constraint
 
-In the case where there are no limitations on lateral velocity, the total time required for shifting can be calculated from the lateral jerk and lateral acceleration limits and the final shift length as follows. By solving the two equations given above:
+In cases where there are no limitations on lateral velocity, the total time required for shifting can be calculated from the lateral jerk and lateral acceleration limits and the final shift length as follows. By solving the two equations given above:
 
 $$
 L = l_7 = 2 j T_j^3 + 3 j T_a T_j^2 + j T_a^2 T_j,\quad a_{\rm lim}^{\rm lat} = j T_j
 $$
 
-we obtain the following expressions:
+We obtain the following expressions:
 
 $$
 \begin{align}

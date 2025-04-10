@@ -17,8 +17,8 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <geometry_msgs/msg/detail/pose__struct.hpp>
 
@@ -36,15 +36,15 @@ using PredictedObjects = autoware_perception_msgs::msg::PredictedObjects;
 using ObjectClassification = autoware_perception_msgs::msg::ObjectClassification;
 using PoseWithCovariance = geometry_msgs::msg::PoseWithCovariance;
 using TwistWithCovariance = geometry_msgs::msg::TwistWithCovariance;
+using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
 using autoware_perception_msgs::msg::PredictedPath;
 using autoware_planning_msgs::msg::Trajectory;
-using tier4_planning_msgs::msg::PathPointWithLaneId;
 
 using autoware::test_utils::createPose;
 using autoware::test_utils::generateTrajectory;
 using autoware::test_utils::make_lanelet;
-using autoware::universe_utils::createPoint;
-using autoware::universe_utils::createVector3;
+using autoware_utils::create_point;
+using autoware_utils::create_vector3;
 
 constexpr double epsilon = 1e-6;
 
@@ -59,7 +59,7 @@ PredictedObject create_bounding_box_object(
   const std::vector<ObjectClassification> & classification = std::vector<ObjectClassification>())
 {
   PredictedObject object;
-  object.object_id = autoware::universe_utils::generateUUID();
+  object.object_id = autoware_utils::generate_uuid();
   object.kinematics.initial_pose_with_covariance.pose = pose;
   object.kinematics.initial_twist_with_covariance.twist.linear = velocity;
   object.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
@@ -114,7 +114,7 @@ TEST(BehaviorPathPlanningObjectsFiltering, position_filter)
 {
   using autoware::behavior_path_planner::utils::path_safety_checker::filter::position_filter;
 
-  auto current_pos = createPoint(0.0, 0.0, 0.0);
+  auto current_pos = create_point(0.0, 0.0, 0.0);
   PredictedObject object = create_bounding_box_object(createPose(10.0, 0.0, 0.0, 0.0, 0.0, 0.0));
   auto straight_trajectory = generateTrajectory<Trajectory>(20, 1.0);
   double forward_distance = 20.0;
@@ -143,8 +143,8 @@ TEST(BehaviorPathPlanningObjectsFiltering, is_within_circle)
 {
   using autoware::behavior_path_planner::utils::path_safety_checker::filter::is_within_circle;
 
-  auto object_pos = createPoint(0.0, 0.0, 0.0);
-  auto ref_point = createPoint(0.0, 0.0, 0.0);
+  auto object_pos = create_point(0.0, 0.0, 0.0);
+  auto ref_point = create_point(0.0, 0.0, 0.0);
   double search_radius = 1.0;
 
   EXPECT_TRUE(is_within_circle(object_pos, ref_point, search_radius));
@@ -206,7 +206,7 @@ TEST(BehaviorPathPlanningObjectsFiltering, filterObjects)
 {
   using autoware::behavior_path_planner::utils::path_safety_checker::filterObjects;
   using autoware::behavior_path_planner::utils::path_safety_checker::ObjectsFilteringParams;
-  using autoware::universe_utils::createVector3;
+  using autoware_utils::create_vector3;
 
   std::shared_ptr<PredictedObjects> objects = std::make_shared<PredictedObjects>();
   std::shared_ptr<autoware::route_handler::RouteHandler> route_handler =
@@ -221,7 +221,7 @@ TEST(BehaviorPathPlanningObjectsFiltering, filterObjects)
 
   current_lanes.push_back(route_handler->getLaneletsFromId(1000));
   current_lanes.push_back(route_handler->getLaneletsFromId(1010));
-  auto current_pose = createPoint(360.22, 600.51, 0.0);
+  auto current_pose = create_point(360.22, 600.51, 0.0);
 
   EXPECT_TRUE(
     filterObjects(objects, route_handler, current_lanes, current_pose, params).objects.empty());
@@ -231,10 +231,10 @@ TEST(BehaviorPathPlanningObjectsFiltering, filterObjects)
   classification.probability = 1.0;
 
   auto target_object = create_bounding_box_object(
-    createPose(360.22, 605.51, 0.0, 0.0, 0.0, 0.0), createVector3(1.0, 1.0, 0.0));
+    createPose(360.22, 605.51, 0.0, 0.0, 0.0, 0.0), create_vector3(1.0, 1.0, 0.0));
   target_object.classification.push_back(classification);
   auto other_object = create_bounding_box_object(
-    createPose(370.22, 600.51, 0.0, 0.0, 0.0, 0.0), createVector3(1.0, 1.0, 0.0));
+    createPose(370.22, 600.51, 0.0, 0.0, 0.0, 0.0), create_vector3(1.0, 1.0, 0.0));
   other_object.classification.push_back(classification);
 
   objects->objects.push_back(target_object);
@@ -251,9 +251,9 @@ TEST(BehaviorPathPlanningObjectsFiltering, filterObjectsByVelocity)
 
   PredictedObjects objects;
   auto slow_obj = create_bounding_box_object(
-    createPose(0.0, 0.0, 0.0, 0.0, 0.0, 0.0), createVector3(2.0, 0.0, 0.0));
+    createPose(0.0, 0.0, 0.0, 0.0, 0.0, 0.0), create_vector3(2.0, 0.0, 0.0));
   auto fast_obj = create_bounding_box_object(
-    createPose(0.0, 0.0, 0.0, 0.0, 0.0, 0.0), createVector3(10.0, 0.0, 0.0));
+    createPose(0.0, 0.0, 0.0, 0.0, 0.0, 0.0), create_vector3(10.0, 0.0, 0.0));
   double vel_thr = 5.0;
 
   objects.objects.push_back(slow_obj);
@@ -280,7 +280,7 @@ TEST(BehaviorPathPlanningObjectsFiltering, filterObjectsByPosition)
   using autoware::behavior_path_planner::utils::path_safety_checker::filterObjectsByPosition;
   using autoware::behavior_path_planner::utils::path_safety_checker::filterObjectsWithinRadius;
 
-  auto current_pos = createPoint(0.0, 0.0, 0.0);
+  auto current_pos = create_point(0.0, 0.0, 0.0);
   auto straight_path = trajectory_to_path_with_lane_id(generateTrajectory<Trajectory>(20, 1.0));
   double forward_distance = 10.0;
   double backward_distance = 1.0;
@@ -388,7 +388,7 @@ TEST(BehaviorPathPlanningObjectsFiltering, getPredictedPathFromObj)
       pose.position.x = initial_pose.position.x + time * velocity;
       pose.position.y = initial_pose.position.y;
       PoseWithVelocityAndPolygonStamped obj_pose_with_poly(
-        time, pose, velocity, autoware::universe_utils::toPolygon2d(pose, shape));
+        time, pose, velocity, autoware_utils::to_polygon2d(pose, shape));
       path.push_back(obj_pose_with_poly);
     }
     return path;
@@ -464,10 +464,10 @@ TEST(BehaviorPathPlanningObjectsFiltering, createPredictedPath)
 TEST(BehaviorPathPlanningObjectsFiltering, transform)
 {
   using autoware::behavior_path_planner::utils::path_safety_checker::transform;
-  auto velocity = autoware::universe_utils::createVector3(2.0, 0.0, 0.0);
+  auto velocity = autoware_utils::create_vector3(2.0, 0.0, 0.0);
 
   auto obj = create_bounding_box_object(
-    createPose(2.0, 0.0, 0.0, 0.0, 0.0, 0.0), createVector3(2.0, 0.0, 0.0), 2.0, 1.0);
+    createPose(2.0, 0.0, 0.0, 0.0, 0.0, 0.0), create_vector3(2.0, 0.0, 0.0), 2.0, 1.0);
   autoware_perception_msgs::msg::PredictedPath predicted_path;
   auto straight_path = trajectory_to_predicted_path(generateTrajectory<Trajectory>(5, 1.0));
   straight_path.confidence = 0.6;
@@ -525,19 +525,19 @@ TEST(BehaviorPathPlanningObjectsFiltering, filterObjectsByClass)
   ObjectClassification classification;
   autoware::behavior_path_planner::utils::path_safety_checker::ObjectTypesToCheck types_to_check;
 
-  car.object_id = autoware::universe_utils::generateUUID();
+  car.object_id = autoware_utils::generate_uuid();
   classification.label = ObjectClassification::Type::CAR;
   classification.probability = 1.0;
   car.classification.push_back(classification);
   objects.objects.push_back(car);
 
-  truck.object_id = autoware::universe_utils::generateUUID();
+  truck.object_id = autoware_utils::generate_uuid();
   classification.label = ObjectClassification::Type::TRUCK;
   classification.probability = 1.0;
   truck.classification.push_back(classification);
   objects.objects.push_back(truck);
 
-  pedestrian.object_id = autoware::universe_utils::generateUUID();
+  pedestrian.object_id = autoware_utils::generate_uuid();
   classification.label = ObjectClassification::Type::PEDESTRIAN;
   classification.probability = 1.0;
   pedestrian.classification.push_back(classification);
@@ -560,7 +560,7 @@ TEST(BehaviorPathPlanningObjectsFiltering, createTargetObjectsOnLane)
 {
   using autoware::behavior_path_planner::utils::path_safety_checker::createTargetObjectsOnLane;
   using autoware::behavior_path_planner::utils::path_safety_checker::ObjectsFilteringParams;
-  using autoware::universe_utils::createVector3;
+  using autoware_utils::create_vector3;
 
   PredictedObjects objects;
   std::shared_ptr<autoware::route_handler::RouteHandler> route_handler =

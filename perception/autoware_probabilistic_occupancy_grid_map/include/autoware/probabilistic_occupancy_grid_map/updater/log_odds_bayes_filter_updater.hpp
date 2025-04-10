@@ -32,18 +32,18 @@ namespace costmap_2d
 class OccupancyGridMapLOBFUpdater : public OccupancyGridMapUpdaterInterface
 {
 public:
-  enum Index : size_t { OCCUPIED = 0U, FREE = 1U };
+  enum Index : size_t { OCCUPIED = 0U, FREE = 1U, NUM_STATES = 2U };
   OccupancyGridMapLOBFUpdater(
-    const unsigned int cells_size_x, const unsigned int cells_size_y, const float resolution)
-  : OccupancyGridMapUpdaterInterface(cells_size_x, cells_size_y, resolution)
+    const bool use_cuda, const unsigned int cells_size_x, const unsigned int cells_size_y,
+    const float resolution)
+  : OccupancyGridMapUpdaterInterface(use_cuda, cells_size_x, cells_size_y, resolution)
   {
   }
-  bool update(const Costmap2D & single_frame_occupancy_grid_map) override;
+  bool update(const OccupancyGridMapInterface & single_frame_occupancy_grid_map) override;
   void initRosParam(rclcpp::Node & node) override;
 
 private:
   inline unsigned char applyLOBF(const unsigned char & z, const unsigned char & o);
-  Eigen::Matrix2f probability_matrix_;
 };
 
 }  // namespace costmap_2d

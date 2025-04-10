@@ -36,12 +36,16 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionRoute)
 
   publishMandatoryTopics(test_manager, test_target_node);
 
+  const std::string input_route_topic = "behavior_path_planner/input/route";
+
   // test for normal trajectory
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testWithBehaviorNominalRoute(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithBehaviorNormalRoute(test_target_node, input_route_topic));
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
   // test with empty route
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testWithAbnormalRoute(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithAbnormalRoute(test_target_node, input_route_topic));
   rclcpp::shutdown();
 }
 
@@ -55,13 +59,18 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
                       "autoware::behavior_path_planner::LaneChangeLeftModuleManager"});
   publishMandatoryTopics(test_manager, test_target_node);
 
+  const std::string input_route_topic = "behavior_path_planner/input/route";
+  const std::string input_odometry_topic = "behavior_path_planner/input/odometry";
+
   // test for normal trajectory
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testWithBehaviorNominalRoute(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithBehaviorNormalRoute(test_target_node, input_route_topic));
 
   // make sure behavior_path_planner is running
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testRouteWithInvalidEgoPose(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithOffTrackOdometry(test_target_node, input_odometry_topic));
 
   rclcpp::shutdown();
 }

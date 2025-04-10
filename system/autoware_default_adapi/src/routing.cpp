@@ -48,8 +48,11 @@ ResponseStatus route_is_not_set()
 namespace autoware::default_adapi
 {
 
-RoutingNode::RoutingNode(const rclcpp::NodeOptions & options) : Node("routing", options)
+RoutingNode::RoutingNode(const rclcpp::NodeOptions & options)
+: Node("routing", options), vehicle_stop_checker_(this)
 {
+  stop_check_duration_ = declare_parameter<double>("stop_check_duration");
+
   const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
   group_cli_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   adaptor.init_pub(pub_state_);
@@ -124,10 +127,12 @@ void RoutingNode::on_clear_route(
   // For safety, do not clear the route while it is in use.
   // https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-interfaces/ad-api/list/api/routing/clear_route/
   if (is_auto_mode_ && is_autoware_control_) {
-    res->status.success = false;
-    res->status.code = ResponseStatus::UNKNOWN;
-    res->status.message = "The route cannot be cleared while it is in use.";
-    return;
+    if (!vehicle_stop_checker_.isVehicleStopped(stop_check_duration_)) {
+      res->status.success = false;
+      res->status.code = ResponseStatus::UNKNOWN;
+      res->status.message = "The route cannot be cleared while it is in use.";
+      return;
+    }
   }
   res->status = conversion::convert_call(cli_clear_route_, req);
 }

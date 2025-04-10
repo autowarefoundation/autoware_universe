@@ -32,10 +32,11 @@ class LaneParkingRequest
 {
 public:
   LaneParkingRequest(
-    const autoware::universe_utils::LinearRing2d & vehicle_footprint,
-    const GoalCandidates & goal_candidates, const BehaviorModuleOutput & upstream_module_output)
+    const autoware_utils::LinearRing2d & vehicle_footprint, const GoalCandidates & goal_candidates,
+    const BehaviorModuleOutput & upstream_module_output, const bool use_bus_stop_area)
   : vehicle_footprint_(vehicle_footprint),
     goal_candidates_(goal_candidates),
+    use_bus_stop_area_(use_bus_stop_area),
     upstream_module_output_(upstream_module_output)
   {
   }
@@ -43,10 +44,12 @@ public:
   void update(
     const PlannerData & planner_data, const ModuleStatus & current_status,
     const BehaviorModuleOutput & upstream_module_output,
-    const std::optional<PullOverPath> & pull_over_path, const PathDecisionState & prev_data);
+    const std::optional<PullOverPath> & pull_over_path, const PathDecisionState & prev_data,
+    const bool trigger_thread_on_approach);
 
-  const autoware::universe_utils::LinearRing2d vehicle_footprint_;
+  const autoware_utils::LinearRing2d vehicle_footprint_;
   const GoalCandidates goal_candidates_;
+  const bool use_bus_stop_area_;
 
   const std::shared_ptr<PlannerData> & get_planner_data() const { return planner_data_; }
   const ModuleStatus & get_current_status() const { return current_status_; }
@@ -56,6 +59,7 @@ public:
   }
   const std::optional<PullOverPath> & get_pull_over_path() const { return pull_over_path_; }
   const PathDecisionState & get_prev_data() const { return prev_data_; }
+  bool trigger_thread_on_approach() const { return trigger_thread_on_approach_; }
 
 private:
   std::shared_ptr<PlannerData> planner_data_;
@@ -63,12 +67,14 @@ private:
   BehaviorModuleOutput upstream_module_output_;
   std::optional<PullOverPath> pull_over_path_;  //<! pull over path selected by main thread
   PathDecisionState prev_data_;
+  bool trigger_thread_on_approach_{false};
 };
 
 struct LaneParkingResponse
 {
   std::vector<PullOverPath> pull_over_path_candidates;
   std::optional<Pose> closest_start_pose;
+  std::optional<std::vector<size_t>> sorted_bezier_indices_opt;
 };
 
 class FreespaceParkingRequest
@@ -76,8 +82,8 @@ class FreespaceParkingRequest
 public:
   FreespaceParkingRequest(
     const GoalPlannerParameters & parameters,
-    const autoware::universe_utils::LinearRing2d & vehicle_footprint,
-    const GoalCandidates & goal_candidates, const PlannerData & planner_data)
+    const autoware_utils::LinearRing2d & vehicle_footprint, const GoalCandidates & goal_candidates,
+    const PlannerData & planner_data)
   : parameters_(parameters),
     vehicle_footprint_(vehicle_footprint),
     goal_candidates_(goal_candidates)
@@ -92,7 +98,7 @@ public:
     const std::optional<rclcpp::Time> & last_path_update_time, const bool is_stopped);
 
   const GoalPlannerParameters parameters_;
-  const autoware::universe_utils::LinearRing2d vehicle_footprint_;
+  const autoware_utils::LinearRing2d vehicle_footprint_;
   const GoalCandidates goal_candidates_;
 
   const std::shared_ptr<PlannerData> & get_planner_data() const { return planner_data_; }

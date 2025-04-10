@@ -16,8 +16,8 @@
 
 #include "types.hpp"
 
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
-#include <autoware/universe_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <rclcpp/duration.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
@@ -41,7 +41,7 @@ namespace autoware::motion_velocity_planner::out_of_lane
 
 void update_collision_times(
   OutOfLaneData & out_of_lane_data, const std::unordered_set<size_t> & potential_collision_indexes,
-  const universe_utils::Polygon2d & object_footprint, const double time)
+  const autoware_utils::Polygon2d & object_footprint, const double time)
 {
   for (const auto index : potential_collision_indexes) {
     auto & out_of_lane_point = out_of_lane_data.outside_points[index];
@@ -61,10 +61,9 @@ void calculate_object_path_time_collisions(
   const autoware_perception_msgs::msg::Shape & object_shape)
 {
   const auto time_step = rclcpp::Duration(object_path.time_step).seconds();
-  auto time = time_step;
+  auto time = 0.0;
   for (const auto & object_pose : object_path.path) {
-    time += time_step;
-    const auto object_footprint = universe_utils::toPolygon2d(object_pose, object_shape);
+    const auto object_footprint = autoware_utils::to_polygon2d(object_pose, object_shape);
     std::vector<OutAreaNode> query_results;
     out_of_lane_data.outside_areas_rtree.query(
       boost::geometry::index::intersects(object_footprint.outer()),
@@ -74,6 +73,7 @@ void calculate_object_path_time_collisions(
       potential_collision_indexes.insert(index);
     }
     update_collision_times(out_of_lane_data, potential_collision_indexes, object_footprint, time);
+    time += time_step;
   }
 }
 
@@ -117,10 +117,8 @@ void calculate_collisions_to_avoid(
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
   const PlannerParam & params)
 {
-  for (auto & out_of_lane_point : out_of_lane_data.outside_points) {
-    calculate_min_max_arrival_times(out_of_lane_point, trajectory);
-  }
   for (auto & p : out_of_lane_data.outside_points) {
+    calculate_min_max_arrival_times(p, trajectory);
     if (params.mode == "ttc") {
       p.to_avoid = p.ttc && p.ttc <= params.ttc_threshold;
     } else {
@@ -142,7 +140,7 @@ OutOfLanePoint calculate_out_of_lane_point(
     lanelet::BasicPolygons2d intersections;
     boost::geometry::intersection(footprint, lanelet.polygon2d().basicPolygon(), intersections);
     for (const auto & intersection : intersections) {
-      universe_utils::Polygon2d poly;
+      autoware_utils::Polygon2d poly;
       boost::geometry::convert(intersection, poly);
       p.out_overlaps.push_back(poly);
     }
@@ -173,7 +171,7 @@ void prepare_out_of_lane_areas_rtree(OutOfLaneData & out_of_lane_data)
   for (auto i = 0UL; i < out_of_lane_data.outside_points.size(); ++i) {
     for (const auto & out_overlap : out_of_lane_data.outside_points[i].out_overlaps) {
       OutAreaNode n;
-      n.first = boost::geometry::return_envelope<universe_utils::Box2d>(out_overlap);
+      n.first = boost::geometry::return_envelope<autoware_utils::Box2d>(out_overlap);
       n.second = i;
       rtree_nodes.push_back(n);
     }

@@ -19,7 +19,7 @@
 
 #include <autoware/lane_departure_checker/lane_departure_checker.hpp>
 
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <memory>
 #include <vector>
@@ -42,8 +42,6 @@ protected:
   PathWithLaneId generateReferencePath(
     const std::shared_ptr<const PlannerData> planner_data,
     const lanelet::ConstLanelets & road_lanes, const Pose & end_pose) const;
-  std::optional<PathWithLaneId> cropPrevModulePath(
-    const PathWithLaneId & prev_module_path, const Pose & shift_end_pose) const;
   std::optional<PullOverPath> generatePullOverPath(
     const GoalCandidate & goal_candidate, const size_t id,
     const std::shared_ptr<const PlannerData> planner_data,

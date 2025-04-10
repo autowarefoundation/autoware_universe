@@ -1,4 +1,4 @@
-// Copyright 2021 Tier IV, Inc.
+// Copyright 2025 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,10 +16,12 @@
 #define AUTOWARE__PLANNING_EVALUATOR__MOTION_EVALUATOR_NODE_HPP_
 
 #include "autoware/planning_evaluator/metrics_calculator.hpp"
-#include "autoware/universe_utils/math/accumulator.hpp"
+#include "autoware_utils/math/accumulator.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
+
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"
@@ -33,9 +35,10 @@
 
 namespace planning_diagnostics
 {
-using autoware::universe_utils::Accumulator;
+using autoware::vehicle_info_utils::VehicleInfo;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
+using autoware_utils::Accumulator;
 
 /**
  * @brief Node for planning evaluation
@@ -67,6 +70,7 @@ private:
   MetricsCalculator metrics_calculator_;
   // Metrics
   std::vector<Metric> metrics_;
+  VehicleInfo vehicle_info_;
   std::deque<rclcpp::Time> stamps_;
   Trajectory accumulated_trajectory_;
 };

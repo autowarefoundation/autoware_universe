@@ -76,7 +76,7 @@ bool is_unavoidable(
 /// @param hysteresis [m] extra distance threshold used for filtering
 /// @return filtered predicted objects
 std::vector<autoware_perception_msgs::msg::PredictedObject> filter_predicted_objects(
-  const std::vector<PlannerData::Object> & objects, const EgoData & ego_data,
+  const std::vector<std::shared_ptr<PlannerData::Object>> & objects, const EgoData & ego_data,
   const PlannerParam & params, const double hysteresis);
 
 }  // namespace autoware::motion_velocity_planner::dynamic_obstacle_stop

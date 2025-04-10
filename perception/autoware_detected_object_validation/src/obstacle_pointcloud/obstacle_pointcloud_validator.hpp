@@ -17,8 +17,8 @@
 // NOLINTNEXTLINE(whitespace/line_length)
 #define OBSTACLE_POINTCLOUD__OBSTACLE_POINTCLOUD_VALIDATOR_HPP_
 
-#include "autoware/universe_utils/ros/debug_publisher.hpp"
-#include "autoware/universe_utils/ros/published_time_publisher.hpp"
+#include "autoware_utils/ros/debug_publisher.hpp"
+#include "autoware_utils/ros/published_time_publisher.hpp"
 #include "debugger.hpp"
 
 #include <rclcpp/rclcpp.hpp>
@@ -142,7 +142,7 @@ private:
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr objects_pub_;
   message_filters::Subscriber<autoware_perception_msgs::msg::DetectedObjects> objects_sub_;
   message_filters::Subscriber<sensor_msgs::msg::PointCloud2> obstacle_pointcloud_sub_;
-  std::unique_ptr<autoware::universe_utils::DebugPublisher> debug_publisher_{nullptr};
+  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_{nullptr};
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
 
@@ -157,7 +157,7 @@ private:
   std::shared_ptr<Debugger> debugger_;
   bool using_2d_validator_;
   std::unique_ptr<Validator> validator_;
-  std::unique_ptr<autoware::universe_utils::PublishedTimePublisher> published_time_publisher_;
+  std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
 
 private:
   void onObjectsAndObstaclePointCloud(

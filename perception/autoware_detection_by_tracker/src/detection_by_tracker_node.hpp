@@ -19,7 +19,7 @@
 #include "autoware/euclidean_cluster/utils.hpp"
 #include "autoware/euclidean_cluster/voxel_grid_based_euclidean_cluster.hpp"
 #include "autoware/shape_estimation/shape_estimator.hpp"
-#include "autoware/universe_utils/ros/published_time_publisher.hpp"
+#include "autoware_utils/ros/published_time_publisher.hpp"
 #include "debugger/debugger.hpp"
 #include "tracker/tracker_handler.hpp"
 #include "utils/utils.hpp"
@@ -76,7 +76,7 @@ private:
 
   detection_by_tracker::utils::TrackerIgnoreLabel tracker_ignore_;
 
-  std::unique_ptr<autoware::universe_utils::PublishedTimePublisher> published_time_publisher_;
+  std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
 
   void setMaxSearchRange();
 

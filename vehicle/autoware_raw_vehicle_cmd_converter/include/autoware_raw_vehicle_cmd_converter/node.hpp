@@ -15,14 +15,14 @@
 #ifndef AUTOWARE_RAW_VEHICLE_CMD_CONVERTER__NODE_HPP_
 #define AUTOWARE_RAW_VEHICLE_CMD_CONVERTER__NODE_HPP_
 
-#include "autoware/universe_utils/ros/logger_level_configure.hpp"
-#include "autoware/universe_utils/ros/polling_subscriber.hpp"
 #include "autoware_raw_vehicle_cmd_converter/accel_map.hpp"
 #include "autoware_raw_vehicle_cmd_converter/brake_map.hpp"
 #include "autoware_raw_vehicle_cmd_converter/pid.hpp"
 #include "autoware_raw_vehicle_cmd_converter/steer_map.hpp"
 #include "autoware_raw_vehicle_cmd_converter/vehicle_adaptor/vehicle_adaptor.hpp"
 #include "autoware_raw_vehicle_cmd_converter/vgr.hpp"
+#include "autoware_utils/ros/logger_level_configure.hpp"
+#include "autoware_utils/ros/polling_subscriber.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -88,15 +88,14 @@ public:
   rclcpp::Subscription<ActuationStatusStamped>::SharedPtr sub_actuation_status_;
   rclcpp::Subscription<Steering>::SharedPtr sub_steering_;
   // polling subscribers
-  autoware::universe_utils::InterProcessPollingSubscriber<Odometry> sub_odometry_{
-    this, "~/input/odometry"};
+  autoware_utils::InterProcessPollingSubscriber<Odometry> sub_odometry_{this, "~/input/odometry"};
   // polling subscribers for vehicle_adaptor
-  autoware::universe_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped> sub_accel_{
+  autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped> sub_accel_{
     this, "~/input/accel"};
-  autoware::universe_utils::InterProcessPollingSubscriber<OperationModeState> sub_operation_mode_{
+  autoware_utils::InterProcessPollingSubscriber<OperationModeState> sub_operation_mode_{
     this, "~/input/operation_mode_state"};
   // control_horizon is an experimental topic, but vehicle_adaptor uses it to improve performance,
-  autoware::universe_utils::InterProcessPollingSubscriber<ControlHorizon> sub_control_horizon_{
+  autoware_utils::InterProcessPollingSubscriber<ControlHorizon> sub_control_horizon_{
     this, "~/input/control_horizon"};
 
   rclcpp::TimerBase::SharedPtr timer_;
@@ -146,7 +145,7 @@ public:
   rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr debug_pub_steer_pid_;
   DebugValues debug_steer_;
 
-  std::unique_ptr<autoware::universe_utils::LoggerLevelConfigure> logger_configure_;
+  std::unique_ptr<autoware_utils::LoggerLevelConfigure> logger_configure_;
 };
 }  // namespace autoware::raw_vehicle_cmd_converter
 

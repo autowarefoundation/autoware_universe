@@ -1,4 +1,4 @@
-// Copyright 2021 Tier IV, Inc.
+// Copyright 2025 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__PLANNING_EVALUATOR__METRICS__METRIC_HPP_
 #define AUTOWARE__PLANNING_EVALUATOR__METRICS__METRIC_HPP_
 
+#include "autoware/planning_evaluator/metrics/output_metric.hpp"
+
 #include <iostream>
 #include <string>
 #include <unordered_map>
@@ -23,12 +25,13 @@
 namespace planning_diagnostics
 {
 /**
- * @brief Enumeration of trajectory metrics
+ * @brief Enumeration of metrics to publish
  */
 enum class Metric {
   curvature,
   point_interval,
   relative_angle,
+  resampled_relative_angle,
   length,
   duration,
   velocity,
@@ -46,6 +49,10 @@ enum class Metric {
   modified_goal_longitudinal_deviation,
   modified_goal_lateral_deviation,
   modified_goal_yaw_deviation,
+  stop_decision,
+  abnormal_stop_decision,
+  blinker_change_count,
+  steer_change_count,
   SIZE,
 };
 
@@ -56,6 +63,7 @@ static const std::unordered_map<std::string, Metric> str_to_metric = {
   {"curvature", Metric::curvature},
   {"point_interval", Metric::point_interval},
   {"relative_angle", Metric::relative_angle},
+  {"resampled_relative_angle", Metric::resampled_relative_angle},
   {"length", Metric::length},
   {"duration", Metric::duration},
   {"velocity", Metric::velocity},
@@ -72,12 +80,17 @@ static const std::unordered_map<std::string, Metric> str_to_metric = {
   {"obstacle_ttc", Metric::obstacle_ttc},
   {"modified_goal_longitudinal_deviation", Metric::modified_goal_longitudinal_deviation},
   {"modified_goal_lateral_deviation", Metric::modified_goal_lateral_deviation},
-  {"modified_goal_yaw_deviation", Metric::modified_goal_yaw_deviation}};
+  {"modified_goal_yaw_deviation", Metric::modified_goal_yaw_deviation},
+  {"stop_decision", Metric::stop_decision},
+  {"abnormal_stop_decision", Metric::abnormal_stop_decision},
+  {"blinker_change_count", Metric::blinker_change_count},
+  {"steer_change_count", Metric::steer_change_count}};
 
 static const std::unordered_map<Metric, std::string> metric_to_str = {
   {Metric::curvature, "curvature"},
   {Metric::point_interval, "point_interval"},
   {Metric::relative_angle, "relative_angle"},
+  {Metric::resampled_relative_angle, "resampled_relative_angle"},
   {Metric::length, "length"},
   {Metric::duration, "duration"},
   {Metric::velocity, "velocity"},
@@ -94,13 +107,18 @@ static const std::unordered_map<Metric, std::string> metric_to_str = {
   {Metric::obstacle_ttc, "obstacle_ttc"},
   {Metric::modified_goal_longitudinal_deviation, "modified_goal_longitudinal_deviation"},
   {Metric::modified_goal_lateral_deviation, "modified_goal_lateral_deviation"},
-  {Metric::modified_goal_yaw_deviation, "modified_goal_yaw_deviation"}};
+  {Metric::modified_goal_yaw_deviation, "modified_goal_yaw_deviation"},
+  {Metric::stop_decision, "stop_decision"},
+  {Metric::abnormal_stop_decision, "abnormal_stop_decision"},
+  {Metric::blinker_change_count, "blinker_change_count"},
+  {Metric::steer_change_count, "steer_change_count"}};
 
 // Metrics descriptions
 static const std::unordered_map<Metric, std::string> metric_descriptions = {
   {Metric::curvature, "Curvature[1/rad]"},
   {Metric::point_interval, "Interval_between_points[m]"},
   {Metric::relative_angle, "Relative_angle[rad]"},
+  {Metric::resampled_relative_angle, "Resampled_relative_angle[rad]"},
   {Metric::length, "Trajectory_length[m]"},
   {Metric::duration, "Trajectory_duration[s]"},
   {Metric::velocity, "Trajectory_velocity[m/s]"},
@@ -117,24 +135,32 @@ static const std::unordered_map<Metric, std::string> metric_descriptions = {
   {Metric::obstacle_ttc, "Obstacle_time_to_collision[s]"},
   {Metric::modified_goal_longitudinal_deviation, "Modified_goal_longitudinal_deviation[m]"},
   {Metric::modified_goal_lateral_deviation, "Modified_goal_lateral_deviation[m]"},
-  {Metric::modified_goal_yaw_deviation, "Modified_goal_yaw_deviation[rad]"}};
+  {Metric::modified_goal_yaw_deviation, "Modified_goal_yaw_deviation[rad]"},
+  {Metric::stop_decision,
+   "The keep duration[s] and distance to stop line[m] of stop decisions made by each module"},
+  {Metric::abnormal_stop_decision,
+   "The keep duration[s] and distance to stop line[m] of abnormal stop decisions made by each "
+   "module"},
+  {Metric::blinker_change_count, "Count of blinker changes in recent `window_duration_s` seconds"},
+  {Metric::steer_change_count,
+   "Count of steer_rate positive/negative changes in recent `window_duration_s` seconds"}};
 
 namespace details
 {
-static struct CheckCorrectMaps
+static struct CheckCorrectMetricMaps
 {
-  CheckCorrectMaps()
+  CheckCorrectMetricMaps()
   {
     if (
       str_to_metric.size() != static_cast<size_t>(Metric::SIZE) ||
       metric_to_str.size() != static_cast<size_t>(Metric::SIZE) ||
       metric_descriptions.size() != static_cast<size_t>(Metric::SIZE)) {
-      std::cerr << "[metrics/metrics.hpp] Maps are not defined for all metrics: ";
+      std::cerr << "[metric/metric.hpp] Maps are not defined for all metrics: ";
       std::cerr << str_to_metric.size() << " " << metric_to_str.size() << " "
                 << metric_descriptions.size() << std::endl;
     }
   }
-} check;
+} check_correct_metric_maps;
 
 }  // namespace details
 }  // namespace planning_diagnostics

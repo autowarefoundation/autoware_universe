@@ -13,7 +13,7 @@ RTC Interface is an interface to publish the decision status of behavior plannin
 autoware::rtc_interface::RTCInterface rtc_interface(node, "intersection");
 
 // Generate UUID
-const unique_identifier_msgs::msg::UUID uuid = generateUUID(getModuleId());
+const unique_identifier_msgs::msg::UUID uuid = generate_uuid(getModuleId());
 
 // Repeat while module is running
 while (...) {

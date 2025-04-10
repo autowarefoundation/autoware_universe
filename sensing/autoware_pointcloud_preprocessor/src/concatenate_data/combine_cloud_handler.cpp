@@ -40,7 +40,7 @@ CombineCloudHandler::CombineCloudHandler(
   publish_synchronized_pointcloud_(publish_synchronized_pointcloud),
   keep_input_frame_in_synchronized_pointcloud_(keep_input_frame_in_synchronized_pointcloud),
   managed_tf_buffer_(
-    std::make_unique<autoware::universe_utils::ManagedTransformBuffer>(&node_, has_static_tf_only))
+    std::make_unique<autoware_utils::ManagedTransformBuffer>(&node_, has_static_tf_only))
 {
 }
 
@@ -189,7 +189,10 @@ ConcatenatedCloudResult CombineCloudHandler::combine_pointclouds(
 {
   ConcatenatedCloudResult concatenate_cloud_result;
 
+  if (topic_to_cloud_map.empty()) return concatenate_cloud_result;
+
   std::vector<rclcpp::Time> pc_stamps;
+  pc_stamps.reserve(topic_to_cloud_map.size());
   for (const auto & [topic, cloud] : topic_to_cloud_map) {
     pc_stamps.emplace_back(cloud->header.stamp);
   }
@@ -216,7 +219,7 @@ ConcatenatedCloudResult CombineCloudHandler::combine_pointclouds(
     convert_to_xyzirc_cloud(cloud, xyzirc_cloud);
 
     auto transformed_cloud_ptr = std::make_shared<sensor_msgs::msg::PointCloud2>();
-    managed_tf_buffer_->transformPointcloud(output_frame_, *xyzirc_cloud, *transformed_cloud_ptr);
+    managed_tf_buffer_->transform_pointcloud(output_frame_, *xyzirc_cloud, *transformed_cloud_ptr);
 
     concatenate_cloud_result.topic_to_original_stamp_map[topic] =
       rclcpp::Time(cloud->header.stamp).seconds();
@@ -246,7 +249,7 @@ ConcatenatedCloudResult CombineCloudHandler::combine_pointclouds(
       if (keep_input_frame_in_synchronized_pointcloud_ && need_transform_to_sensor_frame) {
         auto transformed_cloud_ptr_in_sensor_frame =
           std::make_shared<sensor_msgs::msg::PointCloud2>();
-        managed_tf_buffer_->transformPointcloud(
+        managed_tf_buffer_->transform_pointcloud(
           cloud->header.frame_id, *transformed_delay_compensated_cloud_ptr,
           *transformed_cloud_ptr_in_sensor_frame);
         transformed_cloud_ptr_in_sensor_frame->header.stamp = oldest_stamp;

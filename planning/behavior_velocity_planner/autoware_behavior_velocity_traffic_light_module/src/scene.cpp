@@ -44,7 +44,7 @@ TrafficLightModule::TrafficLightModule(
   const int64_t lane_id, const lanelet::TrafficLight & traffic_light_reg_elem,
   lanelet::ConstLanelet lane, const PlannerParam & planner_param, const rclcpp::Logger logger,
   const rclcpp::Clock::SharedPtr clock,
-  const std::shared_ptr<universe_utils::TimeKeeper> time_keeper,
+  const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface)
 : SceneModuleInterfaceWithRTC(lane_id, logger, clock, time_keeper, planning_factor_interface),
@@ -213,7 +213,8 @@ bool TrafficLightModule::isPassthrough(const double & signed_arc_length) const
     delay_response_time);
 
   const bool distance_stoppable = pass_judge_line_distance < signed_arc_length;
-  const bool slow_velocity = planner_data_->current_velocity->twist.linear.x < 2.0;
+  const bool slow_velocity =
+    planner_data_->current_velocity->twist.linear.x < planner_param_.yellow_light_stop_velocity;
   const bool stoppable = distance_stoppable || slow_velocity;
   const bool reachable = signed_arc_length < reachable_distance;
 
@@ -274,11 +275,11 @@ bool TrafficLightModule::isTrafficSignalTimedOut() const
   return false;
 }
 
-tier4_planning_msgs::msg::PathWithLaneId TrafficLightModule::insertStopPose(
-  const tier4_planning_msgs::msg::PathWithLaneId & input, const size_t & insert_target_point_idx,
-  const Eigen::Vector2d & target_point)
+autoware_internal_planning_msgs::msg::PathWithLaneId TrafficLightModule::insertStopPose(
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & input,
+  const size_t & insert_target_point_idx, const Eigen::Vector2d & target_point)
 {
-  tier4_planning_msgs::msg::PathWithLaneId modified_path;
+  autoware_internal_planning_msgs::msg::PathWithLaneId modified_path;
   modified_path = input;
 
   // Create stop pose
@@ -295,9 +296,10 @@ tier4_planning_msgs::msg::PathWithLaneId TrafficLightModule::insertStopPose(
 
   planning_factor_interface_->add(
     modified_path.points, planner_data_->current_odometry->pose,
-    target_point_with_lane_id.point.pose, target_point_with_lane_id.point.pose,
-    tier4_planning_msgs::msg::PlanningFactor::STOP, tier4_planning_msgs::msg::SafetyFactorArray{},
-    true /*is_driving_forward*/, 0.0, 0.0 /*shift distance*/, "");
+    target_point_with_lane_id.point.pose,
+    autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+    autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
+    0.0 /*shift distance*/, "traffic_light");
 
   return modified_path;
 }

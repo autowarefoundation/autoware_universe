@@ -1,0 +1,3 @@
+<library path="autoware_mission_planner_universe_lanelet2_plugins">
+  <class type="autoware::mission_planner_universe::lanelet2::DefaultPlanner" base_class_type="autoware::mission_planner_universe::PlannerPlugin"/>
+</library>

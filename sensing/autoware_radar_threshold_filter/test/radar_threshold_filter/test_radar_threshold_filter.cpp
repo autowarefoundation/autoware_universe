@@ -32,6 +32,7 @@ TEST(RadarThresholdFilter, isWithinThreshold)
   const double azimuth_max = 1.2;
   const double z_min = -2.0;
   const double z_max = 5.0;
+  const int64_t max_queue_size = 5;
   // amplitude filter
   {
     rclcpp::NodeOptions node_options;
@@ -48,6 +49,7 @@ TEST(RadarThresholdFilter, isWithinThreshold)
       {"node_params.is_z_filter", false},
       {"node_params.z_min", z_min},
       {"node_params.z_max", z_max},
+      {"node_params.max_queue_size", max_queue_size},
     });
 
     RadarThresholdFilterNode node(node_options);
@@ -78,6 +80,7 @@ TEST(RadarThresholdFilter, isWithinThreshold)
       {"node_params.is_z_filter", false},
       {"node_params.z_min", z_min},
       {"node_params.z_max", z_max},
+      {"node_params.max_queue_size", max_queue_size},
     });
 
     RadarThresholdFilterNode node(node_options);
@@ -107,6 +110,7 @@ TEST(RadarThresholdFilter, isWithinThreshold)
       {"node_params.is_z_filter", false},
       {"node_params.z_min", z_min},
       {"node_params.z_max", z_max},
+      {"node_params.max_queue_size", max_queue_size},
     });
 
     RadarThresholdFilterNode node(node_options);
@@ -135,6 +139,7 @@ TEST(RadarThresholdFilter, isWithinThreshold)
       {"node_params.is_z_filter", true},
       {"node_params.z_min", z_min},
       {"node_params.z_max", z_max},
+      {"node_params.max_queue_size", max_queue_size},
     });
 
     RadarThresholdFilterNode node(node_options);

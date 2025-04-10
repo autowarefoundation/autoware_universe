@@ -32,11 +32,11 @@ using autoware::behavior_path_planner::utils::path_safety_checker::
 using autoware::behavior_path_planner::utils::path_safety_checker::PoseWithVelocityStamped;
 using autoware::behavior_path_planner::utils::path_safety_checker::PredictedPathWithPolygon;
 using autoware::route_handler::Direction;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::Twist;
 using lane_change::LanesPolygon;
-using tier4_planning_msgs::msg::PathWithLaneId;
 using utils::path_safety_checker::ExtendedPredictedObjects;
 using utils::path_safety_checker::RSSparams;
 
@@ -119,8 +119,6 @@ public:
 
 protected:
   lanelet::ConstLanelets get_lane_change_lanes(const lanelet::ConstLanelets & current_lanes) const;
-
-  int getNumToPreferredLane(const lanelet::ConstLanelet & lane) const override;
 
   TurnSignalInfo get_terminal_turn_signal_info() const final;
 

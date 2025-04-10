@@ -31,12 +31,17 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionPathWithLaneID)
 
   autoware::behavior_velocity_planner::publishMandatoryTopics(test_manager, test_target_node);
 
+  const std::string input_path_with_lane_id_topic =
+    "behavior_velocity_planner_node/input/path_with_lane_id";
+
   // test with nominal path_with_lane_id
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testWithNominalPathWithLaneId(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithNormalPathWithLaneId(test_target_node, input_path_with_lane_id_topic));
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
   // test with empty path_with_lane_id
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testWithAbnormalPathWithLaneId(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithAbnormalPathWithLaneId(test_target_node, input_path_with_lane_id_topic));
   rclcpp::shutdown();
 }
 
@@ -51,13 +56,19 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
   auto test_target_node = autoware::behavior_velocity_planner::generateNode(plugin_info_vec);
   autoware::behavior_velocity_planner::publishMandatoryTopics(test_manager, test_target_node);
 
+  const std::string input_path_with_lane_id_topic =
+    "behavior_velocity_planner_node/input/path_with_lane_id";
+  const std::string input_odometry_topic = "behavior_velocity_planner_node/input/vehicle_odometry";
+
   // test for normal trajectory
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testWithNominalPathWithLaneId(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithNormalPathWithLaneId(test_target_node, input_path_with_lane_id_topic));
 
   // make sure behavior_path_planner is running
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testOffTrackFromPathWithLaneId(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithOffTrackOdometry(test_target_node, input_odometry_topic));
 
   rclcpp::shutdown();
 }

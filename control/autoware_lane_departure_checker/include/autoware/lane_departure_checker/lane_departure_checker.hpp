@@ -17,15 +17,15 @@
 
 #include "autoware/lane_departure_checker/parameters.hpp"
 
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rosidl_runtime_cpp/message_initialization.hpp>
 
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <boost/geometry/algorithms/envelope.hpp>
 #include <boost/geometry/algorithms/union.hpp>
@@ -45,24 +45,24 @@
 
 namespace autoware::lane_departure_checker
 {
-using autoware::universe_utils::Segment2d;
-using tier4_planning_msgs::msg::PathWithLaneId;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
+using autoware_utils::Segment2d;
 typedef boost::geometry::index::rtree<Segment2d, boost::geometry::index::rstar<16>> SegmentRtree;
 
 class LaneDepartureChecker
 {
 public:
   explicit LaneDepartureChecker(
-    std::shared_ptr<universe_utils::TimeKeeper> time_keeper =
-      std::make_shared<universe_utils::TimeKeeper>())
+    std::shared_ptr<autoware_utils::TimeKeeper> time_keeper =
+      std::make_shared<autoware_utils::TimeKeeper>())
   : time_keeper_(time_keeper)
   {
   }
 
   LaneDepartureChecker(
     const Param & param, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
-    std::shared_ptr<universe_utils::TimeKeeper> time_keeper =
-      std::make_shared<universe_utils::TimeKeeper>())
+    std::shared_ptr<autoware_utils::TimeKeeper> time_keeper =
+      std::make_shared<autoware_utils::TimeKeeper>())
   : param_(param),
     vehicle_info_ptr_(std::make_shared<autoware::vehicle_info_utils::VehicleInfo>(vehicle_info)),
     time_keeper_(time_keeper)
@@ -78,13 +78,13 @@ public:
   std::vector<std::pair<double, lanelet::Lanelet>> getLaneletsFromPath(
     const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path) const;
 
-  std::optional<autoware::universe_utils::Polygon2d> getFusedLaneletPolygonForPath(
+  std::optional<autoware_utils::Polygon2d> getFusedLaneletPolygonForPath(
     const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path) const;
 
   bool updateFusedLaneletPolygonForPath(
     const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path,
     std::vector<lanelet::Id> & fused_lanelets_id,
-    std::optional<autoware::universe_utils::Polygon2d> & fused_lanelets_polygon) const;
+    std::optional<autoware_utils::Polygon2d> & fused_lanelets_polygon) const;
 
   bool checkPathWillLeaveLane(
     const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path) const;
@@ -92,12 +92,12 @@ public:
   bool checkPathWillLeaveLane(
     const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path,
     std::vector<lanelet::Id> & fused_lanelets_id,
-    std::optional<autoware::universe_utils::Polygon2d> & fused_lanelets_polygon) const;
+    std::optional<autoware_utils::Polygon2d> & fused_lanelets_polygon) const;
 
   PathWithLaneId cropPointsOutsideOfLanes(
     const lanelet::LaneletMapPtr lanelet_map_ptr, const PathWithLaneId & path,
     const size_t end_index, std::vector<lanelet::Id> & fused_lanelets_id,
-    std::optional<autoware::universe_utils::Polygon2d> & fused_lanelets_polygon);
+    std::optional<autoware_utils::Polygon2d> & fused_lanelets_polygon);
 
   static bool isOutOfLane(
     const lanelet::ConstLanelets & candidate_lanelets, const LinearRing2d & vehicle_footprint);
@@ -119,9 +119,9 @@ private:
     const SegmentRtree & uncrossable_segments) const;
 
   lanelet::BasicPolygon2d toBasicPolygon2D(const LinearRing2d & footprint_hull) const;
-  autoware::universe_utils::Polygon2d toPolygon2D(const lanelet::BasicPolygon2d & poly) const;
+  autoware_utils::Polygon2d toPolygon2D(const lanelet::BasicPolygon2d & poly) const;
 
-  mutable std::shared_ptr<universe_utils::TimeKeeper> time_keeper_;
+  mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 };
 }  // namespace autoware::lane_departure_checker
 

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <!-- Input -->
+  <arg name="input/command_array" default="/planning/scenario_planning/status/infrastructure_commands"/>
+  <arg name="input/planning_factors" default="/planning/planning_factors/virtual_traffic_light"/>
+  <arg name="input/odometry" default="/localization/kinematic_state"/>
+
+  <!-- Output -->
+  <arg name="output/state_array" default="/system/v2x/virtual_traffic_light_states"/>
+
+  <!-- Parameter -->
+  <arg name="config_file" default="$(find-pkg-share autoware_dummy_infrastructure)/config/dummy_infrastructure.param.yaml"/>
+
+  <!-- Node -->
+  <node pkg="autoware_dummy_infrastructure" exec="autoware_dummy_infrastructure_node" name="dummy_infrastructure" output="screen">
+    <!-- Input -->
+    <remap from="~/input/command_array" to="$(var input/command_array)"/>
+    <remap from="~/input/planning_factors" to="$(var input/planning_factors)"/>
+    <remap from="~/input/odometry" to="$(var input/odometry)"/>
+
+    <!-- Output -->
+    <remap from="~/output/state_array" to="$(var output/state_array)"/>
+
+    <!-- Parameter -->
+    <param from="$(var config_file)"/>
+  </node>
+</launch>

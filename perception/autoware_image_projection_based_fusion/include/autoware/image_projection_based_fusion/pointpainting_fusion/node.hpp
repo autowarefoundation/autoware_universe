@@ -23,7 +23,7 @@
 #include <autoware/image_projection_based_fusion/utils/utils.hpp>
 #include <autoware/lidar_centerpoint/centerpoint_trt.hpp>
 #include <autoware/lidar_centerpoint/detection_class_remapper.hpp>
-#include <autoware/universe_utils/ros/diagnostics_interface.hpp>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 
 #include <map>
 #include <memory>
@@ -50,15 +50,15 @@ public:
 private:
   void preprocess(PointCloudMsgType & pointcloud_msg) override;
 
-  void fuseOnSingleImage(
-    const PointCloudMsgType & input_pointcloud_msg, const Det2dStatus<RoiMsgType> & det2d,
-    const RoiMsgType & input_roi_msg, PointCloudMsgType & painted_pointcloud_msg) override;
+  void fuse_on_single_image(
+    const PointCloudMsgType & input_pointcloud_msg, const Det2dStatus<RoiMsgType> & det2d_status,
+    const RoiMsgType & input_rois_msg, PointCloudMsgType & painted_pointcloud_msg) override;
 
   void postprocess(
     const PointCloudMsgType & painted_pointcloud_msg, DetectedObjects & output_msg) override;
 
   rclcpp::Publisher<PointCloudMsgType>::SharedPtr painted_point_pub_ptr_;
-  std::unique_ptr<autoware::universe_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
 
   int omp_num_threads_{1};
   std::vector<std::string> class_names_;

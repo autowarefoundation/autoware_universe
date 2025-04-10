@@ -1,4 +1,4 @@
-// Copyright 2024 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,6 +49,8 @@ struct AdvancedCollectorInfo : public CollectorInfoBase
   }
 };
 
+enum class CollectorStatus { Idle, Processing, Finished };
+
 class CloudCollector
 {
 public:
@@ -57,7 +59,7 @@ public:
     std::shared_ptr<CombineCloudHandler> & combine_cloud_handler, int num_of_clouds,
     double timeout_sec, bool debug_mode);
   bool topic_exists(const std::string & topic_name);
-  bool process_pointcloud(
+  void process_pointcloud(
     const std::string & topic_name, sensor_msgs::msg::PointCloud2::SharedPtr cloud);
   void concatenate_callback();
 
@@ -67,11 +69,12 @@ public:
   std::unordered_map<std::string, sensor_msgs::msg::PointCloud2::SharedPtr>
   get_topic_to_cloud_map();
 
-  [[nodiscard]] bool concatenate_finished() const;
+  [[nodiscard]] CollectorStatus get_status() const;
 
   void set_info(std::shared_ptr<CollectorInfoBase> collector_info);
   [[nodiscard]] std::shared_ptr<CollectorInfoBase> get_info() const;
   void show_debug_message();
+  void reset();
 
 private:
   std::shared_ptr<PointCloudConcatenateDataSynchronizerComponent> ros2_parent_node_;
@@ -81,9 +84,8 @@ private:
   uint64_t num_of_clouds_;
   double timeout_sec_;
   bool debug_mode_;
-  bool concatenate_finished_{false};
-  std::mutex concatenate_mutex_;
   std::shared_ptr<CollectorInfoBase> collector_info_;
+  CollectorStatus status_;
 };
 
 }  // namespace autoware::pointcloud_preprocessor

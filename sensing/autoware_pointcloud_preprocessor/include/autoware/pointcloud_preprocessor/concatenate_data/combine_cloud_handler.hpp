@@ -1,4 +1,4 @@
-// Copyright 2024 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@
 // ROS includes
 #include "autoware/point_types/types.hpp"
 
-#include <autoware/universe_utils/ros/managed_transform_buffer.hpp>
+#include <autoware_utils/ros/managed_transform_buffer.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <point_cloud_msg_wrapper/point_cloud_msg_wrapper.hpp>
 
@@ -34,8 +34,6 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
-#include <tier4_debug_msgs/msg/int32_stamped.hpp>
-#include <tier4_debug_msgs/msg/string_stamped.hpp>
 
 #include <message_filters/pass_through.h>
 #include <message_filters/subscriber.h>
@@ -65,7 +63,7 @@ private:
   bool is_motion_compensated_;
   bool publish_synchronized_pointcloud_;
   bool keep_input_frame_in_synchronized_pointcloud_;
-  std::unique_ptr<autoware::universe_utils::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
+  std::unique_ptr<autoware_utils::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
 
   std::deque<geometry_msgs::msg::TwistStamped> twist_queue_;
 

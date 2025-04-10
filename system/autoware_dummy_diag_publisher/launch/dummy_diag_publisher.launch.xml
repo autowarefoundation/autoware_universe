@@ -1,0 +1,34 @@
+<launch>
+  <arg name="config_file" default="$(find-pkg-share autoware_dummy_diag_publisher)/config/_empty.param.yaml"/>
+  <arg name="extra_config_file_sensor" default="$(find-pkg-share autoware_dummy_diag_publisher)/config/_empty.param.yaml"/>
+  <arg name="update_rate" default="10.0"/>
+
+  <arg name="launch_rqt_reconfigure" default="true"/>
+  <arg name="launch_rqt_runtime_monitor" default="true"/>
+  <arg name="launch_rqt_robot_monitor" default="true"/>
+  <arg name="launch_rqt_runtime_monitor_err" default="true"/>
+
+  <group if="$(var launch_rqt_reconfigure)">
+    <node pkg="rqt_reconfigure" exec="rqt_reconfigure" name="rqt_reconfigure"/>
+  </group>
+
+  <group if="$(var launch_rqt_runtime_monitor)">
+    <node pkg="rqt_runtime_monitor" exec="rqt_runtime_monitor" name="rqt_runtime_monitor"/>
+  </group>
+
+  <group if="$(var launch_rqt_robot_monitor)">
+    <node pkg="rqt_robot_monitor" exec="rqt_robot_monitor" name="rqt_robot_monitor"/>
+  </group>
+
+  <group if="$(var launch_rqt_runtime_monitor_err)">
+    <node pkg="rqt_runtime_monitor" exec="rqt_runtime_monitor" name="rqt_runtime_monitor_err">
+      <remap from="/diagnostics" to="/diagnostics_err"/>
+    </node>
+  </group>
+
+  <include file="$(find-pkg-share autoware_dummy_diag_publisher)/launch/dummy_diag_publisher_node.launch.xml">
+    <arg name="config_file" value="$(var config_file)"/>
+    <arg name="extra_config_file_sensor" value="$(var extra_config_file_sensor)"/>
+    <arg name="update_rate" value="$(var update_rate)"/>
+  </include>
+</launch>

@@ -17,7 +17,7 @@
 #include "autoware/object_merger/object_association_merger_node.hpp"
 
 #include "autoware/object_recognition_utils/object_recognition_utils.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -48,7 +48,7 @@ bool isUnknownObjectOverlapped(
   const double distance_threshold = distance_threshold_map.at(
     autoware::object_recognition_utils::getHighestProbLabel(known_object.classification));
   const double sq_distance_threshold = std::pow(distance_threshold, 2.0);
-  const double sq_distance = autoware::universe_utils::calcSquaredDistance2d(
+  const double sq_distance = autoware_utils::calc_squared_distance2d(
     unknown_object.kinematics.pose_with_covariance.pose,
     known_object.kinematics.pose_with_covariance.pose);
   if (sq_distance_threshold < sq_distance) return false;
@@ -125,13 +125,11 @@ ObjectAssociationMergerNode::ObjectAssociationMergerNode(const rclcpp::NodeOptio
 
   // Debug publisher
   processing_time_publisher_ =
-    std::make_unique<autoware::universe_utils::DebugPublisher>(this, "object_association_merger");
-  stop_watch_ptr_ =
-    std::make_unique<autoware::universe_utils::StopWatch<std::chrono::milliseconds>>();
+    std::make_unique<autoware_utils::DebugPublisher>(this, "object_association_merger");
+  stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
-  published_time_publisher_ =
-    std::make_unique<autoware::universe_utils::PublishedTimePublisher>(this);
+  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 }
 
 void ObjectAssociationMergerNode::objectsCallback(

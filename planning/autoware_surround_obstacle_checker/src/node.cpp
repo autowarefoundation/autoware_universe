@@ -14,11 +14,11 @@
 
 #include "node.hpp"
 
-#include <autoware/universe_utils/geometry/boost_polygon_utils.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/update_param.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
-#include <autoware/universe_utils/transform/transforms.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/update_param.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils/transform/transforms.hpp>
 
 #include <boost/assert.hpp>
 #include <boost/assign/list_of.hpp>
@@ -54,9 +54,9 @@ namespace autoware::surround_obstacle_checker
 namespace bg = boost::geometry;
 using Point2d = bg::model::d2::point_xy<double>;
 using Polygon2d = bg::model::polygon<Point2d>;
-using autoware::universe_utils::createPoint;
-using autoware::universe_utils::pose2transform;
 using autoware_perception_msgs::msg::ObjectClassification;
+using autoware_utils::create_point;
+using autoware_utils::pose2transform;
 
 SurroundObstacleCheckerNode::SurroundObstacleCheckerNode(const rclcpp::NodeOptions & node_options)
 : Node("surround_obstacle_checker_node", node_options)
@@ -71,7 +71,7 @@ SurroundObstacleCheckerNode::SurroundObstacleCheckerNode(const rclcpp::NodeOptio
     param_listener_ = std::make_shared<surround_obstacle_checker_node::ParamListener>(
       this->get_node_parameters_interface());
 
-    logger_configure_ = std::make_unique<autoware::universe_utils::LoggerLevelConfigure>(this);
+    logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
   }
 
   vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo();
@@ -125,12 +125,12 @@ bool SurroundObstacleCheckerNode::getUseDynamicObject() const
 
 void SurroundObstacleCheckerNode::onTimer()
 {
-  autoware::universe_utils::StopWatch<std::chrono::milliseconds> stop_watch;
+  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
   stop_watch.tic();
 
-  odometry_ptr_ = sub_odometry_.takeData();
-  pointcloud_ptr_ = sub_pointcloud_.takeData();
-  object_ptr_ = sub_dynamic_objects_.takeData();
+  odometry_ptr_ = sub_odometry_.take_data();
+  pointcloud_ptr_ = sub_pointcloud_.take_data();
+  object_ptr_ = sub_dynamic_objects_.take_data();
 
   if (!odometry_ptr_) {
     RCLCPP_INFO_THROTTLE(
@@ -282,8 +282,7 @@ std::optional<Obstacle> SurroundObstacleCheckerNode::getNearestObstacleByPointCl
     tf2::transformToEigen(transform_stamped.value().transform).cast<float>();
   pcl::PointCloud<pcl::PointXYZ> transformed_pointcloud;
   pcl::fromROSMsg(*pointcloud_ptr_, transformed_pointcloud);
-  autoware::universe_utils::transformPointCloud(
-    transformed_pointcloud, transformed_pointcloud, isometry);
+  autoware_utils::transform_pointcloud(transformed_pointcloud, transformed_pointcloud, isometry);
 
   const auto & pointcloud_param = param.obstacle_types_map.at("pointcloud");
   const double front_margin = pointcloud_param.surround_check_front_distance;
@@ -292,8 +291,8 @@ std::optional<Obstacle> SurroundObstacleCheckerNode::getNearestObstacleByPointCl
   const double base_to_front = vehicle_info_.max_longitudinal_offset_m + front_margin;
   const double base_to_rear = vehicle_info_.rear_overhang_m + back_margin;
   const double width = vehicle_info_.vehicle_width_m + side_margin * 2;
-  const auto ego_polygon = autoware::universe_utils::toFootprint(
-    odometry_ptr_->pose.pose, base_to_front, base_to_rear, width);
+  const auto ego_polygon =
+    autoware_utils::to_footprint(odometry_ptr_->pose.pose, base_to_front, base_to_rear, width);
 
   geometry_msgs::msg::Point nearest_point;
   double minimum_distance = std::numeric_limits<double>::max();
@@ -304,7 +303,7 @@ std::optional<Obstacle> SurroundObstacleCheckerNode::getNearestObstacleByPointCl
     const auto distance_to_object = bg::distance(ego_polygon, boost_point);
 
     if (distance_to_object < minimum_distance) {
-      nearest_point = createPoint(p.x, p.y, p.z);
+      nearest_point = create_point(p.x, p.y, p.z);
       minimum_distance = distance_to_object;
       was_minimum_distance_updated = true;
     }
@@ -341,10 +340,10 @@ std::optional<Obstacle> SurroundObstacleCheckerNode::getNearestObstacleByDynamic
     const double base_to_front = vehicle_info_.max_longitudinal_offset_m + front_margin;
     const double base_to_rear = vehicle_info_.rear_overhang_m + back_margin;
     const double width = vehicle_info_.vehicle_width_m + side_margin * 2;
-    const auto ego_polygon = autoware::universe_utils::toFootprint(
-      odometry_ptr_->pose.pose, base_to_front, base_to_rear, width);
+    const auto ego_polygon =
+      autoware_utils::to_footprint(odometry_ptr_->pose.pose, base_to_front, base_to_rear, width);
 
-    const auto object_polygon = autoware::universe_utils::toPolygon2d(object);
+    const auto object_polygon = autoware_utils::to_polygon2d(object);
 
     const auto distance_to_object = bg::distance(ego_polygon, object_polygon);
 

@@ -16,7 +16,7 @@
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/ros/parameter.hpp>
+#include <autoware_utils/ros/parameter.hpp>
 
 #include <tf2/utils.h>
 
@@ -27,7 +27,7 @@
 #include <utility>
 namespace autoware::behavior_velocity_planner
 {
-using autoware::universe_utils::getOrDeclareParameter;
+using autoware_utils::get_or_declare_parameter;
 using lanelet::TrafficLight;
 
 TrafficLightModuleManager::TrafficLightModuleManager(rclcpp::Node & node)
@@ -35,18 +35,23 @@ TrafficLightModuleManager::TrafficLightModuleManager(rclcpp::Node & node)
     node, getModuleName(), getEnableRTC(node, std::string(getModuleName()) + ".enable_rtc"))
 {
   const std::string ns(TrafficLightModuleManager::getModuleName());
-  planner_param_.stop_margin = getOrDeclareParameter<double>(node, ns + ".stop_margin");
-  planner_param_.tl_state_timeout = getOrDeclareParameter<double>(node, ns + ".tl_state_timeout");
+  planner_param_.stop_margin = get_or_declare_parameter<double>(node, ns + ".stop_margin");
+  planner_param_.tl_state_timeout =
+    get_or_declare_parameter<double>(node, ns + ".tl_state_timeout");
   planner_param_.stop_time_hysteresis =
-    getOrDeclareParameter<double>(node, ns + ".stop_time_hysteresis");
-  planner_param_.enable_pass_judge = getOrDeclareParameter<bool>(node, ns + ".enable_pass_judge");
+    get_or_declare_parameter<double>(node, ns + ".stop_time_hysteresis");
+  planner_param_.enable_pass_judge =
+    get_or_declare_parameter<bool>(node, ns + ".enable_pass_judge");
   planner_param_.yellow_lamp_period =
-    getOrDeclareParameter<double>(node, ns + ".yellow_lamp_period");
+    get_or_declare_parameter<double>(node, ns + ".yellow_lamp_period");
+  planner_param_.yellow_light_stop_velocity =
+    get_or_declare_parameter<double>(node, ns + ".yellow_light_stop_velocity");
   pub_tl_state_ = node.create_publisher<autoware_perception_msgs::msg::TrafficLightGroup>(
     "~/output/traffic_signal", 1);
 }
 
-void TrafficLightModuleManager::modifyPathVelocity(tier4_planning_msgs::msg::PathWithLaneId * path)
+void TrafficLightModuleManager::modifyPathVelocity(
+  autoware_internal_planning_msgs::msg::PathWithLaneId * path)
 {
   visualization_msgs::msg::MarkerArray debug_marker_array;
   visualization_msgs::msg::MarkerArray virtual_wall_marker_array;
@@ -77,13 +82,14 @@ void TrafficLightModuleManager::modifyPathVelocity(tier4_planning_msgs::msg::Pat
     virtual_wall_marker_creator_.add_virtual_walls(
       traffic_light_scene_module->createVirtualWalls());
   }
+  planning_factor_interface_->publish();
   pub_debug_->publish(debug_marker_array);
   pub_virtual_wall_->publish(virtual_wall_marker_creator_.create_markers(clock_->now()));
   pub_tl_state_->publish(tl_state);
 }
 
 void TrafficLightModuleManager::launchNewModules(
-  const tier4_planning_msgs::msg::PathWithLaneId & path)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   for (const auto & traffic_light_reg_elem : planning_utils::getRegElemMapOnPath<TrafficLight>(
          path, planner_data_->route_handler_->getLaneletMapPtr(),
@@ -104,7 +110,7 @@ void TrafficLightModuleManager::launchNewModules(
         lane_id, *(traffic_light_reg_elem.first), traffic_light_reg_elem.second, planner_param_,
         logger_.get_child("traffic_light_module"), clock_, time_keeper_,
         planning_factor_interface_));
-      generateUUID(lane_id);
+      generate_uuid(lane_id);
       updateRTCStatus(
         getUUID(lane_id), true, State::WAITING_FOR_EXECUTION, std::numeric_limits<double>::lowest(),
         path.header.stamp);
@@ -114,7 +120,7 @@ void TrafficLightModuleManager::launchNewModules(
 
 std::function<bool(const std::shared_ptr<SceneModuleInterfaceWithRTC> &)>
 TrafficLightModuleManager::getModuleExpiredFunction(
-  const tier4_planning_msgs::msg::PathWithLaneId & path)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   const auto lanelet_id_set = planning_utils::getLaneletIdSetOnPath<TrafficLight>(
     path, planner_data_->route_handler_->getLaneletMapPtr(), planner_data_->current_odometry->pose);
