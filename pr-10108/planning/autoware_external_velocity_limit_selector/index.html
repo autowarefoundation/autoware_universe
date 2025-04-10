@@ -77,7 +77,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#macro-rendering-error" class="md-skip">
+        <a href="#external-velocity-limit-selector" class="md-skip">
           Skip to content
         </a>
       
@@ -14073,6 +14073,84 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#purpose" class="md-nav__link">
+    Purpose
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inner-workings-algorithms" class="md-nav__link">
+    Inner-workings / Algorithms
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inputs" class="md-nav__link">
+    Inputs
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#outputs" class="md-nav__link">
+    Outputs
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    Parameters
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#assumptions-known-limits" class="md-nav__link">
+    Assumptions / Known limits
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-error-detection-and-handling" class="md-nav__link">
+    (Optional) Error detection and handling
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-performance-characterization" class="md-nav__link">
+    (Optional) Performance characterization
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-referencesexternal-links" class="md-nav__link">
+    (Optional) References/External links
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#optional-future-extensions-unimplemented-parts" class="md-nav__link">
+    (Optional) Future extensions / Unimplemented parts
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -14089,29 +14167,222 @@
   
 
 
-<div><h1 id="macro-rendering-error"><em>Macro Rendering Error</em><a class="headerlink" href="#macro-rendering-error" title="Permanent link">#</a></h1>
-<p><em>File</em>: <code>planning/autoware_external_velocity_limit_selector/README.md</code></p>
-<p><em>JSONDecodeError</em>: Expecting property name enclosed in double quotes: line 13 column 9 (char 395)</p>
-<div class="highlight"><pre><span></span><code>Traceback (most recent call last):
-  File "/opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages/mkdocs_macros/plugin.py", line 688, in render
-    return md_template.render(**page_variables)
-  File "/opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages/jinja2/environment.py", line 1295, in render
-    self.environment.handle_exception()
-  File "/opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/site-packages/jinja2/environment.py", line 942, in handle_exception
-    raise rewrite_traceback_stack(source=source)
-  File "&lt;template&gt;", line 54, in top-level template code
-  File "/home/runner/work/autoware_universe/autoware_universe/mkdocs_macros.py", line 72, in json_to_markdown
-    data = json.load(f)
-  File "/opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/json/__init__.py", line 293, in load
-    return loads(fp.read(),
-  File "/opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/json/__init__.py", line 357, in loads
-    return _default_decoder.decode(s)
-  File "/opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/json/decoder.py", line 337, in decode
-    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
-  File "/opt/hostedtoolcache/Python/3.8.18/x64/lib/python3.8/json/decoder.py", line 353, in raw_decode
-    obj, end = self.scan_once(s, idx)
-json.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 13 column 9 (char 395)
-</code></pre></div></div>
+<div><h1 id="external-velocity-limit-selector">External Velocity Limit Selector<a class="headerlink" href="#external-velocity-limit-selector" title="Permanent link">#</a></h1>
+<h2 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">#</a></h2>
+<p>The <code>external_velocity_limit_selector_node</code> is a node that keeps consistency of external velocity limits. This module subscribes</p>
+<ol>
+<li>velocity limit command sent by <strong>API</strong>,</li>
+<li>velocity limit command sent by <strong>Autoware internal modules</strong>.</li>
+</ol>
+<p>VelocityLimit.msg contains not only <strong>max velocity</strong> but also information about the <strong>acceleration/jerk constraints</strong> on deceleration. The <code>external_velocity_limit_selector_node</code> integrates the lowest velocity limit and the highest jerk constraint to calculate the <strong>hardest velocity limit</strong> that protects all the deceleration points and max velocities sent by API and Autoware internal modules.</p>
+<p><img alt="selector algorithm" src="image/external_velocity_limit_selector.png"></p>
+<h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
+<p>WIP</p>
+<!-- Write how this package works. Flowcharts and figures are great. Add sub-sections as you like.
+
+Example:
+  ### Flowcharts
+
+  ...(PlantUML or something)
+
+  ### State Transitions
+
+  ...(PlantUML or something)
+
+  ### How to filter target obstacles
+
+  ...
+
+  ### How to optimize trajectory
+
+  ...
+-->
+
+<h2 id="inputs">Inputs<a class="headerlink" href="#inputs" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~input/velocity_limit_from_api</code></td>
+<td>autoware_internal_planning_msgs::msg::VelocityLimit</td>
+<td>velocity limit from api</td>
+</tr>
+<tr>
+<td><code>~input/velocity_limit_from_internal</code></td>
+<td>autoware_internal_planning_msgs::msg::VelocityLimit</td>
+<td>velocity limit from autoware internal modules</td>
+</tr>
+<tr>
+<td><code>~input/velocity_limit_clear_command_from_internal</code></td>
+<td>autoware_internal_planning_msgs::msg::VelocityLimitClearCommand</td>
+<td>velocity limit clear command</td>
+</tr>
+</tbody>
+</table>
+<h2 id="outputs">Outputs<a class="headerlink" href="#outputs" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>~output/max_velocity</code></td>
+<td>autoware_internal_planning_msgs::msg::VelocityLimit</td>
+<td>current information of the hardest velocity limit</td>
+</tr>
+</tbody>
+</table>
+<h2 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>max_velocity</td>
+<td>float</td>
+<td>Default max velocity [m/s]</td>
+<td>20</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>Name</td>
+<td>Type</td>
+<td>Description</td>
+<td>Default</td>
+<td>Range</td>
+</tr>
+<tr>
+<td>-----------------</td>
+<td>--------</td>
+<td>-------------------------------</td>
+<td>-----------</td>
+<td>---------</td>
+</tr>
+<tr>
+<td>max_vel</td>
+<td>float</td>
+<td>max velocity limit [m/s]</td>
+<td>11.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>normal.min_acc</td>
+<td>float</td>
+<td>min deceleration [m/ss]</td>
+<td>-0.5</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>normal.max_acc</td>
+<td>float</td>
+<td>max acceleration [m/ss]</td>
+<td>1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>normal.min_jerk</td>
+<td>float</td>
+<td>min jerk [m/sss]</td>
+<td>-0.5</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>normal.max_jerk</td>
+<td>float</td>
+<td>max jerk [m/sss]</td>
+<td>1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>limit.min_acc</td>
+<td>float</td>
+<td>min deceleration limit [m/ss]</td>
+<td>-2.5</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>limit.max_acc</td>
+<td>float</td>
+<td>max acceleration [m/ss]</td>
+<td>1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>limit.min_jerk</td>
+<td>float</td>
+<td>min jerk [m/sss]</td>
+<td>-1.5</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>limit.max_jerk</td>
+<td>float</td>
+<td>max jerk [m/sss]</td>
+<td>1.5</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
+<h2 id="assumptions-known-limits">Assumptions / Known limits<a class="headerlink" href="#assumptions-known-limits" title="Permanent link">#</a></h2>
+<!-- Write assumptions and limitations of your implementation.
+
+Example:
+  This algorithm assumes obstacles are not moving, so if they rapidly move after the vehicle started to avoid them, it might collide with them.
+  Also, this algorithm doesn't care about blind spots. In general, since too close obstacles aren't visible due to the sensing performance limit, please take enough margin to obstacles.
+-->
+
+<h2 id="optional-error-detection-and-handling">(Optional) Error detection and handling<a class="headerlink" href="#optional-error-detection-and-handling" title="Permanent link">#</a></h2>
+<!-- Write how to detect errors and how to recover from them.
+
+Example:
+  This package can handle up to 20 obstacles. If more obstacles found, this node will give up and raise diagnostic errors.
+-->
+
+<h2 id="optional-performance-characterization">(Optional) Performance characterization<a class="headerlink" href="#optional-performance-characterization" title="Permanent link">#</a></h2>
+<!-- Write performance information like complexity. If it wouldn't be the bottleneck, not necessary.
+
+Example:
+  ### Complexity
+
+  This algorithm is O(N).
+
+  ### Processing time
+
+  ...
+-->
+
+<h2 id="optional-referencesexternal-links">(Optional) References/External links<a class="headerlink" href="#optional-referencesexternal-links" title="Permanent link">#</a></h2>
+<!-- Write links you referred to when you implemented.
+
+Example:
+  [1] {link_to_a_thesis}
+  [2] {link_to_an_issue}
+-->
+
+<h2 id="optional-future-extensions-unimplemented-parts">(Optional) Future extensions / Unimplemented parts<a class="headerlink" href="#optional-future-extensions-unimplemented-parts" title="Permanent link">#</a></h2>
+<!-- Write future extensions of this package.
+
+Example:
+  Currently, this package can't handle the chattering obstacles well. We plan to add some probabilistic filters in the perception layer to improve it.
+  Also, there are some parameters that should be global(e.g. vehicle size, max steering, etc.). These will be refactored and defined as global parameters so that we can share the same parameters between different nodes.
+--></div>
 
 
 
