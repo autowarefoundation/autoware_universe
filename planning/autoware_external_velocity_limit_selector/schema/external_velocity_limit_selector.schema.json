@@ -9,7 +9,7 @@
         "max_velocity": {
           "type": "number",
           "description": "Default max velocity [m/s]",
-          "default": 20.0,
+          "default": 20.0
         }
       },
       "required": ["max_velocity"],
