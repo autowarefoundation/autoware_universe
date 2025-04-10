@@ -69,7 +69,8 @@ bool VoxelGridMapLoader::isFeasibleWithPCLVoxelGrid(
       "Given map voxel grid is not feasible. (Number of voxel overflows int32_t limit) "
       "Check the voxel grid filter parameters and input pointcloud map."
       "  (1) If use_dynamic_map_loading is false, consider to enable use_dynamic_map_loading"
-      "  (2) If use_dynamic_map_loading is true, consider to adjust map pointcloud split size smaller"
+      "  (2) If use_dynamic_map_loading is true, consider to adjust map pointcloud split size "
+      "smaller"
       "     and confirm the given pointcloud map is separated sufficiently."
       "  (2) If static map is only the option, consider to enlarge distance_threshold to generate "
       "     more larger leaf size";
