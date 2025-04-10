@@ -73,12 +73,10 @@ public:
   explicit ControlEvaluatorNode(const rclcpp::NodeOptions & node_options);
   ~ControlEvaluatorNode() override;
 
-  void AddMetricMsg(const Metric & metric, const double & metric_value);
+  void AddMetricMsg(const Metric & metric, const double & metric_value, const bool & accumulate_metric = true);
   void AddLateralDeviationMetricMsg(const Trajectory & traj, const Point & ego_point);
   void AddYawDeviationMetricMsg(const Trajectory & traj, const Pose & ego_pose);
-  void AddGoalLongitudinalDeviationMetricMsg(const Pose & ego_pose);
-  void AddGoalLateralDeviationMetricMsg(const Pose & ego_pose);
-  void AddGoalYawDeviationMetricMsg(const Pose & ego_pose);
+  void AddGoalDeviationMetricMsg(const Odometry & odom);
   void AddBoundaryDistanceMetricMsg(const PathWithLaneId & behavior_path, const Pose & ego_pose);
 
   void AddLaneletInfoMsg(const Pose & ego_pose);

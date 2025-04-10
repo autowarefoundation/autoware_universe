@@ -22,6 +22,7 @@
 #include <nlohmann/json.hpp>
 
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -146,14 +147,13 @@ void ControlEvaluatorNode::getRouteData()
   }
 }
 
-void ControlEvaluatorNode::AddMetricMsg(const Metric & metric, const double & metric_value)
+void ControlEvaluatorNode::AddMetricMsg(const Metric & metric, const double & metric_value, const bool & accumulate_metric)
 {
   MetricMsg metric_msg;
   metric_msg.name = metric_to_str.at(metric);
   metric_msg.value = std::to_string(metric_value);
   metrics_msg_.metric_array.push_back(metric_msg);
-
-  if (output_metrics_) {
+  if (output_metrics_ && accumulate_metric) {
     metric_accumulators_[static_cast<size_t>(metric)].add(metric_value);
   }
 }
@@ -309,30 +309,22 @@ void ControlEvaluatorNode::AddYawDeviationMetricMsg(const Trajectory & traj, con
   AddMetricMsg(metric, metric_value);
 }
 
-void ControlEvaluatorNode::AddGoalLongitudinalDeviationMetricMsg(const Pose & ego_pose)
+void ControlEvaluatorNode::AddGoalDeviationMetricMsg(const Odometry & odom)
 {
-  const Metric metric = Metric::goal_longitudinal_deviation;
-  const double metric_value =
+  const Pose ego_pose = odom.pose.pose;
+  const double longitudinal_deviation_value =
     metrics::calcLongitudinalDeviation(route_handler_.getGoalPose(), ego_pose.position);
-
-  AddMetricMsg(metric, metric_value);
-}
-
-void ControlEvaluatorNode::AddGoalLateralDeviationMetricMsg(const Pose & ego_pose)
-{
-  const Metric metric = Metric::goal_lateral_deviation;
-  const double metric_value =
+  const double lateral_deviation_value =
     metrics::calcLateralDeviation(route_handler_.getGoalPose(), ego_pose.position);
+  const double yaw_deviation_value =
+    metrics::calcYawDeviation(route_handler_.getGoalPose(), ego_pose);
 
-  AddMetricMsg(metric, metric_value);
-}
+  const bool is_ego_stopped_near_goal =
+    std::abs(longitudinal_deviation_value) < 3.0 && std::abs(odom.twist.twist.linear.x) < 0.001;
 
-void ControlEvaluatorNode::AddGoalYawDeviationMetricMsg(const Pose & ego_pose)
-{
-  const Metric metric = Metric::goal_yaw_deviation;
-  const double metric_value = metrics::calcYawDeviation(route_handler_.getGoalPose(), ego_pose);
-
-  AddMetricMsg(metric, metric_value);
+  AddMetricMsg(Metric::goal_longitudinal_deviation, longitudinal_deviation_value, is_ego_stopped_near_goal);
+  AddMetricMsg(Metric::goal_lateral_deviation, lateral_deviation_value, is_ego_stopped_near_goal);
+  AddMetricMsg(Metric::goal_yaw_deviation, yaw_deviation_value, is_ego_stopped_near_goal);
 }
 
 void ControlEvaluatorNode::AddStopDeviationMetricMsg(
@@ -379,9 +371,7 @@ void ControlEvaluatorNode::onTimer()
   if (odom && route_handler_.isHandlerReady()) {
     const Pose ego_pose = odom->pose.pose;
     AddLaneletInfoMsg(ego_pose);
-    AddGoalLongitudinalDeviationMetricMsg(ego_pose);
-    AddGoalLateralDeviationMetricMsg(ego_pose);
-    AddGoalYawDeviationMetricMsg(ego_pose);
+    AddGoalDeviationMetricMsg(*odom);
   }
 
   // add planning_factor related metrics
