@@ -464,7 +464,7 @@ void RadarObjectTrackerNode::diagnoseRadarInputInterval(
       message.clear();
       message << "The duration of radar input since the last reception has exceeded"
               << " the stale threshold " << radar_input_stale_threshold_ms_ << " ms by "
-              << elapsed_since_last_input_ms - radar_data_stale_th_ms_ << " ms.";
+              << elapsed_since_last_input_ms - radar_input_stale_threshold_ms_ << " ms.";
 
       diag_level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
     } else {
