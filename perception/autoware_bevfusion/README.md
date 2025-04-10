@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The `autoware_bevfusion` package is used for 3D object detection based on camera-lidar fusion.
+The `autoware_bevfusion` package is used for 3D object detection based on lidar or camera-lidar fusion.
 
 ## Inner-workings / Algorithms
 
@@ -68,7 +68,12 @@ This node assumes that the input pointcloud follows the `PointXYZIRC` layout def
 
 ## Trained Models
 
-TODO
+You can download the onnx and config files in the following links.
+The files need to be placed inside `$(env HOME)/autoware_data/bevfusion`
+
+- [TIER IV INTERNAL LINK](https://drive.google.com/drive/folders/1vci-mcd-PnMPFfbfwpzCGcfJBqn5kt3M) (once the PR is approved I will upload the files to an open link)
+
+The model was trained in TIER IV's internal database (~35k lidar frames) for 30 epochs.
 
 ### Changelog
 
@@ -78,4 +83,4 @@ TODO
 
 ## (Optional) Future extensions / Unimplemented parts
 
-Although this node can perform camera-lidar fusion, as is the first method in autoware to actually use images and lidars for inference, the package structure and its full integration in the autoware pipeline are left for future work. In the current structure, it can be employed without any changes as a lidar-based detector.
+Although this node can perform camera-lidar fusion, as it is the first method in autoware to actually use images and lidars for inference, the package structure and its full integration in the autoware pipeline are left for future work. In the current structure, it can be employed without any changes as a lidar-based detector.
