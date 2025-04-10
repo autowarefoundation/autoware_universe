@@ -116,7 +116,7 @@ private:
   // lanelet::ConstLanelets crosswalks_;
 
   // diagnostics
-  double radar_data_stale_th_ms_;
+  double radar_input_stale_threshold_ms_;
   std::optional<rclcpp::Time> last_processing_timestamp_;
   diagnostic_updater::Updater diagnostic_updater_{this};
 
