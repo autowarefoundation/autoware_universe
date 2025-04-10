@@ -16,9 +16,9 @@
 
 #include "autoware/obstacle_collision_checker/debug.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/math/unit_conversion.hpp>
-#include <autoware/universe_utils/ros/update_param.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
+#include <autoware_utils/ros/update_param.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <memory>
@@ -49,8 +49,8 @@ ObstacleCollisionCheckerNode::ObstacleCollisionCheckerNode(const rclcpp::NodeOpt
     &autoware::obstacle_collision_checker::ObstacleCollisionCheckerNode::param_callback, this, _1));
 
   // Subscriber
-  self_pose_listener_ = std::make_shared<autoware::universe_utils::SelfPoseListener>(this);
-  transform_listener_ = std::make_shared<autoware::universe_utils::TransformListener>(this);
+  self_pose_listener_ = std::make_shared<autoware_utils::SelfPoseListener>(this);
+  transform_listener_ = std::make_shared<autoware_utils::TransformListener>(this);
 
   sub_obstacle_pointcloud_ = create_subscription<sensor_msgs::msg::PointCloud2>(
     "input/obstacle_pointcloud", rclcpp::SensorDataQoS(),
@@ -65,9 +65,8 @@ ObstacleCollisionCheckerNode::ObstacleCollisionCheckerNode(const rclcpp::NodeOpt
     "input/odometry", 1, std::bind(&ObstacleCollisionCheckerNode::on_odom, this, _1));
 
   // Publisher
-  debug_publisher_ =
-    std::make_shared<autoware::universe_utils::DebugPublisher>(this, "debug/marker");
-  time_publisher_ = std::make_shared<autoware::universe_utils::ProcessingTimePublisher>(this);
+  debug_publisher_ = std::make_shared<autoware_utils::DebugPublisher>(this, "debug/marker");
+  time_publisher_ = std::make_shared<autoware_utils::ProcessingTimePublisher>(this);
 
   // Diagnostic Updater
   updater_.setHardwareID("obstacle_collision_checker");
@@ -76,7 +75,7 @@ ObstacleCollisionCheckerNode::ObstacleCollisionCheckerNode(const rclcpp::NodeOpt
     "obstacle_collision_checker", this, &ObstacleCollisionCheckerNode::check_lane_departure);
 
   // Wait for first self pose
-  self_pose_listener_->waitForFirstPose();
+  self_pose_listener_->wait_for_first_pose();
 
   // Timer
   init_timer(1.0 / node_param_.update_rate);
@@ -174,11 +173,11 @@ bool ObstacleCollisionCheckerNode::is_data_timeout()
 
 void ObstacleCollisionCheckerNode::on_timer()
 {
-  current_pose_ = self_pose_listener_->getCurrentPose();
+  current_pose_ = self_pose_listener_->get_current_pose();
   if (obstacle_pointcloud_) {
     const auto & header = obstacle_pointcloud_->header;
     try {
-      obstacle_transform_ = transform_listener_->getTransform(
+      obstacle_transform_ = transform_listener_->get_transform(
         "map", header.frame_id, header.stamp, rclcpp::Duration::from_seconds(0.01));
     } catch (tf2::TransformException & ex) {
       RCLCPP_INFO(
@@ -222,22 +221,22 @@ rcl_interfaces::msg::SetParametersResult ObstacleCollisionCheckerNode::param_cal
   result.reason = "success";
 
   try {
-    using autoware::universe_utils::updateParam;
+    using autoware_utils::update_param;
     // Node Parameter
     {
       auto & p = node_param_;
 
       // Update params
-      updateParam(parameters, "update_rate", p.update_rate);
+      update_param(parameters, "update_rate", p.update_rate);
     }
 
     auto & p = input_.param;
 
-    updateParam(parameters, "delay_time", p.delay_time);
-    updateParam(parameters, "footprint_margin", p.footprint_margin);
-    updateParam(parameters, "max_deceleration", p.max_deceleration);
-    updateParam(parameters, "resample_interval", p.resample_interval);
-    updateParam(parameters, "search_radius", p.search_radius);
+    update_param(parameters, "delay_time", p.delay_time);
+    update_param(parameters, "footprint_margin", p.footprint_margin);
+    update_param(parameters, "max_deceleration", p.max_deceleration);
+    update_param(parameters, "resample_interval", p.resample_interval);
+    update_param(parameters, "search_radius", p.search_radius);
   } catch (const rclcpp::exceptions::InvalidParameterTypeException & e) {
     result.successful = false;
     result.reason = e.what();

@@ -28,6 +28,7 @@
 #include <rcl_yaml_param_parser/parser.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 
+#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -54,6 +55,7 @@ protected:
         node_options.parameter_overrides().push_back(param);
       }
     }
+    node_options.parameter_overrides().emplace_back("initial_pose_estimation.particles_num", 100);
     node_ = std::make_shared<autoware::ndt_scan_matcher::NDTScanMatcher>(node_options);
     rcl_yaml_node_struct_fini(params_st);
 

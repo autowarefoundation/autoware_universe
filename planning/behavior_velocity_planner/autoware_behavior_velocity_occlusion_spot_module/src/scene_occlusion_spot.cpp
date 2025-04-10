@@ -30,12 +30,13 @@
 
 #include <algorithm>
 #include <memory>
+#include <string>
 #include <vector>
 
 // turn on only when debugging.
 #define DEBUG_PRINT(enable, n, x)                                  \
   if (enable) {                                                    \
-    const std::string time_msg = n + std::to_string(x);            \
+    const std::string time_msg = (n) + std::to_string(x);          \
     RCLCPP_INFO_STREAM_THROTTLE(logger_, *clock_, 3000, time_msg); \
   }
 
@@ -63,11 +64,13 @@ namespace utils = occlusion_spot_utils;
 OcclusionSpotModule::OcclusionSpotModule(
   const int64_t module_id, const std::shared_ptr<const PlannerData> & planner_data,
   const PlannerParam & planner_param, const rclcpp::Logger & logger,
-  const rclcpp::Clock::SharedPtr clock)
-: SceneModuleInterface(module_id, logger, clock), param_(planner_param)
+  const rclcpp::Clock::SharedPtr clock,
+  const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
+  const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+    planning_factor_interface)
+: SceneModuleInterface(module_id, logger, clock, time_keeper, planning_factor_interface),
+  param_(planner_param)
 {
-  velocity_factor_.init(PlanningBehavior::UNKNOWN);
-
   if (param_.detection_method == utils::DETECTION_METHOD::OCCUPANCY_GRID) {
     debug_data_.detection_type = "occupancy";
     //! occupancy grid limitation( 100 * 100 )
@@ -82,8 +85,7 @@ OcclusionSpotModule::OcclusionSpotModule(
   }
 }
 
-bool OcclusionSpotModule::modifyPathVelocity(
-  PathWithLaneId * path, [[maybe_unused]] StopReason * stop_reason)
+bool OcclusionSpotModule::modifyPathVelocity(PathWithLaneId * path)
 {
   if (param_.is_show_processing_time) stop_watch_.tic("total_processing_time");
   debug_data_.resetData();

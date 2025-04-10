@@ -17,6 +17,7 @@
 
 #include "autoware/behavior_path_planner_common/interface/scene_module_interface.hpp"
 #include "autoware/behavior_path_planner_common/interface/scene_module_visitor.hpp"
+#include "autoware/behavior_path_planner_common/utils/path_safety_checker/safety_check.hpp"
 #include "autoware/behavior_path_static_obstacle_avoidance_module/data_structs.hpp"
 #include "autoware/behavior_path_static_obstacle_avoidance_module/helper.hpp"
 #include "autoware/behavior_path_static_obstacle_avoidance_module/shift_line_generator.hpp"
@@ -28,6 +29,7 @@
 
 #include <limits>
 #include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -47,7 +49,7 @@ public:
     const std::unordered_map<std::string, std::shared_ptr<RTCInterface>> & rtc_interface_ptr_map,
     std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
       objects_of_interest_marker_interface_ptr_map,
-    std::shared_ptr<SteeringFactorInterface> & steering_factor_interface_ptr);
+    const std::shared_ptr<PlanningFactorInterface> & planning_factor_interface);
 
   CandidateOutput planCandidate() const override;
   BehaviorModuleOutput plan() override;
@@ -66,6 +68,8 @@ public:
   std::shared_ptr<AvoidanceDebugMsgArray> get_debug_msg_array() const;
 
 private:
+  ModuleStatus setInitState() const override { return ModuleStatus::WAITING_APPROVAL; };
+
   /**
    * @brief return the result whether the module can stop path generation process.
    * @param avoidance data.
@@ -89,7 +93,7 @@ private:
       rtc_interface_ptr_map_.at("left")->updateCooperateStatus(
         uuid_map_.at("left"), isExecutionReady(), State::WAITING_FOR_EXECUTION,
         candidate.start_distance_to_path_change, candidate.finish_distance_to_path_change,
-        clock_->now());
+        clock_->now(), avoid_data_.request_operator);
       candidate_uuid_ = uuid_map_.at("left");
       return;
     }
@@ -97,7 +101,7 @@ private:
       rtc_interface_ptr_map_.at("right")->updateCooperateStatus(
         uuid_map_.at("right"), isExecutionReady(), State::WAITING_FOR_EXECUTION,
         candidate.start_distance_to_path_change, candidate.finish_distance_to_path_change,
-        clock_->now());
+        clock_->now(), avoid_data_.request_operator);
       candidate_uuid_ = uuid_map_.at("right");
       return;
     }
@@ -130,9 +134,10 @@ private:
       }
 
       if (finish_distance > -1.0e-03) {
-        steering_factor_interface_ptr_->updateSteeringFactor(
-          {left_shift.start_pose, left_shift.finish_pose}, {start_distance, finish_distance},
-          PlanningBehavior::AVOIDANCE, SteeringFactor::LEFT, SteeringFactor::TURNING, "");
+        planning_factor_interface_->add(
+          start_distance, finish_distance, left_shift.start_pose, left_shift.finish_pose,
+          PlanningFactor::SHIFT_LEFT,
+          utils::path_safety_checker::to_safety_factor_array(debug_data_.collision_check));
       }
     }
 
@@ -150,9 +155,10 @@ private:
       }
 
       if (finish_distance > -1.0e-03) {
-        steering_factor_interface_ptr_->updateSteeringFactor(
-          {right_shift.start_pose, right_shift.finish_pose}, {start_distance, finish_distance},
-          PlanningBehavior::AVOIDANCE, SteeringFactor::RIGHT, SteeringFactor::TURNING, "");
+        planning_factor_interface_->add(
+          start_distance, finish_distance, right_shift.start_pose, right_shift.finish_pose,
+          PlanningFactor::SHIFT_RIGHT,
+          utils::path_safety_checker::to_safety_factor_array(debug_data_.collision_check));
       }
     }
   }
@@ -179,9 +185,9 @@ private:
     }
 
     if (candidate_registered) {
-      uuid_map_.at("left") = generateUUID();
-      uuid_map_.at("right") = generateUUID();
-      candidate_uuid_ = generateUUID();
+      uuid_map_.at("left") = generate_uuid();
+      uuid_map_.at("right") = generate_uuid();
+      candidate_uuid_ = generate_uuid();
     }
   }
 
@@ -399,7 +405,8 @@ private:
   {
     constexpr double threshold = 0.1;
     if (std::abs(path_shifter_.getBaseOffset()) > threshold) {
-      RCLCPP_INFO(getLogger(), "base offset is not zero. can't reset registered shift lines.");
+      RCLCPP_INFO_THROTTLE(
+        getLogger(), *clock_, 3000, "base offset is not zero. can't reset registered shift lines.");
       return;
     }
 
@@ -454,7 +461,7 @@ private:
 
   bool safe_{true};
 
-  std::optional<UUID> ignore_signal_{std::nullopt};
+  std::set<std::string> ignore_signal_ids_;
 
   std::shared_ptr<AvoidanceHelper> helper_;
 

@@ -15,7 +15,7 @@
 #include "../src/obstacle_collision_checker.cpp"  // NOLINT
 #include "gtest/gtest.h"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
@@ -29,6 +29,7 @@
 
 #include <limits>
 #include <memory>
+#include <vector>
 
 namespace
 {
@@ -125,7 +126,7 @@ TEST(test_obstacle_collision_checker, getTransformedPointCloud)
   }
   {  // rotation
     geometry_msgs::msg::Transform transform;
-    transform.rotation = autoware::universe_utils::createQuaternionFromRPY(0.0, 0.0, M_PI);
+    transform.rotation = autoware_utils::create_quaternion_from_rpy(0.0, 0.0, M_PI);
     const auto transformed_pcd = get_transformed_point_cloud(pcd_msg, transform);
     EXPECT_EQ(pcl_pcd.size(), transformed_pcd.size());
     EXPECT_TRUE(point_in_pcl_pointcloud(pcl_point(0.0, 0.0), transformed_pcd));
@@ -136,7 +137,7 @@ TEST(test_obstacle_collision_checker, getTransformedPointCloud)
     geometry_msgs::msg::Transform transform;
     transform.translation.x = 0.5;
     transform.translation.y = -0.5;
-    transform.rotation = autoware::universe_utils::createQuaternionFromRPY(0.0, 0.0, M_PI);
+    transform.rotation = autoware_utils::create_quaternion_from_rpy(0.0, 0.0, M_PI);
     const auto transformed_pcd = get_transformed_point_cloud(pcd_msg, transform);
     EXPECT_EQ(pcl_pcd.size(), transformed_pcd.size());
     EXPECT_TRUE(point_in_pcl_pointcloud(pcl_point(0.5, -0.5), transformed_pcd));
@@ -212,7 +213,7 @@ TEST(test_obstacle_collision_checker, check_for_collisions)
     EXPECT_FALSE(output.will_collide);
     // 1s * 1m/s = 1m for the delay, then 1->0m/s at 1m/s² = 0.5m -> 1.5m braking distance
     EXPECT_DOUBLE_EQ(
-      autoware::universe_utils::calcDistance2d(
+      autoware_utils::calc_distance2d(
         output.resampled_trajectory.points.front(), output.resampled_trajectory.points.back()),
       1.5);
   }

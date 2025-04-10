@@ -17,8 +17,8 @@
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/marker/marker_helper.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/marker_helper.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
 
 #include <vector>
 
@@ -27,12 +27,12 @@ namespace autoware::behavior_velocity_planner
 
 using autoware::motion_utils::createSlowDownVirtualWallMarker;
 using autoware::motion_utils::createStopVirtualWallMarker;
-using autoware::universe_utils::appendMarkerArray;
-using autoware::universe_utils::calcOffsetPose;
-using autoware::universe_utils::createDefaultMarker;
-using autoware::universe_utils::createMarkerColor;
-using autoware::universe_utils::createMarkerScale;
-using autoware::universe_utils::createPoint;
+using autoware_utils::append_marker_array;
+using autoware_utils::calc_offset_pose;
+using autoware_utils::create_default_marker;
+using autoware_utils::create_marker_color;
+using autoware_utils::create_marker_scale;
+using autoware_utils::create_point;
 using visualization_msgs::msg::Marker;
 
 namespace
@@ -45,11 +45,11 @@ visualization_msgs::msg::MarkerArray createWalkwayMarkers(
 
   // Stop point
   if (!debug_data.stop_poses.empty()) {
-    auto marker = createDefaultMarker(
-      "map", now, "stop point", uid, Marker::POINTS, createMarkerScale(0.25, 0.25, 0.0),
-      createMarkerColor(1.0, 0.0, 0.0, 0.999));
+    auto marker = create_default_marker(
+      "map", now, "stop point", uid, Marker::POINTS, create_marker_scale(0.25, 0.25, 0.0),
+      create_marker_color(1.0, 0.0, 0.0, 0.999));
     for (const auto & p : debug_data.stop_poses) {
-      marker.points.push_back(createPoint(p.position.x, p.position.y, p.position.z));
+      marker.points.push_back(create_point(p.position.x, p.position.y, p.position.z));
     }
     msg.markers.push_back(marker);
   }
@@ -57,13 +57,13 @@ visualization_msgs::msg::MarkerArray createWalkwayMarkers(
   {
     size_t i = 0;
     for (const auto & p : debug_data.stop_poses) {
-      auto marker = createDefaultMarker(
+      auto marker = create_default_marker(
         "map", now, "walkway stop judge range", uid + i++, Marker::LINE_STRIP,
-        createMarkerScale(0.1, 0.1, 0.0), createMarkerColor(1.0, 0.0, 0.0, 0.5));
+        create_marker_scale(0.1, 0.1, 0.0), create_marker_color(1.0, 0.0, 0.0, 0.5));
       for (size_t j = 0; j < 50; ++j) {
         const auto x = p.position.x + debug_data.stop_judge_range * std::cos(M_PI * 2 / 50 * j);
         const auto y = p.position.y + debug_data.stop_judge_range * std::sin(M_PI * 2 / 50 * j);
-        marker.points.push_back(createPoint(x, y, p.position.z));
+        marker.points.push_back(create_point(x, y, p.position.z));
       }
       marker.points.push_back(marker.points.front());
       msg.markers.push_back(marker);
@@ -83,7 +83,7 @@ autoware::motion_utils::VirtualWalls WalkwayModule::createVirtualWalls()
 
   wall.style = autoware::motion_utils::VirtualWallType::stop;
   for (const auto & p : debug_data_.stop_poses) {
-    wall.pose = calcOffsetPose(p, debug_data_.base_link2front, 0.0, 0.0);
+    wall.pose = calc_offset_pose(p, debug_data_.base_link2front, 0.0, 0.0);
     virtual_walls.push_back(wall);
   }
   return virtual_walls;
@@ -93,7 +93,7 @@ visualization_msgs::msg::MarkerArray WalkwayModule::createDebugMarkerArray()
 {
   visualization_msgs::msg::MarkerArray debug_marker_array;
 
-  appendMarkerArray(
+  append_marker_array(
     createWalkwayMarkers(debug_data_, this->clock_->now(), module_id_), &debug_marker_array);
 
   return debug_marker_array;

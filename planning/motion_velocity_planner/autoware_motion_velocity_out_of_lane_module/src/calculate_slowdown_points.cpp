@@ -19,7 +19,7 @@
 
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
@@ -38,7 +38,7 @@ namespace autoware::motion_velocity_planner::out_of_lane
 
 std::optional<geometry_msgs::msg::Pose> calculate_last_avoiding_pose(
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
-  const universe_utils::Polygon2d & footprint, const lanelet::BasicPolygons2d & polygons_to_avoid,
+  const autoware_utils::Polygon2d & footprint, const lanelet::BasicPolygons2d & polygons_to_avoid,
   const double min_arc_length, const double max_arc_length, const double precision)
 {
   geometry_msgs::msg::Pose interpolated_pose{};
@@ -68,7 +68,7 @@ std::optional<geometry_msgs::msg::Pose> calculate_last_avoiding_pose(
 
 std::optional<geometry_msgs::msg::Pose> calculate_pose_ahead_of_collision(
   const EgoData & ego_data, const OutOfLanePoint & point_to_avoid,
-  const universe_utils::Polygon2d & footprint, const double precision)
+  const autoware_utils::Polygon2d & footprint, const double precision)
 {
   const auto first_avoid_arc_length = motion_utils::calcSignedArcLength(
     ego_data.trajectory_points, 0UL, point_to_avoid.trajectory_index);
@@ -84,15 +84,15 @@ std::optional<geometry_msgs::msg::Pose> calculate_pose_ahead_of_collision(
   return std::nullopt;
 }
 
-std::optional<geometry_msgs::msg::Pose> calculate_slowdown_point(
-  const EgoData & ego_data, const OutOfLaneData & out_of_lane_data, PlannerParam params)
+std::optional<geometry_msgs::msg::Pose> calculate_last_in_lane_pose(
+  const EgoData & ego_data, const OutOfLanePoint & point_to_avoid, PlannerParam params)
 {
-  const auto point_to_avoid_it = std::find_if(
-    out_of_lane_data.outside_points.cbegin(), out_of_lane_data.outside_points.cend(),
-    [&](const auto & p) { return p.to_avoid; });
-  if (point_to_avoid_it == out_of_lane_data.outside_points.cend()) {
-    return std::nullopt;
-  }
+  std::optional<geometry_msgs::msg::Pose> last_in_lane_pose;
+
+  const auto outside_idx = point_to_avoid.trajectory_index;
+  const auto outside_arc_length =
+    motion_utils::calcSignedArcLength(ego_data.trajectory_points, 0UL, outside_idx);
+
   const auto raw_footprint = make_base_footprint(params, true);  // ignore extra footprint offsets
   const auto base_footprint = make_base_footprint(params);
   params.extra_front_offset += params.lon_dist_buffer;
@@ -100,31 +100,71 @@ std::optional<geometry_msgs::msg::Pose> calculate_slowdown_point(
   params.extra_left_offset += params.lat_dist_buffer;
   const auto expanded_footprint = make_base_footprint(params);  // with added distance buffers
   lanelet::BasicPolygons2d polygons_to_avoid;
-  for (const auto & ll : point_to_avoid_it->overlapped_lanelets) {
+  for (const auto & ll : point_to_avoid.overlapped_lanelets) {
     polygons_to_avoid.push_back(ll.polygon2d().basicPolygon());
   }
-  // points are ordered by trajectory index so the first one has the smallest index and arc length
-  const auto first_outside_idx = out_of_lane_data.outside_points.front().trajectory_index;
-  const auto first_outside_arc_length =
-    motion_utils::calcSignedArcLength(ego_data.trajectory_points, 0UL, first_outside_idx);
-
-  std::optional<geometry_msgs::msg::Pose> slowdown_point;
   // search for the first slowdown decision for which a stop point can be inserted
   // we first try to use the expanded footprint (distance buffers + extra footprint offsets)
-  for (const auto & footprint : {expanded_footprint, base_footprint, raw_footprint}) {
-    slowdown_point = calculate_last_avoiding_pose(
-      ego_data.trajectory_points, footprint, polygons_to_avoid, ego_data.min_stop_arc_length,
-      first_outside_arc_length, params.precision);
-    if (slowdown_point) {
+  // then we use the base footprint (with distance buffers)
+  // finally, we use the raw footprint
+  for (const auto & ego_footprint : {expanded_footprint, base_footprint, raw_footprint}) {
+    last_in_lane_pose = calculate_last_avoiding_pose(
+      ego_data.trajectory_points, ego_footprint, polygons_to_avoid, ego_data.min_stop_arc_length,
+      outside_arc_length, params.precision);
+    if (last_in_lane_pose) {
       break;
     }
   }
   // fallback to simply stopping ahead of the collision to avoid (regardless of being out of lane or
   // not)
-  if (!slowdown_point) {
-    slowdown_point = calculate_pose_ahead_of_collision(
-      ego_data, *point_to_avoid_it, expanded_footprint, params.precision);
+  if (!last_in_lane_pose) {
+    last_in_lane_pose = calculate_pose_ahead_of_collision(
+      ego_data, point_to_avoid, expanded_footprint, params.precision);
   }
-  return slowdown_point;
+  return last_in_lane_pose;
 }
+
+std::optional<geometry_msgs::msg::Pose> calculate_slowdown_pose(
+  const EgoData & ego_data, const OutOfLaneData & out_of_lane_data, const PlannerParam & params)
+{
+  // points are ordered by trajectory index so the first one has the smallest index and arc length
+  const auto point_to_avoid_it = std::find_if(
+    out_of_lane_data.outside_points.cbegin(), out_of_lane_data.outside_points.cend(),
+    [&](const auto & p) { return p.to_avoid; });
+  if (point_to_avoid_it == out_of_lane_data.outside_points.cend()) {
+    return std::nullopt;
+  }
+  auto slowdown_pose = calculate_last_in_lane_pose(ego_data, *point_to_avoid_it, params);
+  if (slowdown_pose && params.use_map_stop_lines) {
+    // try to use a map stop line ahead of the stop pose
+    auto stop_arc_length =
+      motion_utils::calcSignedArcLength(ego_data.trajectory_points, 0LU, slowdown_pose->position);
+    for (const auto & stop_point : ego_data.map_stop_points) {
+      if (
+        stop_point.ego_trajectory_arc_length < stop_arc_length &&
+        stop_point.ego_trajectory_arc_length >= ego_data.min_stop_arc_length) {
+        slowdown_pose = stop_point.ego_stop_pose;
+        stop_arc_length = stop_point.ego_trajectory_arc_length;
+      }
+    }
+  }
+  return slowdown_pose;
+}
+
+void calculate_min_stop_and_slowdown_distances(
+  out_of_lane::EgoData & ego_data, const PlannerData & planner_data,
+  const std::optional<geometry_msgs::msg::Pose> & previous_slowdown_pose)
+{
+  ego_data.min_stop_distance = planner_data.calculate_min_deceleration_distance(0.0).value_or(0.0);
+  if (previous_slowdown_pose) {
+    // Ensure we do not remove the previous slowdown point due to the min distance limit
+    const auto previous_slowdown_pose_arc_length = motion_utils::calcSignedArcLength(
+      ego_data.trajectory_points, 0UL, previous_slowdown_pose->position);
+    ego_data.min_stop_distance =
+      std::min(previous_slowdown_pose_arc_length, ego_data.min_stop_distance);
+  }
+  ego_data.min_stop_arc_length =
+    ego_data.longitudinal_offset_to_first_trajectory_index + ego_data.min_stop_distance;
+}
+
 }  // namespace autoware::motion_velocity_planner::out_of_lane

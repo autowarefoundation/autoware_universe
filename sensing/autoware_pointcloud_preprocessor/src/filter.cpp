@@ -107,8 +107,7 @@ autoware::pointcloud_preprocessor::Filter::Filter(
   set_param_res_filter_ = this->add_on_set_parameters_callback(
     std::bind(&Filter::filterParamCallback, this, std::placeholders::_1));
 
-  published_time_publisher_ =
-    std::make_unique<autoware::universe_utils::PublishedTimePublisher>(this);
+  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
   RCLCPP_DEBUG(this->get_logger(), "[Filter Constructor] successfully created.");
 }
 
@@ -125,7 +124,7 @@ void autoware::pointcloud_preprocessor::Filter::setupTF()
     has_static_tf_only_ = true;
   }
   managed_tf_buffer_ =
-    std::make_unique<autoware::universe_utils::ManagedTransformBuffer>(this, has_static_tf_only_);
+    std::make_unique<autoware_utils::ManagedTransformBuffer>(this, has_static_tf_only_);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -141,7 +140,8 @@ void autoware::pointcloud_preprocessor::Filter::subscribe(const std::string & fi
   // each time a child class supports the faster version.
   // When all the child classes support the faster version, this workaround is deleted.
   std::set<std::string> supported_nodes = {
-    "CropBoxFilter", "RingOutlierFilter", "VoxelGridDownsampleFilter", "ScanGroundFilter"};
+    "CropBoxFilter", "RingOutlierFilter", "VoxelGridDownsampleFilter", "ScanGroundFilter",
+    "PointCloudDensifier"};
   auto callback = supported_nodes.find(filter_name) != supported_nodes.end()
                     ? &Filter::faster_input_indices_callback
                     : &Filter::input_indices_callback;
@@ -280,7 +280,7 @@ void autoware::pointcloud_preprocessor::Filter::input_indices_callback(
     // Convert the cloud into the different frame
     PointCloud2 cloud_transformed;
 
-    if (!managed_tf_buffer_->transformPointcloud(tf_input_frame_, *cloud, cloud_transformed)) {
+    if (!managed_tf_buffer_->transform_pointcloud(tf_input_frame_, *cloud, cloud_transformed)) {
       return;
     }
     cloud_tf = std::make_shared<PointCloud2>(cloud_transformed);
@@ -309,7 +309,7 @@ bool autoware::pointcloud_preprocessor::Filter::calculate_transform_matrix(
     this->get_logger(), "[get_transform_matrix] Transforming input dataset from %s to %s.",
     from.header.frame_id.c_str(), target_frame.c_str());
 
-  if (!managed_tf_buffer_->getTransform(
+  if (!managed_tf_buffer_->get_transform(
         target_frame, from.header.frame_id, transform_info.eigen_transform)) {
     return false;
   }
@@ -332,7 +332,7 @@ bool autoware::pointcloud_preprocessor::Filter::convert_output_costly(
     // Convert the cloud into the different frame
     auto cloud_transformed = std::make_unique<PointCloud2>();
 
-    if (!managed_tf_buffer_->transformPointcloud(tf_output_frame_, *output, *cloud_transformed)) {
+    if (!managed_tf_buffer_->transform_pointcloud(tf_output_frame_, *output, *cloud_transformed)) {
       RCLCPP_ERROR(
         this->get_logger(),
         "[convert_output_costly] Error converting output dataset from %s to %s.",
@@ -352,7 +352,7 @@ bool autoware::pointcloud_preprocessor::Filter::convert_output_costly(
 
     auto cloud_transformed = std::make_unique<PointCloud2>();
 
-    if (!managed_tf_buffer_->transformPointcloud(
+    if (!managed_tf_buffer_->transform_pointcloud(
           tf_input_orig_frame_, *output, *cloud_transformed)) {
       return false;
     }

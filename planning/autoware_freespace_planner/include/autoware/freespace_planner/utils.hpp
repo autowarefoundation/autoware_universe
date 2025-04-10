@@ -19,13 +19,13 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_planning_msgs/msg/scenario.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <tier4_planning_msgs/msg/scenario.hpp>
 
 #include <deque>
 #include <vector>
@@ -34,6 +34,7 @@ namespace autoware::freespace_planner::utils
 {
 using autoware::freespace_planning_algorithms::PlannerWaypoint;
 using autoware::freespace_planning_algorithms::PlannerWaypoints;
+using autoware_internal_planning_msgs::msg::Scenario;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using geometry_msgs::msg::Pose;
@@ -41,7 +42,6 @@ using geometry_msgs::msg::PoseArray;
 using geometry_msgs::msg::PoseStamped;
 using geometry_msgs::msg::TransformStamped;
 using nav_msgs::msg::Odometry;
-using tier4_planning_msgs::msg::Scenario;
 
 PoseArray trajectory_to_pose_array(const Trajectory & trajectory);
 
@@ -58,13 +58,15 @@ size_t get_next_target_index(
   const size_t current_target_index);
 
 Trajectory get_partial_trajectory(
-  const Trajectory & trajectory, const size_t start_index, const size_t end_index);
+  const Trajectory & trajectory, const size_t start_index, const size_t end_index,
+  const rclcpp::Clock::SharedPtr clock);
 
 Trajectory create_trajectory(
   const PoseStamped & current_pose, const PlannerWaypoints & planner_waypoints,
   const double & velocity);
 
-Trajectory create_stop_trajectory(const PoseStamped & current_pose);
+Trajectory create_stop_trajectory(
+  const PoseStamped & current_pose, const rclcpp::Clock::SharedPtr clock);
 
 Trajectory create_stop_trajectory(const Trajectory & trajectory);
 

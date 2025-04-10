@@ -19,6 +19,8 @@
 #include <boost/geometry/algorithms/distance.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
 
+#include <vector>
+
 namespace autoware::behavior_velocity_planner
 {
 namespace bg = boost::geometry;
@@ -32,8 +34,8 @@ auto getOffsetPoint(const Eigen::Vector2d & src, const Eigen::Vector2d & dst, co
 }
 
 auto findNearestCollisionPoint(
-  const LineString2d & line1, const LineString2d & line2,
-  const Point2d & origin) -> std::optional<Point2d>
+  const LineString2d & line1, const LineString2d & line2, const Point2d & origin)
+  -> std::optional<Point2d>
 {
   std::vector<Point2d> collision_points;
   bg::intersection(line1, line2, collision_points);
@@ -57,8 +59,9 @@ auto findNearestCollisionPoint(
 }
 
 auto createTargetPoint(
-  const tier4_planning_msgs::msg::PathWithLaneId & input, const LineString2d & stop_line,
-  const double offset) -> std::optional<std::pair<size_t, Eigen::Vector2d>>
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & input,
+  const LineString2d & stop_line, const double offset)
+  -> std::optional<std::pair<size_t, Eigen::Vector2d>>
 {
   if (input.points.size() < 2) {
     return std::nullopt;
@@ -122,7 +125,7 @@ auto createTargetPoint(
 }
 
 auto calcStopPointAndInsertIndex(
-  const tier4_planning_msgs::msg::PathWithLaneId & input_path,
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & input_path,
   const lanelet::ConstLineString3d & lanelet_stop_lines, const double & offset,
   const double & stop_line_extend_length) -> std::optional<std::pair<size_t, Eigen::Vector2d>>
 {

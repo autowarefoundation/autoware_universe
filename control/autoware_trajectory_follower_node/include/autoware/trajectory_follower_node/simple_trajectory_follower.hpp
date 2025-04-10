@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__TRAJECTORY_FOLLOWER_NODE__SIMPLE_TRAJECTORY_FOLLOWER_HPP_
 #define AUTOWARE__TRAJECTORY_FOLLOWER_NODE__SIMPLE_TRAJECTORY_FOLLOWER_HPP_
 
-#include "autoware/universe_utils/ros/polling_subscriber.hpp"
+#include "autoware_utils/ros/polling_subscriber.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -44,9 +44,9 @@ public:
   ~SimpleTrajectoryFollower() = default;
 
 private:
-  autoware::universe_utils::InterProcessPollingSubscriber<Odometry> sub_kinematics_{
+  autoware_utils::InterProcessPollingSubscriber<Odometry> sub_kinematics_{
     this, "~/input/kinematics"};
-  autoware::universe_utils::InterProcessPollingSubscriber<Trajectory> sub_trajectory_{
+  autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_trajectory_{
     this, "~/input/trajectory"};
   rclcpp::Publisher<Control>::SharedPtr pub_cmd_;
   rclcpp::TimerBase::SharedPtr timer_;

@@ -14,8 +14,8 @@
 
 #include "autoware/collision_detector/node.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/uuid_helper.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/uuid_helper.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <boost/assert.hpp>
@@ -29,6 +29,12 @@
 #include <pcl/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <limits>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #define EIGEN_MPL2_ONLY
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -38,8 +44,8 @@ namespace autoware::collision_detector
 namespace bg = boost::geometry;
 using Point2d = bg::model::d2::point_xy<double>;
 using Polygon2d = bg::model::polygon<Point2d>;
-using autoware::universe_utils::createPoint;
-using autoware::universe_utils::pose2transform;
+using autoware_utils::create_point;
+using autoware_utils::pose2transform;
 
 namespace
 {
@@ -153,19 +159,6 @@ CollisionDetectorNode::CollisionDetectorNode(const rclcpp::NodeOptions & node_op
   }
 
   vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo();
-
-  // Subscribers
-  sub_pointcloud_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-    "~/input/pointcloud", rclcpp::SensorDataQoS(),
-    std::bind(&CollisionDetectorNode::onPointCloud, this, std::placeholders::_1));
-  sub_dynamic_objects_ = this->create_subscription<PredictedObjects>(
-    "~/input/objects", 1,
-    std::bind(&CollisionDetectorNode::onDynamicObjects, this, std::placeholders::_1));
-
-  sub_operation_mode_ = this->create_subscription<autoware_adapi_v1_msgs::msg::OperationModeState>(
-    "/api/operation_mode/state", rclcpp::QoS{1}.transient_local(),
-    std::bind(&CollisionDetectorNode::onOperationMode, this, std::placeholders::_1));
-
   last_obstacle_found_stamp_ = this->now();
 
   // Diagnostics Updater
@@ -325,6 +318,18 @@ bool CollisionDetectorNode::shouldBeExcluded(
 
 void CollisionDetectorNode::checkCollision(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
+  odometry_ptr_ = sub_odometry_.take_data();
+
+  if (!odometry_ptr_) {
+    RCLCPP_INFO_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000 /* ms */, "waiting for current odometry...");
+    return;
+  }
+
+  pointcloud_ptr_ = sub_pointcloud_.take_data();
+  object_ptr_ = sub_dynamic_objects_.take_data();
+  operation_mode_ptr_ = sub_operation_mode_.take_data();
+
   if (node_param_.use_pointcloud && !pointcloud_ptr_) {
     RCLCPP_WARN_THROTTLE(
       this->get_logger(), *this->get_clock(), 5000 /* ms */, "waiting for pointcloud info...");
@@ -370,21 +375,6 @@ void CollisionDetectorNode::checkCollision(diagnostic_updater::DiagnosticStatusW
   }
 
   stat.summary(status.level, status.message);
-}
-
-void CollisionDetectorNode::onPointCloud(const sensor_msgs::msg::PointCloud2::ConstSharedPtr msg)
-{
-  pointcloud_ptr_ = msg;
-}
-
-void CollisionDetectorNode::onDynamicObjects(const PredictedObjects::ConstSharedPtr msg)
-{
-  object_ptr_ = msg;
-}
-
-void CollisionDetectorNode::onOperationMode(const OperationModeState::ConstSharedPtr msg)
-{
-  operation_mode_ptr_ = msg;
 }
 
 boost::optional<Obstacle> CollisionDetectorNode::getNearestObstacle() const
@@ -441,7 +431,7 @@ boost::optional<Obstacle> CollisionDetectorNode::getNearestObstacleByPointCloud(
     const auto distance_to_object = bg::distance(ego_polygon, boost_point);
 
     if (distance_to_object < minimum_distance) {
-      nearest_point = createPoint(p.x, p.y, p.z);
+      nearest_point = create_point(p.x, p.y, p.z);
       minimum_distance = distance_to_object;
     }
   }

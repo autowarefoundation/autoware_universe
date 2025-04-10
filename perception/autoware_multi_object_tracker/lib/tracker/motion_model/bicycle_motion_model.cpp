@@ -20,13 +20,16 @@
 #include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
 
 #include "autoware/multi_object_tracker/tracker/motion_model/motion_model_base.hpp"
-#include "autoware/multi_object_tracker/utils/utils.hpp"
-#include "autoware/universe_utils/math/normalization.hpp"
-#include "autoware/universe_utils/math/unit_conversion.hpp"
-#include "autoware/universe_utils/ros/msg_covariance.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <autoware_utils/math/normalization.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
+#include <autoware_utils/ros/msg_covariance.hpp>
+
+#include <tf2/LinearMath/Quaternion.h>
+
+#include <algorithm>
 
 namespace autoware::multi_object_tracker
 {
@@ -34,7 +37,7 @@ namespace autoware::multi_object_tracker
 // cspell: ignore CTRV
 // Bicycle CTRV motion model
 // CTRV : Constant Turn Rate and constant Velocity
-using autoware::universe_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
 
 BicycleMotionModel::BicycleMotionModel() : logger_(rclcpp::get_logger("BicycleMotionModel"))
 {
@@ -173,6 +176,35 @@ bool BicycleMotionModel::updateStatePoseHead(
   return ekf_.update(Y, C, R);
 }
 
+bool BicycleMotionModel::updateStatePoseVel(
+  const double & x, const double & y, const std::array<double, 36> & pose_cov, const double & vel,
+  const std::array<double, 36> & twist_cov)
+{
+  // check if the state is initialized
+  if (!checkInitialized()) return false;
+
+  // update state, with velocity
+  constexpr int DIM_Y = 4;
+
+  // update state
+  Eigen::MatrixXd Y(DIM_Y, 1);
+  Y << x, y, vel;
+
+  Eigen::MatrixXd C = Eigen::MatrixXd::Zero(DIM_Y, DIM);
+  C(0, IDX::X) = 1.0;
+  C(1, IDX::Y) = 1.0;
+  C(2, IDX::VEL) = 1.0;
+
+  Eigen::MatrixXd R = Eigen::MatrixXd::Zero(DIM_Y, DIM_Y);
+  R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
+  R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
+  R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X];
+  R(1, 1) = pose_cov[XYZRPY_COV_IDX::Y_Y];
+  R(2, 2) = twist_cov[XYZRPY_COV_IDX::X_X];
+
+  return ekf_.update(Y, C, R);
+}
+
 bool BicycleMotionModel::updateStatePoseHeadVel(
   const double & x, const double & y, const double & yaw, const std::array<double, 36> & pose_cov,
   const double & vel, const std::array<double, 36> & twist_cov)
@@ -242,7 +274,7 @@ bool BicycleMotionModel::limitStates()
     X_t(IDX::SLIP) = X_t(IDX::SLIP) < 0 ? -motion_params_.max_slip : motion_params_.max_slip;
   }
   // normalize yaw
-  X_t(IDX::YAW) = autoware::universe_utils::normalizeRadian(X_t(IDX::YAW));
+  X_t(IDX::YAW) = autoware_utils::normalize_radian(X_t(IDX::YAW));
 
   // overwrite state
   ekf_.init(X_t, P_t);
@@ -313,7 +345,7 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   double w = vel * sin_slip / lr_;
   const double sin_2yaw = std::sin(2.0f * X_t(IDX::YAW));
   const double w_dtdt = w * dt * dt;
-  const double vv_dtdt__lr = vel * vel * dt * dt / lr_;
+  const double vv_dtdt_lr = vel * vel * dt * dt / lr_;
 
   // Predict state vector X t+1
   Eigen::MatrixXd X_next_t(DIM, 1);  // predicted state
@@ -323,18 +355,20 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
     X_t(IDX::Y) + vel * sin_yaw * dt + 0.5 * vel * cos_slip * w_dtdt;  // dy = v * sin(yaw) * dt
   X_next_t(IDX::YAW) = X_t(IDX::YAW) + w * dt;                         // d(yaw) = w * dt
   X_next_t(IDX::VEL) = X_t(IDX::VEL);
-  X_next_t(IDX::SLIP) = X_t(IDX::SLIP);  // slip_angle = asin(lr * w / v)
+  // Apply exponential decay to slip angle over time, with a half-life of 2 seconds
+  const double decay_rate = std::exp(-dt * 0.69314718056 / 2.0);
+  X_next_t(IDX::SLIP) = X_t(IDX::SLIP) * decay_rate;  // slip_angle = asin(lr * w / v)
 
   // State transition matrix A
   Eigen::MatrixXd A = Eigen::MatrixXd::Identity(DIM, DIM);
   A(IDX::X, IDX::YAW) = -vel * sin_yaw * dt - 0.5 * vel * cos_yaw * w_dtdt;
   A(IDX::X, IDX::VEL) = cos_yaw * dt - sin_yaw * w_dtdt;
   A(IDX::X, IDX::SLIP) =
-    -vel * sin_yaw * dt - 0.5 * (cos_slip * sin_yaw + sin_slip * cos_yaw) * vv_dtdt__lr;
+    -vel * sin_yaw * dt - 0.5 * (cos_slip * sin_yaw + sin_slip * cos_yaw) * vv_dtdt_lr;
   A(IDX::Y, IDX::YAW) = vel * cos_yaw * dt - 0.5 * vel * sin_yaw * w_dtdt;
   A(IDX::Y, IDX::VEL) = sin_yaw * dt + cos_yaw * w_dtdt;
   A(IDX::Y, IDX::SLIP) =
-    vel * cos_yaw * dt + 0.5 * (cos_slip * cos_yaw - sin_slip * sin_yaw) * vv_dtdt__lr;
+    vel * cos_yaw * dt + 0.5 * (cos_slip * cos_yaw - sin_slip * sin_yaw) * vv_dtdt_lr;
   A(IDX::YAW, IDX::VEL) = 1.0 / lr_ * sin_slip * dt;
   A(IDX::YAW, IDX::SLIP) = vel / lr_ * cos_slip * dt;
 
@@ -409,7 +443,7 @@ bool BicycleMotionModel::getPredictedState(
   // set position
   pose.position.x = X(IDX::X);
   pose.position.y = X(IDX::Y);
-  pose.position.z = 0.0;
+  // do not change z
 
   // set orientation
   tf2::Quaternion quaternion;

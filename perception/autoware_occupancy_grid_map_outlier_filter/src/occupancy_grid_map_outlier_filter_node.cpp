@@ -14,9 +14,9 @@
 
 #include "occupancy_grid_map_outlier_filter_node.hpp"
 
-#include "autoware/universe_utils/geometry/geometry.hpp"
-#include "autoware/universe_utils/ros/debug_publisher.hpp"
-#include "autoware/universe_utils/system/stop_watch.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
+#include "autoware_utils/ros/debug_publisher.hpp"
+#include "autoware_utils/system/stop_watch.hpp"
 
 #include <pcl_ros/transforms.hpp>
 
@@ -32,6 +32,7 @@
 #endif
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <string>
 #include <utility>
@@ -39,7 +40,7 @@
 
 namespace
 {
-using autoware::universe_utils::ScopedTimeTrack;
+using autoware_utils::ScopedTimeTrack;
 
 bool transformPointcloud(
   const sensor_msgs::msg::PointCloud2 & input, const tf2_ros::Buffer & tf2,
@@ -76,7 +77,7 @@ geometry_msgs::msg::PoseStamped getPoseStamped(
     RCLCPP_WARN_THROTTLE(
       rclcpp::get_logger("occupancy_grid_map_outlier_filter"), clock, 5000, "%s", ex.what());
   }
-  return autoware::universe_utils::transform2pose(tf_stamped);
+  return autoware_utils::transform2pose(tf_stamped);
 }
 
 boost::optional<char> getCost(
@@ -140,7 +141,8 @@ void RadiusSearch2dFilter::filter(
     const float distance =
       std::hypot(xy_cloud->points[i].x - pose.position.x, xy_cloud->points[i].y - pose.position.y);
     const int min_points_threshold = std::min(
-      std::max(static_cast<int>(min_points_and_distance_ratio_ / distance + 0.5f), min_points_),
+      std::max(
+        static_cast<int>(std::lround(min_points_and_distance_ratio_ / distance)), min_points_),
       max_points_);
     const int points_num =
       kd_tree_->radiusSearch(i, search_radius_, k_indices, k_distances, min_points_threshold);
@@ -200,7 +202,8 @@ void RadiusSearch2dFilter::filter(
     const float distance =
       std::hypot(xy_cloud->points[i].x - pose.position.x, xy_cloud->points[i].y - pose.position.y);
     const int min_points_threshold = std::min(
-      std::max(static_cast<int>(min_points_and_distance_ratio_ / distance + 0.5f), min_points_),
+      std::max(
+        static_cast<int>(std::lround(min_points_and_distance_ratio_ / distance)), min_points_),
       max_points_);
     const int points_num =
       kd_tree_->radiusSearch(i, search_radius_, k_indices, k_distances, min_points_threshold);
@@ -228,8 +231,8 @@ OccupancyGridMapOutlierFilterComponent::OccupancyGridMapOutlierFilterComponent(
 {
   // initialize debug tool
   {
-    using autoware::universe_utils::DebugPublisher;
-    using autoware::universe_utils::StopWatch;
+    using autoware_utils::DebugPublisher;
+    using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ = std::make_unique<DebugPublisher>(this, "occupancy_grid_map_outlier_filter");
     stop_watch_ptr_->tic("cyclic_time");
@@ -270,10 +273,10 @@ OccupancyGridMapOutlierFilterComponent::OccupancyGridMapOutlierFilterComponent(
   bool use_time_keeper = declare_parameter<bool>("publish_processing_time_detail");
   if (use_time_keeper) {
     detailed_processing_time_publisher_ =
-      this->create_publisher<autoware::universe_utils::ProcessingTimeDetail>(
+      this->create_publisher<autoware_utils::ProcessingTimeDetail>(
         "~/debug/processing_time_detail_ms", 1);
-    auto time_keeper = autoware::universe_utils::TimeKeeper(detailed_processing_time_publisher_);
-    time_keeper_ = std::make_shared<autoware::universe_utils::TimeKeeper>(time_keeper);
+    auto time_keeper = autoware_utils::TimeKeeper(detailed_processing_time_publisher_);
+    time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(time_keeper);
   }
 }
 
@@ -417,9 +420,9 @@ void OccupancyGridMapOutlierFilterComponent::onOccupancyGridMapAndPointCloud2(
   if (debug_publisher_) {
     const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
     const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
-    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
-    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time_ms", processing_time_ms);
   }
 }

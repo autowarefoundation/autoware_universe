@@ -31,21 +31,22 @@
 #ifndef AUTOWARE__FREESPACE_PLANNER__FREESPACE_PLANNER_NODE_HPP_
 #define AUTOWARE__FREESPACE_PLANNER__FREESPACE_PLANNER_NODE_HPP_
 
-#include "autoware/universe_utils/ros/logger_level_configure.hpp"
+#include "autoware_utils/ros/logger_level_configure.hpp"
 
 #include <autoware/freespace_planning_algorithms/astar_search.hpp>
 #include <autoware/freespace_planning_algorithms/rrtstar.hpp>
-#include <autoware/universe_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
+#include <autoware_internal_planning_msgs/msg/scenario.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <nav_msgs/msg/occupancy_grid.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <std_msgs/msg/bool.hpp>
-#include <tier4_planning_msgs/msg/scenario.hpp>
 
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -75,6 +76,7 @@ using autoware::freespace_planning_algorithms::PlannerCommonParam;
 using autoware::freespace_planning_algorithms::RRTStar;
 using autoware::freespace_planning_algorithms::RRTStarParam;
 using autoware::freespace_planning_algorithms::VehicleShape;
+using autoware_internal_planning_msgs::msg::Scenario;
 using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::Trajectory;
 using geometry_msgs::msg::PoseArray;
@@ -83,7 +85,6 @@ using geometry_msgs::msg::TransformStamped;
 using geometry_msgs::msg::Twist;
 using nav_msgs::msg::OccupancyGrid;
 using nav_msgs::msg::Odometry;
-using tier4_planning_msgs::msg::Scenario;
 
 struct NodeParam
 {
@@ -111,15 +112,15 @@ private:
   rclcpp::Publisher<PoseArray>::SharedPtr debug_pose_array_pub_;
   rclcpp::Publisher<PoseArray>::SharedPtr debug_partial_pose_array_pub_;
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr parking_state_pub_;
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
+    processing_time_pub_;
 
   rclcpp::Subscription<LaneletRoute>::SharedPtr route_sub_;
 
-  autoware::universe_utils::InterProcessPollingSubscriber<OccupancyGrid> occupancy_grid_sub_{
+  autoware_utils::InterProcessPollingSubscriber<OccupancyGrid> occupancy_grid_sub_{
     this, "~/input/occupancy_grid"};
-  autoware::universe_utils::InterProcessPollingSubscriber<Scenario> scenario_sub_{
-    this, "~/input/scenario"};
-  autoware::universe_utils::InterProcessPollingSubscriber<
-    Odometry, autoware::universe_utils::polling_policy::All>
+  autoware_utils::InterProcessPollingSubscriber<Scenario> scenario_sub_{this, "~/input/scenario"};
+  autoware_utils::InterProcessPollingSubscriber<Odometry, autoware_utils::polling_policy::All>
     odom_sub_{this, "~/input/odometry", rclcpp::QoS{100}};
 
   rclcpp::TimerBase::SharedPtr timer_;
@@ -202,7 +203,7 @@ private:
 
   TransformStamped getTransform(const std::string & from, const std::string & to);
 
-  std::unique_ptr<autoware::universe_utils::LoggerLevelConfigure> logger_configure_;
+  std::unique_ptr<autoware_utils::LoggerLevelConfigure> logger_configure_;
 
   friend class ::TestFreespacePlanner;
 };

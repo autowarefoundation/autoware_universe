@@ -21,8 +21,8 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <tier4_planning_msgs/msg/lateral_offset.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <memory>
 #include <string>
@@ -32,10 +32,10 @@
 
 namespace autoware::behavior_path_planner
 {
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using geometry_msgs::msg::Pose;
 using nav_msgs::msg::OccupancyGrid;
 using tier4_planning_msgs::msg::LateralOffset;
-using tier4_planning_msgs::msg::PathWithLaneId;
 
 class SideShiftModule : public SceneModuleInterface
 {
@@ -46,7 +46,7 @@ public:
     const std::unordered_map<std::string, std::shared_ptr<RTCInterface>> & rtc_interface_ptr_map,
     std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
       objects_of_interest_marker_interface_ptr_map,
-    std::shared_ptr<SteeringFactorInterface> & steering_factor_interface_ptr);
+    const std::shared_ptr<PlanningFactorInterface> planning_factor_interface);
 
   bool isExecutionRequested() const override;
   bool isExecutionReady() const override;
@@ -87,8 +87,6 @@ private:
 
   // const methods
   void publishPath(const PathWithLaneId & path) const;
-
-  double getClosestShiftLength() const;
 
   // member
   PathWithLaneId refined_path_{};

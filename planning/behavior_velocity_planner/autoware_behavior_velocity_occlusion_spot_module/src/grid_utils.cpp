@@ -15,6 +15,7 @@
 #include "grid_utils.hpp"
 
 #include <algorithm>
+#include <iostream>
 #include <limits>
 #include <stdexcept>
 #include <utility>
@@ -95,13 +96,13 @@ std::optional<Polygon2d> generateOcclusionPolygon(
   const Polygon2d & occupancy_poly, const Point2d & origin, const Point2d & min_theta_pos,
   const Point2d & max_theta_pos, const double ray_max_length = 100.0)
 {
-  using autoware::universe_utils::normalizeRadian;
+  using autoware_utils::normalize_radian;
   const double origin_x = origin.x();
   const double origin_y = origin.y();
   const double min_theta =
-    normalizeRadian(std::atan2(min_theta_pos.y() - origin_y, min_theta_pos.x() - origin_x), 0.0);
+    normalize_radian(std::atan2(min_theta_pos.y() - origin_y, min_theta_pos.x() - origin_x), 0.0);
   const double max_theta =
-    normalizeRadian(std::atan2(max_theta_pos.y() - origin_y, max_theta_pos.x() - origin_x), 0.0);
+    normalize_radian(std::atan2(max_theta_pos.y() - origin_y, max_theta_pos.x() - origin_x), 0.0);
   LineString2d theta_min_ray = {
     origin,
     {origin_x + ray_max_length * std::cos(min_theta),
@@ -134,13 +135,13 @@ std::optional<Polygon2d> generateOcclusionPolygon(
 
 Polygon2d generateOccupancyPolygon(const nav_msgs::msg::MapMetaData & info, const double r = 100)
 {
-  using autoware::universe_utils::calcOffsetPose;
+  using autoware_utils::calc_offset_pose;
   // generate occupancy polygon from grid origin
   Polygon2d poly;  // create counter clockwise poly
-  poly.outer().emplace_back(to_bg2d(calcOffsetPose(info.origin, 0, 0, 0).position));
-  poly.outer().emplace_back(to_bg2d(calcOffsetPose(info.origin, r, 0, 0).position));
-  poly.outer().emplace_back(to_bg2d(calcOffsetPose(info.origin, r, r, 0).position));
-  poly.outer().emplace_back(to_bg2d(calcOffsetPose(info.origin, 0, r, 0).position));
+  poly.outer().emplace_back(to_bg2d(calc_offset_pose(info.origin, 0, 0, 0).position));
+  poly.outer().emplace_back(to_bg2d(calc_offset_pose(info.origin, r, 0, 0).position));
+  poly.outer().emplace_back(to_bg2d(calc_offset_pose(info.origin, r, r, 0).position));
+  poly.outer().emplace_back(to_bg2d(calc_offset_pose(info.origin, 0, r, 0).position));
 
   boost::geometry::correct(poly);
   return poly;
@@ -155,7 +156,7 @@ std::pair<size_t, size_t> calcEdgePoint(const Polygon2d & foot_print, const Poin
   for (size_t i = 0; i < foot_print.outer().size(); i++) {
     const auto & f = foot_print.outer().at(i);
     PolarCoordinates polar = toPolarCoordinates(origin, f);
-    const double theta_norm = autoware::universe_utils::normalizeRadian(polar.theta, 0.0);
+    const double theta_norm = autoware_utils::normalize_radian(polar.theta, 0.0);
     if (theta_norm < min_theta) {
       min_theta = theta_norm;
       min_idx = i;
@@ -183,7 +184,7 @@ std::optional<Polygon2d> generateOccupiedPolygon(
 
 Point transformFromMap2Grid(const TransformStamped & geom_tf_map2grid, const Point2d & p)
 {
-  Point geom_pt = autoware::universe_utils::createPoint(p.x(), p.y(), 0);
+  Point geom_pt = autoware_utils::create_point(p.x(), p.y(), 0);
   Point transformed_geom_pt;
   // from map coordinate to occupancy grid coordinate
   tf2::doTransform(geom_pt, transformed_geom_pt, geom_tf_map2grid);

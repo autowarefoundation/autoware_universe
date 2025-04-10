@@ -15,34 +15,35 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_LANE_CHANGE_MODULE__INTERFACE_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_LANE_CHANGE_MODULE__INTERFACE_HPP_
 
+#include "autoware/behavior_path_lane_change_module/base_class.hpp"
 #include "autoware/behavior_path_lane_change_module/scene.hpp"
-#include "autoware/behavior_path_lane_change_module/utils/base_class.hpp"
-#include "autoware/behavior_path_lane_change_module/utils/data_structs.hpp"
-#include "autoware/behavior_path_lane_change_module/utils/path.hpp"
+#include "autoware/behavior_path_lane_change_module/structs/data.hpp"
+#include "autoware/behavior_path_lane_change_module/structs/path.hpp"
 #include "autoware/behavior_path_planner_common/interface/scene_module_interface.hpp"
 #include "autoware/behavior_path_planner_common/turn_signal_decider.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_shifter/path_shifter.hpp"
 
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/twist.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <tf2/utils.h>
 
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 
 namespace autoware::behavior_path_planner
 {
 using autoware::objects_of_interest_marker_interface::ColorName;
 using autoware::objects_of_interest_marker_interface::ObjectsOfInterestMarkerInterface;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::Twist;
-using tier4_planning_msgs::msg::PathWithLaneId;
 
 class LaneChangeInterface : public SceneModuleInterface
 {
@@ -52,7 +53,7 @@ public:
     const std::unordered_map<std::string, std::shared_ptr<RTCInterface>> & rtc_interface_ptr_map,
     std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
       objects_of_interest_marker_interface_ptr_map,
-    std::shared_ptr<SteeringFactorInterface> & steering_factor_interface_ptr,
+    const std::shared_ptr<PlanningFactorInterface> & planning_factor_interface,
     std::unique_ptr<LaneChangeBase> && module_type);
 
   LaneChangeInterface(const LaneChangeInterface &) = delete;
@@ -94,6 +95,8 @@ public:
   MarkerArray getModuleVirtualWall() override;
 
 protected:
+  using SceneModuleInterface::updateRTCStatus;
+
   std::shared_ptr<LaneChangeParameters> parameters_;
 
   std::unique_ptr<LaneChangeBase> module_type_;
@@ -110,7 +113,7 @@ protected:
     const double start_distance, const double finish_distance, const bool safe,
     const uint8_t & state)
   {
-    universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+    autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
     for (const auto & [module_name, ptr] : rtc_interface_ptr_map_) {
       if (ptr) {
         ptr->updateCooperateStatus(
@@ -118,6 +121,8 @@ protected:
       }
     }
   }
+
+  std::pair<LaneChangeStates, std::string_view> check_transit_failure();
 
   void updateDebugMarker() const;
 
@@ -128,13 +133,13 @@ protected:
 
   mutable MarkerArray virtual_wall_marker_;
 
-  std::unique_ptr<PathWithLaneId> prev_approved_path_;
-
   void clearAbortApproval() { is_abort_path_approved_ = false; }
 
   bool is_abort_path_approved_{false};
 
   bool is_abort_approval_requested_{false};
+
+  lane_change::InterfaceDebug interface_debug_;
 };
 }  // namespace autoware::behavior_path_planner
 

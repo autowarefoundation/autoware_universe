@@ -15,23 +15,30 @@
 #include "scene.hpp"
 
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 #include "util.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <iostream>
+#include <memory>
+#include <utility>
+
 namespace autoware::behavior_velocity_planner
 {
 using autoware::motion_utils::calcSignedArcLength;
-using autoware::universe_utils::createPoint;
+using autoware_utils::create_point;
 
 using geometry_msgs::msg::Point32;
 
 SpeedBumpModule::SpeedBumpModule(
   const int64_t module_id, const int64_t lane_id,
   const lanelet::autoware::SpeedBump & speed_bump_reg_elem, const PlannerParam & planner_param,
-  const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock)
-: SceneModuleInterface(module_id, logger, clock),
+  const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock,
+  const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
+  const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+    planning_factor_interface)
+: SceneModuleInterface(module_id, logger, clock, time_keeper, planning_factor_interface),
   module_id_(module_id),
   lane_id_(lane_id),
   speed_bump_reg_elem_(std::move(speed_bump_reg_elem)),
@@ -70,8 +77,7 @@ SpeedBumpModule::SpeedBumpModule(
   }
 }
 
-bool SpeedBumpModule::modifyPathVelocity(
-  PathWithLaneId * path, [[maybe_unused]] StopReason * stop_reason)
+bool SpeedBumpModule::modifyPathVelocity(PathWithLaneId * path)
 {
   if (path->points.empty()) {
     return false;
@@ -91,7 +97,7 @@ bool SpeedBumpModule::modifyPathVelocity(
   debug_data_.path_polygon_intersection_status = path_polygon_intersection_status;
 
   for (const auto & p : speed_bump_reg_elem_.speedBump().basicPolygon()) {
-    debug_data_.speed_bump_polygon.push_back(createPoint(p.x(), p.y(), ego_pos.z));
+    debug_data_.speed_bump_polygon.push_back(create_point(p.x(), p.y(), ego_pos.z));
   }
 
   return applySlowDownSpeed(*path, speed_bump_slow_down_speed_, path_polygon_intersection_status);

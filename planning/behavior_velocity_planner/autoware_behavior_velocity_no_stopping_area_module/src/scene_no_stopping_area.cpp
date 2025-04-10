@@ -20,8 +20,8 @@
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/interpolation/spline_interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/boost_polygon_utils.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/clock.hpp>
 #include <rclcpp/logger.hpp>
 
@@ -30,6 +30,7 @@
 #include <lanelet2_core/utility/Optional.h>
 
 #include <cmath>
+#include <memory>
 #include <vector>
 
 namespace autoware::behavior_velocity_planner
@@ -40,19 +41,21 @@ NoStoppingAreaModule::NoStoppingAreaModule(
   const int64_t module_id, const int64_t lane_id,
   const lanelet::autoware::NoStoppingArea & no_stopping_area_reg_elem,
   const PlannerParam & planner_param, const rclcpp::Logger & logger,
-  const rclcpp::Clock::SharedPtr clock)
-: SceneModuleInterface(module_id, logger, clock),
+  const rclcpp::Clock::SharedPtr clock,
+  const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
+  const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+    planning_factor_interface)
+: SceneModuleInterfaceWithRTC(module_id, logger, clock, time_keeper, planning_factor_interface),
   lane_id_(lane_id),
   no_stopping_area_reg_elem_(no_stopping_area_reg_elem),
   planner_param_(planner_param),
   debug_data_()
 {
-  velocity_factor_.init(PlanningBehavior::NO_STOPPING_AREA);
   state_machine_.setState(StateMachine::State::GO);
   state_machine_.setMarginTime(planner_param_.state_clear_time);
 }
 
-bool NoStoppingAreaModule::modifyPathVelocity(PathWithLaneId * path, StopReason * stop_reason)
+bool NoStoppingAreaModule::modifyPathVelocity(PathWithLaneId * path)
 {
   // Store original path
   const auto original_path = *path;
@@ -64,7 +67,6 @@ bool NoStoppingAreaModule::modifyPathVelocity(PathWithLaneId * path, StopReason 
   // Reset data
   debug_data_ = no_stopping_area::DebugData();
   debug_data_.base_link2front = planner_data_->vehicle_info_.max_longitudinal_offset_m;
-  *stop_reason = planning_utils::initializeStopReason(StopReason::NO_STOPPING_AREA);
 
   const no_stopping_area::EgoData ego_data(*planner_data_);
 
@@ -142,25 +144,13 @@ bool NoStoppingAreaModule::modifyPathVelocity(PathWithLaneId * path, StopReason 
 
     // Create StopReason
     {
-      tier4_planning_msgs::msg::StopFactor stop_factor;
-      stop_factor.stop_pose = stop_point->second;
-      stop_factor.stop_factor_points = debug_data_.stuck_points;
-      planning_utils::appendStopReason(stop_factor, stop_reason);
-      velocity_factor_.set(
+      planning_factor_interface_->add(
         path->points, planner_data_->current_odometry->pose, stop_point->second,
-        VelocityFactor::UNKNOWN);
+        autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+        autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
+        0.0 /*shift distance*/, "");
     }
 
-    // Create legacy StopReason
-    {
-      const auto insert_idx = stop_point->first + 1;
-      if (
-        !first_stop_path_point_index_ ||
-        static_cast<int>(insert_idx) < first_stop_path_point_index_) {
-        debug_data_.first_stop_pose = stop_pose;
-        first_stop_path_point_index_ = static_cast<int>(insert_idx);
-      }
-    }
   } else if (state_machine_.getState() == StateMachine::State::GO) {
     // reset pass judge if current state is go
     pass_judge_.is_stoppable = true;
@@ -185,7 +175,7 @@ bool NoStoppingAreaModule::check_stuck_vehicles_in_no_stopping_area(
       continue;  // not stop vehicle
     }
     // check if the footprint is in the stuck detect area
-    const Polygon2d obj_footprint = autoware::universe_utils::toPolygon2d(object);
+    const Polygon2d obj_footprint = autoware_utils::to_polygon2d(object);
     const bool is_in_stuck_area = !bg::disjoint(obj_footprint, poly);
     if (is_in_stuck_area) {
       RCLCPP_DEBUG(logger_, "stuck vehicle found.");

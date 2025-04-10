@@ -125,6 +125,16 @@
             },
             "OccupancyGridMapProjectiveBlindSpot": {
               "$ref": "#/definitions/occupancy_grid_map_projective_blind_spot_params"
+            },
+            "processing_time_tolerance_ms": {
+              "type": "number",
+              "description": "Maximum warning processing time delay in milliseconds.",
+              "default": 50.0
+            },
+            "processing_time_consecutive_excess_tolerance_ms": {
+              "type": "number",
+              "description": "Maximum acceptable consecutive processing time delay warning in milliseconds.",
+              "default": 1000.0
             }
           },
           "required": [

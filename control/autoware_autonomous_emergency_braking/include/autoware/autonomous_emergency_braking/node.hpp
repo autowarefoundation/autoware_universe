@@ -15,11 +15,11 @@
 #ifndef AUTOWARE__AUTONOMOUS_EMERGENCY_BRAKING__NODE_HPP_
 #define AUTOWARE__AUTONOMOUS_EMERGENCY_BRAKING__NODE_HPP_
 
-#include "autoware/universe_utils/system/time_keeper.hpp"
+#include "autoware_utils/system/time_keeper.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <pcl_ros/transforms.hpp>
@@ -34,6 +34,8 @@
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <tier4_debug_msgs/msg/float32_stamped.hpp>
+#include <tier4_metric_msgs/msg/metric.hpp>
+#include <tier4_metric_msgs/msg/metric_array.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
@@ -65,9 +67,9 @@ using nav_msgs::msg::Odometry;
 using sensor_msgs::msg::Imu;
 using sensor_msgs::msg::PointCloud2;
 using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
-using autoware::universe_utils::Polygon2d;
-using autoware::universe_utils::Polygon3d;
 using autoware::vehicle_info_utils::VehicleInfo;
+using autoware_utils::Polygon2d;
+using autoware_utils::Polygon3d;
 using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
 using visualization_msgs::msg::Marker;
@@ -77,6 +79,8 @@ using Vector3 = geometry_msgs::msg::Vector3;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
 using colorTuple = std::tuple<double, double, double, double>;
+using Metric = tier4_metric_msgs::msg::Metric;
+using MetricArray = tier4_metric_msgs::msg::MetricArray;
 
 /**
  * @brief Struct to store object data
@@ -327,27 +331,28 @@ public:
   explicit AEB(const rclcpp::NodeOptions & node_options);
 
   // subscriber
-  autoware::universe_utils::InterProcessPollingSubscriber<PointCloud2> sub_point_cloud_{
-    this, "~/input/pointcloud", autoware::universe_utils::SingleDepthSensorQoS()};
-  autoware::universe_utils::InterProcessPollingSubscriber<VelocityReport> sub_velocity_{
+  autoware_utils::InterProcessPollingSubscriber<PointCloud2> sub_point_cloud_{
+    this, "~/input/pointcloud", autoware_utils::single_depth_sensor_qos()};
+  autoware_utils::InterProcessPollingSubscriber<VelocityReport> sub_velocity_{
     this, "~/input/velocity"};
-  autoware::universe_utils::InterProcessPollingSubscriber<Imu> sub_imu_{this, "~/input/imu"};
-  autoware::universe_utils::InterProcessPollingSubscriber<Trajectory> sub_predicted_traj_{
+  autoware_utils::InterProcessPollingSubscriber<Imu> sub_imu_{this, "~/input/imu"};
+  autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_predicted_traj_{
     this, "~/input/predicted_trajectory"};
-  autoware::universe_utils::InterProcessPollingSubscriber<PredictedObjects> predicted_objects_sub_{
+  autoware_utils::InterProcessPollingSubscriber<PredictedObjects> predicted_objects_sub_{
     this, "~/input/objects"};
-  autoware::universe_utils::InterProcessPollingSubscriber<AutowareState> sub_autoware_state_{
+  autoware_utils::InterProcessPollingSubscriber<AutowareState> sub_autoware_state_{
     this, "/autoware/state"};
   // publisher
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_obstacle_pointcloud_;
   rclcpp::Publisher<MarkerArray>::SharedPtr debug_marker_publisher_;
   rclcpp::Publisher<MarkerArray>::SharedPtr virtual_wall_publisher_;
-  rclcpp::Publisher<autoware::universe_utils::ProcessingTimeDetail>::SharedPtr
+  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_pub_;
   rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr debug_rss_distance_publisher_;
+  rclcpp::Publisher<MetricArray>::SharedPtr metrics_pub_;
   // timer
   rclcpp::TimerBase::SharedPtr timer_;
-  mutable std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_{nullptr};
+  mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
 
   // callback
   /**
@@ -548,13 +553,15 @@ public:
   // Member variables
   bool publish_debug_pointcloud_;
   bool publish_debug_markers_;
-  bool publish_debug_time_;
   bool use_predicted_trajectory_;
   bool use_imu_path_;
+  bool limit_imu_path_lat_dev_;
+  bool limit_imu_path_length_;
   bool use_pointcloud_data_;
   bool use_predicted_object_data_;
   bool use_object_velocity_calculation_;
   bool check_autoware_state_;
+  double imu_path_lat_dev_threshold_;
   double path_footprint_extra_margin_;
   double speed_calculation_expansion_margin_;
   double detection_range_min_height_;
@@ -565,7 +572,7 @@ public:
   double min_generated_imu_path_length_;
   double max_generated_imu_path_length_;
   double expand_width_;
-  double longitudinal_offset_;
+  double longitudinal_offset_margin_;
   double t_response_;
   double a_ego_min_;
   double a_obj_min_;

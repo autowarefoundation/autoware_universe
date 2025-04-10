@@ -138,26 +138,23 @@ The decision is based on the following variables, along with the calculation of 
 
 We classify ego behavior at crosswalks into three categories according to the relative relationship between TTC and TTV [1].
 
-- A. **TTC >> TTV**: The object has enough time to cross before the ego.
+- A. **TTC >> TTV**: The object will pass early enough than the ego reach the collision point.
   - No stop planning.
 - B. **TTC ≒ TTV**: There is a risk of collision.
   - **Stop point is inserted in the ego's path**.
-- C. **TTC << TTV**: Ego has enough time to cross before the object.
+- C. **TTC << TTV**: The ego will pass early enough than the object reach the collision point.
   - No stop planning.
+
+The following figure shows the decision result for each TTC and TTV with the parameters, `ego_pass_first_margin_x` is `{0}`, `ego_pass_first_margin_y` is `{4}`, `ego_pass_later_margin_x` is `{0}`, and `ego_pass_later_margin_y` is `{13}`.
 
 <div align="center">
     <table>
         <tr>
             <td><img src="./docs/virtual_collision_point.svg" width="600"></td>
-            <td><img src="./docs/ttc_vs_ttv.drawio.svg" width="350"></td>
+            <td><img src="./docs/ttc_vs_ttv.svg" width="350"></td>
         </tr>
     </table>
 </div>
-
-The boundary of A and B is interpolated from `ego_pass_later_margin_x` and `ego_pass_later_margin_y`.
-In the case of the upper figure, `ego_pass_later_margin_x` is `{0, 1, 2}` and `ego_pass_later_margin_y` is `{1, 4, 6}`.
-In the same way, the boundary of B and C is calculated from `ego_pass_first_margin_x` and `ego_pass_first_margin_y`.
-In the case of the upper figure, `ego_pass_first_margin_x` is `{3, 5}` and `ego_pass_first_margin_y` is `{0, 1}`.
 
 If the red signal is indicating to the corresponding crosswalk, the ego do not yield against the pedestrians.
 
@@ -352,7 +349,7 @@ The label of each plot is `<crosswalk module id>-<pedestrian uuid>`.
 ### Behavior
 
 - Q. The ego stopped around the crosswalk even though there were no crosswalk user objects.
-  - A. See [Stuck Vehicle Detection](https://autowarefoundation.github.io/autoware.universe/pr-5583/planning/autoware_behavior_velocity_crosswalk_module/#stuck-vehicle-detection).
+  - A. See [Stuck Vehicle Detection](https://autowarefoundation.github.io/autoware_universe/pr-5583/planning/autoware_behavior_velocity_crosswalk_module/#stuck-vehicle-detection).
 - Q. The crosswalk virtual wall suddenly appeared resulting in the sudden stop.
   - A. There may be a crosswalk user started moving when the ego was close to the crosswalk.
 - Q. The crosswalk module decides to stop even when the pedestrian traffic light is red.
@@ -363,9 +360,9 @@ The label of each plot is `<crosswalk module id>-<pedestrian uuid>`.
 ### Parameter Tuning
 
 - Q. The ego's yield behavior is too conservative.
-  - A. Tune `ego_pass_later_margin` described in [Yield Decision](https://autowarefoundation.github.io/autoware.universe/pr-5583/planning/autoware_behavior_velocity_crosswalk_module/#stuck-vehicle-detection)
+  - A. Tune `ego_pass_later_margin` described in [Yield Decision](https://autowarefoundation.github.io/autoware_universe/pr-5583/planning/autoware_behavior_velocity_crosswalk_module/#stuck-vehicle-detection)
 - Q. The ego's yield behavior is too aggressive.
-  - A. Tune `ego_pass_later_margin` described in [Yield Decision](https://autowarefoundation.github.io/autoware.universe/pr-5583/planning/autoware_behavior_velocity_crosswalk_module/#stuck-vehicle-detection)
+  - A. Tune `ego_pass_later_margin` described in [Yield Decision](https://autowarefoundation.github.io/autoware_universe/pr-5583/planning/autoware_behavior_velocity_crosswalk_module/#stuck-vehicle-detection)
 
 ## References/External links
 

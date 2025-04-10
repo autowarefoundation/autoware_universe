@@ -30,10 +30,10 @@ TrafficLightRoiVisualizerNode::TrafficLightRoiVisualizerNode(const rclcpp::NodeO
   using std::placeholders::_2;
   using std::placeholders::_3;
   using std::placeholders::_4;
-  enable_fine_detection_ = this->declare_parameter<bool>("enable_fine_detection");
+  use_high_accuracy_detection_ = this->declare_parameter<bool>("use_high_accuracy_detection");
   use_image_transport_ = this->declare_parameter<bool>("use_image_transport");
 
-  if (enable_fine_detection_) {
+  if (use_high_accuracy_detection_) {
     sync_with_rough_roi_.reset(new SyncWithRoughRoi(
       SyncPolicyWithRoughRoi(10), image_sub_, roi_sub_, rough_roi_sub_, traffic_signals_sub_));
     sync_with_rough_roi_->registerCallback(
@@ -69,7 +69,7 @@ void TrafficLightRoiVisualizerNode::connectCb()
     image_sub_.unsubscribe();
     traffic_signals_sub_.unsubscribe();
     roi_sub_.unsubscribe();
-    if (enable_fine_detection_) {
+    if (use_high_accuracy_detection_) {
       rough_roi_sub_.unsubscribe();
     }
   } else if (!image_sub_.getSubscriber()) {
@@ -77,7 +77,7 @@ void TrafficLightRoiVisualizerNode::connectCb()
     roi_sub_.subscribe(this, "~/input/rois", rclcpp::QoS{1}.get_rmw_qos_profile());
     traffic_signals_sub_.subscribe(
       this, "~/input/traffic_signals", rclcpp::QoS{1}.get_rmw_qos_profile());
-    if (enable_fine_detection_) {
+    if (use_high_accuracy_detection_) {
       rough_roi_sub_.subscribe(this, "~/input/rough/rois", rclcpp::QoS{1}.get_rmw_qos_profile());
     }
   }
@@ -201,15 +201,17 @@ void TrafficLightRoiVisualizerNode::imageRoughRoiCallback(
     // bbox drawing
     cv_ptr = cv_bridge::toCvCopy(input_image_msg, sensor_msgs::image_encodings::RGB8);
     for (auto tl_rough_roi : input_tl_rough_roi_msg->rois) {
-      // visualize rough roi
-      createRect(cv_ptr->image, tl_rough_roi, cv::Scalar(0, 255, 0));
-
+      // note: a signal will still be output even if it is undetected
+      // Its position and size will be set as 0 and the color will be set as unknown
+      // So a rough roi will always have correspond roi a correspond traffic signal
       ClassificationResult result;
       bool has_correspond_traffic_signal =
         getClassificationResult(tl_rough_roi.traffic_light_id, *input_traffic_signals_msg, result);
       tier4_perception_msgs::msg::TrafficLightRoi tl_roi;
       bool has_correspond_roi =
         getRoiFromId(tl_rough_roi.traffic_light_id, input_tl_roi_msg, tl_roi);
+
+      createRect(cv_ptr->image, tl_rough_roi, extractShapeInfo(result.label).color);
 
       if (has_correspond_roi && has_correspond_traffic_signal) {
         // has fine detection and classification results

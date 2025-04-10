@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <utility>
@@ -28,13 +29,10 @@ ExternalCmdConverterNode::ExternalCmdConverterNode(const rclcpp::NodeOptions & n
   using std::placeholders::_1;
 
   cmd_pub_ = create_publisher<Control>("out/control_cmd", rclcpp::QoS{1});
-  current_cmd_pub_ =
-    create_publisher<ExternalControlCommand>("out/latest_external_control_cmd", rclcpp::QoS{1});
-  control_cmd_sub_ = create_subscription<ExternalControlCommand>(
-    "in/external_control_cmd", 1, std::bind(&ExternalCmdConverterNode::on_external_cmd, this, _1));
-  emergency_stop_heartbeat_sub_ = create_subscription<tier4_external_api_msgs::msg::Heartbeat>(
-    "in/emergency_stop", 1,
-    std::bind(&ExternalCmdConverterNode::on_emergency_stop_heartbeat, this, _1));
+  pedals_cmd_sub_ = create_subscription<PedalsCommand>(
+    "in/pedals_cmd", 1, std::bind(&ExternalCmdConverterNode::on_pedals_cmd, this, _1));
+  heartbeat_sub_ = create_subscription<ManualOperatorHeartbeat>(
+    "in/heartbeat", 1, std::bind(&ExternalCmdConverterNode::on_heartbeat, this, _1));
 
   // Parameter
   ref_vel_gain_ = declare_parameter<double>("ref_vel_gain");
@@ -71,7 +69,7 @@ ExternalCmdConverterNode::ExternalCmdConverterNode(const rclcpp::NodeOptions & n
   updater_.add("remote_control_topic_status", this, &ExternalCmdConverterNode::check_topic_status);
 
   // Set default values
-  current_shift_cmd_ = std::make_shared<GearCommand>();
+  current_gear_cmd_ = std::make_shared<GearCommand>();
 }
 
 void ExternalCmdConverterNode::on_timer()
@@ -79,53 +77,48 @@ void ExternalCmdConverterNode::on_timer()
   updater_.force_update();
 }
 
-void ExternalCmdConverterNode::on_emergency_stop_heartbeat(
-  [[maybe_unused]] const tier4_external_api_msgs::msg::Heartbeat::ConstSharedPtr msg)
+void ExternalCmdConverterNode::on_heartbeat(const ManualOperatorHeartbeat::ConstSharedPtr msg)
 {
-  latest_emergency_stop_heartbeat_received_time_ = std::make_shared<rclcpp::Time>(this->now());
+  if (msg->ready) {
+    latest_heartbeat_received_time_ = std::make_shared<rclcpp::Time>(this->now());
+  }
   updater_.force_update();
 }
 
-void ExternalCmdConverterNode::on_external_cmd(const ExternalControlCommand::ConstSharedPtr cmd_ptr)
+void ExternalCmdConverterNode::on_pedals_cmd(const PedalsCommand::ConstSharedPtr pedals)
 {
-  // Echo back received command
-  {
-    auto current_cmd = *cmd_ptr;
-    current_cmd.stamp = this->now();
-    current_cmd_pub_->publish(current_cmd);
-  }
-
   // Save received time for rate check
   latest_cmd_received_time_ = std::make_shared<rclcpp::Time>(this->now());
 
   // take data from subscribers
-  current_velocity_ptr_ = velocity_sub_.takeData();
-  current_shift_cmd_ = shift_cmd_sub_.takeData();
+  current_velocity_ptr_ = velocity_sub_.take_data();
+  current_gear_cmd_ = gear_cmd_sub_.take_data();
+  const auto steering = steering_cmd_sub_.take_data();
 
   // Wait for input data
-  if (!current_velocity_ptr_ || !acc_map_initialized_ || !current_shift_cmd_) {
+  if (!acc_map_initialized_ || !current_velocity_ptr_ || !current_gear_cmd_ || !steering) {
     return;
   }
 
   // Calculate reference velocity and acceleration
-  const double sign = get_shift_velocity_sign(*current_shift_cmd_);
+  const double sign = get_gear_velocity_sign(*current_gear_cmd_);
   const double ref_acceleration =
-    calculate_acc(*cmd_ptr, std::fabs(current_velocity_ptr_->twist.twist.linear.x));
+    calculate_acc(*pedals, std::fabs(current_velocity_ptr_->twist.twist.linear.x));
 
   if (ref_acceleration > 0.0 && sign == 0.0) {
     RCLCPP_WARN_THROTTLE(
       get_logger(), *get_clock(), std::chrono::milliseconds(1000).count(),
       "Target acceleration is positive, but the gear is not appropriate. accel: %f, gear: %d",
-      ref_acceleration, current_shift_cmd_->command);
+      ref_acceleration, current_gear_cmd_->command);
   }
 
   double ref_velocity =
     current_velocity_ptr_->twist.twist.linear.x + ref_acceleration * ref_vel_gain_ * sign;
-  if (current_shift_cmd_->command == GearCommand::REVERSE) {
+  if (current_gear_cmd_->command == GearCommand::REVERSE) {
     ref_velocity = std::min(0.0, ref_velocity);
   } else if (
-    current_shift_cmd_->command == GearCommand::DRIVE ||  // NOLINT
-    current_shift_cmd_->command == GearCommand::LOW) {
+    current_gear_cmd_->command == GearCommand::DRIVE ||  // NOLINT
+    current_gear_cmd_->command == GearCommand::LOW) {
     ref_velocity = std::max(0.0, ref_velocity);
   } else {
     ref_velocity = 0.0;
@@ -134,20 +127,19 @@ void ExternalCmdConverterNode::on_external_cmd(const ExternalControlCommand::Con
 
   // Publish ControlCommand
   autoware_control_msgs::msg::Control output;
-  output.stamp = cmd_ptr->stamp;
-  output.lateral.steering_tire_angle = static_cast<float>(cmd_ptr->control.steering_angle);
-  output.lateral.steering_tire_rotation_rate =
-    static_cast<float>(cmd_ptr->control.steering_angle_velocity);
+  output.stamp = pedals->stamp;
+  output.lateral.steering_tire_angle = steering->steering_tire_angle;
+  output.lateral.steering_tire_rotation_rate = steering->steering_tire_velocity;
   output.longitudinal.velocity = static_cast<float>(ref_velocity);
   output.longitudinal.acceleration = static_cast<float>(ref_acceleration);
 
   cmd_pub_->publish(output);
 }
 
-double ExternalCmdConverterNode::calculate_acc(const ExternalControlCommand & cmd, const double vel)
+double ExternalCmdConverterNode::calculate_acc(const PedalsCommand & cmd, const double vel)
 {
-  const double desired_throttle = cmd.control.throttle;
-  const double desired_brake = cmd.control.brake;
+  const double desired_throttle = cmd.throttle;
+  const double desired_brake = cmd.brake;
   if (
     std::isnan(desired_throttle) || std::isnan(desired_brake) || std::isinf(desired_throttle) ||
     std::isinf(desired_brake)) {
@@ -168,7 +160,7 @@ double ExternalCmdConverterNode::calculate_acc(const ExternalControlCommand & cm
   return ref_acceleration;
 }
 
-double ExternalCmdConverterNode::get_shift_velocity_sign(const GearCommand & cmd)
+double ExternalCmdConverterNode::get_gear_velocity_sign(const GearCommand & cmd)
 {
   if (cmd.command == GearCommand::DRIVE) {
     return 1.0;
@@ -189,7 +181,7 @@ void ExternalCmdConverterNode::check_topic_status(
   using diagnostic_msgs::msg::DiagnosticStatus;
   DiagnosticStatus status;
 
-  current_gate_mode_ = gate_mode_sub_.takeData();
+  current_gate_mode_ = gate_mode_sub_.take_data();
 
   if (!check_emergency_stop_topic_timeout()) {
     status.level = DiagnosticStatus::ERROR;
@@ -212,14 +204,14 @@ bool ExternalCmdConverterNode::check_emergency_stop_topic_timeout()
   }
 
   if (current_gate_mode_->data == tier4_control_msgs::msg::GateMode::AUTO) {
-    latest_emergency_stop_heartbeat_received_time_ = nullptr;
+    latest_heartbeat_received_time_ = nullptr;
   }
 
-  if (!latest_emergency_stop_heartbeat_received_time_) {
+  if (!latest_heartbeat_received_time_) {
     return wait_for_first_topic_;
   }
 
-  const auto duration = (this->now() - *latest_emergency_stop_heartbeat_received_time_);
+  const auto duration = (this->now() - *latest_heartbeat_received_time_);
   return duration.seconds() <= emergency_stop_timeout_;
 }
 

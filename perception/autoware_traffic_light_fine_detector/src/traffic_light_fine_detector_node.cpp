@@ -14,6 +14,8 @@
 
 #include "traffic_light_fine_detector_node.hpp"
 
+#include <map>
+
 #if (defined(_MSC_VER) or (defined(__GNUC__) and (7 <= __GNUC_MAJOR__)))
 #include <filesystem>
 namespace fs = ::std::filesystem;
@@ -57,37 +59,34 @@ TrafficLightFineDetectorNode::TrafficLightFineDetectorNode(const rclcpp::NodeOpt
   using std::placeholders::_2;
   using std::placeholders::_3;
 
-  std::string model_path = declare_parameter("fine_detector_model_path", "");
-  std::string label_path = declare_parameter("fine_detector_label_path", "");
-  std::string precision = declare_parameter("fine_detector_precision", "fp32");
-  const uint8_t gpu_id = declare_parameter("gpu_id", 0);
+  std::string model_path = this->declare_parameter<std::string>("model_path");
+  std::string label_path = this->declare_parameter<std::string>("label_path");
+  std::string precision = this->declare_parameter<std::string>("precision");
+  const uint8_t gpu_id = this->declare_parameter<uint8_t>("gpu_id");
   // Objects with a score lower than this value will be ignored.
   // This threshold will be ignored if specified model contains EfficientNMS_TRT module in it
-  score_thresh_ = declare_parameter("fine_detector_score_thresh", 0.3);
+  score_thresh_ = this->declare_parameter<double>("score_thresh");
   // Detection results will be ignored if IoU over this value.
   // This threshold will be ignored if specified model contains EfficientNMS_TRT module in it
-  float nms_threshold = declare_parameter("fine_detector_nms_thresh", 0.65);
-  is_approximate_sync_ = this->declare_parameter<bool>("approximate_sync", false);
+  float nms_threshold = static_cast<float>(this->declare_parameter<double>("nms_thresh"));
+  is_approximate_sync_ = this->declare_parameter<bool>("approximate_sync");
 
   if (!readLabelFile(label_path, tlr_label_id_, num_class)) {
     RCLCPP_ERROR(this->get_logger(), "Could not find tlr id");
   }
 
-  const autoware::tensorrt_common::BuildConfig build_config =
-    autoware::tensorrt_common::BuildConfig("MinMax", -1, false, false, false, 0.0);
-
   const bool cuda_preprocess = true;
   const std::string calib_image_list = "";
   const double scale = 1.0;
   const std::string cache_dir = "";
-  nvinfer1::Dims input_dim = autoware::tensorrt_common::get_input_dims(model_path);
-  assert(input_dim.d[0] > 0);
-  batch_size_ = input_dim.d[0];
-  const autoware::tensorrt_common::BatchConfig batch_config{batch_size_, batch_size_, batch_size_};
+
+  auto trt_config = autoware::tensorrt_common::TrtCommonConfig(model_path, precision);
 
   trt_yolox_ = std::make_unique<autoware::tensorrt_yolox::TrtYoloX>(
-    model_path, precision, num_class, score_thresh_, nms_threshold, build_config, cuda_preprocess,
-    gpu_id, calib_image_list, scale, cache_dir, batch_config);
+    trt_config, num_class, score_thresh_, nms_threshold, cuda_preprocess, gpu_id, calib_image_list,
+    scale, cache_dir);
+
+  batch_size_ = trt_yolox_->getBatchSize();
 
   if (!trt_yolox_->isGPUInitialized()) {
     RCLCPP_ERROR(this->get_logger(), "GPU %d does not exist or is not suitable.", gpu_id);
@@ -102,8 +101,8 @@ TrafficLightFineDetectorNode::TrafficLightFineDetectorNode(const rclcpp::NodeOpt
 
   std::lock_guard<std::mutex> lock(connect_mutex_);
   output_roi_pub_ = this->create_publisher<TrafficLightRoiArray>("~/output/rois", 1);
-  exe_time_pub_ =
-    this->create_publisher<tier4_debug_msgs::msg::Float32Stamped>("~/debug/exe_time_ms", 1);
+  exe_time_pub_ = this->create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
+    "~/debug/exe_time_ms", 1);
   if (is_approximate_sync_) {
     approximate_sync_.reset(
       new ApproximateSync(ApproximateSyncPolicy(10), image_sub_, rough_roi_sub_, expect_roi_sub_));
@@ -114,7 +113,7 @@ TrafficLightFineDetectorNode::TrafficLightFineDetectorNode(const rclcpp::NodeOpt
     sync_->registerCallback(std::bind(&TrafficLightFineDetectorNode::callback, this, _1, _2, _3));
   }
 
-  if (declare_parameter("build_only", false)) {
+  if (this->declare_parameter<bool>("build_only")) {
     RCLCPP_INFO(get_logger(), "TensorRT engine is built and shutdown node.");
     rclcpp::shutdown();
   }
@@ -209,7 +208,7 @@ void TrafficLightFineDetectorNode::callback(
   const auto exe_end_time = high_resolution_clock::now();
   const double exe_time =
     std::chrono::duration_cast<milliseconds>(exe_end_time - exe_start_time).count();
-  tier4_debug_msgs::msg::Float32Stamped exe_time_msg;
+  autoware_internal_debug_msgs::msg::Float32Stamped exe_time_msg;
   exe_time_msg.data = exe_time;
   exe_time_msg.stamp = this->now();
   exe_time_pub_->publish(exe_time_msg);

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 #include <opencv4/opencv2/calib3d.hpp>
 #include <opencv4/opencv2/core.hpp>
 #include <opencv4/opencv2/imgproc.hpp>
@@ -23,6 +23,8 @@
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/compressed_image.hpp>
 #include <sensor_msgs/msg/image.hpp>
+
+#include <string>
 
 #if __has_include(<cv_bridge/cv_bridge.hpp>)
 #include <cv_bridge/cv_bridge.hpp>  // for ROS 2 Jazzy or newer
@@ -150,7 +152,7 @@ private:
       sub_compressed_image_.reset();
     }
 
-    autoware::universe_utils::StopWatch stop_watch;
+    autoware_utils::StopWatch stop_watch;
     remap_and_publish(common::decompress_to_cv_mat(msg), msg.header);
     RCLCPP_INFO_STREAM(get_logger(), "image undistort: " << stop_watch.toc() << "[ms]");
   }
@@ -164,7 +166,7 @@ private:
       make_remap_lut();
     }
 
-    autoware::universe_utils::StopWatch stop_watch;
+    autoware_utils::StopWatch stop_watch;
     remap_and_publish(common::decompress_to_cv_mat(msg), msg.header);
     RCLCPP_INFO_STREAM(get_logger(), "image undistort: " << stop_watch.toc() << "[ms]");
   }

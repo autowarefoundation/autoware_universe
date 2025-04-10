@@ -49,7 +49,7 @@ def convert_dict(msg):
 
 def spin_ros_node():
     global cli
-    node = Node("ad_api_default_web_server")
+    node = Node("adapi_default_web_server")
     cli = create_service(node, InterfaceVersion, "/api/interface/version")
     rclpy.spin(node)
 

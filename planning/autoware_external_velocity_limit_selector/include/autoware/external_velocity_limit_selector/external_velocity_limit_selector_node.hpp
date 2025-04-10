@@ -18,11 +18,10 @@
 #include <external_velocity_limit_selector_parameters.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <tier4_debug_msgs/msg/string_stamped.hpp>
-#include <tier4_planning_msgs/msg/velocity_limit.hpp>
-#include <tier4_planning_msgs/msg/velocity_limit_clear_command.hpp>
+#include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
+#include <autoware_internal_planning_msgs/msg/velocity_limit.hpp>
+#include <autoware_internal_planning_msgs/msg/velocity_limit_clear_command.hpp>
 
-#include <deque>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -30,10 +29,10 @@
 namespace autoware::external_velocity_limit_selector
 {
 
-using tier4_debug_msgs::msg::StringStamped;
-using tier4_planning_msgs::msg::VelocityLimit;
-using tier4_planning_msgs::msg::VelocityLimitClearCommand;
-using tier4_planning_msgs::msg::VelocityLimitConstraints;
+using autoware_internal_debug_msgs::msg::StringStamped;
+using autoware_internal_planning_msgs::msg::VelocityLimit;
+using autoware_internal_planning_msgs::msg::VelocityLimitClearCommand;
+using autoware_internal_planning_msgs::msg::VelocityLimitConstraints;
 
 using VelocityLimitTable = std::unordered_map<std::string, VelocityLimit>;
 

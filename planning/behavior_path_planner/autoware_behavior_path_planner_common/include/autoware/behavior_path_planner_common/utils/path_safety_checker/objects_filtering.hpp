@@ -18,9 +18,9 @@
 #include "autoware/behavior_path_planner_common/data_manager.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_safety_checker/path_safety_checker_parameters.hpp"
 
+#include <autoware_internal_planning_msgs/msg/path_point_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
-#include <tier4_planning_msgs/msg/path_point_with_lane_id.hpp>
 
 #include <lanelet2_core/geometry/Lanelet.h>
 
@@ -31,19 +31,18 @@
 namespace autoware::behavior_path_planner::utils::path_safety_checker::filter
 {
 
+using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
 using autoware_perception_msgs::msg::PredictedObject;
-using tier4_planning_msgs::msg::PathPointWithLaneId;
 
 /**
  * @brief Filters object based on velocity.
  *
- * @param object The predicted object to filter.
+ * @param twist The twist of predicted object to filter.
  * @param velocity_threshold Lower bound
  * @param max_velocity Upper bound
  * @return Returns true when the object is within a certain velocity range.
  */
-bool velocity_filter(
-  const PredictedObject & object, double velocity_threshold, double max_velocity);
+bool velocity_filter(const Twist & object_twist, double velocity_threshold, double max_velocity);
 
 /**
  * @brief Filters object based on position.
@@ -72,14 +71,24 @@ bool is_within_circle(
   const geometry_msgs::msg::Point & object_pos, const geometry_msgs::msg::Point & reference_point,
   const double search_radius);
 
+/**
+ * @brief Checks if the object classification represents a vehicle (CAR, TRUCK, BUS, TRAILER,
+ * MOTORCYCLE).
+ *
+ * @param classification The object classification to check.
+ * @return true If the classification is a vehicle type.
+ * @return false Otherwise.
+ */
+bool is_vehicle(const ObjectClassification & classification);
+
 }  // namespace autoware::behavior_path_planner::utils::path_safety_checker::filter
 
 namespace autoware::behavior_path_planner::utils::path_safety_checker
 {
 
+using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
-using tier4_planning_msgs::msg::PathPointWithLaneId;
 
 /**
  * @brief Filters objects based on object centroid position.
@@ -106,7 +115,7 @@ bool isPolygonOverlapLanelet(
   const double yaw_threshold);
 
 bool isPolygonOverlapLanelet(
-  const PredictedObject & object, const autoware::universe_utils::Polygon2d & lanelet_polygon);
+  const PredictedObject & object, const autoware_utils::Polygon2d & lanelet_polygon);
 
 bool isPolygonOverlapLanelet(
   const PredictedObject & object, const lanelet::BasicPolygon2d & lanelet_polygon);

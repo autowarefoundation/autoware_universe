@@ -24,14 +24,17 @@
 
 #include <limits>
 #include <memory>
+#include <string>
+
 using autoware::external_cmd_converter::ExternalCmdConverterNode;
-using nav_msgs::msg::Odometry;
-using tier4_control_msgs::msg::GateMode;
-using GearCommand = autoware_vehicle_msgs::msg::GearCommand;
-using autoware_control_msgs::msg::Control;
-using ExternalControlCommand = tier4_external_api_msgs::msg::ControlCommandStamped;
 using autoware::raw_vehicle_cmd_converter::AccelMap;
 using autoware::raw_vehicle_cmd_converter::BrakeMap;
+using autoware_adapi_v1_msgs::msg::ManualOperatorHeartbeat;
+using autoware_adapi_v1_msgs::msg::PedalsCommand;
+using autoware_control_msgs::msg::Control;
+using autoware_vehicle_msgs::msg::GearCommand;
+using nav_msgs::msg::Odometry;
+using tier4_control_msgs::msg::GateMode;
 
 class TestExternalCmdConverter : public ::testing::Test
 {
@@ -103,8 +106,9 @@ public:
     if (!received_data) {
       return external_cmd_converter_->check_emergency_stop_topic_timeout();
     }
-    tier4_external_api_msgs::msg::Heartbeat::ConstSharedPtr msg;
-    external_cmd_converter_->on_emergency_stop_heartbeat(msg);
+    ManualOperatorHeartbeat::SharedPtr msg = std::make_shared<ManualOperatorHeartbeat>();
+    msg->ready = true;
+    external_cmd_converter_->on_heartbeat(msg);
     GateMode gate;
     gate.data = (is_auto) ? tier4_control_msgs::msg::GateMode::AUTO
                           : tier4_control_msgs::msg::GateMode::EXTERNAL;
@@ -123,7 +127,7 @@ public:
    */
   double test_get_shift_velocity_sign(const GearCommand & cmd)
   {
-    return external_cmd_converter_->get_shift_velocity_sign(cmd);
+    return external_cmd_converter_->get_gear_velocity_sign(cmd);
   }
 
   /**
@@ -143,9 +147,7 @@ public:
    * @param cmd the command to be passed to the calculate_acc member function.
    * @param vel the velocity to be passed to the calculate_acc member function.
    */
-  double test_calculate_acc(
-
-    const ExternalControlCommand & cmd, const double vel)
+  double test_calculate_acc(const PedalsCommand & cmd, const double vel)
   {
     return external_cmd_converter_->calculate_acc(cmd, vel);
   }
@@ -212,34 +214,34 @@ TEST_F(TestExternalCmdConverter, testCalculateAcc)
 
   // test standard cases
   {
-    ExternalControlCommand cmd;
-    cmd.control.throttle = 1.0;
-    cmd.control.brake = 0.0;
+    PedalsCommand cmd;
+    cmd.throttle = 1.0;
+    cmd.brake = 0.0;
     double vel = 0.0;
     EXPECT_TRUE(test_calculate_acc(cmd, vel) > 0.0);
-    cmd.control.throttle = 0.0;
-    cmd.control.brake = 1.0;
+    cmd.throttle = 0.0;
+    cmd.brake = 1.0;
     EXPECT_TRUE(test_calculate_acc(cmd, vel) < 0.0);
 
-    cmd.control.throttle = 1.0;
-    cmd.control.brake = 0.5;
+    cmd.throttle = 1.0;
+    cmd.brake = 0.5;
     vel = 1.0;
     EXPECT_TRUE(test_calculate_acc(cmd, vel) > 0.0);
-    cmd.control.throttle = 0.5;
-    cmd.control.brake = 1.0;
+    cmd.throttle = 0.5;
+    cmd.brake = 1.0;
     EXPECT_TRUE(test_calculate_acc(cmd, vel) < 0.0);
   }
   // test border cases
   {
     // input brake or throttle are infinite. finite velocity.
-    ExternalControlCommand cmd;
-    cmd.control.throttle = std::numeric_limits<double>::infinity();
-    cmd.control.brake = 0.0;
+    PedalsCommand cmd;
+    cmd.throttle = std::numeric_limits<double>::infinity();
+    cmd.brake = 0.0;
     double vel = 0.0;
     double acc = test_calculate_acc(cmd, vel);
     EXPECT_DOUBLE_EQ(acc, 0.0);
-    cmd.control.throttle = 0.0;
-    cmd.control.brake = std::numeric_limits<double>::infinity();
+    cmd.throttle = 0.0;
+    cmd.brake = std::numeric_limits<double>::infinity();
     acc = test_calculate_acc(cmd, vel);
     EXPECT_DOUBLE_EQ(acc, 0.0);
 
@@ -247,35 +249,35 @@ TEST_F(TestExternalCmdConverter, testCalculateAcc)
     // Check that acc is not NaN and not infinite
 
     vel = std::numeric_limits<double>::infinity();
-    cmd.control.throttle = std::numeric_limits<double>::infinity();
-    cmd.control.brake = 0.0;
+    cmd.throttle = std::numeric_limits<double>::infinity();
+    cmd.brake = 0.0;
     acc = test_calculate_acc(cmd, vel);
     EXPECT_FALSE(std::isnan(acc));
     EXPECT_FALSE(std::isinf(acc));
     EXPECT_DOUBLE_EQ(acc, 0.0);
-    cmd.control.throttle = 0.0;
-    cmd.control.brake = std::numeric_limits<double>::infinity();
-    acc = test_calculate_acc(cmd, vel);
-    EXPECT_FALSE(std::isnan(acc));
-    EXPECT_FALSE(std::isinf(acc));
-    EXPECT_DOUBLE_EQ(acc, 0.0);
-
-    cmd.control.throttle = std::numeric_limits<double>::infinity();
-    cmd.control.brake = std::numeric_limits<double>::infinity();
+    cmd.throttle = 0.0;
+    cmd.brake = std::numeric_limits<double>::infinity();
     acc = test_calculate_acc(cmd, vel);
     EXPECT_FALSE(std::isnan(acc));
     EXPECT_FALSE(std::isinf(acc));
     EXPECT_DOUBLE_EQ(acc, 0.0);
 
-    cmd.control.throttle = std::numeric_limits<double>::quiet_NaN();
-    cmd.control.brake = std::numeric_limits<double>::quiet_NaN();
+    cmd.throttle = std::numeric_limits<double>::infinity();
+    cmd.brake = std::numeric_limits<double>::infinity();
     acc = test_calculate_acc(cmd, vel);
     EXPECT_FALSE(std::isnan(acc));
     EXPECT_FALSE(std::isinf(acc));
     EXPECT_DOUBLE_EQ(acc, 0.0);
 
-    cmd.control.throttle = std::numeric_limits<double>::signaling_NaN();
-    cmd.control.brake = std::numeric_limits<double>::signaling_NaN();
+    cmd.throttle = std::numeric_limits<double>::quiet_NaN();
+    cmd.brake = std::numeric_limits<double>::quiet_NaN();
+    acc = test_calculate_acc(cmd, vel);
+    EXPECT_FALSE(std::isnan(acc));
+    EXPECT_FALSE(std::isinf(acc));
+    EXPECT_DOUBLE_EQ(acc, 0.0);
+
+    cmd.throttle = std::numeric_limits<double>::signaling_NaN();
+    cmd.brake = std::numeric_limits<double>::signaling_NaN();
     acc = test_calculate_acc(cmd, vel);
     EXPECT_FALSE(std::isnan(acc));
     EXPECT_FALSE(std::isinf(acc));

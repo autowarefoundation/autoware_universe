@@ -117,11 +117,11 @@ component_management:
         # - control/control_performance_analysis/**
         - control/obstacle_collision_checker/**
         # - control/predicted_path_checker/**
+        - control/autoware_collision_detector/**
 
     - component_id: localization-tier-iv-maintained-packages
       name: Localization TIER IV Maintained Packages
       paths:
-        - localization/autoware_ekf_localizer/**
         - localization/autoware_gyro_odometer/**
         - localization/autoware_localization_error_monitor/**
         - localization/autoware_localization_util/**
@@ -194,16 +194,16 @@ component_management:
         - planning/autoware_external_velocity_limit_selector/**
         - planning/autoware_freespace_planner/**
         - planning/autoware_freespace_planning_algorithms/**
-        - planning/autoware_mission_planner/**
+        - planning/autoware_mission_planner_universe/**
         # - planning/autoware_objects_of_interest_marker_interface/**
         - planning/autoware_obstacle_cruise_planner/**
         # - planning/autoware_obstacle_stop_planner/**
         - planning/autoware_path_optimizer/**
         - planning/autoware_path_smoother/**
         - planning/autoware_planning_test_manager/**
-        - planning/autoware_planning_topic_converter/**
+        # - planning/autoware_planning_topic_converter/**
         - planning/autoware_planning_validator/**
-        - planning/autoware_remaining_distance_time_calculator/**
+        # - planning/autoware_remaining_distance_time_calculator/**
         - planning/autoware_route_handler/**
         - planning/autoware_rtc_interface/**
         - planning/autoware_scenario_selector/**
@@ -215,7 +215,7 @@ component_management:
         - planning/behavior_path_planner/autoware_behavior_path_goal_planner_module/**
         - planning/behavior_path_planner/autoware_behavior_path_planner_common/**
         - planning/behavior_path_planner/autoware_behavior_path_start_planner_module/**
-        - planning/behavior_path_planner/autoware_behavior_path_dynamic_obstacle_avoidance_module/**
+        # - planning/behavior_path_planner/autoware_behavior_path_dynamic_obstacle_avoidance_module/**
         - planning/behavior_path_planner/autoware_behavior_path_lane_change_module/**
         # - planning/behavior_path_planner/autoware_behavior_path_sampling_planner_module/**
         - planning/behavior_path_planner/autoware_behavior_path_static_obstacle_avoidance_module/**
@@ -243,5 +243,5 @@ component_management:
         - planning/motion_velocity_planner/autoware_motion_velocity_dynamic_obstacle_stop_module/**
         - planning/motion_velocity_planner/autoware_motion_velocity_obstacle_velocity_limiter_module/**
         - planning/motion_velocity_planner/autoware_motion_velocity_out_of_lane_module/**
-        - planning/motion_velocity_planner/autoware_motion_velocity_planner_common/**
-        - planning/motion_velocity_planner/autoware_motion_velocity_planner_node/**
+        #### sampling_based_planner
+        - planning/sampling_based_planner/autoware_bezier_sampler/**

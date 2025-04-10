@@ -14,13 +14,16 @@
 
 #include "autoware/rtc_interface/rtc_interface.hpp"
 
-#include <autoware/universe_utils/ros/uuid_helper.hpp>
+#include <autoware_utils/ros/uuid_helper.hpp>
 #include <rclcpp/node.hpp>
 #include <rclcpp/time.hpp>
 
 #include "tier4_rtc_msgs/msg/detail/command__struct.hpp"
 
 #include <gtest/gtest.h>
+
+#include <memory>
+#include <vector>
 
 using tier4_rtc_msgs::msg::State;
 
@@ -53,7 +56,7 @@ protected:
 
 TEST_F(RTCInterfaceTest, uuid_to_string)
 {
-  auto uuid = autoware::universe_utils::generateUUID();
+  auto uuid = autoware_utils::generate_uuid();
   rclcpp::Time stamp(1.0, 0);
 
   // Condition: no registered uuid
@@ -153,7 +156,7 @@ TEST_F(RTCInterfaceTest, uuid_to_string)
   // allowed)
   rtc_interface_->updateCooperateStatus(
     uuid, true, State::WAITING_FOR_EXECUTION, 10.0, 100.0, stamp, true);
-  rtc_interface_->updateCooperateStatus(uuid, true, State::RUNNING, 10.0, 100.0, stamp);
+  rtc_interface_->updateCooperateStatus(uuid, true, State::RUNNING, 10.0, 100.0, stamp, true);
   EXPECT_TRUE(rtc_interface_->isRegistered(uuid));
   EXPECT_FALSE(rtc_interface_->isActivated(uuid));
   EXPECT_FALSE(rtc_interface_->isForceActivated(uuid));

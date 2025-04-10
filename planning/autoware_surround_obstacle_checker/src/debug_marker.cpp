@@ -15,8 +15,10 @@
 #include "debug_marker.hpp"
 
 #include <autoware/motion_utils/marker/marker_helper.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/marker_helper.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
+
+#include <string>
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #else
@@ -52,21 +54,23 @@ Polygon2d createSelfPolygon(
 }
 }  // namespace
 
-using autoware::universe_utils::appendMarkerArray;
-using autoware::universe_utils::calcOffsetPose;
-using autoware::universe_utils::createDefaultMarker;
-using autoware::universe_utils::createMarkerColor;
-using autoware::universe_utils::createMarkerScale;
-using autoware::universe_utils::createPoint;
+using autoware_utils::append_marker_array;
+using autoware_utils::calc_offset_pose;
+using autoware_utils::create_default_marker;
+using autoware_utils::create_marker_color;
+using autoware_utils::create_marker_scale;
+using autoware_utils::create_point;
 
 SurroundObstacleCheckerDebugNode::SurroundObstacleCheckerDebugNode(
-  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const double base_link2front,
-  const std::string & object_label, const double & surround_check_front_distance,
-  const double & surround_check_side_distance, const double & surround_check_back_distance,
-  const double & surround_check_hysteresis_distance, const geometry_msgs::msg::Pose & self_pose,
-  const rclcpp::Clock::SharedPtr clock, rclcpp::Node & node)
-: vehicle_info_(vehicle_info),
-  base_link2front_(base_link2front),
+  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const std::string & object_label,
+  const double & surround_check_front_distance, const double & surround_check_side_distance,
+  const double & surround_check_back_distance, const double & surround_check_hysteresis_distance,
+  const geometry_msgs::msg::Pose & self_pose, const rclcpp::Clock::SharedPtr clock,
+  rclcpp::Node & node)
+: planning_factor_interface_{std::make_unique<
+    autoware::planning_factor_interface::PlanningFactorInterface>(
+    &node, "surround_obstacle_checker")},
+  vehicle_info_(vehicle_info),
   object_label_(object_label),
   surround_check_front_distance_(surround_check_front_distance),
   surround_check_side_distance_(surround_check_side_distance),
@@ -76,9 +80,6 @@ SurroundObstacleCheckerDebugNode::SurroundObstacleCheckerDebugNode(
   clock_(clock)
 {
   debug_viz_pub_ = node.create_publisher<visualization_msgs::msg::MarkerArray>("~/debug/marker", 1);
-  stop_reason_pub_ = node.create_publisher<StopReasonArray>("~/output/stop_reasons", 1);
-  velocity_factor_pub_ =
-    node.create_publisher<VelocityFactorArray>("/planning/velocity_factors/surround_obstacle", 1);
   vehicle_footprint_pub_ = node.create_publisher<PolygonStamped>("~/debug/footprint", 1);
   vehicle_footprint_offset_pub_ =
     node.create_publisher<PolygonStamped>("~/debug/footprint_offset", 1);
@@ -143,10 +144,12 @@ void SurroundObstacleCheckerDebugNode::publish()
   debug_viz_pub_->publish(visualization_msg);
 
   /* publish stop reason for autoware api */
-  const auto stop_reason_msg = makeStopReasonArray();
-  stop_reason_pub_->publish(stop_reason_msg);
-  const auto velocity_factor_msg = makeVelocityFactorArray();
-  velocity_factor_pub_->publish(velocity_factor_msg);
+  if (stop_pose_ptr_ != nullptr) {
+    planning_factor_interface_->add(
+      0.0, *stop_pose_ptr_, autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+      autoware_internal_planning_msgs::msg::SafetyFactorArray{});
+  }
+  planning_factor_interface_->publish();
 
   /* reset variables */
   stop_pose_ptr_ = nullptr;
@@ -160,9 +163,9 @@ MarkerArray SurroundObstacleCheckerDebugNode::makeVisualizationMarker()
 
   // visualize surround object
   if (stop_obstacle_point_ptr_ != nullptr) {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", current_time, "no_start_obstacle_text", 0, Marker::TEXT_VIEW_FACING,
-      createMarkerScale(0.0, 0.0, 1.0), createMarkerColor(1.0, 1.0, 1.0, 0.999));
+      create_marker_scale(0.0, 0.0, 1.0), create_marker_color(1.0, 1.0, 1.0, 0.999));
     marker.pose.position = *stop_obstacle_point_ptr_;
     marker.pose.position.z += 2.0;  // add half of the heights of obj roughly
     marker.text = "!";
@@ -170,52 +173,6 @@ MarkerArray SurroundObstacleCheckerDebugNode::makeVisualizationMarker()
   }
 
   return msg;
-}
-
-StopReasonArray SurroundObstacleCheckerDebugNode::makeStopReasonArray()
-{
-  // create header
-  std_msgs::msg::Header header;
-  header.frame_id = "map";
-  header.stamp = this->clock_->now();
-
-  // create stop reason stamped
-  StopReason stop_reason_msg;
-  stop_reason_msg.reason = StopReason::SURROUND_OBSTACLE_CHECK;
-  StopFactor stop_factor;
-
-  if (stop_pose_ptr_ != nullptr) {
-    stop_factor.stop_pose = *stop_pose_ptr_;
-    if (stop_obstacle_point_ptr_ != nullptr) {
-      stop_factor.stop_factor_points.emplace_back(*stop_obstacle_point_ptr_);
-    }
-    stop_reason_msg.stop_factors.emplace_back(stop_factor);
-  }
-
-  // create stop reason array
-  StopReasonArray stop_reason_array;
-  stop_reason_array.header = header;
-  stop_reason_array.stop_reasons.emplace_back(stop_reason_msg);
-  return stop_reason_array;
-}
-
-VelocityFactorArray SurroundObstacleCheckerDebugNode::makeVelocityFactorArray()
-{
-  VelocityFactorArray velocity_factor_array;
-  velocity_factor_array.header.frame_id = "map";
-  velocity_factor_array.header.stamp = clock_->now();
-
-  if (stop_pose_ptr_) {
-    using distance_type = VelocityFactor::_distance_type;
-    VelocityFactor velocity_factor;
-    velocity_factor.behavior = PlanningBehavior::SURROUNDING_OBSTACLE;
-    velocity_factor.pose = *stop_pose_ptr_;
-    velocity_factor.distance = std::numeric_limits<distance_type>::quiet_NaN();
-    velocity_factor.status = VelocityFactor::UNKNOWN;
-    velocity_factor.detail = std::string();
-    velocity_factor_array.factors.push_back(velocity_factor);
-  }
-  return velocity_factor_array;
 }
 
 PolygonStamped SurroundObstacleCheckerDebugNode::boostPolygonToPolygonStamped(

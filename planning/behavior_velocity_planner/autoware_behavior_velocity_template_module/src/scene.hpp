@@ -18,18 +18,21 @@
 #include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <memory>
 #include <utility>
 #include <vector>
-
 namespace autoware::behavior_velocity_planner
 {
-using tier4_planning_msgs::msg::PathWithLaneId;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 
 class TemplateModule : public SceneModuleInterface
 {
 public:
   TemplateModule(
-    const int64_t module_id, const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock);
+    const int64_t module_id, const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+      planning_factor_interface);
 
   /**
    * @brief Modify the velocity of path points.
@@ -38,10 +41,9 @@ public:
    * specific criteria.
    *
    * @param path A pointer to the path containing points to be modified.
-   * @param stop_reason A pointer to the stop reason data.
    * @return [bool] wether the path velocity was modified or not.
    */
-  bool modifyPathVelocity(PathWithLaneId * path, StopReason * stop_reason) override;
+  bool modifyPathVelocity(PathWithLaneId * path) override;
 
   /**
    * @brief Create a visualization of debug markers.

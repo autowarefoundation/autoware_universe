@@ -14,8 +14,8 @@
 #ifndef IMU_CORRECTOR_CORE_HPP_
 #define IMU_CORRECTOR_CORE_HPP_
 
-#include <autoware/universe_utils/ros/msg_covariance.hpp>
-#include <autoware/universe_utils/ros/transform_listener.hpp>
+#include <autoware_utils/ros/msg_covariance.hpp>
+#include <autoware_utils/ros/transform_listener.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <sensor_msgs/msg/imu.hpp>
@@ -30,7 +30,7 @@ namespace autoware::imu_corrector
 {
 class ImuCorrector : public rclcpp::Node
 {
-  using COV_IDX = autoware::universe_utils::xyz_covariance_index::XYZ_COV_IDX;
+  using COV_IDX = autoware_utils::xyz_covariance_index::XYZ_COV_IDX;
 
 public:
   explicit ImuCorrector(const rclcpp::NodeOptions & options);
@@ -52,7 +52,7 @@ private:
 
   double accel_stddev_imu_link_;
 
-  std::shared_ptr<autoware::universe_utils::TransformListener> transform_listener_;
+  std::shared_ptr<autoware_utils::TransformListener> transform_listener_;
 
   std::string output_frame_;
 };

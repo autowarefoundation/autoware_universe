@@ -26,9 +26,20 @@
           "description": "A cluster tolerance measured in radial direction [m]",
           "default": 0.5,
           "exclusiveMinimum": 0.0
+        },
+        "roi_scale_factor": {
+          "type": "number",
+          "description": "A scale factor for resizing RoI while checking if points are inside the RoI.",
+          "default": 1.0,
+          "exclusiveMinimum": 0.0
         }
       },
-      "required": ["fuse_unknown_only", "min_cluster_size", "cluster_2d_tolerance"]
+      "required": [
+        "fuse_unknown_only",
+        "min_cluster_size",
+        "cluster_2d_tolerance",
+        "roi_scale_factor"
+      ]
     }
   },
   "properties": {

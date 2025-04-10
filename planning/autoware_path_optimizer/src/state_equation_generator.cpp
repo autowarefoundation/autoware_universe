@@ -16,6 +16,8 @@
 
 #include "autoware/path_optimizer/mpt_optimizer.hpp"
 
+#include <vector>
+
 namespace autoware::path_optimizer
 {
 // state equation: x = B u + W (u includes x_0)
@@ -23,7 +25,7 @@ namespace autoware::path_optimizer
 StateEquationGenerator::Matrix StateEquationGenerator::calcMatrix(
   const std::vector<ReferencePoint> & ref_points) const
 {
-  autoware::universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const size_t D_x = vehicle_model_ptr_->getDimX();
   const size_t D_u = vehicle_model_ptr_->getDimU();

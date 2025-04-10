@@ -1,4 +1,4 @@
-// Copyright 2021 Tier IV, Inc.
+// Copyright 2025 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,10 @@
 #ifndef AUTOWARE__PLANNING_EVALUATOR__METRICS__TRAJECTORY_METRICS_HPP_
 #define AUTOWARE__PLANNING_EVALUATOR__METRICS__TRAJECTORY_METRICS_HPP_
 
-#include "autoware/planning_evaluator/stat.hpp"
+#include "autoware/motion_utils/resample/resample.hpp"
+#include "autoware/motion_utils/trajectory/conversion.hpp"
+#include "autoware/motion_utils/trajectory/trajectory.hpp"
+#include "autoware_utils/math/accumulator.hpp"
 
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"
@@ -26,6 +29,7 @@ namespace metrics
 {
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
+using autoware_utils::Accumulator;
 
 /**
  * @brief calculate relative angle metric (angle between successive points)
@@ -33,56 +37,66 @@ using autoware_planning_msgs::msg::TrajectoryPoint;
  * @param [in] min_dist_threshold minimum distance between successive points
  * @return calculated statistics
  */
-Stat<double> calcTrajectoryRelativeAngle(const Trajectory & traj, const double min_dist_threshold);
+Accumulator<double> calcTrajectoryRelativeAngle(
+  const Trajectory & traj, const double min_dist_threshold);
+
+/**
+ * @brief calculate large relative angle metric (angle between successive points)
+ * @param [in] traj input trajectory
+ * @param [in] vehicle_length_m input vehicle length
+ * @return calculated statistics
+ */
+Accumulator<double> calcTrajectoryResampledRelativeAngle(
+  const Trajectory & traj, const double vehicle_length_m);
 
 /**
  * @brief calculate metric for the distance between trajectory points
  * @param [in] traj input trajectory
  * @return calculated statistics
  */
-Stat<double> calcTrajectoryInterval(const Trajectory & traj);
+Accumulator<double> calcTrajectoryInterval(const Trajectory & traj);
 
 /**
  * @brief calculate curvature metric
  * @param [in] traj input trajectory
  * @return calculated statistics
  */
-Stat<double> calcTrajectoryCurvature(const Trajectory & traj);
+Accumulator<double> calcTrajectoryCurvature(const Trajectory & traj);
 
 /**
  * @brief calculate length of the trajectory [m]
  * @param [in] traj input trajectory
  * @return calculated statistics
  */
-Stat<double> calcTrajectoryLength(const Trajectory & traj);
+Accumulator<double> calcTrajectoryLength(const Trajectory & traj);
 
 /**
  * @brief calculate duration of the trajectory [s]
  * @param [in] traj input trajectory
  * @return calculated statistics
  */
-Stat<double> calcTrajectoryDuration(const Trajectory & traj);
+Accumulator<double> calcTrajectoryDuration(const Trajectory & traj);
 
 /**
  * @brief calculate velocity metrics for the trajectory
  * @param [in] traj input trajectory
  * @return calculated statistics
  */
-Stat<double> calcTrajectoryVelocity(const Trajectory & traj);
+Accumulator<double> calcTrajectoryVelocity(const Trajectory & traj);
 
 /**
  * @brief calculate acceleration metrics for the trajectory
  * @param [in] traj input trajectory
  * @return calculated statistics
  */
-Stat<double> calcTrajectoryAcceleration(const Trajectory & traj);
+Accumulator<double> calcTrajectoryAcceleration(const Trajectory & traj);
 
 /**
  * @brief calculate jerk metrics for the trajectory
  * @param [in] traj input trajectory
  * @return calculated statistics
  */
-Stat<double> calcTrajectoryJerk(const Trajectory & traj);
+Accumulator<double> calcTrajectoryJerk(const Trajectory & traj);
 
 }  // namespace metrics
 }  // namespace planning_diagnostics

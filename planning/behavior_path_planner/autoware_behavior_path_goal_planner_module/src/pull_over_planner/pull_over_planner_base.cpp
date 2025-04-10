@@ -13,6 +13,11 @@
 // limitations under the License.
 
 #include <autoware/behavior_path_goal_planner_module/pull_over_planner/pull_over_planner_base.hpp>
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
+
+#include <algorithm>
+#include <utility>
+#include <vector>
 
 namespace autoware::behavior_path_planner
 {
@@ -75,11 +80,24 @@ std::optional<PullOverPath> PullOverPath::create(
   std::tie(full_path_curvatures, full_path_max_curvature) = calculateCurvaturesAndMax(full_path);
   std::tie(parking_path_curvatures, parking_path_max_curvature) =
     calculateCurvaturesAndMax(parking_path);
+  const double parking_path_curvature_total_derivative = [&]() {
+    const auto parking_path_curvature_base = autoware::motion_utils::calcSignedArcLengthPartialSum(
+      parking_path.points, 1, parking_path.points.size() - 1);
+    const auto size = std::min(parking_path_curvatures.size(), parking_path_curvature_base.size());
+    double total_abs_kappa_diff = 0;
+    for (unsigned i = 0; i + 1 < size; ++i) {
+      total_abs_kappa_diff += std::fabs(
+        (parking_path_curvatures.at(i + 1) - parking_path_curvatures.at(i)) /
+        (parking_path_curvature_base.at(i + 1) - parking_path_curvature_base.at(i)));
+    }
+    return total_abs_kappa_diff;
+  }();
 
   return PullOverPath(
     type, id, start_pose, modified_goal_pose, partial_paths, full_path, parking_path,
     full_path_curvatures, parking_path_curvatures, full_path_max_curvature,
-    parking_path_max_curvature, pairs_terminal_velocity_and_accel);
+    parking_path_max_curvature, parking_path_curvature_total_derivative,
+    pairs_terminal_velocity_and_accel);
 }
 
 PullOverPath::PullOverPath(const PullOverPath & other)
@@ -105,7 +123,7 @@ PullOverPath::PullOverPath(
   const PathWithLaneId & full_path, const PathWithLaneId & parking_path,
   const std::vector<double> & full_path_curvatures,
   const std::vector<double> & parking_path_curvatures, const double full_path_max_curvature,
-  const double parking_path_max_curvature,
+  const double parking_path_max_curvature, const double parking_path_curvature_total_derivative,
   const std::vector<std::pair<double, double>> & pairs_terminal_velocity_and_accel)
 : type_(type),
   modified_goal_pose_(modified_goal_pose),
@@ -118,6 +136,7 @@ PullOverPath::PullOverPath(
   parking_path_curvatures_(parking_path_curvatures),
   full_path_max_curvature_(full_path_max_curvature),
   parking_path_max_curvature_(parking_path_max_curvature),
+  parking_path_curvature_total_derivative_(parking_path_curvature_total_derivative),
   path_idx_(0),
   pairs_terminal_velocity_and_accel_(pairs_terminal_velocity_and_accel)
 {

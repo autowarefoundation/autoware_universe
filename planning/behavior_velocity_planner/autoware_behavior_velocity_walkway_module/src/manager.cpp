@@ -15,7 +15,7 @@
 #include "manager.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware/universe_utils/ros/parameter.hpp>
+#include <autoware_utils/ros/parameter.hpp>
 
 #include <limits>
 #include <memory>
@@ -26,7 +26,7 @@
 namespace autoware::behavior_velocity_planner
 {
 
-using autoware::universe_utils::getOrDeclareParameter;
+using autoware_utils::get_or_declare_parameter;
 using lanelet::autoware::Crosswalk;
 
 WalkwayModuleManager::WalkwayModuleManager(rclcpp::Node & node)
@@ -37,15 +37,15 @@ WalkwayModuleManager::WalkwayModuleManager(rclcpp::Node & node)
   // for walkway parameters
   auto & wp = walkway_planner_param_;
   wp.stop_distance_from_crosswalk =
-    getOrDeclareParameter<double>(node, ns + ".stop_distance_from_crosswalk");
-  wp.stop_duration = getOrDeclareParameter<double>(node, ns + ".stop_duration");
+    get_or_declare_parameter<double>(node, ns + ".stop_distance_from_crosswalk");
+  wp.stop_duration = get_or_declare_parameter<double>(node, ns + ".stop_duration");
 }
 
 void WalkwayModuleManager::launchNewModules(const PathWithLaneId & path)
 {
   const auto rh = planner_data_->route_handler_;
 
-  const auto launch = [this, &path](const auto & lanelet, const auto & use_regulatory_element) {
+  const auto launch = [this](const auto & lanelet, const auto & use_regulatory_element) {
     const auto attribute =
       lanelet.attributeOr(lanelet::AttributeNamesString::Subtype, std::string(""));
     if (attribute != lanelet::AttributeValueString::Walkway) {
@@ -61,7 +61,8 @@ void WalkwayModuleManager::launchNewModules(const PathWithLaneId & path)
     const auto lanelet_map_ptr = planner_data_->route_handler_->getLaneletMapPtr();
 
     registerModule(std::make_shared<WalkwayModule>(
-      lanelet.id(), lanelet_map_ptr, p, use_regulatory_element, logger, clock_));
+      lanelet.id(), lanelet_map_ptr, p, use_regulatory_element, logger, clock_, time_keeper_,
+      planning_factor_interface_));
   };
 
   const auto crosswalk_leg_elem_map = planning_utils::getRegElemMapOnPath<Crosswalk>(

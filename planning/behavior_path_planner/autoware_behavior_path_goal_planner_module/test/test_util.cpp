@@ -20,6 +20,10 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
+#include <string>
+#include <vector>
+
 class TestUtilWithMap : public ::testing::Test
 {
 protected:
@@ -88,7 +92,7 @@ TEST_F(TestUtilWithMap, getBusStopAreaPolygons)
   const auto shoulder_lanes = lanelet::utils::query::shoulderLanelets(lanes);
   const auto bus_stop_area_polygons =
     autoware::behavior_path_planner::goal_planner_utils::getBusStopAreaPolygons(shoulder_lanes);
-  EXPECT_EQ(bus_stop_area_polygons.size(), 1);
+  EXPECT_EQ(bus_stop_area_polygons.size(), 2);
 }
 
 TEST_F(DISABLED_TestUtilWithMap, isWithinAreas)
@@ -106,8 +110,8 @@ TEST_F(DISABLED_TestUtilWithMap, isWithinAreas)
       .orientation(
         geometry_msgs::build<geometry_msgs::msg::Quaternion>().x(0.0).y(0.0).z(0.707390).w(
           0.706824));
-  const auto baselink_footprint = autoware::universe_utils::transformVector(
-    footprint, autoware::universe_utils::pose2transform(baselink_pose));
+  const auto baselink_footprint =
+    autoware_utils::transform_vector(footprint, autoware_utils::pose2transform(baselink_pose));
   EXPECT_EQ(
     autoware::behavior_path_planner::goal_planner_utils::isWithinAreas(
       baselink_footprint, bus_stop_area_polygons),

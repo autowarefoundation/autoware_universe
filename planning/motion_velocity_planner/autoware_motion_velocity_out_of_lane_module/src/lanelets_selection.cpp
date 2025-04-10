@@ -17,8 +17,8 @@
 #include "types.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <boost/geometry/algorithms/buffer.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
@@ -85,7 +85,7 @@ lanelet::ConstLanelets get_missing_lane_change_lanelets(
 }
 
 lanelet::ConstLanelets calculate_trajectory_lanelets(
-  const universe_utils::LineString2d & trajectory_ls,
+  const autoware_utils::LineString2d & trajectory_ls,
   const route_handler::RouteHandler & route_handler)
 {
   const auto lanelet_map_ptr = route_handler.getLaneletMapPtr();
@@ -123,7 +123,7 @@ lanelet::ConstLanelets calculate_ignored_lanelets(
 
 lanelet::ConstLanelets calculate_out_lanelets(
   const lanelet::LaneletLayer & lanelet_layer,
-  const universe_utils::MultiPolygon2d & trajectory_footprints,
+  const autoware_utils::MultiPolygon2d & trajectory_footprints,
   const lanelet::ConstLanelets & trajectory_lanelets,
   const lanelet::ConstLanelets & ignored_lanelets)
 {
@@ -150,7 +150,7 @@ OutLaneletRtree calculate_out_lanelet_rtree(const lanelet::ConstLanelets & lanel
   nodes.reserve(lanelets.size());
   for (auto i = 0UL; i < lanelets.size(); ++i) {
     nodes.emplace_back(
-      boost::geometry::return_envelope<universe_utils::Box2d>(
+      boost::geometry::return_envelope<autoware_utils::Box2d>(
         lanelets[i].polygon2d().basicPolygon()),
       i);
   }
@@ -161,12 +161,12 @@ void calculate_out_lanelet_rtree(
   EgoData & ego_data, const route_handler::RouteHandler & route_handler,
   const PlannerParam & params)
 {
-  universe_utils::LineString2d trajectory_ls;
+  autoware_utils::LineString2d trajectory_ls;
   for (const auto & p : ego_data.trajectory_points) {
     trajectory_ls.emplace_back(p.pose.position.x, p.pose.position.y);
   }
   // add a point beyond the last trajectory point to account for the ego front offset
-  const auto pose_beyond = universe_utils::calcOffsetPose(
+  const auto pose_beyond = autoware_utils::calc_offset_pose(
     ego_data.trajectory_points.back().pose, params.front_offset, 0.0, 0.0, 0.0);
   trajectory_ls.emplace_back(pose_beyond.position.x, pose_beyond.position.y);
   const auto trajectory_lanelets = calculate_trajectory_lanelets(trajectory_ls, route_handler);
@@ -178,7 +178,7 @@ void calculate_out_lanelet_rtree(
     params.right_offset + params.extra_right_offset,
     params.rear_offset + params.extra_rear_offset,
   });
-  universe_utils::MultiPolygon2d trajectory_footprints;
+  autoware_utils::MultiPolygon2d trajectory_footprints;
   const boost::geometry::strategy::buffer::distance_symmetric<double> distance_strategy(
     max_ego_footprint_offset);
   const boost::geometry::strategy::buffer::join_miter join_strategy;

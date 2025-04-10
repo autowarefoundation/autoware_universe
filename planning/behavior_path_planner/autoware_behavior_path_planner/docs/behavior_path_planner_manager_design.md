@@ -101,7 +101,7 @@ void registerSceneModuleManager(const SceneModuleManagerPtr & manager_ptr)
 }
 ```
 
-Code is [here](https://github.com/autowarefoundation/autoware.universe/blob/b1734916e3efd9786507a271e0fe829dd37476c8/planning/behavior_path_planner/include/behavior_path_planner/planner_manager.hpp#L66-L75)
+Code is [here](https://github.com/autowarefoundation/autoware_universe/blob/b1734916e3efd9786507a271e0fe829dd37476c8/planning/behavior_path_planner/include/behavior_path_planner/planner_manager.hpp#L66-L75)
 
 Sub-manager has the following parameters that are needed by the manager to manage the launched modules, and these parameters can be set for each module.
 
@@ -116,7 +116,7 @@ struct ModuleConfigParameters
 };
 ```
 
-Code is [here](https://github.com/autowarefoundation/autoware.universe/blob/b1734916e3efd9786507a271e0fe829dd37476c8/planning/behavior_path_planner/include/behavior_path_planner/parameters.hpp#L23-L30)
+Code is [here](https://github.com/autowarefoundation/autoware_universe/blob/b1734916e3efd9786507a271e0fe829dd37476c8/planning/behavior_path_planner/include/behavior_path_planner/parameters.hpp#L23-L30)
 
 | Name                                                | Type    | Description                                                                                                                                     |
 | :-------------------------------------------------- | :------ | :---------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -139,9 +139,9 @@ Scene modules receives necessary data and RTC command, and outputs candidate pat
 | :-- | :-------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | IN  | `behavior_path_planner::BehaviorModuleOutput` | previous module output. contains data necessary for path planning.                                                                                                                    |
 | IN  | `behavior_path_planner::PlannerData`          | contains data necessary for path planning.                                                                                                                                            |
-| IN  | `tier4_planning_msgs::srv::CooperateCommands` | contains approval data for scene module's path modification. ([details](https://github.com/autowarefoundation/autoware.universe/blob/main/planning/autoware_rtc_interface/README.md)) |
+| IN  | `tier4_planning_msgs::srv::CooperateCommands` | contains approval data for scene module's path modification. ([details](https://github.com/autowarefoundation/autoware_universe/blob/main/planning/autoware_rtc_interface/README.md)) |
 | OUT | `behavior_path_planner::BehaviorModuleOutput` | contains modified path, turn signal information, etc...                                                                                                                               |
-| OUT | `tier4_planning_msgs::msg::CooperateStatus`   | contains RTC cooperate status. ([details](https://github.com/autowarefoundation/autoware.universe/blob/main/planning/autoware_rtc_interface/README.md))                               |
+| OUT | `tier4_planning_msgs::msg::CooperateStatus`   | contains RTC cooperate status. ([details](https://github.com/autowarefoundation/autoware_universe/blob/main/planning/autoware_rtc_interface/README.md))                               |
 | OUT | `autoware_planning_msgs::msg::Path`           | candidate path output by a module that has not received approval for path change. when it approved, the ego's following path is switched to this path. (just for visualization)       |
 | OUT | `autoware_planning_msgs::msg::Path`           | reference path generated from the centerline of the lane the ego is going to follow. (just for visualization)                                                                         |
 | OUT | `visualization_msgs::msg::MarkerArray`        | virtual wall, debug info, etc...                                                                                                                                                      |
@@ -150,7 +150,7 @@ Scene modules running on the manager are stored on the **candidate modules stack
 
 | Stack             | Approval condition | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | :---------------- | :----------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| candidate modules | Not approved       | The candidate modules whose modified path has not been approved by [RTC](https://github.com/autowarefoundation/autoware.universe/blob/main/planning/autoware_rtc_interface/README.md) is stored in vector `candidate_module_ptrs_` in the manager. The candidate modules stack is updated in the following order. 1. The manager selects only those modules that can be executed based on the configuration of the sub-manager whose scene module requests execution. 2. Determines the execution priority. 3. Executes them as candidate module. All of these modules receive the decided (approved) path from approved modules stack and **RUN in PARALLEL**. <br>![candidate_modules_stack](../image/manager/candidate_modules_stack.svg) |
+| candidate modules | Not approved       | The candidate modules whose modified path has not been approved by [RTC](https://github.com/autowarefoundation/autoware_universe/blob/main/planning/autoware_rtc_interface/README.md) is stored in vector `candidate_module_ptrs_` in the manager. The candidate modules stack is updated in the following order. 1. The manager selects only those modules that can be executed based on the configuration of the sub-manager whose scene module requests execution. 2. Determines the execution priority. 3. Executes them as candidate module. All of these modules receive the decided (approved) path from approved modules stack and **RUN in PARALLEL**. <br>![candidate_modules_stack](../image/manager/candidate_modules_stack.svg) |
 | approved modules  | Already approved   | When the path modification is approved via RTC commands, the manager moves the candidate module to approved modules stack. These modules are stored in `approved_module_ptrs_`. In this stack, all scene modules **RUN in SERIES**. <br>![approved_modules_stack](../image/manager/approved_modules_stack.svg)                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
 ## Process flow
@@ -313,7 +313,7 @@ detach
   }
 ```
 
-Code is [here](https://github.com/autowarefoundation/autoware.universe/blob/b1734916e3efd9786507a271e0fe829dd37476c8/planning/behavior_path_planner/src/planner_manager.cpp#L66-L111)
+Code is [here](https://github.com/autowarefoundation/autoware_universe/blob/b1734916e3efd9786507a271e0fe829dd37476c8/planning/behavior_path_planner/src/planner_manager.cpp#L66-L111)
 
 ## Priority of execution request
 
@@ -334,7 +334,7 @@ Compare priorities parameter among sub-managers to determine the order of execut
   }
 ```
 
-Code is [here](https://github.com/autowarefoundation/autoware.universe/blob/b1734916e3efd9786507a271e0fe829dd37476c8/planning/behavior_path_planner/include/behavior_path_planner/planner_manager.hpp#L239-L250)
+Code is [here](https://github.com/autowarefoundation/autoware_universe/blob/b1734916e3efd9786507a271e0fe829dd37476c8/planning/behavior_path_planner/include/behavior_path_planner/planner_manager.hpp#L239-L250)
 
 In the future, however, we are considering having the priorities change dynamically depending on the situation in order to achieve more complex use cases.
 
@@ -533,9 +533,9 @@ If this case happened in the slot, `is_upstream_waiting_approved` is set to true
 
 ### Failure modules
 
-The failure modules return the status `ModuleStatus::FAILURE`. The manager removes the module from approved modules stack as well as waiting approval modules, but the failure module is not moved to candidate modules stack.
+If a module returns `ModuleStatus::FAILURE`, the manager removes the failed module. Additionally, all modules after the failed module are removed, even if they did not return `ModuleStatus::FAILURE`. These modules are not added back to the candidate modules stack and will instead run again from the beginning. Once these modules are removed, the output of the module prior to the failed module will be used as the planner's output.
 
-As a result, the module A's output is used as approved modules stack.
+As shown in the example below, modules B, A, and C are running. When module A returns `ModuleStatus::FAILURE`, both module A and C are removed from the approved modules stack. Module B's output is then used as the final output of the planner.
 
 ![failure_modules](../image/manager/failure_modules.drawio.svg)
 

@@ -15,8 +15,11 @@
 #ifndef VOXEL_DISTANCE_BASED_COMPARE_MAP_FILTER__NODE_HPP_  // NOLINT
 #define VOXEL_DISTANCE_BASED_COMPARE_MAP_FILTER__NODE_HPP_  // NOLINT
 
-#include "../voxel_grid_map_loader/voxel_grid_map_loader.hpp"
+#include "autoware/compare_map_segmentation/voxel_grid_map_loader.hpp"
 #include "autoware/pointcloud_preprocessor/filter.hpp"
+
+#include <autoware_utils/ros/diagnostics_interface.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/search/pcl_search.h>
@@ -29,14 +32,14 @@
 namespace autoware::compare_map_segmentation
 {
 
-using PointCloud = typename pcl::Filter<pcl::PointXYZ>::PointCloud;
-using PointCloudPtr = typename PointCloud::Ptr;
-using PointCloudConstPtr = typename PointCloud::ConstPtr;
+using FilteredPointCloud = typename pcl::Filter<pcl::PointXYZ>::PointCloud;
+using FilteredPointCloudPtr = typename FilteredPointCloud::Ptr;
+using FilteredPointCloudConstPtr = typename FilteredPointCloud::ConstPtr;
 
 class VoxelDistanceBasedStaticMapLoader : public VoxelGridStaticMapLoader
 {
 private:
-  PointCloudConstPtr map_ptr_;
+  FilteredPointCloudConstPtr map_ptr_;
   pcl::search::Search<pcl::PointXYZ>::Ptr tree_;
 
 public:
@@ -55,7 +58,7 @@ class VoxelDistanceBasedDynamicMapLoader : public VoxelGridDynamicMapLoader
 {
 protected:
 private:
-  PointCloudConstPtr map_ptr_;
+  FilteredPointCloudConstPtr map_ptr_;
   /* data */
 public:
   explicit VoxelDistanceBasedDynamicMapLoader(
@@ -71,14 +74,17 @@ public:
   inline void addMapCellAndFilter(
     const autoware_map_msgs::msg::PointCloudMapCellWithID & map_cell_to_add) override
   {
-    map_grid_size_x_ = map_cell_to_add.metadata.max_x - map_cell_to_add.metadata.min_x;
-    map_grid_size_y_ = map_cell_to_add.metadata.max_y - map_cell_to_add.metadata.min_y;
+    {
+      std::lock_guard<std::mutex> lock(dynamic_map_loader_mutex_);
+      map_grid_size_x_ = map_cell_to_add.metadata.max_x - map_cell_to_add.metadata.min_x;
+      map_grid_size_y_ = map_cell_to_add.metadata.max_y - map_cell_to_add.metadata.min_y;
+    }
 
     pcl::PointCloud<pcl::PointXYZ> map_cell_pc_tmp;
     pcl::fromROSMsg(map_cell_to_add.pointcloud, map_cell_pc_tmp);
 
     VoxelGridPointXYZ map_cell_voxel_grid_tmp;
-    PointCloudPtr map_cell_downsampled_pc_ptr_tmp;
+    FilteredPointCloudPtr map_cell_downsampled_pc_ptr_tmp;
 
     auto map_cell_voxel_input_tmp_ptr =
       std::make_shared<pcl::PointCloud<pcl::PointXYZ>>(map_cell_pc_tmp);
@@ -129,8 +135,15 @@ protected:
   void input_target_callback(const PointCloud2ConstPtr map);
 
 private:
+  // interfaces
   std::unique_ptr<VoxelGridMapLoader> voxel_distance_based_map_loader_;
+
+  // parameters
   double distance_threshold_;
+
+  // diagnostics
+  diagnostic_updater::Updater diagnostic_updater_;
+  void checkStatus(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
 public:
   PCL_MAKE_ALIGNED_OPERATOR_NEW

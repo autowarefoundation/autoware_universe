@@ -48,6 +48,7 @@ target_link_libraries(obstacle_pointcloud_based_validator
 )
 
 ament_auto_add_library(object_lanelet_filter SHARED
+  src/lanelet_filter/debug.cpp
   src/lanelet_filter/lanelet_filter.cpp
   lib/utils/utils.cpp
 )
@@ -81,6 +82,10 @@ if(BUILD_TESTING)
   ament_auto_add_gtest(detection_object_validation_tests
     test/test_utils.cpp
     test/object_position_filter/test_object_position_filter.cpp
+  )
+  ament_auto_add_gtest(object_lanelet_filter_tests
+    test/test_utils.cpp
+    test/lanelet_filter/test_lanelet_filter.cpp
   )
 endif()
 

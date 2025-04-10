@@ -17,17 +17,18 @@
 
 #include "autoware/behavior_path_planner_common/interface/scene_module_interface.hpp"
 
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <autoware_perception_msgs/msg/predicted_path.hpp>
 #include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
 #include <tier4_planning_msgs/msg/avoidance_debug_msg.hpp>
 #include <tier4_planning_msgs/msg/avoidance_debug_msg_array.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <algorithm>
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
@@ -56,9 +57,9 @@ std::vector<T> getAllKeys(const std::unordered_map<T, S> & map)
 
 namespace autoware::behavior_path_planner
 {
-using autoware::universe_utils::Polygon2d;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using autoware_perception_msgs::msg::PredictedPath;
-using tier4_planning_msgs::msg::PathWithLaneId;
+using autoware_utils::Polygon2d;
 
 struct MinMaxValue
 {
@@ -182,7 +183,7 @@ public:
       const PredictedObject & predicted_object, const double arg_vel, const double arg_lat_vel,
       const bool arg_is_object_on_ego_path,
       const std::optional<rclcpp::Time> & arg_latest_time_inside_ego_path)
-    : uuid(autoware::universe_utils::toHexString(predicted_object.object_id)),
+    : uuid(autoware_utils::to_hex_string(predicted_object.object_id)),
       label(predicted_object.classification.front().label),
       pose(predicted_object.kinematics.initial_pose_with_covariance.pose),
       shape(predicted_object.shape),
@@ -351,7 +352,7 @@ public:
     const std::unordered_map<std::string, std::shared_ptr<RTCInterface>> & rtc_interface_ptr_map,
     std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
       objects_of_interest_marker_interface_ptr_map,
-    std::shared_ptr<SteeringFactorInterface> & steering_factor_interface_ptr);
+    const std::shared_ptr<PlanningFactorInterface> planning_factor_interface);
 
   void updateModuleParams(const std::any & parameters) override
   {
@@ -381,8 +382,8 @@ private:
   };
   struct EgoPathReservePoly
   {
-    const autoware::universe_utils::Polygon2d left_avoid;
-    const autoware::universe_utils::Polygon2d right_avoid;
+    const autoware_utils::Polygon2d left_avoid;
+    const autoware_utils::Polygon2d right_avoid;
   };
 
   bool canTransitSuccessState() override;
@@ -439,11 +440,11 @@ private:
     const DynamicAvoidanceObject & object) const;
   std::pair<lanelet::ConstLanelets, lanelet::ConstLanelets> getAdjacentLanes(
     const double forward_distance, const double backward_distance) const;
-  std::optional<autoware::universe_utils::Polygon2d> calcEgoPathBasedDynamicObstaclePolygon(
+  std::optional<autoware_utils::Polygon2d> calcEgoPathBasedDynamicObstaclePolygon(
     const DynamicAvoidanceObject & object) const;
-  std::optional<autoware::universe_utils::Polygon2d> calcObjectPathBasedDynamicObstaclePolygon(
+  std::optional<autoware_utils::Polygon2d> calcObjectPathBasedDynamicObstaclePolygon(
     const DynamicAvoidanceObject & object) const;
-  std::optional<autoware::universe_utils::Polygon2d> calcPredictedPathBasedDynamicObstaclePolygon(
+  std::optional<autoware_utils::Polygon2d> calcPredictedPathBasedDynamicObstaclePolygon(
     const DynamicAvoidanceObject & object, const EgoPathReservePoly & ego_path_poly) const;
   EgoPathReservePoly calcEgoPathReservePoly(const PathWithLaneId & ego_path) const;
   lanelet::ConstLanelets getCurrentLanesFromPath(

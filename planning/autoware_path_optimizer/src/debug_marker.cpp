@@ -18,12 +18,15 @@
 
 #include "visualization_msgs/msg/marker_array.hpp"
 
+#include <string>
+#include <vector>
+
 namespace autoware::path_optimizer
 {
-using autoware::universe_utils::appendMarkerArray;
-using autoware::universe_utils::createDefaultMarker;
-using autoware::universe_utils::createMarkerColor;
-using autoware::universe_utils::createMarkerScale;
+using autoware_utils::append_marker_array;
+using autoware_utils::create_default_marker;
+using autoware_utils::create_marker_color;
+using autoware_utils::create_marker_scale;
 
 namespace
 {
@@ -31,9 +34,9 @@ MarkerArray getFootprintsMarkerArray(
   const std::vector<TrajectoryPoint> & mpt_traj,
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const size_t sampling_num)
 {
-  auto marker = createDefaultMarker(
+  auto marker = create_default_marker(
     "map", rclcpp::Clock().now(), "mpt_footprints", 0, Marker::LINE_STRIP,
-    createMarkerScale(0.05, 0.0, 0.0), createMarkerColor(0.99, 0.99, 0.2, 0.99));
+    create_marker_scale(0.05, 0.0, 0.0), create_marker_color(0.99, 0.99, 0.2, 0.99));
   marker.lifetime = rclcpp::Duration::from_seconds(1.5);
 
   MarkerArray marker_array;
@@ -53,17 +56,15 @@ MarkerArray getFootprintsMarkerArray(
     const double base_to_rear = vehicle_info.rear_overhang_m;
 
     marker.points.push_back(
-      autoware::universe_utils::calcOffsetPose(traj_point.pose, base_to_front, base_to_left, 0.0)
+      autoware_utils::calc_offset_pose(traj_point.pose, base_to_front, base_to_left, 0.0).position);
+    marker.points.push_back(
+      autoware_utils::calc_offset_pose(traj_point.pose, base_to_front, -base_to_right, 0.0)
         .position);
     marker.points.push_back(
-      autoware::universe_utils::calcOffsetPose(traj_point.pose, base_to_front, -base_to_right, 0.0)
+      autoware_utils::calc_offset_pose(traj_point.pose, -base_to_rear, -base_to_right, 0.0)
         .position);
     marker.points.push_back(
-      autoware::universe_utils::calcOffsetPose(traj_point.pose, -base_to_rear, -base_to_right, 0.0)
-        .position);
-    marker.points.push_back(
-      autoware::universe_utils::calcOffsetPose(traj_point.pose, -base_to_rear, base_to_left, 0.0)
-        .position);
+      autoware_utils::calc_offset_pose(traj_point.pose, -base_to_rear, base_to_left, 0.0).position);
     marker.points.push_back(marker.points.front());
 
     marker_array.markers.push_back(marker);
@@ -81,15 +82,15 @@ MarkerArray getBoundsWidthMarkerArray(
   if (ref_points.empty()) return marker_array;
 
   // create lower bound marker
-  auto lb_marker = createDefaultMarker(
-    "map", rclcpp::Clock().now(), "", 0, Marker::LINE_LIST, createMarkerScale(0.05, 0.0, 0.0),
-    createMarkerColor(0.5, 0.99, 0.2, 0.8));
+  auto lb_marker = create_default_marker(
+    "map", rclcpp::Clock().now(), "", 0, Marker::LINE_LIST, create_marker_scale(0.05, 0.0, 0.0),
+    create_marker_color(0.5, 0.99, 0.2, 0.8));
   lb_marker.lifetime = rclcpp::Duration::from_seconds(1.5);
 
   // create upper bound marker
-  auto ub_marker = createDefaultMarker(
-    "map", rclcpp::Clock().now(), "", 1, Marker::LINE_LIST, createMarkerScale(0.05, 0.0, 0.0),
-    createMarkerColor(0.99, 0.5, 0.2, 0.8));
+  auto ub_marker = create_default_marker(
+    "map", rclcpp::Clock().now(), "", 1, Marker::LINE_LIST, create_marker_scale(0.05, 0.0, 0.0),
+    create_marker_color(0.99, 0.5, 0.2, 0.8));
   ub_marker.lifetime = rclcpp::Duration::from_seconds(1.5);
 
   for (size_t bound_idx = 0; bound_idx < ref_points.at(0).bounds_on_constraints.size();
@@ -110,7 +111,7 @@ MarkerArray getBoundsWidthMarkerArray(
           (vehicle_info.wheel_tread_m / 2.0) + vehicle_info.right_overhang_m;
         const double lb_y =
           ref_points.at(i).bounds_on_constraints.at(bound_idx).lower_bound - base_to_right;
-        const auto lb = autoware::universe_utils::calcOffsetPose(pose, 0.0, lb_y, 0.0).position;
+        const auto lb = autoware_utils::calc_offset_pose(pose, 0.0, lb_y, 0.0).position;
 
         lb_marker.points.push_back(pose.position);
         lb_marker.points.push_back(lb);
@@ -132,7 +133,7 @@ MarkerArray getBoundsWidthMarkerArray(
           (vehicle_info.wheel_tread_m / 2.0) + vehicle_info.left_overhang_m;
         const double ub_y =
           ref_points.at(i).bounds_on_constraints.at(bound_idx).upper_bound + base_to_left;
-        const auto ub = autoware::universe_utils::calcOffsetPose(pose, 0.0, ub_y, 0.0).position;
+        const auto ub = autoware_utils::calc_offset_pose(pose, 0.0, ub_y, 0.0).position;
 
         ub_marker.points.push_back(pose.position);
         ub_marker.points.push_back(ub);
@@ -152,14 +153,14 @@ MarkerArray getBoundsLineMarkerArray(
 
   if (ref_points.empty()) return marker_array;
 
-  auto ub_marker = createDefaultMarker(
+  auto ub_marker = create_default_marker(
     "map", rclcpp::Clock().now(), "left_bounds", 0, Marker::LINE_STRIP,
-    createMarkerScale(0.05, 0.0, 0.0), createMarkerColor(0.0, 1.0, 1.0, 0.8));
+    create_marker_scale(0.05, 0.0, 0.0), create_marker_color(0.0, 1.0, 1.0, 0.8));
   ub_marker.lifetime = rclcpp::Duration::from_seconds(1.5);
 
-  auto lb_marker = createDefaultMarker(
+  auto lb_marker = create_default_marker(
     "map", rclcpp::Clock().now(), "right_bounds", 0, Marker::LINE_STRIP,
-    createMarkerScale(0.05, 0.0, 0.0), createMarkerColor(0.0, 1.0, 1.0, 0.8));
+    create_marker_scale(0.05, 0.0, 0.0), create_marker_color(0.0, 1.0, 1.0, 0.8));
   lb_marker.lifetime = rclcpp::Duration::from_seconds(1.5);
 
   for (size_t i = 0; i < ref_points.size(); i++) {
@@ -167,11 +168,11 @@ MarkerArray getBoundsLineMarkerArray(
     const double base_to_right = (vehicle_info.wheel_tread_m / 2.0) + vehicle_info.right_overhang_m;
     const double base_to_left = (vehicle_info.wheel_tread_m / 2.0) + vehicle_info.left_overhang_m;
     const double ub_y = ref_points.at(i).bounds.upper_bound + base_to_left;
-    const auto ub = autoware::universe_utils::calcOffsetPose(pose, 0.0, ub_y, 0.0).position;
+    const auto ub = autoware_utils::calc_offset_pose(pose, 0.0, ub_y, 0.0).position;
     ub_marker.points.push_back(ub);
 
     const double lb_y = ref_points.at(i).bounds.lower_bound - base_to_right;
-    const auto lb = autoware::universe_utils::calcOffsetPose(pose, 0.0, lb_y, 0.0).position;
+    const auto lb = autoware_utils::calc_offset_pose(pose, 0.0, lb_y, 0.0).position;
     lb_marker.points.push_back(lb);
   }
   marker_array.markers.push_back(ub_marker);
@@ -195,32 +196,30 @@ MarkerArray getVehicleCircleLinesMarkerArray(
     }
     const auto & ref_point = ref_points.at(i);
 
-    auto marker = createDefaultMarker(
-      "map", rclcpp::Clock().now(), ns, i, Marker::LINE_LIST, createMarkerScale(0.1, 0, 0),
-      createMarkerColor(0.99, 0.99, 0.2, 0.25));
+    auto marker = create_default_marker(
+      "map", rclcpp::Clock().now(), ns, i, Marker::LINE_LIST, create_marker_scale(0.1, 0, 0),
+      create_marker_color(0.99, 0.99, 0.2, 0.25));
     marker.lifetime = rclcpp::Duration::from_seconds(1.5);
 
     const double lat_dev = ref_point.optimized_kinematic_state.lat;
     const double yaw_dev = ref_point.optimized_kinematic_state.yaw;
 
     // apply lateral and yaw deviation
-    auto pose_with_deviation =
-      autoware::universe_utils::calcOffsetPose(ref_point.pose, 0.0, lat_dev, 0.0);
+    auto pose_with_deviation = autoware_utils::calc_offset_pose(ref_point.pose, 0.0, lat_dev, 0.0);
     pose_with_deviation.orientation =
-      autoware::universe_utils::createQuaternionFromYaw(ref_point.getYaw() + yaw_dev);
+      autoware_utils::create_quaternion_from_yaw(ref_point.getYaw() + yaw_dev);
 
     for (const double d : vehicle_circle_longitudinal_offsets) {
       // apply longitudinal offset
-      auto base_pose = autoware::universe_utils::calcOffsetPose(pose_with_deviation, d, 0.0, 0.0);
+      auto base_pose = autoware_utils::calc_offset_pose(pose_with_deviation, d, 0.0, 0.0);
       base_pose.orientation =
-        autoware::universe_utils::createQuaternionFromYaw(ref_point.getYaw() + ref_point.alpha);
+        autoware_utils::create_quaternion_from_yaw(ref_point.getYaw() + ref_point.alpha);
       const double base_to_right =
         (vehicle_info.wheel_tread_m / 2.0) + vehicle_info.right_overhang_m;
       const double base_to_left = (vehicle_info.wheel_tread_m / 2.0) + vehicle_info.left_overhang_m;
-      const auto ub =
-        autoware::universe_utils::calcOffsetPose(base_pose, 0.0, base_to_left, 0.0).position;
+      const auto ub = autoware_utils::calc_offset_pose(base_pose, 0.0, base_to_left, 0.0).position;
       const auto lb =
-        autoware::universe_utils::calcOffsetPose(base_pose, 0.0, -base_to_right, 0.0).position;
+        autoware_utils::calc_offset_pose(base_pose, 0.0, -base_to_right, 0.0).position;
 
       marker.points.push_back(ub);
       marker.points.push_back(lb);
@@ -243,11 +242,11 @@ MarkerArray getCurrentVehicleCirclesMarkerArray(
   for (size_t v_idx = 0; v_idx < vehicle_circle_longitudinal_offsets.size(); ++v_idx) {
     const double offset = vehicle_circle_longitudinal_offsets.at(v_idx);
 
-    auto marker = createDefaultMarker(
-      "map", rclcpp::Clock().now(), ns, id, Marker::LINE_STRIP, createMarkerScale(0.05, 0.0, 0.0),
-      createMarkerColor(r, g, b, 0.8));
+    auto marker = create_default_marker(
+      "map", rclcpp::Clock().now(), ns, id, Marker::LINE_STRIP, create_marker_scale(0.05, 0.0, 0.0),
+      create_marker_color(r, g, b, 0.8));
     marker.lifetime = rclcpp::Duration::from_seconds(1.5);
-    marker.pose = autoware::universe_utils::calcOffsetPose(ego_pose, offset, 0.0, 0.0);
+    marker.pose = autoware_utils::calc_offset_pose(ego_pose, offset, 0.0, 0.0);
 
     constexpr size_t circle_dividing_num = 16;
     for (size_t e_idx = 0; e_idx < circle_dividing_num + 1; ++e_idx) {
@@ -285,11 +284,11 @@ MarkerArray getVehicleCirclesMarkerArray(
     for (size_t v_idx = 0; v_idx < vehicle_circle_longitudinal_offsets.size(); ++v_idx) {
       const double offset = vehicle_circle_longitudinal_offsets.at(v_idx);
 
-      auto marker = createDefaultMarker(
-        "map", rclcpp::Clock().now(), ns, id, Marker::LINE_STRIP, createMarkerScale(0.05, 0.0, 0.0),
-        createMarkerColor(r, g, b, 0.8));
+      auto marker = create_default_marker(
+        "map", rclcpp::Clock().now(), ns, id, Marker::LINE_STRIP,
+        create_marker_scale(0.05, 0.0, 0.0), create_marker_color(r, g, b, 0.8));
       marker.lifetime = rclcpp::Duration::from_seconds(1.5);
-      marker.pose = autoware::universe_utils::calcOffsetPose(mpt_traj_point.pose, offset, 0.0, 0.0);
+      marker.pose = autoware_utils::calc_offset_pose(mpt_traj_point.pose, offset, 0.0, 0.0);
 
       constexpr size_t circle_dividing_num = 16;
       for (size_t e_idx = 0; e_idx < circle_dividing_num + 1; ++e_idx) {
@@ -317,9 +316,9 @@ visualization_msgs::msg::MarkerArray getPointsTextMarkerArray(
     return visualization_msgs::msg::MarkerArray{};
   }
 
-  auto marker = createDefaultMarker(
+  auto marker = create_default_marker(
     "map", rclcpp::Clock().now(), "text", 0, visualization_msgs::msg::Marker::TEXT_VIEW_FACING,
-    createMarkerScale(0.0, 0.0, 0.15), createMarkerColor(1.0, 1.0, 0.0, 0.99));
+    create_marker_scale(0.0, 0.0, 0.15), create_marker_color(1.0, 1.0, 0.0, 0.99));
   marker.lifetime = rclcpp::Duration::from_seconds(1.5);
 
   visualization_msgs::msg::MarkerArray msg;
@@ -345,9 +344,9 @@ visualization_msgs::msg::MarkerArray getFootprintByDrivableAreaMarkerArray(
 {
   visualization_msgs::msg::MarkerArray msg;
 
-  auto marker = createDefaultMarker(
+  auto marker = create_default_marker(
     "map", rclcpp::Clock().now(), ns, 1, visualization_msgs::msg::Marker::LINE_STRIP,
-    createMarkerScale(0.05, 0.0, 0.0), createMarkerColor(r, g, b, 1.0));
+    create_marker_scale(0.05, 0.0, 0.0), create_marker_color(r, g, b, 1.0));
   marker.lifetime = rclcpp::Duration::from_seconds(1.5);
 
   const double base_to_right = (vehicle_info.wheel_tread_m / 2.0) + vehicle_info.right_overhang_m;
@@ -356,15 +355,13 @@ visualization_msgs::msg::MarkerArray getFootprintByDrivableAreaMarkerArray(
   const double base_to_rear = vehicle_info.rear_overhang_m;
 
   marker.points.push_back(
-    autoware::universe_utils::calcOffsetPose(stop_pose, base_to_front, base_to_left, 0.0).position);
+    autoware_utils::calc_offset_pose(stop_pose, base_to_front, base_to_left, 0.0).position);
   marker.points.push_back(
-    autoware::universe_utils::calcOffsetPose(stop_pose, base_to_front, -base_to_right, 0.0)
-      .position);
+    autoware_utils::calc_offset_pose(stop_pose, base_to_front, -base_to_right, 0.0).position);
   marker.points.push_back(
-    autoware::universe_utils::calcOffsetPose(stop_pose, -base_to_rear, -base_to_right, 0.0)
-      .position);
+    autoware_utils::calc_offset_pose(stop_pose, -base_to_rear, -base_to_right, 0.0).position);
   marker.points.push_back(
-    autoware::universe_utils::calcOffsetPose(stop_pose, -base_to_rear, base_to_left, 0.0).position);
+    autoware_utils::calc_offset_pose(stop_pose, -base_to_rear, base_to_left, 0.0).position);
   marker.points.push_back(marker.points.front());
 
   msg.markers.push_back(marker);
@@ -381,16 +378,16 @@ MarkerArray getDebugMarker(
   MarkerArray marker_array;
 
   // bounds line
-  appendMarkerArray(getBoundsLineMarkerArray(debug_data.ref_points, vehicle_info), &marker_array);
+  append_marker_array(getBoundsLineMarkerArray(debug_data.ref_points, vehicle_info), &marker_array);
 
   // bounds width
-  appendMarkerArray(
+  append_marker_array(
     getBoundsWidthMarkerArray(
       debug_data.ref_points, vehicle_info, debug_data.mpt_visualize_sampling_num),
     &marker_array);
 
   // current vehicle circles
-  appendMarkerArray(
+  append_marker_array(
     getCurrentVehicleCirclesMarkerArray(
       debug_data.ego_pose, debug_data.vehicle_circle_longitudinal_offsets,
       debug_data.vehicle_circle_radiuses, "current_vehicle_circles", 1.0, 0.3, 0.3),
@@ -400,7 +397,7 @@ MarkerArray getDebugMarker(
   //       Circles visualization is comparatively heavy.
   if (publish_extra_marker) {
     // vehicle circles
-    appendMarkerArray(
+    append_marker_array(
       getVehicleCirclesMarkerArray(
         optimized_points, debug_data.vehicle_circle_longitudinal_offsets,
         debug_data.vehicle_circle_radiuses, debug_data.mpt_visualize_sampling_num,
@@ -408,13 +405,13 @@ MarkerArray getDebugMarker(
       &marker_array);
 
     // mpt footprints
-    appendMarkerArray(
+    append_marker_array(
       getFootprintsMarkerArray(
         optimized_points, vehicle_info, debug_data.mpt_visualize_sampling_num),
       &marker_array);
 
     // vehicle circle line
-    appendMarkerArray(
+    append_marker_array(
       getVehicleCircleLinesMarkerArray(
         debug_data.ref_points, debug_data.vehicle_circle_longitudinal_offsets, vehicle_info,
         debug_data.mpt_visualize_sampling_num, "vehicle_circle_lines"),
@@ -422,7 +419,7 @@ MarkerArray getDebugMarker(
 
     // footprint by drivable area
     if (debug_data.stop_pose_by_drivable_area) {
-      appendMarkerArray(
+      append_marker_array(
         getFootprintByDrivableAreaMarkerArray(
           *debug_data.stop_pose_by_drivable_area, vehicle_info, "footprint_by_drivable_area", 1.0,
           0.0, 0.0),
@@ -430,7 +427,7 @@ MarkerArray getDebugMarker(
     }
 
     // debug text
-    appendMarkerArray(getPointsTextMarkerArray(debug_data.ref_points), &marker_array);
+    append_marker_array(getPointsTextMarkerArray(debug_data.ref_points), &marker_array);
   }
 
   return marker_array;

@@ -27,7 +27,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-#include "autoware_perception_msgs/msg/detected_objects.hpp"
+#include <autoware_perception_msgs/msg/detected_objects.hpp>
 
 #include <list>
 #include <memory>
@@ -36,6 +36,16 @@
 
 namespace autoware::multi_object_tracker
 {
+struct AssociatorConfig
+{
+  std::vector<int> can_assign_matrix;
+  std::vector<double> max_dist_matrix;
+  std::vector<double> max_area_matrix;
+  std::vector<double> min_area_matrix;
+  std::vector<double> max_rad_matrix;
+  std::vector<double> min_iou_matrix;
+};
+
 class DataAssociation
 {
 private:
@@ -50,17 +60,20 @@ private:
 
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  DataAssociation(
-    std::vector<int> can_assign_vector, std::vector<double> max_dist_vector,
-    std::vector<double> max_area_vector, std::vector<double> min_area_vector,
-    std::vector<double> max_rad_vector, std::vector<double> min_iou_vector);
+  explicit DataAssociation(const AssociatorConfig & config);
+  virtual ~DataAssociation() {}
+
   void assign(
     const Eigen::MatrixXd & src, std::unordered_map<int, int> & direct_assignment,
     std::unordered_map<int, int> & reverse_assignment);
+
+  double calculateScore(
+    const types::DynamicObject & tracked_object, const std::uint8_t tracker_label,
+    const types::DynamicObject & measurement_object, const std::uint8_t measurement_label) const;
+
   Eigen::MatrixXd calcScoreMatrix(
-    const autoware_perception_msgs::msg::DetectedObjects & measurements,
+    const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers);
-  virtual ~DataAssociation() {}
 };
 
 }  // namespace autoware::multi_object_tracker

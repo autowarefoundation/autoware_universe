@@ -15,6 +15,7 @@
 #include "autoware/universe_utils/geometry/boost_geometry.hpp"
 #include "autoware/universe_utils/geometry/ear_clipping.hpp"
 #include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware/universe_utils/geometry/polygon_clip.hpp"
 #include "autoware/universe_utils/geometry/random_concave_polygon.hpp"
 #include "autoware/universe_utils/geometry/random_convex_polygon.hpp"
 #include "autoware/universe_utils/geometry/sat_2d.hpp"
@@ -24,12 +25,19 @@
 #include <geometry_msgs/msg/point32.hpp>
 
 #include <boost/geometry/algorithms/correct.hpp>
+#include <boost/geometry/algorithms/difference.hpp>
+#include <boost/geometry/algorithms/distance.hpp>
+#include <boost/geometry/algorithms/union.hpp>
 #include <boost/geometry/io/wkt/write.hpp>
 
 #include <gtest/gtest.h>
 
 #include <chrono>
+#include <cstdio>
+#include <iostream>
+#include <limits>
 #include <string>
+#include <vector>
 
 constexpr double epsilon = 1e-6;
 
@@ -2021,6 +2029,105 @@ TEST(geometry, intersectPolygonRand)
   }
 }
 
+double calculate_total_polygon_area(
+  const std::vector<autoware::universe_utils::Polygon2d> & polygons)
+{
+  double totalArea = 0.0;
+  for (const auto & polygon : polygons) {
+    totalArea += boost::geometry::area(polygon);
+  }
+  return totalArea;
+}
+
+TEST(geometry, PolygonTriangulation)
+{
+  using autoware::universe_utils::Polygon2d;
+  using autoware::universe_utils::triangulate;
+
+  {  // concave polygon
+    Polygon2d poly;
+
+    poly.outer().emplace_back(0.0, 0.0);
+    poly.outer().emplace_back(4.0, 0.0);
+    poly.outer().emplace_back(4.0, 4.0);
+    poly.outer().emplace_back(2.0, 2.0);
+    poly.outer().emplace_back(0.0, 4.0);
+    boost::geometry::correct(poly);
+
+    const auto triangles = triangulate(poly);
+
+    const auto triangle_area = calculate_total_polygon_area(triangles);
+    const auto poly_area = boost::geometry::area(poly);
+    EXPECT_NEAR(triangle_area, poly_area, epsilon);
+  }
+
+  {  // concave polygon with empty inners
+    Polygon2d poly;
+
+    poly.outer().emplace_back(0.0, 0.0);
+    poly.outer().emplace_back(4.0, 0.0);
+    poly.outer().emplace_back(4.0, 4.0);
+    poly.outer().emplace_back(2.0, 2.0);
+    poly.outer().emplace_back(0.0, 4.0);
+    boost::geometry::correct(poly);
+
+    poly.inners().emplace_back();
+
+    const auto triangles = triangulate(poly);
+
+    const auto triangle_area = calculate_total_polygon_area(triangles);
+    const auto poly_area = boost::geometry::area(poly);
+    EXPECT_NEAR(triangle_area, poly_area, epsilon);
+  }
+
+  {  // concave polygon with hole
+    Polygon2d poly;
+
+    poly.outer().emplace_back(0.0, 0.0);
+    poly.outer().emplace_back(4.0, 0.0);
+    poly.outer().emplace_back(4.0, 4.0);
+    poly.outer().emplace_back(2.0, 2.0);
+    poly.outer().emplace_back(0.0, 4.0);
+
+    poly.inners().emplace_back();
+    poly.inners().back().emplace_back(1.0, 1.0);
+    poly.inners().back().emplace_back(1.5, 1.0);
+    poly.inners().back().emplace_back(1.5, 1.5);
+    poly.inners().back().emplace_back(1.0, 1.5);
+    boost::geometry::correct(poly);
+
+    const auto triangles = triangulate(poly);
+
+    const auto triangle_area = calculate_total_polygon_area(triangles);
+    const auto poly_area = boost::geometry::area(poly);
+    EXPECT_NEAR(triangle_area, poly_area, epsilon);
+  }
+
+  {  // concave polygon with one empty inner followed by one hole
+    Polygon2d poly;
+
+    poly.outer().emplace_back(0.0, 0.0);
+    poly.outer().emplace_back(4.0, 0.0);
+    poly.outer().emplace_back(4.0, 4.0);
+    poly.outer().emplace_back(2.0, 2.0);
+    poly.outer().emplace_back(0.0, 4.0);
+
+    poly.inners().emplace_back();
+    poly.inners().emplace_back();
+    poly.inners().back().emplace_back(1.0, 1.0);
+    poly.inners().back().emplace_back(1.5, 1.0);
+    poly.inners().back().emplace_back(1.5, 1.5);
+    poly.inners().back().emplace_back(1.0, 1.5);
+    boost::geometry::correct(poly);
+
+    const auto triangles = triangulate(poly);
+
+    const auto triangle_area = calculate_total_polygon_area(triangles);
+    const auto poly_area = boost::geometry::area(poly);
+    EXPECT_NEAR(triangle_area, poly_area, epsilon);
+  }
+}
+
 TEST(geometry, intersectPolygonWithHoles)
 {
   using autoware::universe_utils::Polygon2d;
@@ -2246,7 +2353,10 @@ TEST(geometry, intersectConcavePolygonRand)
     triangulations.clear();
 
     for (auto i = 0; i < polygons_nb; ++i) {
-      polygons.push_back(autoware::universe_utils::random_concave_polygon(vertices, max_values));
+      auto polygon_opt = autoware::universe_utils::random_concave_polygon(vertices, max_values);
+      if (polygon_opt.has_value()) {
+        polygons.push_back(polygon_opt.value());
+      }
     }
 
     for (const auto & polygon : polygons) {
@@ -2316,5 +2426,435 @@ TEST(geometry, intersectConcavePolygonRand)
       ground_truth_no_intersect_ns / 1e6, gjk_no_intersect_ns / 1e6, sat_no_intersect_ns / 1e6);
 
     std::printf("\tTotal:\n\t\tTriangulation = %2.2f ms\n", triangulation_ns / 1e6);
+  }
+}
+
+bool polygon_equal(
+  const autoware::universe_utils::Polygon2d & A, const autoware::universe_utils::Polygon2d & B,
+  double max_difference_threshold)
+{
+  const auto & outer_A = A.outer();
+  const auto & outer_B = B.outer();
+
+  int n = outer_A.size() - 1;
+  int m = outer_B.size() - 1;
+
+  if (n != m) {
+    if (std::abs(boost::geometry::area(outer_A) - boost::geometry::area(outer_B)) < 1) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  int start_index_B = -1;
+  double min_distance = std::numeric_limits<double>::max();
+
+  for (int i = 0; i < m; ++i) {
+    double dist = boost::geometry::distance(outer_A[0], outer_B[i]) +
+                  boost::geometry::distance(outer_A[1], outer_B[i + 1]);
+    if (dist < min_distance) {
+      min_distance = dist;
+      start_index_B = i;
+    }
+  }
+
+  if (start_index_B == -1) {
+    std::cout << "No common starting point found\n";
+    return false;
+  }
+
+  std::vector<autoware::universe_utils::Point2d> rotated_B(outer_B.begin(), outer_B.end() - 1);
+  std::rotate(rotated_B.begin(), rotated_B.begin() + start_index_B, rotated_B.end());
+
+  for (int i = 0; i < n - 1; ++i) {
+    double x_diff = std::abs(outer_A[i].x() - rotated_B[i].x());
+    double y_diff = std::abs(outer_A[i].y() - rotated_B[i].y());
+
+    if (x_diff >= max_difference_threshold || y_diff >= max_difference_threshold) {
+      std::cout << outer_A[i].x() << ", " << outer_A[i].y() << ": A\n";
+      std::cout << rotated_B[i].x() << ", " << rotated_B[i].y() << ": B\n";
+      std::cout << std::abs(rotated_B[i].x() - outer_A[i].x()) << ", "
+                << std::abs(rotated_B[i].y() - outer_A[i].y()) << ": Difference\n";
+
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// function to compare two sets of polygons
+bool polygon_equal_vector(
+  std::vector<autoware::universe_utils::Polygon2d> & customPolygons,
+  std::vector<autoware::universe_utils::Polygon2d> & boostPolygons, double max_difference_threshold)
+{
+  // sort custom polygons by area
+  std::sort(
+    customPolygons.begin(), customPolygons.end(),
+    [](
+      const autoware::universe_utils::Polygon2d & a,
+      const autoware::universe_utils::Polygon2d & b) {
+      return boost::geometry::area(a) < boost::geometry::area(b);
+    });
+
+  std::sort(
+    boostPolygons.begin(), boostPolygons.end(),
+    [](
+      const autoware::universe_utils::Polygon2d & a,
+      const autoware::universe_utils::Polygon2d & b) {
+      return boost::geometry::area(a) < boost::geometry::area(b);
+    });
+
+  if (customPolygons.size() != boostPolygons.size()) {
+    double customArea = 0.0;
+    double boostArea = 0.0;
+
+    for (const auto & polygon : customPolygons) {
+      customArea += boost::geometry::area(polygon);
+    }
+
+    for (const auto & polygon : boostPolygons) {
+      boostArea += boost::geometry::area(polygon);
+    }
+
+    if (std::abs(customArea - boostArea) < 1) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  for (size_t i = 0; i < customPolygons.size(); ++i) {
+    if (!polygon_equal(customPolygons[i], boostPolygons[i], max_difference_threshold)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+TEST(geometry, UnionDifferenceIntersectPolygon)
+{
+  using autoware::universe_utils::Polygon2d;
+  double epsilon = 1e-2;
+
+  {  // same size polygons
+    Polygon2d polyA;
+    Polygon2d polyB;
+
+    polyA.outer().emplace_back(0.0, 0.0);
+    polyA.outer().emplace_back(4.0, 0.0);
+    polyA.outer().emplace_back(4.0, 4.0);
+    polyA.outer().emplace_back(0.0, 4.0);
+    boost::geometry::correct(polyA);
+
+    polyB.outer().emplace_back(1.0, 1.0);
+    polyB.outer().emplace_back(5.0, 1.0);
+    polyB.outer().emplace_back(5.0, 5.0);
+    polyB.outer().emplace_back(1.0, 5.0);
+    boost::geometry::correct(polyB);
+
+    auto custom_union_poly = autoware::universe_utils::union_(polyA, polyB);
+    auto custom_intersection_poly = autoware::universe_utils::intersection(polyA, polyB);
+    auto custom_difference_poly = autoware::universe_utils::difference(polyA, polyB);
+
+    boost::geometry::model::multi_polygon<autoware::universe_utils::Polygon2d> boost_union_resultMP;
+    boost::geometry::union_(polyA, polyB, boost_union_resultMP);
+    std::vector<autoware::universe_utils::Polygon2d> boost_union_result(
+      boost_union_resultMP.begin(), boost_union_resultMP.end());
+
+    boost::geometry::model::multi_polygon<autoware::universe_utils::Polygon2d>
+      boost_intersection_resultMP;
+    boost::geometry::intersection(polyA, polyB, boost_intersection_resultMP);
+    std::vector<autoware::universe_utils::Polygon2d> boost_intersection_result(
+      boost_intersection_resultMP.begin(), boost_intersection_resultMP.end());
+
+    boost::geometry::model::multi_polygon<autoware::universe_utils::Polygon2d>
+      boost_difference_resultMP;
+    boost::geometry::difference(polyA, polyB, boost_difference_resultMP);
+    std::vector<autoware::universe_utils::Polygon2d> boost_difference_result(
+      boost_difference_resultMP.begin(), boost_difference_resultMP.end());
+
+    EXPECT_TRUE(polygon_equal_vector(custom_union_poly, boost_union_result, epsilon));
+    EXPECT_TRUE(polygon_equal_vector(custom_intersection_poly, boost_intersection_result, epsilon));
+    EXPECT_TRUE(polygon_equal_vector(custom_difference_poly, boost_difference_result, epsilon));
+  }
+
+  {  // different size polygons
+    Polygon2d polyA;
+    Polygon2d polyB;
+
+    polyA.outer().emplace_back(0.0, 0.0);
+    polyA.outer().emplace_back(6.0, 0.0);
+    polyA.outer().emplace_back(6.0, 6.0);
+    polyA.outer().emplace_back(0.0, 6.0);
+    boost::geometry::correct(polyA);
+
+    polyB.outer().emplace_back(2.0, 2.0);
+    polyB.outer().emplace_back(3.0, 2.0);
+    polyB.outer().emplace_back(2.0, 3.0);
+    boost::geometry::correct(polyB);
+
+    auto custom_union_poly = autoware::universe_utils::union_(polyA, polyB);
+    auto custom_intersection_poly = autoware::universe_utils::intersection(polyA, polyB);
+    auto custom_difference_poly = autoware::universe_utils::difference(polyA, polyB);
+
+    boost::geometry::model::multi_polygon<autoware::universe_utils::Polygon2d> boost_union_resultMP;
+    boost::geometry::union_(polyA, polyB, boost_union_resultMP);
+    std::vector<autoware::universe_utils::Polygon2d> boost_union_result(
+      boost_union_resultMP.begin(), boost_union_resultMP.end());
+
+    boost::geometry::model::multi_polygon<autoware::universe_utils::Polygon2d>
+      boost_intersection_resultMP;
+    boost::geometry::intersection(polyA, polyB, boost_intersection_resultMP);
+    std::vector<autoware::universe_utils::Polygon2d> boost_intersection_result(
+      boost_intersection_resultMP.begin(), boost_intersection_resultMP.end());
+
+    boost::geometry::model::multi_polygon<autoware::universe_utils::Polygon2d>
+      boost_difference_resultMP;
+    boost::geometry::difference(polyA, polyB, boost_difference_resultMP);
+    std::vector<autoware::universe_utils::Polygon2d> boost_difference_result(
+      boost_difference_resultMP.begin(), boost_difference_resultMP.end());
+
+    EXPECT_TRUE(polygon_equal_vector(custom_union_poly, boost_union_result, epsilon));
+    EXPECT_TRUE(polygon_equal_vector(custom_intersection_poly, boost_intersection_result, epsilon));
+    EXPECT_TRUE(polygon_equal_vector(custom_difference_poly, boost_difference_result, epsilon));
+  }
+
+  {  // degenerate polygon (failed case)
+    Polygon2d polyA;
+    Polygon2d polyB;
+
+    polyA.outer().emplace_back(0.0, 0.0);
+    polyA.outer().emplace_back(2.0, 1.0);  // degenerate case (same point)
+    polyA.outer().emplace_back(2.0, 0.0);
+    boost::geometry::correct(polyA);
+
+    polyB.outer().emplace_back(1.0, 1.0);
+    polyB.outer().emplace_back(2.0, 1.0);
+    polyB.outer().emplace_back(2.0, 2.0);
+    polyB.outer().emplace_back(1.0, 2.0);
+    boost::geometry::correct(polyB);
+
+    auto custom_union_poly = autoware::universe_utils::union_(polyA, polyB);
+    auto custom_intersection_poly = autoware::universe_utils::intersection(polyA, polyB);
+    auto custom_difference_poly = autoware::universe_utils::difference(polyA, polyB);
+
+    boost::geometry::model::multi_polygon<autoware::universe_utils::Polygon2d> boost_union_resultMP;
+    boost::geometry::union_(polyA, polyB, boost_union_resultMP);
+    std::vector<autoware::universe_utils::Polygon2d> boost_union_result(
+      boost_union_resultMP.begin(), boost_union_resultMP.end());
+
+    boost::geometry::model::multi_polygon<autoware::universe_utils::Polygon2d>
+      boost_intersection_resultMP;
+    boost::geometry::intersection(polyA, polyB, boost_intersection_resultMP);
+    std::vector<autoware::universe_utils::Polygon2d> boost_intersection_result(
+      boost_intersection_resultMP.begin(), boost_intersection_resultMP.end());
+
+    boost::geometry::model::multi_polygon<autoware::universe_utils::Polygon2d>
+      boost_difference_resultMP;
+    boost::geometry::difference(polyA, polyB, boost_difference_resultMP);
+    std::vector<autoware::universe_utils::Polygon2d> boost_difference_result(
+      boost_difference_resultMP.begin(), boost_difference_resultMP.end());
+
+    EXPECT_TRUE(polygon_equal_vector(custom_union_poly, boost_union_result, epsilon));
+    EXPECT_TRUE(polygon_equal_vector(custom_intersection_poly, boost_intersection_result, epsilon));
+    EXPECT_TRUE(polygon_equal_vector(custom_difference_poly, boost_difference_result, epsilon));
+  }
+
+  {  // case where the difference between the polygons is greater than 0.5 using Boost.Geometry, but
+     // it is confirmed to match the result from Shapely
+    Polygon2d polyA;
+    Polygon2d polyB;
+
+    polyA.outer().emplace_back(474.1861139144, 357.4532187344);
+    polyA.outer().emplace_back(2840.6550926656, 2880.5752363202);
+    polyA.outer().emplace_back(2274.8557444340, 989.8630822076);
+    polyA.outer().emplace_back(2203.7919603015, 32.5559338946);
+    boost::geometry::correct(polyA);
+
+    polyB.outer().emplace_back(16.5571756985, 2726.9026932982);
+    polyB.outer().emplace_back(2085.6873996180, 2075.6552665052);
+    polyB.outer().emplace_back(1367.0448775695, 1309.2684834777);
+    polyB.outer().emplace_back(530.7105471140, 301.6894918973);
+    boost::geometry::correct(polyB);
+
+    auto custom_union_poly = autoware::universe_utils::union_(polyA, polyB);
+    auto custom_intersection_poly = autoware::universe_utils::intersection(polyA, polyB);
+    auto custom_difference_poly = autoware::universe_utils::difference(polyA, polyB);
+
+    boost::geometry::model::multi_polygon<autoware::universe_utils::Polygon2d> boost_union_resultMP;
+    boost::geometry::union_(polyA, polyB, boost_union_resultMP);
+    std::vector<autoware::universe_utils::Polygon2d> boost_union_result(
+      boost_union_resultMP.begin(), boost_union_resultMP.end());
+
+    boost::geometry::model::multi_polygon<autoware::universe_utils::Polygon2d>
+      boost_intersection_resultMP;
+    boost::geometry::intersection(polyA, polyB, boost_intersection_resultMP);
+    std::vector<autoware::universe_utils::Polygon2d> boost_intersection_result(
+      boost_intersection_resultMP.begin(), boost_intersection_resultMP.end());
+
+    boost::geometry::model::multi_polygon<autoware::universe_utils::Polygon2d>
+      boost_difference_resultMP;
+    boost::geometry::difference(polyA, polyB, boost_difference_resultMP);
+    std::vector<autoware::universe_utils::Polygon2d> boost_difference_result(
+      boost_difference_resultMP.begin(), boost_difference_resultMP.end());
+
+    EXPECT_FALSE(polygon_equal_vector(custom_union_poly, boost_union_result, epsilon));
+    EXPECT_FALSE(
+      polygon_equal_vector(custom_intersection_poly, boost_intersection_result, epsilon));
+    EXPECT_FALSE(polygon_equal_vector(custom_difference_poly, boost_difference_result, epsilon));
+  }
+
+  {  // case where Boost.Geometry omits a very small polygon in the difference result, while Shapely
+     // and our custom function recognize it as a valid polygon.
+
+    Polygon2d polyA;
+    Polygon2d polyB;
+
+    polyA.outer().emplace_back(398.6627895225, 2020.9971337400);
+    polyA.outer().emplace_back(2053.4301277502, 1487.3008988972);
+    polyA.outer().emplace_back(1361.3689322077, 746.2935043375);
+    polyA.outer().emplace_back(624.1941572081, 18.0106444090);
+    polyA.outer().emplace_back(569.3918138266, 694.6232593731);
+    polyA.outer().emplace_back(992.9521794850, 1248.9022921509);
+    boost::geometry::correct(polyA);
+
+    polyB.outer().emplace_back(353.0508543735, 2217.0897988768);
+    polyB.outer().emplace_back(1261.2989930437, 1316.8199700947);
+    polyB.outer().emplace_back(2515.7069164679, 1206.7858412531);
+    polyB.outer().emplace_back(947.4189338473, 89.9986425623);
+    polyB.outer().emplace_back(362.9869975068, 919.9162595880);
+    polyB.outer().emplace_back(559.5373047609, 1329.3731983727);
+    boost::geometry::correct(polyB);
+
+    auto custom_difference_poly = autoware::universe_utils::difference(polyA, polyB);
+
+    boost::geometry::model::multi_polygon<autoware::universe_utils::Polygon2d>
+      boost_difference_resultMP;
+    boost::geometry::difference(polyA, polyB, boost_difference_resultMP);
+    std::vector<autoware::universe_utils::Polygon2d> boost_difference_result(
+      boost_difference_resultMP.begin(), boost_difference_resultMP.end());
+
+    EXPECT_TRUE(polygon_equal_vector(custom_difference_poly, boost_difference_result, epsilon));
+  }
+}
+
+TEST(geometry, RandomUnionIntersectPolygon)
+{
+  std::vector<autoware::universe_utils::Polygon2d> polygons;
+  constexpr auto polygons_nb = 250;
+  constexpr auto max_vertices = 10;
+  constexpr auto max_values = 1000;
+
+  autoware::universe_utils::StopWatch<std::chrono::nanoseconds, std::chrono::nanoseconds> sw;
+
+  std::cout << std::fixed << std::setprecision(10);
+
+  for (auto vertices = 4UL; vertices < max_vertices; ++vertices) {
+    double custom_union_ns = 0.0;
+    double custom_intersection_ns = 0.0;
+    double boost_intersection_ns = 0.0;
+    double boost_union_ns = 0.0;
+
+    int count_matching_polygon_union = 0.0;
+    int count_different_polygon_union = 0.0;
+    int count_matching_polygon_intersection = 0.0;
+    int count_different_polygon_intersection = 0.0;
+    polygons.clear();
+
+    for (auto i = 0; i < polygons_nb; ++i) {
+      auto polygon_opt = autoware::universe_utils::random_concave_polygon(vertices, max_values);
+      if (polygon_opt.has_value()) {
+        polygons.push_back(polygon_opt.value());
+      }
+    }
+
+    for (auto i = 0UL; i < polygons.size(); ++i) {
+      for (auto j = 0UL; j < polygons.size(); ++j) {
+        if (i == j) {
+          continue;
+        }
+        sw.tic();
+        auto custom_union_result = autoware::universe_utils::union_(polygons[i], polygons[j]);
+        custom_union_ns += sw.toc();
+
+        sw.tic();
+        auto custom_intersection_result =
+          autoware::universe_utils::intersection(polygons[i], polygons[j]);
+        custom_intersection_ns += sw.toc();
+
+        sw.tic();
+        boost::geometry::model::multi_polygon<autoware::universe_utils::Polygon2d>
+          boost_union_resultMP;
+        boost::geometry::union_(polygons[i], polygons[j], boost_union_resultMP);
+        std::vector<autoware::universe_utils::Polygon2d> boost_union_result(
+          boost_union_resultMP.begin(), boost_union_resultMP.end());
+        boost_union_ns += sw.toc();
+
+        sw.tic();
+        boost::geometry::model::multi_polygon<autoware::universe_utils::Polygon2d>
+          boost_intersection_resultMP;
+        boost::geometry::intersection(polygons[i], polygons[j], boost_intersection_resultMP);
+        std::vector<autoware::universe_utils::Polygon2d> boost_intersection_result(
+          boost_intersection_resultMP.begin(), boost_intersection_resultMP.end());
+        boost_intersection_ns += sw.toc();
+
+        bool union_match = polygon_equal_vector(custom_union_result, boost_union_result, 1);
+        if (union_match) {
+          ++count_matching_polygon_union;
+        } else {
+          for (size_t k = 0; k < polygons[i].outer().size() - 1; ++k) {
+            const auto & point = polygons[i].outer()[k];
+            auto x = point.x();
+            auto y = point.y();
+            std::cout << "union polygon source point: (" << x << ", " << y << ")\n";
+          }
+          for (size_t k = 0; k < polygons[j].outer().size() - 1; ++k) {
+            const auto & point = polygons[j].outer()[k];
+            auto x = point.x();
+            auto y = point.y();
+            std::cout << "polygon clip point: (" << x << ", " << y << ")\n";
+          }
+
+          ++count_different_polygon_union;
+        }
+
+        bool intersection_match =
+          polygon_equal_vector(custom_intersection_result, boost_intersection_result, 1);
+        if (intersection_match) {
+          ++count_matching_polygon_intersection;
+        } else {
+          for (size_t k = 0; k < polygons[i].outer().size() - 1; ++k) {
+            const auto & point = polygons[i].outer()[k];
+            auto x = point.x();
+            auto y = point.y();
+            std::cout << "intersection polygon source point: (" << x << ", " << y << ")\n";
+          }
+          for (size_t k = 0; k < polygons[j].outer().size() - 1; ++k) {
+            const auto & point = polygons[j].outer()[k];
+            auto x = point.x();
+            auto y = point.y();
+            std::cout << "polygon clip point: (" << x << ", " << y << ")\n";
+          }
+
+          ++count_different_polygon_intersection;
+        }
+      }
+    }
+
+    std::printf("vertices = %ld\n", vertices);
+    std::printf(
+      "\tUnion:\n\t\tCustom = %2.2f ms\n\t\tBoost::geometry = %2.2f ms\n", custom_union_ns / 1e6,
+      boost_union_ns / 1e6);
+    std::printf(
+      "\t\tMatching Polygon = %d\n\t\tDifferent Polygon = %d\n", count_matching_polygon_union,
+      count_different_polygon_union);
+    std::printf(
+      "\tIntersection:\n\t\tCustom = %2.2f ms\n\t\tBoost::geometry = %2.2f ms\n",
+      custom_intersection_ns / 1e6, boost_intersection_ns / 1e6);
+    std::printf(
+      "\t\tMatching Polygon = %d\n\t\tDifferent Polygon = %d\n",
+      count_matching_polygon_intersection, count_different_polygon_intersection);
   }
 }

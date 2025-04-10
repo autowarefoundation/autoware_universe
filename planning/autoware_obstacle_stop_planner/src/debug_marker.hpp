@@ -14,14 +14,12 @@
 #ifndef DEBUG_MARKER_HPP_
 #define DEBUG_MARKER_HPP_
 
+#include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <autoware_adapi_v1_msgs/msg/planning_behavior.hpp>
-#include <autoware_adapi_v1_msgs/msg/velocity_factor_array.hpp>
+#include <autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
-#include <tier4_debug_msgs/msg/float32_multi_array_stamped.hpp>
-#include <tier4_planning_msgs/msg/stop_reason_array.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
@@ -33,7 +31,7 @@
 #define EIGEN_MPL2_ONLY
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 namespace autoware::motion_planning
 {
 
@@ -43,13 +41,7 @@ using std_msgs::msg::Header;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 
-using autoware_adapi_v1_msgs::msg::PlanningBehavior;
-using autoware_adapi_v1_msgs::msg::VelocityFactor;
-using autoware_adapi_v1_msgs::msg::VelocityFactorArray;
-using tier4_debug_msgs::msg::Float32MultiArrayStamped;
-using tier4_planning_msgs::msg::StopFactor;
-using tier4_planning_msgs::msg::StopReason;
-using tier4_planning_msgs::msg::StopReasonArray;
+using autoware_internal_debug_msgs::msg::Float32MultiArrayStamped;
 
 enum class PolygonType : int8_t { Vehicle = 0, Collision, SlowDownRange, SlowDown, Obstacle };
 
@@ -77,7 +69,7 @@ public:
    * @brief get all the debug values as an std::array
    * @return array of all debug values
    */
-  std::array<double, static_cast<int>(TYPE::SIZE)> getValues() const { return values_; }
+  const std::array<double, static_cast<int>(TYPE::SIZE)> & getValues() const { return values_; }
   /**
    * @brief set the given type to the given value
    * @param [in] type TYPE of the value
@@ -102,10 +94,10 @@ public:
   explicit ObstacleStopPlannerDebugNode(rclcpp::Node * node, const double base_link2front);
   ~ObstacleStopPlannerDebugNode() {}
   bool pushPolygon(
-    const autoware::universe_utils::Polygon2d & polygon, const double z, const PolygonType & type);
+    const autoware_utils::Polygon2d & polygon, const double z, const PolygonType & type);
   bool pushPolygon(const std::vector<Eigen::Vector3d> & polygon, const PolygonType & type);
   bool pushPolyhedron(
-    const autoware::universe_utils::Polygon2d & polyhedron, const double z_min, const double z_max,
+    const autoware_utils::Polygon2d & polyhedron, const double z_min, const double z_max,
     const PolygonType & type);
   bool pushPolyhedron(const std::vector<Eigen::Vector3d> & polyhedron, const PolygonType & type);
   bool pushPose(const Pose & pose, const PoseType & type);
@@ -113,8 +105,6 @@ public:
   bool pushObstaclePoint(const pcl::PointXYZ & obstacle_point, const PointType & type);
   MarkerArray makeVirtualWallMarker();
   MarkerArray makeVisualizationMarker();
-  StopReasonArray makeStopReasonArray();
-  VelocityFactorArray makeVelocityFactorArray();
 
   void setDebugValues(const DebugValues::TYPE type, const double val)
   {
@@ -125,11 +115,12 @@ public:
 private:
   rclcpp::Publisher<MarkerArray>::SharedPtr virtual_wall_pub_;
   rclcpp::Publisher<MarkerArray>::SharedPtr debug_viz_pub_;
-  rclcpp::Publisher<StopReasonArray>::SharedPtr stop_reason_pub_;
-  rclcpp::Publisher<VelocityFactorArray>::SharedPtr velocity_factor_pub_;
   rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr pub_debug_values_;
   rclcpp::Node * node_;
   double base_link2front_;
+
+  std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
+    planning_factor_interface_;
 
   std::shared_ptr<Pose> stop_pose_ptr_;
   std::shared_ptr<Pose> target_stop_pose_ptr_;

@@ -22,8 +22,14 @@
 #include "autoware/motion_utils/trajectory/interpolation.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware/obstacle_cruise_planner/utils.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
-#include "autoware/universe_utils/ros/marker_helper.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
+#include "autoware_utils/ros/marker_helper.hpp"
+
+#include <algorithm>
+#include <limits>
+#include <memory>
+#include <tuple>
+#include <vector>
 
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -199,7 +205,8 @@ std::vector<TrajectoryPoint> OptimizationBasedPlanner::generateCruiseTrajectory(
       output.at(i).longitudinal_velocity_mps = 0.0;
     }
     prev_output_ = output;
-    debug_data_ptr_->cruise_reason_diag = makeDiagnostic("cruise", planner_data);
+    debug_data_ptr_->cruise_metrics =
+      makeMetrics("OptimizationBasedPlanner", "cruise", planner_data);
     return output;
   } else if (opt_position.size() == 1) {
     RCLCPP_DEBUG(
@@ -256,7 +263,7 @@ std::vector<TrajectoryPoint> OptimizationBasedPlanner::generateCruiseTrajectory(
   // Insert Closest Stop Point
   autoware::motion_utils::insertStopPoint(0, closest_stop_dist, output);
 
-  debug_data_ptr_->cruise_reason_diag = makeDiagnostic("cruise", planner_data);
+  debug_data_ptr_->cruise_metrics = makeMetrics("OptimizationBasedPlanner", "cruise", planner_data);
   prev_output_ = output;
   return output;
 }
@@ -457,7 +464,7 @@ std::optional<SBoundaries> OptimizationBasedPlanner::getSBoundaries(
 
       const auto markers = autoware::motion_utils::createSlowDownVirtualWallMarker(
         marker_pose.value(), "obstacle to follow", current_time, 0);
-      autoware::universe_utils::appendMarkerArray(markers, &wall_msg);
+      autoware_utils::append_marker_array(markers, &wall_msg);
 
       // publish rviz marker
       debug_wall_marker_pub_->publish(wall_msg);
@@ -634,7 +641,7 @@ geometry_msgs::msg::Pose OptimizationBasedPlanner::transformBaseLink2Center(
 
   geometry_msgs::msg::Pose center_pose;
   center_pose.position =
-    autoware::universe_utils::createPoint(map2center.x(), map2center.y(), map2center.z());
+    autoware_utils::create_point(map2center.x(), map2center.y(), map2center.z());
   center_pose.orientation = pose_base_link.orientation;
 
   return center_pose;

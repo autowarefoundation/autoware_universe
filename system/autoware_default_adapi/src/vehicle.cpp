@@ -20,18 +20,21 @@
 #include <geographic_msgs/msg/geo_point.hpp>
 
 #include <limits>
+#include <unordered_map>
 
 namespace autoware::default_adapi
 {
 
-using GearReport = autoware::component_interface_specs::vehicle::GearStatus::Message;
+using GearReport = autoware::component_interface_specs_universe::vehicle::GearStatus::Message;
 using ApiGear = autoware_adapi_v1_msgs::msg::Gear;
 using TurnIndicatorsReport =
-  autoware::component_interface_specs::vehicle::TurnIndicatorStatus::Message;
+  autoware::component_interface_specs_universe::vehicle::TurnIndicatorStatus::Message;
 using ApiTurnIndicator = autoware_adapi_v1_msgs::msg::TurnIndicators;
-using HazardLightsReport = autoware::component_interface_specs::vehicle::HazardLightStatus::Message;
+using HazardLightsReport =
+  autoware::component_interface_specs_universe::vehicle::HazardLightStatus::Message;
 using ApiHazardLight = autoware_adapi_v1_msgs::msg::HazardLights;
-using MapProjectorInfo = autoware::component_interface_specs::map::MapProjectorInfo::Message;
+using MapProjectorInfo =
+  autoware::component_interface_specs_universe::map::MapProjectorInfo::Message;
 
 std::unordered_map<uint8_t, uint8_t> gear_type_ = {
   {GearReport::NONE, ApiGear::UNKNOWN},    {GearReport::NEUTRAL, ApiGear::NEUTRAL},
@@ -62,7 +65,7 @@ std::unordered_map<uint8_t, uint8_t> hazard_light_type_ = {
 
 VehicleNode::VehicleNode(const rclcpp::NodeOptions & options) : Node("vehicle", options)
 {
-  const auto adaptor = component_interface_utils::NodeAdaptor(this);
+  const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
   group_cli_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   adaptor.init_pub(pub_kinematics_);
   adaptor.init_pub(pub_status_);
@@ -89,23 +92,20 @@ uint8_t VehicleNode::mapping(
   }
 }
 
-void VehicleNode::kinematic_state(
-  const autoware::component_interface_specs::localization::KinematicState::Message::ConstSharedPtr
-    msg_ptr)
+void VehicleNode::kinematic_state(const autoware::component_interface_specs_universe::localization::
+                                    KinematicState::Message::ConstSharedPtr msg_ptr)
 {
   kinematic_state_msgs_ = msg_ptr;
 }
 
-void VehicleNode::acceleration_status(
-  const autoware::component_interface_specs::localization::Acceleration::Message::ConstSharedPtr
-    msg_ptr)
+void VehicleNode::acceleration_status(const autoware::component_interface_specs_universe::
+                                        localization::Acceleration::Message::ConstSharedPtr msg_ptr)
 {
   acceleration_msgs_ = msg_ptr;
 }
 
-void VehicleNode::steering_status(
-  const autoware::component_interface_specs::vehicle::SteeringStatus::Message::ConstSharedPtr
-    msg_ptr)
+void VehicleNode::steering_status(const autoware::component_interface_specs_universe::vehicle::
+                                    SteeringStatus::Message::ConstSharedPtr msg_ptr)
 {
   steering_status_msgs_ = msg_ptr;
 }
@@ -126,7 +126,8 @@ void VehicleNode::hazard_light_status(const HazardLightsReport::ConstSharedPtr m
 }
 
 void VehicleNode::energy_status(
-  const autoware::component_interface_specs::vehicle::EnergyStatus::Message::ConstSharedPtr msg_ptr)
+  const autoware::component_interface_specs_universe::vehicle::EnergyStatus::Message::ConstSharedPtr
+    msg_ptr)
 {
   energy_status_msgs_ = msg_ptr;
 }
@@ -140,7 +141,7 @@ void VehicleNode::publish_kinematics()
 {
   if (!kinematic_state_msgs_ || !acceleration_msgs_ || !map_projector_info_) return;
 
-  autoware_ad_api::vehicle::VehicleKinematics::Message vehicle_kinematics;
+  autoware::adapi_specs::vehicle::VehicleKinematics::Message vehicle_kinematics;
   vehicle_kinematics.pose.header = kinematic_state_msgs_->header;
   vehicle_kinematics.pose.pose = kinematic_state_msgs_->pose;
   vehicle_kinematics.twist.header = kinematic_state_msgs_->header;
@@ -176,7 +177,7 @@ void VehicleNode::publish_status()
     !hazard_light_status_msgs_)
     return;
 
-  autoware_ad_api::vehicle::VehicleStatus::Message vehicle_status;
+  autoware::adapi_specs::vehicle::VehicleStatus::Message vehicle_status;
   vehicle_status.stamp = now();
   vehicle_status.steering_tire_angle = steering_status_msgs_->steering_tire_angle;
   vehicle_status.gear.status = mapping(gear_type_, gear_status_msgs_->report, ApiGear::UNKNOWN);

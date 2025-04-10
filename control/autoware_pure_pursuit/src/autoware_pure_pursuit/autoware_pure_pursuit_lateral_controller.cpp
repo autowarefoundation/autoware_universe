@@ -34,11 +34,13 @@
 #include "autoware/pure_pursuit/util/planning_utils.hpp"
 #include "autoware/pure_pursuit/util/tf_utils.hpp"
 
+#include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <algorithm>
 #include <memory>
 #include <utility>
+#include <vector>
 
 namespace
 {
@@ -91,8 +93,9 @@ PurePursuitLateralController::PurePursuitLateralController(rclcpp::Node & node)
   // Debug Publishers
   pub_debug_marker_ =
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/debug/markers", 0);
-  pub_debug_values_ = node.create_publisher<tier4_debug_msgs::msg::Float32MultiArrayStamped>(
-    "~/debug/ld_outputs", rclcpp::QoS{1});
+  pub_debug_values_ =
+    node.create_publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>(
+      "~/debug/ld_outputs", rclcpp::QoS{1});
 
   // Publish predicted trajectory
   pub_predicted_trajectory_ = node.create_publisher<autoware_planning_msgs::msg::Trajectory>(
@@ -117,7 +120,7 @@ double PurePursuitLateralController::calcLookaheadDistance(
     std::clamp(vel_ld + curvature_ld + lateral_error_ld, min_ld, param_.max_lookahead_distance);
 
   auto pubDebugValues = [&]() {
-    tier4_debug_msgs::msg::Float32MultiArrayStamped debug_msg{};
+    autoware_internal_debug_msgs::msg::Float32MultiArrayStamped debug_msg{};
     debug_msg.data.resize(TYPE::SIZE);
     debug_msg.data.at(TYPE::VEL_LD) = static_cast<float>(vel_ld);
     debug_msg.data.at(TYPE::CURVATURE_LD) = static_cast<float>(curvature_ld);
@@ -141,7 +144,7 @@ TrajectoryPoint PurePursuitLateralController::calcNextPose(
   const double ds, TrajectoryPoint & point, Lateral cmd) const
 {
   geometry_msgs::msg::Transform transform;
-  transform.translation = autoware::universe_utils::createTranslation(ds, 0.0, 0.0);
+  transform.translation = autoware_utils::create_translation(ds, 0.0, 0.0);
   transform.rotation =
     planning_utils::getQuaternionFromYaw(((tan(cmd.steering_tire_angle) * ds) / param_.wheel_base));
   TrajectoryPoint output_p;
@@ -202,10 +205,10 @@ double PurePursuitLateralController::calcCurvature(const size_t closest_idx)
   double current_curvature = 0.0;
 
   try {
-    current_curvature = autoware::universe_utils::calcCurvature(
-      autoware::universe_utils::getPoint(trajectory_resampled_->points.at(prev_idx)),
-      autoware::universe_utils::getPoint(trajectory_resampled_->points.at(closest_idx)),
-      autoware::universe_utils::getPoint(trajectory_resampled_->points.at(next_idx)));
+    current_curvature = autoware_utils::calc_curvature(
+      autoware_utils::get_point(trajectory_resampled_->points.at(prev_idx)),
+      autoware_utils::get_point(trajectory_resampled_->points.at(closest_idx)),
+      autoware_utils::get_point(trajectory_resampled_->points.at(next_idx)));
   } catch (std::exception const & e) {
     // ...code that handles the error...
     RCLCPP_WARN(rclcpp::get_logger("pure_pursuit"), "%s", e.what());

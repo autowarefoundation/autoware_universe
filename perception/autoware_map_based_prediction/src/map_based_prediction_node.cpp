@@ -19,16 +19,18 @@
 #include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/math/constants.hpp>
-#include <autoware/universe_utils/math/normalization.hpp>
-#include <autoware/universe_utils/math/unit_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/autoware_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/constants.hpp>
+#include <autoware_utils/math/normalization.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
+#include <autoware_utils/ros/uuid_helper.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <boost/geometry.hpp>
@@ -45,12 +47,19 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <deque>
 #include <functional>
 #include <limits>
+#include <memory>
+#include <ratio>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace autoware::map_based_prediction
 {
-using autoware::universe_utils::ScopedTimeTrack;
+using autoware_utils::ScopedTimeTrack;
 
 namespace
 {
@@ -91,7 +100,7 @@ double calcAbsLateralOffset(
   for (size_t i = 0; i < boundary_path.size(); ++i) {
     const double x = boundary_line[i].x();
     const double y = boundary_line[i].y();
-    boundary_path[i] = autoware::universe_utils::createPoint(x, y, 0.0);
+    boundary_path[i] = autoware_utils::create_point(x, y, 0.0);
   }
 
   return std::fabs(autoware::motion_utils::calcLateralOffset(boundary_path, search_pose.position));
@@ -324,45 +333,6 @@ lanelet::ConstLanelets getLanelets(const map_based_prediction::LaneletsData & da
   return lanelets;
 }
 
-// NOTE: These two functions are copied from the route_handler package.
-lanelet::Lanelets getRightOppositeLanelets(
-  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
-  const lanelet::ConstLanelet & lanelet)
-{
-  const auto opposite_candidate_lanelets =
-    lanelet_map_ptr->laneletLayer.findUsages(lanelet.rightBound().invert());
-
-  lanelet::Lanelets opposite_lanelets;
-  for (const auto & candidate_lanelet : opposite_candidate_lanelets) {
-    if (candidate_lanelet.leftBound().id() == lanelet.rightBound().id()) {
-      continue;
-    }
-
-    opposite_lanelets.push_back(candidate_lanelet);
-  }
-
-  return opposite_lanelets;
-}
-
-lanelet::Lanelets getLeftOppositeLanelets(
-  const std::shared_ptr<lanelet::LaneletMap> & lanelet_map_ptr,
-  const lanelet::ConstLanelet & lanelet)
-{
-  const auto opposite_candidate_lanelets =
-    lanelet_map_ptr->laneletLayer.findUsages(lanelet.leftBound().invert());
-
-  lanelet::Lanelets opposite_lanelets;
-  for (const auto & candidate_lanelet : opposite_candidate_lanelets) {
-    if (candidate_lanelet.rightBound().id() == lanelet.leftBound().id()) {
-      continue;
-    }
-
-    opposite_lanelets.push_back(candidate_lanelet);
-  }
-
-  return opposite_lanelets;
-}
-
 void replaceObjectYawWithLaneletsYaw(
   const LaneletsData & current_lanelets, TrackedObject & transformed_object)
 {
@@ -397,7 +367,6 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
     google::InitGoogleLogging("map_based_prediction_node");
     google::InstallFailureSignalHandler();
   }
-  enable_delay_compensation_ = declare_parameter<bool>("enable_delay_compensation");
   prediction_time_horizon_.vehicle = declare_parameter<double>("prediction_time_horizon.vehicle");
   prediction_time_horizon_.pedestrian =
     declare_parameter<double>("prediction_time_horizon.pedestrian");
@@ -513,28 +482,40 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
   // publishers
   pub_objects_ = this->create_publisher<PredictedObjects>("~/output/objects", rclcpp::QoS{1});
 
+  // stopwatch
+  stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
+  stop_watch_ptr_->tic("cyclic_time");
+  stop_watch_ptr_->tic("processing_time");
+
+  {  // diagnostics
+    diagnostics_interface_ptr_ =
+      std::make_unique<autoware_utils::DiagnosticsInterface>(this, "map_based_prediction");
+
+    // [s] -> [ms]
+    processing_time_tolerance_ms_ = declare_parameter<double>("processing_time_tolerance") * 1e3;
+    processing_time_consecutive_excess_tolerance_ms_ =
+      declare_parameter<double>("processing_time_consecutive_excess_tolerance") * 1e3;
+  }
+
   // debug publishers
   if (use_time_publisher) {
     processing_time_publisher_ =
-      std::make_unique<autoware::universe_utils::DebugPublisher>(this, "map_based_prediction");
-    published_time_publisher_ =
-      std::make_unique<autoware::universe_utils::PublishedTimePublisher>(this);
-    stop_watch_ptr_ =
-      std::make_unique<autoware::universe_utils::StopWatch<std::chrono::milliseconds>>();
-    stop_watch_ptr_->tic("cyclic_time");
-    stop_watch_ptr_->tic("processing_time");
+      std::make_unique<autoware_utils::DebugPublisher>(this, "map_based_prediction");
+    published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
   }
 
+  // debug time keeper
   if (use_time_keeper) {
     detailed_processing_time_publisher_ =
-      this->create_publisher<autoware::universe_utils::ProcessingTimeDetail>(
+      this->create_publisher<autoware_utils::ProcessingTimeDetail>(
         "~/debug/processing_time_detail_ms", 1);
-    auto time_keeper = autoware::universe_utils::TimeKeeper(detailed_processing_time_publisher_);
-    time_keeper_ = std::make_shared<autoware::universe_utils::TimeKeeper>(time_keeper);
+    auto time_keeper = autoware_utils::TimeKeeper(detailed_processing_time_publisher_);
+    time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(time_keeper);
     path_generator_->setTimeKeeper(time_keeper_);
     predictor_vru_->setTimeKeeper(time_keeper_);
   }
 
+  // debug marker
   if (use_debug_marker) {
     pub_debug_markers_ =
       this->create_publisher<visualization_msgs::msg::MarkerArray>("maneuver", rclcpp::QoS{1});
@@ -547,15 +528,15 @@ MapBasedPredictionNode::MapBasedPredictionNode(const rclcpp::NodeOptions & node_
 rcl_interfaces::msg::SetParametersResult MapBasedPredictionNode::onParam(
   const std::vector<rclcpp::Parameter> & parameters)
 {
-  using autoware::universe_utils::updateParam;
+  using autoware_utils::update_param;
 
-  updateParam(parameters, "max_lateral_accel", max_lateral_accel_);
-  updateParam(parameters, "min_acceleration_before_curve", min_acceleration_before_curve_);
-  updateParam(
+  update_param(parameters, "max_lateral_accel", max_lateral_accel_);
+  update_param(parameters, "min_acceleration_before_curve", min_acceleration_before_curve_);
+  update_param(
     parameters, "check_lateral_acceleration_constraints", check_lateral_acceleration_constraints_);
-  updateParam(parameters, "use_vehicle_acceleration", use_vehicle_acceleration_);
-  updateParam(parameters, "speed_limit_multiplier", speed_limit_multiplier_);
-  updateParam(
+  update_param(parameters, "use_vehicle_acceleration", use_vehicle_acceleration_);
+  update_param(parameters, "speed_limit_multiplier", speed_limit_multiplier_);
+  update_param(
     parameters, "acceleration_exponential_half_life", acceleration_exponential_half_life_);
 
   path_generator_->setUseVehicleAcceleration(use_vehicle_acceleration_);
@@ -565,6 +546,54 @@ rcl_interfaces::msg::SetParametersResult MapBasedPredictionNode::onParam(
   result.successful = true;
   result.reason = "success";
   return result;
+}
+
+void MapBasedPredictionNode::updateDiagnostics(
+  const rclcpp::Time & timestamp, double processing_time_ms)
+{
+  diagnostics_interface_ptr_->clear();
+  diagnostics_interface_ptr_->add_key_value("timestamp", timestamp.seconds());
+  diagnostics_interface_ptr_->add_key_value("processing_time_ms", processing_time_ms);
+  // check processing time is in time
+  bool is_processing_in_time = processing_time_ms <= processing_time_tolerance_ms_;
+  diagnostics_interface_ptr_->add_key_value("is_processing_in_time", is_processing_in_time);
+  if (!is_processing_in_time) {
+    // publish warning if the current processing time exceeded
+    std::ostringstream oss;
+    oss << "Processing time exceeded: " << processing_time_tolerance_ms_ << "[ms] < "
+        << processing_time_ms << "[ms]";
+    diagnostics_interface_ptr_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, oss.str());
+  }
+
+  if (is_processing_in_time || !last_in_time_processing_timestamp_) {
+    last_in_time_processing_timestamp_ = timestamp;
+  }
+
+  // calculate consecutive excess duration
+  const double consecutive_excess_duration_ms =
+    std::chrono::duration<double, std::milli>(
+      std::chrono::nanoseconds(
+        (timestamp - last_in_time_processing_timestamp_.value()).nanoseconds()))
+      .count();
+
+  bool is_consecutive_excess_duration_ok =
+    consecutive_excess_duration_ms < processing_time_consecutive_excess_tolerance_ms_;
+  diagnostics_interface_ptr_->add_key_value(
+    "consecutive_excess_duration_ms", consecutive_excess_duration_ms);
+  diagnostics_interface_ptr_->add_key_value(
+    "is_consecutive_excess_duration_ok", is_consecutive_excess_duration_ok);
+  if (!is_consecutive_excess_duration_ok) {
+    // publish error if the processing time exceeded in a long term
+    std::ostringstream oss;
+    oss << "Processing time exceeded consecutively in a long term: "
+        << processing_time_consecutive_excess_tolerance_ms_ << "[ms] < "
+        << consecutive_excess_duration_ms << "[ms]";
+    diagnostics_interface_ptr_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::ERROR, oss.str());
+  }
+
+  diagnostics_interface_ptr_->publish(timestamp);
 }
 
 void MapBasedPredictionNode::mapCallback(const LaneletMapBin::ConstSharedPtr msg)
@@ -591,11 +620,11 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  if (stop_watch_ptr_) stop_watch_ptr_->toc("processing_time", true);
+  stop_watch_ptr_->toc("processing_time", true);
 
   // take traffic_signal
   {
-    const auto msg = sub_traffic_signals_.takeData();
+    const auto msg = sub_traffic_signals_.take_data();
     if (msg) {
       trafficSignalsCallback(msg);
     }
@@ -610,7 +639,7 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
   geometry_msgs::msg::TransformStamped::ConstSharedPtr world2map_transform;
   bool is_object_not_in_map_frame = in_objects->header.frame_id != "map";
   if (is_object_not_in_map_frame) {
-    world2map_transform = transform_listener_.getTransform(
+    world2map_transform = transform_listener_.get_transform(
       "map",                        // target
       in_objects->header.frame_id,  // src
       in_objects->header.stamp, rclcpp::Duration::from_seconds(0.1));
@@ -659,7 +688,8 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
       case ObjectClassification::PEDESTRIAN:
       case ObjectClassification::BICYCLE: {
         // Run pedestrian/bicycle prediction
-        const auto predicted_vru = predictor_vru_->predict(output.header, transformed_object);
+        const auto predicted_vru =
+          getPredictionForNonVehicleObject(output.header, transformed_object);
         output.objects.emplace_back(predicted_vru);
         break;
       }
@@ -668,151 +698,11 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
       case ObjectClassification::TRAILER:
       case ObjectClassification::MOTORCYCLE:
       case ObjectClassification::TRUCK: {
-        // Update object yaw and velocity
-        updateObjectData(transformed_object);
-
-        // Get Closest Lanelet
-        const auto current_lanelets = getCurrentLanelets(transformed_object);
-
-        // Update Objects History
-        updateRoadUsersHistory(output.header, transformed_object, current_lanelets);
-
-        // For off lane obstacles
-        if (current_lanelets.empty()) {
-          PredictedPath predicted_path = path_generator_->generatePathForOffLaneVehicle(
-            transformed_object, prediction_time_horizon_.vehicle);
-          predicted_path.confidence = 1.0;
-          if (predicted_path.path.empty()) break;
-
-          auto predicted_object_vehicle = utils::convertToPredictedObject(transformed_object);
-          predicted_object_vehicle.kinematics.predicted_paths.push_back(predicted_path);
-          output.objects.push_back(predicted_object_vehicle);
-          break;
+        const auto predicted_object_opt = getPredictionForVehicleObject(
+          output.header, transformed_object, objects_detected_time, debug_markers);
+        if (predicted_object_opt) {
+          output.objects.push_back(predicted_object_opt.value());
         }
-
-        // For too-slow vehicle
-        const double abs_obj_speed = std::hypot(
-          transformed_object.kinematics.twist_with_covariance.twist.linear.x,
-          transformed_object.kinematics.twist_with_covariance.twist.linear.y);
-        if (std::fabs(abs_obj_speed) < min_velocity_for_map_based_prediction_) {
-          PredictedPath predicted_path = path_generator_->generatePathForLowSpeedVehicle(
-            transformed_object, prediction_time_horizon_.vehicle);
-          predicted_path.confidence = 1.0;
-          if (predicted_path.path.empty()) break;
-
-          auto predicted_slow_object = utils::convertToPredictedObject(transformed_object);
-          predicted_slow_object.kinematics.predicted_paths.push_back(predicted_path);
-          output.objects.push_back(predicted_slow_object);
-          break;
-        }
-
-        // Get Predicted Reference Path for Each Maneuver and current lanelets
-        // return: <probability, paths>
-        const auto lanelet_ref_paths = getPredictedReferencePath(
-          transformed_object, current_lanelets, objects_detected_time,
-          prediction_time_horizon_.vehicle);
-        const auto ref_paths = convertPredictedReferencePath(transformed_object, lanelet_ref_paths);
-
-        // If predicted reference path is empty, assume this object is out of the lane
-        if (ref_paths.empty()) {
-          PredictedPath predicted_path = path_generator_->generatePathForOffLaneVehicle(
-            transformed_object, prediction_time_horizon_.vehicle);
-          predicted_path.confidence = 1.0;
-          if (predicted_path.path.empty()) break;
-
-          auto predicted_object_out_of_lane = utils::convertToPredictedObject(transformed_object);
-          predicted_object_out_of_lane.kinematics.predicted_paths.push_back(predicted_path);
-          output.objects.push_back(predicted_object_out_of_lane);
-          break;
-        }
-
-        // Get Debug Marker for On Lane Vehicles
-        if (pub_debug_markers_) {
-          const auto max_prob_path = std::max_element(
-            ref_paths.begin(), ref_paths.end(),
-            [](const PredictedRefPath & a, const PredictedRefPath & b) {
-              return a.probability < b.probability;
-            });
-          const auto debug_marker =
-            getDebugMarker(object, max_prob_path->maneuver, debug_markers.markers.size());
-          debug_markers.markers.push_back(debug_marker);
-        }
-
-        // Fix object angle if its orientation unreliable (e.g. far object by radar sensor)
-        // This prevent bending predicted path
-        TrackedObject yaw_fixed_transformed_object = transformed_object;
-        if (
-          transformed_object.kinematics.orientation_availability ==
-          autoware_perception_msgs::msg::TrackedObjectKinematics::UNAVAILABLE) {
-          replaceObjectYawWithLaneletsYaw(current_lanelets, yaw_fixed_transformed_object);
-        }
-        // Generate Predicted Path
-        std::vector<PredictedPath> predicted_paths;
-        double min_avg_curvature = std::numeric_limits<double>::max();
-        PredictedPath path_with_smallest_avg_curvature;
-
-        for (const auto & ref_path : ref_paths) {
-          PredictedPath predicted_path = path_generator_->generatePathForOnLaneVehicle(
-            yaw_fixed_transformed_object, ref_path.path, prediction_time_horizon_.vehicle,
-            lateral_control_time_horizon_, ref_path.width, ref_path.speed_limit);
-          if (predicted_path.path.empty()) continue;
-
-          if (!check_lateral_acceleration_constraints_) {
-            predicted_path.confidence = ref_path.probability;
-            predicted_paths.push_back(predicted_path);
-            continue;
-          }
-
-          // Check lat. acceleration constraints
-          const auto trajectory_with_const_velocity =
-            toTrajectoryPoints(predicted_path, abs_obj_speed);
-
-          if (isLateralAccelerationConstraintSatisfied(
-                trajectory_with_const_velocity, prediction_sampling_time_interval_)) {
-            predicted_path.confidence = ref_path.probability;
-            predicted_paths.push_back(predicted_path);
-            continue;
-          }
-
-          // Calculate curvature assuming the trajectory points interval is constant
-          // In case all paths are deleted, a copy of the straightest path is kept
-
-          constexpr double curvature_calculation_distance = 2.0;
-          constexpr double points_interval = 1.0;
-          const size_t idx_dist = static_cast<size_t>(
-            std::max(static_cast<int>((curvature_calculation_distance) / points_interval), 1));
-          const auto curvature_v =
-            calcTrajectoryCurvatureFrom3Points(trajectory_with_const_velocity, idx_dist);
-          if (curvature_v.empty()) {
-            continue;
-          }
-          const auto curvature_avg =
-            std::accumulate(curvature_v.begin(), curvature_v.end(), 0.0) / curvature_v.size();
-          if (curvature_avg < min_avg_curvature) {
-            min_avg_curvature = curvature_avg;
-            path_with_smallest_avg_curvature = predicted_path;
-            path_with_smallest_avg_curvature.confidence = ref_path.probability;
-          }
-        }
-
-        if (predicted_paths.empty()) predicted_paths.push_back(path_with_smallest_avg_curvature);
-        // Normalize Path Confidence and output the predicted object
-
-        float sum_confidence = 0.0;
-        for (const auto & predicted_path : predicted_paths) {
-          sum_confidence += predicted_path.confidence;
-        }
-        const float min_sum_confidence_value = 1e-3;
-        sum_confidence = std::max(sum_confidence, min_sum_confidence_value);
-
-        auto predicted_object = utils::convertToPredictedObject(transformed_object);
-
-        for (auto & predicted_path : predicted_paths) {
-          predicted_path.confidence = predicted_path.confidence / sum_confidence;
-          if (predicted_object.kinematics.predicted_paths.size() >= 100) break;
-          predicted_object.kinematics.predicted_paths.push_back(predicted_path);
-        }
-        output.objects.push_back(predicted_object);
         break;
       }
       default: {
@@ -830,21 +720,26 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
 
   // process lost crosswalk users to tackle unstable detection
   if (remember_lost_crosswalk_users_) {
-    PredictedObjects retrived_objects = predictor_vru_->retrieveUndetectedObjects();
+    PredictedObjects retrieved_objects = predictor_vru_->retrieveUndetectedObjects();
     output.objects.insert(
-      output.objects.end(), retrived_objects.objects.begin(), retrived_objects.objects.end());
+      output.objects.end(), retrieved_objects.objects.begin(), retrieved_objects.objects.end());
   }
 
   // Publish Results
   publish(output, debug_markers);
 
+  // Processing time
+  const auto processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
+  const auto cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
+
+  // Diagnostics
+  updateDiagnostics(output.header.stamp, processing_time_ms);
+
   // Publish Processing Time
-  if (stop_watch_ptr_) {
-    const auto processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
-    const auto cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
-    processing_time_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+  if (processing_time_publisher_) {
+    processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
-    processing_time_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time_ms", processing_time_ms);
   }
 }
@@ -868,14 +763,14 @@ void MapBasedPredictionNode::updateObjectData(TrackedObject & object)
 
   if (
     object.kinematics.orientation_availability ==
-    autoware_perception_msgs::msg::DetectedObjectKinematics::AVAILABLE) {
+    autoware_perception_msgs::msg::TrackedObjectKinematics::AVAILABLE) {
     return;
   }
 
   // Compute yaw angle from the velocity and position of the object
   const auto & object_pose = object.kinematics.pose_with_covariance.pose;
   const auto & object_twist = object.kinematics.twist_with_covariance.twist;
-  const auto future_object_pose = autoware::universe_utils::calcOffsetPose(
+  const auto future_object_pose = autoware_utils::calc_offset_pose(
     object_pose, object_twist.linear.x * 0.1, object_twist.linear.y * 0.1, 0.0);
 
   // assumption: the object vx is much larger than vy
@@ -889,21 +784,20 @@ void MapBasedPredictionNode::updateObjectData(TrackedObject & object)
   if (abs_object_speed < min_abs_speed) return;
 
   switch (object.kinematics.orientation_availability) {
-    case autoware_perception_msgs::msg::DetectedObjectKinematics::SIGN_UNKNOWN: {
+    case autoware_perception_msgs::msg::TrackedObjectKinematics::SIGN_UNKNOWN: {
       const auto original_yaw =
         tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
       // flip the angle
       object.kinematics.pose_with_covariance.pose.orientation =
-        autoware::universe_utils::createQuaternionFromYaw(
-          autoware::universe_utils::pi + original_yaw);
+        autoware_utils::create_quaternion_from_yaw(autoware_utils::pi + original_yaw);
       break;
     }
     default: {
-      const auto updated_object_yaw = autoware::universe_utils::calcAzimuthAngle(
-        object_pose.position, future_object_pose.position);
+      const auto updated_object_yaw =
+        autoware_utils::calc_azimuth_angle(object_pose.position, future_object_pose.position);
 
       object.kinematics.pose_with_covariance.pose.orientation =
-        autoware::universe_utils::createQuaternionFromYaw(updated_object_yaw);
+        autoware_utils::create_quaternion_from_yaw(updated_object_yaw);
       break;
     }
   }
@@ -918,177 +812,9 @@ LaneletsData MapBasedPredictionNode::getCurrentLanelets(const TrackedObject & ob
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  // obstacle point
-  lanelet::BasicPoint2d search_point(
-    object.kinematics.pose_with_covariance.pose.position.x,
-    object.kinematics.pose_with_covariance.pose.position.y);
-
-  // nearest lanelet
-  std::vector<std::pair<double, lanelet::Lanelet>> surrounding_lanelets =
-    lanelet::geometry::findNearest(lanelet_map_ptr_->laneletLayer, search_point, 10);
-
-  {  // Step 1. Search same directional lanelets
-    // No Closest Lanelets
-    if (surrounding_lanelets.empty()) {
-      return {};
-    }
-
-    LaneletsData object_lanelets;
-    std::optional<std::pair<double, lanelet::Lanelet>> closest_lanelet{std::nullopt};
-    for (const auto & lanelet : surrounding_lanelets) {
-      // Check if the close lanelets meet the necessary condition for start lanelets and
-      // Check if similar lanelet is inside the object lanelet
-      if (!checkCloseLaneletCondition(lanelet, object) || isDuplicated(lanelet, object_lanelets)) {
-        continue;
-      }
-
-      // Memorize closest lanelet
-      // NOTE: The object may be outside the lanelet.
-      if (!closest_lanelet || lanelet.first < closest_lanelet->first) {
-        closest_lanelet = lanelet;
-      }
-
-      // Check if the obstacle is inside of this lanelet
-      constexpr double epsilon = 1e-3;
-      if (lanelet.first < epsilon) {
-        const auto object_lanelet =
-          LaneletData{lanelet.second, calculateLocalLikelihood(lanelet.second, object)};
-        object_lanelets.push_back(object_lanelet);
-      }
-    }
-
-    if (!object_lanelets.empty()) {
-      return object_lanelets;
-    }
-    if (closest_lanelet) {
-      return LaneletsData{LaneletData{
-        closest_lanelet->second, calculateLocalLikelihood(closest_lanelet->second, object)}};
-    }
-  }
-
-  {  // Step 2. Search opposite directional lanelets
-    // Get opposite lanelets and calculate distance to search point.
-    std::vector<std::pair<double, lanelet::Lanelet>> surrounding_opposite_lanelets;
-    for (const auto & surrounding_lanelet : surrounding_lanelets) {
-      for (const auto & left_opposite_lanelet :
-           getLeftOppositeLanelets(lanelet_map_ptr_, surrounding_lanelet.second)) {
-        const double distance = lanelet::geometry::distance2d(left_opposite_lanelet, search_point);
-        surrounding_opposite_lanelets.push_back(std::make_pair(distance, left_opposite_lanelet));
-      }
-      for (const auto & right_opposite_lanelet :
-           getRightOppositeLanelets(lanelet_map_ptr_, surrounding_lanelet.second)) {
-        const double distance = lanelet::geometry::distance2d(right_opposite_lanelet, search_point);
-        surrounding_opposite_lanelets.push_back(std::make_pair(distance, right_opposite_lanelet));
-      }
-    }
-
-    std::optional<std::pair<double, lanelet::Lanelet>> opposite_closest_lanelet{std::nullopt};
-    for (const auto & lanelet : surrounding_opposite_lanelets) {
-      // Check if the close lanelets meet the necessary condition for start lanelets
-      // except for distance checking
-      if (!checkCloseLaneletCondition(lanelet, object)) {
-        continue;
-      }
-
-      // Memorize closest lanelet
-      if (!opposite_closest_lanelet || lanelet.first < opposite_closest_lanelet->first) {
-        opposite_closest_lanelet = lanelet;
-      }
-    }
-    if (opposite_closest_lanelet) {
-      return LaneletsData{LaneletData{
-        opposite_closest_lanelet->second,
-        calculateLocalLikelihood(opposite_closest_lanelet->second, object)}};
-    }
-  }
-
-  return LaneletsData{};
-}
-
-bool MapBasedPredictionNode::checkCloseLaneletCondition(
-  const std::pair<double, lanelet::Lanelet> & lanelet, const TrackedObject & object)
-{
-  std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
-
-  // Step1. If we only have one point in the centerline, we will ignore the lanelet
-  if (lanelet.second.centerline().size() <= 1) {
-    return false;
-  }
-
-  // If the object is in the objects history, we check if the target lanelet is
-  // inside the current lanelets id or following lanelets
-  const std::string object_id = autoware::universe_utils::toHexString(object.object_id);
-  if (road_users_history_.count(object_id) != 0) {
-    const std::vector<lanelet::ConstLanelet> & possible_lanelet =
-      road_users_history_.at(object_id).back().future_possible_lanelets;
-
-    bool not_in_possible_lanelet =
-      std::find(possible_lanelet.begin(), possible_lanelet.end(), lanelet.second) ==
-      possible_lanelet.end();
-    if (!possible_lanelet.empty() && not_in_possible_lanelet) {
-      return false;
-    }
-  }
-
-  // Step2. Calculate the angle difference between the lane angle and obstacle angle
-  const double object_yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
-  const double lane_yaw = lanelet::utils::getLaneletAngle(
-    lanelet.second, object.kinematics.pose_with_covariance.pose.position);
-  const double delta_yaw = object_yaw - lane_yaw;
-  const double normalized_delta_yaw = autoware::universe_utils::normalizeRadian(delta_yaw);
-  const double abs_norm_delta = std::fabs(normalized_delta_yaw);
-
-  // Step3. Check if the closest lanelet is valid, and add all
-  // of the lanelets that are below max_dist and max_delta_yaw
-  const double object_vel = object.kinematics.twist_with_covariance.twist.linear.x;
-  const bool is_yaw_reversed =
-    M_PI - delta_yaw_threshold_for_searching_lanelet_ < abs_norm_delta && object_vel < 0.0;
-  if (dist_threshold_for_searching_lanelet_ < lanelet.first) {
-    return false;
-  }
-  if (!is_yaw_reversed && delta_yaw_threshold_for_searching_lanelet_ < abs_norm_delta) {
-    return false;
-  }
-
-  return true;
-}
-
-float MapBasedPredictionNode::calculateLocalLikelihood(
-  const lanelet::Lanelet & current_lanelet, const TrackedObject & object) const
-{
-  std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
-
-  const auto & obj_point = object.kinematics.pose_with_covariance.pose.position;
-
-  // compute yaw difference between the object and lane
-  const double obj_yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
-  const double lane_yaw = lanelet::utils::getLaneletAngle(current_lanelet, obj_point);
-  const double delta_yaw = obj_yaw - lane_yaw;
-  const double abs_norm_delta_yaw = std::fabs(autoware::universe_utils::normalizeRadian(delta_yaw));
-
-  // compute lateral distance
-  const auto centerline = current_lanelet.centerline();
-  std::vector<geometry_msgs::msg::Point> converted_centerline;
-  for (const auto & p : centerline) {
-    const auto converted_p = lanelet::utils::conversion::toGeomMsgPt(p);
-    converted_centerline.push_back(converted_p);
-  }
-  const double lat_dist =
-    std::fabs(autoware::motion_utils::calcLateralOffset(converted_centerline, obj_point));
-
-  // Compute Chi-squared distributed (Equation (8) in the paper)
-  const double sigma_d = sigma_lateral_offset_;  // Standard Deviation for lateral position
-  const double sigma_yaw = M_PI * sigma_yaw_angle_deg_ / 180.0;  // Standard Deviation for yaw angle
-  const Eigen::Vector2d delta(lat_dist, abs_norm_delta_yaw);
-  const Eigen::Matrix2d P_inv =
-    (Eigen::Matrix2d() << 1.0 / (sigma_d * sigma_d), 0.0, 0.0, 1.0 / (sigma_yaw * sigma_yaw))
-      .finished();
-  const double MINIMUM_DISTANCE = 1e-6;
-  const double dist = std::max(delta.dot(P_inv * delta), MINIMUM_DISTANCE);
-
-  return static_cast<float>(1.0 / dist);
+  return utils::getCurrentLanelets(
+    object, lanelet_map_ptr_, road_users_history_, dist_threshold_for_searching_lanelet_,
+    delta_yaw_threshold_for_searching_lanelet_, sigma_lateral_offset_, sigma_yaw_angle_deg_);
 }
 
 void MapBasedPredictionNode::updateRoadUsersHistory(
@@ -1098,7 +824,7 @@ void MapBasedPredictionNode::updateRoadUsersHistory(
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  std::string object_id = autoware::universe_utils::toHexString(object.object_id);
+  std::string object_id = autoware_utils::to_hex_string(object.object_id);
   const auto current_lanelets = getLanelets(current_lanelets_data);
 
   ObjectData single_object_data;
@@ -1107,8 +833,7 @@ void MapBasedPredictionNode::updateRoadUsersHistory(
   single_object_data.future_possible_lanelets = current_lanelets;
   single_object_data.pose = object.kinematics.pose_with_covariance.pose;
   const double object_yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
-  single_object_data.pose.orientation =
-    autoware::universe_utils::createQuaternionFromYaw(object_yaw);
+  single_object_data.pose.orientation = autoware_utils::create_quaternion_from_yaw(object_yaw);
   single_object_data.time_delay = std::fabs((this->get_clock()->now() - header.stamp).seconds());
   single_object_data.twist = object.kinematics.twist_with_covariance.twist;
 
@@ -1186,7 +911,7 @@ std::vector<LaneletPathWithPathInfo> MapBasedPredictionNode::getPredictedReferen
     return search_dist;
   };
 
-  std::string object_id = autoware::universe_utils::toHexString(object.object_id);
+  std::string object_id = autoware_utils::to_hex_string(object.object_id);
   geometry_msgs::msg::Pose object_pose = object.kinematics.pose_with_covariance.pose;
 
   // Step 2. Get possible paths for each lanelet
@@ -1521,7 +1246,7 @@ Maneuver MapBasedPredictionNode::predictObjectManeuverByLatDiffDistance(
   for (const auto & lanelet : prev_lanelets) {
     const double lane_yaw = lanelet::utils::getLaneletAngle(lanelet, prev_pose.position);
     const double delta_yaw = tf2::getYaw(prev_pose.orientation) - lane_yaw;
-    const double normalized_delta_yaw = autoware::universe_utils::normalizeRadian(delta_yaw);
+    const double normalized_delta_yaw = autoware_utils::normalize_radian(delta_yaw);
     if (normalized_delta_yaw < closest_prev_yaw) {
       closest_prev_yaw = normalized_delta_yaw;
       prev_lanelet = lanelet;
@@ -1531,7 +1256,7 @@ Maneuver MapBasedPredictionNode::predictObjectManeuverByLatDiffDistance(
   // Step4. Check if the vehicle has changed lane
   const auto current_lanelet = current_lanelet_data.lanelet;
   const auto current_pose = object_pose;
-  const double dist = autoware::universe_utils::calcDistance2d(prev_pose, current_pose);
+  const double dist = autoware_utils::calc_distance2d(prev_pose, current_pose);
   lanelet::routing::LaneletPaths possible_paths =
     routing_graph_ptr_->possiblePaths(prev_lanelet, dist + 2.0, 0, false);
   bool has_lane_changed = true;
@@ -1586,42 +1311,6 @@ Maneuver MapBasedPredictionNode::predictObjectManeuverByLatDiffDistance(
   return Maneuver::LANE_FOLLOW;
 }
 
-geometry_msgs::msg::Pose MapBasedPredictionNode::compensateTimeDelay(
-  const geometry_msgs::msg::Pose & delayed_pose, const geometry_msgs::msg::Twist & twist,
-  const double dt) const
-{
-  if (!enable_delay_compensation_) {
-    return delayed_pose;
-  }
-
-  /*  == Nonlinear model ==
-   *
-   * x_{k+1}   = x_k + vx_k * cos(yaw_k) * dt - vy_k * sin(yaw_k) * dt
-   * y_{k+1}   = y_k + vx_k * sin(yaw_k) * dt + vy_k * cos(yaw_k) * dt
-   * yaw_{k+1} = yaw_k + (wz_k) * dt
-   *
-   */
-
-  const double vx = twist.linear.x;
-  const double vy = twist.linear.y;
-  const double wz = twist.angular.z;
-  const double prev_yaw = tf2::getYaw(delayed_pose.orientation);
-  const double prev_x = delayed_pose.position.x;
-  const double prev_y = delayed_pose.position.y;
-  const double prev_z = delayed_pose.position.z;
-
-  const double curr_x = prev_x + vx * std::cos(prev_yaw) * dt - vy * std::sin(prev_yaw) * dt;
-  const double curr_y = prev_y + vx * std::sin(prev_yaw) * dt + vy * std::cos(prev_yaw) * dt;
-  const double curr_z = prev_z;
-  const double curr_yaw = prev_yaw + wz * dt;
-
-  geometry_msgs::msg::Pose current_pose;
-  current_pose.position = autoware::universe_utils::createPoint(curr_x, curr_y, curr_z);
-  current_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(curr_yaw);
-
-  return current_pose;
-}
-
 double MapBasedPredictionNode::calcRightLateralOffset(
   const lanelet::ConstLineString2d & boundary_line, const geometry_msgs::msg::Pose & search_pose)
 {
@@ -1629,7 +1318,7 @@ double MapBasedPredictionNode::calcRightLateralOffset(
   for (size_t i = 0; i < boundary_path.size(); ++i) {
     const double x = boundary_line[i].x();
     const double y = boundary_line[i].y();
-    boundary_path[i] = autoware::universe_utils::createPoint(x, y, 0.0);
+    boundary_path[i] = autoware_utils::create_point(x, y, 0.0);
   }
 
   return std::fabs(autoware::motion_utils::calcLateralOffset(boundary_path, search_pose.position));
@@ -1815,7 +1504,7 @@ std::pair<PosePath, double> MapBasedPredictionNode::convertLaneletPathToPosePath
         // Prevent from inserting same points
         if (!converted_path.empty()) {
           const auto last_p = converted_path.back();
-          const double tmp_dist = autoware::universe_utils::calcDistance2d(last_p, current_p);
+          const double tmp_dist = autoware_utils::calc_distance2d(last_p, current_p);
           if (tmp_dist < 1e-6) {
             prev_p = current_p;
             continue;
@@ -1858,6 +1547,168 @@ std::pair<PosePath, double> MapBasedPredictionNode::convertLaneletPathToPosePath
 
   lru_cache_of_convert_path_type_.put(path, converted_path_and_width);
   return converted_path_and_width;
+}
+
+PredictedObject MapBasedPredictionNode::getPredictionForNonVehicleObject(
+  const std_msgs::msg::Header & header, const TrackedObject & object)
+{
+  return predictor_vru_->predict(header, object);
+}
+
+std::optional<PredictedObject> MapBasedPredictionNode::getPredictionForVehicleObject(
+  const std_msgs::msg::Header & header, const TrackedObject & transformed_object,
+  const double objects_detected_time, visualization_msgs::msg::MarkerArray & debug_markers)
+{
+  auto object = transformed_object;
+
+  // Update object yaw and velocity
+  updateObjectData(object);
+
+  // Get Closest Lanelet
+  const auto current_lanelets = utils::getCurrentLanelets(
+    object, lanelet_map_ptr_, road_users_history_, dist_threshold_for_searching_lanelet_,
+    delta_yaw_threshold_for_searching_lanelet_, sigma_lateral_offset_, sigma_yaw_angle_deg_);
+
+  // Update Objects History
+  updateRoadUsersHistory(header, object, current_lanelets);
+
+  // For off lane obstacles
+  if (current_lanelets.empty()) {
+    PredictedPath predicted_path =
+      path_generator_->generatePathForOffLaneVehicle(object, prediction_time_horizon_.vehicle);
+    predicted_path.confidence = 1.0;
+    if (predicted_path.path.empty()) {
+      return std::nullopt;
+    }
+
+    auto predicted_object_vehicle = utils::convertToPredictedObject(object);
+    predicted_object_vehicle.kinematics.predicted_paths.push_back(predicted_path);
+    return predicted_object_vehicle;
+  }
+
+  // For too-slow vehicle
+  const double abs_obj_speed = std::hypot(
+    object.kinematics.twist_with_covariance.twist.linear.x,
+    object.kinematics.twist_with_covariance.twist.linear.y);
+  if (std::fabs(abs_obj_speed) < min_velocity_for_map_based_prediction_) {
+    PredictedPath predicted_path =
+      path_generator_->generatePathForLowSpeedVehicle(object, prediction_time_horizon_.vehicle);
+    predicted_path.confidence = 1.0;
+    if (predicted_path.path.empty()) {
+      return std::nullopt;
+    }
+
+    auto predicted_slow_object = utils::convertToPredictedObject(object);
+    predicted_slow_object.kinematics.predicted_paths.push_back(predicted_path);
+    return predicted_slow_object;
+  }
+
+  // Get Predicted Reference Path for Each Maneuver and current lanelets
+  // return: <probability, paths>
+  const auto lanelet_ref_paths = getPredictedReferencePath(
+    object, current_lanelets, objects_detected_time, prediction_time_horizon_.vehicle);
+  const auto ref_paths = convertPredictedReferencePath(object, lanelet_ref_paths);
+
+  // If predicted reference path is empty, assume this object is out of the lane
+  if (ref_paths.empty()) {
+    PredictedPath predicted_path =
+      path_generator_->generatePathForOffLaneVehicle(object, prediction_time_horizon_.vehicle);
+    predicted_path.confidence = 1.0;
+    if (predicted_path.path.empty()) {
+      return std::nullopt;
+    }
+
+    auto predicted_object_out_of_lane = utils::convertToPredictedObject(object);
+    predicted_object_out_of_lane.kinematics.predicted_paths.push_back(predicted_path);
+    return predicted_object_out_of_lane;
+  }
+
+  // Get Debug Marker for On Lane Vehicles
+  if (pub_debug_markers_) {
+    const auto max_prob_path = std::max_element(
+      ref_paths.begin(), ref_paths.end(),
+      [](const PredictedRefPath & a, const PredictedRefPath & b) {
+        return a.probability < b.probability;
+      });
+    const auto debug_marker =
+      getDebugMarker(object, max_prob_path->maneuver, debug_markers.markers.size());
+    debug_markers.markers.push_back(debug_marker);
+  }
+
+  // Fix object angle if its orientation unreliable (e.g. far object by radar sensor)
+  // This prevent bending predicted path
+  TrackedObject yaw_fixed_object = object;
+  if (
+    object.kinematics.orientation_availability ==
+    autoware_perception_msgs::msg::TrackedObjectKinematics::UNAVAILABLE) {
+    replaceObjectYawWithLaneletsYaw(current_lanelets, yaw_fixed_object);
+  }
+  // Generate Predicted Path
+  std::vector<PredictedPath> predicted_paths;
+  double min_avg_curvature = std::numeric_limits<double>::max();
+  PredictedPath path_with_smallest_avg_curvature;
+
+  for (const auto & ref_path : ref_paths) {
+    PredictedPath predicted_path = path_generator_->generatePathForOnLaneVehicle(
+      yaw_fixed_object, ref_path.path, prediction_time_horizon_.vehicle,
+      lateral_control_time_horizon_, ref_path.width, ref_path.speed_limit);
+    if (predicted_path.path.empty()) continue;
+
+    if (!check_lateral_acceleration_constraints_) {
+      predicted_path.confidence = ref_path.probability;
+      predicted_paths.push_back(predicted_path);
+      continue;
+    }
+
+    // Check lat. acceleration constraints
+    const auto trajectory_with_const_velocity = toTrajectoryPoints(predicted_path, abs_obj_speed);
+
+    if (isLateralAccelerationConstraintSatisfied(
+          trajectory_with_const_velocity, prediction_sampling_time_interval_)) {
+      predicted_path.confidence = ref_path.probability;
+      predicted_paths.push_back(predicted_path);
+      continue;
+    }
+
+    // Calculate curvature assuming the trajectory points interval is constant
+    // In case all paths are deleted, a copy of the straightest path is kept
+
+    constexpr double curvature_calculation_distance = 2.0;
+    constexpr double points_interval = 1.0;
+    const size_t idx_dist = static_cast<size_t>(
+      std::max(static_cast<int>((curvature_calculation_distance) / points_interval), 1));
+    const auto curvature_v =
+      calcTrajectoryCurvatureFrom3Points(trajectory_with_const_velocity, idx_dist);
+    if (curvature_v.empty()) {
+      continue;
+    }
+    const auto curvature_avg =
+      std::accumulate(curvature_v.begin(), curvature_v.end(), 0.0) / curvature_v.size();
+    if (curvature_avg < min_avg_curvature) {
+      min_avg_curvature = curvature_avg;
+      path_with_smallest_avg_curvature = predicted_path;
+      path_with_smallest_avg_curvature.confidence = ref_path.probability;
+    }
+  }
+
+  if (predicted_paths.empty()) predicted_paths.push_back(path_with_smallest_avg_curvature);
+  // Normalize Path Confidence and output the predicted object
+
+  float sum_confidence = 0.0;
+  for (const auto & predicted_path : predicted_paths) {
+    sum_confidence += predicted_path.confidence;
+  }
+  const float min_sum_confidence_value = 1e-3;
+  sum_confidence = std::max(sum_confidence, min_sum_confidence_value);
+
+  auto predicted_object = utils::convertToPredictedObject(transformed_object);
+
+  for (auto & predicted_path : predicted_paths) {
+    predicted_path.confidence = predicted_path.confidence / sum_confidence;
+    if (predicted_object.kinematics.predicted_paths.size() >= 100) break;
+    predicted_object.kinematics.predicted_paths.push_back(predicted_path);
+  }
+  return predicted_object;
 }
 
 std::optional<size_t> MapBasedPredictionNode::searchProperStartingRefPathIndex(
@@ -1952,40 +1803,6 @@ std::optional<size_t> MapBasedPredictionNode::searchProperStartingRefPathIndex(
   index = std::clamp(index, 0ul, pose_path.size() - 1);
 
   return is_position_found ? opt_index : std::nullopt;
-}
-
-bool MapBasedPredictionNode::isDuplicated(
-  const std::pair<double, lanelet::ConstLanelet> & target_lanelet,
-  const LaneletsData & lanelets_data)
-{
-  const double CLOSE_LANELET_THRESHOLD = 0.1;
-  for (const auto & lanelet_data : lanelets_data) {
-    const auto target_lanelet_end_p = target_lanelet.second.centerline2d().back();
-    const auto lanelet_end_p = lanelet_data.lanelet.centerline2d().back();
-    const double dist = std::hypot(
-      target_lanelet_end_p.x() - lanelet_end_p.x(), target_lanelet_end_p.y() - lanelet_end_p.y());
-    if (dist < CLOSE_LANELET_THRESHOLD) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-bool MapBasedPredictionNode::isDuplicated(
-  const PredictedPath & predicted_path, const std::vector<PredictedPath> & predicted_paths)
-{
-  const double CLOSE_PATH_THRESHOLD = 0.1;
-  for (const auto & prev_predicted_path : predicted_paths) {
-    const auto prev_path_end = prev_predicted_path.path.back().position;
-    const auto current_path_end = predicted_path.path.back().position;
-    const double dist = autoware::universe_utils::calcDistance2d(prev_path_end, current_path_end);
-    if (dist < CLOSE_PATH_THRESHOLD) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 }  // namespace autoware::map_based_prediction

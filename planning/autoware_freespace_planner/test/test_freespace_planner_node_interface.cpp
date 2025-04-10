@@ -15,11 +15,13 @@
 #include "autoware/freespace_planner/freespace_planner_node.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <autoware_planning_test_manager/autoware_planning_test_manager.hpp>
+#include <autoware/planning_test_manager/autoware_planning_test_manager.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
 
 #include <gtest/gtest.h>
 
+#include <memory>
+#include <string>
 #include <vector>
 
 using autoware::freespace_planner::FreespacePlannerNode;
@@ -28,10 +30,8 @@ using autoware::planning_test_manager::PlanningInterfaceTestManager;
 std::shared_ptr<PlanningInterfaceTestManager> generateTestManager()
 {
   auto test_manager = std::make_shared<PlanningInterfaceTestManager>();
-  test_manager->setRouteInputTopicName("freespace_planner/input/route");
-  test_manager->setTrajectorySubscriber("freespace_planner/output/trajectory");
-  test_manager->setOdometryTopicName("freespace_planner/input/odometry");
-  test_manager->setInitialPoseTopicName("freespace_planner/input/odometry");
+  test_manager->subscribeOutput<autoware_planning_msgs::msg::Trajectory>(
+    "freespace_planner/output/trajectory");
   return test_manager;
 }
 
@@ -54,10 +54,16 @@ void publishMandatoryTopics(
   rclcpp::Node::SharedPtr test_target_node)
 {
   // publish necessary topics from test_manager
-  test_manager->publishTF(test_target_node, "/tf");
-  test_manager->publishOdometry(test_target_node, "freespace_planner/input/odometry");
-  test_manager->publishOccupancyGrid(test_target_node, "freespace_planner/input/occupancy_grid");
-  test_manager->publishParkingScenario(test_target_node, "freespace_planner/input/scenario");
+  test_manager->publishInput(
+    test_target_node, "/tf", autoware::test_utils::makeTFMsg(test_target_node, "base_link", "map"));
+  test_manager->publishInput(
+    test_target_node, "freespace_planner/input/odometry", autoware::test_utils::makeOdometry());
+  test_manager->publishInput(
+    test_target_node, "freespace_planner/input/occupancy_grid",
+    autoware::test_utils::makeCostMapMsg());
+  test_manager->publishInput(
+    test_target_node, "freespace_planner/input/scenario",
+    autoware::test_utils::makeScenarioMsg(autoware_internal_planning_msgs::msg::Scenario::PARKING));
 }
 
 // the following tests are disable because they randomly fail
@@ -69,12 +75,16 @@ TEST(PlanningModuleInterfaceTest, DISABLED_testPlanningInterfaceWithVariousTraje
   auto test_target_node = generateNode();
   publishMandatoryTopics(test_manager, test_target_node);
 
+  const std::string input_route_topic = "freespace_planner/input/route";
+
   // test with normal route
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testWithBehaviorNominalRoute(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithBehaviorNormalRoute(test_target_node, input_route_topic));
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
   // test with empty route
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testWithAbnormalRoute(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithAbnormalRoute(test_target_node, input_route_topic));
   rclcpp::shutdown();
 }
 
@@ -86,11 +96,16 @@ TEST(PlanningModuleInterfaceTest, DISABLED_NodeTestWithOffTrackEgoPose)
 
   publishMandatoryTopics(test_manager, test_target_node);
 
+  const std::string input_route_topic = "freespace_planner/input/route";
+  const std::string input_odometry_topic = "freespace_planner/input/odometry";
+
   // test for normal route
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testWithBehaviorNominalRoute(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithBehaviorNormalRoute(test_target_node, input_route_topic));
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testRouteWithInvalidEgoPose(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithOffTrackOdometry(test_target_node, input_odometry_topic));
 
   rclcpp::shutdown();
 }

@@ -27,6 +27,9 @@
 #include <algorithm>
 #include <chrono>
 #include <limits>
+#include <memory>
+#include <tuple>
+#include <vector>
 
 namespace
 {
@@ -34,9 +37,9 @@ Eigen::SparseMatrix<double> makePMatrix(const int num_points)
 {
   std::vector<Eigen::Triplet<double>> triplet_vec;
   const auto assign_value_to_triplet_vec =
-    [&](const double row, const double colum, const double value) {
-      triplet_vec.push_back(Eigen::Triplet<double>(row, colum, value));
-      triplet_vec.push_back(Eigen::Triplet<double>(row + num_points, colum + num_points, value));
+    [&](const double row, const double column, const double value) {
+      triplet_vec.push_back(Eigen::Triplet<double>(row, column, value));
+      triplet_vec.push_back(Eigen::Triplet<double>(row + num_points, column + num_points, value));
     };
 
   for (int r = 0; r < num_points; ++r) {
@@ -50,9 +53,7 @@ Eigen::SparseMatrix<double> makePMatrix(const int num_points)
           assign_value_to_triplet_vec(r, c, 6.0);
         }
       } else if (std::abs(c - r) == 1) {
-        if (r == 0 || r == num_points - 1) {
-          assign_value_to_triplet_vec(r, c, -2.0);
-        } else if (c == 0 || c == num_points - 1) {
+        if (r == 0 || r == num_points - 1 || c == 0 || c == num_points - 1) {
           assign_value_to_triplet_vec(r, c, -2.0);
         } else {
           assign_value_to_triplet_vec(r, c, -4.0);
@@ -125,38 +126,38 @@ EBPathSmoother::EBParam::EBParam(rclcpp::Node * node)
 
 void EBPathSmoother::EBParam::onParam(const std::vector<rclcpp::Parameter> & parameters)
 {
-  using autoware::universe_utils::updateParam;
+  using autoware_utils::update_param;
 
   {  // option
-    updateParam<bool>(parameters, "elastic_band.option.enable_warm_start", enable_warm_start);
-    updateParam<bool>(
+    update_param<bool>(parameters, "elastic_band.option.enable_warm_start", enable_warm_start);
+    update_param<bool>(
       parameters, "elastic_band.option.enable_optimization_validation",
       enable_optimization_validation);
   }
 
   {  // common
-    updateParam<double>(parameters, "elastic_band.common.delta_arc_length", delta_arc_length);
-    updateParam<int>(parameters, "elastic_band.common.num_points", num_points);
+    update_param<double>(parameters, "elastic_band.common.delta_arc_length", delta_arc_length);
+    update_param<int>(parameters, "elastic_band.common.num_points", num_points);
   }
 
   {  // clearance
-    updateParam<int>(parameters, "elastic_band.clearance.num_joint_points", num_joint_points);
-    updateParam<double>(parameters, "elastic_band.clearance.clearance_for_fix", clearance_for_fix);
-    updateParam<double>(
+    update_param<int>(parameters, "elastic_band.clearance.num_joint_points", num_joint_points);
+    update_param<double>(parameters, "elastic_band.clearance.clearance_for_fix", clearance_for_fix);
+    update_param<double>(
       parameters, "elastic_band.clearance.clearance_for_joint", clearance_for_joint);
-    updateParam<double>(
+    update_param<double>(
       parameters, "elastic_band.clearance.clearance_for_smooth", clearance_for_smooth);
   }
 
   {  // weight
-    updateParam<double>(parameters, "elastic_band.weight.smooth_weight", smooth_weight);
-    updateParam<double>(parameters, "elastic_band.weight.lat_error_weight", lat_error_weight);
+    update_param<double>(parameters, "elastic_band.weight.smooth_weight", smooth_weight);
+    update_param<double>(parameters, "elastic_band.weight.lat_error_weight", lat_error_weight);
   }
 
   {  // qp
-    updateParam<int>(parameters, "elastic_band.qp.max_iteration", qp_param.max_iteration);
-    updateParam<double>(parameters, "elastic_band.qp.eps_abs", qp_param.eps_abs);
-    updateParam<double>(parameters, "elastic_band.qp.eps_rel", qp_param.eps_rel);
+    update_param<int>(parameters, "elastic_band.qp.max_iteration", qp_param.max_iteration);
+    update_param<double>(parameters, "elastic_band.qp.eps_abs", qp_param.eps_abs);
+    update_param<double>(parameters, "elastic_band.qp.eps_rel", qp_param.eps_rel);
   }
 }
 
@@ -402,9 +403,9 @@ std::optional<std::vector<double>> EBPathSmoother::calcSmoothedTrajectory()
 
   // solve QP
   const auto result = osqp_solver_ptr_->optimize();
-  const auto optimized_points = std::get<0>(result);
+  const auto optimized_points = result.primal_solution;
 
-  const auto status = std::get<3>(result);
+  const auto status = result.solution_status;
 
   // check status
   if (status != 1) {
@@ -442,8 +443,7 @@ std::optional<std::vector<TrajectoryPoint>> EBPathSmoother::convertOptimizedPoin
     }
 
     auto eb_traj_point = traj_points.at(i);
-    eb_traj_point.pose =
-      autoware::universe_utils::calcOffsetPose(eb_traj_point.pose, 0.0, lat_offset, 0.0);
+    eb_traj_point.pose = autoware_utils::calc_offset_pose(eb_traj_point.pose, 0.0, lat_offset, 0.0);
     eb_traj_points.push_back(eb_traj_point);
   }
 

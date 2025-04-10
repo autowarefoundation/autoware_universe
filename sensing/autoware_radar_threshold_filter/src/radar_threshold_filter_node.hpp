@@ -48,6 +48,7 @@ public:
     bool is_z_filter{};
     double z_min{};
     double z_max{};
+    size_t max_queue_size{};
   };
 
 private:

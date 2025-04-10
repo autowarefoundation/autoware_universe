@@ -19,7 +19,9 @@
 
 #include <gtest/gtest.h>
 
+#include <iostream>
 #include <memory>
+#include <vector>
 
 using autoware::behavior_velocity_planner::virtual_traffic_light::calcCenter;
 using autoware::behavior_velocity_planner::virtual_traffic_light::calcHeadPose;
@@ -31,11 +33,11 @@ using autoware::behavior_velocity_planner::virtual_traffic_light::insertStopVelo
 using autoware::behavior_velocity_planner::virtual_traffic_light::SegmentIndexWithPoint;
 using autoware::behavior_velocity_planner::virtual_traffic_light::toAutowarePoints;
 
-tier4_planning_msgs::msg::PathWithLaneId generateStraightPath()
+autoware_internal_planning_msgs::msg::PathWithLaneId generateStraightPath()
 {
-  tier4_planning_msgs::msg::PathWithLaneId path;
+  autoware_internal_planning_msgs::msg::PathWithLaneId path;
   for (size_t i = 0; i < 10; ++i) {
-    tier4_planning_msgs::msg::PathPointWithLaneId point;
+    autoware_internal_planning_msgs::msg::PathPointWithLaneId point;
     point.point.pose.position.x = static_cast<double>(i);
     point.point.pose.position.y = 0;
     point.point.pose.position.z = 0;
@@ -129,7 +131,7 @@ TEST(VirtualTrafficLightTest, ToAutowarePoints)
 
 TEST(VirtualTrafficLightTest, CalcCenter)
 {
-  autoware::universe_utils::LineString3d line_string;
+  autoware_utils::LineString3d line_string;
   line_string.emplace_back(1.0, 2.0, 3.0);
   line_string.emplace_back(4.0, 5.0, 6.0);
 
@@ -156,7 +158,7 @@ TEST(VirtualTrafficLightTest, CalcHeadPose)
 
 TEST(VirtualTrafficLightTest, ConvertToGeomPoint)
 {
-  autoware::universe_utils::Point3d point(1.0, 2.0, 3.0);
+  autoware_utils::Point3d point(1.0, 2.0, 3.0);
   auto geom_point = convertToGeomPoint(point);
 
   EXPECT_DOUBLE_EQ(geom_point.x, 1.0);
@@ -166,8 +168,8 @@ TEST(VirtualTrafficLightTest, ConvertToGeomPoint)
 
 TEST(VirtualTrafficLightTest, InsertStopVelocityFromStart)
 {
-  tier4_planning_msgs::msg::PathWithLaneId path;
-  tier4_planning_msgs::msg::PathPointWithLaneId point;
+  autoware_internal_planning_msgs::msg::PathWithLaneId path;
+  autoware_internal_planning_msgs::msg::PathPointWithLaneId point;
   point.point.longitudinal_velocity_mps = 10.0;
   path.points.push_back(point);
 
@@ -383,7 +385,7 @@ TEST(VirtualTrafficLightTest, FindLastCollisionBeforeEndLine)
   // 1) find first collision point
   {
     std::cout << "----- find first collision point -----" << std::endl;
-    autoware::universe_utils::LineString3d target_line;
+    autoware_utils::LineString3d target_line;
     target_line.emplace_back(0.0, -1.0, 0.0);
     target_line.emplace_back(0.0, 1.0, 0.0);
 
@@ -399,7 +401,7 @@ TEST(VirtualTrafficLightTest, FindLastCollisionBeforeEndLine)
   {
     std::cout << "----- find middle collision point -----" << std::endl;
 
-    autoware::universe_utils::LineString3d target_line;
+    autoware_utils::LineString3d target_line;
     target_line.emplace_back(5.0, -1.0, 0.0);
     target_line.emplace_back(5.0, 1.0, 0.0);
 
@@ -416,7 +418,7 @@ TEST(VirtualTrafficLightTest, FindLastCollisionBeforeEndLine)
   {
     std::cout << "----- find middle collision point -----" << std::endl;
 
-    autoware::universe_utils::LineString3d target_line;
+    autoware_utils::LineString3d target_line;
     target_line.emplace_back(4.5, -1.0, 0.0);
     target_line.emplace_back(4.5, 1.0, 0.0);
 
@@ -429,19 +431,19 @@ TEST(VirtualTrafficLightTest, FindLastCollisionBeforeEndLine)
     EXPECT_EQ(result.value().index, 5);
   }
 
-  // std::vector<autoware::universe_utils::LineString3d>
+  // std::vector<autoware_utils::LineString3d>
   // 3) find middle collision point with multi target lines
   {
     std::cout << "----- find collision point with multi target lines -----" << std::endl;
 
-    std::vector<autoware::universe_utils::LineString3d> target_lines;
+    std::vector<autoware_utils::LineString3d> target_lines;
     {
-      autoware::universe_utils::LineString3d target_line1;
+      autoware_utils::LineString3d target_line1;
 
       target_line1.emplace_back(3.5, -1.0, 0.0);
       target_line1.emplace_back(3.5, 1.0, 0.0);
 
-      autoware::universe_utils::LineString3d target_line2;
+      autoware_utils::LineString3d target_line2;
       target_line2.emplace_back(6.5, -1.0, 0.0);
       target_line2.emplace_back(6.5, 1.0, 0.0);
 

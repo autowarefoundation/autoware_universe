@@ -24,11 +24,6 @@
 #include "autoware/behavior_path_sampling_planner_module/sampling_planner_parameters.hpp"
 #include "autoware/behavior_path_sampling_planner_module/util.hpp"
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
-#include "autoware/universe_utils/geometry/boost_geometry.hpp"
-#include "autoware/universe_utils/geometry/boost_polygon_utils.hpp"
-#include "autoware/universe_utils/math/constants.hpp"
-#include "autoware/universe_utils/ros/update_param.hpp"
-#include "autoware/universe_utils/system/stop_watch.hpp"
 #include "autoware_bezier_sampler/bezier_sampling.hpp"
 #include "autoware_frenet_planner/frenet_planner.hpp"
 #include "autoware_lanelet2_extension/utility/query.hpp"
@@ -38,11 +33,16 @@
 #include "autoware_sampler_common/constraints/soft_constraint.hpp"
 #include "autoware_sampler_common/structures.hpp"
 #include "autoware_sampler_common/transform/spline_transform.hpp"
+#include "autoware_utils/geometry/boost_geometry.hpp"
+#include "autoware_utils/geometry/boost_polygon_utils.hpp"
+#include "autoware_utils/math/constants.hpp"
+#include "autoware_utils/ros/update_param.hpp"
+#include "autoware_utils/system/stop_watch.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 #include "rclcpp/rclcpp.hpp"
 
+#include "autoware_internal_planning_msgs/msg/path_with_lane_id.hpp"
 #include "tier4_planning_msgs/msg/lateral_offset.hpp"
-#include "tier4_planning_msgs/msg/path_with_lane_id.hpp"
 
 #include <boost/geometry.hpp>
 #include <boost/geometry/algorithms/within.hpp>
@@ -75,8 +75,8 @@ struct SamplingPlannerDebugData
 {
   std::vector<autoware::sampler_common::Path> sampled_candidates{};
   size_t previous_sampled_candidates_nb = 0UL;
-  std::vector<autoware::universe_utils::Polygon2d> obstacles{};
-  std::vector<autoware::universe_utils::MultiPoint2d> footprints{};
+  std::vector<autoware_utils::Polygon2d> obstacles{};
+  std::vector<autoware_utils::MultiPoint2d> footprints{};
 };
 class SamplingPlannerModule : public SceneModuleInterface
 {
@@ -87,7 +87,7 @@ public:
     const std::unordered_map<std::string, std::shared_ptr<RTCInterface>> & rtc_interface_ptr_map,
     std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
       objects_of_interest_marker_interface_ptr_map,
-    std::shared_ptr<SteeringFactorInterface> & steering_factor_interface_ptr);
+    const std::shared_ptr<PlanningFactorInterface> planning_factor_interface);
 
   bool isExecutionRequested() const override;
   bool isExecutionReady() const override;
@@ -156,8 +156,6 @@ private:
   bool canTransitSuccessState() override
   {
     std::vector<DrivableLanes> drivable_lanes{};
-    const auto & prev_module_path =
-      std::make_shared<PathWithLaneId>(getPreviousModuleOutput().path);
     const auto prev_module_reference_path =
       std::make_shared<PathWithLaneId>(getPreviousModuleOutput().reference_path);
 
@@ -208,7 +206,7 @@ private:
       autoware::motion_utils::findNearestIndex(prev_module_reference_path->points, ego_pose);
     if (!nearest_index) return false;
     auto toYaw = [](const geometry_msgs::msg::Quaternion & quat) -> double {
-      const auto rpy = autoware::universe_utils::getRPY(quat);
+      const auto rpy = autoware_utils::get_rpy(quat);
       return rpy.z;
     };
     const auto quat = prev_module_reference_path->points[*nearest_index].point.pose.orientation;

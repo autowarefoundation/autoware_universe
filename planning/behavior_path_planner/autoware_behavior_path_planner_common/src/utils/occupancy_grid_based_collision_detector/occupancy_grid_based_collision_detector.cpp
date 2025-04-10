@@ -14,21 +14,21 @@
 
 #include "autoware/behavior_path_planner_common/utils/occupancy_grid_based_collision_detector/occupancy_grid_based_collision_detector.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/math/normalization.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/normalization.hpp>
 
 #include <vector>
 
 namespace autoware::behavior_path_planner
 {
-using autoware::universe_utils::createQuaternionFromYaw;
-using autoware::universe_utils::normalizeRadian;
-using autoware::universe_utils::transformPose;
+using autoware_utils::create_quaternion_from_yaw;
+using autoware_utils::normalize_radian;
+using autoware_utils::transform_pose;
 
 int discretize_angle(const double theta, const int theta_size)
 {
   const double one_angle_range = 2.0 * M_PI / theta_size;
-  return static_cast<int>(std::rint(normalizeRadian(theta, 0.0) / one_angle_range)) % theta_size;
+  return static_cast<int>(std::rint(normalize_radian(theta, 0.0) / one_angle_range)) % theta_size;
 }
 
 IndexXYT pose2index(
@@ -51,7 +51,7 @@ geometry_msgs::msg::Pose index2pose(
 
   const double one_angle_range = 2.0 * M_PI / theta_size;
   const double yaw = index.theta * one_angle_range;
-  pose_local.orientation = createQuaternionFromYaw(yaw);
+  pose_local.orientation = create_quaternion_from_yaw(yaw);
 
   return pose_local;
 }
@@ -65,7 +65,7 @@ geometry_msgs::msg::Pose global2local(
   geometry_msgs::msg::TransformStamped transform;
   transform.transform = tf2::toMsg(tf_origin.inverse());
 
-  return transformPose(pose_global, transform);
+  return transform_pose(pose_global, transform);
 }
 
 void OccupancyGridBasedCollisionDetector::setMap(const nav_msgs::msg::OccupancyGrid & costmap)
@@ -80,7 +80,7 @@ void OccupancyGridBasedCollisionDetector::setMap(const nav_msgs::msg::OccupancyG
   for (uint32_t i = 0; i < height; i++) {
     is_obstacle_table.at(i).resize(width);
     for (uint32_t j = 0; j < width; j++) {
-      const int cost = costmap_.data[i * width + j];
+      const int cost = costmap_.data[i * width + j];  // NOLINT
 
       if (cost < 0 || param_.obstacle_threshold <= cost) {
         is_obstacle_table[i][j] = true;
@@ -173,7 +173,8 @@ bool OccupancyGridBasedCollisionDetector::detectCollision(
 }
 
 bool OccupancyGridBasedCollisionDetector::hasObstacleOnPath(
-  const tier4_planning_msgs::msg::PathWithLaneId & path, const bool check_out_of_range) const
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
+  const bool check_out_of_range) const
 {
   for (const auto & p : path.points) {
     const auto pose_local = global2local(costmap_, p.point.pose);

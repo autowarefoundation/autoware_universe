@@ -1,0 +1,80 @@
+name: bump-version-pr
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_part:
+        description: Which part of the version number to bump?
+        required: true
+        default: minor
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+
+jobs:
+  bump-version-pr:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: humble
+          fetch-depth: 0
+
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+
+      - name: Set git config
+        uses: autowarefoundation/autoware-github-actions/set-git-config@v1
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+
+      - name: Setup Python 3.x
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+
+      - name: Install dependencies
+        run: pip3 install -U catkin_tools
+        shell: bash
+
+      - name: Bump version from humble branch
+        id: bump-version-from-humble-branch
+        run: |
+          git checkout -b tmp/bot/bump_version_base
+          git fetch origin main
+          git merge origin/main
+          catkin_generate_changelog -y
+          git add *
+          git commit -m "update CHANGELOG.rst"
+          catkin_prepare_release -y --bump ${{ inputs.version_part }} --no-push
+          version=$(git describe --tags)
+          echo "version=${version}" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Create target branch
+        run: |
+          git checkout origin/main
+          git checkout -b chore/bot/bump_version
+          git merge tmp/bot/bump_version_base
+          git push origin chore/bot/bump_version --force
+        shell: bash
+
+      - name: Create PR
+        id: create-pr
+        run: >
+          gh
+          pr
+          create
+          --base=main
+          --body="Bump version to ${{ steps.bump-version-from-humble-branch.outputs.version }}"
+          --title="chore: bump version to ${{ steps.bump-version-from-humble-branch.outputs.version }}"
+          --head=chore/bot/bump_version
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/behavior_path_planner_common/data_manager.hpp"
 #include "autoware/behavior_path_planner_common/utils/parking_departure/utils.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_safety_checker/path_safety_checker_parameters.hpp"
 
@@ -23,13 +24,16 @@
 #include <lanelet2_core/Forward.h>
 
 #include <cstddef>
+#include <memory>
+#include <utility>
+#include <vector>
 
 constexpr double epsilon = 1e-6;
 
 using autoware::behavior_path_planner::PlannerData;
+using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using autoware_planning_msgs::msg::Trajectory;
-using tier4_planning_msgs::msg::PathPointWithLaneId;
-using tier4_planning_msgs::msg::PathWithLaneId;
 
 using autoware::test_utils::generateTrajectory;
 
@@ -172,7 +176,7 @@ TEST(BehaviorPathPlanningParkingDepartureUtil, initializeCollisionCheckDebugMap)
   using autoware::behavior_path_planner::utils::parking_departure::initializeCollisionCheckDebugMap;
 
   autoware::behavior_path_planner::CollisionCheckDebugMap debug_map;
-  auto uuid1 = autoware::universe_utils::toBoostUUID(autoware::universe_utils::generateUUID());
+  auto uuid1 = autoware_utils::to_boost_uuid(autoware_utils::generate_uuid());
   autoware::behavior_path_planner::utils::path_safety_checker::CollisionCheckDebug debug_info;
   debug_map[uuid1] = debug_info;
 
@@ -219,7 +223,7 @@ TEST(BehaviorPathPlanningParkingDepartureUtil, generateFeasibleStopPath)
   data->self_acceleration = accel_with_covariance;
   auto planner_data = std::static_pointer_cast<const PlannerData>(data);
 
-  std::optional<geometry_msgs::msg::Pose> stop_pose;
+  autoware::behavior_path_planner::PoseWithDetailOpt stop_pose{std::nullopt};
 
   // condition: empty path
   PathWithLaneId path;

@@ -18,6 +18,9 @@
 
 #include <gtest/gtest.h>
 
+#include <string>
+#include <vector>
+
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 
@@ -89,5 +92,10 @@ INSTANTIATE_TEST_SUITE_P(
       "IntervalIsGreaterThanDistance",
       {{1.0, 0.0, 0.0}, {2.0, 0.0, 0.0}, {3.0, 0.0, 0.0}},
       1.5,
-      {{1.0, 0.0, 0.0}, {3.0, 0.0, 0.0}}}),
+      {{1.0, 0.0, 0.0}, {3.0, 0.0, 0.0}}},
+    ResampleTrajectoryTestParam{
+      "ConsecutiveSmallDistancesFollowedByLargeDistance",
+      {{0.0, 0.0, 0.0}, {0.7, 0.0, 0.0}, {1.3, 0.0, 0.0}, {3.0, 0.0, 0.0}},
+      1.0,
+      {{0.0, 0.0, 0.0}, {1.3, 0.0, 0.0}, {3.0, 0.0, 0.0}}}),
   ::testing::PrintToStringParamName());

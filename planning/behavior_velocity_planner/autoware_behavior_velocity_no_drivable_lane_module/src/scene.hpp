@@ -26,7 +26,7 @@
 
 namespace autoware::behavior_velocity_planner
 {
-using tier4_planning_msgs::msg::PathWithLaneId;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 
 class NoDrivableLaneModule : public SceneModuleInterface
 {
@@ -55,9 +55,12 @@ public:
 
   NoDrivableLaneModule(
     const int64_t module_id, const int64_t lane_id, const PlannerParam & planner_param,
-    const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock);
+    const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+      planning_factor_interface);
 
-  bool modifyPathVelocity(PathWithLaneId * path, StopReason * stop_reason) override;
+  bool modifyPathVelocity(PathWithLaneId * path) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
@@ -79,9 +82,9 @@ private:
   double distance_ego_first_intersection{};
 
   void handle_init_state();
-  void handle_approaching_state(PathWithLaneId * path, StopReason * stop_reason);
-  void handle_inside_no_drivable_lane_state(PathWithLaneId * path, StopReason * stop_reason);
-  void handle_stopped_state(PathWithLaneId * path, StopReason * stop_reason);
+  void handle_approaching_state(PathWithLaneId * path);
+  void handle_inside_no_drivable_lane_state(PathWithLaneId * path);
+  void handle_stopped_state(PathWithLaneId * path);
   void initialize_debug_data(
     const lanelet::Lanelet & no_drivable_lane, const geometry_msgs::msg::Point & ego_pos);
 };

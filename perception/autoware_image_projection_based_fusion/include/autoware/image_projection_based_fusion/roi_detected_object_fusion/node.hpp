@@ -16,7 +16,7 @@
 #define AUTOWARE__IMAGE_PROJECTION_BASED_FUSION__ROI_DETECTED_OBJECT_FUSION__NODE_HPP_
 
 #include "autoware/image_projection_based_fusion/fusion_node.hpp"
-#include "autoware/universe_utils/ros/debug_publisher.hpp"
+#include "autoware_utils/ros/debug_publisher.hpp"
 
 #include <autoware/image_projection_based_fusion/utils/utils.hpp>
 
@@ -31,35 +31,31 @@ namespace autoware::image_projection_based_fusion
 
 using sensor_msgs::msg::RegionOfInterest;
 
-class RoiDetectedObjectFusionNode
-: public FusionNode<DetectedObjects, DetectedObject, DetectedObjectsWithFeature>
+class RoiDetectedObjectFusionNode : public FusionNode<DetectedObjects, RoiMsgType, DetectedObjects>
 {
 public:
   explicit RoiDetectedObjectFusionNode(const rclcpp::NodeOptions & options);
 
-protected:
+private:
   void preprocess(DetectedObjects & output_msg) override;
 
-  void fuseOnSingleImage(
-    const DetectedObjects & input_object_msg, const std::size_t image_id,
-    const DetectedObjectsWithFeature & input_roi_msg,
-    const sensor_msgs::msg::CameraInfo & camera_info, DetectedObjects & output_object_msg) override;
+  void fuse_on_single_image(
+    const DetectedObjects & input_object_msg, const Det2dStatus<RoiMsgType> & det2d_status,
+    const RoiMsgType & input_rois_msg, DetectedObjects & output_object_msg) override;
 
   std::map<std::size_t, DetectedObjectWithFeature> generateDetectedObjectRoIs(
-    const DetectedObjects & input_object_msg, const double image_width, const double image_height,
-    const Eigen::Affine3d & object2camera_affine,
-    const image_geometry::PinholeCameraModel & pinhole_camera_model);
+    const DetectedObjects & input_object_msg, const Det2dStatus<RoiMsgType> & det2d_status,
+    const Eigen::Affine3d & object2camera_affine);
 
   void fuseObjectsOnImage(
     const DetectedObjects & input_object_msg,
     const std::vector<DetectedObjectWithFeature> & image_rois,
     const std::map<std::size_t, DetectedObjectWithFeature> & object_roi_map);
 
-  void publish(const DetectedObjects & output_msg) override;
+  void postprocess(const DetectedObjects & processing_msg, DetectedObjects & output_msg) override;
 
   bool out_of_scope(const DetectedObject & obj);
 
-private:
   struct
   {
     std::vector<double> passthrough_lower_bound_probability_thresholds{};

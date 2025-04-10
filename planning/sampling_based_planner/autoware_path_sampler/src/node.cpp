@@ -27,8 +27,11 @@
 
 #include <boost/geometry/algorithms/distance.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <limits>
+#include <string>
+#include <vector>
 
 namespace autoware::path_sampler
 {
@@ -144,59 +147,62 @@ PathSampler::PathSampler(const rclcpp::NodeOptions & node_options)
 rcl_interfaces::msg::SetParametersResult PathSampler::onParam(
   const std::vector<rclcpp::Parameter> & parameters)
 {
-  using autoware::universe_utils::updateParam;
+  using autoware_utils::update_param;
 
-  updateParam(parameters, "constraints.hard.max_curvature", params_.constraints.hard.max_curvature);
-  updateParam(parameters, "constraints.hard.min_curvature", params_.constraints.hard.min_curvature);
-  updateParam(
+  update_param(
+    parameters, "constraints.hard.max_curvature", params_.constraints.hard.max_curvature);
+  update_param(
+    parameters, "constraints.hard.min_curvature", params_.constraints.hard.min_curvature);
+  update_param(
     parameters, "constraints.hard.min_distance_from_obstacles",
     params_.constraints.hard.min_dist_from_obstacles);
-  updateParam(
+  update_param(
     parameters, "constraints.hard.limit_footprint_inside_drivable_area",
     params_.constraints.hard.limit_footprint_inside_drivable_area);
-  updateParam(
+  update_param(
     parameters, "constraints.soft.lateral_deviation_weight",
     params_.constraints.soft.lateral_deviation_weight);
-  updateParam(parameters, "constraints.soft.length_weight", params_.constraints.soft.length_weight);
-  updateParam(
+  update_param(
+    parameters, "constraints.soft.length_weight", params_.constraints.soft.length_weight);
+  update_param(
     parameters, "constraints.soft.curvature_weight", params_.constraints.soft.curvature_weight);
-  updateParam(parameters, "sampling.enable_frenet", params_.sampling.enable_frenet);
-  updateParam(parameters, "sampling.enable_bezier", params_.sampling.enable_bezier);
-  updateParam(parameters, "sampling.resolution", params_.sampling.resolution);
-  updateParam(
+  update_param(parameters, "sampling.enable_frenet", params_.sampling.enable_frenet);
+  update_param(parameters, "sampling.enable_bezier", params_.sampling.enable_bezier);
+  update_param(parameters, "sampling.resolution", params_.sampling.resolution);
+  update_param(
     parameters, "sampling.previous_path_reuse_points_nb",
     params_.sampling.previous_path_reuse_points_nb);
-  updateParam(parameters, "sampling.target_lengths", params_.sampling.target_lengths);
-  updateParam(
+  update_param(parameters, "sampling.target_lengths", params_.sampling.target_lengths);
+  update_param(
     parameters, "sampling.target_lateral_positions", params_.sampling.target_lateral_positions);
-  updateParam(
+  update_param(
     parameters, "sampling.nb_target_lateral_positions",
     params_.sampling.nb_target_lateral_positions);
-  updateParam(
+  update_param(
     parameters, "sampling.frenet.target_lateral_velocities",
     params_.sampling.frenet.target_lateral_velocities);
-  updateParam(
+  update_param(
     parameters, "sampling.frenet.target_lateral_accelerations",
     params_.sampling.frenet.target_lateral_accelerations);
-  updateParam(parameters, "sampling.bezier.nb_k", params_.sampling.bezier.nb_k);
-  updateParam(parameters, "sampling.bezier.mk_min", params_.sampling.bezier.mk_min);
-  updateParam(parameters, "sampling.bezier.mk_max", params_.sampling.bezier.mk_max);
-  updateParam(parameters, "sampling.bezier.nb_t", params_.sampling.bezier.nb_t);
-  updateParam(parameters, "sampling.bezier.mt_min", params_.sampling.bezier.mt_min);
-  updateParam(parameters, "sampling.bezier.mt_max", params_.sampling.bezier.mt_max);
-  updateParam(
+  update_param(parameters, "sampling.bezier.nb_k", params_.sampling.bezier.nb_k);
+  update_param(parameters, "sampling.bezier.mk_min", params_.sampling.bezier.mk_min);
+  update_param(parameters, "sampling.bezier.mk_max", params_.sampling.bezier.mk_max);
+  update_param(parameters, "sampling.bezier.nb_t", params_.sampling.bezier.nb_t);
+  update_param(parameters, "sampling.bezier.mt_min", params_.sampling.bezier.mt_min);
+  update_param(parameters, "sampling.bezier.mt_max", params_.sampling.bezier.mt_max);
+  update_param(
     parameters, "preprocessing.force_zero_initial_deviation",
     params_.preprocessing.force_zero_deviation);
-  updateParam(
+  update_param(
     parameters, "preprocessing.force_zero_initial_heading",
     params_.preprocessing.force_zero_heading);
-  updateParam(
+  update_param(
     parameters, "preprocessing.smooth_reference_trajectory",
     params_.preprocessing.smooth_reference);
-  updateParam(
+  update_param(
     parameters, "debug.enable_calculation_time_info",
     time_keeper_ptr_->enable_calculation_time_info);
-  updateParam(parameters, "debug.id", debug_id_);
+  update_param(parameters, "debug.id", debug_id_);
   // parameters for ego nearest search
   ego_nearest_param_.onParam(parameters);
 
@@ -232,7 +238,7 @@ void PathSampler::onPath(const Path::SharedPtr path_ptr)
   time_keeper_ptr_->tic(__func__);
 
   // check if data is ready and valid
-  const auto ego_state_ptr = odom_sub_.takeData();
+  const auto ego_state_ptr = odom_sub_.take_data();
   if (!isDataReady(*path_ptr, ego_state_ptr, *get_clock())) {
     return;
   }
@@ -290,7 +296,7 @@ bool PathSampler::isDataReady(
     return false;
   }
 
-  if (!objects_sub_.takeData()) {
+  if (!objects_sub_.take_data()) {
     RCLCPP_INFO_SKIPFIRST_THROTTLE(get_logger(), clock, 5000, "Waiting for detected objects.");
     return false;
   }
@@ -318,14 +324,14 @@ void PathSampler::copyZ(
   to_traj.front().pose.position.z = from_traj.front().pose.position.z;
   if (from_traj.size() < 2 || to_traj.size() < 2) return;
   auto from = from_traj.begin() + 1;
-  auto s_from = autoware::universe_utils::calcDistance2d(from->pose, std::next(from)->pose);
+  auto s_from = autoware_utils::calc_distance2d(from->pose, std::next(from)->pose);
   auto s_to = 0.0;
   auto s_from_prev = 0.0;
   for (auto to = to_traj.begin() + 1; to + 1 != to_traj.end(); ++to) {
-    s_to += autoware::universe_utils::calcDistance2d(std::prev(to)->pose, to->pose);
+    s_to += autoware_utils::calc_distance2d(std::prev(to)->pose, to->pose);
     for (; s_from < s_to && from + 1 != from_traj.end(); ++from) {
       s_from_prev = s_from;
-      s_from += autoware::universe_utils::calcDistance2d(from->pose, std::next(from)->pose);
+      s_from += autoware_utils::calc_distance2d(from->pose, std::next(from)->pose);
     }
     const auto ratio = (s_to - s_from_prev) / (s_from - s_from_prev);
     to->pose.position.z = std::prev(from)->pose.position.z +
@@ -341,8 +347,8 @@ void PathSampler::copyVelocity(
   if (to_traj.empty() || from_traj.empty()) return;
 
   const auto closest_fn = [&](const auto & p1, const auto & p2) {
-    return autoware::universe_utils::calcDistance2d(p1.pose, ego_pose) <=
-           autoware::universe_utils::calcDistance2d(p2.pose, ego_pose);
+    return autoware_utils::calc_distance2d(p1.pose, ego_pose) <=
+           autoware_utils::calc_distance2d(p2.pose, ego_pose);
   };
   const auto first_from = std::min_element(from_traj.begin(), from_traj.end() - 1, closest_fn);
   const auto first_to = std::min_element(to_traj.begin(), to_traj.end() - 1, closest_fn);
@@ -352,14 +358,14 @@ void PathSampler::copyVelocity(
     to->longitudinal_velocity_mps = first_from->longitudinal_velocity_mps;
 
   auto from = first_from;
-  auto s_from = autoware::universe_utils::calcDistance2d(from->pose, std::next(from)->pose);
+  auto s_from = autoware_utils::calc_distance2d(from->pose, std::next(from)->pose);
   auto s_to = 0.0;
   auto s_from_prev = 0.0;
   for (; to + 1 != to_traj.end(); ++to) {
-    s_to += autoware::universe_utils::calcDistance2d(to->pose, std::next(to)->pose);
+    s_to += autoware_utils::calc_distance2d(to->pose, std::next(to)->pose);
     for (; s_from < s_to && from + 1 != from_traj.end(); ++from) {
       s_from_prev = s_from;
-      s_from += autoware::universe_utils::calcDistance2d(from->pose, std::next(from)->pose);
+      s_from += autoware_utils::calc_distance2d(from->pose, std::next(from)->pose);
     }
     if (
       from->longitudinal_velocity_mps == 0.0 || std::prev(from)->longitudinal_velocity_mps == 0.0) {
@@ -466,7 +472,7 @@ autoware::sampler_common::Path PathSampler::generatePath(const PlannerData & pla
   current_state.heading = tf2::getYaw(planner_data.ego_pose.orientation);
 
   const auto planning_state = getPlanningState(current_state, path_spline);
-  const auto objects = objects_sub_.takeData();
+  const auto objects = objects_sub_.take_data();
   prepareConstraints(
     params_.constraints, *objects, planner_data.left_bound, planner_data.right_bound);
 

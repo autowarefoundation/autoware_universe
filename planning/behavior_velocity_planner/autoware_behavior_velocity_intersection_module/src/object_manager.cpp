@@ -14,9 +14,9 @@
 
 #include "object_manager.hpp"
 
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
-#include <autoware/universe_utils/geometry/boost_polygon_utils.hpp>  // for toPolygon2d
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>  // for toPolygon2d
 
 #include <boost/geometry/algorithms/convex_hull.hpp>
 #include <boost/geometry/algorithms/correct.hpp>
@@ -25,6 +25,8 @@
 #include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/geometry/LineString.h>
 
+#include <memory>
+#include <string>
 #include <vector>
 
 namespace
@@ -38,15 +40,15 @@ std::string to_string(const unique_identifier_msgs::msg::UUID & uuid)
   return ss.str();
 }
 
-autoware::universe_utils::Polygon2d createOneStepPolygon(
+autoware_utils::Polygon2d createOneStepPolygon(
   const geometry_msgs::msg::Pose & prev_pose, const geometry_msgs::msg::Pose & next_pose,
   const autoware_perception_msgs::msg::Shape & shape)
 {
   namespace bg = boost::geometry;
-  const auto prev_poly = autoware::universe_utils::toPolygon2d(prev_pose, shape);
-  const auto next_poly = autoware::universe_utils::toPolygon2d(next_pose, shape);
+  const auto prev_poly = autoware_utils::to_polygon2d(prev_pose, shape);
+  const auto next_poly = autoware_utils::to_polygon2d(next_pose, shape);
 
-  autoware::universe_utils::Polygon2d one_step_poly;
+  autoware_utils::Polygon2d one_step_poly;
   for (const auto & point : prev_poly.outer()) {
     one_step_poly.outer().push_back(point);
   }
@@ -56,7 +58,7 @@ autoware::universe_utils::Polygon2d createOneStepPolygon(
 
   bg::correct(one_step_poly);
 
-  autoware::universe_utils::Polygon2d convex_one_step_poly;
+  autoware_utils::Polygon2d convex_one_step_poly;
   bg::convex_hull(one_step_poly, convex_one_step_poly);
 
   return convex_one_step_poly;
@@ -160,13 +162,13 @@ bool ObjectInfo::can_stop_before_ego_lane(
   const auto stopline = stopline_opt_.value();
   const auto stopline_p1 = stopline.front();
   const auto stopline_p2 = stopline.back();
-  const autoware::universe_utils::Point2d stopline_mid{
+  const autoware_utils::Point2d stopline_mid{
     (stopline_p1.x() + stopline_p2.x()) / 2.0, (stopline_p1.y() + stopline_p2.y()) / 2.0};
   const auto attention_lane_end = attention_lanelet.centerline().back();
-  const autoware::universe_utils::LineString2d attention_lane_later_part(
-    {autoware::universe_utils::Point2d{stopline_mid.x(), stopline_mid.y()},
-     autoware::universe_utils::Point2d{attention_lane_end.x(), attention_lane_end.y()}});
-  std::vector<autoware::universe_utils::Point2d> ego_collision_points;
+  const autoware_utils::LineString2d attention_lane_later_part(
+    {autoware_utils::Point2d{stopline_mid.x(), stopline_mid.y()},
+     autoware_utils::Point2d{attention_lane_end.x(), attention_lane_end.y()}});
+  std::vector<autoware_utils::Point2d> ego_collision_points;
   bg::intersection(
     attention_lane_later_part, ego_lane.centerline2d().basicLineString(), ego_collision_points);
   if (ego_collision_points.empty()) {

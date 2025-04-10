@@ -23,10 +23,10 @@ The clusters are projected onto image planes, and then if the ROIs of clusters a
 
 ### Output
 
-| Name                     | Type                                                     | Description                |
-| ------------------------ | -------------------------------------------------------- | -------------------------- |
-| `output`                 | `tier4_perception_msgs::msg::DetectedObjectsWithFeature` | labeled cluster pointcloud |
-| `~/debug/image_raw[0-7]` | `sensor_msgs::msg::Image`                                | images for visualization   |
+| Name                   | Type                                                     | Description                |
+| ---------------------- | -------------------------------------------------------- | -------------------------- |
+| `output`               | `tier4_perception_msgs::msg::DetectedObjectsWithFeature` | labeled cluster pointcloud |
+| `debug/image_raw[0-7]` | `sensor_msgs::msg::Image`                                | images for visualization   |
 
 ## Parameters
 

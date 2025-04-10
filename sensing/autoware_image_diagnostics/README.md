@@ -28,13 +28,13 @@ After all image's blocks state are evaluated, the whole image status is summariz
 
 ### Output
 
-| Name                                | Type                                    | Description                           |
-| ----------------------------------- | --------------------------------------- | ------------------------------------- |
-| `image_diag/debug/gray_image`       | `sensor_msgs::msg::Image`               | gray image                            |
-| `image_diag/debug/dft_image`        | `sensor_msgs::msg::Image`               | discrete Fourier transformation image |
-| `image_diag/debug/diag_block_image` | `sensor_msgs::msg::Image`               | each block state colorization         |
-| `image_diag/image_state_diag`       | `tier4_debug_msgs::msg::Int32Stamped`   | image diagnostics status value        |
-| `/diagnostics`                      | `diagnostic_msgs::msg::DiagnosticArray` | diagnostics                           |
+| Name                                | Type                                              | Description                           |
+| ----------------------------------- | ------------------------------------------------- | ------------------------------------- |
+| `image_diag/debug/gray_image`       | `sensor_msgs::msg::Image`                         | gray image                            |
+| `image_diag/debug/dft_image`        | `sensor_msgs::msg::Image`                         | discrete Fourier transformation image |
+| `image_diag/debug/diag_block_image` | `sensor_msgs::msg::Image`                         | each block state colorization         |
+| `image_diag/image_state_diag`       | `autoware_internal_debug_msgs::msg::Int32Stamped` | image diagnostics status value        |
+| `/diagnostics`                      | `diagnostic_msgs::msg::DiagnosticArray`           | diagnostics                           |
 
 ## Parameters
 

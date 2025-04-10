@@ -17,10 +17,10 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <tier4_debug_msgs/msg/float32_multi_array_stamped.hpp>
 
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -58,7 +58,8 @@ public:
     const PredictedObject & target_object);
 
 private:
-  rclcpp::Publisher<tier4_debug_msgs::msg::Float32MultiArrayStamped>::SharedPtr pub_debug_;
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>::SharedPtr
+    pub_debug_;
 
   rclcpp::Node * node_;
   /*
@@ -203,8 +204,8 @@ private:
   double estimateRoughPointVelocity(double current_vel);
   bool isObstacleVelocityHigh(const double obj_vel);
   double calcUpperVelocity(const double dist_to_col, const double obj_vel, const double self_vel);
-  double calcThreshDistToForwardObstacle(const double current_vel, const double obj_vel);
-  double calcBaseDistToForwardObstacle(const double current_vel, const double obj_vel);
+  double calcThreshDistToForwardObstacle(const double current_vel, const double obj_vel) const;
+  double calcBaseDistToForwardObstacle(const double current_vel, const double obj_vel) const;
   double calcTargetVelocity_P(const double target_dist, const double current_dist) const;
   static double calcTargetVelocity_I(const double target_dist, const double current_dist);
   double calcTargetVelocity_D(const double target_dist, const double current_dist);
@@ -217,7 +218,7 @@ private:
   void registerQueToVelocity(const double vel, const rclcpp::Time & vel_time);
 
   /* Debug */
-  mutable tier4_debug_msgs::msg::Float32MultiArrayStamped debug_values_;
+  mutable autoware_internal_debug_msgs::msg::Float32MultiArrayStamped debug_values_;
   enum DBGVAL {
     ESTIMATED_VEL_PCL = 0,
     ESTIMATED_VEL_OBJ = 1,

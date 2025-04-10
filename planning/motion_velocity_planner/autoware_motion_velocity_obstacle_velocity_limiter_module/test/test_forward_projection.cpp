@@ -14,7 +14,7 @@
 
 #include "../src/forward_projection.hpp"
 #include "../src/types.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 
 #include <geometry_msgs/msg/point.hpp>
 
@@ -24,6 +24,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <iostream>
 
 constexpr auto EPS = 1e-15;
 constexpr auto EPS_APPROX = 1e-3;

@@ -15,18 +15,18 @@
 #ifndef AUTOWARE__SCENARIO_SELECTOR__NODE_HPP_
 #define AUTOWARE__SCENARIO_SELECTOR__NODE_HPP_
 
-#include <autoware/universe_utils/ros/published_time_publisher.hpp>
+#include <autoware_utils/ros/published_time_publisher.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
+#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
+#include <autoware_internal_planning_msgs/msg/scenario.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <std_msgs/msg/bool.hpp>
-#include <tier4_debug_msgs/msg/float64_stamped.hpp>
-#include <tier4_planning_msgs/msg/scenario.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_routing/RoutingGraph.h>
@@ -37,8 +37,8 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #endif
 #include <autoware/route_handler/route_handler.hpp>
-#include <autoware/universe_utils/ros/polling_subscriber.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
@@ -79,12 +79,12 @@ private:
 
   inline bool isCurrentLaneDriving() const
   {
-    return current_scenario_ == tier4_planning_msgs::msg::Scenario::LANEDRIVING;
+    return current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING;
   }
 
   inline bool isCurrentParking() const
   {
-    return current_scenario_ == tier4_planning_msgs::msg::Scenario::PARKING;
+    return current_scenario_ == autoware_internal_planning_msgs::msg::Scenario::PARKING;
   }
 
   rclcpp::TimerBase::SharedPtr timer_;
@@ -96,14 +96,15 @@ private:
     sub_lane_driving_trajectory_;
   rclcpp::Subscription<autoware_planning_msgs::msg::Trajectory>::SharedPtr sub_parking_trajectory_;
   rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr pub_trajectory_;
-  rclcpp::Publisher<tier4_planning_msgs::msg::Scenario>::SharedPtr pub_scenario_;
-  rclcpp::Publisher<tier4_debug_msgs::msg::Float64Stamped>::SharedPtr pub_processing_time_;
+  rclcpp::Publisher<autoware_internal_planning_msgs::msg::Scenario>::SharedPtr pub_scenario_;
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
+    pub_processing_time_;
 
   // polling subscribers
-  universe_utils::InterProcessPollingSubscriber<
-    nav_msgs::msg::Odometry, autoware::universe_utils::polling_policy::All>::SharedPtr sub_odom_;
-  universe_utils::InterProcessPollingSubscriber<std_msgs::msg::Bool>::SharedPtr sub_parking_state_;
-  universe_utils::InterProcessPollingSubscriber<
+  autoware_utils::InterProcessPollingSubscriber<
+    nav_msgs::msg::Odometry, autoware_utils::polling_policy::All>::SharedPtr sub_odom_;
+  autoware_utils::InterProcessPollingSubscriber<std_msgs::msg::Bool>::SharedPtr sub_parking_state_;
+  autoware_utils::InterProcessPollingSubscriber<
     autoware_adapi_v1_msgs::msg::OperationModeState>::SharedPtr sub_operation_mode_state_;
 
   autoware_adapi_v1_msgs::msg::OperationModeState::ConstSharedPtr operation_mode_state_;
@@ -117,7 +118,7 @@ private:
   std::deque<geometry_msgs::msg::TwistStamped::ConstSharedPtr> twist_buffer_;
 
   std::shared_ptr<autoware::route_handler::RouteHandler> route_handler_;
-  std::unique_ptr<autoware::universe_utils::PublishedTimePublisher> published_time_publisher_;
+  std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
 
   // Parameters
   double update_rate_;
@@ -135,7 +136,7 @@ private:
   static constexpr double empty_parking_trajectory_timeout_s = 3.0;
 
   // processing time
-  autoware::universe_utils::StopWatch<std::chrono::milliseconds> stop_watch;
+  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
 };
 }  // namespace autoware::scenario_selector
 #endif  // AUTOWARE__SCENARIO_SELECTOR__NODE_HPP_

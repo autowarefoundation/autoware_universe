@@ -14,10 +14,13 @@
 
 #include "autoware/pid_longitudinal_controller/longitudinal_controller_utils.hpp"
 
+#include "autoware_utils/geometry/geometry.hpp"
 #include "tf2/LinearMath/Matrix3x3.h"
 #include "tf2/LinearMath/Quaternion.h"
 
 #include <experimental/optional>  // NOLINT
+
+#include <utility>
 
 #ifdef ROS_DISTRO_GALACTIC
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
@@ -93,8 +96,8 @@ double getPitchByTraj(
 
   const auto [prev_idx, next_idx] = [&]() {
     for (size_t i = start_idx + 1; i < trajectory.points.size(); ++i) {
-      const double dist = autoware::universe_utils::calcDistance3d(
-        trajectory.points.at(start_idx), trajectory.points.at(i));
+      const double dist =
+        autoware_utils::calc_distance3d(trajectory.points.at(start_idx), trajectory.points.at(i));
       if (dist > wheel_base) {
         // calculate pitch from trajectory between rear wheel (nearest) and front center (i)
         return std::make_pair(start_idx, i);
@@ -105,7 +108,7 @@ double getPitchByTraj(
       std::min(start_idx, trajectory.points.size() - 2), trajectory.points.size() - 1);
   }();
 
-  return autoware::universe_utils::calcElevationAngle(
+  return autoware_utils::calc_elevation_angle(
     trajectory.points.at(prev_idx).pose.position, trajectory.points.at(next_idx).pose.position);
 }
 
@@ -166,7 +169,7 @@ geometry_msgs::msg::Pose findTrajectoryPoseAfterDistance(
   double remain_dist = distance;
   geometry_msgs::msg::Pose p = trajectory.points.back().pose;
   for (size_t i = src_idx; i < trajectory.points.size() - 1; ++i) {
-    const double dist = autoware::universe_utils::calcDistance3d(
+    const double dist = autoware_utils::calc_distance3d(
       trajectory.points.at(i).pose, trajectory.points.at(i + 1).pose);
     if (remain_dist < dist) {
       if (remain_dist <= 0.0) {

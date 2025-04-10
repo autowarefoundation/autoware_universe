@@ -8,8 +8,8 @@ find_package(pcl_conversions REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(tf2_eigen REQUIRED)
-find_package(autoware_universe_utils REQUIRED)
-find_package(tier4_debug_msgs REQUIRED)
+find_package(autoware_utils REQUIRED)
+find_package(autoware_internal_debug_msgs REQUIRED)
 find_package(tier4_perception_msgs REQUIRED)
 
 find_package(autoware_tensorrt_common)
@@ -23,7 +23,7 @@ if(NOT ${autoware_tensorrt_common_FOUND})
   )
   return()
 endif()
-find_package(cuda_utils REQUIRED)
+find_package(autoware_cuda_utils REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
   src/node.cpp
@@ -38,9 +38,9 @@ add_library(${PROJECT_NAME} SHARED
 target_include_directories(${PROJECT_NAME} PRIVATE
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
-  ${cuda_utils_INCLUDE_DIRS}
+  ${autoware_cuda_utils_INCLUDE_DIRS}
   ${pcl_conversions_INCLUDE_DIRS}
-  ${autoware_universe_utils_INCLUDE_DIRS}
+  ${autoware_utils_INCLUDE_DIRS}
   ${autoware_perception_msgs_INCLUDE_DIRS}
 )
 
@@ -50,7 +50,7 @@ target_link_libraries(${PROJECT_NAME}
   rclcpp_components::component
   tf2_eigen::tf2_eigen
   ${autoware_tensorrt_common_TARGETS}
-  ${tier4_debug_msgs_TARGETS}
+  ${autoware_internal_debug_msgs_TARGETS}
   ${tier4_perception_msgs_TARGETS}
 )
 

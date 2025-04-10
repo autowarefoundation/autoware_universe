@@ -17,17 +17,19 @@
 #ifndef AUTOWARE_ACCEL_BRAKE_MAP_CALIBRATOR__ACCEL_BRAKE_MAP_CALIBRATOR_NODE_HPP_
 #define AUTOWARE_ACCEL_BRAKE_MAP_CALIBRATOR__ACCEL_BRAKE_MAP_CALIBRATOR_NODE_HPP_
 
-#include "autoware/universe_utils/ros/logger_level_configure.hpp"
-#include "autoware/universe_utils/ros/polling_subscriber.hpp"
-#include "autoware/universe_utils/ros/transform_listener.hpp"
 #include "autoware_raw_vehicle_cmd_converter/accel_map.hpp"
 #include "autoware_raw_vehicle_cmd_converter/brake_map.hpp"
+#include "autoware_utils/ros/logger_level_configure.hpp"
+#include "autoware_utils/ros/polling_subscriber.hpp"
+#include "autoware_utils/ros/transform_listener.hpp"
 #include "diagnostic_updater/diagnostic_updater.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2/utils.h"
 
 #include <Eigen/Dense>
 
+#include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
+#include "autoware_internal_debug_msgs/msg/float32_stamped.hpp"
 #include "autoware_vehicle_msgs/msg/steering_report.hpp"
 #include "autoware_vehicle_msgs/msg/velocity_report.hpp"
 #include "geometry_msgs/msg/twist_stamped.hpp"
@@ -37,8 +39,6 @@
 #include "std_msgs/msg/multi_array_dimension.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
-#include "tier4_debug_msgs/msg/float32_multi_array_stamped.hpp"
-#include "tier4_debug_msgs/msg/float32_stamped.hpp"
 #include "tier4_external_api_msgs/msg/calibration_status.hpp"
 #include "tier4_external_api_msgs/msg/calibration_status_array.hpp"
 #include "tier4_external_api_msgs/srv/get_accel_brake_map_calibration_data.hpp"
@@ -47,6 +47,7 @@
 #include "tier4_vehicle_msgs/srv/update_accel_brake_map.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 
+#include <cstdio>
 #include <fstream>
 #include <iomanip>
 #include <memory>
@@ -56,6 +57,8 @@
 
 namespace autoware::accel_brake_map_calibrator
 {
+using autoware_internal_debug_msgs::msg::Float32MultiArrayStamped;
+using autoware_internal_debug_msgs::msg::Float32Stamped;
 using autoware_vehicle_msgs::msg::SteeringReport;
 using autoware_vehicle_msgs::msg::VelocityReport;
 using geometry_msgs::msg::TwistStamped;
@@ -63,8 +66,6 @@ using nav_msgs::msg::OccupancyGrid;
 using raw_vehicle_cmd_converter::AccelMap;
 using raw_vehicle_cmd_converter::BrakeMap;
 using std_msgs::msg::Float32MultiArray;
-using tier4_debug_msgs::msg::Float32MultiArrayStamped;
-using tier4_debug_msgs::msg::Float32Stamped;
 using tier4_external_api_msgs::msg::CalibrationStatus;
 using tier4_vehicle_msgs::msg::ActuationCommandStamped;
 using tier4_vehicle_msgs::msg::ActuationStatusStamped;
@@ -88,7 +89,7 @@ using DataStampedPtr = std::shared_ptr<DataStamped>;
 class AccelBrakeMapCalibrator : public rclcpp::Node
 {
 private:
-  std::shared_ptr<autoware::universe_utils::TransformListener> transform_listener_;
+  std::shared_ptr<autoware_utils::TransformListener> transform_listener_;
   std::string csv_default_map_dir_;
   rclcpp::Publisher<OccupancyGrid>::SharedPtr original_map_occ_pub_;
   rclcpp::Publisher<OccupancyGrid>::SharedPtr update_map_occ_pub_;
@@ -107,13 +108,12 @@ private:
   rclcpp::Publisher<Float32Stamped>::SharedPtr map_error_ratio_pub_;
   rclcpp::Publisher<CalibrationStatus>::SharedPtr calibration_status_pub_;
 
-  autoware::universe_utils::InterProcessPollingSubscriber<SteeringReport> steer_sub_{
-    this, "~/input/steer"};
-  autoware::universe_utils::InterProcessPollingSubscriber<ActuationStatusStamped>
-    actuation_status_sub_{this, "~/input/actuation_status"};
-  autoware::universe_utils::InterProcessPollingSubscriber<ActuationCommandStamped>
-    actuation_cmd_sub_{this, "~/input/actuation_cmd"};
-  autoware::universe_utils::InterProcessPollingSubscriber<VelocityReport> velocity_sub_{
+  autoware_utils::InterProcessPollingSubscriber<SteeringReport> steer_sub_{this, "~/input/steer"};
+  autoware_utils::InterProcessPollingSubscriber<ActuationStatusStamped> actuation_status_sub_{
+    this, "~/input/actuation_status"};
+  autoware_utils::InterProcessPollingSubscriber<ActuationCommandStamped> actuation_cmd_sub_{
+    this, "~/input/actuation_cmd"};
+  autoware_utils::InterProcessPollingSubscriber<VelocityReport> velocity_sub_{
     this, "~/input/velocity"};
 
   // Service
@@ -374,7 +374,7 @@ private:
     COMMAND = 1,
   };
 
-  std::unique_ptr<autoware::universe_utils::LoggerLevelConfigure> logger_configure_;
+  std::unique_ptr<autoware_utils::LoggerLevelConfigure> logger_configure_;
 
 public:
   explicit AccelBrakeMapCalibrator(const rclcpp::NodeOptions & node_options);

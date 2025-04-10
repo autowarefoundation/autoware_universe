@@ -17,7 +17,7 @@
 #include <autoware/behavior_velocity_planner_common/utilization/path_utilization.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/clock.hpp>
 
 #include <boost/geometry/geometry.hpp>
@@ -26,6 +26,7 @@
 #include <lanelet2_core/geometry/Polygon.h>
 
 #include <limits>
+#include <vector>
 
 namespace autoware::behavior_velocity_planner::no_stopping_area
 {
@@ -47,13 +48,13 @@ bool is_vehicle_type(const autoware_perception_msgs::msg::PredictedObject & obje
 }
 
 void insert_stop_point(
-  tier4_planning_msgs::msg::PathWithLaneId & path, const PathIndexWithPose & stop_point)
+  autoware_internal_planning_msgs::msg::PathWithLaneId & path, const PathIndexWithPose & stop_point)
 {
   auto insert_idx = stop_point.first + 1UL;
   const auto & stop_pose = stop_point.second;
 
   // To PathPointWithLaneId
-  tier4_planning_msgs::msg::PathPointWithLaneId stop_point_with_lane_id;
+  autoware_internal_planning_msgs::msg::PathPointWithLaneId stop_point_with_lane_id;
   stop_point_with_lane_id = path.points.at(insert_idx);
   stop_point_with_lane_id.point.pose = stop_pose;
   stop_point_with_lane_id.point.longitudinal_velocity_mps = 0.0;
@@ -63,7 +64,7 @@ void insert_stop_point(
 }
 
 std::optional<LineString2d> generate_stop_line(
-  const tier4_planning_msgs::msg::PathWithLaneId & path,
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
   const lanelet::ConstPolygons3d & no_stopping_areas, const double ego_width,
   const double stop_line_margin)
 {
@@ -77,7 +78,7 @@ std::optional<LineString2d> generate_stop_line(
       std::vector<Point2d> collision_points;
       boost::geometry::intersection(area_poly, line, collision_points);
       if (!collision_points.empty()) {
-        const double yaw = autoware::universe_utils::calcAzimuthAngle(p0, p1);
+        const double yaw = autoware_utils::calc_azimuth_angle(p0, p1);
         const double w = ego_width;
         const double l = stop_line_margin;
         stop_line.emplace_back(
@@ -107,14 +108,13 @@ bool is_stoppable(
   const bool distance_stoppable = stoppable_distance < signed_arc_length;
   const bool slow_velocity = ego_data.current_velocity < 2.0;
   // ego vehicle is high speed and can't stop before stop line -> GO
-  const bool not_stoppable = !distance_stoppable && !slow_velocity;
   // stoppable or not is judged only once
   RCLCPP_DEBUG(
     logger, "stoppable_dist: %lf signed_arc_length: %lf", stoppable_distance, signed_arc_length);
   if (!distance_stoppable && !pass_judge.pass_judged) {
     pass_judge.pass_judged = true;
     // can't stop using maximum brake consider jerk limit
-    if (not_stoppable) {  // TODO(someone): this can be replaced by !slow_velocity, is this correct?
+    if (!slow_velocity) {
       // pass through
       pass_judge.is_stoppable = false;
       RCLCPP_WARN_THROTTLE(
@@ -127,7 +127,8 @@ bool is_stoppable(
 }
 
 Polygon2d generate_ego_no_stopping_area_lane_polygon(
-  const tier4_planning_msgs::msg::PathWithLaneId & path, const geometry_msgs::msg::Pose & ego_pose,
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
+  const geometry_msgs::msg::Pose & ego_pose,
   const lanelet::autoware::NoStoppingArea & no_stopping_area_reg_elem, const double margin,
   const double max_polygon_length, const double path_expand_width, const rclcpp::Logger & logger,
   rclcpp::Clock & clock)
@@ -136,7 +137,7 @@ Polygon2d generate_ego_no_stopping_area_lane_polygon(
   double dist_from_start_sum = 0.0;
   constexpr double interpolation_interval = 0.5;
   bool is_in_area = false;
-  tier4_planning_msgs::msg::PathWithLaneId interpolated_path;
+  autoware_internal_planning_msgs::msg::PathWithLaneId interpolated_path;
   if (!splineInterpolate(path, interpolation_interval, interpolated_path, logger)) {
     return ego_area;
   }
@@ -158,7 +159,7 @@ Polygon2d generate_ego_no_stopping_area_lane_polygon(
   }
   const auto no_stopping_area = no_stopping_area_reg_elem.noStoppingAreas().front();
   for (size_t i = ego_area_start_idx; i < pp.size() - 1; ++i) {
-    dist_from_start_sum += autoware::universe_utils::calcDistance2d(pp.at(i), pp.at(i - 1));
+    dist_from_start_sum += autoware_utils::calc_distance2d(pp.at(i), pp.at(i - 1));
     const auto & p = pp.at(i).point.pose.position;
     // TODO(someone): within will skip points on the edge of polygons so some points can be skipped
     // depending on the interpolation
@@ -185,12 +186,12 @@ Polygon2d generate_ego_no_stopping_area_lane_polygon(
   // decide end idx with extract distance
   size_t ego_area_end_idx = ego_area_start_idx;
   for (size_t i = ego_area_start_idx; i < pp.size() - 1; ++i) {
-    dist_from_start_sum += autoware::universe_utils::calcDistance2d(pp.at(i), pp.at(i - 1));
+    dist_from_start_sum += autoware_utils::calc_distance2d(pp.at(i), pp.at(i - 1));
     const auto & p = pp.at(i).point.pose.position;
     // TODO(someone): within will skip points on the edge of polygons so some points can be skipped
     // depending on the interpolation
     if (!bg::within(Point2d{p.x, p.y}, lanelet::utils::to2D(no_stopping_area).basicPolygon())) {
-      dist_from_area_sum += autoware::universe_utils::calcDistance2d(pp.at(i), pp.at(i - 1));
+      dist_from_area_sum += autoware_utils::calc_distance2d(pp.at(i), pp.at(i - 1));
     }
     if (dist_from_start_sum > max_polygon_length || dist_from_area_sum > margin) {
       break;
@@ -204,7 +205,7 @@ Polygon2d generate_ego_no_stopping_area_lane_polygon(
 }
 
 bool check_stop_lines_in_no_stopping_area(
-  const tier4_planning_msgs::msg::PathWithLaneId & path, const Polygon2d & poly,
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const Polygon2d & poly,
   no_stopping_area::DebugData & debug_data)
 {
   const double stop_vel = std::numeric_limits<float>::min();
@@ -245,7 +246,7 @@ bool check_stop_lines_in_no_stopping_area(
 }
 
 std::optional<LineString2d> get_stop_line_geometry2d(
-  const tier4_planning_msgs::msg::PathWithLaneId & path,
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
   const lanelet::autoware::NoStoppingArea & no_stopping_area_reg_elem,
   const double stop_line_margin, const double stop_line_extend_length, const double vehicle_width)
 {

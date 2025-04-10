@@ -12,97 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/behavior_path_planner/behavior_path_planner_node.hpp"
-
-#include <ament_index_cpp/get_package_share_directory.hpp>
-#include <autoware_planning_test_manager/autoware_planning_test_manager.hpp>
-#include <autoware_test_utils/autoware_test_utils.hpp>
+#include "autoware/behavior_path_planner/test_utils.hpp"
 
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <memory>
+#include <string>
 #include <vector>
 
-using autoware::behavior_path_planner::BehaviorPathPlannerNode;
-using autoware::planning_test_manager::PlanningInterfaceTestManager;
-
-std::shared_ptr<PlanningInterfaceTestManager> generateTestManager()
-{
-  auto test_manager = std::make_shared<PlanningInterfaceTestManager>();
-
-  // set subscriber with topic name: behavior_path_planner → test_node_
-  test_manager->setPathWithLaneIdSubscriber("behavior_path_planner/output/path");
-
-  // set behavior_path_planner's input topic name(this topic is changed to test node)
-  test_manager->setRouteInputTopicName("behavior_path_planner/input/route");
-
-  test_manager->setInitialPoseTopicName("behavior_path_planner/input/odometry");
-
-  return test_manager;
-}
-
-std::shared_ptr<BehaviorPathPlannerNode> generateNode()
-{
-  auto node_options = rclcpp::NodeOptions{};
-  const auto autoware_test_utils_dir =
-    ament_index_cpp::get_package_share_directory("autoware_test_utils");
-  const auto behavior_path_planner_dir =
-    ament_index_cpp::get_package_share_directory("autoware_behavior_path_planner");
-
-  std::vector<std::string> module_names;
-  module_names.emplace_back("autoware::behavior_path_planner::SideShiftModuleManager");
-
-  std::vector<rclcpp::Parameter> params;
-  params.emplace_back("launch_modules", module_names);
-  node_options.parameter_overrides(params);
-
-  autoware::test_utils::updateNodeOptions(
-    node_options,
-    {autoware_test_utils_dir + "/config/test_common.param.yaml",
-     autoware_test_utils_dir + "/config/test_nearest_search.param.yaml",
-     autoware_test_utils_dir + "/config/test_vehicle_info.param.yaml",
-     behavior_path_planner_dir + "/config/behavior_path_planner.param.yaml",
-     behavior_path_planner_dir + "/config/drivable_area_expansion.param.yaml",
-     behavior_path_planner_dir + "/config/scene_module_manager.param.yaml",
-     ament_index_cpp::get_package_share_directory("autoware_behavior_path_side_shift_module") +
-       "/config/side_shift.param.yaml"});
-
-  return std::make_shared<BehaviorPathPlannerNode>(node_options);
-}
-
-void publishMandatoryTopics(
-  std::shared_ptr<PlanningInterfaceTestManager> test_manager,
-  std::shared_ptr<BehaviorPathPlannerNode> test_target_node)
-{
-  // publish necessary topics from test_manager
-  test_manager->publishInitialPose(test_target_node, "behavior_path_planner/input/odometry");
-  test_manager->publishAcceleration(test_target_node, "behavior_path_planner/input/accel");
-  test_manager->publishPredictedObjects(test_target_node, "behavior_path_planner/input/perception");
-  test_manager->publishOccupancyGrid(
-    test_target_node, "behavior_path_planner/input/occupancy_grid_map");
-  test_manager->publishLaneDrivingScenario(
-    test_target_node, "behavior_path_planner/input/scenario");
-  test_manager->publishMap(test_target_node, "behavior_path_planner/input/vector_map");
-  test_manager->publishCostMap(test_target_node, "behavior_path_planner/input/costmap");
-  test_manager->publishOperationModeState(test_target_node, "system/operation_mode/state");
-  test_manager->publishLateralOffset(
-    test_target_node, "behavior_path_planner/input/lateral_offset");
-}
+using autoware::behavior_path_planner::generateNode;
+using autoware::behavior_path_planner::generateTestManager;
+using autoware::behavior_path_planner::publishMandatoryTopics;
 
 TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionRoute)
 {
   rclcpp::init(0, nullptr);
   auto test_manager = generateTestManager();
-  auto test_target_node = generateNode();
+  auto test_target_node =
+    generateNode({"side_shift"}, {"autoware::behavior_path_planner::SideShiftModuleManager"});
 
   publishMandatoryTopics(test_manager, test_target_node);
 
+  const std::string input_route_topic = "behavior_path_planner/input/route";
+
   // test for normal trajectory
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testWithBehaviorNominalRoute(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithBehaviorNormalRoute(test_target_node, input_route_topic));
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
   // test with empty route
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testWithAbnormalRoute(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithAbnormalRoute(test_target_node, input_route_topic));
   rclcpp::shutdown();
 }
 
@@ -111,16 +52,22 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
   rclcpp::init(0, nullptr);
 
   auto test_manager = generateTestManager();
-  auto test_target_node = generateNode();
+  auto test_target_node =
+    generateNode({"side_shift"}, {"autoware::behavior_path_planner::SideShiftModuleManager"});
   publishMandatoryTopics(test_manager, test_target_node);
 
+  const std::string input_route_topic = "behavior_path_planner/input/route";
+  const std::string input_odometry_topic = "behavior_path_planner/input/odometry";
+
   // test for normal trajectory
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testWithBehaviorNominalRoute(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithBehaviorNormalRoute(test_target_node, input_route_topic));
 
   // make sure behavior_path_planner is running
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
 
-  ASSERT_NO_THROW_WITH_ERROR_MSG(test_manager->testRouteWithInvalidEgoPose(test_target_node));
+  ASSERT_NO_THROW_WITH_ERROR_MSG(
+    test_manager->testWithOffTrackOdometry(test_target_node, input_odometry_topic));
 
   rclcpp::shutdown();
 }

@@ -14,6 +14,9 @@
 
 #include "imu_corrector_core.hpp"
 
+#include <memory>
+#include <string>
+
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #else
@@ -25,7 +28,7 @@
 
 std::array<double, 9> transform_covariance(const std::array<double, 9> & cov)
 {
-  using COV_IDX = autoware::universe_utils::xyz_covariance_index::XYZ_COV_IDX;
+  using COV_IDX = autoware_utils::xyz_covariance_index::XYZ_COV_IDX;
 
   double max_cov = 0.0;
   max_cov = std::max(max_cov, cov[COV_IDX::X_X]);
@@ -57,7 +60,7 @@ ImuCorrector::ImuCorrector(const rclcpp::NodeOptions & options)
 : rclcpp::Node("imu_corrector", options),
   output_frame_(declare_parameter<std::string>("base_link", "base_link"))
 {
-  transform_listener_ = std::make_shared<autoware::universe_utils::TransformListener>(this);
+  transform_listener_ = std::make_shared<autoware_utils::TransformListener>(this);
 
   angular_velocity_offset_x_imu_link_ = declare_parameter<double>("angular_velocity_offset_x", 0.0);
   angular_velocity_offset_y_imu_link_ = declare_parameter<double>("angular_velocity_offset_y", 0.0);
@@ -101,7 +104,7 @@ void ImuCorrector::callback_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_
     accel_stddev_imu_link_ * accel_stddev_imu_link_;
 
   geometry_msgs::msg::TransformStamped::ConstSharedPtr tf_imu2base_ptr =
-    transform_listener_->getLatestTransform(imu_msg.header.frame_id, output_frame_);
+    transform_listener_->get_latest_transform(imu_msg.header.frame_id, output_frame_);
   if (!tf_imu2base_ptr) {
     RCLCPP_ERROR(
       this->get_logger(), "Please publish TF %s to %s", output_frame_.c_str(),

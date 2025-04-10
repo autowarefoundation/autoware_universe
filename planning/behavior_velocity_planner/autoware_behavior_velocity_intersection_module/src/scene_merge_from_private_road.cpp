@@ -21,6 +21,7 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/road_marking.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <lanelet2_core/geometry/Polygon.h>
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
@@ -29,6 +30,7 @@
 #include <algorithm>
 #include <limits>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -40,12 +42,14 @@ MergeFromPrivateRoadModule::MergeFromPrivateRoadModule(
   const int64_t module_id, const int64_t lane_id,
   [[maybe_unused]] std::shared_ptr<const PlannerData> planner_data,
   const PlannerParam & planner_param, const std::set<lanelet::Id> & associative_ids,
-  const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock)
-: SceneModuleInterface(module_id, logger, clock),
+  const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
+  const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
+  const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+    planning_factor_interface)
+: SceneModuleInterface(module_id, logger, clock, time_keeper, planning_factor_interface),
   lane_id_(lane_id),
   associative_ids_(associative_ids)
 {
-  velocity_factor_.init(PlanningBehavior::MERGE);
   planner_param_ = planner_param;
   state_machine_.setState(StateMachine::State::STOP);
 }
@@ -53,7 +57,7 @@ MergeFromPrivateRoadModule::MergeFromPrivateRoadModule(
 static std::optional<lanelet::ConstLanelet> getFirstConflictingLanelet(
   const lanelet::ConstLanelets & conflicting_lanelets,
   const InterpolatedPathInfo & interpolated_path_info,
-  const autoware::universe_utils::LinearRing2d & footprint, const double vehicle_length)
+  const autoware_utils::LinearRing2d & footprint, const double vehicle_length)
 {
   const auto & path_ip = interpolated_path_info.path;
   const auto [lane_start, end] = interpolated_path_info.lane_id_interval.value();
@@ -63,8 +67,8 @@ static std::optional<lanelet::ConstLanelet> getFirstConflictingLanelet(
 
   for (size_t i = start; i <= end; ++i) {
     const auto & pose = path_ip.points.at(i).point.pose;
-    const auto path_footprint = autoware::universe_utils::transformVector(
-      footprint, autoware::universe_utils::pose2transform(pose));
+    const auto path_footprint =
+      autoware_utils::transform_vector(footprint, autoware_utils::pose2transform(pose));
     for (const auto & conflicting_lanelet : conflicting_lanelets) {
       const auto polygon_2d = conflicting_lanelet.polygon2d().basicPolygon();
       const bool intersects = bg::intersects(polygon_2d, path_footprint);
@@ -76,10 +80,9 @@ static std::optional<lanelet::ConstLanelet> getFirstConflictingLanelet(
   return std::nullopt;
 }
 
-bool MergeFromPrivateRoadModule::modifyPathVelocity(PathWithLaneId * path, StopReason * stop_reason)
+bool MergeFromPrivateRoadModule::modifyPathVelocity(PathWithLaneId * path)
 {
   debug_data_ = DebugData();
-  *stop_reason = planning_utils::initializeStopReason(StopReason::MERGE_FROM_PRIVATE_ROAD);
 
   const auto input_path = *path;
 
@@ -152,12 +155,12 @@ bool MergeFromPrivateRoadModule::modifyPathVelocity(PathWithLaneId * path, StopR
     planning_utils::setVelocityFromIndex(stopline_idx, v, path);
 
     /* get stop point and stop factor */
-    tier4_planning_msgs::msg::StopFactor stop_factor;
-    stop_factor.stop_pose = debug_data_.stop_point_pose;
-    planning_utils::appendStopReason(stop_factor, stop_reason);
     const auto & stop_pose = path->points.at(stopline_idx).point.pose;
-    velocity_factor_.set(
-      path->points, planner_data_->current_odometry->pose, stop_pose, VelocityFactor::UNKNOWN);
+    planning_factor_interface_->add(
+      path->points, planner_data_->current_odometry->pose, stop_pose,
+      autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+      autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
+      0.0 /*shift distance*/, "merge_from_private");
 
     const double signed_arc_dist_to_stop_point = autoware::motion_utils::calcSignedArcLength(
       path->points, current_pose.position, path->points.at(stopline_idx).point.pose.position);

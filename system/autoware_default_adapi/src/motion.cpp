@@ -27,7 +27,7 @@ MotionNode::MotionNode(const rclcpp::NodeOptions & options)
   require_accept_start_ = declare_parameter<bool>("require_accept_start");
   is_calling_set_pause_ = false;
 
-  const auto adaptor = component_interface_utils::NodeAdaptor(this);
+  const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
   group_cli_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   adaptor.init_srv(srv_accept_, this, &MotionNode::on_accept);
   adaptor.init_pub(pub_state_);
@@ -88,7 +88,7 @@ void MotionNode::update_state()
 
 void MotionNode::change_state(const State state)
 {
-  using MotionState = autoware_ad_api::motion::State::Message;
+  using MotionState = autoware::adapi_specs::motion::State::Message;
   static const auto mapping = std::unordered_map<State, MotionState::_state_type>(
     {{State::Unknown, MotionState::UNKNOWN},
      {State::Pausing, MotionState::STOPPED},
@@ -121,8 +121,8 @@ void MotionNode::update_pause(const State state)
 void MotionNode::change_pause(bool pause)
 {
   if (!is_calling_set_pause_ && cli_set_pause_->service_is_ready()) {
-    const auto req =
-      std::make_shared<autoware::component_interface_specs::control::SetPause::Service::Request>();
+    const auto req = std::make_shared<
+      autoware::component_interface_specs_universe::control::SetPause::Service::Request>();
     req->pause = pause;
     is_calling_set_pause_ = true;
     cli_set_pause_->async_send_request(req, [this](auto) { is_calling_set_pause_ = false; });
@@ -135,26 +135,27 @@ void MotionNode::on_timer()
 }
 
 void MotionNode::on_is_paused(
-  const autoware::component_interface_specs::control::IsPaused::Message::ConstSharedPtr msg)
+  const autoware::component_interface_specs_universe::control::IsPaused::Message::ConstSharedPtr
+    msg)
 {
   is_paused_ = msg->data;
   update_state();
 }
 
-void MotionNode::on_is_start_requested(
-  const autoware::component_interface_specs::control::IsStartRequested::Message::ConstSharedPtr msg)
+void MotionNode::on_is_start_requested(const autoware::component_interface_specs_universe::control::
+                                         IsStartRequested::Message::ConstSharedPtr msg)
 {
   is_start_requested_ = msg->data;
   update_state();
 }
 
 void MotionNode::on_accept(
-  const autoware_ad_api::motion::AcceptStart::Service::Request::SharedPtr,
-  const autoware_ad_api::motion::AcceptStart::Service::Response::SharedPtr res)
+  const autoware::adapi_specs::motion::AcceptStart::Service::Request::SharedPtr,
+  const autoware::adapi_specs::motion::AcceptStart::Service::Response::SharedPtr res)
 {
   if (state_ != State::Starting) {
-    using AcceptStartResponse = autoware_ad_api::motion::AcceptStart::Service::Response;
-    throw component_interface_utils::ServiceException(
+    using AcceptStartResponse = autoware::adapi_specs::motion::AcceptStart::Service::Response;
+    throw autoware::component_interface_utils::ServiceException(
       AcceptStartResponse::ERROR_NOT_STARTING, "The motion state is not starting");
   }
   change_state(State::Resuming);

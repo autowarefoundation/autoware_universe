@@ -14,15 +14,24 @@
 
 #include "autoware/behavior_path_sampling_planner_module/sampling_planner_module.hpp"
 
+#include <algorithm>
+#include <iostream>
+#include <limits>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
 namespace autoware::behavior_path_planner
 {
 using autoware::motion_utils::calcSignedArcLength;
 using autoware::motion_utils::findNearestIndex;
 using autoware::motion_utils::findNearestSegmentIndex;
-using autoware::universe_utils::calcDistance2d;
-using autoware::universe_utils::calcOffsetPose;
-using autoware::universe_utils::getPoint;
-using autoware::universe_utils::Point2d;
+using autoware_utils::calc_distance2d;
+using autoware_utils::calc_offset_pose;
+using autoware_utils::get_point;
+using autoware_utils::Point2d;
 using geometry_msgs::msg::Point;
 
 namespace bg = boost::geometry;
@@ -34,8 +43,8 @@ SamplingPlannerModule::SamplingPlannerModule(
   const std::unordered_map<std::string, std::shared_ptr<RTCInterface>> & rtc_interface_ptr_map,
   std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
     objects_of_interest_marker_interface_ptr_map,
-  std::shared_ptr<SteeringFactorInterface> & steering_factor_interface_ptr)
-: SceneModuleInterface{name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, steering_factor_interface_ptr},  // NOLINT
+  const std::shared_ptr<PlanningFactorInterface> planning_factor_interface)
+: SceneModuleInterface{name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface},  // NOLINT
   vehicle_info_{autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo()}
 {
   internal_params_ = std::make_shared<SamplingPlannerInternalParameters>();
@@ -104,7 +113,7 @@ SamplingPlannerModule::SamplingPlannerModule(
   //     [[maybe_unused]] const SoftConstraintsInputs & input_data) -> double {
   //     if (path.points.empty()) return 0.0;
   //     const auto & goal_pose_yaw =
-  //     autoware::universe_utils::getRPY(input_data.goal_pose.orientation).z; const auto &
+  //     autoware_utils::getRPY(input_data.goal_pose.orientation).z; const auto &
   //     last_point_yaw = path.yaws.back(); const double angle_difference = std::abs(last_point_yaw
   //     - goal_pose_yaw); return angle_difference / (3.141519 / 4.0);
   //   });
@@ -247,7 +256,6 @@ bool SamplingPlannerModule::isReferencePathSafe() const
       sampling_planner_data.left_bound, sampling_planner_data.right_bound);
   }
 
-  std::vector<bool> hard_constraints_results;
   auto transform_to_sampling_path = [](const PlanResult plan) {
     autoware::sampler_common::Path path;
     for (size_t i = 0; i < plan->points.size(); ++i) {
@@ -366,9 +374,9 @@ void SamplingPlannerModule::prepareConstraints(
   size_t i = 0;
   for (const auto & o : predicted_objects->objects) {
     if (o.kinematics.initial_twist_with_covariance.twist.linear.x < 0.5) {
-      const auto polygon = autoware::universe_utils::toPolygon2d(o);
+      const auto polygon = autoware_utils::to_polygon2d(o);
       constraints.obstacle_polygons.push_back(polygon);
-      const auto box = boost::geometry::return_envelope<autoware::universe_utils::Box2d>(polygon);
+      const auto box = boost::geometry::return_envelope<autoware_utils::Box2d>(polygon);
       constraints.rtree.insert(std::make_pair(box, i));
     }
     i++;
@@ -592,13 +600,11 @@ BehaviorModuleOutput SamplingPlannerModule::plan()
   soft_constraints_input.closest_lanelets_to_goal = {closest_lanelet_to_goal};
 
   debug_data_.footprints.clear();
-  std::vector<std::vector<bool>> hard_constraints_results_full;
   std::vector<std::vector<double>> soft_constraints_results_full;
   for (auto & path : frenet_paths) {
     const auto footprint = autoware::sampler_common::constraints::buildFootprintPoints(
       path, internal_params_->constraints);
-    std::vector<bool> hard_constraints_results =
-      evaluateHardConstraints(path, internal_params_->constraints, footprint, hard_constraints_);
+    evaluateHardConstraints(path, internal_params_->constraints, footprint, hard_constraints_);
     path.constraint_results.valid_curvature = true;
     debug_data_.footprints.push_back(footprint);
     std::vector<double> soft_constraints_results = evaluateSoftConstraints(

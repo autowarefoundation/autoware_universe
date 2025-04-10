@@ -18,6 +18,7 @@
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for toGeomPoly
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
@@ -25,6 +26,10 @@
 
 #include <lanelet2_core/geometry/LineString.h>
 #include <lanelet2_core/geometry/Point.h>
+
+#include <algorithm>
+#include <string>
+#include <vector>
 
 namespace
 {
@@ -119,7 +124,7 @@ namespace autoware::behavior_velocity_planner
 namespace bg = boost::geometry;
 
 std::optional<StuckStop> IntersectionModule::isStuckStatus(
-  const tier4_planning_msgs::msg::PathWithLaneId & path,
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
   const IntersectionStopLines & intersection_stoplines, const PathLanelets & path_lanelets) const
 {
   const auto closest_idx = intersection_stoplines.closest_idx;
@@ -290,7 +295,7 @@ bool IntersectionModule::checkStuckVehicleInIntersection(const PathLanelets & pa
     }
 
     // check if the footprint is in the stuck detect area
-    const auto obj_footprint = autoware::universe_utils::toPolygon2d(object);
+    const auto obj_footprint = autoware_utils::to_polygon2d(object);
     // NOTE: in order not to stop too much
     const bool is_in_stuck_area = bg::within(
       to_bg2d(object.kinematics.initial_pose_with_covariance.pose.position),
@@ -304,7 +309,7 @@ bool IntersectionModule::checkStuckVehicleInIntersection(const PathLanelets & pa
 }
 
 std::optional<YieldStuckStop> IntersectionModule::isYieldStuckStatus(
-  const tier4_planning_msgs::msg::PathWithLaneId & path,
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
   const InterpolatedPathInfo & interpolated_path_info,
   const IntersectionStopLines & intersection_stoplines) const
 {

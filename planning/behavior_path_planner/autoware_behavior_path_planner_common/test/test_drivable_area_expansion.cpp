@@ -21,6 +21,8 @@
 #include <gtest/gtest.h>
 #include <lanelet2_core/LaneletMap.h>
 
+#include <memory>
+
 using autoware::behavior_path_planner::drivable_area_expansion::LineString2d;
 using autoware::behavior_path_planner::drivable_area_expansion::Point2d;
 using autoware::behavior_path_planner::drivable_area_expansion::Segment2d;
@@ -213,7 +215,7 @@ TEST(DrivableAreaExpansionProjection, expand_drivable_area)
   }
   {  // parameters
     params.enabled = true;
-    params.avoid_dynamic_objects = false;
+    params.object_exclusion.exclude_dynamic = false;
     params.avoid_linestring_dist = 0.0;
     params.avoid_linestring_types = {};
     params.max_expansion_distance = 0.0;  // means no limit

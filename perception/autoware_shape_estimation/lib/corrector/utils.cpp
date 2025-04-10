@@ -16,7 +16,7 @@
 
 #include "autoware/shape_estimation/corrector/utils.hpp"
 
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
@@ -163,7 +163,7 @@ bool correctWithDefaultValue(
     (param.min_width < (v_point.at(second_most_distant_index) * 2.0).norm() &&
      (v_point.at(second_most_distant_index) * 2.0).norm() <
        param.max_width))  // both of edge is within width threshold
-  {
+  {                       // NOLINT
     correction_vector = v_point.at(first_most_distant_index);
     if (correction_vector.x() == 0.0) {
       correction_vector.y() =
@@ -250,9 +250,9 @@ bool correctWithDefaultValue(
 
   // correct to set long length is x, short length is y
   if (shape.dimensions.x < shape.dimensions.y) {
-    geometry_msgs::msg::Vector3 rpy = autoware::universe_utils::getRPY(pose.orientation);
+    geometry_msgs::msg::Vector3 rpy = autoware_utils::get_rpy(pose.orientation);
     rpy.z = rpy.z + M_PI_2;
-    pose.orientation = autoware::universe_utils::createQuaternionFromRPY(rpy.x, rpy.y, rpy.z);
+    pose.orientation = autoware_utils::create_quaternion_from_rpy(rpy.x, rpy.y, rpy.z);
     double temp = shape.dimensions.x;
     shape.dimensions.x = shape.dimensions.y;
     shape.dimensions.y = temp;
