@@ -61,6 +61,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   std::string ego_frame_id = declare_parameter<std::string>("ego_frame_id");
   bool enable_delay_compensation{declare_parameter<bool>("enable_delay_compensation")};
   bool enable_odometry_uncertainty = declare_parameter<bool>("consider_odometry_uncertainty");
+  bool use_time_keeper = declare_parameter<bool>("publish_processing_time_detail");
 
   declare_parameter("selected_input_channels", std::vector<std::string>());
   std::vector<std::string> selected_input_channels =
@@ -211,7 +212,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   debugger_ = std::make_unique<TrackerDebugger>(*this, world_frame_id_, input_channels_config_);
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 
-  bool use_time_keeper = true;
   if (use_time_keeper) {
     detailed_processing_time_publisher_ =
       this->create_publisher<autoware_utils::ProcessingTimeDetail>(
