@@ -521,7 +521,7 @@ void PointPaintingFusionNode::postprocess(
   detection_class_remapper_.mapClasses(output_msg);
 
   // update processing time for diagnosis
-  const double processing_time_ms = stop_watch_ptr_->toc("processing_time");
+  const double processing_time_ms = stop_watch_ptr_->toc("pointpainting_processing_time");
   last_processing_time_ms_ = processing_time_ms;
 
   // publish debug message: painted pointcloud
