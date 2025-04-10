@@ -128,8 +128,8 @@ RadarObjectTrackerNode::RadarObjectTrackerNode(const rclcpp::NodeOptions & node_
     std::make_pair(Label::MOTORCYCLE, this->declare_parameter<std::string>("motorcycle_tracker")));
 
   {  // diagnostics
-    radar_data_stale_th_ms_ =
-      declare_parameter<double>("diagnostics.radar_data_stale_threshold_ms");
+    radar_input_stale_threshold_ms_ =
+      declare_parameter<double>("diagnostics.radar_input_stale_threshold_ms");
     const double validation_callback_interval_ms =
       declare_parameter<double>("diagnostics.validation_callback_interval_ms");
 
