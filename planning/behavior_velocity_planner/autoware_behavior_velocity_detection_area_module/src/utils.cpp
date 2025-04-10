@@ -99,10 +99,11 @@ std::pair<lanelet::BasicPoint2d, double> get_smallest_enclosing_circle(
 namespace autoware::behavior_velocity_planner::detection_area
 {
 autoware_utils::LineString2d get_stop_line_geometry2d(
-  const lanelet::autoware::DetectionArea & detection_area, const double extend_length)
+  const lanelet::autoware::DetectionArea & detection_area,
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   const auto stop_line = detection_area.stopLine();
-  return planning_utils::extendLine(stop_line[0], stop_line[1], extend_length);
+  return planning_utils::extendLineToPathBound(stop_line[0], stop_line[1], path);
 }
 
 std::vector<geometry_msgs::msg::Point> get_obstacle_points(
