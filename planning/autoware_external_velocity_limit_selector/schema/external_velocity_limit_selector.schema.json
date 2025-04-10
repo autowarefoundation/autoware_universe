@@ -8,56 +8,11 @@
       "properties": {
         "max_velocity": {
           "type": "number",
-          "description": "Default max velocity [m/s]"
-        },
-        "normal": {
-          "type": "object",
-          "properties": {
-            "min_acc": {
-              "type": "number",
-              "description": "Minimum acceleration [m/ss]"
-            },
-            "max_acc": {
-              "type": "number",
-              "description": "Maximum acceleration [m/ss]"
-            },
-            "min_jerk": {
-              "type": "number",
-              "description": "Minimum jerk [m/sss]"
-            },
-            "max_jerk": {
-              "type": "number",
-              "description": "Maximum jerk [m/sss]"
-            }
-          },
-          "required": ["min_acc", "max_acc", "min_jerk", "max_jerk"],
-          "additionalProperties": false
-        },
-        "limit": {
-          "type": "object",
-          "properties": {
-            "min_acc": {
-              "type": "number",
-              "description": "Minimum acceleration to be observed [m/ss]"
-            },
-            "max_acc": {
-              "type": "number",
-              "description": "Maximum acceleration to be observed [m/ss]"
-            },
-            "min_jerk": {
-              "type": "number",
-              "description": "Minimum jerk to be observed [m/sss]"
-            },
-            "max_jerk": {
-              "type": "number",
-              "description": "Maximum jerk to be observed [m/sss]"
-            }
-          },
-          "required": ["min_acc", "max_acc", "min_jerk", "max_jerk"],
-          "additionalProperties": false
+          "description": "Default max velocity [m/s]",
+          "default": 20.0,
         }
       },
-      "required": ["max_velocity", "normal", "limit"],
+      "required": ["max_velocity"],
       "additionalProperties": false
     }
   },
