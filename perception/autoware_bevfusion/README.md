@@ -36,11 +36,11 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 
 ### BEVFusion node
 
-{{ json_to_markdown("perception/autoware_bevfusion/schema/bevfusion_lidar.schema.json") }}
+{{ json_to_markdown("perception/autoware_bevfusion/schema/bevfusion.schema.json") }}
 
 ### BEVFusion model
 
-{{ json_to_markdown("perception/autoware_bevfusion/schema/ml_package_bevfusion_lidar.schema.json") }}
+{{ json_to_markdown("perception/autoware_bevfusion/schema/ml_package_bevfusion.schema.json") }}
 
 ### Detection class remapper
 
