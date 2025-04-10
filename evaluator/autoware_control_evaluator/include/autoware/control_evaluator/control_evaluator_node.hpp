@@ -23,6 +23,7 @@
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils_math/accumulator.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -73,20 +74,18 @@ public:
   explicit ControlEvaluatorNode(const rclcpp::NodeOptions & node_options);
   ~ControlEvaluatorNode() override;
 
-  void AddMetricMsg(const Metric & metric, const double & metric_value);
+  void AddMetricMsg(
+    const Metric & metric, const double & metric_value, const bool & accumulate_metric = true);
   void AddLateralDeviationMetricMsg(const Trajectory & traj, const Point & ego_point);
   void AddYawDeviationMetricMsg(const Trajectory & traj, const Pose & ego_pose);
-  void AddGoalLongitudinalDeviationMetricMsg(const Pose & ego_pose);
-  void AddGoalLateralDeviationMetricMsg(const Pose & ego_pose);
-  void AddGoalYawDeviationMetricMsg(const Pose & ego_pose);
+  void AddGoalDeviationMetricMsg(const Odometry & odom);
   void AddBoundaryDistanceMetricMsg(const PathWithLaneId & behavior_path, const Pose & ego_pose);
 
   void AddLaneletInfoMsg(const Pose & ego_pose);
   void AddKinematicStateMetricMsg(
     const Odometry & odom, const AccelWithCovarianceStamped & accel_stamped);
   void AddSteeringMetricMsg(const SteeringReport & steering_report);
-  void AddStopDeviationMetricMsg(
-    const PlanningFactorArray::ConstSharedPtr & planning_factors, const std::string & module_name);
+  void AddStopDeviationMetricMsg(const Odometry & odom);
   void onTimer();
 
 private:
@@ -108,6 +107,7 @@ private:
   std::unordered_map<
     std::string, autoware_utils::InterProcessPollingSubscriber<PlanningFactorArray>>
     planning_factors_sub_;
+  std::unordered_map<std::string, Accumulator<double>> stop_deviation_accumulators_;
   std::unordered_set<std::string> stop_deviation_modules_;
 
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
@@ -123,6 +123,9 @@ private:
   // Metric
   const std::vector<Metric> metrics_ = {
     // collect all metrics
+    Metric::velocity,
+    Metric::acceleration,
+    Metric::jerk,
     Metric::lateral_deviation,
     Metric::yaw_deviation,
     Metric::goal_longitudinal_deviation,
@@ -133,6 +136,7 @@ private:
     Metric::steering_angle,
     Metric::steering_rate,
     Metric::steering_acceleration,
+    Metric::stop_deviation,
   };
 
   std::array<Accumulator<double>, static_cast<size_t>(Metric::SIZE)>
