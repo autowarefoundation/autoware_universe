@@ -126,6 +126,19 @@ RadarObjectTrackerNode::RadarObjectTrackerNode(const rclcpp::NodeOptions & node_
     std::make_pair(Label::BICYCLE, this->declare_parameter<std::string>("bicycle_tracker")));
   tracker_map_.insert(
     std::make_pair(Label::MOTORCYCLE, this->declare_parameter<std::string>("motorcycle_tracker")));
+
+  {  // diagnostics
+    radar_input_stale_threshold_ms_ =
+      declare_parameter<double>("diagnostics.radar_input_stale_threshold_ms");
+    const double diagnose_callback_interval =
+      declare_parameter<double>("diagnostics.diagnose_callback_interval");
+
+    diagnostic_updater_.setHardwareID(this->get_name());
+    diagnostic_updater_.add(
+      "radar_input_status", this, &RadarObjectTrackerNode::diagnoseRadarInputInterval);
+    // msec -> sec
+    diagnostic_updater_.setPeriod(diagnose_callback_interval / 1e3);
+  }
 }
 
 // load map information to node parameter
@@ -154,6 +167,10 @@ void RadarObjectTrackerNode::onMeasurement(
         *input_objects_msg, world_frame_id_, tf_buffer_, transformed_objects)) {
     return;
   }
+
+  // track timestamp for diagnosis
+  last_processing_timestamp_ = this->now();
+
   /* tracker prediction */
   rclcpp::Time measurement_time = input_objects_msg->header.stamp;
   for (auto itr = list_tracker_.begin(); itr != list_tracker_.end(); ++itr) {
@@ -424,6 +441,39 @@ void RadarObjectTrackerNode::publish(const rclcpp::Time & time) const
 
   // Publish
   tracked_objects_pub_->publish(output_msg);
+}
+
+void RadarObjectTrackerNode::diagnoseRadarInputInterval(
+  diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  const rclcpp::Time timestamp_now = this->get_clock()->now();
+  diagnostic_msgs::msg::DiagnosticStatus::_level_type diag_level =
+    diagnostic_msgs::msg::DiagnosticStatus::OK;
+  std::stringstream message{"OK"};
+
+  if (last_processing_timestamp_) {  // Check if the first input arrived
+    const double elapsed_since_last_input_ms =
+      std::chrono::duration<double, std::milli>(
+        std::chrono::nanoseconds(
+          (timestamp_now - last_processing_timestamp_.value()).nanoseconds()))
+        .count();
+
+    if (elapsed_since_last_input_ms > radar_input_stale_threshold_ms_) {
+      stat.add("is_radar_input_alive", false);
+
+      message.clear();
+      message << "The duration of radar input since the last reception has exceeded"
+              << " the stale threshold " << radar_input_stale_threshold_ms_ << " ms by "
+              << elapsed_since_last_input_ms - radar_input_stale_threshold_ms_ << " ms.";
+
+      diag_level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+    } else {
+      stat.add("is_radar_input_alive", true);
+    }
+    stat.add("elapsed_time_since_last_input_ms", elapsed_since_last_input_ms);
+  }
+
+  stat.summary(diag_level, message.str());
 }
 }  // namespace autoware::radar_object_tracker
 
