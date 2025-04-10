@@ -32,4 +32,4 @@
       # When the elapsed time from last radar data input exceeds the radar_input_stale_threshold_ms,
       # a warning will be triggered.
       radar_input_stale_threshold_ms: 500.0 # [milliseconds]
-      validation_callback_interval_ms: 100.0 # [milliseconds]
+      diagnose_callback_interval: 100.0 # [milliseconds]

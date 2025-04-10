@@ -130,14 +130,14 @@ RadarObjectTrackerNode::RadarObjectTrackerNode(const rclcpp::NodeOptions & node_
   {  // diagnostics
     radar_input_stale_threshold_ms_ =
       declare_parameter<double>("diagnostics.radar_input_stale_threshold_ms");
-    const double validation_callback_interval_ms =
-      declare_parameter<double>("diagnostics.validation_callback_interval_ms");
+    const double diagnose_callback_interval =
+      declare_parameter<double>("diagnostics.diagnose_callback_interval");
 
     diagnostic_updater_.setHardwareID(this->get_name());
     diagnostic_updater_.add(
       "radar_input_status", this, &RadarObjectTrackerNode::diagnoseRadarInputInterval);
     // msec -> sec
-    diagnostic_updater_.setPeriod(validation_callback_interval_ms / 1e3);
+    diagnostic_updater_.setPeriod(diagnose_callback_interval / 1e3);
   }
 }
 
