@@ -107,9 +107,10 @@ bool Tracker::updateWithMeasurement(
 
     // update total existence probability
     const double existence_probability =
-      channel_info.trust_existence_probability ? object.existence_probability : 0.6;
+      channel_info.trust_existence_probability ? object.existence_probability : 0.9;
     total_existence_probability_ = updateProbability(
-      total_existence_probability_, existence_probability, probability_false_detection);
+      total_existence_probability_, existence_probability * probability_true_detection,
+      probability_false_detection);
   }
 
   last_update_with_measurement_time_ = measurement_time;
@@ -125,22 +126,28 @@ bool Tracker::updateWithMeasurement(
   // Update object
   measure(object, measurement_time, channel_info);
 
+  // Update object status
+  getTrackedObject(measurement_time, object_);
+
   return true;
 }
 
-bool Tracker::updateWithoutMeasurement(const rclcpp::Time & now)
+bool Tracker::updateWithoutMeasurement(const rclcpp::Time & timestamp)
 {
   // Update existence probability
   ++no_measurement_count_;
   ++total_no_measurement_count_;
   {
     // decay existence probability
-    float const delta_time = (now - last_update_with_measurement_time_).seconds();
+    float const delta_time = (timestamp - last_update_with_measurement_time_).seconds();
     for (float & existence_probability : existence_probabilities_) {
       existence_probability = decayProbability(existence_probability, delta_time);
     }
     total_existence_probability_ = decayProbability(total_existence_probability_, delta_time);
   }
+
+  // Update object status
+  getTrackedObject(timestamp, object_);
 
   return true;
 }
@@ -218,6 +225,146 @@ void Tracker::limitObjectExtension(const object_model::ObjectModel object_model)
     object_extension.y, object_model.size_limit.width_min, object_model.size_limit.width_max);
   object_extension.z = std::clamp(
     object_extension.z, object_model.size_limit.height_min, object_model.size_limit.height_max);
+}
+
+void Tracker::getPositionCovarianceEigenSq(
+  const rclcpp::Time & time, double & major_axis_sq, double & minor_axis_sq) const
+{
+  // estimate the covariance of the position at the given time
+  types::DynamicObject object = object_;
+  if (object.time.seconds() + 1e-6 < time.seconds()) {  // 1usec is allowed error
+    getTrackedObject(time, object);
+  }
+  using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  auto & pose_cov = object.pose_covariance;
+
+  // principal component of the position covariance matrix
+  Eigen::Matrix2d covariance;
+  covariance << pose_cov[XYZRPY_COV_IDX::X_X], pose_cov[XYZRPY_COV_IDX::X_Y],
+    pose_cov[XYZRPY_COV_IDX::Y_X], pose_cov[XYZRPY_COV_IDX::Y_Y];
+  Eigen::EigenSolver<Eigen::Matrix2d> es(covariance);
+  major_axis_sq = es.eigenvalues().real().maxCoeff();
+  minor_axis_sq = es.eigenvalues().real().minCoeff();
+}
+
+bool Tracker::isConfident(const rclcpp::Time & time) const
+{
+  // check the number of measurements. if the measurement is too small, definitely not confident
+  const int count = getTotalMeasurementCount();
+  if (count < 2) {
+    return false;
+  }
+
+  double major_axis_sq = 0.0;
+  double minor_axis_sq = 0.0;
+  getPositionCovarianceEigenSq(time, major_axis_sq, minor_axis_sq);
+
+  // if the covariance is very small, the tracker is confident
+  constexpr double STRONG_COV_SQ_THRESHOLD = 0.28;
+  if (major_axis_sq < STRONG_COV_SQ_THRESHOLD) {
+    // // debug message
+    // {
+    //   std::cout << "Tracker is strongly confident " << getUuidString().substr(0, 6) << " "
+    //             << getTotalExistenceProbability() << ", axis_sq " << major_axis_sq << " x "
+    //             << minor_axis_sq << std::endl;
+    // }
+    return true;
+  }
+
+  // if the existence probability is high and the covariance is small enough, the tracker is
+  // confident
+  constexpr double WEAK_COV_SQ_THRESHOLD = 1.6;
+  if (getTotalExistenceProbability() > 0.60 && major_axis_sq < WEAK_COV_SQ_THRESHOLD) {
+    // // debug message
+    // {
+    //   std::cout << "Tracker is weakly confident " << getUuidString().substr(0, 6) << " "
+    //             << getTotalExistenceProbability() << ", axis_sq " << major_axis_sq << " x "
+    //             << minor_axis_sq << std::endl;
+    // }
+    return true;
+  }
+
+  // // debug message
+  // {
+  //   std::cout << "Tracker is not confident " << getUuidString().substr(0, 6) << " "
+  //             << getTotalExistenceProbability() << " , axis_sq " << major_axis_sq << " x "
+  //             << minor_axis_sq << std::endl;
+  // }
+  return false;
+}
+
+bool Tracker::isExpired(const rclcpp::Time & now) const
+{
+  // check the number of no measurements
+  const double elapsed_time = getElapsedTimeFromLastUpdate(now);
+
+  // if the last measurement is too old, the tracker is expired
+  if (elapsed_time > 1.0) {
+    // // debug message
+    // double major_axis_sq = 0.0;
+    // double minor_axis_sq = 0.0;
+    // getPositionCovarianceEigenSq(now, major_axis_sq, minor_axis_sq);
+    // std::cout << "Tracker is expired " << getUuidString().substr(0, 6) << " " << elapsed_time
+    //           << " , axis_sq " << major_axis_sq << " x " << minor_axis_sq << std::endl;
+    return true;
+  }
+
+  // if the tracker is not confident, the tracker is expired
+  const float existence_probability = getTotalExistenceProbability();
+  if (existence_probability < 0.015) {
+    // // debug message
+    // double major_axis_sq = 0.0;
+    // double minor_axis_sq = 0.0;
+    // getPositionCovarianceEigenSq(now, major_axis_sq, minor_axis_sq);
+    // std::cout << "Tracker is expired " << getUuidString().substr(0, 6) << " " << elapsed_time
+    //           << ", existence_probability " << existence_probability << " , axis_sq "
+    //           << major_axis_sq << " x " << minor_axis_sq << std::endl;
+    return true;
+  }
+
+  // if the tracker is a bit old and the existence probability is low, check the covariance size
+  if (elapsed_time > 0.18 && existence_probability < 0.4) {
+    // if the tracker covariance is too large, the tracker is expired
+    double major_axis_sq = 0.0;
+    double minor_axis_sq = 0.0;
+    getPositionCovarianceEigenSq(now, major_axis_sq, minor_axis_sq);
+    constexpr double MAJOR_COV_SQ_THRESHOLD = 1.8;
+    constexpr double MINOR_COV_SQ_THRESHOLD = 1.2;
+    if (major_axis_sq > MAJOR_COV_SQ_THRESHOLD || minor_axis_sq > MINOR_COV_SQ_THRESHOLD) {
+      // // debug message
+      // std::cout << "Tracker is expired " << getUuidString().substr(0, 6) << " " << elapsed_time
+      //           << ", existence_probability " << existence_probability << " , axis_sq "
+      //           << major_axis_sq << " x " << minor_axis_sq << std::endl;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+float Tracker::getKnownObjectProbability() const
+{
+  // find unknown probability
+  float unknown_probability = 0.0;
+  for (const auto & a_class : object_.classification) {
+    if (a_class.label == autoware_perception_msgs::msg::ObjectClassification::UNKNOWN) {
+      unknown_probability = a_class.probability;
+      break;
+    }
+  }
+  // known object probability is reverse of unknown probability
+  return 1.0 - unknown_probability;
+}
+
+double Tracker::getPositionCovarianceSizeSq() const
+{
+  using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  auto & pose_cov = object_.pose_covariance;
+  const double determinant = pose_cov[XYZRPY_COV_IDX::X_X] * pose_cov[XYZRPY_COV_IDX::Y_Y] -
+                             pose_cov[XYZRPY_COV_IDX::X_Y] * pose_cov[XYZRPY_COV_IDX::Y_X];
+
+  // position covariance size is square root of the determinant
+  return determinant;
 }
 
 }  // namespace autoware::multi_object_tracker
