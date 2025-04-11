@@ -17,6 +17,8 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/pose_history_footprint/display.cpp
   src/pose_with_covariance_history/pose_with_covariance_history_display.hpp
   src/pose_with_covariance_history/pose_with_covariance_history_display.cpp
+  src/colored_pose_with_covariance_history/colored_pose_with_covariance_history_display.hpp
+  src/colored_pose_with_covariance_history/colored_pose_with_covariance_history_display.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
