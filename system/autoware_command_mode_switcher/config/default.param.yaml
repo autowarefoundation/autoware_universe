@@ -1,0 +1,11 @@
+/**:
+  ros__parameters:
+    update_rate: 10.0
+    plugins:
+      - autoware::command_mode_switcher::StopSwitcher
+      - autoware::command_mode_switcher::AutonomousSwitcher
+      - autoware::command_mode_switcher::LocalSwitcher
+      - autoware::command_mode_switcher::RemoteSwitcher
+      - autoware::command_mode_switcher::EmergencyStopSwitcher
+      - autoware::command_mode_switcher::ComfortableStopSwitcher
+      - autoware::command_mode_switcher::PullOverSwitcher
