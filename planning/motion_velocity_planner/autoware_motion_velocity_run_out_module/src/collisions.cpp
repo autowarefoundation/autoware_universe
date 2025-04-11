@@ -118,6 +118,76 @@ calculate_closest_interpolated_point_and_arc_length(
   return {trajectory_point, offset_arc_length};
 }
 
+std::optional<FootprintIntersection> calculate_first_intersection(
+  const universe_utils::LineString2d & ls, const TrajectoryCornerFootprint & footprint,
+  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & ego_trajectory,
+  const double ls_time_step)
+{
+  const auto front_inside_front_polygon =
+    boost::geometry::within(ls.front(), footprint.front_polygon);
+  const auto front_inside_rear_polygon =
+    boost::geometry::within(ls.front(), footprint.rear_polygon);
+  if (!front_inside_front_polygon && !front_inside_rear_polygon) {
+    return std::nullopt;
+  }
+  FootprintIntersection fi;
+  fi.intersection = ls.front();
+  const auto [ego_point, arc_length] = calculate_closest_interpolated_point_and_arc_length(
+    ego_trajectory, fi.intersection, footprint.max_longitudinal_offset);
+  fi.arc_length = arc_length;
+  fi.ego_time = rclcpp::Duration(ego_point.time_from_start).seconds();
+  const auto obj_yaw = std::atan2(ls[1].y() - ls[0].y(), ls[1].x() - ls[2].x());
+  fi.yaw_diff =
+    autoware::universe_utils::normalizeRadian(tf2::getYaw(ego_point.pose.orientation) - obj_yaw);
+  const auto obj_vel = boost::geometry::distance(ls[0], ls[1]) / ls_time_step;
+  fi.ego_vel = ego_point.longitudinal_velocity_mps;
+  fi.vel_diff = fi.ego_vel - obj_vel;
+  fi.object_time = 0.0;
+  if (front_inside_front_polygon && front_inside_rear_polygon) {
+    fi.position = inside_both_polygons;
+  } else if (front_inside_front_polygon) {
+    fi.position = inside_front_polygon;
+  } else {
+    fi.position = inside_rear_polygon;
+  }
+  return fi;
+}
+
+std::optional<FootprintIntersection> calculate_last_intersection(
+  const universe_utils::LineString2d & ls, const TrajectoryCornerFootprint & footprint,
+  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & ego_trajectory,
+  const double ls_time_step)
+{
+  const auto back_inside_front_polygon =
+    boost::geometry::within(ls.back(), footprint.front_polygon);
+  const auto back_inside_rear_polygon = boost::geometry::within(ls.back(), footprint.rear_polygon);
+  if (!back_inside_front_polygon && !back_inside_rear_polygon) {
+    return std::nullopt;
+  }
+  const auto & obj_from = ls[ls.size() - 2];
+  const auto & obj_to = ls.back();
+  FootprintIntersection fi;
+  fi.intersection = obj_to;
+  const auto [ego_point, arc_length] = calculate_closest_interpolated_point_and_arc_length(
+    ego_trajectory, fi.intersection, footprint.max_longitudinal_offset);
+  fi.arc_length = arc_length;
+  fi.ego_time = rclcpp::Duration(ego_point.time_from_start).seconds();
+  const auto obj_yaw = std::atan2(obj_to.y() - obj_from.y(), obj_to.x() - obj_from.x());
+  fi.yaw_diff = autoware::universe_utils::normalizeRadian(
+    tf2::getYaw(ego_point.pose.orientation) - obj_yaw, 0.0);
+  fi.ego_vel = ego_point.longitudinal_velocity_mps;
+  const auto obj_vel = boost::geometry::distance(obj_from, obj_to) / (ls_time_step);
+  fi.vel_diff = fi.ego_vel - obj_vel;
+  fi.object_time = (static_cast<double>(ls.size()) - 1.0) * ls_time_step;
+  if (back_inside_front_polygon && back_inside_rear_polygon)
+    fi.position = inside_both_polygons;
+  else if (back_inside_front_polygon)
+    fi.position = inside_front_polygon;
+  else
+    fi.position = inside_rear_polygon;
+  return fi;
+}
+
 std::vector<FootprintIntersection> calculate_intersections(
   const universe_utils::LineString2d & ls, const TrajectoryCornerFootprint & footprint,
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & ego_trajectory,
@@ -127,31 +197,10 @@ std::vector<FootprintIntersection> calculate_intersections(
   if (ls.size() < 2) {
     return intersections;
   }
-  const auto front_inside_front_polygon =
-    boost::geometry::within(ls.front(), footprint.front_polygon);
-  const auto front_inside_rear_polygon =
-    boost::geometry::within(ls.front(), footprint.rear_polygon);
-  if (front_inside_front_polygon || front_inside_rear_polygon) {
-    FootprintIntersection fi;
-    fi.intersection = ls.front();
-    const auto [ego_point, arc_length] = calculate_closest_interpolated_point_and_arc_length(
-      ego_trajectory, fi.intersection, footprint.max_longitudinal_offset);
-    fi.arc_length = arc_length;
-    fi.ego_time = rclcpp::Duration(ego_point.time_from_start).seconds();
-    const auto obj_yaw = std::atan2(ls[1].y() - ls[0].y(), ls[1].x() - ls[2].x());
-    fi.yaw_diff =
-      autoware::universe_utils::normalizeRadian(tf2::getYaw(ego_point.pose.orientation) - obj_yaw);
-    const auto obj_vel = boost::geometry::distance(ls[0], ls[1]) / ls_time_step;
-    fi.ego_vel = ego_point.longitudinal_velocity_mps;
-    fi.vel_diff = fi.ego_vel - obj_vel;
-    fi.object_time = 0.0;
-    if (front_inside_front_polygon && front_inside_rear_polygon)
-      fi.position = inside_both_polygons;
-    else if (front_inside_front_polygon)
-      fi.position = inside_front_polygon;
-    else
-      fi.position = inside_rear_polygon;
-    intersections.push_back(fi);
+  const auto first_intersection =
+    calculate_first_intersection(ls, footprint, ego_trajectory, ls_time_step);
+  if (first_intersection) {
+    intersections.push_back(*first_intersection);
   }
   for (auto i = 0UL; i + 1 < ls.size(); ++i) {
     universe_utils::Segment2d segment;
@@ -171,32 +220,10 @@ std::vector<FootprintIntersection> calculate_intersections(
       }
     }
   }
-  const auto back_inside_front_polygon =
-    boost::geometry::within(ls.back(), footprint.front_polygon);
-  const auto back_inside_rear_polygon = boost::geometry::within(ls.back(), footprint.rear_polygon);
-  if (back_inside_front_polygon || back_inside_rear_polygon) {
-    const auto & obj_from = ls[ls.size() - 2];
-    const auto & obj_to = ls.back();
-    FootprintIntersection fi;
-    fi.intersection = obj_to;
-    const auto [ego_point, arc_length] = calculate_closest_interpolated_point_and_arc_length(
-      ego_trajectory, fi.intersection, footprint.max_longitudinal_offset);
-    fi.arc_length = arc_length;
-    fi.ego_time = rclcpp::Duration(ego_point.time_from_start).seconds();
-    const auto obj_yaw = std::atan2(obj_to.y() - obj_from.y(), obj_to.x() - obj_from.x());
-    fi.yaw_diff = autoware::universe_utils::normalizeRadian(
-      tf2::getYaw(ego_point.pose.orientation) - obj_yaw, 0.0);
-    fi.ego_vel = ego_point.longitudinal_velocity_mps;
-    const auto obj_vel = boost::geometry::distance(obj_from, obj_to) / (ls_time_step);
-    fi.vel_diff = fi.ego_vel - obj_vel;
-    fi.object_time = (static_cast<double>(ls.size()) - 1.0) * ls_time_step;
-    if (back_inside_front_polygon && back_inside_rear_polygon)
-      fi.position = inside_both_polygons;
-    else if (back_inside_front_polygon)
-      fi.position = inside_front_polygon;
-    else
-      fi.position = inside_rear_polygon;
-    intersections.push_back(fi);
+  const auto last_intersection =
+    calculate_last_intersection(ls, footprint, ego_trajectory, ls_time_step);
+  if (last_intersection) {
+    intersections.push_back(*last_intersection);
   }
   return intersections;
 }
@@ -210,6 +237,30 @@ struct TimeOverlapIntervalPair
   : ego(std::move(e)), object(std::move(o))
   {
   }
+};
+
+void create_overlap(
+  std::vector<TimeOverlapIntervalPair> & overlap_intervals,
+  const std::vector<FootprintIntersection> & intersections, const size_t entering_id,
+  const size_t exiting_id)
+{
+  TimeOverlapInterval object_interval(
+    intersections[entering_id].object_time, intersections[exiting_id].object_time,
+    intersections[entering_id], intersections[exiting_id]);
+  auto ego_entering = intersections[entering_id];
+  auto ego_exiting = intersections[exiting_id];
+  for (auto i = entering_id + 1; i <= exiting_id; ++i) {
+    const auto & intersection = intersections[i];
+    if (intersection.ego_time < ego_entering.ego_time) {
+      ego_entering = intersection;
+    }
+    if (intersection.ego_time > ego_exiting.ego_time) {
+      ego_exiting = intersection;
+    }
+  }
+  TimeOverlapInterval ego_interval(
+    ego_entering.ego_time, ego_exiting.ego_time, ego_entering, ego_exiting);
+  overlap_intervals.emplace_back(ego_interval, object_interval);
 };
 
 std::vector<TimeOverlapIntervalPair> calculate_overlap_intervals(
@@ -229,25 +280,6 @@ std::vector<TimeOverlapIntervalPair> calculate_overlap_intervals(
     (first_position == inside_front_polygon) || (first_position == inside_both_polygons);
   bool overlap_rear =
     (first_position == inside_rear_polygon) || (first_position == inside_both_polygons);
-  const auto create_overlap = [&](const size_t entering_id, const size_t exiting_id) {
-    TimeOverlapInterval object_interval(
-      intersections[entering_id].object_time, intersections[exiting_id].object_time,
-      intersections[entering_id], intersections[exiting_id]);
-    auto ego_entering = intersections[entering_id];
-    auto ego_exiting = intersections[exiting_id];
-    for (auto i = entering_id + 1; i <= exiting_id; ++i) {
-      const auto & intersection = intersections[i];
-      if (intersection.ego_time < ego_entering.ego_time) {
-        ego_entering = intersection;
-      }
-      if (intersection.ego_time > ego_exiting.ego_time) {
-        ego_exiting = intersection;
-      }
-    }
-    TimeOverlapInterval ego_interval(
-      ego_entering.ego_time, ego_exiting.ego_time, ego_entering, ego_exiting);
-    overlap_intervals.emplace_back(ego_interval, object_interval);
-  };
   size_t entering_intersection_id = 0UL;
   for (auto i = 0UL; i < intersections.size(); ++i) {
     const auto & position = intersections[i].position;
@@ -259,12 +291,13 @@ std::vector<TimeOverlapIntervalPair> calculate_overlap_intervals(
     }
     const auto is_exiting_the_overlap = !overlap_front && !overlap_rear;
     if (is_exiting_the_overlap) {
-      create_overlap(entering_intersection_id, i);
+      create_overlap(overlap_intervals, intersections, entering_intersection_id, i);
       entering_intersection_id = i + 1;
     }
   }
   if (overlap_front || overlap_rear) {
-    create_overlap(entering_intersection_id, intersections.size() - 1);
+    create_overlap(
+      overlap_intervals, intersections, entering_intersection_id, intersections.size() - 1);
   }
   return overlap_intervals;
 }
