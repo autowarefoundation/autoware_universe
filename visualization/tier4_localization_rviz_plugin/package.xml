@@ -11,10 +11,12 @@
   <author email="isamu.takagi@tier4.jp">Takagi, Isamu</author>
   <author email="takamasa.horibe@tier4.jp">Takamasa Horibe</author>
   <author email="yuhei.oshikubo@tier4.jp">Yuhei Oshikubo</author>
+  <author email="kazusa.hashimoto@tier4.jp">Kazusa Hashimoto</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
+  <depend>autoware_internal_debug_msgs</depend>
   <depend>autoware_vehicle_info_utils</depend>
   <depend>geometry_msgs</depend>
   <depend>libqt5-core</depend>

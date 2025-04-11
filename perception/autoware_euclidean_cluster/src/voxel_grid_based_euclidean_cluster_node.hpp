@@ -17,8 +17,8 @@
 #include "autoware/euclidean_cluster/voxel_grid_based_euclidean_cluster.hpp"
 
 #include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
-#include <rclcpp/rclcpp.hpp>
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -43,6 +43,8 @@ private:
   std::shared_ptr<VoxelGridBasedEuclideanCluster> cluster_;
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
+
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
 };
 
 }  // namespace autoware::euclidean_cluster
