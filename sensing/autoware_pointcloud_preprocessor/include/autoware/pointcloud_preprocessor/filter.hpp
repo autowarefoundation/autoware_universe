@@ -172,6 +172,8 @@ protected:
   /** \brief The flag to indicate if only static TF are used. */
   bool has_static_tf_only_;
 
+  bool use_pc_stamp_for_dynamic_transform_lookup_{false};
+
   /** \brief Internal mutex. */
   std::mutex mutex_;
 

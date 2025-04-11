@@ -89,8 +89,8 @@ void DistortionCorrectorBase::get_imu_transformation(
   }
 
   Eigen::Matrix4f eigen_imu_to_base_link;
-  imu_transform_exists_ =
-    managed_tf_buffer_->get_transform(base_frame, imu_frame, eigen_imu_to_base_link);
+  imu_transform_exists_ = managed_tf_buffer_->get_transform(
+    base_frame, imu_frame, rclcpp::Time(0), eigen_imu_to_base_link);
   tf2::Transform tf2_imu_to_base_link = convert_matrix_to_transform(eigen_imu_to_base_link);
 
   geometry_imu_to_base_link_ptr_ = std::make_shared<geometry_msgs::msg::TransformStamped>();
@@ -431,8 +431,8 @@ void DistortionCorrector2D::set_pointcloud_transform(
   }
 
   Eigen::Matrix4f eigen_lidar_to_base_link;
-  pointcloud_transform_exists_ =
-    managed_tf_buffer_->get_transform(base_frame, lidar_frame, eigen_lidar_to_base_link);
+  pointcloud_transform_exists_ = managed_tf_buffer_->get_transform(
+    base_frame, lidar_frame, rclcpp::Time(0), eigen_lidar_to_base_link);
   tf2_lidar_to_base_link_ = convert_matrix_to_transform(eigen_lidar_to_base_link);
   tf2_base_link_to_lidar_ = tf2_lidar_to_base_link_.inverse();
   pointcloud_transform_needed_ = base_frame != lidar_frame && pointcloud_transform_exists_;
@@ -445,8 +445,8 @@ void DistortionCorrector3D::set_pointcloud_transform(
     return;
   }
 
-  pointcloud_transform_exists_ =
-    managed_tf_buffer_->get_transform(base_frame, lidar_frame, eigen_lidar_to_base_link_);
+  pointcloud_transform_exists_ = managed_tf_buffer_->get_transform(
+    base_frame, lidar_frame, rclcpp::Time(0), eigen_lidar_to_base_link_);
   eigen_base_link_to_lidar_ = eigen_lidar_to_base_link_.inverse();
   pointcloud_transform_needed_ = base_frame != lidar_frame && pointcloud_transform_exists_;
 }
