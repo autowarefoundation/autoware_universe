@@ -16,6 +16,7 @@
 #define AUTOWARE__PLANNING_VALIDATOR__PLANNING_VALIDATOR_HPP_
 
 #include "autoware/planning_validator/debug_marker.hpp"
+#include "autoware/planning_validator/parameters.hpp"
 #include "autoware_planning_validator/msg/planning_validator_status.hpp"
 #include "autoware_utils/ros/logger_level_configure.hpp"
 #include "autoware_utils/ros/polling_subscriber.hpp"
@@ -44,28 +45,6 @@ using autoware_utils::StopWatch;
 using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
 using nav_msgs::msg::Odometry;
-
-struct ValidationParams
-{
-  // thresholds
-  double interval_threshold;
-  double relative_angle_threshold;
-  double curvature_threshold;
-  double lateral_acc_threshold;
-  double longitudinal_max_acc_threshold;
-  double longitudinal_min_acc_threshold;
-  double steering_threshold;
-  double steering_rate_threshold;
-  double velocity_deviation_threshold;
-  double distance_deviation_threshold;
-  double longitudinal_distance_deviation_threshold;
-  double nominal_latency_threshold;
-  double yaw_deviation_threshold;
-
-  // parameters
-  double forward_trajectory_length_acceleration;
-  double forward_trajectory_length_margin;
-};
 
 class PlanningValidator : public rclcpp::Node
 {
@@ -115,20 +94,12 @@ private:
   rclcpp::Publisher<Float64Stamped>::SharedPtr pub_processing_time_ms_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_markers_;
 
-  // system parameters
-  enum class InvalidTrajectoryHandlingType {
-    PUBLISH_AS_IT_IS,
-    STOP_PUBLISHING,
-    USE_PREVIOUS_RESULT,
-  } invalid_trajectory_handling_type_;
-  bool publish_diag_ = true;
-  int diag_error_count_threshold_ = 0;
-  bool display_on_terminal_ = true;
+  bool is_critical_error_ = false;
 
   std::shared_ptr<Updater> diag_updater_ = nullptr;
 
   PlanningValidatorStatus validation_status_;
-  ValidationParams validation_params_;  // for thresholds
+  Params params_;  // for thresholds
 
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
 

@@ -57,6 +57,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   // Get parameters
   double publish_rate = declare_parameter<double>("publish_rate");  // [hz]
   world_frame_id_ = declare_parameter<std::string>("world_frame_id");
+  std::string ego_frame_id = declare_parameter<std::string>("ego_frame_id");
   bool enable_delay_compensation{declare_parameter<bool>("enable_delay_compensation")};
   bool enable_odometry_uncertainty = declare_parameter<bool>("consider_odometry_uncertainty");
 
@@ -69,7 +70,8 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     create_publisher<autoware_perception_msgs::msg::TrackedObjects>("output", rclcpp::QoS{1});
 
   // Odometry manager
-  odometry_ = std::make_shared<Odometry>(*this, world_frame_id_, enable_odometry_uncertainty);
+  odometry_ =
+    std::make_shared<Odometry>(*this, world_frame_id_, ego_frame_id, enable_odometry_uncertainty);
 
   // ROS interface - Input channels
   // Get input channels configuration
@@ -238,7 +240,10 @@ void MultiObjectTracker::onTrigger()
 void MultiObjectTracker::onTimer()
 {
   const rclcpp::Time current_time = this->now();
-
+  if (last_updated_time_.nanoseconds() == 0) {
+    // If the last updated time is not set, set it to the current time
+    last_updated_time_ = current_time;
+  }
   // ensure minimum interval: room for the next process(prediction)
   const double minimum_publish_interval = publisher_period_ * minimum_publish_interval_ratio;
   const auto elapsed_time = (current_time - last_published_time_).seconds();
@@ -317,6 +322,10 @@ void MultiObjectTracker::publish(const rclcpp::Time & time) const
 
   // Publish debugger information if enabled
   debugger_->endPublishTime(this->now(), time);
+
+  // Update the diagnostic values
+  const double min_extrapolation_time = (time - last_updated_time_).seconds();
+  debugger_->updateDiagnosticValues(min_extrapolation_time, output_msg.objects.size());
 
   if (debugger_->shouldPublishTentativeObjects()) {
     autoware_perception_msgs::msg::TrackedObjects tentative_output_msg;

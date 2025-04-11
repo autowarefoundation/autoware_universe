@@ -12,6 +12,7 @@
     # default tracker node parameters
     publish_rate: 10.0
     world_frame_id: map
+    ego_frame_id: base_link
     enable_delay_compensation: false
     consider_odometry_uncertainty: false
 
@@ -36,3 +37,5 @@
     publish_debug_markers: false
     diagnostics_warn_delay: 0.5      # [sec]
     diagnostics_error_delay: 1.0     # [sec]
+    diagnostics_warn_extrapolation: 0.5      # [sec]
+    diagnostics_error_extrapolation: 1.0      # [sec]
