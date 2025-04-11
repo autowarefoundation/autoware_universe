@@ -54,6 +54,10 @@ repositories:
     type: git
     url: https://github.com/osrf/negotiated.git
     version: eac198b55dcd052af5988f0f174902913c5f20e7
+  universe/external/managed_transform_buffer:
+    type: git
+    url: https://github.com/autowarefoundation/managed_transform_buffer.git
+    version: 0.1.0
   # middleware
   # TODO(TIER IV): During the transition period of Agnocast introduction,
   # the Agnocast ROS packages are provided as a source build.

@@ -11,11 +11,6 @@
           "default": false,
           "description": "Flag to enables debug mode to display additional logging information."
         },
-        "has_static_tf_only": {
-          "type": "boolean",
-          "default": false,
-          "description": "Flag to indicate if only static TF is used."
-        },
         "rosbag_length": {
           "type": "number",
           "default": 10.0,
@@ -132,7 +127,6 @@
       },
       "required": [
         "debug_mode",
-        "has_static_tf_only",
         "rosbag_length",
         "maximum_queue_size",
         "timeout_sec",
