@@ -162,7 +162,7 @@ VelocityPlanningResult RunOutModule::plan(
   time_keeper_->end_track("filter_objects()");
   time_keeper_->start_track("calc_collisions()");
   run_out::calculate_collisions(
-    filtered_objects, ego_footprint, smoothed_trajectory_points,
+    filtered_objects, ego_footprint, smoothed_trajectory_points, filtering_data,
     planner_data->vehicle_info_.max_longitudinal_offset_m, params_);
   time_keeper_->end_track("calc_collisions()");
   time_keeper_->start_track("calc_decisions()");
@@ -183,7 +183,7 @@ VelocityPlanningResult RunOutModule::plan(
   debug_publisher_->publish(run_out::make_debug_markers(
     ego_footprint, filtered_objects, decisions_tracker_, smoothed_trajectory_points,
     comfortable_time_to_stop,
-    filtering_data[autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN]));
+    filtering_data[autoware_perception_msgs::msg::ObjectClassification::BICYCLE]));
 
   time_keeper_->end_track("publish_debug()");
   time_keeper_->end_track("plan()");

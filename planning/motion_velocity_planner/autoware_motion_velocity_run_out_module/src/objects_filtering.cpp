@@ -105,7 +105,9 @@ bool skip_object_condition(
   if (!object.has_target_label) {
     return skip_object;
   }
-  if (filtering_data.to_be_ignored(object.current_footprint)) {
+  if (!FilteringData::is_geometry_disjoint_from_rtree(
+        object.current_footprint, filtering_data.ignore_objects_rtree,
+        filtering_data.ignore_objects_polygons)) {
     return skip_object;
   }
   return !skip_object;

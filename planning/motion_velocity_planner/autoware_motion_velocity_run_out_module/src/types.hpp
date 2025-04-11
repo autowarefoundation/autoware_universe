@@ -281,24 +281,29 @@ struct Object
 /// @brief data to filter predicted paths and collisions
 struct FilteringData
 {
-  std::vector<universe_utils::LinearRing2d> ignore_polygons;
-  PolygonRtree ignore_rtree;
+  std::vector<universe_utils::LinearRing2d> ignore_objects_polygons;
+  PolygonRtree ignore_objects_rtree;
+  std::vector<universe_utils::LinearRing2d> ignore_collisions_polygons;
+  PolygonRtree ignore_collisions_rtree;
   std::vector<universe_utils::Segment2d> cut_predicted_paths_segments;
   SegmentRtree cut_predicted_paths_rtree;
 
-  /// @brief return true if the given geometry is disjoint from the polygons
+  /// @brief return true if the given geometry is not disjoint from the geometries contained in the
+  /// rtree
   template <class T>
-  bool to_be_ignored(const T & geometry) const
+  static bool is_geometry_disjoint_from_rtree(
+    const T & geometry, const PolygonRtree & rtree,
+    const std::vector<universe_utils::LinearRing2d> & polygons)
   {
     std::vector<PolygonNode> query_results;
-    ignore_rtree.query(!bgi::disjoint(geometry), std::back_inserter(query_results));
+    rtree.query(!bgi::disjoint(geometry), std::back_inserter(query_results));
     for (const auto & query_result : query_results) {
-      const auto & polygon = ignore_polygons[query_result.second];
+      const auto & polygon = polygons[query_result.second];
       if (!boost::geometry::disjoint(geometry, polygon)) {
-        return true;
+        return false;
       }
     }
-    return false;
+    return true;
   }
 };
 using FilteringDataPerLabel = std::vector<FilteringData>;

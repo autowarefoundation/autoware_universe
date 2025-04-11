@@ -48,8 +48,8 @@ lanelet::BoundingBox2d prepare_relevent_bounding_box(
   const TrajectoryCornerFootprint & ego_footprint,
   const std::vector<std::shared_ptr<PlannerData::Object>> & objects);
 
-/// @brief add polygons used to ignore objects in the given lanelets
-void add_ignore_polygons(
+/// @brief add polygons used to ignore collisions and objects or cut predicted paths
+void add_ignore_and_cut_polygons(
   FilteringDataPerLabel & data_per_label, const std::vector<lanelet::Lanelet> & lanelets,
   const std::vector<uint8_t> & all_labels, const std::vector<ObjectParameters> & params_per_label);
 
