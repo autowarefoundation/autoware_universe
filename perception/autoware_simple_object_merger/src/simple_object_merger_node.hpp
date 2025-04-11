@@ -63,6 +63,9 @@ private:
   rclcpp::TimerBase::SharedPtr timer_{};
   void onTimer();
   bool isDataReady();
+  bool shouldLogThrottle(
+    size_t index, const rclcpp::Time & now, std::vector<rclcpp::Time> & last_log_times,
+    double throttle_interval_sec);
 
   // Parameter Server
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
