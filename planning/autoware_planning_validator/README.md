@@ -13,6 +13,7 @@ The following features are supported for trajectory validation and can have thre
 - **Curvature** : invalid if the trajectory has too sharp turns that is not feasible for the given vehicle kinematics
 - **Relative angle** : invalid if the yaw angle changes too fast in the sequence of trajectory points
 - **Lateral acceleration** : invalid if the expected lateral acceleration/deceleration is too large
+- **Lateral jerk** : invalid if the expected lateral jerk is too large
 - **Longitudinal acceleration/deceleration** : invalid if the acceleration/deceleration in the trajectory point is too large
 - **Steering angle** : invalid if the expected steering value is too large estimated from trajectory curvature
 - **Steering angle rate** : invalid if the expected steering rate value is too large
@@ -104,6 +105,14 @@ The following parameters can be set for the `autoware_planning_validator`:
 | `validity_checks.acceleration.longitudinal_max_th` | double | max valid value for the longitudinal acceleration along the trajectory [m/ss] | 9.8           |
 | `validity_checks.acceleration.longitudinal_min_th` | double | min valid value for the longitudinal acceleration along the trajectory [m/ss] | -9.8          |
 | `validity_checks.acceleration.is_critical`         | bool   | if true, will use handling type specified for critical checks                 | false         |
+
+### Lateral Jerk Check
+
+| Name                                       | Type   | Description                                                       | Default value |
+| :----------------------------------------- | :----- | :---------------------------------------------------------------- | :------------ |
+| `validity_checks.lateral_jerk.enable`      | bool   | flag to enable/disable lateral jerk validation check              | true          |
+| `validity_checks.lateral_jerk.threshold`   | double | max valid value for the lateral jerk along the trajectory [m/sss] | **TBD**       |
+| `validity_checks.lateral_jerk.is_critical` | bool   | if true, will use handling type specified for critical checks     | false         |
 
 #### Steering Check
 

@@ -40,7 +40,7 @@ struct ValidationParams
   ValidityCheck latency;
   ValidityCheck steering;
   ValidityCheck steering_rate;
-
+  ValidityCheck lateral_jerk{};
   struct AccelerationCheck : ValidityCheck
   {
     double lateral_th;

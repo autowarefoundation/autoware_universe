@@ -7,6 +7,7 @@ bool is_valid_interval
 bool is_valid_relative_angle
 bool is_valid_curvature
 bool is_valid_lateral_acc
+bool is_valid_lateral_jerk
 bool is_valid_longitudinal_max_acc
 bool is_valid_longitudinal_min_acc
 bool is_valid_steering
@@ -24,6 +25,7 @@ float64 max_interval_distance
 float64 max_relative_angle
 float64 max_curvature
 float64 max_lateral_acc
+float64 max_lateral_jerk
 float64 max_longitudinal_acc
 float64 min_longitudinal_acc
 float64 max_steering
