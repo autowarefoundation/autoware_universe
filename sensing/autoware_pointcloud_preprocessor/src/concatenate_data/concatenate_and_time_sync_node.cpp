@@ -48,7 +48,6 @@ PointCloudConcatenateDataSynchronizerComponent::PointCloudConcatenateDataSynchro
 
   //  initialize parameters
   params_.debug_mode = declare_parameter<bool>("debug_mode");
-  params_.has_static_tf_only = declare_parameter<bool>("has_static_tf_only");
   params_.rosbag_length = declare_parameter<double>("rosbag_length");
   params_.maximum_queue_size = static_cast<size_t>(declare_parameter<int>("maximum_queue_size"));
   params_.timeout_sec = declare_parameter<double>("timeout_sec");
@@ -140,8 +139,7 @@ PointCloudConcatenateDataSynchronizerComponent::PointCloudConcatenateDataSynchro
   // Combine cloud handler
   combine_cloud_handler_ = std::make_shared<CombineCloudHandler>(
     *this, params_.output_frame, params_.is_motion_compensated,
-    params_.publish_synchronized_pointcloud, params_.keep_input_frame_in_synchronized_pointcloud,
-    params_.has_static_tf_only);
+    params_.publish_synchronized_pointcloud, params_.keep_input_frame_in_synchronized_pointcloud);
 
   // Diagnostic Updater
   std::ostringstream hardware_id_stream;
