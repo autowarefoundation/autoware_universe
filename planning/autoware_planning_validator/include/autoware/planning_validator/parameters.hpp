@@ -59,6 +59,13 @@ struct ValidationParams
     double yaw_th;
   } deviation;
 
+  struct TrajectoryShift : ValidityCheck
+  {
+    double lat_shift_th;
+    double forward_shift_th;
+    double backward_shift_th;
+  } trajectory_shift;
+
   struct ForwardTrajectoryLength : ValidityCheck
   {
     double acceleration;

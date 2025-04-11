@@ -69,6 +69,9 @@ public:
   bool checkValidForwardTrajectoryLength(const Trajectory & trajectory);
   bool checkValidLatency(const Trajectory & trajectory);
   bool checkValidYawDeviation(const Trajectory & trajectory);
+  bool checkTrajectoryShift(
+    const Trajectory & trajectory, const Trajectory & prev_trajectory,
+    const geometry_msgs::msg::Pose & ego_pose);
 
 private:
   void setupDiag();
@@ -77,14 +80,17 @@ private:
 
   bool isDataReady();
 
-  void validate(const Trajectory & trajectory);
+  void validate(
+    const Trajectory & trajectory, const std::optional<Trajectory> & prev_trajectory = {});
 
   void publishProcessingTime(const double processing_time_ms);
   void publishTrajectory();
   void publishDebugInfo();
   void displayStatus();
 
-  void setStatus(DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg);
+  void setStatus(
+    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg,
+    const bool is_critical = false);
 
   autoware_utils::InterProcessPollingSubscriber<Odometry> sub_kinematics_{
     this, "~/input/kinematics"};
@@ -107,6 +113,7 @@ private:
 
   Trajectory::ConstSharedPtr current_trajectory_;
   Trajectory::ConstSharedPtr previous_published_trajectory_;
+  Trajectory::ConstSharedPtr soft_stop_trajectory_;
 
   Odometry::ConstSharedPtr current_kinematics_;
 
