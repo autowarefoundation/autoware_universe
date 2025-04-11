@@ -21,6 +21,7 @@
 #include <rclcpp/node.hpp>
 #include <rclcpp/parameter.hpp>
 
+#include <autoware_perception_msgs/msg/detail/object_classification__struct.hpp>
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 
 #include <algorithm>
@@ -37,9 +38,13 @@ struct ObjectParameters
   double stopped_velocity_threshold;
   bool ignore_if_on_ego_trajectory;
   bool ignore_if_behind_ego;
-  bool ignore_if_on_crosswalk;
+  std::vector<std::string> ignore_objects_polygon_types;
+  std::vector<std::string> ignore_objects_lanelet_subtypes;
+  std::vector<std::string> ignore_collisions_polygon_types;
+  std::vector<std::string> ignore_collisions_lanelet_subtypes;
   std::vector<std::string> cut_linestring_types;
   std::vector<std::string> cut_polygon_types;
+  std::vector<std::string> cut_lanelet_subtypes;
   bool cut_if_crossing_ego_from_behind;
   double confidence_filtering_threshold;
   bool confidence_filtering_only_use_highest;
@@ -155,8 +160,16 @@ struct Parameters
         get_object_parameter<bool>(node, ns, label, ".ignore.if_on_ego_trajectory");
       object_parameters_per_label[label].ignore_if_behind_ego =
         get_object_parameter<bool>(node, ns, label, ".ignore.if_behind_ego");
-      object_parameters_per_label[label].ignore_if_on_crosswalk =
-        get_object_parameter<bool>(node, ns, label, ".ignore.if_on_crosswalk");
+      object_parameters_per_label[label].ignore_objects_polygon_types =
+        get_object_parameter<std::vector<std::string>>(node, ns, label, ".ignore.polygon_types");
+      object_parameters_per_label[label].ignore_objects_lanelet_subtypes =
+        get_object_parameter<std::vector<std::string>>(node, ns, label, ".ignore.lanelet_subtypes");
+      object_parameters_per_label[label].ignore_collisions_polygon_types =
+        get_object_parameter<std::vector<std::string>>(
+          node, ns, label, ".ignore_collisions.polygon_types");
+      object_parameters_per_label[label].ignore_collisions_lanelet_subtypes =
+        get_object_parameter<std::vector<std::string>>(
+          node, ns, label, ".ignore_collisions.lanelet_subtypes");
       object_parameters_per_label[label].ignore_if_stopped =
         get_object_parameter<bool>(node, ns, label, ".ignore.if_stopped");
       object_parameters_per_label[label].stopped_velocity_threshold =
@@ -168,6 +181,9 @@ struct Parameters
       object_parameters_per_label[label].cut_polygon_types =
         get_object_parameter<std::vector<std::string>>(
           node, ns, label, ".cut_predicted_paths.polygon_types");
+      object_parameters_per_label[label].cut_lanelet_subtypes =
+        get_object_parameter<std::vector<std::string>>(
+          node, ns, label, ".cut_predicted_paths.lanelet_subtypes");
       object_parameters_per_label[label].cut_linestring_types =
         get_object_parameter<std::vector<std::string>>(
           node, ns, label, ".cut_predicted_paths.linestring_types");
@@ -230,8 +246,17 @@ struct Parameters
         params, ns + ".ignore.if_behind_ego",
         object_parameters_per_label[label].ignore_if_behind_ego);
       updateParam(
-        params, ns + str + ".ignore.if_on_crosswalk",
-        object_parameters_per_label[label].ignore_if_on_crosswalk);
+        params, ns + str + ".ignore.lanelet_subtypes",
+        object_parameters_per_label[label].ignore_objects_lanelet_subtypes);
+      updateParam(
+        params, ns + str + ".ignore_collisions.lanelet_subtypes",
+        object_parameters_per_label[label].ignore_collisions_lanelet_subtypes);
+      updateParam(
+        params, ns + str + ".ignore.polygon_types",
+        object_parameters_per_label[label].ignore_objects_polygon_types);
+      updateParam(
+        params, ns + str + ".ignore_collisions.polygon_types",
+        object_parameters_per_label[label].ignore_collisions_polygon_types);
       updateParam(
         params, ns + str + ".confidence_filtering.threshold",
         object_parameters_per_label[label].confidence_filtering_threshold);
@@ -241,6 +266,9 @@ struct Parameters
       updateParam(
         params, ns + str + ".cut_predicted_paths.if_crossing_ego_from_behind",
         object_parameters_per_label[label].cut_if_crossing_ego_from_behind);
+      updateParam(
+        params, ns + str + ".cut_predicted_paths.lanelet_subtypes",
+        object_parameters_per_label[label].cut_lanelet_subtypes);
       updateParam(
         params, ns + str + ".cut_predicted_paths.polygon_types",
         object_parameters_per_label[label].cut_polygon_types);
@@ -281,10 +309,12 @@ struct Parameters
   static std::vector<uint8_t> all_labels()
   {
     using autoware_perception_msgs::msg::ObjectClassification;
-    return {ObjectClassification::CAR,        ObjectClassification::TRUCK,
-            ObjectClassification::BICYCLE,    ObjectClassification::BUS,
-            ObjectClassification::MOTORCYCLE, ObjectClassification::PEDESTRIAN,
-            ObjectClassification::TRAILER,    ObjectClassification::UNKNOWN};
+    std::vector<uint8_t> labels;
+    for (uint8_t label = ObjectClassification::UNKNOWN; label <= ObjectClassification::PEDESTRIAN;
+         ++label) {
+      labels.push_back(label);
+    }
+    return labels;
   }
 };
 }  // namespace autoware::motion_velocity_planner::run_out

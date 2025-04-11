@@ -35,6 +35,14 @@
 namespace autoware::motion_velocity_planner::run_out
 {
 
+namespace
+{
+bool contains_type(const std::vector<std::string> & types, const std::string & type)
+{
+  return std::find(types.begin(), types.end(), type) != types.end();
+}
+}  // namespace
+
 lanelet::BoundingBox2d prepare_relevent_bounding_box(
   const TrajectoryCornerFootprint & ego_footprint,
   const std::vector<std::shared_ptr<PlannerData::Object>> & objects)
@@ -51,43 +59,60 @@ lanelet::BoundingBox2d prepare_relevent_bounding_box(
   return bounding_box;
 }
 
-void add_ignore_polygons(
+void add_ignore_and_cut_lanelets(
   FilteringDataPerLabel & data_per_label, const std::vector<lanelet::Lanelet> & lanelets,
   const std::vector<uint8_t> & all_labels, const std::vector<ObjectParameters> & params_per_label)
 {
   for (const auto & ll : lanelets) {
-    const auto attribute = ll.attributeOr(lanelet::AttributeName::Subtype, std::string());
+    const auto lanelet_subtype = ll.attributeOr(lanelet::AttributeName::Subtype, std::string());
     for (const auto label : all_labels) {
       auto & data = data_per_label[label];
       const auto & params = params_per_label[label];
-      const auto & types = params.cut_polygon_types;
-      if (std::find(types.begin(), types.end(), attribute) != types.end()) {
+      if (contains_type(params.cut_lanelet_subtypes, lanelet_subtype)) {
         for (auto i = 0UL; i < ll.polygon2d().numSegments(); ++i) {
           data.cut_predicted_paths_segments.push_back(convert(ll.polygon2d().segment(i)));
         }
       }
-      if (params.ignore_if_on_crosswalk && attribute == lanelet::AttributeValueString::Crosswalk) {
+      if (contains_type(params.ignore_objects_lanelet_subtypes, lanelet_subtype)) {
         universe_utils::LinearRing2d polygon;
         boost::geometry::convert(ll.polygon2d().basicPolygon(), polygon);
-        data.ignore_polygons.push_back(polygon);
+        data.ignore_objects_polygons.push_back(polygon);
+      }
+      if (contains_type(params.ignore_collisions_lanelet_subtypes, lanelet_subtype)) {
+        universe_utils::LinearRing2d polygon;
+        boost::geometry::convert(ll.polygon2d().basicPolygon(), polygon);
+        data.ignore_collisions_polygons.push_back(polygon);
       }
     }
   }
 }
 
-void add_cut_segments(
+void add_ignore_and_cut_polygons(
   FilteringDataPerLabel & data_per_label, const std::vector<lanelet::Polygon3d> & polygons,
   const std::vector<uint8_t> & all_labels, const std::vector<ObjectParameters> & params_per_label)
 {
   for (const auto & p : polygons) {
-    const auto attribute = p.attributeOr(lanelet::AttributeName::Subtype, std::string());
+    const auto polygon_type = p.attributeOr(lanelet::AttributeName::Type, std::string());
     for (const auto label : all_labels) {
       const auto & params = params_per_label[label];
-      const auto & types = params.cut_polygon_types;
-      if (std::find(types.begin(), types.end(), attribute) != types.end()) {
+      if (contains_type(params.cut_polygon_types, polygon_type)) {
         for (auto i = 0UL; i < p.numSegments(); ++i) {
           data_per_label[label].cut_predicted_paths_segments.push_back(convert(p.segment(i)));
         }
+      }
+      if (contains_type(params.ignore_objects_polygon_types, polygon_type)) {
+        universe_utils::LinearRing2d polygon;
+        for (const auto & pt : p) {
+          polygon.emplace_back(pt.x(), pt.y());
+        }
+        data_per_label[label].ignore_objects_polygons.push_back(polygon);
+      }
+      if (contains_type(params.ignore_collisions_polygon_types, polygon_type)) {
+        universe_utils::LinearRing2d polygon;
+        for (const auto & pt : p) {
+          polygon.emplace_back(pt.x(), pt.y());
+        }
+        data_per_label[label].ignore_collisions_polygons.push_back(polygon);
       }
     }
   }
@@ -125,16 +150,16 @@ FilteringDataPerLabel calculate_filtering_data(
   }
   const auto lanelets_in_range = map_ptr->laneletLayer.search(bounding_box);
   const auto polygons_in_range = map_ptr->polygonLayer.search(bounding_box);
-  add_ignore_polygons(data_per_label, lanelets_in_range, all_labels, params_per_label);
-  add_cut_segments(data_per_label, polygons_in_range, all_labels, params_per_label);
+  add_ignore_and_cut_lanelets(data_per_label, lanelets_in_range, all_labels, params_per_label);
+  add_ignore_and_cut_polygons(data_per_label, polygons_in_range, all_labels, params_per_label);
   const auto linestrings_in_range = map_ptr->lineStringLayer.search(bounding_box);
   add_cut_segments(data_per_label, linestrings_in_range, all_labels, params_per_label);
   for (const auto label : all_labels) {
     const auto & params = parameters.object_parameters_per_label[label];
     if (params.ignore_if_on_ego_trajectory) {
       auto & data = data_per_label[label];
-      data.ignore_polygons.push_back(ego_footprint.front_polygon.outer());
-      data.ignore_polygons.push_back(ego_footprint.rear_polygon.outer());
+      data.ignore_objects_polygons.push_back(ego_footprint.front_polygon.outer());
+      data.ignore_objects_polygons.push_back(ego_footprint.rear_polygon.outer());
     }
   }
   // prepare rtree objects
@@ -150,12 +175,24 @@ FilteringDataPerLabel calculate_filtering_data(
   for (const auto label : all_labels) {
     auto & data = data_per_label[label];
     std::vector<PolygonNode> nodes;
-    nodes.reserve(data.ignore_polygons.size());
-    for (auto i = 0UL; i < data.ignore_polygons.size(); ++i) {
+    nodes.reserve(data.ignore_objects_polygons.size());
+    for (auto i = 0UL; i < data.ignore_objects_polygons.size(); ++i) {
       nodes.emplace_back(
-        boost::geometry::return_envelope<universe_utils::Box2d>(data.ignore_polygons[i]), i);
+        boost::geometry::return_envelope<universe_utils::Box2d>(data.ignore_objects_polygons[i]),
+        i);
     }
-    data.ignore_rtree = PolygonRtree(nodes);
+    data.ignore_objects_rtree = PolygonRtree(nodes);
+  }
+  for (const auto label : all_labels) {
+    auto & data = data_per_label[label];
+    std::vector<PolygonNode> nodes;
+    nodes.reserve(data.ignore_collisions_polygons.size());
+    for (auto i = 0UL; i < data.ignore_collisions_polygons.size(); ++i) {
+      nodes.emplace_back(
+        boost::geometry::return_envelope<universe_utils::Box2d>(data.ignore_collisions_polygons[i]),
+        i);
+    }
+    data.ignore_collisions_rtree = PolygonRtree(nodes);
   }
   return data_per_label;
 }

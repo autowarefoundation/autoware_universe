@@ -22,19 +22,19 @@
 #include <autoware/universe_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware/universe_utils/math/normalization.hpp>
-#include <autoware/universe_utils/ros/uuid_helper.hpp>
 #include <tf2/utils.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
-#include <autoware_planning_msgs/msg/detail/trajectory_point__struct.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
-#include <geometry_msgs/msg/detail/point__struct.hpp>
+#include <geometry_msgs/msg/point.hpp>
 
-#include <boost/geometry/algorithms/disjoint.hpp>
 #include <boost/geometry/algorithms/distance.hpp>
 #include <boost/geometry/algorithms/length.hpp>
+#include <boost/geometry/algorithms/within.hpp>
+#include <boost/geometry/index/predicates.hpp>
 
 #include <algorithm>
+#include <iterator>
 #include <utility>
 #include <vector>
 
@@ -365,13 +365,24 @@ std::vector<Collision> calculate_interval_collisions(
 std::vector<Collision> calculate_footprint_collisions(
   const TrajectoryCornerFootprint & ego_footprint, const ObjectCornerFootprint & object_footprint,
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & ego_trajectory,
-  const Parameters & params)
+  const FilteringData & filtering_data, const double min_arc_length, const Parameters & params)
 {
   std::vector<TimeOverlapIntervalPair> all_overlap_intervals;
   for (const auto & corner_ls : object_footprint.corner_footprint.corner_linestrings) {
     const std::vector<FootprintIntersection> footprint_intersections =
       calculate_intersections(corner_ls, ego_footprint, ego_trajectory, object_footprint.time_step);
-    const auto intervals = calculate_overlap_intervals(footprint_intersections);
+    std::vector<FootprintIntersection> filtered_intersections;
+    for (const auto & intersection : footprint_intersections) {
+      const auto is_before_min_arc_length = intersection.arc_length <= min_arc_length;
+      if (
+        !is_before_min_arc_length &&
+        FilteringData::is_geometry_disjoint_from_rtree(
+          intersection.intersection, filtering_data.ignore_collisions_rtree,
+          filtering_data.ignore_collisions_polygons)) {
+        filtered_intersections.push_back(intersection);
+      }
+    }
+    const auto intervals = calculate_overlap_intervals(filtered_intersections);
     all_overlap_intervals.insert(all_overlap_intervals.end(), intervals.begin(), intervals.end());
   }
   return calculate_interval_collisions(all_overlap_intervals, params);
@@ -380,17 +391,17 @@ std::vector<Collision> calculate_footprint_collisions(
 void calculate_collisions(
   std::vector<Object> & objects, const TrajectoryCornerFootprint & ego_footprint,
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & ego_trajectory,
-  const double min_arc_length, const Parameters & params)
+  const FilteringDataPerLabel & filtering_data, const double min_arc_length,
+  const Parameters & params)
 {
   for (auto & object : objects) {
     for (const auto & corner_footprint : object.corner_footprints) {
-      const auto collisions =
-        calculate_footprint_collisions(ego_footprint, corner_footprint, ego_trajectory, params);
+      const auto collisions = calculate_footprint_collisions(
+        ego_footprint, corner_footprint, ego_trajectory, filtering_data[object.label],
+        min_arc_length, params);
       for (const auto & collision : collisions) {
-        const auto is_on_current_ego_pose =
-          collision.object_time_interval.first_intersection.arc_length <= min_arc_length;
         const auto is_after_overlap = collision.ego_collision_time > collision.ego_time_interval.to;
-        if (!is_on_current_ego_pose && !is_after_overlap) {
+        if (!is_after_overlap) {
           object.collisions.push_back(collision);
         }
       }
