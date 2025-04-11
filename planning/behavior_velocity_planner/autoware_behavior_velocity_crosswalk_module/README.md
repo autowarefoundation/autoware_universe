@@ -54,12 +54,12 @@ group calculate the candidate stop
     if (the weak brake distance is closer than the limit stop position against the nearest pedestrian?) then (yes)
       :plan to stop by the weak brake distance;
     else (no)
-      :plan to stop at the limit stop position against the nearest pedestrian;
+      :plan to stop at the limit stop position against the crosswalk;
     endif
   endif
 end group
-group check if the candidate stop pose is acceptable for braking distance
-  if (the stop pose candidate is closer than the acceptable stop dist?) then (yes)
+group check if the candidate stop pose is acceptable as deceleration rate
+  if (the stop pose candidate requries stronger deceleration than the parameter?) then (yes)
     :abort to stop.;
   else (no)
     :plan to stop at the candidate stop pose;
