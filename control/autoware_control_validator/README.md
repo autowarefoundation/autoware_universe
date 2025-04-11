@@ -13,6 +13,7 @@ The listed features below does not always correspond to the latest implementatio
 | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | :---------------------------------------------------: |
 | Inverse velocity: Measured velocity has a different sign from the target velocity. | measured velocity $v$, target velocity $\hat{v}$, and velocity parameter $c$                    |      $v \hat{v} < 0, \quad \lvert v \rvert > c$       |
 | Overspeed: Measured speed exceeds target speed significantly.                      | measured velocity $v$, target velocity $\hat{v}$, ratio parameter $r$, and offset parameter $c$ | $\lvert v \rvert > (1 + r) \lvert \hat{v} \rvert + c$ |
+| Overrun estimation: estimate overrun even if decelerate by assumed rate.           | assumed deceleration, assumed delay                                                             |                                                       |
 
 - **Deviation check between reference trajectory and predicted trajectory** : invalid when the largest deviation between the predicted trajectory and reference trajectory is greater than the given threshold.
 
