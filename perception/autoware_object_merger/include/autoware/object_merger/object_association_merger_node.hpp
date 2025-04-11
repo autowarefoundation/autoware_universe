@@ -20,6 +20,7 @@
 #include "autoware_utils/ros/published_time_publisher.hpp"
 #include "autoware_utils/system/stop_watch.hpp"
 
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
@@ -58,6 +59,11 @@ private:
     const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr & input_objects0_msg,
     const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr & input_objects1_msg);
 
+  void timeoutCallback();
+  void checkStatus(
+    double elapsed_time, double timeout, const std::string & message_prefix,
+    const rclcpp::Time & publish_time_stamp);
+
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr merged_object_pub_;
@@ -72,6 +78,17 @@ private:
   int sync_queue_size_;
   std::unique_ptr<DataAssociation> data_association_;
   std::string base_link_frame_id_;  // associated with the base_link frame
+
+  // Timeout Related
+  double message_timeout_sec_;
+  double initialization_timeout_sec_;
+  rclcpp::Time last_sync_time_;
+  bool received_first_message_;
+  bool time_source_initialized_;
+  double message_interval_;
+  rclcpp::Time node_start_time_;
+  rclcpp::TimerBase::SharedPtr timeout_timer_;
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
 
   PriorityMode priority_mode_;
   bool remove_overlapped_unknown_objects_;
