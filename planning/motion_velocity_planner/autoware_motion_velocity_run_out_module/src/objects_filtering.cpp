@@ -33,6 +33,7 @@
 #include <boost/geometry/algorithms/detail/overlaps/interface.hpp>
 
 #include <algorithm>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -189,16 +190,6 @@ std::optional<size_t> get_first_intersecting_segment_idx(
   return std::nullopt;
 }
 
-bool crosses_from_the_rear(
-  const universe_utils::Segment2d & incoming, const universe_utils::Segment2d & rear)
-{
-  const auto rear_vector = rear.second - rear.first;
-  // normal vector in the direction coming from the rear
-  const auto rear_normal = universe_utils::Point2d(-rear_vector.y(), rear_vector.x());
-  const auto incoming_vector = incoming.second - incoming.first;
-  return incoming_vector.dot(rear_normal) > 0.0;
-}
-
 void cut_footprint_after_index(ObjectCornerFootprint & footprint, const size_t index)
 {
   footprint.corner_footprint.corner_linestrings[front_left].resize(index);
@@ -207,47 +198,33 @@ void cut_footprint_after_index(ObjectCornerFootprint & footprint, const size_t i
   footprint.corner_footprint.corner_linestrings[rear_right].resize(index);
 }
 
-void filter_predicted_paths(
-  Object & object, const universe_utils::Segment2d & ego_rear_segment,
-  const FilteringData & map_data, const Parameters & params)
+std::optional<size_t> get_cut_predicted_path_index(
+  const ObjectCornerFootprint & corner_footprint, const FilteringData & map_data)
 {
-  for (auto & corner_footprint : object.corner_footprints) {
-    bool cut = false;
-    for (auto i = 0UL; i + 1 < corner_footprint.corner_footprint.size(); ++i) {
-      for (const auto & corner : {front_left, front_right, rear_left, rear_right}) {
-        const auto & ls = corner_footprint.corner_footprint.corner_linestrings[corner];
-        const auto & segment = universe_utils::Segment2d(ls[i], ls[i + 1]);
-        std::vector<SegmentNode> query_results;
-        map_data.cut_predicted_paths_rtree.query(
-          boost::geometry::index::intersects(segment), std::back_inserter(query_results));
-        for (const auto & candidate : query_results) {
-          if (universe_utils::intersect(
-                segment.first, segment.second, candidate.first.first, candidate.first.second)) {
-            cut = true;
-            cut_footprint_after_index(corner_footprint, i);
-            break;
-          }
+  for (auto i = 0UL; i + 1 < corner_footprint.corner_footprint.size(); ++i) {
+    for (const auto & corner : {front_left, front_right, rear_left, rear_right}) {
+      const auto & ls = corner_footprint.corner_footprint.corner_linestrings[corner];
+      const auto & segment = universe_utils::Segment2d(ls[i], ls[i + 1]);
+      std::vector<SegmentNode> query_results;
+      map_data.cut_predicted_paths_rtree.query(
+        boost::geometry::index::intersects(segment), std::back_inserter(query_results));
+      for (const auto & candidate : query_results) {
+        if (universe_utils::intersect(
+              segment.first, segment.second, candidate.first.first, candidate.first.second)) {
+          return i;
         }
-        if (cut) {
-          break;
-        }
-      }
-      if (cut) {
-        break;
       }
     }
-    if (params.object_parameters_per_label[object.label].cut_if_crossing_ego_from_behind) {
-      const auto first_intersecting_idx =
-        get_first_intersecting_segment_idx(corner_footprint, ego_rear_segment);
-      if (first_intersecting_idx) {
-        const auto first_intersecting_segment = universe_utils::Segment2d(
-          corner_footprint.corner_footprint.corner_linestrings[rear_left][*first_intersecting_idx],
-          corner_footprint.corner_footprint
-            .corner_linestrings[rear_left][*first_intersecting_idx + 1]);
-        if (crosses_from_the_rear(first_intersecting_segment, ego_rear_segment)) {
-          cut_footprint_after_index(corner_footprint, *first_intersecting_idx);
-        }
-      }
+  }
+  return std::nullopt;
+}
+
+void filter_predicted_paths(Object & object, const FilteringData & map_data)
+{
+  for (auto & corner_footprint : object.corner_footprints) {
+    const auto cut_index = get_cut_predicted_path_index(corner_footprint, map_data);
+    if (cut_index) {
+      cut_footprint_after_index(corner_footprint, *cut_index);
     }
   }
 }
@@ -276,8 +253,7 @@ std::vector<Object> prepare_dynamic_objects(
       continue;
     }
     calculate_predicted_path_footprints(filtered_object, object->predicted_object, params);
-    filter_predicted_paths(
-      filtered_object, ego_rear_segment, filtering_data[filtered_object.label], params);
+    filter_predicted_paths(filtered_object, filtering_data[filtered_object.label]);
     if (!filtered_object.corner_footprints.empty()) {
       filtered_objects.push_back(filtered_object);
     }

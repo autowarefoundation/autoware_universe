@@ -71,10 +71,12 @@ bool crosses_from_the_rear(
 /// @brief cut a footprint after the given index
 void cut_footprint_after_index(ObjectCornerFootprint & footprint, const size_t index);
 
+/// @brief calculate the first index of the given footprint that crosses a cut segment
+std::optional<size_t> get_cut_predicted_path_index(
+  const ObjectCornerFootprint & corner_footprint, const FilteringData & map_data);
+
 /// @brief filter predicted paths of an object used map filtering data
-void filter_predicted_paths(
-  Object & object, const universe_utils::Segment2d & ego_rear_segment,
-  const FilteringData & map_data, const Parameters & params);
+void filter_predicted_paths(Object & object, const FilteringData & map_data);
 
 /// @brief prepare data for the dynamic objects and their path footprints to use for collision
 /// detection

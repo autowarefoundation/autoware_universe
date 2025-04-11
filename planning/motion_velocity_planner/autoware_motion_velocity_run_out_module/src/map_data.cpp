@@ -146,7 +146,10 @@ FilteringDataPerLabel calculate_filtering_data(
   const auto all_labels = Parameters::all_labels();
   data_per_label.resize(all_labels.size());
   for (const auto label : all_labels) {
-    data_per_label[label].cut_predicted_paths_segments.push_back(ego_footprint.get_rear_segment());
+    if (params_per_label[label].cut_if_crossing_ego_from_behind) {
+      data_per_label[label].cut_predicted_paths_segments.push_back(
+        ego_footprint.get_rear_segment());
+    }
   }
   const auto lanelets_in_range = map_ptr->laneletLayer.search(bounding_box);
   const auto polygons_in_range = map_ptr->polygonLayer.search(bounding_box);
