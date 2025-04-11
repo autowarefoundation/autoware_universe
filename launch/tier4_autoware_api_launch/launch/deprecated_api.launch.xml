@@ -17,4 +17,9 @@
     <push-ros-namespace namespace="autoware_api/utils"/>
     <include file="$(find-pkg-share autoware_path_distance_calculator)/launch/path_distance_calculator.launch.xml"/>
   </group>
+
+  <!-- tier4 deprecated api adapter -->
+  <group>
+    <include file="$(find-pkg-share tier4_deprecated_api_adapter)/launch/tier4_deprecated_api_adapter.launch.xml"/>
+  </group>
 </launch>
