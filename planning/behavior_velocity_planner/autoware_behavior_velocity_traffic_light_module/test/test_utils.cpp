@@ -138,8 +138,7 @@ TEST(BehaviorTrafficLightModuleUtilsTest, calcStopPointAndInsertIndex)
     basic_line.emplace_back(lanelet::InvalId, 5.5, 1.0, 0.0);
 
     const auto line = lanelet::LineString3d(lanelet::InvalId, basic_line);
-    constexpr double extend_length = 0.0;
-    const auto output = calcStopPointAndInsertIndex(PathWithLaneId{}, line, offset, extend_length);
+    const auto output = calcStopPointAndInsertIndex(PathWithLaneId{}, line, offset);
 
     EXPECT_FALSE(output.has_value());
   }
@@ -150,8 +149,7 @@ TEST(BehaviorTrafficLightModuleUtilsTest, calcStopPointAndInsertIndex)
     basic_line.emplace_back(lanelet::InvalId, 5.5, 1.0, 0.0);
 
     const auto line = lanelet::LineString3d(lanelet::InvalId, basic_line);
-    constexpr double extend_length = 0.0;
-    const auto output = calcStopPointAndInsertIndex(path, line, offset, extend_length);
+    const auto output = calcStopPointAndInsertIndex(path, line, offset);
 
     EXPECT_TRUE(output.has_value());
     EXPECT_EQ(output.value().first, size_t(4));
@@ -165,8 +163,7 @@ TEST(BehaviorTrafficLightModuleUtilsTest, calcStopPointAndInsertIndex)
     basic_line.emplace_back(lanelet::InvalId, 5.5, 1.0, 0.0);
 
     const auto line = lanelet::LineString3d(lanelet::InvalId, basic_line);
-    constexpr double extend_length = 2.0;
-    const auto output = calcStopPointAndInsertIndex(path, line, offset, extend_length);
+    const auto output = calcStopPointAndInsertIndex(path, line, offset);
 
     EXPECT_TRUE(output.has_value());
     EXPECT_EQ(output.value().first, size_t(4));
@@ -180,8 +177,7 @@ TEST(BehaviorTrafficLightModuleUtilsTest, calcStopPointAndInsertIndex)
     basic_line.emplace_back(lanelet::InvalId, 5.5, 1.0, 0.0);
 
     const auto line = lanelet::LineString3d(lanelet::InvalId, basic_line);
-    constexpr double extend_length = 0.0;
-    const auto output = calcStopPointAndInsertIndex(path, line, offset, extend_length);
+    const auto output = calcStopPointAndInsertIndex(path, line, offset);
 
     EXPECT_FALSE(output.has_value());
   }
