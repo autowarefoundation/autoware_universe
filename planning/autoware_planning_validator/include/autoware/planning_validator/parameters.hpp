@@ -38,6 +38,7 @@ struct ValidationParams
   ValidityCheck relative_angle;
   ValidityCheck curvature;
   ValidityCheck latency;
+  ValidityCheck lateral_jerk{};
 
   struct SteeringCheck : ValidityCheck
   {
