@@ -272,7 +272,7 @@ void ObjectAssociationMergerNode::checkStatus(
   const bool timeout_occurred = elapsed_timeout || interval_timeout;
   diagnostics_interface_ptr_->clear();
   diagnostics_interface_ptr_->add_key_value("timeout_occurred", timeout_occurred);
-  diagnostics_interface_ptr_->add_key_value("elapsed_time_since_sync_or_startup", elapsed_time);
+  diagnostics_interface_ptr_->add_key_value("elapsed_time_since_sync", elapsed_time);
   diagnostics_interface_ptr_->add_key_value("messages_interval", message_interval_);
   std::string message;
   if (elapsed_timeout) {
