@@ -60,6 +60,9 @@ private:
     const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr & input_objects1_msg);
 
   void timeoutCallback();
+  void checkStatus(
+    double elapsed_time, double timeout, const std::string & message_prefix,
+    const rclcpp::Time & publish_time_stamp);
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
@@ -82,6 +85,7 @@ private:
   rclcpp::Time last_sync_time_;
   bool received_first_message_;
   bool time_source_initialized_;
+  double message_interval_;
   rclcpp::Time node_start_time_;
   rclcpp::TimerBase::SharedPtr timeout_timer_;
   std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
