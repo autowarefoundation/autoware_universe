@@ -162,7 +162,7 @@ void ObjectAssociationMergerNode::objectsCallback(
   // Update the last sync time to now
   last_sync_time_ = now;
   checkStatus(
-    message_interval_, message_timeout_sec_, "No recent messages received or synchronized",
+    message_interval_, message_timeout_sec_, "Synchronized message came too late",
     input_objects0_msg->header.stamp);
   received_first_message_ = true;
 
