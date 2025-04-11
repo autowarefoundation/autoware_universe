@@ -161,9 +161,6 @@ void ObjectAssociationMergerNode::objectsCallback(
     (last_sync_time_.nanoseconds() == 0) ? 0.0 : (now - last_sync_time_).seconds();
   // Update the last sync time to now
   last_sync_time_ = now;
-  checkStatus(
-    message_interval_, message_timeout_sec_, "Synchronized message came too late",
-    input_objects0_msg->header.stamp);
   received_first_message_ = true;
 
   /* transform to base_link coordinate */
