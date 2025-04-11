@@ -804,15 +804,26 @@ bool PlanningValidator::checkTrajectoryShift(
     is_valid = false;
   }
 
+  const auto is_check_lon_shift = std::invoke([&]() {
+    if (*prev_nearest_seg_idx == prev_trajectory.points.size() - 2) {
+      return false;  // no need to check longitudinal shift if at the end of previous trajectory
+    }
+    if (*nearest_seg_idx > 0 && *nearest_seg_idx < trajectory.points.size() - 2) {
+      return false;  // no need to check longitudinal shift if ego is within the current trajectory
+    }
+    return true;
+  });
+
   // if nearest segment is within the trajectory no need to check longitudinal shift
-  if (*nearest_seg_idx > 0 && *nearest_seg_idx < trajectory.points.size() - 2) {
+  if (!is_check_lon_shift) {
     validation_status_.longitudinal_shift = 0.0;
     return is_valid;
   }
 
   const auto lon_shift =
     autoware_utils::calc_longitudinal_deviation(prev_nearest_pose, nearest_pose.position);
-    validation_status_.longitudinal_shift = std::abs(lon_shift) > epsilon ? lon_shift : 0.0;
+
+  validation_status_.longitudinal_shift = std::abs(lon_shift) > epsilon ? lon_shift : 0.0;
 
   // if the nearest segment is the first segment, check forward shift
   if (*nearest_seg_idx == 0) {
