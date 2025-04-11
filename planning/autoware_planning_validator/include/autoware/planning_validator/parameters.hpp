@@ -29,7 +29,7 @@ struct ValidityCheck
 {
   bool enable = false;
   bool is_critical = false;
-  double threshold;
+  double threshold{0.0};
 };
 
 struct ValidationParams
@@ -38,11 +38,8 @@ struct ValidationParams
   ValidityCheck relative_angle;
   ValidityCheck curvature;
   ValidityCheck latency;
-
-  struct SteeringCheck : ValidityCheck
-  {
-    double rate_th;
-  } steering;
+  ValidityCheck steering;
+  ValidityCheck steering_rate;
 
   struct AccelerationCheck : ValidityCheck
   {
