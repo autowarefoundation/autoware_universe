@@ -52,6 +52,7 @@ TrajectoryCornerFootprint calculate_trajectory_corner_footprint(
   autoware::vehicle_info_utils::VehicleInfo vehicle_info, const Parameters & params)
 {
   run_out::TrajectoryCornerFootprint trajectory_footprint;
+  trajectory_footprint.ego_trajectory = trajectory;
   auto & footprint = trajectory_footprint.corner_footprint;
   const auto base_footprint =
     vehicle_info.createFootprint(params.ego_lateral_margin, params.ego_longitudinal_margin);

@@ -71,6 +71,18 @@ calculate_closest_interpolated_point_and_arc_length(
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
   const universe_utils::Point2d & p, const double longitudinal_offset = 0.0);
 
+/// @brief Calculate the intersection between the end point of a linestring and the ego vehicle's
+/// trajectory footprint
+/// @param[in] ls The corner linestring of the predicted object.
+/// @param[in] footprint The footprint of the ego vehicle's trajectory.
+/// @param[in] ego_trajectory The ego vehicle's trajectory.
+/// @param[in] ls_time_step The time step of the predicted object's linestring.
+/// @param[in] check_front If true, the first point of the linestring is checked, otherwise the last
+/// point is checked
+std::optional<FootprintIntersection> calculate_end_point_intersection(
+  const universe_utils::LineString2d & ls, const TrajectoryCornerFootprint & footprint,
+  const double ls_time_step, const bool check_front);
+
 /// @brief Calculates intersections between a predicted object's corner linestring and the ego
 /// vehicle's trajectory footprint.
 /// @param[in] ls The corner linestring of the predicted object.
@@ -80,7 +92,6 @@ calculate_closest_interpolated_point_and_arc_length(
 /// @return A vector of footprint intersections.
 std::vector<FootprintIntersection> calculate_intersections(
   const universe_utils::LineString2d & ls, const TrajectoryCornerFootprint & footprint,
-  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & ego_trajectory,
   const double ls_time_step);
 
 /// @brief group the intersections into overlap intervals of increasing object time
@@ -94,6 +105,11 @@ std::vector<TimeOverlapIntervalPair> calculate_overlap_intervals(
 /// @return a Collision object with the collision type and predicted collision time
 Collision calculate_collision(
   const TimeOverlapInterval & ego, const TimeOverlapInterval & object, const Parameters & params);
+
+/// @brief calculate a collision when the ego and object are predicted to overlap at the same time
+void calculate_overlapping_collision(
+  Collision & c, const TimeOverlapInterval & ego, const TimeOverlapInterval & object,
+  const Parameters & params);
 
 /// @brief Calculates collisions based on overlap intervals.
 ///
@@ -120,8 +136,19 @@ std::vector<Collision> calculate_interval_collisions(
 /// @return A vector of collisions.
 std::vector<Collision> calculate_footprint_collisions(
   const TrajectoryCornerFootprint & ego_footprint, const ObjectCornerFootprint & object_footprint,
-  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & ego_trajectory,
   const FilteringData & filtering_data, const double min_arc_length, const Parameters & params);
+
+/// @brief Calculates collisions between the ego vehicle's trajectory and a predicted object.
+/// @param[inout] object A predicted object.  Collisions are added to each object.
+/// @param[in] ego_footprint The footprint of the ego vehicle's trajectory.
+/// @param[in] ego_trajectory The ego vehicle's trajectory.
+/// @param[in] filtering_data Data containing the polygons where collisions should be ignored
+/// @param[in] min_arc_length [m] minimum arc length where collisions are considered
+/// @param[in] params The parameters for collision calculation.
+void calculate_object_collisions(
+  std::vector<Object> & objects, const TrajectoryCornerFootprint & ego_footprint,
+  const FilteringDataPerLabel & filtering_data, const double min_arc_length,
+  const Parameters & params);
 
 /// @brief Calculates collisions between the ego vehicle's trajectory and a set of predicted
 /// objects.
@@ -133,7 +160,6 @@ std::vector<Collision> calculate_footprint_collisions(
 /// @param[in] params The parameters for collision calculation.
 void calculate_collisions(
   std::vector<Object> & objects, const TrajectoryCornerFootprint & ego_footprint,
-  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & ego_trajectory,
   const FilteringDataPerLabel & filtering_data, const double min_arc_length,
   const Parameters & params);
 }  // namespace autoware::motion_velocity_planner::run_out

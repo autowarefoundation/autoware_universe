@@ -162,7 +162,7 @@ VelocityPlanningResult RunOutModule::plan(
   time_keeper_->end_track("filter_objects()");
   time_keeper_->start_track("calc_collisions()");
   run_out::calculate_collisions(
-    filtered_objects, ego_footprint, smoothed_trajectory_points, filtering_data,
+    filtered_objects, ego_footprint, filtering_data,
     planner_data->vehicle_info_.max_longitudinal_offset_m, params_);
   time_keeper_->end_track("calc_collisions()");
   time_keeper_->start_track("calc_decisions()");

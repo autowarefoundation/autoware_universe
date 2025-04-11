@@ -19,6 +19,8 @@
 #include <autoware/universe_utils/geometry/boost_geometry.hpp>
 #include <rclcpp/time.hpp>
 
+#include <autoware_planning_msgs/msg/trajectory_point.hpp>
+
 #include <boost/geometry.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
 #include <boost/geometry/index/predicates.hpp>
@@ -107,6 +109,7 @@ struct TrajectoryCornerFootprint
   universe_utils::Polygon2d rear_polygon;   // polygon built from the rear linestrings
   FootprintSegmentRtree rtree;
   double max_longitudinal_offset;  // [m] distance between baselink and the front of the vehicle
+  std::vector<autoware_planning_msgs::msg::TrajectoryPoint> ego_trajectory;
 
   /// @brief get the segment from rear left corner to rear right corner
   [[nodiscard]] universe_utils::Segment2d get_rear_segment() const
