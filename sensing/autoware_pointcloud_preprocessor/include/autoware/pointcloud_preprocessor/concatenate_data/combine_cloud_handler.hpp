@@ -24,8 +24,8 @@
 // ROS includes
 #include "autoware/point_types/types.hpp"
 
-#include <autoware_utils/ros/managed_transform_buffer.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
+#include <managed_transform_buffer/managed_transform_buffer.hpp>
 #include <point_cloud_msg_wrapper/point_cloud_msg_wrapper.hpp>
 
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
@@ -63,7 +63,7 @@ private:
   bool is_motion_compensated_;
   bool publish_synchronized_pointcloud_;
   bool keep_input_frame_in_synchronized_pointcloud_;
-  std::unique_ptr<autoware_utils::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
+  std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
 
   std::deque<geometry_msgs::msg::TwistStamped> twist_queue_;
 
@@ -90,8 +90,7 @@ private:
 public:
   CombineCloudHandler(
     rclcpp::Node & node, std::string output_frame, bool is_motion_compensated,
-    bool publish_synchronized_pointcloud, bool keep_input_frame_in_synchronized_pointcloud,
-    bool has_static_tf_only);
+    bool publish_synchronized_pointcloud, bool keep_input_frame_in_synchronized_pointcloud);
   void process_twist(
     const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr & twist_msg);
   void process_odometry(const nav_msgs::msg::Odometry::ConstSharedPtr & odometry_msg);
