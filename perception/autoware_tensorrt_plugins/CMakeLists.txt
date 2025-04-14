@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(autoware_bevfusion)
+project(autoware_tensorrt_plugins)
 
 find_package(autoware_cmake REQUIRED)
 autoware_package()
@@ -102,83 +102,39 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL AND SPCONV_AVAIL)
   # cSpell:ignore expt
   list(APPEND CUDA_NVCC_FLAGS "--expt-relaxed-constexpr -diag-suppress 1675 --extended-lambda")
 
-  cuda_add_library(${PROJECT_NAME}_cuda_lib SHARED
-    lib/postprocess/circle_nms_kernel.cu
-    lib/postprocess/postprocess_kernel.cu
-    lib/preprocess/preprocess_kernel.cu
+  cuda_add_library(bev_ops SHARED
+    src/bev_ops/bev_pool_cuda.cu
   )
 
-  target_link_libraries(${PROJECT_NAME}_cuda_lib
-    spconv::spconv
+  add_library(${PROJECT_NAME} SHARED
+    src/plugin_utils.cpp
+    src/quick_cumsum_cuda_plugin.cpp
+    src/quick_cumsum_cuda_plugin_creator.cpp
+    src/get_indices_pairs_implicit_gemm_plugin_creator.cpp
+    src/get_indices_pairs_implicit_gemm_plugin.cpp
+    src/implicit_gemm_plugin_creator.cpp
+    src/implicit_gemm_plugin.cpp
+    src/plugin_registration.cpp
   )
 
-  target_include_directories(${PROJECT_NAME}_cuda_lib
-    SYSTEM PUBLIC
-    ${autoware_cuda_utils_INCLUDE_DIRS}
-  )
+  target_compile_definitions(${PROJECT_NAME} PRIVATE _GLIBCXX_USE_CXX11_ABI=1)
 
-  ament_auto_add_library(${PROJECT_NAME}_lib SHARED
-    lib/detection_class_remapper.cpp
-    lib/postprocess/non_maximum_suppression.cpp
-    lib/preprocess/voxel_generator.cpp
-    lib/preprocess/pointcloud_densification.cpp
-    lib/preprocess/precomputed_features.cpp
-    lib/ros_utils.cpp
-    lib/bevfusion_trt.cpp
-  )
-
-  target_compile_definitions(${PROJECT_NAME}_lib PRIVATE
-    TENSORRT_VERSION_MAJOR=${TENSORRT_VERSION_MAJOR}
-  )
-
-  target_link_libraries(${PROJECT_NAME}_lib
-    ${NVINFER}
-    ${NVONNXPARSER}
-    ${CUDA_LIBRARIES}
-    ${CUBLAS_LIBRARIES}
-    ${CUDA_curand_LIBRARY}
-    ${CUDNN_LIBRARY}
-    ${PROJECT_NAME}_cuda_lib
-  )
-
-  # To suppress unknown-pragmas error. The root-cause is CUB library in CUDA 11.6.
-  # This issue was fixed by https://github.com/NVIDIA/cub/commit/7d608bf1dc14553e2fb219eabeed80b76621b6fe
-  target_include_directories(${PROJECT_NAME}_lib
-    SYSTEM PUBLIC
-    ${CUDA_INCLUDE_DIRS}
-    $(autoware_point_types_INCLUDE_DIRS)
-  )
-
-  ament_auto_add_library(${PROJECT_NAME}_component SHARED
-    src/bevfusion_node.cpp
-  )
-
-  target_link_libraries(${PROJECT_NAME}_component
-    ${PROJECT_NAME}_lib
-  )
-
-  rclcpp_components_register_node(${PROJECT_NAME}_component
-    PLUGIN "autoware::bevfusion::BEVFusionNode"
-    EXECUTABLE ${PROJECT_NAME}_node
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+      ${NVINFER}
+      CUDA::cudart
+      bev_ops
+      spconv::spconv
   )
 
   install(
-    TARGETS ${PROJECT_NAME}_cuda_lib
-    DESTINATION lib
+    TARGETS ${PROJECT_NAME}
+    DESTINATION share/${PROJECT_NAME}/plugins
   )
 
-  ament_auto_package(
-    INSTALL_TO_SHARE
-      launch
-      config
-  )
+  ament_auto_package()
 
 else()
   find_package(ament_cmake_auto REQUIRED)
   ament_auto_find_build_dependencies()
 
-  ament_auto_package(
-    INSTALL_TO_SHARE
-      launch
-  )
 endif()

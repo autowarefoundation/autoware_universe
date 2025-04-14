@@ -27,6 +27,7 @@
   <depend>tf2_sensor_msgs</depend>
 
   <exec_depend>autoware_image_transport_decompressor</exec_depend>
+  <exec_depend>autoware_tensorrt_plugins</exec_depend>
 
   <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_lint_auto</test_depend>
