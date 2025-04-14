@@ -15,4 +15,4 @@ This requires the installation of `spconv_cpp` which is automatically installed 
 
 ### BEV Pool
 
-We provide a wrapper for the [bev_pool] operation presented in [BEVFusion](https://github.com/mit-han-lab/bevfusion). Please refer to the original paper for specific details.
+We provide a wrapper for the `bev_pool` operation presented in [BEVFusion](https://github.com/mit-han-lab/bevfusion). Please refer to the original paper for specific details.
