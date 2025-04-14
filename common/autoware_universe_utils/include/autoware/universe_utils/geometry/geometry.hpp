@@ -105,6 +105,12 @@ geometry_msgs::msg::Point getPoint(const T & p)
 }
 
 template <>
+inline geometry_msgs::msg::Point getPoint(const Point2d & p)
+{
+  return geometry_msgs::build<geometry_msgs::msg::Point>().x(p.x()).y(p.y()).z(0.0);
+}
+
+template <>
 inline geometry_msgs::msg::Point getPoint(const geometry_msgs::msg::Point & p)
 {
   return p;
@@ -580,6 +586,9 @@ bool isTwistCovarianceValid(const geometry_msgs::msg::TwistWithCovariance & twis
 std::optional<geometry_msgs::msg::Point> intersect(
   const geometry_msgs::msg::Point & p1, const geometry_msgs::msg::Point & p2,
   const geometry_msgs::msg::Point & p3, const geometry_msgs::msg::Point & p4);
+
+std::optional<Point2d> intersect(
+  const Point2d & p1, const Point2d & p2, const Point2d & p3, const Point2d & p4);
 
 /**
  * @brief Check if 2 convex polygons intersect using the GJK algorithm
