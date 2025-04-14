@@ -15,6 +15,8 @@
 #ifndef TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
 #define TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
 
+#include "traffic_light_multi_camera_fusion_utils.hpp"
+
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
@@ -38,24 +40,7 @@
 
 namespace autoware::traffic_light
 {
-
 namespace mf = message_filters;
-
-struct FusionRecord
-{
-  std_msgs::msg::Header header;
-  sensor_msgs::msg::CameraInfo cam_info;
-  tier4_perception_msgs::msg::TrafficLightRoi roi;
-  tier4_perception_msgs::msg::TrafficLight signal;
-};
-
-struct FusionRecordArr
-{
-  std_msgs::msg::Header header;
-  sensor_msgs::msg::CameraInfo cam_info;
-  tier4_perception_msgs::msg::TrafficLightRoiArray rois;
-  tier4_perception_msgs::msg::TrafficLightArray signals;
-};
 
 bool operator<(const FusionRecordArr & r1, const FusionRecordArr & r2)
 {
