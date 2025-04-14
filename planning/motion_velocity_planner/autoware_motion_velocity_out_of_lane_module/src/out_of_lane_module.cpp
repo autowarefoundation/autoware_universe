@@ -330,7 +330,8 @@ VelocityPlanningResult OutOfLaneModule::plan(
 
   stopwatch.tic("calculate_times");
   const auto is_stopping = previous_slowdown_pose_ ? true : false;
-  out_of_lane::calculate_collisions_to_avoid(out_of_lane_data, ego_data.trajectory_points, params_, is_stopping);
+  out_of_lane::calculate_collisions_to_avoid(
+    out_of_lane_data, ego_data.trajectory_points, params_, is_stopping);
   const auto calculate_times_us = stopwatch.toc("calculate_times");
 
   const auto is_already_overlapping =
