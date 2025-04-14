@@ -14521,13 +14521,38 @@
 <td align="left">1.414</td>
 </tr>
 <tr>
-<td align="left"><code>validity_checks.steering.rate_th</code></td>
+<td align="left"><code>validity_checks.steering.is_critical</code></td>
+<td align="left">bool</td>
+<td align="left">if true, will use handling type specified for critical checks</td>
+<td align="left">false</td>
+</tr>
+</tbody>
+</table>
+<h4 id="steering-rate-check">Steering Rate Check<a class="headerlink" href="#steering-rate-check" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th align="left">Name</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+<th align="left">Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><code>validity_checks.steering_rate.enable</code></td>
+<td align="left">bool</td>
+<td align="left">flag to enable/disable steering rate validation check</td>
+<td align="left">true</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.steering_rate.threshold</code></td>
 <td align="left">double</td>
 <td align="left">max valid steering rate along the trajectory [rad/s]</td>
 <td align="left">10.0</td>
 </tr>
 <tr>
-<td align="left"><code>validity_checks.steering.is_critical</code></td>
+<td align="left"><code>validity_checks.steering_rate.is_critical</code></td>
 <td align="left">bool</td>
 <td align="left">if true, will use handling type specified for critical checks</td>
 <td align="left">false</td>
