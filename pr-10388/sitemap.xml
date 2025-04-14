@@ -416,6 +416,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10388/perception/autoware_bevfusion/</loc>
+         <lastmod>2025-04-14</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-10388/perception/autoware_bytetrack/</loc>
          <lastmod>2025-04-14</lastmod>
          <changefreq>daily</changefreq>
