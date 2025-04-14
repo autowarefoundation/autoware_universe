@@ -71,7 +71,13 @@ This node assumes that the input pointcloud follows the `PointXYZIRC` layout def
 You can download the onnx and config files in the following links.
 The files need to be placed inside `$(env HOME)/autoware_data/bevfusion`
 
-- [TIER IV INTERNAL LINK](https://drive.google.com/drive/folders/1vci-mcd-PnMPFfbfwpzCGcfJBqn5kt3M) (once the PR is approved I will upload the files to an open link)
+- lidar-only model:
+  - [onnx](https://awf.ml.dev.web.auto/perception/models/bevfusion/t4base_120m/v1/bevfusion_lidar.onnx)
+  - [config](https://awf.ml.dev.web.auto/perception/models/bevfusion/t4base_120m/v1/ml_package_bevfusion_lidar.param.yaml)
+- camera-lidar model:
+  - [onnx](https://awf.ml.dev.web.auto/perception/models/bevfusion/t4base_120m/v1/bevfusion_camera_lidar.onnx)
+  - [config](https://awf.ml.dev.web.auto/perception/models/bevfusion/t4base_120m/v1/ml_package_bevfusion_camera_lidar.param.yaml)
+- [class remapper](https://awf.ml.dev.web.auto/perception/models/bevfusion/t4base_120m/v1/detection_class_remapper.param.yaml)
 
 The model was trained in TIER IV's internal database (~35k lidar frames) for 30 epochs.
 

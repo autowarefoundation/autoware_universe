@@ -176,7 +176,7 @@ void BEVFusionTRT::initTrt(const tensorrt_common::TrtCommonConfig & trt_config)
     profile_dims.emplace_back(
       "points", nvinfer1::Dims{2, {config_.voxels_num_[0], 5}},
       nvinfer1::Dims{2, {config_.voxels_num_[1], 5}},
-      nvinfer1::Dims{2, {config_.voxels_num_[2], 5}});
+      nvinfer1::Dims{2, {config_.cloud_capacity_, 5}});
 
     profile_dims.emplace_back(
       "camera_mask", nvinfer1::Dims{1, {1}}, nvinfer1::Dims{1, {config_.num_cameras_}},
