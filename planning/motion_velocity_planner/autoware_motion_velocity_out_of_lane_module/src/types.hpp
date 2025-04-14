@@ -51,6 +51,7 @@ struct PlannerParam
 
   double time_threshold;  // [s](mode="threshold") objects time threshold
   double ttc_threshold;  // [s](mode="ttc") threshold on time to collision between ego and an object
+  double ttc_release_threshold;
 
   bool objects_cut_predicted_paths_beyond_red_lights;  // whether to cut predicted paths beyond red
                                                        // lights' stop lines
