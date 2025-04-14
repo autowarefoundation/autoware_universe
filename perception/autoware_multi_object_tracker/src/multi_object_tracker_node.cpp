@@ -40,6 +40,7 @@
 
 namespace autoware::multi_object_tracker
 {
+using autoware_utils::ScopedTimeTrack;
 using Label = autoware_perception_msgs::msg::ObjectClassification;
 using LabelType = autoware_perception_msgs::msg::ObjectClassification::_label_type;
 
@@ -60,6 +61,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   std::string ego_frame_id = declare_parameter<std::string>("ego_frame_id");
   bool enable_delay_compensation{declare_parameter<bool>("enable_delay_compensation")};
   bool enable_odometry_uncertainty = declare_parameter<bool>("consider_odometry_uncertainty");
+  bool use_time_keeper = declare_parameter<bool>("publish_processing_time_detail");
 
   declare_parameter("selected_input_channels", std::vector<std::string>());
   std::vector<std::string> selected_input_channels =
@@ -209,10 +211,22 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   // Debugger
   debugger_ = std::make_unique<TrackerDebugger>(*this, world_frame_id_, input_channels_config_);
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+
+  if (use_time_keeper) {
+    detailed_processing_time_publisher_ =
+      this->create_publisher<autoware_utils::ProcessingTimeDetail>(
+        "~/debug/processing_time_detail_ms", 1);
+    time_keeper_ =
+      std::make_shared<autoware_utils::TimeKeeper>(detailed_processing_time_publisher_);
+    processor_->setTimeKeeper(time_keeper_);
+  }
 }
 
 void MultiObjectTracker::onTrigger()
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   const rclcpp::Time current_time = this->now();
   // get objects from the input manager and run process
   ObjectsList objects_list;
@@ -239,6 +253,9 @@ void MultiObjectTracker::onTrigger()
 
 void MultiObjectTracker::onTimer()
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   const rclcpp::Time current_time = this->now();
   if (last_updated_time_.nanoseconds() == 0) {
     // If the last updated time is not set, set it to the current time
@@ -265,6 +282,9 @@ void MultiObjectTracker::onTimer()
 
 void MultiObjectTracker::runProcess(const types::DynamicObjectList & detected_objects)
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   // Get the time of the measurement
   const rclcpp::Time measurement_time =
     rclcpp::Time(detected_objects.header.stamp, this->now().get_clock_type());
@@ -293,6 +313,9 @@ void MultiObjectTracker::runProcess(const types::DynamicObjectList & detected_ob
 
 void MultiObjectTracker::checkAndPublish(const rclcpp::Time & time)
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   /* tracker pruning*/
   processor_->prune(time);
 
@@ -305,6 +328,9 @@ void MultiObjectTracker::checkAndPublish(const rclcpp::Time & time)
 
 void MultiObjectTracker::publish(const rclcpp::Time & time) const
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   debugger_->startPublishTime(this->now());
   const auto subscriber_count = tracked_objects_pub_->get_subscription_count() +
                                 tracked_objects_pub_->get_intra_process_subscription_count();
