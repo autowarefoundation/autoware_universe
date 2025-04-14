@@ -130,13 +130,15 @@ bool TrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
     // Check if the vehicle is stopped and within a certain distance to the stop line
     if (planner_data_->isVehicleStopped()) {
       const double dist_to_stop = signed_arc_length_to_stop_point;
-      if (planner_param_.min_behind_dist_to_stop_for_restart_suppression < dist_to_stop &&
-          dist_to_stop < planner_param_.max_behind_dist_to_stop_for_restart_suppression &&
-          is_stop_signal ) {
+      if (
+        planner_param_.min_behind_dist_to_stop_for_restart_suppression < dist_to_stop &&
+        dist_to_stop < planner_param_.max_behind_dist_to_stop_for_restart_suppression &&
+        is_stop_signal) {
         // Suppress restart
         RCLCPP_DEBUG(logger_, "Suppressing restart due to proximity to stop line.");
         const auto & ego_pose = planner_data_->current_odometry->pose;
-        const auto restart_suppression_point = Eigen::Vector2d(ego_pose.position.x, ego_pose.position.y);
+        const auto restart_suppression_point =
+          Eigen::Vector2d(ego_pose.position.x, ego_pose.position.y);
         *path = insertStopPose(input_path, stop_line.value().first, restart_suppression_point);
         return true;
       }

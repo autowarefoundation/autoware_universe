@@ -67,7 +67,6 @@ public:
     // Restart Suppression Parameter
     double max_behind_dist_to_stop_for_restart_suppression;
     double min_behind_dist_to_stop_for_restart_suppression;
-
   };
 
 public:
