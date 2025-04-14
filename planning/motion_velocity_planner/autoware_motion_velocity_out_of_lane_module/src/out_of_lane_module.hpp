@@ -58,7 +58,8 @@ private:
   std::optional<geometry_msgs::msg::Pose> calculate_slowdown_pose(
     const out_of_lane::EgoData & ego_data, const out_of_lane::OutOfLaneData & out_of_lane_data);
   void update_slowdown_pose_buffer(
-    const out_of_lane::EgoData & ego_data, const std::optional<geometry_msgs::msg::Pose> & slowdown_pose);
+    const out_of_lane::EgoData & ego_data,
+    const std::optional<geometry_msgs::msg::Pose> & slowdown_pose);
   /// @brief update the given planning result and some internal states of the module
   void update_result(
     VelocityPlanningResult & result, const std::optional<geometry_msgs::msg::Pose> & slowdown_pose,
