@@ -245,29 +245,8 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
 
   std::vector<autoware::motion_velocity_planner::SlowDownPointData> slow_down_points;
 
-  // 1. transform pointcloud
-  pcl::PointCloud<pcl::PointXYZ>::Ptr pointcloud_ptr =
-    std::make_shared<pcl::PointCloud<pcl::PointXYZ>>(pointcloud.pointcloud);
-  // 2. downsample & cluster pointcloud
-  PointCloud::Ptr filtered_points_ptr(new PointCloud);
-  pcl::VoxelGrid<pcl::PointXYZ> filter;
-  filter.setInputCloud(pointcloud_ptr);
-  filter.setLeafSize(
-    p.pointcloud_obstacle_filtering_param.pointcloud_voxel_grid_x,
-    p.pointcloud_obstacle_filtering_param.pointcloud_voxel_grid_y,
-    p.pointcloud_obstacle_filtering_param.pointcloud_voxel_grid_z);
-  filter.filter(*filtered_points_ptr);
-
-  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
-  tree->setInputCloud(filtered_points_ptr);
-  std::vector<pcl::PointIndices> clusters;
-  pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-  ec.setClusterTolerance(p.pointcloud_obstacle_filtering_param.pointcloud_cluster_tolerance);
-  ec.setMinClusterSize(p.pointcloud_obstacle_filtering_param.pointcloud_min_cluster_size);
-  ec.setMaxClusterSize(p.pointcloud_obstacle_filtering_param.pointcloud_max_cluster_size);
-  ec.setSearchMethod(tree);
-  ec.setInputCloud(filtered_points_ptr);
-  ec.extract(clusters);
+  const PointCloud::Ptr filtered_points_ptr = pointcloud.get_filtered_pointcloud_ptr();
+  std::vector<pcl::PointIndices> clusters = pointcloud.get_cluster_indices();
 
   // 3. convert clusters to obstacles
   for (const auto & cluster_indices : clusters) {
@@ -343,7 +322,7 @@ VelocityPlanningResult ObstacleSlowDownModule::plan(
 
   auto slow_down_obstacles_for_point_cloud = filter_slow_down_obstacle_for_point_cloud(
     planner_data->current_odometry, raw_trajectory_points, decimated_traj_points,
-    planner_data->no_ground_pointcloud, planner_data->vehicle_info_,
+    planner_data->no_ground_pointcloud, planner_data->use_pointcloud, planner_data->vehicle_info_,
     planner_data->trajectory_polygon_collision_check,
     planner_data->find_index(raw_trajectory_points, planner_data->current_odometry.pose.pose));
 
@@ -446,12 +425,13 @@ ObstacleSlowDownModule::filter_slow_down_obstacle_for_predicted_object(
 std::vector<SlowDownObstacle> ObstacleSlowDownModule::filter_slow_down_obstacle_for_point_cloud(
   const Odometry & odometry, const std::vector<TrajectoryPoint> & traj_points,
   const std::vector<TrajectoryPoint> & decimated_traj_points,
-  const PlannerData::Pointcloud & point_cloud, const VehicleInfo & vehicle_info,
+  const PlannerData::Pointcloud & point_cloud,
+  const bool use_pointcloud, const VehicleInfo & vehicle_info,
   const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check, size_t ego_idx)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  if (!obstacle_filtering_param_.use_pointcloud) {
+  if (!use_pointcloud) {
     return std::vector<SlowDownObstacle>{};
   }
 

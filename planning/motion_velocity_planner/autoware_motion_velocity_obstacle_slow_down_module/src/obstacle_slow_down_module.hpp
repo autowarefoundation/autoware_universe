@@ -101,7 +101,8 @@ private:
   std::vector<SlowDownObstacle> filter_slow_down_obstacle_for_point_cloud(
     const Odometry & odometry, const std::vector<TrajectoryPoint> & traj_points,
     const std::vector<TrajectoryPoint> & decimated_traj_points,
-    const PlannerData::Pointcloud & point_cloud, const VehicleInfo & vehicle_info,
+    const PlannerData::Pointcloud & point_cloud,
+    const bool use_pointcloud, const VehicleInfo & vehicle_info,
     const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check, size_t ego_idx);
   std::optional<SlowDownObstacle> create_slow_down_obstacle_for_predicted_object(
     const std::vector<TrajectoryPoint> & traj_points,
