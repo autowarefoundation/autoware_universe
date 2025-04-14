@@ -184,7 +184,7 @@ bool BicycleMotionModel::updateStatePoseVel(
   if (!checkInitialized()) return false;
 
   // update state, with velocity
-  constexpr int DIM_Y = 4;
+  constexpr int DIM_Y = 3;
 
   // update state
   Eigen::MatrixXd Y(DIM_Y, 1);
