@@ -32,9 +32,8 @@
 
 namespace autoware::motion_velocity_planner::run_out
 {
-void prepare_trajectory_footprint_rtree(TrajectoryCornerFootprint & footprint)
+void prepare_trajectory_footprint_rtrees(TrajectoryCornerFootprint & footprint)
 {
-  SegmentRtree rtree;
   std::vector<FootprintSegmentNode> nodes;
   nodes.emplace_back(footprint.get_rear_segment(), std::make_pair(rear, 0UL));
   nodes.emplace_back(footprint.get_front_segment(), std::make_pair(front, 0UL));
@@ -44,7 +43,9 @@ void prepare_trajectory_footprint_rtree(TrajectoryCornerFootprint & footprint)
       nodes.emplace_back(universe_utils::Segment2d{ls[i], ls[i + 1]}, std::make_pair(corner, i));
     }
   }
-  footprint.rtree = FootprintSegmentRtree(nodes);
+  footprint.segments_rtree = FootprintSegmentRtree(nodes);
+  footprint.front_polygons_rtree = PolygonRtree(footprint.front_polygons);
+  footprint.rear_polygons_rtree = PolygonRtree(footprint.rear_polygons);
 }
 
 TrajectoryCornerFootprint calculate_trajectory_corner_footprint(
@@ -79,28 +80,23 @@ TrajectoryCornerFootprint calculate_trajectory_corner_footprint(
       base_link.x() + rotated_rear_left_offset.x(), base_link.y() + rotated_rear_left_offset.y());
     trajectory_footprint.max_longitudinal_offset = vehicle_info.max_longitudinal_offset_m;
   }
-
-  const auto push_to_polygon_fn = [](universe_utils::Polygon2d & poly) {
-    return [&](const universe_utils::Point2d & p) { poly.outer().push_back(p); };
-  };
-  std::for_each(
-    footprint.corner_linestrings[front_left].begin(),
-    footprint.corner_linestrings[front_left].end(),
-    push_to_polygon_fn(trajectory_footprint.front_polygon));
-  std::for_each(
-    footprint.corner_linestrings[front_right].rbegin(),
-    footprint.corner_linestrings[front_right].rend(),
-    push_to_polygon_fn(trajectory_footprint.front_polygon));
-  boost::geometry::correct(trajectory_footprint.front_polygon);
-  std::for_each(
-    footprint.corner_linestrings[rear_left].begin(), footprint.corner_linestrings[rear_left].end(),
-    push_to_polygon_fn(trajectory_footprint.rear_polygon));
-  std::for_each(
-    footprint.corner_linestrings[rear_right].rbegin(),
-    footprint.corner_linestrings[rear_right].rend(),
-    push_to_polygon_fn(trajectory_footprint.rear_polygon));
-  boost::geometry::correct(trajectory_footprint.rear_polygon);
-  prepare_trajectory_footprint_rtree(trajectory_footprint);
+  for (auto i = 0UL; i + 1 < footprint.corner_linestrings[front_left].size(); ++i) {
+    universe_utils::LinearRing2d front_polygon = {
+      footprint.corner_linestrings[front_left][i],
+      footprint.corner_linestrings[front_left][i + 1],
+      footprint.corner_linestrings[front_right][i + 1],
+      footprint.corner_linestrings[front_right][i],
+    };
+    universe_utils::LinearRing2d rear_polygon = {
+      footprint.corner_linestrings[rear_left][i],
+      footprint.corner_linestrings[rear_left][i + 1],
+      footprint.corner_linestrings[rear_right][i + 1],
+      footprint.corner_linestrings[rear_right][i],
+    };
+    trajectory_footprint.front_polygons.push_back(front_polygon);
+    trajectory_footprint.rear_polygons.push_back(rear_polygon);
+  }
+  prepare_trajectory_footprint_rtrees(trajectory_footprint);
   return trajectory_footprint;
 }
 }  // namespace autoware::motion_velocity_planner::run_out

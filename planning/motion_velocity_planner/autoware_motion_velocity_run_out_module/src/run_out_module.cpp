@@ -197,13 +197,21 @@ VelocityPlanningResult RunOutModule::plan(
     motion_utils::insertStopPoint(length, debug_trajectory.points);
   }
   for (const auto & slowdown_point : result.slowdown_intervals) {
-    const auto from_idx =
-      motion_utils::findNearestSegmentIndex(debug_trajectory.points, slowdown_point.from);
-    const auto to_idx =
-      motion_utils::findNearestSegmentIndex(debug_trajectory.points, slowdown_point.to);
-    for (auto i = from_idx; i <= to_idx; ++i) {
-      debug_trajectory.points[i].longitudinal_velocity_mps =
-        static_cast<float>(slowdown_point.velocity);
+    const auto from_seg_idx =
+      autoware::motion_utils::findNearestSegmentIndex(debug_trajectory.points, slowdown_point.from);
+    const auto from_insert_idx = autoware::motion_utils::insertTargetPoint(
+      from_seg_idx, slowdown_point.from, debug_trajectory.points);
+    const auto to_seg_idx =
+      autoware::motion_utils::findNearestSegmentIndex(debug_trajectory.points, slowdown_point.to);
+    const auto to_insert_idx = autoware::motion_utils::insertTargetPoint(
+      to_seg_idx, slowdown_point.to, debug_trajectory.points);
+    if (from_insert_idx && to_insert_idx) {
+      for (auto idx = *from_insert_idx; idx <= *to_insert_idx; ++idx) {
+        debug_trajectory.points[idx].longitudinal_velocity_mps =
+          std::min(  // prevent the node from increasing the velocity
+            debug_trajectory.points[idx].longitudinal_velocity_mps,
+            static_cast<float>(slowdown_point.velocity));
+      }
     }
   }
   debug_trajectory_publisher_->publish(debug_trajectory);

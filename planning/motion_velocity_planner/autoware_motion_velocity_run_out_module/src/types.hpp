@@ -96,7 +96,41 @@ namespace bgi = boost::geometry::index;
 using SegmentNode = std::pair<universe_utils::Segment2d, size_t>;
 using SegmentRtree = bgi::rtree<SegmentNode, bgi::rstar<16>>;
 using PolygonNode = std::pair<universe_utils::Box2d, size_t>;
-using PolygonRtree = bgi::rtree<PolygonNode, bgi::rstar<16>>;
+class PolygonRtree : bgi::rtree<PolygonNode, bgi::rstar<16>>
+{
+  static std::vector<PolygonNode> prepare_nodes(
+    const std::vector<universe_utils::LinearRing2d> & polygons)
+  {
+    std::vector<PolygonNode> nodes;
+    for (auto i = 0UL; i < polygons.size(); ++i) {
+      nodes.emplace_back(boost::geometry::return_envelope<universe_utils::Box2d>(polygons[i]), i);
+    }
+    return nodes;
+  }
+
+public:
+  PolygonRtree() = default;
+  explicit PolygonRtree(const std::vector<universe_utils::LinearRing2d> & polygons)
+  : bgi::rtree<PolygonNode, bgi::rstar<16>>(PolygonRtree::prepare_nodes(polygons))
+  {
+  }
+
+  /// @brief check if the given geometry is disjoint from the polygons contained in the rtree
+  template <class T>
+  bool is_geometry_disjoint_from_rtree_polygons(
+    const T & geometry, const std::vector<universe_utils::LinearRing2d> & polygons) const
+  {
+    std::vector<PolygonNode> query_results;
+    query(!bgi::disjoint(geometry), std::back_inserter(query_results));
+    for (const auto & query_result : query_results) {
+      const auto & polygon = polygons[query_result.second];
+      if (!boost::geometry::disjoint(geometry, polygon)) {
+        return false;
+      }
+    }
+    return true;
+  }
+};
 using FootprintSegmentNode =
   std::pair<universe_utils::Segment2d, std::pair<IntersectionPosition, size_t>>;
 using FootprintSegmentRtree = bgi::rtree<FootprintSegmentNode, bgi::rstar<16>>;
@@ -105,9 +139,13 @@ using FootprintSegmentRtree = bgi::rtree<FootprintSegmentNode, bgi::rstar<16>>;
 struct TrajectoryCornerFootprint
 {
   CornerFootprint corner_footprint;
-  universe_utils::Polygon2d front_polygon;  // polygon built from the front linestrings
-  universe_utils::Polygon2d rear_polygon;   // polygon built from the rear linestrings
-  FootprintSegmentRtree rtree;
+  FootprintSegmentRtree segments_rtree;
+  std::vector<universe_utils::LinearRing2d>
+    front_polygons;  // polygons built from the front linestrings
+  std::vector<universe_utils::LinearRing2d>
+    rear_polygons;  // polygons built from the rear linestrings
+  PolygonRtree front_polygons_rtree;
+  PolygonRtree rear_polygons_rtree;
   double max_longitudinal_offset;  // [m] distance between baselink and the front of the vehicle
   std::vector<autoware_planning_msgs::msg::TrajectoryPoint> ego_trajectory;
 
@@ -290,24 +328,6 @@ struct FilteringData
   PolygonRtree ignore_collisions_rtree;
   std::vector<universe_utils::Segment2d> cut_predicted_paths_segments;
   SegmentRtree cut_predicted_paths_rtree;
-
-  /// @brief return true if the given geometry is not disjoint from the geometries contained in the
-  /// rtree
-  template <class T>
-  static bool is_geometry_disjoint_from_rtree(
-    const T & geometry, const PolygonRtree & rtree,
-    const std::vector<universe_utils::LinearRing2d> & polygons)
-  {
-    std::vector<PolygonNode> query_results;
-    rtree.query(!bgi::disjoint(geometry), std::back_inserter(query_results));
-    for (const auto & query_result : query_results) {
-      const auto & polygon = polygons[query_result.second];
-      if (!boost::geometry::disjoint(geometry, polygon)) {
-        return false;
-      }
-    }
-    return true;
-  }
 };
 using FilteringDataPerLabel = std::vector<FilteringData>;
 

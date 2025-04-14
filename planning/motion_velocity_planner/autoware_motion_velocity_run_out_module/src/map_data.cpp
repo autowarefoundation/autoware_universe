@@ -47,11 +47,8 @@ lanelet::BoundingBox2d prepare_relevent_bounding_box(
   const TrajectoryCornerFootprint & ego_footprint,
   const std::vector<std::shared_ptr<PlannerData::Object>> & objects)
 {
-  lanelet::BoundingBox2d bounding_box(ego_footprint.get_rear_segment().first);
-  for (const auto & p : ego_footprint.front_polygon.outer()) {
-    bounding_box.extend(p);
-  }
-  bounding_box.extend(universe_utils::Point2d(ego_footprint.get_rear_segment().second));
+  lanelet::BoundingBox2d bounding_box;
+  boost::geometry::convert(ego_footprint.segments_rtree.bounds(), bounding_box);
   for (const auto & o : objects) {
     const auto p = o->predicted_object.kinematics.initial_pose_with_covariance.pose.position;
     bounding_box.extend(universe_utils::Point2d(p.x, p.y));
@@ -161,8 +158,12 @@ FilteringDataPerLabel calculate_filtering_data(
     const auto & params = parameters.object_parameters_per_label[label];
     if (params.ignore_if_on_ego_trajectory) {
       auto & data = data_per_label[label];
-      data.ignore_objects_polygons.push_back(ego_footprint.front_polygon.outer());
-      data.ignore_objects_polygons.push_back(ego_footprint.rear_polygon.outer());
+      data.ignore_objects_polygons.insert(
+        data.ignore_objects_polygons.end(), ego_footprint.front_polygons.begin(),
+        ego_footprint.front_polygons.end());
+      data.ignore_objects_polygons.insert(
+        data.ignore_objects_polygons.end(), ego_footprint.rear_polygons.begin(),
+        ego_footprint.rear_polygons.end());
     }
   }
   // prepare rtree objects
@@ -177,25 +178,8 @@ FilteringDataPerLabel calculate_filtering_data(
   }
   for (const auto label : all_labels) {
     auto & data = data_per_label[label];
-    std::vector<PolygonNode> nodes;
-    nodes.reserve(data.ignore_objects_polygons.size());
-    for (auto i = 0UL; i < data.ignore_objects_polygons.size(); ++i) {
-      nodes.emplace_back(
-        boost::geometry::return_envelope<universe_utils::Box2d>(data.ignore_objects_polygons[i]),
-        i);
-    }
-    data.ignore_objects_rtree = PolygonRtree(nodes);
-  }
-  for (const auto label : all_labels) {
-    auto & data = data_per_label[label];
-    std::vector<PolygonNode> nodes;
-    nodes.reserve(data.ignore_collisions_polygons.size());
-    for (auto i = 0UL; i < data.ignore_collisions_polygons.size(); ++i) {
-      nodes.emplace_back(
-        boost::geometry::return_envelope<universe_utils::Box2d>(data.ignore_collisions_polygons[i]),
-        i);
-    }
-    data.ignore_collisions_rtree = PolygonRtree(nodes);
+    data.ignore_objects_rtree = PolygonRtree(data.ignore_objects_polygons);
+    data.ignore_collisions_rtree = PolygonRtree(data.ignore_collisions_polygons);
   }
   return data_per_label;
 }

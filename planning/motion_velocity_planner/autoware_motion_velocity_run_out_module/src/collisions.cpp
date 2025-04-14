@@ -123,8 +123,12 @@ std::optional<FootprintIntersection> calculate_end_point_intersection(
   const double ls_time_step, const bool check_front)
 {
   const auto & end_point = check_front ? ls.front() : ls.back();
-  const auto is_inside_front_polygon = boost::geometry::within(end_point, footprint.front_polygon);
-  const auto is_inside_rear_polygon = boost::geometry::within(end_point, footprint.rear_polygon);
+  const auto is_inside_front_polygon =
+    !footprint.front_polygons_rtree.is_geometry_disjoint_from_rtree_polygons(
+      end_point, footprint.front_polygons);
+  const auto is_inside_rear_polygon =
+    !footprint.rear_polygons_rtree.is_geometry_disjoint_from_rtree_polygons(
+      end_point, footprint.rear_polygons);
   if (!is_inside_front_polygon && !is_inside_rear_polygon) {
     return std::nullopt;
   }
@@ -179,7 +183,7 @@ std::vector<FootprintIntersection> calculate_intersections(
     segment.first = ls[i];
     segment.second = ls[i + 1];
     std::vector<FootprintSegmentNode> query_results;
-    footprint.rtree.query(
+    footprint.segments_rtree.query(
       boost::geometry::index::intersects(segment), std::back_inserter(query_results));
     for (const auto & query_result : query_results) {
       const auto intersection = universe_utils::intersect(
@@ -386,9 +390,8 @@ std::vector<Collision> calculate_footprint_collisions(
       const auto is_before_min_arc_length = intersection.arc_length <= min_arc_length;
       if (
         !is_before_min_arc_length &&
-        FilteringData::is_geometry_disjoint_from_rtree(
-          intersection.intersection, filtering_data.ignore_collisions_rtree,
-          filtering_data.ignore_collisions_polygons)) {
+        filtering_data.ignore_collisions_rtree.is_geometry_disjoint_from_rtree_polygons(
+          intersection.intersection, filtering_data.ignore_collisions_polygons)) {
         filtered_intersections.push_back(intersection);
       }
     }
