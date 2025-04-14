@@ -2,12 +2,17 @@
 
 ## Purpose
 
-The `autoware_tensorrt_plugins` extends the operations available in TensorRT via plugins
+The `autoware_tensorrt_plugins` extends the operations available in TensorRT via plugins.
 
 ## Algorithms
 
+The following operations are implemented:
+
 ### Sparse convolutions
 
-This package implements a TensorRT powered inference node for BEVFusion [1].
-The sparse convolution backend corresponds to [spconv](https://github.com/traveller59/spconv).
-Autoware installs it automatically in its setup script. If needed, the user can also build it and install it following the [following instructions](https://github.com/autowarefoundation/spconv_cpp).
+We provide a wrapper for [spconv](https://github.com/traveller59/spconv) (please see the correspondent package for details about the algorithms involved).
+This requires the installation of `spconv_cpp` which is automatically installed in autoware's setup script. If needed, the user can also build it and install it following the [following instructions](https://github.com/autowarefoundation/spconv_cpp).
+
+### BEV Pool
+
+We provide a wrapper for the [bev_pool] operation presented in [BEVFusion](https://github.com/mit-han-lab/bevfusion). Please refer to the original paper for specific details.
