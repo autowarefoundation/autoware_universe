@@ -136,6 +136,11 @@
           "description": "Enable to publish debug message of process time information.",
           "default": false
         },
+        "publish_processing_time_detail": {
+          "type": "boolean",
+          "description": "Enable to publish debug message of detailed process time information.",
+          "default": false
+        },
         "publish_tentative_objects": {
           "type": "boolean",
           "description": "Enable to publish tentative tracked objects, which have lower confidence.",
@@ -186,6 +191,7 @@
         "distance_threshold",
         "confident_count_threshold",
         "publish_processing_time",
+        "publish_processing_time_detail",
         "publish_tentative_objects",
         "publish_debug_markers",
         "diagnostics_warn_delay",

@@ -42,7 +42,10 @@
       steering:
         enable: true
         threshold: 1.414
-        rate_th: 10.0
+        is_critical: false
+      steering_rate:
+        enable: true
+        threshold: 10.0
         is_critical: false
       deviation:
         enable: true
