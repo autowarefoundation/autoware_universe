@@ -73,7 +73,7 @@ bool VoxelBasedApproximateDynamicMapLoader::is_close_to_map(
 
 VoxelBasedApproximateCompareMapFilterComponent::VoxelBasedApproximateCompareMapFilterComponent(
   const rclcpp::NodeOptions & options)
-: Filter("VoxelBasedApproximateCompareMapFilter", options)
+: Filter("VoxelBasedApproximateCompareMapFilter", options), diagnostic_updater_(this)
 {
   // initialize debug tool
   {
@@ -84,6 +84,15 @@ VoxelBasedApproximateCompareMapFilterComponent::VoxelBasedApproximateCompareMapF
       std::make_unique<DebugPublisher>(this, "voxel_based_approximate_compare_map_filter");
     stop_watch_ptr_->tic("cyclic_time");
     stop_watch_ptr_->tic("processing_time");
+  }
+
+  // setup diagnostics
+  {
+    diagnostic_updater_.setHardwareID(this->get_name());
+    diagnostic_updater_.add(
+      "Compare map filter status", this,
+      &VoxelBasedApproximateCompareMapFilterComponent::checkStatus);
+    diagnostic_updater_.setPeriod(0.1);
   }
 
   distance_threshold_ = declare_parameter<double>("distance_threshold");
@@ -104,12 +113,40 @@ VoxelBasedApproximateCompareMapFilterComponent::VoxelBasedApproximateCompareMapF
   }
 }
 
+void VoxelBasedApproximateCompareMapFilterComponent::checkStatus(
+  diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  // map loader status
+  DiagStatus & map_loader_status =
+    (*voxel_based_approximate_map_loader_).diagnostics_map_voxel_status_;
+  if (map_loader_status.level == diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    stat.add("Map loader status", "OK");
+  } else {
+    stat.add("Map loader status", "NG");
+  }
+
+  // final status = map loader status
+  stat.summary(map_loader_status.level, map_loader_status.message);
+}
+
 void VoxelBasedApproximateCompareMapFilterComponent::filter(
   const PointCloud2ConstPtr & input, [[maybe_unused]] const IndicesPtr & indices,
   PointCloud2 & output)
 {
   std::scoped_lock lock(mutex_);
   stop_watch_ptr_->toc("processing_time", true);
+
+  // check grid map loader status
+  auto & map_diag_status = (*voxel_based_approximate_map_loader_).diagnostics_map_voxel_status_;
+  if (map_diag_status.level != diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000, "Map loader status: %s",
+      map_diag_status.message.c_str());
+    // return input point cloud, no filter implemented
+    output = *input;
+    return;
+  }
+
   int point_step = input->point_step;
   int offset_x = input->fields[pcl::getFieldIndex(*input, "x")].offset;
   int offset_y = input->fields[pcl::getFieldIndex(*input, "y")].offset;
