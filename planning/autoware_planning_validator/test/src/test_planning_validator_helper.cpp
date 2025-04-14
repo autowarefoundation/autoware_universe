@@ -236,9 +236,12 @@ rclcpp::NodeOptions getNodeOptionsWithDefaultParams()
 
   node_options.append_parameter_override("validity_checks.steering.enable", true);
   node_options.append_parameter_override("validity_checks.steering.threshold", THRESHOLD_STEERING);
-  node_options.append_parameter_override(
-    "validity_checks.steering.rate_th", THRESHOLD_STEERING_RATE);
   node_options.append_parameter_override("validity_checks.steering.is_critical", false);
+
+  node_options.append_parameter_override("validity_checks.steering_rate.enable", true);
+  node_options.append_parameter_override(
+    "validity_checks.steering_rate.threshold", THRESHOLD_STEERING_RATE);
+  node_options.append_parameter_override("validity_checks.steering_rate.is_critical", false);
 
   node_options.append_parameter_override("validity_checks.forward_trajectory_length.enable", true);
   node_options.append_parameter_override(

@@ -111,8 +111,15 @@ The following parameters can be set for the `autoware_planning_validator`:
 | :------------------------------------- | :----- | :------------------------------------------------------------ | :------------ |
 | `validity_checks.steering.enable`      | bool   | flag to enable/disable steering validation check              | true          |
 | `validity_checks.steering.threshold`   | double | max valid steering value along the trajectory [rad]           | 1.414         |
-| `validity_checks.steering.rate_th`     | double | max valid steering rate along the trajectory [rad/s]          | 10.0          |
 | `validity_checks.steering.is_critical` | bool   | if true, will use handling type specified for critical checks | false         |
+
+#### Steering Rate Check
+
+| Name                                        | Type   | Description                                                   | Default value |
+| :------------------------------------------ | :----- | :------------------------------------------------------------ | :------------ |
+| `validity_checks.steering_rate.enable`      | bool   | flag to enable/disable steering rate validation check         | true          |
+| `validity_checks.steering_rate.threshold`   | double | max valid steering rate along the trajectory [rad/s]          | 10.0          |
+| `validity_checks.steering_rate.is_critical` | bool   | if true, will use handling type specified for critical checks | false         |
 
 #### Deviation Check
 
