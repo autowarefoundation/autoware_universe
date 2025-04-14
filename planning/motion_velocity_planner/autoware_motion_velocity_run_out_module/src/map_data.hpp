@@ -51,17 +51,17 @@ lanelet::BoundingBox2d prepare_relevent_bounding_box(
 /// @brief add polygons used to ignore collisions and objects or cut predicted paths
 void add_ignore_and_cut_polygons(
   FilteringDataPerLabel & data_per_label, const std::vector<lanelet::Lanelet> & lanelets,
-  const std::vector<uint8_t> & all_labels, const std::vector<ObjectParameters> & params_per_label);
+  const std::vector<uint8_t> & labels, const std::vector<ObjectParameters> & params_per_label);
 
 /// @brief add segments used to cut the predicted paths in the given polygons
 void add_cut_segments(
   FilteringDataPerLabel & data_per_label, const std::vector<lanelet::Polygon3d> & polygons,
-  const std::vector<uint8_t> & all_labels, const std::vector<ObjectParameters> & params_per_label);
+  const std::vector<uint8_t> & labels, const std::vector<ObjectParameters> & params_per_label);
 
 /// @brief add segments used to cut the predicted paths in the given linestrings
 void add_cut_segments(
   FilteringDataPerLabel & data_per_label, const std::vector<lanelet::LineString3d> & linestrings,
-  const std::vector<uint8_t> & all_labels, const std::vector<ObjectParameters> & params_per_label);
+  const std::vector<uint8_t> & labels, const std::vector<ObjectParameters> & params_per_label);
 
 /// @brief calculate map filtering data for each object classification label
 FilteringDataPerLabel calculate_filtering_data(

@@ -22,6 +22,7 @@
 #include <autoware/universe_utils/ros/uuid_helper.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 
+#include <autoware_perception_msgs/msg/detail/object_classification__struct.hpp>
 #include <autoware_perception_msgs/msg/detail/predicted_object__struct.hpp>
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
@@ -56,13 +57,11 @@ uint8_t get_most_probable_classification_label(
 
 void classify(
   Object & object, const autoware_perception_msgs::msg::PredictedObject & predicted_object,
-  const Parameters & params)
+  const std::vector<uint8_t> & target_labels, const Parameters & params)
 {
   object.label = get_most_probable_classification_label(predicted_object);
   object.has_target_label =
-    std::find(
-      params.objects_target_labels.begin(), params.objects_target_labels.end(),
-      Parameters::label_to_string(object.label)) != params.objects_target_labels.end();
+    std::find(target_labels.begin(), target_labels.end(), object.label) != target_labels.end();
   if (
     predicted_object.kinematics.initial_twist_with_covariance.twist.linear.x <=
     params.object_parameters_per_label[object.label].stopped_velocity_threshold) {
@@ -235,6 +234,7 @@ std::vector<Object> prepare_dynamic_objects(
   const Parameters & params)
 {
   std::vector<Object> filtered_objects;
+  const auto target_labels = params.target_labels();
   const auto ego_rear_segment = ego_trajectory.get_rear_segment();
   for (const auto & object : objects) {
     Object filtered_object;
@@ -243,7 +243,7 @@ std::vector<Object> prepare_dynamic_objects(
       universe_utils::fromMsg(
         object->predicted_object.kinematics.initial_pose_with_covariance.pose.position)
         .to_2d();
-    classify(filtered_object, object->predicted_object, params);
+    classify(filtered_object, object->predicted_object, target_labels, params);
     calculate_current_footprint(filtered_object, object->predicted_object);
     const auto & previous_object_decisions = previous_decisions.get(filtered_object.uuid);
     if (skip_object_condition(

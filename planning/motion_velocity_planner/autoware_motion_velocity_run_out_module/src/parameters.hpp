@@ -305,6 +305,23 @@ struct Parameters
         return "DEFAULT";
     }
   }
+  std::vector<uint8_t> target_labels() const
+  {
+    using autoware_perception_msgs::msg::ObjectClassification;
+    std::vector<uint8_t> labels;
+    for (uint8_t label = ObjectClassification::UNKNOWN; label <= ObjectClassification::PEDESTRIAN;
+         ++label) {
+      const auto is_target_label =
+        std::find(
+          objects_target_labels.begin(), objects_target_labels.end(),
+          Parameters::label_to_string(label)) != objects_target_labels.end();
+      if (is_target_label) {
+        labels.push_back(label);
+      }
+    }
+    return labels;
+  }
+
   /// @brief get all possible classification labels
   static std::vector<uint8_t> all_labels()
   {

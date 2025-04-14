@@ -35,10 +35,11 @@ namespace autoware::motion_velocity_planner::run_out
 uint8_t get_most_probable_classification_label(
   const autoware_perception_msgs::msg::PredictedObject & object);
 
-/// @brief identify the most probable class of an object and whether it is stopped or not
+/// @brief identify the most probable class of an object to determine if it is a target and if it is
+/// stopped
 void classify(
   Object & object, const autoware_perception_msgs::msg::PredictedObject & predicted_object,
-  const Parameters & params);
+  const std::vector<uint8_t> & target_labels, const Parameters & params);
 
 /// @brief calculate the current footprint of an object
 void calculate_current_footprint(

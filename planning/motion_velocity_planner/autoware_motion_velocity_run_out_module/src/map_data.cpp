@@ -58,11 +58,11 @@ lanelet::BoundingBox2d prepare_relevent_bounding_box(
 
 void add_ignore_and_cut_lanelets(
   FilteringDataPerLabel & data_per_label, const std::vector<lanelet::Lanelet> & lanelets,
-  const std::vector<uint8_t> & all_labels, const std::vector<ObjectParameters> & params_per_label)
+  const std::vector<uint8_t> & labels, const std::vector<ObjectParameters> & params_per_label)
 {
   for (const auto & ll : lanelets) {
     const auto lanelet_subtype = ll.attributeOr(lanelet::AttributeName::Subtype, std::string());
-    for (const auto label : all_labels) {
+    for (const auto label : labels) {
       auto & data = data_per_label[label];
       const auto & params = params_per_label[label];
       if (contains_type(params.cut_lanelet_subtypes, lanelet_subtype)) {
@@ -86,11 +86,11 @@ void add_ignore_and_cut_lanelets(
 
 void add_ignore_and_cut_polygons(
   FilteringDataPerLabel & data_per_label, const std::vector<lanelet::Polygon3d> & polygons,
-  const std::vector<uint8_t> & all_labels, const std::vector<ObjectParameters> & params_per_label)
+  const std::vector<uint8_t> & labels, const std::vector<ObjectParameters> & params_per_label)
 {
   for (const auto & p : polygons) {
     const auto polygon_type = p.attributeOr(lanelet::AttributeName::Type, std::string());
-    for (const auto label : all_labels) {
+    for (const auto label : labels) {
       const auto & params = params_per_label[label];
       if (contains_type(params.cut_polygon_types, polygon_type)) {
         for (auto i = 0UL; i < p.numSegments(); ++i) {
@@ -117,10 +117,10 @@ void add_ignore_and_cut_polygons(
 
 void add_cut_segments(
   FilteringDataPerLabel & data_per_label, const std::vector<lanelet::LineString3d> & linestrings,
-  const std::vector<uint8_t> & all_labels, const std::vector<ObjectParameters> & params_per_label)
+  const std::vector<uint8_t> & labels, const std::vector<ObjectParameters> & params_per_label)
 {
   for (const auto & ls : linestrings) {
-    for (const auto label : all_labels) {
+    for (const auto label : labels) {
       const auto & params = params_per_label[label];
       const auto attribute = ls.attributeOr(lanelet::AttributeName::Type, std::string());
       const auto & types = params.cut_linestring_types;
@@ -140,9 +140,9 @@ FilteringDataPerLabel calculate_filtering_data(
   const auto bounding_box = prepare_relevent_bounding_box(ego_footprint, objects);
   FilteringDataPerLabel data_per_label;
   const auto & params_per_label = parameters.object_parameters_per_label;
-  const auto all_labels = Parameters::all_labels();
-  data_per_label.resize(all_labels.size());
-  for (const auto label : all_labels) {
+  data_per_label.resize(Parameters::all_labels().size());
+  const auto target_labels = parameters.target_labels();
+  for (const auto label : target_labels) {
     if (params_per_label[label].cut_if_crossing_ego_from_behind) {
       data_per_label[label].cut_predicted_paths_segments.push_back(
         ego_footprint.get_rear_segment());
@@ -150,14 +150,17 @@ FilteringDataPerLabel calculate_filtering_data(
   }
   const auto lanelets_in_range = map_ptr->laneletLayer.search(bounding_box);
   const auto polygons_in_range = map_ptr->polygonLayer.search(bounding_box);
-  add_ignore_and_cut_lanelets(data_per_label, lanelets_in_range, all_labels, params_per_label);
-  add_ignore_and_cut_polygons(data_per_label, polygons_in_range, all_labels, params_per_label);
+  add_ignore_and_cut_lanelets(data_per_label, lanelets_in_range, target_labels, params_per_label);
+  add_ignore_and_cut_polygons(data_per_label, polygons_in_range, target_labels, params_per_label);
   const auto linestrings_in_range = map_ptr->lineStringLayer.search(bounding_box);
-  add_cut_segments(data_per_label, linestrings_in_range, all_labels, params_per_label);
-  for (const auto label : all_labels) {
+  add_cut_segments(data_per_label, linestrings_in_range, target_labels, params_per_label);
+  for (const auto label : target_labels) {
     const auto & params = parameters.object_parameters_per_label[label];
     if (params.ignore_if_on_ego_trajectory) {
       auto & data = data_per_label[label];
+      data.ignore_objects_polygons.reserve(
+        data.ignore_objects_polygons.size() + ego_footprint.front_polygons.size() +
+        ego_footprint.rear_polygons.size());
       data.ignore_objects_polygons.insert(
         data.ignore_objects_polygons.end(), ego_footprint.front_polygons.begin(),
         ego_footprint.front_polygons.end());
@@ -167,7 +170,7 @@ FilteringDataPerLabel calculate_filtering_data(
     }
   }
   // prepare rtree objects
-  for (const auto label : all_labels) {
+  for (const auto label : target_labels) {
     auto & data = data_per_label[label];
     std::vector<SegmentNode> nodes;
     nodes.reserve(data.cut_predicted_paths_segments.size());
@@ -176,7 +179,7 @@ FilteringDataPerLabel calculate_filtering_data(
     }
     data.cut_predicted_paths_rtree = SegmentRtree(nodes);
   }
-  for (const auto label : all_labels) {
+  for (const auto label : target_labels) {
     auto & data = data_per_label[label];
     data.ignore_objects_rtree = PolygonRtree(data.ignore_objects_polygons);
     data.ignore_collisions_rtree = PolygonRtree(data.ignore_collisions_polygons);
