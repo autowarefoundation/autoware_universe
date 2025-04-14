@@ -14222,7 +14222,7 @@
 <p>ex.)</p>
 <div class="highlight"><pre><span></span><code><span class="nt">&lt;let</span><span class="w"> </span><span class="na">name=</span><span class="s">"vehicle_model_pkg"</span><span class="w"> </span><span class="na">value=</span><span class="s">"$(find-pkg-share $(var vehicle_model)_description)"</span><span class="nt">/&gt;</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"config_dir"</span><span class="w"> </span><span class="na">default=</span><span class="s">"$(find-pkg-share individual_params)/config/$(var vehicle_id)/$(var sensor_model)"</span><span class="nt">/&gt;</span>
+<div class="highlight"><pre><span></span><code><span class="nt">&lt;arg</span><span class="w"> </span><span class="na">name=</span><span class="s">"config_dir"</span><span class="w"> </span><span class="na">default=</span><span class="s">"$(find-pkg-share $(var sensor_model)_description)/config"</span><span class="nt">/&gt;</span>
 </code></pre></div>
 <h2 id="vehiclexacro">vehicle.xacro<a class="headerlink" href="#vehiclexacro" title="Permanent link">#</a></h2>
 <h3 id="arguments">Arguments<a class="headerlink" href="#arguments" title="Permanent link">#</a></h3>
