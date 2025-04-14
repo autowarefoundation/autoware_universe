@@ -387,6 +387,29 @@ std::optional<geometry_msgs::msg::Point> intersect(
   return intersect_point;
 }
 
+std::optional<Point2d> intersect(
+  const Point2d & p1, const Point2d & p2, const Point2d & p3, const Point2d & p4)
+{
+  // calculate intersection point
+  const double det = (p1.x() - p2.x()) * (p4.y() - p3.y()) - (p4.x() - p3.x()) * (p1.y() - p2.y());
+  if (det == 0.0) {
+    return std::nullopt;
+  }
+
+  const double t =
+    ((p4.y() - p3.y()) * (p4.x() - p2.x()) + (p3.x() - p4.x()) * (p4.y() - p2.y())) / det;
+  const double s =
+    ((p2.y() - p1.y()) * (p4.x() - p2.x()) + (p1.x() - p2.x()) * (p4.y() - p2.y())) / det;
+  if (t < 0 || 1 < t || s < 0 || 1 < s) {
+    return std::nullopt;
+  }
+
+  Point2d intersect_point;
+  intersect_point.x() = t * p1.x() + (1.0 - t) * p2.x();
+  intersect_point.y() = t * p1.y() + (1.0 - t) * p2.y();
+  return intersect_point;
+}
+
 bool intersects_convex(const Polygon2d & convex_polygon1, const Polygon2d & convex_polygon2)
 {
   return gjk::intersects(convex_polygon1, convex_polygon2);

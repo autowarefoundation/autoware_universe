@@ -93,7 +93,7 @@ void PlanningValidator::setupParameters()
     set_validation_params(p.curvature, t + "curvature");
     set_validation_params(p.latency, t + "latency");
     set_validation_params(p.steering, t + "steering");
-    p.steering.rate_th = declare_parameter<double>(t + "steering.rate_th");
+    set_validation_params(p.steering_rate, t + "steering_rate");
 
     set_validation_flags(p.acceleration, t + "acceleration");
     p.acceleration.lateral_th = declare_parameter<double>(t + "acceleration.lateral_th");
@@ -522,7 +522,7 @@ bool PlanningValidator::checkValidSteeringRate(const Trajectory & trajectory)
   const auto [max_steering_rate, i] = calcMaxSteeringRates(trajectory, vehicle_info_.wheel_base_m);
   validation_status_.max_steering_rate = max_steering_rate;
 
-  if (max_steering_rate > params_.validation_params.steering.rate_th) {
+  if (max_steering_rate > params_.validation_params.steering_rate.threshold) {
     debug_pose_publisher_->pushPoseMarker(trajectory.points.at(i).pose, "max_steering_rate");
     is_critical_error_ |= params_.validation_params.steering.is_critical;
     return false;
