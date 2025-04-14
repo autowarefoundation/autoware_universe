@@ -375,7 +375,7 @@ void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
       continue;
     }
 
-    if (is_reparking_ && !already_switched_dir && (dist_g < min_out_distance_)) {
+    if (is_reparking_ && !already_switched_dir && (dist_g < reparking_distance_)) {
       // if the node aligned with the goal yaw, skip nonzero steering
       if (aligned_with_goal_yaw && std::abs(steering_index) > 0) {
         continue;  // don't allow turning expansions if aligned
@@ -404,7 +404,7 @@ void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
       (current_node.reparking_direction_change || direction_switched);
 
     // "pull‐out" phase, ensure next_dist_g > dist_g to keep moving away
-    if (is_reparking_ && !already_switched_dir && (dist_g < min_out_distance_)) {
+    if (is_reparking_ && !already_switched_dir && (dist_g < reparking_distance_)) {
       if (next_dist_g <= dist_g) {
         // skip expansions that don't move us further from the goal
         continue;
