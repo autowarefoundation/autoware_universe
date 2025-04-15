@@ -246,6 +246,7 @@ void ObjectAssociationMergerNode::objectsCallback(
   if (message_interval_.has_value()) {
     message_interval_ = (now - last_sync_time_.value()).seconds();
   } else {
+    // initialize message interval
     message_interval_ = 0.0;
   }
   // Update the last sync time to now
