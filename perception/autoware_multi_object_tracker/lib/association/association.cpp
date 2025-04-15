@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <list>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -80,42 +81,18 @@ DataAssociation::DataAssociation(const AssociatorConfig & config) : score_thresh
   std::vector<double> max_rad_vector = config.max_rad_matrix;
   std::vector<double> min_iou_vector = config.min_iou_matrix;
 
-  {
-    const int assign_label_num = static_cast<int>(std::sqrt(can_assign_vector.size()));
-    Eigen::Map<Eigen::MatrixXi> can_assign_matrix_tmp(
-      can_assign_vector.data(), assign_label_num, assign_label_num);
-    can_assign_matrix_ = can_assign_matrix_tmp.transpose();
-  }
-  {
-    const int max_dist_label_num = static_cast<int>(std::sqrt(max_dist_vector.size()));
-    Eigen::Map<Eigen::MatrixXd> max_dist_matrix_tmp(
-      max_dist_vector.data(), max_dist_label_num, max_dist_label_num);
-    max_dist_matrix_ = max_dist_matrix_tmp.transpose();
-  }
-  {
-    const int max_area_label_num = static_cast<int>(std::sqrt(max_area_vector.size()));
-    Eigen::Map<Eigen::MatrixXd> max_area_matrix_tmp(
-      max_area_vector.data(), max_area_label_num, max_area_label_num);
-    max_area_matrix_ = max_area_matrix_tmp.transpose();
-  }
-  {
-    const int min_area_label_num = static_cast<int>(std::sqrt(min_area_vector.size()));
-    Eigen::Map<Eigen::MatrixXd> min_area_matrix_tmp(
-      min_area_vector.data(), min_area_label_num, min_area_label_num);
-    min_area_matrix_ = min_area_matrix_tmp.transpose();
-  }
-  {
-    const int max_rad_label_num = static_cast<int>(std::sqrt(max_rad_vector.size()));
-    Eigen::Map<Eigen::MatrixXd> max_rad_matrix_tmp(
-      max_rad_vector.data(), max_rad_label_num, max_rad_label_num);
-    max_rad_matrix_ = max_rad_matrix_tmp.transpose();
-  }
-  {
-    const int min_iou_label_num = static_cast<int>(std::sqrt(min_iou_vector.size()));
-    Eigen::Map<Eigen::MatrixXd> min_iou_matrix_tmp(
-      min_iou_vector.data(), min_iou_label_num, min_iou_label_num);
-    min_iou_matrix_ = min_iou_matrix_tmp.transpose();
-  }
+  auto initializeMatrix = [](const std::vector<int> & vector, Eigen::MatrixXi & matrix) {
+    const int label_num = static_cast<int>(std::sqrt(vector.size()));
+    Eigen::Map<Eigen::MatrixXi> matrix_tmp(vector.data(), label_num, label_num);
+    matrix = matrix_tmp.transpose();
+  };
+
+  initializeMatrix(can_assign_vector, can_assign_matrix_);
+  initializeMatrix(max_dist_vector, max_dist_matrix_);
+  initializeMatrix(max_area_vector, max_area_matrix_);
+  initializeMatrix(min_area_vector, min_area_matrix_);
+  initializeMatrix(max_rad_vector, max_rad_matrix_);
+  initializeMatrix(min_iou_vector, min_iou_matrix_);
 
   gnn_solver_ptr_ = std::make_unique<gnn_solver::MuSSP>();
 }
@@ -198,6 +175,11 @@ double DataAssociation::calculateScore(
   const double max_dist = max_dist_matrix_(tracker_label, measurement_label);
   const double dist =
     autoware_utils::calc_distance2d(measurement_object.pose.position, tracked_object.pose.position);
+
+  // debug only when detection is car
+  if (measurement_label == autoware_perception_msgs::msg::ObjectClassification::CAR) {
+    RCLCPP_WARN_STREAM(rclcpp::get_logger("association"), "measurement:car, tracker:" << std::to_string(tracker_label) << " dist: " << dist << " max_dist: " << max_dist);
+  }
 
   // dist gate
   if (max_dist < dist) return 0.0;

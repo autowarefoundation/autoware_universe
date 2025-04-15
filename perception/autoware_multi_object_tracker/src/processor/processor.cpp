@@ -219,6 +219,8 @@ void TrackerProcessor::removeOverlappedTracker(const rclcpp::Time & time)
       const double distance = std::hypot(
         object1.pose.position.x - object2.pose.position.x,
         object1.pose.position.y - object2.pose.position.y);
+      const auto & label1 = sorted_list_tracker[i]->getHighestProbLabel();
+      const auto & label2 = sorted_list_tracker[j]->getHighestProbLabel();
 
       // If the distance is too large, skip
       if (distance > config_.distance_threshold) {
@@ -228,8 +230,6 @@ void TrackerProcessor::removeOverlappedTracker(const rclcpp::Time & time)
       // Check the Intersection over Union (IoU) between the two objects
       constexpr double min_union_iou_area = 1e-2;
       const auto iou = shapes::get2dIoU(object1, object2, min_union_iou_area);
-      const auto & label1 = sorted_list_tracker[i]->getHighestProbLabel();
-      const auto & label2 = sorted_list_tracker[j]->getHighestProbLabel();
       bool delete_candidate_tracker = false;
 
       // If both trackers are UNKNOWN, delete the younger tracker
