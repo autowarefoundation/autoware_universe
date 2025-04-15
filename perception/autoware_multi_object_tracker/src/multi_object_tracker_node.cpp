@@ -188,19 +188,32 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
     AssociatorConfig associator_config;
     {
-      const auto tmp = this->declare_parameter<std::vector<int64_t>>("can_assign_matrix");
-      const std::vector<int> can_assign_matrix(tmp.begin(), tmp.end());
-      associator_config.can_assign_matrix = can_assign_matrix;
+      auto initializeMatrixInt = [](const std::vector<int64_t> & vector) {
+        const int label_num = static_cast<int>(std::sqrt(vector.size()));
+        std::vector<int> converted_vector(vector.begin(), vector.end());
+        Eigen::Map<Eigen::MatrixXi> matrix_tmp(converted_vector.data(), label_num, label_num);
+        // transpose to make it row-major
+        return matrix_tmp.transpose();
+      };
+      auto initializeMatrixDouble = [](const std::vector<double> & vector) {
+        const int label_num = static_cast<int>(std::sqrt(vector.size()));
+        Eigen::Map<Eigen::MatrixXd> matrix_tmp(
+          const_cast<double *>(vector.data()), label_num, label_num);
+        // transpose to make it row-major
+        return matrix_tmp.transpose();
+      };
+      associator_config.can_assign_matrix =
+        initializeMatrixInt(this->declare_parameter<std::vector<int64_t>>("can_assign_matrix"));
       associator_config.max_dist_matrix =
-        this->declare_parameter<std::vector<double>>("max_dist_matrix");
+        initializeMatrixDouble(this->declare_parameter<std::vector<double>>("max_dist_matrix"));
       associator_config.max_area_matrix =
-        this->declare_parameter<std::vector<double>>("max_area_matrix");
+        initializeMatrixDouble(this->declare_parameter<std::vector<double>>("max_area_matrix"));
       associator_config.min_area_matrix =
-        this->declare_parameter<std::vector<double>>("min_area_matrix");
+        initializeMatrixDouble(this->declare_parameter<std::vector<double>>("min_area_matrix"));
       associator_config.max_rad_matrix =
-        this->declare_parameter<std::vector<double>>("max_rad_matrix");
+        initializeMatrixDouble(this->declare_parameter<std::vector<double>>("max_rad_matrix"));
       associator_config.min_iou_matrix =
-        this->declare_parameter<std::vector<double>>("min_iou_matrix");
+        initializeMatrixDouble(this->declare_parameter<std::vector<double>>("min_iou_matrix"));
     }
 
     // Initialize processor with parameters

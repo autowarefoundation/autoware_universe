@@ -72,35 +72,10 @@ double getFormedYawAngle(
 namespace autoware::multi_object_tracker
 {
 
-DataAssociation::DataAssociation(const AssociatorConfig & config) : score_threshold_(0.01)
+DataAssociation::DataAssociation(const AssociatorConfig & config)
+: config_(config), score_threshold_(0.01)
 {
-  std::vector<int> can_assign_vector = config.can_assign_matrix;
-  std::vector<double> max_dist_vector = config.max_dist_matrix;
-  std::vector<double> max_area_vector = config.max_area_matrix;
-  std::vector<double> min_area_vector = config.min_area_matrix;
-  std::vector<double> max_rad_vector = config.max_rad_matrix;
-  std::vector<double> min_iou_vector = config.min_iou_matrix;
-
-  auto initializeMatrixInt = [](const std::vector<int> & vector, Eigen::MatrixXi & matrix) {
-    const int label_num = static_cast<int>(std::sqrt(vector.size()));
-    Eigen::Map<Eigen::MatrixXi> matrix_tmp(const_cast<int *>(vector.data()), label_num, label_num);
-    // transpose to make it row-major
-    matrix = matrix_tmp.transpose();
-  };
-  auto initializeMatrixDouble = [](const std::vector<double> & vector, Eigen::MatrixXd & matrix) {
-    const int label_num = static_cast<int>(std::sqrt(vector.size()));
-    Eigen::Map<Eigen::MatrixXd> matrix_tmp(
-      const_cast<double *>(vector.data()), label_num, label_num);
-    // transpose to make it row-major
-    matrix = matrix_tmp.transpose();
-  };
-  initializeMatrixInt(can_assign_vector, can_assign_matrix_);
-  initializeMatrixDouble(max_dist_vector, max_dist_matrix_);
-  initializeMatrixDouble(max_area_vector, max_area_matrix_);
-  initializeMatrixDouble(min_area_vector, min_area_matrix_);
-  initializeMatrixDouble(max_rad_vector, max_rad_matrix_);
-  initializeMatrixDouble(min_iou_vector, min_iou_matrix_);
-
+  // Initialize the GNN solver
   gnn_solver_ptr_ = std::make_unique<gnn_solver::MuSSP>();
 }
 
@@ -175,11 +150,11 @@ double DataAssociation::calculateScore(
   const types::DynamicObject & tracked_object, const std::uint8_t tracker_label,
   const types::DynamicObject & measurement_object, const std::uint8_t measurement_label) const
 {
-  if (!can_assign_matrix_(tracker_label, measurement_label)) {
+  if (!config_.can_assign_matrix(tracker_label, measurement_label)) {
     return 0.0;
   }
 
-  const double max_dist = max_dist_matrix_(tracker_label, measurement_label);
+  const double max_dist = config_.max_dist_matrix(tracker_label, measurement_label);
   const double dist =
     autoware_utils::calc_distance2d(measurement_object.pose.position, tracked_object.pose.position);
 
@@ -193,13 +168,13 @@ double DataAssociation::calculateScore(
   if (max_dist < dist) return 0.0;
 
   // area gate
-  const double max_area = max_area_matrix_(tracker_label, measurement_label);
-  const double min_area = min_area_matrix_(tracker_label, measurement_label);
+  const double max_area = config_.max_area_matrix(tracker_label, measurement_label);
+  const double min_area = config_.min_area_matrix(tracker_label, measurement_label);
   const double area = autoware_utils::get_area(measurement_object.shape);
   if (area < min_area || max_area < area) return 0.0;
 
   // angle gate
-  const double max_rad = max_rad_matrix_(tracker_label, measurement_label);
+  const double max_rad = config_.max_rad_matrix(tracker_label, measurement_label);
   const double angle =
     getFormedYawAngle(measurement_object.pose.orientation, tracked_object.pose.orientation, false);
   if (std::fabs(max_rad) < M_PI && std::fabs(max_rad) < std::fabs(angle)) {
@@ -213,7 +188,7 @@ double DataAssociation::calculateScore(
   if (3.035 /*99%*/ <= mahalanobis_dist) return 0.0;
 
   // 2d iou gate
-  const double min_iou = min_iou_matrix_(tracker_label, measurement_label);
+  const double min_iou = config_.min_iou_matrix(tracker_label, measurement_label);
   const double min_union_iou_area = 1e-2;
   const double iou = shapes::get2dIoU(measurement_object, tracked_object, min_union_iou_area);
   if (iou < min_iou) return 0.0;
