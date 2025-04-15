@@ -79,6 +79,7 @@ private:
   rclcpp::TimerBase::SharedPtr timer_;
   void onTimer();
   std::optional<InputData> subscribeData();
+  bool isInputDataTimedOut(const InputData & input_data);
   void publishData();
   void changeControlMode(ControlModeCommandType mode);
   void changeOperationMode(std::optional<OperationMode> request_mode);
@@ -88,6 +89,7 @@ private:
     const OperationModeState & gate_operation_mode);
 
   double transition_timeout_;
+  double input_timeout_;
   OperationMode current_mode_;
   std::unique_ptr<Transition> transition_;
   std::unordered_map<OperationMode, std::unique_ptr<ModeChangeBase>> modes_;
