@@ -22,6 +22,57 @@
 #include <cstddef>
 #include <memory>
 
+namespace
+{
+std::vector<geometry_msgs::msg::Point> make_bound(
+  const lanelet::BasicPoint2d & start, const lanelet::BasicPoint2d & end)
+{
+  return {
+    geometry_msgs::msg::Point{}.set__x(start.x()).set__y(start.y()),
+    geometry_msgs::msg::Point{}.set__x(end.x()).set__y(end.y())};
+};
+}  // namespace
+
+TEST(TestUtils, getStopLine)
+{
+  using autoware::behavior_velocity_planner::detection_area::get_stop_line_geometry2d;
+  lanelet::LineString3d line;
+  line.push_back(lanelet::Point3d(lanelet::InvalId, 0.0, -1.0));
+  line.push_back(lanelet::Point3d(lanelet::InvalId, 0.0, 1.0));
+  lanelet::Polygons3d detection_areas;
+  lanelet::Polygon3d area;
+  area.push_back(lanelet::Point3d(lanelet::InvalId, 1.0, -1.0));
+  area.push_back(lanelet::Point3d(lanelet::InvalId, 1.0, 1.0));
+  area.push_back(lanelet::Point3d(lanelet::InvalId, 3.0, 1.0));
+  area.push_back(lanelet::Point3d(lanelet::InvalId, 3.0, -1.0));
+  detection_areas.push_back(area);
+  auto detection_area =
+    lanelet::autoware::DetectionArea::make(lanelet::InvalId, {}, detection_areas, line);
+  {
+    autoware_internal_planning_msgs::msg::PathWithLaneId path;
+    path.left_bound = make_bound({-1.0, -1.0}, {1.0, -1.0});
+    path.right_bound = make_bound({-1.0, 1.0}, {1.0, 1.0});
+    const auto stop_line = get_stop_line_geometry2d(*detection_area, path);
+    ASSERT_EQ(stop_line.size(), 2UL);
+    EXPECT_EQ(stop_line[0].x(), line[0].x());
+    EXPECT_EQ(stop_line[0].y(), line[0].y());
+    EXPECT_EQ(stop_line[1].x(), line[1].x());
+    EXPECT_EQ(stop_line[1].y(), line[1].y());
+  }
+  // extended line
+  for (auto extend_length = -2.0; extend_length < 2.0; extend_length += 0.1) {
+    autoware_internal_planning_msgs::msg::PathWithLaneId path;
+    path.left_bound = make_bound({-1.0, -1.0 - extend_length}, {1.0, -1.0 - extend_length});
+    path.right_bound = make_bound({-1.0, 1.0 + extend_length}, {1.0, 1.0 + extend_length});
+    const auto stop_line = get_stop_line_geometry2d(*detection_area, path);
+    ASSERT_EQ(stop_line.size(), 2UL);
+    EXPECT_EQ(stop_line[0].x(), line[0].x());
+    EXPECT_EQ(stop_line[0].y(), line[0].y() - extend_length);
+    EXPECT_EQ(stop_line[1].x(), line[1].x());
+    EXPECT_EQ(stop_line[1].y(), line[1].y() + extend_length);
+  }
+}
+
 TEST(TestUtils, getObstaclePoints)
 {
   using autoware::behavior_velocity_planner::detection_area::get_obstacle_points;
