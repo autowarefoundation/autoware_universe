@@ -12,18 +12,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <autoware/diagnostic_graph_aggregator/test/test.hpp>
+#include <autoware/diagnostic_graph_aggregator/test/tests.hpp>
 
 #include <gtest/gtest.h>
 
+#include <string>
+#include <unordered_map>
+
+using autoware::diagnostic_graph_aggregator::test::DiagnosticLevel;
+using autoware::diagnostic_graph_aggregator::test::DiagnosticStatus;
 using autoware::diagnostic_graph_aggregator::test::test;
-using autoware::diagnostic_graph_aggregator::test::TestData;
-using autoware::diagnostic_graph_aggregator::test::TestResult;
+using autoware::diagnostic_graph_aggregator::test::TestInput;
+using autoware::diagnostic_graph_aggregator::test::TestOutput;
+
+DiagnosticStatus create_status(const std::string & name, const DiagnosticLevel level)
+{
+  DiagnosticStatus status;
+  status.name = name;
+  status.level = level;
+  return status;
+}
 
 TEST(TestDiagGraph, Main)
 {
-  TestData data;
-  data.graph_path = "config.yaml";
+  const auto test_data_path = std::string(TEST_DATA_PATH) + "/";
 
-  TestResult result = test(data);
+  TestInput input;
+  input.graph_path = test_data_path + "graph.yaml";
+  input.diags.status.push_back(create_status("test_node: input_1", DiagnosticStatus::OK));
+  input.diags.status.push_back(create_status("test_node: input_2", DiagnosticStatus::ERROR));
+  input.diags.status.push_back(create_status("test_node: input_3", DiagnosticStatus::OK));
+  input.diags.status.push_back(create_status("test_node: input_4", DiagnosticStatus::ERROR));
+
+  TestOutput output = test(input);
+  std::unordered_map<std::string, DiagnosticLevel> units;
+  for (const auto & unit : output.units) {
+    units[unit.path] = unit.level;
+  }
+
+  EXPECT_EQ(units.at("/unit/1"), DiagnosticStatus::ERROR);
+  EXPECT_EQ(units.at("/unit/2"), DiagnosticStatus::OK);
 }
