@@ -292,7 +292,7 @@ void ObjectAssociationMergerNode::diagCallback()
     message = "[WARN] " + prefix + " - Elapsed time " + std::to_string(time_since_last_sync) +
               "s exceeded timeout threshold of " + std::to_string(timeout) + "s.";
   } else if (interval_exceeded) {
-    message = "[WARN] No recent messages received or synchronized - Message interval " +
+    message = "[WARN] Message interval " +
               std::to_string(message_interval_value) + "s exceeded allowed interval of " +
               std::to_string(message_timeout_sec_) + "s.";
   } else {
