@@ -71,8 +71,6 @@
 #include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/optional.hpp>
 
-#include <tf2_ros/transform_listener.h>
-
 #include <chrono>
 #include <memory>
 #include <string>

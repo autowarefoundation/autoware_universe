@@ -64,7 +64,6 @@ private:
   {
     bool use_naive_approach;
     bool debug_mode;
-    bool has_static_tf_only;
     double rosbag_length;
     int maximum_queue_size;
     double timeout_sec;
