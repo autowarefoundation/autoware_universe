@@ -188,4 +188,4 @@ Higher values of this parameter will make it more likely to detect a collision a
 
 ## Flow Diagram
 
-![Flow diagram](./docs/flow_mermaid_diagram.svg)
+![Flow diagram](./docs/flow_diagram.svg)
