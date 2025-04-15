@@ -125,7 +125,7 @@ The following parameters can be set for the `autoware_planning_validator`:
 | Name                                       | Type   | Description                                                       | Default value |
 | :----------------------------------------- | :----- | :---------------------------------------------------------------- | :------------ |
 | `validity_checks.lateral_jerk.enable`      | bool   | flag to enable/disable lateral jerk validation check              | true          |
-| `validity_checks.lateral_jerk.threshold`   | double | max valid value for the lateral jerk along the trajectory [m/sss] | **TBD**       |
+| `validity_checks.lateral_jerk.threshold`   | double | max valid value for the lateral jerk along the trajectory [m/sss] | 7.0           |
 | `validity_checks.lateral_jerk.is_critical` | bool   | if true, will use handling type specified for critical checks     | false         |
 
 #### Steering Check

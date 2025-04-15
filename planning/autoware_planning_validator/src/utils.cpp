@@ -242,12 +242,17 @@ void calc_lateral_jerk(const Trajectory & trajectory, std::vector<double> & late
   // Initialize lateral jerk array with zeros
   lateral_jerk_vector = std::vector<double>(trajectory.points.size(), 0.0);
 
-  // Calculate lateral jerk for each point (except the last one)
+  // Calculate lateral jerk for each point
+  // Note: The complete formula for lateral jerk is:
+  // j_lat = v_lon^3 * (dk/ds) + 3 * v_lon^2 * a_lon * k
+  // However, the dk/ds term is omitted here because the curvature calculation
+  // is currently unstable, making it difficult to derive an accurate rate of
+  // curvature change. Therefore, we only use the second term for a stable estimation.
   for (size_t i = 0; i < trajectory.points.size(); ++i) {
     const double v_lon = trajectory.points.at(i).longitudinal_velocity_mps;
     const double a_lon = trajectory.points.at(i).acceleration_mps2;
 
-    // Calculate lateral jerk using the formula: jerk_lat = 3 * v_lon^2 * a_lon * curvature
+    // Calculate lateral jerk using simplified formula: jerk_lat = 3 * v_lon^2 * a_lon * curvature
     lateral_jerk_vector.at(i) = 3.0 * v_lon * v_lon * a_lon * curvature_vector.at(i);
   }
 }
