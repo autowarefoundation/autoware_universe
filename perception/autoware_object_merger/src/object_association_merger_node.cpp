@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <type_traits>
 #define EIGEN_MPL2_ONLY
 
 #include "autoware/object_merger/object_association_merger_node.hpp"
-
 #include "autoware/object_recognition_utils/object_recognition_utils.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 
@@ -130,6 +130,16 @@ ObjectAssociationMergerNode::ObjectAssociationMergerNode(const rclcpp::NodeOptio
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+  // Timeout process initialization
+  message_timeout_sec_ = this->declare_parameter<double>("message_timeout_sec");
+  initialization_timeout_sec_ = this->declare_parameter<double>("initialization_timeout_sec");
+  last_sync_time_ = std::nullopt;
+  message_interval_ = std::nullopt;
+  timeout_timer_ = this->create_wall_timer(
+    std::chrono::duration<double>(message_timeout_sec_ / 2),
+    std::bind(&ObjectAssociationMergerNode::diagCallback, this));
+  diagnostics_interface_ptr_ =
+    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "object_association_merger");
 }
 
 void ObjectAssociationMergerNode::objectsCallback(
@@ -229,6 +239,19 @@ void ObjectAssociationMergerNode::objectsCallback(
     }
   }
 
+  // Diagnostics part
+  rclcpp::Time now = this->now();
+  // Calculate the interval since the last sync,
+  // or set to 0.0 if this is the first sync
+  if (message_interval_.has_value()) {
+    message_interval_ = (now - last_sync_time_.value()).seconds();
+  } else {
+    // initialize message interval
+    message_interval_ = 0.0;
+  }
+  // Update the last sync time to now
+  last_sync_time_ = now;
+
   // publish output msg
   merged_object_pub_->publish(output_msg);
   published_time_publisher_->publish_if_subscribed(merged_object_pub_, output_msg.header.stamp);
@@ -238,6 +261,50 @@ void ObjectAssociationMergerNode::objectsCallback(
   processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/processing_time_ms", stop_watch_ptr_->toc("processing_time", true));
 }
+
+void ObjectAssociationMergerNode::diagCallback()
+{
+  rclcpp::Time now = this->now();
+  // If the time source is not initialized, return early
+  if (now.nanoseconds() == 0) {
+    return;
+  }
+  // Initialize the time source if it hasn't been initialized yet
+  if (!last_sync_time_.has_value()) {
+    last_sync_time_ = now;
+    return;
+  }
+
+  const double time_since_last_sync = (now - last_sync_time_.value()).seconds();
+  const double message_interval_value = message_interval_.value_or(0.0);
+  const double timeout = message_interval_ ? message_timeout_sec_ : initialization_timeout_sec_;
+  const bool interval_exceeded = message_interval_value >= message_timeout_sec_;
+  const bool elapsed_exceeded = time_since_last_sync >= timeout;
+  const bool timeout_occurred = elapsed_exceeded || interval_exceeded;
+  diagnostics_interface_ptr_->clear();
+  diagnostics_interface_ptr_->add_key_value("timeout_occurred", timeout_occurred);
+  diagnostics_interface_ptr_->add_key_value("elapsed_time_since_sync", time_since_last_sync);
+  diagnostics_interface_ptr_->add_key_value("messages_interval", message_interval_value);
+  std::string message;
+  if (elapsed_exceeded) {
+    const std::string prefix = message_interval_
+                                 ? "No recent messages received or synchronized"
+                                 : "No synchronized messages received since startup";
+    message = "[WARN] " + prefix + " - Elapsed time " + std::to_string(time_since_last_sync) +
+              "s exceeded timeout threshold of " + std::to_string(timeout) + "s.";
+  } else if (interval_exceeded) {
+    message = "[WARN] Message interval " + std::to_string(message_interval_value) +
+              "s exceeded allowed interval of " + std::to_string(message_timeout_sec_) + "s.";
+  } else {
+    message = "[OK] Status is normal.";
+  }
+  diagnostics_interface_ptr_->update_level_and_message(
+    timeout_occurred ? diagnostic_msgs::msg::DiagnosticStatus::WARN
+                     : diagnostic_msgs::msg::DiagnosticStatus::OK,
+    message);
+  diagnostics_interface_ptr_->publish(now);
+}
+
 }  // namespace autoware::object_merger
 
 #include <rclcpp_components/register_node_macro.hpp>
