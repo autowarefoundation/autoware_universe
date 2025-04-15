@@ -85,29 +85,6 @@ void RunOutModule::init(rclcpp::Node & node, const std::string & module_name)
     "unavoidable_run_out_collision", this, &RunOutModule::update_unavoidable_collision_status);
 }
 
-double calculate_comfortable_time_to_stop(
-  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & ego_trajectory,
-  const std::optional<double> & distance_to_stop)
-{
-  if (!distance_to_stop || *distance_to_stop <= 1e-3) {
-    return 0.0;
-  }
-  auto s = 0.0;
-  auto i = 0UL;
-  auto s_delta = 0.0;
-  for (; i + 1 < ego_trajectory.size() && s < *distance_to_stop; ++i) {
-    s_delta = universe_utils::calcDistance2d(ego_trajectory[i], ego_trajectory[i + 1]);
-    s += s_delta;
-  }
-  const auto s_diff = s_delta - (s - *distance_to_stop);
-  const auto ratio = s_diff / s_delta;
-  const auto t_from = rclcpp::Duration(ego_trajectory[i].time_from_start);
-  const auto t_to = rclcpp::Duration(ego_trajectory[i + 1].time_from_start);
-  const auto t_delta = (t_to - t_from).seconds();
-  const auto t_diff = ratio * t_delta;
-  return t_from.seconds() + t_diff;
-}
-
 double calculate_keep_stop_distance_range(
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
   const run_out::Parameters & params)
@@ -161,13 +138,13 @@ VelocityPlanningResult RunOutModule::plan(
     planner_data->objects, ego_footprint, decisions_tracker_, filtering_data, params_);
   time_keeper_->end_track("filter_objects()");
   time_keeper_->start_track("calc_collisions()");
+  const auto min_stop_time =
+    planner_data->current_odometry.twist.twist.linear.x / params_.unavoidable_deceleration;
   run_out::calculate_collisions(
     filtered_objects, ego_footprint, filtering_data,
-    planner_data->vehicle_info_.max_longitudinal_offset_m, params_);
+    planner_data->vehicle_info_.max_longitudinal_offset_m, min_stop_time, params_);
   time_keeper_->end_track("calc_collisions()");
   time_keeper_->start_track("calc_decisions()");
-  const auto comfortable_time_to_stop = calculate_comfortable_time_to_stop(
-    smoothed_trajectory_points, planner_data->calculate_min_deceleration_distance(0.0));
   const auto keep_stop_distance_range =
     calculate_keep_stop_distance_range(smoothed_trajectory_points, params_);
   run_out::calculate_decisions(
@@ -183,8 +160,7 @@ VelocityPlanningResult RunOutModule::plan(
     result, smoothed_trajectory_points, planner_data->vehicle_info_.max_longitudinal_offset_m));
   virtual_wall_publisher_->publish(virtual_wall_marker_creator.create_markers(now));
   debug_publisher_->publish(run_out::make_debug_markers(
-    ego_footprint, filtered_objects, decisions_tracker_, smoothed_trajectory_points,
-    comfortable_time_to_stop,
+    ego_footprint, filtered_objects, decisions_tracker_, smoothed_trajectory_points, min_stop_time,
     filtering_data[autoware_perception_msgs::msg::ObjectClassification::BICYCLE]));
 
   time_keeper_->end_track("publish_debug()");

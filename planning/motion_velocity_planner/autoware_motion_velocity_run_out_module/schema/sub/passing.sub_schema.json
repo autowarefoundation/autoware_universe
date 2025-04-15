@@ -21,19 +21,9 @@
           "type": "number",
           "description": "[s] The collision is not ignored if ego is predicted to stay on the object's path for longer than this duration.",
           "default": 2.0
-        },
-        "enable_deceleration_limit": {
-          "type": "boolean",
-          "description": "If true, collisions are ignored if happening within the minimum duration required to stop ego comfortably.",
-          "default": false
         }
       },
-      "required": [
-        "enable_passing_margin",
-        "time_margin",
-        "max_overlap_duration",
-        "enable_deceleration_limit"
-      ],
+      "required": ["enable_passing_margin", "time_margin", "max_overlap_duration"],
       "additionalProperties": false
     }
   }

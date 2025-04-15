@@ -74,15 +74,18 @@ struct Parameters
   double preventive_slowdown_deceleration_limit;  // [m/s²] minimum deceleration that can be applied
                                                   // by the preventive slowdown
 
-  bool enable_passing_collisions;         // If true, a collision where ego arrives first is ignored
+  bool enable_passing_when_unavoidable;  // if true, ignore collision when ego arrives first (margin
+                                         // parameter is not considered) and cannot comfortably stop
+                                         // before the collision
+  double unavoidable_deceleration;  // [m/s²] deceleration used to determine if ego can stop before
+                                    // a collision
+  bool enable_passing_collisions;   // if true, a collision where ego arrives first is ignored
   double passing_collisions_time_margin;  // [s] required time margin to decide a passing_collision
   double passing_max_overlap_duration;    // [s] the collision is not ignored if ego is predicted to
                                           // stay on the object's path for longer than this duration
-  bool enable_deceleration_limit;  // if true, collisions are not ignored if happening within the
-                                   // minimum duration required to stop ego comfortably
-  double ego_lateral_margin;       // [m] ego footprint lateral margin
-  double ego_longitudinal_margin;  // [m] ego footprint longitudinal margin
-  double collision_time_margin;    // [s] extra time margin to determine collisions
+  double ego_lateral_margin;              // [m] ego footprint lateral margin
+  double ego_longitudinal_margin;         // [m] ego footprint longitudinal margin
+  double collision_time_margin;           // [s] extra time margin to determine collisions
   double collision_time_overlap_tolerance;  // [s] when calculating overlap time intervals,
                                             // intervals are grouped if they are separated by less
                                             // than this tolerance value
@@ -115,14 +118,16 @@ struct Parameters
   void initialize(rclcpp::Node & node, const std::string & ns)
   {
     using universe_utils::getOrDeclareParameter;
+    enable_passing_when_unavoidable =
+      getOrDeclareParameter<bool>(node, ns + ".passing.enable_when_unavoidable");
+    unavoidable_deceleration =
+      getOrDeclareParameter<double>(node, ns + ".passing.unavoidable_deceleration");
     enable_passing_collisions =
       getOrDeclareParameter<bool>(node, ns + ".passing.enable_passing_margin");
     passing_collisions_time_margin =
       getOrDeclareParameter<double>(node, ns + ".passing.time_margin");
     passing_max_overlap_duration =
       getOrDeclareParameter<double>(node, ns + ".passing.max_overlap_duration");
-    enable_deceleration_limit =
-      getOrDeclareParameter<bool>(node, ns + ".passing.enable_deceleration_limit");
     stop_off_time_buffer = getOrDeclareParameter<double>(node, ns + ".stop.off_time_buffer");
     stop_on_time_buffer = getOrDeclareParameter<double>(node, ns + ".stop.on_time_buffer");
     stop_distance_buffer = getOrDeclareParameter<double>(node, ns + ".stop.distance_buffer");
@@ -196,10 +201,11 @@ struct Parameters
   void update(const std::vector<rclcpp::Parameter> & params, const std::string & ns)
   {
     using universe_utils::updateParam;
+    updateParam(params, ns + ".passing.enable_when_unavoidable", enable_passing_when_unavoidable);
+    updateParam(params, ns + ".passing.unavoidable_deceleration", unavoidable_deceleration);
     updateParam(params, ns + ".passing.enable_passing_margin", enable_passing_collisions);
     updateParam(params, ns + ".passing.time_margin", passing_collisions_time_margin);
     updateParam(params, ns + ".passing.max_overlap_duration", passing_max_overlap_duration);
-    updateParam(params, ns + ".passing.enable_deceleration_limit", enable_deceleration_limit);
     updateParam(
       params, ns + ".preventive_slowdown.on_time_buffer", preventive_slowdown_on_time_buffer);
     updateParam(

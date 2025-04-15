@@ -21,25 +21,9 @@
           "type": "number",
           "description": "[m] Longitudinal safety distance to keep between ego and the collision position.",
           "default": 2.0
-        },
-        "calculate_earliest_position_within_history": {
-          "type": "boolean",
-          "description": "If true, use the earliest stop position within the history, otherwise the stop position is calculated only from the currently detected collision.",
-          "default": false
-        },
-        "keep_until_object_is_gone": {
-          "type": "boolean",
-          "description": "If true, once ego stopped for an object we keep the stop decision until the object is gone.",
-          "default": true
         }
       },
-      "required": [
-        "on_time_buffer",
-        "off_time_buffer",
-        "distance_buffer",
-        "calculate_earliest_position_within_history",
-        "keep_until_object_is_gone"
-      ],
+      "required": ["on_time_buffer", "off_time_buffer", "distance_buffer"],
       "additionalProperties": false
     }
   }
