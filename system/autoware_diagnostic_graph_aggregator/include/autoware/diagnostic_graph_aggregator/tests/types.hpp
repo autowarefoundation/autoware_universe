@@ -12,16 +12,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TESTS_HPP_
-#define TESTS_HPP_
+#ifndef AUTOWARE__DIAGNOSTIC_GRAPH_AGGREGATOR__TESTS__TYPES_HPP_
+#define AUTOWARE__DIAGNOSTIC_GRAPH_AGGREGATOR__TESTS__TYPES_HPP_
 
-#include "autoware/diagnostic_graph_aggregator/test/types.hpp"
+#include <diagnostic_msgs/msg/diagnostic_array.hpp>
+
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace autoware::diagnostic_graph_aggregator::test
 {
 
-TestOutput test(const TestInput & input);
+using DiagnosticArray = diagnostic_msgs::msg::DiagnosticArray;
+using DiagnosticLevel = diagnostic_msgs::msg::DiagnosticStatus::_level_type;
+using DiagnosticStatus = diagnostic_msgs::msg::DiagnosticStatus;
+
+struct TestUnitStatus
+{
+  std::string path;
+  DiagnosticLevel level;
+};
+
+struct TestInput
+{
+  std::string graph_path;
+  DiagnosticArray diags;
+};
+
+struct TestOutput
+{
+  std::vector<TestUnitStatus> units;
+};
 
 }  // namespace autoware::diagnostic_graph_aggregator::test
 
-#endif  // TESTS_HPP_
+#endif  // AUTOWARE__DIAGNOSTIC_GRAPH_AGGREGATOR__TESTS__TYPES_HPP_

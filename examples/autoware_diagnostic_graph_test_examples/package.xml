@@ -1,16 +1,16 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>autoware_diagnostic_graph_test</name>
+  <name>autoware_diagnostic_graph_test_examples</name>
   <version>0.43.0</version>
-  <description>The autoware_diagnostic_graph_test package</description>
+  <description>The autoware_diagnostic_graph_test_examples package</description>
   <maintainer email="isamu.takagi@tier4.jp">Takagi, Isamu</maintainer>
-  <maintainer email="junya.sasaki@tier4.jp">Junya Sasaki</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
+  <test_depend>ament_index_cpp</test_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_diagnostic_graph_aggregator</test_depend>
   <test_depend>autoware_lint_common</test_depend>

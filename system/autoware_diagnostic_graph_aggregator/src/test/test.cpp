@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/diagnostic_graph_aggregator/test/tests.hpp"
+#include "autoware/diagnostic_graph_aggregator/tests/tests.hpp"
 #include "graph/graph.hpp"
 #include "graph/units.hpp"
 

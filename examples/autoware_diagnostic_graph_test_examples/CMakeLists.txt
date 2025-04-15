@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(autoware_diagnostic_graph_test)
+project(autoware_diagnostic_graph_test_examples)
 
 find_package(autoware_cmake REQUIRED)
 autoware_package()
@@ -11,4 +11,4 @@ if(BUILD_TESTING)
   target_compile_definitions(test_${PROJECT_NAME} PRIVATE TEST_DATA_PATH="${DATA_PATH}")
 endif()
 
-ament_auto_package()
+ament_auto_package(INSTALL_TO_SHARE data)

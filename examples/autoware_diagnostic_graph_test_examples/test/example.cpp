@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <autoware/diagnostic_graph_aggregator/test/tests.hpp>
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <autoware/diagnostic_graph_aggregator/tests/tests.hpp>
 
 #include <gtest/gtest.h>
 
@@ -33,9 +34,32 @@ DiagnosticStatus create_status(const std::string & name, const DiagnosticLevel l
   return status;
 }
 
-TEST(TestDiagGraph, Main)
+TEST(TestDiagGraph, TestLocalGraph)
 {
   const auto test_data_path = std::string(TEST_DATA_PATH) + "/";
+
+  TestInput input;
+  input.graph_path = test_data_path + "graph.yaml";
+  input.diags.status.push_back(create_status("test_node: input_1", DiagnosticStatus::OK));
+  input.diags.status.push_back(create_status("test_node: input_2", DiagnosticStatus::ERROR));
+  input.diags.status.push_back(create_status("test_node: input_3", DiagnosticStatus::OK));
+  input.diags.status.push_back(create_status("test_node: input_4", DiagnosticStatus::ERROR));
+
+  TestOutput output = test(input);
+  std::unordered_map<std::string, DiagnosticLevel> units;
+  for (const auto & unit : output.units) {
+    units[unit.path] = unit.level;
+  }
+
+  EXPECT_EQ(units.at("/unit/1"), DiagnosticStatus::ERROR);
+  EXPECT_EQ(units.at("/unit/2"), DiagnosticStatus::OK);
+}
+
+TEST(TestDiagGraph, TestSharedGraph)
+{
+  const auto package_name = "autoware_diagnostic_graph_test_examples";
+  const auto package_path = ament_index_cpp::get_package_share_directory(package_name);
+  const auto test_data_path = package_path + "/data/";
 
   TestInput input;
   input.graph_path = test_data_path + "graph.yaml";
