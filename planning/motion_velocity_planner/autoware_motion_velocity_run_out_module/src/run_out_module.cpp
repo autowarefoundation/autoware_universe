@@ -23,6 +23,7 @@
 #include "parameters.hpp"
 #include "slowdown.hpp"
 
+#include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/universe_utils/geometry/geometry.hpp>
 #include <rclcpp/duration.hpp>
@@ -107,6 +108,25 @@ double calculate_comfortable_time_to_stop(
   return t_from.seconds() + t_diff;
 }
 
+double calculate_keep_stop_distance_range(
+  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
+  const run_out::Parameters & params)
+{
+  std::vector<double> times = {0.0};
+  std::vector<double> arc_lengths = {0.0};
+  for (auto i = 1UL; i < trajectory.size(); ++i) {
+    const auto t = rclcpp::Duration(trajectory[i].time_from_start).seconds();
+    const auto arc_length_delta = universe_utils::calcDistance2d(trajectory[i - 1], trajectory[i]);
+    times.push_back(t);
+    arc_lengths.push_back(arc_lengths.back() + arc_length_delta);
+  }
+  if (params.keep_stop_condition_time > times.back()) {
+    return arc_lengths.back();
+  }
+  return autoware::interpolation::lerp(times, arc_lengths, params.keep_stop_condition_time) +
+         params.keep_stop_condition_distance;
+}
+
 void RunOutModule::update_unavoidable_collision_status(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
@@ -121,26 +141,6 @@ void RunOutModule::update_unavoidable_collision_status(
     const auto diag_level = diagnostic_msgs::msg::DiagnosticStatus::OK;
     stat.summary(diag_level, error_msg);
   }
-}
-
-void RunOutModule::ignore_unavoidable_collision(const double time_to_stop)
-{
-  for (auto & [_, history] : decisions_tracker_.history_per_object) {
-    if (history.decisions.empty()) {
-      continue;
-    }
-    auto & current_decision = history.decisions.back();
-    if (current_decision.type == run_out::DecisionType::stop) {
-      if (time_to_stop > current_decision.collision->ego_time_interval.from) {
-        unavoidable_collision_.emplace();
-        unavoidable_collision_->comfortable_time_to_stop = time_to_stop;
-        unavoidable_collision_->time_to_collision =
-          current_decision.collision->ego_time_interval.from;
-        current_decision.type = run_out::DecisionType::nothing;
-      }
-    }
-  }
-  unavoidable_collision_.reset();
 }
 
 VelocityPlanningResult RunOutModule::plan(
@@ -168,8 +168,10 @@ VelocityPlanningResult RunOutModule::plan(
   time_keeper_->start_track("calc_decisions()");
   const auto comfortable_time_to_stop = calculate_comfortable_time_to_stop(
     smoothed_trajectory_points, planner_data->calculate_min_deceleration_distance(0.0));
+  const auto keep_stop_distance_range =
+    calculate_keep_stop_distance_range(smoothed_trajectory_points, params_);
   run_out::calculate_decisions(
-    decisions_tracker_, filtered_objects, now, comfortable_time_to_stop, params_);
+    decisions_tracker_, filtered_objects, now, keep_stop_distance_range, params_);
   time_keeper_->end_track("calc_decisions()");
   time_keeper_->start_track("calc_slowdowns()");
   const auto result = run_out::calculate_slowdowns(

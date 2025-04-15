@@ -60,12 +60,10 @@ struct Parameters
                                 // stopping decision
   double stop_distance_buffer;  // [m] longitudinal safety distance to keep between ego and the
                                 // collision position
-  bool
-    stop_calculate_earliest_within_history;  // if true, use the earliest stop position within the
-                                             // history, otherwise the stop position is calculated
-                                             // only from the currently detected collision
-  bool keep_stop_until_object_is_gone;  // if true, once ego stopped for an object we keep the stop
-                                        // decision until the object is gone
+  double keep_stop_condition_time;  // [s] time along the ego trajectory where any collision will
+                                    // make us keep a stop decision
+  double keep_stop_condition_distance;  // [m] distance along the ego trajectory where any collision
+                                        // will make us keep a stop decision
 
   double preventive_slowdown_on_time_buffer;  // [s] successive collision detection time required to
                                               // start the slowdown decision
@@ -128,6 +126,10 @@ struct Parameters
     stop_off_time_buffer = getOrDeclareParameter<double>(node, ns + ".stop.off_time_buffer");
     stop_on_time_buffer = getOrDeclareParameter<double>(node, ns + ".stop.on_time_buffer");
     stop_distance_buffer = getOrDeclareParameter<double>(node, ns + ".stop.distance_buffer");
+    keep_stop_condition_time =
+      getOrDeclareParameter<double>(node, ns + ".stop.keep_condition.time");
+    keep_stop_condition_distance =
+      getOrDeclareParameter<double>(node, ns + ".stop.keep_condition.distance");
     preventive_slowdown_off_time_buffer =
       getOrDeclareParameter<double>(node, ns + ".preventive_slowdown.off_time_buffer");
     preventive_slowdown_on_time_buffer =
@@ -136,10 +138,6 @@ struct Parameters
       getOrDeclareParameter<double>(node, ns + ".preventive_slowdown.distance_buffer");
     preventive_slowdown_deceleration_limit =
       getOrDeclareParameter<double>(node, ns + ".preventive_slowdown.deceleration_limit");
-    stop_calculate_earliest_within_history =
-      getOrDeclareParameter<bool>(node, ns + ".stop.calculate_earliest_position_within_history");
-    keep_stop_until_object_is_gone =
-      getOrDeclareParameter<bool>(node, ns + ".stop.keep_until_object_is_gone");
     ego_lateral_margin = getOrDeclareParameter<double>(node, ns + ".ego.lateral_margin");
     ego_longitudinal_margin = getOrDeclareParameter<double>(node, ns + ".ego.longitudinal_margin");
     collision_time_margin = getOrDeclareParameter<double>(node, ns + ".collision.time_margin");
@@ -214,10 +212,8 @@ struct Parameters
     updateParam(params, ns + ".stop.on_time_buffer", stop_on_time_buffer);
     updateParam(params, ns + ".stop.off_time_buffer", stop_off_time_buffer);
     updateParam(params, ns + ".stop.distance_buffer", stop_distance_buffer);
-    updateParam(
-      params, ns + ".stop.calculate_earliest_position_within_history",
-      stop_calculate_earliest_within_history);
-    updateParam(params, ns + ".stop.keep_until_object_is_gone", keep_stop_until_object_is_gone);
+    updateParam(params, ns + ".stop.keep_condition.time", keep_stop_condition_time);
+    updateParam(params, ns + ".stop.keep_condition.distance", keep_stop_condition_distance);
     updateParam(params, ns + ".ego.lateral_margin", ego_lateral_margin);
     updateParam(params, ns + ".ego.longitudinal_margin", ego_longitudinal_margin);
     updateParam(params, ns + ".collision.time_margin", collision_time_margin);

@@ -168,11 +168,10 @@ struct TrajectoryCornerFootprint
 /// @brief the time interval where a vehicle overlaps the path of another vehicle
 struct TimeOverlapInterval
 {
-  double from;
-  double to;
+  double from{};
+  double to{};
   FootprintIntersection first_intersection;
   FootprintIntersection last_intersection;
-  TimeOverlapInterval() = delete;
   TimeOverlapInterval(
     const double from_, const double to_, FootprintIntersection first_intersection_,
     FootprintIntersection last_intersection_)
@@ -224,7 +223,7 @@ struct Collision
 {
   TimeOverlapInterval ego_time_interval;
   TimeOverlapInterval object_time_interval;
-  CollisionType type{};
+  CollisionType type = no_collision;
   double ego_collision_time{};  // [s] predicted time of the collision for ego (only used when type
                                 // is 'collision')
   std::string explanation;

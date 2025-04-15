@@ -95,17 +95,6 @@ std::optional<geometry_msgs::msg::Point> calculate_stop_position(
                              params.stop_distance_buffer;
     current_decision.stop_point =
       motion_utils::calcInterpolatedPose(trajectory, stop_point_length).position;
-    if (params.stop_calculate_earliest_within_history) {
-      for (const auto & decision : history.decisions) {
-        if (decision.stop_point) {
-          stop_point_length = std::min(
-            motion_utils::calcSignedArcLength(trajectory, 0, *decision.stop_point),
-            stop_point_length);
-        }
-      }
-      current_decision.stop_point =
-        motion_utils::calcInterpolatedPose(trajectory, stop_point_length).position;
-    }
   }
   return current_decision.stop_point;
 }

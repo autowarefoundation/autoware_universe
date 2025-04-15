@@ -32,7 +32,7 @@
 
 namespace autoware::motion_velocity_planner::run_out
 {
-void prepare_trajectory_footprint_rtrees(TrajectoryCornerFootprint & footprint)
+void prepare_trajectory_footprint_rtree(TrajectoryCornerFootprint & footprint)
 {
   std::vector<FootprintSegmentNode> nodes;
   nodes.emplace_back(footprint.get_rear_segment(), std::make_pair(rear, 0UL));
@@ -96,7 +96,7 @@ TrajectoryCornerFootprint calculate_trajectory_corner_footprint(
     trajectory_footprint.front_polygons.push_back(front_polygon);
     trajectory_footprint.rear_polygons.push_back(rear_polygon);
   }
-  prepare_trajectory_footprint_rtrees(trajectory_footprint);
+  prepare_trajectory_footprint_rtree(trajectory_footprint);
   return trajectory_footprint;
 }
 }  // namespace autoware::motion_velocity_planner::run_out

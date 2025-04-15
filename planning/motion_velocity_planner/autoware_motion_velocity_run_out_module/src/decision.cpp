@@ -14,6 +14,9 @@
 
 #include "decision.hpp"
 
+#include "parameters.hpp"
+#include "types.hpp"
+
 #include <algorithm>
 #include <cstdio>
 #include <optional>
@@ -26,12 +29,9 @@ void update_decision(
   std::optional<Decision> & decision_to_update, std::stringstream & explanation_to_update,
   const Decision & decision, const std::stringstream & explanation)
 {
-  if (!decision.collision.has_value()) {
-    return;
-  }
   const auto not_set_yet = !decision_to_update;
   const auto same_decision_but_earlier =
-    decision_to_update &&
+    decision_to_update && decision.collision.has_value() &&
     (decision_to_update->type == decision.type &&
      decision.collision->ego_collision_time < decision_to_update->collision->ego_collision_time);
   const auto higher_priority_decision =
@@ -69,12 +69,14 @@ double calculate_consecutive_time_with_collision(
 }
 
 bool condition_to_stop(
-  const DecisionHistory & history, const CollisionType & current_collision_type,
-  const rclcpp::Time & current_time, std::stringstream & explanation, const bool ego_is_stopped,
-  const Parameters & params)
+  const DecisionHistory & history, const std::optional<Collision> & current_collision,
+  const rclcpp::Time & current_time, std::stringstream & explanation, const Parameters & params)
 {
+  if (!current_collision) {
+    return false;
+  }
   // only stop after successively detecting collisions for some time
-  if (current_collision_type == collision) {
+  if (current_collision->type == collision) {
     const auto previous_decision =
       history.decisions.empty() ? std::nullopt : std::make_optional(history.decisions.back().type);
     if (previous_decision == stop) {
@@ -93,11 +95,26 @@ bool condition_to_stop(
                 << "s buffer)";
     return false;
   }
+  if (current_collision->type == pass_first_collision) {
+    explanation << "ignoring passing collision";
+  }
+  return false;
+}
+
+bool condition_to_keep_stop(
+  const DecisionHistory & history, const std::optional<Collision> & collision,
+  const double keep_stop_distance_range, std::stringstream & explanation,
+  const rclcpp::Time & current_time, const Parameters & params)
+{
+  if (history.decisions.empty() || history.decisions.back().type != stop) {
+    return false;
+  }
   if (
-    params.keep_stop_until_object_is_gone && !history.decisions.empty() &&
-    history.decisions.back().type == stop && ego_is_stopped &&
-    current_collision_type != no_collision) {
-    explanation << "keep stop until object is gone";
+    collision &&
+    collision->ego_time_interval.first_intersection.arc_length < keep_stop_distance_range) {
+    explanation << "keep stop since found collision "
+                << collision->ego_time_interval.first_intersection.arc_length << "m ahead ("
+                << keep_stop_distance_range << " m range)";
     return true;
   }
   // keep stopping for some time after the last detected collision
@@ -105,85 +122,93 @@ bool condition_to_stop(
     const auto most_recent_collision_it =
       std::find_if(history.decisions.rbegin(), history.decisions.rend(), is_collision);
     if (most_recent_collision_it == history.decisions.rend()) {
-      explanation << "removing stop since no collision in history";
+      explanation << "remove stop since no collision in history";
       return false;
     }
     // -1 because the reverse iterator has an offset compared to base iterator
     const auto i = std::distance(history.decisions.begin(), most_recent_collision_it.base()) - 1;
     const auto time_since_last_collision = current_time.seconds() - history.times[i];
     if (time_since_last_collision < params.stop_off_time_buffer) {
-      explanation << "keeping stop since last collision found " << time_since_last_collision
+      explanation << "keep stop since last collision found " << time_since_last_collision
                   << "s ago (" << params.stop_off_time_buffer << "s buffer)";
       return true;
     }
-    explanation << "removing stop since last collision found " << time_since_last_collision
+    explanation << "remove stop since last collision found " << time_since_last_collision
                 << "s ago (" << params.stop_off_time_buffer << "s buffer)";
     return false;
-  }
-  if (current_collision_type == pass_first_collision) {
-    explanation << "ignoring passing collision";
   }
   return false;
 }
 
 bool condition_to_slowdown(
-  const DecisionHistory & history, const CollisionType & current_collision_type,
+  const DecisionHistory & history, const std::optional<Collision> & current_collision,
   const rclcpp::Time & current_time, std::stringstream & explanation, const Parameters & params)
 {
   // only slowdown after successively detecting collisions for some time
-  if (current_collision_type == collision) {
-    const auto previous_decision =
-      history.decisions.empty() ? std::nullopt : std::make_optional(history.decisions.back().type);
-    if (previous_decision == slowdown) {
-      explanation << "slowdown since finding a collision and previous decision was SLOWDOWN";
-      return true;
-    }
-    const auto consecutive_time_with_collision =
-      calculate_consecutive_time_with_collision(history, current_time);
-    if (consecutive_time_with_collision >= params.preventive_slowdown_on_time_buffer) {
-      explanation << "preventive slowdown since finding collisions for "
-                  << consecutive_time_with_collision << "s ("
-                  << params.preventive_slowdown_on_time_buffer << "s buffer)";
-      return true;
-    }
-    explanation << "not slowing down since only finding collisions for "
+  if (!current_collision || current_collision->type != collision) {
+    return false;
+  }
+  const auto previous_decision =
+    history.decisions.empty() ? std::nullopt : std::make_optional(history.decisions.back().type);
+  if (previous_decision == slowdown) {
+    explanation << "slowdown since finding a collision and previous decision was SLOWDOWN";
+    return true;
+  }
+  const auto consecutive_time_with_collision =
+    calculate_consecutive_time_with_collision(history, current_time);
+  if (consecutive_time_with_collision >= params.preventive_slowdown_on_time_buffer) {
+    explanation << "preventive slowdown since finding collisions for "
                 << consecutive_time_with_collision << "s ("
                 << params.preventive_slowdown_on_time_buffer << "s buffer)";
-    return false;
+    return true;
   }
+  explanation << "no slowdown since only finding collisions for " << consecutive_time_with_collision
+              << "s (" << params.preventive_slowdown_on_time_buffer << "s buffer)";
+  return false;
+}
+
+bool condition_to_keep_slowdown(
+  const DecisionHistory & history, const rclcpp::Time & current_time,
+  std::stringstream & explanation, const Parameters & params)
+{
   // keep decision for some time after the last detected collision
-  if (!history.decisions.empty() && history.decisions.back().type == slowdown) {
-    const auto most_recent_collision_it =
-      std::find_if(history.decisions.rbegin(), history.decisions.rend(), is_collision);
-    if (most_recent_collision_it == history.decisions.rend()) {
-      explanation << "removing slowdown since no collision in history";
-      return false;
-    }
-    // -1 because the reverse iterator has an offset compared to base iterator
-    const auto i = std::distance(history.decisions.begin(), most_recent_collision_it.base()) - 1;
-    const auto time_since_last_collision = current_time.seconds() - history.times[i];
-    if (time_since_last_collision < params.preventive_slowdown_off_time_buffer) {
-      explanation << "keeping slowdown since last collision found " << time_since_last_collision
-                  << "s ago (" << params.preventive_slowdown_off_time_buffer << "s buffer)"
-                  << most_recent_collision_it->type;
-      return true;
-    }
-    explanation << "removing slowdown since last collision found " << time_since_last_collision
-                << "s ago (" << params.preventive_slowdown_off_time_buffer << "s buffer)";
+  if (history.decisions.empty() || history.decisions.back().type != slowdown) {
     return false;
   }
+  const auto most_recent_collision_it =
+    std::find_if(history.decisions.rbegin(), history.decisions.rend(), is_collision);
+  if (most_recent_collision_it == history.decisions.rend()) {
+    explanation << "remove slowdown since no collision in history";
+    return false;
+  }
+  // -1 because the reverse iterator has an offset compared to base iterator
+  const auto i = std::distance(history.decisions.begin(), most_recent_collision_it.base()) - 1;
+  const auto time_since_last_collision = current_time.seconds() - history.times[i];
+  if (time_since_last_collision < params.preventive_slowdown_off_time_buffer) {
+    explanation << "keep slowdown since last collision found " << time_since_last_collision
+                << "s ago (" << params.preventive_slowdown_off_time_buffer << "s buffer)"
+                << most_recent_collision_it->type;
+    return true;
+  }
+  explanation << "remove slowdown since last collision found " << time_since_last_collision
+              << "s ago (" << params.preventive_slowdown_off_time_buffer << "s buffer)";
   return false;
 }
 
 DecisionType calculate_decision_type(
-  const CollisionType & collision_type, const DecisionHistory & history, const rclcpp::Time & now,
-  std::stringstream & explanation, const double time_to_stop, const Parameters & params)
+  const std::optional<Collision> & collision, const DecisionHistory & history,
+  const rclcpp::Time & now, std::stringstream & explanation, const double keep_stop_distance_range,
+  const Parameters & params)
 {
-  const auto ego_is_stopped = time_to_stop < 1e-3;
-  if (condition_to_stop(history, collision_type, now, explanation, ego_is_stopped, params)) {
+  if (
+    condition_to_stop(history, collision, now, explanation, params) ||
+    condition_to_keep_stop(
+      history, collision, keep_stop_distance_range, explanation, now, params)) {
     return stop;
   }
-  if (condition_to_slowdown(history, collision_type, now, explanation, params)) {
+  if (
+    condition_to_slowdown(history, collision, now, explanation, params) ||
+    condition_to_keep_slowdown(history, now, explanation, params)) {
     return slowdown;
   }
   return nothing;
@@ -215,7 +240,7 @@ void update_objects_without_decisions(
 }
 void calculate_decisions(
   ObjectDecisionsTracker & decisions_tracker, const std::vector<Object> & objects,
-  const rclcpp::Time & now, const double time_to_stop, const Parameters & params)
+  const rclcpp::Time & now, const double keep_stop_distance_range, const Parameters & params)
 {
   for (const auto & object : objects) {
     std::optional<Decision> object_decision;
@@ -223,9 +248,9 @@ void calculate_decisions(
     std::stringstream object_decision_explanation;
     for (const auto & collision : object.collisions) {
       std::stringstream explanation;
-      Decision d(
-        collision, calculate_decision_type(
-                     collision.type, decision_history, now, explanation, time_to_stop, params));
+      const auto decision_type = calculate_decision_type(
+        collision, decision_history, now, explanation, keep_stop_distance_range, params);
+      Decision d(collision, decision_type);
       update_decision(object_decision, object_decision_explanation, d, explanation);
     }
     if (object_decision) {
@@ -238,8 +263,8 @@ void calculate_decisions(
     if (!history.times.empty() && history.times.back() != now.seconds()) {
       Decision d;
       std::stringstream explanation;
-      d.type =
-        calculate_decision_type(no_collision, history, now, explanation, time_to_stop, params);
+      d.type = calculate_decision_type(
+        std::nullopt, history, now, explanation, keep_stop_distance_range, params);
       history.add_decision(now.seconds(), d);
     }
     history.remove_outdated(now, params.max_history_duration);

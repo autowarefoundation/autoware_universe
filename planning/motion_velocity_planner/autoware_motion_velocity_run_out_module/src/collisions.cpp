@@ -301,7 +301,8 @@ void calculate_overlapping_collision(
     } else {
       c.explanation = " v_diff = " + std::to_string(ego.first_intersection.vel_diff);
       // adjust the collision time based on the velocity difference
-      const auto time_margin = ego.first_intersection.ego_time - ego.first_intersection.object_time;
+      const auto time_margin =
+        std::abs(ego.first_intersection.ego_time - ego.first_intersection.object_time);
       const auto catchup_time =
         ego.first_intersection.ego_vel * time_margin / ego.first_intersection.vel_diff;
       c.ego_collision_time += catchup_time;

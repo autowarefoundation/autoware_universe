@@ -39,24 +39,33 @@ double calculate_consecutive_time_with_collision(
   const DecisionHistory & history, const rclcpp::Time & current_time);
 /// @brief return true if the conditions to stop are met
 bool condition_to_stop(
-  const DecisionHistory & history, const CollisionType & current_collision_type,
-  const rclcpp::Time & current_time, std::stringstream & explanation, const bool ego_is_stopped,
-  const Parameters & params);
+  const DecisionHistory & history, const std::optional<Collision> & current_collision,
+  const rclcpp::Time & current_time, std::stringstream & explanation, const Parameters & params);
+/// @brief return true if the conditions to keep the previous stop decision are met
+bool condition_to_keep_stop(
+  const DecisionHistory & history, const Collision & collision,
+  const double keep_stop_distance_range, std::stringstream & explanation,
+  const rclcpp::Time & current_time, const Parameters & params);
 /// @brief return true if the conditions to slowdown are met
 bool condition_to_slowdown(
-  const DecisionHistory & history, const CollisionType & current_collision_type,
+  const DecisionHistory & history, const std::optional<Collision> & current_collision,
   const rclcpp::Time & current_time, std::stringstream & explanation, const Parameters & params);
+/// @brief return true if the conditions to keep the previous slowdown decision are met
+bool condition_to_keep_slowdown(
+  const DecisionHistory & history, const rclcpp::Time & current_time,
+  std::stringstream & explanation, const Parameters & params);
 /// @brief calculate the decision type corresponding to a collision type and a decision history
 DecisionType calculate_decision_type(
-  const CollisionType & collision_type, const DecisionHistory & history, const rclcpp::Time & now,
-  std::stringstream & explanation, const double time_to_stop, const Parameters & params);
+  const std::optional<Collision> & collision, const DecisionHistory & history,
+  const rclcpp::Time & now, std::stringstream & explanation, const double keep_stop_distance_range,
+  const Parameters & params);
 /// @brief update objects that did not have a decision at the given time
 void update_objects_without_decisions(
   ObjectDecisionsTracker & decisions_tracker, const rclcpp::Time & now);
 /// @brief calculate current decisions for the objects and update the decision tracker accordingly
 void calculate_decisions(
   ObjectDecisionsTracker & decisions_tracker, const std::vector<Object> & objects,
-  const rclcpp::Time & now, const double time_to_stop, const Parameters & params);
+  const rclcpp::Time & now, const double keep_stop_distance_range, const Parameters & params);
 }  // namespace autoware::motion_velocity_planner::run_out
 
 #endif  // DECISION_HPP_
