@@ -136,7 +136,7 @@ struct OutOfLanePoint
 
 struct SlowdownPose
 {
-  double arc_length;
+  double arc_length{0.0};
   rclcpp::Time start_time{0};
   geometry_msgs::msg::Pose pose;
 
