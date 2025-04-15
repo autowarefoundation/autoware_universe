@@ -59,7 +59,7 @@
         maximum_deceleration: 1.0
         maximum_jerk: 1.0
         path_priority: "efficient_path" # "efficient_path" or "close_goal"
-        efficient_path_order: ["SHIFT", "ARC_FORWARD", "CLOTHOID_FORWARD", "ARC_BACKWARD", "CLOTHOID_BACKWARD"] # only lane based pull over(exclude freespace parking)
+        efficient_path_order: ["SHIFT", "CLOTHOID_FORWARD", "ARC_FORWARD", "CLOTHOID_BACKWARD", "ARC_BACKWARD"] # only lane based pull over(exclude freespace parking)
         lane_departure_check_expansion_margin: 0.2
 
         # shift parking

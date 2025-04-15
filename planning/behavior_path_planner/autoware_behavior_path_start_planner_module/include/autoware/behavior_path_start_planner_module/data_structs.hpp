@@ -116,6 +116,7 @@ struct StartPlannerParameters
     object_types_to_check_for_path_generation{};
   double center_line_path_interval{0.0};
   double lane_departure_check_expansion_margin{0.0};
+  double geometric_pull_out_max_steer_angle_margin_scale{0.0};
 
   // shift pull out
   bool enable_shift_pull_out{false};
