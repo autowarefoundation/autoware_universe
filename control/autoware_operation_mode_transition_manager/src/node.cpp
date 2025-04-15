@@ -213,6 +213,9 @@ void OperationModeTransitionManager::onTimer()
 {
   const auto input_data = subscribeData();
   if (!input_data || isInputDataTimedOut(*input_data)) {
+    // NOTE: The planning component depends on the output of the operation_mode_transition_manager.
+    // Therefore, even when the trajectory is not published yet, the
+    // operation_mode_transition_manager has to publish the output.
     publishData();
     return;
   }
