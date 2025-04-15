@@ -229,10 +229,10 @@ std::optional<geometry_msgs::msg::Pose> OutOfLaneModule::calculate_slowdown_pose
   if (slowdown_pose_buffer_.empty()) return {};
 
   // get nearest slowdown pose
-  const auto min_arc_length = std::numeric_limits<double>::max();
   out_of_lane::SlowdownPose nearest_slowdown_pose;
+  nearest_slowdown_pose.arc_length = std::numeric_limits<double>::max();
   for (const auto & sp : slowdown_pose_buffer_) {
-    if (sp.arc_length < min_arc_length) nearest_slowdown_pose = sp;
+    if (sp.arc_length < nearest_slowdown_pose.arc_length) nearest_slowdown_pose = sp;
   }
 
   slowdown_pose = motion_utils::calcInterpolatedPose(
