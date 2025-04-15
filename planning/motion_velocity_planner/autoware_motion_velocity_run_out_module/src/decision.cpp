@@ -118,25 +118,22 @@ bool condition_to_keep_stop(
     return true;
   }
   // keep stopping for some time after the last detected collision
-  if (!history.decisions.empty() && history.decisions.back().type == stop) {
-    const auto most_recent_collision_it =
-      std::find_if(history.decisions.rbegin(), history.decisions.rend(), is_collision);
-    if (most_recent_collision_it == history.decisions.rend()) {
-      explanation << "remove stop since no collision in history";
-      return false;
-    }
-    // -1 because the reverse iterator has an offset compared to base iterator
-    const auto i = std::distance(history.decisions.begin(), most_recent_collision_it.base()) - 1;
-    const auto time_since_last_collision = current_time.seconds() - history.times[i];
-    if (time_since_last_collision < params.stop_off_time_buffer) {
-      explanation << "keep stop since last collision found " << time_since_last_collision
-                  << "s ago (" << params.stop_off_time_buffer << "s buffer)";
-      return true;
-    }
-    explanation << "remove stop since last collision found " << time_since_last_collision
-                << "s ago (" << params.stop_off_time_buffer << "s buffer)";
+  const auto most_recent_collision_it =
+    std::find_if(history.decisions.rbegin(), history.decisions.rend(), is_collision);
+  if (most_recent_collision_it == history.decisions.rend()) {
+    explanation << "remove stop since no collision in history";
     return false;
   }
+  // -1 because the reverse iterator has an offset compared to base iterator
+  const auto i = std::distance(history.decisions.begin(), most_recent_collision_it.base()) - 1;
+  const auto time_since_last_collision = current_time.seconds() - history.times[i];
+  if (time_since_last_collision < params.stop_off_time_buffer) {
+    explanation << "keep stop since last collision found " << time_since_last_collision << "s ago ("
+                << params.stop_off_time_buffer << "s buffer)";
+    return true;
+  }
+  explanation << "remove stop since last collision found " << time_since_last_collision << "s ago ("
+              << params.stop_off_time_buffer << "s buffer)";
   return false;
 }
 
