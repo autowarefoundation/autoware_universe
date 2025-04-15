@@ -18,7 +18,7 @@ The following features are supported for trajectory validation and can have thre
   a_{lat} = v_{lon}^2 * \kappa
   $$
 
-  Where $v_{lon}$ is longitudinal velocity and $\kappa$ is curvature. The velocity and acceleration assigned to each point are directed toward the next path point. In this calculation, we assume that no lateral acceleration occurs when passing directly through path points, and we don't consider lateral velocity or acceleration components. The lateral direction refers to the direction perpendicular to the path tangent at each point.
+  Where $v_{lon}$ is longitudinal velocity and $\kappa$ is curvature. Since the acceleration embedded in path points is perpendicular to the derived lateral acceleration, projections are not considered. The velocity and acceleration assigned to each point are directed toward the next path point.
 
 - **Lateral jerk** : invalid if the rate of change of lateral acceleration is too large. Lateral jerk is calculated using the formula:
 

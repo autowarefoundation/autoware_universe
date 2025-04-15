@@ -41,7 +41,7 @@
         is_critical: false
       lateral_jerk:
         enable: true
-        threshold: 5.0
+        threshold: 7.0
         is_critical: false
       steering:
         enable: true
