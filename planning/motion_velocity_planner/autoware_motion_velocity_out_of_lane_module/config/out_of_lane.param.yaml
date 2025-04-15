@@ -9,8 +9,8 @@
       threshold:
         time_threshold: 5.0  # [s] consider objects that will reach an overlap within this time
       ttc:
-        threshold: 1.0 # [s] threshold for difference in time to ovelrap region between ego and target object to trigger stop decision
-        release_threshold: 2.0 # [s] threshold for difference in time to the ovelrap region between ego and target object to release stop decision
+        threshold: 1.0 # [s] threshold for difference in time to overlap region between ego and target object to trigger stop decision
+        release_threshold: 2.0 # [s] threshold for difference in time to the overlap region between ego and target object to release stop decision
 
 
       objects:
