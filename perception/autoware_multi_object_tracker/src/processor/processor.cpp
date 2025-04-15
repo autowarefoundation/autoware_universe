@@ -43,7 +43,6 @@ TrackerProcessor::TrackerProcessor(
 : config_(config), channels_config_(channels_config)
 {
   association_ = std::make_unique<DataAssociation>(associator_config);
-  max_dist_matrix_ = associator_config.max_dist_matrix;
 }
 
 void TrackerProcessor::predict(const rclcpp::Time & time)
@@ -223,8 +222,8 @@ void TrackerProcessor::removeOverlappedTracker(const rclcpp::Time & time)
         object1.pose.position.y - object2.pose.position.y);
       const auto & label1 = sorted_list_tracker[i]->getHighestProbLabel();
       const auto & label2 = sorted_list_tracker[j]->getHighestProbLabel();
-      const double max_dist_matrix_value =
-        max_dist_matrix_(label2, label1);  // Get the maximum distance threshold for the labels
+      const double max_dist_matrix_value = config_.max_dist_matrix(
+        label2, label1);  // Get the maximum distance threshold for the labels
 
       // If the distance is too large, skip
       if (distance > max_dist_matrix_value) {
