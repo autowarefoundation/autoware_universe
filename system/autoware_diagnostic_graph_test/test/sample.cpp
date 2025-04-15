@@ -12,11 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "gtest/gtest.h"
+#include <autoware/diagnostic_graph_aggregator/test/test.hpp>
 
-// using autoware::diagnostic_graph_aggregator::tests::TestGraph;
+#include <gtest/gtest.h>
+
+using autoware::diagnostic_graph_aggregator::test::test;
+using autoware::diagnostic_graph_aggregator::test::TestData;
+using autoware::diagnostic_graph_aggregator::test::TestResult;
 
 TEST(TestDiagGraph, Main)
 {
-  // TestGraph graph("config.yaml");
+  TestData data;
+  data.graph_path = "config.yaml";
+
+  TestResult result = test(data);
 }
