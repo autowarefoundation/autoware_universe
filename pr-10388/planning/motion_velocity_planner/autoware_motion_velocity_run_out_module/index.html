@@ -14540,13 +14540,6 @@ Higher values of this parameter will make it more likely to detect a collision a
 <td>2</td>
 <td>N/A</td>
 </tr>
-<tr>
-<td>enable_deceleration_limit</td>
-<td>boolean</td>
-<td>If true, collisions are ignored if happening within the minimum duration required to stop ego comfortably.</td>
-<td>0</td>
-<td>N/A</td>
-</tr>
 </tbody>
 </table>
 <h3 id="preventive-slowdown-parameters">Preventive slowdown parameters<a class="headerlink" href="#preventive-slowdown-parameters" title="Permanent link">#</a></h3>
@@ -14617,24 +14610,10 @@ Higher values of this parameter will make it more likely to detect a collision a
 <td>2</td>
 <td>N/A</td>
 </tr>
-<tr>
-<td>calculate_earliest_position_within_history</td>
-<td>boolean</td>
-<td>If true, use the earliest stop position within the history, otherwise the stop position is calculated only from the currently detected collision.</td>
-<td>0</td>
-<td>N/A</td>
-</tr>
-<tr>
-<td>keep_until_object_is_gone</td>
-<td>boolean</td>
-<td>If true, once ego stopped for an object we keep the stop decision until the object is gone.</td>
-<td>1</td>
-<td>N/A</td>
-</tr>
 </tbody>
 </table>
 <h2 id="flow-diagram">Flow Diagram<a class="headerlink" href="#flow-diagram" title="Permanent link">#</a></h2>
-<p><img alt="Flow diagram" src="docs/flow_mermaid_diagram.svg"></p></div>
+<p><img alt="Flow diagram" src="docs/flow_diagram.svg"></p></div>
 
 
 
