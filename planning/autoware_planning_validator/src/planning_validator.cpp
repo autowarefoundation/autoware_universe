@@ -26,6 +26,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace autoware::planning_validator
 {
@@ -365,8 +366,6 @@ void PlanningValidator::validate(const Trajectory & trajectory)
   s.is_valid_lateral_jerk = checkValidLateralJerk(resampled);
   s.is_valid_steering = checkValidSteering(resampled);
   s.is_valid_steering_rate = checkValidSteeringRate(resampled);
-  s.is_valid_latency = checkValidLatency(trajectory);
-  s.is_valid_yaw_deviation = checkValidYawDeviation(trajectory);
 
   s.invalid_count = isAllValid(s) ? 0 : s.invalid_count + 1;
 }
