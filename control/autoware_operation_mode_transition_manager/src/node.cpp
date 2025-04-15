@@ -261,45 +261,49 @@ OperationModeTransitionManager::subscribeData()
 {
   InputData input_data;
 
+  // NOTE: Regarding some of the following inputs, do not update is_ready
+  // since the planning component depends on the output of this node.
+  bool is_ready = true;
+
   const auto kinematics_ptr = sub_kinematics_.take_data();
-  if (!kinematics_ptr) {
-    return std::nullopt;
+  if (kinematics_ptr) {
+    input_data.kinematics = *kinematics_ptr;
+  } else {
+    is_ready = false;
   }
-  input_data.kinematics = *kinematics_ptr;
 
   const auto trajectory_ptr = sub_trajectory_.take_data();
-  if (!trajectory_ptr) {
-    return std::nullopt;
+  if (trajectory_ptr) {
+    input_data.trajectory = *trajectory_ptr;
   }
-  input_data.trajectory = *trajectory_ptr;
 
   const auto trajectory_follower_control_cmd_ptr = sub_trajectory_follower_control_cmd_.take_data();
-  if (!trajectory_follower_control_cmd_ptr) {
-    return std::nullopt;
+  if (trajectory_follower_control_cmd_ptr) {
+    input_data.trajectory_follower_control_cmd = *trajectory_follower_control_cmd_ptr;
   }
-  input_data.trajectory_follower_control_cmd = *trajectory_follower_control_cmd_ptr;
 
   const auto control_cmd_ptr = sub_control_cmd_.take_data();
-  if (!control_cmd_ptr) {
-    return std::nullopt;
+  if (control_cmd_ptr) {
+    input_data.control_cmd = *control_cmd_ptr;
   }
-  input_data.control_cmd = *control_cmd_ptr;
 
   const auto gate_operation_mode_ptr = sub_gate_operation_mode_.take_data();
-  if (!gate_operation_mode_ptr) {
-    return std::nullopt;
+  if (gate_operation_mode_ptr) {
+    input_data.gate_operation_mode = *gate_operation_mode_ptr;
+  } else {
+    is_ready = false;
   }
-  input_data.gate_operation_mode = *gate_operation_mode_ptr;
 
   const auto control_mode_report_ptr = sub_control_mode_report_.take_data();
-  if (!control_mode_report_ptr) {
-    return std::nullopt;
+  if (control_mode_report_ptr) {
+    // NOTE: This will be used outside the onTimer function. Therefore, it
+    // has to be a member variable
+    control_mode_report_ = *control_mode_report_ptr;
+  } else {
+    is_ready = false;
   }
-  // NOTE: This will be used outside the onTimer function. Therefore, it
-  // has to be a member variable
-  control_mode_report_ = *control_mode_report_ptr;
 
-  return input_data;
+  return is_ready ? input_data : std::optional<InputData>{};
 }
 
 void OperationModeTransitionManager::publishData()
