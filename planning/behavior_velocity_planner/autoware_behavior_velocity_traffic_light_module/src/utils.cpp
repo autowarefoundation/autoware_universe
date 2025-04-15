@@ -132,8 +132,9 @@ auto calcStopPointAndInsertIndex(
   LineString2d stop_line;
 
   for (size_t i = 0; i < lanelet_stop_lines.size() - 1; ++i) {
-    stop_line = planning_utils::extendLineToPathBound(
-      lanelet_stop_lines[i], lanelet_stop_lines[i + 1], input_path);
+    stop_line = planning_utils::extendSegmentToBounds(
+      {lanelet_stop_lines[i].basicPoint2d(), lanelet_stop_lines[i + 1].basicPoint2d()},
+      input_path.left_bound, input_path.right_bound);
 
     // Calculate stop pose and insert index,
     // if there is a collision point between path and stop line

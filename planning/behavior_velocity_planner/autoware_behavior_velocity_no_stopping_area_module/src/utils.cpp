@@ -253,7 +253,9 @@ std::optional<LineString2d> get_stop_line_geometry2d(
   const auto & stop_line = no_stopping_area_reg_elem.stopLine();
   if (stop_line && stop_line->size() >= 2) {
     // get stop line from map
-    return planning_utils::extendLineToPathBound(stop_line.value()[0], stop_line.value()[1], path);
+    return planning_utils::extendSegmentToBounds(
+      {(*stop_line)[0].basicPoint2d(), (*stop_line)[1].basicPoint2d()}, path.left_bound,
+      path.right_bound);
   }
   return generate_stop_line(
     path, no_stopping_area_reg_elem.noStoppingAreas(), vehicle_width, stop_line_margin);

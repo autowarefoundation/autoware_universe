@@ -103,7 +103,8 @@ autoware_utils::LineString2d get_stop_line_geometry2d(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   const auto stop_line = detection_area.stopLine();
-  return planning_utils::extendLineToPathBound(stop_line[0], stop_line[1], path);
+  return planning_utils::extendSegmentToBounds(
+    lanelet::utils::to2D(stop_line).basicLineString(), path.left_bound, path.right_bound);
 }
 
 std::vector<geometry_msgs::msg::Point> get_obstacle_points(
