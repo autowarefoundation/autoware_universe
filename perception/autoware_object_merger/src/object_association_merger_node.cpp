@@ -133,14 +133,11 @@ ObjectAssociationMergerNode::ObjectAssociationMergerNode(const rclcpp::NodeOptio
   // Timeout process initialization
   message_timeout_sec_ = this->declare_parameter<double>("message_timeout_sec");
   initialization_timeout_sec_ = this->declare_parameter<double>("initialization_timeout_sec");
-  last_sync_time_ = this->now();
-  node_start_time_ = this->now();
-  received_first_message_ = false;
-  message_interval_ = 0.0;
-  time_source_initialized_ = false;
+  last_sync_time_ = std::nullopt;
+  message_interval_ = std::nullopt;
   timeout_timer_ = this->create_wall_timer(
     std::chrono::duration<double>(message_timeout_sec_ / 2),
-    std::bind(&ObjectAssociationMergerNode::timeoutCallback, this));
+    std::bind(&ObjectAssociationMergerNode::diagCallback, this));
   diagnostics_interface_ptr_ =
     std::make_unique<autoware_utils::DiagnosticsInterface>(this, "object_association_merger");
 }
@@ -154,14 +151,6 @@ void ObjectAssociationMergerNode::objectsCallback(
     return;
   }
   stop_watch_ptr_->toc("processing_time", true);
-  rclcpp::Time now = this->now();
-  // If this is the first sync (timestamp is zero), set interval to 0.0
-  // Otherwise, compute the time difference from the last sync
-  message_interval_ =
-    (last_sync_time_.nanoseconds() == 0) ? 0.0 : (now - last_sync_time_).seconds();
-  // Update the last sync time to now
-  last_sync_time_ = now;
-  received_first_message_ = true;
 
   /* transform to base_link coordinate */
   autoware_perception_msgs::msg::DetectedObjects transformed_objects0, transformed_objects1;
@@ -250,6 +239,18 @@ void ObjectAssociationMergerNode::objectsCallback(
     }
   }
 
+  // Diagnostics part
+  rclcpp::Time now = this->now();
+  // Calculate the interval since the last sync,
+  // or set to 0.0 if this is the first sync
+  if (message_interval_.has_value()) {
+    message_interval_ = (now - last_sync_time_.value()).seconds();
+  } else {
+    message_interval_ = 0.0;
+  }
+  // Update the last sync time to now
+  last_sync_time_ = now;
+
   // publish output msg
   merged_object_pub_->publish(output_msg);
   published_time_publisher_->publish_if_subscribed(merged_object_pub_, output_msg.header.stamp);
@@ -260,24 +261,39 @@ void ObjectAssociationMergerNode::objectsCallback(
     "debug/processing_time_ms", stop_watch_ptr_->toc("processing_time", true));
 }
 
-void ObjectAssociationMergerNode::checkStatus(
-  double elapsed_time, double timeout, const std::string & message_prefix,
-  const rclcpp::Time & publish_time_stamp)
+void ObjectAssociationMergerNode::diagCallback()
 {
-  const bool elapsed_timeout = (elapsed_time >= timeout);
-  const bool interval_timeout = (message_interval_ >= message_timeout_sec_);
-  const bool timeout_occurred = elapsed_timeout || interval_timeout;
+  rclcpp::Time now = this->now();
+  // If the time source is not initialized, return early
+  if (now.nanoseconds() == 0) {
+    return;
+  }
+  // Initialize the time source if it hasn't been initialized yet
+  if (!last_sync_time_.has_value()) {
+    last_sync_time_ = now;
+    return;
+  }
+
+  const double time_since_last_sync = (now - last_sync_time_.value()).seconds();
+  const double message_interval_value = message_interval_.value_or(0.0);
+  const double timeout = message_interval_ ? message_timeout_sec_ : initialization_timeout_sec_;
+  const bool interval_exceeded = message_interval_value >= message_timeout_sec_;
+  const bool elapsed_exceeded = time_since_last_sync >= timeout;
+  const bool timeout_occurred = elapsed_exceeded || interval_exceeded;
   diagnostics_interface_ptr_->clear();
   diagnostics_interface_ptr_->add_key_value("timeout_occurred", timeout_occurred);
-  diagnostics_interface_ptr_->add_key_value("elapsed_time_since_sync", elapsed_time);
-  diagnostics_interface_ptr_->add_key_value("messages_interval", message_interval_);
+  diagnostics_interface_ptr_->add_key_value("elapsed_time_since_sync", time_since_last_sync);
+  diagnostics_interface_ptr_->add_key_value("messages_interval", message_interval_value);
   std::string message;
-  if (elapsed_timeout) {
-    message = "[WARN] " + message_prefix + " - Elapsed time " + std::to_string(elapsed_time) +
+  if (elapsed_exceeded) {
+    const std::string prefix = message_interval_
+                                 ? "No recent messages received or synchronized"
+                                 : "No synchronized messages received since startup";
+    message = "[WARN] " + prefix + " - Elapsed time " + std::to_string(time_since_last_sync) +
               "s exceeded timeout threshold of " + std::to_string(timeout) + "s.";
-  } else if (interval_timeout) {
-    message = "[WARN] " + message_prefix + " - Message interval " +
-              std::to_string(message_interval_) + "s exceeded allowed interval of " +
+  } else if (interval_exceeded) {
+    message = "[WARN] No recent messages received or synchronized - Message interval " +
+              std::to_string(message_interval_value) + "s exceeded allowed interval of " +
               std::to_string(message_timeout_sec_) + "s.";
   } else {
     message = "[OK] Status is normal.";
@@ -286,37 +302,7 @@ void ObjectAssociationMergerNode::checkStatus(
     timeout_occurred ? diagnostic_msgs::msg::DiagnosticStatus::WARN
                      : diagnostic_msgs::msg::DiagnosticStatus::OK,
     message);
-  diagnostics_interface_ptr_->publish(publish_time_stamp);
-}
-
-void ObjectAssociationMergerNode::timeoutCallback()
-{
-  rclcpp::Time now = this->now();
-  // If the time source is not initialized, return early
-  if (now.nanoseconds() == 0) {
-    return;
-  }
-  // Initialize the time source if it hasn't been initialized yet
-  if (!time_source_initialized_) {
-    node_start_time_ = now;
-    time_source_initialized_ = true;
-    return;
-  }
-
-  // Handle case: no messages received since startup
-  if (!received_first_message_) {
-    // If no message has been received within the initialization timeout, publish a warning
-    const double time_since_startup = (now - node_start_time_).seconds();
-    checkStatus(
-      time_since_startup, initialization_timeout_sec_,
-      "No synchronized messages received since startup", now);
-    return;
-  }
-
-  // Handle case: timeout due to lack of recent sync
-  const double time_since_last_sync = (now - last_sync_time_).seconds();
-  checkStatus(
-    time_since_last_sync, message_timeout_sec_, "No recent messages received or synchronized", now);
+  diagnostics_interface_ptr_->publish(now);
 }
 
 }  // namespace autoware::object_merger
