@@ -43,7 +43,6 @@ TrackerProcessor::TrackerProcessor(
 : config_(config), channels_config_(channels_config)
 {
   association_ = std::make_unique<DataAssociation>(associator_config);
-  max_dist_matrix_ = associator_config.max_dist_matrix;
 }
 
 void TrackerProcessor::predict(const rclcpp::Time & time)
