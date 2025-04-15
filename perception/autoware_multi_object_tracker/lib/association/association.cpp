@@ -81,18 +81,25 @@ DataAssociation::DataAssociation(const AssociatorConfig & config) : score_thresh
   std::vector<double> max_rad_vector = config.max_rad_matrix;
   std::vector<double> min_iou_vector = config.min_iou_matrix;
 
-  auto initializeMatrix = [](const std::vector<int> & vector, Eigen::MatrixXi & matrix) {
+  auto initializeMatrixInt = [](const std::vector<int> & vector, Eigen::MatrixXi & matrix) {
     const int label_num = static_cast<int>(std::sqrt(vector.size()));
-    Eigen::Map<Eigen::MatrixXi> matrix_tmp(vector.data(), label_num, label_num);
+    Eigen::Map<Eigen::MatrixXi> matrix_tmp(const_cast<int *>(vector.data()), label_num, label_num);
+    // transpose to make it row-major
     matrix = matrix_tmp.transpose();
   };
-
-  initializeMatrix(can_assign_vector, can_assign_matrix_);
-  initializeMatrix(max_dist_vector, max_dist_matrix_);
-  initializeMatrix(max_area_vector, max_area_matrix_);
-  initializeMatrix(min_area_vector, min_area_matrix_);
-  initializeMatrix(max_rad_vector, max_rad_matrix_);
-  initializeMatrix(min_iou_vector, min_iou_matrix_);
+  auto initializeMatrixDouble = [](const std::vector<double> & vector, Eigen::MatrixXd & matrix) {
+    const int label_num = static_cast<int>(std::sqrt(vector.size()));
+    Eigen::Map<Eigen::MatrixXd> matrix_tmp(
+      const_cast<double *>(vector.data()), label_num, label_num);
+    // transpose to make it row-major
+    matrix = matrix_tmp.transpose();
+  };
+  initializeMatrixInt(can_assign_vector, can_assign_matrix_);
+  initializeMatrixDouble(max_dist_vector, max_dist_matrix_);
+  initializeMatrixDouble(max_area_vector, max_area_matrix_);
+  initializeMatrixDouble(min_area_vector, min_area_matrix_);
+  initializeMatrixDouble(max_rad_vector, max_rad_matrix_);
+  initializeMatrixDouble(min_iou_vector, min_iou_matrix_);
 
   gnn_solver_ptr_ = std::make_unique<gnn_solver::MuSSP>();
 }
@@ -176,10 +183,11 @@ double DataAssociation::calculateScore(
   const double dist =
     autoware_utils::calc_distance2d(measurement_object.pose.position, tracked_object.pose.position);
 
-  // debug only when detection is car
-  if (measurement_label == autoware_perception_msgs::msg::ObjectClassification::CAR) {
-    RCLCPP_WARN_STREAM(rclcpp::get_logger("association"), "measurement:car, tracker:" << std::to_string(tracker_label) << " dist: " << dist << " max_dist: " << max_dist);
-  }
+  // // debug only when detection is car
+  // if (measurement_label == autoware_perception_msgs::msg::ObjectClassification::CAR) {
+  //   RCLCPP_WARN_STREAM(rclcpp::get_logger("association"), "measurement:car, tracker:" <<
+  //   std::to_string(tracker_label) << " dist: " << dist << " max_dist: " << max_dist);
+  // }
 
   // dist gate
   if (max_dist < dist) return 0.0;

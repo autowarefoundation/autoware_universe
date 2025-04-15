@@ -252,6 +252,26 @@ void TrackerProcessor::removeOverlappedTracker(const rclcpp::Time & time)
         if (
           sorted_list_tracker[i]->getElapsedTimeFromLastUpdate(time) <=
           sorted_list_tracker[j]->getElapsedTimeFromLastUpdate(time)) {
+          // debug message
+          // print info about removed tracker uuid, label
+          auto uuidToString = [](const unique_identifier_msgs::msg::UUID & uuid) {
+            std::ostringstream oss;
+            oss << std::hex << std::setfill('0');
+            for (const auto & byte : uuid.uuid) {
+              oss << std::setw(2) << static_cast<int>(byte);
+            }
+            return oss.str();
+          };
+
+          std::string obj1_uuid_str = uuidToString(object1.uuid).substr(0, 6);
+          std::string obj2_uuid_str = uuidToString(object2.uuid).substr(0, 6);
+
+          RCLCPP_INFO_STREAM(
+            rclcpp::get_logger("tracker_processor"),
+            "Removing tracker " << obj2_uuid_str << " (" << std::to_string(label2) << ") by "
+                                << obj1_uuid_str << " (" << std::to_string(label1)
+                                << "), distance: " << distance << ", IoU: " << iou);
+
           // Remove from original list_tracker
           list_tracker_.remove(sorted_list_tracker[j]);
           // Remove from sorted list
