@@ -84,6 +84,7 @@ public:
 private:
   const TrackerProcessorConfig config_;
   const std::vector<types::InputChannel> & channels_config_;
+  Eigen::MatrixXd max_dist_matrix_;
 
   std::unique_ptr<DataAssociation> association_;
 
