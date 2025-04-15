@@ -47,8 +47,6 @@ OperationModeTransitionManager::OperationModeTransitionManager(const rclcpp::Nod
   // initialize state
   current_mode_ = OperationMode::STOP;
   transition_ = nullptr;
-  gate_operation_mode_.mode = OperationModeState::UNKNOWN;
-  gate_operation_mode_.is_in_transition = false;
   control_mode_report_.mode = ControlModeReport::NO_COMMAND;
   transition_timeout_ = declare_parameter<double>("transition_timeout");
   {
@@ -169,7 +167,8 @@ void OperationModeTransitionManager::cancelTransition()
   transition_.reset();
 }
 
-void OperationModeTransitionManager::processTransition()
+void OperationModeTransitionManager::processTransition(
+  const OperationModeState & gate_operation_mode)
 {
   const bool current_control = control_mode_report_.mode == ControlModeReport::AUTONOMOUS;
 
@@ -203,7 +202,7 @@ void OperationModeTransitionManager::processTransition()
       return transition_.reset();
     }
   } else {
-    if (transition_->is_engage_requested && gate_operation_mode_.is_in_transition) {
+    if (transition_->is_engage_requested && gate_operation_mode.is_in_transition) {
       transition_->is_engage_requested = false;
       return changeControlMode(ControlModeCommand::Request::AUTONOMOUS);
     }
@@ -216,12 +215,12 @@ void OperationModeTransitionManager::onTimer()
   if (!control_mode_report_ptr) {
     return;
   }
+  control_mode_report_ = *control_mode_report_ptr;
+
   const auto gate_operation_mode_ptr = sub_gate_operation_mode_.take_data();
   if (!gate_operation_mode_ptr) {
     return;
   }
-  control_mode_report_ = *control_mode_report_ptr;
-  gate_operation_mode_ = *gate_operation_mode_ptr;
 
   for (const auto & [type, mode] : modes_) {
     mode->update(current_mode_ == type && transition_);
@@ -253,7 +252,7 @@ void OperationModeTransitionManager::onTimer()
   }
 
   if (transition_) {
-    processTransition();
+    processTransition(*gate_operation_mode_ptr);
   }
 
   publishData();

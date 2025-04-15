@@ -67,14 +67,13 @@ private:
   void changeControlMode(ControlModeCommandType mode);
   void changeOperationMode(std::optional<OperationMode> request_mode);
   void cancelTransition();
-  void processTransition();
+  void processTransition(const OperationModeState & gate_operation_mode);
 
   double transition_timeout_;
   OperationMode current_mode_;
   std::unique_ptr<Transition> transition_;
   std::unordered_map<OperationMode, std::unique_ptr<ModeChangeBase>> modes_;
   std::unordered_map<OperationMode, bool> available_mode_change_;
-  OperationModeState gate_operation_mode_;
   ControlModeReport control_mode_report_;
 
   std::optional<OperationModeStateAPI::Message> prev_state_;
