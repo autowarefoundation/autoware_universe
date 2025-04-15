@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <list>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -158,6 +159,11 @@ double DataAssociation::calculateScore(
   const double max_dist = config_.max_dist_matrix(tracker_label, measurement_label);
   const double dist =
     autoware_utils::calc_distance2d(measurement_object.pose.position, tracked_object.pose.position);
+
+  // debug only when detection is car
+  if (measurement_label == autoware_perception_msgs::msg::ObjectClassification::CAR) {
+    RCLCPP_WARN_STREAM(rclcpp::get_logger("association"), "measurement:car, tracker:" << std::to_string(tracker_label) << " dist: " << dist << " max_dist: " << max_dist);
+  }
 
   // dist gate
   if (max_dist < dist) return 0.0;
