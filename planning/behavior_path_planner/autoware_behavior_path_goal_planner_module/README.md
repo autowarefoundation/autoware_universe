@@ -329,7 +329,7 @@ Generate forward clothoid paths.
 
 #### clothoid backward parking (to be supported)
 
-Generate two backward arc paths.
+Generate backward clothoid paths.
 
 ![clothoid_backward_parking](./images/clothoid_backward_parking.drawio.svg).
 
