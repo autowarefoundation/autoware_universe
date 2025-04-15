@@ -30,7 +30,7 @@ ament_auto_add_library(aggregator SHARED
 target_include_directories(aggregator PRIVATE src/common)
 
 ament_auto_add_library(${PROJECT_NAME}_test SHARED
-  "src/test/test.cpp"
+  src/tests/tests.cpp
 )
 target_include_directories(${PROJECT_NAME}_test PRIVATE src/common)
 

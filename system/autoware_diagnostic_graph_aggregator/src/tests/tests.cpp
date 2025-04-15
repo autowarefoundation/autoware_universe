@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/diagnostic_graph_aggregator/tests/tests.hpp"
+
 #include "graph/graph.hpp"
 #include "graph/units.hpp"
 
