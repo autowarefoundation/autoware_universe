@@ -256,7 +256,6 @@ void TrackerProcessor::removeOverlappedTracker(const rclcpp::Time & time)
         if (
           sorted_list_tracker[i]->getElapsedTimeFromLastUpdate(time) <=
           sorted_list_tracker[j]->getElapsedTimeFromLastUpdate(time)) {
-
           // Remove from original list_tracker
           list_tracker_.remove(sorted_list_tracker[j]);
           // Remove from sorted list
