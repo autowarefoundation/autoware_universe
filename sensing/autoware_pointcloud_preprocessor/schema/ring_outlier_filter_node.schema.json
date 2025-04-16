@@ -18,12 +18,6 @@
           "default": "0.1",
           "minimum": 0.0
         },
-        "num_points_threshold": {
-          "type": "integer",
-          "description": "num_points_threshold",
-          "default": "4",
-          "minimum": 0
-        },
         "max_rings_num": {
           "type": "integer",
           "description": "max_rings_num",
