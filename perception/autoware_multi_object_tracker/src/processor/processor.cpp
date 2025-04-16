@@ -28,11 +28,12 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace autoware::multi_object_tracker
 {
-
+using autoware_utils::ScopedTimeTrack;
 using Label = autoware_perception_msgs::msg::ObjectClassification;
 using LabelType = autoware_perception_msgs::msg::ObjectClassification::_label_type;
 
@@ -46,6 +47,9 @@ TrackerProcessor::TrackerProcessor(
 
 void TrackerProcessor::predict(const rclcpp::Time & time)
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   for (auto itr = list_tracker_.begin(); itr != list_tracker_.end(); ++itr) {
     (*itr)->predict(time);
   }
@@ -56,6 +60,9 @@ void TrackerProcessor::associate(
   std::unordered_map<int, int> & direct_assignment,
   std::unordered_map<int, int> & reverse_assignment) const
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   const auto & tracker_list = list_tracker_;
   // global nearest neighbor
   Eigen::MatrixXd score_matrix = association_->calcScoreMatrix(
@@ -67,6 +74,9 @@ void TrackerProcessor::update(
   const types::DynamicObjectList & detected_objects,
   const std::unordered_map<int, int> & direct_assignment)
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   int tracker_idx = 0;
   const auto & time = detected_objects.header.stamp;
   for (auto tracker_itr = list_tracker_.begin(); tracker_itr != list_tracker_.end();
@@ -89,6 +99,9 @@ void TrackerProcessor::spawn(
   const types::DynamicObjectList & detected_objects,
   const std::unordered_map<int, int> & reverse_assignment)
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   const auto channel_config = channels_config_[detected_objects.channel_index];
   // If spawn is disabled, return
   if (!channel_config.is_spawn_enabled) {
@@ -143,6 +156,9 @@ std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
 
 void TrackerProcessor::prune(const rclcpp::Time & time)
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   // Check tracker lifetime: if the tracker is old, delete it
   removeOldTracker(time);
   // Check tracker overlap: if the tracker is overlapped, delete the one with lower IOU
@@ -151,6 +167,9 @@ void TrackerProcessor::prune(const rclcpp::Time & time)
 
 void TrackerProcessor::removeOldTracker(const rclcpp::Time & time)
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   // Check elapsed time from last update
   for (auto itr = list_tracker_.begin(); itr != list_tracker_.end(); ++itr) {
     const bool is_old = config_.tracker_lifetime < (*itr)->getElapsedTimeFromLastUpdate(time);
@@ -166,6 +185,9 @@ void TrackerProcessor::removeOldTracker(const rclcpp::Time & time)
 // This function removes overlapped trackers based on distance and IoU criteria
 void TrackerProcessor::removeOverlappedTracker(const rclcpp::Time & time)
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   // Create sorted list with non-UNKNOWN objects first, then by measurement count
   std::vector<std::shared_ptr<Tracker>> sorted_list_tracker(
     list_tracker_.begin(), list_tracker_.end());
@@ -193,21 +215,24 @@ void TrackerProcessor::removeOverlappedTracker(const rclcpp::Time & time)
     for (size_t j = i + 1; j < sorted_list_tracker.size(); ++j) {
       types::DynamicObject object2;
       if (!sorted_list_tracker[j]->getTrackedObject(time, object2)) continue;
+
       // Calculate the distance between the two objects
       const double distance = std::hypot(
         object1.pose.position.x - object2.pose.position.x,
         object1.pose.position.y - object2.pose.position.y);
+      const auto & label1 = sorted_list_tracker[i]->getHighestProbLabel();
+      const auto & label2 = sorted_list_tracker[j]->getHighestProbLabel();
+      const double max_dist_matrix_value = config_.max_dist_matrix(
+        label2, label1);  // Get the maximum distance threshold for the labels
 
       // If the distance is too large, skip
-      if (distance > config_.distance_threshold) {
+      if (distance > max_dist_matrix_value) {
         continue;
       }
 
       // Check the Intersection over Union (IoU) between the two objects
       constexpr double min_union_iou_area = 1e-2;
       const auto iou = shapes::get2dIoU(object1, object2, min_union_iou_area);
-      const auto & label1 = sorted_list_tracker[i]->getHighestProbLabel();
-      const auto & label2 = sorted_list_tracker[j]->getHighestProbLabel();
       bool delete_candidate_tracker = false;
 
       // If both trackers are UNKNOWN, delete the younger tracker
@@ -253,6 +278,9 @@ bool TrackerProcessor::isConfidentTracker(const std::shared_ptr<Tracker> & track
 void TrackerProcessor::getTrackedObjects(
   const rclcpp::Time & time, autoware_perception_msgs::msg::TrackedObjects & tracked_objects) const
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   tracked_objects.header.stamp = time;
   types::DynamicObject tracked_object;
   for (const auto & tracker : list_tracker_) {
@@ -269,6 +297,9 @@ void TrackerProcessor::getTentativeObjects(
   const rclcpp::Time & time,
   autoware_perception_msgs::msg::TrackedObjects & tentative_objects) const
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   tentative_objects.header.stamp = time;
   types::DynamicObject tracked_object;
   for (const auto & tracker : list_tracker_) {
@@ -278,6 +309,11 @@ void TrackerProcessor::getTentativeObjects(
       }
     }
   }
+}
+
+void TrackerProcessor::setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr)
+{
+  time_keeper_ = std::move(time_keeper_ptr);
 }
 
 }  // namespace autoware::multi_object_tracker
