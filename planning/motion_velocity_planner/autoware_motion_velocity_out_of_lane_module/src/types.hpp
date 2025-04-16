@@ -66,8 +66,9 @@ struct PlannerParam
                                // try to insert a stop point
   double precision;            // [m] precision when inserting a stop pose in the trajectory
   double
-    min_decision_duration;  // [s] duration needed before a stop or slowdown point can be removed
-  bool use_map_stop_lines;  // if true, try to stop at stop lines defined in the map
+    min_decision_duration;    // [s] duration needed before a stop or slowdown point can be removed
+  double update_distance_th;  // [m] distance threshold for updating previous stop pose position
+  bool use_map_stop_lines;    // if true, try to stop at stop lines defined in the map
 
   // ego dimensions used to create its polygon footprint
   double front_offset;        // [m]  front offset (from vehicle info)
@@ -131,6 +132,20 @@ struct OutOfLanePoint
   std::optional<double> ttc;
   lanelet::ConstLanelets overlapped_lanelets;
   bool to_avoid = false;
+};
+
+struct SlowdownPose
+{
+  double arc_length{0.0};
+  rclcpp::Time start_time{0};
+  geometry_msgs::msg::Pose pose;
+
+  SlowdownPose() = default;
+  SlowdownPose(
+    const double arc_length, const rclcpp::Time start_time, const geometry_msgs::msg::Pose & pose)
+  : arc_length(arc_length), start_time(start_time), pose(pose)
+  {
+  }
 };
 
 /// @brief data related to the out of lane points

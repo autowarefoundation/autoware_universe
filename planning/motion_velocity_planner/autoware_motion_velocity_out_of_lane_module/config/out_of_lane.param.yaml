@@ -23,6 +23,7 @@
         longitudinal_distance_buffer: 1.5  # [m] safety distance buffer to keep in front of the ego vehicle
         lateral_distance_buffer: 1.0  # [m] safety distance buffer to keep on the side of the ego vehicle
         min_duration: 1.0  # [s] minimum duration needed before a decision can be canceled
+        update_distance_th: 5.0 # [m] distance threshold for updating previous stop pose position
         slowdown:
           distance_threshold: 30.0 # [m] insert a slowdown when closer than this distance from an overlap
           velocity: 2.0  # [m/s] slowdown velocity

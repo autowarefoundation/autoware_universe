@@ -41,6 +41,7 @@
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 
 #include <algorithm>
+#include <limits>
 #include <map>
 #include <memory>
 #include <string>
@@ -97,6 +98,8 @@ void OutOfLaneModule::init_parameters(rclcpp::Node & node)
   pp.precision = get_or_declare_parameter<double>(node, ns_ + ".action.precision");
   pp.use_map_stop_lines = get_or_declare_parameter<bool>(node, ns_ + ".action.use_map_stop_lines");
   pp.min_decision_duration = get_or_declare_parameter<double>(node, ns_ + ".action.min_duration");
+  pp.update_distance_th =
+    get_or_declare_parameter<double>(node, ns_ + ".action.update_distance_th");
   pp.lon_dist_buffer =
     get_or_declare_parameter<double>(node, ns_ + ".action.longitudinal_distance_buffer");
   pp.lat_dist_buffer =
@@ -219,37 +222,68 @@ out_of_lane::OutOfLaneData prepare_out_of_lane_data(const out_of_lane::EgoData &
 std::optional<geometry_msgs::msg::Pose> OutOfLaneModule::calculate_slowdown_pose(
   const out_of_lane::EgoData & ego_data, const out_of_lane::OutOfLaneData & out_of_lane_data)
 {
-  if (  // reset the previous inserted point if the timer expired
-    previous_slowdown_pose_ &&
-    (clock_->now() - previous_slowdown_time_).seconds() > params_.min_decision_duration) {
-    previous_slowdown_pose_.reset();
-  }
-
   auto slowdown_pose = out_of_lane::calculate_slowdown_pose(ego_data, out_of_lane_data, params_);
 
-  // reuse previous stop pose if there is no new one or if its velocity is not higher than the new
-  // one and its arc length is lower
-  if (slowdown_pose) {  // reset the clock when we could calculate a valid slowdown pose
-    previous_slowdown_time_ = clock_->now();
-  }
-  const auto should_use_previous_pose = [&]() {
-    if (slowdown_pose && previous_slowdown_pose_) {
-      const auto arc_length =
-        motion_utils::calcSignedArcLength(ego_data.trajectory_points, 0LU, slowdown_pose->position);
-      const auto prev_arc_length = motion_utils::calcSignedArcLength(
-        ego_data.trajectory_points, 0LU, previous_slowdown_pose_->position);
-      return prev_arc_length < arc_length;
-    }
-    return slowdown_pose && previous_slowdown_pose_;
-  }();
-  if (should_use_previous_pose) {
-    // if the trajectory changed the prev point is no longer on the trajectory so we project it
-    const auto new_arc_length = motion_utils::calcSignedArcLength(
-      ego_data.trajectory_points, 0UL, previous_slowdown_pose_->position);
-    slowdown_pose = motion_utils::calcInterpolatedPose(ego_data.trajectory_points, new_arc_length);
+  update_slowdown_pose_buffer(ego_data, slowdown_pose);
+
+  if (slowdown_pose_buffer_.empty()) return {};
+
+  // get nearest slowdown pose
+  out_of_lane::SlowdownPose nearest_slowdown_pose;
+  nearest_slowdown_pose.arc_length = std::numeric_limits<double>::max();
+  for (const auto & sp : slowdown_pose_buffer_) {
+    if (sp.arc_length < nearest_slowdown_pose.arc_length) nearest_slowdown_pose = sp;
   }
 
+  slowdown_pose = motion_utils::calcInterpolatedPose(
+    ego_data.trajectory_points, nearest_slowdown_pose.arc_length);
+
   return slowdown_pose;
+}
+
+void OutOfLaneModule::update_slowdown_pose_buffer(
+  const out_of_lane::EgoData & ego_data,
+  const std::optional<geometry_msgs::msg::Pose> & slowdown_pose)
+{
+  std::vector<out_of_lane::SlowdownPose> valid_poses;
+  for (auto & sp : slowdown_pose_buffer_) {
+    if ((clock_->now() - sp.start_time).seconds() > params_.min_decision_duration) continue;
+    sp.arc_length =
+      motion_utils::calcSignedArcLength(ego_data.trajectory_points, 0LU, sp.pose.position);
+    valid_poses.push_back(sp);
+  }
+  slowdown_pose_buffer_ = valid_poses;
+
+  if (!slowdown_pose) return;
+
+  const auto slowdown_pose_arc_length =
+    motion_utils::calcSignedArcLength(ego_data.trajectory_points, 0LU, slowdown_pose->position);
+
+  if (slowdown_pose_buffer_.empty()) {
+    slowdown_pose_buffer_.emplace_back(slowdown_pose_arc_length, clock_->now(), *slowdown_pose);
+    return;
+  }
+
+  auto nearest_prev_pose_it = slowdown_pose_buffer_.end();
+  auto min_relative_dist = std::numeric_limits<double>::max();
+  for (auto it = slowdown_pose_buffer_.begin(); it < slowdown_pose_buffer_.end(); ++it) {
+    const auto rel_dist = it->arc_length - slowdown_pose_arc_length;
+    if (std::abs(rel_dist) < params_.update_distance_th && rel_dist < min_relative_dist) {
+      nearest_prev_pose_it = it;
+      min_relative_dist = rel_dist;
+    }
+  }
+
+  if (nearest_prev_pose_it == slowdown_pose_buffer_.end()) {
+    slowdown_pose_buffer_.emplace_back(slowdown_pose_arc_length, clock_->now(), *slowdown_pose);
+    return;
+  }
+
+  if (min_relative_dist > 0) {
+    nearest_prev_pose_it->pose = *slowdown_pose;
+    nearest_prev_pose_it->arc_length = slowdown_pose_arc_length;
+  }
+  nearest_prev_pose_it->start_time = clock_->now();
 }
 
 void OutOfLaneModule::update_result(

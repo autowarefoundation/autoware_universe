@@ -57,6 +57,9 @@ private:
   /// @brief calculate the first slowdown pose (if any)
   std::optional<geometry_msgs::msg::Pose> calculate_slowdown_pose(
     const out_of_lane::EgoData & ego_data, const out_of_lane::OutOfLaneData & out_of_lane_data);
+  void update_slowdown_pose_buffer(
+    const out_of_lane::EgoData & ego_data,
+    const std::optional<geometry_msgs::msg::Pose> & slowdown_pose);
   /// @brief update the given planning result and some internal states of the module
   void update_result(
     VelocityPlanningResult & result, const std::optional<geometry_msgs::msg::Pose> & slowdown_pose,
@@ -68,7 +71,7 @@ private:
   std::string module_name_{"uninitialized"};
   rclcpp::Clock::SharedPtr clock_{nullptr};
   std::optional<geometry_msgs::msg::Pose> previous_slowdown_pose_{std::nullopt};
-  rclcpp::Time previous_slowdown_time_{0};
+  std::vector<out_of_lane::SlowdownPose> slowdown_pose_buffer_{};
 
 protected:
   // Debug
