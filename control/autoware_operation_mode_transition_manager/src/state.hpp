@@ -38,14 +38,12 @@ class ModeChangeBase
 {
 public:
   virtual ~ModeChangeBase() = default;
-  virtual void update([[maybe_unused]] bool transition) {}
+  virtual void update(bool) {}
   virtual bool isModeChangeCompleted(
-    [[maybe_unused]] const Odometry & kinematics,
-    [[maybe_unused]] const Trajectory & trajectory) = 0;
+    const Odometry & kinematics, const Trajectory & trajectory) = 0;
   virtual bool isModeChangeAvailable(
-    [[maybe_unused]] const Odometry & kinematics, [[maybe_unused]] const Trajectory & trajectory,
-    [[maybe_unused]] const Control & trajectory_follower_control_cmd,
-    [[maybe_unused]] const Control & control_cmd) = 0;
+    const Odometry & kinematics, const Trajectory & trajectory,
+    const Control & trajectory_follower_control_cmd, const Control & control_cmd) = 0;
 
   using DebugInfo =
     autoware_operation_mode_transition_manager::msg::OperationModeTransitionManagerDebug;
@@ -55,16 +53,9 @@ public:
 class StopMode : public ModeChangeBase
 {
 public:
-  bool isModeChangeCompleted(
-    [[maybe_unused]] const Odometry & kinematics,
-    [[maybe_unused]] const Trajectory & trajectory) override
-  {
-    return true;
-  }
+  bool isModeChangeCompleted(const Odometry &, const Trajectory &) override { return true; }
   bool isModeChangeAvailable(
-    [[maybe_unused]] const Odometry & kinematics, [[maybe_unused]] const Trajectory & trajectory,
-    [[maybe_unused]] const Control & trajectory_follower_control_cmd,
-    [[maybe_unused]] const Control & control_cmd) override
+    const Odometry &, const Trajectory &, const Control &, const Control &) override
   {
     return true;
   }
@@ -106,16 +97,9 @@ private:
 class LocalMode : public ModeChangeBase
 {
 public:
-  bool isModeChangeCompleted(
-    [[maybe_unused]] const Odometry & kinematics,
-    [[maybe_unused]] const Trajectory & trajectory) override
-  {
-    return true;
-  }
+  bool isModeChangeCompleted(const Odometry &, const Trajectory &) override { return true; }
   bool isModeChangeAvailable(
-    [[maybe_unused]] const Odometry & kinematics, [[maybe_unused]] const Trajectory & trajectory,
-    [[maybe_unused]] const Control & trajectory_follower_control_cmd,
-    [[maybe_unused]] const Control & control_cmd) override
+    const Odometry &, const Trajectory &, const Control &, const Control &) override
   {
     return true;
   }
@@ -125,16 +109,9 @@ public:
 class RemoteMode : public ModeChangeBase
 {
 public:
-  bool isModeChangeCompleted(
-    [[maybe_unused]] const Odometry & kinematics,
-    [[maybe_unused]] const Trajectory & trajectory) override
-  {
-    return true;
-  }
+  bool isModeChangeCompleted(const Odometry &, const Trajectory &) override { return true; }
   bool isModeChangeAvailable(
-    [[maybe_unused]] const Odometry & kinematics, [[maybe_unused]] const Trajectory & trajectory,
-    [[maybe_unused]] const Control & trajectory_follower_control_cmd,
-    [[maybe_unused]] const Control & control_cmd) override
+    const Odometry &, const Trajectory &, const Control &, const Control &) override
   {
     return true;
   }

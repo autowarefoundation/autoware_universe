@@ -291,7 +291,10 @@ OperationModeTransitionManager::subscribeData()
   if (gate_operation_mode_ptr) {
     input_data.gate_operation_mode = *gate_operation_mode_ptr;
   } else {
-    is_ready = false;
+    // NOTE: initial state when the data is not subscribed yet.
+    input_data.gate_operation_mode = OperationModeState{};
+    input_data.gate_operation_mode.mode = OperationModeState::UNKNOWN;
+    input_data.gate_operation_mode.is_in_transition = false;
   }
 
   const auto control_mode_report_ptr = sub_control_mode_report_.take_data();
