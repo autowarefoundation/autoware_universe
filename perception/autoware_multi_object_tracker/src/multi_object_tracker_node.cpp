@@ -197,8 +197,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
       };
       auto initializeMatrixDouble = [](const std::vector<double> & vector) {
         const int label_num = static_cast<int>(std::sqrt(vector.size()));
-        Eigen::Map<Eigen::MatrixXd> matrix_tmp(
-          const_cast<double *>(vector.data()), label_num, label_num);
+        Eigen::Map<const Eigen::MatrixXd> matrix_tmp(vector.data(), label_num, label_num);
         // transpose to make it row-major
         return matrix_tmp.transpose();
       };
