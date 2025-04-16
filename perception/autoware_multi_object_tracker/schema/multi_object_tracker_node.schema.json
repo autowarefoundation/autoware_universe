@@ -81,11 +81,6 @@
           "description": "Minimum IOU between associated objects with unknown label to remove unknown tracker",
           "default": 0.001
         },
-        "distance_threshold": {
-          "type": "number",
-          "description": "Distance threshold in meters.",
-          "default": 5.0
-        },
         "confident_count_threshold": {
           "type": "object",
           "properties": {
@@ -188,7 +183,6 @@
         "tracker_lifetime",
         "min_known_object_removal_iou",
         "min_unknown_object_removal_iou",
-        "distance_threshold",
         "confident_count_threshold",
         "publish_processing_time",
         "publish_processing_time_detail",

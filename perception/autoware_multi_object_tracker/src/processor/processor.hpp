@@ -42,8 +42,8 @@ struct TrackerProcessorConfig
   float tracker_lifetime;                              // [s]
   float min_known_object_removal_iou;                  // ratio [0, 1]
   float min_unknown_object_removal_iou;                // ratio [0, 1]
-  double distance_threshold;                           // [m]
   std::map<LabelType, int> confident_count_threshold;  // [count]
+  Eigen::MatrixXd max_dist_matrix;
 };
 
 class TrackerProcessor
