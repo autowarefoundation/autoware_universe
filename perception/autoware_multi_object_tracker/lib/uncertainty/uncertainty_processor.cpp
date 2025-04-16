@@ -20,6 +20,9 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
+
 #include <tf2/utils.h>
 
 #include <algorithm>
