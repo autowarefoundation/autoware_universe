@@ -169,6 +169,14 @@ void SimpleObjectMergerNode::onTimer()
   output_objects.header = objects_data_.at(0)->header;
   output_objects.header.frame_id = node_param_.new_frame_id;
 
+  constexpr double throttle_interval = 3.0;  // seconds
+  const rclcpp::Time now = this->now();
+
+  static std::vector<rclcpp::Time> last_log_times;
+  if (last_log_times.size() != input_topic_size) {
+    last_log_times.assign(input_topic_size, now);
+  }
+
   for (size_t i = 0; i < input_topic_size; i++) {
     double time_diff = rclcpp::Time(objects_data_.at(i)->header.stamp).seconds() -
                        rclcpp::Time(objects_data_.at(0)->header.stamp).seconds();
@@ -183,7 +191,7 @@ void SimpleObjectMergerNode::onTimer()
       output_objects.objects.insert(
         output_objects.objects.end(), std::begin(transformed_objects->objects),
         std::end(transformed_objects->objects));
-    } else {
+    } else if (shouldLogThrottle(i, now, last_log_times, throttle_interval)) {
       RCLCPP_INFO(
         rclcpp::get_logger("simple_object_merger"), "Topic of %s is timeout by %f sec",
         node_param_.topic_names.at(i).c_str(), time_diff);
@@ -191,6 +199,17 @@ void SimpleObjectMergerNode::onTimer()
   }
 
   pub_objects_->publish(output_objects);
+}
+
+bool SimpleObjectMergerNode::shouldLogThrottle(
+  size_t index, const rclcpp::Time & now, std::vector<rclcpp::Time> & last_log_times,
+  double throttle_interval_sec)
+{
+  if ((now - last_log_times[index]) > rclcpp::Duration::from_seconds(throttle_interval_sec)) {
+    last_log_times[index] = now;
+    return true;
+  }
+  return false;
 }
 
 }  // namespace autoware::simple_object_merger

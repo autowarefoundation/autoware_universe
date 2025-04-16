@@ -141,7 +141,7 @@ void ObjectLaneletFilterNode::objectCallback(
   output_object_msg.header = input_msg->header;
 
   if (!lanelet_map_ptr_) {
-    RCLCPP_ERROR(get_logger(), "No vector map received.");
+    RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 3000, "No vector map received.");
     return;
   }
   autoware_perception_msgs::msg::DetectedObjects transformed_objects;
