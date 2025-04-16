@@ -99,10 +99,17 @@ The neighborhood is defined by the following parameter in the `object_filtering.
 
 #### Stop Position
 
-First of all, `stop_distance_from_object [m]` is always kept at least between the ego and the target object for safety.
+This function places a stop line to prevent re-transmission based on the following logic:
 
-When the stop line exists in the lanelet map, the stop position is calculated based on the line.
-When the stop line does **NOT** exist in the lanelet map, the stop position is calculated by keeping `stop_distance_from_crosswalk [m]` between the ego and the crosswalk.
+1. A stop line will be positioned at the closest point among. Note that the envelope of the distances determined here is taken:
+   The location of an existing stop line (if none exists, then at a distance of `stop_distance_from_crosswalk [m]` from the pedestrian crossing).
+   `stop_distance_from_object_preferred [m]` before the predicted collision point with a person.
+
+2. If reaching the stop line determined above requires an acceleration of `min_acc_preferred [m/ss]` or more (in absolute value for deceleration), the stop line will be set at the location where the vehicle can stop with a deceleration of `min_acc_preferred [m/ss]`.
+
+3. If the stop line position determined above is further than a distance of `stop_distance_from_crosswalk_limit [m]` from the pedestrian crossing, the stop line will be set at `stop_distance_from_crosswalk_limit [m]` from the pedestrian crossing.
+
+4. If `enable_no_stop_decision` is enabled, and the deceleration required to stop at the position determined above is greater than `no_stop_decision.min_acc`, the system will cancel the stop.
 
 <div align="center">
     <table>
@@ -113,20 +120,17 @@ When the stop line does **NOT** exist in the lanelet map, the stop position is c
     </table>
 </div>
 
-As an exceptional case, if a pedestrian (or bicycle) is crossing **wide** crosswalks seen in scramble intersections, and the pedestrian position is more than `far_object_threshold` meters away from the stop line, the actual stop position is determined by `stop_distance_from_object` and pedestrian position, not at the stop line.
+To decide the stop position, , the following parameters are defined.
 
-<figure markdown>
-  ![far_object_threshold](docs/far_object_threshold.drawio.svg){width=700}
-</figure>
-
-In the `stop_position` namespace, the following parameters are defined.
-
-| Parameter                      |     | Type   | Description                                                                                                                                                                                                               |
-| ------------------------------ | --- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `stop_position_threshold`      | [m] | double | If the ego vehicle has stopped near the stop line than this value, this module assumes itself to have achieved yielding.                                                                                                  |
-| `stop_distance_from_crosswalk` | [m] | double | make stop line away from crosswalk for the Lanelet2 map with no explicit stop lines                                                                                                                                       |
-| `far_object_threshold`         | [m] | double | If objects cross X meters behind the stop line, the stop position is determined according to the object position (stop_distance_from_object meters before the object) for the case where the crosswalk width is very wide |
-| `stop_distance_from_object`    | [m] | double | the vehicle decelerates to be able to stop in front of object with margin                                                                                                                                                 |
+| Parameter                                           |        | Type   | Description                                                                                                              |
+| :-------------------------------------------------- | :----- | :----- | :----------------------------------------------------------------------------------------------------------------------- |
+| `stop_position.stop_position_threshold`             | [m]    | double | If the ego vehicle has stopped near the stop line than this value, this module assumes itself to have achieved yielding. |
+| `stop_position.stop_distance_from_crosswalk`        | [m]    | double | Stop line distance from a pedestrian crossing when no explicit stop line exists in the map.                              |
+| `stop_position.stop_distance_from_object_preferred` | [m]    | double | Preferred distance before a predicted collision for stop line placement.                                                 |
+| `stop_position.stop_distance_from_crosswalk_limit`  | [m]    | double | Minimum stop line distance from a pedestrian crossing.                                                                   |
+| `stop_position.min_acc_preferred`                   | [m/ss] | double | Minimum deceleration to reach the initial stop line; if exceeded, the stop line is moved accordingly.                    |
+| `no_stop_decision.enable_no_stop_decision`          |        | bool   | Enables/disables the cancellation of stopping.                                                                           |
+| `no_stop_decision.min_acc`                          | [m/ss] | double | Minimum deceleration to cancel a stop (if enabled).                                                                      |
 
 #### Yield decision
 
