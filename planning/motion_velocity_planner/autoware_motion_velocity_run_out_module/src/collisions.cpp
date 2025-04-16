@@ -330,8 +330,9 @@ Collision calculate_collision(
   const Parameters & params)
 {
   Collision c(ego, object);
+  const auto is_overlapping_at_same_time = ego.overlaps(object, params.collision_time_margin);
   const auto is_passing_collision =
-    params.enable_passing_collisions && ego.from < object.from && ego.overlaps(object) &&
+    params.enable_passing_collisions && is_overlapping_at_same_time &&
     (ego.from + params.passing_collisions_time_margin) < object.from &&
     ego.to - ego.from <= params.passing_max_overlap_duration;
   const auto is_unavoidable_passing_collision = params.enable_passing_when_unavoidable &&
@@ -351,7 +352,7 @@ Collision calculate_collision(
     ss << std::setprecision(2) << "pass first collision since ego arrives first (" << ego.from
        << " < " << object.from << "), and does not have time to stop (" << min_stop_time << ")";
     c.explanation += ss.str();
-  } else if (ego.overlaps(object, params.collision_time_margin)) {
+  } else if (is_overlapping_at_same_time) {
     calculate_overlapping_collision(c, ego, object, params);
   } else if (ego.to < object.from) {
     c.type = pass_first_no_collision;
