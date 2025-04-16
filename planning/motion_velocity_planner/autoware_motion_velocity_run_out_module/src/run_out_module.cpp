@@ -25,6 +25,7 @@
 
 #include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
 #include <autoware/universe_utils/geometry/geometry.hpp>
 #include <rclcpp/duration.hpp>
 
@@ -120,6 +121,38 @@ void RunOutModule::update_unavoidable_collision_status(
   }
 }
 
+void RunOutModule::publish_debug_trajectory(
+  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
+  const VelocityPlanningResult & planning_result)
+{
+  autoware_planning_msgs::msg::Trajectory debug_trajectory;
+  debug_trajectory.header.frame_id = "map";
+  debug_trajectory.header.stamp = clock_->now();
+  debug_trajectory.points = trajectory;
+  for (const auto & stop_point : planning_result.stop_points) {
+    const auto length = motion_utils::calcSignedArcLength(debug_trajectory.points, 0, stop_point);
+    motion_utils::insertStopPoint(length, debug_trajectory.points);
+  }
+  for (const auto & slowdown_point : planning_result.slowdown_intervals) {
+    const auto from_seg_idx =
+      autoware::motion_utils::findNearestSegmentIndex(debug_trajectory.points, slowdown_point.from);
+    const auto from_insert_idx = autoware::motion_utils::insertTargetPoint(
+      from_seg_idx, slowdown_point.from, debug_trajectory.points);
+    const auto to_seg_idx =
+      autoware::motion_utils::findNearestSegmentIndex(debug_trajectory.points, slowdown_point.to);
+    const auto to_insert_idx = autoware::motion_utils::insertTargetPoint(
+      to_seg_idx, slowdown_point.to, debug_trajectory.points);
+    if (from_insert_idx && to_insert_idx) {
+      for (auto idx = *from_insert_idx; idx <= *to_insert_idx; ++idx) {
+        debug_trajectory.points[idx].longitudinal_velocity_mps = std::min(
+          debug_trajectory.points[idx].longitudinal_velocity_mps,
+          static_cast<float>(slowdown_point.velocity));
+      }
+    }
+  }
+  debug_trajectory_publisher_->publish(debug_trajectory);
+}
+
 VelocityPlanningResult RunOutModule::plan(
   [[maybe_unused]] const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> &,
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
@@ -162,37 +195,11 @@ VelocityPlanningResult RunOutModule::plan(
   debug_publisher_->publish(run_out::make_debug_markers(
     ego_footprint, filtered_objects, decisions_tracker_, smoothed_trajectory_points, min_stop_time,
     filtering_data[autoware_perception_msgs::msg::ObjectClassification::BICYCLE]));
-
+  publish_debug_trajectory(smoothed_trajectory_points, result);
   time_keeper_->end_track("publish_debug()");
+
   time_keeper_->end_track("plan()");
   diagnostic_updater_->force_update();
-  autoware_planning_msgs::msg::Trajectory debug_trajectory;
-  debug_trajectory.header.frame_id = "map";
-  debug_trajectory.header.stamp = clock_->now();
-  debug_trajectory.points = smoothed_trajectory_points;
-  for (const auto & stop_point : result.stop_points) {
-    const auto length = motion_utils::calcSignedArcLength(debug_trajectory.points, 0, stop_point);
-    motion_utils::insertStopPoint(length, debug_trajectory.points);
-  }
-  for (const auto & slowdown_point : result.slowdown_intervals) {
-    const auto from_seg_idx =
-      autoware::motion_utils::findNearestSegmentIndex(debug_trajectory.points, slowdown_point.from);
-    const auto from_insert_idx = autoware::motion_utils::insertTargetPoint(
-      from_seg_idx, slowdown_point.from, debug_trajectory.points);
-    const auto to_seg_idx =
-      autoware::motion_utils::findNearestSegmentIndex(debug_trajectory.points, slowdown_point.to);
-    const auto to_insert_idx = autoware::motion_utils::insertTargetPoint(
-      to_seg_idx, slowdown_point.to, debug_trajectory.points);
-    if (from_insert_idx && to_insert_idx) {
-      for (auto idx = *from_insert_idx; idx <= *to_insert_idx; ++idx) {
-        debug_trajectory.points[idx].longitudinal_velocity_mps =
-          std::min(  // prevent the node from increasing the velocity
-            debug_trajectory.points[idx].longitudinal_velocity_mps,
-            static_cast<float>(slowdown_point.velocity));
-      }
-    }
-  }
-  debug_trajectory_publisher_->publish(debug_trajectory);
   return result;
 }
 

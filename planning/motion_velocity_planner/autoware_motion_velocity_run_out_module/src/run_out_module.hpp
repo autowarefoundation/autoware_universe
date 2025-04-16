@@ -71,8 +71,11 @@ private:
 
   /// @brief update whether we are currently detecting collisions that cannot be avoided
   void update_unavoidable_collision_status(diagnostic_updater::DiagnosticStatusWrapper & stat);
-  /// @brief ignore unavoidable collisions from the decision tracker
-  void ignore_unavoidable_collision(const double time_to_stop);
+  /// @brief publish a debug trajectory with the calculated slowdowns added to trajectory input used
+  /// by the module
+  void publish_debug_trajectory(
+    const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
+    const VelocityPlanningResult & planning_result);
 };
 }  // namespace autoware::motion_velocity_planner
 

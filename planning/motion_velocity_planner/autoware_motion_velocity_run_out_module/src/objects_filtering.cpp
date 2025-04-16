@@ -147,7 +147,7 @@ void calculate_predicted_path_footprints(
     width = predicted_object.shape.dimensions.y;
   } else if (predicted_object.shape.type == autoware_perception_msgs::msg::Shape::POLYGON) {
     for (const auto p : predicted_object.shape.footprint.points) {
-      const auto zero_point = geometry_msgs::msg::Point();
+      const auto zero_point = geometry_msgs::msg::Point().set__x(0.0).set__y(0.0);
       width = std::max(width, autoware_utils_geometry::calc_distance2d(p, zero_point));
     }
     half_length = width / 2.0;

@@ -22,6 +22,7 @@
 #include <autoware/universe_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware/universe_utils/math/normalization.hpp>
+#include <rclcpp/logger.hpp>
 #include <tf2/utils.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
@@ -331,7 +332,7 @@ Collision calculate_collision(
   Collision c(ego, object);
   const auto is_passing_collision =
     params.enable_passing_collisions && ego.from < object.from && ego.overlaps(object) &&
-    ego.from + params.passing_collisions_time_margin < object.from &&
+    (ego.from + params.passing_collisions_time_margin) < object.from &&
     ego.to - ego.from <= params.passing_max_overlap_duration;
   const auto is_unavoidable_passing_collision = params.enable_passing_when_unavoidable &&
                                                 ego.from < object.from && ego.overlaps(object) &&
