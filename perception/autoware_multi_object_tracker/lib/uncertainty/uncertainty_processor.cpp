@@ -19,6 +19,8 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <autoware_utils/math/unit_conversion.hpp>
+#include <autoware_utils/ros/msg_covariance.hpp>
 
 #include <tf2/utils.h>
 
