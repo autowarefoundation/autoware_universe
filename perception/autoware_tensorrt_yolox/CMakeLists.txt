@@ -113,6 +113,11 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     ${autoware_tensorrt_common_LIBRARIES}
     ${PROJECT_NAME}_gpu_preprocess
   )
+
+  install(
+    TARGETS ${PROJECT_NAME}_gpu_preprocess
+    LIBRARY DESTINATION lib
+  )
 else()
   target_link_libraries(${PROJECT_NAME}
     ${autoware_tensorrt_common_LIBRARIES}
