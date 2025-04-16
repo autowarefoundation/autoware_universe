@@ -576,7 +576,7 @@ bool NDTScanMatcher::callback_sensor_points_main(
             << ", Threshold: " << score_threshold;
     diagnostics_scan_points_->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::WARN, message.str());
-    RCLCPP_WARN_STREAM(this->get_logger(), message.str());
+    RCLCPP_WARN_STREAM_THROTTLE(this->get_logger(), *this->get_clock(), 1000, message.str());
   }
 
   // check is_converged

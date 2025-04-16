@@ -19,6 +19,7 @@
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 
+#include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
@@ -78,6 +79,8 @@ public:
 
   void getExistenceProbabilities(std::vector<std::vector<float>> & existence_vectors) const;
 
+  void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr);
+
 private:
   const TrackerProcessorConfig config_;
   const std::vector<types::InputChannel> & channels_config_;
@@ -89,6 +92,8 @@ private:
   void removeOverlappedTracker(const rclcpp::Time & time);
   std::shared_ptr<Tracker> createNewTracker(
     const types::DynamicObject & object, const rclcpp::Time & time) const;
+
+  std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 };
 
 }  // namespace autoware::multi_object_tracker

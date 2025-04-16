@@ -23,7 +23,7 @@
         precision: 0.1  # [m] precision when inserting a stop pose in the trajectory
         longitudinal_distance_buffer: 1.5  # [m] safety distance buffer to keep in front of the ego vehicle
         lateral_distance_buffer: 1.0  # [m] safety distance buffer to keep on the side of the ego vehicle
-        min_on_duration: 1.0  # [s] minimum duration needed before a decision can be triggered
+        min_on_duration: 0.3  # [s] minimum duration needed before a decision can be triggered
         min_off_duration: 1.0  # [s] minimum duration needed before a decision can be canceled
         update_distance_th: 5.0 # [m] distance threshold for updating previous stop pose position
         slowdown:
