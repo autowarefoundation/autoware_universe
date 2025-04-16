@@ -86,6 +86,7 @@ void OutOfLaneModule::init_parameters(rclcpp::Node & node)
 
   pp.time_threshold = get_or_declare_parameter<double>(node, ns_ + ".threshold.time_threshold");
   pp.ttc_threshold = get_or_declare_parameter<double>(node, ns_ + ".ttc.threshold");
+  pp.ttc_release_threshold = get_or_declare_parameter<double>(node, ns_ + ".ttc.release_threshold");
 
   pp.objects_min_vel = get_or_declare_parameter<double>(node, ns_ + ".objects.minimum_velocity");
   pp.objects_min_confidence =
@@ -129,6 +130,7 @@ void OutOfLaneModule::update_parameters(const std::vector<rclcpp::Parameter> & p
 
   update_param(parameters, ns_ + ".threshold.time_threshold", pp.time_threshold);
   update_param(parameters, ns_ + ".ttc.threshold", pp.ttc_threshold);
+  update_param(parameters, ns_ + ".ttc.release_threshold", pp.ttc_release_threshold);
 
   update_param(parameters, ns_ + ".objects.minimum_velocity", pp.objects_min_vel);
   update_param(
@@ -361,7 +363,9 @@ VelocityPlanningResult OutOfLaneModule::plan(
   const auto calculate_time_collisions_us = stopwatch.toc("calculate_time_collisions");
 
   stopwatch.tic("calculate_times");
-  out_of_lane::calculate_collisions_to_avoid(out_of_lane_data, ego_data.trajectory_points, params_);
+  const auto is_stopping = previous_slowdown_pose_ ? true : false;
+  out_of_lane::calculate_collisions_to_avoid(
+    out_of_lane_data, ego_data.trajectory_points, params_, is_stopping);
   const auto calculate_times_us = stopwatch.toc("calculate_times");
 
   const auto is_already_overlapping =
