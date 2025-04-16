@@ -20,6 +20,10 @@
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
 
+#include <message_filters/subscriber.h>
+#include <message_filters/sync_policies/approximate_time.h>
+#include <message_filters/synchronizer.h>
+
 #include <chrono>
 #include <memory>
 #include <string>
@@ -49,7 +53,19 @@ private:
   std::vector<rclcpp::Subscription<DetectedObjects>::SharedPtr> sub_objects_array{};
   std::shared_ptr<autoware_utils::TransformListener> transform_listener_;
 
-  // Callback
+  // Subscriber by message_filter
+  message_filters::Subscriber<DetectedObjects> input0_{};
+  message_filters::Subscriber<DetectedObjects> input1_{};
+  using SyncPolicy =
+    message_filters::sync_policies::ApproximateTime<DetectedObjects, DetectedObjects>;
+  using Sync = message_filters::Synchronizer<SyncPolicy>;
+  typename std::shared_ptr<Sync> sync_ptr_;
+
+  // Process callbacks
+  void approximateMerger(
+    const DetectedObjects::ConstSharedPtr & object_msg0,
+    const DetectedObjects::ConstSharedPtr & object_msg1);
+
   void onData(const DetectedObjects::ConstSharedPtr msg, size_t array_number);
 
   // Data Buffer
