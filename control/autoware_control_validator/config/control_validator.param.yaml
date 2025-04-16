@@ -15,6 +15,9 @@
       over_velocity_offset: 2.0
       over_velocity_ratio: 0.2
       overrun_stop_point_dist: 0.8
+      will_overrun_stop_point_dist: 1.0
+      assumed_limit_acc: 5.0
+      assumed_delay_time: 0.2
       nominal_latency: 0.01
 
     acc_lpf_gain: 0.97 # Time constant 1.11s
