@@ -142,11 +142,11 @@ std::optional<FootprintIntersection> calculate_end_point_intersection(
   universe_utils::Segment2d object_segment;
   if (check_front) {
     object_segment.first = ls.front();
-    object_segment.first = ls[1];
+    object_segment.second = ls[1];
     fi.object_time = 0.0;
   } else {
     object_segment.first = ls[ls.size() - 2];
-    object_segment.first = ls.back();
+    object_segment.second = ls.back();
     fi.object_time = static_cast<double>(ls.size() - 1) * ls_time_step;
   }
   const auto obj_segment_vector = object_segment.second - object_segment.first;
@@ -398,18 +398,19 @@ std::vector<TimeOverlapIntervalPair> calculate_ego_and_object_time_overlap_inter
   for (const auto & corner_ls : object_footprint.corner_footprint.corner_linestrings) {
     const std::vector<FootprintIntersection> footprint_intersections =
       calculate_intersections(corner_ls, ego_footprint, object_footprint.time_step);
-    std::vector<FootprintIntersection> filtered_intersections;
-    for (const auto & intersection : footprint_intersections) {
-      const auto is_before_min_arc_length = intersection.arc_length <= min_arc_length;
+    const auto intervals = calculate_overlap_intervals(footprint_intersections);
+    for (const auto & interval : intervals) {
+      const auto is_before_min_arc_length =
+        interval.ego.first_intersection.arc_length <= min_arc_length;
+      const universe_utils::MultiPoint2d interval_intersections = {
+        interval.ego.first_intersection.intersection, interval.ego.last_intersection.intersection};
       if (
         !is_before_min_arc_length &&
         filtering_data.ignore_collisions_rtree.is_geometry_disjoint_from_rtree_polygons(
-          intersection.intersection, filtering_data.ignore_collisions_polygons)) {
-        filtered_intersections.push_back(intersection);
+          interval_intersections, filtering_data.ignore_collisions_polygons)) {
+        all_overlap_intervals.push_back(interval);
       }
     }
-    const auto intervals = calculate_overlap_intervals(filtered_intersections);
-    all_overlap_intervals.insert(all_overlap_intervals.end(), intervals.begin(), intervals.end());
   }
   return all_overlap_intervals;
 }

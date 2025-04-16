@@ -93,6 +93,8 @@ TrajectoryCornerFootprint calculate_trajectory_corner_footprint(
       footprint.corner_linestrings[rear_right][i + 1],
       footprint.corner_linestrings[rear_right][i],
     };
+    boost::geometry::correct(front_polygon);
+    boost::geometry::correct(rear_polygon);
     trajectory_footprint.front_polygons.push_back(front_polygon);
     trajectory_footprint.rear_polygons.push_back(rear_polygon);
   }
