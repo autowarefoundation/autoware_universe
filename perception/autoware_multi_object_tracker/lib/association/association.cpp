@@ -19,6 +19,8 @@
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 
 #include <algorithm>
 #include <list>
