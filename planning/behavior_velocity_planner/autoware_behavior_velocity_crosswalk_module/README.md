@@ -101,14 +101,11 @@ The neighborhood is defined by the following parameter in the `object_filtering.
 
 This function places a stop line to prevent re-transmission based on the following logic:
 
-1. A stop line will be positioned at the closest point among. Note that the envelope of the distances determined here is taken:
-   The location of an existing stop line (if none exists, then at a distance of `stop_distance_from_crosswalk [m]` from the pedestrian crossing).
-   `stop_distance_from_object_preferred [m]` before the predicted collision point with a person.
-
+1. stop line will be positioned at the closest point among. Note that the envelope of the distances determined here is taken:
+   a. The location of an existing stop line (if none exists, then at a distance of `stop_distance_from_crosswalk [m]` from the pedestrian crossing).
+   b. `stop_distance_from_object_preferred [m]` before the predicted collision point with a person.
 2. If reaching the stop line determined above requires an acceleration of `min_acc_preferred [m/ss]` or more (in absolute value for deceleration), the stop line will be set at the location where the vehicle can stop with a deceleration of `min_acc_preferred [m/ss]`.
-
 3. If the stop line position determined above is further than a distance of `stop_distance_from_crosswalk_limit [m]` from the pedestrian crossing, the stop line will be set at `stop_distance_from_crosswalk_limit [m]` from the pedestrian crossing.
-
 4. If `enable_no_stop_decision` is enabled, and the deceleration required to stop at the position determined above is greater than `no_stop_decision.min_acc`, the system will cancel the stop.
 
 <div align="center">
@@ -120,7 +117,7 @@ This function places a stop line to prevent re-transmission based on the followi
     </table>
 </div>
 
-To decide the stop position, , the following parameters are defined.
+To decide the stop position, the following parameters are defined.
 
 | Parameter                                           |        | Type   | Description                                                                                                              |
 | :-------------------------------------------------- | :----- | :----- | :----------------------------------------------------------------------------------------------------------------------- |
