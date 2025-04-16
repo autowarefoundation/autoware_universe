@@ -66,8 +66,8 @@ struct PlannerParam
   double stop_dist_threshold;  // [m] if a collision is detected bellow this distance ahead of ego,
                                // try to insert a stop point
   double precision;            // [m] precision when inserting a stop pose in the trajectory
-  double
-    min_decision_duration;    // [s] duration needed before a stop or slowdown point can be removed
+  double min_on_duration;   // [s] duration needed before a stop or slowdown point can be triggered
+  double min_off_duration;  // [s] duration needed before a stop or slowdown point can be removed
   double update_distance_th;  // [m] distance threshold for updating previous stop pose position
   bool use_map_stop_lines;    // if true, try to stop at stop lines defined in the map
 
@@ -140,11 +140,13 @@ struct SlowdownPose
   double arc_length{0.0};
   rclcpp::Time start_time{0};
   geometry_msgs::msg::Pose pose;
+  bool is_active = false;
 
   SlowdownPose() = default;
   SlowdownPose(
-    const double arc_length, const rclcpp::Time start_time, const geometry_msgs::msg::Pose & pose)
-  : arc_length(arc_length), start_time(start_time), pose(pose)
+    const double arc_length, const rclcpp::Time start_time, const geometry_msgs::msg::Pose & pose,
+    const bool is_active)
+  : arc_length(arc_length), start_time(start_time), pose(pose), is_active(is_active)
   {
   }
 };
