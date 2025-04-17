@@ -15,8 +15,8 @@
 #include "autoware/multi_object_tracker/object_model/shapes.hpp"
 
 #include <Eigen/Geometry>
-#include <autoware_utils/geometry/boost_geometry.hpp>
-#include <autoware_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils_geometry/boost_geometry.hpp>
+#include <autoware_utils_geometry/boost_polygon_utils.hpp>
 
 #include <autoware_perception_msgs/msg/shape.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -34,27 +34,27 @@ namespace autoware::multi_object_tracker
 {
 namespace shapes
 {
-inline double getSumArea(const std::vector<autoware_utils::Polygon2d> & polygons)
+inline double getSumArea(const std::vector<autoware_utils_geometry::Polygon2d> & polygons)
 {
   return std::accumulate(
     polygons.begin(), polygons.end(), 0.0,
-    [](double acc, autoware_utils::Polygon2d p) { return acc + boost::geometry::area(p); });
+    [](double acc, autoware_utils_geometry::Polygon2d p) { return acc + boost::geometry::area(p); });
 }
 
 inline double getIntersectionArea(
-  const autoware_utils::Polygon2d & source_polygon,
-  const autoware_utils::Polygon2d & target_polygon)
+  const autoware_utils_geometry::Polygon2d & source_polygon,
+  const autoware_utils_geometry::Polygon2d & target_polygon)
 {
-  std::vector<autoware_utils::Polygon2d> intersection_polygons;
+  std::vector<autoware_utils_geometry::Polygon2d> intersection_polygons;
   boost::geometry::intersection(source_polygon, target_polygon, intersection_polygons);
   return getSumArea(intersection_polygons);
 }
 
 inline double getUnionArea(
-  const autoware_utils::Polygon2d & source_polygon,
-  const autoware_utils::Polygon2d & target_polygon)
+  const autoware_utils_geometry::Polygon2d & source_polygon,
+  const autoware_utils_geometry::Polygon2d & target_polygon)
 {
-  std::vector<autoware_utils::Polygon2d> union_polygons;
+  std::vector<autoware_utils_geometry::Polygon2d> union_polygons;
   boost::geometry::union_(source_polygon, target_polygon, union_polygons);
   return getSumArea(union_polygons);
 }
@@ -65,9 +65,9 @@ double get2dIoU(
 {
   static const double MIN_AREA = 1e-6;
 
-  const auto source_polygon = autoware_utils::to_polygon2d(source_object.pose, source_object.shape);
+  const auto source_polygon = autoware_utils_geometry::to_polygon2d(source_object.pose, source_object.shape);
   if (boost::geometry::area(source_polygon) < MIN_AREA) return 0.0;
-  const auto target_polygon = autoware_utils::to_polygon2d(target_object.pose, target_object.shape);
+  const auto target_polygon = autoware_utils_geometry::to_polygon2d(target_object.pose, target_object.shape);
   if (boost::geometry::area(target_polygon) < MIN_AREA) return 0.0;
 
   const double intersection_area = getIntersectionArea(source_polygon, target_polygon);
