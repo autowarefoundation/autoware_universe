@@ -35,6 +35,7 @@
 #include <lanelet2_core/primitives/Polygon.h>
 
 #include <stdexcept>
+#include <vector>
 
 namespace
 {
