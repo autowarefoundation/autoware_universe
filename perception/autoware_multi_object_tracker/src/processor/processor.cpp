@@ -311,7 +311,8 @@ void TrackerProcessor::getTentativeObjects(
   }
 }
 
-void TrackerProcessor::setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr)
+void TrackerProcessor::setTimeKeeper(
+  std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr)
 {
   time_keeper_ = std::move(time_keeper_ptr);
 }
