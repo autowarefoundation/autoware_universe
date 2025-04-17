@@ -22,35 +22,32 @@ In this first step, the trajectory footprint is constructed from the corner poin
 
 At this step, the footprint size can be adjusted using the `ego.lateral_margin` and `ego.longitudinal_margin` parameters.
 
-The following figures show the 4 corner linestrings corresponding calculate for the red trajectory.
+The following figures show the 4 corner linestrings calculated for the red trajectory.
 
 | front left                                                | front right                                                 | rear left                                               | rear right                                                |
 | --------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------- |
 | ![ego_front_left_footprint](./docs/front_left_ego_ls.png) | ![ego_front_right_footprint](./docs/front_right_ego_ls.png) | ![ego_rear_left_footprint](./docs/rear_left_ego_ls.png) | ![ego_rear_right_footprint](./docs/rear_right_ego_ls.png) |
 
-These can be visualized with the debug markers with the `ego_footprint_(front|rear)_(left|right)` namespaces.
+These can be visualized on the debug markers with the `ego_footprint_(front|rear)_(left|right)` namespaces.
 
 ### 2. Extracting map filtering data
 
 In the second step, we extract geometric information from the vector map that will be used to filter dynamic objects.
 For each object classification label,
-we prepare geometries based on the parameters defined for that label (`objects.{CLASSIFICATION_LABEL}`).
+we prepare the following sets of geometries based on the parameters defined for that label (`objects.{CLASSIFICATION_LABEL}`):
 
-Two sets of geometries (polygons and segments) will be prepared and stored in Rtree objects for efficient spatial queries in the next step.
+- polygons to ignore objects (`ignore.polygon_types` and `ignore.lanelet_subtypes`);
+  - polygons for the ego trajectory footprint are also added if `ignore.if_on_ego_trajectory` is set to `true`.
+- polygons to ignore collisions (`ignore_collisions.polygon_types` and `ignore_collisions.lanelet_subtypes`);
+- segments to cut predicted paths (`cut_predicted_paths.polygon_types`, `cut_predicted_paths.linestring_types`, and `cut_predicted_paths.lanelet_subtypes`).
+  - the rear segment of the current ego footprint is also added if `cut_predicted_paths.if_crossing_ego_from_behind` is set to `true`.
 
-#### Polygons to ignore objects
+The following figure shows an example where the polygons to ignore objects are shown in blue, to ignore collisions in green, and to cut predicted paths in red.
 
-2D polygons are extracted from crosswalk polygons if parameter `ignore.if_on_crosswalk` is `true`.
-Additionally, two polygons built from the ego trajectory footprint's front and rear linestrings are used if `ignore.if_on_trajectory` is `true`.
+![map_filtering_data](./docs/map_filtering_data.png)
 
-#### Segments to cut predicted paths
-
-2D segments are extracted from linestrings and polygons based on the types provided in the `cut_predicted_paths.polygon_types` and `cut_predicted_paths.linestring_types` parameters.
-Additionally, if `cut_predicted_paths.if_crossing_ego_from_behind` is `true` then the rear segment of the ego vehicle footprint will also be used.
-
-TODO: figure
-
-TODO: add debug marker explanation
+These geometries can be visualized on the debug markers with the `filtering_data_(ignore_objects|ignore_collisions|cut_predicted_paths)` namespaces.
+The classification label of the published debug markers can be selected with parameter `debug.object_label`.
 
 ### 3. Dynamic objects filtering
 
@@ -69,6 +66,16 @@ If an object is not ignored, its predicted path footprints are generated similar
 First, we only keep predicted paths that have a confidence value above the `confidence_filtering.threshold` parameter.
 If, `confidence_filtering.only_use_highest` is set to `true` then for each object only the predicted paths that have the higher confidence value are kept.
 Next, the remaining predicted paths are cut according to the segments prepared in the previous step.
+
+The following figures shows an example where crosswalks are used to ignore pedestrians and to cut their predicted paths.
+
+| debug markers (`objects_footprints`)                        | objects of interest                                     |
+| ----------------------------------------------------------- | ------------------------------------------------------- |
+| ![objects_footprints](./docs/dynamic_objects_filtering.png) | ![objects_of_interest](./docs/objects_of_intersect.png) |
+
+The result of the filtering can be visualized on the debug markers with the `objects_footprints` namespace which shows in yellow which predicted path will be used for collision checking in the next step.
+
+In addition, the objects of interests markers shows which objects are not ignored and the color will correspond to the decision made towards that object (green for nothing, yellow for slowdown, and red for stop).
 
 ### 4. Collision detection
 
@@ -189,3 +196,18 @@ Higher values of this parameter will make it more likely to detect a collision a
 ## Flow Diagram
 
 ![Flow diagram](./docs/flow_diagram.svg)
+
+## Debuging and Tuning Guide
+
+### Ego does not stop for the incoming object
+
+Possible reasons:
+
+- the object classification label is not in the `objects.target_labels`;
+- the object is inside an ignore polygon (`objects.LABEL.ignore.polygon_types` or `lanelet_subtypes`);
+- the object is on the ego trajectory (`objects.LABEL.ignore.if_on_ego_trajectory`) or behind ego (`if_behind_ego`);
+- the predicted path of the object is cut (`objects.LABEL.cut_predicted_paths.polygon_types`, `lanelet_subtypes`, or `linestring_types`);
+- the collision is considered as "passing";
+  - ego does not have time to stop (`passing.enable_when_unavoidable`);
+  - ego is predicted to pass before the object (`passing.enable`), including the time margin (calculated from `passing.margin.collision_times` and `time_margins`);
+    - to make ego more likely to stop, `time_margins` can be increased.

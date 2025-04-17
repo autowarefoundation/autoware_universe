@@ -75,14 +75,14 @@ struct ObjectCornerFootprint
 /// and angle
 struct FootprintIntersection
 {
-  double ego_time{};
-  double object_time{};
-  universe_utils::Point2d intersection;
-  IntersectionPosition position;
-  double arc_length{};  // [m] arc length of the intersection along the ego trajectory
-  double yaw_diff{};    // [rad] yaw difference between ego and the object at the intersection
-  double ego_vel{};     // [m/s] ego velocity at the intersection
-  double vel_diff{};    // [m/s] velocity difference between ego and the object at the intersection
+  double ego_time{};     // [s] time when ego is predicted to reach the interesection point
+  double object_time{};  // [s] time when the object is predicted to reach the interesection point
+  universe_utils::Point2d intersection;  // intersection point
+  IntersectionPosition position;  // intersection position relative to the ego trajectory footprint
+  double arc_length{};            // [m] arc length of the intersection along the ego trajectory
+  double yaw_diff{};  // [rad] yaw difference between ego and the object at the intersection
+  double ego_vel{};   // [m/s] ego velocity at the intersection
+  double vel_diff{};  // [m/s] velocity difference between ego and the object at the intersection
 };
 
 /// @brief a set of footprint intersections between ego and a specific object
@@ -104,6 +104,7 @@ class PolygonRtree : bgi::rtree<PolygonNode, bgi::rstar<16>>
     const std::vector<universe_utils::LinearRing2d> & polygons)
   {
     std::vector<PolygonNode> nodes;
+    nodes.reserve(polygons.size());
     for (auto i = 0UL; i < polygons.size(); ++i) {
       nodes.emplace_back(boost::geometry::return_envelope<universe_utils::Box2d>(polygons[i]), i);
     }
