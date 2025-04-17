@@ -23,7 +23,7 @@ bool PullOutPlannerBase::isPullOutPathCollided(
   const std::shared_ptr<const PlannerData> & planner_data,
   double collision_check_distance_from_end) const
 {
-  universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   // check for collisions
   const auto & dynamic_objects = planner_data->dynamic_object;

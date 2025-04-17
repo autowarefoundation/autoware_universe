@@ -18,14 +18,14 @@
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/clock.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/time.hpp>
 
+#include <autoware_internal_planning_msgs/msg/detail/path_point_with_lane_id__struct.hpp>
 #include <autoware_perception_msgs/msg/detail/object_classification__struct.hpp>
-#include <tier4_planning_msgs/msg/detail/path_point_with_lane_id__struct.hpp>
 
 #include <gtest/gtest.h>
 
@@ -55,10 +55,10 @@ using autoware::behavior_velocity_planner::run_out_utils::PredictedPath;
 using autoware::behavior_velocity_planner::run_out_utils::toEnum;
 using autoware::behavior_velocity_planner::run_out_utils::trimPathFromSelfPose;
 
+using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using autoware_perception_msgs::msg::ObjectClassification;
 using geometry_msgs::msg::Point;
-using tier4_planning_msgs::msg::PathPointWithLaneId;
-using tier4_planning_msgs::msg::PathWithLaneId;
 
 class TestRunOutUtils : public ::testing::Test
 {
@@ -68,10 +68,10 @@ class TestRunOutUtils : public ::testing::Test
 TEST_F(TestRunOutUtils, testFindLongitudinalNearestPoint)
 {
   std::vector<geometry_msgs::msg::Point> poly;
-  poly.push_back(autoware::universe_utils::createPoint(0.0, 1.0, 0.0));
-  poly.push_back(autoware::universe_utils::createPoint(0.0, -1.0, 0.0));
-  poly.push_back(autoware::universe_utils::createPoint(1.0, 1.0, 0.0));
-  poly.push_back(autoware::universe_utils::createPoint(1.0, 0.0, 0.0));
+  poly.push_back(autoware_utils::create_point(0.0, 1.0, 0.0));
+  poly.push_back(autoware_utils::create_point(0.0, -1.0, 0.0));
+  poly.push_back(autoware_utils::create_point(1.0, 1.0, 0.0));
+  poly.push_back(autoware_utils::create_point(1.0, 0.0, 0.0));
 
   const auto boost_poly = createBoostPolyFromMsg(poly);
   EXPECT_FALSE(boost_poly.outer().empty());

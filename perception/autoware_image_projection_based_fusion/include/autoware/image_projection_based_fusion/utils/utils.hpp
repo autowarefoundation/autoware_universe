@@ -34,7 +34,7 @@
 
 #include "autoware/image_projection_based_fusion/fusion_node.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -63,7 +63,7 @@ struct PointData
   size_t orig_index;
 };
 
-bool checkCameraInfo(const sensor_msgs::msg::CameraInfo & camera_info);
+bool check_camera_info(const sensor_msgs::msg::CameraInfo & camera_info);
 
 std::optional<geometry_msgs::msg::TransformStamped> getTransformStamped(
   const tf2_ros::Buffer & tf_buffer, const std::string & target_frame_id,

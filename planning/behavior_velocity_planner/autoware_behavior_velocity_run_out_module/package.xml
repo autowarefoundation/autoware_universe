@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_behavior_velocity_run_out_module</name>
-  <version>0.41.0</version>
+  <version>0.43.0</version>
   <description>The autoware_behavior_velocity_run_out_module package</description>
 
   <maintainer email="tomohito.ando@tier4.jp">Tomohito Ando</maintainer>
@@ -28,7 +28,7 @@
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_route_handler</depend>
-  <depend>autoware_universe_utils</depend>
+  <depend>autoware_utils</depend>
   <depend>autoware_vehicle_info_utils</depend>
   <depend>eigen</depend>
   <depend>geometry_msgs</depend>

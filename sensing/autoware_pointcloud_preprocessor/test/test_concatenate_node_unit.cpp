@@ -46,7 +46,6 @@ protected:
     // They just helps to setup the concatenate node
     node_options.parameter_overrides(
       {{"debug_mode", false},
-       {"has_static_tf_only", false},
        {"rosbag_length", 0.0},
        {"maximum_queue_size", 5},
        {"timeout_sec", 0.2},
@@ -67,7 +66,7 @@ protected:
       node_options);
     combine_cloud_handler_ =
       std::make_shared<autoware::pointcloud_preprocessor::CombineCloudHandler>(
-        *concatenate_node_, "base_link", true, true, true, false);
+        *concatenate_node_, "base_link", true, true, true);
 
     collector_ = std::make_shared<autoware::pointcloud_preprocessor::CloudCollector>(
       std::dynamic_pointer_cast<
@@ -485,18 +484,21 @@ TEST_F(ConcatenateCloudTest, TestProcessSingleCloud)
 
   auto topic_to_cloud_map = collector_->get_topic_to_cloud_map();
   EXPECT_EQ(topic_to_cloud_map["lidar_top"], top_pointcloud_ptr);
-  EXPECT_FALSE(collector_->concatenate_finished());
+  EXPECT_EQ(
+    collector_->get_status(), autoware::pointcloud_preprocessor::CollectorStatus::Processing);
   concatenate_node_->manage_collector_list();
-  EXPECT_FALSE(concatenate_node_->get_cloud_collectors().empty());
+  EXPECT_EQ(concatenate_node_->get_cloud_collectors().size(), 1);
 
   // Sleep for timeout seconds (200 ms)
   std::this_thread::sleep_for(std::chrono::milliseconds(200));
   rclcpp::spin_some(concatenate_node_);
 
-  // Collector should concatenate and publish the pointcloud, also delete itself.
-  EXPECT_TRUE(collector_->concatenate_finished());
+  // Collector should concatenate and publish the pointcloud, and set the status to IDLE
+  EXPECT_EQ(collector_->get_status(), autoware::pointcloud_preprocessor::CollectorStatus::Finished);
   concatenate_node_->manage_collector_list();
-  EXPECT_TRUE(concatenate_node_->get_cloud_collectors().empty());
+  EXPECT_EQ(
+    concatenate_node_->get_cloud_collectors().front()->get_status(),
+    autoware::pointcloud_preprocessor::CollectorStatus::Idle);
 }
 
 TEST_F(ConcatenateCloudTest, TestProcessMultipleCloud)
@@ -524,9 +526,11 @@ TEST_F(ConcatenateCloudTest, TestProcessMultipleCloud)
   collector_->process_pointcloud("lidar_left", left_pointcloud_ptr);
   collector_->process_pointcloud("lidar_right", right_pointcloud_ptr);
 
-  EXPECT_TRUE(collector_->concatenate_finished());
+  EXPECT_EQ(collector_->get_status(), autoware::pointcloud_preprocessor::CollectorStatus::Finished);
   concatenate_node_->manage_collector_list();
-  EXPECT_TRUE(concatenate_node_->get_cloud_collectors().empty());
+  EXPECT_EQ(
+    concatenate_node_->get_cloud_collectors().front()->get_status(),
+    autoware::pointcloud_preprocessor::CollectorStatus::Idle);
 }
 
 int main(int argc, char ** argv)

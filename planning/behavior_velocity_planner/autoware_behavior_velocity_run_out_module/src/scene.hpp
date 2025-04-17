@@ -33,11 +33,11 @@
 namespace autoware::behavior_velocity_planner
 {
 using autoware_internal_debug_msgs::msg::Float32Stamped;
+using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using autoware_perception_msgs::msg::PredictedObjects;
 using run_out_utils::PlannerParam;
 using run_out_utils::PoseWithRange;
-using tier4_planning_msgs::msg::PathPointWithLaneId;
-using tier4_planning_msgs::msg::PathWithLaneId;
 using BasicPolygons2d = std::vector<lanelet::BasicPolygon2d>;
 
 class RunOutModule : public SceneModuleInterface
@@ -48,7 +48,7 @@ public:
     const PlannerParam & planner_param, const rclcpp::Logger logger,
     std::unique_ptr<DynamicObstacleCreator> dynamic_obstacle_creator,
     const std::shared_ptr<RunOutDebug> & debug_ptr, const rclcpp::Clock::SharedPtr clock,
-    const std::shared_ptr<universe_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 
@@ -127,7 +127,8 @@ private:
 
   bool insertStopPoint(
     const std::optional<geometry_msgs::msg::Pose> stop_point,
-    tier4_planning_msgs::msg::PathWithLaneId & path);
+    autoware_internal_planning_msgs::msg::PathWithLaneId & path,
+    const double stop_point_velocity = 0.0);
 
   void insertVelocityForState(
     const std::optional<DynamicObstacle> & dynamic_obstacle, const PlannerData planner_data,
@@ -148,9 +149,9 @@ private:
     const DynamicObstacle & dynamic_obstacle, const geometry_msgs::msg::Pose & current_pose,
     const float approaching_vel, const float approach_margin, PathWithLaneId & output_path);
 
-  void applyMaxJerkLimit(
+  double calcMaxJerkLimitedVelocity(
     const geometry_msgs::msg::Pose & current_pose, const float current_vel, const float current_acc,
-    PathWithLaneId & path) const;
+    PathWithLaneId & path, const geometry_msgs::msg::Pose & stop_point) const;
 
   /**
    * @brief Creates a virtual line segment that is perpendicular to the ego vehicle and that passes

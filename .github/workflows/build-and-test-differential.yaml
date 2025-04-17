@@ -22,6 +22,10 @@ on:
         required: false
         default: ""
         type: string
+      build-pre-command:
+        required: false
+        default: ""
+        type: string
     secrets:
       codecov-token:
         required: true
@@ -92,6 +96,19 @@ jobs:
           echo "::notice::BUILD_TYPE_CUDA_STATE=$build_type_cuda_state"
         shell: bash
 
+      - name: Prepare build_depends.repos file (main branch)
+        if: ${{ github.event.pull_request.base.ref == 'main' }}
+        uses: ./.github/actions/combine-repos-action
+        with:
+          base_file: build_depends_humble.repos
+          overlay_file: build_depends_nightly.repos
+          output_file: build_depends.repos
+
+      - name: Prepare build_depends.repos file (humble branch)
+        if: ${{ github.event.pull_request.base.ref == 'humble' }}
+        run: cp build_depends_humble.repos build_depends.repos
+        shell: bash
+
       - name: Build
         if: ${{ steps.get-modified-packages.outputs.modified-packages != '' }}
         uses: autowarefoundation/autoware-github-actions/colcon-build@v1
@@ -100,7 +117,7 @@ jobs:
           target-packages: ${{ steps.get-modified-packages.outputs.modified-packages }}
           build-depends-repos: build_depends.repos
           cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
-
+          build-pre-command: ${{ inputs.build-pre-command }}
       - name: Show ccache stats after build
         run: du -sh ${CCACHE_DIR} && ccache -s
         shell: bash

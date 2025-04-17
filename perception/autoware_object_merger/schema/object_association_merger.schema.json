@@ -36,6 +36,16 @@
           "description": "Index for the priority_mode.",
           "default": 3,
           "enum": [0, 1, 2, 3]
+        },
+        "message_timeout_sec": {
+          "type": "number",
+          "description": "The warning timeout threshold for no synchronized messages received.",
+          "default": 1.0
+        },
+        "initialization_timeout_sec": {
+          "type": "number",
+          "description": "The warning timeout threshold for no synchronized messages received since startup.",
+          "default": 10.0
         }
       },
       "required": [

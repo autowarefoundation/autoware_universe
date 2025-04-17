@@ -42,6 +42,14 @@
           pedestrian: true
           pointcloud: false
 
+        pointcloud:
+          pointcloud_voxel_grid_x: 0.05
+          pointcloud_voxel_grid_y: 0.05
+          pointcloud_voxel_grid_z: 100000.0
+          pointcloud_cluster_tolerance: 1.0
+          pointcloud_min_cluster_size: 1
+          pointcloud_max_cluster_size: 100000
+
         min_lat_margin: 0.0  # lateral margin between obstacle and trajectory band with ego's width to avoid the conflict with the obstacle_stop
         max_lat_margin: 1.1  # lateral margin between obstacle and trajectory band with ego's width
         lat_hysteresis_margin: 0.2

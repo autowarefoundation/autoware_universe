@@ -16,7 +16,7 @@
 #define AUTOWARE__OBSTACLE_CRUISE_PLANNER__UTILS_HPP_
 
 #include "autoware/obstacle_cruise_planner/type_alias.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 #include "common_structs.hpp"
 
 #include <rclcpp/rclcpp.hpp>
@@ -61,8 +61,7 @@ size_t getIndexWithLongitudinalOffset(
   double sum_length = 0.0;
   if (longitudinal_offset > 0) {
     for (size_t i = *start_idx; i < points.size() - 1; ++i) {
-      const double segment_length =
-        autoware::universe_utils::calcDistance2d(points.at(i), points.at(i + 1));
+      const double segment_length = autoware_utils::calc_distance2d(points.at(i), points.at(i + 1));
       sum_length += segment_length;
       if (sum_length >= longitudinal_offset) {
         const double back_length = sum_length - longitudinal_offset;
@@ -78,8 +77,7 @@ size_t getIndexWithLongitudinalOffset(
   }
 
   for (size_t i = *start_idx; 0 < i; --i) {
-    const double segment_length =
-      autoware::universe_utils::calcDistance2d(points.at(i - 1), points.at(i));
+    const double segment_length = autoware_utils::calc_distance2d(points.at(i - 1), points.at(i));
     sum_length += segment_length;
     if (sum_length >= -longitudinal_offset) {
       const double back_length = sum_length + longitudinal_offset;

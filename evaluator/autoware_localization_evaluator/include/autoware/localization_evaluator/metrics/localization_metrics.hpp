@@ -15,13 +15,13 @@
 #ifndef AUTOWARE__LOCALIZATION_EVALUATOR__METRICS__LOCALIZATION_METRICS_HPP_
 #define AUTOWARE__LOCALIZATION_EVALUATOR__METRICS__LOCALIZATION_METRICS_HPP_
 
-#include "autoware/universe_utils/math/accumulator.hpp"
+#include "autoware_utils/math/accumulator.hpp"
 
 #include <nav_msgs/msg/odometry.hpp>
 
 namespace autoware::localization_diagnostics
 {
-using autoware::universe_utils::Accumulator;
+using autoware_utils::Accumulator;
 namespace metrics
 {
 /**

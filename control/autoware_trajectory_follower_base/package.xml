@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_trajectory_follower_base</name>
-  <version>0.41.0</version>
+  <version>0.43.0</version>
   <description>Library for generating lateral and longitudinal controls following a trajectory</description>
 
   <!-- mpc longitudinal controller -->
@@ -26,7 +26,7 @@
   <depend>autoware_motion_utils</depend>
   <depend>autoware_osqp_interface</depend>
   <depend>autoware_planning_msgs</depend>
-  <depend>autoware_universe_utils</depend>
+  <depend>autoware_utils</depend>
   <depend>autoware_vehicle_info_utils</depend>
   <depend>autoware_vehicle_msgs</depend>
   <depend>diagnostic_msgs</depend>

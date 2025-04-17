@@ -37,7 +37,8 @@ BlindSpotModuleManager::BlindSpotModuleManager(rclcpp::Node & node)
   planner_param_ = PlannerParam::init(node, ns);
 }
 
-void BlindSpotModuleManager::launchNewModules(const tier4_planning_msgs::msg::PathWithLaneId & path)
+void BlindSpotModuleManager::launchNewModules(
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   for (const auto & ll : planning_utils::getLaneletsOnPath(
          path, planner_data_->route_handler_->getLaneletMapPtr(),
@@ -60,7 +61,7 @@ void BlindSpotModuleManager::launchNewModules(const tier4_planning_msgs::msg::Pa
     registerModule(std::make_shared<BlindSpotModule>(
       module_id, lane_id, turn_direction, planner_data_, planner_param_,
       logger_.get_child("blind_spot_module"), clock_, time_keeper_, planning_factor_interface_));
-    generateUUID(module_id);
+    generate_uuid(module_id);
     updateRTCStatus(
       getUUID(module_id), true, State::WAITING_FOR_EXECUTION, std::numeric_limits<double>::lowest(),
       path.header.stamp);
@@ -69,7 +70,7 @@ void BlindSpotModuleManager::launchNewModules(const tier4_planning_msgs::msg::Pa
 
 std::function<bool(const std::shared_ptr<SceneModuleInterfaceWithRTC> &)>
 BlindSpotModuleManager::getModuleExpiredFunction(
-  const tier4_planning_msgs::msg::PathWithLaneId & path)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   const auto lane_id_set = planning_utils::getLaneIdSetOnPath(
     path, planner_data_->route_handler_->getLaneletMapPtr(), planner_data_->current_odometry->pose);

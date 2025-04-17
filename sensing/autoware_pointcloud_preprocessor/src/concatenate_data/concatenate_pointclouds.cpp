@@ -39,8 +39,8 @@ PointCloudConcatenationComponent::PointCloudConcatenationComponent(
 {
   // initialize debug tool
   {
-    using autoware::universe_utils::DebugPublisher;
-    using autoware::universe_utils::StopWatch;
+    using autoware_utils::DebugPublisher;
+    using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ = std::make_unique<DebugPublisher>(this, "concatenate_pointclouds_debug");
     stop_watch_ptr_->tic("cyclic_time");
@@ -54,8 +54,6 @@ PointCloudConcatenationComponent::PointCloudConcatenationComponent(
       RCLCPP_ERROR(get_logger(), "Need an 'output_frame' parameter to be set before continuing!");
       return;
     }
-    has_static_tf_only_ = declare_parameter<bool>(
-      "has_static_tf_only", false);  // TODO(amadeuszsz): remove default value
     declare_parameter<std::vector<std::string>>("input_topics");
     input_topics_ = get_parameter("input_topics").as_string_array();
     if (input_topics_.empty()) {
@@ -95,8 +93,7 @@ PointCloudConcatenationComponent::PointCloudConcatenationComponent(
 
   // tf2 listener
   {
-    managed_tf_buffer_ =
-      std::make_unique<autoware::universe_utils::ManagedTransformBuffer>(this, has_static_tf_only_);
+    managed_tf_buffer_ = std::make_unique<managed_transform_buffer::ManagedTransformBuffer>();
   }
 
   // Output Publishers
@@ -240,7 +237,9 @@ void PointCloudConcatenationComponent::combineClouds(
       // transform to output frame
       sensor_msgs::msg::PointCloud2::SharedPtr transformed_cloud_ptr(
         new sensor_msgs::msg::PointCloud2());
-      managed_tf_buffer_->transformPointcloud(output_frame_, *e.second, *transformed_cloud_ptr);
+      managed_tf_buffer_->transformPointcloud(
+        output_frame_, *e.second, *transformed_cloud_ptr, e.second->header.stamp,
+        rclcpp::Duration::from_seconds(1.0), this->get_logger());
 
       // concatenate
       if (concat_cloud_ptr == nullptr) {

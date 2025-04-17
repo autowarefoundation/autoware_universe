@@ -210,11 +210,11 @@ void OperationModeTransitionManager::processTransition()
 
 void OperationModeTransitionManager::onTimer()
 {
-  const auto control_mode_report_ptr = sub_control_mode_report_.takeData();
+  const auto control_mode_report_ptr = sub_control_mode_report_.take_data();
   if (!control_mode_report_ptr) {
     return;
   }
-  const auto gate_operation_mode_ptr = sub_gate_operation_mode_.takeData();
+  const auto gate_operation_mode_ptr = sub_gate_operation_mode_.take_data();
   if (!gate_operation_mode_ptr) {
     return;
   }

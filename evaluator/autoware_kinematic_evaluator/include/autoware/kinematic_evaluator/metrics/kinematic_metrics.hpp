@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__KINEMATIC_EVALUATOR__METRICS__KINEMATIC_METRICS_HPP_
 #define AUTOWARE__KINEMATIC_EVALUATOR__METRICS__KINEMATIC_METRICS_HPP_
 
-#include "autoware/universe_utils/math/accumulator.hpp"
+#include "autoware_utils/math/accumulator.hpp"
 
 #include <nav_msgs/msg/odometry.hpp>
 
@@ -23,7 +23,7 @@ namespace autoware::kinematic_diagnostics
 {
 namespace metrics
 {
-using autoware::universe_utils::Accumulator;
+using autoware_utils::Accumulator;
 using nav_msgs::msg::Odometry;
 
 /**

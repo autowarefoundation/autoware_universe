@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_traffic_light_recognition_marker_publisher</name>
-  <version>0.41.0</version>
+  <version>0.43.0</version>
   <description>The autoware_traffic_light_recognition_marker_publisher package</description>
   <maintainer email="tomoya.kimura@tier4.jp">Tomoya Kimura</maintainer>
   <maintainer email="takeshi.miura@tier4.jp">Takeshi Miura</maintainer>
@@ -15,7 +15,7 @@
   <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_perception_msgs</depend>
-  <depend>autoware_universe_utils</depend>
+  <depend>autoware_utils</depend>
   <depend>geometry_msgs</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>

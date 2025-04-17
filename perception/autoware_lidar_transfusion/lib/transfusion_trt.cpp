@@ -18,7 +18,7 @@
 #include "autoware/lidar_transfusion/transfusion_config.hpp"
 
 #include <autoware/tensorrt_common/utils.hpp>
-#include <autoware/universe_utils/math/constants.hpp>
+#include <autoware_utils/math/constants.hpp>
 
 #include <algorithm>
 #include <cstdlib>
@@ -40,8 +40,7 @@ TransfusionTRT::TransfusionTRT(
 : config_(std::move(config))
 {
   vg_ptr_ = std::make_unique<VoxelGenerator>(densification_param, config_, stream_);
-  stop_watch_ptr_ =
-    std::make_unique<autoware::universe_utils::StopWatch<std::chrono::milliseconds>>();
+  stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("processing/inner");
   initPtr();
   initTrt(trt_config);

@@ -14,8 +14,8 @@
 
 #include "radar_crossing_objects_noise_filter_node.hpp"
 
-#include "autoware/universe_utils/geometry/geometry.hpp"
-#include "autoware/universe_utils/math/normalization.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
+#include "autoware_utils/math/normalization.hpp"
 
 #include <tf2/utils.h>
 
@@ -124,14 +124,14 @@ rcl_interfaces::msg::SetParametersResult RadarCrossingObjectsNoiseFilterNode::on
 
 bool RadarCrossingObjectsNoiseFilterNode::isNoise(const DetectedObject & object)
 {
-  const double velocity = std::abs(
-    autoware::universe_utils::calcNorm(object.kinematics.twist_with_covariance.twist.linear));
+  const double velocity =
+    std::abs(autoware_utils::calc_norm(object.kinematics.twist_with_covariance.twist.linear));
   const double object_angle = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
   const double object_position_angle = std::atan2(
     object.kinematics.pose_with_covariance.pose.position.y,
     object.kinematics.pose_with_covariance.pose.position.x);
   const double crossing_yaw =
-    autoware::universe_utils::normalizeRadian(object_angle - object_position_angle);
+    autoware_utils::normalize_radian(object_angle - object_position_angle);
 
   if (
     velocity > node_param_.velocity_threshold &&

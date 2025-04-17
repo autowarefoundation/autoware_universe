@@ -18,8 +18,8 @@
 #include <autoware/behavior_velocity_planner_common/utilization/debug.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/marker_helper.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
 
 #include <string>
 #include <vector>
@@ -30,10 +30,10 @@ namespace
 {
 const double marker_lifetime = 0.2;
 using DebugData = no_stopping_area::DebugData;
-using autoware::universe_utils::appendMarkerArray;
-using autoware::universe_utils::createDefaultMarker;
-using autoware::universe_utils::createMarkerColor;
-using autoware::universe_utils::createMarkerScale;
+using autoware_utils::append_marker_array;
+using autoware_utils::create_default_marker;
+using autoware_utils::create_marker_color;
+using autoware_utils::create_marker_scale;
 
 lanelet::BasicPoint3d get_centroid_point(const lanelet::BasicPolygon3d & poly)
 {
@@ -60,10 +60,10 @@ visualization_msgs::msg::MarkerArray create_lanelet_info_marker_array(
 
   // ID
   {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", now, "no_stopping_area_id", static_cast<int32_t>(no_stopping_area_reg_elem.id()),
-      visualization_msgs::msg::Marker::TEXT_VIEW_FACING, createMarkerScale(0.0, 0.0, 1.0),
-      createMarkerColor(1.0, 1.0, 1.0, 0.999));
+      visualization_msgs::msg::Marker::TEXT_VIEW_FACING, create_marker_scale(0.0, 0.0, 1.0),
+      create_marker_color(1.0, 1.0, 1.0, 0.999));
     marker.lifetime = rclcpp::Duration::from_seconds(marker_lifetime);
 
     for (const auto & detection_area : no_stopping_area_reg_elem.noStoppingAreas()) {
@@ -79,10 +79,10 @@ visualization_msgs::msg::MarkerArray create_lanelet_info_marker_array(
 
   // Polygon
   {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", now, "no_stopping_area_polygon", static_cast<int32_t>(no_stopping_area_reg_elem.id()),
-      visualization_msgs::msg::Marker::LINE_LIST, createMarkerScale(0.1, 0.0, 0.0),
-      createMarkerColor(0.1, 0.1, 1.0, 0.500));
+      visualization_msgs::msg::Marker::LINE_LIST, create_marker_scale(0.1, 0.0, 0.0),
+      create_marker_color(0.1, 0.1, 1.0, 0.500));
     marker.lifetime = rclcpp::Duration::from_seconds(marker_lifetime);
 
     for (const auto & no_stopping_area : no_stopping_area_reg_elem.noStoppingAreas()) {
@@ -107,11 +107,11 @@ visualization_msgs::msg::MarkerArray create_lanelet_info_marker_array(
   if (stop_line) {
     const auto stop_line_center_point =
       (stop_line.value().front().basicPoint() + stop_line.value().back().basicPoint()) / 2;
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", now, "no_stopping_area_correspondence",
       static_cast<int32_t>(no_stopping_area_reg_elem.id()),
-      visualization_msgs::msg::Marker::LINE_STRIP, createMarkerScale(0.1, 0.0, 0.0),
-      createMarkerColor(0.1, 0.1, 1.0, 0.500));
+      visualization_msgs::msg::Marker::LINE_STRIP, create_marker_scale(0.1, 0.0, 0.0),
+      create_marker_color(0.1, 0.1, 1.0, 0.500));
     marker.lifetime = rclcpp::Duration::from_seconds(marker_lifetime);
     for (const auto & detection_area : no_stopping_area_reg_elem.noStoppingAreas()) {
       const auto poly = detection_area.basicPolygon();
@@ -133,24 +133,24 @@ visualization_msgs::msg::MarkerArray NoStoppingAreaModule::createDebugMarkerArra
   visualization_msgs::msg::MarkerArray debug_marker_array;
   const rclcpp::Time now = clock_->now();
 
-  appendMarkerArray(
+  append_marker_array(
     create_lanelet_info_marker_array(no_stopping_area_reg_elem_, now), &debug_marker_array, now);
 
   if (!debug_data_.stuck_points.empty()) {
-    appendMarkerArray(
+    append_marker_array(
       debug::createPointsMarkerArray(
         debug_data_.stuck_points, "stuck_points", module_id_, now, 0.3, 0.3, 0.3, 1.0, 1.0, 0.0),
       &debug_marker_array, now);
   }
   if (!debug_data_.stuck_vehicle_detect_area.points.empty()) {
-    appendMarkerArray(
+    append_marker_array(
       debug::createPolygonMarkerArray(
         debug_data_.stuck_vehicle_detect_area, "stuck_vehicle_detect_area", module_id_, now, 0.1,
         0.1, 0.1, 1.0, 1.0, 0.0),
       &debug_marker_array, now);
   }
   if (!debug_data_.stop_line_detect_area.points.empty()) {
-    appendMarkerArray(
+    append_marker_array(
       debug::createPolygonMarkerArray(
         debug_data_.stop_line_detect_area, "stop_line_detect_area", module_id_, now, 0.1, 0.1, 0.1,
         1.0, 1.0, 0.0),
@@ -167,7 +167,7 @@ autoware::motion_utils::VirtualWalls NoStoppingAreaModule::createVirtualWalls()
   wall.text = "no_stopping_area";
   wall.style = autoware::motion_utils::VirtualWallType::stop;
   for (const auto & p : debug_data_.stop_poses) {
-    wall.pose = autoware::universe_utils::calcOffsetPose(p, debug_data_.base_link2front, 0.0, 0.0);
+    wall.pose = autoware_utils::calc_offset_pose(p, debug_data_.base_link2front, 0.0, 0.0);
     virtual_walls.push_back(wall);
   }
   return virtual_walls;

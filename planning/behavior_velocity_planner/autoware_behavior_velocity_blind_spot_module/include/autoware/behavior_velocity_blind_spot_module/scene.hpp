@@ -75,7 +75,7 @@ public:
     const int64_t module_id, const int64_t lane_id, const TurnDirection turn_direction,
     const std::shared_ptr<const PlannerData> planner_data, const PlannerParam & planner_param,
     const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
-    const std::shared_ptr<universe_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 
@@ -105,15 +105,16 @@ private:
   BlindSpotDecision modifyPathVelocityDetail(PathWithLaneId * path);
   // setSafe(), setDistance()
   void setRTCStatus(
-    const BlindSpotDecision & decision, const tier4_planning_msgs::msg::PathWithLaneId & path);
+    const BlindSpotDecision & decision,
+    const autoware_internal_planning_msgs::msg::PathWithLaneId & path);
   template <typename Decision>
   void setRTCStatusByDecision(
-    const Decision & decision, const tier4_planning_msgs::msg::PathWithLaneId & path);
+    const Decision & decision, const autoware_internal_planning_msgs::msg::PathWithLaneId & path);
   // stop/GO
   void reactRTCApproval(const BlindSpotDecision & decision, PathWithLaneId * path);
   template <typename Decision>
   void reactRTCApprovalByDecision(
-    const Decision & decision, tier4_planning_msgs::msg::PathWithLaneId * path);
+    const Decision & decision, autoware_internal_planning_msgs::msg::PathWithLaneId * path);
 
   /**
    * @brief Generate a stop line and insert it into the path.
@@ -126,10 +127,10 @@ private:
    */
   std::optional<std::pair<size_t, size_t>> generateStopLine(
     const InterpolatedPathInfo & interpolated_path_info,
-    tier4_planning_msgs::msg::PathWithLaneId * path) const;
+    autoware_internal_planning_msgs::msg::PathWithLaneId * path) const;
 
   std::optional<OverPassJudge> isOverPassJudge(
-    const tier4_planning_msgs::msg::PathWithLaneId & input_path,
+    const autoware_internal_planning_msgs::msg::PathWithLaneId & input_path,
     const geometry_msgs::msg::Pose & stop_point_pose) const;
 
   double computeTimeToPassStopLine(

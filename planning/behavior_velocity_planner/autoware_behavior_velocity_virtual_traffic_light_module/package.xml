@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_behavior_velocity_virtual_traffic_light_module</name>
-  <version>0.41.0</version>
+  <version>0.43.0</version>
   <description>The autoware_behavior_velocity_virtual_traffic_light_module package</description>
 
   <maintainer email="kosuke.takeuchi@tier4.jp">Kosuke Takeuchi</maintainer>
@@ -20,11 +20,12 @@
   <depend>autoware_adapi_v1_msgs</depend>
   <depend>autoware_behavior_velocity_planner</depend>
   <depend>autoware_behavior_velocity_planner_common</depend>
+  <depend>autoware_internal_planning_msgs</depend>
   <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_route_handler</depend>
-  <depend>autoware_universe_utils</depend>
+  <depend>autoware_utils</depend>
   <depend>autoware_vehicle_info_utils</depend>
   <depend>geometry_msgs</depend>
   <depend>nlohmann-json-dev</depend>

@@ -23,12 +23,12 @@
 #include "autoware/behavior_path_planner_common/turn_signal_decider.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_shifter/path_shifter.hpp"
 
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/twist.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <tf2/utils.h>
 
@@ -41,9 +41,9 @@ namespace autoware::behavior_path_planner
 {
 using autoware::objects_of_interest_marker_interface::ColorName;
 using autoware::objects_of_interest_marker_interface::ObjectsOfInterestMarkerInterface;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::Twist;
-using tier4_planning_msgs::msg::PathWithLaneId;
 
 class LaneChangeInterface : public SceneModuleInterface
 {
@@ -113,7 +113,7 @@ protected:
     const double start_distance, const double finish_distance, const bool safe,
     const uint8_t & state)
   {
-    universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+    autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
     for (const auto & [module_name, ptr] : rtc_interface_ptr_map_) {
       if (ptr) {
         ptr->updateCooperateStatus(

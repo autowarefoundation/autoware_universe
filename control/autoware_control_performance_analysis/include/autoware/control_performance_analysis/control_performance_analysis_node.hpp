@@ -20,7 +20,7 @@
 #include "autoware_control_performance_analysis/msg/error_stamped.hpp"
 
 #include <autoware/signal_processing/lowpass_filter_1d.hpp>
-#include <autoware/universe_utils/ros/self_pose_listener.hpp>
+#include <autoware_utils/ros/self_pose_listener.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_control_msgs/msg/control.hpp>

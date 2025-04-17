@@ -32,9 +32,9 @@ public:
 private:
   void preprocess(ClusterMsgType & output_cluster_msg) override;
 
-  void fuseOnSingleImage(
-    const ClusterMsgType & input_cluster_msg, const Det2dStatus<RoiMsgType> & det2d,
-    const RoiMsgType & input_roi_msg, ClusterMsgType & output_cluster_msg) override;
+  void fuse_on_single_image(
+    const ClusterMsgType & input_cluster_msg, const Det2dStatus<RoiMsgType> & det2d_status,
+    const RoiMsgType & input_rois_msg, ClusterMsgType & output_cluster_msg) override;
 
   void postprocess(const ClusterMsgType & output_cluster_msg, ClusterMsgType & output_msg) override;
 

@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_grid_map_utils</name>
-  <version>0.41.0</version>
+  <version>0.43.0</version>
   <description>Utilities for the grid_map library</description>
   <maintainer email="maxime.clement@tier4.jp">Maxime CLEMENT</maintainer>
   <license>Apache License 2.0</license>
@@ -10,7 +10,7 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
   <buildtool_depend>eigen3_cmake_module</buildtool_depend>
 
-  <depend>autoware_universe_utils</depend>
+  <depend>autoware_utils</depend>
   <depend>grid_map_core</depend>
   <depend>grid_map_cv</depend>
   <depend>libopencv-dev</depend>

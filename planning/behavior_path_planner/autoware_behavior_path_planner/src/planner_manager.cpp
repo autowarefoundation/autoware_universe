@@ -17,8 +17,8 @@
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/static_drivable_area.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
-#include "autoware/universe_utils/ros/debug_publisher.hpp"
-#include "autoware/universe_utils/system/stop_watch.hpp"
+#include "autoware_utils/ros/debug_publisher.hpp"
+#include "autoware_utils/system/stop_watch.hpp"
 
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <magic_enum.hpp>
@@ -40,7 +40,8 @@ PlannerManager::PlannerManager(rclcpp::Node & node)
     "autoware_behavior_path_planner",
     "autoware::behavior_path_planner::SceneModuleManagerInterface"),
   logger_(node.get_logger().get_child("planner_manager")),
-  clock_(*node.get_clock())
+  clock_(*node.get_clock()),
+  last_valid_reference_path_(std::nullopt)
 {
   current_route_lanelet_ = std::make_shared<std::optional<lanelet::ConstLanelet>>(std::nullopt);
   processing_time_.emplace("total_time", 0.0);
@@ -272,6 +273,23 @@ BehaviorModuleOutput PlannerManager::getReferencePath(
   const std::shared_ptr<PlannerData> & data) const
 {
   const auto reference_path = utils::getReferencePath(current_route_lanelet_->value(), data);
+
+  if (reference_path.path.points.empty()) {
+    RCLCPP_WARN_THROTTLE(
+      logger_, clock_, 5000,
+      "Empty reference path detected. Using last valid reference path if available.");
+
+    if (last_valid_reference_path_.has_value()) {
+      return last_valid_reference_path_.value();
+    }
+
+    RCLCPP_WARN_THROTTLE(
+      logger_, clock_, 5000, "No valid previous reference path available. Creating empty path.");
+    return BehaviorModuleOutput{};
+  }
+
+  last_valid_reference_path_ = reference_path;
+
   publishDebugRootReferencePath(reference_path);
   return reference_path;
 }
@@ -281,10 +299,10 @@ void PlannerManager::publishDebugRootReferencePath(
 {
   using visualization_msgs::msg::Marker;
   MarkerArray array;
-  Marker m = autoware::universe_utils::createDefaultMarker(
+  Marker m = autoware_utils::create_default_marker(
     "map", clock_.now(), "root_reference_path", 0UL, Marker::LINE_STRIP,
-    autoware::universe_utils::createMarkerScale(1.0, 1.0, 1.0),
-    autoware::universe_utils::createMarkerColor(1.0, 0.0, 0.0, 1.0));
+    autoware_utils::create_marker_scale(1.0, 1.0, 1.0),
+    autoware_utils::create_marker_color(1.0, 0.0, 0.0, 1.0));
   for (const auto & p : reference_path.path.points) m.points.push_back(p.point.pose.position);
   array.markers.push_back(m);
   m.points.clear();

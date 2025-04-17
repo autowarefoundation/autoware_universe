@@ -16,17 +16,21 @@
 
 #include "autoware/control_evaluator/metrics/metrics_utils.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <nlohmann/json.hpp>
 
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace control_diagnostics
@@ -36,6 +40,22 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
   vehicle_info_(autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo())
 {
   using std::placeholders::_1;
+
+  // planning_factor subscribers
+  std::vector<std::string> stop_deviation_modules_list =
+    declare_parameter<std::vector<std::string>>(
+      "planning_factor_metrics.stop_deviation.module_list");
+  stop_deviation_modules_ = std::unordered_set<std::string>(
+    stop_deviation_modules_list.begin(), stop_deviation_modules_list.end());
+
+  const std::string topic_prefix =
+    declare_parameter<std::string>("planning_factor_metrics.topic_prefix");
+  for (const auto & module_name : stop_deviation_modules_) {
+    planning_factors_sub_.emplace(
+      module_name, autoware_utils::InterProcessPollingSubscriber<PlanningFactorArray>(
+                     this, topic_prefix + module_name));
+    stop_deviation_accumulators_.emplace(module_name, Accumulator<double>());
+  }
 
   // Publisher
   processing_time_pub_ = this->create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
@@ -62,12 +82,27 @@ ControlEvaluatorNode::~ControlEvaluatorNode()
     using json = nlohmann::json;
     json j;
     for (Metric metric : metrics_) {
+      if (metric_accumulators_[static_cast<size_t>(metric)].count() == 0) {
+        continue;
+      }
       const std::string base_name = metric_to_str.at(metric) + "/";
       j[base_name + "min"] = metric_accumulators_[static_cast<size_t>(metric)].min();
       j[base_name + "max"] = metric_accumulators_[static_cast<size_t>(metric)].max();
       j[base_name + "mean"] = metric_accumulators_[static_cast<size_t>(metric)].mean();
       j[base_name + "count"] = metric_accumulators_[static_cast<size_t>(metric)].count();
       j[base_name + "description"] = metric_descriptions.at(metric);
+    }
+    // processing json for stop_deviation
+    j["stop_deviation/description"] = metric_descriptions.at(Metric::stop_deviation);
+    for (const auto & [module_name, stop_deviation_accumulator] : stop_deviation_accumulators_) {
+      if (stop_deviation_accumulator.count() == 0) {
+        continue;
+      }
+      const std::string base_name = "stop_deviation/" + module_name + "/";
+      j[base_name + "min"] = stop_deviation_accumulator.min();
+      j[base_name + "max"] = stop_deviation_accumulator.max();
+      j[base_name + "mean"] = stop_deviation_accumulator.mean();
+      j[base_name + "count"] = stop_deviation_accumulator.count();
     }
 
     // get output folder
@@ -109,7 +144,7 @@ void ControlEvaluatorNode::getRouteData()
 {
   // route
   {
-    const auto msg = route_subscriber_.takeData();
+    const auto msg = route_subscriber_.take_data();
     if (msg) {
       if (msg->segments.empty()) {
         RCLCPP_ERROR(get_logger(), "input route is empty. ignored");
@@ -121,21 +156,21 @@ void ControlEvaluatorNode::getRouteData()
 
   // map
   {
-    const auto msg = vector_map_subscriber_.takeData();
+    const auto msg = vector_map_subscriber_.take_data();
     if (msg) {
       route_handler_.setMap(*msg);
     }
   }
 }
 
-void ControlEvaluatorNode::AddMetricMsg(const Metric & metric, const double & metric_value)
+void ControlEvaluatorNode::AddMetricMsg(
+  const Metric & metric, const double & metric_value, const bool & accumulate_metric)
 {
   MetricMsg metric_msg;
   metric_msg.name = metric_to_str.at(metric);
   metric_msg.value = std::to_string(metric_value);
   metrics_msg_.metric_array.push_back(metric_msg);
-
-  if (output_metrics_) {
+  if (output_metrics_ && accumulate_metric) {
     metric_accumulators_[static_cast<size_t>(metric)].add(metric_value);
   }
 }
@@ -176,8 +211,8 @@ void ControlEvaluatorNode::AddBoundaryDistanceMetricMsg(
   lanelet::ConstLanelet current_lane;
   lanelet::utils::query::getClosestLanelet(current_lanelets, ego_pose, &current_lane);
   const auto local_vehicle_footprint = vehicle_info_.createFootprint();
-  const auto current_vehicle_footprint =
-    transformVector(local_vehicle_footprint, autoware::universe_utils::pose2transform(ego_pose));
+  const auto current_vehicle_footprint = autoware_utils::transform_vector(
+    local_vehicle_footprint, autoware_utils::pose2transform(ego_pose));
 
   if (behavior_path.left_bound.size() >= 1) {
     LineString2d left_boundary;
@@ -209,17 +244,10 @@ void ControlEvaluatorNode::AddBoundaryDistanceMetricMsg(
 void ControlEvaluatorNode::AddKinematicStateMetricMsg(
   const Odometry & odom, const AccelWithCovarianceStamped & accel_stamped)
 {
-  const std::string base_name = "kinematic_state/";
-  MetricMsg metric_msg;
+  AddMetricMsg(Metric::velocity, odom.twist.twist.linear.x);
 
-  metric_msg.name = base_name + "vel";
-  metric_msg.value = std::to_string(odom.twist.twist.linear.x);
-  metrics_msg_.metric_array.push_back(metric_msg);
-
-  metric_msg.name = base_name + "acc";
   const auto & acc = accel_stamped.accel.accel.linear.x;
-  metric_msg.value = std::to_string(acc);
-  metrics_msg_.metric_array.push_back(metric_msg);
+  AddMetricMsg(Metric::acceleration, acc);
 
   const auto jerk = [&]() {
     if (!prev_acc_stamped_.has_value()) {
@@ -237,11 +265,7 @@ void ControlEvaluatorNode::AddKinematicStateMetricMsg(
     prev_acc_stamped_ = accel_stamped;
     return (acc - prev_acc) / dt;
   }();
-
-  metric_msg.name = base_name + "jerk";
-  metric_msg.value = std::to_string(jerk);
-  metrics_msg_.metric_array.push_back(metric_msg);
-  return;
+  AddMetricMsg(Metric::jerk, jerk);
 }
 
 void ControlEvaluatorNode::AddSteeringMetricMsg(const SteeringReport & steering_status)
@@ -302,66 +326,121 @@ void ControlEvaluatorNode::AddYawDeviationMetricMsg(const Trajectory & traj, con
   AddMetricMsg(metric, metric_value);
 }
 
-void ControlEvaluatorNode::AddGoalLongitudinalDeviationMetricMsg(const Pose & ego_pose)
+void ControlEvaluatorNode::AddGoalDeviationMetricMsg(const Odometry & odom)
 {
-  const Metric metric = Metric::goal_longitudinal_deviation;
-  const double metric_value =
+  const Pose ego_pose = odom.pose.pose;
+  const double longitudinal_deviation_value =
     metrics::calcLongitudinalDeviation(route_handler_.getGoalPose(), ego_pose.position);
-
-  AddMetricMsg(metric, metric_value);
-}
-
-void ControlEvaluatorNode::AddGoalLateralDeviationMetricMsg(const Pose & ego_pose)
-{
-  const Metric metric = Metric::goal_lateral_deviation;
-  const double metric_value =
+  const double lateral_deviation_value =
     metrics::calcLateralDeviation(route_handler_.getGoalPose(), ego_pose.position);
+  const double yaw_deviation_value =
+    metrics::calcYawDeviation(route_handler_.getGoalPose(), ego_pose);
 
-  AddMetricMsg(metric, metric_value);
+  const bool is_ego_stopped_near_goal =
+    std::abs(longitudinal_deviation_value) < 3.0 && std::abs(odom.twist.twist.linear.x) < 0.001;
+
+  AddMetricMsg(
+    Metric::goal_longitudinal_deviation, longitudinal_deviation_value, is_ego_stopped_near_goal);
+  AddMetricMsg(Metric::goal_lateral_deviation, lateral_deviation_value, is_ego_stopped_near_goal);
+  AddMetricMsg(Metric::goal_yaw_deviation, yaw_deviation_value, is_ego_stopped_near_goal);
 }
 
-void ControlEvaluatorNode::AddGoalYawDeviationMetricMsg(const Pose & ego_pose)
+void ControlEvaluatorNode::AddStopDeviationMetricMsg(const Odometry & odom)
 {
-  const Metric metric = Metric::goal_yaw_deviation;
-  const double metric_value = metrics::calcYawDeviation(route_handler_.getGoalPose(), ego_pose);
+  const auto get_min_distance =
+    [](const PlanningFactorArray::ConstSharedPtr & planning_factors) -> std::optional<double> {
+    std::optional<double> min_distance = std::nullopt;
+    for (const auto & factor : planning_factors->factors) {
+      if (factor.behavior == PlanningFactor::STOP) {
+        for (const auto & control_point : factor.control_points) {
+          const auto cur_distance = std::abs(control_point.distance);
+          if (!min_distance || cur_distance < *min_distance) {
+            min_distance = cur_distance;
+          }
+        }
+      }
+    }
+    return min_distance;
+  };
 
-  AddMetricMsg(metric, metric_value);
+  // get min_distance from each module
+  std::vector<std::pair<std::string, double>> min_distances;
+  for (auto & [module_name, planning_factor_sub_] : planning_factors_sub_) {
+    const auto planning_factors = planning_factor_sub_.take_data();
+    if (
+      !planning_factors || planning_factors->factors.empty() ||
+      stop_deviation_modules_.count(module_name) == 0) {
+      continue;
+    }
+    const auto min_distance = get_min_distance(planning_factors);
+    if (min_distance) {
+      min_distances.emplace_back(module_name, *min_distance);
+    }
+  }
+  if (min_distances.empty()) {
+    return;
+  }
+
+  // find the stop decision closest to the ego, accumulate its metric
+  const auto min_distance_pair = std::min_element(
+    min_distances.begin(), min_distances.end(),
+    [](const auto & a, const auto & b) { return a.second < b.second; });
+
+  const auto [closest_module_name, closest_min_distance] = *min_distance_pair;
+  const bool is_ego_stopped_near_stop_decision =
+    std::abs(closest_min_distance) < 3.0 && std::abs(odom.twist.twist.linear.x) < 0.001;
+  if (output_metrics_ && is_ego_stopped_near_stop_decision) {
+    stop_deviation_accumulators_[closest_module_name].add(closest_min_distance);
+  }
+
+  // add metrics
+  for (const auto & [module_name, min_distance] : min_distances) {
+    MetricMsg metric_msg;
+    metric_msg.name = "stop_deviation/" + module_name;
+    metric_msg.value = std::to_string(min_distance);
+    metrics_msg_.metric_array.push_back(metric_msg);
+  }
 }
 
 void ControlEvaluatorNode::onTimer()
 {
-  autoware::universe_utils::StopWatch<std::chrono::milliseconds> stop_watch;
-  const auto traj = traj_sub_.takeData();
-  const auto odom = odometry_sub_.takeData();
-  const auto acc = accel_sub_.takeData();
-  const auto behavior_path = behavior_path_subscriber_.takeData();
-  const auto steering_status = steering_sub_.takeData();
+  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
+  const auto traj = traj_sub_.take_data();
+  const auto odom = odometry_sub_.take_data();
+  const auto acc = accel_sub_.take_data();
+  const auto behavior_path = behavior_path_subscriber_.take_data();
+  const auto steering_status = steering_sub_.take_data();
 
-  // calculate deviation metrics
+  // add deviation metrics
   if (odom && traj && !traj->points.empty()) {
     const Pose ego_pose = odom->pose.pose;
     AddLateralDeviationMetricMsg(*traj, ego_pose.position);
     AddYawDeviationMetricMsg(*traj, ego_pose);
   }
 
+  // add goal deviation metrics
   getRouteData();
   if (odom && route_handler_.isHandlerReady()) {
     const Pose ego_pose = odom->pose.pose;
     AddLaneletInfoMsg(ego_pose);
-    AddGoalLongitudinalDeviationMetricMsg(ego_pose);
-    AddGoalLateralDeviationMetricMsg(ego_pose);
-    AddGoalYawDeviationMetricMsg(ego_pose);
+    AddGoalDeviationMetricMsg(*odom);
   }
 
+  // add planning_factor related metrics
+  AddStopDeviationMetricMsg(*odom);
+
+  // add kinematic info
   if (odom && acc) {
     AddKinematicStateMetricMsg(*odom, *acc);
   }
 
+  // add boundary distance metrics
   if (odom && behavior_path) {
     const Pose ego_pose = odom->pose.pose;
     AddBoundaryDistanceMetricMsg(*behavior_path, ego_pose);
   }
 
+  // add steering metrics
   if (steering_status) {
     AddSteeringMetricMsg(*steering_status);
   }

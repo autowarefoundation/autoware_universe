@@ -134,7 +134,7 @@ std::vector<PullOverPath> BezierPullOver::generateBezierPath(
 
   // shift end pose is longitudinal offset from goal pose to improve parking angle accuracy
   const Pose shift_end_pose =
-    autoware::universe_utils::calcOffsetPose(goal_pose, -after_shift_straight_distance, 0, 0);
+    autoware_utils::calc_offset_pose(goal_pose, -after_shift_straight_distance, 0, 0);
 
   // calculate lateral shift of previous module path terminal pose from road lane reference path
   const auto road_lane_reference_path_to_shift_end = utils::resamplePathWithSpline(
@@ -170,7 +170,7 @@ std::vector<PullOverPath> BezierPullOver::generateBezierPath(
   const Pose & shift_end_pose_prev_module_path =
     processed_prev_module_path->points.back().point.pose;
   const double shift_end_road_to_target_distance =
-    autoware::universe_utils::inverseTransformPoint(
+    autoware_utils::inverse_transform_point(
       shift_end_pose.position, shift_end_pose_prev_module_path)
       .y;
 
@@ -260,7 +260,7 @@ std::vector<PullOverPath> BezierPullOver::generateBezierPath(
       p.point.pose.position.x = bezier_points[i].x();
       p.point.pose.position.y = bezier_points[i].y();
       p.point.pose.orientation =
-        universe_utils::createQuaternionFromRPY(0.0, 0.0, bezier_points[i].z());
+        autoware_utils::create_quaternion_from_rpy(0.0, 0.0, bezier_points[i].z());
     }
 
     // interpolate between shift end pose to goal pose

@@ -16,8 +16,13 @@
 
 #include <boost/optional.hpp>
 
+#include <algorithm>
+#include <cmath>
+#include <limits>
 #include <memory>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 using namespace std::literals;
@@ -46,7 +51,7 @@ bool update_param(
   return true;
 }
 
-boost::optional<InfrastructureCommandArray> findCommand(
+std::optional<InfrastructureCommandArray> findCommand(
   const InfrastructureCommandArray & command_array, const std::string & instrument_id,
   const bool use_first_command, const bool use_command_state)
 {
@@ -72,12 +77,44 @@ boost::optional<InfrastructureCommandArray> findCommand(
       found_flag = true;
     }
   }
-  if (found_flag) {
-    return array;
-  } else {
-    return {};
-  }
+
+  return found_flag ? std::optional<InfrastructureCommandArray>{array} : std::nullopt;
 }
+
+std::optional<double> calcClosestStopLineDistance(
+  const PlanningFactorArray::ConstSharedPtr & planning_factors)
+{
+  if (!planning_factors || planning_factors->factors.empty()) {
+    return std::nullopt;
+  }
+
+  const auto vtl_it = std::find_if(
+    planning_factors->factors.begin(), planning_factors->factors.end(),
+    [](const auto & factor) { return factor.module == "virtual_traffic_light"; });
+
+  if (vtl_it == planning_factors->factors.end()) {
+    return std::nullopt;
+  }
+
+  std::vector<double> distances;
+  distances.reserve(planning_factors->factors.size() * 2);
+
+  for (const auto & factor : planning_factors->factors) {
+    if (factor.module == "virtual_traffic_light") {
+      for (const auto & control_point : factor.control_points) {
+        distances.push_back(std::abs(control_point.distance));
+      }
+    }
+  }
+
+  if (distances.empty()) {
+    return std::nullopt;
+  }
+
+  const auto min_it = std::min_element(distances.begin(), distances.end());
+  return *min_it;
+}
+
 }  // namespace
 
 DummyInfrastructureNode::DummyInfrastructureNode(const rclcpp::NodeOptions & node_options)
@@ -95,11 +132,9 @@ DummyInfrastructureNode::DummyInfrastructureNode(const rclcpp::NodeOptions & nod
   node_param_.instrument_id = declare_parameter<std::string>("instrument_id");
   node_param_.approval = declare_parameter<bool>("approval");
   node_param_.is_finalized = declare_parameter<bool>("is_finalized");
-
-  // Subscriber
-  sub_command_array_ = create_subscription<InfrastructureCommandArray>(
-    "~/input/command_array", rclcpp::QoS{1},
-    std::bind(&DummyInfrastructureNode::onCommandArray, this, _1));
+  node_param_.auto_approval_mode = declare_parameter<bool>("auto_approval_mode", false);
+  node_param_.stop_distance_threshold = declare_parameter<double>("stop_distance_threshold", 1.0);
+  node_param_.stop_velocity_threshold = declare_parameter<double>("stop_velocity_threshold", 0.1);
 
   // Publisher
   pub_state_array_ = create_publisher<VirtualTrafficLightStateArray>("~/output/state_array", 1);
@@ -110,17 +145,12 @@ DummyInfrastructureNode::DummyInfrastructureNode(const rclcpp::NodeOptions & nod
     this, get_clock(), update_period_ns, std::bind(&DummyInfrastructureNode::onTimer, this));
 }
 
-void DummyInfrastructureNode::onCommandArray(const InfrastructureCommandArray::ConstSharedPtr msg)
-{
-  if (!msg->commands.empty()) {
-    command_array_ = msg;
-  }
-}
-
 rcl_interfaces::msg::SetParametersResult DummyInfrastructureNode::onSetParam(
   const std::vector<rclcpp::Parameter> & params)
 {
   rcl_interfaces::msg::SetParametersResult result;
+  result.successful = true;
+  result.reason = "success";
 
   try {
     // Copy to local variable
@@ -133,17 +163,23 @@ rcl_interfaces::msg::SetParametersResult DummyInfrastructureNode::onSetParam(
     update_param(params, "instrument_id", p.instrument_id);
     update_param(params, "approval", p.approval);
     update_param(params, "is_finalized", p.is_finalized);
+    update_param(params, "auto_approval_mode", p.auto_approval_mode);
+    update_param(params, "stop_distance_threshold", p.stop_distance_threshold);
+    update_param(params, "stop_velocity_threshold", p.stop_velocity_threshold);
 
     // Copy back to member variable
     node_param_ = p;
   } catch (const rclcpp::exceptions::InvalidParameterTypeException & e) {
     result.successful = false;
     result.reason = e.what();
-    return result;
+  } catch (const std::exception & e) {
+    result.successful = false;
+    result.reason = "Exception occurred: " + std::string(e.what());
+  } catch (...) {
+    result.successful = false;
+    result.reason = "Unknown exception occurred";
   }
 
-  result.successful = true;
-  result.reason = "success";
   return result;
 }
 
@@ -154,11 +190,33 @@ bool DummyInfrastructureNode::isDataReady()
     return false;
   }
 
+  if (!planning_factors_) {
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "waiting for planning_factors msg...");
+    return false;
+  }
+
+  if (!current_odometry_) {
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000, "waiting for odometry msg...");
+    return false;
+  }
+
   return true;
+}
+
+std::optional<std::string> DummyInfrastructureNode::getCurrentCommandId() const
+{
+  if (!command_array_ || command_array_->commands.empty()) {
+    return std::nullopt;
+  }
+  return command_array_->commands.front().id;
 }
 
 void DummyInfrastructureNode::onTimer()
 {
+  command_array_ = sub_command_array_.take_data();
+  planning_factors_ = sub_planning_factors_.take_data();
+  current_odometry_ = sub_odometry_.take_data();
+
   if (!isDataReady()) {
     return;
   }
@@ -174,22 +232,57 @@ void DummyInfrastructureNode::onTimer()
     state.stamp = get_clock()->now();
     state.id = node_param_.instrument_id;
     state.type = "dummy_infrastructure";
-    state.approval = false;
+    state.approval = node_param_.approval;
     state.is_finalized = node_param_.is_finalized;
     state_array.states.push_back(state);
   } else {
-    for (auto command : found_command_array->commands) {
-      VirtualTrafficLightState state;
+    const bool is_stopped =
+      std::abs(current_odometry_->twist.twist.linear.x) < node_param_.stop_velocity_threshold;
+    const auto min_distance_opt = calcClosestStopLineDistance(planning_factors_);
+    const bool is_near_stop_line =
+      min_distance_opt && *min_distance_opt <= node_param_.stop_distance_threshold;
+
+    for (const auto & command : found_command_array->commands) {
+      const auto [command_approval, command_is_finalized] =
+        checkApprovalCommand(command.id, is_stopped, is_near_stop_line);
+      if (command_approval && command_is_finalized) {
+        if (approved_command_ids_.find(command.id) == approved_command_ids_.end()) {
+          approved_command_ids_.insert(command.id);
+          RCLCPP_INFO(get_logger(), "Approved new command ID %s", command.id.c_str());
+        }
+      }
+      VirtualTrafficLightState state{};
       state.stamp = get_clock()->now();
       state.id = command.id;
       state.type = command.type;
-      state.approval = node_param_.approval;
-      state.is_finalized = node_param_.is_finalized;
+      state.approval = command_approval;
+      state.is_finalized = command_is_finalized;
       state_array.states.push_back(state);
     }
   }
 
   pub_state_array_->publish(state_array);
+}
+
+std::pair<bool, bool> DummyInfrastructureNode::checkApprovalCommand(
+  const std::string & command_id, const bool is_stopped, const bool is_near_stop_line) const
+{
+  if (!node_param_.auto_approval_mode) {
+    return {node_param_.approval, node_param_.is_finalized};
+  }
+
+  if (approved_command_ids_.find(command_id) != approved_command_ids_.end()) {
+    return {true, true};
+  }
+
+  if (is_stopped && is_near_stop_line) {
+    if (approved_command_ids_.find(command_id) == approved_command_ids_.end()) {
+      RCLCPP_INFO(get_logger(), "Command ID %s meets approval conditions", command_id.c_str());
+    }
+    return {true, true};
+  }
+
+  return {false, false};
 }
 
 }  // namespace autoware::dummy_infrastructure

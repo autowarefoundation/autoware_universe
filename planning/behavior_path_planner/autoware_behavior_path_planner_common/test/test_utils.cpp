@@ -26,12 +26,12 @@
 #include <memory>
 #include <string>
 
-using autoware::universe_utils::Point2d;
+using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::Trajectory;
-using tier4_planning_msgs::msg::PathPointWithLaneId;
-using tier4_planning_msgs::msg::PathWithLaneId;
+using autoware_utils::Point2d;
 using ObjectClassification = autoware_perception_msgs::msg::ObjectClassification;
 using autoware::behavior_path_planner::PlannerData;
 using autoware_planning_msgs::msg::LaneletRoute;
@@ -85,11 +85,11 @@ TEST_F(BehaviorPathPlanningUtilTest, l2Norm)
 {
   using autoware::behavior_path_planner::utils::l2Norm;
 
-  geometry_msgs::msg::Vector3 vector = autoware::universe_utils::createVector3(0.0, 0.0, 0.0);
+  geometry_msgs::msg::Vector3 vector = autoware_utils::create_vector3(0.0, 0.0, 0.0);
   auto norm = l2Norm(vector);
   EXPECT_DOUBLE_EQ(norm, 0.0);
 
-  vector = autoware::universe_utils::createVector3(1.0, 2.0, 2.0);
+  vector = autoware_utils::create_vector3(1.0, 2.0, 2.0);
   norm = l2Norm(vector);
   EXPECT_DOUBLE_EQ(norm, 3.0);
 }
@@ -98,7 +98,7 @@ TEST_F(BehaviorPathPlanningUtilTest, checkCollisionBetweenPathFootprintsAndObjec
 {
   using autoware::behavior_path_planner::utils::checkCollisionBetweenPathFootprintsAndObjects;
 
-  autoware::universe_utils::LinearRing2d base_footprint = {
+  autoware_utils::LinearRing2d base_footprint = {
     Point2d{1.0, 1.0}, Point2d{1.0, -1.0}, Point2d{-1.0, -1.0}, Point2d{-1.0, 1.0},
     Point2d{1.0, -1.0}};
   double margin = 0.2;
@@ -132,7 +132,7 @@ TEST_F(BehaviorPathPlanningUtilTest, checkCollisionBetweenFootprintAndObjects)
   using autoware::behavior_path_planner::utils::checkCollisionBetweenFootprintAndObjects;
 
   auto ego_pose = createPose(1.0, 1.0, 0.0, 0.0, 0.0, 0.0);
-  autoware::universe_utils::LinearRing2d base_footprint = {
+  autoware_utils::LinearRing2d base_footprint = {
     Point2d{1.0, 1.0}, Point2d{1.0, -1.0}, Point2d{-1.0, -1.0}, Point2d{-1.0, 1.0},
     Point2d{1.0, -1.0}};
   double margin = 0.2;

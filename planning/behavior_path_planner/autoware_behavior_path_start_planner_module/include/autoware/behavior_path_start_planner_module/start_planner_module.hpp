@@ -32,7 +32,7 @@
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <lanelet2_core/Forward.h>
 #include <tf2/utils.h>
@@ -230,7 +230,7 @@ private:
   bool receivedNewRoute() const;
 
   bool isModuleRunning() const;
-  bool isCurrentPoseOnMiddleOfTheRoad() const;
+  bool isCurrentPoseOnEgoCenterline() const;
 
   /**
    * @brief Check if the ego vehicle is preventing the rear vehicle from passing through.

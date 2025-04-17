@@ -17,10 +17,10 @@
 
 #include "autoware/lane_departure_checker/lane_departure_checker.hpp"
 #include "autoware/lane_departure_checker/parameters.hpp"
-#include "autoware/universe_utils/ros/polling_subscriber.hpp"
+#include "autoware_utils/ros/polling_subscriber.hpp"
 
-#include <autoware/universe_utils/ros/debug_publisher.hpp>
-#include <autoware/universe_utils/ros/processing_time_publisher.hpp>
+#include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/ros/processing_time_publisher.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -55,22 +55,19 @@ public:
 
 private:
   // Subscriber
-  autoware::universe_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry> sub_odom_{
+  autoware_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry> sub_odom_{
     this, "~/input/odometry"};
-  autoware::universe_utils::InterProcessPollingSubscriber<
-    LaneletMapBin, autoware::universe_utils::polling_policy::Newest>
+  autoware_utils::InterProcessPollingSubscriber<
+    LaneletMapBin, autoware_utils::polling_policy::Newest>
     sub_lanelet_map_bin_{this, "~/input/lanelet_map_bin", rclcpp::QoS{1}.transient_local()};
-  autoware::universe_utils::InterProcessPollingSubscriber<LaneletRoute> sub_route_{
-    this, "~/input/route"};
-  autoware::universe_utils::InterProcessPollingSubscriber<Trajectory> sub_reference_trajectory_{
+  autoware_utils::InterProcessPollingSubscriber<LaneletRoute> sub_route_{this, "~/input/route"};
+  autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_reference_trajectory_{
     this, "~/input/reference_trajectory"};
-  autoware::universe_utils::InterProcessPollingSubscriber<Trajectory> sub_predicted_trajectory_{
+  autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_predicted_trajectory_{
     this, "~/input/predicted_trajectory"};
-  autoware::universe_utils::InterProcessPollingSubscriber<
-    autoware_adapi_v1_msgs::msg::OperationModeState>
+  autoware_utils::InterProcessPollingSubscriber<autoware_adapi_v1_msgs::msg::OperationModeState>
     sub_operation_mode_{this, "/api/operation_mode/state"};
-  autoware::universe_utils::InterProcessPollingSubscriber<
-    autoware_vehicle_msgs::msg::ControlModeReport>
+  autoware_utils::InterProcessPollingSubscriber<autoware_vehicle_msgs::msg::ControlModeReport>
     sub_control_mode_{this, "/vehicle/status/control_mode"};
 
   // Data Buffer
@@ -88,18 +85,9 @@ private:
   autoware_adapi_v1_msgs::msg::OperationModeState::ConstSharedPtr operation_mode_;
   autoware_vehicle_msgs::msg::ControlModeReport::ConstSharedPtr control_mode_;
 
-  // Callback
-  void onOdometry(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
-  void onLaneletMapBin(const LaneletMapBin::ConstSharedPtr msg);
-  void onRoute(const LaneletRoute::ConstSharedPtr msg);
-  void onReferenceTrajectory(const Trajectory::ConstSharedPtr msg);
-  void onPredictedTrajectory(const Trajectory::ConstSharedPtr msg);
-  void onOperationMode(const autoware_adapi_v1_msgs::msg::OperationModeState::ConstSharedPtr msg);
-  void onControlMode(const autoware_vehicle_msgs::msg::ControlModeReport::ConstSharedPtr msg);
-
   // Publisher
-  autoware::universe_utils::DebugPublisher debug_publisher_{this, "~/debug"};
-  autoware::universe_utils::ProcessingTimePublisher processing_diag_publisher_{
+  autoware_utils::DebugPublisher debug_publisher_{this, "~/debug"};
+  autoware_utils::ProcessingTimePublisher processing_diag_publisher_{
     this, "~/debug/processing_time_ms_diag"};
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
     processing_time_publisher_;

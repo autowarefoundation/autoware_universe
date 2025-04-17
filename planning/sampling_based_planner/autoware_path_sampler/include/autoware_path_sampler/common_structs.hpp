@@ -15,13 +15,13 @@
 #ifndef AUTOWARE_PATH_SAMPLER__COMMON_STRUCTS_HPP_
 #define AUTOWARE_PATH_SAMPLER__COMMON_STRUCTS_HPP_
 
-#include "autoware/universe_utils/ros/update_param.hpp"
-#include "autoware/universe_utils/system/stop_watch.hpp"
 #include "autoware_path_sampler/type_alias.hpp"
 #include "autoware_sampler_common/structures.hpp"
+#include "autoware_utils/ros/update_param.hpp"
+#include "autoware_utils/system/stop_watch.hpp"
 #include "rclcpp/rclcpp.hpp"
 
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 
 #include <memory>
 #include <optional>
@@ -80,7 +80,7 @@ struct TimeKeeper
   std::string accumulated_msg = "\n";
   std::stringstream latest_stream;
 
-  autoware::universe_utils::StopWatch<
+  autoware_utils::StopWatch<
     std::chrono::milliseconds, std::chrono::microseconds, std::chrono::steady_clock>
     stop_watch_;
 };
@@ -89,8 +89,8 @@ struct DebugData
 {
   std::vector<autoware::sampler_common::Path> sampled_candidates{};
   size_t previous_sampled_candidates_nb = 0UL;
-  std::vector<autoware::universe_utils::Polygon2d> obstacles{};
-  std::vector<autoware::universe_utils::MultiPoint2d> footprints{};
+  std::vector<autoware_utils::Polygon2d> obstacles{};
+  std::vector<autoware_utils::MultiPoint2d> footprints{};
 };
 
 struct TrajectoryParam
@@ -103,10 +103,10 @@ struct TrajectoryParam
 
   void onParam(const std::vector<rclcpp::Parameter> & parameters)
   {
-    using autoware::universe_utils::updateParam;
+    using autoware_utils::update_param;
 
     // common
-    updateParam<double>(parameters, "common.output_delta_arc_length", output_delta_arc_length);
+    update_param<double>(parameters, "common.output_delta_arc_length", output_delta_arc_length);
   }
 
   double output_delta_arc_length;
@@ -123,9 +123,9 @@ struct EgoNearestParam
 
   void onParam(const std::vector<rclcpp::Parameter> & parameters)
   {
-    using autoware::universe_utils::updateParam;
-    updateParam<double>(parameters, "ego_nearest_dist_threshold", dist_threshold);
-    updateParam<double>(parameters, "ego_nearest_yaw_threshold", yaw_threshold);
+    using autoware_utils::update_param;
+    update_param<double>(parameters, "ego_nearest_dist_threshold", dist_threshold);
+    update_param<double>(parameters, "ego_nearest_yaw_threshold", yaw_threshold);
   }
 
   double dist_threshold{0.0};

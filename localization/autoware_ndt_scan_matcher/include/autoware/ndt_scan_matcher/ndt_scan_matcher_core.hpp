@@ -18,12 +18,12 @@
 #define FMT_HEADER_ONLY
 
 #include "autoware/localization_util/smart_pose_buffer.hpp"
-#include "autoware/universe_utils/ros/diagnostics_interface.hpp"
+#include "autoware_utils/ros/diagnostics_interface.hpp"
 #include "hyper_parameters.hpp"
 #include "map_update_module.hpp"
 #include "ndt_omp/multigrid_ndt_omp.h"
 
-#include <autoware/universe_utils/ros/logger_level_configure.hpp>
+#include <autoware_utils/ros/logger_level_configure.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
@@ -219,7 +219,7 @@ private:
   std::unique_ptr<DiagnosticsInterface> diagnostics_ndt_align_;
   std::unique_ptr<DiagnosticsInterface> diagnostics_trigger_node_;
   std::unique_ptr<MapUpdateModule> map_update_module_;
-  std::unique_ptr<autoware::universe_utils::LoggerLevelConfigure> logger_configure_;
+  std::unique_ptr<autoware_utils::LoggerLevelConfigure> logger_configure_;
 
   HyperParameters param_;
 };

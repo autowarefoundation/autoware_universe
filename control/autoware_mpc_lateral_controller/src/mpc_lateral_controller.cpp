@@ -461,7 +461,7 @@ bool MpcLateralController::isStoppedState() const
     auto covered_distance = 0.0;
     for (auto i = nearest + 1; i < m_current_trajectory.points.size(); ++i) {
       min_vel = std::min(min_vel, m_current_trajectory.points.at(i).longitudinal_velocity_mps);
-      covered_distance += autoware::universe_utils::calcDistance2d(
+      covered_distance += autoware_utils::calc_distance2d(
         m_current_trajectory.points.at(i - 1).pose, m_current_trajectory.points.at(i).pose);
       if (covered_distance > distance_margin) break;
     }
@@ -670,7 +670,7 @@ bool MpcLateralController::isTrajectoryShapeChanged() const
   // TODO(Horibe): update implementation to check trajectory shape around ego vehicle.
   // Now temporally check the goal position.
   for (const auto & trajectory : m_trajectory_buffer) {
-    const auto change_distance = autoware::universe_utils::calcDistance2d(
+    const auto change_distance = autoware_utils::calc_distance2d(
       trajectory.points.back().pose, m_current_trajectory.points.back().pose);
     if (change_distance > m_new_traj_end_dist) {
       return true;

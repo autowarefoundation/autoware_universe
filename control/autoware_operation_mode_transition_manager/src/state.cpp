@@ -17,8 +17,8 @@
 #include "util.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/geometry/pose_deviation.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/pose_deviation.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -29,8 +29,8 @@ namespace autoware::operation_mode_transition_manager
 {
 
 using autoware::motion_utils::findNearestIndex;
-using autoware::universe_utils::calcDistance2d;
-using autoware::universe_utils::calcYawDeviation;
+using autoware_utils::calc_distance2d;
+using autoware_utils::calc_yaw_deviation;
 
 AutonomousMode::AutonomousMode(rclcpp::Node * node)
 : logger_(node->get_logger()), clock_(node->get_clock())
@@ -252,11 +252,11 @@ bool AutonomousMode::isModeChangeAvailable()
   debug_info_.trajectory_available_ok = true;
 
   // No engagement is lateral control error is large
-  const auto lateral_deviation = calcDistance2d(closest_point.pose, kinematics_.pose.pose);
+  const auto lateral_deviation = calc_distance2d(closest_point.pose, kinematics_.pose.pose);
   const bool lateral_deviation_ok = lateral_deviation < param.dist_threshold;
 
   // No engagement is yaw control error is large
-  const auto yaw_deviation = calcYawDeviation(closest_point.pose, kinematics_.pose.pose);
+  const auto yaw_deviation = calc_yaw_deviation(closest_point.pose, kinematics_.pose.pose);
   const bool yaw_deviation_ok = yaw_deviation < param.yaw_threshold;
 
   // No engagement if speed control error is large

@@ -17,9 +17,9 @@
 
 #include "map_based_prediction/data_structure.hpp"
 
-#include <autoware/universe_utils/math/normalization.hpp>
-#include <autoware/universe_utils/math/unit_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/math/normalization.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>

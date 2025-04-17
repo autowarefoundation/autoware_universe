@@ -20,11 +20,11 @@
 
 #include <autoware/lane_departure_checker/lane_departure_checker.hpp>
 
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_perception_msgs/msg/predicted_path.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <lanelet2_core/Forward.h>
@@ -36,15 +36,15 @@
 
 namespace autoware::behavior_path_planner::goal_planner_utils
 {
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_perception_msgs::msg::PredictedPath;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::Twist;
-using tier4_planning_msgs::msg::PathWithLaneId;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 using Shape = autoware_perception_msgs::msg::Shape;
-using Polygon2d = autoware::universe_utils::Polygon2d;
+using Polygon2d = autoware_utils::Polygon2d;
 
 lanelet::ConstLanelets getPullOverLanes(
   const RouteHandler & route_handler, const bool left_side, const double backward_distance,
@@ -128,6 +128,23 @@ bool isWithinAreas(
  */
 std::vector<lanelet::BasicPolygon2d> getBusStopAreaPolygons(const lanelet::ConstLanelets & lanes);
 
+/**
+ * @brief check collision between objects and ego path footprints
+ * @param path ego path to check collision
+ * @param curvatures curvatures of ego path
+ * @param static_target_objects static objects to check collision
+ * @param dynamic_target_objects dynamic objects to check collision
+ * @param behavior_path_parameters behavior path parameters
+ * @param collision_check_margin margin to check collision
+ * @param extract_static_objects flag to extract static objects
+ * @param maximum_deceleration maximum deceleration
+ * @param object_recognition_collision_check_max_extra_stopping_margin maximum extra stopping margin
+ * @param collision_check_outer_margin_factor factor to extend the collision check margin from the
+ *                                            inside margin to the outside in the curved path
+ * @param ego_polygons_expanded expanded ego polygons
+ * @param update_debug_data flag to update debug data
+ * @return true if collision is detected
+ */
 bool checkObjectsCollision(
   const PathWithLaneId & path, const std::vector<double> & curvatures,
   const PredictedObjects & static_target_objects, const PredictedObjects & dynamic_target_objects,
@@ -135,12 +152,13 @@ bool checkObjectsCollision(
   const double collision_check_margin, const bool extract_static_objects,
   const double maximum_deceleration,
   const double object_recognition_collision_check_max_extra_stopping_margin,
-  std::vector<Polygon2d> & ego_polygons_expanded, const bool update_debug_data = false);
+  const double collision_check_outer_margin_factor, std::vector<Polygon2d> & ego_polygons_expanded,
+  const bool update_debug_data = false);
 
 // debug
 MarkerArray createPullOverAreaMarkerArray(
-  const autoware::universe_utils::MultiPolygon2d area_polygons,
-  const std_msgs::msg::Header & header, const std_msgs::msg::ColorRGBA & color, const double z);
+  const autoware_utils::MultiPolygon2d area_polygons, const std_msgs::msg::Header & header,
+  const std_msgs::msg::ColorRGBA & color, const double z);
 MarkerArray createPosesMarkerArray(
   const std::vector<Pose> & poses, std::string && ns, const std_msgs::msg::ColorRGBA & color);
 MarkerArray createTextsMarkerArray(

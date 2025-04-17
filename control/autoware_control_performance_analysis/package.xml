@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_control_performance_analysis</name>
-  <version>0.41.0</version>
+  <version>0.43.0</version>
   <description>Controller Performance Evaluation</description>
   <maintainer email="berkay@leodrive.ai">Berkay Karaman</maintainer>
   <maintainer email="taiki.tanaka@tier4.jp">Taiki Tanaka</maintainer>
@@ -30,7 +30,7 @@
   <depend>autoware_motion_utils</depend>
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_signal_processing</depend>
-  <depend>autoware_universe_utils</depend>
+  <depend>autoware_utils</depend>
   <depend>autoware_vehicle_info_utils</depend>
   <depend>autoware_vehicle_msgs</depend>
   <depend>geometry_msgs</depend>

@@ -22,12 +22,12 @@ include_directories(
 )
 
 add_library(${PROJECT_NAME} SHARED
+  lib/voxel_grid_map_loader.cpp
   src/distance_based_compare_map_filter/node.cpp
   src/voxel_based_approximate_compare_map_filter/node.cpp
   src/voxel_based_compare_map_filter/node.cpp
   src/voxel_distance_based_compare_map_filter/node.cpp
   src/compare_elevation_map_filter/node.cpp
-  src/voxel_grid_map_loader/voxel_grid_map_loader.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -44,7 +44,7 @@ ament_target_dependencies(${PROJECT_NAME}
   rclcpp
   rclcpp_components
   sensor_msgs
-  autoware_universe_utils
+  autoware_utils
   autoware_map_msgs
   nav_msgs
 )

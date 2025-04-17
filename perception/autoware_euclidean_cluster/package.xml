@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_euclidean_cluster</name>
-  <version>0.41.0</version>
+  <version>0.43.0</version>
   <description>The autoware_euclidean_cluster package</description>
   <maintainer email="yukihiro.saito@tier4.jp">Yukihiro Saito</maintainer>
   <maintainer email="dai.nguyen@tier4.jp">Dai Nguyen</maintainer>
@@ -13,7 +13,7 @@
 
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_point_types</depend>
-  <depend>autoware_universe_utils</depend>
+  <depend>autoware_utils</depend>
   <depend>geometry_msgs</depend>
   <depend>libpcl-all-dev</depend>
   <depend>pcl_conversions</depend>

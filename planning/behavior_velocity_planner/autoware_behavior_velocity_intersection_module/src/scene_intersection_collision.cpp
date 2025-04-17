@@ -18,9 +18,9 @@
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for toGeomPoly
 #include <autoware/behavior_velocity_planner_common/utilization/trajectory_utils.hpp>  // for smoothPath
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/boost_polygon_utils.hpp>  // for toPolygon2d
-#include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>  // for toPolygon2d
+#include <autoware_utils/geometry/geometry.hpp>
 #include <magic_enum.hpp>
 
 #include <boost/geometry/algorithms/correct.hpp>
@@ -118,8 +118,7 @@ void IntersectionModule::updateObjectInfoManagerArea()
       if (!intersection_area) {
         return false;
       }
-      return bg::within(
-        autoware::universe_utils::Point2d{obj_pos.x, obj_pos.y}, intersection_area.value());
+      return bg::within(autoware_utils::Point2d{obj_pos.x, obj_pos.y}, intersection_area.value());
     }();
     std::optional<lanelet::ConstLanelet> attention_lanelet{std::nullopt};
     std::optional<lanelet::ConstLineString3d> stopline{std::nullopt};
@@ -320,8 +319,7 @@ void IntersectionModule::updateObjectInfoManagerCollision(
       bool collision_detected = false;
       for (auto i = begin; i <= end; ++i) {
         if (bg::intersects(
-              polygon,
-              autoware::universe_utils::toPolygon2d(object_path.at(i), predicted_object.shape))) {
+              polygon, autoware_utils::to_polygon2d(object_path.at(i), predicted_object.shape))) {
           collision_detected = true;
           break;
         }
@@ -500,13 +498,13 @@ std::string IntersectionModule::generateDetectionBlameDiagnosis(
           "judge line({2} seconds before from now) given the estimated current velocity {3}[m/s]. "
           "ego was at x = {4}, y = {5} when it passed the 1st pass judge line so it is the fault "
           "of detection side that failed to detect around {6}[m] range at that time.\n",
-          past_position.x,                                                                     // 0
-          past_position.y,                                                                     // 1
-          time_diff,                                                                           // 2
-          object_info->observed_velocity(),                                                    // 3
-          passed_1st_judge_line_pose.position.x,                                               // 4
-          passed_1st_judge_line_pose.position.y,                                               // 5
-          autoware::universe_utils::calcDistance2d(passed_1st_judge_line_pose, past_position)  // 6
+          past_position.x,                                                            // 0
+          past_position.y,                                                            // 1
+          time_diff,                                                                  // 2
+          object_info->observed_velocity(),                                           // 3
+          passed_1st_judge_line_pose.position.x,                                      // 4
+          passed_1st_judge_line_pose.position.y,                                      // 5
+          autoware_utils::calc_distance2d(passed_1st_judge_line_pose, past_position)  // 6
         );
       }
     }
@@ -538,13 +536,13 @@ std::string IntersectionModule::generateDetectionBlameDiagnosis(
           "judge line({2} seconds before from now) given the estimated current velocity {3}[m/s]. "
           "ego was at x = {4}, y = {5} when it passed the 2nd pass judge line so it is the fault "
           "of detection side that failed to detect around {6}[m] range at that time.\n",
-          past_position.x,                                                                     // 0
-          past_position.y,                                                                     // 1
-          time_diff,                                                                           // 2
-          object_info->observed_velocity(),                                                    // 3
-          passed_2nd_judge_line_pose.position.x,                                               // 4
-          passed_2nd_judge_line_pose.position.y,                                               // 5
-          autoware::universe_utils::calcDistance2d(passed_2nd_judge_line_pose, past_position)  // 6
+          past_position.x,                                                            // 0
+          past_position.y,                                                            // 1
+          time_diff,                                                                  // 2
+          object_info->observed_velocity(),                                           // 3
+          passed_2nd_judge_line_pose.position.x,                                      // 4
+          passed_2nd_judge_line_pose.position.y,                                      // 5
+          autoware_utils::calc_distance2d(passed_2nd_judge_line_pose, past_position)  // 6
         );
       }
     }
@@ -603,7 +601,7 @@ std::string IntersectionModule::generateDetectionBlameDiagnosis(
 }
 
 std::string IntersectionModule::generateEgoRiskEvasiveDiagnosis(
-  const tier4_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
   const IntersectionModule::TimeDistanceArray & ego_time_distance_array,
   const std::vector<
     std::pair<IntersectionModule::CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> &
@@ -624,10 +622,10 @@ std::string IntersectionModule::generateEgoRiskEvasiveDiagnosis(
     const auto [begin, end] = unsafe_interval.interval_position;
     const auto &p1 = unsafe_interval.path.at(begin).position,
                p2 = unsafe_interval.path.at(end).position;
-    const auto collision_pos = autoware::universe_utils::createPoint(
-      (p1.x + p2.x) / 2, (p1.y + p2.y) / 2, (p1.z + p2.z) / 2);
+    const auto collision_pos =
+      autoware_utils::create_point((p1.x + p2.x) / 2, (p1.y + p2.y) / 2, (p1.z + p2.z) / 2);
     const auto object_dist_to_margin_point =
-      autoware::universe_utils::calcDistance2d(
+      autoware_utils::calc_distance2d(
         object_info->predicted_object().kinematics.initial_pose_with_covariance.pose.position,
         collision_pos) -
       planner_param_.collision_detection.avoid_collision_by_acceleration
@@ -790,8 +788,7 @@ std::optional<size_t> IntersectionModule::checkAngleForTargetLanelets(
     }
     const double ll_angle = lanelet::utils::getLaneletAngle(ll, pose.position);
     const double pose_angle = tf2::getYaw(pose.orientation);
-    const double angle_diff =
-      autoware::universe_utils::normalizeRadian(ll_angle - pose_angle, -M_PI);
+    const double angle_diff = autoware_utils::normalize_radian(ll_angle - pose_angle, -M_PI);
     if (consider_wrong_direction_vehicle) {
       if (std::fabs(angle_diff) > 1.57 || std::fabs(angle_diff) < detection_area_angle_thr) {
         return std::make_optional<size_t>(i);
@@ -813,7 +810,7 @@ std::optional<size_t> IntersectionModule::checkAngleForTargetLanelets(
 }
 
 IntersectionModule::TimeDistanceArray IntersectionModule::calcIntersectionPassingTime(
-  const tier4_planning_msgs::msg::PathWithLaneId & path, const bool is_prioritized,
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const bool is_prioritized,
   const IntersectionStopLines & intersection_stoplines,
   autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * ego_ttc_array) const
 {
@@ -929,7 +926,7 @@ IntersectionModule::TimeDistanceArray IntersectionModule::calcIntersectionPassin
     const auto & p1 = smoothed_reference_path.points.at(i);
     const auto & p2 = smoothed_reference_path.points.at(i + 1);
 
-    const double dist = autoware::universe_utils::calcDistance2d(p1, p2);
+    const double dist = autoware_utils::calc_distance2d(p1, p2);
     dist_sum += dist;
 
     // use average velocity between p1 and p2

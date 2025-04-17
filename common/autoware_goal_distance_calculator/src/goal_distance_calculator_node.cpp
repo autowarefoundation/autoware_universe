@@ -14,7 +14,7 @@
 
 #include "autoware/goal_distance_calculator/goal_distance_calculator_node.hpp"
 
-#include <autoware/universe_utils/math/unit_conversion.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/timer.hpp>
 
@@ -42,7 +42,7 @@ GoalDistanceCalculatorNode::GoalDistanceCalculatorNode(const rclcpp::NodeOptions
   goal_distance_calculator_->setParam(param_);
 
   // Wait for first self pose
-  self_pose_listener_.waitForFirstPose();
+  self_pose_listener_.wait_for_first_pose();
 
   // Timer
   const auto period_ns = rclcpp::Rate(node_param_.update_rate).period();
@@ -54,7 +54,7 @@ GoalDistanceCalculatorNode::GoalDistanceCalculatorNode(const rclcpp::NodeOptions
 bool GoalDistanceCalculatorNode::tryGetCurrentPose(
   geometry_msgs::msg::PoseStamped::ConstSharedPtr current_pose)
 {
-  auto current_pose_tmp = self_pose_listener_.getCurrentPose();
+  auto current_pose_tmp = self_pose_listener_.get_current_pose();
   if (!current_pose_tmp) return false;
   current_pose = current_pose_tmp;
   return true;
@@ -63,7 +63,7 @@ bool GoalDistanceCalculatorNode::tryGetCurrentPose(
 bool GoalDistanceCalculatorNode::tryGetRoute(
   autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr route)
 {
-  auto route_tmp = sub_route_.takeData();
+  auto route_tmp = sub_route_.take_data();
   if (!route_tmp) return false;
   route = route_tmp;
   return true;
@@ -97,7 +97,7 @@ void GoalDistanceCalculatorNode::onTimer()
   Output output = goal_distance_calculator_->update(input);
 
   {
-    using autoware::universe_utils::rad2deg;
+    using autoware_utils::rad2deg;
     const auto & deviation = output.goal_deviation;
 
     debug_publisher_.publish<autoware_internal_debug_msgs::msg::Float64Stamped>(

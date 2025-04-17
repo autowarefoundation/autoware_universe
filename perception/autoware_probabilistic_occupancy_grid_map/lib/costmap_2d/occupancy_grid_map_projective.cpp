@@ -18,7 +18,7 @@
 #include "autoware/probabilistic_occupancy_grid_map/costmap_2d/occupancy_grid_map_projective_kernel.hpp"
 #include "autoware/probabilistic_occupancy_grid_map/utils/utils.hpp"
 
-#include <autoware/universe_utils/math/unit_conversion.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 #include <grid_map_costmap_2d/grid_map_costmap_2d.hpp>
 #include <grid_map_ros/grid_map_ros.hpp>
 #include <pcl_ros/transforms.hpp>

@@ -15,7 +15,7 @@
 #include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
-#include <autoware/universe_utils/ros/uuid_helper.hpp>
+#include <autoware_utils/ros/uuid_helper.hpp>
 
 #include <algorithm>
 #include <limits>
@@ -28,7 +28,7 @@ namespace autoware::behavior_velocity_planner
 
 SceneModuleInterfaceWithRTC::SceneModuleInterfaceWithRTC(
   const int64_t module_id, rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock,
-  const std::shared_ptr<universe_utils::TimeKeeper> time_keeper,
+  const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface)
 : SceneModuleInterface(module_id, logger, clock, time_keeper, planning_factor_interface),
@@ -46,7 +46,8 @@ SceneModuleManagerInterfaceWithRTC::SceneModuleManagerInterfaceWithRTC(
 {
 }
 
-void SceneModuleManagerInterfaceWithRTC::plan(tier4_planning_msgs::msg::PathWithLaneId * path)
+void SceneModuleManagerInterfaceWithRTC::plan(
+  autoware_internal_planning_msgs::msg::PathWithLaneId * path)
 {
   setActivation();
   modifyPathVelocity(path);
@@ -84,9 +85,9 @@ UUID SceneModuleManagerInterfaceWithRTC::getUUID(const int64_t & module_id) cons
   return map_uuid_.at(module_id);
 }
 
-void SceneModuleManagerInterfaceWithRTC::generateUUID(const int64_t & module_id)
+void SceneModuleManagerInterfaceWithRTC::generate_uuid(const int64_t & module_id)
 {
-  map_uuid_.insert({module_id, autoware::universe_utils::generateUUID()});
+  map_uuid_.insert({module_id, autoware_utils::generate_uuid()});
 }
 
 void SceneModuleManagerInterfaceWithRTC::removeUUID(const int64_t & module_id)
@@ -111,7 +112,7 @@ void SceneModuleManagerInterfaceWithRTC::publishObjectsOfInterestMarker()
 }
 
 void SceneModuleManagerInterfaceWithRTC::deleteExpiredModules(
-  const tier4_planning_msgs::msg::PathWithLaneId & path)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   const auto isModuleExpired = getModuleExpiredFunction(path);
 
@@ -132,12 +133,12 @@ void SceneModuleManagerInterfaceWithRTC::deleteExpiredModules(
 }
 
 template size_t SceneModuleManagerInterface<SceneModuleInterfaceWithRTC>::findEgoSegmentIndex(
-  const std::vector<tier4_planning_msgs::msg::PathPointWithLaneId> & points) const;
+  const std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> & points) const;
 template void SceneModuleManagerInterface<SceneModuleInterfaceWithRTC>::updateSceneModuleInstances(
   const std::shared_ptr<const PlannerData> & planner_data,
-  const tier4_planning_msgs::msg::PathWithLaneId & path);
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path);
 template void SceneModuleManagerInterface<SceneModuleInterfaceWithRTC>::modifyPathVelocity(
-  tier4_planning_msgs::msg::PathWithLaneId * path);
+  autoware_internal_planning_msgs::msg::PathWithLaneId * path);
 template void SceneModuleManagerInterface<SceneModuleInterfaceWithRTC>::registerModule(
   const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module);
 }  // namespace autoware::behavior_velocity_planner

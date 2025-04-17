@@ -14,7 +14,7 @@
 
 #include "autoware/mrm_emergency_stop_operator/mrm_emergency_stop_operator_core.hpp"
 
-#include <autoware/universe_utils/ros/update_param.hpp>
+#include <autoware_utils/ros/update_param.hpp>
 
 #include <vector>
 
@@ -61,9 +61,9 @@ MrmEmergencyStopOperator::MrmEmergencyStopOperator(const rclcpp::NodeOptions & n
 rcl_interfaces::msg::SetParametersResult MrmEmergencyStopOperator::onParameter(
   const std::vector<rclcpp::Parameter> & parameters)
 {
-  using autoware::universe_utils::updateParam;
-  updateParam<double>(parameters, "target_acceleration", params_.target_acceleration);
-  updateParam<double>(parameters, "target_jerk", params_.target_jerk);
+  using autoware_utils::update_param;
+  update_param<double>(parameters, "target_acceleration", params_.target_acceleration);
+  update_param<double>(parameters, "target_jerk", params_.target_jerk);
 
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;

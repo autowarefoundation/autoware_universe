@@ -19,6 +19,7 @@
 #include <autoware/component_interface_specs_universe/planning.hpp>
 #include <autoware/component_interface_specs_universe/system.hpp>
 #include <autoware/component_interface_utils/status.hpp>
+#include <autoware/motion_utils/vehicle/vehicle_state_checker.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 // This file should be included after messages.
@@ -79,6 +80,10 @@ private:
   void on_change_route(
     const autoware::adapi_specs::routing::SetRoute::Service::Request::SharedPtr req,
     const autoware::adapi_specs::routing::SetRoute::Service::Response::SharedPtr res);
+
+  // Stop check for route clear.
+  autoware::motion_utils::VehicleStopChecker vehicle_stop_checker_;
+  double stop_check_duration_;
 };
 
 }  // namespace autoware::default_adapi

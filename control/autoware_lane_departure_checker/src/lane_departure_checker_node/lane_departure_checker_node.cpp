@@ -14,14 +14,14 @@
 
 #include "autoware/lane_departure_checker/lane_departure_checker_node.hpp"
 
-#include <autoware/universe_utils/math/unit_conversion.hpp>
-#include <autoware/universe_utils/ros/marker_helper.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/route_checker.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 
 #include <autoware_planning_msgs/msg/lanelet_segment.hpp>
 
@@ -31,7 +31,7 @@
 #include <utility>
 #include <vector>
 
-using autoware::universe_utils::rad2deg;
+using autoware_utils::rad2deg;
 
 namespace
 {
@@ -234,17 +234,17 @@ bool LaneDepartureCheckerNode::isDataValid()
 void LaneDepartureCheckerNode::onTimer()
 {
   std::map<std::string, double> processing_time_map;
-  autoware::universe_utils::StopWatch<std::chrono::milliseconds> stop_watch;
+  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
   stop_watch.tic("Total");
 
-  current_odom_ = sub_odom_.takeData();
-  route_ = sub_route_.takeData();
-  reference_trajectory_ = sub_reference_trajectory_.takeData();
-  predicted_trajectory_ = sub_predicted_trajectory_.takeData();
-  operation_mode_ = sub_operation_mode_.takeData();
-  control_mode_ = sub_control_mode_.takeData();
+  current_odom_ = sub_odom_.take_data();
+  route_ = sub_route_.take_data();
+  reference_trajectory_ = sub_reference_trajectory_.take_data();
+  predicted_trajectory_ = sub_predicted_trajectory_.take_data();
+  operation_mode_ = sub_operation_mode_.take_data();
+  control_mode_ = sub_control_mode_.take_data();
 
-  const auto lanelet_map_bin_msg = sub_lanelet_map_bin_.takeData();
+  const auto lanelet_map_bin_msg = sub_lanelet_map_bin_.take_data();
   if (lanelet_map_bin_msg) {
     lanelet_map_ = std::make_shared<lanelet::LaneletMap>();
     lanelet::utils::conversion::fromBinMsg(
@@ -450,9 +450,9 @@ void LaneDepartureCheckerNode::checkTrajectoryDeviation(
 
 visualization_msgs::msg::MarkerArray LaneDepartureCheckerNode::createMarkerArray() const
 {
-  using autoware::universe_utils::createDefaultMarker;
-  using autoware::universe_utils::createMarkerColor;
-  using autoware::universe_utils::createMarkerScale;
+  using autoware_utils::create_default_marker;
+  using autoware_utils::create_marker_color;
+  using autoware_utils::create_marker_scale;
 
   visualization_msgs::msg::MarkerArray marker_array;
 
@@ -461,9 +461,9 @@ visualization_msgs::msg::MarkerArray LaneDepartureCheckerNode::createMarkerArray
   if (node_param_.visualize_lanelet) {
     // Route Lanelets
     {
-      auto marker = createDefaultMarker(
+      auto marker = create_default_marker(
         "map", this->now(), "route_lanelets", 0, visualization_msgs::msg::Marker::TRIANGLE_LIST,
-        createMarkerScale(1.0, 1.0, 1.0), createMarkerColor(0.0, 0.5, 0.5, 0.5));
+        create_marker_scale(1.0, 1.0, 1.0), create_marker_color(0.0, 0.5, 0.5, 0.5));
 
       for (const auto & lanelet : input_.route_lanelets) {
         std::vector<geometry_msgs::msg::Polygon> triangles;
@@ -482,9 +482,9 @@ visualization_msgs::msg::MarkerArray LaneDepartureCheckerNode::createMarkerArray
 
     // Candidate Lanelets
     {
-      auto marker = createDefaultMarker(
+      auto marker = create_default_marker(
         "map", this->now(), "candidate_lanelets", 0, visualization_msgs::msg::Marker::TRIANGLE_LIST,
-        createMarkerScale(1.0, 1.0, 1.0), createMarkerColor(1.0, 1.0, 0.0, 0.5));
+        create_marker_scale(1.0, 1.0, 1.0), create_marker_color(1.0, 1.0, 0.0, 0.5));
 
       for (const auto & lanelet : output_.candidate_lanelets) {
         std::vector<geometry_msgs::msg::Polygon> triangles;
@@ -505,10 +505,10 @@ visualization_msgs::msg::MarkerArray LaneDepartureCheckerNode::createMarkerArray
   if (output_.resampled_trajectory.size() >= 2) {
     // Line of resampled_trajectory
     {
-      auto marker = createDefaultMarker(
+      auto marker = create_default_marker(
         "map", this->now(), "resampled_trajectory_line", 0,
-        visualization_msgs::msg::Marker::LINE_STRIP, createMarkerScale(0.05, 0, 0),
-        createMarkerColor(1.0, 1.0, 1.0, 0.999));
+        visualization_msgs::msg::Marker::LINE_STRIP, create_marker_scale(0.05, 0, 0),
+        create_marker_color(1.0, 1.0, 1.0, 0.999));
 
       for (const auto & p : output_.resampled_trajectory) {
         marker.points.push_back(p.pose.position);
@@ -520,10 +520,10 @@ visualization_msgs::msg::MarkerArray LaneDepartureCheckerNode::createMarkerArray
 
     // Points of resampled_trajectory
     {
-      auto marker = createDefaultMarker(
+      auto marker = create_default_marker(
         "map", this->now(), "resampled_trajectory_points", 0,
-        visualization_msgs::msg::Marker::SPHERE_LIST, createMarkerScale(0.1, 0.1, 0.1),
-        createMarkerColor(0.0, 1.0, 0.0, 0.999));
+        visualization_msgs::msg::Marker::SPHERE_LIST, create_marker_scale(0.1, 0.1, 0.1),
+        create_marker_color(0.0, 1.0, 0.0, 0.999));
 
       for (const auto & p : output_.resampled_trajectory) {
         marker.points.push_back(p.pose.position);
@@ -536,9 +536,9 @@ visualization_msgs::msg::MarkerArray LaneDepartureCheckerNode::createMarkerArray
 
   // Vehicle Footprints
   {
-    const auto color_ok = createMarkerColor(0.0, 1.0, 0.0, 0.5);
-    const auto color_will_leave_lane = createMarkerColor(0.5, 0.5, 0.0, 0.5);
-    const auto color_is_out_of_lane = createMarkerColor(1.0, 0.0, 0.0, 0.5);
+    const auto color_ok = create_marker_color(0.0, 1.0, 0.0, 0.5);
+    const auto color_will_leave_lane = create_marker_color(0.5, 0.5, 0.0, 0.5);
+    const auto color_is_out_of_lane = create_marker_color(1.0, 0.0, 0.0, 0.5);
 
     auto color = color_ok;
     if (output_.will_leave_lane) {
@@ -548,17 +548,17 @@ visualization_msgs::msg::MarkerArray LaneDepartureCheckerNode::createMarkerArray
       color = color_is_out_of_lane;
     }
 
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", this->now(), "vehicle_footprints", 0, visualization_msgs::msg::Marker::LINE_LIST,
-      createMarkerScale(0.05, 0, 0), color);
+      create_marker_scale(0.05, 0, 0), color);
 
     for (const auto & vehicle_footprint : output_.vehicle_footprints) {
       for (size_t i = 0; i < vehicle_footprint.size() - 1; ++i) {
         const auto p1 = vehicle_footprint.at(i);
         const auto p2 = vehicle_footprint.at(i + 1);
 
-        marker.points.push_back(toMsg(p1.to_3d(base_link_z)));
-        marker.points.push_back(toMsg(p2.to_3d(base_link_z)));
+        marker.points.push_back(autoware_utils::to_msg(p1.to_3d(base_link_z)));
+        marker.points.push_back(autoware_utils::to_msg(p2.to_3d(base_link_z)));
       }
     }
 

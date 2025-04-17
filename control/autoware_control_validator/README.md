@@ -13,6 +13,7 @@ The listed features below does not always correspond to the latest implementatio
 | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | :---------------------------------------------------: |
 | Inverse velocity: Measured velocity has a different sign from the target velocity. | measured velocity $v$, target velocity $\hat{v}$, and velocity parameter $c$                    |      $v \hat{v} < 0, \quad \lvert v \rvert > c$       |
 | Overspeed: Measured speed exceeds target speed significantly.                      | measured velocity $v$, target velocity $\hat{v}$, ratio parameter $r$, and offset parameter $c$ | $\lvert v \rvert > (1 + r) \lvert \hat{v} \rvert + c$ |
+| Overrun estimation: estimate overrun even if decelerate by assumed rate.           | assumed deceleration, assumed delay                                                             |                                                       |
 
 - **Deviation check between reference trajectory and predicted trajectory** : invalid when the largest deviation between the predicted trajectory and reference trajectory is greater than the given threshold.
 
@@ -57,9 +58,15 @@ The following parameters can be set for the `control_validator`:
 
 The input trajectory is detected as invalid if the index exceeds the following thresholds.
 
-| Name                                | Type   | Description                                                                                                 | Default value |
-| :---------------------------------- | :----- | :---------------------------------------------------------------------------------------------------------- | :------------ |
-| `thresholds.max_distance_deviation` | double | invalid threshold of the max distance deviation between the predicted path and the reference trajectory [m] | 1.0           |
-| `thresholds.rolling_back_velocity`  | double | threshold velocity to valid the vehicle velocity [m/s]                                                      | 0.5           |
-| `thresholds.over_velocity_offset`   | double | threshold velocity offset to valid the vehicle velocity [m/s]                                               | 2.0           |
-| `thresholds.over_velocity_ratio`    | double | threshold ratio to valid the vehicle velocity [*]                                                           | 0.2           |
+| Name                                      | Type   | Description                                                                                                 | Default value |
+| :---------------------------------------- | :----- | :---------------------------------------------------------------------------------------------------------- | :------------ |
+| `thresholds.max_distance_deviation`       | double | invalid threshold of the max distance deviation between the predicted path and the reference trajectory [m] | 1.0           |
+| `thresholds.rolling_back_velocity`        | double | threshold velocity to valid the vehicle velocity [m/s]                                                      | 0.5           |
+| `thresholds.over_velocity_offset`         | double | threshold velocity offset to valid the vehicle velocity [m/s]                                               | 2.0           |
+| `thresholds.over_velocity_ratio`          | double | threshold ratio to valid the vehicle velocity [*]                                                           | 0.2           |
+| `thresholds.overrun_stop_point_dist`      | double | threshold distance to overrun stop point [m]                                                                | 0.8           |
+| `thresholds.acc_error_offset`             | double | threshold ratio to valid the vehicle acceleration [*]                                                       | 0.8           |
+| `thresholds.acc_error_scale`              | double | threshold acceleration to valid the vehicle acceleration [m]                                                | 0.2           |
+| `thresholds.will_overrun_stop_point_dist` | double | threshold distance to overrun stop point [m]                                                                | 1.0           |
+| `thresholds.assumed_limit_acc`            | double | assumed acceleration for over run estimation [m]                                                            | 5.0           |
+| `thresholds.assumed_delay_time`           | double | assumed delay for over run estimation [m]                                                                   | 0.2           |

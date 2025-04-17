@@ -14,9 +14,9 @@
 
 #include "occupancy_grid_map_outlier_filter_node.hpp"
 
-#include "autoware/universe_utils/geometry/geometry.hpp"
-#include "autoware/universe_utils/ros/debug_publisher.hpp"
-#include "autoware/universe_utils/system/stop_watch.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
+#include "autoware_utils/ros/debug_publisher.hpp"
+#include "autoware_utils/system/stop_watch.hpp"
 
 #include <pcl_ros/transforms.hpp>
 
@@ -40,7 +40,7 @@
 
 namespace
 {
-using autoware::universe_utils::ScopedTimeTrack;
+using autoware_utils::ScopedTimeTrack;
 
 bool transformPointcloud(
   const sensor_msgs::msg::PointCloud2 & input, const tf2_ros::Buffer & tf2,
@@ -77,7 +77,7 @@ geometry_msgs::msg::PoseStamped getPoseStamped(
     RCLCPP_WARN_THROTTLE(
       rclcpp::get_logger("occupancy_grid_map_outlier_filter"), clock, 5000, "%s", ex.what());
   }
-  return autoware::universe_utils::transform2pose(tf_stamped);
+  return autoware_utils::transform2pose(tf_stamped);
 }
 
 boost::optional<char> getCost(
@@ -231,8 +231,8 @@ OccupancyGridMapOutlierFilterComponent::OccupancyGridMapOutlierFilterComponent(
 {
   // initialize debug tool
   {
-    using autoware::universe_utils::DebugPublisher;
-    using autoware::universe_utils::StopWatch;
+    using autoware_utils::DebugPublisher;
+    using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ = std::make_unique<DebugPublisher>(this, "occupancy_grid_map_outlier_filter");
     stop_watch_ptr_->tic("cyclic_time");
@@ -273,10 +273,10 @@ OccupancyGridMapOutlierFilterComponent::OccupancyGridMapOutlierFilterComponent(
   bool use_time_keeper = declare_parameter<bool>("publish_processing_time_detail");
   if (use_time_keeper) {
     detailed_processing_time_publisher_ =
-      this->create_publisher<autoware::universe_utils::ProcessingTimeDetail>(
+      this->create_publisher<autoware_utils::ProcessingTimeDetail>(
         "~/debug/processing_time_detail_ms", 1);
-    auto time_keeper = autoware::universe_utils::TimeKeeper(detailed_processing_time_publisher_);
-    time_keeper_ = std::make_shared<autoware::universe_utils::TimeKeeper>(time_keeper);
+    auto time_keeper = autoware_utils::TimeKeeper(detailed_processing_time_publisher_);
+    time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(time_keeper);
   }
 }
 

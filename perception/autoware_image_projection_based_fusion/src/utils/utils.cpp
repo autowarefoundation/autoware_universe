@@ -22,7 +22,7 @@
 
 namespace autoware::image_projection_based_fusion
 {
-bool checkCameraInfo(const sensor_msgs::msg::CameraInfo & camera_info)
+bool check_camera_info(const sensor_msgs::msg::CameraInfo & camera_info)
 {
   const bool is_supported_model =
     (camera_info.distortion_model == sensor_msgs::distortion_models::PLUMB_BOB ||
@@ -30,7 +30,7 @@ bool checkCameraInfo(const sensor_msgs::msg::CameraInfo & camera_info)
   if (!is_supported_model) {
     RCLCPP_ERROR_STREAM(
       rclcpp::get_logger("image_projection_based_fusion"),
-      "checkCameraInfo: Unsupported distortion model: " << camera_info.distortion_model);
+      "check_camera_info: Unsupported distortion model: " << camera_info.distortion_model);
     return false;
   }
   const bool is_supported_distortion_param =
@@ -38,7 +38,7 @@ bool checkCameraInfo(const sensor_msgs::msg::CameraInfo & camera_info)
   if (!is_supported_distortion_param) {
     RCLCPP_ERROR_STREAM(
       rclcpp::get_logger("image_projection_based_fusion"),
-      "checkCameraInfo: Unsupported distortion coefficients size: " << camera_info.d.size());
+      "check_camera_info: Unsupported distortion coefficients size: " << camera_info.d.size());
     return false;
   }
   return true;
@@ -86,7 +86,7 @@ void closest_cluster(
     std::memcpy(&point.y, &cluster.data[i * point_step + y_offset], sizeof(float));
     std::memcpy(&point.z, &cluster.data[i * point_step + z_offset], sizeof(float));
 
-    point_data.distance = autoware::universe_utils::calcDistance2d(center, point);
+    point_data.distance = autoware_utils::calc_distance2d(center, point);
     point_data.orig_index = i;
     points_data.push_back(point_data);
   }

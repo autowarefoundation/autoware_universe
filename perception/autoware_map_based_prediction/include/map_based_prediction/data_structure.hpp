@@ -15,7 +15,7 @@
 #ifndef MAP_BASED_PREDICTION__DATA_STRUCTURE_HPP_
 #define MAP_BASED_PREDICTION__DATA_STRUCTURE_HPP_
 
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
@@ -99,7 +99,6 @@ struct CrosswalkUserData
 
 using LaneletsData = std::vector<LaneletData>;
 using ManeuverProbability = std::unordered_map<Maneuver, float>;
-using autoware::universe_utils::StopWatch;
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObject;
@@ -112,6 +111,7 @@ using autoware_perception_msgs::msg::TrackedObjects;
 using autoware_perception_msgs::msg::TrafficLightElement;
 using autoware_perception_msgs::msg::TrafficLightGroup;
 using autoware_perception_msgs::msg::TrafficLightGroupArray;
+using autoware_utils::StopWatch;
 using LaneletPathWithPathInfo = std::pair<lanelet::routing::LaneletPath, PredictedRefPath>;
 
 }  // namespace autoware::map_based_prediction

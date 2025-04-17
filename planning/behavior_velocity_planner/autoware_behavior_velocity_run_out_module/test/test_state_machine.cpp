@@ -17,13 +17,13 @@
 #include "utils.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/clock.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/time.hpp>
 
-#include <tier4_planning_msgs/msg/detail/path_point_with_lane_id__struct.hpp>
+#include <autoware_internal_planning_msgs/msg/detail/path_point_with_lane_id__struct.hpp>
 
 #include <gtest/gtest.h>
 
@@ -37,9 +37,9 @@ using autoware::behavior_velocity_planner::DynamicObstacle;
 using autoware::behavior_velocity_planner::run_out_utils::StateMachine;
 using autoware::behavior_velocity_planner::run_out_utils::StateParam;
 
+using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using geometry_msgs::msg::Point;
-using tier4_planning_msgs::msg::PathPointWithLaneId;
-using tier4_planning_msgs::msg::PathWithLaneId;
 
 class TestStateMachine : public ::testing::Test
 {

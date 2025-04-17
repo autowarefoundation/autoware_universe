@@ -34,19 +34,17 @@ CNNClassifier::CNNClassifier(rclcpp::Node * node_ptr) : node_ptr_(node_ptr)
   std::string precision;
   std::string label_file_path;
   std::string model_file_path;
-  precision = node_ptr_->declare_parameter("classifier_precision", "fp16");
-  label_file_path = node_ptr_->declare_parameter("classifier_label_path", "labels.txt");
-  model_file_path = node_ptr_->declare_parameter("classifier_model_path", "model.onnx");
+  precision = node_ptr_->declare_parameter<std::string>("precision");
+  label_file_path = node_ptr_->declare_parameter<std::string>("label_path");
+  model_file_path = node_ptr_->declare_parameter<std::string>("model_path");
   // ros param does not support loading std::vector<float>
   // we have to load std::vector<double> and transfer to std::vector<float>
-  auto mean_d =
-    node_ptr->declare_parameter("classifier_mean", std::vector<double>{123.675, 116.28, 103.53});
-  auto std_d =
-    node_ptr->declare_parameter("classifier_std", std::vector<double>{58.395, 57.12, 57.375});
+  auto mean_d = node_ptr->declare_parameter<std::vector<double>>("mean");
+  auto std_d = node_ptr->declare_parameter<std::vector<double>>("std");
   mean_ = std::vector<float>(mean_d.begin(), mean_d.end());
   std_ = std::vector<float>(std_d.begin(), std_d.end());
   if (mean_.size() != 3 || std_.size() != 3) {
-    RCLCPP_ERROR(node_ptr->get_logger(), "classifier_mean and classifier_std must be of size 3");
+    RCLCPP_ERROR(node_ptr->get_logger(), "mean and std must be of size 3");
     return;
   }
 
@@ -55,7 +53,7 @@ CNNClassifier::CNNClassifier(rclcpp::Node * node_ptr) : node_ptr_(node_ptr)
   classifier_ = std::make_unique<autoware::tensorrt_classifier::TrtClassifier>(
     model_file_path, precision, mean_, std_);
   batch_size_ = classifier_->getBatchSize();
-  if (node_ptr_->declare_parameter("build_only", false)) {
+  if (node_ptr_->declare_parameter<bool>("build_only")) {
     RCLCPP_INFO(node_ptr_->get_logger(), "TensorRT engine is built and shutdown node.");
     rclcpp::shutdown();
   }

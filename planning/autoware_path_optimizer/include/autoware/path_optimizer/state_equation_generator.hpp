@@ -18,7 +18,7 @@
 #include "autoware/path_optimizer/common_structs.hpp"
 #include "autoware/path_optimizer/vehicle_model/vehicle_model_bicycle_kinematics.hpp"
 #include "autoware/path_optimizer/vehicle_model/vehicle_model_interface.hpp"
-#include "autoware/universe_utils/system/time_keeper.hpp"
+#include "autoware_utils/system/time_keeper.hpp"
 
 #include <memory>
 #include <vector>
@@ -37,10 +37,20 @@ public:
     Eigen::VectorXd W;
   };
 
+  friend std::ostream & operator<<(std::ostream & os, const Matrix & matrix)
+  {
+    os << "Matrix: {\n";
+    os << "\tA:\n" << matrix.A << "\n";
+    os << "\tB:\n" << matrix.B << "\n";
+    os << "\tW:\n" << matrix.W << "\n";
+    os << "}\n";
+    return os;
+  }
+
   StateEquationGenerator() = default;
   StateEquationGenerator(
     const double wheel_base, const double max_steer_rad,
-    const std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper)
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper)
   : vehicle_model_ptr_(std::make_unique<KinematicsBicycleModel>(wheel_base, max_steer_rad)),
     time_keeper_(time_keeper)
   {
@@ -57,7 +67,7 @@ public:
 
 private:
   std::unique_ptr<VehicleModelInterface> vehicle_model_ptr_;
-  mutable std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_;
+  mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 };
 }  // namespace autoware::path_optimizer
 #endif  // AUTOWARE__PATH_OPTIMIZER__STATE_EQUATION_GENERATOR_HPP_

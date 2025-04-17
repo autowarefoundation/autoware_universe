@@ -16,8 +16,8 @@
 #define OCCUPANCY_GRID_MAP_OUTLIER_FILTER_NODE_HPP_
 
 #include "autoware/pointcloud_preprocessor/filter.hpp"
-#include "autoware/universe_utils/ros/published_time_publisher.hpp"
-#include "autoware/universe_utils/system/time_keeper.hpp"
+#include "autoware_utils/ros/published_time_publisher.hpp"
+#include "autoware_utils/system/time_keeper.hpp"
 
 #include <pcl/common/impl/common.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -121,9 +121,9 @@ private:
 
   // Debugger
   std::shared_ptr<Debugger> debugger_ptr_;
-  std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
-  std::unique_ptr<autoware::universe_utils::DebugPublisher> debug_publisher_;
-  std::unique_ptr<autoware::universe_utils::PublishedTimePublisher> published_time_publisher_;
+  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
+  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
+  std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
 
   // ROS Parameters
   std::string map_frame_;
@@ -131,9 +131,9 @@ private:
   int cost_threshold_;
 
   // time keeper
-  rclcpp::Publisher<autoware::universe_utils::ProcessingTimeDetail>::SharedPtr
+  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
     detailed_processing_time_publisher_;
-  std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_;
+  std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 };
 }  // namespace autoware::occupancy_grid_map_outlier_filter
 

@@ -15,7 +15,7 @@
 #include "autoware/planning_validator/debug_marker.hpp"
 
 #include <autoware/motion_utils/marker/marker_helper.hpp>
-#include <autoware/universe_utils/ros/marker_helper.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
 
 #include <memory>
 #include <string>
@@ -48,25 +48,25 @@ void PlanningValidatorDebugMarkerPublisher::pushPoseMarker(
 void PlanningValidatorDebugMarkerPublisher::pushPoseMarker(
   const geometry_msgs::msg::Pose & pose, const std::string & ns, int id)
 {
-  using autoware::universe_utils::createMarkerColor;
+  using autoware_utils::create_marker_color;
 
   // append arrow marker
   std_msgs::msg::ColorRGBA color;
   if (id == 0)  // Red
   {
-    color = createMarkerColor(1.0, 0.0, 0.0, 0.999);
+    color = create_marker_color(1.0, 0.0, 0.0, 0.999);
   }
   if (id == 1)  // Green
   {
-    color = createMarkerColor(0.0, 1.0, 0.0, 0.999);
+    color = create_marker_color(0.0, 1.0, 0.0, 0.999);
   }
   if (id == 2)  // Blue
   {
-    color = createMarkerColor(0.0, 0.0, 1.0, 0.999);
+    color = create_marker_color(0.0, 0.0, 1.0, 0.999);
   }
-  Marker marker = autoware::universe_utils::createDefaultMarker(
+  Marker marker = autoware_utils::create_default_marker(
     "map", node_->get_clock()->now(), ns, getMarkerId(ns), Marker::ARROW,
-    autoware::universe_utils::createMarkerScale(0.2, 0.1, 0.3), color);
+    autoware_utils::create_marker_scale(0.2, 0.1, 0.3), color);
   marker.lifetime = rclcpp::Duration::from_seconds(0.2);
   marker.pose = pose;
 
@@ -76,10 +76,10 @@ void PlanningValidatorDebugMarkerPublisher::pushPoseMarker(
 void PlanningValidatorDebugMarkerPublisher::pushWarningMsg(
   const geometry_msgs::msg::Pose & pose, const std::string & msg)
 {
-  visualization_msgs::msg::Marker marker = autoware::universe_utils::createDefaultMarker(
+  visualization_msgs::msg::Marker marker = autoware_utils::create_default_marker(
     "map", node_->get_clock()->now(), "warning_msg", 0, Marker::TEXT_VIEW_FACING,
-    autoware::universe_utils::createMarkerScale(0.0, 0.0, 1.0),
-    autoware::universe_utils::createMarkerColor(1.0, 0.1, 0.1, 0.999));
+    autoware_utils::create_marker_scale(0.0, 0.0, 1.0),
+    autoware_utils::create_marker_color(1.0, 0.1, 0.1, 0.999));
   marker.lifetime = rclcpp::Duration::from_seconds(0.2);
   marker.pose = pose;
   marker.text = msg;
@@ -91,7 +91,7 @@ void PlanningValidatorDebugMarkerPublisher::pushVirtualWall(const geometry_msgs:
   const auto now = node_->get_clock()->now();
   const auto stop_wall_marker = autoware::motion_utils::createStopVirtualWallMarker(
     pose, "autoware_planning_validator", now, 0);
-  autoware::universe_utils::appendMarkerArray(stop_wall_marker, &marker_array_virtual_wall_, now);
+  autoware_utils::append_marker_array(stop_wall_marker, &marker_array_virtual_wall_, now);
 }
 
 void PlanningValidatorDebugMarkerPublisher::publish()

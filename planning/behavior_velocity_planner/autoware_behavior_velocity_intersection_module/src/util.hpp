@@ -17,7 +17,7 @@
 
 #include "interpolated_path_info.hpp"
 
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 #include <rclcpp/logger.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_object_kinematics.hpp>
@@ -38,14 +38,16 @@ namespace autoware::behavior_velocity_planner::util
  * @return if insertion was successful return the inserted point index
  */
 std::optional<size_t> insertPointIndex(
-  const geometry_msgs::msg::Pose & in_pose, tier4_planning_msgs::msg::PathWithLaneId * inout_path,
+  const geometry_msgs::msg::Pose & in_pose,
+  autoware_internal_planning_msgs::msg::PathWithLaneId * inout_path,
   const double ego_nearest_dist_threshold, const double ego_nearest_yaw_threshold);
 
 /**
  * @brief check if a PathPointWithLaneId contains any of the given lane ids
  */
 bool hasLaneIds(
-  const tier4_planning_msgs::msg::PathPointWithLaneId & p, const std::set<lanelet::Id> & ids);
+  const autoware_internal_planning_msgs::msg::PathPointWithLaneId & p,
+  const std::set<lanelet::Id> & ids);
 
 /**
  * @brief find the first contiguous interval of the path points that contains the specified lane ids
@@ -53,7 +55,8 @@ bool hasLaneIds(
  * found, returns the pair (start-1, end)
  */
 std::optional<std::pair<size_t, size_t>> findLaneIdsInterval(
-  const tier4_planning_msgs::msg::PathWithLaneId & p, const std::set<lanelet::Id> & ids);
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & p,
+  const std::set<lanelet::Id> & ids);
 
 /**
  * @brief return the index of the first point which is inside the given polygon
@@ -61,7 +64,7 @@ std::optional<std::pair<size_t, size_t>> findLaneIdsInterval(
  * @param[in] search_forward flag for search direction
  */
 std::optional<size_t> getFirstPointInsidePolygon(
-  const tier4_planning_msgs::msg::PathWithLaneId & path,
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
   const std::pair<size_t, size_t> lane_interval, const lanelet::CompoundPolygon3d & polygon,
   const bool search_forward = true);
 
@@ -73,10 +76,10 @@ std::optional<size_t> getFirstPointInsidePolygon(
  * @return true if ego is over the target_idx
  */
 bool isOverTargetIndex(
-  const tier4_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
   const geometry_msgs::msg::Pose & current_pose, const size_t target_idx);
 
-std::optional<autoware::universe_utils::Polygon2d> getIntersectionArea(
+std::optional<autoware_utils::Polygon2d> getIntersectionArea(
   lanelet::ConstLanelet assigned_lane, lanelet::LaneletMapConstPtr lanelet_map_ptr);
 
 /**
@@ -84,7 +87,7 @@ std::optional<autoware::universe_utils::Polygon2d> getIntersectionArea(
  */
 std::optional<InterpolatedPathInfo> generateInterpolatedPath(
   const lanelet::Id lane_id, const std::set<lanelet::Id> & associative_lane_ids,
-  const tier4_planning_msgs::msg::PathWithLaneId & input_path, const double ds,
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & input_path, const double ds,
   const rclcpp::Logger logger);
 
 geometry_msgs::msg::Pose getObjectPoseWithVelocityDirection(
@@ -117,7 +120,7 @@ void retrievePathsBackward(
  */
 std::optional<size_t> getFirstPointInsidePolygonByFootprint(
   const lanelet::CompoundPolygon3d & polygon, const InterpolatedPathInfo & interpolated_path_info,
-  const autoware::universe_utils::LinearRing2d & footprint, const double vehicle_length);
+  const autoware_utils::LinearRing2d & footprint, const double vehicle_length);
 
 /**
  * @brief find the index of the first point where vehicle footprint intersects with the given
@@ -128,7 +131,7 @@ std::optional<std::pair<
 getFirstPointInsidePolygonsByFootprint(
   const std::vector<lanelet::CompoundPolygon3d> & polygons,
   const InterpolatedPathInfo & interpolated_path_info,
-  const autoware::universe_utils::LinearRing2d & footprint, const double vehicle_length);
+  const autoware_utils::LinearRing2d & footprint, const double vehicle_length);
 
 std::vector<lanelet::CompoundPolygon3d> getPolygon3dFromLanelets(
   const lanelet::ConstLanelets & ll_vec);

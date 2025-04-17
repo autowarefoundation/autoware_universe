@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_predicted_path_checker</name>
-  <version>0.41.0</version>
+  <version>0.43.0</version>
   <description>The predicted_path_checker package</description>
 
   <maintainer email="berkay@leodrive.ai">Berkay Karaman</maintainer>
@@ -18,7 +18,7 @@
   <depend>autoware_motion_utils</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_planning_msgs</depend>
-  <depend>autoware_universe_utils</depend>
+  <depend>autoware_utils</depend>
   <depend>autoware_vehicle_info_utils</depend>
   <depend>boost</depend>
   <depend>diagnostic_updater</depend>

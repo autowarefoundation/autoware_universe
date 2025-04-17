@@ -18,13 +18,13 @@
 #include "autoware_test_utils/autoware_test_utils.hpp"
 #include "autoware_test_utils/mock_data_parser.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
+#include <autoware_internal_planning_msgs/msg/detail/path_with_lane_id__struct.hpp>
 #include <autoware_perception_msgs/msg/detail/traffic_light_group__struct.hpp>
 #include <autoware_planning_msgs/msg/detail/lanelet_route__struct.hpp>
 #include <geometry_msgs/msg/detail/pose__struct.hpp>
 #include <geometry_msgs/msg/detail/twist__struct.hpp>
-#include <tier4_planning_msgs/msg/detail/path_with_lane_id__struct.hpp>
 
 #include <gtest/gtest.h>
 #include <lanelet2_core/Forward.h>
@@ -97,7 +97,7 @@ protected:
   {
     nav_msgs::msg::Odometry odometry;
     odometry.pose.pose = planner_data_->self_odometry->pose.pose;
-    odometry.twist.twist.linear = autoware::universe_utils::createVector3(0.0, 0.0, 0.0);
+    odometry.twist.twist.linear = autoware_utils::create_vector3(0.0, 0.0, 0.0);
     planner_data_->self_odometry = std::make_shared<const nav_msgs::msg::Odometry>(odometry);
   }
 
@@ -127,7 +127,7 @@ TEST_F(TrafficLightTest, calcDistanceToRedTrafficLight)
   using autoware::behavior_path_planner::utils::traffic_light::calcDistanceToRedTrafficLight;
 
   {
-    const tier4_planning_msgs::msg::PathWithLaneId path;
+    const autoware_internal_planning_msgs::msg::PathWithLaneId path;
     const lanelet::ConstLanelets empty_lanelets;
     EXPECT_FALSE(calcDistanceToRedTrafficLight(empty_lanelets, path, planner_data_).has_value());
   }

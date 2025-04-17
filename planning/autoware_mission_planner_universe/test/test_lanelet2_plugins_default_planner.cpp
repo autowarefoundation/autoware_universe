@@ -14,9 +14,9 @@
 
 #include <../src/lanelet2_plugins/default_planner.hpp>
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <boost/geometry/io/wkt/write.hpp>
 
@@ -33,9 +33,9 @@
 #include <string>
 #include <vector>
 
-using autoware::universe_utils::calcOffsetPose;
-using autoware::universe_utils::createQuaternionFromRPY;
 using autoware_planning_msgs::msg::LaneletRoute;
+using autoware_utils::calc_offset_pose;
+using autoware_utils::create_quaternion_from_rpy;
 using geometry_msgs::msg::Pose;
 using RoutePoints = std::vector<geometry_msgs::msg::Pose>;
 
@@ -47,7 +47,7 @@ struct DefaultPlanner : public autoware::mission_planner_universe::lanelet2::Def
   [[nodiscard]] bool check_goal_inside_lanes(
     const lanelet::ConstLanelet & closest_lanelet_to_goal,
     const lanelet::ConstLanelets & path_lanelets,
-    const autoware::universe_utils::Polygon2d & goal_footprint) const
+    const autoware_utils::Polygon2d & goal_footprint) const
   {
     return check_goal_footprint_inside_lanes(
       closest_lanelet_to_goal, path_lanelets, goal_footprint);
@@ -118,7 +118,7 @@ TEST_F(DefaultPlannerTest, checkGoalInsideLane)
   lanelet::ConstLanelet goal_lanelet{lanelet::InvalId, left_bound, right_bound};
 
   // simple case where the footprint is completely inside the lane
-  autoware::universe_utils::Polygon2d goal_footprint;
+  autoware_utils::Polygon2d goal_footprint;
   goal_footprint.outer().emplace_back(0, 0);
   goal_footprint.outer().emplace_back(0, 0.5);
   goal_footprint.outer().emplace_back(0.5, 0.5);
@@ -232,21 +232,21 @@ TEST_F(DefaultPlannerTest, isValidGoal)
   EXPECT_TRUE(planner_.is_goal_valid_wrapper(goal_pose, path_lanelets));
 
   // move 1m to the right to make the goal outside of the lane
-  Pose right_offset_goal_pose = calcOffsetPose(goal_pose, 0.0, 1.0, 0.0);
+  Pose right_offset_goal_pose = calc_offset_pose(goal_pose, 0.0, 1.0, 0.0);
   EXPECT_FALSE(planner_.is_goal_valid_wrapper(right_offset_goal_pose, path_lanelets));
 
   // move 1m to the left to make the goal outside of the lane
-  Pose left_offset_goal_pose = calcOffsetPose(goal_pose, 0.0, -1.0, 0.0);
+  Pose left_offset_goal_pose = calc_offset_pose(goal_pose, 0.0, -1.0, 0.0);
   EXPECT_FALSE(planner_.is_goal_valid_wrapper(left_offset_goal_pose, path_lanelets));
 
   // rotate to the right
   Pose right_rotated_goal_pose = goal_pose;
-  right_rotated_goal_pose.orientation = createQuaternionFromRPY(0.0, 0.0, yaw + yaw_threshold);
+  right_rotated_goal_pose.orientation = create_quaternion_from_rpy(0.0, 0.0, yaw + yaw_threshold);
   EXPECT_FALSE(planner_.is_goal_valid_wrapper(right_rotated_goal_pose, path_lanelets));
 
   // rotate to the left
   Pose left_rotated_goal_pose = goal_pose;
-  left_rotated_goal_pose.orientation = createQuaternionFromRPY(0.0, 0.0, yaw - yaw_threshold);
+  left_rotated_goal_pose.orientation = create_quaternion_from_rpy(0.0, 0.0, yaw - yaw_threshold);
   EXPECT_FALSE(planner_.is_goal_valid_wrapper(left_rotated_goal_pose, path_lanelets));
 
   /**
@@ -282,14 +282,14 @@ TEST_F(DefaultPlannerTest, isValidGoal)
 
   // move goal pose outside of the road shoulder
   Pose goal_pose_outside_road_shoulder =
-    calcOffsetPose(goal_pose_on_road_shoulder_left_bound, 0.0, 0.1, 0.0);
+    calc_offset_pose(goal_pose_on_road_shoulder_left_bound, 0.0, 0.1, 0.0);
   EXPECT_FALSE(planner_.is_goal_valid_wrapper(
     goal_pose_outside_road_shoulder, path_lanelets_to_road_shoulder));
 
   // rotate goal to the right
   Pose right_rotated_goal_pose_on_road_shoulder = goal_pose_on_road_shoulder;
   right_rotated_goal_pose_on_road_shoulder.orientation =
-    createQuaternionFromRPY(0.0, 0.0, yaw + yaw_threshold);
+    create_quaternion_from_rpy(0.0, 0.0, yaw + yaw_threshold);
   EXPECT_FALSE(planner_.is_goal_valid_wrapper(
     right_rotated_goal_pose_on_road_shoulder, path_lanelets_to_road_shoulder));
 
@@ -403,7 +403,7 @@ TEST_F(DefaultPlannerTest, visualizeDebugFootprint)
   DefaultPlanner planner;
   planner_.set_default_test_map();
 
-  autoware::universe_utils::LinearRing2d footprint;
+  autoware_utils::LinearRing2d footprint;
   footprint.push_back({1.0, 1.0});
   footprint.push_back({1.0, -1.0});
   footprint.push_back({0.0, -1.0});

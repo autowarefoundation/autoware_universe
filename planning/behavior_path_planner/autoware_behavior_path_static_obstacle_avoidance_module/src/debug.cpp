@@ -57,11 +57,11 @@ MarkerArray createObjectsCubeMarkerArray(
   };
 
   for (const auto & object : objects) {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, 0L, Marker::CUBE, scale, color);
 
     if (is_small_object(object.object)) {
-      marker.scale = createMarkerScale(0.5, 0.5, 1.5);
+      marker.scale = create_marker_scale(0.5, 0.5, 1.5);
       marker.type = Marker::CYLINDER;
     }
 
@@ -78,12 +78,12 @@ MarkerArray createObjectPolygonMarkerArray(const ObjectDataArray & objects, std:
   MarkerArray msg;
 
   for (const auto & object : objects) {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, 0L, Marker::LINE_STRIP,
-      createMarkerScale(0.1, 0.0, 0.0), createMarkerColor(1.0, 1.0, 1.0, 0.999));
+      create_marker_scale(0.1, 0.0, 0.0), create_marker_color(1.0, 1.0, 1.0, 0.999));
 
     for (const auto & p : object.envelope_poly.outer()) {
-      marker.points.push_back(createPoint(p.x(), p.y(), object.getPosition().z));
+      marker.points.push_back(create_point(p.x(), p.y(), object.getPosition().z));
     }
 
     marker.points.push_back(marker.points.front());
@@ -104,9 +104,9 @@ MarkerArray createToDrivableBoundDistance(const ObjectDataArray & objects, std::
     }
 
     {
-      auto marker = createDefaultMarker(
+      auto marker = create_default_marker(
         "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, 0L, Marker::LINE_STRIP,
-        createMarkerScale(0.1, 0.0, 0.0), createMarkerColor(1.0, 0.0, 0.42, 0.999));
+        create_marker_scale(0.1, 0.0, 0.0), create_marker_color(1.0, 0.0, 0.42, 0.999));
 
       marker.points.push_back(object.narrowest_place.value().first);
       marker.points.push_back(object.narrowest_place.value().second);
@@ -115,9 +115,9 @@ MarkerArray createToDrivableBoundDistance(const ObjectDataArray & objects, std::
     }
 
     {
-      auto marker = createDefaultMarker(
+      auto marker = create_default_marker(
         "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, 0L, Marker::TEXT_VIEW_FACING,
-        createMarkerScale(0.5, 0.5, 0.5), createMarkerColor(1.0, 1.0, 0.0, 1.0));
+        create_marker_scale(0.5, 0.5, 0.5), create_marker_color(1.0, 1.0, 0.0, 1.0));
 
       marker.pose.position = object.narrowest_place.value().second;
       std::ostringstream string_stream;
@@ -135,9 +135,9 @@ MarkerArray createObjectInfoMarkerArray(
 {
   MarkerArray msg;
 
-  auto marker = createDefaultMarker(
+  auto marker = create_default_marker(
     "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, 0L, Marker::TEXT_VIEW_FACING,
-    createMarkerScale(0.5, 0.5, 0.5), createMarkerColor(1.0, 1.0, 0.0, 1.0));
+    create_marker_scale(0.5, 0.5, 0.5), create_marker_color(1.0, 1.0, 0.0, 1.0));
 
   for (const auto & object : objects) {
     if (verbose) {
@@ -154,8 +154,8 @@ MarkerArray createObjectInfoMarkerArray(
                     << "move_time:" << object.move_time << " [s]\n"
                     << "stop_time:" << object.stop_time << " [s]\n";
       marker.text = string_stream.str();
-      marker.color = createMarkerColor(1.0, 1.0, 0.0, 0.999);
-      marker.scale = createMarkerScale(0.5, 0.5, 0.5);
+      marker.color = create_marker_color(1.0, 1.0, 0.0, 0.999);
+      marker.scale = create_marker_scale(0.5, 0.5, 0.5);
       marker.ns = ns;
       msg.markers.push_back(marker);
     }
@@ -168,8 +168,8 @@ MarkerArray createObjectInfoMarkerArray(
       string_stream << magic_enum::enum_name(object.info) << (object.is_parked ? "(PARKED)" : "");
       string_stream << (object.is_ambiguous ? "(WAIT AND SEE)" : "");
       marker.text = string_stream.str();
-      marker.color = createMarkerColor(1.0, 1.0, 1.0, 0.999);
-      marker.scale = createMarkerScale(0.6, 0.6, 0.6);
+      marker.color = create_marker_color(1.0, 1.0, 1.0, 0.999);
+      marker.scale = create_marker_scale(0.6, 0.6, 0.6);
       marker.ns = ns + "_reason";
       msg.markers.push_back(marker);
     }
@@ -184,7 +184,7 @@ MarkerArray createOverhangLaneletMarkerArray(const ObjectDataArray & objects, st
   msg.markers.reserve(objects.size());
 
   for (const auto & object : objects) {
-    appendMarkerArray(
+    append_marker_array(
       marker_utils::createLaneletsAreaMarkerArray(
         {object.overhang_lanelet}, std::string(ns), 0.0, 0.0, 1.0),
       &msg);
@@ -198,16 +198,16 @@ MarkerArray avoidableObjectsMarkerArray(const ObjectDataArray & objects, std::st
   MarkerArray msg;
   msg.markers.reserve(objects.size() * 5);
 
-  appendMarkerArray(
+  append_marker_array(
     createObjectsCubeMarkerArray(
-      objects, ns + "_cube", createMarkerScale(3.0, 1.5, 1.5),
-      createMarkerColor(1.0, 1.0, 0.0, 0.8)),
+      objects, ns + "_cube", create_marker_scale(3.0, 1.5, 1.5),
+      create_marker_color(1.0, 1.0, 0.0, 0.8)),
     &msg);
 
-  appendMarkerArray(createObjectInfoMarkerArray(objects, ns + "_info", true), &msg);
-  appendMarkerArray(createObjectPolygonMarkerArray(objects, ns + "_envelope_polygon"), &msg);
-  appendMarkerArray(createToDrivableBoundDistance(objects, ns + "_to_drivable_bound"), &msg);
-  appendMarkerArray(createOverhangLaneletMarkerArray(objects, ns + "_overhang_lanelet"), &msg);
+  append_marker_array(createObjectInfoMarkerArray(objects, ns + "_info", true), &msg);
+  append_marker_array(createObjectPolygonMarkerArray(objects, ns + "_envelope_polygon"), &msg);
+  append_marker_array(createToDrivableBoundDistance(objects, ns + "_to_drivable_bound"), &msg);
+  append_marker_array(createOverhangLaneletMarkerArray(objects, ns + "_overhang_lanelet"), &msg);
 
   return msg;
 }
@@ -217,16 +217,16 @@ MarkerArray unAvoidableObjectsMarkerArray(const ObjectDataArray & objects, std::
   MarkerArray msg;
   msg.markers.reserve(objects.size() * 5);
 
-  appendMarkerArray(
+  append_marker_array(
     createObjectsCubeMarkerArray(
-      objects, ns + "_cube", createMarkerScale(3.0, 1.5, 1.5),
-      createMarkerColor(1.0, 0.0, 0.0, 0.8)),
+      objects, ns + "_cube", create_marker_scale(3.0, 1.5, 1.5),
+      create_marker_color(1.0, 0.0, 0.0, 0.8)),
     &msg);
 
-  appendMarkerArray(createObjectInfoMarkerArray(objects, ns + "_info", true), &msg);
-  appendMarkerArray(createObjectPolygonMarkerArray(objects, ns + "_envelope_polygon"), &msg);
-  appendMarkerArray(createToDrivableBoundDistance(objects, ns + "_to_drivable_bound"), &msg);
-  appendMarkerArray(createOverhangLaneletMarkerArray(objects, ns + "_overhang_lanelet"), &msg);
+  append_marker_array(createObjectInfoMarkerArray(objects, ns + "_info", true), &msg);
+  append_marker_array(createObjectPolygonMarkerArray(objects, ns + "_envelope_polygon"), &msg);
+  append_marker_array(createToDrivableBoundDistance(objects, ns + "_to_drivable_bound"), &msg);
+  append_marker_array(createOverhangLaneletMarkerArray(objects, ns + "_overhang_lanelet"), &msg);
 
   return msg;
 }
@@ -253,38 +253,38 @@ MarkerArray createTurnSignalMarkerArray(const TurnSignalInfo & turn_signal_info,
 
   size_t i = 0;
   {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, i++, Marker::ARROW,
-      createMarkerScale(0.6, 0.3, 0.3), createMarkerColor(0.0, 0.0, 1.0, 0.999));
+      create_marker_scale(0.6, 0.3, 0.3), create_marker_color(0.0, 0.0, 1.0, 0.999));
     marker.pose = turn_signal_info.desired_start_point;
-    marker.pose = calcOffsetPose(marker.pose, 0.0, 0.0, 0.0, yaw_offset);
+    marker.pose = calc_offset_pose(marker.pose, 0.0, 0.0, 0.0, yaw_offset);
 
     msg.markers.push_back(marker);
   }
   {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, i++, Marker::ARROW,
-      createMarkerScale(0.6, 0.3, 0.3), createMarkerColor(0.0, 0.0, 1.0, 0.999));
+      create_marker_scale(0.6, 0.3, 0.3), create_marker_color(0.0, 0.0, 1.0, 0.999));
     marker.pose = turn_signal_info.desired_end_point;
-    marker.pose = calcOffsetPose(marker.pose, 0.0, 0.0, 0.0, yaw_offset);
+    marker.pose = calc_offset_pose(marker.pose, 0.0, 0.0, 0.0, yaw_offset);
 
     msg.markers.push_back(marker);
   }
   {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, i++, Marker::ARROW,
-      createMarkerScale(0.8, 0.4, 0.4), createMarkerColor(1.0, 0.0, 0.0, 0.999));
+      create_marker_scale(0.8, 0.4, 0.4), create_marker_color(1.0, 0.0, 0.0, 0.999));
     marker.pose = turn_signal_info.required_start_point;
-    marker.pose = calcOffsetPose(marker.pose, 0.0, 0.0, 0.0, yaw_offset);
+    marker.pose = calc_offset_pose(marker.pose, 0.0, 0.0, 0.0, yaw_offset);
 
     msg.markers.push_back(marker);
   }
   {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, i++, Marker::ARROW,
-      createMarkerScale(0.8, 0.4, 0.4), createMarkerColor(1.0, 0.0, 0.0, 0.999));
+      create_marker_scale(0.8, 0.4, 0.4), create_marker_color(1.0, 0.0, 0.0, 0.999));
     marker.pose = turn_signal_info.required_end_point;
-    marker.pose = calcOffsetPose(marker.pose, 0.0, 0.0, 0.0, yaw_offset);
+    marker.pose = calc_offset_pose(marker.pose, 0.0, 0.0, 0.0, yaw_offset);
 
     msg.markers.push_back(marker);
   }
@@ -304,9 +304,9 @@ MarkerArray createAvoidLineMarkerArray(
     return msg;
   }
 
-  auto marker = createDefaultMarker(
+  auto marker = create_default_marker(
     "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, 0L, Marker::CUBE,
-    createMarkerScale(0.1, 0.1, 0.1), createMarkerColor(r, g, b, 0.9));
+    create_marker_scale(0.1, 0.1, 0.1), create_marker_color(r, g, b, 0.9));
 
   int32_t shift_line_id{0};
   int32_t marker_id{0};
@@ -316,9 +316,9 @@ MarkerArray createAvoidLineMarkerArray(
       auto m = marker;
       m.id = marker_id++;
       m.type = Marker::LINE_STRIP;
-      m.scale = createMarkerScale(w, 0.0, 0.0);
-      m.points.push_back(calcOffsetPose(s.start, 0.0, s.start_shift_length, 0.0).position);
-      m.points.push_back(calcOffsetPose(s.end, 0.0, s.end_shift_length, 0.0).position);
+      m.scale = create_marker_scale(w, 0.0, 0.0);
+      m.points.push_back(calc_offset_pose(s.start, 0.0, s.start_shift_length, 0.0).position);
+      m.points.push_back(calc_offset_pose(s.end, 0.0, s.end_shift_length, 0.0).position);
       msg.markers.push_back(m);
     }
 
@@ -327,8 +327,8 @@ MarkerArray createAvoidLineMarkerArray(
       auto m = marker;
       m.id = marker_id++;
       m.type = Marker::CUBE;
-      m.scale = createMarkerScale(0.2, 0.2, 0.2);
-      m.pose = calcOffsetPose(s.start, 0.0, s.start_shift_length, 0.0);
+      m.scale = create_marker_scale(0.2, 0.2, 0.2);
+      m.pose = calc_offset_pose(s.start, 0.0, s.start_shift_length, 0.0);
       msg.markers.push_back(m);
     }
 
@@ -337,8 +337,8 @@ MarkerArray createAvoidLineMarkerArray(
       auto m = marker;
       m.id = marker_id++;
       m.type = Marker::CUBE;
-      m.scale = createMarkerScale(0.2, 0.2, 0.2);
-      m.pose = calcOffsetPose(s.end, 0.0, s.end_shift_length, 0.0);
+      m.scale = create_marker_scale(0.2, 0.2, 0.2);
+      m.pose = calc_offset_pose(s.end, 0.0, s.end_shift_length, 0.0);
       msg.markers.push_back(m);
     }
 
@@ -349,8 +349,8 @@ MarkerArray createAvoidLineMarkerArray(
       string_stream << "(S):" << shift_line_id;
       m.id = marker_id++;
       m.type = Marker::TEXT_VIEW_FACING;
-      m.scale = createMarkerScale(0.3, 0.3, 0.3);
-      m.pose = calcOffsetPose(s.start, 0.0, s.start_shift_length + 0.3, 0.0);
+      m.scale = create_marker_scale(0.3, 0.3, 0.3);
+      m.pose = calc_offset_pose(s.start, 0.0, s.start_shift_length + 0.3, 0.0);
       m.text = string_stream.str();
       msg.markers.push_back(m);
     }
@@ -362,8 +362,8 @@ MarkerArray createAvoidLineMarkerArray(
       string_stream << "(E):" << shift_line_id;
       m.id = marker_id++;
       m.type = Marker::TEXT_VIEW_FACING;
-      m.scale = createMarkerScale(0.3, 0.3, 0.3);
-      m.pose = calcOffsetPose(s.end, 0.0, s.end_shift_length - 0.3, 0.0);
+      m.scale = create_marker_scale(0.3, 0.3, 0.3);
+      m.pose = calc_offset_pose(s.end, 0.0, s.end_shift_length - 0.3, 0.0);
       m.text = string_stream.str();
       msg.markers.push_back(m);
     }
@@ -389,8 +389,8 @@ MarkerArray createTargetObjectsMarkerArray(const ObjectDataArray & objects, cons
   MarkerArray msg;
   msg.markers.reserve(objects.size() * 4);
 
-  appendMarkerArray(avoidableObjectsMarkerArray(avoidable, "avoidable_" + ns), &msg);
-  appendMarkerArray(unAvoidableObjectsMarkerArray(unavoidable, "unavoidable_" + ns), &msg);
+  append_marker_array(avoidableObjectsMarkerArray(avoidable, "avoidable_" + ns), &msg);
+  append_marker_array(unAvoidableObjectsMarkerArray(unavoidable, "unavoidable_" + ns), &msg);
 
   return msg;
 }
@@ -419,14 +419,14 @@ MarkerArray createOtherObjectsMarkerArray(
   std::string ns = string_stream.str();
   transform(ns.begin(), ns.end(), ns.begin(), tolower);
 
-  appendMarkerArray(
+  append_marker_array(
     createObjectsCubeMarkerArray(
-      filtered_objects, "others_" + ns + "_cube", createMarkerScale(3.0, 1.5, 1.5),
-      createMarkerColor(0.5, 0.5, 0.5, 0.8)),
+      filtered_objects, "others_" + ns + "_cube", create_marker_scale(3.0, 1.5, 1.5),
+      create_marker_color(0.5, 0.5, 0.5, 0.8)),
     &msg);
-  appendMarkerArray(
+  append_marker_array(
     createObjectInfoMarkerArray(filtered_objects, "others_" + ns + "_info", verbose), &msg);
-  appendMarkerArray(
+  append_marker_array(
     createOverhangLaneletMarkerArray(filtered_objects, "others_" + ns + "_overhang_lanelet"), &msg);
 
   return msg;
@@ -447,9 +447,9 @@ MarkerArray createAmbiguousObjectsMarkerArray(
     }
 
     {
-      auto marker = createDefaultMarker(
+      auto marker = create_default_marker(
         "map", rclcpp::Clock{RCL_ROS_TIME}.now(), "ambiguous_target", 0L, Marker::ARROW,
-        createMarkerScale(0.5, 1.0, 1.0), createMarkerColor(1.0, 1.0, 0.0, 0.999));
+        create_marker_scale(0.5, 1.0, 1.0), create_marker_color(1.0, 1.0, 0.0, 0.999));
 
       Point src, dst;
       src = object.getPosition();
@@ -465,10 +465,10 @@ MarkerArray createAmbiguousObjectsMarkerArray(
     }
 
     {
-      auto marker = createDefaultMarker(
+      auto marker = create_default_marker(
         "map", rclcpp::Clock{RCL_ROS_TIME}.now(), "ambiguous_target_text", 0L,
-        Marker::TEXT_VIEW_FACING, createMarkerScale(0.5, 0.5, 0.5),
-        createMarkerColor(1.0, 1.0, 0.0, 1.0));
+        Marker::TEXT_VIEW_FACING, create_marker_scale(0.5, 0.5, 0.5),
+        create_marker_color(1.0, 1.0, 0.0, 1.0));
 
       marker.id = uuidToInt32(object.object.object_id);
       marker.pose = object.getPose();
@@ -476,15 +476,15 @@ MarkerArray createAmbiguousObjectsMarkerArray(
       std::ostringstream string_stream;
       string_stream << "SHOULD AVOID?";
       marker.text = string_stream.str();
-      marker.color = createMarkerColor(1.0, 1.0, 0.0, 0.999);
-      marker.scale = createMarkerScale(0.8, 0.8, 0.8);
+      marker.color = create_marker_color(1.0, 1.0, 0.0, 0.999);
+      marker.scale = create_marker_scale(0.8, 0.8, 0.8);
       msg.markers.push_back(marker);
     }
 
     {
-      auto marker = createDefaultMarker(
+      auto marker = create_default_marker(
         "map", rclcpp::Clock{RCL_ROS_TIME}.now(), "request_text", 0L, Marker::TEXT_VIEW_FACING,
-        createMarkerScale(0.5, 0.5, 0.5), createMarkerColor(1.0, 1.0, 0.0, 1.0));
+        create_marker_scale(0.5, 0.5, 0.5), create_marker_color(1.0, 1.0, 0.0, 1.0));
 
       marker.id = uuidToInt32(object.object.object_id);
       marker.pose = ego_pose;
@@ -492,8 +492,8 @@ MarkerArray createAmbiguousObjectsMarkerArray(
       std::ostringstream string_stream;
       string_stream << "SYSTEM REQUESTS OPERATOR SUPPORT.";
       marker.text = string_stream.str();
-      marker.color = createMarkerColor(1.0, 1.0, 0.0, 0.999);
-      marker.scale = createMarkerScale(0.8, 0.8, 0.8);
+      marker.color = create_marker_color(1.0, 1.0, 0.0, 0.999);
+      marker.scale = create_marker_scale(0.8, 0.8, 0.8);
       msg.markers.push_back(marker);
     }
 
@@ -511,10 +511,10 @@ MarkerArray createStopTargetObjectMarkerArray(const AvoidancePlanningData & data
     return msg;
   }
 
-  appendMarkerArray(
+  append_marker_array(
     createObjectsCubeMarkerArray(
-      {data.stop_target_object.value()}, "stop_target", createMarkerScale(3.4, 1.9, 1.9),
-      createMarkerColor(1.0, 0.0, 0.42, 0.5)),
+      {data.stop_target_object.value()}, "stop_target", create_marker_scale(3.4, 1.9, 1.9),
+      create_marker_color(1.0, 0.0, 0.42, 0.5)),
     &msg);
 
   return msg;
@@ -529,9 +529,9 @@ MarkerArray createDrivableBounds(
 
   // right bound
   {
-    auto marker = createDefaultMarker(
-      "map", current_time, ns + "_right", 0L, Marker::LINE_STRIP, createMarkerScale(0.4, 0.0, 0.0),
-      createMarkerColor(r, g, b, 0.999));
+    auto marker = create_default_marker(
+      "map", current_time, ns + "_right", 0L, Marker::LINE_STRIP,
+      create_marker_scale(0.4, 0.0, 0.0), create_marker_color(r, g, b, 0.999));
 
     for (const auto & p : data.right_bound) {
       marker.points.push_back(p);
@@ -542,9 +542,9 @@ MarkerArray createDrivableBounds(
 
   // left bound
   {
-    auto marker = createDefaultMarker(
-      "map", current_time, ns + "_left", 0L, Marker::LINE_STRIP, createMarkerScale(0.4, 0.0, 0.0),
-      createMarkerColor(r, g, b, 0.999));
+    auto marker = create_default_marker(
+      "map", current_time, ns + "_left", 0L, Marker::LINE_STRIP, create_marker_scale(0.4, 0.0, 0.0),
+      create_marker_color(r, g, b, 0.999));
 
     for (const auto & p : data.left_bound) {
       marker.points.push_back(p);
@@ -580,7 +580,7 @@ MarkerArray createDebugMarkerArray(
 
   const auto & path = data.reference_path;
 
-  const auto add = [&msg](const MarkerArray & added) { appendMarkerArray(added, &msg); };
+  const auto add = [&msg](const MarkerArray & added) { append_marker_array(added, &msg); };
 
   const auto addAvoidLine =
     [&](const AvoidLineArray & al_arr, const auto & ns, auto r, auto g, auto b, double w = 0.05) {
@@ -684,11 +684,11 @@ MarkerArray createDebugMarkerArray(
   if (parameters->enable_lane_marker) {
     add(laneletsAsTriangleMarkerArray(
       "drivable_lanes", transformToLanelets(data.drivable_lanes),
-      createMarkerColor(0.16, 1.0, 0.69, 0.2)));
+      create_marker_color(0.16, 1.0, 0.69, 0.2)));
     add(laneletsAsTriangleMarkerArray(
-      "current_lanes", data.current_lanelets, createMarkerColor(1.0, 1.0, 1.0, 0.2)));
+      "current_lanes", data.current_lanelets, create_marker_color(1.0, 1.0, 1.0, 0.2)));
     add(laneletsAsTriangleMarkerArray(
-      "safety_check_lanes", debug.safety_check_lanes, createMarkerColor(1.0, 0.0, 0.42, 0.2)));
+      "safety_check_lanes", debug.safety_check_lanes, create_marker_color(1.0, 0.0, 0.42, 0.2)));
   }
 
   // misc
@@ -737,16 +737,16 @@ std::string toStrInfo(const autoware::behavior_path_planner::AvoidLineArray & ap
 }
 std::string toStrInfo(const autoware::behavior_path_planner::AvoidLine & ap)
 {
-  using autoware::universe_utils::toHexString;
+  using autoware_utils::to_hex_string;
 
   std::stringstream pids;
   for (const auto pid : ap.parent_ids) {
-    pids << toHexString(pid) << ", ";
+    pids << to_hex_string(pid) << ", ";
   }
   const auto & ps = ap.start.position;
   const auto & pe = ap.end.position;
   std::stringstream ss;
-  ss << "id = " << toHexString(ap.id) << ", shift length: " << ap.end_shift_length
+  ss << "id = " << to_hex_string(ap.id) << ", shift length: " << ap.end_shift_length
      << ", start_idx: " << ap.start_idx << ", end_idx: " << ap.end_idx
      << ", start_dist = " << ap.start_longitudinal << ", end_dist = " << ap.end_longitudinal
      << ", start_shift_length: " << ap.start_shift_length << ", start: (" << ps.x << ", " << ps.y

@@ -15,10 +15,10 @@
 #ifndef GYRO_ODOMETER_CORE_HPP_
 #define GYRO_ODOMETER_CORE_HPP_
 
-#include "autoware/universe_utils/ros/diagnostics_interface.hpp"
-#include "autoware/universe_utils/ros/logger_level_configure.hpp"
-#include "autoware/universe_utils/ros/msg_covariance.hpp"
-#include "autoware/universe_utils/ros/transform_listener.hpp"
+#include "autoware_utils/ros/diagnostics_interface.hpp"
+#include "autoware_utils/ros/logger_level_configure.hpp"
+#include "autoware_utils/ros/msg_covariance.hpp"
+#include "autoware_utils/ros/transform_listener.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -43,7 +43,7 @@ namespace autoware::gyro_odometer
 class GyroOdometerNode : public rclcpp::Node
 {
 private:
-  using COV_IDX = autoware::universe_utils::xyz_covariance_index::XYZ_COV_IDX;
+  using COV_IDX = autoware_utils::xyz_covariance_index::XYZ_COV_IDX;
 
 public:
   explicit GyroOdometerNode(const rclcpp::NodeOptions & node_options);
@@ -67,8 +67,8 @@ private:
   rclcpp::Publisher<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr
     twist_with_covariance_pub_;
 
-  std::shared_ptr<autoware::universe_utils::TransformListener> transform_listener_;
-  std::unique_ptr<autoware::universe_utils::LoggerLevelConfigure> logger_configure_;
+  std::shared_ptr<autoware_utils::TransformListener> transform_listener_;
+  std::unique_ptr<autoware_utils::LoggerLevelConfigure> logger_configure_;
 
   std::string output_frame_;
   double message_timeout_sec_;
@@ -80,7 +80,7 @@ private:
   std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> vehicle_twist_queue_;
   std::deque<sensor_msgs::msg::Imu> gyro_queue_;
 
-  std::unique_ptr<autoware::universe_utils::DiagnosticsInterface> diagnostics_;
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_;
 };
 
 }  // namespace autoware::gyro_odometer

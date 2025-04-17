@@ -43,23 +43,7 @@ ROIs detected from YOLOX will be selected by a combination of `expect/rois`. At 
 
 ## Parameters
 
-### Core Parameters
-
-| Name                         | Type   | Default Value | Description                                                            |
-| ---------------------------- | ------ | ------------- | ---------------------------------------------------------------------- |
-| `fine_detector_score_thresh` | double | 0.3           | If the objectness score is less than this value, the object is ignored |
-| `fine_detector_nms_thresh`   | double | 0.65          | IoU threshold to perform Non-Maximum Suppression                       |
-
-### Node Parameters
-
-| Name                       | Type    | Default Value               | Description                                                        |
-| -------------------------- | ------- | --------------------------- | ------------------------------------------------------------------ |
-| `data_path`                | string  | "$(env HOME)/autoware_data" | packages data and artifacts directory path                         |
-| `fine_detector_model_path` | string  | ""                          | The onnx file name for yolo model                                  |
-| `fine_detector_label_path` | string  | ""                          | The label file with label names for detected objects written on it |
-| `fine_detector_precision`  | string  | "fp16"                      | The inference mode: "fp32", "fp16"                                 |
-| `approximate_sync`         | bool    | false                       | Flag for whether to ues approximate sync policy                    |
-| `gpu_id`                   | integer | 0                           | ID for the selecting CUDA GPU device                               |
+{{ json_to_markdown("perception/autoware_traffic_light_fine_detector/schema/traffic_light_fine_detector.schema.json") }} |
 
 ## Assumptions / Known limits
 
