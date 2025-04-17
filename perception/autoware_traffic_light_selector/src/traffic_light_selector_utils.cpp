@@ -57,15 +57,15 @@ void computeCenterOffset(
 }
 
 RegionOfInterest getShiftedRoi(
-  const RegionOfInterest & image, const uint32_t & image_width, const uint32_t & image_height,
+  const RegionOfInterest & input_ROI, const uint32_t & image_width, const uint32_t & image_height,
   const int32_t & shift_x, const int32_t & shift_y)
 {
-  RegionOfInterest shifted_ROI = image;
-  const auto x_offset = static_cast<int32_t>(image.x_offset) + shift_x;
-  const auto y_offset = static_cast<int32_t>(image.y_offset) + shift_y;
+  RegionOfInterest shifted_ROI = input_ROI;
+  const auto x_offset = static_cast<int32_t>(input_ROI.x_offset) + shift_x;
+  const auto y_offset = static_cast<int32_t>(input_ROI.y_offset) + shift_y;
   if (
-    x_offset < 0 || y_offset < 0 || x_offset + image.width > image_width ||
-    y_offset + image.height > image_height) {
+    x_offset < 0 || y_offset < 0 || x_offset + input_ROI.width > image_width ||
+    y_offset + input_ROI.height > image_height) {
     shifted_ROI.x_offset = 0;
     shifted_ROI.y_offset = 0;
     shifted_ROI.width = 0;
