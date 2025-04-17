@@ -103,7 +103,7 @@ void TrafficLightSelectorNode::objectsCallback(
 
       if (total_max_iou > final_iou) {
         final_iou = total_max_iou;
-        final_rois_map = total_max_iou_rois_map;
+        final_rois_map = std::move(total_max_iou_rois_map);
       }
     }
   }
