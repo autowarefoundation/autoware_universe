@@ -14345,6 +14345,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#parameters" class="md-nav__link">
+    Parameters
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -14579,6 +14586,426 @@ Although it has a cons to converge to the local minima, it can get a good soluti
 <li><code>option.enable_calculation_time_info</code> enables showing each calculation time for functions and total calculation time on the terminal.</li>
 <li><code>option.enable_outside_drivable_area_stop</code> enables stopping just before the generated trajectory point will be outside the drivable area.</li>
 </ul>
+<h3 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>option.enable_skip_optimization</td>
+<td>boolean</td>
+<td>Skip elastic band and model predictive trajectory optimization.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>option.enable_reset_prev_optimization</td>
+<td>boolean</td>
+<td>If true, optimization has no fix constraint to the previous result.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>option.enable_outside_drivable_area_stop</td>
+<td>boolean</td>
+<td>Stop if the ego's trajectory footprint is outside the drivable area.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>option.use_footprint_polygon_for_outside_drivable_area_check</td>
+<td>boolean</td>
+<td>If false, only the footprint's corner points are considered for drivable area check.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>debug.enable_pub_debug_marker</td>
+<td>boolean</td>
+<td>Publish debug markers.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>debug.enable_pub_extra_debug_marker</td>
+<td>boolean</td>
+<td>Publish extra debug markers.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>debug.enable_debug_info</td>
+<td>boolean</td>
+<td>Enable debug information.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>debug.enable_calculation_time_info</td>
+<td>boolean</td>
+<td>Enable calculation time information.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>common.output_delta_arc_length</td>
+<td>float</td>
+<td>Delta arc length for output trajectory [m].</td>
+<td>0.5</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>common.output_backward_traj_length</td>
+<td>float</td>
+<td>Backward length for backward trajectory from base_link [m].</td>
+<td>5.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>common.vehicle_stop_margin_outside_drivable_area</td>
+<td>float</td>
+<td>Vehicle stop margin to let the vehicle stop before the calculated stop point if it is calculated outside the drivable area [m].</td>
+<td>0.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>replan.max_path_shape_around_ego_lat_dist</td>
+<td>float</td>
+<td>Threshold of path shape change around ego [m].</td>
+<td>2.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>replan.max_path_shape_forward_lon_dist</td>
+<td>float</td>
+<td>Forward point to check lateral distance difference [m].</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>replan.max_path_shape_forward_lat_dist</td>
+<td>float</td>
+<td>Threshold of path shape change around forward point [m].</td>
+<td>0.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>replan.max_ego_moving_dist</td>
+<td>float</td>
+<td>Threshold of ego's moving distance for replan [m].</td>
+<td>5.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>replan.max_goal_moving_dist</td>
+<td>float</td>
+<td>Threshold of goal's moving distance for replan [m].</td>
+<td>15.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>replan.max_delta_time_sec</td>
+<td>float</td>
+<td>Threshold of delta time for replan [second].</td>
+<td>0.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>option.steer_limit_constraint</td>
+<td>boolean</td>
+<td>Enable steer limit constraint.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>option.visualize_sampling_num</td>
+<td>integer</td>
+<td>Number of samples to visualize.</td>
+<td>1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>option.enable_manual_warm_start</td>
+<td>boolean</td>
+<td>Enable manual warm start.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>option.enable_warm_start</td>
+<td>boolean</td>
+<td>Enable warm start.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>option.enable_optimization_validation</td>
+<td>boolean</td>
+<td>Enable optimization validation.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>common.num_points</td>
+<td>integer</td>
+<td>Number of points for optimization.</td>
+<td>100</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>common.delta_arc_length</td>
+<td>float</td>
+<td>Delta arc length for optimization [m].</td>
+<td>1.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>clearance.hard_clearance_from_road</td>
+<td>float</td>
+<td>Clearance from road boundary [m] if collision_free_constraints.option.hard_constraint is true.</td>
+<td>0.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>clearance.soft_clearance_from_road</td>
+<td>float</td>
+<td>Clearance from road boundary [m] if collision_free_constraints.option.soft_constraint is true.</td>
+<td>0.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>weight.soft_collision_free_weight</td>
+<td>float</td>
+<td>Soft weight for lateral error around the middle point.</td>
+<td>1.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>weight.lat_error_weight</td>
+<td>float</td>
+<td>Weight for lateral error.</td>
+<td>1.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>weight.yaw_error_weight</td>
+<td>float</td>
+<td>Weight for yaw error.</td>
+<td>0.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>weight.yaw_error_rate_weight</td>
+<td>float</td>
+<td>Weight for yaw error rate.</td>
+<td>0.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>weight.steer_input_weight</td>
+<td>float</td>
+<td>Weight for steering input.</td>
+<td>1.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>weight.steer_rate_weight</td>
+<td>float</td>
+<td>Weight for steering rate.</td>
+<td>1.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>weight.terminal_lat_error_weight</td>
+<td>float</td>
+<td>Weight for lateral error at terminal point.</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>weight.terminal_yaw_error_weight</td>
+<td>float</td>
+<td>Weight for yaw error at terminal point.</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>weight.goal_lat_error_weight</td>
+<td>float</td>
+<td>Weight for lateral error at path end point.</td>
+<td>1000.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>weight.goal_yaw_error_weight</td>
+<td>float</td>
+<td>Weight for yaw error at path end point.</td>
+<td>1000.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>avoidance.max_bound_fixing_time</td>
+<td>float</td>
+<td>Maximum bound fixing time [s].</td>
+<td>1.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>avoidance.max_longitudinal_margin_for_bound_violation</td>
+<td>float</td>
+<td>Maximum longitudinal margin for bound violation [m].</td>
+<td>1.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>avoidance.max_avoidance_cost</td>
+<td>float</td>
+<td>Maximum avoidance cost [m].</td>
+<td>0.5</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>avoidance.avoidance_cost_margin</td>
+<td>float</td>
+<td>Avoidance cost margin [m].</td>
+<td>0.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>avoidance.avoidance_cost_band_length</td>
+<td>float</td>
+<td>Avoidance cost band length [m].</td>
+<td>5.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>avoidance.avoidance_cost_decrease_rate</td>
+<td>float</td>
+<td>Decreased cost per point interval.</td>
+<td>0.05</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>avoidance.min_drivable_width</td>
+<td>float</td>
+<td>Minimum drivable width [m]. The vehicle width and this parameter are guaranteed to keep for collision-free constraint.</td>
+<td>0.2</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>weight.lat_error_weight</td>
+<td>float</td>
+<td>Weight for lateral error.</td>
+<td>0.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>weight.yaw_error_weight</td>
+<td>float</td>
+<td>Weight for yaw error.</td>
+<td>10.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>weight.steer_input_weight</td>
+<td>float</td>
+<td>Weight for yaw error.</td>
+<td>100.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>option.l_inf_norm</td>
+<td>boolean</td>
+<td>Use L-infinity norm for collision-free constraints.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>option.soft_constraint</td>
+<td>boolean</td>
+<td>Enable soft constraints.</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>option.hard_constraint</td>
+<td>boolean</td>
+<td>Enable hard constraints.</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>vehicle_circles.method</td>
+<td>string</td>
+<td>Method to represent footprint as circles.</td>
+<td>fitting_uniform_circle</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>bicycle_model.num_for_calculation</td>
+<td>integer</td>
+<td>Number of circles for calculation.</td>
+<td>3</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>bicycle_model.front_radius_ratio</td>
+<td>float</td>
+<td>Front radius ratio.</td>
+<td>1.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>bicycle_model.rear_radius_ratio</td>
+<td>float</td>
+<td>Rear radius ratio.</td>
+<td>1.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>uniform_circle.num</td>
+<td>integer</td>
+<td>Number of circles.</td>
+<td>3</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>uniform_circle.radius_ratio</td>
+<td>float</td>
+<td>Radius ratio.</td>
+<td>1.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>fitting_uniform_circle.num</td>
+<td>integer</td>
+<td>Number of circles.</td>
+<td>3</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>validation.max_lat_error</td>
+<td>float</td>
+<td>Maximum lateral error for validation [m].</td>
+<td>5.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>validation.max_yaw_error</td>
+<td>float</td>
+<td>Maximum yaw error for validation [rad].</td>
+<td>1.046</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
 <h2 id="how-to-debug">How To Debug<a class="headerlink" href="#how-to-debug" title="Permanent link">#</a></h2>
 <p>How to debug can be seen <a href="docs/debug/">here</a>.</p></div>
 
