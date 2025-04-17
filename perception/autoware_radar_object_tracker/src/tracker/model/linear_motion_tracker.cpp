@@ -230,8 +230,8 @@ void LinearMotionTracker::loadDefaultModelParameters(const std::string & path)
   // limitation
   // (TODO): this may be written in another yaml file based on classify result
   const float max_speed_kmph = config["default"]["limit"]["max_speed"].as<float>();  // [km/h]
-  max_vx_ = autoware_utils_math::kmph2mps(max_speed_kmph);                                // [m/s]
-  max_vy_ = autoware_utils_math::kmph2mps(max_speed_kmph);                                // [rad/s]
+  max_vx_ = autoware_utils_math::kmph2mps(max_speed_kmph);                           // [m/s]
+  max_vy_ = autoware_utils_math::kmph2mps(max_speed_kmph);                           // [rad/s]
 }
 
 bool LinearMotionTracker::predict(const rclcpp::Time & time)
