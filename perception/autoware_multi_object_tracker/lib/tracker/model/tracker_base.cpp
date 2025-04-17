@@ -76,7 +76,7 @@ void Tracker::initializeExistenceProbabilities(
   constexpr float max_probability = 0.999;
   constexpr float min_probability = 0.100;
   total_existence_probability_ =
-    std::max(std::min(existence_probability, max_probability), min_probability);
+    std::clamp(existence_probability, min_probability, max_probability);
 }
 
 bool Tracker::updateWithMeasurement(
@@ -108,8 +108,9 @@ bool Tracker::updateWithMeasurement(
     }
 
     // update total existence probability
-    const double existence_probability =
-      channel_info.trust_existence_probability ? object.existence_probability : 0.9;
+    const double existence_probability = channel_info.trust_existence_probability
+                                           ? object.existence_probability
+                                           : types::default_existence_probability;
     total_existence_probability_ = updateProbability(
       total_existence_probability_, existence_probability * probability_true_detection,
       probability_false_detection);

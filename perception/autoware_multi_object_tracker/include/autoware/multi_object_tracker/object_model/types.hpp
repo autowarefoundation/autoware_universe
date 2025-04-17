@@ -43,6 +43,7 @@ namespace types
 {
 // constants
 constexpr size_t max_channel_size = 16;
+constexpr double default_existence_probability = 0.8;
 
 // channel configuration
 struct InputChannel
