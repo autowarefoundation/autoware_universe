@@ -82,30 +82,46 @@ In addition, the objects of interests markers shows which objects are not ignore
 Now that we prepared the ego trajectory footprint, the dynamic objects, and their predicted paths,
 we will calculate the times when they are predicted to collide.
 
-The following operation are performed for each object that was not ignored in the previous iteration.
+The following operations are performed for each object that was not ignored in the previous iteration.
 
 First, we calculate the intersections between each pair of linestrings between the ego and object footprints.
 For each intersection, we calculate the corresponding point,
 the time when ego and the object are predicted to reach that point,
 and the location of that point on the ego footprint (e.g., on the rear left linestring).
 
-All these intersections are then combined into intervals representing when the overlap between the ego trajectory and object predict paths starts and ends.
+All these intersections are then combined into intervals representing when the overlap between the ego trajectory and object predicted paths starts and ends.
 An overlap is represented by the entering and exiting intersections for both ego and the object.
 
-These overlaps calculated for all the object's predicted paths are then combined if overlapping in time
+These overlaps calculated for all the object's predicted paths are then combined if overlapping in time (including the `collision.time_overlap_tolerance` parameter).
 and classified into the following collision types:
 
 - `pass_first_collision` if ego is predicted to enter the overlap before the object.
-  - only used if parameter `passing.enable_passing_margin` is set to `true`.
-  - ego must enter the overlap at least `passing.time_margin` seconds before the object.
-  - ego must not be overlapping the object's path by more than `passing.max_overlap_duration` seconds.
-- `collision` if ego and the object are predicted to be in the overlap at the same time (i.e., the overlap time intervals overlap).
+  - if parameter `passing.enable` is set to `true` and:
+    - ego enters the overlap at least `time_margin` seconds before the object.
+      - `time_margin` is calculated based on the time when ego enters the overlap and linearly interpolated using the mappings between `passing.margin.ego_enter_times` and `passing.margin.time_margins`.
+    - ego does not overlap the object's path by more than `passing.max_overlap_duration` seconds.
+  - if parameter `passing.enable_when_unavoidable` is set to `true` and:
+    - ego cannot stop before entering the interval by using the deceleration limit set with `passing.unavoidable_deceleration`.
+- `collision` if ego and the object are predicted to be in the overlap at the same time.
+  - the distance between the time intervals of ego and the objects must be smaller than the `time_margin` parameter (a distance of 0 means that the intervals overlap).
 - `pass_first_no_collision` if ego is predicted to exit the overlap before the object enters it.
 - `no_collision` in all other cases.
 
-TODO: figure
+In the case where a collision is detected, the corresponding collision time is calculated
+based on the yaw difference between the object and the ego vehicle at the first intersection point.
 
-TODO: add debug marker explanation
+- default: collision time is set to the time when ego enters the overlap.
+- object yaw is within `collision.same_direction_angle_threshold` of the ego yaw:
+  - if the object is faster than ego, no collision will happen and the type is changed to `no_collision`.
+  - the collision time is increased based on the velocity difference.
+- object yaw is within `collision.opposite_direction_angle_threshold` of the opposite of the ego yaw:
+  - the collision time is increased based on the estimated time when ego will collide will the object after entering the overlap.
+
+The following figure shows the collision points in red and a table showing each overlap found and the corresponding collision type, ego and object time intervals, and predicted ego collision time.
+
+![collisions](./docs/collisions.png)
+
+The collisions points and the table can be visualized on the debug markers with the `collisions_points` and `collisions_table` namespaces.
 
 ### 5. Decisions
 
@@ -129,9 +145,9 @@ If the condition to stop is not met, we check the following conditions to slowdo
 - if the current collision type is `collision` and collisions with the object have been identified for a consecutive duration of at least `preventive_slowdown.on_time_buffer` seconds.
 - if the previous decision was `slowdown` and the time since the last identified collision with the object was less than `preventive_slowdown.off_time_buffer` seconds ago.
 
-TODO: figure
+![decisions](./docs/decisions.png)
 
-TODO: add debug marker explanation
+The decision table can be visualized on the debug markers with the `decisions` namespace.
 
 ### 6. Calculate the stop or slowdowns
 
