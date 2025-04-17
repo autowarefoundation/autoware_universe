@@ -54,6 +54,10 @@ namespace autoware::traffic_light
 TrafficLightFineDetectorNode::TrafficLightFineDetectorNode(const rclcpp::NodeOptions & options)
 : Node("traffic_light_fine_detector_node", options)
 {
+  // Set CUDA device flags
+  // note: Device flags are process-wide
+  cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+
   int num_class = 2;
   using std::placeholders::_1;
   using std::placeholders::_2;

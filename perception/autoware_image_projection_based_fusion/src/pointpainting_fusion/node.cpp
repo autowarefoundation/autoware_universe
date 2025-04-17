@@ -95,6 +95,10 @@ inline bool isUnknown(int label2d)
 PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & options)
 : FusionNode<PointCloudMsgType, RoiMsgType, DetectedObjects>("pointpainting_fusion", options)
 {
+  // Set CUDA device flags
+  // note: Device flags are process-wide
+  cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+
   omp_num_threads_ = this->declare_parameter<int>("omp_params.num_threads");
   const float score_threshold =
     static_cast<float>(this->declare_parameter<double>("post_process_params.score_threshold"));

@@ -26,6 +26,10 @@ namespace autoware::traffic_light
 TrafficLightClassifierNodelet::TrafficLightClassifierNodelet(const rclcpp::NodeOptions & options)
 : Node("traffic_light_classifier_node", options)
 {
+  // Set CUDA device flags
+  // note: Device flags are process-wide
+  cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+
   classify_traffic_light_type_ = this->declare_parameter<int>("traffic_light_type");
 
   using std::placeholders::_1;

@@ -38,6 +38,10 @@ namespace autoware::lidar_centerpoint
 LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_options)
 : Node("lidar_center_point", node_options), tf_buffer_(this->get_clock())
 {
+  // Set CUDA device flags
+  // note: Device flags are process-wide
+  cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+
   const float score_threshold =
     static_cast<float>(this->declare_parameter<double>("post_process_params.score_threshold"));
   const float circle_nms_dist_threshold = static_cast<float>(

@@ -41,6 +41,7 @@ ShapeEstimationNode::ShapeEstimationNode(const rclcpp::NodeOptions & node_option
 : Node("shape_estimation", node_options)
 {
   using std::placeholders::_1;
+
   sub_ = create_subscription<DetectedObjectsWithFeature>(
     "input", rclcpp::QoS{1}, std::bind(&ShapeEstimationNode::callback, this, _1));
 
@@ -57,6 +58,10 @@ ShapeEstimationNode::ShapeEstimationNode(const rclcpp::NodeOptions & node_option
     std::make_unique<ShapeEstimator>(use_corrector, use_filter, use_boost_bbox_optimizer);
 
 #ifdef USE_CUDA
+  // Set CUDA device flags
+  // note: Device flags are process-wide
+  cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+
   use_ml_shape_estimation_ = declare_parameter<bool>("model_params.use_ml_shape_estimator");
   if (use_ml_shape_estimation_) {
     std::string model_path = declare_parameter<std::string>("model_path");
