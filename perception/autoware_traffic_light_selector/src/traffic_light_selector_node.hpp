@@ -74,8 +74,8 @@ private:
 
   void evaluateWholeRois(
     const std::vector<RegionOfInterest> & detected_rois,
-    const std::map<uint8_t, RegionOfInterest> & expect_rois_shifted_map, double & total_max_iou,
-    std::map<uint8_t, RegionOfInterest> & total_max_iou_rois_map);
+    const std::map<int64_t, RegionOfInterest> & expect_rois_shifted_map, double & total_max_iou,
+    std::map<int64_t, RegionOfInterest> & total_max_iou_rois_map);
 };
 
 }  // namespace autoware::traffic_light
