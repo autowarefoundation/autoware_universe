@@ -14424,14 +14424,14 @@
 <td>global_slope_max_angle_deg</td>
 <td>float</td>
 <td>The global angle to classify as the ground or object [deg]. A large threshold may reduce false positive of high slope road classification but it may lead to increase false negative of non-ground classification, particularly for small objects.</td>
-<td>10</td>
+<td>10.0</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>local_slope_max_angle_deg</td>
 <td>float</td>
 <td>The local angle to classify as the ground or object [deg] when comparing with adjacent point. A small value enhance accuracy classification of object with inclined surface. This should be considered together with split_points_distance_tolerance value.</td>
-<td>13</td>
+<td>13.0</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -14445,7 +14445,7 @@
 <td>use_virtual_ground_point</td>
 <td>boolean</td>
 <td>Whether to use the ground center of front wheels as the virtual ground point</td>
-<td>1</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -14473,7 +14473,7 @@
 <td>grid_mode_switch_radius</td>
 <td>float</td>
 <td>The distance where grid division mode change from by distance to by vertical angle [m], applied only for elevation_grid_mode</td>
-<td>20</td>
+<td>20.0</td>
 <td>N/A</td>
 </tr>
 <tr>
@@ -14494,49 +14494,49 @@
 <td>elevation_grid_mode</td>
 <td>boolean</td>
 <td>Elevation grid scan mode option</td>
-<td>1</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>low_priority_region_x</td>
 <td>float</td>
 <td>The non-zero x threshold in back side from which small objects detection is low priority [m]</td>
-<td>-20</td>
+<td>-20.0</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>center_pcl_shift</td>
 <td>float</td>
 <td>The x-axis offset of addition LiDARs from vehicle center of mass [m], recommended to use only for additional LiDARs in elevation_grid_mode</td>
-<td>0</td>
+<td>0.0</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>radial_divider_angle_deg</td>
 <td>float</td>
 <td>The angle which divide the whole pointcloud to sliced group [deg]</td>
-<td>1</td>
+<td>1.0</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_recheck_ground_cluster</td>
 <td>boolean</td>
 <td>Enable recheck ground cluster</td>
-<td>1</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>use_lowest_point</td>
 <td>boolean</td>
 <td>To select lowest point for reference in recheck ground cluster, otherwise select middle point</td>
-<td>1</td>
+<td>true</td>
 <td>N/A</td>
 </tr>
 <tr>
 <td>publish_processing_time_detail</td>
 <td>boolean</td>
 <td>publish_processing_time_detail</td>
-<td>0</td>
+<td>false</td>
 <td>N/A</td>
 </tr>
 </tbody>
