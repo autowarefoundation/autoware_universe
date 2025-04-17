@@ -32,6 +32,15 @@ namespace autoware::operation_mode_transition_manager
 class OperationModeTransitionManager : public rclcpp::Node
 {
 public:
+  struct InputData
+  {
+    Odometry kinematics;
+    Trajectory trajectory;
+    Control trajectory_follower_control_cmd;
+    Control control_cmd;
+    OperationModeState gate_operation_mode;
+  };
+
   explicit OperationModeTransitionManager(const rclcpp::NodeOptions & options);
 
 private:
@@ -55,26 +64,34 @@ private:
     const ChangeOperationModeAPI::Service::Response::SharedPtr response);
 
   using ControlModeCommandType = ControlModeCommand::Request::_mode_type;
-  autoware_utils::InterProcessPollingSubscriber<ControlModeReport> sub_control_mode_report_{
-    this, "control_mode_report"};
+  autoware_utils::InterProcessPollingSubscriber<Odometry> sub_kinematics_{this, "kinematics"};
+  autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_trajectory_{this, "trajectory"};
+  autoware_utils::InterProcessPollingSubscriber<Control> sub_trajectory_follower_control_cmd_{
+    this, "trajectory_follower_control_cmd"};
+  autoware_utils::InterProcessPollingSubscriber<Control> sub_control_cmd_{this, "control_cmd"};
   autoware_utils::InterProcessPollingSubscriber<OperationModeState> sub_gate_operation_mode_{
     this, "gate_operation_mode"};
+  autoware_utils::InterProcessPollingSubscriber<ControlModeReport> sub_control_mode_report_{
+    this, "control_mode_report"};
+
   rclcpp::Client<ControlModeCommand>::SharedPtr cli_control_mode_;
   rclcpp::Publisher<ModeChangeBase::DebugInfo>::SharedPtr pub_debug_info_;
   rclcpp::TimerBase::SharedPtr timer_;
   void onTimer();
+  std::optional<InputData> subscribeData();
   void publishData();
   void changeControlMode(ControlModeCommandType mode);
   void changeOperationMode(std::optional<OperationMode> request_mode);
   void cancelTransition();
-  void processTransition();
+  void processTransition(
+    const Odometry & kinematics, const Trajectory & trajectory,
+    const OperationModeState & gate_operation_mode);
 
   double transition_timeout_;
   OperationMode current_mode_;
   std::unique_ptr<Transition> transition_;
   std::unordered_map<OperationMode, std::unique_ptr<ModeChangeBase>> modes_;
   std::unordered_map<OperationMode, bool> available_mode_change_;
-  OperationModeState gate_operation_mode_;
   ControlModeReport control_mode_report_;
 
   std::optional<OperationModeStateAPI::Message> prev_state_;
