@@ -90,8 +90,8 @@ void TrafficLightSelectorNode::objectsCallback(
 
       std::map<int64_t, RegionOfInterest> expect_rois_shifted_map;
       for (const auto & rois : expected_rois_msg->rois) {
-        const auto expect_roi_shifted = utils::getShiftedRoi(
-          rois.roi, image_width, image_height, shift_x, shift_y);
+        const auto expect_roi_shifted =
+          utils::getShiftedRoi(rois.roi, image_width, image_height, shift_x, shift_y);
         expect_rois_shifted_map[rois.traffic_light_id] = expect_roi_shifted;
       }
 
