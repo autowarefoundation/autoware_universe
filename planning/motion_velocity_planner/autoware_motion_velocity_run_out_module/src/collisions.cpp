@@ -331,10 +331,15 @@ Collision calculate_collision(
 {
   Collision c(ego, object);
   const auto is_overlapping_at_same_time = ego.overlaps(object, params.collision_time_margin);
-  const auto is_passing_collision =
-    params.enable_passing_collisions && is_overlapping_at_same_time &&
-    (ego.from + params.passing_collisions_time_margin) < object.from &&
-    ego.to - ego.from <= params.passing_max_overlap_duration;
+  const auto clamped_time = std::clamp(
+    ego.from, params.passing_margin_collision_times.front(),
+    params.passing_margin_collision_times.back());
+  const auto passing_margin = interpolation::lerp(
+    params.passing_margin_collision_times, params.passing_margin_time_margins, clamped_time);
+  const auto is_passing_collision = params.enable_passing_collisions &&
+                                    is_overlapping_at_same_time &&
+                                    (ego.from + passing_margin) < object.from &&
+                                    ego.to - ego.from <= params.passing_max_overlap_duration;
   const auto is_unavoidable_passing_collision = params.enable_passing_when_unavoidable &&
                                                 ego.from < object.from && ego.overlaps(object) &&
                                                 ego.from < min_stop_time;
@@ -342,9 +347,9 @@ Collision calculate_collision(
     c.type = pass_first_collision;
     std::stringstream ss;
     ss << std::setprecision(2) << "pass first collision since ego arrives first (" << ego.from
-       << " < " << object.from << "), including with margin ("
-       << params.passing_collisions_time_margin << ") and ego overlap bellow max ("
-       << ego.to - ego.from << " < " << params.passing_max_overlap_duration << ")";
+       << " < " << object.from << "), including with margin (" << passing_margin
+       << ") and ego overlap bellow max (" << ego.to - ego.from << " < "
+       << params.passing_max_overlap_duration << ")";
     c.explanation += ss.str();
   } else if (is_unavoidable_passing_collision) {
     c.type = pass_first_collision;
