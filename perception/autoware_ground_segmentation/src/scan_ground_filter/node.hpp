@@ -36,8 +36,6 @@
 #include <tf2_eigen/tf2_eigen.hpp>
 #endif
 
-#include <tf2_ros/transform_listener.h>
-
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -149,9 +147,6 @@ private:
   void faster_filter(
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output,
     const autoware::pointcloud_preprocessor::TransformInfo & transform_info) override;
-
-  tf2_ros::Buffer tf_buffer_{get_clock()};
-  tf2_ros::TransformListener tf_listener_{tf_buffer_};
 
   // data accessor
   PclDataAccessor data_accessor_;

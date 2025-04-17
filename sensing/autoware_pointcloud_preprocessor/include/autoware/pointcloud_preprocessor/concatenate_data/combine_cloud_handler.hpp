@@ -40,10 +40,10 @@ public:
   CombineCloudHandler(
     rclcpp::Node & node, const std::vector<std::string> & input_topics, std::string output_frame,
     bool is_motion_compensated, bool publish_synchronized_pointcloud,
-    bool keep_input_frame_in_synchronized_pointcloud, bool has_static_tf_only)
+    bool keep_input_frame_in_synchronized_pointcloud)
   : CombineCloudHandlerBase(
       node, input_topics, output_frame, is_motion_compensated, publish_synchronized_pointcloud,
-      keep_input_frame_in_synchronized_pointcloud, has_static_tf_only)
+      keep_input_frame_in_synchronized_pointcloud)
   {
   }
 

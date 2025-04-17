@@ -24,7 +24,7 @@
 #include <vector>
 
 // ROS includes
-#include <autoware_utils/ros/managed_transform_buffer.hpp>
+#include <managed_transform_buffer/managed_transform_buffer.hpp>
 
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
@@ -48,15 +48,14 @@ public:
   CombineCloudHandlerBase(
     rclcpp::Node & node, const std::vector<std::string> & input_topics, std::string output_frame,
     bool is_motion_compensated, bool publish_synchronized_pointcloud,
-    bool keep_input_frame_in_synchronized_pointcloud, bool has_static_tf_only)
+    bool keep_input_frame_in_synchronized_pointcloud)
   : node_(node),
     input_topics_(input_topics),
     output_frame_(output_frame),
     is_motion_compensated_(is_motion_compensated),
     publish_synchronized_pointcloud_(publish_synchronized_pointcloud),
     keep_input_frame_in_synchronized_pointcloud_(keep_input_frame_in_synchronized_pointcloud),
-    managed_tf_buffer_(
-      std::make_unique<autoware_utils::ManagedTransformBuffer>(&node_, has_static_tf_only))
+    managed_tf_buffer_(std::make_unique<managed_transform_buffer::ManagedTransformBuffer>())
   {
   }
 
@@ -79,7 +78,7 @@ protected:
   bool is_motion_compensated_;
   bool publish_synchronized_pointcloud_;
   bool keep_input_frame_in_synchronized_pointcloud_;
-  std::unique_ptr<autoware_utils::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
+  std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
 
   std::deque<geometry_msgs::msg::TwistStamped> twist_queue_;
 };

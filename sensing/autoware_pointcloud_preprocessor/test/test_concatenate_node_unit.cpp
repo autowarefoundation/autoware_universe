@@ -52,7 +52,6 @@ protected:
     // They just helps to setup the concatenate node
     node_options.parameter_overrides(
       {{"debug_mode", false},
-       {"has_static_tf_only", false},
        {"rosbag_length", 0.0},
        {"maximum_queue_size", 5},
        {"timeout_sec", 0.2},
@@ -71,7 +70,7 @@ protected:
     concatenate_node_ =
       std::make_shared<PointCloudConcatenateDataSynchronizerComponent>(node_options);
     combine_cloud_handler_ = std::make_shared<CombineCloudHandler<PointCloud2Traits>>(
-      *concatenate_node_, input_topics, "base_link", true, true, true, false);
+      *concatenate_node_, input_topics, "base_link", true, true, true);
 
     collector_ = std::make_shared<CloudCollector<PointCloud2Traits>>(
       std::dynamic_pointer_cast<PointCloudConcatenateDataSynchronizerComponent>(
