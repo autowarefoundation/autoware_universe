@@ -15,6 +15,7 @@
 #ifndef TYPES_HPP_
 #define TYPES_HPP_
 
+#include <autoware/motion_velocity_planner_common/planner_data.hpp>
 #include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
 #include <autoware/universe_utils/geometry/boost_geometry.hpp>
 #include <rclcpp/time.hpp>
@@ -30,6 +31,7 @@
 #include <deque>
 #include <iomanip>
 #include <iterator>
+#include <memory>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -309,6 +311,7 @@ struct UnavoidableCollision
 /// collisions with ego, classification label
 struct Object
 {
+  std::shared_ptr<motion_velocity_planner::PlannerData::Object> object;
   std::string uuid;
   std::vector<ObjectCornerFootprint> corner_footprints;  // footprint of each predicted path
   universe_utils::Polygon2d current_footprint;

@@ -22,10 +22,12 @@
 #include "objects_filtering.hpp"
 #include "parameters.hpp"
 #include "slowdown.hpp"
+#include "types.hpp"
 
 #include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
+#include <autoware/objects_of_interest_marker_interface/marker_data.hpp>
 #include <autoware/universe_utils/geometry/geometry.hpp>
 #include <rclcpp/duration.hpp>
 
@@ -84,6 +86,9 @@ void RunOutModule::init(rclcpp::Node & node, const std::string & module_name)
   diagnostic_updater_->setHardwareID("mvp_run_out");
   diagnostic_updater_->add(
     "unavoidable_run_out_collision", this, &RunOutModule::update_unavoidable_collision_status);
+
+  objects_of_interest_marker_interface_ = std::make_unique<
+    autoware::objects_of_interest_marker_interface::ObjectsOfInterestMarkerInterface>(&node, ns_);
 }
 
 double calculate_keep_stop_distance_range(
@@ -182,6 +187,18 @@ VelocityPlanningResult RunOutModule::plan(
     calculate_keep_stop_distance_range(smoothed_trajectory_points, params_);
   run_out::calculate_decisions(
     decisions_tracker_, filtered_objects, now, keep_stop_distance_range, params_);
+  for (const auto & obj : filtered_objects) {
+    auto color = objects_of_interest_marker_interface::ColorName::GREEN;
+    if (decisions_tracker_.get(obj.uuid)->decisions.back().type == run_out::stop) {
+      color = objects_of_interest_marker_interface::ColorName::RED;
+    }
+    if (decisions_tracker_.get(obj.uuid)->decisions.back().type == run_out::slowdown) {
+      color = objects_of_interest_marker_interface::ColorName::AMBER;
+    }
+    objects_of_interest_marker_interface_->insertObjectData(
+      obj.object->predicted_object.kinematics.initial_pose_with_covariance.pose,
+      obj.object->predicted_object.shape, color);
+  }
   time_keeper_->end_track("calc_decisions()");
   time_keeper_->start_track("calc_slowdowns()");
   const auto result = run_out::calculate_slowdowns(
@@ -192,10 +209,13 @@ VelocityPlanningResult RunOutModule::plan(
   virtual_wall_marker_creator.add_virtual_walls(run_out::create_virtual_walls(
     result, smoothed_trajectory_points, planner_data->vehicle_info_.max_longitudinal_offset_m));
   virtual_wall_publisher_->publish(virtual_wall_marker_creator.create_markers(now));
-  debug_publisher_->publish(run_out::make_debug_markers(
-    ego_footprint, filtered_objects, decisions_tracker_, smoothed_trajectory_points, min_stop_time,
-    filtering_data[autoware_perception_msgs::msg::ObjectClassification::BICYCLE]));
+  if (debug_publisher_->get_subscription_count() > 0) {
+    debug_publisher_->publish(run_out::make_debug_markers(
+      ego_footprint, filtered_objects, decisions_tracker_, smoothed_trajectory_points,
+      min_stop_time, filtering_data[autoware_perception_msgs::msg::ObjectClassification::BICYCLE]));
+  }
   publish_debug_trajectory(smoothed_trajectory_points, result);
+  objects_of_interest_marker_interface_->publishMarkerArray();
   time_keeper_->end_track("publish_debug()");
 
   time_keeper_->end_track("plan()");

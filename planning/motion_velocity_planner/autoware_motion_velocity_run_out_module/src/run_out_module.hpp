@@ -21,6 +21,7 @@
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
 #include <autoware/motion_velocity_planner_common/plugin_module_interface.hpp>
 #include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
+#include <autoware/objects_of_interest_marker_interface/objects_of_interest_marker_interface.hpp>
 #include <autoware/universe_utils/system/time_keeper.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/publisher.hpp>
@@ -64,6 +65,8 @@ private:
   rclcpp::Publisher<autoware_planning_msgs::msg::Trajectory>::SharedPtr debug_trajectory_publisher_;
   std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_;
   std::optional<diagnostic_updater::Updater> diagnostic_updater_ = std::nullopt;
+  std::unique_ptr<autoware::objects_of_interest_marker_interface::ObjectsOfInterestMarkerInterface>
+    objects_of_interest_marker_interface_;
   std::optional<run_out::UnavoidableCollision> unavoidable_collision_;
 
   run_out::ObjectDecisionsTracker decisions_tracker_;

@@ -238,6 +238,7 @@ std::vector<Object> prepare_dynamic_objects(
   const auto ego_rear_segment = ego_trajectory.get_rear_segment();
   for (const auto & object : objects) {
     Object filtered_object;
+    filtered_object.object = object;
     filtered_object.uuid = universe_utils::toHexString(object->predicted_object.object_id);
     filtered_object.position =
       universe_utils::fromMsg(
