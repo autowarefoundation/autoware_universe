@@ -68,8 +68,8 @@ void TrafficLightSelectorNode::objectsCallback(
   }
 
   std::vector<RegionOfInterest> detected_rois;
-  for (const auto & detected_objects : detected_traffic_light_msg->feature_objects) {
-    detected_rois.push_back(detected_objects.feature.roi);
+  for (const auto & detected_object : detected_traffic_light_msg->feature_objects) {
+    detected_rois.push_back(detected_object.feature.roi);
   }
 
   double final_iou = 0.0;
