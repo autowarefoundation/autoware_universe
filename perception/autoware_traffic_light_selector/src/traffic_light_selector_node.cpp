@@ -89,10 +89,10 @@ void TrafficLightSelectorNode::objectsCallback(
       utils::computeCenterOffset(detected_roi, expect_roi, shift_x, shift_y);
 
       std::map<int64_t, RegionOfInterest> expect_rois_shifted_map;
-      for (const auto & expected_rois_msg_rois : expected_rois_msg->rois) {
+      for (const auto & rois : expected_rois_msg->rois) {
         const auto expect_roi_shifted = utils::getShiftedRoi(
-          expected_rois_msg_rois.roi, image_width, image_height, shift_x, shift_y);
-        expect_rois_shifted_map[expected_rois_msg_rois.traffic_light_id] = expect_roi_shifted;
+          rois.roi, image_width, image_height, shift_x, shift_y);
+        expect_rois_shifted_map[rois.traffic_light_id] = expect_roi_shifted;
       }
 
       // check total IoU after all expect roi shift

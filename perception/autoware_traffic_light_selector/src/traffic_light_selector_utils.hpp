@@ -32,7 +32,7 @@ void computeCenterOffset(
   int32_t & shift_y);
 
 RegionOfInterest getShiftedRoi(
-  const RegionOfInterest & source, const uint32_t & image_width, const uint32_t & image_height,
+  const RegionOfInterest & input_ROI, const uint32_t & image_width, const uint32_t & image_height,
   const int32_t & shift_x, const int32_t & shift_y);
 
 double getIoU(const RegionOfInterest & bbox1, const RegionOfInterest & bbox2);
