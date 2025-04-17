@@ -62,7 +62,7 @@ void TrafficLightSelectorNode::objectsCallback(
   const auto image_width = camera_info_msg->width;
   const auto image_height = camera_info_msg->height;
 
-  std::map<uint8_t, RegionOfInterest> rough_rois_map;
+  std::map<int64_t, RegionOfInterest> rough_rois_map;
   for (const auto & roi : rough_rois_msg->rois) {
     rough_rois_map[roi.traffic_light_id] = roi.roi;
   }
@@ -73,7 +73,7 @@ void TrafficLightSelectorNode::objectsCallback(
   }
 
   double final_iou = 0.0;
-  std::map<uint8_t, RegionOfInterest> final_rois_map;
+  std::map<int64_t, RegionOfInterest> final_rois_map;
   for (const auto & expected_rois_msg_rois : expected_rois_msg->rois) {
     const auto traffic_light_id = expected_rois_msg_rois.traffic_light_id;
     const auto & rough_roi = rough_rois_map[traffic_light_id];
@@ -88,7 +88,7 @@ void TrafficLightSelectorNode::objectsCallback(
       int32_t shift_x, shift_y;
       utils::computeCenterOffset(detected_roi, expect_roi, shift_x, shift_y);
 
-      std::map<uint8_t, RegionOfInterest> expect_rois_shifted_map;
+      std::map<int64_t, RegionOfInterest> expect_rois_shifted_map;
       for (const auto & expected_rois_msg_rois : expected_rois_msg->rois) {
         const auto expect_roi_shifted = utils::getShiftedRoi(
           expected_rois_msg_rois.roi, image_width, image_height, shift_x, shift_y);
@@ -97,7 +97,7 @@ void TrafficLightSelectorNode::objectsCallback(
 
       // check total IoU after all expect roi shift
       double total_max_iou = 0.0;
-      std::map<uint8_t, RegionOfInterest> total_max_iou_rois_map;
+      std::map<int64_t, RegionOfInterest> total_max_iou_rois_map;
       evaluateWholeRois(
         detected_rois, expect_rois_shifted_map, total_max_iou, total_max_iou_rois_map);
 
@@ -148,8 +148,8 @@ void TrafficLightSelectorNode::objectsCallback(
 
 void TrafficLightSelectorNode::evaluateWholeRois(
   const std::vector<RegionOfInterest> & detected_rois,
-  const std::map<uint8_t, RegionOfInterest> & expect_rois_shifted_map, double & total_max_iou,
-  std::map<uint8_t, RegionOfInterest> & total_max_iou_rois_map)
+  const std::map<int64_t, RegionOfInterest> & expect_rois_shifted_map, double & total_max_iou,
+  std::map<int64_t, RegionOfInterest> & total_max_iou_rois_map)
 {
   for (const auto & expect_roi_shifted : expect_rois_shifted_map) {
     double max_iou = 0.0;
