@@ -80,7 +80,7 @@ struct Parameters
                                          // before the collision
   double unavoidable_deceleration;  // [m/s²] deceleration used to determine if ego can stop before
                                     // a collision
-  std::vector<double> passing_margin_collision_times;  // [s] predicted times when ego starts
+  std::vector<double> passing_margin_ego_enter_times;  // [s] predicted times when ego starts
                                                        // overlapping the path of the object
   std::vector<double> passing_margin_time_margins;  // [s] margin values used such that ego needs to
                                                     // enter the overlap before the object with this
@@ -127,8 +127,8 @@ struct Parameters
       getOrDeclareParameter<bool>(node, ns + ".passing.enable_when_unavoidable");
     unavoidable_deceleration =
       getOrDeclareParameter<double>(node, ns + ".passing.unavoidable_deceleration");
-    passing_margin_collision_times =
-      getOrDeclareParameter<std::vector<double>>(node, ns + ".passing.margin.collision_times");
+    passing_margin_ego_enter_times =
+      getOrDeclareParameter<std::vector<double>>(node, ns + ".passing.margin.ego_enter_times");
     passing_margin_time_margins =
       getOrDeclareParameter<std::vector<double>>(node, ns + ".passing.margin.time_margins");
     passing_max_overlap_duration =
@@ -209,7 +209,7 @@ struct Parameters
     updateParam(params, ns + ".passing.enable", enable_passing_collisions);
     updateParam(params, ns + ".passing.enable_when_unavoidable", enable_passing_when_unavoidable);
     updateParam(params, ns + ".passing.unavoidable_deceleration", unavoidable_deceleration);
-    updateParam(params, ns + ".passing.margin.collision_times", passing_margin_collision_times);
+    updateParam(params, ns + ".passing.margin.ego_enter_times", passing_margin_ego_enter_times);
     updateParam(params, ns + ".passing.margin.time_margins", passing_margin_time_margins);
     updateParam(params, ns + ".passing.max_overlap_duration", passing_max_overlap_duration);
     updateParam(

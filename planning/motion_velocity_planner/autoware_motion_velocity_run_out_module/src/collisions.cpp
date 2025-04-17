@@ -332,10 +332,10 @@ Collision calculate_collision(
   Collision c(ego, object);
   const auto is_overlapping_at_same_time = ego.overlaps(object, params.collision_time_margin);
   const auto clamped_time = std::clamp(
-    ego.from, params.passing_margin_collision_times.front(),
-    params.passing_margin_collision_times.back());
+    ego.from, params.passing_margin_ego_enter_times.front(),
+    params.passing_margin_ego_enter_times.back());
   const auto passing_margin = interpolation::lerp(
-    params.passing_margin_collision_times, params.passing_margin_time_margins, clamped_time);
+    params.passing_margin_ego_enter_times, params.passing_margin_time_margins, clamped_time);
   const auto is_passing_collision = params.enable_passing_collisions &&
                                     is_overlapping_at_same_time &&
                                     (ego.from + passing_margin) < object.from &&
@@ -427,6 +427,8 @@ void calculate_object_collisions(
   const double min_stop_time, const Parameters & params)
 {
   for (const auto & corner_footprint : object.corner_footprints) {
+    // combining overlap intervals over all corner footprints gives bad results
+    // the current way calculate collisions independently for each corner footprint is best
     const auto time_overlap_intervals = calculate_ego_and_object_time_overlap_intervals(
       ego_footprint, corner_footprint, filtering_data[object.label], min_arc_length);
     const auto collisions =
@@ -439,6 +441,7 @@ void calculate_object_collisions(
     }
   }
 }
+
 void calculate_collisions(
   std::vector<Object> & objects, const TrajectoryCornerFootprint & ego_footprint,
   const FilteringDataPerLabel & filtering_data, const double min_arc_length,
