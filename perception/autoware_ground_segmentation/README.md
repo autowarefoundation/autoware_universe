@@ -42,10 +42,6 @@ Detail description of each ground segmentation algorithm is in the following lin
 | `latched_indices`  | bool   | false         | flag to latch pointcloud indices      |
 | `approximate_sync` | bool   | false         | flag to use approximate sync option   |
 
-### Ground Segmentation
-
-{{ json_to_markdown("perception/autoware_ground_segmentation/schema/ground_segmentation.schema.json") }}
-
 ### RANSAC Ground Filter
 
 {{ json_to_markdown("perception/autoware_ground_segmentation/schema/ransac_ground_filter.schema.json") }}
