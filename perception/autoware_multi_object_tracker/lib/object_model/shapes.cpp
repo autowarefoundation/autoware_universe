@@ -38,8 +38,9 @@ namespace shapes
 inline double getSumArea(const std::vector<autoware_utils_geometry::Polygon2d> & polygons)
 {
   return std::accumulate(
-    polygons.begin(), polygons.end(), 0.0,
-    [](double acc, const autoware_utils_geometry::Polygon2d & p) { return acc + boost::geometry::area(p); });
+    polygons.begin(), polygons.end(), 0.0, [](double acc, autoware_utils_geometry::Polygon2d p) {
+      return acc + boost::geometry::area(p);
+    });
 }
 
 inline double getIntersectionArea(
@@ -111,9 +112,11 @@ double get2dIoU(
 {
   static const double MIN_AREA = 1e-6;
 
-  const auto source_polygon = autoware_utils_geometry::to_polygon2d(source_object.pose, source_object.shape);
+  const auto source_polygon =
+    autoware_utils_geometry::to_polygon2d(source_object.pose, source_object.shape);
   if (boost::geometry::area(source_polygon) < MIN_AREA) return 0.0;
-  const auto target_polygon = autoware_utils_geometry::to_polygon2d(target_object.pose, target_object.shape);
+  const auto target_polygon =
+    autoware_utils_geometry::to_polygon2d(target_object.pose, target_object.shape);
   if (boost::geometry::area(target_polygon) < MIN_AREA) return 0.0;
 
   const double intersection_area = getIntersectionArea(source_polygon, target_polygon);
