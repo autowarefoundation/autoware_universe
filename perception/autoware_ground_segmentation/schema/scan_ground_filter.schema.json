@@ -24,7 +24,7 @@
         "use_virtual_ground_point": {
           "type": "boolean",
           "description": "Whether to use the ground center of front wheels as the virtual ground point",
-          "default": true
+          "default": "true"
         },
         "split_height_distance": {
           "type": "number",
@@ -59,7 +59,7 @@
         "elevation_grid_mode": {
           "type": "boolean",
           "description": "Elevation grid scan mode option",
-          "default": true
+          "default": "true"
         },
         "low_priority_region_x": {
           "type": "number",
@@ -79,17 +79,17 @@
         "use_recheck_ground_cluster": {
           "type": "boolean",
           "description": "Enable recheck ground cluster",
-          "default": true
+          "default": "true"
         },
         "use_lowest_point": {
           "type": "boolean",
           "description": "To select lowest point for reference in recheck ground cluster, otherwise select middle point",
-          "default": true
+          "default": "true"
         },
         "publish_processing_time_detail": {
           "type": "boolean",
           "description": "publish_processing_time_detail",
-          "default": false
+          "default": "false"
         }
       },
       "required": [

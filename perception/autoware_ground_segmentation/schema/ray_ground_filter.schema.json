@@ -29,7 +29,7 @@
         "use_vehicle_footprint": {
           "type": "boolean",
           "description": "use_vehicle_footprint",
-          "default": false
+          "default": "false"
         },
         "general_max_slope": {
           "type": "number",
@@ -69,7 +69,7 @@
         "publish_processing_time_detail": {
           "type": "boolean",
           "description": "publish_processing_time_detail",
-          "default": false
+          "default": "false"
         }
       },
       "required": [
