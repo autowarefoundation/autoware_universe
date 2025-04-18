@@ -240,8 +240,9 @@ autoware_perception_msgs::msg::TrafficLightGroupArray SignalMatchValidator::vali
     // We don't validate the pedestrian signals
     // TODO(TomohitoAndo): Validate pedestrian signals
     if (isPedestrianSignal(signal_id)) {
-      validated_signals.traffic_light_groups.emplace_back(util::get_highest_confidence_signal(
-        perception_result, external_result, external_priority_));
+      validated_signals.traffic_light_groups.emplace_back(
+        util::get_highest_confidence_signal(
+          perception_result, external_result, external_priority_));
 
       continue;
     }

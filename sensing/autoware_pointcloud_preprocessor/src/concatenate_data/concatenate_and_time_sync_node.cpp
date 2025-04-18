@@ -189,10 +189,12 @@ void PointCloudConcatenateDataSynchronizerComponent::initialize_collector_list()
 {
   // Initialize collector list
   for (size_t i = 0; i < num_of_collectors; ++i) {
-    cloud_collectors_.emplace_back(std::make_shared<CloudCollector>(
-      std::dynamic_pointer_cast<PointCloudConcatenateDataSynchronizerComponent>(shared_from_this()),
-      combine_cloud_handler_, params_.input_topics.size(), params_.timeout_sec,
-      params_.debug_mode));
+    cloud_collectors_.emplace_back(
+      std::make_shared<CloudCollector>(
+        std::dynamic_pointer_cast<PointCloudConcatenateDataSynchronizerComponent>(
+          shared_from_this()),
+        combine_cloud_handler_, params_.input_topics.size(), params_.timeout_sec,
+        params_.debug_mode));
   }
   init_collector_list_ = true;
 }

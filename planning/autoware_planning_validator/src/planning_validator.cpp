@@ -640,9 +640,10 @@ bool PlanningValidator::checkValidYawDeviation(const Trajectory & trajectory)
 
   const auto interpolated_trajectory_point =
     motion_utils::calcInterpolatedPoint(trajectory, current_kinematics_->pose.pose);
-  validation_status_.yaw_deviation = std::abs(angles::shortest_angular_distance(
-    tf2::getYaw(interpolated_trajectory_point.pose.orientation),
-    tf2::getYaw(current_kinematics_->pose.pose.orientation)));
+  validation_status_.yaw_deviation = std::abs(
+    angles::shortest_angular_distance(
+      tf2::getYaw(interpolated_trajectory_point.pose.orientation),
+      tf2::getYaw(current_kinematics_->pose.pose.orientation)));
 
   if (validation_status_.yaw_deviation > params_.validation_params.deviation.yaw_th) {
     is_critical_error_ |= params_.validation_params.deviation.is_critical;

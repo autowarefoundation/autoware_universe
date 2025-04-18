@@ -2213,8 +2213,9 @@ std::vector<ExtendedPredictedObject> getSafetyCheckTargetObjects(
 
   const auto append = [&](const auto & objects) {
     std::for_each(objects.objects.begin(), objects.objects.end(), [&](const auto & object) {
-      target_objects.push_back(utils::path_safety_checker::transform(
-        object, time_horizon, parameters->ego_predicted_path_params.time_resolution));
+      target_objects.push_back(
+        utils::path_safety_checker::transform(
+          object, time_horizon, parameters->ego_predicted_path_params.time_resolution));
     });
   };
 

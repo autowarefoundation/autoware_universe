@@ -65,10 +65,11 @@ void DetectionAreaModuleManager::launchNewModules(
     const auto lane_id = detection_area_with_lane_id.second.id();
     const auto module_id = detection_area_with_lane_id.first->id();
     if (!isModuleRegistered(module_id)) {
-      registerModule(std::make_shared<DetectionAreaModule>(
-        module_id, lane_id, *detection_area_with_lane_id.first, planner_param_,
-        logger_.get_child("detection_area_module"), clock_, time_keeper_,
-        planning_factor_interface_));
+      registerModule(
+        std::make_shared<DetectionAreaModule>(
+          module_id, lane_id, *detection_area_with_lane_id.first, planner_param_,
+          logger_.get_child("detection_area_module"), clock_, time_keeper_,
+          planning_factor_interface_));
       generate_uuid(module_id);
       updateRTCStatus(
         getUUID(module_id), true, State::WAITING_FOR_EXECUTION,

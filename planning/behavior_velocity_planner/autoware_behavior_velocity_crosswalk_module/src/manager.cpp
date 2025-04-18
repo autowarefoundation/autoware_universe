@@ -198,9 +198,10 @@ void CrosswalkModuleManager::launchNewModules(const PathWithLaneId & path)
 
     // NOTE: module_id is always a lane id so that isModuleRegistered works correctly in the case
     //       where both regulatory element and non-regulatory element crosswalks exist.
-    registerModule(std::make_shared<CrosswalkModule>(
-      node_, road_lanelet_id, crosswalk_lanelet_id, reg_elem_id, lanelet_map_ptr, p, logger, clock_,
-      time_keeper_, planning_factor_interface_));
+    registerModule(
+      std::make_shared<CrosswalkModule>(
+        node_, road_lanelet_id, crosswalk_lanelet_id, reg_elem_id, lanelet_map_ptr, p, logger,
+        clock_, time_keeper_, planning_factor_interface_));
     generate_uuid(crosswalk_lanelet_id);
     updateRTCStatus(
       getUUID(crosswalk_lanelet_id), true, State::WAITING_FOR_EXECUTION,

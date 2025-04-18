@@ -1388,8 +1388,8 @@ TurnSignalInfo StartPlannerModule::calcTurnSignalInfo()
     }
     constexpr double distance_threshold = 1.0;
     const auto stop_point = status_.pull_out_path.partial_paths.front().points.back();
-    const double distance_from_ego_to_stop_point =
-      std::abs(autoware::motion_utils::calcSignedArcLength(
+    const double distance_from_ego_to_stop_point = std::abs(
+      autoware::motion_utils::calcSignedArcLength(
         path.points, stop_point.point.pose.position, current_pose.position));
     return distance_from_ego_to_stop_point < distance_threshold;
   });

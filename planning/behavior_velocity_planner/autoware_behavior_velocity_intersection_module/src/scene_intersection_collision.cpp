@@ -370,28 +370,30 @@ void IntersectionModule::updateObjectInfoManagerCollision(
     }
     object_info->update_safety(unsafe_interval, safe_interval, safe_under_traffic_control);
     if (passed_1st_judge_line_first_time) {
-      object_info->setDecisionAt1stPassJudgeLinePassage(CollisionKnowledge{
-        clock_->now(),  // stamp
-        unsafe_interval
-          ? CollisionKnowledge::SafeType::UNSAFE
-          : (safe_under_traffic_control ? CollisionKnowledge::SafeType::SAFE_UNDER_TRAFFIC_CONTROL
-                                        : CollisionKnowledge::SafeType::SAFE),  // safe
-        unsafe_interval ? unsafe_interval : safe_interval,                      // interval
-        predicted_object.kinematics.initial_twist_with_covariance.twist.linear
-          .x  // observed_velocity
-      });
+      object_info->setDecisionAt1stPassJudgeLinePassage(
+        CollisionKnowledge{
+          clock_->now(),  // stamp
+          unsafe_interval
+            ? CollisionKnowledge::SafeType::UNSAFE
+            : (safe_under_traffic_control ? CollisionKnowledge::SafeType::SAFE_UNDER_TRAFFIC_CONTROL
+                                          : CollisionKnowledge::SafeType::SAFE),  // safe
+          unsafe_interval ? unsafe_interval : safe_interval,                      // interval
+          predicted_object.kinematics.initial_twist_with_covariance.twist.linear
+            .x  // observed_velocity
+        });
     }
     if (passed_2nd_judge_line_first_time) {
-      object_info->setDecisionAt2ndPassJudgeLinePassage(CollisionKnowledge{
-        clock_->now(),  // stamp
-        unsafe_interval
-          ? CollisionKnowledge::SafeType::UNSAFE
-          : (safe_under_traffic_control ? CollisionKnowledge::SafeType::SAFE_UNDER_TRAFFIC_CONTROL
-                                        : CollisionKnowledge::SafeType::SAFE),  // safe
-        unsafe_interval ? unsafe_interval : safe_interval,                      // interval
-        predicted_object.kinematics.initial_twist_with_covariance.twist.linear
-          .x  // observed_velocity
-      });
+      object_info->setDecisionAt2ndPassJudgeLinePassage(
+        CollisionKnowledge{
+          clock_->now(),  // stamp
+          unsafe_interval
+            ? CollisionKnowledge::SafeType::UNSAFE
+            : (safe_under_traffic_control ? CollisionKnowledge::SafeType::SAFE_UNDER_TRAFFIC_CONTROL
+                                          : CollisionKnowledge::SafeType::SAFE),  // safe
+          unsafe_interval ? unsafe_interval : safe_interval,                      // interval
+          predicted_object.kinematics.initial_twist_with_covariance.twist.linear
+            .x  // observed_velocity
+        });
     }
 
     // debug
