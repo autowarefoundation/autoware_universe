@@ -19,6 +19,9 @@
 
 #include <math.h>
 
+#include <algorithm>
+#include <limits>
+
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_utils::create_quaternion_from_yaw;
@@ -144,6 +147,32 @@ Trajectory generateTrajectoryWithConstantSteeringRate(
   return trajectory;
 }
 
+Trajectory generateShiftedTrajectory(
+  const Trajectory & trajectory, const double lat_shift, const double lon_shift, const size_t size)
+{
+  Trajectory shifted_traj;
+  shifted_traj.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
+  if (
+    abs(lat_shift) <= std::numeric_limits<double>::epsilon() &&
+    abs(lon_shift) <= std::numeric_limits<double>::epsilon() && size >= trajectory.points.size()) {
+    shifted_traj.points = trajectory.points;
+    return shifted_traj;
+  }
+
+  const auto nb_points = std::min(size, trajectory.points.size());
+  shifted_traj.points = {trajectory.points.begin(), trajectory.points.begin() + nb_points};
+
+  if (
+    abs(lat_shift) > std::numeric_limits<double>::epsilon() ||
+    abs(lon_shift) > std::numeric_limits<double>::epsilon()) {
+    for (auto & t_p : shifted_traj.points) {
+      t_p.pose = autoware_utils::calc_offset_pose(t_p.pose, lon_shift, lat_shift, 0.0, 0.0);
+    }
+  }
+
+  return shifted_traj;
+}
+
 Trajectory generateNanTrajectory()
 {
   Trajectory trajectory = generateTrajectory(1.0);
@@ -195,6 +224,8 @@ rclcpp::NodeOptions getNodeOptionsWithDefaultParams()
   node_options.append_parameter_override("publish_diag", true);
   node_options.append_parameter_override("diag_error_count_threshold", 0);
   node_options.append_parameter_override("display_on_terminal", true);
+  node_options.append_parameter_override("enable_soft_stop_on_prev_traj", false);
+  node_options.append_parameter_override("soft_stop_deceleration", -1.0);
 
   node_options.append_parameter_override("validity_checks.latency.enable", true);
   node_options.append_parameter_override("validity_checks.latency.threshold", THRESHOLD_LATENCY);
@@ -251,6 +282,15 @@ rclcpp::NodeOptions getNodeOptionsWithDefaultParams()
     "validity_checks.forward_trajectory_length.margin", PARAMETER_FORWARD_TRAJECTORY_LENGTH_MARGIN);
   node_options.append_parameter_override(
     "validity_checks.forward_trajectory_length.is_critical", false);
+
+  node_options.append_parameter_override("validity_checks.trajectory_shift.enable", true);
+  node_options.append_parameter_override(
+    "validity_checks.trajectory_shift.lat_shift_th", THRESHOLD_LATERAL_SHIFT);
+  node_options.append_parameter_override(
+    "validity_checks.trajectory_shift.forward_shift_th", THRESHOLD_FORWARD_SHIFT);
+  node_options.append_parameter_override(
+    "validity_checks.trajectory_shift.backward_shift_th", THRESHOLD_BACKWARD_SHIFT);
+  node_options.append_parameter_override("validity_checks.trajectory_shift.is_critical", true);
 
   // for vehicle info
   node_options.append_parameter_override("wheel_radius", 0.5);
