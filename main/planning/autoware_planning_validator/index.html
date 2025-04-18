@@ -14235,6 +14235,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#lateral-jerk-check" class="md-nav__link">
+    Lateral Jerk Check
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -14268,7 +14275,24 @@
 <li><strong>Trajectory points interval</strong> : invalid if any of the distance of trajectory points is too large</li>
 <li><strong>Curvature</strong> : invalid if the trajectory has too sharp turns that is not feasible for the given vehicle kinematics</li>
 <li><strong>Relative angle</strong> : invalid if the yaw angle changes too fast in the sequence of trajectory points</li>
-<li><strong>Lateral acceleration</strong> : invalid if the expected lateral acceleration/deceleration is too large</li>
+<li>
+<p><strong>Lateral acceleration</strong> : invalid if the expected lateral acceleration/deceleration is too large. Lateral acceleration is calculated using the formula:</p>
+<div class="arithmatex">\[
+a_{lat} = v_{lon}^2 * \kappa
+\]</div>
+<p>Where <span class="arithmatex">\(v_{lon}\)</span> is longitudinal velocity and <span class="arithmatex">\(\kappa\)</span> is curvature. Since the acceleration embedded in path points is perpendicular to the derived lateral acceleration, projections are not considered. The velocity and acceleration assigned to each point are directed toward the next path point.</p>
+</li>
+</ul>
+<ul>
+<li>
+<p><strong>Lateral jerk</strong> : invalid if the rate of change of lateral acceleration is too large. Lateral jerk is calculated using the formula:</p>
+<div class="arithmatex">\[
+j_{lat} = v_{lon}^3 * \frac{d\kappa}{ds} + 3 * v_{lon}^2 * a_{lon} * \kappa
+\]</div>
+<p>Where <span class="arithmatex">\(v_{lon}\)</span> is longitudinal velocity, <span class="arithmatex">\(\kappa\)</span> is curvature, <span class="arithmatex">\(a_{lon}\)</span> is longitudinal acceleration, and <span class="arithmatex">\(\frac{d\kappa}{ds}\)</span> is the rate of curvature change with respect to distance. In this implementation, the curvature change (<span class="arithmatex">\(\frac{d\kappa}{ds}\)</span>) is not considered, simplifying the calculation to only the second term. The lateral jerk represents how quickly the lateral acceleration changes, which affects ride comfort and vehicle stability.</p>
+</li>
+</ul>
+<ul>
 <li><strong>Longitudinal acceleration/deceleration</strong> : invalid if the acceleration/deceleration in the trajectory point is too large</li>
 <li><strong>Steering angle</strong> : invalid if the expected steering value is too large estimated from trajectory curvature</li>
 <li><strong>Steering angle rate</strong> : invalid if the expected steering rate value is too large</li>
@@ -14541,6 +14565,37 @@
 </tr>
 <tr>
 <td align="left"><code>validity_checks.acceleration.is_critical</code></td>
+<td align="left">bool</td>
+<td align="left">if true, will use handling type specified for critical checks</td>
+<td align="left">false</td>
+</tr>
+</tbody>
+</table>
+<h3 id="lateral-jerk-check">Lateral Jerk Check<a class="headerlink" href="#lateral-jerk-check" title="Permanent link">#</a></h3>
+<table>
+<thead>
+<tr>
+<th align="left">Name</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+<th align="left">Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><code>validity_checks.lateral_jerk.enable</code></td>
+<td align="left">bool</td>
+<td align="left">flag to enable/disable lateral jerk validation check</td>
+<td align="left">true</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.lateral_jerk.threshold</code></td>
+<td align="left">double</td>
+<td align="left">max valid value for the lateral jerk along the trajectory [m/sss]</td>
+<td align="left">7.0</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.lateral_jerk.is_critical</code></td>
 <td align="left">bool</td>
 <td align="left">if true, will use handling type specified for critical checks</td>
 <td align="left">false</td>
