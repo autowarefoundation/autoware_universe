@@ -20,6 +20,7 @@
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
@@ -114,6 +115,11 @@ private:
   // Crosswalk Entry Points
   // lanelet::ConstLanelets crosswalks_;
 
+  // diagnostics
+  double radar_input_stale_threshold_ms_;
+  std::optional<rclcpp::Time> last_processing_timestamp_;
+  diagnostic_updater::Updater diagnostic_updater_{this};
+
   void checkTrackerLifeCycle(
     std::list<std::shared_ptr<Tracker>> & list_tracker, const rclcpp::Time & time,
     const geometry_msgs::msg::Transform & self_transform);
@@ -130,6 +136,8 @@ private:
 
   void publish(const rclcpp::Time & time) const;
   inline bool shouldTrackerPublish(const std::shared_ptr<const Tracker> tracker) const;
+
+  void diagnoseRadarInputInterval(diagnostic_updater::DiagnosticStatusWrapper & stat);
 };
 
 }  // namespace autoware::radar_object_tracker

@@ -19,7 +19,8 @@
 
 namespace autoware::motion::control::mpc_lateral_controller
 {
-QPSolverOSQP::QPSolverOSQP(const rclcpp::Logger & logger) : logger_{logger}
+QPSolverOSQP::QPSolverOSQP(const rclcpp::Logger & logger, rclcpp::Clock::SharedPtr clock)
+: logger_{logger}, clock_{clock}
 {
 }
 bool QPSolverOSQP::solve(
@@ -75,7 +76,9 @@ bool QPSolverOSQP::solve(
   if (status_polish == -1 || status_polish == 0) {
     const auto s = (status_polish == 0) ? "Polish process is not performed in osqp."
                                         : "Polish process failed in osqp.";
-    RCLCPP_INFO(logger_, "%s The required accuracy is met, but the solution can be inaccurate.", s);
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 1000,
+      "%s The required accuracy is met, but the solution can be inaccurate.", s);
     return true;
   }
   return true;

@@ -54,8 +54,6 @@ PointCloudConcatenationComponent::PointCloudConcatenationComponent(
       RCLCPP_ERROR(get_logger(), "Need an 'output_frame' parameter to be set before continuing!");
       return;
     }
-    has_static_tf_only_ = declare_parameter<bool>(
-      "has_static_tf_only", false);  // TODO(amadeuszsz): remove default value
     declare_parameter<std::vector<std::string>>("input_topics");
     input_topics_ = get_parameter("input_topics").as_string_array();
     if (input_topics_.empty()) {
@@ -95,8 +93,7 @@ PointCloudConcatenationComponent::PointCloudConcatenationComponent(
 
   // tf2 listener
   {
-    managed_tf_buffer_ =
-      std::make_unique<autoware_utils::ManagedTransformBuffer>(this, has_static_tf_only_);
+    managed_tf_buffer_ = std::make_unique<managed_transform_buffer::ManagedTransformBuffer>();
   }
 
   // Output Publishers
@@ -240,7 +237,9 @@ void PointCloudConcatenationComponent::combineClouds(
       // transform to output frame
       sensor_msgs::msg::PointCloud2::SharedPtr transformed_cloud_ptr(
         new sensor_msgs::msg::PointCloud2());
-      managed_tf_buffer_->transform_pointcloud(output_frame_, *e.second, *transformed_cloud_ptr);
+      managed_tf_buffer_->transformPointcloud(
+        output_frame_, *e.second, *transformed_cloud_ptr, e.second->header.stamp,
+        rclcpp::Duration::from_seconds(1.0), this->get_logger());
 
       // concatenate
       if (concat_cloud_ptr == nullptr) {
