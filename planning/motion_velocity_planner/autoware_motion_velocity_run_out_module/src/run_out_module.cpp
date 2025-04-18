@@ -26,17 +26,12 @@
 
 #include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
 #include <autoware/objects_of_interest_marker_interface/marker_data.hpp>
 #include <autoware/universe_utils/geometry/geometry.hpp>
 #include <rclcpp/duration.hpp>
 
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
-#include <geometry_msgs/msg/detail/pose__struct.hpp>
-
-#include <lanelet2_core/primitives/BoundingBox.h>
-#include <lanelet2_core/primitives/Point.h>
 
 #include <iostream>
 #include <memory>
@@ -188,6 +183,9 @@ VelocityPlanningResult RunOutModule::plan(
   run_out::calculate_decisions(
     decisions_tracker_, filtered_objects, now, keep_stop_distance_range, params_);
   for (const auto & obj : filtered_objects) {
+    if (!decisions_tracker_.get(obj.uuid)) {
+      continue;
+    }
     auto color = objects_of_interest_marker_interface::ColorName::GREEN;
     if (decisions_tracker_.get(obj.uuid)->decisions.back().type == run_out::stop) {
       color = objects_of_interest_marker_interface::ColorName::RED;
