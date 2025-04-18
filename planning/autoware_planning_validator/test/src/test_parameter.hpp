@@ -26,6 +26,7 @@ constexpr double THRESHOLD_INTERVAL = 1.0;
 constexpr double THRESHOLD_RELATIVE_ANGLE = 115.0 * deg2rad;
 constexpr double THRESHOLD_CURVATURE = 0.3;
 constexpr double THRESHOLD_LATERAL_ACC = 5.0;
+constexpr double THRESHOLD_LATERAL_JERK = 5.0;
 constexpr double THRESHOLD_LONGITUDINAL_MAX_ACC = 3.0;
 constexpr double THRESHOLD_LONGITUDINAL_MIN_ACC = -6.0;
 constexpr double THRESHOLD_STEERING = 35.0 * deg2rad;

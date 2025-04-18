@@ -51,6 +51,10 @@ void calc_lateral_acceleration(
 
 std::pair<double, size_t> calcMaxLateralAcceleration(const Trajectory & trajectory);
 
+void calc_lateral_jerk(const Trajectory & trajectory, std::vector<double> & lateral_jerk_vector);
+
+std::pair<double, size_t> calc_max_lateral_jerk(const Trajectory & trajectory);
+
 std::pair<double, size_t> getMaxLongitudinalAcc(const Trajectory & trajectory);
 
 std::pair<double, size_t> getMinLongitudinalAcc(const Trajectory & trajectory);

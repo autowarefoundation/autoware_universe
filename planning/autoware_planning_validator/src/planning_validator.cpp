@@ -26,6 +26,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace autoware::planning_validator
 {
@@ -94,6 +95,7 @@ void PlanningValidator::setupParameters()
     set_validation_params(p.latency, t + "latency");
     set_validation_params(p.steering, t + "steering");
     set_validation_params(p.steering_rate, t + "steering_rate");
+    set_validation_params(p.lateral_jerk, t + "lateral_jerk");
 
     set_validation_flags(p.acceleration, t + "acceleration");
     p.acceleration.lateral_th = declare_parameter<double>(t + "acceleration.lateral_th");
@@ -361,6 +363,7 @@ void PlanningValidator::validate(const Trajectory & trajectory)
   s.is_valid_relative_angle = checkValidRelativeAngle(resampled);
   s.is_valid_curvature = checkValidCurvature(resampled);
   s.is_valid_lateral_acc = checkValidLateralAcceleration(resampled);
+  s.is_valid_lateral_jerk = checkValidLateralJerk(resampled);
   s.is_valid_steering = checkValidSteering(resampled);
   s.is_valid_steering_rate = checkValidSteeringRate(resampled);
 
@@ -456,6 +459,22 @@ bool PlanningValidator::checkValidLateralAcceleration(const Trajectory & traject
   validation_status_.max_lateral_acc = max_lateral_acc;
   if (max_lateral_acc > params_.validation_params.acceleration.lateral_th) {
     debug_pose_publisher_->pushPoseMarker(trajectory.points.at(i), "lateral_acceleration");
+    is_critical_error_ |= params_.validation_params.acceleration.is_critical;
+    return false;
+  }
+  return true;
+}
+
+bool PlanningValidator::checkValidLateralJerk(const Trajectory & trajectory)
+{
+  if (!params_.validation_params.lateral_jerk.enable) {
+    return true;
+  }
+
+  const auto [max_lateral_jerk, i] = calc_max_lateral_jerk(trajectory);
+  validation_status_.max_lateral_jerk = max_lateral_jerk;
+  if (max_lateral_jerk > params_.validation_params.acceleration.lateral_th) {
+    debug_pose_publisher_->pushPoseMarker(trajectory.points.at(i), "lateral_jerk");
     is_critical_error_ |= params_.validation_params.acceleration.is_critical;
     return false;
   }
@@ -698,10 +717,11 @@ bool PlanningValidator::isAllValid(const PlanningValidatorStatus & s) const
 {
   return s.is_valid_size && s.is_valid_finite_value && s.is_valid_interval &&
          s.is_valid_relative_angle && s.is_valid_curvature && s.is_valid_lateral_acc &&
-         s.is_valid_longitudinal_max_acc && s.is_valid_longitudinal_min_acc &&
-         s.is_valid_steering && s.is_valid_steering_rate && s.is_valid_velocity_deviation &&
-         s.is_valid_distance_deviation && s.is_valid_longitudinal_distance_deviation &&
-         s.is_valid_forward_trajectory_length && s.is_valid_latency && s.is_valid_yaw_deviation;
+         s.is_valid_lateral_jerk && s.is_valid_longitudinal_max_acc &&
+         s.is_valid_longitudinal_min_acc && s.is_valid_steering && s.is_valid_steering_rate &&
+         s.is_valid_velocity_deviation && s.is_valid_distance_deviation &&
+         s.is_valid_longitudinal_distance_deviation && s.is_valid_forward_trajectory_length &&
+         s.is_valid_latency && s.is_valid_yaw_deviation;
 }
 
 void PlanningValidator::displayStatus()
@@ -721,6 +741,7 @@ void PlanningValidator::displayStatus()
   warn(s.is_valid_finite_value, "planning trajectory has invalid value!!");
   warn(s.is_valid_interval, "planning trajectory interval is too long!!");
   warn(s.is_valid_lateral_acc, "planning trajectory lateral acceleration is too high!!");
+  warn(s.is_valid_lateral_jerk, "planning trajectory lateral jerk is too high!!");
   warn(s.is_valid_longitudinal_max_acc, "planning trajectory acceleration is too high!!");
   warn(s.is_valid_longitudinal_min_acc, "planning trajectory deceleration is too high!!");
   warn(s.is_valid_relative_angle, "planning trajectory yaw angle varies too fast!!");

@@ -21,12 +21,26 @@
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
+#include <vector>
+
 using autoware_planning_msgs::msg::Trajectory;
 using nav_msgs::msg::Odometry;
 
 Trajectory generateTrajectoryWithConstantAcceleration(
   const double interval_distance, const double speed, const double yaw, const size_t size,
   const double acceleration);
+
+Trajectory generateTrajectoryWithVariableAcceleration(
+  const double interval_distance, const double initial_speed, const double yaw, const size_t size,
+  const std::function<double(size_t)> & acceleration_pattern);
+
+Trajectory generateTrajectoryWithSinusoidalAcceleration(
+  const double interval_distance, const double initial_speed, const double yaw, const size_t size,
+  const double max_acceleration, const double oscillation_period);
+
+Trajectory generateTrajectoryWithStepAcceleration(
+  const double interval_distance, const double initial_speed, const double yaw, const size_t size,
+  const std::vector<double> & acceleration_values, const size_t steps_per_value);
 
 Trajectory generateTrajectory(
   const double interval_distance, const double speed = 1.0, const double yaw = 0.0,
