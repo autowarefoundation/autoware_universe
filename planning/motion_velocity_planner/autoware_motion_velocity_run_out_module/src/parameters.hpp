@@ -90,6 +90,8 @@ struct Parameters
                                 // stopping decision
   double stop_distance_buffer;  // [m] longitudinal safety distance to keep between ego and the
                                 // collision position
+  double stop_deceleration_limit;  // [m/s²] if a stop requires a higher deceleration, then an ERROR
+                                   // diagnostic is published
   double keep_stop_condition_time;  // [s] time along the ego trajectory where any collision will
                                     // make us keep a stop decision
   double keep_stop_condition_distance;  // [m] distance along the ego trajectory where any collision
@@ -101,7 +103,7 @@ struct Parameters
                                        // required to remove the slowdown decision
   double slowdown_distance_buffer;     // [m] longitudinal distance between the collision
                                        // and the slowdown positions
-  double slowdown_deceleration_limit;  // [m/s²] minimum deceleration that can be applied
+  double slowdown_deceleration_limit;  // [m/s²] maximum deceleration that can be applied
                                        // by the preventive slowdown
 
   double ego_lateral_margin;                // [m] ego footprint lateral margin
@@ -166,6 +168,7 @@ struct Parameters
     stop_off_time_buffer = getOrDeclareParameter<double>(node, ns + ".stop.off_time_buffer");
     stop_on_time_buffer = getOrDeclareParameter<double>(node, ns + ".stop.on_time_buffer");
     stop_distance_buffer = getOrDeclareParameter<double>(node, ns + ".stop.distance_buffer");
+    stop_deceleration_limit = getOrDeclareParameter<double>(node, ns + ".stop.deceleration_limit");
     keep_stop_condition_time =
       getOrDeclareParameter<double>(node, ns + ".stop.keep_condition.time");
     keep_stop_condition_distance =

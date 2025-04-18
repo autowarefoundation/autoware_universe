@@ -68,13 +68,13 @@ private:
   std::optional<diagnostic_updater::Updater> diagnostic_updater_ = std::nullopt;
   std::unique_ptr<autoware::objects_of_interest_marker_interface::ObjectsOfInterestMarkerInterface>
     objects_of_interest_marker_interface_;
-  std::optional<run_out::UnavoidableCollision> unavoidable_collision_;
+  std::optional<double> unfeasible_stop_deceleration_;
 
   run_out::ObjectDecisionsTracker decisions_tracker_;
   run_out::Parameters params_{};
 
-  /// @brief update whether we are currently detecting collisions that cannot be avoided
-  void update_unavoidable_collision_status(diagnostic_updater::DiagnosticStatusWrapper & stat);
+  /// @brief update whether we are currently inserting a stop that breaks the deceleration limit
+  void update_unfeasible_stop_status(diagnostic_updater::DiagnosticStatusWrapper & stat);
   /// @brief publish a debug trajectory with the calculated slowdowns added to trajectory input used
   /// by the module
   void publish_debug_trajectory(

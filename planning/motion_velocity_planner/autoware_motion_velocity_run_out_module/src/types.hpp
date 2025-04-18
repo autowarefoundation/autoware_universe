@@ -302,12 +302,6 @@ struct ObjectDecisionsTracker
     return history_per_object.at(object);
   }
 };
-/// @brief Unavoidable collision with its collision time and the minimum ego time to stop
-struct UnavoidableCollision
-{
-  double time_to_collision;
-  double comfortable_time_to_stop;
-};
 /// @brief Object represented by its uuid, corner footprints, current footprint, position,
 /// collisions with ego, classification label
 struct Object

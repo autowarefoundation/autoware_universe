@@ -33,7 +33,6 @@
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 
-#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -74,13 +73,12 @@ void RunOutModule::init(rclcpp::Node & node, const std::string & module_name)
     "~/debug/" + ns_ + "/trajectory", 1);
   timekeeper_publisher_ = node.create_publisher<autoware::universe_utils::ProcessingTimeDetail>(
     "~/" + ns_ + "/processing_time", 1);
-  time_keeper_ =
-    std::make_shared<autoware::universe_utils::TimeKeeper>(timekeeper_publisher_, &std::cerr);
+  time_keeper_ = std::make_shared<autoware::universe_utils::TimeKeeper>(timekeeper_publisher_);
 
   init_parameters(node);
   diagnostic_updater_->setHardwareID("mvp_run_out");
   diagnostic_updater_->add(
-    "unavoidable_run_out_collision", this, &RunOutModule::update_unavoidable_collision_status);
+    "unavoidable_run_out_collision", this, &RunOutModule::update_unfeasible_stop_status);
 
   objects_of_interest_marker_interface_ = std::make_unique<
     autoware::objects_of_interest_marker_interface::ObjectsOfInterestMarkerInterface>(&node, ns_);
@@ -105,20 +103,19 @@ double calculate_keep_stop_distance_range(
          params.keep_stop_condition_distance;
 }
 
-void RunOutModule::update_unavoidable_collision_status(
-  diagnostic_updater::DiagnosticStatusWrapper & stat)
+void RunOutModule::update_unfeasible_stop_status(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  if (unavoidable_collision_.has_value()) {
-    const std::string error_msg = "[RunOut]: Unavoidable collision";
+  if (unfeasible_stop_deceleration_.has_value()) {
+    const std::string error_msg = "[RunOut]: Unfeasible stop";
     const auto diag_level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
     stat.summary(diag_level, error_msg);
-    stat.addf("Time to collision", "%.2f", unavoidable_collision_->time_to_collision);
-    stat.addf("Comfortable time to stop", "%.2f", unavoidable_collision_->comfortable_time_to_stop);
   } else {
     const std::string error_msg = "[RunOut]: Nominal";
     const auto diag_level = diagnostic_msgs::msg::DiagnosticStatus::OK;
     stat.summary(diag_level, error_msg);
   }
+  stat.addf("Unfeasible deceleration", "%2.2f", unfeasible_stop_deceleration_.value_or(0.0));
+  unfeasible_stop_deceleration_.reset();
 }
 
 void RunOutModule::publish_debug_trajectory(
@@ -202,7 +199,9 @@ VelocityPlanningResult RunOutModule::plan(
   time_keeper_->end_track("calc_decisions()");
   time_keeper_->start_track("calc_slowdowns()");
   const auto result = run_out::calculate_slowdowns(
-    decisions_tracker_, smoothed_trajectory_points, *planner_data, params_);
+    decisions_tracker_, smoothed_trajectory_points,
+    planner_data->current_odometry.twist.twist.linear.x, unfeasible_stop_deceleration_, params_);
+  diagnostic_updater_->force_update();
   time_keeper_->end_track("calc_slowdowns()");
 
   time_keeper_->start_track("publish_debug()");
@@ -223,7 +222,6 @@ VelocityPlanningResult RunOutModule::plan(
   time_keeper_->end_track("publish_debug()");
 
   time_keeper_->end_track("plan()");
-  diagnostic_updater_->force_update();
   return result;
 }
 

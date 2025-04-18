@@ -157,13 +157,15 @@ Finally, for each object, we calculate how the velocity profile will be modified
 - `slowdown`: insert a $V_{slow}$ velocity between the collision point and the point ahead of collision point by the distance set in the `slowdown.distance_buffer` parameter.
   - $V_{slow}$ is calculated as the maximum between the safe velocity and the comfortable velocity.
     - safe velocity: velocity required to be able to stop over the `distance_buffer` assuming a deceleration as set by the
-      `slowdown.safe_deceleration` parameter.
-    - comfortable velocity: velocity ego would reached assuming it constantly decelerates at the
-      `slowdown.comfortable_deceleration` parameter.
+      `stop.deceleration_limit` parameter.
+    - comfortable velocity: velocity ego would reach assuming it constantly decelerates at the
+      `slowdown.deceleration_limit` parameter until the slowdown point.
 
 The slowdowns and stops inserted in the trajectory are visualized with the virtual walls.
 
 ![virtual_walls](./docs/stop_slow_virtual_walls.png)
+
+If an inserted `stop` point requires a stronger deceleration than set by the `stop.deceleration_limit` parameter, then an ERROR diagnostic is published to indicate that the stop in unfeasible.
 
 ### Use of Rtree for fast spatial queries
 
@@ -175,6 +177,8 @@ from which the interpolated `time_from_start` can be calculated.
 In step 2, the polygons and linestrings used for filtering the objects are stored in Rtree objects to efficiently find whether
 an object is inside a polygon or if its predicted path intersects a linestring.
 
+For more information about Rtree, see <https://beta.boost.org/doc/libs/1_82_0/libs/geometry/doc/html/geometry/spatial_indexes/introduction.html>
+
 ### Accounting for prediction inaccuracies
 
 When calculating predicted collisions between ego and the objects,
@@ -182,8 +186,11 @@ we assume that the input ego trajectory contains accurate `time_from_start` valu
 Similarly, accurate predicted paths are expected to be provided for the objects.
 
 To allow for errors in these predictions, margins around the time intervals can be added using the parameters
-`ego_time_interval_expansion` and `TODO`.
+`collision.time_margin`.
 Higher values of this parameter will make it more likely to detect a collision and generate a stop.
+
+The time buffers `on_time_buffer` and `off_time_buffer` allow to delay the addition or removal of the decisions to stop/slowdown.
+Higher values prevent incorrect decisions in case of noisy object predictions, but also increase the reaction time, possibly causing stronger decelerations once a decision is made.
 
 ## Module Parameters
 
@@ -217,13 +224,17 @@ Higher values of this parameter will make it more likely to detect a collision a
 
 ### Ego does not stop for the incoming object
 
-Possible reasons:
+Possible reasons to investigate:
 
 - the object classification label is not in the `objects.target_labels`;
 - the object is inside an ignore polygon (`objects.LABEL.ignore.polygon_types` or `lanelet_subtypes`);
 - the object is on the ego trajectory (`objects.LABEL.ignore.if_on_ego_trajectory`) or behind ego (`if_behind_ego`);
 - the predicted path of the object is cut (`objects.LABEL.cut_predicted_paths.polygon_types`, `lanelet_subtypes`, or `linestring_types`);
-- the collision is considered as "passing";
-  - ego does not have time to stop (`passing.enable_when_unavoidable`);
-  - ego is predicted to pass before the object (`passing.enable`), including the time margin (calculated from `passing.margin.collision_times` and `time_margins`);
-    - to make ego more likely to stop, `time_margins` can be increased.
+- the collision is ignored;
+  - ego does not have time to stop (`ignore_conditions.if_ego_arrives_first_and_cannot_stop`);
+    - `deceleration_limit` can be increased.
+  - ego is predicted to pass before the object (`ignore_conditions.if_ego_arrives_first`), including the time margin (calculated from `margin.ego_enter_times` and `margin.time_margins`);
+    - `time_margins` can be increased.
+- the collision is not detected;
+  - `collision.time_margin` can be increased.
+  - the ego footprint can be made larger (`ego.lateral_margin` and `ego.longitudinal.margin`).
