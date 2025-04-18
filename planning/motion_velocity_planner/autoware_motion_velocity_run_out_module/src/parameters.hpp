@@ -78,6 +78,7 @@ struct IgnoreCollisionConditionsParameters
                                         // current ego velocity
   } if_ego_arrives_first_and_cannot_stop;
 };
+
 /// @brief Parameters of the run_out module
 struct Parameters
 {

@@ -75,8 +75,8 @@ struct ObjectCornerFootprint
 /// and angle
 struct FootprintIntersection
 {
-  double ego_time{};     // [s] time when ego is predicted to reach the interesection point
-  double object_time{};  // [s] time when the object is predicted to reach the interesection point
+  double ego_time{};     // [s] time when ego is predicted to reach the intersection point
+  double object_time{};  // [s] time when the object is predicted to reach the intersection point
   universe_utils::Point2d intersection;  // intersection point
   IntersectionPosition position;  // intersection position relative to the ego trajectory footprint
   double arc_length{};            // [m] arc length of the intersection along the ego trajectory

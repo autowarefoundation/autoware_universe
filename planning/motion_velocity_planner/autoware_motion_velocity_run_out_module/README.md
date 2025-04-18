@@ -213,7 +213,7 @@ Higher values of this parameter will make it more likely to detect a collision a
 
 ![Flow diagram](./docs/flow_diagram.svg)
 
-## Debuging and Tuning Guide
+## Debbuging and Tuning Guide
 
 ### Ego does not stop for the incoming object
 
