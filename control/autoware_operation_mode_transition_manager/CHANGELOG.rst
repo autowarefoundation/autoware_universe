@@ -2,8 +2,8 @@
 Changelog for package autoware_operation_mode_transition_manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(control): apply THROTTLE to frequent log (`#10418 <https://github.com/autowarefoundation/autoware_universe/issues/10418>`_)
   * fix(control): apply THROTTLE to frequent log

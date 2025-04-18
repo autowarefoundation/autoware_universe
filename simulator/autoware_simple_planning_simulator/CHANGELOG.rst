@@ -2,8 +2,8 @@
 Changelog for package autoware_simple_planning_simulator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(simple_planning_simulator): fix a small turn_signal bug (`#10386 <https://github.com/autowarefoundation/autoware_universe/issues/10386>`_)
   * fix turn bug

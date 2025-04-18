@@ -2,8 +2,8 @@
 Changelog for package autoware_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(object_merger): add diagnostics warning for timeout when merging (`#10283 <https://github.com/autowarefoundation/autoware_universe/issues/10283>`_)
   * feat(object_merger): add diagnostics warning for timeout when merge messages are incomplete

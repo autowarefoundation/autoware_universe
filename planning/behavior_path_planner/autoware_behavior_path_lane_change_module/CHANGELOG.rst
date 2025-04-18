@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_lane_change_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(lane_change): set safety factor properly (`#10308 <https://github.com/autowarefoundation/autoware_universe/issues/10308>`_)
 * Contributors: Ryohsuke Mitsudome, Satoshi OTA

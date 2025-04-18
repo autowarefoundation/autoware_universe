@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_start_planner_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(start_planner): use waypoints as centerline if available (`#10238 <https://github.com/autowarefoundation/autoware_universe/issues/10238>`_)
   * fix(start_planner): use waypoints as centerline if available

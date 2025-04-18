@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_static_obstacle_avoidance_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(static_obstacle_avoidance): return original lane automatically (`#10231 <https://github.com/autowarefoundation/autoware_universe/issues/10231>`_)
 * fix(behavior_path_planner): apply THROTTLE to frequent log (`#10417 <https://github.com/autowarefoundation/autoware_universe/issues/10417>`_)

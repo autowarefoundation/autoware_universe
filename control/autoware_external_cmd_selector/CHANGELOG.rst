@@ -2,8 +2,8 @@
 Changelog for package autoware_external_cmd_selector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat: manual control (`#10354 <https://github.com/autowarefoundation/autoware_universe/issues/10354>`_)
   * feat(default_adapi): add manual control

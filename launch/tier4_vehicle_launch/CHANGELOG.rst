@@ -2,8 +2,8 @@
 Changelog for package tier4_vehicle_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * docs(tier4_vehicle_launch): update individual_params reference in readme (`#10442 <https://github.com/autowarefoundation/autoware_universe/issues/10442>`_)
 * Contributors: Mete Fatih Cırıt, Ryohsuke Mitsudome

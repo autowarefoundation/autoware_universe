@@ -2,8 +2,8 @@
 Changelog for package autoware_cluster_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(autoware_cluster_merger): created Schema file and updated ReadME file for parameters settings (`#9977 <https://github.com/autowarefoundation/autoware_universe/issues/9977>`_)
   * feat: Created Schema file and updated ReadME file for parameters settings

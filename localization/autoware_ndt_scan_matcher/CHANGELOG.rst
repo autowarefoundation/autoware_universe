@@ -2,8 +2,8 @@
 Changelog for package autoware_ndt_scan_matcher
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(ndt_scan_matcher): applied THROTTLE to frequent logs (`#10430 <https://github.com/autowarefoundation/autoware_universe/issues/10430>`_)
 * Contributors: Ryohsuke Mitsudome, RyuYamamoto

@@ -2,8 +2,8 @@
 Changelog for package autoware_compare_map_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(compare_map_segmentation): publish warning when pcl::voxelgrid failed to filter with large leaf size (`#10381 <https://github.com/autowarefoundation/autoware_universe/issues/10381>`_)
   * feat: add warn in pcl overflow with compare_map

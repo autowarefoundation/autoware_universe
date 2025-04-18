@@ -2,8 +2,8 @@
 Changelog for package autoware_remaining_distance_time_calculator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(planning): apply THROTTLE to frequent log (`#10419 <https://github.com/autowarefoundation/autoware_universe/issues/10419>`_)
 * Contributors: Ryohsuke Mitsudome, Takayuki Murooka

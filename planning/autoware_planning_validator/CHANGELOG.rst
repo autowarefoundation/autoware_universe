@@ -2,8 +2,8 @@
 Changelog for package autoware_planning_validator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * build(autoware_planning_validator): fix missing angles dependency (`#10479 <https://github.com/autowarefoundation/autoware_universe/issues/10479>`_)
 * refactor(planning_validator): separate validation check for steering and steering rate (`#10438 <https://github.com/autowarefoundation/autoware_universe/issues/10438>`_)

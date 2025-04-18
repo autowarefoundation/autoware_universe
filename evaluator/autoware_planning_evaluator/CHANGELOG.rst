@@ -2,8 +2,8 @@
 Changelog for package autoware_planning_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * chore(autoware_planning_evaluator): record goal_stop_deviation only when ego stop (`#10429 <https://github.com/autowarefoundation/autoware_universe/issues/10429>`_)
   * record modified_goal related output_metric only when the ego stop close to goal

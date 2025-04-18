@@ -2,8 +2,8 @@
 Changelog for package autoware_control_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(control_evaluator): fix bugs about output_metrics (`#10433 <https://github.com/autowarefoundation/autoware_universe/issues/10433>`_)
   * add val,acc,jark to metrics

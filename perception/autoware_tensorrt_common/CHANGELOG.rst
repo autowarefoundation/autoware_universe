@@ -2,8 +2,8 @@
 Changelog for package autoware_tensorrt_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat: should be using NvInferRuntime.h (`#10399 <https://github.com/autowarefoundation/autoware_universe/issues/10399>`_)
 * feat(autoware_tenssort_common): validate TensorRT engine version for cached engine (`#10320 <https://github.com/autowarefoundation/autoware_universe/issues/10320>`_)

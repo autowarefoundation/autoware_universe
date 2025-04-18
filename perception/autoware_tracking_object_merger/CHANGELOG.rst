@@ -2,8 +2,8 @@
 Changelog for package autoware_tracking_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(autoware_tracker_object_merger): add diagnostics (`#10257 <https://github.com/autowarefoundation/autoware_universe/issues/10257>`_)
   * add diagnostics

@@ -2,8 +2,8 @@
 Changelog for package autoware_path_optimizer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(autoware_path_optimizer): created the schema file,updated the readme file (`#10123 <https://github.com/autowarefoundation/autoware_universe/issues/10123>`_)
 * build(autoware_path_optimizer): fix missing diagnostic_updater dependency (`#10478 <https://github.com/autowarefoundation/autoware_universe/issues/10478>`_)

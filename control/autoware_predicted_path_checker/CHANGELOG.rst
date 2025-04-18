@@ -2,8 +2,8 @@
 Changelog for package autoware_predicted_path_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(pred_path_checker,dyn_obstacle_stop): use output of removeOverlaps (`#10375 <https://github.com/autowarefoundation/autoware_universe/issues/10375>`_)
 * Contributors: Maxime CLEMENT, Ryohsuke Mitsudome

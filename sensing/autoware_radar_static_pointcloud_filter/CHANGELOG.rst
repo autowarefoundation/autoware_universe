@@ -2,8 +2,8 @@
 Changelog for package autoware_radar_static_pointcloud_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(autoware_radar_static_pointcloud_filter): lookup timestamp and er… (`#10350 <https://github.com/autowarefoundation/autoware_universe/issues/10350>`_)
   fix(autoware_radar_static_pointcloud_filter): lookup timestamp and error handling

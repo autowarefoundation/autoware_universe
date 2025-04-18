@@ -2,8 +2,8 @@
 Changelog for package autoware_radar_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * build(autoware_radar_object_tracker): fix missing diagnostic_updater dependency (`#10480 <https://github.com/autowarefoundation/autoware_universe/issues/10480>`_)
 * fix(radar_object_tracker): add required headers (`#10463 <https://github.com/autowarefoundation/autoware_universe/issues/10463>`_)

@@ -2,8 +2,8 @@
 Changelog for package autoware_simple_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(simple_object_merger): add approximatefilter (`#10462 <https://github.com/autowarefoundation/autoware_universe/issues/10462>`_)
   * fix(simple_object_merger): add approximatefilter

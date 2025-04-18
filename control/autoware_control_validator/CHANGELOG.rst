@@ -2,8 +2,8 @@
 Changelog for package autoware_control_validator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(control_validator): add over run estimation feature (`#10422 <https://github.com/autowarefoundation/autoware_universe/issues/10422>`_)
 * refactor(control validaor): refactor control_validator (`#10363 <https://github.com/autowarefoundation/autoware_universe/issues/10363>`_)

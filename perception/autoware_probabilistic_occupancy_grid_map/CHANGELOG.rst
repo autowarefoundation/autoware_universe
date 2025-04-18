@@ -2,8 +2,8 @@
 Changelog for package autoware_probabilistic_occupancy_grid_map
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(probabilistic_occupancy_grid_map): add diagnostics warning when latency is too long (`#10280 <https://github.com/autowarefoundation/autoware_universe/issues/10280>`_)
   * feat(probabilistic_occupancy_grid_map): add diagnostics warning when latency is too long

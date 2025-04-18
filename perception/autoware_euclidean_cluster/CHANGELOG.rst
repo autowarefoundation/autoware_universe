@@ -2,8 +2,8 @@
 Changelog for package autoware_euclidean_cluster
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(euclidean_cluster): add diagnostics warning when cluster skipped (`#10278 <https://github.com/autowarefoundation/autoware_universe/issues/10278>`_)
   * feat(euclidean_cluster): add diagnostics warning when cluster skipped due to excessive points from large objects

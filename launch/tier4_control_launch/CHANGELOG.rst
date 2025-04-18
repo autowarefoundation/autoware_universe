@@ -2,8 +2,8 @@
 Changelog for package tier4_control_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(control_validator)!: add acceleration check (`#10326 <https://github.com/autowarefoundation/autoware_universe/issues/10326>`_)
 * Contributors: Ryohsuke Mitsudome, Yuki TAKAGI

@@ -2,8 +2,8 @@
 Changelog for package autoware_lidar_centerpoint
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(lidar_centerpoint): add diagnostics for processing time (`#10284 <https://github.com/autowarefoundation/autoware_universe/issues/10284>`_)
   * add diagnostics for processing time

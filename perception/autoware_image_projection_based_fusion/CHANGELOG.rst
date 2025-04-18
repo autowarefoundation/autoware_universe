@@ -2,8 +2,8 @@
 Changelog for package autoware_image_projection_based_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * fix(autoware_image_projection_based_fusion): add missing params `common_param_path` when not use container (`#10499 <https://github.com/autowarefoundation/autoware_universe/issues/10499>`_)
   add missing params common_param_path when not use container

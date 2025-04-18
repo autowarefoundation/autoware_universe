@@ -2,8 +2,8 @@
 Changelog for package autoware_overlay_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(autoware_overlay_rviz_plugin)!: add static blinking option for turn_signal (`#10319 <https://github.com/autowarefoundation/autoware_universe/issues/10319>`_)
   * feat!(autoware_overlay_rviz_plugin): removed the blinking function of turn_signal

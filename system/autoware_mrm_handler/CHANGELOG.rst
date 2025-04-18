@@ -2,8 +2,8 @@
 Changelog for package autoware_mrm_handler
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.44.0 (2025-04-18)
+-------------------
 * Merge remote-tracking branch 'origin/main' into humble
 * feat(mrm_handler): modify log level (`#10425 <https://github.com/autowarefoundation/autoware_universe/issues/10425>`_)
 * Contributors: Ryohsuke Mitsudome, Takagi, Isamu
