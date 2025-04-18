@@ -249,8 +249,8 @@ void calc_lateral_jerk(const Trajectory & trajectory, std::vector<double> & late
   // is currently unstable, making it difficult to derive an accurate rate of
   // curvature change. Therefore, we only use the second term for a stable estimation.
 
-  // TODO: When the curvature calculation becomes stable, include the v_lon^3 * (dk/ds) term
-  // in the lateral jerk calculation for a more accurate result.
+  // TODO(Sugahara): When the curvature calculation becomes stable, include the v_lon^3 * (dk/ds)
+  // term in the lateral jerk calculation for a more accurate result.
   for (size_t i = 0; i < trajectory.points.size(); ++i) {
     const double v_lon = trajectory.points.at(i).longitudinal_velocity_mps;
     const double a_lon = trajectory.points.at(i).acceleration_mps2;
