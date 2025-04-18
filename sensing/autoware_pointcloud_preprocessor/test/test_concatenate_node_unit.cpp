@@ -36,11 +36,17 @@
 #include <unordered_map>
 #include <vector>
 
+using autoware::pointcloud_preprocessor::CloudCollector;
+using autoware::pointcloud_preprocessor::CombineCloudHandler;
+using autoware::pointcloud_preprocessor::PointCloud2Traits;
+using autoware::pointcloud_preprocessor::PointCloudConcatenateDataSynchronizerComponent;
+
 class ConcatenateCloudTest : public ::testing::Test
 {
 protected:
   void SetUp() override
   {
+    std::vector<std::string> input_topics{"lidar_top", "lidar_left", "lidar_right"};
     rclcpp::NodeOptions node_options;
     // Instead of "input_topics", other parameters are not used.
     // They just helps to setup the concatenate node
@@ -55,22 +61,19 @@ protected:
        {"publish_previous_but_late_pointcloud", false},
        {"synchronized_pointcloud_postfix", "pointcloud"},
        {"input_twist_topic_type", "twist"},
-       {"input_topics", std::vector<std::string>{"lidar_top", "lidar_left", "lidar_right"}},
+       {"input_topics", input_topics},
        {"output_frame", "base_link"},
        {"matching_strategy.type", "advanced"},
        {"matching_strategy.lidar_timestamp_offsets", std::vector<double>{0.0, 0.04, 0.08}},
        {"matching_strategy.lidar_timestamp_noise_window", std::vector<double>{0.01, 0.01, 0.01}}});
 
-    concatenate_node_ = std::make_shared<
-      autoware::pointcloud_preprocessor::PointCloudConcatenateDataSynchronizerComponent>(
-      node_options);
-    combine_cloud_handler_ =
-      std::make_shared<autoware::pointcloud_preprocessor::CombineCloudHandler>(
-        *concatenate_node_, "base_link", true, true, true);
+    concatenate_node_ =
+      std::make_shared<PointCloudConcatenateDataSynchronizerComponent>(node_options);
+    combine_cloud_handler_ = std::make_shared<CombineCloudHandler<PointCloud2Traits>>(
+      *concatenate_node_, input_topics, "base_link", true, true, true);
 
-    collector_ = std::make_shared<autoware::pointcloud_preprocessor::CloudCollector>(
-      std::dynamic_pointer_cast<
-        autoware::pointcloud_preprocessor::PointCloudConcatenateDataSynchronizerComponent>(
+    collector_ = std::make_shared<CloudCollector<PointCloud2Traits>>(
+      std::dynamic_pointer_cast<PointCloudConcatenateDataSynchronizerComponent>(
         concatenate_node_->shared_from_this()),
       combine_cloud_handler_, number_of_pointcloud, timeout_sec, collector_debug_mode);
 
@@ -168,10 +171,9 @@ protected:
     generate_transform_msg("base_link", "lidar_right", 1.0, 1.0, 3.0, 0.278, 0.717, 0.441, 0.453);
   }
 
-  std::shared_ptr<autoware::pointcloud_preprocessor::PointCloudConcatenateDataSynchronizerComponent>
-    concatenate_node_;
-  std::shared_ptr<autoware::pointcloud_preprocessor::CombineCloudHandler> combine_cloud_handler_;
-  std::shared_ptr<autoware::pointcloud_preprocessor::CloudCollector> collector_;
+  std::shared_ptr<PointCloudConcatenateDataSynchronizerComponent> concatenate_node_;
+  std::shared_ptr<CombineCloudHandler<PointCloud2Traits>> combine_cloud_handler_;
+  std::shared_ptr<CloudCollector<PointCloud2Traits>> collector_;
   std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_broadcaster_;
 
   static constexpr int32_t timestamp_seconds{10};
@@ -343,7 +345,7 @@ TEST_F(ConcatenateCloudTest, TestConcatenateClouds)
   sensor_msgs::msg::PointCloud2::SharedPtr right_pointcloud_ptr =
     std::make_shared<sensor_msgs::msg::PointCloud2>(right_pointcloud);
 
-  std::unordered_map<std::string, sensor_msgs::msg::PointCloud2::SharedPtr> topic_to_cloud_map;
+  std::unordered_map<std::string, sensor_msgs::msg::PointCloud2::ConstSharedPtr> topic_to_cloud_map;
   topic_to_cloud_map["lidar_top"] = top_pointcloud_ptr;
   topic_to_cloud_map["lidar_left"] = left_pointcloud_ptr;
   topic_to_cloud_map["lidar_right"] = right_pointcloud_ptr;
