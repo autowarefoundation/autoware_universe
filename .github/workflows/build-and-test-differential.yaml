@@ -97,7 +97,7 @@ jobs:
         shell: bash
 
       - name: Prepare build_depends.repos file (main branch)
-        if: ${{ github.event.pull_request.base.ref == 'main' }}
+        if: ${{ github.event.pull_request.base.ref != 'humble' }}
         uses: ./.github/actions/combine-repos-action
         with:
           base_file: build_depends_humble.repos
