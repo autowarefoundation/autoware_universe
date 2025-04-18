@@ -122,7 +122,7 @@ std::optional<SlowdownInterval> calculate_slowdown_interval(
   }
   const auto t_collision = current_decision.collision->ego_collision_time;
   const auto p_collision = [&]() {
-    if (current_decision.collision) {
+    if (current_decision.collision && current_decision.collision->type == collision) {
       return std::make_optional(interpolated_point_at_time(trajectory, t_collision));
     }
     return get_most_recent_slowdown_point(history);

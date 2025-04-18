@@ -35,6 +35,7 @@
 #include <boost/geometry/index/predicates.hpp>
 
 #include <algorithm>
+#include <iomanip>
 #include <iterator>
 #include <utility>
 #include <vector>
@@ -52,8 +53,13 @@ FootprintIntersection calculate_footprint_intersection(
   const auto & ego_segment = ego_query_result.first;
   FootprintIntersection footprint_intersection;
   footprint_intersection.intersection = intersection_point;
+  footprint_intersection.position = ego_query_result.second.first;
   const auto & ego_traj_from = ego_trajectory[ego_trajectory_index];
-  const auto & ego_traj_to = ego_trajectory[ego_trajectory_index + 1];
+  // special case for the rear/front segments of the footprint
+  const auto is_end_segment =
+    (footprint_intersection.position == rear || footprint_intersection.position == front);
+  const auto & ego_traj_to =
+    is_end_segment ? ego_traj_from : ego_trajectory[ego_trajectory_index + 1];
 
   const auto object_segment_length = static_cast<double>(boost::geometry::length(object_segment));
   const auto object_segment_intersection_ratio =
@@ -88,7 +94,6 @@ FootprintIntersection calculate_footprint_intersection(
   footprint_intersection.vel_diff = footprint_intersection.ego_vel - obj_vel;
   footprint_intersection.object_time = interpolation::lerp(
     object_segment_times.first, object_segment_times.second, object_segment_intersection_ratio);
-  footprint_intersection.position = ego_query_result.second.first;
   return footprint_intersection;
 }
 
@@ -300,13 +305,17 @@ void calculate_overlapping_collision(
       c.type = no_collision;
       c.explanation = " no collision will happen because object is faster and enter first";
     } else {
-      c.explanation = " v_diff = " + std::to_string(ego.first_intersection.vel_diff);
       // adjust the collision time based on the velocity difference
       const auto time_margin =
         std::abs(ego.first_intersection.ego_time - ego.first_intersection.object_time);
       const auto catchup_time =
-        ego.first_intersection.ego_vel * time_margin / ego.first_intersection.vel_diff;
+        (time_margin * ego.first_intersection.vel_diff) / ego.first_intersection.ego_vel;
       c.ego_collision_time += catchup_time;
+      std::stringstream ss;
+      ss << std::setprecision(2) << "coll_t = ego_enter_time[" << ego.first_intersection.ego_time
+         << "]+enter_t_diff[" << time_margin << "]*v_diff[" << ego.first_intersection.vel_diff
+         << "]/ego_vel[" << ego.first_intersection.ego_vel << "]";
+      c.explanation = ss.str();
     }
   } else if (is_opposite_direction_collision) {
     // predict time when collision would occur by finding time when arc lengths are equal
@@ -322,6 +331,10 @@ void calculate_overlapping_collision(
     const auto collision_time_within_overlap = (overlap_length - lon_buffer) / (ego_vel + obj_vel);
     // TODO(Maxime): we need to correctly account for the agents' longitudinal offsets
     c.ego_collision_time += collision_time_within_overlap;
+    std::stringstream ss;
+    ss << std::setprecision(2) << "coll_t = ego_enter_time[" << ego.first_intersection.ego_time
+       << "]+coll_t_within_overlap[" << collision_time_within_overlap << "]";
+    c.explanation = ss.str();
   }
 }
 
@@ -337,27 +350,29 @@ Collision calculate_collision(
   const auto passing_margin = interpolation::lerp(
     ignore_params.if_ego_arrives_first.margin.ego_enter_times,
     ignore_params.if_ego_arrives_first.margin.time_margins, clamped_ego_enter_time);
+  const auto is_opposite_direction =
+    object.first_intersection.ego_time > object.last_intersection.ego_time;
   const auto is_ignored_ego_arrives_first =
-    ignore_params.if_ego_arrives_first.enable && is_overlapping_at_same_time &&
-    (ego.from + passing_margin) < object.from &&
+    !is_opposite_direction && ignore_params.if_ego_arrives_first.enable &&
+    is_overlapping_at_same_time && (ego.from + passing_margin) < object.from &&
     ego.to - ego.from <= ignore_params.if_ego_arrives_first.max_overlap_duration;
   const auto is_ignored_ego_arrives_first_and_cannot_stop =
-    ignore_params.if_ego_arrives_first_and_cannot_stop.enable && ego.from < object.from &&
-    ego.overlaps(object) &&
+    !is_opposite_direction && ignore_params.if_ego_arrives_first_and_cannot_stop.enable &&
+    ego.from < object.from && ego.overlaps(object) &&
     ego.from < ignore_params.if_ego_arrives_first_and_cannot_stop.calculated_stop_time_limit;
   if (is_ignored_ego_arrives_first) {
     c.type = ignored_collision;
     std::stringstream ss;
-    ss << std::setprecision(2) << "pass first collision since ego arrives first (" << ego.from
-       << " < " << object.from << "), including with margin (" << passing_margin
+    ss << std::setprecision(2) << "ignore since ego arrives first (" << ego.from << " < "
+       << object.from << "), including with margin (" << passing_margin
        << ") and ego overlap bellow max (" << ego.to - ego.from << " < "
        << ignore_params.if_ego_arrives_first.max_overlap_duration << ")";
     c.explanation += ss.str();
   } else if (is_ignored_ego_arrives_first_and_cannot_stop) {
     c.type = ignored_collision;
     std::stringstream ss;
-    ss << std::setprecision(2) << "pass first collision since ego arrives first (" << ego.from
-       << " < " << object.from << "), and does not have time to stop ("
+    ss << std::setprecision(2) << "ignore ego arrives first (" << ego.from << " < " << object.from
+       << "), and does not have time to stop ("
        << ignore_params.if_ego_arrives_first_and_cannot_stop.calculated_stop_time_limit << ")";
     c.explanation += ss.str();
   } else if (is_overlapping_at_same_time) {
