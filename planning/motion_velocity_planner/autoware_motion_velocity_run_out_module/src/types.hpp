@@ -220,7 +220,7 @@ inline std::ostream & operator<<(std::ostream & os, const TimeOverlapInterval & 
   return os;
 }
 /// @brief Type of collision between ego and an object
-enum CollisionType { pass_first_no_collision, pass_first_collision, collision, no_collision };
+enum CollisionType { pass_first_no_collision, ignored_collision, collision, no_collision };
 /// @brief Collision between ego and an object with the corresponding time intervals and type
 struct Collision
 {

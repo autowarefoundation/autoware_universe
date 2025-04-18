@@ -135,7 +135,7 @@ inline MarkerArray make_debug_object_markers(const std::vector<Object> & objects
     for (const auto & col : o.collisions) {
       ss << std::setw(10) << o.uuid.substr(0, 5) + "|";
       if (col.type == collision) ss << std::setw(10) << "C|";
-      if (col.type == pass_first_collision) ss << std::setw(10) << "PC|";
+      if (col.type == ignored_collision) ss << std::setw(10) << "IC|";
       if (col.type == pass_first_no_collision) ss << std::setw(10) << "P-|";
       if (col.type == no_collision) ss << std::setw(10) << "-|";
       ss << std::setw(20) << col.ego_time_interval << "|";
@@ -188,10 +188,10 @@ inline MarkerArray make_debug_decisions_markers(const ObjectDecisionsTracker & d
     switch (c->type) {
       case collision:
         return "C|";
-      case pass_first_collision:
-        return "PC|";
+      case ignored_collision:
+        return "IC|";
       case pass_first_no_collision:
-        return "P-|";
+        return "P|";
       case no_collision:
       default:
         return "-|";

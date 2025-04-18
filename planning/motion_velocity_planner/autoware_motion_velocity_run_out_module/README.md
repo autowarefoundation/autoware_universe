@@ -47,7 +47,7 @@ The following figure shows an example where the polygons to ignore objects are s
 ![map_filtering_data](./docs/map_filtering_data.png)
 
 These geometries can be visualized on the debug markers with the `filtering_data_(ignore_objects|ignore_collisions|cut_predicted_paths)` namespaces.
-The classification label of the published debug markers can be selected with parameter `debug.object_label`.
+The classification label corresponding to the published debug markers can be selected with parameter `debug.object_label`.
 
 ### 3. Dynamic objects filtering
 
@@ -95,15 +95,15 @@ An overlap is represented by the entering and exiting intersections for both ego
 These overlaps calculated for all the object's predicted paths are then combined if overlapping in time (including the `collision.time_overlap_tolerance` parameter).
 and classified into the following collision types:
 
-- `pass_first_collision` if ego is predicted to enter the overlap before the object.
-  - if parameter `passing.enable` is set to `true` and:
+- `ignored_collision` if one of the following condition is true:
+  - parameter `collision.ignore_conditions.if_ego_arrives_first.enable` is set to `true` and:
     - ego enters the overlap at least `time_margin` seconds before the object.
-      - `time_margin` is calculated based on the time when ego enters the overlap and linearly interpolated using the mappings between `passing.margin.ego_enter_times` and `passing.margin.time_margins`.
-    - ego does not overlap the object's path by more than `passing.max_overlap_duration` seconds.
-  - if parameter `passing.enable_when_unavoidable` is set to `true` and:
-    - ego cannot stop before entering the interval by using the deceleration limit set with `passing.unavoidable_deceleration`.
+      - `time_margin` is calculated based on the time when ego enters the overlap, which is used to interpolate the margin using the mapping between `margin.ego_enter_times` and `margin.time_margins`.
+    - ego does not overlap the object's path by more than `max_overlap_duration` seconds.
+  - parameter `collision.ignore_conditions.if_ego_arrives_first.enable` is set to `true` and:
+    - ego cannot stop before entering the interval by using the deceleration limit set with `deceleration_limit`.
 - `collision` if ego and the object are predicted to be in the overlap at the same time.
-  - the distance between the time intervals of ego and the objects must be smaller than the `time_margin` parameter (a distance of 0 means that the intervals overlap).
+  - the time distance between the time intervals of ego and the objects must be smaller than the `time_margin` parameter (a distance of 0 means that the intervals overlap).
 - `pass_first_no_collision` if ego is predicted to exit the overlap before the object enters it.
 - `no_collision` in all other cases.
 

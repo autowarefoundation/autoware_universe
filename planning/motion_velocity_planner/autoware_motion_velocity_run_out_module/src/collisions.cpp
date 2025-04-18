@@ -326,36 +326,39 @@ void calculate_overlapping_collision(
 }
 
 Collision calculate_collision(
-  const TimeOverlapInterval & ego, const TimeOverlapInterval & object, const double min_stop_time,
-  const Parameters & params)
+  const TimeOverlapInterval & ego, const TimeOverlapInterval & object, const Parameters & params)
 {
   Collision c(ego, object);
   const auto is_overlapping_at_same_time = ego.overlaps(object, params.collision_time_margin);
-  const auto clamped_time = std::clamp(
-    ego.from, params.passing_margin_ego_enter_times.front(),
-    params.passing_margin_ego_enter_times.back());
+  const auto & ignore_params = params.ignore_collision_conditions;
+  const auto clamped_ego_enter_time = std::clamp(
+    ego.from, ignore_params.if_ego_arrives_first.margin.ego_enter_times.front(),
+    ignore_params.if_ego_arrives_first.margin.ego_enter_times.back());
   const auto passing_margin = interpolation::lerp(
-    params.passing_margin_ego_enter_times, params.passing_margin_time_margins, clamped_time);
-  const auto is_passing_collision = params.enable_passing_collisions &&
-                                    is_overlapping_at_same_time &&
-                                    (ego.from + passing_margin) < object.from &&
-                                    ego.to - ego.from <= params.passing_max_overlap_duration;
-  const auto is_unavoidable_passing_collision = params.enable_passing_when_unavoidable &&
-                                                ego.from < object.from && ego.overlaps(object) &&
-                                                ego.from < min_stop_time;
-  if (is_passing_collision) {
-    c.type = pass_first_collision;
+    ignore_params.if_ego_arrives_first.margin.ego_enter_times,
+    ignore_params.if_ego_arrives_first.margin.time_margins, clamped_ego_enter_time);
+  const auto is_ignored_ego_arrives_first =
+    ignore_params.if_ego_arrives_first.enable && is_overlapping_at_same_time &&
+    (ego.from + passing_margin) < object.from &&
+    ego.to - ego.from <= ignore_params.if_ego_arrives_first.max_overlap_duration;
+  const auto is_ignored_ego_arrives_first_and_cannot_stop =
+    ignore_params.if_ego_arrives_first_and_cannot_stop.enable && ego.from < object.from &&
+    ego.overlaps(object) &&
+    ego.from < ignore_params.if_ego_arrives_first_and_cannot_stop.calculated_stop_time_limit;
+  if (is_ignored_ego_arrives_first) {
+    c.type = ignored_collision;
     std::stringstream ss;
     ss << std::setprecision(2) << "pass first collision since ego arrives first (" << ego.from
        << " < " << object.from << "), including with margin (" << passing_margin
        << ") and ego overlap bellow max (" << ego.to - ego.from << " < "
-       << params.passing_max_overlap_duration << ")";
+       << ignore_params.if_ego_arrives_first.max_overlap_duration << ")";
     c.explanation += ss.str();
-  } else if (is_unavoidable_passing_collision) {
-    c.type = pass_first_collision;
+  } else if (is_ignored_ego_arrives_first_and_cannot_stop) {
+    c.type = ignored_collision;
     std::stringstream ss;
     ss << std::setprecision(2) << "pass first collision since ego arrives first (" << ego.from
-       << " < " << object.from << "), and does not have time to stop (" << min_stop_time << ")";
+       << " < " << object.from << "), and does not have time to stop ("
+       << ignore_params.if_ego_arrives_first_and_cannot_stop.calculated_stop_time_limit << ")";
     c.explanation += ss.str();
   } else if (is_overlapping_at_same_time) {
     calculate_overlapping_collision(c, ego, object, params);
@@ -368,8 +371,7 @@ Collision calculate_collision(
 }
 
 std::vector<Collision> calculate_interval_collisions(
-  std::vector<TimeOverlapIntervalPair> intervals, const double min_stop_time,
-  const Parameters & params)
+  std::vector<TimeOverlapIntervalPair> intervals, const Parameters & params)
 {
   std::vector<Collision> collisions;
   if (intervals.empty()) {
@@ -387,13 +389,12 @@ std::vector<Collision> calculate_interval_collisions(
       object_combined.expand(interval.object);
       ego_combined.expand(interval.ego);
     } else {
-      collisions.push_back(
-        calculate_collision(ego_combined, object_combined, min_stop_time, params));
+      collisions.push_back(calculate_collision(ego_combined, object_combined, params));
       object_combined = interval.object;
       ego_combined = interval.ego;
     }
   }
-  collisions.push_back(calculate_collision(ego_combined, object_combined, min_stop_time, params));
+  collisions.push_back(calculate_collision(ego_combined, object_combined, params));
   return collisions;
 }
 std::vector<TimeOverlapIntervalPair> calculate_ego_and_object_time_overlap_intervals(
@@ -424,15 +425,14 @@ std::vector<TimeOverlapIntervalPair> calculate_ego_and_object_time_overlap_inter
 void calculate_object_collisions(
   Object & object, const TrajectoryCornerFootprint & ego_footprint,
   const FilteringDataPerLabel & filtering_data, const double min_arc_length,
-  const double min_stop_time, const Parameters & params)
+  const Parameters & params)
 {
   for (const auto & corner_footprint : object.corner_footprints) {
     // combining overlap intervals over all corner footprints gives bad results
-    // the current way calculate collisions independently for each corner footprint is best
+    // the current way to calculate collisions independently for each corner footprint is best
     const auto time_overlap_intervals = calculate_ego_and_object_time_overlap_intervals(
       ego_footprint, corner_footprint, filtering_data[object.label], min_arc_length);
-    const auto collisions =
-      calculate_interval_collisions(time_overlap_intervals, min_stop_time, params);
+    const auto collisions = calculate_interval_collisions(time_overlap_intervals, params);
     for (const auto & c : collisions) {
       const auto is_after_overlap = c.ego_collision_time > c.ego_time_interval.to;
       if (!is_after_overlap) {
@@ -445,11 +445,10 @@ void calculate_object_collisions(
 void calculate_collisions(
   std::vector<Object> & objects, const TrajectoryCornerFootprint & ego_footprint,
   const FilteringDataPerLabel & filtering_data, const double min_arc_length,
-  const double min_stop_time, const Parameters & params)
+  const Parameters & params)
 {
   for (auto & object : objects) {
-    calculate_object_collisions(
-      object, ego_footprint, filtering_data, min_arc_length, min_stop_time, params);
+    calculate_object_collisions(object, ego_footprint, filtering_data, min_arc_length, params);
   }
 }
 }  // namespace autoware::motion_velocity_planner::run_out

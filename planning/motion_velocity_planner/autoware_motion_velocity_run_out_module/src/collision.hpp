@@ -157,12 +157,11 @@ void calculate_object_collisions(
 /// @param[in] ego_trajectory The ego vehicle's trajectory.
 /// @param[in] filtering_data Data containing the polygons where collisions should be ignored
 /// @param[in] min_arc_length [m] minimum arc length where collisions are considered
-/// @param[in] min_stop_time [s] minimum time when ego can stop
 /// @param[in] params The parameters for collision calculation.
 void calculate_collisions(
   std::vector<Object> & objects, const TrajectoryCornerFootprint & ego_footprint,
   const FilteringDataPerLabel & filtering_data, const double min_arc_length,
-  const double min_stop_time, const Parameters & params);
+  const Parameters & params);
 }  // namespace autoware::motion_velocity_planner::run_out
 
 #endif  // COLLISION_HPP_

@@ -49,6 +49,35 @@ struct ObjectParameters
   double confidence_filtering_threshold;
   bool confidence_filtering_only_use_highest;
 };
+
+/// @brief conditions to ignore collisions
+struct IgnoreCollisionConditionsParameters
+{
+  /// @brief collision where ego arrives first
+  struct
+  {
+    bool enable;
+    struct
+    {
+      std::vector<double>
+        ego_enter_times;  // [s] predicted times when ego starts overlapping the path of the object
+      std::vector<double>
+        time_margins;  // [s] margin values used such that ego needs to enter the overlap before the
+                       // object with this much margin to decide to ignore the collision
+    } margin;
+    double max_overlap_duration;  // [s] the collision is not ignored if ego is predicted to stay on
+                                  // the object's path for longer than this duration
+  } if_ego_arrives_first;
+  /// @brief collision where ego arrives first and cannot stop before the collision
+  struct
+  {
+    bool enable;
+    double deceleration_limit;  // [m/s²] deceleration used to determine if ego can stop before a
+                                // collision
+    double calculated_stop_time_limit;  // [s] calculated from the deceleration limit and the
+                                        // current ego velocity
+  } if_ego_arrives_first_and_cannot_stop;
+};
 /// @brief Parameters of the run_out module
 struct Parameters
 {
@@ -74,22 +103,9 @@ struct Parameters
   double slowdown_deceleration_limit;  // [m/s²] minimum deceleration that can be applied
                                        // by the preventive slowdown
 
-  bool enable_passing_collisions;        // if true, a collision where ego arrives first is ignored
-  bool enable_passing_when_unavoidable;  // if true, ignore collision when ego arrives first (margin
-                                         // parameter is not considered) and cannot comfortably stop
-                                         // before the collision
-  double unavoidable_deceleration;  // [m/s²] deceleration used to determine if ego can stop before
-                                    // a collision
-  std::vector<double> passing_margin_ego_enter_times;  // [s] predicted times when ego starts
-                                                       // overlapping the path of the object
-  std::vector<double> passing_margin_time_margins;  // [s] margin values used such that ego needs to
-                                                    // enter the overlap before the object with this
-                                                    // much margin to decide to ignore the collision
-  double passing_max_overlap_duration;  // [s] the collision is not ignored if ego is predicted to
-                                        // stay on the object's path for longer than this duration
-  double ego_lateral_margin;            // [m] ego footprint lateral margin
-  double ego_longitudinal_margin;       // [m] ego footprint longitudinal margin
-  double collision_time_margin;         // [s] extra time margin to determine collisions
+  double ego_lateral_margin;                // [m] ego footprint lateral margin
+  double ego_longitudinal_margin;           // [m] ego footprint longitudinal margin
+  double collision_time_margin;             // [s] extra time margin to determine collisions
   double collision_time_overlap_tolerance;  // [s] when calculating overlap time intervals,
                                             // intervals are grouped if they are separated by less
                                             // than this tolerance value
@@ -99,9 +115,15 @@ struct Parameters
   double collision_opposite_direction_angle_threshold;  // [rad] threshold to determine if a
                                                         // collision is going in a direction
                                                         // opposite to the ego trajectory
+  IgnoreCollisionConditionsParameters ignore_collision_conditions;
   // object parameters
   std::vector<std::string> objects_target_labels;
   std::vector<ObjectParameters> object_parameters_per_label;
+
+  struct
+  {
+    std::string object_label;
+  } debug;
 
   /// @brief Get the parameter defined for a specific object label, or the default value if it was
   /// not specified
@@ -122,17 +144,24 @@ struct Parameters
   void initialize(rclcpp::Node & node, const std::string & ns)
   {
     using universe_utils::getOrDeclareParameter;
-    enable_passing_collisions = getOrDeclareParameter<bool>(node, ns + ".passing.enable");
-    enable_passing_when_unavoidable =
-      getOrDeclareParameter<bool>(node, ns + ".passing.enable_when_unavoidable");
-    unavoidable_deceleration =
-      getOrDeclareParameter<double>(node, ns + ".passing.unavoidable_deceleration");
-    passing_margin_ego_enter_times =
-      getOrDeclareParameter<std::vector<double>>(node, ns + ".passing.margin.ego_enter_times");
-    passing_margin_time_margins =
-      getOrDeclareParameter<std::vector<double>>(node, ns + ".passing.margin.time_margins");
-    passing_max_overlap_duration =
-      getOrDeclareParameter<double>(node, ns + ".passing.max_overlap_duration");
+    const auto ignore_collisions_ns = ns + ".collision.ignore_conditions";
+    ignore_collision_conditions.if_ego_arrives_first.enable =
+      getOrDeclareParameter<bool>(node, ignore_collisions_ns + ".if_ego_arrives_first.enable");
+    ignore_collision_conditions.if_ego_arrives_first.margin.ego_enter_times =
+      getOrDeclareParameter<std::vector<double>>(
+        node, ignore_collisions_ns + ".if_ego_arrives_first.margin.ego_enter_times");
+    ignore_collision_conditions.if_ego_arrives_first.margin.time_margins =
+      getOrDeclareParameter<std::vector<double>>(
+        node, ignore_collisions_ns + ".if_ego_arrives_first.margin.time_margins");
+    ignore_collision_conditions.if_ego_arrives_first.max_overlap_duration =
+      getOrDeclareParameter<double>(
+        node, ignore_collisions_ns + ".if_ego_arrives_first.max_overlap_duration");
+    ignore_collision_conditions.if_ego_arrives_first_and_cannot_stop.enable =
+      getOrDeclareParameter<bool>(
+        node, ignore_collisions_ns + ".if_ego_arrives_first_and_cannot_stop.enable");
+    ignore_collision_conditions.if_ego_arrives_first_and_cannot_stop.deceleration_limit =
+      getOrDeclareParameter<double>(
+        node, ignore_collisions_ns + ".if_ego_arrives_first_and_cannot_stop.deceleration_limit");
     stop_off_time_buffer = getOrDeclareParameter<double>(node, ns + ".stop.off_time_buffer");
     stop_on_time_buffer = getOrDeclareParameter<double>(node, ns + ".stop.on_time_buffer");
     stop_distance_buffer = getOrDeclareParameter<double>(node, ns + ".stop.distance_buffer");
@@ -198,6 +227,7 @@ struct Parameters
         get_object_parameter<bool>(
           node, ns, label, ".cut_predicted_paths.if_crossing_ego_from_behind");
     }
+    debug.object_label = getOrDeclareParameter<std::string>(node, ns + ".debug.object_label");
 
     max_history_duration = std::max(stop_off_time_buffer, stop_on_time_buffer);
   }
@@ -205,12 +235,24 @@ struct Parameters
   void update(const std::vector<rclcpp::Parameter> & params, const std::string & ns)
   {
     using universe_utils::updateParam;
-    updateParam(params, ns + ".passing.enable", enable_passing_collisions);
-    updateParam(params, ns + ".passing.enable_when_unavoidable", enable_passing_when_unavoidable);
-    updateParam(params, ns + ".passing.unavoidable_deceleration", unavoidable_deceleration);
-    updateParam(params, ns + ".passing.margin.ego_enter_times", passing_margin_ego_enter_times);
-    updateParam(params, ns + ".passing.margin.time_margins", passing_margin_time_margins);
-    updateParam(params, ns + ".passing.max_overlap_duration", passing_max_overlap_duration);
+    updateParam(
+      params, ns + ".collision.ignore_conditions.if_ego_arrives_first.enable",
+      ignore_collision_conditions.if_ego_arrives_first.enable);
+    updateParam(
+      params, ns + ".collision.ignore_conditions.if_ego_arrives_first.margin.ego_enter_times",
+      ignore_collision_conditions.if_ego_arrives_first.margin.ego_enter_times);
+    updateParam(
+      params, ns + ".collision.ignore_conditions.if_ego_arrives_first.margin.time_margins",
+      ignore_collision_conditions.if_ego_arrives_first.margin.time_margins);
+    updateParam(
+      params, ns + ".collision.ignore_conditions.if_ego_arrives_first.max_overlap_duration",
+      ignore_collision_conditions.if_ego_arrives_first.max_overlap_duration);
+    updateParam(
+      params, ns + ".collision.if_ego_arrives_first_and_cannot_stop.enable",
+      ignore_collision_conditions.if_ego_arrives_first_and_cannot_stop.enable);
+    updateParam(
+      params, ns + ".collision.if_ego_arrives_first_and_cannot_stop.deceleration_limit",
+      ignore_collision_conditions.if_ego_arrives_first_and_cannot_stop.deceleration_limit);
     updateParam(params, ns + ".slowdown.on_time_buffer", slowdown_on_time_buffer);
     updateParam(params, ns + ".slowdown.off_time_buffer", slowdown_off_time_buffer);
     updateParam(params, ns + ".slowdown.distance_buffer", slowdown_distance_buffer);
@@ -278,6 +320,7 @@ struct Parameters
         params, ns + str + ".cut_predicted_paths.linestring_types",
         object_parameters_per_label[label].cut_linestring_types);
     }
+    updateParam(params, ns + ".debug.object_label", debug.object_label);
 
     max_history_duration = std::max(stop_off_time_buffer, stop_on_time_buffer);
   }
@@ -307,7 +350,35 @@ struct Parameters
         return "DEFAULT";
     }
   }
-  std::vector<uint8_t> target_labels() const
+  /// @brief get the label corresponding to the given string
+  static autoware_perception_msgs::msg::ObjectClassification::_label_type string_to_label(
+    const std::string & label)
+  {
+    using autoware_perception_msgs::msg::ObjectClassification;
+    if (label == "CAR") {
+      return ObjectClassification::CAR;
+    }
+    if (label == "TRUCK") {
+      return ObjectClassification::TRUCK;
+    }
+    if (label == "BICYCLE") {
+      return ObjectClassification::BICYCLE;
+    }
+    if (label == "BUS") {
+      return ObjectClassification::BUS;
+    }
+    if (label == "MOTORCYCLE") {
+      return ObjectClassification::MOTORCYCLE;
+    }
+    if (label == "PEDESTRIAN") {
+      return ObjectClassification::PEDESTRIAN;
+    }
+    if (label == "TRAILER") {
+      return ObjectClassification::TRAILER;
+    }
+    return ObjectClassification::UNKNOWN;
+  }
+  [[nodiscard]] std::vector<uint8_t> target_labels() const
   {
     using autoware_perception_msgs::msg::ObjectClassification;
     std::vector<uint8_t> labels;

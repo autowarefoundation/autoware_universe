@@ -171,11 +171,13 @@ VelocityPlanningResult RunOutModule::plan(
     planner_data->objects, ego_footprint, decisions_tracker_, filtering_data, params_);
   time_keeper_->end_track("filter_objects()");
   time_keeper_->start_track("calc_collisions()");
-  const auto min_stop_time =
-    planner_data->current_odometry.twist.twist.linear.x / params_.unavoidable_deceleration;
+  params_.ignore_collision_conditions.if_ego_arrives_first_and_cannot_stop
+    .calculated_stop_time_limit =
+    planner_data->current_odometry.twist.twist.linear.x /
+    params_.ignore_collision_conditions.if_ego_arrives_first_and_cannot_stop.deceleration_limit;
   run_out::calculate_collisions(
     filtered_objects, ego_footprint, filtering_data,
-    planner_data->vehicle_info_.max_longitudinal_offset_m, min_stop_time, params_);
+    planner_data->vehicle_info_.max_longitudinal_offset_m, params_);
   time_keeper_->end_track("calc_collisions()");
   time_keeper_->start_track("calc_decisions()");
   const auto keep_stop_distance_range =
@@ -208,9 +210,13 @@ VelocityPlanningResult RunOutModule::plan(
     result, smoothed_trajectory_points, planner_data->vehicle_info_.max_longitudinal_offset_m));
   virtual_wall_publisher_->publish(virtual_wall_marker_creator.create_markers(now));
   if (debug_publisher_->get_subscription_count() > 0) {
+    const auto & filtering_data_to_publish =
+      filtering_data[run_out::Parameters::string_to_label(params_.debug.object_label)];
     debug_publisher_->publish(run_out::make_debug_markers(
       ego_footprint, filtered_objects, decisions_tracker_, smoothed_trajectory_points,
-      min_stop_time, filtering_data[autoware_perception_msgs::msg::ObjectClassification::BICYCLE]));
+      params_.ignore_collision_conditions.if_ego_arrives_first_and_cannot_stop
+        .calculated_stop_time_limit,
+      filtering_data_to_publish));
   }
   publish_debug_trajectory(smoothed_trajectory_points, result);
   objects_of_interest_marker_interface_->publishMarkerArray();

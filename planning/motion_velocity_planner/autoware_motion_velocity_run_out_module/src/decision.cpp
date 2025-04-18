@@ -95,7 +95,7 @@ bool condition_to_stop(
                 << "s buffer)";
     return false;
   }
-  if (current_collision->type == pass_first_collision) {
+  if (current_collision->type == ignored_collision) {
     explanation << "ignoring passing collision";
   }
   return false;
