@@ -235,7 +235,7 @@ std::vector<Object> prepare_dynamic_objects(
 {
   std::vector<Object> filtered_objects;
   const auto target_labels = params.target_labels();
-  const auto ego_rear_segment = ego_trajectory.get_rear_segment();
+  const auto ego_rear_segment = ego_trajectory.get_rear_segment(0);
   for (const auto & object : objects) {
     Object filtered_object;
     filtered_object.object = object;

@@ -145,7 +145,7 @@ FilteringDataPerLabel calculate_filtering_data(
   for (const auto label : target_labels) {
     if (params_per_label[label].cut_if_crossing_ego_from_behind) {
       data_per_label[label].cut_predicted_paths_segments.push_back(
-        ego_footprint.get_rear_segment());
+        ego_footprint.get_rear_segment(0));
     }
   }
   const auto lanelets_in_range = map_ptr->laneletLayer.search(bounding_box);

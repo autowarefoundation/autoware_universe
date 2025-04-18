@@ -35,14 +35,17 @@ namespace autoware::motion_velocity_planner::run_out
 void prepare_trajectory_footprint_rtree(TrajectoryCornerFootprint & footprint)
 {
   std::vector<FootprintSegmentNode> nodes;
-  nodes.emplace_back(footprint.get_rear_segment(), std::make_pair(rear, 0UL));
-  nodes.emplace_back(footprint.get_front_segment(), std::make_pair(front, 0UL));
+  nodes.emplace_back(footprint.get_rear_segment(0), std::make_pair(rear, 0UL));
+  nodes.emplace_back(footprint.get_front_segment(0), std::make_pair(front, 0UL));
   for (const auto corner : {front_left, front_right, rear_left, rear_right}) {
     const auto & ls = footprint.corner_footprint.corner_linestrings[corner];
     for (auto i = 0UL; i + 1 < ls.size(); ++i) {
       nodes.emplace_back(universe_utils::Segment2d{ls[i], ls[i + 1]}, std::make_pair(corner, i));
     }
   }
+  const auto max_index = footprint.ego_trajectory.size() - 1UL;
+  nodes.emplace_back(footprint.get_rear_segment(max_index), std::make_pair(rear, max_index));
+  nodes.emplace_back(footprint.get_front_segment(max_index), std::make_pair(front, max_index));
   footprint.segments_rtree = FootprintSegmentRtree(nodes);
   footprint.front_polygons_rtree = PolygonRtree(footprint.front_polygons);
   footprint.rear_polygons_rtree = PolygonRtree(footprint.rear_polygons);

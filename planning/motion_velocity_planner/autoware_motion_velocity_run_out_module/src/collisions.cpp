@@ -259,10 +259,10 @@ std::vector<TimeOverlapIntervalPair> calculate_overlap_intervals(
     (first_position == inside_rear_polygon) || (first_position == inside_both_polygons);
   size_t entering_intersection_id = 0UL;
   const auto update_current_overlaps = [&](const IntersectionPosition & position) {
-    if (position == front_left || position == front_right) {
+    if (position == front_left || position == front_right || position == front) {
       overlap_front = !overlap_front;
     }
-    if (position == rear_left || position == rear_right) {
+    if (position == rear_left || position == rear_right || position == rear) {
       overlap_rear = !overlap_rear;
     }
   };

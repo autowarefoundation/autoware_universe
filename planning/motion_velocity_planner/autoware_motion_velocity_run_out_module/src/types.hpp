@@ -152,19 +152,19 @@ struct TrajectoryCornerFootprint
   double max_longitudinal_offset;  // [m] distance between baselink and the front of the vehicle
   std::vector<autoware_planning_msgs::msg::TrajectoryPoint> ego_trajectory;
 
-  /// @brief get the segment from rear left corner to rear right corner
-  [[nodiscard]] universe_utils::Segment2d get_rear_segment() const
+  /// @brief get the rear footprint segment of the given index
+  [[nodiscard]] universe_utils::Segment2d get_rear_segment(const size_t index) const
   {
     return {
-      corner_footprint.corner_linestrings[rear_left].front(),
-      corner_footprint.corner_linestrings[rear_right].front()};
+      corner_footprint.corner_linestrings[rear_left][index],
+      corner_footprint.corner_linestrings[rear_right][index]};
   }
-  /// @brief get the segment from front left corner to front right corner
-  [[nodiscard]] universe_utils::Segment2d get_front_segment() const
+  /// @brief get the front footprint segment of the given index
+  [[nodiscard]] universe_utils::Segment2d get_front_segment(const size_t index) const
   {
     return {
-      corner_footprint.corner_linestrings[front_left].front(),
-      corner_footprint.corner_linestrings[front_right].front()};
+      corner_footprint.corner_linestrings[front_left][index],
+      corner_footprint.corner_linestrings[front_right][index]};
   }
 };
 
