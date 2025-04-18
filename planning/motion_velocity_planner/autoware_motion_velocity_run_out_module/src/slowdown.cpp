@@ -121,17 +121,16 @@ std::optional<SlowdownInterval> calculate_slowdown_interval(
   const auto min_slow_arc_length = planner_data.current_odometry.twist.twist.linear.x * 0.1;
   auto from_arc_length = std::max(
     min_slow_arc_length, motion_utils::calcSignedArcLength(trajectory, 0, *p_collision) -
-                           params.preventive_slowdown_distance_buffer);
+                           params.slowdown_distance_buffer);
   const auto p_slowdown = motion_utils::calcInterpolatedPose(trajectory, from_arc_length).position;
   // safe velocity that guarantees we can smoothly stop before the collision
   const auto safe_velocity = std::sqrt(
-    2.0 * -planner_data.velocity_smoother_->getMinDecel() *
-    params.preventive_slowdown_distance_buffer);
+    2.0 * -planner_data.velocity_smoother_->getMinDecel() * params.slowdown_distance_buffer);
   // velocity limit we can reach by applying minimum deceleration until the slowdown point
   const auto smooth_velocity = std::sqrt(
     planner_data.current_odometry.twist.twist.linear.x *
       planner_data.current_odometry.twist.twist.linear.x -
-    2.0 * params.preventive_slowdown_deceleration_limit * from_arc_length);
+    2.0 * params.slowdown_deceleration_limit * from_arc_length);
   const SlowdownInterval interval{
     p_slowdown, *p_collision, std::max({0.0, safe_velocity, smooth_velocity})};
   current_decision.slowdown_interval = interval;

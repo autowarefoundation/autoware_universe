@@ -153,14 +153,14 @@ bool condition_to_slowdown(
   }
   const auto consecutive_time_with_collision =
     calculate_consecutive_time_with_collision(history, current_time);
-  if (consecutive_time_with_collision >= params.preventive_slowdown_on_time_buffer) {
+  if (consecutive_time_with_collision >= params.slowdown_on_time_buffer) {
     explanation << "preventive slowdown since finding collisions for "
-                << consecutive_time_with_collision << "s ("
-                << params.preventive_slowdown_on_time_buffer << "s buffer)";
+                << consecutive_time_with_collision << "s (" << params.slowdown_on_time_buffer
+                << "s buffer)";
     return true;
   }
   explanation << "no slowdown since only finding collisions for " << consecutive_time_with_collision
-              << "s (" << params.preventive_slowdown_on_time_buffer << "s buffer)";
+              << "s (" << params.slowdown_on_time_buffer << "s buffer)";
   return false;
 }
 
@@ -181,14 +181,14 @@ bool condition_to_keep_slowdown(
   // -1 because the reverse iterator has an offset compared to base iterator
   const auto i = std::distance(history.decisions.begin(), most_recent_collision_it.base()) - 1;
   const auto time_since_last_collision = current_time.seconds() - history.times[i];
-  if (time_since_last_collision < params.preventive_slowdown_off_time_buffer) {
+  if (time_since_last_collision < params.slowdown_off_time_buffer) {
     explanation << "keep slowdown since last collision found " << time_since_last_collision
-                << "s ago (" << params.preventive_slowdown_off_time_buffer << "s buffer)"
+                << "s ago (" << params.slowdown_off_time_buffer << "s buffer)"
                 << most_recent_collision_it->type;
     return true;
   }
   explanation << "remove slowdown since last collision found " << time_since_last_collision
-              << "s ago (" << params.preventive_slowdown_off_time_buffer << "s buffer)";
+              << "s ago (" << params.slowdown_off_time_buffer << "s buffer)";
   return false;
 }
 

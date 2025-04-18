@@ -65,14 +65,14 @@ struct Parameters
   double keep_stop_condition_distance;  // [m] distance along the ego trajectory where any collision
                                         // will make us keep a stop decision
 
-  double preventive_slowdown_on_time_buffer;  // [s] successive collision detection time required to
-                                              // start the slowdown decision
-  double preventive_slowdown_off_time_buffer;     // [s] successive non-collision detection time
-                                                  // required to remove the slowdown decision
-  double preventive_slowdown_distance_buffer;     // [m] longitudinal distance between the collision
-                                                  // and the slowdown positions
-  double preventive_slowdown_deceleration_limit;  // [m/s²] minimum deceleration that can be applied
-                                                  // by the preventive slowdown
+  double slowdown_on_time_buffer;      // [s] successive collision detection time required to
+                                       // start the slowdown decision
+  double slowdown_off_time_buffer;     // [s] successive non-collision detection time
+                                       // required to remove the slowdown decision
+  double slowdown_distance_buffer;     // [m] longitudinal distance between the collision
+                                       // and the slowdown positions
+  double slowdown_deceleration_limit;  // [m/s²] minimum deceleration that can be applied
+                                       // by the preventive slowdown
 
   bool enable_passing_collisions;        // if true, a collision where ego arrives first is ignored
   bool enable_passing_when_unavoidable;  // if true, ignore collision when ego arrives first (margin
@@ -140,14 +140,13 @@ struct Parameters
       getOrDeclareParameter<double>(node, ns + ".stop.keep_condition.time");
     keep_stop_condition_distance =
       getOrDeclareParameter<double>(node, ns + ".stop.keep_condition.distance");
-    preventive_slowdown_off_time_buffer =
-      getOrDeclareParameter<double>(node, ns + ".preventive_slowdown.off_time_buffer");
-    preventive_slowdown_on_time_buffer =
-      getOrDeclareParameter<double>(node, ns + ".preventive_slowdown.on_time_buffer");
-    preventive_slowdown_distance_buffer =
-      getOrDeclareParameter<double>(node, ns + ".preventive_slowdown.distance_buffer");
-    preventive_slowdown_deceleration_limit =
-      getOrDeclareParameter<double>(node, ns + ".preventive_slowdown.deceleration_limit");
+    slowdown_off_time_buffer =
+      getOrDeclareParameter<double>(node, ns + ".slowdown.off_time_buffer");
+    slowdown_on_time_buffer = getOrDeclareParameter<double>(node, ns + ".slowdown.on_time_buffer");
+    slowdown_distance_buffer =
+      getOrDeclareParameter<double>(node, ns + ".slowdown.distance_buffer");
+    slowdown_deceleration_limit =
+      getOrDeclareParameter<double>(node, ns + ".slowdown.deceleration_limit");
     ego_lateral_margin = getOrDeclareParameter<double>(node, ns + ".ego.lateral_margin");
     ego_longitudinal_margin = getOrDeclareParameter<double>(node, ns + ".ego.longitudinal_margin");
     collision_time_margin = getOrDeclareParameter<double>(node, ns + ".collision.time_margin");
@@ -212,15 +211,10 @@ struct Parameters
     updateParam(params, ns + ".passing.margin.ego_enter_times", passing_margin_ego_enter_times);
     updateParam(params, ns + ".passing.margin.time_margins", passing_margin_time_margins);
     updateParam(params, ns + ".passing.max_overlap_duration", passing_max_overlap_duration);
-    updateParam(
-      params, ns + ".preventive_slowdown.on_time_buffer", preventive_slowdown_on_time_buffer);
-    updateParam(
-      params, ns + ".preventive_slowdown.off_time_buffer", preventive_slowdown_off_time_buffer);
-    updateParam(
-      params, ns + ".preventive_slowdown.distance_buffer", preventive_slowdown_distance_buffer);
-    updateParam(
-      params, ns + ".preventive_slowdown.deceleration_limit",
-      preventive_slowdown_deceleration_limit);
+    updateParam(params, ns + ".slowdown.on_time_buffer", slowdown_on_time_buffer);
+    updateParam(params, ns + ".slowdown.off_time_buffer", slowdown_off_time_buffer);
+    updateParam(params, ns + ".slowdown.distance_buffer", slowdown_distance_buffer);
+    updateParam(params, ns + ".slowdown.deceleration_limit", slowdown_deceleration_limit);
     updateParam(params, ns + ".stop.on_time_buffer", stop_on_time_buffer);
     updateParam(params, ns + ".stop.off_time_buffer", stop_off_time_buffer);
     updateParam(params, ns + ".stop.distance_buffer", stop_distance_buffer);

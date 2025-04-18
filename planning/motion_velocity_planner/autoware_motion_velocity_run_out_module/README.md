@@ -142,8 +142,8 @@ and first check if it satisfies the following conditions to stop:
 
 If the condition to stop is not met, we check the following conditions to slowdown as follows:
 
-- if the current collision type is `collision` and collisions with the object have been identified for a consecutive duration of at least `preventive_slowdown.on_time_buffer` seconds.
-- if the previous decision was `slowdown` and the time since the last identified collision with the object was less than `preventive_slowdown.off_time_buffer` seconds ago.
+- if the current collision type is `collision` and collisions with the object have been identified for a consecutive duration of at least `slowdown.on_time_buffer` seconds.
+- if the previous decision was `slowdown` and the time since the last identified collision with the object was less than `slowdown.off_time_buffer` seconds ago.
 
 ![decisions](./docs/decisions.png)
 
@@ -154,12 +154,12 @@ The decision table can be visualized on the debug markers with the `decisions` n
 Finally, for each object, we calculate how the velocity profile will be modified based on the decision made:
 
 - `stop`: insert a `0` velocity ahead of the predicted collision point by the distance set in the `stop.distance_buffer` parameter.
-- `slowdown`: insert a $V_{slow}$ velocity between the collision point and the point ahead of collision point by the distance set in the `preventive_slowdown.distance_buffer` parameter.
+- `slowdown`: insert a $V_{slow}$ velocity between the collision point and the point ahead of collision point by the distance set in the `slowdown.distance_buffer` parameter.
   - $V_{slow}$ is calculated as the maximum between the safe velocity and the comfortable velocity.
     - safe velocity: velocity required to be able to stop over the `distance_buffer` assuming a deceleration as set by the
-      `preventive_slowdown.safe_deceleration` parameter.
+      `slowdown.safe_deceleration` parameter.
     - comfortable velocity: velocity ego would reached assuming it constantly decelerates at the
-      `preventive_slowdown.comfortable_deceleration` parameter.
+      `slowdown.comfortable_deceleration` parameter.
 
 The slowdowns and stops inserted in the trajectory are visualized with the virtual walls.
 
@@ -203,7 +203,7 @@ Higher values of this parameter will make it more likely to detect a collision a
 
 ### Preventive slowdown parameters
 
-{{ json_to_markdown("planning/motion_velocity_planner/autoware_motion_velocity_run_out_module/schema/sub/preventive_slowdown.sub_schema.json") }}
+{{ json_to_markdown("planning/motion_velocity_planner/autoware_motion_velocity_run_out_module/schema/sub/slowdown.sub_schema.json") }}
 
 ### Stop parameters
 

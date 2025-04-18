@@ -23,8 +23,8 @@
           "description": "[s] When calculating overlap time intervals, intervals are grouped if they are separated by less than this tolerance value.",
           "default": 0.1
         },
-        "preventive_slowdown": {
-          "$ref": "sub/preventive_slowdown.sub_schema.json#/definitions/preventive_slowdown"
+        "slowdown": {
+          "$ref": "sub/slowdown.sub_schema.json#/definitions/slowdown"
         },
         "stop": {
           "$ref": "sub/stop.sub_schema.json#/definitions/stop"
@@ -43,7 +43,7 @@
         "ego_time_interval_expansion",
         "collision_time_margin",
         "time_overlap_tolerance",
-        "preventive_slowdown",
+        "slowdown",
         "stop",
         "passing",
         "ego",

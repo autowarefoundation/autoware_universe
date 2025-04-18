@@ -3,7 +3,7 @@
   "title": "Run Out module configuration for the preventive slowdown feature",
   "type": "object",
   "definitions": {
-    "preventive_slowdown": {
+    "slowdown": {
       "type": "object",
       "description": "Parameters for comfortable slowdown behavior.",
       "properties": {
