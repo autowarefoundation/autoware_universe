@@ -2,6 +2,16 @@
 Changelog for package autoware_behavior_velocity_traffic_light_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(traffic_light): restart suppression at traffic light stop_point (`#10451 <https://github.com/autowarefoundation/autoware_universe/issues/10451>`_)
+  * feat: restart suppression at traffic light stop_point
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, eiki
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

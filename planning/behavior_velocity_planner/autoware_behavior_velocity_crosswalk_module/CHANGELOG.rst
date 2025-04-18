@@ -2,6 +2,12 @@
 Changelog for package autoware_behavior_velocity_crosswalk_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(crosswalk_module): consider objects on crosswalk when pedestrian traffic light is red (`#10332 <https://github.com/autowarefoundation/autoware_universe/issues/10332>`_)
+* Contributors: Mehmet Dogru, Ryohsuke Mitsudome
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

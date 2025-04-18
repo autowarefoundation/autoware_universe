@@ -2,6 +2,9 @@
 Changelog for package autoware_cuda_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+
 0.43.0 (2025-03-21)
 -------------------
 * fix: update tool version
