@@ -196,8 +196,9 @@ void ObstacleSlowDownModule::init(rclcpp::Node & node, const std::string & modul
   slow_down_planning_param_ = SlowDownPlanningParam(node);
   obstacle_filtering_param_ = ObstacleFilteringParam(node);
 
-  const double mask_lat_margin = get_or_declare_parameter<double>(node, "pointcloud.mask_lat_margin");
-  
+  const double mask_lat_margin =
+    get_or_declare_parameter<double>(node, "pointcloud.mask_lat_margin");
+
   if (mask_lat_margin < obstacle_filtering_param_.max_lat_margin) {
     throw std::invalid_argument("point-cloud mask narrower than stop margin");
   }
