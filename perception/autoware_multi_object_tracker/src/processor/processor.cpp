@@ -122,7 +122,8 @@ void TrackerProcessor::spawn(
       tracker->initializeExistenceProbabilities(
         new_object.channel_index, new_object.existence_probability);
     } else {
-      tracker->initializeExistenceProbabilities(new_object.channel_index, 0.5);
+      tracker->initializeExistenceProbabilities(
+        new_object.channel_index, types::default_existence_probability);
     }
 
     // Update the tracker with the new object
@@ -162,7 +163,7 @@ void TrackerProcessor::prune(const rclcpp::Time & time)
   // Check tracker lifetime: if the tracker is old, delete it
   removeOldTracker(time);
   // Check tracker overlap: if the tracker is overlapped, delete the one with lower IOU
-  removeOverlappedTracker(time);
+  mergeOverlappedTracker(time);
 }
 
 void TrackerProcessor::removeOldTracker(const rclcpp::Time & time)
@@ -182,7 +183,7 @@ void TrackerProcessor::removeOldTracker(const rclcpp::Time & time)
 }
 
 // This function removes overlapped trackers based on distance and IoU criteria
-void TrackerProcessor::removeOverlappedTracker(const rclcpp::Time & time)
+void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -231,7 +232,25 @@ void TrackerProcessor::removeOverlappedTracker(const rclcpp::Time & time)
       const auto iou = shapes::get2dIoU(object2, object1, min_union_iou_area);
 
       // check if object2 should be removed
-      if (canRemoveOverlappedTarget(*(*itr2), *(*itr1), time, iou)) {
+      if (canMergeOverlappedTarget(*(*itr2), *(*itr1), time, iou)) {
+        // debug message of probabilities
+        float prob1 = (*itr1)->getTotalExistenceProbability();
+        float prob2 = (*itr2)->getTotalExistenceProbability();
+
+        // add existence probability to the tracker 1
+        (*itr1)->updateTotalExistenceProbability((*itr2)->getTotalExistenceProbability());
+        (*itr1)->updateExistenceProbabilities((*itr2)->getExistenceProbabilityVector());
+
+        // debug message of probabilities
+        float prob1_after = (*itr1)->getTotalExistenceProbability();
+        std::cout << "Merging trackers: "
+                  << "Tracker 1 UUID: " << (*itr1)->getUuidString().substr(0, 6)
+                  << " class: " << std::to_string((*itr1)->getHighestProbLabel())
+                  << ", Tracker 2 UUID: " << (*itr2)->getUuidString().substr(0, 6)
+                  << " class: " << std::to_string((*itr2)->getHighestProbLabel())
+                  << ", Probabilities: " << prob1 << " -> " << prob1_after << ", ( + " << prob2
+                  << "), Distance: " << distance << ", IoU: " << iou << std::endl;
+
         // Remove from original list_tracker
         itr2 = list_tracker_.erase(itr2);
         --itr2;
@@ -240,7 +259,7 @@ void TrackerProcessor::removeOverlappedTracker(const rclcpp::Time & time)
   }
 }
 
-bool TrackerProcessor::canRemoveOverlappedTarget(
+bool TrackerProcessor::canMergeOverlappedTarget(
   const Tracker & target, const Tracker & other, const rclcpp::Time & time, const double iou) const
 {
   // if the other is not confident, do not remove the target

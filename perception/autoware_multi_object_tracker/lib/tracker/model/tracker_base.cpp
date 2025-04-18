@@ -25,13 +25,20 @@
 namespace
 {
 float updateProbability(
-  const float & prior, const float & true_positive, const float & false_positive)
+  const float & prior, const float & true_positive, const float & false_positive,
+  const bool normalize = true)
 {
-  constexpr float max_updated_probability = 0.999;
-  constexpr float min_updated_probability = 0.100;
-  const float probability =
+  float probability =
     (prior * true_positive) / (prior * true_positive + (1 - prior) * false_positive);
-  return std::clamp(probability, min_updated_probability, max_updated_probability);
+
+  if (normalize) {
+    // Normalize the probability to [0.1, 0.999]
+    constexpr float max_updated_probability = 0.999;
+    constexpr float min_updated_probability = 0.100;
+    probability = std::clamp(probability, min_updated_probability, max_updated_probability);
+  }
+
+  return probability;
 }
 float decayProbability(const float & prior, const float & delta_time)
 {
@@ -66,17 +73,34 @@ Tracker::Tracker(const rclcpp::Time & time, const types::DynamicObject & detecte
 void Tracker::initializeExistenceProbabilities(
   const uint & channel_index, const float & existence_probability)
 {
-  // The initial existence probability is modeled
-  // since the incoming object's existence probability is not reliable
-  // existence probability on each channel
-  constexpr float initial_existence_probability = 0.1;
-  existence_probabilities_[channel_index] = initial_existence_probability;
-
-  // total existence probability
+  // The initial existence probability is normalized to [0.1, 0.999]
+  // to avoid the existence probability being too low or too high
+  // and to avoid the existence probability being too close to 0 or 1
   constexpr float max_probability = 0.999;
   constexpr float min_probability = 0.100;
-  total_existence_probability_ =
+  const float normalized_existence_probability =
     std::clamp(existence_probability, min_probability, max_probability);
+
+  // existence probability on each channel
+  existence_probabilities_[channel_index] = normalized_existence_probability;
+
+  // total existence probability
+  total_existence_probability_ = normalized_existence_probability;
+}
+
+void Tracker::updateTotalExistenceProbability(const float & existence_probability)
+{
+  total_existence_probability_ =
+    updateProbability(total_existence_probability_, existence_probability, 0.2);
+}
+
+void Tracker::updateExistenceProbabilities(std::vector<float> existence_probabilities)
+{
+  // existence probability on each channel
+  for (size_t i = 0; i < existence_probabilities.size(); ++i) {
+    existence_probabilities_[i] =
+      updateProbability(existence_probabilities_[i], existence_probabilities[i], 0.2, false);
+  }
 }
 
 bool Tracker::updateWithMeasurement(
