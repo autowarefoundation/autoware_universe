@@ -57,9 +57,11 @@ OperationModeTransitionManager::OperationModeTransitionManager(const rclcpp::Nod
     const double TIMEOUT_MARGIN = 0.5;
     if (transition_timeout_ < stable_duration + TIMEOUT_MARGIN) {
       transition_timeout_ = stable_duration + TIMEOUT_MARGIN;
-      RCLCPP_WARN(
-        get_logger(), "`transition_timeout` must be somewhat larger than `stable_check.duration`");
-      RCLCPP_WARN_STREAM(get_logger(), "transition_timeout is set to " << transition_timeout_);
+      RCLCPP_WARN_THROTTLE(
+        get_logger(), *get_clock(), 3000,
+        "`transition_timeout` must be somewhat larger than `stable_check.duration`");
+      RCLCPP_WARN_STREAM_THROTTLE(
+        get_logger(), *get_clock(), 3000, "transition_timeout is set to " << transition_timeout_);
     }
   }
 
