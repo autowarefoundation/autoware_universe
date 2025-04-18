@@ -2,6 +2,21 @@
 Changelog for package autoware_control_validator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(control_validator): add over run estimation feature (`#10422 <https://github.com/autowarefoundation/autoware_universe/issues/10422>`_)
+* refactor(control validaor): refactor control_validator (`#10363 <https://github.com/autowarefoundation/autoware_universe/issues/10363>`_)
+* fix(control_validator): memory-related crash when processing large trajectories (`#10372 <https://github.com/autowarefoundation/autoware_universe/issues/10372>`_)
+  * fix(control_validator): momory
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(control validator): combine callback functions to fix error count increment bug (`#10355 <https://github.com/autowarefoundation/autoware_universe/issues/10355>`_)
+* fix(control_validator): fix sign miss and add code test (`#10341 <https://github.com/autowarefoundation/autoware_universe/issues/10341>`_)
+* feat(control_validator)!: add acceleration check (`#10326 <https://github.com/autowarefoundation/autoware_universe/issues/10326>`_)
+* Contributors: Ryohsuke Mitsudome, Shumpei Wakabayashi, Yuki TAKAGI
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

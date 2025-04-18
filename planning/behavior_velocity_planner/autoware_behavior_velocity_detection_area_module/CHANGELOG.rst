@@ -2,6 +2,12 @@
 Changelog for package autoware_behavior_velocity_detection_area_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(detection_area): integrate RTC feature (`#10376 <https://github.com/autowarefoundation/autoware_universe/issues/10376>`_)
+* Contributors: Ryohsuke Mitsudome, Satoshi OTA
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

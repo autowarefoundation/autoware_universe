@@ -2,6 +2,17 @@
 Changelog for package autoware_path_optimizer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_path_optimizer): created the schema file,updated the readme file (`#10123 <https://github.com/autowarefoundation/autoware_universe/issues/10123>`_)
+* build(autoware_path_optimizer): fix missing diagnostic_updater dependency (`#10478 <https://github.com/autowarefoundation/autoware_universe/issues/10478>`_)
+* fix(autoware_path_optimizer): incorrect application of input velocity due to badly mapping output trajectory to input trajectory (`#10403 <https://github.com/autowarefoundation/autoware_universe/issues/10403>`_)
+  * Changes for proper input velocity application
+  * fix
+  ---------
+* Contributors: Arjun Jagdish Ram, Esteve Fernandez, Ryohsuke Mitsudome, Vishal Chauhan
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

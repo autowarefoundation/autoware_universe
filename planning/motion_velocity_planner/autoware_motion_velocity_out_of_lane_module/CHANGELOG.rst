@@ -2,6 +2,72 @@
 Changelog for package autoware_motion_velocity_out_of_lane_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(out_of_lane): implement min duration to activate stop action (`#10448 <https://github.com/autowarefoundation/autoware_universe/issues/10448>`_)
+  * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)
+  not sync github-release
+  * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)
+  not sync github-release
+  * maintain a buffer of slowdown poses and use nearest one
+  * fix duration check condition
+  * implement stop pose activation time buffer
+  * refactor code to avoid reduce loops
+  * fix logic
+  * use different ttc threshold value once stop decision is made
+  * rename parameter
+  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)"
+  This reverts commit 871a8540ade845c7c9a193029d407b411a4d685b.
+  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)"
+  This reverts commit 871a8540ade845c7c9a193029d407b411a4d685b.
+  * fix logic to get nearest slowdown pose
+  * fix merge errors
+  * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)
+  not sync github-release
+  * maintain a buffer of slowdown poses and use nearest one
+  * fix duration check condition
+  * rename parameter
+  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)"
+  This reverts commit 871a8540ade845c7c9a193029d407b411a4d685b.
+  * fix logic to get nearest slowdown pose
+  * initialize struct member
+  * remove obsolete lanelet selection logic
+  * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)
+  not sync github-release
+  * use different ttc threshold value once stop decision is made
+  * fix format
+  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)"
+  This reverts commit 871a8540ade845c7c9a193029d407b411a4d685b.
+  * fix spelling
+  ---------
+  Co-authored-by: Yutaka Kondo <yutaka.kondo@youtalk.jp>
+  Co-authored-by: GitHub Action <action@github.com>
+* feat(out_of_lane): add ttc threshold for releasing stop decision (`#10447 <https://github.com/autowarefoundation/autoware_universe/issues/10447>`_)
+  * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)
+  not sync github-release
+  * use different ttc threshold value once stop decision is made
+  * fix format
+  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)"
+  This reverts commit 871a8540ade845c7c9a193029d407b411a4d685b.
+  * fix spelling
+  ---------
+  Co-authored-by: Yutaka Kondo <yutaka.kondo@youtalk.jp>
+* feat(out_of_lane): revise logic for using previous stop pose (`#10446 <https://github.com/autowarefoundation/autoware_universe/issues/10446>`_)
+  * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)
+  not sync github-release
+  * maintain a buffer of slowdown poses and use nearest one
+  * fix duration check condition
+  * rename parameter
+  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)"
+  This reverts commit 871a8540ade845c7c9a193029d407b411a4d685b.
+  * fix logic to get nearest slowdown pose
+  * initialize struct member
+  ---------
+  Co-authored-by: Yutaka Kondo <yutaka.kondo@youtalk.jp>
+* chore(motion_velocity_planner): move common and node packages to core (`#10367 <https://github.com/autowarefoundation/autoware_universe/issues/10367>`_)
+* Contributors: Maxime CLEMENT, Ryohsuke Mitsudome, mkquda
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

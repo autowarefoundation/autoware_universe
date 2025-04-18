@@ -2,6 +2,15 @@
 Changelog for package tier4_traffic_light_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(build_depends_humble.repos): update `autoware_cmake` to address `#10410 <https://github.com/autowarefoundation/autoware_universe/issues/10410>`_ (`#10416 <https://github.com/autowarefoundation/autoware_universe/issues/10416>`_)
+  * remove todo
+  * update autoware_cmake
+  ---------
+* Contributors: Ryohsuke Mitsudome, Yutaka Kondo
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

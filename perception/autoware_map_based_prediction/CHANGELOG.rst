@@ -2,6 +2,12 @@
 Changelog for package autoware_map_based_prediction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(map_based_prediction): add diagnostic handler to warn the processing time excess (`#10219 <https://github.com/autowarefoundation/autoware_universe/issues/10219>`_)
+* Contributors: Kotaro Uetake, Ryohsuke Mitsudome
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

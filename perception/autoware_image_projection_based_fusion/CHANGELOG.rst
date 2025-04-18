@@ -2,6 +2,53 @@
 Changelog for package autoware_image_projection_based_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(autoware_image_projection_based_fusion): add missing params `common_param_path` when not use container (`#10499 <https://github.com/autowarefoundation/autoware_universe/issues/10499>`_)
+  add missing params common_param_path when not use container
+* feat(pointpainting_fusion): add diagnostics for processing time of pointpainting (`#10397 <https://github.com/autowarefoundation/autoware_universe/issues/10397>`_)
+  * add diagnostics for pointpainting
+  * add common params
+  * add schema for common param
+  * style(pre-commit): autofix
+  * include diagnostic_msgs
+  * fix typo
+  * fix stop watch recording name
+  * fix parameter and message
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(autoware_lidar_centerpoint): added the cuda_blackboard to centerpoint (`#9453 <https://github.com/autowarefoundation/autoware_universe/issues/9453>`_)
+  * feat: introduced the cuda transport layer (cuda blackboard) to centerpoint
+  * chore: fixed compilation issue on pointpainting
+  * fix: fixed compile errors in the ml models
+  * fix: fixed standalone non-composed launcher
+  * chore: ci/cd
+  * chore: clang tidy related fix
+  * chore: removed non applicable override (point painting does not support the blackboard yet)
+  * chore: temporarily ignoring warning until pointpainting also supports the blackboard
+  * chore: ignoring spell
+  * feat: removed the deprecated compatible subs option in the constructor
+  * chore: bump the cuda blackboard version in the build depends
+  * Update perception/autoware_image_projection_based_fusion/src/pointpainting_fusion/pointpainting_trt.cpp
+  Co-authored-by: badai nguyen  <94814556+badai-nguyen@users.noreply.github.com>
+  * Update perception/autoware_image_projection_based_fusion/src/pointpainting_fusion/pointpainting_trt.cpp
+  Co-authored-by: badai nguyen  <94814556+badai-nguyen@users.noreply.github.com>
+  ---------
+  Co-authored-by: Amadeusz Szymko <amadeusz.szymko.2@tier4.jp>
+  Co-authored-by: badai nguyen <94814556+badai-nguyen@users.noreply.github.com>
+* chore(localization, perception): remove koji minoda as maintainer from multiple packages (`#10359 <https://github.com/autowarefoundation/autoware_universe/issues/10359>`_)
+  fix: remove Koji Minoda as maintainer from multiple package.xml files
+* fix(autoware_image_projection_based_fusion): unintended new container behavior (`#10346 <https://github.com/autowarefoundation/autoware_universe/issues/10346>`_)
+  fix: the current launcher was creating a new container with the same name
+* fix(roi_pointcloud_fusion): merge into pointcloud container (`#10334 <https://github.com/autowarefoundation/autoware_universe/issues/10334>`_)
+* fix(roi_pointcloud_fusion): add roi scale factor param (`#10333 <https://github.com/autowarefoundation/autoware_universe/issues/10333>`_)
+  * fix(roi_pointcloud_fusion): add roi scale factor param
+  * fix: missing declare
+  ---------
+* fix(image_projection_based_fusion): add outside of FOV checking (`#10329 <https://github.com/autowarefoundation/autoware_universe/issues/10329>`_)
+* Contributors: Kenzo Lobos Tsunekawa, Masaki Baba, Masato Saeki, Ryohsuke Mitsudome, Taekjin LEE, badai nguyen
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
