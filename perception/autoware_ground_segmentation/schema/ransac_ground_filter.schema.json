@@ -8,17 +8,17 @@
       "properties": {
         "base_frame": {
           "type": "string",
-          "description": "base_frame",
+          "description": "base_link frame",
           "default": "base_link"
         },
         "unit_axis": {
           "type": "string",
-          "description": "unit_axis",
+          "description": "The axis which we need to search ground plane",
           "default": "z"
         },
         "max_iterations": {
           "type": "integer",
-          "description": "max_iterations",
+          "description": "The maximum number of iterations",
           "default": 1000
         },
         "min_trial": {
@@ -33,43 +33,43 @@
         },
         "outlier_threshold": {
           "type": "number",
-          "description": "outlier_threshold",
+          "description": "The distance threshold to the model [m]",
           "default": 0.01
         },
         "plane_slope_threshold": {
           "type": "number",
-          "description": "plane_slope_threshold",
+          "description": "The slope threshold to prevent mis-fitting [deg]",
           "default": 10.0
         },
         "voxel_size_x": {
           "type": "number",
-          "description": "voxel_size_x",
+          "description": "voxel size x [m]",
           "default": 0.04
         },
         "voxel_size_y": {
           "type": "number",
-          "description": "voxel_size_y",
+          "description": "voxel size y [m]",
           "default": 0.04
         },
         "voxel_size_z": {
           "type": "number",
-          "description": "voxel_size_z",
+          "description": "voxel size z [m]",
           "default": 0.04
         },
         "height_threshold": {
           "type": "number",
-          "description": "height_threshold",
+          "description": "The height threshold from ground plane for no ground points [m]",
           "default": 0.01
         },
         "debug": {
           "type": "boolean",
-          "description": "debug",
-          "default": false
+          "description": "whether to output debug information",
+          "default": "false"
         },
         "publish_processing_time_detail": {
           "type": "boolean",
           "description": "publish_processing_time_detail",
-          "default": false
+          "default": "false"
         }
       },
       "required": [
