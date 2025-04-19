@@ -201,7 +201,7 @@ system/autoware_mrm_emergency_stop_operator/** junya.sasaki@tier4.jp makoto.kuri
 system/autoware_mrm_handler/** junya.sasaki@tier4.jp makoto.kurihara@tier4.jp ryuta.kambe@tier4.jp tetsuhiro.kawaguchi@tier4.jp
 system/autoware_processing_time_checker/** kosuke.takeuchi@tier4.jp takayuki.murooka@tier4.jp
 system/autoware_system_diagnostic_monitor/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp
-system/autoware_system_monitor/** fumihito.ito@tier4.jp junya.sasaki@tier4.jp tetsuhiro.kawaguchi@tier4.jp
+system/autoware_system_monitor/** fumihito.ito@tier4.jp junya.sasaki@tier4.jp masaki.nishikawa@tier4.jp tetsuhiro.kawaguchi@tier4.jp
 system/autoware_topic_relay_controller/** makoto.kurihara@tier4.jp tetsuhiro.kawaguchi@tier4.jp
 system/autoware_topic_state_monitor/** junya.sasaki@tier4.jp ryohsuke.mitsudome@tier4.jp
 system/autoware_velodyne_monitor/** fumihito.ito@tier4.jp junya.sasaki@tier4.jp
