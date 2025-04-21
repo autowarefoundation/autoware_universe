@@ -19,11 +19,14 @@
 
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
+#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
+#include <limits>
 #include <vector>
 
 using autoware_planning_msgs::msg::Trajectory;
+using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 
 Trajectory generateTrajectoryWithConstantAcceleration(
@@ -58,6 +61,10 @@ Trajectory generateTrajectoryWithConstantSteeringRate(
   const double interval_distance, const double speed, const double steering_rate, const size_t size,
   const double wheelbase);
 
+Trajectory generateShiftedTrajectory(
+  const Trajectory & trajectory, const double lat_shift = 0.0, const double lon_shift = 0.0,
+  const size_t size = std::numeric_limits<size_t>::max());
+
 Trajectory generateNanTrajectory();
 
 Trajectory generateInfTrajectory();
@@ -65,6 +72,8 @@ Trajectory generateInfTrajectory();
 Trajectory generateBadCurvatureTrajectory();
 
 Odometry generateDefaultOdometry(const double x = 0.0, const double y = 0.0, const double vx = 0.0);
+
+AccelWithCovarianceStamped generateDefaultAcceleration(const double ax = 0.0);
 
 rclcpp::NodeOptions getNodeOptionsWithDefaultParams();
 

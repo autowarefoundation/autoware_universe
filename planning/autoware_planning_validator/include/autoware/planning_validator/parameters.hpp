@@ -57,6 +57,13 @@ struct ValidationParams
     double yaw_th;
   } deviation{};
 
+  struct TrajectoryShift : ValidityCheck
+  {
+    double lat_shift_th;
+    double forward_shift_th;
+    double backward_shift_th;
+  } trajectory_shift;
+
   struct ForwardTrajectoryLength : ValidityCheck
   {
     double acceleration;
@@ -70,6 +77,7 @@ struct Params
   bool publish_diag = true;
   bool display_on_terminal = true;
   double soft_stop_deceleration{};
+  double soft_stop_jerk_lim{};
   int diag_error_count_threshold{};
   ValidationParams validation_params{};
   InvalidTrajectoryHandlingType inv_traj_handling_type{};
