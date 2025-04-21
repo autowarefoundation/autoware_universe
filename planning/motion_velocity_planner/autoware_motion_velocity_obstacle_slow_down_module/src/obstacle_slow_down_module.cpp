@@ -252,8 +252,8 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
 
   std::vector<autoware::motion_velocity_planner::SlowDownPointData> slow_down_points;
 
-  const PointCloud::Ptr filtered_points_ptr = pointcloud.get_filtered_pointcloud_ptr();
-  std::vector<pcl::PointIndices> clusters = pointcloud.get_cluster_indices();
+  const PointCloud::Ptr filtered_points_ptr = pointcloud.get_filtered_pointcloud_ptr(traj_points, vehicle_info);
+  const std::vector<pcl::PointIndices> clusters = pointcloud.get_cluster_indices(traj_points, vehicle_info);
 
   // 3. convert clusters to obstacles
   for (const auto & cluster_indices : clusters) {
