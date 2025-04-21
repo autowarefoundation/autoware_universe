@@ -1011,6 +1011,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/motion_velocity_planner/autoware_motion_velocity_run_out_module/</loc>
+         <lastmod>2025-04-21</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/latest/planning/sampling_based_planner/autoware_bezier_sampler/</loc>
          <lastmod>2025-04-21</lastmod>
          <changefreq>daily</changefreq>
