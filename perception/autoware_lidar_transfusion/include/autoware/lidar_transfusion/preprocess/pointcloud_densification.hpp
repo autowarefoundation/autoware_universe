@@ -17,6 +17,8 @@
 
 #include "autoware/lidar_transfusion/cuda_utils.hpp"
 
+#include <cuda_blackboard/cuda_pointcloud2.hpp>
+
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 #ifdef ROS_DISTRO_GALACTIC
@@ -26,6 +28,7 @@
 #endif
 
 #include <list>
+#include <memory>
 #include <string>
 #include <utility>
 
@@ -51,9 +54,7 @@ private:
 
 struct PointCloudWithTransform
 {
-  cuda::unique_ptr<uint8_t[]> data_d{nullptr};
-  std_msgs::msg::Header header;
-  std::size_t num_points{0};
+  std::shared_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr;
   Eigen::Affine3f affine_past2world;
 };
 
@@ -63,7 +64,8 @@ public:
   explicit PointCloudDensification(const DensificationParam & param, cudaStream_t & stream);
 
   bool enqueuePointCloud(
-    const sensor_msgs::msg::PointCloud2 & msg, const tf2_ros::Buffer & tf_buffer);
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+    const tf2_ros::Buffer & tf_buffer);
 
   double getCurrentTimestamp() const { return current_timestamp_; }
   Eigen::Affine3f getAffineWorldToCurrent() const { return affine_world2current_; }
@@ -86,7 +88,9 @@ public:
   unsigned int pointcloud_cache_size() const { return param_.pointcloud_cache_size(); }
 
 private:
-  void enqueue(const sensor_msgs::msg::PointCloud2 & msg, const Eigen::Affine3f & affine);
+  void enqueue(
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+    const Eigen::Affine3f & affine);
   void dequeue();
 
   DensificationParam param_;
