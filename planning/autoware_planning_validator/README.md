@@ -12,7 +12,22 @@ The following features are supported for trajectory validation and can have thre
 - **Trajectory points interval** : invalid if any of the distance of trajectory points is too large
 - **Curvature** : invalid if the trajectory has too sharp turns that is not feasible for the given vehicle kinematics
 - **Relative angle** : invalid if the yaw angle changes too fast in the sequence of trajectory points
-- **Lateral acceleration** : invalid if the expected lateral acceleration/deceleration is too large
+- **Lateral acceleration** : invalid if the expected lateral acceleration/deceleration is too large. Lateral acceleration is calculated using the formula:
+
+  $$
+  a_{lat} = v_{lon}^2 * \kappa
+  $$
+
+  Where $v_{lon}$ is longitudinal velocity and $\kappa$ is curvature. Since the acceleration embedded in path points is perpendicular to the derived lateral acceleration, projections are not considered. The velocity and acceleration assigned to each point are directed toward the next path point.
+
+- **Lateral jerk** : invalid if the rate of change of lateral acceleration is too large. Lateral jerk is calculated using the formula:
+
+  $$
+  j_{lat} = v_{lon}^3 * \frac{d\kappa}{ds} + 3 * v_{lon}^2 * a_{lon} * \kappa
+  $$
+
+  Where $v_{lon}$ is longitudinal velocity, $\kappa$ is curvature, $a_{lon}$ is longitudinal acceleration, and $\frac{d\kappa}{ds}$ is the rate of curvature change with respect to distance. In this implementation, the curvature change ($\frac{d\kappa}{ds}$) is not considered, simplifying the calculation to only the second term. The lateral jerk represents how quickly the lateral acceleration changes, which affects ride comfort and vehicle stability.
+
 - **Longitudinal acceleration/deceleration** : invalid if the acceleration/deceleration in the trajectory point is too large
 - **Steering angle** : invalid if the expected steering value is too large estimated from trajectory curvature
 - **Steering angle rate** : invalid if the expected steering rate value is too large
@@ -104,6 +119,14 @@ The following parameters can be set for the `autoware_planning_validator`:
 | `validity_checks.acceleration.longitudinal_max_th` | double | max valid value for the longitudinal acceleration along the trajectory [m/ss] | 9.8           |
 | `validity_checks.acceleration.longitudinal_min_th` | double | min valid value for the longitudinal acceleration along the trajectory [m/ss] | -9.8          |
 | `validity_checks.acceleration.is_critical`         | bool   | if true, will use handling type specified for critical checks                 | false         |
+
+### Lateral Jerk Check
+
+| Name                                       | Type   | Description                                                       | Default value |
+| :----------------------------------------- | :----- | :---------------------------------------------------------------- | :------------ |
+| `validity_checks.lateral_jerk.enable`      | bool   | flag to enable/disable lateral jerk validation check              | true          |
+| `validity_checks.lateral_jerk.threshold`   | double | max valid value for the lateral jerk along the trajectory [m/sss] | 7.0           |
+| `validity_checks.lateral_jerk.is_critical` | bool   | if true, will use handling type specified for critical checks     | false         |
 
 #### Steering Check
 

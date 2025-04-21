@@ -14,13 +14,17 @@
 
 #include "autoware/planning_validator/debug_marker.hpp"
 #include "autoware/planning_validator/planning_validator.hpp"
+#include "autoware/planning_validator/utils.hpp"
 #include "test_parameter.hpp"
 #include "test_planning_validator_helper.hpp"
+
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <gtest/gtest.h>
 
 #include <memory>
 #include <string>
+#include <vector>
 
 using autoware::planning_validator::PlanningValidator;
 using autoware_planning_msgs::msg::Trajectory;
@@ -159,5 +163,155 @@ TEST(PlanningValidatorTestSuite, checkValidRelativeAngleFunction)
     invalid_traj.points[4].pose.position.x = 10;
     std::string valid_error_msg;
     ASSERT_FALSE(validator->checkValidRelativeAngle(invalid_traj));
+  }
+}
+
+TEST(PlanningValidatorTestSuite, checkValidLateralJerkFunction)
+{
+  auto validator = std::make_shared<PlanningValidator>(getNodeOptionsWithDefaultParams());
+
+  // Test case 1: Valid trajectory with normal lateral jerk
+  {
+    Trajectory valid_traj = generateTrajectory(THRESHOLD_INTERVAL * 0.9);
+    ASSERT_TRUE(validator->checkValidLateralJerk(valid_traj));
+  }
+
+  // Test case 2: Trajectory with straight line movement (valid lateral jerk)
+  {
+    std::vector<double> accel_values = {1.0, 2.0, 0.0, -1.0, -2.0};
+    Trajectory zero_jerk_traj =
+      generateTrajectoryWithStepAcceleration(0.5, 5.0, 0.0, 20, accel_values, 4);
+    ASSERT_TRUE(validator->checkValidLateralJerk(zero_jerk_traj));
+  }
+
+  // Test case 3: Trajectory with sinusoidal longitudinal acceleration but straight path
+  {
+    Trajectory sinusoidal_accel_traj =
+      generateTrajectoryWithSinusoidalAcceleration(0.5, 8.0, 0.0, 30, 2.0, 10.0);
+    ASSERT_TRUE(validator->checkValidLateralJerk(sinusoidal_accel_traj));
+  }
+
+  // Test case 4: Trajectory with high lateral jerk (zigzag pattern)
+  {
+    // Generate trajectory with constant acceleration on a straight path
+    Trajectory high_jerk_traj = generateTrajectoryWithConstantAcceleration(2.0, 5.0, 0.0, 10, 1.0);
+
+    // Create a sharp zigzag pattern by modifying Y positions
+    for (size_t i = 2; i < high_jerk_traj.points.size(); i += 4) {
+      if (i < high_jerk_traj.points.size()) {
+        high_jerk_traj.points[i].pose.position.y += 2.0;
+      }
+
+      if (i + 2 < high_jerk_traj.points.size()) {
+        high_jerk_traj.points[i + 2].pose.position.y -= 2.0;
+      }
+    }
+
+    // Update orientations to match the path direction
+    for (size_t i = 1; i < high_jerk_traj.points.size(); ++i) {
+      const auto & p1 = high_jerk_traj.points[i - 1].pose.position;
+      const auto & p2 = high_jerk_traj.points[i].pose.position;
+      const double yaw = std::atan2(p2.y - p1.y, p2.x - p1.x);
+      high_jerk_traj.points[i - 1].pose.orientation =
+        autoware_utils::create_quaternion_from_yaw(yaw);
+    }
+
+    // Set high velocity to generate significant lateral jerk
+    for (auto & point : high_jerk_traj.points) {
+      point.longitudinal_velocity_mps = 10.0;
+    }
+
+    // This should fail due to high lateral jerk
+    ASSERT_FALSE(validator->checkValidLateralJerk(high_jerk_traj));
+  }
+}
+
+TEST(PlanningValidatorTestSuite, DISABLED_checkCalcMaxLateralJerkFunction)
+/**
+ * Trajectory specification:
+ * --------------------------
+ * Index :               0    1    2    3    4    5    6    7    8    9
+ * Velocity (m/s):       1    1    1    1    1    2    3    3    3    3
+ * Acceleration (m/ss):  1    1    1    1    1    2    3    3    3    3
+ * Curvature (1/m):      0    0    0    0.05 0.1  0.1  0.05 0    0    0
+ * Lateral Jerk (m/sss): 0    0    0    0.15 0.3  2.4  4.05 0    0    0
+ */
+{
+  {
+    Trajectory custom_traj;
+    custom_traj.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
+    std::vector<double> expected_lateral_jerk = {0.0, 0.0,  0.0, 0.15, 0.3,
+                                                 2.4, 4.05, 0.0, 0.0,  0.0};
+
+    const size_t num_points = 10;
+    const double point_spacing = 2.0;
+    const double curve_radius = 10.0;
+
+    // Create straight line section (indices 0-3)
+    for (size_t i = 0; i < 4; ++i) {
+      autoware_planning_msgs::msg::TrajectoryPoint p;
+      p.pose.position.x = i * point_spacing;
+      p.pose.position.y = 0.0;
+      p.pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(0.0);
+      p.longitudinal_velocity_mps = 1.0;
+      p.acceleration_mps2 = 1.0;
+      custom_traj.points.push_back(p);
+    }
+
+    // Create curve section (indices 4-6)
+    for (size_t i = 4; i <= 6; ++i) {
+      autoware_planning_msgs::msg::TrajectoryPoint p;
+      const auto & last_pose = custom_traj.points[i - 1].pose;
+
+      const double angle = (i - 3) * (point_spacing / curve_radius);
+      const double last_x = last_pose.position.x;
+      const double last_y = last_pose.position.y;
+      const double prev_angle = (i - 4) * (point_spacing / curve_radius);
+
+      p.pose.position.x = last_x + curve_radius * (std::sin(angle) - std::sin(prev_angle));
+      p.pose.position.y =
+        last_y + curve_radius * (1 - std::cos(angle) - (1 - std::cos(prev_angle)));
+      p.pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(angle);
+
+      p.longitudinal_velocity_mps = 1.0 + (i - 4);  // 1.0, 2.0, 3.0
+      p.acceleration_mps2 = 1.0 + (i - 4);          // 1.0, 2.0, 3.0
+
+      custom_traj.points.push_back(p);
+    }
+
+    // Create final straight line section (indices 7-9)
+    const auto & final_point = custom_traj.points[6];
+    double final_roll, final_pitch, final_yaw;
+    tf2::Quaternion final_q(
+      final_point.pose.orientation.x, final_point.pose.orientation.y,
+      final_point.pose.orientation.z, final_point.pose.orientation.w);
+    tf2::Matrix3x3(final_q).getRPY(final_roll, final_pitch, final_yaw);
+
+    const double start_x = final_point.pose.position.x;
+    const double start_y = final_point.pose.position.y;
+
+    for (size_t i = 7; i < num_points; ++i) {
+      autoware_planning_msgs::msg::TrajectoryPoint p;
+
+      const double dx = std::cos(final_yaw) * point_spacing * (i - 6);
+      const double dy = std::sin(final_yaw) * point_spacing * (i - 6);
+
+      p.pose.position.x = start_x + dx;
+      p.pose.position.y = start_y + dy;
+      p.pose.orientation = autoware_utils_geometry::create_quaternion_from_yaw(final_yaw);
+
+      p.longitudinal_velocity_mps = 3.0;
+      p.acceleration_mps2 = 3.0;
+
+      custom_traj.points.push_back(p);
+    }
+
+    // Calculate lateral jerk
+    std::vector<double> lateral_jerk_vector;
+    autoware::planning_validator::calc_lateral_jerk(custom_traj, lateral_jerk_vector);
+    const double tolerance = 0.01;  // 1% tolerance for lateral jerk values
+    for (size_t i = 0; i < custom_traj.points.size(); ++i) {
+      EXPECT_NEAR(expected_lateral_jerk.at(i), lateral_jerk_vector.at(i), tolerance);
+    }
   }
 }

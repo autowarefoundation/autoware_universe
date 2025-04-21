@@ -2,6 +2,55 @@
 Changelog for package tier4_perception_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(perception_launch): add common param path for transfusion (`#10434 <https://github.com/autowarefoundation/autoware_universe/issues/10434>`_)
+  add common_param_path
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* fix: add missing exec_depend (`#10404 <https://github.com/autowarefoundation/autoware_universe/issues/10404>`_)
+  * fix missing exec depend
+  * remove fixed depend
+  * remove the removed dependency
+  ---------
+* feat(perception_launch): add common param file (`#10396 <https://github.com/autowarefoundation/autoware_universe/issues/10396>`_)
+  add common param
+* fix: add irregular object detector pipeline (`#10369 <https://github.com/autowarefoundation/autoware_universe/issues/10369>`_)
+  * feat: add small unknown object detector pipeline
+  * chore: rename param
+  * refactor: camera lidar detector launch.xml
+  * chore: change default fusion camera ids
+  * fix: camera_lidar_detector launch
+  * fix: update rois_timestamp_offsets param name
+  * chore: pre-commit
+  * fix: spelling
+  * separete unknown pipeline
+  * style(pre-commit): autofix
+  * fix: sync param
+  * fix: change to simple object merger
+  * fix: fusion param
+  * refactor: change file name
+  * refactor: rename topic and ns
+  * chore: unify naming
+  * refactor cameara lidar merger
+  * fix: camera_lidar_radar merger
+  * style(pre-commit): autofix
+  * refactor: image_topic_name
+  * refactor: param path update
+  * fix: irregular object switch
+  * fix: missing param
+  * fix: missing param
+  * fix: move roi_pointcloud_fusion out of container
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* chore(perception): code owner revision (`#10358 <https://github.com/autowarefoundation/autoware_universe/issues/10358>`_)
+  * feat: add Masato Saeki and Taekjin Lee as maintainer to multiple package.xml files
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(roi_pointcloud_fusion): merge into pointcloud container (`#10334 <https://github.com/autowarefoundation/autoware_universe/issues/10334>`_)
+* Contributors: Masaki Baba, Ryohsuke Mitsudome, Taekjin LEE, Takagi, Isamu, badai nguyen
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

@@ -59,6 +59,7 @@ public:
   bool checkValidRelativeAngle(const Trajectory & trajectory);
   bool checkValidCurvature(const Trajectory & trajectory);
   bool checkValidLateralAcceleration(const Trajectory & trajectory);
+  bool checkValidLateralJerk(const Trajectory & trajectory);
   bool checkValidMaxLongitudinalAcceleration(const Trajectory & trajectory);
   bool checkValidMinLongitudinalAcceleration(const Trajectory & trajectory);
   bool checkValidSteering(const Trajectory & trajectory);
