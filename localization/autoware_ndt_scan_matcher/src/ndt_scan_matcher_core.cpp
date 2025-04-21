@@ -736,7 +736,7 @@ void NDTScanMatcher::publish_tf(
   result_pose_stamped_msg.header.frame_id = param_.frame.map_frame;
   result_pose_stamped_msg.pose = result_pose_msg;
   tf2_broadcaster_.sendTransform(
-    autoware_utils_pcl::pose2transform(result_pose_stamped_msg, param_.frame.ndt_base_frame));
+    autoware_utils_geometry::pose2transform(result_pose_stamped_msg, param_.frame.ndt_base_frame));
 }
 
 void NDTScanMatcher::publish_pose(
