@@ -301,13 +301,16 @@ void calculate_overlapping_collision(
     M_PI - params.collision_opposite_direction_angle_threshold < ego.first_intersection.yaw_diff &&
     ego.first_intersection.yaw_diff < M_PI + params.collision_opposite_direction_angle_threshold;
   if (is_same_direction_collision) {
-    if (ego.first_intersection.vel_diff < 0.0) {  // object is faster than ego
+    const auto time_margin =
+      std::abs(ego.first_intersection.ego_time - ego.first_intersection.object_time);
+    const auto object_is_faster_than_ego = ego.first_intersection.vel_diff < 0;
+    if (object_is_faster_than_ego && time_margin > params.collision_time_margin) {  // object is
+                                                                                    // faster than
+                                                                                    // ego
       c.type = no_collision;
       c.explanation = " no collision will happen because object is faster and enter first";
     } else {
       // adjust the collision time based on the velocity difference
-      const auto time_margin =
-        std::abs(ego.first_intersection.ego_time - ego.first_intersection.object_time);
       const auto catchup_time =
         (time_margin * ego.first_intersection.vel_diff) / ego.first_intersection.ego_vel;
       c.ego_collision_time += catchup_time;
