@@ -261,7 +261,8 @@ void LidarMarkerLocalizer::main_process(const PointCloud2::ConstSharedPtr & poin
     pose_array_msg.header.stamp = sensor_ros_time;
     pose_array_msg.header.frame_id = "map";
     for (const landmark_manager::Landmark & landmark : detected_landmarks) {
-      const Pose detected_marker_on_map = autoware_utils_geometry::transform_pose(landmark.pose, self_pose);
+      const Pose detected_marker_on_map =
+        autoware_utils_geometry::transform_pose(landmark.pose, self_pose);
       pose_array_msg.poses.push_back(detected_marker_on_map);
     }
     pub_marker_detected_->publish(pose_array_msg);
