@@ -196,26 +196,6 @@ Higher values prevent incorrect decisions in case of noisy object predictions, b
 
 {{ json_to_markdown("planning/motion_velocity_planner/autoware_motion_velocity_run_out_module/schema/run_out.schema.json") }}
 
-### Ego parameters
-
-{{ json_to_markdown("planning/motion_velocity_planner/autoware_motion_velocity_run_out_module/schema/sub/ego.sub_schema.json") }}
-
-### Objects parameters
-
-{{ json_to_markdown("planning/motion_velocity_planner/autoware_motion_velocity_run_out_module/schema/sub/object.sub_schema.json") }}
-
-### Passing parameters
-
-{{ json_to_markdown("planning/motion_velocity_planner/autoware_motion_velocity_run_out_module/schema/sub/passing.sub_schema.json") }}
-
-### Preventive slowdown parameters
-
-{{ json_to_markdown("planning/motion_velocity_planner/autoware_motion_velocity_run_out_module/schema/sub/slowdown.sub_schema.json") }}
-
-### Stop parameters
-
-{{ json_to_markdown("planning/motion_velocity_planner/autoware_motion_velocity_run_out_module/schema/sub/stop.sub_schema.json") }}
-
 ## Flow Diagram
 
 ![Flow diagram](./docs/flow_diagram.svg)
