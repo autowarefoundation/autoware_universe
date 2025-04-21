@@ -85,7 +85,7 @@ double calculateStoppingDistance(
   const auto v1 = current_vel + current_accel * t1 - 0.5 * jerk_limit * t1 * t1;
   const auto d1 =
     (current_vel * t1) + (0.5 * current_accel * t1 * t1) - (jerk_limit * t1 * t1 * t1 / 6.0);
-  // calculate distace to stop from v1
+  // calculate distance to stop from v1
   const auto d2 = std::abs((v1 * v1) / (2 * decel));
   return d1 + d2;
 }

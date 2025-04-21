@@ -286,6 +286,7 @@ rclcpp::NodeOptions getNodeOptionsWithDefaultParams()
   node_options.append_parameter_override("display_on_terminal", true);
   node_options.append_parameter_override("enable_soft_stop_on_prev_traj", false);
   node_options.append_parameter_override("soft_stop_deceleration", -1.0);
+  node_options.append_parameter_override("soft_stop_jerk_lim", 0.3);
 
   node_options.append_parameter_override("validity_checks.latency.enable", true);
   node_options.append_parameter_override("validity_checks.latency.threshold", THRESHOLD_LATENCY);
