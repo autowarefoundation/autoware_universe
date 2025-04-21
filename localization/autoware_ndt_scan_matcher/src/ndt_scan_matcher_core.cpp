@@ -808,8 +808,8 @@ void NDTScanMatcher::publish_initial_to_result(
   const geometry_msgs::msg::PoseWithCovarianceStamped & initial_pose_new_msg)
 {
   geometry_msgs::msg::PoseStamped initial_to_result_relative_pose_stamped;
-  initial_to_result_relative_pose_stamped.pose =
-    autoware_utils_geometry::inverse_transform_pose(result_pose_msg, initial_pose_cov_msg.pose.pose);
+  initial_to_result_relative_pose_stamped.pose = autoware_utils_geometry::inverse_transform_pose(
+    result_pose_msg, initial_pose_cov_msg.pose.pose);
   initial_to_result_relative_pose_stamped.header.stamp = sensor_ros_time;
   initial_to_result_relative_pose_stamped.header.frame_id = param_.frame.map_frame;
   initial_to_result_relative_pose_pub_->publish(initial_to_result_relative_pose_stamped);
