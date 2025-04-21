@@ -81,7 +81,7 @@ double calculateStoppingDistance(
 {
   // calculate time to ramp acceleration from current accel to decel
   const auto t1 = std::max((current_accel - decel) / jerk_limit, 0.0);
-  // calculate velcotity and distance after t1
+  // calculate velocity and distance after t1
   const auto v1 = current_vel + current_accel * t1 - 0.5 * jerk_limit * t1 * t1;
   const auto d1 =
     (current_vel * t1) + (0.5 * current_accel * t1 * t1) - (jerk_limit * t1 * t1 * t1 / 6.0);
