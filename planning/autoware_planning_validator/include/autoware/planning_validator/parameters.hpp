@@ -27,9 +27,9 @@ enum class InvalidTrajectoryHandlingType : uint8_t {
 
 struct ValidityCheck
 {
-  bool enable = false;
+  bool enable = true;
   bool is_critical = false;
-  double threshold;
+  double threshold{};
 };
 
 struct ValidationParams
@@ -38,18 +38,16 @@ struct ValidationParams
   ValidityCheck relative_angle;
   ValidityCheck curvature;
   ValidityCheck latency;
-
-  struct SteeringCheck : ValidityCheck
-  {
-    double rate_th;
-  } steering;
+  ValidityCheck steering;
+  ValidityCheck steering_rate;
+  ValidityCheck lateral_jerk;
 
   struct AccelerationCheck : ValidityCheck
   {
     double lateral_th;
     double longitudinal_max_th;
     double longitudinal_min_th;
-  } acceleration;
+  } acceleration{};
 
   struct DeviationCheck : ValidityCheck
   {
@@ -57,7 +55,7 @@ struct ValidationParams
     double distance_th;
     double lon_distance_th;
     double yaw_th;
-  } deviation;
+  } deviation{};
 
   struct TrajectoryShift : ValidityCheck
   {
@@ -70,7 +68,7 @@ struct ValidationParams
   {
     double acceleration;
     double margin;
-  } forward_trajectory_length;
+  } forward_trajectory_length{};
 };
 
 struct Params
@@ -78,11 +76,11 @@ struct Params
   bool enable_soft_stop_on_prev_traj = true;
   bool publish_diag = true;
   bool display_on_terminal = true;
-  double soft_stop_deceleration = -1.0;
-  double soft_stop_jerk_lim = 0.3;
-  int diag_error_count_threshold = 0;
-  ValidationParams validation_params;
-  InvalidTrajectoryHandlingType inv_traj_handling_type;
-  InvalidTrajectoryHandlingType inv_traj_critical_handling_type;
+  double soft_stop_deceleration{};
+  double soft_stop_jerk_lim{};
+  int diag_error_count_threshold{};
+  ValidationParams validation_params{};
+  InvalidTrajectoryHandlingType inv_traj_handling_type{};
+  InvalidTrajectoryHandlingType inv_traj_critical_handling_type{};
 };
 }  // namespace autoware::planning_validator

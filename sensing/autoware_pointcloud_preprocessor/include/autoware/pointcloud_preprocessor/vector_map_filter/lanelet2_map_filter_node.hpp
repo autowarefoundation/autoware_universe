@@ -18,6 +18,7 @@
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
+#include <managed_transform_buffer/managed_transform_buffer.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
@@ -32,8 +33,6 @@
 #else
 #include <tf2_eigen/tf2_eigen.hpp>
 #endif
-
-#include <tf2_ros/transform_listener.h>
 
 #include <memory>
 #include <mutex>
@@ -56,8 +55,7 @@ public:
   explicit Lanelet2MapFilterComponent(const rclcpp::NodeOptions & options);
 
 private:
-  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
-  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+  std::shared_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_;
 
   rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr map_sub_;
   rclcpp::Subscription<PointCloud2>::SharedPtr pointcloud_sub_;

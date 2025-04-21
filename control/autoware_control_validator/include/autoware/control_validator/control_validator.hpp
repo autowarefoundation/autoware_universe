@@ -156,6 +156,12 @@ public:
   explicit OverrunValidator(rclcpp::Node & node)
   : overrun_stop_point_dist_th{autoware_utils::get_or_declare_parameter<double>(
       node, "thresholds.overrun_stop_point_dist")},
+    will_overrun_stop_point_dist_th{autoware_utils::get_or_declare_parameter<double>(
+      node, "thresholds.will_overrun_stop_point_dist")},
+    assumed_limit_acc{
+      autoware_utils::get_or_declare_parameter<double>(node, "thresholds.assumed_limit_acc")},
+    assumed_delay_time{
+      autoware_utils::get_or_declare_parameter<double>(node, "thresholds.assumed_delay_time")},
     vehicle_vel_lpf{autoware_utils::get_or_declare_parameter<double>(node, "vel_lpf_gain")} {};
 
   void validate(
@@ -164,6 +170,9 @@ public:
 
 private:
   const double overrun_stop_point_dist_th;
+  const double will_overrun_stop_point_dist_th;
+  const double assumed_limit_acc;
+  const double assumed_delay_time;
   autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf;
 };
 

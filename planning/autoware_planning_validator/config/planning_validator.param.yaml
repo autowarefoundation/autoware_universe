@@ -44,10 +44,17 @@
         longitudinal_max_th: 9.8
         longitudinal_min_th: -9.8
         is_critical: false
+      lateral_jerk:
+        enable: true
+        threshold: 7.0
+        is_critical: false
       steering:
         enable: true
         threshold: 1.414
-        rate_th: 10.0
+        is_critical: false
+      steering_rate:
+        enable: true
+        threshold: 10.0
         is_critical: false
       deviation:
         enable: true

@@ -2,6 +2,33 @@
 Changelog for package autoware_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(object_merger): add diagnostics warning for timeout when merging (`#10283 <https://github.com/autowarefoundation/autoware_universe/issues/10283>`_)
+  * feat(object_merger): add diagnostics warning for timeout when merge messages are incomplete
+  * feat(object_merger): add parameters loading
+  * style(pre-commit): autofix
+  * feat(object_merger): add schema parameters
+  * feat(object_merger):  1. add initialization timeout check 2. handle for now() uninitialized problem in constructor  3. threshold tuned
+  * feat(object_merger): threshold modified and schema accordingly
+  * feat(object_merger): check both interval and elapsed time
+  * Update perception/autoware_object_merger/src/object_association_merger_node.cpp
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update perception/autoware_object_merger/src/object_association_merger_node.cpp
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * feat(object_merger): only update the message arrival timing in objectCallback
+  * feat(object_merger): checkstatus impl moved to diagcallback
+  * Update perception/autoware_object_merger/src/object_association_merger_node.cpp
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update perception/autoware_object_merger/src/object_association_merger_node.cpp
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+* Contributors: Ryohsuke Mitsudome, lei.gu
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

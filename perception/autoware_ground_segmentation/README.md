@@ -33,15 +33,30 @@ Detail description of each ground segmentation algorithm is in the following lin
 
 ### Node Parameters
 
-| Name                 | Type   | Default Value | Description                           |
-| -------------------- | ------ | ------------- | ------------------------------------- |
-| `input_frame`        | string | " "           | input frame id                        |
-| `output_frame`       | string | " "           | output frame id                       |
-| `has_static_tf_only` | bool   | false         | flag to listen TF only once           |
-| `max_queue_size`     | int    | 5             | max queue size of input/output topics |
-| `use_indices`        | bool   | false         | flag to use pointcloud indices        |
-| `latched_indices`    | bool   | false         | flag to latch pointcloud indices      |
-| `approximate_sync`   | bool   | false         | flag to use approximate sync option   |
+| Name               | Type   | Default Value | Description                           |
+| ------------------ | ------ | ------------- | ------------------------------------- |
+| `input_frame`      | string | " "           | input frame id                        |
+| `output_frame`     | string | " "           | output frame id                       |
+| `max_queue_size`   | int    | 5             | max queue size of input/output topics |
+| `use_indices`      | bool   | false         | flag to use pointcloud indices        |
+| `latched_indices`  | bool   | false         | flag to latch pointcloud indices      |
+| `approximate_sync` | bool   | false         | flag to use approximate sync option   |
+
+### Ground Segmentation
+
+{{ json_to_markdown("perception/autoware_ground_segmentation/schema/ground_segmentation.schema.json") }}
+
+### RANSAC Ground Filter
+
+{{ json_to_markdown("perception/autoware_ground_segmentation/schema/ransac_ground_filter.schema.json") }}
+
+### Ray Ground Filter
+
+{{ json_to_markdown("perception/autoware_ground_segmentation/schema/ray_ground_filter.schema.json") }}
+
+### Scan Ground Filter
+
+{{ json_to_markdown("perception/autoware_ground_segmentation/schema/scan_ground_filter.schema.json") }}
 
 ## Assumptions / Known limits
 
