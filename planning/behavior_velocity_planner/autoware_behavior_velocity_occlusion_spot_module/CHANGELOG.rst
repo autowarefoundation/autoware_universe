@@ -2,6 +2,9 @@
 Changelog for package autoware_behavior_velocity_occlusion_spot_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
