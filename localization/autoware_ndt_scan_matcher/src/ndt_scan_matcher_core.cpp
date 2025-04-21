@@ -721,7 +721,7 @@ void NDTScanMatcher::transform_sensor_measurement(
   }
 
   const geometry_msgs::msg::PoseStamped target_to_source_pose_stamped =
-    autoware_utils_pcl::transform2pose(transform);
+    autoware_utils_geometry::transform2pose(transform);
   const Eigen::Matrix4f base_to_sensor_matrix =
     pose_to_matrix4f(target_to_source_pose_stamped.pose);
   autoware_utils_pcl::transform_pointcloud(
@@ -736,7 +736,7 @@ void NDTScanMatcher::publish_tf(
   result_pose_stamped_msg.header.frame_id = param_.frame.map_frame;
   result_pose_stamped_msg.pose = result_pose_msg;
   tf2_broadcaster_.sendTransform(
-    autoware_utils_pcl::pose2transform(result_pose_stamped_msg, param_.frame.ndt_base_frame));
+    autoware_utils_geometry::pose2transform(result_pose_stamped_msg, param_.frame.ndt_base_frame));
 }
 
 void NDTScanMatcher::publish_pose(
@@ -808,8 +808,8 @@ void NDTScanMatcher::publish_initial_to_result(
   const geometry_msgs::msg::PoseWithCovarianceStamped & initial_pose_new_msg)
 {
   geometry_msgs::msg::PoseStamped initial_to_result_relative_pose_stamped;
-  initial_to_result_relative_pose_stamped.pose =
-    autoware_utils_geometry::inverse_transform_pose(result_pose_msg, initial_pose_cov_msg.pose.pose);
+  initial_to_result_relative_pose_stamped.pose = autoware_utils_geometry::inverse_transform_pose(
+    result_pose_msg, initial_pose_cov_msg.pose.pose);
   initial_to_result_relative_pose_stamped.header.stamp = sensor_ros_time;
   initial_to_result_relative_pose_stamped.header.frame_id = param_.frame.map_frame;
   initial_to_result_relative_pose_pub_->publish(initial_to_result_relative_pose_stamped);

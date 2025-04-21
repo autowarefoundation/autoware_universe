@@ -20,9 +20,9 @@
   <depend>autoware_localization_util</depend>
   <depend>autoware_map_msgs</depend>
   <depend>autoware_utils_diagnostics</depend>
-  <depend>autoware_utils_visualization</depend>
   <depend>autoware_utils_pcl</depend>
   <depend>autoware_utils_logging</depend>
+  <depend>autoware_utils_visualization</depend>
   <depend>diagnostic_msgs</depend>
   <depend>fmt</depend>
   <depend>geometry_msgs</depend>
