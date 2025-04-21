@@ -274,6 +274,13 @@ Odometry generateDefaultOdometry(const double x, const double y, const double vx
   return odom;
 }
 
+AccelWithCovarianceStamped generateDefaultAcceleration(const double ax)
+{
+  AccelWithCovarianceStamped acceleration;
+  acceleration.accel.accel.linear.x = ax;
+  return acceleration;
+}
+
 rclcpp::NodeOptions getNodeOptionsWithDefaultParams()
 {
   rclcpp::NodeOptions node_options;
