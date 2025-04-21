@@ -8,20 +8,20 @@
       
       
       
-        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/main/planning/sampling_based_planner/autoware_bezier_sampler/">
+        <link rel="canonical" href="https://autowarefoundation.github.io/autoware_universe/main/planning/motion_velocity_planner/autoware_motion_velocity_run_out_module/">
       
       
-        <link rel="prev" href="../../motion_velocity_planner/autoware_motion_velocity_run_out_module/">
+        <link rel="prev" href="../autoware_motion_velocity_out_of_lane_module/">
       
       
-        <link rel="next" href="../autoware_frenet_planner/">
+        <link rel="next" href="../../sampling_based_planner/autoware_bezier_sampler/">
       
       <link rel="icon" href="../../../docs/assets/images/autoware-foundation.png">
       <meta name="generator" content="mkdocs-1.4.3, mkdocs-material-9.1.20">
     
     
       
-        <title>Bézier sampler - Autoware Universe Documentation</title>
+        <title>Run Out - Autoware Universe Documentation</title>
       
     
     
@@ -77,7 +77,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#bezier-sampler" class="md-skip">
+        <a href="#run-out" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Bézier sampler
+              Run Out
             
           </span>
         </div>
@@ -8855,7 +8855,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../autoware_path_sampler" class="md-nav__link">
+      <a href="../../sampling_based_planner/autoware_path_sampler" class="md-nav__link">
         Path Sample
       </a>
     </li>
@@ -8869,7 +8869,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../autoware_sampler_common" class="md-nav__link">
+      <a href="../../sampling_based_planner/autoware_sampler_common" class="md-nav__link">
         Common library
       </a>
     </li>
@@ -8883,7 +8883,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../autoware_frenet_planner" class="md-nav__link">
+      <a href="../../sampling_based_planner/autoware_frenet_planner" class="md-nav__link">
         Frenet Planner
       </a>
     </li>
@@ -8897,7 +8897,7 @@
   
   
     <li class="md-nav__item">
-      <a href="." class="md-nav__link">
+      <a href="../../sampling_based_planner/autoware_bezier_sampler" class="md-nav__link">
         Bezier Sampler
       </a>
     </li>
@@ -9094,7 +9094,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../motion_velocity_planner/autoware_motion_velocity_obstacle_slow_down_module/" class="md-nav__link">
+      <a href="../autoware_motion_velocity_obstacle_slow_down_module/" class="md-nav__link">
         Obstacle Slow Down
       </a>
     </li>
@@ -9108,7 +9108,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../motion_velocity_planner/autoware_motion_velocity_obstacle_cruise_module/" class="md-nav__link">
+      <a href="../autoware_motion_velocity_obstacle_cruise_module/" class="md-nav__link">
         Obstacle Cruise
       </a>
     </li>
@@ -9122,7 +9122,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../motion_velocity_planner/autoware_motion_velocity_dynamic_obstacle_stop_module/" class="md-nav__link">
+      <a href="../autoware_motion_velocity_dynamic_obstacle_stop_module/" class="md-nav__link">
         Dynamic Obstacle Stop
       </a>
     </li>
@@ -9136,7 +9136,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../motion_velocity_planner/autoware_motion_velocity_out_of_lane_module/" class="md-nav__link">
+      <a href="../autoware_motion_velocity_out_of_lane_module/" class="md-nav__link">
         Out of Lane
       </a>
     </li>
@@ -9150,7 +9150,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../motion_velocity_planner/autoware_motion_velocity_obstacle_velocity_limiter_module/" class="md-nav__link">
+      <a href="../autoware_motion_velocity_obstacle_velocity_limiter_module/" class="md-nav__link">
         Obstacle Velocity Limiter
       </a>
     </li>
@@ -14173,6 +14173,131 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#role" class="md-nav__link">
+    Role
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#activation" class="md-nav__link">
+    Activation
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#inner-workings-algorithms" class="md-nav__link">
+    Inner-workings / Algorithms
+  </a>
+  
+    <nav class="md-nav" aria-label="Inner-workings / Algorithms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-ego-trajectory-footprint" class="md-nav__link">
+    1. Ego trajectory footprint
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-extracting-map-filtering-data" class="md-nav__link">
+    2. Extracting map filtering data
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-dynamic-objects-filtering" class="md-nav__link">
+    3. Dynamic objects filtering
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-collision-detection" class="md-nav__link">
+    4. Collision detection
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-decisions" class="md-nav__link">
+    5. Decisions
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-calculate-the-stop-or-slowdowns" class="md-nav__link">
+    6. Calculate the stop or slowdowns
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#use-of-rtree-for-fast-spatial-queries" class="md-nav__link">
+    Use of Rtree for fast spatial queries
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#accounting-for-prediction-inaccuracies" class="md-nav__link">
+    Accounting for prediction inaccuracies
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#module-parameters" class="md-nav__link">
+    Module Parameters
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flow-diagram" class="md-nav__link">
+    Flow Diagram
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debugging-and-tuning-guide" class="md-nav__link">
+    Debugging and Tuning Guide
+  </a>
+  
+    <nav class="md-nav" aria-label="Debugging and Tuning Guide">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ego-does-not-stop-for-the-incoming-object" class="md-nav__link">
+    Ego does not stop for the incoming object
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -14189,8 +14314,449 @@
   
 
 
-<div><h1 id="bezier-sampler">Bézier sampler<a class="headerlink" href="#bezier-sampler" title="Permanent link">#</a></h1>
-<p>Implementation of bézier curves and their generation following the sampling strategy from <a href="https://ieeexplore.ieee.org/document/8932495">https://ieeexplore.ieee.org/document/8932495</a></p></div>
+<div><h1 id="run-out">Run Out<a class="headerlink" href="#run-out" title="Permanent link">#</a></h1>
+<h2 id="role">Role<a class="headerlink" href="#role" title="Permanent link">#</a></h2>
+<p>The <code>run_out</code> module adds deceleration and stop points to the ego trajectory in order to prevent collisions with objects that are moving towards the ego vehicle path.</p>
+<h2 id="activation">Activation<a class="headerlink" href="#activation" title="Permanent link">#</a></h2>
+<p>This module is activated if the launch parameter <code>launch_mvp_run_out_module</code> is set to true.</p>
+<h2 id="inner-workings-algorithms">Inner-workings / Algorithms<a class="headerlink" href="#inner-workings-algorithms" title="Permanent link">#</a></h2>
+<p>This module calculates the times when the ego vehicle and the objects are predicted to overlap each other's trajectories.
+These times are then used to decide whether to stop before the overlap or not.</p>
+<p>Next we explain the inner-workings of the module in more details.</p>
+<h3 id="1-ego-trajectory-footprint">1. Ego trajectory footprint<a class="headerlink" href="#1-ego-trajectory-footprint" title="Permanent link">#</a></h3>
+<p>In this first step, the trajectory footprint is constructed from the corner points of the vehicle.
+4 linestrings are constructed from the 4 corners (front left, front right, rear left, rear right) projected at each trajectory point.</p>
+<p>At this step, the footprint size can be adjusted using the <code>ego.lateral_margin</code> and <code>ego.longitudinal_margin</code> parameters.</p>
+<p>The following figures show the 4 corner linestrings calculated for the red trajectory.</p>
+<table>
+<thead>
+<tr>
+<th>front left</th>
+<th>front right</th>
+<th>rear left</th>
+<th>rear right</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><img alt="ego_front_left_footprint" src="docs/front_left_ego_ls.png"></td>
+<td><img alt="ego_front_right_footprint" src="docs/front_right_ego_ls.png"></td>
+<td><img alt="ego_rear_left_footprint" src="docs/rear_left_ego_ls.png"></td>
+<td><img alt="ego_rear_right_footprint" src="docs/rear_right_ego_ls.png"></td>
+</tr>
+</tbody>
+</table>
+<p>These can be visualized on the debug markers with the <code>ego_footprint_(front|rear)_(left|right)</code> namespaces.</p>
+<h3 id="2-extracting-map-filtering-data">2. Extracting map filtering data<a class="headerlink" href="#2-extracting-map-filtering-data" title="Permanent link">#</a></h3>
+<p>In the second step, we extract geometric information from the vector map that will be used to filter dynamic objects.
+For each object classification label,
+we prepare the following sets of geometries based on the parameters defined for that label (<code>objects.{CLASSIFICATION_LABEL}</code>):</p>
+<ul>
+<li>polygons to ignore objects (<code>ignore.polygon_types</code> and <code>ignore.lanelet_subtypes</code>);<ul>
+<li>polygons for the ego trajectory footprint are also added if <code>ignore.if_on_ego_trajectory</code> is set to <code>true</code>.</li>
+</ul>
+</li>
+<li>polygons to ignore collisions (<code>ignore_collisions.polygon_types</code> and <code>ignore_collisions.lanelet_subtypes</code>);</li>
+<li>segments to cut predicted paths (<code>cut_predicted_paths.polygon_types</code>, <code>cut_predicted_paths.linestring_types</code>, and <code>cut_predicted_paths.lanelet_subtypes</code>).<ul>
+<li>the rear segment of the current ego footprint is also added if <code>cut_predicted_paths.if_crossing_ego_from_behind</code> is set to <code>true</code>.</li>
+</ul>
+</li>
+</ul>
+<p>The following figure shows an example where the polygons to ignore objects are shown in blue, to ignore collisions in green, and to cut predicted paths in red.</p>
+<p><img alt="map_filtering_data" src="docs/map_filtering_data.png"></p>
+<p>These geometries can be visualized on the debug markers with the <code>filtering_data_(ignore_objects|ignore_collisions|cut_predicted_paths)</code> namespaces.
+The classification label corresponding to the published debug markers can be selected with parameter <code>debug.object_label</code>.</p>
+<h3 id="3-dynamic-objects-filtering">3. Dynamic objects filtering<a class="headerlink" href="#3-dynamic-objects-filtering" title="Permanent link">#</a></h3>
+<p>In this step, objects and their predicted paths are filtered based on its classification label and the corresponding parameters <code>objects.{CLASSIFICATION_LABEL}</code>.</p>
+<p>An object is ignored if one of the following condition is true:</p>
+<ul>
+<li>its classification label is not in the list defined by the <code>objects.target_labels</code> parameter;</li>
+<li>its velocity is bellow the <code>ignore.stopped_velocity_threshold</code> and <code>ignore.if_stopped</code> is set to <code>true</code>;</li>
+<li>its current footprint is inside one of the polygons prepared in the previous step.</li>
+</ul>
+<p>However, if it was decided to stop for the object in the previous iteration,
+or if a collision was detected with the object, then it cannot be ignored.</p>
+<p>If an object is not ignored, its predicted path footprints are generated similarly to the ego footprint
+First, we only keep predicted paths that have a confidence value above the <code>confidence_filtering.threshold</code> parameter.
+If, <code>confidence_filtering.only_use_highest</code> is set to <code>true</code> then for each object only the predicted paths that have the higher confidence value are kept.
+Next, the remaining predicted paths are cut according to the segments prepared in the previous step.</p>
+<p>The following figures shows an example where crosswalks are used to ignore pedestrians and to cut their predicted paths.</p>
+<table>
+<thead>
+<tr>
+<th>debug markers (<code>objects_footprints</code>)</th>
+<th>objects of interest</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><img alt="objects_footprints" src="docs/dynamic_objects_filtering.png"></td>
+<td><img alt="objects_of_interest" src="docs/objects_of_intersect.png"></td>
+</tr>
+</tbody>
+</table>
+<p>The result of the filtering can be visualized on the debug markers with the <code>objects_footprints</code> namespace which shows in yellow which predicted path will be used for collision checking in the next step.</p>
+<p>In addition, the objects of interests markers shows which objects are not ignored and the color will correspond to the decision made towards that object (green for nothing, yellow for slowdown, and red for stop).</p>
+<h3 id="4-collision-detection">4. Collision detection<a class="headerlink" href="#4-collision-detection" title="Permanent link">#</a></h3>
+<p>Now that we prepared the ego trajectory footprint, the dynamic objects, and their predicted paths,
+we will calculate the times when they are predicted to collide.</p>
+<p>The following operations are performed for each object that was not ignored in the previous iteration.</p>
+<p>First, we calculate the intersections between each pair of linestrings between the ego and object footprints.
+For each intersection, we calculate the corresponding point,
+the time when ego and the object are predicted to reach that point,
+and the location of that point on the ego footprint (e.g., on the rear left linestring).</p>
+<p>All these intersections are then combined into intervals representing when the overlap between the ego trajectory and object predicted paths starts and ends.
+An overlap is represented by the entering and exiting intersections for both ego and the object.</p>
+<p>These overlaps calculated for all the object's predicted paths are then combined if overlapping in time (including the <code>collision.time_overlap_tolerance</code> parameter).
+and classified into the following collision types:</p>
+<ul>
+<li><code>ignored_collision</code> if one of the following condition is true:<ul>
+<li>parameter <code>collision.ignore_conditions.if_ego_arrives_first.enable</code> is set to <code>true</code> and:<ul>
+<li>ego enters the overlap at least <code>time_margin</code> seconds before the object.<ul>
+<li><code>time_margin</code> is calculated based on the time when ego enters the overlap, which is used to interpolate the margin using the mapping between <code>margin.ego_enter_times</code> and <code>margin.time_margins</code>.</li>
+</ul>
+</li>
+<li>ego does not overlap the object's path by more than <code>max_overlap_duration</code> seconds.</li>
+</ul>
+</li>
+<li>parameter <code>collision.ignore_conditions.if_ego_arrives_first.enable</code> is set to <code>true</code> and:<ul>
+<li>ego cannot stop before entering the interval by using the deceleration limit set with <code>deceleration_limit</code>.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><code>collision</code> if ego and the object are predicted to be in the overlap at the same time.<ul>
+<li>the time distance between the time intervals of ego and the objects must be smaller than the <code>time_margin</code> parameter (a distance of 0 means that the intervals overlap).</li>
+</ul>
+</li>
+<li><code>pass_first_no_collision</code> if ego is predicted to exit the overlap before the object enters it.</li>
+<li><code>no_collision</code> in all other cases.</li>
+</ul>
+<p>In the case where a collision is detected, the corresponding collision time is calculated
+based on the yaw difference between the object and the ego vehicle at the first intersection point.</p>
+<ul>
+<li>default: collision time is set to the time when ego enters the overlap.</li>
+<li>object yaw is within <code>collision.same_direction_angle_threshold</code> of the ego yaw:<ul>
+<li>if the object is faster than ego, no collision will happen and the type is changed to <code>no_collision</code>.</li>
+<li>the collision time is increased based on the velocity difference.</li>
+</ul>
+</li>
+<li>object yaw is within <code>collision.opposite_direction_angle_threshold</code> of the opposite of the ego yaw:<ul>
+<li>the collision time is increased based on the estimated time when ego will collide will the object after entering the overlap.</li>
+</ul>
+</li>
+</ul>
+<p>The following figure shows the collision points in red and a table showing each overlap found and the corresponding collision type, ego and object time intervals, and predicted ego collision time.</p>
+<p><img alt="collisions" src="docs/collisions.png"></p>
+<p>The collisions points and the table can be visualized on the debug markers with the <code>collisions_points</code> and <code>collisions_table</code> namespaces.</p>
+<h3 id="5-decisions">5. Decisions<a class="headerlink" href="#5-decisions" title="Permanent link">#</a></h3>
+<p>We will now make the decision towards each object on whether to stop, slowdown, or do nothing.
+For each object, we consider what decision each collision require, and keep the one with highest priority as follows:</p>
+<ul>
+<li><code>stop</code> types have higher priority than <code>slowdown</code> types.</li>
+<li>for two decisions of the same type, the one whose predicted collision time is earlier has higher priority.</li>
+</ul>
+<p>Once a decision is made, the history of the object is updated and will allow to know,
+for each previous time step, what was the decision made and the type of collision identified.</p>
+<p>To decide the type of a collision, we use the decision history of the object
+and first check if it satisfies the following conditions to stop:</p>
+<ul>
+<li>if the current collision type is <code>collision</code> and collisions with the object have been identified for a consecutive duration of at least <code>stop.on_time_buffer</code> seconds.</li>
+<li>if the previous decision was <code>stop</code> and the time since the last identified collision with the object was less than <code>stop.off_time_buffer</code> seconds ago.</li>
+</ul>
+<p>If the condition to stop is not met, we check the following conditions to slowdown as follows:</p>
+<ul>
+<li>if the current collision type is <code>collision</code> and collisions with the object have been identified for a consecutive duration of at least <code>slowdown.on_time_buffer</code> seconds.</li>
+<li>if the previous decision was <code>slowdown</code> and the time since the last identified collision with the object was less than <code>slowdown.off_time_buffer</code> seconds ago.</li>
+</ul>
+<p><img alt="decisions" src="docs/decisions.png"></p>
+<p>The decision table can be visualized on the debug markers with the <code>decisions</code> namespace.</p>
+<h3 id="6-calculate-the-stop-or-slowdowns">6. Calculate the stop or slowdowns<a class="headerlink" href="#6-calculate-the-stop-or-slowdowns" title="Permanent link">#</a></h3>
+<p>Finally, for each object, we calculate how the velocity profile will be modified based on the decision made:</p>
+<ul>
+<li><code>stop</code>: insert a <code>0</code> velocity ahead of the predicted collision point by the distance set in the <code>stop.distance_buffer</code> parameter.</li>
+<li><code>slowdown</code>: insert a <span class="arithmatex">\(V_{slow}\)</span> velocity between the collision point and the point ahead of collision point by the distance set in the <code>slowdown.distance_buffer</code> parameter.<ul>
+<li><span class="arithmatex">\(V_{slow}\)</span> is calculated as the maximum between the safe velocity and the comfortable velocity.<ul>
+<li>safe velocity: velocity required to be able to stop over the <code>distance_buffer</code> assuming a deceleration as set by the
+  <code>stop.deceleration_limit</code> parameter.</li>
+<li>comfortable velocity: velocity ego would reach assuming it constantly decelerates at the
+  <code>slowdown.deceleration_limit</code> parameter until the slowdown point.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>The slowdowns and stops inserted in the trajectory are visualized with the virtual walls.</p>
+<p><img alt="virtual_walls" src="docs/stop_slow_virtual_walls.png"></p>
+<p>If an inserted <code>stop</code> point requires a stronger deceleration than set by the <code>stop.deceleration_limit</code> parameter, then an ERROR diagnostic is published to indicate that the stop in unfeasible.</p>
+<h3 id="use-of-rtree-for-fast-spatial-queries">Use of Rtree for fast spatial queries<a class="headerlink" href="#use-of-rtree-for-fast-spatial-queries" title="Permanent link">#</a></h3>
+<p>In step 1, each segment of the 4 linestrings of the ego trajectory footprint are stored in a Rtree
+along with the corresponding trajectory point index.
+This allows to efficiently find intersections with an object's predicted path along with the corresponding ego trajectory segment
+from which the interpolated <code>time_from_start</code> can be calculated.</p>
+<p>In step 2, the polygons and linestrings used for filtering the objects are stored in Rtree objects to efficiently find whether
+an object is inside a polygon or if its predicted path intersects a linestring.</p>
+<p>For more information about Rtree, see <a href="https://beta.boost.org/doc/libs/1_82_0/libs/geometry/doc/html/geometry/spatial_indexes/introduction.html">https://beta.boost.org/doc/libs/1_82_0/libs/geometry/doc/html/geometry/spatial_indexes/introduction.html</a></p>
+<h3 id="accounting-for-prediction-inaccuracies">Accounting for prediction inaccuracies<a class="headerlink" href="#accounting-for-prediction-inaccuracies" title="Permanent link">#</a></h3>
+<p>When calculating predicted collisions between ego and the objects,
+we assume that the input ego trajectory contains accurate <code>time_from_start</code> values.
+Similarly, accurate predicted paths are expected to be provided for the objects.</p>
+<p>To allow for errors in these predictions, margins around the time intervals can be added using the parameters
+<code>collision.time_margin</code>.
+Higher values of this parameter will make it more likely to detect a collision and generate a stop.</p>
+<p>The time buffers <code>on_time_buffer</code> and <code>off_time_buffer</code> allow to delay the addition or removal of the decisions to stop/slowdown.
+Higher values prevent incorrect decisions in case of noisy object predictions, but also increase the reaction time, possibly causing stronger decelerations once a decision is made.</p>
+<h2 id="module-parameters">Module Parameters<a class="headerlink" href="#module-parameters" title="Permanent link">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>collision.time_margin</td>
+<td>float</td>
+<td>[s] extra time margin used to determine collisions</td>
+<td>0.5</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>collision.time_overlap_tolerance</td>
+<td>float</td>
+<td>[s] when calculating overlap time intervals, intervals are grouped if they are separated by less than this tolerance value</td>
+<td>0.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>collision.same_direction_angle_threshold</td>
+<td>float</td>
+<td>[rad] threshold to determine if a collision is going in the same direction as the ego trajectory</td>
+<td>0.5</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>collision.opposite_direction_angle_threshold</td>
+<td>float</td>
+<td>[rad] threshold around pi to determine if a collision is going in a direction opposite to the ego trajectory</td>
+<td>0.5</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>if_ego_arrives_first.enable</td>
+<td>boolean</td>
+<td>enable the condition to ignore collisions if ego arrives first</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>margin.ego_enter_times</td>
+<td>array</td>
+<td>[s] predicted times when ego starts overlapping the path of the object</td>
+<td>[0.0, 3.0]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>margin.time_margins</td>
+<td>array</td>
+<td>[s] margin values used such that ego needs to enter the overlap before the object with this much margin to decide to ignore the collision</td>
+<td>[0.0, 6.0]</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>if_ego_arrives_first.max_overlap_duration</td>
+<td>float</td>
+<td>[s] the collision is not ignored if ego is predicted to stay on the object's path for longer than this duration</td>
+<td>2.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>if_ego_arrives_first_and_cannot_stop.enable</td>
+<td>boolean</td>
+<td>enable the condition to ignore collisions if ego arrives first and cannot stop</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>if_ego_arrives_first_and_cannot_stop.deceleration_limit</td>
+<td>float</td>
+<td>[m/s²] deceleration used to determine if ego can stop before a collision</td>
+<td>5.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>slowdown.on_time_buffer</td>
+<td>float</td>
+<td>[s] successive collision detection time required to start the slowdown decision</td>
+<td>0.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>slowdown.off_time_buffer</td>
+<td>float</td>
+<td>[s] successive non-collision detection time required to remove the slowdown decision</td>
+<td>0.5</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>slowdown.distance_buffer</td>
+<td>float</td>
+<td>[m] longitudinal distance between the collision and the slowdown positions</td>
+<td>2.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>slowdown.deceleration_limit</td>
+<td>float</td>
+<td>[m/s²] maximum deceleration that can be applied by the preventive slowdown</td>
+<td>4.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>stop.on_time_buffer</td>
+<td>float</td>
+<td>[s] successive collision detection time required to start the stopping decision</td>
+<td>0.5</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>stop.off_time_buffer</td>
+<td>float</td>
+<td>[s] successive non-collision detection time required to remove a stopping decision</td>
+<td>0.5</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>stop.distance_buffer</td>
+<td>float</td>
+<td>[m] longitudinal safety distance to keep between ego and the collision position</td>
+<td>2.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>stop.deceleration_limit</td>
+<td>float</td>
+<td>[m/s²] if a stop causes a deceleration higher than this limit, an ERROR diagnostic is published</td>
+<td>5.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>keep_condition.time</td>
+<td>float</td>
+<td>[s] time along the ego trajectory</td>
+<td>5.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>keep_condition.distance</td>
+<td>float</td>
+<td>[m] distance along the ego trajectory</td>
+<td>5.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>ego.lateral_margin</td>
+<td>float</td>
+<td>[m] extra lateral margin</td>
+<td>0.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>ego.longitudinal_margin</td>
+<td>float</td>
+<td>[m] extra longitudinal margin</td>
+<td>0.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>objects.target_labels</td>
+<td>array</td>
+<td>target labels</td>
+<td>['PEDESTRIAN', 'BICYCLE', 'MOTORCYCLE']</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>ignore.if_stopped</td>
+<td>boolean</td>
+<td>if true, object with a velocity bellow the threshold are ignored</td>
+<td>False</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>ignore.stopped_velocity_threshold</td>
+<td>float</td>
+<td>[m/s] velocity threshold to decide if an object is stopped</td>
+<td>0.5</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>ignore.if_on_ego_trajectory</td>
+<td>boolean</td>
+<td>if true, object located on the ego trajectory footprint are ignored</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>ignore.if_behind_ego</td>
+<td>boolean</td>
+<td>if true, objects located behind the ego vehicles are ignored</td>
+<td>True</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>ignore.polygon_types</td>
+<td>array</td>
+<td>types of polygons in the vector map used to ignore objects</td>
+<td>['NONE']</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>ignore.lanelet_subtypes</td>
+<td>array</td>
+<td>subtypes of lanelets in the vector map used to ignore objects</td>
+<td>['NONE']</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>debug.object_label</td>
+<td>string</td>
+<td>debug markers specific to each object classification labels will only be published for this one</td>
+<td>PEDESTRIAN</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
+<h2 id="flow-diagram">Flow Diagram<a class="headerlink" href="#flow-diagram" title="Permanent link">#</a></h2>
+<p><img alt="Flow diagram" src="docs/flow_diagram.svg"></p>
+<h2 id="debugging-and-tuning-guide">Debugging and Tuning Guide<a class="headerlink" href="#debugging-and-tuning-guide" title="Permanent link">#</a></h2>
+<h3 id="ego-does-not-stop-for-the-incoming-object">Ego does not stop for the incoming object<a class="headerlink" href="#ego-does-not-stop-for-the-incoming-object" title="Permanent link">#</a></h3>
+<p>Possible reasons to investigate:</p>
+<ul>
+<li>the object classification label is not in the <code>objects.target_labels</code>;</li>
+<li>the object is inside an ignore polygon (<code>objects.LABEL.ignore.polygon_types</code> or <code>lanelet_subtypes</code>);</li>
+<li>the object is on the ego trajectory (<code>objects.LABEL.ignore.if_on_ego_trajectory</code>) or behind ego (<code>if_behind_ego</code>);</li>
+<li>the predicted path of the object is cut (<code>objects.LABEL.cut_predicted_paths.polygon_types</code>, <code>lanelet_subtypes</code>, or <code>linestring_types</code>);</li>
+<li>the collision is ignored;<ul>
+<li>ego does not have time to stop (<code>ignore_conditions.if_ego_arrives_first_and_cannot_stop</code>);<ul>
+<li><code>deceleration_limit</code> can be increased.</li>
+</ul>
+</li>
+<li>ego is predicted to pass before the object (<code>ignore_conditions.if_ego_arrives_first</code>), including the time margin (calculated from <code>margin.ego_enter_times</code> and <code>margin.time_margins</code>);<ul>
+<li><code>time_margins</code> can be increased.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>the collision is not detected;<ul>
+<li><code>collision.time_margin</code> can be increased.</li>
+<li>the ego footprint can be made larger (<code>ego.lateral_margin</code> and <code>ego.longitudinal.margin</code>).</li>
+</ul>
+</li>
+</ul></div>
 
 
 
@@ -14217,7 +14783,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../../motion_velocity_planner/autoware_motion_velocity_run_out_module/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Run Out" rel="prev">
+          <a href="../autoware_motion_velocity_out_of_lane_module/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Out of Lane" rel="prev">
             <div class="md-footer__button md-icon">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
             </div>
@@ -14226,20 +14792,20 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Run Out
+                Out of Lane
               </div>
             </div>
           </a>
         
         
           
-          <a href="../autoware_frenet_planner/" class="md-footer__link md-footer__link--next" aria-label="Next: Frenet planner" rel="next">
+          <a href="../../sampling_based_planner/autoware_bezier_sampler/" class="md-footer__link md-footer__link--next" aria-label="Next: Bézier sampler" rel="next">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Frenet planner
+                Bézier sampler
               </div>
             </div>
             <div class="md-footer__button md-icon">
