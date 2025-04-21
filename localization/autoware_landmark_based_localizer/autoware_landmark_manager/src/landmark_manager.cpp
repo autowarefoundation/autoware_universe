@@ -63,7 +63,7 @@ void LandmarkManager::parse_landmarks(
     const auto center = (v0 + v1 + v2 + v3) / 4.0;
 
     // Define axes
-    const auto x_axis = \(v1 - v0).normalized();
+    const auto x_axis = (v1 - v0).normalized();
     const auto y_axis = (v2 - v1).normalized();
     const auto z_axis = x_axis.cross(y_axis).normalized();
 
