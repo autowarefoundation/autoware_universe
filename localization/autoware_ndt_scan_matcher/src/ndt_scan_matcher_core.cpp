@@ -721,7 +721,7 @@ void NDTScanMatcher::transform_sensor_measurement(
   }
 
   const geometry_msgs::msg::PoseStamped target_to_source_pose_stamped =
-    autoware_utils_pcl::transform2pose(transform);
+    autoware_utils_geometry::transform2pose(transform);
   const Eigen::Matrix4f base_to_sensor_matrix =
     pose_to_matrix4f(target_to_source_pose_stamped.pose);
   autoware_utils_pcl::transform_pointcloud(
