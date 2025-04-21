@@ -17,8 +17,8 @@
 
 #include <autoware/component_interface_specs_universe/localization.hpp>
 #include <autoware/component_interface_utils/rclcpp.hpp>
-#include <autoware_utils/ros/diagnostics_interface.hpp>
-#include <autoware_utils/ros/logger_level_configure.hpp>
+#include <autoware_utils_diagnostics/diagnostics_interface.hpp>
+#include <autoware_utils_logging/logger_level_configure.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
