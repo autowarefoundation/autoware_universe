@@ -299,6 +299,8 @@ struct Object
   universe_utils::Polygon2d current_footprint;
   universe_utils::Point2d position;
   bool is_stopped = false;
+  double velocity{};
+  bool careful_skip = false;
   uint8_t label;
   bool has_target_label = false;
   std::vector<Collision> collisions;  // collisions with the ego trajectory

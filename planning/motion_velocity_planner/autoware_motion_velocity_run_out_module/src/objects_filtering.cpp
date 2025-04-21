@@ -62,8 +62,9 @@ void classify(
   object.label = get_most_probable_classification_label(predicted_object);
   object.has_target_label =
     std::find(target_labels.begin(), target_labels.end(), object.label) != target_labels.end();
+  object.velocity = predicted_object.kinematics.initial_twist_with_covariance.twist.linear.x;
   if (
-    predicted_object.kinematics.initial_twist_with_covariance.twist.linear.x <=
+    object.velocity <=
     params.object_parameters_per_label[object.label].stopped_velocity_threshold) {
     object.is_stopped = true;
   }
@@ -79,11 +80,18 @@ void calculate_current_footprint(
 }
 
 bool skip_object_condition(
-  const Object & object, const std::optional<DecisionHistory> & prev_decisions,
+  Object & object, const std::optional<DecisionHistory> & prev_decisions,
   const universe_utils::Segment2d & ego_rear_segment, const FilteringData & filtering_data,
   const Parameters & params)
 {
   constexpr auto skip_object = true;
+
+  const auto dist = boost::geometry::distance(object.position, ego_rear_segment);
+  const auto careful_skip_condition = object.velocity > 0.5 && dist < 20.0;
+  if (careful_skip_condition) {
+    object.careful_skip = true;
+  }
+
   const auto rear_vector = ego_rear_segment.second - ego_rear_segment.first;
   // normal vector in the direction coming from the rear
   const auto rear_normal = universe_utils::Point2d(-rear_vector.y(), rear_vector.x());
@@ -107,6 +115,9 @@ bool skip_object_condition(
   }
   if (!filtering_data.ignore_objects_rtree.is_geometry_disjoint_from_rtree_polygons(
         object.current_footprint, filtering_data.ignore_objects_polygons)) {
+    if (careful_skip_condition) {
+      return !skip_object;
+    }
     return skip_object;
   }
   return !skip_object;
@@ -174,6 +185,9 @@ void calculate_predicted_path_footprints(
 
 void cut_footprint_after_index(ObjectPredictedPathFootprint & footprint, const size_t index)
 {
+  if (index > footprint.predicted_path_footprint.size()) {
+    return;
+  }
   footprint.predicted_path_footprint.corner_linestrings[front_left].resize(index);
   footprint.predicted_path_footprint.corner_linestrings[front_right].resize(index);
   footprint.predicted_path_footprint.corner_linestrings[rear_left].resize(index);
@@ -204,10 +218,24 @@ std::optional<size_t> get_cut_predicted_path_index(
 
 void filter_predicted_paths(Object & object, const FilteringData & map_data)
 {
+  constexpr auto careful_skip_time_horizon = 2.0;
   for (auto & predicted_path_footprint : object.predicted_path_footprints) {
-    const auto cut_index = get_cut_predicted_path_index(predicted_path_footprint, map_data);
+    const auto cut_index = object.careful_skip
+                             ? careful_skip_time_horizon / predicted_path_footprint.time_step
+                             : get_cut_predicted_path_index(predicted_path_footprint, map_data);
     if (cut_index) {
       cut_footprint_after_index(predicted_path_footprint, *cut_index);
+    }
+    if (object.careful_skip && cut_index) {
+      constexpr auto extra_time = 2.0;
+      for (auto i = 0UL; i < static_cast<size_t>(extra_time / predicted_path_footprint.time_step);
+           ++i) {
+        for (auto & ls : predicted_path_footprint.predicted_path_footprint.corner_linestrings) {
+          if (!ls.empty()) {
+            ls.push_back(ls.back());
+          }
+        }
+      }
     }
   }
 }
