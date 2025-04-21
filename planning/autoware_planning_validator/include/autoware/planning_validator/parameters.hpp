@@ -79,6 +79,7 @@ struct Params
   bool publish_diag = true;
   bool display_on_terminal = true;
   double soft_stop_deceleration = -1.0;
+  double soft_stop_jerk_lim = 0.3;
   int diag_error_count_threshold = 0;
   ValidationParams validation_params;
   InvalidTrajectoryHandlingType inv_traj_handling_type;

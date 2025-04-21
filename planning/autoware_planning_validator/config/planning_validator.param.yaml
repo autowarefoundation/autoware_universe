@@ -19,6 +19,7 @@
     # if handling type is 2 (use last valid traj), the following parameters are used to enable soft stop
     enable_soft_stop_on_prev_traj: true
     soft_stop_deceleration: -1.0 # [m/s^2]
+    soft_stop_jerk_lim: 0.3 # [m/s^3]
 
     validity_checks:
       latency:

@@ -34,7 +34,7 @@ Trajectory resampleTrajectory(const Trajectory & trajectory, const double min_in
 
 Trajectory getStopTrajectory(
   const Trajectory & trajectory, const int nearest_traj_idx, const double current_vel,
-  const double decel);
+  const double current_accel, const double decel, const double jerk_limit);
 
 void calcCurvature(
   const Trajectory & trajectory, std::vector<double> & curvatures,
