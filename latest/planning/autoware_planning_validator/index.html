@@ -14301,6 +14301,7 @@ j_{lat} = v_{lon}^3 * \frac{d\kappa}{ds} + 3 * v_{lon}^2 * a_{lon} * \kappa
 <li><strong>Longitudinal distance deviation</strong> : invalid if the trajectory is too far from ego in longitudinal direction</li>
 <li><strong>Forward trajectory length</strong> : invalid if the trajectory length is not enough to stop within a given deceleration</li>
 <li><strong>Yaw difference</strong> : invalid if the difference between the ego yaw and closest trajectory yaw is too large</li>
+<li><strong>Trajectory Shift</strong> : invalid if the lat./long. distance between two consecutive trajectories near the Ego exceed the thresholds.</li>
 </ul>
 <p>The following features are to be implemented.</p>
 <ul>
@@ -14322,6 +14323,11 @@ j_{lat} = v_{lon}^3 * \frac{d\kappa}{ds} + 3 * v_{lon}^2 * a_{lon} * \kappa
 <td><code>~/input/kinematics</code></td>
 <td>nav_msgs/Odometry</td>
 <td>ego pose and twist</td>
+</tr>
+<tr>
+<td><code>~/input/acceleration</code></td>
+<td>geometry_msgs/AccelWithCovarianceStamped</td>
+<td>current acceleration of the ego vehicle</td>
 </tr>
 <tr>
 <td><code>~/input/trajectory</code></td>
@@ -14400,6 +14406,24 @@ j_{lat} = v_{lon}^3 * \frac{d\kappa}{ds} + 3 * v_{lon}^2 * a_{lon} * \kappa
 <td align="left">bool</td>
 <td align="left">show error msg on terminal</td>
 <td align="left">true</td>
+</tr>
+<tr>
+<td align="left"><code>enable_soft_stop_on_prev_traj</code></td>
+<td align="left">bool</td>
+<td align="left">if true, and handling type is <code>2: publish last valid trajectory</code>, the soft stop is applied instead of using mrm emergency stop.</td>
+<td align="left">true</td>
+</tr>
+<tr>
+<td align="left"><code>soft_stop_deceleration</code></td>
+<td align="left">double</td>
+<td align="left">deceleration value to be used for soft stop action.</td>
+<td align="left">-1.0</td>
+</tr>
+<tr>
+<td align="left"><code>soft_stop_jerk_lim</code></td>
+<td align="left">double</td>
+<td align="left">jerk limit value to be used for soft stop action.</td>
+<td align="left">0.3</td>
 </tr>
 </tbody>
 </table>
@@ -14747,6 +14771,49 @@ j_{lat} = v_{lon}^3 * \frac{d\kappa}{ds} + 3 * v_{lon}^2 * a_{lon} * \kappa
 <td align="left">bool</td>
 <td align="left">if true, will use handling type specified for critical checks</td>
 <td align="left">false</td>
+</tr>
+</tbody>
+</table>
+<h4 id="trajectory-shift-check">Trajectory Shift Check<a class="headerlink" href="#trajectory-shift-check" title="Permanent link">#</a></h4>
+<table>
+<thead>
+<tr>
+<th align="left">Name</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+<th align="left">Default value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><code>validity_checks.trajectory_shift.enable</code></td>
+<td align="left">bool</td>
+<td align="left">flag to enable/disable trajectory shift validation check</td>
+<td align="left">true</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.trajectory_shift.lat_shift_th</code></td>
+<td align="left">double</td>
+<td align="left">max valid lateral distance between two consecutive trajectories (measured at nearest points to ego) [m]</td>
+<td align="left">0.5</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.trajectory_shift.forward_shift_th</code></td>
+<td align="left">double</td>
+<td align="left">max valid Longitudinal distance between two consecutive trajectories (measured at nearest point to ego) [m]</td>
+<td align="left">1.0</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.trajectory_shift.backward_shift_th</code></td>
+<td align="left">double</td>
+<td align="left">min valid longitudinal distance between two consecutive trajectories (measured at nearest point to ego) [m]</td>
+<td align="left">0.1</td>
+</tr>
+<tr>
+<td align="left"><code>validity_checks.trajectory_shift.is_critical</code></td>
+<td align="left">bool</td>
+<td align="left">if true, will use handling type specified for critical checks</td>
+<td align="left">true</td>
 </tr>
 </tbody>
 </table></div>
