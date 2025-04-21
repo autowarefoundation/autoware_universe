@@ -62,8 +62,8 @@ nav_msgs::msg::Odometry to_odometry(
   nav_msgs::msg::Odometry odometry;
   odometry.pose.pose.position.x = vehicle_model_ptr->getX();
   odometry.pose.pose.position.y = vehicle_model_ptr->getY();
-  odometry.pose.pose.orientation =
-    autoware_utils_geometry::create_quaternion_from_rpy(0.0, ego_pitch_angle, vehicle_model_ptr->getYaw());
+  odometry.pose.pose.orientation = autoware_utils_geometry::create_quaternion_from_rpy(
+    0.0, ego_pitch_angle, vehicle_model_ptr->getYaw());
   odometry.twist.twist.linear.x = vehicle_model_ptr->getVx();
   odometry.twist.twist.angular.z = vehicle_model_ptr->getWz();
 
