@@ -63,18 +63,18 @@ void calculate_predicted_path_footprints(
 
 /// @brief get the first footprint segment index which intersect with the given segment
 std::optional<size_t> get_first_intersecting_segment_idx(
-  const ObjectCornerFootprint & footprint, const universe_utils::Segment2d & segment);
+  const ObjectPredictedPathFootprint & footprint, const universe_utils::Segment2d & segment);
 
 /// @brief return true if the incoming vector crosses from the rear
 bool crosses_from_the_rear(
   const universe_utils::Segment2d & incoming, const universe_utils::Segment2d & rear);
 
 /// @brief cut a footprint after the given index
-void cut_footprint_after_index(ObjectCornerFootprint & footprint, const size_t index);
+void cut_footprint_after_index(ObjectPredictedPathFootprint & footprint, const size_t index);
 
 /// @brief calculate the first index of the given footprint that crosses a cut segment
 std::optional<size_t> get_cut_predicted_path_index(
-  const ObjectCornerFootprint & corner_footprint, const FilteringData & map_data);
+  const ObjectPredictedPathFootprint & predicted_path_footprint, const FilteringData & map_data);
 
 /// @brief filter predicted paths of an object used map filtering data
 void filter_predicted_paths(Object & object, const FilteringData & map_data);

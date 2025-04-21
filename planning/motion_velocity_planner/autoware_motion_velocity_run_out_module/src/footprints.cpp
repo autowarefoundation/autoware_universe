@@ -38,7 +38,7 @@ void prepare_trajectory_footprint_rtree(TrajectoryCornerFootprint & footprint)
   nodes.emplace_back(footprint.get_rear_segment(0), std::make_pair(rear, 0UL));
   nodes.emplace_back(footprint.get_front_segment(0), std::make_pair(front, 0UL));
   for (const auto corner : {front_left, front_right, rear_left, rear_right}) {
-    const auto & ls = footprint.corner_footprint.corner_linestrings[corner];
+    const auto & ls = footprint.predicted_path_footprint.corner_linestrings[corner];
     for (auto i = 0UL; i + 1 < ls.size(); ++i) {
       nodes.emplace_back(universe_utils::Segment2d{ls[i], ls[i + 1]}, std::make_pair(corner, i));
     }
@@ -57,7 +57,7 @@ TrajectoryCornerFootprint calculate_trajectory_corner_footprint(
 {
   run_out::TrajectoryCornerFootprint trajectory_footprint;
   trajectory_footprint.ego_trajectory = trajectory;
-  auto & footprint = trajectory_footprint.corner_footprint;
+  auto & footprint = trajectory_footprint.predicted_path_footprint;
   const auto base_footprint =
     vehicle_info.createFootprint(params.ego_lateral_margin, params.ego_longitudinal_margin);
   for (const auto & p : trajectory) {

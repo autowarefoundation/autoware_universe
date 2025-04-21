@@ -155,31 +155,32 @@ void calculate_predicted_path_footprints(
   // calculate footprint
   for (const auto & path :
        filter_by_confidence(predicted_object.kinematics.predicted_paths, object.label, params)) {
-    ObjectCornerFootprint footprint;
+    ObjectPredictedPathFootprint footprint;
     footprint.time_step = rclcpp::Duration(path.time_step).seconds();
     for (const auto & p : path.path) {
       const auto object_polygon = autoware_utils::to_footprint(p, half_length, half_length, width);
-      footprint.corner_footprint.corner_linestrings[front_left].push_back(
+      footprint.predicted_path_footprint.corner_linestrings[front_left].push_back(
         object_polygon.outer()[0]);
-      footprint.corner_footprint.corner_linestrings[front_right].push_back(
+      footprint.predicted_path_footprint.corner_linestrings[front_right].push_back(
         object_polygon.outer()[1]);
-      footprint.corner_footprint.corner_linestrings[rear_right].push_back(
+      footprint.predicted_path_footprint.corner_linestrings[rear_right].push_back(
         object_polygon.outer()[2]);
-      footprint.corner_footprint.corner_linestrings[rear_left].push_back(object_polygon.outer()[3]);
+      footprint.predicted_path_footprint.corner_linestrings[rear_left].push_back(
+        object_polygon.outer()[3]);
     }
-    object.corner_footprints.push_back(footprint);
+    object.predicted_path_footprints.push_back(footprint);
   }
 }
 
 std::optional<size_t> get_first_intersecting_segment_idx(
-  const ObjectCornerFootprint & footprint, const universe_utils::Segment2d & segment)
+  const ObjectPredictedPathFootprint & footprint, const universe_utils::Segment2d & segment)
 {
-  for (auto i = 0UL; i + 1 < footprint.corner_footprint.size(); ++i) {
+  for (auto i = 0UL; i + 1 < footprint.predicted_path_footprint.size(); ++i) {
     for (const auto & ls :
-         {footprint.corner_footprint.corner_linestrings[front_left],
-          footprint.corner_footprint.corner_linestrings[front_right],
-          footprint.corner_footprint.corner_linestrings[rear_left],
-          footprint.corner_footprint.corner_linestrings[rear_right]}) {
+         {footprint.predicted_path_footprint.corner_linestrings[front_left],
+          footprint.predicted_path_footprint.corner_linestrings[front_right],
+          footprint.predicted_path_footprint.corner_linestrings[rear_left],
+          footprint.predicted_path_footprint.corner_linestrings[rear_right]}) {
       if (universe_utils::intersect(segment.first, segment.second, ls[i], ls[i + 1])) {
         return i;
       }
@@ -188,20 +189,21 @@ std::optional<size_t> get_first_intersecting_segment_idx(
   return std::nullopt;
 }
 
-void cut_footprint_after_index(ObjectCornerFootprint & footprint, const size_t index)
+void cut_footprint_after_index(ObjectPredictedPathFootprint & footprint, const size_t index)
 {
-  footprint.corner_footprint.corner_linestrings[front_left].resize(index);
-  footprint.corner_footprint.corner_linestrings[front_right].resize(index);
-  footprint.corner_footprint.corner_linestrings[rear_left].resize(index);
-  footprint.corner_footprint.corner_linestrings[rear_right].resize(index);
+  footprint.predicted_path_footprint.corner_linestrings[front_left].resize(index);
+  footprint.predicted_path_footprint.corner_linestrings[front_right].resize(index);
+  footprint.predicted_path_footprint.corner_linestrings[rear_left].resize(index);
+  footprint.predicted_path_footprint.corner_linestrings[rear_right].resize(index);
 }
 
 std::optional<size_t> get_cut_predicted_path_index(
-  const ObjectCornerFootprint & corner_footprint, const FilteringData & map_data)
+  const ObjectPredictedPathFootprint & predicted_path_footprint, const FilteringData & map_data)
 {
-  for (auto i = 0UL; i + 1 < corner_footprint.corner_footprint.size(); ++i) {
+  for (auto i = 0UL; i + 1 < predicted_path_footprint.predicted_path_footprint.size(); ++i) {
     for (const auto & corner : {front_left, front_right, rear_left, rear_right}) {
-      const auto & ls = corner_footprint.corner_footprint.corner_linestrings[corner];
+      const auto & ls =
+        predicted_path_footprint.predicted_path_footprint.corner_linestrings[corner];
       const auto & segment = universe_utils::Segment2d(ls[i], ls[i + 1]);
       std::vector<SegmentNode> query_results;
       map_data.cut_predicted_paths_rtree.query(
@@ -219,10 +221,10 @@ std::optional<size_t> get_cut_predicted_path_index(
 
 void filter_predicted_paths(Object & object, const FilteringData & map_data)
 {
-  for (auto & corner_footprint : object.corner_footprints) {
-    const auto cut_index = get_cut_predicted_path_index(corner_footprint, map_data);
+  for (auto & predicted_path_footprint : object.predicted_path_footprints) {
+    const auto cut_index = get_cut_predicted_path_index(predicted_path_footprint, map_data);
     if (cut_index) {
-      cut_footprint_after_index(corner_footprint, *cut_index);
+      cut_footprint_after_index(predicted_path_footprint, *cut_index);
     }
   }
 }
@@ -254,7 +256,7 @@ std::vector<Object> prepare_dynamic_objects(
     }
     calculate_predicted_path_footprints(filtered_object, object->predicted_object, params);
     filter_predicted_paths(filtered_object, filtering_data[filtered_object.label]);
-    if (!filtered_object.corner_footprints.empty()) {
+    if (!filtered_object.predicted_path_footprints.empty()) {
       filtered_objects.push_back(filtered_object);
     }
   }

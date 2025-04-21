@@ -135,8 +135,9 @@ std::vector<Collision> calculate_interval_collisions(
 /// @param[in] params The parameters for collision calculation.
 /// @return A vector of collisions.
 std::vector<Collision> calculate_footprint_collisions(
-  const TrajectoryCornerFootprint & ego_footprint, const ObjectCornerFootprint & object_footprint,
-  const FilteringData & filtering_data, const double min_arc_length, const Parameters & params);
+  const TrajectoryCornerFootprint & ego_footprint,
+  const ObjectPredictedPathFootprint & object_footprint, const FilteringData & filtering_data,
+  const double min_arc_length, const Parameters & params);
 
 /// @brief Calculates collisions between the ego vehicle's trajectory and a predicted object.
 /// @param[inout] object A predicted object.  Collisions are added to each object.

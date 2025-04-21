@@ -65,9 +65,9 @@ struct CornerFootprint
   }
 };
 /// @brief corner footprint of an object with the timestep separating each footprint point
-struct ObjectCornerFootprint
+struct ObjectPredictedPathFootprint
 {
-  CornerFootprint corner_footprint;
+  CornerFootprint predicted_path_footprint;
   double time_step{};
 };
 
@@ -141,7 +141,7 @@ using FootprintSegmentRtree = bgi::rtree<FootprintSegmentNode, bgi::rstar<16>>;
 /// @brief the corner footprint of the ego trajectory
 struct TrajectoryCornerFootprint
 {
-  CornerFootprint corner_footprint;
+  CornerFootprint predicted_path_footprint;
   FootprintSegmentRtree segments_rtree;
   std::vector<universe_utils::LinearRing2d>
     front_polygons;  // polygons built from the front linestrings
@@ -156,15 +156,15 @@ struct TrajectoryCornerFootprint
   [[nodiscard]] universe_utils::Segment2d get_rear_segment(const size_t index) const
   {
     return {
-      corner_footprint.corner_linestrings[rear_left][index],
-      corner_footprint.corner_linestrings[rear_right][index]};
+      predicted_path_footprint.corner_linestrings[rear_left][index],
+      predicted_path_footprint.corner_linestrings[rear_right][index]};
   }
   /// @brief get the front footprint segment of the given index
   [[nodiscard]] universe_utils::Segment2d get_front_segment(const size_t index) const
   {
     return {
-      corner_footprint.corner_linestrings[front_left][index],
-      corner_footprint.corner_linestrings[front_right][index]};
+      predicted_path_footprint.corner_linestrings[front_left][index],
+      predicted_path_footprint.corner_linestrings[front_right][index]};
   }
 };
 
@@ -308,7 +308,8 @@ struct Object
 {
   std::shared_ptr<motion_velocity_planner::PlannerData::Object> object;
   std::string uuid;
-  std::vector<ObjectCornerFootprint> corner_footprints;  // footprint of each predicted path
+  std::vector<ObjectPredictedPathFootprint>
+    predicted_path_footprints;  // footprint of each predicted path
   universe_utils::Polygon2d current_footprint;
   universe_utils::Point2d position;
   bool is_stopped = false;

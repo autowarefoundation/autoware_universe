@@ -50,25 +50,25 @@ inline MarkerArray make_debug_footprint_markers(
   m.color = universe_utils::createMarkerColor(0.0, 1.0, 0.0, 1.0);
   m.scale.x = 0.2;
   m.ns = "ego_footprint_front_left";
-  for (const auto & p : ego.corner_footprint.corner_linestrings[front_left]) {
+  for (const auto & p : ego.predicted_path_footprint.corner_linestrings[front_left]) {
     m.points.push_back(universe_utils::createPoint(p.x(), p.y(), 0.0));
   }
   markers.markers.push_back(m);
   m.ns = "ego_footprint_front_right";
   m.points.clear();
-  for (const auto & p : ego.corner_footprint.corner_linestrings[front_right]) {
+  for (const auto & p : ego.predicted_path_footprint.corner_linestrings[front_right]) {
     m.points.push_back(universe_utils::createPoint(p.x(), p.y(), 0.0));
   }
   markers.markers.push_back(m);
   m.ns = "ego_footprint_rear_right";
   m.points.clear();
-  for (const auto & p : ego.corner_footprint.corner_linestrings[rear_right]) {
+  for (const auto & p : ego.predicted_path_footprint.corner_linestrings[rear_right]) {
     m.points.push_back(universe_utils::createPoint(p.x(), p.y(), 0.0));
   }
   markers.markers.push_back(m);
   m.ns = "ego_footprint_rear_left";
   m.points.clear();
-  for (const auto & p : ego.corner_footprint.corner_linestrings[rear_left]) {
+  for (const auto & p : ego.predicted_path_footprint.corner_linestrings[rear_left]) {
     m.points.push_back(universe_utils::createPoint(p.x(), p.y(), 0.0));
   }
   markers.markers.push_back(m);
@@ -78,8 +78,8 @@ inline MarkerArray make_debug_footprint_markers(
   m.ns = "objects_footprints";
   m.color.r = 1.0;
   for (const auto & object : objects) {
-    for (const auto & footprint : object.corner_footprints) {
-      const auto & f = footprint.corner_footprint;
+    for (const auto & footprint : object.predicted_path_footprints) {
+      const auto & f = footprint.predicted_path_footprint;
       for (auto i = 0UL; i + 1 < f.corner_linestrings[front_left].size(); ++i) {
         m.points.push_back(universe_utils::createPoint(
           f.corner_linestrings[front_left][i].x(), f.corner_linestrings[front_left][i].y(), 0.0));

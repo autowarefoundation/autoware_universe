@@ -413,11 +413,12 @@ std::vector<Collision> calculate_interval_collisions(
   return collisions;
 }
 std::vector<TimeOverlapIntervalPair> calculate_ego_and_object_time_overlap_intervals(
-  const TrajectoryCornerFootprint & ego_footprint, const ObjectCornerFootprint & object_footprint,
-  const FilteringData & filtering_data, const double min_arc_length)
+  const TrajectoryCornerFootprint & ego_footprint,
+  const ObjectPredictedPathFootprint & object_footprint, const FilteringData & filtering_data,
+  const double min_arc_length)
 {
   std::vector<TimeOverlapIntervalPair> all_overlap_intervals;
-  for (const auto & corner_ls : object_footprint.corner_footprint.corner_linestrings) {
+  for (const auto & corner_ls : object_footprint.predicted_path_footprint.corner_linestrings) {
     const std::vector<FootprintIntersection> footprint_intersections =
       calculate_intersections(corner_ls, ego_footprint, object_footprint.time_step);
     const auto intervals = calculate_overlap_intervals(footprint_intersections);
@@ -442,11 +443,11 @@ void calculate_object_collisions(
   const FilteringDataPerLabel & filtering_data, const double min_arc_length,
   const Parameters & params)
 {
-  for (const auto & corner_footprint : object.corner_footprints) {
+  for (const auto & predicted_path_footprint : object.predicted_path_footprints) {
     // combining overlap intervals over all corner footprints gives bad results
     // the current way to calculate collisions independently for each corner footprint is best
     const auto time_overlap_intervals = calculate_ego_and_object_time_overlap_intervals(
-      ego_footprint, corner_footprint, filtering_data[object.label], min_arc_length);
+      ego_footprint, predicted_path_footprint, filtering_data[object.label], min_arc_length);
     const auto collisions = calculate_interval_collisions(time_overlap_intervals, params);
     for (const auto & c : collisions) {
       const auto is_after_overlap = c.ego_collision_time > c.ego_time_interval.to;
