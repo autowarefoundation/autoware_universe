@@ -10,7 +10,7 @@ This module is activated if the launch parameter `launch_mvp_run_out_module` is 
 
 ## Inner-workings / Algorithms
 
-This module calculates the times when the ego vehicle and the objects are predicted to overlaps each other's trajectories.
+This module calculates the times when the ego vehicle and the objects are predicted to overlap each other's trajectories.
 These times are then used to decide whether to stop before the overlap or not.
 
 Next we explain the inner-workings of the module in more details.
@@ -200,7 +200,7 @@ Higher values prevent incorrect decisions in case of noisy object predictions, b
 
 ![Flow diagram](./docs/flow_diagram.svg)
 
-## Debbuging and Tuning Guide
+## Debugging and Tuning Guide
 
 ### Ego does not stop for the incoming object
 
