@@ -14201,6 +14201,11 @@
 <td>ego pose and twist</td>
 </tr>
 <tr>
+<td><code>~/input/acceleration</code></td>
+<td>geometry_msgs/AccelWithCovarianceStamped</td>
+<td>current acceleration of the ego vehicle</td>
+</tr>
+<tr>
 <td><code>~/input/trajectory</code></td>
 <td>autoware_planning_msgs/Trajectory</td>
 <td>target trajectory to be validated in this node</td>
@@ -14288,7 +14293,13 @@
 <td align="left"><code>soft_stop_deceleration</code></td>
 <td align="left">double</td>
 <td align="left">deceleration value to be used for soft stop action.</td>
-<td align="left">true</td>
+<td align="left">-1.0</td>
+</tr>
+<tr>
+<td align="left"><code>soft_stop_jerk_lim</code></td>
+<td align="left">double</td>
+<td align="left">jerk limit value to be used for soft stop action.</td>
+<td align="left">0.3</td>
 </tr>
 </tbody>
 </table>
