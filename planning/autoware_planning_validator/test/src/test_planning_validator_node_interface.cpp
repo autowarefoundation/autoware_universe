@@ -59,6 +59,9 @@ void publishMandatoryTopics(
   // publish necessary topics from test_manager
   test_manager->publishInput(
     test_target_node, "planning_validator/input/kinematics", autoware::test_utils::makeOdometry());
+  test_manager->publishInput(
+    test_target_node, "planning_validator/input/acceleration",
+    geometry_msgs::msg::AccelWithCovarianceStamped{});
 }
 
 TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectory)

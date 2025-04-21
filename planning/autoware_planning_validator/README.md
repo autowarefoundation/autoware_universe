@@ -36,6 +36,7 @@ The following features are supported for trajectory validation and can have thre
 - **Longitudinal distance deviation** : invalid if the trajectory is too far from ego in longitudinal direction
 - **Forward trajectory length** : invalid if the trajectory length is not enough to stop within a given deceleration
 - **Yaw difference** : invalid if the difference between the ego yaw and closest trajectory yaw is too large
+- **Trajectory Shift** : invalid if the lat./long. distance between two consecutive trajectories near the Ego exceed the thresholds.
 
 The following features are to be implemented.
 
@@ -47,10 +48,11 @@ The following features are to be implemented.
 
 The `autoware_planning_validator` takes in the following inputs:
 
-| Name                 | Type                              | Description                                    |
-| -------------------- | --------------------------------- | ---------------------------------------------- |
-| `~/input/kinematics` | nav_msgs/Odometry                 | ego pose and twist                             |
-| `~/input/trajectory` | autoware_planning_msgs/Trajectory | target trajectory to be validated in this node |
+| Name                   | Type                                     | Description                                    |
+| ---------------------- | ---------------------------------------- | ---------------------------------------------- |
+| `~/input/kinematics`   | nav_msgs/Odometry                        | ego pose and twist                             |
+| `~/input/acceleration` | geometry_msgs/AccelWithCovarianceStamped | current acceleration of the ego vehicle        |
+| `~/input/trajectory`   | autoware_planning_msgs/Trajectory        | target trajectory to be validated in this node |
 
 ### Outputs
 
@@ -68,13 +70,16 @@ The following parameters can be set for the `autoware_planning_validator`:
 
 ### System parameters
 
-| Name                         | Type | Description                                                                                                                                                                                      | Default value |
-| :--------------------------- | :--- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------ |
-| `handling_type.noncritical`  | int  | set the handling type for noncritical invalid trajectory. <br>0: publish invalid trajectory as it is, <br>1: stop publishing the trajectory, <br>2: publish last valid trajectory.               | 0             |
-| `handling_type.critical`     | int  | set the handling type for critical invalid trajectory. <br>0: publish the trajectory even if it is invalid, <br>1: stop publishing the trajectory, <br>2: publish the last validated trajectory. | 0             |
-| `publish_diag`               | bool | if true, diagnostics msg is published.                                                                                                                                                           | true          |
-| `diag_error_count_threshold` | int  | Number of consecutive invalid trajectories to set the Diag to ERROR. (Fe.g, threshold = 1 means, even if the trajectory is invalid, the Diag will not be ERROR if the next trajectory is valid.) | 0             |
-| `display_on_terminal`        | bool | show error msg on terminal                                                                                                                                                                       | true          |
+| Name                            | Type   | Description                                                                                                                                                                                      | Default value |
+| :------------------------------ | :----- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------ |
+| `handling_type.noncritical`     | int    | set the handling type for noncritical invalid trajectory. <br>0: publish invalid trajectory as it is, <br>1: stop publishing the trajectory, <br>2: publish last valid trajectory.               | 0             |
+| `handling_type.critical`        | int    | set the handling type for critical invalid trajectory. <br>0: publish the trajectory even if it is invalid, <br>1: stop publishing the trajectory, <br>2: publish the last validated trajectory. | 0             |
+| `publish_diag`                  | bool   | if true, diagnostics msg is published.                                                                                                                                                           | true          |
+| `diag_error_count_threshold`    | int    | Number of consecutive invalid trajectories to set the Diag to ERROR. (Fe.g, threshold = 1 means, even if the trajectory is invalid, the Diag will not be ERROR if the next trajectory is valid.) | 0             |
+| `display_on_terminal`           | bool   | show error msg on terminal                                                                                                                                                                       | true          |
+| `enable_soft_stop_on_prev_traj` | bool   | if true, and handling type is `2: publish last valid trajectory`, the soft stop is applied instead of using mrm emergency stop.                                                                  | true          |
+| `soft_stop_deceleration`        | double | deceleration value to be used for soft stop action.                                                                                                                                              | -1.0          |
+| `soft_stop_jerk_lim`            | double | jerk limit value to be used for soft stop action.                                                                                                                                                | 0.3           |
 
 ### Algorithm parameters
 
@@ -163,3 +168,13 @@ The following parameters can be set for the `autoware_planning_validator`:
 | `validity_checks.forward_trajectory_length.acceleration` | double | acceleration value used to calculate required trajectory length. [m/ss]                          | -5.0          |
 | `validity_checks.forward_trajectory_length.margin`       | double | margin of the required length not to raise an error when ego slightly exceeds the end point. [m] | 2.0           |
 | `validity_checks.forward_trajectory_length.is_critical`  | bool   | if true, will use handling type specified for critical checks                                    | false         |
+
+#### Trajectory Shift Check
+
+| Name                                                 | Type   | Description                                                                                                 | Default value |
+| :--------------------------------------------------- | :----- | :---------------------------------------------------------------------------------------------------------- | :------------ |
+| `validity_checks.trajectory_shift.enable`            | bool   | flag to enable/disable trajectory shift validation check                                                    | true          |
+| `validity_checks.trajectory_shift.lat_shift_th`      | double | max valid lateral distance between two consecutive trajectories (measured at nearest points to ego) [m]     | 0.5           |
+| `validity_checks.trajectory_shift.forward_shift_th`  | double | max valid Longitudinal distance between two consecutive trajectories (measured at nearest point to ego) [m] | 1.0           |
+| `validity_checks.trajectory_shift.backward_shift_th` | double | min valid longitudinal distance between two consecutive trajectories (measured at nearest point to ego) [m] | 0.1           |
+| `validity_checks.trajectory_shift.is_critical`       | bool   | if true, will use handling type specified for critical checks                                               | true          |

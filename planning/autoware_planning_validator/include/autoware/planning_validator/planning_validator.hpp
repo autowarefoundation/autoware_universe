@@ -30,6 +30,7 @@
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
+#include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
 #include <memory>
@@ -44,6 +45,7 @@ using autoware_planning_validator::msg::PlanningValidatorStatus;
 using autoware_utils::StopWatch;
 using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
+using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 
 class PlanningValidator : public rclcpp::Node
@@ -70,6 +72,9 @@ public:
   bool checkValidForwardTrajectoryLength(const Trajectory & trajectory);
   bool checkValidLatency(const Trajectory & trajectory);
   bool checkValidYawDeviation(const Trajectory & trajectory);
+  bool checkTrajectoryShift(
+    const Trajectory & trajectory, const Trajectory & prev_trajectory,
+    const geometry_msgs::msg::Pose & ego_pose);
 
 private:
   void setupDiag();
@@ -78,17 +83,22 @@ private:
 
   bool isDataReady();
 
-  void validate(const Trajectory & trajectory);
+  void validate(
+    const Trajectory & trajectory, const std::optional<Trajectory> & prev_trajectory = {});
 
   void publishProcessingTime(const double processing_time_ms);
   void publishTrajectory();
   void publishDebugInfo();
   void displayStatus();
 
-  void setStatus(DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg);
+  void setStatus(
+    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg,
+    const bool is_critical = false);
 
   autoware_utils::InterProcessPollingSubscriber<Odometry> sub_kinematics_{
     this, "~/input/kinematics"};
+  autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped> sub_acceleration_{
+    this, "~/input/acceleration"};
   rclcpp::Subscription<Trajectory>::SharedPtr sub_traj_;
   rclcpp::Publisher<Trajectory>::SharedPtr pub_traj_;
   rclcpp::Publisher<PlanningValidatorStatus>::SharedPtr pub_status_;
@@ -108,8 +118,10 @@ private:
 
   Trajectory::ConstSharedPtr current_trajectory_;
   Trajectory::ConstSharedPtr previous_published_trajectory_;
+  Trajectory::ConstSharedPtr soft_stop_trajectory_;
 
   Odometry::ConstSharedPtr current_kinematics_;
+  AccelWithCovarianceStamped::ConstSharedPtr current_acceleration_;
 
   std::shared_ptr<PlanningValidatorDebugMarkerPublisher> debug_pose_publisher_;
 
