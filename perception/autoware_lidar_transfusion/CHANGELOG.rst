@@ -2,6 +2,17 @@
 Changelog for package autoware_lidar_transfusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(lidar_transfusion): add diagnostics for processing time (`#10398 <https://github.com/autowarefoundation/autoware_universe/issues/10398>`_)
+  * add processing time diagnostics
+  * style(pre-commit): autofix
+  * remove comment
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Masaki Baba, Ryohsuke Mitsudome
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

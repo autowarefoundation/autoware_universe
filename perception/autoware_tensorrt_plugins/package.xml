@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_tensorrt_plugins</name>
-  <version>1.0.0</version>
+  <version>0.44.0</version>
   <description>The autoware_tensorrt_plugins package</description>
   <maintainer email="kenzo.lobos@tier4.jp">Kenzo Lobos-Tsunekawa</maintainer>
   <license>Apache License 2.0</license>
