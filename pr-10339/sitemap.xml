@@ -416,6 +416,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/perception/autoware_bevfusion/</loc>
+         <lastmod>2025-04-21</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/perception/autoware_bytetrack/</loc>
          <lastmod>2025-04-21</lastmod>
          <changefreq>daily</changefreq>
@@ -657,6 +662,11 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/perception/autoware_tensorrt_common/</loc>
+         <lastmod>2025-04-21</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10339/perception/autoware_tensorrt_plugins/</loc>
          <lastmod>2025-04-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
