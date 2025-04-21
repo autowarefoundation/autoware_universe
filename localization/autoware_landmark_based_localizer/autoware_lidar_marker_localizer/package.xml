@@ -20,7 +20,6 @@
   <depend>autoware_point_types</depend>
   <depend>autoware_utils_diagnostics</depend>
   <depend>autoware_utils_geometry</depend>
-  <depend>autoware_utils_pcl</depend>
   <depend>pcl_conversions</depend>
   <depend>pcl_ros</depend>
   <depend>rclcpp</depend>
