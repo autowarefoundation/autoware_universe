@@ -4,8 +4,9 @@
   <name>autoware_radar_objects_adapter</name>
   <version>0.43.0</version>
   <description>The autoware_radar_objects_adapter package</description>
+  <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
+  <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
   <author email="kenzo.lobos@tier4.jp">Kenzo Lobos-Tsunekawa</author>
-  <maintainer email="kenzo.lobos@tier4.jp">Kenzo Lobos-Tsunekawa</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
