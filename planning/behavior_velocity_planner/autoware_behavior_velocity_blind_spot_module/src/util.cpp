@@ -326,6 +326,24 @@ lanelet::ConstLanelets generateBlindSpotLanelets(
       blind_spot_lanelets.push_back(ego_half_lanelet);
     }
   }
+
+  // add next straight lanelet if exists
+  if (!lane_ids_upto_intersection.empty()) {
+    for (const auto & next : routing_graph_ptr->following(
+           lanelet_map_ptr->laneletLayer.get(lane_ids_upto_intersection.back()))) {
+      if (next.attributeOr("turn_direction", "else") == std::string("straight")) {
+        const auto next_straight_lanelet =
+          generateHalfLanelet(next, turn_direction, ignore_width_from_centerline);
+        const double left_offset =
+          (turn_direction == TurnDirection::LEFT) ? adjacent_extend_width : 0.0;
+        const double right_offset =
+          (turn_direction == TurnDirection::RIGHT) ? adjacent_extend_width : 0.0;
+        blind_spot_lanelets.push_back(
+          lanelet::utils::getExpandedLanelet(next_straight_lanelet, left_offset, right_offset));
+        break;
+      }
+    }
+  }
   return blind_spot_lanelets;
 }
 
@@ -335,7 +353,8 @@ std::optional<lanelet::CompoundPolygon3d> generateBlindSpotPolygons(
   const geometry_msgs::msg::Pose & stop_line_pose, const double backward_detection_length)
 {
   const auto stop_line_arc_ego =
-    lanelet::utils::getArcCoordinates(blind_spot_lanelets, stop_line_pose).length;
+    lanelet::utils::getArcCoordinates(blind_spot_lanelets, stop_line_pose).length +
+    lanelet::utils::getLaneletLength3d(blind_spot_lanelets.back());
   const auto detection_area_start_length_ego =
     std::max<double>(stop_line_arc_ego - backward_detection_length, 0.0);
   return lanelet::utils::getPolygonFromArcLength(

@@ -239,7 +239,7 @@ TEST_F(TestWithAdjLaneData, generateBlindSpotLanelets_left)
     route_handler, autoware::behavior_velocity_planner::TurnDirection::LEFT, {2000, 2010},
     param.ignore_width_from_center_line, param.adjacent_extend_width,
     param.opposite_adjacent_extend_width);
-  EXPECT_EQ(blind_spot_lanelets.size(), 2);
+  EXPECT_EQ(blind_spot_lanelets.size(), 3);
 
 #ifdef EXPORT_TEST_PLOT_FIGURE
   py::gil_scoped_acquire acquire;
@@ -406,7 +406,7 @@ TEST_F(TestWithShoulderData, generateBlindSpotLaneletsShoulder_left)
     route_handler, autoware::behavior_velocity_planner::TurnDirection::LEFT, {1000, 1010},
     param.ignore_width_from_center_line, param.adjacent_extend_width,
     param.opposite_adjacent_extend_width);
-  EXPECT_EQ(blind_spot_lanelets.size(), 2);
+  EXPECT_EQ(blind_spot_lanelets.size(), 3);
 
 #ifdef EXPORT_TEST_PLOT_FIGURE
   py::gil_scoped_acquire acquire;
