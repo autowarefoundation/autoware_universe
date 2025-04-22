@@ -174,8 +174,9 @@ VelocityPlanningResult ObstacleVelocityLimiterModule::plan(
     planner_data->objects, obstacle_params_.dynamic_obstacles_buffer,
     obstacle_params_.dynamic_obstacles_min_vel);
   if (obstacle_params_.ignore_on_path)
-    obstacle_masks.negative_masks.push_back(obstacle_velocity_limiter::createTrajectoryFootprint(
-      original_traj_points, vehicle_lateral_offset_ + obstacle_params_.ignore_extra_distance));
+    obstacle_masks.negative_masks.push_back(
+      obstacle_velocity_limiter::createTrajectoryFootprint(
+        original_traj_points, vehicle_lateral_offset_ + obstacle_params_.ignore_extra_distance));
   const auto projected_linestrings =
     obstacle_velocity_limiter::createProjectedLines(downsampled_traj_points, projection_params_);
   const auto footprint_polygons = obstacle_velocity_limiter::createFootprintPolygons(

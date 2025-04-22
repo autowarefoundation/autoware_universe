@@ -52,11 +52,12 @@ class GyroOdometerValidator : public rclcpp::Node
 public:
   GyroOdometerValidator()
   : Node("gyro_odometer_validator"),
-    twist_sub(create_subscription<TwistWithCovarianceStamped>(
-      "/twist_with_covariance", 1,
-      [this](const TwistWithCovarianceStamped::ConstSharedPtr msg) {
-        received_latest_twist_ptr = msg;
-      })),
+    twist_sub(
+      create_subscription<TwistWithCovarianceStamped>(
+        "/twist_with_covariance", 1,
+        [this](const TwistWithCovarianceStamped::ConstSharedPtr msg) {
+          received_latest_twist_ptr = msg;
+        })),
     received_latest_twist_ptr(nullptr)
   {
   }

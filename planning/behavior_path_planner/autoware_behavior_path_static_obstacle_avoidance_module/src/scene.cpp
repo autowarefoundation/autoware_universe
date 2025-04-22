@@ -1439,8 +1439,9 @@ void StaticObstacleAvoidanceModule::updateData()
     helper_->setPreviousSplineShiftPath(toShiftedPath(getPreviousModuleOutput().path));
     helper_->setPreviousLinearShiftPath(toShiftedPath(getPreviousModuleOutput().path));
     helper_->setPreviousReferencePath(getPreviousModuleOutput().path);
-    helper_->setPreviousDrivingLanes(utils::static_obstacle_avoidance::getCurrentLanesFromPath(
-      getPreviousModuleOutput().reference_path, planner_data_));
+    helper_->setPreviousDrivingLanes(
+      utils::static_obstacle_avoidance::getCurrentLanesFromPath(
+        getPreviousModuleOutput().reference_path, planner_data_));
   }
 
   debug_data_ = DebugData();

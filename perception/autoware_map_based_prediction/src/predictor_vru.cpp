@@ -277,8 +277,9 @@ void PredictorVru::setLaneletMap(std::shared_ptr<lanelet::LaneletMap> lanelet_ma
   for (const auto & linestring : lanelet_map_ptr_->lineStringLayer) {
     if (const std::string type = linestring.attributeOr(lanelet::AttributeName::Type, "none");
         type == "fence") {
-      fences.push_back(lanelet::LineString3d(
-        std::const_pointer_cast<lanelet::LineStringData>(linestring.constData())));
+      fences.push_back(
+        lanelet::LineString3d(
+          std::const_pointer_cast<lanelet::LineStringData>(linestring.constData())));
     }
   }
   fence_layer_ = lanelet::utils::createMap(fences);

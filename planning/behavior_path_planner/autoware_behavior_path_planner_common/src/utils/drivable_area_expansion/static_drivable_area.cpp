@@ -1037,9 +1037,10 @@ void extractObstaclesFromDrivableArea(
     std::vector<Point> edge_points;
     for (int i = 0; i < static_cast<int>(obstacle.poly.outer().size()) - 1;
          ++i) {  // NOTE: There is a duplicated points
-      edge_points.push_back(autoware_utils::create_point(
-        obstacle.poly.outer().at(i).x(), obstacle.poly.outer().at(i).y(),
-        path.points.at(nearest_path_idx).point.pose.position.z));
+      edge_points.push_back(
+        autoware_utils::create_point(
+          obstacle.poly.outer().at(i).x(), obstacle.poly.outer().at(i).y(),
+          path.points.at(nearest_path_idx).point.pose.position.z));
     }
 
     // get a boundary that we have to change

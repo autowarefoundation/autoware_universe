@@ -92,20 +92,23 @@ uint8_t VehicleNode::mapping(
   }
 }
 
-void VehicleNode::kinematic_state(const autoware::component_interface_specs_universe::localization::
-                                    KinematicState::Message::ConstSharedPtr msg_ptr)
+void VehicleNode::kinematic_state(
+  const autoware::component_interface_specs_universe::localization::KinematicState::Message::
+    ConstSharedPtr msg_ptr)
 {
   kinematic_state_msgs_ = msg_ptr;
 }
 
-void VehicleNode::acceleration_status(const autoware::component_interface_specs_universe::
-                                        localization::Acceleration::Message::ConstSharedPtr msg_ptr)
+void VehicleNode::acceleration_status(
+  const autoware::component_interface_specs_universe::localization::Acceleration::Message::
+    ConstSharedPtr msg_ptr)
 {
   acceleration_msgs_ = msg_ptr;
 }
 
-void VehicleNode::steering_status(const autoware::component_interface_specs_universe::vehicle::
-                                    SteeringStatus::Message::ConstSharedPtr msg_ptr)
+void VehicleNode::steering_status(
+  const autoware::component_interface_specs_universe::vehicle::SteeringStatus::Message::
+    ConstSharedPtr msg_ptr)
 {
   steering_status_msgs_ = msg_ptr;
 }

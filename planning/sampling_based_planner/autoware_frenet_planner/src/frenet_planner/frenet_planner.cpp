@@ -162,8 +162,9 @@ void calculateCartesian(
     std::vector<double> d_yaws;
     d_yaws.reserve(trajectory.yaws.size());
     for (size_t i = 0; i + 1 < trajectory.yaws.size(); ++i)
-      d_yaws.push_back(autoware::common::helper_functions::wrap_angle(
-        trajectory.yaws[i + 1] - trajectory.yaws[i]));
+      d_yaws.push_back(
+        autoware::common::helper_functions::wrap_angle(
+          trajectory.yaws[i + 1] - trajectory.yaws[i]));
     d_yaws.push_back(0.0);
     // Calculate curvatures
     for (size_t i = 1; i < trajectory.yaws.size(); ++i) {

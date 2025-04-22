@@ -209,8 +209,9 @@ void PoseWithCovarianceHistory::update_shapes()
   lines_->setColor(color_line.r, color_line.g, color_line.b, color_line.a);
 
   while (spheres_.size() < history_.size()) {
-    spheres_.emplace_back(std::make_unique<rviz_rendering::Shape>(
-      rviz_rendering::Shape::Sphere, scene_manager_, scene_node_));
+    spheres_.emplace_back(
+      std::make_unique<rviz_rendering::Shape>(
+        rviz_rendering::Shape::Sphere, scene_manager_, scene_node_));
   }
   while (arrows_.size() < history_.size()) {
     arrows_.emplace_back(std::make_unique<rviz_rendering::Arrow>(scene_manager_, scene_node_));
@@ -260,13 +261,14 @@ void PoseWithCovarianceHistory::update_shapes()
       sphere->setPosition(position);
       sphere->setOrientation(orientation);
       sphere->setColor(color_sphere.r, color_sphere.g, color_sphere.b, color_sphere.a);
-      sphere->setScale(Ogre::Vector3(
-        static_cast<float>(
-          property_sphere_scale_->getFloat() * 2 * std::sqrt(covariance_3d_base_link(0, 0))),
-        static_cast<float>(
-          property_sphere_scale_->getFloat() * 2 * std::sqrt(covariance_3d_base_link(1, 1))),
-        static_cast<float>(
-          property_sphere_scale_->getFloat() * 2 * std::sqrt(covariance_3d_base_link(2, 2)))));
+      sphere->setScale(
+        Ogre::Vector3(
+          static_cast<float>(
+            property_sphere_scale_->getFloat() * 2 * std::sqrt(covariance_3d_base_link(0, 0))),
+          static_cast<float>(
+            property_sphere_scale_->getFloat() * 2 * std::sqrt(covariance_3d_base_link(1, 1))),
+          static_cast<float>(
+            property_sphere_scale_->getFloat() * 2 * std::sqrt(covariance_3d_base_link(2, 2)))));
     }
 
     if (property_path_view_->getBool()) {

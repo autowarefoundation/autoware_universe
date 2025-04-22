@@ -193,8 +193,9 @@ double calc_max_lateral_distance(
     // find nearest segment
     const size_t nearest_segment_idx =
       autoware::motion_utils::findNearestSegmentIndex(reference_trajectory.points, p0);
-    const double temp_dist = std::abs(autoware::motion_utils::calcLateralOffset(
-      reference_trajectory.points, p0, nearest_segment_idx));
+    const double temp_dist = std::abs(
+      autoware::motion_utils::calcLateralOffset(
+        reference_trajectory.points, p0, nearest_segment_idx));
     if (temp_dist > max_dist) {
       max_dist = temp_dist;
     }
