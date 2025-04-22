@@ -19,6 +19,7 @@
     <load_composable_node target="$(var pointcloud_container_name)">
       <composable_node pkg="autoware_lidar_transfusion" plugin="autoware::lidar_transfusion::LidarTransfusionNode" name="lidar_transfusion">
         <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+        <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda"/>
         <remap from="~/output/objects" to="$(var output/objects)"/>
         <param from="$(var model_param_path)" allow_substs="true"/>
         <param from="$(var ml_package_param_path)" allow_substs="true"/>
@@ -33,6 +34,7 @@
   <group unless="$(var use_pointcloud_container)">
     <node pkg="autoware_lidar_transfusion" exec="autoware_lidar_transfusion_node" name="lidar_transfusion" output="screen" args="--ros-args --log-level $(var log_level)">
       <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+      <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda"/>
       <remap from="~/output/objects" to="$(var output/objects)"/>
       <param from="$(var model_param_path)" allow_substs="true"/>
       <param from="$(var ml_package_param_path)" allow_substs="true"/>

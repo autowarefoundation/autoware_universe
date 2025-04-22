@@ -24,6 +24,10 @@
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <cuda_blackboard/cuda_adaptation.hpp>
+#include <cuda_blackboard/cuda_blackboard_subscriber.hpp>
+#include <cuda_blackboard/cuda_pointcloud2.hpp>
+#include <cuda_blackboard/negotiated_types.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -46,11 +50,12 @@ public:
   explicit LidarTransfusionNode(const rclcpp::NodeOptions & options);
 
 private:
-  void cloudCallback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr msg);
+  void cloudCallback(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg);
 
   void diagnoseProcessingTime(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
-  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::ConstSharedPtr cloud_sub_{nullptr};
+  std::unique_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
+    cloud_sub_;
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr objects_pub_{
     nullptr};
 
