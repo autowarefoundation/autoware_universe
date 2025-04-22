@@ -47,8 +47,6 @@ OperationModeTransitionManager::OperationModeTransitionManager(const rclcpp::Nod
   // initialize state
   current_mode_ = OperationMode::STOP;
   transition_ = nullptr;
-  gate_operation_mode_.mode = OperationModeState::UNKNOWN;
-  gate_operation_mode_.is_in_transition = false;
   control_mode_report_.mode = ControlModeReport::NO_COMMAND;
   transition_timeout_ = declare_parameter<double>("transition_timeout");
   {
@@ -169,7 +167,9 @@ void OperationModeTransitionManager::cancelTransition()
   transition_.reset();
 }
 
-void OperationModeTransitionManager::processTransition()
+void OperationModeTransitionManager::processTransition(
+  const Odometry & kinematics, const Trajectory & trajectory,
+  const OperationModeState & gate_operation_mode)
 {
   const bool current_control = control_mode_report_.mode == ControlModeReport::AUTONOMOUS;
 
@@ -199,11 +199,11 @@ void OperationModeTransitionManager::processTransition()
 
   // Check completion when engaged, otherwise engage after the gate reflects transition.
   if (current_control) {
-    if (modes_.at(current_mode_)->isModeChangeCompleted()) {
+    if (modes_.at(current_mode_)->isModeChangeCompleted(kinematics, trajectory)) {
       return transition_.reset();
     }
   } else {
-    if (transition_->is_engage_requested && gate_operation_mode_.is_in_transition) {
+    if (transition_->is_engage_requested && gate_operation_mode.is_in_transition) {
       transition_->is_engage_requested = false;
       return changeControlMode(ControlModeCommand::Request::AUTONOMOUS);
     }
@@ -212,23 +212,19 @@ void OperationModeTransitionManager::processTransition()
 
 void OperationModeTransitionManager::onTimer()
 {
-  const auto control_mode_report_ptr = sub_control_mode_report_.take_data();
-  if (!control_mode_report_ptr) {
+  const auto input_data = subscribeData();
+  if (!input_data) {
     return;
   }
-  const auto gate_operation_mode_ptr = sub_gate_operation_mode_.take_data();
-  if (!gate_operation_mode_ptr) {
-    return;
-  }
-  control_mode_report_ = *control_mode_report_ptr;
-  gate_operation_mode_ = *gate_operation_mode_ptr;
 
   for (const auto & [type, mode] : modes_) {
     mode->update(current_mode_ == type && transition_);
   }
 
   for (const auto & [type, mode] : modes_) {
-    available_mode_change_[type] = mode->isModeChangeAvailable();
+    available_mode_change_[type] = mode->isModeChangeAvailable(
+      input_data->kinematics, input_data->trajectory, input_data->trajectory_follower_control_cmd,
+      input_data->control_cmd);
   }
 
   // Check sync timeout to the compatible interface.
@@ -253,10 +249,64 @@ void OperationModeTransitionManager::onTimer()
   }
 
   if (transition_) {
-    processTransition();
+    processTransition(
+      input_data->kinematics, input_data->trajectory, input_data->gate_operation_mode);
   }
 
   publishData();
+}
+
+std::optional<OperationModeTransitionManager::InputData>
+OperationModeTransitionManager::subscribeData()
+{
+  InputData input_data;
+
+  // NOTE: Regarding some of the following inputs, do not update is_ready
+  // since the planning component depends on the output of this node.
+  bool is_ready = true;
+
+  const auto kinematics_ptr = sub_kinematics_.take_data();
+  if (kinematics_ptr) {
+    input_data.kinematics = *kinematics_ptr;
+  } else {
+    is_ready = false;
+  }
+
+  const auto trajectory_ptr = sub_trajectory_.take_data();
+  if (trajectory_ptr) {
+    input_data.trajectory = *trajectory_ptr;
+  }
+
+  const auto trajectory_follower_control_cmd_ptr = sub_trajectory_follower_control_cmd_.take_data();
+  if (trajectory_follower_control_cmd_ptr) {
+    input_data.trajectory_follower_control_cmd = *trajectory_follower_control_cmd_ptr;
+  }
+
+  const auto control_cmd_ptr = sub_control_cmd_.take_data();
+  if (control_cmd_ptr) {
+    input_data.control_cmd = *control_cmd_ptr;
+  }
+
+  const auto gate_operation_mode_ptr = sub_gate_operation_mode_.take_data();
+  if (gate_operation_mode_ptr) {
+    input_data.gate_operation_mode = *gate_operation_mode_ptr;
+  } else {
+    // NOTE: initial state when the data is not subscribed yet.
+    input_data.gate_operation_mode = OperationModeState{};
+    input_data.gate_operation_mode.mode = OperationModeState::UNKNOWN;
+    input_data.gate_operation_mode.is_in_transition = false;
+  }
+
+  const auto control_mode_report_ptr = sub_control_mode_report_.take_data();
+  if (control_mode_report_ptr) {
+    // NOTE: This will be used outside the onTimer function. Therefore, it
+    // has to be a member variable
+    control_mode_report_ = *control_mode_report_ptr;
+  } else {
+    is_ready = false;
+  }
+
+  return is_ready ? input_data : std::optional<InputData>{};
 }
 
 void OperationModeTransitionManager::publishData()
