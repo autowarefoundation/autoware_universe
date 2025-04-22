@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/* *INDENT-OFF* */
 #ifndef AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_CONCATENATE_DATA__CUDA_COMBINE_CLOUD_HANDLER_KERNEL_HPP_
 #define AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_CONCATENATE_DATA__CUDA_COMBINE_CLOUD_HANDLER_KERNEL_HPP_
+/* *INDENT-ON* */
 
 #include <cuda_runtime.h>
 

@@ -88,6 +88,7 @@ void CombineCloudHandler<CudaPointCloud2Traits>::allocate_pointclouds()
     max_concat_pointcloud_size_ * input_topics_.size());
 }
 
+/* *INDENT-OFF* */
 ConcatenatedCloudResult<CudaPointCloud2Traits>
 CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
   std::unordered_map<
@@ -280,6 +281,7 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
 
   return concatenate_cloud_result;
 }
+/* *INDENT-ON* */
 
 }  // namespace autoware::pointcloud_preprocessor
 

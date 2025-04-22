@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/* *INDENT-OFF* */
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_concatenate_and_time_sync_node.hpp"
+/* *INDENT-ON* */
 
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_cloud_collector.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_traits.hpp"
@@ -26,6 +28,7 @@
 namespace autoware::pointcloud_preprocessor
 {
 
+/* *INDENT-OFF* */
 template <>
 void PointCloudConcatenateDataSynchronizerComponentTemplated<
   CudaPointCloud2Traits>::initialize_pub_sub()
@@ -62,6 +65,7 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<
     RCLCPP_DEBUG_STREAM(get_logger(), " - " << input_topic);
   }
 }
+/* *INDENT-ON* */
 
 }  // namespace autoware::pointcloud_preprocessor
 
