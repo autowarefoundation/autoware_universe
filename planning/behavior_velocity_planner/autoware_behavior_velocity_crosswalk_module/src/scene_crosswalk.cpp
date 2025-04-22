@@ -405,15 +405,15 @@ std::optional<geometry_msgs::msg::Pose> CrosswalkModule::calcStopPose(
         dynamic_stop_distance_from_crosswalk_front, static_stop_distance_from_crosswalk_front);
     }();
 
-    if (!pref_stop_x_position_.getValue().has_value()) {
+    if (ego_vel_non_negative < 1.0 && pref_stop_x_position_.getValue().has_value()) {
+      // do not update the lpf variable.
+    } else if (
+      pref_stop_x_position_.getValue().has_value() &&
+      current_step_pref_x_pos < *pref_stop_x_position_.getValue()) {
+      pref_stop_x_position_.reset(current_step_pref_x_pos);
+    } else {
       pref_stop_x_position_.filter(current_step_pref_x_pos);
-    } else if (ego_vel_non_negative > 1.0) {
-      if (current_step_pref_x_pos < pref_stop_x_position_.getValue().value()) {
-        pref_stop_x_position_.reset(current_step_pref_x_pos);
-      } else {
-        pref_stop_x_position_.filter(current_step_pref_x_pos);
-      }
-    }  // if the ego is not moving, pref_stop_x_position is not updated.
+    }
 
     // From here, ego_pos is used as x-origin
     const double dist =
