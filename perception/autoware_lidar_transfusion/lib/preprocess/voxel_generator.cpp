@@ -31,23 +31,25 @@ VoxelGenerator::VoxelGenerator(
   cudaStream_t & stream)
 : config_(config), stream_(stream)
 {
-  pd_ptr_ = std::make_unique<PointCloudDensification>(densification_param, stream_);
+  pd_ptr_ = std::make_unique<PointCloudDensification>(densification_param);
   pre_ptr_ = std::make_unique<PreprocessCuda>(config_, stream_);
   cloud_data_d_ = cuda::make_unique<unsigned char[]>(config_.cloud_capacity_ * MAX_CLOUD_STEP_SIZE);
   affine_past2current_d_ = cuda::make_unique<float[]>(AFF_MAT_SIZE);
 }
 
 bool VoxelGenerator::enqueuePointCloud(
-  const sensor_msgs::msg::PointCloud2 & msg, const tf2_ros::Buffer & tf_buffer)
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+  const tf2_ros::Buffer & tf_buffer)
 {
-  return pd_ptr_->enqueuePointCloud(msg, tf_buffer);
+  return pd_ptr_->enqueuePointCloud(msg_ptr, tf_buffer);
 }
 
 std::size_t VoxelGenerator::generateSweepPoints(
-  const sensor_msgs::msg::PointCloud2 & msg, cuda::unique_ptr<float[]> & points_d)
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+  cuda::unique_ptr<float[]> & points_d)
 {
   if (!is_initialized_) {
-    initCloudInfo(msg);
+    initCloudInfo(msg_ptr);
     std::stringstream ss;
     ss << "Input point cloud information: " << std::endl << cloud_info_;
     RCLCPP_DEBUG_STREAM(rclcpp::get_logger("lidar_transfusion"), ss.str());
@@ -66,7 +68,8 @@ std::size_t VoxelGenerator::generateSweepPoints(
 
   for (auto pc_cache_iter = pd_ptr_->getPointCloudCacheIter(); !pd_ptr_->isCacheEnd(pc_cache_iter);
        pc_cache_iter++) {
-    auto sweep_num_points = pc_cache_iter->num_points;
+    const auto & input_pointcloud_msg_ptr = pc_cache_iter->msg_ptr;
+    auto sweep_num_points = input_pointcloud_msg_ptr->height * input_pointcloud_msg_ptr->width;
     if (point_counter + sweep_num_points >= config_.cloud_capacity_) {
       RCLCPP_WARN_STREAM(
         rclcpp::get_logger("lidar_transfusion"), "Exceeding cloud capacity. Used "
@@ -82,41 +85,43 @@ std::size_t VoxelGenerator::generateSweepPoints(
     static_assert(!Eigen::Matrix4f::IsRowMajor, "matrices should be col-major.");
 
     float time_lag = static_cast<float>(
-      pd_ptr_->getCurrentTimestamp() - rclcpp::Time(pc_cache_iter->header.stamp).seconds());
-
+      pd_ptr_->getCurrentTimestamp() -
+      rclcpp::Time(input_pointcloud_msg_ptr->header.stamp).seconds());
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
       affine_past2current_d_.get(), affine_past2current.data(), AFF_MAT_SIZE * sizeof(float),
       cudaMemcpyHostToDevice, stream_));
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
     pre_ptr_->generateSweepPoints_launch(
-      pc_cache_iter->data_d.get(), sweep_num_points, cloud_info_.point_step, time_lag,
-      affine_past2current_d_.get(), points_d.get() + shift);
+      reinterpret_cast<uint8_t *>(input_pointcloud_msg_ptr->data.get()), sweep_num_points,
+      cloud_info_.point_step, time_lag, affine_past2current_d_.get(), points_d.get() + shift);
     point_counter += sweep_num_points;
   }
 
   return point_counter;
 }
 
-void VoxelGenerator::initCloudInfo(const sensor_msgs::msg::PointCloud2 & msg)
+void VoxelGenerator::initCloudInfo(
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr)
 {
   std::tie(cloud_info_.x_offset, cloud_info_.x_datatype, cloud_info_.x_count) =
-    getFieldInfo(msg, "x");
+    getFieldInfo(msg_ptr, "x");
   std::tie(cloud_info_.y_offset, cloud_info_.y_datatype, cloud_info_.y_count) =
-    getFieldInfo(msg, "y");
+    getFieldInfo(msg_ptr, "y");
   std::tie(cloud_info_.z_offset, cloud_info_.z_datatype, cloud_info_.z_count) =
-    getFieldInfo(msg, "z");
+    getFieldInfo(msg_ptr, "z");
   std::tie(
     cloud_info_.intensity_offset, cloud_info_.intensity_datatype, cloud_info_.intensity_count) =
-    getFieldInfo(msg, "intensity");
-  cloud_info_.point_step = msg.point_step;
-  cloud_info_.is_bigendian = msg.is_bigendian;
+    getFieldInfo(msg_ptr, "intensity");
+  cloud_info_.point_step = msg_ptr->point_step;
+  cloud_info_.is_bigendian = msg_ptr->is_bigendian;
 }
 
 std::tuple<const uint32_t, const uint8_t, const uint8_t> VoxelGenerator::getFieldInfo(
-  const sensor_msgs::msg::PointCloud2 & msg, const std::string & field_name)
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+  const std::string & field_name)
 {
-  for (const auto & field : msg.fields) {
+  for (const auto & field : msg_ptr->fields) {
     if (field.name == field_name) {
       return std::make_tuple(field.offset, field.datatype, field.count);
     }

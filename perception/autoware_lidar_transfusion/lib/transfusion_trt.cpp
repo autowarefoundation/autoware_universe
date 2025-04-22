@@ -143,11 +143,12 @@ void TransfusionTRT::initTrt(const tensorrt_common::TrtCommonConfig & trt_config
 }
 
 bool TransfusionTRT::detect(
-  const sensor_msgs::msg::PointCloud2 & msg, const tf2_ros::Buffer & tf_buffer,
-  std::vector<Box3D> & det_boxes3d, std::unordered_map<std::string, double> & proc_timing)
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+  const tf2_ros::Buffer & tf_buffer, std::vector<Box3D> & det_boxes3d,
+  std::unordered_map<std::string, double> & proc_timing)
 {
   stop_watch_ptr_->toc("processing/inner", true);
-  if (!preprocess(msg, tf_buffer)) {
+  if (!preprocess(msg_ptr, tf_buffer)) {
     RCLCPP_WARN_STREAM(
       rclcpp::get_logger("lidar_transfusion"), "Fail to preprocess and skip to detect.");
     return false;
@@ -175,9 +176,10 @@ bool TransfusionTRT::detect(
 }
 
 bool TransfusionTRT::preprocess(
-  const sensor_msgs::msg::PointCloud2 & msg, const tf2_ros::Buffer & tf_buffer)
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+  const tf2_ros::Buffer & tf_buffer)
 {
-  if (!vg_ptr_->enqueuePointCloud(msg, tf_buffer)) {
+  if (!vg_ptr_->enqueuePointCloud(msg_ptr, tf_buffer)) {
     return false;
   }
 
@@ -192,7 +194,7 @@ bool TransfusionTRT::preprocess(
     points_aux_d_.get(), config_.cloud_capacity_ * config_.num_point_feature_size_, stream_);
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
-  const auto count = vg_ptr_->generateSweepPoints(msg, points_aux_d_);
+  const auto count = vg_ptr_->generateSweepPoints(msg_ptr, points_aux_d_);
   RCLCPP_DEBUG_STREAM(rclcpp::get_logger("lidar_transfusion"), "Generated sweep points: " << count);
 
   const std::size_t random_offset = std::rand() % config_.cloud_capacity_;

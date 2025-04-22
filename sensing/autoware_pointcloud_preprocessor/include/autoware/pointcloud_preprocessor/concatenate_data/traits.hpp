@@ -1,4 +1,4 @@
-// Copyright 2024 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <autoware/pointcloud_preprocessor/concatenate_data/collector_matching_strategy.hpp>
+#pragma once
 
-template class autoware::pointcloud_preprocessor::NaiveMatchingStrategy<
-  autoware::pointcloud_preprocessor::PointCloud2Traits>;
-template class autoware::pointcloud_preprocessor::AdvancedMatchingStrategy<
-  autoware::pointcloud_preprocessor::PointCloud2Traits>;
+#include <rclcpp/rclcpp.hpp>
+
+#include <sensor_msgs/msg/point_cloud2.hpp>
+
+namespace autoware::pointcloud_preprocessor
+{
+
+struct PointCloud2Traits
+{
+  using PointCloudMessage = sensor_msgs::msg::PointCloud2;
+  using PublisherType = rclcpp::Publisher<PointCloudMessage>;
+  using SubscriberType = rclcpp::Subscription<PointCloudMessage>;
+};
+
+}  // namespace autoware::pointcloud_preprocessor
