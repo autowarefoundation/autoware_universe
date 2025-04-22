@@ -27,7 +27,8 @@ namespace autoware::pointcloud_preprocessor
 {
 
 template <>
-void PointCloudConcatenateDataSynchronizerComponentTemplated<CudaPointCloud2Traits>::initialize()
+void PointCloudConcatenateDataSynchronizerComponentTemplated<
+  CudaPointCloud2Traits>::initialize_pub_sub()
 {
   concatenated_cloud_publisher_ =
     std::make_shared<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(

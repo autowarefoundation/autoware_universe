@@ -56,10 +56,10 @@ namespace autoware::pointcloud_preprocessor
 CombineCloudHandler<CudaPointCloud2Traits>::CombineCloudHandler(
   rclcpp::Node & node, const std::vector<std::string> & input_topics, std::string output_frame,
   bool is_motion_compensated, bool publish_synchronized_pointcloud,
-  bool keep_input_frame_in_synchronized_pointcloud, bool has_static_tf_only)
+  bool keep_input_frame_in_synchronized_pointcloud)
 : CombineCloudHandlerBase(
     node, input_topics, output_frame, is_motion_compensated, publish_synchronized_pointcloud,
-    keep_input_frame_in_synchronized_pointcloud, has_static_tf_only)
+    keep_input_frame_in_synchronized_pointcloud)
 {
   for (const auto & topic : input_topics_) {
     CudaConcatStruct cuda_concat_struct;
@@ -143,7 +143,13 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
     Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
 
     // Transform if needed
-    managed_tf_buffer_->get_transform(output_frame_, cloud->header.frame_id, transform);
+    auto transform_opt = managed_tf_buffer_->getTransform<Eigen::Matrix4f>(
+      output_frame_, cloud->header.frame_id, node_.now(), rclcpp::Duration::from_seconds(1.0),
+      node_.get_logger());
+
+    if (transform_opt) {
+      transform = *transform_opt;
+    }
 
     rclcpp::Time current_cloud_stamp = rclcpp::Time(cloud->header.stamp);
 
@@ -215,7 +221,13 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
 
       if (keep_input_frame_in_synchronized_pointcloud_ && need_transform_to_sensor_frame) {
         Eigen::Matrix4f transform;
-        managed_tf_buffer_->get_transform(cloud->header.frame_id, output_frame_, transform);
+        auto transform_opt = managed_tf_buffer_->getTransform<Eigen::Matrix4f>(
+          cloud->header.frame_id, output_frame_, node_.now(), rclcpp::Duration::from_seconds(1.0),
+          node_.get_logger());
+
+        if (transform_opt.has_value()) {
+          transform = *transform_opt;
+        }
 
         TransformStruct transform_struct;
         transform_struct.translation_x = transform(0, 3);
