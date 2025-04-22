@@ -112,10 +112,8 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
   // Reserve space based on the total size of the pointcloud data to speed up the concatenation
   // process
   size_t total_data_size = 0;
-  size_t total_points = 0;
   for (const auto & [topic, cloud] : topic_to_cloud_map) {
     total_data_size += (cloud->height * cloud->row_step);
-    total_points += (cloud->height * cloud->width);
   }
 
   const auto point_fields = topic_to_cloud_map.begin()->second->fields;
