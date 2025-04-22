@@ -2,6 +2,12 @@
 Changelog for package tier4_planning_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(tier4_planning_rviz_plugin): add time from start text to Trajectory (`#10370 <https://github.com/autowarefoundation/autoware_universe/issues/10370>`_)
+* Contributors: Maxime CLEMENT, Ryohsuke Mitsudome
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

@@ -2,6 +2,19 @@
 Changelog for package autoware_cluster_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_cluster_merger): created Schema file and updated ReadME file for parameters settings (`#9977 <https://github.com/autowarefoundation/autoware_universe/issues/9977>`_)
+  * feat: Created Schema file and updated ReadME file for parameters settings
+  * style(pre-commit): autofix
+  * Update README.md
+  Updated readme file
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: badai nguyen <94814556+badai-nguyen@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, Vishal Chauhan
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

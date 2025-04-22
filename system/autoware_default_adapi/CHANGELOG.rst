@@ -2,6 +2,39 @@
 Changelog for package autoware_default_adapi
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix: add missing exec_depend (`#10404 <https://github.com/autowarefoundation/autoware_universe/issues/10404>`_)
+  * fix missing exec depend
+  * remove fixed depend
+  * remove the removed dependency
+  ---------
+* feat(autoware_default_adapi): release adapi v1.8.0 (`#10380 <https://github.com/autowarefoundation/autoware_universe/issues/10380>`_)
+* feat: manual control (`#10354 <https://github.com/autowarefoundation/autoware_universe/issues/10354>`_)
+  * feat(default_adapi): add manual control
+  * add conversion
+  * update selector
+  * update selector depends
+  * update converter
+  * modify heartbeat name
+  * update launch
+  * update api
+  * fix pedal callback
+  * done todo
+  * apply message rename
+  * fix test
+  * fix message type and qos
+  * fix steering_tire_velocity
+  * fix for clang-tidy
+  ---------
+* feat(autoware_default_adapi): disable sample web server (`#10327 <https://github.com/autowarefoundation/autoware_universe/issues/10327>`_)
+  * feat(autoware_default_adapi): disable sample web server
+  * fix unused inport
+  ---------
+* feat(autoware_default_adapi): log autoware state change (`#10364 <https://github.com/autowarefoundation/autoware_universe/issues/10364>`_)
+* Contributors: Ryohsuke Mitsudome, Takagi, Isamu
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

@@ -1,4 +1,4 @@
-// Copyright 2020 Autoware Foundation
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,17 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/**
- * @file top3.cpp
- * @brief dummy top executable to provide invalid output
- */
+#pragma once
 
-#include <stdio.h>
+#include <rclcpp/rclcpp.hpp>
 
-#include <cstdio>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
-int main(int argc, char ** argv)
+namespace autoware::pointcloud_preprocessor
 {
-  printf("Tasks:");
-  return 0;
-}
+
+struct PointCloud2Traits
+{
+  using PointCloudMessage = sensor_msgs::msg::PointCloud2;
+  using PublisherType = rclcpp::Publisher<PointCloudMessage>;
+  using SubscriberType = rclcpp::Subscription<PointCloudMessage>;
+};
+
+}  // namespace autoware::pointcloud_preprocessor
