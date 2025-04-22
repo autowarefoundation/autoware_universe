@@ -17,9 +17,15 @@
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_traits.hpp"
 #include "autoware/pointcloud_preprocessor/concatenate_data/combine_cloud_handler.hpp"
 
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 namespace autoware::pointcloud_preprocessor
 {
 
+/* *INDENT-OFF* */
 template <>
 class CombineCloudHandler<CudaPointCloud2Traits> : public CombineCloudHandlerBase
 {
@@ -49,5 +55,6 @@ public:
 
   void allocate_pointclouds() override;
 };
+/* *INDENT-ON* */
 
 }  // namespace autoware::pointcloud_preprocessor

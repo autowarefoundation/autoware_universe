@@ -26,6 +26,7 @@
 namespace autoware::cuda_pointcloud_preprocessor
 {
 
+/* *INDENT-OFF* */
 class CudaPointCloudConcatenateDataSynchronizerComponent
 : public autoware::pointcloud_preprocessor::PointCloudConcatenateDataSynchronizerComponentTemplated<
     autoware::pointcloud_preprocessor::CudaPointCloud2Traits>
@@ -39,6 +40,7 @@ public:
   }
   ~CudaPointCloudConcatenateDataSynchronizerComponent() override = default;
 };
+/* *INDENT-ON* */
 
 }  // namespace autoware::cuda_pointcloud_preprocessor
 

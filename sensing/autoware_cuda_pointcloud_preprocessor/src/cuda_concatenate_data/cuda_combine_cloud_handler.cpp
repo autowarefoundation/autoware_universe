@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/* *INDENT-OFF* */
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_combine_cloud_handler.hpp"
 
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_combine_cloud_handler_kernel.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_traits.hpp"
+/* *INDENT-ON* */
 
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 
@@ -26,10 +28,12 @@
 #include <unordered_map>
 #include <vector>
 
+/* *INDENT-OFF* */
 #define CHECK_OFFSET(structure1, structure2, field)             \
   static_assert(                                                \
     offsetof(structure1, field) == offsetof(structure2, field), \
     "Offset of " #field " in " #structure1 " does not match expected offset.")
+/* *INDENT-ON* */
 
 static_assert(
   sizeof(autoware::pointcloud_preprocessor::PointTypeStruct) ==
@@ -93,7 +97,9 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
   ConcatenatedCloudResult<CudaPointCloud2Traits> concatenate_cloud_result;
   std::lock_guard<std::mutex> lock(mutex_);
 
+  /* *INDENT-OFF* */
   if (topic_to_cloud_map.empty()) return concatenate_cloud_result;
+  /* *INDENT-ON* */
 
   std::vector<rclcpp::Time> pc_stamps;
   pc_stamps.reserve(topic_to_cloud_map.size());
@@ -277,5 +283,7 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
 
 }  // namespace autoware::pointcloud_preprocessor
 
+/* *INDENT-OFF* */
 template class autoware::pointcloud_preprocessor::CombineCloudHandler<
   autoware::pointcloud_preprocessor::CudaPointCloud2Traits>;
+/* *INDENT-ON* */
