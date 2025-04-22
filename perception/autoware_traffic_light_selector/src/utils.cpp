@@ -43,22 +43,6 @@ bool isInsideRoughRoi(
   return false;
 }
 
-float calIOU(
-  const sensor_msgs::msg::RegionOfInterest & bbox1,
-  const sensor_msgs::msg::RegionOfInterest & bbox2)
-{
-  int x1 = std::max(bbox1.x_offset, bbox2.x_offset);
-  int x2 = std::min(bbox1.x_offset + bbox1.width, bbox2.x_offset + bbox2.width);
-  int y1 = std::max(bbox1.y_offset, bbox2.y_offset);
-  int y2 = std::min(bbox1.y_offset + bbox1.height, bbox2.y_offset + bbox2.height);
-  int area1 = std::max(x2 - x1, 0) * std::max(y2 - y1, 0);
-  int area2 = bbox1.width * bbox1.height + bbox2.width * bbox2.height - area1;
-  if (area2 == 0) {
-    return 0.0;
-  }
-  return static_cast<float>(area1) / static_cast<float>(area2);
-}
-
 // create binary image from list of rois
 cv::Mat createBinaryImageFromRois(
   const std::vector<sensor_msgs::msg::RegionOfInterest> & rois, const cv::Size & size)

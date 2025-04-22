@@ -54,10 +54,6 @@ bool isInsideRoughRoi(
   const sensor_msgs::msg::RegionOfInterest & detected_roi,
   const sensor_msgs::msg::RegionOfInterest & rough_roi);
 
-float calIOU(
-  const sensor_msgs::msg::RegionOfInterest & bbox1,
-  const sensor_msgs::msg::RegionOfInterest & bbox2);
-
 double getGenIoU(
   const sensor_msgs::msg::RegionOfInterest & roi1, const sensor_msgs::msg::RegionOfInterest & roi2);
 // create binary image from list of rois
