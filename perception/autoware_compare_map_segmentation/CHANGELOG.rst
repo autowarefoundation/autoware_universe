@@ -2,6 +2,42 @@
 Changelog for package autoware_compare_map_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(compare_map_segmentation): publish warning when pcl::voxelgrid failed to filter with large leaf size (`#10381 <https://github.com/autowarefoundation/autoware_universe/issues/10381>`_)
+  * feat: add warn in pcl overflow with compare_map
+  chore: fix message length
+  feat: add sanity check into voxel based compare map
+  feat: add feasibility check function
+  * fix: update include paths for voxel_grid_map_loader in segmentation filters
+  * feat: add diagnostic status handling in VoxelGridMapLoader and related components
+  * feat: add diagnostic updater for voxel-based compare map filter and improve status reporting
+  * refactor: move isFeasibleWithPCLVoxelGrid function to VoxelGridMapLoader and streamline diagnostics handling
+  * feat: update diagnostic status handling in VoxelGridMapLoader and related components
+  * feat: enhance diagnostic status handling in voxel-based compare map filters
+  * style(pre-commit): autofix
+  * refactor: add comments for clarity on voxel number calculations and overflow checks
+  * Update perception/autoware_compare_map_segmentation/lib/voxel_grid_map_loader.cpp
+  Co-authored-by: badai nguyen  <94814556+badai-nguyen@users.noreply.github.com>
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: yoshiri <yoshiyoshidetteiu@gmail.com>
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: badai nguyen <94814556+badai-nguyen@users.noreply.github.com>
+* fix(autoware_compare_map_segmentation): missing includes (`#10413 <https://github.com/autowarefoundation/autoware_universe/issues/10413>`_)
+  fix: missing include
+* fix(compare_map_segmentation): last map update logic (`#10351 <https://github.com/autowarefoundation/autoware_universe/issues/10351>`_)
+  fix(compare_map): logic
+* fix(voxel_based_compare_map): temporary fix pointcloud transform lookup  (`#10299 <https://github.com/autowarefoundation/autoware_universe/issues/10299>`_)
+  * fix(voxel_based_compare_map): temporary fix pointcloud transform lookup_time
+  * pre-commit
+  * chore: reduce timeout
+  * fix: misalignment when tranform back output
+  * fix: typo
+  ---------
+* Contributors: Kenzo Lobos Tsunekawa, Ryohsuke Mitsudome, Shumpei Wakabayashi, Taekjin LEE, badai nguyen
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

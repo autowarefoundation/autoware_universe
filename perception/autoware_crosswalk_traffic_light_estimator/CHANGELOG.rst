@@ -2,6 +2,15 @@
 Changelog for package autoware_crosswalk_traffic_light_estimator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(autoware_crosswalk_traffic_light_estimator): add process that guard access to empty elements (`#10281 <https://github.com/autowarefoundation/autoware_universe/issues/10281>`_)
+  * fix(autoware_crosswalk_traffic_light_estimator) : add process that guard access to empty elements.
+  * fix for linter
+  ---------
+* Contributors: Ryohsuke Mitsudome, k-hazama-esol
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

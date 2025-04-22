@@ -112,7 +112,7 @@ bool AutonomousMode::isModeChangeCompleted()
   };
 
   if (trajectory_.points.size() < 2) {
-    RCLCPP_INFO(logger_, "Not stable yet: trajectory size must be > 2");
+    RCLCPP_INFO_THROTTLE(logger_, *clock_, 3000, "Not stable yet: trajectory size must be > 2");
     return unstable();
   }
 
@@ -120,7 +120,7 @@ bool AutonomousMode::isModeChangeCompleted()
     trajectory_.points, kinematics_.pose.pose, nearest_dist_deviation_threshold_,
     nearest_yaw_deviation_threshold_);
   if (!closest_idx) {
-    RCLCPP_INFO(logger_, "Not stable yet: closest point not found");
+    RCLCPP_INFO_THROTTLE(logger_, *clock_, 3000, "Not stable yet: closest point not found");
     return unstable();
   }
 
@@ -130,11 +130,14 @@ bool AutonomousMode::isModeChangeCompleted()
   const auto dist_deviation =
     autoware::motion_utils::calcLateralOffset(trajectory_.points, kinematics_.pose.pose.position);
   if (std::isnan(dist_deviation)) {
-    RCLCPP_INFO(logger_, "Not stable yet: lateral offset calculation failed.");
+    RCLCPP_INFO_THROTTLE(
+      logger_, *clock_, 3000, "Not stable yet: lateral offset calculation failed.");
     return unstable();
   }
   if (dist_deviation > stable_check_param_.dist_threshold) {
-    RCLCPP_INFO(logger_, "Not stable yet: distance deviation is too large: %f", dist_deviation);
+    RCLCPP_INFO_THROTTLE(
+      logger_, *clock_, 3000, "Not stable yet: distance deviation is too large: %f",
+      dist_deviation);
     return unstable();
   }
 
@@ -142,11 +145,13 @@ bool AutonomousMode::isModeChangeCompleted()
   const auto yaw_deviation =
     autoware::motion_utils::calcYawDeviation(trajectory_.points, kinematics_.pose.pose);
   if (std::isnan(yaw_deviation)) {
-    RCLCPP_INFO(logger_, "Not stable yet: lateral offset calculation failed.");
+    RCLCPP_INFO_THROTTLE(
+      logger_, *clock_, 3000, "Not stable yet: lateral offset calculation failed.");
     return unstable();
   }
   if (yaw_deviation > stable_check_param_.yaw_threshold) {
-    RCLCPP_INFO(logger_, "Not stable yet: yaw deviation is too large: %f", yaw_deviation);
+    RCLCPP_INFO_THROTTLE(
+      logger_, *clock_, 3000, "Not stable yet: yaw deviation is too large: %f", yaw_deviation);
     return unstable();
   }
 
@@ -154,11 +159,13 @@ bool AutonomousMode::isModeChangeCompleted()
   const auto speed_deviation =
     kinematics_.twist.twist.linear.x - closest_point.longitudinal_velocity_mps;
   if (speed_deviation > stable_check_param_.speed_upper_threshold) {
-    RCLCPP_INFO(logger_, "Not stable yet: ego speed is too high: %f", speed_deviation);
+    RCLCPP_INFO_THROTTLE(
+      logger_, *clock_, 3000, "Not stable yet: ego speed is too high: %f", speed_deviation);
     return unstable();
   }
   if (speed_deviation < stable_check_param_.speed_lower_threshold) {
-    RCLCPP_INFO(logger_, "Not stable yet: ego speed is too low: %f", speed_deviation);
+    RCLCPP_INFO_THROTTLE(
+      logger_, *clock_, 3000, "Not stable yet: ego speed is too low: %f", speed_deviation);
     return unstable();
   }
 
@@ -170,7 +177,7 @@ bool AutonomousMode::isModeChangeCompleted()
   // keep being stable for enough time.
   const double stable_time = (clock_->now() - *stable_start_time_).seconds();
   const bool is_system_stable = stable_time > stable_check_param_.duration;
-  RCLCPP_INFO(logger_, "Now stable: now duration: %f", stable_time);
+  RCLCPP_INFO_THROTTLE(logger_, *clock_, 3000, "Now stable: now duration: %f", stable_time);
   return is_system_stable;
 }
 
@@ -224,8 +231,8 @@ bool AutonomousMode::isModeChangeAvailable()
   const auto & param = engage_acceptable_param_;
 
   if (!enable_engage_on_driving_ && std::fabs(current_speed) > 1.0e-2) {
-    RCLCPP_INFO(
-      logger_,
+    RCLCPP_INFO_THROTTLE(
+      logger_, *clock_, 3000,
       "Engage unavailable: enable_engage_on_driving is false, and the vehicle is not "
       "stationary.");
     debug_info_ = DebugInfo{};  // all false
@@ -243,7 +250,7 @@ bool AutonomousMode::isModeChangeAvailable()
     trajectory_.points, kinematics_.pose.pose, nearest_dist_deviation_threshold_,
     nearest_yaw_deviation_threshold_);
   if (!closest_idx) {
-    RCLCPP_INFO(logger_, "Engage unavailable: closest point not found");
+    RCLCPP_INFO_THROTTLE(logger_, *clock_, 3000, "Engage unavailable: closest point not found");
     debug_info_ = DebugInfo{};  // all false
     return false;               // closest trajectory point not found.
   }

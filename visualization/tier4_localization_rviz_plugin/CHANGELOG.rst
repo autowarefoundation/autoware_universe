@@ -2,6 +2,26 @@
 Changelog for package tier4_localization_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(tier4_localization_rviz_plugin): add colored_pose_with_covariance_history (`#10271 <https://github.com/autowarefoundation/autoware_universe/issues/10271>`_)
+  * feat: add colored pose with covariance history
+  * fix: CMakeLists library name
+  * fix: transplant mistake
+  * fix: segmentation fault
+  * style(pre-commit): autofix
+  * fix: visualization
+  * style(pre-commit): autofix
+  * fix: include ci error
+  * fix: bug that occurred when re-enabling
+  * fix: copyright year
+  * feat: less (than min), greater (than max) value's color property
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Kazu, Ryohsuke Mitsudome
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

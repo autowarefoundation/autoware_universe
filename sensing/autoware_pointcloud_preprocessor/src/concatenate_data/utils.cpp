@@ -1,4 +1,4 @@
-// Copyright 2020 Autoware Foundation
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,14 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/**
- * @file top2.cpp
- * @brief dummy top executable to provide nothing
- */
+#include "autoware/pointcloud_preprocessor/concatenate_data/utils.hpp"
 
-#include <stdio.h>
+#include <iomanip>
+#include <sstream>
+#include <string>
 
-int main(int argc, char ** argv)
+namespace autoware::pointcloud_preprocessor
 {
-  return 0;
+
+std::string format_timestamp(double timestamp)
+{
+  std::ostringstream oss;
+  oss << std::fixed << std::setprecision(9) << timestamp;
+  return oss.str();
 }
+
+}  // namespace autoware::pointcloud_preprocessor

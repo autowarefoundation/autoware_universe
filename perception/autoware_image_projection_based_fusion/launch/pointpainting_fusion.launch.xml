@@ -95,6 +95,7 @@
       <param from="$(var model_param_path)" allow_substs="true"/>
       <param from="$(var ml_package_param_path)" allow_substs="true"/>
       <param from="$(var sync_param_path)"/>
+      <param from="$(var common_param_path)"/>
       <param from="$(var class_remapper_param_path)"/>
       <param name="rois_number" value="$(var input/rois_number)"/>
 
