@@ -36,10 +36,6 @@ public:
   explicit YoloXSingleImageInferenceNode(const rclcpp::NodeOptions & node_options)
   : Node("yolox_single_image_inference", node_options)
   {
-    // Set CUDA device flags
-    // note: Device flags are process-wide
-    cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-
     const auto image_path = declare_parameter("image_path", "");
     const auto model_path = declare_parameter("model_path", "");
     const auto precision = declare_parameter("precision", "fp32");

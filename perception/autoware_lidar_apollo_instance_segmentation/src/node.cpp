@@ -30,11 +30,6 @@ LidarInstanceSegmentationNode::LidarInstanceSegmentationNode(
 : Node("lidar_apollo_instance_segmentation_node", node_options)
 {
   using std::placeholders::_1;
-
-  // Set CUDA device flags
-  // note: Device flags are process-wide
-  cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-
   // initialize debug tool
   {
     using autoware_utils::DebugPublisher;

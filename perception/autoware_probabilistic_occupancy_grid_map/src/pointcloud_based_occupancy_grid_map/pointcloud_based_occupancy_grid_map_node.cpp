@@ -57,10 +57,6 @@ PointcloudBasedOccupancyGridMapNode::PointcloudBasedOccupancyGridMapNode(
   using std::placeholders::_1;
   using std::placeholders::_2;
 
-  // Set CUDA device flags
-  // note: Device flags are process-wide
-  cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-
   /* params */
   map_frame_ = this->declare_parameter<std::string>("map_frame");
   base_link_frame_ = this->declare_parameter<std::string>("base_link_frame");

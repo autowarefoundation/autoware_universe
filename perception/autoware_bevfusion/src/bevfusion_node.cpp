@@ -28,10 +28,6 @@ namespace autoware::bevfusion
 BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
 : Node("bevfusion", options), tf_buffer_(this->get_clock())
 {
-  // Set CUDA device flags
-  // note: Device flags are process-wide
-  cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-
   auto descriptor = rcl_interfaces::msg::ParameterDescriptor{}.set__read_only(true);
 
   // Modality

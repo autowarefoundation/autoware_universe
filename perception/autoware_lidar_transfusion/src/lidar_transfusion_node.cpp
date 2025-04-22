@@ -30,11 +30,6 @@ LidarTransfusionNode::LidarTransfusionNode(const rclcpp::NodeOptions & options)
 : Node("lidar_transfusion", options), tf_buffer_(this->get_clock())
 {
   auto descriptor = rcl_interfaces::msg::ParameterDescriptor{}.set__read_only(true);
-
-  // Set CUDA device flags
-  // note: Device flags are process-wide
-  cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
-
   // network
   class_names_ = this->declare_parameter<std::vector<std::string>>("class_names", descriptor);
   const std::string trt_precision =
