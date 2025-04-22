@@ -21,11 +21,13 @@
   <depend>grid_map_ros</depend>
   <depend>grid_map_rviz_plugin</depend>
   <depend>libpcl-all-dev</depend>
+  <depend>map_msgs</depend>
   <depend>pcl_conversions</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>rosbag2_storage_default_plugins</depend>
   <depend>tier4_external_api_msgs</depend>
+  <!-- TODO(esteve): remove map_msgs dependency when https://github.com/ANYbotics/grid_map/pull/516 is merged -->
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
