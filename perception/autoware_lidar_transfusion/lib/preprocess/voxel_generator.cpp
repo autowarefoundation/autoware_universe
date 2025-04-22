@@ -31,7 +31,7 @@ VoxelGenerator::VoxelGenerator(
   cudaStream_t & stream)
 : config_(config), stream_(stream)
 {
-  pd_ptr_ = std::make_unique<PointCloudDensification>(densification_param, stream_);
+  pd_ptr_ = std::make_unique<PointCloudDensification>(densification_param);
   pre_ptr_ = std::make_unique<PreprocessCuda>(config_, stream_);
   cloud_data_d_ = cuda::make_unique<unsigned char[]>(config_.cloud_capacity_ * MAX_CLOUD_STEP_SIZE);
   affine_past2current_d_ = cuda::make_unique<float[]>(AFF_MAT_SIZE);

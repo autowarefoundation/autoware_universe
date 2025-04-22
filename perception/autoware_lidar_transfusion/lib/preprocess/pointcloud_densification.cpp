@@ -48,9 +48,7 @@ boost::optional<geometry_msgs::msg::Transform> getTransform(
 
 Eigen::Affine3f transformToEigen(const geometry_msgs::msg::Transform & t)
 {
-  Eigen::Affine3f a;
-  a.matrix() = tf2::transformToEigen(t).matrix().cast<float>();
-  return a;
+  return tf2::transformToEigen(t).cast<float>();
 }
 
 }  // namespace
@@ -58,9 +56,7 @@ Eigen::Affine3f transformToEigen(const geometry_msgs::msg::Transform & t)
 namespace autoware::lidar_transfusion
 {
 
-PointCloudDensification::PointCloudDensification(
-  const DensificationParam & param, cudaStream_t & stream)
-: param_(param), stream_(stream)
+PointCloudDensification::PointCloudDensification(const DensificationParam & param) : param_(param)
 {
 }
 
