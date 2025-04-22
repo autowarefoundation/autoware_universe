@@ -85,7 +85,7 @@ Please refer to the following file for the values of the parameters that have be
 The blue line is the control input, the green line is the actual vehicle's tire angle output, and the red line is the simulator's tire angle output.
 [mechanical_sample_param](../param/simple_planning_simulator_mechanical_sample.param.yaml)
 
-This model has a smaller sum of errors with the observed values of the actual vehicle than when tuned with a normal first-order lag model. For details, please refer to [#9252](https://github.com/autowarefoundation/autoware.universe/pull/9300).
+This model has a smaller sum of errors with the observed values of the actual vehicle than when tuned with a normal first-order lag model. For details, please refer to [#9252](https://github.com/autowarefoundation/autoware_universe/pull/9300).
 
 ![mechanical_controller_system_identification](../media/mechanical_controller_system_identification.png)
 

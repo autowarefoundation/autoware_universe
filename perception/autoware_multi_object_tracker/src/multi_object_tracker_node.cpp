@@ -40,6 +40,7 @@
 
 namespace autoware::multi_object_tracker
 {
+using autoware_utils::ScopedTimeTrack;
 using Label = autoware_perception_msgs::msg::ObjectClassification;
 using LabelType = autoware_perception_msgs::msg::ObjectClassification::_label_type;
 
@@ -57,8 +58,10 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   // Get parameters
   double publish_rate = declare_parameter<double>("publish_rate");  // [hz]
   world_frame_id_ = declare_parameter<std::string>("world_frame_id");
+  std::string ego_frame_id = declare_parameter<std::string>("ego_frame_id");
   bool enable_delay_compensation{declare_parameter<bool>("enable_delay_compensation")};
   bool enable_odometry_uncertainty = declare_parameter<bool>("consider_odometry_uncertainty");
+  bool use_time_keeper = declare_parameter<bool>("publish_processing_time_detail");
 
   declare_parameter("selected_input_channels", std::vector<std::string>());
   std::vector<std::string> selected_input_channels =
@@ -69,7 +72,8 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
     create_publisher<autoware_perception_msgs::msg::TrackedObjects>("output", rclcpp::QoS{1});
 
   // Odometry manager
-  odometry_ = std::make_shared<Odometry>(*this, world_frame_id_, enable_odometry_uncertainty);
+  odometry_ =
+    std::make_shared<Odometry>(*this, world_frame_id_, ego_frame_id, enable_odometry_uncertainty);
 
   // ROS interface - Input channels
   // Get input channels configuration
@@ -91,7 +95,23 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
     // required parameter, but can set a default value
     input_channel_config.is_spawn_enabled = declare_parameter<bool>(
-      "input_channels." + selected_input_channel + ".can_spawn_new_tracker", true);
+      "input_channels." + selected_input_channel + ".flags.can_spawn_new_tracker", true);
+
+    // trust object existence probability
+    input_channel_config.trust_existence_probability = declare_parameter<bool>(
+      "input_channels." + selected_input_channel + ".flags.can_trust_existence_probability", true);
+
+    // trust object extension, size beyond the visible area
+    input_channel_config.trust_extension = declare_parameter<bool>(
+      "input_channels." + selected_input_channel + ".flags.can_trust_extension", true);
+
+    // trust object classification
+    input_channel_config.trust_classification = declare_parameter<bool>(
+      "input_channels." + selected_input_channel + ".flags.can_trust_classification", true);
+
+    // trust object orientation(yaw)
+    input_channel_config.trust_orientation = declare_parameter<bool>(
+      "input_channels." + selected_input_channel + ".flags.can_trust_orientation", true);
 
     // optional parameters
     const std::string default_name = selected_input_channel;
@@ -127,6 +147,7 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
   // Initialize processor
   {
+    // Parameters for processor
     TrackerProcessorConfig config;
     {
       config.tracker_map.insert(
@@ -150,7 +171,6 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         declare_parameter<double>("min_known_object_removal_iou");
       config.min_unknown_object_removal_iou =
         declare_parameter<double>("min_unknown_object_removal_iou");
-      config.distance_threshold = declare_parameter<double>("distance_threshold");
 
       // Map from class name to label
       std::map<std::string, LabelType> class_name_to_label = {
@@ -168,19 +188,33 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
     AssociatorConfig associator_config;
     {
-      const auto tmp = this->declare_parameter<std::vector<int64_t>>("can_assign_matrix");
-      const std::vector<int> can_assign_matrix(tmp.begin(), tmp.end());
-      associator_config.can_assign_matrix = can_assign_matrix;
+      auto initializeMatrixInt = [](const std::vector<int64_t> & vector) {
+        const int label_num = static_cast<int>(std::sqrt(vector.size()));
+        std::vector<int> converted_vector(vector.begin(), vector.end());
+        Eigen::Map<Eigen::MatrixXi> matrix_tmp(converted_vector.data(), label_num, label_num);
+        // transpose to make it row-major
+        return matrix_tmp.transpose();
+      };
+      auto initializeMatrixDouble = [](const std::vector<double> & vector) {
+        const int label_num = static_cast<int>(std::sqrt(vector.size()));
+        Eigen::Map<const Eigen::MatrixXd> matrix_tmp(vector.data(), label_num, label_num);
+        // transpose to make it row-major
+        return matrix_tmp.transpose();
+      };
+      associator_config.can_assign_matrix =
+        initializeMatrixInt(this->declare_parameter<std::vector<int64_t>>("can_assign_matrix"));
       associator_config.max_dist_matrix =
-        this->declare_parameter<std::vector<double>>("max_dist_matrix");
+        initializeMatrixDouble(this->declare_parameter<std::vector<double>>("max_dist_matrix"));
       associator_config.max_area_matrix =
-        this->declare_parameter<std::vector<double>>("max_area_matrix");
+        initializeMatrixDouble(this->declare_parameter<std::vector<double>>("max_area_matrix"));
       associator_config.min_area_matrix =
-        this->declare_parameter<std::vector<double>>("min_area_matrix");
+        initializeMatrixDouble(this->declare_parameter<std::vector<double>>("min_area_matrix"));
       associator_config.max_rad_matrix =
-        this->declare_parameter<std::vector<double>>("max_rad_matrix");
+        initializeMatrixDouble(this->declare_parameter<std::vector<double>>("max_rad_matrix"));
       associator_config.min_iou_matrix =
-        this->declare_parameter<std::vector<double>>("min_iou_matrix");
+        initializeMatrixDouble(this->declare_parameter<std::vector<double>>("min_iou_matrix"));
+
+      config.max_dist_matrix = associator_config.max_dist_matrix;
     }
 
     // Initialize processor with parameters
@@ -191,10 +225,22 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   // Debugger
   debugger_ = std::make_unique<TrackerDebugger>(*this, world_frame_id_, input_channels_config_);
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+
+  if (use_time_keeper) {
+    detailed_processing_time_publisher_ =
+      this->create_publisher<autoware_utils::ProcessingTimeDetail>(
+        "~/debug/processing_time_detail_ms", 1);
+    time_keeper_ =
+      std::make_shared<autoware_utils::TimeKeeper>(detailed_processing_time_publisher_);
+    processor_->setTimeKeeper(time_keeper_);
+  }
 }
 
 void MultiObjectTracker::onTrigger()
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   const rclcpp::Time current_time = this->now();
   // get objects from the input manager and run process
   ObjectsList objects_list;
@@ -221,8 +267,14 @@ void MultiObjectTracker::onTrigger()
 
 void MultiObjectTracker::onTimer()
 {
-  const rclcpp::Time current_time = this->now();
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
+  const rclcpp::Time current_time = this->now();
+  if (last_updated_time_.nanoseconds() == 0) {
+    // If the last updated time is not set, set it to the current time
+    last_updated_time_ = current_time;
+  }
   // ensure minimum interval: room for the next process(prediction)
   const double minimum_publish_interval = publisher_period_ * minimum_publish_interval_ratio;
   const auto elapsed_time = (current_time - last_published_time_).seconds();
@@ -244,6 +296,9 @@ void MultiObjectTracker::onTimer()
 
 void MultiObjectTracker::runProcess(const types::DynamicObjectList & detected_objects)
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   // Get the time of the measurement
   const rclcpp::Time measurement_time =
     rclcpp::Time(detected_objects.header.stamp, this->now().get_clock_type());
@@ -272,6 +327,9 @@ void MultiObjectTracker::runProcess(const types::DynamicObjectList & detected_ob
 
 void MultiObjectTracker::checkAndPublish(const rclcpp::Time & time)
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   /* tracker pruning*/
   processor_->prune(time);
 
@@ -284,6 +342,9 @@ void MultiObjectTracker::checkAndPublish(const rclcpp::Time & time)
 
 void MultiObjectTracker::publish(const rclcpp::Time & time) const
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   debugger_->startPublishTime(this->now());
   const auto subscriber_count = tracked_objects_pub_->get_subscription_count() +
                                 tracked_objects_pub_->get_intra_process_subscription_count();
@@ -301,6 +362,10 @@ void MultiObjectTracker::publish(const rclcpp::Time & time) const
 
   // Publish debugger information if enabled
   debugger_->endPublishTime(this->now(), time);
+
+  // Update the diagnostic values
+  const double min_extrapolation_time = (time - last_updated_time_).seconds();
+  debugger_->updateDiagnosticValues(min_extrapolation_time, output_msg.objects.size());
 
   if (debugger_->shouldPublishTentativeObjects()) {
     autoware_perception_msgs::msg::TrackedObjects tentative_output_msg;

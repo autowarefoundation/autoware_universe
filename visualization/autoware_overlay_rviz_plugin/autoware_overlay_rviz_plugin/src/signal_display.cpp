@@ -17,6 +17,7 @@
 #include <QFontDatabase>
 #include <QPainter>
 #include <rclcpp/rclcpp.hpp>
+#include <rviz_common/properties/enum_property.hpp>
 #include <rviz_common/properties/ros_topic_property.hpp>
 #include <rviz_rendering/render_system.hpp>
 
@@ -66,6 +67,11 @@ SignalDisplay::SignalDisplay()
   property_dark_limit_color_ = new rviz_common::properties::ColorProperty(
     "Dark Traffic Color", QColor(255, 51, 51), "Color of the signal arrows", this,
     SLOT(updateOverlayColor()));
+  property_turn_signal_blinking_mode_ = new rviz_common::properties::EnumProperty(
+    "Signal Blinking Mode", "Static", "State of the signal blinking", this,
+    SLOT(updateTurnSignalBlinkingMode()));
+  property_turn_signal_blinking_mode_->addOption("Static", 0);
+  property_turn_signal_blinking_mode_->addOption("Blinking", 1);
 
   // Initialize the component displays
   steering_wheel_display_ = std::make_unique<SteeringWheelDisplay>();
@@ -389,6 +395,15 @@ void SignalDisplay::updateOverlayPosition()
 void SignalDisplay::updateOverlayColor()
 {
   std::lock_guard<std::mutex> lock(mutex_);
+  queueRender();
+}
+
+void SignalDisplay::updateTurnSignalBlinkingMode()
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (turn_signals_display_) {
+    turn_signals_display_->setBlinkingMode(property_turn_signal_blinking_mode_->getStdString());
+  }
   queueRender();
 }
 

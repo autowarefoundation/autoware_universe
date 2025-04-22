@@ -52,7 +52,9 @@ bool PassThroughTracker::predict(const rclcpp::Time & time)
   return true;
 }
 
-bool PassThroughTracker::measure(const types::DynamicObject & object, const rclcpp::Time & time)
+bool PassThroughTracker::measure(
+  const types::DynamicObject & object, const rclcpp::Time & time,
+  const types::InputChannel & /*channel_info*/)
 {
   prev_observed_object_ = object_;
   object_ = object;

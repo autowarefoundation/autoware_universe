@@ -52,7 +52,7 @@ If the score of initial pose estimation result is lower than score threshold, ER
 
 ## Connection with Default AD API
 
-This `autoware_pose_initializer` is used via default AD API. For detailed description of the API description, please refer to [the description of `autoware_default_adapi`](https://github.com/autowarefoundation/autoware.universe/blob/main/system/autoware_default_adapi/document/localization.md).
+This `autoware_pose_initializer` is used via default AD API. For detailed description of the API description, please refer to [the description of `autoware_default_adapi`](https://github.com/autowarefoundation/autoware_universe/blob/main/system/autoware_default_adapi/document/localization.md).
 
 <img src="../../system/autoware_default_adapi/document/images/localization.drawio.svg" alt="drawing" width="800"/>
 
@@ -137,4 +137,4 @@ pose:
 ```
 
 It behaves the same as "initialpose (from rviz)".
-The position.z and the covariance will be overwritten by [autoware_adapi_adaptors](https://github.com/autowarefoundation/autoware.universe/tree/main/system/autoware_default_adapi_helpers/autoware_adapi_adaptors), so there is no need to input them.
+The position.z and the covariance will be overwritten by [autoware_adapi_adaptors](https://github.com/autowarefoundation/autoware_universe/tree/main/system/autoware_default_adapi_helpers/autoware_adapi_adaptors), so there is no need to input them.

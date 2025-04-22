@@ -169,7 +169,9 @@ bool PedestrianTracker::measureWithShape(const types::DynamicObject & object)
   return true;
 }
 
-bool PedestrianTracker::measure(const types::DynamicObject & object, const rclcpp::Time & time)
+bool PedestrianTracker::measure(
+  const types::DynamicObject & object, const rclcpp::Time & time,
+  const types::InputChannel & channel_info)
 {
   // check time gap
   const double dt = motion_model_.getDeltaTime(time);
@@ -183,7 +185,9 @@ bool PedestrianTracker::measure(const types::DynamicObject & object, const rclcp
 
   // update object
   measureWithPose(object);
-  measureWithShape(object);
+  if (channel_info.trust_extension) {
+    measureWithShape(object);
+  }
 
   return true;
 }
