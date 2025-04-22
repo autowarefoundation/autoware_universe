@@ -48,7 +48,6 @@ inline bool is_error(const tier4_external_api_msgs::msg::ResponseStatus & status
 inline ResponseStatus response_success(const std::string & message = "")
 {
   return tier4_external_api_msgs::build<tier4_external_api_msgs::msg::ResponseStatus>()
-    .success(true)
     .code(tier4_external_api_msgs::msg::ResponseStatus::SUCCESS)
     .message(message);
 }
@@ -56,7 +55,6 @@ inline ResponseStatus response_success(const std::string & message = "")
 inline ResponseStatus response_ignored(const std::string & message = "")
 {
   return tier4_external_api_msgs::build<tier4_external_api_msgs::msg::ResponseStatus>()
-    .success(false)
     .code(tier4_external_api_msgs::msg::ResponseStatus::IGNORED)
     .message(message);
 }
@@ -64,7 +62,6 @@ inline ResponseStatus response_ignored(const std::string & message = "")
 inline ResponseStatus response_warn(const std::string & message = "")
 {
   return tier4_external_api_msgs::build<tier4_external_api_msgs::msg::ResponseStatus>()
-    .success(false)
     .code(tier4_external_api_msgs::msg::ResponseStatus::WARN)
     .message(message);
 }
@@ -72,7 +69,6 @@ inline ResponseStatus response_warn(const std::string & message = "")
 inline ResponseStatus response_error(const std::string & message = "")
 {
   return tier4_external_api_msgs::build<tier4_external_api_msgs::msg::ResponseStatus>()
-    .success(false)
     .code(tier4_external_api_msgs::msg::ResponseStatus::ERROR)
     .message(message);
 }
