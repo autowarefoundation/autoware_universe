@@ -108,11 +108,27 @@ def launch_setup(context, *args, **kwargs):
                     ),
                 ),
                 (
+                    "~/input/obstacle_pointcloud/cuda",
+                    (
+                        LaunchConfiguration("input/obstacle_pointcloud").perform(context) + "/cuda"
+                        if not downsample_input_pointcloud
+                        else "obstacle/downsample/pointcloud/cuda"
+                    ),
+                ),
+                (
                     "~/input/raw_pointcloud",
                     (
                         LaunchConfiguration("input/raw_pointcloud")
                         if not downsample_input_pointcloud
                         else "raw/downsample/pointcloud"
+                    ),
+                ),
+                (
+                    "~/input/raw_pointcloud/cuda",
+                    (
+                        LaunchConfiguration("input/raw_pointcloud").perform(context) + "/cuda"
+                        if not downsample_input_pointcloud
+                        else "raw/downsample/pointcloud/cuda"
                     ),
                 ),
                 ("~/output/occupancy_grid_map", LaunchConfiguration("output")),
@@ -122,7 +138,8 @@ def launch_setup(context, *args, **kwargs):
                 occupancy_grid_map_updater_params,
                 {"updater_type": LaunchConfiguration("updater_type")},
             ],
-            extra_arguments=[{"use_intra_process_comms": LaunchConfiguration("use_intra_process")}],
+            # The whole node can not set use_intra_process due to type negotiation internal topics
+            # extra_arguments=[{"use_intra_process_comms": LaunchConfiguration("use_intra_process")}],
         )
     )
 
