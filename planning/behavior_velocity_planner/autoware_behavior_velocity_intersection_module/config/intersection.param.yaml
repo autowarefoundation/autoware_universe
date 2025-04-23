@@ -110,6 +110,10 @@
         creep_velocity_without_traffic_light: 1.388
         static_occlusion_with_traffic_light_timeout: 0.5
 
+      conservative_merging:
+        enable_yield: false
+        merging_judge_angle_threshold: 0.785
+
       debug:
         ttc: [0]
 

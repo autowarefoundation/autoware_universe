@@ -27,6 +27,7 @@
 
 #include <optional>
 #include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -135,6 +136,11 @@ getFirstPointInsidePolygonsByFootprint(
 
 std::vector<lanelet::CompoundPolygon3d> getPolygon3dFromLanelets(
   const lanelet::ConstLanelets & ll_vec);
+
+std::optional<size_t> find_maximum_footprint_overshoot_position(
+  const InterpolatedPathInfo & interpolated_path_info,
+  const autoware_utils::LinearRing2d & footprint, const lanelet::ConstLanelet & merging_lanelet,
+  const std::string & turn_direction, const size_t search_start_idx);
 
 }  // namespace autoware::behavior_velocity_planner::util
 
