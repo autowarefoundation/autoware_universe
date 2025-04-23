@@ -34,7 +34,7 @@ namespace autoware::gyro_odometer
 
 std::array<double, 9> transform_covariance(const std::array<double, 9> & cov)
 {
-  using COV_IDX = autoware_utils::xyz_covariance_index::XYZ_COV_IDX;
+  using COV_IDX = autoware_utils_geometry::xyz_covariance_index::XYZ_COV_IDX;
 
   double max_cov = std::max({cov[COV_IDX::X_X], cov[COV_IDX::Y_Y], cov[COV_IDX::Z_Z]});
 
@@ -53,8 +53,8 @@ GyroOdometerNode::GyroOdometerNode(const rclcpp::NodeOptions & node_options)
   vehicle_twist_arrived_(false),
   imu_arrived_(false)
 {
-  transform_listener_ = std::make_shared<autoware_utils::TransformListener>(this);
-  logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
+  transform_listener_ = std::make_shared<autoware_utils_tf::TransformListener>(this);
+  logger_configure_ = std::make_unique<autoware_utils_logging::LoggerLevelConfigure>(this);
 
   vehicle_twist_sub_ = create_subscription<geometry_msgs::msg::TwistWithCovarianceStamped>(
     "vehicle/twist_with_covariance", rclcpp::QoS{100},
@@ -72,8 +72,8 @@ GyroOdometerNode::GyroOdometerNode(const rclcpp::NodeOptions & node_options)
   twist_with_covariance_pub_ = create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
     "twist_with_covariance", rclcpp::QoS{10});
 
-  diagnostics_ =
-    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "gyro_odometer_status");
+  diagnostics_ = std::make_unique<autoware_utils_diagnostics::DiagnosticsInterface>(
+    this, "gyro_odometer_status");
 
   // TODO(YamatoAndo) createTimer
 }
@@ -210,8 +210,8 @@ void GyroOdometerNode::concat_gyro_and_odometer()
     gyro.angular_velocity_covariance = transform_covariance(gyro.angular_velocity_covariance);
   }
 
-  using COV_IDX_XYZ = autoware_utils::xyz_covariance_index::XYZ_COV_IDX;
-  using COV_IDX_XYZRPY = autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  using COV_IDX_XYZ = autoware_utils_geometry::xyz_covariance_index::XYZ_COV_IDX;
+  using COV_IDX_XYZRPY = autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
 
   // calc mean, covariance
   double vx_mean = 0;
