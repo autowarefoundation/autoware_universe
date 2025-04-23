@@ -11,7 +11,7 @@
   <arg name="model_param_path" default="$(find-pkg-share autoware_bevfusion)/config/$(var model_name).param.yaml"/>
   <arg name="ml_package_param_path" default="$(var model_path)/ml_package_$(var model_name).param.yaml"/>
   <arg name="class_remapper_param_path" default="$(var model_path)/detection_class_remapper.param.yaml"/>
-  <arg name="common_param_path" default="$(find-pkg-share autoware_bevfusion)/config/bevfusion_common.param.yaml"/>
+  <arg name="common_param_path" default="$(find-pkg-share autoware_bevfusion)/config/common_bevfusion.param.yaml"/>
   <arg name="build_only" default="false" description="shutdown node after TensorRT engine file is built"/>
   <arg name="log_level" default="info"/>
 

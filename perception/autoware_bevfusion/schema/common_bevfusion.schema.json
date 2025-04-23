@@ -3,7 +3,7 @@
   "title": "Parameters for BEVFusion Diagnostics",
   "type": "object",
   "definitions": {
-    "bevfusion_common": {
+    "common_bevfusion": {
       "type": "object",
       "properties": {
         "diagnostics": {
@@ -39,7 +39,7 @@
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "$ref": "#/definitions/bevfusion_common"
+          "$ref": "#/definitions/common_bevfusion"
         }
       },
       "required": ["ros__parameters"]
