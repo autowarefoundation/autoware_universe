@@ -404,4 +404,47 @@ std::vector<lanelet::CompoundPolygon3d> getPolygon3dFromLanelets(
   return polys;
 }
 
+std::optional<size_t> find_maximum_footprint_overshoot_position(
+  const InterpolatedPathInfo & interpolated_path_info,
+  const autoware_utils::LinearRing2d & local_footprint,
+  const lanelet::ConstLanelet & merging_lanelet, const std::string & turn_direction,
+  const std::size_t search_start_index)
+{
+  if (turn_direction != "left" && turn_direction != "right") {
+    return std::nullopt;
+  }
+
+  const auto lane_boundary =
+    turn_direction == "left" ? lanelet::utils::to2D(merging_lanelet.rightBound().basicLineString())
+                             : lanelet::utils::to2D(merging_lanelet.leftBound().basicLineString());
+
+  double closest_dist = std::numeric_limits<double>::infinity();
+  std::optional<size_t> closest_index = std::nullopt;
+  const auto & path = interpolated_path_info.path;
+  const auto & [intersection_start, intersection_end] =
+    interpolated_path_info.lane_id_interval.value();
+  for (unsigned i = std::max<size_t>(intersection_start, search_start_index); i <= intersection_end;
+       ++i) {
+    const auto & base_pose = path.points.at(i).point.pose;
+    const auto footprint =
+      autoware_utils::transform_vector(local_footprint, autoware_utils::pose2transform(base_pose));
+    if (boost::geometry::intersects(footprint, lane_boundary)) {
+      return i;
+    }
+
+    double footprint_to_boundary_distance = std::numeric_limits<double>::infinity();
+    for (const auto & p : footprint) {
+      const double dist = boost::geometry::distance(p, lane_boundary);
+      if (dist < footprint_to_boundary_distance) {
+        footprint_to_boundary_distance = dist;
+      }
+    }
+    if (footprint_to_boundary_distance < closest_dist) {
+      closest_dist = footprint_to_boundary_distance;
+      closest_index = i;
+    }
+  }
+  return closest_index;
+}
+
 }  // namespace autoware::behavior_velocity_planner::util
