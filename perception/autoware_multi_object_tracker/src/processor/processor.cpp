@@ -241,27 +241,6 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
         (*itr1)->updateTotalExistenceProbability((*itr2)->getTotalExistenceProbability());
         (*itr1)->mergeExistenceProbabilities((*itr2)->getExistenceProbabilityVector());
 
-        // debug message of probabilities
-        float prob1_after = (*itr1)->getTotalExistenceProbability();
-        std::cout << "Merging trackers: "
-                  << "Tracker 1 UUID: " << (*itr1)->getUuidString().substr(0, 6)
-                  << " class: " << std::to_string((*itr1)->getHighestProbLabel())
-                  << ", Tracker 2 UUID: " << (*itr2)->getUuidString().substr(0, 6)
-                  << " class: " << std::to_string((*itr2)->getHighestProbLabel())
-                  << ", Probabilities: " << prob1 << " -> " << prob1_after << ", (+" << prob2
-                  << "), Distance: " << distance << ", IoU: " << iou << std::endl;
-        // debug message for existence probability vector
-        std::cout << "Tracker 1 existence probability vector: ";
-        for (const auto & prob : (*itr1)->getExistenceProbabilityVector()) {
-          std::cout << prob << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "Tracker 2 existence probability vector: ";
-        for (const auto & prob : (*itr2)->getExistenceProbabilityVector()) {
-          std::cout << prob << " ";
-        }
-        std::cout << std::endl;
-
         // Remove from original list_tracker
         itr2 = list_tracker_.erase(itr2);
         --itr2;
