@@ -32,6 +32,14 @@ public:
 
   const char * getModuleName() override { return "run_out"; }
 
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    RequiredSubscriptionInfo required_subscription_info;
+    required_subscription_info.traffic_signals = true;
+    required_subscription_info.predicted_objects = true;
+    return required_subscription_info;
+  }
+
 private:
   run_out_utils::PlannerParam planner_param_;
   std::shared_ptr<RunOutDebug> debug_ptr_;
