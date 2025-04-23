@@ -31,7 +31,7 @@
 
   <!-- BEVFusion -->
   <group if="$(eval &quot;'$(var lidar_detection_model_type)'=='bevfusion'&quot;)">
-    <let name="lidar_detection_model_name" value="$(eval &quot;'bevfusion' if ''=='$(var lidar_detection_model_name)' else '$(var lidar_detection_model_name)'&quot;)"/>
+    <let name="lidar_detection_model_name" value="$(eval &quot;'bevfusion_lidar' if ''=='$(var lidar_detection_model_name)' else '$(var lidar_detection_model_name)'&quot;)"/>
     <push-ros-namespace namespace="bevfusion"/>
     <arg name="lidar_model_param_path" default="$(find-pkg-share autoware_bevfusion)/config"/>
 
