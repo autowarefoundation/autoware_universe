@@ -248,8 +248,19 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
                   << " class: " << std::to_string((*itr1)->getHighestProbLabel())
                   << ", Tracker 2 UUID: " << (*itr2)->getUuidString().substr(0, 6)
                   << " class: " << std::to_string((*itr2)->getHighestProbLabel())
-                  << ", Probabilities: " << prob1 << " -> " << prob1_after << ", ( + " << prob2
+                  << ", Probabilities: " << prob1 << " -> " << prob1_after << ", (+" << prob2
                   << "), Distance: " << distance << ", IoU: " << iou << std::endl;
+        // debug message for existence probability vector
+        std::cout << "Tracker 1 existence probability vector: ";
+        for (const auto & prob : (*itr1)->getExistenceProbabilityVector()) {
+          std::cout << prob << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "Tracker 2 existence probability vector: ";
+        for (const auto & prob : (*itr2)->getExistenceProbabilityVector()) {
+          std::cout << prob << " ";
+        }
+        std::cout << std::endl;
 
         // Remove from original list_tracker
         itr2 = list_tracker_.erase(itr2);

@@ -98,8 +98,17 @@ void Tracker::updateExistenceProbabilities(std::vector<float> existence_probabil
 {
   // existence probability on each channel
   for (size_t i = 0; i < existence_probabilities.size(); ++i) {
-    existence_probabilities_[i] =
-      updateProbability(existence_probabilities_[i], existence_probabilities[i], 0.2, false);
+    // Update only if a probability is over minimum threshold
+    constexpr float min_update = 0.001;
+    constexpr float min_prior = 0.1;
+    if (existence_probabilities[i] > min_update) {
+      existence_probabilities_[i] = existence_probabilities_[i] < min_prior
+                                      ? min_prior
+                                      : existence_probabilities_[i];
+      updateProbability(existence_probabilities_[i], existence_probabilities[i], 0.01, true);
+    } else {
+      existence_probabilities_[i] = min_update;
+    }
   }
 }
 
