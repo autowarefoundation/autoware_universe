@@ -252,7 +252,7 @@ void BEVFusionNode::cloudCallback(
     "is_num_voxels_within_range", is_num_voxels_within_range);
   if (!is_num_voxels_within_range) {
     std::stringstream message;
-    message << "BEVFusiontTRT::detect: The actual number of voxels exceeds its maximum value, "
+    message << "BEVFusionTRT::detect: The actual number of voxels exceeds its maximum value, "
             << "which may limit the detection performance.";
     diagnostics_detector_trt_->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::WARN, message.str());
