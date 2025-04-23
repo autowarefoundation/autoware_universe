@@ -102,9 +102,10 @@ LidarTransfusionNode::LidarTransfusionNode(const rclcpp::NodeOptions & options)
 
   detector_ptr_ = std::make_unique<TransfusionTRT>(trt_config, densification_param, config);
 
-  cloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-    "~/input/pointcloud", rclcpp::SensorDataQoS{}.keep_last(1),
-    std::bind(&LidarTransfusionNode::cloudCallback, this, std::placeholders::_1));
+  cloud_sub_ =
+    std::make_unique<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
+      *this, "~/input/pointcloud",
+      std::bind(&LidarTransfusionNode::cloudCallback, this, std::placeholders::_1));
 
   objects_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
     "~/output/objects", rclcpp::QoS(1));
@@ -139,7 +140,8 @@ LidarTransfusionNode::LidarTransfusionNode(const rclcpp::NodeOptions & options)
   }
 }
 
-void LidarTransfusionNode::cloudCallback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr msg)
+void LidarTransfusionNode::cloudCallback(
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg)
 {
   const auto objects_sub_count =
     objects_pub_->get_subscription_count() + objects_pub_->get_intra_process_subscription_count();
@@ -153,7 +155,7 @@ void LidarTransfusionNode::cloudCallback(const sensor_msgs::msg::PointCloud2::Co
 
   std::vector<Box3D> det_boxes3d;
   std::unordered_map<std::string, double> proc_timing;
-  bool is_success = detector_ptr_->detect(*msg, tf_buffer_, det_boxes3d, proc_timing);
+  bool is_success = detector_ptr_->detect(msg, tf_buffer_, det_boxes3d, proc_timing);
   if (!is_success) {
     return;
   }

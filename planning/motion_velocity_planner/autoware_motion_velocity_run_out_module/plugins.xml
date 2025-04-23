@@ -1,0 +1,3 @@
+<library path="autoware_motion_velocity_run_out_module">
+  <class type="autoware::motion_velocity_planner::RunOutModule" base_class_type="autoware::motion_velocity_planner::PluginModuleInterface"/>
+</library>
