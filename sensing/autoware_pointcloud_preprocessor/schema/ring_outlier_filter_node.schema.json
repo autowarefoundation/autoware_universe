@@ -76,7 +76,6 @@
       "required": [
         "distance_ratio",
         "object_length_threshold",
-        "num_points_threshold",
         "max_rings_num",
         "max_points_num_per_ring",
         "publish_outlier_pointcloud",
