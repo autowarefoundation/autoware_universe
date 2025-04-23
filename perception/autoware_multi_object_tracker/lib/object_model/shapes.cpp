@@ -129,28 +129,6 @@ bool convertConvexHullToBoundingBox(
   return true;
 }
 
-bool getMeasurementYaw(
-  const types::DynamicObject & object, const double & predicted_yaw, double & measurement_yaw)
-{
-  measurement_yaw = tf2::getYaw(object.pose.orientation);
-
-  // check orientation sign is known or not, and fix the limiting delta yaw
-  double limiting_delta_yaw = M_PI_2;
-  if (object.kinematics.orientation_availability == types::OrientationAvailability::AVAILABLE) {
-    limiting_delta_yaw = M_PI;
-  }
-  // limiting delta yaw, even the availability is unknown
-  while (std::fabs(predicted_yaw - measurement_yaw) > limiting_delta_yaw) {
-    if (measurement_yaw < predicted_yaw) {
-      measurement_yaw += 2 * limiting_delta_yaw;
-    } else {
-      measurement_yaw -= 2 * limiting_delta_yaw;
-    }
-  }
-  // return false if the orientation is unknown
-  return object.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE;
-}
-
 enum BBOX_IDX {
   FRONT_SURFACE = 0,
   RIGHT_SURFACE = 1,
