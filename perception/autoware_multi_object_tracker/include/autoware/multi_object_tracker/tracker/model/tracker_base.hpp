@@ -58,7 +58,7 @@ public:
   std::vector<float> getExistenceProbabilityVector() const { return existence_probabilities_; }
   float getTotalExistenceProbability() const { return total_existence_probability_; }
   void updateTotalExistenceProbability(const float & existence_probability);
-  void updateExistenceProbabilities(std::vector<float> existence_probabilities);
+  void mergeExistenceProbabilities(std::vector<float> existence_probabilities);
 
   // object update
   bool updateWithMeasurement(

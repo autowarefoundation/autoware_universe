@@ -239,7 +239,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
 
         // add existence probability to the tracker 1
         (*itr1)->updateTotalExistenceProbability((*itr2)->getTotalExistenceProbability());
-        (*itr1)->updateExistenceProbabilities((*itr2)->getExistenceProbabilityVector());
+        (*itr1)->mergeExistenceProbabilities((*itr2)->getExistenceProbabilityVector());
 
         // debug message of probabilities
         float prob1_after = (*itr1)->getTotalExistenceProbability();
