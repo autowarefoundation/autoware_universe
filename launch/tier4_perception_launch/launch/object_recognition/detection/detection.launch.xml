@@ -5,8 +5,25 @@
 
   <!-- Pipeline junctions -->
   <arg name="mode" description="options: `camera_lidar_radar_fusion`, `camera_lidar_fusion`, `lidar_radar_fusion`, `lidar` or `radar`"/>
-  <arg name="lidar_detection_model_type" description="options: `transfusion`, `centerpoint`, `pointpainting`, `apollo`, `clustering`"/>
-  <arg name="lidar_detection_model_name" description="options: `transfusion`, `centerpoint`, `centerpoint_tiny`, `centerpoint_sigma`, `pointpainting`"/>
+
+  <arg name="lidar_detection_model_type">
+    <choice value="bevfusion"/>
+    <choice value="centerpoint"/>
+    <choice value="pointpainting"/>
+    <choice value="transfusion"/>
+    <choice value="apollo"/>
+    <choice value="clustering"/>
+  </arg>
+  <arg name="lidar_detection_model_name">
+    <choice value="bevfusion_lidar"/>
+    <choice value="centerpoint"/>
+    <choice value="centerpoint_tiny"/>
+    <choice value="centerpoint_sigma"/>
+    <choice value="pointpainting"/>
+    <choice value="transfusion"/>
+    <choice value=""/>
+  </arg>
+
   <arg name="use_object_filter" description="use object filter"/>
   <arg name="objects_filter_method" description="options: `lanelet_filter` or `position_filter`"/>
   <arg name="use_pointcloud_map" description="use pointcloud map filter"/>
