@@ -24,6 +24,7 @@
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_universe_utils</depend>
   <depend>autoware_velocity_smoother</depend>
+  <depend>diagnostic_updater</depend>
   <depend>eigen</depend>
   <depend>geometry_msgs</depend>
   <depend>libboost-dev</depend>

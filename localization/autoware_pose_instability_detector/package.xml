@@ -20,7 +20,7 @@
   <test_depend>ament_cmake_cppcheck</test_depend>
   <test_depend>ament_index_cpp</test_depend>
   <test_depend>ament_lint_auto</test_depend>
-  <depend>autoware_utils</depend>
+  <depend>autoware_utils_geometry</depend>
   <depend>diagnostic_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
