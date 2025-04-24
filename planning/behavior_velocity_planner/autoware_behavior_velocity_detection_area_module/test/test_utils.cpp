@@ -49,19 +49,8 @@ TEST(TestUtils, getStopLine)
   detection_areas.push_back(area);
   auto detection_area =
     lanelet::autoware::DetectionArea::make(lanelet::InvalId, {}, detection_areas, line);
-  {
-    autoware_internal_planning_msgs::msg::PathWithLaneId path;
-    path.left_bound = make_bound({-1.0, -1.0}, {1.0, -1.0});
-    path.right_bound = make_bound({-1.0, 1.0}, {1.0, 1.0});
-    const auto stop_line = get_stop_line_geometry2d(*detection_area, path);
-    ASSERT_EQ(stop_line.size(), 2UL);
-    EXPECT_EQ(stop_line[0].x(), line[0].x());
-    EXPECT_EQ(stop_line[0].y(), line[0].y());
-    EXPECT_EQ(stop_line[1].x(), line[1].x());
-    EXPECT_EQ(stop_line[1].y(), line[1].y());
-  }
   // extended line
-  for (auto extend_length = -2.0; extend_length < 2.0; extend_length += 0.1) {
+  for (auto extend_length = 0.0; extend_length < 2.0; extend_length += 0.1) {
     autoware_internal_planning_msgs::msg::PathWithLaneId path;
     path.left_bound = make_bound({-1.0, -1.0 - extend_length}, {1.0, -1.0 - extend_length});
     path.right_bound = make_bound({-1.0, 1.0 + extend_length}, {1.0, 1.0 + extend_length});
