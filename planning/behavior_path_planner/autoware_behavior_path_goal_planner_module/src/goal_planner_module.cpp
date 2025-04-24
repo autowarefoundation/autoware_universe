@@ -2283,9 +2283,6 @@ bool GoalPlannerModule::isCrossingPossible(
     // NOTE: this line does not specify the /forward/backward length, so if the shoulders form a
     // loop, this returns all shoulder lanes in the loop
     end_lane_sequence = route_handler->getShoulderLaneletSequence(end_lane, end_lane_pose);
-  } else {
-    const double dist = std::numeric_limits<double>::max();
-    end_lane_sequence = route_handler->getLaneletSequence(end_lane, dist, dist, false);
   }
 
   const auto getNeighboringLane =
