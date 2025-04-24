@@ -40,6 +40,11 @@ public:
 
   const char * getModuleName() override { return "virtual_traffic_light"; }
 
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    return RequiredSubscriptionInfo{};
+  }
+
 private:
   VirtualTrafficLightModule::PlannerParam planner_param_;
 

@@ -36,6 +36,11 @@ public:
 
   const char * getModuleName() override { return "speed_bump"; }
 
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    return RequiredSubscriptionInfo{};
+  }
+
 private:
   SpeedBumpModule::PlannerParam planner_param_;
 

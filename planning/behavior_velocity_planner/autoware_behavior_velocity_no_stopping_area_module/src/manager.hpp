@@ -36,6 +36,11 @@ public:
 
   const char * getModuleName() override { return "no_stopping_area"; }
 
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    return RequiredSubscriptionInfo{};
+  }
+
 private:
   NoStoppingAreaModule::PlannerParam planner_param_{};
 

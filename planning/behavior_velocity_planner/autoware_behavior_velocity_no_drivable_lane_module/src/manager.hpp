@@ -36,6 +36,11 @@ public:
 
   const char * getModuleName() override { return "no_drivable_lane"; }
 
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    return RequiredSubscriptionInfo{};
+  }
+
 private:
   NoDrivableLaneModule::PlannerParam planner_param_;
 
