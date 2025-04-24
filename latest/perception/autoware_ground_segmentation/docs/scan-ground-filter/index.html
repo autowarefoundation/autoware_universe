@@ -14480,118 +14480,130 @@
 <tr>
 <th>Name</th>
 <th>Type</th>
-<th>Default Value</th>
 <th>Description</th>
+<th>Default</th>
+<th>Range</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>input_frame</code></td>
-<td>string</td>
-<td>"base_link"</td>
-<td>frame id of input pointcloud</td>
-</tr>
-<tr>
-<td><code>output_frame</code></td>
-<td>string</td>
-<td>"base_link"</td>
-<td>frame id of output pointcloud</td>
-</tr>
-<tr>
-<td><code>global_slope_max_angle_deg</code></td>
-<td>double</td>
-<td>8.0</td>
-<td>The global angle to classify as the ground or object [deg].<br>A large threshold may reduce false positive of high slope road classification but it may lead to increase false negative of non-ground classification, particularly for small objects.</td>
-</tr>
-<tr>
-<td><code>local_slope_max_angle_deg</code></td>
-<td>double</td>
+<td>global_slope_max_angle_deg</td>
+<td>float</td>
+<td>The global angle to classify as the ground or object [deg]. A large threshold may reduce false positive of high slope road classification but it may lead to increase false negative of non-ground classification, particularly for small objects.</td>
 <td>10.0</td>
-<td>The local angle to classify as the ground or object [deg] when comparing with adjacent point.<br>A small value enhance accuracy classification of object with inclined surface. This should be considered together with <code>split_points_distance_tolerance</code> value.</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>radial_divider_angle_deg</code></td>
-<td>double</td>
-<td>1.0</td>
-<td>The angle which divide the whole pointcloud to sliced group [deg]</td>
+<td>local_slope_max_angle_deg</td>
+<td>float</td>
+<td>The local angle to classify as the ground or object [deg] when comparing with adjacent point. A small value enhance accuracy classification of object with inclined surface. This should be considered together with split_points_distance_tolerance value.</td>
+<td>13.0</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>split_points_distance_tolerance</code></td>
-<td>double</td>
-<td>0.2</td>
+<td>split_points_distance_tolerance</td>
+<td>float</td>
 <td>The xy-distance threshold to distinguish far and near [m]</td>
-</tr>
-<tr>
-<td><code>split_height_distance</code></td>
-<td>double</td>
 <td>0.2</td>
-<td>The height threshold to distinguish ground and non-ground pointcloud when comparing with adjacent points [m]. <br>A small threshold improves classification of non-ground point, especially for high elevation resolution pointcloud lidar. However, it might cause false positive for small step-like road surface or misaligned multiple lidar configuration.</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>use_virtual_ground_point</code></td>
-<td>bool</td>
+<td>use_virtual_ground_point</td>
+<td>boolean</td>
+<td>Whether to use the ground center of front wheels as the virtual ground point</td>
 <td>true</td>
-<td>whether to use the ground center of front wheels as the virtual ground point.</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>detection_range_z_max</code></td>
+<td>split_height_distance</td>
 <td>float</td>
-<td>2.5</td>
-<td>Maximum height of detection range [m], applied only for elevation_grid_mode</td>
-</tr>
-<tr>
-<td><code>center_pcl_shift</code></td>
-<td>float</td>
-<td>0.0</td>
-<td>The x-axis offset of addition LiDARs from vehicle center of mass [m], <br> recommended to use only for additional LiDARs in elevation_grid_mode</td>
-</tr>
-<tr>
-<td><code>non_ground_height_threshold</code></td>
-<td>float</td>
+<td>The height threshold to distinguish ground and non-ground pointcloud when comparing with adjacent points [m]. A small threshold improves classification of non-ground point, especially for high elevation resolution pointcloud lidar. However, it might cause false positive for small step-like road surface or misaligned multiple lidar configuration.</td>
 <td>0.2</td>
-<td>Height threshold of non ground objects [m] as <code>split_height_distance</code> and applied only for elevation_grid_mode</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>grid_mode_switch_radius</code></td>
+<td>non_ground_height_threshold</td>
 <td>float</td>
+<td>Height threshold of non ground objects [m] as split_height_distance and applied only for elevation_grid_mode</td>
+<td>0.2</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>grid_size_m</td>
+<td>float</td>
+<td>The first grid size [m], applied only for elevation_grid_mode. A large value enhances the prediction stability for ground surface. suitable for rough surface or multiple lidar configuration.</td>
+<td>0.1</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>grid_mode_switch_radius</td>
+<td>float</td>
+<td>The distance where grid division mode change from by distance to by vertical angle [m], applied only for elevation_grid_mode</td>
 <td>20.0</td>
-<td>The distance where grid division mode change from by distance to by vertical angle [m],<br> applied only for elevation_grid_mode</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>grid_size_m</code></td>
-<td>float</td>
-<td>0.5</td>
-<td>The first grid size [m], applied only for elevation_grid_mode.<br>A large value enhances the prediction stability for ground surface. suitable for rough surface or multiple lidar configuration.</td>
-</tr>
-<tr>
-<td><code>gnd_grid_buffer_size</code></td>
-<td>uint16</td>
+<td>gnd_grid_buffer_size</td>
+<td>integer</td>
+<td>Number of grids using to estimate local ground slope, applied only for elevation_grid_mode</td>
 <td>4</td>
-<td>Number of grids using to estimate local ground slope,<br> applied only for elevation_grid_mode</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>low_priority_region_x</code></td>
+<td>detection_range_z_max</td>
 <td>float</td>
-<td>-20.0</td>
-<td>The non-zero x threshold in back side from which small objects detection is low priority [m]</td>
+<td>Maximum height of detection range [m], applied only for elevation_grid_mode</td>
+<td>2.5</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>elevation_grid_mode</code></td>
-<td>bool</td>
-<td>true</td>
+<td>elevation_grid_mode</td>
+<td>boolean</td>
 <td>Elevation grid scan mode option</td>
+<td>true</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>use_recheck_ground_cluster</code></td>
-<td>bool</td>
-<td>true</td>
+<td>low_priority_region_x</td>
+<td>float</td>
+<td>The non-zero x threshold in back side from which small objects detection is low priority [m]</td>
+<td>-20.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>center_pcl_shift</td>
+<td>float</td>
+<td>The x-axis offset of addition LiDARs from vehicle center of mass [m], recommended to use only for additional LiDARs in elevation_grid_mode</td>
+<td>0.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>radial_divider_angle_deg</td>
+<td>float</td>
+<td>The angle which divide the whole pointcloud to sliced group [deg]</td>
+<td>1.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>use_recheck_ground_cluster</td>
+<td>boolean</td>
 <td>Enable recheck ground cluster</td>
+<td>true</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td><code>use_lowest_point</code></td>
-<td>bool</td>
+<td>use_lowest_point</td>
+<td>boolean</td>
+<td>To select lowest point for reference in recheck ground cluster, otherwise select middle point</td>
 <td>true</td>
-<td>to select lowest point for reference in recheck ground cluster, otherwise select middle point</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>publish_processing_time_detail</td>
+<td>boolean</td>
+<td>publish_processing_time_detail</td>
+<td>false</td>
+<td>N/A</td>
 </tr>
 </tbody>
 </table>
