@@ -20,8 +20,7 @@ namespace autoware::cuda_pointcloud_preprocessor
 
 __global__ void ringOutlierFilterKernel(
   const InputPointType * points, std::uint32_t * output_mask, int num_rings,
-  int max_points_per_ring, float distance_ratio, float object_length_threshold_squared,
-  int num_points_threshold)
+  int max_points_per_ring, float distance_ratio, float object_length_threshold_squared)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   int j = idx / max_points_per_ring;
@@ -31,10 +30,10 @@ __global__ void ringOutlierFilterKernel(
     return;
   }
 
-  int min_i = max(i - num_points_threshold, 0);
-  int max_i = min(i + num_points_threshold, max_points_per_ring);
+  const int window_size = 5;
+  int min_i = max(i - window_size, 0);
+  int max_i = min(i + window_size, max_points_per_ring);
 
-  int walk_size = 1;
   int left_idx = min_i;
   int right_idx = min_i + 1;
 
@@ -51,12 +50,10 @@ __global__ void ringOutlierFilterKernel(
         min(left_point.distance, right_point.distance) * distance_ratio &&
       azimuth_diff < 1.f * M_PI / 180.f) {
       // Determined to be included in the same walk
-      walk_size++;
       right_idx++;
     } else if (k >= i) {
       break;
     } else {
-      walk_size = 1;
       left_idx = k + 1;
       right_idx = k + 2;  // this is safe since we break if k >= i
     }
@@ -68,19 +65,18 @@ __global__ void ringOutlierFilterKernel(
   const float y = left_point.y - right_point.y;
   const float z = left_point.z - right_point.z;
 
-  output_mask[j * max_points_per_ring + i] = static_cast<std::uint32_t>(
-    (walk_size > num_points_threshold) ||
-    (x * x + y * y + z * z >= object_length_threshold_squared));
+  output_mask[j * max_points_per_ring + i] =
+    static_cast<std::uint32_t>((x * x + y * y + z * z >= object_length_threshold_squared));
 }
 
 void ringOutlierFilterLaunch(
   const InputPointType * points, std::uint32_t * output_mask, int num_rings,
   int max_points_per_ring, float distance_ratio, float object_length_threshold_squared,
-  int num_points_threshold, int threads_per_block, int blocks_per_grid, cudaStream_t & stream)
+  int threads_per_block, int blocks_per_grid, cudaStream_t & stream)
 {
   ringOutlierFilterKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
     points, output_mask, num_rings, max_points_per_ring, distance_ratio,
-    object_length_threshold_squared, num_points_threshold);
+    object_length_threshold_squared);
 }
 
 }  // namespace autoware::cuda_pointcloud_preprocessor

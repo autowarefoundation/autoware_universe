@@ -24,7 +24,7 @@ namespace autoware::cuda_pointcloud_preprocessor
 void ringOutlierFilterLaunch(
   const InputPointType * points, std::uint32_t * output_mask, int num_rings,
   int max_points_per_ring, float distance_ratio, float object_length_threshold_squared,
-  int num_points_threshold, int threads_per_block, int blocks_per_grid, cudaStream_t & stream);
+  int threads_per_block, int blocks_per_grid, cudaStream_t & stream);
 
 }  // namespace autoware::cuda_pointcloud_preprocessor
 
