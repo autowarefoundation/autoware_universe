@@ -16,7 +16,6 @@
 #define AUTOWARE__PROBABILISTIC_OCCUPANCY_GRID_MAP__COSTMAP_2D__OCCUPANCY_GRID_MAP_FIXED_HPP_
 
 #include "autoware/probabilistic_occupancy_grid_map/costmap_2d/occupancy_grid_map_base.hpp"
-#include "autoware/probabilistic_occupancy_grid_map/utils/cuda_pointcloud.hpp"
 
 namespace autoware::occupancy_grid_map
 {

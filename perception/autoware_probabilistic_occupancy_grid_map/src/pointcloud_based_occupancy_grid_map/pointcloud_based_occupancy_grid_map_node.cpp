@@ -257,18 +257,28 @@ void PointcloudBasedOccupancyGridMapNode::onPointcloudWithObstacleAndRaw()
   if (use_height_filter_) {
     // Make sure that the frame is base_link
     if (raw_pointcloud_ptr_->header.frame_id != base_link_frame_) {
-      throw std::runtime_error("raw_pointcloud_.header.frame_id is not base_link_frame_");
-      /* if (!utils::transformPointcloudAsync(
-            raw_pointcloud_, *tf2_, base_link_frame_, device_rotation_, device_translation_)) {
+      std::shared_ptr<cuda_blackboard::CudaPointCloud2> tmp_pointcloud_ptr =
+        std::make_shared<cuda_blackboard::CudaPointCloud2>(*raw_pointcloud_ptr_);
+
+      if (!utils::transformPointcloudAsync(
+            tmp_pointcloud_ptr, *tf2_, base_link_frame_, device_rotation_, device_translation_,
+            stream_)) {
         return;
-      } */
+      }
+
+      raw_pointcloud_ptr_ = tmp_pointcloud_ptr;
     }
     if (obstacle_pointcloud_ptr_->header.frame_id != base_link_frame_) {
-      throw std::runtime_error("obstacle_pointcloud_.header.frame_id is not base_link_frame_");
-      /* if (!utils::transformPointcloudAsync(
-            obstacle_pointcloud_, *tf2_, base_link_frame_, device_rotation_, device_translation_)) {
+      std::shared_ptr<cuda_blackboard::CudaPointCloud2> tmp_pointcloud_ptr =
+        std::make_shared<cuda_blackboard::CudaPointCloud2>(*obstacle_pointcloud_ptr_);
+
+      if (!utils::transformPointcloudAsync(
+            tmp_pointcloud_ptr, *tf2_, base_link_frame_, device_rotation_, device_translation_,
+            stream_)) {
         return;
-      } */
+      }
+
+      obstacle_pointcloud_ptr_ = tmp_pointcloud_ptr;
     }
     occupancy_grid_map_ptr_->setHeightLimit(min_height_, max_height_);
   } else {

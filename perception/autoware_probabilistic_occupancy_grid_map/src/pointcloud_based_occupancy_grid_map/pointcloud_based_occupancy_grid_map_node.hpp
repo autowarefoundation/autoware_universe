@@ -18,7 +18,6 @@
 #include "autoware/probabilistic_occupancy_grid_map/costmap_2d/occupancy_grid_map_base.hpp"
 #include "autoware/probabilistic_occupancy_grid_map/updater/binary_bayes_filter_updater.hpp"
 #include "autoware/probabilistic_occupancy_grid_map/updater/ogm_updater_interface.hpp"
-#include "autoware/probabilistic_occupancy_grid_map/utils/cuda_pointcloud.hpp"
 
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>

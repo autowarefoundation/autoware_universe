@@ -53,8 +53,6 @@
 #define AUTOWARE__PROBABILISTIC_OCCUPANCY_GRID_MAP__COSTMAP_2D__OCCUPANCY_GRID_MAP_BASE_HPP_
 
 #ifdef USE_CUDA
-#include "autoware/probabilistic_occupancy_grid_map/utils/cuda_pointcloud.hpp"
-
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #endif
