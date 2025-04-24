@@ -141,13 +141,15 @@ Giving the longitudinal controller information about steer convergence allows it
 #### Parameters
 
 ##### Summary
+
 {{ json_to_markdown("control/autoware_trajectory_follower_node/schema/trajectory_follower_node.schema.json") }}
 
 ##### Parameter Details
- - `timeout_thr_sec`: duration in second after which input messages are discarded.
-  - Each time the node receives lateral and longitudinal commands from each controller, it publishes an `Control` if the following two conditions are met.
-    1. Both commands have been received.
-    2. The last received commands are not older than defined by `timeout_thr_sec`.
+
+- `timeout_thr_sec`: duration in second after which input messages are discarded.
+- Each time the node receives lateral and longitudinal commands from each controller, it publishes an `Control` if the following two conditions are met.
+  1. Both commands have been received.
+  2. The last received commands are not older than defined by `timeout_thr_sec`.
 
 ## Debugging
 
