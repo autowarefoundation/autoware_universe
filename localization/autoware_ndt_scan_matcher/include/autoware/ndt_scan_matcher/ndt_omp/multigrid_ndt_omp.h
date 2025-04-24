@@ -157,10 +157,9 @@ public:
    */
   inline void addTarget(const PointCloudTargetConstPtr & cloud, const std::string & target_id)
   {
+    const auto resolution = static_cast<float>(params_.resolution);
     BaseRegType::setInputTarget(cloud);
-    target_cells_.setLeafSize(
-      static_cast<float>(params_.resolution), static_cast<float>(params_.resolution),
-      static_cast<float>(params_.resolution));
+    target_cells_.setLeafSize(resolution, resolution, resolution);
     target_cells_.setInputCloudAndFilter(cloud, target_id);
   }
 
