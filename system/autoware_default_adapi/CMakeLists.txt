@@ -17,6 +17,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/planning.cpp
   src/routing.cpp
   src/vehicle.cpp
+  src/vehicle_metrics.cpp
   src/vehicle_info.cpp
   src/vehicle_door.cpp
   src/utils/command_conversion.cpp
@@ -39,6 +40,7 @@ rclcpp_components_register_nodes(${PROJECT_NAME}
   "autoware::default_adapi::PlanningNode"
   "autoware::default_adapi::RoutingNode"
   "autoware::default_adapi::VehicleNode"
+  "autoware::default_adapi::VehicleMetricsNode"
   "autoware::default_adapi::VehicleInfoNode"
   "autoware::default_adapi::VehicleDoorNode"
 )
