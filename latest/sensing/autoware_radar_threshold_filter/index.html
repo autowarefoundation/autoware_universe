@@ -14348,77 +14348,107 @@
 </tbody>
 </table>
 <h3 id="parameters">Parameters<a class="headerlink" href="#parameters" title="Permanent link">#</a></h3>
-<ul>
-<li>For node parameter</li>
-</ul>
 <table>
 <thead>
 <tr>
 <th>Name</th>
 <th>Type</th>
 <th>Description</th>
+<th>Default</th>
+<th>Range</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>is_amplitude_filter</td>
-<td>bool</td>
-<td>if this parameter is true, apply amplitude filter (publish amplitude_min &lt; amplitude &lt; amplitude_max)</td>
+<td>node_params.is_amplitude_filter</td>
+<td>boolean</td>
+<td>If true, amplitude filtering is enabled.</td>
+<td>true</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td>amplitude_min</td>
-<td>double</td>
-<td>[dBm^2]</td>
+<td>node_params.amplitude_min</td>
+<td>float</td>
+<td>Minimum amplitude threshold.</td>
+<td>-10.0</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td>amplitude_max</td>
-<td>double</td>
-<td>[dBm^2]</td>
+<td>node_params.amplitude_max</td>
+<td>float</td>
+<td>Maximum amplitude threshold.</td>
+<td>100.0</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td>is_range_filter</td>
-<td>bool</td>
-<td>if this parameter is true, apply range filter (publish range_min &lt; range &lt; range_max)</td>
+<td>node_params.is_range_filter</td>
+<td>boolean</td>
+<td>If true, range filtering is enabled.</td>
+<td>false</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td>range_min</td>
-<td>double</td>
-<td>[m]</td>
+<td>node_params.range_min</td>
+<td>float</td>
+<td>Minimum range threshold.</td>
+<td>20.0</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td>range_max</td>
-<td>double</td>
-<td>[m]</td>
+<td>node_params.range_max</td>
+<td>float</td>
+<td>Maximum range threshold.</td>
+<td>300.0</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td>is_azimuth_filter</td>
-<td>bool</td>
-<td>if this parameter is true, apply angle filter (publish azimuth_min &lt; range &lt; azimuth_max)</td>
+<td>node_params.is_azimuth_filter</td>
+<td>boolean</td>
+<td>If true, azimuth filtering is enabled.</td>
+<td>true</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td>azimuth_min</td>
-<td>double</td>
-<td>[rad]</td>
+<td>node_params.azimuth_min</td>
+<td>float</td>
+<td>Minimum azimuth threshold (radians).</td>
+<td>-1.2</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td>azimuth_max</td>
-<td>double</td>
-<td>[rad]</td>
+<td>node_params.azimuth_max</td>
+<td>float</td>
+<td>Maximum azimuth threshold (radians).</td>
+<td>1.2</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td>is_z_filter</td>
-<td>bool</td>
-<td>if this parameter is true, apply z position filter (publish z_min &lt; z &lt; z_max)</td>
+<td>node_params.is_z_filter</td>
+<td>boolean</td>
+<td>If true, Z filtering is enabled.</td>
+<td>false</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td>z_min</td>
-<td>double</td>
-<td>[m]</td>
+<td>node_params.z_min</td>
+<td>float</td>
+<td>Minimum Z threshold (meters).</td>
+<td>-2.0</td>
+<td>N/A</td>
 </tr>
 <tr>
-<td>z_max</td>
-<td>double</td>
-<td>[m]</td>
+<td>node_params.z_max</td>
+<td>float</td>
+<td>Maximum Z threshold (meters).</td>
+<td>5.0</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td>node_params.max_queue_size</td>
+<td>integer</td>
+<td>Maximum size of the queue.</td>
+<td>5</td>
+<td>N/A</td>
 </tr>
 </tbody>
 </table>
