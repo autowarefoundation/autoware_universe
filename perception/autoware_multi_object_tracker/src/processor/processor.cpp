@@ -233,10 +233,6 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
 
       // check if object2 should be removed
       if (canMergeOverlappedTarget(*(*itr2), *(*itr1), time, iou)) {
-        // debug message of probabilities
-        float prob1 = (*itr1)->getTotalExistenceProbability();
-        float prob2 = (*itr2)->getTotalExistenceProbability();
-
         // add existence probability to the tracker 1
         (*itr1)->updateTotalExistenceProbability((*itr2)->getTotalExistenceProbability());
         (*itr1)->mergeExistenceProbabilities((*itr2)->getExistenceProbabilityVector());
