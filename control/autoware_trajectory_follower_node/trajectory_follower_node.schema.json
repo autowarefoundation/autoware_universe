@@ -13,7 +13,7 @@
         },
         "timeout_thr_sec": {
           "type": "number",
-          "description": "Timeout threshold in seconds.",
+          "description": "Timeout threshold for publishing Control command in seconds.",
           "default": 0.0
         },
         "enable_control_cmd_horizon_pub": {

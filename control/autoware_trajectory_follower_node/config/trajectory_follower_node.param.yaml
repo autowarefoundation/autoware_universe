@@ -1,0 +1,7 @@
+/**:
+  ros__parameters:
+    ctrl_period: 0.03
+    timeout_thr_sec: 0.5
+    enable_control_cmd_horizon_pub: false
+    lateral_controller_mode: "mpc"
+    longitudinal_controller_mode: "pid"
