@@ -4,7 +4,13 @@
   <let name="ns" value="/perception/object_recognition/detection"/>
 
   <!-- Pipeline junctions -->
-  <arg name="mode" description="options: `camera_lidar_radar_fusion`, `camera_lidar_fusion`, `lidar_radar_fusion`, `lidar` or `radar`"/>
+  <arg name="mode">
+    <choice value="camera_lidar_radar_fusion"/>
+    <choice value="camera_lidar_fusion"/>
+    <choice value="lidar_radar_fusion"/>
+    <choice value="lidar"/>
+    <choice value="radar"/>
+  </arg>
 
   <arg name="lidar_detection_model_type">
     <choice value="bevfusion"/>
