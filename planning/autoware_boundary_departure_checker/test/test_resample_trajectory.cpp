@@ -62,7 +62,7 @@ TEST_P(ResampleTrajectoryTest, test_resample_trajectory)
   const auto p = GetParam();
   const auto trajectory = create_trajectory(p.trajectory_points);
   const auto resampled =
-    autoware::lane_departure_checker::utils::resampleTrajectory(trajectory, p.interval);
+    autoware::boundary_departure_checker::utils::resampleTrajectory(trajectory, p.interval);
 
   ASSERT_EQ(resampled.size(), p.expected_points.size());
 

@@ -31,7 +31,7 @@ GeometricPullOver::GeometricPullOver(
 : PullOverPlannerBase{node, parameters},
   parallel_parking_parameters_{parameters.parallel_parking_parameters},
   lane_departure_checker_{[&]() {
-    auto lane_departure_checker_params = lane_departure_checker::Param{};
+    auto lane_departure_checker_params = boundary_departure_checker::Param{};
     lane_departure_checker_params.footprint_extra_margin =
       parameters.lane_departure_check_expansion_margin;
     return LaneDepartureChecker{lane_departure_checker_params, vehicle_info_};

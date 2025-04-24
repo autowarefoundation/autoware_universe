@@ -38,6 +38,7 @@ using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_utils::PoseDeviation;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 using autoware_utils::LinearRing2d;
+using boundary_departure_checker::Param;
 
 struct NodeParam
 {

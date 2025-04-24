@@ -26,7 +26,7 @@
 
 #include <vector>
 
-using autoware::lane_departure_checker::utils::createVehiclePassingAreas;
+using autoware::boundary_departure_checker::utils::createVehiclePassingAreas;
 using autoware_utils::LinearRing2d;
 using autoware_utils::Point2d;
 

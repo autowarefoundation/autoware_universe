@@ -43,11 +43,9 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::lane_departure_checker
+namespace autoware::boundary_departure_checker
 {
-using autoware_internal_planning_msgs::msg::PathWithLaneId;
-using autoware_utils::Segment2d;
-typedef boost::geometry::index::rtree<Segment2d, boost::geometry::index::rstar<16>> SegmentRtree;
+using SegmentRtree = boost::geometry::index::rtree<Segment2d, boost::geometry::index::rstar<16>>;
 
 class LaneDepartureChecker
 {
@@ -123,6 +121,6 @@ private:
 
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 };
-}  // namespace autoware::lane_departure_checker
+}  // namespace autoware::boundary_departure_checker
 
 #endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__BOUNDARY_DEPARTURE_CHECKER_HPP_
