@@ -76,10 +76,11 @@ lanelet::ConstLanelets getPullOverLanes(
   } else {
     outermost_lane = route_handler.getMostRightLanelet(closest_lane, false, true);
   }
-
-  constexpr bool only_route_lanes = false;
-  return route_handler.getLaneletSequence(
-    outermost_lane, backward_distance_with_buffer, forward_distance, only_route_lanes);
+  if (route_handler.isShoulderLanelet(outermost_lane)) {
+    return route_handler.get_shoulder_lanelet_sequence(
+      outermost_lane, backward_distance_with_buffer, forward_distance);
+  }
+  return {outermost_lane};
 }
 
 static double getOffsetToLanesBoundary(
@@ -750,6 +751,9 @@ std::optional<Pose> calcRefinedGoal(
   const lanelet::ConstLanelets pull_over_lanes = goal_planner_utils::getPullOverLanes(
     *route_handler, left_side_parking, parameters.backward_goal_search_length,
     parameters.forward_goal_search_length);
+  if (pull_over_lanes.empty()) {
+    return {};
+  }
 
   lanelet::Lanelet closest_pull_over_lanelet{};
   lanelet::utils::query::getClosestLanelet(pull_over_lanes, goal_pose, &closest_pull_over_lanelet);

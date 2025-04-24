@@ -261,13 +261,14 @@ void BEVFusionTRT::initTrt(const tensorrt_common::TrtCommonConfig & trt_config)
 }
 
 bool BEVFusionTRT::detect(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pc_msg,
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & pc_msg_ptr,
   const std::vector<sensor_msgs::msg::Image::ConstSharedPtr> & image_msgs,
   const std::vector<float> & camera_masks, const tf2_ros::Buffer & tf_buffer,
-  std::vector<Box3D> & det_boxes3d, std::unordered_map<std::string, double> & proc_timing)
+  std::vector<Box3D> & det_boxes3d, std::unordered_map<std::string, double> & proc_timing,
+  bool & is_num_voxels_within_range)
 {
   stop_watch_ptr_->toc("processing/inner", true);
-  if (!preProcess(pc_msg, image_msgs, camera_masks, tf_buffer)) {
+  if (!preProcess(pc_msg_ptr, image_msgs, camera_masks, tf_buffer, is_num_voxels_within_range)) {
     RCLCPP_ERROR(rclcpp::get_logger("bevfusion"), "Pre-process failed. Skipping detection.");
     return false;
   }
@@ -370,23 +371,26 @@ void BEVFusionTRT::setIntrinsicsExtrinsics(
 }
 
 bool BEVFusionTRT::preProcess(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pc_msg,
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & pc_msg_ptr,
   const std::vector<sensor_msgs::msg::Image::ConstSharedPtr> & image_msgs,
-  const std::vector<float> & camera_masks, const tf2_ros::Buffer & tf_buffer)
+  const std::vector<float> & camera_masks, const tf2_ros::Buffer & tf_buffer,
+  bool & is_num_voxels_within_range)
 {
   using autoware::cuda_utils::clear_async;
 
-  if (!autoware::point_types::is_data_layout_compatible_with_point_xyzirc(pc_msg->fields)) {
+  is_num_voxels_within_range = true;
+
+  if (!autoware::point_types::is_data_layout_compatible_with_point_xyzirc(pc_msg_ptr->fields)) {
     RCLCPP_ERROR(rclcpp::get_logger("bevfusion"), "Invalid point type. Skipping detection.");
     return false;
   }
 
-  if (pc_msg->height * pc_msg->width == 0) {
+  if (pc_msg_ptr->height * pc_msg_ptr->width == 0) {
     RCLCPP_ERROR(rclcpp::get_logger("bevfusion"), "Empty pointcloud. Skipping detection.");
     return false;
   }
 
-  if (!vg_ptr_->enqueuePointCloud(*pc_msg, tf_buffer)) {
+  if (!vg_ptr_->enqueuePointCloud(pc_msg_ptr, tf_buffer)) {
     return false;
   }
 
@@ -450,12 +454,17 @@ bool BEVFusionTRT::preProcess(
                                          << config_.min_num_voxels_ << ")");
     return false;
   }
-  if (num_voxels > config_.max_num_voxels_) {
-    RCLCPP_WARN_STREAM(
-      rclcpp::get_logger("bevfusion"),
-      "Actual number of voxels (" << num_voxels
-                                  << ") is over the limit for the actual optimization profile ("
-                                  << config_.max_num_voxels_ << "). Clipping to the limit.");
+
+  // Check the actual number of pillars after inference to avoid unnecessary synchronization.
+  if (num_voxels >= config_.max_num_voxels_) {
+    rclcpp::Clock clock{RCL_ROS_TIME};
+    RCLCPP_WARN_THROTTLE(
+      rclcpp::get_logger("bevfusion"), clock, 1000,
+      "The actual number of voxels (%lu) exceeds its maximum value (%zu). "
+      "Please considering increasing it since it may limit the detection performance. Clipping for "
+      "now.",
+      num_voxels, config_.max_num_voxels_);
+    is_num_voxels_within_range = false;
     num_voxels = config_.max_num_voxels_;
   }
 
