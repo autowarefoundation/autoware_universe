@@ -248,10 +248,11 @@ VelocityOptimizer::OptimizationResult VelocityOptimizer::optimize(const Optimiza
   }
 
   // execute optimization
-  const auto result = qp_solver_.optimize(P, A, q, lower_bound, upper_bound);
-  const std::vector<double> optval = std::get<0>(result);
+  const autoware::osqp_interface::OSQPResult result =
+    qp_solver_.optimize(P, A, q, lower_bound, upper_bound);
+  const std::vector<double> optval = result.primal_solution;
 
-  const int status_val = std::get<3>(result);
+  const int status_val = result.solution_status;
   if (status_val != 1)
     std::cerr << "optimization failed : " << qp_solver_.getStatusMessage().c_str() << std::endl;
 

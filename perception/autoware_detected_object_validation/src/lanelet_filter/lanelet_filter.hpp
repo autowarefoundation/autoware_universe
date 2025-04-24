@@ -16,11 +16,11 @@
 #define LANELET_FILTER__LANELET_FILTER_HPP_
 
 #include "autoware/detected_object_validation/utils/utils.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
-#include "autoware/universe_utils/ros/debug_publisher.hpp"
-#include "autoware/universe_utils/ros/published_time_publisher.hpp"
-#include "autoware/universe_utils/system/stop_watch.hpp"
 #include "autoware_lanelet2_extension/utility/utilities.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
+#include "autoware_utils/ros/debug_publisher.hpp"
+#include "autoware_utils/ros/published_time_publisher.hpp"
+#include "autoware_utils/system/stop_watch.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -45,9 +45,9 @@ namespace autoware::detected_object_validation
 {
 namespace lanelet_filter
 {
-using autoware::universe_utils::LinearRing2d;
-using autoware::universe_utils::MultiPoint2d;
-using autoware::universe_utils::Polygon2d;
+using autoware_utils::LinearRing2d;
+using autoware_utils::MultiPoint2d;
+using autoware_utils::Polygon2d;
 
 namespace bg = boost::geometry;
 namespace bgi = boost::geometry::index;
@@ -79,8 +79,8 @@ private:
   rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr map_sub_;
   rclcpp::Subscription<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr object_sub_;
 
-  std::unique_ptr<autoware::universe_utils::DebugPublisher> debug_publisher_{nullptr};
-  std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
+  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_{nullptr};
+  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
 
   lanelet::LaneletMapPtr lanelet_map_ptr_;
   std::string lanelet_frame_id_;
@@ -123,7 +123,7 @@ private:
   geometry_msgs::msg::Polygon setFootprint(const autoware_perception_msgs::msg::DetectedObject &);
 
   lanelet::BasicPolygon2d getPolygon(const lanelet::ConstLanelet & lanelet);
-  std::unique_ptr<autoware::universe_utils::PublishedTimePublisher> published_time_publisher_;
+  std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
 };
 
 }  // namespace lanelet_filter

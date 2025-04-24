@@ -15,11 +15,11 @@
 #include "autoware/perception_online_evaluator/perception_online_evaluator_node.hpp"
 
 #include "autoware/perception_online_evaluator/utils/marker_utils.hpp"
-#include "autoware/universe_utils/ros/marker_helper.hpp"
-#include "autoware/universe_utils/ros/parameter.hpp"
-#include "autoware/universe_utils/ros/update_param.hpp"
+#include "autoware_utils/ros/marker_helper.hpp"
+#include "autoware_utils/ros/parameter.hpp"
+#include "autoware_utils/ros/update_param.hpp"
 
-#include <autoware/universe_utils/ros/uuid_helper.hpp>
+#include <autoware_utils/ros/uuid_helper.hpp>
 
 #include "boost/lexical_cast.hpp"
 
@@ -152,7 +152,7 @@ void PerceptionOnlineEvaluatorNode::publishDebugMarker()
     for (auto & marker : added.markers) {
       marker.lifetime = rclcpp::Duration::from_seconds(1.5);
     }
-    autoware::universe_utils::appendMarkerArray(added, &marker);
+    autoware_utils::append_marker_array(added, &marker);
   };
 
   const auto & p = parameters_->debug_marker_parameters;
@@ -232,31 +232,32 @@ void PerceptionOnlineEvaluatorNode::publishDebugMarker()
 rcl_interfaces::msg::SetParametersResult PerceptionOnlineEvaluatorNode::onParameter(
   const std::vector<rclcpp::Parameter> & parameters)
 {
-  using autoware::universe_utils::updateParam;
+  using autoware_utils::update_param;
 
   auto & p = parameters_;
 
-  updateParam<size_t>(parameters, "smoothing_window_size", p->smoothing_window_size);
-  updateParam<double>(parameters, "stopped_velocity_threshold", p->stopped_velocity_threshold);
-  updateParam<double>(
+  update_param<size_t>(parameters, "smoothing_window_size", p->smoothing_window_size);
+  update_param<double>(parameters, "stopped_velocity_threshold", p->stopped_velocity_threshold);
+  update_param<double>(
     parameters, "detection_count_purge_seconds", p->detection_count_purge_seconds);
-  updateParam<double>(parameters, "objects_count_window_seconds", p->objects_count_window_seconds);
+  update_param<double>(parameters, "objects_count_window_seconds", p->objects_count_window_seconds);
 
   // update parameters for each object class
   {
     const auto update_object_param = [&p, &parameters](
                                        const auto & semantic, const std::string & ns) {
       auto & config = p->object_parameters.at(semantic);
-      updateParam<bool>(parameters, ns + "check_lateral_deviation", config.check_lateral_deviation);
-      updateParam<bool>(parameters, ns + "check_yaw_deviation", config.check_yaw_deviation);
-      updateParam<bool>(
+      update_param<bool>(
+        parameters, ns + "check_lateral_deviation", config.check_lateral_deviation);
+      update_param<bool>(parameters, ns + "check_yaw_deviation", config.check_yaw_deviation);
+      update_param<bool>(
         parameters, ns + "check_predicted_path_deviation", config.check_predicted_path_deviation);
-      updateParam<bool>(parameters, ns + "check_yaw_rate", config.check_yaw_rate);
-      updateParam<bool>(
+      update_param<bool>(parameters, ns + "check_yaw_rate", config.check_yaw_rate);
+      update_param<bool>(
         parameters, ns + "check_total_objects_count", config.check_total_objects_count);
-      updateParam<bool>(
+      update_param<bool>(
         parameters, ns + "check_average_objects_count", config.check_average_objects_count);
-      updateParam<bool>(
+      update_param<bool>(
         parameters, ns + "check_interval_average_objects_count",
         config.check_interval_average_objects_count);
     };
@@ -273,23 +274,23 @@ rcl_interfaces::msg::SetParametersResult PerceptionOnlineEvaluatorNode::onParame
   // update debug marker parameters
   {
     const std::string ns = "debug_marker.";
-    updateParam<bool>(
+    update_param<bool>(
       parameters, ns + "history_path", p->debug_marker_parameters.show_history_path);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, ns + "history_path_arrows", p->debug_marker_parameters.show_history_path_arrows);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, ns + "smoothed_history_path",
       p->debug_marker_parameters.show_smoothed_history_path);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, ns + "smoothed_history_path_arrows",
       p->debug_marker_parameters.show_smoothed_history_path_arrows);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, ns + "predicted_path", p->debug_marker_parameters.show_predicted_path);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, ns + "predicted_path_gt", p->debug_marker_parameters.show_predicted_path_gt);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, ns + "deviation_lines", p->debug_marker_parameters.show_deviation_lines);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, ns + "object_polygon", p->debug_marker_parameters.show_object_polygon);
   }
 
@@ -302,28 +303,28 @@ rcl_interfaces::msg::SetParametersResult PerceptionOnlineEvaluatorNode::onParame
 
 void PerceptionOnlineEvaluatorNode::initParameter()
 {
-  using autoware::universe_utils::getOrDeclareParameter;
-  using autoware::universe_utils::updateParam;
+  using autoware_utils::get_or_declare_parameter;
+  using autoware_utils::update_param;
 
   auto & p = parameters_;
 
-  p->smoothing_window_size = getOrDeclareParameter<int>(*this, "smoothing_window_size");
+  p->smoothing_window_size = get_or_declare_parameter<int>(*this, "smoothing_window_size");
   p->prediction_time_horizons =
-    getOrDeclareParameter<std::vector<double>>(*this, "prediction_time_horizons");
+    get_or_declare_parameter<std::vector<double>>(*this, "prediction_time_horizons");
   p->stopped_velocity_threshold =
-    getOrDeclareParameter<double>(*this, "stopped_velocity_threshold");
+    get_or_declare_parameter<double>(*this, "stopped_velocity_threshold");
   p->detection_radius_list =
-    getOrDeclareParameter<std::vector<double>>(*this, "detection_radius_list");
+    get_or_declare_parameter<std::vector<double>>(*this, "detection_radius_list");
   p->detection_height_list =
-    getOrDeclareParameter<std::vector<double>>(*this, "detection_height_list");
+    get_or_declare_parameter<std::vector<double>>(*this, "detection_height_list");
   p->detection_count_purge_seconds =
-    getOrDeclareParameter<double>(*this, "detection_count_purge_seconds");
+    get_or_declare_parameter<double>(*this, "detection_count_purge_seconds");
   p->objects_count_window_seconds =
-    getOrDeclareParameter<double>(*this, "objects_count_window_seconds");
+    get_or_declare_parameter<double>(*this, "objects_count_window_seconds");
 
   // set metrics
   const auto selected_metrics =
-    getOrDeclareParameter<std::vector<std::string>>(*this, "selected_metrics");
+    get_or_declare_parameter<std::vector<std::string>>(*this, "selected_metrics");
   for (const std::string & selected_metric : selected_metrics) {
     const Metric metric = str_to_metric.at(selected_metric);
     parameters_->metrics.push_back(metric);
@@ -334,17 +335,17 @@ void PerceptionOnlineEvaluatorNode::initParameter()
     const auto get_object_param = [&](std::string && ns) -> ObjectParameter {
       ObjectParameter param{};
       param.check_lateral_deviation =
-        getOrDeclareParameter<bool>(*this, ns + "check_lateral_deviation");
-      param.check_yaw_deviation = getOrDeclareParameter<bool>(*this, ns + "check_yaw_deviation");
+        get_or_declare_parameter<bool>(*this, ns + "check_lateral_deviation");
+      param.check_yaw_deviation = get_or_declare_parameter<bool>(*this, ns + "check_yaw_deviation");
       param.check_predicted_path_deviation =
-        getOrDeclareParameter<bool>(*this, ns + "check_predicted_path_deviation");
-      param.check_yaw_rate = getOrDeclareParameter<bool>(*this, ns + "check_yaw_rate");
+        get_or_declare_parameter<bool>(*this, ns + "check_predicted_path_deviation");
+      param.check_yaw_rate = get_or_declare_parameter<bool>(*this, ns + "check_yaw_rate");
       param.check_total_objects_count =
-        getOrDeclareParameter<bool>(*this, ns + "check_total_objects_count");
+        get_or_declare_parameter<bool>(*this, ns + "check_total_objects_count");
       param.check_average_objects_count =
-        getOrDeclareParameter<bool>(*this, ns + "check_average_objects_count");
+        get_or_declare_parameter<bool>(*this, ns + "check_average_objects_count");
       param.check_interval_average_objects_count =
-        getOrDeclareParameter<bool>(*this, ns + "check_interval_average_objects_count");
+        get_or_declare_parameter<bool>(*this, ns + "check_interval_average_objects_count");
       return param;
     };
 
@@ -365,21 +366,21 @@ void PerceptionOnlineEvaluatorNode::initParameter()
   {
     const std::string ns = "debug_marker.";
     p->debug_marker_parameters.show_history_path =
-      getOrDeclareParameter<bool>(*this, ns + "history_path");
+      get_or_declare_parameter<bool>(*this, ns + "history_path");
     p->debug_marker_parameters.show_history_path_arrows =
-      getOrDeclareParameter<bool>(*this, ns + "history_path_arrows");
+      get_or_declare_parameter<bool>(*this, ns + "history_path_arrows");
     p->debug_marker_parameters.show_smoothed_history_path =
-      getOrDeclareParameter<bool>(*this, ns + "smoothed_history_path");
+      get_or_declare_parameter<bool>(*this, ns + "smoothed_history_path");
     p->debug_marker_parameters.show_smoothed_history_path_arrows =
-      getOrDeclareParameter<bool>(*this, ns + "smoothed_history_path_arrows");
+      get_or_declare_parameter<bool>(*this, ns + "smoothed_history_path_arrows");
     p->debug_marker_parameters.show_predicted_path =
-      getOrDeclareParameter<bool>(*this, ns + "predicted_path");
+      get_or_declare_parameter<bool>(*this, ns + "predicted_path");
     p->debug_marker_parameters.show_predicted_path_gt =
-      getOrDeclareParameter<bool>(*this, ns + "predicted_path_gt");
+      get_or_declare_parameter<bool>(*this, ns + "predicted_path_gt");
     p->debug_marker_parameters.show_deviation_lines =
-      getOrDeclareParameter<bool>(*this, ns + "deviation_lines");
+      get_or_declare_parameter<bool>(*this, ns + "deviation_lines");
     p->debug_marker_parameters.show_object_polygon =
-      getOrDeclareParameter<bool>(*this, ns + "object_polygon");
+      get_or_declare_parameter<bool>(*this, ns + "object_polygon");
   }
 }
 }  // namespace autoware::perception_diagnostics

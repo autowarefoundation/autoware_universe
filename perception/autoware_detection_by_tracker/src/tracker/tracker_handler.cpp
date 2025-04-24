@@ -14,8 +14,8 @@
 
 #include "tracker_handler.hpp"
 
-#include "autoware/universe_utils/geometry/geometry.hpp"
-#include "autoware/universe_utils/math/normalization.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
+#include "autoware_utils/math/normalization.hpp"
 
 #include <tf2/utils.h>
 
@@ -78,9 +78,9 @@ bool TrackerHandler::estimateTrackedObjects(
     estimated_object.kinematics.pose_with_covariance.pose.position.y =
       y + vx * std::sin(yaw) * dt.seconds();
     estimated_object.kinematics.pose_with_covariance.pose.position.z = z;
-    const float yaw_hat = autoware::universe_utils::normalizeRadian(yaw + wz * dt.seconds());
+    const float yaw_hat = autoware_utils::normalize_radian(yaw + wz * dt.seconds());
     estimated_object.kinematics.pose_with_covariance.pose.orientation =
-      autoware::universe_utils::createQuaternionFromYaw(yaw_hat);
+      autoware_utils::create_quaternion_from_yaw(yaw_hat);
     output.objects.push_back(estimated_object);
   }
   return true;

@@ -15,7 +15,7 @@
 #include "autoware/planning_validator/planning_validator.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <autoware_planning_test_manager/autoware_planning_test_manager.hpp>
+#include <autoware/planning_test_manager/autoware_planning_test_manager.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
 
 #include <gtest/gtest.h>
@@ -59,6 +59,9 @@ void publishMandatoryTopics(
   // publish necessary topics from test_manager
   test_manager->publishInput(
     test_target_node, "planning_validator/input/kinematics", autoware::test_utils::makeOdometry());
+  test_manager->publishInput(
+    test_target_node, "planning_validator/input/acceleration",
+    geometry_msgs::msg::AccelWithCovarianceStamped{});
 }
 
 TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectory)

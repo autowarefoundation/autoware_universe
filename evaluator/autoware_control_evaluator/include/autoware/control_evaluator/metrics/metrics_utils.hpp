@@ -16,7 +16,7 @@
 #define AUTOWARE__CONTROL_EVALUATOR__METRICS__METRICS_UTILS_HPP_
 
 #include <autoware/route_handler/route_handler.hpp>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 
 #include <vector>
 namespace control_diagnostics
@@ -45,8 +45,8 @@ lanelet::ConstLanelets get_current_lanes(const RouteHandler & route_handler, con
  *with the line
  **/
 double calc_distance_to_line(
-  const autoware::universe_utils::LinearRing2d & vehicle_footprint,
-  const autoware::universe_utils::LineString2d & line);
+  const autoware_utils::LinearRing2d & vehicle_footprint,
+  const autoware_utils::LineString2d & line);
 
 /**
  * @brief Check if the point is on the left side of the line.

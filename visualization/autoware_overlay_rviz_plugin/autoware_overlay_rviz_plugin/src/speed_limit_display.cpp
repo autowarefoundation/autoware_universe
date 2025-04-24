@@ -52,7 +52,7 @@ SpeedLimitDisplay::SpeedLimitDisplay() : current_limit(0.0), current_speed_(0.0)
 }
 
 void SpeedLimitDisplay::updateSpeedLimitData(
-  const tier4_planning_msgs::msg::VelocityLimit::ConstSharedPtr msg)
+  const autoware_internal_planning_msgs::msg::VelocityLimit::ConstSharedPtr msg)
 {
   current_limit = msg->max_velocity;
 }

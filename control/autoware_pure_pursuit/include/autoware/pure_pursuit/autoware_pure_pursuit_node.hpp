@@ -33,8 +33,8 @@
 #include "autoware/pure_pursuit/autoware_pure_pursuit.hpp"
 #include "autoware/pure_pursuit/autoware_pure_pursuit_viz.hpp"
 
-#include <autoware/universe_utils/ros/polling_subscriber.hpp>
-#include <autoware/universe_utils/ros/self_pose_listener.hpp>
+#include <autoware_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils/ros/self_pose_listener.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_control_msgs/msg/lateral.hpp>
@@ -78,11 +78,11 @@ public:
 
 private:
   // Subscriber
-  autoware::universe_utils::SelfPoseListener self_pose_listener_{this};
-  autoware::universe_utils::InterProcessPollingSubscriber<autoware_planning_msgs::msg::Trajectory>
+  autoware_utils::SelfPoseListener self_pose_listener_{this};
+  autoware_utils::InterProcessPollingSubscriber<autoware_planning_msgs::msg::Trajectory>
     sub_trajectory_{this, "input/reference_trajectory"};
-  autoware::universe_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry>
-    sub_current_odometry_{this, "input/current_odometry"};
+  autoware_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry> sub_current_odometry_{
+    this, "input/current_odometry"};
 
   autoware_planning_msgs::msg::Trajectory::ConstSharedPtr trajectory_;
   nav_msgs::msg::Odometry::ConstSharedPtr current_odometry_;

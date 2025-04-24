@@ -14,11 +14,11 @@
 
 #include "autoware/perception_online_evaluator/utils/marker_utils.hpp"
 
-#include "autoware/universe_utils/geometry/boost_polygon_utils.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
-
-#include <autoware/universe_utils/ros/marker_helper.hpp>
-#include <autoware/universe_utils/ros/uuid_helper.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
+#include <autoware_utils/ros/uuid_helper.hpp>
 
 #include <lanelet2_core/primitives/CompoundPolygon.h>
 #include <lanelet2_core/primitives/Lanelet.h>
@@ -31,12 +31,12 @@
 
 namespace autoware::perception_diagnostics::marker_utils
 {
-using autoware::universe_utils::calcOffsetPose;
-using autoware::universe_utils::createDefaultMarker;
-using autoware::universe_utils::createMarkerColor;
-using autoware::universe_utils::createMarkerOrientation;
-using autoware::universe_utils::createMarkerScale;
-using autoware::universe_utils::createPoint;
+using autoware_utils::calc_offset_pose;
+using autoware_utils::create_default_marker;
+using autoware_utils::create_marker_color;
+using autoware_utils::create_marker_orientation;
+using autoware_utils::create_marker_scale;
+using autoware_utils::create_point;
 using std_msgs::msg::ColorRGBA;
 using visualization_msgs::msg::Marker;
 
@@ -49,13 +49,13 @@ void addFootprintMarker(
   const double base_to_rear = vehicle_info.rear_overhang_m;
 
   marker.points.push_back(
-    autoware::universe_utils::calcOffsetPose(pose, base_to_front, -half_width, 0.0).position);
+    autoware_utils::calc_offset_pose(pose, base_to_front, -half_width, 0.0).position);
   marker.points.push_back(
-    autoware::universe_utils::calcOffsetPose(pose, base_to_front, half_width, 0.0).position);
+    autoware_utils::calc_offset_pose(pose, base_to_front, half_width, 0.0).position);
   marker.points.push_back(
-    autoware::universe_utils::calcOffsetPose(pose, -base_to_rear, half_width, 0.0).position);
+    autoware_utils::calc_offset_pose(pose, -base_to_rear, half_width, 0.0).position);
   marker.points.push_back(
-    autoware::universe_utils::calcOffsetPose(pose, -base_to_rear, -half_width, 0.0).position);
+    autoware_utils::calc_offset_pose(pose, -base_to_rear, -half_width, 0.0).position);
   marker.points.push_back(marker.points.front());
 }
 
@@ -66,9 +66,9 @@ MarkerArray createFootprintMarkerArray(
   const auto current_time = rclcpp::Clock{RCL_ROS_TIME}.now();
   MarkerArray msg;
 
-  Marker marker = createDefaultMarker(
-    "map", current_time, ns, id, Marker::LINE_STRIP, createMarkerScale(0.2, 0.2, 0.2),
-    createMarkerColor(r, g, b, 0.999));
+  Marker marker = create_default_marker(
+    "map", current_time, ns, id, Marker::LINE_STRIP, create_marker_scale(0.2, 0.2, 0.2),
+    create_marker_color(r, g, b, 0.999));
   marker.lifetime = rclcpp::Duration::from_seconds(1.5);
 
   MarkerArray marker_array;
@@ -82,9 +82,9 @@ MarkerArray createPointsMarkerArray(
   const std::vector<Point> & points, const std::string & ns, const int32_t id, const float r,
   const float g, const float b)
 {
-  auto marker = createDefaultMarker(
+  auto marker = create_default_marker(
     "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, id, Marker::LINE_STRIP,
-    createMarkerScale(0.05, 0.0, 0.0), createMarkerColor(r, g, b, 0.999));
+    create_marker_scale(0.05, 0.0, 0.0), create_marker_color(r, g, b, 0.999));
 
   for (const auto & point : points) {
     marker.points.push_back(point);
@@ -99,9 +99,9 @@ MarkerArray createPointsMarkerArray(
   const std::vector<Pose> & poses, const std::string & ns, const int32_t id, const float r,
   const float g, const float b)
 {
-  auto marker = createDefaultMarker(
+  auto marker = create_default_marker(
     "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, id, Marker::LINE_STRIP,
-    createMarkerScale(0.05, 0.0, 0.0), createMarkerColor(r, g, b, 0.999));
+    create_marker_scale(0.05, 0.0, 0.0), create_marker_color(r, g, b, 0.999));
 
   for (const auto & pose : poses) {
     marker.points.push_back(pose.position);
@@ -120,9 +120,9 @@ MarkerArray createDeviationLines(
 
   const size_t max_idx = std::min(poses1.size(), poses2.size());
   for (size_t i = 0; i < max_idx; ++i) {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, first_id + i, Marker::LINE_STRIP,
-      createMarkerScale(0.01, 0.0, 0.0), createMarkerColor(r, g, b, 0.5));
+      create_marker_scale(0.01, 0.0, 0.0), create_marker_color(r, g, b, 0.5));
     marker.points.push_back(poses1.at(i).position);
     marker.points.push_back(poses2.at(i).position);
     msg.markers.push_back(marker);
@@ -137,9 +137,9 @@ MarkerArray createPoseMarkerArray(
 {
   MarkerArray msg;
 
-  Marker marker = createDefaultMarker(
+  Marker marker = create_default_marker(
     "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, id, Marker::ARROW,
-    createMarkerScale(0.7, 0.3, 0.3), createMarkerColor(r, g, b, 0.999));
+    create_marker_scale(0.7, 0.3, 0.3), create_marker_color(r, g, b, 0.999));
   marker.pose = pose;
   msg.markers.push_back(marker);
 
@@ -154,9 +154,9 @@ MarkerArray createPosesMarkerArray(
   MarkerArray msg;
 
   for (size_t i = 0; i < poses.size(); ++i) {
-    Marker marker = createDefaultMarker(
+    Marker marker = create_default_marker(
       "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, first_id + i, Marker::ARROW,
-      createMarkerScale(x_scale, y_scale, z_scale), createMarkerColor(r, g, b, 0.5));
+      create_marker_scale(x_scale, y_scale, z_scale), create_marker_color(r, g, b, 0.5));
     marker.pose = poses.at(i);
     msg.markers.push_back(marker);
   }
@@ -170,7 +170,7 @@ std_msgs::msg::ColorRGBA createColorFromString(const std::string & str)
   const auto r = (hash & 0xFF) / 255.0;
   const auto g = ((hash >> 8) & 0xFF) / 255.0;
   const auto b = ((hash >> 16) & 0xFF) / 255.0;
-  return autoware::universe_utils::createMarkerColor(r, g, b, 0.5);
+  return autoware_utils::create_marker_color(r, g, b, 0.5);
 }
 
 MarkerArray createObjectPolygonMarkerArray(
@@ -179,17 +179,17 @@ MarkerArray createObjectPolygonMarkerArray(
 {
   MarkerArray msg;
 
-  auto marker = createDefaultMarker(
+  auto marker = create_default_marker(
     "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, id, Marker::LINE_STRIP,
-    createMarkerScale(0.05, 0.0, 0.0), createMarkerColor(r, g, b, 0.999));
+    create_marker_scale(0.05, 0.0, 0.0), create_marker_color(r, g, b, 0.999));
 
   const double z = object.kinematics.initial_pose_with_covariance.pose.position.z;
   const double height = object.shape.dimensions.z;
-  const auto polygon = autoware::universe_utils::toPolygon2d(
-    object.kinematics.initial_pose_with_covariance.pose, object.shape);
+  const auto polygon =
+    autoware_utils::to_polygon2d(object.kinematics.initial_pose_with_covariance.pose, object.shape);
   for (const auto & p : polygon.outer()) {
-    marker.points.push_back(createPoint(p.x(), p.y(), z - height / 2));
-    marker.points.push_back(createPoint(p.x(), p.y(), z + height / 2));
+    marker.points.push_back(create_point(p.x(), p.y(), z - height / 2));
+    marker.points.push_back(create_point(p.x(), p.y(), z + height / 2));
   }
   marker.id = id;
   msg.markers.push_back(marker);

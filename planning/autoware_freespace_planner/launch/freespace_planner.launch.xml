@@ -6,7 +6,7 @@
   <arg name="output_trajectory" default="output_trajectory"/>
   <arg name="is_completed" default="is_completed"/>
 
-  <arg name="param_file" default="$(find-pkg-share freespace_planner)/config/freespace_planner.param.yaml"/>
+  <arg name="param_file" default="$(find-pkg-share autoware_freespace_planner)/config/freespace_planner.param.yaml"/>
 
   <!-- vehicle info -->
   <arg name="vehicle_info_param_file" default="$(find-pkg-share autoware_vehicle_info_utils)/config/vehicle_info.param.yaml"/>

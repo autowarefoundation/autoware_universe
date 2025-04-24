@@ -20,8 +20,8 @@
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/interpolation/spline_interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/boost_polygon_utils.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/clock.hpp>
 #include <rclcpp/logger.hpp>
 
@@ -42,7 +42,7 @@ NoStoppingAreaModule::NoStoppingAreaModule(
   const lanelet::autoware::NoStoppingArea & no_stopping_area_reg_elem,
   const PlannerParam & planner_param, const rclcpp::Logger & logger,
   const rclcpp::Clock::SharedPtr clock,
-  const std::shared_ptr<universe_utils::TimeKeeper> time_keeper,
+  const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface)
 : SceneModuleInterfaceWithRTC(module_id, logger, clock, time_keeper, planning_factor_interface),
@@ -145,9 +145,9 @@ bool NoStoppingAreaModule::modifyPathVelocity(PathWithLaneId * path)
     // Create StopReason
     {
       planning_factor_interface_->add(
-        path->points, planner_data_->current_odometry->pose, stop_point->second, stop_point->second,
-        tier4_planning_msgs::msg::PlanningFactor::STOP,
-        tier4_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
+        path->points, planner_data_->current_odometry->pose, stop_point->second,
+        autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+        autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
         0.0 /*shift distance*/, "");
     }
 
@@ -175,7 +175,7 @@ bool NoStoppingAreaModule::check_stuck_vehicles_in_no_stopping_area(
       continue;  // not stop vehicle
     }
     // check if the footprint is in the stuck detect area
-    const Polygon2d obj_footprint = autoware::universe_utils::toPolygon2d(object);
+    const Polygon2d obj_footprint = autoware_utils::to_polygon2d(object);
     const bool is_in_stuck_area = !bg::disjoint(obj_footprint, poly);
     if (is_in_stuck_area) {
       RCLCPP_DEBUG(logger_, "stuck vehicle found.");

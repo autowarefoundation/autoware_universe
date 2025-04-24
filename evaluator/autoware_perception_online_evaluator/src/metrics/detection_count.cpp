@@ -16,9 +16,9 @@
 
 #include "autoware/object_recognition_utils/object_recognition_utils.hpp"
 #include "autoware/perception_online_evaluator/utils/objects_filtering.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 
-#include <autoware/universe_utils/ros/uuid_helper.hpp>
+#include <autoware_utils/ros/uuid_helper.hpp>
 
 #include <set>
 #include <string>
@@ -29,7 +29,7 @@ namespace autoware::perception_diagnostics
 {
 namespace metrics
 {
-using autoware::universe_utils::toHexString;
+using autoware_utils::to_hex_string;
 
 bool isCountObject(
   const std::uint8_t classification, const std::unordered_map<uint8_t, ObjectParameter> & params)
@@ -76,7 +76,7 @@ void DetectionCounter::addObjects(
   unique_timestamps_.insert(timestamp);
 
   for (const auto & object : objects.objects) {
-    const auto uuid = toHexString(object.object_id);
+    const auto uuid = to_hex_string(object.object_id);
     const auto label =
       autoware::object_recognition_utils::getHighestProbLabel(object.classification);
     if (!isCountObject(label, parameters_->object_parameters)) {

@@ -15,7 +15,7 @@
 #ifndef DISTANCE_BASED_COMPARE_MAP_FILTER__NODE_HPP_
 #define DISTANCE_BASED_COMPARE_MAP_FILTER__NODE_HPP_
 
-#include "../voxel_grid_map_loader/voxel_grid_map_loader.hpp"
+#include "autoware/compare_map_segmentation/voxel_grid_map_loader.hpp"
 #include "autoware/pointcloud_preprocessor/filter.hpp"
 
 #include <pcl/common/point_tests.h>  // for pcl::isFinite
@@ -65,8 +65,11 @@ public:
   inline void addMapCellAndFilter(
     const autoware_map_msgs::msg::PointCloudMapCellWithID & map_cell_to_add) override
   {
-    map_grid_size_x_ = map_cell_to_add.metadata.max_x - map_cell_to_add.metadata.min_x;
-    map_grid_size_y_ = map_cell_to_add.metadata.max_y - map_cell_to_add.metadata.min_y;
+    {
+      std::lock_guard<std::mutex> lock(dynamic_map_loader_mutex_);
+      map_grid_size_x_ = map_cell_to_add.metadata.max_x - map_cell_to_add.metadata.min_x;
+      map_grid_size_y_ = map_cell_to_add.metadata.max_y - map_cell_to_add.metadata.min_y;
+    }
 
     pcl::PointCloud<pcl::PointXYZ> map_cell_pc_tmp;
     pcl::fromROSMsg(map_cell_to_add.pointcloud, map_cell_pc_tmp);

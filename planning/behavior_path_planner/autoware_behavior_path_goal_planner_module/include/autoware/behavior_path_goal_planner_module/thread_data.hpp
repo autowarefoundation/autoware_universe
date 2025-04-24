@@ -32,9 +32,8 @@ class LaneParkingRequest
 {
 public:
   LaneParkingRequest(
-    const autoware::universe_utils::LinearRing2d & vehicle_footprint,
-    const GoalCandidates & goal_candidates, const BehaviorModuleOutput & upstream_module_output,
-    const bool use_bus_stop_area)
+    const autoware_utils::LinearRing2d & vehicle_footprint, const GoalCandidates & goal_candidates,
+    const BehaviorModuleOutput & upstream_module_output, const bool use_bus_stop_area)
   : vehicle_footprint_(vehicle_footprint),
     goal_candidates_(goal_candidates),
     use_bus_stop_area_(use_bus_stop_area),
@@ -48,7 +47,7 @@ public:
     const std::optional<PullOverPath> & pull_over_path, const PathDecisionState & prev_data,
     const bool trigger_thread_on_approach);
 
-  const autoware::universe_utils::LinearRing2d vehicle_footprint_;
+  const autoware_utils::LinearRing2d vehicle_footprint_;
   const GoalCandidates goal_candidates_;
   const bool use_bus_stop_area_;
 
@@ -83,8 +82,8 @@ class FreespaceParkingRequest
 public:
   FreespaceParkingRequest(
     const GoalPlannerParameters & parameters,
-    const autoware::universe_utils::LinearRing2d & vehicle_footprint,
-    const GoalCandidates & goal_candidates, const PlannerData & planner_data)
+    const autoware_utils::LinearRing2d & vehicle_footprint, const GoalCandidates & goal_candidates,
+    const PlannerData & planner_data)
   : parameters_(parameters),
     vehicle_footprint_(vehicle_footprint),
     goal_candidates_(goal_candidates)
@@ -99,7 +98,7 @@ public:
     const std::optional<rclcpp::Time> & last_path_update_time, const bool is_stopped);
 
   const GoalPlannerParameters parameters_;
-  const autoware::universe_utils::LinearRing2d vehicle_footprint_;
+  const autoware_utils::LinearRing2d vehicle_footprint_;
   const GoalCandidates goal_candidates_;
 
   const std::shared_ptr<PlannerData> & get_planner_data() const { return planner_data_; }

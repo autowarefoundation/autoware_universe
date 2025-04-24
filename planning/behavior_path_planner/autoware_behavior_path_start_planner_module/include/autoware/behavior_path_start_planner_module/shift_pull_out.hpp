@@ -17,11 +17,11 @@
 
 #include "autoware/behavior_path_start_planner_module/pull_out_path.hpp"
 #include "autoware/behavior_path_start_planner_module/pull_out_planner_base.hpp"
-#include "autoware/universe_utils/system/time_keeper.hpp"
+#include "autoware_utils/system/time_keeper.hpp"
 
 #include <autoware/lane_departure_checker/lane_departure_checker.hpp>
 
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <memory>
 #include <vector>
@@ -35,8 +35,8 @@ class ShiftPullOut : public PullOutPlannerBase
 public:
   explicit ShiftPullOut(
     rclcpp::Node & node, const StartPlannerParameters & parameters,
-    std::shared_ptr<universe_utils::TimeKeeper> time_keeper =
-      std::make_shared<universe_utils::TimeKeeper>());
+    std::shared_ptr<autoware_utils::TimeKeeper> time_keeper =
+      std::make_shared<autoware_utils::TimeKeeper>());
 
   PlannerType getPlannerType() const override { return PlannerType::SHIFT; };
   std::optional<PullOutPath> plan(

@@ -24,7 +24,8 @@
 #include "autoware/lidar_transfusion/visibility_control.hpp"
 
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
+#include <cuda_blackboard/cuda_pointcloud2.hpp>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
@@ -48,15 +49,18 @@ public:
   virtual ~TransfusionTRT();
 
   bool detect(
-    const sensor_msgs::msg::PointCloud2 & msg, const tf2_ros::Buffer & tf_buffer,
-    std::vector<Box3D> & det_boxes3d, std::unordered_map<std::string, double> & proc_timing);
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+    const tf2_ros::Buffer & tf_buffer, std::vector<Box3D> & det_boxes3d,
+    std::unordered_map<std::string, double> & proc_timing);
 
 protected:
   void initTrt(const tensorrt_common::TrtCommonConfig & trt_config);
 
   void initPtr();
 
-  bool preprocess(const sensor_msgs::msg::PointCloud2 & msg, const tf2_ros::Buffer & tf_buffer);
+  bool preprocess(
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+    const tf2_ros::Buffer & tf_buffer);
 
   bool inference();
 
@@ -64,8 +68,7 @@ protected:
 
   std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
   std::unique_ptr<VoxelGenerator> vg_ptr_{nullptr};
-  std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{
-    nullptr};
+  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
   std::unique_ptr<PreprocessCuda> pre_ptr_{nullptr};
   std::unique_ptr<PostprocessCuda> post_ptr_{nullptr};
   cudaStream_t stream_{nullptr};

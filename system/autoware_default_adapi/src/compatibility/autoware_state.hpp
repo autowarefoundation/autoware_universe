@@ -59,6 +59,7 @@ private:
   LocalizationState localization_state_;
   RoutingState routing_state_;
   OperationModeState operation_mode_state_;
+  uint8_t prev_state_;
 
   void on_timer();
   void on_localization(const LocalizationState::ConstSharedPtr msg);

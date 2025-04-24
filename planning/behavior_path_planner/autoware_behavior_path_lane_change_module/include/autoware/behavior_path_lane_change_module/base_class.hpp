@@ -22,15 +22,15 @@
 #include "autoware/behavior_path_planner_common/interface/scene_module_interface.hpp"
 #include "autoware/behavior_path_planner_common/turn_signal_decider.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_shifter/path_shifter.hpp"
-#include "autoware/universe_utils/system/stop_watch.hpp"
+#include "autoware_utils/system/stop_watch.hpp"
 
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <magic_enum.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/twist.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <memory>
 #include <string>
@@ -41,12 +41,12 @@ namespace autoware::behavior_path_planner
 {
 using autoware::behavior_path_planner::PoseWithDetailOpt;
 using autoware::route_handler::Direction;
-using autoware::universe_utils::StopWatch;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
+using autoware_utils::StopWatch;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::Twist;
 using lane_change::PathSafetyStatus;
-using tier4_planning_msgs::msg::PathWithLaneId;
 
 class LaneChangeBase
 {
@@ -58,7 +58,7 @@ public:
     common_data_ptr_{std::make_shared<lane_change::CommonData>()},
     direction_{direction},
     type_{type},
-    time_keeper_(std::make_shared<universe_utils::TimeKeeper>())
+    time_keeper_(std::make_shared<autoware_utils::TimeKeeper>())
   {
   }
 
@@ -191,7 +191,7 @@ public:
     common_data_ptr_->direction = direction_;
   }
 
-  void setTimeKeeper(const std::shared_ptr<universe_utils::TimeKeeper> & time_keeper)
+  void setTimeKeeper(const std::shared_ptr<autoware_utils::TimeKeeper> & time_keeper)
   {
     time_keeper_ = time_keeper;
   }
@@ -302,7 +302,7 @@ protected:
   rclcpp::Logger logger_ = utils::lane_change::getLogger(getModuleTypeStr());
   mutable rclcpp::Clock clock_{RCL_ROS_TIME};
 
-  mutable std::shared_ptr<universe_utils::TimeKeeper> time_keeper_;
+  mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 
   friend class ::TestNormalLaneChange;
 };

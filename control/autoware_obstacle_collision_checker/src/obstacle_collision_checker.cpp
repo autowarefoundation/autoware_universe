@@ -14,10 +14,10 @@
 
 #include "autoware/obstacle_collision_checker/obstacle_collision_checker.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/math/normalization.hpp>
-#include <autoware/universe_utils/math/unit_conversion.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/normalization.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 #include <pcl_ros/transforms.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
@@ -79,7 +79,7 @@ namespace autoware::obstacle_collision_checker
 Output check_for_collisions(const Input & input)
 {
   Output output;
-  autoware::universe_utils::StopWatch<std::chrono::milliseconds> stop_watch;
+  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
 
   // resample trajectory by braking distance
   constexpr double min_velocity = 0.01;
@@ -122,7 +122,7 @@ autoware_planning_msgs::msg::Trajectory resample_trajectory(
     const auto & point = trajectory.points.at(i);
 
     const auto distance =
-      autoware::universe_utils::calcDistance2d(resampled.points.back(), point.pose.position);
+      autoware_utils::calc_distance2d(resampled.points.back(), point.pose.position);
     if (distance > interval) {
       resampled.points.push_back(point);
     }
@@ -143,8 +143,8 @@ autoware_planning_msgs::msg::Trajectory cut_trajectory(
   for (size_t i = 1; i < trajectory.points.size(); ++i) {
     const auto & point = trajectory.points.at(i);
 
-    const auto p1 = autoware::universe_utils::fromMsg(cut.points.back().pose.position);
-    const auto p2 = autoware::universe_utils::fromMsg(point.pose.position);
+    const auto p1 = autoware_utils::from_msg(cut.points.back().pose.position);
+    const auto p2 = autoware_utils::from_msg(point.pose.position);
 
     const auto points_distance = boost::geometry::distance(p1, p2);
     const auto remain_distance = length - total_length;
@@ -185,9 +185,8 @@ std::vector<LinearRing2d> create_vehicle_footprints(
   // Create vehicle footprint on each TrajectoryPoint
   std::vector<LinearRing2d> vehicle_footprints;
   for (const auto & p : trajectory.points) {
-    vehicle_footprints.push_back(
-      autoware::universe_utils::transformVector<autoware::universe_utils::LinearRing2d>(
-        local_vehicle_footprint, autoware::universe_utils::pose2transform(p.pose)));
+    vehicle_footprints.push_back(autoware_utils::transform_vector<autoware_utils::LinearRing2d>(
+      local_vehicle_footprint, autoware_utils::pose2transform(p.pose)));
   }
 
   return vehicle_footprints;
@@ -209,7 +208,7 @@ std::vector<LinearRing2d> create_vehicle_passing_areas(
 
 LinearRing2d create_hull_from_footprints(const LinearRing2d & area1, const LinearRing2d & area2)
 {
-  autoware::universe_utils::MultiPoint2d combined;
+  autoware_utils::MultiPoint2d combined;
   for (const auto & p : area1) {
     combined.push_back(p);
   }
@@ -242,8 +241,7 @@ bool has_collision(
   const LinearRing2d & vehicle_footprint)
 {
   for (const auto & point : obstacle_pointcloud.points) {
-    if (boost::geometry::within(
-          autoware::universe_utils::Point2d{point.x, point.y}, vehicle_footprint)) {
+    if (boost::geometry::within(autoware_utils::Point2d{point.x, point.y}, vehicle_footprint)) {
       RCLCPP_WARN(
         rclcpp::get_logger("obstacle_collision_checker"), "Collide to Point x: %f y: %f", point.x,
         point.y);

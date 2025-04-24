@@ -19,13 +19,15 @@
         extra_wheelbase: 0.0 # [m] extra length to add to the wheelbase
         extra_front_overhang: 0.5 # [m] extra length to add to the front overhang
         extra_width: 1.0 # [m] extra length to add to the width
-      dynamic_objects:
-        avoid: false # if true, the drivable area is not expanded in the predicted path of dynamic objects
-        extra_footprint_offset:
-          front: 0.5 # [m] extra length to add to the front of the dynamic object footprint
-          rear: 0.5 # [m] extra length to add to the rear of the dynamic object footprint
-          left: 0.5 # [m] extra length to add to the left of the dynamic object footprint
-          right: 0.5 # [m] extra length to add to the rear of the dynamic object footprint
+      object_exclusion:
+        exclude_static: true # if true, the drivable area is not expanded over static objects
+        exclude_dynamic: false # if true, the drivable area is not expanded in the predicted path of dynamic objects
+        th_stopped_object_velocity: 1.0 # [m/s] velocity threshold for static objects
+        safety_margin:
+          front: 0.75 # [m] margin to add to the front of object footprint
+          rear: 0.75 # [m] margin to add to the rear of object footprint
+          left: 0.75 # [m] margin to add to the left of object footprint
+          right: 0.75 # [m] margin to add to the rear of object footprint
       path_preprocessing:
         max_arc_length: 100.0 # [m] maximum arc length along the path where the ego footprint is projected (0.0 means no limit)
         resample_interval: 2.0 # [m] fixed interval between resampled path points (0.0 means path points are directly used)

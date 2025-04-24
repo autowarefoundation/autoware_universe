@@ -15,8 +15,7 @@
 #ifndef AUTOWARE__PLANNING_EVALUATOR__METRICS_CALCULATOR_HPP_
 #define AUTOWARE__PLANNING_EVALUATOR__METRICS_CALCULATOR_HPP_
 #include "autoware/planning_evaluator/metrics/metric.hpp"
-#include "autoware/planning_evaluator/parameters.hpp"
-#include "autoware/universe_utils/math/accumulator.hpp"
+#include "autoware_utils/math/accumulator.hpp"
 
 #include "autoware_perception_msgs/msg/predicted_objects.hpp"
 #include "autoware_planning_msgs/msg/pose_with_uuid_stamped.hpp"
@@ -29,18 +28,35 @@
 
 namespace planning_diagnostics
 {
-using autoware::universe_utils::Accumulator;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::PoseWithUuidStamped;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
+using autoware_utils::Accumulator;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
 
 class MetricsCalculator
 {
 public:
-  Parameters parameters;
+  struct Parameters
+  {
+    struct
+    {
+      double min_point_dist_m = 0.1;
+      double evaluation_time_s = 5.0;
+      struct
+      {
+        double max_dist_m = 5.0;
+        double max_time_s = 3.0;
+      } lookahead;
+    } trajectory;
+
+    struct
+    {
+      double dist_thr_m = 1.0;
+    } obstacle;
+  } parameters;  // struct Parameters for those metrics calculated by the MetricsCalculator
 
   MetricsCalculator() = default;
 

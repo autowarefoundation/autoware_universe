@@ -17,7 +17,7 @@
 #include "distance.hpp"
 #include "forward_projection.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <boost/geometry.hpp>
 #include <boost/geometry/algorithms/correct.hpp>

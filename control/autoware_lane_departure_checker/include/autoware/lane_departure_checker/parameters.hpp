@@ -15,8 +15,8 @@
 #ifndef AUTOWARE__LANE_DEPARTURE_CHECKER__PARAMETERS_HPP_
 #define AUTOWARE__LANE_DEPARTURE_CHECKER__PARAMETERS_HPP_
 
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
-#include <autoware/universe_utils/geometry/pose_deviation.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/pose_deviation.hpp>
 #include <rclcpp/node.hpp>
 
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
@@ -32,12 +32,12 @@
 
 namespace autoware::lane_departure_checker
 {
-using autoware::universe_utils::PoseDeviation;
 using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
+using autoware_utils::PoseDeviation;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
-using autoware::universe_utils::LinearRing2d;
+using autoware_utils::LinearRing2d;
 
 struct Param
 {

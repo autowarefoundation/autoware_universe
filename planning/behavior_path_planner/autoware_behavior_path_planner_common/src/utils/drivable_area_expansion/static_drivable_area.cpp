@@ -17,11 +17,11 @@
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
 #include <autoware/motion_utils/resample/resample.hpp>
-#include <autoware/universe_utils/geometry/boost_polygon_utils.hpp>
-#include <autoware/universe_utils/math/unit_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 
 #include <boost/geometry/algorithms/is_valid.hpp>
 
@@ -63,8 +63,8 @@ std::vector<T> removeSharpPoints(const std::vector<T> & points)
     const auto product =
       std::inner_product(vec_1to2.begin(), vec_1to2.end(), vec_3to2.begin(), 0.0);
 
-    const auto dist_1to2 = autoware::universe_utils::calcDistance3d(p1, p2);
-    const auto dist_3to2 = autoware::universe_utils::calcDistance3d(p3, p2);
+    const auto dist_1to2 = autoware_utils::calc_distance3d(p1, p2);
+    const auto dist_3to2 = autoware_utils::calc_distance3d(p3, p2);
 
     constexpr double epsilon = 1e-3;
 
@@ -90,22 +90,22 @@ template <class T>
 size_t findNearestSegmentIndexFromLateralDistance(
   const std::vector<T> & points, const geometry_msgs::msg::Point & target_point)
 {
-  using autoware::universe_utils::calcAzimuthAngle;
-  using autoware::universe_utils::calcDistance2d;
-  using autoware::universe_utils::normalizeRadian;
+  using autoware_utils::calc_azimuth_angle;
+  using autoware_utils::calc_distance2d;
+  using autoware_utils::normalize_radian;
 
   std::optional<size_t> closest_idx{std::nullopt};
   double min_lateral_dist = std::numeric_limits<double>::max();
   for (size_t seg_idx = 0; seg_idx < points.size() - 1; ++seg_idx) {
     const double lon_dist =
       autoware::motion_utils::calcLongitudinalOffsetToSegment(points, seg_idx, target_point);
-    const double segment_length = calcDistance2d(points.at(seg_idx), points.at(seg_idx + 1));
+    const double segment_length = calc_distance2d(points.at(seg_idx), points.at(seg_idx + 1));
     const double lat_dist = [&]() {
       if (lon_dist < 0.0) {
-        return calcDistance2d(points.at(seg_idx), target_point);
+        return calc_distance2d(points.at(seg_idx), target_point);
       }
       if (segment_length < lon_dist) {
-        return calcDistance2d(points.at(seg_idx + 1), target_point);
+        return calc_distance2d(points.at(seg_idx + 1), target_point);
       }
       return std::abs(autoware::motion_utils::calcLateralOffset(points, target_point, seg_idx));
     }();
@@ -127,28 +127,28 @@ size_t findNearestSegmentIndexFromLateralDistance(
   const std::vector<T> & points, const geometry_msgs::msg::Pose & target_point,
   const double yaw_threshold)
 {
-  using autoware::universe_utils::calcAzimuthAngle;
-  using autoware::universe_utils::calcDistance2d;
-  using autoware::universe_utils::normalizeRadian;
+  using autoware_utils::calc_azimuth_angle;
+  using autoware_utils::calc_distance2d;
+  using autoware_utils::normalize_radian;
 
   std::optional<size_t> closest_idx{std::nullopt};
   double min_lateral_dist = std::numeric_limits<double>::max();
   for (size_t seg_idx = 0; seg_idx < points.size() - 1; ++seg_idx) {
     const auto base_yaw = tf2::getYaw(target_point.orientation);
     const auto yaw =
-      normalizeRadian(calcAzimuthAngle(points.at(seg_idx), points.at(seg_idx + 1)) - base_yaw);
+      normalize_radian(calc_azimuth_angle(points.at(seg_idx), points.at(seg_idx + 1)) - base_yaw);
     if (yaw_threshold < std::abs(yaw)) {
       continue;
     }
     const double lon_dist = autoware::motion_utils::calcLongitudinalOffsetToSegment(
       points, seg_idx, target_point.position);
-    const double segment_length = calcDistance2d(points.at(seg_idx), points.at(seg_idx + 1));
+    const double segment_length = calc_distance2d(points.at(seg_idx), points.at(seg_idx + 1));
     const double lat_dist = [&]() {
       if (lon_dist < 0.0) {
-        return calcDistance2d(points.at(seg_idx), target_point.position);
+        return calc_distance2d(points.at(seg_idx), target_point.position);
       }
       if (segment_length < lon_dist) {
-        return calcDistance2d(points.at(seg_idx + 1), target_point.position);
+        return calc_distance2d(points.at(seg_idx + 1), target_point.position);
       }
       return std::abs(
         autoware::motion_utils::calcLateralOffset(points, target_point.position, seg_idx));
@@ -253,8 +253,7 @@ std::optional<std::pair<size_t, geometry_msgs::msg::Point>> intersectBound(
   const size_t end_idx = static_cast<size_t>(std::min(
     static_cast<int>(bound.size()) - 1, static_cast<int>(std::max(seg_idx1, seg_idx2)) + 1 + 5));
   for (int i = start_idx; i < static_cast<int>(end_idx); ++i) {
-    const auto intersect_point =
-      autoware::universe_utils::intersect(p1, p2, bound.at(i), bound.at(i + 1));
+    const auto intersect_point = autoware_utils::intersect(p1, p2, bound.at(i), bound.at(i + 1));
     if (intersect_point) {
       std::pair<size_t, geometry_msgs::msg::Point> result;
       result.first = static_cast<size_t>(i);
@@ -270,20 +269,20 @@ double calcSquaredDistanceFromPointToSegment(
   const geometry_msgs::msg::Point & segment_end_point,
   const geometry_msgs::msg::Point & target_point)
 {
-  using autoware::universe_utils::calcSquaredDistance2d;
+  using autoware_utils::calc_squared_distance2d;
 
   const auto & a = segment_start_point;
   const auto & b = segment_end_point;
   const auto & p = target_point;
 
   const double dot_val = (b.x - a.x) * (p.x - a.x) + (b.y - a.y) * (p.y - a.y);
-  const double squared_segment_length = calcSquaredDistance2d(a, b);
+  const double squared_segment_length = calc_squared_distance2d(a, b);
   if (0 <= dot_val && dot_val <= squared_segment_length) {
-    return calcSquaredDistance2d(p, a) - dot_val * dot_val / squared_segment_length;
+    return calc_squared_distance2d(p, a) - dot_val * dot_val / squared_segment_length;
   }
 
   // target_point is outside the segment.
-  return std::min(calcSquaredDistance2d(a, p), calcSquaredDistance2d(b, p));
+  return std::min(calc_squared_distance2d(a, p), calc_squared_distance2d(b, p));
 }
 
 PolygonPoint transformBoundFrenetCoordinate(
@@ -399,7 +398,7 @@ std::vector<geometry_msgs::msg::Point> convertToGeometryPoints(
   return points;
 }
 
-// NOTE: See the PR's figure. https://github.com/autowarefoundation/autoware.universe/pull/2880
+// NOTE: See the PR's figure. https://github.com/autowarefoundation/autoware_universe/pull/2880
 std::vector<PolygonPoint> concatenateTwoPolygons(
   const std::vector<PolygonPoint> & front_polygon, const std::vector<PolygonPoint> & back_polygon)
 {
@@ -445,7 +444,7 @@ std::vector<PolygonPoint> concatenateTwoPolygons(
     double min_dist_to_intersection = std::numeric_limits<double>::max();
     PolygonPoint closest_intersect_point;
     for (size_t i = 0; i < get_in_poly().size() - 1; ++i) {
-      const auto intersection = autoware::universe_utils::intersect(
+      const auto intersection = autoware_utils::intersect(
         get_out_poly().at(curr_idx).point, get_out_poly().at(next_idx).point,
         get_in_poly().at(i).point, get_in_poly().at(i + 1).point);
       if (!intersection) {
@@ -462,7 +461,7 @@ std::vector<PolygonPoint> concatenateTwoPolygons(
 
       const auto intersect_point = PolygonPoint{*intersection, 0, 0.0, 0.0};
       const double dist_to_intersection =
-        autoware::universe_utils::calcDistance2d(get_out_poly().at(curr_idx).point, *intersection);
+        autoware_utils::calc_distance2d(get_out_poly().at(curr_idx).point, *intersection);
       if (dist_to_intersection < min_dist_to_intersection) {
         closest_idx = i;
         min_dist_to_intersection = dist_to_intersection;
@@ -662,20 +661,15 @@ std::optional<size_t> getOverlappedLaneletId(const std::vector<DrivableLanes> & 
     return {};
   }
 
-  size_t overlapped_idx = lanes.size();
   for (size_t i = 0; i < lanes.size() - 2; ++i) {
     for (size_t j = i + 2; j < lanes.size(); ++j) {
       if (overlaps(lanes.at(i), lanes.at(j))) {
-        overlapped_idx = std::min(overlapped_idx, j);
+        return j;
       }
     }
   }
 
-  if (overlapped_idx == lanes.size()) {
-    return {};
-  }
-
-  return overlapped_idx;
+  return {};
 }
 
 std::vector<DrivableLanes> cutOverlappedLanes(
@@ -847,7 +841,7 @@ void generateDrivableArea(
   PathWithLaneId & path, const double vehicle_length, const double offset,
   const bool is_driving_forward)
 {
-  using autoware::universe_utils::calcOffsetPose;
+  using autoware_utils::calc_offset_pose;
 
   // remove path points which is close to the previous point
   PathWithLaneId resampled_path{};
@@ -871,7 +865,7 @@ void generateDrivableArea(
   // add last point of path if enough far from the one of resampled path
   constexpr double th_last_point_distance = 0.3;
   if (
-    autoware::universe_utils::calcDistance2d(
+    autoware_utils::calc_distance2d(
       resampled_path.points.back().point.pose.position, path.points.back().point.pose.position) >
     th_last_point_distance) {
     resampled_path.points.push_back(path.points.back());
@@ -883,8 +877,8 @@ void generateDrivableArea(
   for (const auto & point : resampled_path.points) {
     const auto & pose = point.point.pose;
 
-    const auto left_point = calcOffsetPose(pose, 0, offset, 0);
-    const auto right_point = calcOffsetPose(pose, 0, -offset, 0);
+    const auto left_point = calc_offset_pose(pose, 0, offset, 0);
+    const auto right_point = calc_offset_pose(pose, 0, -offset, 0);
 
     left_bound.push_back(left_point.position);
     right_bound.push_back(right_point.position);
@@ -893,33 +887,33 @@ void generateDrivableArea(
   if (is_driving_forward) {
     // add backward offset point to bound
     const Pose first_point =
-      calcOffsetPose(resampled_path.points.front().point.pose, -vehicle_length, 0, 0);
-    const Pose left_first_point = calcOffsetPose(first_point, 0, offset, 0);
-    const Pose right_first_point = calcOffsetPose(first_point, 0, -offset, 0);
+      calc_offset_pose(resampled_path.points.front().point.pose, -vehicle_length, 0, 0);
+    const Pose left_first_point = calc_offset_pose(first_point, 0, offset, 0);
+    const Pose right_first_point = calc_offset_pose(first_point, 0, -offset, 0);
     left_bound.insert(left_bound.begin(), left_first_point.position);
     right_bound.insert(right_bound.begin(), right_first_point.position);
 
     // add forward offset point to bound
     const Pose last_point =
-      calcOffsetPose(resampled_path.points.back().point.pose, vehicle_length, 0, 0);
-    const Pose left_last_point = calcOffsetPose(last_point, 0, offset, 0);
-    const Pose right_last_point = calcOffsetPose(last_point, 0, -offset, 0);
+      calc_offset_pose(resampled_path.points.back().point.pose, vehicle_length, 0, 0);
+    const Pose left_last_point = calc_offset_pose(last_point, 0, offset, 0);
+    const Pose right_last_point = calc_offset_pose(last_point, 0, -offset, 0);
     left_bound.push_back(left_last_point.position);
     right_bound.push_back(right_last_point.position);
   } else {
     // add forward offset point to bound
     const Pose first_point =
-      calcOffsetPose(resampled_path.points.front().point.pose, vehicle_length, 0, 0);
-    const Pose left_first_point = calcOffsetPose(first_point, 0, offset, 0);
-    const Pose right_first_point = calcOffsetPose(first_point, 0, -offset, 0);
+      calc_offset_pose(resampled_path.points.front().point.pose, vehicle_length, 0, 0);
+    const Pose left_first_point = calc_offset_pose(first_point, 0, offset, 0);
+    const Pose right_first_point = calc_offset_pose(first_point, 0, -offset, 0);
     left_bound.insert(left_bound.begin(), left_first_point.position);
     right_bound.insert(right_bound.begin(), right_first_point.position);
 
     // add backward offset point to bound
     const Pose last_point =
-      calcOffsetPose(resampled_path.points.back().point.pose, -vehicle_length, 0, 0);
-    const Pose left_last_point = calcOffsetPose(last_point, 0, offset, 0);
-    const Pose right_last_point = calcOffsetPose(last_point, 0, -offset, 0);
+      calc_offset_pose(resampled_path.points.back().point.pose, -vehicle_length, 0, 0);
+    const Pose left_last_point = calc_offset_pose(last_point, 0, offset, 0);
+    const Pose right_last_point = calc_offset_pose(last_point, 0, -offset, 0);
     left_bound.push_back(left_last_point.position);
     right_bound.push_back(right_last_point.position);
   }
@@ -944,7 +938,7 @@ void generateDrivableArea(
       p_line.push_back(p2);
       bool intersection_found = false;
       for (size_t j = i + 2; j < bound.size() - 1; j++) {
-        const double distance = autoware::universe_utils::calcDistance2d(bound.at(i), bound.at(j));
+        const double distance = autoware_utils::calc_distance2d(bound.at(i), bound.at(j));
         if (distance > intersection_check_distance) {
           break;
         }
@@ -1043,7 +1037,7 @@ void extractObstaclesFromDrivableArea(
     std::vector<Point> edge_points;
     for (int i = 0; i < static_cast<int>(obstacle.poly.outer().size()) - 1;
          ++i) {  // NOTE: There is a duplicated points
-      edge_points.push_back(autoware::universe_utils::createPoint(
+      edge_points.push_back(autoware_utils::create_point(
         obstacle.poly.outer().at(i).x(), obstacle.poly.outer().at(i).y(),
         path.points.at(nearest_path_idx).point.pose.position.z));
     }
@@ -1306,9 +1300,9 @@ std::pair<std::vector<lanelet::ConstPoint3d>, bool> getBoundWithFreeSpaceAreas(
   const std::vector<lanelet::ConstPoint3d> & other_side_bound,
   const std::shared_ptr<const PlannerData> planner_data, const bool is_left)
 {
-  using autoware::universe_utils::getPose;
-  using autoware::universe_utils::pose2transform;
-  using autoware::universe_utils::transformVector;
+  using autoware_utils::get_pose;
+  using autoware_utils::pose2transform;
+  using autoware_utils::transform_vector;
   using lanelet::utils::to2D;
   using lanelet::utils::conversion::toGeomMsgPt;
   using lanelet::utils::conversion::toLaneletPoint;
@@ -1358,7 +1352,7 @@ std::pair<std::vector<lanelet::ConstPoint3d>, bool> getBoundWithFreeSpaceAreas(
   }
 
   const auto footprint = planner_data->parameters.vehicle_info.createFootprint();
-  const auto vehicle_polygon = transformVector(footprint, pose2transform(ego_pose));
+  const auto vehicle_polygon = transform_vector(footprint, pose2transform(ego_pose));
   const auto is_driving_freespace =
     !boost::geometry::disjoint(vehicle_polygon, to2D(polygon).basicPolygon());
 
@@ -1386,12 +1380,12 @@ std::pair<std::vector<lanelet::ConstPoint3d>, bool> getBoundWithFreeSpaceAreas(
       return bound;
     }
 
-    const auto p_offset = autoware::universe_utils::calcOffsetPose(
+    const auto p_offset = autoware_utils::calc_offset_pose(
       ego_pose, (trim_behind_bound ? -100.0 : 100.0), (is_left ? 0.1 : -0.1), 0.0);
 
     std::vector<lanelet::ConstPoint3d> ret;
     for (size_t i = 1; i < bound.size(); ++i) {
-      const auto intersect = autoware::universe_utils::intersect(
+      const auto intersect = autoware_utils::intersect(
         ego_pose.position, p_offset.position, toGeomMsgPt(bound.at(i - 1)),
         toGeomMsgPt(bound.at(i)));
 
@@ -1490,17 +1484,16 @@ std::vector<geometry_msgs::msg::Point> postProcess(
     return original_bound;
   }
 
-  const auto addPoints =
-    [](const lanelet::ConstLineString3d & points, std::vector<geometry_msgs::msg::Point> & bound) {
-      for (const auto & bound_p : points) {
-        const auto cp = lanelet::utils::conversion::toGeomMsgPt(bound_p);
-        if (
-          bound.empty() ||
-          autoware::universe_utils::calcDistance2d(cp, bound.back()) > overlap_threshold) {
-          bound.push_back(cp);
-        }
+  const auto addPoints = [](
+                           const lanelet::ConstLineString3d & points,
+                           std::vector<geometry_msgs::msg::Point> & bound) {
+    for (const auto & bound_p : points) {
+      const auto cp = lanelet::utils::conversion::toGeomMsgPt(bound_p);
+      if (bound.empty() || autoware_utils::calc_distance2d(cp, bound.back()) > overlap_threshold) {
+        bound.push_back(cp);
       }
-    };
+    }
+  };
 
   const auto has_overlap =
     [&](const lanelet::ConstLanelet & lane, const lanelet::ConstLanelets & ignore_lanelets = {}) {
@@ -1600,17 +1593,14 @@ std::vector<geometry_msgs::msg::Point> postProcess(
   // Insert middle points
   for (size_t i = start_idx + 1; i <= goal_idx; ++i) {
     const auto & next_point = tmp_bound.at(i);
-    const double dist =
-      autoware::universe_utils::calcDistance2d(processed_bound.back(), next_point);
+    const double dist = autoware_utils::calc_distance2d(processed_bound.back(), next_point);
     if (dist > overlap_threshold) {
       processed_bound.push_back(next_point);
     }
   }
 
   // Insert a goal point
-  if (
-    autoware::universe_utils::calcDistance2d(processed_bound.back(), goal_point) >
-    overlap_threshold) {
+  if (autoware_utils::calc_distance2d(processed_bound.back(), goal_point) > overlap_threshold) {
     processed_bound.push_back(goal_point);
   }
 
@@ -1671,22 +1661,14 @@ std::vector<geometry_msgs::msg::Point> calcBound(
              : postProcess(bound, path, planner_data, drivable_lanes, is_left, is_driving_forward);
   };
 
-  // Step2. if there is no drivable area defined by polygon, return original drivable bound.
-  if (!enable_expanding_hatched_road_markings && !enable_expanding_intersection_areas) {
-    return post_process(removeOverlapPoints(to_ros_point(bound_points)), skip_post_process);
-  }
-
-  // Step3.if there are hatched road markings, expand drivable bound with the polygon.
+  // if there is no drivable area defined by polygon, return original drivable bound.
+  // if there are hatched road markings, expand drivable bound with the polygon.
+  // if there are intersection areas, expand drivable bound with the polygon.
   if (enable_expanding_hatched_road_markings) {
     bound_points = getBoundWithHatchedRoadMarkings(bound_points, route_handler);
   }
 
-  if (!enable_expanding_intersection_areas) {
-    return post_process(removeOverlapPoints(to_ros_point(bound_points)), skip_post_process);
-  }
-
-  // Step4. if there are intersection areas, expand drivable bound with the polygon.
-  {
+  if (enable_expanding_intersection_areas) {
     bound_points =
       getBoundWithIntersectionAreas(bound_points, route_handler, drivable_lanes, is_left);
   }

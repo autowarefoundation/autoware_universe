@@ -34,6 +34,7 @@
 #include "autoware/pure_pursuit/util/planning_utils.hpp"
 #include "autoware/pure_pursuit/util/tf_utils.hpp"
 
+#include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <algorithm>
@@ -143,7 +144,7 @@ TrajectoryPoint PurePursuitLateralController::calcNextPose(
   const double ds, TrajectoryPoint & point, Lateral cmd) const
 {
   geometry_msgs::msg::Transform transform;
-  transform.translation = autoware::universe_utils::createTranslation(ds, 0.0, 0.0);
+  transform.translation = autoware_utils::create_translation(ds, 0.0, 0.0);
   transform.rotation =
     planning_utils::getQuaternionFromYaw(((tan(cmd.steering_tire_angle) * ds) / param_.wheel_base));
   TrajectoryPoint output_p;
@@ -204,10 +205,10 @@ double PurePursuitLateralController::calcCurvature(const size_t closest_idx)
   double current_curvature = 0.0;
 
   try {
-    current_curvature = autoware::universe_utils::calcCurvature(
-      autoware::universe_utils::getPoint(trajectory_resampled_->points.at(prev_idx)),
-      autoware::universe_utils::getPoint(trajectory_resampled_->points.at(closest_idx)),
-      autoware::universe_utils::getPoint(trajectory_resampled_->points.at(next_idx)));
+    current_curvature = autoware_utils::calc_curvature(
+      autoware_utils::get_point(trajectory_resampled_->points.at(prev_idx)),
+      autoware_utils::get_point(trajectory_resampled_->points.at(closest_idx)),
+      autoware_utils::get_point(trajectory_resampled_->points.at(next_idx)));
   } catch (std::exception const & e) {
     // ...code that handles the error...
     RCLCPP_WARN(rclcpp::get_logger("pure_pursuit"), "%s", e.what());

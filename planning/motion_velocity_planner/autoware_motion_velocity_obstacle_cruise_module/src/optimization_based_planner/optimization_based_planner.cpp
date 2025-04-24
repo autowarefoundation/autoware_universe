@@ -22,9 +22,9 @@
 #include "autoware/motion_utils/trajectory/conversion.hpp"
 #include "autoware/motion_utils/trajectory/interpolation.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
-#include "autoware/motion_velocity_planner_common_universe/utils.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
-#include "autoware/universe_utils/ros/marker_helper.hpp"
+#include "autoware/motion_velocity_planner_common/utils.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
+#include "autoware_utils/ros/marker_helper.hpp"
 
 #include <algorithm>
 #include <limits>
@@ -480,7 +480,7 @@ std::optional<SBoundaries> OptimizationBasedPlanner::getSBoundaries(
 
       const auto markers = autoware::motion_utils::createSlowDownVirtualWallMarker(
         marker_pose.value(), "obstacle to follow", current_time, 0);
-      autoware::universe_utils::appendMarkerArray(markers, &wall_msg);
+      autoware_utils::append_marker_array(markers, &wall_msg);
 
       // publish rviz marker
       debug_wall_marker_pub_->publish(wall_msg);

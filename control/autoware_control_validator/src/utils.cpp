@@ -17,7 +17,7 @@
 #include "autoware/motion_utils/trajectory/conversion.hpp"
 #include "autoware/motion_utils/trajectory/interpolation.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 
 #include <vector>
 
@@ -86,6 +86,26 @@ bool remove_front_trajectory_point(
 Trajectory align_trajectory_with_reference_trajectory(
   const Trajectory & trajectory, const Trajectory & predicted_trajectory)
 {
+  if (
+    trajectory.points.empty() || predicted_trajectory.points.empty() ||
+    trajectory.points.size() < 2) {
+    return Trajectory();
+  }
+
+  constexpr size_t MAX_SAFE_SIZE = 5000;
+
+  if (predicted_trajectory.points.size() > MAX_SAFE_SIZE) {
+    Trajectory safe_predicted_trajectory;
+    safe_predicted_trajectory.header = predicted_trajectory.header;
+    safe_predicted_trajectory.points.reserve(MAX_SAFE_SIZE);
+
+    for (size_t i = 0; i < MAX_SAFE_SIZE && i < predicted_trajectory.points.size(); ++i) {
+      safe_predicted_trajectory.points.push_back(predicted_trajectory.points[i]);
+    }
+
+    return align_trajectory_with_reference_trajectory(trajectory, safe_predicted_trajectory);
+  }
+
   const auto last_seg_length = autoware::motion_utils::calcSignedArcLength(
     trajectory.points, trajectory.points.size() - 2, trajectory.points.size() - 1);
 
@@ -124,8 +144,10 @@ Trajectory align_trajectory_with_reference_trajectory(
     trajectory_points, modified_trajectory_points, predicted_trajectory_points);
 
   if (predicted_trajectory_point_removed) {
-    insert_point_in_predicted_trajectory(
-      modified_trajectory_points, trajectory_points.front().pose, predicted_trajectory_points);
+    if (!trajectory_points.empty() && !predicted_trajectory_points.empty()) {
+      insert_point_in_predicted_trajectory(
+        modified_trajectory_points, trajectory_points.front().pose, predicted_trajectory_points);
+    }
   }
 
   // If last point of predicted_trajectory is behind of end of trajectory, erase points which are
@@ -140,6 +162,12 @@ Trajectory align_trajectory_with_reference_trajectory(
     reverse_trajectory_points(predicted_trajectory_points);
   auto reversed_trajectory_points = reverse_trajectory_points(trajectory_points);
   auto reversed_modified_trajectory_points = reverse_trajectory_points(modified_trajectory_points);
+
+  if (
+    reversed_trajectory_points.empty() || reversed_modified_trajectory_points.empty() ||
+    reversed_predicted_trajectory_points.empty()) {
+    return Trajectory();
+  }
 
   auto reversed_predicted_trajectory_point_removed = remove_front_trajectory_point(
     reversed_trajectory_points, reversed_modified_trajectory_points,
@@ -161,7 +189,7 @@ double calc_max_lateral_distance(
     align_trajectory_with_reference_trajectory(reference_trajectory, predicted_trajectory);
   double max_dist = 0;
   for (const auto & point : alined_predicted_trajectory.points) {
-    const auto p0 = autoware::universe_utils::getPoint(point);
+    const auto p0 = autoware_utils::get_point(point);
     // find nearest segment
     const size_t nearest_segment_idx =
       autoware::motion_utils::findNearestSegmentIndex(reference_trajectory.points, p0);

@@ -17,6 +17,8 @@
 #include "types.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/pose_deviation.hpp>
 
 #include <geometry_msgs/msg/detail/pose__struct.hpp>
 
@@ -72,21 +74,21 @@ bool is_unavoidable(
   const auto & o_pose = object.kinematics.initial_pose_with_covariance.pose;
   const auto o_yaw = tf2::getYaw(o_pose.orientation);
   const auto ego_yaw = tf2::getYaw(ego_pose.orientation);
-  const auto yaw_diff = std::abs(universe_utils::normalizeRadian(o_yaw - ego_yaw));
+  const auto yaw_diff = std::abs(autoware_utils::normalize_radian(o_yaw - ego_yaw));
   const auto opposite_heading = yaw_diff > same_direction_diff_threshold;
   const auto collision_distance_threshold =
     params.ego_lateral_offset + object.shape.dimensions.y / 2.0 + params.hysteresis;
   const auto lat_distance =
-    std::abs(universe_utils::calcLateralDeviation(o_pose, ego_pose.position));
+    std::abs(autoware_utils::calc_lateral_deviation(o_pose, ego_pose.position));
   auto has_collision = opposite_heading && lat_distance <= collision_distance_threshold;
   if (ego_earliest_stop_pose) {
     const auto direction_yaw = std::atan2(
       o_pose.position.y - ego_earliest_stop_pose->position.y,
       o_pose.position.x - ego_earliest_stop_pose->position.x);
     const auto yaw_diff_at_earliest_stop_pose =
-      std::abs(universe_utils::normalizeRadian(o_yaw - direction_yaw));
+      std::abs(autoware_utils::normalize_radian(o_yaw - direction_yaw));
     const auto lat_distance_at_earliest_stop_pose =
-      std::abs(universe_utils::calcLateralDeviation(o_pose, ego_earliest_stop_pose->position));
+      std::abs(autoware_utils::calc_lateral_deviation(o_pose, ego_earliest_stop_pose->position));
     const auto collision_at_earliest_stop_pose =
       yaw_diff_at_earliest_stop_pose > same_direction_diff_threshold &&
       lat_distance_at_earliest_stop_pose <= collision_distance_threshold;

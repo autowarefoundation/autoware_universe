@@ -20,13 +20,13 @@
 #include <remaining_distance_time_calculator_parameters.hpp>
 
 #include <autoware_internal_msgs/msg/mission_remaining_distance_time.hpp>
+#include <autoware_internal_planning_msgs/msg/scenario.hpp>
+#include <autoware_internal_planning_msgs/msg/velocity_limit.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <tier4_planning_msgs/msg/scenario.hpp>
-#include <tier4_planning_msgs/msg/velocity_limit.hpp>
 
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/utility/Optional.h>
@@ -49,14 +49,14 @@ private:
   using LaneletRoute = autoware_planning_msgs::msg::LaneletRoute;
   using HADMapBin = autoware_map_msgs::msg::LaneletMapBin;
   using Odometry = nav_msgs::msg::Odometry;
-  using VelocityLimit = tier4_planning_msgs::msg::VelocityLimit;
+  using VelocityLimit = autoware_internal_planning_msgs::msg::VelocityLimit;
   using MissionRemainingDistanceTime = autoware_internal_msgs::msg::MissionRemainingDistanceTime;
 
   rclcpp::Subscription<LaneletRoute>::SharedPtr sub_route_;
   rclcpp::Subscription<HADMapBin>::SharedPtr sub_map_;
   rclcpp::Subscription<Odometry>::SharedPtr sub_odometry_;
   rclcpp::Subscription<VelocityLimit>::SharedPtr sub_planning_velocity_;
-  rclcpp::Subscription<tier4_planning_msgs::msg::Scenario>::SharedPtr sub_scenario_;
+  rclcpp::Subscription<autoware_internal_planning_msgs::msg::Scenario>::SharedPtr sub_scenario_;
 
   rclcpp::Publisher<MissionRemainingDistanceTime>::SharedPtr pub_mission_remaining_distance_time_;
 
@@ -73,7 +73,7 @@ private:
   geometry_msgs::msg::Pose current_vehicle_pose_;
   geometry_msgs::msg::Vector3 current_vehicle_velocity_;
   geometry_msgs::msg::Pose goal_pose_;
-  tier4_planning_msgs::msg::Scenario::ConstSharedPtr scenario_;
+  autoware_internal_planning_msgs::msg::Scenario::ConstSharedPtr scenario_;
   bool has_received_route_;
   bool has_received_scenario_;
   double velocity_limit_;
@@ -90,7 +90,7 @@ private:
   void on_route(const LaneletRoute::ConstSharedPtr & msg);
   void on_map(const HADMapBin::ConstSharedPtr & msg);
   void on_velocity_limit(const VelocityLimit::ConstSharedPtr & msg);
-  void on_scenario(const tier4_planning_msgs::msg::Scenario::ConstSharedPtr & msg);
+  void on_scenario(const autoware_internal_planning_msgs::msg::Scenario::ConstSharedPtr & msg);
 
   /**
    * @brief calculate mission remaining distance

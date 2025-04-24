@@ -21,8 +21,8 @@
 #ifndef Q_MOC_RUN
 #include "jsk_overlay_utils.hpp"
 
-#include <autoware/universe_utils/math/normalization.hpp>
-#include <autoware/universe_utils/math/unit_conversion.hpp>
+#include <autoware_utils/math/normalization.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 #include <rviz_common/properties/color_property.hpp>
 #include <rviz_common/properties/float_property.hpp>
 #include <rviz_common/properties/int_property.hpp>
@@ -63,10 +63,10 @@ protected:
   // QImage hud_;
 
 private:
-  static constexpr float meter_min_velocity_ = autoware::universe_utils::kmph2mps(0.f);
-  static constexpr float meter_max_velocity_ = autoware::universe_utils::kmph2mps(60.f);
-  static constexpr float meter_min_angle_ = autoware::universe_utils::deg2rad(40.f);
-  static constexpr float meter_max_angle_ = autoware::universe_utils::deg2rad(320.f);
+  static constexpr float meter_min_velocity_ = autoware_utils::kmph2mps(0.f);
+  static constexpr float meter_max_velocity_ = autoware_utils::kmph2mps(60.f);
+  static constexpr float meter_min_angle_ = autoware_utils::deg2rad(40.f);
+  static constexpr float meter_max_angle_ = autoware_utils::deg2rad(320.f);
   static constexpr int line_width_ = 2;
   static constexpr int hand_width_ = 4;
   struct Line  // for drawLine

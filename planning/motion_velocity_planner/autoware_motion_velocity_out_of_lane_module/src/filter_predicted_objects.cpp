@@ -16,7 +16,8 @@
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <boost/geometry/algorithms/detail/intersects/interface.hpp>
 #include <boost/geometry/algorithms/intersects.hpp>
@@ -32,7 +33,7 @@ namespace autoware::motion_velocity_planner::out_of_lane
 {
 void cut_predicted_path_beyond_line(
   autoware_perception_msgs::msg::PredictedPath & predicted_path,
-  const universe_utils::LineString2d & stop_line, const double object_front_overhang)
+  const autoware_utils::LineString2d & stop_line, const double object_front_overhang)
 {
   if (predicted_path.path.empty() || stop_line.size() < 2) return;
 
@@ -54,7 +55,7 @@ void cut_predicted_path_beyond_line(
     auto cut_idx = stop_line_idx;
     double arc_length = 0;
     while (cut_idx > 0 && arc_length < object_front_overhang) {
-      arc_length += universe_utils::calcDistance2d(
+      arc_length += autoware_utils::calc_distance2d(
         predicted_path.path[cut_idx], predicted_path.path[cut_idx - 1]);
       --cut_idx;
     }
@@ -62,17 +63,17 @@ void cut_predicted_path_beyond_line(
   }
 }
 
-std::optional<universe_utils::LineString2d> find_next_stop_line(
+std::optional<autoware_utils::LineString2d> find_next_stop_line(
   const autoware_perception_msgs::msg::PredictedPath & path, const EgoData & ego_data)
 {
-  universe_utils::LineString2d query_path;
+  autoware_utils::LineString2d query_path;
   for (const auto & p : path.path) query_path.emplace_back(p.position.x, p.position.y);
   std::vector<StopLineNode> query_results;
   ego_data.stop_lines_rtree.query(
     boost::geometry::index::intersects(query_path), std::back_inserter(query_results));
   auto earliest_intersecting_index = query_path.size();
-  std::optional<universe_utils::LineString2d> earliest_stop_line;
-  universe_utils::Segment2d path_segment;
+  std::optional<autoware_utils::LineString2d> earliest_stop_line;
+  autoware_utils::Segment2d path_segment;
   for (const auto & [_, stop_line] : query_results) {
     for (auto index = 0UL; index + 1 < query_path.size(); ++index) {
       path_segment.first = query_path[index];

@@ -87,13 +87,13 @@ MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
   data_check_timer_ = create_wall_timer(period, [this] { check_initialization(); });
   is_mission_planner_ready_ = false;
 
-  logger_configure_ = std::make_unique<autoware::universe_utils::LoggerLevelConfigure>(this);
+  logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
   pub_processing_time_ = this->create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "~/debug/processing_time_ms", 1);
 }
 
 void MissionPlanner::publish_processing_time(
-  autoware::universe_utils::StopWatch<std::chrono::milliseconds> stop_watch)
+  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch)
 {
   autoware_internal_debug_msgs::msg::Float64Stamped processing_time_msg;
   processing_time_msg.stamp = get_clock()->now();
@@ -263,7 +263,7 @@ void MissionPlanner::on_set_lanelet_route(
   }
 
   if (is_reroute && is_autonomous_driving) {
-    const auto reroute_availability = sub_reroute_availability_.takeData();
+    const auto reroute_availability = sub_reroute_availability_.take_data();
     if (!reroute_availability || !reroute_availability->availability) {
       throw service_utils::ServiceException(
         ResponseCode::ERROR_INVALID_STATE,
@@ -321,7 +321,7 @@ void MissionPlanner::on_set_waypoint_route(
                           : false;
 
   if (is_reroute && is_autonomous_driving) {
-    const auto reroute_availability = sub_reroute_availability_.takeData();
+    const auto reroute_availability = sub_reroute_availability_.take_data();
     if (!reroute_availability || !reroute_availability->availability) {
       throw service_utils::ServiceException(
         ResponseCode::ERROR_INVALID_STATE,
@@ -425,7 +425,7 @@ LaneletRoute MissionPlanner::create_route(const PoseWithUuidStamped & msg)
   //       Also, use start pose and waypoints that are on the preferred lanelet of the current route
   //       as much as possible.
   //       For this process, refer to RouteHandler::planPathLaneletsBetweenCheckpoints() or
-  //       https://github.com/autowarefoundation/autoware.universe/pull/8238 too.
+  //       https://github.com/autowarefoundation/autoware_universe/pull/8238 too.
   const auto & start_pose = current_route_ ? current_route_->start_pose : odometry_->pose.pose;
   std::vector<Pose> waypoints{};
   if (current_route_) {

@@ -23,23 +23,23 @@ namespace autoware::behavior_path_planner
 void SceneModuleManagerInterface::initInterface(
   rclcpp::Node * node, const std::vector<std::string> & rtc_types)
 {
-  using autoware::universe_utils::getOrDeclareParameter;
+  using autoware_utils::get_or_declare_parameter;
 
   // init manager configuration
   {
     std::string ns = name_ + ".";
     try {
-      config_.enable_rtc = getOrDeclareParameter<bool>(*node, "enable_all_modules_auto_mode")
+      config_.enable_rtc = get_or_declare_parameter<bool>(*node, "enable_all_modules_auto_mode")
                              ? false
-                             : getOrDeclareParameter<bool>(*node, ns + "enable_rtc");
+                             : get_or_declare_parameter<bool>(*node, ns + "enable_rtc");
     } catch (const std::exception & e) {
-      config_.enable_rtc = getOrDeclareParameter<bool>(*node, ns + "enable_rtc");
+      config_.enable_rtc = get_or_declare_parameter<bool>(*node, ns + "enable_rtc");
     }
 
-    config_.enable_simultaneous_execution_as_approved_module =
-      getOrDeclareParameter<bool>(*node, ns + "enable_simultaneous_execution_as_approved_module");
-    config_.enable_simultaneous_execution_as_candidate_module =
-      getOrDeclareParameter<bool>(*node, ns + "enable_simultaneous_execution_as_candidate_module");
+    config_.enable_simultaneous_execution_as_approved_module = get_or_declare_parameter<bool>(
+      *node, ns + "enable_simultaneous_execution_as_approved_module");
+    config_.enable_simultaneous_execution_as_candidate_module = get_or_declare_parameter<bool>(
+      *node, ns + "enable_simultaneous_execution_as_candidate_module");
   }
 
   // init rtc configuration
@@ -59,7 +59,7 @@ void SceneModuleManagerInterface::initInterface(
     pub_debug_marker_ = node->create_publisher<MarkerArray>("~/debug/" + name_, 20);
     pub_virtual_wall_ = node->create_publisher<MarkerArray>("~/virtual_wall/" + name_, 20);
     pub_drivable_lanes_ = node->create_publisher<MarkerArray>("~/drivable_lanes/" + name_, 20);
-    pub_processing_time_ = node->create_publisher<universe_utils::ProcessingTimeDetail>(
+    pub_processing_time_ = node->create_publisher<autoware_utils::ProcessingTimeDetail>(
       "~/processing_time/" + name_, 20);
   }
 
