@@ -26,6 +26,7 @@
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
 #include <autoware/universe_utils/system/stop_watch.hpp>
+#include <cuda_blackboard/cuda_pointcloud2.hpp>
 
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
@@ -77,10 +78,11 @@ public:
   virtual ~BEVFusionTRT();
 
   bool detect(
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & msg,
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & input_pointcloud_msg_ptr,
     const std::vector<sensor_msgs::msg::Image::ConstSharedPtr> & image_msgs,
     const std::vector<float> & camera_masks, const tf2_ros::Buffer & tf_buffer,
-    std::vector<Box3D> & det_boxes3d, std::unordered_map<std::string, double> & proc_timing);
+    std::vector<Box3D> & det_boxes3d, std::unordered_map<std::string, double> & proc_timing,
+    bool & is_num_voxels_within_range);
 
   void setIntrinsicsExtrinsics(
     std::vector<sensor_msgs::msg::CameraInfo> & camera_info_vector,
@@ -91,9 +93,10 @@ protected:
   void initTrt(const tensorrt_common::TrtCommonConfig & trt_config);
 
   bool preProcess(
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pc_msg,
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & pc_msg_ptr,
     const std::vector<sensor_msgs::msg::Image::ConstSharedPtr> & image_msgs,
-    const std::vector<float> & camera_masks, const tf2_ros::Buffer & tf_buffer);
+    const std::vector<float> & camera_masks, const tf2_ros::Buffer & tf_buffer,
+    bool & is_num_voxels_within_range);
 
   bool inference();
 
