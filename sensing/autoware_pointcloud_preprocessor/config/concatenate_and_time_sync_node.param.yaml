@@ -1,7 +1,6 @@
 /**:
   ros__parameters:
     debug_mode: false
-    has_static_tf_only: false
     rosbag_length: 10.0
     maximum_queue_size: 5
     timeout_sec: 0.2

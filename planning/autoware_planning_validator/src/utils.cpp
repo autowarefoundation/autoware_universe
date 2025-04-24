@@ -76,6 +76,45 @@ Trajectory resampleTrajectory(const Trajectory & trajectory, const double min_in
   return resampled;
 }
 
+double calculateStoppingDistance(
+  const double current_vel, const double current_accel, const double decel, const double jerk_limit)
+{
+  // calculate time to ramp acceleration from current accel to decel
+  const auto t1 = std::max((current_accel - decel) / jerk_limit, 0.0);
+  // calculate velocity and distance after t1
+  const auto v1 = current_vel + current_accel * t1 - 0.5 * jerk_limit * t1 * t1;
+  const auto d1 =
+    (current_vel * t1) + (0.5 * current_accel * t1 * t1) - (jerk_limit * t1 * t1 * t1 / 6.0);
+  // calculate distance to stop from v1
+  const auto d2 = std::abs((v1 * v1) / (2 * decel));
+  return d1 + d2;
+}
+
+Trajectory getStopTrajectory(
+  const Trajectory & trajectory, const int nearest_traj_idx, const double current_vel,
+  const double current_accel, const double decel, const double jerk_limit)
+{
+  const auto stopping_distance =
+    calculateStoppingDistance(current_vel, current_accel, decel, jerk_limit);
+
+  Trajectory soft_stop_traj = trajectory;
+  soft_stop_traj.header = trajectory.header;
+  double accumulated_distance = 0.0;
+  for (size_t i = nearest_traj_idx + 1; i < trajectory.points.size(); ++i) {
+    accumulated_distance += calc_distance2d(trajectory.points.at(i - 1), trajectory.points.at(i));
+    if (accumulated_distance >= stopping_distance) {
+      soft_stop_traj.points.at(i).longitudinal_velocity_mps = 0.0;
+      continue;
+    }
+    const float interpolated_velocity =
+      current_vel * (stopping_distance - accumulated_distance) / stopping_distance;
+    soft_stop_traj.points.at(i).longitudinal_velocity_mps =
+      std::min(interpolated_velocity, soft_stop_traj.points.at(i).longitudinal_velocity_mps);
+  }
+  soft_stop_traj.points.back().longitudinal_velocity_mps = 0.0;
+  return soft_stop_traj;
+}
+
 // calculate curvature from three points with curvature_distance
 void calcCurvature(
   const Trajectory & trajectory, std::vector<double> & curvature_vector,
@@ -203,16 +242,8 @@ void calc_lateral_acceleration(
 
   for (size_t i = 0; i < trajectory.points.size(); ++i) {
     const auto v_lon = trajectory.points.at(i).longitudinal_velocity_mps;
-    const auto a_lon = trajectory.points.at(i).acceleration_mps2;
 
-    // Component 1: Centrifugal acceleration from curvature (v^2 * κ)
-    const auto lat_acc_curve = v_lon * v_lon * curvature_vector.at(i);
-
-    // Component 2: Lateral projection of longitudinal acceleration
-    const auto theta = std::atan2(curvature_vector.at(i) * v_lon * v_lon, a_lon);
-    const auto lat_acc_from_lon = a_lon * std::sin(theta);
-
-    lateral_acceleration_vector.at(i) = std::hypot(lat_acc_curve, lat_acc_from_lon);
+    lateral_acceleration_vector.at(i) = v_lon * v_lon * curvature_vector.at(i);
   }
 }
 
@@ -229,11 +260,62 @@ std::pair<double, size_t> calcMaxLateralAcceleration(const Trajectory & trajecto
     return {0.0, 0};
   }
 
-  const auto max_it =
-    std::max_element(lateral_acceleration_vector.begin(), lateral_acceleration_vector.end());
+  const auto max_it = std::max_element(
+    lateral_acceleration_vector.begin(), lateral_acceleration_vector.end(),
+    [](double a, double b) { return std::abs(a) < std::abs(b); });
   const size_t max_index = std::distance(lateral_acceleration_vector.begin(), max_it);
 
   return {*max_it, max_index};
+}
+
+void calc_lateral_jerk(const Trajectory & trajectory, std::vector<double> & lateral_jerk_vector)
+{
+  // Handle trajectories with insufficient points
+  if (trajectory.points.size() < 2) {
+    lateral_jerk_vector = std::vector<double>(trajectory.points.size(), 0.0);
+    return;
+  }
+  std::vector<double> curvature_vector;
+  calcCurvature(trajectory, curvature_vector);
+
+  // Initialize lateral jerk array with zeros
+  lateral_jerk_vector = std::vector<double>(trajectory.points.size(), 0.0);
+
+  // Calculate lateral jerk for each point
+  // Note: The complete formula for lateral jerk is:
+  // j_lat = v_lon^3 * (dk/ds) + 3 * v_lon^2 * a_lon * k
+  // However, the dk/ds term is omitted here because the curvature calculation
+  // is currently unstable, making it difficult to derive an accurate rate of
+  // curvature change. Therefore, we only use the second term for a stable estimation.
+
+  // TODO(Sugahara): When the curvature calculation becomes stable, include the v_lon^3 * (dk/ds)
+  // term in the lateral jerk calculation for a more accurate result.
+  for (size_t i = 0; i < trajectory.points.size(); ++i) {
+    const double v_lon = trajectory.points.at(i).longitudinal_velocity_mps;
+    const double a_lon = trajectory.points.at(i).acceleration_mps2;
+
+    // Calculate lateral jerk using simplified formula: jerk_lat = 3 * v_lon^2 * a_lon * curvature
+    lateral_jerk_vector.at(i) = 3.0 * v_lon * v_lon * a_lon * curvature_vector.at(i);
+  }
+}
+
+std::pair<double, size_t> calc_max_lateral_jerk(const Trajectory & trajectory)
+{
+  std::vector<double> lateral_jerk_vector;
+  calc_lateral_jerk(trajectory, lateral_jerk_vector);
+
+  if (lateral_jerk_vector.empty()) {
+    return {0.0, 0};
+  }
+
+  // Find index of maximum absolute lateral jerk
+  const auto max_it = std::max_element(
+    lateral_jerk_vector.begin(), lateral_jerk_vector.end(),
+    [](double a, double b) { return std::abs(a) < std::abs(b); });
+
+  const size_t max_index = std::distance(lateral_jerk_vector.begin(), max_it);
+
+  return {std::abs(*max_it), max_index};
 }
 
 std::pair<double, size_t> getMaxLongitudinalAcc(const Trajectory & trajectory)

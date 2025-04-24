@@ -16,6 +16,8 @@
 
 #include "autoware_radar_object_tracker/association/solver/gnn_solver.hpp"
 
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 #include <nlohmann/json.hpp>
 
 #include <algorithm>

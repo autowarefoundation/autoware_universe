@@ -22,7 +22,6 @@
 #include <boost/geometry/algorithms/intersects.hpp>
 
 #include <lanelet2_core/geometry/Polygon.h>
-#include <tf2_ros/create_timer_ros.h>
 
 #include <memory>
 #include <string>
@@ -69,12 +68,7 @@ Lanelet2MapFilterComponent::Lanelet2MapFilterComponent(const rclcpp::NodeOptions
 
   // Set tf
   {
-    rclcpp::Clock::SharedPtr ros_clock = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
-    tf_buffer_ = std::make_shared<tf2_ros::Buffer>(ros_clock);
-    auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
-      get_node_base_interface(), get_node_timers_interface());
-    tf_buffer_->setCreateTimerInterface(timer_interface);
-    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+    managed_tf_buffer_ = std::make_shared<managed_transform_buffer::ManagedTransformBuffer>();
   }
 }
 
@@ -100,25 +94,9 @@ bool Lanelet2MapFilterComponent::transformPointCloud(
   const std::string & in_target_frame, const PointCloud2ConstPtr & in_cloud_ptr,
   PointCloud2 * out_cloud_ptr)
 {
-  if (in_target_frame == in_cloud_ptr->header.frame_id) {
-    *out_cloud_ptr = *in_cloud_ptr;
-    return true;
-  }
-
-  geometry_msgs::msg::TransformStamped transform_stamped;
-  try {
-    transform_stamped = tf_buffer_->lookupTransform(
-      in_target_frame, in_cloud_ptr->header.frame_id, in_cloud_ptr->header.stamp,
-      rclcpp::Duration::from_seconds(1.0));
-  } catch (tf2::TransformException & ex) {
-    RCLCPP_WARN(this->get_logger(), "%s", ex.what());
-    return false;
-  }
-  // tf2::doTransform(*in_cloud_ptr, *out_cloud_ptr, transform_stamped);
-  Eigen::Matrix4f mat = tf2::transformToEigen(transform_stamped.transform).matrix().cast<float>();
-  pcl_ros::transformPointCloud(mat, *in_cloud_ptr, *out_cloud_ptr);
-  out_cloud_ptr->header.frame_id = in_target_frame;
-  return true;
+  return managed_tf_buffer_->transformPointcloud(
+    in_target_frame, *in_cloud_ptr, *out_cloud_ptr, in_cloud_ptr->header.stamp,
+    rclcpp::Duration::from_seconds(1.0), this->get_logger());
 }
 
 LinearRing2d Lanelet2MapFilterComponent::getConvexHull(

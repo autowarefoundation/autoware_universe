@@ -26,6 +26,7 @@ constexpr double THRESHOLD_INTERVAL = 1.0;
 constexpr double THRESHOLD_RELATIVE_ANGLE = 115.0 * deg2rad;
 constexpr double THRESHOLD_CURVATURE = 0.3;
 constexpr double THRESHOLD_LATERAL_ACC = 5.0;
+constexpr double THRESHOLD_LATERAL_JERK = 5.0;
 constexpr double THRESHOLD_LONGITUDINAL_MAX_ACC = 3.0;
 constexpr double THRESHOLD_LONGITUDINAL_MIN_ACC = -6.0;
 constexpr double THRESHOLD_STEERING = 35.0 * deg2rad;
@@ -37,5 +38,8 @@ constexpr double THRESHOLD_NOMINAL_LATENCY = 1.0;
 constexpr double THRESHOLD_YAW_DEVIATION = 1.5708;
 constexpr double PARAMETER_FORWARD_TRAJECTORY_LENGTH_ACCELERATION = -5.0;
 constexpr double PARAMETER_FORWARD_TRAJECTORY_LENGTH_MARGIN = 2.0;
+constexpr double THRESHOLD_LATERAL_SHIFT = 0.5;
+constexpr double THRESHOLD_FORWARD_SHIFT = 1.0;
+constexpr double THRESHOLD_BACKWARD_SHIFT = 0.1;
 
 #endif  // TEST_PARAMETER_HPP_

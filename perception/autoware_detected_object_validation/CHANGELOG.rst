@@ -2,6 +2,17 @@
 Changelog for package autoware_detected_object_validation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat: reduce warn log frequency (`#10414 <https://github.com/autowarefoundation/autoware_universe/issues/10414>`_)
+  * feat: limit warning message frequency to 3.0 sec
+  * refactor: use THROTTLE ERROR macro
+  fix: reduce code complexity
+  ---------
+  Co-authored-by: Jian Kang <jian.kang@tier4.jp>
+* Contributors: Kang, Ryohsuke Mitsudome
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

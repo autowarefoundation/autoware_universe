@@ -41,7 +41,6 @@
   <arg name="car_traffic_light_classifier_param_path"/>
   <arg name="pedestrian_traffic_light_classifier_param_path"/>
   <arg name="traffic_light_roi_visualizer_param_path"/>
-  <arg name="traffic_light_selector_param_path"/>
   <arg name="traffic_light_occlusion_predictor_param_path"/>
   <arg name="traffic_light_multi_camera_fusion_param_path"/>
   <arg name="traffic_light_arbiter_param_path"/>
@@ -50,16 +49,38 @@
   <!-- ML model parameters -->
   <arg name="lidar_detection_model_type" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[0]&quot;)"/>
   <arg name="lidar_detection_model_name" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[1] if '/' in '$(var lidar_detection_model)' else ''&quot;)"/>
+  <arg name="bevfusion_model_path" default="$(var data_path)/bevfusion"/>
   <arg name="centerpoint_model_path" default="$(var data_path)/lidar_centerpoint"/>
   <arg name="transfusion_model_path" default="$(var data_path)/lidar_transfusion"/>
   <arg name="pointpainting_model_path" default="$(var data_path)/image_projection_based_fusion"/>
 
   <!-- Common parameters -->
   <arg name="input/pointcloud" default="/sensing/lidar/concatenated/pointcloud" description="The topic will be used in the detection module"/>
-  <arg name="mode" default="camera_lidar_fusion" description="options: `camera_lidar_radar_fusion`, `camera_lidar_fusion`, `lidar_radar_fusion`, `lidar` or `radar`"/>
+  <arg name="mode" default="camera_lidar_fusion">
+    <choice value="camera_lidar_radar_fusion"/>
+    <choice value="camera_lidar_fusion"/>
+    <choice value="lidar_radar_fusion"/>
+    <choice value="lidar"/>
+    <choice value="radar"/>
+  </arg>
   <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
-  <arg name="lidar_detection_model_type" default="$(var lidar_detection_model_type)" description="options: `transfusion`, `centerpoint`, `pointpainting`, `apollo`, `clustering`"/>
-  <arg name="lidar_detection_model_name" default="$(var lidar_detection_model_name)" description="options: `transfusion`, `centerpoint`, `centerpoint_tiny`, `centerpoint_sigma`, `pointpainting`"/>
+  <arg name="lidar_detection_model_type" default="$(var lidar_detection_model_type)">
+    <choice value="bevfusion"/>
+    <choice value="centerpoint"/>
+    <choice value="pointpainting"/>
+    <choice value="transfusion"/>
+    <choice value="apollo"/>
+    <choice value="clustering"/>
+  </arg>
+  <arg name="lidar_detection_model_name" default="$(var lidar_detection_model_name)">
+    <choice value="bevfusion_lidar"/>
+    <choice value="centerpoint"/>
+    <choice value="centerpoint_tiny"/>
+    <choice value="centerpoint_sigma"/>
+    <choice value="pointpainting"/>
+    <choice value="transfusion"/>
+    <choice value=""/>
+  </arg>
   <arg name="image_raw0" default="/sensing/camera/camera0/image_rect_color" description="image raw topic name"/>
   <arg name="camera_info0" default="/sensing/camera/camera0/camera_info" description="camera info topic name"/>
   <arg name="detection_rois0" default="/perception/object_recognition/detection/rois0" description="detection rois output topic name"/>
@@ -322,7 +343,6 @@
         <arg name="car_traffic_light_classifier_param_path" value="$(var car_traffic_light_classifier_param_path)"/>
         <arg name="pedestrian_traffic_light_classifier_param_path" value="$(var pedestrian_traffic_light_classifier_param_path)"/>
         <arg name="traffic_light_roi_visualizer_param_path" value="$(var traffic_light_roi_visualizer_param_path)"/>
-        <arg name="traffic_light_selector_param_path" value="$(var traffic_light_selector_param_path)"/>
         <arg name="traffic_light_occlusion_predictor_param_path" value="$(var traffic_light_occlusion_predictor_param_path)"/>
         <arg name="traffic_light_multi_camera_fusion_param_path" value="$(var traffic_light_multi_camera_fusion_param_path)"/>
         <arg name="traffic_light_arbiter_param_path" value="$(var traffic_light_arbiter_param_path)"/>

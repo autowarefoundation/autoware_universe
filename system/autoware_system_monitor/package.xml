@@ -2,11 +2,12 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_system_monitor</name>
-  <version>0.43.0</version>
+  <version>0.44.0</version>
   <description>The system_monitor package</description>
   <maintainer email="fumihito.ito@tier4.jp">Fumihito Ito</maintainer>
   <maintainer email="tetsuhiro.kawaguchi@tier4.jp">TetsuKawa</maintainer>
   <maintainer email="junya.sasaki@tier4.jp">Junya Sasaki</maintainer>
+  <maintainer email="masaki.nishikawa@tier4.jp">Masaki Nishikawa</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
