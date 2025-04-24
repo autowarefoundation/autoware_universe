@@ -32,6 +32,7 @@
 #include <geometry_msgs/msg/point.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
+#include <string>
 #include <vector>
 
 namespace autoware::multi_object_tracker

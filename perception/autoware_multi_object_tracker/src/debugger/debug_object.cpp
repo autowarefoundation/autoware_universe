@@ -96,7 +96,7 @@ void TrackerObjectDebugger::collect(
     types::DynamicObject tracked_object;
     (*(tracker_itr))->getTrackedObject(message_time, tracked_object);
     object_data.uuid = uuidToBoostUuid(tracked_object.uuid);
-    object_data.uuid_str = uuidToString(tracked_object.uuid);
+    object_data.uuid_str = (*(tracker_itr))->getUuidString();
 
     // tracker
     bool is_associated = false;
