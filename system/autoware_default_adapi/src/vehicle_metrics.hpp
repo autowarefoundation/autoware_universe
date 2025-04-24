@@ -33,6 +33,8 @@ private:
   using VehicleMetrics = autoware::adapi_specs::vehicle::VehicleMetrics;
   using EnergyStatus = autoware::component_interface_specs_universe::vehicle::EnergyStatus;
 
+  void on_timer();
+
   Publisher<VehicleMetrics>::SharedPtr pub_metrics_;
   PollingSubscription<EnergyStatus::Message>::SharedPtr sub_energy_;
   rclcpp::TimerBase::SharedPtr timer_;

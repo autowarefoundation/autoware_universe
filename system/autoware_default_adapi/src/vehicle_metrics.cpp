@@ -26,17 +26,19 @@ VehicleMetricsNode::VehicleMetricsNode(const rclcpp::NodeOptions & options)
   adaptor.init_pub(pub_metrics_);
   sub_energy_ = create_polling_subscription<EnergyStatus>(this);
 
-  const auto on_timer = [this]() {
-    constexpr double f_nan = std::numeric_limits<float>::quiet_NaN();
-    const auto energy = sub_energy_->take_data();
-
-    VehicleMetrics::Message msg;
-    msg.stamp = now();
-    msg.energy = energy ? energy->energy_level : f_nan;
-    pub_metrics_->publish(msg);
-  };
   const auto period = rclcpp::Rate(0.1).period();
-  timer_ = rclcpp::create_timer(this, get_clock(), period, on_timer);
+  timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { on_timer(); });
+}
+
+void VehicleMetricsNode::on_timer()
+{
+  constexpr auto f_nan = std::numeric_limits<float>::quiet_NaN();
+  const auto energy = sub_energy_->take_data();
+
+  VehicleMetrics::Message msg;
+  msg.stamp = now();
+  msg.energy = energy ? energy->energy_level : f_nan;
+  pub_metrics_->publish(msg);
 }
 
 }  // namespace autoware::default_adapi
