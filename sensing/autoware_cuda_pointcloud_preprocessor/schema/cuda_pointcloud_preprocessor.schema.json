@@ -30,7 +30,7 @@
         "object_length_threshold": {
           "type": "number",
           "description": "minimum object length to be considered a valid cluster in meters",
-          "default": "0.1",
+          "default": "0.05",
           "minimum": 0.0
         },
         "num_points_threshold": {
