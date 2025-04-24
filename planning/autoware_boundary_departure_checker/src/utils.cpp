@@ -55,7 +55,7 @@ FootprintMargin calcFootprintMargin(
 }
 }  // namespace
 
-namespace autoware::lane_departure_checker::utils
+namespace autoware::boundary_departure_checker::utils
 {
 TrajectoryPoints cutTrajectory(const TrajectoryPoints & trajectory, const double length)
 {
@@ -234,4 +234,4 @@ double calcMaxSearchLengthForBoundaries(
   const double max_ego_search_length = std::hypot(max_ego_lon_length, max_ego_lat_length);
   return autoware::motion_utils::calcArcLength(trajectory.points) + max_ego_search_length;
 }
-}  // namespace autoware::lane_departure_checker::utils
+}  // namespace autoware::boundary_departure_checker::utils

@@ -44,7 +44,8 @@ public:
 
   GeometricParallelParking planner_;
   ParallelParkingParameters parallel_parking_parameters_;
-  std::shared_ptr<autoware::lane_departure_checker::LaneDepartureChecker> lane_departure_checker_;
+  std::shared_ptr<autoware::boundary_departure_checker::LaneDepartureChecker>
+    lane_departure_checker_;
 
   friend class TestGeometricPullOut;
 };

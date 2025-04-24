@@ -15,12 +15,11 @@
 #ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__PARAMETERS_HPP_
 #define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__PARAMETERS_HPP_
 
+#include "autoware/boundary_departure_checker/type_alias.hpp"
+
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/pose_deviation.hpp>
 
-#include <autoware_planning_msgs/msg/lanelet_route.hpp>
-#include <autoware_planning_msgs/msg/trajectory.hpp>
-#include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
@@ -29,15 +28,8 @@
 #include <string>
 #include <vector>
 
-namespace autoware::lane_departure_checker
+namespace autoware::boundary_departure_checker
 {
-using autoware_planning_msgs::msg::LaneletRoute;
-using autoware_planning_msgs::msg::Trajectory;
-using autoware_planning_msgs::msg::TrajectoryPoint;
-using autoware_utils::PoseDeviation;
-using TrajectoryPoints = std::vector<TrajectoryPoint>;
-using autoware_utils::LinearRing2d;
-
 struct Param
 {
   double footprint_margin_scale{};
@@ -74,6 +66,6 @@ struct Output
   std::vector<LinearRing2d> vehicle_footprints;
   std::vector<LinearRing2d> vehicle_passing_areas;
 };
-}  // namespace autoware::lane_departure_checker
+}  // namespace autoware::boundary_departure_checker
 
 #endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__PARAMETERS_HPP_

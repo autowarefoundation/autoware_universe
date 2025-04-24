@@ -563,10 +563,10 @@ int main(int argc, char ** argv)
       node.get(), "goal_planner.");
   goal_planner_parameter.bus_stop_area.use_bus_stop_area = true;
   goal_planner_parameter.lane_departure_check_expansion_margin = 0.2;
-  autoware::lane_departure_checker::Param lane_departure_checker_params;
+  autoware::boundary_departure_checker::Param lane_departure_checker_params;
   lane_departure_checker_params.footprint_extra_margin =
     goal_planner_parameter.lane_departure_check_expansion_margin;
-  autoware::lane_departure_checker::LaneDepartureChecker lane_departure_checker(
+  autoware::boundary_departure_checker::LaneDepartureChecker lane_departure_checker(
     lane_departure_checker_params, vehicle_info);
 
   const auto footprint = vehicle_info.createFootprint();

@@ -40,11 +40,11 @@ GeometricPullOut::GeometricPullOut(
 : PullOutPlannerBase{node, parameters, time_keeper},
   parallel_parking_parameters_{parameters.parallel_parking_parameters}
 {
-  auto lane_departure_checker_params = autoware::lane_departure_checker::Param{};
+  auto lane_departure_checker_params = autoware::boundary_departure_checker::Param{};
   lane_departure_checker_params.footprint_extra_margin =
     parameters.lane_departure_check_expansion_margin;
   lane_departure_checker_ =
-    std::make_shared<autoware::lane_departure_checker::LaneDepartureChecker>(
+    std::make_shared<autoware::boundary_departure_checker::LaneDepartureChecker>(
       lane_departure_checker_params, vehicle_info_);
   planner_.setParameters(parallel_parking_parameters_);
 }

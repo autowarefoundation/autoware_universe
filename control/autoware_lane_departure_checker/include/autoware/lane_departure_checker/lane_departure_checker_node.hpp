@@ -47,6 +47,7 @@
 namespace autoware::lane_departure_checker
 {
 using autoware_map_msgs::msg::LaneletMapBin;
+using namespace boundary_departure_checker;  // NOLINT;
 
 class LaneDepartureCheckerNode : public rclcpp::Node
 {

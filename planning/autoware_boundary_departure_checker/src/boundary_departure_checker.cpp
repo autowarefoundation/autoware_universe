@@ -29,17 +29,12 @@
 #include <string>
 #include <vector>
 
-using autoware_utils::LinearRing2d;
-using autoware_utils::LineString2d;
-using autoware_utils::MultiPoint2d;
-using autoware_utils::MultiPolygon2d;
-using autoware_utils::Point2d;
-
 namespace
 {
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
+using autoware_utils::Point2d;
 using geometry_msgs::msg::Point;
 
 double calcBrakingDistance(
@@ -61,7 +56,7 @@ bool isInAnyLane(const lanelet::ConstLanelets & candidate_lanelets, const Point2
 
 }  // namespace
 
-namespace autoware::lane_departure_checker
+namespace autoware::boundary_departure_checker
 {
 Output LaneDepartureChecker::update(const Input & input)
 {
@@ -397,4 +392,4 @@ autoware_utils::Polygon2d LaneDepartureChecker::toPolygon2D(
   return polygon;
 }
 
-}  // namespace autoware::lane_departure_checker
+}  // namespace autoware::boundary_departure_checker
