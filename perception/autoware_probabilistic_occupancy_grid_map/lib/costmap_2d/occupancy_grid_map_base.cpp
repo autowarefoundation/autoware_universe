@@ -114,6 +114,13 @@ void OccupancyGridMapInterface::updateOrigin(double new_origin_x, double new_ori
   double new_grid_ox{origin_x_ + cell_ox * resolution_};
   double new_grid_oy{origin_y_ + cell_oy * resolution_};
 
+  if (first_iteration_) {
+    origin_x_ = new_grid_ox;
+    origin_y_ = new_grid_oy;
+    first_iteration_ = false;
+    return;
+  }
+
   // To save casting from unsigned int to int a bunch of times
   int size_x{static_cast<int>(size_x_)};
   int size_y{static_cast<int>(size_y_)};
