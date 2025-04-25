@@ -2,6 +2,7 @@
     ros__parameters:
       map_frame: "map"
       base_link_frame: "base_link"
+      max_velocity: 10.0 # m/s
       update_rate: 10.0 # hz
       save_interval: 0.5 # m
       bound_margin: 1.0 # m
