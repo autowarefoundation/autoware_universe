@@ -59,6 +59,12 @@ RadarObjectsAdapter::RadarObjectsAdapter(const rclcpp::NodeOptions & options)
   required_attributes_ = {
     "existence_probability", "position_x",     "position_y", "velocity_x", "velocity_y",
     "acceleration_x",        "acceleration_y", "orientation"};
+
+  std::size_t hash_code = std::hash<std::string>{}(radar_objects_sub_->get_topic_name());
+
+  for (std::size_t i = 0; i < sizeof(std::size_t); ++i) {
+    topic_hash_code_[i] = static_cast<std::uint8_t>((hash_code >> (i * 8)) & 0xFF);
+  }
 }
 
 void RadarObjectsAdapter::radar_cov_to_detection_pose_cov(
@@ -295,6 +301,14 @@ void RadarObjectsAdapter::parse_as_tracks(
     output_object.object_id.uuid[1] = static_cast<uint8_t>((input_object.object_id >> 8) & 0xFF);
     output_object.object_id.uuid[2] = static_cast<uint8_t>((input_object.object_id >> 16) & 0xFF);
     output_object.object_id.uuid[3] = static_cast<uint8_t>((input_object.object_id >> 24) & 0xFF);
+
+    for (std::size_t i = 4; i < output_object.object_id.uuid.size(); ++i) {
+      if (i - 4 < topic_hash_code_.size()) {
+        output_object.object_id.uuid[i] = topic_hash_code_[i - 4];
+      } else {
+        output_object.object_id.uuid[i] = 0;
+      }
+    }
 
     output_object.existence_probability = input_object.existence_probability;
 

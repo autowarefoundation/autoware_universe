@@ -62,6 +62,7 @@ private:
   std::unordered_map<std::string, autoware_sensing_msgs::msg::RadarFieldInfo> field_info_map_;
 
   bool valid_radar_info_{false};
+  std::array<std::uint8_t, sizeof(std::size_t)> topic_hash_code_;
 
   std::vector<std::string> required_attributes_;
   float default_position_z_;
