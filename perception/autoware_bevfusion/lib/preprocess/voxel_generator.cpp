@@ -40,9 +40,10 @@ VoxelGenerator::VoxelGenerator(
 }
 
 bool VoxelGenerator::enqueuePointCloud(
-  const sensor_msgs::msg::PointCloud2 & msg, const tf2_ros::Buffer & tf_buffer)
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+  const tf2_ros::Buffer & tf_buffer)
 {
-  return pd_ptr_->enqueuePointCloud(msg, tf_buffer);
+  return pd_ptr_->enqueuePointCloud(msg_ptr, tf_buffer);
 }
 
 std::size_t VoxelGenerator::generateSweepPoints(CudaUniquePtr<float[]> & points_d)
@@ -52,7 +53,8 @@ std::size_t VoxelGenerator::generateSweepPoints(CudaUniquePtr<float[]> & points_
 
   for (auto pc_cache_iter = pd_ptr_->getPointCloudCacheIter(); !pd_ptr_->isCacheEnd(pc_cache_iter);
        pc_cache_iter++) {
-    auto sweep_num_points = pc_cache_iter->num_points;
+    const auto & input_pointcloud_msg_ptr = pc_cache_iter->input_pointcloud_msg_ptr;
+    auto sweep_num_points = input_pointcloud_msg_ptr->height * input_pointcloud_msg_ptr->width;
     auto output_offset = point_counter * config_.num_point_feature_size_;
 
     if (point_counter + sweep_num_points > static_cast<std::size_t>(config_.cloud_capacity_)) {
@@ -69,7 +71,8 @@ std::size_t VoxelGenerator::generateSweepPoints(CudaUniquePtr<float[]> & points_
     static_assert(!Eigen::Matrix4f::IsRowMajor, "matrices should be col-major.");
 
     float time_lag = static_cast<float>(
-      pd_ptr_->getCurrentTimestamp() - rclcpp::Time(pc_cache_iter->header.stamp).seconds());
+      pd_ptr_->getCurrentTimestamp() -
+      rclcpp::Time(input_pointcloud_msg_ptr->header.stamp).seconds());
 
     CHECK_CUDA_ERROR(cudaMemcpyAsync(
       affine_past2current_d_.get(), affine_past2current.data(),
@@ -78,8 +81,8 @@ std::size_t VoxelGenerator::generateSweepPoints(CudaUniquePtr<float[]> & points_
     CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
     pre_ptr_->generateSweepPoints_launch(
-      pc_cache_iter->data_d.get(), sweep_num_points, time_lag, affine_past2current_d_.get(),
-      points_d.get() + output_offset);
+      reinterpret_cast<InputPointType *>(input_pointcloud_msg_ptr->data.get()), sweep_num_points,
+      time_lag, affine_past2current_d_.get(), points_d.get() + output_offset);
     point_counter += sweep_num_points;
   }
 

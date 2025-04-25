@@ -118,7 +118,7 @@ public:
 
     ndt.trans_epsilon = node->declare_parameter<double>("ndt.trans_epsilon");
     ndt.step_size = node->declare_parameter<double>("ndt.step_size");
-    ndt.resolution = node->declare_parameter<double>("ndt.resolution");
+    ndt.resolution = node->declare_parameter<float>("ndt.resolution");
     ndt.max_iterations = static_cast<int>(node->declare_parameter<int64_t>("ndt.max_iterations"));
     ndt.num_threads = static_cast<int>(node->declare_parameter<int64_t>("ndt.num_threads"));
     ndt.num_threads = std::max(ndt.num_threads, 1);
