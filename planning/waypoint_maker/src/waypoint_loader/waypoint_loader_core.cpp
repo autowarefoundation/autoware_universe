@@ -10,8 +10,8 @@ WaypointLoaderNode::WaypointLoaderNode()
       "node_name_for_max_velocity", "/planning/scenario_planning/velocity_smoother"),
     declare_parameter("param_name_for_max_velocity", "max_vel"));
   double max_velocity_param = declare_parameter("max_velocity", 10.0);
-  max_velocity_ = std::max(max_velocity_system, max_velocity_param);
-  
+  max_velocity_ = std::min(max_velocity_system, max_velocity_param);
+
   lane_csv_position_ = declare_parameter(
     "lane_csv_position", "./src/universe/autoware.universe/planning/waypoint_maker/log/");
   bound_margin_ = declare_parameter("bound_margin", 1.0);
