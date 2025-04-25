@@ -290,6 +290,12 @@ void RadarObjectsAdapter::parse_as_tracks(
 
   for (const auto & input_object : input_msg.objects) {
     autoware_perception_msgs::msg::TrackedObject output_object;
+
+    output_object.object_id.uuid[0] = static_cast<uint8_t>((input_object.object_id >> 0) & 0xFF);
+    output_object.object_id.uuid[1] = static_cast<uint8_t>((input_object.object_id >> 8) & 0xFF);
+    output_object.object_id.uuid[2] = static_cast<uint8_t>((input_object.object_id >> 16) & 0xFF);
+    output_object.object_id.uuid[3] = static_cast<uint8_t>((input_object.object_id >> 24) & 0xFF);
+
     output_object.existence_probability = input_object.existence_probability;
 
     output_object.classification.reserve(input_object.classifications.size());
