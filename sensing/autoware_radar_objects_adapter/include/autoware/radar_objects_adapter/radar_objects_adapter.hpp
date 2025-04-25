@@ -18,6 +18,7 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
+#include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <autoware_sensing_msgs/msg/radar_info.hpp>
 #include <autoware_sensing_msgs/msg/radar_objects.hpp>
 
@@ -43,12 +44,20 @@ private:
     const std::array<float, 6> & radar_cov, const float yaw, const float yaw_std,
     std::array<double, 36> & twist_cov);
 
+  void radar_cov_to_detection_acceleration_cov(
+    const std::array<float, 6> & radar_acceleration_cov, const float yaw,
+    std::array<double, 36> & acceleration_cov);
+
   void objects_callback(const autoware_sensing_msgs::msg::RadarObjects & objects_msg);
+  void parse_as_detections(const autoware_sensing_msgs::msg::RadarObjects & objects_msg);
+  void parse_as_tracks(const autoware_sensing_msgs::msg::RadarObjects & objects_msg);
+
   void radar_info_callback(const autoware_sensing_msgs::msg::RadarInfo & radar_info_msg);
 
   rclcpp::Subscription<autoware_sensing_msgs::msg::RadarObjects>::SharedPtr radar_objects_sub_;
   rclcpp::Subscription<autoware_sensing_msgs::msg::RadarInfo>::SharedPtr radar_info_sub_;
-  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr pub_;
+  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr detections_pub_;
+  rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr tracks_pub_;
 
   std::unordered_map<std::string, autoware_sensing_msgs::msg::RadarFieldInfo> field_info_map_;
 
@@ -57,12 +66,14 @@ private:
   std::vector<std::string> required_attributes_;
   float default_position_z_;
   float default_velocity_z_;
+  float default_acceleration_z_;
   float default_size_x_;
   float default_size_y_;
   float default_size_z_;
 
   bool position_z_available_;
   bool velocity_z_available_;
+  bool acceleration_z_available_;
   bool size_x_available_;
   bool size_y_available_;
   bool size_z_available_;
