@@ -19,6 +19,7 @@
 
 #include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <rclcpp/rclcpp.hpp>
 
