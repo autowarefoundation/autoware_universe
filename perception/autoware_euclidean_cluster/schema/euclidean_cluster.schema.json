@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "autoware_eucidean Parameters",
+  "title": "autoware_euclidean Parameters",
   "type": "object",
   "definitions": {
     "euclidean_cluster": {
