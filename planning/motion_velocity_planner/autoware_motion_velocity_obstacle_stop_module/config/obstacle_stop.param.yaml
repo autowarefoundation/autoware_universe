@@ -10,6 +10,8 @@
         terminal_stop_margin : 3.0 # Stop margin at the goal. This value cannot exceed stop margin. [m]
         min_behavior_stop_margin: 3.0 # [m]
 
+        additional_stop_margin_opposing_traffic: 20
+
         hold_stop_velocity_threshold: 0.01 # The maximum ego velocity to hold stopping [m/s]
         hold_stop_distance_threshold: 0.3 # The ego keeps stopping if the distance to stop changes within the threshold [m]
 
