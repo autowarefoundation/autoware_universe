@@ -28,6 +28,7 @@
 #endif
 
 #include <autoware/point_types/types.hpp>
+#include <cuda_blackboard/cuda_pointcloud2.hpp>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
@@ -48,12 +49,15 @@ public:
     const DensificationParam & densification_param, const TransfusionConfig & config,
     cudaStream_t & stream);
   std::size_t generateSweepPoints(
-    const sensor_msgs::msg::PointCloud2 & msg, cuda::unique_ptr<float[]> & points_d);
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+    cuda::unique_ptr<float[]> & points_d);
   bool enqueuePointCloud(
-    const sensor_msgs::msg::PointCloud2 & msg, const tf2_ros::Buffer & tf_buffer);
-  void initCloudInfo(const sensor_msgs::msg::PointCloud2 & msg);
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+    const tf2_ros::Buffer & tf_buffer);
+  void initCloudInfo(const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr);
   std::tuple<const uint32_t, const uint8_t, const uint8_t> getFieldInfo(
-    const sensor_msgs::msg::PointCloud2 & msg, const std::string & field_name);
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+    const std::string & field_name);
 
 private:
   std::unique_ptr<PointCloudDensification> pd_ptr_{nullptr};

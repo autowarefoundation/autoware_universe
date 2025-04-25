@@ -2,6 +2,36 @@
 Changelog for package autoware_planning_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* chore(autoware_planning_evaluator): record goal_stop_deviation only when ego stop (`#10429 <https://github.com/autowarefoundation/autoware_universe/issues/10429>`_)
+  * record modified_goal related output_metric only when the ego stop close to goal
+  * change vel thr
+  * pre-commit
+  ---------
+* feat(autoware_planning_evaluator): refactor planning_evaluator for new metrics (`#10368 <https://github.com/autowarefoundation/autoware_universe/issues/10368>`_)
+  * tmp save.
+  * tmp save.
+  * WIP add accumulator-based metrics.
+  * pre-commit
+  * add unit test.
+  * pre-commit
+  * fix cppcheck
+  * update readme.
+  * pre-commit
+  * polish readme.
+  * pre-commit
+  * change count to size_t
+  * update config.
+  * publish count.
+  * fix stop decision bug
+  * update parameters.
+  * fix typo
+  ---------
+  Co-authored-by: t4-adc <grp-rd-1-adc-admin@tier4.jp>
+* Contributors: Kem (TiankuiXian), Ryohsuke Mitsudome
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

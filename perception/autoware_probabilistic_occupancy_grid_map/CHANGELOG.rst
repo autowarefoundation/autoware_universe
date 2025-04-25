@@ -2,6 +2,26 @@
 Changelog for package autoware_probabilistic_occupancy_grid_map
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(probabilistic_occupancy_grid_map): add diagnostics warning when latency is too long (`#10280 <https://github.com/autowarefoundation/autoware_universe/issues/10280>`_)
+  * feat(probabilistic_occupancy_grid_map): add diagnostics warning when latency is too long
+  * feat(probabilistic_occupancy_grid_map): add default max_output_delay_ms\_
+  * style(pre-commit): autofix
+  * feat(probabilistic_occupancy_grid_map): fix reading parameters and add schema
+  * style(pre-commit): autofix
+  * feat(probabilistic_occupancy_grid_map):1. add tolerance duration  2. change to process time
+  * feat(probabilistic_occupancy_grid_map): modification since it is clear that the target isprocess time
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(autoware_probabilistic_occupancy_grid_map): fixed transform issues and border conditions (`#10344 <https://github.com/autowarefoundation/autoware_universe/issues/10344>`_)
+  * fix: fixed transform issues and border conditions
+  * fix: fixed compilation on cpu only builds
+  ---------
+* Contributors: Kenzo Lobos Tsunekawa, Ryohsuke Mitsudome, lei.gu
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

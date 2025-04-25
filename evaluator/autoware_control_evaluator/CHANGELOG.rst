@@ -2,6 +2,17 @@
 Changelog for package autoware_control_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(control_evaluator): fix bugs about output_metrics (`#10433 <https://github.com/autowarefoundation/autoware_universe/issues/10433>`_)
+  * add val,acc,jark to metrics
+  * accumulate goal metrics only when stop at goal
+  * fix bug of stop-related metrics
+  * fix unit test.
+  ---------
+* Contributors: Kem (TiankuiXian), Ryohsuke Mitsudome
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

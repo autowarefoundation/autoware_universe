@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_tensorrt_yolox</name>
-  <version>0.43.0</version>
+  <version>0.44.0</version>
   <description>tensorrt library implementation for yolox</description>
 
   <author email="daisuke.nishimatsu@tier4.jp">Daisuke Nishimatsu</author>
@@ -25,6 +25,7 @@
   <depend>autoware_object_recognition_utils</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_tensorrt_common</depend>
+  <depend>autoware_utils</depend>
   <depend>cv_bridge</depend>
   <depend>image_transport</depend>
   <depend>libopencv-dev</depend>

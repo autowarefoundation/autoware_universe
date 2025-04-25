@@ -26,6 +26,9 @@ namespace control_diagnostics
  * @brief Enumeration of trajectory metrics
  */
 enum class Metric {
+  velocity,
+  acceleration,
+  jerk,
   lateral_deviation,
   yaw_deviation,
   goal_longitudinal_deviation,
@@ -41,6 +44,9 @@ enum class Metric {
 };
 
 static const std::unordered_map<std::string, Metric> str_to_metric = {
+  {"velocity", Metric::velocity},
+  {"acceleration", Metric::acceleration},
+  {"jerk", Metric::jerk},
   {"lateral_deviation", Metric::lateral_deviation},
   {"yaw_deviation", Metric::yaw_deviation},
   {"goal_longitudinal_deviation", Metric::goal_longitudinal_deviation},
@@ -55,6 +61,9 @@ static const std::unordered_map<std::string, Metric> str_to_metric = {
 };
 
 static const std::unordered_map<Metric, std::string> metric_to_str = {
+  {Metric::velocity, "velocity"},
+  {Metric::acceleration, "acceleration"},
+  {Metric::jerk, "jerk"},
   {Metric::lateral_deviation, "lateral_deviation"},
   {Metric::yaw_deviation, "yaw_deviation"},
   {Metric::goal_longitudinal_deviation, "goal_longitudinal_deviation"},
@@ -70,6 +79,9 @@ static const std::unordered_map<Metric, std::string> metric_to_str = {
 
 // Metrics descriptions
 static const std::unordered_map<Metric, std::string> metric_descriptions = {
+  {Metric::velocity, "Velocity[m/s]"},
+  {Metric::acceleration, "Acceleration[m/s^2]"},
+  {Metric::jerk, "Jerk[m/s^3]"},
   {Metric::lateral_deviation, "Lateral deviation from the reference trajectory[m]"},
   {Metric::yaw_deviation, "Yaw deviation from the reference trajectory[rad]"},
   {Metric::goal_longitudinal_deviation, "Longitudinal deviation from the goal point[m]"},

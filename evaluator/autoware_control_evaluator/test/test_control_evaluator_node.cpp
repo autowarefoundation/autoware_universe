@@ -261,7 +261,7 @@ TEST_F(EvalTest, TestLateralDeviation)
 
 TEST_F(EvalTest, TestKinematicStateAcc)
 {
-  setTargetMetric("kinematic_state/acc");
+  setTargetMetric("acceleration");
   Trajectory t = makeTrajectory({{0.0, 0.0}, {1.0, 0.0}});
   publishTrajectory(t);
   publishEgoPose(0.0, 0.0, 0.0);
@@ -270,7 +270,7 @@ TEST_F(EvalTest, TestKinematicStateAcc)
 
 TEST_F(EvalTest, TestKinematicStateJerk)
 {
-  setTargetMetric("kinematic_state/jerk");
+  setTargetMetric("jerk");
   Trajectory t = makeTrajectory({{0.0, 0.0}, {1.0, 0.0}});
   publishTrajectory(t);
   publishEgoPose(0.0, 0.0, 0.0);
