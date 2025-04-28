@@ -25,7 +25,7 @@ This node depends on the map height fitter library.
 
 | Name                                         | Type                                                    | Description             |
 | -------------------------------------------- | ------------------------------------------------------- | ----------------------- |
-| `/localization/pose_estimator/ndt_align_srv` | tier4_localization_msgs::srv::PoseWithCovarianceStamped | pose estimation service |
+| `/localization/pose_estimator/ndt_align_srv` | autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped | pose estimation service |
 
 ### Subscriptions
 

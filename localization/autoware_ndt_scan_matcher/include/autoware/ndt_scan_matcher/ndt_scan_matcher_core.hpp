@@ -35,7 +35,7 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_srvs/srv/set_bool.hpp>
-#include <tier4_localization_msgs/srv/pose_with_covariance_stamped.hpp>
+#include <autoware_internal_localization_msgs/srv/pose_with_covariance_stamped.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <fmt/format.h>
@@ -109,11 +109,11 @@ private:
     std_srvs::srv::SetBool::Response::SharedPtr res);
 
   void service_ndt_align(
-    const tier4_localization_msgs::srv::PoseWithCovarianceStamped::Request::SharedPtr req,
-    tier4_localization_msgs::srv::PoseWithCovarianceStamped::Response::SharedPtr res);
+    const autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped::Request::SharedPtr req,
+    autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped::Response::SharedPtr res);
   void service_ndt_align_main(
-    const tier4_localization_msgs::srv::PoseWithCovarianceStamped::Request::SharedPtr req,
-    tier4_localization_msgs::srv::PoseWithCovarianceStamped::Response::SharedPtr res);
+    const autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped::Request::SharedPtr req,
+    autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped::Response::SharedPtr res);
 
   std::tuple<geometry_msgs::msg::PoseWithCovarianceStamped, double> align_pose(
     const geometry_msgs::msg::PoseWithCovarianceStamped & initial_pose_with_cov);
@@ -189,7 +189,7 @@ private:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
     ndt_monte_carlo_initial_pose_marker_pub_;
 
-  rclcpp::Service<tier4_localization_msgs::srv::PoseWithCovarianceStamped>::SharedPtr service_;
+  rclcpp::Service<autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped>::SharedPtr service_;
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr service_trigger_node_;
 
   tf2_ros::TransformBroadcaster tf2_broadcaster_;
