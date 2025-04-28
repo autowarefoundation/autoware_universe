@@ -38,21 +38,21 @@ namespace
 template <typename T>
 __device__
 T* getElementPointer(
-    void * data, const size_t point_index, const size_t point_step, const size_t offset)
+    uint8_t* data, const size_t point_index, const size_t point_step, const size_t offset)
 {
   return reinterpret_cast<T *>(data + point_index * point_step + offset);
 }
 
 template<typename T>
 __device__
-const T getElementValue(const void * data, const size_t point_index,
+const T getElementValue(const uint8_t* data, const size_t point_index,
                         const size_t point_step, const size_t offset)
 {
   return *reinterpret_cast<const T*>(data + point_index * point_step + offset);
 }
 
 __global__
-void extractCoordKernel(const void* __restrict__  data, const size_t num_points,
+void extractCoordKernel(const uint8_t* __restrict__  data, const size_t num_points,
                         const size_t point_step, const size_t offset, float* __restrict__ coord_buf)
 {
   size_t index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -66,7 +66,7 @@ void extractCoordKernel(const void* __restrict__  data, const size_t num_points,
 __constant__ CudaVoxelGridDownsampleFilter::VoxelInfo voxel_info_dev;
 
 __global__
-void calculateVoxelIndexKernel(const void* __restrict__ data,
+void calculateVoxelIndexKernel(const uint8_t* __restrict__ data,
                                const CudaVoxelGridDownsampleFilter::ThreeDim<size_t> num_voxels,
                                size_t* __restrict__ voxel_indices, size_t* __restrict__ point_indices)
 {
@@ -97,7 +97,7 @@ void calculateVoxelIndexKernel(const void* __restrict__ data,
 
 __global__
 void accumulatePointsKernel(
-    const void * __restrict__ input_data, const size_t * __restrict__ index_map,
+    const uint8_t * __restrict__ input_data, const size_t * __restrict__ index_map,
     const size_t * __restrict__ point_indices,
     CudaVoxelGridDownsampleFilter::Centroid * __restrict__ centroids)
 {
