@@ -51,23 +51,32 @@ public:
     }
   };
 
+  struct OptionalField {
+    bool is_valid;
+    size_t offset;
+  };
+
   struct VoxelInfo {
     size_t num_input_points;
     size_t input_point_step;
     size_t input_xyzi_offset[4];
-    size_t output_xyzi_offset[4];
+    OptionalField input_return_type_offset;
+    OptionalField input_channel_offset;
+    size_t output_offsets[6];
     ThreeDim<float> voxel_size;
     ThreeDim<int> min_coord;
     ThreeDim<int> max_coord;
   };
 
-  // This filter only returns XYZI regardless of the input point type
+  // This filter only returns XYZIRC regardless of the input point type
 #pragma pack(push, 1)
   struct OutputPointType {
     float x;
     float y;
     float z;
     std::uint8_t intensity;
+    std::uint8_t return_type;
+    std::uint16_t channel;
   };
 #pragma pack(pop)
 
@@ -97,12 +106,16 @@ private:
   void getVoxelMinMaxCoordinate(const cuda_blackboard::CudaPointCloud2::ConstSharedPtr& points,
                                 float* buffer_dev);
   size_t searchValidVoxel(const cuda_blackboard::CudaPointCloud2::ConstSharedPtr& points,
-                       size_t* voxel_index_buffer_dev, size_t* point_index_buffer_dev);
+                          size_t* voxel_index_buffer_dev, size_t* point_index_buffer_dev,
+                          decltype(OutputPointType::return_type)* return_type_field_dev,
+                          decltype(OutputPointType::channel)* channel_field_dev);
   void getCentroid(const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
                    const size_t num_valid_voxel,
                    const size_t* voxel_index_dev, const size_t* point_index_dev,
                    size_t* index_map_dev, Centroid * buffer_dev,
-                   std::unique_ptr<cuda_blackboard::CudaPointCloud2>& output_points);
+                   std::unique_ptr<cuda_blackboard::CudaPointCloud2>& output_points,
+                   decltype(OutputPointType::return_type)* return_type_field_dev,
+                   decltype(OutputPointType::channel)* channel_field_dev);
 
   VoxelInfo voxel_info_{};
 

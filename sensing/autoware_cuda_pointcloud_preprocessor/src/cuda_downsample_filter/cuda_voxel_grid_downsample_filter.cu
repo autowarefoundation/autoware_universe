@@ -66,9 +66,11 @@ void extractCoordKernel(const uint8_t* __restrict__  data, const size_t num_poin
 __constant__ CudaVoxelGridDownsampleFilter::VoxelInfo voxel_info_dev;
 
 __global__
-void calculateVoxelIndexKernel(const uint8_t* __restrict__ data,
-                               const CudaVoxelGridDownsampleFilter::ThreeDim<size_t> num_voxels,
-                               size_t* __restrict__ voxel_indices, size_t* __restrict__ point_indices)
+void calculateVoxelIndexKernel(
+    const uint8_t * __restrict__ data,
+    const CudaVoxelGridDownsampleFilter::ThreeDim<size_t> num_voxels,
+    size_t * __restrict__ voxel_indices, size_t * __restrict__ point_indices,
+    uint8_t * __restrict__ return_type_field, uint16_t * __restrict__ channel_field)
 {
   size_t index = blockIdx.x * blockDim.x + threadIdx.x;
   if (index >= voxel_info_dev.num_input_points) {
@@ -93,6 +95,21 @@ void calculateVoxelIndexKernel(const uint8_t* __restrict__ data,
   voxel_indices[index] = static_cast<size_t>(
       voxel_x + (num_voxels.x) * voxel_y + (num_voxels.x * num_voxels.y) * voxel_z);
   point_indices[index] = index;
+
+  // If `return_type` and `channel` fields are contained in the input,
+  // gather the representative value to be copied to the output
+  if (index == 0) {
+    if (voxel_info_dev.input_return_type_offset.is_valid) {
+      *return_type_field = getElementValue<uint8_t>(
+          data, index, voxel_info_dev.input_point_step,
+          voxel_info_dev.input_return_type_offset.offset);
+    }
+    if (voxel_info_dev.input_channel_offset.is_valid) {
+      *channel_field = getElementValue<uint16_t>(
+          data, index, voxel_info_dev.input_point_step,
+          voxel_info_dev.input_channel_offset.offset);
+    }
+  }
 }
 
 __global__
@@ -128,9 +145,10 @@ void accumulatePointsKernel(
 }
 
 __global__
-void packCentroidKernel(const CudaVoxelGridDownsampleFilter::Centroid* __restrict__ centroids,
-                        const size_t num_valid_voxel, const size_t output_point_step,
-                        uint8_t* __restrict__ output)
+void packCentroidKernel(
+    const CudaVoxelGridDownsampleFilter::Centroid * __restrict__ centroids,
+    const size_t num_valid_voxel, const size_t output_point_step, uint8_t * __restrict__ output,
+    uint8_t * __restrict__ return_type_field, uint16_t * __restrict__ channel_field)
 {
   size_t index = blockIdx.x * blockDim.x + threadIdx.x;
   if (index >= num_valid_voxel) {
@@ -145,6 +163,12 @@ void packCentroidKernel(const CudaVoxelGridDownsampleFilter::Centroid* __restric
   dst->z = static_cast<decltype(output_type::z)>(centroids[index].z / centroids[index].count);
   dst->intensity =
       static_cast<decltype(output_type::intensity)>(centroids[index].i / centroids[index].count);
+  // Since `return_type` and `channel` fields cannot be accumulated, fill the representative values
+  // for `return_type` and `channel` fields if they are available in the input pointcloud.
+  dst->return_type =
+    voxel_info_dev.input_return_type_offset.is_valid ? *return_type_field : 0;  // 0: UNKNOWN
+  dst->channel =
+      voxel_info_dev.input_channel_offset.is_valid ? *channel_field : 0;  // dummy laser channel ID
 }
 }  // namespace
 
@@ -155,10 +179,12 @@ CudaVoxelGridDownsampleFilter::CudaVoxelGridDownsampleFilter(
   voxel_info_.voxel_size.y = voxel_size_y;
   voxel_info_.voxel_size.z = voxel_size_z;
 
-  voxel_info_.output_xyzi_offset[0] = 0;
-  voxel_info_.output_xyzi_offset[1] = voxel_info_.output_xyzi_offset[0] + sizeof(OutputPointType::x);
-  voxel_info_.output_xyzi_offset[2] = voxel_info_.output_xyzi_offset[1] + sizeof(OutputPointType::y);
-  voxel_info_.output_xyzi_offset[3] = voxel_info_.output_xyzi_offset[2] + sizeof(OutputPointType::z);
+  voxel_info_.output_offsets[0] = 0;
+  voxel_info_.output_offsets[1] = voxel_info_.output_offsets[0] + sizeof(OutputPointType::x);
+  voxel_info_.output_offsets[2] = voxel_info_.output_offsets[1] + sizeof(OutputPointType::y);
+  voxel_info_.output_offsets[3] = voxel_info_.output_offsets[2] + sizeof(OutputPointType::z);
+  voxel_info_.output_offsets[4] = voxel_info_.output_offsets[3] + sizeof(OutputPointType::intensity);
+  voxel_info_.output_offsets[5] = voxel_info_.output_offsets[4] + sizeof(OutputPointType::return_type);
 
   CUDA_VGDF_ERROR_CHECK(cudaStreamCreate(&stream_));
 
@@ -185,7 +211,7 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaVoxelGridDownsampleFilter:
   voxel_info_.num_input_points = input_points->width * input_points->height;
   voxel_info_.input_point_step = input_points->point_step;
 
-  auto get_offset = [&](const std::string& field_name) -> size_t {
+ auto get_offset = [&](const std::string& field_name) -> size_t {
     int index = -1;
     for (size_t i = 0; i < input_points->fields.size(); ++i) {
       if (input_points->fields[i].name == field_name) {
@@ -204,12 +230,27 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaVoxelGridDownsampleFilter:
   voxel_info_.input_xyzi_offset[1] = get_offset("y");
   voxel_info_.input_xyzi_offset[2] = get_offset("z");
   voxel_info_.input_xyzi_offset[3] = get_offset("intensity");
+  try {
+    voxel_info_.input_return_type_offset.offset = get_offset("return_type");
+    voxel_info_.input_return_type_offset.is_valid = true;
+  } catch (const std::runtime_error& e) {
+    voxel_info_.input_return_type_offset.is_valid = false;
+  }
+
+  try {
+    voxel_info_.input_channel_offset.offset = get_offset("channel");
+    voxel_info_.input_channel_offset.is_valid = true;
+  } catch (const std::runtime_error & e) {
+    voxel_info_.input_channel_offset.is_valid = false;
+  }
 
   // Pull working buffer from the pooled region
   auto coord_buffer_dev = allocateBufferFromPool<float>(voxel_info_.num_input_points);
   auto voxel_index_buffer_dev = allocateBufferFromPool<size_t>(voxel_info_.num_input_points);
   auto point_index_buffer_dev = allocateBufferFromPool<size_t>(voxel_info_.num_input_points);
   auto index_map_dev = allocateBufferFromPool<size_t>(voxel_info_.num_input_points);
+  auto return_type_field_dev = allocateBufferFromPool<decltype(OutputPointType::return_type)>(1);
+  auto channel_field_dev = allocateBufferFromPool<decltype(OutputPointType::channel)>(1);
 
   // Get min/max value for x, y, z in input_points to determine computation target range
   getVoxelMinMaxCoordinate(input_points, coord_buffer_dev);
@@ -217,7 +258,9 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaVoxelGridDownsampleFilter:
   // Calculate unique voxel indices that all points in input_points belong to
   // Create lookup table to show correspondence between spatial voxel grid position
   // and memory index
-  auto num_valid_voxel = searchValidVoxel(input_points, voxel_index_buffer_dev, point_index_buffer_dev);
+  auto num_valid_voxel = searchValidVoxel(
+    input_points, voxel_index_buffer_dev, point_index_buffer_dev, return_type_field_dev,
+    channel_field_dev);
 
   // Allocate region actually result filtered pointcloud requires and fill them
   auto filtered_output = std::make_unique<cuda_blackboard::CudaPointCloud2>();
@@ -226,8 +269,9 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaVoxelGridDownsampleFilter:
 
   // Calculate actual voxel-filtered points
   auto centroid_buffer_dev = allocateBufferFromPool<Centroid>(num_valid_voxel * sizeof(Centroid));
-  getCentroid(input_points, num_valid_voxel, voxel_index_buffer_dev, point_index_buffer_dev,
-              index_map_dev, centroid_buffer_dev, filtered_output);
+  getCentroid(
+    input_points, num_valid_voxel, voxel_index_buffer_dev, point_index_buffer_dev, index_map_dev,
+    centroid_buffer_dev, filtered_output, return_type_field_dev, channel_field_dev);
 
   // Fill topic fields
   {
@@ -246,13 +290,17 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaVoxelGridDownsampleFilter:
     filtered_output->height = input_points->height;
     filtered_output->width = num_valid_voxel;
     filtered_output->fields.push_back(generate_point_field(
-        "x", voxel_info_.output_xyzi_offset[0], sensor_msgs::msg::PointField::FLOAT32, 1));
+        "x", voxel_info_.output_offsets[0], sensor_msgs::msg::PointField::FLOAT32, 1));
     filtered_output->fields.push_back(generate_point_field(
-        "y", voxel_info_.output_xyzi_offset[1], sensor_msgs::msg::PointField::FLOAT32, 1));
+        "y", voxel_info_.output_offsets[1], sensor_msgs::msg::PointField::FLOAT32, 1));
     filtered_output->fields.push_back(generate_point_field(
-        "z", voxel_info_.output_xyzi_offset[2], sensor_msgs::msg::PointField::FLOAT32, 1));
+        "z", voxel_info_.output_offsets[2], sensor_msgs::msg::PointField::FLOAT32, 1));
     filtered_output->fields.push_back(generate_point_field(
-        "intensity", voxel_info_.output_xyzi_offset[3], sensor_msgs::msg::PointField::UINT8, 1));
+        "intensity", voxel_info_.output_offsets[3], sensor_msgs::msg::PointField::UINT8, 1));
+    filtered_output->fields.push_back(generate_point_field(
+        "return_type", voxel_info_.output_offsets[4], sensor_msgs::msg::PointField::UINT8, 1));
+    filtered_output->fields.push_back(generate_point_field(
+        "channel", voxel_info_.output_offsets[5], sensor_msgs::msg::PointField::UINT16, 1));
     filtered_output->is_bigendian = input_points->is_bigendian;
     filtered_output->point_step = sizeof(OutputPointType);
     filtered_output->row_step = sizeof(OutputPointType) * num_valid_voxel;
@@ -265,6 +313,8 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaVoxelGridDownsampleFilter:
   returnBufferToPool(point_index_buffer_dev);
   returnBufferToPool(index_map_dev);
   returnBufferToPool(centroid_buffer_dev);
+  returnBufferToPool(return_type_field_dev);
+  returnBufferToPool(channel_field_dev);
 
   CUDA_VGDF_ERROR_CHECK(cudaStreamSynchronize(stream_));
 
@@ -345,8 +395,9 @@ void CudaVoxelGridDownsampleFilter::getVoxelMinMaxCoordinate(
 }
 
 size_t CudaVoxelGridDownsampleFilter::searchValidVoxel(
-    const cuda_blackboard::CudaPointCloud2::ConstSharedPtr& points,
-    size_t* voxel_index_buffer_dev, size_t* point_index_buffer_dev)
+    const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & points, size_t * voxel_index_buffer_dev,
+    size_t * point_index_buffer_dev, decltype(OutputPointType::return_type) * return_type_field_dev,
+    decltype(OutputPointType::channel) * channel_field_dev)
 {
   // Update computation parameters on GPU constant memory
   CUDA_VGDF_ERROR_CHECK(cudaMemcpyToSymbolAsync(
@@ -365,7 +416,8 @@ size_t CudaVoxelGridDownsampleFilter::searchValidVoxel(
 
   // calculate voxel index that each input point belong to
   calculateVoxelIndexKernel<<<grid_dim, block_dim, 0, stream_>>>(
-      points->data.get(), num_voxels, voxel_index_buffer_dev, point_index_buffer_dev);
+      points->data.get(), num_voxels, voxel_index_buffer_dev, point_index_buffer_dev,
+      return_type_field_dev, channel_field_dev);
 
   // get number of valid voxels
   // Because thrust::unique_count returns the number of "consective" equal values,
@@ -386,9 +438,11 @@ size_t CudaVoxelGridDownsampleFilter::searchValidVoxel(
 
 void CudaVoxelGridDownsampleFilter::getCentroid(
     const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
-    const size_t num_valid_voxel, const size_t* voxel_index_dev, const size_t* point_index_dev,
-    size_t* index_map_dev, Centroid * buffer_dev,
-    std::unique_ptr<cuda_blackboard::CudaPointCloud2>& output_points)
+    const size_t num_valid_voxel, const size_t * voxel_index_dev, const size_t * point_index_dev,
+    size_t * index_map_dev, Centroid * buffer_dev,
+    std::unique_ptr<cuda_blackboard::CudaPointCloud2> & output_points,
+    decltype(OutputPointType::return_type) * return_type_field_dev,
+    decltype(OutputPointType::channel) * channel_field_dev)
 {
   // create map between index on spatial voxel and index on memory
   thrust::fill(
@@ -423,6 +477,7 @@ void CudaVoxelGridDownsampleFilter::getCentroid(
 
   dim3 grid_dim_voxel((num_valid_voxel + block_dim.x - 1) / block_dim.x);
   packCentroidKernel<<<grid_dim_voxel, block_dim, 0, stream_>>>(
-      buffer_dev, num_valid_voxel, sizeof(OutputPointType), output_points->data.get());
+      buffer_dev, num_valid_voxel, sizeof(OutputPointType), output_points->data.get(),
+      return_type_field_dev, channel_field_dev);
 }
 }  // namespace autoware::cuda_downsample_filter

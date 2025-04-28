@@ -49,7 +49,7 @@ void CudaVoxelGridDownsampleFilterNode::cudaPointcloudCallback(
   // and don't care the rest of the fields)
   if (!cuda_pointcloud_preprocessor::is_data_layout_compatible_with_point_xyzi(msg->fields)) {
     RCLCPP_ERROR(
-        this->get_logger(), "Input pointcloud data layout is not compatible with PointXYZIRCAEDT");
+        this->get_logger(), "Input pointcloud data layout is not compatible with PointXYZI");
   }
 
 
