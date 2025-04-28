@@ -61,10 +61,6 @@ void calculate_predicted_path_footprints(
   Object & object, const autoware_perception_msgs::msg::PredictedObject & predicted_object,
   [[maybe_unused]] const Parameters & params);
 
-/// @brief get the first footprint segment index which intersect with the given segment
-std::optional<size_t> get_first_intersecting_segment_idx(
-  const ObjectPredictedPathFootprint & footprint, const universe_utils::Segment2d & segment);
-
 /// @brief return true if the incoming vector crosses from the rear
 bool crosses_from_the_rear(
   const universe_utils::Segment2d & incoming, const universe_utils::Segment2d & rear);
