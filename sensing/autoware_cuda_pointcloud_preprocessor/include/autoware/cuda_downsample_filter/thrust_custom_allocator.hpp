@@ -30,17 +30,12 @@ public:
   using pointer = typename Base::pointer;
   using size_type = typename Base::size_type;
 
-  //explicit ThrustCustomAllocator(cudaStream_t& stream)
   explicit ThrustCustomAllocator(cudaStream_t stream)
       : stream_(stream){}
-  // explicit ThrustCustomAllocator(cudaStream_t& stream, cudaMemPool_t& pool)
-  //     : stream_(stream), pool_(pool){}
 
   pointer allocate(size_type num) {
     uint8_t* buffer(nullptr);
     auto result = cudaMallocAsync(&buffer, num, stream_);
-    //auto result = cudaMalloc(&buffer, num);
-    //auto result = cudaMallocFromPoolAsync(&buffer, num, pool_, stream_);
     if (result != ::cudaSuccess) {
       std::stringstream s;
       s << ::cudaGetErrorName(result) << " : "  << ::cudaGetErrorString(result);
@@ -48,7 +43,6 @@ public:
     }
 
     cudaMemsetAsync(buffer, 0, num, stream_);
-    // cudaStreamSynchronize(stream_);
 
     return pointer(thrust::device_pointer_cast(buffer));
   }
@@ -60,12 +54,10 @@ public:
       s << ::cudaGetErrorName(result) << " : "  << ::cudaGetErrorString(result);
       throw std::runtime_error{s.str()};
     }
-    // cudaStreamSynchronize(stream_);
   }
 
 private:
   cudaStream_t stream_;
-  //cudaMemPool_t pool_;
 };
 
 }  // namespace autoware::cuda_downsample_filter
