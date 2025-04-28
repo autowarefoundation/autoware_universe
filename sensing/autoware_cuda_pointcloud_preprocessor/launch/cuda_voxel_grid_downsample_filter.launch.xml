@@ -14,8 +14,14 @@
     <param from="$(var cuda_voxel_gird_downsample_filter_param_file)"/>
   </node>
 
-  <node pkg="autoware_cuda_pointcloud_preprocessor" exec="cuda_voxel_grid_downsample_filter_node" name="cuda_voxel_grid_downsample_filter" output="screen"
-        launch-prefix="gnome-terminal -- cuda-gdb --args" if="$(var debug)">
+  <node
+    pkg="autoware_cuda_pointcloud_preprocessor"
+    exec="cuda_voxel_grid_downsample_filter_node"
+    name="cuda_voxel_grid_downsample_filter"
+    output="screen"
+    launch-prefix="gnome-terminal -- cuda-gdb --args"
+    if="$(var debug)"
+  >
     <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
     <remap from="~/output/pointcloud" to="$(var output/pointcloud)"/>
     <param from="$(var cuda_voxel_gird_downsample_filter_param_file)"/>

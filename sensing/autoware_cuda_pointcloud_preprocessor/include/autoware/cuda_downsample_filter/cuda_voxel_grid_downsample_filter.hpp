@@ -21,12 +21,12 @@
 #include <cuda_blackboard/cuda_unique_ptr.hpp>
 
 #include <cuda_runtime.h>
-#include <cstdint>
-#include <memory>
-#include <iostream>
 
-#define CUDA_VGDF_ERROR_CHECK(e) \
-  (CUDA_BLACKBOARD_CHECK_CUDA_ERROR(e))
+#include <cstdint>
+#include <iostream>
+#include <memory>
+
+#define CUDA_VGDF_ERROR_CHECK(e) (CUDA_BLACKBOARD_CHECK_CUDA_ERROR(e))
 
 namespace autoware::cuda_downsample_filter
 {
@@ -34,29 +34,34 @@ namespace autoware::cuda_downsample_filter
 class CudaVoxelGridDownsampleFilter
 {
 public:
-  template<typename T>
-  struct ThreeDim {
+  template <typename T>
+  struct ThreeDim
+  {
     T x;
     T y;
     T z;
 
-    friend std::ostream& operator<<(std::ostream& os, const ThreeDim& t){
+    friend std::ostream & operator<<(std::ostream & os, const ThreeDim & t)
+    {
       os << t.x << ", " << t.y << ", " << t.z;
       return os;
     }
 
-    T& operator[](size_t i) { // Define [] operator to make iterative access easy
-      static T* members[] = {&x, &y, &z};
+    T & operator[](size_t i)
+    {  // Define [] operator to make iterative access easy
+      static T * members[] = {&x, &y, &z};
       return *members[i];
     }
   };
 
-  struct OptionalField {
+  struct OptionalField
+  {
     bool is_valid;
     size_t offset;
   };
 
-  struct VoxelInfo {
+  struct VoxelInfo
+  {
     size_t num_input_points;
     size_t input_point_step;
     size_t input_xyzi_offset[4];
@@ -70,7 +75,8 @@ public:
 
   // This filter only returns XYZIRC regardless of the input point type
 #pragma pack(push, 1)
-  struct OutputPointType {
+  struct OutputPointType
+  {
     float x;
     float y;
     float z;
@@ -80,42 +86,44 @@ public:
   };
 #pragma pack(pop)
 
-  struct Centroid {
+  struct Centroid
+  {
     float x;
     float y;
     float z;
     float i;
-    unsigned int count;  // use unsigned int instead of size_t because of lack support of cuda's atomicAdd
+    unsigned int
+      count;  // use unsigned int instead of size_t because of lack support of cuda's atomicAdd
   };
 
-  explicit CudaVoxelGridDownsampleFilter(const float voxel_size_x,
-                                         const float voxel_size_y,
-                                         const float voxel_size_z);
+  explicit CudaVoxelGridDownsampleFilter(
+    const float voxel_size_x, const float voxel_size_y, const float voxel_size_z);
   ~CudaVoxelGridDownsampleFilter() = default;
 
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> filter(
-      const cuda_blackboard::CudaPointCloud2::ConstSharedPtr& input_points);
+    const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points);
 
 private:
-  template<typename T>
-  T* allocateBufferFromPool(size_t num_elements);
+  template <typename T>
+  T * allocateBufferFromPool(size_t num_elements);
 
   template <typename T>
-  void returnBufferToPool(T* buffer);
+  void returnBufferToPool(T * buffer);
 
-  void getVoxelMinMaxCoordinate(const cuda_blackboard::CudaPointCloud2::ConstSharedPtr& points,
-                                float* buffer_dev);
-  size_t searchValidVoxel(const cuda_blackboard::CudaPointCloud2::ConstSharedPtr& points,
-                          size_t* voxel_index_buffer_dev, size_t* point_index_buffer_dev,
-                          decltype(OutputPointType::return_type)* return_type_field_dev,
-                          decltype(OutputPointType::channel)* channel_field_dev);
-  void getCentroid(const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
-                   const size_t num_valid_voxel,
-                   const size_t* voxel_index_dev, const size_t* point_index_dev,
-                   size_t* index_map_dev, Centroid * buffer_dev,
-                   std::unique_ptr<cuda_blackboard::CudaPointCloud2>& output_points,
-                   decltype(OutputPointType::return_type)* return_type_field_dev,
-                   decltype(OutputPointType::channel)* channel_field_dev);
+  void getVoxelMinMaxCoordinate(
+    const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & points, float * buffer_dev);
+  size_t searchValidVoxel(
+    const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & points,
+    size_t * voxel_index_buffer_dev, size_t * point_index_buffer_dev,
+    decltype(OutputPointType::return_type) * return_type_field_dev,
+    decltype(OutputPointType::channel) * channel_field_dev);
+  void getCentroid(
+    const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points,
+    const size_t num_valid_voxel, const size_t * voxel_index_dev, const size_t * point_index_dev,
+    size_t * index_map_dev, Centroid * buffer_dev,
+    std::unique_ptr<cuda_blackboard::CudaPointCloud2> & output_points,
+    decltype(OutputPointType::return_type) * return_type_field_dev,
+    decltype(OutputPointType::channel) * channel_field_dev);
 
   VoxelInfo voxel_info_{};
 
@@ -123,7 +131,6 @@ private:
   cudaMemPool_t mem_pool_{};
 
   std::unique_ptr<ThrustCustomAllocator> thrust_custom_allocator_;
-
 };
 }  // namespace autoware::cuda_downsample_filter
 

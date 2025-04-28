@@ -49,11 +49,11 @@ private:
 
   // CUDA sub
   std::shared_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
-  sub_{};
+    sub_{};
 
   // CUDA pub
   std::unique_ptr<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>
-  pub_{};
+    pub_{};
 
   std::unique_ptr<CudaVoxelGridDownsampleFilter> cuda_voxel_grid_downsample_filter_{};
 };

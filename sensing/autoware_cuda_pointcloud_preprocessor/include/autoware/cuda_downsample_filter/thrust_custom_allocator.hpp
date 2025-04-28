@@ -17,28 +17,28 @@
 
 #include <cuda_runtime.h>
 #include <thrust/device_malloc_allocator.h>
-#include <sstream>
 
+#include <sstream>
 
 namespace autoware::cuda_downsample_filter
 {
 struct ThrustCustomAllocator : public thrust::device_malloc_allocator<uint8_t>
 {
-// ref: https://stackoverflow.com/questions/76594790/memory-pool-in-thrust-execution-policy
+  // ref: https://stackoverflow.com/questions/76594790/memory-pool-in-thrust-execution-policy
 public:
   using Base = thrust::device_malloc_allocator<uint8_t>;
   using pointer = typename Base::pointer;
   using size_type = typename Base::size_type;
 
-  explicit ThrustCustomAllocator(cudaStream_t stream)
-      : stream_(stream){}
+  explicit ThrustCustomAllocator(cudaStream_t stream) : stream_(stream) {}
 
-  pointer allocate(size_type num) {
-    uint8_t* buffer(nullptr);
+  pointer allocate(size_type num)
+  {
+    uint8_t * buffer(nullptr);
     auto result = cudaMallocAsync(&buffer, num, stream_);
     if (result != ::cudaSuccess) {
       std::stringstream s;
-      s << ::cudaGetErrorName(result) << " : "  << ::cudaGetErrorString(result);
+      s << ::cudaGetErrorName(result) << " : " << ::cudaGetErrorString(result);
       throw std::runtime_error{s.str()};
     }
 
@@ -47,11 +47,12 @@ public:
     return pointer(thrust::device_pointer_cast(buffer));
   }
 
-  void deallocate(pointer ptr, size_t) {
+  void deallocate(pointer ptr, size_t)
+  {
     auto result = cudaFreeAsync(thrust::raw_pointer_cast(ptr), stream_);
     if (result != ::cudaSuccess) {
       std::stringstream s;
-      s << ::cudaGetErrorName(result) << " : "  << ::cudaGetErrorString(result);
+      s << ::cudaGetErrorName(result) << " : " << ::cudaGetErrorString(result);
       throw std::runtime_error{s.str()};
     }
   }
