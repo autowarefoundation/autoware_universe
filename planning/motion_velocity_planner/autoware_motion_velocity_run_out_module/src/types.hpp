@@ -274,20 +274,6 @@ struct DecisionHistory
     times.push_back(now);
     decisions.push_back(decision);
   }
-
-  [[nodiscard]] bool has_data_before_time(const double t) const
-  {
-    return !times.empty() && times.front() <= t;
-  }
-  [[nodiscard]] std::optional<int> first_index_at_or_after_time(const double t) const
-  {
-    for (auto i = 0UL; i < times.size(); ++i) {
-      if (times[i] > t) {
-        return i;
-      }
-    }
-    return std::nullopt;
-  }
 };
 /// @brief Tracker for the decisions toward predicted objects
 struct ObjectDecisionsTracker
