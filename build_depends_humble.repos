@@ -66,4 +66,4 @@ repositories:
   middleware/external/agnocast:
     type: git
     url: https://github.com/tier4/agnocast.git
-    version: main # TODO(TIER IV): to be updated to v1.1.0
+    version: 2.1.0
