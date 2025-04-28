@@ -15,14 +15,6 @@
 #include "autoware/cuda_downsample_filter/cuda_voxel_grid_downsample_filter_node.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/memory.hpp"
 
-////////////////////////////////////////////////////////////////////////////////
-// DEBUG
-// #include <pcl/point_cloud.h>
-// #include <pcl/point_types.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <cfloat>
-////////////////////////////////////////////////////////////////////////////////
-
 namespace autoware::cuda_downsample_filter
 {
 CudaVoxelGridDownsampleFilterNode::CudaVoxelGridDownsampleFilterNode(
@@ -60,53 +52,9 @@ void CudaVoxelGridDownsampleFilterNode::cudaPointcloudCallback(
         this->get_logger(), "Input pointcloud data layout is not compatible with PointXYZIRCAEDT");
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
-  { // XXX: DEBUG
-    auto ros_pcl = std::make_unique<sensor_msgs::msg::PointCloud2>();
-    ros_pcl->header = msg->header;
-    ros_pcl->height = msg->height;
-    ros_pcl->width = msg->width;
-    ros_pcl->fields = msg->fields;
-    ros_pcl->is_bigendian = msg->is_bigendian;
-    ros_pcl->point_step = msg->point_step;
-    ros_pcl->row_step = msg->row_step;
-    ros_pcl->is_dense = msg->is_dense;
-
-    auto data_size = msg->height * msg->width * msg->point_step * sizeof(uint8_t);
-
-    ros_pcl->data = std::vector<uint8_t>(data_size);
-    cudaMemcpy(ros_pcl->data.data(), msg->data.get(), data_size, cudaMemcpyDeviceToHost);
-
-
-    pcl::PointCloud<pcl::PointXYZI>::Ptr in_cloud(new pcl::PointCloud<pcl::PointXYZI>);
-    pcl::fromROSMsg(*ros_pcl, *in_cloud);
-
-    auto mins = CudaVoxelGridDownsampleFilter::ThreeDim<float>{FLT_MAX, FLT_MAX, FLT_MAX};
-    auto maxs = CudaVoxelGridDownsampleFilter::ThreeDim<float>{FLT_MIN, FLT_MIN, FLT_MIN};
-    // for (int i = 0; i < 2; i++) {
-    //   std::cerr << "host: idx: " << i << ", value: " << in_cloud->points[i].x << std::endl;
-    // }
-    auto start = std::chrono::high_resolution_clock::now();
-    for (const auto& p : in_cloud->points) {
-      mins.x = p.x < mins.x ? p.x : mins.x;
-      mins.y = p.y < mins.y ? p.y : mins.y;
-      mins.z = p.z < mins.z ? p.z : mins.z;
-      maxs.x = p.x > maxs.x ? p.x : maxs.x;
-      maxs.y = p.y > maxs.y ? p.y : maxs.y;
-      maxs.z = p.z > maxs.z ? p.z : maxs.z;
-    }
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration<double, std::milli>(end - start).count();
-
-    // std::cerr << "   min: " << mins << std::endl
-    //           << "   max: " << maxs << std::endl
-    //           << "    @ " << duration << "[ms]" << std::endl;
-  }
-  ////////////////////////////////////////////////////////////////////////////////
 
   auto output_pointcloud_ptr = cuda_voxel_grid_downsample_filter_->filter(msg);
   pub_->publish(std::move(output_pointcloud_ptr));
-  return;
 }
 }  // namespace autoware::cuda_downsample_filter
 

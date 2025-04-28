@@ -54,8 +54,8 @@ public:
   struct VoxelInfo {
     size_t num_input_points;
     size_t input_point_step;
-    size_t  input_xyzi_offset[4];
-    size_t  output_xyzi_offset[4];
+    size_t input_xyzi_offset[4];
+    size_t output_xyzi_offset[4];
     ThreeDim<float> voxel_size;
     ThreeDim<int> min_coord;
     ThreeDim<int> max_coord;
