@@ -264,6 +264,10 @@ public:
   void visualizeTrajectory(
     const typename autoware_planning_msgs::msg::Trajectory::ConstSharedPtr msg_ptr) override
   {
+    if (msg_ptr->points.empty()) {
+      return;
+    }
+
     if (msg_ptr->points.size() > time_texts_.size()) {
       for (size_t i = time_texts_.size(); i < msg_ptr->points.size(); i++) {
         Ogre::SceneNode * node = this->scene_node_->createChildSceneNode();
