@@ -13,7 +13,7 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
   <buildtool_depend>eigen3_cmake_module</buildtool_depend>
 
-  <depend>autoware_euclidean_cluster</depend>
+  <depend>autoware_euclidean_cluster_universe</depend>
   <depend>autoware_object_recognition_utils</depend>
   <depend>autoware_shape_estimation</depend>
   <depend>autoware_utils</depend>

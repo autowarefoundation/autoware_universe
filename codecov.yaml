@@ -147,7 +147,7 @@ component_management:
         - perception/autoware_detected_object_validation/**
         - perception/autoware_detection_by_tracker/**
         - perception/autoware_elevation_map_loader/**
-        - perception/autoware_euclidean_cluster/**
+        - perception/autoware_euclidean_cluster_universe/**
         - perception/autoware_ground_segmentation/**
         - perception/autoware_image_projection_based_fusion/**
         - perception/autoware_lidar_centerpoint/**

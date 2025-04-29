@@ -4,11 +4,11 @@
   <arg name="input_map" default="/map/pointcloud_map"/>
   <arg name="output_clusters" default="clusters"/>
   <arg name="use_low_height_cropbox" default="false"/>
-  <arg name="voxel_grid_based_euclidean_param_path" default="$(find-pkg-share autoware_euclidean_cluster)/config/voxel_grid_based_euclidean_cluster.param.yaml"/>
+  <arg name="voxel_grid_based_euclidean_param_path" default="$(find-pkg-share autoware_euclidean_cluster_universe)/config/voxel_grid_based_euclidean_cluster.param.yaml"/>
   <arg name="use_pointcloud_container" default="false"/>
   <arg name="pointcloud_container_name" default="pointcloud_container"/>
 
-  <include file="$(find-pkg-share autoware_euclidean_cluster)/launch/voxel_grid_based_euclidean_cluster.launch.py">
+  <include file="$(find-pkg-share autoware_euclidean_cluster_universe)/launch/voxel_grid_based_euclidean_cluster.launch.py">
     <arg name="input_pointcloud" value="$(var input_pointcloud)"/>
     <arg name="input_map" value="$(var input_map)"/>
     <arg name="output_clusters" value="$(var output_clusters)"/>

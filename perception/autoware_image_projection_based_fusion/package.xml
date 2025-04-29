@@ -15,7 +15,7 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
   <depend>autoware_cuda_dependency_meta</depend>
-  <depend>autoware_euclidean_cluster</depend>
+  <depend>autoware_euclidean_cluster_universe</depend>
   <depend>autoware_internal_debug_msgs</depend>
   <depend>autoware_lidar_centerpoint</depend>
   <depend>autoware_object_recognition_utils</depend>

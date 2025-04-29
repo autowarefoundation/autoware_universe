@@ -152,7 +152,7 @@
   <group>
     <push-ros-namespace namespace="clustering"/>
     <group>
-      <include file="$(find-pkg-share autoware_euclidean_cluster)/launch/voxel_grid_based_euclidean_cluster.launch.xml">
+      <include file="$(find-pkg-share autoware_euclidean_cluster_universe)/launch/voxel_grid_based_euclidean_cluster.launch.xml">
         <arg name="input_pointcloud" value="$(var euclidean_cluster/input/pointcloud)"/>
         <arg name="output_clusters" value="$(var euclidean_cluster/output/clusters)"/>
         <arg name="use_low_height_cropbox" value="$(var use_low_height_cropbox)"/>
