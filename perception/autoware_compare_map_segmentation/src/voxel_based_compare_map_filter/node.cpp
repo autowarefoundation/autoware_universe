@@ -162,7 +162,7 @@ bool VoxelBasedCompareMapFilterComponent::convert_output_costly(
     RCLCPP_ERROR(this->get_logger(), "Invalid output point cloud!");
     return false;
   }
-  if (output->data.empty()){
+  if (output->data.empty()) {
     // empty point cloud, could happen under certain conditions
     // e.g. when the input point cloud is empty or all points are filtered out
     if (!tf_output_frame_.empty()) {
