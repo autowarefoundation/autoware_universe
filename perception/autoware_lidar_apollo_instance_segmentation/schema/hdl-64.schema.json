@@ -35,6 +35,16 @@
           "type": "boolean",
           "description": "The flag to use direction and distance feature of pointcloud.",
           "default": false
+        },
+        "z_offset": {
+          "type": "number",
+          "description": "z offset from target frame. [m]",
+          "default": -2.0
+        },
+        "onnx_file": {
+          "type": "string",
+          "description": "The name of ONNX model file.",
+          "default": "hdl-64.onnx"
         }
       },
       "required": [
@@ -43,7 +53,9 @@
         "width",
         "height",
         "use_intensity_feature",
-        "use_constant_feature"
+        "use_constant_feature",
+        "z_offset",
+        "onnx_file"
       ],
       "additionalProperties": false
     }
