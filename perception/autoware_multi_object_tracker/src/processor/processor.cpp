@@ -272,7 +272,7 @@ bool TrackerProcessor::canMergeOverlappedTarget(
       constexpr float prob_buffer = 0.4;
       for (size_t i = 0; i < target_existence_prob.size(); ++i) {
         if (target_existence_prob[i] + prob_buffer < other_existence_prob[i]) {
-          // if a channel probability has a large difference in higher index, remove the target 
+          // if a channel probability has a large difference in higher index, remove the target
           return true;
         }
       }
