@@ -314,9 +314,9 @@ bool Tracker::isExpired(const rclcpp::Time & now) const
   }
 
   // if the tracker is not confident, the tracker is expired
-  constexpr double EXPIRED_CONFIDENCE_THRESHOLD = 0.015;
+  constexpr double EXPIRED_PROBABILITY_THRESHOLD = 0.015;
   const float existence_probability = getTotalExistenceProbability();
-  if (existence_probability < EXPIRED_CONFIDENCE_THRESHOLD) {
+  if (existence_probability < EXPIRED_PROBABILITY_THRESHOLD) {
     return true;
   }
 
