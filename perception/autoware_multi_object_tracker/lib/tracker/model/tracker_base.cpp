@@ -269,6 +269,16 @@ void Tracker::getPositionCovarianceEigenSq(
   Eigen::Matrix2d covariance;
   covariance << pose_cov[XYZRPY_COV_IDX::X_X], pose_cov[XYZRPY_COV_IDX::X_Y],
     pose_cov[XYZRPY_COV_IDX::Y_X], pose_cov[XYZRPY_COV_IDX::Y_Y];
+  // check if the covariance is valid
+  if (covariance(0, 0) <= 0.0 || covariance(1, 1) <= 0.0) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("Tracker"),
+      "Covariance is not valid. X_X: %f, Y_Y: %f", covariance(0, 0), covariance(1, 1));
+    major_axis_sq = 0.0;
+    minor_axis_sq = 0.0;
+    return;
+  }
+  // calculate the eigenvalues of the covariance matrix
   Eigen::EigenSolver<Eigen::Matrix2d> es(covariance);
   major_axis_sq = es.eigenvalues().real().maxCoeff();
   minor_axis_sq = es.eigenvalues().real().minCoeff();
@@ -358,10 +368,23 @@ double Tracker::getPositionCovarianceSizeSq() const
 {
   using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
   auto & pose_cov = object_.pose_covariance;
-  const double determinant = pose_cov[XYZRPY_COV_IDX::X_X] * pose_cov[XYZRPY_COV_IDX::Y_Y] -
-                             pose_cov[XYZRPY_COV_IDX::X_Y] * pose_cov[XYZRPY_COV_IDX::Y_X];
 
-  // position covariance size is square root of the determinant
+  // The covariance size is defined as the square of the dominant eigenvalue
+  // of the 2x2 covariance matrix:
+  // | X_X  X_Y |
+  // | Y_X  Y_Y |
+  const double determinant = 
+    pose_cov[XYZRPY_COV_IDX::X_X] * pose_cov[XYZRPY_COV_IDX::Y_Y] -
+    pose_cov[XYZRPY_COV_IDX::X_Y] * pose_cov[XYZRPY_COV_IDX::Y_X];
+  // covariance matrix is positive semi-definite
+  if (determinant <= 0.0) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("Tracker"),
+      "Covariance is not positive semi-definite. X_X: %f, Y_Y: %f", 
+      pose_cov[XYZRPY_COV_IDX::X_X], pose_cov[XYZRPY_COV_IDX::Y_Y]);
+    // return a large value to indicate the covariance is not valid
+    return std::numeric_limits<double>::max();
+  }
   return determinant;
 }
 
