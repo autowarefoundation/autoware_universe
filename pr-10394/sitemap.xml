@@ -1016,6 +1016,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10394/planning/motion_velocity_planner/autoware_motion_velocity_run_out_module/</loc>
+         <lastmod>2025-04-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-10394/planning/sampling_based_planner/autoware_bezier_sampler/</loc>
          <lastmod>2025-04-30</lastmod>
          <changefreq>daily</changefreq>
@@ -1037,6 +1042,11 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-10394/sensing/autoware_cuda_pointcloud_preprocessor/</loc>
+         <lastmod>2025-04-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10394/sensing/autoware_cuda_pointcloud_preprocessor/docs/cuda-concatenate-data/</loc>
          <lastmod>2025-04-30</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -1147,6 +1157,11 @@
     </url>
     <url>
          <loc>https://autowarefoundation.github.io/autoware_universe/pr-10394/sensing/autoware_pointcloud_preprocessor/docs/voxel-grid-outlier-filter/</loc>
+         <lastmod>2025-04-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://autowarefoundation.github.io/autoware_universe/pr-10394/sensing/autoware_radar_objects_adapter/</loc>
          <lastmod>2025-04-30</lastmod>
          <changefreq>daily</changefreq>
     </url>
