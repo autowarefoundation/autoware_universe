@@ -272,11 +272,12 @@ bool TrackerProcessor::canMergeOverlappedTarget(
       constexpr float prob_buffer = 0.4;
       for (size_t i = 0; i < target_existence_prob.size(); ++i) {
         if (target_existence_prob[i] + prob_buffer < other_existence_prob[i]) {
+          // if a channel probability has a large difference in higher index, remove the target 
           return true;
         }
       }
 
-      // compare the covariance size
+      // if there is no big difference in the probability per channel, compare the covariance size
       return target.getPositionCovarianceSizeSq() > other.getPositionCovarianceSizeSq();
     }
   }
