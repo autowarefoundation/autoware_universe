@@ -19,6 +19,7 @@
 #include <autoware_utils/geometry/geometry.hpp>
 
 #include <algorithm>
+#include <limits>
 #include <random>
 #include <vector>
 
@@ -272,8 +273,8 @@ void Tracker::getPositionCovarianceEigenSq(
   // check if the covariance is valid
   if (covariance(0, 0) <= 0.0 || covariance(1, 1) <= 0.0) {
     RCLCPP_WARN(
-      rclcpp::get_logger("Tracker"),
-      "Covariance is not valid. X_X: %f, Y_Y: %f", covariance(0, 0), covariance(1, 1));
+      rclcpp::get_logger("Tracker"), "Covariance is not valid. X_X: %f, Y_Y: %f", covariance(0, 0),
+      covariance(1, 1));
     major_axis_sq = 0.0;
     minor_axis_sq = 0.0;
     return;
@@ -373,14 +374,12 @@ double Tracker::getPositionCovarianceSizeSq() const
   // of the 2x2 covariance matrix:
   // | X_X  X_Y |
   // | Y_X  Y_Y |
-  const double determinant = 
-    pose_cov[XYZRPY_COV_IDX::X_X] * pose_cov[XYZRPY_COV_IDX::Y_Y] -
-    pose_cov[XYZRPY_COV_IDX::X_Y] * pose_cov[XYZRPY_COV_IDX::Y_X];
+  const double determinant = pose_cov[XYZRPY_COV_IDX::X_X] * pose_cov[XYZRPY_COV_IDX::Y_Y] -
+                             pose_cov[XYZRPY_COV_IDX::X_Y] * pose_cov[XYZRPY_COV_IDX::Y_X];
   // covariance matrix is positive semi-definite
   if (determinant <= 0.0) {
     RCLCPP_WARN(
-      rclcpp::get_logger("Tracker"),
-      "Covariance is not positive semi-definite. X_X: %f, Y_Y: %f", 
+      rclcpp::get_logger("Tracker"), "Covariance is not positive semi-definite. X_X: %f, Y_Y: %f",
       pose_cov[XYZRPY_COV_IDX::X_X], pose_cov[XYZRPY_COV_IDX::Y_Y]);
     // return a large value to indicate the covariance is not valid
     return std::numeric_limits<double>::max();
