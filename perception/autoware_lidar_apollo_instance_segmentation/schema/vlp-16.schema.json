@@ -80,5 +80,5 @@
     }
   },
   "required": ["/**"],
-  "additionalProperties": false 
+  "additionalProperties": false
 }
