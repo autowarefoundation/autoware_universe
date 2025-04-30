@@ -152,15 +152,13 @@ bool check_stop_lines_in_no_stopping_area(
  * @param path ego path
  * @param no_stopping_area_reg_elem no_stopping_area regulatory element
  * @param stop_line_margin [m] margin between the stop line and the start of the no stopping area
- * @param stop_line_extend_length [m] extra length to add on each side of the stop line (only added
- * to the stop line of the regulatory element)
  * @param vehicle_width [m] width of the ego vehicle
  * @return generated stop line
  */
 std::optional<autoware_utils::LineString2d> get_stop_line_geometry2d(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
   const lanelet::autoware::NoStoppingArea & no_stopping_area_reg_elem,
-  const double stop_line_margin, const double stop_line_extend_length, const double vehicle_width);
+  const double stop_line_margin, const double vehicle_width);
 
 }  // namespace autoware::behavior_velocity_planner::no_stopping_area
 
