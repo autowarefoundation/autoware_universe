@@ -26,12 +26,12 @@ namespace
 {
 float updateProbability(
   const float & prior, const float & true_positive, const float & false_positive,
-  const bool normalize = true)
+  const bool clamp = true)
 {
   float probability =
     (prior * true_positive) / (prior * true_positive + (1 - prior) * false_positive);
 
-  if (normalize) {
+  if (clamp) {
     // Normalize the probability to [0.1, 0.999]
     constexpr float max_updated_probability = 0.999;
     constexpr float min_updated_probability = 0.100;
@@ -78,14 +78,14 @@ void Tracker::initializeExistenceProbabilities(
   // and to avoid the existence probability being too close to 0 or 1
   constexpr float max_probability = 0.999;
   constexpr float min_probability = 0.100;
-  const float normalized_existence_probability =
+  const float clamped_existence_probability =
     std::clamp(existence_probability, min_probability, max_probability);
 
   // existence probability on each channel
-  existence_probabilities_[channel_index] = normalized_existence_probability;
+  existence_probabilities_[channel_index] = clamped_existence_probability;
 
   // total existence probability
-  total_existence_probability_ = normalized_existence_probability;
+  total_existence_probability_ = clamped_existence_probability;
 }
 
 void Tracker::updateTotalExistenceProbability(const float & existence_probability)
