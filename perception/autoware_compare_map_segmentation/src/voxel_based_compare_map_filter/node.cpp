@@ -158,9 +158,19 @@ void VoxelBasedCompareMapFilterComponent::input_indices_callback(
 bool VoxelBasedCompareMapFilterComponent::convert_output_costly(
   std::unique_ptr<PointCloud2> & output)
 {
-  if (!output || output->data.empty() || output->fields.empty()) {
+  if (!output || output->fields.empty()) {
     RCLCPP_ERROR(this->get_logger(), "Invalid output point cloud!");
     return false;
+  }
+  if (output->data.empty()) {
+    // empty point cloud, could happen under certain conditions
+    // e.g. when the input point cloud is empty or all points are filtered out
+    if (!tf_output_frame_.empty()) {
+      output->header.frame_id = tf_output_frame_;
+    } else {
+      output->header.frame_id = tf_input_orig_frame_;
+    }
+    return true;
   }
   if (
     pcl::getFieldIndex(*output, "x") == -1 || pcl::getFieldIndex(*output, "y") == -1 ||
@@ -168,6 +178,7 @@ bool VoxelBasedCompareMapFilterComponent::convert_output_costly(
     RCLCPP_ERROR(this->get_logger(), "Input pointcloud does not have xyz fields");
     return false;
   }
+  // A. the output frame is set, transform the point cloud to the output frame
   if (!tf_output_frame_.empty() && output->header.frame_id != tf_output_frame_) {
     auto cloud_transformed = std::make_unique<PointCloud2>();
     try {
@@ -184,7 +195,7 @@ bool VoxelBasedCompareMapFilterComponent::convert_output_costly(
       return false;
     }
   }
-
+  // B. the output frame is not set, the output frame is the same as the input frame
   if (tf_output_frame_.empty() && output->header.frame_id != tf_input_orig_frame_) {
     auto cloud_transformed = std::make_unique<PointCloud2>();
     try {
