@@ -1,0 +1,3 @@
+<library path="autoware_planning_latency_validator">
+  <class type="autoware::planning_validator::LatencyValidator" base_class_type="autoware::planning_validator::PluginInterface"/>
+</library>

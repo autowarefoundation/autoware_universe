@@ -1,5 +1,7 @@
 /**:
   ros__parameters:
+    planning_hz: 10.0
+
     # Operation option when invalid trajectory is detected
     #  0: publish the trajectory even if it is invalid
     #  1: stop publishing the trajectory

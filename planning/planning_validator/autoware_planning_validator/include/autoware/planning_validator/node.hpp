@@ -1,4 +1,4 @@
-// Copyright 2022 Tier IV, Inc.
+// Copyright 2025Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__PLANNING_VALIDATOR__PLANNING_VALIDATOR_HPP_
-#define AUTOWARE__PLANNING_VALIDATOR__PLANNING_VALIDATOR_HPP_
+#ifndef AUTOWARE__PLANNING_VALIDATOR__NODE_HPP_
+#define AUTOWARE__PLANNING_VALIDATOR__NODE_HPP_
 
 #include "autoware/planning_validator/debug_marker.hpp"
+#include "autoware/planning_validator/manager.hpp"
 #include "autoware/planning_validator/parameters.hpp"
+#include "autoware/planning_validator/planning_validator_data.hpp"
 #include "autoware_planning_validator/msg/planning_validator_status.hpp"
-#include "autoware_utils/ros/logger_level_configure.hpp"
-#include "autoware_utils/ros/polling_subscriber.hpp"
-#include "autoware_utils/system/stop_watch.hpp"
-#include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 
+#include <autoware_utils/ros/logger_level_configure.hpp>
+#include <autoware_utils/ros/parameter.hpp>
+#include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -48,12 +51,49 @@ using diagnostic_updater::Updater;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 
-class PlanningValidator : public rclcpp::Node
+class PlanningValidatorNode : public rclcpp::Node
 {
 public:
-  explicit PlanningValidator(const rclcpp::NodeOptions & options);
+  explicit PlanningValidatorNode(const rclcpp::NodeOptions & options);
 
-  void onTrajectory(const Trajectory::ConstSharedPtr msg);
+private:
+  void onTimer();
+  void setupDiag();
+  void setupParameters();
+  void setData();
+  bool isDataReady();
+
+  void validate(const std::shared_ptr<const PlanningValidatorData> & data);
+
+  void publishProcessingTime(const double processing_time_ms);
+  void publishTrajectory();
+  void publishDebugInfo();
+  void displayStatus();
+
+  void setStatus(
+    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg,
+    const bool is_critical = false);
+
+  autoware_utils::InterProcessPollingSubscriber<Odometry> sub_kinematics_{
+    this, "~/input/kinematics"};
+  autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped> sub_acceleration_{
+    this, "~/input/acceleration"};
+  autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_trajectory_{
+    this, "~/input/trajectory"};
+  rclcpp::Publisher<Trajectory>::SharedPtr pub_traj_;
+  rclcpp::Publisher<PlanningValidatorStatus>::SharedPtr pub_status_;
+  rclcpp::Publisher<Float64Stamped>::SharedPtr pub_processing_time_ms_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_markers_;
+
+  PlanningValidatorManager manager_;
+  std::shared_ptr<PlanningValidatorData> data_;
+  std::shared_ptr<PlanningValidatorStatus> validation_status_;
+
+  bool is_critical_error_ = false;
+
+  std::shared_ptr<Updater> diag_updater_ = nullptr;
+
+  Params params_;
 
   bool checkValidSize(const Trajectory & trajectory);
   bool checkValidFiniteValue(const Trajectory & trajectory);
@@ -70,58 +110,14 @@ public:
   bool checkValidDistanceDeviation(const Trajectory & trajectory);
   bool checkValidLongitudinalDistanceDeviation(const Trajectory & trajectory);
   bool checkValidForwardTrajectoryLength(const Trajectory & trajectory);
-  bool checkValidLatency(const Trajectory & trajectory);
   bool checkValidYawDeviation(const Trajectory & trajectory);
   bool checkTrajectoryShift(
     const Trajectory & trajectory, const Trajectory & prev_trajectory,
     const geometry_msgs::msg::Pose & ego_pose);
 
-private:
-  void setupDiag();
-
-  void setupParameters();
-
-  bool isDataReady();
-
-  void validate(
-    const Trajectory & trajectory, const std::optional<Trajectory> & prev_trajectory = {});
-
-  void publishProcessingTime(const double processing_time_ms);
-  void publishTrajectory();
-  void publishDebugInfo();
-  void displayStatus();
-
-  void setStatus(
-    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg,
-    const bool is_critical = false);
-
-  autoware_utils::InterProcessPollingSubscriber<Odometry> sub_kinematics_{
-    this, "~/input/kinematics"};
-  autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped> sub_acceleration_{
-    this, "~/input/acceleration"};
-  rclcpp::Subscription<Trajectory>::SharedPtr sub_traj_;
-  rclcpp::Publisher<Trajectory>::SharedPtr pub_traj_;
-  rclcpp::Publisher<PlanningValidatorStatus>::SharedPtr pub_status_;
-  rclcpp::Publisher<Float64Stamped>::SharedPtr pub_processing_time_ms_;
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_markers_;
-
-  bool is_critical_error_ = false;
-
-  std::shared_ptr<Updater> diag_updater_ = nullptr;
-
-  PlanningValidatorStatus validation_status_;
-  Params params_;  // for thresholds
-
-  autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
-
   bool isAllValid(const PlanningValidatorStatus & status) const;
 
-  Trajectory::ConstSharedPtr current_trajectory_;
-  Trajectory::ConstSharedPtr previous_published_trajectory_;
   Trajectory::ConstSharedPtr soft_stop_trajectory_;
-
-  Odometry::ConstSharedPtr current_kinematics_;
-  AccelWithCovarianceStamped::ConstSharedPtr current_acceleration_;
 
   std::shared_ptr<PlanningValidatorDebugMarkerPublisher> debug_pose_publisher_;
 
@@ -130,7 +126,8 @@ private:
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
 
   StopWatch<std::chrono::milliseconds> stop_watch_;
+  rclcpp::TimerBase::SharedPtr timer_;
 };
 }  // namespace autoware::planning_validator
 
-#endif  // AUTOWARE__PLANNING_VALIDATOR__PLANNING_VALIDATOR_HPP_
+#endif  // AUTOWARE__PLANNING_VALIDATOR__NODE_HPP_
