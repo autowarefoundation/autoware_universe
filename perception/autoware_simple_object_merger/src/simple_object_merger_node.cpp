@@ -127,7 +127,7 @@ SimpleObjectMergerNode::SimpleObjectMergerNode(const rclcpp::NodeOptions & node_
   }
 
   // Publisher
-  pub_objects_ = create_publisher<DetectedObjects>("~/output/objects", 1);
+  pub_objects_ = create_publisher<DetectedObjects>("~/output/objects", rclcpp::QoS{1}.reliable());
 }
 
 void SimpleObjectMergerNode::approximateMerger(
