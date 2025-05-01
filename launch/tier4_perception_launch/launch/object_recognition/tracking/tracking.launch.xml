@@ -78,13 +78,12 @@
 
   <!-- Object list for multi-channel tracker merger -->
   <group if="$(var use_multi_channel_tracker_merger)">
+    <let name="lidar_dnn_detection_channel" value="lidar_$(var lidar_detection_model_type)"/>
     <group scoped="false" unless="$(var use_validator)">
       <let name="lidar_dnn_detection_topic" value="/perception/object_recognition/detection/$(var lidar_detection_model_type)/objects"/>
-      <let name="lidar_dnn_detection_channel" value="$(var lidar_detection_model_type)"/>
     </group>
     <group scoped="false" if="$(var use_validator)">
       <let name="lidar_dnn_detection_topic" value="/perception/object_recognition/detection/$(var lidar_detection_model_type)/validation/objects"/>
-      <let name="lidar_dnn_detection_channel" value="$(var lidar_detection_model_type)_validated"/>
     </group>
 
     <let name="input/detection01/channel" value="$(var lidar_dnn_detection_channel)"/>
@@ -94,7 +93,7 @@
     <let name="input/detection03/channel" value="detection_by_tracker"/>
     <let name="input/detection03/channel" value="none" unless="$(var use_detection_by_tracker)"/>
     <let name="input/detection03/objects" value="/perception/object_recognition/detection/detection_by_tracker/objects"/>
-    <let name="input/detection04/channel" value="radar"/>
+    <let name="input/detection04/channel" value="radar_far"/>
     <let name="input/detection04/objects" value="/perception/object_recognition/detection/radar/far_objects"/>
 
     <group scoped="false" if="$(eval '&quot;$(var mode)&quot;==&quot;camera_lidar_fusion&quot;')">
@@ -118,6 +117,7 @@
       <let name="input/detection02/channel" value="none"/>
       <!-- detection by tracker is not used -->
       <let name="input/detection03/channel" value="none"/>
+      <let name="input/detection04/channel" value="radar"/>
       <let name="input/detection04/objects" value="/sensing/radar/detected_objects"/>
     </group>
 

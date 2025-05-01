@@ -2,13 +2,13 @@
   ros__parameters:
     input_channels:
       detected_objects:
-        topic: "/perception/object_recognition/detection/objects"
+        # topic: "/perception/object_recognition/detection/objects"
         optional:
           name: "detected_objects"
           short_name: "all"
       # LIDAR - rule-based
       lidar_clustering:
-        topic: "/perception/object_recognition/detection/clustering/objects"
+        # topic: "/perception/object_recognition/detection/clustering/objects"
         flags:
           can_spawn_new_tracker: true
           can_trust_existence_probability: false
@@ -20,18 +20,7 @@
           short_name: "Lcl"
       # LIDAR - DNN
       lidar_centerpoint:
-        topic: "/perception/object_recognition/detection/centerpoint/objects"
-        flags:
-          can_spawn_new_tracker: true
-          can_trust_existence_probability: true
-          can_trust_extension: true
-          can_trust_classification: true
-          can_trust_orientation: true
-        optional:
-          name: "centerpoint"
-          short_name: "Lcp"
-      lidar_centerpoint_validated:
-        topic: "/perception/object_recognition/detection/centerpoint/validation/objects"
+        # topic: "/perception/object_recognition/detection/centerpoint/objects"
         flags:
           can_spawn_new_tracker: true
           can_trust_existence_probability: true
@@ -42,18 +31,7 @@
           name: "centerpoint"
           short_name: "Lcp"
       lidar_apollo:
-        topic: "/perception/object_recognition/detection/apollo/objects"
-        flags:
-          can_spawn_new_tracker: true
-          can_trust_existence_probability: true
-          can_trust_extension: true
-          can_trust_classification: true
-          can_trust_orientation: true
-        optional:
-          name: "apollo"
-          short_name: "Lap"
-      lidar_apollo_validated:
-        topic: "/perception/object_recognition/detection/apollo/validation/objects"
+        # topic: "/perception/object_recognition/detection/apollo/objects"
         flags:
           can_spawn_new_tracker: true
           can_trust_existence_probability: true
@@ -66,18 +44,7 @@
       # LIDAR-CAMERA - DNN
       # cspell:ignore lidar_pointpainting pointpainting
       lidar_pointpainting:
-        topic: "/perception/object_recognition/detection/pointpainting/objects"
-        flags:
-          can_spawn_new_tracker: true
-          can_trust_existence_probability: true
-          can_trust_extension: true
-          can_trust_classification: true
-          can_trust_orientation: true
-        optional:
-          name: "pointpainting"
-          short_name: "Lpp"
-      lidar_pointpainting_validated:
-        topic: "/perception/object_recognition/detection/pointpainting/validation/objects"
+        # topic: "/perception/object_recognition/detection/pointpainting/objects"
         flags:
           can_spawn_new_tracker: true
           can_trust_existence_probability: true
@@ -89,7 +56,7 @@
           short_name: "Lpp"
       # CAMERA-LIDAR
       camera_lidar_fusion:
-        topic: "/perception/object_recognition/detection/clustering/camera_lidar_fusion/objects"
+        # topic: "/perception/object_recognition/detection/clustering/camera_lidar_fusion/objects"
         flags:
           can_spawn_new_tracker: true
           can_trust_existence_probability: false
@@ -101,7 +68,7 @@
           short_name: "CLf"
       # CAMERA-LIDAR+TRACKER
       detection_by_tracker:
-        topic: "/perception/object_recognition/detection/detection_by_tracker/objects"
+        # topic: "/perception/object_recognition/detection/detection_by_tracker/objects"
         flags:
           can_spawn_new_tracker: false
           can_trust_existence_probability: false
@@ -113,7 +80,7 @@
           short_name: "dbT"
       # RADAR
       radar:
-        topic: "/sensing/radar/detected_objects"
+        # topic: "/sensing/radar/detected_objects"
         flags:
           can_spawn_new_tracker: true
           can_trust_existence_probability: true
@@ -124,7 +91,7 @@
           name: "radar"
           short_name: "R"
       radar_far:
-        topic: "/perception/object_recognition/detection/radar/far_objects"
+        # topic: "/perception/object_recognition/detection/radar/far_objects"
         flags:
           can_spawn_new_tracker: true
           can_trust_existence_probability: true
