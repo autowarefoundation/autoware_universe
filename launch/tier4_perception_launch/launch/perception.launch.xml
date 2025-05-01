@@ -303,6 +303,7 @@
         <push-ros-namespace namespace="tracking"/>
         <include file="$(find-pkg-share tier4_perception_launch)/launch/object_recognition/tracking/tracking.launch.xml">
           <arg name="mode" value="$(var mode)"/>
+          <arg name="lidar_detection_model_type" value="$(var lidar_detection_model_type)"/>
           <arg
             name="object_recognition_tracking_radar_object_tracker_data_association_matrix_param_path"
             value="$(var object_recognition_tracking_radar_object_tracker_data_association_matrix_param_path)"
