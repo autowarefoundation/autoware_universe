@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__PLANNING_VALIDATOR__PLANNING_VALIDATOR_DATA_HPP_
 #define AUTOWARE__PLANNING_VALIDATOR__PLANNING_VALIDATOR_DATA_HPP_
 
+#include "autoware/planning_validator/utils.hpp"
 #include "autoware_planning_validator/msg/planning_validator_status.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 
@@ -69,28 +70,17 @@ struct PlanningValidatorData
     return true;
   }
 
-  std::optional<size_t> get_current_nearest_point_index()
+  void set_nearest_trajectory_indices()
   {
+    nearest_point_index.reset();
+    nearest_segment_index.reset();
     if (!current_trajectory || !current_kinematics) {
-      return std::nullopt;
+      return;
     }
-    if (!nearest_point_index) {
-      nearest_point_index = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
-        current_trajectory->points, current_kinematics->pose.pose);
-    }
-    return nearest_point_index;
-  }
-
-  std::optional<size_t> get_current_nearest_segment_index()
-  {
-    if (!current_trajectory || !current_kinematics) {
-      return std::nullopt;
-    }
-    if (!nearest_segment_index && current_kinematics) {
-      nearest_segment_index = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
-        current_trajectory->points, current_kinematics->pose.pose);
-    }
-    return nearest_segment_index;
+    nearest_point_index = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
+      current_trajectory->points, current_kinematics->pose.pose);
+    nearest_segment_index = autoware::motion_utils::findNearestSegmentIndex(
+      current_trajectory->points, current_kinematics->pose.pose);
   }
 };
 

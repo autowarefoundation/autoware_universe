@@ -17,6 +17,9 @@
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 
+#include <memory>
+#include <string>
+
 namespace autoware::planning_validator
 {
 using autoware_utils::get_or_declare_parameter;
@@ -37,7 +40,6 @@ void LatencyValidator::validate(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status, bool & is_critical)
 {
-  RCLCPP_INFO(logger_, "LatencyValidator::validate");
   if (!enable_latency_check_ || !data->current_trajectory) {
     return;
   }
