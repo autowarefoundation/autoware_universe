@@ -1,0 +1,116 @@
+detection_lane:
+  detection_lane:
+    pointcloud:
+      range:
+        min:
+          type: double
+          validation:
+            gt_eq<>: [0.0]
+        max:
+          type: double
+          validation:
+            gt_eq<>: [0.0]
+      offset:
+        left:
+          type: double
+        right:
+          type: double
+      voxel_grid_filter:
+        x:
+          type: double
+          validation:
+            gt<>: [0.0]
+        y:
+          type: double
+          validation:
+            gt<>: [0.0]
+        z:
+          type: double
+          validation:
+            gt<>: [0.0]
+      clustering:
+        cluster_tolerance:
+          type: double
+          validation:
+            gt<>: [0.0]
+        min_cluster_height:
+          type: double
+          validation:
+            gt<>: [0.0]
+        min_cluster_size:
+          type: int
+          validation:
+            gt<>: [0]
+        max_cluster_size:
+          type: int
+          validation:
+            gt<>: [0]
+      velocity_estimation:
+        observation_time:
+          type: double
+          validation:
+            gt_eq<>: [0.0]
+      latency:
+        type: double
+        validation:
+          gt_eq<>: [0.0]
+
+    filter:
+      min_velocity:
+        type: double
+
+    stop:
+      margin:
+        type: double
+      on_time_buffer:
+        type: double
+      off_time_buffer:
+        type: double
+      use_sudden_stop:
+        type: bool
+
+    hold:
+      margin:
+        type: double
+
+    dead_line:
+      enable:
+        type: bool
+      margin:
+        type: double
+
+  intersection_names:
+    type: string_array
+
+  config:
+    __map_intersection_names:
+      mgrs_grid:
+        type: string
+      lane_id:
+        type: int
+      stop_line_id:
+        type: int
+      lane_1st_ids:
+        type: int_array
+        validation:
+          not_empty<>: []
+          unique<>: []
+      lane_2nd_ids:
+        type: int_array
+        default_value: []
+        validation:
+          unique<>: []
+      lane_3rd_ids:
+        type: int_array
+        default_value: []
+        validation:
+          unique<>: []
+      lane_4th_ids:
+        type: int_array
+        default_value: []
+        validation:
+          unique<>: []
+      ttc_threshold:
+        type: double
+        validation:
+          gt_eq<>: [0.0]
