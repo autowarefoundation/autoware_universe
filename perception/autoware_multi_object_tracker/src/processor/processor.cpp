@@ -209,10 +209,12 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     types::DynamicObject object1;
     if (!(*itr1)->getTrackedObject(time, object1)) continue;
     // Compare the current tracker with the remaining trackers
-    for (auto itr2 = std::next(itr1); itr2 != list_tracker_.end(); ++itr2) {
+    for (auto itr2 = std::next(itr1); itr2 != list_tracker_.end();) {
       types::DynamicObject object2;
-      if (!(*itr2)->getTrackedObject(time, object2)) continue;
-
+      if (!(*itr2)->getTrackedObject(time, object2)) {
+        ++itr2;
+        continue;
+      }
       // Calculate the distance between the two objects
       const double distance = std::hypot(
         object1.pose.position.x - object2.pose.position.x,
@@ -224,6 +226,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
 
       // If the distance is too large, skip
       if (distance > max_dist_matrix_value) {
+        ++itr2;
         continue;
       }
 
@@ -239,7 +242,8 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
 
         // Remove from original list_tracker
         itr2 = list_tracker_.erase(itr2);
-        --itr2;
+      } else {
+        ++itr2;  // Move to the next tracker
       }
     }
   }
