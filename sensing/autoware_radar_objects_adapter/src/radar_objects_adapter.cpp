@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/radar_objects_adapter/radar_objects_adapter.hpp"
+#include "radar_objects_adapter.hpp"
 
 #include <autoware/universe_utils/geometry/geometry.hpp>
 
@@ -156,12 +156,104 @@ void RadarObjectsAdapter::objects_callback(
   this->parse_as_tracks(input_msg);
 }
 
-void RadarObjectsAdapter::parse_as_detections(
-  const autoware_sensing_msgs::msg::RadarObjects & input_msg)
+template <typename ObjectType>
+void RadarObjectsAdapter::populate_common_fields(
+  const autoware_sensing_msgs::msg::RadarObject & input_object, ObjectType & output_object,
+  const float yaw)
+{
+  output_object.existence_probability = input_object.existence_probability;
+
+  auto & output_shape = output_object.shape;
+  output_shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+  output_shape.dimensions.x = size_x_available_ ? input_object.size.x : default_size_x_;
+  output_shape.dimensions.y = size_y_available_ ? input_object.size.y : default_size_y_;
+  output_shape.dimensions.z = size_z_available_ ? input_object.size.z : default_size_z_;
+
+  auto & output_pose = output_object.kinematics.pose_with_covariance.pose;
+  output_pose.position.x = input_object.position.x;
+  output_pose.position.y = input_object.position.y;
+  output_pose.position.z = position_z_available_ ? input_object.position.z : default_position_z_;
+  output_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(yaw);
+
+  radar_cov_to_detection_pose_cov(
+    input_object.position_covariance, input_object.orientation_std,
+    output_object.kinematics.pose_with_covariance.covariance);
+
+  auto & output_twist = output_object.kinematics.twist_with_covariance.twist;
+  output_twist.linear.x =
+    std::cos(yaw) * input_object.velocity.x + std::sin(yaw) * input_object.velocity.y;
+  output_twist.linear.y =
+    -std::sin(yaw) * input_object.velocity.x + std::cos(yaw) * input_object.velocity.y;
+  output_twist.linear.z = velocity_z_available_ ? input_object.velocity.z : default_velocity_z_;
+  output_twist.angular.z = input_object.orientation_rate;
+
+  radar_cov_to_detection_twist_cov(
+    input_object.velocity_covariance, yaw, input_object.orientation_rate_std,
+    output_object.kinematics.twist_with_covariance.covariance);
+
+  // Additional fields for TrackedObject
+  if constexpr (std::is_same_v<ObjectType, autoware_perception_msgs::msg::TrackedObject>) {
+    auto & output_acceleration = output_object.kinematics.acceleration_with_covariance.accel;
+    output_acceleration.linear.x =
+      std::cos(yaw) * input_object.acceleration.x + std::sin(yaw) * input_object.acceleration.y;
+    output_acceleration.linear.y =
+      -std::sin(yaw) * input_object.acceleration.x + std::cos(yaw) * input_object.acceleration.y;
+    output_acceleration.linear.z =
+      acceleration_z_available_ ? input_object.acceleration.z : default_acceleration_z_;
+
+    radar_cov_to_detection_acceleration_cov(
+      input_object.acceleration_covariance, yaw,
+      output_object.kinematics.acceleration_with_covariance.covariance);
+  }
+}
+
+void RadarObjectsAdapter::populate_classifications(
+  const std::vector<autoware_sensing_msgs::msg::RadarClassification> & input_classifications,
+  std::vector<autoware_perception_msgs::msg::ObjectClassification> & output_classifications)
 {
   using RadarClassification = autoware_sensing_msgs::msg::RadarClassification;
   using ObjectClassification = autoware_perception_msgs::msg::ObjectClassification;
 
+  for (const auto & input_classification : input_classifications) {
+    ObjectClassification output_classification;
+
+    switch (input_classification.label) {
+      case RadarClassification::UNKNOWN:
+        output_classification.label = ObjectClassification::UNKNOWN;
+        break;
+      case RadarClassification::CAR:
+        output_classification.label = ObjectClassification::CAR;
+        break;
+      case RadarClassification::TRUCK:
+        output_classification.label = ObjectClassification::TRUCK;
+        break;
+      case RadarClassification::MOTORCYCLE:
+        output_classification.label = ObjectClassification::MOTORCYCLE;
+        break;
+      case RadarClassification::BICYCLE:
+        output_classification.label = ObjectClassification::BICYCLE;
+        break;
+      case RadarClassification::PEDESTRIAN:
+        output_classification.label = ObjectClassification::PEDESTRIAN;
+        break;
+      case RadarClassification::ANIMAL:
+        output_classification.label = ObjectClassification::ANIMAL;
+        break;
+      case RadarClassification::HAZARD:
+        output_classification.label = ObjectClassification::UNKNOWN;
+        break;
+      default:
+        continue;
+    }
+
+    output_classification.probability = input_classification.probability;
+    output_classifications.push_back(output_classification);
+  }
+}
+
+void RadarObjectsAdapter::parse_as_detections(
+  const autoware_sensing_msgs::msg::RadarObjects & input_msg)
+{
   auto output_msg_ptr = std::make_unique<autoware_perception_msgs::msg::DetectedObjects>();
   auto & output_msg = *output_msg_ptr;
 
@@ -170,103 +262,10 @@ void RadarObjectsAdapter::parse_as_detections(
 
   for (const auto & input_object : input_msg.objects) {
     autoware_perception_msgs::msg::DetectedObject output_object;
-    output_object.existence_probability = input_object.existence_probability;
-
-    output_object.classification.reserve(input_object.classifications.size());
-
-    for (const auto & input_classification : input_object.classifications) {
-      ObjectClassification output_classification;
-
-      switch (input_classification.label) {
-        case RadarClassification::UNKNOWN:
-          output_classification.label = ObjectClassification::UNKNOWN;
-          break;
-        case RadarClassification::CAR:
-          output_classification.label = ObjectClassification::CAR;
-          break;
-        case RadarClassification::TRUCK:
-          output_classification.label = ObjectClassification::TRUCK;
-          break;
-        case RadarClassification::MOTORCYCLE:
-          output_classification.label = ObjectClassification::MOTORCYCLE;
-          break;
-        case RadarClassification::BICYCLE:
-          output_classification.label = ObjectClassification::BICYCLE;
-          break;
-        case RadarClassification::PEDESTRIAN:
-          output_classification.label = ObjectClassification::PEDESTRIAN;
-          break;
-        case RadarClassification::ANIMAL:
-          output_classification.label = ObjectClassification::ANIMAL;
-          break;
-        case RadarClassification::HAZARD:
-          output_classification.label = ObjectClassification::UNKNOWN;
-          break;
-        default:
-          continue;
-      }
-
-      output_classification.probability = input_classification.probability;
-      output_object.classification.push_back(output_classification);
-    }
-
-    auto & output_shape = output_object.shape;
-    output_shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
-    output_shape.dimensions.x = size_x_available_ ? input_object.size.x : default_size_x_;
-    output_shape.dimensions.y = size_y_available_ ? input_object.size.y : default_size_y_;
-    output_shape.dimensions.z = size_z_available_ ? input_object.size.z : default_size_z_;
-
-    // Brace for conditionals
-    auto & output_pose = output_object.kinematics.pose_with_covariance.pose;
-
-    output_pose.position.x = input_object.position.x;
-    output_pose.position.y = input_object.position.y;
-    output_pose.position.z = position_z_available_ ? input_object.position.z : default_position_z_;
-
-    output_object.kinematics.orientation_availability =
-      autoware_perception_msgs::msg::DetectedObjectKinematics::AVAILABLE;  // 2 is full, 0 non
-                                                                           // available
 
     const auto & yaw = input_object.orientation;
-    output_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(yaw);
-
-    bool position_covariance_available = std::any_of(
-      input_object.position_covariance.begin(), input_object.position_covariance.end(),
-      [](const auto & cov_element) {
-        return cov_element != autoware_sensing_msgs::msg::RadarObject::INVALID_COV_VALUE;
-      });
-
-    output_object.kinematics.has_position_covariance = position_covariance_available;
-
-    radar_cov_to_detection_pose_cov(
-      input_object.position_covariance, input_object.orientation_std,
-      output_object.kinematics.pose_with_covariance.covariance);
-
-    auto & output_twist = output_object.kinematics.twist_with_covariance.twist;
-    output_object.kinematics.has_twist = true;
-
-    // twist of the object is based on the object coordinate system
-    output_twist.linear.x =
-      std::cos(yaw) * input_object.velocity.x + std::sin(yaw) * input_object.velocity.y;
-    output_twist.linear.y =
-      -std::sin(yaw) * input_object.velocity.x + std::cos(yaw) * input_object.velocity.y;
-    output_twist.linear.z = velocity_z_available_ ? input_object.velocity.z : default_velocity_z_;
-
-    output_twist.angular.x = 0.0;
-    output_twist.angular.y = 0.0;
-    output_twist.angular.z = input_object.orientation_rate;
-
-    bool twist_covariance_available = std::any_of(
-      input_object.velocity_covariance.begin(), input_object.velocity_covariance.end(),
-      [](const auto & cov_element) {
-        return cov_element != autoware_sensing_msgs::msg::RadarObject::INVALID_COV_VALUE;
-      });
-
-    output_object.kinematics.has_twist_covariance = twist_covariance_available;
-
-    radar_cov_to_detection_twist_cov(
-      input_object.velocity_covariance, yaw, input_object.orientation_rate_std,
-      output_object.kinematics.twist_with_covariance.covariance);
+    populate_common_fields(input_object, output_object, yaw);
+    populate_classifications(input_object.classifications, output_object.classification);
 
     output_msg.objects.push_back(output_object);
   }
@@ -277,9 +276,6 @@ void RadarObjectsAdapter::parse_as_detections(
 void RadarObjectsAdapter::parse_as_tracks(
   const autoware_sensing_msgs::msg::RadarObjects & input_msg)
 {
-  using RadarClassification = autoware_sensing_msgs::msg::RadarClassification;
-  using ObjectClassification = autoware_perception_msgs::msg::ObjectClassification;
-
   auto output_msg_ptr = std::make_unique<autoware_perception_msgs::msg::TrackedObjects>();
   auto & output_msg = *output_msg_ptr;
 
@@ -302,102 +298,9 @@ void RadarObjectsAdapter::parse_as_tracks(
       }
     }
 
-    output_object.existence_probability = input_object.existence_probability;
-
-    output_object.classification.reserve(input_object.classifications.size());
-
-    for (const auto & input_classification : input_object.classifications) {
-      ObjectClassification output_classification;
-
-      switch (input_classification.label) {
-        case RadarClassification::UNKNOWN:
-          output_classification.label = ObjectClassification::UNKNOWN;
-          break;
-        case RadarClassification::CAR:
-          output_classification.label = ObjectClassification::CAR;
-          break;
-        case RadarClassification::TRUCK:
-          output_classification.label = ObjectClassification::TRUCK;
-          break;
-        case RadarClassification::MOTORCYCLE:
-          output_classification.label = ObjectClassification::MOTORCYCLE;
-          break;
-        case RadarClassification::BICYCLE:
-          output_classification.label = ObjectClassification::BICYCLE;
-          break;
-        case RadarClassification::PEDESTRIAN:
-          output_classification.label = ObjectClassification::PEDESTRIAN;
-          break;
-        case RadarClassification::ANIMAL:
-          output_classification.label = ObjectClassification::ANIMAL;
-          break;
-        case RadarClassification::HAZARD:
-          output_classification.label = ObjectClassification::UNKNOWN;
-          break;
-        default:
-          continue;
-      }
-
-      output_classification.probability = input_classification.probability;
-      output_object.classification.push_back(output_classification);
-    }
-
-    auto & output_shape = output_object.shape;
-    output_shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
-    output_shape.dimensions.x = size_x_available_ ? input_object.size.x : default_size_x_;
-    output_shape.dimensions.y = size_y_available_ ? input_object.size.y : default_size_y_;
-    output_shape.dimensions.z = size_z_available_ ? input_object.size.z : default_size_z_;
-
-    // Brace for conditionals
-    auto & output_pose = output_object.kinematics.pose_with_covariance.pose;
-
-    output_pose.position.x = input_object.position.x;
-    output_pose.position.y = input_object.position.y;
-    output_pose.position.z = position_z_available_ ? input_object.position.z : default_position_z_;
-
-    output_object.kinematics.orientation_availability =
-      autoware_perception_msgs::msg::DetectedObjectKinematics::AVAILABLE;  // 2 is full, 0 non
-                                                                           // available
-
     const auto & yaw = input_object.orientation;
-    output_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(yaw);
-
-    radar_cov_to_detection_pose_cov(
-      input_object.position_covariance, input_object.orientation_std,
-      output_object.kinematics.pose_with_covariance.covariance);
-
-    auto & output_twist = output_object.kinematics.twist_with_covariance.twist;
-
-    // twist of the object is based on the object coordinate system
-    output_twist.linear.x =
-      std::cos(yaw) * input_object.velocity.x + std::sin(yaw) * input_object.velocity.y;
-    output_twist.linear.y =
-      -std::sin(yaw) * input_object.velocity.x + std::cos(yaw) * input_object.velocity.y;
-    output_twist.linear.z = velocity_z_available_ ? input_object.velocity.z : default_velocity_z_;
-
-    output_twist.angular.x = 0.0;
-    output_twist.angular.y = 0.0;
-    output_twist.angular.z = input_object.orientation_rate;
-
-    radar_cov_to_detection_twist_cov(
-      input_object.velocity_covariance, yaw, input_object.orientation_rate_std,
-      output_object.kinematics.twist_with_covariance.covariance);
-
-    auto & output_acceleration = output_object.kinematics.acceleration_with_covariance.accel;
-    output_acceleration.linear.x =
-      std::cos(yaw) * input_object.acceleration.x + std::sin(yaw) * input_object.acceleration.y;
-    output_acceleration.linear.y =
-      -std::sin(yaw) * input_object.acceleration.x + std::cos(yaw) * input_object.acceleration.y;
-    output_acceleration.linear.z =
-      acceleration_z_available_ ? input_object.acceleration.z : default_acceleration_z_;
-
-    output_acceleration.angular.x = 0.0;
-    output_acceleration.angular.y = 0.0;
-    output_acceleration.angular.z = 0.0;
-
-    radar_cov_to_detection_acceleration_cov(
-      input_object.acceleration_covariance, yaw,
-      output_object.kinematics.acceleration_with_covariance.covariance);
+    populate_common_fields(input_object, output_object, yaw);
+    populate_classifications(input_object.classifications, output_object.classification);
 
     output_msg.objects.push_back(output_object);
   }

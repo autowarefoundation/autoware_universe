@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__RADAR_OBJECTS_ADAPTER__RADAR_OBJECTS_ADAPTER_HPP_
-#define AUTOWARE__RADAR_OBJECTS_ADAPTER__RADAR_OBJECTS_ADAPTER_HPP_
+#ifndef RADAR_OBJECTS_ADAPTER_HPP_
+#define RADAR_OBJECTS_ADAPTER_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -47,6 +47,15 @@ private:
   void radar_cov_to_detection_acceleration_cov(
     const std::array<float, 6> & radar_acceleration_cov, const float yaw,
     std::array<double, 36> & acceleration_cov);
+
+  template <typename ObjectType>
+  void populate_common_fields(
+    const autoware_sensing_msgs::msg::RadarObject & input_object, ObjectType & output_object,
+    const float yaw);
+
+  void populate_classifications(
+    const std::vector<autoware_sensing_msgs::msg::RadarClassification> & input_classifications,
+    std::vector<autoware_perception_msgs::msg::ObjectClassification> & output_classifications);
 
   void objects_callback(const autoware_sensing_msgs::msg::RadarObjects & objects_msg);
   void parse_as_detections(const autoware_sensing_msgs::msg::RadarObjects & objects_msg);
@@ -85,4 +94,4 @@ private:
 };
 }  // namespace autoware
 
-#endif  // AUTOWARE__RADAR_OBJECTS_ADAPTER__RADAR_OBJECTS_ADAPTER_HPP_
+#endif  // RADAR_OBJECTS_ADAPTER_HPP_
