@@ -79,17 +79,24 @@ void calculate_current_footprint(
     predicted_object.shape.dimensions.y);
 }
 
-bool skip_object_condition(
-  Object & object, const std::optional<DecisionHistory> & prev_decisions,
+ObjectFilteringType calculate_filtering_type(
+  const Object & object, const std::optional<DecisionHistory> & prev_decisions,
   const universe_utils::Segment2d & ego_rear_segment, const FilteringData & filtering_data,
   const Parameters & params)
 {
-  constexpr auto skip_object = true;
+  ObjectFilteringType filtering_type = not_ignored;
 
-  const auto dist = boost::geometry::distance(object.position, ego_rear_segment);
-  const auto careful_skip_condition = object.velocity > 0.5 && dist < 20.0;
-  if (careful_skip_condition) {
-    object.careful_skip = true;
+  if (!filtering_data.carefully_ignore_objects_rtree.is_geometry_disjoint_from_rtree_polygons(
+        object.current_footprint, filtering_data.carefully_ignore_objects_polygons)) {
+    filtering_type = carefully_ignored;
+  }
+
+  const auto & is_previous_target =
+    prev_decisions && (prev_decisions->decisions.back().type == stop ||
+                       (prev_decisions->decisions.back().collision.has_value() &&
+                        prev_decisions->decisions.back().collision->type == collision));
+  if (is_previous_target) {
+    return filtering_type;
   }
 
   const auto rear_vector = ego_rear_segment.second - ego_rear_segment.first;
@@ -98,29 +105,19 @@ bool skip_object_condition(
   const auto object_vector = object.position - ego_rear_segment.first;
   const auto is_behind_ego = rear_normal.dot(object_vector) < 0.0;
   if (params.object_parameters_per_label[object.label].ignore_if_behind_ego && is_behind_ego) {
-    return skip_object;
-  }
-  const auto & is_previous_target =
-    prev_decisions && (prev_decisions->decisions.back().type == stop ||
-                       (prev_decisions->decisions.back().collision.has_value() &&
-                        prev_decisions->decisions.back().collision->type == collision));
-  if (is_previous_target) {
-    return !skip_object;
+    return ignored;
   }
   if (params.object_parameters_per_label[object.label].ignore_if_stopped && object.is_stopped) {
-    return skip_object;
+    return ignored;
   }
   if (!object.has_target_label) {
-    return skip_object;
+    return ignored;
   }
   if (!filtering_data.ignore_objects_rtree.is_geometry_disjoint_from_rtree_polygons(
         object.current_footprint, filtering_data.ignore_objects_polygons)) {
-    if (careful_skip_condition) {
-      return !skip_object;
-    }
-    return skip_object;
+    return ignored;
   }
-  return !skip_object;
+  return filtering_type;
 }
 
 std::vector<autoware_perception_msgs::msg::PredictedPath> filter_by_confidence(
@@ -216,25 +213,50 @@ std::optional<size_t> get_cut_predicted_path_index(
   return std::nullopt;
 }
 
-void filter_predicted_paths(Object & object, const FilteringData & map_data)
+size_t get_careful_predicted_path_index(
+  const ObjectPredictedPathFootprint & predicted_path_footprint, const double max_time,
+  const double max_length)
 {
-  constexpr auto careful_skip_time_horizon = 2.0;
+  const auto max_time_index = static_cast<size_t>(max_time / predicted_path_footprint.time_step);
+  auto max_length_index = 0UL;
+  const auto & ls = predicted_path_footprint.predicted_path_footprint.corner_linestrings[0];
+  auto length = 0.0;
+  for (; max_length_index + 1 < ls.size(); ++max_length_index) {
+    if (length >= max_length) {
+      break;
+    }
+    length += universe_utils::calcDistance2d(ls[max_length_index], ls[max_length_index + 1]);
+  }
+  return std::min(max_length_index, max_time_index);
+}
+
+void repeat_last_pose(
+  ObjectPredictedPathFootprint & predicted_path_footprint, const size_t new_size)
+{
+  for (auto & ls : predicted_path_footprint.predicted_path_footprint.corner_linestrings) {
+    if (!ls.empty()) {
+      ls.resize(new_size, ls.back());
+    }
+  }
+}
+
+void filter_predicted_paths(
+  Object & object, const FilteringData & map_data, const ObjectParameters & params)
+{
   for (auto & predicted_path_footprint : object.predicted_path_footprints) {
-    const auto cut_index = object.careful_skip
-                             ? careful_skip_time_horizon / predicted_path_footprint.time_step
-                             : get_cut_predicted_path_index(predicted_path_footprint, map_data);
+    const auto original_size = predicted_path_footprint.predicted_path_footprint.size();
+    auto cut_index = get_cut_predicted_path_index(predicted_path_footprint, map_data);
+    if (object.filtering_type == carefully_ignored) {
+      cut_index = std::min(
+        cut_index.value_or(original_size),
+        get_careful_predicted_path_index(
+          predicted_path_footprint, params.carefully_ignore_max_time,
+          params.carefully_ignore_max_length));
+    }
     if (cut_index) {
       cut_footprint_after_index(predicted_path_footprint, *cut_index);
-    }
-    if (object.careful_skip && cut_index) {
-      constexpr auto extra_time = 2.0;
-      for (auto i = 0UL; i < static_cast<size_t>(extra_time / predicted_path_footprint.time_step);
-           ++i) {
-        for (auto & ls : predicted_path_footprint.predicted_path_footprint.corner_linestrings) {
-          if (!ls.empty()) {
-            ls.push_back(ls.back());
-          }
-        }
+      if (object.filtering_type == carefully_ignored) {
+        repeat_last_pose(predicted_path_footprint, original_size);
       }
     }
   }
@@ -260,13 +282,16 @@ std::vector<Object> prepare_dynamic_objects(
     classify(filtered_object, object->predicted_object, target_labels, params);
     calculate_current_footprint(filtered_object, object->predicted_object);
     const auto & previous_object_decisions = previous_decisions.get(filtered_object.uuid);
-    if (skip_object_condition(
-          filtered_object, previous_object_decisions, ego_rear_segment,
-          filtering_data[filtered_object.label], params)) {
+    filtered_object.filtering_type = calculate_filtering_type(
+      filtered_object, previous_object_decisions, ego_rear_segment,
+      filtering_data[filtered_object.label], params);
+    if (filtered_object.filtering_type == ignored) {
       continue;
     }
     calculate_predicted_path_footprints(filtered_object, object->predicted_object, params);
-    filter_predicted_paths(filtered_object, filtering_data[filtered_object.label]);
+    filter_predicted_paths(
+      filtered_object, filtering_data[filtered_object.label],
+      params.object_parameters_per_label[filtered_object.label]);
     if (!filtered_object.predicted_path_footprints.empty()) {
       filtered_objects.push_back(filtered_object);
     }

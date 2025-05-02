@@ -40,6 +40,8 @@ struct ObjectParameters
   bool ignore_if_behind_ego;
   std::vector<std::string> ignore_objects_polygon_types;
   std::vector<std::string> ignore_objects_lanelet_subtypes;
+  std::vector<std::string> carefully_ignore_objects_polygon_types;
+  std::vector<std::string> carefully_ignore_objects_lanelet_subtypes;
   std::vector<std::string> ignore_collisions_polygon_types;
   std::vector<std::string> ignore_collisions_lanelet_subtypes;
   std::vector<std::string> cut_linestring_types;
@@ -48,6 +50,8 @@ struct ObjectParameters
   bool cut_if_crossing_ego_from_behind;
   double confidence_filtering_threshold;
   bool confidence_filtering_only_use_highest;
+  double carefully_ignore_max_time;
+  double carefully_ignore_max_length;
 };
 
 /// @brief conditions to ignore collisions
@@ -204,6 +208,12 @@ struct Parameters
         get_object_parameter<std::vector<std::string>>(node, ns, label, ".ignore.polygon_types");
       object_parameters_per_label[label].ignore_objects_lanelet_subtypes =
         get_object_parameter<std::vector<std::string>>(node, ns, label, ".ignore.lanelet_subtypes");
+      object_parameters_per_label[label].carefully_ignore_objects_polygon_types =
+        get_object_parameter<std::vector<std::string>>(
+          node, ns, label, ".carefully_ignore.polygon_types");
+      object_parameters_per_label[label].carefully_ignore_objects_lanelet_subtypes =
+        get_object_parameter<std::vector<std::string>>(
+          node, ns, label, ".carefully_ignore.lanelet_subtypes");
       object_parameters_per_label[label].ignore_collisions_polygon_types =
         get_object_parameter<std::vector<std::string>>(
           node, ns, label, ".ignore_collisions.polygon_types");
@@ -230,6 +240,10 @@ struct Parameters
       object_parameters_per_label[label].cut_if_crossing_ego_from_behind =
         get_object_parameter<bool>(
           node, ns, label, ".cut_predicted_paths.if_crossing_ego_from_behind");
+      object_parameters_per_label[label].carefully_ignore_max_time =
+        get_object_parameter<double>(node, ns, label, ".carefully_ignore.max_time_considered");
+      object_parameters_per_label[label].carefully_ignore_max_length =
+        get_object_parameter<double>(node, ns, label, ".carefully_ignore.max_length_considered");
     }
     debug.object_label = getOrDeclareParameter<std::string>(node, ns + ".debug.object_label");
 
@@ -297,11 +311,17 @@ struct Parameters
         params, ns + str + ".ignore.lanelet_subtypes",
         object_parameters_per_label[label].ignore_objects_lanelet_subtypes);
       updateParam(
-        params, ns + str + ".ignore_collisions.lanelet_subtypes",
-        object_parameters_per_label[label].ignore_collisions_lanelet_subtypes);
-      updateParam(
         params, ns + str + ".ignore.polygon_types",
         object_parameters_per_label[label].ignore_objects_polygon_types);
+      updateParam(
+        params, ns + str + ".carefully_ignore.lanelet_subtypes",
+        object_parameters_per_label[label].carefully_ignore_objects_lanelet_subtypes);
+      updateParam(
+        params, ns + str + ".carefully_ignore.polygon_types",
+        object_parameters_per_label[label].carefully_ignore_objects_polygon_types);
+      updateParam(
+        params, ns + str + ".ignore_collisions.lanelet_subtypes",
+        object_parameters_per_label[label].ignore_collisions_lanelet_subtypes);
       updateParam(
         params, ns + str + ".ignore_collisions.polygon_types",
         object_parameters_per_label[label].ignore_collisions_polygon_types);
@@ -323,6 +343,12 @@ struct Parameters
       updateParam(
         params, ns + str + ".cut_predicted_paths.linestring_types",
         object_parameters_per_label[label].cut_linestring_types);
+      updateParam(
+        params, ns + str + ".carefully_ignore.max_time_considered",
+        object_parameters_per_label[label].carefully_ignore_max_time);
+      updateParam(
+        params, ns + str + ".carefully_ignore.max_length_considered",
+        object_parameters_per_label[label].carefully_ignore_max_length);
     }
     updateParam(params, ns + ".debug.object_label", debug.object_label);
 

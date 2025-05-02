@@ -288,19 +288,25 @@ struct ObjectDecisionsTracker
     return history_per_object.at(object);
   }
 };
+
+enum ObjectFilteringType {
+  ignored,
+  carefully_ignored,
+  not_ignored,
+};
 /// @brief Object represented by its uuid, corner footprints, current footprint, position,
 /// collisions with ego, classification label
 struct Object
 {
   std::shared_ptr<motion_velocity_planner::PlannerData::Object> object;
   std::string uuid;
+  ObjectFilteringType filtering_type = not_ignored;
   std::vector<ObjectPredictedPathFootprint>
     predicted_path_footprints;  // footprint of each predicted path
   universe_utils::Polygon2d current_footprint;
   universe_utils::Point2d position;
   bool is_stopped = false;
   double velocity{};
-  bool careful_skip = false;
   uint8_t label;
   bool has_target_label = false;
   std::vector<Collision> collisions;  // collisions with the ego trajectory
@@ -310,6 +316,8 @@ struct FilteringData
 {
   std::vector<universe_utils::LinearRing2d> ignore_objects_polygons;
   PolygonRtree ignore_objects_rtree;
+  std::vector<universe_utils::LinearRing2d> carefully_ignore_objects_polygons;
+  PolygonRtree carefully_ignore_objects_rtree;
   std::vector<universe_utils::LinearRing2d> ignore_collisions_polygons;
   PolygonRtree ignore_collisions_rtree;
   std::vector<universe_utils::Segment2d> cut_predicted_paths_segments;
