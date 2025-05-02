@@ -37,11 +37,11 @@ public:
 
 private:
   void radar_cov_to_detection_pose_cov(
-    const std::array<float, 6> & radar_cov, const double orientation_std,
+    const std::array<float, 6> & radar_pose_cov, const double orientation_std,
     std::array<double, 36> & pose_cov);
 
   void radar_cov_to_detection_twist_cov(
-    const std::array<float, 6> & radar_cov, const float yaw, const float yaw_std,
+    const std::array<float, 6> & radar_twist_cov, const float yaw, const float yaw_rate_std,
     std::array<double, 36> & twist_cov);
 
   void radar_cov_to_detection_acceleration_cov(
@@ -57,7 +57,7 @@ private:
     const std::vector<autoware_sensing_msgs::msg::RadarClassification> & input_classifications,
     std::vector<autoware_perception_msgs::msg::ObjectClassification> & output_classifications);
 
-  void objects_callback(const autoware_sensing_msgs::msg::RadarObjects & objects_msg);
+  void objects_callback(const autoware_sensing_msgs::msg::RadarObjects & input_msg);
   void parse_as_detections(const autoware_sensing_msgs::msg::RadarObjects & objects_msg);
   void parse_as_tracks(const autoware_sensing_msgs::msg::RadarObjects & objects_msg);
 
