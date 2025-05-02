@@ -43,10 +43,10 @@ RadarObjectsAdapter::RadarObjectsAdapter(const rclcpp::NodeOptions & options)
     std::bind(&RadarObjectsAdapter::radar_info_callback, this, std::placeholders::_1));
 
   detections_pub_ = create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
-    "~/output/detections", rclcpp::SensorDataQoS());
+    "~/output/detections", rclcpp::QoS(10).reliable().transient_local());
 
   tracks_pub_ = create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
-    "~/output/tracks", rclcpp::SensorDataQoS());
+    "~/output/tracks", rclcpp::QoS(10).reliable().transient_local());
 
   default_position_z_ = this->declare_parameter<float>("default_position_z");
   default_velocity_z_ = this->declare_parameter<float>("default_velocity_z");
@@ -151,17 +151,9 @@ void RadarObjectsAdapter::objects_callback(
     return;
   }
 
-  if (
-    detections_pub_->get_subscription_count() > 0 ||
-    detections_pub_->get_intra_process_subscription_count() > 0) {
-    this->parse_as_detections(input_msg);
-  }
-
-  if (
-    tracks_pub_->get_subscription_count() > 0 ||
-    tracks_pub_->get_intra_process_subscription_count() > 0) {
-    this->parse_as_tracks(input_msg);
-  }
+  // publish both detections and tracks
+  this->parse_as_detections(input_msg);
+  this->parse_as_tracks(input_msg);
 }
 
 void RadarObjectsAdapter::parse_as_detections(
