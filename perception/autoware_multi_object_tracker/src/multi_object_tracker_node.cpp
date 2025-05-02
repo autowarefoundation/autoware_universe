@@ -64,8 +64,8 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
   bool use_time_keeper = declare_parameter<bool>("publish_processing_time_detail");
 
   // ROS interface - Publisher
-  tracked_objects_pub_ =
-    create_publisher<autoware_perception_msgs::msg::TrackedObjects>("output", rclcpp::QoS{1});
+  tracked_objects_pub_ = create_publisher<autoware_perception_msgs::msg::TrackedObjects>(
+    "output/objects", rclcpp::QoS{1});
 
   // Odometry manager
   odometry_ =
