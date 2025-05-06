@@ -30,6 +30,9 @@ add_library(pointcloud_preprocessor_filter_base SHARED
   src/utility/memory.cpp
 )
 
+# Post Humble compatibility:
+target_compile_options(pointcloud_preprocessor_filter_base PUBLIC -Wno-error=deprecated-declarations)
+
 target_include_directories(pointcloud_preprocessor_filter_base PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
@@ -117,6 +120,9 @@ ament_auto_add_library(pointcloud_preprocessor_filter SHARED
   src/pointcloud_densifier/pointcloud_densifier_node.cpp
   src/pointcloud_densifier/occupancy_grid.cpp
 )
+
+# Post Humble compatibility:
+target_compile_options(pointcloud_preprocessor_filter PUBLIC -Wno-error=maybe-uninitialized)
 
 target_link_libraries(pointcloud_preprocessor_filter
   pointcloud_preprocessor_filter_base
