@@ -3,20 +3,20 @@
   <!-- cspell:ignore nuscenes, bevdet, dlongterm -->
 
   <!-- input topic name -->
-  <arg name="input/img_fl" default="/CAM_FRONT_LEFT/image"/>
-  <arg name="input/img_f" default="/CAM_FRONT/image"/>
-  <arg name="input/img_fr" default="/CAM_FRONT_RIGHT/image"/>
-  <arg name="input/img_bl" default="/CAM_BACK_LEFT/image"/>
-  <arg name="input/img_b" default="/CAM_BACK/image"/>
-  <arg name="input/img_br" default="/CAM_BACK_RIGHT/image"/>
-  <arg name="output/boxes" default="boxes"/>
+  <arg name="input/img_fl" default="/nuscenes/CAM_FRONT_LEFT/image"/>
+  <arg name="input/img_f" default="/nuscenes/CAM_FRONT/image"/>
+  <arg name="input/img_fr" default="/nuscenes/CAM_FRONT_RIGHT/image"/>
+  <arg name="input/img_bl" default="/nuscenes/CAM_BACK_LEFT/image"/>
+  <arg name="input/img_b" default="/nuscenes/CAM_BACK/image"/>
+  <arg name="input/img_br" default="/nuscenes/CAM_BACK_RIGHT/image"/>
+  <arg name="output/boxes" default="/nuscenes/bboxes"/>
 
-  <arg name="input/img_fl/camera_info" default="/CAM_FRONT_LEFT/camera_info"/>
-  <arg name="input/img_f/camera_info" default="/CAM_FRONT/camera_info"/>
-  <arg name="input/img_fr/camera_info" default="/CAM_FRONT_RIGHT/camera_info"/>
-  <arg name="input/img_bl/camera_info" default="/CAM_BACK_LEFT/camera_info"/>
-  <arg name="input/img_b/camera_info" default="/CAM_BACK/camera_info"/>
-  <arg name="input/img_br/camera_info" default="/CAM_BACK_RIGHT/camera_info"/>
+  <arg name="input/img_fl/camera_info" default="/nuscenes/CAM_FRONT_LEFT/camera_info"/>
+  <arg name="input/img_f/camera_info" default="/nuscenes/CAM_FRONT/camera_info"/>
+  <arg name="input/img_fr/camera_info" default="/nuscenes/CAM_FRONT_RIGHT/camera_info"/>
+  <arg name="input/img_bl/camera_info" default="/nuscenes/CAM_BACK_LEFT/camera_info"/>
+  <arg name="input/img_b/camera_info" default="/nuscenes/CAM_BACK/camera_info"/>
+  <arg name="input/img_br/camera_info" default="/nuscenes/CAM_BACK_RIGHT/camera_info"/>
 
   <arg name="data_path" default="$(env HOME)/autoware_data"/>
   <arg name="model_name" default="bevdet_one_lt_d"/>
