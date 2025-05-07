@@ -6,3 +6,5 @@
     remove_overlapped_unknown_objects: true
     base_link_frame_id: base_link
     priority_mode: 2  # PriorityMode::Confidence
+    message_timeout_sec: 1.0
+    initialization_timeout_sec: 10.0

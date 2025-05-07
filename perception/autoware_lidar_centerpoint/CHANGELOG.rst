@@ -2,6 +2,66 @@
 Changelog for package autoware_lidar_centerpoint
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(lidar_centerpoint): add diagnostics for processing time (`#10284 <https://github.com/autowarefoundation/autoware_universe/issues/10284>`_)
+  * add diagnostics for processing time
+  * style(pre-commit): autofix
+  * change to timer callback to check the error
+  * style(pre-commit): autofix
+  * add ms in name
+  * fix cppcheck error
+  * change parameter name
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * change structure
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * change var name
+  * change config related part
+  * fix typo
+  * change launch arg name
+  * add schema file
+  * refactor(autoware_lidar_centerpoint): remove unused is_processing_delayed\_ variable
+  * add processing time in diag.
+  * style(pre-commit): autofix
+  * refactor
+  * style(pre-commit): autofix
+  * use diagnostic_updater instead of timer callback
+  * style(pre-commit): autofix
+  * change validation_callback_interval_ms type to number
+  * Update perception/autoware_lidar_centerpoint/src/node.cpp
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* chore(perception): code owner revision (`#10358 <https://github.com/autowarefoundation/autoware_universe/issues/10358>`_)
+  * feat: add Masato Saeki and Taekjin Lee as maintainer to multiple package.xml files
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(autoware_lidar_centerpoint): added the cuda_blackboard to centerpoint (`#9453 <https://github.com/autowarefoundation/autoware_universe/issues/9453>`_)
+  * feat: introduced the cuda transport layer (cuda blackboard) to centerpoint
+  * chore: fixed compilation issue on pointpainting
+  * fix: fixed compile errors in the ml models
+  * fix: fixed standalone non-composed launcher
+  * chore: ci/cd
+  * chore: clang tidy related fix
+  * chore: removed non applicable override (point painting does not support the blackboard yet)
+  * chore: temporarily ignoring warning until pointpainting also supports the blackboard
+  * chore: ignoring spell
+  * feat: removed the deprecated compatible subs option in the constructor
+  * chore: bump the cuda blackboard version in the build depends
+  * Update perception/autoware_image_projection_based_fusion/src/pointpainting_fusion/pointpainting_trt.cpp
+  Co-authored-by: badai nguyen  <94814556+badai-nguyen@users.noreply.github.com>
+  * Update perception/autoware_image_projection_based_fusion/src/pointpainting_fusion/pointpainting_trt.cpp
+  Co-authored-by: badai nguyen  <94814556+badai-nguyen@users.noreply.github.com>
+  ---------
+  Co-authored-by: Amadeusz Szymko <amadeusz.szymko.2@tier4.jp>
+  Co-authored-by: badai nguyen <94814556+badai-nguyen@users.noreply.github.com>
+* chore(localization, perception): remove koji minoda as maintainer from multiple packages (`#10359 <https://github.com/autowarefoundation/autoware_universe/issues/10359>`_)
+  fix: remove Koji Minoda as maintainer from multiple package.xml files
+* Contributors: Kenzo Lobos Tsunekawa, Masaki Baba, Ryohsuke Mitsudome, Taekjin LEE
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

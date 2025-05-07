@@ -2,6 +2,69 @@
 Changelog for package autoware_multi_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(multi object tracker): tracker overlap threshold (`#10456 <https://github.com/autowarefoundation/autoware_universe/issues/10456>`_)
+  * preparation
+  * feat(autoware_multi_object_tracker): enhance matrix initialization and add debug logging for tracker removal
+  * refactor(autoware_multi_object_tracker): replace vector matrices with Eigen matrices in AssociatorConfig
+  * feat(autoware_multi_object_tracker): integrate max distance matrix for tracker removal logic
+  * refactor(autoware_multi_object_tracker): remove debug logging for tracker removal process
+  * style(pre-commit): autofix
+  * refactor(autoware_multi_object_tracker): remove unused string include in association.cpp
+  * refactor(autoware_multi_object_tracker): remove commented debug logging in association.cpp
+  * refactor(autoware_multi_object_tracker): remove distance_threshold parameter and update related configurations
+  * refactor(multi_object_tracker_node): change Eigen::Map to use const for matrix initialization
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(multi_object_tracker): add required headers (`#10461 <https://github.com/autowarefoundation/autoware_universe/issues/10461>`_)
+* fix(autoware_multi_object_tracker): fix bicycle renovation vector dimension (`#10449 <https://github.com/autowarefoundation/autoware_universe/issues/10449>`_)
+  fix a bug in updateStatePoseVel
+* feat(autoware_multi_object_tracker): implement time keeper (`#10431 <https://github.com/autowarefoundation/autoware_universe/issues/10431>`_)
+  * feat(multi_object_tracker): integrate ScopedTimeTrack for detailed processing time tracking
+  * feat(multi_object_tracker): add parameter for detailed processing time publishing
+  ---------
+* feat(autoware_multi_object_tracker): vehicle's ego frame as a parameter (`#10428 <https://github.com/autowarefoundation/autoware_universe/issues/10428>`_)
+* feat(multi_object_tracker): add diagnostics warning when extrapolation time exceeds limit with latency guarantee enabled (`#10301 <https://github.com/autowarefoundation/autoware_universe/issues/10301>`_)
+  * feat(multi_object_tracker): add diagnostics warning when extrapolation time exceeds limit with latency guarantee enabled
+  * feat(multi_object_tracker): handled  the case last_updated_time\_ initialized as 0
+  * feat(multi_object_tracker): refactored to give better structure
+  diagnostic force updated when published
+  * style(pre-commit): autofix
+  * feat(multi_object_tracker): add published tracker count check
+  * style(pre-commit): autofix
+  * feat(multi_object_tracker): fix checkAllTiming  complexity
+  * style(pre-commit): autofix
+  * feat(multi_object_tracker): check consecutive warning duration
+  * style(pre-commit): autofix
+  * feat(multi_object_tracker): diag messages updated
+  * feat(multi_object_tracker): diag messages updated
+  * style(pre-commit): autofix
+  * style(pre-commit): autofix
+  * feat(multi_object_tracker): messages fix
+  ---------
+  Co-authored-by: lei.gu <lei.gu@tier4.jp>
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(autoware_multi_object_tracker): update overlapped tracker removing process in multi obj tracker  (`#10347 <https://github.com/autowarefoundation/autoware_universe/issues/10347>`_)
+  Update overlapped tracker removing process
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* feat(autoware_multi_object_tracker): selective update per channel (`#10277 <https://github.com/autowarefoundation/autoware_universe/issues/10277>`_)
+  * refactor(bicycle_motion_model): implement exponential decay for slip angle in state prediction
+  * Revert "refactor(multi_object_tracker): simplify input channel configuration by removing trust flags and consolidating parameters"
+  This reverts commit c5155ef2e978b411955ace35f412bbf76c96f354.
+  * refactor(multi_object_tracker): update measure function signatures to include InputChannel parameter
+  * refactor(multi_object_tracker): add updateStatePoseVel method to BicycleMotionModel and update measurement logic in VehicleTracker
+  * refactor(multi_object_tracker): update measureWithPose method to include InputChannel parameter and adjust related logic
+  * refactor(multi_object_tracker): remove BicycleTracker and update references to use VehicleTracker
+  * refactor(bicycle_tracker): add tracking_offset to adjust object position based on motion model
+  * refactor(multi_object_tracker): remove BicycleTracker and replace with VehicleTracker in relevant classes
+  * refactor(input_channels): disable trust flags for extension and orientation in radar configurations
+  * refactor(input_channels): restructure flags for input channel properties
+  * refactor(input_channels): remove 'flags' from required properties in schema
+  ---------
+* Contributors: Amadeusz Szymko, Ryohsuke Mitsudome, TadaKazuto, Taekjin LEE, Takagi, Isamu, lei.gu
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

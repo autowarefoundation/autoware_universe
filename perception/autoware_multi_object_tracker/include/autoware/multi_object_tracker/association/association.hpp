@@ -38,23 +38,18 @@ namespace autoware::multi_object_tracker
 {
 struct AssociatorConfig
 {
-  std::vector<int> can_assign_matrix;
-  std::vector<double> max_dist_matrix;
-  std::vector<double> max_area_matrix;
-  std::vector<double> min_area_matrix;
-  std::vector<double> max_rad_matrix;
-  std::vector<double> min_iou_matrix;
+  Eigen::MatrixXi can_assign_matrix;
+  Eigen::MatrixXd max_dist_matrix;
+  Eigen::MatrixXd max_area_matrix;
+  Eigen::MatrixXd min_area_matrix;
+  Eigen::MatrixXd max_rad_matrix;
+  Eigen::MatrixXd min_iou_matrix;
 };
 
 class DataAssociation
 {
 private:
-  Eigen::MatrixXi can_assign_matrix_;
-  Eigen::MatrixXd max_dist_matrix_;
-  Eigen::MatrixXd max_area_matrix_;
-  Eigen::MatrixXd min_area_matrix_;
-  Eigen::MatrixXd max_rad_matrix_;
-  Eigen::MatrixXd min_iou_matrix_;
+  AssociatorConfig config_;
   const double score_threshold_;
   std::unique_ptr<gnn_solver::GnnSolverInterface> gnn_solver_ptr_;
 

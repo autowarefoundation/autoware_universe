@@ -21,9 +21,9 @@
 #include "autoware_radar_object_tracker/tracker/model/constant_turn_rate_motion_tracker.hpp"
 
 #include "autoware_radar_object_tracker/utils/utils.hpp"
-#include "autoware_utils/geometry/boost_polygon_utils.hpp"
-#include "autoware_utils/math/unit_conversion.hpp"
-#include "autoware_utils/ros/msg_covariance.hpp"
+#include "autoware_utils_geometry/boost_polygon_utils.hpp"
+#include "autoware_utils_geometry/msg/covariance.hpp"
+#include "autoware_utils_math/unit_conversion.hpp"
 
 #include <bits/stdc++.h>
 #include <tf2/LinearMath/Matrix3x3.h>
@@ -49,7 +49,7 @@
 namespace autoware::radar_object_tracker
 {
 using Label = autoware_perception_msgs::msg::ObjectClassification;
-using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
 
 // init static member variables
 bool ConstantTurnRateMotionTracker::is_initialized_ = false;
@@ -216,7 +216,7 @@ void ConstantTurnRateMotionTracker::loadDefaultModelParameters(const std::string
   // limitation
   // (TODO): this may be written in another yaml file based on classify result
   const float max_speed_kmph = config["default"]["limit"]["max_speed"].as<float>();  // [km/h]
-  max_vx_ = autoware_utils::kmph2mps(max_speed_kmph);                                // [m/s]
+  max_vx_ = autoware_utils_math::kmph2mps(max_speed_kmph);                           // [m/s]
 }
 
 bool ConstantTurnRateMotionTracker::predict(const rclcpp::Time & time)
@@ -397,7 +397,7 @@ bool ConstantTurnRateMotionTracker::measureWithPose(
 
     Eigen::MatrixXd Y_yaw = Eigen::MatrixXd::Zero(1, 1);
     const auto yaw = [&] {
-      auto obj_yaw = autoware_utils::normalize_radian(
+      auto obj_yaw = autoware_utils_math::normalize_radian(
         tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation));
       while (M_PI_2 <= yaw_state - obj_yaw) {
         obj_yaw = obj_yaw + M_PI;
@@ -623,7 +623,7 @@ bool ConstantTurnRateMotionTracker::getTrackedObject(
     const auto origin_yaw = tf2::getYaw(object_.kinematics.pose_with_covariance.pose.orientation);
     const auto ekf_pose_yaw = tf2::getYaw(pose_with_cov.pose.orientation);
     object.shape.footprint =
-      autoware_utils::rotate_polygon(object.shape.footprint, origin_yaw - ekf_pose_yaw);
+      autoware_utils_geometry::rotate_polygon(object.shape.footprint, origin_yaw - ekf_pose_yaw);
   }
 
   return true;

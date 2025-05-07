@@ -2,6 +2,28 @@
 Changelog for package autoware_tracking_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(autoware_tracker_object_merger): add diagnostics (`#10257 <https://github.com/autowarefoundation/autoware_universe/issues/10257>`_)
+  * add diagnostics
+  * style(pre-commit): autofix
+  * fix how to check as diag
+  * style(pre-commit): autofix
+  * delete unnecesary include row
+  * change the way to check time
+  * pre-commit
+  * chore
+  * fix warn msg
+  * change msg string to int
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * fix msg
+  * add unit
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+* Contributors: Masato Saeki, Ryohsuke Mitsudome
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

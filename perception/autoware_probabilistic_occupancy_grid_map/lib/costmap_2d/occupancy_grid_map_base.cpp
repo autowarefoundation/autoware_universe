@@ -167,6 +167,13 @@ void OccupancyGridMapInterface::updateOrigin(double new_origin_x, double new_ori
   int start_x{lower_left_x - cell_ox};
   int start_y{lower_left_y - cell_oy};
 
+  if (first_iteration_) {
+    origin_x_ = new_grid_ox;
+    origin_y_ = new_grid_oy;
+    first_iteration_ = false;
+    return;
+  }
+
   // now we want to copy the overlapping information back into the map, but in its new location
 #ifdef USE_CUDA
   if (use_cuda_) {

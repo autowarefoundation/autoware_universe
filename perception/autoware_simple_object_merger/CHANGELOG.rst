@@ -2,6 +2,36 @@
 Changelog for package autoware_simple_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(simple_object_merger): add approximatefilter (`#10462 <https://github.com/autowarefoundation/autoware_universe/issues/10462>`_)
+  * fix(simple_object_merger): add approximatefilter
+  * Update perception/autoware_simple_object_merger/src/simple_object_merger_node.cpp
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update perception/autoware_simple_object_merger/src/simple_object_merger_node.cpp
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update perception/autoware_simple_object_merger/src/simple_object_merger_node.cpp
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update perception/autoware_simple_object_merger/src/simple_object_merger_node.cpp
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update perception/autoware_simple_object_merger/src/simple_object_merger_node.hpp
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  ---------
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+* feat: reduce warn log frequency (`#10414 <https://github.com/autowarefoundation/autoware_universe/issues/10414>`_)
+  * feat: limit warning message frequency to 3.0 sec
+  * refactor: use THROTTLE ERROR macro
+  fix: reduce code complexity
+  ---------
+  Co-authored-by: Jian Kang <jian.kang@tier4.jp>
+* chore(perception): code owner revision (`#10358 <https://github.com/autowarefoundation/autoware_universe/issues/10358>`_)
+  * feat: add Masato Saeki and Taekjin Lee as maintainer to multiple package.xml files
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Kang, Ryohsuke Mitsudome, Taekjin LEE, badai nguyen
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

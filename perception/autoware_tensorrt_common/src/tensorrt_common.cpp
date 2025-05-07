@@ -19,7 +19,7 @@
 
 #include <NvInfer.h>
 #include <NvInferPlugin.h>
-#include <NvInferRuntimeBase.h>
+#include <NvInferRuntime.h>
 #include <dlfcn.h>
 
 #include <cmath>
@@ -44,6 +44,11 @@ TrtCommon::TrtCommon(
   model_profiler_(profiler)
 {
   logger_ = std::make_shared<Logger>();
+
+  // Set CUDA device flags
+  // note: Device flags are process-wide
+  cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+
   for (const auto & plugin_path : plugin_paths) {
     int32_t flags{RTLD_LAZY};
 // cspell: ignore asan
