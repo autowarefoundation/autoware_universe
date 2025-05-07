@@ -240,6 +240,7 @@ void ObstacleSlowDownModule::update_parameters(
 std::vector<autoware::motion_velocity_planner::SlowDownPointData>
 ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
   const PlannerData::Pointcloud & pointcloud, const std::vector<TrajectoryPoint> & traj_points,
+  const std::vector<Polygon2d>& decimated_traj_polys,
   const VehicleInfo & vehicle_info, const size_t ego_idx)
 {
   if (pointcloud.pointcloud.empty()) {
@@ -274,6 +275,14 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
         std::abs(current_lat_dist_from_obstacle_to_traj) - vehicle_info.vehicle_width_m/2;
 
       if (min_lat_dist_to_traj_poly >= p.max_lat_margin) {
+        continue;
+      }
+
+      // precise filtering
+      const double precise_min_lat_dist_to_traj_poly =
+        utils::get_dist_to_traj_poly(obstacle_point, decimated_traj_polys);
+
+      if (precise_min_lat_dist_to_traj_poly >= p.max_lat_margin) {
         continue;
       }
 
@@ -330,7 +339,8 @@ VelocityPlanningResult ObstacleSlowDownModule::plan(
     planner_data->vehicle_info_, planner_data->trajectory_polygon_collision_check);
 
   auto slow_down_obstacles_for_point_cloud = filter_slow_down_obstacle_for_point_cloud(
-    planner_data->current_odometry, raw_trajectory_points, decimated_traj_points,
+    planner_data->current_odometry, planner_data->ego_nearest_dist_threshold,
+    planner_data->ego_nearest_yaw_threshold, raw_trajectory_points, decimated_traj_points,
     planner_data->no_ground_pointcloud, planner_data->vehicle_info_,
     planner_data->trajectory_polygon_collision_check,
     planner_data->find_index(raw_trajectory_points, planner_data->current_odometry.pose.pose));
@@ -432,7 +442,8 @@ ObstacleSlowDownModule::filter_slow_down_obstacle_for_predicted_object(
 }
 
 std::vector<SlowDownObstacle> ObstacleSlowDownModule::filter_slow_down_obstacle_for_point_cloud(
-  const Odometry & odometry, const std::vector<TrajectoryPoint> & traj_points,
+  const Odometry & odometry, const double ego_nearest_dist_threshold,
+  const double ego_nearest_yaw_threshold, const std::vector<TrajectoryPoint> & traj_points,
   const std::vector<TrajectoryPoint> & decimated_traj_points,
   const PlannerData::Pointcloud & point_cloud, const VehicleInfo & vehicle_info,
   const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check, size_t ego_idx)
@@ -453,9 +464,13 @@ std::vector<SlowDownObstacle> ObstacleSlowDownModule::filter_slow_down_obstacle_
     tp.time_to_convergence, tp.decimate_trajectory_step_length);
   debug_data_ptr_->decimated_traj_polys = decimated_traj_polys_with_lat_margin;
 
+  const auto & decimated_traj_polys = get_decimated_traj_polys(
+    traj_points, odometry.pose.pose, vehicle_info, ego_nearest_dist_threshold,
+    ego_nearest_yaw_threshold, trajectory_polygon_collision_check);
+
   // Get Objects
   const std::vector<autoware::motion_velocity_planner::SlowDownPointData> slow_down_points_data =
-    convert_point_cloud_to_slow_down_points(point_cloud, traj_points, vehicle_info, ego_idx);
+    convert_point_cloud_to_slow_down_points(point_cloud, traj_points, decimated_traj_polys, vehicle_info, ego_idx);
 
   // slow down
   std::vector<SlowDownObstacle> slow_down_obstacles;
