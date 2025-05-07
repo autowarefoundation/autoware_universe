@@ -365,7 +365,7 @@ float Tracker::getKnownObjectProbability() const
   return 1.0 - unknown_probability;
 }
 
-double Tracker::getPositionCovarianceSizeSq() const
+double Tracker::getPositionCovarianceDeterminant() const
 {
   using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
   auto & pose_cov = object_.pose_covariance;

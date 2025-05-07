@@ -73,7 +73,7 @@ public:
   bool isConfident(const rclcpp::Time & time) const;
   bool isExpired(const rclcpp::Time & time) const;
   float getKnownObjectProbability() const;
-  double getPositionCovarianceSizeSq() const;
+  double getPositionCovarianceDeterminant() const;
 
   std::uint8_t getHighestProbLabel() const
   {
