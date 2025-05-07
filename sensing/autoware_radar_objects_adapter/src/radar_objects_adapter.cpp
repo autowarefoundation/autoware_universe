@@ -142,7 +142,7 @@ void RadarObjectsAdapter::radar_cov_to_detection_acceleration_cov(
 }
 
 void RadarObjectsAdapter::objects_callback(
-  const autoware_sensing_msgs::msg::RadarObjects & input_msg)
+  const autoware_sensing_msgs::msg::RadarObjects & objects_msg)
 {
   if (!valid_radar_info_) {
     RCLCPP_WARN_THROTTLE(
@@ -152,8 +152,8 @@ void RadarObjectsAdapter::objects_callback(
   }
 
   // publish both detections and tracks
-  this->parse_as_detections(input_msg);
-  this->parse_as_tracks(input_msg);
+  this->parse_as_detections(objects_msg);
+  this->parse_as_tracks(objects_msg);
 }
 
 template <typename ObjectType>

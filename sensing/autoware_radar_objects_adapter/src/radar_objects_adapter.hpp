@@ -57,9 +57,9 @@ private:
     const std::vector<autoware_sensing_msgs::msg::RadarClassification> & input_classifications,
     std::vector<autoware_perception_msgs::msg::ObjectClassification> & output_classifications);
 
-  void objects_callback(const autoware_sensing_msgs::msg::RadarObjects & input_msg);
-  void parse_as_detections(const autoware_sensing_msgs::msg::RadarObjects & objects_msg);
-  void parse_as_tracks(const autoware_sensing_msgs::msg::RadarObjects & objects_msg);
+  void objects_callback(const autoware_sensing_msgs::msg::RadarObjects & objects_msg);
+  void parse_as_detections(const autoware_sensing_msgs::msg::RadarObjects & input_msg);
+  void parse_as_tracks(const autoware_sensing_msgs::msg::RadarObjects & input_msg);
 
   void radar_info_callback(const autoware_sensing_msgs::msg::RadarInfo & radar_info_msg);
 
