@@ -90,6 +90,7 @@ private:
   std::vector<autoware::motion_velocity_planner::SlowDownPointData>
   convert_point_cloud_to_slow_down_points(
     const PlannerData::Pointcloud & pointcloud, const std::vector<TrajectoryPoint> & traj_points,
+    const std::vector<Polygon2d>& decimated_traj_polys,
     const VehicleInfo & vehicle_info, const size_t ego_idx);
   std::vector<SlowDownObstacle> filter_slow_down_obstacle_for_predicted_object(
     const Odometry & odometry, const double ego_nearest_dist_threshold,
@@ -99,7 +100,8 @@ private:
     const rclcpp::Time & predicted_objects_stamp, const VehicleInfo & vehicle_info,
     const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check);
   std::vector<SlowDownObstacle> filter_slow_down_obstacle_for_point_cloud(
-    const Odometry & odometry, const std::vector<TrajectoryPoint> & traj_points,
+    const Odometry & odometry, const double ego_nearest_dist_threshold,
+    const double ego_nearest_yaw_threshold, const std::vector<TrajectoryPoint> & traj_points,
     const std::vector<TrajectoryPoint> & decimated_traj_points,
     const PlannerData::Pointcloud & point_cloud, const VehicleInfo & vehicle_info,
     const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check, size_t ego_idx);
