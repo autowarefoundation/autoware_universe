@@ -48,11 +48,15 @@ DetectedObjectsWithFeatureDisplay::DetectedObjectsWithFeatureDisplay(
   m_intensity_color_scale_max.setMax(255.0);
   m_color_mode_property.addOption("Flat", 0);
   m_color_mode_property.addOption("Intensity", 1);
-  m_color_mode_property.addOption("RGB", 2);
+  m_color_mode_property.addOption("Cluster", 2);
   m_colormap_property.addOption("Jet", 0);
   m_colormap_property.addOption("HSV", 1);
   m_colormap_property.addOption("Viridis", 2);
   m_colormap_property.addOption("Red", 3);  
+  m_colormap_property.addOption("Gray", 4);
+  m_colormap_property.addOption("Turbo", 5);
+  m_colormap_property.addOption("Rainbow", 6);
+  m_colormap_property.addOption("Parula", 7); 
 }
 
 void DetectedObjectsWithFeatureDisplay::onInitialize()
@@ -69,7 +73,27 @@ void DetectedObjectsWithFeatureDisplay::reset()
   RosTopicDisplay::reset();
   m_marker_common.clearMarkers();
 }
+std_msgs::msg::ColorRGBA generateDistinctColor(size_t idx)
+{
+  // Use HSV hue variation for distinct colors
+  float hue = static_cast<float>((idx * 47) % 360);  // 47 is a prime for spacing
+  float c = 1.0f;
+  float x = c * (1 - std::fabs(std::fmod(hue / 60.0f, 2) - 1));
+  float r = 0, g = 0, b = 0;
+  if (hue < 60)      { r = c; g = x; b = 0; }
+  else if (hue < 120){ r = x; g = c; b = 0; }
+  else if (hue < 180){ r = 0; g = c; b = x; }
+  else if (hue < 240){ r = 0; g = x; b = c; }
+  else if (hue < 300){ r = x; g = 0; b = c; }
+  else               { r = c; g = 0; b = x; }
 
+  std_msgs::msg::ColorRGBA color;
+  color.r = r;
+  color.g = g;
+  color.b = b;
+  color.a = 1.0f;
+  return color;
+}
 std_msgs::msg::ColorRGBA colormapJet(float value_normalized)
 {
   value_normalized = std::clamp(value_normalized, 0.0f, 1.0f);
@@ -134,7 +158,78 @@ std_msgs::msg::ColorRGBA colormapRed(float v)
   color.a = 1.0f;
   return color;
 }
+std_msgs::msg::ColorRGBA colormapGray(float value)
+{
+  value = std::clamp(value, 0.0f, 1.0f);
+  std_msgs::msg::ColorRGBA color;
+  color.r = value;
+  color.g = value;
+  color.b = value;
+  color.a = 1.0f;
+  return color;
+}
+std_msgs::msg::ColorRGBA colormapTurbo(float v)
+{
+  v = std::clamp(v, 0.0f, 1.0f);
 
+  // The coefficients for Turbo are derived from Google’s approximation
+  float r = std::clamp(0.996f * v - 0.1046f, 0.0f, 1.0f);
+  float g = std::clamp(0.996f * v - 0.0625f, 0.0f, 1.0f);
+  float b = std::clamp(0.996f * v - 0.0878f, 0.0f, 1.0f);
+
+  std_msgs::msg::ColorRGBA color;
+  color.r = r;
+  color.g = g;
+  color.b = b;
+  color.a = 1.0f;
+  
+  return color;
+}
+std_msgs::msg::ColorRGBA colormapRainbow(float v)
+{
+  v = std::clamp(v, 0.0f, 1.0f);
+  float r = std::sin(2.0f * M_PI * v + 0.0f) * 0.5f + 0.5f;
+  float g = std::sin(2.0f * M_PI * v + 2.0f * M_PI / 3.0f) * 0.5f + 0.5f;
+  float b = std::sin(2.0f * M_PI * v + 4.0f * M_PI / 3.0f) * 0.5f + 0.5f;
+
+  std_msgs::msg::ColorRGBA color;
+  color.r = r;
+  color.g = g;
+  color.b = b;
+  color.a = 1.0f;
+  return color;
+}
+std_msgs::msg::ColorRGBA colormapParula(float v)
+{
+  v = std::clamp(v, 0.0f, 1.0f);
+
+  // Parula approximation (6 key points from MATLAB)
+  const std::vector<std::array<float, 3>> parula_data = {
+    {0.2081f, 0.1663f, 0.5292f},  // dark blue
+    {0.2291f, 0.3220f, 0.5451f},  // blue
+    {0.2669f, 0.4887f, 0.5561f},  // teal
+    {0.3052f, 0.6502f, 0.5653f},  // greenish
+    {0.5849f, 0.7823f, 0.4863f},  // yellow-green
+    {0.9763f, 0.9831f, 0.0538f}   // yellow
+  };
+
+  float scaled = v * (parula_data.size() - 1);
+  int idx = static_cast<int>(scaled);
+  float frac = scaled - idx;
+
+  if (idx >= static_cast<int>(parula_data.size()) - 1) {
+    idx = static_cast<int>(parula_data.size()) - 2;
+    frac = 1.0f;
+  }
+
+  std_msgs::msg::ColorRGBA color;
+  color.r = (1 - frac) * parula_data[idx][0] + frac * parula_data[idx + 1][0];
+  color.g = (1 - frac) * parula_data[idx][1] + frac * parula_data[idx + 1][1];
+  color.b = (1 - frac) * parula_data[idx][2] + frac * parula_data[idx + 1][2];
+  color.a = 1.0f;
+
+  return color;
+}
 
 void DetectedObjectsWithFeatureDisplay::processMessage(DetectedObjectsWithFeature::ConstSharedPtr msg)
 {
@@ -176,9 +271,7 @@ void DetectedObjectsWithFeatureDisplay::processMessage(DetectedObjectsWithFeatur
       pointcloud_marker_ptr->points.push_back(point);
     }
 
-
     int mode = m_color_mode_property.getOptionInt();
-
     if (mode == 1) {
       using ColorMapFn = std_msgs::msg::ColorRGBA(*)(float);
       ColorMapFn color_fn = colormapJet;
@@ -187,32 +280,23 @@ void DetectedObjectsWithFeatureDisplay::processMessage(DetectedObjectsWithFeatur
         case 1: color_fn = colormapHSV; break;
         case 2: color_fn = colormapViridis; break;
         case 3: color_fn = colormapRed; break;
+        case 4: color_fn = colormapGray; break;
+        case 5: color_fn = colormapTurbo; break;
+        case 6: color_fn = colormapRainbow; break;
+        case 7: color_fn = colormapParula; break;
         default: color_fn = colormapJet; break;
       }
-
-
       // Use intensity to color the points
       float intensity_threshold = m_intensity_color_scale_max.getFloat();
       for(; iter_intensity != iter_intensity.end(); ++iter_intensity) {
-        // std_msgs::msg::ColorRGBA color;
-        // color.r = std::clamp(static_cast<float>(*iter_intensity) / intensity_threshold, 0.0f, 1.0f);
-        // color.g = 0.0f;
-        // color.b = 0.0f;
-        // color.a = 1.0f;
-
-
         float intensity_norm = static_cast<float>(*iter_intensity) / intensity_threshold;
         pointcloud_marker_ptr->colors.push_back(color_fn(intensity_norm));
         //pointcloud_marker_ptr->colors.push_back(color);
       }
-    } else if (mode == 2) {
-      std_msgs::msg::ColorRGBA color;
-      color.r = get_point_color().redF();
-      color.g = get_point_color().greenF();
-      color.b = get_point_color().blueF();
-      color.a = 1.0f;
+    } else if (mode == 2 /* Cluster */) {
+      std_msgs::msg::ColorRGBA cluster_color = generateDistinctColor(id);
       for(; iter_intensity != iter_intensity.end(); ++iter_intensity) {
-        pointcloud_marker_ptr->colors.push_back(color);
+        pointcloud_marker_ptr->colors.push_back(cluster_color);
       }
     } else {
       // Use the default color
@@ -225,8 +309,6 @@ void DetectedObjectsWithFeatureDisplay::processMessage(DetectedObjectsWithFeatur
         pointcloud_marker_ptr->colors.push_back(color);
       }
     }
-
-
     add_marker(pointcloud_marker_ptr);
     id++;
   }
