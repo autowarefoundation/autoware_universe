@@ -40,10 +40,19 @@ DetectedObjectsWithFeatureDisplay::DetectedObjectsWithFeatureDisplay(
   m_display_intensity_property{"Display Intensity", true, "Display intensity of point cloud", this},
   m_intensity_color_scale_max{
     "Intensity Threshold", 50.0, "Intensity threshold of point cloud", this},
+  m_color_mode_property{"Color Mode", 0, "Color mode of point cloud", this},
+  m_colormap_property{"Colormap", "Jet", "Colormap to use for intensity coloring", this},
   m_default_topic{default_topic}
 {
   m_intensity_color_scale_max.setMin(1.0);
   m_intensity_color_scale_max.setMax(255.0);
+  m_color_mode_property.addOption("Flat", 0);
+  m_color_mode_property.addOption("Intensity", 1);
+  m_color_mode_property.addOption("RGB", 2);
+  m_colormap_property.addOption("Jet", 0);
+  m_colormap_property.addOption("HSV", 1);
+  m_colormap_property.addOption("Viridis", 2);
+  m_colormap_property.addOption("Red", 3);  
 }
 
 void DetectedObjectsWithFeatureDisplay::onInitialize()
@@ -60,6 +69,72 @@ void DetectedObjectsWithFeatureDisplay::reset()
   RosTopicDisplay::reset();
   m_marker_common.clearMarkers();
 }
+
+std_msgs::msg::ColorRGBA colormapJet(float value_normalized)
+{
+  value_normalized = std::clamp(value_normalized, 0.0f, 1.0f);
+  float r = std::clamp(1.5f - std::abs(4.0f * value_normalized - 3.0f), 0.0f, 1.0f);
+  float g = std::clamp(1.5f - std::abs(4.0f * value_normalized - 2.0f), 0.0f, 1.0f);
+  float b = std::clamp(1.5f - std::abs(4.0f * value_normalized - 1.0f), 0.0f, 1.0f);
+
+  std_msgs::msg::ColorRGBA color;
+  color.r = r;
+  color.g = g;
+  color.b = b;
+  color.a = 1.0f;
+  return color;
+}
+
+std_msgs::msg::ColorRGBA colormapViridis(float v)
+{
+  v = std::clamp(v, 0.0f, 1.0f);
+  float r = std::clamp(0.267f + v * (0.993f - 0.267f), 0.0f, 1.0f);
+  float g = std::clamp(0.004f + v * (0.906f - 0.004f), 0.0f, 1.0f);
+  float b = std::clamp(0.329f + v * (0.933f - 0.329f), 0.0f, 1.0f);
+  std_msgs::msg::ColorRGBA color;
+  color.r = r;
+  color.g = g;
+  color.b = b;
+  color.a = 1.0f;
+  return color;
+}
+
+std_msgs::msg::ColorRGBA colormapHSV(float v)
+{
+  v = std::clamp(v, 0.0f, 1.0f);
+  float h = v * 360.0f;  // hue in degrees
+  float s = 1.0f, l = 0.5f;
+
+  float c = (1.0f - std::fabs(2.0f * l - 1.0f)) * s;
+  float x = c * (1.0f - std::fabs(std::fmod(h / 60.0f, 2) - 1.0f));
+  float m = l - c / 2.0f;
+
+  float r = 0, g = 0, b = 0;
+  if (h < 60)      { r = c; g = x; b = 0; }
+  else if (h < 120){ r = x; g = c; b = 0; }
+  else if (h < 180){ r = 0; g = c; b = x; }
+  else if (h < 240){ r = 0; g = x; b = c; }
+  else if (h < 300){ r = x; g = 0; b = c; }
+  else             { r = c; g = 0; b = x; }
+
+  std_msgs::msg::ColorRGBA color;
+  color.r = r + m;
+  color.g = g + m;
+  color.b = b + m;
+  color.a = 1.0f;
+  return color;
+}
+std_msgs::msg::ColorRGBA colormapRed(float v)
+{
+  std_msgs::msg::ColorRGBA color;
+  v = std::clamp(v, 0.0f, 1.0f);
+  color.r = v;
+  color.g = 0.0f;
+  color.b = 0.0f;
+  color.a = 1.0f;
+  return color;
+}
+
 
 void DetectedObjectsWithFeatureDisplay::processMessage(DetectedObjectsWithFeature::ConstSharedPtr msg)
 {
@@ -101,18 +176,46 @@ void DetectedObjectsWithFeatureDisplay::processMessage(DetectedObjectsWithFeatur
       pointcloud_marker_ptr->points.push_back(point);
     }
 
-    if (m_display_intensity_property.getBool()) {
+
+    int mode = m_color_mode_property.getOptionInt();
+
+    if (mode == 1) {
+      using ColorMapFn = std_msgs::msg::ColorRGBA(*)(float);
+      ColorMapFn color_fn = colormapJet;
+      switch (m_colormap_property.getOptionInt()) {
+        case 0: color_fn = colormapJet; break;
+        case 1: color_fn = colormapHSV; break;
+        case 2: color_fn = colormapViridis; break;
+        case 3: color_fn = colormapRed; break;
+        default: color_fn = colormapJet; break;
+      }
+
+
       // Use intensity to color the points
       float intensity_threshold = m_intensity_color_scale_max.getFloat();
       for(; iter_intensity != iter_intensity.end(); ++iter_intensity) {
-        std_msgs::msg::ColorRGBA color;
-        color.r = std::clamp(static_cast<float>(*iter_intensity) / intensity_threshold, 0.0f, 1.0f);
-        color.g = 0.0f;
-        color.b = 0.0f;
-        color.a = 1.0f;
+        // std_msgs::msg::ColorRGBA color;
+        // color.r = std::clamp(static_cast<float>(*iter_intensity) / intensity_threshold, 0.0f, 1.0f);
+        // color.g = 0.0f;
+        // color.b = 0.0f;
+        // color.a = 1.0f;
+
+
+        float intensity_norm = static_cast<float>(*iter_intensity) / intensity_threshold;
+        pointcloud_marker_ptr->colors.push_back(color_fn(intensity_norm));
+        //pointcloud_marker_ptr->colors.push_back(color);
+      }
+    } else if (mode == 2) {
+      std_msgs::msg::ColorRGBA color;
+      color.r = get_point_color().redF();
+      color.g = get_point_color().greenF();
+      color.b = get_point_color().blueF();
+      color.a = 1.0f;
+      for(; iter_intensity != iter_intensity.end(); ++iter_intensity) {
         pointcloud_marker_ptr->colors.push_back(color);
       }
     } else {
+      // Use the default color
       std_msgs::msg::ColorRGBA color;
       color.r = get_point_color().redF();
       color.g = get_point_color().greenF();
@@ -122,6 +225,8 @@ void DetectedObjectsWithFeatureDisplay::processMessage(DetectedObjectsWithFeatur
         pointcloud_marker_ptr->colors.push_back(color);
       }
     }
+
+
     add_marker(pointcloud_marker_ptr);
     id++;
   }

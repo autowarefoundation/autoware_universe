@@ -78,6 +78,11 @@ private:
   rviz_common::properties::FloatProperty m_point_alpha_property;
   // Property to set intensity color threshold of cluster point cloud
   rviz_common::properties::FloatProperty m_intensity_color_scale_max;
+  // Property to set color mode of cluster point cloud
+  rviz_common::properties::EnumProperty m_color_mode_property;
+  // Property to set colormap of cluster point cloud
+  rviz_common::properties::EnumProperty m_colormap_property;
+
   // Property to set the default topic name
   std::string m_default_topic;
 
