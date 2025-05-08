@@ -9,6 +9,7 @@ find_package(Qt5 REQUIRED COMPONENTS Widgets)
 set(OD_PLUGIN_LIB_SRC
   src/object_detection/detected_objects_display.cpp
   src/object_detection/detected_objects_with_feature_display.cpp
+  src/object_detection/detected_objects_with_feature_helper.cpp
   src/object_detection/tracked_objects_display.cpp
   src/object_detection/predicted_objects_display.cpp
 )
@@ -19,6 +20,7 @@ set(OD_PLUGIN_LIB_HEADERS
 set(OD_PLUGIN_LIB_HEADERS_TO_WRAP
   include/autoware_perception_rviz_plugin/object_detection/detected_objects_display.hpp
   include/autoware_perception_rviz_plugin/object_detection/detected_objects_with_feature_display.hpp
+  include/autoware_perception_rviz_plugin/object_detection/detected_objects_with_feature_helper.hpp
   include/autoware_perception_rviz_plugin/object_detection/tracked_objects_display.hpp
   include/autoware_perception_rviz_plugin/object_detection/predicted_objects_display.hpp
 )
