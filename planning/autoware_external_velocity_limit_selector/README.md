@@ -52,7 +52,7 @@ Example:
 ## Parameters
 
 {{ json_to_markdown("planning/autoware_external_velocity_limit_selector/schema/external_velocity_limit_selector.schema.json") }}
-{{ json_to_markdown("planning/autoware_external_velocity_limit_selector/schema/external_velocity_limit_selector_common.schema.json") }}
+{{ json_to_markdown("planning/autoware_external_velocity_limit_selector/schema/default_common.schema.json") }}
 
 ## Assumptions / Known limits
 

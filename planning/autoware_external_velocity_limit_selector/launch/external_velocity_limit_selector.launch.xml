@@ -1,6 +1,6 @@
 <launch>
   <!-- common param -->
-  <arg name="common_param_path" default="$(find-pkg-share autoware_external_velocity_limit_selector)/config/external_velocity_limit_selector_common.param.yaml"/>
+  <arg name="common_param_path" default="$(find-pkg-share autoware_external_velocity_limit_selector)/config/default_common.param.yaml"/>
   <arg name="param_path" default="$(find-pkg-share autoware_external_velocity_limit_selector)/config/external_velocity_limit_selector.param.yaml"/>
 
   <!-- input/output -->
