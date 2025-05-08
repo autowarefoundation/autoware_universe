@@ -341,10 +341,8 @@ void ControlValidator::publish_debug_info(const geometry_msgs::msg::Pose & ego_p
   if (!is_all_valid(validation_status_)) {
     geometry_msgs::msg::Pose front_pose = ego_pose;
     shift_pose(front_pose, vehicle_info_.front_overhang_m + vehicle_info_.wheel_base_m);
-    debug_pose_publisher_->push_virtual_wall(front_pose);
-
     std::string error_message = generate_error_message(validation_status_);
-    debug_pose_publisher_->push_warning_msg(front_pose, error_message);
+    debug_pose_publisher_->push_virtual_wall(front_pose, error_message);
   }
   debug_pose_publisher_->publish();
 
@@ -364,10 +362,6 @@ bool ControlValidator::is_all_valid(const ControlValidatorStatus & s)
 std::string ControlValidator::generate_error_message(const ControlValidatorStatus & s)
 {
   std::vector<std::string> error_messages;
-
-  if (!s.is_valid_steering_rate) {
-    error_messages.push_back("HIGH STEERING RATE");
-  }
 
   if (!s.is_valid_max_distance_deviation) {
     error_messages.push_back("TRAJECTORY DEVIATION");
