@@ -27,8 +27,10 @@ namespace autoware::multi_object_tracker
 {
 
 Odometry::Odometry(
-  rclcpp::Node & node, const std::string & world_frame_id, bool enable_odometry_uncertainty)
+  rclcpp::Node & node, const std::string & world_frame_id, const std::string & ego_frame_id,
+  bool enable_odometry_uncertainty)
 : node_(node),
+  ego_frame_id_(ego_frame_id),
   world_frame_id_(world_frame_id),
   tf_buffer_(node_.get_clock()),
   tf_listener_(tf_buffer_),

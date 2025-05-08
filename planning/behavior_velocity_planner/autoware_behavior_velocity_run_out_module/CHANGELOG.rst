@@ -2,6 +2,12 @@
 Changelog for package autoware_behavior_velocity_run_out_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(planning): apply THROTTLE to frequent log (`#10419 <https://github.com/autowarefoundation/autoware_universe/issues/10419>`_)
+* Contributors: Ryohsuke Mitsudome, Takayuki Murooka
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

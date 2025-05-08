@@ -46,6 +46,14 @@ public:
 
   const char * getModuleName() override { return "occlusion_spot"; }
 
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    RequiredSubscriptionInfo required_subscription_info;
+    required_subscription_info.predicted_objects = true;
+    required_subscription_info.occupancy_grid_map = true;
+    return required_subscription_info;
+  }
+
 private:
   enum class ModuleID { OCCUPANCY, OBJECT };
   using PlannerParam = occlusion_spot_utils::PlannerParam;

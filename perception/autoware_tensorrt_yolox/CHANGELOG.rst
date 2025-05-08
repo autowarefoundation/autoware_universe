@@ -2,6 +2,14 @@
 Changelog for package autoware_tensorrt_yolox
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(tensorrt_yolox): add autoware_utils packages (`#10460 <https://github.com/autowarefoundation/autoware_universe/issues/10460>`_)
+  Co-authored-by: t4-adc <grp-rd-1-adc-admin@tier4.jp>
+* fix(autoware_tensorrt_yolox): explicitly install shared library (`#10454 <https://github.com/autowarefoundation/autoware_universe/issues/10454>`_)
+* Contributors: Kazunori-Nakajima, Manato Hirabayashi, Ryohsuke Mitsudome
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

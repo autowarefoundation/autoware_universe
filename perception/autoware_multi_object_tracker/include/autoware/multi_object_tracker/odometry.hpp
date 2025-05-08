@@ -36,7 +36,7 @@ class Odometry
 {
 public:
   Odometry(
-    rclcpp::Node & node, const std::string & world_frame_id,
+    rclcpp::Node & node, const std::string & world_frame_id, const std::string & ego_frame_id,
     bool enable_odometry_uncertainty = false);
 
   std::optional<geometry_msgs::msg::Transform> getTransform(
@@ -51,8 +51,8 @@ public:
 private:
   rclcpp::Node & node_;
   // frame id
-  std::string ego_frame_id_ = "base_link";  // ego vehicle frame
-  std::string world_frame_id_;              // absolute/relative ground frame
+  std::string ego_frame_id_;    // ego vehicle frame
+  std::string world_frame_id_;  // absolute/relative ground frame
   // tf
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;

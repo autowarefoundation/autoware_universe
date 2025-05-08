@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_lidar_transfusion</name>
-  <version>0.43.0</version>
+  <version>0.44.0</version>
   <description>The lidar_transfusion package</description>
   <maintainer email="amadeusz.szymko.2@tier4.jp">Amadeusz Szymko</maintainer>
   <maintainer email="kenzo.lobos@tier4.jp">Kenzo Lobos-Tsunekawa</maintainer>
@@ -18,6 +18,7 @@
   <depend>autoware_point_types</depend>
   <depend>autoware_tensorrt_common</depend>
   <depend>autoware_utils</depend>
+  <depend>cuda_blackboard</depend>
   <depend>launch_ros</depend>
   <depend>pcl_ros</depend>
   <depend>rclcpp</depend>

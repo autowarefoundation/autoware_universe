@@ -2,6 +2,30 @@
 Changelog for package autoware_behavior_path_planner_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(start/goal_planner): use common max steer angle parameter from vehicle_info (`#10321 <https://github.com/autowarefoundation/autoware_universe/issues/10321>`_)
+  * fix(autoware_behavior_path_start_planner_module): update parameter name for geometric pull out max steer angle
+  * fix(docs): update unit for max_steer_angle_margin_scale in README
+  * fix dead link
+  ---------
+* fix(behavior_path_planner, behavior_static_obstacle_avoidance_module): crash during goal changes (`#10205 <https://github.com/autowarefoundation/autoware_universe/issues/10205>`_)
+  * fix(behavior_path_planner, behavior_static_obstacle_avoidance_module): empty path handling
+  * style(pre-commit): autofix
+  * refactor: use optional
+  * fix: std
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(goal_planner): use precise distance to objects for sorting candidate paths (`#10296 <https://github.com/autowarefoundation/autoware_universe/issues/10296>`_)
+  * fix(goal_planner): use precise distance to objects for sorting candidate paths
+  * shortest_distance_from_ego_footprint_to_objects_on_path
+  * improve doxygen
+  update docs
+  * fix build
+  ---------
+* Contributors: Kosuke Takeuchi, Kyoichi Sugahara, Ryohsuke Mitsudome, Shumpei Wakabayashi
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
