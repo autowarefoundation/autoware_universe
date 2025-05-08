@@ -355,15 +355,15 @@ std::string ControlValidator::generate_error_message(const ControlValidatorStatu
   }
 
   if (s.is_over_velocity) {
-    error_messages.push_back("OVER SPEED");
+    error_messages.push_back("OVER VELOCITY");
   }
 
   if (s.has_overrun_stop_point) {
-    error_messages.push_back("OVERRUN STOP");
+    error_messages.push_back("OVERRUN STOP POINT");
   }
 
   if (s.will_overrun_stop_point) {
-    error_messages.push_back("WILL OVERRUN STOP");
+    error_messages.push_back("WILL OVERRUN STOP POINT");
   }
 
   if (error_messages.empty()) {
