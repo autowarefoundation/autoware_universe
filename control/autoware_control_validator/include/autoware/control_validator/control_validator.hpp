@@ -107,7 +107,7 @@ public:
     const AccelWithCovarianceStamped & loc_acc);
 
 private:
-  bool is_in_error_range() const;
+  bool is_in_error_range(const double filtered_acceleration) const;
   const double e_offset;
   const double e_scale;
   autoware::signal_processing::LowpassFilter1d desired_acc_lpf;

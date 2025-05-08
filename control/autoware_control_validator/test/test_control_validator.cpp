@@ -184,9 +184,11 @@ INSTANTIATE_TEST_SUITE_P(
 class AccelerationValidatorTest : public ::testing::TestWithParam<std::tuple<bool, double, double>>
 {
 public:
-  bool is_in_error_range() { return acceleration_validator_->is_in_error_range(); }
-  void set_desired(double x) { acceleration_validator_->desired_acc_lpf.reset(x); }
-  void set_measured(double x) { acceleration_validator_->measured_acc_lpf.reset(x); }
+  bool is_in_error_range(const double filtered_acceleration)
+  {
+    return acceleration_validator_->is_in_error_range(filtered_acceleration);
+  }
+  void set_desired(const double x) { acceleration_validator_->desired_acc_lpf.reset(x); }
 
 protected:
   void SetUp() override
@@ -214,9 +216,8 @@ TEST_P(AccelerationValidatorTest, test_is_in_error_range)
 {
   auto [expected, des, mes] = GetParam();
   set_desired(des);
-  set_measured(mes);
 
-  ASSERT_EQ(expected, is_in_error_range());
+  ASSERT_EQ(expected, is_in_error_range(mes));
 };
 
 INSTANTIATE_TEST_SUITE_P(

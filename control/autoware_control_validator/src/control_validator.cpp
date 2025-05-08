@@ -59,18 +59,16 @@ void AccelerationValidator::validate(
     measured_acc_lpf.reset(0.0);
   }
 
-  res.desired_acc = desired_acc_lpf.getValue().value();
-  res.measured_acc = measured_acc_lpf.getValue().value();
-  res.is_valid_acc = is_in_error_range();
+  res.desired_acc = desired_acc;
+  res.is_valid_acc = is_in_error_range(filtered_acceleration);
 }
 
-bool AccelerationValidator::is_in_error_range() const
+bool AccelerationValidator::is_in_error_range(const double measured_acceleration) const
 {
   const double des = desired_acc_lpf.getValue().value();
-  const double mes = measured_acc_lpf.getValue().value();
 
-  return mes <= des + std::abs(e_scale * des) + e_offset &&
-         mes >= des - std::abs(e_scale * des) - e_offset;
+  return measured_acceleration <= des + std::abs(e_scale * des) + e_offset &&
+         measured_acceleration >= des - std::abs(e_scale * des) - e_offset;
 }
 
 void VelocityValidator::validate(
@@ -283,6 +281,16 @@ void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
   if (!acceleration_msg) {
     return waiting(sub_measured_acc_->subscriber()->get_topic_name());
   }
+
+  const double filtered_velocity =
+    common_velocity_lpf_->filter(kinematics_msg->twist.twist.linear.x);
+  const double filtered_acceleration =
+    common_acceleration_lpf_->filter(acceleration_msg->accel.accel.linear.x);
+  if (std::abs(kinematics_msg->twist.twist.linear.x) < 0.3) {
+    common_acceleration_lpf_->reset(0.0);
+  }
+  validation_status_.measured_acc = filtered_acceleration;
+  validation_status_.target_vel = filtered_velocity;
 
   // pre process
   debug_pose_publisher_->clear_markers();
