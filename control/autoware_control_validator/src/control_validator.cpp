@@ -49,16 +49,16 @@ void TrajectoryValidator::validate(
 
 void AccelerationValidator::validate(
   ControlValidatorStatus & res, const Odometry & kinematic_state, const Control & control_cmd,
-  const AccelWithCovarianceStamped & loc_acc)
+  const double filtered_acceleration)
 {
   desired_acc_lpf.filter(
     control_cmd.longitudinal.acceleration +
     9.8 * autoware_utils::get_rpy(kinematic_state.pose.pose).y);
-  measured_acc_lpf.filter(loc_acc.accel.accel.linear.x);
   if (std::abs(kinematic_state.twist.twist.linear.x) < 0.3) {
     desired_acc_lpf.reset(0.0);
-    measured_acc_lpf.reset(0.0);
   }
+
+  const double desired_acc = desired_acc_lpf.getValue().value();
 
   res.desired_acc = desired_acc;
   res.is_valid_acc = is_in_error_range(filtered_acceleration);
@@ -74,32 +74,34 @@ bool AccelerationValidator::is_in_error_range(const double measured_acceleration
 
 void VelocityValidator::validate(
   ControlValidatorStatus & res, const Trajectory & reference_trajectory,
-  const Odometry & kinematics)
+  const Odometry & kinematics, const double filtered_velocity)
 {
-  const double v_vel = vehicle_vel_lpf.filter(kinematics.twist.twist.linear.x);
   const double t_vel = target_vel_lpf.filter(
     autoware::motion_utils::calcInterpolatedPoint(reference_trajectory, kinematics.pose.pose)
       .longitudinal_velocity_mps);
 
-  const bool is_rolling_back =
-    std::signbit(v_vel * t_vel) && std::abs(v_vel) > rolling_back_velocity_th;
-  if (!hold_velocity_error_until_stop || !res.is_rolling_back || std::abs(v_vel) < 0.05) {
+  const bool is_rolling_back = std::signbit(filtered_velocity * t_vel) &&
+                               std::abs(filtered_velocity) > rolling_back_velocity_th;
+  if (
+    !hold_velocity_error_until_stop || !res.is_rolling_back || std::abs(filtered_velocity) < 0.05) {
     res.is_rolling_back = is_rolling_back;
   }
 
   const bool is_over_velocity =
-    std::abs(v_vel) > std::abs(t_vel) * (1.0 + over_velocity_ratio_th) + over_velocity_offset_th;
-  if (!hold_velocity_error_until_stop || !res.is_over_velocity || std::abs(v_vel) < 0.05) {
+    std::abs(filtered_velocity) >
+    std::abs(t_vel) * (1.0 + over_velocity_ratio_th) + over_velocity_offset_th;
+  if (
+    !hold_velocity_error_until_stop || !res.is_over_velocity ||
+    std::abs(filtered_velocity) < 0.05) {
     res.is_over_velocity = is_over_velocity;
   }
 
-  res.vehicle_vel = v_vel;
   res.target_vel = t_vel;
 }
 
 void OverrunValidator::validate(
   ControlValidatorStatus & res, const Trajectory & reference_trajectory,
-  const Odometry & kinematics)
+  const Odometry & kinematics, const double filtered_velocity)
 {
   const auto stop_idx_opt =
     autoware::motion_utils::searchZeroVelocityIndex(reference_trajectory.points);
@@ -112,19 +114,19 @@ void OverrunValidator::validate(
       .longitudinal_velocity_mps;
 
   /*
+  clang-format off
   res.dist_to_stop: distance to stop according to the trajectory.
-  v_vel * assumed_delay_time : distance ego will travel before starting the limit deceleration.
-  v_vel * v_vel / (2.0 * assumed_limit_acc): distance to stop assuming we apply the limit
-  deceleration.
+  filtered_velocity * assumed_delay_time : distance ego will travel before starting the limit deceleration.
+  filtered_velocity * filtered_velocity / (2.0 * assumed_limit_acc): distance to stop assuming we apply the limit deceleration.
   if res.pred_dist_to_stop is negative, it means that we predict we will stop after the stop point
   contained in the trajectory.
+  clang format on
   */
-  const double v_vel = vehicle_vel_lpf.filter(kinematics.twist.twist.linear.x);
-  res.pred_dist_to_stop =
-    res.dist_to_stop - v_vel * assumed_delay_time - v_vel * v_vel / (2.0 * assumed_limit_acc);
+  res.pred_dist_to_stop = res.dist_to_stop - filtered_velocity * assumed_delay_time -
+                          filtered_velocity * filtered_velocity / (2.0 * assumed_limit_acc);
 
   // NOTE: the same velocity threshold as autoware::motion_utils::searchZeroVelocity
-  if (v_vel < 1e-3) {
+  if (filtered_velocity < 1e-3) {
     res.has_overrun_stop_point = false;
     res.will_overrun_stop_point = false;
     return;
@@ -137,6 +139,14 @@ void OverrunValidator::validate(
 ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)
 : Node("control_validator", options), vehicle_info_()
 {
+  double vel_lpf_gain = get_or_declare_parameter<double>(*this, "vel_lpf_gain");
+  double acc_lpf_gain = get_or_declare_parameter<double>(*this, "acc_lpf_gain");
+
+  common_velocity_lpf_ =
+    std::make_unique<autoware::signal_processing::LowpassFilter1d>(vel_lpf_gain);
+  common_acceleration_lpf_ =
+    std::make_unique<autoware::signal_processing::LowpassFilter1d>(acc_lpf_gain);
+
   using std::placeholders::_1;
 
   sub_control_cmd_ = create_subscription<Control>(
@@ -308,10 +318,13 @@ void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
       validation_status_, *predicted_trajectory_msg, *reference_trajectory_msg);
   }
   acceleration_validator.validate(
-    validation_status_, *kinematics_msg, *control_cmd_msg, *acceleration_msg);
-  velocity_validator.validate(validation_status_, *reference_trajectory_msg, *kinematics_msg);
-  overrun_validator.validate(validation_status_, *reference_trajectory_msg, *kinematics_msg);
+    validation_status_, *kinematics_msg, *control_cmd_msg, filtered_acceleration);
 
+  velocity_validator.validate(
+    validation_status_, *reference_trajectory_msg, *kinematics_msg, filtered_velocity);
+
+  overrun_validator.validate(
+    validation_status_, *reference_trajectory_msg, *kinematics_msg, filtered_velocity);
   // post process
   validation_status_.invalid_count =
     is_all_valid(validation_status_) ? 0 : validation_status_.invalid_count + 1;
