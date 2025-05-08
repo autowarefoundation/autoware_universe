@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__RADAR_OBJECTS_ADAPTER__RADAR_OBJECTS_ADAPTER_HPP_
-#define AUTOWARE__RADAR_OBJECTS_ADAPTER__RADAR_OBJECTS_ADAPTER_HPP_
+#ifndef RADAR_OBJECTS_ADAPTER_HPP_
+#define RADAR_OBJECTS_ADAPTER_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
+#include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <autoware_sensing_msgs/msg/radar_info.hpp>
 #include <autoware_sensing_msgs/msg/radar_objects.hpp>
 
@@ -36,33 +37,53 @@ public:
 
 private:
   void radar_cov_to_detection_pose_cov(
-    const std::array<float, 6> & radar_cov, const double orientation_std,
+    const std::array<float, 6> & radar_pose_cov, const double orientation_std,
     std::array<double, 36> & pose_cov);
 
   void radar_cov_to_detection_twist_cov(
-    const std::array<float, 6> & radar_cov, const float yaw, const float yaw_std,
+    const std::array<float, 6> & radar_twist_cov, const float yaw, const float yaw_rate_std,
     std::array<double, 36> & twist_cov);
 
+  void radar_cov_to_detection_acceleration_cov(
+    const std::array<float, 6> & radar_acceleration_cov, const float yaw,
+    std::array<double, 36> & acceleration_cov);
+
+  template <typename ObjectType>
+  void populate_common_fields(
+    const autoware_sensing_msgs::msg::RadarObject & input_object, ObjectType & output_object,
+    const float yaw);
+
+  void populate_classifications(
+    const std::vector<autoware_sensing_msgs::msg::RadarClassification> & input_classifications,
+    std::vector<autoware_perception_msgs::msg::ObjectClassification> & output_classifications);
+
   void objects_callback(const autoware_sensing_msgs::msg::RadarObjects & objects_msg);
+  void parse_as_detections(const autoware_sensing_msgs::msg::RadarObjects & input_msg);
+  void parse_as_tracks(const autoware_sensing_msgs::msg::RadarObjects & input_msg);
+
   void radar_info_callback(const autoware_sensing_msgs::msg::RadarInfo & radar_info_msg);
 
   rclcpp::Subscription<autoware_sensing_msgs::msg::RadarObjects>::SharedPtr radar_objects_sub_;
   rclcpp::Subscription<autoware_sensing_msgs::msg::RadarInfo>::SharedPtr radar_info_sub_;
-  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr pub_;
+  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr detections_pub_;
+  rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr tracks_pub_;
 
   std::unordered_map<std::string, autoware_sensing_msgs::msg::RadarFieldInfo> field_info_map_;
 
   bool valid_radar_info_{false};
+  std::array<std::uint8_t, sizeof(std::size_t)> topic_hash_code_;
 
   std::vector<std::string> required_attributes_;
   float default_position_z_;
   float default_velocity_z_;
+  float default_acceleration_z_;
   float default_size_x_;
   float default_size_y_;
   float default_size_z_;
 
   bool position_z_available_;
   bool velocity_z_available_;
+  bool acceleration_z_available_;
   bool size_x_available_;
   bool size_y_available_;
   bool size_z_available_;
@@ -73,4 +94,4 @@ private:
 };
 }  // namespace autoware
 
-#endif  // AUTOWARE__RADAR_OBJECTS_ADAPTER__RADAR_OBJECTS_ADAPTER_HPP_
+#endif  // RADAR_OBJECTS_ADAPTER_HPP_
