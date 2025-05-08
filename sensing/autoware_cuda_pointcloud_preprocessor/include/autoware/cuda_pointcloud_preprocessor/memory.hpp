@@ -86,6 +86,38 @@ bool is_data_layout_compatible_with_point_xyzircaedt(
   return same_layout;
 }
 
+// TODO(manato): similar to the case of `is_data_layout_compatible_with_point_xyzircaedt`
+// once https://github.com/autowarefoundation/autoware_universe/pull/10298 will be merged,
+// we can replace the following
+bool is_data_layout_compatible_with_point_xyzi(
+  const std::vector<sensor_msgs::msg::PointField> & fields)
+{
+  if (fields.size() < 4) {
+    return false;
+  }
+  bool same_layout = true;
+  const auto & field_x = fields.at(0);
+  same_layout &= field_x.name == "x";
+  same_layout &= field_x.offset == offsetof(InputPointType, x);
+  same_layout &= field_x.datatype == sensor_msgs::msg::PointField::FLOAT32;
+  same_layout &= field_x.count == 1;
+  const auto & field_y = fields.at(1);
+  same_layout &= field_y.name == "y";
+  same_layout &= field_y.offset == offsetof(InputPointType, y);
+  same_layout &= field_y.datatype == sensor_msgs::msg::PointField::FLOAT32;
+  same_layout &= field_y.count == 1;
+  const auto & field_z = fields.at(2);
+  same_layout &= field_z.name == "z";
+  same_layout &= field_z.offset == offsetof(InputPointType, z);
+  same_layout &= field_z.datatype == sensor_msgs::msg::PointField::FLOAT32;
+  same_layout &= field_z.count == 1;
+  const auto & field_intensity = fields.at(3);
+  same_layout &= field_intensity.name == "intensity";
+  same_layout &= field_intensity.offset == offsetof(InputPointType, intensity);
+  same_layout &= field_intensity.datatype == sensor_msgs::msg::PointField::UINT8;
+  same_layout &= field_intensity.count == 1;
+  return same_layout;
+}
 }  // namespace autoware::cuda_pointcloud_preprocessor
 
 #endif  // AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__MEMORY_HPP_
