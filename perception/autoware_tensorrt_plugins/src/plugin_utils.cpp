@@ -30,11 +30,6 @@ void logDebug(char const * msg)
   getLogger()->log(nvinfer1::ILogger::Severity::kVERBOSE, msg);
 }
 
-void logInfo(char const * msg)
-{
-  getLogger()->log(nvinfer1::ILogger::Severity::kINFO, msg);
-}
-
 void reportAssertion(bool success, char const * msg, char const * file, std::int32_t line)
 {
   if (!success) {
