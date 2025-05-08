@@ -15,7 +15,6 @@
 #ifndef TRAFFIC_LIGHT_CATEGORY_MERGER_NODE_HPP_
 #define TRAFFIC_LIGHT_CATEGORY_MERGER_NODE_HPP_
 
-#include <autoware_utils/ros/transform_listener.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <tier4_perception_msgs/msg/traffic_light_array.hpp>
@@ -40,9 +39,6 @@ public:
 
 private:
   // Subscriber
-  tf2_ros::Buffer tf_buffer_;
-  tf2_ros::TransformListener tf_listener_;
-
   message_filters::Subscriber<TrafficLightArray> car_signal_sub_;
   message_filters::Subscriber<TrafficLightArray> pedestrian_signal_sub_;
 

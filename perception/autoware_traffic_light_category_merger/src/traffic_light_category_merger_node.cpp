@@ -24,8 +24,6 @@ namespace autoware::traffic_light
 TrafficLightCategoryMergerNode::TrafficLightCategoryMergerNode(
   const rclcpp::NodeOptions & node_options)
 : rclcpp::Node("traffic_light_category_merger_node", node_options),
-  tf_buffer_(get_clock()),
-  tf_listener_(tf_buffer_),
   car_signal_sub_(this, "input/car_signals", rclcpp::QoS{1}.get_rmw_qos_profile()),
   pedestrian_signal_sub_(this, "input/pedestrian_signals", rclcpp::QoS{1}.get_rmw_qos_profile()),
   sync_(SyncPolicy(10), car_signal_sub_, pedestrian_signal_sub_)
