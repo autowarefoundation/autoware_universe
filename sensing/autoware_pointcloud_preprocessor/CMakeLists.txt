@@ -121,9 +121,6 @@ ament_auto_add_library(pointcloud_preprocessor_filter SHARED
   src/pointcloud_densifier/occupancy_grid.cpp
 )
 
-# Post Humble compatibility:
-target_compile_options(pointcloud_preprocessor_filter PUBLIC -Wno-error=maybe-uninitialized)
-
 target_link_libraries(pointcloud_preprocessor_filter
   pointcloud_preprocessor_filter_base
   faster_voxel_grid_downsample_filter
