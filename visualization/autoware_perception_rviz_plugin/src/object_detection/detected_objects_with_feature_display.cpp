@@ -31,6 +31,168 @@ namespace rviz_plugins
 {
 namespace object_detection
 {
+
+
+  std_msgs::msg::ColorRGBA generateDistinctColor(size_t idx)
+  {
+    // Use HSV hue variation for distinct colors
+    float hue = static_cast<float>((idx * 47) % 360);  // 47 is a prime for spacing
+    float c = 1.0f;
+    float x = c * (1 - std::fabs(std::fmod(hue / 60.0f, 2) - 1));
+    float r = 0, g = 0, b = 0;
+    if (hue < 60)      { r = c; g = x; b = 0; }
+    else if (hue < 120){ r = x; g = c; b = 0; }
+    else if (hue < 180){ r = 0; g = c; b = x; }
+    else if (hue < 240){ r = 0; g = x; b = c; }
+    else if (hue < 300){ r = x; g = 0; b = c; }
+    else               { r = c; g = 0; b = x; }
+  
+    std_msgs::msg::ColorRGBA color;
+    color.r = r;
+    color.g = g;
+    color.b = b;
+    color.a = 1.0f;
+    return color;
+  }
+  std_msgs::msg::ColorRGBA colormapJet(float value_normalized)
+  {
+    value_normalized = std::clamp(value_normalized, 0.0f, 1.0f);
+    float r = std::clamp(1.5f - std::abs(4.0f * value_normalized - 3.0f), 0.0f, 1.0f);
+    float g = std::clamp(1.5f - std::abs(4.0f * value_normalized - 2.0f), 0.0f, 1.0f);
+    float b = std::clamp(1.5f - std::abs(4.0f * value_normalized - 1.0f), 0.0f, 1.0f);
+  
+    std_msgs::msg::ColorRGBA color;
+    color.r = r;
+    color.g = g;
+    color.b = b;
+    color.a = 1.0f;
+    return color;
+  }
+  
+  std_msgs::msg::ColorRGBA colormapViridis(float v)
+  {
+    v = std::clamp(v, 0.0f, 1.0f);
+    float r = std::clamp(0.267f + v * (0.993f - 0.267f), 0.0f, 1.0f);
+    float g = std::clamp(0.004f + v * (0.906f - 0.004f), 0.0f, 1.0f);
+    float b = std::clamp(0.329f + v * (0.933f - 0.329f), 0.0f, 1.0f);
+    std_msgs::msg::ColorRGBA color;
+    color.r = r;
+    color.g = g;
+    color.b = b;
+    color.a = 1.0f;
+    return color;
+  }
+  
+  std_msgs::msg::ColorRGBA colormapHSV(float v)
+  {
+    v = std::clamp(v, 0.0f, 1.0f);
+    float h = v * 360.0f;  // hue in degrees
+    float s = 1.0f, l = 0.5f;
+  
+    float c = (1.0f - std::fabs(2.0f * l - 1.0f)) * s;
+    float x = c * (1.0f - std::fabs(std::fmod(h / 60.0f, 2) - 1.0f));
+    float m = l - c / 2.0f;
+  
+    float r = 0, g = 0, b = 0;
+    if (h < 60)      { r = c; g = x; b = 0; }
+    else if (h < 120){ r = x; g = c; b = 0; }
+    else if (h < 180){ r = 0; g = c; b = x; }
+    else if (h < 240){ r = 0; g = x; b = c; }
+    else if (h < 300){ r = x; g = 0; b = c; }
+    else             { r = c; g = 0; b = x; }
+  
+    std_msgs::msg::ColorRGBA color;
+    color.r = r + m;
+    color.g = g + m;
+    color.b = b + m;
+    color.a = 1.0f;
+    return color;
+  }
+  std_msgs::msg::ColorRGBA colormapRed(float v)
+  {
+    std_msgs::msg::ColorRGBA color;
+    v = std::clamp(v, 0.0f, 1.0f);
+    color.r = v;
+    color.g = 0.0f;
+    color.b = 0.0f;
+    color.a = 1.0f;
+    return color;
+  }
+  std_msgs::msg::ColorRGBA colormapGray(float value)
+  {
+    value = std::clamp(value, 0.0f, 1.0f);
+    std_msgs::msg::ColorRGBA color;
+    color.r = value;
+    color.g = value;
+    color.b = value;
+    color.a = 1.0f;
+    return color;
+  }
+  std_msgs::msg::ColorRGBA colormapTurbo(float v)
+  {
+    v = std::clamp(v, 0.0f, 1.0f);
+  
+    // The coefficients for Turbo are derived from Google’s approximation
+    float r = std::clamp(0.996f * v - 0.1046f, 0.0f, 1.0f);
+    float g = std::clamp(0.996f * v - 0.0625f, 0.0f, 1.0f);
+    float b = std::clamp(0.996f * v - 0.0878f, 0.0f, 1.0f);
+  
+    std_msgs::msg::ColorRGBA color;
+    color.r = r;
+    color.g = g;
+    color.b = b;
+    color.a = 1.0f;
+    
+    return color;
+  }
+  std_msgs::msg::ColorRGBA colormapRainbow(float v)
+  {
+    v = std::clamp(v, 0.0f, 1.0f);
+    float r = std::sin(2.0f * M_PI * v + 0.0f) * 0.5f + 0.5f;
+    float g = std::sin(2.0f * M_PI * v + 2.0f * M_PI / 3.0f) * 0.5f + 0.5f;
+    float b = std::sin(2.0f * M_PI * v + 4.0f * M_PI / 3.0f) * 0.5f + 0.5f;
+  
+    std_msgs::msg::ColorRGBA color;
+    color.r = r;
+    color.g = g;
+    color.b = b;
+    color.a = 1.0f;
+    return color;
+  }
+  std_msgs::msg::ColorRGBA colormapParula(float v)
+  {
+    v = std::clamp(v, 0.0f, 1.0f);
+  
+    // Parula approximation (6 key points from MATLAB)
+    const std::vector<std::array<float, 3>> parula_data = {
+      {0.2081f, 0.1663f, 0.5292f},  // dark blue
+      {0.2291f, 0.3220f, 0.5451f},  // blue
+      {0.2669f, 0.4887f, 0.5561f},  // teal
+      {0.3052f, 0.6502f, 0.5653f},  // greenish
+      {0.5849f, 0.7823f, 0.4863f},  // yellow-green
+      {0.9763f, 0.9831f, 0.0538f}   // yellow
+    };
+  
+    float scaled = v * (parula_data.size() - 1);
+    int idx = static_cast<int>(scaled);
+    float frac = scaled - idx;
+  
+    if (idx >= static_cast<int>(parula_data.size()) - 1) {
+      idx = static_cast<int>(parula_data.size()) - 2;
+      frac = 1.0f;
+    }
+  
+    std_msgs::msg::ColorRGBA color;
+    color.r = (1 - frac) * parula_data[idx][0] + frac * parula_data[idx + 1][0];
+    color.g = (1 - frac) * parula_data[idx][1] + frac * parula_data[idx + 1][1];
+    color.b = (1 - frac) * parula_data[idx][2] + frac * parula_data[idx + 1][2];
+    color.a = 1.0f;
+  
+    return color;
+  }
+  
+
+
 DetectedObjectsWithFeatureDisplay::DetectedObjectsWithFeatureDisplay(
   const std::string & default_topic)
 : m_marker_common(this),
@@ -65,7 +227,33 @@ void DetectedObjectsWithFeatureDisplay::onInitialize()
   m_marker_common.initialize(this->context_, this->scene_node_);
   QString message_type = QString::fromStdString(rosidl_generator_traits::name<DetectedObjectsWithFeature>());
   this->topic_property_->setMessageType(message_type);
-  this->topic_property_->setDescription("Topic to subscribe to.");  
+  this->topic_property_->setDescription("Topic to subscribe to.");
+
+  // Generate the colorbar for the colormap
+  generateColorbar();
+  // Create the colorbar widget
+  m_colorbar_widget = new ColorbarWidget();
+  m_colorbar_widget->setColorbarImage(m_colorbar_image);  // Set the generated colorbar image
+  m_colorbar_widget->setMinMax(0.0f, 1.0f);
+  m_colorbar_widget->setWindowFlags(Qt::Tool); 
+  m_colorbar_widget->show();
+}
+
+void DetectedObjectsWithFeatureDisplay::generateColorbar()
+{
+    int width = 200;  // Width of the colorbar
+    int height = 20;  // Height of the colorbar
+
+    m_colorbar_image = QImage(width, height, QImage::Format_RGB32);
+    for (int x = 0; x < width; ++x) {
+        float normalized = float(x) / (width - 1);
+        std_msgs::msg::ColorRGBA color = colormapParula(normalized);  // Using Turbo colormap for example
+
+        // Map color (0 to 1) into 0-255 range for RGB
+        for (int y = 0; y < height; ++y) {
+          m_colorbar_image.setPixelColor(x, y, qRgb(color.r * 255, color.g * 255, color.b * 255));
+        }
+      }
 }
 
 void DetectedObjectsWithFeatureDisplay::reset()
@@ -73,164 +261,6 @@ void DetectedObjectsWithFeatureDisplay::reset()
   RosTopicDisplay::reset();
   m_marker_common.clearMarkers();
 }
-std_msgs::msg::ColorRGBA generateDistinctColor(size_t idx)
-{
-  // Use HSV hue variation for distinct colors
-  float hue = static_cast<float>((idx * 47) % 360);  // 47 is a prime for spacing
-  float c = 1.0f;
-  float x = c * (1 - std::fabs(std::fmod(hue / 60.0f, 2) - 1));
-  float r = 0, g = 0, b = 0;
-  if (hue < 60)      { r = c; g = x; b = 0; }
-  else if (hue < 120){ r = x; g = c; b = 0; }
-  else if (hue < 180){ r = 0; g = c; b = x; }
-  else if (hue < 240){ r = 0; g = x; b = c; }
-  else if (hue < 300){ r = x; g = 0; b = c; }
-  else               { r = c; g = 0; b = x; }
-
-  std_msgs::msg::ColorRGBA color;
-  color.r = r;
-  color.g = g;
-  color.b = b;
-  color.a = 1.0f;
-  return color;
-}
-std_msgs::msg::ColorRGBA colormapJet(float value_normalized)
-{
-  value_normalized = std::clamp(value_normalized, 0.0f, 1.0f);
-  float r = std::clamp(1.5f - std::abs(4.0f * value_normalized - 3.0f), 0.0f, 1.0f);
-  float g = std::clamp(1.5f - std::abs(4.0f * value_normalized - 2.0f), 0.0f, 1.0f);
-  float b = std::clamp(1.5f - std::abs(4.0f * value_normalized - 1.0f), 0.0f, 1.0f);
-
-  std_msgs::msg::ColorRGBA color;
-  color.r = r;
-  color.g = g;
-  color.b = b;
-  color.a = 1.0f;
-  return color;
-}
-
-std_msgs::msg::ColorRGBA colormapViridis(float v)
-{
-  v = std::clamp(v, 0.0f, 1.0f);
-  float r = std::clamp(0.267f + v * (0.993f - 0.267f), 0.0f, 1.0f);
-  float g = std::clamp(0.004f + v * (0.906f - 0.004f), 0.0f, 1.0f);
-  float b = std::clamp(0.329f + v * (0.933f - 0.329f), 0.0f, 1.0f);
-  std_msgs::msg::ColorRGBA color;
-  color.r = r;
-  color.g = g;
-  color.b = b;
-  color.a = 1.0f;
-  return color;
-}
-
-std_msgs::msg::ColorRGBA colormapHSV(float v)
-{
-  v = std::clamp(v, 0.0f, 1.0f);
-  float h = v * 360.0f;  // hue in degrees
-  float s = 1.0f, l = 0.5f;
-
-  float c = (1.0f - std::fabs(2.0f * l - 1.0f)) * s;
-  float x = c * (1.0f - std::fabs(std::fmod(h / 60.0f, 2) - 1.0f));
-  float m = l - c / 2.0f;
-
-  float r = 0, g = 0, b = 0;
-  if (h < 60)      { r = c; g = x; b = 0; }
-  else if (h < 120){ r = x; g = c; b = 0; }
-  else if (h < 180){ r = 0; g = c; b = x; }
-  else if (h < 240){ r = 0; g = x; b = c; }
-  else if (h < 300){ r = x; g = 0; b = c; }
-  else             { r = c; g = 0; b = x; }
-
-  std_msgs::msg::ColorRGBA color;
-  color.r = r + m;
-  color.g = g + m;
-  color.b = b + m;
-  color.a = 1.0f;
-  return color;
-}
-std_msgs::msg::ColorRGBA colormapRed(float v)
-{
-  std_msgs::msg::ColorRGBA color;
-  v = std::clamp(v, 0.0f, 1.0f);
-  color.r = v;
-  color.g = 0.0f;
-  color.b = 0.0f;
-  color.a = 1.0f;
-  return color;
-}
-std_msgs::msg::ColorRGBA colormapGray(float value)
-{
-  value = std::clamp(value, 0.0f, 1.0f);
-  std_msgs::msg::ColorRGBA color;
-  color.r = value;
-  color.g = value;
-  color.b = value;
-  color.a = 1.0f;
-  return color;
-}
-std_msgs::msg::ColorRGBA colormapTurbo(float v)
-{
-  v = std::clamp(v, 0.0f, 1.0f);
-
-  // The coefficients for Turbo are derived from Google’s approximation
-  float r = std::clamp(0.996f * v - 0.1046f, 0.0f, 1.0f);
-  float g = std::clamp(0.996f * v - 0.0625f, 0.0f, 1.0f);
-  float b = std::clamp(0.996f * v - 0.0878f, 0.0f, 1.0f);
-
-  std_msgs::msg::ColorRGBA color;
-  color.r = r;
-  color.g = g;
-  color.b = b;
-  color.a = 1.0f;
-  
-  return color;
-}
-std_msgs::msg::ColorRGBA colormapRainbow(float v)
-{
-  v = std::clamp(v, 0.0f, 1.0f);
-  float r = std::sin(2.0f * M_PI * v + 0.0f) * 0.5f + 0.5f;
-  float g = std::sin(2.0f * M_PI * v + 2.0f * M_PI / 3.0f) * 0.5f + 0.5f;
-  float b = std::sin(2.0f * M_PI * v + 4.0f * M_PI / 3.0f) * 0.5f + 0.5f;
-
-  std_msgs::msg::ColorRGBA color;
-  color.r = r;
-  color.g = g;
-  color.b = b;
-  color.a = 1.0f;
-  return color;
-}
-std_msgs::msg::ColorRGBA colormapParula(float v)
-{
-  v = std::clamp(v, 0.0f, 1.0f);
-
-  // Parula approximation (6 key points from MATLAB)
-  const std::vector<std::array<float, 3>> parula_data = {
-    {0.2081f, 0.1663f, 0.5292f},  // dark blue
-    {0.2291f, 0.3220f, 0.5451f},  // blue
-    {0.2669f, 0.4887f, 0.5561f},  // teal
-    {0.3052f, 0.6502f, 0.5653f},  // greenish
-    {0.5849f, 0.7823f, 0.4863f},  // yellow-green
-    {0.9763f, 0.9831f, 0.0538f}   // yellow
-  };
-
-  float scaled = v * (parula_data.size() - 1);
-  int idx = static_cast<int>(scaled);
-  float frac = scaled - idx;
-
-  if (idx >= static_cast<int>(parula_data.size()) - 1) {
-    idx = static_cast<int>(parula_data.size()) - 2;
-    frac = 1.0f;
-  }
-
-  std_msgs::msg::ColorRGBA color;
-  color.r = (1 - frac) * parula_data[idx][0] + frac * parula_data[idx + 1][0];
-  color.g = (1 - frac) * parula_data[idx][1] + frac * parula_data[idx + 1][1];
-  color.b = (1 - frac) * parula_data[idx][2] + frac * parula_data[idx + 1][2];
-  color.a = 1.0f;
-
-  return color;
-}
-
 void DetectedObjectsWithFeatureDisplay::processMessage(DetectedObjectsWithFeature::ConstSharedPtr msg)
 {
   clear_markers();

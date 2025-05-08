@@ -25,12 +25,58 @@
 #include <tier4_perception_msgs/msg/detail/detected_objects_with_feature__struct.hpp>
 #include <tier4_perception_msgs/msg/detected_objects_with_feature.hpp>
 
+#include <QWidget>
+#include <QImage>
+#include <QPainter>
+#include <QPaintEvent>
 namespace autoware
 {
 namespace rviz_plugins
 {
 namespace object_detection
 {
+
+
+  class ColorbarWidget : public QWidget
+  {
+  public:
+      ColorbarWidget(QWidget *parent = nullptr) : QWidget(parent) {
+          setFixedSize(220, 40);  // Adjust size to fit your colorbar
+      }
+  
+      void setColorbarImage(const QImage &image) {
+          m_colorbar_image = image;
+          update();  // Trigger a repaint
+      }
+      void setMinMax(float min_value, float max_value)
+      {
+        m_min_value = min_value;
+        m_max_value = max_value;
+      }
+      
+  protected:
+      void paintEvent(QPaintEvent *) override {
+          QPainter painter(this);
+          painter.drawImage(10, 10, m_colorbar_image);  // Draw the colorbar with some margin
+
+          QFont font = painter.font();
+          font.setPixelSize(10);
+          painter.setFont(font);
+          painter.setPen(QPen(Qt::black));
+        
+          painter.drawText(10, height() - 5, QString::number(m_min_value));
+          painter.drawText(width() - 40, height() - 5, QString::number(m_max_value));
+
+
+      }
+  
+  private:
+    QImage m_colorbar_image;
+    float m_min_value{0.0f};
+    float m_max_value{1.0f};
+  };
+
+
 /// \brief Class defining rviz plugin to visualize DetectedObjects
 class AUTOWARE_PERCEPTION_RVIZ_PLUGIN_PUBLIC DetectedObjectsWithFeatureDisplay
 : public rviz_common::RosTopicDisplay<tier4_perception_msgs::msg::DetectedObjectsWithFeature>
@@ -63,6 +109,11 @@ protected:
   double get_point_size() { return m_point_size_property.getFloat(); }
   QColor get_point_color() { return m_point_color_property.getColor(); }
   double get_point_alpha() { return m_point_alpha_property.getFloat(); }
+  // Member variable to store the colorbar image
+  QImage m_colorbar_image;
+  // Method to generate the colorbar image
+  void generateColorbar();
+
 private:
   // All rviz plugins should have this. Should be initialized with pointer to this class
   MarkerCommon m_marker_common;  
@@ -92,7 +143,8 @@ private:
   {
     m_marker_common.addMessage(marker_ptr);
   }
-
+    // Colorbar widget
+    ColorbarWidget* m_colorbar_widget;
 };
 
 }  // namespace object_detection
