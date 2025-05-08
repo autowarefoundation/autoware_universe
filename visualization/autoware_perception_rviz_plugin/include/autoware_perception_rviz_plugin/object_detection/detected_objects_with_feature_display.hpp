@@ -40,8 +40,8 @@ namespace object_detection
   class ColorbarWidget : public QWidget
   {
   public:
-      ColorbarWidget(QWidget *parent = nullptr) : QWidget(parent) {
-          setFixedSize(220, 40);  // Adjust size to fit your colorbar
+  explicit ColorbarWidget(QWidget *parent = nullptr) : QWidget(parent) {
+          setFixedSize(50, 220);  // Adjust size to fit your colorbar
       }
   
       void setColorbarImage(const QImage &image) {
@@ -66,8 +66,6 @@ namespace object_detection
         
           painter.drawText(10, height() - 5, QString::number(m_min_value));
           painter.drawText(width() - 40, height() - 5, QString::number(m_max_value));
-
-
       }
   
   private:
@@ -92,7 +90,9 @@ public:
   using RosTopicDisplay = rviz_common::RosTopicDisplay<DetectedObjectsWithFeature>;
 
 
-  DetectedObjectsWithFeatureDisplay(const std::string & default_topic = "detected_objects_with_feature");
+  DetectedObjectsWithFeatureDisplay(
+    const std::string & default_topic = "detected_objects_with_feature");
+  ~DetectedObjectsWithFeatureDisplay() override;
 protected:
   void onInitialize() override;
   void reset() override;  
@@ -103,17 +103,18 @@ protected:
     RosTopicDisplay::Display::load(config);
     m_marker_common.load(config);
   }
-
+  void onPropertyChanged(const rviz_common::properties::Property * property);
   void update(float wall_dt, float ros_dt) override { m_marker_common.update(wall_dt, ros_dt); }
   double get_line_width() { return m_point_size_property.getFloat(); }
   double get_point_size() { return m_point_size_property.getFloat(); }
   QColor get_point_color() { return m_point_color_property.getColor(); }
-  double get_point_alpha() { return m_point_alpha_property.getFloat(); }
   // Member variable to store the colorbar image
   QImage m_colorbar_image;
   // Method to generate the colorbar image
   void generateColorbar();
-
+  void updateColorbarVisibility();
+  void updateColormapAndColorbar();
+  void updateColormapPropertiesVisibility();
 private:
   // All rviz plugins should have this. Should be initialized with pointer to this class
   MarkerCommon m_marker_common;  
@@ -121,18 +122,16 @@ private:
   rviz_common::properties::FloatProperty m_line_width_property;
   // Property to set point size of cluster point cloud
   rviz_common::properties::FloatProperty m_point_size_property;
-  // Property to set point color of cluster point cloud
-  rviz_common::properties::ColorProperty m_point_color_property;
-  // Property to show intensity of cluster point cloud
-  rviz_common::properties::BoolProperty m_display_intensity_property;
-  // Property to set point alpha of cluster point cloud
-  rviz_common::properties::FloatProperty m_point_alpha_property;
-  // Property to set intensity color threshold of cluster point cloud
-  rviz_common::properties::FloatProperty m_intensity_color_scale_max;
   // Property to set color mode of cluster point cloud
   rviz_common::properties::EnumProperty m_color_mode_property;
   // Property to set colormap of cluster point cloud
   rviz_common::properties::EnumProperty m_colormap_property;
+  // Property to set point color of cluster point cloud
+  rviz_common::properties::ColorProperty m_point_color_property;
+  // Property to set intensity color threshold of cluster point cloud
+  rviz_common::properties::FloatProperty m_intensity_color_scale_max;
+  // Property to show colorbar
+  rviz_common::properties::BoolProperty m_show_colorbar_property;
 
   // Property to set the default topic name
   std::string m_default_topic;
