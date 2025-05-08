@@ -75,7 +75,7 @@
           "type": "number",
           "default": 25,
           "description": "Number of points for moving average path filter."
-        },
+        }
       },
       "required": [
         "ld_velocity_ratio",
