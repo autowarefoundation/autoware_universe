@@ -213,6 +213,11 @@ private:
   void publish_debug_info(const geometry_msgs::msg::Pose & ego_pose);
 
   /**
+   * @brief Generate error message based on validation status
+   */
+  std::string generate_error_message(const ControlValidatorStatus & s);
+
+  /**
    * @brief Display validation status on terminal
    */
   void display_status();
