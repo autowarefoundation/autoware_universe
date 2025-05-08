@@ -100,17 +100,19 @@ public:
   explicit AccelerationValidator(rclcpp::Node & node)
   : e_offset{get_or_declare_parameter<double>(node, "thresholds.acc_error_offset")},
     e_scale{get_or_declare_parameter<double>(node, "thresholds.acc_error_scale")},
-    desired_acc_lpf{get_or_declare_parameter<double>(node, "acc_lpf_gain")} {};
+    desired_acc_lpf{get_or_declare_parameter<double>(node, "acc_lpf_gain")},
+    measured_acc_lpf{get_or_declare_parameter<double>(node, "acc_lpf_gain")} {};
 
   void validate(
     ControlValidatorStatus & res, const Odometry & kinematic_state, const Control & control_cmd,
-    const double filtered_acceleration);
+    const AccelWithCovarianceStamped & loc_acc);
 
 private:
-  bool is_in_error_range(const double filtered_acceleration) const;
+  bool is_in_error_range() const;
   const double e_offset;
   const double e_scale;
   autoware::signal_processing::LowpassFilter1d desired_acc_lpf;
+  autoware::signal_processing::LowpassFilter1d measured_acc_lpf;
 };
 
 /**
@@ -129,17 +131,19 @@ public:
       get_or_declare_parameter<double>(node, "thresholds.over_velocity_offset")},
     hold_velocity_error_until_stop{
       get_or_declare_parameter<bool>(node, "hold_velocity_error_until_stop")},
+    vehicle_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")},
     target_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")} {};
 
   void validate(
     ControlValidatorStatus & res, const Trajectory & reference_trajectory,
-    const Odometry & kinematics, const double filtered_velocity);
+    const Odometry & kinematics);
 
 private:
   const double rolling_back_velocity_th;
   const double over_velocity_ratio_th;
   const double over_velocity_offset_th;
   const bool hold_velocity_error_until_stop;
+  autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf;
   autoware::signal_processing::LowpassFilter1d target_vel_lpf;
 };
 
@@ -156,17 +160,19 @@ public:
     will_overrun_stop_point_dist_th{
       get_or_declare_parameter<double>(node, "thresholds.will_overrun_stop_point_dist")},
     assumed_limit_acc{get_or_declare_parameter<double>(node, "thresholds.assumed_limit_acc")},
-    assumed_delay_time{get_or_declare_parameter<double>(node, "thresholds.assumed_delay_time")} {};
+    assumed_delay_time{get_or_declare_parameter<double>(node, "thresholds.assumed_delay_time")},
+    vehicle_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")} {};
 
   void validate(
     ControlValidatorStatus & res, const Trajectory & reference_trajectory,
-    const Odometry & kinematics, const double filtered_velocity);
+    const Odometry & kinematics);
 
 private:
   const double overrun_stop_point_dist_th;
   const double will_overrun_stop_point_dist_th;
   const double assumed_limit_acc;
   const double assumed_delay_time;
+  autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf;
 };
 
 /**
@@ -242,9 +248,6 @@ private:
   Updater diag_updater_{this};
   ControlValidatorStatus validation_status_;
   vehicle_info_utils::VehicleInfo vehicle_info_;
-  std::unique_ptr<autoware::signal_processing::LowpassFilter1d> common_velocity_lpf_;
-  std::unique_ptr<autoware::signal_processing::LowpassFilter1d> common_acceleration_lpf_;
-
   /**
    * @brief Check if all validation criteria are met
    * @param status Validation status
