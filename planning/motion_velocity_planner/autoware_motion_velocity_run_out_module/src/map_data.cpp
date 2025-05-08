@@ -70,6 +70,11 @@ void add_ignore_and_cut_lanelets(
           data.cut_predicted_paths_segments.push_back(convert(ll.polygon2d().segment(i)));
         }
       }
+      if (contains_type(params.carefully_ignore_objects_lanelet_subtypes, lanelet_subtype)) {
+        universe_utils::LinearRing2d polygon;
+        boost::geometry::convert(ll.polygon2d().basicPolygon(), polygon);
+        data.carefully_ignore_objects_polygons.push_back(polygon);
+      }
       if (contains_type(params.ignore_objects_lanelet_subtypes, lanelet_subtype)) {
         universe_utils::LinearRing2d polygon;
         boost::geometry::convert(ll.polygon2d().basicPolygon(), polygon);
@@ -103,6 +108,13 @@ void add_ignore_and_cut_polygons(
           polygon.emplace_back(pt.x(), pt.y());
         }
         data_per_label[label].ignore_objects_polygons.push_back(polygon);
+      }
+      if (contains_type(params.carefully_ignore_objects_polygon_types, polygon_type)) {
+        universe_utils::LinearRing2d polygon;
+        for (const auto & pt : p) {
+          polygon.emplace_back(pt.x(), pt.y());
+        }
+        data_per_label[label].carefully_ignore_objects_polygons.push_back(polygon);
       }
       if (contains_type(params.ignore_collisions_polygon_types, polygon_type)) {
         universe_utils::LinearRing2d polygon;
@@ -182,6 +194,7 @@ FilteringDataPerLabel calculate_filtering_data(
   for (const auto label : target_labels) {
     auto & data = data_per_label[label];
     data.ignore_objects_rtree = PolygonRtree(data.ignore_objects_polygons);
+    data.carefully_ignore_objects_rtree = PolygonRtree(data.carefully_ignore_objects_polygons);
     data.ignore_collisions_rtree = PolygonRtree(data.ignore_collisions_polygons);
   }
   return data_per_label;
