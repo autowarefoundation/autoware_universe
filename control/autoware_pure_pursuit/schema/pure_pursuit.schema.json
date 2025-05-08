@@ -76,11 +76,6 @@
           "default": 25,
           "description": "Number of points for moving average path filter."
         },
-        "control_period": {
-          "type": "number",
-          "default": 0.03,
-          "description": "Control period."
-        }
       },
       "required": [
         "ld_velocity_ratio",
