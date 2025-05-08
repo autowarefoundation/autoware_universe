@@ -313,7 +313,7 @@ __global__ void generateFeatures_kernel(
 
     pillarOutSM[pillar_idx_inBlock][point_idx][7] = center.x;
     pillarOutSM[pillar_idx_inBlock][point_idx][8] = center.y;
-	pillarOutSM[pillar_idx_inBlock][point_idx][9] = center.z;
+    pillarOutSM[pillar_idx_inBlock][point_idx][9] = center.z;
   
 } else {
 
@@ -328,7 +328,7 @@ __global__ void generateFeatures_kernel(
 
     pillarOutSM[pillar_idx_inBlock][point_idx][7] = 0;
     pillarOutSM[pillar_idx_inBlock][point_idx][8] = 0;
-	pillarOutSM[pillar_idx_inBlock][point_idx][9] = 0;
+    pillarOutSM[pillar_idx_inBlock][point_idx][9] = 0;
   }
 
   __syncthreads();
