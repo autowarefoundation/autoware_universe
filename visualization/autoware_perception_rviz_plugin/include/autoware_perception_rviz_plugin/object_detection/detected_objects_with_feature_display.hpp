@@ -69,7 +69,6 @@ protected:
   }
   void onPropertyChanged(const rviz_common::properties::Property * property);
   void update(float wall_dt, float ros_dt) override { m_marker_common.update(wall_dt, ros_dt); }
-  double get_line_width() { return m_point_size_property.getFloat(); }
   double get_point_size() { return m_point_size_property.getFloat(); }
   QColor get_point_color() { return m_point_color_property.getColor(); }
   // Member variable to store the colorbar image
@@ -82,8 +81,6 @@ protected:
 private:
   // All rviz plugins should have this. Should be initialized with pointer to this class
   MarkerCommon m_marker_common;  
-  // Property to set line width of object shape
-  rviz_common::properties::FloatProperty m_line_width_property;
   // Property to set point size of cluster point cloud
   rviz_common::properties::FloatProperty m_point_size_property;
   // Property to set color mode of cluster point cloud

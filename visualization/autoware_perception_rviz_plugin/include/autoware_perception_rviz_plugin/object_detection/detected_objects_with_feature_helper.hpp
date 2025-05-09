@@ -47,7 +47,7 @@ namespace object_detection
       void setMinMax(float min_value, float max_value);
       
   protected:
-  void paintEvent(QPaintEvent *) override ;
+  void paintEvent(QPaintEvent *event) override ;
   
   private:
     QImage m_colorbar_image;

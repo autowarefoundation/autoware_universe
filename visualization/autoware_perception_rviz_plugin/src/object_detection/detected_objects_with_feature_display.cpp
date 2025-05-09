@@ -37,7 +37,6 @@ namespace object_detection
 DetectedObjectsWithFeatureDisplay::DetectedObjectsWithFeatureDisplay(
   const std::string & default_topic)
 : m_marker_common(this),
-  m_line_width_property{"Line Width", 0.03, "Line width of object-shape", this},
   m_point_size_property{"Point Size", 0.1, "Point size of cluster", this},
   m_color_mode_property("Color Mode", 0, "Color mode of point cloud", this),
   m_colormap_property{"Colormap", "Jet", "Colormap to use for intensity coloring", this},
@@ -79,7 +78,7 @@ void DetectedObjectsWithFeatureDisplay::onInitialize()
 
   // m_colorbar_widget->setWindowTitle("Colorbar");
   m_colorbar_widget->setColorbarImage(m_colorbar_image);  // Set the generated colorbar image
-  m_colorbar_widget->setMinMax(0.0f, 1.0f);
+  m_colorbar_widget->setMinMax(0.0f, m_intensity_color_scale_max.getFloat());
   m_colorbar_widget->setWindowFlags(Qt::Tool);
   m_colorbar_widget->show();
 
@@ -96,13 +95,14 @@ void DetectedObjectsWithFeatureDisplay::onInitialize()
     &m_intensity_color_scale_max, &rviz_common::properties::Property::changed, this,
     [this]() { updateColormapAndColorbar(); });
   updateColormapPropertiesVisibility();
-  updateColorbarVisibility();
+  
 }
 
 void DetectedObjectsWithFeatureDisplay::updateColormapAndColorbar()
 {
   generateColorbar();  // Regenerate the image with the current colormap
   if (m_colorbar_widget) {
+    m_colorbar_widget->setMinMax(0.0f, m_intensity_color_scale_max.getFloat());
     m_colorbar_widget->setColorbarImage(m_colorbar_image);
     if (m_colorbar_widget->isVisible()) {
       m_colorbar_widget->update();  // Request a repaint of the colorbar widget
@@ -118,6 +118,7 @@ void DetectedObjectsWithFeatureDisplay::updateColormapPropertiesVisibility()
   m_show_colorbar_property.setHidden(!is_intensity_mode_active);
   m_intensity_color_scale_max.setHidden(!is_intensity_mode_active);
   m_point_color_property.setHidden(mode != FLAT_COLOR);
+  updateColorbarVisibility();
 }
 
 void DetectedObjectsWithFeatureDisplay::updateColorbarVisibility()
@@ -139,13 +140,15 @@ void DetectedObjectsWithFeatureDisplay::updateColorbarVisibility()
 
 void DetectedObjectsWithFeatureDisplay::generateColorbar()
 {
-  constexpr int width = 20;    // Width of the colorbar
-  constexpr int height = 200;  // Height of the colorbar
+  constexpr int width = 20;
+  constexpr int height = 200;
   const auto & colormap_info = getColormapInfo();
   ColormapFuncType colormap_fn = colormap_info.getFunctionSafe(m_colormap_property.getOptionInt());
+  // Create a colorbar image
   m_colorbar_image = QImage(width, height, QImage::Format_RGB32);
+
   for (int y = 0; y < height; ++y) {
-    float norm = float(y) / (height - 1);
+    float norm = static_cast<float>(y) / (height - 1);
     std_msgs::msg::ColorRGBA color = colormap_fn(norm);
     QRgb rgb = qRgb(color.r * 255, color.g * 255, color.b * 255);
     for (int x = 0; x < width; ++x) {
@@ -169,23 +172,33 @@ void DetectedObjectsWithFeatureDisplay::processMessage(
   DetectedObjectsWithFeature::ConstSharedPtr msg)
 {
   clear_markers();
+  
+  const int mode = m_color_mode_property.getOptionInt();
+  const float max_intensity = m_intensity_color_scale_max.getFloat();
+  const ColormapFuncType color_fn =
+    getColormapInfo().getFunctionSafe(m_colormap_property.getOptionInt());
+  const auto default_color = [&]() {
+    std_msgs::msg::ColorRGBA c;
+    c.r = get_point_color().redF();
+    c.g = get_point_color().greenF();
+    c.b = get_point_color().blueF();
+    c.a = 1.0f;
+    return c;
+  }();
+    
   int id = 0;
-  int mode = m_color_mode_property.getOptionInt();
   for (const auto & feature_object : msg->feature_objects) {
     const auto & cluster = feature_object.feature.cluster;
-    if (cluster.width <= 0 || cluster.height <= 0) {
+    if (cluster.width == 0 || cluster.height == 0) {
       continue;  // Skip this cluster
     }
     // Create a marker to display the cluster point cloud
     auto marker = std::make_shared<Marker>();
     marker->header = msg->header;
     marker->ns = "cluster_point_cloud";
-    marker->id = static_cast<int>(id);
+    marker->id = id++;
     marker->type = visualization_msgs::msg::Marker::POINTS;
     marker->action = visualization_msgs::msg::Marker::ADD;
-    marker->pose.position.x = 0.0;
-    marker->pose.position.y = 0.0;
-    marker->pose.position.z = 0.0;
     marker->pose.orientation.w = 1.0;
     marker->scale.x = marker->scale.y = get_point_size();
     marker->lifetime = rclcpp::Duration::from_seconds(0.15);
@@ -200,43 +213,31 @@ void DetectedObjectsWithFeatureDisplay::processMessage(
     sensor_msgs::PointCloud2ConstIterator<float> iter_y(cluster, "y");
     sensor_msgs::PointCloud2ConstIterator<float> iter_z(cluster, "z");
     sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_intensity(cluster, "intensity");
-
+    // Set the position of each point in the marker
     for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z) {
-      geometry_msgs::msg::Point point;
-      point.x = *iter_x;
-      point.y = *iter_y;
-      point.z = *iter_z;
-      marker->points.push_back(point);
+      geometry_msgs::msg::Point pt;
+      pt.x = *iter_x;
+      pt.y = *iter_y;
+      pt.z = *iter_z;
+      marker->points.push_back(pt);
     }
-
+    // Set the color of each point based on the selected mode
     if (mode == INTENSITY_COLOR) {
-      ColormapFuncType color_fn =
-        getColormapInfo().getFunctionSafe(m_colormap_property.getOptionInt());
-      // Use intensity to color the points
-      float max_intensity = m_intensity_color_scale_max.getFloat();
-
       for (; iter_intensity != iter_intensity.end(); ++iter_intensity) {
         float intensity_norm = static_cast<float>(*iter_intensity) / max_intensity;
         marker->colors.push_back(color_fn(intensity_norm));
       }
     } else if (mode == CLUSTER_COLOR) {
-      auto cluster_color = generateDistinctColor(id);
+      const auto cluster_color = generateDistinctColor(marker->id);
       for (; iter_intensity != iter_intensity.end(); ++iter_intensity) {
         marker->colors.push_back(cluster_color);
       }
     } else {
-      // Use the default color
-      std_msgs::msg::ColorRGBA color;
-      color.r = get_point_color().redF();
-      color.g = get_point_color().greenF();
-      color.b = get_point_color().blueF();
-      color.a = 1.0f;
       for (; iter_intensity != iter_intensity.end(); ++iter_intensity) {
-        marker->colors.push_back(color);
+        marker->colors.push_back(default_color);
       }
     }
     add_marker(marker);
-    id++;
   }
 }
 
