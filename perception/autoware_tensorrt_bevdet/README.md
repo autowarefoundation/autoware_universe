@@ -47,7 +47,7 @@ The core algorithm, named `BEVDet`, it unifies multi-view images into the perspe
 
    ros2 launch autoware_tensorrt_bevdet tensorrt_bevdet_node.launch.xml
    ```
-   
+
    launch `tensorrt_bevdet_node` as part of autoware
 
    ```bash
