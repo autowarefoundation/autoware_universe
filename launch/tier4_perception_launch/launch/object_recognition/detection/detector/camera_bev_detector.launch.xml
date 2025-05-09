@@ -17,6 +17,7 @@
   <arg name="input/camera6/info"/>
   <arg name="input/camera7/image"/>
   <arg name="input/camera7/info"/>
+  <arg name="output/objects"/>
   <arg name="number_of_cameras"/>
 
   <!-- Model parameters -->
@@ -39,7 +40,7 @@
       <arg name="input/img_b/camera_info" value="$(var input/camera4/info)"/>
       <arg name="input/img_br" value="$(var input/camera5/image)"/>
       <arg name="input/img_br/camera_info" value="$(var input/camera5/info)"/>
-      <arg name="output/boxes" value="boxes"/>
+      <arg name="output/boxes" value="$(var output/objects)"/>
       <arg name="data_path" value="$(var data_path)"/>
       <arg name="model_name" value="$(var bevdet_model_name)"/>
       <arg name="model_path" value="$(var bevdet_model_path)"/>

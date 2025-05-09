@@ -47,6 +47,13 @@ The core algorithm, named `BEVDet`, it unifies multi-view images into the perspe
 
    ros2 launch autoware_tensorrt_bevdet tensorrt_bevdet_node.launch.xml
    ```
+   
+   launch `tensorrt_bevdet_node` as part of autoware
+
+   ```bash
+
+   ros2 launch autoware_launch <launch_file> <other_arguments> perception_mode:=camera
+   ```
 
 2. play ros2 bag of nuScenes data
 
