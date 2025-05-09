@@ -48,7 +48,7 @@ if(BUILD_TESTING)
 endif()
 
 install(
-  PROGRAMS script/web_server.py script/guide.py
+  PROGRAMS script/web_server.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
