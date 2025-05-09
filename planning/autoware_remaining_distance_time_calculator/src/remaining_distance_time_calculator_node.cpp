@@ -21,7 +21,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/timer.hpp>
 
-#include <tier4_planning_msgs/msg/velocity_limit.hpp>
+#include <autoware_internal_planning_msgs/msg/velocity_limit.hpp>
 
 #include <chrono>
 #include <functional>
@@ -55,7 +55,7 @@ RemainingDistanceTimeCalculatorNode::RemainingDistanceTimeCalculatorNode(
   sub_route_ = create_subscription<LaneletRoute>(
     "~/input/route", qos_transient_local,
     std::bind(&RemainingDistanceTimeCalculatorNode::on_route, this, _1));
-  sub_planning_velocity_ = create_subscription<tier4_planning_msgs::msg::VelocityLimit>(
+  sub_planning_velocity_ = create_subscription<autoware_internal_planning_msgs::msg::VelocityLimit>(
     "/planning/scenario_planning/current_max_velocity", qos_transient_local,
     std::bind(&RemainingDistanceTimeCalculatorNode::on_velocity_limit, this, _1));
   sub_scenario_ = this->create_subscription<autoware_internal_planning_msgs::msg::Scenario>(
@@ -137,14 +137,16 @@ void RemainingDistanceTimeCalculatorNode::calculate_remaining_distance()
   lanelet::ConstLanelet current_lanelet;
   if (!lanelet::utils::query::getClosestLanelet(
         road_lanelets_, current_vehicle_pose_, &current_lanelet)) {
-    RCLCPP_WARN_STREAM(this->get_logger(), "Failed to find current lanelet.");
+    RCLCPP_WARN_STREAM_THROTTLE(
+      this->get_logger(), *get_clock(), 3000, "Failed to find current lanelet.");
 
     return;
   }
 
   lanelet::ConstLanelet goal_lanelet;
   if (!lanelet::utils::query::getClosestLanelet(road_lanelets_, goal_pose_, &goal_lanelet)) {
-    RCLCPP_WARN_STREAM(this->get_logger(), "Failed to find goal lanelet.");
+    RCLCPP_WARN_STREAM_THROTTLE(
+      this->get_logger(), *get_clock(), 3000, "Failed to find goal lanelet.");
 
     return;
   }
@@ -152,7 +154,8 @@ void RemainingDistanceTimeCalculatorNode::calculate_remaining_distance()
   const lanelet::Optional<lanelet::routing::Route> optional_route =
     routing_graph_ptr_->getRoute(current_lanelet, goal_lanelet, 0);
   if (!optional_route) {
-    RCLCPP_WARN_STREAM(this->get_logger(), "Failed to find proper route.");
+    RCLCPP_WARN_STREAM_THROTTLE(
+      this->get_logger(), *get_clock(), 3000, "Failed to find proper route.");
 
     return;
   }

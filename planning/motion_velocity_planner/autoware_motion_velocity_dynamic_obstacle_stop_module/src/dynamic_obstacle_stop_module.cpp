@@ -32,7 +32,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace autoware::motion_velocity_planner
@@ -97,6 +96,14 @@ void DynamicObstacleStopModule::update_parameters(const std::vector<rclcpp::Para
   update_param(parameters, ns_ + ".ignore_unavoidable_collisions", p.ignore_unavoidable_collisions);
 }
 
+void DynamicObstacleStopModule::publish_processing_time(const double processing_time_ms)
+{
+  autoware_internal_debug_msgs::msg::Float64Stamped processing_time_msg;
+  processing_time_msg.stamp = clock_->now();
+  processing_time_msg.data = processing_time_ms;
+  processing_time_publisher_->publish(processing_time_msg);
+}
+
 VelocityPlanningResult DynamicObstacleStopModule::plan(
   [[maybe_unused]] const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> &
     raw_trajectory_points,
@@ -105,15 +112,18 @@ VelocityPlanningResult DynamicObstacleStopModule::plan(
 {
   VelocityPlanningResult result;
   debug_data_.reset_data();
-  if (smoothed_trajectory_points.size() < 2) return result;
-
   autoware_utils::StopWatch<std::chrono::microseconds> stopwatch;
+  if (smoothed_trajectory_points.size() < 2) {
+    publish_processing_time(stopwatch.toc() / 1000);
+    return result;
+  }
+
   stopwatch.tic();
   stopwatch.tic("preprocessing");
   dynamic_obstacle_stop::EgoData ego_data;
   ego_data.pose = planner_data->current_odometry.pose.pose;
   ego_data.trajectory = smoothed_trajectory_points;
-  autoware::motion_utils::removeOverlapPoints(ego_data.trajectory);
+  ego_data.trajectory = autoware::motion_utils::removeOverlapPoints(ego_data.trajectory);
   ego_data.first_trajectory_idx =
     autoware::motion_utils::findNearestSegmentIndex(ego_data.trajectory, ego_data.pose.position);
   ego_data.longitudinal_offset_to_first_trajectory_idx =
@@ -191,10 +201,7 @@ VelocityPlanningResult DynamicObstacleStopModule::plan(
   processing_times["collisions"] = collisions_duration_us / 1000;
   processing_times["Total"] = total_time_us / 1000;
   processing_diag_publisher_->publish(processing_times);
-  autoware_internal_debug_msgs::msg::Float64Stamped processing_time_msg;
-  processing_time_msg.stamp = clock_->now();
-  processing_time_msg.data = processing_times["Total"];
-  processing_time_publisher_->publish(processing_time_msg);
+  publish_processing_time(processing_times["Total"]);
   return result;
 }
 

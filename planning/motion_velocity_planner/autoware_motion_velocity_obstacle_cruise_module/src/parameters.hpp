@@ -18,7 +18,7 @@
 #include "autoware/motion_utils/marker/marker_helper.hpp"
 #include "autoware/motion_utils/resample/resample.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
-#include "autoware/motion_velocity_planner_common_universe/utils.hpp"
+#include "autoware/motion_velocity_planner_common/utils.hpp"
 #include "autoware/object_recognition_utils/predicted_path_utils.hpp"
 #include "autoware_utils/ros/parameter.hpp"
 #include "autoware_utils/ros/update_param.hpp"
@@ -64,6 +64,7 @@ struct ObstacleFilteringParam
 {
   std::vector<uint8_t> inside_object_types{};
   std::vector<uint8_t> outside_object_types{};
+  std::vector<uint8_t> side_stopped_object_types{};
   // bool use_pointcloud{};
 
   double max_lat_margin{};
@@ -93,6 +94,8 @@ struct ObstacleFilteringParam
       utils::get_target_object_type(node, "obstacle_cruise.obstacle_filtering.object_type.inside.");
     outside_object_types = utils::get_target_object_type(
       node, "obstacle_cruise.obstacle_filtering.object_type.outside.");
+    side_stopped_object_types = utils::get_target_object_type(
+      node, "obstacle_cruise.obstacle_filtering.object_type.side_stopped.");
     // use_pointcloud = get_or_declare_parameter<bool>(
     //   node, "obstacle_cruise.obstacle_filtering.object_type.pointcloud");
 

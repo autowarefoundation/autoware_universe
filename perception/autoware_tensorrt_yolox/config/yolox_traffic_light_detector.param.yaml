@@ -2,8 +2,6 @@
 /**:
   ros__parameters:
 
-    model_path: "$(var data_path)/tensorrt_yolox/$(var model_name).onnx"
-    label_path: "$(var data_path)/tensorrt_yolox/car_ped_tl_detector_labels.txt"
     score_threshold: 0.35
     nms_threshold: 0.7
 
@@ -18,9 +16,7 @@
     gpu_id: 0 # GPU ID to select CUDA Device
     calibration_image_list_path: "" # Path to a file which contains path to images. Those images will be used for int8 quantization.
 
-
     # default params of tensorrt_yolox package, only effective for semseg model
-    color_map_path: "$(var data_path)/tensorrt_yolox/semseg_color_map.csv"
     is_roi_overlap_segment: false
     overlap_roi_score_threshold: 0.3
     is_publish_color_mask: false

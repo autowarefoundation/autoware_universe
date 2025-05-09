@@ -85,15 +85,6 @@ private:
   autoware_adapi_v1_msgs::msg::OperationModeState::ConstSharedPtr operation_mode_;
   autoware_vehicle_msgs::msg::ControlModeReport::ConstSharedPtr control_mode_;
 
-  // Callback
-  void onOdometry(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
-  void onLaneletMapBin(const LaneletMapBin::ConstSharedPtr msg);
-  void onRoute(const LaneletRoute::ConstSharedPtr msg);
-  void onReferenceTrajectory(const Trajectory::ConstSharedPtr msg);
-  void onPredictedTrajectory(const Trajectory::ConstSharedPtr msg);
-  void onOperationMode(const autoware_adapi_v1_msgs::msg::OperationModeState::ConstSharedPtr msg);
-  void onControlMode(const autoware_vehicle_msgs::msg::ControlModeReport::ConstSharedPtr msg);
-
   // Publisher
   autoware_utils::DebugPublisher debug_publisher_{this, "~/debug"};
   autoware_utils::ProcessingTimePublisher processing_diag_publisher_{

@@ -27,6 +27,7 @@
 #include <QString>
 #include <rviz_common/display.hpp>
 #include <rviz_common/properties/color_property.hpp>
+#include <rviz_common/properties/enum_property.hpp>
 #include <rviz_common/properties/float_property.hpp>
 #include <rviz_common/properties/int_property.hpp>
 #include <rviz_common/properties/ros_topic_property.hpp>
@@ -60,6 +61,7 @@ private Q_SLOTS:
   void updateSmallOverlaySize();
   void updateOverlayPosition();
   void updateOverlayColor();
+  void updateTurnSignalBlinkingMode();
   void topic_updated_gear();
   void topic_updated_steering();
   void topic_updated_speed();
@@ -82,6 +84,8 @@ private:
   rviz_common::properties::ColorProperty * property_primary_color_;
   rviz_common::properties::ColorProperty * property_light_limit_color_;
   rviz_common::properties::ColorProperty * property_dark_limit_color_;
+
+  rviz_common::properties::EnumProperty * property_turn_signal_blinking_mode_;
 
   std::unique_ptr<rviz_common::properties::RosTopicProperty> steering_topic_property_;
   std::unique_ptr<rviz_common::properties::RosTopicProperty> gear_topic_property_;
@@ -110,7 +114,8 @@ private:
   rclcpp::Subscription<autoware_vehicle_msgs::msg::HazardLightsReport>::SharedPtr
     hazard_lights_sub_;
   rclcpp::Subscription<autoware_perception_msgs::msg::TrafficLightGroup>::SharedPtr traffic_sub_;
-  rclcpp::Subscription<tier4_planning_msgs::msg::VelocityLimit>::SharedPtr speed_limit_sub_;
+  rclcpp::Subscription<autoware_internal_planning_msgs::msg::VelocityLimit>::SharedPtr
+    speed_limit_sub_;
 
   std::mutex property_mutex_;
 
@@ -121,7 +126,8 @@ private:
     const autoware_vehicle_msgs::msg::TurnIndicatorsReport::ConstSharedPtr & msg);
   void updateHazardLightsData(
     const autoware_vehicle_msgs::msg::HazardLightsReport::ConstSharedPtr & msg);
-  void updateSpeedLimitData(const tier4_planning_msgs::msg::VelocityLimit::ConstSharedPtr msg);
+  void updateSpeedLimitData(
+    const autoware_internal_planning_msgs::msg::VelocityLimit::ConstSharedPtr msg);
   void updateTrafficLightData(
     const autoware_perception_msgs::msg::TrafficLightGroup::ConstSharedPtr msg);
   void drawWidget(QImage & hud);

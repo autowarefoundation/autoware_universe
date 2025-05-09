@@ -764,7 +764,7 @@ void reactRTCApprovalByDecisionResult(
     {
       planning_factor_interface->add(
         path->points, path->points.at(closest_idx).point.pose,
-        path->points.at(stopline_idx).point.pose, path->points.at(stopline_idx).point.pose,
+        path->points.at(stopline_idx).point.pose,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
         autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
         0.0 /*shift distance*/, "intersection(pure StuckStop)");
@@ -778,7 +778,6 @@ void reactRTCApprovalByDecisionResult(
     {
       planning_factor_interface->add(
         path->points, path->points.at(closest_idx).point.pose,
-        path->points.at(occlusion_stopline_idx).point.pose,
         path->points.at(occlusion_stopline_idx).point.pose,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
         autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
@@ -811,7 +810,7 @@ void reactRTCApprovalByDecisionResult(
     {
       planning_factor_interface->add(
         path->points, path->points.at(closest_idx).point.pose,
-        path->points.at(stopline_idx).point.pose, path->points.at(stopline_idx).point.pose,
+        path->points.at(stopline_idx).point.pose,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
         autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
         0.0 /*shift distance*/, "intersection(Yield Stuck)");
@@ -841,7 +840,7 @@ void reactRTCApprovalByDecisionResult(
     {
       planning_factor_interface->add(
         path->points, path->points.at(decision_result.closest_idx).point.pose,
-        path->points.at(stopline_idx).point.pose, path->points.at(stopline_idx).point.pose,
+        path->points.at(stopline_idx).point.pose,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
         autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
         0.0 /*shift distance*/, "intersection(CollisionStop)");
@@ -855,7 +854,7 @@ void reactRTCApprovalByDecisionResult(
     {
       planning_factor_interface->add(
         path->points, path->points.at(decision_result.closest_idx).point.pose,
-        path->points.at(stopline_idx).point.pose, path->points.at(stopline_idx).point.pose,
+        path->points.at(stopline_idx).point.pose,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
         autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
         0.0 /*shift distance*/, "intersection(CollisionStop with occlusion)");
@@ -885,7 +884,7 @@ void reactRTCApprovalByDecisionResult(
     {
       planning_factor_interface->add(
         path->points, path->points.at(decision_result.closest_idx).point.pose,
-        path->points.at(stopline_idx).point.pose, path->points.at(stopline_idx).point.pose,
+        path->points.at(stopline_idx).point.pose,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
         autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
         0.0 /*shift distance*/, "intersection(FirstWaitBeforeOcclusion with collision)");
@@ -907,7 +906,7 @@ void reactRTCApprovalByDecisionResult(
     {
       planning_factor_interface->add(
         path->points, path->points.at(decision_result.closest_idx).point.pose,
-        path->points.at(stopline_idx).point.pose, path->points.at(stopline_idx).point.pose,
+        path->points.at(stopline_idx).point.pose,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
         autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
         0.0 /*shift distance*/, "intersection(FirstWaitBeforeOcclusion with occlusion)");
@@ -951,7 +950,6 @@ void reactRTCApprovalByDecisionResult(
       planning_factor_interface->add(
         path->points, path->points.at(decision_result.closest_idx).point.pose,
         path->points.at(occlusion_peeking_stopline).point.pose,
-        path->points.at(occlusion_peeking_stopline).point.pose,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
         autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
         0.0 /*shift distance*/, "intersection(PeekingToOcclusion)");
@@ -965,7 +963,7 @@ void reactRTCApprovalByDecisionResult(
     {
       planning_factor_interface->add(
         path->points, path->points.at(decision_result.closest_idx).point.pose,
-        path->points.at(stopline_idx).point.pose, path->points.at(stopline_idx).point.pose,
+        path->points.at(stopline_idx).point.pose,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
         autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
         0.0 /*shift distance*/, "intersection(PeekingToOcclusion while stopping for collision)");
@@ -995,7 +993,7 @@ void reactRTCApprovalByDecisionResult(
     {
       planning_factor_interface->add(
         path->points, path->points.at(decision_result.closest_idx).point.pose,
-        path->points.at(stopline_idx).point.pose, path->points.at(stopline_idx).point.pose,
+        path->points.at(stopline_idx).point.pose,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
         autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
         0.0 /*shift distance*/, "intersection(CollisionStop with occlusion)");
@@ -1013,7 +1011,7 @@ void reactRTCApprovalByDecisionResult(
     {
       planning_factor_interface->add(
         path->points, path->points.at(decision_result.closest_idx).point.pose,
-        path->points.at(stopline_idx).point.pose, path->points.at(stopline_idx).point.pose,
+        path->points.at(stopline_idx).point.pose,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
         autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
         0.0 /*shift distance*/, "intersection(CollisionStop with occlusion)");
@@ -1043,7 +1041,7 @@ void reactRTCApprovalByDecisionResult(
     {
       planning_factor_interface->add(
         path->points, path->points.at(decision_result.closest_idx).point.pose,
-        path->points.at(stopline_idx).point.pose, path->points.at(stopline_idx).point.pose,
+        path->points.at(stopline_idx).point.pose,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
         autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
         0.0 /*shift distance*/,
@@ -1058,7 +1056,7 @@ void reactRTCApprovalByDecisionResult(
     {
       planning_factor_interface->add(
         path->points, path->points.at(decision_result.closest_idx).point.pose,
-        path->points.at(stopline_idx).point.pose, path->points.at(stopline_idx).point.pose,
+        path->points.at(stopline_idx).point.pose,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
         autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
         0.0 /*shift distance*/, "intersection(Occlusion without traffic light)");
@@ -1096,7 +1094,7 @@ void reactRTCApprovalByDecisionResult(
     {
       planning_factor_interface->add(
         path->points, path->points.at(decision_result.closest_idx).point.pose,
-        path->points.at(stopline_idx).point.pose, path->points.at(stopline_idx).point.pose,
+        path->points.at(stopline_idx).point.pose,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
         autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
         0.0 /*shift distance*/, "intersection(Safe, but RTC interrupted for collision)");
@@ -1110,7 +1108,7 @@ void reactRTCApprovalByDecisionResult(
     {
       planning_factor_interface->add(
         path->points, path->points.at(decision_result.closest_idx).point.pose,
-        path->points.at(stopline_idx).point.pose, path->points.at(stopline_idx).point.pose,
+        path->points.at(stopline_idx).point.pose,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
         autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
         0.0 /*shift distance*/, "intersection(Safe, but RTC interrupted for occlusion)");
@@ -1140,7 +1138,7 @@ void reactRTCApprovalByDecisionResult(
     {
       planning_factor_interface->add(
         path->points, path->points.at(decision_result.closest_idx).point.pose,
-        path->points.at(stopline_idx).point.pose, path->points.at(stopline_idx).point.pose,
+        path->points.at(stopline_idx).point.pose,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
         autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
         0.0 /*shift distance*/, "intersection(FullyPrioritized, collision detected)");
@@ -1154,7 +1152,7 @@ void reactRTCApprovalByDecisionResult(
     {
       planning_factor_interface->add(
         path->points, path->points.at(decision_result.closest_idx).point.pose,
-        path->points.at(stopline_idx).point.pose, path->points.at(stopline_idx).point.pose,
+        path->points.at(stopline_idx).point.pose,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
         autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
         0.0 /*shift distance*/,

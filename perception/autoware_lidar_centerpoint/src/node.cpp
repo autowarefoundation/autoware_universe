@@ -14,25 +14,24 @@
 
 #include "autoware/lidar_centerpoint/node.hpp"
 
-#include "pcl_ros/transforms.hpp"
+#include "autoware/lidar_centerpoint/centerpoint_config.hpp"
+#include "autoware/lidar_centerpoint/preprocess/pointcloud_densification.hpp"
+#include "autoware/lidar_centerpoint/ros_utils.hpp"
+#include "autoware/lidar_centerpoint/utils.hpp"
 
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
+#include <pcl_ros/transforms.hpp>
 
 #include <memory>
 #include <string>
 #include <vector>
 
 #ifdef ROS_DISTRO_GALACTIC
-#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #else
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #endif
-
-#include "autoware/lidar_centerpoint/centerpoint_config.hpp"
-#include "autoware/lidar_centerpoint/preprocess/pointcloud_densification.hpp"
-#include "autoware/lidar_centerpoint/ros_utils.hpp"
-#include "autoware/lidar_centerpoint/utils.hpp"
 
 namespace autoware::lidar_centerpoint
 {
@@ -107,12 +106,19 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
     circle_nms_dist_threshold, yaw_norm_thresholds, has_variance_);
   detector_ptr_ =
     std::make_unique<CenterPointTRT>(encoder_param, head_param, densification_param, config);
-  diagnostics_interface_ptr_ =
+  diagnostics_centerpoint_trt_ =
     std::make_unique<autoware_utils::DiagnosticsInterface>(this, "centerpoint_trt");
 
-  pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-    "~/input/pointcloud", rclcpp::SensorDataQoS{}.keep_last(1),
-    std::bind(&LidarCenterPointNode::pointCloudCallback, this, std::placeholders::_1));
+  // diagnostics parameters
+  max_allowed_processing_time_ms_ =
+    declare_parameter<double>("diagnostics.max_allowed_processing_time_ms");
+  max_acceptable_consecutive_delay_ms_ =
+    declare_parameter<double>("diagnostics.max_acceptable_consecutive_delay_ms");
+
+  pointcloud_sub_ =
+    std::make_unique<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
+      *this, "~/input/pointcloud",
+      std::bind(&LidarCenterPointNode::pointCloudCallback, this, std::placeholders::_1));
   objects_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
     "~/output/objects", rclcpp::QoS{1});
 
@@ -126,6 +132,18 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
     stop_watch_ptr_->tic("processing_time");
   }
 
+  if (stop_watch_ptr_) {
+    // processing time diagnostics
+    const double validation_callback_interval_ms =
+      declare_parameter<double>("diagnostics.validation_callback_interval_ms");
+
+    diagnostic_processing_time_updater_.setHardwareID(this->get_name());
+    diagnostic_processing_time_updater_.add(
+      "processing_time_status", this, &LidarCenterPointNode::diagnoseProcessingTime);
+    // msec -> sec
+    diagnostic_processing_time_updater_.setPeriod(validation_callback_interval_ms / 1e3);
+  }
+
   if (this->declare_parameter("build_only", false)) {
     RCLCPP_INFO(this->get_logger(), "TensorRT engine is built and shutdown node.");
     rclcpp::shutdown();
@@ -134,7 +152,7 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
 }
 
 void LidarCenterPointNode::pointCloudCallback(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr input_pointcloud_msg)
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & input_pointcloud_msg)
 {
   const auto objects_sub_count =
     objects_pub_->get_subscription_count() + objects_pub_->get_intra_process_subscription_count();
@@ -145,22 +163,22 @@ void LidarCenterPointNode::pointCloudCallback(
   if (stop_watch_ptr_) {
     stop_watch_ptr_->toc("processing_time", true);
   }
-  diagnostics_interface_ptr_->clear();
+  diagnostics_centerpoint_trt_->clear();
 
   std::vector<Box3D> det_boxes3d;
   bool is_num_pillars_within_range = true;
   bool is_success = detector_ptr_->detect(
-    *input_pointcloud_msg, tf_buffer_, det_boxes3d, is_num_pillars_within_range);
+    input_pointcloud_msg, tf_buffer_, det_boxes3d, is_num_pillars_within_range);
   if (!is_success) {
     return;
   }
-  diagnostics_interface_ptr_->add_key_value(
+  diagnostics_centerpoint_trt_->add_key_value(
     "is_num_pillars_within_range", is_num_pillars_within_range);
   if (!is_num_pillars_within_range) {
     std::stringstream message;
     message << "CenterPointTRT::detect: The actual number of pillars exceeds its maximum value, "
             << "which may limit the detection performance.";
-    diagnostics_interface_ptr_->update_level_and_message(
+    diagnostics_centerpoint_trt_->update_level_and_message(
       diagnostic_msgs::msg::DiagnosticStatus::WARN, message.str());
   }
 
@@ -182,7 +200,7 @@ void LidarCenterPointNode::pointCloudCallback(
     objects_pub_->publish(output_msg);
     published_time_publisher_->publish_if_subscribed(objects_pub_, output_msg.header.stamp);
   }
-  diagnostics_interface_ptr_->publish(input_pointcloud_msg->header.stamp);
+  diagnostics_centerpoint_trt_->publish(input_pointcloud_msg->header.stamp);
 
   // add processing time for debug
   if (debug_publisher_ptr_ && stop_watch_ptr_) {
@@ -199,7 +217,71 @@ void LidarCenterPointNode::pointCloudCallback(
       "debug/processing_time_ms", processing_time_ms);
     debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/pipeline_latency_ms", pipeline_latency_ms);
+
+    last_processing_time_ms_ = processing_time_ms;
   }
+}
+
+// Check the processing time and delayed timestamp
+// If the node is consistently delayed, publish an error diagnostic message
+void LidarCenterPointNode::diagnoseProcessingTime(
+  diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  const rclcpp::Time timestamp_now = this->get_clock()->now();
+  diagnostic_msgs::msg::DiagnosticStatus::_level_type diag_level =
+    diagnostic_msgs::msg::DiagnosticStatus::OK;
+  std::stringstream message{"OK"};
+
+  // Check if the node has performed inference
+  if (last_processing_time_ms_) {
+    // check processing time is acceptable
+    if (last_processing_time_ms_ > max_allowed_processing_time_ms_) {
+      stat.add("is_processing_time_ms_in_expected_range", false);
+
+      message.clear();
+      message << "Processing time exceeds the acceptable limit of "
+              << max_allowed_processing_time_ms_ << " ms by "
+              << (last_processing_time_ms_.value() - max_allowed_processing_time_ms_) << " ms.";
+
+      // in case the processing starts with a delayed inference
+      if (!last_in_time_processing_timestamp_) {
+        last_in_time_processing_timestamp_ = timestamp_now;
+      }
+
+      diag_level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+    } else {
+      stat.add("is_processing_time_ms_in_expected_range", true);
+      last_in_time_processing_timestamp_ = timestamp_now;
+    }
+    stat.add("processing_time_ms", last_processing_time_ms_.value());
+
+    const double delayed_state_duration =
+      std::chrono::duration<double, std::milli>(
+        std::chrono::nanoseconds(
+          (timestamp_now - last_in_time_processing_timestamp_.value()).nanoseconds()))
+        .count();
+
+    // check consecutive delays
+    if (delayed_state_duration > max_acceptable_consecutive_delay_ms_) {
+      stat.add("is_consecutive_processing_delay_in_range", false);
+
+      message << " Processing delay has consecutively exceeded the acceptable limit continuously.";
+
+      diag_level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+    } else {
+      stat.add("is_consecutive_processing_delay_in_range", true);
+    }
+    stat.add("consecutive_processing_delay_ms", delayed_state_duration);
+  } else {
+    stat.add("is_processing_time_ms_in_expected_range", true);
+    stat.add("processing_time_ms", 0.0);
+    stat.add("is_consecutive_processing_delay_in_range", true);
+    stat.add("consecutive_processing_delay_ms", 0.0);
+
+    message << "Waiting for the node to perform inference.";
+  }
+
+  stat.summary(diag_level, message.str());
 }
 
 }  // namespace autoware::lidar_centerpoint

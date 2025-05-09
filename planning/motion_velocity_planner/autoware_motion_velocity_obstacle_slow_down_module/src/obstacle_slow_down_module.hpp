@@ -15,17 +15,16 @@
 #ifndef OBSTACLE_SLOW_DOWN_MODULE_HPP_
 #define OBSTACLE_SLOW_DOWN_MODULE_HPP_
 
-#include "autoware/motion_velocity_planner_common_universe/polygon_utils.hpp"
-#include "autoware/motion_velocity_planner_common_universe/utils.hpp"
+#include "autoware/motion_velocity_planner_common/polygon_utils.hpp"
+#include "autoware/motion_velocity_planner_common/utils.hpp"
 #include "autoware_utils/system/stop_watch.hpp"
 #include "autoware_utils/system/time_keeper.hpp"
-#include "metrics_manager.hpp"
 #include "parameters.hpp"
 #include "type_alias.hpp"
 #include "types.hpp"
 
-#include <autoware/motion_velocity_planner_common_universe/plugin_module_interface.hpp>
-#include <autoware/motion_velocity_planner_common_universe/velocity_planning_result.hpp>
+#include <autoware/motion_velocity_planner_common/plugin_module_interface.hpp>
+#include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
 #include <autoware/objects_of_interest_marker_interface/objects_of_interest_marker_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
@@ -70,7 +69,6 @@ private:
   ObstacleFilteringParam obstacle_filtering_param_;
 
   // module publisher
-  rclcpp::Publisher<MetricArray>::SharedPtr metrics_pub_;
   rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr debug_slow_down_planning_info_pub_;
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr processing_time_detail_pub_;
 
@@ -85,7 +83,6 @@ private:
   Float32MultiArrayStamped slow_down_debug_multi_array_;
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch_;
   mutable std::shared_ptr<DebugData> debug_data_ptr_;
-  MetricsManager metrics_manager_;
   bool need_to_clear_velocity_limit_{false};
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
   mutable std::optional<std::vector<Polygon2d>> decimated_traj_polys_{std::nullopt};
@@ -111,7 +108,7 @@ private:
     const std::vector<Polygon2d> & decimated_traj_polys_with_lat_margin,
     const std::shared_ptr<PlannerData::Object> object, const rclcpp::Time & predicted_objects_stamp,
     const double dist_from_obj_poly_to_traj_poly);
-  std::optional<SlowDownObstacle> create_slow_down_obstacle_for_point_cloud(
+  SlowDownObstacle create_slow_down_obstacle_for_point_cloud(
     const rclcpp::Time & stamp, const geometry_msgs::msg::Point & front_collision_point,
     const geometry_msgs::msg::Point & back_collision_point, const double lat_dist_to_traj);
   std::vector<SlowdownInterval> plan_slow_down(

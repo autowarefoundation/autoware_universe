@@ -215,7 +215,7 @@ TEST(DrivableAreaExpansionProjection, expand_drivable_area)
   }
   {  // parameters
     params.enabled = true;
-    params.avoid_dynamic_objects = false;
+    params.object_exclusion.exclude_dynamic = false;
     params.avoid_linestring_dist = 0.0;
     params.avoid_linestring_types = {};
     params.max_expansion_distance = 0.0;  // means no limit

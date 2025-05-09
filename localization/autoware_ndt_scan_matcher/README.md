@@ -219,7 +219,7 @@ Note that the dynamic map loading may FAIL if the map is split into two or more 
 - one PCD map file
 - multiple PCD map files divided into small size (~20[m])
 
-Here is a split PCD map for `sample-map-rosbag` from Autoware tutorial: [`sample-map-rosbag_split.zip`](https://github.com/autowarefoundation/autoware.universe/files/10349104/sample-map-rosbag_split.zip)
+Here is a split PCD map for `sample-map-rosbag` from Autoware tutorial: [`sample-map-rosbag_split.zip`](https://github.com/autowarefoundation/autoware_universe/files/10349104/sample-map-rosbag_split.zip)
 
 |   PCD files    | How NDT loads map(s) |
 | :------------: | :------------------: |
@@ -231,7 +231,7 @@ Here is a split PCD map for `sample-map-rosbag` from Autoware tutorial: [`sample
 ### Abstract
 
 This is a function that uses no ground LiDAR scan to estimate the scan matching score. This score can reflect the current localization performance more accurately.
-[related issue](https://github.com/autowarefoundation/autoware.universe/issues/2044).
+[related issue](https://github.com/autowarefoundation/autoware_universe/issues/2044).
 
 ### Parameters
 

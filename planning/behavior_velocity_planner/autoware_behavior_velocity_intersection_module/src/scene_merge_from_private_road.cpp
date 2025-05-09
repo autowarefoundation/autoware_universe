@@ -157,7 +157,7 @@ bool MergeFromPrivateRoadModule::modifyPathVelocity(PathWithLaneId * path)
     /* get stop point and stop factor */
     const auto & stop_pose = path->points.at(stopline_idx).point.pose;
     planning_factor_interface_->add(
-      path->points, planner_data_->current_odometry->pose, stop_pose, stop_pose,
+      path->points, planner_data_->current_odometry->pose, stop_pose,
       autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
       autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
       0.0 /*shift distance*/, "merge_from_private");

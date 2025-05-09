@@ -32,27 +32,29 @@ Currently, when clipping left bound or right bound, it can clip the bound more t
 
 ### Dynamic expansion
 
-| Name                                         | Unit  | Type         | Description                                                                                             | Default value                |
-| :------------------------------------------- | :---- | :----------- | :------------------------------------------------------------------------------------------------------ | :--------------------------- |
-| enabled                                      | [-]   | boolean      | if true, dynamically expand the drivable area based on the path curvature                               | true                         |
-| print_runtime                                | [-]   | boolean      | if true, runtime is logged by the node                                                                  | true                         |
-| max_expansion_distance                       | [m]   | double       | maximum distance by which the original drivable area can be expanded (no limit if set to 0)             | 0.0                          |
-| smoothing.curvature_average_window           | [-]   | int          | window size used for smoothing the curvatures using a moving window average                             | 3                            |
-| smoothing.max_bound_rate                     | [m/m] | double       | maximum rate of change of the bound lateral distance over its arc length                                | 1.0                          |
-| smoothing.arc_length_range                   | [m]   | double       | arc length range where an expansion distance is initially applied                                       | 2.0                          |
-| ego.extra_wheel_base                         | [m]   | double       | extra ego wheelbase                                                                                     | 0.0                          |
-| ego.extra_front_overhang                     | [m]   | double       | extra ego overhang                                                                                      | 0.5                          |
-| ego.extra_width                              | [m]   | double       | extra ego width                                                                                         | 1.0                          |
-| dynamic_objects.avoid                        | [-]   | boolean      | if true, the drivable area is not expanded in the predicted path of dynamic objects                     | true                         |
-| dynamic_objects.extra_footprint_offset.front | [m]   | double       | extra length to add to the front of the ego footprint                                                   | 0.5                          |
-| dynamic_objects.extra_footprint_offset.rear  | [m]   | double       | extra length to add to the rear of the ego footprint                                                    | 0.5                          |
-| dynamic_objects.extra_footprint_offset.left  | [m]   | double       | extra length to add to the left of the ego footprint                                                    | 0.5                          |
-| dynamic_objects.extra_footprint_offset.right | [m]   | double       | extra length to add to the rear of the ego footprint                                                    | 0.5                          |
-| path_preprocessing.max_arc_length            | [m]   | double       | maximum arc length along the path where the ego footprint is projected (0.0 means no limit)             | 100.0                        |
-| path_preprocessing.resample_interval         | [m]   | double       | fixed interval between resampled path points (0.0 means path points are directly used)                  | 2.0                          |
-| path_preprocessing.reuse_max_deviation       | [m]   | double       | if the path changes by more than this value, the curvatures are recalculated. Otherwise they are reused | 0.5                          |
-| avoid_linestring.types                       | [-]   | string array | linestring types in the lanelet maps that will not be crossed when expanding the drivable area          | ["road_border", "curbstone"] |
-| avoid_linestring.distance                    | [m]   | double       | distance to keep between the drivable area and the linestrings to avoid                                 | 0.0                          |
+| Name                                        | Unit  | Type         | Description                                                                                             | Default value                |
+| :------------------------------------------ | :---- | :----------- | :------------------------------------------------------------------------------------------------------ | :--------------------------- |
+| enabled                                     | [-]   | boolean      | if true, dynamically expand the drivable area based on the path curvature                               | true                         |
+| print_runtime                               | [-]   | boolean      | if true, runtime is logged by the node                                                                  | true                         |
+| max_expansion_distance                      | [m]   | double       | maximum distance by which the original drivable area can be expanded (no limit if set to 0)             | 0.0                          |
+| smoothing.curvature_average_window          | [-]   | int          | window size used for smoothing the curvatures using a moving window average                             | 3                            |
+| smoothing.max_bound_rate                    | [m/m] | double       | maximum rate of change of the bound lateral distance over its arc length                                | 1.0                          |
+| smoothing.arc_length_range                  | [m]   | double       | arc length range where an expansion distance is initially applied                                       | 2.0                          |
+| ego.extra_wheel_base                        | [m]   | double       | extra ego wheelbase                                                                                     | 0.0                          |
+| ego.extra_front_overhang                    | [m]   | double       | extra ego overhang                                                                                      | 0.5                          |
+| ego.extra_width                             | [m]   | double       | extra ego width                                                                                         | 1.0                          |
+| object_exclusion.exclude_static             | [-]   | boolean      | if true, the drivable area is not expanded over static objects                                          | true                         |
+| object_exclusion.exclude_dynamic            | [-]   | boolean      | if true, the drivable area is not expanded in the predicted path of dynamic objects                     | true                         |
+| object_exclusion.th_stopped_object_velocity | [m/s] | double       | velocity threshold for static objects                                                                   | 1.0                          |
+| object_exclusion.safety_margin.front        | [m]   | double       | extra length to add to the front of the object footprint                                                | 0.75                         |
+| object_exclusion.safety_margin.rear         | [m]   | double       | extra length to add to the rear of the object footprint                                                 | 0.75                         |
+| object_exclusion.safety_margin.left         | [m]   | double       | extra length to add to the left of the object footprint                                                 | 0.75                         |
+| object_exclusion.safety_margin.right        | [m]   | double       | extra length to add to the right of the object footprint                                                | 0.75                         |
+| path_preprocessing.max_arc_length           | [m]   | double       | maximum arc length along the path where the ego footprint is projected (0.0 means no limit)             | 100.0                        |
+| path_preprocessing.resample_interval        | [m]   | double       | fixed interval between resampled path points (0.0 means path points are directly used)                  | 2.0                          |
+| path_preprocessing.reuse_max_deviation      | [m]   | double       | if the path changes by more than this value, the curvatures are recalculated. Otherwise they are reused | 0.5                          |
+| avoid_linestring.types                      | [-]   | string array | linestring types in the lanelet maps that will not be crossed when expanding the drivable area          | ["road_border", "curbstone"] |
+| avoid_linestring.distance                   | [m]   | double       | distance to keep between the drivable area and the linestrings to avoid                                 | 0.0                          |
 
 ## Inner-workings / Algorithms
 
@@ -133,9 +135,14 @@ This equation was derived from the work of [Lim, H., Kim, C., and Jo, A., "Model
 
 ![min width](../images/drivable_area/DynamicDrivableArea-MinWidth.drawio.svg)
 
-##### 3 Calculate maximum expansion distances of each bound point based on dynamic objects and linestring of the vector map (optional)
+##### 3 Calculate maximum expansion distances of each bound point based on detected objects and linestring of the vector map (optional)
 
-For each drivable area bound point, we calculate its maximum expansion distance as its distance to the closest "obstacle" (either a map linestring with type `avoid_linestrings.type`, or a dynamic object footprint if `dynamic_objects.avoid` is set to `true`).
+For each drivable area bound point, we calculate its maximum expansion distance as its distance to the closest "obstacle" which could be:
+
+1. Map linestring with type `avoid_linestrings.type`.
+2. Static object footprint (if `object_exclusion.exclude_static` is set to `true`).
+3. Dynamic object path footprint (if `object_exclusion.exclude_dynamic` is set to `true`).
+
 If `max_expansion_distance` is not `0.0`, it is use here if smaller than the distance to the closest obstacle.
 
 ![max distances](../images/drivable_area/DynamicDrivableArea-MaxWidth.drawio.svg)

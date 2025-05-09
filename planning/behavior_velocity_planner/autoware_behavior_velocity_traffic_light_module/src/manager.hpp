@@ -37,6 +37,13 @@ public:
 
   const char * getModuleName() override { return "traffic_light"; }
 
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    RequiredSubscriptionInfo required_subscription_info;
+    required_subscription_info.traffic_signals = true;
+    return required_subscription_info;
+  }
+
 private:
   TrafficLightModule::PlannerParam planner_param_;
 

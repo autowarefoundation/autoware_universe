@@ -73,7 +73,7 @@ bool NoStoppingAreaModule::modifyPathVelocity(PathWithLaneId * path)
   // Get stop line geometry
   const auto stop_line = no_stopping_area::get_stop_line_geometry2d(
     original_path, no_stopping_area_reg_elem_, planner_param_.stop_line_margin,
-    planner_data_->stop_line_extend_length, planner_data_->vehicle_info_.vehicle_width_m);
+    planner_data_->vehicle_info_.vehicle_width_m);
   if (!stop_line) {
     setSafe(true);
     return true;
@@ -145,7 +145,7 @@ bool NoStoppingAreaModule::modifyPathVelocity(PathWithLaneId * path)
     // Create StopReason
     {
       planning_factor_interface_->add(
-        path->points, planner_data_->current_odometry->pose, stop_point->second, stop_point->second,
+        path->points, planner_data_->current_odometry->pose, stop_point->second,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
         autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
         0.0 /*shift distance*/, "");

@@ -21,6 +21,7 @@
 
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/ros/published_time_publisher.hpp>
 #include <autoware_utils/ros/transform_listener.hpp>
@@ -115,6 +116,12 @@ private:
   // Predictor
   std::shared_ptr<PredictorVru> predictor_vru_;
 
+  // Diagnostics
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
+  double processing_time_tolerance_ms_;
+  double processing_time_consecutive_excess_tolerance_ms_;
+  std::optional<rclcpp::Time> last_in_time_processing_timestamp_;
+
   ////// Parameters
 
   //// Vehicle Parameters
@@ -162,6 +169,9 @@ private:
   void mapCallback(const LaneletMapBin::ConstSharedPtr msg);
   void trafficSignalsCallback(const TrafficLightGroupArray::ConstSharedPtr msg);
   void objectsCallback(const TrackedObjects::ConstSharedPtr in_objects);
+
+  // Diagnostics proccess
+  void updateDiagnostics(const rclcpp::Time & timestamp, double processing_time_ms);
 
   // Map process
   bool doesPathCrossFence(

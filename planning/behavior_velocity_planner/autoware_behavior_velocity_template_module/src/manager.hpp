@@ -53,6 +53,11 @@ public:
    */
   const char * getModuleName() override { return "template"; }
 
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    return RequiredSubscriptionInfo{};
+  }
+
 private:
   double dummy_parameter_{0.0};
 

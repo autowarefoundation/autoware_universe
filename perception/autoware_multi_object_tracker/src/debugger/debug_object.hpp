@@ -15,13 +15,14 @@
 #ifndef DEBUGGER__DEBUG_OBJECT_HPP_
 #define DEBUGGER__DEBUG_OBJECT_HPP_
 
+#include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
-#include "autoware_utils/ros/uuid_helper.hpp"
 
+#include <autoware_utils/ros/uuid_helper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include "autoware_perception_msgs/msg/detected_objects.hpp"
-#include "autoware_perception_msgs/msg/tracked_objects.hpp"
+#include <autoware_perception_msgs/msg/detected_objects.hpp>
+#include <autoware_perception_msgs/msg/tracked_objects.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
@@ -46,7 +47,6 @@ struct ObjectData
 
   // object uuid
   boost::uuids::uuid uuid;
-  int uuid_int;
   std::string uuid_str;
 
   // association link, pair of coordinates
@@ -65,27 +65,24 @@ struct ObjectData
 class TrackerObjectDebugger
 {
 public:
-  explicit TrackerObjectDebugger(const std::string & frame_id);
+  TrackerObjectDebugger(
+    const std::string & frame_id, const std::vector<types::InputChannel> & channels_config);
 
 private:
   bool is_initialized_{false};
   std::string frame_id_;
+  const std::vector<types::InputChannel> channels_config_;
+
   visualization_msgs::msg::MarkerArray markers_;
-  std::unordered_set<int> current_ids_;
-  std::unordered_set<int> previous_ids_;
+  std::unordered_set<int> current_ids_{};
+  std::unordered_set<int> previous_ids_{};
   rclcpp::Time message_time_;
 
   std::vector<ObjectData> object_data_list_;
   std::list<int32_t> unused_marker_ids_;
   std::vector<std::vector<ObjectData>> object_data_groups_;
 
-  std::vector<std::string> channel_names_;
-
 public:
-  void setChannelNames(const std::vector<std::string> & channel_names)
-  {
-    channel_names_ = channel_names;
-  }
   void collect(
     const rclcpp::Time & message_time, const std::list<std::shared_ptr<Tracker>> & list_tracker,
     const types::DynamicObjectList & detected_objects,

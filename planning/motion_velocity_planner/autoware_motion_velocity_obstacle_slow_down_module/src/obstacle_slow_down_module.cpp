@@ -196,6 +196,13 @@ void ObstacleSlowDownModule::init(rclcpp::Node & node, const std::string & modul
   slow_down_planning_param_ = SlowDownPlanningParam(node);
   obstacle_filtering_param_ = ObstacleFilteringParam(node);
 
+  const double mask_lat_margin =
+    get_or_declare_parameter<double>(node, "pointcloud.mask_lat_margin");
+
+  if (mask_lat_margin < obstacle_filtering_param_.max_lat_margin) {
+    throw std::invalid_argument("point-cloud mask narrower than stop margin");
+  }
+
   objects_of_interest_marker_interface_ = std::make_unique<
     autoware::objects_of_interest_marker_interface::ObjectsOfInterestMarkerInterface>(
     &node, "motion_velocity_planner_common");
@@ -208,9 +215,8 @@ void ObstacleSlowDownModule::init(rclcpp::Node & node, const std::string & modul
   debug_publisher_ = node.create_publisher<MarkerArray>("~/obstacle_slow_down/debug_markers", 1);
 
   // module publisher
-  metrics_pub_ = node.create_publisher<MetricArray>("~/slow_down/metrics", 10);
   debug_slow_down_planning_info_pub_ =
-    node.create_publisher<Float32MultiArrayStamped>("~/debug/slow_down_planning_info", 1);
+    node.create_publisher<Float32MultiArrayStamped>("~/debug/obstacle_slow_down/planning_info", 1);
   processing_time_detail_pub_ = node.create_publisher<autoware_utils::ProcessingTimeDetail>(
     "~/debug/processing_time_detail_ms/obstacle_slow_down", 1);
 
@@ -246,29 +252,10 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
 
   std::vector<autoware::motion_velocity_planner::SlowDownPointData> slow_down_points;
 
-  // 1. transform pointcloud
-  pcl::PointCloud<pcl::PointXYZ>::Ptr pointcloud_ptr =
-    std::make_shared<pcl::PointCloud<pcl::PointXYZ>>(pointcloud.pointcloud);
-  // 2. downsample & cluster pointcloud
-  PointCloud::Ptr filtered_points_ptr(new PointCloud);
-  pcl::VoxelGrid<pcl::PointXYZ> filter;
-  filter.setInputCloud(pointcloud_ptr);
-  filter.setLeafSize(
-    p.pointcloud_obstacle_filtering_param.pointcloud_voxel_grid_x,
-    p.pointcloud_obstacle_filtering_param.pointcloud_voxel_grid_y,
-    p.pointcloud_obstacle_filtering_param.pointcloud_voxel_grid_z);
-  filter.filter(*filtered_points_ptr);
-
-  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
-  tree->setInputCloud(filtered_points_ptr);
-  std::vector<pcl::PointIndices> clusters;
-  pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-  ec.setClusterTolerance(p.pointcloud_obstacle_filtering_param.pointcloud_cluster_tolerance);
-  ec.setMinClusterSize(p.pointcloud_obstacle_filtering_param.pointcloud_min_cluster_size);
-  ec.setMaxClusterSize(p.pointcloud_obstacle_filtering_param.pointcloud_max_cluster_size);
-  ec.setSearchMethod(tree);
-  ec.setInputCloud(filtered_points_ptr);
-  ec.extract(clusters);
+  const PointCloud::Ptr filtered_points_ptr =
+    pointcloud.get_filtered_pointcloud_ptr(traj_points, vehicle_info);
+  const std::vector<pcl::PointIndices> clusters =
+    pointcloud.get_cluster_indices(traj_points, vehicle_info);
 
   // 3. convert clusters to obstacles
   for (const auto & cluster_indices : clusters) {
@@ -329,7 +316,6 @@ VelocityPlanningResult ObstacleSlowDownModule::plan(
 
   stop_watch_.tic();
   debug_data_ptr_ = std::make_shared<DebugData>();
-  metrics_manager_.init();
   decimated_traj_polys_ = std::nullopt;
 
   const auto decimated_traj_points = utils::decimate_trajectory_points_from_ego(
@@ -357,7 +343,6 @@ VelocityPlanningResult ObstacleSlowDownModule::plan(
   result.slowdown_intervals = plan_slow_down(
     planner_data, raw_trajectory_points, slow_down_obstacles, result.velocity_limit,
     planner_data->vehicle_info_);
-  metrics_manager_.calculate_metrics("PlannerInterface", "cruise");
 
   // clear velocity limit if necessary
   if (result.velocity_limit) {
@@ -454,6 +439,10 @@ std::vector<SlowDownObstacle> ObstacleSlowDownModule::filter_slow_down_obstacle_
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
+  if (!obstacle_filtering_param_.use_pointcloud) {
+    return std::vector<SlowDownObstacle>{};
+  }
+
   // calculate collision points with trajectory with lateral stop margin
   // NOTE: For additional margin, hysteresis is not divided by two.
   const auto & p = obstacle_filtering_param_;
@@ -480,11 +469,7 @@ std::vector<SlowDownObstacle> ObstacleSlowDownModule::filter_slow_down_obstacle_
     const auto slow_down_obstacle = create_slow_down_obstacle_for_point_cloud(
       rclcpp::Time(point_cloud.pointcloud.header.stamp), front_collision_point,
       back_collision_point, slow_down_point_data.lat_dist_to_traj);
-
-    if (slow_down_obstacle) {
-      slow_down_obstacles.push_back(*slow_down_obstacle);
-      continue;
-    }
+    slow_down_obstacles.push_back(slow_down_obstacle);
   }
 
   RCLCPP_DEBUG(
@@ -630,13 +615,10 @@ ObstacleSlowDownModule::create_slow_down_obstacle_for_predicted_object(
     back_collision_point};
 }
 
-std::optional<SlowDownObstacle> ObstacleSlowDownModule::create_slow_down_obstacle_for_point_cloud(
+SlowDownObstacle ObstacleSlowDownModule::create_slow_down_obstacle_for_point_cloud(
   const rclcpp::Time & stamp, const geometry_msgs::msg::Point & front_collision_point,
   const geometry_msgs::msg::Point & back_collision_point, const double lat_dist_to_traj)
 {
-  if (!obstacle_filtering_param_.use_pointcloud) {
-    return std::nullopt;
-  }
   const unique_identifier_msgs::msg::UUID obj_uuid;
   const auto & obj_uuid_str = autoware_utils::to_hex_string(obj_uuid);
 
@@ -889,14 +871,10 @@ void ObstacleSlowDownModule::publish_debug_info()
   // 4. objects of interest
   objects_of_interest_marker_interface_->publishMarkerArray();
 
-  // 5. metrics
-  const auto metrics_msg = metrics_manager_.create_metric_array(clock_->now());
-  metrics_pub_->publish(metrics_msg);
-
-  // 6. processing time
+  // 5. processing time
   processing_time_publisher_->publish(create_float64_stamped(clock_->now(), stop_watch_.toc()));
 
-  // 7. planning factor
+  // 6. planning factor
   planning_factor_interface_->publish();
 }
 

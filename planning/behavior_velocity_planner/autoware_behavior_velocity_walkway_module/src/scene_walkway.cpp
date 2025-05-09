@@ -123,7 +123,7 @@ bool WalkwayModule::modifyPathVelocity(PathWithLaneId * path)
 
     /* get stop point and stop factor */
     planning_factor_interface_->add(
-      path->points, planner_data_->current_odometry->pose, stop_pose.value(), stop_pose.value(),
+      path->points, planner_data_->current_odometry->pose, stop_pose.value(),
       autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
       autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/,
       0.0 /*velocity*/, 0.0 /*shift distance*/, "walkway_stop");

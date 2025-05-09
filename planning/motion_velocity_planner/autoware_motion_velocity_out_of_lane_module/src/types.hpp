@@ -15,6 +15,7 @@
 #ifndef TYPES_HPP_
 #define TYPES_HPP_
 
+#include <autoware/motion_velocity_planner_common/planner_data.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 
@@ -50,6 +51,7 @@ struct PlannerParam
 
   double time_threshold;  // [s](mode="threshold") objects time threshold
   double ttc_threshold;  // [s](mode="ttc") threshold on time to collision between ego and an object
+  double ttc_release_threshold;
 
   bool objects_cut_predicted_paths_beyond_red_lights;  // whether to cut predicted paths beyond red
                                                        // lights' stop lines
@@ -64,8 +66,10 @@ struct PlannerParam
   double stop_dist_threshold;  // [m] if a collision is detected bellow this distance ahead of ego,
                                // try to insert a stop point
   double precision;            // [m] precision when inserting a stop pose in the trajectory
-  double
-    min_decision_duration;  // [s] duration needed before a stop or slowdown point can be removed
+  double min_on_duration;   // [s] duration needed before a stop or slowdown point can be triggered
+  double min_off_duration;  // [s] duration needed before a stop or slowdown point can be removed
+  double update_distance_th;  // [m] distance threshold for updating previous stop pose position
+  bool use_map_stop_lines;    // if true, try to stop at stop lines defined in the map
 
   // ego dimensions used to create its polygon footprint
   double front_offset;        // [m]  front offset (from vehicle info)
@@ -97,6 +101,7 @@ struct EgoData
   std::vector<autoware_planning_msgs::msg::TrajectoryPoint>
     trajectory_points;  // filtered trajectory starting from the 1st point behind ego
   geometry_msgs::msg::Pose pose;
+  double velocity{};              // [m/s] current longitudinal velocity of the ego vehicle
   size_t first_trajectory_idx{};  // segment index closest to ego on the original trajectory
   double
     longitudinal_offset_to_first_trajectory_index{};  // longitudinal offset of ego along the
@@ -112,7 +117,9 @@ struct EgoData
   std::vector<lanelet::BasicPolygon2d>
     trajectory_footprints;  // ego footprints along the filtered trajectory
 
-  StopLinesRtree stop_lines_rtree;
+  StopLinesRtree stop_lines_rtree;  // rtree with the stop lines for other vehicles
+  std::vector<StopPoint>
+    map_stop_points;  // ego stop points (and their corresponding stop lines) taken from the map
 };
 
 /// @brief data related to an out of lane trajectory point
@@ -126,6 +133,22 @@ struct OutOfLanePoint
   std::optional<double> ttc;
   lanelet::ConstLanelets overlapped_lanelets;
   bool to_avoid = false;
+};
+
+struct SlowdownPose
+{
+  double arc_length{0.0};
+  rclcpp::Time start_time{0};
+  geometry_msgs::msg::Pose pose;
+  bool is_active = false;
+
+  SlowdownPose() = default;
+  SlowdownPose(
+    const double arc_length, const rclcpp::Time start_time, const geometry_msgs::msg::Pose & pose,
+    const bool is_active)
+  : arc_length(arc_length), start_time(start_time), pose(pose), is_active(is_active)
+  {
+  }
 };
 
 /// @brief data related to the out of lane points

@@ -19,6 +19,7 @@
 #include "autoware/behavior_path_planner_common/interface/scene_module_interface.hpp"
 #include "autoware/behavior_path_planner_common/interface/scene_module_visitor.hpp"
 #include "autoware/behavior_path_planner_common/marker_utils/utils.hpp"
+#include "autoware/behavior_path_planner_common/utils/path_safety_checker/safety_check.hpp"
 
 #include <autoware_utils/ros/marker_helper.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
@@ -104,6 +105,15 @@ BehaviorModuleOutput LaneChangeInterface::plan()
   autoware_utils::ScopedTimeTrack st(__func__, *getTimeKeeper());
   resetPathCandidate();
   resetPathReference();
+
+  // plan() should be called only when the module is in the RUNNING state, but
+  // due to planner manager implementation, it can be called in the IDLE state.
+  // TODO(Azu, Quda): consider a proper fix.
+  if (getCurrentStatus() == ModuleStatus::IDLE) {
+    auto output = getPreviousModuleOutput();
+    path_reference_ = std::make_shared<PathWithLaneId>(output.reference_path);
+    return output;
+  }
 
   auto output = module_type_->generateOutput();
   path_reference_ = std::make_shared<PathWithLaneId>(output.reference_path);
@@ -401,9 +411,11 @@ void LaneChangeInterface::updateSteeringFactorPtr(const BehaviorModuleOutput & o
     return PlanningFactor::UNKNOWN;
   });
 
+  const auto & lane_change_debug = module_type_->getDebugData();
   planning_factor_interface_->add(
     start_distance, finish_distance, status.lane_change_path.info.shift_line.start,
-    status.lane_change_path.info.shift_line.end, planning_factor_direction, SafetyFactorArray{});
+    status.lane_change_path.info.shift_line.end, planning_factor_direction,
+    utils::path_safety_checker::to_safety_factor_array(lane_change_debug.collision_check_objects));
 }
 
 void LaneChangeInterface::updateSteeringFactorPtr(
@@ -416,9 +428,11 @@ void LaneChangeInterface::updateSteeringFactorPtr(
     return PlanningFactor::SHIFT_RIGHT;
   });
 
+  const auto & lane_change_debug = module_type_->getDebugData();
   planning_factor_interface_->add(
     output.start_distance_to_path_change, output.finish_distance_to_path_change,
     selected_path.info.shift_line.start, selected_path.info.shift_line.end,
-    planning_factor_direction, SafetyFactorArray{});
+    planning_factor_direction,
+    utils::path_safety_checker::to_safety_factor_array(lane_change_debug.collision_check_objects));
 }
 }  // namespace autoware::behavior_path_planner

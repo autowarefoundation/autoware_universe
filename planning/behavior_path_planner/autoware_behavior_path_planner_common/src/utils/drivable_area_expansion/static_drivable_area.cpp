@@ -398,7 +398,7 @@ std::vector<geometry_msgs::msg::Point> convertToGeometryPoints(
   return points;
 }
 
-// NOTE: See the PR's figure. https://github.com/autowarefoundation/autoware.universe/pull/2880
+// NOTE: See the PR's figure. https://github.com/autowarefoundation/autoware_universe/pull/2880
 std::vector<PolygonPoint> concatenateTwoPolygons(
   const std::vector<PolygonPoint> & front_polygon, const std::vector<PolygonPoint> & back_polygon)
 {

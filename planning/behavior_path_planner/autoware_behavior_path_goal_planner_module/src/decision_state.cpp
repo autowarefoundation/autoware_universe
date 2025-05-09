@@ -114,7 +114,7 @@ PathDecisionState PathDecisionStateController::get_next_state(
           planner_data->parameters, margin,
           /*extract_static_objects=*/false, parameters.maximum_deceleration,
           parameters.object_recognition_collision_check_max_extra_stopping_margin,
-          ego_polygons_expanded, true)) {
+          parameters.collision_check_outer_margin_factor, ego_polygons_expanded, true)) {
       RCLCPP_DEBUG(
         logger_, "[DecidingPathStatus]: DECIDING->NOT_DECIDED. path has collision with objects");
       next_state.state = PathDecisionState::DecisionKind::NOT_DECIDED;
