@@ -272,7 +272,7 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
       const auto current_lat_dist_from_obstacle_to_traj =
         autoware::motion_utils::calcLateralOffset(traj_points, obstacle_point);
       const auto min_lat_dist_to_traj_poly =
-        std::abs(current_lat_dist_from_obstacle_to_traj) - vehicle_info.vehicle_width_m/2;
+        std::abs(current_lat_dist_from_obstacle_to_traj) - vehicle_info.max_longitudinal_offset_m;
 
       if (min_lat_dist_to_traj_poly >= p.max_lat_margin) {
         continue;
