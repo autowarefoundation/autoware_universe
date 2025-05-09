@@ -24,22 +24,27 @@ namespace autoware::planning_validator
 {
 using autoware_utils::get_or_declare_parameter;
 
-void LatencyValidator::init(rclcpp::Node & node, const std::string & name)
+void LatencyValidator::init(
+  rclcpp::Node & node, const std::string & name,
+  const std::shared_ptr<PlanningValidatorContext> & context)
 {
   module_name_ = name;
 
   clock_ = node.get_clock();
   logger_ = node.get_logger();
+  context_ = context;
 
   enable_latency_check_ = get_or_declare_parameter<bool>(node, "latency_validator.enable");
   is_critical_check_ = get_or_declare_parameter<bool>(node, "latency_validator.is_critical");
   latency_threshold_ = get_or_declare_parameter<double>(node, "latency_validator.threshold");
+
+  setup_diag();
 }
 
-void LatencyValidator::validate(
-  const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status, bool & is_critical)
+void LatencyValidator::validate(bool & is_critical)
 {
+  auto & data = context_->data;
+  auto & status = context_->validation_status;
   if (!enable_latency_check_ || !data->current_trajectory) {
     return;
   }
@@ -50,6 +55,12 @@ void LatencyValidator::validate(
   status->latency = latency;
   status->is_valid_latency = latency <= latency_threshold_;
   is_critical = !status->is_valid_latency && is_critical_check_;
+}
+
+void LatencyValidator::setup_diag()
+{
+  context_->add_diag(
+    "trajectory_validation_latency", context_->validation_status->is_valid_latency, "latency is larger than expected value", is_critical_check_);
 }
 
 }  // namespace autoware::planning_validator

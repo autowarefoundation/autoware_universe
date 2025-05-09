@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__PLANNING_VALIDATOR__PLUGIN_INTERFACE_HPP_
 #define AUTOWARE__PLANNING_VALIDATOR__PLUGIN_INTERFACE_HPP_
 
-#include "autoware/planning_validator/planning_validator_data.hpp"
+#include "autoware/planning_validator/types.hpp"
 #include "autoware_planning_validator/msg/planning_validator_status.hpp"
 
 #include <rclcpp/rclcpp.hpp>
@@ -32,12 +32,18 @@ class PluginInterface
 {
 public:
   virtual ~PluginInterface() = default;
-  virtual void init(rclcpp::Node & node, const std::string & name) = 0;
-  virtual void validate(
-    const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status, bool & is_critical) = 0;
+  virtual void init(
+    rclcpp::Node & node, const std::string & name,
+    const std::shared_ptr<PlanningValidatorContext> & context) = 0;
+  virtual void validate(bool & is_critical) = 0;
+  virtual void setup_diag() = 0;
   virtual std::string get_module_name() const = 0;
   rclcpp::Logger logger_ = rclcpp::get_logger("");
+
+protected:
+  std::string module_name_;
+  std::shared_ptr<PlanningValidatorContext> context_;
+  rclcpp::Clock::SharedPtr clock_{};
 };
 
 }  // namespace autoware::planning_validator

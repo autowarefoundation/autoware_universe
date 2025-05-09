@@ -28,7 +28,9 @@ PlanningValidatorManager::PlanningValidatorManager()
 {
 }
 
-void PlanningValidatorManager::load_plugin(rclcpp::Node & node, const std::string & name)
+void PlanningValidatorManager::load_plugin(
+  rclcpp::Node & node, const std::string & name,
+  const std::shared_ptr<PlanningValidatorContext> & context)
 {
   // Check if the plugin is already loaded.
   if (plugin_loader_.isClassLoaded(name)) {
@@ -37,7 +39,7 @@ void PlanningValidatorManager::load_plugin(rclcpp::Node & node, const std::strin
   }
   if (plugin_loader_.isClassAvailable(name)) {
     const auto plugin = plugin_loader_.createSharedInstance(name);
-    plugin->init(node, name);
+    plugin->init(node, name, context);
 
     // register
     loaded_plugins_.push_back(plugin);
@@ -62,13 +64,11 @@ void PlanningValidatorManager::unload_plugin(rclcpp::Node & node, const std::str
   }
 }
 
-void PlanningValidatorManager::validate(
-  const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status, bool & is_critical)
+void PlanningValidatorManager::validate(bool & is_critical)
 {
   for (auto & plugin : loaded_plugins_) {
     bool is_critical_error = false;
-    plugin->validate(data, status, is_critical_error);
+    plugin->validate(is_critical_error);
     is_critical |= is_critical_error;
   }
 }

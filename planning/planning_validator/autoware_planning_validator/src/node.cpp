@@ -30,14 +30,14 @@ using diagnostic_msgs::msg::DiagnosticStatus;
 PlanningValidatorNode::PlanningValidatorNode(const rclcpp::NodeOptions & options)
 : Node("planning_validator_node", options)
 {
+
   pub_traj_ = create_publisher<Trajectory>("~/output/trajectory", 1);
   pub_status_ = create_publisher<PlanningValidatorStatus>("~/output/validation_status", 1);
   pub_markers_ = create_publisher<visualization_msgs::msg::MarkerArray>("~/output/markers", 1);
   pub_processing_time_ms_ = create_publisher<Float64Stamped>("~/debug/processing_time_ms", 1);
 
-  debug_pose_publisher_ = std::make_shared<PlanningValidatorDebugMarkerPublisher>(this);
-  data_ = std::make_shared<PlanningValidatorData>(*this);
-  validation_status_ = std::make_shared<PlanningValidatorStatus>();
+  context_ = std::make_shared<PlanningValidatorContext>(this);
+  context_->set_diag_id("planning_validator");
 
   setupParameters();
 
@@ -55,7 +55,7 @@ PlanningValidatorNode::PlanningValidatorNode(const rclcpp::NodeOptions & options
     if (name.empty()) {
       break;
     }
-    manager_.load_plugin(*this, name);
+    manager_.load_plugin(*this, name, context_);
   }
 
   logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
@@ -64,6 +64,7 @@ PlanningValidatorNode::PlanningValidatorNode(const rclcpp::NodeOptions & options
 
 void PlanningValidatorNode::setupParameters()
 {
+  auto & p = context_->params;
   auto set_handling_type = [&](auto & type, const std::string & key) {
     const auto value = declare_parameter<int>(key);
     if (value == 0) {
@@ -78,186 +79,16 @@ void PlanningValidatorNode::setupParameters()
     }
   };
 
-  set_handling_type(params_.inv_traj_handling_type, "handling_type.noncritical");
-  set_handling_type(params_.inv_traj_critical_handling_type, "handling_type.critical");
+  set_handling_type(p.inv_traj_handling_type, "handling_type.noncritical");
+  set_handling_type(p.inv_traj_critical_handling_type, "handling_type.critical");
 
-  params_.publish_diag = declare_parameter<bool>("publish_diag");
-  params_.diag_error_count_threshold = declare_parameter<int>("diag_error_count_threshold");
-  params_.display_on_terminal = declare_parameter<bool>("display_on_terminal");
+  p.publish_diag = declare_parameter<bool>("publish_diag");
+  p.diag_error_count_threshold = declare_parameter<int>("diag_error_count_threshold");
+  p.display_on_terminal = declare_parameter<bool>("display_on_terminal");
 
-  params_.enable_soft_stop_on_prev_traj = declare_parameter<bool>("enable_soft_stop_on_prev_traj");
-  params_.soft_stop_deceleration = declare_parameter<double>("soft_stop_deceleration");
-  params_.soft_stop_jerk_lim = declare_parameter<double>("soft_stop_jerk_lim");
-
-  {
-    auto set_validation_flags = [&](auto & param, const std::string & key) {
-      param.enable = declare_parameter<bool>(key + ".enable");
-      param.is_critical = declare_parameter<bool>(key + ".is_critical");
-    };
-
-    auto set_validation_params = [&](auto & param, const std::string & key) {
-      set_validation_flags(param, key);
-      param.threshold = declare_parameter<double>(key + ".threshold");
-    };
-
-    auto & p = params_.validation_params;
-    const std::string t = "validity_checks.";
-    set_validation_params(p.interval, t + "interval");
-    set_validation_params(p.relative_angle, t + "relative_angle");
-    set_validation_params(p.curvature, t + "curvature");
-    set_validation_params(p.latency, t + "latency");
-    set_validation_params(p.steering, t + "steering");
-    set_validation_params(p.steering_rate, t + "steering_rate");
-    set_validation_params(p.lateral_jerk, t + "lateral_jerk");
-
-    set_validation_flags(p.acceleration, t + "acceleration");
-    p.acceleration.lateral_th = declare_parameter<double>(t + "acceleration.lateral_th");
-    p.acceleration.longitudinal_max_th =
-      declare_parameter<double>(t + "acceleration.longitudinal_max_th");
-    p.acceleration.longitudinal_min_th =
-      declare_parameter<double>(t + "acceleration.longitudinal_min_th");
-
-    set_validation_flags(p.deviation, t + "deviation");
-    p.deviation.velocity_th = declare_parameter<double>(t + "deviation.velocity_th");
-    p.deviation.distance_th = declare_parameter<double>(t + "deviation.distance_th");
-    p.deviation.lon_distance_th = declare_parameter<double>(t + "deviation.lon_distance_th");
-    p.deviation.yaw_th = declare_parameter<double>(t + "deviation.yaw_th");
-
-    set_validation_flags(p.trajectory_shift, t + "trajectory_shift");
-    p.trajectory_shift.lat_shift_th =
-      declare_parameter<double>(t + "trajectory_shift.lat_shift_th");
-    p.trajectory_shift.forward_shift_th =
-      declare_parameter<double>(t + "trajectory_shift.forward_shift_th");
-    p.trajectory_shift.backward_shift_th =
-      declare_parameter<double>(t + "trajectory_shift.backward_shift_th");
-
-    set_validation_flags(p.forward_trajectory_length, t + "forward_trajectory_length");
-    p.forward_trajectory_length.acceleration =
-      declare_parameter<double>(t + "forward_trajectory_length.acceleration");
-    p.forward_trajectory_length.margin =
-      declare_parameter<double>(t + "forward_trajectory_length.margin");
-  }
-}
-
-void PlanningValidatorNode::setStatus(
-  DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg,
-  const bool is_critical)
-{
-  if (is_ok) {
-    stat.summary(DiagnosticStatus::OK, "validated.");
-    return;
-  }
-
-  const bool only_warn = std::invoke([&]() {
-    const auto handling_type =
-      is_critical ? params_.inv_traj_critical_handling_type : params_.inv_traj_handling_type;
-    if (handling_type != InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT) {
-      return false;
-    }
-    return params_.enable_soft_stop_on_prev_traj;
-  });
-
-  if (validation_status_->invalid_count < params_.diag_error_count_threshold || only_warn) {
-    const auto warn_msg = msg + " (invalid count is less than error threshold: " +
-                          std::to_string(validation_status_->invalid_count) + " < " +
-                          std::to_string(params_.diag_error_count_threshold) + ")";
-    stat.summary(DiagnosticStatus::WARN, warn_msg);
-  } else {
-    stat.summary(DiagnosticStatus::ERROR, msg);
-  }
-}
-
-void PlanningValidatorNode::setupDiag()
-{
-  diag_updater_ = std::make_shared<Updater>(this);
-  auto & d = diag_updater_;
-  d->setHardwareID("planning_validator");
-
-  const auto & p = params_.validation_params;
-
-  std::string ns = "trajectory_validation_";
-  d->add(ns + "size", [&](auto & stat) {
-    setStatus(stat, validation_status_->is_valid_size, "invalid trajectory size is found");
-  });
-  d->add(ns + "finite", [&](auto & stat) {
-    setStatus(stat, validation_status_->is_valid_finite_value, "infinite value is found");
-  });
-  d->add(ns + "interval", [&](auto & stat) {
-    setStatus(
-      stat, validation_status_->is_valid_interval, "points interval is too long",
-      p.interval.is_critical);
-  });
-  d->add(ns + "relative_angle", [&](auto & stat) {
-    setStatus(
-      stat, validation_status_->is_valid_relative_angle, "relative angle is too large",
-      p.relative_angle.is_critical);
-  });
-  d->add(ns + "curvature", [&](auto & stat) {
-    setStatus(
-      stat, validation_status_->is_valid_curvature, "curvature is too large",
-      p.curvature.is_critical);
-  });
-  d->add(ns + "lateral_acceleration", [&](auto & stat) {
-    setStatus(
-      stat, validation_status_->is_valid_lateral_acc, "lateral acceleration is too large",
-      p.acceleration.is_critical);
-  });
-  d->add(ns + "acceleration", [&](auto & stat) {
-    setStatus(
-      stat, validation_status_->is_valid_longitudinal_max_acc, "acceleration is too large",
-      p.acceleration.is_critical);
-  });
-  d->add(ns + "deceleration", [&](auto & stat) {
-    setStatus(
-      stat, validation_status_->is_valid_longitudinal_min_acc, "deceleration is too large",
-      p.acceleration.is_critical);
-  });
-  d->add(ns + "steering", [&](auto & stat) {
-    setStatus(
-      stat, validation_status_->is_valid_steering, "expected steering is too large",
-      p.steering.is_critical);
-  });
-  d->add(ns + "steering_rate", [&](auto & stat) {
-    setStatus(
-      stat, validation_status_->is_valid_steering_rate, "expected steering rate is too large",
-      p.steering.is_critical);
-  });
-  d->add(ns + "velocity_deviation", [&](auto & stat) {
-    setStatus(
-      stat, validation_status_->is_valid_velocity_deviation, "velocity deviation is too large",
-      p.deviation.is_critical);
-  });
-  d->add(ns + "distance_deviation", [&](auto & stat) {
-    setStatus(
-      stat, validation_status_->is_valid_distance_deviation, "distance deviation is too large",
-      p.deviation.is_critical);
-  });
-  d->add(ns + "longitudinal_distance_deviation", [&](auto & stat) {
-    setStatus(
-      stat, validation_status_->is_valid_longitudinal_distance_deviation,
-      "longitudinal distance deviation is too large", p.deviation.is_critical);
-  });
-  d->add(ns + "forward_trajectory_length", [&](auto & stat) {
-    setStatus(
-      stat, validation_status_->is_valid_forward_trajectory_length,
-      "trajectory length is too short", p.forward_trajectory_length.is_critical);
-  });
-  d->add(ns + "latency", [&](auto & stat) {
-    setStatus(
-      stat, validation_status_->is_valid_latency, "latency is larger than expected value.",
-      p.latency.is_critical);
-  });
-  d->add(ns + "yaw_deviation", [&](auto & stat) {
-    setStatus(
-      stat, validation_status_->is_valid_yaw_deviation,
-      "difference between vehicle yaw and closest trajectory yaw is too large.",
-      p.deviation.is_critical);
-  });
-  d->add(ns + "trajectory_shift", [&](auto & stat) {
-    setStatus(
-      stat, validation_status_->is_valid_trajectory_shift, "detected sudden shift in trajectory.",
-      p.trajectory_shift.is_critical);
-  });
+  p.enable_soft_stop_on_prev_traj = declare_parameter<bool>("enable_soft_stop_on_prev_traj");
+  p.soft_stop_deceleration = declare_parameter<double>("soft_stop_deceleration");
+  p.soft_stop_jerk_lim = declare_parameter<double>("soft_stop_jerk_lim");
 }
 
 bool PlanningValidatorNode::isDataReady()
@@ -268,7 +99,7 @@ bool PlanningValidatorNode::isDataReady()
   };
 
   std::string msg;
-  if (!data_->is_ready(msg)) {
+  if (!context_->data->is_ready(msg)) {
     return waiting(msg);
   }
   return true;
@@ -276,16 +107,17 @@ bool PlanningValidatorNode::isDataReady()
 
 void PlanningValidatorNode::setData()
 {
-  data_->current_trajectory = sub_trajectory_.take_data();
-  data_->current_kinematics = sub_kinematics_.take_data();
-  data_->current_acceleration = sub_acceleration_.take_data();
-  if (data_->current_trajectory) {
+  auto & data = context_->data;
+  data->current_trajectory = sub_trajectory_.take_data();
+  data->current_kinematics = sub_kinematics_.take_data();
+  data->current_acceleration = sub_acceleration_.take_data();
+  if (data->current_trajectory) {
     constexpr auto min_interval = 1.0;
-    data_->resampled_current_trajectory =
-      std::make_shared<Trajectory>(resampleTrajectory(*data_->current_trajectory, min_interval));
+    data->resampled_current_trajectory =
+      std::make_shared<Trajectory>(resampleTrajectory(*data->current_trajectory, min_interval));
   }
-  data_->nearest_point_index.reset();
-  data_->nearest_segment_index.reset();
+  data->nearest_point_index.reset();
+  data->nearest_segment_index.reset();
 }
 
 void PlanningValidatorNode::onTimer()
@@ -296,18 +128,17 @@ void PlanningValidatorNode::onTimer()
 
   if (!isDataReady()) return;
 
-  data_->set_nearest_trajectory_indices();
+  context_->data->set_nearest_trajectory_indices();
 
-  if (params_.publish_diag && !diag_updater_) {
-    setupDiag();  // run setup after all data is ready.
-  }
-
-  debug_pose_publisher_->clearMarkers();
+  context_->debug_pose_publisher->clearMarkers();
   is_critical_error_ = false;
 
-  validate(data_);
+  manager_.validate(is_critical_error_);
 
-  diag_updater_->force_update();
+  auto & s = context_->validation_status;
+  s->invalid_count = isAllValid(*s) ? 0 : s->invalid_count + 1;
+
+  context_->update_diag();
 
   publishTrajectory();
 
@@ -315,15 +146,6 @@ void PlanningValidatorNode::onTimer()
   publishProcessingTime(stop_watch_.toc(__func__));
   publishDebugInfo();
   displayStatus();
-}
-
-void PlanningValidatorNode::validate(const std::shared_ptr<const PlanningValidatorData> & data)
-{
-  auto & s = validation_status_;
-
-  manager_.validate(data, s, is_critical_error_);
-
-  s->invalid_count = isAllValid(*s) ? 0 : s->invalid_count + 1;
 }
 
 bool PlanningValidatorNode::isAllValid(const PlanningValidatorStatus & s) const
@@ -339,25 +161,29 @@ bool PlanningValidatorNode::isAllValid(const PlanningValidatorStatus & s) const
 
 void PlanningValidatorNode::publishTrajectory()
 {
+  const auto & status = *context_->validation_status;
+  const auto & data = context_->data;
   // Validation check is all green. Publish the trajectory.
-  if (isAllValid(*validation_status_)) {
-    pub_traj_->publish(*data_->current_trajectory);
+  if (isAllValid(status)) {
+    pub_traj_->publish(*data->current_trajectory);
     published_time_publisher_->publish_if_subscribed(
-      pub_traj_, data_->current_trajectory->header.stamp);
-    data_->last_valid_trajectory = data_->current_trajectory;
+      pub_traj_, data->current_trajectory->header.stamp);
+    data->last_valid_trajectory = data->current_trajectory;
     soft_stop_trajectory_ = nullptr;
     return;
   }
 
+  const auto & params = context_->params;
+
   //  ----- invalid factor is found. Publish previous trajectory. -----
 
   const auto handling_type =
-    is_critical_error_ ? params_.inv_traj_critical_handling_type : params_.inv_traj_handling_type;
+    is_critical_error_ ? params.inv_traj_critical_handling_type : params.inv_traj_handling_type;
 
   if (handling_type == InvalidTrajectoryHandlingType::PUBLISH_AS_IT_IS) {
-    pub_traj_->publish(*data_->current_trajectory);
+    pub_traj_->publish(*data->current_trajectory);
     published_time_publisher_->publish_if_subscribed(
-      pub_traj_, data_->current_trajectory->header.stamp);
+      pub_traj_, data->current_trajectory->header.stamp);
     RCLCPP_ERROR_THROTTLE(
       get_logger(), *get_clock(), 3000, "Caution! Invalid Trajectory published.");
     return;
@@ -370,18 +196,18 @@ void PlanningValidatorNode::publishTrajectory()
 
   if (
     handling_type == InvalidTrajectoryHandlingType::USE_PREVIOUS_RESULT &&
-    data_->last_valid_trajectory) {
-    if (params_.enable_soft_stop_on_prev_traj && !soft_stop_trajectory_) {
+    data->last_valid_trajectory) {
+    if (params.enable_soft_stop_on_prev_traj && !soft_stop_trajectory_) {
       const auto nearest_idx = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
-        data_->last_valid_trajectory->points, data_->current_kinematics->pose.pose);
+        data->last_valid_trajectory->points, data->current_kinematics->pose.pose);
       soft_stop_trajectory_ = std::make_shared<Trajectory>(planning_validator::getStopTrajectory(
-        *data_->last_valid_trajectory, nearest_idx, data_->current_kinematics->twist.twist.linear.x,
-        data_->current_acceleration->accel.accel.linear.x, params_.soft_stop_deceleration,
-        params_.soft_stop_jerk_lim));
+        *data->last_valid_trajectory, nearest_idx, data->current_kinematics->twist.twist.linear.x,
+        data->current_acceleration->accel.accel.linear.x, params.soft_stop_deceleration,
+        params.soft_stop_jerk_lim));
     }
-    const auto & pub_trajectory = params_.enable_soft_stop_on_prev_traj
+    const auto & pub_trajectory = params.enable_soft_stop_on_prev_traj
                                     ? *soft_stop_trajectory_
-                                    : *data_->last_valid_trajectory;
+                                    : *data->last_valid_trajectory;
     pub_traj_->publish(pub_trajectory);
     published_time_publisher_->publish_if_subscribed(pub_traj_, pub_trajectory.header.stamp);
     RCLCPP_ERROR(get_logger(), "Invalid Trajectory detected. Use previous trajectory.");
@@ -406,23 +232,26 @@ void PlanningValidatorNode::publishProcessingTime(const double processing_time_m
 
 void PlanningValidatorNode::publishDebugInfo()
 {
-  validation_status_->stamp = get_clock()->now();
-  pub_status_->publish(*validation_status_);
+  const auto & status = context_->validation_status;
+  status->stamp = get_clock()->now();
+  pub_status_->publish(*status);
 
-  if (!isAllValid(*validation_status_)) {
-    geometry_msgs::msg::Pose front_pose = data_->current_kinematics->pose.pose;
-    shiftPose(front_pose, data_->vehicle_info.front_overhang_m + data_->vehicle_info.wheel_base_m);
+  const auto & data = context_->data;
+
+  if (!isAllValid(*status)) {
+    geometry_msgs::msg::Pose front_pose = data->current_kinematics->pose.pose;
+    shiftPose(front_pose, context_->vehicle_info.front_overhang_m + context_->vehicle_info.wheel_base_m);
     auto offset_pose = front_pose;
     shiftPose(offset_pose, 0.25);
-    debug_pose_publisher_->pushVirtualWall(front_pose);
-    debug_pose_publisher_->pushWarningMsg(offset_pose, "INVALID PLANNING");
+    context_->debug_pose_publisher->pushVirtualWall(front_pose);
+    context_->debug_pose_publisher->pushWarningMsg(offset_pose, "INVALID PLANNING");
   }
-  debug_pose_publisher_->publish();
+  context_->debug_pose_publisher->publish();
 }
 
 void PlanningValidatorNode::displayStatus()
 {
-  if (!params_.display_on_terminal) return;
+  if (!context_->params.display_on_terminal) return;
 
   const auto warn = [this](const bool status, const std::string & msg) {
     if (!status) {
@@ -430,7 +259,7 @@ void PlanningValidatorNode::displayStatus()
     }
   };
 
-  const auto & s = validation_status_;
+  const auto & s = context_->validation_status;
 
   warn(s->is_valid_size, "planning trajectory size is invalid, too small.");
   warn(s->is_valid_curvature, "planning trajectory curvature is too large!!");

@@ -1,4 +1,4 @@
-// Copyright 2025 Tier IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,17 +30,23 @@ namespace autoware::planning_validator
 {
 using autoware_utils::get_or_declare_parameter;
 
-void TrajectoryValidator::init(rclcpp::Node & node, const std::string & name)
+void TrajectoryValidator::init(
+  rclcpp::Node & node, const std::string & name,
+  const std::shared_ptr<PlanningValidatorContext> & context)
 {
   module_name_ = name;
 
   clock_ = node.get_clock();
   logger_ = node.get_logger();
 
-  setupParameters(node);
+  context_ = context;
+
+  setup_parameters(node);
+
+  setup_diag();
 }
 
-void TrajectoryValidator::setupParameters(rclcpp::Node & node)
+void TrajectoryValidator::setup_parameters(rclcpp::Node & node)
 {
   {
     auto set_validation_flags = [&](auto & param, const std::string & key) {
@@ -93,50 +99,92 @@ void TrajectoryValidator::setupParameters(rclcpp::Node & node)
   }
 }
 
-void TrajectoryValidator::validate(
-  const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status, bool & is_critical)
+void TrajectoryValidator::setup_diag()
 {
-  auto & s = status;
+  const auto & status = context_->validation_status;
+
+  std::string ns = "trajectory_validation_";
+  // constexpr bool default_critical = false;
+  context_->add_diag(
+    ns + "size", status->is_valid_size, "invalid trajectory size is found");
+  context_->add_diag(
+    ns + "finite", status->is_valid_finite_value, "infinite value is found");
+  context_->add_diag(
+    ns + "interval", status->is_valid_interval, "points interval is too large", params_.interval.is_critical);
+  context_->add_diag(
+    ns + "relative_angle", status->is_valid_relative_angle, "relative angle is too large", params_.relative_angle.is_critical);
+  context_->add_diag(
+    ns + "curvature", status->is_valid_curvature, "curvature is too large", params_.curvature.is_critical);
+  context_->add_diag(
+    ns + "lateral_acceleration", status->is_valid_lateral_acc, "lateral acceleration is too large", params_.acceleration.is_critical);
+  context_->add_diag(
+    ns + "acceleration", status->is_valid_longitudinal_max_acc, "acceleration is too large", params_.acceleration.is_critical);
+  context_->add_diag(
+    ns + "deceleration", status->is_valid_longitudinal_min_acc, "deceleration is too large", params_.acceleration.is_critical);
+  context_->add_diag(
+    ns + "steering", status->is_valid_steering, "steering angle is too large", params_.steering.is_critical);
+  context_->add_diag(
+    ns + "steering_rate", status->is_valid_steering_rate, "steering rate is too large", params_.steering_rate.is_critical);
+  context_->add_diag(
+    ns + "velocity_deviation", status->is_valid_velocity_deviation, "velocity deviation is too large", params_.deviation.is_critical);
+  context_->add_diag(
+    ns + "distance_deviation", status->is_valid_distance_deviation, "distance deviation is too large", params_.deviation.is_critical);
+  context_->add_diag(
+    ns + "longitudinal_distance_deviation", status->is_valid_longitudinal_distance_deviation,
+    "longitudinal distance deviation is too large", params_.deviation.is_critical);
+  context_->add_diag(
+    ns + "yaw_deviation", status->is_valid_yaw_deviation, "difference between vehicle yaw and closest trajectory yaw is too large", params_.deviation.is_critical);
+  context_->add_diag(
+    ns + "forward_trajectory_length", status->is_valid_forward_trajectory_length,
+    "trajectory length is too short", params_.forward_trajectory_length.is_critical);
+  context_->add_diag(
+    ns + "trajectory_shift", status->is_valid_trajectory_shift, "detected sudden shift in trajectory", params_.trajectory_shift.is_critical);
+}
+
+void TrajectoryValidator::validate(bool & is_critical)
+{
+  const auto & data = context_->data;
+  auto & status = context_->validation_status;
+  const double vehicle_wheel_base_m = context_->vehicle_info.wheel_base_m;
 
   const auto terminateValidation = [&](const auto & ss) {
     RCLCPP_ERROR_STREAM_THROTTLE(logger_, *clock_, 3000, ss);
   };
 
-  s->is_valid_size = checkValidSize(data, status);
-  if (!s->is_valid_size) {
+  status->is_valid_size = check_valid_size(data, status);
+  if (!status->is_valid_size) {
     return terminateValidation(
-      "trajectory has invalid point size (" + std::to_string(s->trajectory_size) +
+      "trajectory has invalid point size (" + std::to_string(status->trajectory_size) +
       "). Stop validation process, raise an error.");
   }
 
-  s->is_valid_finite_value = checkValidFiniteValue(data);
-  if (!s->is_valid_finite_value) {
+  status->is_valid_finite_value = check_valid_finite_value(data);
+  if (!status->is_valid_finite_value) {
     return terminateValidation(
       "trajectory has invalid value (NaN, Inf, etc). Stop validation process, raise an error.");
   }
 
-  s->is_valid_interval = checkValidInterval(data, status);
-  s->is_valid_longitudinal_max_acc = checkValidMaxLongitudinalAcceleration(data, status);
-  s->is_valid_longitudinal_min_acc = checkValidMinLongitudinalAcceleration(data, status);
-  s->is_valid_velocity_deviation = checkValidVelocityDeviation(data, status);
-  s->is_valid_distance_deviation = checkValidDistanceDeviation(data, status);
-  s->is_valid_longitudinal_distance_deviation =
-    checkValidLongitudinalDistanceDeviation(data, status);
-  s->is_valid_yaw_deviation = checkValidYawDeviation(data, status);
-  s->is_valid_forward_trajectory_length = checkValidForwardTrajectoryLength(data, status);
-  s->is_valid_trajectory_shift = checkTrajectoryShift(data, status);
-  s->is_valid_relative_angle = checkValidRelativeAngle(data, status);
-  s->is_valid_curvature = checkValidCurvature(data, status);
-  s->is_valid_lateral_acc = checkValidLateralAcceleration(data, status);
-  s->is_valid_lateral_jerk = checkValidLateralJerk(data, status);
-  s->is_valid_steering = checkValidSteering(data, status);
-  s->is_valid_steering_rate = checkValidSteeringRate(data, status);
+  status->is_valid_interval = check_valid_interval(data, status);
+  status->is_valid_longitudinal_max_acc = check_valid_max_longitudinal_acceleration(data, status);
+  status->is_valid_longitudinal_min_acc = check_valid_min_longitudinal_acceleration(data, status);
+  status->is_valid_velocity_deviation = check_valid_velocity_deviation(data, status);
+  status->is_valid_distance_deviation = check_valid_distance_deviation(data, status);
+  status->is_valid_longitudinal_distance_deviation =
+    check_valid_longitudinal_distance_deviation(data, status);
+  status->is_valid_yaw_deviation = check_valid_yaw_deviation(data, status);
+  status->is_valid_forward_trajectory_length = check_valid_forward_trajectory_length(data, status);
+  status->is_valid_trajectory_shift = check_trajectory_shift(data, status);
+  status->is_valid_relative_angle = check_valid_relative_angle(data, status);
+  status->is_valid_curvature = check_valid_curvature(data, status);
+  status->is_valid_lateral_acc = check_valid_lateral_acceleration(data, status);
+  status->is_valid_lateral_jerk = check_valid_lateral_jerk(data, status);
+  status->is_valid_steering = check_valid_steering(data, status, vehicle_wheel_base_m);
+  status->is_valid_steering_rate = check_valid_steering_rate(data, status, vehicle_wheel_base_m);
 
   is_critical = is_critical_error_;
 }
 
-bool TrajectoryValidator::checkValidSize(
+bool TrajectoryValidator::check_valid_size(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -144,7 +192,7 @@ bool TrajectoryValidator::checkValidSize(
   return status->trajectory_size >= 2;
 }
 
-bool TrajectoryValidator::checkValidFiniteValue(
+bool TrajectoryValidator::check_valid_finite_value(
   const std::shared_ptr<const PlanningValidatorData> & data)
 {
   const auto & trajectory = *data->current_trajectory;
@@ -154,7 +202,7 @@ bool TrajectoryValidator::checkValidFiniteValue(
   return true;
 }
 
-bool TrajectoryValidator::checkValidInterval(
+bool TrajectoryValidator::check_valid_interval(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -180,7 +228,7 @@ bool TrajectoryValidator::checkValidInterval(
   return true;
 }
 
-bool TrajectoryValidator::checkValidRelativeAngle(
+bool TrajectoryValidator::check_valid_relative_angle(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -206,7 +254,7 @@ bool TrajectoryValidator::checkValidRelativeAngle(
   return true;
 }
 
-bool TrajectoryValidator::checkValidCurvature(
+bool TrajectoryValidator::check_valid_curvature(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -231,7 +279,7 @@ bool TrajectoryValidator::checkValidCurvature(
   return true;
 }
 
-bool TrajectoryValidator::checkValidLateralAcceleration(
+bool TrajectoryValidator::check_valid_lateral_acceleration(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -251,7 +299,7 @@ bool TrajectoryValidator::checkValidLateralAcceleration(
   return true;
 }
 
-bool TrajectoryValidator::checkValidLateralJerk(
+bool TrajectoryValidator::check_valid_lateral_jerk(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -271,7 +319,7 @@ bool TrajectoryValidator::checkValidLateralJerk(
   return true;
 }
 
-bool TrajectoryValidator::checkValidMinLongitudinalAcceleration(
+bool TrajectoryValidator::check_valid_min_longitudinal_acceleration(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -292,7 +340,7 @@ bool TrajectoryValidator::checkValidMinLongitudinalAcceleration(
   return true;
 }
 
-bool TrajectoryValidator::checkValidMaxLongitudinalAcceleration(
+bool TrajectoryValidator::check_valid_max_longitudinal_acceleration(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -313,18 +361,18 @@ bool TrajectoryValidator::checkValidMaxLongitudinalAcceleration(
   return true;
 }
 
-bool TrajectoryValidator::checkValidSteering(
+bool TrajectoryValidator::check_valid_steering(
   const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status)
+  const std::shared_ptr<PlanningValidatorStatus> & status,
+  const double vehicle_wheel_base_m)
 {
   if (!params_.steering.enable) {
     return true;
   }
 
   const auto & trajectory = *data->resampled_current_trajectory;
-  const auto & vehicle_info = data->vehicle_info;
 
-  const auto [max_steering, i] = calcMaxSteeringAngles(trajectory, vehicle_info.wheel_base_m);
+  const auto [max_steering, i] = calcMaxSteeringAngles(trajectory, vehicle_wheel_base_m);
   status->max_steering = max_steering;
 
   if (max_steering > params_.steering.threshold) {
@@ -335,18 +383,18 @@ bool TrajectoryValidator::checkValidSteering(
   return true;
 }
 
-bool TrajectoryValidator::checkValidSteeringRate(
+bool TrajectoryValidator::check_valid_steering_rate(
   const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status)
+  const std::shared_ptr<PlanningValidatorStatus> & status,
+  const double vehicle_wheel_base_m)
 {
   if (!params_.steering.enable) {
     return true;
   }
 
   const auto & trajectory = *data->resampled_current_trajectory;
-  const auto & vehicle_info = data->vehicle_info;
 
-  const auto [max_steering_rate, i] = calcMaxSteeringRates(trajectory, vehicle_info.wheel_base_m);
+  const auto [max_steering_rate, i] = calcMaxSteeringRates(trajectory, vehicle_wheel_base_m);
   status->max_steering_rate = max_steering_rate;
 
   if (max_steering_rate > params_.steering_rate.threshold) {
@@ -357,7 +405,7 @@ bool TrajectoryValidator::checkValidSteeringRate(
   return true;
 }
 
-bool TrajectoryValidator::checkValidVelocityDeviation(
+bool TrajectoryValidator::check_valid_velocity_deviation(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -381,7 +429,7 @@ bool TrajectoryValidator::checkValidVelocityDeviation(
   return true;
 }
 
-bool TrajectoryValidator::checkValidDistanceDeviation(
+bool TrajectoryValidator::check_valid_distance_deviation(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -404,7 +452,7 @@ bool TrajectoryValidator::checkValidDistanceDeviation(
   return true;
 }
 
-bool TrajectoryValidator::checkValidLongitudinalDistanceDeviation(
+bool TrajectoryValidator::check_valid_longitudinal_distance_deviation(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -468,7 +516,7 @@ bool TrajectoryValidator::checkValidLongitudinalDistanceDeviation(
   return true;
 }
 
-bool TrajectoryValidator::checkValidYawDeviation(
+bool TrajectoryValidator::check_valid_yaw_deviation(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -492,7 +540,7 @@ bool TrajectoryValidator::checkValidYawDeviation(
   return true;
 }
 
-bool TrajectoryValidator::checkValidForwardTrajectoryLength(
+bool TrajectoryValidator::check_valid_forward_trajectory_length(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -525,7 +573,7 @@ bool TrajectoryValidator::checkValidForwardTrajectoryLength(
   return true;
 }
 
-bool TrajectoryValidator::checkTrajectoryShift(
+bool TrajectoryValidator::check_trajectory_shift(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {

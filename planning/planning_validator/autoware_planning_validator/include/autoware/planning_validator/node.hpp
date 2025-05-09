@@ -17,8 +17,7 @@
 
 #include "autoware/planning_validator/debug_marker.hpp"
 #include "autoware/planning_validator/manager.hpp"
-#include "autoware/planning_validator/parameters.hpp"
-#include "autoware/planning_validator/planning_validator_data.hpp"
+#include "autoware/planning_validator/types.hpp"
 #include "autoware_planning_validator/msg/planning_validator_status.hpp"
 
 #include <autoware_utils/ros/logger_level_configure.hpp>
@@ -58,7 +57,6 @@ public:
 
 private:
   void onTimer();
-  void setupDiag();
   void setupParameters();
   void setData();
   bool isDataReady();
@@ -69,10 +67,6 @@ private:
   void publishTrajectory();
   void publishDebugInfo();
   void displayStatus();
-
-  void setStatus(
-    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg,
-    const bool is_critical = false);
 
   autoware_utils::InterProcessPollingSubscriber<Odometry> sub_kinematics_{
     this, "~/input/kinematics"};
@@ -86,40 +80,14 @@ private:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_markers_;
 
   PlanningValidatorManager manager_;
-  std::shared_ptr<PlanningValidatorData> data_;
-  std::shared_ptr<PlanningValidatorStatus> validation_status_;
+
+  std::shared_ptr<PlanningValidatorContext> context_;
 
   bool is_critical_error_ = false;
-
-  std::shared_ptr<Updater> diag_updater_ = nullptr;
-
-  Params params_;
-
-  bool checkValidSize(const Trajectory & trajectory);
-  bool checkValidFiniteValue(const Trajectory & trajectory);
-  bool checkValidInterval(const Trajectory & trajectory);
-  bool checkValidRelativeAngle(const Trajectory & trajectory);
-  bool checkValidCurvature(const Trajectory & trajectory);
-  bool checkValidLateralAcceleration(const Trajectory & trajectory);
-  bool checkValidLateralJerk(const Trajectory & trajectory);
-  bool checkValidMaxLongitudinalAcceleration(const Trajectory & trajectory);
-  bool checkValidMinLongitudinalAcceleration(const Trajectory & trajectory);
-  bool checkValidSteering(const Trajectory & trajectory);
-  bool checkValidSteeringRate(const Trajectory & trajectory);
-  bool checkValidVelocityDeviation(const Trajectory & trajectory);
-  bool checkValidDistanceDeviation(const Trajectory & trajectory);
-  bool checkValidLongitudinalDistanceDeviation(const Trajectory & trajectory);
-  bool checkValidForwardTrajectoryLength(const Trajectory & trajectory);
-  bool checkValidYawDeviation(const Trajectory & trajectory);
-  bool checkTrajectoryShift(
-    const Trajectory & trajectory, const Trajectory & prev_trajectory,
-    const geometry_msgs::msg::Pose & ego_pose);
 
   bool isAllValid(const PlanningValidatorStatus & status) const;
 
   Trajectory::ConstSharedPtr soft_stop_trajectory_;
-
-  std::shared_ptr<PlanningValidatorDebugMarkerPublisher> debug_pose_publisher_;
 
   std::unique_ptr<autoware_utils::LoggerLevelConfigure> logger_configure_;
 

@@ -15,8 +15,8 @@
 #ifndef AUTOWARE__PLANNING_VALIDATOR__MANAGER_HPP_
 #define AUTOWARE__PLANNING_VALIDATOR__MANAGER_HPP_
 
-#include "planning_validator_data.hpp"
-#include "plugin_interface.hpp"
+#include "autoware/planning_validator/types.hpp"
+#include "autoware/planning_validator/plugin_interface.hpp"
 
 #include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -33,11 +33,11 @@ class PlanningValidatorManager
 {
 public:
   PlanningValidatorManager();
-  void load_plugin(rclcpp::Node & node, const std::string & name);
+  void load_plugin(
+    rclcpp::Node & node, const std::string & name,
+    const std::shared_ptr<PlanningValidatorContext> & context);
   void unload_plugin(rclcpp::Node & node, const std::string & name);
-  void validate(
-    const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status, bool & is_critical);
+  void validate(bool & is_critical);
 
 private:
   pluginlib::ClassLoader<PluginInterface> plugin_loader_;
