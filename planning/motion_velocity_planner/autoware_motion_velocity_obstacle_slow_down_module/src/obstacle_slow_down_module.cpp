@@ -240,8 +240,8 @@ void ObstacleSlowDownModule::update_parameters(
 std::vector<autoware::motion_velocity_planner::SlowDownPointData>
 ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
   const PlannerData::Pointcloud & pointcloud, const std::vector<TrajectoryPoint> & traj_points,
-  const std::vector<Polygon2d>& decimated_traj_polys,
-  const VehicleInfo & vehicle_info, const size_t ego_idx)
+  const std::vector<Polygon2d> & decimated_traj_polys, const VehicleInfo & vehicle_info,
+  const size_t ego_idx)
 {
   if (pointcloud.pointcloud.empty()) {
     return {};
@@ -470,7 +470,8 @@ std::vector<SlowDownObstacle> ObstacleSlowDownModule::filter_slow_down_obstacle_
 
   // Get Objects
   const std::vector<autoware::motion_velocity_planner::SlowDownPointData> slow_down_points_data =
-    convert_point_cloud_to_slow_down_points(point_cloud, traj_points, decimated_traj_polys, vehicle_info, ego_idx);
+    convert_point_cloud_to_slow_down_points(
+      point_cloud, traj_points, decimated_traj_polys, vehicle_info, ego_idx);
 
   // slow down
   std::vector<SlowDownObstacle> slow_down_obstacles;
