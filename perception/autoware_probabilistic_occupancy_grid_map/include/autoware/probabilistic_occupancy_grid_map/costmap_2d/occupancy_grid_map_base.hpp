@@ -53,9 +53,8 @@
 #define AUTOWARE__PROBABILISTIC_OCCUPANCY_GRID_MAP__COSTMAP_2D__OCCUPANCY_GRID_MAP_BASE_HPP_
 
 #ifdef USE_CUDA
-#include "autoware/probabilistic_occupancy_grid_map/utils/cuda_pointcloud.hpp"
-
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
+#include <cuda_blackboard/cuda_pointcloud2.hpp>
 #endif
 
 #include <autoware_utils/math/unit_conversion.hpp>
@@ -83,8 +82,9 @@ public:
 
 #ifdef USE_CUDA
   virtual void updateWithPointCloud(
-    [[maybe_unused]] const CudaPointCloud2 & raw_pointcloud,
-    [[maybe_unused]] const CudaPointCloud2 & obstacle_pointcloud,
+    [[maybe_unused]] std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & raw_pointcloud_ptr,
+    [[maybe_unused]] std::shared_ptr<const cuda_blackboard::CudaPointCloud2> &
+      obstacle_pointcloud_ptr,
     [[maybe_unused]] const Pose & robot_pose, [[maybe_unused]] const Pose & scan_origin) {};
 #endif
 

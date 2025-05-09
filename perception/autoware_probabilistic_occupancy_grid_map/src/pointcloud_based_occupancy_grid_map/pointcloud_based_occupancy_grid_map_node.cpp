@@ -72,14 +72,24 @@ PointcloudBasedOccupancyGridMapNode::PointcloudBasedOccupancyGridMapNode(
   const double map_resolution = this->declare_parameter<double>("map_resolution");
 
   /* Subscriber and publisher */
-  obstacle_pointcloud_sub_ptr_ = this->create_subscription<PointCloud2>(
-    "~/input/obstacle_pointcloud", rclcpp::SensorDataQoS{}.keep_last(1),
-    std::bind(&PointcloudBasedOccupancyGridMapNode::obstaclePointcloudCallback, this, _1));
-  raw_pointcloud_sub_ptr_ = this->create_subscription<PointCloud2>(
-    "~/input/raw_pointcloud", rclcpp::SensorDataQoS{}.keep_last(1),
-    std::bind(&PointcloudBasedOccupancyGridMapNode::rawPointcloudCallback, this, _1));
+  obstacle_pointcloud_sub_ptr_ =
+    std::make_unique<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
+      *this, "~/input/obstacle_pointcloud",
+      std::bind(
+        &PointcloudBasedOccupancyGridMapNode::obstaclePointcloudCallback, this,
+        std::placeholders::_1));
 
-  occupancy_grid_map_pub_ = create_publisher<OccupancyGrid>("~/output/occupancy_grid_map", 1);
+  raw_pointcloud_sub_ptr_ =
+    std::make_unique<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
+      *this, "~/input/raw_pointcloud",
+      std::bind(
+        &PointcloudBasedOccupancyGridMapNode::rawPointcloudCallback, this, std::placeholders::_1));
+
+  rclcpp::PublisherOptions pub_options;
+  pub_options.use_intra_process_comm = rclcpp::IntraProcessSetting::Enable;
+
+  occupancy_grid_map_pub_ =
+    create_publisher<OccupancyGrid>("~/output/occupancy_grid_map", 1, pub_options);
 
   const std::string updater_type = this->declare_parameter<std::string>("updater_type");
   if (updater_type == "binary_bayes_filter") {
@@ -118,8 +128,6 @@ PointcloudBasedOccupancyGridMapNode::PointcloudBasedOccupancyGridMapNode(
   }
 
   cudaStreamCreateWithFlags(&stream_, cudaStreamNonBlocking);
-  raw_pointcloud_.stream = stream_;
-  obstacle_pointcloud_.stream = stream_;
   occupancy_grid_map_ptr_->setCudaStream(stream_);
   occupancy_grid_map_updater_ptr_->setCudaStream(stream_);
 
@@ -158,21 +166,25 @@ PointcloudBasedOccupancyGridMapNode::PointcloudBasedOccupancyGridMapNode(
 }
 
 void PointcloudBasedOccupancyGridMapNode::obstaclePointcloudCallback(
-  const PointCloud2::ConstSharedPtr & input_obstacle_msg)
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & input_obstacle_msg_ptr)
 {
-  obstacle_pointcloud_.fromROSMsgAsync(input_obstacle_msg);
+  obstacle_pointcloud_ptr_ = input_obstacle_msg_ptr;
 
-  if (obstacle_pointcloud_.header.stamp == raw_pointcloud_.header.stamp) {
+  if (
+    raw_pointcloud_ptr_ &&
+    obstacle_pointcloud_ptr_->header.stamp == raw_pointcloud_ptr_->header.stamp) {
     onPointcloudWithObstacleAndRaw();
   }
 }
 
 void PointcloudBasedOccupancyGridMapNode::rawPointcloudCallback(
-  const PointCloud2::ConstSharedPtr & input_raw_msg)
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & input_raw_msg_ptr)
 {
-  raw_pointcloud_.fromROSMsgAsync(input_raw_msg);
+  raw_pointcloud_ptr_ = input_raw_msg_ptr;
 
-  if (obstacle_pointcloud_.header.stamp == raw_pointcloud_.header.stamp) {
+  if (
+    obstacle_pointcloud_ptr_ &&
+    obstacle_pointcloud_ptr_->header.stamp == raw_pointcloud_ptr_->header.stamp) {
     onPointcloudWithObstacleAndRaw();
   }
 }
@@ -224,7 +236,7 @@ void PointcloudBasedOccupancyGridMapNode::checkProcessingTime(double processing_
     "is processing time consecutive excess duration within threshold",
     processing_consecutive_excess_time <= processing_time_consecutive_excess_tolerance_ms_);
   diagnostics_interface_ptr_->update_level_and_message(level, "[" + status_str + "] " + message);
-  diagnostics_interface_ptr_->publish(raw_pointcloud_.header.stamp);
+  diagnostics_interface_ptr_->publish(raw_pointcloud_ptr_->header.stamp);
 }
 
 void PointcloudBasedOccupancyGridMapNode::onPointcloudWithObstacleAndRaw()
@@ -238,23 +250,35 @@ void PointcloudBasedOccupancyGridMapNode::onPointcloudWithObstacleAndRaw()
 
   // if scan_origin_frame_ is "", replace it with raw_pointcloud_.header.frame_id
   if (scan_origin_frame_.empty()) {
-    scan_origin_frame_ = raw_pointcloud_.header.frame_id;
+    scan_origin_frame_ = raw_pointcloud_ptr_->header.frame_id;
   }
 
   // Prepare for applying height filter
   if (use_height_filter_) {
     // Make sure that the frame is base_link
-    if (raw_pointcloud_.header.frame_id != base_link_frame_) {
+    if (raw_pointcloud_ptr_->header.frame_id != base_link_frame_) {
+      std::shared_ptr<cuda_blackboard::CudaPointCloud2> tmp_pointcloud_ptr =
+        std::make_shared<cuda_blackboard::CudaPointCloud2>(*raw_pointcloud_ptr_);
+
       if (!utils::transformPointcloudAsync(
-            raw_pointcloud_, *tf2_, base_link_frame_, device_rotation_, device_translation_)) {
+            tmp_pointcloud_ptr, *tf2_, base_link_frame_, device_rotation_, device_translation_,
+            stream_)) {
         return;
       }
+
+      raw_pointcloud_ptr_ = tmp_pointcloud_ptr;
     }
-    if (obstacle_pointcloud_.header.frame_id != base_link_frame_) {
+    if (obstacle_pointcloud_ptr_->header.frame_id != base_link_frame_) {
+      std::shared_ptr<cuda_blackboard::CudaPointCloud2> tmp_pointcloud_ptr =
+        std::make_shared<cuda_blackboard::CudaPointCloud2>(*obstacle_pointcloud_ptr_);
+
       if (!utils::transformPointcloudAsync(
-            obstacle_pointcloud_, *tf2_, base_link_frame_, device_rotation_, device_translation_)) {
+            tmp_pointcloud_ptr, *tf2_, base_link_frame_, device_rotation_, device_translation_,
+            stream_)) {
         return;
       }
+
+      obstacle_pointcloud_ptr_ = tmp_pointcloud_ptr;
     }
     occupancy_grid_map_ptr_->setHeightLimit(min_height_, max_height_);
   } else {
@@ -267,11 +291,12 @@ void PointcloudBasedOccupancyGridMapNode::onPointcloudWithObstacleAndRaw()
   Pose gridmap_origin{};
   Pose scan_origin{};
   try {
-    robot_pose = utils::getPose(raw_pointcloud_.header.stamp, *tf2_, base_link_frame_, map_frame_);
+    robot_pose =
+      utils::getPose(raw_pointcloud_ptr_->header.stamp, *tf2_, base_link_frame_, map_frame_);
     gridmap_origin =
-      utils::getPose(raw_pointcloud_.header.stamp, *tf2_, gridmap_origin_frame_, map_frame_);
+      utils::getPose(raw_pointcloud_ptr_->header.stamp, *tf2_, gridmap_origin_frame_, map_frame_);
     scan_origin =
-      utils::getPose(raw_pointcloud_.header.stamp, *tf2_, scan_origin_frame_, map_frame_);
+      utils::getPose(raw_pointcloud_ptr_->header.stamp, *tf2_, scan_origin_frame_, map_frame_);
   } catch (tf2::TransformException & ex) {
     RCLCPP_WARN_STREAM(get_logger(), ex.what());
     return;
@@ -288,7 +313,7 @@ void PointcloudBasedOccupancyGridMapNode::onPointcloudWithObstacleAndRaw()
       gridmap_origin.position.x - occupancy_grid_map_ptr_->getSizeInMetersX() / 2,
       gridmap_origin.position.y - occupancy_grid_map_ptr_->getSizeInMetersY() / 2);
     occupancy_grid_map_ptr_->updateWithPointCloud(
-      raw_pointcloud_, obstacle_pointcloud_, robot_pose, scan_origin);
+      raw_pointcloud_ptr_, obstacle_pointcloud_ptr_, robot_pose, scan_origin);
   }
 
   if (enable_single_frame_mode_) {
@@ -300,7 +325,7 @@ void PointcloudBasedOccupancyGridMapNode::onPointcloudWithObstacleAndRaw()
 
     // publish
     occupancy_grid_map_pub_->publish(OccupancyGridMapToMsgPtr(
-      map_frame_, raw_pointcloud_.header.stamp, robot_pose.position.z,
+      map_frame_, raw_pointcloud_ptr_->header.stamp, robot_pose.position.z,
       *occupancy_grid_map_ptr_));  // (todo) robot_pose may be altered with gridmap_origin
   } else {
     std::unique_ptr<ScopedTimeTrack> inner_st_ptr;
@@ -314,7 +339,7 @@ void PointcloudBasedOccupancyGridMapNode::onPointcloudWithObstacleAndRaw()
 
     // publish
     occupancy_grid_map_pub_->publish(OccupancyGridMapToMsgPtr(
-      map_frame_, raw_pointcloud_.header.stamp, robot_pose.position.z,
+      map_frame_, raw_pointcloud_ptr_->header.stamp, robot_pose.position.z,
       *occupancy_grid_map_updater_ptr_));
   }
 
@@ -324,7 +349,7 @@ void PointcloudBasedOccupancyGridMapNode::onPointcloudWithObstacleAndRaw()
     const double pipeline_latency_ms =
       std::chrono::duration<double, std::milli>(
         std::chrono::nanoseconds(
-          (this->get_clock()->now() - raw_pointcloud_.header.stamp).nanoseconds()))
+          (this->get_clock()->now() - raw_pointcloud_ptr_->header.stamp).nanoseconds()))
         .count();
     debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);

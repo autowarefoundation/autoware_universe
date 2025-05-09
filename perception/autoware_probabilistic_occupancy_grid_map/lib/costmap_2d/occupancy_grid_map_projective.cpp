@@ -60,13 +60,14 @@ OccupancyGridMapProjectiveBlindSpot::OccupancyGridMapProjectiveBlindSpot(
 /**
  * @brief update Gridmap with PointCloud in 3D manner
  *
- * @param raw_pointcloud raw point cloud on a certain frame (usually base_link)
- * @param obstacle_pointcloud raw point cloud on a certain frame (usually base_link)
+ * @param raw_pointcloud_ptr raw point cloud on a certain frame (usually base_link)
+ * @param obstacle_pointcloud_ptr raw point cloud on a certain frame (usually base_link)
  * @param robot_pose frame of the input point cloud (usually base_link)
  * @param scan_origin manually chosen grid map origin frame
  */
 void OccupancyGridMapProjectiveBlindSpot::updateWithPointCloud(
-  const CudaPointCloud2 & raw_pointcloud, const CudaPointCloud2 & obstacle_pointcloud,
+  std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & raw_pointcloud_ptr,
+  std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & obstacle_pointcloud_ptr,
   const Pose & robot_pose, const Pose & scan_origin)
 {
   const size_t angle_bin_size =
@@ -121,23 +122,24 @@ void OccupancyGridMapProjectiveBlindSpot::updateWithPointCloud(
     device_translation_scan_origin_.get(), &scan_origin_position, sizeof(Eigen::Vector3f),
     cudaMemcpyHostToDevice, stream_);
 
-  const std::size_t num_raw_points = raw_pointcloud.width * raw_pointcloud.height;
+  const std::size_t num_raw_points = raw_pointcloud_ptr->width * raw_pointcloud_ptr->height;
   float range_resolution_inv = 1.0 / map_res;
 
   map_projective::prepareRawTensorLaunch(
-    reinterpret_cast<const float *>(raw_pointcloud.data.get()), num_raw_points,
-    raw_pointcloud.point_step / sizeof(float), angle_bin_size, range_bin_size, min_height_,
+    reinterpret_cast<const float *>(raw_pointcloud_ptr->data.get()), num_raw_points,
+    raw_pointcloud_ptr->point_step / sizeof(float), angle_bin_size, range_bin_size, min_height_,
     max_height_, min_angle_, angle_increment_inv_, range_resolution_inv, device_rotation_map_.get(),
     device_translation_map_.get(), device_rotation_scan_.get(), device_translation_scan_.get(),
     raw_points_tensor_.get(), stream_);
 
-  const std::size_t num_obstacle_points = obstacle_pointcloud.width * obstacle_pointcloud.height;
+  const std::size_t num_obstacle_points =
+    obstacle_pointcloud_ptr->width * obstacle_pointcloud_ptr->height;
 
   map_projective::prepareObstacleTensorLaunch(
-    reinterpret_cast<const float *>(obstacle_pointcloud.data.get()), num_obstacle_points,
-    obstacle_pointcloud.point_step / sizeof(float), angle_bin_size, range_bin_size, min_height_,
-    max_height_, min_angle_, angle_increment_inv_, range_resolution_inv, projection_dz_threshold_,
-    device_translation_scan_origin_.get(), device_rotation_map_.get(),
+    reinterpret_cast<const float *>(obstacle_pointcloud_ptr->data.get()), num_obstacle_points,
+    obstacle_pointcloud_ptr->point_step / sizeof(float), angle_bin_size, range_bin_size,
+    min_height_, max_height_, min_angle_, angle_increment_inv_, range_resolution_inv,
+    projection_dz_threshold_, device_translation_scan_origin_.get(), device_rotation_map_.get(),
     device_translation_map_.get(), device_rotation_scan_.get(), device_translation_scan_.get(),
     obstacle_points_tensor_.get(), stream_);
 

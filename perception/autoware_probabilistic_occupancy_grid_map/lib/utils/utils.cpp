@@ -53,15 +53,17 @@ bool transformPointcloud(
 
 #ifdef USE_CUDA
 bool transformPointcloudAsync(
-  CudaPointCloud2 & input, const tf2_ros::Buffer & tf2, const std::string & target_frame,
+  cuda_blackboard::CudaPointCloud2::SharedPtr & input_ptr, const tf2_ros::Buffer & tf2,
+  const std::string & target_frame,
   autoware::cuda_utils::CudaUniquePtr<Eigen::Matrix3f> & device_rotation,
-  autoware::cuda_utils::CudaUniquePtr<Eigen::Vector3f> & device_translation)
+  autoware::cuda_utils::CudaUniquePtr<Eigen::Vector3f> & device_translation, cudaStream_t stream)
 {
   geometry_msgs::msg::TransformStamped tf_stamped;
   // lookup transform
   try {
     tf_stamped = tf2.lookupTransform(
-      target_frame, input.header.frame_id, input.header.stamp, rclcpp::Duration::from_seconds(0.5));
+      target_frame, input_ptr->header.frame_id, input_ptr->header.stamp,
+      rclcpp::Duration::from_seconds(0.5));
   } catch (tf2::TransformException & ex) {
     RCLCPP_WARN(
       rclcpp::get_logger("probabilistic_occupancy_grid_map"), "Failed to lookup transform: %s",
@@ -75,16 +77,16 @@ bool transformPointcloudAsync(
 
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     device_rotation.get(), rotation.data(), sizeof(Eigen::Matrix3f), cudaMemcpyHostToDevice,
-    input.stream));
+    stream));
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
     device_translation.get(), translation.data(), sizeof(Eigen::Vector3f), cudaMemcpyHostToDevice,
-    input.stream));
+    stream));
 
   transformPointCloudLaunch(
-    input.data.get(), input.width * input.height, input.point_step, device_rotation.get(),
-    device_translation.get(), input.stream);
+    input_ptr->data.get(), input_ptr->width * input_ptr->height, input_ptr->point_step,
+    device_rotation.get(), device_translation.get(), stream);
 
-  input.header.frame_id = target_frame;
+  input_ptr->header.frame_id = target_frame;
   return true;
 }
 #endif
