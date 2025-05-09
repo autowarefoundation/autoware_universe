@@ -14,13 +14,14 @@
 #ifndef AUTOWARE_PERCEPTION_RVIZ_PLUGIN__OBJECT_DETECTION__DETECTED_OBJECTS_WITH_FEATURE_HELPER_HPP_
 #define AUTOWARE_PERCEPTION_RVIZ_PLUGIN__OBJECT_DETECTION__DETECTED_OBJECTS_WITH_FEATURE_HELPER_HPP_
 
-#include <std_msgs/msg/detail/color_rgba__struct.hpp>
-
-#include <QWidget>
+#include <QColor>
 #include <QPainter>
 #include <QString>
+#include <QWidget>
+
+#include <std_msgs/msg/detail/color_rgba__struct.hpp>
+
 #include <vector>
-#include <QColor>
 
 namespace autoware
 {
@@ -28,60 +29,71 @@ namespace rviz_plugins
 {
 namespace object_detection
 {
-  std_msgs::msg::ColorRGBA generateDistinctColor(size_t idx);
+std_msgs::msg::ColorRGBA generateDistinctColor(size_t idx);
 
-  std_msgs::msg::ColorRGBA colormapJet(float value_normalized);  
-  std_msgs::msg::ColorRGBA colormapViridis(float v);
-  std_msgs::msg::ColorRGBA colormapHSV(float v);
-  std_msgs::msg::ColorRGBA colormapRed(float v);
-  std_msgs::msg::ColorRGBA colormapGray(float value);
-  std_msgs::msg::ColorRGBA colormapTurbo(float x);
-  std_msgs::msg::ColorRGBA colormapRainbow(float v);  
-  std_msgs::msg::ColorRGBA colormapParula(float v);
+std_msgs::msg::ColorRGBA colormapJet(float value_normalized);
+std_msgs::msg::ColorRGBA colormapViridis(float v);
+std_msgs::msg::ColorRGBA colormapHSV(float v);
+std_msgs::msg::ColorRGBA colormapRed(float v);
+std_msgs::msg::ColorRGBA colormapGray(float value);
+std_msgs::msg::ColorRGBA colormapTurbo(float x);
+std_msgs::msg::ColorRGBA colormapRainbow(float v);
+std_msgs::msg::ColorRGBA colormapParula(float v);
 
-  class ColorbarWidget : public QWidget
+class ColorbarWidget : public QWidget
+{
+public:
+  explicit ColorbarWidget(QWidget * parent = nullptr);
+  void setColorbarImage(const QImage & image);
+  void setMinMax(float min_value, float max_value);
+
+protected:
+  void paintEvent(QPaintEvent * event) override;
+
+private:
+  QImage m_colorbar_image;
+  float m_min_value{0.0f};
+  float m_max_value{1.0f};
+  QString m_title;
+  QFont m_font;
+  QColor m_textColor;
+  QColor m_tickColor;
+  QColor m_backgroundColor;
+};
+
+// Type alias for colormap functions
+using ColormapFuncType = std::function<std_msgs::msg::ColorRGBA(float)>;
+
+// Static const array of colormap functions (Initialized once)
+// Ensure these enum values match the order and options in the constructor
+enum ColormapEnum {
+  JET_CM = 0,
+  HSV_CM,
+  VIRIDIS_CM,
+  RED_CM,
+  GRAY_CM,
+  TURBO_CM,
+  RAINBOW_CM,
+  PARULA_CM,
+  NUM_COLORMAPS
+};
+enum ColorModeEnum { FLAT_COLOR = 0, INTENSITY_COLOR, CLUSTER_COLOR };
+struct ColormapInfo
+{
+  const std::array<const char *, NUM_COLORMAPS> & names;
+  const std::array<ColormapFuncType, NUM_COLORMAPS> & functions;
+
+  ColormapFuncType getFunctionSafe(int index) const
   {
-  public:
-  explicit ColorbarWidget(QWidget *parent = nullptr) ;  
-      void setColorbarImage(const QImage &image) ;
-      void setMinMax(float min_value, float max_value);
-      
-  protected:
-  void paintEvent(QPaintEvent *event) override ;
-  
-  private:
-    QImage m_colorbar_image;
-    float m_min_value{0.0f};
-    float m_max_value{1.0f};
-    QString m_title;
-    QFont m_font;    
-    QColor m_textColor;
-    QColor m_tickColor;
-    QColor m_backgroundColor;
-  };
-  
-  // Type alias for colormap functions
-  using ColormapFuncType = std::function<std_msgs::msg::ColorRGBA(float)>;
-
-  // Static const array of colormap functions (Initialized once)
-  // Ensure these enum values match the order and options in the constructor
-  enum ColormapEnum { JET_CM = 0, HSV_CM, VIRIDIS_CM, RED_CM, GRAY_CM, TURBO_CM, RAINBOW_CM, PARULA_CM, NUM_COLORMAPS };
-  enum ColorModeEnum { FLAT_COLOR = 0, INTENSITY_COLOR, CLUSTER_COLOR };
-  struct ColormapInfo
-  {
-    const std::array<const char*, NUM_COLORMAPS>& names;
-    const std::array<ColormapFuncType, NUM_COLORMAPS>& functions;
-  
-    ColormapFuncType getFunctionSafe(int index) const {
-      if (index < 0 || index >= static_cast<int>(functions.size())) {
-        return functions[0];  // Fallback to default (JET)
-      }
-      return functions[index];
+    if (index < 0 || index >= static_cast<int>(functions.size())) {
+      return functions[0];  // Fallback to default (JET)
     }
-  };
-  
-  const ColormapInfo& getColormapInfo();
-    
+    return functions[index];
+  }
+};
+
+const ColormapInfo & getColormapInfo();
+
 }  // namespace object_detection
 }  // namespace rviz_plugins
 }  // namespace autoware

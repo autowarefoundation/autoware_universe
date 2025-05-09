@@ -95,7 +95,6 @@ void DetectedObjectsWithFeatureDisplay::onInitialize()
     &m_intensity_color_scale_max, &rviz_common::properties::Property::changed, this,
     [this]() { updateColormapAndColorbar(); });
   updateColormapPropertiesVisibility();
-  
 }
 
 void DetectedObjectsWithFeatureDisplay::updateColormapAndColorbar()
@@ -172,7 +171,7 @@ void DetectedObjectsWithFeatureDisplay::processMessage(
   DetectedObjectsWithFeature::ConstSharedPtr msg)
 {
   clear_markers();
-  
+
   const int mode = m_color_mode_property.getOptionInt();
   const float max_intensity = m_intensity_color_scale_max.getFloat();
   const ColormapFuncType color_fn =
@@ -185,7 +184,7 @@ void DetectedObjectsWithFeatureDisplay::processMessage(
     c.a = 1.0f;
     return c;
   }();
-    
+
   int id = 0;
   for (const auto & feature_object : msg->feature_objects) {
     const auto & cluster = feature_object.feature.cluster;
