@@ -114,7 +114,7 @@ private:
   // Core
   Input input_{};
   Output output_{};
-  std::unique_ptr<LaneDepartureChecker> lane_departure_checker_;
+  std::unique_ptr<BoundaryDepartureChecker> boundary_departure_checker_;
 
   // Diagnostic Updater
   diagnostic_updater::Updater updater_{this};

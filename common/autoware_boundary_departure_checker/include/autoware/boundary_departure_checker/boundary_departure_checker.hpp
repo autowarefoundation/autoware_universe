@@ -47,17 +47,17 @@ namespace autoware::boundary_departure_checker
 {
 using SegmentRtree = boost::geometry::index::rtree<Segment2d, boost::geometry::index::rstar<16>>;
 
-class LaneDepartureChecker
+class BoundaryDepartureChecker
 {
 public:
-  explicit LaneDepartureChecker(
+  explicit BoundaryDepartureChecker(
     std::shared_ptr<autoware_utils::TimeKeeper> time_keeper =
       std::make_shared<autoware_utils::TimeKeeper>())
   : time_keeper_(time_keeper)
   {
   }
 
-  LaneDepartureChecker(
+  BoundaryDepartureChecker(
     const Param & param, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
     std::shared_ptr<autoware_utils::TimeKeeper> time_keeper =
       std::make_shared<autoware_utils::TimeKeeper>())

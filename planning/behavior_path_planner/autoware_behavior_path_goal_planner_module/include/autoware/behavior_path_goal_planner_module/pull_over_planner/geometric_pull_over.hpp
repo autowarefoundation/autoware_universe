@@ -27,7 +27,7 @@
 
 namespace autoware::behavior_path_planner
 {
-using autoware::boundary_departure_checker::LaneDepartureChecker;
+using autoware::boundary_departure_checker::BoundaryDepartureChecker;
 class GeometricPullOver : public PullOverPlannerBase
 {
 public:
@@ -59,7 +59,7 @@ public:
 
 protected:
   const ParallelParkingParameters parallel_parking_parameters_;
-  const LaneDepartureChecker lane_departure_checker_;
+  const BoundaryDepartureChecker boundary_departure_checker_;
   const bool is_forward_;
   const bool left_side_parking_;
 
