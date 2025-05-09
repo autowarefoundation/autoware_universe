@@ -11410,6 +11410,10 @@
         
           
         
+          
+        
+          
+        
       
       
         <label class="md-nav__link" for="__nav_11_4_2" id="__nav_11_4_2_label" tabindex="0">
@@ -11432,6 +11436,20 @@
     <li class="md-nav__item">
       <a href="document/autoware-state/" class="md-nav__link">
         Autoware state compatibility
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="document/diagnostics/" class="md-nav__link">
+        Diagnostics
       </a>
     </li>
   
@@ -11502,6 +11520,20 @@
     <li class="md-nav__item">
       <a href="document/operation-mode/" class="md-nav__link">
         Operation mode API
+      </a>
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="document/parameters/" class="md-nav__link">
+        Parameters
       </a>
     </li>
   
@@ -14260,6 +14292,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#interface" class="md-nav__link">
+    Interface
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#web-server-script" class="md-nav__link">
     Web server script
   </a>
@@ -14305,18 +14344,18 @@
 <li><a href="document/operation-mode/">operation mode</a></li>
 <li><a href="document/routing/">routing</a></li>
 </ul>
+<h2 id="interface">Interface<a class="headerlink" href="#interface" title="Permanent link">#</a></h2>
+<ul>
+<li><a href="https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-interfaces/ad-api/">Autoware AD API</a></li>
+<li><a href="document/parameters/">Parameters</a></li>
+<li><a href="document/diagnostics/">Diagnostics</a></li>
+</ul>
 <h2 id="web-server-script">Web server script<a class="headerlink" href="#web-server-script" title="Permanent link">#</a></h2>
 <p>This is a sample to call API using HTTP.</p>
 <h2 id="guide-message-script">Guide message script<a class="headerlink" href="#guide-message-script" title="Permanent link">#</a></h2>
-<p>This is a debug script to check the conditions for transition to autonomous mode.</p>
-<div class="highlight"><pre><span></span><code>$<span class="w"> </span>ros2<span class="w"> </span>run<span class="w"> </span>autoware_default_adapi<span class="w"> </span>guide.py
-
-The<span class="w"> </span>vehicle<span class="w"> </span>pose<span class="w"> </span>is<span class="w"> </span>not<span class="w"> </span>estimated.<span class="w"> </span>Please<span class="w"> </span><span class="nb">set</span><span class="w"> </span>an<span class="w"> </span>initial<span class="w"> </span>pose<span class="w"> </span>or<span class="w"> </span>check<span class="w"> </span>GNSS.
-The<span class="w"> </span>route<span class="w"> </span>is<span class="w"> </span>not<span class="w"> </span>set.<span class="w"> </span>Please<span class="w"> </span><span class="nb">set</span><span class="w"> </span>a<span class="w"> </span>goal<span class="w"> </span>pose.
-The<span class="w"> </span>topic<span class="w"> </span>rate<span class="w"> </span>error<span class="w"> </span>is<span class="w"> </span>detected.<span class="w"> </span>Please<span class="w"> </span>check<span class="w"> </span><span class="o">[</span>control,planning<span class="o">]</span><span class="w"> </span>components.
-The<span class="w"> </span>vehicle<span class="w"> </span>is<span class="w"> </span>ready.<span class="w"> </span>Please<span class="w"> </span>change<span class="w"> </span>the<span class="w"> </span>operation<span class="w"> </span>mode<span class="w"> </span>to<span class="w"> </span>autonomous.
-The<span class="w"> </span>vehicle<span class="w"> </span>is<span class="w"> </span>driving<span class="w"> </span>autonomously.
-The<span class="w"> </span>vehicle<span class="w"> </span>has<span class="w"> </span>reached<span class="w"> </span>the<span class="w"> </span>goal<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>route.<span class="w"> </span>Please<span class="w"> </span>reset<span class="w"> </span>a<span class="w"> </span>route.
+<p>This script is no longer supported, please use rqt_diagnostic_graph_monitor instead.
+This tool is available in <a href="https://github.com/autowarefoundation/autoware_tools">autoware_tools</a>.</p>
+<div class="highlight"><pre><span></span><code>ros2<span class="w"> </span>run<span class="w"> </span>rqt_diagnostic_graph_monitor<span class="w"> </span>rqt_diagnostic_graph_monitor
 </code></pre></div></div>
 
 
