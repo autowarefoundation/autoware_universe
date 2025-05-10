@@ -39,23 +39,11 @@ This package has two clustering methods: `euclidean_cluster` and `voxel_grid_bas
 
 #### euclidean_cluster
 
-| Name               | Type  | Description                                                                                  |
-| ------------------ | ----- | -------------------------------------------------------------------------------------------- |
-| `use_height`       | bool  | use point.z for clustering                                                                   |
-| `min_cluster_size` | int   | the minimum number of points that a cluster needs to contain in order to be considered valid |
-| `max_cluster_size` | int   | the maximum number of points that a cluster needs to contain in order to be considered valid |
-| `tolerance`        | float | the spatial cluster tolerance as a measure in the L2 Euclidean space                         |
+{{ json_to_markdown("perception/autoware_euclidean_cluster/schema/euclidean_cluster.schema.json") }}
 
 #### voxel_grid_based_euclidean_cluster
 
-| Name                          | Type  | Description                                                                                  |
-| ----------------------------- | ----- | -------------------------------------------------------------------------------------------- |
-| `use_height`                  | bool  | use point.z for clustering                                                                   |
-| `min_cluster_size`            | int   | the minimum number of points that a cluster needs to contain in order to be considered valid |
-| `max_cluster_size`            | int   | the maximum number of points that a cluster needs to contain in order to be considered valid |
-| `tolerance`                   | float | the spatial cluster tolerance as a measure in the L2 Euclidean space                         |
-| `voxel_leaf_size`             | float | the voxel leaf size of x and y                                                               |
-| `min_points_number_per_voxel` | int   | the minimum number of points for a voxel                                                     |
+{{ json_to_markdown("perception/autoware_euclidean_cluster/schema/voxel_grid_based_euclidean_cluster.schema.json") }}
 
 ## Assumptions / Known limits
 
