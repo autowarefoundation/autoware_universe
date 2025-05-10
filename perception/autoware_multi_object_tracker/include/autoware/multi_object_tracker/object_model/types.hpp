@@ -40,7 +40,7 @@ namespace autoware::multi_object_tracker
 namespace types
 {
 // constants
-constexpr size_t max_channel_size = 16;
+constexpr size_t max_channel_size = 12;
 
 // channel configuration
 struct InputChannel
