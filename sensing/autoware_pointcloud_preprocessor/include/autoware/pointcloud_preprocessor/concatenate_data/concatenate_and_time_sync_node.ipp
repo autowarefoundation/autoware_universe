@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "autoware/pointcloud_preprocessor/concatenate_data/cloud_collector.hpp"
-#include "autoware/pointcloud_preprocessor/concatenate_data/utils.hpp"
+#include "autoware/pointcloud_preprocessor/utility/diagnostic_utils.hpp"
 #include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 
 #include <pcl_ros/transforms.hpp>
@@ -111,17 +111,8 @@ PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::
     params_.publish_synchronized_pointcloud, params_.keep_input_frame_in_synchronized_pointcloud);
 
   // Diagnostic Updater
-  std::ostringstream hardware_id_stream;
-  hardware_id_stream << this->get_fully_qualified_name() << "_checker";
-  std::string hardware_id = hardware_id_stream.str();
-
-  std::ostringstream diagnostic_name_stream;
-  diagnostic_name_stream << this->get_fully_qualified_name() << "_status";
-  std::string diagnostic_name = diagnostic_name_stream.str();
-
-  diagnostic_updater_.setHardwareID(hardware_id);
-  diagnostic_updater_.add(
-    diagnostic_name, this, &PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::check_concat_status);
+  setup_diagnostics(this, diagnostic_updater_, this,
+    &PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::check_concat_status);
 
   initialize_pub_sub();
 }

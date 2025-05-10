@@ -20,6 +20,7 @@
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <geometry_msgs/msg/twist_stamped.hpp>
@@ -53,14 +54,28 @@ private:
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
 
+  // Parameters
   std::string base_frame_;
   bool use_imu_;
   bool use_3d_distortion_correction_;
   bool update_azimuth_and_distance_;
+  double processing_time_threshold_;
 
   std::optional<AngleConversion> angle_conversion_opt_;
 
   std::unique_ptr<DistortionCorrectorBase> distortion_corrector_;
+
+  // Diagnostic
+  diagnostic_updater::Updater diagnostic_updater_{this};
+  int mismatch_count_{0};
+  double mismatch_fraction_{0.0};
+  double mismatch_fraction_threshold_{0.0};
+  double pointcloud_timestamp_{0.0};
+  double last_processing_time_ms_{0.0};
+  double last_pipeline_latency_ms_{0.0};
+  double last_pass_rate_{0.0};
+
+  void check_diagnostics(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
   void pointcloud_callback(PointCloud2::UniquePtr pointcloud_msg);
 };
