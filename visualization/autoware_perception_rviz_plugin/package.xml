@@ -19,6 +19,7 @@
   <depend>autoware_perception_msgs</depend>
   <depend>rviz_common</depend>
   <depend>rviz_default_plugins</depend>
+  <depend>tier4_perception_msgs</depend>
 
   <exec_depend>libqt5-widgets</exec_depend>
   <exec_depend>rviz2</exec_depend>
