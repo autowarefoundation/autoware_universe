@@ -76,7 +76,6 @@ struct RingOutlierFilterParameters
 {
   float distance_ratio{std::nanf("")};
   float object_length_threshold{std::nanf("")};
-  std::size_t num_points_threshold{0};
 };
 
 /* *INDENT-OFF* */

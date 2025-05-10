@@ -30,14 +30,8 @@
         "object_length_threshold": {
           "type": "number",
           "description": "minimum object length to be considered a valid cluster in meters",
-          "default": "0.1",
+          "default": "0.05",
           "minimum": 0.0
-        },
-        "num_points_threshold": {
-          "type": "integer",
-          "description": "threshold on the number of points in a walk to determine if it corresponds to a cluster",
-          "default": "4",
-          "minimum": 0
         },
         "crop_box.min_x": {
           "type": "array",
@@ -76,7 +70,6 @@
         "use_3d_distortion_correction",
         "distance_ratio",
         "object_length_threshold",
-        "num_points_threshold",
         "crop_box.min_x",
         "crop_box.min_y",
         "crop_box.min_z",
