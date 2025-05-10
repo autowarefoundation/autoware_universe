@@ -406,6 +406,10 @@ void VehicleCmdGate::onTimer()
   if (msg_emergency_command_hazard_light)
     emergency_commands_.hazard_light = *msg_emergency_command_hazard_light;
 
+  const auto msg_emergency_command_turn_indicator = emergency_turn_indicator_cmd_sub_.take_data();
+  if (msg_emergency_command_turn_indicator)
+    emergency_commands_.turn_indicator = *msg_emergency_command_turn_indicator;
+
   const auto msg_emergency_command_gear = emergency_gear_cmd_sub_.take_data();
   if (msg_emergency_command_gear) emergency_commands_.gear = *msg_emergency_command_gear;
 

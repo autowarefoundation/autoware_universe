@@ -181,6 +181,8 @@ private:
   // Subscription for emergency
   Commands emergency_commands_;
   rclcpp::Subscription<Control>::SharedPtr emergency_control_cmd_sub_;
+  autoware_utils::InterProcessPollingSubscriber<TurnIndicatorsCommand>
+    emergency_turn_indicator_cmd_sub_{this, "input/emergency/turn_indicators_cmd"};
   autoware_utils::InterProcessPollingSubscriber<HazardLightsCommand>
     emergency_hazard_light_cmd_sub_{this, "input/emergency/hazard_lights_cmd"};
   autoware_utils::InterProcessPollingSubscriber<GearCommand> emergency_gear_cmd_sub_{
