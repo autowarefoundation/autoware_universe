@@ -1,11 +1,13 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>autoware_lane_departure_checker</name>
-  <version>0.44.0</version>
-  <description>The autoware_lane_departure_checker package</description>
+  <name>autoware_boundary_departure_checker</name>
+  <version>0.43.0</version>
+  <description>The autoware_boundary_departure_checker package</description>
+  <maintainer email="alqudah.mohammad@tier4.jp">Alqudah Mohammad</maintainer>
   <maintainer email="kyoichi.sugahara@tier4.jp">Kyoichi Sugahara</maintainer>
   <maintainer email="makoto.kurihara@tier4.jp">Makoto Kurihara</maintainer>
+  <maintainer email="takayuki.murooka@tier4.jp">Takayuki Murooka</maintainer>
   <maintainer email="zulfaqar.azmi@tier4.jp">Zulfaqar Azmi</maintainer>
 
   <license>Apache License 2.0</license>
@@ -14,7 +16,6 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
   <depend>autoware_adapi_v1_msgs</depend>
-  <depend>autoware_boundary_departure_checker</depend>
   <depend>autoware_internal_debug_msgs</depend>
   <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_map_msgs</depend>

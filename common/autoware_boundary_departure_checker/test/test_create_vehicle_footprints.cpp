@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/lane_departure_checker/utils.hpp"
+#include "autoware/boundary_departure_checker/utils.hpp"
 
 #include <Eigen/Core>
 
@@ -147,7 +147,7 @@ TEST_P(CreateVehicleFootprintsAlongTrajectoryTest, test_create_vehicle_footprint
   const auto p = GetParam();
   const auto pose_with_covariance = create_pose_with_covariance(p.covariance_xy, p.yaw);
   const auto trajectory_points = create_trajectory_points(p.trajectory_points);
-  const auto footprints = autoware::lane_departure_checker::utils::createVehicleFootprints(
+  const auto footprints = autoware::boundary_departure_checker::utils::createVehicleFootprints(
     pose_with_covariance, trajectory_points, vehicle_info, p.footprint_margin_scale);
 
   ASSERT_EQ(footprints.size(), p.expected_footprints.size());
@@ -166,7 +166,7 @@ TEST_P(CreateVehicleFootprintsAlongPathTest, test_create_vehicle_footprints)
 {
   const auto p = GetParam();
   const auto path = create_path(p.path_points);
-  const auto footprints = autoware::lane_departure_checker::utils::createVehicleFootprints(
+  const auto footprints = autoware::boundary_departure_checker::utils::createVehicleFootprints(
     path, vehicle_info, p.footprint_extra_margin);
 
   ASSERT_EQ(footprints.size(), p.expected_footprints.size());
