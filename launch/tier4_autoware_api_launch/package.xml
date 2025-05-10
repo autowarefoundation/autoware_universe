@@ -18,6 +18,7 @@
   <exec_depend>autoware_path_distance_calculator</exec_depend>
   <exec_depend>awapi_awiv_adapter</exec_depend>
   <exec_depend>rosbridge_server</exec_depend>
+  <exec_depend>tier4_deprecated_api_adapter</exec_depend>
   <exec_depend>topic_tools</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
