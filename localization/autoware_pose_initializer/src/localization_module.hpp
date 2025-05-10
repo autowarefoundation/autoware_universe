@@ -17,8 +17,8 @@
 
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_localization_msgs/srv/pose_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
-#include <tier4_localization_msgs/srv/pose_with_covariance_stamped.hpp>
 
 #include <string>
 #include <tuple>
@@ -29,7 +29,7 @@ class LocalizationModule
 {
 private:
   using PoseWithCovarianceStamped = geometry_msgs::msg::PoseWithCovarianceStamped;
-  using RequestPoseAlignment = tier4_localization_msgs::srv::PoseWithCovarianceStamped;
+  using RequestPoseAlignment = autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped;
 
 public:
   LocalizationModule(rclcpp::Node * node, const std::string & service_name);
