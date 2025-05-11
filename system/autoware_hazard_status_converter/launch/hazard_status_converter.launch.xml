@@ -3,5 +3,6 @@
     <remap from="~/diagnostics_graph" to="/diagnostics_graph"/>
     <remap from="~/hazard_status" to="/system/emergency/hazard_status"/>
     <remap from="~/input/emergency_holding" to="/system/emergency_holding"/>
+    <remap from="~/input/external_emergency" to="/api/external/get/emergency"/>
   </node>
 </launch>

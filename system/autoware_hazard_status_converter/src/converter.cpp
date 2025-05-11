@@ -14,6 +14,7 @@
 
 #include "converter.hpp"
 
+#include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -21,7 +22,8 @@
 namespace autoware::hazard_status_converter
 {
 
-Converter::Converter(const rclcpp::NodeOptions & options) : Node("converter", options)
+Converter::Converter(const rclcpp::NodeOptions & options)
+: Node("converter", options), mode_interface_(*this)
 {
   using std::placeholders::_1;
   pub_hazard_ = create_publisher<HazardStatusStamped>("~/hazard_status", rclcpp::QoS(1));
@@ -32,9 +34,9 @@ Converter::Converter(const rclcpp::NodeOptions & options) : Node("converter", op
 
 void Converter::on_create(DiagGraph::ConstSharedPtr graph)
 {
-  const auto find_auto_mode_root = [](const DiagGraph & graph) {
+  const auto find_auto_mode_root = [](const DiagGraph & graph, const std::string & root_name) {
     for (const auto & unit : graph.units()) {
-      if (unit->path() == "/autoware/modes/autonomous") return unit;
+      if (unit->path() == root_name) return unit;
     }
     return static_cast<DiagUnit *>(nullptr);
   };
@@ -54,8 +56,17 @@ void Converter::on_create(DiagGraph::ConstSharedPtr graph)
     return result;
   };
 
-  auto_mode_root_ = find_auto_mode_root(*graph);
-  auto_mode_tree_ = make_auto_mode_tree(auto_mode_root_);
+  std::vector<std::pair<RootModeStatus::Mode, std::string>> root_modes = {
+    {RootModeStatus::Mode::AUTO, "/autoware/modes/autonomous"},
+    {RootModeStatus::Mode::REMOTE, "/autoware/modes/remote"},
+    {RootModeStatus::Mode::LOCAL, "/autoware/modes/local"},
+  };
+  for (const auto & [mode, root_name] : root_modes) {
+    ModeSubgraph subgraph;
+    subgraph.root = find_auto_mode_root(*graph, root_name);
+    subgraph.nodes = make_auto_mode_tree(subgraph.root);
+    mode_subgraphs_[mode] = subgraph;
+  }
 }
 
 void Converter::on_update(DiagGraph::ConstSharedPtr graph)
@@ -99,8 +110,15 @@ void Converter::on_update(DiagGraph::ConstSharedPtr graph)
     return static_cast<std::vector<DiagnosticStatus> *>(nullptr);
   };
 
-  if (!auto_mode_root_) {
-    RCLCPP_ERROR_STREAM_THROTTLE(get_logger(), *get_clock(), 10000, "No auto mode unit.");
+  // Get subgraph related to the current operation mode.
+  const auto root = mode_interface_.get_root();
+  if (root.mode == RootModeStatus::Mode::UNKNOWN) {
+    RCLCPP_ERROR_STREAM_THROTTLE(get_logger(), *get_clock(), 10000, "Unknown root mode.");
+    return;
+  }
+  const auto & subgraph = mode_subgraphs_.at(root.mode);
+  if (!subgraph.root) {
+    RCLCPP_ERROR_STREAM_THROTTLE(get_logger(), *get_clock(), 10000, "No current mode root.");
     return;
   }
 
@@ -108,13 +126,24 @@ void Converter::on_update(DiagGraph::ConstSharedPtr graph)
   HazardStatusStamped hazard;
   for (const auto & unit : graph->units()) {
     if (unit->path().empty()) continue;
-    const bool is_auto_tree = auto_mode_tree_.count(unit);
-    const auto root_level = is_auto_tree ? auto_mode_root_->level() : DiagnosticStatus::OK;
+    const bool is_ignored = root.ignore || !subgraph.nodes.count(unit);
+    const auto root_level = is_ignored ? DiagnosticStatus::OK : subgraph.root->level();
     const auto unit_level = unit->level();
     if (auto diags = get_hazards_vector(hazard.status, get_hazard_level(unit_level, root_level))) {
       diags->push_back(unit->create_diagnostic_status());
     }
   }
+
+  // Add external emergency to spf so that it is not ignored.
+  if (const auto external_emergency = sub_external_emergency_.take_data()) {
+    if (external_emergency->emergency) {
+      DiagnosticStatus status;
+      status.name = std::string(this->get_name()) + ": external_emergency";
+      status.level = DiagnosticStatus::ERROR;
+      hazard.status.diag_single_point_fault.push_back(status);
+    }
+  }
+
   hazard.stamp = graph->updated_stamp();
   hazard.status.level = get_system_level(hazard.status);
   hazard.status.emergency = hazard.status.level == HazardStatus::SINGLE_POINT_FAULT;
