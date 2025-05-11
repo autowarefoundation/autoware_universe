@@ -16,7 +16,6 @@
 #define AUTOWARE__PROBABILISTIC_OCCUPANCY_GRID_MAP__COSTMAP_2D__OCCUPANCY_GRID_MAP_FIXED_HPP_
 
 #include "autoware/probabilistic_occupancy_grid_map/costmap_2d/occupancy_grid_map_base.hpp"
-#include "autoware/probabilistic_occupancy_grid_map/utils/cuda_pointcloud.hpp"
 
 namespace autoware::occupancy_grid_map
 {
@@ -33,7 +32,8 @@ public:
     const float resolution);
 
   void updateWithPointCloud(
-    const CudaPointCloud2 & raw_pointcloud, const CudaPointCloud2 & obstacle_pointcloud,
+    std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & raw_pointcloud_ptr,
+    std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & obstacle_pointcloud_ptr,
     const Pose & robot_pose, const Pose & scan_origin) override;
 
   void initRosParam(rclcpp::Node & node) override;

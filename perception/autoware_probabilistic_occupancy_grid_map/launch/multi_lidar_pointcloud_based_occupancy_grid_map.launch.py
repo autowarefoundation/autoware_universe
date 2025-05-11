@@ -205,7 +205,8 @@ def launch_setup(context, *args, **kwargs):
                 ("~/output/occupancy_grid_map", fusion_config["fusion_input_ogm_topics"][i]),
             ],
             parameters=[ogm_creation_config],
-            extra_arguments=[{"use_intra_process_comms": LaunchConfiguration("use_intra_process")}],
+            # The whole node can not set use_intra_process due to type negotiation internal topics
+            # extra_arguments=[{"use_intra_process_comms": LaunchConfiguration("use_intra_process")}],
         )
         gridmap_generation_composable_nodes.append(node)
 

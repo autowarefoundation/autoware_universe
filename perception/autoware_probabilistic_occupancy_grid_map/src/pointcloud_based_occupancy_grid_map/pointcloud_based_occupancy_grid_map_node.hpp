@@ -18,13 +18,16 @@
 #include "autoware/probabilistic_occupancy_grid_map/costmap_2d/occupancy_grid_map_base.hpp"
 #include "autoware/probabilistic_occupancy_grid_map/updater/binary_bayes_filter_updater.hpp"
 #include "autoware/probabilistic_occupancy_grid_map/updater/ogm_updater_interface.hpp"
-#include "autoware/probabilistic_occupancy_grid_map/utils/cuda_pointcloud.hpp"
 
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 #include <builtin_interfaces/msg/time.hpp>
+#include <cuda_blackboard/cuda_adaptation.hpp>
+#include <cuda_blackboard/cuda_blackboard_subscriber.hpp>
+#include <cuda_blackboard/cuda_pointcloud2.hpp>
+#include <cuda_blackboard/negotiated_types.hpp>
 #include <laser_geometry/laser_geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -57,8 +60,10 @@ public:
   explicit PointcloudBasedOccupancyGridMapNode(const rclcpp::NodeOptions & node_options);
 
 private:
-  void obstaclePointcloudCallback(const PointCloud2::ConstSharedPtr & input_obstacle_msg);
-  void rawPointcloudCallback(const PointCloud2::ConstSharedPtr & input_raw_msg);
+  void obstaclePointcloudCallback(
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & input_obstacle_msg_ptr);
+  void rawPointcloudCallback(
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & input_raw_msg_ptr);
   void onPointcloudWithObstacleAndRaw();
   void checkProcessingTime(double processing_time_ms);
 
@@ -68,8 +73,10 @@ private:
 
 private:
   rclcpp::Publisher<OccupancyGrid>::SharedPtr occupancy_grid_map_pub_;
-  rclcpp::Subscription<PointCloud2>::SharedPtr obstacle_pointcloud_sub_ptr_;
-  rclcpp::Subscription<PointCloud2>::SharedPtr raw_pointcloud_sub_ptr_;
+  std::unique_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
+    obstacle_pointcloud_sub_ptr_;
+  std::unique_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
+    raw_pointcloud_sub_ptr_;
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{};
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{};
 
@@ -80,8 +87,8 @@ private:
   std::unique_ptr<OccupancyGridMapUpdaterInterface> occupancy_grid_map_updater_ptr_;
 
   cudaStream_t stream_;
-  CudaPointCloud2 raw_pointcloud_;
-  CudaPointCloud2 obstacle_pointcloud_;
+  std::shared_ptr<const cuda_blackboard::CudaPointCloud2> raw_pointcloud_ptr_;
+  std::shared_ptr<const cuda_blackboard::CudaPointCloud2> obstacle_pointcloud_ptr_;
 
   autoware::cuda_utils::CudaUniquePtr<Eigen::Matrix3f> device_rotation_;
   autoware::cuda_utils::CudaUniquePtr<Eigen::Vector3f> device_translation_;
