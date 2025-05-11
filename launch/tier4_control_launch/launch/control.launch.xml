@@ -45,8 +45,18 @@
   <let name="container_executable" value="component_container" unless="$(var use_multithread)"/>
   <let name="container_executable" value="component_container_mt" if="$(var use_multithread)"/>
 
+  <!-- temporary: control_command_gate migration -->
+  <arg name="use_control_command_gate" default="false"/>
+
   <group>
     <push-ros-namespace namespace="control"/>
+
+    <group if="$(var use_control_command_gate)">
+      <include file="$(find-pkg-share autoware_control_command_gate)/launch/control_command_gate.launch.xml"/>
+    </group>
+    <group if="$(var use_control_command_gate)">
+      <include file="$(find-pkg-share autoware_stop_mode_operator)/launch/stop_mode_operator.launch.xml"/>
+    </group>
 
     <group>
       <!-- set a control container to run all required components in the same process -->
@@ -61,8 +71,9 @@
           <param from="$(var shift_decider_param_path)"/>
           <extra_arg name="use_intra_process_comms" value="$(var use_intra_process)"/>
         </composable_node>
+
         <!-- vehicle cmd gate -->
-        <composable_node pkg="autoware_vehicle_cmd_gate" plugin="autoware::vehicle_cmd_gate::VehicleCmdGate" name="vehicle_cmd_gate">
+        <composable_node pkg="autoware_vehicle_cmd_gate" plugin="autoware::vehicle_cmd_gate::VehicleCmdGate" name="vehicle_cmd_gate" unless="$(var use_control_command_gate)">
           <remap from="input/steering" to="/vehicle/status/steering_status"/>
           <remap from="input/operation_mode" to="/system/operation_mode/state"/>
           <remap from="input/auto/control_cmd" to="/control/trajectory_follower/control_cmd"/>
@@ -101,11 +112,13 @@
           <param name="check_external_emergency_heartbeat" value="$(var check_external_emergency_heartbeat)"/>
           <extra_arg name="use_intra_process_comms" value="$(var use_intra_process)"/>
         </composable_node>
+
         <!-- operation mode transition manager -->
         <composable_node
           pkg="autoware_operation_mode_transition_manager"
           plugin="autoware::operation_mode_transition_manager::OperationModeTransitionManager"
           name="autoware_operation_mode_transition_manager"
+          unless="$(var use_control_command_gate)"
         >
           <!-- input -->
           <remap from="kinematics" to="/localization/kinematic_state"/>
