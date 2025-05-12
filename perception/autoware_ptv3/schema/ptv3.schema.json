@@ -83,13 +83,10 @@
         "cloud_capacity",
         "onnx_path",
         "engine_path",
-        "densification_num_past_frames",
-        "densification_world_frame_id",
-        "circle_nms_dist_threshold",
-        "iou_nms_search_distance_2d",
-        "iou_nms_threshold",
-        "yaw_norm_thresholds",
-        "score_threshold"
+        "colors_red",
+        "colors_green",
+        "colors_blue",
+        "ground_prob_threshold"
       ],
       "additionalProperties": false
     }
