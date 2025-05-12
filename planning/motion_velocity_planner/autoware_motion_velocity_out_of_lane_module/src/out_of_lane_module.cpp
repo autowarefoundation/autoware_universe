@@ -29,6 +29,7 @@
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/ros/parameter.hpp>
+#include <autoware_utils/ros/published_time_publisher.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <rclcpp/logging.hpp>
