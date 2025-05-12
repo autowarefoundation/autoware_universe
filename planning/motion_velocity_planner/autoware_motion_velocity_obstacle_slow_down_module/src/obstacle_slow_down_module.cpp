@@ -269,14 +269,16 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
     for (const auto & index : cluster_indices.indices) {
       const auto obstacle_point = autoware::motion_velocity_planner::utils::to_geometry_point(
         filtered_points_ptr->points[index]);
-      // 1. brief filtering - filters out point-cloud points that are far from the trajectory laterally
-      // The lateral distance of the obstacle-point to trajectory is measured below
+      // 1. brief filtering - filters out point-cloud points that are far from the trajectory
+      // laterally The lateral distance of the obstacle-point to trajectory is measured below
       const auto current_lat_dist_from_obstacle_to_traj =
         autoware::motion_utils::calcLateralOffset(traj_points, obstacle_point);
-      // The minimum lateral distance to the trajectory polygon is estimated by assuming that the ego-vehicle is fully perpendicular to the trajectory, in the very worst case
+      // The minimum lateral distance to the trajectory polygon is estimated by assuming that the
+      // ego-vehicle is fully perpendicular to the trajectory, in the very worst case
       const auto min_lat_dist_to_traj_poly =
         std::abs(current_lat_dist_from_obstacle_to_traj) - vehicle_info.max_longitudinal_offset_m;
-      // The minimum lateral distance to the trajectory polygo is then thresholded against the maximum lateral margin
+      // The minimum lateral distance to the trajectory polygo is then thresholded against the
+      // maximum lateral margin
       if (min_lat_dist_to_traj_poly >= 0.0) {
         continue;
       }
@@ -469,7 +471,8 @@ std::vector<SlowDownObstacle> ObstacleSlowDownModule::filter_slow_down_obstacle_
 
   // Get Objects
   const std::vector<autoware::motion_velocity_planner::SlowDownPointData> slow_down_points_data =
-    convert_point_cloud_to_slow_down_points(point_cloud, traj_points, decimated_traj_polys_with_lat_margin, vehicle_info, ego_idx);
+    convert_point_cloud_to_slow_down_points(
+      point_cloud, traj_points, decimated_traj_polys_with_lat_margin, vehicle_info, ego_idx);
 
   // slow down
   std::vector<SlowDownObstacle> slow_down_obstacles;
