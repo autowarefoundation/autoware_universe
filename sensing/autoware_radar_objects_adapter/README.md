@@ -25,4 +25,4 @@ A node that converts radar objects from the sensing definition into a perception
 
 ## Parameters
 
-{{ json_to_markdown("perception/autoware_radar_objects_adapter/schema/radar_objects_adapter.schema.json") }}
+{{ json_to_markdown("sensing/autoware_radar_objects_adapter/schema/radar_objects_adapter.schema.json") }}
