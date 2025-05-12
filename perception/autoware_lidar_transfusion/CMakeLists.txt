@@ -91,6 +91,17 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     lib/transfusion_trt.cpp
   )
 
+  # cSpell:ignore gencode
+  list(APPEND CUDA_NVCC_FLAGS "--expt-relaxed-constexpr -diag-suppress 1675 --extended-lambda")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_80,code=sm_80")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
+  # NOTE(knzo25): PTX support for newer GPUs until we can compile directly
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
+  # TODO(knzo25): enable when the driver supports it
+  # list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
+
   cuda_add_library(${PROJECT_NAME}_cuda_lib SHARED
     lib/postprocess/circle_nms_kernel.cu
     lib/postprocess/postprocess_kernel.cu
