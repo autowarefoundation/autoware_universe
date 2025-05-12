@@ -289,6 +289,7 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::publish
     0) {
     RCLCPP_ERROR(this->get_logger(), "Concatenated cloud is an empty pointcloud.");
     is_concatenated_cloud_empty_ = true;
+    return;
   }
 
   current_concatenate_cloud_timestamp_ =
