@@ -88,8 +88,10 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_80,code=sm_80")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
-  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89") # NOTE(knzo25): PTX support for newer GPUs until we can compile directly
-  #list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120") TODO(knzo25): enable when the driver supports it
+  # NOTE(knzo25): PTX support for newer GPUs until we can compile directly
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
+  # TODO(knzo25): enable when the driver supports it
+  # list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
 
   cuda_add_library(${PROJECT_NAME}_cuda_lib SHARED
     lib/postprocess/postprocess_kernel.cu
