@@ -43,7 +43,7 @@ LaneChangeInterface::LaneChangeInterface(
     objects_of_interest_marker_interface_ptr_map,
   const std::shared_ptr<PlanningFactorInterface> & planning_factor_interface,
   std::unique_ptr<LaneChangeBase> && module_type)
-: SceneModuleInterface{name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface},  // NOLINT
+: SceneModuleInterface{name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface, ModuleStatus::WAITING_APPROVAL},  // NOLINT
   parameters_{std::move(parameters)},
   module_type_{std::move(module_type)}
 {
@@ -105,15 +105,6 @@ BehaviorModuleOutput LaneChangeInterface::plan()
   autoware_utils::ScopedTimeTrack st(__func__, *getTimeKeeper());
   resetPathCandidate();
   resetPathReference();
-
-  // plan() should be called only when the module is in the RUNNING state, but
-  // due to planner manager implementation, it can be called in the IDLE state.
-  // TODO(Azu, Quda): consider a proper fix.
-  if (getCurrentStatus() == ModuleStatus::IDLE) {
-    auto output = getPreviousModuleOutput();
-    path_reference_ = std::make_shared<PathWithLaneId>(output.reference_path);
-    return output;
-  }
 
   auto output = module_type_->generateOutput();
   path_reference_ = std::make_shared<PathWithLaneId>(output.reference_path);
@@ -177,6 +168,9 @@ BehaviorModuleOutput LaneChangeInterface::planWaitingApproval()
 
   if (!module_type_->isValidPath()) {
     path_candidate_ = std::make_shared<PathWithLaneId>();
+    updateRTCStatus(
+      std::numeric_limits<double>::lowest(), std::numeric_limits<double>::lowest(), false,
+      State::WAITING_FOR_EXECUTION);
     return out;
   }
 
@@ -300,7 +294,7 @@ std::pair<LaneChangeStates, std::string_view> LaneChangeInterface::check_transit
     return {LaneChangeStates::Normal, "WaitingForApproval"};
   }
 
-  if (!module_type_->isValidPath()) {
+  if (getCurrentStatus() == ModuleStatus::RUNNING && !module_type_->isValidPath()) {
     return {LaneChangeStates::Cancel, "InvalidPath"};
   }
 
