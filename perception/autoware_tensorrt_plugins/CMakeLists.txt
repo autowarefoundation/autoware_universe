@@ -112,6 +112,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL AND SPCONV_AVAIL)
     src/bev_ops/bev_pool_cuda.cu
   )
 
+  # cSpell:ignore indice
   add_library(${PROJECT_NAME} SHARED
     src/quick_cumsum_cuda_plugin.cpp
     src/quick_cumsum_cuda_plugin_creator.cpp

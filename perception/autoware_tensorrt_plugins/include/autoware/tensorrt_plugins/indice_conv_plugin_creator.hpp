@@ -24,6 +24,7 @@
 namespace nvinfer1::plugin
 {
 
+// cSpell:ignore INDICE Indice
 class IndiceConvPluginCreator : public nvinfer1::IPluginCreatorV3One
 {
 public:

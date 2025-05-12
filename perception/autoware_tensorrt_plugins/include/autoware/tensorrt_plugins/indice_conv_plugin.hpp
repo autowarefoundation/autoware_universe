@@ -28,6 +28,7 @@
 #include <tuple>
 #include <vector>
 
+// cSpell:ignore INDICE Indice
 constexpr char const * const kINDICE_CONV_PLUGIN_NAME{"IndiceConv"};
 constexpr char const * const kINDICE_CONV_PLUGIN_VERSION{"1"};
 constexpr char const * const kINDICE_CONV_PLUGIN_NAMESPACE{""};

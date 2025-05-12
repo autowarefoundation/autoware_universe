@@ -34,6 +34,7 @@
 namespace nvinfer1::plugin
 {
 
+// cSpell:ignore INDICE indice
 GetIndicesPairsPlugin::GetIndicesPairsPlugin(
   const std::string & name, GetIndicesPairsParameters const & params)
 : layer_name_{name}, params_{params}
@@ -265,12 +266,12 @@ std::int32_t GetIndicesPairsPlugin::enqueue(
 
   cudaMemsetAsync(indices_kernel_num.data_ptr(), 0, kernel_volume * sizeof(std::int32_t), stream);
 
-  tv::Tensor out_inds =
+  tv::Tensor out_indices =
     tv::from_blob(outputs[0], {is_subm ? num_act_in : out_indices_num_limit_, 4}, tv::int32, 0);
 
   ws_tensors.insert({SPCONV_ALLOC_PAIR_FWD, pair});
   ws_tensors.insert({SPCONV_ALLOC_INDICE_NUM_PER_LOC, indices_kernel_num});
-  ws_tensors.insert({SPCONV_ALLOC_OUT_INDICES, out_inds});
+  ws_tensors.insert({SPCONV_ALLOC_OUT_INDICES, out_indices});
 
   tv::Tensor input_indices = tv::from_blob(inputs[0], {num_act_in, 4}, tv::int32, 0);
 

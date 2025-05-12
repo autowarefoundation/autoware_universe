@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// cSpell:ignore Indice INDICE Matmul indice
 #include "autoware/tensorrt_plugins/indice_conv_plugin.hpp"
 
 #include "autoware/tensorrt_plugins/plugin_utils.hpp"
