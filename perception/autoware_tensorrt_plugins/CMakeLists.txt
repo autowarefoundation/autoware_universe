@@ -99,7 +99,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL AND SPCONV_AVAIL)
 
   add_definitions("-DTV_CUDA")
 
-  # cSpell:ignore expt
+  # cSpell:ignore expt gencode
   list(APPEND CUDA_NVCC_FLAGS "--expt-relaxed-constexpr -diag-suppress 1675 --extended-lambda")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_80,code=sm_80")
