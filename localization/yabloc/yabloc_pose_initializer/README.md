@@ -63,6 +63,6 @@ Converted model URL
 
 ### Services
 
-| Name               | Type                                                      | Description                     |
-| ------------------ | --------------------------------------------------------- | ------------------------------- |
+| Name               | Type                                                                  | Description                     |
+| ------------------ | --------------------------------------------------------------------- | ------------------------------- |
 | `yabloc_align_srv` | `autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped` | initial pose estimation request |

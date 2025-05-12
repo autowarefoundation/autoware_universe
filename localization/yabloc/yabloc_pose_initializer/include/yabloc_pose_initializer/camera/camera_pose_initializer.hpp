@@ -23,11 +23,11 @@
 #include <opencv2/core.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_localization_msgs/srv/pose_with_covariance_stamped.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <autoware_internal_localization_msgs/srv/pose_with_covariance_stamped.hpp>
 
 #include <memory>
 
