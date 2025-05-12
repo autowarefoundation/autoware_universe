@@ -18,8 +18,8 @@
 #include "autoware/simple_planning_simulator/vehicle_model/sim_model.hpp"
 #include "autoware/simple_planning_simulator/vehicle_model/sim_model_actuation_cmd.hpp"
 #include "autoware_utils_geometry/geometry.hpp"
-#include "autoware_utils_geometry/msg_covariance.hpp"
-#include "autoware_utils_rclcpp/update_param.hpp"
+#include "autoware_utils_geometry/msg/covariance.hpp"
+#include "autoware_utils_rclcpp/parameter.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
 
