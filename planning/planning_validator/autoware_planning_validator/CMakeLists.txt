@@ -4,24 +4,23 @@ project(autoware_planning_validator)
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
-ament_auto_add_library(autoware_planning_validator_helpers SHARED
-  src/utils.cpp
-  src/debug_marker.cpp
-)
-
 # planning validator
 ament_auto_add_library(autoware_planning_validator_component SHARED
+  include/autoware/planning_validator/debug_marker.hpp
+  include/autoware/planning_validator/utils.hpp
   include/autoware/planning_validator/types.hpp
   include/autoware/planning_validator/plugin_interface.hpp
   include/autoware/planning_validator/manager.hpp
   include/autoware/planning_validator/node.hpp
   src/manager.cpp
   src/node.cpp
+  src/debug_marker.cpp
+  src/utils.cpp
 )
-target_link_libraries(autoware_planning_validator_component autoware_planning_validator_helpers)
-rclcpp_components_register_node(autoware_planning_validator_component
+
+rclcpp_components_register_node(${PROJECT_NAME}_component
   PLUGIN "autoware::planning_validator::PlanningValidatorNode"
-  EXECUTABLE planning_validator_node
+  EXECUTABLE ${PROJECT_NAME}_node
 )
 
 # invalid trajectory publisher (for debug)
@@ -41,12 +40,12 @@ rosidl_generate_interfaces(
 
 # to use a message defined in the same package
 if(${rosidl_cmake_VERSION} VERSION_LESS 2.5.0)
-    rosidl_target_interfaces(autoware_planning_validator_component
+    rosidl_target_interfaces(${PROJECT_NAME}_component
     ${PROJECT_NAME} "rosidl_typesupport_cpp")
 else()
     rosidl_get_typesupport_target(
             cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
-    target_link_libraries(autoware_planning_validator_component "${cpp_typesupport_target}")
+    target_link_libraries(${PROJECT_NAME}_component "${cpp_typesupport_target}")
 endif()
 
 # if(BUILD_TESTING)
@@ -67,9 +66,7 @@ endif()
 #   )
 # endif()
 
-ament_auto_package(
-  INSTALL_TO_SHARE
-    include
-    config
-    launch
+ament_auto_package(INSTALL_TO_SHARE
+  config
+  launch
 )

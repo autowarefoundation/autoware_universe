@@ -20,6 +20,7 @@
   <depend>autoware_planning_validator</depend>
   <depend>autoware_trajectory</depend>
   <depend>autoware_utils</depend>
+  <depend>autoware_vehicle_info_utils</depend>
   <depend>pluginlib</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>

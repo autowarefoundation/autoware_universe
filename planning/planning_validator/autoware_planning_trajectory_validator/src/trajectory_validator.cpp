@@ -244,9 +244,9 @@ bool TrajectoryValidator::check_valid_relative_angle(
   if (max_relative_angle > params_.relative_angle.threshold) {
     const auto & p = trajectory.points;
     if (i < p.size() - 3) {
-      // debug_pose_publisher_->pushPoseMarker(p.at(i), "trajectory_relative_angle", 0);
-      // debug_pose_publisher_->pushPoseMarker(p.at(i + 1), "trajectory_relative_angle", 1);
-      // debug_pose_publisher_->pushPoseMarker(p.at(i + 2), "trajectory_relative_angle", 2);
+      context_->debug_pose_publisher->pushPoseMarker(p.at(i), "trajectory_relative_angle", 0);
+      context_->debug_pose_publisher->pushPoseMarker(p.at(i + 1), "trajectory_relative_angle", 1);
+      context_->debug_pose_publisher->pushPoseMarker(p.at(i + 2), "trajectory_relative_angle", 2);
     }
     is_critical_error_ |= params_.relative_angle.is_critical;
     return false;
@@ -269,9 +269,9 @@ bool TrajectoryValidator::check_valid_curvature(
   if (max_curvature > params_.curvature.threshold) {
     const auto & p = trajectory.points;
     if (i > 0 && i < p.size() - 1) {
-      // debug_pose_publisher_->pushPoseMarker(p.at(i - 1), "trajectory_curvature");
-      // debug_pose_publisher_->pushPoseMarker(p.at(i), "trajectory_curvature");
-      // debug_pose_publisher_->pushPoseMarker(p.at(i + 1), "trajectory_curvature");
+      context_->debug_pose_publisher->pushPoseMarker(p.at(i - 1), "trajectory_curvature");
+      context_->debug_pose_publisher->pushPoseMarker(p.at(i), "trajectory_curvature");
+      context_->debug_pose_publisher->pushPoseMarker(p.at(i + 1), "trajectory_curvature");
     }
     is_critical_error_ |= params_.curvature.is_critical;
     return false;
@@ -292,7 +292,7 @@ bool TrajectoryValidator::check_valid_lateral_acceleration(
   const auto [max_lateral_acc, i] = calcMaxLateralAcceleration(trajectory);
   status->max_lateral_acc = max_lateral_acc;
   if (max_lateral_acc > params_.acceleration.lateral_th) {
-    // debug_pose_publisher_->pushPoseMarker(trajectory.points.at(i), "lateral_acceleration");
+    context_->debug_pose_publisher->pushPoseMarker(trajectory.points.at(i), "lateral_acceleration");
     is_critical_error_ |= params_.acceleration.is_critical;
     return false;
   }
@@ -312,7 +312,7 @@ bool TrajectoryValidator::check_valid_lateral_jerk(
   const auto [max_lateral_jerk, i] = calc_max_lateral_jerk(trajectory);
   status->max_lateral_jerk = max_lateral_jerk;
   if (max_lateral_jerk > params_.acceleration.lateral_th) {
-    // debug_pose_publisher_->pushPoseMarker(trajectory.points.at(i), "lateral_jerk");
+    context_->debug_pose_publisher->pushPoseMarker(trajectory.points.at(i), "lateral_jerk");
     is_critical_error_ |= params_.acceleration.is_critical;
     return false;
   }
@@ -333,7 +333,7 @@ bool TrajectoryValidator::check_valid_min_longitudinal_acceleration(
   status->min_longitudinal_acc = min_longitudinal_acc;
 
   if (min_longitudinal_acc < params_.acceleration.longitudinal_min_th) {
-    // debug_pose_publisher_->pushPoseMarker(trajectory.points.at(i).pose, "min_longitudinal_acc");
+    context_->debug_pose_publisher->pushPoseMarker(trajectory.points.at(i).pose, "min_longitudinal_acc");
     is_critical_error_ |= params_.acceleration.is_critical;
     return false;
   }
@@ -354,7 +354,7 @@ bool TrajectoryValidator::check_valid_max_longitudinal_acceleration(
   status->max_longitudinal_acc = max_longitudinal_acc;
 
   if (max_longitudinal_acc > params_.acceleration.longitudinal_max_th) {
-    // debug_pose_publisher_->pushPoseMarker(trajectory.points.at(i).pose, "max_longitudinal_acc");
+    context_->debug_pose_publisher->pushPoseMarker(trajectory.points.at(i).pose, "max_longitudinal_acc");
     is_critical_error_ |= params_.acceleration.is_critical;
     return false;
   }
@@ -376,7 +376,7 @@ bool TrajectoryValidator::check_valid_steering(
   status->max_steering = max_steering;
 
   if (max_steering > params_.steering.threshold) {
-    // debug_pose_publisher_->pushPoseMarker(trajectory.points.at(i).pose, "max_steering");
+    context_->debug_pose_publisher->pushPoseMarker(trajectory.points.at(i).pose, "max_steering");
     is_critical_error_ |= params_.steering.is_critical;
     return false;
   }
@@ -398,7 +398,7 @@ bool TrajectoryValidator::check_valid_steering_rate(
   status->max_steering_rate = max_steering_rate;
 
   if (max_steering_rate > params_.steering_rate.threshold) {
-    // debug_pose_publisher_->pushPoseMarker(trajectory.points.at(i).pose, "max_steering_rate");
+    context_->debug_pose_publisher->pushPoseMarker(trajectory.points.at(i).pose, "max_steering_rate");
     is_critical_error_ |= params_.steering.is_critical;
     return false;
   }
@@ -610,7 +610,7 @@ bool TrajectoryValidator::check_trajectory_shift(
     ego_lat_dist > params_.trajectory_shift.lat_shift_th &&
     lat_shift > params_.trajectory_shift.lat_shift_th) {
     is_critical_error_ |= params_.trajectory_shift.is_critical;
-    // debug_pose_publisher_->pushPoseMarker(nearest_pose, "trajectory_shift");
+    context_->debug_pose_publisher->pushPoseMarker(nearest_pose, "trajectory_shift");
     is_valid = false;
   }
 
@@ -639,7 +639,7 @@ bool TrajectoryValidator::check_trajectory_shift(
   if (*nearest_seg_idx == 0) {
     if (lon_shift > params_.trajectory_shift.forward_shift_th) {
       is_critical_error_ |= params_.trajectory_shift.is_critical;
-      // debug_pose_publisher_->pushPoseMarker(nearest_pose, "trajectory_shift");
+      context_->debug_pose_publisher->pushPoseMarker(nearest_pose, "trajectory_shift");
       is_valid = false;
     }
     return is_valid;
@@ -648,7 +648,7 @@ bool TrajectoryValidator::check_trajectory_shift(
   // if the nearest segment is the last segment, check backward shift
   if (lon_shift < 0.0 && std::abs(lon_shift) > params_.trajectory_shift.backward_shift_th) {
     is_critical_error_ |= params_.trajectory_shift.is_critical;
-    // debug_pose_publisher_->pushPoseMarker(nearest_pose, "trajectory_shift");
+    context_->debug_pose_publisher->pushPoseMarker(nearest_pose, "trajectory_shift");
     is_valid = false;
   }
 
