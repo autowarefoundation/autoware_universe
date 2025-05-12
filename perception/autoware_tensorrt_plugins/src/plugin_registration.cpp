@@ -65,11 +65,7 @@ extern "C" nvinfer1::IPluginCreatorInterface * const * getCreators(std::int32_t 
   static nvinfer1::plugin::QuickCumsumCudaPluginCreator quick_cumsum_cuda_plugin_creator{};
   static nvinfer1::plugin::GetIndicesPairsImplicitGemmPluginCreator
     get_indices_pairs_implicit_gemm_plugin_creator{};
-  static nvinfer1::plugin::GetIndicesPairsPluginCreator get_indices_pairs_plugin_creator{};
   static nvinfer1::plugin::ImplicitGemmPluginCreator implicit_gemm_plugin_creator{};
-  static nvinfer1::plugin::IndiceConvPluginCreator
-    indice_conv_plugin_creator{};  // cSpell:ignore Indice indice
-  static nvinfer1::plugin::SegmentCSRPluginCreator segment_csr_plugin_creator{};
 
   static nvinfer1::IPluginCreatorInterface * const plugin_creator_list[] = {
     &unique_plugin_creator, &quick_cumsum_cuda_plugin_creator,
