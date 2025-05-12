@@ -29,6 +29,8 @@ The implementation mostly follows [torch_scatter](https://github.com/pytorch/pyt
 The codes under the `src/unique_ops` and `include/autoware/unique_ops` directory are copied and modified from [Pytorch's implementation](https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/cuda/Unique.cu).
 The original codes is provided under Pytorch's license as follows:
 
+<!-- cSpell:ignore Yangqing Kakao IDIAP -->
+
 > Pytorch License
 >
 > From PyTorch:
