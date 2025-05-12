@@ -100,8 +100,7 @@ private:
     const rclcpp::Time & predicted_objects_stamp, const VehicleInfo & vehicle_info,
     const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check);
   std::vector<SlowDownObstacle> filter_slow_down_obstacle_for_point_cloud(
-    const Odometry & odometry, const double ego_nearest_dist_threshold,
-    const double ego_nearest_yaw_threshold, const std::vector<TrajectoryPoint> & traj_points,
+    const Odometry & odometry, const std::vector<TrajectoryPoint> & traj_points,
     const std::vector<TrajectoryPoint> & decimated_traj_points,
     const PlannerData::Pointcloud & point_cloud, const VehicleInfo & vehicle_info,
     const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check, size_t ego_idx);

@@ -249,8 +249,6 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
 
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  const auto & p = obstacle_filtering_param_;
-
   std::vector<autoware::motion_velocity_planner::SlowDownPointData> slow_down_points;
 
   const PointCloud::Ptr filtered_points_ptr =
@@ -286,8 +284,7 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
       // precise filtering
       const double precise_min_lat_dist_to_traj_poly =
         utils::get_dist_to_traj_poly(obstacle_point, decimated_traj_polys);
-
-      if (precise_min_lat_dist_to_traj_poly >= 0.0) {
+      if (precise_min_lat_dist_to_traj_poly > 0.0) {
         continue;
       }
 
@@ -344,12 +341,11 @@ VelocityPlanningResult ObstacleSlowDownModule::plan(
     planner_data->vehicle_info_, planner_data->trajectory_polygon_collision_check);
 
   auto slow_down_obstacles_for_point_cloud = filter_slow_down_obstacle_for_point_cloud(
-    planner_data->current_odometry, planner_data->ego_nearest_dist_threshold,
-    planner_data->ego_nearest_yaw_threshold, raw_trajectory_points, decimated_traj_points,
+    planner_data->current_odometry, raw_trajectory_points, decimated_traj_points,
     planner_data->no_ground_pointcloud, planner_data->vehicle_info_,
     planner_data->trajectory_polygon_collision_check,
     planner_data->find_index(raw_trajectory_points, planner_data->current_odometry.pose.pose));
-
+ 
   const auto slow_down_obstacles = autoware::motion_velocity_planner::utils::concat_vectors(
     std::move(slow_down_obstacles_for_predicted_object),
     std::move(slow_down_obstacles_for_point_cloud));
@@ -447,8 +443,7 @@ ObstacleSlowDownModule::filter_slow_down_obstacle_for_predicted_object(
 }
 
 std::vector<SlowDownObstacle> ObstacleSlowDownModule::filter_slow_down_obstacle_for_point_cloud(
-  const Odometry & odometry, const double ego_nearest_dist_threshold,
-  const double ego_nearest_yaw_threshold, const std::vector<TrajectoryPoint> & traj_points,
+  const Odometry & odometry, const std::vector<TrajectoryPoint> & traj_points,
   const std::vector<TrajectoryPoint> & decimated_traj_points,
   const PlannerData::Pointcloud & point_cloud, const VehicleInfo & vehicle_info,
   const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check, size_t ego_idx)
