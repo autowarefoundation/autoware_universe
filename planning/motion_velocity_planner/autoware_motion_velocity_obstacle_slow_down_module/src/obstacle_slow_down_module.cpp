@@ -240,14 +240,16 @@ void ObstacleSlowDownModule::update_parameters(
 std::vector<autoware::motion_velocity_planner::SlowDownPointData>
 ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
   const PlannerData::Pointcloud & pointcloud, const std::vector<TrajectoryPoint> & traj_points,
-  const std::vector<Polygon2d> & decimated_traj_polys, const VehicleInfo & vehicle_info,
-  const size_t ego_idx)
+  const std::vector<Polygon2d> & decimated_traj_polys_with_lat_margin,
+  const VehicleInfo & vehicle_info, const size_t ego_idx)
 {
   if (pointcloud.pointcloud.empty()) {
     return {};
   }
 
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  const auto & p = obstacle_filtering_param_;
 
   std::vector<autoware::motion_velocity_planner::SlowDownPointData> slow_down_points;
 
@@ -275,15 +277,15 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
       // ego-vehicle is fully perpendicular to the trajectory, in the very worst case
       const auto min_lat_dist_to_traj_poly =
         std::abs(current_lat_dist_from_obstacle_to_traj) - vehicle_info.max_longitudinal_offset_m;
-      // The minimum lateral distance to the trajectory polygo is then thresholded against the
-      // maximum lateral margin
-      if (min_lat_dist_to_traj_poly >= 0.0) {
+        // The trajectory polygon is ignored if the minimum lateral distance is more than maximum
+        // lateral margin
+      if (min_lat_dist_to_traj_poly >= p.max_lat_margin) {
         continue;
       }
 
       // precise filtering
       const double precise_min_lat_dist_to_traj_poly =
-        utils::get_dist_to_traj_poly(obstacle_point, decimated_traj_polys);
+        utils::get_dist_to_traj_poly(obstacle_point, decimated_traj_polys_with_lat_margin);
       if (precise_min_lat_dist_to_traj_poly > 0.0) {
         continue;
       }
@@ -329,23 +331,34 @@ VelocityPlanningResult ObstacleSlowDownModule::plan(
   debug_data_ptr_ = std::make_shared<DebugData>();
   decimated_traj_polys_ = std::nullopt;
 
+  // calculate collision points with trajectory with lateral stop margin
+  // NOTE: For additional margin, hysteresis is not divided by two.
+  const auto & p = obstacle_filtering_param_;
+  const auto & tp = planner_data->trajectory_polygon_collision_check;
+
   const auto decimated_traj_points = utils::decimate_trajectory_points_from_ego(
     raw_trajectory_points, planner_data->current_odometry.pose.pose,
     planner_data->ego_nearest_dist_threshold, planner_data->ego_nearest_yaw_threshold,
     planner_data->trajectory_polygon_collision_check.decimate_trajectory_step_length, 0.0);
 
+  const auto decimated_traj_polys_with_lat_margin = polygon_utils::create_one_step_polygons(
+    decimated_traj_points, planner_data->vehicle_info_, planner_data->current_odometry.pose.pose,
+    p.max_lat_margin + p.lat_hysteresis_margin, tp.enable_to_consider_current_pose,
+    tp.time_to_convergence, tp.decimate_trajectory_step_length);
+  debug_data_ptr_->decimated_traj_polys = decimated_traj_polys_with_lat_margin;
+
   auto slow_down_obstacles_for_predicted_object = filter_slow_down_obstacle_for_predicted_object(
     planner_data->current_odometry, planner_data->ego_nearest_dist_threshold,
-    planner_data->ego_nearest_yaw_threshold, raw_trajectory_points, decimated_traj_points,
-    planner_data->objects, rclcpp::Time(planner_data->predicted_objects_header.stamp),
-    planner_data->vehicle_info_, planner_data->trajectory_polygon_collision_check);
+    planner_data->ego_nearest_yaw_threshold, decimated_traj_polys_with_lat_margin,
+    raw_trajectory_points, planner_data->objects,
+    rclcpp::Time(planner_data->predicted_objects_header.stamp), planner_data->vehicle_info_,
+    planner_data->trajectory_polygon_collision_check);
 
   auto slow_down_obstacles_for_point_cloud = filter_slow_down_obstacle_for_point_cloud(
-    planner_data->current_odometry, raw_trajectory_points, decimated_traj_points,
-    planner_data->no_ground_pointcloud, planner_data->vehicle_info_,
-    planner_data->trajectory_polygon_collision_check,
+    raw_trajectory_points, decimated_traj_polys_with_lat_margin, planner_data->no_ground_pointcloud,
+    planner_data->vehicle_info_,
     planner_data->find_index(raw_trajectory_points, planner_data->current_odometry.pose.pose));
- 
+
   const auto slow_down_obstacles = autoware::motion_velocity_planner::utils::concat_vectors(
     std::move(slow_down_obstacles_for_predicted_object),
     std::move(slow_down_obstacles_for_point_cloud));
@@ -380,8 +393,9 @@ std::string ObstacleSlowDownModule::get_module_name() const
 std::vector<SlowDownObstacle>
 ObstacleSlowDownModule::filter_slow_down_obstacle_for_predicted_object(
   const Odometry & odometry, const double ego_nearest_dist_threshold,
-  const double ego_nearest_yaw_threshold, const std::vector<TrajectoryPoint> & traj_points,
-  const std::vector<TrajectoryPoint> & decimated_traj_points,
+  const double ego_nearest_yaw_threshold,
+  const std::vector<Polygon2d> & decimated_traj_polys_with_lat_margin,
+  const std::vector<TrajectoryPoint> & traj_points,
   const std::vector<std::shared_ptr<PlannerData::Object>> & objects,
   const rclcpp::Time & predicted_objects_stamp, const VehicleInfo & vehicle_info,
   const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check)
@@ -389,16 +403,6 @@ ObstacleSlowDownModule::filter_slow_down_obstacle_for_predicted_object(
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const auto & current_pose = odometry.pose.pose;
-
-  // calculate collision points with trajectory with lateral stop margin
-  // NOTE: For additional margin, hysteresis is not divided by two.
-  const auto & p = obstacle_filtering_param_;
-  const auto & tp = trajectory_polygon_collision_check;
-  const auto decimated_traj_polys_with_lat_margin = polygon_utils::create_one_step_polygons(
-    decimated_traj_points, vehicle_info, odometry.pose.pose,
-    p.max_lat_margin + p.lat_hysteresis_margin, tp.enable_to_consider_current_pose,
-    tp.time_to_convergence, tp.decimate_trajectory_step_length);
-  debug_data_ptr_->decimated_traj_polys = decimated_traj_polys_with_lat_margin;
 
   // slow down
   slow_down_condition_counter_.reset_current_uuids();
@@ -443,26 +447,15 @@ ObstacleSlowDownModule::filter_slow_down_obstacle_for_predicted_object(
 }
 
 std::vector<SlowDownObstacle> ObstacleSlowDownModule::filter_slow_down_obstacle_for_point_cloud(
-  const Odometry & odometry, const std::vector<TrajectoryPoint> & traj_points,
-  const std::vector<TrajectoryPoint> & decimated_traj_points,
-  const PlannerData::Pointcloud & point_cloud, const VehicleInfo & vehicle_info,
-  const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check, size_t ego_idx)
+  const std::vector<TrajectoryPoint> & traj_points,
+  const std::vector<Polygon2d> & decimated_traj_polys_with_lat_margin,
+  const PlannerData::Pointcloud & point_cloud, const VehicleInfo & vehicle_info, size_t ego_idx)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   if (!obstacle_filtering_param_.use_pointcloud) {
     return std::vector<SlowDownObstacle>{};
   }
-
-  // calculate collision points with trajectory with lateral stop margin
-  // NOTE: For additional margin, hysteresis is not divided by two.
-  const auto & p = obstacle_filtering_param_;
-  const auto & tp = trajectory_polygon_collision_check;
-  const auto decimated_traj_polys_with_lat_margin = polygon_utils::create_one_step_polygons(
-    decimated_traj_points, vehicle_info, odometry.pose.pose,
-    p.max_lat_margin + p.lat_hysteresis_margin, tp.enable_to_consider_current_pose,
-    tp.time_to_convergence, tp.decimate_trajectory_step_length);
-  debug_data_ptr_->decimated_traj_polys = decimated_traj_polys_with_lat_margin;
 
   // Get Objects
   const std::vector<autoware::motion_velocity_planner::SlowDownPointData> slow_down_points_data =
