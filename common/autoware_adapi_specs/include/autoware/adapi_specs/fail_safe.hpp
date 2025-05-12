@@ -17,7 +17,9 @@
 
 #include <rclcpp/qos.hpp>
 
+#include <autoware_adapi_v1_msgs/msg/mrm_request_list.hpp>
 #include <autoware_adapi_v1_msgs/msg/mrm_state.hpp>
+#include <autoware_adapi_v1_msgs/srv/send_mrm_request.hpp>
 
 namespace autoware::adapi_specs::fail_safe
 {
@@ -26,6 +28,21 @@ struct MrmState
 {
   using Message = autoware_adapi_v1_msgs::msg::MrmState;
   static constexpr char name[] = "/api/fail_safe/mrm_state";
+  static constexpr size_t depth = 1;
+  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
+  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;
+};
+
+struct SendMrmRequest
+{
+  using Service = autoware_adapi_v1_msgs::srv::SendMrmRequest;
+  static constexpr char name[] = "/api/fail_safe/mrm_request/send";
+};
+
+struct MrmRequestList
+{
+  using Message = autoware_adapi_v1_msgs::msg::MrmRequestList;
+  static constexpr char name[] = "/api/fail_safe/mrm_request/list";
   static constexpr size_t depth = 1;
   static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
   static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;

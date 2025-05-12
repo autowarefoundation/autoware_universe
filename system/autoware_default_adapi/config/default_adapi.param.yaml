@@ -22,3 +22,9 @@
 /adapi/node/manual/remote:
   ros__parameters:
     mode: remote
+
+/adapi/node/mrm_request:
+  ros__parameters:
+    diagnostic_updater:
+      period: 1.0
+      use_fqn: true
