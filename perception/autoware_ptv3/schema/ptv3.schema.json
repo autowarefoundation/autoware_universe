@@ -76,8 +76,6 @@
         }
       },
       "required": [
-        "sensor_fusion",
-        "max_camera_lidar_delay",
         "plugins_path",
         "trt_precision",
         "cloud_capacity",
