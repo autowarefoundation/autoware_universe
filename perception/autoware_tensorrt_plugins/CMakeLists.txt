@@ -101,20 +101,30 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL AND SPCONV_AVAIL)
 
   # cSpell:ignore expt
   list(APPEND CUDA_NVCC_FLAGS "--expt-relaxed-constexpr -diag-suppress 1675 --extended-lambda")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_80,code=sm_80")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89") # NOTE(knzo25): PTX support for newer GPUs until we can compile directly
+  #list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120") TODO(knzo25): enable when the driver supports it
 
   cuda_add_library(bev_ops SHARED
     src/bev_ops/bev_pool_cuda.cu
   )
 
   add_library(${PROJECT_NAME} SHARED
-    src/plugin_utils.cpp
     src/quick_cumsum_cuda_plugin.cpp
     src/quick_cumsum_cuda_plugin_creator.cpp
     src/get_indices_pairs_implicit_gemm_plugin_creator.cpp
     src/get_indices_pairs_implicit_gemm_plugin.cpp
+    src/get_indices_pairs_plugin_creator.cpp
+    src/get_indices_pairs_plugin.cpp
     src/implicit_gemm_plugin_creator.cpp
     src/implicit_gemm_plugin.cpp
+    src/indice_conv_plugin_creator.cpp
+    src/indice_conv_plugin.cpp
     src/plugin_registration.cpp
+    src/plugin_utils.cpp
   )
 
   target_compile_definitions(${PROJECT_NAME} PRIVATE _GLIBCXX_USE_CXX11_ABI=1)
