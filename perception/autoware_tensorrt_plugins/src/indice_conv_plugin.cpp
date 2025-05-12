@@ -245,35 +245,19 @@ std::int32_t IndiceConvPlugin::enqueue(
 
   auto & tuner_ptr = dtype == tv::float32 ? tuner_fp32_ptr_ : tuner_fp16_ptr_;
 
-  if (params_.is_subm) {
-    std::unordered_map<std::string, tv::Tensor> tensor_dict{
-      {SPCONV_ALLOC_FEATURES, input_features},
-      {SPCONV_ALLOC_FILTERS, weights},
-      {SPCONV_ALLOC_OUT_FEATURES, out_features}};
-    StaticAllocator alloc2(tensor_dict);
+  std::unordered_map<std::string, tv::Tensor> tensor_dict{
+    {SPCONV_ALLOC_FEATURES, input_features},
+    {SPCONV_ALLOC_FILTERS, weights},
+    {SPCONV_ALLOC_OUT_FEATURES, out_features}};
+  StaticAllocator alloc2(tensor_dict);
 
-    SimpleExternalSpconvMatmul ext_mm(alloc2);
+  SimpleExternalSpconvMatmul ext_mm(alloc2);
 
-    ConvGemmOps::indice_conv(
-      alloc2, ext_mm, *tuner_ptr, true, false, input_features, weights, pairs, pairs_num, arch_,
-      out_features.dim(0), false, params_.is_subm,
-      static_cast<int>(tv::gemm::SparseConvAlgo::kNative), reinterpret_cast<std::uintptr_t>(stream),
-      tv::Tensor(), 0.f, 0.f, tv::gemm::Activation::kNone, false);
-  } else {
-    std::unordered_map<std::string, tv::Tensor> tensor_dict{
-      {SPCONV_ALLOC_FEATURES, input_features},
-      {SPCONV_ALLOC_FILTERS, weights},
-      {SPCONV_ALLOC_OUT_FEATURES, out_features}};
-
-    StaticAllocator alloc2(tensor_dict);
-
-    SimpleExternalSpconvMatmul ext_mm(alloc2);
-    ConvGemmOps::indice_conv(
-      alloc2, ext_mm, *tuner_ptr, true, false, input_features, weights, pairs, pairs_num, arch_,
-      out_features.dim(0), false, params_.is_subm,
-      static_cast<int>(tv::gemm::SparseConvAlgo::kNative), reinterpret_cast<std::uintptr_t>(stream),
-      tv::Tensor(), 0.f, 0.f, tv::gemm::Activation::kNone, false);
-  }
+  ConvGemmOps::indice_conv(
+    alloc2, ext_mm, *tuner_ptr, true, false, input_features, weights, pairs, pairs_num, arch_,
+    out_features.dim(0), false, params_.is_subm,
+    static_cast<int>(tv::gemm::SparseConvAlgo::kNative), reinterpret_cast<std::uintptr_t>(stream),
+    tv::Tensor(), 0.f, 0.f, tv::gemm::Activation::kNone, false);
 
   return 0;
 }
