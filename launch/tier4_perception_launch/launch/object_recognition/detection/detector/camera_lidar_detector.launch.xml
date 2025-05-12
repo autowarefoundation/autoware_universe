@@ -51,6 +51,9 @@
   <arg name="input/camera7/info"/>
   <arg name="input/camera7/rois"/>
 
+  <arg name="segmentation_pointcloud_fusion_camera_ids"/>
+  <arg name="image_topic_name"/>
+
   <arg name="node/pointcloud_container"/>
   <arg name="input/pointcloud"/>
   <arg name="input/pointcloud_map/pointcloud"/>
@@ -142,9 +145,11 @@
 
   <!-- Image_segmentation based filter, apply for camera0 only-->
   <group>
-    <include file="$(find-pkg-share autoware_image_projection_based_fusion)/launch/segmentation_pointcloud_fusion.launch.xml" if="$(var use_image_segmentation_based_filter)">
+    <include file="$(find-pkg-share autoware_image_projection_based_fusion)/launch/segmentation_pointcloud_fusion.launch.py" if="$(var use_image_segmentation_based_filter)">
       <arg name="input/pointcloud" value="$(var segmentation_based_filtered/input/pointcloud)"/>
       <arg name="output/pointcloud" value="$(var segmentation_based_filtered/output/pointcloud)"/>
+      <arg name="image_topic_name" value="$(var image_topic_name)"/>
+      <arg name="fusion_camera_ids" value="$(var segmentation_pointcloud_fusion_camera_ids)"/>
     </include>
   </group>
 
