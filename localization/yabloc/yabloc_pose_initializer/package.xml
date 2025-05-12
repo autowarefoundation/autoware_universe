@@ -24,7 +24,7 @@
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>
-  <depend>tier4_localization_msgs</depend>
+  <depend>autoware_internal_localization_msgs</depend>
   <depend>visualization_msgs</depend>
   <depend>yabloc_common</depend>
 
