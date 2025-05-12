@@ -49,9 +49,12 @@ namespace autoware::default_adapi
 {
 
 RoutingNode::RoutingNode(const rclcpp::NodeOptions & options)
-: Node("routing", options), vehicle_stop_checker_(this)
+: Node("routing", options), diagnostics_(this), vehicle_stop_checker_(this)
 {
   stop_check_duration_ = declare_parameter<double>("stop_check_duration");
+
+  diagnostics_.setHardwareID("none");
+  diagnostics_.add("state", this, &RoutingNode::diagnose_state);
 
   const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
   group_cli_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
@@ -74,6 +77,29 @@ RoutingNode::RoutingNode(const rclcpp::NodeOptions & options)
   is_autoware_control_ = false;
   is_auto_mode_ = false;
   state_.state = State::Message::UNKNOWN;
+}
+
+void RoutingNode::diagnose_state(diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  using diagnostic_msgs::msg::DiagnosticStatus;
+  const auto message = std::to_string(state_.state);
+
+  switch (state_.state) {
+    case State::Message::SET:
+    case State::Message::REROUTING:
+    case State::Message::ARRIVED:
+      stat.summary(DiagnosticStatus::OK, message);
+      break;
+    case State::Message::UNKNOWN:
+    case State::Message::INITIALIZING:
+    case State::Message::UNSET:
+    case State::Message::ROUTING:
+    case State::Message::ABORTED:
+    case State::Message::INTERRUPTED:
+    default:
+      stat.summary(DiagnosticStatus::ERROR, message);
+      break;
+  }
 }
 
 void RoutingNode::change_stop_mode()

@@ -20,6 +20,7 @@
 #include <autoware/component_interface_specs_universe/system.hpp>
 #include <autoware/component_interface_utils/status.hpp>
 #include <autoware/motion_utils/vehicle/vehicle_state_checker.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 // This file should be included after messages.
@@ -57,10 +58,8 @@ private:
   Cli<autoware::component_interface_specs_universe::system::ChangeOperationMode>
     cli_operation_mode_;
   Sub<autoware::component_interface_specs_universe::system::OperationModeState> sub_operation_mode_;
-  bool is_autoware_control_;
-  bool is_auto_mode_;
-  State::Message state_;
 
+  void diagnose_state(diagnostic_updater::DiagnosticStatusWrapper & stat);
   void change_stop_mode();
   void on_operation_mode(const OperationModeState::Message::ConstSharedPtr msg);
   void on_state(const State::Message::ConstSharedPtr msg);
@@ -80,6 +79,11 @@ private:
   void on_change_route(
     const autoware::adapi_specs::routing::SetRoute::Service::Request::SharedPtr req,
     const autoware::adapi_specs::routing::SetRoute::Service::Response::SharedPtr res);
+
+  bool is_autoware_control_;
+  bool is_auto_mode_;
+  State::Message state_;
+  diagnostic_updater::Updater diagnostics_;
 
   // Stop check for route clear.
   autoware::motion_utils::VehicleStopChecker vehicle_stop_checker_;

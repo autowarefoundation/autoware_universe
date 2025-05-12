@@ -17,6 +17,7 @@
 
 #include <autoware/adapi_specs/localization.hpp>
 #include <autoware/component_interface_specs_universe/localization.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 // This file should be included after messages.
@@ -31,15 +32,22 @@ public:
   explicit LocalizationNode(const rclcpp::NodeOptions & options);
 
 private:
+  using ImplState = autoware::component_interface_specs_universe::localization::InitializationState;
+
   rclcpp::CallbackGroup::SharedPtr group_cli_;
   Srv<autoware::adapi_specs::localization::Initialize> srv_initialize_;
   Pub<autoware::adapi_specs::localization::InitializationState> pub_state_;
   Cli<autoware::component_interface_specs_universe::localization::Initialize> cli_initialize_;
   Sub<autoware::component_interface_specs_universe::localization::InitializationState> sub_state_;
 
+  void diagnose_state(diagnostic_updater::DiagnosticStatusWrapper & stat);
+  void on_state(const ImplState::Message::ConstSharedPtr msg);
   void on_initialize(
     const autoware::adapi_specs::localization::Initialize::Service::Request::SharedPtr req,
     const autoware::adapi_specs::localization::Initialize::Service::Response::SharedPtr res);
+
+  ImplState::Message state_;
+  diagnostic_updater::Updater diagnostics_;
 };
 
 }  // namespace autoware::default_adapi
