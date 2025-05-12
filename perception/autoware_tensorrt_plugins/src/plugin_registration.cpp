@@ -68,7 +68,7 @@ extern "C" nvinfer1::IPluginCreatorInterface * const * getCreators(std::int32_t 
   static nvinfer1::plugin::ImplicitGemmPluginCreator implicit_gemm_plugin_creator{};
 
   static nvinfer1::IPluginCreatorInterface * const plugin_creator_list[] = {
-    &quick_cumsum_cuda_plugin_creator, &get_indices_pairs_implicit_gemm_plugin_creator,
-    &implicit_gemm_plugin_creator};
+    &argsort_plugin_creator, &quick_cumsum_cuda_plugin_creator,
+    &get_indices_pairs_implicit_gemm_plugin_creator, &implicit_gemm_plugin_creator};
   return plugin_creator_list;
 }
