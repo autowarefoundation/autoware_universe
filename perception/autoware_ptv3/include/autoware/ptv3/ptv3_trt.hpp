@@ -43,6 +43,7 @@ public:
 
   bool fake_segment(sensor_msgs::msg::PointCloud2 & out_msg);
 
+  // cSpell:ignore probs
   bool segment(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
     bool should_publish_segmented_pointcloud, bool should_publish_ground_segmented_pointcloud,
@@ -52,6 +53,7 @@ public:
     std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
   void setPublishGroundSegmentedPointcloud(
     std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
+  // cSpell:ignore Probs
   void setPublishProbsPointcloud(
     std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func);
 

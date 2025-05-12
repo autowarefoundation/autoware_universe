@@ -47,6 +47,7 @@ public:
   void publishGroundSegmentedPointcloud(
     std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr);
 
+  // cSpell:ignore Probs
   void publishProbsPointcloud(std::unique_ptr<const cuda_blackboard::CudaPointCloud2> msg_ptr);
 
 private:
@@ -61,6 +62,7 @@ private:
   std::unique_ptr<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>
     ground_segmented_pointcloud_pub_;
 
+  // cSpell:ignore probs
   std::unique_ptr<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>
     probs_pointcloud_pub_;
 

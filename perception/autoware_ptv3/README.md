@@ -20,6 +20,8 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 
 ### Output
 
+<!-- cSpell:ignore probs -->
+
 | Name                                   | Type                                    | Description                               |
 | -------------------------------------- | --------------------------------------- | ----------------------------------------- |
 | `~/output/segmented/pointcloud`        | `sensor_msgs::msg::PointCloud2`         | RGB segmented pointcloud.                 |

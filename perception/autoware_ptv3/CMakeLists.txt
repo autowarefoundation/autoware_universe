@@ -82,7 +82,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-g -G")
   endif()
 
-  # cSpell:ignore expt
+  # cSpell:ignore expt gencode
   list(APPEND CUDA_NVCC_FLAGS "--expt-relaxed-constexpr -diag-suppress 1675 --extended-lambda")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
   list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_80,code=sm_80")

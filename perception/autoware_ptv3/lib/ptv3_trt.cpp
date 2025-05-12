@@ -60,6 +60,7 @@ void PTv3TRT::setPublishGroundSegmentedPointcloud(
   publish_ground_segmented_pointcloud_ = std::move(func);
 }
 
+// cSpell:ignore Probs probs
 void PTv3TRT::setPublishProbsPointcloud(
   std::function<void(std::unique_ptr<const cuda_blackboard::CudaPointCloud2>)> func)
 {

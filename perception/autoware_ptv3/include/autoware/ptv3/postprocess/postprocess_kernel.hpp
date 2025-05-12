@@ -40,6 +40,7 @@ public:
     const float * input_features, const std::int64_t * pred_labels, float * output_points,
     std::size_t num_points);
 
+  // cSpell:ignore Probs probs
   void createProbsPointcloud(
     const float * input_features, const float * pred_probs, float * output_points,
     std::size_t num_classes, std::size_t num_points);

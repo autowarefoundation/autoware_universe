@@ -37,6 +37,7 @@ __global__ void paintPointcloudKernel(
     make_float4(input_features[idx].x, input_features[idx].y, input_features[idx].z, color);
 }
 
+// cSpell:ignore Probs probs
 __global__ void createProbsPointcloudKernel(
   const float4 * input_features, const float * pred_probs, float * output_points,
   std::size_t num_classes, std::size_t num_points)
