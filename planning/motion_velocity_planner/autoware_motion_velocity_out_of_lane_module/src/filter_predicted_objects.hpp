@@ -20,6 +20,7 @@
 #include <autoware/motion_velocity_planner_common/planner_data.hpp>
 
 #include <optional>
+#include <vector>
 
 namespace autoware::motion_velocity_planner::out_of_lane
 {
@@ -44,6 +45,11 @@ std::optional<autoware_utils::LineString2d> find_next_stop_line(
 void cut_predicted_path_beyond_red_lights(
   autoware_perception_msgs::msg::PredictedPath & predicted_path, const EgoData & ego_data,
   const double object_front_overhang);
+
+/// @brief resample the predicted paths such that there are no gaps between successive footprints
+void resample_predicted_paths(
+  std::vector<autoware_perception_msgs::msg::PredictedPath> & predicted_paths,
+  const autoware_perception_msgs::msg::Shape & shape);
 
 /// @brief filter predicted objects and their predicted paths
 /// @param [in] planner_data planner data
