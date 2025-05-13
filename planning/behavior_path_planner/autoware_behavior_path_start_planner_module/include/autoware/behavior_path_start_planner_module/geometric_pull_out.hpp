@@ -20,7 +20,7 @@
 #include "autoware/behavior_path_start_planner_module/pull_out_planner_base.hpp"
 #include "autoware_utils/system/time_keeper.hpp"
 
-#include <autoware/lane_departure_checker/lane_departure_checker.hpp>
+#include <autoware/boundary_departure_checker/boundary_departure_checker.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
@@ -44,7 +44,8 @@ public:
 
   GeometricParallelParking planner_;
   ParallelParkingParameters parallel_parking_parameters_;
-  std::shared_ptr<autoware::lane_departure_checker::LaneDepartureChecker> lane_departure_checker_;
+  std::shared_ptr<autoware::boundary_departure_checker::BoundaryDepartureChecker>
+    boundary_departure_checker_;
 
   friend class TestGeometricPullOut;
 };

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/lane_departure_checker/utils.hpp"
+#include "autoware/boundary_departure_checker/utils.hpp"
 
 #include <Eigen/Core>
 
@@ -58,7 +58,7 @@ TEST_P(CutTrajectoryTest, test_cut_trajectory)
 {
   const auto p = GetParam();
   const auto trajectory = create_trajectory_points(p.trajectory_points);
-  const auto cut = autoware::lane_departure_checker::utils::cutTrajectory(trajectory, p.length);
+  const auto cut = autoware::boundary_departure_checker::utils::cutTrajectory(trajectory, p.length);
 
   ASSERT_EQ(cut.size(), p.expected_points.size());
 

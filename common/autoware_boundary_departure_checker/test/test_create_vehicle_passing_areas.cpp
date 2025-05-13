@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/lane_departure_checker/utils.hpp"
+#include "autoware/boundary_departure_checker/utils.hpp"
 
 #include <Eigen/Core>
 #include <autoware_utils/geometry/boost_geometry.hpp>
@@ -26,7 +26,7 @@
 
 #include <vector>
 
-using autoware::lane_departure_checker::utils::createVehiclePassingAreas;
+using autoware::boundary_departure_checker::utils::createVehiclePassingAreas;
 using autoware_utils::LinearRing2d;
 using autoware_utils::Point2d;
 

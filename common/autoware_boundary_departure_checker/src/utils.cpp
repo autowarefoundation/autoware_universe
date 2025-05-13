@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/lane_departure_checker/utils.hpp"
+#include "autoware/boundary_departure_checker/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -55,7 +55,7 @@ FootprintMargin calcFootprintMargin(
 }
 }  // namespace
 
-namespace autoware::lane_departure_checker::utils
+namespace autoware::boundary_departure_checker::utils
 {
 TrajectoryPoints cutTrajectory(const TrajectoryPoints & trajectory, const double length)
 {
@@ -223,15 +223,6 @@ std::vector<LinearRing2d> createVehiclePassingAreas(
   return areas;
 }
 
-PoseDeviation calcTrajectoryDeviation(
-  const Trajectory & trajectory, const geometry_msgs::msg::Pose & pose, const double dist_threshold,
-  const double yaw_threshold)
-{
-  const auto nearest_idx = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
-    trajectory.points, pose, dist_threshold, yaw_threshold);
-  return autoware_utils::calc_pose_deviation(trajectory.points.at(nearest_idx).pose, pose);
-}
-
 double calcMaxSearchLengthForBoundaries(
   const Trajectory & trajectory, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info)
 {
@@ -243,4 +234,4 @@ double calcMaxSearchLengthForBoundaries(
   const double max_ego_search_length = std::hypot(max_ego_lon_length, max_ego_lat_length);
   return autoware::motion_utils::calcArcLength(trajectory.points) + max_ego_search_length;
 }
-}  // namespace autoware::lane_departure_checker::utils
+}  // namespace autoware::boundary_departure_checker::utils

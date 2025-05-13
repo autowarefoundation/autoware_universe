@@ -33,11 +33,11 @@ namespace autoware::behavior_path_planner
 {
 BezierPullOver::BezierPullOver(rclcpp::Node & node, const GoalPlannerParameters & parameters)
 : PullOverPlannerBase(node, parameters),
-  lane_departure_checker_{[&]() {
-    auto lane_departure_checker_params = lane_departure_checker::Param{};
-    lane_departure_checker_params.footprint_extra_margin =
+  boundary_departure_checker_{[&]() {
+    auto boundary_departure_checker_params = boundary_departure_checker::Param{};
+    boundary_departure_checker_params.footprint_extra_margin =
       parameters.lane_departure_check_expansion_margin;
-    return LaneDepartureChecker{lane_departure_checker_params, vehicle_info_};
+    return BoundaryDepartureChecker{boundary_departure_checker_params, vehicle_info_};
   }()},
   left_side_parking_(parameters.parking_policy == ParkingPolicy::LEFT_SIDE)
 {
@@ -342,7 +342,7 @@ std::vector<PullOverPath> BezierPullOver::generateBezierPath(
         });
     });
     const bool is_in_lanes = std::invoke([&]() -> bool {
-      return !lane_departure_checker_.checkPathWillLeaveLane(
+      return !boundary_departure_checker_.checkPathWillLeaveLane(
         utils::transformToLanelets(combined_drivable), pull_over_path.parking_path());
     });
     if (!is_in_parking_lots && !is_in_lanes) {
