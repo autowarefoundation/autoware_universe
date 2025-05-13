@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/lane_departure_checker/utils.hpp"
+#include "autoware/boundary_departure_checker/utils.hpp"
 
 #include <Eigen/Core>
 
@@ -84,7 +84,7 @@ TEST_P(CalcMaxSearchLengthForBoundariesTest, test_calc_max_search_length_for_bou
   const auto trajectory = create_trajectory(p.trajectory_points);
 
   const auto max_search_length =
-    autoware::lane_departure_checker::utils::calcMaxSearchLengthForBoundaries(
+    autoware::boundary_departure_checker::utils::calcMaxSearchLengthForBoundaries(
       trajectory, vehicle_info);
 
   EXPECT_DOUBLE_EQ(max_search_length, p.expected_max_search_length);

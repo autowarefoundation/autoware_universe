@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__LANE_DEPARTURE_CHECKER__LANE_DEPARTURE_CHECKER_HPP_
-#define AUTOWARE__LANE_DEPARTURE_CHECKER__LANE_DEPARTURE_CHECKER_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__BOUNDARY_DEPARTURE_CHECKER_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__BOUNDARY_DEPARTURE_CHECKER_HPP_
 
-#include "autoware/lane_departure_checker/parameters.hpp"
+#include "autoware/boundary_departure_checker/parameters.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
@@ -43,23 +43,21 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::lane_departure_checker
+namespace autoware::boundary_departure_checker
 {
-using autoware_internal_planning_msgs::msg::PathWithLaneId;
-using autoware_utils::Segment2d;
-typedef boost::geometry::index::rtree<Segment2d, boost::geometry::index::rstar<16>> SegmentRtree;
+using SegmentRtree = boost::geometry::index::rtree<Segment2d, boost::geometry::index::rstar<16>>;
 
-class LaneDepartureChecker
+class BoundaryDepartureChecker
 {
 public:
-  explicit LaneDepartureChecker(
+  explicit BoundaryDepartureChecker(
     std::shared_ptr<autoware_utils::TimeKeeper> time_keeper =
       std::make_shared<autoware_utils::TimeKeeper>())
   : time_keeper_(time_keeper)
   {
   }
 
-  LaneDepartureChecker(
+  BoundaryDepartureChecker(
     const Param & param, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
     std::shared_ptr<autoware_utils::TimeKeeper> time_keeper =
       std::make_shared<autoware_utils::TimeKeeper>())
@@ -123,6 +121,6 @@ private:
 
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 };
-}  // namespace autoware::lane_departure_checker
+}  // namespace autoware::boundary_departure_checker
 
-#endif  // AUTOWARE__LANE_DEPARTURE_CHECKER__LANE_DEPARTURE_CHECKER_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__BOUNDARY_DEPARTURE_CHECKER_HPP_

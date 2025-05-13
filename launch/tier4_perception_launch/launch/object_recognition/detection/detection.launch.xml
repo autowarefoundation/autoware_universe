@@ -72,6 +72,7 @@
   <arg name="input/camera7/info"/>
   <arg name="input/camera7/rois"/>
   <arg name="image_topic_name"/>
+  <arg name="segmentation_pointcloud_fusion_camera_ids"/>
   <arg name="input/radar"/>
   <arg name="input/tracked_objects" default="/perception/object_recognition/tracking/objects"/>
   <arg name="output/objects" default="objects"/>
@@ -206,6 +207,8 @@
       <arg name="detection_by_tracker_param_path" value="$(var detection_by_tracker_param_path)"/>
       <arg name="use_low_intensity_cluster_filter" value="$(var use_low_intensity_cluster_filter)"/>
       <arg name="use_image_segmentation_based_filter" value="$(var use_image_segmentation_based_filter)"/>
+      <arg name="segmentation_pointcloud_fusion_camera_ids" value="$(var segmentation_pointcloud_fusion_camera_ids)"/>
+      <arg name="image_topic_name" value="$(var image_topic_name)"/>
     </include>
   </group>
 

@@ -12,16 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__LANE_DEPARTURE_CHECKER__UTILS_HPP_
-#define AUTOWARE__LANE_DEPARTURE_CHECKER__UTILS_HPP_
+#ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UTILS_HPP_
+#define AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UTILS_HPP_
 
-#include <autoware_utils/geometry/boost_geometry.hpp>
-#include <autoware_utils/geometry/pose_deviation.hpp>
-#include <autoware_vehicle_info_utils/vehicle_info.hpp>
+#include "autoware/boundary_departure_checker/type_alias.hpp"
 
-#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
-#include <autoware_planning_msgs/msg/trajectory.hpp>
-#include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <geometry_msgs/msg/pose_with_covariance.hpp>
 
 #include <lanelet2_core/primitives/CompoundPolygon.h>
@@ -30,16 +25,8 @@
 
 #include <vector>
 
-namespace autoware::lane_departure_checker::utils
+namespace autoware::boundary_departure_checker::utils
 {
-using autoware_internal_planning_msgs::msg::PathWithLaneId;
-using autoware_planning_msgs::msg::Trajectory;
-using autoware_planning_msgs::msg::TrajectoryPoint;
-using autoware_utils::LinearRing2d;
-using autoware_utils::MultiPoint2d;
-using autoware_utils::PoseDeviation;
-using TrajectoryPoints = std::vector<TrajectoryPoint>;
-
 /**
  * @brief cut trajectory by length
  * @param trajectory input trajectory
@@ -67,8 +54,7 @@ TrajectoryPoints resampleTrajectory(const Trajectory & trajectory, const double 
  */
 std::vector<LinearRing2d> createVehicleFootprints(
   const geometry_msgs::msg::PoseWithCovariance & covariance, const TrajectoryPoints & trajectory,
-  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
-  const double footprint_margin_scale);
+  const VehicleInfo & vehicle_info, const double footprint_margin_scale);
 
 /**
  * @brief create vehicle footprints along the path with the given margin
@@ -78,7 +64,7 @@ std::vector<LinearRing2d> createVehicleFootprints(
  * @return vehicle footprints along the path
  */
 std::vector<LinearRing2d> createVehicleFootprints(
-  const PathWithLaneId & path, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
+  const PathWithLaneId & path, const VehicleInfo & vehicle_info,
   const double footprint_extra_margin);
 
 /**
@@ -109,25 +95,13 @@ std::vector<LinearRing2d> createVehiclePassingAreas(
   const std::vector<LinearRing2d> & vehicle_footprints);
 
 /**
- * @brief calculate the deviation of the given pose from the nearest pose on the trajectory
- * @param trajectory target trajectory
- * @param pose vehicle pose
- * @param dist_threshold distance threshold used for searching for first nearest index to given pose
- * @param yaw_threshold yaw threshold used for searching for first nearest index to given pose
- * @return deviation of the given pose from the trajectory
- */
-PoseDeviation calcTrajectoryDeviation(
-  const Trajectory & trajectory, const geometry_msgs::msg::Pose & pose, const double dist_threshold,
-  const double yaw_threshold);
-
-/**
  * @brief calculate the maximum search length for boundaries considering the vehicle dimensions
  * @param trajectory target trajectory
  * @param vehicle_info vehicle information
  * @return maximum search length for boundaries
  */
 double calcMaxSearchLengthForBoundaries(
-  const Trajectory & trajectory, const autoware::vehicle_info_utils::VehicleInfo & vehicle_info);
-}  // namespace autoware::lane_departure_checker::utils
+  const Trajectory & trajectory, const VehicleInfo & vehicle_info);
+}  // namespace autoware::boundary_departure_checker::utils
 
-#endif  // AUTOWARE__LANE_DEPARTURE_CHECKER__UTILS_HPP_
+#endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UTILS_HPP_
