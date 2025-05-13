@@ -37,8 +37,8 @@ VoxelGridBasedEuclideanCluster::VoxelGridBasedEuclideanCluster(
 
 VoxelGridBasedEuclideanCluster::VoxelGridBasedEuclideanCluster(
   bool use_height, int min_cluster_size, int max_cluster_size, float tolerance,
-  float voxel_leaf_size, int min_points_number_per_voxel,
-  int min_voxel_cluster_size_for_filtering, int max_points_per_voxel_in_large_cluster)
+  float voxel_leaf_size, int min_points_number_per_voxel, int min_voxel_cluster_size_for_filtering,
+  int max_points_per_voxel_in_large_cluster)
 : EuclideanClusterInterface(use_height, min_cluster_size, max_cluster_size),
   tolerance_(tolerance),
   voxel_leaf_size_(voxel_leaf_size),
@@ -146,10 +146,12 @@ bool VoxelGridBasedEuclideanCluster::cluster(
     clusters_data_size.push_back(0);
   }
   // Precompute which clusters are large enough based on the voxel threshold.
-  // This avoids repeatedly checking the size during per-point processing. 
+  // This avoids repeatedly checking the size during per-point processing.
   std::vector<bool> is_large_cluster(cluster_indices.size(), false);
   for (size_t cluster_idx = 0; cluster_idx < cluster_indices.size(); ++cluster_idx) {
-    if (cluster_indices[cluster_idx].indices.size() > static_cast<size_t>(min_voxel_cluster_size_for_filtering_)) {
+    if (
+      cluster_indices[cluster_idx].indices.size() >
+      static_cast<size_t>(min_voxel_cluster_size_for_filtering_)) {
       is_large_cluster[cluster_idx] = true;
     }
   }

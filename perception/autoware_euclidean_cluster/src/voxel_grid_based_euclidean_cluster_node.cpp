@@ -31,13 +31,13 @@ VoxelGridBasedEuclideanClusterNode::VoxelGridBasedEuclideanClusterNode(
   const float voxel_leaf_size = this->declare_parameter("voxel_leaf_size", 0.5);
   const int min_points_number_per_voxel = this->declare_parameter("min_points_number_per_voxel", 3);
   const int min_voxel_cluster_size_for_filtering =
-  this->declare_parameter("min_voxel_cluster_size_for_filtering", 150);
+    this->declare_parameter("min_voxel_cluster_size_for_filtering", 150);
   const int max_points_per_voxel_in_large_cluster =
-  this->declare_parameter("max_points_per_voxel_in_large_cluster", 10);
+    this->declare_parameter("max_points_per_voxel_in_large_cluster", 10);
   cluster_ = std::make_shared<VoxelGridBasedEuclideanCluster>(
-  use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
-  min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
-  max_points_per_voxel_in_large_cluster);
+    use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
+    min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
+    max_points_per_voxel_in_large_cluster);
   // Pass the diagnostics interface pointer from the node to the cluster
   diagnostics_interface_ptr_ =
     std::make_unique<autoware_utils::DiagnosticsInterface>(this, "euclidean_cluster");
