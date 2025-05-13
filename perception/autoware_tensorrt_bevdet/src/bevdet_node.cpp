@@ -26,7 +26,12 @@ namespace tensorrt_bevdet
 {
 TRTBEVDetNode::TRTBEVDetNode(const rclcpp::NodeOptions & node_options)
 : rclcpp::Node("tensorrt_bevdet_node", node_options)
-{  // Only start camera info subscription and tf listener at the beginning
+{  
+  // Get precision parameter
+  precision_ = this->declare_parameter<std::string>("precision", "fp16");
+  RCLCPP_INFO(this->get_logger(), "Using precision mode: %s", precision_.c_str());
+
+  // Only start camera info subscription and tf listener at the beginning
   img_N_ = this->declare_parameter<int>("data_params.CAM_NUM", 6);  // camera num 6
 
   caminfo_received_ = std::vector<bool>(img_N_, false);
@@ -51,7 +56,10 @@ void TRTBEVDetNode::initModel()
   model_config_ = this->declare_parameter("model_config", "bevdet_r50_4dlongterm_depth.yaml");
 
   onnx_file_ = this->declare_parameter<std::string>("onnx_path", "bevdet_one_lt_d.onnx");
-  engine_file_ = this->declare_parameter<std::string>("engine_path", "bevdet_one_lt_d.engine");
+
+  // Generate engine file name based on precision
+  std::string engine_file_base = this->declare_parameter<std::string>("engine_path", "bevdet_one_lt_d");
+  engine_file_ = engine_file_base + (precision_ == "fp16" ? "_fp16.engine" : "_fp32.engine");
 
   imgs_name_ = this->declare_parameter<std::vector<std::string>>("data_params.cams");
   class_names_ =
@@ -65,7 +73,7 @@ void TRTBEVDetNode::initModel()
 
   bevdet_ = std::make_shared<BEVDet>(
     model_config_, img_N_, sampleData_.param.cams_intrin, sampleData_.param.cams2ego_rot,
-    sampleData_.param.cams2ego_trans, onnx_file_, engine_file_);
+    sampleData_.param.cams2ego_trans, onnx_file_, engine_file_, precision_);
 
   RCLCPP_INFO_STREAM(this->get_logger(), "Successful create bevdet!");
 
