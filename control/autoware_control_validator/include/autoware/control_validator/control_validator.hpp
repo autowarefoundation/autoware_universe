@@ -29,6 +29,7 @@
 #include <autoware_control_msgs/msg/control.hpp>
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
+#include <autoware_vehicle_msgs/msg/steering_report.hpp>
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -46,6 +47,7 @@ using autoware_control_validator::msg::ControlValidatorStatus;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_utils::get_or_declare_parameter;
+using autoware_vehicle_msgs::msg::SteeringReport;
 using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
@@ -87,6 +89,32 @@ public:
 
 private:
   const double max_distance_deviation_threshold;
+};
+
+/**
+ * @class SteeringValidator
+ * @brief Validates steering rate is not too high.
+ */
+class SteeringRateValidator
+{
+public:
+  explicit SteeringRateValidator(rclcpp::Node & node)
+  : lateral_jerk_threshold_{get_or_declare_parameter<double>(node, "thresholds.lateral_jerk")},
+    logger_{node.get_logger()},
+    measured_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")},
+    measured_acc_lpf{(get_or_declare_parameter<double>(node, "acc_lpf_gain"))} {};
+
+  void validate(
+    ControlValidatorStatus & res, const Odometry & kinematic_state, const Control & control_cmd,
+    const SteeringReport & steering_status, const AccelWithCovarianceStamped & acceleration,
+    const double wheel_base);
+
+private:
+  double lateral_jerk_threshold_{};  // m/s^3
+  rclcpp::Logger logger_;
+  std::unique_ptr<Control> prev_control_cmd_{};
+  autoware::signal_processing::LowpassFilter1d measured_vel_lpf;
+  autoware::signal_processing::LowpassFilter1d measured_acc_lpf;
 };
 
 /**
@@ -233,6 +261,7 @@ private:
   // Subscribers and publishers
   rclcpp::Subscription<Control>::SharedPtr sub_control_cmd_;
   autoware_utils::InterProcessPollingSubscriber<Odometry>::SharedPtr sub_kinematics_;
+  autoware_utils::InterProcessPollingSubscriber<SteeringReport>::SharedPtr sub_steering_status_;
   autoware_utils::InterProcessPollingSubscriber<Trajectory>::SharedPtr sub_reference_traj_;
   autoware_utils::InterProcessPollingSubscriber<Trajectory>::SharedPtr sub_predicted_traj_;
   autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped>::SharedPtr
@@ -261,6 +290,7 @@ private:
 
   // individual validators
   LatencyValidator latency_validator{*this};
+  SteeringRateValidator steering_rate_validator{*this};
   TrajectoryValidator trajectory_validator{*this};
   AccelerationValidator acceleration_validator{*this};
   VelocityValidator velocity_validator{*this};

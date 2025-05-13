@@ -15,6 +15,7 @@ The listed features below does not always correspond to the latest implementatio
 | Overspeed: Measured speed exceeds target speed significantly.                      | measured velocity $v$, target velocity $\hat{v}$, ratio parameter $r$, and offset parameter $c$ | $\lvert v \rvert > (1 + r) \lvert \hat{v} \rvert + c$ |
 | Overrun estimation: estimate overrun even if decelerate by assumed rate.           | assumed deceleration, assumed delay                                                             |                                                       |
 
+- **Steer rate** : invalid when the steering rate produces lateral jerk that exceeds the configured threshold. The validation uses the vehicle's velocity, acceleration, and steering angle to calculate the resulting lateral jerk.
 - **Deviation check between reference trajectory and predicted trajectory** : invalid when the largest deviation between the predicted trajectory and reference trajectory is greater than the given threshold.
 
 ![trajectory_deviation](./image/trajectory_deviation.drawio.svg)
@@ -25,11 +26,12 @@ The listed features below does not always correspond to the latest implementatio
 
 The `control_validator` takes in the following inputs:
 
-| Name                           | Type                              | Description                                                                    |
-| ------------------------------ | --------------------------------- | ------------------------------------------------------------------------------ |
-| `~/input/kinematics`           | nav_msgs/Odometry                 | ego pose and twist                                                             |
-| `~/input/reference_trajectory` | autoware_planning_msgs/Trajectory | reference trajectory which is outputted from planning module to to be followed |
-| `~/input/predicted_trajectory` | autoware_planning_msgs/Trajectory | predicted trajectory which is outputted from control module                    |
+| Name                           | Type                                 | Description                                                                    |
+| ------------------------------ | ------------------------------------ | ------------------------------------------------------------------------------ |
+| `~/input/kinematics`           | nav_msgs/Odometry                    | ego pose and twist                                                             |
+| `~/input/steering_status`      | autoware_vehicle_msgs/SteeringReport | current steering status                                                        |
+| `~/input/reference_trajectory` | autoware_planning_msgs/Trajectory    | reference trajectory which is outputted from planning module to to be followed |
+| `~/input/predicted_trajectory` | autoware_planning_msgs/Trajectory    | predicted trajectory which is outputted from control module                    |
 
 ### Outputs
 
@@ -61,6 +63,7 @@ The input trajectory is detected as invalid if the index exceeds the following t
 | Name                                      | Type   | Description                                                                                                 | Default value |
 | :---------------------------------------- | :----- | :---------------------------------------------------------------------------------------------------------- | :------------ |
 | `thresholds.max_distance_deviation`       | double | invalid threshold of the max distance deviation between the predicted path and the reference trajectory [m] | 1.0           |
+| `thresholds.lateral_jerk`                 | double | invalid threshold of the lateral jerk for steering rate validation [m/s^3]                                  | 5.0           |
 | `thresholds.rolling_back_velocity`        | double | threshold velocity to valid the vehicle velocity [m/s]                                                      | 0.5           |
 | `thresholds.over_velocity_offset`         | double | threshold velocity offset to valid the vehicle velocity [m/s]                                               | 2.0           |
 | `thresholds.over_velocity_ratio`          | double | threshold ratio to valid the vehicle velocity [*]                                                           | 0.2           |
