@@ -14,6 +14,7 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
+  <exec_depend>autoware_bevfusion</exec_depend>
   <exec_depend>autoware_cluster_merger</exec_depend>
   <exec_depend>autoware_compare_map_segmentation</exec_depend>
   <exec_depend>autoware_crosswalk_traffic_light_estimator</exec_depend>
@@ -37,9 +38,7 @@
   <exec_depend>autoware_perception_online_evaluator</exec_depend>
   <exec_depend>autoware_pointcloud_preprocessor</exec_depend>
   <exec_depend>autoware_probabilistic_occupancy_grid_map</exec_depend>
-  <exec_depend>autoware_radar_crossing_objects_noise_filter</exec_depend>
   <exec_depend>autoware_radar_fusion_to_detected_object</exec_depend>
-  <exec_depend>autoware_radar_object_clustering</exec_depend>
   <exec_depend>autoware_radar_object_tracker</exec_depend>
   <exec_depend>autoware_raindrop_cluster_filter</exec_depend>
   <exec_depend>autoware_shape_estimation</exec_depend>

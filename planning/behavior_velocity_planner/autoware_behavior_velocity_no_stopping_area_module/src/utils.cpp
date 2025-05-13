@@ -248,13 +248,14 @@ bool check_stop_lines_in_no_stopping_area(
 std::optional<LineString2d> get_stop_line_geometry2d(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
   const lanelet::autoware::NoStoppingArea & no_stopping_area_reg_elem,
-  const double stop_line_margin, const double stop_line_extend_length, const double vehicle_width)
+  const double stop_line_margin, const double vehicle_width)
 {
   const auto & stop_line = no_stopping_area_reg_elem.stopLine();
   if (stop_line && stop_line->size() >= 2) {
     // get stop line from map
-    return planning_utils::extendLine(
-      stop_line.value()[0], stop_line.value()[1], stop_line_extend_length);
+    return planning_utils::extendSegmentToBounds(
+      {(*stop_line)[0].basicPoint2d(), (*stop_line)[1].basicPoint2d()}, path.left_bound,
+      path.right_bound);
   }
   return generate_stop_line(
     path, no_stopping_area_reg_elem.noStoppingAreas(), vehicle_width, stop_line_margin);

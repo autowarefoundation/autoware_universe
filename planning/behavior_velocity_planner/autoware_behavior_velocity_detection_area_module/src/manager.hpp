@@ -36,6 +36,13 @@ public:
 
   const char * getModuleName() override { return "detection_area"; }
 
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    RequiredSubscriptionInfo required_subscription_info;
+    required_subscription_info.no_ground_pointcloud = true;
+    return required_subscription_info;
+  }
+
 private:
   DetectionAreaModule::PlannerParam planner_param_;
 

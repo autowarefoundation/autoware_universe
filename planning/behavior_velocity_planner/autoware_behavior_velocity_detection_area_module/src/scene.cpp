@@ -67,8 +67,8 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
   }
 
   // Get stop line geometry
-  const auto stop_line = detection_area::get_stop_line_geometry2d(
-    detection_area_reg_elem_, planner_data_->stop_line_extend_length);
+  const auto stop_line =
+    detection_area::get_stop_line_geometry2d(detection_area_reg_elem_, original_path);
 
   // Get self pose
   const auto & self_pose = planner_data_->current_odometry->pose;
