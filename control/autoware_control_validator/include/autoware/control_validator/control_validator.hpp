@@ -101,12 +101,10 @@ public:
   explicit SteeringRateValidator(rclcpp::Node & node)
   : lateral_jerk_threshold_{get_or_declare_parameter<double>(node, "thresholds.lateral_jerk")},
     logger_{node.get_logger()},
-    measured_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")},
-    measured_acc_lpf{(get_or_declare_parameter<double>(node, "acc_lpf_gain"))} {};
+    measured_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")} {};
 
   void validate(
     ControlValidatorStatus & res, const Odometry & kinematic_state, const Control & control_cmd,
-    const SteeringReport & steering_status, const AccelWithCovarianceStamped & acceleration,
     const double wheel_base);
 
 private:
@@ -114,7 +112,6 @@ private:
   rclcpp::Logger logger_;
   std::unique_ptr<Control> prev_control_cmd_{};
   autoware::signal_processing::LowpassFilter1d measured_vel_lpf;
-  autoware::signal_processing::LowpassFilter1d measured_acc_lpf;
 };
 
 /**
