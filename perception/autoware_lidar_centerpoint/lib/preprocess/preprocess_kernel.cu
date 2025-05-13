@@ -34,7 +34,6 @@
 
 #include <cassert>
 #include <cmath>
-#include <iostream>
 
 namespace
 {
@@ -312,8 +311,6 @@ __global__ void generateFeatures_kernel(
 
     pillarOutSM[pillar_idx_inBlock][point_idx][7] = center.x;
     pillarOutSM[pillar_idx_inBlock][point_idx][8] = center.y;
-    pillarOutSM[pillar_idx_inBlock][point_idx][9] = center.z;
-
     if (ENCODER_IN_FEATURE_SIZE == 10) {
       pillarOutSM[pillar_idx_inBlock][point_idx][9] = center.z;
     }
