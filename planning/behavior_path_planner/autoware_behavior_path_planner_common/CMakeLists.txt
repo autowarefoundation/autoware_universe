@@ -87,6 +87,7 @@ if(BUILD_TESTING)
 
   ament_add_ros_isolated_gmock(test_${PROJECT_NAME}_parking_departure
     test/test_parking_departure_utils.cpp
+    test/test_geometric_parallel_parking.cpp
   )
 
   target_link_libraries(test_${PROJECT_NAME}_parking_departure
