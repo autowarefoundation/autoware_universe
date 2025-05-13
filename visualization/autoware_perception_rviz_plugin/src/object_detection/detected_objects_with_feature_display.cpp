@@ -15,19 +15,21 @@
 // Co-developed by Tier IV, Inc. and Apex.AI, Inc.
 
 #include "autoware_perception_rviz_plugin/object_detection/detected_objects_with_feature_display.hpp"
+
 #include "autoware_perception_rviz_plugin/object_detection/detected_objects_with_feature_helper.hpp"
 
-#include <pcl/filters/voxel_grid.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl/point_types.h>
-#include <pcl/kdtree/kdtree.h>
-#include <pcl/segmentation/extract_clusters.h>
 #include <QObject>
 #include <rclcpp/duration.hpp>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <sensor_msgs/msg/point_field.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
+
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/kdtree/kdtree.h>
+#include <pcl/point_types.h>
+#include <pcl/segmentation/extract_clusters.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 #include <memory>
 
@@ -173,8 +175,6 @@ void DetectedObjectsWithFeatureDisplay::reset()
   m_marker_common.clearMarkers();
 }
 
-
-
 void DetectedObjectsWithFeatureDisplay::processMessage(
   DetectedObjectsWithFeature::ConstSharedPtr msg)
 {
@@ -245,33 +245,29 @@ void DetectedObjectsWithFeatureDisplay::processMessage(
       }
     }
     add_marker(marker);
-
   }
 
   if (m_show_text_marker_property.getBool()) {
     for (const auto & feature_object : msg->feature_objects) {
       const auto & cluster = feature_object.feature.cluster;
-    
+
       // Convert cluster to pcl::PointCloud
       pcl::PointCloud<pcl::PointXYZ> cloud;
       pcl::fromROSMsg(cluster, cloud);
-    
+
       // 2. Voxel grid the cluster for analysis
       pcl::PointCloud<pcl::PointXYZ>::Ptr voxel_map_ptr(new pcl::PointCloud<pcl::PointXYZ>);
       pcl::VoxelGrid<pcl::PointXYZ> voxel_grid;
-      voxel_grid.setLeafSize(0.3f, 0.3f, 10000.f); // Use the same size as in your clustering node
+      voxel_grid.setLeafSize(0.3f, 0.3f, 10000.f);  // Use the same size as in your clustering node
       voxel_grid.setInputCloud(cloud.makeShared());
       voxel_grid.setMinimumPointsNumberPerVoxel(1);
       voxel_grid.setSaveLeafLayout(true);
       voxel_grid.filter(*voxel_map_ptr);
 
-
-      
       int total_points = static_cast<int>(cloud.size());
       int voxel_count = static_cast<int>(voxel_map_ptr->points.size());
-      
+
       float density = voxel_count > 0 ? static_cast<float>(total_points) / voxel_count : 0.0f;
-    
 
       // Step 1: Compute the centroid
       geometry_msgs::msg::Point centroid{};
@@ -290,8 +286,6 @@ void DetectedObjectsWithFeatureDisplay::processMessage(
       centroid.x /= static_cast<float>(total_points);
       centroid.y /= static_cast<float>(total_points);
       centroid.z /= static_cast<float>(total_points);
-
-
 
       // Step 2: Create a text marker
       auto text_marker = std::make_shared<visualization_msgs::msg::Marker>();
@@ -328,22 +322,25 @@ void DetectedObjectsWithFeatureDisplay::processMessage(
 
       for (; iter_x_m != iter_x_m.end(); ++iter_x_m, ++iter_y_m, ++iter_z_m, ++iter_intensity_m) {
         float x = *iter_x_m, y = *iter_y_m, z = *iter_z_m;
-        min_x = std::min(min_x, x); max_x = std::max(max_x, x);
-        min_y = std::min(min_y, y); max_y = std::max(max_y, y);
-        min_z = std::min(min_z, z); max_z = std::max(max_z, z);
+        min_x = std::min(min_x, x);
+        max_x = std::max(max_x, x);
+        min_y = std::min(min_y, y);
+        max_y = std::max(max_y, y);
+        min_z = std::min(min_z, z);
+        max_z = std::max(max_z, z);
         // intensity_sum += static_cast<float>(*iter_intensity_m);
         // intensity_max = std::max(intensity_max, static_cast<float>(*iter_intensity_m));
       }
-  
-      //float avg_intensity = intensity_sum / n;
+
+      // float avg_intensity = intensity_sum / n;
       float dx = max_x - min_x, dy = max_y - min_y, dz = max_z - min_z;
       float volume = dx * dy * dz;
-      //float density_volume = volume > 1e-5f ? static_cast<float>(total_points) / volume : 0.0f;
+      // float density_volume = volume > 1e-5f ? static_cast<float>(total_points) / volume : 0.0f;
 
       std::ostringstream oss;
       // oss << "Pts: " << marker->points.size() << "\nArea: " << std::fixed << std::setprecision(1)
       //     << dx * dy << " m²"
-      //     << "\nDensityArea: " << std::fixed << std::setprecision(1) 
+      //     << "\nDensityArea: " << std::fixed << std::setprecision(1)
       //     << static_cast<float>(n) / (dx * dy) << " pts/m2"
       //     << "\nVolume: " << std::fixed << std::setprecision(1) << volume
       //     << " m3"
@@ -354,23 +351,16 @@ void DetectedObjectsWithFeatureDisplay::processMessage(
       //     //<< "  Max I: " << intensity_max
       //     << "\nDensity: " << std::fixed << std::setprecision(2) << density << " pts/m3";
 
-
-
       // 3. Render text in RViz
       oss << "Pts: " << total_points << "\nVoxels: " << voxel_count << "\nDensity: " << std::fixed
           << std::setprecision(2) << density << "\nVolume: " << std::fixed << std::setprecision(1)
-          << volume <<
-        "\nDims: [" << dx << " x " << dy << " x " << dz << "]";
-        
-    
+          << volume << "\nDims: [" << dx << " x " << dy << " x " << dz << "]";
+
       text_marker->text = oss.str();
       // Step 4: Add the marker
       add_marker(text_marker);
     }
   }
-
-
-
 }
 
 }  // namespace object_detection
