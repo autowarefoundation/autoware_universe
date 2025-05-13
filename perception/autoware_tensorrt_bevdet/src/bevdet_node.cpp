@@ -26,7 +26,7 @@ namespace tensorrt_bevdet
 {
 TRTBEVDetNode::TRTBEVDetNode(const rclcpp::NodeOptions & node_options)
 : rclcpp::Node("tensorrt_bevdet_node", node_options)
-{  
+{
   // Get precision parameter
   precision_ = this->declare_parameter<std::string>("precision", "fp16");
   RCLCPP_INFO(this->get_logger(), "Using precision mode: %s", precision_.c_str());
@@ -58,7 +58,8 @@ void TRTBEVDetNode::initModel()
   onnx_file_ = this->declare_parameter<std::string>("onnx_path", "bevdet_one_lt_d.onnx");
 
   // Generate engine file name based on precision
-  std::string engine_file_base = this->declare_parameter<std::string>("engine_path", "bevdet_one_lt_d");
+  std::string engine_file_base =
+    this->declare_parameter<std::string>("engine_path", "bevdet_one_lt_d");
   engine_file_ = engine_file_base + (precision_ == "fp16" ? "_fp16.engine" : "_fp32.engine");
 
   imgs_name_ = this->declare_parameter<std::vector<std::string>>("data_params.cams");
