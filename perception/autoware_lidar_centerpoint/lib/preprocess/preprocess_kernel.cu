@@ -314,9 +314,9 @@ __global__ void generateFeatures_kernel(
     pillarOutSM[pillar_idx_inBlock][point_idx][8] = center.y;
     pillarOutSM[pillar_idx_inBlock][point_idx][9] = center.z;
 
-	if (ENCODER_IN_FEATURE_SIZE == 10) {
-	  pillarOutSM[pillar_idx_inBlock][point_idx][9] = center.z;
-	}
+    if (ENCODER_IN_FEATURE_SIZE == 10) {
+        pillarOutSM[pillar_idx_inBlock][point_idx][9] = center.z;
+    }
 
   } else {
     pillarOutSM[pillar_idx_inBlock][point_idx][0] = 0;
@@ -330,9 +330,10 @@ __global__ void generateFeatures_kernel(
 
     pillarOutSM[pillar_idx_inBlock][point_idx][7] = 0;
     pillarOutSM[pillar_idx_inBlock][point_idx][8] = 0;
-	if (ENCODER_IN_FEATURE_SIZE == 10) {
-	  pillarOutSM[pillar_idx_inBlock][point_idx][9] = 0;
-	}
+	
+    if (ENCODER_IN_FEATURE_SIZE == 10) {
+        pillarOutSM[pillar_idx_inBlock][point_idx][9] = 0;
+    }
   }
 
   __syncthreads();
