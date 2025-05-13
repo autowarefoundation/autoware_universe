@@ -311,7 +311,7 @@ __global__ void generateFeatures_kernel(
 
     pillarOutSM[pillar_idx_inBlock][point_idx][7] = center.x;
     pillarOutSM[pillar_idx_inBlock][point_idx][8] = center.y;
-	
+
     if (ENCODER_IN_FEATURE_SIZE == 10) {
       pillarOutSM[pillar_idx_inBlock][point_idx][9] = center.z;
     }
