@@ -187,10 +187,9 @@ autoware_perception_msgs::msg::PredictedObjects filter_predicted_objects(
         [](const auto & p) { return p.path.empty(); }),
       predicted_paths.end());
 
-    resample_predicted_paths(predicted_paths, filtered_object.shape);
-
     if (!filtered_object.kinematics.predicted_paths.empty())
-      filtered_objects.objects.push_back(filtered_object);
+      resample_predicted_paths(predicted_paths, filtered_object.shape);
+    filtered_objects.objects.push_back(filtered_object);
   }
   return filtered_objects;
 }
