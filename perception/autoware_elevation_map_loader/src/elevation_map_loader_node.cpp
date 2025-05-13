@@ -135,11 +135,11 @@ void ElevationMapLoaderNode::publish()
 {
   struct stat info;
   if (stat(data_manager_.elevation_map_path_->c_str(), &info) != 0) {
-    RCLCPP_INFO(this->get_logger(), "Create elevation map from pointcloud map ");
+    RCLCPP_INFO(this->get_logger(), "Starting elevation map generation from pointcloud map");
     createElevationMap();
   } else if (info.st_mode & S_IFDIR) {
     RCLCPP_INFO(
-      this->get_logger(), "Load elevation map from: %s",
+      this->get_logger(), "Loading existing elevation map from: %s",
       data_manager_.elevation_map_path_->c_str());
 
     // Check if bag can be loaded
@@ -154,18 +154,21 @@ void ElevationMapLoaderNode::publish()
     if (!is_bag_loaded) {
       // Delete directory including elevation map if bag is broken
       RCLCPP_ERROR(
-        this->get_logger(), "Try to loading bag, but bag is broken. Remove %s",
+        this->get_logger(), "Failed to load bag file. Removing directory: %s",
         data_manager_.elevation_map_path_->c_str());
       std::filesystem::remove_all(data_manager_.elevation_map_path_->c_str());
       // Create elevation map from pointcloud map if bag is broken
-      RCLCPP_INFO(this->get_logger(), "Create elevation map from pointcloud map ");
+      RCLCPP_INFO(this->get_logger(), "Starting elevation map generation from pointcloud map");
       createElevationMap();
+    } else {
+      RCLCPP_INFO(this->get_logger(), "Elevation map loading completed");
     }
   }
 
   elevation_map_.setFrameId(map_frame_);
   auto msg = grid_map::GridMapRosConverter::toMessage(elevation_map_);
   pub_elevation_map_->publish(std::move(msg));
+  RCLCPP_INFO(this->get_logger(), "Elevation map published");
 
   if (use_elevation_map_cloud_publisher_) {
     pcl::PointCloud<pcl::PointXYZ>::Ptr elevation_map_cloud_ptr =
@@ -173,6 +176,7 @@ void ElevationMapLoaderNode::publish()
     sensor_msgs::msg::PointCloud2 elevation_map_cloud_msg;
     pcl::toROSMsg(*elevation_map_cloud_ptr, elevation_map_cloud_msg);
     pub_elevation_map_cloud_->publish(elevation_map_cloud_msg);
+    RCLCPP_INFO(this->get_logger(), "Elevation map point cloud published");
   }
   is_elevation_map_published_ = true;
 }
@@ -352,11 +356,12 @@ void ElevationMapLoaderNode::createElevationMapFromPointcloud(
   grid_map_pcl_loader->initializeGridMapGeometryFromInputCloud();
   grid_map_pcl_loader->addLayerFromInputCloud(layer_name_);
   grid_map::grid_map_pcl::printTimeElapsedToRosInfoStream(
-    start, "Finish creating elevation map. Total time: ", this->get_logger());
+    start, "Elevation map generation completed. Processing time: ", this->get_logger());
 }
 
 void ElevationMapLoaderNode::inpaintElevationMap(const float radius)
 {
+  RCLCPP_INFO(this->get_logger(), "Starting elevation map inpainting (radius: %.2f)", radius);
   // Convert elevation layer to OpenCV image to fill in holes.
   // Get the inpaint mask (nonzero pixels indicate where values need to be filled in).
   namespace bg = boost::geometry;
@@ -417,6 +422,7 @@ void ElevationMapLoaderNode::inpaintElevationMap(const float radius)
   grid_map::GridMapCvConverter::addLayerFromImage<unsigned char, 3>(
     filled_image, layer_name_, elevation_map_, min_value, max_value);
   elevation_map_.erase("inpaint_mask");
+  RCLCPP_INFO(this->get_logger(), "Elevation map inpainting completed");
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr ElevationMapLoaderNode::createPointcloudFromElevationMap()
@@ -444,6 +450,9 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr ElevationMapLoaderNode::createPointcloudFrom
 
 void ElevationMapLoaderNode::saveElevationMap()
 {
+  RCLCPP_INFO(
+    this->get_logger(), "Starting to save elevation map: %s",
+    data_manager_.elevation_map_path_->c_str());
   const bool saving_successful = grid_map::GridMapRosConverter::saveToBag(
     elevation_map_, *data_manager_.elevation_map_path_, "elevation_map");
   RCLCPP_INFO_STREAM(
