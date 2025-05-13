@@ -48,31 +48,6 @@ VoxelGridBasedEuclideanCluster::VoxelGridBasedEuclideanCluster(
 {
 }
 
-// After processing all clusters, publish a summary of diagnostics.
-void VoxelGridBasedEuclideanCluster::publishDiagnosticsSummary(
-  size_t skipped_cluster_count,
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pointcloud_msg)
-{
-  if (!diagnostics_interface_ptr_) {
-    return;
-  }
-  diagnostics_interface_ptr_->clear();
-  std::string summary;
-  if (skipped_cluster_count > 0) {
-    summary = std::to_string(skipped_cluster_count) +
-              " clusters skipped because cluster point size exceeds the maximum allowed " +
-              std::to_string(max_cluster_size_);
-    diagnostics_interface_ptr_->add_key_value("is_cluster_data_size_within_range", false);
-  } else {
-    diagnostics_interface_ptr_->add_key_value("is_cluster_data_size_within_range", true);
-  }
-  diagnostics_interface_ptr_->update_level_and_message(
-    skipped_cluster_count > 0 ? static_cast<int8_t>(diagnostic_msgs::msg::DiagnosticStatus::WARN)
-                              : static_cast<int8_t>(diagnostic_msgs::msg::DiagnosticStatus::OK),
-    summary);
-  diagnostics_interface_ptr_->publish(pointcloud_msg->header.stamp);
-}
-
 // TODO(badai-nguyen): remove this function when field copying also implemented for
 // euclidean_cluster.cpp
 bool VoxelGridBasedEuclideanCluster::cluster(
@@ -90,7 +65,6 @@ bool VoxelGridBasedEuclideanCluster::cluster(
 {
   // TODO(Saito) implement use_height is false version
   // 1) Convert ROS PointCloud2 to PCL cloud
-  // create voxel
   pcl::PointCloud<pcl::PointXYZ>::Ptr pointcloud(new pcl::PointCloud<pcl::PointXYZ>);
   int point_step = pointcloud_msg->point_step;
   pcl::fromROSMsg(*pointcloud_msg, *pointcloud);
@@ -103,26 +77,24 @@ bool VoxelGridBasedEuclideanCluster::cluster(
   voxel_grid_.filter(*voxel_map_ptr);
 
   // 3) Build 2D centroid cloud
-  // voxel is pressed 2d
   pcl::PointCloud<pcl::PointXYZ>::Ptr pointcloud_2d_ptr(new pcl::PointCloud<pcl::PointXYZ>);
   for (const auto & point : voxel_map_ptr->points) {
     pcl::PointXYZ point2d;
     point2d.x = point.x;
     point2d.y = point.y;
-    point2d.z = 0.0;
+    point2d.z = 0.0;  // Set z to 0.0 for 2D clustering
     pointcloud_2d_ptr->push_back(point2d);
   }
 
   // 4) KD-tree + clustering
   pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
   tree->setInputCloud(pointcloud_2d_ptr);
-
-  // clustering
+  // Perform clustering using EuclideanClusterExtraction
   std::vector<pcl::PointIndices> cluster_indices;
   pcl::EuclideanClusterExtraction<pcl::PointXYZ> pcl_euclidean_cluster;
   pcl_euclidean_cluster.setClusterTolerance(tolerance_);
   pcl_euclidean_cluster.setMinClusterSize(1);
-  pcl_euclidean_cluster.setMaxClusterSize(600);
+  pcl_euclidean_cluster.setMaxClusterSize(max_cluster_size_);
   pcl_euclidean_cluster.setSearchMethod(tree);
   pcl_euclidean_cluster.setInputCloud(pointcloud_2d_ptr);
   pcl_euclidean_cluster.extract(cluster_indices);
@@ -190,17 +162,11 @@ bool VoxelGridBasedEuclideanCluster::cluster(
 
   // build output and check cluster size
   {
-    size_t skipped_cluster_count = 0;  // Count the skipped clusters
     for (size_t i = 0; i < temporary_clusters.size(); ++i) {
       auto & i_cluster_data_size = clusters_data_size.at(i);
       int cluster_size = static_cast<int>(i_cluster_data_size / point_step);
       if (cluster_size < min_cluster_size_) {
         // Cluster size is below the minimum threshold; skip without messaging.
-        continue;
-      }
-      if (cluster_size > max_cluster_size_) {
-        // Cluster size exceeds the maximum threshold; log a warning.
-        skipped_cluster_count++;
         continue;
       }
       const auto & cluster = temporary_clusters.at(i);
@@ -225,8 +191,6 @@ bool VoxelGridBasedEuclideanCluster::cluster(
       objects.feature_objects.push_back(feature_object);
     }
     objects.header = pointcloud_msg->header;
-    // Publish the diagnostics summary.
-    publishDiagnosticsSummary(skipped_cluster_count, pointcloud_msg);
   }
 
   return true;

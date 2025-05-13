@@ -47,10 +47,6 @@ public:
   {
     min_points_number_per_voxel_ = min_points_number_per_voxel;
   }
-  void setDiagnosticsInterface(autoware_utils::DiagnosticsInterface * diag_ptr)
-  {
-    diagnostics_interface_ptr_ = diag_ptr;
-  }
 
 private:
   pcl::VoxelGrid<pcl::PointXYZ> voxel_grid_;
@@ -59,10 +55,6 @@ private:
   int min_points_number_per_voxel_;
   int min_voxel_cluster_size_for_filtering_;
   int max_points_per_voxel_in_large_cluster_;
-  void publishDiagnosticsSummary(
-    size_t skipped_cluster_count,
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pointcloud_msg);
-  autoware_utils::DiagnosticsInterface * diagnostics_interface_ptr_{nullptr};
 };
 
 }  // namespace autoware::euclidean_cluster
