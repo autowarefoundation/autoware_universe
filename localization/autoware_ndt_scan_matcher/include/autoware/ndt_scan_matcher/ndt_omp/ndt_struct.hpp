@@ -91,7 +91,7 @@ struct NdtParams
 {
   double trans_epsilon{};
   double step_size{};
-  double resolution{};
+  float resolution{};
   int max_iterations{};
   NeighborSearchMethod search_method{};
   int num_threads{};

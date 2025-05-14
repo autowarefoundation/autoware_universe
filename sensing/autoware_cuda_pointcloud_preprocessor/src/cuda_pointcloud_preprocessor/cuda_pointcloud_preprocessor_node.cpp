@@ -47,6 +47,10 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
 {
   using std::placeholders::_1;
 
+  // Set CUDA device flags
+  // note: Device flags are process-wide
+  cudaSetDeviceFlags(cudaDeviceScheduleBlockingSync);
+
   // Parameters
   base_frame_ = declare_parameter<std::string>("base_frame");
 

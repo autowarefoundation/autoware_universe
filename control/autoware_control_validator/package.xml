@@ -5,10 +5,10 @@
   <version>0.44.0</version>
   <description>ros node for autoware_control_validator</description>
   <maintainer email="kyoichi.sugahara@tier4.jp">Kyoichi Sugahara</maintainer>
-  <maintainer email="takamasa.horibe@tier4.jp">Takamasa Horibe</maintainer>
   <maintainer email="makoto.kurihara@tier4.jp">Makoto Kurihara</maintainer>
   <maintainer email="mamoru.sobue@tier4.jp">Mamoru Sobue</maintainer>
   <maintainer email="takayuki.murooka@tier4.jp">Takayuki Murooka</maintainer>
+  <maintainer email="yuki.takagi@tier4.jp">Yuki Takagi</maintainer>
 
   <license>Apache License 2.0</license>
 

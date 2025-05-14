@@ -17,6 +17,7 @@
 
 #include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/state_machine.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>

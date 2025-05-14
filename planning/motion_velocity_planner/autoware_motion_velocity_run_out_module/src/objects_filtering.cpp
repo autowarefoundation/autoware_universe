@@ -172,23 +172,6 @@ void calculate_predicted_path_footprints(
   }
 }
 
-std::optional<size_t> get_first_intersecting_segment_idx(
-  const ObjectPredictedPathFootprint & footprint, const universe_utils::Segment2d & segment)
-{
-  for (auto i = 0UL; i + 1 < footprint.predicted_path_footprint.size(); ++i) {
-    for (const auto & ls :
-         {footprint.predicted_path_footprint.corner_linestrings[front_left],
-          footprint.predicted_path_footprint.corner_linestrings[front_right],
-          footprint.predicted_path_footprint.corner_linestrings[rear_left],
-          footprint.predicted_path_footprint.corner_linestrings[rear_right]}) {
-      if (universe_utils::intersect(segment.first, segment.second, ls[i], ls[i + 1])) {
-        return i;
-      }
-    }
-  }
-  return std::nullopt;
-}
-
 void cut_footprint_after_index(ObjectPredictedPathFootprint & footprint, const size_t index)
 {
   footprint.predicted_path_footprint.corner_linestrings[front_left].resize(index);

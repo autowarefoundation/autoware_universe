@@ -142,10 +142,13 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
   auto trt_config =
     tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path, 1ULL << 32U);
   detector_ptr_ = std::make_unique<BEVFusionTRT>(trt_config, densification_param, config);
+  diagnostics_detector_trt_ =
+    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "bevfusion_trt");
 
-  cloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-    "~/input/pointcloud", rclcpp::SensorDataQoS{}.keep_last(1),
-    std::bind(&BEVFusionNode::cloudCallback, this, std::placeholders::_1));
+  cloud_sub_ =
+    std::make_unique<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
+      *this, "~/input/pointcloud",
+      std::bind(&BEVFusionNode::cloudCallback, this, std::placeholders::_1));
 
   objects_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
     "~/output/objects", rclcpp::QoS(1));
@@ -172,12 +175,12 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
     }
   }
 
-  published_time_pub_ = std::make_unique<autoware::universe_utils::PublishedTimePublisher>(this);
+  published_time_pub_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 
   // initialize debug tool
   {
-    using autoware::universe_utils::DebugPublisher;
-    using autoware::universe_utils::StopWatch;
+    using autoware_utils::DebugPublisher;
+    using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ptr_ = std::make_unique<DebugPublisher>(this, this->get_name());
     stop_watch_ptr_->tic("cyclic");
@@ -190,9 +193,10 @@ BEVFusionNode::BEVFusionNode(const rclcpp::NodeOptions & options)
   }
 }
 
-void BEVFusionNode::cloudCallback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr pc_msg)
+void BEVFusionNode::cloudCallback(
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & pc_msg_ptr)
 {
-  lidar_frame_ = pc_msg->header.frame_id;
+  lidar_frame_ = pc_msg_ptr->header.frame_id;
 
   if (sensor_fusion_ && (!extrinsics_available_ || !images_available_ || !intrinsics_available_)) {
     return;
@@ -223,8 +227,9 @@ void BEVFusionNode::cloudCallback(const sensor_msgs::msg::PointCloud2::ConstShar
   if (stop_watch_ptr_) {
     stop_watch_ptr_->toc("processing/total", true);
   }
+  diagnostics_detector_trt_->clear();
 
-  double lidar_stamp = rclcpp::Time(pc_msg->header.stamp).seconds();
+  double lidar_stamp = rclcpp::Time(pc_msg_ptr->header.stamp).seconds();
   camera_masks_.resize(camera_info_msgs_.size());
   for (std::size_t i = 0; i < camera_masks_.size(); ++i) {
     camera_masks_[i] =
@@ -235,10 +240,22 @@ void BEVFusionNode::cloudCallback(const sensor_msgs::msg::PointCloud2::ConstShar
 
   std::vector<Box3D> det_boxes3d;
   std::unordered_map<std::string, double> proc_timing;
-  bool is_success =
-    detector_ptr_->detect(pc_msg, image_msgs_, camera_masks_, tf_buffer_, det_boxes3d, proc_timing);
+  bool is_num_voxels_within_range = true;
+  bool is_success = detector_ptr_->detect(
+    pc_msg_ptr, image_msgs_, camera_masks_, tf_buffer_, det_boxes3d, proc_timing,
+    is_num_voxels_within_range);
   if (!is_success) {
     return;
+  }
+
+  diagnostics_detector_trt_->add_key_value(
+    "is_num_voxels_within_range", is_num_voxels_within_range);
+  if (!is_num_voxels_within_range) {
+    std::stringstream message;
+    message << "BEVFusionTRT::detect: The actual number of voxels exceeds its maximum value, "
+            << "which may limit the detection performance.";
+    diagnostics_detector_trt_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN, message.str());
   }
 
   std::vector<autoware_perception_msgs::msg::DetectedObject> raw_objects;
@@ -250,7 +267,7 @@ void BEVFusionNode::cloudCallback(const sensor_msgs::msg::PointCloud2::ConstShar
   }
 
   autoware_perception_msgs::msg::DetectedObjects output_msg;
-  output_msg.header = pc_msg->header;
+  output_msg.header = pc_msg_ptr->header;
   output_msg.objects = iou_bev_nms_.apply(raw_objects);
 
   detection_class_remapper_.mapClasses(output_msg);
@@ -259,6 +276,8 @@ void BEVFusionNode::cloudCallback(const sensor_msgs::msg::PointCloud2::ConstShar
     objects_pub_->publish(output_msg);
     published_time_pub_->publish_if_subscribed(objects_pub_, output_msg.header.stamp);
   }
+
+  diagnostics_detector_trt_->publish(pc_msg_ptr->header.stamp);
 
   // add processing time for debug
   if (debug_publisher_ptr_ && stop_watch_ptr_) {
@@ -269,14 +288,15 @@ void BEVFusionNode::cloudCallback(const sensor_msgs::msg::PointCloud2::ConstShar
         std::chrono::nanoseconds(
           (this->get_clock()->now() - output_msg.header.stamp).nanoseconds()))
         .count();
-    debug_publisher_ptr_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
-    debug_publisher_ptr_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/pipeline_latency_ms", pipeline_latency_ms);
-    debug_publisher_ptr_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time/total_ms", processing_time_ms);
     for (const auto & [topic, time_ms] : proc_timing) {
-      debug_publisher_ptr_->publish<tier4_debug_msgs::msg::Float64Stamped>(topic, time_ms);
+      debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+        topic, time_ms);
     }
   }
 }
@@ -330,6 +350,67 @@ void BEVFusionNode::cameraInfoCallback(
     [](const auto & opt) { return opt.has_value(); });
 
   extrinsics_available_ = num_valid_extrinsics == lidar2camera_extrinsics_.size();
+}
+
+// Check the processing time and delayed timestamp
+// If the node is consistently delayed, publish an error diagnostic message
+void BEVFusionNode::diagnoseProcessingTime(diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  const rclcpp::Time timestamp_now = this->get_clock()->now();
+  diagnostic_msgs::msg::DiagnosticStatus::_level_type diag_level =
+    diagnostic_msgs::msg::DiagnosticStatus::OK;
+  std::stringstream message{"OK"};
+
+  // Check if the node has performed inference
+  if (last_processing_time_ms_) {
+    // check processing time is acceptable
+    if (last_processing_time_ms_ > max_allowed_processing_time_ms_) {
+      stat.add("is_processing_time_ms_in_expected_range", false);
+
+      message.clear();
+      message << "Processing time exceeds the acceptable limit of "
+              << max_allowed_processing_time_ms_ << " ms by "
+              << (last_processing_time_ms_.value() - max_allowed_processing_time_ms_) << " ms.";
+
+      // in case the processing starts with a delayed inference
+      if (!last_in_time_processing_timestamp_) {
+        last_in_time_processing_timestamp_ = timestamp_now;
+      }
+
+      diag_level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+    } else {
+      stat.add("is_processing_time_ms_in_expected_range", true);
+      last_in_time_processing_timestamp_ = timestamp_now;
+    }
+    stat.add("processing_time_ms", last_processing_time_ms_.value());
+
+    const double delayed_state_duration =
+      std::chrono::duration<double, std::milli>(
+        std::chrono::nanoseconds(
+          (timestamp_now - last_in_time_processing_timestamp_.value()).nanoseconds()))
+        .count();
+
+    // check consecutive delays
+    if (delayed_state_duration > max_acceptable_consecutive_delay_ms_) {
+      stat.add("is_consecutive_processing_delay_in_range", false);
+
+      message << " Processing delay has consecutively exceeded the acceptable limit continuously.";
+
+      diag_level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+    } else {
+      stat.add("is_consecutive_processing_delay_in_range", true);
+    }
+    stat.add("consecutive_processing_delay_ms", delayed_state_duration);
+  } else {
+    stat.add("is_processing_time_ms_in_expected_range", true);
+    stat.add("processing_time_ms", 0.0);
+    stat.add("is_consecutive_processing_delay_in_range", true);
+    stat.add("consecutive_processing_delay_ms", 0.0);
+
+    message << "Waiting for the node to perform inference.";
+  }
+
+  stat.summary(diag_level, message.str());
 }
 
 }  // namespace autoware::bevfusion

@@ -40,12 +40,12 @@ GeometricPullOut::GeometricPullOut(
 : PullOutPlannerBase{node, parameters, time_keeper},
   parallel_parking_parameters_{parameters.parallel_parking_parameters}
 {
-  auto lane_departure_checker_params = autoware::lane_departure_checker::Param{};
-  lane_departure_checker_params.footprint_extra_margin =
+  auto boundary_departure_checker_params = autoware::boundary_departure_checker::Param{};
+  boundary_departure_checker_params.footprint_extra_margin =
     parameters.lane_departure_check_expansion_margin;
-  lane_departure_checker_ =
-    std::make_shared<autoware::lane_departure_checker::LaneDepartureChecker>(
-      lane_departure_checker_params, vehicle_info_);
+  boundary_departure_checker_ =
+    std::make_shared<autoware::boundary_departure_checker::BoundaryDepartureChecker>(
+      boundary_departure_checker_params, vehicle_info_);
   planner_.setParameters(parallel_parking_parameters_);
 }
 
@@ -72,7 +72,8 @@ std::optional<PullOutPath> GeometricPullOut::plan(
   planner_.setTurningRadius(planner_data->parameters, max_steer_angle);
   planner_.setPlannerData(planner_data);
   const bool found_valid_path = planner_.planPullOut(
-    start_pose, goal_pose, road_lanes, pull_out_lanes, left_side_start, lane_departure_checker_);
+    start_pose, goal_pose, road_lanes, pull_out_lanes, left_side_start,
+    boundary_departure_checker_);
   if (!found_valid_path) {
     planner_debug_data.conditions_evaluation.emplace_back("no path found");
     return {};
