@@ -24,6 +24,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace autoware::control_validator
 {
@@ -319,8 +320,8 @@ void ControlValidator::publish_debug_info(const geometry_msgs::msg::Pose & ego_p
   if (!is_all_valid(validation_status_)) {
     geometry_msgs::msg::Pose front_pose = ego_pose;
     shift_pose(front_pose, vehicle_info_.front_overhang_m + vehicle_info_.wheel_base_m);
-    debug_pose_publisher_->push_virtual_wall(front_pose);
-    debug_pose_publisher_->push_warning_msg(front_pose, "INVALID CONTROL");
+    std::string error_message = generate_error_message(validation_status_);
+    debug_pose_publisher_->push_virtual_wall(front_pose, error_message);
   }
   debug_pose_publisher_->publish();
 
@@ -335,6 +336,49 @@ bool ControlValidator::is_all_valid(const ControlValidatorStatus & s)
 {
   return s.is_valid_max_distance_deviation && s.is_valid_acc && !s.is_rolling_back &&
          !s.is_over_velocity && !s.has_overrun_stop_point && !s.will_overrun_stop_point;
+}
+
+std::string ControlValidator::generate_error_message(const ControlValidatorStatus & s)
+{
+  std::vector<std::string> error_messages;
+
+  if (!s.is_valid_max_distance_deviation) {
+    error_messages.push_back("TRAJECTORY DEVIATION");
+  }
+
+  if (!s.is_valid_acc) {
+    error_messages.push_back("ACCELERATION ERROR");
+  }
+
+  if (s.is_rolling_back) {
+    error_messages.push_back("ROLLING BACK");
+  }
+
+  if (s.is_over_velocity) {
+    error_messages.push_back("OVER VELOCITY");
+  }
+
+  if (s.has_overrun_stop_point) {
+    error_messages.push_back("OVERRUN STOP POINT");
+  }
+
+  if (s.will_overrun_stop_point) {
+    error_messages.push_back("WILL OVERRUN STOP POINT");
+  }
+
+  if (error_messages.empty()) {
+    return "INVALID CONTROL";
+  }
+
+  if (error_messages.size() == 1) {
+    return error_messages[0];
+  } else {
+    std::string result = error_messages[0];
+    for (size_t i = 1; i < error_messages.size(); ++i) {
+      result += ", " + error_messages[i];
+    }
+    return result;
+  }
 }
 
 void ControlValidator::display_status()

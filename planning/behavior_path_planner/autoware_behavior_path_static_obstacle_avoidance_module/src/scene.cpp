@@ -834,6 +834,25 @@ bool StaticObstacleAvoidanceModule::isSafePath(
     return false;
   }();
 
+  if (
+    !avoid_data_.target_objects.empty() &&
+    parameters_->policy_detection_reliability == "not_enough") {
+    if (has_left_shift) {
+      const auto opposite_lanes = planner_data_->route_handler->getLeftOppositeLanelets(
+        avoid_data_.target_objects.front().overhang_lanelet);
+      if (!opposite_lanes.empty()) {
+        return false;
+      }
+    }
+    if (has_right_shift) {
+      const auto opposite_lanes = planner_data_->route_handler->getRightOppositeLanelets(
+        avoid_data_.target_objects.front().overhang_lanelet);
+      if (!opposite_lanes.empty()) {
+        return false;
+      }
+    }
+  }
+
   if (!has_left_shift && !has_right_shift) {
     return true;
   }

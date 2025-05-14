@@ -17,7 +17,9 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
   <buildtool_depend>rosidl_default_generators</buildtool_depend>
 
-  <depend>autoware_utils</depend>
+  <depend>autoware_utils_math</depend>
+  <depend>autoware_utils_system</depend>
+  <depend>autoware_utils_visualization</depend>
   <depend>geometry_msgs</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>

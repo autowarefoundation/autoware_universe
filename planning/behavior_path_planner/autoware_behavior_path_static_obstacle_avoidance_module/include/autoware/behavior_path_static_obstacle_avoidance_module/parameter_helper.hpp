@@ -330,6 +330,8 @@ AvoidanceParameters getParameter(rclcpp::Node * node)
   // policy
   {
     const std::string ns = "avoidance.policy.";
+    p.policy_detection_reliability =
+      get_or_declare_parameter<std::string>(*node, ns + "detection_reliability");
     p.policy_approval = get_or_declare_parameter<std::string>(*node, ns + "make_approval_request");
     p.policy_deceleration = get_or_declare_parameter<std::string>(*node, ns + "deceleration");
     p.policy_lateral_margin = get_or_declare_parameter<std::string>(*node, ns + "lateral_margin");

@@ -9,7 +9,8 @@
       "properties": {
         "sensor_fusion": {
           "type": "boolean",
-          "description": "Whether to use camera-lidar fusion or not."
+          "description": "Whether to use camera-lidar fusion or not.",
+          "default": true
         },
         "max_camera_lidar_delay": {
           "type": "number",
@@ -82,7 +83,8 @@
           "items": {
             "type": "number",
             "minimum": 0.0,
-            "maximum": 1.0
+            "maximum": 1.0,
+            "default": 0.3
           },
           "description": "A thresholds array of direction vectors norm, all of objects with vector norm less than this threshold are ignored.",
           "default": [0.3, 0.3, 0.3, 0.3, 0.0]

@@ -28,6 +28,7 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware/objects_of_interest_marker_interface/marker_data.hpp>
 #include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/published_time_publisher.hpp>
 #include <rclcpp/duration.hpp>
 
 #include <autoware_perception_msgs/msg/object_classification.hpp>

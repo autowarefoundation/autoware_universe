@@ -29,8 +29,10 @@
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/ros/parameter.hpp>
+#include <autoware_utils/ros/published_time_publisher.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <rclcpp/logging.hpp>
 
 #include <boost/geometry/algorithms/envelope.hpp>
 #include <boost/geometry/algorithms/intersects.hpp>
@@ -345,8 +347,9 @@ void OutOfLaneModule::update_result(
   } else if (std::any_of(
                out_of_lane_data.outside_points.begin(), out_of_lane_data.outside_points.end(),
                [](const auto & p) { return p.to_avoid; })) {
-    RCLCPP_WARN(
-      logger_, "[out_of_lane] Could not insert slowdown point because of deceleration limits");
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 1000,
+      "[out_of_lane] Could not insert slowdown point because of deceleration limits");
   }
 }
 
@@ -404,7 +407,8 @@ VelocityPlanningResult OutOfLaneModule::plan(
       return !boost::geometry::disjoint(ll.polygon2d().basicPolygon(), ego_data.current_footprint);
     }) != ego_data.out_lanelets.end();
   if (is_already_overlapping) {
-    RCLCPP_WARN(logger_, "Ego is already out of lane, skipping the module\n");
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 1000, "Ego is already out of lane, skipping the module\n");
     debug_publisher_->publish(out_of_lane::debug::create_debug_marker_array(
       ego_data, out_of_lane_data, objects, debug_data_));
     return result;

@@ -265,6 +265,10 @@
         stop_buffer: 1.0                                # [m] FOR DEVELOPER
 
       policy:
+        # policy for module behavior. select "reliable" or "not_enough".
+        # "reliable": this module fully trusts the perception results and makes all decisions automatically.
+        # "not_enough": because the perception results are not fully reliable, the system waits for the operator's judgment in situations where long-range perception is required.
+        detection_reliability: "reliable"
         # policy for rtc request. select "per_shift_line" or "per_avoidance_maneuver".
         # "per_shift_line": request approval for each shift line.
         # "per_avoidance_maneuver": request approval for avoidance maneuver (avoid + return).

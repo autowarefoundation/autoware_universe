@@ -135,6 +135,18 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
   // Before combining the pointclouds, initialize and reserve space for the concatenated pointcloud
   concatenate_cloud_result.concatenate_cloud_ptr =
     std::make_unique<sensor_msgs::msg::PointCloud2>();
+  {
+    // Normally, pcl::concatenatePointCloud() copies the field layout (e.g., XYZIRC)
+    // from the non-empty point cloud when given one empty and one non-empty input.
+    //
+    // However, if all input clouds in topic_to_cloud_map are empty,
+    // the function receives two empty point clouds and does nothing,
+    // resulting in concatenate_cloud_ptr not being compatible with the XYZIRC format.
+    //
+    // To avoid this, we explicitly set the fields of concatenate_cloud_ptr to XYZIRC here.
+    PointCloud2Modifier<PointXYZIRC, autoware::point_types::PointXYZIRCGenerator>
+      concatenate_cloud_modifier{*concatenate_cloud_result.concatenate_cloud_ptr, output_frame_};
+  }
 
   // Reserve space based on the total size of the pointcloud data to speed up the concatenation
   // process

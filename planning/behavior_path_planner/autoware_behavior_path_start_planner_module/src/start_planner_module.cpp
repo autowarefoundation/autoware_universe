@@ -28,6 +28,7 @@
 #include <magic_enum.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <boost/geometry.hpp>
 #include <boost/geometry/algorithms/within.hpp>
 
 #include <lanelet2_core/geometry/Lanelet.h>
@@ -335,6 +336,57 @@ bool StartPlannerModule::hasCollisionWithDynamicObjects() const
   return !isSafePath();
 }
 
+bool StartPlannerModule::isInsideLanelets() const
+{
+  const auto & current_pose = planner_data_->self_odometry->pose.pose;
+  const auto vehicle_footprint = autoware_utils::transform_vector(
+    vehicle_info_.createFootprint(), autoware_utils::pose2transform(current_pose));
+
+  lanelet::BasicPolygon2d footprint_polygon;
+  for (const auto & point : vehicle_footprint) {
+    footprint_polygon.push_back({point.x(), point.y()});
+  }
+
+  // Find lanelets that intersect with the vehicle footprint
+  const auto & lanelets_distance_pair = lanelet::geometry::findWithin2d(
+    planner_data_->route_handler->getLaneletMapPtr()->laneletLayer, footprint_polygon, 0.0);
+
+  if (lanelets_distance_pair.empty()) {
+    return false;
+  }
+
+  // Combine all intersecting lanelets into a single MultiPolygon
+  autoware_utils::MultiPolygon2d combined_lanelets;
+  bool first_lanelet = true;
+
+  for (const auto & [distance, lanelet] : lanelets_distance_pair) {
+    const auto & poly = lanelet.polygon2d().basicPolygon();
+
+    autoware_utils::Polygon2d lanelet_polygon;
+    auto & outer = lanelet_polygon.outer();
+
+    for (const auto & p : poly) {
+      outer.push_back({p.x(), p.y()});
+    }
+
+    boost::geometry::correct(lanelet_polygon);
+
+    // Handle the first lanelet differently to avoid unnecessary operations
+    if (first_lanelet) {
+      boost::geometry::convert(lanelet_polygon, combined_lanelets);
+      first_lanelet = false;
+    } else {
+      // Union the current lanelet with the combined lanelets
+      autoware_utils::MultiPolygon2d result;
+      boost::geometry::union_(combined_lanelets, lanelet_polygon, result);
+      combined_lanelets = result;
+    }
+  }
+
+  // Check if the vehicle footprint is completely within the combined lanelets
+  return boost::geometry::within(footprint_polygon, combined_lanelets);
+}
+
 bool StartPlannerModule::isExecutionRequested() const
 {
   if (isModuleRunning()) {
@@ -611,18 +663,46 @@ bool StartPlannerModule::isExecutionReady() const
 {
   // Evaluate safety. The situation is not safe if any of the following conditions are met:
   // 1. pull out path has not been found
-  // 2. there is a moving objects around ego
-  // 3. waiting for approval and there is a collision with dynamic objects
+  // 2. waiting for approval, AND any of the following conditions:
+  //    a. there are moving objects around ego
+  //    b. there is a collision with dynamic objects (if collision detection is required)
 
-  const bool is_safe = [&]() -> bool {
-    if (!status_.found_pull_out_path) return false;
-    if (!isWaitingApproval()) return true;
-    if (!noMovingObjectsAround()) return false;
-    return !(requiresDynamicObjectsCollisionDetection() && hasCollisionWithDynamicObjects());
-  }();
+  bool is_safe = true;
+  std::string stop_reason = "";
+  // Check pull out path
+  if (!status_.found_pull_out_path) {
+    is_safe = false;
+    const bool is_inside_lanelets = isInsideLanelets();
+
+    // TODO(Sugahara): Improve error messaging to clearly:
+    // 1. Current position is within lane, but candidate path violates lane boundaries
+    // 2. Current position is within lane, but path from backed position violate lane boundaries
+    // 3. Current position is within lane, but insufficient clearance from static obstacles
+    // Currently assuming most failures are type 3 (obstacle clearance issues)
+    // since type 1 is an edge case and type 2 doesn't occur when backward path is disabled.
+    // Future work should provide appropriate messages for each case.
+
+    if (!parameters_->enable_back && !is_inside_lanelets) {
+      stop_reason = "ego outside lanes";
+    } else if (is_inside_lanelets) {
+      stop_reason = "unsafe against static objects";
+    } else {
+      stop_reason = "failed to generate valid path";
+    }
+
+  } else if (isWaitingApproval()) {
+    // Check for moving objects around
+    if (!noMovingObjectsAround()) {
+      is_safe = false;
+      stop_reason = "unsafe against moving objects around";
+    } else if (requiresDynamicObjectsCollisionDetection() && hasCollisionWithDynamicObjects()) {
+      is_safe = false;
+      stop_reason = "unsafe against dynamic objects";
+    }
+  }
 
   if (!is_safe) {
-    stop_pose_ = PoseWithDetail(planner_data_->self_odometry->pose.pose);
+    stop_pose_ = PoseWithDetail(planner_data_->self_odometry->pose.pose, stop_reason);
   }
 
   return is_safe;
@@ -716,6 +796,8 @@ BehaviorModuleOutput StartPlannerModule::plan()
       RCLCPP_ERROR_THROTTLE(
         getLogger(), *clock_, 5000, "Insert stop point in the path because of dynamic objects");
       status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(stop_path.value());
+      std::string stop_reason = "unsafe against dynamic objects";
+      stop_pose_ = PoseWithDetail(stop_pose_.value().pose, stop_reason);
       status_.stop_pose = stop_pose_;
       return stop_path.value();
     }

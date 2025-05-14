@@ -20,7 +20,8 @@
   <depend>autoware_adapi_v1_msgs</depend>
   <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_map_msgs</depend>
-  <depend>autoware_utils</depend>
+  <depend>autoware_utils_logging</depend>
+  <depend>autoware_utils_rclcpp</depend>
   <depend>diagnostic_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>magic_enum</depend>
