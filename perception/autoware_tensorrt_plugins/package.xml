@@ -5,6 +5,8 @@
   <version>0.44.0</version>
   <description>The autoware_tensorrt_plugins package</description>
   <maintainer email="kenzo.lobos@tier4.jp">Kenzo Lobos-Tsunekawa</maintainer>
+  <maintainer email="amadeusz.szymko.2@tier4.jp">Amadeusz Szymko</maintainer>
+  <maintainer email="kotaro.uetake@tier4.jp">Kotaro Uetake</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
