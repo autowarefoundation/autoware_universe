@@ -277,8 +277,8 @@ ObstacleSlowDownModule::convert_point_cloud_to_slow_down_points(
       // ego-vehicle is fully perpendicular to the trajectory, in the very worst case
       const auto min_lat_dist_to_traj_poly =
         std::abs(current_lat_dist_from_obstacle_to_traj) - vehicle_info.max_longitudinal_offset_m;
-        // The trajectory polygon is ignored if the minimum lateral distance is more than maximum
-        // lateral margin
+      // The trajectory polygon is ignored if the minimum lateral distance is more than maximum
+      // lateral margin
       if (min_lat_dist_to_traj_poly >= p.max_lat_margin) {
         continue;
       }
