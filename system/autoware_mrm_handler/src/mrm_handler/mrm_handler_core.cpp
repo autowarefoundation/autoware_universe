@@ -36,7 +36,8 @@ MrmHandler::MrmHandler(const rclcpp::NodeOptions & options) : Node("mrm_handler"
   param_.use_pull_over = declare_parameter<bool>("use_pull_over", false);
   param_.use_comfortable_stop = declare_parameter<bool>("use_comfortable_stop", false);
   param_.turning_hazard_on.emergency = declare_parameter<bool>("turning_hazard_on.emergency", true);
-  param_.turning_indicator_on.emergency = declare_parameter<bool>("turning_indicator_on.emergency", true);
+  param_.turning_indicator_on.emergency =
+    declare_parameter<bool>("turning_indicator_on.emergency", true);
 
   using std::placeholders::_1;
 
