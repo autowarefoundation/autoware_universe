@@ -23,7 +23,7 @@ rclcpp_components_register_node(${PROJECT_NAME}
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
-  ament_auto_add_gtest(${PROJECT_NAME}_test
+  ament_auto_add_gtest(test_utils
     test/test_utils.cpp
   )
 endif()
