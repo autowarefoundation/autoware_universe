@@ -17,9 +17,14 @@
 
 #include <opencv2/core.hpp>
 
+#include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
+
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/Lanelet.h>
+#include <tf2/LinearMath/Transform.h>
 #include <tf2/LinearMath/Vector3.h>
+
+#include <vector>
 
 #if __has_include(<image_geometry/pinhole_camera_model.hpp>)
 #include <image_geometry/pinhole_camera_model.hpp>  // for ROS 2 Jazzy or newer
@@ -38,8 +43,7 @@ cv::Point2d calcRawImagePointFromPoint3D(
 cv::Point2d calcRawImagePointFromPoint3D(
   const image_geometry::PinholeCameraModel & pinhole_camera_model, const tf2::Vector3 & point3d);
 
-void roundInImageFrame(
-  const image_geometry::PinholeCameraModel & pinhole_camera_model, cv::Point2d & point);
+void roundInImageFrame(const uint32_t & width, const uint32_t & height, cv::Point2d & point);
 
 bool isInDistanceRange(
   const tf2::Vector3 & p1, const tf2::Vector3 & p2, const double max_distance_range);
@@ -49,11 +53,24 @@ bool isInAngleRange(const double & tl_yaw, const double & camera_yaw, const doub
 bool isInImageFrame(
   const image_geometry::PinholeCameraModel & pinhole_camera_model, const tf2::Vector3 & point);
 
-tf2::Vector3 getTrafficLightTopLeft(const lanelet::ConstLineString3d & traffic_light);
+// Calculated in the camera optical frame but yaw and pitch are in the camera frame
+tf2::Vector3 getVibrationMarginTopLeft(
+  const tf2::Vector3 position, const double margin_pitch, const double margin_yaw,
+  const double margin_height, const double margin_width, const double margin_depth);
 
-tf2::Vector3 getTrafficLightBottomRight(const lanelet::ConstLineString3d & traffic_light);
+// Calculated in the camera optical frame but yaw and pitch are in the camera frame
+tf2::Vector3 getVibrationMarginBottomRight(
+  const tf2::Vector3 position, const double margin_pitch, const double margin_yaw,
+  const double margin_height, const double margin_width, const double margin_depth);
 
-tf2::Vector3 getTrafficLightCenter(const lanelet::ConstLineString3d & traffic_light);
+void computeBoundingRoi(
+  const uint32_t & width, const uint32_t & height,
+  const std::vector<tier4_perception_msgs::msg::TrafficLightRoi> & rois,
+  tier4_perception_msgs::msg::TrafficLightRoi & max_roi);
+
+double getTrafficLightYaw(const lanelet::ConstLineString3d & traffic_light);
+
+double getCameraYaw(const tf2::Transform & tf_map2camera);
 
 }  // namespace utils
 }  // namespace autoware::traffic_light

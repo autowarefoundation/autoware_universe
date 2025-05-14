@@ -17,6 +17,7 @@
 
   <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_map_msgs</depend>
+  <depend>autoware_traffic_light_utils</depend>
   <depend>autoware_utils</depend>
   <depend>geometry_msgs</depend>
   <depend>image_geometry</depend>

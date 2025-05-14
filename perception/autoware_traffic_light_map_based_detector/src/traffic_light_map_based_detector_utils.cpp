@@ -15,12 +15,14 @@
 #include "traffic_light_map_based_detector_utils.hpp"
 
 #include <Eigen/Core>
+#include <autoware_utils/math/normalization.hpp>
 
 #include <sensor_msgs/msg/camera_info.hpp>
 
 #include <lanelet2_core/Attribute.h>
 
 #include <algorithm>
+#include <vector>
 
 namespace autoware::traffic_light
 {
@@ -41,14 +43,10 @@ cv::Point2d calcRawImagePointFromPoint3D(
     pinhole_camera_model, cv::Point3d(point3d.x(), point3d.y(), point3d.z()));
 }
 
-void roundInImageFrame(
-  const image_geometry::PinholeCameraModel & pinhole_camera_model, cv::Point2d & point)
+void roundInImageFrame(const uint32_t & width, const uint32_t & height, cv::Point2d & point)
 {
-  const sensor_msgs::msg::CameraInfo camera_info = pinhole_camera_model.cameraInfo();
-  point.x =
-    std::max(std::min(point.x, static_cast<double>(static_cast<int>(camera_info.width) - 1)), 0.0);
-  point.y =
-    std::max(std::min(point.y, static_cast<double>(static_cast<int>(camera_info.height) - 1)), 0.0);
+  point.x = std::max(std::min(point.x, static_cast<double>(static_cast<int>(width) - 1)), 0.0);
+  point.y = std::max(std::min(point.y, static_cast<double>(static_cast<int>(height) - 1)), 0.0);
 }
 
 bool isInDistanceRange(
@@ -84,24 +82,62 @@ bool isInImageFrame(
   return false;
 }
 
-tf2::Vector3 getTrafficLightTopLeft(const lanelet::ConstLineString3d & traffic_light)
+tf2::Vector3 getVibrationMarginTopLeft(
+  const tf2::Vector3 position, const double margin_pitch, const double margin_yaw,
+  const double margin_height, const double margin_width, const double margin_depth)
 {
-  const auto & tl_bl = traffic_light.front();
-  const double tl_height = traffic_light.attributeOr("height", 0.0);
-  return tf2::Vector3(tl_bl.x(), tl_bl.y(), tl_bl.z() + tl_height);
+  // for small angles, tan(a) ≈ sin(a) ≈ a
+  const double x = std::sin(margin_yaw * 0.5) * position.z() + margin_width * 0.5;
+  const double y = std::sin(margin_pitch * 0.5) * position.z() + margin_height * 0.5;
+  const double z = margin_depth * 0.5;
+  return position - tf2::Vector3(x, y, z);
 }
 
-tf2::Vector3 getTrafficLightBottomRight(const lanelet::ConstLineString3d & traffic_light)
+tf2::Vector3 getVibrationMarginBottomRight(
+  const tf2::Vector3 position, const double margin_pitch, const double margin_yaw,
+  const double margin_height, const double margin_width, const double margin_depth)
 {
-  const auto & tl_bl = traffic_light.back();
-  return tf2::Vector3(tl_bl.x(), tl_bl.y(), tl_bl.z());
+  // for small angles, tan(a) ≈ sin(a) ≈ a
+  const double x = std::sin(margin_yaw * 0.5) * position.z() + margin_width * 0.5;
+  const double y = std::sin(margin_pitch * 0.5) * position.z() + margin_height * 0.5;
+  const double z = margin_depth * 0.5;
+  return position + tf2::Vector3(x, y, z);
 }
 
-tf2::Vector3 getTrafficLightCenter(const lanelet::ConstLineString3d & traffic_light)
+void computeBoundingRoi(
+  const uint32_t & width, const uint32_t & height,
+  const std::vector<tier4_perception_msgs::msg::TrafficLightRoi> & rois,
+  tier4_perception_msgs::msg::TrafficLightRoi & max_roi)
 {
-  tf2::Vector3 top_left = getTrafficLightTopLeft(traffic_light);
-  tf2::Vector3 bottom_right = getTrafficLightBottomRight(traffic_light);
-  return (top_left + bottom_right) / 2;
+  uint32_t x1 = width - 1;
+  uint32_t x2 = 0;
+  uint32_t y1 = height - 1;
+  uint32_t y2 = 0;
+  for (const auto & roi : rois) {
+    x1 = std::min(x1, roi.roi.x_offset);
+    x2 = std::max(x2, roi.roi.x_offset + roi.roi.width);
+    y1 = std::min(y1, roi.roi.y_offset);
+    y2 = std::max(y2, roi.roi.y_offset + roi.roi.height);
+  }
+  max_roi.roi.x_offset = x1;
+  max_roi.roi.y_offset = y1;
+  max_roi.roi.width = x2 - x1;
+  max_roi.roi.height = y2 - y1;
+}
+
+double getTrafficLightYaw(const lanelet::ConstLineString3d & traffic_light)
+{
+  const auto & tl_tl = traffic_light.front();
+  const auto & tl_br = traffic_light.back();
+  return autoware_utils::normalize_radian(std::atan2(tl_br.y() - tl_tl.y(), tl_br.x() - tl_tl.x()));
+}
+
+double getCameraYaw(const tf2::Transform & tf_map2camera)
+{
+  tf2::Vector3 ray_camera_optical(0, 0, 1);
+  tf2::Matrix3x3 map2camera_optical(tf_map2camera.getRotation());
+  tf2::Vector3 ray_map = map2camera_optical * ray_camera_optical;
+  return autoware_utils::normalize_radian(std::atan2(ray_map.y(), ray_map.x()));
 }
 
 }  // namespace utils
