@@ -12,7 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef TRAFFIC_LIGHT_FINE_DETECTOR_UTILS_HPP_
+#define TRAFFIC_LIGHT_FINE_DETECTOR_UTILS_HPP_
+
 #include <autoware/tensorrt_yolox/tensorrt_yolox.hpp>
+#include <opencv2/core/types.hpp>
 
 #include <sensor_msgs/msg/region_of_interest.hpp>
 
@@ -25,6 +29,10 @@ namespace utils
 float calWeightedIou(
   const sensor_msgs::msg::RegionOfInterest & bbox1, const autoware::tensorrt_yolox::Object & bbox2);
 
+bool fitInFrame(cv::Point & lt, cv::Point & rb, const cv::Size & size);
+
 }  // namespace utils
 
 }  // namespace autoware::traffic_light
+
+#endif  // TRAFFIC_LIGHT_FINE_DETECTOR_UTILS_HPP_

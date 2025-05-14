@@ -29,10 +29,10 @@ TEST(calWeightedIou, a_part_of_overlap)
   obj.y_offset = 5;
   obj.width = 10;
   obj.height = 10;
-  obj.score = 1.0;
+  obj.score = 0.5;
 
   float iou = autoware::traffic_light::utils::calWeightedIou(roi, obj);
-  EXPECT_FLOAT_EQ(iou, 0.14285714285);
+  EXPECT_FLOAT_EQ(iou, 0.07142857143);
 }
 
 TEST(calWeightedIou, overlap)
@@ -48,10 +48,10 @@ TEST(calWeightedIou, overlap)
   obj.y_offset = 5;
   obj.width = 5;
   obj.height = 5;
-  obj.score = 1.0;
+  obj.score = 0.5;
 
   float iou = autoware::traffic_light::utils::calWeightedIou(roi, obj);
-  EXPECT_FLOAT_EQ(iou, 0.25);
+  EXPECT_FLOAT_EQ(iou, 0.125);
 }
 
 TEST(calWeightedIou, no_overlap)
@@ -67,10 +67,52 @@ TEST(calWeightedIou, no_overlap)
   obj.y_offset = 15;
   obj.width = 10;
   obj.height = 10;
-  obj.score = 1.0;
+  obj.score = 0.5;
 
   float iou = autoware::traffic_light::utils::calWeightedIou(roi, obj);
   EXPECT_FLOAT_EQ(iou, 0.0);
+}
+
+TEST(fitInFrame, in_range)
+{
+  cv::Point lt(1, 2);
+  cv::Point rb(11, 22);
+  cv::Size size(20, 30);
+
+  bool result = autoware::traffic_light::utils::fitInFrame(lt, rb, size);
+  EXPECT_TRUE(result);
+  EXPECT_EQ(lt.x, 1);
+  EXPECT_EQ(lt.y, 2);
+  EXPECT_EQ(rb.x, 11);
+  EXPECT_EQ(rb.y, 22);
+}
+
+TEST(fitInFrame, out_of_range_left_top)
+{
+  cv::Point lt(-1, -2);
+  cv::Point rb(11, 22);
+  cv::Size size(20, 30);
+
+  bool result = autoware::traffic_light::utils::fitInFrame(lt, rb, size);
+  EXPECT_TRUE(result);
+  EXPECT_EQ(lt.x, 0);
+  EXPECT_EQ(lt.y, 0);
+  EXPECT_EQ(rb.x, 11);
+  EXPECT_EQ(rb.y, 22);
+}
+
+TEST(fitInFrame, out_of_range_right_bottom)
+{
+  cv::Point lt(1, 2);
+  cv::Point rb(21, 32);
+  cv::Size size(20, 30);
+
+  bool result = autoware::traffic_light::utils::fitInFrame(lt, rb, size);
+  EXPECT_TRUE(result);
+  EXPECT_EQ(lt.x, 1);
+  EXPECT_EQ(lt.y, 2);
+  EXPECT_EQ(rb.x, 19);
+  EXPECT_EQ(rb.y, 29);
 }
 
 int main(int argc, char ** argv)

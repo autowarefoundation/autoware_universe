@@ -14,6 +14,8 @@
 
 #include "traffic_light_fine_detector_utils.hpp"
 
+#include <algorithm>
+
 namespace autoware::traffic_light
 {
 
@@ -33,6 +35,26 @@ float calWeightedIou(
     return 0.0;
   }
   return bbox2.score * area1 / area2;
+}
+
+bool fitInFrame(cv::Point & lt, cv::Point & rb, const cv::Size & size)
+{
+  const int width = static_cast<int>(size.width);
+  const int height = static_cast<int>(size.height);
+  {
+    const int x_min = 0, x_max = width - 2;
+    const int y_min = 0, y_max = height - 2;
+    lt.x = std::min(std::max(lt.x, x_min), x_max);
+    lt.y = std::min(std::max(lt.y, y_min), y_max);
+  }
+  {
+    const int x_min = lt.x + 1, x_max = width - 1;
+    const int y_min = lt.y + 1, y_max = height - 1;
+    rb.x = std::min(std::max(rb.x, x_min), x_max);
+    rb.y = std::min(std::max(rb.y, y_min), y_max);
+  }
+
+  return true;
 }
 
 }  // namespace utils
