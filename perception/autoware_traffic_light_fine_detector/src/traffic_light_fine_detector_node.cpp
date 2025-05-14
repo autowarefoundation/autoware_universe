@@ -35,7 +35,6 @@ namespace autoware::traffic_light
 TrafficLightFineDetectorNode::TrafficLightFineDetectorNode(const rclcpp::NodeOptions & options)
 : Node("traffic_light_fine_detector_node", options)
 {
-  int num_class = 2;
   using std::placeholders::_1;
   using std::placeholders::_2;
   using std::placeholders::_3;
@@ -52,6 +51,7 @@ TrafficLightFineDetectorNode::TrafficLightFineDetectorNode(const rclcpp::NodeOpt
   float nms_threshold = static_cast<float>(this->declare_parameter<double>("nms_thresh"));
   is_approximate_sync_ = this->declare_parameter<bool>("approximate_sync");
 
+  int num_class;
   if (!readLabelFile(label_path, tlr_label_id_, num_class)) {
     RCLCPP_ERROR(this->get_logger(), "Could not find tlr id");
   }
