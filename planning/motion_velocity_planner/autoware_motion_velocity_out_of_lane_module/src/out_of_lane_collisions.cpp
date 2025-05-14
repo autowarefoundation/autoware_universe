@@ -61,9 +61,8 @@ void calculate_object_path_time_collisions(
   const autoware_perception_msgs::msg::Shape & object_shape)
 {
   const auto time_step = rclcpp::Duration(object_path.time_step).seconds();
-  auto time = time_step;
+  auto time = 0.0;
   for (const auto & object_pose : object_path.path) {
-    time += time_step;
     const auto object_footprint = autoware_utils::to_polygon2d(object_pose, object_shape);
     std::vector<OutAreaNode> query_results;
     out_of_lane_data.outside_areas_rtree.query(
@@ -74,6 +73,7 @@ void calculate_object_path_time_collisions(
       potential_collision_indexes.insert(index);
     }
     update_collision_times(out_of_lane_data, potential_collision_indexes, object_footprint, time);
+    time += time_step;
   }
 }
 
@@ -115,14 +115,13 @@ void calculate_min_max_arrival_times(
 void calculate_collisions_to_avoid(
   OutOfLaneData & out_of_lane_data,
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
-  const PlannerParam & params)
+  const PlannerParam & params, const bool is_stopping)
 {
-  for (auto & out_of_lane_point : out_of_lane_data.outside_points) {
-    calculate_min_max_arrival_times(out_of_lane_point, trajectory);
-  }
   for (auto & p : out_of_lane_data.outside_points) {
+    calculate_min_max_arrival_times(p, trajectory);
     if (params.mode == "ttc") {
-      p.to_avoid = p.ttc && p.ttc <= params.ttc_threshold;
+      const auto threshold = is_stopping ? params.ttc_release_threshold : params.ttc_threshold;
+      p.to_avoid = p.ttc && p.ttc <= threshold;
     } else {
       p.to_avoid = p.min_object_arrival_time && p.min_object_arrival_time <= params.time_threshold;
     }

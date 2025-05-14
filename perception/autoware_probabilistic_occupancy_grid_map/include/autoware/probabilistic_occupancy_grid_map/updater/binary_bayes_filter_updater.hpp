@@ -16,7 +16,7 @@
 #define AUTOWARE__PROBABILISTIC_OCCUPANCY_GRID_MAP__UPDATER__BINARY_BAYES_FILTER_UPDATER_HPP_
 
 #ifdef USE_CUDA
-#include "autoware/cuda_utils/cuda_unique_ptr.hpp"
+#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #endif
 
 #include "autoware/probabilistic_occupancy_grid_map/updater/ogm_updater_interface.hpp"

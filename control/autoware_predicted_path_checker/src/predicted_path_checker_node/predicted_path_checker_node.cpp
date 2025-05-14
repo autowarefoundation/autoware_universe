@@ -485,7 +485,7 @@ Trajectory PredictedPathCheckerNode::cutTrajectory(
     cut.points.push_back(point);
     total_length += points_distance;
   }
-  autoware::motion_utils::removeOverlapPoints(cut.points);
+  cut.points = autoware::motion_utils::removeOverlapPoints(cut.points);
 
   return cut;
 }

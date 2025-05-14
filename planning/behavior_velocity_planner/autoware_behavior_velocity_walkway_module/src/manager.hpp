@@ -42,6 +42,11 @@ public:
 
   const char * getModuleName() override { return "walkway"; }
 
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    return RequiredSubscriptionInfo{};
+  }
+
 private:
   WalkwayModule::PlannerParam walkway_planner_param_{};
 

@@ -18,6 +18,8 @@ import os
 import unittest
 
 from ament_index_python import get_package_share_directory
+from autoware_internal_planning_msgs.msg import VelocityLimit
+from autoware_internal_planning_msgs.msg import VelocityLimitClearCommand
 import launch
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import AnyLaunchDescriptionSource
@@ -30,8 +32,6 @@ from rcl_interfaces.msg import ParameterValue
 from rcl_interfaces.srv import SetParameters
 import rclpy
 import rclpy.qos
-from tier4_planning_msgs.msg import VelocityLimit
-from tier4_planning_msgs.msg import VelocityLimitClearCommand
 
 logger = get_logger(__name__)
 

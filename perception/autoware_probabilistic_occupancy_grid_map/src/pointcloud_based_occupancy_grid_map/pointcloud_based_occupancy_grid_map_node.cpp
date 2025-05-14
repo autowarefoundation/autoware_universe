@@ -39,6 +39,7 @@
 #include <algorithm>
 #include <limits>
 #include <memory>
+#include <sstream>
 #include <string>
 
 namespace autoware::occupancy_grid_map
@@ -122,6 +123,9 @@ PointcloudBasedOccupancyGridMapNode::PointcloudBasedOccupancyGridMapNode(
   occupancy_grid_map_ptr_->setCudaStream(stream_);
   occupancy_grid_map_updater_ptr_->setCudaStream(stream_);
 
+  device_rotation_ = autoware::cuda_utils::make_unique<Eigen::Matrix3f>();
+  device_translation_ = autoware::cuda_utils::make_unique<Eigen::Vector3f>();
+
   occupancy_grid_map_ptr_->initRosParam(*this);
   occupancy_grid_map_updater_ptr_->initRosParam(*this);
 
@@ -145,6 +149,12 @@ PointcloudBasedOccupancyGridMapNode::PointcloudBasedOccupancyGridMapNode(
       time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(time_keeper);
     }
   }
+
+  processing_time_tolerance_ms_ = this->declare_parameter<double>("processing_time_tolerance_ms");
+  processing_time_consecutive_excess_tolerance_ms_ =
+    this->declare_parameter<double>("processing_time_consecutive_excess_tolerance_ms");
+  diagnostics_interface_ptr_ = std::make_unique<autoware_utils::DiagnosticsInterface>(
+    this, "pointcloud_based_probabilistic_occupancy_grid_map");
 }
 
 void PointcloudBasedOccupancyGridMapNode::obstaclePointcloudCallback(
@@ -167,6 +177,56 @@ void PointcloudBasedOccupancyGridMapNode::rawPointcloudCallback(
   }
 }
 
+void PointcloudBasedOccupancyGridMapNode::checkProcessingTime(double processing_time_ms)
+{
+  static rclcpp::Time last_normal_time = this->get_clock()->now();
+  const bool is_processing_time_within_range =
+    (processing_time_ms <= processing_time_tolerance_ms_);
+
+  // Update timestamp when latency is normal
+  if (is_processing_time_within_range) {
+    last_normal_time = this->get_clock()->now();
+  }
+
+  // Calculate duration of abnormal latency
+  const double processing_consecutive_excess_time =
+    (this->get_clock()->now() - last_normal_time).seconds() * 1000.0;
+
+  uint8_t level;
+  std::string status_str;
+  std::string message;
+
+  if (is_processing_time_within_range) {
+    level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+    status_str = "OK";
+  } else if (
+    processing_consecutive_excess_time > processing_time_consecutive_excess_tolerance_ms_) {
+    status_str = "ERROR";
+    level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+    message = "Processing time exceeded the warning threshold of " +
+              std::to_string(processing_time_tolerance_ms_) + "ms for " +
+              std::to_string(processing_consecutive_excess_time / 1000.0) + "s  (Threshold " +
+              std::to_string(processing_time_consecutive_excess_tolerance_ms_ / 1000.0) + "s)";
+  } else {
+    status_str = "WARN";
+    level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+    message = "Processing time exceeds the warning threshold of " +
+              std::to_string(processing_time_tolerance_ms_) + " ms.";
+  }
+
+  diagnostics_interface_ptr_->clear();
+  diagnostics_interface_ptr_->add_key_value("processing time(ms)", processing_time_ms);
+  diagnostics_interface_ptr_->add_key_value(
+    "is processing time within threshold", is_processing_time_within_range);
+  diagnostics_interface_ptr_->add_key_value(
+    "processing time consecutive excess duration(ms)", processing_consecutive_excess_time);
+  diagnostics_interface_ptr_->add_key_value(
+    "is processing time consecutive excess duration within threshold",
+    processing_consecutive_excess_time <= processing_time_consecutive_excess_tolerance_ms_);
+  diagnostics_interface_ptr_->update_level_and_message(level, "[" + status_str + "] " + message);
+  diagnostics_interface_ptr_->publish(raw_pointcloud_.header.stamp);
+}
+
 void PointcloudBasedOccupancyGridMapNode::onPointcloudWithObstacleAndRaw()
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
@@ -185,12 +245,14 @@ void PointcloudBasedOccupancyGridMapNode::onPointcloudWithObstacleAndRaw()
   if (use_height_filter_) {
     // Make sure that the frame is base_link
     if (raw_pointcloud_.header.frame_id != base_link_frame_) {
-      if (!utils::transformPointcloudAsync(raw_pointcloud_, *tf2_, base_link_frame_)) {
+      if (!utils::transformPointcloudAsync(
+            raw_pointcloud_, *tf2_, base_link_frame_, device_rotation_, device_translation_)) {
         return;
       }
     }
     if (obstacle_pointcloud_.header.frame_id != base_link_frame_) {
-      if (!utils::transformPointcloudAsync(obstacle_pointcloud_, *tf2_, base_link_frame_)) {
+      if (!utils::transformPointcloudAsync(
+            obstacle_pointcloud_, *tf2_, base_link_frame_, device_rotation_, device_translation_)) {
         return;
       }
     }
@@ -270,6 +332,8 @@ void PointcloudBasedOccupancyGridMapNode::onPointcloudWithObstacleAndRaw()
       "debug/processing_time_ms", processing_time_ms);
     debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/pipeline_latency_ms", pipeline_latency_ms);
+
+    checkProcessingTime(processing_time_ms);
   }
 }
 

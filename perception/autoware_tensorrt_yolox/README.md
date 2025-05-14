@@ -33,8 +33,17 @@ Zheng Ge, Songtao Liu, Feng Wang, Zeming Li, Jian Sun, "YOLOX: Exceeding YOLO Se
 
 ## Parameters
 
+### yolox_s_plus_opt
+
 {{ json_to_markdown("perception/autoware_tensorrt_yolox/schema/yolox_s_plus_opt.schema.json") }}
+
+### yolox_tiny
+
 {{ json_to_markdown("perception/autoware_tensorrt_yolox/schema/yolox_tiny.schema.json") }}
+
+### yolox_traffic_light_detector
+
+{{ json_to_markdown("perception/autoware_tensorrt_yolox/schema/yolox_traffic_light_detector.schema.json") }}
 
 ## Assumptions / Known limits
 

@@ -20,17 +20,12 @@
 
 namespace autoware::multi_object_tracker
 {
-
-using Label = autoware_perception_msgs::msg::ObjectClassification;
-
 PedestrianAndBicycleTracker::PedestrianAndBicycleTracker(
-  const rclcpp::Time & time, const types::DynamicObject & object, const size_t channel_size)
-: Tracker(time, object.classification, channel_size),
-  pedestrian_tracker_(time, object, channel_size),
-  bicycle_tracker_(time, object, channel_size)
+  const rclcpp::Time & time, const types::DynamicObject & object)
+: Tracker(time, object),
+  pedestrian_tracker_(time, object),
+  bicycle_tracker_(object_model::bicycle, time, object)
 {
-  // initialize existence probability
-  initializeExistenceProbabilities(object.channel_index, object.existence_probability);
 }
 
 bool PedestrianAndBicycleTracker::predict(const rclcpp::Time & time)
@@ -42,14 +37,11 @@ bool PedestrianAndBicycleTracker::predict(const rclcpp::Time & time)
 
 bool PedestrianAndBicycleTracker::measure(
   const types::DynamicObject & object, const rclcpp::Time & time,
-  const geometry_msgs::msg::Transform & self_transform)
+  const types::InputChannel & channel_info)
 {
-  pedestrian_tracker_.measure(object, time, self_transform);
-  bicycle_tracker_.measure(object, time, self_transform);
-  if (
-    autoware::object_recognition_utils::getHighestProbLabel(object.classification) !=
-    Label::UNKNOWN)
-    updateClassification(object.classification);
+  pedestrian_tracker_.measure(object, time, channel_info);
+  bicycle_tracker_.measure(object, time, channel_info);
+
   return true;
 }
 
@@ -64,8 +56,8 @@ bool PedestrianAndBicycleTracker::getTrackedObject(
   } else if (label == Label::BICYCLE || label == Label::MOTORCYCLE) {
     bicycle_tracker_.getTrackedObject(time, object);
   }
-  object.object_id = getUUID();
-  object.classification = getClassification();
+  object.uuid = object_.uuid;
+  object.classification = object_.classification;
   return true;
 }
 

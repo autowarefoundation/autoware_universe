@@ -254,7 +254,7 @@ bool MrmHandler::requestMrmBehavior(
 
   switch (mrm_behavior) {
     case MrmState::NONE:
-      RCLCPP_WARN(this->get_logger(), "MRM behavior is None. Do nothing.");
+      RCLCPP_DEBUG(this->get_logger(), "MRM behavior is None. Do nothing.");
       return true;
     case MrmState::PULL_OVER: {
       future = client_mrm_pull_over_->async_send_request(request).future.share();

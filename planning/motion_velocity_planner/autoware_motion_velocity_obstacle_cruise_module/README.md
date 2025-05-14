@@ -41,7 +41,7 @@ The obstacles meeting the following condition are determined as obstacles for yi
 
 - The object type is for cruising according to `obstacle_filtering.object_type.*` and it is moving with a speed greater than `obstacle_filtering.yield.stopped_obstacle_velocity_threshold`.
 - The object is not crossing the ego's trajectory (\*1).
-- There is another object of type `obstacle_filtering.object_type.*` stopped in front of the moving obstacle.
+- There is another object of type `obstacle_filtering.object_type.side_stopped` stopped in front of the moving obstacle.
 - The lateral distance (using the ego's trajectory as reference) between both obstacles is less than `obstacle_filtering.yield.max_lat_dist_between_obstacles`
 - Both obstacles, moving and stopped, are within `obstacle_filtering.yield.lat_distance_threshold` and `obstacle_filtering.yield.lat_distance_threshold` + `obstacle_filtering.yield.max_lat_dist_between_obstacles` lateral distance from the ego's trajectory respectively.
 

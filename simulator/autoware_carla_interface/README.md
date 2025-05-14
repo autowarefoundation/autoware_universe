@@ -1,6 +1,6 @@
 # autoware_carla_interface
 
-## ROS 2/Autoware.universe bridge for CARLA simulator
+## ROS 2 / Autoware Universe bridge for CARLA simulator
 
 Thanks to <https://github.com/gezp> for ROS 2 Humble support for CARLA Communication.
 This ros package enables communication between Autoware and CARLA for autonomous driving simulation.

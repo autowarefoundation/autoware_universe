@@ -425,7 +425,7 @@ LaneletRoute MissionPlanner::create_route(const PoseWithUuidStamped & msg)
   //       Also, use start pose and waypoints that are on the preferred lanelet of the current route
   //       as much as possible.
   //       For this process, refer to RouteHandler::planPathLaneletsBetweenCheckpoints() or
-  //       https://github.com/autowarefoundation/autoware.universe/pull/8238 too.
+  //       https://github.com/autowarefoundation/autoware_universe/pull/8238 too.
   const auto & start_pose = current_route_ ? current_route_->start_pose : odometry_->pose.pose;
   std::vector<Pose> waypoints{};
   if (current_route_) {

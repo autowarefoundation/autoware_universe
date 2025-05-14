@@ -21,17 +21,18 @@
 #include <rviz_default_plugins/displays/marker/marker_common.hpp>
 #include <rviz_default_plugins/displays/marker_array/marker_array_display.hpp>
 
-#include <tier4_planning_msgs/msg/planning_factor_array.hpp>
+#include <autoware_internal_planning_msgs/msg/planning_factor_array.hpp>
 
 #include <string>
 
 namespace autoware::rviz_plugins
 {
 
-using RosTopicDisplay = rviz_common::RosTopicDisplay<tier4_planning_msgs::msg::PlanningFactorArray>;
+using RosTopicDisplay =
+  rviz_common::RosTopicDisplay<autoware_internal_planning_msgs::msg::PlanningFactorArray>;
 
 class PlanningFactorRvizPlugin
-: public rviz_common::RosTopicDisplay<tier4_planning_msgs::msg::PlanningFactorArray>
+: public rviz_common::RosTopicDisplay<autoware_internal_planning_msgs::msg::PlanningFactorArray>
 {
 public:
   PlanningFactorRvizPlugin()
@@ -46,7 +47,7 @@ public:
     RosTopicDisplay::RTDClass::onInitialize();
     marker_common_.initialize(this->context_, this->scene_node_);
     QString message_type = QString::fromStdString(
-      rosidl_generator_traits::name<tier4_planning_msgs::msg::PlanningFactorArray>());
+      rosidl_generator_traits::name<autoware_internal_planning_msgs::msg::PlanningFactorArray>());
     this->topic_property_->setMessageType(message_type);
     this->topic_property_->setValue(topic_name_.c_str());
     this->topic_property_->setDescription("Topic to subscribe to.");
@@ -90,7 +91,7 @@ public:
 
 private:
   void processMessage(
-    const tier4_planning_msgs::msg::PlanningFactorArray::ConstSharedPtr msg) override;
+    const autoware_internal_planning_msgs::msg::PlanningFactorArray::ConstSharedPtr msg) override;
 
   rviz_default_plugins::displays::MarkerCommon marker_common_;
 

@@ -25,6 +25,7 @@
   <arg name="ml_package_param_path" default="$(var model_path)/$(var model_name)_ml_package.param.yaml"/>
   <arg name="class_remapper_param_path" default="$(var model_path)/detection_class_remapper.param.yaml"/>
   <arg name="sync_param_path" default="$(find-pkg-share autoware_image_projection_based_fusion)/config/fusion_common.param.yaml"/>
+  <arg name="common_param_path" default="$(find-pkg-share autoware_image_projection_based_fusion)/config/pointpainting_common.param.yaml"/>
   <arg name="build_only" default="false" description="shutdown node after TensorRT engine file is built"/>
 
   <arg name="use_pointcloud_container" default="false" description="use pointcloud_container"/>
@@ -51,10 +52,11 @@
         <param from="$(var model_param_path)" allow_substs="true"/>
         <param from="$(var ml_package_param_path)" allow_substs="true"/>
         <param from="$(var sync_param_path)"/>
+        <param from="$(var common_param_path)"/>
         <param from="$(var class_remapper_param_path)"/>
         <param name="rois_number" value="$(var input/rois_number)"/>
 
-        <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware.universe/pull/6169 -->
+        <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware_universe/pull/6169 -->
         <param name="build_only" value="$(var build_only)"/>
 
         <!-- rois, camera and info -->
@@ -93,10 +95,11 @@
       <param from="$(var model_param_path)" allow_substs="true"/>
       <param from="$(var ml_package_param_path)" allow_substs="true"/>
       <param from="$(var sync_param_path)"/>
+      <param from="$(var common_param_path)"/>
       <param from="$(var class_remapper_param_path)"/>
       <param name="rois_number" value="$(var input/rois_number)"/>
 
-      <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware.universe/pull/6169 -->
+      <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware_universe/pull/6169 -->
       <param name="build_only" value="$(var build_only)"/>
 
       <!-- rois, camera and info -->

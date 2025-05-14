@@ -21,7 +21,7 @@
 #include "autoware_utils/ros/marker_helper.hpp"
 #include "autoware_utils/ros/update_param.hpp"
 
-#include "tier4_planning_msgs/msg/velocity_limit.hpp"
+#include "autoware_internal_planning_msgs/msg/velocity_limit.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -336,8 +336,8 @@ std::vector<TrajectoryPoint> PIDBasedPlanner::planCruise(
 
       planning_factor_interface_->add(
         stop_traj_points, planner_data.ego_pose, stop_traj_points.at(wall_idx).pose,
-        tier4_planning_msgs::msg::PlanningFactor::NONE,
-        tier4_planning_msgs::msg::SafetyFactorArray{});
+        autoware_internal_planning_msgs::msg::PlanningFactor::NONE,
+        autoware_internal_planning_msgs::msg::SafetyFactorArray{});
     }
 
     // do cruise planning

@@ -15,7 +15,7 @@
 #ifndef CRUISE_PLANNER_INTERFACE_HPP_
 #define CRUISE_PLANNER_INTERFACE_HPP_
 
-#include "autoware/motion_velocity_planner_common_universe/planner_data.hpp"
+#include "autoware/motion_velocity_planner_common/planner_data.hpp"
 #include "parameters.hpp"
 #include "type_alias.hpp"
 #include "types.hpp"

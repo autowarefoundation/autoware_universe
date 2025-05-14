@@ -146,8 +146,8 @@ void SurroundObstacleCheckerDebugNode::publish()
   /* publish stop reason for autoware api */
   if (stop_pose_ptr_ != nullptr) {
     planning_factor_interface_->add(
-      0.0, *stop_pose_ptr_, tier4_planning_msgs::msg::PlanningFactor::STOP,
-      tier4_planning_msgs::msg::SafetyFactorArray{});
+      0.0, *stop_pose_ptr_, autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+      autoware_internal_planning_msgs::msg::SafetyFactorArray{});
   }
   planning_factor_interface_->publish();
 

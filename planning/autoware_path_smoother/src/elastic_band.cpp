@@ -403,9 +403,9 @@ std::optional<std::vector<double>> EBPathSmoother::calcSmoothedTrajectory()
 
   // solve QP
   const auto result = osqp_solver_ptr_->optimize();
-  const auto optimized_points = std::get<0>(result);
+  const auto optimized_points = result.primal_solution;
 
-  const auto status = std::get<3>(result);
+  const auto status = result.solution_status;
 
   // check status
   if (status != 1) {

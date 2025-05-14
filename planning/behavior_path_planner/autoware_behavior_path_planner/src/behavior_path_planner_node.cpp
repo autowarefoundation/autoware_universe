@@ -807,8 +807,11 @@ SetParametersResult BehaviorPathPlannerNode::onSetParam(
       parameters, DrivableAreaExpansionParameters::ENABLED_PARAM,
       planner_data_->drivable_area_expansion_parameters.enabled);
     update_param(
+      parameters, DrivableAreaExpansionParameters::AVOID_STA_OBJECTS_PARAM,
+      planner_data_->drivable_area_expansion_parameters.object_exclusion.exclude_static);
+    update_param(
       parameters, DrivableAreaExpansionParameters::AVOID_DYN_OBJECTS_PARAM,
-      planner_data_->drivable_area_expansion_parameters.avoid_dynamic_objects);
+      planner_data_->drivable_area_expansion_parameters.object_exclusion.exclude_dynamic);
     update_param(
       parameters, DrivableAreaExpansionParameters::AVOID_LINESTRING_TYPES_PARAM,
       planner_data_->drivable_area_expansion_parameters.avoid_linestring_types);
@@ -825,17 +828,20 @@ SetParametersResult BehaviorPathPlannerNode::onSetParam(
       parameters, DrivableAreaExpansionParameters::EGO_EXTRA_WIDTH,
       planner_data_->drivable_area_expansion_parameters.extra_width);
     update_param(
-      parameters, DrivableAreaExpansionParameters::DYN_OBJECTS_EXTRA_OFFSET_FRONT,
-      planner_data_->drivable_area_expansion_parameters.dynamic_objects_extra_front_offset);
+      parameters, DrivableAreaExpansionParameters::OBJECTS_SAFE_MARGIN_FRONT,
+      planner_data_->drivable_area_expansion_parameters.object_exclusion.front_offset);
     update_param(
-      parameters, DrivableAreaExpansionParameters::DYN_OBJECTS_EXTRA_OFFSET_REAR,
-      planner_data_->drivable_area_expansion_parameters.dynamic_objects_extra_rear_offset);
+      parameters, DrivableAreaExpansionParameters::OBJECTS_SAFE_MARGIN_REAR,
+      planner_data_->drivable_area_expansion_parameters.object_exclusion.rear_offset);
     update_param(
-      parameters, DrivableAreaExpansionParameters::DYN_OBJECTS_EXTRA_OFFSET_LEFT,
-      planner_data_->drivable_area_expansion_parameters.dynamic_objects_extra_left_offset);
+      parameters, DrivableAreaExpansionParameters::OBJECTS_SAFE_MARGIN_LEFT,
+      planner_data_->drivable_area_expansion_parameters.object_exclusion.left_offset);
     update_param(
-      parameters, DrivableAreaExpansionParameters::DYN_OBJECTS_EXTRA_OFFSET_RIGHT,
-      planner_data_->drivable_area_expansion_parameters.dynamic_objects_extra_right_offset);
+      parameters, DrivableAreaExpansionParameters::OBJECTS_SAFE_MARGIN_RIGHT,
+      planner_data_->drivable_area_expansion_parameters.object_exclusion.right_offset);
+    update_param(
+      parameters, DrivableAreaExpansionParameters::STOPPED_OBJ_VEL_THRESH,
+      planner_data_->drivable_area_expansion_parameters.object_exclusion.stopped_obj_vel_th);
     update_param(
       parameters, DrivableAreaExpansionParameters::MAX_EXP_DIST_PARAM,
       planner_data_->drivable_area_expansion_parameters.max_expansion_distance);

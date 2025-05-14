@@ -54,9 +54,9 @@ protected:
   {
     node_ = std::make_shared<rclcpp::Node>("test_node");
     distortion_corrector_2d_ =
-      std::make_shared<autoware::pointcloud_preprocessor::DistortionCorrector2D>(*node_, true);
+      std::make_shared<autoware::pointcloud_preprocessor::DistortionCorrector2D>(*node_);
     distortion_corrector_3d_ =
-      std::make_shared<autoware::pointcloud_preprocessor::DistortionCorrector3D>(*node_, true);
+      std::make_shared<autoware::pointcloud_preprocessor::DistortionCorrector3D>(*node_);
 
     // Setup TF
     tf_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(node_);
@@ -284,11 +284,11 @@ protected:
     const rclcpp::Time & pointcloud_timestamp, size_t number_of_points)
   {
     std::vector<std::uint32_t> timestamps;
-    rclcpp::Time global_point_stamp = pointcloud_timestamp;
+    rclcpp::Time current_point_stamp = pointcloud_timestamp;
     for (size_t i = 0; i < number_of_points; ++i) {
-      std::uint32_t relative_timestamp = (global_point_stamp - pointcloud_timestamp).nanoseconds();
+      std::uint32_t relative_timestamp = (current_point_stamp - pointcloud_timestamp).nanoseconds();
       timestamps.push_back(relative_timestamp);
-      global_point_stamp = add_milliseconds(global_point_stamp, points_interval_ms);
+      current_point_stamp = add_milliseconds(current_point_stamp, points_interval_ms);
     }
 
     return timestamps;

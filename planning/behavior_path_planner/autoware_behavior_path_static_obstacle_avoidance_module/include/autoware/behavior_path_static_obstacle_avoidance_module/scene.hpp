@@ -29,6 +29,7 @@
 
 #include <limits>
 #include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -404,7 +405,8 @@ private:
   {
     constexpr double threshold = 0.1;
     if (std::abs(path_shifter_.getBaseOffset()) > threshold) {
-      RCLCPP_INFO(getLogger(), "base offset is not zero. can't reset registered shift lines.");
+      RCLCPP_INFO_THROTTLE(
+        getLogger(), *clock_, 3000, "base offset is not zero. can't reset registered shift lines.");
       return;
     }
 
@@ -459,7 +461,7 @@ private:
 
   bool safe_{true};
 
-  std::optional<UUID> ignore_signal_{std::nullopt};
+  std::set<std::string> ignore_signal_ids_;
 
   std::shared_ptr<AvoidanceHelper> helper_;
 

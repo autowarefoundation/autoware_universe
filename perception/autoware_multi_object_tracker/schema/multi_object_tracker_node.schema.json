@@ -51,6 +51,11 @@
           "description": "Object kinematics definition frame.",
           "default": "map"
         },
+        "ego_frame_id": {
+          "type": "string",
+          "description": "Vehicle's ego frame.",
+          "default": "base_link"
+        },
         "enable_delay_compensation": {
           "type": "boolean",
           "description": "If True, tracker use timers to schedule publishers and use prediction step to extrapolate object state at desired timestamp.",
@@ -75,11 +80,6 @@
           "type": "number",
           "description": "Minimum IOU between associated objects with unknown label to remove unknown tracker",
           "default": 0.001
-        },
-        "distance_threshold": {
-          "type": "number",
-          "description": "Distance threshold in meters.",
-          "default": 5.0
         },
         "confident_count_threshold": {
           "type": "object",
@@ -131,6 +131,11 @@
           "description": "Enable to publish debug message of process time information.",
           "default": false
         },
+        "publish_processing_time_detail": {
+          "type": "boolean",
+          "description": "Enable to publish debug message of detailed process time information.",
+          "default": false
+        },
         "publish_tentative_objects": {
           "type": "boolean",
           "description": "Enable to publish tentative tracked objects, which have lower confidence.",
@@ -150,6 +155,16 @@
           "type": "number",
           "description": "Delay threshold for error diagnostics in seconds.",
           "default": 1.0
+        },
+        "diagnostics_warn_extrapolation": {
+          "type": "number",
+          "description": "Delay extrapolation threshold for warning diagnostics in seconds.",
+          "default": 0.5
+        },
+        "diagnostics_error_extrapolation": {
+          "type": "number",
+          "description": "Delay extrapolation threshold for error diagnostics in seconds.",
+          "default": 1.0
         }
       },
       "required": [
@@ -162,14 +177,15 @@
         "motorcycle_tracker",
         "publish_rate",
         "world_frame_id",
+        "ego_frame_id",
         "enable_delay_compensation",
         "consider_odometry_uncertainty",
         "tracker_lifetime",
         "min_known_object_removal_iou",
         "min_unknown_object_removal_iou",
-        "distance_threshold",
         "confident_count_threshold",
         "publish_processing_time",
+        "publish_processing_time_detail",
         "publish_tentative_objects",
         "publish_debug_markers",
         "diagnostics_warn_delay",

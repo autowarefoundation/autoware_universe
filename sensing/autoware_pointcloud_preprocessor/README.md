@@ -9,6 +9,7 @@ The `autoware_pointcloud_preprocessor` is a package that includes the following 
 - concatenating pointclouds
 - correcting distortion
 - downsampling
+- densifying pointclouds
 
 ## Inner-workings / Algorithms
 
@@ -23,6 +24,7 @@ Detail description of each filter's algorithm is in the following links.
 | outlier_filter                | remove points caused by hardware problems, rain drops and small insects as a noise | [link](docs/outlier-filter.md)                |
 | passthrough_filter            | remove points on the outside of a range in given field (e.g. x, y, z, intensity)   | [link](docs/passthrough-filter.md)            |
 | pointcloud_accumulator        | accumulate pointclouds for a given amount of time                                  | [link](docs/pointcloud-accumulator.md)        |
+| pointcloud_densifier          | enhance sparse point clouds by using information from previous frames              | [link](docs/pointcloud-densifier.md)          |
 | vector_map_filter             | remove points on the outside of lane by using vector map                           | [link](docs/vector-map-filter.md)             |
 | vector_map_inside_area_filter | remove points inside of vector map area that has given type by parameter           | [link](docs/vector-map-inside-area-filter.md) |
 

@@ -45,6 +45,7 @@ public:
   struct NodeParam
   {
     double doppler_velocity_sd{};
+    size_t max_queue_size{};
   };
 
 private:

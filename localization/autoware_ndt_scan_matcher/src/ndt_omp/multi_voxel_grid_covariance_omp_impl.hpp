@@ -434,9 +434,7 @@ void pclomp::MultiVoxelGridCovariance<PointT>::computeLeafParams(
   Leaf & leaf) const
 {
   // Single pass covariance calculation
-  leaf.cov_ = (leaf.cov_ - 2 * (pt_sum * leaf.mean_.transpose())) / leaf.nr_points_ +
-              leaf.mean_ * leaf.mean_.transpose();
-  leaf.cov_ *= (leaf.nr_points_ - 1.0) / leaf.nr_points_;
+  leaf.cov_ = (leaf.cov_ - pt_sum * leaf.mean_.transpose()) / (leaf.nr_points_ - 1);
 
   // Normalize Eigen Val such that max no more than 100x min.
   eigensolver.compute(leaf.cov_);

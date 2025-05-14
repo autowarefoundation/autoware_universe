@@ -87,7 +87,6 @@ def generate_test_description():
             parameters=[
                 {
                     "debug_mode": False,
-                    "has_static_tf_only": False,
                     "rosbag_length": 0.0,
                     "maximum_queue_size": 5,
                     "timeout_sec": TIMEOUT_SEC,

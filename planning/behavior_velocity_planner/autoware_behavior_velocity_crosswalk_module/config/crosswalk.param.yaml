@@ -46,6 +46,8 @@
         ego_pass_later_additional_margin: 0.5 # [s] additional time margin for object pass first situation to suppress chattering
         ego_min_assumed_speed: 2.0 # [m/s] assumed speed to calculate the time to collision point
 
+        consider_obj_on_crosswalk_on_red_light: true # consider and do not ignore objects if they are on the crosswalk when the crosswalk pedestrian traffic light is red
+
         no_stop_decision: # parameters to determine stop cancel. {-$overrun_threshold_length + f($min_acc, $min_jerk)} is compared against distance to stop pose.
           min_acc: -1.5 # min acceleration [m/ss]
           min_jerk: -1.5 # min jerk [m/sss]

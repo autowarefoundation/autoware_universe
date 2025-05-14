@@ -6,27 +6,17 @@
     "traffic_light_fine_detector": {
       "type": "object",
       "properties": {
-        "fine_detector_label_path": {
-          "type": "string",
-          "description": "The label file with label names for detected objects written on it.",
-          "default": "$(var traffic_light_fine_detector_model_path)/$(var traffic_light_fine_detector_label_name)"
-        },
-        "fine_detector_model_path": {
-          "type": "string",
-          "description": "The ONNX file name for the YOLO model.",
-          "default": "$(var traffic_light_fine_detector_model_path)/$(var traffic_light_fine_detector_model_name).onnx"
-        },
-        "fine_detector_precision": {
+        "precision": {
           "type": "string",
           "description": "Precision used for traffic light fine detector inference. Valid values: [fp32, fp16].",
           "default": "fp16"
         },
-        "fine_detector_score_thresh": {
+        "score_thresh": {
           "type": "number",
           "description": "If the objectness score is less than this value, the object is ignored.",
           "default": 0.3
         },
-        "fine_detector_nms_thresh": {
+        "nms_thresh": {
           "type": "number",
           "description": "IoU threshold to perform Non-Maximum Suppression (NMS).",
           "default": 0.65
@@ -42,15 +32,7 @@
           "default": 0
         }
       },
-      "required": [
-        "fine_detector_label_path",
-        "fine_detector_model_path",
-        "fine_detector_precision",
-        "fine_detector_score_thresh",
-        "fine_detector_nms_thresh",
-        "approximate_sync",
-        "gpu_id"
-      ],
+      "required": ["precision", "score_thresh", "nms_thresh", "approximate_sync", "gpu_id"],
       "additionalProperties": false
     }
   },

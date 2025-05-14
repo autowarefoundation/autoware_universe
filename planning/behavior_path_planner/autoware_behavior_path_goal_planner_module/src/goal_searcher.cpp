@@ -227,9 +227,8 @@ GoalCandidates GoalSearcher::search(
         vehicle_footprint_, autoware_utils::pose2transform(search_pose));
 
       if (
-        parameters_.bus_stop_area.use_bus_stop_area &&
-        !goal_planner_utils::isWithinAreas(
-          transformed_vehicle_footprint, bus_stop_area_polygons_)) {
+        use_bus_stop_area && !goal_planner_utils::isWithinAreas(
+                               transformed_vehicle_footprint, bus_stop_area_polygons_)) {
         continue;
       }
 

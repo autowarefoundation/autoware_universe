@@ -60,6 +60,8 @@ public:
 
   MultiPolygon2d getAreaPolygons() const { return area_polygons_; }
 
+  bool bus_stop_area_available() const { return !bus_stop_area_polygons_.empty(); }
+
 private:
   GoalSearcher(
     const GoalPlannerParameters & parameters, const LinearRing2d & vehicle_footprint,

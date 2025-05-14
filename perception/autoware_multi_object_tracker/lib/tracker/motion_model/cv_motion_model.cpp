@@ -241,7 +241,7 @@ bool CVMotionModel::getPredictedState(
   // set position
   pose.position.x = X(IDX::X);
   pose.position.y = X(IDX::Y);
-  pose.position.z = 0.0;
+  // do not change z
 
   // set twist
   twist.linear.x = X(IDX::VX) * std::cos(-yaw) - X(IDX::VY) * std::sin(-yaw);

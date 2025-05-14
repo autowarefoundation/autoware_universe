@@ -167,9 +167,10 @@ void NoDrivableLaneModule::handle_approaching_state(PathWithLaneId * path)
   {
     const auto & stop_pose = op_stop_pose.value();
     planning_factor_interface_->add(
-      path->points, planner_data_->current_odometry->pose, stop_pose, stop_pose,
-      tier4_planning_msgs::msg::PlanningFactor::STOP, tier4_planning_msgs::msg::SafetyFactorArray{},
-      true /*is_driving_forward*/, 0.0, 0.0 /*shift distance*/, "");
+      path->points, planner_data_->current_odometry->pose, stop_pose,
+      autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+      autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
+      0.0 /*shift distance*/, "");
 
     const auto virtual_wall_pose = autoware::motion_utils::calcLongitudinalOffsetPose(
       path->points, stop_pose.position, debug_data_.base_link2front);
@@ -217,9 +218,10 @@ void NoDrivableLaneModule::handle_inside_no_drivable_lane_state(PathWithLaneId *
   {
     const auto & stop_pose = autoware_utils::get_pose(path->points.at(0));
     planning_factor_interface_->add(
-      path->points, planner_data_->current_odometry->pose, stop_pose, stop_pose,
-      tier4_planning_msgs::msg::PlanningFactor::STOP, tier4_planning_msgs::msg::SafetyFactorArray{},
-      true /*is_driving_forward*/, 0.0, 0.0 /*shift distance*/, "");
+      path->points, planner_data_->current_odometry->pose, stop_pose,
+      autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+      autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
+      0.0 /*shift distance*/, "");
 
     const auto & virtual_wall_pose = autoware::motion_utils::calcLongitudinalOffsetPose(
       path->points, stop_pose.position, debug_data_.base_link2front);
@@ -257,9 +259,10 @@ void NoDrivableLaneModule::handle_stopped_state(PathWithLaneId * path)
   {
     const auto & stop_pose = ego_pos_on_path.pose;
     planning_factor_interface_->add(
-      path->points, planner_data_->current_odometry->pose, stop_pose, stop_pose,
-      tier4_planning_msgs::msg::PlanningFactor::STOP, tier4_planning_msgs::msg::SafetyFactorArray{},
-      true /*is_driving_forward*/, 0.0, 0.0 /*shift distance*/, "");
+      path->points, planner_data_->current_odometry->pose, stop_pose,
+      autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+      autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
+      0.0 /*shift distance*/, "");
 
     const auto virtual_wall_pose = autoware::motion_utils::calcLongitudinalOffsetPose(
       path->points, stop_pose.position, debug_data_.base_link2front);
