@@ -333,7 +333,7 @@ bool Tracker::isExpired(const rclcpp::Time & now) const
 
   // if the tracker is a bit old and the existence probability is low, check the covariance size
   constexpr double TIME_TO_CHECK_COV = 0.18;  // [sec]
-  constexpr double EXISTENCE_PROBABILITY_TO_CHECK_COV = 0.4;
+  constexpr double EXISTENCE_PROBABILITY_TO_CHECK_COV = 0.3;
   if (
     elapsed_time > TIME_TO_CHECK_COV &&
     existence_probability < EXISTENCE_PROBABILITY_TO_CHECK_COV) {
