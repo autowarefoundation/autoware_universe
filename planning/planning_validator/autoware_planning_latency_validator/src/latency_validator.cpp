@@ -60,7 +60,8 @@ void LatencyValidator::validate(bool & is_critical)
 void LatencyValidator::setup_diag()
 {
   context_->add_diag(
-    "trajectory_validation_latency", context_->validation_status->is_valid_latency, "latency is larger than expected value", is_critical_check_);
+    "trajectory_validation_latency", context_->validation_status->is_valid_latency,
+    "latency is larger than expected value", is_critical_check_);
 }
 
 }  // namespace autoware::planning_validator

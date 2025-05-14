@@ -105,40 +105,51 @@ void TrajectoryValidator::setup_diag()
 
   std::string ns = "trajectory_validation_";
   // constexpr bool default_critical = false;
+  context_->add_diag(ns + "size", status->is_valid_size, "invalid trajectory size is found");
+  context_->add_diag(ns + "finite", status->is_valid_finite_value, "infinite value is found");
   context_->add_diag(
-    ns + "size", status->is_valid_size, "invalid trajectory size is found");
+    ns + "interval", status->is_valid_interval, "points interval is too large",
+    params_.interval.is_critical);
   context_->add_diag(
-    ns + "finite", status->is_valid_finite_value, "infinite value is found");
+    ns + "relative_angle", status->is_valid_relative_angle, "relative angle is too large",
+    params_.relative_angle.is_critical);
   context_->add_diag(
-    ns + "interval", status->is_valid_interval, "points interval is too large", params_.interval.is_critical);
+    ns + "curvature", status->is_valid_curvature, "curvature is too large",
+    params_.curvature.is_critical);
   context_->add_diag(
-    ns + "relative_angle", status->is_valid_relative_angle, "relative angle is too large", params_.relative_angle.is_critical);
+    ns + "lateral_acceleration", status->is_valid_lateral_acc, "lateral acceleration is too large",
+    params_.acceleration.is_critical);
   context_->add_diag(
-    ns + "curvature", status->is_valid_curvature, "curvature is too large", params_.curvature.is_critical);
+    ns + "acceleration", status->is_valid_longitudinal_max_acc, "acceleration is too large",
+    params_.acceleration.is_critical);
   context_->add_diag(
-    ns + "lateral_acceleration", status->is_valid_lateral_acc, "lateral acceleration is too large", params_.acceleration.is_critical);
+    ns + "deceleration", status->is_valid_longitudinal_min_acc, "deceleration is too large",
+    params_.acceleration.is_critical);
   context_->add_diag(
-    ns + "acceleration", status->is_valid_longitudinal_max_acc, "acceleration is too large", params_.acceleration.is_critical);
+    ns + "steering", status->is_valid_steering, "steering angle is too large",
+    params_.steering.is_critical);
   context_->add_diag(
-    ns + "deceleration", status->is_valid_longitudinal_min_acc, "deceleration is too large", params_.acceleration.is_critical);
+    ns + "steering_rate", status->is_valid_steering_rate, "steering rate is too large",
+    params_.steering_rate.is_critical);
   context_->add_diag(
-    ns + "steering", status->is_valid_steering, "steering angle is too large", params_.steering.is_critical);
+    ns + "velocity_deviation", status->is_valid_velocity_deviation,
+    "velocity deviation is too large", params_.deviation.is_critical);
   context_->add_diag(
-    ns + "steering_rate", status->is_valid_steering_rate, "steering rate is too large", params_.steering_rate.is_critical);
-  context_->add_diag(
-    ns + "velocity_deviation", status->is_valid_velocity_deviation, "velocity deviation is too large", params_.deviation.is_critical);
-  context_->add_diag(
-    ns + "distance_deviation", status->is_valid_distance_deviation, "distance deviation is too large", params_.deviation.is_critical);
+    ns + "distance_deviation", status->is_valid_distance_deviation,
+    "distance deviation is too large", params_.deviation.is_critical);
   context_->add_diag(
     ns + "longitudinal_distance_deviation", status->is_valid_longitudinal_distance_deviation,
     "longitudinal distance deviation is too large", params_.deviation.is_critical);
   context_->add_diag(
-    ns + "yaw_deviation", status->is_valid_yaw_deviation, "difference between vehicle yaw and closest trajectory yaw is too large", params_.deviation.is_critical);
+    ns + "yaw_deviation", status->is_valid_yaw_deviation,
+    "difference between vehicle yaw and closest trajectory yaw is too large",
+    params_.deviation.is_critical);
   context_->add_diag(
     ns + "forward_trajectory_length", status->is_valid_forward_trajectory_length,
     "trajectory length is too short", params_.forward_trajectory_length.is_critical);
   context_->add_diag(
-    ns + "trajectory_shift", status->is_valid_trajectory_shift, "detected sudden shift in trajectory", params_.trajectory_shift.is_critical);
+    ns + "trajectory_shift", status->is_valid_trajectory_shift,
+    "detected sudden shift in trajectory", params_.trajectory_shift.is_critical);
 }
 
 void TrajectoryValidator::validate(bool & is_critical)
@@ -333,7 +344,8 @@ bool TrajectoryValidator::check_valid_min_longitudinal_acceleration(
   status->min_longitudinal_acc = min_longitudinal_acc;
 
   if (min_longitudinal_acc < params_.acceleration.longitudinal_min_th) {
-    context_->debug_pose_publisher->pushPoseMarker(trajectory.points.at(i).pose, "min_longitudinal_acc");
+    context_->debug_pose_publisher->pushPoseMarker(
+      trajectory.points.at(i).pose, "min_longitudinal_acc");
     is_critical_error_ |= params_.acceleration.is_critical;
     return false;
   }
@@ -354,7 +366,8 @@ bool TrajectoryValidator::check_valid_max_longitudinal_acceleration(
   status->max_longitudinal_acc = max_longitudinal_acc;
 
   if (max_longitudinal_acc > params_.acceleration.longitudinal_max_th) {
-    context_->debug_pose_publisher->pushPoseMarker(trajectory.points.at(i).pose, "max_longitudinal_acc");
+    context_->debug_pose_publisher->pushPoseMarker(
+      trajectory.points.at(i).pose, "max_longitudinal_acc");
     is_critical_error_ |= params_.acceleration.is_critical;
     return false;
   }
@@ -363,8 +376,7 @@ bool TrajectoryValidator::check_valid_max_longitudinal_acceleration(
 
 bool TrajectoryValidator::check_valid_steering(
   const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status,
-  const double vehicle_wheel_base_m)
+  const std::shared_ptr<PlanningValidatorStatus> & status, const double vehicle_wheel_base_m)
 {
   if (!params_.steering.enable) {
     return true;
@@ -385,8 +397,7 @@ bool TrajectoryValidator::check_valid_steering(
 
 bool TrajectoryValidator::check_valid_steering_rate(
   const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status,
-  const double vehicle_wheel_base_m)
+  const std::shared_ptr<PlanningValidatorStatus> & status, const double vehicle_wheel_base_m)
 {
   if (!params_.steering.enable) {
     return true;
@@ -398,7 +409,8 @@ bool TrajectoryValidator::check_valid_steering_rate(
   status->max_steering_rate = max_steering_rate;
 
   if (max_steering_rate > params_.steering_rate.threshold) {
-    context_->debug_pose_publisher->pushPoseMarker(trajectory.points.at(i).pose, "max_steering_rate");
+    context_->debug_pose_publisher->pushPoseMarker(
+      trajectory.points.at(i).pose, "max_steering_rate");
     is_critical_error_ |= params_.steering.is_critical;
     return false;
   }

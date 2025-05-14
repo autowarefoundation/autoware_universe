@@ -28,6 +28,9 @@
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
+#include <memory>
+#include <string>
+
 namespace autoware::planning_validator
 {
 using autoware_planning_msgs::msg::Trajectory;
@@ -128,13 +131,14 @@ struct PlanningValidatorContext
   }
 
   void set_diag_status(
-    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg, const bool & is_critical = false)
+    DiagnosticStatusWrapper & stat, const bool & is_ok, const std::string & msg,
+    const bool & is_critical = false)
   {
     if (is_ok) {
       stat.summary(DiagnosticStatus::OK, "validated.");
       return;
     }
-  
+
     const bool only_warn = std::invoke([&]() {
       const auto handling_type =
         is_critical ? params.inv_traj_critical_handling_type : params.inv_traj_handling_type;
@@ -143,7 +147,7 @@ struct PlanningValidatorContext
       }
       return params.enable_soft_stop_on_prev_traj;
     });
-  
+
     if (validation_status->invalid_count < params.diag_error_count_threshold || only_warn) {
       const auto warn_msg = msg + " (invalid count is less than error threshold: " +
                             std::to_string(validation_status->invalid_count) + " < " +
@@ -155,11 +159,12 @@ struct PlanningValidatorContext
   }
 
   void add_diag(
-    const std::string & name, const bool & status, const std::string & msg, const bool & is_critical = false)
+    const std::string & name, const bool & status, const std::string & msg,
+    const bool & is_critical = false)
   {
     if (diag_updater) {
       // Do not do implicit capture, need to capture msg by copy
-      diag_updater->add(name, [this, &status, &is_critical, msg=msg](auto & stat) {
+      diag_updater->add(name, [this, &status, &is_critical, msg = msg](auto & stat) {
         set_diag_status(stat, status, msg, is_critical);
       });
     }

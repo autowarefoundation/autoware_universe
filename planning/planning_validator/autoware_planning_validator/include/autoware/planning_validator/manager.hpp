@@ -15,8 +15,8 @@
 #ifndef AUTOWARE__PLANNING_VALIDATOR__MANAGER_HPP_
 #define AUTOWARE__PLANNING_VALIDATOR__MANAGER_HPP_
 
-#include "autoware/planning_validator/types.hpp"
 #include "autoware/planning_validator/plugin_interface.hpp"
+#include "autoware/planning_validator/types.hpp"
 
 #include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>

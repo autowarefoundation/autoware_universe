@@ -20,6 +20,7 @@
 #include <autoware/planning_validator/plugin_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <memory>
 #include <string>
 
 namespace autoware::planning_validator
@@ -65,12 +66,10 @@ private:
     const std::shared_ptr<PlanningValidatorStatus> & status);
   bool check_valid_steering(
     const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status,
-    const double vehicle_wheel_base_m);
+    const std::shared_ptr<PlanningValidatorStatus> & status, const double vehicle_wheel_base_m);
   bool check_valid_steering_rate(
     const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status,
-    const double vehicle_wheel_base_m);
+    const std::shared_ptr<PlanningValidatorStatus> & status, const double vehicle_wheel_base_m);
   bool check_valid_velocity_deviation(
     const std::shared_ptr<const PlanningValidatorData> & data,
     const std::shared_ptr<PlanningValidatorStatus> & status);

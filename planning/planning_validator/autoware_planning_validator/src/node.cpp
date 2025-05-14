@@ -30,7 +30,6 @@ using diagnostic_msgs::msg::DiagnosticStatus;
 PlanningValidatorNode::PlanningValidatorNode(const rclcpp::NodeOptions & options)
 : Node("planning_validator_node", options)
 {
-
   pub_traj_ = create_publisher<Trajectory>("~/output/trajectory", 1);
   pub_status_ = create_publisher<PlanningValidatorStatus>("~/output/validation_status", 1);
   pub_markers_ = create_publisher<visualization_msgs::msg::MarkerArray>("~/output/markers", 1);
@@ -205,9 +204,8 @@ void PlanningValidatorNode::publishTrajectory()
         data->current_acceleration->accel.accel.linear.x, params.soft_stop_deceleration,
         params.soft_stop_jerk_lim));
     }
-    const auto & pub_trajectory = params.enable_soft_stop_on_prev_traj
-                                    ? *soft_stop_trajectory_
-                                    : *data->last_valid_trajectory;
+    const auto & pub_trajectory =
+      params.enable_soft_stop_on_prev_traj ? *soft_stop_trajectory_ : *data->last_valid_trajectory;
     pub_traj_->publish(pub_trajectory);
     published_time_publisher_->publish_if_subscribed(pub_traj_, pub_trajectory.header.stamp);
     RCLCPP_ERROR(get_logger(), "Invalid Trajectory detected. Use previous trajectory.");
@@ -240,7 +238,8 @@ void PlanningValidatorNode::publishDebugInfo()
 
   if (!isAllValid(*status)) {
     geometry_msgs::msg::Pose front_pose = data->current_kinematics->pose.pose;
-    shiftPose(front_pose, context_->vehicle_info.front_overhang_m + context_->vehicle_info.wheel_base_m);
+    shiftPose(
+      front_pose, context_->vehicle_info.front_overhang_m + context_->vehicle_info.wheel_base_m);
     auto offset_pose = front_pose;
     shiftPose(offset_pose, 0.25);
     context_->debug_pose_publisher->pushVirtualWall(front_pose);

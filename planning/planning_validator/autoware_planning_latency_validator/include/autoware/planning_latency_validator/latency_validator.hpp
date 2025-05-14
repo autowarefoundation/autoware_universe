@@ -18,6 +18,7 @@
 #include <autoware/planning_validator/plugin_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <memory>
 #include <string>
 
 namespace autoware::planning_validator
