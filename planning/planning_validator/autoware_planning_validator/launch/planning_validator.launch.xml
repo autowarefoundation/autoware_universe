@@ -6,8 +6,8 @@
   <let name="planning_validator_launch_modules" value="$(eval &quot;'$(var planning_validator_launch_modules)' + '$(var launch_modules_list_end)'&quot;)"/>
 
   <arg name="planning_validator_param_path" default="$(find-pkg-share autoware_planning_validator)/config/planning_validator.param.yaml"/>
-  <arg name="planning_latency_validator_param_path" default="$(find-pkg-share autoware_planning_latency_validator)/config/latency_validator.param.yaml"/>
-  <arg name="planning_trajectory_validator_param_path" default="$(find-pkg-share autoware_planning_trajectory_validator)/config/trajectory_validator.param.yaml"/>
+  <arg name="planning_latency_validator_param_path" default="$(find-pkg-share autoware_planning_validator_latency_checker)/config/latency_validator.param.yaml"/>
+  <arg name="planning_trajectory_validator_param_path" default="$(find-pkg-share autoware_planning_validator_trajectory_checker)/config/trajectory_validator.param.yaml"/>
   <arg name="input_trajectory" default="/planning/scenario_planning/velocity_smoother/trajectory"/>
   <arg name="output_trajectory" default="/planning/scenario_planning/trajectory"/>
 

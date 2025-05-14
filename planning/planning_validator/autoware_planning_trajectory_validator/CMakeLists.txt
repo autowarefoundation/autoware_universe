@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(autoware_planning_trajectory_validator)
+project(autoware_planning_validator_trajectory_checker)
 
 find_package(autoware_cmake REQUIRED)
 autoware_package()
