@@ -14,7 +14,7 @@
 
 #include "switch_rule/pcd_map_based_rule.hpp"
 
-#include <autoware_utils/ros/parameter.hpp>
+#include <autoware_utils_rclcpp/parameter.hpp>
 
 #include <memory>
 #include <unordered_map>
@@ -31,9 +31,9 @@ PcdMapBasedRule::PcdMapBasedRule(
   shared_data_(std::move(shared_data))
 {
   const int pcd_density_upper_threshold =
-    autoware_utils::get_or_declare_parameter<int>(node, "pcd_density_upper_threshold");
+    autoware_utils_rclcpp::get_or_declare_parameter<int>(node, "pcd_density_upper_threshold");
   const int pcd_density_lower_threshold =
-    autoware_utils::get_or_declare_parameter<int>(node, "pcd_density_lower_threshold");
+    autoware_utils_rclcpp::get_or_declare_parameter<int>(node, "pcd_density_lower_threshold");
 
   pcd_occupancy_ = std::make_unique<rule_helper::PcdOccupancy>(
     pcd_density_upper_threshold, pcd_density_lower_threshold);
