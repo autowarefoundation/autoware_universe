@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__PLANNING_TRAJECTORY_VALIDATOR__UTILS_HPP_
-#define AUTOWARE__PLANNING_TRAJECTORY_VALIDATOR__UTILS_HPP_
+#ifndef AUTOWARE__PLANNING_VALIDATOR_TRAJECTORY_CHECKER__UTILS_HPP_
+#define AUTOWARE__PLANNING_VALIDATOR_TRAJECTORY_CHECKER__UTILS_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -55,4 +55,4 @@ bool checkFinite(const TrajectoryPoint & point);
 
 }  // namespace autoware::planning_validator
 
-#endif  // AUTOWARE__PLANNING_TRAJECTORY_VALIDATOR__UTILS_HPP_
+#endif  // AUTOWARE__PLANNING_VALIDATOR_TRAJECTORY_CHECKER__UTILS_HPP_

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/planning_trajectory_validator/utils.hpp"
+#include "autoware/planning_validator_trajectory_checker/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/geometry/geometry.hpp>

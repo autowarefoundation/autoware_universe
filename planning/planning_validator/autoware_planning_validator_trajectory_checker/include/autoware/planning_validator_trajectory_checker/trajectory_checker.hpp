@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__PLANNING_TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_HPP_
-#define AUTOWARE__PLANNING_TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_HPP_
+#ifndef AUTOWARE__PLANNING_VALIDATOR_TRAJECTORY_CHECKER__TRAJECTORY_CHECKER_HPP_
+#define AUTOWARE__PLANNING_VALIDATOR_TRAJECTORY_CHECKER__TRAJECTORY_CHECKER_HPP_
 
-#include "autoware/planning_trajectory_validator/parameters.hpp"
+#include "autoware/planning_validator_trajectory_checker/parameters.hpp"
 
 #include <autoware/planning_validator/plugin_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -26,7 +26,7 @@
 namespace autoware::planning_validator
 {
 
-class TrajectoryValidator : public PluginInterface
+class TrajectoryChecker : public PluginInterface
 {
 public:
   void init(
@@ -91,9 +91,9 @@ private:
 
   bool is_critical_error_ = false;
 
-  TrajectoryValidatorParams params_;
+  TrajectoryCheckerParams params_;
 };
 
 }  // namespace autoware::planning_validator
 
-#endif  // AUTOWARE__PLANNING_TRAJECTORY_VALIDATOR__TRAJECTORY_VALIDATOR_HPP_
+#endif  // AUTOWARE__PLANNING_VALIDATOR_TRAJECTORY_CHECKER__TRAJECTORY_CHECKER_HPP_

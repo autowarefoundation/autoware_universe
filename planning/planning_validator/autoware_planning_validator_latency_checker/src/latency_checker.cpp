@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/planning_latency_validator/latency_validator.hpp"
+#include "autoware/planning_validator_latency_checker/latency_checker.hpp"
 
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>
@@ -24,7 +24,7 @@ namespace autoware::planning_validator
 {
 using autoware_utils::get_or_declare_parameter;
 
-void LatencyValidator::init(
+void LatencyChecker::init(
   rclcpp::Node & node, const std::string & name,
   const std::shared_ptr<PlanningValidatorContext> & context)
 {
@@ -34,14 +34,14 @@ void LatencyValidator::init(
   logger_ = node.get_logger();
   context_ = context;
 
-  enable_latency_check_ = get_or_declare_parameter<bool>(node, "latency_validator.enable");
-  is_critical_check_ = get_or_declare_parameter<bool>(node, "latency_validator.is_critical");
-  latency_threshold_ = get_or_declare_parameter<double>(node, "latency_validator.threshold");
+  enable_latency_check_ = get_or_declare_parameter<bool>(node, "latency_checker.enable");
+  is_critical_check_ = get_or_declare_parameter<bool>(node, "latency_checker.is_critical");
+  latency_threshold_ = get_or_declare_parameter<double>(node, "latency_checker.threshold");
 
   setup_diag();
 }
 
-void LatencyValidator::validate(bool & is_critical)
+void LatencyChecker::validate(bool & is_critical)
 {
   const auto & data = context_->data;
   auto & status = context_->validation_status;
@@ -57,7 +57,7 @@ void LatencyValidator::validate(bool & is_critical)
   is_critical = !status->is_valid_latency && is_critical_check_;
 }
 
-void LatencyValidator::setup_diag()
+void LatencyChecker::setup_diag()
 {
   context_->add_diag(
     "trajectory_validation_latency", context_->validation_status->is_valid_latency,
@@ -68,4 +68,4 @@ void LatencyValidator::setup_diag()
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::planning_validator::LatencyValidator, autoware::planning_validator::PluginInterface)
+  autoware::planning_validator::LatencyChecker, autoware::planning_validator::PluginInterface)

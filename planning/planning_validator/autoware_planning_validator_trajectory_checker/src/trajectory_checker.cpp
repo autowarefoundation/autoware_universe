@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/planning_trajectory_validator/trajectory_validator.hpp"
+#include "autoware/planning_validator_trajectory_checker/trajectory_checker.hpp"
 
-#include "autoware/planning_trajectory_validator/utils.hpp"
+#include "autoware/planning_validator_trajectory_checker/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware_utils/ros/parameter.hpp>
@@ -30,7 +30,7 @@ namespace autoware::planning_validator
 {
 using autoware_utils::get_or_declare_parameter;
 
-void TrajectoryValidator::init(
+void TrajectoryChecker::init(
   rclcpp::Node & node, const std::string & name,
   const std::shared_ptr<PlanningValidatorContext> & context)
 {
@@ -46,7 +46,7 @@ void TrajectoryValidator::init(
   setup_diag();
 }
 
-void TrajectoryValidator::setup_parameters(rclcpp::Node & node)
+void TrajectoryChecker::setup_parameters(rclcpp::Node & node)
 {
   {
     auto set_validation_flags = [&](auto & param, const std::string & key) {
@@ -60,7 +60,7 @@ void TrajectoryValidator::setup_parameters(rclcpp::Node & node)
     };
 
     auto & p = params_;
-    const std::string t = "trajectory_validator.";
+    const std::string t = "trajectory_checker.";
     set_validation_params(p.interval, t + "interval");
     set_validation_params(p.relative_angle, t + "relative_angle");
     set_validation_params(p.curvature, t + "curvature");
@@ -99,7 +99,7 @@ void TrajectoryValidator::setup_parameters(rclcpp::Node & node)
   }
 }
 
-void TrajectoryValidator::setup_diag()
+void TrajectoryChecker::setup_diag()
 {
   const auto & status = context_->validation_status;
 
@@ -152,7 +152,7 @@ void TrajectoryValidator::setup_diag()
     "detected sudden shift in trajectory", params_.trajectory_shift.is_critical);
 }
 
-void TrajectoryValidator::validate(bool & is_critical)
+void TrajectoryChecker::validate(bool & is_critical)
 {
   const auto & data = context_->data;
   auto & status = context_->validation_status;
@@ -195,7 +195,7 @@ void TrajectoryValidator::validate(bool & is_critical)
   is_critical = is_critical_error_;
 }
 
-bool TrajectoryValidator::check_valid_size(
+bool TrajectoryChecker::check_valid_size(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -203,7 +203,7 @@ bool TrajectoryValidator::check_valid_size(
   return status->trajectory_size >= 2;
 }
 
-bool TrajectoryValidator::check_valid_finite_value(
+bool TrajectoryChecker::check_valid_finite_value(
   const std::shared_ptr<const PlanningValidatorData> & data)
 {
   const auto & trajectory = *data->current_trajectory;
@@ -213,7 +213,7 @@ bool TrajectoryValidator::check_valid_finite_value(
   return true;
 }
 
-bool TrajectoryValidator::check_valid_interval(
+bool TrajectoryChecker::check_valid_interval(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -239,7 +239,7 @@ bool TrajectoryValidator::check_valid_interval(
   return true;
 }
 
-bool TrajectoryValidator::check_valid_relative_angle(
+bool TrajectoryChecker::check_valid_relative_angle(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -265,7 +265,7 @@ bool TrajectoryValidator::check_valid_relative_angle(
   return true;
 }
 
-bool TrajectoryValidator::check_valid_curvature(
+bool TrajectoryChecker::check_valid_curvature(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -290,7 +290,7 @@ bool TrajectoryValidator::check_valid_curvature(
   return true;
 }
 
-bool TrajectoryValidator::check_valid_lateral_acceleration(
+bool TrajectoryChecker::check_valid_lateral_acceleration(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -310,7 +310,7 @@ bool TrajectoryValidator::check_valid_lateral_acceleration(
   return true;
 }
 
-bool TrajectoryValidator::check_valid_lateral_jerk(
+bool TrajectoryChecker::check_valid_lateral_jerk(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -330,7 +330,7 @@ bool TrajectoryValidator::check_valid_lateral_jerk(
   return true;
 }
 
-bool TrajectoryValidator::check_valid_min_longitudinal_acceleration(
+bool TrajectoryChecker::check_valid_min_longitudinal_acceleration(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -352,7 +352,7 @@ bool TrajectoryValidator::check_valid_min_longitudinal_acceleration(
   return true;
 }
 
-bool TrajectoryValidator::check_valid_max_longitudinal_acceleration(
+bool TrajectoryChecker::check_valid_max_longitudinal_acceleration(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -374,7 +374,7 @@ bool TrajectoryValidator::check_valid_max_longitudinal_acceleration(
   return true;
 }
 
-bool TrajectoryValidator::check_valid_steering(
+bool TrajectoryChecker::check_valid_steering(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status, const double vehicle_wheel_base_m)
 {
@@ -395,7 +395,7 @@ bool TrajectoryValidator::check_valid_steering(
   return true;
 }
 
-bool TrajectoryValidator::check_valid_steering_rate(
+bool TrajectoryChecker::check_valid_steering_rate(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status, const double vehicle_wheel_base_m)
 {
@@ -417,7 +417,7 @@ bool TrajectoryValidator::check_valid_steering_rate(
   return true;
 }
 
-bool TrajectoryValidator::check_valid_velocity_deviation(
+bool TrajectoryChecker::check_valid_velocity_deviation(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -441,7 +441,7 @@ bool TrajectoryValidator::check_valid_velocity_deviation(
   return true;
 }
 
-bool TrajectoryValidator::check_valid_distance_deviation(
+bool TrajectoryChecker::check_valid_distance_deviation(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -464,7 +464,7 @@ bool TrajectoryValidator::check_valid_distance_deviation(
   return true;
 }
 
-bool TrajectoryValidator::check_valid_longitudinal_distance_deviation(
+bool TrajectoryChecker::check_valid_longitudinal_distance_deviation(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -528,7 +528,7 @@ bool TrajectoryValidator::check_valid_longitudinal_distance_deviation(
   return true;
 }
 
-bool TrajectoryValidator::check_valid_yaw_deviation(
+bool TrajectoryChecker::check_valid_yaw_deviation(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -552,7 +552,7 @@ bool TrajectoryValidator::check_valid_yaw_deviation(
   return true;
 }
 
-bool TrajectoryValidator::check_valid_forward_trajectory_length(
+bool TrajectoryChecker::check_valid_forward_trajectory_length(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -585,7 +585,7 @@ bool TrajectoryValidator::check_valid_forward_trajectory_length(
   return true;
 }
 
-bool TrajectoryValidator::check_trajectory_shift(
+bool TrajectoryChecker::check_trajectory_shift(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
@@ -671,4 +671,4 @@ bool TrajectoryValidator::check_trajectory_shift(
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::planning_validator::TrajectoryValidator, autoware::planning_validator::PluginInterface)
+  autoware::planning_validator::TrajectoryChecker, autoware::planning_validator::PluginInterface)

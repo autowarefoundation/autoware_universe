@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
-    trajectory_validator:
+    trajectory_checker:
       interval:
         enable: true
         threshold: 100.0

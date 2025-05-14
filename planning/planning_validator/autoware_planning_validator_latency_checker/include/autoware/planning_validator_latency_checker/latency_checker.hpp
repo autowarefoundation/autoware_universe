@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__PLANNING_LATENCY_VALIDATOR__LATENCY_VALIDATOR_HPP_
-#define AUTOWARE__PLANNING_LATENCY_VALIDATOR__LATENCY_VALIDATOR_HPP_
+#ifndef AUTOWARE__PLANNING_VALIDATOR_LATENCY_CHECKER__LATENCY_CHECKER_HPP_
+#define AUTOWARE__PLANNING_VALIDATOR_LATENCY_CHECKER__LATENCY_CHECKER_HPP_
 
 #include <autoware/planning_validator/plugin_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -24,7 +24,7 @@
 namespace autoware::planning_validator
 {
 
-class LatencyValidator : public PluginInterface
+class LatencyChecker : public PluginInterface
 {
 public:
   void init(
@@ -42,4 +42,4 @@ private:
 
 }  // namespace autoware::planning_validator
 
-#endif  // AUTOWARE__PLANNING_LATENCY_VALIDATOR__LATENCY_VALIDATOR_HPP_
+#endif  // AUTOWARE__PLANNING_VALIDATOR_LATENCY_CHECKER__LATENCY_CHECKER_HPP_
