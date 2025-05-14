@@ -220,8 +220,12 @@ std::optional<size_t> VirtualTrafficLightModule::getPathIndexOfFirstEndLine()
     end_line_p2.x = end_line.back().x();
     end_line_p2.y = end_line.back().y();
 
-    const auto collision =
-      arc_lane_utils::findCollisionSegment(module_data_.path, end_line_p1, end_line_p2);
+    const auto connected_lane_ids =
+      planning_utils::collectConnectedLaneIds(lane_id_, planner_data_->route_handler_);
+
+    const auto collision = arc_lane_utils::findCollisionSegment(
+      module_data_.path, end_line_p1, end_line_p2, connected_lane_ids);
+
     if (!collision) {
       continue;
     }

@@ -74,10 +74,13 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
   const auto & self_pose = planner_data_->current_odometry->pose;
   const size_t current_seg_idx = findEgoSegmentIndex(path->points);
 
+  // Get current lanelet and connected lanelets
+  const auto connected_lane_ids =
+    planning_utils::collectConnectedLaneIds(lane_id_, planner_data_->route_handler_);
   // Get stop point
   const auto stop_point = arc_lane_utils::createTargetPoint(
     original_path, stop_line, planner_param_.stop_margin,
-    planner_data_->vehicle_info_.max_longitudinal_offset_m);
+    planner_data_->vehicle_info_.max_longitudinal_offset_m, connected_lane_ids);
   if (!stop_point) {
     return true;
   }
@@ -125,7 +128,7 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
     // Use '-' for margin because it's the backward distance from stop line
     const auto dead_line_point = arc_lane_utils::createTargetPoint(
       original_path, stop_line, -planner_param_.dead_line_margin,
-      planner_data_->vehicle_info_.max_longitudinal_offset_m);
+      planner_data_->vehicle_info_.max_longitudinal_offset_m, connected_lane_ids);
 
     if (dead_line_point) {
       const size_t dead_line_point_idx = dead_line_point->first;
