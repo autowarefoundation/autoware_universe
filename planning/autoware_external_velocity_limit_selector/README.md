@@ -51,10 +51,12 @@ Example:
 
 ## Parameters
 
-### Parameters for external_velocity_limit_selector node.
+### Parameters for external_velocity_limit_selector node
+
 {{ json_to_markdown("planning/autoware_external_velocity_limit_selector/schema/external_velocity_limit_selector.schema.json") }}
 
 ### Common parameters from vehicle description
+
 {{ json_to_markdown("planning/autoware_external_velocity_limit_selector/schema/default_common.schema.json") }}
 
 ## Assumptions / Known limits
