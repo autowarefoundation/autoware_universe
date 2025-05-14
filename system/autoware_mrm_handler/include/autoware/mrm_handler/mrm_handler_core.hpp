@@ -50,6 +50,11 @@ struct HazardLampPolicy
   bool emergency;
 };
 
+struct TurnIndicatorPolicy
+{
+  bool emergency;
+};
+
 struct Param
 {
   int update_rate;
@@ -62,6 +67,7 @@ struct Param
   bool use_pull_over;
   bool use_comfortable_stop;
   HazardLampPolicy turning_hazard_on{};
+  TurnIndicatorPolicy turning_indicator_on{};
 };
 
 class MrmHandler : public rclcpp::Node
