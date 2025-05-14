@@ -43,7 +43,7 @@ void LatencyValidator::init(
 
 void LatencyValidator::validate(bool & is_critical)
 {
-  auto & data = context_->data;
+  const auto & data = context_->data;
   auto & status = context_->validation_status;
   if (!enable_latency_check_ || !data->current_trajectory) {
     return;
