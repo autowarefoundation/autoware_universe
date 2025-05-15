@@ -129,7 +129,7 @@ add_library(${PROJECT_NAME} SHARED
   src/get_indices_pairs_plugin.cpp
   src/implicit_gemm_plugin_creator.cpp
   src/implicit_gemm_plugin.cpp
-  src/indice_conv_plugin_creator.cpp
+  src/indice_conv_plugin_creator.cpp # cSpell:ignore indice
   src/indice_conv_plugin.cpp
   src/plugin_registration.cpp
   src/plugin_utils.cpp
