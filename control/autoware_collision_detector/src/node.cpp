@@ -109,12 +109,13 @@ autoware_utils_geometry::Polygon2d createObjPolygonForCylinder(
 }
 
 autoware_utils_geometry::Polygon2d createSelfPolygon(
-  const VehicleInfo & vehicle_info, const bool ignore_behind_rear_axle)
+  const VehicleInfo & vehicle_info, const double extra_offset, const bool ignore_behind_rear_axle)
 {
-  const double & front_m = vehicle_info.max_longitudinal_offset_m;
-  const double & width_left_m = vehicle_info.max_lateral_offset_m;
-  const double & width_right_m = vehicle_info.min_lateral_offset_m;
-  const double & rear_m = ignore_behind_rear_axle ? 0.0 : vehicle_info.min_longitudinal_offset_m;
+  const double & front_m = vehicle_info.max_longitudinal_offset_m + extra_offset;
+  const double & width_left_m = vehicle_info.max_lateral_offset_m + extra_offset;
+  const double & width_right_m = vehicle_info.min_lateral_offset_m - extra_offset;
+  const double & rear_m =
+    ignore_behind_rear_axle ? 0.0 : vehicle_info.min_longitudinal_offset_m - extra_offset;
 
   autoware_utils_geometry::Polygon2d ego_polygon;
 
@@ -164,7 +165,6 @@ CollisionDetectorNode::CollisionDetectorNode(const rclcpp::NodeOptions & node_op
   }
 
   vehicle_info_ = autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo();
-  last_obstacle_found_stamp_ = this->now();
 
   // Diagnostics Updater
   updater_.setHardwareID("collision_detector");
@@ -354,35 +354,52 @@ void CollisionDetectorNode::checkCollision(diagnostic_updater::DiagnosticStatusW
   }
   filtered_object_ptr_ = std::make_shared<PredictedObjects>(filterObjects(*object_ptr_));
 
-  const auto ego_polygon = createSelfPolygon(vehicle_info_, node_param_.ignore_behind_rear_axle);
+  const auto hysteresis = is_error_diag_ ? node_param_.time_buffer.off_distance_hysteresis : 0.0;
+  const auto ego_polygon =
+    createSelfPolygon(vehicle_info_, hysteresis, node_param_.ignore_behind_rear_axle);
   const auto nearest_obstacle = getNearestObstacle(ego_polygon);
 
-  const auto is_obstacle_found =
+  const auto is_collision_found =
     !nearest_obstacle ? false : nearest_obstacle->first < node_param_.collision_distance;
 
-  if (is_obstacle_found) {
-    last_obstacle_found_stamp_ = this->now();
+  if (is_collision_found) {
+    if (!start_of_consecutive_collision_stamp_.has_value()) {
+      start_of_consecutive_collision_stamp_ = this->now();
+    }
+    most_recent_collision_stamp_ = this->now();
+  } else {
+    start_of_consecutive_collision_stamp_.reset();
   }
 
-  const auto is_obstacle_found_recently =
-    (this->now() - last_obstacle_found_stamp_).seconds() < 1.0;
+  const auto condition_to_trigger_error = [&]() {
+    if (is_error_diag_) {
+      return (this->now() - *most_recent_collision_stamp_).seconds() < node_param_.time_buffer.off;
+    }
+    return start_of_consecutive_collision_stamp_.has_value() &&
+           (this->now() - *start_of_consecutive_collision_stamp_).seconds() >=
+             node_param_.time_buffer.on;
+  };
 
   diagnostic_msgs::msg::DiagnosticStatus status;
-  if (
-    operation_mode_ptr_->mode == OperationModeState::AUTONOMOUS &&
-    (is_obstacle_found || is_obstacle_found_recently)) {
+  if (operation_mode_ptr_->mode == OperationModeState::AUTONOMOUS && condition_to_trigger_error()) {
+    is_error_diag_ = true;
     status.level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
     status.message = "collision detected";
-    if (is_obstacle_found) {
+    if (nearest_obstacle) {
       stat.addf("Distance to nearest neighbor object", "%lf", nearest_obstacle->first);
+    } else {
+      stat.addf(
+        "Time since last detection", "%lf",
+        (this->now() - *most_recent_collision_stamp_).seconds() < node_param_.time_buffer.off);
     }
   } else {
+    is_error_diag_ = false;
     status.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
   }
 
   stat.summary(status.level, status.message);
 
-  pub_debug_->publish(generate_debug_markers(ego_polygon, nearest_obstacle));
+  pub_debug_->publish(generate_debug_markers(ego_polygon, nearest_obstacle, is_error_diag_));
 }
 
 std::optional<Obstacle> CollisionDetectorNode::getNearestObstacle(

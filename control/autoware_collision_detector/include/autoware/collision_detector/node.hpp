@@ -140,7 +140,9 @@ private:
   sensor_msgs::msg::PointCloud2::ConstSharedPtr pointcloud_ptr_;
   PredictedObjects::ConstSharedPtr object_ptr_;
   OperationModeState::ConstSharedPtr operation_mode_ptr_;
-  rclcpp::Time last_obstacle_found_stamp_;
+  std::optional<rclcpp::Time> start_of_consecutive_collision_stamp_;
+  std::optional<rclcpp::Time> most_recent_collision_stamp_;
+  bool is_error_diag_ = false;
   std::shared_ptr<PredictedObjects> filtered_object_ptr_;
   std::vector<TimestampedObject> observed_objects_;
   std::vector<TimestampedObject> ignored_objects_;

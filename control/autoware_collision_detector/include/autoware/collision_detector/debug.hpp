@@ -28,7 +28,8 @@ namespace autoware::collision_detector
 {
 inline visualization_msgs::msg::MarkerArray generate_debug_markers(
   const autoware_utils_geometry::Polygon2d & ego_polygon,
-  const std::optional<std::pair<double, geometry_msgs::msg::Point>> & nearest_obstacle_data)
+  const std::optional<std::pair<double, geometry_msgs::msg::Point>> & nearest_obstacle_data,
+  const bool is_error)
 {
   visualization_msgs::msg::MarkerArray marker_array;
   visualization_msgs::msg::Marker marker;
@@ -37,7 +38,11 @@ inline visualization_msgs::msg::MarkerArray generate_debug_markers(
   marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
   marker.action = visualization_msgs::msg::Marker::ADD;
   marker.scale = autoware_utils::create_marker_scale(0.1, 0.0, 0.0);
-  marker.color = autoware_utils::create_marker_color(0.0, 1.0, 0.0, 0.8);
+  if (is_error) {
+    marker.color = autoware_utils::create_marker_color(1.0, 0.0, 0.0, 0.8);
+  } else {
+    marker.color = autoware_utils::create_marker_color(0.0, 1.0, 0.0, 0.8);
+  }
 
   for (const auto & p : ego_polygon.outer()) {
     marker.points.push_back(autoware_utils::create_marker_position(p.x(), p.y(), 0.0));
