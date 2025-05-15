@@ -226,6 +226,7 @@ public:
     std::optional<std::vector<lanelet::CompoundPolygon3d>> yield_stuck_detect_area{std::nullopt};
 
     std::optional<geometry_msgs::msg::Polygon> candidate_collision_ego_lane_polygon{std::nullopt};
+    std::optional<geometry_msgs::msg::Polygon> candidate_collision_object_polygon{std::nullopt};
     autoware_perception_msgs::msg::PredictedObjects safe_under_traffic_control_targets;
     autoware_perception_msgs::msg::PredictedObjects unsafe_targets;
     autoware_perception_msgs::msg::PredictedObjects misjudge_targets;
