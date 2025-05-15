@@ -23,9 +23,7 @@
 #include <cstdint>
 #include <cstring>
 #include <exception>
-#include <functional>
 #include <string>
-#include <tuple>
 #include <vector>
 
 namespace nvinfer1::plugin
