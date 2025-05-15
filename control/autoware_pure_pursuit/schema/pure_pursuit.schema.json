@@ -92,7 +92,6 @@
         "curvature_calculation_distance",
         "enable_path_smoothing",
         "path_filter_moving_ave_num",
-        "control_period"
       ]
     }
   },
