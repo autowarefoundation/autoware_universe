@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef TRTS_COMMON_UTILS_H
-#define TRTS_COMMON_UTILS_H
+#ifndef AUTOWARE__SCATTER_OPS_UTILS_CUH
+#define AUTOWARE__SCATTER_OPS_UTILS_CUH
 
 #include <cuda_bf16.h>
 #include <cuda_fp16.h>
@@ -68,4 +68,4 @@ inline __host__ __device__ int indptr_to_offset(
   return offset;
 }
 
-#endif  // TRTS_COMMON_UTILS_H
+#endif  // AUTOWARE__SCATTER_OPS_UTILS_CUH

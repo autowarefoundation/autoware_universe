@@ -18,18 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef TRTS_COMMON_ATOMICS_CUH
-#define TRTS_COMMON_ATOMICS_CUH
+#ifndef AUTOWARE__SCATTER_OPS_ATOMICS_CUH
+#define AUTOWARE__SCATTER_OPS_ATOMICS_CUH
 
 #include <cuda_bf16.h>
 #include <cuda_fp16.h>
 
 #include <cstdint>
-
-__nv_bfloat16 test(__nv_bfloat16 x)
-{
-  return x;
-}
 
 #define ATOMIC(NAME)                                                                               \
   template <typename scalar, size_t size>                                                          \
@@ -125,6 +120,22 @@ __nv_bfloat16 test(__nv_bfloat16 x)
     }                                                                                              \
   };                                                                                               \
                                                                                                    \
+  template <>                                                                                      \
+  struct Atomic##NAME##DecimalImpl<__nv_bfloat16, 2>                                               \
+  {                                                                                                \
+    inline __device__ void operator()(__nv_bfloat16 * address, __nv_bfloat16 val)                  \
+    {                                                                                              \
+      unsigned short * address_as_us = (unsigned short *)address;                                  \
+      unsigned short old = *address_as_us;                                                         \
+      unsigned short assumed;                                                                      \
+      do {                                                                                         \
+        assumed = old;                                                                             \
+        old = atomicCAS(                                                                           \
+          address_as_us, assumed, __bfloat16_as_ushort(OP(val, __ushort_as_bfloat16(old))));       \
+      } while (assumed != old);                                                                    \
+    }                                                                                              \
+  };                                                                                               \
+                                                                                                   \
   template <typename scalar>                                                                       \
   struct Atomic##NAME##DecimalImpl<scalar, 4>                                                      \
   {                                                                                                \
@@ -208,12 +219,12 @@ static inline __device__ void atomAdd(double * address, double val)
 }
 #endif
 
-/* #ifdef __CUDA_ARCH__
-static inline __device__ void atomAdd(__nv_bfloat16 *address, __nv_bfloat16 val)
+#ifdef __CUDA_ARCH__
+static inline __device__ void atomAdd(__nv_bfloat16 * address, __nv_bfloat16 val)
 {
-    AtomicAddDecimalImpl<__nv_bfloat16, 2>()(address, val);
+  AtomicAddDecimalImpl<__nv_bfloat16, 2>()(address, val);
 }
-#endif */
+#endif
 
 #define OP(X, Y) ((Y) * (X))
 ATOMIC(Mul)
@@ -251,12 +262,12 @@ static inline __device__ void atomMul(double * address, double val)
   AtomicMulDecimalImpl<double, sizeof(double)>()(address, val);
 }
 
-/* #ifdef __CUDA_ARCH__
-static inline __device__ void atomMul(__nv_bfloat16 *address, __nv_bfloat16 val)
+#ifdef __CUDA_ARCH__
+static inline __device__ void atomMul(__nv_bfloat16 * address, __nv_bfloat16 val)
 {
-    AtomicMulDecimalImpl<__nv_bfloat16, 2>()(address, val);
+  AtomicMulDecimalImpl<__nv_bfloat16, 2>()(address, val);
 }
-#endif */
+#endif
 
 #define OP(X, Y) ((Y) / (X))
 ATOMIC(Div)
@@ -294,12 +305,12 @@ static inline __device__ void atomDiv(double * address, double val)
   AtomicDivDecimalImpl<double, sizeof(double)>()(address, val);
 }
 
-/* #ifdef __CUDA_ARCH__
-static inline __device__ void atomDiv(__nv_bfloat16 *address, __nv_bfloat16 val)
+#ifdef __CUDA_ARCH__
+static inline __device__ void atomDiv(__nv_bfloat16 * address, __nv_bfloat16 val)
 {
-    AtomicDivDecimalImpl<__nv_bfloat16, 2>()(address, val);
+  AtomicDivDecimalImpl<__nv_bfloat16, 2>()(address, val);
 }
-#endif */
+#endif
 
 #define OP(X, Y) ((X) >= (Y) ? (X) : (Y))
 ATOMIC(Max)
@@ -337,12 +348,12 @@ static inline __device__ void atomMax(double * address, double val)
   AtomicMaxDecimalImpl<double, sizeof(double)>()(address, val);
 }
 
-/* #ifdef __CUDA_ARCH__
-static inline __device__ void atomMax(__nv_bfloat16 *address, __nv_bfloat16 val)
+#ifdef __CUDA_ARCH__
+static inline __device__ void atomMax(__nv_bfloat16 * address, __nv_bfloat16 val)
 {
-    AtomicMaxDecimalImpl<__nv_bfloat16, 2>()(address, val);
+  AtomicMaxDecimalImpl<__nv_bfloat16, 2>()(address, val);
 }
-#endif */
+#endif
 
 #define OP(X, Y) ((X) <= (Y) ? (X) : (Y))
 ATOMIC(Min)
@@ -380,11 +391,11 @@ static inline __device__ void atomMin(double * address, double val)
   AtomicMinDecimalImpl<double, sizeof(double)>()(address, val);
 }
 
-/* #ifdef __CUDA_ARCH__
-static inline __device__ void atomMin(__nv_bfloat16 *address, __nv_bfloat16 val)
+#ifdef __CUDA_ARCH__
+static inline __device__ void atomMin(__nv_bfloat16 * address, __nv_bfloat16 val)
 {
-    AtomicMinDecimalImpl<__nv_bfloat16, 2>()(address, val);
+  AtomicMinDecimalImpl<__nv_bfloat16, 2>()(address, val);
 }
-#endif */
+#endif
 
-#endif  // TRTS_COMMON_ATOMICS_CUH
+#endif  // AUTOWARE__SCATTER_OPS_ATOMICS_CUH

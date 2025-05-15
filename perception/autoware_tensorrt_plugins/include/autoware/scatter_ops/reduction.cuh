@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#ifndef TRTS_COMMON_REDUCTION_CUH
-#define TRTS_COMMON_REDUCTION_CUH
+#ifndef AUTOWARE__SCATTER_OPS_REDUCTION_CUH
+#define AUTOWARE__SCATTER_OPS_REDUCTION_CUH
 
 #include "autoware/scatter_ops/atomics.cuh"
 #include "autoware/scatter_ops/reduction.h"
@@ -129,4 +129,4 @@ struct Reducer
   }
 };
 
-#endif  // TRTS_COMMON_REDUCTION_CUH
+#endif  // AUTOWARE__SCATTER_OPS_REDUCTION_CUH
