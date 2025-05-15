@@ -8,18 +8,20 @@ The `autoware_traffic_light_visualization` is a package that includes two visual
 
 The node shows traffic light's color and position on rviz as markers.
 
-![traffic light map visualization](./images/map-visualization.png)
+![traffic light map visualization](./docs/map-visualization.png)
 
--
+- The estimated traffic light color is visualized using map information like the traffic light at the center of the image.
+- May not be possible to visualize without information on each of the lights (light_bulbs) at the traffic lights.
 
 ### traffic_light_roi_visualizer
 
 The node draws the result of traffic light recognition on the input image as shown in the following figure and publishes it.
 
-![traffic light roi visualization](./images/roi-visualization.png)
+![traffic light roi visualization](./docs/roi-visualization.png)
 
 - The colors `~/input/rois` and `~/input/rough/rois` are the same as `color` whose `shape` is CIRCLE in `~/input/traffic_signals` (unknown shows as white).
 - The labels in the upper left of `~/input/rois` shows `shape` and `confidence` in `~/input/traffic_signals`.
+- The type of `shape` should be referred to images directory. There are only 3 types of arrows in the image, but they can represent 8 directions.
 
 ## Inner-workings / Algorithms
 
