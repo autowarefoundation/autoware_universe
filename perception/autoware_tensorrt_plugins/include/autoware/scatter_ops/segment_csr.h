@@ -23,6 +23,8 @@
 
 #include "autoware/scatter_ops/reduction.h"
 
+#include <cuda_runtime.h>
+
 #include <tuple>
 #include <vector>
 
