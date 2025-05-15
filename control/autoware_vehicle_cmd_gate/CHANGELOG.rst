@@ -2,6 +2,28 @@
 Changelog for package autoware_vehicle_cmd_gate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat: manual control (`#10354 <https://github.com/autowarefoundation/autoware_universe/issues/10354>`_)
+  * feat(default_adapi): add manual control
+  * add conversion
+  * update selector
+  * update selector depends
+  * update converter
+  * modify heartbeat name
+  * update launch
+  * update api
+  * fix pedal callback
+  * done todo
+  * apply message rename
+  * fix test
+  * fix message type and qos
+  * fix steering_tire_velocity
+  * fix for clang-tidy
+  ---------
+* Contributors: Ryohsuke Mitsudome, Takagi, Isamu
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

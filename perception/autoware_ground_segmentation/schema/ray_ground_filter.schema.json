@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Ray Ground Filter Node Params",
+  "type": "object",
+  "definitions": {
+    "ray_ground_filter": {
+      "type": "object",
+      "properties": {
+        "min_x": {
+          "type": "number",
+          "description": "The parameter to set vehicle footprint manually",
+          "default": -0.01
+        },
+        "max_x": {
+          "type": "number",
+          "description": "The parameter to set vehicle footprint manually",
+          "default": 0.01
+        },
+        "min_y": {
+          "type": "number",
+          "description": "The parameter to set vehicle footprint manually",
+          "default": -0.01
+        },
+        "max_y": {
+          "type": "number",
+          "description": "The parameter to set vehicle footprint manually",
+          "default": 0.01
+        },
+        "use_vehicle_footprint": {
+          "type": "boolean",
+          "description": "use_vehicle_footprint",
+          "default": "false"
+        },
+        "general_max_slope": {
+          "type": "number",
+          "description": "The triangle created by general_max_slope is called the global cone. If the point is outside the global cone, it is judged to be a point that is not on the ground",
+          "default": 8.0
+        },
+        "local_max_slope": {
+          "type": "number",
+          "description": "The triangle created by local_max_slope is called the local cone. This parameter is used for classifying points based on their continuity",
+          "default": 6.0
+        },
+        "initial_max_slope": {
+          "type": "number",
+          "description": "Generally, the point where the object first hits is far from ego-vehicle because of sensor blind spot, so resolution is different from that point and thereafter, so this parameter exists to set a separate local_max_slope",
+          "default": 3.0
+        },
+        "radial_divider_angle": {
+          "type": "number",
+          "description": "The angle of ray",
+          "default": 1.0
+        },
+        "min_height_threshold": {
+          "type": "number",
+          "description": "This parameter is used instead of height_threshold because it's difficult to determine continuity in the local cone when the points are too close to each other",
+          "default": 0.15
+        },
+        "concentric_divider_distance": {
+          "type": "number",
+          "description": "Only check points which radius is larger than concentric_divider_distance",
+          "default": 0.0
+        },
+        "reclass_distance_threshold": {
+          "type": "number",
+          "description": "To check if point is to far from previous one, if so classify again",
+          "default": 0.1
+        },
+        "publish_processing_time_detail": {
+          "type": "boolean",
+          "description": "publish_processing_time_detail",
+          "default": "false"
+        }
+      },
+      "required": [
+        "min_x",
+        "max_x",
+        "min_y",
+        "max_y",
+        "use_vehicle_footprint",
+        "general_max_slope",
+        "local_max_slope",
+        "initial_max_slope",
+        "radial_divider_angle",
+        "min_height_threshold",
+        "concentric_divider_distance",
+        "reclass_distance_threshold",
+        "publish_processing_time_detail"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/ray_ground_filter"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

@@ -366,8 +366,8 @@ T VehicleCmdGate::getContinuousTopic(
     return current_topic;
   } else {
     if (topic_name != "") {
-      RCLCPP_INFO(
-        get_logger(),
+      RCLCPP_INFO_THROTTLE(
+        get_logger(), *get_clock(), 5000,
         "The operation mode is changed, but the %s is not received yet:", topic_name.c_str());
     }
     return *prev_topic;
@@ -743,10 +743,11 @@ Control VehicleCmdGate::createEmergencyStopControlCmd() const
   return cmd;
 }
 
-void VehicleCmdGate::onExternalEmergencyStopHeartbeat(
-  [[maybe_unused]] Heartbeat::ConstSharedPtr msg)
+void VehicleCmdGate::onExternalEmergencyStopHeartbeat(Heartbeat::ConstSharedPtr msg)
 {
-  external_emergency_stop_heartbeat_received_time_ = std::make_shared<rclcpp::Time>(this->now());
+  if (msg->ready) {
+    external_emergency_stop_heartbeat_received_time_ = std::make_shared<rclcpp::Time>(this->now());
+  }
 }
 
 void VehicleCmdGate::onGateMode(GateMode::ConstSharedPtr msg)

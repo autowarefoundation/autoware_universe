@@ -14,14 +14,6 @@ rclcpp_components_register_node(${PROJECT_NAME}
   PLUGIN "autoware::traffic_light::TrafficLightCategoryMergerNode"
   EXECUTABLE traffic_light_category_merger_node)
 
-
-if(BUILD_TESTING)
-  list(APPEND AMENT_LINT_AUTO_EXCLUDE ament_cmake_uncrustify)
-  find_package(ament_lint_auto REQUIRED)
-  ament_lint_auto_find_test_dependencies()
-
-endif()
-
 ament_auto_package(
   INSTALL_TO_SHARE
   launch

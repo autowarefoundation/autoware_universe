@@ -34,6 +34,7 @@
 #include <OgreMaterialManager.h>
 #include <OgreSceneManager.h>
 #include <OgreSceneNode.h>
+#include <glog/logging.h>
 
 #include <deque>
 #include <limits>
@@ -240,6 +241,7 @@ public:
 
 protected:
   virtual void visualizeDrivableArea([[maybe_unused]] const typename T::ConstSharedPtr msg_ptr) {}
+  virtual void visualizeTrajectory([[maybe_unused]] const typename T::ConstSharedPtr msg_ptr) {}
   virtual void preProcessMessageDetail() {}
   virtual void preVisualizePathFootprintDetail(
     [[maybe_unused]] const typename T::ConstSharedPtr msg_ptr)
@@ -285,6 +287,9 @@ protected:
 
     // visualize PathFootprint
     visualizePathFootprint(msg_ptr);
+
+    // visualize Trajectory
+    visualizeTrajectory(msg_ptr);
 
     last_msg_ptr_ = msg_ptr;
   }

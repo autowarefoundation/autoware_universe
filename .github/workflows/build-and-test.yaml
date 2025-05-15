@@ -6,8 +6,8 @@ on:
       - main
 
 concurrency:
-  # Ensures sequential execution of this workflow
-  group: ${{ github.workflow }}
+  # Ensure sequential execution of this workflow
+  group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: false
 
 env:
@@ -99,7 +99,6 @@ jobs:
           target-packages: ${{ steps.get-self-packages.outputs.self-packages }}
           build-depends-repos: build_depends.repos
           cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
-          build-pre-command: taskset --cpu-list 0-5
 
       - name: Show ccache stats after build
         run: du -sh ${CCACHE_DIR} && ccache -s

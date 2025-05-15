@@ -121,6 +121,7 @@ protected:
 
   double resolution_inv_;
   bool use_cuda_;
+  bool first_iteration_{true};
 
 #ifdef USE_CUDA
   cudaStream_t stream_;

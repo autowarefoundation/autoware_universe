@@ -2,6 +2,13 @@
 Changelog for package tier4_autoware_api_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(tier4_autoware_api_launch): launch tier4_deprecated_api_adapter (`#10407 <https://github.com/autowarefoundation/autoware_universe/issues/10407>`_)
+  feat(tier4_autoware_api_launch): launch api adapter
+* Contributors: Ryohsuke Mitsudome, Takagi, Isamu
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43
