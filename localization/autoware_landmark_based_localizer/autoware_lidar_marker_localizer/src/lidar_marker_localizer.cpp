@@ -15,8 +15,7 @@
 #include "lidar_marker_localizer.hpp"
 
 #include <autoware/point_types/types.hpp>
-#include <autoware_utils/geometry/geometry.hpp>
-#include <autoware_utils/transform/transforms.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <pcl_ros/transforms.hpp>
 #include <rclcpp/qos.hpp>
 
@@ -125,7 +124,7 @@ LidarMarkerLocalizer::LidarMarkerLocalizer(const rclcpp::NodeOptions & node_opti
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_, this, false);
 
   diagnostics_interface_.reset(
-    new autoware_utils::DiagnosticsInterface(this, "marker_detection_status"));
+    new autoware_utils_diagnostics::DiagnosticsInterface(this, "marker_detection_status"));
 }
 
 void LidarMarkerLocalizer::initialize_diagnostics()
@@ -226,7 +225,7 @@ void LidarMarkerLocalizer::main_process(const PointCloud2::ConstSharedPtr & poin
   // (4) check distance to the nearest marker
   const landmark_manager::Landmark nearest_marker = get_nearest_landmark(self_pose, map_landmarks);
   const Pose nearest_marker_pose_on_base_link =
-    autoware_utils::inverse_transform_pose(nearest_marker.pose, self_pose);
+    autoware_utils_geometry::inverse_transform_pose(nearest_marker.pose, self_pose);
 
   const double distance_from_self_pose_to_nearest_marker =
     std::abs(nearest_marker_pose_on_base_link.position.x);
@@ -261,7 +260,8 @@ void LidarMarkerLocalizer::main_process(const PointCloud2::ConstSharedPtr & poin
     pose_array_msg.header.stamp = sensor_ros_time;
     pose_array_msg.header.frame_id = "map";
     for (const landmark_manager::Landmark & landmark : detected_landmarks) {
-      const Pose detected_marker_on_map = autoware_utils::transform_pose(landmark.pose, self_pose);
+      const Pose detected_marker_on_map =
+        autoware_utils_geometry::transform_pose(landmark.pose, self_pose);
       pose_array_msg.poses.push_back(detected_marker_on_map);
     }
     pub_marker_detected_->publish(pose_array_msg);
@@ -458,7 +458,7 @@ std::vector<landmark_manager::Landmark> LidarMarkerLocalizer::detect_landmarks(
       marker_pose_on_base_link.position.y = min_y[i];
       marker_pose_on_base_link.position.z = param_.marker_height_from_ground;
       marker_pose_on_base_link.orientation =
-        autoware_utils::create_quaternion_from_rpy(M_PI_2, 0.0, 0.0);  // TODO(YamatoAndo)
+        autoware_utils_geometry::create_quaternion_from_rpy(M_PI_2, 0.0, 0.0);  // TODO(YamatoAndo)
       detected_landmarks.push_back(landmark_manager::Landmark{"0", marker_pose_on_base_link});
     }
   }
@@ -475,7 +475,7 @@ landmark_manager::Landmark get_nearest_landmark(
 
   for (const auto & landmark : landmarks) {
     const double curr_distance =
-      autoware_utils::calc_distance3d(landmark.pose.position, self_pose.position);
+      autoware_utils_geometry::calc_distance3d(landmark.pose.position, self_pose.position);
 
     if (curr_distance > min_distance) {
       continue;
@@ -613,7 +613,7 @@ void LidarMarkerLocalizer::transform_sensor_measurement(
   }
 
   const geometry_msgs::msg::PoseStamped target_to_source_pose_stamped =
-    autoware_utils::transform2pose(transform);
+    autoware_utils_geometry::transform2pose(transform);
   const Eigen::Matrix4f base_to_sensor_matrix =
     autoware::localization_util::pose_to_matrix4f(target_to_source_pose_stamped.pose);
   pcl_ros::transformPointCloud(
