@@ -53,55 +53,6 @@ struct FusionRecordArr
   }
 };
 
-inline const std::unordered_map<
-  tier4_perception_msgs::msg::TrafficLightElement::_color_type,
-  autoware_perception_msgs::msg::TrafficLightElement::_color_type>
-  color_map(
-    {{tier4_perception_msgs::msg::TrafficLightElement::RED,
-      autoware_perception_msgs::msg::TrafficLightElement::RED},
-     {tier4_perception_msgs::msg::TrafficLightElement::AMBER,
-      autoware_perception_msgs::msg::TrafficLightElement::AMBER},
-     {tier4_perception_msgs::msg::TrafficLightElement::GREEN,
-      autoware_perception_msgs::msg::TrafficLightElement::GREEN},
-     {tier4_perception_msgs::msg::TrafficLightElement::WHITE,
-      autoware_perception_msgs::msg::TrafficLightElement::WHITE}});
-
-inline const std::unordered_map<
-  tier4_perception_msgs::msg::TrafficLightElement::_shape_type,
-  autoware_perception_msgs::msg::TrafficLightElement::_shape_type>
-  shape_map(
-    {{tier4_perception_msgs::msg::TrafficLightElement::CIRCLE,
-      autoware_perception_msgs::msg::TrafficLightElement::CIRCLE},
-     {tier4_perception_msgs::msg::TrafficLightElement::LEFT_ARROW,
-      autoware_perception_msgs::msg::TrafficLightElement::LEFT_ARROW},
-     {tier4_perception_msgs::msg::TrafficLightElement::RIGHT_ARROW,
-      autoware_perception_msgs::msg::TrafficLightElement::RIGHT_ARROW},
-     {tier4_perception_msgs::msg::TrafficLightElement::UP_ARROW,
-      autoware_perception_msgs::msg::TrafficLightElement::UP_ARROW},
-     {tier4_perception_msgs::msg::TrafficLightElement::UP_LEFT_ARROW,
-      autoware_perception_msgs::msg::TrafficLightElement::UP_LEFT_ARROW},
-     {tier4_perception_msgs::msg::TrafficLightElement::UP_RIGHT_ARROW,
-      autoware_perception_msgs::msg::TrafficLightElement::UP_RIGHT_ARROW},
-     {tier4_perception_msgs::msg::TrafficLightElement::DOWN_ARROW,
-      autoware_perception_msgs::msg::TrafficLightElement::DOWN_ARROW},
-     {tier4_perception_msgs::msg::TrafficLightElement::DOWN_LEFT_ARROW,
-      autoware_perception_msgs::msg::TrafficLightElement::DOWN_LEFT_ARROW},
-     {tier4_perception_msgs::msg::TrafficLightElement::DOWN_RIGHT_ARROW,
-      autoware_perception_msgs::msg::TrafficLightElement::DOWN_RIGHT_ARROW},
-     {tier4_perception_msgs::msg::TrafficLightElement::CROSS,
-      autoware_perception_msgs::msg::TrafficLightElement::CROSS}});
-
-inline const std::unordered_map<
-  tier4_perception_msgs::msg::TrafficLightElement::_status_type,
-  autoware_perception_msgs::msg::TrafficLightElement::_status_type>
-  status_map(
-    {{tier4_perception_msgs::msg::TrafficLightElement::SOLID_OFF,
-      autoware_perception_msgs::msg::TrafficLightElement::SOLID_OFF},
-     {tier4_perception_msgs::msg::TrafficLightElement::SOLID_ON,
-      autoware_perception_msgs::msg::TrafficLightElement::SOLID_ON},
-     {tier4_perception_msgs::msg::TrafficLightElement::FLASHING,
-      autoware_perception_msgs::msg::TrafficLightElement::FLASHING}});
-
 inline bool isUnknown(const tier4_perception_msgs::msg::TrafficLight & signal)
 {
   return signal.elements.size() == 1 &&
