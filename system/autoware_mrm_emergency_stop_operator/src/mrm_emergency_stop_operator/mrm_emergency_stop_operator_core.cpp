@@ -25,9 +25,9 @@ MrmEmergencyStopOperator::MrmEmergencyStopOperator(const rclcpp::NodeOptions & n
 : Node("mrm_emergency_stop_operator", node_options)
 {
   // Parameter
-  params_.update_rate = static_cast<int>(declare_parameter<int>("update_rate", 30));
-  params_.target_acceleration = declare_parameter<double>("target_acceleration", -2.5);
-  params_.target_jerk = declare_parameter<double>("target_jerk", -1.5);
+  params_.update_rate = declare_parameter<int>("update_rate");
+  params_.target_acceleration = declare_parameter<double>("target_acceleration");
+  params_.target_jerk = declare_parameter<double>("target_jerk");
 
   // Subscriber
   sub_control_cmd_ = create_subscription<Control>(
