@@ -107,7 +107,7 @@ endif()
 
 add_definitions("-DTV_CUDA")
 
-# cSpell:ignore expt
+# cSpell:ignore expt gencode
 list(APPEND CUDA_NVCC_FLAGS "--expt-relaxed-constexpr -diag-suppress 1675 --extended-lambda")
 list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
 list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
