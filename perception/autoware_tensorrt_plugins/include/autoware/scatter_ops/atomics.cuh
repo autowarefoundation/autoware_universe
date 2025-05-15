@@ -26,7 +26,7 @@
 
 #include <cstdint>  // cSpell:ignore cstdint
 
-// cSpell:ignore newval bfloat ifdef indptr
+// cSpell:ignore newval bfloat ifdef
 #define ATOMIC(NAME)                                                                               \
   template <typename scalar, size_t size>                                                          \
   struct Atomic##NAME##IntegerImpl;                                                                \

@@ -56,6 +56,7 @@ __global__ void div_kernel(
   src[thread_idx] /= divisor[thread_idx];
 }
 
+// cSpell:ignore indptr
 inline __host__ __device__ int indptr_to_offset(
   const int64_t * indptr_size, int32_t indptr_dim, int32_t idx)
 {
