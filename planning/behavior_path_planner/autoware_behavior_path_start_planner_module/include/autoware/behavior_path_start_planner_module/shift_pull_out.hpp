@@ -19,7 +19,7 @@
 #include "autoware/behavior_path_start_planner_module/pull_out_planner_base.hpp"
 #include "autoware_utils/system/time_keeper.hpp"
 
-#include <autoware/lane_departure_checker/lane_departure_checker.hpp>
+#include <autoware/boundary_departure_checker/boundary_departure_checker.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
@@ -28,7 +28,7 @@
 
 namespace autoware::behavior_path_planner
 {
-using autoware::lane_departure_checker::LaneDepartureChecker;
+using autoware::boundary_departure_checker::BoundaryDepartureChecker;
 
 class ShiftPullOut : public PullOutPlannerBase
 {
@@ -56,7 +56,7 @@ public:
     ShiftedPath & shifted_path, const Pose & start_pose, const Pose & end_pose,
     const double longitudinal_acc, const double lateral_acc);
 
-  std::shared_ptr<LaneDepartureChecker> lane_departure_checker_;
+  std::shared_ptr<BoundaryDepartureChecker> boundary_departure_checker_;
 
   friend class TestShiftPullOut;
 
