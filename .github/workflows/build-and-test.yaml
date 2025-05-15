@@ -9,7 +9,7 @@ jobs:
   build-and-test:
     uses: ./.github/workflows/build-and-test-reusable.yaml
     with:
-      runner: [self-hosted, Linux, X64]
+      runner: "[self-hosted, Linux, X64]"
       container: ghcr.io/autowarefoundation/autoware:universe-devel
       container-suffix: -cuda
       concurrency-group: ${{ github.workflow }}-${{ github.ref }}

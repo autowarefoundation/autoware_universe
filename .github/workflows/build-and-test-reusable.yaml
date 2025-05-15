@@ -33,7 +33,7 @@ on:
         required: false
       concurrency-group:
         type: string
-        default: ${{ github.workflow }}-${{ github.ref }}-${{ github.run_id }} # unique
+        default: ${{ github.workflow }}-${{ github.ref }}-${{ github.run_id }} # unique per run
         required: false
       cancel-in-progress:
         type: boolean
