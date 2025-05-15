@@ -18,7 +18,7 @@
 #include "autoware/path_optimizer/mpt_optimizer.hpp"
 #include "tf2/utils.h"
 
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 
 #include "autoware_planning_msgs/msg/path_point.hpp"
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"
@@ -36,13 +36,36 @@
 #include <stack>
 #include <vector>
 
+namespace autoware_utils_geometry
+{
+
+template <>
+geometry_msgs::msg::Point get_point(const autoware::path_optimizer::ReferencePoint & p)
+{
+  return p.pose.position;
+}
+
+template <>
+geometry_msgs::msg::Pose get_pose(const autoware::path_optimizer::ReferencePoint & p)
+{
+  return p.pose;
+}
+
+template <>
+double get_longitudinal_velocity(const autoware::path_optimizer::ReferencePoint & p)
+{
+  return p.longitudinal_velocity_mps;
+}
+
+}  // namespace autoware_utils_geometry
+
 namespace autoware::path_optimizer
 {
 namespace bg = boost::geometry;
-using autoware::universe_utils::LinearRing2d;
-using autoware::universe_utils::LineString2d;
-using autoware::universe_utils::Point2d;
-using autoware::universe_utils::Polygon2d;
+using autoware_utils::LinearRing2d;
+using autoware_utils::LineString2d;
+using autoware_utils::Point2d;
+using autoware_utils::Polygon2d;
 
 namespace
 {
@@ -136,13 +159,13 @@ bool isOutsideDrivableAreaFromRectangleFootprint(
 
   // calculate footprint corner points
   const auto top_left_pos =
-    autoware::universe_utils::calcOffsetPose(pose, base_to_front, base_to_left, 0.0).position;
+    autoware_utils::calc_offset_pose(pose, base_to_front, base_to_left, 0.0).position;
   const auto top_right_pos =
-    autoware::universe_utils::calcOffsetPose(pose, base_to_front, -base_to_right, 0.0).position;
+    autoware_utils::calc_offset_pose(pose, base_to_front, -base_to_right, 0.0).position;
   const auto bottom_right_pos =
-    autoware::universe_utils::calcOffsetPose(pose, -base_to_rear, -base_to_right, 0.0).position;
+    autoware_utils::calc_offset_pose(pose, -base_to_rear, -base_to_right, 0.0).position;
   const auto bottom_left_pos =
-    autoware::universe_utils::calcOffsetPose(pose, -base_to_rear, base_to_left, 0.0).position;
+    autoware_utils::calc_offset_pose(pose, -base_to_rear, base_to_left, 0.0).position;
 
   if (use_footprint_polygon_for_outside_drivable_area_check) {
     // calculate footprint polygon

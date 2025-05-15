@@ -33,7 +33,7 @@ ex.)
 ```
 
 ```xml
-<arg name="config_dir" default="$(find-pkg-share individual_params)/config/$(var vehicle_id)/$(var sensor_model)"/>
+<arg name="config_dir" default="$(find-pkg-share $(var sensor_model)_description)/config"/>
 ```
 
 ## vehicle.xacro

@@ -20,7 +20,7 @@
 #include "autoware/probabilistic_occupancy_grid_map/utils/utils_kernel.hpp"
 
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
-#include <autoware/universe_utils/math/unit_conversion.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 #include <grid_map_costmap_2d/grid_map_costmap_2d.hpp>
 #include <pcl_ros/transforms.hpp>
 
@@ -125,14 +125,12 @@ void OccupancyGridMapFixedBlindSpot::updateWithPointCloud(
   const std::size_t num_raw_points = raw_pointcloud.width * raw_pointcloud.height;
   float range_resolution_inv = 1.0 / map_res;
 
-  cudaStreamSynchronize(stream_);
-
   map_fixed::prepareTensorLaunch(
     reinterpret_cast<const float *>(raw_pointcloud.data.get()), num_raw_points,
     raw_pointcloud.point_step / sizeof(float), angle_bin_size, range_bin_size, min_height_,
     max_height_, min_angle_, angle_increment_inv_, range_resolution_inv, device_rotation_map_.get(),
     device_translation_map_.get(), device_rotation_scan_.get(), device_translation_scan_.get(),
-    raw_points_tensor_.get(), raw_pointcloud.stream);
+    raw_points_tensor_.get(), stream_);
 
   const std::size_t num_obstacle_points = obstacle_pointcloud.width * obstacle_pointcloud.height;
 
@@ -141,27 +139,23 @@ void OccupancyGridMapFixedBlindSpot::updateWithPointCloud(
     obstacle_pointcloud.point_step / sizeof(float), angle_bin_size, range_bin_size, min_height_,
     max_height_, min_angle_, angle_increment_inv_, range_resolution_inv, device_rotation_map_.get(),
     device_translation_map_.get(), device_rotation_scan_.get(), device_translation_scan_.get(),
-    obstacle_points_tensor_.get(), obstacle_pointcloud.stream);
+    obstacle_points_tensor_.get(), stream_);
 
   map_fixed::fillEmptySpaceLaunch(
     raw_points_tensor_.get(), angle_bin_size, range_bin_size, range_resolution_inv,
     scan_origin.position.x, scan_origin.position.y, origin_x_, origin_y_, num_cells_x, num_cells_y,
-    cost_value::FREE_SPACE, device_costmap_.get(), raw_pointcloud.stream);
-
-  cudaStreamSynchronize(obstacle_pointcloud.stream);
+    cost_value::FREE_SPACE, device_costmap_.get(), stream_);
 
   map_fixed::fillUnknownSpaceLaunch(
     raw_points_tensor_.get(), obstacle_points_tensor_.get(), distance_margin_, angle_bin_size,
     range_bin_size, range_resolution_inv, scan_origin.position.x, scan_origin.position.y, origin_x_,
     origin_y_, num_cells_x, num_cells_y, cost_value::FREE_SPACE, cost_value::NO_INFORMATION,
-    device_costmap_.get(), raw_pointcloud.stream);
+    device_costmap_.get(), stream_);
 
   map_fixed::fillObstaclesLaunch(
     obstacle_points_tensor_.get(), distance_margin_, angle_bin_size, range_bin_size,
     range_resolution_inv, origin_x_, origin_y_, num_cells_x, num_cells_y,
-    cost_value::LETHAL_OBSTACLE, device_costmap_.get(), raw_pointcloud.stream);
-
-  cudaStreamSynchronize(raw_pointcloud.stream);
+    cost_value::LETHAL_OBSTACLE, device_costmap_.get(), stream_);
 }
 
 void OccupancyGridMapFixedBlindSpot::initRosParam(rclcpp::Node & node)

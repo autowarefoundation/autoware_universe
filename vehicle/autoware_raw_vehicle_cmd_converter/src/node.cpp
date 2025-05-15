@@ -123,7 +123,7 @@ RawVehicleCommandConverterNode::RawVehicleCommandConverterNode(
       "/vehicle/raw_vehicle_cmd_converter/debug/compensated_control_cmd", 1);
   }
 
-  logger_configure_ = std::make_unique<autoware::universe_utils::LoggerLevelConfigure>(this);
+  logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
 }
 
 void RawVehicleCommandConverterNode::publishActuationCmd()
@@ -147,9 +147,9 @@ void RawVehicleCommandConverterNode::publishActuationCmd()
   /* compensate control command if vehicle adaptor is enabled */
   Control control_cmd = *control_cmd_ptr_;
   if (use_vehicle_adaptor_) {
-    const auto current_accel = sub_accel_.takeData();
-    const auto current_operation_mode = sub_operation_mode_.takeData();
-    const auto control_horizon = sub_control_horizon_.takeData();
+    const auto current_accel = sub_accel_.take_data();
+    const auto current_operation_mode = sub_operation_mode_.take_data();
+    const auto control_horizon = sub_control_horizon_.take_data();
     if (!current_accel || !current_operation_mode || !control_horizon) {
       RCLCPP_WARN_EXPRESSION(
         get_logger(), is_debugging_, "some pointers are null: %s, %s %s",
@@ -280,7 +280,7 @@ double RawVehicleCommandConverterNode::calculateBrakeMap(
 
 void RawVehicleCommandConverterNode::onControlCmd(const Control::ConstSharedPtr msg)
 {
-  current_odometry_ = sub_odometry_.takeData();
+  current_odometry_ = sub_odometry_.take_data();
   control_cmd_ptr_ = msg;
   publishActuationCmd();
 }
@@ -300,7 +300,7 @@ void RawVehicleCommandConverterNode::onActuationStatus(
   }
 
   // calculate steering status from actuation status
-  current_odometry_ = sub_odometry_.takeData();
+  current_odometry_ = sub_odometry_.take_data();
   if (current_odometry_) {
     if (convert_steer_cmd_method_.value() == "vgr") {
       current_steer_ptr_ = std::make_unique<double>(vgr_.calculateSteeringTireState(

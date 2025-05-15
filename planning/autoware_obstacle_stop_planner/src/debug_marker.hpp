@@ -31,7 +31,7 @@
 #define EIGEN_MPL2_ONLY
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 namespace autoware::motion_planning
 {
 
@@ -94,10 +94,10 @@ public:
   explicit ObstacleStopPlannerDebugNode(rclcpp::Node * node, const double base_link2front);
   ~ObstacleStopPlannerDebugNode() {}
   bool pushPolygon(
-    const autoware::universe_utils::Polygon2d & polygon, const double z, const PolygonType & type);
+    const autoware_utils::Polygon2d & polygon, const double z, const PolygonType & type);
   bool pushPolygon(const std::vector<Eigen::Vector3d> & polygon, const PolygonType & type);
   bool pushPolyhedron(
-    const autoware::universe_utils::Polygon2d & polyhedron, const double z_min, const double z_max,
+    const autoware_utils::Polygon2d & polyhedron, const double z_min, const double z_max,
     const PolygonType & type);
   bool pushPolyhedron(const std::vector<Eigen::Vector3d> & polyhedron, const PolygonType & type);
   bool pushPose(const Pose & pose, const PoseType & type);

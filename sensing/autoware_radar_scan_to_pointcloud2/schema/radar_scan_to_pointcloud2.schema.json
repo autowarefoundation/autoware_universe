@@ -15,9 +15,15 @@
           "type": "boolean",
           "description": "Whether publish radar pointcloud whose intensity is doppler velocity.",
           "default": "false"
+        },
+        "max_queue_size": {
+          "type": "integer",
+          "default": "5",
+          "minimum": 1,
+          "description": "Max queue size of input/output topics."
         }
       },
-      "required": ["publish_amplitude_pointcloud", "publish_doppler_pointcloud"]
+      "required": ["publish_amplitude_pointcloud", "publish_doppler_pointcloud", "max_queue_size"]
     }
   },
   "properties": {

@@ -15,20 +15,19 @@
 #ifndef OBSTACLE_CRUISE_MODULE_HPP_
 #define OBSTACLE_CRUISE_MODULE_HPP_
 
-#include "autoware/motion_velocity_planner_common_universe/polygon_utils.hpp"
-#include "autoware/motion_velocity_planner_common_universe/utils.hpp"
-#include "autoware/universe_utils/system/stop_watch.hpp"
-#include "autoware/universe_utils/system/time_keeper.hpp"
+#include "autoware/motion_velocity_planner_common/polygon_utils.hpp"
+#include "autoware/motion_velocity_planner_common/utils.hpp"
+#include "autoware_utils/system/stop_watch.hpp"
+#include "autoware_utils/system/time_keeper.hpp"
 #include "cruise_planner_interface.hpp"
-#include "metrics_manager.hpp"
 #include "optimization_based_planner/optimization_based_planner.hpp"
 #include "parameters.hpp"
 #include "pid_based_planner/pid_based_planner.hpp"
 #include "type_alias.hpp"
 #include "types.hpp"
 
-#include <autoware/motion_velocity_planner_common_universe/plugin_module_interface.hpp>
-#include <autoware/motion_velocity_planner_common_universe/velocity_planning_result.hpp>
+#include <autoware/motion_velocity_planner_common/plugin_module_interface.hpp>
+#include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
 #include <autoware/objects_of_interest_marker_interface/objects_of_interest_marker_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -65,22 +64,19 @@ private:
   rclcpp::Publisher<Float32MultiArrayStamped>::SharedPtr debug_cruise_planning_info_pub_;
 
   // module publisher
-  rclcpp::Publisher<MetricArray>::SharedPtr metrics_pub_;
   std::unique_ptr<autoware::objects_of_interest_marker_interface::ObjectsOfInterestMarkerInterface>
     objects_of_interest_marker_interface_;
-  rclcpp::Publisher<autoware::universe_utils::ProcessingTimeDetail>::SharedPtr
-    processing_time_detail_pub_;
+  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr processing_time_detail_pub_;
 
   // cruise planner
   std::unique_ptr<CruisePlannerInterface> cruise_planner_;
 
   // internal variables
-  autoware::universe_utils::StopWatch<std::chrono::milliseconds> stop_watch_;
+  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch_;
   std::vector<CruiseObstacle> prev_cruise_object_obstacles_;
   mutable std::shared_ptr<DebugData> debug_data_ptr_;
   bool need_to_clear_velocity_limit_{false};
-  MetricsManager metrics_manager_;
-  mutable std::shared_ptr<universe_utils::TimeKeeper> time_keeper_;
+  mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 
   std::unique_ptr<CruisePlannerInterface> create_cruise_planner(rclcpp::Node & node) const;
   std::vector<CruiseObstacle> filter_cruise_obstacle_for_predicted_object(
@@ -120,10 +116,12 @@ private:
     const bool is_driving_forward, const VehicleInfo & vehicle_info,
     const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check) const;
   std::optional<CruiseObstacle> create_yield_cruise_obstacle(
-    const std::shared_ptr<PlannerData::Object> object, const rclcpp::Time & predicted_objects_stamp,
-    const std::vector<TrajectoryPoint> & traj_points);
+    const std::shared_ptr<PlannerData::Object> object,
+    const std::shared_ptr<PlannerData::Object> stopped_object,
+    const rclcpp::Time & predicted_objects_stamp, const std::vector<TrajectoryPoint> & traj_points);
   bool is_inside_cruise_obstacle(const uint8_t label) const;
   bool is_outside_cruise_obstacle(const uint8_t label) const;
+  bool is_side_stopped_obstacle(const uint8_t label) const;
   bool is_cruise_obstacle(const uint8_t label) const;
   bool is_front_collide_obstacle(
     const std::vector<TrajectoryPoint> & traj_points,

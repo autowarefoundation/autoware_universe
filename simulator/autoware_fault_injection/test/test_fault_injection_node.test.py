@@ -129,7 +129,7 @@ class TestFaultInjectionLink(unittest.TestCase):
 
     def test_receive_multiple_message_simultaneously(self):
         """
-        Test for https://github.com/autowarefoundation/autoware.universe/pull/4042.
+        Test for https://github.com/autowarefoundation/autoware_universe/pull/4042.
 
         Expect fault_injection_node can receive multiple messages simultaneously.
         """

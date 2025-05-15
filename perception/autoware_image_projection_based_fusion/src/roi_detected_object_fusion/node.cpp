@@ -18,7 +18,7 @@
 
 #include <autoware/image_projection_based_fusion/utils/geometry.hpp>
 #include <autoware/image_projection_based_fusion/utils/utils.hpp>
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 
 #include <algorithm>
 #include <map>
@@ -28,7 +28,7 @@
 
 namespace autoware::image_projection_based_fusion
 {
-using autoware::universe_utils::ScopedTimeTrack;
+using autoware_utils::ScopedTimeTrack;
 
 RoiDetectedObjectFusionNode::RoiDetectedObjectFusionNode(const rclcpp::NodeOptions & options)
 : FusionNode<DetectedObjects, RoiMsgType, DetectedObjects>("roi_detected_object_fusion", options)
@@ -83,9 +83,9 @@ void RoiDetectedObjectFusionNode::preprocess(DetectedObjects & output_msg)
   ignored_object_flags_map_.insert(std::make_pair(timestamp_nsec, ignored_object_flags));
 }
 
-void RoiDetectedObjectFusionNode::fuseOnSingleImage(
-  const DetectedObjects & input_object_msg, const Det2dStatus<RoiMsgType> & det2d,
-  const RoiMsgType & input_roi_msg, DetectedObjects & output_object_msg __attribute__((unused)))
+void RoiDetectedObjectFusionNode::fuse_on_single_image(
+  const DetectedObjects & input_object_msg, const Det2dStatus<RoiMsgType> & det2d_status,
+  const RoiMsgType & input_rois_msg, DetectedObjects & output_object_msg __attribute__((unused)))
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -93,8 +93,8 @@ void RoiDetectedObjectFusionNode::fuseOnSingleImage(
   Eigen::Affine3d object2camera_affine;
   {
     const auto transform_stamped_optional = getTransformStamped(
-      tf_buffer_, /*target*/ input_roi_msg.header.frame_id,
-      /*source*/ input_object_msg.header.frame_id, input_roi_msg.header.stamp);
+      tf_buffer_, /*target*/ input_rois_msg.header.frame_id,
+      /*source*/ input_object_msg.header.frame_id, input_rois_msg.header.stamp);
     if (!transform_stamped_optional) {
       return;
     }
@@ -102,21 +102,21 @@ void RoiDetectedObjectFusionNode::fuseOnSingleImage(
   }
 
   const auto object_roi_map =
-    generateDetectedObjectRoIs(input_object_msg, det2d, object2camera_affine);
-  fuseObjectsOnImage(input_object_msg, input_roi_msg.feature_objects, object_roi_map);
+    generateDetectedObjectRoIs(input_object_msg, det2d_status, object2camera_affine);
+  fuseObjectsOnImage(input_object_msg, input_rois_msg.feature_objects, object_roi_map);
 
   if (debugger_) {
-    debugger_->image_rois_.reserve(input_roi_msg.feature_objects.size());
-    for (std::size_t roi_i = 0; roi_i < input_roi_msg.feature_objects.size(); ++roi_i) {
-      debugger_->image_rois_.push_back(input_roi_msg.feature_objects.at(roi_i).feature.roi);
+    debugger_->image_rois_.reserve(input_rois_msg.feature_objects.size());
+    for (std::size_t roi_i = 0; roi_i < input_rois_msg.feature_objects.size(); ++roi_i) {
+      debugger_->image_rois_.push_back(input_rois_msg.feature_objects.at(roi_i).feature.roi);
     }
-    debugger_->publishImage(det2d.id, input_roi_msg.header.stamp);
+    debugger_->publishImage(det2d_status.id, input_rois_msg.header.stamp);
   }
 }
 
 std::map<std::size_t, DetectedObjectWithFeature>
 RoiDetectedObjectFusionNode::generateDetectedObjectRoIs(
-  const DetectedObjects & input_object_msg, const Det2dStatus<RoiMsgType> & det2d,
+  const DetectedObjects & input_object_msg, const Det2dStatus<RoiMsgType> & det2d_status,
   const Eigen::Affine3d & object2camera_affine)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
@@ -132,7 +132,8 @@ RoiDetectedObjectFusionNode::generateDetectedObjectRoIs(
     return object_roi_map;
   }
   const auto & passthrough_object_flags = passthrough_object_flags_map_.at(timestamp_nsec);
-  const sensor_msgs::msg::CameraInfo & camera_info = det2d.camera_projector_ptr->getCameraInfo();
+  const sensor_msgs::msg::CameraInfo & camera_info =
+    det2d_status.camera_projector_ptr->getCameraInfo();
   const double image_width = static_cast<double>(camera_info.width);
   const double image_height = static_cast<double>(camera_info.height);
 
@@ -163,7 +164,7 @@ RoiDetectedObjectFusionNode::generateDetectedObjectRoIs(
       }
 
       Eigen::Vector2d proj_point;
-      if (det2d.camera_projector_ptr->calcImageProjectedPoint(
+      if (det2d_status.camera_projector_ptr->calcImageProjectedPoint(
             cv::Point3d(point.x(), point.y(), point.z()), proj_point)) {
         const double px = proj_point.x();
         const double py = proj_point.y();

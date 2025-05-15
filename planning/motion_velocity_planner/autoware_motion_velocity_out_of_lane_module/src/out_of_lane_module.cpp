@@ -24,13 +24,15 @@
 
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/motion_velocity_planner_common_universe/planner_data.hpp>
+#include <autoware/motion_velocity_planner_common/planner_data.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
-#include <autoware/universe_utils/ros/parameter.hpp>
-#include <autoware/universe_utils/ros/update_param.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/ros/parameter.hpp>
+#include <autoware_utils/ros/published_time_publisher.hpp>
+#include <autoware_utils/ros/update_param.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
+#include <rclcpp/logging.hpp>
 
 #include <boost/geometry/algorithms/envelope.hpp>
 #include <boost/geometry/algorithms/intersects.hpp>
@@ -41,6 +43,7 @@
 #include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 
 #include <algorithm>
+#include <limits>
 #include <map>
 #include <memory>
 #include <string>
@@ -67,7 +70,7 @@ void OutOfLaneModule::init(rclcpp::Node & node, const std::string & module_name)
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/" + ns_ + "/debug_markers", 1);
   virtual_wall_publisher_ =
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/" + ns_ + "/virtual_walls", 1);
-  processing_diag_publisher_ = std::make_shared<universe_utils::ProcessingTimePublisher>(
+  processing_diag_publisher_ = std::make_shared<autoware_utils::ProcessingTimePublisher>(
     &node, "~/debug/" + ns_ + "/processing_time_ms_diag");
   processing_time_publisher_ =
     node.create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
@@ -75,38 +78,44 @@ void OutOfLaneModule::init(rclcpp::Node & node, const std::string & module_name)
 }
 void OutOfLaneModule::init_parameters(rclcpp::Node & node)
 {
-  using universe_utils::getOrDeclareParameter;
+  using autoware_utils::get_or_declare_parameter;
   auto & pp = params_;
 
-  pp.mode = getOrDeclareParameter<std::string>(node, ns_ + ".mode");
+  pp.mode = get_or_declare_parameter<std::string>(node, ns_ + ".mode");
   pp.skip_if_already_overlapping =
-    getOrDeclareParameter<bool>(node, ns_ + ".skip_if_already_overlapping");
-  pp.max_arc_length = getOrDeclareParameter<double>(node, ns_ + ".max_arc_length");
+    get_or_declare_parameter<bool>(node, ns_ + ".skip_if_already_overlapping");
+  pp.max_arc_length = get_or_declare_parameter<double>(node, ns_ + ".max_arc_length");
 
-  pp.time_threshold = getOrDeclareParameter<double>(node, ns_ + ".threshold.time_threshold");
-  pp.ttc_threshold = getOrDeclareParameter<double>(node, ns_ + ".ttc.threshold");
+  pp.time_threshold = get_or_declare_parameter<double>(node, ns_ + ".threshold.time_threshold");
+  pp.ttc_threshold = get_or_declare_parameter<double>(node, ns_ + ".ttc.threshold");
+  pp.ttc_release_threshold = get_or_declare_parameter<double>(node, ns_ + ".ttc.release_threshold");
 
-  pp.objects_min_vel = getOrDeclareParameter<double>(node, ns_ + ".objects.minimum_velocity");
+  pp.objects_min_vel = get_or_declare_parameter<double>(node, ns_ + ".objects.minimum_velocity");
   pp.objects_min_confidence =
-    getOrDeclareParameter<double>(node, ns_ + ".objects.predicted_path_min_confidence");
+    get_or_declare_parameter<double>(node, ns_ + ".objects.predicted_path_min_confidence");
   pp.objects_cut_predicted_paths_beyond_red_lights =
-    getOrDeclareParameter<bool>(node, ns_ + ".objects.cut_predicted_paths_beyond_red_lights");
+    get_or_declare_parameter<bool>(node, ns_ + ".objects.cut_predicted_paths_beyond_red_lights");
   pp.objects_ignore_behind_ego =
-    getOrDeclareParameter<bool>(node, ns_ + ".objects.ignore_behind_ego");
+    get_or_declare_parameter<bool>(node, ns_ + ".objects.ignore_behind_ego");
 
-  pp.precision = getOrDeclareParameter<double>(node, ns_ + ".action.precision");
-  pp.min_decision_duration = getOrDeclareParameter<double>(node, ns_ + ".action.min_duration");
+  pp.precision = get_or_declare_parameter<double>(node, ns_ + ".action.precision");
+  pp.use_map_stop_lines = get_or_declare_parameter<bool>(node, ns_ + ".action.use_map_stop_lines");
+  pp.min_on_duration = get_or_declare_parameter<double>(node, ns_ + ".action.min_on_duration");
+  pp.min_off_duration = get_or_declare_parameter<double>(node, ns_ + ".action.min_off_duration");
+  pp.update_distance_th =
+    get_or_declare_parameter<double>(node, ns_ + ".action.update_distance_th");
   pp.lon_dist_buffer =
-    getOrDeclareParameter<double>(node, ns_ + ".action.longitudinal_distance_buffer");
-  pp.lat_dist_buffer = getOrDeclareParameter<double>(node, ns_ + ".action.lateral_distance_buffer");
-  pp.slow_velocity = getOrDeclareParameter<double>(node, ns_ + ".action.slowdown.velocity");
+    get_or_declare_parameter<double>(node, ns_ + ".action.longitudinal_distance_buffer");
+  pp.lat_dist_buffer =
+    get_or_declare_parameter<double>(node, ns_ + ".action.lateral_distance_buffer");
+  pp.slow_velocity = get_or_declare_parameter<double>(node, ns_ + ".action.slowdown.velocity");
   pp.stop_dist_threshold =
-    getOrDeclareParameter<double>(node, ns_ + ".action.stop.distance_threshold");
+    get_or_declare_parameter<double>(node, ns_ + ".action.stop.distance_threshold");
 
-  pp.extra_front_offset = getOrDeclareParameter<double>(node, ns_ + ".ego.extra_front_offset");
-  pp.extra_rear_offset = getOrDeclareParameter<double>(node, ns_ + ".ego.extra_rear_offset");
-  pp.extra_left_offset = getOrDeclareParameter<double>(node, ns_ + ".ego.extra_left_offset");
-  pp.extra_right_offset = getOrDeclareParameter<double>(node, ns_ + ".ego.extra_right_offset");
+  pp.extra_front_offset = get_or_declare_parameter<double>(node, ns_ + ".ego.extra_front_offset");
+  pp.extra_rear_offset = get_or_declare_parameter<double>(node, ns_ + ".ego.extra_rear_offset");
+  pp.extra_left_offset = get_or_declare_parameter<double>(node, ns_ + ".ego.extra_left_offset");
+  pp.extra_right_offset = get_or_declare_parameter<double>(node, ns_ + ".ego.extra_right_offset");
   const auto vehicle_info = vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo();
   pp.front_offset = vehicle_info.max_longitudinal_offset_m;
   pp.rear_offset = vehicle_info.min_longitudinal_offset_m;
@@ -116,34 +125,37 @@ void OutOfLaneModule::init_parameters(rclcpp::Node & node)
 
 void OutOfLaneModule::update_parameters(const std::vector<rclcpp::Parameter> & parameters)
 {
-  using universe_utils::updateParam;
+  using autoware_utils::update_param;
   auto & pp = params_;
-  updateParam(parameters, ns_ + ".mode", pp.mode);
-  updateParam(parameters, ns_ + ".skip_if_already_overlapping", pp.skip_if_already_overlapping);
-  updateParam(parameters, ns_ + ".max_arc_length", pp.max_arc_length);
+  update_param(parameters, ns_ + ".mode", pp.mode);
+  update_param(parameters, ns_ + ".skip_if_already_overlapping", pp.skip_if_already_overlapping);
+  update_param(parameters, ns_ + ".max_arc_length", pp.max_arc_length);
 
-  updateParam(parameters, ns_ + ".threshold.time_threshold", pp.time_threshold);
-  updateParam(parameters, ns_ + ".ttc.threshold", pp.ttc_threshold);
+  update_param(parameters, ns_ + ".threshold.time_threshold", pp.time_threshold);
+  update_param(parameters, ns_ + ".ttc.threshold", pp.ttc_threshold);
+  update_param(parameters, ns_ + ".ttc.release_threshold", pp.ttc_release_threshold);
 
-  updateParam(parameters, ns_ + ".objects.minimum_velocity", pp.objects_min_vel);
-  updateParam(
+  update_param(parameters, ns_ + ".objects.minimum_velocity", pp.objects_min_vel);
+  update_param(
     parameters, ns_ + ".objects.predicted_path_min_confidence", pp.objects_min_confidence);
-  updateParam(
+  update_param(
     parameters, ns_ + ".objects.cut_predicted_paths_beyond_red_lights",
     pp.objects_cut_predicted_paths_beyond_red_lights);
-  updateParam(parameters, ns_ + ".objects.ignore_behind_ego", pp.objects_ignore_behind_ego);
+  update_param(parameters, ns_ + ".objects.ignore_behind_ego", pp.objects_ignore_behind_ego);
 
-  updateParam(parameters, ns_ + ".action.precision", pp.precision);
-  updateParam(parameters, ns_ + ".action.min_duration", pp.min_decision_duration);
-  updateParam(parameters, ns_ + ".action.longitudinal_distance_buffer", pp.lon_dist_buffer);
-  updateParam(parameters, ns_ + ".action.lateral_distance_buffer", pp.lat_dist_buffer);
-  updateParam(parameters, ns_ + ".action.slowdown.velocity", pp.slow_velocity);
-  updateParam(parameters, ns_ + ".action.stop.distance_threshold", pp.stop_dist_threshold);
+  update_param(parameters, ns_ + ".action.precision", pp.precision);
+  update_param(parameters, ns_ + ".action.use_map_stop_lines", pp.use_map_stop_lines);
+  update_param(parameters, ns_ + ".action.min_on_duration", pp.min_on_duration);
+  update_param(parameters, ns_ + ".action.min_off_duration", pp.min_off_duration);
+  update_param(parameters, ns_ + ".action.longitudinal_distance_buffer", pp.lon_dist_buffer);
+  update_param(parameters, ns_ + ".action.lateral_distance_buffer", pp.lat_dist_buffer);
+  update_param(parameters, ns_ + ".action.slowdown.velocity", pp.slow_velocity);
+  update_param(parameters, ns_ + ".action.stop.distance_threshold", pp.stop_dist_threshold);
 
-  updateParam(parameters, ns_ + ".ego.extra_front_offset", pp.extra_front_offset);
-  updateParam(parameters, ns_ + ".ego.extra_rear_offset", pp.extra_rear_offset);
-  updateParam(parameters, ns_ + ".ego.extra_left_offset", pp.extra_left_offset);
-  updateParam(parameters, ns_ + ".ego.extra_right_offset", pp.extra_right_offset);
+  update_param(parameters, ns_ + ".ego.extra_front_offset", pp.extra_front_offset);
+  update_param(parameters, ns_ + ".ego.extra_rear_offset", pp.extra_rear_offset);
+  update_param(parameters, ns_ + ".ego.extra_left_offset", pp.extra_left_offset);
+  update_param(parameters, ns_ + ".ego.extra_right_offset", pp.extra_right_offset);
 }
 
 void OutOfLaneModule::limit_trajectory_size(
@@ -159,7 +171,7 @@ void OutOfLaneModule::limit_trajectory_size(
   auto l = -ego_data.longitudinal_offset_to_first_trajectory_index;
   ego_data.trajectory_points.push_back(smoothed_trajectory_points[ego_data.first_trajectory_idx]);
   for (auto i = ego_data.first_trajectory_idx + 1; i < smoothed_trajectory_points.size(); ++i) {
-    l += universe_utils::calcDistance2d(
+    l += autoware_utils::calc_distance2d(
       smoothed_trajectory_points[i - 1], smoothed_trajectory_points[i]);
     if (l >= max_arc_length) {
       break;
@@ -197,7 +209,7 @@ void prepare_stop_lines_rtree(
         stop_line_node.second.stop_line.back() += diff * 0.5;
         stop_line_node.second.lanelets = planner_data.route_handler->getPreviousLanelets(ll);
         stop_line_node.first =
-          boost::geometry::return_envelope<universe_utils::Box2d>(stop_line_node.second.stop_line);
+          boost::geometry::return_envelope<autoware_utils::Box2d>(stop_line_node.second.stop_line);
         rtree_nodes.push_back(stop_line_node);
       }
     }
@@ -213,6 +225,134 @@ out_of_lane::OutOfLaneData prepare_out_of_lane_data(const out_of_lane::EgoData &
   return out_of_lane_data;
 }
 
+std::optional<geometry_msgs::msg::Pose> OutOfLaneModule::calculate_slowdown_pose(
+  const out_of_lane::EgoData & ego_data, const out_of_lane::OutOfLaneData & out_of_lane_data)
+{
+  auto slowdown_pose = out_of_lane::calculate_slowdown_pose(ego_data, out_of_lane_data, params_);
+
+  update_slowdown_pose_buffer(ego_data, slowdown_pose);
+
+  if (slowdown_pose_buffer_.empty()) return {};
+
+  // get nearest active slowdown pose
+  auto min_arc_length = std::numeric_limits<double>::max();
+  std::optional<out_of_lane::SlowdownPose> nearest_slowdown_pose = {};
+  for (const auto & sp : slowdown_pose_buffer_) {
+    if (sp.arc_length > min_arc_length || !sp.is_active) continue;
+    nearest_slowdown_pose = sp;
+    min_arc_length = sp.arc_length;
+  }
+
+  if (!nearest_slowdown_pose) return {};
+
+  slowdown_pose = motion_utils::calcInterpolatedPose(
+    ego_data.trajectory_points, nearest_slowdown_pose->arc_length);
+
+  return slowdown_pose;
+}
+
+void OutOfLaneModule::update_slowdown_pose_buffer(
+  const out_of_lane::EgoData & ego_data,
+  const std::optional<geometry_msgs::msg::Pose> & slowdown_pose)
+{
+  const double slowdown_pose_arc_length =
+    slowdown_pose
+      ? motion_utils::calcSignedArcLength(ego_data.trajectory_points, 0LU, slowdown_pose->position)
+      : std::numeric_limits<double>::max();
+
+  // remove no longer valid slowdown poses in the buffer:
+  //  slowdown poses that are active but have exceeded the duration threshold since last detection
+  //  slowdown poses that are invalid and not near the new slowdown pose
+  std::vector<out_of_lane::SlowdownPose> valid_poses;
+  for (auto & sp : slowdown_pose_buffer_) {
+    const auto sp_duration = (clock_->now() - sp.start_time).seconds();
+    if (sp.is_active && sp_duration > params_.min_off_duration) continue;
+    if (!sp.is_active && !slowdown_pose) continue;
+
+    sp.arc_length =
+      motion_utils::calcSignedArcLength(ego_data.trajectory_points, 0LU, sp.pose.position);
+    if (
+      !sp.is_active && abs(sp.arc_length - slowdown_pose_arc_length) > params_.update_distance_th) {
+      continue;
+    }
+
+    if (!sp.is_active && (clock_->now() - sp.start_time).seconds() > params_.min_on_duration) {
+      sp.is_active = true;
+      sp.start_time = clock_->now();
+    }
+    valid_poses.push_back(sp);
+  }
+
+  slowdown_pose_buffer_ = valid_poses;
+
+  if (!slowdown_pose) return;
+
+  static constexpr double eps = 1e-3;
+  if (slowdown_pose_buffer_.empty()) {
+    slowdown_pose_buffer_.emplace_back(
+      slowdown_pose_arc_length, clock_->now(), *slowdown_pose, params_.min_on_duration < eps);
+    return;
+  }
+
+  auto nearest_prev_pose_it = slowdown_pose_buffer_.end();
+  auto min_relative_dist = std::numeric_limits<double>::max();
+  for (auto it = slowdown_pose_buffer_.begin(); it < slowdown_pose_buffer_.end(); ++it) {
+    const auto rel_dist = it->arc_length - slowdown_pose_arc_length;
+    if (std::abs(rel_dist) < params_.update_distance_th && rel_dist < min_relative_dist) {
+      nearest_prev_pose_it = it;
+      min_relative_dist = rel_dist;
+    }
+  }
+
+  if (nearest_prev_pose_it == slowdown_pose_buffer_.end()) {
+    slowdown_pose_buffer_.emplace_back(
+      slowdown_pose_arc_length, clock_->now(), *slowdown_pose, params_.min_on_duration < eps);
+    return;
+  }
+
+  if (min_relative_dist > 0) {
+    nearest_prev_pose_it->pose = *slowdown_pose;
+    nearest_prev_pose_it->arc_length = slowdown_pose_arc_length;
+  }
+
+  if (nearest_prev_pose_it->is_active) {
+    nearest_prev_pose_it->start_time = clock_->now();
+  }
+}
+
+void OutOfLaneModule::update_result(
+  VelocityPlanningResult & result, const std::optional<geometry_msgs::msg::Pose> & slowdown_pose,
+  const out_of_lane::EgoData & ego_data, const out_of_lane::OutOfLaneData & out_of_lane_data)
+{
+  if (slowdown_pose) {
+    const auto arc_length =
+      motion_utils::calcSignedArcLength(ego_data.trajectory_points, 0UL, slowdown_pose->position) -
+      ego_data.longitudinal_offset_to_first_trajectory_index;
+    const auto slowdown_velocity =
+      arc_length <= params_.stop_dist_threshold ? 0.0 : params_.slow_velocity;
+    previous_slowdown_pose_ = slowdown_pose;
+    if (slowdown_velocity == 0.0) {
+      result.stop_points.push_back(slowdown_pose->position);
+    } else {
+      result.slowdown_intervals.emplace_back(
+        slowdown_pose->position, slowdown_pose->position, slowdown_velocity);
+    }
+
+    planning_factor_interface_->add(
+      ego_data.trajectory_points, ego_data.pose, *slowdown_pose, PlanningFactor::SLOW_DOWN,
+      SafetyFactorArray{});
+    virtual_wall_marker_creator.add_virtual_walls(
+      out_of_lane::debug::create_virtual_walls(*slowdown_pose, slowdown_velocity == 0.0, params_));
+    virtual_wall_publisher_->publish(virtual_wall_marker_creator.create_markers(clock_->now()));
+  } else if (std::any_of(
+               out_of_lane_data.outside_points.begin(), out_of_lane_data.outside_points.end(),
+               [](const auto & p) { return p.to_avoid; })) {
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 1000,
+      "[out_of_lane] Could not insert slowdown point because of deceleration limits");
+  }
+}
+
 VelocityPlanningResult OutOfLaneModule::plan(
   [[maybe_unused]] const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> &
     raw_trajectory_points,
@@ -220,7 +360,7 @@ VelocityPlanningResult OutOfLaneModule::plan(
   const std::shared_ptr<const PlannerData> planner_data)
 {
   VelocityPlanningResult result;
-  universe_utils::StopWatch<std::chrono::microseconds> stopwatch;
+  autoware_utils::StopWatch<std::chrono::microseconds> stopwatch;
   stopwatch.tic();
 
   stopwatch.tic("preprocessing");
@@ -230,6 +370,7 @@ VelocityPlanningResult OutOfLaneModule::plan(
   out_of_lane::calculate_min_stop_and_slowdown_distances(
     ego_data, *planner_data, previous_slowdown_pose_);
   prepare_stop_lines_rtree(ego_data, *planner_data, params_.max_arc_length);
+  ego_data.map_stop_points = planner_data->calculate_map_stop_points(ego_data.trajectory_points);
   const auto preprocessing_us = stopwatch.toc("preprocessing");
 
   stopwatch.tic("calculate_trajectory_footprints");
@@ -255,8 +396,9 @@ VelocityPlanningResult OutOfLaneModule::plan(
   const auto calculate_time_collisions_us = stopwatch.toc("calculate_time_collisions");
 
   stopwatch.tic("calculate_times");
-  // calculate times
-  out_of_lane::calculate_collisions_to_avoid(out_of_lane_data, ego_data.trajectory_points, params_);
+  const auto is_stopping = previous_slowdown_pose_ ? true : false;
+  out_of_lane::calculate_collisions_to_avoid(
+    out_of_lane_data, ego_data.trajectory_points, params_, is_stopping);
   const auto calculate_times_us = stopwatch.toc("calculate_times");
 
   const auto is_already_overlapping =
@@ -265,70 +407,18 @@ VelocityPlanningResult OutOfLaneModule::plan(
       return !boost::geometry::disjoint(ll.polygon2d().basicPolygon(), ego_data.current_footprint);
     }) != ego_data.out_lanelets.end();
   if (is_already_overlapping) {
-    RCLCPP_WARN(logger_, "Ego is already out of lane, skipping the module\n");
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 1000, "Ego is already out of lane, skipping the module\n");
     debug_publisher_->publish(out_of_lane::debug::create_debug_marker_array(
       ego_data, out_of_lane_data, objects, debug_data_));
     return result;
   }
 
-  if (  // reset the previous inserted point if the timer expired
-    previous_slowdown_pose_ &&
-    (clock_->now() - previous_slowdown_time_).seconds() > params_.min_decision_duration) {
-    previous_slowdown_pose_.reset();
-  }
-
   stopwatch.tic("calculate_slowdown_point");
-  auto slowdown_pose = out_of_lane::calculate_slowdown_point(ego_data, out_of_lane_data, params_);
+  const auto slowdown_pose = calculate_slowdown_pose(ego_data, out_of_lane_data);
   const auto calculate_slowdown_point_us = stopwatch.toc("calculate_slowdown_point");
 
-  // reuse previous stop pose if there is no new one or if its velocity is not higher than the new
-  // one and its arc length is lower
-  if (slowdown_pose) {  // reset the clock when we could calculate a valid slowdown pose
-    previous_slowdown_time_ = clock_->now();
-  }
-  const auto should_use_previous_pose = [&]() {
-    if (slowdown_pose && previous_slowdown_pose_) {
-      const auto arc_length =
-        motion_utils::calcSignedArcLength(ego_data.trajectory_points, 0LU, slowdown_pose->position);
-      const auto prev_arc_length = motion_utils::calcSignedArcLength(
-        ego_data.trajectory_points, 0LU, previous_slowdown_pose_->position);
-      return prev_arc_length < arc_length;
-    }
-    return slowdown_pose && previous_slowdown_pose_;
-  }();
-  if (should_use_previous_pose) {
-    // if the trajectory changed the prev point is no longer on the trajectory so we project it
-    const auto new_arc_length = motion_utils::calcSignedArcLength(
-      ego_data.trajectory_points, 0UL, previous_slowdown_pose_->position);
-    slowdown_pose = motion_utils::calcInterpolatedPose(ego_data.trajectory_points, new_arc_length);
-  }
-  if (slowdown_pose) {
-    const auto arc_length =
-      motion_utils::calcSignedArcLength(ego_data.trajectory_points, 0UL, slowdown_pose->position) -
-      ego_data.longitudinal_offset_to_first_trajectory_index;
-    const auto slowdown_velocity =
-      arc_length <= params_.stop_dist_threshold ? 0.0 : params_.slow_velocity;
-    previous_slowdown_pose_ = slowdown_pose;
-    if (slowdown_velocity == 0.0) {
-      result.stop_points.push_back(slowdown_pose->position);
-    } else {
-      result.slowdown_intervals.emplace_back(
-        slowdown_pose->position, slowdown_pose->position, slowdown_velocity);
-    }
-
-    planning_factor_interface_->add(
-      smoothed_trajectory_points, ego_data.pose, *slowdown_pose, PlanningFactor::SLOW_DOWN,
-      SafetyFactorArray{});
-    virtual_wall_marker_creator.add_virtual_walls(
-      out_of_lane::debug::create_virtual_walls(*slowdown_pose, slowdown_velocity == 0.0, params_));
-    virtual_wall_publisher_->publish(virtual_wall_marker_creator.create_markers(clock_->now()));
-  } else if (std::any_of(
-               out_of_lane_data.outside_points.begin(), out_of_lane_data.outside_points.end(),
-               [](const auto & p) { return p.to_avoid; })) {
-    RCLCPP_WARN(
-      logger_, "[out_of_lane] Could not insert slowdown point because of deceleration limits");
-  }
-
+  update_result(result, slowdown_pose, ego_data, out_of_lane_data);
   stopwatch.tic("gen_debug");
   const auto markers =
     out_of_lane::debug::create_debug_marker_array(ego_data, out_of_lane_data, objects, debug_data_);

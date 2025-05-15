@@ -214,9 +214,9 @@ status:
 
 ## Node separation options
 
-There is also an option to separate the concatenate_and_time_sync_node into two nodes: one for `time synchronization` and another for `concatenate pointclouds` ([See this PR](https://github.com/autowarefoundation/autoware.universe/pull/3312)).
+There is also an option to separate the concatenate_and_time_sync_node into two nodes: one for `time synchronization` and another for `concatenate pointclouds` ([See this PR](https://github.com/autowarefoundation/autoware_universe/pull/3312)).
 
-Note that the `concatenate_pointclouds` and `time_synchronizer_nodelet` are using the [old design](https://github.com/autowarefoundation/autoware.universe/blob/9bb228fe5b7fa4c6edb47e4713c73489a02366e1/sensing/autoware_pointcloud_preprocessor/docs/concatenate-data.md) of the concatenate node.
+Note that the `concatenate_pointclouds` and `time_synchronizer_nodelet` are using the [old design](https://github.com/autowarefoundation/autoware_universe/blob/9bb228fe5b7fa4c6edb47e4713c73489a02366e1/sensing/autoware_pointcloud_preprocessor/docs/concatenate-data.md) of the concatenate node.
 
 ## Assumptions / Known Limits
 

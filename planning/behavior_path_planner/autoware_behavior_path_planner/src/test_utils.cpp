@@ -15,7 +15,7 @@
 #include "autoware/behavior_path_planner/test_utils.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <autoware_planning_test_manager/autoware_planning_test_manager.hpp>
+#include <autoware/planning_test_manager/autoware_planning_test_manager.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
 
 #include <tier4_planning_msgs/msg/lateral_offset.hpp>
@@ -31,7 +31,7 @@ std::shared_ptr<PlanningInterfaceTestManager> generateTestManager()
   auto test_manager = std::make_shared<PlanningInterfaceTestManager>();
 
   // set subscriber with topic name: behavior_path_planner → test_node_
-  test_manager->subscribeOutput<tier4_planning_msgs::msg::PathWithLaneId>(
+  test_manager->subscribeOutput<autoware_internal_planning_msgs::msg::PathWithLaneId>(
     "behavior_path_planner/output/path");
 
   return test_manager;
@@ -97,7 +97,8 @@ void publishMandatoryTopics(
     autoware::test_utils::makeCostMapMsg());
   test_manager->publishInput(
     test_target_node, "behavior_path_planner/input/scenario",
-    autoware::test_utils::makeScenarioMsg(tier4_planning_msgs::msg::Scenario::LANEDRIVING));
+    autoware::test_utils::makeScenarioMsg(
+      autoware_internal_planning_msgs::msg::Scenario::LANEDRIVING));
   test_manager->publishInput(
     test_target_node, "behavior_path_planner/input/vector_map",
     autoware::test_utils::makeMapBinMsg());

@@ -19,14 +19,15 @@
 #include "map_based_prediction/path_generator.hpp"
 #include "map_based_prediction/predictor_vru.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/debug_publisher.hpp>
-#include <autoware/universe_utils/ros/polling_subscriber.hpp>
-#include <autoware/universe_utils/ros/published_time_publisher.hpp>
-#include <autoware/universe_utils/ros/transform_listener.hpp>
-#include <autoware/universe_utils/ros/update_param.hpp>
-#include <autoware/universe_utils/system/lru_cache.hpp>
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
+#include <autoware_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils/ros/published_time_publisher.hpp>
+#include <autoware_utils/ros/transform_listener.hpp>
+#include <autoware_utils/ros/update_param.hpp>
+#include <autoware_utils/system/lru_cache.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <geometry_msgs/msg/pose.hpp>
@@ -86,12 +87,12 @@ private:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_debug_markers_;
   rclcpp::Subscription<TrackedObjects>::SharedPtr sub_objects_;
   rclcpp::Subscription<LaneletMapBin>::SharedPtr sub_map_;
-  autoware::universe_utils::InterProcessPollingSubscriber<TrafficLightGroupArray>
-    sub_traffic_signals_{this, "/traffic_signals"};
+  autoware_utils::InterProcessPollingSubscriber<TrafficLightGroupArray> sub_traffic_signals_{
+    this, "/traffic_signals"};
 
   // debug publisher
-  std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
-  std::unique_ptr<autoware::universe_utils::DebugPublisher> processing_time_publisher_;
+  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
+  std::unique_ptr<autoware_utils::DebugPublisher> processing_time_publisher_;
 
   // Object History
   std::unordered_map<std::string, std::deque<ObjectData>> road_users_history_;
@@ -107,7 +108,7 @@ private:
     const std::vector<rclcpp::Parameter> & parameters);
 
   // Pose Transform Listener
-  autoware::universe_utils::TransformListener transform_listener_{this};
+  autoware_utils::TransformListener transform_listener_{this};
 
   // Path Generator
   std::shared_ptr<PathGenerator> path_generator_;
@@ -115,10 +116,13 @@ private:
   // Predictor
   std::shared_ptr<PredictorVru> predictor_vru_;
 
-  ////// Parameters
+  // Diagnostics
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
+  double processing_time_tolerance_ms_;
+  double processing_time_consecutive_excess_tolerance_ms_;
+  std::optional<rclcpp::Time> last_in_time_processing_timestamp_;
 
-  // Object Parameters
-  bool enable_delay_compensation_;
+  ////// Parameters
 
   //// Vehicle Parameters
   // Lanelet Parameters
@@ -166,6 +170,9 @@ private:
   void trafficSignalsCallback(const TrafficLightGroupArray::ConstSharedPtr msg);
   void objectsCallback(const TrackedObjects::ConstSharedPtr in_objects);
 
+  // Diagnostics proccess
+  void updateDiagnostics(const rclcpp::Time & timestamp, double processing_time_ms);
+
   // Map process
   bool doesPathCrossFence(
     const PredictedPath & predicted_path, const lanelet::ConstLineString3d & fence_line);
@@ -174,10 +181,6 @@ private:
   // Object process
   PredictedObject convertToPredictedObject(const TrackedObject & tracked_object);
   void updateObjectData(TrackedObject & object);
-  geometry_msgs::msg::Pose compensateTimeDelay(
-    const geometry_msgs::msg::Pose & delayed_pose, const geometry_msgs::msg::Twist & twist,
-    const double dt) const;
-
   //// Vehicle process
   // Lanelet process
   LaneletsData getCurrentLanelets(const TrackedObject & object);
@@ -226,16 +229,16 @@ private:
   std::vector<PredictedRefPath> convertPredictedReferencePath(
     const TrackedObject & object,
     const std::vector<LaneletPathWithPathInfo> & lanelet_ref_paths) const;
-  mutable universe_utils::LRUCache<lanelet::routing::LaneletPath, std::pair<PosePath, double>>
+  mutable autoware_utils::LRUCache<lanelet::routing::LaneletPath, std::pair<PosePath, double>>
     lru_cache_of_convert_path_type_{1000};
   std::pair<PosePath, double> convertLaneletPathToPosePath(
     const lanelet::routing::LaneletPath & path) const;
 
   ////// Debugger
-  std::unique_ptr<autoware::universe_utils::PublishedTimePublisher> published_time_publisher_;
-  rclcpp::Publisher<autoware::universe_utils::ProcessingTimeDetail>::SharedPtr
+  std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
+  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
     detailed_processing_time_publisher_;
-  std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_;
+  std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
   visualization_msgs::msg::Marker getDebugMarker(
     const TrackedObject & object, const Maneuver & maneuver, const size_t obj_num);
 
@@ -249,8 +252,8 @@ private:
   inline std::vector<double> calcTrajectoryCurvatureFrom3Points(
     const TrajectoryPoints & trajectory, size_t idx_dist)
   {
-    using autoware::universe_utils::calcCurvature;
-    using autoware::universe_utils::getPoint;
+    using autoware_utils::calc_curvature;
+    using autoware_utils::get_point;
 
     if (trajectory.size() < 3) {
       const std::vector<double> k_arr(trajectory.size(), 0.0);
@@ -270,11 +273,11 @@ private:
 
     for (size_t i = 1; i + 1 < trajectory.size(); i++) {
       double curvature = 0.0;
-      const auto p0 = getPoint(trajectory.at(i - std::min(idx_dist, i)));
-      const auto p1 = getPoint(trajectory.at(i));
-      const auto p2 = getPoint(trajectory.at(i + std::min(idx_dist, trajectory.size() - 1 - i)));
+      const auto p0 = get_point(trajectory.at(i - std::min(idx_dist, i)));
+      const auto p1 = get_point(trajectory.at(i));
+      const auto p2 = get_point(trajectory.at(i + std::min(idx_dist, trajectory.size() - 1 - i)));
       try {
-        curvature = calcCurvature(p0, p1, p2);
+        curvature = calc_curvature(p0, p1, p2);
       } catch (std::exception const & e) {
         // ...code that handles the error...
         RCLCPP_WARN(rclcpp::get_logger("map_based_prediction"), "%s", e.what());

@@ -33,11 +33,11 @@ namespace autoware::behavior_path_planner
 {
 BezierPullOver::BezierPullOver(rclcpp::Node & node, const GoalPlannerParameters & parameters)
 : PullOverPlannerBase(node, parameters),
-  lane_departure_checker_{[&]() {
-    auto lane_departure_checker_params = lane_departure_checker::Param{};
-    lane_departure_checker_params.footprint_extra_margin =
+  boundary_departure_checker_{[&]() {
+    auto boundary_departure_checker_params = boundary_departure_checker::Param{};
+    boundary_departure_checker_params.footprint_extra_margin =
       parameters.lane_departure_check_expansion_margin;
-    return LaneDepartureChecker{lane_departure_checker_params, vehicle_info_};
+    return BoundaryDepartureChecker{boundary_departure_checker_params, vehicle_info_};
   }()},
   left_side_parking_(parameters.parking_policy == ParkingPolicy::LEFT_SIDE)
 {
@@ -134,7 +134,7 @@ std::vector<PullOverPath> BezierPullOver::generateBezierPath(
 
   // shift end pose is longitudinal offset from goal pose to improve parking angle accuracy
   const Pose shift_end_pose =
-    autoware::universe_utils::calcOffsetPose(goal_pose, -after_shift_straight_distance, 0, 0);
+    autoware_utils::calc_offset_pose(goal_pose, -after_shift_straight_distance, 0, 0);
 
   // calculate lateral shift of previous module path terminal pose from road lane reference path
   const auto road_lane_reference_path_to_shift_end = utils::resamplePathWithSpline(
@@ -170,7 +170,7 @@ std::vector<PullOverPath> BezierPullOver::generateBezierPath(
   const Pose & shift_end_pose_prev_module_path =
     processed_prev_module_path->points.back().point.pose;
   const double shift_end_road_to_target_distance =
-    autoware::universe_utils::inverseTransformPoint(
+    autoware_utils::inverse_transform_point(
       shift_end_pose.position, shift_end_pose_prev_module_path)
       .y;
 
@@ -260,7 +260,7 @@ std::vector<PullOverPath> BezierPullOver::generateBezierPath(
       p.point.pose.position.x = bezier_points[i].x();
       p.point.pose.position.y = bezier_points[i].y();
       p.point.pose.orientation =
-        universe_utils::createQuaternionFromRPY(0.0, 0.0, bezier_points[i].z());
+        autoware_utils::create_quaternion_from_rpy(0.0, 0.0, bezier_points[i].z());
     }
 
     // interpolate between shift end pose to goal pose
@@ -342,7 +342,7 @@ std::vector<PullOverPath> BezierPullOver::generateBezierPath(
         });
     });
     const bool is_in_lanes = std::invoke([&]() -> bool {
-      return !lane_departure_checker_.checkPathWillLeaveLane(
+      return !boundary_departure_checker_.checkPathWillLeaveLane(
         utils::transformToLanelets(combined_drivable), pull_over_path.parking_path());
     });
     if (!is_in_parking_lots && !is_in_lanes) {

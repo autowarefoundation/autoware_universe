@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__OBSTACLE_COLLISION_CHECKER__OBSTACLE_COLLISION_CHECKER_HPP_
 #define AUTOWARE__OBSTACLE_COLLISION_CHECKER__OBSTACLE_COLLISION_CHECKER_HPP_
 
+#include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory.hpp>
@@ -32,7 +33,7 @@
 
 namespace autoware::obstacle_collision_checker
 {
-using autoware::universe_utils::LinearRing2d;
+using autoware_utils::LinearRing2d;
 
 struct Param
 {

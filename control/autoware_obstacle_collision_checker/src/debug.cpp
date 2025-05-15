@@ -14,25 +14,25 @@
 
 #include "autoware/obstacle_collision_checker/debug.hpp"
 
-#include <autoware/universe_utils/ros/marker_helper.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
 
 namespace autoware::obstacle_collision_checker
 {
 visualization_msgs::msg::MarkerArray create_marker_array(
   const Output & output, const double base_link_z, const rclcpp::Time & now)
 {
-  using autoware::universe_utils::createDefaultMarker;
-  using autoware::universe_utils::createMarkerColor;
-  using autoware::universe_utils::createMarkerScale;
+  using autoware_utils::create_default_marker;
+  using autoware_utils::create_marker_color;
+  using autoware_utils::create_marker_scale;
 
   visualization_msgs::msg::MarkerArray marker_array;
 
   if (output.resampled_trajectory.points.size() >= 2) {
     // Line of resampled_trajectory
     {
-      auto marker = createDefaultMarker(
+      auto marker = create_default_marker(
         "map", now, "resampled_trajectory_line", 0, visualization_msgs::msg::Marker::LINE_STRIP,
-        createMarkerScale(0.05, 0, 0), createMarkerColor(1.0, 1.0, 1.0, 0.999));
+        create_marker_scale(0.05, 0, 0), create_marker_color(1.0, 1.0, 1.0, 0.999));
 
       for (const auto & p : output.resampled_trajectory.points) {
         marker.points.push_back(p.pose.position);
@@ -44,9 +44,9 @@ visualization_msgs::msg::MarkerArray create_marker_array(
 
     // Points of resampled_trajectory
     {
-      auto marker = createDefaultMarker(
+      auto marker = create_default_marker(
         "map", now, "resampled_trajectory_points", 0, visualization_msgs::msg::Marker::SPHERE_LIST,
-        createMarkerScale(0.1, 0.1, 0.1), createMarkerColor(0.0, 1.0, 0.0, 0.999));
+        create_marker_scale(0.1, 0.1, 0.1), create_marker_color(0.0, 1.0, 0.0, 0.999));
 
       for (const auto & p : output.resampled_trajectory.points) {
         marker.points.push_back(p.pose.position);
@@ -59,25 +59,25 @@ visualization_msgs::msg::MarkerArray create_marker_array(
 
   // Vehicle Footprints
   {
-    const auto color_ok = createMarkerColor(0.0, 1.0, 0.0, 0.5);
-    const auto color_will_collide = createMarkerColor(1.0, 0.0, 0.0, 0.5);
+    const auto color_ok = create_marker_color(0.0, 1.0, 0.0, 0.5);
+    const auto color_will_collide = create_marker_color(1.0, 0.0, 0.0, 0.5);
 
     auto color = color_ok;
     if (output.will_collide) {
       color = color_will_collide;
     }
 
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", now, "vehicle_footprints", 0, visualization_msgs::msg::Marker::LINE_LIST,
-      createMarkerScale(0.05, 0, 0), color);
+      create_marker_scale(0.05, 0, 0), color);
 
     for (const auto & vehicle_footprint : output.vehicle_footprints) {
       for (size_t i = 0; i < vehicle_footprint.size() - 1; ++i) {
         const auto & p1 = vehicle_footprint.at(i);
         const auto & p2 = vehicle_footprint.at(i + 1);
 
-        marker.points.push_back(toMsg(p1.to_3d(base_link_z)));
-        marker.points.push_back(toMsg(p2.to_3d(base_link_z)));
+        marker.points.push_back(autoware_utils::to_msg(p1.to_3d(base_link_z)));
+        marker.points.push_back(autoware_utils::to_msg(p2.to_3d(base_link_z)));
       }
     }
 

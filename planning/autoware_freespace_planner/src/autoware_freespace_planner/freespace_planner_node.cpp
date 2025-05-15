@@ -34,9 +34,9 @@
 #include "autoware/freespace_planning_algorithms/abstract_algorithm.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/geometry/pose_deviation.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/pose_deviation.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 
 #include <algorithm>
 #include <deque>
@@ -112,7 +112,7 @@ FreespacePlannerNode::FreespacePlannerNode(const rclcpp::NodeOptions & node_opti
       this, get_clock(), period_ns, std::bind(&FreespacePlannerNode::onTimer, this));
   }
 
-  logger_configure_ = std::make_unique<autoware::universe_utils::LoggerLevelConfigure>(this);
+  logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
 }
 
 PlannerCommonParam FreespacePlannerNode::getPlannerCommonParam()
@@ -246,10 +246,10 @@ void FreespacePlannerNode::onOdometry(const Odometry::ConstSharedPtr msg)
 
 void FreespacePlannerNode::updateData()
 {
-  occupancy_grid_ = occupancy_grid_sub_.takeData();
+  occupancy_grid_ = occupancy_grid_sub_.take_data();
 
   {
-    auto msgs = odom_sub_.takeData();
+    auto msgs = odom_sub_.take_data();
     for (const auto & msg : msgs) {
       onOdometry(msg);
     }
@@ -280,9 +280,9 @@ bool FreespacePlannerNode::isDataReady()
 
 void FreespacePlannerNode::onTimer()
 {
-  autoware::universe_utils::StopWatch<std::chrono::milliseconds> stop_watch;
+  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
 
-  scenario_ = scenario_sub_.takeData();
+  scenario_ = scenario_sub_.take_data();
   if (!utils::is_active(scenario_)) {
     reset();
     return;

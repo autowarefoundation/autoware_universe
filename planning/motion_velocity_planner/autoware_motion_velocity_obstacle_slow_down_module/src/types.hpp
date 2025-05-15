@@ -18,12 +18,28 @@
 #include "type_alias.hpp"
 
 #include <algorithm>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 namespace autoware::motion_velocity_planner
 {
+
+struct SlowDownPointData
+{
+  std::optional<geometry_msgs::msg::Point> front{std::nullopt};
+  std::optional<geometry_msgs::msg::Point> back{std::nullopt};
+
+  double lat_dist_to_traj{0};
+
+  SlowDownPointData(
+    const std::optional<geometry_msgs::msg::Point> & front_point,
+    const std::optional<geometry_msgs::msg::Point> & back_point, double lat_dist_to_traj)
+  : front(front_point), back(back_point), lat_dist_to_traj(lat_dist_to_traj)
+  {
+  }
+};
 struct SlowDownObstacle
 {
   SlowDownObstacle(

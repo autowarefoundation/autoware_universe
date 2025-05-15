@@ -15,8 +15,8 @@
 #include "debug_marker.hpp"
 
 #include <autoware/motion_utils/marker/marker_helper.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/marker_helper.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
 
 #include <string>
 #ifdef ROS_DISTRO_GALACTIC
@@ -54,12 +54,12 @@ Polygon2d createSelfPolygon(
 }
 }  // namespace
 
-using autoware::universe_utils::appendMarkerArray;
-using autoware::universe_utils::calcOffsetPose;
-using autoware::universe_utils::createDefaultMarker;
-using autoware::universe_utils::createMarkerColor;
-using autoware::universe_utils::createMarkerScale;
-using autoware::universe_utils::createPoint;
+using autoware_utils::append_marker_array;
+using autoware_utils::calc_offset_pose;
+using autoware_utils::create_default_marker;
+using autoware_utils::create_marker_color;
+using autoware_utils::create_marker_scale;
+using autoware_utils::create_point;
 
 SurroundObstacleCheckerDebugNode::SurroundObstacleCheckerDebugNode(
   const autoware::vehicle_info_utils::VehicleInfo & vehicle_info, const std::string & object_label,
@@ -146,8 +146,8 @@ void SurroundObstacleCheckerDebugNode::publish()
   /* publish stop reason for autoware api */
   if (stop_pose_ptr_ != nullptr) {
     planning_factor_interface_->add(
-      0.0, *stop_pose_ptr_, tier4_planning_msgs::msg::PlanningFactor::STOP,
-      tier4_planning_msgs::msg::SafetyFactorArray{});
+      0.0, *stop_pose_ptr_, autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+      autoware_internal_planning_msgs::msg::SafetyFactorArray{});
   }
   planning_factor_interface_->publish();
 
@@ -163,9 +163,9 @@ MarkerArray SurroundObstacleCheckerDebugNode::makeVisualizationMarker()
 
   // visualize surround object
   if (stop_obstacle_point_ptr_ != nullptr) {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", current_time, "no_start_obstacle_text", 0, Marker::TEXT_VIEW_FACING,
-      createMarkerScale(0.0, 0.0, 1.0), createMarkerColor(1.0, 1.0, 1.0, 0.999));
+      create_marker_scale(0.0, 0.0, 1.0), create_marker_color(1.0, 1.0, 1.0, 0.999));
     marker.pose.position = *stop_obstacle_point_ptr_;
     marker.pose.position.z += 2.0;  // add half of the heights of obj roughly
     marker.text = "!";

@@ -115,8 +115,8 @@ void PurePursuitNode::onTimer()
 {
   current_pose_ = self_pose_listener_.getCurrentPose();
 
-  current_odometry_ = sub_current_odometry_.takeData();
-  trajectory_ = sub_trajectory_.takeData();
+  current_odometry_ = sub_current_odometry_.take_data();
+  trajectory_ = sub_trajectory_.take_data();
   if (!isDataReady()) {
     return;
   }

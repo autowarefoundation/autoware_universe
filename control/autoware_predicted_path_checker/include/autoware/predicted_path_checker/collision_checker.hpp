@@ -19,9 +19,9 @@
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/predicted_path_checker/debug_marker.hpp>
 #include <autoware/predicted_path_checker/utils.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/debug_publisher.hpp>
-#include <autoware/universe_utils/ros/transform_listener.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/ros/transform_listener.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -45,10 +45,10 @@ namespace autoware::predicted_path_checker
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
-using autoware::universe_utils::Point2d;
-using autoware::universe_utils::Polygon2d;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
+using autoware_utils::Point2d;
+using autoware_utils::Polygon2d;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::TransformStamped;
 using PointArray = std::vector<geometry_msgs::msg::Point>;

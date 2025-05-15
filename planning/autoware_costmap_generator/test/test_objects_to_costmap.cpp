@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <autoware/costmap_generator/utils/objects_to_costmap.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <gtest/gtest.h>
@@ -100,17 +100,17 @@ PredictedObject ObjectsToCostMapTest::get_object(
 
   object.shape.type = autoware_perception_msgs::msg::Shape::POLYGON;
 
-  object.shape.footprint.points.emplace_back(toPoint32(
-    autoware::universe_utils::calcOffsetPose(pose, -0.5 * dimension.x, -0.5 * dimension.y, 0.0)));
+  object.shape.footprint.points.emplace_back(
+    toPoint32(autoware_utils::calc_offset_pose(pose, -0.5 * dimension.x, -0.5 * dimension.y, 0.0)));
 
-  object.shape.footprint.points.emplace_back(toPoint32(
-    autoware::universe_utils::calcOffsetPose(pose, -0.5 * dimension.x, 0.5 * dimension.y, 0.0)));
+  object.shape.footprint.points.emplace_back(
+    toPoint32(autoware_utils::calc_offset_pose(pose, -0.5 * dimension.x, 0.5 * dimension.y, 0.0)));
 
-  object.shape.footprint.points.emplace_back(toPoint32(
-    autoware::universe_utils::calcOffsetPose(pose, 0.5 * dimension.x, 0.5 * dimension.y, 0.0)));
+  object.shape.footprint.points.emplace_back(
+    toPoint32(autoware_utils::calc_offset_pose(pose, 0.5 * dimension.x, 0.5 * dimension.y, 0.0)));
 
-  object.shape.footprint.points.emplace_back(toPoint32(
-    autoware::universe_utils::calcOffsetPose(pose, 0.5 * dimension.x, -0.5 * dimension.y, 0.0)));
+  object.shape.footprint.points.emplace_back(
+    toPoint32(autoware_utils::calc_offset_pose(pose, 0.5 * dimension.x, -0.5 * dimension.y, 0.0)));
 
   return object;
 }

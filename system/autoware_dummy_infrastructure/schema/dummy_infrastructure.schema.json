@@ -29,12 +29,27 @@
         "approval": {
           "type": "boolean",
           "default": "false",
-          "description": "set approval filed to ros param"
+          "description": "Set approval field to ros param"
         },
         "is_finalized": {
           "type": "boolean",
           "default": "false",
           "description": "Stop at stop_line if finalization isn't completed"
+        },
+        "auto_approval_mode": {
+          "type": "boolean",
+          "default": "false",
+          "description": "Automatically approve commands when vehicle has stopped near a virtual traffic light"
+        },
+        "stop_distance_threshold": {
+          "type": "number",
+          "default": "1.0",
+          "description": "Distance threshold to determine if the vehicle is near a stop line [m]"
+        },
+        "stop_velocity_threshold": {
+          "type": "number",
+          "default": "0.1",
+          "description": "Velocity threshold to determine if the vehicle has stopped [m/s]"
         }
       },
       "required": [
@@ -43,7 +58,10 @@
         "use_command_state",
         "instrument_id",
         "approval",
-        "is_finalized"
+        "is_finalized",
+        "auto_approval_mode",
+        "stop_distance_threshold",
+        "stop_velocity_threshold"
       ],
       "additionalProperties": false
     }

@@ -63,25 +63,19 @@ These colors and shapes are assigned to the message as follows:
 
 ### Node Parameters
 
-| Name                          | Type   | Description                                                                                                                                                                                                                                                                                                                        |
-| ----------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `classifier_type`             | int    | If the value is `1`, cnn_classifier is used                                                                                                                                                                                                                                                                                        |
-| `data_path`                   | str    | Packages data and artifacts directory path                                                                                                                                                                                                                                                                                         |
-| `backlight_threshold`         | double | If the intensity of light is grater than this threshold, the color and shape of the corresponding ROI will be overwritten with UNKNOWN, and the confidence of the overwritten signal will be set to `0.0`. The value should be set in the range of `[0.0, 1.0]`. If you wouldn't like to use this feature, please set it to `1.0`. |
-| `classify_traffic_light_type` | int    | If the value is `0`, vehicular signals are classified. If the value is `1`, pedestrian signals are classified.                                                                                                                                                                                                                     |
+#### car_traffic_light_classifier
+
+{{ json_to_markdown("perception/autoware_traffic_light_classifier/schema/car_traffic_light_classifier.schema.json") }}
+
+#### pedestrian_traffic_light_classifier
+
+{{ json_to_markdown("perception/autoware_traffic_light_classifier/schema/pedestrian_traffic_light_classifier.schema.json") }}
 
 ### Core Parameters
 
 #### cnn_classifier
 
-| Name                    | Type            | Description                          |
-| ----------------------- | --------------- | ------------------------------------ |
-| `classifier_label_path` | str             | path to the model file               |
-| `classifier_model_path` | str             | path to the label file               |
-| `classifier_precision`  | str             | TensorRT precision, `fp16` or `int8` |
-| `classifier_mean`       | vector\<double> | 3-channel input image mean           |
-| `classifier_std`        | vector\<double> | 3-channel input image std            |
-| `apply_softmax`         | bool            | whether or not apply softmax         |
+Including [this section](#car_traffic_light_classifier)
 
 #### hsv_classifier
 

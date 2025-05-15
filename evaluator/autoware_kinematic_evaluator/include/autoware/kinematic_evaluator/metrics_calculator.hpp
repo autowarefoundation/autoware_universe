@@ -17,14 +17,14 @@
 
 #include "autoware/kinematic_evaluator/metrics/metric.hpp"
 #include "autoware/kinematic_evaluator/parameters.hpp"
-#include "autoware/universe_utils/math/accumulator.hpp"
+#include "autoware_utils/math/accumulator.hpp"
 
 #include "geometry_msgs/msg/pose.hpp"
 #include <nav_msgs/msg/odometry.hpp>
 
 namespace autoware::kinematic_diagnostics
 {
-using autoware::universe_utils::Accumulator;
+using autoware_utils::Accumulator;
 using nav_msgs::msg::Odometry;
 
 class MetricsCalculator

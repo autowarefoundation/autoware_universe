@@ -17,14 +17,14 @@
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware/object_recognition_utils/object_classification.hpp"
 #include "autoware/object_recognition_utils/object_recognition_utils.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 
-#include <autoware/universe_utils/ros/uuid_helper.hpp>
+#include <autoware_utils/ros/uuid_helper.hpp>
 
 namespace autoware::perception_diagnostics
 {
 using autoware::object_recognition_utils::convertLabelToString;
-using autoware::universe_utils::inverseTransformPoint;
+using autoware_utils::inverse_transform_point;
 
 std::optional<MetricsMap> MetricsCalculator::calculate(const Metric & metric) const
 {
@@ -238,7 +238,7 @@ MetricStatMap MetricsCalculator::calcLateralDeviationMetrics(
     Accumulator<double> stat{};
     const auto stamp = rclcpp::Time(objects.header.stamp);
     for (const auto & object : objects.objects) {
-      const auto uuid = autoware::universe_utils::toHexString(object.object_id);
+      const auto uuid = autoware_utils::to_hex_string(object.object_id);
       if (!hasPassedTime(uuid, stamp)) {
         continue;
       }
@@ -267,7 +267,7 @@ MetricStatMap MetricsCalculator::calcYawDeviationMetrics(
     Accumulator<double> stat{};
     const auto stamp = rclcpp::Time(objects.header.stamp);
     for (const auto & object : objects.objects) {
-      const auto uuid = autoware::universe_utils::toHexString(object.object_id);
+      const auto uuid = autoware_utils::to_hex_string(object.object_id);
       if (!hasPassedTime(uuid, stamp)) {
         continue;
       }
@@ -326,7 +326,7 @@ PredictedPathDeviationMetrics MetricsCalculator::calcPredictedPathDeviationMetri
 
   const auto stamp = objects.header.stamp;
   for (const auto & object : objects.objects) {
-    const auto uuid = autoware::universe_utils::toHexString(object.object_id);
+    const auto uuid = autoware_utils::to_hex_string(object.object_id);
     const auto predicted_paths = object.kinematics.predicted_paths;
     for (size_t i = 0; i < predicted_paths.size(); i++) {
       const auto predicted_path = predicted_paths[i];
@@ -349,8 +349,7 @@ PredictedPathDeviationMetrics MetricsCalculator::calcPredictedPathDeviationMetri
         const auto history_object = history_object_opt.value();
         const auto history_pose = history_object.kinematics.initial_pose_with_covariance.pose;
         const Pose & p = predicted_path.path[j];
-        const double distance =
-          autoware::universe_utils::calcDistance2d(p.position, history_pose.position);
+        const double distance = autoware_utils::calc_distance2d(p.position, history_pose.position);
         deviation_map_for_paths[uuid][i].push_back(distance);
 
         // Save debug information
@@ -424,7 +423,7 @@ MetricStatMap MetricsCalculator::calcYawRateMetrics(const ClassObjectsMap & clas
     const auto stamp = rclcpp::Time(objects.header.stamp);
 
     for (const auto & object : objects.objects) {
-      const auto uuid = autoware::universe_utils::toHexString(object.object_id);
+      const auto uuid = autoware_utils::to_hex_string(object.object_id);
       if (!hasPassedTime(uuid, stamp)) {
         continue;
       }
@@ -444,7 +443,7 @@ MetricStatMap MetricsCalculator::calcYawRateMetrics(const ClassObjectsMap & clas
         tf2::getYaw(previous_object.kinematics.initial_pose_with_covariance.pose.orientation);
       // Calculate the absolute difference between current_yaw and previous_yaw
       const double yaw_diff =
-        std::abs(autoware::universe_utils::normalizeRadian(current_yaw - previous_yaw));
+        std::abs(autoware_utils::normalize_radian(current_yaw - previous_yaw));
       // The yaw difference is flipped if the angle is larger than 90 degrees
       const double yaw_diff_flip_fixed = std::min(yaw_diff, M_PI - yaw_diff);
       const double yaw_rate = yaw_diff_flip_fixed / time_diff;
@@ -494,9 +493,9 @@ void MetricsCalculator::setPredictedObjects(
 
   // store objects to check deviation
   {
-    using autoware::universe_utils::toHexString;
+    using autoware_utils::to_hex_string;
     for (const auto & object : objects.objects) {
-      std::string uuid = toHexString(object.object_id);
+      std::string uuid = to_hex_string(object.object_id);
       updateObjects(uuid, current_stamp_, object);
     }
     deleteOldObjects(current_stamp_);
@@ -557,8 +556,7 @@ void MetricsCalculator::updateHistoryPath()
         const auto current_pose = object.kinematics.initial_pose_with_covariance.pose;
         const auto prev_pose = prev_object.kinematics.initial_pose_with_covariance.pose;
         const auto velocity =
-          autoware::universe_utils::calcDistance2d(current_pose.position, prev_pose.position) /
-          time_diff;
+          autoware_utils::calc_distance2d(current_pose.position, prev_pose.position) / time_diff;
         if (velocity < parameters_->stopped_velocity_threshold) {
           continue;
         }
@@ -603,9 +601,9 @@ std::vector<Pose> MetricsCalculator::generateHistoryPathWithPrev(
 std::vector<Pose> MetricsCalculator::averageFilterPath(
   const std::vector<Pose> & path, const size_t window_size) const
 {
-  using autoware::universe_utils::calcAzimuthAngle;
-  using autoware::universe_utils::calcDistance2d;
-  using autoware::universe_utils::createQuaternionFromYaw;
+  using autoware_utils::calc_azimuth_angle;
+  using autoware_utils::calc_distance2d;
+  using autoware_utils::create_quaternion_from_yaw;
 
   std::vector<Pose> filtered_path;
   filtered_path.reserve(path.size());  // Reserve space to avoid reallocations
@@ -637,15 +635,15 @@ std::vector<Pose> MetricsCalculator::averageFilterPath(
     // skip if the points are too close
     if (
       filtered_path.size() > 0 &&
-      calcDistance2d(filtered_path.back().position, average_pose.position) < 0.5) {
+      calc_distance2d(filtered_path.back().position, average_pose.position) < 0.5) {
       continue;
     }
 
     // skip if the difference between the current orientation and the azimuth angle is large
     if (i > 0) {
-      const double azimuth = calcAzimuthAngle(path.at(i - 1).position, path.at(i).position);
+      const double azimuth = calc_azimuth_angle(path.at(i - 1).position, path.at(i).position);
       const double yaw = tf2::getYaw(path.at(i).orientation);
-      if (autoware::universe_utils::normalizeRadian(yaw - azimuth) > M_PI_2) {
+      if (autoware_utils::normalize_radian(yaw - azimuth) > M_PI_2) {
         continue;
       }
     }
@@ -659,11 +657,10 @@ std::vector<Pose> MetricsCalculator::averageFilterPath(
   if (filtered_path.size() > 2) {
     auto it = filtered_path.begin() + 2;
     while (it != filtered_path.end()) {
-      const double azimuth_to_prev = calcAzimuthAngle((it - 2)->position, (it - 1)->position);
-      const double azimuth_to_current = calcAzimuthAngle((it - 1)->position, it->position);
+      const double azimuth_to_prev = calc_azimuth_angle((it - 2)->position, (it - 1)->position);
+      const double azimuth_to_current = calc_azimuth_angle((it - 1)->position, it->position);
       if (
-        std::abs(autoware::universe_utils::normalizeRadian(azimuth_to_prev - azimuth_to_current)) >
-        M_PI_2) {
+        std::abs(autoware_utils::normalize_radian(azimuth_to_prev - azimuth_to_current)) > M_PI_2) {
         it = filtered_path.erase(it);
         continue;
       }
@@ -675,8 +672,8 @@ std::vector<Pose> MetricsCalculator::averageFilterPath(
   for (size_t i = 0; i < filtered_path.size(); ++i) {
     Pose & p = filtered_path[i];
     if (i < filtered_path.size() - 1) {
-      const double azimuth_to_next = calcAzimuthAngle(p.position, filtered_path[i + 1].position);
-      filtered_path[i].orientation = createQuaternionFromYaw(azimuth_to_next);
+      const double azimuth_to_next = calc_azimuth_angle(p.position, filtered_path[i + 1].position);
+      filtered_path[i].orientation = create_quaternion_from_yaw(azimuth_to_next);
     } else if (filtered_path.size() > 1) {
       // For the last point, use the orientation of the second-to-last point
       p.orientation = filtered_path[i - 1].orientation;

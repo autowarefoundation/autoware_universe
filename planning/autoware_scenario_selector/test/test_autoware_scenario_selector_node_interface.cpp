@@ -15,7 +15,7 @@
 #include "autoware/scenario_selector/node.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <autoware_planning_test_manager/autoware_planning_test_manager.hpp>
+#include <autoware/planning_test_manager/autoware_planning_test_manager.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
 
 #include <gtest/gtest.h>
@@ -34,7 +34,7 @@ std::shared_ptr<PlanningInterfaceTestManager> generateTestManager()
   auto test_manager = std::make_shared<PlanningInterfaceTestManager>();
 
   // set subscriber with topic name: scenario_selector → test_node_
-  test_manager->subscribeOutput<tier4_planning_msgs::msg::Scenario>("output/scenario");
+  test_manager->subscribeOutput<autoware_internal_planning_msgs::msg::Scenario>("output/scenario");
 
   return test_manager;
 }

@@ -17,14 +17,14 @@
 
 #include "autoware/behavior_path_goal_planner_module/pull_over_planner/pull_over_planner_base.hpp"
 
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <memory>
 #include <vector>
 
 namespace autoware::behavior_path_planner
 {
-using autoware::lane_departure_checker::LaneDepartureChecker;
+using autoware::boundary_departure_checker::BoundaryDepartureChecker;
 
 class BezierPullOver : public PullOverPlannerBase
 {
@@ -41,7 +41,7 @@ public:
     const BehaviorModuleOutput & upstream_module_output);
 
 private:
-  const LaneDepartureChecker lane_departure_checker_;
+  const BoundaryDepartureChecker boundary_departure_checker_;
 
   const bool left_side_parking_;
 

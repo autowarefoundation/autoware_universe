@@ -139,7 +139,7 @@ void MrmHandler::publishGearCmd()
       (param_.use_parking_after_stopped && isStopped()) ? GearCommand::PARK : last_gear_command_;
   } else {
     // use the same gear as the input gear
-    auto gear = sub_gear_cmd_.takeData();
+    auto gear = sub_gear_cmd_.take_data();
     msg.command = (gear == nullptr) ? last_gear_command_ : gear->command;
     last_gear_command_ = msg.command;
   }
@@ -254,7 +254,7 @@ bool MrmHandler::requestMrmBehavior(
 
   switch (mrm_behavior) {
     case MrmState::NONE:
-      RCLCPP_WARN(this->get_logger(), "MRM behavior is None. Do nothing.");
+      RCLCPP_DEBUG(this->get_logger(), "MRM behavior is None. Do nothing.");
       return true;
     case MrmState::PULL_OVER: {
       future = client_mrm_pull_over_->async_send_request(request).future.share();
@@ -529,7 +529,7 @@ autoware_adapi_v1_msgs::msg::MrmState::_behavior_type MrmHandler::getCurrentMrmB
 
 bool MrmHandler::isStopped()
 {
-  auto odom = sub_odom_.takeData();
+  auto odom = sub_odom_.take_data();
   if (odom == nullptr) return false;
   constexpr auto th_stopped_velocity = 0.001;
   return (std::abs(odom->twist.twist.linear.x) < th_stopped_velocity);
@@ -544,7 +544,7 @@ bool MrmHandler::isEmergency() const
 bool MrmHandler::isControlModeAutonomous()
 {
   using autoware_vehicle_msgs::msg::ControlModeReport;
-  auto mode = sub_control_mode_.takeData();
+  auto mode = sub_control_mode_.take_data();
   if (mode == nullptr) return false;
   return mode->mode == ControlModeReport::AUTONOMOUS;
 }
@@ -552,28 +552,28 @@ bool MrmHandler::isControlModeAutonomous()
 bool MrmHandler::isOperationModeAutonomous()
 {
   using autoware_adapi_v1_msgs::msg::OperationModeState;
-  auto state = sub_operation_mode_state_.takeData();
+  auto state = sub_operation_mode_state_.take_data();
   if (state == nullptr) return false;
   return state->mode == OperationModeState::AUTONOMOUS;
 }
 
 bool MrmHandler::isPullOverStatusAvailable()
 {
-  auto status = sub_mrm_pull_over_status_.takeData();
+  auto status = sub_mrm_pull_over_status_.take_data();
   if (status == nullptr) return false;
   return status->state != tier4_system_msgs::msg::MrmBehaviorStatus::NOT_AVAILABLE;
 }
 
 bool MrmHandler::isComfortableStopStatusAvailable()
 {
-  auto status = sub_mrm_comfortable_stop_status_.takeData();
+  auto status = sub_mrm_comfortable_stop_status_.take_data();
   if (status == nullptr) return false;
   return status->state != tier4_system_msgs::msg::MrmBehaviorStatus::NOT_AVAILABLE;
 }
 
 bool MrmHandler::isEmergencyStopStatusAvailable()
 {
-  auto status = sub_mrm_emergency_stop_status_.takeData();
+  auto status = sub_mrm_emergency_stop_status_.take_data();
   if (status == nullptr) return false;
   return status->state != tier4_system_msgs::msg::MrmBehaviorStatus::NOT_AVAILABLE;
 }
@@ -581,7 +581,7 @@ bool MrmHandler::isEmergencyStopStatusAvailable()
 bool MrmHandler::isArrivedAtGoal()
 {
   using autoware_adapi_v1_msgs::msg::OperationModeState;
-  auto state = sub_operation_mode_state_.takeData();
+  auto state = sub_operation_mode_state_.take_data();
   if (state == nullptr) return false;
   return state->mode == OperationModeState::STOP;
 }

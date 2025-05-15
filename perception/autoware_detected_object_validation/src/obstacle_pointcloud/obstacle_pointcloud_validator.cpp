@@ -17,7 +17,7 @@
 #include "obstacle_pointcloud_validator.hpp"
 
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
-#include <autoware/universe_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 
 #include <boost/geometry.hpp>
 
@@ -41,7 +41,7 @@ namespace obstacle_pointcloud
 {
 namespace bg = boost::geometry;
 using Shape = autoware_perception_msgs::msg::Shape;
-using Polygon2d = autoware::universe_utils::Polygon2d;
+using Polygon2d = autoware_utils::Polygon2d;
 
 Validator::Validator(const PointsNumThresholdParam & points_num_threshold_param)
 {
@@ -103,8 +103,8 @@ std::optional<size_t> Validator2D::getPointCloudWithinObject(
 {
   std::vector<pcl::Vertices> vertices_array;
   pcl::Vertices vertices;
-  Polygon2d poly2d = autoware::universe_utils::toPolygon2d(
-    object.kinematics.pose_with_covariance.pose, object.shape);
+  Polygon2d poly2d =
+    autoware_utils::to_polygon2d(object.kinematics.pose_with_covariance.pose, object.shape);
   if (bg::is_empty(poly2d)) return std::nullopt;
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr poly3d(new pcl::PointCloud<pcl::PointXYZ>);
@@ -218,8 +218,8 @@ std::optional<size_t> Validator3D::getPointCloudWithinObject(
   auto const object_height = object.shape.dimensions.x;
   auto z_min = object_position.z - object_height / 2.0f;
   auto z_max = object_position.z + object_height / 2.0f;
-  Polygon2d poly2d = autoware::universe_utils::toPolygon2d(
-    object.kinematics.pose_with_covariance.pose, object.shape);
+  Polygon2d poly2d =
+    autoware_utils::to_polygon2d(object.kinematics.pose_with_covariance.pose, object.shape);
   if (bg::is_empty(poly2d)) return std::nullopt;
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr poly3d(new pcl::PointCloud<pcl::PointXYZ>);
@@ -313,13 +313,12 @@ ObstaclePointCloudBasedValidator::ObstaclePointCloudBasedValidator(
 
   objects_pub_ = create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
     "~/output/objects", rclcpp::QoS{1});
-  debug_publisher_ = std::make_unique<autoware::universe_utils::DebugPublisher>(
-    this, "obstacle_pointcloud_based_validator");
+  debug_publisher_ =
+    std::make_unique<autoware_utils::DebugPublisher>(this, "obstacle_pointcloud_based_validator");
 
   const bool enable_debugger = declare_parameter<bool>("enable_debugger");
   if (enable_debugger) debugger_ = std::make_shared<Debugger>(this);
-  published_time_publisher_ =
-    std::make_unique<autoware::universe_utils::PublishedTimePublisher>(this);
+  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 }
 void ObstaclePointCloudBasedValidator::onObjectsAndObstaclePointCloud(
   const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr & input_objects,

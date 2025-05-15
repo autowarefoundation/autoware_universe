@@ -1,0 +1,48 @@
+name: Combine Repos Action
+description: Merge base and overlay .repos files, with overlay entries taking precedence.
+inputs:
+  base_file:
+    description: Path to the base .repos file
+    required: true
+  overlay_file:
+    description: Path to the overlay .repos file
+    required: true
+  output_file:
+    description: Path for the combined output file
+    required: false
+    default: combined.repos
+
+runs:
+  using: composite
+  steps:
+    - name: Install python3-pip
+      run: |
+        sudo apt-get -yqq update
+        sudo apt-get -yqq install python3-pip python-is-python3
+      shell: bash
+
+    - name: Display Python version
+      run: |
+        python --version
+        which pip
+        pip --version
+      shell: bash
+
+    - name: Install PyYAML dependency
+      run: pip install pyyaml
+      shell: bash
+
+    - name: Combine repos files
+      run: |
+        python "${GITHUB_ACTION_PATH}/combine-repos.py" \
+          --base "${{ inputs.base_file }}" \
+          --overlay "${{ inputs.overlay_file }}" \
+          --output "${{ inputs.output_file }}"
+      shell: bash
+
+    - name: Display combined repos file
+      run: |
+        echo "=== Combined .repos File Content ==="
+        cat "${{ inputs.output_file }}"
+        echo "===================================="
+      shell: bash

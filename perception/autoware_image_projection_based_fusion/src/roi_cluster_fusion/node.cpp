@@ -16,7 +16,7 @@
 
 #include <autoware/image_projection_based_fusion/utils/geometry.hpp>
 #include <autoware/image_projection_based_fusion/utils/utils.hpp>
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
@@ -38,7 +38,7 @@
 
 namespace autoware::image_projection_based_fusion
 {
-using autoware::universe_utils::ScopedTimeTrack;
+using autoware_utils::ScopedTimeTrack;
 
 RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
 : FusionNode<ClusterMsgType, RoiMsgType, ClusterMsgType>("roi_cluster_fusion", options)
@@ -73,14 +73,15 @@ void RoiClusterFusionNode::preprocess(ClusterMsgType & output_cluster_msg)
   }
 }
 
-void RoiClusterFusionNode::fuseOnSingleImage(
-  const ClusterMsgType & input_cluster_msg, const Det2dStatus<RoiMsgType> & det2d,
-  const RoiMsgType & input_roi_msg, ClusterMsgType & output_cluster_msg)
+void RoiClusterFusionNode::fuse_on_single_image(
+  const ClusterMsgType & input_cluster_msg, const Det2dStatus<RoiMsgType> & det2d_status,
+  const RoiMsgType & input_rois_msg, ClusterMsgType & output_cluster_msg)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  const sensor_msgs::msg::CameraInfo & camera_info = det2d.camera_projector_ptr->getCameraInfo();
+  const sensor_msgs::msg::CameraInfo & camera_info =
+    det2d_status.camera_projector_ptr->getCameraInfo();
 
   // get transform from cluster frame id to camera optical frame id
   geometry_msgs::msg::TransformStamped transform_stamped;
@@ -129,7 +130,7 @@ void RoiClusterFusionNode::fuseOnSingleImage(
       }
 
       Eigen::Vector2d projected_point;
-      if (det2d.camera_projector_ptr->calcImageProjectedPoint(
+      if (det2d_status.camera_projector_ptr->calcImageProjectedPoint(
             cv::Point3d(*iter_x, *iter_y, *iter_z), projected_point)) {
         const int px = static_cast<int>(projected_point.x());
         const int py = static_cast<int>(projected_point.y());
@@ -156,7 +157,7 @@ void RoiClusterFusionNode::fuseOnSingleImage(
     if (debugger_) debugger_->obstacle_rois_.push_back(roi);
   }
 
-  for (const auto & feature_obj : input_roi_msg.feature_objects) {
+  for (const auto & feature_obj : input_rois_msg.feature_objects) {
     int index = -1;
     bool associated = false;
     double max_iou = 0.0;
@@ -210,7 +211,7 @@ void RoiClusterFusionNode::fuseOnSingleImage(
 
   // note: debug objects are safely cleared in fusion_node.cpp
   if (debugger_) {
-    debugger_->publishImage(det2d.id, input_roi_msg.header.stamp);
+    debugger_->publishImage(det2d_status.id, input_rois_msg.header.stamp);
   }
 }
 

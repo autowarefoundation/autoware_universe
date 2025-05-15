@@ -8,6 +8,7 @@
   <arg name="launch_dynamic_obstacle_stop_module" default="true"/>
   <arg name="launch_out_of_lane_module" default="true"/>
   <arg name="launch_obstacle_velocity_limiter_module" default="true"/>
+  <arg name="launch_mvp_run_out_module" default="true"/>
   <arg name="launch_module_list_end" default="&quot;&quot;]"/>
 
   <!-- assemble launch config for motion velocity planner -->
@@ -41,6 +42,11 @@
     name="motion_velocity_planner_launch_modules"
     value="$(eval &quot;'$(var motion_velocity_planner_launch_modules)' + 'autoware::motion_velocity_planner::DynamicObstacleStopModule, '&quot;)"
     if="$(var launch_dynamic_obstacle_stop_module)"
+  />
+  <let
+    name="motion_velocity_planner_launch_modules"
+    value="$(eval &quot;'$(var motion_velocity_planner_launch_modules)' + 'autoware::motion_velocity_planner::RunOutModule, '&quot;)"
+    if="$(var launch_mvp_run_out_module)"
   />
   <let name="motion_velocity_planner_launch_modules" value="$(eval &quot;'$(var motion_velocity_planner_launch_modules)' + '$(var launch_module_list_end)'&quot;)"/>
 
@@ -137,7 +143,7 @@
   <!-- plan slowdown or stops on the final trajectory -->
   <group>
     <load_composable_node target="/planning/scenario_planning/lane_driving/motion_planning/motion_planning_container">
-      <composable_node pkg="autoware_motion_velocity_planner_node_universe" plugin="autoware::motion_velocity_planner::MotionVelocityPlannerNode" name="motion_velocity_planner" namespace="">
+      <composable_node pkg="autoware_motion_velocity_planner" plugin="autoware::motion_velocity_planner::MotionVelocityPlannerNode" name="motion_velocity_planner" namespace="">
         <!-- topic remap -->
         <remap from="~/input/trajectory" to="path_optimizer/trajectory"/>
         <remap from="~/input/vector_map" to="/map/vector_map"/>
@@ -167,6 +173,7 @@
         <param from="$(var motion_velocity_planner_dynamic_obstacle_stop_module_param_path)"/>
         <param from="$(var motion_velocity_planner_out_of_lane_module_param_path)"/>
         <param from="$(var motion_velocity_planner_obstacle_velocity_limiter_param_path)"/>
+        <param from="$(var motion_velocity_planner_run_out_param_path)"/>
         <!-- <param from="$(var motion_velocity_planner_template_param_path)"/> -->
         <!-- composable node config -->
         <extra_arg name="use_intra_process_comms" value="false"/>

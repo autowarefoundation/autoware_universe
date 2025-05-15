@@ -75,13 +75,16 @@ RadarThresholdFilterNode::RadarThresholdFilterNode(const rclcpp::NodeOptions & n
   node_param_.is_z_filter = declare_parameter<bool>("node_params.is_z_filter");
   node_param_.z_min = declare_parameter<double>("node_params.z_min");
   node_param_.z_max = declare_parameter<double>("node_params.z_max");
+  node_param_.max_queue_size = declare_parameter<int64_t>("node_params.max_queue_size");
 
   // Subscriber
   sub_radar_ = create_subscription<RadarScan>(
-    "~/input/radar", rclcpp::QoS{1}, std::bind(&RadarThresholdFilterNode::onData, this, _1));
+    "~/input/radar", rclcpp::SensorDataQoS().keep_last(node_param_.max_queue_size),
+    std::bind(&RadarThresholdFilterNode::onData, this, _1));
 
   // Publisher
-  pub_radar_ = create_publisher<RadarScan>("~/output/radar", 1);
+  pub_radar_ = create_publisher<RadarScan>(
+    "~/output/radar", rclcpp::SensorDataQoS().keep_last(node_param_.max_queue_size));
 }
 
 rcl_interfaces::msg::SetParametersResult RadarThresholdFilterNode::onSetParam(
@@ -103,6 +106,7 @@ rcl_interfaces::msg::SetParametersResult RadarThresholdFilterNode::onSetParam(
       update_param(params, "node_params.is_z_filter", p.is_z_filter);
       update_param(params, "node_params.z_min", p.z_min);
       update_param(params, "node_params.z_max", p.z_max);
+      update_param(params, "node_params.max_queue_size", p.max_queue_size);
     }
   } catch (const rclcpp::exceptions::InvalidParameterTypeException & e) {
     result.successful = false;

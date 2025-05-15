@@ -19,8 +19,8 @@
 #include "types.hpp"
 
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
-#include <autoware/motion_velocity_planner_common_universe/plugin_module_interface.hpp>
-#include <autoware/motion_velocity_planner_common_universe/velocity_planning_result.hpp>
+#include <autoware/motion_velocity_planner_common/plugin_module_interface.hpp>
+#include <autoware/motion_velocity_planner_common/velocity_planning_result.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <memory>
@@ -35,6 +35,7 @@ public:
   void init(rclcpp::Node & node, const std::string & module_name) override;
   void publish_planning_factor() override { planning_factor_interface_->publish(); };
   void update_parameters(const std::vector<rclcpp::Parameter> & parameters) override;
+  void publish_processing_time(const double processing_time_ms);
   VelocityPlanningResult plan(
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & raw_trajectory_points,
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
@@ -47,7 +48,7 @@ private:
 
   inline static const std::string ns_ = "dynamic_obstacle_stop";
   std::string module_name_;
-  rclcpp::Clock::SharedPtr clock_{};
+  rclcpp::Clock::SharedPtr clock_;
 
   dynamic_obstacle_stop::PlannerParam params_;
   dynamic_obstacle_stop::ObjectStopDecisionMap object_map_;

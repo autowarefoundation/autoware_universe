@@ -24,8 +24,8 @@
 #include "autoware/behavior_path_planner_common/utils/parking_departure/common_module_data.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_safety_checker/path_safety_checker_parameters.hpp"
 
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_vehicle_msgs/msg/hazard_lights_command.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <lanelet2_core/Forward.h>
 
@@ -55,7 +55,7 @@ using autoware::behavior_path_planner::utils::path_safety_checker::ObjectsFilter
 using autoware::behavior_path_planner::utils::path_safety_checker::PoseWithVelocityStamped;
 using autoware::behavior_path_planner::utils::path_safety_checker::SafetyCheckParams;
 using autoware::behavior_path_planner::utils::path_safety_checker::TargetObjectsOnLane;
-using autoware::universe_utils::Polygon2d;
+using autoware_utils::Polygon2d;
 
 struct FreespacePlannerDebugData
 {
@@ -71,14 +71,6 @@ struct GoalPlannerDebugData
   lanelet::ConstLanelet expanded_pull_over_lane_between_ego{};
   Polygon2d objects_extraction_polygon{};
   utils::path_safety_checker::CollisionCheckDebugMap collision_check{};
-};
-
-struct LastApprovalData
-{
-  LastApprovalData(rclcpp::Time time, Pose pose) : time(time), pose(pose) {}
-
-  rclcpp::Time time{};
-  Pose pose{};
 };
 
 struct PullOverContextData
@@ -203,7 +195,7 @@ private:
   bool switch_bezier_{false};
   void normal_pullover_planning_helper(
     const std::shared_ptr<PlannerData> planner_data, const GoalCandidates & goal_candidates,
-    const BehaviorModuleOutput & upstream_module_output,
+    const BehaviorModuleOutput & upstream_module_output, const bool use_bus_stop_area,
     const lanelet::ConstLanelets current_lanelets, std::optional<Pose> & closest_start_pose,
     std::vector<PullOverPath> & path_candidates);
   void bezier_planning_helper(
@@ -311,7 +303,7 @@ private:
   const SafetyCheckParams safety_check_params_ = parameters_.safety_check_params;
 
   const autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
-  const autoware::universe_utils::LinearRing2d vehicle_footprint_;
+  const autoware_utils::LinearRing2d vehicle_footprint_;
 
   const bool left_side_parking_;
 
@@ -352,7 +344,7 @@ private:
   std::optional<PullOverContextData> context_data_{std::nullopt};
   // path_decision_controller is updated in updateData(), and used in plan()
   PathDecisionStateController path_decision_controller_{getLogger()};
-  std::unique_ptr<LastApprovalData> last_approval_data_{nullptr};
+  std::optional<rclcpp::Time> decided_time_{};
 
   // approximate distance from the start point to the end point of pull_over.
   // this is used as an assumed value to decelerate, etc., before generating the actual path.

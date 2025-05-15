@@ -24,22 +24,7 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 
 ![ray-xz](./image/ground_filter-ray-xz.drawio.svg)
 
-| Name                          | Type   | Description                                                                                                                                                                                                                    |
-| ----------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `input_frame`                 | string | frame id of input pointcloud                                                                                                                                                                                                   |
-| `output_frame`                | string | frame id of output pointcloud                                                                                                                                                                                                  |
-| `has_static_tf_only`          | bool   | Flag to listen TF only once                                                                                                                                                                                                    |
-| `general_max_slope`           | double | The triangle created by `general_max_slope` is called the global cone. If the point is outside the global cone, it is judged to be a point that is no on the ground                                                            |
-| `initial_max_slope`           | double | Generally, the point where the object first hits is far from ego-vehicle because of sensor blind spot, so resolution is different from that point and thereafter, so this parameter exists to set a separate `local_max_slope` |
-| `local_max_slope`             | double | The triangle created by `local_max_slope` is called the local cone. This parameter for classification based on the continuity of points                                                                                        |
-| `min_height_threshold`        | double | This parameter is used instead of `height_threshold` because it's difficult to determine continuity in the local cone when the points are too close to each other.                                                             |
-| `radial_divider_angle`        | double | The angle of ray                                                                                                                                                                                                               |
-| `concentric_divider_distance` | double | Only check points which radius is larger than `concentric_divider_distance`                                                                                                                                                    |
-| `reclass_distance_threshold`  | double | To check if point is to far from previous one, if so classify again                                                                                                                                                            |
-| `min_x`                       | double | The parameter to set vehicle footprint manually                                                                                                                                                                                |
-| `max_x`                       | double | The parameter to set vehicle footprint manually                                                                                                                                                                                |
-| `min_y`                       | double | The parameter to set vehicle footprint manually                                                                                                                                                                                |
-| `max_y`                       | double | The parameter to set vehicle footprint manually                                                                                                                                                                                |
+{{ json_to_markdown("perception/autoware_ground_segmentation/schema/ray_ground_filter.schema.json") }}
 
 ## Assumptions / Known limits
 

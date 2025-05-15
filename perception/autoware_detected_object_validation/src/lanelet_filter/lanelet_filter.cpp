@@ -15,10 +15,10 @@
 #include "lanelet_filter.hpp"
 
 #include "autoware/object_recognition_utils/object_recognition_utils.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
-#include "autoware/universe_utils/system/time_keeper.hpp"
 #include "autoware_lanelet2_extension/utility/message_conversion.hpp"
 #include "autoware_lanelet2_extension/utility/query.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
+#include "autoware_utils/system/time_keeper.hpp"
 
 #include <boost/geometry/algorithms/convex_hull.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
@@ -83,11 +83,9 @@ ObjectLaneletFilterNode::ObjectLaneletFilterNode(const rclcpp::NodeOptions & nod
     "output/object", rclcpp::QoS{1});
 
   debug_publisher_ =
-    std::make_unique<autoware::universe_utils::DebugPublisher>(this, "object_lanelet_filter");
-  published_time_publisher_ =
-    std::make_unique<autoware::universe_utils::PublishedTimePublisher>(this);
-  stop_watch_ptr_ =
-    std::make_unique<autoware::universe_utils::StopWatch<std::chrono::milliseconds>>();
+    std::make_unique<autoware_utils::DebugPublisher>(this, "object_lanelet_filter");
+  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+  stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
   if (filter_settings_.debug) {
     viz_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
       "~/debug/marker", rclcpp::QoS{1});
@@ -105,7 +103,7 @@ bool isInPolygon(
 
 LinearRing2d expandPolygon(const LinearRing2d & polygon, double distance)
 {
-  universe_utils::MultiPolygon2d multi_polygon;
+  autoware_utils::MultiPolygon2d multi_polygon;
   bg::strategy::buffer::distance_symmetric<double> distance_strategy(distance);
   bg::strategy::buffer::join_miter join_strategy;
   bg::strategy::buffer::end_flat end_strategy;
@@ -143,7 +141,7 @@ void ObjectLaneletFilterNode::objectCallback(
   output_object_msg.header = input_msg->header;
 
   if (!lanelet_map_ptr_) {
-    RCLCPP_ERROR(get_logger(), "No vector map received.");
+    RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 3000, "No vector map received.");
     return;
   }
   autoware_perception_msgs::msg::DetectedObjects transformed_objects;
@@ -388,8 +386,7 @@ bool ObjectLaneletFilterNode::isObjectOverlapLanelets(
     const auto footprint = setFootprint(object);
     for (const auto & point : footprint.points) {
       const geometry_msgs::msg::Point32 point_transformed =
-        autoware::universe_utils::transformPoint(
-          point, object.kinematics.pose_with_covariance.pose);
+        autoware_utils::transform_point(point, object.kinematics.pose_with_covariance.pose);
       polygon.outer().emplace_back(point_transformed.x, point_transformed.y);
     }
     polygon.outer().push_back(polygon.outer().front());
@@ -407,8 +404,7 @@ bool ObjectLaneletFilterNode::isObjectOverlapLanelets(
     // if object do not have bounding box, check each footprint is inside polygon
     for (const auto & point : object.shape.footprint.points) {
       const geometry_msgs::msg::Point32 point_transformed =
-        autoware::universe_utils::transformPoint(
-          point, object.kinematics.pose_with_covariance.pose);
+        autoware_utils::transform_point(point, object.kinematics.pose_with_covariance.pose);
       geometry_msgs::msg::Pose point2d;
       point2d.position.x = point_transformed.x;
       point2d.position.y = point_transformed.y;
@@ -483,7 +479,7 @@ bool ObjectLaneletFilterNode::isSameDirectionWithLanelets(
     const double lane_yaw = lanelet::utils::getLaneletAngle(
       box_and_lanelet.second.lanelet, object.kinematics.pose_with_covariance.pose.position);
     const double delta_yaw = object_velocity_yaw - lane_yaw;
-    const double normalized_delta_yaw = autoware::universe_utils::normalizeRadian(delta_yaw);
+    const double normalized_delta_yaw = autoware_utils::normalize_radian(delta_yaw);
     const double abs_norm_delta_yaw = std::fabs(normalized_delta_yaw);
 
     if (abs_norm_delta_yaw < filter_settings_.lanelet_direction_filter_velocity_yaw_threshold) {

@@ -16,8 +16,8 @@
 #define POSITION_FILTER__POSITION_FILTER_HPP_
 
 #include "autoware/detected_object_validation/utils/utils.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
-#include "autoware/universe_utils/ros/published_time_publisher.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
+#include "autoware_utils/ros/published_time_publisher.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -56,7 +56,7 @@ private:
   utils::FilterTargetLabel filter_target_;
   bool isObjectInBounds(const autoware_perception_msgs::msg::DetectedObject & object) const;
 
-  std::unique_ptr<autoware::universe_utils::PublishedTimePublisher> published_time_publisher_;
+  std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
 };
 
 }  // namespace position_filter

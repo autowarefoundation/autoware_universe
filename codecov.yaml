@@ -122,7 +122,6 @@ component_management:
     - component_id: localization-tier-iv-maintained-packages
       name: Localization TIER IV Maintained Packages
       paths:
-        - localization/autoware_ekf_localizer/**
         - localization/autoware_gyro_odometer/**
         - localization/autoware_localization_error_monitor/**
         - localization/autoware_localization_util/**
@@ -244,7 +243,5 @@ component_management:
         - planning/motion_velocity_planner/autoware_motion_velocity_dynamic_obstacle_stop_module/**
         - planning/motion_velocity_planner/autoware_motion_velocity_obstacle_velocity_limiter_module/**
         - planning/motion_velocity_planner/autoware_motion_velocity_out_of_lane_module/**
-        - planning/motion_velocity_planner/autoware_motion_velocity_planner_common_universe/**
-        - planning/motion_velocity_planner/autoware_motion_velocity_planner_node_universe/**
         #### sampling_based_planner
         - planning/sampling_based_planner/autoware_bezier_sampler/**

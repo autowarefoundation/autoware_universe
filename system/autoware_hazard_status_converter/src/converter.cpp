@@ -119,7 +119,7 @@ void Converter::on_update(DiagGraph::ConstSharedPtr graph)
   hazard.status.level = get_system_level(hazard.status);
   hazard.status.emergency = hazard.status.level == HazardStatus::SINGLE_POINT_FAULT;
 
-  const auto is_emergency_holding = sub_emergency_holding_.takeData();
+  const auto is_emergency_holding = sub_emergency_holding_.take_data();
   hazard.status.emergency_holding =
     is_emergency_holding == nullptr ? false : is_emergency_holding->is_holding;
   pub_hazard_->publish(hazard);

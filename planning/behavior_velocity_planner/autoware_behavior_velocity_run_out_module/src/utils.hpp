@@ -15,7 +15,7 @@
 #ifndef UTILS_HPP_
 #define UTILS_HPP_
 
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 
 #include <autoware/behavior_velocity_planner_common/planner_data.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
@@ -34,18 +34,18 @@ namespace autoware::behavior_velocity_planner
 namespace run_out_utils
 {
 namespace bg = boost::geometry;
-using autoware::universe_utils::Box2d;
-using autoware::universe_utils::LineString2d;
-using autoware::universe_utils::Point2d;
-using autoware::universe_utils::Polygon2d;
 using autoware::vehicle_info_utils::VehicleInfo;
 using autoware_internal_debug_msgs::msg::Float32Stamped;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_perception_msgs::msg::Shape;
 using autoware_planning_msgs::msg::PathPoint;
-using tier4_planning_msgs::msg::PathWithLaneId;
-using PathPointsWithLaneId = std::vector<tier4_planning_msgs::msg::PathPointWithLaneId>;
+using autoware_utils::Box2d;
+using autoware_utils::LineString2d;
+using autoware_utils::Point2d;
+using autoware_utils::Polygon2d;
+using PathPointsWithLaneId = std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId>;
 struct CommonParam
 {
   double normal_min_jerk;  // min jerk limit for mild stop [m/sss]

@@ -68,7 +68,7 @@ std::optional<PullOverPath> FreespacePullOver::plan(
   const auto & goal_pose = modified_goal_pose.goal_pose;
   const Pose end_pose =
     use_back_ ? goal_pose
-              : autoware::universe_utils::calcOffsetPose(goal_pose, -straight_distance, 0.0, 0.0);
+              : autoware_utils::calc_offset_pose(goal_pose, -straight_distance, 0.0, 0.0);
 
   try {
     if (!planner_->makePlan(current_pose, end_pose)) {
@@ -101,7 +101,7 @@ std::optional<PullOverPath> FreespacePullOver::plan(
     size_t index = std::distance(last_path.points.begin(), it);
     if (index == 0) continue;
     const double distance =
-      autoware::universe_utils::calcDistance2d(end_pose.position, it->point.pose.position);
+      autoware_utils::calc_distance2d(end_pose.position, it->point.pose.position);
     if (distance < th_goal_distance) {
       last_path.points.erase(it, last_path.points.end());
       break;

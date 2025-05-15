@@ -15,7 +15,7 @@
 #ifndef MISSION_PLANNER__SERVICE_UTILS_HPP_
 #define MISSION_PLANNER__SERVICE_UTILS_HPP_
 
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 
 #include <autoware_common_msgs/msg/response_status.hpp>
 
@@ -60,7 +60,7 @@ template <class T, class Req, class Res>
 std::function<void(Req, Res)> handle_exception(void (T::*callback)(Req, Res), T * instance)
 {
   return [instance, callback](Req req, Res res) {
-    autoware::universe_utils::StopWatch<std::chrono::milliseconds> stop_watch;
+    autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
     try {
       (instance->*callback)(req, res);
     } catch (const ServiceException & error) {

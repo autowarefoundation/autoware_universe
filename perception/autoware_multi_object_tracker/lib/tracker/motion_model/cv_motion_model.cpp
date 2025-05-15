@@ -23,9 +23,9 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <autoware/universe_utils/math/normalization.hpp>
-#include <autoware/universe_utils/math/unit_conversion.hpp>
-#include <autoware/universe_utils/ros/msg_covariance.hpp>
+#include <autoware_utils/math/normalization.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
+#include <autoware_utils/ros/msg_covariance.hpp>
 
 #include <tf2/utils.h>
 
@@ -33,7 +33,7 @@ namespace autoware::multi_object_tracker
 {
 // cspell: ignore CV
 // Constant Velocity (CV) motion model
-using autoware::universe_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
 
 CVMotionModel::CVMotionModel() : logger_(rclcpp::get_logger("CVMotionModel"))
 {
@@ -241,7 +241,7 @@ bool CVMotionModel::getPredictedState(
   // set position
   pose.position.x = X(IDX::X);
   pose.position.y = X(IDX::Y);
-  pose.position.z = 0.0;
+  // do not change z
 
   // set twist
   twist.linear.x = X(IDX::VX) * std::cos(-yaw) - X(IDX::VY) * std::sin(-yaw);

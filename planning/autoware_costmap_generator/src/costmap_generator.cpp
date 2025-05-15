@@ -173,8 +173,8 @@ CostmapGenerator::CostmapGenerator(const rclcpp::NodeOptions & node_options)
   pub_occupancy_grid_ =
     this->create_publisher<nav_msgs::msg::OccupancyGrid>("~/output/occupancy_grid", 1);
   pub_processing_time_ =
-    create_publisher<autoware::universe_utils::ProcessingTimeDetail>("processing_time", 1);
-  time_keeper_ = std::make_shared<autoware::universe_utils::TimeKeeper>(pub_processing_time_);
+    create_publisher<autoware_utils::ProcessingTimeDetail>("processing_time", 1);
+  time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(pub_processing_time_);
   pub_processing_time_ms_ =
     this->create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "~/debug/processing_time_ms", 1);
@@ -249,9 +249,9 @@ void CostmapGenerator::onLaneletMapBin(
 
 void CostmapGenerator::update_data()
 {
-  objects_ = sub_objects_.takeData();
-  points_ = sub_points_.takeData();
-  scenario_ = sub_scenario_.takeData();
+  objects_ = sub_objects_.take_data();
+  points_ = sub_points_.take_data();
+  scenario_ = sub_scenario_.take_data();
 }
 
 void CostmapGenerator::set_current_pose()
@@ -263,7 +263,7 @@ void CostmapGenerator::onTimer()
 {
   update_data();
 
-  autoware::universe_utils::ScopedTimeTrack scoped_time_track(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack scoped_time_track(__func__, *time_keeper_);
   stop_watch.tic();
 
   if (!param_->activate_by_scenario) set_current_pose();
@@ -292,22 +292,22 @@ void CostmapGenerator::onTimer()
   set_grid_center(tf);
 
   if ((param_->use_wayarea || param_->use_parkinglot) && lanelet_map_) {
-    autoware::universe_utils::ScopedTimeTrack st("generatePrimitivesCostmap()", *time_keeper_);
+    autoware_utils::ScopedTimeTrack st("generatePrimitivesCostmap()", *time_keeper_);
     costmap_[LayerName::primitives] = generatePrimitivesCostmap();
   }
 
   if (param_->use_objects && objects_) {
-    autoware::universe_utils::ScopedTimeTrack st("generateObjectsCostmap()", *time_keeper_);
+    autoware_utils::ScopedTimeTrack st("generateObjectsCostmap()", *time_keeper_);
     costmap_[LayerName::objects] = generateObjectsCostmap(objects_);
   }
 
   if (param_->use_points && points_) {
-    autoware::universe_utils::ScopedTimeTrack st("generatePointsCostmap()", *time_keeper_);
+    autoware_utils::ScopedTimeTrack st("generatePointsCostmap()", *time_keeper_);
     costmap_[LayerName::points] = generatePointsCostmap(points_, tf.transform.translation.z);
   }
 
   {
-    autoware::universe_utils::ScopedTimeTrack st("generateCombinedCostmap()", *time_keeper_);
+    autoware_utils::ScopedTimeTrack st("generateCombinedCostmap()", *time_keeper_);
     costmap_[LayerName::combined] = generateCombinedCostmap();
   }
 
@@ -335,7 +335,7 @@ bool CostmapGenerator::isActive()
     if (!scenario_) return false;
     const auto & s = scenario_->activating_scenarios;
     return std::any_of(s.begin(), s.end(), [](const auto scenario) {
-      return scenario == tier4_planning_msgs::msg::Scenario::PARKING;
+      return scenario == autoware_internal_planning_msgs::msg::Scenario::PARKING;
     });
   }
 

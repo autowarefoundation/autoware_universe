@@ -16,14 +16,14 @@
 #include "autoware/behavior_path_planner_common/marker_utils/utils.hpp"
 
 #include <autoware/behavior_path_lane_change_module/utils/markers.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/marker_helper.hpp>
 #include <autoware_lanelet2_extension/visualization/visualization.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
 #include <magic_enum.hpp>
 
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <geometry_msgs/msg/detail/pose__struct.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
 #include <visualization_msgs/msg/detail/marker__struct.hpp>
 #include <visualization_msgs/msg/detail/marker_array__struct.hpp>
 
@@ -37,8 +37,8 @@
 
 namespace marker_utils::lane_change_markers
 {
-using autoware::universe_utils::createDefaultMarker;
-using autoware::universe_utils::createMarkerScale;
+using autoware_utils::create_default_marker;
+using autoware_utils::create_marker_scale;
 using geometry_msgs::msg::Point;
 
 MarkerArray showAllValidLaneChangePath(
@@ -64,9 +64,9 @@ MarkerArray showAllValidLaneChangePath(
     std::string ns_with_idx = ns + "[" + std::to_string(idx) + "]";
     const auto & color = colors.at(idx);
     const auto & points = lc_path.path.points;
-    auto marker = createDefaultMarker(
-      "map", current_time, ns_with_idx, ++id, Marker::LINE_STRIP, createMarkerScale(0.1, 0.1, 0.0),
-      color);
+    auto marker = create_default_marker(
+      "map", current_time, ns_with_idx, ++id, Marker::LINE_STRIP,
+      create_marker_scale(0.1, 0.1, 0.0), color);
     marker.points.reserve(points.size());
 
     for (const auto & point : points) {
@@ -74,9 +74,9 @@ MarkerArray showAllValidLaneChangePath(
     }
 
     const auto & info = lc_path.info;
-    auto text_marker = createDefaultMarker(
+    auto text_marker = create_default_marker(
       "map", current_time, ns_with_idx, ++id, visualization_msgs::msg::Marker::TEXT_VIEW_FACING,
-      createMarkerScale(0.1, 0.1, 0.8), colors::yellow());
+      create_marker_scale(0.1, 0.1, 0.8), colors::yellow());
     const auto prep_idx = points.size() / 4;
     text_marker.pose = points.at(prep_idx).point.pose;
     text_marker.pose.position.z += 2.0;
@@ -114,18 +114,18 @@ MarkerArray createLaneChangingVirtualWallMarker(
   MarkerArray marker_array{};
   marker_array.markers.reserve(2);
   {
-    auto wall_marker = createDefaultMarker(
+    auto wall_marker = create_default_marker(
       "map", now, ns + "virtual_wall", id, visualization_msgs::msg::Marker::CUBE,
-      createMarkerScale(0.1, 5.0, 2.0), colors::green());
+      create_marker_scale(0.1, 5.0, 2.0), colors::green());
     wall_marker.pose = lane_changing_pose;
     wall_marker.pose.position.z += 1.0;
     marker_array.markers.push_back(wall_marker);
   }
 
   {
-    auto text_marker = createDefaultMarker(
+    auto text_marker = create_default_marker(
       "map", now, ns + "_text", id, visualization_msgs::msg::Marker::TEXT_VIEW_FACING,
-      createMarkerScale(0.0, 0.0, 1.0), colors::white());
+      create_marker_scale(0.0, 0.0, 1.0), colors::white());
     text_marker.pose = lane_changing_pose;
     text_marker.pose.position.z += 2.0;
     text_marker.text = module_name;
@@ -172,9 +172,9 @@ MarkerArray showExecutionInfo(
   const geometry_msgs::msg::Pose & ego_pose)
 {
   auto default_text_marker = [&]() {
-    return createDefaultMarker(
+    return create_default_marker(
       "map", rclcpp::Clock{RCL_ROS_TIME}.now(), "execution_info", 0, Marker::TEXT_VIEW_FACING,
-      createMarkerScale(0.5, 0.5, 0.5), colors::white());
+      create_marker_scale(0.5, 0.5, 0.5), colors::white());
   };
 
   MarkerArray marker_array;
@@ -200,10 +200,10 @@ MarkerArray ShowLaneChangeMetricsInfo(
 {
   MarkerArray marker_array;
 
-  auto text_marker = createDefaultMarker(
+  auto text_marker = create_default_marker(
     "map", rclcpp::Clock{RCL_ROS_TIME}.now(), "sampling_metrics", 0, Marker::TEXT_VIEW_FACING,
-    createMarkerScale(0.6, 0.6, 0.6), colors::yellow());
-  text_marker.pose = autoware::universe_utils::calcOffsetPose(pose, 10.0, 15.0, 0.0);
+    create_marker_scale(0.6, 0.6, 0.6), colors::yellow());
+  text_marker.pose = autoware_utils::calc_offset_pose(pose, 10.0, 15.0, 0.0);
 
   if (!debug_data.lane_change_metrics.empty()) {
     text_marker.text =
@@ -293,7 +293,7 @@ MarkerArray createDebugMarkerArray(
 
   MarkerArray debug_marker;
   const auto add = [&debug_marker](const MarkerArray & added) {
-    autoware::universe_utils::appendMarkerArray(added, &debug_marker);
+    autoware_utils::append_marker_array(added, &debug_marker);
   };
 
   if (!scene_debug_data.execution_area.points.empty()) {

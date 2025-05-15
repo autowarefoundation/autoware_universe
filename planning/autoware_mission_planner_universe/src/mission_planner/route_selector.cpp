@@ -143,7 +143,7 @@ RouteSelector::RouteSelector(const rclcpp::NodeOptions & options)
 }
 
 void RouteSelector::publish_processing_time(
-  autoware::universe_utils::StopWatch<std::chrono::milliseconds> stop_watch)
+  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch)
 {
   autoware_internal_debug_msgs::msg::Float64Stamped processing_time_msg;
   processing_time_msg.stamp = get_clock()->now();

@@ -15,7 +15,7 @@
 #ifndef MISSION_PLANNER__ROUTE_SELECTOR_HPP_
 #define MISSION_PLANNER__ROUTE_SELECTOR_HPP_
 
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
@@ -66,8 +66,7 @@ class RouteSelector : public rclcpp::Node
 {
 public:
   explicit RouteSelector(const rclcpp::NodeOptions & options);
-  void publish_processing_time(
-    autoware::universe_utils::StopWatch<std::chrono::milliseconds> stop_watch);
+  void publish_processing_time(autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch);
 
 private:
   using WaypointRequest = SetWaypointRoute::Request::SharedPtr;

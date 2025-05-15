@@ -17,7 +17,7 @@
 
 #define EIGEN_MPL2_ONLY
 
-#include "autoware/universe_utils/geometry/boost_geometry.hpp"
+#include "autoware_utils/geometry/boost_geometry.hpp"
 #include "rclcpp/logger.hpp"
 
 #include <Eigen/Core>
@@ -33,10 +33,10 @@
 
 namespace autoware::radar_fusion_to_detected_object
 {
-using autoware::universe_utils::LinearRing2d;
-using autoware::universe_utils::Point2d;
 using autoware_perception_msgs::msg::DetectedObject;
 using autoware_perception_msgs::msg::DetectedObjects;
+using autoware_utils::LinearRing2d;
+using autoware_utils::Point2d;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::PoseWithCovariance;
 using geometry_msgs::msg::Twist;

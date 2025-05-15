@@ -206,7 +206,6 @@ struct AvoidanceParameters
   // for merging/deviating vehicle
   double th_overhang_distance{0.0};
 
-  // parameters for safety check area
   bool enable_safety_check{false};
   bool check_current_lane{false};
   bool check_shift_side_lane{false};
@@ -305,6 +304,9 @@ struct AvoidanceParameters
 
   // policy
   bool use_shorten_margin_immediately{false};
+
+  // policy
+  std::string policy_detection_reliability{"reliable"};
 
   // policy
   std::string policy_approval{"per_shift_line"};

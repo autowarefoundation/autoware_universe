@@ -20,7 +20,7 @@
 #include "autoware/planning_evaluator/metrics/obstacle_metrics.hpp"
 #include "autoware/planning_evaluator/metrics/stability_metrics.hpp"
 #include "autoware/planning_evaluator/metrics/trajectory_metrics.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 namespace planning_diagnostics
 {
 std::optional<Accumulator<double>> MetricsCalculator::calculate(

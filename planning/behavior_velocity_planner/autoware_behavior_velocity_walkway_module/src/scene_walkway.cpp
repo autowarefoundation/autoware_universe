@@ -16,6 +16,7 @@
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <cmath>
 #include <memory>
@@ -27,14 +28,14 @@ namespace bg = boost::geometry;
 using autoware::motion_utils::calcLongitudinalOffsetPose;
 using autoware::motion_utils::calcSignedArcLength;
 using autoware::motion_utils::findNearestSegmentIndex;
-using autoware::universe_utils::createPoint;
-using autoware::universe_utils::getPose;
+using autoware_utils::create_point;
+using autoware_utils::get_pose;
 
 WalkwayModule::WalkwayModule(
   const int64_t module_id, const lanelet::LaneletMapPtr & lanelet_map_ptr,
   const PlannerParam & planner_param, const bool use_regulatory_element,
   const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock,
-  const std::shared_ptr<universe_utils::TimeKeeper> time_keeper,
+  const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface)
 : SceneModuleInterface(module_id, logger, clock, time_keeper, planning_factor_interface),
@@ -122,9 +123,10 @@ bool WalkwayModule::modifyPathVelocity(PathWithLaneId * path)
 
     /* get stop point and stop factor */
     planning_factor_interface_->add(
-      path->points, planner_data_->current_odometry->pose, stop_pose.value(), stop_pose.value(),
-      tier4_planning_msgs::msg::PlanningFactor::STOP, tier4_planning_msgs::msg::SafetyFactorArray{},
-      true /*is_driving_forward*/, 0.0 /*velocity*/, 0.0 /*shift distance*/, "walkway_stop");
+      path->points, planner_data_->current_odometry->pose, stop_pose.value(),
+      autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+      autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/,
+      0.0 /*velocity*/, 0.0 /*shift distance*/, "walkway_stop");
 
     // use arc length to identify if ego vehicle is in front of walkway stop or not.
     const double signed_arc_dist_to_stop_point =

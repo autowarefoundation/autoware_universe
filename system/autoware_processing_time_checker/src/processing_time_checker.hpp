@@ -15,7 +15,7 @@
 #ifndef PROCESSING_TIME_CHECKER_HPP_
 #define PROCESSING_TIME_CHECKER_HPP_
 
-#include "autoware/universe_utils/math/accumulator.hpp"
+#include "autoware_utils/math/accumulator.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -29,7 +29,7 @@
 
 namespace autoware::processing_time_checker
 {
-using autoware::universe_utils::Accumulator;
+using autoware_utils::Accumulator;
 using MetricMsg = tier4_metric_msgs::msg::Metric;
 using MetricArrayMsg = tier4_metric_msgs::msg::MetricArray;
 using autoware_internal_debug_msgs::msg::Float64Stamped;

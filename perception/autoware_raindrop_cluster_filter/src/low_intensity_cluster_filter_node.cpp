@@ -14,7 +14,7 @@
 
 #include "low_intensity_cluster_filter_node.hpp"
 
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 
 #include <pcl_ros/transforms.hpp>
 
@@ -56,8 +56,8 @@ LowIntensityClusterFilter::LowIntensityClusterFilter(const rclcpp::NodeOptions &
     "output/objects", rclcpp::QoS{1});
   // initialize debug tool
   {
-    using autoware::universe_utils::DebugPublisher;
-    using autoware::universe_utils::StopWatch;
+    using autoware_utils::DebugPublisher;
+    using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ptr_ =
       std::make_unique<DebugPublisher>(this, "low_intensity_cluster_filter_node");
@@ -89,8 +89,8 @@ void LowIntensityClusterFilter::objectCallback(
   geometry_msgs::msg::Pose max_pose;
   max_pose.position.x = max_x_;
   max_pose.position.y = max_y_;
-  auto min_ranged_transformed = autoware::universe_utils::transformPose(min_range, transform_stamp);
-  auto max_range_transformed = autoware::universe_utils::transformPose(max_pose, transform_stamp);
+  auto min_ranged_transformed = autoware_utils::transform_pose(min_range, transform_stamp);
+  auto max_range_transformed = autoware_utils::transform_pose(max_pose, transform_stamp);
   for (const auto & feature_object : input_msg->feature_objects) {
     const auto & object = feature_object.object;
     const auto & label = object.classification.front().label;

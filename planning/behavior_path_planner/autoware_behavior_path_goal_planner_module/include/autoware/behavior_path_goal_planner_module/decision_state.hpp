@@ -56,7 +56,7 @@ public:
     const std::shared_ptr<OccupancyGridBasedCollisionDetector> occupancy_grid_map,
     const bool is_current_safe, const GoalPlannerParameters & parameters,
     const GoalSearcher & goal_searcher,
-    std::vector<autoware::universe_utils::Polygon2d> & ego_polygons_expanded);
+    std::vector<autoware_utils::Polygon2d> & ego_polygons_expanded);
 
   PathDecisionState get_current_state() const { return current_state_; }
 
@@ -75,7 +75,7 @@ private:
     const std::shared_ptr<OccupancyGridBasedCollisionDetector> occupancy_grid_map,
     const bool is_current_safe, const GoalPlannerParameters & parameters,
     const GoalSearcher & goal_searcher,
-    std::vector<autoware::universe_utils::Polygon2d> & ego_polygons_expanded) const;
+    std::vector<autoware_utils::Polygon2d> & ego_polygons_expanded) const;
 };
 
 }  // namespace autoware::behavior_path_planner

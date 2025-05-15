@@ -37,20 +37,25 @@ def launch_setup(context, *args, **kwargs):
         name="external_cmd_selector",
         remappings=[
             _create_mapping_tuple("service/select_external_command"),
-            _create_mapping_tuple("input/local/control_cmd"),
-            _create_mapping_tuple("input/local/shift_cmd"),
-            _create_mapping_tuple("input/local/turn_signal_cmd"),
+            _create_mapping_tuple("output/current_selector_mode"),
+            _create_mapping_tuple("input/local/pedals_cmd"),
+            _create_mapping_tuple("input/local/steering_cmd"),
             _create_mapping_tuple("input/local/heartbeat"),
-            _create_mapping_tuple("input/remote/control_cmd"),
-            _create_mapping_tuple("input/remote/shift_cmd"),
-            _create_mapping_tuple("input/remote/turn_signal_cmd"),
+            _create_mapping_tuple("input/local/gear_cmd"),
+            _create_mapping_tuple("input/local/turn_indicators_cmd"),
+            _create_mapping_tuple("input/local/hazard_lights_cmd"),
+            _create_mapping_tuple("input/remote/pedals_cmd"),
+            _create_mapping_tuple("input/remote/steering_cmd"),
             _create_mapping_tuple("input/remote/heartbeat"),
-            _create_mapping_tuple("output/control_cmd"),
+            _create_mapping_tuple("input/remote/gear_cmd"),
+            _create_mapping_tuple("input/remote/turn_indicators_cmd"),
+            _create_mapping_tuple("input/remote/hazard_lights_cmd"),
+            _create_mapping_tuple("output/pedals_cmd"),
+            _create_mapping_tuple("output/steering_cmd"),
+            _create_mapping_tuple("output/heartbeat"),
             _create_mapping_tuple("output/gear_cmd"),
             _create_mapping_tuple("output/turn_indicators_cmd"),
             _create_mapping_tuple("output/hazard_lights_cmd"),
-            _create_mapping_tuple("output/heartbeat"),
-            _create_mapping_tuple("output/current_selector_mode"),
         ],
         parameters=[
             external_cmd_selector_param,
@@ -78,57 +83,36 @@ def launch_setup(context, *args, **kwargs):
 
 
 def generate_launch_description():
+    # fmt: off
     arguments = [
         # component
         DeclareLaunchArgument("use_intra_process"),
         DeclareLaunchArgument("target_container"),
-        # service
-        DeclareLaunchArgument(
-            "service/select_external_command", default_value="~/select_external_command"
-        ),
+        # mode select
+        DeclareLaunchArgument("service/select_external_command", default_value="~/select_external_command"),
+        DeclareLaunchArgument("output/current_selector_mode", default_value="~/current_selector_mode"),
         # local input
-        DeclareLaunchArgument(
-            "input/local/control_cmd", default_value="/api/external/set/command/local/control"
-        ),
-        DeclareLaunchArgument(
-            "input/local/shift_cmd", default_value="/api/external/set/command/local/shift"
-        ),
-        DeclareLaunchArgument(
-            "input/local/turn_signal_cmd",
-            default_value="/api/external/set/command/local/turn_signal",
-        ),
-        DeclareLaunchArgument(
-            "input/local/heartbeat", default_value="/api/external/set/command/local/heartbeat"
-        ),
+        DeclareLaunchArgument("input/local/pedals_cmd", default_value="/external/local/pedals_cmd"),
+        DeclareLaunchArgument("input/local/steering_cmd", default_value="/external/local/steering_cmd"),
+        DeclareLaunchArgument("input/local/heartbeat", default_value="/external/local/heartbeat"),
+        DeclareLaunchArgument("input/local/gear_cmd", default_value="/external/local/gear_cmd"),
+        DeclareLaunchArgument("input/local/turn_indicators_cmd", default_value="/external/local/turn_indicators_cmd"),
+        DeclareLaunchArgument("input/local/hazard_lights_cmd", default_value="/external/local/hazard_lights_cmd"),
         # remote input
-        DeclareLaunchArgument(
-            "input/remote/control_cmd", default_value="/api/external/set/command/remote/control"
-        ),
-        DeclareLaunchArgument(
-            "input/remote/shift_cmd", default_value="/api/external/set/command/remote/shift"
-        ),
-        DeclareLaunchArgument(
-            "input/remote/turn_signal_cmd",
-            default_value="/api/external/set/command/remote/turn_signal",
-        ),
-        DeclareLaunchArgument(
-            "input/remote/heartbeat", default_value="/api/external/set/command/remote/heartbeat"
-        ),
+        DeclareLaunchArgument("input/remote/pedals_cmd", default_value="/external/remote/pedals_cmd"),
+        DeclareLaunchArgument("input/remote/steering_cmd", default_value="/external/remote/steering_cmd"),
+        DeclareLaunchArgument("input/remote/heartbeat", default_value="/external/remote/heartbeat"),
+        DeclareLaunchArgument("input/remote/gear_cmd", default_value="/external/remote/gear_cmd"),
+        DeclareLaunchArgument("input/remote/turn_indicators_cmd", default_value="/external/remote/turn_indicators_cmd"),
+        DeclareLaunchArgument("input/remote/hazard_lights_cmd", default_value="/external/remote/hazard_lights_cmd"),
         # output
-        DeclareLaunchArgument(
-            "output/control_cmd", default_value="/external/selected/external_control_cmd"
-        ),
-        DeclareLaunchArgument("output/gear_cmd", default_value="/external/selected/gear_cmd"),
-        DeclareLaunchArgument(
-            "output/turn_indicators_cmd", default_value="/external/selected/turn_indicators_cmd"
-        ),
-        DeclareLaunchArgument(
-            "output/hazard_lights_cmd", default_value="/external/selected/hazard_lights_cmd"
-        ),
+        DeclareLaunchArgument("output/pedals_cmd", default_value="/external/selected/pedals_cmd"),
+        DeclareLaunchArgument("output/steering_cmd", default_value="/external/selected/steering_cmd"),
         DeclareLaunchArgument("output/heartbeat", default_value="/external/selected/heartbeat"),
-        DeclareLaunchArgument(
-            "output/current_selector_mode", default_value="~/current_selector_mode"
-        ),
+        DeclareLaunchArgument("output/gear_cmd", default_value="/external/selected/gear_cmd"),
+        DeclareLaunchArgument("output/turn_indicators_cmd", default_value="/external/selected/turn_indicators_cmd"),
+        DeclareLaunchArgument("output/hazard_lights_cmd", default_value="/external/selected/hazard_lights_cmd"),
     ]
+    # fmt: on
 
     return LaunchDescription(arguments + [OpaqueFunction(function=launch_setup)])

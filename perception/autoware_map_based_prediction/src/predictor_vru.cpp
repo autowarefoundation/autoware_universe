@@ -16,8 +16,8 @@
 
 #include "map_based_prediction/utils.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/uuid_helper.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/uuid_helper.hpp>
 
 #include <algorithm>
 #include <deque>
@@ -30,7 +30,7 @@
 
 namespace autoware::map_based_prediction
 {
-using autoware::universe_utils::ScopedTimeTrack;
+using autoware_utils::ScopedTimeTrack;
 
 namespace
 {
@@ -43,7 +43,7 @@ boost::optional<CrosswalkEdgePoints> isReachableCrosswalkEdgePoints(
 
   const auto & obj_pos = object.kinematics.pose_with_covariance.pose.position;
   const auto & obj_vel = object.kinematics.twist_with_covariance.twist.linear;
-  const auto yaw = autoware::universe_utils::getRPY(object.kinematics.pose_with_covariance.pose).z;
+  const auto yaw = autoware_utils::get_rpy(object.kinematics.pose_with_covariance.pose).z;
 
   lanelet::BasicPoint2d obj_pos_as_lanelet(obj_pos.x, obj_pos.y);
 
@@ -145,7 +145,7 @@ bool hasPotentialToReach(
 {
   const auto & obj_pos = object.kinematics.pose_with_covariance.pose.position;
   const auto & obj_vel = object.kinematics.twist_with_covariance.twist.linear;
-  const auto yaw = autoware::universe_utils::getRPY(object.kinematics.pose_with_covariance.pose).z;
+  const auto yaw = autoware_utils::get_rpy(object.kinematics.pose_with_covariance.pose).z;
 
   constexpr double stop_velocity_th = 0.14;  // [m/s]
   const auto estimated_velocity = std::hypot(obj_vel.x, obj_vel.y);
@@ -163,16 +163,16 @@ bool hasPotentialToReach(
         const double pedestrian_to_crosswalk_left_direction =
           std::atan2(left_point.y() - obj_pos.y, left_point.x() - obj_pos.x);
         return std::make_pair(
-          autoware::universe_utils::normalizeRadian(
+          autoware_utils::normalize_radian(
             pedestrian_to_crosswalk_right_direction - pedestrian_to_crosswalk_center_direction),
-          autoware::universe_utils::normalizeRadian(
+          autoware_utils::normalize_radian(
             pedestrian_to_crosswalk_left_direction - pedestrian_to_crosswalk_center_direction));
       }();
 
   const double pedestrian_heading_rel_direction = [&]() {
     const double pedestrian_heading_direction =
       std::atan2(obj_vel.x * std::sin(yaw), obj_vel.x * std::cos(yaw));
-    return autoware::universe_utils::normalizeRadian(
+    return autoware_utils::normalize_radian(
       pedestrian_heading_direction - pedestrian_to_crosswalk_center_direction);
   }();
 
@@ -219,11 +219,11 @@ bool isIntersecting(
   const geometry_msgs::msg::Point & point1, const geometry_msgs::msg::Point & point2,
   const lanelet::ConstPoint3d & point3, const lanelet::ConstPoint3d & point4)
 {
-  const auto p1 = autoware::universe_utils::createPoint(point1.x, point1.y, 0.0);
-  const auto p2 = autoware::universe_utils::createPoint(point2.x, point2.y, 0.0);
-  const auto p3 = autoware::universe_utils::createPoint(point3.x(), point3.y(), 0.0);
-  const auto p4 = autoware::universe_utils::createPoint(point4.x(), point4.y(), 0.0);
-  const auto intersection = autoware::universe_utils::intersect(p1, p2, p3, p4);
+  const auto p1 = autoware_utils::create_point(point1.x, point1.y, 0.0);
+  const auto p2 = autoware_utils::create_point(point2.x, point2.y, 0.0);
+  const auto p3 = autoware_utils::create_point(point3.x(), point3.y(), 0.0);
+  const auto p4 = autoware_utils::create_point(point4.x(), point4.y(), 0.0);
+  const auto intersection = autoware_utils::intersect(p1, p2, p3, p4);
   return intersection.has_value();
 }
 
@@ -310,7 +310,7 @@ void PredictorVru::loadCurrentCrosswalkUsers(const TrackedObjects & objects)
     const bool isDisappeared = std::none_of(
       objects.objects.begin(), objects.objects.end(),
       [&it](autoware_perception_msgs::msg::TrackedObject obj) {
-        return autoware::universe_utils::toHexString(obj.object_id) == it->first.first;
+        return autoware_utils::to_hex_string(obj.object_id) == it->first.first;
       });
     if (isDisappeared) {
       it = stopped_times_against_green_.erase(it);
@@ -329,7 +329,7 @@ void PredictorVru::loadCurrentCrosswalkUsers(const TrackedObjects & objects)
     if (
       label_for_prediction == ObjectClassification::PEDESTRIAN ||
       label_for_prediction == ObjectClassification::BICYCLE) {
-      const std::string object_id = autoware::universe_utils::toHexString(object.object_id);
+      const std::string object_id = autoware_utils::to_hex_string(object.object_id);
       current_crosswalk_users_.emplace(object_id, object);
     }
   }
@@ -355,7 +355,7 @@ PredictedObject PredictorVru::predict(
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  std::string object_id = autoware::universe_utils::toHexString(object.object_id);
+  std::string object_id = autoware_utils::to_hex_string(object.object_id);
   if (match_lost_and_appeared_crosswalk_users_) {
     object_id = tryMatchNewObjectToDisappeared(object_id, current_crosswalk_users_);
   }
@@ -641,11 +641,10 @@ bool PredictorVru::calcIntentionToCrossWithTrafficSignal(
     return elem_opt ? elem_opt.value().color : TrafficLightElement::UNKNOWN;
   }();
 
-  const auto key =
-    std::make_pair(autoware::universe_utils::toHexString(object.object_id), signal_id);
+  const auto key = std::make_pair(autoware_utils::to_hex_string(object.object_id), signal_id);
   if (
     signal_color == TrafficLightElement::GREEN &&
-    autoware::universe_utils::calcNorm(object.kinematics.twist_with_covariance.twist.linear) <
+    autoware_utils::calc_norm(object.kinematics.twist_with_covariance.twist.linear) <
       threshold_velocity_assumed_as_stopping_) {
     stopped_times_against_green_.try_emplace(key, node_.get_clock()->now());
 
