@@ -24,7 +24,7 @@
 #include <cuda_bf16.h>
 #include <cuda_fp16.h>
 
-#include <cstdint>
+#include <cstdint>  // cSpell:ignore cstdint
 
 #define ATOMIC(NAME)                                                                               \
   template <typename scalar, size_t size>                                                          \

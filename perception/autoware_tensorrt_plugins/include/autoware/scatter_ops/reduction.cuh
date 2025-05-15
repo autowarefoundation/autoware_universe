@@ -30,6 +30,7 @@
 #include <limits>
 #include <type_traits>
 
+// cSpell:ignore bfloat
 template <typename scalar_t, ReductionType REDUCE>
 struct Reducer
 {

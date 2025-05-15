@@ -25,7 +25,8 @@
 #include <cuda_fp16.h>
 
 template <typename scalar_t>
-__global__ void fill_kernel(scalar_t * src, int32_t numel, const scalar_t val)
+__global__ void fill_kernel(
+  scalar_t * src, int32_t numel, const scalar_t val)  // cSpell:ignore numel
 {
   int32_t thread_idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (thread_idx >= numel) return;
