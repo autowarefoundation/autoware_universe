@@ -57,7 +57,7 @@ namespace same_camera
 TEST(compareRecord, timestamp_check)
 {
   // r1 is newer
-  autoware::traffic_light::FusionRecord r1;
+  autoware::traffic_light::utils::FusionRecord r1;
   {
     std_msgs::msg::Header header;
     header.stamp = rclcpp::Time(200, 10);
@@ -81,7 +81,7 @@ TEST(compareRecord, timestamp_check)
     element.confidence = 0.9;
     r1.signal.elements.push_back(element);
   }
-  autoware::traffic_light::FusionRecord r2;
+  autoware::traffic_light::utils::FusionRecord r2;
   {
     std_msgs::msg::Header header;
     header.stamp = rclcpp::Time(100, 10);
@@ -161,7 +161,7 @@ TEST(compareRecord, timestamp_check)
 TEST(compareRecord, unknown_check)
 {
   // r1 is unknown
-  autoware::traffic_light::FusionRecord r1;
+  autoware::traffic_light::utils::FusionRecord r1;
   {
     std_msgs::msg::Header header;
     header.stamp = rclcpp::Time(100, 10);
@@ -185,7 +185,7 @@ TEST(compareRecord, unknown_check)
     element.confidence = 0.0;
     r1.signal.elements.push_back(element);
   }
-  autoware::traffic_light::FusionRecord r2;
+  autoware::traffic_light::utils::FusionRecord r2;
   {
     std_msgs::msg::Header header;
     header.stamp = rclcpp::Time(100, 10);
@@ -314,7 +314,7 @@ TEST(compareRecord, unknown_check)
 TEST(compareRecord, visible_check)
 {
   // r1 is better visible on top left
-  autoware::traffic_light::FusionRecord r1;
+  autoware::traffic_light::utils::FusionRecord r1;
   {
     std_msgs::msg::Header header;
     header.stamp = rclcpp::Time(100, 10);
@@ -338,7 +338,7 @@ TEST(compareRecord, visible_check)
     element.confidence = 0.9;
     r1.signal.elements.push_back(element);
   }
-  autoware::traffic_light::FusionRecord r2;
+  autoware::traffic_light::utils::FusionRecord r2;
   {
     const uint32_t boundary_thres = 5;
     std_msgs::msg::Header header;
@@ -521,7 +521,7 @@ TEST(compareRecord, visible_check)
 TEST(compareRecord, confidence_check)
 {
   // r1 is higher confidence
-  autoware::traffic_light::FusionRecord r1;
+  autoware::traffic_light::utils::FusionRecord r1;
   {
     std_msgs::msg::Header header;
     header.stamp = rclcpp::Time(100, 10);
@@ -545,7 +545,7 @@ TEST(compareRecord, confidence_check)
     element.confidence = 0.9;
     r1.signal.elements.push_back(element);
   }
-  autoware::traffic_light::FusionRecord r2;
+  autoware::traffic_light::utils::FusionRecord r2;
   {
     std_msgs::msg::Header header;
     header.stamp = rclcpp::Time(100, 10);
@@ -632,7 +632,7 @@ namespace different_camera
 TEST(compareRecord, unknown_check)
 {
   // r1 is unknown
-  autoware::traffic_light::FusionRecord r1;
+  autoware::traffic_light::utils::FusionRecord r1;
   {
     std_msgs::msg::Header header;
     header.stamp = rclcpp::Time(100, 10);
@@ -656,7 +656,7 @@ TEST(compareRecord, unknown_check)
     element.confidence = 0.0;
     r1.signal.elements.push_back(element);
   }
-  autoware::traffic_light::FusionRecord r2;
+  autoware::traffic_light::utils::FusionRecord r2;
   {
     std_msgs::msg::Header header;
     header.stamp = rclcpp::Time(100, 10);
@@ -785,7 +785,7 @@ TEST(compareRecord, unknown_check)
 TEST(compareRecord, visible_check)
 {
   // r1 is better visible on top left
-  autoware::traffic_light::FusionRecord r1;
+  autoware::traffic_light::utils::FusionRecord r1;
   {
     std_msgs::msg::Header header;
     header.stamp = rclcpp::Time(100, 10);
@@ -809,7 +809,7 @@ TEST(compareRecord, visible_check)
     element.confidence = 0.9;
     r1.signal.elements.push_back(element);
   }
-  autoware::traffic_light::FusionRecord r2;
+  autoware::traffic_light::utils::FusionRecord r2;
   {
     const uint32_t boundary_thres = 5;
     std_msgs::msg::Header header;
@@ -992,7 +992,7 @@ TEST(compareRecord, visible_check)
 TEST(compareRecord, confidence_check)
 {
   // r1 is higher confidence
-  autoware::traffic_light::FusionRecord r1;
+  autoware::traffic_light::utils::FusionRecord r1;
   {
     std_msgs::msg::Header header;
     header.stamp = rclcpp::Time(100, 10);
@@ -1016,7 +1016,7 @@ TEST(compareRecord, confidence_check)
     element.confidence = 0.9;
     r1.signal.elements.push_back(element);
   }
-  autoware::traffic_light::FusionRecord r2;
+  autoware::traffic_light::utils::FusionRecord r2;
   {
     std_msgs::msg::Header header;
     header.stamp = rclcpp::Time(100, 10);
@@ -1097,7 +1097,7 @@ TEST(compareRecord, confidence_check)
 TEST(calVisibleScore, normal)
 {
   // visible
-  autoware::traffic_light::FusionRecord r1;
+  autoware::traffic_light::utils::FusionRecord r1;
   {
     std_msgs::msg::Header header;
     header.stamp = rclcpp::Time(100, 10);

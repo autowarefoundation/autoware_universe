@@ -23,32 +23,7 @@ namespace autoware::traffic_light
 namespace utils
 {
 
-using T4Elem = tier4_perception_msgs::msg::TrafficLightElement;
-using AutowareElem = autoware_perception_msgs::msg::TrafficLightElement;
-const std::unordered_map<T4Elem::_color_type, AutowareElem::_color_type> color_map(
-  {{T4Elem::RED, AutowareElem::RED},
-   {T4Elem::AMBER, AutowareElem::AMBER},
-   {T4Elem::GREEN, AutowareElem::GREEN},
-   {T4Elem::WHITE, AutowareElem::WHITE}});
-const std::unordered_map<T4Elem::_shape_type, AutowareElem::_shape_type> shape_map(
-  {{T4Elem::CIRCLE, AutowareElem::CIRCLE},
-   {T4Elem::LEFT_ARROW, AutowareElem::LEFT_ARROW},
-   {T4Elem::RIGHT_ARROW, AutowareElem::RIGHT_ARROW},
-   {T4Elem::UP_ARROW, AutowareElem::UP_ARROW},
-   {T4Elem::UP_LEFT_ARROW, AutowareElem::UP_LEFT_ARROW},
-   {T4Elem::UP_RIGHT_ARROW, AutowareElem::UP_RIGHT_ARROW},
-   {T4Elem::DOWN_ARROW, AutowareElem::DOWN_ARROW},
-   {T4Elem::DOWN_LEFT_ARROW, AutowareElem::DOWN_LEFT_ARROW},
-   {T4Elem::DOWN_RIGHT_ARROW, AutowareElem::DOWN_RIGHT_ARROW},
-   {T4Elem::CROSS, AutowareElem::CROSS}});
-const std::unordered_map<T4Elem::_status_type, AutowareElem::_status_type> status_map(
-  {{T4Elem::SOLID_OFF, AutowareElem::SOLID_OFF},
-   {T4Elem::SOLID_ON, AutowareElem::SOLID_ON},
-   {T4Elem::FLASHING, AutowareElem::FLASHING}});
-
-int compareRecord(
-  const autoware::traffic_light::FusionRecord & r1,
-  const autoware::traffic_light::FusionRecord & r2)
+int compareRecord(const FusionRecord & r1, const FusionRecord & r2)
 {
   /*
   r1 will be checked
@@ -89,20 +64,23 @@ int compareRecord(
   }
 }
 
-autoware_perception_msgs::msg::TrafficLightElement convert(
+autoware_perception_msgs::msg::TrafficLightElement convertT4toAutoware(
   const tier4_perception_msgs::msg::TrafficLightElement & input)
 {
   // clang-format on
 
-  AutowareElem output;
-  output.color = at_or(color_map, input.color, AutowareElem::UNKNOWN);
-  output.shape = at_or(shape_map, input.shape, AutowareElem::UNKNOWN);
-  output.status = at_or(status_map, input.status, AutowareElem::UNKNOWN);
+  autoware_perception_msgs::msg::TrafficLightElement output;
+  output.color =
+    at_or(color_map, input.color, autoware_perception_msgs::msg::TrafficLightElement::UNKNOWN);
+  output.shape =
+    at_or(shape_map, input.shape, autoware_perception_msgs::msg::TrafficLightElement::UNKNOWN);
+  output.status =
+    at_or(status_map, input.status, autoware_perception_msgs::msg::TrafficLightElement::UNKNOWN);
   output.confidence = input.confidence;
   return output;
 }
 
-int calVisibleScore(const autoware::traffic_light::FusionRecord & record)
+int calVisibleScore(const FusionRecord & record)
 {
   const uint32_t boundary = 5;
   uint32_t x1 = record.roi.roi.x_offset;
