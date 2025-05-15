@@ -26,6 +26,11 @@ AutowarePathWithLaneIdDisplay::AutowarePathWithLaneIdDisplay()
 : property_lane_id_view_{"View LaneId", true, "", this},
   property_lane_id_scale_{"Scale", 0.1, "", &property_lane_id_view_}
 {
+  // glog for debug
+  if (!google::IsGoogleLoggingInitialized()) {
+    google::InitGoogleLogging("path_with_lane_id_display");
+    google::InstallFailureSignalHandler();
+  }
 }
 
 void AutowarePathWithLaneIdDisplay::preProcessMessageDetail()

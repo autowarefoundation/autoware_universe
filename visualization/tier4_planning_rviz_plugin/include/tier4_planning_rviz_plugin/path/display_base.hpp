@@ -34,6 +34,7 @@
 #include <OgreMaterialManager.h>
 #include <OgreSceneManager.h>
 #include <OgreSceneNode.h>
+#include <glog/logging.h>
 
 #include <deque>
 #include <limits>

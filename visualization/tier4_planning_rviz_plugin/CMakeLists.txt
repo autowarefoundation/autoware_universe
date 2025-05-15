@@ -32,6 +32,7 @@ ament_auto_add_library(tier4_planning_rviz_plugin SHARED
 
 target_link_libraries(tier4_planning_rviz_plugin
   ${QT_LIBRARIES}
+  glog::glog
 )
 
 # Export the plugin to be imported by rviz2

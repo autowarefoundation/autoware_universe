@@ -128,6 +128,12 @@ public:
     property_drivable_area_alpha_.setMin(0.0);
     property_drivable_area_alpha_.setMax(1.0);
     property_drivable_area_width_.setMin(0.001);
+
+    // glog for debug
+    if (!google::IsGoogleLoggingInitialized()) {
+      google::InitGoogleLogging("path_with_lane_id_display");
+      google::InstallFailureSignalHandler();
+    }
   }
 
   ~AutowarePathWithDrivableAreaDisplay()
@@ -235,6 +241,11 @@ public:
   : property_time_text_view_{"View Text Time", false, "", this},
     property_time_text_scale_{"Scale", 0.3, "", &property_time_text_view_}
   {
+    // glog for debug
+    if (!google::IsGoogleLoggingInitialized()) {
+      google::InitGoogleLogging("path_with_lane_id_display");
+      google::InstallFailureSignalHandler();
+    }
   }
 
   ~AutowareTrajectoryDisplay() override
