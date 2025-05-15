@@ -20,13 +20,37 @@ namespace autoware::default_adapi
 {
 
 LocalizationNode::LocalizationNode(const rclcpp::NodeOptions & options)
-: Node("localization", options)
+: Node("localization", options), diagnostics_(this)
 {
+  diagnostics_.setHardwareID("none");
+  diagnostics_.add("state", this, &LocalizationNode::diagnose_state);
+
   const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
   group_cli_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-  adaptor.relay_message(pub_state_, sub_state_);
+  adaptor.init_pub(pub_state_);
+  adaptor.init_sub(sub_state_, this, &LocalizationNode::on_state);
   adaptor.init_cli(cli_initialize_);
   adaptor.init_srv(srv_initialize_, this, &LocalizationNode::on_initialize, group_cli_);
+
+  state_.state = ImplState::Message::UNKNOWN;
+}
+
+void LocalizationNode::diagnose_state(diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  using diagnostic_msgs::msg::DiagnosticStatus;
+  const auto message = std::to_string(state_.state);
+
+  if (state_.state == ImplState::Message::INITIALIZED) {
+    stat.summary(DiagnosticStatus::OK, message);
+  } else {
+    stat.summary(DiagnosticStatus::ERROR, message);
+  }
+}
+
+void LocalizationNode::on_state(const ImplState::Message::ConstSharedPtr msg)
+{
+  state_ = *msg;
+  pub_state_->publish(*msg);
 }
 
 void LocalizationNode::on_initialize(
