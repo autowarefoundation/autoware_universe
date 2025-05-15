@@ -241,8 +241,6 @@ class TTCVisualizer(Node):
         if not self.last_sub:
             return
 
-        now = time.time()
-
         self.plot_ttc()
         self.plot_world()
         self.fig.canvas.flush_events()
