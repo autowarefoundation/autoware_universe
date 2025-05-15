@@ -172,7 +172,7 @@ std::size_t get_unique_workspace_size(std::size_t num_elements)
 
   cub::DeviceRadixSort::SortPairs(
     nullptr, temp_size, int64_nullptr, int64_nullptr, int64_nullptr, int64_nullptr, num_elements, 0,
-    64, 0);
+    64, nullptr);
 
   return temp_size + (4 * num_elements + 1) * sizeof(std::int64_t);
 }

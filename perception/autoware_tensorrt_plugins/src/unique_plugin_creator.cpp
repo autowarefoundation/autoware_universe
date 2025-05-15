@@ -14,8 +14,7 @@
 
 #include "autoware/tensorrt_plugins/unique_plugin_creator.hpp"
 
-#include "autoware/tensorrt_plugins//unique_plugin.hpp"
-#include "autoware/tensorrt_plugins/plugin_utils.hpp"
+#include "autoware/tensorrt_plugins/unique_plugin.hpp"
 
 #include <NvInferRuntimePlugin.h>
 
