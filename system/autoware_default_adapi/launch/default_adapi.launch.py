@@ -52,6 +52,7 @@ def generate_launch_description():
         create_api_node("manual/local", "ManualControlNode"),
         create_api_node("manual/remote", "ManualControlNode"),
         create_api_node("motion", "MotionNode"),
+        create_api_node("mrm_request", "MrmRequestNode"),
         create_api_node("operation_mode", "OperationModeNode"),
         create_api_node("perception", "PerceptionNode"),
         create_api_node("planning", "PlanningNode"),

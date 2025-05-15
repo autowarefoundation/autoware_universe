@@ -23,7 +23,7 @@ namespace autoware::lane_departure_checker
 {
 using autoware_utils::get_or_declare_parameter;
 
-Param Param::init(rclcpp::Node & node)
+Param init(rclcpp::Node & node)
 {
   Param p;
   p.footprint_margin_scale = get_or_declare_parameter<double>(node, "footprint_margin_scale");
@@ -31,10 +31,6 @@ Param Param::init(rclcpp::Node & node)
   p.resample_interval = get_or_declare_parameter<double>(node, "resample_interval");
   p.max_deceleration = get_or_declare_parameter<double>(node, "max_deceleration");
   p.delay_time = get_or_declare_parameter<double>(node, "delay_time");
-  p.max_lateral_deviation = get_or_declare_parameter<double>(node, "max_lateral_deviation");
-  p.max_longitudinal_deviation =
-    get_or_declare_parameter<double>(node, "max_longitudinal_deviation");
-  p.max_yaw_deviation_deg = get_or_declare_parameter<double>(node, "max_yaw_deviation_deg");
   p.min_braking_distance = get_or_declare_parameter<double>(node, "min_braking_distance");
   p.ego_nearest_dist_threshold =
     get_or_declare_parameter<double>(node, "ego_nearest_dist_threshold");
