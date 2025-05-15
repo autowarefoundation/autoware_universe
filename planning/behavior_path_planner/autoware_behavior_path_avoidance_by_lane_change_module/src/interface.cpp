@@ -32,13 +32,15 @@ AvoidanceByLaneChangeInterface::AvoidanceByLaneChangeInterface(
   const std::shared_ptr<AvoidanceByLCParameters> & avoidance_by_lane_change_parameters,
   const std::unordered_map<std::string, std::shared_ptr<RTCInterface>> & rtc_interface_ptr_map,
   std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
-    objects_of_interest_marker_interface_ptr_map)
+    objects_of_interest_marker_interface_ptr_map,
+  const std::shared_ptr<PlanningFactorInterface> & planning_factor_interface)
 : LaneChangeInterface{
     name,
     node,
     parameters,
     rtc_interface_ptr_map,
     objects_of_interest_marker_interface_ptr_map,
+    planning_factor_interface,
     std::make_unique<AvoidanceByLaneChange>(parameters, avoidance_by_lane_change_parameters)}
 {
 }

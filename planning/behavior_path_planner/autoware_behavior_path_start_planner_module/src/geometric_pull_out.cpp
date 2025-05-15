@@ -18,7 +18,7 @@
 #include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 #include "autoware/behavior_path_start_planner_module/util.hpp"
-#include "autoware/universe_utils/geometry/boost_polygon_utils.hpp"
+#include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 
@@ -27,8 +27,8 @@
 #include <utility>
 
 using autoware::motion_utils::findNearestIndex;
-using autoware::universe_utils::calcDistance2d;
-using autoware::universe_utils::calcOffsetPose;
+using autoware_utils::calc_distance2d;
+using autoware_utils::calc_offset_pose;
 using lanelet::utils::getArcCoordinates;
 namespace autoware::behavior_path_planner
 {
@@ -36,37 +36,44 @@ using start_planner_utils::getPullOutLanes;
 
 GeometricPullOut::GeometricPullOut(
   rclcpp::Node & node, const StartPlannerParameters & parameters,
-  const std::shared_ptr<autoware::lane_departure_checker::LaneDepartureChecker>
-    lane_departure_checker,
-  std::shared_ptr<universe_utils::TimeKeeper> time_keeper)
+  std::shared_ptr<autoware_utils::TimeKeeper> time_keeper)
 : PullOutPlannerBase{node, parameters, time_keeper},
-  parallel_parking_parameters_{parameters.parallel_parking_parameters},
-  lane_departure_checker_(lane_departure_checker)
+  parallel_parking_parameters_{parameters.parallel_parking_parameters}
 {
+  auto boundary_departure_checker_params = autoware::boundary_departure_checker::Param{};
+  boundary_departure_checker_params.footprint_extra_margin =
+    parameters.lane_departure_check_expansion_margin;
+  boundary_departure_checker_ =
+    std::make_shared<autoware::boundary_departure_checker::BoundaryDepartureChecker>(
+      boundary_departure_checker_params, vehicle_info_);
   planner_.setParameters(parallel_parking_parameters_);
 }
 
 std::optional<PullOutPath> GeometricPullOut::plan(
-  const Pose & start_pose, const Pose & goal_pose, PlannerDebugData & planner_debug_data)
+  const Pose & start_pose, const Pose & goal_pose,
+  const std::shared_ptr<const PlannerData> & planner_data, PlannerDebugData & planner_debug_data)
 {
   PullOutPath output;
 
   // combine road lane and pull out lane
   const double backward_path_length =
-    planner_data_->parameters.backward_path_length + parameters_.max_back_distance;
+    planner_data->parameters.backward_path_length + parameters_.max_back_distance;
   const auto road_lanes = utils::getExtendedCurrentLanes(
-    planner_data_, backward_path_length, std::numeric_limits<double>::max(),
+    planner_data, backward_path_length, std::numeric_limits<double>::max(),
     /*forward_only_in_route*/ true);
-  const auto pull_out_lanes = getPullOutLanes(planner_data_, backward_path_length);
+  const auto pull_out_lanes = getPullOutLanes(planner_data, backward_path_length);
 
   // check if the ego is at left or right side of road lane center
   const bool left_side_start = 0 < getArcCoordinates(road_lanes, start_pose).distance;
+  const double max_steer_angle =
+    vehicle_info_.max_steer_angle_rad *
+    parallel_parking_parameters_.geometric_pull_out_max_steer_angle_margin_scale;
 
-  planner_.setTurningRadius(
-    planner_data_->parameters, parallel_parking_parameters_.pull_out_max_steer_angle);
-  planner_.setPlannerData(planner_data_);
+  planner_.setTurningRadius(planner_data->parameters, max_steer_angle);
+  planner_.setPlannerData(planner_data);
   const bool found_valid_path = planner_.planPullOut(
-    start_pose, goal_pose, road_lanes, pull_out_lanes, left_side_start, lane_departure_checker_);
+    start_pose, goal_pose, road_lanes, pull_out_lanes, left_side_start,
+    boundary_departure_checker_);
   if (!found_valid_path) {
     planner_debug_data.conditions_evaluation.emplace_back("no path found");
     return {};
@@ -122,7 +129,8 @@ std::optional<PullOutPath> GeometricPullOut::plan(
   output.start_pose = planner_.getArcPaths().at(0).points.front().point.pose;
   output.end_pose = planner_.getArcPaths().at(1).points.back().point.pose;
 
-  if (isPullOutPathCollided(output, parameters_.geometric_collision_check_distance_from_end)) {
+  if (isPullOutPathCollided(
+        output, planner_data, parameters_.geometric_collision_check_distance_from_end)) {
     planner_debug_data.conditions_evaluation.emplace_back("collision");
     return {};
   }

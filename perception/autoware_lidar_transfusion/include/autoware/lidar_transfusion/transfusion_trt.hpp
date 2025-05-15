@@ -16,7 +16,6 @@
 #define AUTOWARE__LIDAR_TRANSFUSION__TRANSFUSION_TRT_HPP_
 
 #include "autoware/lidar_transfusion/cuda_utils.hpp"
-#include "autoware/lidar_transfusion/network/network_trt.hpp"
 #include "autoware/lidar_transfusion/postprocess/postprocess_kernel.hpp"
 #include "autoware/lidar_transfusion/preprocess/pointcloud_densification.hpp"
 #include "autoware/lidar_transfusion/preprocess/preprocess_kernel.hpp"
@@ -24,7 +23,9 @@
 #include "autoware/lidar_transfusion/utils.hpp"
 #include "autoware/lidar_transfusion/visibility_control.hpp"
 
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware/tensorrt_common/tensorrt_common.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
+#include <cuda_blackboard/cuda_pointcloud2.hpp>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
@@ -34,57 +35,40 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 namespace autoware::lidar_transfusion
 {
 
-class NetworkParam
-{
-public:
-  NetworkParam(std::string onnx_path, std::string engine_path, std::string trt_precision)
-  : onnx_path_(std::move(onnx_path)),
-    engine_path_(std::move(engine_path)),
-    trt_precision_(std::move(trt_precision))
-  {
-  }
-
-  std::string onnx_path() const { return onnx_path_; }
-  std::string engine_path() const { return engine_path_; }
-  std::string trt_precision() const { return trt_precision_; }
-
-private:
-  std::string onnx_path_;
-  std::string engine_path_;
-  std::string trt_precision_;
-};
-
 class LIDAR_TRANSFUSION_PUBLIC TransfusionTRT
 {
 public:
   explicit TransfusionTRT(
-    const NetworkParam & network_param, const DensificationParam & densification_param,
-    const TransfusionConfig & config);
+    const tensorrt_common::TrtCommonConfig & trt_config,
+    const DensificationParam & densification_param, const TransfusionConfig config);
   virtual ~TransfusionTRT();
 
   bool detect(
-    const sensor_msgs::msg::PointCloud2 & msg, const tf2_ros::Buffer & tf_buffer,
-    std::vector<Box3D> & det_boxes3d, std::unordered_map<std::string, double> & proc_timing);
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+    const tf2_ros::Buffer & tf_buffer, std::vector<Box3D> & det_boxes3d,
+    std::unordered_map<std::string, double> & proc_timing);
 
 protected:
+  void initTrt(const tensorrt_common::TrtCommonConfig & trt_config);
+
   void initPtr();
 
-  bool preprocess(const sensor_msgs::msg::PointCloud2 & msg, const tf2_ros::Buffer & tf_buffer);
+  bool preprocess(
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+    const tf2_ros::Buffer & tf_buffer);
 
   bool inference();
 
   bool postprocess(std::vector<Box3D> & det_boxes3d);
 
-  std::unique_ptr<NetworkTRT> network_trt_ptr_{nullptr};
+  std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
   std::unique_ptr<VoxelGenerator> vg_ptr_{nullptr};
-  std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{
-    nullptr};
+  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
   std::unique_ptr<PreprocessCuda> pre_ptr_{nullptr};
   std::unique_ptr<PostprocessCuda> post_ptr_{nullptr};
   cudaStream_t stream_{nullptr};

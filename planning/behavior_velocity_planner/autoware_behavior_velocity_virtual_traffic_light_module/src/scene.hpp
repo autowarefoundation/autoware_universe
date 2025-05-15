@@ -16,17 +16,23 @@
 #define SCENE_HPP_
 
 #include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/virtual_traffic_light.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info.hpp>
 #include <nlohmann/json.hpp>
 #include <rclcpp/clock.hpp>
 #include <rclcpp/logger.hpp>
 
+#include <tier4_v2x_msgs/msg/infrastructure_command_array.hpp>
+#include <tier4_v2x_msgs/msg/virtual_traffic_light_state_array.hpp>
+
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_routing/RoutingGraph.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -48,16 +54,16 @@ public:
     std::string instrument_type{};
     std::string instrument_id{};
     std::vector<tier4_v2x_msgs::msg::KeyValue> custom_tags{};
-    autoware::universe_utils::Point3d instrument_center{};
-    std::optional<autoware::universe_utils::LineString3d> stop_line{};
-    autoware::universe_utils::LineString3d start_line{};
-    std::vector<autoware::universe_utils::LineString3d> end_lines{};
+    autoware_utils::Point3d instrument_center{};
+    std::optional<autoware_utils::LineString3d> stop_line{};
+    autoware_utils::LineString3d start_line{};
+    std::vector<autoware_utils::LineString3d> end_lines{};
   };
 
   struct ModuleData
   {
     geometry_msgs::msg::Pose head_pose{};
-    tier4_planning_msgs::msg::PathWithLaneId path{};
+    autoware_internal_planning_msgs::msg::PathWithLaneId path{};
     std::optional<geometry_msgs::msg::Pose> stop_head_pose_at_stop_line;
     std::optional<geometry_msgs::msg::Pose> stop_head_pose_at_end_line;
   };
@@ -77,28 +83,37 @@ public:
     const int64_t module_id, const int64_t lane_id,
     const lanelet::autoware::VirtualTrafficLight & reg_elem, lanelet::ConstLanelet lane,
     const PlannerParam & planner_param, const rclcpp::Logger logger,
-    const rclcpp::Clock::SharedPtr clock);
+    const rclcpp::Clock::SharedPtr clock,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+      planning_factor_interface);
 
   bool modifyPathVelocity(PathWithLaneId * path) override;
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
 
+  std::optional<tier4_v2x_msgs::msg::InfrastructureCommand> getInfrastructureCommand() const;
+  void setInfrastructureCommand(
+    const std::optional<tier4_v2x_msgs::msg::InfrastructureCommand> & command);
+
+  void setVirtualTrafficLightStates(
+    const tier4_v2x_msgs::msg::VirtualTrafficLightStateArray::ConstSharedPtr
+      virtual_traffic_light_states);
+
 private:
   const int64_t lane_id_;
   const lanelet::autoware::VirtualTrafficLight & reg_elem_;
   const lanelet::ConstLanelet lane_;
   const PlannerParam planner_param_;
+  tier4_v2x_msgs::msg::VirtualTrafficLightStateArray::ConstSharedPtr virtual_traffic_light_states_;
   State state_{State::NONE};
   tier4_v2x_msgs::msg::InfrastructureCommand command_;
+  std::optional<tier4_v2x_msgs::msg::InfrastructureCommand> infrastructure_command_;
   MapData map_data_;
   ModuleData module_data_;
 
   void updateInfrastructureCommand();
-
-  void setVelocityFactor(
-    const geometry_msgs::msg::Pose & stop_pose,
-    autoware_adapi_v1_msgs::msg::VelocityFactor * velocity_factor);
 
   std::optional<size_t> getPathIndexOfFirstEndLine();
 
@@ -117,10 +132,10 @@ private:
   bool hasRightOfWay(const tier4_v2x_msgs::msg::VirtualTrafficLightState & state);
 
   void insertStopVelocityAtStopLine(
-    tier4_planning_msgs::msg::PathWithLaneId * path, const size_t end_line_idx);
+    autoware_internal_planning_msgs::msg::PathWithLaneId * path, const size_t end_line_idx);
 
   void insertStopVelocityAtEndLine(
-    tier4_planning_msgs::msg::PathWithLaneId * path, const size_t end_line_idx);
+    autoware_internal_planning_msgs::msg::PathWithLaneId * path, const size_t end_line_idx);
 };
 }  // namespace autoware::behavior_velocity_planner
 #endif  // SCENE_HPP_

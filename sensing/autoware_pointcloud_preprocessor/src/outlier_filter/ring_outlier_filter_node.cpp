@@ -31,8 +31,8 @@ RingOutlierFilterComponent::RingOutlierFilterComponent(const rclcpp::NodeOptions
 {
   // initialize debug tool
   {
-    using autoware::universe_utils::DebugPublisher;
-    using autoware::universe_utils::StopWatch;
+    using autoware_utils::DebugPublisher;
+    using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ = std::make_unique<DebugPublisher>(this, "ring_outlier_filter");
     {
@@ -41,7 +41,7 @@ RingOutlierFilterComponent::RingOutlierFilterComponent(const rclcpp::NodeOptions
       outlier_pointcloud_publisher_ =
         this->create_publisher<PointCloud2>("debug/ring_outlier_filter", 1, pub_options);
     }
-    visibility_pub_ = create_publisher<tier4_debug_msgs::msg::Float32Stamped>(
+    visibility_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
       "ring_outlier_filter/debug/visibility", rclcpp::SensorDataQoS());
     stop_watch_ptr_->tic("cyclic_time");
     stop_watch_ptr_->tic("processing_time");
@@ -51,7 +51,6 @@ RingOutlierFilterComponent::RingOutlierFilterComponent(const rclcpp::NodeOptions
   {
     distance_ratio_ = declare_parameter<double>("distance_ratio");
     object_length_threshold_ = declare_parameter<double>("object_length_threshold");
-    num_points_threshold_ = declare_parameter<int>("num_points_threshold");
     max_rings_num_ = static_cast<uint16_t>(declare_parameter<int64_t>("max_rings_num"));
     max_points_num_per_ring_ =
       static_cast<size_t>(declare_parameter<int64_t>("max_points_num_per_ring"));
@@ -150,9 +149,7 @@ void RingOutlierFilterComponent::faster_filter(
         continue;                               // Determined to be included in the same walk
       }
 
-      if (isCluster(
-            input, std::make_pair(indices[walk_first_idx], indices[walk_last_idx]),
-            walk_last_idx - walk_first_idx + 1)) {
+      if (isCluster(input, std::make_pair(indices[walk_first_idx], indices[walk_last_idx]))) {
         for (int i = walk_first_idx; i <= walk_last_idx; i++) {
           auto output_ptr = reinterpret_cast<OutputPointType *>(&output.data[output_size]);
           auto input_ptr = reinterpret_cast<const InputPointType *>(&input->data[indices[i]]);
@@ -205,9 +202,7 @@ void RingOutlierFilterComponent::faster_filter(
 
     if (walk_first_idx > walk_last_idx) continue;
 
-    if (isCluster(
-          input, std::make_pair(indices[walk_first_idx], indices[walk_last_idx]),
-          walk_last_idx - walk_first_idx + 1)) {
+    if (isCluster(input, std::make_pair(indices[walk_first_idx], indices[walk_last_idx]))) {
       for (int i = walk_first_idx; i <= walk_last_idx; i++) {
         auto output_ptr = reinterpret_cast<OutputPointType *>(&output.data[output_size]);
         auto input_ptr = reinterpret_cast<const InputPointType *>(&input->data[indices[i]]);
@@ -262,7 +257,7 @@ void RingOutlierFilterComponent::faster_filter(
     outlier.header = input->header;
     outlier_pointcloud_publisher_->publish(outlier);
 
-    tier4_debug_msgs::msg::Float32Stamped visibility_msg;
+    autoware_internal_debug_msgs::msg::Float32Stamped visibility_msg;
     visibility_msg.data = calculateVisibilityScore(outlier);
     visibility_msg.stamp = input->header.stamp;
     visibility_pub_->publish(visibility_msg);
@@ -272,9 +267,9 @@ void RingOutlierFilterComponent::faster_filter(
   if (debug_publisher_) {
     const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
     const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
-    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
-    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time_ms", processing_time_ms);
 
     auto pipeline_latency_ms =
@@ -282,7 +277,7 @@ void RingOutlierFilterComponent::faster_filter(
         std::chrono::nanoseconds((this->get_clock()->now() - input->header.stamp).nanoseconds()))
         .count();
 
-    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/pipeline_latency_ms", pipeline_latency_ms);
   }
 }
@@ -309,9 +304,6 @@ rcl_interfaces::msg::SetParametersResult RingOutlierFilterComponent::paramCallba
   if (get_param(p, "object_length_threshold", object_length_threshold_)) {
     RCLCPP_DEBUG(
       get_logger(), "Setting new object length threshold to: %f.", object_length_threshold_);
-  }
-  if (get_param(p, "num_points_threshold", num_points_threshold_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new num_points_threshold to: %d.", num_points_threshold_);
   }
   if (get_param(p, "publish_outlier_pointcloud", publish_outlier_pointcloud_)) {
     RCLCPP_DEBUG(

@@ -26,6 +26,11 @@ AutowarePathWithLaneIdDisplay::AutowarePathWithLaneIdDisplay()
 : property_lane_id_view_{"View LaneId", true, "", this},
   property_lane_id_scale_{"Scale", 0.1, "", &property_lane_id_view_}
 {
+  // glog for debug
+  if (!google::IsGoogleLoggingInitialized()) {
+    google::InitGoogleLogging("path_with_lane_id_display");
+    google::InstallFailureSignalHandler();
+  }
 }
 
 void AutowarePathWithLaneIdDisplay::preProcessMessageDetail()
@@ -55,7 +60,7 @@ AutowarePathWithLaneIdDisplay::~AutowarePathWithLaneIdDisplay()
 }
 
 void AutowarePathWithLaneIdDisplay::preVisualizePathFootprintDetail(
-  const tier4_planning_msgs::msg::PathWithLaneId::ConstSharedPtr msg_ptr)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId::ConstSharedPtr msg_ptr)
 {
   const size_t size = msg_ptr->points.size();
   // clear previous text
@@ -77,7 +82,8 @@ void AutowarePathWithLaneIdDisplay::preVisualizePathFootprintDetail(
 }
 
 void AutowarePathWithLaneIdDisplay::visualizePathFootprintDetail(
-  const tier4_planning_msgs::msg::PathWithLaneId::ConstSharedPtr msg_ptr, const size_t p_idx)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId::ConstSharedPtr msg_ptr,
+  const size_t p_idx)
 {
   const auto & point = msg_ptr->points.at(p_idx);
 

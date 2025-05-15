@@ -15,9 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from autoware_internal_debug_msgs.msg import Float32Stamped
 import rclpy
 from rclpy.node import Node
-from tier4_debug_msgs.msg import Float32Stamped
 
 MAX_ACCEL = 1.0  # [-]
 MIN_ACCEL = 0.0  # [-]

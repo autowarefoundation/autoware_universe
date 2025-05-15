@@ -24,11 +24,11 @@
 #include <autoware/trajectory_follower_base/control_horizon.hpp>
 
 #include "autoware_control_msgs/msg/lateral.hpp"
+#include "autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp"
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "autoware_planning_msgs/msg/trajectory_point.hpp"
 #include "autoware_vehicle_msgs/msg/steering_report.hpp"
 #include "geometry_msgs/msg/pose.hpp"
-#include "tier4_debug_msgs/msg/float32_multi_array_stamped.hpp"
 
 #ifdef ROS_DISTRO_GALACTIC
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
@@ -45,12 +45,12 @@ namespace autoware::motion::control::mpc_lateral_controller
 
 using autoware::motion::control::trajectory_follower::LateralHorizon;
 using autoware_control_msgs::msg::Lateral;
+using autoware_internal_debug_msgs::msg::Float32MultiArrayStamped;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_vehicle_msgs::msg::SteeringReport;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::PoseStamped;
-using tier4_debug_msgs::msg::Float32MultiArrayStamped;
 
 TrajectoryPoint makePoint(const double x, const double y, const float vx)
 {
@@ -269,7 +269,8 @@ TEST_F(MPCTest, OsqpCalculate)
   mpc->setVehicleModel(vehicle_model_ptr);
   ASSERT_TRUE(mpc->hasVehicleModel());
 
-  std::shared_ptr<QPSolverInterface> qpsolver_ptr = std::make_shared<QPSolverOSQP>(logger);
+  std::shared_ptr<QPSolverInterface> qpsolver_ptr =
+    std::make_shared<QPSolverOSQP>(logger, node.get_clock());
   mpc->setQPSolver(qpsolver_ptr);
   ASSERT_TRUE(mpc->hasQPSolver());
 
@@ -302,7 +303,8 @@ TEST_F(MPCTest, OsqpCalculateRightTurn)
   mpc->setVehicleModel(vehicle_model_ptr);
   ASSERT_TRUE(mpc->hasVehicleModel());
 
-  std::shared_ptr<QPSolverInterface> qpsolver_ptr = std::make_shared<QPSolverOSQP>(logger);
+  std::shared_ptr<QPSolverInterface> qpsolver_ptr =
+    std::make_shared<QPSolverOSQP>(logger, node.get_clock());
   mpc->setQPSolver(qpsolver_ptr);
   ASSERT_TRUE(mpc->hasQPSolver());
 

@@ -50,6 +50,9 @@ from .modules.carla_wrapper import SensorInterface
 class carla_ros2_interface(object):
     def __init__(self):
         self.sensor_interface = SensorInterface()
+        self.prev_timestamp = None
+        self.prev_steer_output = 0.0
+        self.tau = 0.2
         self.timestamp = None
         self.ego_actor = None
         self.physics_control = None
@@ -147,7 +150,7 @@ class carla_ros2_interface(object):
             elif sensor["type"] == "sensor.lidar.ray_cast":
                 if sensor["id"] in self.sensor_frequencies:
                     self.pub_lidar[sensor["id"]] = self.ros2_node.create_publisher(
-                        PointCloud2, f'/sensing/lidar/{sensor["id"]}/pointcloud', 10
+                        PointCloud2, f'/sensing/lidar/{sensor["id"]}/pointcloud_before_sync', 10
                     )
                 else:
                     self.ros2_node.get_logger().info(
@@ -382,6 +385,21 @@ class carla_ros2_interface(object):
 
         self.pub_imu.publish(imu_msg)
 
+    def first_order_steering(self, steer_input):
+        """First order steering model."""
+        steer_output = 0.0
+        if self.prev_timestamp is None:
+            self.prev_timestamp = self.timestamp
+
+        dt = self.timestamp - self.prev_timestamp
+        if dt > 0.0:
+            steer_output = self.prev_steer_output + (steer_input - self.prev_steer_output) * (
+                dt / (self.tau + dt)
+            )
+        self.prev_steer_output = steer_output
+        self.prev_timestamp = self.timestamp
+        return steer_output
+
     def control_callback(self, in_cmd):
         """Convert and publish CARLA Ego Vehicle Control to AUTOWARE."""
         out_cmd = carla.VehicleControl()
@@ -392,11 +410,7 @@ class carla_ros2_interface(object):
         max_steer_ratio = numpy.interp(
             abs(current_vel.x), [v.x for v in steer_curve], [v.y for v in steer_curve]
         )
-        out_cmd.steer = (
-            -in_cmd.actuation.steer_cmd
-            * max_steer_ratio
-            * math.radians(self.physics_control.wheels[0].max_steer_angle)
-        )
+        out_cmd.steer = self.first_order_steering(-in_cmd.actuation.steer_cmd) * max_steer_ratio
         out_cmd.brake = in_cmd.actuation.brake_cmd
         self.current_control = out_cmd
 

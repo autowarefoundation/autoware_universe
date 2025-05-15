@@ -16,9 +16,11 @@
 #define ROUTING_HPP_
 
 #include <autoware/adapi_specs/routing.hpp>
-#include <autoware/component_interface_specs/planning.hpp>
-#include <autoware/component_interface_specs/system.hpp>
+#include <autoware/component_interface_specs_universe/planning.hpp>
+#include <autoware/component_interface_specs_universe/system.hpp>
 #include <autoware/component_interface_utils/status.hpp>
+#include <autoware/motion_utils/vehicle/vehicle_state_checker.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 // This file should be included after messages.
@@ -33,9 +35,10 @@ public:
   explicit RoutingNode(const rclcpp::NodeOptions & options);
 
 private:
-  using OperationModeState = autoware::component_interface_specs::system::OperationModeState;
-  using State = autoware::component_interface_specs::planning::RouteState;
-  using Route = autoware::component_interface_specs::planning::LaneletRoute;
+  using OperationModeState =
+    autoware::component_interface_specs_universe::system::OperationModeState;
+  using State = autoware::component_interface_specs_universe::planning::RouteState;
+  using Route = autoware::component_interface_specs_universe::planning::LaneletRoute;
 
   rclcpp::CallbackGroup::SharedPtr group_cli_;
   Pub<autoware::adapi_specs::routing::RouteState> pub_state_;
@@ -45,17 +48,18 @@ private:
   Srv<autoware::adapi_specs::routing::ChangeRoutePoints> srv_change_route_points_;
   Srv<autoware::adapi_specs::routing::ChangeRoute> srv_change_route_;
   Srv<autoware::adapi_specs::routing::ClearRoute> srv_clear_route_;
-  Sub<autoware::component_interface_specs::planning::RouteState> sub_state_;
-  Sub<autoware::component_interface_specs::planning::LaneletRoute> sub_route_;
-  Cli<autoware::component_interface_specs::planning::SetWaypointRoute> cli_set_waypoint_route_;
-  Cli<autoware::component_interface_specs::planning::SetLaneletRoute> cli_set_lanelet_route_;
-  Cli<autoware::component_interface_specs::planning::ClearRoute> cli_clear_route_;
-  Cli<autoware::component_interface_specs::system::ChangeOperationMode> cli_operation_mode_;
-  Sub<autoware::component_interface_specs::system::OperationModeState> sub_operation_mode_;
-  bool is_autoware_control_;
-  bool is_auto_mode_;
-  State::Message state_;
+  Sub<autoware::component_interface_specs_universe::planning::RouteState> sub_state_;
+  Sub<autoware::component_interface_specs_universe::planning::LaneletRoute> sub_route_;
+  Cli<autoware::component_interface_specs_universe::planning::SetWaypointRoute>
+    cli_set_waypoint_route_;
+  Cli<autoware::component_interface_specs_universe::planning::SetLaneletRoute>
+    cli_set_lanelet_route_;
+  Cli<autoware::component_interface_specs_universe::planning::ClearRoute> cli_clear_route_;
+  Cli<autoware::component_interface_specs_universe::system::ChangeOperationMode>
+    cli_operation_mode_;
+  Sub<autoware::component_interface_specs_universe::system::OperationModeState> sub_operation_mode_;
 
+  void diagnose_state(diagnostic_updater::DiagnosticStatusWrapper & stat);
   void change_stop_mode();
   void on_operation_mode(const OperationModeState::Message::ConstSharedPtr msg);
   void on_state(const State::Message::ConstSharedPtr msg);
@@ -75,6 +79,15 @@ private:
   void on_change_route(
     const autoware::adapi_specs::routing::SetRoute::Service::Request::SharedPtr req,
     const autoware::adapi_specs::routing::SetRoute::Service::Response::SharedPtr res);
+
+  bool is_autoware_control_;
+  bool is_auto_mode_;
+  State::Message state_;
+  diagnostic_updater::Updater diagnostics_;
+
+  // Stop check for route clear.
+  autoware::motion_utils::VehicleStopChecker vehicle_stop_checker_;
+  double stop_check_duration_;
 };
 
 }  // namespace autoware::default_adapi

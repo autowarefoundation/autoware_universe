@@ -17,40 +17,38 @@
 
 #include "autoware/behavior_path_goal_planner_module/pull_over_planner/pull_over_planner_base.hpp"
 
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <memory>
 #include <vector>
 
 namespace autoware::behavior_path_planner
 {
-using autoware::lane_departure_checker::LaneDepartureChecker;
+using autoware::boundary_departure_checker::BoundaryDepartureChecker;
 
 class BezierPullOver : public PullOverPlannerBase
 {
 public:
-  BezierPullOver(
-    rclcpp::Node & node, const GoalPlannerParameters & parameters,
-    const LaneDepartureChecker & lane_departure_checker);
+  BezierPullOver(rclcpp::Node & node, const GoalPlannerParameters & parameters);
   PullOverPlannerType getPlannerType() const override { return PullOverPlannerType::BEZIER; }
   std::optional<PullOverPath> plan(
     const GoalCandidate & modified_goal_pose, const size_t id,
     const std::shared_ptr<const PlannerData> planner_data,
-    const BehaviorModuleOutput & previous_module_output) override;
+    const BehaviorModuleOutput & upstream_module_output) override;
   std::vector<PullOverPath> plans(
     const GoalCandidate & modified_goal_pose, const size_t id,
     const std::shared_ptr<const PlannerData> planner_data,
-    const BehaviorModuleOutput & previous_module_output);
+    const BehaviorModuleOutput & upstream_module_output);
 
 private:
-  const LaneDepartureChecker lane_departure_checker_;
+  const BoundaryDepartureChecker boundary_departure_checker_;
 
   const bool left_side_parking_;
 
   std::vector<PullOverPath> generateBezierPath(
     const GoalCandidate & goal_candidate, const size_t id,
     const std::shared_ptr<const PlannerData> planner_data,
-    const BehaviorModuleOutput & previous_module_output, const lanelet::ConstLanelets & road_lanes,
+    const BehaviorModuleOutput & upstream_module_output, const lanelet::ConstLanelets & road_lanes,
     const lanelet::ConstLanelets & shoulder_lanes, const double lateral_jerk) const;
 
   PathWithLaneId generateReferencePath(

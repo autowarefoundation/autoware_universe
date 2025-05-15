@@ -184,7 +184,7 @@ void ThirdPersonViewController::handleMouseEvent(rviz_common::ViewportMouseEvent
 
 void ThirdPersonViewController::mimic(rviz_common::ViewController * source_view)
 {
-  FramePositionTrackingViewController::mimic(source_view);
+  FramePositionTrackingViewController::mimic(source_view);  // NOLINT
 
   target_frame_property_->setValue(TARGET_FRAME_START);
   getNewTransform();

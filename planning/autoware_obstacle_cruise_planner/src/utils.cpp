@@ -15,7 +15,7 @@
 #include "autoware/obstacle_cruise_planner/utils.hpp"
 
 #include "autoware/object_recognition_utils/predicted_path_utils.hpp"
-#include "autoware/universe_utils/ros/marker_helper.hpp"
+#include "autoware_utils/ros/marker_helper.hpp"
 
 #include <limits>
 #include <string>
@@ -64,10 +64,10 @@ visualization_msgs::msg::Marker getObjectMarker(
 {
   const auto current_time = rclcpp::Clock().now();
 
-  auto marker = autoware::universe_utils::createDefaultMarker(
+  auto marker = autoware_utils::create_default_marker(
     "map", current_time, ns, idx, visualization_msgs::msg::Marker::SPHERE,
-    autoware::universe_utils::createMarkerScale(2.0, 2.0, 2.0),
-    autoware::universe_utils::createMarkerColor(r, g, b, 0.8));
+    autoware_utils::create_marker_scale(2.0, 2.0, 2.0),
+    autoware_utils::create_marker_color(r, g, b, 0.8));
 
   marker.pose = obj_pose;
 
@@ -116,27 +116,6 @@ std::vector<StopObstacle> getClosestStopObstacles(const std::vector<StopObstacle
     }
   }
   return candidates;
-}
-
-VelocityFactorArray makeVelocityFactorArray(
-  const rclcpp::Time & time, const std::string & behavior,
-  const std::optional<geometry_msgs::msg::Pose> pose)
-{
-  VelocityFactorArray velocity_factor_array;
-  velocity_factor_array.header.frame_id = "map";
-  velocity_factor_array.header.stamp = time;
-
-  if (pose) {
-    using distance_type = VelocityFactor::_distance_type;
-    VelocityFactor velocity_factor;
-    velocity_factor.behavior = behavior;
-    velocity_factor.pose = pose.value();
-    velocity_factor.distance = std::numeric_limits<distance_type>::quiet_NaN();
-    velocity_factor.status = VelocityFactor::UNKNOWN;
-    velocity_factor.detail = std::string();
-    velocity_factor_array.factors.push_back(velocity_factor);
-  }
-  return velocity_factor_array;
 }
 
 }  // namespace obstacle_cruise_utils

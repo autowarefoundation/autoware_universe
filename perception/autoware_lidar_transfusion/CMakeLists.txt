@@ -84,13 +84,22 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
 
   ament_auto_add_library(${PROJECT_NAME}_lib SHARED
     lib/detection_class_remapper.cpp
-    lib/network/network_trt.cpp
     lib/postprocess/non_maximum_suppression.cpp
     lib/preprocess/voxel_generator.cpp
     lib/preprocess/pointcloud_densification.cpp
     lib/ros_utils.cpp
     lib/transfusion_trt.cpp
   )
+
+  # cSpell:ignore gencode
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_87,code=sm_87")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
+  # NOTE(knzo25): PTX support for newer GPUs until we can compile directly
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
+  # TODO(knzo25): enable when the driver supports it
+  # list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
 
   cuda_add_library(${PROJECT_NAME}_cuda_lib SHARED
     lib/postprocess/circle_nms_kernel.cu
@@ -155,7 +164,7 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     )
 
     # Temporary disabled, tracked by:
-    # https://github.com/autowarefoundation/autoware.universe/issues/7724
+    # https://github.com/autowarefoundation/autoware_universe/issues/7724
     # ament_auto_add_gtest(test_voxel_generator
     #   test/test_voxel_generator.cpp
     # )

@@ -16,7 +16,7 @@
 
 #include <autoware/object_recognition_utils/geometry.hpp>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <vector>
 
@@ -46,7 +46,7 @@ bool NonMaximumSuppression::isTargetPairObject(
     return false;
   }
 
-  const auto sqr_dist_2d = autoware::universe_utils::calcSquaredDistance2d(
+  const auto sqr_dist_2d = autoware_utils::calc_squared_distance2d(
     autoware::object_recognition_utils::getPose(object1),
     autoware::object_recognition_utils::getPose(object2));
   return sqr_dist_2d <= search_distance_2d_sq_;

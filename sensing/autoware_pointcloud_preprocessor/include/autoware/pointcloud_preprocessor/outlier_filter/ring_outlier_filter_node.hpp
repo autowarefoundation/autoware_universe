@@ -53,7 +53,7 @@ protected:
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output,
     const TransformInfo & transform_info) override;
 
-  rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr visibility_pub_;
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr visibility_pub_;
 
 private:
   /** \brief publisher of excluded pointcloud for debug reason. **/
@@ -61,7 +61,6 @@ private:
 
   double distance_ratio_;
   double object_length_threshold_;
-  int num_points_threshold_;
   uint16_t max_rings_num_;
   size_t max_points_num_per_ring_;
   bool publish_outlier_pointcloud_;
@@ -81,11 +80,8 @@ private:
   /** \brief Parameter service callback */
   rcl_interfaces::msg::SetParametersResult paramCallback(const std::vector<rclcpp::Parameter> & p);
 
-  bool isCluster(
-    const PointCloud2ConstPtr & input, std::pair<int, int> data_idx_both_ends, int walk_size)
+  bool isCluster(const PointCloud2ConstPtr & input, std::pair<int, int> data_idx_both_ends)
   {
-    if (walk_size > num_points_threshold_) return true;
-
     auto first_point =
       reinterpret_cast<const InputPointType *>(&input->data[data_idx_both_ends.first]);
     auto last_point =

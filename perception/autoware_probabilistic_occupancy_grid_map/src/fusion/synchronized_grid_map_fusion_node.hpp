@@ -1,4 +1,4 @@
-// Copyright 2023 Tier IV, Inc.
+// Copyright 2024 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,9 +20,9 @@
 #include "autoware/probabilistic_occupancy_grid_map/updater/log_odds_bayes_filter_updater.hpp"
 #include "autoware/probabilistic_occupancy_grid_map/updater/ogm_updater_interface.hpp"
 
-#include <autoware/universe_utils/ros/debug_publisher.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <builtin_interfaces/msg/time.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -69,7 +69,7 @@ private:
 
   OccupancyGridMapFixedBlindSpot OccupancyGridMsgToGridMap(
     const nav_msgs::msg::OccupancyGrid & occupancy_grid_map);
-  OccupancyGridMapFixedBlindSpot SingleFrameOccupancyFusion(
+  const OccupancyGridMapFixedBlindSpot & SingleFrameOccupancyFusion(
     std::vector<OccupancyGridMapFixedBlindSpot> & occupancy_grid_maps,
     const builtin_interfaces::msg::Time latest_stamp, const std::vector<double> & weights);
 
@@ -82,8 +82,8 @@ private:
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr fused_map_pub_;
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr single_frame_pub_;
   std::vector<rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr> grid_map_subs_;
-  std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{};
-  std::unique_ptr<autoware::universe_utils::DebugPublisher> debug_publisher_ptr_{};
+  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{};
+  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{};
 
   // Topics manager
   std::size_t num_input_topics_{1};
@@ -103,6 +103,7 @@ private:
 
   // cache for fusion
   std::mutex mutex_;
+  std::unique_ptr<OccupancyGridMapFixedBlindSpot> fused_map_;
   std::shared_ptr<OccupancyGridMapUpdaterInterface>
     occupancy_grid_map_updater_ptr_;  // contains fused grid map
   std::map<std::string, nav_msgs::msg::OccupancyGrid::ConstSharedPtr>
@@ -121,9 +122,9 @@ private:
   fusion_policy::FusionMethod fusion_method_;
 
   // time keeper
-  rclcpp::Publisher<autoware::universe_utils::ProcessingTimeDetail>::SharedPtr
+  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
     detailed_processing_time_publisher_;
-  std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_;
+  std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 };
 
 }  // namespace autoware::occupancy_grid_map

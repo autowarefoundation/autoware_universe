@@ -17,8 +17,8 @@
 #include "types.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <boost/geometry/algorithms/buffer.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
@@ -47,45 +47,8 @@ bool is_road_lanelet(const lanelet::ConstLanelet & lanelet)
 }
 }  // namespace
 
-lanelet::ConstLanelets consecutive_lanelets(
-  const route_handler::RouteHandler & route_handler, const lanelet::ConstLanelet & lanelet)
-{
-  lanelet::ConstLanelets consecutives = route_handler.getRoutingGraphPtr()->following(lanelet);
-  const auto previous = route_handler.getRoutingGraphPtr()->previous(lanelet);
-  consecutives.insert(consecutives.end(), previous.begin(), previous.end());
-  return consecutives;
-}
-
-lanelet::ConstLanelets get_missing_lane_change_lanelets(
-  const lanelet::ConstLanelets & trajectory_lanelets,
-  const route_handler::RouteHandler & route_handler)
-{
-  lanelet::ConstLanelets missing_lane_change_lanelets;
-  const auto & routing_graph = *route_handler.getRoutingGraphPtr();
-  lanelet::ConstLanelets adjacents;
-  lanelet::ConstLanelets consecutives;
-  for (const auto & ll : trajectory_lanelets) {
-    const auto consecutives_of_ll = consecutive_lanelets(route_handler, ll);
-    std::copy_if(
-      consecutives_of_ll.begin(), consecutives_of_ll.end(), std::back_inserter(consecutives),
-      [&](const auto & l) { return !contains_lanelet(consecutives, l.id()); });
-    const auto adjacents_of_ll = routing_graph.besides(ll);
-    std::copy_if(
-      adjacents_of_ll.begin(), adjacents_of_ll.end(), std::back_inserter(adjacents),
-      [&](const auto & l) { return !contains_lanelet(adjacents, l.id()); });
-  }
-  std::copy_if(
-    adjacents.begin(), adjacents.end(), std::back_inserter(missing_lane_change_lanelets),
-    [&](const auto & l) {
-      return !contains_lanelet(missing_lane_change_lanelets, l.id()) &&
-             !contains_lanelet(trajectory_lanelets, l.id()) &&
-             contains_lanelet(consecutives, l.id());
-    });
-  return missing_lane_change_lanelets;
-}
-
 lanelet::ConstLanelets calculate_trajectory_lanelets(
-  const universe_utils::LineString2d & trajectory_ls,
+  const autoware_utils::LineString2d & trajectory_ls,
   const route_handler::RouteHandler & route_handler)
 {
   const auto lanelet_map_ptr = route_handler.getLaneletMapPtr();
@@ -99,10 +62,6 @@ lanelet::ConstLanelets calculate_trajectory_lanelets(
       trajectory_lanelets.push_back(ll);
     }
   }
-  const auto missing_lanelets =
-    get_missing_lane_change_lanelets(trajectory_lanelets, route_handler);
-  trajectory_lanelets.insert(
-    trajectory_lanelets.end(), missing_lanelets.begin(), missing_lanelets.end());
   return trajectory_lanelets;
 }
 
@@ -123,7 +82,7 @@ lanelet::ConstLanelets calculate_ignored_lanelets(
 
 lanelet::ConstLanelets calculate_out_lanelets(
   const lanelet::LaneletLayer & lanelet_layer,
-  const universe_utils::MultiPolygon2d & trajectory_footprints,
+  const autoware_utils::MultiPolygon2d & trajectory_footprints,
   const lanelet::ConstLanelets & trajectory_lanelets,
   const lanelet::ConstLanelets & ignored_lanelets)
 {
@@ -150,7 +109,7 @@ OutLaneletRtree calculate_out_lanelet_rtree(const lanelet::ConstLanelets & lanel
   nodes.reserve(lanelets.size());
   for (auto i = 0UL; i < lanelets.size(); ++i) {
     nodes.emplace_back(
-      boost::geometry::return_envelope<universe_utils::Box2d>(
+      boost::geometry::return_envelope<autoware_utils::Box2d>(
         lanelets[i].polygon2d().basicPolygon()),
       i);
   }
@@ -161,12 +120,12 @@ void calculate_out_lanelet_rtree(
   EgoData & ego_data, const route_handler::RouteHandler & route_handler,
   const PlannerParam & params)
 {
-  universe_utils::LineString2d trajectory_ls;
+  autoware_utils::LineString2d trajectory_ls;
   for (const auto & p : ego_data.trajectory_points) {
     trajectory_ls.emplace_back(p.pose.position.x, p.pose.position.y);
   }
   // add a point beyond the last trajectory point to account for the ego front offset
-  const auto pose_beyond = universe_utils::calcOffsetPose(
+  const auto pose_beyond = autoware_utils::calc_offset_pose(
     ego_data.trajectory_points.back().pose, params.front_offset, 0.0, 0.0, 0.0);
   trajectory_ls.emplace_back(pose_beyond.position.x, pose_beyond.position.y);
   const auto trajectory_lanelets = calculate_trajectory_lanelets(trajectory_ls, route_handler);
@@ -178,7 +137,7 @@ void calculate_out_lanelet_rtree(
     params.right_offset + params.extra_right_offset,
     params.rear_offset + params.extra_rear_offset,
   });
-  universe_utils::MultiPolygon2d trajectory_footprints;
+  autoware_utils::MultiPolygon2d trajectory_footprints;
   const boost::geometry::strategy::buffer::distance_symmetric<double> distance_strategy(
     max_ego_footprint_offset);
   const boost::geometry::strategy::buffer::join_miter join_strategy;

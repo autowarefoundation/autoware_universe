@@ -15,10 +15,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from autoware_internal_debug_msgs.msg import Float32Stamped
 from autoware_vehicle_msgs.msg import GearCommand
 import rclpy
 from rclpy.node import Node
-from tier4_debug_msgs.msg import Float32Stamped
 from tier4_vehicle_msgs.msg import ActuationCommandStamped
 
 

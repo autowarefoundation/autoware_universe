@@ -14,7 +14,6 @@
 
 #include "autoware/external_velocity_limit_selector/external_velocity_limit_selector_node.hpp"
 
-#include <cstddef>
 #include <memory>
 #include <ostream>
 #include <string>

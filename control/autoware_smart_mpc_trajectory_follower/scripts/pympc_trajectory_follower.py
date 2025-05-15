@@ -21,6 +21,9 @@ import time
 
 from autoware_adapi_v1_msgs.msg import OperationModeState
 from autoware_control_msgs.msg import Control
+from autoware_internal_debug_msgs.msg import BoolStamped
+from autoware_internal_debug_msgs.msg import Float32MultiArrayStamped
+from autoware_internal_debug_msgs.msg import Float32Stamped
 from autoware_planning_msgs.msg import Trajectory
 from autoware_planning_msgs.msg import TrajectoryPoint
 from autoware_smart_mpc_trajectory_follower.scripts import drive_controller
@@ -43,9 +46,6 @@ import scipy.interpolate
 from scipy.spatial.transform import Rotation as R
 from scipy.spatial.transform import Slerp
 from std_msgs.msg import String
-from tier4_debug_msgs.msg import BoolStamped
-from tier4_debug_msgs.msg import Float32MultiArrayStamped
-from tier4_debug_msgs.msg import Float32Stamped
 from visualization_msgs.msg import Marker
 from visualization_msgs.msg import MarkerArray
 

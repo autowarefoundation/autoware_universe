@@ -38,16 +38,16 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 
 ### Output
 
-| Name                                                      | Type                                    | Description                                                                                      |
-| :-------------------------------------------------------- | :-------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `~/output/blockage_diag/debug/blockage_mask_image`        | `sensor_msgs::msg::Image`               | The mask image of detected blockage                                                              |
-| `~/output/blockage_diag/debug/ground_blockage_ratio`      | `tier4_debug_msgs::msg::Float32Stamped` | The area ratio of blockage region in ground region                                               |
-| `~/output/blockage_diag/debug/sky_blockage_ratio`         | `tier4_debug_msgs::msg::Float32Stamped` | The area ratio of blockage region in sky region                                                  |
-| `~/output/blockage_diag/debug/lidar_depth_map`            | `sensor_msgs::msg::Image`               | The depth map image of input point cloud                                                         |
-| `~/output/blockage_diag/debug/single_frame_dust_mask`     | `sensor_msgs::msg::Image`               | The mask image of detected dusty area in latest single frame                                     |
-| `~/output/blockage_diag/debug/multi_frame_dust_mask`      | `sensor_msgs::msg::Image`               | The mask image of continuous detected dusty area                                                 |
-| `~/output/blockage_diag/debug/blockage_dust_merged_image` | `sensor_msgs::msg::Image`               | The merged image of blockage detection(red) and multi frame dusty area detection(yellow) results |
-| `~/output/blockage_diag/debug/ground_dust_ratio`          | `tier4_debug_msgs::msg::Float32Stamped` | The ratio of dusty area divided by area where ray usually returns from the ground.               |
+| Name                                                      | Type                                                | Description                                                                                      |
+| :-------------------------------------------------------- | :-------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `~/output/blockage_diag/debug/blockage_mask_image`        | `sensor_msgs::msg::Image`                           | The mask image of detected blockage                                                              |
+| `~/output/blockage_diag/debug/ground_blockage_ratio`      | `autoware_internal_debug_msgs::msg::Float32Stamped` | The area ratio of blockage region in ground region                                               |
+| `~/output/blockage_diag/debug/sky_blockage_ratio`         | `autoware_internal_debug_msgs::msg::Float32Stamped` | The area ratio of blockage region in sky region                                                  |
+| `~/output/blockage_diag/debug/lidar_depth_map`            | `sensor_msgs::msg::Image`                           | The depth map image of input point cloud                                                         |
+| `~/output/blockage_diag/debug/single_frame_dust_mask`     | `sensor_msgs::msg::Image`                           | The mask image of detected dusty area in latest single frame                                     |
+| `~/output/blockage_diag/debug/multi_frame_dust_mask`      | `sensor_msgs::msg::Image`                           | The mask image of continuous detected dusty area                                                 |
+| `~/output/blockage_diag/debug/blockage_dust_merged_image` | `sensor_msgs::msg::Image`                           | The merged image of blockage detection(red) and multi frame dusty area detection(yellow) results |
+| `~/output/blockage_diag/debug/ground_dust_ratio`          | `autoware_internal_debug_msgs::msg::Float32Stamped` | The ratio of dusty area divided by area where ray usually returns from the ground.               |
 
 ## Parameters
 

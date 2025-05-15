@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <autoware/costmap_generator/utils/object_map_utils.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <gtest/gtest.h>
 

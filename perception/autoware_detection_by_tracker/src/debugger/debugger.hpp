@@ -15,8 +15,8 @@
 #ifndef DEBUGGER__DEBUGGER_HPP_
 #define DEBUGGER__DEBUGGER_HPP_
 
-#include "autoware/universe_utils/ros/debug_publisher.hpp"
-#include "autoware/universe_utils/system/stop_watch.hpp"
+#include "autoware_utils/ros/debug_publisher.hpp"
+#include "autoware_utils/system/stop_watch.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -58,9 +58,8 @@ public:
     divided_objects_pub_ = node->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
       "debug/divided_objects", 1);
     processing_time_publisher_ =
-      std::make_unique<autoware::universe_utils::DebugPublisher>(node, "detection_by_tracker");
-    stop_watch_ptr_ =
-      std::make_unique<autoware::universe_utils::StopWatch<std::chrono::milliseconds>>();
+      std::make_unique<autoware_utils::DebugPublisher>(node, "detection_by_tracker");
+    stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
     this->startStopWatch();
   }
 
@@ -89,9 +88,9 @@ public:
   void startMeasureProcessingTime() { stop_watch_ptr_->tic("processing_time"); }
   void publishProcessingTime()
   {
-    processing_time_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", stop_watch_ptr_->toc("cyclic_time", true));
-    processing_time_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time_ms", stop_watch_ptr_->toc("processing_time", true));
   }
 
@@ -101,8 +100,8 @@ private:
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr merged_objects_pub_;
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr divided_objects_pub_;
   // debug publisher
-  std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
-  std::unique_ptr<autoware::universe_utils::DebugPublisher> processing_time_publisher_;
+  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
+  std::unique_ptr<autoware_utils::DebugPublisher> processing_time_publisher_;
 
   static autoware_perception_msgs::msg::DetectedObjects removeFeature(
     const tier4_perception_msgs::msg::DetectedObjectsWithFeature & input)

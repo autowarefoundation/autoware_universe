@@ -14,7 +14,8 @@
 
 #include "../src/object_filtering.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware/motion_velocity_planner_common/planner_data.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <autoware_perception_msgs/msg/detail/object_classification__struct.hpp>
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
@@ -25,6 +26,8 @@
 
 #include <gtest/gtest.h>
 #include <lanelet2_core/geometry/LineString.h>
+
+#include <vector>
 
 TEST(TestObjectFiltering, isVehicle)
 {
@@ -157,18 +160,18 @@ TEST(TestObjectFiltering, isUnavoidable)
   ego_pose.position.y = 0.0;
   // ego and object heading in the same direction -> not unavoidable
   for (auto ego_yaw = -0.4; ego_yaw <= 0.4; ego_yaw += 0.1) {
-    ego_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(ego_yaw);
+    ego_pose.orientation = autoware_utils::create_quaternion_from_yaw(ego_yaw);
     for (auto obj_yaw = -0.4; obj_yaw <= 0.4; obj_yaw += 0.1) {
       object.kinematics.initial_pose_with_covariance.pose.orientation =
-        autoware::universe_utils::createQuaternionFromYaw(obj_yaw);
+        autoware_utils::create_quaternion_from_yaw(obj_yaw);
       EXPECT_FALSE(is_unavoidable(object, ego_pose, ego_earliest_stop_pose, params));
     }
   }
   // ego and object heading in opposite direction -> unavoidable
   for (auto ego_yaw = -0.4; ego_yaw <= 0.4; ego_yaw += 0.1) {
-    ego_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(ego_yaw);
+    ego_pose.orientation = autoware_utils::create_quaternion_from_yaw(ego_yaw);
     object.kinematics.initial_pose_with_covariance.pose.orientation =
-      autoware::universe_utils::createQuaternionFromYaw(ego_yaw + M_PI);
+      autoware_utils::create_quaternion_from_yaw(ego_yaw + M_PI);
     EXPECT_TRUE(is_unavoidable(object, ego_pose, ego_earliest_stop_pose, params));
   }
 
@@ -176,16 +179,16 @@ TEST(TestObjectFiltering, isUnavoidable)
   object.kinematics.initial_pose_with_covariance.pose.position.x = 5.0;
   object.kinematics.initial_pose_with_covariance.pose.position.y = 5.0;
   for (auto ego_yaw = -0.4; ego_yaw <= 0.4; ego_yaw += 0.1) {
-    ego_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(ego_yaw);
+    ego_pose.orientation = autoware_utils::create_quaternion_from_yaw(ego_yaw);
     object.kinematics.initial_pose_with_covariance.pose.orientation =
-      autoware::universe_utils::createQuaternionFromYaw(ego_yaw + M_PI);
+      autoware_utils::create_quaternion_from_yaw(ego_yaw + M_PI);
     EXPECT_FALSE(is_unavoidable(object, ego_pose, ego_earliest_stop_pose, params));
   }
 
   // perpendicular case
   object.kinematics.initial_pose_with_covariance.pose.orientation =
-    autoware::universe_utils::createQuaternionFromYaw(-M_PI_2);
-  ego_pose.orientation = autoware::universe_utils::createQuaternionFromYaw(0.0);
+    autoware_utils::create_quaternion_from_yaw(-M_PI_2);
+  ego_pose.orientation = autoware_utils::create_quaternion_from_yaw(0.0);
   EXPECT_FALSE(is_unavoidable(object, ego_pose, ego_earliest_stop_pose, params));
   // with earliest stop pose away from the object path -> no collision
   ego_earliest_stop_pose.emplace();
@@ -202,8 +205,7 @@ TEST(TestObjectFiltering, isUnavoidable)
 TEST(TestObjectFiltering, filterPredictedObjects)
 {
   using autoware::motion_velocity_planner::dynamic_obstacle_stop::filter_predicted_objects;
-  autoware_perception_msgs::msg::PredictedObjects objects;
-  autoware_perception_msgs::msg::PredictedObject object;
+  std::vector<std::shared_ptr<autoware::motion_velocity_planner::PlannerData::Object>> objects;
   autoware::motion_velocity_planner::dynamic_obstacle_stop::EgoData ego_data;
   autoware::motion_velocity_planner::dynamic_obstacle_stop::PlannerParam params;
   double hysteresis{};

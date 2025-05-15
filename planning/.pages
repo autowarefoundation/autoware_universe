@@ -39,7 +39,7 @@ nav:
       - 'About Freespace Planner': planning/autoware_freespace_planner
       - 'Algorithm': planning/autoware_freespace_planning_algorithms
       - 'RRT*': planning/autoware_freespace_planning_algorithms/rrtstar
-  - 'Mission Planner': planning/autoware_mission_planner
+  - 'Mission Planner': planning/autoware_mission_planner_universe
   - 'Motion Planning':
     - 'Path Optimizer':
       - 'About Path Optimizer': planning/autoware_path_optimizer
@@ -61,8 +61,11 @@ nav:
       - 'About Surround Obstacle Checker': planning/autoware_surround_obstacle_checker
       - 'About Surround Obstacle Checker (Japanese)': planning/autoware_surround_obstacle_checker/surround_obstacle_checker-design.ja
     - 'Motion Velocity Planner':
-      - 'About Motion Velocity Planner': planning/motion_velocity_planner/autoware_motion_velocity_planner_node/
+      - 'About Motion Velocity Planner': https://autowarefoundation.github.io/autoware_core/main/planning/motion_velocity_planner/autoware_motion_velocity_planner/
       - 'Available Modules':
+        - 'Obstacle Stop': https://autowarefoundation.github.io/autoware_core/main/planning/motion_velocity_planner/autoware_motion_velocity_obstacle_stop_module/
+        - 'Obstacle Slow Down': planning/motion_velocity_planner/autoware_motion_velocity_obstacle_slow_down_module/
+        - 'Obstacle Cruise': planning/motion_velocity_planner/autoware_motion_velocity_obstacle_cruise_module/
         - 'Dynamic Obstacle Stop': planning/motion_velocity_planner/autoware_motion_velocity_dynamic_obstacle_stop_module/
         - 'Out of Lane': planning/motion_velocity_planner/autoware_motion_velocity_out_of_lane_module/
         - 'Obstacle Velocity Limiter': planning/motion_velocity_planner/autoware_motion_velocity_obstacle_velocity_limiter_module/

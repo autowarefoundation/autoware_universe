@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_traffic_light_arbiter parameters",
+  "type": "object",
+  "definitions": {
+    "traffic_light_arbiter": {
+      "type": "object",
+      "properties": {
+        "external_delay_tolerance": {
+          "type": "number",
+          "description": "The duration in seconds an external message is considered valid for merging in comparison with current time.",
+          "default": 5.0
+        },
+        "external_time_tolerance": {
+          "type": "number",
+          "description": "The duration in seconds an external message is considered valid for merging.",
+          "default": 5.0
+        },
+        "perception_time_tolerance": {
+          "type": "number",
+          "description": "The duration in seconds a perception message is considered valid for merging.",
+          "default": 1.0
+        },
+        "external_priority": {
+          "type": "boolean",
+          "description": "Whether or not external signals take precedence over perception-based ones. If false, the merging uses confidence as a criteria.",
+          "default": false
+        },
+        "enable_signal_matching": {
+          "type": "boolean",
+          "description": "Decide whether to validate the match between perception signals and external signals. If set to true, verify that the colors match and only publish them if they are identical.",
+          "default": false
+        }
+      },
+      "required": [
+        "external_delay_tolerance",
+        "external_time_tolerance",
+        "perception_time_tolerance",
+        "external_priority",
+        "enable_signal_matching"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/traffic_light_arbiter"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

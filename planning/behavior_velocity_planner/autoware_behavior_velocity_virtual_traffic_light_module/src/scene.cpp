@@ -20,6 +20,7 @@
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -38,15 +39,16 @@ VirtualTrafficLightModule::VirtualTrafficLightModule(
   const int64_t module_id, const int64_t lane_id,
   const lanelet::autoware::VirtualTrafficLight & reg_elem, lanelet::ConstLanelet lane,
   const PlannerParam & planner_param, const rclcpp::Logger logger,
-  const rclcpp::Clock::SharedPtr clock)
-: SceneModuleInterface(module_id, logger, clock),
+  const rclcpp::Clock::SharedPtr clock,
+  const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
+  const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+    planning_factor_interface)
+: SceneModuleInterface(module_id, logger, clock, time_keeper, planning_factor_interface),
   lane_id_(lane_id),
   reg_elem_(reg_elem),
   lane_(lane),
   planner_param_(planner_param)
 {
-  velocity_factor_.init(PlanningBehavior::VIRTUAL_TRAFFIC_LIGHT);
-
   // Get map data
   const auto instrument = reg_elem_.getVirtualTrafficLight();
   const auto instrument_bottom_line = toAutowarePoints(instrument);
@@ -218,8 +220,12 @@ std::optional<size_t> VirtualTrafficLightModule::getPathIndexOfFirstEndLine()
     end_line_p2.x = end_line.back().x();
     end_line_p2.y = end_line.back().y();
 
-    const auto collision =
-      arc_lane_utils::findCollisionSegment(module_data_.path, end_line_p1, end_line_p2);
+    const auto connected_lane_ids =
+      planning_utils::collectConnectedLaneIds(lane_id_, planner_data_->route_handler_);
+
+    const auto collision = arc_lane_utils::findCollisionSegment(
+      module_data_.path, end_line_p1, end_line_p2, connected_lane_ids);
+
     if (!collision) {
       continue;
     }
@@ -333,12 +339,12 @@ bool VirtualTrafficLightModule::isNearAnyEndLine(const size_t end_line_idx)
 std::optional<tier4_v2x_msgs::msg::VirtualTrafficLightState>
 VirtualTrafficLightModule::findCorrespondingState()
 {
-  // No message
-  if (!planner_data_->virtual_traffic_light_states) {
+  // Note: This variable is set by virtual traffic light's manager.
+  if (!virtual_traffic_light_states_) {
     return {};
   }
 
-  for (const auto & state : planner_data_->virtual_traffic_light_states->states) {
+  for (const auto & state : virtual_traffic_light_states_->states) {
     if (state.id == map_data_.instrument_id) {
       return state;
     }
@@ -366,7 +372,7 @@ bool VirtualTrafficLightModule::hasRightOfWay(
 }
 
 void VirtualTrafficLightModule::insertStopVelocityAtStopLine(
-  tier4_planning_msgs::msg::PathWithLaneId * path, const size_t end_line_idx)
+  autoware_internal_planning_msgs::msg::PathWithLaneId * path, const size_t end_line_idx)
 {
   const auto collision =
     findLastCollisionBeforeEndLine(path->points, *map_data_.stop_line, end_line_idx);
@@ -417,9 +423,11 @@ void VirtualTrafficLightModule::insertStopVelocityAtStopLine(
   }
 
   // Set StopReason
-  velocity_factor_.set(
-    path->points, planner_data_->current_odometry->pose, stop_pose, VelocityFactor::UNKNOWN,
-    command_.type);
+  planning_factor_interface_->add(
+    path->points, planner_data_->current_odometry->pose, stop_pose,
+    autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+    autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
+    0.0 /*shift distance*/, "");
 
   // Set data for visualization
   module_data_.stop_head_pose_at_stop_line =
@@ -427,7 +435,7 @@ void VirtualTrafficLightModule::insertStopVelocityAtStopLine(
 }
 
 void VirtualTrafficLightModule::insertStopVelocityAtEndLine(
-  tier4_planning_msgs::msg::PathWithLaneId * path, const size_t end_line_idx)
+  autoware_internal_planning_msgs::msg::PathWithLaneId * path, const size_t end_line_idx)
 {
   const auto collision =
     findLastCollisionBeforeEndLine(path->points, map_data_.end_lines, end_line_idx);
@@ -450,11 +458,33 @@ void VirtualTrafficLightModule::insertStopVelocityAtEndLine(
   }
 
   // Set StopReason
-  velocity_factor_.set(
-    path->points, planner_data_->current_odometry->pose, stop_pose, VelocityFactor::UNKNOWN);
+  planning_factor_interface_->add(
+    path->points, planner_data_->current_odometry->pose, stop_pose,
+    autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+    autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
+    0.0 /*shift distance*/, "");
 
   // Set data for visualization
   module_data_.stop_head_pose_at_end_line =
     calcHeadPose(stop_pose, planner_data_->vehicle_info_.max_longitudinal_offset_m);
+}
+
+std::optional<tier4_v2x_msgs::msg::InfrastructureCommand>
+VirtualTrafficLightModule::getInfrastructureCommand() const
+{
+  return infrastructure_command_;
+}
+
+void VirtualTrafficLightModule::setInfrastructureCommand(
+  const std::optional<tier4_v2x_msgs::msg::InfrastructureCommand> & command)
+{
+  infrastructure_command_ = command;
+}
+
+void VirtualTrafficLightModule::setVirtualTrafficLightStates(
+  const tier4_v2x_msgs::msg::VirtualTrafficLightStateArray::ConstSharedPtr
+    virtual_traffic_light_states)
+{
+  virtual_traffic_light_states_ = virtual_traffic_light_states;
 }
 }  // namespace autoware::behavior_velocity_planner

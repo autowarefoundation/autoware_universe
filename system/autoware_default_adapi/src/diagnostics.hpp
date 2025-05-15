@@ -15,7 +15,7 @@
 #ifndef DIAGNOSTICS_HPP_
 #define DIAGNOSTICS_HPP_
 
-#include "diagnostic_graph_utils/subscription.hpp"
+#include "autoware/diagnostic_graph_utils/subscription.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -31,14 +31,14 @@ public:
   explicit DiagnosticsNode(const rclcpp::NodeOptions & options);
 
 private:
-  using DiagGraph = diagnostic_graph_utils::DiagGraph;
-  using DiagUnit = diagnostic_graph_utils::DiagUnit;
-  using DiagLink = diagnostic_graph_utils::DiagLink;
+  using DiagGraph = autoware::diagnostic_graph_utils::DiagGraph;
+  using DiagUnit = autoware::diagnostic_graph_utils::DiagUnit;
+  using DiagLink = autoware::diagnostic_graph_utils::DiagLink;
   void on_create(DiagGraph::ConstSharedPtr graph);
   void on_update(DiagGraph::ConstSharedPtr graph);
   rclcpp::Publisher<autoware_adapi_v1_msgs::msg::DiagGraphStruct>::SharedPtr pub_struct_;
   rclcpp::Publisher<autoware_adapi_v1_msgs::msg::DiagGraphStatus>::SharedPtr pub_status_;
-  diagnostic_graph_utils::DiagGraphSubscription sub_graph_;
+  autoware::diagnostic_graph_utils::DiagGraphSubscription sub_graph_;
 };
 
 }  // namespace autoware::default_adapi

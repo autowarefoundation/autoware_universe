@@ -16,12 +16,16 @@
 #define PLANNING_HPP_
 
 #include <autoware/adapi_specs/planning.hpp>
-#include <autoware/component_interface_specs/localization.hpp>
-#include <autoware/component_interface_specs/planning.hpp>
+#include <autoware/component_interface_specs_universe/localization.hpp>
+#include <autoware/component_interface_specs_universe/planning.hpp>
 #include <autoware/motion_utils/vehicle/vehicle_state_checker.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_adapi_v1_msgs/msg/planning_behavior.hpp>
+#include <autoware_internal_planning_msgs/msg/planning_factor_array.hpp>
+
 #include <memory>
+#include <string>
 #include <vector>
 
 // This file should be included after messages.
@@ -30,27 +34,33 @@
 namespace autoware::default_adapi
 {
 
+using autoware_adapi_v1_msgs::msg::PlanningBehavior;
+using autoware_adapi_v1_msgs::msg::SteeringFactor;
+using autoware_adapi_v1_msgs::msg::SteeringFactorArray;
+using autoware_adapi_v1_msgs::msg::VelocityFactor;
+using autoware_adapi_v1_msgs::msg::VelocityFactorArray;
+using autoware_internal_planning_msgs::msg::PlanningFactor;
+using autoware_internal_planning_msgs::msg::PlanningFactorArray;
+
 class PlanningNode : public rclcpp::Node
 {
 public:
   explicit PlanningNode(const rclcpp::NodeOptions & options);
 
 private:
-  using VelocityFactorArray = autoware_adapi_v1_msgs::msg::VelocityFactorArray;
-  using SteeringFactorArray = autoware_adapi_v1_msgs::msg::SteeringFactorArray;
   Pub<autoware::adapi_specs::planning::VelocityFactors> pub_velocity_factors_;
   Pub<autoware::adapi_specs::planning::SteeringFactors> pub_steering_factors_;
-  Sub<autoware::component_interface_specs::planning::Trajectory> sub_trajectory_;
-  Sub<autoware::component_interface_specs::localization::KinematicState> sub_kinematic_state_;
-  std::vector<rclcpp::Subscription<VelocityFactorArray>::SharedPtr> sub_velocity_factors_;
-  std::vector<rclcpp::Subscription<SteeringFactorArray>::SharedPtr> sub_steering_factors_;
-  std::vector<VelocityFactorArray::ConstSharedPtr> velocity_factors_;
-  std::vector<SteeringFactorArray::ConstSharedPtr> steering_factors_;
+  Sub<autoware::component_interface_specs_universe::planning::Trajectory> sub_trajectory_;
+  Sub<autoware::component_interface_specs_universe::localization::KinematicState>
+    sub_kinematic_state_;
+  std::vector<rclcpp::Subscription<PlanningFactorArray>::SharedPtr> sub_factors_;
+  std::vector<PlanningFactorArray::ConstSharedPtr> factors_;
   rclcpp::TimerBase::SharedPtr timer_;
 
   using VehicleStopChecker = autoware::motion_utils::VehicleStopCheckerBase;
-  using Trajectory = autoware::component_interface_specs::planning::Trajectory::Message;
-  using KinematicState = autoware::component_interface_specs::localization::KinematicState::Message;
+  using Trajectory = autoware::component_interface_specs_universe::planning::Trajectory::Message;
+  using KinematicState =
+    autoware::component_interface_specs_universe::localization::KinematicState::Message;
   void on_trajectory(const Trajectory::ConstSharedPtr msg);
   void on_kinematic_state(const KinematicState::ConstSharedPtr msg);
   void on_timer();

@@ -52,7 +52,13 @@
 #ifndef AUTOWARE__PROBABILISTIC_OCCUPANCY_GRID_MAP__COSTMAP_2D__OCCUPANCY_GRID_MAP_BASE_HPP_
 #define AUTOWARE__PROBABILISTIC_OCCUPANCY_GRID_MAP__COSTMAP_2D__OCCUPANCY_GRID_MAP_BASE_HPP_
 
-#include <autoware/universe_utils/math/unit_conversion.hpp>
+#ifdef USE_CUDA
+#include "autoware/probabilistic_occupancy_grid_map/utils/cuda_pointcloud.hpp"
+
+#include <autoware/cuda_utils/cuda_unique_ptr.hpp>
+#endif
+
+#include <autoware_utils/math/unit_conversion.hpp>
 #include <nav2_costmap_2d/costmap_2d.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
@@ -72,18 +78,19 @@ class OccupancyGridMapInterface : public nav2_costmap_2d::Costmap2D
 {
 public:
   OccupancyGridMapInterface(
-    const unsigned int cells_size_x, const unsigned int cells_size_y, const float resolution);
+    const bool use_cuda, const unsigned int cells_size_x, const unsigned int cells_size_y,
+    const float resolution);
 
+#ifdef USE_CUDA
   virtual void updateWithPointCloud(
-    const PointCloud2 & raw_pointcloud, const PointCloud2 & obstacle_pointcloud,
-    const Pose & robot_pose, const Pose & scan_origin) = 0;
+    [[maybe_unused]] const CudaPointCloud2 & raw_pointcloud,
+    [[maybe_unused]] const CudaPointCloud2 & obstacle_pointcloud,
+    [[maybe_unused]] const Pose & robot_pose, [[maybe_unused]] const Pose & scan_origin) {};
+#endif
 
   void updateOrigin(double new_origin_x, double new_origin_y) override;
-  void raytrace(
-    const double source_x, const double source_y, const double target_x, const double target_y,
-    const unsigned char cost);
-  void setCellValue(const double wx, const double wy, const unsigned char cost);
-  using nav2_costmap_2d::Costmap2D::resetMaps;
+
+  void resetMaps() override;
 
   virtual void initRosParam(rclcpp::Node & node) = 0;
 
@@ -92,47 +99,41 @@ public:
   double min_height_;
   double max_height_;
 
-  void setFieldOffsets(const PointCloud2 & input_raw, const PointCloud2 & input_obstacle);
-
-  int x_offset_raw_;
-  int y_offset_raw_;
-  int z_offset_raw_;
-  int x_offset_obstacle_;
-  int y_offset_obstacle_;
-  int z_offset_obstacle_;
-  bool offset_initialized_;
-
-  const double min_angle_ = autoware::universe_utils::deg2rad(-180.0);
-  const double max_angle_ = autoware::universe_utils::deg2rad(180.0);
-  const double angle_increment_inv_ = 1.0 / autoware::universe_utils::deg2rad(0.1);
+  const double min_angle_ = autoware_utils::deg2rad(-180.0);
+  const double max_angle_ = autoware_utils::deg2rad(180.0);
+  const double angle_increment_inv_ = 1.0 / autoware_utils::deg2rad(0.1);
 
   Eigen::Matrix4f mat_map_, mat_scan_;
 
-  bool isPointValid(const Eigen::Vector4f & pt) const
-  {
-    // Apply height filter and exclude invalid points
-    return min_height_ < pt[2] && pt[2] < max_height_ && std::isfinite(pt[0]) &&
-           std::isfinite(pt[1]) && std::isfinite(pt[2]);
-  }
-  // Transform pt to (pt_map, pt_scan), then calculate angle_bin_index and range
-  void transformPointAndCalculate(
-    const Eigen::Vector4f & pt, Eigen::Vector4f & pt_map, int & angle_bin_index,
-    double & range) const
-  {
-    pt_map = mat_map_ * pt;
-    Eigen::Vector4f pt_scan(mat_scan_ * pt_map);
-    const double angle = atan2(pt_scan[1], pt_scan[0]);
-    angle_bin_index = (angle - min_angle_) * angle_increment_inv_;
-    range = std::sqrt(pt_scan[1] * pt_scan[1] + pt_scan[0] * pt_scan[0]);
-  }
+  bool isCudaEnabled() const;
 
-private:
-  bool worldToMap(double wx, double wy, unsigned int & mx, unsigned int & my) const;
+#ifdef USE_CUDA
+  void setCudaStream(const cudaStream_t & stream);
 
+  const autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> & getDeviceCostmap() const;
+
+  void copyDeviceCostmapToHost() const;
+#endif
+
+protected:
   rclcpp::Logger logger_{rclcpp::get_logger("pointcloud_based_occupancy_grid_map")};
   rclcpp::Clock clock_{RCL_ROS_TIME};
 
   double resolution_inv_;
+  bool use_cuda_;
+  bool first_iteration_{true};
+
+#ifdef USE_CUDA
+  cudaStream_t stream_;
+
+  autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> device_costmap_;
+  autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> device_costmap_aux_;
+
+  autoware::cuda_utils::CudaUniquePtr<Eigen::Matrix3f> device_rotation_map_;
+  autoware::cuda_utils::CudaUniquePtr<Eigen::Vector3f> device_translation_map_;
+  autoware::cuda_utils::CudaUniquePtr<Eigen::Matrix3f> device_rotation_scan_;
+  autoware::cuda_utils::CudaUniquePtr<Eigen::Vector3f> device_translation_scan_;
+#endif
 };
 
 }  // namespace costmap_2d

@@ -16,13 +16,13 @@
 #define AUTOWARE__BEHAVIOR_PATH_START_PLANNER_MODULE__FREESPACE_PULL_OUT_HPP_
 
 #include "autoware/behavior_path_start_planner_module/pull_out_planner_base.hpp"
-#include "autoware/universe_utils/system/time_keeper.hpp"
+#include "autoware_utils/system/time_keeper.hpp"
 
 #include <autoware/freespace_planning_algorithms/abstract_algorithm.hpp>
 #include <autoware/freespace_planning_algorithms/astar_search.hpp>
 #include <autoware/freespace_planning_algorithms/rrtstar.hpp>
 
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <memory>
 
@@ -35,15 +35,16 @@ using autoware::freespace_planning_algorithms::RRTStar;
 class FreespacePullOut : public PullOutPlannerBase
 {
 public:
-  FreespacePullOut(
-    rclcpp::Node & node, const StartPlannerParameters & parameters,
-    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
-    std::shared_ptr<universe_utils::TimeKeeper> time_keeper);
+  FreespacePullOut(rclcpp::Node & node, const StartPlannerParameters & parameters);
 
   PlannerType getPlannerType() const override { return PlannerType::FREESPACE; }
 
   std::optional<PullOutPath> plan(
-    const Pose & start_pose, const Pose & end_pose, PlannerDebugData & planner_debug_data) override;
+    const Pose & start_pose, const Pose & end_pose,
+    const std::shared_ptr<const PlannerData> & planner_data,
+    PlannerDebugData & planner_debug_data) override;
+
+  friend class TestFreespacePullOut;
 
 protected:
   std::unique_ptr<AbstractPlanningAlgorithm> planner_;

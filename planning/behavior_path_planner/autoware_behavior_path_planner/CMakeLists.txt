@@ -10,6 +10,7 @@ find_package(magic_enum CONFIG REQUIRED)
 ament_auto_add_library(${PROJECT_NAME}_lib SHARED
   src/planner_manager.cpp
   src/behavior_path_planner_node.cpp
+  src/test_utils.cpp
 )
 
 target_include_directories(${PROJECT_NAME}_lib SYSTEM PUBLIC

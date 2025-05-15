@@ -18,7 +18,7 @@
 #include "data.hpp"
 #include "grid.hpp"
 
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <pcl/impl/point_types.hpp>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -168,7 +168,7 @@ public:
   }
   ~GridGroundFilter() = default;
 
-  void setTimeKeeper(std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_ptr)
+  void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr)
   {
     time_keeper_ = std::move(time_keeper_ptr);
 
@@ -196,7 +196,7 @@ private:
   std::unique_ptr<Grid> grid_ptr_;
 
   // debug information
-  std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_;
+  std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 
   bool recursiveSearch(const int check_idx, const int search_cnt, std::vector<int> & idx) const;
   bool recursiveSearch(

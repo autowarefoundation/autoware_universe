@@ -16,6 +16,7 @@
 
 #include "autoware/behavior_path_goal_planner_module/util.hpp"
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/static_drivable_area.hpp"
+#include "autoware/behavior_path_planner_common/utils/path_utils.hpp"
 
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
@@ -26,11 +27,15 @@
 namespace autoware::behavior_path_planner
 {
 GeometricPullOver::GeometricPullOver(
-  rclcpp::Node & node, const GoalPlannerParameters & parameters,
-  const LaneDepartureChecker & lane_departure_checker, const bool is_forward)
+  rclcpp::Node & node, const GoalPlannerParameters & parameters, const bool is_forward)
 : PullOverPlannerBase{node, parameters},
   parallel_parking_parameters_{parameters.parallel_parking_parameters},
-  lane_departure_checker_{lane_departure_checker},
+  boundary_departure_checker_{[&]() {
+    auto boundary_departure_checker_params = boundary_departure_checker::Param{};
+    boundary_departure_checker_params.footprint_extra_margin =
+      parameters.lane_departure_check_expansion_margin;
+    return BoundaryDepartureChecker{boundary_departure_checker_params, vehicle_info_};
+  }()},
   is_forward_{is_forward},
   left_side_parking_{parameters.parking_policy == ParkingPolicy::LEFT_SIDE}
 {
@@ -40,7 +45,7 @@ GeometricPullOver::GeometricPullOver(
 std::optional<PullOverPath> GeometricPullOver::plan(
   const GoalCandidate & modified_goal_pose, const size_t id,
   const std::shared_ptr<const PlannerData> planner_data,
-  [[maybe_unused]] const BehaviorModuleOutput & previous_module_output)
+  [[maybe_unused]] const BehaviorModuleOutput & upstream_module_output)
 {
   const auto & route_handler = planner_data->route_handler;
 
@@ -57,13 +62,12 @@ std::optional<PullOverPath> GeometricPullOver::plan(
   }
 
   const auto & p = parallel_parking_parameters_;
-  const double max_steer_angle =
-    is_forward_ ? p.forward_parking_max_steer_angle : p.backward_parking_max_steer_angle;
+  const double max_steer_angle = vehicle_info_.max_steer_angle_rad * p.max_steer_angle_margin_scale;
   planner_.setTurningRadius(planner_data->parameters, max_steer_angle);
   planner_.setPlannerData(planner_data);
 
-  const bool found_valid_path =
-    planner_.planPullOver(goal_pose, road_lanes, pull_over_lanes, is_forward_, left_side_parking_);
+  const bool found_valid_path = planner_.planPullOver(
+    goal_pose, road_lanes, pull_over_lanes, max_steer_angle, is_forward_, left_side_parking_);
   if (!found_valid_path) {
     return {};
   }
@@ -73,7 +77,12 @@ std::optional<PullOverPath> GeometricPullOver::plan(
   const auto arc_path = planner_.getArcPath();
 
   // check lane departure with road and shoulder lanes
-  if (lane_departure_checker_.checkPathWillLeaveLane({departure_check_lane}, arc_path)) return {};
+  // To improve the accuracy of lane departure detection, make the sampling interval finer
+  // todo: Implement lane departure detection that does not depend on the footprint
+  const auto resampled_arc_path =
+    utils::resamplePathWithSpline(arc_path, parameters_.center_line_path_interval / 2);
+  if (boundary_departure_checker_.checkPathWillLeaveLane({departure_check_lane}, arc_path))
+    return {};
 
   auto pull_over_path_opt = PullOverPath::create(
     getPlannerType(), id, planner_.getPaths(), planner_.getStartPose(), modified_goal_pose,

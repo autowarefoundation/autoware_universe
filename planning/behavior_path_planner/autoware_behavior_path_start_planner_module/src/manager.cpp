@@ -14,7 +14,7 @@
 
 #include "autoware/behavior_path_start_planner_module/manager.hpp"
 
-#include "autoware/universe_utils/ros/update_param.hpp"
+#include "autoware_utils/ros/update_param.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -46,149 +46,152 @@ void StartPlannerModuleManager::init(rclcpp::Node * node)
 void StartPlannerModuleManager::updateModuleParams(
   [[maybe_unused]] const std::vector<rclcpp::Parameter> & parameters)
 {
-  using autoware::universe_utils::updateParam;
+  using autoware_utils::update_param;
 
   auto & p = parameters_;
 
   {
     const std::string ns = "start_planner.";
-    updateParam<double>(parameters, ns + "th_arrived_distance", p->th_arrived_distance);
-    updateParam<double>(parameters, ns + "th_stopped_velocity", p->th_stopped_velocity);
-    updateParam<double>(parameters, ns + "th_stopped_time", p->th_stopped_time);
-    updateParam<double>(parameters, ns + "prepare_time_before_start", p->prepare_time_before_start);
-    updateParam<double>(
+    update_param<double>(parameters, ns + "th_arrived_distance", p->th_arrived_distance);
+    update_param<double>(parameters, ns + "th_stopped_velocity", p->th_stopped_velocity);
+    update_param<double>(parameters, ns + "th_stopped_time", p->th_stopped_time);
+    update_param<double>(
+      parameters, ns + "prepare_time_before_start", p->prepare_time_before_start);
+    update_param<double>(
       parameters, ns + "th_distance_to_middle_of_the_road", p->th_distance_to_middle_of_the_road);
-    updateParam<bool>(parameters, ns + "skip_rear_vehicle_check", p->skip_rear_vehicle_check);
-    updateParam<double>(
+    update_param<bool>(parameters, ns + "skip_rear_vehicle_check", p->skip_rear_vehicle_check);
+    update_param<double>(
       parameters, ns + "extra_width_margin_for_rear_obstacle",
       p->extra_width_margin_for_rear_obstacle);
-    updateParam<std::vector<double>>(
+    update_param<std::vector<double>>(
       parameters, ns + "collision_check_margins", p->collision_check_margins);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "collision_check_margin_from_front_object",
       p->collision_check_margin_from_front_object);
-    updateParam<double>(parameters, ns + "th_moving_object_velocity", p->th_moving_object_velocity);
+    update_param<double>(
+      parameters, ns + "th_moving_object_velocity", p->th_moving_object_velocity);
     const std::string obj_types_ns = ns + "object_types_to_check_for_path_generation.";
     {
-      updateParam<bool>(
+      update_param<bool>(
         parameters, obj_types_ns + "check_car",
         p->object_types_to_check_for_path_generation.check_car);
-      updateParam<bool>(
+      update_param<bool>(
         parameters, obj_types_ns + "check_truck",
         p->object_types_to_check_for_path_generation.check_truck);
-      updateParam<bool>(
+      update_param<bool>(
         parameters, obj_types_ns + "check_bus",
         p->object_types_to_check_for_path_generation.check_bus);
-      updateParam<bool>(
+      update_param<bool>(
         parameters, obj_types_ns + "check_trailer",
         p->object_types_to_check_for_path_generation.check_trailer);
-      updateParam<bool>(
+      update_param<bool>(
         parameters, obj_types_ns + "check_unknown",
         p->object_types_to_check_for_path_generation.check_unknown);
-      updateParam<bool>(
+      update_param<bool>(
         parameters, obj_types_ns + "check_bicycle",
         p->object_types_to_check_for_path_generation.check_bicycle);
-      updateParam<bool>(
+      update_param<bool>(
         parameters, obj_types_ns + "check_motorcycle",
         p->object_types_to_check_for_path_generation.check_motorcycle);
-      updateParam<bool>(
+      update_param<bool>(
         parameters, obj_types_ns + "check_pedestrian",
         p->object_types_to_check_for_path_generation.check_pedestrian);
     }
-    updateParam<double>(parameters, ns + "center_line_path_interval", p->center_line_path_interval);
-    updateParam<bool>(parameters, ns + "enable_shift_pull_out", p->enable_shift_pull_out);
-    updateParam<double>(
+    update_param<double>(
+      parameters, ns + "center_line_path_interval", p->center_line_path_interval);
+    update_param<bool>(parameters, ns + "enable_shift_pull_out", p->enable_shift_pull_out);
+    update_param<double>(
       parameters, ns + "shift_collision_check_distance_from_end",
       p->shift_collision_check_distance_from_end);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "minimum_shift_pull_out_distance", p->minimum_shift_pull_out_distance);
-    updateParam<int>(
+    update_param<int>(
       parameters, ns + "lateral_acceleration_sampling_num", p->lateral_acceleration_sampling_num);
-    updateParam<double>(parameters, ns + "lateral_jerk", p->lateral_jerk);
-    updateParam<double>(parameters, ns + "maximum_lateral_acc", p->maximum_lateral_acc);
-    updateParam<double>(parameters, ns + "minimum_lateral_acc", p->minimum_lateral_acc);
-    updateParam<double>(parameters, ns + "maximum_curvature", p->maximum_curvature);
-    updateParam<double>(
+    update_param<double>(parameters, ns + "lateral_jerk", p->lateral_jerk);
+    update_param<double>(parameters, ns + "maximum_lateral_acc", p->maximum_lateral_acc);
+    update_param<double>(parameters, ns + "minimum_lateral_acc", p->minimum_lateral_acc);
+    update_param<double>(parameters, ns + "maximum_curvature", p->maximum_curvature);
+    update_param<double>(
       parameters, ns + "end_pose_curvature_threshold", p->end_pose_curvature_threshold);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "maximum_longitudinal_deviation", p->maximum_longitudinal_deviation);
-    updateParam<bool>(parameters, ns + "enable_geometric_pull_out", p->enable_geometric_pull_out);
-    updateParam<bool>(parameters, ns + "divide_pull_out_path", p->divide_pull_out_path);
-    updateParam<double>(
+    update_param<bool>(parameters, ns + "enable_geometric_pull_out", p->enable_geometric_pull_out);
+    update_param<bool>(parameters, ns + "divide_pull_out_path", p->divide_pull_out_path);
+    update_param<double>(
       parameters, ns + "arc_path_interval",
       p->parallel_parking_parameters.pull_out_arc_path_interval);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "lane_departure_margin",
       p->parallel_parking_parameters.pull_out_lane_departure_margin);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "lane_departure_check_expansion_margin",
       p->lane_departure_check_expansion_margin);
-    updateParam<double>(
-      parameters, ns + "pull_out_max_steer_angle",
-      p->parallel_parking_parameters.pull_out_max_steer_angle);
-    updateParam<bool>(parameters, ns + "enable_back", p->enable_back);
-    updateParam<double>(parameters, ns + "backward_velocity", p->backward_velocity);
-    updateParam<double>(
+    update_param<double>(
+      parameters, ns + "geometric_pull_out_max_steer_angle_margin_scale",
+      p->parallel_parking_parameters.geometric_pull_out_max_steer_angle_margin_scale);
+    update_param<bool>(parameters, ns + "enable_back", p->enable_back);
+    update_param<double>(parameters, ns + "backward_velocity", p->backward_velocity);
+    update_param<double>(
       parameters, ns + "geometric_pull_out_velocity",
       p->parallel_parking_parameters.pull_out_velocity);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "geometric_collision_check_distance_from_end",
       p->geometric_collision_check_distance_from_end);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, ns + "check_shift_path_lane_departure", p->check_shift_path_lane_departure);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, ns + "allow_check_shift_path_lane_departure_override",
       p->allow_check_shift_path_lane_departure_override);
-    updateParam<std::string>(parameters, ns + "search_priority", p->search_priority);
-    updateParam<double>(parameters, ns + "max_back_distance", p->max_back_distance);
-    updateParam<double>(
+    update_param<std::string>(parameters, ns + "search_priority", p->search_priority);
+    update_param<double>(parameters, ns + "max_back_distance", p->max_back_distance);
+    update_param<double>(
       parameters, ns + "backward_search_resolution", p->backward_search_resolution);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "backward_path_update_duration", p->backward_path_update_duration);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "ignore_distance_from_lane_end", p->ignore_distance_from_lane_end);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "stop_condition.maximum_deceleration_for_stop",
       p->maximum_deceleration_for_stop);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "stop_condition.maximum_jerk_for_stop", p->maximum_jerk_for_stop);
   }
   {
     const std::string ns = "start_planner.freespace_planner.";
 
-    updateParam<bool>(parameters, ns + "enable_freespace_planner", p->enable_freespace_planner);
-    updateParam<std::string>(
+    update_param<bool>(parameters, ns + "enable_freespace_planner", p->enable_freespace_planner);
+    update_param<std::string>(
       parameters, ns + "freespace_planner_algorithm", p->freespace_planner_algorithm);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "end_pose_search_start_distance", p->end_pose_search_start_distance);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "end_pose_search_end_distance", p->end_pose_search_end_distance);
-    updateParam<double>(parameters, ns + "end_pose_search_interval", p->end_pose_search_interval);
-    updateParam<double>(parameters, ns + "velocity", p->freespace_planner_velocity);
-    updateParam<double>(parameters, ns + "vehicle_shape_margin", p->vehicle_shape_margin);
-    updateParam<double>(
+    update_param<double>(parameters, ns + "end_pose_search_interval", p->end_pose_search_interval);
+    update_param<double>(parameters, ns + "velocity", p->freespace_planner_velocity);
+    update_param<double>(parameters, ns + "vehicle_shape_margin", p->vehicle_shape_margin);
+    update_param<double>(
       parameters, ns + "time_limit", p->freespace_planner_common_parameters.time_limit);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "max_turning_ratio",
       p->freespace_planner_common_parameters.max_turning_ratio);
-    updateParam<int>(
+    update_param<int>(
       parameters, ns + "turning_steps", p->freespace_planner_common_parameters.turning_steps);
   }
   {
     const std::string ns = "start_planner.freespace_planner.search_configs.";
 
-    updateParam<int>(
+    update_param<int>(
       parameters, ns + "theta_size", p->freespace_planner_common_parameters.theta_size);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "angle_goal_range", p->freespace_planner_common_parameters.angle_goal_range);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "curve_weight", p->freespace_planner_common_parameters.curve_weight);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "reverse_weight", p->freespace_planner_common_parameters.reverse_weight);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "lateral_goal_range",
       p->freespace_planner_common_parameters.lateral_goal_range);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "longitudinal_goal_range",
       p->freespace_planner_common_parameters.longitudinal_goal_range);
   }
@@ -196,7 +199,7 @@ void StartPlannerModuleManager::updateModuleParams(
   {
     const std::string ns = "start_planner.freespace_planner.costmap_configs.";
 
-    updateParam<int>(
+    update_param<int>(
       parameters, ns + "obstacle_threshold",
       p->freespace_planner_common_parameters.obstacle_threshold);
   }
@@ -204,205 +207,206 @@ void StartPlannerModuleManager::updateModuleParams(
   {
     const std::string ns = "start_planner.freespace_planner.astar.";
 
-    updateParam<std::string>(parameters, ns + "search_method", p->astar_parameters.search_method);
-    updateParam<bool>(parameters, ns + "use_back", p->astar_parameters.use_back);
-    updateParam<bool>(
+    update_param<std::string>(parameters, ns + "search_method", p->astar_parameters.search_method);
+    update_param<bool>(parameters, ns + "use_back", p->astar_parameters.use_back);
+    update_param<bool>(
       parameters, ns + "only_behind_solutions", p->astar_parameters.only_behind_solutions);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "distance_heuristic_weight", p->astar_parameters.distance_heuristic_weight);
   }
 
   {
     const std::string ns = "start_planner.freespace_planner.rrtstar.";
 
-    updateParam<bool>(parameters, ns + "enable_update", p->rrt_star_parameters.enable_update);
-    updateParam<bool>(
+    update_param<bool>(parameters, ns + "enable_update", p->rrt_star_parameters.enable_update);
+    update_param<bool>(
       parameters, ns + "use_informed_sampling", p->rrt_star_parameters.use_informed_sampling);
-    updateParam<double>(
+    update_param<double>(
       parameters, ns + "max_planning_time", p->rrt_star_parameters.max_planning_time);
-    updateParam<double>(parameters, ns + "neighbor_radius", p->rrt_star_parameters.neighbor_radius);
-    updateParam<double>(parameters, ns + "margin", p->rrt_star_parameters.margin);
+    update_param<double>(
+      parameters, ns + "neighbor_radius", p->rrt_star_parameters.neighbor_radius);
+    update_param<double>(parameters, ns + "margin", p->rrt_star_parameters.margin);
   }
 
   const std::string base_ns = "start_planner.path_safety_check.";
   const std::string ego_path_ns = base_ns + "ego_predicted_path.";
 
   {
-    updateParam<double>(
+    update_param<double>(
       parameters, ego_path_ns + "min_velocity", p->ego_predicted_path_params.min_velocity);
-    updateParam<double>(
+    update_param<double>(
       parameters, ego_path_ns + "min_acceleration", p->ego_predicted_path_params.acceleration);
-    updateParam<double>(
+    update_param<double>(
       parameters, ego_path_ns + "time_horizon_for_front_object",
       p->ego_predicted_path_params.time_horizon_for_front_object);
-    updateParam<double>(
+    update_param<double>(
       parameters, ego_path_ns + "time_horizon_for_rear_object",
       p->ego_predicted_path_params.time_horizon_for_rear_object);
-    updateParam<double>(
+    update_param<double>(
       parameters, ego_path_ns + "time_resolution", p->ego_predicted_path_params.time_resolution);
-    updateParam<double>(
+    update_param<double>(
       parameters, ego_path_ns + "delay_until_departure",
       p->ego_predicted_path_params.delay_until_departure);
   }
 
   const std::string obj_filter_ns = base_ns + "target_filtering.";
   {
-    updateParam<double>(
+    update_param<double>(
       parameters, obj_filter_ns + "safety_check_time_horizon",
       p->objects_filtering_params.safety_check_time_horizon);
-    updateParam<double>(
+    update_param<double>(
       parameters, obj_filter_ns + "safety_check_time_resolution",
       p->objects_filtering_params.safety_check_time_resolution);
-    updateParam<double>(
+    update_param<double>(
       parameters, obj_filter_ns + "object_check_forward_distance",
       p->objects_filtering_params.object_check_forward_distance);
-    updateParam<double>(
+    update_param<double>(
       parameters, obj_filter_ns + "object_check_backward_distance",
       p->objects_filtering_params.object_check_backward_distance);
-    updateParam<double>(
+    update_param<double>(
       parameters, obj_filter_ns + "ignore_object_velocity_threshold",
       p->objects_filtering_params.ignore_object_velocity_threshold);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, obj_filter_ns + "include_opposite_lane",
       p->objects_filtering_params.include_opposite_lane);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, obj_filter_ns + "invert_opposite_lane",
       p->objects_filtering_params.invert_opposite_lane);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, obj_filter_ns + "check_all_predicted_path",
       p->objects_filtering_params.check_all_predicted_path);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, obj_filter_ns + "use_all_predicted_path",
       p->objects_filtering_params.use_all_predicted_path);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, obj_filter_ns + "use_predicted_path_outside_lanelet",
       p->objects_filtering_params.use_predicted_path_outside_lanelet);
   }
 
   {
     const std::string obj_types_ns = obj_filter_ns + "object_types_to_check.";
-    updateParam<bool>(
+    update_param<bool>(
       parameters, obj_types_ns + "check_car",
       p->objects_filtering_params.object_types_to_check.check_car);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, obj_types_ns + "check_truck",
       p->objects_filtering_params.object_types_to_check.check_truck);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, obj_types_ns + "check_bus",
       p->objects_filtering_params.object_types_to_check.check_bus);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, obj_types_ns + "check_trailer",
       p->objects_filtering_params.object_types_to_check.check_trailer);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, obj_types_ns + "check_unknown",
       p->objects_filtering_params.object_types_to_check.check_unknown);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, obj_types_ns + "check_bicycle",
       p->objects_filtering_params.object_types_to_check.check_bicycle);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, obj_types_ns + "check_motorcycle",
       p->objects_filtering_params.object_types_to_check.check_motorcycle);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, obj_types_ns + "check_pedestrian",
       p->objects_filtering_params.object_types_to_check.check_pedestrian);
   }
 
   const std::string obj_lane_ns = obj_filter_ns + "object_lane_configuration.";
   {
-    updateParam<bool>(
+    update_param<bool>(
       parameters, obj_lane_ns + "check_current_lane",
       p->objects_filtering_params.object_lane_configuration.check_current_lane);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, obj_lane_ns + "check_right_side_lane",
       p->objects_filtering_params.object_lane_configuration.check_right_lane);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, obj_lane_ns + "check_left_side_lane",
       p->objects_filtering_params.object_lane_configuration.check_left_lane);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, obj_lane_ns + "check_shoulder_lane",
       p->objects_filtering_params.object_lane_configuration.check_shoulder_lane);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, obj_lane_ns + "check_other_lane",
       p->objects_filtering_params.object_lane_configuration.check_other_lane);
   }
 
   const std::string safety_check_ns = base_ns + "safety_check_params.";
   {
-    updateParam<bool>(
+    update_param<bool>(
       parameters, safety_check_ns + "enable_safety_check",
       p->safety_check_params.enable_safety_check);
-    updateParam<double>(
+    update_param<double>(
       parameters, safety_check_ns + "hysteresis_factor_expand_rate",
       p->safety_check_params.hysteresis_factor_expand_rate);
-    updateParam<double>(
+    update_param<double>(
       parameters, safety_check_ns + "backward_path_length",
       p->safety_check_params.backward_path_length);
-    updateParam<double>(
+    update_param<double>(
       parameters, safety_check_ns + "forward_path_length",
       p->safety_check_params.forward_path_length);
-    updateParam<bool>(
+    update_param<bool>(
       parameters, safety_check_ns + "publish_debug_marker",
       p->safety_check_params.publish_debug_marker);
-    updateParam<double>(
+    update_param<double>(
       parameters, safety_check_ns + "collision_check_yaw_diff_threshold",
       p->safety_check_params.collision_check_yaw_diff_threshold);
   }
 
   {
     const std::string rss_ns = safety_check_ns + "rss_params.";
-    updateParam<double>(
+    update_param<double>(
       parameters, rss_ns + "rear_vehicle_reaction_time",
       p->safety_check_params.rss_params.rear_vehicle_reaction_time);
-    updateParam<double>(
+    update_param<double>(
       parameters, rss_ns + "rear_vehicle_safety_time_margin",
       p->safety_check_params.rss_params.rear_vehicle_safety_time_margin);
-    updateParam<double>(
+    update_param<double>(
       parameters, rss_ns + "lateral_distance_max_threshold",
       p->safety_check_params.rss_params.lateral_distance_max_threshold);
-    updateParam<double>(
+    update_param<double>(
       parameters, rss_ns + "longitudinal_distance_min_threshold",
       p->safety_check_params.rss_params.longitudinal_distance_min_threshold);
-    updateParam<double>(
+    update_param<double>(
       parameters, rss_ns + "longitudinal_velocity_delta_time",
       p->safety_check_params.rss_params.longitudinal_velocity_delta_time);
-    updateParam<std::string>(
+    update_param<std::string>(
       parameters, rss_ns + "extended_polygon_policy",
       p->safety_check_params.rss_params.extended_polygon_policy);
   }
   {
     const std::string surround_moving_obstacle_check_ns =
       "start_planner.surround_moving_obstacle_check.";
-    updateParam<double>(
+    update_param<double>(
       parameters, surround_moving_obstacle_check_ns + "search_radius", p->search_radius);
-    updateParam<double>(
+    update_param<double>(
       parameters, surround_moving_obstacle_check_ns + "th_moving_obstacle_velocity",
       p->th_moving_obstacle_velocity);
 
     // ObjectTypesToCheck
     {
       std::string obj_types_ns = surround_moving_obstacle_check_ns + "object_types_to_check.";
-      updateParam<bool>(
+      update_param<bool>(
         parameters, obj_types_ns + "check_car",
         p->surround_moving_obstacles_type_to_check.check_car);
-      updateParam<bool>(
+      update_param<bool>(
         parameters, obj_types_ns + "check_truck",
         p->surround_moving_obstacles_type_to_check.check_truck);
-      updateParam<bool>(
+      update_param<bool>(
         parameters, obj_types_ns + "check_bus",
         p->surround_moving_obstacles_type_to_check.check_bus);
-      updateParam<bool>(
+      update_param<bool>(
         parameters, obj_types_ns + "check_trailer",
         p->surround_moving_obstacles_type_to_check.check_trailer);
-      updateParam<bool>(
+      update_param<bool>(
         parameters, obj_types_ns + "check_unknown",
         p->surround_moving_obstacles_type_to_check.check_unknown);
-      updateParam<bool>(
+      update_param<bool>(
         parameters, obj_types_ns + "check_bicycle",
         p->surround_moving_obstacles_type_to_check.check_bicycle);
-      updateParam<bool>(
+      update_param<bool>(
         parameters, obj_types_ns + "check_motorcycle",
         p->surround_moving_obstacles_type_to_check.check_motorcycle);
-      updateParam<bool>(
+      update_param<bool>(
         parameters, obj_types_ns + "check_pedestrian",
         p->surround_moving_obstacles_type_to_check.check_pedestrian);
     }
@@ -410,7 +414,7 @@ void StartPlannerModuleManager::updateModuleParams(
 
   {
     const std::string debug_ns = "start_planner.debug.";
-    updateParam<bool>(parameters, debug_ns + "print_debug_info", p->print_debug_info);
+    update_param<bool>(parameters, debug_ns + "print_debug_info", p->print_debug_info);
   }
 
   std::for_each(observers_.begin(), observers_.end(), [&p](const auto & observer) {

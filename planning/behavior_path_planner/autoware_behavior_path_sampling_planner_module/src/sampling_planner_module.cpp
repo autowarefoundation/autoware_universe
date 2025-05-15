@@ -28,10 +28,10 @@ namespace autoware::behavior_path_planner
 using autoware::motion_utils::calcSignedArcLength;
 using autoware::motion_utils::findNearestIndex;
 using autoware::motion_utils::findNearestSegmentIndex;
-using autoware::universe_utils::calcDistance2d;
-using autoware::universe_utils::calcOffsetPose;
-using autoware::universe_utils::getPoint;
-using autoware::universe_utils::Point2d;
+using autoware_utils::calc_distance2d;
+using autoware_utils::calc_offset_pose;
+using autoware_utils::get_point;
+using autoware_utils::Point2d;
 using geometry_msgs::msg::Point;
 
 namespace bg = boost::geometry;
@@ -42,8 +42,9 @@ SamplingPlannerModule::SamplingPlannerModule(
   const std::shared_ptr<SamplingPlannerParameters> & parameters,
   const std::unordered_map<std::string, std::shared_ptr<RTCInterface>> & rtc_interface_ptr_map,
   std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
-    objects_of_interest_marker_interface_ptr_map)
-: SceneModuleInterface{name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map},  // NOLINT
+    objects_of_interest_marker_interface_ptr_map,
+  const std::shared_ptr<PlanningFactorInterface> planning_factor_interface)
+: SceneModuleInterface{name, node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface},  // NOLINT
   vehicle_info_{autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo()}
 {
   internal_params_ = std::make_shared<SamplingPlannerInternalParameters>();
@@ -112,7 +113,7 @@ SamplingPlannerModule::SamplingPlannerModule(
   //     [[maybe_unused]] const SoftConstraintsInputs & input_data) -> double {
   //     if (path.points.empty()) return 0.0;
   //     const auto & goal_pose_yaw =
-  //     autoware::universe_utils::getRPY(input_data.goal_pose.orientation).z; const auto &
+  //     autoware_utils::getRPY(input_data.goal_pose.orientation).z; const auto &
   //     last_point_yaw = path.yaws.back(); const double angle_difference = std::abs(last_point_yaw
   //     - goal_pose_yaw); return angle_difference / (3.141519 / 4.0);
   //   });
@@ -373,9 +374,9 @@ void SamplingPlannerModule::prepareConstraints(
   size_t i = 0;
   for (const auto & o : predicted_objects->objects) {
     if (o.kinematics.initial_twist_with_covariance.twist.linear.x < 0.5) {
-      const auto polygon = autoware::universe_utils::toPolygon2d(o);
+      const auto polygon = autoware_utils::to_polygon2d(o);
       constraints.obstacle_polygons.push_back(polygon);
-      const auto box = boost::geometry::return_envelope<autoware::universe_utils::Box2d>(polygon);
+      const auto box = boost::geometry::return_envelope<autoware_utils::Box2d>(polygon);
       constraints.rtree.insert(std::make_pair(box, i));
     }
     i++;

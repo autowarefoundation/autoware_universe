@@ -1,0 +1,6 @@
+/**:
+  ros__parameters:
+    update_rate: 10               # Node Parameters
+    min_acceleration: -1.0        # Code Parameters
+    max_jerk: 0.3                 # Code Parameters
+    min_jerk: -0.3                # Code Parameters

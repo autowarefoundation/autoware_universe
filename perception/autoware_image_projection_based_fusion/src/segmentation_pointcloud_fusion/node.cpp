@@ -17,7 +17,7 @@
 #include "autoware/image_projection_based_fusion/utils/geometry.hpp"
 #include "autoware/image_projection_based_fusion/utils/utils.hpp"
 
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <perception_utils/run_length_encoder.hpp>
 
 #include <memory>
@@ -33,10 +33,10 @@
 
 namespace autoware::image_projection_based_fusion
 {
-using autoware::universe_utils::ScopedTimeTrack;
+using autoware_utils::ScopedTimeTrack;
 
 SegmentPointCloudFusionNode::SegmentPointCloudFusionNode(const rclcpp::NodeOptions & options)
-: FusionNode<PointCloud2, PointCloud2, Image>("segmentation_pointcloud_fusion", options)
+: FusionNode<PointCloudMsgType, Image, PointCloudMsgType>("segmentation_pointcloud_fusion", options)
 {
   filter_distance_threshold_ = declare_parameter<float>("filter_distance_threshold");
   for (auto & item : filter_semantic_label_target_list_) {
@@ -48,9 +48,13 @@ SegmentPointCloudFusionNode::SegmentPointCloudFusionNode(const rclcpp::NodeOptio
   }
   is_publish_debug_mask_ = declare_parameter<bool>("is_publish_debug_mask");
   pub_debug_mask_ptr_ = image_transport::create_publisher(this, "~/debug/mask");
+
+  // publisher
+  pub_ptr_ = this->create_publisher<PointCloudMsgType>("output", rclcpp::QoS{1});
 }
 
-void SegmentPointCloudFusionNode::preprocess(__attribute__((unused)) PointCloud2 & pointcloud_msg)
+void SegmentPointCloudFusionNode::preprocess(__attribute__((unused))
+                                             PointCloudMsgType & pointcloud_msg)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -58,37 +62,10 @@ void SegmentPointCloudFusionNode::preprocess(__attribute__((unused)) PointCloud2
   return;
 }
 
-void SegmentPointCloudFusionNode::postprocess(PointCloud2 & pointcloud_msg)
-{
-  std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
-
-  auto original_cloud = std::make_shared<PointCloud2>(pointcloud_msg);
-
-  int point_step = original_cloud->point_step;
-  size_t output_pointcloud_size = 0;
-  pointcloud_msg.data.clear();
-  pointcloud_msg.data.resize(original_cloud->data.size());
-
-  for (size_t global_offset = 0; global_offset < original_cloud->data.size();
-       global_offset += point_step) {
-    if (filter_global_offset_set_.find(global_offset) == filter_global_offset_set_.end()) {
-      copyPointCloud(
-        *original_cloud, point_step, global_offset, pointcloud_msg, output_pointcloud_size);
-    }
-  }
-
-  pointcloud_msg.data.resize(output_pointcloud_size);
-  pointcloud_msg.row_step = output_pointcloud_size / pointcloud_msg.height;
-  pointcloud_msg.width = output_pointcloud_size / pointcloud_msg.point_step / pointcloud_msg.height;
-
-  filter_global_offset_set_.clear();
-  return;
-}
-
-void SegmentPointCloudFusionNode::fuseOnSingleImage(
-  const PointCloud2 & input_pointcloud_msg, const std::size_t image_id,
-  [[maybe_unused]] const Image & input_mask, __attribute__((unused)) PointCloud2 & output_cloud)
+void SegmentPointCloudFusionNode::fuse_on_single_image(
+  const PointCloudMsgType & input_pointcloud_msg, const Det2dStatus<Image> & det2d_status,
+  [[maybe_unused]] const Image & input_mask,
+  __attribute__((unused)) PointCloudMsgType & output_cloud)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
@@ -100,7 +77,8 @@ void SegmentPointCloudFusionNode::fuseOnSingleImage(
     return;
   }
 
-  const sensor_msgs::msg::CameraInfo & camera_info = camera_projectors_[image_id].getCameraInfo();
+  const sensor_msgs::msg::CameraInfo & camera_info =
+    det2d_status.camera_projector_ptr->getCameraInfo();
   std::vector<uint8_t> mask_data(input_mask.data.begin(), input_mask.data.end());
   cv::Mat mask = perception_utils::runLengthDecoder(mask_data, input_mask.height, input_mask.width);
 
@@ -128,7 +106,7 @@ void SegmentPointCloudFusionNode::fuseOnSingleImage(
     transform_stamped = transform_stamped_optional.value();
   }
 
-  PointCloud2 transformed_cloud;
+  PointCloudMsgType transformed_cloud;
   tf2::doTransform(input_pointcloud_msg, transformed_cloud, transform_stamped);
 
   int point_step = input_pointcloud_msg.point_step;
@@ -144,13 +122,16 @@ void SegmentPointCloudFusionNode::fuseOnSingleImage(
       *reinterpret_cast<float *>(&transformed_cloud.data[global_offset + y_offset]);
     float transformed_z =
       *reinterpret_cast<float *>(&transformed_cloud.data[global_offset + z_offset]);
-    // skip filtering pointcloud behind the camera or too far from camera
-    if (transformed_z <= 0.0 || transformed_z > filter_distance_threshold_) {
+    // skip pointcloud out of FOV
+    if (det2d_status.camera_projector_ptr->isOutsideHorizontalView(transformed_x, transformed_z)) {
+      continue;
+    }
+    if (transformed_z > filter_distance_threshold_) {
       continue;
     }
 
     Eigen::Vector2d projected_point;
-    if (!camera_projectors_[image_id].calcImageProjectedPoint(
+    if (!det2d_status.camera_projector_ptr->calcImageProjectedPoint(
           cv::Point3d(transformed_x, transformed_y, transformed_z), projected_point)) {
       continue;
     }
@@ -168,11 +149,40 @@ void SegmentPointCloudFusionNode::fuseOnSingleImage(
   }
 }
 
-bool SegmentPointCloudFusionNode::out_of_scope(__attribute__((unused))
-                                               const PointCloud2 & filtered_cloud)
+void SegmentPointCloudFusionNode::postprocess(
+  const PointCloudMsgType & pointcloud_msg, PointCloudMsgType & output_msg)
 {
-  return false;
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
+  output_msg = pointcloud_msg;
+  output_msg.header = pointcloud_msg.header;
+  output_msg.data.clear();
+  output_msg.data.resize(pointcloud_msg.data.size());
+  const int point_step = pointcloud_msg.point_step;
+
+  size_t output_pointcloud_size = 0;
+  for (size_t global_offset = 0; global_offset < pointcloud_msg.data.size();
+       global_offset += point_step) {
+    if (filter_global_offset_set_.find(global_offset) == filter_global_offset_set_.end()) {
+      copyPointCloud(pointcloud_msg, point_step, global_offset, output_msg, output_pointcloud_size);
+    }
+  }
+
+  output_msg.data.resize(output_pointcloud_size);
+  if (output_msg.height != 0 && output_msg.point_step != 0) {
+    output_msg.row_step = output_pointcloud_size / output_msg.height;
+    output_msg.width = output_pointcloud_size / output_msg.point_step / output_msg.height;
+  } else {
+    RCLCPP_ERROR(this->get_logger(), "output_msg.height or output_msg.point_step is 0");
+    output_msg.row_step = 0;
+    output_msg.width = 0;
+  }
+
+  filter_global_offset_set_.clear();
+  return;
 }
+
 }  // namespace autoware::image_projection_based_fusion
 
 #include <rclcpp_components/register_node_macro.hpp>

@@ -14,8 +14,8 @@
 
 #include "node.hpp"
 
-#include "autoware/universe_utils/ros/debug_publisher.hpp"
-#include "autoware/universe_utils/system/stop_watch.hpp"
+#include "autoware_utils/ros/debug_publisher.hpp"
+#include "autoware_utils/system/stop_watch.hpp"
 
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/search/kdtree.h>
@@ -45,44 +45,54 @@ bool VoxelBasedApproximateStaticMapLoader::is_close_to_map(
 bool VoxelBasedApproximateDynamicMapLoader::is_close_to_map(
   const pcl::PointXYZ & point, [[maybe_unused]] const double distance_threshold)
 {
-  if (current_voxel_grid_dict_.size() == 0) {
-    return false;
-  }
-
-  const int map_grid_index = static_cast<int>(
-    std::floor((point.x - origin_x_) / map_grid_size_x_) +
-    map_grids_x_ * std::floor((point.y - origin_y_) / map_grid_size_y_));
-
-  if (static_cast<size_t>(map_grid_index) >= current_voxel_grid_array_.size()) {
-    return false;
-  }
-  if (current_voxel_grid_array_.at(map_grid_index) != nullptr) {
-    const int index = current_voxel_grid_array_.at(map_grid_index)
-                        ->map_cell_voxel_grid.getCentroidIndexAt(
-                          current_voxel_grid_array_.at(map_grid_index)
-                            ->map_cell_voxel_grid.getGridCoordinates(point.x, point.y, point.z));
-    if (index == -1) {
+  VoxelGridPointXYZ map_cell_voxel_grid;
+  {
+    std::lock_guard<std::mutex> lock(dynamic_map_loader_mutex_);
+    if (current_voxel_grid_dict_.size() == 0) {
       return false;
-    } else {
-      return true;
     }
+
+    const int map_grid_index = static_cast<int>(
+      std::floor((point.x - origin_x_) / map_grid_size_x_) +
+      map_grids_x_ * std::floor((point.y - origin_y_) / map_grid_size_y_));
+
+    if (static_cast<size_t>(map_grid_index) >= current_voxel_grid_array_.size()) {
+      return false;
+    }
+    const auto & current_voxel_grid = current_voxel_grid_array_.at(map_grid_index);
+    if (current_voxel_grid == nullptr) {
+      return false;
+    }
+    map_cell_voxel_grid = current_voxel_grid_array_.at(map_grid_index)->map_cell_voxel_grid;
   }
-  return false;
+
+  const int index = map_cell_voxel_grid.getCentroidIndexAt(
+    map_cell_voxel_grid.getGridCoordinates(point.x, point.y, point.z));
+  return (index != -1);
 }
 
 VoxelBasedApproximateCompareMapFilterComponent::VoxelBasedApproximateCompareMapFilterComponent(
   const rclcpp::NodeOptions & options)
-: Filter("VoxelBasedApproximateCompareMapFilter", options)
+: Filter("VoxelBasedApproximateCompareMapFilter", options), diagnostic_updater_(this)
 {
   // initialize debug tool
   {
-    using autoware::universe_utils::DebugPublisher;
-    using autoware::universe_utils::StopWatch;
+    using autoware_utils::DebugPublisher;
+    using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ =
       std::make_unique<DebugPublisher>(this, "voxel_based_approximate_compare_map_filter");
     stop_watch_ptr_->tic("cyclic_time");
     stop_watch_ptr_->tic("processing_time");
+  }
+
+  // setup diagnostics
+  {
+    diagnostic_updater_.setHardwareID(this->get_name());
+    diagnostic_updater_.add(
+      "Compare map filter status", this,
+      &VoxelBasedApproximateCompareMapFilterComponent::checkStatus);
+    diagnostic_updater_.setPeriod(0.1);
   }
 
   distance_threshold_ = declare_parameter<double>("distance_threshold");
@@ -103,12 +113,40 @@ VoxelBasedApproximateCompareMapFilterComponent::VoxelBasedApproximateCompareMapF
   }
 }
 
+void VoxelBasedApproximateCompareMapFilterComponent::checkStatus(
+  diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  // map loader status
+  DiagStatus & map_loader_status =
+    (*voxel_based_approximate_map_loader_).diagnostics_map_voxel_status_;
+  if (map_loader_status.level == diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    stat.add("Map loader status", "OK");
+  } else {
+    stat.add("Map loader status", "NG");
+  }
+
+  // final status = map loader status
+  stat.summary(map_loader_status.level, map_loader_status.message);
+}
+
 void VoxelBasedApproximateCompareMapFilterComponent::filter(
   const PointCloud2ConstPtr & input, [[maybe_unused]] const IndicesPtr & indices,
   PointCloud2 & output)
 {
   std::scoped_lock lock(mutex_);
   stop_watch_ptr_->toc("processing_time", true);
+
+  // check grid map loader status
+  auto & map_diag_status = (*voxel_based_approximate_map_loader_).diagnostics_map_voxel_status_;
+  if (map_diag_status.level != diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000, "Map loader status: %s",
+      map_diag_status.message.c_str());
+    // return input point cloud, no filter implemented
+    output = *input;
+    return;
+  }
+
   int point_step = input->point_step;
   int offset_x = input->fields[pcl::getFieldIndex(*input, "x")].offset;
   int offset_y = input->fields[pcl::getFieldIndex(*input, "y")].offset;
@@ -141,9 +179,9 @@ void VoxelBasedApproximateCompareMapFilterComponent::filter(
   if (debug_publisher_) {
     const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
     const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
-    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
-    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time_ms", processing_time_ms);
   }
 }

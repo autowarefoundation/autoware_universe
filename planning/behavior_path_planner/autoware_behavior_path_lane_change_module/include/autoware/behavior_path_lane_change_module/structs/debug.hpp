@@ -34,9 +34,23 @@ using utils::path_safety_checker::CollisionCheckDebugMap;
 struct MetricsDebug
 {
   LaneChangePhaseMetrics prep_metric;
-  std::vector<LaneChangePhaseMetrics> lc_metrics;
+  std::vector<std::pair<LaneChangePhaseMetrics, int>> lc_metrics;
   double max_prepare_length;
   double max_lane_changing_length;
+};
+
+struct FrenetStateDebug
+{
+  LaneChangePhaseMetrics prep_metric;
+  frenet_planner::SamplingParameter sampling_parameter;
+  double max_lane_changing_length;
+
+  FrenetStateDebug(
+    LaneChangePhaseMetrics prep_metric, frenet_planner::SamplingParameter sampling_param,
+    const double max_len)
+  : prep_metric(prep_metric), sampling_parameter(sampling_param), max_lane_changing_length(max_len)
+  {
+  }
 };
 
 struct Debug
@@ -52,13 +66,13 @@ struct Debug
   lanelet::ConstLanelets target_lanes;
   lanelet::ConstLanelets target_backward_lanes;
   std::vector<MetricsDebug> lane_change_metrics;
+  std::vector<FrenetStateDebug> frenet_states;
   double collision_check_object_debug_lifetime{0.0};
   double distance_to_end_of_current_lane{std::numeric_limits<double>::max()};
   double distance_to_lane_change_finished{std::numeric_limits<double>::max()};
   double distance_to_abort_finished{std::numeric_limits<double>::max()};
   bool is_able_to_return_to_current_lane{true};
   bool is_stuck{false};
-  bool is_abort{false};
 
   void reset()
   {
@@ -83,8 +97,13 @@ struct Debug
     distance_to_abort_finished = std::numeric_limits<double>::max();
     is_able_to_return_to_current_lane = true;
     is_stuck = false;
-    is_abort = false;
   }
+};
+
+struct InterfaceDebug
+{
+  std::string_view failing_reason;
+  LaneChangeStates lc_state;
 };
 }  // namespace autoware::behavior_path_planner::lane_change
 

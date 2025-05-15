@@ -28,7 +28,7 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float64_multi_array_stamped.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/primitives/LineString.h>
@@ -214,6 +214,7 @@ public:
     bool passed_first_pass_judge{false};
     bool passed_second_pass_judge{false};
     std::optional<geometry_msgs::msg::Pose> absence_traffic_light_creep_wall{std::nullopt};
+    std::optional<geometry_msgs::msg::Pose> too_late_stop_wall_pose{std::nullopt};
 
     std::optional<std::vector<lanelet::CompoundPolygon3d>> attention_area{std::nullopt};
     std::optional<std::vector<lanelet::CompoundPolygon3d>> occlusion_attention_area{std::nullopt};
@@ -225,6 +226,7 @@ public:
     std::optional<std::vector<lanelet::CompoundPolygon3d>> yield_stuck_detect_area{std::nullopt};
 
     std::optional<geometry_msgs::msg::Polygon> candidate_collision_ego_lane_polygon{std::nullopt};
+    std::optional<geometry_msgs::msg::Polygon> candidate_collision_object_polygon{std::nullopt};
     autoware_perception_msgs::msg::PredictedObjects safe_under_traffic_control_targets;
     autoware_perception_msgs::msg::PredictedObjects unsafe_targets;
     autoware_perception_msgs::msg::PredictedObjects misjudge_targets;
@@ -304,7 +306,10 @@ public:
     const int64_t module_id, const int64_t lane_id, std::shared_ptr<const PlannerData> planner_data,
     const PlannerParam & planner_param, const std::set<lanelet::Id> & associative_ids,
     const std::string & turn_direction, const bool has_traffic_light, rclcpp::Node & node,
-    const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock);
+    const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+      planning_factor_interface);
 
   /**
    ***********************************************************
@@ -510,13 +515,14 @@ private:
    * @brief set RTC value according to calculated DecisionResult
    */
   void prepareRTCStatus(
-    const DecisionResult &, const tier4_planning_msgs::msg::PathWithLaneId & path);
+    const DecisionResult &, const autoware_internal_planning_msgs::msg::PathWithLaneId & path);
 
   /**
    * @brief act based on current RTC approval
    */
   void reactRTCApproval(
-    const DecisionResult & decision_result, tier4_planning_msgs::msg::PathWithLaneId * path);
+    const DecisionResult & decision_result,
+    autoware_internal_planning_msgs::msg::PathWithLaneId * path);
   /** @}*/
 
 private:
@@ -563,7 +569,7 @@ private:
     const lanelet::ConstLanelet & first_attention_lane,
     const std::optional<lanelet::CompoundPolygon3d> & second_attention_area_opt,
     const InterpolatedPathInfo & interpolated_path_info,
-    tier4_planning_msgs::msg::PathWithLaneId * original_path) const;
+    autoware_internal_planning_msgs::msg::PathWithLaneId * original_path) const;
 
   /**
    * @brief generate IntersectionLanelets
@@ -634,7 +640,7 @@ private:
    * intersection_lanelets.first_conflicting_lane(). They are ensured in prepareIntersectionData()
    */
   std::optional<StuckStop> isStuckStatus(
-    const tier4_planning_msgs::msg::PathWithLaneId & path,
+    const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
     const IntersectionStopLines & intersection_stoplines, const PathLanelets & path_lanelets) const;
 
   bool isTargetStuckVehicleType(
@@ -663,7 +669,7 @@ private:
    * intersection_stoplines.default_stopline, intersection_stoplines.first_attention_stopline
    */
   std::optional<YieldStuckStop> isYieldStuckStatus(
-    const tier4_planning_msgs::msg::PathWithLaneId & path,
+    const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
     const InterpolatedPathInfo & interpolated_path_info,
     const IntersectionStopLines & intersection_stoplines) const;
 
@@ -719,8 +725,8 @@ private:
    * intersection_stoplines.occlusion_stopline
    */
   PassJudgeStatus isOverPassJudgeLinesStatus(
-    const tier4_planning_msgs::msg::PathWithLaneId & path, const bool is_occlusion_state,
-    const IntersectionStopLines & intersection_stoplines);
+    const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
+    const bool is_occlusion_state, const IntersectionStopLines & intersection_stoplines);
   /** @} */
 
 private:
@@ -781,7 +787,7 @@ private:
    * situation
    */
   std::string generateEgoRiskEvasiveDiagnosis(
-    const tier4_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
+    const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
     const TimeDistanceArray & ego_time_distance_array,
     const std::vector<std::pair<CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> &
       too_late_detect_objects,
@@ -807,7 +813,7 @@ private:
    * intersection_stoplines.first_attention_stopline
    */
   TimeDistanceArray calcIntersectionPassingTime(
-    const tier4_planning_msgs::msg::PathWithLaneId & path, const bool is_prioritized,
+    const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const bool is_prioritized,
     const IntersectionStopLines & intersection_stoplines,
     autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * ego_ttc_array) const;
   /** @} */

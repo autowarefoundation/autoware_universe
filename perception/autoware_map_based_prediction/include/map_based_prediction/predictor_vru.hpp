@@ -18,8 +18,8 @@
 #include "map_based_prediction/data_structure.hpp"
 #include "map_based_prediction/path_generator.hpp"
 
-#include <autoware/universe_utils/system/time_keeper.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
@@ -77,7 +77,7 @@ public:
 
   void setLaneletMap(std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr);
 
-  void setTimeKeeper(std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_ptr)
+  void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr)
   {
     time_keeper_ = std::move(time_keeper_ptr);
   }
@@ -94,7 +94,7 @@ public:
 
 private:
   rclcpp::Node & node_;
-  std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_;
+  std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 
   // Map data
   std::shared_ptr<lanelet::LaneletMap> lanelet_map_ptr_;

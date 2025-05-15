@@ -1,4 +1,4 @@
-// Copyright 2021 Tier IV, Inc.
+// Copyright 2024 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -77,30 +77,30 @@ namespace costmap_2d
 using sensor_msgs::PointCloud2ConstIterator;
 
 OccupancyGridMapInterface::OccupancyGridMapInterface(
-  const unsigned int cells_size_x, const unsigned int cells_size_y, const float resolution)
-: Costmap2D(cells_size_x, cells_size_y, resolution, 0.f, 0.f, cost_value::NO_INFORMATION)
+  const bool use_cuda, const unsigned int cells_size_x, const unsigned int cells_size_y,
+  const float resolution)
+: Costmap2D(cells_size_x, cells_size_y, resolution, 0.f, 0.f, cost_value::NO_INFORMATION),
+  use_cuda_(use_cuda)
 {
-  min_height_ = -std::numeric_limits<double>::infinity();
-  max_height_ = std::numeric_limits<double>::infinity();
-  resolution_inv_ = 1.0 / resolution_;
-  offset_initialized_ = false;
-}
+#ifdef USE_CUDA
+  if (use_cuda_) {
+    min_height_ = -std::numeric_limits<double>::infinity();
+    max_height_ = std::numeric_limits<double>::infinity();
+    resolution_inv_ = 1.0 / resolution_;
 
-inline bool OccupancyGridMapInterface::worldToMap(
-  double wx, double wy, unsigned int & mx, unsigned int & my) const
-{
-  if (wx < origin_x_ || wy < origin_y_) {
-    return false;
+    const auto num_cells_x = this->getSizeInCellsX();
+    const auto num_cells_y = this->getSizeInCellsY();
+
+    device_costmap_ = autoware::cuda_utils::make_unique<std::uint8_t[]>(num_cells_x * num_cells_y);
+    device_costmap_aux_ =
+      autoware::cuda_utils::make_unique<std::uint8_t[]>(num_cells_x * num_cells_y);
+
+    device_rotation_map_ = autoware::cuda_utils::make_unique<Eigen::Matrix3f>();
+    device_translation_map_ = autoware::cuda_utils::make_unique<Eigen::Vector3f>();
+    device_rotation_scan_ = autoware::cuda_utils::make_unique<Eigen::Matrix3f>();
+    device_translation_scan_ = autoware::cuda_utils::make_unique<Eigen::Vector3f>();
   }
-
-  mx = static_cast<int>(std::floor((wx - origin_x_) * resolution_inv_));
-  my = static_cast<int>(std::floor((wy - origin_y_) * resolution_inv_));
-
-  if (mx < size_x_ && my < size_y_) {
-    return true;
-  }
-
-  return false;
+#endif
 }
 
 void OccupancyGridMapInterface::updateOrigin(double new_origin_x, double new_origin_y)
@@ -128,15 +128,36 @@ void OccupancyGridMapInterface::updateOrigin(double new_origin_x, double new_ori
   unsigned int cell_size_y = upper_right_y - lower_left_y;
 
   // we need a map to store the obstacles in the window temporarily
-  unsigned char * local_map = new unsigned char[cell_size_x * cell_size_y];
+  unsigned char * local_map{nullptr};
 
-  // copy the local window in the costmap to the local map
-  copyMapRegion(
-    costmap_, lower_left_x, lower_left_y, size_x_, local_map, 0, 0, cell_size_x, cell_size_x,
-    cell_size_y);
+#ifdef USE_CUDA
+  using autoware::occupancy_grid_map::utils::copyMapRegionLaunch;
+  if (use_cuda_) {
+    copyMapRegionLaunch(
+      device_costmap_.get(), lower_left_x, lower_left_y, size_x_, size_y_,
+      device_costmap_aux_.get(), 0, 0, cell_size_x, cell_size_y, cell_size_x, cell_size_y, stream_);
 
-  // now we'll set the costmap to be completely unknown if we track unknown space
-  resetMaps();
+    cudaMemsetAsync(
+      device_costmap_.get(), cost_value::NO_INFORMATION, size_x_ * size_y_ * sizeof(std::uint8_t),
+      stream_);
+#else
+  if (use_cuda_) {
+    RCLCPP_ERROR(
+      rclcpp::get_logger("pointcloud_based_occupancy_grid_map"),
+      "The code was compiled without cuda.");
+    return;
+#endif
+  } else {
+    local_map = new unsigned char[cell_size_x * cell_size_y];
+
+    // copy the local window in the costmap to the local map
+    copyMapRegion(
+      costmap_, lower_left_x, lower_left_y, size_x_, local_map, 0, 0, cell_size_x, cell_size_x,
+      cell_size_y);
+
+    // now we'll set the costmap to be completely unknown if we track unknown space
+    nav2_costmap_2d::Costmap2D::resetMaps();
+  }
 
   // update the origin with the appropriate world coordinates
   origin_x_ = new_grid_ox;
@@ -146,94 +167,65 @@ void OccupancyGridMapInterface::updateOrigin(double new_origin_x, double new_ori
   int start_x{lower_left_x - cell_ox};
   int start_y{lower_left_y - cell_oy};
 
+  if (first_iteration_) {
+    origin_x_ = new_grid_ox;
+    origin_y_ = new_grid_oy;
+    first_iteration_ = false;
+    return;
+  }
+
   // now we want to copy the overlapping information back into the map, but in its new location
-  copyMapRegion(
-    local_map, 0, 0, cell_size_x, costmap_, start_x, start_y, size_x_, cell_size_x, cell_size_y);
+#ifdef USE_CUDA
+  if (use_cuda_) {
+    if (
+      start_x < 0 || start_y < 0 || start_x + cell_size_x > size_x_ ||
+      start_y + cell_size_y > size_y_) {
+      RCLCPP_ERROR(
+        rclcpp::get_logger("pointcloud_based_occupancy_grid_map"),
+        "update coordinates are negative or out of bounds: start.x=%d, start.y=%d, cell_size.x=%d, "
+        "cell_size.y=%d size_x:%d, size_y=%d",
+        start_x, start_y, cell_size_x, cell_size_y, size_x_, size_y_);
+      return;
+    }
 
-  // make sure to clean up
-  delete[] local_map;
+    copyMapRegionLaunch(
+      device_costmap_aux_.get(), 0, 0, cell_size_x, cell_size_y, device_costmap_.get(), start_x,
+      start_y, size_x_, size_y_, cell_size_x, cell_size_y, stream_);
+#else
+  if (use_cuda_) {
+    RCLCPP_ERROR(
+      rclcpp::get_logger("pointcloud_based_occupancy_grid_map"),
+      "The code was compiled without cuda.");
+    return;
+#endif
+  } else {
+    copyMapRegion(
+      local_map, 0, 0, cell_size_x, costmap_, start_x, start_y, size_x_, cell_size_x, cell_size_y);
+
+    // make sure to clean up
+    if (local_map != nullptr) {
+      delete[] local_map;
+    }
+  }
 }
 
-void OccupancyGridMapInterface::setCellValue(
-  const double wx, const double wy, const unsigned char cost)
+void OccupancyGridMapInterface::resetMaps()
 {
-  MarkCell marker(costmap_, cost);
-  unsigned int mx{};
-  unsigned int my{};
-  if (!worldToMap(wx, wy, mx, my)) {
-    RCLCPP_DEBUG(logger_, "Computing map coords failed");
+#ifdef USE_CUDA
+  if (use_cuda_) {
+    cudaMemsetAsync(
+      device_costmap_.get(), cost_value::NO_INFORMATION, getSizeInCellsX() * getSizeInCellsY(),
+      stream_);
+#else
+  if (use_cuda_) {
+    RCLCPP_ERROR(
+      rclcpp::get_logger("pointcloud_based_occupancy_grid_map"),
+      "The code was compiled without cuda.");
     return;
+#endif
+  } else {
+    nav2_costmap_2d::Costmap2D::resetMaps();
   }
-  const unsigned int index = getIndex(mx, my);
-  marker(index);
-}
-
-void OccupancyGridMapInterface::raytrace(
-  const double source_x, const double source_y, const double target_x, const double target_y,
-  const unsigned char cost)
-{
-  unsigned int x0{};
-  unsigned int y0{};
-  const double ox{source_x};
-  const double oy{source_y};
-  if (!worldToMap(ox, oy, x0, y0)) {
-    RCLCPP_DEBUG(
-      logger_,
-      "The origin for the sensor at (%.2f, %.2f) is out of map bounds. So, the costmap cannot "
-      "raytrace for it.",
-      ox, oy);
-    return;
-  }
-
-  // we can pre-compute the endpoints of the map outside of the inner loop... we'll need these later
-  const double origin_x = origin_x_, origin_y = origin_y_;
-  const double map_end_x = origin_x + size_x_ * resolution_;
-  const double map_end_y = origin_y + size_y_ * resolution_;
-
-  double wx = target_x;
-  double wy = target_y;
-
-  // now we also need to make sure that the endpoint we're ray-tracing
-  // to isn't off the costmap and scale if necessary
-  const double a = wx - ox;
-  const double b = wy - oy;
-
-  // the minimum value to raytrace from is the origin
-  if (wx < origin_x) {
-    const double t = (origin_x - ox) / a;
-    wx = origin_x;
-    wy = oy + b * t;
-  }
-  if (wy < origin_y) {
-    const double t = (origin_y - oy) / b;
-    wx = ox + a * t;
-    wy = origin_y;
-  }
-
-  // the maximum value to raytrace to is the end of the map
-  if (wx > map_end_x) {
-    const double t = (map_end_x - ox) / a;
-    wx = map_end_x - .001;
-    wy = oy + b * t;
-  }
-  if (wy > map_end_y) {
-    const double t = (map_end_y - oy) / b;
-    wx = ox + a * t;
-    wy = map_end_y - .001;
-  }
-
-  // now that the vector is scaled correctly... we'll get the map coordinates of its endpoint
-  unsigned int x1{};
-  unsigned int y1{};
-
-  // check for legality just in case
-  if (!worldToMap(wx, wy, x1, y1)) {
-    return;
-  }
-
-  constexpr unsigned int cell_raytrace_range = 10000;  // large number to ignore range threshold
-  MarkCell marker(costmap_, cost);
-  raytraceLine(marker, x0, y0, x1, y1, cell_raytrace_range);
 }
 
 void OccupancyGridMapInterface::setHeightLimit(const double min_height, const double max_height)
@@ -242,17 +234,33 @@ void OccupancyGridMapInterface::setHeightLimit(const double min_height, const do
   max_height_ = max_height;
 }
 
-void OccupancyGridMapInterface::setFieldOffsets(
-  const PointCloud2 & input_raw, const PointCloud2 & input_obstacle)
+bool OccupancyGridMapInterface::isCudaEnabled() const
 {
-  x_offset_raw_ = input_raw.fields[pcl::getFieldIndex(input_raw, "x")].offset;
-  y_offset_raw_ = input_raw.fields[pcl::getFieldIndex(input_raw, "y")].offset;
-  z_offset_raw_ = input_raw.fields[pcl::getFieldIndex(input_raw, "z")].offset;
-  x_offset_obstacle_ = input_obstacle.fields[pcl::getFieldIndex(input_obstacle, "x")].offset;
-  y_offset_obstacle_ = input_obstacle.fields[pcl::getFieldIndex(input_obstacle, "y")].offset;
-  z_offset_obstacle_ = input_obstacle.fields[pcl::getFieldIndex(input_obstacle, "z")].offset;
-  offset_initialized_ = true;
+  return use_cuda_;
 }
+
+#ifdef USE_CUDA
+void OccupancyGridMapInterface::setCudaStream(const cudaStream_t & stream)
+{
+  if (isCudaEnabled()) {
+    stream_ = stream;
+  }
+}
+
+const autoware::cuda_utils::CudaUniquePtr<std::uint8_t[]> &
+OccupancyGridMapInterface::getDeviceCostmap() const
+{
+  return device_costmap_;
+}
+
+void OccupancyGridMapInterface::copyDeviceCostmapToHost() const
+{
+  cudaMemcpyAsync(
+    costmap_, device_costmap_.get(), getSizeInCellsX() * getSizeInCellsY() * sizeof(std::uint8_t),
+    cudaMemcpyDeviceToHost, stream_);
+  cudaStreamSynchronize(stream_);
+}
+#endif
 
 }  // namespace costmap_2d
 }  // namespace autoware::occupancy_grid_map

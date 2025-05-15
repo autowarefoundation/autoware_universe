@@ -59,14 +59,10 @@ geometry_msgs::msg::Polygon create_execution_area(
   const double backward_lon_offset = -base_to_rear;
   const double lat_offset = width / 2.0 + additional_lat_offset;
 
-  const auto p1 =
-    autoware::universe_utils::calcOffsetPose(pose, forward_lon_offset, lat_offset, 0.0);
-  const auto p2 =
-    autoware::universe_utils::calcOffsetPose(pose, forward_lon_offset, -lat_offset, 0.0);
-  const auto p3 =
-    autoware::universe_utils::calcOffsetPose(pose, backward_lon_offset, -lat_offset, 0.0);
-  const auto p4 =
-    autoware::universe_utils::calcOffsetPose(pose, backward_lon_offset, lat_offset, 0.0);
+  const auto p1 = autoware_utils::calc_offset_pose(pose, forward_lon_offset, lat_offset, 0.0);
+  const auto p2 = autoware_utils::calc_offset_pose(pose, forward_lon_offset, -lat_offset, 0.0);
+  const auto p3 = autoware_utils::calc_offset_pose(pose, backward_lon_offset, -lat_offset, 0.0);
+  const auto p4 = autoware_utils::calc_offset_pose(pose, backward_lon_offset, lat_offset, 0.0);
   geometry_msgs::msg::Polygon polygon;
 
   polygon.points.push_back(create_point32(p1));
@@ -237,8 +233,8 @@ std::optional<ObjectData> AvoidanceByLaneChange::createObjectData(
   const AvoidancePlanningData & data, const PredictedObject & object) const
 {
   using autoware::motion_utils::findNearestIndex;
-  using autoware::universe_utils::calcDistance2d;
-  using autoware::universe_utils::calcLateralDeviation;
+  using autoware_utils::calc_distance2d;
+  using autoware_utils::calc_lateral_deviation;
   using boost::geometry::return_centroid;
 
   const auto p = std::dynamic_pointer_cast<AvoidanceParameters>(avoidance_parameters_);
@@ -266,7 +262,7 @@ std::optional<ObjectData> AvoidanceByLaneChange::createObjectData(
   const auto lower = p->lower_distance_for_polygon_expansion;
   const auto upper = p->upper_distance_for_polygon_expansion;
   const auto clamp =
-    std::clamp(calcDistance2d(getEgoPose(), object_pose) - lower, 0.0, upper) / upper;
+    std::clamp(calc_distance2d(getEgoPose(), object_pose) - lower, 0.0, upper) / upper;
   object_data.distance_factor = object_parameter.max_expand_ratio * clamp + 1.0;
 
   // Calc envelop polygon.
@@ -279,7 +275,7 @@ std::optional<ObjectData> AvoidanceByLaneChange::createObjectData(
   // Calc moving time.
   utils::static_obstacle_avoidance::fillObjectMovingTime(object_data, stopped_objects_, p);
 
-  object_data.direction = calcLateralDeviation(object_closest_pose, object_pose.position) > 0.0
+  object_data.direction = calc_lateral_deviation(object_closest_pose, object_pose.position) > 0.0
                             ? Direction::LEFT
                             : Direction::RIGHT;
 

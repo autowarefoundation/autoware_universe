@@ -18,7 +18,7 @@
 #include "autoware/behavior_path_planner_common/utils/path_safety_checker/path_safety_checker_parameters.hpp"
 
 #include <autoware/interpolation/linear_interpolation.hpp>
-#include <autoware/universe_utils/math/unit_conversion.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 
 #include <utility>
 #include <vector>
@@ -94,6 +94,7 @@ struct CollisionCheckParameters
   bool check_current_lane{true};
   bool check_other_lanes{true};
   bool use_all_predicted_paths{false};
+  double th_incoming_object_yaw{2.3562};
   double th_yaw_diff{3.1416};
   double prediction_time_resolution{0.5};
 };
@@ -113,6 +114,13 @@ struct SafetyParameters
   CollisionCheckParameters collision_check{};
 };
 
+struct FrenetPlannerParameters
+{
+  bool enable{true};
+  double th_yaw_diff_deg{10.0};
+  double th_curvature_smoothing{0.1};
+};
+
 struct TrajectoryParameters
 {
   double max_prepare_duration{4.0};
@@ -124,6 +132,7 @@ struct TrajectoryParameters
   double th_lane_changing_length_diff{0.5};
   double min_lane_changing_velocity{5.6};
   double lane_changing_decel_factor{0.5};
+  double th_prepare_curvature{0.03};
   int lon_acc_sampling_num{10};
   int lat_acc_sampling_num{10};
   LateralAccelerationMap lat_acc_map{};
@@ -151,8 +160,10 @@ struct Parameters
   CancelParameters cancel{};
   DelayParameters delay{};
   TerminalPathParameters terminal_path{};
+  FrenetPlannerParameters frenet{};
 
   // lane change parameters
+  double time_limit{50.0};
   double backward_lane_length{200.0};
   double backward_length_buffer_for_end_of_lane{0.0};
   double backward_length_buffer_for_blocking_object{0.0};
@@ -178,7 +189,7 @@ struct Parameters
   // finish judge parameter
   double lane_change_finish_judge_buffer{3.0};
   double th_finish_judge_lateral_diff{0.2};
-  double th_finish_judge_yaw_diff{autoware::universe_utils::deg2rad(3.0)};
+  double th_finish_judge_yaw_diff{autoware_utils::deg2rad(3.0)};
 
   // debug marker
   bool publish_debug_marker{false};

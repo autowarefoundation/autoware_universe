@@ -48,8 +48,14 @@ ResponseStatus route_is_not_set()
 namespace autoware::default_adapi
 {
 
-RoutingNode::RoutingNode(const rclcpp::NodeOptions & options) : Node("routing", options)
+RoutingNode::RoutingNode(const rclcpp::NodeOptions & options)
+: Node("routing", options), diagnostics_(this), vehicle_stop_checker_(this)
 {
+  stop_check_duration_ = declare_parameter<double>("stop_check_duration");
+
+  diagnostics_.setHardwareID("none");
+  diagnostics_.add("state", this, &RoutingNode::diagnose_state);
+
   const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
   group_cli_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   adaptor.init_pub(pub_state_);
@@ -73,10 +79,33 @@ RoutingNode::RoutingNode(const rclcpp::NodeOptions & options) : Node("routing", 
   state_.state = State::Message::UNKNOWN;
 }
 
+void RoutingNode::diagnose_state(diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  using diagnostic_msgs::msg::DiagnosticStatus;
+  const auto message = std::to_string(state_.state);
+
+  switch (state_.state) {
+    case State::Message::SET:
+    case State::Message::REROUTING:
+    case State::Message::ARRIVED:
+      stat.summary(DiagnosticStatus::OK, message);
+      break;
+    case State::Message::UNKNOWN:
+    case State::Message::INITIALIZING:
+    case State::Message::UNSET:
+    case State::Message::ROUTING:
+    case State::Message::ABORTED:
+    case State::Message::INTERRUPTED:
+    default:
+      stat.summary(DiagnosticStatus::ERROR, message);
+      break;
+  }
+}
+
 void RoutingNode::change_stop_mode()
 {
   using OperationModeRequest =
-    autoware::component_interface_specs::system::ChangeOperationMode::Service::Request;
+    autoware::component_interface_specs_universe::system::ChangeOperationMode::Service::Request;
   if (is_auto_mode_) {
     const auto req = std::make_shared<OperationModeRequest>();
     req->mode = OperationModeRequest::STOP;
@@ -124,10 +153,12 @@ void RoutingNode::on_clear_route(
   // For safety, do not clear the route while it is in use.
   // https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-interfaces/ad-api/list/api/routing/clear_route/
   if (is_auto_mode_ && is_autoware_control_) {
-    res->status.success = false;
-    res->status.code = ResponseStatus::UNKNOWN;
-    res->status.message = "The route cannot be cleared while it is in use.";
-    return;
+    if (!vehicle_stop_checker_.isVehicleStopped(stop_check_duration_)) {
+      res->status.success = false;
+      res->status.code = ResponseStatus::UNKNOWN;
+      res->status.message = "The route cannot be cleared while it is in use.";
+      return;
+    }
   }
   res->status = conversion::convert_call(cli_clear_route_, req);
 }

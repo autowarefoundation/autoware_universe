@@ -16,8 +16,6 @@
     stopped_state_entry_vel: 0.01
     stopped_state_entry_acc: 0.1
     emergency_state_overshoot_stop_dist: 1.5
-    emergency_state_traj_trans_dev: 3.0
-    emergency_state_traj_rot_dev: 0.7854
 
     # drive state
     kp: 1.0

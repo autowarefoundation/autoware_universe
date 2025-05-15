@@ -1,0 +1,6 @@
+<launch>
+  <arg name="bluetooth_monitor_param_file" default="$(find-pkg-share autoware_bluetooth_monitor)/config/bluetooth_monitor.param.yaml"/>
+  <node pkg="autoware_bluetooth_monitor" exec="autoware_bluetooth_monitor_node" output="log" respawn="true">
+    <param from="$(var bluetooth_monitor_param_file)"/>
+  </node>
+</launch>

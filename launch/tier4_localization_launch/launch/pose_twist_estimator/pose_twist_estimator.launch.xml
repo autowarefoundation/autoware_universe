@@ -134,7 +134,7 @@
 
     <!-- automatic_pose_initializer -->
     <group if="$(var gnss_enabled)">
-      <include file="$(find-pkg-share automatic_pose_initializer)/launch/automatic_pose_initializer.launch.xml"/>
+      <include file="$(find-pkg-share autoware_automatic_pose_initializer)/launch/automatic_pose_initializer.launch.xml"/>
     </group>
 
     <!-- pointcloud_downsampling -->

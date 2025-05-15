@@ -32,25 +32,22 @@ class OccupancyGridMapProjectiveBlindSpot : public OccupancyGridMapInterface
 {
 public:
   OccupancyGridMapProjectiveBlindSpot(
-    const unsigned int cells_size_x, const unsigned int cells_size_y, const float resolution);
+    const bool use_cuda, const unsigned int cells_size_x, const unsigned int cells_size_y,
+    const float resolution);
 
   void updateWithPointCloud(
-    const PointCloud2 & raw_pointcloud, const PointCloud2 & obstacle_pointcloud,
+    const CudaPointCloud2 & raw_pointcloud, const CudaPointCloud2 & obstacle_pointcloud,
     const Pose & robot_pose, const Pose & scan_origin) override;
-
-  using OccupancyGridMapInterface::raytrace;
-  using OccupancyGridMapInterface::setCellValue;
-  using OccupancyGridMapInterface::setFieldOffsets;
-  using OccupancyGridMapInterface::updateOrigin;
 
   void initRosParam(rclcpp::Node & node) override;
 
 private:
-  double projection_dz_threshold_;
-  double obstacle_separation_threshold_;
-  bool pub_debug_grid_;
-  grid_map::GridMap debug_grid_;
-  rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr debug_grid_map_publisher_ptr_;
+  float projection_dz_threshold_;
+  float obstacle_separation_threshold_;
+
+  autoware::cuda_utils::CudaUniquePtr<std::uint64_t[]> raw_points_tensor_;
+  autoware::cuda_utils::CudaUniquePtr<std::uint64_t[]> obstacle_points_tensor_;
+  autoware::cuda_utils::CudaUniquePtr<Eigen::Vector3f> device_translation_scan_origin_;
 };
 
 }  // namespace costmap_2d

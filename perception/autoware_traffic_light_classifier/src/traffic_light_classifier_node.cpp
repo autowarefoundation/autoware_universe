@@ -13,6 +13,7 @@
 // limitations under the License.
 #include "traffic_light_classifier_node.hpp"
 
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_element.hpp>
 
 #include <iostream>
@@ -25,11 +26,11 @@ namespace autoware::traffic_light
 TrafficLightClassifierNodelet::TrafficLightClassifierNodelet(const rclcpp::NodeOptions & options)
 : Node("traffic_light_classifier_node", options)
 {
-  classify_traffic_light_type_ = this->declare_parameter("classify_traffic_light_type", 0);
+  classify_traffic_light_type_ = this->declare_parameter<int>("traffic_light_type");
 
   using std::placeholders::_1;
   using std::placeholders::_2;
-  is_approximate_sync_ = this->declare_parameter("approximate_sync", false);
+  is_approximate_sync_ = this->declare_parameter<bool>("approximate_sync");
   backlight_threshold_ = this->declare_parameter<double>("backlight_threshold");
 
   if (is_approximate_sync_) {
@@ -49,8 +50,7 @@ TrafficLightClassifierNodelet::TrafficLightClassifierNodelet(const rclcpp::NodeO
   timer_ = rclcpp::create_timer(
     this, get_clock(), 100ms, std::bind(&TrafficLightClassifierNodelet::connectCb, this));
 
-  int classifier_type = this->declare_parameter(
-    "classifier_type", static_cast<int>(TrafficLightClassifierNodelet::ClassifierType::HSVFilter));
+  int classifier_type = this->declare_parameter<int>("classifier_type");
   if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::HSVFilter) {
     classifier_ptr_ = std::make_shared<ColorClassifier>(this);
   } else if (classifier_type == TrafficLightClassifierNodelet::ClassifierType::CNN) {
@@ -61,6 +61,9 @@ TrafficLightClassifierNodelet::TrafficLightClassifierNodelet(const rclcpp::NodeO
       this->get_logger(), "please install CUDA, CUDNN and TensorRT to use cnn classifier");
 #endif
   }
+
+  diagnostics_interface_ptr_ =
+    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "traffic_light_classifier");
 }
 
 void TrafficLightClassifierNodelet::connectCb()
@@ -166,6 +169,17 @@ void TrafficLightClassifierNodelet::imageRoiCallback(
 
   output_msg.header = input_image_msg->header;
   traffic_signal_array_pub_->publish(output_msg);
+
+  // publish diagnostics
+  diagnostics_interface_ptr_->clear();
+  bool found_harsh_backlight = backlight_indices.size() != 0;
+  diagnostics_interface_ptr_->add_key_value("found_harsh_backlight", found_harsh_backlight);
+  if (found_harsh_backlight) {
+    diagnostics_interface_ptr_->update_level_and_message(
+      diagnostic_msgs::msg::DiagnosticStatus::WARN,
+      "Found harsh backlight in ROI(s) and corresponding ROI(s) were overwritten by UNKNOWN");
+  }
+  diagnostics_interface_ptr_->publish(output_msg.header.stamp);
 }
 
 bool TrafficLightClassifierNodelet::is_harsh_backlight(const cv::Mat & img) const

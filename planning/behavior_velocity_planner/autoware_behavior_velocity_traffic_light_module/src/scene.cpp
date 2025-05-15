@@ -43,8 +43,11 @@ namespace autoware::behavior_velocity_planner
 TrafficLightModule::TrafficLightModule(
   const int64_t lane_id, const lanelet::TrafficLight & traffic_light_reg_elem,
   lanelet::ConstLanelet lane, const PlannerParam & planner_param, const rclcpp::Logger logger,
-  const rclcpp::Clock::SharedPtr clock)
-: SceneModuleInterfaceWithRTC(lane_id, logger, clock),
+  const rclcpp::Clock::SharedPtr clock,
+  const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
+  const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+    planning_factor_interface)
+: SceneModuleInterfaceWithRTC(lane_id, logger, clock, time_keeper, planning_factor_interface),
   lane_id_(lane_id),
   traffic_light_reg_elem_(traffic_light_reg_elem),
   lane_(lane),
@@ -52,7 +55,6 @@ TrafficLightModule::TrafficLightModule(
   debug_data_(),
   is_prev_state_stop_(false)
 {
-  velocity_factor_.init(PlanningBehavior::TRAFFIC_SIGNAL);
   planner_param_ = planner_param;
 }
 
@@ -72,8 +74,7 @@ bool TrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
   // Calculate stop pose and insert index
   const auto stop_line = calcStopPointAndInsertIndex(
     input_path, lanelet_stop_lines,
-    planner_param_.stop_margin + planner_data_->vehicle_info_.max_longitudinal_offset_m,
-    planner_data_->stop_line_extend_length);
+    planner_param_.stop_margin + planner_data_->vehicle_info_.max_longitudinal_offset_m);
 
   if (!stop_line.has_value()) {
     RCLCPP_WARN_STREAM_ONCE(
@@ -124,6 +125,23 @@ bool TrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
         : 0.0;
     const bool to_be_stopped =
       is_stop_signal && (is_prev_state_stop_ || time_diff > planner_param_.stop_time_hysteresis);
+
+    // Check if the vehicle is stopped and within a certain distance to the stop line
+    if (planner_data_->isVehicleStopped()) {
+      const double dist_to_stop = signed_arc_length_to_stop_point;
+      if (
+        planner_param_.min_behind_dist_to_stop_for_restart_suppression < dist_to_stop &&
+        dist_to_stop < planner_param_.max_behind_dist_to_stop_for_restart_suppression &&
+        is_stop_signal) {
+        // Suppress restart
+        RCLCPP_DEBUG(logger_, "Suppressing restart due to proximity to stop line.");
+        const auto & ego_pose = planner_data_->current_odometry->pose;
+        const auto restart_suppression_point =
+          Eigen::Vector2d(ego_pose.position.x, ego_pose.position.y);
+        *path = insertStopPose(input_path, stop_line.value().first, restart_suppression_point);
+        return true;
+      }
+    }
 
     setSafe(!to_be_stopped);
     if (isActivated()) {
@@ -211,7 +229,8 @@ bool TrafficLightModule::isPassthrough(const double & signed_arc_length) const
     delay_response_time);
 
   const bool distance_stoppable = pass_judge_line_distance < signed_arc_length;
-  const bool slow_velocity = planner_data_->current_velocity->twist.linear.x < 2.0;
+  const bool slow_velocity =
+    planner_data_->current_velocity->twist.linear.x < planner_param_.yellow_light_stop_velocity;
   const bool stoppable = distance_stoppable || slow_velocity;
   const bool reachable = signed_arc_length < reachable_distance;
 
@@ -272,11 +291,11 @@ bool TrafficLightModule::isTrafficSignalTimedOut() const
   return false;
 }
 
-tier4_planning_msgs::msg::PathWithLaneId TrafficLightModule::insertStopPose(
-  const tier4_planning_msgs::msg::PathWithLaneId & input, const size_t & insert_target_point_idx,
-  const Eigen::Vector2d & target_point)
+autoware_internal_planning_msgs::msg::PathWithLaneId TrafficLightModule::insertStopPose(
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & input,
+  const size_t & insert_target_point_idx, const Eigen::Vector2d & target_point)
 {
-  tier4_planning_msgs::msg::PathWithLaneId modified_path;
+  autoware_internal_planning_msgs::msg::PathWithLaneId modified_path;
   modified_path = input;
 
   // Create stop pose
@@ -291,9 +310,12 @@ tier4_planning_msgs::msg::PathWithLaneId TrafficLightModule::insertStopPose(
   size_t insert_index = insert_target_point_idx;
   planning_utils::insertVelocity(modified_path, target_point_with_lane_id, 0.0, insert_index);
 
-  velocity_factor_.set(
+  planning_factor_interface_->add(
     modified_path.points, planner_data_->current_odometry->pose,
-    target_point_with_lane_id.point.pose, VelocityFactor::UNKNOWN);
+    target_point_with_lane_id.point.pose,
+    autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+    autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
+    0.0 /*shift distance*/, "traffic_light");
 
   return modified_path;
 }

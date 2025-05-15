@@ -30,7 +30,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #endif
 
-#include <autoware/universe_utils/math/normalization.hpp>
+#include <autoware_utils/math/normalization.hpp>
 
 #include <algorithm>
 #include <limits>
@@ -99,7 +99,7 @@ double getDistanceFromTwoPoint(
   return dist;
 }
 
-[[maybe_unused]] double normalizeRadian(
+[[maybe_unused]] double normalize_radian(
   const double rad, const double min_rad = -boost::math::constants::pi<double>(),
   const double max_rad = boost::math::constants::pi<double>())
 {
@@ -181,7 +181,7 @@ AdaptiveCruiseController::AdaptiveCruiseController(
   param_.rough_velocity_rate = node_->declare_parameter<double>(acc_ns + "rough_velocity_rate");
 
   /* publisher */
-  pub_debug_ = node_->create_publisher<tier4_debug_msgs::msg::Float32MultiArrayStamped>(
+  pub_debug_ = node_->create_publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>(
     "~/adaptive_cruise_control/debug_values", 1);
 }
 
@@ -449,8 +449,7 @@ void AdaptiveCruiseController::calculateProjectedVelocityFromObject(
                 object.kinematics.initial_twist_with_covariance.twist.linear.y,
                 object.kinematics.initial_twist_with_covariance.twist.linear.x);
 
-  *velocity =
-    obj_vel_norm * std::cos(autoware::universe_utils::normalizeRadian(obj_vel_yaw - traj_yaw));
+  *velocity = obj_vel_norm * std::cos(autoware_utils::normalize_radian(obj_vel_yaw - traj_yaw));
   debug_values_.data.at(DBGVAL::ESTIMATED_VEL_OBJ) = *velocity;
 }
 

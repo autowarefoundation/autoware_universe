@@ -1,4 +1,4 @@
-// Copyright 2021 Tier IV, Inc.
+// Copyright 2025 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,11 +20,11 @@
 #include "autoware/planning_evaluator/metrics/obstacle_metrics.hpp"
 #include "autoware/planning_evaluator/metrics/stability_metrics.hpp"
 #include "autoware/planning_evaluator/metrics/trajectory_metrics.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 namespace planning_diagnostics
 {
 std::optional<Accumulator<double>> MetricsCalculator::calculate(
-  const Metric metric, const Trajectory & traj) const
+  const Metric metric, const Trajectory & traj, const double vehicle_length_m) const
 {
   // Functions to calculate trajectory metrics
   switch (metric) {
@@ -34,6 +34,8 @@ std::optional<Accumulator<double>> MetricsCalculator::calculate(
       return metrics::calcTrajectoryInterval(traj);
     case Metric::relative_angle:
       return metrics::calcTrajectoryRelativeAngle(traj, parameters.trajectory.min_point_dist_m);
+    case Metric::resampled_relative_angle:
+      return metrics::calcTrajectoryResampledRelativeAngle(traj, vehicle_length_m);
     case Metric::length:
       return metrics::calcTrajectoryLength(traj);
     case Metric::duration:

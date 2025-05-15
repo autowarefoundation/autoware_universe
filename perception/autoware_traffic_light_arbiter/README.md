@@ -39,12 +39,4 @@ The table below outlines how the matching process determines the output based on
 
 ## Parameters
 
-### Core Parameters
-
-| Name                        | Type   | Default Value | Description                                                                                                                                                                    |
-| --------------------------- | ------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `external_delay_tolerance`  | double | 5.0           | The duration in seconds an external message is considered valid for merging in comparison with current time                                                                    |
-| `external_time_tolerance`   | double | 5.0           | The duration in seconds an external message is considered valid for merging in comparison with a timestamp of perception message                                               |
-| `perception_time_tolerance` | double | 1.0           | The duration in seconds a perception message is considered valid for merging in comparison with a timestamp of external message                                                |
-| `external_priority`         | bool   | false         | Whether or not externals signals take precedence over perception-based ones. If false, the merging uses confidence as a criteria                                               |
-| `enable_signal_matching`    | bool   | false         | Decide whether to validate the match between perception signals and external signals. If set to true, verify that the colors match and only publish them if they are identical |
+{{ json_to_markdown("perception/autoware_traffic_light_arbiter/schema/traffic_light_arbiter.schema.json") }}

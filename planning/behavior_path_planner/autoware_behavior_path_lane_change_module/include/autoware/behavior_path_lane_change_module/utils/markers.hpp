@@ -32,6 +32,7 @@ namespace marker_utils::lane_change_markers
 using autoware::behavior_path_planner::FilteredLanesObjects;
 using autoware::behavior_path_planner::LaneChangePath;
 using autoware::behavior_path_planner::lane_change::Debug;
+using autoware::behavior_path_planner::lane_change::InterfaceDebug;
 using autoware::behavior_path_planner::utils::path_safety_checker::ExtendedPredictedObjects;
 using visualization_msgs::msg::MarkerArray;
 MarkerArray showAllValidLaneChangePath(
@@ -42,9 +43,12 @@ MarkerArray createLaneChangingVirtualWallMarker(
 MarkerArray showFilteredObjects(
   const FilteredLanesObjects & filtered_objects, const std::string & ns);
 MarkerArray createExecutionArea(const geometry_msgs::msg::Polygon & execution_area);
-MarkerArray showExecutionInfo(const Debug & debug_data, const geometry_msgs::msg::Pose & ego_pose);
+MarkerArray showExecutionInfo(
+  const InterfaceDebug & interface_debug_data, const Debug & scene_debug_data,
+  const geometry_msgs::msg::Pose & ego_pose);
 MarkerArray createDebugMarkerArray(
-  const Debug & debug_data, const geometry_msgs::msg::Pose & ego_pose);
+  const InterfaceDebug & interface_debug_data, const Debug & scene_debug_data,
+  const geometry_msgs::msg::Pose & ego_pose);
 
 }  // namespace marker_utils::lane_change_markers
 #endif  // AUTOWARE__BEHAVIOR_PATH_LANE_CHANGE_MODULE__UTILS__MARKERS_HPP_
