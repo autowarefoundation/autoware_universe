@@ -18,11 +18,34 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+#include <tier4_perception_msgs/msg/traffic_light_element.hpp>
+
+#include <string>
+#include <unordered_map>
+
 namespace autoware::traffic_light
 {
 
 namespace utils
 {
+
+template <class K, class V>
+V at_or(const std::unordered_map<K, V> & map, const K & key, const V & value)
+{
+  return map.count(key) ? map.at(key) : value;
+}
+
+tier4_perception_msgs::msg::TrafficLightElement::_color_type convertColorStringtoT4(
+  const std::string & label);
+
+tier4_perception_msgs::msg::TrafficLightElement::_shape_type convertShapeStringtoT4(
+  const std::string & label);
+
+std::string convertColorT4toString(
+  const tier4_perception_msgs::msg::TrafficLightElement::_color_type & label);
+
+std::string convertShapeT4toString(
+  const tier4_perception_msgs::msg::TrafficLightElement::_shape_type & label);
 
 bool is_harsh_backlight(const cv::Mat & img, const double backlight_threshold);
 

@@ -14,10 +14,77 @@
 
 #include "traffic_light_classifier_utils.hpp"
 
+#include <string>
+#include <unordered_map>
+
 namespace autoware::traffic_light
 {
 namespace utils
 {
+
+const std::unordered_map<tier4_perception_msgs::msg::TrafficLightElement::_color_type, std::string>
+  color2string(
+    {{tier4_perception_msgs::msg::TrafficLightElement::RED, "red"},
+     {tier4_perception_msgs::msg::TrafficLightElement::AMBER, "yellow"},
+     {tier4_perception_msgs::msg::TrafficLightElement::GREEN, "green"},
+     {tier4_perception_msgs::msg::TrafficLightElement::WHITE, "white"}});
+
+const std::unordered_map<tier4_perception_msgs::msg::TrafficLightElement::_shape_type, std::string>
+  shape2string(
+    {{tier4_perception_msgs::msg::TrafficLightElement::CIRCLE, "circle"},
+     {tier4_perception_msgs::msg::TrafficLightElement::LEFT_ARROW, "left"},
+     {tier4_perception_msgs::msg::TrafficLightElement::RIGHT_ARROW, "right"},
+     {tier4_perception_msgs::msg::TrafficLightElement::UP_ARROW, "straight"},
+     {tier4_perception_msgs::msg::TrafficLightElement::UP_LEFT_ARROW, "up_left"},
+     {tier4_perception_msgs::msg::TrafficLightElement::UP_RIGHT_ARROW, "up_right"},
+     {tier4_perception_msgs::msg::TrafficLightElement::DOWN_ARROW, "down"},
+     {tier4_perception_msgs::msg::TrafficLightElement::DOWN_LEFT_ARROW, "down_left"},
+     {tier4_perception_msgs::msg::TrafficLightElement::DOWN_RIGHT_ARROW, "down_right"},
+     {tier4_perception_msgs::msg::TrafficLightElement::CROSS, "cross"}});
+
+const std::unordered_map<std::string, tier4_perception_msgs::msg::TrafficLightElement::_color_type>
+  string2color(
+    {{"red", tier4_perception_msgs::msg::TrafficLightElement::RED},
+     {"yellow", tier4_perception_msgs::msg::TrafficLightElement::AMBER},
+     {"green", tier4_perception_msgs::msg::TrafficLightElement::GREEN},
+     {"white", tier4_perception_msgs::msg::TrafficLightElement::WHITE}});
+
+const std::unordered_map<std::string, tier4_perception_msgs::msg::TrafficLightElement::_shape_type>
+  string2shape(
+    {{"circle", tier4_perception_msgs::msg::TrafficLightElement::CIRCLE},
+     {"left", tier4_perception_msgs::msg::TrafficLightElement::LEFT_ARROW},
+     {"right", tier4_perception_msgs::msg::TrafficLightElement::RIGHT_ARROW},
+     {"straight", tier4_perception_msgs::msg::TrafficLightElement::UP_ARROW},
+     {"up_left", tier4_perception_msgs::msg::TrafficLightElement::UP_LEFT_ARROW},
+     {"up_right", tier4_perception_msgs::msg::TrafficLightElement::UP_RIGHT_ARROW},
+     {"down", tier4_perception_msgs::msg::TrafficLightElement::DOWN_ARROW},
+     {"down_left", tier4_perception_msgs::msg::TrafficLightElement::DOWN_LEFT_ARROW},
+     {"down_right", tier4_perception_msgs::msg::TrafficLightElement::DOWN_RIGHT_ARROW},
+     {"cross", tier4_perception_msgs::msg::TrafficLightElement::CROSS}});
+
+tier4_perception_msgs::msg::TrafficLightElement::_color_type convertColorStringtoT4(
+  const std::string & label)
+{
+  return at_or(string2color, label, tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN);
+}
+
+tier4_perception_msgs::msg::TrafficLightElement::_shape_type convertShapeStringtoT4(
+  const std::string & label)
+{
+  return at_or(string2shape, label, tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN);
+}
+
+std::string convertColorT4toString(
+  const tier4_perception_msgs::msg::TrafficLightElement::_color_type & label)
+{
+  return at_or(color2string, label, std::string("unknown"));
+}
+
+std::string convertShapeT4toString(
+  const tier4_perception_msgs::msg::TrafficLightElement::_shape_type & label)
+{
+  return at_or(shape2string, label, std::string("unknown"));
+}
 
 bool is_harsh_backlight(const cv::Mat & img, const double backlight_threshold)
 {
