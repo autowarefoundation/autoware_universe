@@ -69,7 +69,7 @@ None
 
 #### Node Parameters
 
-{{json_to_markdown("perception/autoware_traffic_light_visualization/schema/traffic_light_roi_visualization.schema.json")}}
+{{json_to_markdown("perception/autoware_traffic_light_visualization/schema/traffic_light_roi_visualizer.schema.json")}}
 
 ## Assumptions / Known limits
 
