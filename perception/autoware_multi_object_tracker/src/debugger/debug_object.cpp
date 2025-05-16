@@ -96,7 +96,7 @@ void TrackerObjectDebugger::collect(
     types::DynamicObject tracked_object;
     (*(tracker_itr))->getTrackedObject(message_time, tracked_object);
     object_data.uuid = uuidToBoostUuid(tracked_object.uuid);
-    object_data.uuid_str = uuidToString(tracked_object.uuid);
+    object_data.uuid_str = (*(tracker_itr))->getUuidString();
 
     // tracker
     bool is_associated = false;
@@ -105,7 +105,7 @@ void TrackerObjectDebugger::collect(
     tracker_point.y = tracked_object.pose.position.y;
     tracker_point.z = tracked_object.pose.position.z;
 
-    // detection
+    // associated detection
     if (direct_assignment.find(tracker_idx) != direct_assignment.end()) {
       const auto & associated_object =
         detected_objects.objects.at(direct_assignment.find(tracker_idx)->second);
@@ -114,6 +114,7 @@ void TrackerObjectDebugger::collect(
       detection_point.z = associated_object.pose.position.z;
       is_associated = true;
     } else {
+      // no detection
       detection_point.x = tracker_point.x;
       detection_point.y = tracker_point.y;
       detection_point.z = tracker_point.z;
@@ -124,9 +125,8 @@ void TrackerObjectDebugger::collect(
     object_data.is_associated = is_associated;
 
     // existence probabilities
-    std::vector<float> existence_vector;
-    (*(tracker_itr))->getExistenceProbabilityVector(existence_vector);
-    object_data.existence_vector = existence_vector;
+    object_data.existence_vector = (*tracker_itr)->getExistenceProbabilityVector();
+    object_data.total_existence_probability = (*tracker_itr)->getTotalExistenceProbability();
 
     object_data_list_.push_back(object_data);
   }
@@ -233,12 +233,19 @@ void TrackerObjectDebugger::draw(
     // print existence probability with channel name
     // probability to text, two digits of percentage
     std::string existence_probability_text = "";
+
+    // total probability
+    existence_probability_text += "total:";
+    existence_probability_text +=
+      std::to_string(static_cast<int>(object_data_front.total_existence_probability * 100)) + "\n";
+
+    // probability per channel
     const size_t channel_size = channels_config_.size();
     for (size_t i = 0; i < channel_size; ++i) {
       if (object_data_front.existence_vector[i] < 0.00101) continue;
-      std::stringstream stream;
-      stream << std::fixed << std::setprecision(0) << object_data_front.existence_vector[i] * 100;
-      existence_probability_text += channels_config_[i].short_name + stream.str() + ":";
+      existence_probability_text +=
+        channels_config_[i].short_name +
+        std::to_string(static_cast<int>(object_data_front.existence_vector[i] * 100)) + ":";
     }
     if (!existence_probability_text.empty()) {
       existence_probability_text.pop_back();
@@ -356,11 +363,11 @@ void TrackerObjectDebugger::draw(
       marker_track_boxes.color.r = 0.5;
       marker_track_boxes.color.g = 0.5;
       marker_track_boxes.color.b = 0.5;
-      marker_track_boxes.color.a = 0.5;
+      marker_track_boxes.color.a = 0.8;
       text_marker.color.r = 0.5;
       text_marker.color.g = 0.5;
       text_marker.color.b = 0.5;
-      text_marker.color.a = 0.5;
+      text_marker.color.a = 0.9;
     }
     marker_array.markers.push_back(text_marker);
     marker_array.markers.push_back(marker_track_boxes);
