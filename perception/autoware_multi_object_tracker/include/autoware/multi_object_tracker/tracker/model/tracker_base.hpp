@@ -93,8 +93,10 @@ public:
   {
     const auto uuid_msg = object_.uuid;
     std::stringstream ss;
-    for (auto i = 0; i < 16; ++i) {
-      ss << std::hex << std::setfill('0') << std::setw(2) << +uuid_msg.uuid[i];
+    constexpr size_t UUID_SIZE = 16;
+    ss << std::hex << std::setfill('0');
+    for (size_t i = 0; i < UUID_SIZE; ++i) {
+      ss << std::setw(2) << static_cast<int>(uuid_msg.uuid[i]);
     }
     return ss.str();
   }
