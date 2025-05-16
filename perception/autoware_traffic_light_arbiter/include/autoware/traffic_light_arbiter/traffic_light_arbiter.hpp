@@ -26,7 +26,7 @@
 #include <memory>
 #include <unordered_set>
 
-namespace autoware
+namespace autoware::traffic_light
 {
 class TrafficLightArbiter : public rclcpp::Node
 {
@@ -61,6 +61,6 @@ private:
   TrafficSignalArray latest_external_msg_;
   std::unique_ptr<SignalMatchValidator> signal_match_validator_;
 };
-}  // namespace autoware
+}  // namespace autoware::traffic_light
 
 #endif  // AUTOWARE__TRAFFIC_LIGHT_ARBITER__TRAFFIC_LIGHT_ARBITER_HPP_

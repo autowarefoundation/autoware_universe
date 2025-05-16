@@ -27,6 +27,8 @@
 #include <unordered_set>
 #include <vector>
 
+namespace autoware::traffic_light
+{
 /**
  * @class SignalMatchValidator
  * @brief Validates and compares traffic signal data from different sources.
@@ -99,5 +101,7 @@ private:
    */
   bool isPedestrianSignal(const lanelet::Id & signal_id);
 };
+
+}  // namespace autoware::traffic_light
 
 #endif  // AUTOWARE__TRAFFIC_LIGHT_ARBITER__SIGNAL_MATCH_VALIDATOR_HPP_

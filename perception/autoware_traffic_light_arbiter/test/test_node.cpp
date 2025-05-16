@@ -27,7 +27,7 @@
 #include <string>
 #include <vector>
 
-using autoware::TrafficLightArbiter;
+using autoware::traffic_light::TrafficLightArbiter;
 using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
 using TrafficSignalArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
 using TrafficSignal = autoware_perception_msgs::msg::TrafficLightGroup;
