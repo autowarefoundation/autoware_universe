@@ -47,7 +47,7 @@ void TrajectoryValidator::validate(
     res.max_distance_deviation <= max_distance_deviation_threshold;
 }
 
-void SteeringRateValidator::validate(
+void LateralJerkValidator::validate(
   ControlValidatorStatus & res, const Odometry & kinematic_state, const Control & control_cmd,
   const double wheel_base)
 {
@@ -68,22 +68,23 @@ void SteeringRateValidator::validate(
   const double steering_rate = (steering_cmd - prev_steering_cmd) / dt;
 
   // Calculate lateral jerk with the formula
-  // j_y = (1/L) * [2V * a_x * δ + V^2 * (dδ/dt)]
+  // j_y = (1/L) * [2V * a_x * θ + V^2 * (dθ/dt)]
   //
   // Where:
   // - L: wheel base
   // - V: longitudinal velocity
-  // - a_x: longitudinal acceleration
-  // - dδ/dt: steering angle rate of change
+  // - a_x: longitudinal acceleration (assumed to be zero for constant velocity)
+  // - dθ/dt: steering angle rate of change
   //
+  // Note: The calculation assumes constant velocity (a_x = 0), so the first term is omitted.
   const double lateral_jerk =
     (1.0 / wheel_base) * (filtered_velocity * filtered_velocity * steering_rate);
 
   res.steering_rate = steering_rate;
   res.lateral_jerk = lateral_jerk;
   // Note: Assuming left-right symmetry, only considering the magnitude of jerk
-  res.is_valid_steering_rate = std::abs(lateral_jerk) < lateral_jerk_threshold_;
-  if (!res.is_valid_steering_rate) {
+  res.is_valid_lateral_jerk = std::abs(lateral_jerk) < lateral_jerk_threshold_;
+  if (!res.is_valid_lateral_jerk) {
     RCLCPP_DEBUG(
       logger_, "Lateral jerk is too high. %f > %f", std::abs(lateral_jerk),
       lateral_jerk_threshold_);
@@ -297,8 +298,8 @@ void ControlValidator::setup_diag()
 
   d.add(ns + "steering_rate", [&](auto & stat) {
     set_status(
-      stat, validation_status_.is_valid_steering_rate,
-      "The steering rate is larger than expected value.");
+      stat, validation_status_.is_valid_lateral_jerk,
+      "The lateral jerk is larger than expected value.");
   });
 }
 
@@ -352,7 +353,7 @@ void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
   // validation process
   latency_validator.validate(validation_status_, *control_cmd_msg, *this);
 
-  steering_rate_validator.validate(
+  lateral_jerk_validator.validate(
     validation_status_, *kinematics_msg, *control_cmd_msg, vehicle_info_.wheel_base_m);
 
   if (predicted_trajectory_msg->points.size() < 2) {
@@ -398,7 +399,7 @@ void ControlValidator::publish_debug_info(const geometry_msgs::msg::Pose & ego_p
 
 bool ControlValidator::is_all_valid(const ControlValidatorStatus & s)
 {
-  return s.is_valid_steering_rate && s.is_valid_max_distance_deviation && s.is_valid_acc &&
+  return s.is_valid_lateral_jerk && s.is_valid_max_distance_deviation && s.is_valid_acc &&
          !s.is_rolling_back && !s.is_over_velocity && !s.has_overrun_stop_point &&
          !s.will_overrun_stop_point;
 }
@@ -407,7 +408,7 @@ std::string ControlValidator::generate_error_message(const ControlValidatorStatu
 {
   std::vector<std::string> error_messages;
 
-  if (!s.is_valid_steering_rate) {
+  if (!s.is_valid_lateral_jerk) {
     error_messages.push_back("HIGH STEERING RATE");
   }
 
@@ -466,7 +467,7 @@ void ControlValidator::display_status()
   warn(
     s.is_valid_max_distance_deviation, "predicted trajectory is too far from planning trajectory!!",
     s.max_distance_deviation);
-  warn(s.is_valid_steering_rate, "steering rate exceeds safety threshold!!", s.steering_rate);
+  warn(s.is_valid_lateral_jerk, "steering rate exceeds safety threshold!!", s.steering_rate);
 }
 
 }  // namespace autoware::control_validator

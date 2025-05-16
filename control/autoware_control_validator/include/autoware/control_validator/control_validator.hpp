@@ -92,13 +92,13 @@ private:
 };
 
 /**
- * @class SteeringValidator
- * @brief Validates steering rate is not too high.
+ * @class LateralJerkValidator
+ * @brief Validates lateral jerk is not too high.
  */
-class SteeringRateValidator
+class LateralJerkValidator
 {
 public:
-  explicit SteeringRateValidator(rclcpp::Node & node)
+  explicit LateralJerkValidator(rclcpp::Node & node)
   : lateral_jerk_threshold_{get_or_declare_parameter<double>(node, "thresholds.lateral_jerk")},
     logger_{node.get_logger()},
     measured_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")} {};
@@ -287,7 +287,7 @@ private:
 
   // individual validators
   LatencyValidator latency_validator{*this};
-  SteeringRateValidator steering_rate_validator{*this};
+  LateralJerkValidator lateral_jerk_validator{*this};
   TrajectoryValidator trajectory_validator{*this};
   AccelerationValidator acceleration_validator{*this};
   VelocityValidator velocity_validator{*this};

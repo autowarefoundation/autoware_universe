@@ -5,7 +5,7 @@ bool is_valid_max_distance_deviation
 bool is_valid_acc
 bool is_rolling_back
 bool is_over_velocity
-bool is_valid_steering_rate
+bool is_valid_lateral_jerk
 bool has_overrun_stop_point
 bool will_overrun_stop_point
 bool is_valid_latency

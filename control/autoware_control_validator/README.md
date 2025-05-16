@@ -15,7 +15,7 @@ The listed features below does not always correspond to the latest implementatio
 | Overspeed: Measured speed exceeds target speed significantly.                      | measured velocity $v$, target velocity $\hat{v}$, ratio parameter $r$, and offset parameter $c$ | $\lvert v \rvert > (1 + r) \lvert \hat{v} \rvert + c$ |
 | Overrun estimation: estimate overrun even if decelerate by assumed rate.           | assumed deceleration, assumed delay                                                             |                                                       |
 
-- **Steer rate** : invalid when the steering rate produces lateral jerk that exceeds the configured threshold. The validation uses the vehicle's velocity, acceleration, and steering angle to calculate the resulting lateral jerk.
+- **Lateral jerk** : invalid when the lateral jerk exceeds the configured threshold. The validation uses the vehicle's velocity and steering angle rate to calculate the resulting lateral jerk. The calculation assumes constant velocity (acceleration is zero).
 - **Deviation check between reference trajectory and predicted trajectory** : invalid when the largest deviation between the predicted trajectory and reference trajectory is greater than the given threshold.
 
 ![trajectory_deviation](./image/trajectory_deviation.drawio.svg)
