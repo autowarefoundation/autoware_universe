@@ -101,20 +101,31 @@ The neighborhood is defined by the following parameter in the `object_filtering.
 
 This function places a stop line to prevent re-transmission based on the following logic:
 
-1. stop line will be positioned at the closest point among. Note that the envelope of the distances determined here is taken:
-   a. The location of an existing stop line (if none exists, then at a distance of `stop_distance_from_crosswalk [m]` from the pedestrian crossing).
-   b. `stop_distance_from_object_preferred [m]` before the predicted collision point with a person.
-2. If reaching the stop line determined above requires an acceleration of `min_acc_preferred [m/ss]` or more (in absolute value for deceleration), the stop line will be set at the location where the vehicle can stop with a deceleration of `min_acc_preferred [m/ss]`.
+1. stop line will be positioned at the closest point among the followings. Note that the envelope of the distances determined here is taken:
+   1. The location of an existing stop line (if none exists, then at a distance of `stop_distance_from_crosswalk [m]` from the crosswalk).
+   2. `stop_distance_from_object_preferred [m]` before the predicted collision point with a person.
+2. If reaching the stop line determined above requires an deceleration of `min_acc_preferred [m/ss]` or more, the stop line will be set at the location where the vehicle can stop with a deceleration of `min_acc_preferred [m/ss]`.
 3. If the stop line position determined above is further than a distance of `stop_distance_from_crosswalk_limit [m]` from the pedestrian crossing, the stop line will be set at `stop_distance_from_crosswalk_limit [m]` from the pedestrian crossing.
 4. If `enable_no_stop_decision` is enabled, and the deceleration required to stop at the position determined above is greater than `no_stop_decision.min_acc`, the system will cancel the stop.
 
 <div align="center">
-    <table>
-        <tr>
-            <td><img src="./docs/explicit_stop_line.svg" width="600"></td>
-            <td><img src="./docs/virtual_stop_line.svg" width="600"></td>
-        </tr>
-    </table>
+    <div>
+        <img src="./docs/explicit_stop_line.svg" width="600">
+        <div align="center">1-1-1 Stop line based on road markings</div>
+    </div>
+    <br> <div>
+        <img src="./docs/virtual_stop_line.svg" width="600">
+        <div align="center">1-1-2 Virtual stop line</div>
+    </div>
+    <br> <div>
+        <img src="./docs/stop_distance_from_object_preferred.svg" width="600">
+        <div align="center">1-2 Preferred stop position from pedestrian location</div>
+    </div>
+</div>
+
+<div align="center">
+  <img src="./docs/stop_position.svg" width="600">
+  <div align="center" style="width:600px">The figure shows how the stop position is determined based on the distance to the crosswalk and current vehicle speed. If the vehicle can stop at the preferred location with preferred deceleration (gray region), the preferred location becomes the stop position. If it cannot stop with preferred deceleration (orange region), the stop position is set where it can stop with preferred deceleration. If it cannot stop at the limit position with preferred deceleration (red region), the limit position becomes the stop position. If it cannot stop at the limit position even with strong deceleration, stopping is cancelled.</div>
 </div>
 
 To decide the stop position, the following parameters are defined.
