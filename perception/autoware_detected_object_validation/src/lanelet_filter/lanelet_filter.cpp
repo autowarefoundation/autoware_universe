@@ -20,11 +20,12 @@
 #include "autoware_utils/geometry/geometry.hpp"
 #include "autoware_utils/system/time_keeper.hpp"
 
+#include <Eigen/Core>
+
 #include <boost/geometry/algorithms/convex_hull.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
 #include <boost/geometry/algorithms/intersects.hpp>
 #include <boost/geometry/index/rtree.hpp>
-#include <Eigen/Core>
 
 #include <lanelet2_core/geometry/BoundingBox.h>
 #include <lanelet2_core/geometry/Lanelet.h>
@@ -109,8 +110,7 @@ bool isInPolygon(
 }
 
 bool isInPolygon(
-  const double & x, const double & y, const lanelet::BasicPolygon2d & polygon,
-  const double radius)
+  const double & x, const double & y, const lanelet::BasicPolygon2d & polygon, const double radius)
 {
   constexpr double eps = 1.0e-9;
   const lanelet::BasicPoint2d p(x, y);
@@ -137,7 +137,8 @@ LinearRing2d expandPolygon(const LinearRing2d & polygon, double distance)
   return multi_polygon.front().outer();
 }
 
-TriangleMesh createTriangleMeshFromLanelet(const lanelet::ConstLanelet & lanelet) {
+TriangleMesh createTriangleMeshFromLanelet(const lanelet::ConstLanelet & lanelet)
+{
   TriangleMesh mesh;
 
   const lanelet::ConstLineString3d & left = lanelet.leftBound();
@@ -171,7 +172,7 @@ TriangleMesh createTriangleMeshFromLanelet(const lanelet::ConstLanelet & lanelet
   }
 
   // triangulation of the remaining unmatched parts from the tail
-   if (n_left > n_right) {
+  if (n_left > n_right) {
     size_t i = n_left - 1;
     size_t j = n_right - 1;
     const size_t n_extra = n_left - n_right;
@@ -216,23 +217,24 @@ TriangleMesh createTriangleMeshFromLanelet(const lanelet::ConstLanelet & lanelet
 }
 
 // compute a normal vector that is pointing the Z+ from given triangle points
-Eigen::Vector3d computeFaceNormal(const std::array<Eigen::Vector3d, 3>& triangle_points) {
-    Eigen::Vector3d v1 = triangle_points[1] - triangle_points[0];
-    Eigen::Vector3d v2 = triangle_points[2] - triangle_points[0];
-    Eigen::Vector3d normal = v1.cross(v2);
+Eigen::Vector3d computeFaceNormal(const std::array<Eigen::Vector3d, 3> & triangle_points)
+{
+  Eigen::Vector3d v1 = triangle_points[1] - triangle_points[0];
+  Eigen::Vector3d v2 = triangle_points[2] - triangle_points[0];
+  Eigen::Vector3d normal = v1.cross(v2);
 
-    // ensure the normal is pointing upward (Z+)
-    if (normal.z() < 0) {
-        normal = -normal;
-    }
+  // ensure the normal is pointing upward (Z+)
+  if (normal.z() < 0) {
+    normal = -normal;
+  }
 
-    return normal.normalized();
+  return normal.normalized();
 }
 
 // checks whether a point is located above the lanelet triangle plane
 // that is closest in the perpendicular direction
-bool isPointAboveLaneletMesh(const Eigen::Vector3d & point, const lanelet::ConstLanelet & lanelet,
-  const double & offset)
+bool isPointAboveLaneletMesh(
+  const Eigen::Vector3d & point, const lanelet::ConstLanelet & lanelet, const double & offset)
 {
   TriangleMesh mesh = createTriangleMeshFromLanelet(lanelet);
 
@@ -240,10 +242,10 @@ bool isPointAboveLaneletMesh(const Eigen::Vector3d & point, const lanelet::Const
 
   double min_dist = std::numeric_limits<double>::infinity();
   double min_abs_dist = std::numeric_limits<double>::infinity();
-  for (const auto& tri : mesh) {
+  for (const auto & tri : mesh) {
     Eigen::Vector3d plane_normal_vec = computeFaceNormal(tri);
 
-    const double cos_of_normal_and_z  = plane_normal_vec.dot(Eigen::Vector3d::UnitZ());
+    const double cos_of_normal_and_z = plane_normal_vec.dot(Eigen::Vector3d::UnitZ());
     constexpr double cos_threshold = std::cos(M_PI / 3.0);
 
     // if angle is too steep, consider as above for safety
@@ -554,7 +556,7 @@ bool ObjectLaneletFilterNode::isObjectOverlapLanelets(
 
       for (const auto & candidate : candidates) {
         if (isInPolygon(point_transformed.x, point_transformed.y, candidate.second.polygon, 0.0)) {
-          if (filter_settings_.filter_object_under_lanelet){
+          if (filter_settings_.filter_object_under_lanelet) {
             is_point_in_polygon = true;
             break;
           } else {
