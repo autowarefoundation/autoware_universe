@@ -32,6 +32,9 @@ DynamicObject toDynamicObject(
   if (det_object.existence_probability < 1e-6) {
     // given existence probability is too low, may the value is not set
     dynamic_object.existence_probability = default_existence_probability;
+  } else if (det_object.existence_probability > 0.999) {
+    // given existence probability is too high, may the value is not set
+    dynamic_object.existence_probability = 0.999;
   } else {
     dynamic_object.existence_probability = det_object.existence_probability;
   }
