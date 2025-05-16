@@ -458,9 +458,12 @@ void ControlValidator::display_status()
   const auto & s = validation_status_;
 
   warn(
-    s.is_valid_max_distance_deviation, "predicted trajectory is too far from planning trajectory!!",
+    s.is_valid_max_distance_deviation,
+    "predicted trajectory is too far from planning trajectory with max distance deviation: ",
     s.max_distance_deviation);
-  warn(s.is_valid_lateral_jerk, "steering rate exceeds safety threshold!!", s.steering_rate);
+  warn(
+    s.is_valid_lateral_jerk,
+    "lateral jerk exceeds safety threshold with steering rate: ", s.steering_rate);
 }
 
 }  // namespace autoware::control_validator
