@@ -74,7 +74,7 @@ perception/autoware_bevfusion/** amadeusz.szymko.2@tier4.jp kenzo.lobos@tier4.jp
 perception/autoware_bytetrack/** manato.hirabayashi@tier4.jp yoshi.ri@tier4.jp
 perception/autoware_cluster_merger/** dai.nguyen@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 perception/autoware_compare_map_segmentation/** abrahammonrroy@yahoo.com akihisa.nagata@tier4.jp dai.nguyen@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
-perception/autoware_crosswalk_traffic_light_estimator/** masato.saeki@tier4.jp satoshi.ota@tier4.jp tao.zhong@tier4.jp yoshi.ri@tier4.jp
+perception/autoware_crosswalk_traffic_light_estimator/** masato.saeki@tier4.jp satoshi.ota@tier4.jp taekjin.lee@tier4.jp tao.zhong@tier4.jp yoshi.ri@tier4.jp
 perception/autoware_detected_object_feature_remover/** kotaro.uetake@tier4.jp tomoya.kimura@tier4.jp yoshi.ri@tier4.jp
 perception/autoware_detected_object_validation/** dai.nguyen@tier4.jp shintaro.tomie@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 perception/autoware_detection_by_tracker/** taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
@@ -100,20 +100,20 @@ perception/autoware_radar_tracks_msgs_converter/** satoshi.tanaka@tier4.jp taekj
 perception/autoware_raindrop_cluster_filter/** dai.nguyen@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 perception/autoware_shape_estimation/** kcolak@leodrive.ai taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 perception/autoware_simple_object_merger/** satoshi.tanaka@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp
-perception/autoware_tensorrt_classifier/** kotaro.uetake@tier4.jp masato.saeki@tier4.jp yoshi.ri@tier4.jp
+perception/autoware_tensorrt_classifier/** kotaro.uetake@tier4.jp masato.saeki@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 perception/autoware_tensorrt_common/** amadeusz.szymko.2@tier4.jp dan.umeda@tier4.jp kenzo.lobos@tier4.jp manato.hirabayashi@tier4.jp
 perception/autoware_tensorrt_plugins/** amadeusz.szymko.2@tier4.jp kenzo.lobos@tier4.jp kotaro.uetake@tier4.jp
 perception/autoware_tensorrt_yolox/** dan.umeda@tier4.jp kotaro.uetake@tier4.jp manato.hirabayashi@tier4.jp
 perception/autoware_tracking_object_merger/** taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
-perception/autoware_traffic_light_arbiter/** kenzo.lobos@tier4.jp masato.saeki@tier4.jp yoshi.ri@tier4.jp
-perception/autoware_traffic_light_category_merger/** dai.nguyen@tier4.jp masato.saeki@tier4.jp yoshi.ri@tier4.jp
-perception/autoware_traffic_light_classifier/** masato.saeki@tier4.jp tao.zhong@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
-perception/autoware_traffic_light_fine_detector/** masato.saeki@tier4.jp shintaro.tomie@tier4.jp tao.zhong@tier4.jp yoshi.ri@tier4.jp
-perception/autoware_traffic_light_map_based_detector/** masato.saeki@tier4.jp tao.zhong@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
-perception/autoware_traffic_light_multi_camera_fusion/** masato.saeki@tier4.jp tao.zhong@tier4.jp yoshi.ri@tier4.jp
-perception/autoware_traffic_light_occlusion_predictor/** masato.saeki@tier4.jp tao.zhong@tier4.jp yoshi.ri@tier4.jp
-perception/autoware_traffic_light_selector/** dai.nguyen@tier4.jp masato.saeki@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
-perception/autoware_traffic_light_visualization/** masato.saeki@tier4.jp tao.zhong@tier4.jp yukihiro.saito@tier4.jp
+perception/autoware_traffic_light_arbiter/** masato.saeki@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp
+perception/autoware_traffic_light_category_merger/** dai.nguyen@tier4.jp masato.saeki@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp
+perception/autoware_traffic_light_classifier/** masato.saeki@tier4.jp taekjin.lee@tier4.jp tao.zhong@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
+perception/autoware_traffic_light_fine_detector/** masato.saeki@tier4.jp shintaro.tomie@tier4.jp taekjin.lee@tier4.jp tao.zhong@tier4.jp yoshi.ri@tier4.jp
+perception/autoware_traffic_light_map_based_detector/** masato.saeki@tier4.jp taekjin.lee@tier4.jp tao.zhong@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
+perception/autoware_traffic_light_multi_camera_fusion/** masato.saeki@tier4.jp taekjin.lee@tier4.jp tao.zhong@tier4.jp yoshi.ri@tier4.jp
+perception/autoware_traffic_light_occlusion_predictor/** masato.saeki@tier4.jp taekjin.lee@tier4.jp tao.zhong@tier4.jp yoshi.ri@tier4.jp
+perception/autoware_traffic_light_selector/** dai.nguyen@tier4.jp masato.saeki@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
+perception/autoware_traffic_light_visualization/** masato.saeki@tier4.jp taekjin.lee@tier4.jp tao.zhong@tier4.jp yukihiro.saito@tier4.jp
 perception/perception_utils/** taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 planning/autoware_costmap_generator/** kosuke.takeuchi@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 planning/autoware_external_velocity_limit_selector/** satoshi.ota@tier4.jp shumpei.wakabayashi@tier4.jp tomohito.ando@tier4.jp tomoya.kimura@tier4.jp
