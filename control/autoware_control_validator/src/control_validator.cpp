@@ -191,9 +191,6 @@ ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)
 
   sub_control_cmd_ = create_subscription<Control>(
     "~/input/control_cmd", 1, std::bind(&ControlValidator::on_control_cmd, this, _1));
-  sub_steering_status_ =
-    autoware_utils::InterProcessPollingSubscriber<SteeringReport>::create_subscription(
-      this, "~/input/steering_status", 1);
   sub_kinematics_ =
     autoware_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry>::create_subscription(
       this, "~/input/kinematics", 1);
@@ -317,10 +314,6 @@ void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
   if (!control_cmd_msg) {
     return waiting(sub_control_cmd_->get_topic_name());
   }
-  SteeringReport::ConstSharedPtr steering_status_msg = sub_steering_status_->take_data();
-  if (!steering_status_msg) {
-    return waiting(sub_steering_status_->subscriber()->get_topic_name());
-  }
   Trajectory::ConstSharedPtr predicted_trajectory_msg = sub_predicted_traj_->take_data();
   if (!predicted_trajectory_msg) {
     return waiting(sub_reference_traj_->subscriber()->get_topic_name());
@@ -409,7 +402,7 @@ std::string ControlValidator::generate_error_message(const ControlValidatorStatu
   std::vector<std::string> error_messages;
 
   if (!s.is_valid_lateral_jerk) {
-    error_messages.push_back("HIGH STEERING RATE");
+    error_messages.push_back("HIGH LATERAL JERK");
   }
 
   if (!s.is_valid_max_distance_deviation) {
