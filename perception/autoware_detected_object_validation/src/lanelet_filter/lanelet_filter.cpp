@@ -24,12 +24,14 @@
 #include <boost/geometry/algorithms/disjoint.hpp>
 #include <boost/geometry/algorithms/intersects.hpp>
 #include <boost/geometry/index/rtree.hpp>
+#include <Eigen/Core>
 
 #include <lanelet2_core/geometry/BoundingBox.h>
 #include <lanelet2_core/geometry/Lanelet.h>
 #include <lanelet2_core/geometry/LaneletMap.h>
 #include <lanelet2_core/geometry/Polygon.h>
 
+#include <cmath>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -38,6 +40,9 @@ namespace autoware::detected_object_validation
 {
 namespace lanelet_filter
 {
+using autoware_utils::ScopedTimeTrack;
+using TriangleMesh = std::vector<std::array<Eigen::Vector3d, 3>>;
+
 ObjectLaneletFilterNode::ObjectLaneletFilterNode(const rclcpp::NodeOptions & node_options)
 : Node("object_lanelet_filter_node", node_options),
   tf_buffer_(this->get_clock()),
@@ -57,6 +62,8 @@ ObjectLaneletFilterNode::ObjectLaneletFilterNode(const rclcpp::NodeOptions & nod
   // Set filter settings
   filter_settings_.polygon_overlap_filter =
     declare_parameter<bool>("filter_settings.polygon_overlap_filter.enabled");
+  filter_settings_.filter_object_under_lanelet =
+    declare_parameter<bool>("filter_settings.polygon_overlap_filter.filter_object_under_lanelet");
   filter_settings_.lanelet_direction_filter =
     declare_parameter<bool>("filter_settings.lanelet_direction_filter.enabled");
   filter_settings_.lanelet_direction_filter_velocity_yaw_threshold =
@@ -101,6 +108,15 @@ bool isInPolygon(
   return boost::geometry::distance(p, polygon) < radius + eps;
 }
 
+bool isInPolygon(
+  const double & x, const double & y, const lanelet::BasicPolygon2d & polygon,
+  const double radius)
+{
+  constexpr double eps = 1.0e-9;
+  const lanelet::BasicPoint2d p(x, y);
+  return boost::geometry::distance(p, polygon) < radius + eps;
+}
+
 LinearRing2d expandPolygon(const LinearRing2d & polygon, double distance)
 {
   autoware_utils::MultiPolygon2d multi_polygon;
@@ -119,6 +135,134 @@ LinearRing2d expandPolygon(const LinearRing2d & polygon, double distance)
   }
 
   return multi_polygon.front().outer();
+}
+
+TriangleMesh createTriangleMeshFromLanelet(const lanelet::ConstLanelet & lanelet) {
+  TriangleMesh mesh;
+
+  const lanelet::ConstLineString3d & left = lanelet.leftBound();
+  const lanelet::ConstLineString3d & right = lanelet.rightBound();
+
+  // bounds should have same number of points
+  // if not the same, first check the first shared points then we will check it from the tail
+  // since we don't have the original set of 3 points,
+  // we will approximate the 3d mesh with this way
+  size_t n_left = left.size();
+  size_t n_right = right.size();
+  const size_t n_shared = std::min(n_left, n_right);
+  if (n_shared < 2) return mesh;
+
+  // take 2 points from each side and create 2 triangles
+  for (size_t i = 0; i < n_shared - 1; ++i) {
+    Eigen::Vector3d a_l(left[i].x(), left[i].y(), left[i].z());
+    Eigen::Vector3d b_l(left[i + 1].x(), left[i + 1].y(), left[i + 1].z());
+    Eigen::Vector3d a_r(right[i].x(), right[i].y(), right[i].z());
+    Eigen::Vector3d b_r(right[i + 1].x(), right[i + 1].y(), right[i + 1].z());
+
+    //
+    // b_l .--. b_r
+    //     |\ |
+    //     | \|
+    //     .--.
+    // a_l      a_r
+    //
+    mesh.push_back({a_l, b_l, a_r});
+    mesh.push_back({b_l, b_r, a_r});
+  }
+
+  // triangulation of the remaining unmatched parts from the tail
+   if (n_left > n_right) {
+    size_t i = n_left - 1;
+    size_t j = n_right - 1;
+    const size_t n_extra = n_left - n_right;
+
+    for (size_t k = 0; k < n_extra; ++k) {
+      // we need at least 2 points from eash side
+      if (i < 1 || j < 1) break;
+
+      Eigen::Vector3d a_l(left[i - 1].x(), left[i - 1].y(), left[i - 1].z());
+      Eigen::Vector3d b_l(left[i].x(), left[i].y(), left[i].z());
+      Eigen::Vector3d a_r(right[j - 1].x(), right[j - 1].y(), right[j - 1].z());
+      Eigen::Vector3d b_r(right[j].x(), right[j].y(), right[j].z());
+
+      mesh.push_back({b_l, a_l, b_r});
+      mesh.push_back({a_l, a_r, b_r});
+
+      --i;
+      --j;
+    }
+  } else if (n_right > n_left) {
+    size_t i = n_left - 1;
+    size_t j = n_right - 1;
+    const size_t n_extra = n_right - n_left;
+
+    for (size_t k = 0; k < n_extra; ++k) {
+      if (i < 1 || j < 1) break;
+
+      Eigen::Vector3d a_l(left[i - 1].x(), left[i - 1].y(), left[i - 1].z());
+      Eigen::Vector3d b_l(left[i].x(), left[i].y(), left[i].z());
+      Eigen::Vector3d a_r(right[j - 1].x(), right[j - 1].y(), right[j - 1].z());
+      Eigen::Vector3d b_r(right[j].x(), right[j].y(), right[j].z());
+
+      mesh.push_back({b_l, a_l, b_r});
+      mesh.push_back({a_l, a_r, b_r});
+
+      --i;
+      --j;
+    }
+  }
+
+  return mesh;
+}
+
+// compute a normal vector that is pointing the Z+ from given triangle points
+Eigen::Vector3d computeFaceNormal(const std::array<Eigen::Vector3d, 3>& triangle_points) {
+    Eigen::Vector3d v1 = triangle_points[1] - triangle_points[0];
+    Eigen::Vector3d v2 = triangle_points[2] - triangle_points[0];
+    Eigen::Vector3d normal = v1.cross(v2);
+
+    // ensure the normal is pointing upward (Z+)
+    if (normal.z() < 0) {
+        normal = -normal;
+    }
+
+    return normal.normalized();
+}
+
+// checks whether a point is located above the lanelet triangle plane
+// that is closest in the perpendicular direction
+bool isPointAboveLaneletMesh(const Eigen::Vector3d & point, const lanelet::ConstLanelet & lanelet,
+  const double & offset)
+{
+  TriangleMesh mesh = createTriangleMeshFromLanelet(lanelet);
+
+  if (mesh.size() == 0) return true;
+
+  double min_dist = std::numeric_limits<double>::infinity();
+  double min_abs_dist = std::numeric_limits<double>::infinity();
+  for (const auto& tri : mesh) {
+    Eigen::Vector3d plane_normal_vec = computeFaceNormal(tri);
+
+    const double cos_of_normal_and_z  = plane_normal_vec.dot(Eigen::Vector3d::UnitZ());
+    constexpr double cos_threshold = std::cos(M_PI / 3.0);
+
+    // if angle is too steep, consider as above for safety
+    if (cos_of_normal_and_z < cos_threshold) {
+      return true;
+    }
+
+    // use offset to account for height
+    Eigen::Vector3d vec_to_point = (point + offset * plane_normal_vec) - tri[0];
+    double signed_dist = plane_normal_vec.dot(vec_to_point);
+
+    const double abs_dist = std::abs(signed_dist);
+    if (abs_dist < min_abs_dist) {
+      min_abs_dist = abs_dist;
+      min_dist = signed_dist;
+    }
+  }
+
+  return min_dist > 0;
 }
 
 void ObjectLaneletFilterNode::mapCallback(
@@ -144,6 +288,7 @@ void ObjectLaneletFilterNode::objectCallback(
     RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 3000, "No vector map received.");
     return;
   }
+
   autoware_perception_msgs::msg::DetectedObjects transformed_objects;
   if (!autoware::object_recognition_utils::transformObjects(
         *input_msg, lanelet_frame_id_, tf_buffer_, transformed_objects)) {
@@ -401,22 +546,41 @@ bool ObjectLaneletFilterNode::isObjectOverlapLanelets(
     bg::envelope(object_convex_hull, bbox);
     local_rtree.query(bgi::intersects(bbox), std::back_inserter(candidates));
 
+    bool is_point_in_polygon = false;
     // if object do not have bounding box, check each footprint is inside polygon
     for (const auto & point : object.shape.footprint.points) {
       const geometry_msgs::msg::Point32 point_transformed =
         autoware_utils::transform_point(point, object.kinematics.pose_with_covariance.pose);
-      geometry_msgs::msg::Pose point2d;
-      point2d.position.x = point_transformed.x;
-      point2d.position.y = point_transformed.y;
 
       for (const auto & candidate : candidates) {
-        if (isInPolygon(point2d, candidate.second.polygon, 0.0)) {
-          return true;
+        if (isInPolygon(point_transformed.x, point_transformed.y, candidate.second.polygon, 0.0)) {
+          if (filter_settings_.filter_object_under_lanelet){
+            is_point_in_polygon = true;
+            break;
+          } else {
+            return true;
+          }
         }
       }
+
+      if (is_point_in_polygon) break;
     }
 
-    return false;
+    // filter the object under the lanelet
+    if (filter_settings_.filter_object_under_lanelet && is_point_in_polygon) {
+      // assuming the positions are already the center of the cluster (convex hull)
+      // for an exact calculation of the cluster from the points,
+      // we should use autoware_utils::transform_point before computing the cluster
+      const double cx = object.kinematics.pose_with_covariance.pose.position.x;
+      const double cy = object.kinematics.pose_with_covariance.pose.position.y;
+      const double cz = object.kinematics.pose_with_covariance.pose.position.z;
+      // use the centroid as a query point
+      const Eigen::Vector3d centroid(cx, cy, cz);
+
+      return isCentroidAboveLanelet(candidates, centroid, object.shape.dimensions.z * 0.5);
+    }
+
+    return is_point_in_polygon;
   }
 }
 
@@ -488,6 +652,35 @@ bool ObjectLaneletFilterNode::isSameDirectionWithLanelets(
   }
 
   return false;
+}
+
+bool ObjectLaneletFilterNode::isCentroidAboveLanelet(
+  const std::vector<BoxAndLanelet> & lanelets, const Eigen::Vector3d & centroid,
+  const double & dim_z)
+{
+  lanelet::ConstLanelet nearest_lanelet;
+  double closest_lanelet_z_dist = std::numeric_limits<double>::infinity();
+
+  const double cz = centroid.z();
+
+  // search for the nearest lanelet along the z-axis in case roads are layered
+  for (const auto & candidate_lanelet : lanelets) {
+    const lanelet::ConstLanelet llt = candidate_lanelet.second.lanelet;
+    const lanelet::ConstLineString3d line = llt.leftBound();
+    if (line.size() == 0) continue;
+
+    // assuming the roads have enough height difference to distinguish each other
+    const double diff_z = cz - line[0].z();
+    const double dist_z = diff_z * diff_z;
+
+    // use the closest lanelet in z axis
+    if (dist_z < closest_lanelet_z_dist) {
+      closest_lanelet_z_dist = dist_z;
+      nearest_lanelet = llt;
+    }
+  }
+
+  return isPointAboveLaneletMesh(centroid, nearest_lanelet, dim_z);
 }
 
 }  // namespace lanelet_filter

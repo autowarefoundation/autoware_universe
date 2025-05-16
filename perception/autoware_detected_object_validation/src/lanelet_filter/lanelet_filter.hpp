@@ -93,6 +93,7 @@ private:
   struct FilterSettings
   {
     bool polygon_overlap_filter;
+    bool filter_object_under_lanelet;
     bool lanelet_direction_filter;
     double lanelet_direction_filter_velocity_yaw_threshold;
     double lanelet_direction_filter_object_speed_threshold;
@@ -120,6 +121,9 @@ private:
   bool isSameDirectionWithLanelets(
     const autoware_perception_msgs::msg::DetectedObject & object,
     const bgi::rtree<BoxAndLanelet, RtreeAlgo> & local_rtree);
+  bool isCentroidAboveLanelet(
+    const std::vector<BoxAndLanelet> & lanelets, const Eigen::Vector3d & centroid,
+    const double & dim_z);
   geometry_msgs::msg::Polygon setFootprint(const autoware_perception_msgs::msg::DetectedObject &);
 
   lanelet::BasicPolygon2d getPolygon(const lanelet::ConstLanelet & lanelet);

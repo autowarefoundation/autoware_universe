@@ -71,6 +71,11 @@
                   "type": "boolean",
                   "default": true,
                   "description": "If true, objects that are not in the lanelet polygon are filtered."
+                },
+                "filter_object_under_lanelet": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "If true, unknown objects under the lanelet will be filtered."
                 }
               },
               "required": ["enabled"]
