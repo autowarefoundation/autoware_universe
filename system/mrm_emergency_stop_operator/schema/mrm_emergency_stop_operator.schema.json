@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MRM Emergency Stop Operator",
+  "type": "object",
+  "definitions": {
+    "mrm_emergency_stop_operator": {
+      "type": "object",
+      "properties": {
+        "update_rate": {
+          "type": "integer",
+          "description": "Timer callback frequency [Hz]",
+          "default": 30
+        },
+        "target_acceleration": {
+          "type": "number",
+          "description": "Target acceleration for emergency stop [m/s^2]",
+          "default": -2.5
+        },
+        "target_jerk": {
+          "type": "number",
+          "description": "Target jerk for emergency stop [m/s^3]",
+          "default": -1.5
+        }
+      },
+      "required": ["update_rate", "target_acceleration", "target_jerk"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/mrm_emergency_stop_operator"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
