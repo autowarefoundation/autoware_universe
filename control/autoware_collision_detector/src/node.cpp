@@ -362,6 +362,9 @@ void CollisionDetectorNode::checkCollision(diagnostic_updater::DiagnosticStatusW
   const auto is_collision_found =
     !nearest_obstacle ? false : nearest_obstacle->first < node_param_.collision_distance;
 
+  // When a collision is detected, update timestamps to track collision duration
+  // - start_of_consecutive_collision_stamp_: marks when a continuous collision began
+  // - most_recent_collision_stamp_: records the latest collision detection time
   if (is_collision_found) {
     if (!start_of_consecutive_collision_stamp_.has_value()) {
       start_of_consecutive_collision_stamp_ = this->now();
@@ -371,6 +374,13 @@ void CollisionDetectorNode::checkCollision(diagnostic_updater::DiagnosticStatusW
     start_of_consecutive_collision_stamp_.reset();
   }
 
+  // Define condition to determine error state based on diagnostic mode
+  // 1. When already in error state (is_error_diag_ == true):
+  //    - Stay in error if time since last collision is less than off_buffer time
+  //    - This creates hysteresis to prevent rapid switching between states
+  // 2. When in normal state (is_error_diag_ == false):
+  //    - Enter error if collision has been continuous for longer than on_buffer time
+  //    - This prevents triggering on brief/momentary collisions
   const auto condition_to_trigger_error = [&]() {
     if (is_error_diag_) {
       return (this->now() - *most_recent_collision_stamp_).seconds() < node_param_.time_buffer.off;
