@@ -129,6 +129,7 @@ def main():
     plt.subplots_adjust(bottom=0.15)
 
     # Add formula text
+    # cSpell:ignore figtext boxstyle
     plt.figtext(
         0.5,
         0.02,
