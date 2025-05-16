@@ -9,7 +9,7 @@ jobs:
   build-and-test-daily:
     uses: ./.github/workflows/build-and-test-reusable.yaml
     with:
-      runner: "[self-hosted, Linux, X64]"
+      runner: "['self-hosted', 'Linux', 'X64']"
       container: ghcr.io/autowarefoundation/autoware:universe-devel
       container-suffix: ""
       pull-ccache: true
@@ -21,7 +21,7 @@ jobs:
   build-and-test-daily-cuda:
     uses: ./.github/workflows/build-and-test-reusable.yaml
     with:
-      runner: "[self-hosted, Linux, X64]"
+      runner: "['self-hosted', 'Linux', 'X64']"
       container: ghcr.io/autowarefoundation/autoware:universe-devel
       container-suffix: -cuda
       pull-ccache: true
@@ -33,7 +33,7 @@ jobs:
   build-and-test-daily-arm64:
     uses: ./.github/workflows/build-and-test-reusable.yaml
     with:
-      runner: codebuild-autoware-us-east-1-${{ github.run_id }}-${{ github.run_attempt }}-arm-3.0-large
+      runner: "['codebuild-autoware-us-east-1-${{ github.run_id }}-${{ github.run_attempt }}-arm-3.0-large']"
       container: ghcr.io/autowarefoundation/autoware:universe-devel
       container-suffix: ""
       build-pre-command: taskset --cpu-list 0-6
@@ -45,7 +45,7 @@ jobs:
   build-and-test-daily-arm64-cuda:
     uses: ./.github/workflows/build-and-test-reusable.yaml
     with:
-      runner: codebuild-autoware-us-east-1-${{ github.run_id }}-${{ github.run_attempt }}-arm-3.0-large
+      runner: "['codebuild-autoware-us-east-1-${{ github.run_id }}-${{ github.run_attempt }}-arm-3.0-large']"
       container: ghcr.io/autowarefoundation/autoware:universe-devel
       container-suffix: -cuda
       build-pre-command: taskset --cpu-list 0-6

@@ -3,9 +3,11 @@ name: build-and-test-reusable
 on:
   workflow_call:
     inputs:
+      # Why is it a JSON string?
+      # https://github.com/orgs/community/discussions/11692#discussioncomment-3541856
       runner:
         type: string
-        default: ubuntu-24.04
+        default: "['ubuntu-latest']"
         required: false
       container:
         type: string
@@ -57,7 +59,7 @@ env:
 
 jobs:
   build-and-test:
-    runs-on: ${{ inputs.runner }}
+    runs-on: ${{ fromJson(inputs.runner) }}
     container: ${{ inputs.container }}${{ inputs.container-suffix }}
     steps:
       - name: Check out repository
