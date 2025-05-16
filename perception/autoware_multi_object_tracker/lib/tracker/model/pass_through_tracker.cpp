@@ -21,7 +21,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
-#include <autoware_utils/ros/msg_covariance.hpp>
+#include <autoware_utils_geometry/msg/covariance.hpp>
 
 #include <bits/stdc++.h>
 #include <tf2/utils.h>
@@ -74,7 +74,7 @@ bool PassThroughTracker::measure(
 bool PassThroughTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object) const
 {
-  using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+  using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
   object = object_;
 
   object.pose_covariance[XYZRPY_COV_IDX::X_X] = 0.0;

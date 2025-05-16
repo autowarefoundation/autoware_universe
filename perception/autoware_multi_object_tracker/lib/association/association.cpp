@@ -19,8 +19,6 @@
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
-#include <autoware_utils/geometry/geometry.hpp>
-#include <autoware_utils/math/unit_conversion.hpp>
 
 #include <algorithm>
 #include <list>
@@ -54,8 +52,9 @@ double getFormedYawAngle(
   const geometry_msgs::msg::Quaternion & measurement_quat,
   const geometry_msgs::msg::Quaternion & tracker_quat, const bool distinguish_front_or_back = true)
 {
-  const double measurement_yaw = autoware_utils::normalize_radian(tf2::getYaw(measurement_quat));
-  const double tracker_yaw = autoware_utils::normalize_radian(tf2::getYaw(tracker_quat));
+  const double measurement_yaw =
+    autoware_utils_math::normalize_radian(tf2::getYaw(measurement_quat));
+  const double tracker_yaw = autoware_utils_math::normalize_radian(tf2::getYaw(tracker_quat));
   const double angle_range = distinguish_front_or_back ? M_PI : M_PI_2;
   const double angle_step = distinguish_front_or_back ? 2.0 * M_PI : M_PI;
   // Fixed measurement_yaw to be in the range of +-90 or 180 degrees of X_t(IDX::YAW)
@@ -156,8 +155,8 @@ double DataAssociation::calculateScore(
   }
 
   const double max_dist = config_.max_dist_matrix(tracker_label, measurement_label);
-  const double dist =
-    autoware_utils::calc_distance2d(measurement_object.pose.position, tracked_object.pose.position);
+  const double dist = autoware_utils_geometry::calc_distance2d(
+    measurement_object.pose.position, tracked_object.pose.position);
 
   // dist gate
   if (max_dist < dist) return 0.0;
@@ -165,7 +164,7 @@ double DataAssociation::calculateScore(
   // area gate
   const double max_area = config_.max_area_matrix(tracker_label, measurement_label);
   const double min_area = config_.min_area_matrix(tracker_label, measurement_label);
-  const double area = autoware_utils::get_area(measurement_object.shape);
+  const double area = autoware_utils_geometry::get_area(measurement_object.shape);
   if (area < min_area || max_area < area) return 0.0;
 
   // angle gate
@@ -181,7 +180,6 @@ double DataAssociation::calculateScore(
     measurement_object.pose.position, tracked_object.pose.position,
     getXYCovariance(tracked_object.pose_covariance));
   if (3.035 /*99%*/ <= mahalanobis_dist) return 0.0;
-
   // 2d iou gate
   const double min_iou = config_.min_iou_matrix(tracker_label, measurement_label);
   const double min_union_iou_area = 1e-2;
