@@ -180,7 +180,9 @@ double DataAssociation::calculateScore(
   const double mahalanobis_dist = getMahalanobisDistance(
     measurement_object.pose.position, tracked_object.pose.position,
     getXYCovariance(tracked_object.pose_covariance));
-  constexpr double chi_square_critical_value = 3.717; // 99.99% confidence level for 2 degrees of freedom, square root of chi-square critical value of 13.816
+  constexpr double chi_square_critical_value =
+    3.717;  // 99.99% confidence level for 2 degrees of freedom, square root of chi-square critical
+            // value of 13.816
   if (chi_square_critical_value <= mahalanobis_dist) return 0.0;
 
   // 2d iou gate
