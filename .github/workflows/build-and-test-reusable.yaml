@@ -61,6 +61,8 @@ jobs:
   build-and-test:
     runs-on: ${{ fromJson(inputs.runner) }}
     container: ${{ inputs.container }}${{ inputs.container-suffix }}
+    outputs:
+      coverage-files: ${{ steps.test.outputs.coverage-report-files }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
