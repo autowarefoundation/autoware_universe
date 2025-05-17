@@ -73,7 +73,7 @@ VoxelGridDownsampleFilterComponent::VoxelGridDownsampleFilterComponent(
 
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&VoxelGridDownsampleFilterComponent::paramCallback, this, _1));
+    std::bind(&VoxelGridDownsampleFilterComponent::param_callback, this, _1));
 }
 
 // TODO(atsushi421): Temporary Implementation: Delete this function definition when all the filter
@@ -112,7 +112,7 @@ void VoxelGridDownsampleFilterComponent::faster_filter(
   faster_voxel_filter.filter(input, output, transform_info, this->get_logger());
 }
 
-rcl_interfaces::msg::SetParametersResult VoxelGridDownsampleFilterComponent::paramCallback(
+rcl_interfaces::msg::SetParametersResult VoxelGridDownsampleFilterComponent::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);
