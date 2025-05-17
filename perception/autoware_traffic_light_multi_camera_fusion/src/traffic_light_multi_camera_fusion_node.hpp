@@ -15,6 +15,10 @@
 #ifndef TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
 #define TRAFFIC_LIGHT_MULTI_CAMERA_FUSION_NODE_HPP_
 
+#include <message_filters/subscriber.hpp>
+#include <message_filters/sync_policies/approximate_time.hpp>
+#include <message_filters/sync_policies/exact_time.hpp>
+#include <message_filters/synchronizer.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
@@ -24,10 +28,6 @@
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
 
 #include <lanelet2_core/Forward.h>
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <message_filters/sync_policies/exact_time.h>
-#include <message_filters/synchronizer.h>
 
 #include <list>
 #include <map>
