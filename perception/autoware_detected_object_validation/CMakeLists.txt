@@ -53,6 +53,10 @@ ament_auto_add_library(object_lanelet_filter SHARED
   lib/utils/utils.cpp
 )
 
+target_link_libraries(object_lanelet_filter
+  Eigen3::Eigen
+)
+
 ament_auto_add_library(object_position_filter SHARED
   src/position_filter/position_filter.cpp
   lib/utils/utils.cpp

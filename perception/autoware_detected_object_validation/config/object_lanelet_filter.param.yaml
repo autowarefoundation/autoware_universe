@@ -13,12 +13,16 @@
     filter_settings:
       # polygon overlap based filter
       polygon_overlap_filter:
-       enabled: true
+        enabled: true
+        # only applies on unknown objects
+        filter_object_under_lanelet: false
+
       # velocity direction based filter
       lanelet_direction_filter:
         enabled: false
         velocity_yaw_threshold: 0.785398 # [rad] (45 deg)
         object_speed_threshold: 3.0 # [m/s]
+
       debug: false
       lanelet_extra_margin: 0.0
       use_height_threshold: false
