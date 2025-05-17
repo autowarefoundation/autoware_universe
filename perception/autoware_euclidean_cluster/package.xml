@@ -6,6 +6,8 @@
   <description>The autoware_euclidean_cluster package</description>
   <maintainer email="yukihiro.saito@tier4.jp">Yukihiro Saito</maintainer>
   <maintainer email="dai.nguyen@tier4.jp">Dai Nguyen</maintainer>
+  <maintainer email="lei.gu@tier4.jp">Lei Gu</maintainer>
+  <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
