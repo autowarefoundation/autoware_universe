@@ -161,15 +161,40 @@ jobs:
           target-packages: ${{ steps.get-self-packages.outputs.self-packages }}
           build-depends-repos: build_depends.repos
 
-      - name: Upload coverage to CodeCov
+      # Cache lcov/coverage directories for next job
+      - name: Cache coverage reports
         if: ${{ steps.test.outputs.coverage-report-files != '' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            build
+            lcov
+          key: coverage-${{ inputs.codecov-flag }}-${{ github.sha }}
+
+      - name: Show disk space after the tasks
+        run: df -h
+
+  upload-coverage:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: ${{ needs.build-and-test.outputs.coverage-files != '' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Restore coverage cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            build
+            lcov
+          key: coverage-${{ inputs.codecov-flag }}-${{ github.sha }}
+
+      - name: Upload coverage to CodeCov
         uses: codecov/codecov-action@v4
         with:
-          files: ${{ steps.test.outputs.coverage-report-files }}
+          files: ${{ needs.build-and-test.outputs.coverage-files }}
           fail_ci_if_error: false
           verbose: true
           flags: ${{ inputs.codecov-flag }}
           token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Show disk space after the tasks
-        run: df -h
