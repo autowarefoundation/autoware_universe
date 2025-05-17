@@ -30,31 +30,11 @@ namespace fs = ::std::experimental::filesystem;
 #include <utility>
 #include <vector>
 
-namespace
-{
-float calWeightedIou(
-  const sensor_msgs::msg::RegionOfInterest & bbox1, const autoware::tensorrt_yolox::Object & bbox2)
-{
-  int x1 = std::max(static_cast<int>(bbox1.x_offset), bbox2.x_offset);
-  int x2 = std::min(static_cast<int>(bbox1.x_offset + bbox1.width), bbox2.x_offset + bbox2.width);
-  int y1 = std::max(static_cast<int>(bbox1.y_offset), bbox2.y_offset);
-  int y2 = std::min(static_cast<int>(bbox1.y_offset + bbox1.height), bbox2.y_offset + bbox2.height);
-  int area1 = std::max(x2 - x1, 0) * std::max(y2 - y1, 0);
-  int area2 = bbox1.width * bbox1.height + bbox2.width * bbox2.height - area1;
-  if (area2 == 0) {
-    return 0.0;
-  }
-  return bbox2.score * area1 / area2;
-}
-
-}  // namespace
-
 namespace autoware::traffic_light
 {
 TrafficLightFineDetectorNode::TrafficLightFineDetectorNode(const rclcpp::NodeOptions & options)
 : Node("traffic_light_fine_detector_node", options)
 {
-  int num_class = 2;
   using std::placeholders::_1;
   using std::placeholders::_2;
   using std::placeholders::_3;
@@ -71,6 +51,7 @@ TrafficLightFineDetectorNode::TrafficLightFineDetectorNode(const rclcpp::NodeOpt
   float nms_threshold = static_cast<float>(this->declare_parameter<double>("nms_thresh"));
   is_approximate_sync_ = this->declare_parameter<bool>("approximate_sync");
 
+  int num_class;
   if (!readLabelFile(label_path, tlr_label_id_, num_class)) {
     RCLCPP_ERROR(this->get_logger(), "Could not find tlr id");
   }
@@ -164,7 +145,7 @@ void TrafficLightFineDetectorNode::callback(
     cv::Point lt(rough_roi.roi.x_offset, rough_roi.roi.y_offset);
     cv::Point rb(
       rough_roi.roi.x_offset + rough_roi.roi.width, rough_roi.roi.y_offset + rough_roi.roi.height);
-    fitInFrame(lt, rb, cv::Size(original_image.size()));
+    utils::fitInFrame(lt, rb, cv::Size(original_image.size()));
     rois.emplace_back(lt, rb);
     lts.emplace_back(lt);
     roi_ids.emplace_back(rough_roi.traffic_light_id);
@@ -186,7 +167,7 @@ void TrafficLightFineDetectorNode::callback(
           cv::Point lt_roi(
             lts[batch_i].x + detection.x_offset, lts[batch_i].y + detection.y_offset);
           cv::Point rb_roi(lt_roi.x + detection.width, lt_roi.y + detection.height);
-          fitInFrame(lt_roi, rb_roi, cv::Size(original_image.size()));
+          utils::fitInFrame(lt_roi, rb_roi, cv::Size(original_image.size()));
           autoware::tensorrt_yolox::Object det = detection;
           det.x_offset = lt_roi.x;
           det.y_offset = lt_roi.y;
@@ -226,7 +207,7 @@ float TrafficLightFineDetectorNode::evalMatchScore(
     float max_score = 0.0f;
     const sensor_msgs::msg::RegionOfInterest & expected_roi = roi_p.second.roi;
     for (const autoware::tensorrt_yolox::Object & detection : id2detections[tlr_id]) {
-      float score = ::calWeightedIou(expected_roi, detection);
+      float score = utils::calWeightedIou(expected_roi, detection);
       if (score >= max_score) {
         max_score = score;
         id2bestDetection[tlr_id] = detection;
@@ -310,26 +291,6 @@ bool TrafficLightFineDetectorNode::rosMsg2CvMat(
     RCLCPP_ERROR(
       this->get_logger(), "Failed to convert sensor_msgs::msg::Image to cv::Mat \n%s", e.what());
     return false;
-  }
-
-  return true;
-}
-
-bool TrafficLightFineDetectorNode::fitInFrame(cv::Point & lt, cv::Point & rb, const cv::Size & size)
-{
-  const int width = static_cast<int>(size.width);
-  const int height = static_cast<int>(size.height);
-  {
-    const int x_min = 0, x_max = width - 2;
-    const int y_min = 0, y_max = height - 2;
-    lt.x = std::min(std::max(lt.x, x_min), x_max);
-    lt.y = std::min(std::max(lt.y, y_min), y_max);
-  }
-  {
-    const int x_min = lt.x + 1, x_max = width - 1;
-    const int y_min = lt.y + 1, y_max = height - 1;
-    rb.x = std::min(std::max(rb.x, x_min), x_max);
-    rb.y = std::min(std::max(rb.y, y_min), y_max);
   }
 
   return true;
