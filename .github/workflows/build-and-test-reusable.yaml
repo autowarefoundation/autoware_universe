@@ -133,7 +133,7 @@ jobs:
         uses: autowarefoundation/autoware-github-actions/colcon-build@feat/cache-rosdep
         with:
           rosdistro: ${{ inputs.rosdistro }}
-          target-packages: ${{ steps.get-self-packages.outputs.self-packages }}
+          target-packages: "autoware_pose_initializer"
           build-depends-repos: build_depends.repos
           cache-key-element: ${{ env.BUILD_TYPE_CUDA_STATE }}
           build-pre-command: ${{ inputs.build-pre-command }}
@@ -159,7 +159,7 @@ jobs:
         uses: autowarefoundation/autoware-github-actions/colcon-test@feat/cache-rosdep
         with:
           rosdistro: ${{ inputs.rosdistro }}
-          target-packages: ${{ steps.get-self-packages.outputs.self-packages }}
+          target-packages: "autoware_pose_initializer"
           build-depends-repos: build_depends.repos
           use-local-mixin: true
 
