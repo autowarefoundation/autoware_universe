@@ -201,4 +201,4 @@ jobs:
           fail_ci_if_error: false
           verbose: true
           flags: ${{ inputs.codecov-flag }}
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ secrets.codecov-token }}
