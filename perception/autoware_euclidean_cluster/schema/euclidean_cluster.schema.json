@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_euclidean Parameters",
+  "type": "object",
+  "definitions": {
+    "euclidean_cluster": {
+      "type": "object",
+      "properties": {
+        "max_cluster_size": {
+          "type": "integer",
+          "description": "The maximum number of points that a cluster needs to contain in order to be considered valid.",
+          "default": 1000
+        },
+        "min_cluster_size": {
+          "type": "integer",
+          "description": "The minimum number of points that a cluster needs to contain in order to be considered valid.",
+          "default": 10
+        },
+        "tolerance": {
+          "type": "number",
+          "description": "The spatial cluster tolerance as a measure in the L2 Euclidean space.",
+          "default": 0.7
+        },
+        "use_height": {
+          "type": "boolean",
+          "description": "Whether to use point.z for clustering.",
+          "default": false
+        }
+      },
+      "required": ["max_cluster_size", "min_cluster_size", "tolerance", "use_height"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/euclidean_cluster"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
