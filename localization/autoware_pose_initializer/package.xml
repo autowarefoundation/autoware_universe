@@ -21,6 +21,7 @@
 
   <depend>autoware_component_interface_specs_universe</depend>
   <depend>autoware_component_interface_utils</depend>
+  <depend>autoware_internal_localization_msgs</depend>
   <depend>autoware_map_height_fitter</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_utils_diagnostics</depend>
@@ -29,7 +30,6 @@
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>std_srvs</depend>
-  <depend>tier4_localization_msgs</depend>
 
   <test_depend>ament_cmake_cppcheck</test_depend>
   <test_depend>ament_cmake_gmock</test_depend>
