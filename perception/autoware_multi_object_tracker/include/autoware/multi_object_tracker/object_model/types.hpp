@@ -42,7 +42,7 @@ namespace autoware::multi_object_tracker
 namespace types
 {
 // constants
-constexpr size_t max_channel_size = 16;
+constexpr size_t max_channel_size = 12;
 constexpr float default_existence_probability = 0.75;
 
 // channel configuration
