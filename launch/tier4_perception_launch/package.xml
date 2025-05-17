@@ -39,6 +39,7 @@
   <exec_depend>autoware_pointcloud_preprocessor</exec_depend>
   <exec_depend>autoware_probabilistic_occupancy_grid_map</exec_depend>
   <exec_depend>autoware_radar_fusion_to_detected_object</exec_depend>
+  <exec_depend>autoware_radar_object_clustering</exec_depend>
   <exec_depend>autoware_radar_object_tracker</exec_depend>
   <exec_depend>autoware_raindrop_cluster_filter</exec_depend>
   <exec_depend>autoware_shape_estimation</exec_depend>
