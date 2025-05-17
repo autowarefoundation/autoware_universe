@@ -12,44 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__PLANNING_VALIDATOR__PARAMETERS_HPP_
-#define AUTOWARE__PLANNING_VALIDATOR__PARAMETERS_HPP_
-
-#endif  // AUTOWARE__PLANNING_VALIDATOR__PARAMETERS_HPP_
+#ifndef AUTOWARE__PLANNING_VALIDATOR_TRAJECTORY_CHECKER__PARAMETERS_HPP_
+#define AUTOWARE__PLANNING_VALIDATOR_TRAJECTORY_CHECKER__PARAMETERS_HPP_
 
 namespace autoware::planning_validator
 {
-enum class InvalidTrajectoryHandlingType : uint8_t {
-  PUBLISH_AS_IT_IS,
-  STOP_PUBLISHING,
-  USE_PREVIOUS_RESULT,
-};
 
-struct ValidityCheck
+struct TrajectoryCheck
 {
   bool enable = true;
   bool is_critical = false;
   double threshold{};
 };
 
-struct ValidationParams
+struct TrajectoryCheckerParams
 {
-  ValidityCheck interval;
-  ValidityCheck relative_angle;
-  ValidityCheck curvature;
-  ValidityCheck latency;
-  ValidityCheck steering;
-  ValidityCheck steering_rate;
-  ValidityCheck lateral_jerk;
+  TrajectoryCheck interval;
+  TrajectoryCheck relative_angle;
+  TrajectoryCheck curvature;
+  TrajectoryCheck steering;
+  TrajectoryCheck steering_rate;
+  TrajectoryCheck lateral_jerk;
 
-  struct AccelerationCheck : ValidityCheck
+  struct AccelerationCheck : TrajectoryCheck
   {
     double lateral_th;
     double longitudinal_max_th;
     double longitudinal_min_th;
   } acceleration{};
 
-  struct DeviationCheck : ValidityCheck
+  struct DeviationCheck : TrajectoryCheck
   {
     double velocity_th;
     double distance_th;
@@ -57,30 +49,20 @@ struct ValidationParams
     double yaw_th;
   } deviation{};
 
-  struct TrajectoryShift : ValidityCheck
+  struct TrajectoryShift : TrajectoryCheck
   {
     double lat_shift_th;
     double forward_shift_th;
     double backward_shift_th;
   } trajectory_shift;
 
-  struct ForwardTrajectoryLength : ValidityCheck
+  struct ForwardTrajectoryLength : TrajectoryCheck
   {
     double acceleration;
     double margin;
   } forward_trajectory_length{};
 };
 
-struct Params
-{
-  bool enable_soft_stop_on_prev_traj = true;
-  bool publish_diag = true;
-  bool display_on_terminal = true;
-  double soft_stop_deceleration{};
-  double soft_stop_jerk_lim{};
-  int diag_error_count_threshold{};
-  ValidationParams validation_params{};
-  InvalidTrajectoryHandlingType inv_traj_handling_type{};
-  InvalidTrajectoryHandlingType inv_traj_critical_handling_type{};
-};
 }  // namespace autoware::planning_validator
+
+#endif  // AUTOWARE__PLANNING_VALIDATOR_TRAJECTORY_CHECKER__PARAMETERS_HPP_
