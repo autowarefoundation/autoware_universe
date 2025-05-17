@@ -59,7 +59,7 @@ void PlanningFactorAccumulator::update(
                                     ego_state.twist.twist.linear.x /
                                     (2.0 * parameters.abnormal_deceleration_threshold_mps2);
     const bool vel_near_to_stop = std::abs(ego_state.twist.twist.linear.x) <
-                                  0.277778;  // don't count abnormal stop if vel < 1km/h
+                                  1.38888;  // don't count abnormal stop if vel < 5km/h
     if (!vel_near_to_stop && closest_stop_point->distance < min_dist_to_stop) {
       abnormal_stop_decision_state_[module_name].update_stop_decision(
         closest_stop_point.value(), cur_time, parameters);
