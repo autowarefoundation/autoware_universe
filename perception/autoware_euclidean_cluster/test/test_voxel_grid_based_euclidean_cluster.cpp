@@ -91,10 +91,13 @@ TEST(VoxelGridBasedEuclideanClusterTest, testcase1)
   int min_points_number_per_voxel = 1;
   int min_cluster_size = 1;
   int max_cluster_size = 100;
+  int min_voxel_cluster_size_for_filtering = 150;
+  int max_points_per_voxel_in_large_cluster = 10;
   bool use_height = false;
   cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
     use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
-    min_points_number_per_voxel);
+    min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
+    max_points_per_voxel_in_large_cluster);
   if (cluster_->cluster(pointcloud_msg, output)) {
     std::cout << "cluster success" << std::endl;
   } else {
@@ -125,10 +128,13 @@ TEST(VoxelGridBasedEuclideanClusterTest, testcase2)
   int min_points_number_per_voxel = 1;
   int min_cluster_size = 2;
   int max_cluster_size = 100;
+  int min_voxel_cluster_size_for_filtering = 150;
+  int max_points_per_voxel_in_large_cluster = 10;
   bool use_height = false;
   cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
     use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
-    min_points_number_per_voxel);
+    min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
+    max_points_per_voxel_in_large_cluster);
   if (cluster_->cluster(pointcloud_msg, output)) {
     std::cout << "cluster success" << std::endl;
   } else {
@@ -155,10 +161,13 @@ TEST(VoxelGridBasedEuclideanClusterTest, testcase3)
   int min_points_number_per_voxel = 1;
   int min_cluster_size = 1;
   int max_cluster_size = 99;  // max_cluster_size is less than nb_generated_points
+  int min_voxel_cluster_size_for_filtering = 150;
+  int max_points_per_voxel_in_large_cluster = 10;
   bool use_height = false;
   cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
     use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
-    min_points_number_per_voxel);
+    min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
+    max_points_per_voxel_in_large_cluster);
   if (cluster_->cluster(pointcloud_msg, output)) {
     std::cout << "cluster success" << std::endl;
   } else {
