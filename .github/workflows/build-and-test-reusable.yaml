@@ -173,7 +173,7 @@ jobs:
           path: |
             build
             lcov
-          key: coverage-${{ inputs.codecov-flag }}-${{ github.sha }}
+          key: coverage-${{ inputs.codecov-flag }}-${{ runner.arch }}-${{ inputs.rosdistro }}-${{ github.sha }}
 
       - name: Show disk space after the tasks
         run: df -h
@@ -192,7 +192,7 @@ jobs:
           path: |
             build
             lcov
-          key: coverage-${{ inputs.codecov-flag }}-${{ github.sha }}
+          key: coverage-${{ inputs.codecov-flag }}-${{ runner.arch }}-${{ inputs.rosdistro }}-${{ github.sha }}
 
       - name: Upload coverage to CodeCov
         uses: codecov/codecov-action@v4
