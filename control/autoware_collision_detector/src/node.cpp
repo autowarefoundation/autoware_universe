@@ -158,8 +158,8 @@ CollisionDetectorNode::CollisionDetectorNode(const rclcpp::NodeOptions & node_op
     p.nearby_object_type_filters.filter_pedestrian =
       this->declare_parameter<bool>("nearby_object_type_filters.filter_pedestrian");
     p.ignore_behind_rear_axle = this->declare_parameter<bool>("ignore_behind_rear_axle");
-    p.time_buffer.on = this->declare_parameter<double>("time_buffer.on");
-    p.time_buffer.off = this->declare_parameter<double>("time_buffer.off");
+    p.time_buffer.on = this->declare_parameter<double>("time_buffer.on_duration");
+    p.time_buffer.off = this->declare_parameter<double>("time_buffer.off_duration");
     p.time_buffer.off_distance_hysteresis =
       this->declare_parameter<double>("time_buffer.off_distance_hysteresis");
   }
