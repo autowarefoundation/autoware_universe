@@ -152,6 +152,10 @@ void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Tim
 {
   using ElementAndPriority = std::pair<Element, bool>;
   std::unordered_map<lanelet::Id, std::vector<ElementAndPriority>> regulatory_element_signals_map;
+  std::unordered_map<lanelet::Id, PredictedTrafficLightState> predicted_state_map;
+  for (const auto & signal : latest_external_msg_.traffic_light_groups) {
+    predicted_state_map[signal.traffic_light_group_id] = signal.predictions;
+  }
 
   if (map_regulatory_elements_set_ == nullptr) {
     RCLCPP_WARN_THROTTLE(
@@ -233,6 +237,7 @@ void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Tim
     TrafficSignal signal_msg;
     signal_msg.traffic_light_group_id = regulatory_element_id;
     signal_msg.elements = get_highest_confidence_elements(elements);
+    signal_msg.predictions = predicted_state_map[regulatory_element_id];
     output_signals_msg.traffic_light_groups.emplace_back(signal_msg);
   }
 
