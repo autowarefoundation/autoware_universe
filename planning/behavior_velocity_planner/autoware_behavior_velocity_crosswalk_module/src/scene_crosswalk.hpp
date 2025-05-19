@@ -380,6 +380,9 @@ private:
     PathWithLaneId & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk);
 
+  void applyStopForParkedVehicles(
+    PathWithLaneId & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk);
+
   std::optional<geometry_msgs::msg::Pose> getDefaultStopPose(
     const PathWithLaneId & ego_path,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk) const;

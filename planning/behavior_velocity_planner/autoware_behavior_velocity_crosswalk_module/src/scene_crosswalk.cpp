@@ -15,6 +15,7 @@
 #include "scene_crosswalk.hpp"
 
 #include "occluded_crosswalk.hpp"
+#include "parked_vehicles_stop.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/path_utilization.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
@@ -27,7 +28,13 @@
 #include <autoware_utils/ros/uuid_helper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <boost/geometry/algorithms/buffer.hpp>
+#include <boost/geometry/strategies/cartesian/buffer_end_flat.hpp>
+#include <boost/geometry/strategies/cartesian/buffer_point_square.hpp>
+
 #include <lanelet2_core/geometry/LineString.h>
+#include <lanelet2_core/primitives/Point.h>
+#include <lanelet2_core/primitives/Polygon.h>
 #include <lanelet2_routing/RoutingGraph.h>
 #include <lanelet2_routing/RoutingGraphContainer.h>
 
@@ -280,6 +287,10 @@ bool CrosswalkModule::modifyPathVelocity(PathWithLaneId * path)
     planStop(*path, nearest_stop_factor, default_stop_pose);
   }
   recordTime(4);
+
+  applyStopForParkedVehicles(*path, first_path_point_on_crosswalk);
+
+  recordTime(5);
 
   const auto collision_info_msg =
     createStringStampedMessage(clock_->now(), module_id_, debug_data_.collision_points);
@@ -989,6 +1000,23 @@ void CrosswalkModule::applySlowDownByOcclusion(
   } else {
     most_recent_occlusion_time_.reset();
   }
+}
+
+void CrosswalkModule::applyStopForParkedVehicles(
+  PathWithLaneId & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk)
+{
+  // TODO(maxime): params
+  constexpr auto search_distance = 10.0;
+
+  const auto search_area = create_search_area(
+    crosswalk_,
+    lanelet::BasicPoint2d(first_path_point_on_crosswalk.x, first_path_point_on_crosswalk.y),
+    search_distance);
+  debug_data_.parked_vehicles_stop_search_area = search_area;
+  if (search_area.empty()) {
+    return;
+  }
+  (void)output;
 }
 
 Polygon2d CrosswalkModule::getAttentionArea(
