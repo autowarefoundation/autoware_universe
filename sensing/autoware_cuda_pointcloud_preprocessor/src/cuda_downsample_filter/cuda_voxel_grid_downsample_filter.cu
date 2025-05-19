@@ -189,8 +189,8 @@ CudaVoxelGridDownsampleFilter::CudaVoxelGridDownsampleFilter(
     CHECK_CUDA_ERROR(cudaDeviceGetDefaultMemPool(&mem_pool_, current_device_id));
 
     // Configure the memory pool reusing allocation
-    // Following the CUDA documentation, we set a high release threshold so that the allocated memory region
-    // will be reused
+    // Following the CUDA documentation, we set a high release threshold so that the allocated
+    // memory region will be reused
     uint64_t pool_release_threshold = ULONG_MAX;
     CHECK_CUDA_ERROR(cudaMemPoolSetAttribute(
       mem_pool_, cudaMemPoolAttrReleaseThreshold, static_cast<void *>(&pool_release_threshold)));
@@ -477,35 +477,35 @@ void CudaVoxelGridDownsampleFilter::getCentroid(
   switch (get_intensity_type(input_points)) {
     case sensor_msgs::msg::PointField::INT8:
       accumulatePointsKernel<int8_t><<<grid_dim_point, block_dim, 0, stream_>>>(
-          input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
+        input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
       break;
     case sensor_msgs::msg::PointField::UINT8:
       accumulatePointsKernel<uint8_t><<<grid_dim_point, block_dim, 0, stream_>>>(
-          input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
+        input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
       break;
     case sensor_msgs::msg::PointField::INT16:
       accumulatePointsKernel<int16_t><<<grid_dim_point, block_dim, 0, stream_>>>(
-          input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
+        input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
       break;
     case sensor_msgs::msg::PointField::UINT16:
       accumulatePointsKernel<uint16_t><<<grid_dim_point, block_dim, 0, stream_>>>(
-          input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
+        input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
       break;
     case sensor_msgs::msg::PointField::INT32:
       accumulatePointsKernel<int32_t><<<grid_dim_point, block_dim, 0, stream_>>>(
-          input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
+        input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
       break;
     case sensor_msgs::msg::PointField::UINT32:
       accumulatePointsKernel<uint32_t><<<grid_dim_point, block_dim, 0, stream_>>>(
-          input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
+        input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
       break;
     case sensor_msgs::msg::PointField::FLOAT32:
       accumulatePointsKernel<float><<<grid_dim_point, block_dim, 0, stream_>>>(
-          input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
+        input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
       break;
     case sensor_msgs::msg::PointField::FLOAT64:
       accumulatePointsKernel<double><<<grid_dim_point, block_dim, 0, stream_>>>(
-          input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
+        input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
       break;
     default:
       throw std::runtime_error("unsupported intensity data type is detected.");
@@ -516,4 +516,4 @@ void CudaVoxelGridDownsampleFilter::getCentroid(
     buffer_dev, num_valid_voxel, sizeof(OutputPointType), output_points->data.get(),
     return_type_field_dev, channel_field_dev);
 }
-}  // namespace autoware::cuda_pointcloud_priprocessor
+}  // namespace autoware::cuda_pointcloud_preprocessor

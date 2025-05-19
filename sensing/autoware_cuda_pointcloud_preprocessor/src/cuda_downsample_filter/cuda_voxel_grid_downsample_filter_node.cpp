@@ -51,7 +51,8 @@ void CudaVoxelGridDownsampleFilterNode::cudaPointcloudCallback(
     // This filter assumes float for intensity data type, though the filter supports
     // other data types for the intensity field, so here just outputs a WARN message.
     RCLCPP_WARN(
-      this->get_logger(), "Input pointcloud data layout is not compatible with PointXYZI. "
+      this->get_logger(),
+      "Input pointcloud data layout is not compatible with PointXYZI. "
       "The output result may not be correct");
   }
 
@@ -61,4 +62,5 @@ void CudaVoxelGridDownsampleFilterNode::cudaPointcloudCallback(
 }  // namespace autoware::cuda_pointcloud_preprocessor
 
 #include "rclcpp_components/register_node_macro.hpp"
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::cuda_pointcloud_preprocessor::CudaVoxelGridDownsampleFilterNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(
+  autoware::cuda_pointcloud_preprocessor::CudaVoxelGridDownsampleFilterNode)
