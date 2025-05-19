@@ -149,14 +149,13 @@ __global__ void packCentroidKernel(
     return;
   }
 
-  using output_type = typename CudaVoxelGridDownsampleFilter::OutputPointType;
-  auto dst = getElementPointer<output_type>(output, index, output_point_step, 0);
+  auto dst = getElementPointer<OutputPointType>(output, index, output_point_step, 0);
 
-  dst->x = static_cast<decltype(output_type::x)>(centroids[index].x / centroids[index].count);
-  dst->y = static_cast<decltype(output_type::y)>(centroids[index].y / centroids[index].count);
-  dst->z = static_cast<decltype(output_type::z)>(centroids[index].z / centroids[index].count);
+  dst->x = static_cast<decltype(OutputPointType::x)>(centroids[index].x / centroids[index].count);
+  dst->y = static_cast<decltype(OutputPointType::y)>(centroids[index].y / centroids[index].count);
+  dst->z = static_cast<decltype(OutputPointType::z)>(centroids[index].z / centroids[index].count);
   dst->intensity =
-    static_cast<decltype(output_type::intensity)>(centroids[index].i / centroids[index].count);
+    static_cast<decltype(OutputPointType::intensity)>(centroids[index].i / centroids[index].count);
   // Since `return_type` and `channel` fields cannot be accumulated, fill the representative values
   // for `return_type` and `channel` fields if they are available in the input pointcloud.
   dst->return_type =

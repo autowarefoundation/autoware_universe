@@ -16,6 +16,7 @@
 #define AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_DOWNSAMPLE_FILTER__CUDA_VOXEL_GRID_DOWNSAMPLE_FILTER_HPP_
 
 #include "autoware/cuda_pointcloud_preprocessor/cuda_downsample_filter/thrust_custom_allocator.hpp"
+#include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
 
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <cuda_blackboard/cuda_unique_ptr.hpp>
@@ -72,19 +73,6 @@ public:
     ThreeDim<int> min_coord;
     ThreeDim<int> max_coord;
   };
-
-  // This filter only returns XYZIRC regardless of the input point type
-#pragma pack(push, 1)
-  struct OutputPointType
-  {
-    float x;
-    float y;
-    float z;
-    std::uint8_t intensity;
-    std::uint8_t return_type;
-    std::uint16_t channel;
-  };
-#pragma pack(pop)
 
   struct Centroid
   {
