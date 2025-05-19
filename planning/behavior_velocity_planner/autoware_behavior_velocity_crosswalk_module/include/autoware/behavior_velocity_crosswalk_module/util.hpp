@@ -21,6 +21,8 @@
 #include <boost/geometry/geometries/linestring.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
 
+#include <lanelet2_core/primitives/Polygon.h>
+
 #include <memory>
 #include <optional>
 #include <set>
@@ -87,6 +89,9 @@ struct DebugData
   // occlusion data
   std::vector<lanelet::BasicPolygon2d> occlusion_detection_areas;
   geometry_msgs::msg::Point crosswalk_origin;
+
+  // parked vehicles stop
+  lanelet::BasicPolygon2d parked_vehicles_stop_search_area;
 };
 
 std::vector<std::pair<int64_t, lanelet::ConstLanelet>> getCrosswalksOnPath(
