@@ -188,8 +188,8 @@ CudaVoxelGridDownsampleFilter::CudaVoxelGridDownsampleFilter(
     CHECK_CUDA_ERROR(cudaGetDevice(&current_device_id));
     CHECK_CUDA_ERROR(cudaDeviceGetDefaultMemPool(&mem_pool_, current_device_id));
 
-    // Configure memory pool reusing allocation
-    // Following CUDA sample, set high release threshold so that allocated memory region
+    // Configure the memory pool reusing allocation
+    // Following the CUDA documentation, we set a high release threshold so that the allocated memory region
     // will be reused
     uint64_t pool_release_threshold = ULONG_MAX;
     CHECK_CUDA_ERROR(cudaMemPoolSetAttribute(
