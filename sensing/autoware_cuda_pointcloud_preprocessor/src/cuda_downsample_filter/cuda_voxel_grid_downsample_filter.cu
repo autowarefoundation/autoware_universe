@@ -30,6 +30,7 @@
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
+#include <optional>
 
 namespace autoware::cuda_pointcloud_preprocessor
 {
@@ -108,6 +109,7 @@ __global__ void calculateVoxelIndexKernel(
   }
 }
 
+template <typename IntensityType>
 __global__ void accumulatePointsKernel(
   const uint8_t * __restrict__ input_data, const size_t * __restrict__ index_map,
   const size_t * __restrict__ point_indices,
@@ -129,7 +131,7 @@ __global__ void accumulatePointsKernel(
     input_data, point_index, voxel_info_dev.input_point_step, voxel_info_dev.input_xyzi_offset[1]);
   auto z = getElementValue<float>(
     input_data, point_index, voxel_info_dev.input_point_step, voxel_info_dev.input_xyzi_offset[2]);
-  auto i = getElementValue<uint8_t>(
+  auto i = getElementValue<IntensityType>(
     input_data, point_index, voxel_info_dev.input_point_step, voxel_info_dev.input_xyzi_offset[3]);
 
   atomicAdd(&(centroids[voxel_index].x), x);
@@ -458,9 +460,59 @@ void CudaVoxelGridDownsampleFilter::getCentroid(
   dim3 block_dim(512);
   dim3 grid_dim_point((voxel_info_.num_input_points + block_dim.x - 1) / block_dim.x);
 
+  // get data type for intensity field
+  auto get_intensity_type = [](const auto & points) -> const uint8_t {
+    std::optional<uint8_t> intensity_index = std::nullopt;
+    for (size_t i = 0; i < points->fields.size(); i++) {
+      // Here assumes input points surely has "intensity" field
+      if (points->fields[i].name == "intensity") {
+        intensity_index = i;
+        break;
+      }
+    }
+    if (!intensity_index) {
+      throw std::runtime_error("intensity field is not found in input");
+    }
+    return points->fields[intensity_index.value()].datatype;
+  };
+
   // calculate voxel index that each input point belong to
-  accumulatePointsKernel<<<grid_dim_point, block_dim, 0, stream_>>>(
-    input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
+  switch (get_intensity_type(input_points)) {
+    case sensor_msgs::msg::PointField::INT8:
+      accumulatePointsKernel<int8_t><<<grid_dim_point, block_dim, 0, stream_>>>(
+          input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
+      break;
+    case sensor_msgs::msg::PointField::UINT8:
+      accumulatePointsKernel<uint8_t><<<grid_dim_point, block_dim, 0, stream_>>>(
+          input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
+      break;
+    case sensor_msgs::msg::PointField::INT16:
+      accumulatePointsKernel<int16_t><<<grid_dim_point, block_dim, 0, stream_>>>(
+          input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
+      break;
+    case sensor_msgs::msg::PointField::UINT16:
+      accumulatePointsKernel<uint16_t><<<grid_dim_point, block_dim, 0, stream_>>>(
+          input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
+      break;
+    case sensor_msgs::msg::PointField::INT32:
+      accumulatePointsKernel<int32_t><<<grid_dim_point, block_dim, 0, stream_>>>(
+          input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
+      break;
+    case sensor_msgs::msg::PointField::UINT32:
+      accumulatePointsKernel<uint32_t><<<grid_dim_point, block_dim, 0, stream_>>>(
+          input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
+      break;
+    case sensor_msgs::msg::PointField::FLOAT32:
+      accumulatePointsKernel<float><<<grid_dim_point, block_dim, 0, stream_>>>(
+          input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
+      break;
+    case sensor_msgs::msg::PointField::FLOAT64:
+      accumulatePointsKernel<double><<<grid_dim_point, block_dim, 0, stream_>>>(
+          input_points->data.get(), index_map_dev, point_index_dev, buffer_dev);
+      break;
+    default:
+      throw std::runtime_error("unsupported intensity data type is detected.");
+  }
 
   dim3 grid_dim_voxel((num_valid_voxel + block_dim.x - 1) / block_dim.x);
   packCentroidKernel<<<grid_dim_voxel, block_dim, 0, stream_>>>(

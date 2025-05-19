@@ -48,8 +48,11 @@ void CudaVoxelGridDownsampleFilterNode::cudaPointcloudCallback(
   // (i.e., just check the first four elements of the point field are x, y, z, and intensity
   // and don't care the rest of the fields)
   if (!pointcloud_preprocessor::utils::is_data_layout_compatible_with_point_xyzi(msg->fields)) {
-    RCLCPP_ERROR(
-      this->get_logger(), "Input pointcloud data layout is not compatible with PointXYZI");
+    // This filter assumes float for intensity data type, though the filter supports
+    // other data types for the intensity field, so here just outputs a WARN message.
+    RCLCPP_WARN(
+      this->get_logger(), "Input pointcloud data layout is not compatible with PointXYZI. "
+      "The output result may not be correct");
   }
 
   auto output_pointcloud_ptr = cuda_voxel_grid_downsample_filter_->filter(msg);
