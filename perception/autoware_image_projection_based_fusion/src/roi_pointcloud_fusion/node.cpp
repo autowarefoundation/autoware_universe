@@ -35,6 +35,7 @@
 namespace autoware::image_projection_based_fusion
 {
 using autoware_utils::ScopedTimeTrack;
+using Classification = autoware_perception_msgs::msg::ObjectClassification;
 
 RoiPointCloudFusionNode::RoiPointCloudFusionNode(const rclcpp::NodeOptions & options)
 : FusionNode<PointCloudMsgType, RoiMsgType, ClusterMsgType>("roi_pointcloud_fusion", options)
@@ -44,6 +45,7 @@ RoiPointCloudFusionNode::RoiPointCloudFusionNode(const rclcpp::NodeOptions & opt
   max_cluster_size_ = declare_parameter<int>("max_cluster_size");
   cluster_2d_tolerance_ = declare_parameter<double>("cluster_2d_tolerance");
   roi_scale_factor_ = declare_parameter<double>("roi_scale_factor");
+  override_class_with_unknown_ = declare_parameter<bool>("override_class_with_unknown");
 
   // publisher
   pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
@@ -68,15 +70,21 @@ void RoiPointCloudFusionNode::fuse_on_single_image(
   // select ROIs for fusion
   for (const auto & feature_obj : input_rois_msg.feature_objects) {
     if (fuse_unknown_only_) {
-      bool is_roi_label_unknown = feature_obj.object.classification.front().label ==
-                                  autoware_perception_msgs::msg::ObjectClassification::UNKNOWN;
+      bool is_roi_label_unknown =
+        feature_obj.object.classification.front().label == Classification::UNKNOWN;
       if (is_roi_label_unknown) {
         output_objs.push_back(feature_obj);
         debug_image_rois.push_back(feature_obj.feature.roi);
       }
     } else {
       // TODO(badai-nguyen): selected class from a list
-      output_objs.push_back(feature_obj);
+      if (override_class_with_unknown_) {
+        auto feature_obj_remap = feature_obj;
+        feature_obj_remap.object.classification.front().label = Classification::UNKNOWN;
+        output_objs.push_back(feature_obj_remap);
+      } else {
+        output_objs.push_back(feature_obj);
+      }
       debug_image_rois.push_back(feature_obj.feature.roi);
     }
   }
