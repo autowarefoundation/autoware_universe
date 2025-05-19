@@ -18,6 +18,7 @@
 #include "autoware/behavior_velocity_crosswalk_module/util.hpp"
 
 #include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
+#include <autoware/signal_processing/lowpass_filter_1d.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/crosswalk.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
@@ -120,7 +121,7 @@ public:
     bool show_processing_time;
     // param for stop position
     double stop_distance_from_object_preferred;
-    double stop_distance_from_object_limit;
+    double stop_distance_from_crosswalk_limit;
     double stop_distance_from_crosswalk;
     double stop_position_threshold;
     double min_acc_preferred;
@@ -150,9 +151,9 @@ public:
     double ego_pass_later_additional_margin;
     double ego_min_assumed_speed;
     bool consider_obj_on_crosswalk_on_red_light;
+    bool enable_no_stop_decision;
     double min_acc_for_no_stop_decision;
     double min_jerk_for_no_stop_decision;
-    double overrun_threshold_length_for_no_stop_decision;
     double stop_object_velocity;
     double min_object_velocity;
     bool disable_yield_for_new_stopped_object;
@@ -385,7 +386,8 @@ private:
 
   std::optional<geometry_msgs::msg::Pose> calcStopPose(
     const PathWithLaneId & ego_path, double dist_nearest_cp,
-    const std::optional<geometry_msgs::msg::Pose> & default_stop_pose_opt);
+    const std::optional<geometry_msgs::msg::Pose> & default_stop_pose_opt,
+    const geometry_msgs::msg::Point & first_path_point_on_crosswalk);
 
   std::optional<StopFactor> checkStopForCrosswalkUsers(
     const PathWithLaneId & ego_path, const PathWithLaneId & sparse_resample_path,
@@ -498,6 +500,8 @@ private:
 
   // Stop watch
   StopWatch<std::chrono::milliseconds> stop_watch_;
+
+  autoware::signal_processing::LowpassFilter1d pref_stop_x_position_{0.9};
 
   // whether ego passed safety_slow_point
   bool passed_safety_slow_point_;
