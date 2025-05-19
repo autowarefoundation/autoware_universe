@@ -6,6 +6,7 @@
   <description>autoware_lidar_apollo_instance_segmentation</description>
   <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
   <maintainer email="yukihiro.saito@tier4.jp">Yukihiro Saito</maintainer>
+  <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
   <license>Apache License 2.0</license>
 
   <author email="kosuke.takeuchi@tier4.jp">Kosuke Takeuchi</author>
