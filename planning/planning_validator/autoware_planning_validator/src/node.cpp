@@ -107,16 +107,9 @@ bool PlanningValidatorNode::isDataReady()
 void PlanningValidatorNode::setData()
 {
   auto & data = context_->data;
-  data->current_trajectory = sub_trajectory_.take_data();
   data->current_kinematics = sub_kinematics_.take_data();
   data->current_acceleration = sub_acceleration_.take_data();
-  if (data->current_trajectory) {
-    constexpr auto min_interval = 1.0;
-    data->resampled_current_trajectory =
-      std::make_shared<Trajectory>(resampleTrajectory(*data->current_trajectory, min_interval));
-  }
-  data->nearest_point_index.reset();
-  data->nearest_segment_index.reset();
+  data->set_current_trajectory(sub_trajectory_.take_data());
 }
 
 void PlanningValidatorNode::onTimer()

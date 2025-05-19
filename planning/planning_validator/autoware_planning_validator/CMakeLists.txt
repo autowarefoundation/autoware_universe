@@ -48,23 +48,24 @@ else()
     target_link_libraries(${PROJECT_NAME}_component "${cpp_typesupport_target}")
 endif()
 
-# if(BUILD_TESTING)
-#   ament_add_ros_isolated_gtest(test_autoware_planning_validator
-#     test/src/test_main.cpp
-#     test/src/test_planning_validator_functions.cpp
-#     test/src/test_planning_validator_helper.cpp
-#     test/src/test_planning_validator_pubsub.cpp
-#     test/src/test_planning_validator_node_interface.cpp
-
-#   )
-#   ament_target_dependencies(test_autoware_planning_validator
-#     rclcpp
-#     autoware_planning_msgs
-#   )
-#   target_link_libraries(test_autoware_planning_validator
-#   autoware_planning_validator_component
-#   )
-# endif()
+if(BUILD_TESTING)
+  find_package(autoware_planning_validator_test_utils REQUIRED)
+  ament_add_ros_isolated_gtest(test_autoware_planning_validator
+    test/src/test_main.cpp
+    test/src/test_planning_validator_pubsub.cpp
+    test/src/test_planning_validator_node_interface.cpp
+  )
+  ament_target_dependencies(test_autoware_planning_validator
+    rclcpp
+    autoware_planning_msgs
+    autoware_planning_validator_test_utils
+  )
+  target_link_libraries(test_autoware_planning_validator
+    ${PROJECT_NAME}_component
+    ${autoware_planning_validator_test_utils_LIBRARIES}
+  )
+  set_tests_properties(test_autoware_planning_validator PROPERTIES TIMEOUT 120)
+endif()
 
 ament_auto_package(INSTALL_TO_SHARE
   config

@@ -23,7 +23,7 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::planning_validator
+namespace autoware::planning_validator::trajectory_checker_utils
 {
 using autoware_utils::calc_curvature;
 using autoware_utils::calc_distance2d;
@@ -375,4 +375,4 @@ bool checkFinite(const TrajectoryPoint & point)
   return quat_result && p_result && v_result && w_result && a_result;
 }
 
-}  // namespace autoware::planning_validator
+}  // namespace autoware::planning_validator::trajectory_checker_utils

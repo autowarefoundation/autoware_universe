@@ -89,11 +89,23 @@ struct PlanningValidatorData
     return true;
   }
 
+  void set_current_trajectory(const Trajectory::ConstSharedPtr & msg)
+  {
+    current_trajectory.reset();
+    resampled_current_trajectory.reset();
+    if (!msg) return;
+    current_trajectory = msg;
+    constexpr double min_interval = 1.0;
+    resampled_current_trajectory =
+      std::make_shared<Trajectory>(resampleTrajectory(*current_trajectory, min_interval));
+    set_nearest_trajectory_indices();
+  }
+
   void set_nearest_trajectory_indices()
   {
     nearest_point_index.reset();
     nearest_segment_index.reset();
-    if (!current_trajectory || !current_kinematics) {
+    if (!current_trajectory || !current_kinematics || current_trajectory->points.empty()) {
       return;
     }
     nearest_point_index = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(

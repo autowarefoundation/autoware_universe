@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/planning_validator/planning_validator.hpp"
+#include "autoware/planning_validator/node.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <autoware/planning_test_manager/autoware_planning_test_manager.hpp>
@@ -25,7 +25,7 @@
 #include <vector>
 
 using autoware::planning_test_manager::PlanningInterfaceTestManager;
-using autoware::planning_validator::PlanningValidator;
+using autoware::planning_validator::PlanningValidatorNode;
 
 std::shared_ptr<PlanningInterfaceTestManager> generateTestManager()
 {
@@ -33,12 +33,12 @@ std::shared_ptr<PlanningInterfaceTestManager> generateTestManager()
 
   // set subscriber with topic name: planning_validator → test_node_
   test_manager->subscribeOutput<autoware_planning_msgs::msg::Trajectory>(
-    "planning_validator/output/trajectory");
+    "planning_validator_node/output/trajectory");
 
   return test_manager;
 }
 
-std::shared_ptr<PlanningValidator> generateNode()
+std::shared_ptr<PlanningValidatorNode> generateNode()
 {
   auto node_options = rclcpp::NodeOptions{};
   const auto autoware_test_utils_dir =
@@ -49,18 +49,21 @@ std::shared_ptr<PlanningValidator> generateNode()
     {"--ros-args", "--params-file",
      autoware_test_utils_dir + "/config/test_vehicle_info.param.yaml", "--params-file",
      planning_validator_dir + "/config/planning_validator.param.yaml"});
-  return std::make_shared<PlanningValidator>(node_options);
+
+  node_options.append_parameter_override("launch_modules", std::vector<std::string>{});
+  return std::make_shared<PlanningValidatorNode>(node_options);
 }
 
 void publishMandatoryTopics(
   std::shared_ptr<PlanningInterfaceTestManager> test_manager,
-  std::shared_ptr<PlanningValidator> test_target_node)
+  std::shared_ptr<PlanningValidatorNode> test_target_node)
 {
   // publish necessary topics from test_manager
   test_manager->publishInput(
-    test_target_node, "planning_validator/input/kinematics", autoware::test_utils::makeOdometry());
+    test_target_node, "planning_validator_node/input/kinematics",
+    autoware::test_utils::makeOdometry());
   test_manager->publishInput(
-    test_target_node, "planning_validator/input/acceleration",
+    test_target_node, "planning_validator_node/input/acceleration",
     geometry_msgs::msg::AccelWithCovarianceStamped{});
 }
 
@@ -71,7 +74,7 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithExceptionTrajectory)
 
   publishMandatoryTopics(test_manager, test_target_node);
 
-  const std::string input_trajectory_topic = "planning_validator/input/trajectory";
+  const std::string input_trajectory_topic = "planning_validator_node/input/trajectory";
 
   // test for normal trajectory
   ASSERT_NO_THROW(test_manager->testWithNormalTrajectory(test_target_node, input_trajectory_topic));
@@ -89,8 +92,8 @@ TEST(PlanningModuleInterfaceTest, NodeTestWithOffTrackEgoPose)
 
   publishMandatoryTopics(test_manager, test_target_node);
 
-  const std::string input_trajectory_topic = "planning_validator/input/trajectory";
-  const std::string input_odometry_topic = "planning_validator/input/kinematics";
+  const std::string input_trajectory_topic = "planning_validator_node/input/trajectory";
+  const std::string input_odometry_topic = "planning_validator_node/input/kinematics";
 
   // test for normal trajectory
   ASSERT_NO_THROW(test_manager->testWithNormalTrajectory(test_target_node, input_trajectory_topic));

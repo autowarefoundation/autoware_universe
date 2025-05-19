@@ -17,4 +17,21 @@ target_link_libraries(${PROJECT_NAME}
   ${autoware_planning_validator_LIBRARIES}
 )
 
+if(BUILD_TESTING)
+  find_package(autoware_planning_validator_test_utils REQUIRED)
+  ament_add_ros_isolated_gtest(test_autoware_planning_validator
+    test/test_main.cpp
+    test/test_trajectory_checker.cpp
+  )
+  ament_target_dependencies(test_autoware_planning_validator
+    rclcpp
+    autoware_planning_msgs
+    autoware_planning_validator_test_utils
+  )
+  target_link_libraries(test_autoware_planning_validator
+    ${PROJECT_NAME}
+    ${autoware_planning_validator_test_utils_LIBRARIES}
+  )
+endif()
+
 ament_auto_package(INSTALL_TO_SHARE config)

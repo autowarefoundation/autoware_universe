@@ -208,7 +208,7 @@ bool TrajectoryChecker::check_valid_finite_value(
 {
   const auto & trajectory = *data->current_trajectory;
   for (const auto & p : trajectory.points) {
-    if (!checkFinite(p)) return false;
+    if (!trajectory_checker_utils::checkFinite(p)) return false;
   }
   return true;
 }
@@ -223,15 +223,16 @@ bool TrajectoryChecker::check_valid_interval(
 
   const auto & trajectory = *data->current_trajectory;
 
-  const auto [max_interval_distance, i] = calcMaxIntervalDistance(trajectory);
+  const auto [max_interval_distance, i] =
+    trajectory_checker_utils::calcMaxIntervalDistance(trajectory);
   status->max_interval_distance = max_interval_distance;
 
   if (max_interval_distance > params_.interval.threshold) {
-    // if (i > 0) {
-    //   const auto & p = trajectory.points;
-    //   debug_pose_publisher_->pushPoseMarker(p.at(i - 1), "trajectory_interval");
-    //   debug_pose_publisher_->pushPoseMarker(p.at(i), "trajectory_interval");
-    // }
+    if (i > 0) {
+      const auto & p = trajectory.points;
+      context_->debug_pose_publisher->pushPoseMarker(p.at(i - 1), "trajectory_interval");
+      context_->debug_pose_publisher->pushPoseMarker(p.at(i), "trajectory_interval");
+    }
     is_critical_error_ |= params_.interval.is_critical;
     return false;
   }
@@ -249,7 +250,7 @@ bool TrajectoryChecker::check_valid_relative_angle(
 
   const auto & trajectory = *data->resampled_current_trajectory;
 
-  const auto [max_relative_angle, i] = calcMaxRelativeAngles(trajectory);
+  const auto [max_relative_angle, i] = trajectory_checker_utils::calcMaxRelativeAngles(trajectory);
   status->max_relative_angle = max_relative_angle;
 
   if (max_relative_angle > params_.relative_angle.threshold) {
@@ -275,7 +276,7 @@ bool TrajectoryChecker::check_valid_curvature(
 
   const auto & trajectory = *data->resampled_current_trajectory;
 
-  const auto [max_curvature, i] = calcMaxCurvature(trajectory);
+  const auto [max_curvature, i] = trajectory_checker_utils::calcMaxCurvature(trajectory);
   status->max_curvature = max_curvature;
   if (max_curvature > params_.curvature.threshold) {
     const auto & p = trajectory.points;
@@ -300,7 +301,8 @@ bool TrajectoryChecker::check_valid_lateral_acceleration(
 
   const auto & trajectory = *data->resampled_current_trajectory;
 
-  const auto [max_lateral_acc, i] = calcMaxLateralAcceleration(trajectory);
+  const auto [max_lateral_acc, i] =
+    trajectory_checker_utils::calcMaxLateralAcceleration(trajectory);
   status->max_lateral_acc = max_lateral_acc;
   if (max_lateral_acc > params_.acceleration.lateral_th) {
     context_->debug_pose_publisher->pushPoseMarker(trajectory.points.at(i), "lateral_acceleration");
@@ -320,7 +322,7 @@ bool TrajectoryChecker::check_valid_lateral_jerk(
 
   const auto & trajectory = *data->resampled_current_trajectory;
 
-  const auto [max_lateral_jerk, i] = calc_max_lateral_jerk(trajectory);
+  const auto [max_lateral_jerk, i] = trajectory_checker_utils::calc_max_lateral_jerk(trajectory);
   status->max_lateral_jerk = max_lateral_jerk;
   if (max_lateral_jerk > params_.acceleration.lateral_th) {
     context_->debug_pose_publisher->pushPoseMarker(trajectory.points.at(i), "lateral_jerk");
@@ -340,7 +342,8 @@ bool TrajectoryChecker::check_valid_min_longitudinal_acceleration(
 
   const auto & trajectory = *data->current_trajectory;
 
-  const auto [min_longitudinal_acc, i] = getMinLongitudinalAcc(trajectory);
+  const auto [min_longitudinal_acc, i] =
+    trajectory_checker_utils::getMinLongitudinalAcc(trajectory);
   status->min_longitudinal_acc = min_longitudinal_acc;
 
   if (min_longitudinal_acc < params_.acceleration.longitudinal_min_th) {
@@ -362,7 +365,8 @@ bool TrajectoryChecker::check_valid_max_longitudinal_acceleration(
 
   const auto & trajectory = *data->current_trajectory;
 
-  const auto [max_longitudinal_acc, i] = getMaxLongitudinalAcc(trajectory);
+  const auto [max_longitudinal_acc, i] =
+    trajectory_checker_utils::getMaxLongitudinalAcc(trajectory);
   status->max_longitudinal_acc = max_longitudinal_acc;
 
   if (max_longitudinal_acc > params_.acceleration.longitudinal_max_th) {
@@ -384,7 +388,8 @@ bool TrajectoryChecker::check_valid_steering(
 
   const auto & trajectory = *data->resampled_current_trajectory;
 
-  const auto [max_steering, i] = calcMaxSteeringAngles(trajectory, vehicle_wheel_base_m);
+  const auto [max_steering, i] =
+    trajectory_checker_utils::calcMaxSteeringAngles(trajectory, vehicle_wheel_base_m);
   status->max_steering = max_steering;
 
   if (max_steering > params_.steering.threshold) {
@@ -405,7 +410,8 @@ bool TrajectoryChecker::check_valid_steering_rate(
 
   const auto & trajectory = *data->resampled_current_trajectory;
 
-  const auto [max_steering_rate, i] = calcMaxSteeringRates(trajectory, vehicle_wheel_base_m);
+  const auto [max_steering_rate, i] =
+    trajectory_checker_utils::calcMaxSteeringRates(trajectory, vehicle_wheel_base_m);
   status->max_steering_rate = max_steering_rate;
 
   if (max_steering_rate > params_.steering_rate.threshold) {

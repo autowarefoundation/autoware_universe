@@ -1,4 +1,4 @@
-// Copyright 2021 Tier IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TEST_PLANNING_VALIDATOR_HELPER_HPP_
-#define TEST_PLANNING_VALIDATOR_HELPER_HPP_
+#ifndef AUTOWARE__PLANNING_VALIDATOR_TEST_UTILS__PLANNING_VALIDATOR_TEST_UTILS_HPP_
+#define AUTOWARE__PLANNING_VALIDATOR_TEST_UTILS__PLANNING_VALIDATOR_TEST_UTILS_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -23,11 +23,20 @@
 #include <nav_msgs/msg/odometry.hpp>
 
 #include <limits>
+#include <string>
 #include <vector>
 
+namespace autoware::planning_validator::test_utils
+{
 using autoware_planning_msgs::msg::Trajectory;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
+
+struct PluginInfo
+{
+  std::string plugin_name;
+  std::string module_name;
+};
 
 Trajectory generateTrajectoryWithConstantAcceleration(
   const double interval_distance, const double speed, const double yaw, const size_t size,
@@ -77,4 +86,8 @@ AccelWithCovarianceStamped generateDefaultAcceleration(const double ax = 0.0);
 
 rclcpp::NodeOptions getNodeOptionsWithDefaultParams();
 
-#endif  // TEST_PLANNING_VALIDATOR_HELPER_HPP_
+std::vector<PluginInfo> getPluginsInfo();
+
+}  // namespace autoware::planning_validator::test_utils
+
+#endif  // AUTOWARE__PLANNING_VALIDATOR_TEST_UTILS__PLANNING_VALIDATOR_TEST_UTILS_HPP_

@@ -23,7 +23,7 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::planning_validator
+namespace autoware::planning_validator::trajectory_checker_utils
 {
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
@@ -53,6 +53,6 @@ std::pair<double, size_t> calcMaxSteeringRates(
 
 bool checkFinite(const TrajectoryPoint & point);
 
-}  // namespace autoware::planning_validator
+}  // namespace autoware::planning_validator::trajectory_checker_utils
 
 #endif  // AUTOWARE__PLANNING_VALIDATOR_TRAJECTORY_CHECKER__UTILS_HPP_

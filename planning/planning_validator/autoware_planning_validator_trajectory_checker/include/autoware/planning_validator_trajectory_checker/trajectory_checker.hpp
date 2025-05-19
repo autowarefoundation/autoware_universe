@@ -36,9 +36,6 @@ public:
   void setup_diag() override;
   std::string get_module_name() const override { return module_name_; };
 
-private:
-  void setup_parameters(rclcpp::Node & node);
-
   bool check_valid_finite_value(const std::shared_ptr<const PlanningValidatorData> & data);
   bool check_valid_size(
     const std::shared_ptr<const PlanningValidatorData> & data,
@@ -88,6 +85,9 @@ private:
   bool check_trajectory_shift(
     const std::shared_ptr<const PlanningValidatorData> & data,
     const std::shared_ptr<PlanningValidatorStatus> & status);
+
+private:
+  void setup_parameters(rclcpp::Node & node);
 
   bool is_critical_error_ = false;
 

@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/planning_validator/planning_validator.hpp"
-#include "test_parameter.hpp"
-#include "test_planning_validator_helper.hpp"
+#include "autoware/planning_validator/node.hpp"
 
+#include <autoware/planning_validator_test_utils/planning_validator_test_utils.hpp>
+#include <autoware/planning_validator_test_utils/test_parameters.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -33,13 +33,20 @@
 /*
  * This test checks the diagnostics message published from the planning_validator node
  */
-
-using autoware::planning_validator::PlanningValidator;
+namespace autoware::planning_validator
+{
+using autoware::planning_validator::PlanningValidatorNode;
 using autoware_planning_msgs::msg::Trajectory;
 using diagnostic_msgs::msg::DiagnosticArray;
 using diagnostic_msgs::msg::DiagnosticStatus;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
+
+using test_utils::generateDefaultAcceleration;
+using test_utils::generateDefaultOdometry;
+using test_utils::generateTrajectory;
+using test_utils::THRESHOLD_INTERVAL;
+using test_utils::WHEELBASE;
 
 constexpr double epsilon = 0.001;
 constexpr double scale_margin = 1.1;
@@ -49,10 +56,10 @@ class PubSubManager : public rclcpp::Node
 public:
   PubSubManager() : Node("test_pub_sub")
   {
-    trajectory_pub_ = create_publisher<Trajectory>("/planning_validator/input/trajectory", 1);
-    kinematics_pub_ = create_publisher<Odometry>("/planning_validator/input/kinematics", 1);
-    acceleration_pub_ =
-      create_publisher<AccelWithCovarianceStamped>("/planning_validator/input/acceleration", 1);
+    trajectory_pub_ = create_publisher<Trajectory>("/planning_validator_node/input/trajectory", 1);
+    kinematics_pub_ = create_publisher<Odometry>("/planning_validator_node/input/kinematics", 1);
+    acceleration_pub_ = create_publisher<AccelWithCovarianceStamped>(
+      "/planning_validator_node/input/acceleration", 1);
     diag_sub_ = create_subscription<DiagnosticArray>(
       "/diagnostics", 1,
       [this](const DiagnosticArray::ConstSharedPtr msg) { received_diags_.push_back(msg); });
@@ -68,7 +75,7 @@ public:
 
 void spinSome(rclcpp::Node::SharedPtr node_ptr)
 {
-  for (int i = 0; i < 10; ++i) {
+  for (int i = 0; i < 20; ++i) {
     rclcpp::spin_some(node_ptr);
     rclcpp::WallRate(100).sleep();
   }
@@ -111,12 +118,14 @@ bool hasError(const std::vector<DiagnosticArray::ConstSharedPtr> & diags, const 
 }
 
 std::pair<
-  std::shared_ptr<autoware::planning_validator::PlanningValidator>, std::shared_ptr<PubSubManager>>
+  std::shared_ptr<autoware::planning_validator::PlanningValidatorNode>,
+  std::shared_ptr<PubSubManager>>
 prepareTest(
   const Trajectory & trajectory, const Odometry & ego_odom,
   const AccelWithCovarianceStamped & acceleration)
 {
-  auto validator = std::make_shared<PlanningValidator>(getNodeOptionsWithDefaultParams());
+  auto validator =
+    std::make_shared<PlanningValidatorNode>(test_utils::getNodeOptionsWithDefaultParams());
   auto manager = std::make_shared<PubSubManager>();
   EXPECT_GE(manager->trajectory_pub_->get_subscription_count(), 1U) << "topic is not connected.";
 
@@ -174,7 +183,7 @@ void runWithBadTrajectory(
 // =============================================================
 
 // OK cases
-TEST(PlanningValidator, DiagCheckForNominalTrajectory)
+TEST(PlanningValidatorNode, DiagCheckForNominalTrajectory)
 {
   runWithOKTrajectory(
     generateTrajectory(THRESHOLD_INTERVAL * 0.5), generateDefaultOdometry(),
@@ -182,17 +191,17 @@ TEST(PlanningValidator, DiagCheckForNominalTrajectory)
 }
 
 // Bad cases
-TEST(PlanningValidator, DiagCheckForNaNTrajectory)
+TEST(PlanningValidatorNode, DiagCheckForNaNTrajectory)
 {
   runWithBadTrajectory(
-    generateNanTrajectory(), generateDefaultOdometry(), generateDefaultAcceleration());
+    test_utils::generateNanTrajectory(), generateDefaultOdometry(), generateDefaultAcceleration());
 }
-TEST(PlanningValidator, DiagCheckForInfTrajectory)
+TEST(PlanningValidatorNode, DiagCheckForInfTrajectory)
 {
   runWithBadTrajectory(
-    generateInfTrajectory(), generateDefaultOdometry(), generateDefaultAcceleration());
+    test_utils::generateInfTrajectory(), generateDefaultOdometry(), generateDefaultAcceleration());
 }
-TEST(PlanningValidator, DiagCheckForTooLongIntervalTrajectory)
+TEST(PlanningValidatorNode, DiagCheckForTooLongIntervalTrajectory)
 {
   constexpr double ep = 0.001;
   runWithBadTrajectory(
@@ -204,9 +213,9 @@ TEST(PlanningValidator, DiagCheckForTooLongIntervalTrajectory)
 //                    Specific diag tests
 // =============================================================
 
-TEST(PlanningValidator, DiagCheckSize)
+TEST(PlanningValidatorNode, DiagCheckSize)
 {
-  const auto diag_name = "planning_validator: trajectory_validation_size";
+  const auto diag_name = "planning_validator_node: trajectory_validation_size";
   const auto odom = generateDefaultOdometry();
   const auto accel = generateDefaultAcceleration();
   runWithBadTrajectory(generateTrajectory(1.0, 1.0, 0.0, 0), odom, accel, diag_name);
@@ -215,9 +224,9 @@ TEST(PlanningValidator, DiagCheckSize)
   runWithOKTrajectory(generateTrajectory(1.0, 1.0, 0.0, 3), odom, accel);
 }
 
-TEST(PlanningValidator, DiagCheckInterval)
+TEST(PlanningValidatorNode, DiagCheckInterval)
 {
-  const auto diag_name = "planning_validator: trajectory_validation_interval";
+  const auto diag_name = "planning_validator_node: trajectory_validation_interval";
   const auto odom = generateDefaultOdometry();
   const auto accel = generateDefaultAcceleration();
 
@@ -240,9 +249,10 @@ TEST(PlanningValidator, DiagCheckInterval)
   }
 }
 
-TEST(PlanningValidator, DiagCheckRelativeAngle)
+TEST(PlanningValidatorNode, DiagCheckRelativeAngle)
 {
-  const auto diag_name = "planning_validator: trajectory_validation_relative_angle";
+  using test_utils::THRESHOLD_RELATIVE_ANGLE;
+  const auto diag_name = "planning_validator_node: trajectory_validation_relative_angle";
 
   // TODO(Horibe): interval must be larger than min_interval used in planning_validator.cpp
   constexpr auto interval = 1.1;
@@ -271,9 +281,9 @@ TEST(PlanningValidator, DiagCheckRelativeAngle)
   }
 }
 
-TEST(PlanningValidator, DiagCheckCurvature)
+TEST(PlanningValidatorNode, DiagCheckCurvature)
 {
-  const auto diag_name = "planning_validator: trajectory_validation_curvature";
+  const auto diag_name = "planning_validator_node: trajectory_validation_curvature";
 
   // TODO(Horibe): interval must be larger than min_interval used in planning_validator.cpp
   constexpr auto interval = 1.1;
@@ -290,24 +300,24 @@ TEST(PlanningValidator, DiagCheckCurvature)
 
   // Higher curvature than threshold -> must be NG
   {
-    constexpr double curvature = THRESHOLD_CURVATURE * scale_margin;
+    constexpr double curvature = test_utils::THRESHOLD_CURVATURE * scale_margin;
     auto bad_trajectory =
-      generateTrajectoryWithConstantCurvature(interval, 1.0, curvature, 10, WHEELBASE);
+      test_utils::generateTrajectoryWithConstantCurvature(interval, 1.0, curvature, 10, WHEELBASE);
     runWithBadTrajectory(bad_trajectory, odom, accel, diag_name);
   }
 
   // Lower curvature than threshold -> must be OK
   {
-    constexpr double curvature = THRESHOLD_CURVATURE / scale_margin;
+    constexpr double curvature = test_utils::THRESHOLD_CURVATURE / scale_margin;
     auto ok_trajectory =
-      generateTrajectoryWithConstantCurvature(interval, 1.0, curvature, 10, WHEELBASE);
+      test_utils::generateTrajectoryWithConstantCurvature(interval, 1.0, curvature, 10, WHEELBASE);
     runWithOKTrajectory(ok_trajectory, odom, accel, diag_name);
   }
 }
 
-TEST(PlanningValidator, DiagCheckLateralAcceleration)
+TEST(PlanningValidatorNode, DiagCheckLateralAcceleration)
 {
-  const auto diag_name = "planning_validator: trajectory_validation_lateral_acceleration";
+  const auto diag_name = "planning_validator_node: trajectory_validation_lateral_acceleration";
   constexpr double speed = 10.0;
 
   const auto odom = generateDefaultOdometry();
@@ -317,24 +327,24 @@ TEST(PlanningValidator, DiagCheckLateralAcceleration)
 
   // Higher lateral acc than threshold -> must be NG
   {
-    constexpr double curvature = THRESHOLD_LATERAL_ACC / (speed * speed) * scale_margin;
+    constexpr double curvature = test_utils::THRESHOLD_LATERAL_ACC / (speed * speed) * scale_margin;
     const auto bad_trajectory =
-      generateTrajectoryWithConstantCurvature(1.0, speed, curvature, 10, WHEELBASE);
+      test_utils::generateTrajectoryWithConstantCurvature(1.0, speed, curvature, 10, WHEELBASE);
     runWithBadTrajectory(bad_trajectory, odom, accel, diag_name);
   }
 
   // Smaller lateral acc than threshold -> must be OK
   {
-    constexpr double curvature = THRESHOLD_LATERAL_ACC / (speed * speed) / scale_margin;
+    constexpr double curvature = test_utils::THRESHOLD_LATERAL_ACC / (speed * speed) / scale_margin;
     const auto ok_trajectory =
-      generateTrajectoryWithConstantCurvature(1.0, speed, curvature, 10, WHEELBASE);
+      test_utils::generateTrajectoryWithConstantCurvature(1.0, speed, curvature, 10, WHEELBASE);
     runWithOKTrajectory(ok_trajectory, odom, accel, diag_name);
   }
 }
 
-TEST(PlanningValidator, DiagCheckLongitudinalMaxAcc)
+TEST(PlanningValidatorNode, DiagCheckLongitudinalMaxAcc)
 {
-  const auto diag_name = "planning_validator: trajectory_validation_acceleration";
+  const auto diag_name = "planning_validator_node: trajectory_validation_acceleration";
   constexpr double speed = 1.0;
 
   const auto odom = generateDefaultOdometry();
@@ -342,31 +352,32 @@ TEST(PlanningValidator, DiagCheckLongitudinalMaxAcc)
 
   // Larger acceleration than threshold -> must be NG
   {
-    constexpr double acceleration = THRESHOLD_LONGITUDINAL_MAX_ACC + epsilon;
+    constexpr double acceleration = test_utils::THRESHOLD_LONGITUDINAL_MAX_ACC + epsilon;
     auto bad_trajectory =
-      generateTrajectoryWithConstantAcceleration(1.0, speed, 0.0, 20, acceleration);
+      test_utils::generateTrajectoryWithConstantAcceleration(1.0, speed, 0.0, 20, acceleration);
     runWithBadTrajectory(bad_trajectory, odom, accel, diag_name);
   }
 
   // Smaller acceleration than threshold -> must be OK
   {
-    constexpr double acceleration = THRESHOLD_LONGITUDINAL_MAX_ACC - epsilon;
+    constexpr double acceleration = test_utils::THRESHOLD_LONGITUDINAL_MAX_ACC - epsilon;
     auto bad_trajectory =
-      generateTrajectoryWithConstantAcceleration(1.0, speed, 0.0, 20, acceleration);
+      test_utils::generateTrajectoryWithConstantAcceleration(1.0, speed, 0.0, 20, acceleration);
     runWithOKTrajectory(bad_trajectory, odom, accel, diag_name);
   }
 }
 
-TEST(PlanningValidator, DiagCheckLongitudinalMinAcc)
+TEST(PlanningValidatorNode, DiagCheckLongitudinalMinAcc)
 {
-  const auto diag_name = "planning_validator: trajectory_validation_deceleration";
+  const auto diag_name = "planning_validator_node: trajectory_validation_deceleration";
   constexpr double speed = 20.0;
 
   const auto odom = generateDefaultOdometry();
   const auto accel = generateDefaultAcceleration();
 
   const auto test = [&](const auto acceleration, const bool expect_ok) {
-    auto trajectory = generateTrajectoryWithConstantAcceleration(1.0, speed, 0.0, 10, acceleration);
+    auto trajectory =
+      test_utils::generateTrajectoryWithConstantAcceleration(1.0, speed, 0.0, 10, acceleration);
     if (expect_ok) {
       runWithOKTrajectory(trajectory, odom, accel, diag_name);
     } else {
@@ -375,22 +386,22 @@ TEST(PlanningValidator, DiagCheckLongitudinalMinAcc)
   };
 
   // Larger deceleration than threshold -> must be NG
-  test(THRESHOLD_LONGITUDINAL_MIN_ACC - epsilon, false);
+  test(test_utils::THRESHOLD_LONGITUDINAL_MIN_ACC - epsilon, false);
 
   // Larger deceleration than threshold -> must be OK
-  test(THRESHOLD_LONGITUDINAL_MIN_ACC + epsilon, true);
+  test(test_utils::THRESHOLD_LONGITUDINAL_MIN_ACC + epsilon, true);
 }
 
-TEST(PlanningValidator, DiagCheckSteering)
+TEST(PlanningValidatorNode, DiagCheckSteering)
 {
-  const auto diag_name = "planning_validator: trajectory_validation_steering";
+  const auto diag_name = "planning_validator_node: trajectory_validation_steering";
 
   // TODO(Horibe): interval must be larger than min_interval used in planning_validator.cpp
   constexpr auto interval = 1.1;
 
   const auto test = [&](const auto steering, const bool expect_ok) {
     auto trajectory =
-      generateTrajectoryWithConstantSteering(interval, 1.0, steering, 10, WHEELBASE);
+      test_utils::generateTrajectoryWithConstantSteering(interval, 1.0, steering, 10, WHEELBASE);
     const auto odom = generateDefaultOdometry();
     const auto accel = generateDefaultAcceleration();
     expect_ok ? runWithOKTrajectory(trajectory, odom, accel, diag_name)
@@ -398,24 +409,24 @@ TEST(PlanningValidator, DiagCheckSteering)
   };
 
   // Larger steering than threshold -> must be NG
-  test(THRESHOLD_STEERING * scale_margin, false);
-  test(-THRESHOLD_STEERING * scale_margin, false);
+  test(test_utils::THRESHOLD_STEERING * scale_margin, false);
+  test(-test_utils::THRESHOLD_STEERING * scale_margin, false);
 
   // Smaller steering than threshold -> must be OK
-  test(THRESHOLD_STEERING / scale_margin, true);
-  test(-THRESHOLD_STEERING / scale_margin, true);
+  test(test_utils::THRESHOLD_STEERING / scale_margin, true);
+  test(-test_utils::THRESHOLD_STEERING / scale_margin, true);
 }
 
-TEST(PlanningValidator, DiagCheckSteeringRate)
+TEST(PlanningValidatorNode, DiagCheckSteeringRate)
 {
-  const auto diag_name = "planning_validator: trajectory_validation_steering_rate";
+  const auto diag_name = "planning_validator_node: trajectory_validation_steering_rate";
 
   // TODO(Horibe): interval must be larger than min_interval used in planning_validator.cpp
   constexpr auto interval = 1.1;
 
   const auto test = [&](const auto steering_rate, const bool expect_ok) {
-    auto trajectory =
-      generateTrajectoryWithConstantSteeringRate(interval, 1.0, steering_rate, 10, WHEELBASE);
+    auto trajectory = test_utils::generateTrajectoryWithConstantSteeringRate(
+      interval, 1.0, steering_rate, 10, WHEELBASE);
     const auto odom = generateDefaultOdometry();
     const auto accel = generateDefaultAcceleration();
     expect_ok ? runWithOKTrajectory(trajectory, odom, accel, diag_name)
@@ -423,17 +434,17 @@ TEST(PlanningValidator, DiagCheckSteeringRate)
   };
 
   // Larger steering rate than threshold -> must be NG
-  test(THRESHOLD_STEERING_RATE * scale_margin, false);
-  test(-THRESHOLD_STEERING_RATE * scale_margin, false);
+  test(test_utils::THRESHOLD_STEERING_RATE * scale_margin, false);
+  test(-test_utils::THRESHOLD_STEERING_RATE * scale_margin, false);
 
   // Smaller steering rate than threshold -> must be OK
-  test(THRESHOLD_STEERING_RATE / scale_margin, true);
-  test(-THRESHOLD_STEERING_RATE / scale_margin, true);
+  test(test_utils::THRESHOLD_STEERING_RATE / scale_margin, true);
+  test(-test_utils::THRESHOLD_STEERING_RATE / scale_margin, true);
 }
 
-TEST(PlanningValidator, DiagCheckVelocityDeviation)
+TEST(PlanningValidatorNode, DiagCheckVelocityDeviation)
 {
-  const auto diag_name = "planning_validator: trajectory_validation_velocity_deviation";
+  const auto diag_name = "planning_validator_node: trajectory_validation_velocity_deviation";
   const auto test = [&](const auto trajectory_speed, const auto ego_speed, const bool expect_ok) {
     const auto trajectory = generateTrajectory(1.0, trajectory_speed, 0.0, 10);
     const auto ego_odom = generateDefaultOdometry(0.0, 0.0, ego_speed);
@@ -443,16 +454,16 @@ TEST(PlanningValidator, DiagCheckVelocityDeviation)
   };
 
   // Larger velocity deviation than threshold -> must be NG
-  test(1.0 + THRESHOLD_VELOCITY_DEVIATION * scale_margin, 1.0, false);
-  test(1.0, 1.0 + THRESHOLD_VELOCITY_DEVIATION * scale_margin, false);
+  test(1.0 + test_utils::THRESHOLD_VELOCITY_DEVIATION * scale_margin, 1.0, false);
+  test(1.0, 1.0 + test_utils::THRESHOLD_VELOCITY_DEVIATION * scale_margin, false);
 
   // Larger velocity deviation than threshold -> must be OK
-  test(1.0, 1.0 + THRESHOLD_VELOCITY_DEVIATION / scale_margin, true);
+  test(1.0, 1.0 + test_utils::THRESHOLD_VELOCITY_DEVIATION / scale_margin, true);
 }
 
-TEST(PlanningValidator, DiagCheckDistanceDeviation)
+TEST(PlanningValidatorNode, DiagCheckDistanceDeviation)
 {
-  const auto diag_name = "planning_validator: trajectory_validation_distance_deviation";
+  const auto diag_name = "planning_validator_node: trajectory_validation_distance_deviation";
   const auto test = [&](const auto ego_x, const auto ego_y, const bool expect_ok) {
     const auto trajectory = generateTrajectory(1.0, 3.0, 0.0, 10);
     const auto last_p = trajectory.points.back().pose.position;
@@ -463,7 +474,7 @@ TEST(PlanningValidator, DiagCheckDistanceDeviation)
   };
 
   // Larger distance deviation than threshold -> must be NG
-  const auto error_distance = THRESHOLD_DISTANCE_DEVIATION * scale_margin;
+  const auto error_distance = test_utils::THRESHOLD_DISTANCE_DEVIATION * scale_margin;
   test(error_distance, 0.0, false);
   test(0.0, error_distance, false);
   test(0.0, -error_distance, false);
@@ -471,16 +482,16 @@ TEST(PlanningValidator, DiagCheckDistanceDeviation)
   test(error_distance, -error_distance, false);
 
   // Smaller distance deviation than threshold -> must be OK
-  const auto ok_distance = THRESHOLD_DISTANCE_DEVIATION / scale_margin;
+  const auto ok_distance = test_utils::THRESHOLD_DISTANCE_DEVIATION / scale_margin;
   test(ok_distance, 0.0, true);
   test(0.0, ok_distance, true);
   test(0.0, -ok_distance, true);
 }
 
-TEST(PlanningValidator, DiagCheckLongitudinalDistanceDeviation)
+TEST(PlanningValidatorNode, DiagCheckLongitudinalDistanceDeviation)
 {
   const auto diag_name =
-    "planning_validator: trajectory_validation_longitudinal_distance_deviation";
+    "planning_validator_node: trajectory_validation_longitudinal_distance_deviation";
   const auto trajectory = generateTrajectory(1.0, 3.0, 0.0, 10);
   const auto test = [&](const auto ego_x, const auto ego_y, const bool expect_ok) {
     const auto ego_odom = generateDefaultOdometry(ego_x, ego_y, 0.0);
@@ -489,8 +500,9 @@ TEST(PlanningValidator, DiagCheckLongitudinalDistanceDeviation)
               : runWithBadTrajectory(trajectory, ego_odom, accel, diag_name);
   };
 
-  const auto invalid_distance = THRESHOLD_LONGITUDINAL_DISTANCE_DEVIATION * scale_margin;
-  const auto valid_distance = THRESHOLD_LONGITUDINAL_DISTANCE_DEVIATION / scale_margin;
+  const auto invalid_distance =
+    test_utils::THRESHOLD_LONGITUDINAL_DISTANCE_DEVIATION * scale_margin;
+  const auto valid_distance = test_utils::THRESHOLD_LONGITUDINAL_DISTANCE_DEVIATION / scale_margin;
 
   // behind from idx=0 -> must be NG
   test(-invalid_distance, 0.0, false);
@@ -509,14 +521,14 @@ TEST(PlanningValidator, DiagCheckLongitudinalDistanceDeviation)
   test(trajectory.points.back().pose.position.x + valid_distance, 0.0, true);
 }
 
-TEST(PlanningValidator, DiagCheckForwardTrajectoryLength)
+TEST(PlanningValidatorNode, DiagCheckForwardTrajectoryLength)
 {
-  const auto diag_name = "planning_validator: trajectory_validation_forward_trajectory_length";
+  const auto diag_name = "planning_validator_node: trajectory_validation_forward_trajectory_length";
   constexpr auto trajectory_v = 10.0;
   constexpr size_t trajectory_size = 10;
   constexpr auto ego_v = 10.0;
-  constexpr auto ego_a = std::abs(PARAMETER_FORWARD_TRAJECTORY_LENGTH_ACCELERATION);
-  constexpr auto margin = PARAMETER_FORWARD_TRAJECTORY_LENGTH_MARGIN;
+  constexpr auto ego_a = std::abs(test_utils::PARAMETER_FORWARD_TRAJECTORY_LENGTH_ACCELERATION);
+  constexpr auto margin = test_utils::PARAMETER_FORWARD_TRAJECTORY_LENGTH_MARGIN;
 
   const auto accel = generateDefaultAcceleration();
 
@@ -556,9 +568,9 @@ TEST(PlanningValidator, DiagCheckForwardTrajectoryLength)
   }
 }
 
-TEST(PlanningValidator, DiagCheckYawDeviation)
+TEST(PlanningValidatorNode, DiagCheckYawDeviation)
 {
-  const auto diag_name = "planning_validator: trajectory_validation_yaw_deviation";
+  const auto diag_name = "planning_validator_node: trajectory_validation_yaw_deviation";
   const auto straight_trajectory = generateTrajectory(1.0, 0.0, 0.0, 10);
 
   const auto accel = generateDefaultAcceleration();
@@ -566,7 +578,7 @@ TEST(PlanningValidator, DiagCheckYawDeviation)
   // Ego with yaw deviation smaller than threshold -> must be OK
   {
     auto ego_odom = generateDefaultOdometry(0.0, 0.0, 0.0);
-    for (auto yaw = 0.0; yaw <= THRESHOLD_YAW_DEVIATION; yaw += 0.1) {
+    for (auto yaw = 0.0; yaw <= test_utils::THRESHOLD_YAW_DEVIATION; yaw += 0.1) {
       ego_odom.pose.pose.orientation = autoware_utils::create_quaternion_from_yaw(yaw);
       runWithOKTrajectory(straight_trajectory, ego_odom, accel, diag_name);
     }
@@ -574,7 +586,7 @@ TEST(PlanningValidator, DiagCheckYawDeviation)
   // Ego with yaw deviation larger than threshold -> must be NG
   {
     auto ego_odom = generateDefaultOdometry(0.0, 0.0, 0.0);
-    for (auto yaw = THRESHOLD_YAW_DEVIATION + 1e-3; yaw < M_PI; yaw += 0.1) {
+    for (auto yaw = test_utils::THRESHOLD_YAW_DEVIATION + 1e-3; yaw < M_PI; yaw += 0.1) {
       ego_odom.pose.pose.orientation = autoware_utils::create_quaternion_from_yaw(yaw);
       runWithBadTrajectory(straight_trajectory, ego_odom, accel, diag_name);
       ego_odom.pose.pose.orientation = autoware_utils::create_quaternion_from_yaw(-yaw);
@@ -582,3 +594,4 @@ TEST(PlanningValidator, DiagCheckYawDeviation)
     }
   }
 }
+}  // namespace autoware::planning_validator

@@ -1,5 +1,5 @@
 
-// Copyright 2024 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,11 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef TEST_PARAMETER_HPP_
-#define TEST_PARAMETER_HPP_
+#ifndef AUTOWARE__PLANNING_VALIDATOR_TEST_UTILS__TEST_PARAMETERS_HPP_
+#define AUTOWARE__PLANNING_VALIDATOR_TEST_UTILS__TEST_PARAMETERS_HPP_
+
+namespace autoware::planning_validator::test_utils
+{
 
 constexpr double deg2rad = 3.14159265 / 180.0;
 constexpr double kmph2mps = 1.0 / 3.6;
+
+constexpr double PLANNING_HZ = 10.0;
 
 constexpr double WHEELBASE = 3.5;
 
@@ -42,4 +47,6 @@ constexpr double THRESHOLD_LATERAL_SHIFT = 0.5;
 constexpr double THRESHOLD_FORWARD_SHIFT = 1.0;
 constexpr double THRESHOLD_BACKWARD_SHIFT = 0.1;
 
-#endif  // TEST_PARAMETER_HPP_
+}  // namespace autoware::planning_validator::test_utils
+
+#endif  // AUTOWARE__PLANNING_VALIDATOR_TEST_UTILS__TEST_PARAMETERS_HPP_
