@@ -191,6 +191,20 @@ visualization_msgs::msg::MarkerArray createCrosswalkMarkers(
     msg.markers.push_back(marker);
   }
 
+  // parked vehicles stop
+  {
+    auto marker = create_default_marker(
+      "map", now, "parked_vehicles_stop_search_area", uid, Marker::LINE_LIST,
+      create_marker_scale(0.25, 0.25, 0.0), create_marker_color(1.0, 1.0, 1.0, 0.5));
+    for (auto i = 0UL; i + 1 < debug_data.parked_vehicles_stop_search_area.size(); ++i) {
+      const auto & p1 = debug_data.parked_vehicles_stop_search_area[i];
+      const auto & p2 = debug_data.parked_vehicles_stop_search_area[i + 1];
+      marker.points.push_back(create_point(p1.x(), p1.y(), 0.0));
+      marker.points.push_back(create_point(p2.x(), p2.y(), 0.0));
+    }
+    msg.markers.push_back(marker);
+  }
+
   return msg;
 }
 }  // namespace
