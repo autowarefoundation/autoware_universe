@@ -26,9 +26,16 @@
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
+#include <rclcpp/logging.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_planning_msgs/msg/detail/path_with_lane_id__struct.hpp>
+#include <autoware_perception_msgs/msg/detail/object_classification__struct.hpp>
+#include <autoware_perception_msgs/msg/detail/predicted_objects__struct.hpp>
+#include <geometry_msgs/msg/detail/point__struct.hpp>
+
 #include <boost/geometry/algorithms/buffer.hpp>
+#include <boost/geometry/algorithms/detail/disjoint/interface.hpp>
 #include <boost/geometry/strategies/cartesian/buffer_end_flat.hpp>
 #include <boost/geometry/strategies/cartesian/buffer_point_square.hpp>
 
@@ -43,6 +50,7 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <tuple>
@@ -1007,16 +1015,78 @@ void CrosswalkModule::applyStopForParkedVehicles(
 {
   // TODO(maxime): params
   constexpr auto search_distance = 10.0;
+  constexpr auto min_ego_stop_time = 2.0;
+  constexpr auto max_parked_velocity = 0.5;
 
-  const auto search_area = create_search_area(
-    crosswalk_,
-    lanelet::BasicPoint2d(first_path_point_on_crosswalk.x, first_path_point_on_crosswalk.y),
-    search_distance);
-  debug_data_.parked_vehicles_stop_search_area = search_area;
-  if (search_area.empty()) {
+  const auto & ego_pose = planner_data_->current_odometry->pose;
+  if (parked_vehicles_stop_.search_area.empty()) {
+    const auto search_area = create_search_area(
+      crosswalk_,
+      lanelet::BasicPoint2d(first_path_point_on_crosswalk.x, first_path_point_on_crosswalk.y),
+      search_distance);
+    parked_vehicles_stop_.search_area = search_area;
+  }
+  debug_data_.parked_vehicles_stop_search_area = parked_vehicles_stop_.search_area;
+  debug_data_.parked_vehicles_stop_already_stopped =
+    parked_vehicles_stop_.already_stopped_within_search_area;
+  if (
+    parked_vehicles_stop_.already_stopped_within_search_area ||
+    parked_vehicles_stop_.search_area.empty()) {
     return;
   }
-  (void)output;
+  const auto ego_base_polygon = createVehiclePolygon(planner_data_->vehicle_info_);
+  Polygon2d ego_polygon;
+  offsetPolygon2d(ego_pose, ego_base_polygon, ego_polygon);
+  const auto ego_within_search_area =
+    !boost::geometry::disjoint(ego_polygon, parked_vehicles_stop_.search_area);
+  if (ego_within_search_area && planner_data_->isVehicleStopped(min_ego_stop_time)) {
+    parked_vehicles_stop_.already_stopped_within_search_area = true;
+    return;
+  }
+
+  std::vector<Polygon2d> filtered_object_polygons;
+  for (const auto & object : planner_data_->predicted_objects->objects) {
+    if (
+      isVehicle(object) &&
+      object.kinematics.initial_twist_with_covariance.twist.linear.x <= max_parked_velocity) {
+      const auto object_polygon = autoware_utils_geometry::to_polygon2d(object);
+      if (!boost::geometry::disjoint(object_polygon, parked_vehicles_stop_.search_area)) {
+        filtered_object_polygons.push_back(object_polygon);
+      }
+    }
+  }
+  const auto furthest_parked_object_point = calculate_furthest_parked_object_point(
+    output.points, filtered_object_polygons, first_path_point_on_crosswalk);
+  if (!furthest_parked_object_point) {
+    return;
+  }
+
+  const double ego_vel_non_negative =
+    std::max(0.0, planner_data_->current_velocity->twist.linear.x);
+  const auto min_stop_distance = motion_utils::calcDecelDistWithJerkAndAccConstraints(
+    ego_vel_non_negative, 0.0, planner_data_->current_acceleration->accel.accel.linear.x,
+    planner_param_.min_acc_preferred, 10.0, planner_param_.min_jerk_preferred);
+  const auto default_stop_pose = getDefaultStopPose(output, first_path_point_on_crosswalk);
+  const auto parked_vehicle_stop_pose = calcLongitudinalOffsetPose(
+    output.points, *furthest_parked_object_point,
+    -planner_data_->vehicle_info_.max_longitudinal_offset_m);
+  if (
+    parked_vehicle_stop_pose &&
+    calcSignedArcLength(output.points, ego_pose.position, parked_vehicle_stop_pose->position) >=
+      min_stop_distance) {
+    insertDecelPointWithDebugInfo(parked_vehicle_stop_pose->position, 0.0, output);
+  } else if (
+    default_stop_pose &&
+    calcSignedArcLength(output.points, ego_pose.position, default_stop_pose->position) >=
+      min_stop_distance) {
+    insertDecelPointWithDebugInfo(default_stop_pose->position, 0.0, output);
+  } else {
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 1000UL,
+      "[%lu][ParkedVehicleStop] could not stop without breaking the jerk and deceleration "
+      "constraints",
+      module_id_);
+  }
 }
 
 Polygon2d CrosswalkModule::getAttentionArea(

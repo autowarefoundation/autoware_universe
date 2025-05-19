@@ -92,6 +92,7 @@ struct DebugData
 
   // parked vehicles stop
   lanelet::BasicPolygon2d parked_vehicles_stop_search_area;
+  bool parked_vehicles_stop_already_stopped = false;
 };
 
 std::vector<std::pair<int64_t, lanelet::ConstLanelet>> getCrosswalksOnPath(
