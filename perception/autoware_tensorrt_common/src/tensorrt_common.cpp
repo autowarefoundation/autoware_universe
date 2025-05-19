@@ -61,7 +61,9 @@ TrtCommon::TrtCommon(
 #endif  // ENABLE_ASAN
     void * handle = dlopen(plugin_path.c_str(), flags);
     if (!handle) {
-      logger_->log(nvinfer1::ILogger::Severity::kERROR, "Could not load plugin library");
+      logger_->log(
+        nvinfer1::ILogger::Severity::kERROR, "Could not load plugin library %s. error %s",
+        plugin_path.c_str(), dlerror());
     } else {
       logger_->log(
         nvinfer1::ILogger::Severity::kINFO, "Loaded plugin library: %s", plugin_path.c_str());
