@@ -15,7 +15,7 @@
 #include "autoware/cuda_pointcloud_preprocessor/cuda_downsample_filter/cuda_voxel_grid_downsample_filter.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/cuda_downsample_filter/thrust_custom_allocator.hpp"
 
-#include <sensor_msgs/msg/detail/point_field__struct.hpp>
+#include <sensor_msgs/msg/point_field.hpp>
 
 #include <thrust/adjacent_difference.h>
 #include <thrust/device_ptr.h>
@@ -26,10 +26,7 @@
 #include <thrust/unique.h>
 
 #include <cmath>
-#include <cstdint>
 #include <memory>
-#include <stdexcept>
-#include <type_traits>
 #include <optional>
 
 namespace autoware::cuda_pointcloud_preprocessor
