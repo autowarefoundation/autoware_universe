@@ -35,6 +35,7 @@
 #include <lanelet2_core/geometry/Polygon.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/LineString.h>
+#include <lanelet2_core/primitives/Polygon.h>
 #include <pcl/common/distances.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -515,6 +516,12 @@ private:
   // occluded space time buffer
   std::optional<rclcpp::Time> current_initial_occlusion_time_;
   std::optional<rclcpp::Time> most_recent_occlusion_time_;
+
+  struct
+  {
+    lanelet::BasicPolygon2d search_area;
+    bool already_stopped_within_search_area = false;
+  } parked_vehicles_stop_;
 };
 }  // namespace autoware::behavior_velocity_planner
 

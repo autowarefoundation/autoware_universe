@@ -17,12 +17,14 @@
 
 #include "scene_crosswalk.hpp"
 
+#include <autoware_utils_geometry/boost_geometry.hpp>
 #include <rclcpp/time.hpp>
 
 #include <geometry_msgs/msg/point.hpp>
 
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/Point.h>
+#include <lanelet2_core/primitives/Polygon.h>
 
 #include <vector>
 
@@ -57,6 +59,35 @@ inline lanelet::BasicPolygon2d create_search_area(
     return search_area.front();
   }
   return {};
+}
+
+std::optional<geometry_msgs::msg::Point> calculate_furthest_parked_object_point(
+  const std::vector<PathPointWithLaneId> & ego_path,
+  const std::vector<autoware_utils_geometry::Polygon2d> & object_polygons,
+  const geometry_msgs::msg::Point & first_path_point_on_crosswalk)
+{
+  double furthest_parked_object_arc_length = 0.0;
+  const auto max_stop_arc_length =
+    motion_utils::calcSignedArcLength(ego_path, 0UL, first_path_point_on_crosswalk);
+  geometry_msgs::msg::Point furthest_parked_object_point;
+  for (const auto & object_polygon : object_polygons) {
+    for (const auto & p : object_polygon.outer()) {
+      const auto pt = geometry_msgs::msg::Point().set__x(p.x()).set__y(p.y());
+      const auto arc_length = motion_utils::calcSignedArcLength(ego_path, 0UL, pt);
+      if (arc_length > furthest_parked_object_arc_length) {
+        furthest_parked_object_arc_length = arc_length;
+        furthest_parked_object_point = pt;
+      }
+    }
+  }
+  if (furthest_parked_object_arc_length == 0.0) {
+    return std::nullopt;
+  }
+  if (furthest_parked_object_arc_length > max_stop_arc_length) {
+    furthest_parked_object_arc_length = max_stop_arc_length;
+    furthest_parked_object_point = first_path_point_on_crosswalk;
+  }
+  return furthest_parked_object_point;
 }
 
 }  // namespace autoware::behavior_velocity_planner
