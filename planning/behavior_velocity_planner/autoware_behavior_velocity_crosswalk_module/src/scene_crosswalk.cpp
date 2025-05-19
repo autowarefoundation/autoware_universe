@@ -26,6 +26,7 @@
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <rclcpp/logging.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -1019,6 +1020,28 @@ void CrosswalkModule::applyStopForParkedVehicles(
   constexpr auto max_parked_velocity = 0.5;
 
   const auto & ego_pose = planner_data_->current_odometry->pose;
+  const auto ego_idx = motion_utils::findNearestIndex(output.points, ego_pose);
+  if (!ego_idx) {
+    RCLCPP_WARN(logger_, "no ego_idx");
+    return;
+  }
+  const auto ego_arc_length = motion_utils::calcSignedArcLength(output.points, 0UL, *ego_idx);
+  const auto crosswalk_arc_length =
+    motion_utils::calcSignedArcLength(output.points, 0UL, first_path_point_on_crosswalk);
+  auto dist_to_next_stop = 0.0;
+  for(auto idx = *ego_idx + 1; idx < output.points.size(); ++idx) {
+    if(output.points[idx].point.longitudinal_velocity_mps == 0.0) {
+      break;
+    }
+    dist_to_next_stop += autoware_utils_geometry::calc_distance2d(output.points[idx - 1], output.points[idx]);
+  }
+  const auto next_stop_arc_length = ego_arc_length + dist_to_next_stop;
+
+  // skip if we are already planning to stop before the crosswalk
+  if (next_stop_arc_length < crosswalk_arc_length) {
+    return;
+  }
+
   if (parked_vehicles_stop_.search_area.empty()) {
     const auto search_area = create_search_area(
       crosswalk_,
