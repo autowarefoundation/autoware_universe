@@ -15,6 +15,9 @@
 #include "autoware/cuda_pointcloud_preprocessor/cuda_downsample_filter/cuda_voxel_grid_downsample_filter.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/cuda_downsample_filter/thrust_custom_allocator.hpp"
 
+#include <cub/device/device_radix_sort.cuh>
+#include <cub/device/device_run_length_encode.cuh>
+
 #include <sensor_msgs/msg/point_field.hpp>
 
 #include <thrust/adjacent_difference.h>
@@ -23,8 +26,6 @@
 #include <thrust/extrema.h>
 #include <thrust/scan.h>
 #include <thrust/unique.h>
-#include <cub/device/device_radix_sort.cuh>
-#include <cub/device/device_run_length_encode.cuh>
 
 #include <cmath>
 #include <memory>
@@ -409,51 +410,50 @@ size_t CudaVoxelGridDownsampleFilter::searchValidVoxel(
   // get number of valid voxels
   auto tmp_key_in = allocateBufferFromPool<size_t>(voxel_info_.num_input_points);
   auto tmp_val_in = allocateBufferFromPool<size_t>(voxel_info_.num_input_points);
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(tmp_key_in, voxel_index_buffer_dev,
-                                   voxel_info_.num_input_points * sizeof(size_t),
-                                   cudaMemcpyDeviceToDevice, stream_));
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(tmp_val_in, point_index_buffer_dev,
-                                   voxel_info_.num_input_points * sizeof(size_t),
-                                   cudaMemcpyDeviceToDevice, stream_));
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    tmp_key_in, voxel_index_buffer_dev, voxel_info_.num_input_points * sizeof(size_t),
+    cudaMemcpyDeviceToDevice, stream_));
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    tmp_val_in, point_index_buffer_dev, voxel_info_.num_input_points * sizeof(size_t),
+    cudaMemcpyDeviceToDevice, stream_));
 
   //// Determine temporary device strage requirements for sort operation
-  void* tmp_storage = nullptr;
+  void * tmp_storage = nullptr;
   size_t tmp_storage_bytes = 0;
-  cub::DeviceRadixSort::SortPairs(tmp_storage, tmp_storage_bytes,
-                                  tmp_key_in, voxel_index_buffer_dev,
-                                  tmp_val_in, point_index_buffer_dev,
-                                  voxel_info_.num_input_points, 0, sizeof(size_t)*8, stream_);
+  cub::DeviceRadixSort::SortPairs(
+    tmp_storage, tmp_storage_bytes, tmp_key_in, voxel_index_buffer_dev, tmp_val_in,
+    point_index_buffer_dev, voxel_info_.num_input_points, 0, sizeof(size_t) * 8, stream_);
 
   //// allocate temporary storage
   tmp_storage = allocateBufferFromPool<std::byte>(tmp_storage_bytes);
 
   // Run sorting operation
-  cub::DeviceRadixSort::SortPairs(tmp_storage, tmp_storage_bytes,
-                                  tmp_key_in, voxel_index_buffer_dev,
-                                  tmp_val_in, point_index_buffer_dev,
-                                  voxel_info_.num_input_points, 0, sizeof(size_t)*8, stream_);
+  cub::DeviceRadixSort::SortPairs(
+    tmp_storage, tmp_storage_bytes, tmp_key_in, voxel_index_buffer_dev, tmp_val_in,
+    point_index_buffer_dev, voxel_info_.num_input_points, 0, sizeof(size_t) * 8, stream_);
   returnBufferToPool(tmp_storage);
 
   //// Determine temporary device strage requirements for run-length encoding operation
   auto num_unique_voxels_dev = allocateBufferFromPool<size_t>(1);
-  cub::DeviceRunLengthEncode::Encode(nullptr, tmp_storage_bytes,
-                                     voxel_index_buffer_dev,
-                                     tmp_key_in, tmp_val_in,  // use these storages for tamporal use
-                                     num_unique_voxels_dev, voxel_info_.num_input_points, stream_);
+  cub::DeviceRunLengthEncode::Encode(
+    nullptr, tmp_storage_bytes, voxel_index_buffer_dev, tmp_key_in,
+    tmp_val_in,  // use these storages for tamporal use
+    num_unique_voxels_dev, voxel_info_.num_input_points, stream_);
 
   //// allocate temporary storage
   tmp_storage = allocateBufferFromPool<std::byte>(tmp_storage_bytes);
 
   //// Run encoding (count the number of valid voxels)
-  cub::DeviceRunLengthEncode::Encode(tmp_storage, tmp_storage_bytes,
-                                     voxel_index_buffer_dev,
-                                     tmp_key_in, tmp_val_in,  // use these storages for tamporal use
-                                     num_unique_voxels_dev, voxel_info_.num_input_points, stream_);
+  cub::DeviceRunLengthEncode::Encode(
+    tmp_storage, tmp_storage_bytes, voxel_index_buffer_dev, tmp_key_in,
+    tmp_val_in,  // use these storages for tamporal use
+    num_unique_voxels_dev, voxel_info_.num_input_points, stream_);
 
   //// wait until num_unique_voxels available
   size_t num_unique_voxels = 0;
-  CHECK_CUDA_ERROR(cudaMemcpy(&num_unique_voxels, num_unique_voxels_dev, sizeof(size_t),
-                              cudaMemcpyDeviceToHost));  // use default stream for implicit sync
+  CHECK_CUDA_ERROR(cudaMemcpy(
+    &num_unique_voxels, num_unique_voxels_dev, sizeof(size_t),
+    cudaMemcpyDeviceToHost));  // use default stream for implicit sync
 
   returnBufferToPool(tmp_key_in);
   returnBufferToPool(tmp_val_in);
