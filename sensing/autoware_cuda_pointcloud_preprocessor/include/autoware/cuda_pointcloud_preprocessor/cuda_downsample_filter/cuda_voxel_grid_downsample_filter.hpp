@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__CUDA_DOWNSAMPLE_FILTER__CUDA_VOXEL_GRID_DOWNSAMPLE_FILTER_HPP_
-#define AUTOWARE__CUDA_DOWNSAMPLE_FILTER__CUDA_VOXEL_GRID_DOWNSAMPLE_FILTER_HPP_
+#ifndef AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_DOWNSAMPLE_FILTER__CUDA_VOXEL_GRID_DOWNSAMPLE_FILTER_HPP_
+#define AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_DOWNSAMPLE_FILTER__CUDA_VOXEL_GRID_DOWNSAMPLE_FILTER_HPP_
 
-#include "autoware/cuda_downsample_filter/thrust_custom_allocator.hpp"
+#include "autoware/cuda_pointcloud_preprocessor/cuda_downsample_filter/thrust_custom_allocator.hpp"
 
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <cuda_blackboard/cuda_unique_ptr.hpp>
@@ -28,7 +28,7 @@
 
 #define CUDA_VGDF_ERROR_CHECK(e) (CUDA_BLACKBOARD_CHECK_CUDA_ERROR(e))
 
-namespace autoware::cuda_downsample_filter
+namespace autoware::cuda_pointcloud_preprocessor
 {
 
 class CudaVoxelGridDownsampleFilter
@@ -132,6 +132,6 @@ private:
 
   std::unique_ptr<ThrustCustomAllocator> thrust_custom_allocator_;
 };
-}  // namespace autoware::cuda_downsample_filter
+}  // namespace autoware::cuda_pointcloud_preprocessor
 
-#endif  // AUTOWARE__CUDA_DOWNSAMPLE_FILTER__CUDA_VOXEL_GRID_DOWNSAMPLE_FILTER_HPP_
+#endif  // AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_DOWNSAMPLE_FILTER__CUDA_VOXEL_GRID_DOWNSAMPLE_FILTER_HPP_

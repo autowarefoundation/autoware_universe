@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/cuda_downsample_filter/cuda_voxel_grid_downsample_filter_node.hpp"
+#include "autoware/cuda_pointcloud_preprocessor/cuda_downsample_filter/cuda_voxel_grid_downsample_filter_node.hpp"
 
-#include "autoware/cuda_pointcloud_preprocessor/memory.hpp"
+#include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 
-namespace autoware::cuda_downsample_filter
+namespace autoware::cuda_pointcloud_preprocessor
 {
 CudaVoxelGridDownsampleFilterNode::CudaVoxelGridDownsampleFilterNode(
   const rclcpp::NodeOptions & node_options)
@@ -47,7 +47,7 @@ void CudaVoxelGridDownsampleFilterNode::cudaPointcloudCallback(
   // The following only checks compatibility with xyzi
   // (i.e., just check the first four elements of the point field are x, y, z, and intensity
   // and don't care the rest of the fields)
-  if (!cuda_pointcloud_preprocessor::is_data_layout_compatible_with_point_xyzi(msg->fields)) {
+  if (!pointcloud_preprocessor::utils::is_data_layout_compatible_with_point_xyzi(msg->fields)) {
     RCLCPP_ERROR(
       this->get_logger(), "Input pointcloud data layout is not compatible with PointXYZI");
   }
@@ -55,7 +55,7 @@ void CudaVoxelGridDownsampleFilterNode::cudaPointcloudCallback(
   auto output_pointcloud_ptr = cuda_voxel_grid_downsample_filter_->filter(msg);
   pub_->publish(std::move(output_pointcloud_ptr));
 }
-}  // namespace autoware::cuda_downsample_filter
+}  // namespace autoware::cuda_pointcloud_preprocessor
 
 #include "rclcpp_components/register_node_macro.hpp"
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::cuda_downsample_filter::CudaVoxelGridDownsampleFilterNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::cuda_pointcloud_preprocessor::CudaVoxelGridDownsampleFilterNode)

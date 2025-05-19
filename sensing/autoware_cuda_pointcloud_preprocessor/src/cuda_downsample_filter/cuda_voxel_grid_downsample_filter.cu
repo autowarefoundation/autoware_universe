@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/cuda_downsample_filter/cuda_voxel_grid_downsample_filter.hpp"
-#include "autoware/cuda_downsample_filter/thrust_custom_allocator.hpp"
+#include "autoware/cuda_pointcloud_preprocessor/cuda_downsample_filter/cuda_voxel_grid_downsample_filter.hpp"
+#include "autoware/cuda_pointcloud_preprocessor/cuda_downsample_filter/thrust_custom_allocator.hpp"
 
 #include <sensor_msgs/msg/detail/point_field__struct.hpp>
 
@@ -31,7 +31,7 @@
 #include <stdexcept>
 #include <type_traits>
 
-namespace autoware::cuda_downsample_filter
+namespace autoware::cuda_pointcloud_preprocessor
 {
 namespace
 {
@@ -468,4 +468,4 @@ void CudaVoxelGridDownsampleFilter::getCentroid(
     buffer_dev, num_valid_voxel, sizeof(OutputPointType), output_points->data.get(),
     return_type_field_dev, channel_field_dev);
 }
-}  // namespace autoware::cuda_downsample_filter
+}  // namespace autoware::cuda_pointcloud_priprocessor

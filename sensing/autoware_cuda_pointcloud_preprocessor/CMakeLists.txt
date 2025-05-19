@@ -57,6 +57,7 @@ cuda_add_library(cuda_pointcloud_preprocessor_lib SHARED
   src/cuda_pointcloud_preprocessor/organize_kernels.cu
   src/cuda_pointcloud_preprocessor/outlier_kernels.cu
   src/cuda_pointcloud_preprocessor/undistort_kernels.cu
+  src/cuda_downsample_filter/cuda_voxel_grid_downsample_filter.cu
 )
 
 target_link_libraries(cuda_pointcloud_preprocessor_lib
@@ -82,6 +83,7 @@ target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
 ament_auto_add_library(cuda_pointcloud_preprocessor SHARED
   src/cuda_concatenate_data/cuda_concatenate_and_time_sync_node.cpp
   src/cuda_pointcloud_preprocessor/cuda_pointcloud_preprocessor_node.cpp
+  src/cuda_downsample_filter/cuda_voxel_grid_downsample_filter_node.cpp
 )
 
 target_link_libraries(cuda_pointcloud_preprocessor
@@ -101,33 +103,9 @@ rclcpp_components_register_node(cuda_pointcloud_preprocessor
   EXECUTABLE cuda_pointcloud_preprocessor_node
 )
 
-################################################################################
-### cuda_downsample_filter ###
-cuda_add_library(cuda_voxel_grid_downsample_filter_lib SHARED
-  src/cuda_downsample_filter/cuda_voxel_grid_downsample_filter.cu
-)
-
-target_include_directories(cuda_voxel_grid_downsample_filter_lib SYSTEM PRIVATE
-  ${cuda_blackboard_INCLUDE_DIRS}
-  ${sensor_msgs_INCLUDE_DIRS}
-)
-
-# Targets
-ament_auto_add_library(cuda_voxel_grid_downsample_filter SHARED
-  src/cuda_downsample_filter/cuda_voxel_grid_downsample_filter_node.cpp
-)
-
-ament_target_dependencies (cuda_voxel_grid_downsample_filter # XXX: DEBUG
-  pcl_conversions
-)
-
-target_link_libraries(cuda_voxel_grid_downsample_filter
-  ${CUDA_LIBRARIES}
-  cuda_voxel_grid_downsample_filter_lib
-)
-
-rclcpp_components_register_node(cuda_voxel_grid_downsample_filter
-  PLUGIN "autoware::cuda_downsample_filter::CudaVoxelGridDownsampleFilterNode"
+# ========== VoxelGrid downsample filter ==========
+rclcpp_components_register_node(cuda_pointcloud_preprocessor
+  PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaVoxelGridDownsampleFilterNode"
   EXECUTABLE cuda_voxel_grid_downsample_filter_node
 )
 

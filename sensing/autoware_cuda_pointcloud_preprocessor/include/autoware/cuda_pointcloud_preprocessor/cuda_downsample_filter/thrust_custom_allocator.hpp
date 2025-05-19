@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__CUDA_DOWNSAMPLE_FILTER__THRUST_CUSTOM_ALLOCATOR_HPP_
-#define AUTOWARE__CUDA_DOWNSAMPLE_FILTER__THRUST_CUSTOM_ALLOCATOR_HPP_
+#ifndef AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_DOWNSAMPLE_FILTER__THRUST_CUSTOM_ALLOCATOR_HPP_
+#define AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_DOWNSAMPLE_FILTER__THRUST_CUSTOM_ALLOCATOR_HPP_
 
 #include <cuda_runtime.h>
 #include <thrust/device_malloc_allocator.h>
 
 #include <sstream>
 
-namespace autoware::cuda_downsample_filter
+namespace autoware::cuda_pointcloud_preprocessor
 {
 struct ThrustCustomAllocator : public thrust::device_malloc_allocator<uint8_t>
 {
@@ -61,6 +61,6 @@ private:
   cudaStream_t stream_;
 };
 
-}  // namespace autoware::cuda_downsample_filter
+}  // namespace autoware::cuda_pointcloud_preprocessor
 
-#endif  // AUTOWARE__CUDA_DOWNSAMPLE_FILTER__THRUST_CUSTOM_ALLOCATOR_HPP_
+#endif  // AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_DOWNSAMPLE_FILTER__THRUST_CUSTOM_ALLOCATOR_HPP_

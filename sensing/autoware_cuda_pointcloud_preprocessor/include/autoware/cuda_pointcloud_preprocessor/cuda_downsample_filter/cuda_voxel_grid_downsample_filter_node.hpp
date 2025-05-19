@@ -26,8 +26,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__CUDA_DOWNSAMPLE_FILTER__CUDA_VOXEL_GRID_DOWNSAMPLE_FILTER_NODE_HPP_
-#define AUTOWARE__CUDA_DOWNSAMPLE_FILTER__CUDA_VOXEL_GRID_DOWNSAMPLE_FILTER_NODE_HPP_
+#ifndef AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_DOWNSAMPLE_FILTER__CUDA_VOXEL_GRID_DOWNSAMPLE_FILTER_NODE_HPP_
+#define AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_DOWNSAMPLE_FILTER__CUDA_VOXEL_GRID_DOWNSAMPLE_FILTER_NODE_HPP_
 
 #include "cuda_voxel_grid_downsample_filter.hpp"
 
@@ -37,7 +37,7 @@
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-namespace autoware::cuda_downsample_filter
+namespace autoware::cuda_pointcloud_preprocessor
 {
 class CudaVoxelGridDownsampleFilterNode : public rclcpp::Node
 {
@@ -57,6 +57,6 @@ private:
 
   std::unique_ptr<CudaVoxelGridDownsampleFilter> cuda_voxel_grid_downsample_filter_{};
 };
-}  // namespace autoware::cuda_downsample_filter
+}  // namespace autoware::cuda_pointcloud_preprocessor
 
-#endif  // AUTOWARE__CUDA_DOWNSAMPLE_FILTER__CUDA_VOXEL_GRID_DOWNSAMPLE_FILTER_NODE_HPP_
+#endif  // AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_DOWNSAMPLE_FILTER__CUDA_VOXEL_GRID_DOWNSAMPLE_FILTER_NODE_HPP_
