@@ -207,6 +207,7 @@
       <arg name="detection_by_tracker_param_path" value="$(var detection_by_tracker_param_path)"/>
       <arg name="use_low_intensity_cluster_filter" value="$(var use_low_intensity_cluster_filter)"/>
       <arg name="use_image_segmentation_based_filter" value="$(var use_image_segmentation_based_filter)"/>
+      <arg name="pointpainting_fusion_common_param_path" value="$(var pointpainting_fusion_common_param_path)"/>
       <arg name="segmentation_pointcloud_fusion_camera_ids" value="$(var segmentation_pointcloud_fusion_camera_ids)"/>
       <arg name="image_topic_name" value="$(var image_topic_name)"/>
     </include>

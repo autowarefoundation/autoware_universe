@@ -25,18 +25,7 @@ MRM emergency stop operator is a node that generates emergency stop commands acc
 
 ## Parameters
 
-### Node Parameters
-
-| Name        | Type | Default value | Explanation                   |
-| ----------- | ---- | ------------- | ----------------------------- |
-| update_rate | int  | `30`          | Timer callback frequency [Hz] |
-
-### Core Parameters
-
-| Name                | Type   | Default value | Explanation                                    |
-| ------------------- | ------ | ------------- | ---------------------------------------------- |
-| target_acceleration | double | `-2.5`        | Target acceleration for emergency stop [m/s^2] |
-| target_jerk         | double | `-1.5`        | Target jerk for emergency stop [m/s^3]         |
+{{ json_to_markdown("system/mrm_emergency_stop_operator/schema/mrm_emergency_stop_operator.schema.json") }}
 
 ## Assumptions / Known limits
 
