@@ -181,19 +181,19 @@ CudaVoxelGridDownsampleFilter::CudaVoxelGridDownsampleFilter(
   voxel_info_.output_offsets[5] =
     voxel_info_.output_offsets[4] + sizeof(OutputPointType::return_type);
 
-  CUDA_VGDF_ERROR_CHECK(cudaStreamCreate(&stream_));
+  CHECK_CUDA_ERROR(cudaStreamCreate(&stream_));
 
   // create memory pool to make repeated allocation efficient
   {
     int current_device_id = 0;
-    CUDA_VGDF_ERROR_CHECK(cudaGetDevice(&current_device_id));
-    CUDA_VGDF_ERROR_CHECK(cudaDeviceGetDefaultMemPool(&mem_pool_, current_device_id));
+    CHECK_CUDA_ERROR(cudaGetDevice(&current_device_id));
+    CHECK_CUDA_ERROR(cudaDeviceGetDefaultMemPool(&mem_pool_, current_device_id));
 
     // Configure memory pool reusing allocation
     // Following CUDA sample, set high release threshold so that allocated memory region
     // will be reused
     uint64_t pool_release_threshold = ULONG_MAX;
-    CUDA_VGDF_ERROR_CHECK(cudaMemPoolSetAttribute(
+    CHECK_CUDA_ERROR(cudaMemPoolSetAttribute(
       mem_pool_, cudaMemPoolAttrReleaseThreshold, static_cast<void *>(&pool_release_threshold)));
   }
 
@@ -311,7 +311,7 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaVoxelGridDownsampleFilter:
   returnBufferToPool(return_type_field_dev);
   returnBufferToPool(channel_field_dev);
 
-  CUDA_VGDF_ERROR_CHECK(cudaStreamSynchronize(stream_));
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   return filtered_output;
 }
@@ -320,8 +320,8 @@ template <typename T>
 T * CudaVoxelGridDownsampleFilter::allocateBufferFromPool(size_t num_elements)
 {
   T * buffer{};
-  CUDA_VGDF_ERROR_CHECK(cudaMallocAsync(&buffer, num_elements * sizeof(T), stream_));
-  CUDA_VGDF_ERROR_CHECK(cudaMemsetAsync(buffer, 0, num_elements * sizeof(T), stream_));
+  CHECK_CUDA_ERROR(cudaMallocAsync(&buffer, num_elements * sizeof(T), stream_));
+  CHECK_CUDA_ERROR(cudaMemsetAsync(buffer, 0, num_elements * sizeof(T), stream_));
 
   return buffer;
 }
@@ -330,7 +330,7 @@ template <typename T>
 void CudaVoxelGridDownsampleFilter::returnBufferToPool(T * buffer)
 {
   // Return (but not actual) working buffer to the pool
-  CUDA_VGDF_ERROR_CHECK(cudaFreeAsync(buffer, stream_));
+  CHECK_CUDA_ERROR(cudaFreeAsync(buffer, stream_));
 }
 
 void CudaVoxelGridDownsampleFilter::getVoxelMinMaxCoordinate(
@@ -355,10 +355,10 @@ void CudaVoxelGridDownsampleFilter::getVoxelMinMaxCoordinate(
     // Fill the result
     // Since referring pointer contents by `*min_max.first` and `*min_max.second`
     // causes implicit data copy from device to host, download data using stream explicitly
-    CUDA_VGDF_ERROR_CHECK(cudaMemcpyAsync(
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(
       &min_field, thrust::raw_pointer_cast(min_max.first.get()), sizeof(float),
       cudaMemcpyDeviceToHost, stream_));
-    CUDA_VGDF_ERROR_CHECK(cudaMemcpyAsync(
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(
       &max_field, thrust::raw_pointer_cast(min_max.second.get()), sizeof(float),
       cudaMemcpyDeviceToHost, stream_));
 
@@ -370,7 +370,7 @@ void CudaVoxelGridDownsampleFilter::getVoxelMinMaxCoordinate(
   find_min_max(1, min_coord.y, max_coord.y);
   find_min_max(2, min_coord.z, max_coord.z);
 
-  CUDA_VGDF_ERROR_CHECK(
+  CHECK_CUDA_ERROR(
     cudaStreamSynchronize(stream_));  // Ensure the values on the host side ready to use
 
   voxel_info_.min_coord.x = static_cast<int>(std::floor(min_coord.x / voxel_info_.voxel_size.x));
@@ -387,7 +387,7 @@ size_t CudaVoxelGridDownsampleFilter::searchValidVoxel(
   decltype(OutputPointType::channel) * channel_field_dev)
 {
   // Update computation parameters on GPU constant memory
-  CUDA_VGDF_ERROR_CHECK(cudaMemcpyToSymbolAsync(
+  CHECK_CUDA_ERROR(cudaMemcpyToSymbolAsync(
     voxel_info_dev, &voxel_info_, sizeof(VoxelInfo), 0, cudaMemcpyDefault, stream_));
 
   // calculate the number of voxel in each axis

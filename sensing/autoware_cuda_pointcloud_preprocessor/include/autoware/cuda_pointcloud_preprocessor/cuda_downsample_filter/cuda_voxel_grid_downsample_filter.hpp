@@ -17,6 +17,7 @@
 
 #include "autoware/cuda_pointcloud_preprocessor/cuda_downsample_filter/thrust_custom_allocator.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
+#include "autoware/cuda_utils/cuda_check_error.hpp"
 
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <cuda_blackboard/cuda_unique_ptr.hpp>
@@ -26,8 +27,6 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
-
-#define CUDA_VGDF_ERROR_CHECK(e) (CUDA_BLACKBOARD_CHECK_CUDA_ERROR(e))
 
 namespace autoware::cuda_pointcloud_preprocessor
 {

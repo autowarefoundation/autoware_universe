@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_DOWNSAMPLE_FILTER__THRUST_CUSTOM_ALLOCATOR_HPP_
 #define AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_DOWNSAMPLE_FILTER__THRUST_CUSTOM_ALLOCATOR_HPP_
 
+#include "autoware/cuda_utils/cuda_check_error.hpp"
+
 #include <cuda_runtime.h>
 #include <thrust/device_malloc_allocator.h>
 
@@ -35,12 +37,7 @@ public:
   pointer allocate(size_type num)
   {
     uint8_t * buffer(nullptr);
-    auto result = cudaMallocAsync(&buffer, num, stream_);
-    if (result != ::cudaSuccess) {
-      std::stringstream s;
-      s << ::cudaGetErrorName(result) << " : " << ::cudaGetErrorString(result);
-      throw std::runtime_error{s.str()};
-    }
+    CHECK_CUDA_ERROR(cudaMallocAsync(&buffer, num, stream_));
 
     cudaMemsetAsync(buffer, 0, num, stream_);
 
@@ -49,12 +46,7 @@ public:
 
   void deallocate(pointer ptr, size_t)
   {
-    auto result = cudaFreeAsync(thrust::raw_pointer_cast(ptr), stream_);
-    if (result != ::cudaSuccess) {
-      std::stringstream s;
-      s << ::cudaGetErrorName(result) << " : " << ::cudaGetErrorString(result);
-      throw std::runtime_error{s.str()};
-    }
+    CHECK_CUDA_ERROR(cudaFreeAsync(thrust::raw_pointer_cast(ptr), stream_));
   }
 
 private:

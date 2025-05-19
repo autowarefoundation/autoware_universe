@@ -76,6 +76,7 @@ target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
   ${sensor_msgs_INCLUDE_DIRS}
   ${tf2_INCLUDE_DIRS}
   ${tf2_msgs_INCLUDE_DIRS}
+  ${autoware_cuda_utils_INCLUDE_DIRS}
 )
 
 
