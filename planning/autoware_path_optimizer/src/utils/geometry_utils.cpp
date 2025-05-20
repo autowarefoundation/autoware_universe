@@ -16,7 +16,7 @@
 
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware/path_optimizer/mpt_optimizer.hpp"
-#include "tf2/utils.h"
+#include "tf2/utils.hpp"
 
 #include <autoware_utils/geometry/boost_geometry.hpp>
 

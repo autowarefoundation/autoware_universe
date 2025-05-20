@@ -15,13 +15,13 @@
 #include "footprint.hpp"
 
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
+#include <tf2/utils.hpp>
 
 #include <geometry_msgs/msg/pose.hpp>
 
 #include <boost/geometry/algorithms/envelope.hpp>
 
 #include <lanelet2_core/geometry/Polygon.h>
-#include <tf2/utils.h>
 
 #include <utility>
 #include <vector>

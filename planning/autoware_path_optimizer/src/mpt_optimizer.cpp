@@ -21,7 +21,7 @@
 #include "autoware/path_optimizer/utils/trajectory_utils.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
 #include "autoware_utils/math/normalization.hpp"
-#include "tf2/utils.h"
+#include "tf2/utils.hpp"
 
 #include <rclcpp/logging.hpp>
 

@@ -26,7 +26,7 @@
 #include <cub/cub.cuh>
 
 #include <cuda_runtime.h>
-#include <tf2/utils.h>
+#include <tf2/utils.hpp>
 #include <thrust/count.h>
 #include <thrust/execution_policy.h>
 #include <thrust/reduce.h>

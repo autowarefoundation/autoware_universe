@@ -19,6 +19,7 @@
 #include "autoware_utils/system/time_keeper.hpp"
 
 #include <managed_transform_buffer/managed_transform_buffer.hpp>
+#include <tf2/transform_datatypes.hpp>
 
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -27,7 +28,6 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <tf2/transform_datatypes.h>
 
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_eigen/tf2_eigen.h>

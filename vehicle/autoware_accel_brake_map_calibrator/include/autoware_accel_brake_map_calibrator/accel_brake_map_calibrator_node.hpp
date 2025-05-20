@@ -24,7 +24,7 @@
 #include "autoware_utils/ros/transform_listener.hpp"
 #include "diagnostic_updater/diagnostic_updater.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "tf2/utils.h"
+#include "tf2/utils.hpp"
 
 #include <Eigen/Dense>
 
