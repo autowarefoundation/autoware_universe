@@ -224,9 +224,10 @@ bool MapBasedDetector::getTrafficLightRoi(
     tf2::Vector3 tl_map = traffic_light_utils::getTrafficLightTopLeft(traffic_light);
     tf2::Vector3 tl_camera_optical = tf_map2camera.inverse() * tl_map;
     // max vibration
-    tf2::Vector3 point3d = utils::getVibrationMarginTopLeft(
-      tl_camera_optical, config.max_vibration_pitch, config.max_vibration_yaw,
+    tf2::Vector3 margin = utils::getVibrationMargin(
+      tl_camera_optical.z(), config.max_vibration_pitch, config.max_vibration_yaw,
       config.max_vibration_height, config.max_vibration_width, config.max_vibration_depth);
+    tf2::Vector3 point3d = tl_camera_optical - margin;
     if (point3d.z() <= 0.0) {
       return false;
     }
@@ -245,9 +246,10 @@ bool MapBasedDetector::getTrafficLightRoi(
     tf2::Vector3 tl_map = traffic_light_utils::getTrafficLightBottomRight(traffic_light);
     tf2::Vector3 tl_camera_optical = tf_map2camera.inverse() * tl_map;
     // max vibration
-    tf2::Vector3 point3d = utils::getVibrationMarginBottomRight(
-      tl_camera_optical, config.max_vibration_pitch, config.max_vibration_yaw,
+    tf2::Vector3 margin = utils::getVibrationMargin(
+      tl_camera_optical.z(), config.max_vibration_pitch, config.max_vibration_yaw,
       config.max_vibration_height, config.max_vibration_width, config.max_vibration_depth);
+    tf2::Vector3 point3d = tl_camera_optical + margin;
     if (point3d.z() <= 0.0) {
       return false;
     }

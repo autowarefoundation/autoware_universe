@@ -98,7 +98,7 @@ TEST(isInAngleRange, in_range_boundary)
   EXPECT_TRUE(result);
 }
 
-TEST(getVibrationMarginTopLeft, calculate)
+TEST(getVibrationMargin, calculate)
 {
   const tf2::Vector3 position(10.0, 20.0, 100.0);
   const double margin_pitch = 0.01745329251;  // 1 degree in radians
@@ -107,29 +107,12 @@ TEST(getVibrationMarginTopLeft, calculate)
   const double margin_width = 0.4;
   const double margin_depth = 0.5;
 
-  const tf2::Vector3 result = autoware::traffic_light::utils::getVibrationMarginTopLeft(
-    position, margin_pitch, margin_yaw, margin_height, margin_width, margin_depth);
+  const tf2::Vector3 result = autoware::traffic_light::utils::getVibrationMargin(
+    position.z(), margin_pitch, margin_yaw, margin_height, margin_width, margin_depth);
 
-  EXPECT_FLOAT_EQ(result.x(), 8.054759357);
-  EXPECT_FLOAT_EQ(result.y(), 18.97734645);
-  EXPECT_FLOAT_EQ(result.z(), 99.75);
-}
-
-TEST(getVibrationMarginBottomRight, calculate)
-{
-  const tf2::Vector3 position(10.0, 20.0, 100.0);
-  const double margin_pitch = 0.01745329251;  // 1 degree in radians
-  const double margin_yaw = 0.03490658503;    // 1 degree in radians
-  const double margin_height = 0.3;
-  const double margin_width = 0.4;
-  const double margin_depth = 0.5;
-
-  const tf2::Vector3 result = autoware::traffic_light::utils::getVibrationMarginBottomRight(
-    position, margin_pitch, margin_yaw, margin_height, margin_width, margin_depth);
-
-  EXPECT_FLOAT_EQ(result.x(), 11.94524064);
-  EXPECT_FLOAT_EQ(result.y(), 21.02265355);
-  EXPECT_FLOAT_EQ(result.z(), 100.25);
+  EXPECT_FLOAT_EQ(result.x(), 1.945240643);
+  EXPECT_FLOAT_EQ(result.y(), 1.022653549);
+  EXPECT_FLOAT_EQ(result.z(), 0.25);
 }
 
 TEST(computeBoundingRoi, select)

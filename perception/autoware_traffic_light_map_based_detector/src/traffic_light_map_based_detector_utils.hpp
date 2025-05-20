@@ -54,13 +54,8 @@ bool isInImageFrame(
   const image_geometry::PinholeCameraModel & pinhole_camera_model, const tf2::Vector3 & point);
 
 // Calculated in the camera optical frame but yaw and pitch are in the camera frame
-tf2::Vector3 getVibrationMarginTopLeft(
-  const tf2::Vector3 position, const double margin_pitch, const double margin_yaw,
-  const double margin_height, const double margin_width, const double margin_depth);
-
-// Calculated in the camera optical frame but yaw and pitch are in the camera frame
-tf2::Vector3 getVibrationMarginBottomRight(
-  const tf2::Vector3 position, const double margin_pitch, const double margin_yaw,
+tf2::Vector3 getVibrationMargin(
+  const double depth, const double margin_pitch, const double margin_yaw,
   const double margin_height, const double margin_width, const double margin_depth);
 
 void computeBoundingRoi(

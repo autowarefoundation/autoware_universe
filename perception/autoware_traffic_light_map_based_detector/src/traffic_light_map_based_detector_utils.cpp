@@ -82,26 +82,15 @@ bool isInImageFrame(
   return false;
 }
 
-tf2::Vector3 getVibrationMarginTopLeft(
-  const tf2::Vector3 position, const double margin_pitch, const double margin_yaw,
+tf2::Vector3 getVibrationMargin(
+  const double depth, const double margin_pitch, const double margin_yaw,
   const double margin_height, const double margin_width, const double margin_depth)
 {
   // for small angles, tan(a) ≈ sin(a) ≈ a
-  const double x = std::sin(margin_yaw * 0.5) * position.z() + margin_width * 0.5;
-  const double y = std::sin(margin_pitch * 0.5) * position.z() + margin_height * 0.5;
+  const double x = std::sin(margin_yaw * 0.5) * depth + margin_width * 0.5;
+  const double y = std::sin(margin_pitch * 0.5) * depth + margin_height * 0.5;
   const double z = margin_depth * 0.5;
-  return position - tf2::Vector3(x, y, z);
-}
-
-tf2::Vector3 getVibrationMarginBottomRight(
-  const tf2::Vector3 position, const double margin_pitch, const double margin_yaw,
-  const double margin_height, const double margin_width, const double margin_depth)
-{
-  // for small angles, tan(a) ≈ sin(a) ≈ a
-  const double x = std::sin(margin_yaw * 0.5) * position.z() + margin_width * 0.5;
-  const double y = std::sin(margin_pitch * 0.5) * position.z() + margin_height * 0.5;
-  const double z = margin_depth * 0.5;
-  return position + tf2::Vector3(x, y, z);
+  return tf2::Vector3(x, y, z);
 }
 
 void computeBoundingRoi(
