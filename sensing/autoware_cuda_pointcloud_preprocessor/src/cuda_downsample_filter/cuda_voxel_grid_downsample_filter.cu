@@ -188,7 +188,12 @@ CudaVoxelGridDownsampleFilter::CudaVoxelGridDownsampleFilter(
   {
     int current_device_id = 0;
     CHECK_CUDA_ERROR(cudaGetDevice(&current_device_id));
-    CHECK_CUDA_ERROR(cudaDeviceGetDefaultMemPool(&mem_pool_, current_device_id));
+    cudaMemPoolProps pool_props = {};
+    pool_props.allocType = cudaMemAllocationTypePinned;
+    pool_props.location.id = current_device_id;
+    pool_props.location.type = cudaMemLocationTypeDevice;
+    CHECK_CUDA_ERROR(cudaMemPoolCreate(&mem_pool_, &pool_props));
+
 
     // Configure the memory pool reusing allocation
     // Following the CUDA documentation, we set a high release threshold so that the allocated
@@ -198,7 +203,7 @@ CudaVoxelGridDownsampleFilter::CudaVoxelGridDownsampleFilter(
       mem_pool_, cudaMemPoolAttrReleaseThreshold, static_cast<void *>(&pool_release_threshold)));
   }
 
-  thrust_custom_allocator_ = std::make_unique<ThrustCustomAllocator>(stream_);
+  thrust_custom_allocator_ = std::make_unique<ThrustCustomAllocator>(stream_, mem_pool_);
 }
 
 std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaVoxelGridDownsampleFilter::filter(
@@ -321,7 +326,7 @@ template <typename T>
 T * CudaVoxelGridDownsampleFilter::allocateBufferFromPool(size_t num_elements)
 {
   T * buffer{};
-  CHECK_CUDA_ERROR(cudaMallocAsync(&buffer, num_elements * sizeof(T), stream_));
+  CHECK_CUDA_ERROR(cudaMallocFromPoolAsync(&buffer, num_elements * sizeof(T), mem_pool_, stream_));
   CHECK_CUDA_ERROR(cudaMemsetAsync(buffer, 0, num_elements * sizeof(T), stream_));
 
   return buffer;

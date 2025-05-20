@@ -32,12 +32,13 @@ public:
   using pointer = typename Base::pointer;
   using size_type = typename Base::size_type;
 
-  explicit ThrustCustomAllocator(cudaStream_t stream) : stream_(stream) {}
+  explicit ThrustCustomAllocator(cudaStream_t stream, cudaMemPool_t& mem_pool)
+      : stream_(stream), mem_pool_(mem_pool) {}
 
   pointer allocate(size_type num)
   {
     uint8_t * buffer(nullptr);
-    CHECK_CUDA_ERROR(cudaMallocAsync(&buffer, num, stream_));
+    CHECK_CUDA_ERROR(cudaMallocFromPoolAsync(&buffer, num, mem_pool_, stream_));
 
     cudaMemsetAsync(buffer, 0, num, stream_);
 
@@ -51,6 +52,8 @@ public:
 
 private:
   cudaStream_t stream_;
+  cudaMemPool_t mem_pool_;
+
 };
 
 }  // namespace autoware::cuda_pointcloud_preprocessor
