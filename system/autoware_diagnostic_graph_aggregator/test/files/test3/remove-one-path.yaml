@@ -1,0 +1,5 @@
+files:
+  - { path: $(dirname)/_units.yaml }
+
+edits:
+  - { type: remove, path: /autoware/foobar }

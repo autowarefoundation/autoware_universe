@@ -1,0 +1,6 @@
+files:
+  - { path: $(dirname)/_units.yaml }
+
+edits:
+  - { type: remove, path: /autoware/foo }
+  - { type: remove, path: /autoware/bar }
