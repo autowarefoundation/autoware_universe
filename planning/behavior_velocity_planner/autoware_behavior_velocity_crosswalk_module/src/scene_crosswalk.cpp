@@ -1022,18 +1022,19 @@ void CrosswalkModule::applyStopForParkedVehicles(
   const auto & ego_pose = planner_data_->current_odometry->pose;
   const auto ego_idx = motion_utils::findNearestIndex(output.points, ego_pose);
   if (!ego_idx) {
-    RCLCPP_WARN(logger_, "no ego_idx");
+    RCLCPP_WARN(logger_, "[applyStopForParkedVehicles] could not find nearest index on the path");
     return;
   }
   const auto ego_arc_length = motion_utils::calcSignedArcLength(output.points, 0UL, *ego_idx);
   const auto crosswalk_arc_length =
     motion_utils::calcSignedArcLength(output.points, 0UL, first_path_point_on_crosswalk);
   auto dist_to_next_stop = 0.0;
-  for(auto idx = *ego_idx + 1; idx < output.points.size(); ++idx) {
-    if(output.points[idx].point.longitudinal_velocity_mps == 0.0) {
+  for (auto idx = *ego_idx + 1; idx < output.points.size(); ++idx) {
+    if (output.points[idx].point.longitudinal_velocity_mps == 0.0) {
       break;
     }
-    dist_to_next_stop += autoware_utils_geometry::calc_distance2d(output.points[idx - 1], output.points[idx]);
+    dist_to_next_stop +=
+      autoware_utils_geometry::calc_distance2d(output.points[idx - 1], output.points[idx]);
   }
   const auto next_stop_arc_length = ego_arc_length + dist_to_next_stop;
 
@@ -1043,10 +1044,10 @@ void CrosswalkModule::applyStopForParkedVehicles(
   }
 
   if (parked_vehicles_stop_.search_area.empty()) {
+    const auto lanelets_on_path = planning_utils::getLaneletsOnPath(
+      output, planner_data_->route_handler_->getLaneletMapPtr(), ego_pose);
     const auto search_area = create_search_area(
-      crosswalk_,
-      lanelet::BasicPoint2d(first_path_point_on_crosswalk.x, first_path_point_on_crosswalk.y),
-      search_distance);
+      crosswalk_, lanelets_on_path, first_path_point_on_crosswalk, search_distance);
     parked_vehicles_stop_.search_area = search_area;
   }
   debug_data_.parked_vehicles_stop_search_area = parked_vehicles_stop_.search_area;
