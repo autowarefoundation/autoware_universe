@@ -1,0 +1,12 @@
+<launch>
+  <!-- Parameter -->
+  <arg name="config_file" default="$(find-pkg-share autoware_process_alive_monitor)/config/autoware_process_alive_monitor.param.yaml"/>
+
+  <!-- Set log level -->
+  <arg name="log_level" default="info"/>
+
+  <node pkg="autoware_process_alive_monitor" exec="autoware_process_alive_monitor_node" name="process_alive_monitor" output="screen" args="--ros-args --log-level $(var log_level)">
+    <!-- Parameter -->
+    <param from="$(var config_file)"/>
+  </node>
+</launch>
