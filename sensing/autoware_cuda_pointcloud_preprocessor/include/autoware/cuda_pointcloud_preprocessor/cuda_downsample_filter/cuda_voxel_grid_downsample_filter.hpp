@@ -36,7 +36,7 @@ namespace autoware::cuda_pointcloud_preprocessor
 class CudaVoxelGridDownsampleFilter
 {
 public:
-  template<typename T>
+  template <typename T>
   struct ThreeDim
   {
     T x;
@@ -51,7 +51,7 @@ public:
 
     T & operator[](size_t i)
     {  // Define [] operator to make iterative access easy
-      static T * members[] = { & x, & y, & z };
+      static T * members[] = {&x, &y, &z};
       return *members[i];
     }
   };
@@ -94,10 +94,10 @@ public:
     const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points);
 
 private:
-  template<typename T>
+  template <typename T>
   T * allocateBufferFromPool(size_t num_elements);
 
-  template<typename T>
+  template <typename T>
   void returnBufferToPool(T * buffer);
 
   void getVoxelMinMaxCoordinate(
