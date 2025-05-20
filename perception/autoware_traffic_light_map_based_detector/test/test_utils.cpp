@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "../src/traffic_light_map_based_detector_utils.hpp"
+#include "../src/traffic_light_map_based_detector_process.hpp"
 
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>

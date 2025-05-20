@@ -13,7 +13,7 @@ include_directories(
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/traffic_light_map_based_detector_node.cpp
-  src/traffic_light_map_based_detector_utils.cpp
+  src/traffic_light_map_based_detector_process.cpp
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
