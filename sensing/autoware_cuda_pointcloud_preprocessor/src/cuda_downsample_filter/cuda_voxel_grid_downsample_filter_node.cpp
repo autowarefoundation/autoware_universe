@@ -36,14 +36,14 @@ CudaVoxelGridDownsampleFilterNode::CudaVoxelGridDownsampleFilterNode(
   }
 
   sub_ =
-    std::make_shared<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
-      *this, "~/input/pointcloud",
-      std::bind(
-        &CudaVoxelGridDownsampleFilterNode::cudaPointcloudCallback, this, std::placeholders::_1));
+    std::make_shared<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
+      (*this, "~/input/pointcloud",
+       std::bind(
+           &CudaVoxelGridDownsampleFilterNode::cudaPointcloudCallback, this, std::placeholders::_1));
 
   pub_ =
-    std::make_unique<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(
-      *this, "~/output/pointcloud");
+    std::make_unique<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>
+      (*this, "~/output/pointcloud");
 
   cuda_voxel_grid_downsample_filter_ = std::make_unique<CudaVoxelGridDownsampleFilter>(
     voxel_size_x, voxel_size_y, voxel_size_z, max_mem_pool_size_in_byte);

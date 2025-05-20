@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/* *INDENT-OFF* */
 #ifndef AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_DOWNSAMPLE_FILTER__CUDA_VOXEL_GRID_DOWNSAMPLE_FILTER_HPP_
 #define AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_DOWNSAMPLE_FILTER__CUDA_VOXEL_GRID_DOWNSAMPLE_FILTER_HPP_
+/* *INDENT-ON* */
 
 #include "autoware/cuda_pointcloud_preprocessor/cuda_downsample_filter/thrust_custom_allocator.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
@@ -34,7 +36,7 @@ namespace autoware::cuda_pointcloud_preprocessor
 class CudaVoxelGridDownsampleFilter
 {
 public:
-  template <typename T>
+  template<typename T>
   struct ThreeDim
   {
     T x;
@@ -49,7 +51,7 @@ public:
 
     T & operator[](size_t i)
     {  // Define [] operator to make iterative access easy
-      static T * members[] = {&x, &y, &z};
+      static T * members[] = { & x, & y, & z };
       return *members[i];
     }
   };
@@ -92,10 +94,10 @@ public:
     const cuda_blackboard::CudaPointCloud2::ConstSharedPtr & input_points);
 
 private:
-  template <typename T>
+  template<typename T>
   T * allocateBufferFromPool(size_t num_elements);
 
-  template <typename T>
+  template<typename T>
   void returnBufferToPool(T * buffer);
 
   void getVoxelMinMaxCoordinate(

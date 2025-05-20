@@ -37,6 +37,8 @@
 #include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <memory>
+
 namespace autoware::cuda_pointcloud_preprocessor
 {
 class CudaVoxelGridDownsampleFilterNode : public rclcpp::Node
@@ -49,11 +51,11 @@ private:
 
   // CUDA sub
   std::shared_ptr<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>
-    sub_{};
+  sub_{};
 
   // CUDA pub
   std::unique_ptr<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>
-    pub_{};
+  pub_{};
 
   std::unique_ptr<CudaVoxelGridDownsampleFilter> cuda_voxel_grid_downsample_filter_{};
 };
