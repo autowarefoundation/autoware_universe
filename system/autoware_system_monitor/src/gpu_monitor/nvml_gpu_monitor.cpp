@@ -303,7 +303,8 @@ void GPUMonitor::checkMemoryUsage(diagnostic_updater::DiagnosticStatusWrapper & 
 
     stat.add(fmt::format("GPU {}: status", index), load_dict_.at(level));
     stat.add(fmt::format("GPU {}: name", index), itr->name);
-    stat.addf(fmt::format("GPU {}: usage", index), "%d.0%%", static_cast<unsigned int>(usage * 100.0f));
+    stat.addf(
+      fmt::format("GPU {}: usage", index), "%d.0%%", static_cast<unsigned int>(usage * 100.0f));
     stat.add(fmt::format("GPU {}: total", index), toHumanReadable(memory.total));
     stat.add(fmt::format("GPU {}: used", index), toHumanReadable(memory.used));
     stat.add(fmt::format("GPU {}: free", index), toHumanReadable(memory.free));
