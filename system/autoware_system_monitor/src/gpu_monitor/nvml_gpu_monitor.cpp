@@ -284,11 +284,17 @@ void GPUMonitor::checkMemoryUsage(diagnostic_updater::DiagnosticStatusWrapper & 
       stat.add(fmt::format("GPU {}: content", index), nvmlErrorString(ret));
       return;
     }
+    if (memory.total == 0) {
+      stat.summary(DiagStatus::ERROR, "Total memory is 0");
+      stat.add(fmt::format("GPU {}: name", index), itr->name);
+      stat.add(fmt::format("GPU {}: bus-id", index), itr->pci.busId);
+      return;
+    }
 
     int level = DiagStatus::OK;
-    const float used_memory = static_cast<float>(memory.used);
-    const float total_memory = static_cast<float>(memory.total);
-    const float usage = used_memory/total_memory;
+    const auto used_memory = static_cast<double>(memory.used);
+    const auto total_memory = static_cast<double>(memory.total);
+    const auto usage = static_cast<float>(used_memory/total_memory);
     if (usage >= memory_usage_error_) {
       level = std::max(level, static_cast<int>(DiagStatus::ERROR));
     } else if (usage >= memory_usage_warn_) {
