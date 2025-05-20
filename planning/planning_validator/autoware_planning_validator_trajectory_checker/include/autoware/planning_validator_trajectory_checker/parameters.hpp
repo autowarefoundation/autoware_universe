@@ -33,21 +33,13 @@ struct TrajectoryCheckerParams
   TrajectoryCheck steering;
   TrajectoryCheck steering_rate;
   TrajectoryCheck lateral_jerk;
-
-  struct AccelerationCheck : TrajectoryCheck
-  {
-    double lateral_th;
-    double longitudinal_max_th;
-    double longitudinal_min_th;
-  } acceleration{};
-
-  struct DeviationCheck : TrajectoryCheck
-  {
-    double velocity_th;
-    double distance_th;
-    double lon_distance_th;
-    double yaw_th;
-  } deviation{};
+  TrajectoryCheck lateral_accel;
+  TrajectoryCheck max_lon_accel;
+  TrajectoryCheck min_lon_accel;
+  TrajectoryCheck velocity_deviation;
+  TrajectoryCheck distance_deviation;
+  TrajectoryCheck lon_distance_deviation;
+  TrajectoryCheck yaw_deviation;
 
   struct TrajectoryShift : TrajectoryCheck
   {

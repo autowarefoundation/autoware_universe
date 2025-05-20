@@ -320,30 +320,49 @@ rclcpp::NodeOptions getNodeOptionsWithDefaultParams()
     "trajectory_checker.curvature.threshold", THRESHOLD_CURVATURE);
   node_options.append_parameter_override("trajectory_checker.curvature.is_critical", false);
 
-  node_options.append_parameter_override("trajectory_checker.acceleration.enable", true);
+  node_options.append_parameter_override("trajectory_checker.lateral_accel.enable", true);
   node_options.append_parameter_override(
-    "trajectory_checker.acceleration.lateral_th", THRESHOLD_LATERAL_ACC);
+    "trajectory_checker.lateral_accel.threshold", THRESHOLD_LATERAL_ACC);
+  node_options.append_parameter_override("trajectory_checker.lateral_accel.is_critical", false);
+
+  node_options.append_parameter_override("trajectory_checker.max_lon_accel.enable", true);
   node_options.append_parameter_override(
-    "trajectory_checker.acceleration.longitudinal_max_th", THRESHOLD_LONGITUDINAL_MAX_ACC);
+    "trajectory_checker.max_lon_accel.threshold", THRESHOLD_LONGITUDINAL_MAX_ACC);
+  node_options.append_parameter_override("trajectory_checker.max_lon_accel.is_critical", false);
+
+  node_options.append_parameter_override("trajectory_checker.min_lon_accel.enable", true);
   node_options.append_parameter_override(
-    "trajectory_checker.acceleration.longitudinal_min_th", THRESHOLD_LONGITUDINAL_MIN_ACC);
-  node_options.append_parameter_override("trajectory_checker.acceleration.is_critical", false);
+    "trajectory_checker.min_lon_accel.threshold", THRESHOLD_LONGITUDINAL_MIN_ACC);
+  node_options.append_parameter_override("trajectory_checker.min_lon_accel.is_critical", false);
 
   node_options.append_parameter_override("trajectory_checker.lateral_jerk.enable", true);
   node_options.append_parameter_override(
     "trajectory_checker.lateral_jerk.threshold", THRESHOLD_LATERAL_JERK);
   node_options.append_parameter_override("trajectory_checker.lateral_jerk.is_critical", false);
 
-  node_options.append_parameter_override("trajectory_checker.deviation.enable", true);
+  node_options.append_parameter_override("trajectory_checker.distance_deviation.enable", true);
   node_options.append_parameter_override(
-    "trajectory_checker.deviation.velocity_th", THRESHOLD_VELOCITY_DEVIATION);
+    "trajectory_checker.distance_deviation.threshold", THRESHOLD_DISTANCE_DEVIATION);
   node_options.append_parameter_override(
-    "trajectory_checker.deviation.distance_th", THRESHOLD_DISTANCE_DEVIATION);
+    "trajectory_checker.distance_deviation.is_critical", false);
+
+  node_options.append_parameter_override("trajectory_checker.lon_distance_deviation.enable", true);
   node_options.append_parameter_override(
-    "trajectory_checker.deviation.lon_distance_th", THRESHOLD_LONGITUDINAL_DISTANCE_DEVIATION);
+    "trajectory_checker.lon_distance_deviation.threshold",
+    THRESHOLD_LONGITUDINAL_DISTANCE_DEVIATION);
   node_options.append_parameter_override(
-    "trajectory_checker.deviation.yaw_th", THRESHOLD_YAW_DEVIATION);
-  node_options.append_parameter_override("trajectory_checker.deviation.is_critical", false);
+    "trajectory_checker.lon_distance_deviation.is_critical", false);
+
+  node_options.append_parameter_override("trajectory_checker.velocity_deviation.enable", true);
+  node_options.append_parameter_override(
+    "trajectory_checker.velocity_deviation.threshold", THRESHOLD_VELOCITY_DEVIATION);
+  node_options.append_parameter_override(
+    "trajectory_checker.velocity_deviation.is_critical", false);
+
+  node_options.append_parameter_override("trajectory_checker.yaw_deviation.enable", true);
+  node_options.append_parameter_override(
+    "trajectory_checker.yaw_deviation.threshold", THRESHOLD_YAW_DEVIATION);
+  node_options.append_parameter_override("trajectory_checker.yaw_deviation.is_critical", false);
 
   node_options.append_parameter_override("trajectory_checker.steering.enable", true);
   node_options.append_parameter_override(

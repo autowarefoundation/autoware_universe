@@ -67,21 +67,13 @@ void TrajectoryChecker::setup_parameters(rclcpp::Node & node)
     set_validation_params(p.steering, t + "steering");
     set_validation_params(p.steering_rate, t + "steering_rate");
     set_validation_params(p.lateral_jerk, t + "lateral_jerk");
-
-    set_validation_flags(p.acceleration, t + "acceleration");
-    p.acceleration.lateral_th =
-      get_or_declare_parameter<double>(node, t + "acceleration.lateral_th");
-    p.acceleration.longitudinal_max_th =
-      get_or_declare_parameter<double>(node, t + "acceleration.longitudinal_max_th");
-    p.acceleration.longitudinal_min_th =
-      get_or_declare_parameter<double>(node, t + "acceleration.longitudinal_min_th");
-
-    set_validation_flags(p.deviation, t + "deviation");
-    p.deviation.velocity_th = get_or_declare_parameter<double>(node, t + "deviation.velocity_th");
-    p.deviation.distance_th = get_or_declare_parameter<double>(node, t + "deviation.distance_th");
-    p.deviation.lon_distance_th =
-      get_or_declare_parameter<double>(node, t + "deviation.lon_distance_th");
-    p.deviation.yaw_th = get_or_declare_parameter<double>(node, t + "deviation.yaw_th");
+    set_validation_params(p.lateral_accel, t + "lateral_accel");
+    set_validation_params(p.max_lon_accel, t + "max_lon_accel");
+    set_validation_params(p.min_lon_accel, t + "min_lon_accel");
+    set_validation_params(p.distance_deviation, t + "distance_deviation");
+    set_validation_params(p.lon_distance_deviation, t + "lon_distance_deviation");
+    set_validation_params(p.velocity_deviation, t + "velocity_deviation");
+    set_validation_params(p.yaw_deviation, t + "yaw_deviation");
 
     set_validation_flags(p.trajectory_shift, t + "trajectory_shift");
     p.trajectory_shift.lat_shift_th =
@@ -118,13 +110,13 @@ void TrajectoryChecker::setup_diag()
     params_.curvature.is_critical);
   context_->add_diag(
     ns + "lateral_acceleration", status->is_valid_lateral_acc, "lateral acceleration is too large",
-    params_.acceleration.is_critical);
+    params_.lateral_accel.is_critical);
   context_->add_diag(
     ns + "acceleration", status->is_valid_longitudinal_max_acc, "acceleration is too large",
-    params_.acceleration.is_critical);
+    params_.max_lon_accel.is_critical);
   context_->add_diag(
     ns + "deceleration", status->is_valid_longitudinal_min_acc, "deceleration is too large",
-    params_.acceleration.is_critical);
+    params_.min_lon_accel.is_critical);
   context_->add_diag(
     ns + "steering", status->is_valid_steering, "steering angle is too large",
     params_.steering.is_critical);
@@ -133,17 +125,17 @@ void TrajectoryChecker::setup_diag()
     params_.steering_rate.is_critical);
   context_->add_diag(
     ns + "velocity_deviation", status->is_valid_velocity_deviation,
-    "velocity deviation is too large", params_.deviation.is_critical);
+    "velocity deviation is too large", params_.velocity_deviation.is_critical);
   context_->add_diag(
     ns + "distance_deviation", status->is_valid_distance_deviation,
-    "distance deviation is too large", params_.deviation.is_critical);
+    "distance deviation is too large", params_.distance_deviation.is_critical);
   context_->add_diag(
     ns + "longitudinal_distance_deviation", status->is_valid_longitudinal_distance_deviation,
-    "longitudinal distance deviation is too large", params_.deviation.is_critical);
+    "longitudinal distance deviation is too large", params_.lon_distance_deviation.is_critical);
   context_->add_diag(
     ns + "yaw_deviation", status->is_valid_yaw_deviation,
     "difference between vehicle yaw and closest trajectory yaw is too large",
-    params_.deviation.is_critical);
+    params_.yaw_deviation.is_critical);
   context_->add_diag(
     ns + "forward_trajectory_length", status->is_valid_forward_trajectory_length,
     "trajectory length is too short", params_.forward_trajectory_length.is_critical);
@@ -295,7 +287,7 @@ bool TrajectoryChecker::check_valid_lateral_acceleration(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
-  if (!params_.acceleration.enable) {
+  if (!params_.lateral_accel.enable) {
     return true;
   }
 
@@ -304,9 +296,9 @@ bool TrajectoryChecker::check_valid_lateral_acceleration(
   const auto [max_lateral_acc, i] =
     trajectory_checker_utils::calcMaxLateralAcceleration(trajectory);
   status->max_lateral_acc = max_lateral_acc;
-  if (max_lateral_acc > params_.acceleration.lateral_th) {
+  if (max_lateral_acc > params_.lateral_accel.threshold) {
     context_->debug_pose_publisher->pushPoseMarker(trajectory.points.at(i), "lateral_acceleration");
-    is_critical_error_ |= params_.acceleration.is_critical;
+    is_critical_error_ |= params_.lateral_accel.is_critical;
     return false;
   }
   return true;
@@ -324,9 +316,9 @@ bool TrajectoryChecker::check_valid_lateral_jerk(
 
   const auto [max_lateral_jerk, i] = trajectory_checker_utils::calc_max_lateral_jerk(trajectory);
   status->max_lateral_jerk = max_lateral_jerk;
-  if (max_lateral_jerk > params_.acceleration.lateral_th) {
+  if (max_lateral_jerk > params_.lateral_jerk.threshold) {
     context_->debug_pose_publisher->pushPoseMarker(trajectory.points.at(i), "lateral_jerk");
-    is_critical_error_ |= params_.acceleration.is_critical;
+    is_critical_error_ |= params_.lateral_jerk.is_critical;
     return false;
   }
   return true;
@@ -336,7 +328,7 @@ bool TrajectoryChecker::check_valid_min_longitudinal_acceleration(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
-  if (!params_.acceleration.enable) {
+  if (!params_.min_lon_accel.enable) {
     return true;
   }
 
@@ -346,10 +338,10 @@ bool TrajectoryChecker::check_valid_min_longitudinal_acceleration(
     trajectory_checker_utils::getMinLongitudinalAcc(trajectory);
   status->min_longitudinal_acc = min_longitudinal_acc;
 
-  if (min_longitudinal_acc < params_.acceleration.longitudinal_min_th) {
+  if (min_longitudinal_acc < params_.min_lon_accel.threshold) {
     context_->debug_pose_publisher->pushPoseMarker(
       trajectory.points.at(i).pose, "min_longitudinal_acc");
-    is_critical_error_ |= params_.acceleration.is_critical;
+    is_critical_error_ |= params_.min_lon_accel.is_critical;
     return false;
   }
   return true;
@@ -359,7 +351,7 @@ bool TrajectoryChecker::check_valid_max_longitudinal_acceleration(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
-  if (!params_.acceleration.enable) {
+  if (!params_.max_lon_accel.enable) {
     return true;
   }
 
@@ -369,10 +361,10 @@ bool TrajectoryChecker::check_valid_max_longitudinal_acceleration(
     trajectory_checker_utils::getMaxLongitudinalAcc(trajectory);
   status->max_longitudinal_acc = max_longitudinal_acc;
 
-  if (max_longitudinal_acc > params_.acceleration.longitudinal_max_th) {
+  if (max_longitudinal_acc > params_.max_lon_accel.threshold) {
     context_->debug_pose_publisher->pushPoseMarker(
       trajectory.points.at(i).pose, "max_longitudinal_acc");
-    is_critical_error_ |= params_.acceleration.is_critical;
+    is_critical_error_ |= params_.max_lon_accel.is_critical;
     return false;
   }
   return true;
@@ -427,7 +419,7 @@ bool TrajectoryChecker::check_valid_velocity_deviation(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
-  if (!params_.deviation.enable) {
+  if (!params_.velocity_deviation.enable) {
     return true;
   }
 
@@ -440,8 +432,8 @@ bool TrajectoryChecker::check_valid_velocity_deviation(
   status->velocity_deviation =
     std::abs(trajectory.points.at(idx).longitudinal_velocity_mps - ego_speed);
 
-  if (status->velocity_deviation > params_.deviation.velocity_th) {
-    is_critical_error_ |= params_.deviation.is_critical;
+  if (status->velocity_deviation > params_.velocity_deviation.threshold) {
+    is_critical_error_ |= params_.velocity_deviation.is_critical;
     return false;
   }
   return true;
@@ -451,7 +443,7 @@ bool TrajectoryChecker::check_valid_distance_deviation(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
-  if (!params_.deviation.enable) {
+  if (!params_.distance_deviation.enable) {
     return true;
   }
 
@@ -463,8 +455,8 @@ bool TrajectoryChecker::check_valid_distance_deviation(
 
   status->distance_deviation = autoware_utils::calc_distance2d(trajectory.points.at(idx), ego_pose);
 
-  if (status->distance_deviation > params_.deviation.distance_th) {
-    is_critical_error_ |= params_.deviation.is_critical;
+  if (status->distance_deviation > params_.distance_deviation.threshold) {
+    is_critical_error_ |= params_.distance_deviation.is_critical;
     return false;
   }
   return true;
@@ -474,7 +466,7 @@ bool TrajectoryChecker::check_valid_longitudinal_distance_deviation(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
-  if (!params_.deviation.enable) {
+  if (!params_.lon_distance_deviation.enable) {
     return true;
   }
 
@@ -508,14 +500,15 @@ bool TrajectoryChecker::check_valid_longitudinal_distance_deviation(
     }
 
     status->longitudinal_distance_deviation = long_offset;
-    return std::abs(status->longitudinal_distance_deviation) < params_.deviation.lon_distance_th;
+    return std::abs(status->longitudinal_distance_deviation) <
+           params_.lon_distance_deviation.threshold;
   };
 
   // Make sure the trajectory is far AHEAD from ego.
   if (idx == 0) {
     const auto seg_idx = 0;
     if (!has_valid_lon_deviation(seg_idx, false)) {
-      is_critical_error_ |= params_.deviation.is_critical;
+      is_critical_error_ |= params_.lon_distance_deviation.is_critical;
       return false;
     }
     return true;
@@ -525,7 +518,7 @@ bool TrajectoryChecker::check_valid_longitudinal_distance_deviation(
   if (idx == trajectory.points.size() - 1) {
     const auto seg_idx = trajectory.points.size() - 2;
     if (!has_valid_lon_deviation(seg_idx, true)) {
-      is_critical_error_ |= params_.deviation.is_critical;
+      is_critical_error_ |= params_.lon_distance_deviation.is_critical;
       return false;
     }
     return true;
@@ -538,7 +531,7 @@ bool TrajectoryChecker::check_valid_yaw_deviation(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
 {
-  if (!params_.deviation.enable) {
+  if (!params_.yaw_deviation.enable) {
     return true;
   }
 
@@ -551,8 +544,8 @@ bool TrajectoryChecker::check_valid_yaw_deviation(
     tf2::getYaw(interpolated_trajectory_point.pose.orientation),
     tf2::getYaw(ego_pose.orientation)));
 
-  if (status->yaw_deviation > params_.deviation.yaw_th) {
-    is_critical_error_ |= params_.deviation.is_critical;
+  if (status->yaw_deviation > params_.yaw_deviation.threshold) {
+    is_critical_error_ |= params_.yaw_deviation.is_critical;
     return false;
   }
   return true;

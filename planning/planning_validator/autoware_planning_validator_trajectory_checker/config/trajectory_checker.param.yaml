@@ -13,11 +13,17 @@
         enable: true
         threshold: 2.0 # (= 115 degree)
         is_critical: false
-      acceleration:
+      lateral_accel:
         enable: true
-        lateral_th: 9.8
-        longitudinal_max_th: 9.8
-        longitudinal_min_th: -9.8
+        threshold: 9.8
+        is_critical: false
+      min_lon_accel:
+        enable: true
+        threshold: -9.8
+        is_critical: false
+      max_lon_accel:
+        enable: true
+        threshold: 9.8
         is_critical: false
       lateral_jerk:
         enable: true
@@ -31,12 +37,21 @@
         enable: true
         threshold: 10.0
         is_critical: false
-      deviation:
+      distance_deviation:
         enable: true
-        velocity_th: 100.0
-        distance_th: 100.0
-        lon_distance_th: 1.0
-        yaw_th: 1.5708 # (= 90 degrees)
+        threshold: 100.0
+        is_critical: false
+      lon_distance_deviation:
+        enable: true
+        threshold: 1.0
+        is_critical: false
+      velocity_deviation:
+        enable: true
+        threshold: 100.0
+        is_critical: false
+      yaw_deviation:
+        enable: true
+        threshold: 1.5708 # (= 90 degrees)
         is_critical: false
       forward_trajectory_length:
         enable: true
