@@ -6,7 +6,7 @@ This node is a CUDA accelerated version of the `FasterVoxelGridDownsampleFilter`
 
 ## Inner-workings / Algorithms
 
-This node is reimplementation of the function of `autoware::pointcloud_preprocessor::FasterVoxelGridDownsampleFilter`, which calculates centroids as representative points in each voxels.
+This node reimplements of the function of `autoware::pointcloud_preprocessor::FasterVoxelGridDownsampleFilter`, which calculates centroids as representative points in each voxels.
 
 ## Inputs / Outputs
 

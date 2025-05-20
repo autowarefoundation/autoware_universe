@@ -31,7 +31,7 @@ CudaVoxelGridDownsampleFilterNode::CudaVoxelGridDownsampleFilterNode(
     1e9);  // 1GB in default
   if (max_mem_pool_size_in_byte < 0) {
     RCLCPP_ERROR(
-      this->get_logger(), "Invalid pool size was specified. The value shoudl be positive");
+      this->get_logger(), "Invalid pool size was specified. The value should be positive");
     return;
   }
 
