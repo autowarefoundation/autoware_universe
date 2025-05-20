@@ -195,7 +195,6 @@ CudaVoxelGridDownsampleFilter::CudaVoxelGridDownsampleFilter(
     pool_props.location.type = cudaMemLocationTypeDevice;
     CHECK_CUDA_ERROR(cudaMemPoolCreate(&mem_pool_, &pool_props));
 
-
     // Configure the memory pool reusing allocation
     // we set a high release threshold so that the allocated memory region will be reused
     uint64_t pool_release_threshold = max_mem_pool_size_in_byte;

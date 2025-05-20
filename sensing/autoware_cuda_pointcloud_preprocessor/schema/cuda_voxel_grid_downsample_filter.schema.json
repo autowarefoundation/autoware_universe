@@ -31,11 +31,7 @@
           "minimum": 0
         }
       },
-      "required": [
-        "voxel_size_x",
-        "voxel_size_y",
-        "voxel_size_z"
-      ],
+      "required": ["voxel_size_x", "voxel_size_y", "voxel_size_z"],
       "additionalProperties": false
     }
   },

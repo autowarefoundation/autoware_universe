@@ -32,8 +32,10 @@ public:
   using pointer = typename Base::pointer;
   using size_type = typename Base::size_type;
 
-  explicit ThrustCustomAllocator(cudaStream_t stream, cudaMemPool_t& mem_pool)
-      : stream_(stream), mem_pool_(mem_pool) {}
+  explicit ThrustCustomAllocator(cudaStream_t stream, cudaMemPool_t & mem_pool)
+  : stream_(stream), mem_pool_(mem_pool)
+  {
+  }
 
   pointer allocate(size_type num)
   {
@@ -53,7 +55,6 @@ public:
 private:
   cudaStream_t stream_;
   cudaMemPool_t mem_pool_;
-
 };
 
 }  // namespace autoware::cuda_pointcloud_preprocessor

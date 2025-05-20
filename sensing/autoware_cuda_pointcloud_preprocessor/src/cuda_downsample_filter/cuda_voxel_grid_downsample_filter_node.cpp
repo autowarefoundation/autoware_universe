@@ -26,10 +26,12 @@ CudaVoxelGridDownsampleFilterNode::CudaVoxelGridDownsampleFilterNode(
   float voxel_size_x = declare_parameter<float>("voxel_size_x");
   float voxel_size_y = declare_parameter<float>("voxel_size_y");
   float voxel_size_z = declare_parameter<float>("voxel_size_z");
-  int64_t max_mem_pool_size_in_byte = declare_parameter<int64_t>("max_mem_pool_size_in_byte",
-                                                                 1e9);  // 1GB in default
+  int64_t max_mem_pool_size_in_byte = declare_parameter<int64_t>(
+    "max_mem_pool_size_in_byte",
+    1e9);  // 1GB in default
   if (max_mem_pool_size_in_byte < 0) {
-    RCLCPP_ERROR(this->get_logger(), "Invalid pool size was specified. The value shoudl be positive");
+    RCLCPP_ERROR(
+      this->get_logger(), "Invalid pool size was specified. The value shoudl be positive");
     return;
   }
 
@@ -43,9 +45,8 @@ CudaVoxelGridDownsampleFilterNode::CudaVoxelGridDownsampleFilterNode(
     std::make_unique<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(
       *this, "~/output/pointcloud");
 
-  cuda_voxel_grid_downsample_filter_ =
-    std::make_unique<CudaVoxelGridDownsampleFilter>(voxel_size_x, voxel_size_y, voxel_size_z,
-                                                    max_mem_pool_size_in_byte);
+  cuda_voxel_grid_downsample_filter_ = std::make_unique<CudaVoxelGridDownsampleFilter>(
+    voxel_size_x, voxel_size_y, voxel_size_z, max_mem_pool_size_in_byte);
 }
 
 void CudaVoxelGridDownsampleFilterNode::cudaPointcloudCallback(

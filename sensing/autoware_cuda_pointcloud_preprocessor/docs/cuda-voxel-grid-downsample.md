@@ -20,7 +20,7 @@ This node is reimplementation of the function of `autoware::pointcloud_preproces
 ### Output
 
 | Name                       | Type                                             | Description                                             |
-|----------------------------|--------------------------------------------------|---------------------------------------------------------|
+| -------------------------- | ------------------------------------------------ | ------------------------------------------------------- |
 | `~/output/pointcloud`      | `sensor_msgs::msg::PointCloud2`                  | Processed pointcloud's topic (in `PointXYZIRC` fashion) |
 | `~/output/pointcloud/cuda` | `negotiated_interfaces/msg/NegotiatedTopicsInfo` | Processed pointcloud's negotiation topic                |
 
