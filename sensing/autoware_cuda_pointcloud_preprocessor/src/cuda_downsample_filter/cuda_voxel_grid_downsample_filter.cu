@@ -167,7 +167,8 @@ __global__ void packCentroidKernel(
 }  // namespace
 
 CudaVoxelGridDownsampleFilter::CudaVoxelGridDownsampleFilter(
-  const float voxel_size_x, const float voxel_size_y, const float voxel_size_z)
+  const float voxel_size_x, const float voxel_size_y, const float voxel_size_z,
+  const int64_t max_mem_pool_size_in_byte)
 {
   voxel_info_.voxel_size.x = voxel_size_x;
   voxel_info_.voxel_size.y = voxel_size_y;
@@ -196,9 +197,8 @@ CudaVoxelGridDownsampleFilter::CudaVoxelGridDownsampleFilter(
 
 
     // Configure the memory pool reusing allocation
-    // Following the CUDA documentation, we set a high release threshold so that the allocated
-    // memory region will be reused
-    uint64_t pool_release_threshold = ULONG_MAX;
+    // we set a high release threshold so that the allocated memory region will be reused
+    uint64_t pool_release_threshold = max_mem_pool_size_in_byte;
     CHECK_CUDA_ERROR(cudaMemPoolSetAttribute(
       mem_pool_, cudaMemPoolAttrReleaseThreshold, static_cast<void *>(&pool_release_threshold)));
   }

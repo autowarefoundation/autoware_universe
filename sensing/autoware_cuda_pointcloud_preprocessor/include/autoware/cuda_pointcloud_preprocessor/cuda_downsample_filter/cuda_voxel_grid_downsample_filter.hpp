@@ -84,7 +84,8 @@ public:
   };
 
   explicit CudaVoxelGridDownsampleFilter(
-    const float voxel_size_x, const float voxel_size_y, const float voxel_size_z);
+    const float voxel_size_x, const float voxel_size_y, const float voxel_size_z,
+    const int64_t max_mem_pool_size_in_byte);
   ~CudaVoxelGridDownsampleFilter() = default;
 
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> filter(
