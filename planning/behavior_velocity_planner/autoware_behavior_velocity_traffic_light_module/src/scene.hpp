@@ -64,6 +64,9 @@ public:
     double yellow_light_stop_velocity;
     double stop_time_hysteresis;
     bool enable_pass_judge;
+    // Restart Suppression Parameter
+    double max_behind_dist_to_stop_for_restart_suppression;
+    double min_behind_dist_to_stop_for_restart_suppression;
   };
 
 public:

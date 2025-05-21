@@ -45,7 +45,7 @@ void calculate_objects_time_collisions(
 void calculate_collisions_to_avoid(
   OutOfLaneData & out_of_lane_data,
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
-  const PlannerParam & params);
+  const PlannerParam & params, const bool is_stopping = false);
 
 /// @brief calculate the out of lane points
 std::vector<OutOfLanePoint> calculate_out_of_lane_points(const EgoData & ego_data);

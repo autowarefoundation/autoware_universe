@@ -40,8 +40,8 @@ PoseInitializer::PoseInitializer(const rclcpp::NodeOptions & options)
   output_pose_covariance_ = get_covariance_parameter(this, "output_pose_covariance");
   gnss_particle_covariance_ = get_covariance_parameter(this, "gnss_particle_covariance");
 
-  diagnostics_pose_reliable_ =
-    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "pose_initializer_status");
+  diagnostics_pose_reliable_ = std::make_unique<autoware_utils_diagnostics::DiagnosticsInterface>(
+    this, "pose_initializer_status");
 
   if (declare_parameter<bool>("ekf_enabled")) {
     ekf_localization_trigger_ = std::make_unique<EkfLocalizationTriggerModule>(this);
@@ -64,7 +64,7 @@ PoseInitializer::PoseInitializer(const rclcpp::NodeOptions & options)
   if (declare_parameter<bool>("pose_error_check_enabled")) {
     pose_error_check_ = std::make_unique<PoseErrorCheckModule>(this);
   }
-  logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
+  logger_configure_ = std::make_unique<autoware_utils_logging::LoggerLevelConfigure>(this);
 
   change_state(State::Message::UNINITIALIZED);
 

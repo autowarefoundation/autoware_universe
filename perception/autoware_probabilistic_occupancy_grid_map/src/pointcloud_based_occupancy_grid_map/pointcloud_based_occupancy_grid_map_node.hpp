@@ -21,6 +21,7 @@
 #include "autoware/probabilistic_occupancy_grid_map/utils/cuda_pointcloud.hpp"
 
 #include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_utils/system/time_keeper.hpp>
 #include <builtin_interfaces/msg/time.hpp>
@@ -59,6 +60,7 @@ private:
   void obstaclePointcloudCallback(const PointCloud2::ConstSharedPtr & input_obstacle_msg);
   void rawPointcloudCallback(const PointCloud2::ConstSharedPtr & input_raw_msg);
   void onPointcloudWithObstacleAndRaw();
+  void checkProcessingTime(double processing_time_ms);
 
   OccupancyGrid::UniquePtr OccupancyGridMapToMsgPtr(
     const std::string & frame_id, const Time & stamp, const float & robot_pose_z,
@@ -99,6 +101,10 @@ private:
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
     detailed_processing_time_publisher_;
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
+  // diagnostics
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
+  double processing_time_tolerance_ms_;
+  double processing_time_consecutive_excess_tolerance_ms_;
 };
 
 }  // namespace autoware::occupancy_grid_map

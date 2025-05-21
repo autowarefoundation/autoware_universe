@@ -2,6 +2,36 @@
 Changelog for package autoware_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* perf(autoware_pointcloud_preprocessor): introduce managed transform buffer with implicitly defined listener type (`#9197 <https://github.com/autowarefoundation/autoware_universe/issues/9197>`_)
+  * feat(autoware_universe_utils): rework managed transform buffer
+  * feat(autoware_pointcloud_preprocessor): integrate Managed TF Buffer into pointcloud densifier
+  * chore: update repos
+  * chore(managed_transform_buffer): fix version
+  ---------
+  Co-authored-by: Kenzo Lobos-Tsunekawa <kenzo.lobos@tier4.jp>
+* fix(pointcloud_preprocessor): added missing includes (`#10412 <https://github.com/autowarefoundation/autoware_universe/issues/10412>`_)
+  fix: added missing includes
+* fix: missing dependency on tf2_sensor_msgs (`#10400 <https://github.com/autowarefoundation/autoware_universe/issues/10400>`_)
+* feat(autoware_pointcloud_preprocessor): add pointcloud_densifier package (`#10226 <https://github.com/autowarefoundation/autoware_universe/issues/10226>`_)
+  * feat(autoware_pointcloud_preprocessor): add pointcloud_densifier package
+  * style(pre-commit): autofix
+  * fix(autoware_pointcloud_preprocessor): add header
+  * fix(autoware_pointcloud_preprocessor): add schema and fix debugger
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(voxel_based_compare_map): temporary fix pointcloud transform lookup  (`#10299 <https://github.com/autowarefoundation/autoware_universe/issues/10299>`_)
+  * fix(voxel_based_compare_map): temporary fix pointcloud transform lookup_time
+  * pre-commit
+  * chore: reduce timeout
+  * fix: misalignment when tranform back output
+  * fix: typo
+  ---------
+* Contributors: Amadeusz Szymko, Kaan Çolak, Kenzo Lobos Tsunekawa, Ryohsuke Mitsudome, Tim Clephas, badai nguyen
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

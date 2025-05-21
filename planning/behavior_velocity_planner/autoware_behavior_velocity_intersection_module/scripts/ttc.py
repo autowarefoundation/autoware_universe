@@ -146,7 +146,7 @@ class TTCVisualizer(Node):
         v = [d / t for d, t in zip(dd, dt)]
         self.ttc_vel_ax.yaxis.set_label_position("right")
         self.ttc_vel_ax.set_ylabel("ego velocity")
-        # self.ttc_vel_ax.set_ylim(0.0, max(v) + 1.0)
+        self.ttc_vel_ax.set_ylim(0.0, 10.0)
         time_velocity_plot = self.ttc_vel_ax.plot(ego_ttc_time[1:], v, label="time-v", c="red")
         lines = time_dist_plot + time_velocity_plot
         labels = [line.get_label() for line in lines]
@@ -235,33 +235,26 @@ class TTCVisualizer(Node):
         rclpy.shutdown()
 
     def on_plot_timer(self):
-        with self.lock:
-            if (not self.ego_ttc_data) or (not self.object_ttc_data):
-                return
+        if (not self.ego_ttc_data) or (not self.object_ttc_data):
+            return
 
-            if not self.last_sub:
-                return
+        if not self.last_sub:
+            return
 
-            now = time.time()
-            if (now - self.last_sub) > 1.0:
-                print("elapsed more than 1sec from last sub, exit/save fig")
-                self.cleanup()
+        self.plot_ttc()
+        self.plot_world()
+        self.fig.canvas.flush_events()
 
-            self.plot_ttc()
-            self.plot_world()
-            self.fig.canvas.flush_events()
-
-            if self.args.save:
-                image = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype="uint8")
-                image = image.reshape(self.fig.canvas.get_width_height()[::-1] + (3,))
-                image = Image.fromarray(image.astype(np.uint8))
-                self.images.append(image)
+        if self.args.save:
+            image = np.frombuffer(self.fig.canvas.tostring_rgb(), dtype="uint8")
+            image = image.reshape(self.fig.canvas.get_width_height()[::-1] + (3,))
+            image = Image.fromarray(image.astype(np.uint8))
+            self.images.append(image)
 
     def on_ego_ttc(self, msg):
-        with self.lock:
-            if int(msg.data[0]) == self.lane_id:
-                self.ego_ttc_data = msg
-                self.last_sub = time.time()
+        if int(msg.data[0]) == self.lane_id:
+            self.ego_ttc_data = msg
+            self.last_sub = time.time()
 
     def parse_npc_vehicles(self):
         self.npc_vehicles = []
@@ -272,11 +265,10 @@ class TTCVisualizer(Node):
             self.npc_vehicles.append(NPC(data))
 
     def on_object_ttc(self, msg):
-        with self.lock:
-            if int(msg.data[0]) == self.lane_id:
-                self.object_ttc_data = msg
-                self.parse_npc_vehicles()
-                self.last_sub = time.time()
+        if int(msg.data[0]) == self.lane_id:
+            self.object_ttc_data = msg
+            self.parse_npc_vehicles()
+            self.last_sub = time.time()
 
 
 if __name__ == "__main__":

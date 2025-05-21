@@ -51,7 +51,6 @@ RingOutlierFilterComponent::RingOutlierFilterComponent(const rclcpp::NodeOptions
   {
     distance_ratio_ = declare_parameter<double>("distance_ratio");
     object_length_threshold_ = declare_parameter<double>("object_length_threshold");
-    num_points_threshold_ = declare_parameter<int>("num_points_threshold");
     max_rings_num_ = static_cast<uint16_t>(declare_parameter<int64_t>("max_rings_num"));
     max_points_num_per_ring_ =
       static_cast<size_t>(declare_parameter<int64_t>("max_points_num_per_ring"));
@@ -150,9 +149,7 @@ void RingOutlierFilterComponent::faster_filter(
         continue;                               // Determined to be included in the same walk
       }
 
-      if (isCluster(
-            input, std::make_pair(indices[walk_first_idx], indices[walk_last_idx]),
-            walk_last_idx - walk_first_idx + 1)) {
+      if (isCluster(input, std::make_pair(indices[walk_first_idx], indices[walk_last_idx]))) {
         for (int i = walk_first_idx; i <= walk_last_idx; i++) {
           auto output_ptr = reinterpret_cast<OutputPointType *>(&output.data[output_size]);
           auto input_ptr = reinterpret_cast<const InputPointType *>(&input->data[indices[i]]);
@@ -205,9 +202,7 @@ void RingOutlierFilterComponent::faster_filter(
 
     if (walk_first_idx > walk_last_idx) continue;
 
-    if (isCluster(
-          input, std::make_pair(indices[walk_first_idx], indices[walk_last_idx]),
-          walk_last_idx - walk_first_idx + 1)) {
+    if (isCluster(input, std::make_pair(indices[walk_first_idx], indices[walk_last_idx]))) {
       for (int i = walk_first_idx; i <= walk_last_idx; i++) {
         auto output_ptr = reinterpret_cast<OutputPointType *>(&output.data[output_size]);
         auto input_ptr = reinterpret_cast<const InputPointType *>(&input->data[indices[i]]);
@@ -309,9 +304,6 @@ rcl_interfaces::msg::SetParametersResult RingOutlierFilterComponent::paramCallba
   if (get_param(p, "object_length_threshold", object_length_threshold_)) {
     RCLCPP_DEBUG(
       get_logger(), "Setting new object length threshold to: %f.", object_length_threshold_);
-  }
-  if (get_param(p, "num_points_threshold", num_points_threshold_)) {
-    RCLCPP_DEBUG(get_logger(), "Setting new num_points_threshold to: %d.", num_points_threshold_);
   }
   if (get_param(p, "publish_outlier_pointcloud", publish_outlier_pointcloud_)) {
     RCLCPP_DEBUG(

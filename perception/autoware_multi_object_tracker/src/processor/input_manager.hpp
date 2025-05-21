@@ -96,11 +96,6 @@ public:
 
   bool getObjects(const rclcpp::Time & now, ObjectsList & objects_list);
 
-  bool isChannelSpawnEnabled(const uint & index) const
-  {
-    return input_streams_[index]->isSpawnEnabled();
-  }
-
 private:
   rclcpp::Node & node_;
   std::shared_ptr<Odometry> odometry_;

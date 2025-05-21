@@ -68,7 +68,7 @@ CameraProjection::CameraProjection(
   cv::Point3d x_left = ray_top_left;
   cv::Point3d x_right = ray_top_right;
   cv::Point3d y_top = ray_top_left;
-  cv::Point3d y_bottom = ray_bottom_left;
+  cv::Point3d y_bottom = ray_bottom_right;
 
   // check each side of the view
   if (ray_bottom_left.x < x_left.x) x_left = ray_bottom_left;

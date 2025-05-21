@@ -39,7 +39,6 @@ namespace
 {
 const std::size_t MAX_POINT_IN_VOXEL_SIZE = 32;  // the same as max_point_in_voxel_size_ in config
 const std::size_t WARPS_PER_BLOCK = 4;
-const std::size_t ENCODER_IN_FEATURE_SIZE = 9;  // the same as encoder_in_feature_size_ in config
 }  // namespace
 
 namespace autoware::lidar_centerpoint
@@ -236,6 +235,7 @@ cudaError_t generateBaseFeatures_launch(
   return err;
 }
 
+template <std::size_t ENCODER_IN_FEATURE_SIZE>
 __global__ void generateFeatures_kernel(
   const float * voxel_features, const float * voxel_num_points, const int * coords,
   const unsigned int * num_voxels, const float voxel_x, const float voxel_y, const float voxel_z,
@@ -312,6 +312,10 @@ __global__ void generateFeatures_kernel(
     pillarOutSM[pillar_idx_inBlock][point_idx][7] = center.x;
     pillarOutSM[pillar_idx_inBlock][point_idx][8] = center.y;
 
+    if (ENCODER_IN_FEATURE_SIZE == 10) {
+      pillarOutSM[pillar_idx_inBlock][point_idx][9] = center.z;
+    }
+
   } else {
     pillarOutSM[pillar_idx_inBlock][point_idx][0] = 0;
     pillarOutSM[pillar_idx_inBlock][point_idx][1] = 0;
@@ -324,6 +328,10 @@ __global__ void generateFeatures_kernel(
 
     pillarOutSM[pillar_idx_inBlock][point_idx][7] = 0;
     pillarOutSM[pillar_idx_inBlock][point_idx][8] = 0;
+
+    if (ENCODER_IN_FEATURE_SIZE == 10) {
+      pillarOutSM[pillar_idx_inBlock][point_idx][9] = 0;
+    }
   }
 
   __syncthreads();
@@ -342,13 +350,22 @@ cudaError_t generateFeatures_launch(
   const float * voxel_features, const float * voxel_num_points, const int * coords,
   const unsigned int * num_voxels, const std::size_t max_voxel_size, const float voxel_size_x,
   const float voxel_size_y, const float voxel_size_z, const float range_min_x,
-  const float range_min_y, const float range_min_z, float * features, cudaStream_t stream)
+  const float range_min_y, const float range_min_z, float * features,
+  const std::size_t encoder_in_feature_size, cudaStream_t stream)
 {
   dim3 blocks(divup(max_voxel_size, WARPS_PER_BLOCK));
   dim3 threads(WARPS_PER_BLOCK * MAX_POINT_IN_VOXEL_SIZE);
-  generateFeatures_kernel<<<blocks, threads, 0, stream>>>(
-    voxel_features, voxel_num_points, coords, num_voxels, voxel_size_x, voxel_size_y, voxel_size_z,
-    range_min_x, range_min_y, range_min_z, features);
+  if (encoder_in_feature_size == 9) {
+    generateFeatures_kernel<9><<<blocks, threads, 0, stream>>>(
+      voxel_features, voxel_num_points, coords, num_voxels, voxel_size_x, voxel_size_y,
+      voxel_size_z, range_min_x, range_min_y, range_min_z, features);
+  } else if (encoder_in_feature_size == 10) {
+    generateFeatures_kernel<10><<<blocks, threads, 0, stream>>>(
+      voxel_features, voxel_num_points, coords, num_voxels, voxel_size_x, voxel_size_y,
+      voxel_size_z, range_min_x, range_min_y, range_min_z, features);
+  } else {
+    throw std::runtime_error("Value of encoder_in_feature_size is not supported!");
+  }
 
   return cudaGetLastError();
 }
