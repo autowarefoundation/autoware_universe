@@ -182,6 +182,8 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
 
   // param for parked vehicles stop
   cp.parked_vehicles_stop_search_distance =
+    get_or_declare_parameter<bool>(node, ns + ".parked_vehicles_stop.enable");
+  cp.parked_vehicles_stop_search_distance =
     get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.search_distance");
   cp.parked_vehicles_stop_min_ego_stop_time =
     get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.min_ego_stop_time");
