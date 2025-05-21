@@ -176,52 +176,53 @@
   />
   <let name="behavior_velocity_planner_launch_modules" value="$(eval &quot;'$(var behavior_velocity_planner_launch_modules)' + '$(var launch_module_list_end)'&quot;)"/>
 
-  <node pkg="autoware_behavior_velocity_planner" exec="autoware_behavior_velocity_planner_node" name="behavior_velocity_planner" namespace="" launch-prefix="konsole -e gdb -ex run --args">
-    <remap from="~/input/path_with_lane_id" to="path_with_lane_id"/>
-    <remap from="~/input/vector_map" to="$(var input_vector_map_topic_name)"/>
-    <remap from="~/input/vehicle_odometry" to="/localization/kinematic_state"/>
-    <remap from="~/input/accel" to="/localization/acceleration"/>
-    <remap from="~/input/dynamic_objects" to="/perception/object_recognition/objects"/>
-    <remap from="~/input/no_ground_pointcloud" to="/perception/obstacle_segmentation/pointcloud"/>
-    <remap from="~/input/compare_map_filtered_pointcloud" to="compare_map_filtered/pointcloud"/>
-    <remap from="~/input/vector_map_inside_area_filtered_pointcloud" to="vector_map_inside_area_filtered/pointcloud"/>
-    <remap from="~/input/external_velocity_limit_mps" to="/planning/scenario_planning/max_velocity_default"/>
-    <remap from="~/input/traffic_signals" to="$(var input_traffic_light_topic_name)"/>
-    <remap from="~/input/virtual_traffic_light_states" to="$(var input_virtual_traffic_light_topic_name)"/>
-    <remap from="~/input/occupancy_grid" to="/perception/occupancy_grid_map/map"/>
-    <remap from="~/output/path" to="path"/>
-    <remap from="~/output/stop_reasons" to="/planning/scenario_planning/status/stop_reasons"/>
-    <remap from="~/output/infrastructure_commands" to="/planning/scenario_planning/status/infrastructure_commands"/>
-    <remap from="~/output/traffic_signal" to="debug/traffic_signal"/>
-    <!-- params -->
-    <param from="$(var common_param_path)"/>
-    <param from="$(var vehicle_param_file)"/>
-    <param from="$(var nearest_search_param_path)"/>
-    <param from="$(var velocity_smoother_param_path)"/>
-    <param from="$(var behavior_velocity_smoother_type_param_path)"/>
-    <param from="$(var behavior_velocity_planner_common_param_path)"/>
-    <param from="$(var behavior_velocity_planner_param_path)"/>
-    <param name="launch_modules" value="$(var behavior_velocity_planner_launch_modules)"/>
-    <param name="enable_all_modules_auto_mode" value="$(var enable_all_modules_auto_mode)"/>
-    <param name="is_simulation" value="$(var is_simulation)"/>
-    <!-- <param from="$(var template_param_path)"/> -->
-    <param from="$(var behavior_velocity_planner_blind_spot_module_param_path)"/>
-    <param from="$(var behavior_velocity_planner_crosswalk_module_param_path)"/>
-    <param from="$(var behavior_velocity_planner_walkway_module_param_path)"/>
-    <param from="$(var behavior_velocity_planner_detection_area_module_param_path)"/>
-    <param from="$(var behavior_velocity_planner_intersection_module_param_path)"/>
-    <param from="$(var behavior_velocity_planner_stop_line_module_param_path)"/>
-    <param from="$(var behavior_velocity_planner_traffic_light_module_param_path)"/>
-    <param from="$(var behavior_velocity_planner_virtual_traffic_light_module_param_path)"/>
-    <param from="$(var behavior_velocity_planner_occlusion_spot_module_param_path)"/>
-    <param from="$(var behavior_velocity_planner_no_stopping_area_module_param_path)"/>
-    <param from="$(var behavior_velocity_planner_run_out_module_param_path)"/>
-    <param from="$(var behavior_velocity_planner_speed_bump_module_param_path)"/>
-    <param from="$(var behavior_velocity_planner_no_drivable_lane_module_param_path)"/>
-  </node>
-
   <node_container pkg="rclcpp_components" exec="$(var container_type)" name="behavior_planning_container" namespace="" args="" output="both">
     <composable_node pkg="autoware_glog_component" plugin="autoware::glog_component::GlogComponent" name="glog_component" namespace=""/>
+    <composable_node pkg="autoware_behavior_velocity_planner" plugin="autoware::behavior_velocity_planner::BehaviorVelocityPlannerNode" name="behavior_velocity_planner" namespace="">
+      <remap from="~/input/path_with_lane_id" to="path_with_lane_id"/>
+      <remap from="~/input/vector_map" to="$(var input_vector_map_topic_name)"/>
+      <remap from="~/input/vehicle_odometry" to="/localization/kinematic_state"/>
+      <remap from="~/input/accel" to="/localization/acceleration"/>
+      <remap from="~/input/dynamic_objects" to="/perception/object_recognition/objects"/>
+      <remap from="~/input/no_ground_pointcloud" to="/perception/obstacle_segmentation/pointcloud"/>
+      <remap from="~/input/compare_map_filtered_pointcloud" to="compare_map_filtered/pointcloud"/>
+      <remap from="~/input/vector_map_inside_area_filtered_pointcloud" to="vector_map_inside_area_filtered/pointcloud"/>
+      <remap from="~/input/external_velocity_limit_mps" to="/planning/scenario_planning/max_velocity_default"/>
+      <remap from="~/input/traffic_signals" to="$(var input_traffic_light_topic_name)"/>
+      <remap from="~/input/virtual_traffic_light_states" to="$(var input_virtual_traffic_light_topic_name)"/>
+      <remap from="~/input/occupancy_grid" to="/perception/occupancy_grid_map/map"/>
+      <remap from="~/output/path" to="path"/>
+      <remap from="~/output/stop_reasons" to="/planning/scenario_planning/status/stop_reasons"/>
+      <remap from="~/output/infrastructure_commands" to="/planning/scenario_planning/status/infrastructure_commands"/>
+      <remap from="~/output/traffic_signal" to="debug/traffic_signal"/>
+      <!-- params -->
+      <param from="$(var common_param_path)"/>
+      <param from="$(var vehicle_param_file)"/>
+      <param from="$(var nearest_search_param_path)"/>
+      <param from="$(var velocity_smoother_param_path)"/>
+      <param from="$(var behavior_velocity_smoother_type_param_path)"/>
+      <param from="$(var behavior_velocity_planner_common_param_path)"/>
+      <param from="$(var behavior_velocity_planner_param_path)"/>
+      <param name="launch_modules" value="$(var behavior_velocity_planner_launch_modules)"/>
+      <param name="enable_all_modules_auto_mode" value="$(var enable_all_modules_auto_mode)"/>
+      <param name="is_simulation" value="$(var is_simulation)"/>
+      <!-- <param from="$(var template_param_path)"/> -->
+      <param from="$(var behavior_velocity_planner_blind_spot_module_param_path)"/>
+      <param from="$(var behavior_velocity_planner_crosswalk_module_param_path)"/>
+      <param from="$(var behavior_velocity_planner_walkway_module_param_path)"/>
+      <param from="$(var behavior_velocity_planner_detection_area_module_param_path)"/>
+      <param from="$(var behavior_velocity_planner_intersection_module_param_path)"/>
+      <param from="$(var behavior_velocity_planner_stop_line_module_param_path)"/>
+      <param from="$(var behavior_velocity_planner_traffic_light_module_param_path)"/>
+      <param from="$(var behavior_velocity_planner_virtual_traffic_light_module_param_path)"/>
+      <param from="$(var behavior_velocity_planner_occlusion_spot_module_param_path)"/>
+      <param from="$(var behavior_velocity_planner_no_stopping_area_module_param_path)"/>
+      <param from="$(var behavior_velocity_planner_run_out_module_param_path)"/>
+      <param from="$(var behavior_velocity_planner_speed_bump_module_param_path)"/>
+      <param from="$(var behavior_velocity_planner_no_drivable_lane_module_param_path)"/>
+      <!-- composable node config -->
+      <extra_arg name="use_intra_process_comms" value="false"/>
+    </composable_node>
   </node_container>
 
   <group if="$(eval &quot;'$(var behavior_path_planner_type)' == 'behavior_path_planner'&quot;)">
