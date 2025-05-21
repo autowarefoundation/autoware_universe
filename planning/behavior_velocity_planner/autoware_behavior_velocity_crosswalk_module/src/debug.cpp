@@ -199,6 +199,8 @@ visualization_msgs::msg::MarkerArray createCrosswalkMarkers(
     auto marker = create_default_marker(
       "map", now, "parked_vehicles_stop_search_area", uid, Marker::LINE_STRIP,
       create_marker_scale(0.25, 0.25, 0.0), color);
+    marker.lifetime.sec = 0.0;
+    marker.lifetime.nanosec = 0.0;
     for (const auto & p : debug_data.parked_vehicles_stop_search_area) {
       marker.points.push_back(create_point(p.x(), p.y(), 0.0));
     }
