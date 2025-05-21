@@ -66,7 +66,7 @@ std::vector<TrafficLightConstPtr> filter_pedestrian_signals(const LaneletMapCons
 
 }  // namespace lanelet
 
-namespace autoware
+namespace autoware::traffic_light
 {
 TrafficLightArbiter::TrafficLightArbiter(const rclcpp::NodeOptions & options)
 : Node("traffic_light_arbiter", options)
@@ -245,7 +245,7 @@ void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Tim
       get_logger(), *get_clock(), 5000, "Published traffic signal messages are not latest");
   }
 }
-}  // namespace autoware
+}  // namespace autoware::traffic_light
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::TrafficLightArbiter)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::traffic_light::TrafficLightArbiter)
