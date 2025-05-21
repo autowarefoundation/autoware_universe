@@ -208,7 +208,7 @@ void apply_edits(FileConfig & config)
   // List units to remove and links from/to them.
   std::unordered_set<UnitConfig *> remove_units;
   std::unordered_set<LinkConfig *> remove_links;
-  const auto remove_by_regex =  [&](EditConfig & edit) {
+  const auto remove_by_regex = [&](EditConfig & edit) {
     const auto raw_regex = edit.data.optional("regex").text();
     if (raw_regex.empty()) {
       return false;
@@ -229,7 +229,7 @@ void apply_edits(FileConfig & config)
       return true;
     }
   };
-  const auto remove_by_fullpath =  [&](EditConfig & edit) {
+  const auto remove_by_fullpath = [&](EditConfig & edit) {
     const auto path = edit.data.required("path").text();
     if (path_to_unit.count(path) == 0) {
       throw PathNotFound(edit.data.path(), path);
