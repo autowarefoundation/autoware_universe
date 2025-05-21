@@ -79,7 +79,6 @@ class BehaviorPathPlannerNode : public rclcpp::Node
 {
 public:
   explicit BehaviorPathPlannerNode(const rclcpp::NodeOptions & node_options);
-  // dummy comment
 
   // Getter method for waiting approval modules
   std::vector<std::string> getWaitingApprovalModules();

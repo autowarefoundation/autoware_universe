@@ -27,7 +27,6 @@ class EuclideanCluster : public EuclideanClusterInterface
 {
 public:
   EuclideanCluster();
-  // dummy comment
   EuclideanCluster(bool use_height, int min_cluster_size, int max_cluster_size);
   EuclideanCluster(bool use_height, int min_cluster_size, int max_cluster_size, float tolerance);
   bool cluster(
