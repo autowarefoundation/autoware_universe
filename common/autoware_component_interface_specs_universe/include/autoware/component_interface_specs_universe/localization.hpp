@@ -18,9 +18,9 @@
 #include <rclcpp/qos.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/localization_initialization_state.hpp>
+#include <autoware_internal_localization_msgs/srv/initialize_localization.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <autoware_internal_localization_msgs/srv/initialize_localization.hpp>
 
 namespace autoware::component_interface_specs_universe::localization
 {
