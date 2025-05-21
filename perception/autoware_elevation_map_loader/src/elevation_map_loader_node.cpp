@@ -135,11 +135,11 @@ void ElevationMapLoaderNode::publish()
 {
   struct stat info;
   if (stat(data_manager_.elevation_map_path_->c_str(), &info) != 0) {
-    RCLCPP_INFO(this->get_logger(), "Create elevation map from pointcloud map ");
+    RCLCPP_INFO(this->get_logger(), "Starting elevation map generation from pointcloud map");
     createElevationMap();
   } else if (info.st_mode & S_IFDIR) {
     RCLCPP_INFO(
-      this->get_logger(), "Load elevation map from: %s",
+      this->get_logger(), "Loading existing elevation map from: %s",
       data_manager_.elevation_map_path_->c_str());
 
     // Check if bag can be loaded
@@ -154,18 +154,21 @@ void ElevationMapLoaderNode::publish()
     if (!is_bag_loaded) {
       // Delete directory including elevation map if bag is broken
       RCLCPP_ERROR(
-        this->get_logger(), "Try to loading bag, but bag is broken. Remove %s",
+        this->get_logger(), "Failed to load bag file. Removing directory: %s",
         data_manager_.elevation_map_path_->c_str());
       std::filesystem::remove_all(data_manager_.elevation_map_path_->c_str());
       // Create elevation map from pointcloud map if bag is broken
-      RCLCPP_INFO(this->get_logger(), "Create elevation map from pointcloud map ");
+      RCLCPP_INFO(this->get_logger(), "Starting elevation map generation from pointcloud map");
       createElevationMap();
+    } else {
+      RCLCPP_INFO(this->get_logger(), "Elevation map loading has been completed");
     }
   }
 
   elevation_map_.setFrameId(map_frame_);
   auto msg = grid_map::GridMapRosConverter::toMessage(elevation_map_);
   pub_elevation_map_->publish(std::move(msg));
+  RCLCPP_INFO(this->get_logger(), "Elevation map has been published");
 
   if (use_elevation_map_cloud_publisher_) {
     pcl::PointCloud<pcl::PointXYZ>::Ptr elevation_map_cloud_ptr =
@@ -173,6 +176,7 @@ void ElevationMapLoaderNode::publish()
     sensor_msgs::msg::PointCloud2 elevation_map_cloud_msg;
     pcl::toROSMsg(*elevation_map_cloud_ptr, elevation_map_cloud_msg);
     pub_elevation_map_cloud_->publish(elevation_map_cloud_msg);
+    RCLCPP_INFO(this->get_logger(), "Elevation map point cloud has been published");
   }
   is_elevation_map_published_ = true;
 }
@@ -183,7 +187,7 @@ void ElevationMapLoaderNode::timerCallback()
     ElevationMapLoaderNode::receiveMap();
     // flag to make receiveMap() called only once.
     is_map_received_ = true;
-    RCLCPP_DEBUG(this->get_logger(), "receive service with pointcloud_map");
+    RCLCPP_DEBUG(this->get_logger(), "Service with pointcloud_map has been received");
   }
   if (data_manager_.isInitialized() && !is_elevation_map_published_) {
     publish();
@@ -193,7 +197,7 @@ void ElevationMapLoaderNode::timerCallback()
 void ElevationMapLoaderNode::onMapHash(
   const tier4_external_api_msgs::msg::MapHash::ConstSharedPtr map_hash)
 {
-  RCLCPP_INFO(this->get_logger(), "subscribe map_hash");
+  RCLCPP_INFO(this->get_logger(), "map_hash has been subscribed");
   const auto elevation_map_hash = map_hash->pcd;
   data_manager_.elevation_map_path_ = std::make_unique<std::filesystem::path>(
     std::filesystem::path(elevation_map_directory_) / elevation_map_hash);
@@ -205,7 +209,7 @@ void ElevationMapLoaderNode::onMapHash(
 void ElevationMapLoaderNode::onPointcloudMap(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr pointcloud_map)
 {
-  RCLCPP_INFO(this->get_logger(), "subscribe pointcloud_map");
+  RCLCPP_INFO(this->get_logger(), "Pointcloud_map has been subscribed");
   {
     pcl::PointCloud<pcl::PointXYZ> map_pcl;
     pcl::fromROSMsg<pcl::PointXYZ>(*pointcloud_map, map_pcl);
@@ -219,7 +223,7 @@ void ElevationMapLoaderNode::onPointcloudMap(
 void ElevationMapLoaderNode::onPointCloudMapMetaData(
   const autoware_map_msgs::msg::PointCloudMapMetaData pointcloud_map_metadata)
 {
-  RCLCPP_INFO(this->get_logger(), "subscribe pointcloud_map metadata");
+  RCLCPP_INFO(this->get_logger(), "Pointcloud_map metadata has been subscribed");
   {
     if (pointcloud_map_metadata.metadata_list.size() < 1) {
       RCLCPP_ERROR(
@@ -243,7 +247,7 @@ void ElevationMapLoaderNode::onPointCloudMapMetaData(
 void ElevationMapLoaderNode::onVectorMap(
   const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr vector_map)
 {
-  RCLCPP_INFO(this->get_logger(), "subscribe vector_map");
+  RCLCPP_INFO(this->get_logger(), "Vector_map has been subscribed");
   data_manager_.lanelet_map_ptr_ = std::make_shared<lanelet::LaneletMap>();
   lanelet::utils::conversion::fromBinMsg(*vector_map, data_manager_.lanelet_map_ptr_);
   const lanelet::ConstLanelets all_lanelets =
@@ -273,13 +277,14 @@ void ElevationMapLoaderNode::receiveMap()
     request->cell_ids = getRequestIDs(map_id_counter);
 
     // send a request to map_loader
-    RCLCPP_DEBUG_THROTTLE(this->get_logger(), *get_clock(), 5000, "send a request to map_loader");
+    RCLCPP_DEBUG_THROTTLE(
+      this->get_logger(), *get_clock(), 5000, "Request has been sent to map_loader");
     auto result{pcd_loader_client_->async_send_request(
       request,
       [](rclcpp::Client<autoware_map_msgs::srv::GetSelectedPointCloudMap>::SharedFuture) {})};
     std::future_status status = result.wait_for(std::chrono::seconds(0));
     while (status != std::future_status::ready) {
-      RCLCPP_DEBUG_THROTTLE(this->get_logger(), *get_clock(), 5000, "waiting response");
+      RCLCPP_DEBUG_THROTTLE(this->get_logger(), *get_clock(), 5000, "Waiting for response");
       if (!rclcpp::ok()) {
         return;
       }
@@ -289,7 +294,7 @@ void ElevationMapLoaderNode::receiveMap()
     // concatenate maps
     concatenatePointCloudMaps(pointcloud_map, result.get()->new_pointcloud_with_ids);
   }
-  RCLCPP_DEBUG(this->get_logger(), "finish receiving");
+  RCLCPP_DEBUG(this->get_logger(), "Pointcloud map receiving process has been finished");
   pcl::PointCloud<pcl::PointXYZ> map_pcl;
   pcl::fromROSMsg<pcl::PointXYZ>(pointcloud_map, map_pcl);
   data_manager_.map_pcl_ptr_ = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>(map_pcl);
@@ -352,11 +357,12 @@ void ElevationMapLoaderNode::createElevationMapFromPointcloud(
   grid_map_pcl_loader->initializeGridMapGeometryFromInputCloud();
   grid_map_pcl_loader->addLayerFromInputCloud(layer_name_);
   grid_map::grid_map_pcl::printTimeElapsedToRosInfoStream(
-    start, "Finish creating elevation map. Total time: ", this->get_logger());
+    start, "Elevation map generation completed. Processing time: ", this->get_logger());
 }
 
 void ElevationMapLoaderNode::inpaintElevationMap(const float radius)
 {
+  RCLCPP_INFO(this->get_logger(), "Starting elevation map inpainting (radius: %.2f)", radius);
   // Convert elevation layer to OpenCV image to fill in holes.
   // Get the inpaint mask (nonzero pixels indicate where values need to be filled in).
   namespace bg = boost::geometry;
@@ -417,6 +423,7 @@ void ElevationMapLoaderNode::inpaintElevationMap(const float radius)
   grid_map::GridMapCvConverter::addLayerFromImage<unsigned char, 3>(
     filled_image, layer_name_, elevation_map_, min_value, max_value);
   elevation_map_.erase("inpaint_mask");
+  RCLCPP_INFO(this->get_logger(), "Elevation map inpainting has been completed");
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr ElevationMapLoaderNode::createPointcloudFromElevationMap()
@@ -444,6 +451,9 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr ElevationMapLoaderNode::createPointcloudFrom
 
 void ElevationMapLoaderNode::saveElevationMap()
 {
+  RCLCPP_INFO(
+    this->get_logger(), "Starting to save elevation map: %s",
+    data_manager_.elevation_map_path_->c_str());
   const bool saving_successful = grid_map::GridMapRosConverter::saveToBag(
     elevation_map_, *data_manager_.elevation_map_path_, "elevation_map");
   RCLCPP_INFO_STREAM(
