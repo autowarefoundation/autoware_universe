@@ -21,6 +21,7 @@
 #include <geometry_msgs/msg/point.hpp>
 
 #include <lanelet2_core/primitives/Lanelet.h>
+#include <lanelet2_core/primitives/Point.h>
 #include <lanelet2_core/primitives/Polygon.h>
 
 #include <optional>
@@ -47,6 +48,14 @@ std::optional<geometry_msgs::msg::Point> calculate_furthest_parked_object_point(
   const std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> & ego_path,
   const std::vector<autoware_utils_geometry::Polygon2d> & object_polygons,
   const geometry_msgs::msg::Point & first_path_point_on_crosswalk);
+/// @brief determine if the path already plans to stop inside the search area
+/// @param [in] path ego path
+/// @param [in] ego_idx ego index in the path
+/// @param [in] search_area search area
+/// @return true if a stopped point after the ego index was found inside the search area
+bool is_planning_to_stop_in_search_area(
+  const std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> & path,
+  const size_t ego_idx, const lanelet::BasicPolygon2d & search_area);
 
 }  // namespace autoware::behavior_velocity_planner
 

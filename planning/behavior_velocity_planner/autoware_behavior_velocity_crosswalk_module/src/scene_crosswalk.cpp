@@ -1020,25 +1020,7 @@ void CrosswalkModule::applyStopForParkedVehicles(
     RCLCPP_WARN(logger_, "[applyStopForParkedVehicles] could not find nearest index on the path");
     return;
   }
-  const auto ego_arc_length = motion_utils::calcSignedArcLength(output.points, 0UL, *ego_idx);
-  const auto crosswalk_arc_length =
-    motion_utils::calcSignedArcLength(output.points, 0UL, first_path_point_on_crosswalk);
-  auto dist_to_next_stop = 0.0;
-  for (auto idx = *ego_idx + 1; idx < output.points.size(); ++idx) {
-    if (output.points[idx].point.longitudinal_velocity_mps == 0.0) {
-      break;
-    }
-    dist_to_next_stop +=
-      autoware_utils_geometry::calc_distance2d(output.points[idx - 1], output.points[idx]);
-  }
-  const auto next_stop_arc_length = ego_arc_length + dist_to_next_stop;
-
-  // skip if we are already planning to stop before the crosswalk
-  if (next_stop_arc_length < crosswalk_arc_length) {
-    return;
-  }
-
-  if (parked_vehicles_stop_.search_area.empty()) {
+  if (parked_vehicles_stop_.search_area.empty()) {  // only computed once
     const auto lanelets_on_path = planning_utils::getLaneletsOnPath(
       output, planner_data_->route_handler_->getLaneletMapPtr(), ego_pose);
     const auto search_area = create_search_area(
@@ -1051,9 +1033,12 @@ void CrosswalkModule::applyStopForParkedVehicles(
     parked_vehicles_stop_.already_stopped_within_search_area;
   if (
     parked_vehicles_stop_.already_stopped_within_search_area ||
-    parked_vehicles_stop_.search_area.empty()) {
+    parked_vehicles_stop_.search_area.empty() ||
+    is_planning_to_stop_in_search_area(
+      output.points, *ego_idx, parked_vehicles_stop_.search_area)) {
     return;
   }
+
   const auto ego_base_polygon = createVehiclePolygon(planner_data_->vehicle_info_);
   Polygon2d ego_polygon;
   offsetPolygon2d(ego_pose, ego_base_polygon, ego_polygon);

@@ -19,9 +19,12 @@
 
 #include <geometry_msgs/msg/point.hpp>
 
+#include <boost/geometry/algorithms/correct.hpp>
+
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/geometry/LineString.h>
 #include <lanelet2_core/geometry/Point.h>
+#include <lanelet2_core/geometry/Polygon.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/LineString.h>
 #include <lanelet2_core/primitives/Point.h>
@@ -117,15 +120,13 @@ lanelet::BasicLineString2d create_bound_subset(
       subset_bound.emplace_back(p2);
     }
   }
-  const auto first_left_point =
-    lanelet::geometry::fromArcCoordinates(bound, {start_arc_length, 0.0});
+  const auto first_point = lanelet::geometry::fromArcCoordinates(bound, {start_arc_length, 0.0});
   if (
-    !subset_bound.empty() &&
-    lanelet::geometry::distance2d(subset_bound.front(), first_left_point) > 1e-3) {
-    subset_bound.insert(subset_bound.begin(), first_left_point);
+    subset_bound.empty() ||
+    lanelet::geometry::distance2d(subset_bound.front(), first_point) > 1e-3) {
+    subset_bound.insert(subset_bound.begin(), first_point);
   }
-  if (
-    !subset_bound.empty() && lanelet::geometry::distance2d(subset_bound.back(), end_point) > 1e-3) {
+  if (lanelet::geometry::distance2d(subset_bound.back(), end_point) > 1e-3) {
     subset_bound.emplace_back(end_point);
   }
   return subset_bound;
@@ -154,6 +155,7 @@ lanelet::BasicPolygon2d create_search_area(
   for (auto it = search_area_right_bound.rbegin(); it != search_area_right_bound.rend(); ++it) {
     search_area.emplace_back(*it);
   }
+  boost::geometry::correct(search_area);
   return search_area;
 }
 
@@ -179,11 +181,23 @@ std::optional<geometry_msgs::msg::Point> calculate_furthest_parked_object_point(
   if (furthest_parked_object_arc_length == 0.0) {
     return std::nullopt;
   }
-  if (furthest_parked_object_arc_length > max_stop_arc_length) {
-    furthest_parked_object_arc_length = max_stop_arc_length;
-    furthest_parked_object_point = first_path_point_on_crosswalk;
-  }
-  return furthest_parked_object_point;
+  return (furthest_parked_object_arc_length > max_stop_arc_length) ? first_path_point_on_crosswalk
+                                                                   : furthest_parked_object_point;
 }
 
+bool is_planning_to_stop_in_search_area(
+  const std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> & path,
+  const size_t ego_idx, const lanelet::BasicPolygon2d & search_area)
+{
+  for (auto idx = ego_idx + 1; idx < path.size(); ++idx) {
+    if (
+      path[idx].point.longitudinal_velocity_mps == 0.0 &&
+      boost::geometry::within(
+        lanelet::BasicPoint2d(path[idx].point.pose.position.x, path[idx].point.pose.position.y),
+        search_area)) {
+      return true;
+    }
+  }
+  return false;
+}
 }  // namespace autoware::behavior_velocity_planner
