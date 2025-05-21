@@ -89,5 +89,6 @@ TEST(ConfigFile, RemoveUnknownUnitByEdit)
 TEST(ConfigFile, RemoveUnknownUnitByRegexEdit)
 {
   Graph graph;
-  EXPECT_THROW(graph.create(resource("test1/remove-unknown-unit-by-regex-edit.yaml")), PathNotFound);
+  EXPECT_THROW(
+    graph.create(resource("test1/remove-unknown-unit-by-regex-edit.yaml")), PathNotFound);
 }
