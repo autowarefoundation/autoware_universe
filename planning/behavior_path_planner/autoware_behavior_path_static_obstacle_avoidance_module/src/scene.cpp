@@ -317,7 +317,7 @@ void StaticObstacleAvoidanceModule::fillFundamentalData(
   // filter only for the latest detected objects.
   fillAvoidanceTargetObjects(data, debug);
 
-  auto current_target_objects = data.target_objects;
+  auto current_target_objects_snapshot = data.target_objects;
 
   // compensate lost object which was avoidance target. if the time hasn't passed more than
   // threshold since perception module lost the target yet, this module keeps it as avoidance
@@ -330,11 +330,11 @@ void StaticObstacleAvoidanceModule::fillFundamentalData(
   utils::static_obstacle_avoidance::updateClipObject(clip_objects_, data);
 
   // calculate various data for each target objects.
-  fillAvoidanceTargetData(data.target_objects);  // <=
-  fillAvoidanceTargetData(current_target_objects);
+  fillAvoidanceTargetData(data.target_objects);
+  fillAvoidanceTargetData(current_target_objects_snapshot);
 
   utils::static_obstacle_avoidance::updateStoredObjects(
-    stored_objects_, current_target_objects, clock_->now(), parameters_);
+    stored_objects_, current_target_objects_snapshot, clock_->now(), parameters_);
 
   // sort object order by longitudinal distance
   std::sort(data.target_objects.begin(), data.target_objects.end(), [](auto a, auto b) {

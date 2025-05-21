@@ -1412,12 +1412,12 @@ TEST(TestUtils, compensateLostTargetObjects)
     avoidance_planning_data.target_objects = {new_object};
     avoidance_planning_data.other_objects = {};
 
-    auto current_target_objects = avoidance_planning_data.target_objects;
+    auto current_target_objects_snapshot = avoidance_planning_data.target_objects;
 
     utils::static_obstacle_avoidance::compensateLostTargetObjects(
       avoidance_planning_data, stored_objects, planner_data);
     utils::static_obstacle_avoidance::updateStoredObjects(
-      stored_objects, current_target_objects, now, parameters);
+      stored_objects, current_target_objects_snapshot, now, parameters);
     ASSERT_FALSE(stored_objects.empty());
     EXPECT_EQ(stored_objects.front().object.object_id, new_object.object.object_id);
   }
@@ -1432,12 +1432,12 @@ TEST(TestUtils, compensateLostTargetObjects)
     avoidance_planning_data.target_objects = {};
     avoidance_planning_data.other_objects = {};
 
-    auto current_target_objects = avoidance_planning_data.target_objects;
+    auto current_target_objects_snapshot = avoidance_planning_data.target_objects;
 
     utils::static_obstacle_avoidance::compensateLostTargetObjects(
       avoidance_planning_data, stored_objects, planner_data);
     utils::static_obstacle_avoidance::updateStoredObjects(
-      stored_objects, current_target_objects, now, parameters);
+      stored_objects, current_target_objects_snapshot, now, parameters);
     ASSERT_FALSE(avoidance_planning_data.target_objects.empty());
     EXPECT_EQ(
       avoidance_planning_data.target_objects.front().object.object_id,
@@ -1462,12 +1462,12 @@ TEST(TestUtils, compensateLostTargetObjects)
     avoidance_planning_data.target_objects = {detected_object};
     avoidance_planning_data.other_objects = {};
 
-    auto current_target_objects = avoidance_planning_data.target_objects;
+    auto current_target_objects_snapshot = avoidance_planning_data.target_objects;
 
     utils::static_obstacle_avoidance::compensateLostTargetObjects(
       avoidance_planning_data, stored_objects, planner_data);
     utils::static_obstacle_avoidance::updateStoredObjects(
-      stored_objects, current_target_objects, now, parameters);
+      stored_objects, current_target_objects_snapshot, now, parameters);
     ASSERT_FALSE(stored_objects.empty());
     EXPECT_EQ(stored_objects.front().last_seen, detected_object.last_seen);
   }
@@ -1490,11 +1490,11 @@ TEST(TestUtils, compensateLostTargetObjects)
     avoidance_planning_data.target_objects = {detected_object};
     avoidance_planning_data.other_objects = {};
 
-    auto current_target_objects = avoidance_planning_data.target_objects;
+    auto current_target_objects_snapshot = avoidance_planning_data.target_objects;
     utils::static_obstacle_avoidance::compensateLostTargetObjects(
       avoidance_planning_data, stored_objects, planner_data);
     utils::static_obstacle_avoidance::updateStoredObjects(
-      stored_objects, current_target_objects, now, parameters);
+      stored_objects, current_target_objects_snapshot, now, parameters);
     ASSERT_FALSE(stored_objects.empty());
     EXPECT_EQ(stored_objects.front().last_seen, detected_object.last_seen);
   }
@@ -1517,11 +1517,11 @@ TEST(TestUtils, compensateLostTargetObjects)
     avoidance_planning_data.target_objects = {detected_object};
     avoidance_planning_data.other_objects = {};
 
-    auto current_target_objects = avoidance_planning_data.target_objects;
+    auto current_target_objects_snapshot = avoidance_planning_data.target_objects;
     utils::static_obstacle_avoidance::compensateLostTargetObjects(
       avoidance_planning_data, stored_objects, planner_data);
     utils::static_obstacle_avoidance::updateStoredObjects(
-      stored_objects, current_target_objects, now, parameters);
+      stored_objects, current_target_objects_snapshot, now, parameters);
 
     ASSERT_FALSE(stored_objects.empty());
     EXPECT_EQ(stored_objects.front().last_seen, init_time);
@@ -1539,17 +1539,17 @@ TEST(TestUtils, compensateLostTargetObjects)
     avoidance_planning_data.target_objects = {};
     avoidance_planning_data.other_objects = {};
 
-    auto current_target_objects = avoidance_planning_data.target_objects;
+    auto current_target_objects_snapshot = avoidance_planning_data.target_objects;
     utils::static_obstacle_avoidance::compensateLostTargetObjects(
       avoidance_planning_data, stored_objects, planner_data);
     utils::static_obstacle_avoidance::updateStoredObjects(
-      stored_objects, current_target_objects, now, parameters);
+      stored_objects, current_target_objects_snapshot, now, parameters);
 
-    current_target_objects = {};
+    current_target_objects_snapshot = {};
     utils::static_obstacle_avoidance::compensateLostTargetObjects(
       avoidance_planning_data, stored_objects, planner_data);
     utils::static_obstacle_avoidance::updateStoredObjects(
-      stored_objects, current_target_objects, now, parameters);
+      stored_objects, current_target_objects_snapshot, now, parameters);
 
     EXPECT_TRUE(avoidance_planning_data.target_objects.empty());
   }
