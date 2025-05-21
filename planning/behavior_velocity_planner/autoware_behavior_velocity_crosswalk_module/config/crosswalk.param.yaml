@@ -98,5 +98,5 @@
       parked_vehicles_stop:
         enable: false # if true, ego will stop if there are parked vehicles before the crosswalk
         search_distance: 10.0  # [m] distance ahead of the crosswalk where to search for parked vehicles
-        min_ego_stop_time: 1.0  # [s] minimum duration ego should stop before it can continue
+        min_ego_stop_duration: 1.0  # [s] minimum duration ego should stop before it can continue
         max_parked_velocity: 0.5  # [m/s] maximum velocity of vehicles considered to be parked
