@@ -1014,11 +1014,6 @@ void CrosswalkModule::applySlowDownByOcclusion(
 void CrosswalkModule::applyStopForParkedVehicles(
   PathWithLaneId & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk)
 {
-  // TODO(maxime): params
-  constexpr auto search_distance = 10.0;
-  constexpr auto min_ego_stop_time = 2.0;
-  constexpr auto max_parked_velocity = 0.5;
-
   const auto & ego_pose = planner_data_->current_odometry->pose;
   const auto ego_idx = motion_utils::findNearestIndex(output.points, ego_pose);
   if (!ego_idx) {
@@ -1047,7 +1042,8 @@ void CrosswalkModule::applyStopForParkedVehicles(
     const auto lanelets_on_path = planning_utils::getLaneletsOnPath(
       output, planner_data_->route_handler_->getLaneletMapPtr(), ego_pose);
     const auto search_area = create_search_area(
-      crosswalk_, lanelets_on_path, first_path_point_on_crosswalk, search_distance);
+      crosswalk_, lanelets_on_path, first_path_point_on_crosswalk,
+      planner_param_.parked_vehicles_stop_search_distance);
     parked_vehicles_stop_.search_area = search_area;
   }
   debug_data_.parked_vehicles_stop_search_area = parked_vehicles_stop_.search_area;
@@ -1063,7 +1059,9 @@ void CrosswalkModule::applyStopForParkedVehicles(
   offsetPolygon2d(ego_pose, ego_base_polygon, ego_polygon);
   const auto ego_within_search_area =
     !boost::geometry::disjoint(ego_polygon, parked_vehicles_stop_.search_area);
-  if (ego_within_search_area && planner_data_->isVehicleStopped(min_ego_stop_time)) {
+  if (
+    ego_within_search_area &&
+    planner_data_->isVehicleStopped(planner_param_.parked_vehicles_stop_min_ego_stop_time)) {
     parked_vehicles_stop_.already_stopped_within_search_area = true;
     return;
   }
@@ -1071,8 +1069,8 @@ void CrosswalkModule::applyStopForParkedVehicles(
   std::vector<Polygon2d> filtered_object_polygons;
   for (const auto & object : planner_data_->predicted_objects->objects) {
     if (
-      isVehicle(object) &&
-      object.kinematics.initial_twist_with_covariance.twist.linear.x <= max_parked_velocity) {
+      isVehicle(object) && object.kinematics.initial_twist_with_covariance.twist.linear.x <=
+                             planner_param_.parked_vehicles_stop_max_parked_velocity) {
       const auto object_polygon = autoware_utils_geometry::to_polygon2d(object);
       if (!boost::geometry::disjoint(object_polygon, parked_vehicles_stop_.search_area)) {
         filtered_object_polygons.push_back(object_polygon);

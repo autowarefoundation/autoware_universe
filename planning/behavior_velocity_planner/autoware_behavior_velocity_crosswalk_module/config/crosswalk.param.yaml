@@ -93,3 +93,9 @@
           custom_labels: ["PEDESTRIAN"]  # labels for which to define a non-default velocity threshold (see autoware_perception_msgs::msg::ObjectClassification for all the labels)
           custom_thresholds: [0.0]  # velocities of the custom labels
         extra_predicted_objects_size: 0.5  # [m] extra size added to the objects for masking the occlusions
+
+      # param for parked vehicles stop
+      parked_vehicles_stop:
+        search_distance: 10.0
+        min_ego_stop_time: 1.0
+        max_parked_velocity: 0.5
