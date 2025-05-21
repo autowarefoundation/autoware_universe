@@ -179,6 +179,14 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
   }
   cp.occlusion_extra_objects_size =
     get_or_declare_parameter<double>(node, ns + ".occlusion.extra_predicted_objects_size");
+
+  // param for parked vehicles stop
+  cp.parked_vehicles_stop_search_distance =
+    get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.search_distance");
+  cp.parked_vehicles_stop_min_ego_stop_time =
+    get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.min_ego_stop_time");
+  cp.parked_vehicles_stop_max_parked_velocity =
+    get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.max_parked_velocity");
 }
 
 void CrosswalkModuleManager::launchNewModules(const PathWithLaneId & path)

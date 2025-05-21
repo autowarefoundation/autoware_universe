@@ -182,6 +182,10 @@ public:
     bool occlusion_ignore_behind_predicted_objects;
     std::vector<double> occlusion_ignore_velocity_thresholds;
     double occlusion_extra_objects_size;
+    // param for parked vehicles stop
+    double parked_vehicles_stop_search_distance;
+    double parked_vehicles_stop_min_ego_stop_time;
+    double parked_vehicles_stop_max_parked_velocity;
   };
 
   struct ObjectInfo

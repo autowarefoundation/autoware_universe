@@ -194,16 +194,16 @@ visualization_msgs::msg::MarkerArray createCrosswalkMarkers(
   // parked vehicles stop
   {
     const auto color = debug_data.parked_vehicles_stop_already_stopped
-                         ? create_marker_color(1.0, 0.0, 0.0, 0.5)
-                         : create_marker_color(1.0, 1.0, 1.0, 0.5);
+                         ? create_marker_color(1.0, 1.0, 1.0, 0.5)
+                         : create_marker_color(1.0, 0.0, 0.0, 0.5);
     auto marker = create_default_marker(
-      "map", now, "parked_vehicles_stop_search_area", uid, Marker::LINE_LIST,
+      "map", now, "parked_vehicles_stop_search_area", uid, Marker::LINE_STRIP,
       create_marker_scale(0.25, 0.25, 0.0), color);
-    for (auto i = 0UL; i + 1 < debug_data.parked_vehicles_stop_search_area.size(); ++i) {
-      const auto & p1 = debug_data.parked_vehicles_stop_search_area[i];
-      const auto & p2 = debug_data.parked_vehicles_stop_search_area[i + 1];
-      marker.points.push_back(create_point(p1.x(), p1.y(), 0.0));
-      marker.points.push_back(create_point(p2.x(), p2.y(), 0.0));
+    for (const auto & p : debug_data.parked_vehicles_stop_search_area) {
+      marker.points.push_back(create_point(p.x(), p.y(), 0.0));
+    }
+    if (!marker.points.empty()) {
+      marker.points.push_back(marker.points.front());
     }
     msg.markers.push_back(marker);
   }
