@@ -69,7 +69,7 @@ jobs:
       container: ghcr.io/autowarefoundation/autoware:universe-devel
       container-suffix: -cuda
       run-condition: ${{ needs.check-if-cuda-job-is-needed.outputs.cuda_job_is_needed == 'true' }}
-      runner: codebuild-autoware-us-east-1-${{ github.run_id }}-${{ github.run_attempt }}-ubuntu-7.0-large
+      runner: "['self-hosted', 'Linux', 'X64']"
       build-pre-command: taskset --cpu-list 0-6
     secrets:
       codecov-token: ${{ secrets.CODECOV_TOKEN }}
@@ -94,4 +94,4 @@ jobs:
       container: ghcr.io/autowarefoundation/autoware:universe-devel
       container-suffix: -cuda
       run-condition: ${{ needs.check-if-cuda-job-is-needed.outputs.cuda_job_is_needed == 'true' && needs.build-and-test-differential-cuda.result == 'success' }}
-      runner: codebuild-autoware-us-east-1-${{ github.run_id }}-${{ github.run_attempt }}-ubuntu-7.0-large
+      runner: "['self-hosted', 'Linux', 'X64']"
