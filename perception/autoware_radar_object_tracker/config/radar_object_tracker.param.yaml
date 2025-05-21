@@ -27,5 +27,3 @@
 
     # tracking model parameters
     tracking_config_directory: $(find-pkg-share radar_object_tracker)/config/tracking/
-
-
