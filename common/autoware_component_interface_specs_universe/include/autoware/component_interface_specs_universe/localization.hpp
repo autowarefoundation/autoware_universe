@@ -20,14 +20,14 @@
 #include <autoware_adapi_v1_msgs/msg/localization_initialization_state.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <tier4_localization_msgs/srv/initialize_localization.hpp>
+#include <autoware_internal_localization_msgs/srv/initialize_localization.hpp>
 
 namespace autoware::component_interface_specs_universe::localization
 {
 
 struct Initialize
 {
-  using Service = tier4_localization_msgs::srv::InitializeLocalization;
+  using Service = autoware_internal_localization_msgs::srv::InitializeLocalization;
   static constexpr char name[] = "/localization/initialize";
 };
 
