@@ -275,7 +275,7 @@ void GridGroundFilter::SegmentDiscontinuousCell(
     }
     // 3. local slope
     const float delta_radius = radius - prev_cell.avg_radius_;
-    const float global_slope_threshold = param_.local_slope_max_ratio * delta_radius;
+    const float local_slope_threshold = param_.local_slope_max_ratio * delta_radius;
     if (abs(delta_avg_z) < global_slope_threshold) {
       // this point is ground
       ground_bin.addPoint(radius, height, pt_idx);
