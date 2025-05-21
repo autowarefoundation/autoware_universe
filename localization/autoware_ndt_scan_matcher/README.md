@@ -48,9 +48,9 @@ One optional function is regularization. Please see the regularization chapter i
 
 ### Service
 
-| Name            | Type                                                         | Description                      |
-| --------------- | ------------------------------------------------------------ | -------------------------------- |
-| `ndt_align_srv` | `autoware_localization_srvs::srv::PoseWithCovarianceStamped` | service to estimate initial pose |
+| Name            | Type                                                                  | Description                      |
+| --------------- | --------------------------------------------------------------------- | -------------------------------- |
+| `ndt_align_srv` | `autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped` | service to estimate initial pose |
 
 ## Parameters
 

@@ -14,13 +14,13 @@
 
 #include "autoware/map_height_fitter/map_height_fitter.hpp"
 
-#include <tier4_localization_msgs/srv/pose_with_covariance_stamped.hpp>
+#include <autoware_internal_localization_msgs/srv/pose_with_covariance_stamped.hpp>
 
 #include <memory>
 
 namespace autoware::map_height_fitter
 {
-using tier4_localization_msgs::srv::PoseWithCovarianceStamped;
+using autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped;
 
 class MapHeightFitterNode : public rclcpp::Node
 {
