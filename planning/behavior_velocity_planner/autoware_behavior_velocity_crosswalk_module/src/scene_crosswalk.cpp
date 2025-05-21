@@ -1061,7 +1061,7 @@ void CrosswalkModule::applyStopForParkedVehicles(
     !boost::geometry::disjoint(ego_polygon, parked_vehicles_stop_.search_area);
   if (
     ego_within_search_area &&
-    planner_data_->isVehicleStopped(planner_param_.parked_vehicles_stop_min_ego_stop_time)) {
+    planner_data_->isVehicleStopped(planner_param_.parked_vehicles_stop_min_ego_stop_duration)) {
     parked_vehicles_stop_.already_stopped_within_search_area = true;
     return;
   }
