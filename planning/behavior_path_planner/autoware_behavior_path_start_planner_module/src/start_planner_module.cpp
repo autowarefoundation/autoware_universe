@@ -793,7 +793,7 @@ BehaviorModuleOutput StartPlannerModule::plan()
 
       if (!stop_path.has_value()) return current_path;
       // Insert stop point in the path if needed
-      RCLCPP_ERROR_THROTTLE(
+      RCLCPP_DEBUG_THROTTLE(
         getLogger(), *clock_, 5000, "Insert stop point in the path because of dynamic objects");
       status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(stop_path.value());
       std::string stop_reason = "unsafe against dynamic objects";
