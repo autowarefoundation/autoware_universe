@@ -13,6 +13,7 @@
 
   <exec_depend>autoware_component_interface_tools</exec_depend>
   <exec_depend>autoware_component_state_monitor</exec_depend>
+  <exec_depend>autoware_diagnostic_graph_aggregator</exec_depend>
   <exec_depend>autoware_dummy_diag_publisher</exec_depend>
   <exec_depend>autoware_duplicated_node_checker</exec_depend>
   <exec_depend>autoware_hazard_status_converter</exec_depend>
@@ -20,7 +21,6 @@
   <exec_depend>autoware_mrm_emergency_stop_operator</exec_depend>
   <exec_depend>autoware_mrm_handler</exec_depend>
   <exec_depend>autoware_processing_time_checker</exec_depend>
-  <exec_depend>autoware_system_diagnostic_monitor</exec_depend>
   <exec_depend>autoware_system_monitor</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
