@@ -14,8 +14,10 @@
 
 #include "parked_vehicles_stop.hpp"
 
+#include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
+#include <autoware_utils_geometry/boost_polygon_utils.hpp>
 
 #include <geometry_msgs/msg/point.hpp>
 
@@ -159,30 +161,30 @@ lanelet::BasicPolygon2d create_search_area(
   return search_area;
 }
 
-std::optional<geometry_msgs::msg::Point> calculate_furthest_parked_object_point(
+std::pair<std::optional<autoware_perception_msgs::msg::PredictedObject>, geometry_msgs::msg::Point>
+calculate_furthest_parked_vehicle(
   const std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> & ego_path,
-  const std::vector<autoware_utils_geometry::Polygon2d> & object_polygons,
-  const geometry_msgs::msg::Point & first_path_point_on_crosswalk)
+  const std::vector<autoware_perception_msgs::msg::PredictedObject> & parked_vehicles,
+  const lanelet::BasicPolygon2d & search_area)
 {
+  std::optional<autoware_perception_msgs::msg::PredictedObject> furthest_vehicle;
+  geometry_msgs::msg::Point furthest_point;
   double furthest_parked_object_arc_length = 0.0;
-  const auto max_stop_arc_length =
-    motion_utils::calcSignedArcLength(ego_path, 0UL, first_path_point_on_crosswalk);
-  geometry_msgs::msg::Point furthest_parked_object_point;
-  for (const auto & object_polygon : object_polygons) {
-    for (const auto & p : object_polygon.outer()) {
-      const auto pt = geometry_msgs::msg::Point().set__x(p.x()).set__y(p.y());
-      const auto arc_length = motion_utils::calcSignedArcLength(ego_path, 0UL, pt);
-      if (arc_length > furthest_parked_object_arc_length) {
-        furthest_parked_object_arc_length = arc_length;
-        furthest_parked_object_point = pt;
+  for (const auto & parked_vehicle : parked_vehicles) {
+    const auto footprint = autoware_utils_geometry::to_polygon2d(parked_vehicle);
+    for (const auto & p : footprint.outer()) {
+      if (boost::geometry::within(p, search_area)) {
+        const auto pt = geometry_msgs::msg::Point().set__x(p.x()).set__y(p.y());
+        const auto arc_length = motion_utils::calcSignedArcLength(ego_path, 0UL, pt);
+        if (arc_length > furthest_parked_object_arc_length) {
+          furthest_parked_object_arc_length = arc_length;
+          furthest_vehicle = parked_vehicle;
+          furthest_point = pt;
+        }
       }
     }
   }
-  if (furthest_parked_object_arc_length == 0.0) {
-    return std::nullopt;
-  }
-  return (furthest_parked_object_arc_length > max_stop_arc_length) ? first_path_point_on_crosswalk
-                                                                   : furthest_parked_object_point;
+  return std::make_pair(furthest_vehicle, furthest_point);
 }
 
 bool is_planning_to_stop_in_search_area(

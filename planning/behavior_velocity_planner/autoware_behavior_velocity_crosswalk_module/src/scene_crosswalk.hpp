@@ -183,6 +183,7 @@ public:
     std::vector<double> occlusion_ignore_velocity_thresholds;
     double occlusion_extra_objects_size;
     // param for parked vehicles stop
+    bool parked_vehicles_stop_enable;
     double parked_vehicles_stop_search_distance;
     double parked_vehicles_stop_min_ego_stop_duration;
     double parked_vehicles_stop_max_parked_velocity;
@@ -385,9 +386,6 @@ private:
     PathWithLaneId & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk);
 
-  void applyStopForParkedVehicles(
-    PathWithLaneId & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk);
-
   std::optional<geometry_msgs::msg::Pose> getDefaultStopPose(
     const PathWithLaneId & ego_path,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk) const;
@@ -409,6 +407,10 @@ private:
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const std::optional<geometry_msgs::msg::Pose> & stop_pose);
 
+  std::optional<StopFactor> checkStopForParkedVehicles(
+    const PathWithLaneId & ego_path,
+    const geometry_msgs::msg::Point & first_path_point_on_crosswalk);
+
   std::optional<double> findEgoPassageDirectionAlongPath(
     const PathWithLaneId & sparse_resample_path) const;
   std::optional<double> findObjectPassageDirectionAlongVehicleLane(
@@ -419,9 +421,7 @@ private:
     const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area);
 
   std::optional<StopFactor> getNearestStopFactor(
-    const PathWithLaneId & ego_path,
-    const std::optional<StopFactor> & stop_factor_for_crosswalk_users,
-    const std::optional<StopFactor> & stop_factor_for_stuck_vehicles);
+    const PathWithLaneId & ego_path, const std::vector<StopFactor> & stop_factors);
 
   void setDistanceToStop(
     const PathWithLaneId & ego_path,
