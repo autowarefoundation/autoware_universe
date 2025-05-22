@@ -324,13 +324,14 @@ A search area is built along the ego path ahead of the crosswalk by a distance s
 A stop is planned such that ego will be aligned with the furthest parked vehicle along the ego path within the search area.
 Once ego stops inside the search area for at least the duration set by `parked_vehicles_stop.min_ego_stop_duration`, the stop is removed and no more stop for parked vehicles will be triggered for that crosswalk.
 
-| Parameter                                         | Unit  | Type   | Description                                                                           |
-| ------------------------------------------------- | ----- | ------ | ------------------------------------------------------------------------------------- |
-| `parked_vehicles_stop.enable`                     | [-]   | bool   | if true, ego will stop if there are parked vehicles before the crosswalk              |
-| `parked_vehicles_stop.search_distance`            | [m]   | double | distance ahead of the crosswalk where to search for parked vehicles                   |
-| `parked_vehicles_stop.min_ego_stop_duration`      | [s]   | double | minimum duration ego should stop before it can continue                               |
-| `parked_vehicles_stop.parked_velocity_threshold`  | [m/s] | double | vehicle are considered to be parked if their velocity is less or equal this threshold |
-| `parked_vehicles_stop.parked_velocity_hysteresis` | [m/s] | double | once a vehicle is detected to be parked, this value is added to the threshold         |
+| Parameter                                          | Unit  | Type   | Description                                                                                                                   |
+| -------------------------------------------------- | ----- | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `parked_vehicles_stop.enable`                      | [-]   | bool   | if true, ego will stop if there are parked vehicles before the crosswalk                                                      |
+| `parked_vehicles_stop.search_distance`             | [m]   | double | distance ahead of the crosswalk where to search for parked vehicles                                                           |
+| `parked_vehicles_stop.min_ego_stop_duration`       | [s]   | double | minimum duration ego should stop before it can continue                                                                       |
+| `parked_vehicles_stop.ego_inside_safe_area_margin` | [m]   | double | margin used to consider if ego is inside the search area. Should be higher than the expected longitudinal error when stopping |
+| `parked_vehicles_stop.parked_velocity_threshold`   | [m/s] | double | vehicle are considered to be parked if their velocity is less or equal this threshold                                         |
+| `parked_vehicles_stop.parked_velocity_hysteresis`  | [m/s] | double | once a vehicle is detected to be parked, this value is added to the threshold                                                 |
 
 ### Others
 

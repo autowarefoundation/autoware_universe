@@ -1171,9 +1171,13 @@ std::optional<StopFactor> CrosswalkModule::checkStopForParkedVehicles(
     return std::nullopt;
   }
 
-  const auto ego_within_search_area = boost::geometry::within(
-    lanelet::BasicPoint2d(ego_pose.position.x, ego_pose.position.y),
-    parked_vehicles_stop_.search_area);
+  const auto & vehicle_info = planner_data_->vehicle_info_;
+  const auto ego_footprint = autoware_utils_geometry::to_footprint(
+    ego_pose, vehicle_info.max_longitudinal_offset_m, vehicle_info.min_longitudinal_offset_m,
+    vehicle_info.max_lateral_offset_m);
+  const auto ego_within_search_area =
+    boost::geometry::distance(ego_footprint, parked_vehicles_stop_.search_area) <
+    planner_param_.parked_vehicles_stop_parked_ego_inside_safe_area_margin;
   if (
     ego_within_search_area &&
     planner_data_->isVehicleStopped(planner_param_.parked_vehicles_stop_min_ego_stop_duration)) {
