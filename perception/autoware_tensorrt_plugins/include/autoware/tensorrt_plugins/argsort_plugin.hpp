@@ -37,7 +37,7 @@ class ArgsortPlugin : public IPluginV3,
                       public IPluginV3OneRuntime
 {
 public:
-  explicit ArgsortPlugin(const std::string & name);
+  explicit ArgsortPlugin(const std::string & name) noexcept;
 
   ~ArgsortPlugin() override = default;
 
