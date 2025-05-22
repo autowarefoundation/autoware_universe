@@ -51,6 +51,9 @@
   <arg name="input/camera7/info"/>
   <arg name="input/camera7/rois"/>
 
+  <arg name="segmentation_pointcloud_fusion_camera_ids"/>
+  <arg name="image_topic_name"/>
+
   <arg name="node/pointcloud_container"/>
   <arg name="input/pointcloud"/>
   <arg name="input/pointcloud_map/pointcloud"/>
@@ -135,6 +138,7 @@
       <arg name="model_param_path" value="$(var lidar_model_param_path)/$(var lidar_detection_model_name).param.yaml"/>
       <arg name="ml_package_param_path" value="$(var model_path)/$(var lidar_detection_model_name)_ml_package.param.yaml"/>
       <arg name="class_remapper_param_path" value="$(var model_path)/detection_class_remapper.param.yaml"/>
+      <arg name="common_param_path" value="$(var pointpainting_fusion_common_param_path)"/>
       <arg name="use_pointcloud_container" value="true"/>
       <arg name="pointcloud_container_name" value="$(var node/pointcloud_container)"/>
     </include>
@@ -142,9 +146,11 @@
 
   <!-- Image_segmentation based filter, apply for camera0 only-->
   <group>
-    <include file="$(find-pkg-share autoware_image_projection_based_fusion)/launch/segmentation_pointcloud_fusion.launch.xml" if="$(var use_image_segmentation_based_filter)">
+    <include file="$(find-pkg-share autoware_image_projection_based_fusion)/launch/segmentation_pointcloud_fusion.launch.py" if="$(var use_image_segmentation_based_filter)">
       <arg name="input/pointcloud" value="$(var segmentation_based_filtered/input/pointcloud)"/>
       <arg name="output/pointcloud" value="$(var segmentation_based_filtered/output/pointcloud)"/>
+      <arg name="image_topic_name" value="$(var image_topic_name)"/>
+      <arg name="fusion_camera_ids" value="$(var segmentation_pointcloud_fusion_camera_ids)"/>
     </include>
   </group>
 
