@@ -137,7 +137,6 @@ add_library(${PROJECT_NAME} SHARED
   src/segment_csr_plugin.cpp
   src/plugin_registration.cpp
   src/plugin_utils.cpp
-
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE _GLIBCXX_USE_CXX11_ABI=1)
