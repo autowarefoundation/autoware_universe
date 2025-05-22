@@ -132,8 +132,12 @@ add_library(${PROJECT_NAME} SHARED
   src/quick_cumsum_cuda_plugin_creator.cpp
   src/get_indices_pairs_implicit_gemm_plugin_creator.cpp
   src/get_indices_pairs_implicit_gemm_plugin.cpp
+  src/get_indices_pairs_plugin_creator.cpp
+  src/get_indices_pairs_plugin.cpp
   src/implicit_gemm_plugin_creator.cpp
   src/implicit_gemm_plugin.cpp
+  src/indice_conv_plugin_creator.cpp # cSpell:ignore indice
+  src/indice_conv_plugin.cpp
   src/segment_csr_plugin_creator.cpp
   src/segment_csr_plugin.cpp
   src/unique_plugin.cpp
