@@ -1183,9 +1183,15 @@ std::optional<StopFactor> CrosswalkModule::checkStopForParkedVehicles(
 
   std::vector<PredictedObject> parked_vehicles;
   for (const auto & object : planner_data_->predicted_objects->objects) {
+    const auto obj_uuid = to_hex_string(object.object_id);
+    const auto velocity_threshold =
+      planner_param_.parked_vehicles_stop_parked_velocity_threshold +
+      (parked_vehicles_stop_.previous_parked_vehicle_uuid == obj_uuid
+         ? planner_param_.parked_vehicles_stop_parked_velocity_hysteresis
+         : 0.0);
     if (
-      isVehicle(object) && object.kinematics.initial_twist_with_covariance.twist.linear.x <=
-                             planner_param_.parked_vehicles_stop_max_parked_velocity) {
+      isVehicle(object) &&
+      object.kinematics.initial_twist_with_covariance.twist.linear.x <= velocity_threshold) {
       parked_vehicles.push_back(object);
     }
   }

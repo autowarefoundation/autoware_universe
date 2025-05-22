@@ -186,7 +186,8 @@ public:
     bool parked_vehicles_stop_enable;
     double parked_vehicles_stop_search_distance;
     double parked_vehicles_stop_min_ego_stop_duration;
-    double parked_vehicles_stop_max_parked_velocity;
+    double parked_vehicles_stop_parked_velocity_threshold;
+    double parked_vehicles_stop_parked_velocity_hysteresis;
   };
 
   struct ObjectInfo
@@ -525,6 +526,7 @@ private:
   {
     lanelet::BasicPolygon2d search_area;
     bool already_stopped_within_search_area = false;
+    std::string previous_parked_vehicle_uuid;
   } parked_vehicles_stop_;
 };
 }  // namespace autoware::behavior_velocity_planner
