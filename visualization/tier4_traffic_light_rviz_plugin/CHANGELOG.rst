@@ -2,6 +2,9 @@
 Changelog for package tier4_traffic_light_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.44.1 (2025-05-01)
 -------------------
 

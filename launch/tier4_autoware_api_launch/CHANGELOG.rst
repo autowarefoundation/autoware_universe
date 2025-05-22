@@ -2,6 +2,9 @@
 Changelog for package tier4_autoware_api_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.44.1 (2025-05-01)
 -------------------
 

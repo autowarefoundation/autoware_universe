@@ -2,6 +2,9 @@
 Changelog for package autoware_behavior_path_sampling_planner_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.44.1 (2025-05-01)
 -------------------
 

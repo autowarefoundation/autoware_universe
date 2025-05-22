@@ -2,6 +2,13 @@
 Changelog for package autoware_behavior_velocity_rtc_interface
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* fix(behavior_velocity_planner): add missing header (`#10561 <https://github.com/autowarefoundation/autoware_universe/issues/10561>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Masaki Baba, TaikiYamada4
+
 0.44.1 (2025-05-01)
 -------------------
 

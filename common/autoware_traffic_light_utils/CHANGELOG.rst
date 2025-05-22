@@ -2,6 +2,13 @@
 Changelog for package autoware_traffic_light_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* fix(traffic_light_utils): remove condition in `setSignalUnknown` (`#10631 <https://github.com/autowarefoundation/autoware_universe/issues/10631>`_)
+  remove condition
+* Contributors: Masato Saeki, TaikiYamada4
+
 0.44.1 (2025-05-01)
 -------------------
 

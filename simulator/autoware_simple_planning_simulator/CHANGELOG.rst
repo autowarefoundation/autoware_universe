@@ -2,6 +2,9 @@
 Changelog for package autoware_simple_planning_simulator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.44.1 (2025-05-01)
 -------------------
 

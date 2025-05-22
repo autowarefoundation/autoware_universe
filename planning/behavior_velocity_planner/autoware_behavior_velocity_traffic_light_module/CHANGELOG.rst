@@ -2,6 +2,23 @@
 Changelog for package autoware_behavior_velocity_traffic_light_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(behavior_velocity_planner): extend stop line to path bound (`#10435 <https://github.com/autowarefoundation/autoware_universe/issues/10435>`_)
+  * extend stop line to path bound
+  * style(pre-commit): autofix
+  * change signature of stop line extension function
+  * add tests for detection area module
+  * fix test for no stopping area module
+  * fix tests for traffic light module
+  * include necessary header
+  * fix test for detection area module
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(behavior_velocity_planner): only wait for the required subscriptions (`#10546 <https://github.com/autowarefoundation/autoware_universe/issues/10546>`_)
+* Contributors: Mitsuhiro Sakamoto, TaikiYamada4, Takayuki Murooka
+
 0.44.1 (2025-05-01)
 -------------------
 

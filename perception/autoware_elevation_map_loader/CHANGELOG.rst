@@ -2,6 +2,14 @@
 Changelog for package autoware_elevation_map_loader
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(elevation_map_loader): improve log message (`#10620 <https://github.com/autowarefoundation/autoware_universe/issues/10620>`_)
+* chore(elevation_map): add @asa-naki to maitainer (`#10621 <https://github.com/autowarefoundation/autoware_universe/issues/10621>`_)
+* build(autoware_elevation_map_loader): add map_msgs dependency (`#10533 <https://github.com/autowarefoundation/autoware_universe/issues/10533>`_)
+* Contributors: Esteve Fernandez, Kosuke Takeuchi, TaikiYamada4
+
 0.44.1 (2025-05-01)
 -------------------
 

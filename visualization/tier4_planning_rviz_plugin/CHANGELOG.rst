@@ -2,6 +2,14 @@
 Changelog for package tier4_planning_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(tier4_planning_rviz_plugin): add glog in the path visualization (`#10624 <https://github.com/autowarefoundation/autoware_universe/issues/10624>`_)
+  tier4_planning_rviz_plugin): add glog
+* fix(tier4_planning_rviz_plugin): handle empty trajectory (`#10570 <https://github.com/autowarefoundation/autoware_universe/issues/10570>`_)
+* Contributors: TaikiYamada4, Takayuki Murooka
+
 0.44.1 (2025-05-01)
 -------------------
 

@@ -2,6 +2,13 @@
 Changelog for package tier4_simulator_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* chore(simulator.launch): remove params of traffic_light_selector (`#10536 <https://github.com/autowarefoundation/autoware_universe/issues/10536>`_)
+  remove params
+* Contributors: Masato Saeki, TaikiYamada4
+
 0.44.1 (2025-05-01)
 -------------------
 

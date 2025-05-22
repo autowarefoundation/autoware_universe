@@ -2,6 +2,27 @@
 Changelog for package autoware_traffic_light_map_based_detector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* refactor(autoware_traffic_light_map_based_detector): split utils and add test (`#10353 <https://github.com/autowarefoundation/autoware_universe/issues/10353>`_)
+  * split utils and add test
+  * style(pre-commit): autofix
+  * chore
+  * fix pre-commit
+  * change name for include guard
+  * fix cmake
+  * fix
+  * refactor
+  * fix name
+  * merge similar function
+  * change file name from utils to process
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* chore: update traffic light packages code owner (`#10644 <https://github.com/autowarefoundation/autoware_universe/issues/10644>`_)
+  chore: add Taekjin Lee as maintainer to multiple perception packages
+* Contributors: Masato Saeki, Taekjin LEE, TaikiYamada4
+
 0.44.1 (2025-05-01)
 -------------------
 

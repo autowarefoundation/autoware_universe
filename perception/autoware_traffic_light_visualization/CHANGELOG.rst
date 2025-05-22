@@ -2,6 +2,21 @@
 Changelog for package autoware_traffic_light_visualization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* chore(autoware_traffic_light_visualization): modify docs (`#10345 <https://github.com/autowarefoundation/autoware_universe/issues/10345>`_)
+  * fix docs
+  * style(pre-commit): autofix
+  * add images of docs
+  * fix path in json
+  * fix typo
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* chore: update traffic light packages code owner (`#10644 <https://github.com/autowarefoundation/autoware_universe/issues/10644>`_)
+  chore: add Taekjin Lee as maintainer to multiple perception packages
+* Contributors: Masato Saeki, Taekjin LEE, TaikiYamada4
+
 0.44.1 (2025-05-01)
 -------------------
 

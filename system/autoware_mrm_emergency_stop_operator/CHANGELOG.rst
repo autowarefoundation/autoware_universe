@@ -2,6 +2,13 @@
 Changelog for package autoware_mrm_emergency_stop_operator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* refactor(mrm_emergency_stop_operator ): rework parameter (`#9076 <https://github.com/autowarefoundation/autoware_universe/issues/9076>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Prakash Kannaiah, TaikiYamada4
+
 0.44.1 (2025-05-01)
 -------------------
 

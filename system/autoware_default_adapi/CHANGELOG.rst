@@ -2,6 +2,19 @@
 Changelog for package autoware_default_adapi
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(localization): replace tier4_localization_msgs used by ndt_align_srv with autoware_internal_localization_msgs (`#10567 <https://github.com/autowarefoundation/autoware_universe/issues/10567>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(default_adapi): add state diagnostics (`#10539 <https://github.com/autowarefoundation/autoware_universe/issues/10539>`_)
+* feat(default_adapi): add mrm request api (`#10550 <https://github.com/autowarefoundation/autoware_universe/issues/10550>`_)
+* docs(default_adapi): add document of params and diags (`#10557 <https://github.com/autowarefoundation/autoware_universe/issues/10557>`_)
+  * doc(default_adapi): add document of params and diags
+  * fix cmakelists
+  ---------
+* Contributors: TaikiYamada4, Takagi, Isamu, 心刚
+
 0.44.1 (2025-05-01)
 -------------------
 

@@ -2,6 +2,12 @@
 Changelog for package yabloc_image_processing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* fix(yabloc_image_processing): fix deprecated autoware_utils header (`#10495 <https://github.com/autowarefoundation/autoware_universe/issues/10495>`_)
+* Contributors: Masaki Baba, TaikiYamada4
+
 0.44.1 (2025-05-01)
 -------------------
 

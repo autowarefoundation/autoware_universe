@@ -2,6 +2,16 @@
 Changelog for package autoware_behavior_path_static_obstacle_avoidance_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(static_obstacle_avoidance): add flag to wait approval when the ego uses opposite lane (`#10585 <https://github.com/autowarefoundation/autoware_universe/issues/10585>`_)
+  * feat(static_obstacle_avoidance): add flag to wait approval when the ego uses opposite lane
+  * fix: json
+  * fix: json
+  ---------
+* Contributors: Satoshi OTA, TaikiYamada4
+
 0.44.1 (2025-05-01)
 -------------------
 

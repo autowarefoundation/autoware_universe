@@ -2,6 +2,13 @@
 Changelog for package autoware_behavior_velocity_blind_spot_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(behavior_velocity_planner): only wait for the required subscriptions (`#10546 <https://github.com/autowarefoundation/autoware_universe/issues/10546>`_)
+* feat(blind_spot): extend attention area to straight lanelet (`#10450 <https://github.com/autowarefoundation/autoware_universe/issues/10450>`_)
+* Contributors: Mamoru Sobue, TaikiYamada4, Takayuki Murooka
+
 0.44.1 (2025-05-01)
 -------------------
 

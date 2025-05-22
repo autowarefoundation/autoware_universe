@@ -2,6 +2,22 @@
 Changelog for package autoware_motion_velocity_obstacle_slow_down_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* fix(autoware_motion_velocity_obstacle_slow_down_module): fix for mishandling lateral-distance (`#10559 <https://github.com/autowarefoundation/autoware_universe/issues/10559>`_)
+  * Fix for mishandling lateral-distance
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(autoware_motion_velocity_planner): point-cloud clustering optimization (`#10477 <https://github.com/autowarefoundation/autoware_universe/issues/10477>`_)
+  * Point-Cloud clustering optimization
+  * style(pre-commit): autofix
+  * fix
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Arjun Jagdish Ram, TaikiYamada4
+
 0.44.1 (2025-05-01)
 -------------------
 

@@ -2,6 +2,14 @@
 Changelog for package tier4_planning_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(motion_planning): add direct path to trajectory conversion pipeline when both motion_path_smoother and motion_path_planner are disabled (`#10661 <https://github.com/autowarefoundation/autoware_universe/issues/10661>`_)
+  feat(motion_planning): add direct path to trajectory conversion pipeline when both path_smoother and path_optimizer are disabled
+* feat(motion_velocity_planner): add new run_out module (`#10388 <https://github.com/autowarefoundation/autoware_universe/issues/10388>`_)
+* Contributors: Kosuke Takeuchi, Maxime CLEMENT, TaikiYamada4
+
 0.44.1 (2025-05-01)
 -------------------
 

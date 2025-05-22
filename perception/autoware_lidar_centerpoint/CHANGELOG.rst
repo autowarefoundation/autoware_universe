@@ -2,6 +2,26 @@
 Changelog for package autoware_lidar_centerpoint
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* chore: perception code owner update (`#10645 <https://github.com/autowarefoundation/autoware_universe/issues/10645>`_)
+  * chore: update maintainers in multiple perception packages
+  * Revert "chore: update maintainers in multiple perception packages"
+  This reverts commit f2838c33d6cd82bd032039e2a12b9cb8ba6eb584.
+  * chore: update maintainers in multiple perception packages
+  * chore: add Kok Seang Tan as maintainer in multiple perception packages
+  ---------
+* feat(autoware_lidar_centerpoint): add distance of z to pillar center as a new lidar encoder feature in CenterPoint (`#10592 <https://github.com/autowarefoundation/autoware_universe/issues/10592>`_)
+  * Add support of distance of z to pillar center in centerpoint
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Amadeusz Szymko <amadeusz.szymko.2@tier4.jp>
+* feat(autoware_lidar_centerpoint): added target architectures for centerpoint (`#10616 <https://github.com/autowarefoundation/autoware_universe/issues/10616>`_)
+  * feat: added target architectures for centerpoint
+  * chore: mistook the capabilities of edge devices
+  ---------
+* Contributors: Kenzo Lobos Tsunekawa, Kok Seang Tan, Taekjin LEE, TaikiYamada4
+
 0.44.1 (2025-05-01)
 -------------------
 

@@ -2,6 +2,18 @@
 Changelog for package autoware_behavior_velocity_crosswalk_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(crosswalk): update stop position logic (`#10439 <https://github.com/autowarefoundation/autoware_universe/issues/10439>`_)
+  * update stop pos logic
+  * update doc
+  * response to the review
+  ---------
+* fix(behavior_velocity_crosswalk_module): add missing header  (`#10552 <https://github.com/autowarefoundation/autoware_universe/issues/10552>`_)
+* feat(behavior_velocity_planner): only wait for the required subscriptions (`#10546 <https://github.com/autowarefoundation/autoware_universe/issues/10546>`_)
+* Contributors: Masaki Baba, TaikiYamada4, Takayuki Murooka, Yuki TAKAGI
+
 0.44.1 (2025-05-01)
 -------------------
 

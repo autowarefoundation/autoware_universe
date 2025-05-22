@@ -2,6 +2,23 @@
 Changelog for package autoware_tensorrt_yolox
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* chore: perception code owner update (`#10645 <https://github.com/autowarefoundation/autoware_universe/issues/10645>`_)
+  * chore: update maintainers in multiple perception packages
+  * Revert "chore: update maintainers in multiple perception packages"
+  This reverts commit f2838c33d6cd82bd032039e2a12b9cb8ba6eb584.
+  * chore: update maintainers in multiple perception packages
+  * chore: add Kok Seang Tan as maintainer in multiple perception packages
+  ---------
+* feat(autoware_tensorrt_yolox): added target architectures for yolox (`#10611 <https://github.com/autowarefoundation/autoware_universe/issues/10611>`_)
+  * chore: added target architectures for yolox
+  * chore: mistook the compute capabilities of edge devices
+  * chore: cspell
+  ---------
+* Contributors: Kenzo Lobos Tsunekawa, Taekjin LEE, TaikiYamada4
+
 0.44.1 (2025-05-01)
 -------------------
 
