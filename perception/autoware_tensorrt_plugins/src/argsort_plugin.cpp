@@ -29,7 +29,7 @@
 namespace nvinfer1::plugin
 {
 
-ArgsortPlugin::ArgsortPlugin(const std::string & name) : layer_name_{name}
+ArgsortPlugin::ArgsortPlugin(const std::string & name) noexcept : layer_name_{name}
 {
   initFieldsToSerialize();
 }
