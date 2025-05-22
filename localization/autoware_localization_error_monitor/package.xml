@@ -20,7 +20,8 @@
   <buildtool_depend>eigen</buildtool_depend>
 
   <depend>autoware_localization_util</depend>
-  <depend>autoware_utils</depend>
+  <depend>autoware_utils_diagnostics</depend>
+  <depend>autoware_utils_logging</depend>
   <depend>diagnostic_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>rclcpp_components</depend>

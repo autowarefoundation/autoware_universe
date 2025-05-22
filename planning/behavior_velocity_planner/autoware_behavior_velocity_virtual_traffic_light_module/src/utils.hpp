@@ -17,6 +17,8 @@
 
 #include <autoware/behavior_velocity_planner_common/utilization/arc_lane_util.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/virtual_traffic_light.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <tier4_v2x_msgs/msg/key_value.hpp>
@@ -73,10 +75,9 @@ std::optional<SegmentIndexWithPoint> findLastCollisionBeforeEndLine(
        --i) {  // NOTE: size_t can be used since it will not be negative.
     const auto & p1 = autoware_utils::get_point(points.at(i));
     const auto & p2 = autoware_utils::get_point(points.at(i - 1));
-    const auto collision_point =
-      arc_lane_utils::checkCollision(p1, p2, target_line_p1, target_line_p2);
-
-    if (collision_point) {
+    if (const auto collision_point =
+          autoware_utils_geometry::intersect(p1, p2, target_line_p1, target_line_p2);
+        collision_point) {
       return SegmentIndexWithPoint{i, collision_point.value()};
     }
   }

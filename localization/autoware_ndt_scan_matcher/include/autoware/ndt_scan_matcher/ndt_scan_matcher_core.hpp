@@ -18,16 +18,17 @@
 #define FMT_HEADER_ONLY
 
 #include "autoware/localization_util/smart_pose_buffer.hpp"
-#include "autoware_utils/ros/diagnostics_interface.hpp"
+#include "autoware_utils_diagnostics/diagnostics_interface.hpp"
 #include "hyper_parameters.hpp"
 #include "map_update_module.hpp"
 #include "ndt_omp/multigrid_ndt_omp.h"
 
-#include <autoware_utils/ros/logger_level_configure.hpp>
+#include <autoware_utils_logging/logger_level_configure.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <autoware_internal_debug_msgs/msg/int32_stamped.hpp>
+#include <autoware_internal_localization_msgs/srv/pose_with_covariance_stamped.hpp>
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
@@ -35,7 +36,6 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_srvs/srv/set_bool.hpp>
-#include <tier4_localization_msgs/srv/pose_with_covariance_stamped.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <fmt/format.h>
@@ -109,11 +109,13 @@ private:
     std_srvs::srv::SetBool::Response::SharedPtr res);
 
   void service_ndt_align(
-    const tier4_localization_msgs::srv::PoseWithCovarianceStamped::Request::SharedPtr req,
-    tier4_localization_msgs::srv::PoseWithCovarianceStamped::Response::SharedPtr res);
+    const autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped::Request::SharedPtr
+      req,
+    autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped::Response::SharedPtr res);
   void service_ndt_align_main(
-    const tier4_localization_msgs::srv::PoseWithCovarianceStamped::Request::SharedPtr req,
-    tier4_localization_msgs::srv::PoseWithCovarianceStamped::Response::SharedPtr res);
+    const autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped::Request::SharedPtr
+      req,
+    autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped::Response::SharedPtr res);
 
   std::tuple<geometry_msgs::msg::PoseWithCovarianceStamped, double> align_pose(
     const geometry_msgs::msg::PoseWithCovarianceStamped & initial_pose_with_cov);
@@ -189,7 +191,8 @@ private:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
     ndt_monte_carlo_initial_pose_marker_pub_;
 
-  rclcpp::Service<tier4_localization_msgs::srv::PoseWithCovarianceStamped>::SharedPtr service_;
+  rclcpp::Service<autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped>::SharedPtr
+    service_;
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr service_trigger_node_;
 
   tf2_ros::TransformBroadcaster tf2_broadcaster_;
@@ -219,7 +222,7 @@ private:
   std::unique_ptr<DiagnosticsInterface> diagnostics_ndt_align_;
   std::unique_ptr<DiagnosticsInterface> diagnostics_trigger_node_;
   std::unique_ptr<MapUpdateModule> map_update_module_;
-  std::unique_ptr<autoware_utils::LoggerLevelConfigure> logger_configure_;
+  std::unique_ptr<autoware_utils_logging::LoggerLevelConfigure> logger_configure_;
 
   HyperParameters param_;
 };

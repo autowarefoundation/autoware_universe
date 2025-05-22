@@ -17,15 +17,16 @@ This node depends on the map height fitter library.
 
 ### Services
 
-| Name                       | Type                                                 | Description           |
-| -------------------------- | ---------------------------------------------------- | --------------------- |
-| `/localization/initialize` | tier4_localization_msgs::srv::InitializeLocalization | initial pose from api |
+| Name                       | Type                                                             | Description           |
+| -------------------------- | ---------------------------------------------------------------- | --------------------- |
+| `/localization/initialize` | autoware_internal_localization_msgs::srv::InitializeLocalization | initial pose from api |
 
 ### Clients
 
-| Name                                         | Type                                                    | Description             |
-| -------------------------------------------- | ------------------------------------------------------- | ----------------------- |
-| `/localization/pose_estimator/ndt_align_srv` | tier4_localization_msgs::srv::PoseWithCovarianceStamped | pose estimation service |
+| Name                                                               | Type                                                                | Description                    |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------- | ------------------------------ |
+| `/localization/pose_estimator/ndt_align_srv`                       | autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped | pose estimation service        |
+| `/localization/pose_estimator/yabloc/initializer/yabloc_align_srv` | autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped | yabloc pose estimation service |
 
 ### Subscriptions
 
@@ -61,7 +62,7 @@ This `autoware_pose_initializer` is used via default AD API. For detailed descri
 ### Using the GNSS estimated position
 
 ```bash
-ros2 service call /localization/initialize tier4_localization_msgs/srv/InitializeLocalization
+ros2 service call /localization/initialize autoware_internal_localization_msgs/srv/InitializeLocalization
 ```
 
 The GNSS estimated position is used as the initial guess, and the localization algorithm automatically estimates a more accurate position.
@@ -69,7 +70,7 @@ The GNSS estimated position is used as the initial guess, and the localization a
 ### Using the input position
 
 ```bash
-ros2 service call /localization/initialize tier4_localization_msgs/srv/InitializeLocalization "
+ros2 service call /localization/initialize autoware_internal_localization_msgs/srv/InitializeLocalization "
 pose_with_covariance:
   - header:
       frame_id: map
@@ -94,7 +95,7 @@ The input position is used as the initial guess, and the localization algorithm 
 ### Direct initial position set
 
 ```bash
-ros2 service call /localization/initialize tier4_localization_msgs/srv/InitializeLocalization "
+ros2 service call /localization/initialize autoware_internal_localization_msgs/srv/InitializeLocalization "
 pose_with_covariance:
   - header:
       frame_id: map

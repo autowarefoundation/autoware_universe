@@ -16,6 +16,11 @@
     diag_error_count_threshold: 0
     display_on_terminal: true # show error msg on terminal
 
+    # if handling type is 2 (use last valid traj), the following parameters are used to enable soft stop
+    enable_soft_stop_on_prev_traj: true
+    soft_stop_deceleration: -1.0 # [m/s^2]
+    soft_stop_jerk_lim: 0.3 # [m/s^3]
+
     validity_checks:
       latency:
         enable: true
@@ -39,6 +44,10 @@
         longitudinal_max_th: 9.8
         longitudinal_min_th: -9.8
         is_critical: false
+      lateral_jerk:
+        enable: true
+        threshold: 7.0
+        is_critical: false
       steering:
         enable: true
         threshold: 1.414
@@ -59,3 +68,9 @@
         acceleration: -3.0
         margin: 2.0
         is_critical: false
+      trajectory_shift:
+        enable: true
+        lat_shift_th: 0.5
+        forward_shift_th: 1.0
+        backward_shift_th: 0.1
+        is_critical: true

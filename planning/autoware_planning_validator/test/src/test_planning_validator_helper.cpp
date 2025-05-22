@@ -19,6 +19,10 @@
 
 #include <math.h>
 
+#include <algorithm>
+#include <limits>
+#include <vector>
+
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_utils::create_quaternion_from_yaw;
@@ -50,6 +54,65 @@ Trajectory generateTrajectoryWithConstantAcceleration(
     }
   }
   return trajectory;
+}
+
+Trajectory generateTrajectoryWithVariableAcceleration(
+  const double interval_distance, const double initial_speed, const double yaw, const size_t size,
+  const std::function<double(size_t)> & acceleration_pattern)
+{
+  Trajectory trajectory;
+  trajectory.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
+  double s = 0.0, v = initial_speed;
+  constexpr auto MAX_DT = 10.0;
+
+  for (size_t i = 0; i < size; ++i) {
+    // Get acceleration for this point based on the provided pattern
+    const double a = acceleration_pattern(i);
+
+    TrajectoryPoint p;
+    p.pose.position.x = s * std::cos(yaw);
+    p.pose.position.y = s * std::sin(yaw);
+    p.pose.orientation = create_quaternion_from_yaw(yaw);
+    p.longitudinal_velocity_mps = v;
+    p.acceleration_mps2 = a;
+    p.front_wheel_angle_rad = 0.0;
+    trajectory.points.push_back(p);
+
+    s += interval_distance;
+
+    // Calculate time interval and update velocity
+    const auto dt = std::abs(v) > 0.1 ? interval_distance / v : MAX_DT;
+    v += a * dt;
+
+    // Ensure velocity doesn't go negative
+    if (v < 0.0) {
+      v = 0.0;
+    }
+  }
+  return trajectory;
+}
+
+Trajectory generateTrajectoryWithSinusoidalAcceleration(
+  const double interval_distance, const double initial_speed, const double yaw, const size_t size,
+  const double max_acceleration, const double oscillation_period)
+{
+  return generateTrajectoryWithVariableAcceleration(
+    interval_distance, initial_speed, yaw, size,
+    [max_acceleration, oscillation_period](size_t i) -> double {
+      return max_acceleration * std::sin(2.0 * M_PI * i / oscillation_period);
+    });
+}
+
+Trajectory generateTrajectoryWithStepAcceleration(
+  const double interval_distance, const double initial_speed, const double yaw, const size_t size,
+  const std::vector<double> & acceleration_values, const size_t steps_per_value)
+{
+  return generateTrajectoryWithVariableAcceleration(
+    interval_distance, initial_speed, yaw, size,
+    [acceleration_values, steps_per_value](size_t i) -> double {
+      const size_t pattern_index = (i / steps_per_value) % acceleration_values.size();
+      return acceleration_values[pattern_index];
+    });
 }
 
 Trajectory generateTrajectory(
@@ -144,6 +207,32 @@ Trajectory generateTrajectoryWithConstantSteeringRate(
   return trajectory;
 }
 
+Trajectory generateShiftedTrajectory(
+  const Trajectory & trajectory, const double lat_shift, const double lon_shift, const size_t size)
+{
+  Trajectory shifted_traj;
+  shifted_traj.header.stamp = rclcpp::Clock{RCL_ROS_TIME}.now();
+  if (
+    abs(lat_shift) <= std::numeric_limits<double>::epsilon() &&
+    abs(lon_shift) <= std::numeric_limits<double>::epsilon() && size >= trajectory.points.size()) {
+    shifted_traj.points = trajectory.points;
+    return shifted_traj;
+  }
+
+  const auto nb_points = std::min(size, trajectory.points.size());
+  shifted_traj.points = {trajectory.points.begin(), trajectory.points.begin() + nb_points};
+
+  if (
+    abs(lat_shift) > std::numeric_limits<double>::epsilon() ||
+    abs(lon_shift) > std::numeric_limits<double>::epsilon()) {
+    for (auto & t_p : shifted_traj.points) {
+      t_p.pose = autoware_utils::calc_offset_pose(t_p.pose, lon_shift, lat_shift, 0.0, 0.0);
+    }
+  }
+
+  return shifted_traj;
+}
+
 Trajectory generateNanTrajectory()
 {
   Trajectory trajectory = generateTrajectory(1.0);
@@ -185,6 +274,13 @@ Odometry generateDefaultOdometry(const double x, const double y, const double vx
   return odom;
 }
 
+AccelWithCovarianceStamped generateDefaultAcceleration(const double ax)
+{
+  AccelWithCovarianceStamped acceleration;
+  acceleration.accel.accel.linear.x = ax;
+  return acceleration;
+}
+
 rclcpp::NodeOptions getNodeOptionsWithDefaultParams()
 {
   rclcpp::NodeOptions node_options;
@@ -195,6 +291,9 @@ rclcpp::NodeOptions getNodeOptionsWithDefaultParams()
   node_options.append_parameter_override("publish_diag", true);
   node_options.append_parameter_override("diag_error_count_threshold", 0);
   node_options.append_parameter_override("display_on_terminal", true);
+  node_options.append_parameter_override("enable_soft_stop_on_prev_traj", false);
+  node_options.append_parameter_override("soft_stop_deceleration", -1.0);
+  node_options.append_parameter_override("soft_stop_jerk_lim", 0.3);
 
   node_options.append_parameter_override("validity_checks.latency.enable", true);
   node_options.append_parameter_override("validity_checks.latency.threshold", THRESHOLD_LATENCY);
@@ -222,6 +321,11 @@ rclcpp::NodeOptions getNodeOptionsWithDefaultParams()
   node_options.append_parameter_override(
     "validity_checks.acceleration.longitudinal_min_th", THRESHOLD_LONGITUDINAL_MIN_ACC);
   node_options.append_parameter_override("validity_checks.acceleration.is_critical", false);
+
+  node_options.append_parameter_override("validity_checks.lateral_jerk.enable", true);
+  node_options.append_parameter_override(
+    "validity_checks.lateral_jerk.threshold", THRESHOLD_LATERAL_JERK);
+  node_options.append_parameter_override("validity_checks.lateral_jerk.is_critical", false);
 
   node_options.append_parameter_override("validity_checks.deviation.enable", true);
   node_options.append_parameter_override(
@@ -251,6 +355,15 @@ rclcpp::NodeOptions getNodeOptionsWithDefaultParams()
     "validity_checks.forward_trajectory_length.margin", PARAMETER_FORWARD_TRAJECTORY_LENGTH_MARGIN);
   node_options.append_parameter_override(
     "validity_checks.forward_trajectory_length.is_critical", false);
+
+  node_options.append_parameter_override("validity_checks.trajectory_shift.enable", true);
+  node_options.append_parameter_override(
+    "validity_checks.trajectory_shift.lat_shift_th", THRESHOLD_LATERAL_SHIFT);
+  node_options.append_parameter_override(
+    "validity_checks.trajectory_shift.forward_shift_th", THRESHOLD_FORWARD_SHIFT);
+  node_options.append_parameter_override(
+    "validity_checks.trajectory_shift.backward_shift_th", THRESHOLD_BACKWARD_SHIFT);
+  node_options.append_parameter_override("validity_checks.trajectory_shift.is_critical", true);
 
   // for vehicle info
   node_options.append_parameter_override("wheel_radius", 0.5);

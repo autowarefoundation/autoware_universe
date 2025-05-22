@@ -35,7 +35,7 @@
                 "use_virtual_ground_point": {
                   "type": "boolean",
                   "description": "use_virtual_ground_point",
-                  "default": true
+                  "default": "true"
                 },
                 "split_height_distance": {
                   "type": "number",
@@ -90,17 +90,17 @@
                 "use_recheck_ground_cluster": {
                   "type": "boolean",
                   "description": "use_recheck_ground_cluster",
-                  "default": true
+                  "default": "true"
                 },
                 "use_lowest_point": {
                   "type": "boolean",
                   "description": "use_lowest_point",
-                  "default": true
+                  "default": "true"
                 },
                 "publish_processing_time_detail": {
                   "type": "boolean",
                   "description": "publish_processing_time_detail (debug parameter)",
-                  "default": false
+                  "default": "false"
                 }
               },
               "required": [

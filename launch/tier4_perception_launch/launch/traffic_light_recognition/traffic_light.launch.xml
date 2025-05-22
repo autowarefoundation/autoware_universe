@@ -14,7 +14,6 @@
   <arg name="car_traffic_light_classifier_param_path"/>
   <arg name="pedestrian_traffic_light_classifier_param_path"/>
   <arg name="traffic_light_roi_visualizer_param_path"/>
-  <arg name="traffic_light_selector_param_path"/>
   <arg name="traffic_light_occlusion_predictor_param_path"/>
   <arg name="traffic_light_multi_camera_fusion_param_path"/>
   <arg name="traffic_light_arbiter_param_path"/>
@@ -61,7 +60,6 @@
       <arg name="car_traffic_light_classifier_param_path" value="$(var car_traffic_light_classifier_param_path)"/>
       <arg name="pedestrian_traffic_light_classifier_param_path" value="$(var pedestrian_traffic_light_classifier_param_path)"/>
       <arg name="traffic_light_roi_visualizer_param_path" value="$(var traffic_light_roi_visualizer_param_path)"/>
-      <arg name="traffic_light_selector_param_path" value="$(var traffic_light_selector_param_path)"/>
       <arg name="whole_image_detection/model_path" value="$(var whole_image_detection/model_path)"/>
       <arg name="whole_image_detection/label_path" value="$(var whole_image_detection/label_path)"/>
       <arg name="fine_detection/model_path" value="$(var fine_detection/model_path)"/>

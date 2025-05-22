@@ -20,8 +20,8 @@
 #include "autoware/ndt_scan_matcher/ndt_omp/estimate_covariance.hpp"
 #include "autoware/ndt_scan_matcher/particle.hpp"
 
-#include <autoware_utils/geometry/geometry.hpp>
-#include <autoware_utils/transform/transforms.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
+#include <autoware_utils_pcl/transforms.hpp>
 
 #include <pcl_conversions/pcl_conversions.h>
 
@@ -51,7 +51,7 @@ using autoware::localization_util::pose_to_matrix4f;
 
 using autoware::localization_util::SmartPoseBuffer;
 using autoware::localization_util::TreeStructuredParzenEstimator;
-using autoware_utils::DiagnosticsInterface;
+using autoware_utils_diagnostics::DiagnosticsInterface;
 
 autoware_internal_debug_msgs::msg::Float32Stamped make_float32_stamped(
   const builtin_interfaces::msg::Time & stamp, const float data)
@@ -192,11 +192,12 @@ NDTScanMatcher::NDTScanMatcher(const rclcpp::NodeOptions & options)
     this->create_publisher<visualization_msgs::msg::MarkerArray>(
       "monte_carlo_initial_pose_marker", 10);
 
-  service_ = this->create_service<tier4_localization_msgs::srv::PoseWithCovarianceStamped>(
-    "ndt_align_srv",
-    std::bind(
-      &NDTScanMatcher::service_ndt_align, this, std::placeholders::_1, std::placeholders::_2),
-    rclcpp::ServicesQoS().get_rmw_qos_profile(), sensor_callback_group);
+  service_ =
+    this->create_service<autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped>(
+      "ndt_align_srv",
+      std::bind(
+        &NDTScanMatcher::service_ndt_align, this, std::placeholders::_1, std::placeholders::_2),
+      rclcpp::ServicesQoS().get_rmw_qos_profile(), sensor_callback_group);
   service_trigger_node_ = this->create_service<std_srvs::srv::SetBool>(
     "trigger_node_srv",
     std::bind(
@@ -220,7 +221,7 @@ NDTScanMatcher::NDTScanMatcher(const rclcpp::NodeOptions & options)
   diagnostics_trigger_node_ =
     std::make_unique<DiagnosticsInterface>(this, "trigger_node_service_status");
 
-  logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
+  logger_configure_ = std::make_unique<autoware_utils_logging::LoggerLevelConfigure>(this);
 }
 
 void NDTScanMatcher::callback_timer()
@@ -650,7 +651,7 @@ bool NDTScanMatcher::callback_sensor_points_main(
 
   pcl::shared_ptr<pcl::PointCloud<PointSource>> sensor_points_in_map_ptr(
     new pcl::PointCloud<PointSource>);
-  autoware_utils::transform_pointcloud(
+  autoware_utils_pcl::transform_pointcloud(
     *sensor_points_in_baselink_frame, *sensor_points_in_map_ptr, ndt_result.pose);
   publish_point_cloud(sensor_ros_time, param_.frame.map_frame, sensor_points_in_map_ptr);
 
@@ -721,10 +722,10 @@ void NDTScanMatcher::transform_sensor_measurement(
   }
 
   const geometry_msgs::msg::PoseStamped target_to_source_pose_stamped =
-    autoware_utils::transform2pose(transform);
+    autoware_utils_geometry::transform2pose(transform);
   const Eigen::Matrix4f base_to_sensor_matrix =
     pose_to_matrix4f(target_to_source_pose_stamped.pose);
-  autoware_utils::transform_pointcloud(
+  autoware_utils_pcl::transform_pointcloud(
     *sensor_points_input_ptr, *sensor_points_output_ptr, base_to_sensor_matrix);
 }
 
@@ -736,7 +737,7 @@ void NDTScanMatcher::publish_tf(
   result_pose_stamped_msg.header.frame_id = param_.frame.map_frame;
   result_pose_stamped_msg.pose = result_pose_msg;
   tf2_broadcaster_.sendTransform(
-    autoware_utils::pose2transform(result_pose_stamped_msg, param_.frame.ndt_base_frame));
+    autoware_utils_geometry::pose2transform(result_pose_stamped_msg, param_.frame.ndt_base_frame));
 }
 
 void NDTScanMatcher::publish_pose(
@@ -780,7 +781,7 @@ void NDTScanMatcher::publish_marker(
   marker.header.frame_id = param_.frame.map_frame;
   marker.type = visualization_msgs::msg::Marker::ARROW;
   marker.action = visualization_msgs::msg::Marker::ADD;
-  marker.scale = autoware_utils::create_marker_scale(0.3, 0.1, 0.1);
+  marker.scale = autoware_utils_visualization::create_marker_scale(0.3, 0.1, 0.1);
   int i = 0;
   marker.ns = "result_pose_matrix_array";
   marker.action = visualization_msgs::msg::Marker::ADD;
@@ -808,8 +809,8 @@ void NDTScanMatcher::publish_initial_to_result(
   const geometry_msgs::msg::PoseWithCovarianceStamped & initial_pose_new_msg)
 {
   geometry_msgs::msg::PoseStamped initial_to_result_relative_pose_stamped;
-  initial_to_result_relative_pose_stamped.pose =
-    autoware_utils::inverse_transform_pose(result_pose_msg, initial_pose_cov_msg.pose.pose);
+  initial_to_result_relative_pose_stamped.pose = autoware_utils_geometry::inverse_transform_pose(
+    result_pose_msg, initial_pose_cov_msg.pose.pose);
   initial_to_result_relative_pose_stamped.header.stamp = sensor_ros_time;
   initial_to_result_relative_pose_stamped.header.frame_id = param_.frame.map_frame;
   initial_to_result_relative_pose_pub_->publish(initial_to_result_relative_pose_stamped);
@@ -973,8 +974,8 @@ void NDTScanMatcher::service_trigger_node(
 }
 
 void NDTScanMatcher::service_ndt_align(
-  const tier4_localization_msgs::srv::PoseWithCovarianceStamped::Request::SharedPtr req,
-  tier4_localization_msgs::srv::PoseWithCovarianceStamped::Response::SharedPtr res)
+  const autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped::Request::SharedPtr req,
+  autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped::Response::SharedPtr res)
 {
   const rclcpp::Time ros_time_now = this->now();
 
@@ -998,8 +999,8 @@ void NDTScanMatcher::service_ndt_align(
 }
 
 void NDTScanMatcher::service_ndt_align_main(
-  const tier4_localization_msgs::srv::PoseWithCovarianceStamped::Request::SharedPtr req,
-  tier4_localization_msgs::srv::PoseWithCovarianceStamped::Response::SharedPtr res)
+  const autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped::Request::SharedPtr req,
+  autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped::Response::SharedPtr res)
 {
   // get TF from pose_frame to map_frame
   const std::string & target_frame = param_.frame.map_frame;
@@ -1157,7 +1158,7 @@ std::tuple<geometry_msgs::msg::PoseWithCovarianceStamped, double> NDTScanMatcher
     tpe.add_trial(TreeStructuredParzenEstimator::Trial{result, ndt_result.transform_probability});
 
     auto sensor_points_in_map_ptr = std::make_shared<pcl::PointCloud<PointSource>>();
-    autoware_utils::transform_pointcloud(
+    autoware_utils_pcl::transform_pointcloud(
       *ndt_ptr_->getInputSource(), *sensor_points_in_map_ptr, ndt_result.pose);
     publish_point_cloud(
       initial_pose_with_cov.header.stamp, param_.frame.map_frame, sensor_points_in_map_ptr);
