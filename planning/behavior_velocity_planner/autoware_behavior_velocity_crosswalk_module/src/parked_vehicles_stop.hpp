@@ -20,12 +20,14 @@
 #include <autoware_internal_planning_msgs/msg/path_point_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <geometry_msgs/msg/point.hpp>
+#include <tier4_planning_msgs/msg/stop_factor.hpp>
 
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/Point.h>
 #include <lanelet2_core/primitives/Polygon.h>
 
 #include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -61,6 +63,34 @@ bool is_planning_to_stop_in_search_area(
   const std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> & path,
   const size_t ego_idx, const lanelet::BasicPolygon2d & search_area);
 
+/// @brief calculate the stop factor based on the stop poses found
+/// @param [in] ego_path ego path
+/// @param [in] ego_pose current ego pose
+/// @param [in] default_stop_pose default stop pose of the crosswalk module
+/// @param [in] parked_vehicle_stop_pose stop pose calculate for parked vehicles
+/// @param [in] vehicle_point point of the parked vehicle footprint that causes the stop
+/// @param [in] min_stop_distance minimum distance where we can comfortably stop
+/// @return calculated stop factor
+std::optional<tier4_planning_msgs::msg::StopFactor> calculate_parked_vehicles_stop_factor(
+  const std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> & ego_path,
+  const geometry_msgs::msg::Pose & ego_pose,
+  const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
+  const std::optional<const geometry_msgs::msg::Pose> & parked_vehicle_stop_pose,
+  const geometry_msgs::msg::Point & vehicle_point, const std::optional<double> min_stop_distance);
+
+/// @brief return the parked vehicles from a vector of predict object
+/// @param [in] objects predicted objects
+/// @param [in] parked_velocity_threshold [m/s] velocity threshold to determine if a vehicle is
+/// parked
+/// @param [in] parked_velocity_hysteresis [m/s] velocity to add to the threshold of the previous
+/// object with the given uuid
+/// @param [in] previous_parked_vehicle_uuid uuid of the previous vehicle used for stopping
+/// @param [in] is_vehicle_fn function to determine if an object is a vehicle
+std::vector<autoware_perception_msgs::msg::PredictedObject> filter_parked_vehicles(
+  const std::vector<autoware_perception_msgs::msg::PredictedObject> & objects,
+  const double parked_velocity_threshold, const double parked_velocity_hysteresis,
+  const std::string & previous_parked_vehicle_uuid,
+  const std::function<bool(autoware_perception_msgs::msg::PredictedObject)> & is_vehicle_fn);
 }  // namespace autoware::behavior_velocity_planner
 
 #endif  // PARKED_VEHICLES_STOP_HPP_
