@@ -46,6 +46,7 @@ RoiPointCloudFusionNode::RoiPointCloudFusionNode(const rclcpp::NodeOptions & opt
   cluster_2d_tolerance_ = declare_parameter<double>("cluster_2d_tolerance");
   roi_scale_factor_ = declare_parameter<double>("roi_scale_factor");
   override_class_with_unknown_ = declare_parameter<bool>("override_class_with_unknown");
+  max_object_size_ = declare_parameter<double>("max_object_size");
 
   // publisher
   pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
@@ -122,14 +123,12 @@ void RoiPointCloudFusionNode::fuse_on_single_image(
   tf2::doTransform(input_pointcloud_msg, transformed_cloud, transform_stamped);
 
   std::vector<PointCloudMsgType> clusters;
-  std::vector<size_t> clusters_data_size;
   clusters.resize(output_objs.size());
   for (auto & cluster : clusters) {
     cluster.point_step = input_pointcloud_msg.point_step;
     cluster.height = input_pointcloud_msg.height;
     cluster.fields = input_pointcloud_msg.fields;
-    cluster.data.resize(max_cluster_size_ * input_pointcloud_msg.point_step);
-    clusters_data_size.push_back(0);
+    cluster.data.reserve(input_pointcloud_msg.data.size());
   }
   for (size_t offset = 0; offset < input_pointcloud_msg.data.size(); offset += point_step) {
     const float transformed_x =
@@ -153,19 +152,14 @@ void RoiPointCloudFusionNode::fuse_on_single_image(
         const double px = projected_point.x();
         const double py = projected_point.y();
 
-        if (
-          clusters_data_size.at(i) >=
-          static_cast<size_t>(max_cluster_size_) * static_cast<size_t>(point_step)) {
-          continue;
-        }
+        // is not correct to skip fusion and keep a cluster with a partial of points
         if (isPointInsideRoi(check_roi, px, py, roi_scale_factor_)) {
-          std::memcpy(
-            &cluster.data[clusters_data_size.at(i)], &input_pointcloud_msg.data[offset],
-            point_step);
-          clusters_data_size.at(i) += point_step;
+          // append point data to clusters data vector
+          cluster.data.insert(
+            cluster.data.end(), &input_pointcloud_msg.data[offset],
+            &input_pointcloud_msg.data[offset + point_step]);
         }
       }
-
       if (debugger_) {
         // add all points inside image to debug
         debug_image_points.push_back(projected_point);
@@ -175,8 +169,9 @@ void RoiPointCloudFusionNode::fuse_on_single_image(
 
   // refine and update output_fused_objects_
   updateOutputFusedObjects(
-    output_objs, clusters, clusters_data_size, input_pointcloud_msg, input_rois_msg.header,
-    tf_buffer_, min_cluster_size_, max_cluster_size_, cluster_2d_tolerance_, output_fused_objects_);
+    output_objs, clusters, input_pointcloud_msg, input_rois_msg.header, tf_buffer_,
+    min_cluster_size_, max_cluster_size_, cluster_2d_tolerance_, max_object_size_,
+    output_fused_objects_);
 
   // publish debug image
   if (debugger_) {

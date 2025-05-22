@@ -20,12 +20,14 @@
         "min_cluster_size": {
           "type": "integer",
           "description": "The minimum number of points that a cluster must contain to be considered as valid.",
-          "default": 2
+          "default": 2,
+          "exclusiveMinimum": 2
         },
         "max_cluster_size": {
           "type": "integer",
           "description": "The maximum number of points that a cluster must contain to be considered as valid.",
-          "default": 20
+          "default": 20,
+          "exclusiveMinimum": 2
         },
         "cluster_2d_tolerance": {
           "type": "number",
@@ -37,6 +39,12 @@
           "type": "number",
           "description": "A scale factor for resizing RoI while checking if points are inside the RoI.",
           "default": 1.0,
+          "exclusiveMinimum": 0.0
+        },
+        "max_object_size": {
+          "type": "number",
+          "description": "The maximum size of the object to be considered as valid.",
+          "default": 2.0,
           "exclusiveMinimum": 0.0
         }
       },
