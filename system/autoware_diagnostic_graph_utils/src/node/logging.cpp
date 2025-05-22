@@ -79,13 +79,20 @@ void LoggingNode::on_timer()
     // update previous value
     prev_error_graph_text_ = error_graph_text;
   } else {
+    const std::string error_graph_text{""};
+
     // publish debug topic
     autoware_internal_debug_msgs::msg::StringStamped error_graph_message;
     error_graph_message.stamp = now();
     pub_error_graph_text_->publish(error_graph_message);
 
+    // show on terminal
+    if (enable_terminal_log_ && error_graph_text != prev_error_graph_text_) {
+      RCLCPP_INFO_STREAM(get_logger(), "The target mode is available now.");
+    }
+
     // update previous value
-    prev_error_graph_text_ = "";
+    prev_error_graph_text_ = error_graph_text;
   }
 }
 
