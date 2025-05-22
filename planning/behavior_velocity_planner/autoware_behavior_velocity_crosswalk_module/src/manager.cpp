@@ -187,8 +187,10 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
     get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.search_distance");
   cp.parked_vehicles_stop_min_ego_stop_duration =
     get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.min_ego_stop_duration");
-  cp.parked_vehicles_stop_max_parked_velocity =
-    get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.max_parked_velocity");
+  cp.parked_vehicles_stop_parked_velocity_threshold =
+    get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.parked_velocity_threshold");
+  cp.parked_vehicles_stop_parked_velocity_hysteresis =
+    get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.parked_velocity_hysteresis");
 }
 
 void CrosswalkModuleManager::launchNewModules(const PathWithLaneId & path)
