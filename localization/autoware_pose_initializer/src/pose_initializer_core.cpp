@@ -22,6 +22,7 @@
 #include "pose_error_check_module.hpp"
 #include "stop_check_module.hpp"
 
+#include <autoware_adapi_v1_msgs/msg/response_status.hpp>
 #include <memory>
 #include <sstream>
 #include <vector>
@@ -115,7 +116,8 @@ void PoseInitializer::change_node_trigger(bool flag, bool need_spin)
       ndt_localization_trigger_->wait_for_service();
       ndt_localization_trigger_->send_request(flag, need_spin);
     }
-  } catch (const ServiceException & error) {
+  // } catch (const ServiceException & error) {
+  } catch (const autoware_adapi_v1_msgs::msg::ResponseStatus & error) {
     throw;
   }
 }
@@ -138,7 +140,8 @@ void PoseInitializer::set_user_defined_initial_pose(
     change_state(State::Message::INITIALIZED);
 
     RCLCPP_INFO(get_logger(), "Set user defined initial pose");
-  } catch (const ServiceException & error) {
+  // } catch (const ServiceException & error) {
+  } catch (const autoware_adapi_v1_msgs::msg::ResponseStatus & error) {
     change_state(State::Message::UNINITIALIZED);
     RCLCPP_WARN(get_logger(), "Could not set user defined initial pose");
   }
@@ -150,8 +153,13 @@ void PoseInitializer::on_initialize(
 {
   // NOTE: This function is not executed during initialization because mutually exclusive.
   if (stop_check_ && !stop_check_->isVehicleStopped(stop_check_duration_)) {
-    throw ServiceException(
-      Initialize::Service::Response::ERROR_UNSAFE, "The vehicle is not stopped.");
+    // throw ServiceException(
+    //   Initialize::Service::Response::ERROR_UNSAFE, "The vehicle is not stopped.");
+    autoware_adapi_v1_msgs::msg::ResponseStatus respose_status;
+    respose_status.success = false;
+    respose_status.code = Initialize::Service::Response::ERROR_UNSAFE;
+    respose_status.message = "The vehicle is not stopped.";
+    throw respose_status;
   }
   try {
     if (req->method == Initialize::Service::Request::AUTO) {
@@ -212,8 +220,13 @@ void PoseInitializer::on_initialize(
         message << "No input pose_with_covariance. If you want to use DIRECT method, please input "
                    "pose_with_covariance.";
         RCLCPP_ERROR_STREAM(get_logger(), message.str());
-        throw ServiceException(
-          autoware_common_msgs::msg::ResponseStatus::PARAMETER_ERROR, message.str());
+        // throw ServiceException(
+        //   autoware_common_msgs::msg::ResponseStatus::PARAMETER_ERROR, message.str());
+        autoware_adapi_v1_msgs::msg::ResponseStatus respose_status;
+        respose_status.success = false;
+        respose_status.code = autoware_common_msgs::msg::ResponseStatus::PARAMETER_ERROR;
+        respose_status.message = message.str();
+        throw respose_status;
       }
       auto pose = req->pose_with_covariance.front().pose.pose;
       set_user_defined_initial_pose(pose, false);
@@ -223,15 +236,21 @@ void PoseInitializer::on_initialize(
       std::stringstream message;
       message << "Unknown method type (=" << std::to_string(req->method) << ")";
       RCLCPP_ERROR_STREAM(get_logger(), message.str());
-      throw ServiceException(
-        autoware_common_msgs::msg::ResponseStatus::PARAMETER_ERROR, message.str());
+      // throw ServiceException(
+      //   autoware_common_msgs::msg::ResponseStatus::PARAMETER_ERROR, message.str());
+      autoware_adapi_v1_msgs::msg::ResponseStatus respose_status;
+      respose_status.success = false;
+      respose_status.code = autoware_common_msgs::msg::ResponseStatus::PARAMETER_ERROR;
+      respose_status.message = message.str();
+      throw respose_status;
     }
-  } catch (const ServiceException & error) {
-    autoware_adapi_v1_msgs::msg::ResponseStatus respose_status;
-    respose_status = error.status();
-    res->status.success = respose_status.success;
-    res->status.code = respose_status.code;
-    res->status.message = respose_status.message;
+  // } catch (const ServiceException & error) {
+  } catch (const autoware_adapi_v1_msgs::msg::ResponseStatus & error) {
+    // autoware_adapi_v1_msgs::msg::ResponseStatus respose_status;
+    // respose_status = error.status();
+    res->status.success = error.success;
+    res->status.code = error.code;
+    res->status.message = error.message;
     change_state(State::Message::UNINITIALIZED);
   }
 }
@@ -243,8 +262,13 @@ geometry_msgs::msg::PoseWithCovarianceStamped PoseInitializer::get_gnss_pose()
     pose.pose.covariance = gnss_particle_covariance_;
     return pose;
   }
-  throw ServiceException(
-    Initialize::Service::Response::ERROR_GNSS_SUPPORT, "GNSS is not supported.");
+  // throw ServiceException(
+  //   Initialize::Service::Response::ERROR_GNSS_SUPPORT, "GNSS is not supported.");
+  autoware_adapi_v1_msgs::msg::ResponseStatus respose_status;
+  respose_status.success = false;
+  respose_status.code = Initialize::Service::Response::ERROR_GNSS_SUPPORT;
+  respose_status.message = "GNSS is not supported.";
+  throw respose_status;
 }
 }  // namespace autoware::pose_initializer
 
