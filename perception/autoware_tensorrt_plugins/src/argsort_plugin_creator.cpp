@@ -42,7 +42,7 @@ IPluginV3 * ArgsortPluginCreator::createPlugin(
   char const * name, [[maybe_unused]] PluginFieldCollection const * fc,
   [[maybe_unused]] TensorRTPhase phase) noexcept
 {
-  return new ArgsortPlugin(std::string(name));
+  return new (std::nothrow) ArgsortPlugin(std::string(name));
 }
 
 }  // namespace nvinfer1::plugin
