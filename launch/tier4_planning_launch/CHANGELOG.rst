@@ -2,8 +2,8 @@
 Changelog for package tier4_planning_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * feat(motion_planning): add direct path to trajectory conversion pipeline when both motion_path_smoother and motion_path_planner are disabled (`#10661 <https://github.com/autowarefoundation/autoware_universe/issues/10661>`_)
   feat(motion_planning): add direct path to trajectory conversion pipeline when both path_smoother and path_optimizer are disabled

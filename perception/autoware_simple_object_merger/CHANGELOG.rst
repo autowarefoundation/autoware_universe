@@ -2,8 +2,8 @@
 Changelog for package autoware_simple_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * feat(radar): update radar pipeline (`#10580 <https://github.com/autowarefoundation/autoware_universe/issues/10580>`_)
   * fix(tier4_perception_launch): update radar filter launch configuration for improved object handling

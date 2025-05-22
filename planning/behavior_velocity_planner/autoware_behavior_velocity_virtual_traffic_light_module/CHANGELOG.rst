@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_velocity_virtual_traffic_light_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * fix(detection_area_module,virtual_traffic_light,no_stopping_area): support overlap lane (`#10623 <https://github.com/autowarefoundation/autoware_universe/issues/10623>`_)
 * fix(behavior_velocity_planner): add missing header (`#10561 <https://github.com/autowarefoundation/autoware_universe/issues/10561>`_)

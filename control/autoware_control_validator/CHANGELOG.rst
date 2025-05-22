@@ -2,8 +2,8 @@
 Changelog for package autoware_control_validator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * feat(control_validator): add lateral jerk validation (`#10619 <https://github.com/autowarefoundation/autoware_universe/issues/10619>`_)
   * feat(control_validator): add steering rate validation and update parameters

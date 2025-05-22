@@ -2,8 +2,8 @@
 Changelog for package autoware_mrm_comfortable_stop_operator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * refactor(mrm_comfortable_stop_operator): rework parameter (`#8936 <https://github.com/autowarefoundation/autoware_universe/issues/8936>`_)
   * refactor/mrm_comfortable_stop_operator

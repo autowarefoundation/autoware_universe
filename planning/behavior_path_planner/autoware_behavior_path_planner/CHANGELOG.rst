@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * fix(bpp): remove unnecessary enable_module in sampling_planner (`#7038 <https://github.com/autowarefoundation/autoware_universe/issues/7038>`_)
 * refactor(departure_checker): move lane departure checker class to departure_checker  (`#10337 <https://github.com/autowarefoundation/autoware_universe/issues/10337>`_)

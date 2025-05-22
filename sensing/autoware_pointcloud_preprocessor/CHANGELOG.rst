@@ -2,8 +2,8 @@
 Changelog for package autoware_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * fix(autoware_pointcloud_preprocessor): combine_cloud_handler always set XYZIRC (`#10617 <https://github.com/autowarefoundation/autoware_universe/issues/10617>`_)
   always set XYZIRC

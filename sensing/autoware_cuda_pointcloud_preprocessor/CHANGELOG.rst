@@ -2,8 +2,8 @@
 Changelog for package autoware_cuda_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * feat(autoware_cuda_pointcloud_preprocessor): added target architectures for the cuda pointcloud preprocessor (`#10612 <https://github.com/autowarefoundation/autoware_universe/issues/10612>`_)
   * chore: added target architectures for the cuda pointcloud preprocessor

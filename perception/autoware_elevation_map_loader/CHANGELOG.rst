@@ -2,8 +2,8 @@
 Changelog for package autoware_elevation_map_loader
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * feat(elevation_map_loader): improve log message (`#10620 <https://github.com/autowarefoundation/autoware_universe/issues/10620>`_)
 * chore(elevation_map): add @asa-naki to maitainer (`#10621 <https://github.com/autowarefoundation/autoware_universe/issues/10621>`_)

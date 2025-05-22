@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_velocity_traffic_light_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * feat(behavior_velocity_planner): extend stop line to path bound (`#10435 <https://github.com/autowarefoundation/autoware_universe/issues/10435>`_)
   * extend stop line to path bound

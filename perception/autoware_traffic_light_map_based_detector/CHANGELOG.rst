@@ -2,8 +2,8 @@
 Changelog for package autoware_traffic_light_map_based_detector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * refactor(autoware_traffic_light_map_based_detector): split utils and add test (`#10353 <https://github.com/autowarefoundation/autoware_universe/issues/10353>`_)
   * split utils and add test

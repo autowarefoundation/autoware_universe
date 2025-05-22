@@ -2,8 +2,8 @@
 Changelog for package autoware_system_diagnostic_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * feat(planning_validator): check for sudden shift in planning trajectory (`#10339 <https://github.com/autowarefoundation/autoware_universe/issues/10339>`_)
   * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)

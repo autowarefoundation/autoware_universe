@@ -2,8 +2,8 @@
 Changelog for package yabloc_particle_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * fix(yabloc_particle_filter): fix deprecated autoware_utils header (`#10497 <https://github.com/autowarefoundation/autoware_universe/issues/10497>`_)
 * Contributors: Masaki Baba, TaikiYamada4

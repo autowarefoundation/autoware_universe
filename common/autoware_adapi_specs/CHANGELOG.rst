@@ -2,8 +2,8 @@
 Changelog for package autoware_adapi_specs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * feat(default_adapi): add mrm request api (`#10550 <https://github.com/autowarefoundation/autoware_universe/issues/10550>`_)
 * Contributors: TaikiYamada4, Takagi, Isamu

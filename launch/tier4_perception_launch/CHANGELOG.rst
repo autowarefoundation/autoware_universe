@@ -2,8 +2,8 @@
 Changelog for package tier4_perception_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * feat(perception_launch): add common param path for pointpainting_fusion (`#10436 <https://github.com/autowarefoundation/autoware_universe/issues/10436>`_)
   add common param path

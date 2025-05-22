@@ -2,8 +2,8 @@
 Changelog for package autoware_operation_mode_transition_manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * feat(operation_mode_transition_manager): add timeout of the input (`#10457 <https://github.com/autowarefoundation/autoware_universe/issues/10457>`_)
   fix(operation_mode_transition_manager): add timeout for the input

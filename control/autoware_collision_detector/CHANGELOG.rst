@@ -2,8 +2,8 @@
 Changelog for package autoware_collision_detector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * fix(collision_detector): rename parameters to prevent launch issues (`#10651 <https://github.com/autowarefoundation/autoware_universe/issues/10651>`_)
   rename params

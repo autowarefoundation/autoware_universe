@@ -2,8 +2,8 @@
 Changelog for package autoware_radar_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * feat(autoware_radar_object_tracker): adaptation to autoware_utils (`#10464 <https://github.com/autowarefoundation/autoware_universe/issues/10464>`_)
   * feat(autoware_radar_object_tracker): adaptation to autoware_utils

@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_velocity_detection_area_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * fix(detection_area_module,virtual_traffic_light,no_stopping_area): support overlap lane (`#10623 <https://github.com/autowarefoundation/autoware_universe/issues/10623>`_)
 * feat(behavior_velocity_planner): extend stop line to path bound (`#10435 <https://github.com/autowarefoundation/autoware_universe/issues/10435>`_)

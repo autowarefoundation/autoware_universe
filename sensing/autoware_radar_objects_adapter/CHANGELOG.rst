@@ -2,8 +2,8 @@
 Changelog for package autoware_radar_objects_adapter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * fix(autoware_radar_objects_adapter): update schema path in readme (`#10607 <https://github.com/autowarefoundation/autoware_universe/issues/10607>`_)
   fix(autoware_radar_objects_adapter): update schema path in README.md

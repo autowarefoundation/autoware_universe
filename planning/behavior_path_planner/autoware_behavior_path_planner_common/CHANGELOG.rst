@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_planner_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * fix(autoware_behavior_path_planner_common): revert "modify geometric parallel parking path planning" `#9622 <https://github.com/autowarefoundation/autoware_universe/issues/9622>`_ (`#10659 <https://github.com/autowarefoundation/autoware_universe/issues/10659>`_)
   Revert "fix(autoware_behavior_path_planner_common): modify geometric parallel…"

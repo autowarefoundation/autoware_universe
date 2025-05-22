@@ -2,8 +2,8 @@
 Changelog for package autoware_pose_instability_detector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.45.0 (2025-05-22)
+-------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * fix(autoware_pose_instability_detector ): fix deprecated autoware_utils header  (`#10518 <https://github.com/autowarefoundation/autoware_universe/issues/10518>`_)
   fix autoware_utils header
