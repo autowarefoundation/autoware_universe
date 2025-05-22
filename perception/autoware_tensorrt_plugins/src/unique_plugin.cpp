@@ -28,7 +28,7 @@
 namespace nvinfer1::plugin
 {
 
-UniquePlugin::UniquePlugin(const std::string & name) : layer_name_(name)
+UniquePlugin::UniquePlugin(const std::string & name) noexcept : layer_name_(name)
 {
   initFieldsToSerialize();
 }

@@ -37,7 +37,7 @@ class UniquePlugin : public IPluginV3,
                      public IPluginV3OneRuntime
 {
 public:
-  explicit UniquePlugin(const std::string & name);
+  explicit UniquePlugin(const std::string & name) noexcept;
 
   ~UniquePlugin() override = default;
 
@@ -100,7 +100,6 @@ private:
 
   std::string layer_name_;
   std::size_t workspace_size_{0};
-  std::size_t max_num_elements_{0};
   std::vector<nvinfer1::PluginField> data_to_serialize_;
   nvinfer1::PluginFieldCollection fc_to_serialize_;
 };

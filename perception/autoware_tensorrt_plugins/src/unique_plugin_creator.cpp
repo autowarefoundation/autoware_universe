@@ -42,7 +42,7 @@ IPluginV3 * UniquePluginCreator::createPlugin(
   char const * name, [[maybe_unused]] PluginFieldCollection const * fc,
   [[maybe_unused]] TensorRTPhase phase) noexcept
 {
-  return new UniquePlugin(std::string(name));
+  return new (std::nothrow) UniquePlugin(std::string(name));
 }
 
 }  // namespace nvinfer1::plugin
