@@ -25,6 +25,7 @@ group calculate stop pose
   :resamplePath;
   :checkStopForCrosswalkUsers;
   :checkStopForStuckVehicles;
+  :checkStopForParkedVehicles;
 end group
 group apply stop
   :getNearestStopFactor;
@@ -36,7 +37,6 @@ group apply stop
   else (no)
     :planStop;
   endif
-  :applyStopForParkedVehicles;
 end group
 stop
 @enduml
@@ -314,19 +314,23 @@ To inflate the masking behind objects, their footprint can be made bigger using 
 This feature makes ego stop before the crosswalk if there are other vehicles parked in front of the crosswalk, possibly obstructing the view of incoming pedestrians or bicycles.
 
 The feature is enabled with the `parked_vehicles_stop.enable` parameter.
-Other vehicles are determined to be stopped if their velocity is less or equal to the `parked_vehicles_stop.max_parked_velocity` parameter.
+Moreover, the stop is only applied if we are not already planning to stop for crosswalk users or stuck vehicles.
+
+Other vehicles are determined to be stopped if their velocity is less or equal to the `parked_vehicles_stop.parked_velocity_threshold` parameter.
+To prevent chattering caused by noise in the detected velocities, once a parked vehicle causes a stop, an hysteresis `parked_vehicles_stop.parked_velocity_hysteresis` is added to the velocity threshold.
 
 A search area is built along the ego path ahead of the crosswalk by a distance set with the `parked_vehicles_stop.search_distance` parameter.
 
 A stop is planned such that ego will be aligned with the furthest parked vehicle along the ego path within the search area.
 Once ego stops inside the search area for at least the duration set by `parked_vehicles_stop.min_ego_stop_duration`, the stop is removed and no more stop for parked vehicles will be triggered for that crosswalk.
 
-| Parameter                                    | Unit  | Type   | Description                                                              |
-| -------------------------------------------- | ----- | ------ | ------------------------------------------------------------------------ |
-| `parked_vehicles_stop.enable`                | [-]   | bool   | if true, ego will stop if there are parked vehicles before the crosswalk |
-| `parked_vehicles_stop.search_distance`       | [m]   | double | distance ahead of the crosswalk where to search for parked vehicles      |
-| `parked_vehicles_stop.min_ego_stop_duration` | [s]   | double | minimum duration ego should stop before it can continue                  |
-| `parked_vehicles_stop.max_parked_velocity`   | [m/s] | double | maximum velocity of vehicles considered to be parked                     |
+| Parameter                                         | Unit  | Type   | Description                                                                           |
+| ------------------------------------------------- | ----- | ------ | ------------------------------------------------------------------------------------- |
+| `parked_vehicles_stop.enable`                     | [-]   | bool   | if true, ego will stop if there are parked vehicles before the crosswalk              |
+| `parked_vehicles_stop.search_distance`            | [m]   | double | distance ahead of the crosswalk where to search for parked vehicles                   |
+| `parked_vehicles_stop.min_ego_stop_duration`      | [s]   | double | minimum duration ego should stop before it can continue                               |
+| `parked_vehicles_stop.parked_velocity_threshold`  | [m/s] | double | vehicle are considered to be parked if their velocity is less or equal this threshold |
+| `parked_vehicles_stop.parked_velocity_hysteresis` | [m/s] | double | once a vehicle is detected to be parked, this value is added to the threshold         |
 
 ### Others
 
