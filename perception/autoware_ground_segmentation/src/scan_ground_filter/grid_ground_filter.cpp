@@ -297,7 +297,7 @@ void GridGroundFilter::SegmentDiscontinuousCell(
       continue;
     }
     // 5. obstacle from local slope
-    if (delta_avg_z >= global_slope_threshold) {
+    if (delta_avg_z >= local_slope_threshold) {
       // this point is obstacle
       out_no_ground_indices.indices.push_back(pt_idx);
       // go to the next point
