@@ -771,7 +771,8 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
       m_pid_vel.reset();
       m_lpf_vel_error->reset(0.0);
       m_lpf_acc_error->reset(0.0);
-      m_prev_ctrl_cmd.acc = std::max(0.0, m_prev_raw_ctrl_cmd.acc); // prevent the car from taking a long time to start to move
+      m_prev_ctrl_cmd.acc = std::max(
+        0.0, m_prev_raw_ctrl_cmd.acc);  // prevent the car from taking a long time to start to move
       return changeControlState(ControlState::DRIVE);
     }
 
