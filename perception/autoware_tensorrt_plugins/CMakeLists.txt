@@ -122,6 +122,7 @@ cuda_add_library(cuda_ops SHARED
   src/argsort_ops/argsort.cu
   src/bev_ops/bev_pool_cuda.cu
   src/scatter_ops/segment_csr.cu
+  src/unique_ops/unique.cu
 )
 
 add_library(${PROJECT_NAME} SHARED
@@ -135,9 +136,12 @@ add_library(${PROJECT_NAME} SHARED
   src/implicit_gemm_plugin.cpp
   src/segment_csr_plugin_creator.cpp
   src/segment_csr_plugin.cpp
+  src/unique_plugin.cpp
+  src/unique_plugin_creator.cpp
   src/plugin_registration.cpp
   src/plugin_utils.cpp
 )
+
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE _GLIBCXX_USE_CXX11_ABI=1)
 
