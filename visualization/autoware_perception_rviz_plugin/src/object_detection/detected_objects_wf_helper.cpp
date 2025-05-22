@@ -14,7 +14,7 @@
 //
 // Co-developed by Tier IV, Inc. and Apex.AI, Inc.
 
-#include "autoware_perception_rviz_plugin/object_detection/detected_objects_with_feature_helper.hpp"
+#include "autoware_perception_rviz_plugin/object_detection/detected_objects_wf_helper.hpp"
 
 #include <algorithm>
 #include <cmath>

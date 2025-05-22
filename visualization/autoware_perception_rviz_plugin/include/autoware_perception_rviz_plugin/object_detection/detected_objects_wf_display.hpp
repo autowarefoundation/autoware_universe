@@ -11,11 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef AUTOWARE_PERCEPTION_RVIZ_PLUGIN__OBJECT_DETECTION__DETECTED_OBJECTS_WITH_FEATURE_DISPLAY_HPP_
-#define AUTOWARE_PERCEPTION_RVIZ_PLUGIN__OBJECT_DETECTION__DETECTED_OBJECTS_WITH_FEATURE_DISPLAY_HPP_
+#ifndef AUTOWARE_PERCEPTION_RVIZ_PLUGIN__OBJECT_DETECTION__DETECTED_OBJECTS_WF_DISPLAY_HPP_
+#define AUTOWARE_PERCEPTION_RVIZ_PLUGIN__OBJECT_DETECTION__DETECTED_OBJECTS_WF_DISPLAY_HPP_
 
 #include "autoware_perception_rviz_plugin/object_detection/object_polygon_display_base.hpp"
-#include "detected_objects_with_feature_helper.hpp"
+#include "detected_objects_wf_helper.hpp"
 
 #include <QImage>
 #include <QPaintEvent>
@@ -30,6 +30,9 @@
 
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
+
+#include <memory>
+#include <string>
 namespace autoware
 {
 namespace rviz_plugins
@@ -104,11 +107,11 @@ private:
   {
     m_marker_common.addMessage(marker_ptr);
   }
-  ColorbarWidget * m_colorbar_widget;
+  std::unique_ptr<ColorbarWidget> m_colorbar_widget{nullptr};
 };
 
 }  // namespace object_detection
 }  // namespace rviz_plugins
 }  // namespace autoware
 
-#endif  // AUTOWARE_PERCEPTION_RVIZ_PLUGIN__OBJECT_DETECTION__DETECTED_OBJECTS_WITH_FEATURE_DISPLAY_HPP_
+#endif  // AUTOWARE_PERCEPTION_RVIZ_PLUGIN__OBJECT_DETECTION__DETECTED_OBJECTS_WF_DISPLAY_HPP_

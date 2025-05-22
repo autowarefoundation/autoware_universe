@@ -14,9 +14,9 @@
 //
 // Co-developed by Tier IV, Inc. and Apex.AI, Inc.
 
-#include "autoware_perception_rviz_plugin/object_detection/detected_objects_with_feature_display.hpp"
+#include "autoware_perception_rviz_plugin/object_detection/detected_objects_wf_display.hpp"
 
-#include "autoware_perception_rviz_plugin/object_detection/detected_objects_with_feature_helper.hpp"
+#include "autoware_perception_rviz_plugin/object_detection/detected_objects_wf_helper.hpp"
 
 #include <QObject>
 #include <rclcpp/duration.hpp>
@@ -31,8 +31,10 @@
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <algorithm>
+#include <limits>
 #include <memory>
-
+#include <string>
 namespace autoware
 {
 namespace rviz_plugins
@@ -82,13 +84,11 @@ void DetectedObjectsWithFeatureDisplay::onInitialize()
   // Generate the colorbar for the colormap
   generateColorbar();
   // Create the colorbar widget
-  m_colorbar_widget = new ColorbarWidget();
+  m_colorbar_widget = std::make_unique<ColorbarWidget>();
 
-  // m_colorbar_widget->setWindowTitle("Colorbar");
   m_colorbar_widget->setColorbarImage(m_colorbar_image);  // Set the generated colorbar image
   m_colorbar_widget->setMinMax(0.0f, m_intensity_color_scale_max.getFloat());
   m_colorbar_widget->setWindowFlags(Qt::Tool);
-  m_colorbar_widget->show();
 
   QObject::connect(
     &m_color_mode_property, &rviz_common::properties::Property::changed, this,
@@ -166,7 +166,6 @@ void DetectedObjectsWithFeatureDisplay::generateColorbar()
 
 DetectedObjectsWithFeatureDisplay::~DetectedObjectsWithFeatureDisplay()
 {
-  delete m_colorbar_widget;
 }
 
 void DetectedObjectsWithFeatureDisplay::reset()
@@ -258,7 +257,7 @@ void DetectedObjectsWithFeatureDisplay::processMessage(
       // 2. Voxel grid the cluster for analysis
       pcl::PointCloud<pcl::PointXYZ>::Ptr voxel_map_ptr(new pcl::PointCloud<pcl::PointXYZ>);
       pcl::VoxelGrid<pcl::PointXYZ> voxel_grid;
-      voxel_grid.setLeafSize(0.3f, 0.3f, 10000.f);  // Use the same size as in your clustering node
+      voxel_grid.setLeafSize(0.3f, 0.3f, 10000.f);  // Use the same size as in clustering node
       voxel_grid.setInputCloud(cloud.makeShared());
       voxel_grid.setMinimumPointsNumberPerVoxel(1);
       voxel_grid.setSaveLeafLayout(true);
@@ -305,15 +304,14 @@ void DetectedObjectsWithFeatureDisplay::processMessage(
       text_marker->color.a = 1.0;
       text_marker->lifetime = rclcpp::Duration::from_seconds(0.15);
 
-      // // Step 3: Set the displayed text
+      // Step 3: Set the displayed text
       // Compute bounding box
       float min_x = std::numeric_limits<float>::max();
       float max_x = std::numeric_limits<float>::lowest();
       float min_y = min_x, max_y = max_x;
       float min_z = min_x, max_z = max_x;
 
-      // float intensity_sum = 0.0f;
-      // float intensity_max = 0.0f;
+      float intensity_sum = 0.0f;
 
       sensor_msgs::PointCloud2ConstIterator<float> iter_x_m(cluster, "x");
       sensor_msgs::PointCloud2ConstIterator<float> iter_y_m(cluster, "y");
@@ -328,33 +326,19 @@ void DetectedObjectsWithFeatureDisplay::processMessage(
         max_y = std::max(max_y, y);
         min_z = std::min(min_z, z);
         max_z = std::max(max_z, z);
-        // intensity_sum += static_cast<float>(*iter_intensity_m);
-        // intensity_max = std::max(intensity_max, static_cast<float>(*iter_intensity_m));
+        intensity_sum += static_cast<float>(*iter_intensity_m);
       }
 
-      // float avg_intensity = intensity_sum / n;
+      float avg_intensity = intensity_sum / total_points;
       float dx = max_x - min_x, dy = max_y - min_y, dz = max_z - min_z;
       float volume = dx * dy * dz;
-      // float density_volume = volume > 1e-5f ? static_cast<float>(total_points) / volume : 0.0f;
 
       std::ostringstream oss;
-      // oss << "Pts: " << marker->points.size() << "\nArea: " << std::fixed << std::setprecision(1)
-      //     << dx * dy << " m²"
-      //     << "\nDensityArea: " << std::fixed << std::setprecision(1)
-      //     << static_cast<float>(n) / (dx * dy) << " pts/m2"
-      //     << "\nVolume: " << std::fixed << std::setprecision(1) << volume
-      //     << " m3"
-      //     << "\nCentroid: (" << std::fixed << std::setprecision(1)
-      //     << centroid.x << ", " << centroid.y << ", " << centroid.z << ")"
-      //     << "\nDims: [" << dx << " x " << dy << " x " << dz << "]"
-      //     //<< "\nAvg I: " << avg_intensity
-      //     //<< "  Max I: " << intensity_max
-      //     << "\nDensity: " << std::fixed << std::setprecision(2) << density << " pts/m3";
-
       // 3. Render text in RViz
       oss << "Pts: " << total_points << "\nVoxels: " << voxel_count << "\nDensity: " << std::fixed
           << std::setprecision(2) << density << "\nVolume: " << std::fixed << std::setprecision(1)
-          << volume << "\nDims: [" << dx << " x " << dy << " x " << dz << "]";
+          << volume << "\nDims: " << dx << " x " << dy << " x " << dz
+          << "\nAvg Intensity: " << std::fixed << std::setprecision(2) << avg_intensity;
 
       text_marker->text = oss.str();
       // Step 4: Add the marker
