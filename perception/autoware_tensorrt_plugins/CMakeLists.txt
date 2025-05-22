@@ -113,15 +113,20 @@ list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
 list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
 list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_87,code=sm_87")
 list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
-list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89") # NOTE(knzo25): PTX support for newer GPUs until we can compile directly
-#list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120") TODO(knzo25): enable when the driver supports it
+# NOTE(knzo25): PTX support for newer GPUs until we can compile directly
+list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
+# TODO(knzo25): enable when the driver supports it
+#list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
 
 cuda_add_library(cuda_ops SHARED
+  src/argsort_ops/argsort.cu
   src/bev_ops/bev_pool_cuda.cu
   src/scatter_ops/segment_csr.cu
 )
 
 add_library(${PROJECT_NAME} SHARED
+  src/argsort_plugin.cpp
+  src/argsort_plugin_creator.cpp
   src/quick_cumsum_cuda_plugin.cpp
   src/quick_cumsum_cuda_plugin_creator.cpp
   src/get_indices_pairs_implicit_gemm_plugin_creator.cpp
@@ -132,6 +137,7 @@ add_library(${PROJECT_NAME} SHARED
   src/segment_csr_plugin.cpp
   src/plugin_registration.cpp
   src/plugin_utils.cpp
+
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE _GLIBCXX_USE_CXX11_ABI=1)
