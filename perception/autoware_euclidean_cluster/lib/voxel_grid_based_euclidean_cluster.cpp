@@ -38,13 +38,14 @@ VoxelGridBasedEuclideanCluster::VoxelGridBasedEuclideanCluster(
 VoxelGridBasedEuclideanCluster::VoxelGridBasedEuclideanCluster(
   bool use_height, int min_cluster_size, int max_cluster_size, float tolerance,
   float voxel_leaf_size, int min_points_number_per_voxel, int min_voxel_cluster_size_for_filtering,
-  int max_points_per_voxel_in_large_cluster)
+  int max_points_per_voxel_in_large_cluster, int max_num_points_per_cluster)
 : EuclideanClusterInterface(use_height, min_cluster_size, max_cluster_size),
   tolerance_(tolerance),
   voxel_leaf_size_(voxel_leaf_size),
   min_points_number_per_voxel_(min_points_number_per_voxel),
   min_voxel_cluster_size_for_filtering_(min_voxel_cluster_size_for_filtering),
-  max_points_per_voxel_in_large_cluster_(max_points_per_voxel_in_large_cluster)
+  max_points_per_voxel_in_large_cluster_(max_points_per_voxel_in_large_cluster),
+  max_num_points_per_cluster_(max_num_points_per_cluster)
 {
 }
 
@@ -167,6 +168,11 @@ bool VoxelGridBasedEuclideanCluster::cluster(
       int cluster_size = static_cast<int>(i_cluster_data_size / point_step);
       if (cluster_size < min_cluster_size_) {
         // Cluster size is below the minimum threshold; skip without messaging.
+        // Here min_cluster_size_ is used as the minimum number of points in a cluster.
+        continue;
+      }
+      if (cluster_size > max_num_points_per_cluster_) {
+        // Cluster size exceeds the maximum threshold;
         continue;
       }
       const auto & cluster = temporary_clusters.at(i);

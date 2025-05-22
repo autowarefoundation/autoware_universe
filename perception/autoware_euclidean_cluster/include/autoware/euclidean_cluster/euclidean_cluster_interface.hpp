@@ -52,6 +52,7 @@ protected:
   bool use_height_ = true;
   int min_cluster_size_;
   int max_cluster_size_;
+  int max_num_points_per_cluster_;
 };
 
 }  // namespace autoware::euclidean_cluster
