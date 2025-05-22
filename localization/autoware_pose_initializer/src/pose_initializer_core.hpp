@@ -40,7 +40,7 @@ public:
   explicit PoseInitializer(const rclcpp::NodeOptions & options);
 
 private:
-  using ServiceException = autoware::component_interface_utils::ServiceException;
+  // using ServiceException = autoware::component_interface_utils::ServiceException;
   using Initialize = autoware::component_interface_specs_universe::localization::Initialize;
   using State = autoware::component_interface_specs_universe::localization::InitializationState;
   using PoseWithCovarianceStamped = geometry_msgs::msg::PoseWithCovarianceStamped;
