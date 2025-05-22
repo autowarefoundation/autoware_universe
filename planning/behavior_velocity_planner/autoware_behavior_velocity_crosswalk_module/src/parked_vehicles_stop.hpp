@@ -18,6 +18,7 @@
 #include <autoware_utils_geometry/boost_geometry.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_point_with_lane_id.hpp>
+#include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <geometry_msgs/msg/point.hpp>
 
 #include <lanelet2_core/primitives/Lanelet.h>
@@ -25,6 +26,7 @@
 #include <lanelet2_core/primitives/Polygon.h>
 
 #include <optional>
+#include <utility>
 #include <vector>
 
 namespace autoware::behavior_velocity_planner
@@ -38,16 +40,18 @@ namespace autoware::behavior_velocity_planner
 lanelet::BasicPolygon2d create_search_area(
   const lanelet::ConstLanelet & crosswalk_lanelet, const lanelet::ConstLanelets & path_lanelets,
   const geometry_msgs::msg::Point & first_path_point_on_crosswalk, const double search_distance);
-/// @brief calculate the furthest footprint point belonging to a parked object footprint before the
-/// crosswalk
-/// @param [in] ego_path ego path
-/// @param [in] object_polygons polygons of the object footprints
-/// @param [in] first_path_point_on_crosswalk first path point on the crosswalk
-/// @return optional furthest parked object point along the path before the crosswalk
-std::optional<geometry_msgs::msg::Point> calculate_furthest_parked_object_point(
+/// @brief calculate the furthest parked vehicle inside the search area and its corresponding
+/// footprint point
+/// @param [in] ego_path ego path to calculate arc lengths of the footprint points
+/// @param [in] parked_vehicles all detected parked vehicles
+/// @param [in] search_area search area
+/// @return pair of an optional object and corresponding furthest footprint point inside the search
+/// area
+std::pair<std::optional<autoware_perception_msgs::msg::PredictedObject>, geometry_msgs::msg::Point>
+calculate_furthest_parked_vehicle(
   const std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> & ego_path,
-  const std::vector<autoware_utils_geometry::Polygon2d> & object_polygons,
-  const geometry_msgs::msg::Point & first_path_point_on_crosswalk);
+  const std::vector<autoware_perception_msgs::msg::PredictedObject> & parked_vehicles,
+  const lanelet::BasicPolygon2d & search_area);
 /// @brief determine if the path already plans to stop inside the search area
 /// @param [in] path ego path
 /// @param [in] ego_idx ego index in the path

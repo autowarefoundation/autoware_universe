@@ -181,7 +181,7 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
     get_or_declare_parameter<double>(node, ns + ".occlusion.extra_predicted_objects_size");
 
   // param for parked vehicles stop
-  cp.parked_vehicles_stop_search_distance =
+  cp.parked_vehicles_stop_enable =
     get_or_declare_parameter<bool>(node, ns + ".parked_vehicles_stop.enable");
   cp.parked_vehicles_stop_search_distance =
     get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.search_distance");
