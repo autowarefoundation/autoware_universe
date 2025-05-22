@@ -80,7 +80,7 @@ bool NoStoppingAreaModule::modifyPathVelocity(PathWithLaneId * path)
   }
   const auto stop_point = arc_lane_utils::createTargetPoint(
     original_path, stop_line.value(), planner_param_.stop_margin,
-    planner_data_->vehicle_info_.max_longitudinal_offset_m);
+    planner_data_->vehicle_info_.max_longitudinal_offset_m, {lane_id_});
   if (!stop_point) {
     setSafe(true);
     return true;
