@@ -29,6 +29,7 @@
 #include <autoware_vehicle_msgs/msg/control_mode_report.hpp>
 #include <autoware_vehicle_msgs/msg/gear_command.hpp>
 #include <autoware_vehicle_msgs/msg/hazard_lights_command.hpp>
+#include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
 #include <tier4_system_msgs/msg/emergency_holding_state.hpp>
 #include <tier4_system_msgs/msg/mrm_behavior_status.hpp>
 #include <tier4_system_msgs/msg/operation_mode_availability.hpp>
@@ -49,6 +50,11 @@ struct HazardLampPolicy
   bool emergency;
 };
 
+struct TurnIndicatorPolicy
+{
+  bool emergency;
+};
+
 struct Param
 {
   int update_rate;
@@ -61,6 +67,7 @@ struct Param
   bool use_pull_over;
   bool use_comfortable_stop;
   HazardLampPolicy turning_hazard_on{};
+  TurnIndicatorPolicy turning_indicator_on{};
 };
 
 class MrmHandler : public rclcpp::Node
@@ -100,9 +107,12 @@ private:
 
   // rclcpp::Publisher<tier4_vehicle_msgs::msg::ShiftStamped>::SharedPtr pub_shift_;
   // rclcpp::Publisher<tier4_vehicle_msgs::msg::TurnSignal>::SharedPtr pub_turn_signal_;
+  rclcpp::Publisher<autoware_vehicle_msgs::msg::TurnIndicatorsCommand>::SharedPtr
+    pub_turn_indicator_cmd_;
   rclcpp::Publisher<autoware_vehicle_msgs::msg::HazardLightsCommand>::SharedPtr pub_hazard_cmd_;
   rclcpp::Publisher<autoware_vehicle_msgs::msg::GearCommand>::SharedPtr pub_gear_cmd_;
 
+  void publishTurnIndicatorCmd();
   void publishHazardCmd();
   void publishGearCmd();
 

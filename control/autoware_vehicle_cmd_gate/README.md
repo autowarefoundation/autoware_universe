@@ -22,6 +22,7 @@
 | `~/input/external_emergency_stop_heartbeat` | `tier4_external_api_msgs::msg::Heartbeat`           | heartbeat                                                            |
 | `~/input/gate_mode`                         | `tier4_control_msgs::msg::GateMode`                 | gate mode (AUTO or EXTERNAL)                                         |
 | `~/input/emergency/control_cmd`             | `autoware_control_msgs::msg::Control`               | command for lateral and longitudinal velocity from emergency handler |
+| `~/input/emergency/turn_indicators_cmd`     | `autoware_vehicle_msgs::msg::TurnIndicatorsCommand` | turn indicators command from emergency handler                       |
 | `~/input/emergency/hazard_lights_cmd`       | `autoware_vehicle_msgs::msg::HazardLightsCommand`   | hazard lights command from emergency handler                         |
 | `~/input/emergency/gear_cmd`                | `autoware_vehicle_msgs::msg::GearCommand`           | gear command from emergency handler                                  |
 | `~/input/engage`                            | `autoware_vehicle_msgs::msg::Engage`                | engage signal                                                        |
