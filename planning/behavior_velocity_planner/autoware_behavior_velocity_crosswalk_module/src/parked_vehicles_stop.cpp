@@ -16,6 +16,7 @@
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware_utils/ros/uuid_helper.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
 #include <autoware_utils_geometry/boost_polygon_utils.hpp>
 
@@ -34,6 +35,7 @@
 #include <lanelet2_core/utility/Utilities.h>
 
 #include <algorithm>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -187,8 +189,8 @@ calculate_furthest_parked_vehicle(
       }
       lanelet::BasicPoints2d intersections;
       boost::geometry::intersection(footprint, search_area, intersections);
-      for (const auto & p : intersections) {
-        check_point(parked_vehicle, p);
+      for (const auto & intersection : intersections) {
+        check_point(parked_vehicle, intersection);
       }
     }
   }
@@ -209,5 +211,56 @@ bool is_planning_to_stop_in_search_area(
     }
   }
   return false;
+}
+
+std::optional<tier4_planning_msgs::msg::StopFactor> calculate_parked_vehicles_stop_factor(
+  const std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> & ego_path,
+  const geometry_msgs::msg::Pose & ego_pose,
+  const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
+  const std::optional<const geometry_msgs::msg::Pose> & parked_vehicle_stop_pose,
+  const geometry_msgs::msg::Point & vehicle_point, const std::optional<double> min_stop_distance)
+{
+  std::optional<tier4_planning_msgs::msg::StopFactor> stop_factor;
+  if (parked_vehicle_stop_pose) {
+    const auto dist_to_parked_vehicle_stop_pose = motion_utils::calcSignedArcLength(
+      ego_path, ego_pose.position, parked_vehicle_stop_pose->position);
+    if (!min_stop_distance || dist_to_parked_vehicle_stop_pose >= *min_stop_distance) {
+      stop_factor.emplace();
+      stop_factor->stop_pose = *parked_vehicle_stop_pose;
+      stop_factor->stop_factor_points.push_back(vehicle_point);
+      stop_factor->dist_to_stop_pose = dist_to_parked_vehicle_stop_pose;
+    }
+  } else if (default_stop_pose) {
+    const auto dist_to_default_stop_pose =
+      motion_utils::calcSignedArcLength(ego_path, ego_pose.position, default_stop_pose->position);
+    if (!min_stop_distance || dist_to_default_stop_pose >= *min_stop_distance) {
+      stop_factor.emplace();
+      stop_factor->stop_pose = *default_stop_pose;
+      stop_factor->stop_factor_points.push_back(vehicle_point);
+      stop_factor->dist_to_stop_pose = dist_to_default_stop_pose;
+    }
+  }
+  return stop_factor;
+}
+
+std::vector<autoware_perception_msgs::msg::PredictedObject> filter_parked_vehicles(
+  const std::vector<autoware_perception_msgs::msg::PredictedObject> & objects,
+  const double parked_velocity_threshold, const double parked_velocity_hysteresis,
+  const std::string & previous_parked_vehicle_uuid,
+  const std::function<bool(autoware_perception_msgs::msg::PredictedObject)> & is_vehicle_fn)
+{
+  std::vector<autoware_perception_msgs::msg::PredictedObject> parked_vehicles;
+  for (const auto & object : objects) {
+    const auto obj_uuid = autoware_utils::to_hex_string(object.object_id);
+    const auto velocity_threshold =
+      parked_velocity_threshold +
+      (previous_parked_vehicle_uuid == obj_uuid ? parked_velocity_hysteresis : 0.0);
+    if (
+      is_vehicle_fn(object) &&
+      object.kinematics.initial_twist_with_covariance.twist.linear.x <= velocity_threshold) {
+      parked_vehicles.push_back(object);
+    }
+  }
+  return parked_vehicles;
 }
 }  // namespace autoware::behavior_velocity_planner
