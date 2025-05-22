@@ -14,7 +14,7 @@
 
 #include "autoware/tensorrt_plugins/get_indices_pairs_implicit_gemm_plugin_creator.hpp"
 
-#include "autoware/tensorrt_plugins//get_indices_pairs_implicit_gemm_plugin.hpp"
+#include "autoware/tensorrt_plugins/get_indices_pairs_implicit_gemm_plugin.hpp"
 #include "autoware/tensorrt_plugins/plugin_utils.hpp"
 
 #include <NvInferRuntimePlugin.h>
