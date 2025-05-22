@@ -170,6 +170,8 @@ CollisionDetectorNode::CollisionDetectorNode(const rclcpp::NodeOptions & node_op
   updater_.setHardwareID("collision_detector");
   updater_.add("collision_detect", this, &CollisionDetectorNode::checkCollision);
   updater_.setPeriod(0.1);
+
+  vehicle_stop_checker_ = std::make_unique<autoware::motion_utils::VehicleStopChecker>(this);
 }
 
 PredictedObjects CollisionDetectorNode::filterObjects(const PredictedObjects & input_objects)
@@ -328,6 +330,12 @@ void CollisionDetectorNode::checkCollision(diagnostic_updater::DiagnosticStatusW
   if (!odometry_ptr_) {
     RCLCPP_INFO_THROTTLE(
       this->get_logger(), *this->get_clock(), 5000 /* ms */, "waiting for current odometry...");
+    return;
+  }
+
+  if (vehicle_stop_checker_->isVehicleStopped()) {
+    is_error_diag_ = false;
+    stat.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "vehicle is stopping");
     return;
   }
 
