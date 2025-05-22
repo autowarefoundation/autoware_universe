@@ -40,6 +40,10 @@ VoxelGridBasedEuclideanClusterNode::VoxelGridBasedEuclideanClusterNode(
     use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
     min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
     max_points_per_voxel_in_large_cluster, max_num_points_per_cluster);
+  // Pass the diagnostics interface pointer from the node to the cluster
+  diagnostics_interface_ptr_ =
+    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "euclidean_cluster");
+  cluster_->setDiagnosticsInterface(diagnostics_interface_ptr_.get());
 
   using std::placeholders::_1;
   pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(

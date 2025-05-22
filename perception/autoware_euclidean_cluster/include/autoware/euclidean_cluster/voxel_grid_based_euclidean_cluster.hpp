@@ -48,8 +48,16 @@ public:
   {
     min_points_number_per_voxel_ = min_points_number_per_voxel;
   }
+  void setDiagnosticsInterface(autoware_utils::DiagnosticsInterface * diag_ptr)
+  {
+    diagnostics_interface_ptr_ = diag_ptr;
+  }
 
 private:
+  void publishDiagnosticsSummary(
+    size_t skipped_cluster_count,
+    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pointcloud_msg);
+  autoware_utils::DiagnosticsInterface * diagnostics_interface_ptr_{nullptr};
   pcl::VoxelGrid<pcl::PointXYZ> voxel_grid_;
   float tolerance_;
   float voxel_leaf_size_;
