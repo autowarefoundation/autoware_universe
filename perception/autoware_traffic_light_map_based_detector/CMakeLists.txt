@@ -13,12 +13,20 @@ include_directories(
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/traffic_light_map_based_detector_node.cpp
+  src/traffic_light_map_based_detector_process.cpp
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
   PLUGIN "autoware::traffic_light::MapBasedDetector"
   EXECUTABLE traffic_light_map_based_detector_node
 )
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_auto_add_gtest(test_utils
+    test/test_utils.cpp
+  )
+endif()
 
 ament_auto_package(INSTALL_TO_SHARE
   launch
