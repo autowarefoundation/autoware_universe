@@ -1545,7 +1545,8 @@ TEST(TestUtils, compensateLostTargetObjects)
     utils::static_obstacle_avoidance::updateStoredObjects(
       stored_objects, current_target_objects_snapshot, now, parameters);
 
-    current_target_objects_snapshot = {};
+    avoidance_planning_data.target_objects = {};
+    current_target_objects_snapshot = avoidance_planning_data.target_objects;
     utils::static_obstacle_avoidance::compensateLostTargetObjects(
       avoidance_planning_data, stored_objects, planner_data);
     utils::static_obstacle_avoidance::updateStoredObjects(
