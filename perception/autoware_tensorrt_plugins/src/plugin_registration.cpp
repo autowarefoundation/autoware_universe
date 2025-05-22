@@ -16,6 +16,7 @@
 #include "autoware/tensorrt_plugins/get_indices_pairs_implicit_gemm_plugin_creator.hpp"
 #include "autoware/tensorrt_plugins/implicit_gemm_plugin_creator.hpp"
 #include "autoware/tensorrt_plugins/quick_cumsum_cuda_plugin_creator.hpp"
+#include "autoware/tensorrt_plugins/segment_csr_plugin_creator.hpp"
 
 #include <NvInferRuntime.h>
 
@@ -60,15 +61,17 @@ extern "C" void setLoggerFinder(nvinfer1::ILoggerFinder * finder)
 
 extern "C" nvinfer1::IPluginCreatorInterface * const * getCreators(std::int32_t & num_creators)
 {
-  num_creators = 4;
+  num_creators = 5;
   static nvinfer1::plugin::ArgsortPluginCreator argsort_plugin_creator{};
   static nvinfer1::plugin::QuickCumsumCudaPluginCreator quick_cumsum_cuda_plugin_creator{};
   static nvinfer1::plugin::GetIndicesPairsImplicitGemmPluginCreator
     get_indices_pairs_implicit_gemm_plugin_creator{};
   static nvinfer1::plugin::ImplicitGemmPluginCreator implicit_gemm_plugin_creator{};
+  static nvinfer1::plugin::SegmentCSRPluginCreator segment_csr_plugin_creator{};
 
   static nvinfer1::IPluginCreatorInterface * const plugin_creator_list[] = {
     &argsort_plugin_creator, &quick_cumsum_cuda_plugin_creator,
-    &get_indices_pairs_implicit_gemm_plugin_creator, &implicit_gemm_plugin_creator};
+    &get_indices_pairs_implicit_gemm_plugin_creator, &implicit_gemm_plugin_creator,
+    &segment_csr_plugin_creator};
   return plugin_creator_list;
 }

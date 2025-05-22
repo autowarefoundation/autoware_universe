@@ -121,6 +121,7 @@ list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
 cuda_add_library(cuda_ops SHARED
   src/argsort_ops/argsort.cu
   src/bev_ops/bev_pool_cuda.cu
+  src/scatter_ops/segment_csr.cu
 )
 
 add_library(${PROJECT_NAME} SHARED
@@ -132,6 +133,8 @@ add_library(${PROJECT_NAME} SHARED
   src/get_indices_pairs_implicit_gemm_plugin.cpp
   src/implicit_gemm_plugin_creator.cpp
   src/implicit_gemm_plugin.cpp
+  src/segment_csr_plugin_creator.cpp
+  src/segment_csr_plugin.cpp
   src/plugin_registration.cpp
   src/plugin_utils.cpp
 )
