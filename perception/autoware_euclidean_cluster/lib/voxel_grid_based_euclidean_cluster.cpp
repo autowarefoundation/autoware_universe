@@ -96,7 +96,8 @@ bool VoxelGridBasedEuclideanCluster::cluster(
   pcl::fromROSMsg(*pointcloud_msg, *pointcloud);
   // 2) Voxel grid filtering
   pcl::PointCloud<pcl::PointXYZ>::Ptr voxel_map_ptr(new pcl::PointCloud<pcl::PointXYZ>);
-  voxel_grid_.setLeafSize(voxel_leaf_size_, voxel_leaf_size_, 100000.0);
+  constexpr float Z_AXIS_VOXEL_SIZE = 100000.0f;
+  voxel_grid_.setLeafSize(voxel_leaf_size_, voxel_leaf_size_, Z_AXIS_VOXEL_SIZE);
   voxel_grid_.setMinimumPointsNumberPerVoxel(min_points_number_per_voxel_);
   voxel_grid_.setInputCloud(pointcloud);
   voxel_grid_.setSaveLeafLayout(true);
