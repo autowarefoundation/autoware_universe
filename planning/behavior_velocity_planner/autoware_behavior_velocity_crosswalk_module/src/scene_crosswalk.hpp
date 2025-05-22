@@ -186,6 +186,7 @@ public:
     bool parked_vehicles_stop_enable;
     double parked_vehicles_stop_search_distance;
     double parked_vehicles_stop_min_ego_stop_duration;
+    double parked_vehicles_stop_parked_ego_inside_safe_area_margin;
     double parked_vehicles_stop_parked_velocity_threshold;
     double parked_vehicles_stop_parked_velocity_hysteresis;
   };
