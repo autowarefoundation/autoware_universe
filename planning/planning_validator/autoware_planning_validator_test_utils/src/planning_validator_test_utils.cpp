@@ -406,24 +406,7 @@ rclcpp::NodeOptions getNodeOptionsWithDefaultParams()
   node_options.append_parameter_override("vehicle_height", 1.5);
   node_options.append_parameter_override("max_steer_angle", 0.7);
 
-  const auto plugins_info = getPluginsInfo();
-  std::vector<std::string> plugin_names;
-  for (const auto & plugin_info : plugins_info) {
-    plugin_names.emplace_back(plugin_info.plugin_name);
-  }
-  node_options.append_parameter_override("launch_modules", plugin_names);
-
   return node_options;
-}
-
-std::vector<PluginInfo> getPluginsInfo()
-{
-  std::vector<PluginInfo> plugins_info;
-  plugins_info.push_back(
-    PluginInfo{"autoware::planning_validator::LatencyChecker", "lateracy_checker"});
-  plugins_info.push_back(
-    PluginInfo{"autoware::planning_validator::TrajectoryChecker", "trajectory_checker"});
-  return plugins_info;
 }
 
 }  // namespace autoware::planning_validator::test_utils

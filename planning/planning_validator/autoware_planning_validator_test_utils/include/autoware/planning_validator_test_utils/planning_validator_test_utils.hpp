@@ -32,12 +32,6 @@ using autoware_planning_msgs::msg::Trajectory;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
 
-struct PluginInfo
-{
-  std::string plugin_name;
-  std::string module_name;
-};
-
 Trajectory generateTrajectoryWithConstantAcceleration(
   const double interval_distance, const double speed, const double yaw, const size_t size,
   const double acceleration);
@@ -85,8 +79,6 @@ Odometry generateDefaultOdometry(const double x = 0.0, const double y = 0.0, con
 AccelWithCovarianceStamped generateDefaultAcceleration(const double ax = 0.0);
 
 rclcpp::NodeOptions getNodeOptionsWithDefaultParams();
-
-std::vector<PluginInfo> getPluginsInfo();
 
 }  // namespace autoware::planning_validator::test_utils
 

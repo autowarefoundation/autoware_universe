@@ -22,6 +22,7 @@ if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(test_autoware_planning_validator
     test/test_main.cpp
     test/test_trajectory_checker.cpp
+    test/test_trajectory_checker_diag.cpp
   )
   ament_target_dependencies(test_autoware_planning_validator
     rclcpp
@@ -32,6 +33,7 @@ if(BUILD_TESTING)
     ${PROJECT_NAME}
     ${autoware_planning_validator_test_utils_LIBRARIES}
   )
+  set_tests_properties(test_autoware_planning_validator PROPERTIES TIMEOUT 120)
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE config)

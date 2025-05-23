@@ -1,4 +1,4 @@
-// Copyright 2021 Tier IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/planning_validator/node.hpp"
+#include <autoware/planning_validator/node.hpp>
 
 #include <autoware/planning_validator_test_utils/planning_validator_test_utils.hpp>
 #include <autoware/planning_validator_test_utils/test_parameters.hpp>
@@ -30,9 +30,6 @@
 #include <utility>
 #include <vector>
 
-/*
- * This test checks the diagnostics message published from the planning_validator node
- */
 namespace autoware::planning_validator
 {
 using autoware::planning_validator::PlanningValidatorNode;
@@ -118,14 +115,17 @@ bool hasError(const std::vector<DiagnosticArray::ConstSharedPtr> & diags, const 
 }
 
 std::pair<
-  std::shared_ptr<autoware::planning_validator::PlanningValidatorNode>,
+  std::shared_ptr<PlanningValidatorNode>,
   std::shared_ptr<PubSubManager>>
 prepareTest(
   const Trajectory & trajectory, const Odometry & ego_odom,
   const AccelWithCovarianceStamped & acceleration)
 {
+  const std::string plugin_name = "autoware::planning_validator::TrajectoryChecker";
+  auto node_options = test_utils::getNodeOptionsWithDefaultParams();
+  node_options.append_parameter_override("launch_modules", std::vector<std::string>{plugin_name});
   auto validator =
-    std::make_shared<PlanningValidatorNode>(test_utils::getNodeOptionsWithDefaultParams());
+    std::make_shared<PlanningValidatorNode>(node_options);
   auto manager = std::make_shared<PubSubManager>();
   EXPECT_GE(manager->trajectory_pub_->get_subscription_count(), 1U) << "topic is not connected.";
 
@@ -183,7 +183,7 @@ void runWithBadTrajectory(
 // =============================================================
 
 // OK cases
-TEST(PlanningValidatorNode, DiagCheckForNominalTrajectory)
+TEST(TrajectoryCheckerModule, DiagCheckForNominalTrajectory)
 {
   runWithOKTrajectory(
     generateTrajectory(THRESHOLD_INTERVAL * 0.5), generateDefaultOdometry(),
@@ -191,17 +191,17 @@ TEST(PlanningValidatorNode, DiagCheckForNominalTrajectory)
 }
 
 // Bad cases
-TEST(PlanningValidatorNode, DiagCheckForNaNTrajectory)
+TEST(TrajectoryCheckerModule, DiagCheckForNaNTrajectory)
 {
   runWithBadTrajectory(
     test_utils::generateNanTrajectory(), generateDefaultOdometry(), generateDefaultAcceleration());
 }
-TEST(PlanningValidatorNode, DiagCheckForInfTrajectory)
+TEST(TrajectoryCheckerModule, DiagCheckForInfTrajectory)
 {
   runWithBadTrajectory(
     test_utils::generateInfTrajectory(), generateDefaultOdometry(), generateDefaultAcceleration());
 }
-TEST(PlanningValidatorNode, DiagCheckForTooLongIntervalTrajectory)
+TEST(TrajectoryCheckerModule, DiagCheckForTooLongIntervalTrajectory)
 {
   constexpr double ep = 0.001;
   runWithBadTrajectory(
@@ -213,7 +213,7 @@ TEST(PlanningValidatorNode, DiagCheckForTooLongIntervalTrajectory)
 //                    Specific diag tests
 // =============================================================
 
-TEST(PlanningValidatorNode, DiagCheckSize)
+TEST(TrajectoryCheckerModule, DiagCheckSize)
 {
   const auto diag_name = "planning_validator_node: trajectory_validation_size";
   const auto odom = generateDefaultOdometry();
@@ -224,7 +224,7 @@ TEST(PlanningValidatorNode, DiagCheckSize)
   runWithOKTrajectory(generateTrajectory(1.0, 1.0, 0.0, 3), odom, accel);
 }
 
-TEST(PlanningValidatorNode, DiagCheckInterval)
+TEST(TrajectoryCheckerModule, DiagCheckInterval)
 {
   const auto diag_name = "planning_validator_node: trajectory_validation_interval";
   const auto odom = generateDefaultOdometry();
@@ -249,7 +249,7 @@ TEST(PlanningValidatorNode, DiagCheckInterval)
   }
 }
 
-TEST(PlanningValidatorNode, DiagCheckRelativeAngle)
+TEST(TrajectoryCheckerModule, DiagCheckRelativeAngle)
 {
   using test_utils::THRESHOLD_RELATIVE_ANGLE;
   const auto diag_name = "planning_validator_node: trajectory_validation_relative_angle";
@@ -281,7 +281,7 @@ TEST(PlanningValidatorNode, DiagCheckRelativeAngle)
   }
 }
 
-TEST(PlanningValidatorNode, DiagCheckCurvature)
+TEST(TrajectoryCheckerModule, DiagCheckCurvature)
 {
   const auto diag_name = "planning_validator_node: trajectory_validation_curvature";
 
@@ -315,7 +315,7 @@ TEST(PlanningValidatorNode, DiagCheckCurvature)
   }
 }
 
-TEST(PlanningValidatorNode, DiagCheckLateralAcceleration)
+TEST(TrajectoryCheckerModule, DiagCheckLateralAcceleration)
 {
   const auto diag_name = "planning_validator_node: trajectory_validation_lateral_acceleration";
   constexpr double speed = 10.0;
@@ -342,7 +342,7 @@ TEST(PlanningValidatorNode, DiagCheckLateralAcceleration)
   }
 }
 
-TEST(PlanningValidatorNode, DiagCheckLongitudinalMaxAcc)
+TEST(TrajectoryCheckerModule, DiagCheckLongitudinalMaxAcc)
 {
   const auto diag_name = "planning_validator_node: trajectory_validation_acceleration";
   constexpr double speed = 1.0;
@@ -367,7 +367,7 @@ TEST(PlanningValidatorNode, DiagCheckLongitudinalMaxAcc)
   }
 }
 
-TEST(PlanningValidatorNode, DiagCheckLongitudinalMinAcc)
+TEST(TrajectoryCheckerModule, DiagCheckLongitudinalMinAcc)
 {
   const auto diag_name = "planning_validator_node: trajectory_validation_deceleration";
   constexpr double speed = 20.0;
@@ -392,7 +392,7 @@ TEST(PlanningValidatorNode, DiagCheckLongitudinalMinAcc)
   test(test_utils::THRESHOLD_LONGITUDINAL_MIN_ACC + epsilon, true);
 }
 
-TEST(PlanningValidatorNode, DiagCheckSteering)
+TEST(TrajectoryCheckerModule, DiagCheckSteering)
 {
   const auto diag_name = "planning_validator_node: trajectory_validation_steering";
 
@@ -417,7 +417,7 @@ TEST(PlanningValidatorNode, DiagCheckSteering)
   test(-test_utils::THRESHOLD_STEERING / scale_margin, true);
 }
 
-TEST(PlanningValidatorNode, DiagCheckSteeringRate)
+TEST(TrajectoryCheckerModule, DiagCheckSteeringRate)
 {
   const auto diag_name = "planning_validator_node: trajectory_validation_steering_rate";
 
@@ -442,7 +442,7 @@ TEST(PlanningValidatorNode, DiagCheckSteeringRate)
   test(-test_utils::THRESHOLD_STEERING_RATE / scale_margin, true);
 }
 
-TEST(PlanningValidatorNode, DiagCheckVelocityDeviation)
+TEST(TrajectoryCheckerModule, DiagCheckVelocityDeviation)
 {
   const auto diag_name = "planning_validator_node: trajectory_validation_velocity_deviation";
   const auto test = [&](const auto trajectory_speed, const auto ego_speed, const bool expect_ok) {
@@ -461,7 +461,7 @@ TEST(PlanningValidatorNode, DiagCheckVelocityDeviation)
   test(1.0, 1.0 + test_utils::THRESHOLD_VELOCITY_DEVIATION / scale_margin, true);
 }
 
-TEST(PlanningValidatorNode, DiagCheckDistanceDeviation)
+TEST(TrajectoryCheckerModule, DiagCheckDistanceDeviation)
 {
   const auto diag_name = "planning_validator_node: trajectory_validation_distance_deviation";
   const auto test = [&](const auto ego_x, const auto ego_y, const bool expect_ok) {
@@ -488,7 +488,7 @@ TEST(PlanningValidatorNode, DiagCheckDistanceDeviation)
   test(0.0, -ok_distance, true);
 }
 
-TEST(PlanningValidatorNode, DiagCheckLongitudinalDistanceDeviation)
+TEST(TrajectoryCheckerModule, DiagCheckLongitudinalDistanceDeviation)
 {
   const auto diag_name =
     "planning_validator_node: trajectory_validation_longitudinal_distance_deviation";
@@ -521,7 +521,7 @@ TEST(PlanningValidatorNode, DiagCheckLongitudinalDistanceDeviation)
   test(trajectory.points.back().pose.position.x + valid_distance, 0.0, true);
 }
 
-TEST(PlanningValidatorNode, DiagCheckForwardTrajectoryLength)
+TEST(TrajectoryCheckerModule, DiagCheckForwardTrajectoryLength)
 {
   const auto diag_name = "planning_validator_node: trajectory_validation_forward_trajectory_length";
   constexpr auto trajectory_v = 10.0;
@@ -568,7 +568,7 @@ TEST(PlanningValidatorNode, DiagCheckForwardTrajectoryLength)
   }
 }
 
-TEST(PlanningValidatorNode, DiagCheckYawDeviation)
+TEST(TrajectoryCheckerModule, DiagCheckYawDeviation)
 {
   const auto diag_name = "planning_validator_node: trajectory_validation_yaw_deviation";
   const auto straight_trajectory = generateTrajectory(1.0, 0.0, 0.0, 10);

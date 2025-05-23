@@ -52,7 +52,6 @@ if(BUILD_TESTING)
   find_package(autoware_planning_validator_test_utils REQUIRED)
   ament_add_ros_isolated_gtest(test_autoware_planning_validator
     test/src/test_main.cpp
-    test/src/test_planning_validator_pubsub.cpp
     test/src/test_planning_validator_node_interface.cpp
   )
   ament_target_dependencies(test_autoware_planning_validator
