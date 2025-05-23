@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include <autoware/planning_validator/node.hpp>
-
 #include <autoware/planning_validator_test_utils/planning_validator_test_utils.hpp>
 #include <autoware/planning_validator_test_utils/test_parameters.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -114,18 +113,14 @@ bool hasError(const std::vector<DiagnosticArray::ConstSharedPtr> & diags, const 
   throw std::runtime_error(name + " is not contained in the diagnostic message.");
 }
 
-std::pair<
-  std::shared_ptr<PlanningValidatorNode>,
-  std::shared_ptr<PubSubManager>>
-prepareTest(
+std::pair<std::shared_ptr<PlanningValidatorNode>, std::shared_ptr<PubSubManager>> prepareTest(
   const Trajectory & trajectory, const Odometry & ego_odom,
   const AccelWithCovarianceStamped & acceleration)
 {
   const std::string plugin_name = "autoware::planning_validator::TrajectoryChecker";
   auto node_options = test_utils::getNodeOptionsWithDefaultParams();
   node_options.append_parameter_override("launch_modules", std::vector<std::string>{plugin_name});
-  auto validator =
-    std::make_shared<PlanningValidatorNode>(node_options);
+  auto validator = std::make_shared<PlanningValidatorNode>(node_options);
   auto manager = std::make_shared<PubSubManager>();
   EXPECT_GE(manager->trajectory_pub_->get_subscription_count(), 1U) << "topic is not connected.";
 
