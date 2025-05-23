@@ -286,12 +286,10 @@ bool CrosswalkModule::modifyPathVelocity(PathWithLaneId * path)
   // Decide to stop for parked vehicles (only if no other stop is planned)
   const auto stop_factor_for_parked_vehicles =
     checkStopForParkedVehicles(*path, first_path_point_on_crosswalk);
-  if (stop_factors.empty() && stop_factor_for_parked_vehicles) {
-    stop_factors.push_back(*stop_factor_for_parked_vehicles);
-  }
 
   // Get nearest stop factor
-  const auto nearest_stop_factor = getNearestStopFactor(*path, stop_factors);
+  const auto nearest_stop_factor =
+    getNearestStopFactor(*path, stop_factors, stop_factor_for_parked_vehicles);
   recordTime(3);
 
   // Set safe or unsafe
@@ -1240,8 +1238,12 @@ std::optional<StopFactor> CrosswalkModule::checkStopForParkedVehicles(
 }
 
 std::optional<StopFactor> CrosswalkModule::getNearestStopFactor(
-  const PathWithLaneId & ego_path, const std::vector<StopFactor> & stop_factors)
+  const PathWithLaneId & ego_path, const std::vector<StopFactor> & stop_factors,
+  const std::optional<StopFactor> & stop_factor_for_parked_vehicles)
 {
+  if (stop_factors.empty() && stop_factor_for_parked_vehicles) {
+    return stop_factor_for_parked_vehicles;
+  }
   const auto get_distance_to_stop = [&](const auto & stop_factor) -> std::optional<double> {
     const auto & ego_pos = planner_data_->current_odometry->pose.position;
     return calcSignedArcLength(ego_path.points, ego_pos, stop_factor.stop_pose.position);
