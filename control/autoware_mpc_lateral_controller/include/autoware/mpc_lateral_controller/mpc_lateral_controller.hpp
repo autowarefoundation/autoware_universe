@@ -207,7 +207,7 @@ private:
    * @brief Check if the received data is valid.
    * @return True if the data is valid, false otherwise.
    */
-  bool checkData() const;
+  [[nodiscard]] bool checkData() const;
 
   /**
    * @brief Create the control command.
@@ -221,7 +221,8 @@ private:
    * @param ctrl_cmd_horizon Control command horizon to be created.
    * @return Created control command horizon.
    */
-  LateralHorizon createCtrlCmdHorizonMsg(const LateralHorizon & ctrl_cmd_horizon) const;
+  [[nodiscard]] LateralHorizon createCtrlCmdHorizonMsg(
+    const LateralHorizon & ctrl_cmd_horizon) const;
 
   /**
    * @brief Publish the predicted future trajectory.
@@ -239,39 +240,39 @@ private:
    * @brief Get the stop control command.
    * @return Stop control command.
    */
-  Lateral getStopControlCommand() const;
+  [[nodiscard]] Lateral getStopControlCommand() const;
 
   /**
    * @brief Get the control command applied before initialization.
    * @return Initial control command.
    */
-  Lateral getInitialControlCommand() const;
+  [[nodiscard]] Lateral getInitialControlCommand() const;
 
   /**
    * @brief Check if the ego car is in a stopped state.
    * @return True if the ego car is stopped, false otherwise.
    */
-  bool isStoppedState() const;
+  [[nodiscard]] bool isStoppedState() const;
 
   /**
    * @brief Check if the trajectory has a valid value.
    * @param traj Trajectory to be checked.
    * @return True if the trajectory is valid, false otherwise.
    */
-  bool isValidTrajectory(const Trajectory & traj) const;
+  [[nodiscard]] bool isValidTrajectory(const Trajectory & traj) const;
 
   /**
    * @brief Check if the trajectory shape has changed.
    * @return True if the trajectory shape has changed, false otherwise.
    */
-  bool isTrajectoryShapeChanged() const;
+  [[nodiscard]] bool isTrajectoryShapeChanged() const;
 
   /**
    * @brief Check if the steering control is converged and stable now.
    * @param cmd Steering control command to be checked.
    * @return True if the steering control is converged and stable, false otherwise.
    */
-  bool isSteerConverged(const Lateral & cmd) const;
+  [[nodiscard]] bool isSteerConverged(const Lateral & cmd) const;
 
   rclcpp::Node::OnSetParametersCallbackHandle::SharedPtr m_set_param_res;
 
@@ -290,13 +291,13 @@ private:
     const std::vector<rclcpp::Parameter> & parameters);
 
   template <typename... Args>
-  inline void info_throttle(Args &&... args)
+  inline void info_throttle(Args &&... args) const
   {
     RCLCPP_INFO_THROTTLE(logger_, *clock_, 5000, "%s", args...);
   }
 
   template <typename... Args>
-  inline void warn_throttle(Args &&... args)
+  inline void warn_throttle(Args &&... args) const
   {
     RCLCPP_WARN_THROTTLE(logger_, *clock_, 5000, "%s", args...);
   }
