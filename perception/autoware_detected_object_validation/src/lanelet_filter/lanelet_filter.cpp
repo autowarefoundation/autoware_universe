@@ -62,26 +62,37 @@ ObjectLaneletFilterNode::ObjectLaneletFilterNode(const rclcpp::NodeOptions & nod
   filter_target_.MOTORCYCLE = declare_parameter<bool>("filter_target_label.MOTORCYCLE");
   filter_target_.BICYCLE = declare_parameter<bool>("filter_target_label.BICYCLE");
   filter_target_.PEDESTRIAN = declare_parameter<bool>("filter_target_label.PEDESTRIAN");
+
   // Set filter settings
-  filter_settings_.polygon_overlap_filter =
-    declare_parameter<bool>("filter_settings.polygon_overlap_filter.enabled");
-  filter_settings_.filter_object_under_lanelet =
-    declare_parameter<bool>("filter_settings.polygon_overlap_filter.filter_object_under_lanelet");
+  filter_settings_.lanelet_xy_overlap_filter =
+    declare_parameter<bool>("filter_settings.lanelet_xy_overlap_filter.enabled");
+
   filter_settings_.lanelet_direction_filter =
     declare_parameter<bool>("filter_settings.lanelet_direction_filter.enabled");
   filter_settings_.lanelet_direction_filter_velocity_yaw_threshold =
     declare_parameter<double>("filter_settings.lanelet_direction_filter.velocity_yaw_threshold");
   filter_settings_.lanelet_direction_filter_object_speed_threshold =
     declare_parameter<double>("filter_settings.lanelet_direction_filter.object_speed_threshold");
-  filter_settings_.debug = declare_parameter<bool>("filter_settings.debug");
+
+  filter_settings_.lanelet_object_elevation_filter =
+    declare_parameter<bool>("filter_settings.lanelet_object_elevation_filter.enabled");
+  filter_settings_.max_elevation_threshold =
+    declare_parameter<double>(
+      "filter_settings.lanelet_object_elevation_filter.max_elevation_threshold");
+  filter_settings_.min_elevation_threshold =
+    declare_parameter<double>(
+      "filter_settings.lanelet_object_elevation_filter.min_elevation_threshold");
+
   filter_settings_.lanelet_extra_margin =
     declare_parameter<double>("filter_settings.lanelet_extra_margin");
-  filter_settings_.use_height_threshold =
-    declare_parameter<bool>("filter_settings.use_height_threshold");
-  filter_settings_.max_height_threshold =
-    declare_parameter<double>("filter_settings.max_height_threshold");
-  filter_settings_.min_height_threshold =
-    declare_parameter<double>("filter_settings.min_height_threshold");
+  filter_settings_.debug = declare_parameter<bool>("filter_settings.debug");
+
+  if (filter_settings_.min_elevation_threshold > filter_settings_.max_elevation_threshold) {
+    RCLCPP_WARN(
+      this->get_logger(),
+      "parameters of object_elevation_filter do not satisfy the relation: "
+      "min_elevation_threshold <= max_elevation_threshold");
+  }
 
   // Set publisher/subscriber
   map_sub_ = this->create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
@@ -236,14 +247,22 @@ Eigen::Vector3d computeFaceNormal(const std::array<Eigen::Vector3d, 3> & triangl
 // checks whether a point is located above the lanelet triangle plane
 // that is closest in the perpendicular direction
 bool isPointAboveLaneletMesh(
-  const Eigen::Vector3d & point, const lanelet::ConstLanelet & lanelet, const double & offset)
+  const Eigen::Vector3d & point, const lanelet::ConstLanelet & lanelet, const double & offset,
+  const double & min_distance, const double & max_distance)
 {
   TriangleMesh mesh = createTriangleMeshFromLanelet(lanelet);
 
   if (mesh.size() == 0) return true;
 
-  double min_dist = std::numeric_limits<double>::infinity();
-  double min_abs_dist = std::numeric_limits<double>::infinity();
+  // for the query point
+  double query_point_min_abs_dist = std::numeric_limits<double>::infinity();
+  // for top and bottom point
+  double top_min_dist = std::numeric_limits<double>::infinity();
+  double top_min_abs_dist = std::numeric_limits<double>::infinity();
+  double bottom_min_dist = std::numeric_limits<double>::infinity();
+  double bottom_min_abs_dist = std::numeric_limits<double>::infinity();
+
+  // search the most nearest surface from the query point
   for (const auto & tri : mesh) {
     Eigen::Vector3d plane_normal_vec = computeFaceNormal(tri);
 
@@ -256,17 +275,39 @@ bool isPointAboveLaneletMesh(
     }
 
     // use offset to account for height
-    Eigen::Vector3d vec_to_point = (point + offset * plane_normal_vec) - tri[0];
+    Eigen::Vector3d vec_to_point = point - tri[0];
     double signed_dist = plane_normal_vec.dot(vec_to_point);
 
-    const double abs_dist = std::abs(signed_dist);
-    if (abs_dist < min_abs_dist) {
-      min_abs_dist = abs_dist;
-      min_dist = signed_dist;
+    double abs_dist = std::abs(signed_dist);
+    if (abs_dist < query_point_min_abs_dist) {
+      query_point_min_abs_dist = abs_dist;
+
+      // check top side
+      vec_to_point = (point + offset * plane_normal_vec) - tri[0];
+      signed_dist = plane_normal_vec.dot(vec_to_point);
+
+      abs_dist = std::abs(signed_dist);
+      if (abs_dist < top_min_abs_dist) {
+        top_min_dist = signed_dist;
+        top_min_abs_dist = abs_dist;
+      }
+
+      // check bottom side
+      vec_to_point = (point - offset * plane_normal_vec) - tri[0];
+      signed_dist = plane_normal_vec.dot(vec_to_point);
+
+      abs_dist = std::abs(signed_dist);
+      if (abs_dist < bottom_min_abs_dist) {
+        bottom_min_dist = signed_dist;
+        bottom_min_abs_dist = abs_dist;
+      }
     }
   }
 
-  return min_dist > 0;
+  // if at least one point is within the range, we consider it to be in the range
+  if ((min_distance <= top_min_dist && top_min_dist <= max_distance) ||
+      (min_distance <= bottom_min_dist && bottom_min_dist <= max_distance)) return true;
+  else return false;
 }
 
 void ObjectLaneletFilterNode::mapCallback(
@@ -298,19 +339,6 @@ void ObjectLaneletFilterNode::objectCallback(
         *input_msg, lanelet_frame_id_, tf_buffer_, transformed_objects)) {
     RCLCPP_ERROR(get_logger(), "Failed transform to %s.", lanelet_frame_id_.c_str());
     return;
-  }
-  // vehicle base pose :map -> base_link
-  if (filter_settings_.use_height_threshold) {
-    try {
-      ego_base_height_ = tf_buffer_
-                           .lookupTransform(
-                             lanelet_frame_id_, "base_link", transformed_objects.header.stamp,
-                             rclcpp::Duration::from_seconds(0.5))
-                           .transform.translation.z;
-    } catch (const tf2::TransformException & ex) {
-      RCLCPP_ERROR_STREAM(get_logger(), "Failed to get transform: " << ex.what());
-      return;
-    }
   }
 
   if (!transformed_objects.objects.empty()) {
@@ -365,30 +393,45 @@ bool ObjectLaneletFilterNode::filterObject(
       return false;
     }
 
-    // 0. check height threshold
-    if (filter_settings_.use_height_threshold) {
-      const double object_height = transformed_object.shape.dimensions.z;
-      if (
-        object_height > ego_base_height_ + filter_settings_.max_height_threshold ||
-        object_height < ego_base_height_ + filter_settings_.min_height_threshold) {
-        return false;
+    // create a 2D polygon from the object for querying
+    Polygon2d object_polygon;
+    if (utils::hasBoundingBox(transformed_object)) {
+      const auto footprint = setFootprint(transformed_object);
+      for (const auto & point : footprint.points) {
+        const geometry_msgs::msg::Point32 point_transformed =
+          autoware_utils::transform_point(point, transformed_object.kinematics.pose_with_covariance.pose);
+        object_polygon.outer().emplace_back(point_transformed.x, point_transformed.y);
       }
+      object_polygon.outer().push_back(object_polygon.outer().front());
+    } else {
+      object_polygon = getConvexHullFromObjectFootprint(transformed_object);
     }
+
+    // create a bounding box from polygon for searching the local R-tree
+    bg::model::box<bg::model::d2::point_xy<double>> bbox_of_convex_hull;
+    bg::envelope(object_polygon, bbox_of_convex_hull);
+    std::vector<BoxAndLanelet> candidates;
+    // only use the lanelets that intersect with the object's bounding box
+    local_rtree.query(bgi::intersects(bbox_of_convex_hull), std::back_inserter(candidates));
 
     bool filter_pass = true;
     // 1. is polygon overlap with road lanelets or shoulder lanelets
-    if (filter_settings_.polygon_overlap_filter) {
-      const bool is_polygon_overlap = isObjectOverlapLanelets(transformed_object, local_rtree);
-      filter_pass = filter_pass && is_polygon_overlap;
+    if (filter_settings_.lanelet_xy_overlap_filter) {
+      filter_pass = isObjectOverlapLanelets(transformed_object, object_polygon,
+        candidates);
     }
 
     // 2. check if objects velocity is the same with the lanelet direction
     const bool orientation_not_available =
       transformed_object.kinematics.orientation_availability ==
       autoware_perception_msgs::msg::TrackedObjectKinematics::UNAVAILABLE;
-    if (filter_settings_.lanelet_direction_filter && !orientation_not_available) {
-      const bool is_same_direction = isSameDirectionWithLanelets(transformed_object, local_rtree);
-      filter_pass = filter_pass && is_same_direction;
+    if (filter_settings_.lanelet_direction_filter && !orientation_not_available && filter_pass) {
+      filter_pass = isSameDirectionWithLanelets(transformed_object, candidates);
+    }
+
+    // 3. check if the object is above the lanelets
+    if (filter_settings_.lanelet_object_elevation_filter && filter_pass){
+      filter_pass = isObjectAboveLanelet(transformed_object, candidates);
     }
 
     // push back to output object
@@ -448,7 +491,7 @@ LinearRing2d ObjectLaneletFilterNode::getConvexHull(
   return convex_hull;
 }
 
-LinearRing2d ObjectLaneletFilterNode::getConvexHullFromObjectFootprint(
+Polygon2d ObjectLaneletFilterNode::getConvexHullFromObjectFootprint(
   const autoware_perception_msgs::msg::DetectedObject & object)
 {
   MultiPoint2d candidate_points;
@@ -459,7 +502,7 @@ LinearRing2d ObjectLaneletFilterNode::getConvexHullFromObjectFootprint(
     candidate_points.emplace_back(p.x + pos.x, p.y + pos.y);
   }
 
-  LinearRing2d convex_hull;
+  Polygon2d convex_hull;
   bg::convex_hull(candidate_points, convex_hull);
 
   return convex_hull;
@@ -527,76 +570,29 @@ lanelet::BasicPolygon2d ObjectLaneletFilterNode::getPolygon(const lanelet::Const
 
 bool ObjectLaneletFilterNode::isObjectOverlapLanelets(
   const autoware_perception_msgs::msg::DetectedObject & object,
-  const bgi::rtree<BoxAndLanelet, RtreeAlgo> & local_rtree)
+  const Polygon2d & polygon, const std::vector<BoxAndLanelet> & candidates)
 {
   // if object has bounding box, use polygon overlap
   if (utils::hasBoundingBox(object)) {
-    Polygon2d polygon;
-    const auto footprint = setFootprint(object);
-    for (const auto & point : footprint.points) {
-      const geometry_msgs::msg::Point32 point_transformed =
-        autoware_utils::transform_point(point, object.kinematics.pose_with_covariance.pose);
-      polygon.outer().emplace_back(point_transformed.x, point_transformed.y);
-    }
-    polygon.outer().push_back(polygon.outer().front());
-
-    return isPolygonOverlapLanelets(polygon, local_rtree);
+    return isPolygonOverlapLanelets(polygon, candidates);
   } else {
-    const LinearRing2d object_convex_hull = getConvexHullFromObjectFootprint(object);
-
-    // create bounding box to search in the rtree
-    std::vector<BoxAndLanelet> candidates;
-    bg::model::box<bg::model::d2::point_xy<double>> bbox;
-    bg::envelope(object_convex_hull, bbox);
-    local_rtree.query(bgi::intersects(bbox), std::back_inserter(candidates));
-
-    bool is_point_in_polygon = false;
-    // if object do not have bounding box, check each footprint is inside polygon
     for (const auto & point : object.shape.footprint.points) {
       const geometry_msgs::msg::Point32 point_transformed =
         autoware_utils::transform_point(point, object.kinematics.pose_with_covariance.pose);
 
       for (const auto & candidate : candidates) {
         if (isInPolygon(point_transformed.x, point_transformed.y, candidate.second.polygon, 0.0)) {
-          if (filter_settings_.filter_object_under_lanelet) {
-            is_point_in_polygon = true;
-            break;
-          } else {
             return true;
-          }
         }
       }
-
-      if (is_point_in_polygon) break;
     }
-
-    // filter the object under the lanelet
-    if (filter_settings_.filter_object_under_lanelet && is_point_in_polygon) {
-      // assuming the positions are already the center of the cluster (convex hull)
-      // for an exact calculation of the cluster from the points,
-      // we should use autoware_utils::transform_point before computing the cluster
-      const double cx = object.kinematics.pose_with_covariance.pose.position.x;
-      const double cy = object.kinematics.pose_with_covariance.pose.position.y;
-      const double cz = object.kinematics.pose_with_covariance.pose.position.z;
-      // use the centroid as a query point
-      const Eigen::Vector3d centroid(cx, cy, cz);
-
-      return isCentroidAboveLanelet(candidates, centroid, object.shape.dimensions.z * 0.5);
-    }
-
-    return is_point_in_polygon;
+    return false;
   }
 }
 
 bool ObjectLaneletFilterNode::isPolygonOverlapLanelets(
-  const Polygon2d & polygon, const bgi::rtree<BoxAndLanelet, RtreeAlgo> & local_rtree)
+  const Polygon2d & polygon, const std::vector<BoxAndLanelet> & candidates)
 {
-  // create a bounding box from polygon for searching the local R-tree
-  std::vector<BoxAndLanelet> candidates;
-  bg::model::box<bg::model::d2::point_xy<double>> bbox_of_convex_hull;
-  bg::envelope(polygon, bbox_of_convex_hull);
-  local_rtree.query(bgi::intersects(bbox_of_convex_hull), std::back_inserter(candidates));
-
   for (const auto & box_and_lanelet : candidates) {
     if (!bg::disjoint(polygon, box_and_lanelet.second.polygon)) {
       return true;
@@ -608,7 +604,7 @@ bool ObjectLaneletFilterNode::isPolygonOverlapLanelets(
 
 bool ObjectLaneletFilterNode::isSameDirectionWithLanelets(
   const autoware_perception_msgs::msg::DetectedObject & object,
-  const bgi::rtree<BoxAndLanelet, RtreeAlgo> & local_rtree)
+  const std::vector<BoxAndLanelet> & candidates)
 {
   const double object_yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
   const double object_velocity_norm = std::hypot(
@@ -622,20 +618,6 @@ bool ObjectLaneletFilterNode::isSameDirectionWithLanelets(
   if (object_velocity_norm < filter_settings_.lanelet_direction_filter_object_speed_threshold) {
     return true;
   }
-
-  // we can not query by points, so create a small bounding box
-  // eps is not determined by any specific criteria; just a guess
-  constexpr double eps = 1.0e-6;
-  std::vector<BoxAndLanelet> candidates;
-  const Point2d min_corner(
-    object.kinematics.pose_with_covariance.pose.position.x - eps,
-    object.kinematics.pose_with_covariance.pose.position.y - eps);
-  const Point2d max_corner(
-    object.kinematics.pose_with_covariance.pose.position.x + eps,
-    object.kinematics.pose_with_covariance.pose.position.y + eps);
-  const Box bbox(min_corner, max_corner);
-
-  local_rtree.query(bgi::intersects(bbox), std::back_inserter(candidates));
 
   for (const auto & box_and_lanelet : candidates) {
     const bool is_in_lanelet =
@@ -658,14 +640,22 @@ bool ObjectLaneletFilterNode::isSameDirectionWithLanelets(
   return false;
 }
 
-bool ObjectLaneletFilterNode::isCentroidAboveLanelet(
-  const std::vector<BoxAndLanelet> & lanelets, const Eigen::Vector3d & centroid,
-  const double & dim_z)
+bool ObjectLaneletFilterNode::isObjectAboveLanelet(
+  const autoware_perception_msgs::msg::DetectedObject & object,
+  const std::vector<BoxAndLanelet> & lanelets)
 {
+  // assuming the positions are already the center of the cluster (convex hull)
+  // for an exact calculation of the cluster from the points,
+  // we should use autoware_utils::transform_point before computing the cluster
+  const double cx = object.kinematics.pose_with_covariance.pose.position.x;
+  const double cy = object.kinematics.pose_with_covariance.pose.position.y;
+  const double cz = object.kinematics.pose_with_covariance.pose.position.z;
+  // use the centroid as a query point
+  const Eigen::Vector3d centroid(cx, cy, cz);
+  const double half_dim_z = object.shape.dimensions.z * 0.5;
+
   lanelet::ConstLanelet nearest_lanelet;
   double closest_lanelet_z_dist = std::numeric_limits<double>::infinity();
-
-  const double cz = centroid.z();
 
   // search for the nearest lanelet along the z-axis in case roads are layered
   for (const auto & candidate_lanelet : lanelets) {
@@ -684,7 +674,8 @@ bool ObjectLaneletFilterNode::isCentroidAboveLanelet(
     }
   }
 
-  return isPointAboveLaneletMesh(centroid, nearest_lanelet, dim_z);
+  return isPointAboveLaneletMesh(centroid, nearest_lanelet, half_dim_z,
+    filter_settings_.min_elevation_threshold, filter_settings_.max_elevation_threshold);
 }
 
 }  // namespace lanelet_filter

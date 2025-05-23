@@ -92,16 +92,18 @@ private:
   double ego_base_height_ = 0.0;
   struct FilterSettings
   {
-    bool polygon_overlap_filter;
-    bool filter_object_under_lanelet;
+    bool lanelet_xy_overlap_filter;
+
     bool lanelet_direction_filter;
     double lanelet_direction_filter_velocity_yaw_threshold;
     double lanelet_direction_filter_object_speed_threshold;
-    bool debug;
+
+    bool lanelet_object_elevation_filter;
+    double max_elevation_threshold = std::numeric_limits<double>::infinity();
+    double min_elevation_threshold = -std::numeric_limits<double>::infinity();
+
     double lanelet_extra_margin;
-    bool use_height_threshold;
-    double max_height_threshold = std::numeric_limits<double>::infinity();
-    double min_height_threshold = -std::numeric_limits<double>::infinity();
+    bool debug;
   } filter_settings_;
 
   bool filterObject(
@@ -110,20 +112,20 @@ private:
     const bg::index::rtree<BoxAndLanelet, RtreeAlgo> & local_rtree,
     autoware_perception_msgs::msg::DetectedObjects & output_object_msg);
   LinearRing2d getConvexHull(const autoware_perception_msgs::msg::DetectedObjects &);
-  LinearRing2d getConvexHullFromObjectFootprint(
+  Polygon2d getConvexHullFromObjectFootprint(
     const autoware_perception_msgs::msg::DetectedObject & object);
   std::vector<BoxAndLanelet> getIntersectedLanelets(const LinearRing2d &);
   bool isObjectOverlapLanelets(
     const autoware_perception_msgs::msg::DetectedObject & object,
-    const bg::index::rtree<BoxAndLanelet, RtreeAlgo> & local_rtree);
+    const Polygon2d & polygon, const std::vector<BoxAndLanelet> & candidates);
   bool isPolygonOverlapLanelets(
-    const Polygon2d & polygon, const bgi::rtree<BoxAndLanelet, RtreeAlgo> & local_rtree);
+    const Polygon2d & polygon, const std::vector<BoxAndLanelet> & candidates);
   bool isSameDirectionWithLanelets(
     const autoware_perception_msgs::msg::DetectedObject & object,
-    const bgi::rtree<BoxAndLanelet, RtreeAlgo> & local_rtree);
-  bool isCentroidAboveLanelet(
-    const std::vector<BoxAndLanelet> & lanelets, const Eigen::Vector3d & centroid,
-    const double & dim_z);
+    const std::vector<BoxAndLanelet> & lanelets);
+  bool isObjectAboveLanelet(
+    const autoware_perception_msgs::msg::DetectedObject & object,
+    const std::vector<BoxAndLanelet> & lanelets);
   geometry_msgs::msg::Polygon setFootprint(const autoware_perception_msgs::msg::DetectedObject &);
 
   lanelet::BasicPolygon2d getPolygon(const lanelet::ConstLanelet & lanelet);

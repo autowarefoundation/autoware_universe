@@ -12,10 +12,8 @@
 
     filter_settings:
       # polygon overlap based filter
-      polygon_overlap_filter:
+      lanelet_xy_overlap_filter:
         enabled: true
-        # only applies on unknown objects
-        filter_object_under_lanelet: false
 
       # velocity direction based filter
       lanelet_direction_filter:
@@ -23,8 +21,11 @@
         velocity_yaw_threshold: 0.785398 # [rad] (45 deg)
         object_speed_threshold: 3.0 # [m/s]
 
-      debug: false
+      # object's elevation from lanelet based filter
+      lanelet_object_elevation_filter:
+        enabled: false
+        max_elevation_threshold: 5.0 # [m] from a lanelet's surface
+        min_elevation_threshold: 0.0 # [m] from a lanelet's surface
+
       lanelet_extra_margin: 0.0
-      use_height_threshold: false
-      max_height_threshold: 10.0 # [m] from the base_link height in map frame
-      min_height_threshold: -1.0 # [m] from the base_link height in map frame
+      debug: false
