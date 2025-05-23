@@ -32,8 +32,7 @@ using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
 using TrafficSignalArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
 using TrafficSignal = autoware_perception_msgs::msg::TrafficLightGroup;
 using TrafficElement = autoware_perception_msgs::msg::TrafficLightElement;
-using PredictedTrafficLightState =
-  autoware_perception_msgs::msg::PredictedTrafficLightState;
+using PredictedTrafficLightState = autoware_perception_msgs::msg::PredictedTrafficLightState;
 
 std::shared_ptr<autoware::test_utils::AutowareTestManager> generateTestManager()
 {
@@ -98,7 +97,8 @@ void generatePerceptionMsg(TrafficSignalArray & perception_msg)
         predictions.simultaneous_elements.push_back(elements);
       }
       predictions.reliability = 0.9;
-      predictions.information_source = PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION;
+      predictions.information_source =
+        PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION;
       traffic_light_groups.predictions.push_back(predictions);
     }
     perception_msg.traffic_light_groups.push_back(traffic_light_groups);
@@ -222,16 +222,18 @@ bool isCurrentStatusEqual(const TrafficSignalArray & input_msg, const TrafficSig
     }
 
     // check elements
-    if (isElementEqual(
-      input_traffic_light_group.elements, gt_traffic_light_group.elements) == false) {
-        return false;
+    if (
+      isElementEqual(input_traffic_light_group.elements, gt_traffic_light_group.elements) ==
+      false) {
+      return false;
     }
   }
   return true;
 }
 
 bool isPredictedStatusEqual(
-  const std::vector<PredictedTrafficLightState> & input_predicted_state, const std::vector<PredictedTrafficLightState> & gt_predicted_state)
+  const std::vector<PredictedTrafficLightState> & input_predicted_state,
+  const std::vector<PredictedTrafficLightState> & gt_predicted_state)
 {
   // check number of groups
   if (input_predicted_state.size() != gt_predicted_state.size()) {
@@ -248,9 +250,11 @@ bool isPredictedStatusEqual(
     }
 
     // check elements
-    if (isElementEqual(
-      input_traffic_light_group.simultaneous_elements, gt_traffic_light_group.simultaneous_elements) == false) {
-        return false;
+    if (
+      isElementEqual(
+        input_traffic_light_group.simultaneous_elements,
+        gt_traffic_light_group.simultaneous_elements) == false) {
+      return false;
     }
   }
   return true;
@@ -293,7 +297,10 @@ TEST(TrafficLightArbiterTest, testTrafficSignalOnlyPerceptionMsg)
   EXPECT_EQ(isCurrentStatusEqual(latest_msg, perception_msg), true);
   // check predicted state
   EXPECT_EQ(
-    isPredictedStatusEqual(latest_msg.traffic_light_groups.at(0).predictions, perception_msg.traffic_light_groups.at(0).predictions), true);
+    isPredictedStatusEqual(
+      latest_msg.traffic_light_groups.at(0).predictions,
+      perception_msg.traffic_light_groups.at(0).predictions),
+    true);
   rclcpp::shutdown();
 }
 
@@ -333,7 +340,10 @@ TEST(TrafficLightArbiterTest, testTrafficSignalOnlyExternalMsg)
   EXPECT_EQ(isCurrentStatusEqual(latest_msg, external_msg), true);
   // check predicted state
   EXPECT_EQ(
-    isPredictedStatusEqual(latest_msg.traffic_light_groups.at(0).predictions, external_msg.traffic_light_groups.at(0).predictions), true);
+    isPredictedStatusEqual(
+      latest_msg.traffic_light_groups.at(0).predictions,
+      external_msg.traffic_light_groups.at(0).predictions),
+    true);
   rclcpp::shutdown();
 }
 
@@ -390,6 +400,7 @@ TEST(TrafficLightArbiterTest, testTrafficSignalBothMsg)
     gt_predicted_state.push_back(prediction);
   }
   EXPECT_EQ(
-    isPredictedStatusEqual(latest_msg.traffic_light_groups.at(0).predictions, gt_predicted_state), true);
+    isPredictedStatusEqual(latest_msg.traffic_light_groups.at(0).predictions, gt_predicted_state),
+    true);
   rclcpp::shutdown();
 }
