@@ -2,6 +2,31 @@
 Changelog for package autoware_simple_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(radar): update radar pipeline (`#10580 <https://github.com/autowarefoundation/autoware_universe/issues/10580>`_)
+  * fix(tier4_perception_launch): update radar filter launch configuration for improved object handling
+  * fix(autoware_simple_object_merger): change QoS settings to best effort for input subscriptions
+  * fix(autoware_simple_object_merger): change publisher QoS to reliable for output objects
+  * fix(tier4_perception_launch): remove commented-out radar filter pipeline from launch configuration
+  * style(pre-commit): autofix
+  * fix(tier4_perception_launch): remove unnecessary radar filter dependencies from package.xml
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(autoware_simple_object_merger): created Schema file and updated ReadME file for parameters setting (`#9993 <https://github.com/autowarefoundation/autoware_universe/issues/9993>`_)
+  * feat(autoware_simple_object_merger): Created Schema file and updated ReadME file for parameters setting
+  * style(pre-commit): autofix
+  * Update README.md
+  updated readme file
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Ryohsuke Mitsudome <43976834+mitsudome-r@users.noreply.github.com>
+* Contributors: Taekjin LEE, TaikiYamada4, Vishal Chauhan
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

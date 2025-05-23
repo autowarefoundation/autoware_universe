@@ -2,6 +2,30 @@
 Changelog for package autoware_ground_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* fix(autoware_ground_segmentation): correct slope threshold global to local (`#10666 <https://github.com/autowarefoundation/autoware_universe/issues/10666>`_)
+  * fix(grid_ground_filter): correct slope threshold global to local
+  * Update perception/autoware_ground_segmentation/src/scan_ground_filter/grid_ground_filter.cpp
+  Co-authored-by: badai nguyen  <94814556+badai-nguyen@users.noreply.github.com>
+  * Update grid_ground_filter.cpp
+  * fix(grid_ground_filter): update slope threshold from global to local
+  ---------
+  Co-authored-by: badai nguyen <94814556+badai-nguyen@users.noreply.github.com>
+* chore: perception code owner update (`#10645 <https://github.com/autowarefoundation/autoware_universe/issues/10645>`_)
+  * chore: update maintainers in multiple perception packages
+  * Revert "chore: update maintainers in multiple perception packages"
+  This reverts commit f2838c33d6cd82bd032039e2a12b9cb8ba6eb584.
+  * chore: update maintainers in multiple perception packages
+  * chore: add Kok Seang Tan as maintainer in multiple perception packages
+  ---------
+* docs(autoware_ground_segmentation): move parameter table to respective README (`#10500 <https://github.com/autowarefoundation/autoware_universe/issues/10500>`_)
+* Contributors: Ryohsuke Mitsudome, Taekjin LEE, TaikiYamada4
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

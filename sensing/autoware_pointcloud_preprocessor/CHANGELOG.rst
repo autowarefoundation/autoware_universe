@@ -2,6 +2,40 @@
 Changelog for package autoware_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* fix(autoware_pointcloud_preprocessor): combine_cloud_handler always set XYZIRC (`#10617 <https://github.com/autowarefoundation/autoware_universe/issues/10617>`_)
+  always set XYZIRC
+* feat(ring_outlier_filter): update filtering parameter and process (`#10537 <https://github.com/autowarefoundation/autoware_universe/issues/10537>`_)
+* feat(autoware_pointcloud_preprocessor): templated version of the pointcloud concatenation (`#10298 <https://github.com/autowarefoundation/autoware_universe/issues/10298>`_)
+  * feat: refactored the concat into a templated design to allow cuda implementations and extend it to radars
+  * fix: moved the concat cpp for consistency and component loading
+  * chore: removed unused dep
+  * fix: missing virtual destructor
+  * fix: fixed missing dep
+  * chore: removed unused var
+  * chore: refactored the cloud handler
+  * chore: updated documentation
+  * fix: fixed rebase error
+  * chore: removed commented include
+  * chore: removed another rebase error induced print
+  * fix: and yet another rebase induced error
+  * chore: changed method name
+  * chore: removing key from dict for peace of mind
+  * chore: reimplemented latest changes in the base branch
+  * chore: missed dep
+  * chore: spell
+  * chore: removed explicit template instantiation since clang tidy reported it was being done implicitly and thus redundant
+  * chore: added documentation regarding why allocation is done right after publishing
+  * chore: replaced at for extract+mapped
+  * chore: moved format_timestamp into its own file
+  ---------
+* Contributors: Kento Yabuuchi, Kenzo Lobos Tsunekawa, Kotaro Uetake, TaikiYamada4
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

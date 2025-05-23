@@ -2,6 +2,18 @@
 Changelog for package autoware_traffic_light_category_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* chore: update traffic light packages code owner (`#10644 <https://github.com/autowarefoundation/autoware_universe/issues/10644>`_)
+  chore: add Taekjin Lee as maintainer to multiple perception packages
+* chore(autoware_traffic_light_category_merger): reduce dependency (`#10574 <https://github.com/autowarefoundation/autoware_universe/issues/10574>`_)
+  reduce dependency
+* Contributors: Masato Saeki, Taekjin LEE, TaikiYamada4
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 

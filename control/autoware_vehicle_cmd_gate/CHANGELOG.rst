@@ -2,6 +2,16 @@
 Changelog for package autoware_vehicle_cmd_gate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* chore(vehicle_cmd_gate): suppress frequent log (`#10630 <https://github.com/autowarefoundation/autoware_universe/issues/10630>`_)
+* fix(vehicle_cmd_gate): fix bug in limitLateralSteer (`#10532 <https://github.com/autowarefoundation/autoware_universe/issues/10532>`_)
+* Contributors: Ryuta Kambe, TaikiYamada4, Takayuki Murooka
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble
