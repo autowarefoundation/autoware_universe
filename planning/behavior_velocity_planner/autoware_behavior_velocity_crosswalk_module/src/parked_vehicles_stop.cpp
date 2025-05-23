@@ -35,6 +35,7 @@
 #include <lanelet2_core/utility/Utilities.h>
 
 #include <algorithm>
+#include <limits>
 #include <string>
 #include <utility>
 #include <vector>
@@ -172,25 +173,18 @@ calculate_furthest_parked_vehicle(
   std::optional<autoware_perception_msgs::msg::PredictedObject> furthest_vehicle;
   geometry_msgs::msg::Point furthest_point;
   double furthest_parked_object_arc_length = 0.0;
-  const auto check_point = [&](const auto & vehicle, const auto & p) {
-    const auto pt = geometry_msgs::msg::Point().set__x(p.x()).set__y(p.y());
-    const auto arc_length = motion_utils::calcSignedArcLength(ego_path, 0UL, pt);
-    if (arc_length > furthest_parked_object_arc_length) {
-      furthest_parked_object_arc_length = arc_length;
-      furthest_vehicle = vehicle;
-      furthest_point = pt;
-    }
-  };
   for (const auto & parked_vehicle : parked_vehicles) {
     const auto footprint = autoware_utils_geometry::to_polygon2d(parked_vehicle);
+    if (boost::geometry::disjoint(footprint, search_area)) {
+      continue;
+    }
     for (const auto & p : footprint.outer()) {
-      if (boost::geometry::within(p, search_area)) {
-        check_point(parked_vehicle, p);
-      }
-      lanelet::BasicPoints2d intersections;
-      boost::geometry::intersection(footprint, search_area, intersections);
-      for (const auto & intersection : intersections) {
-        check_point(parked_vehicle, intersection);
+      const auto pt = geometry_msgs::msg::Point().set__x(p.x()).set__y(p.y());
+      const auto arc_length = motion_utils::calcSignedArcLength(ego_path, 0UL, pt);
+      if (arc_length > furthest_parked_object_arc_length) {
+        furthest_parked_object_arc_length = arc_length;
+        furthest_vehicle = parked_vehicle;
+        furthest_point = pt;
       }
     }
   }
@@ -214,31 +208,37 @@ bool is_planning_to_stop_in_search_area(
 }
 
 std::optional<tier4_planning_msgs::msg::StopFactor> calculate_parked_vehicles_stop_factor(
-  const std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> & ego_path,
-  const geometry_msgs::msg::Pose & ego_pose,
-  const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
-  const std::optional<const geometry_msgs::msg::Pose> & parked_vehicle_stop_pose,
-  const geometry_msgs::msg::Point & vehicle_point, const std::optional<double> min_stop_distance)
+  const std::vector<std::optional<geometry_msgs::msg::Pose>> & candidate_stop_poses,
+  const std::optional<geometry_msgs::msg::Pose> & previous_stop_pose,
+  const std::optional<double> min_stop_distance,
+  const std::function<double(geometry_msgs::msg::Pose)> & calc_distance_fn)
 {
+  auto min_distance = std::numeric_limits<double>::max();
+  geometry_msgs::msg::Pose min_pose;
+  bool found = false;
+  const auto & update_min_pose = [&](const auto & pose) {
+    if (pose) {
+      const auto dist_to_pose = calc_distance_fn(*pose);
+      if (dist_to_pose < min_distance) {
+        min_distance = dist_to_pose;
+        min_pose = *pose;
+        found = true;
+      }
+    }
+  };
+  for (const auto & pose : candidate_stop_poses) {
+    update_min_pose(pose);
+  }
+  if (min_stop_distance) {
+    min_distance = std::max(*min_stop_distance, min_distance);
+  }
+  // previous stop pose is reused without caring about the minimum stop distance
+  update_min_pose(previous_stop_pose);
   std::optional<tier4_planning_msgs::msg::StopFactor> stop_factor;
-  if (parked_vehicle_stop_pose) {
-    const auto dist_to_parked_vehicle_stop_pose = motion_utils::calcSignedArcLength(
-      ego_path, ego_pose.position, parked_vehicle_stop_pose->position);
-    if (!min_stop_distance || dist_to_parked_vehicle_stop_pose >= *min_stop_distance) {
-      stop_factor.emplace();
-      stop_factor->stop_pose = *parked_vehicle_stop_pose;
-      stop_factor->stop_factor_points.push_back(vehicle_point);
-      stop_factor->dist_to_stop_pose = dist_to_parked_vehicle_stop_pose;
-    }
-  } else if (default_stop_pose) {
-    const auto dist_to_default_stop_pose =
-      motion_utils::calcSignedArcLength(ego_path, ego_pose.position, default_stop_pose->position);
-    if (!min_stop_distance || dist_to_default_stop_pose >= *min_stop_distance) {
-      stop_factor.emplace();
-      stop_factor->stop_pose = *default_stop_pose;
-      stop_factor->stop_factor_points.push_back(vehicle_point);
-      stop_factor->dist_to_stop_pose = dist_to_default_stop_pose;
-    }
+  if (found) {
+    stop_factor.emplace();
+    stop_factor->stop_pose = min_pose;
+    stop_factor->dist_to_stop_pose = min_distance;
   }
   return stop_factor;
 }

@@ -63,20 +63,17 @@ bool is_planning_to_stop_in_search_area(
   const std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> & path,
   const size_t ego_idx, const lanelet::BasicPolygon2d & search_area);
 
-/// @brief calculate the stop factor based on the stop poses found
-/// @param [in] ego_path ego path
-/// @param [in] ego_pose current ego pose
-/// @param [in] default_stop_pose default stop pose of the crosswalk module
-/// @param [in] parked_vehicle_stop_pose stop pose calculate for parked vehicles
-/// @param [in] vehicle_point point of the parked vehicle footprint that causes the stop
-/// @param [in] min_stop_distance minimum distance where we can comfortably stop
+/// @brief calculate the stop factor based on the candidate and previous stop poses
+/// @param [in] candidate_stop_poses candidate stop poses
+/// @param [in] previous_stop_pose previous stop pose calculate for parked vehicles
+/// @param [in] min_stop_distance [m] minimum distance where we can comfortably stop
+/// @param [in] calc_distance_fn function to calculate the distance of a pose
 /// @return calculated stop factor
 std::optional<tier4_planning_msgs::msg::StopFactor> calculate_parked_vehicles_stop_factor(
-  const std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> & ego_path,
-  const geometry_msgs::msg::Pose & ego_pose,
-  const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
-  const std::optional<const geometry_msgs::msg::Pose> & parked_vehicle_stop_pose,
-  const geometry_msgs::msg::Point & vehicle_point, const std::optional<double> min_stop_distance);
+  const std::vector<std::optional<geometry_msgs::msg::Pose>> & candidate_stop_poses,
+  const std::optional<geometry_msgs::msg::Pose> & previous_stop_pose,
+  const std::optional<double> min_stop_distance,
+  const std::function<double(geometry_msgs::msg::Pose)> & calc_distance_fn);
 
 /// @brief return the parked vehicles from a vector of predict object
 /// @param [in] objects predicted objects
