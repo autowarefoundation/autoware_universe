@@ -26,40 +26,42 @@ HazardLightsSelector::HazardLightsSelector(const rclcpp::NodeOptions & node_opti
   params_.update_rate = declare_parameter("update_rate", 10);
 
   // Subscriber
-  sub_hazard_lights_command_from_planning_ = this->create_subscription<autoware_vehicle_msgs::msg::HazardLightsCommand>(
-    "input/planning/hazard_lights_command", 1,
-    std::bind(&HazardLightsSelector::on_hazard_lights_command_from_planning, this, _1)
-  );
-  sub_hazard_lights_command_from_system_ = this->create_subscription<autoware_vehicle_msgs::msg::HazardLightsCommand>(
-    "input/system/hazard_lights_command", 1,
-    std::bind(&HazardLightsSelector::on_hazard_lights_command_from_system, this, _1)
-  );
+  sub_hazard_lights_command_from_planning_ =
+    this->create_subscription<autoware_vehicle_msgs::msg::HazardLightsCommand>(
+      "input/planning/hazard_lights_command", 1,
+      std::bind(&HazardLightsSelector::on_hazard_lights_command_from_planning, this, _1));
+  sub_hazard_lights_command_from_system_ =
+    this->create_subscription<autoware_vehicle_msgs::msg::HazardLightsCommand>(
+      "input/system/hazard_lights_command", 1,
+      std::bind(&HazardLightsSelector::on_hazard_lights_command_from_system, this, _1));
 
   // Publisher
-  pub_hazard_lights_command_ = this->create_publisher<autoware_vehicle_msgs::msg::HazardLightsCommand>(
-    "output/hazard_lights_command", 1
-  );
+  pub_hazard_lights_command_ =
+    this->create_publisher<autoware_vehicle_msgs::msg::HazardLightsCommand>(
+      "output/hazard_lights_command", 1);
 
   // Service
 
   // Client
 
   // Timer
-  timer_ = this->create_wall_timer(std::chrono::milliseconds(1000 / params_.update_rate),
+  timer_ = this->create_wall_timer(
+    std::chrono::milliseconds(1000 / params_.update_rate),
     std::bind(&HazardLightsSelector::on_timer, this));
 
   // State
 
   // Diagnostics
-
 }
 
-void HazardLightsSelector::on_hazard_lights_command_from_planning(const autoware_vehicle_msgs::msg::HazardLightsCommand::SharedPtr msg)
+void HazardLightsSelector::on_hazard_lights_command_from_planning(
+  const autoware_vehicle_msgs::msg::HazardLightsCommand::SharedPtr msg)
 {
   hazard_lights_command_from_planning_ = msg;
 }
 
-void HazardLightsSelector::on_hazard_lights_command_from_system(const autoware_vehicle_msgs::msg::HazardLightsCommand::SharedPtr msg)
+void HazardLightsSelector::on_hazard_lights_command_from_system(
+  const autoware_vehicle_msgs::msg::HazardLightsCommand::SharedPtr msg)
 {
   hazard_lights_command_from_system_ = msg;
 }
