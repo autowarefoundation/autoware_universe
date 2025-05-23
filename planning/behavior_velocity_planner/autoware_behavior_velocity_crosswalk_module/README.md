@@ -317,21 +317,22 @@ The feature is enabled with the `parked_vehicles_stop.enable` parameter.
 Moreover, the stop is only applied if we are not already planning to stop for crosswalk users or stuck vehicles.
 
 Other vehicles are determined to be stopped if their velocity is less or equal to the `parked_vehicles_stop.parked_velocity_threshold` parameter.
-To prevent chattering caused by noise in the detected velocities, once a parked vehicle causes a stop, an hysteresis `parked_vehicles_stop.parked_velocity_hysteresis` is added to the velocity threshold.
 
 A search area is built along the ego path ahead of the crosswalk by a distance set with the `parked_vehicles_stop.search_distance` parameter.
 
 A stop is planned such that ego will be aligned with the furthest parked vehicle along the ego path within the search area.
 Once ego stops inside the search area for at least the duration set by `parked_vehicles_stop.min_ego_stop_duration`, the stop is removed and no more stop for parked vehicles will be triggered for that crosswalk.
 
+To prevent chattering caused by noise in the detected objects, once an object is selected for stopping, its last state will keep being considered for at least a duration of `parked_vehicles_stop.vehicle_permanence_duration`, even if the object is no longer detected or if it is no longer parked.
+
 | Parameter                                          | Unit  | Type   | Description                                                                                                                   |
 | -------------------------------------------------- | ----- | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
 | `parked_vehicles_stop.enable`                      | [-]   | bool   | if true, ego will stop if there are parked vehicles before the crosswalk                                                      |
 | `parked_vehicles_stop.search_distance`             | [m]   | double | distance ahead of the crosswalk where to search for parked vehicles                                                           |
 | `parked_vehicles_stop.min_ego_stop_duration`       | [s]   | double | minimum duration ego should stop before it can continue                                                                       |
+| `parked_vehicles_stop.vehicle_permanence_duration` | [s]   | double | [s] if an object disappears or is no longer classified as parked vehicle, its last state is still used for this duration      |
 | `parked_vehicles_stop.ego_inside_safe_area_margin` | [m]   | double | margin used to consider if ego is inside the search area. Should be higher than the expected longitudinal error when stopping |
 | `parked_vehicles_stop.parked_velocity_threshold`   | [m/s] | double | vehicle are considered to be parked if their velocity is less or equal this threshold                                         |
-| `parked_vehicles_stop.parked_velocity_hysteresis`  | [m/s] | double | once a vehicle is detected to be parked, this value is added to the threshold                                                 |
 
 ### Others
 

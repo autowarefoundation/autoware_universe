@@ -27,6 +27,7 @@
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
+#include <autoware_utils_uuid/uuid_helper.hpp>
 #include <rclcpp/logging.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -1190,15 +1191,16 @@ std::optional<StopFactor> CrosswalkModule::checkStopForParkedVehicles(
     return std::nullopt;
   }
 
-  const std::vector<PredictedObject> parked_vehicles = filter_parked_vehicles(
+  const auto parked_vehicles = get_parked_vehicles(
     planner_data_->predicted_objects->objects,
-    planner_param_.parked_vehicles_stop_parked_velocity_threshold,
-    planner_param_.parked_vehicles_stop_parked_velocity_hysteresis,
-    parked_vehicles_stop_.previous_parked_vehicle_uuid, isVehicle);
+    planner_param_.parked_vehicles_stop_parked_velocity_threshold, isVehicle);
+  const auto targets = parked_vehicles_stop_.update_and_add_previous_target_vehicle(
+    parked_vehicles, clock_->now(),
+    planner_param_.parked_vehicles_stop_vehicle_permanence_duration);
+  const auto no_previous_target = !parked_vehicles_stop_.previous_target_vehicle.has_value();
 
   const auto [furthest_parked_vehicle, furthest_footprint_point] =
-    calculate_furthest_parked_vehicle(
-      ego_path.points, parked_vehicles, parked_vehicles_stop_.search_area);
+    calculate_furthest_parked_vehicle(ego_path.points, targets, parked_vehicles_stop_.search_area);
   if (!furthest_parked_vehicle) {
     parked_vehicles_stop_.reset();
     return std::nullopt;
@@ -1230,9 +1232,11 @@ std::optional<StopFactor> CrosswalkModule::checkStopForParkedVehicles(
     parked_vehicles_stop_.reset();
   } else {
     stop_factor->stop_factor_points.push_back(furthest_footprint_point);
-    parked_vehicles_stop_.previous_parked_vehicle_uuid =
-      to_hex_string(furthest_parked_vehicle->object_id);
     parked_vehicles_stop_.previous_stop_pose = stop_factor->stop_pose;
+    if (no_previous_target) {
+      parked_vehicles_stop_.previous_target_vehicle = *furthest_parked_vehicle;
+      parked_vehicles_stop_.previous_detection_time = clock_->now();
+    }
   }
   return stop_factor;
 }

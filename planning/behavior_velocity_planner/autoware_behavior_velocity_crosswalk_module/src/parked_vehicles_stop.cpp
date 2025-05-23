@@ -36,7 +36,6 @@
 
 #include <algorithm>
 #include <limits>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -246,24 +245,19 @@ std::optional<tier4_planning_msgs::msg::StopFactor> calculate_parked_vehicles_st
   return stop_factor;
 }
 
-std::vector<autoware_perception_msgs::msg::PredictedObject> filter_parked_vehicles(
+std::vector<autoware_perception_msgs::msg::PredictedObject> get_parked_vehicles(
   const std::vector<autoware_perception_msgs::msg::PredictedObject> & objects,
-  const double parked_velocity_threshold, const double parked_velocity_hysteresis,
-  const std::string & previous_parked_vehicle_uuid,
+  const double parked_velocity_threshold,
   const std::function<bool(autoware_perception_msgs::msg::PredictedObject)> & is_vehicle_fn)
 {
-  std::vector<autoware_perception_msgs::msg::PredictedObject> parked_vehicles;
+  std::vector<autoware_perception_msgs::msg::PredictedObject> vehicles;
   for (const auto & object : objects) {
-    const auto obj_uuid = autoware_utils::to_hex_string(object.object_id);
-    const auto velocity_threshold =
-      parked_velocity_threshold +
-      (previous_parked_vehicle_uuid == obj_uuid ? parked_velocity_hysteresis : 0.0);
     if (
       is_vehicle_fn(object) &&
-      object.kinematics.initial_twist_with_covariance.twist.linear.x <= velocity_threshold) {
-      parked_vehicles.push_back(object);
+      object.kinematics.initial_twist_with_covariance.twist.linear.x <= parked_velocity_threshold) {
+      vehicles.push_back(object);
     }
   }
-  return parked_vehicles;
+  return vehicles;
 }
 }  // namespace autoware::behavior_velocity_planner

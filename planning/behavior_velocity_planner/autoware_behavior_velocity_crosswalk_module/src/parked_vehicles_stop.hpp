@@ -75,18 +75,14 @@ std::optional<tier4_planning_msgs::msg::StopFactor> calculate_parked_vehicles_st
   const std::optional<double> min_stop_distance,
   const std::function<double(geometry_msgs::msg::Pose)> & calc_distance_fn);
 
-/// @brief return the parked vehicles from a vector of predict object
+/// @brief get the parked vehicles from the given objects
 /// @param [in] objects predicted objects
-/// @param [in] parked_velocity_threshold [m/s] velocity threshold to determine if a vehicle is
-/// parked
-/// @param [in] parked_velocity_hysteresis [m/s] velocity to add to the threshold of the previous
-/// object with the given uuid
-/// @param [in] previous_parked_vehicle_uuid uuid of the previous vehicle used for stopping
+/// @param [in] parked_velocity_threshold [m/s] velocity under which an object is considered parked
 /// @param [in] is_vehicle_fn function to determine if an object is a vehicle
-std::vector<autoware_perception_msgs::msg::PredictedObject> filter_parked_vehicles(
+/// @return objects that are parked vehicles
+std::vector<autoware_perception_msgs::msg::PredictedObject> get_parked_vehicles(
   const std::vector<autoware_perception_msgs::msg::PredictedObject> & objects,
-  const double parked_velocity_threshold, const double parked_velocity_hysteresis,
-  const std::string & previous_parked_vehicle_uuid,
+  const double parked_velocity_threshold,
   const std::function<bool(autoware_perception_msgs::msg::PredictedObject)> & is_vehicle_fn);
 }  // namespace autoware::behavior_velocity_planner
 
