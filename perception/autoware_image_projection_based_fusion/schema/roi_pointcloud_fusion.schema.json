@@ -11,6 +11,12 @@
           "description": "Whether to fuse only UNKNOWN clusters.",
           "default": true
         },
+        "override_class_with_unknown": {
+          "type": "boolean",
+          "description": "Whether to override class of output cluster with UNKNOWN. It is effective only when fuse_unknown_only is false.",
+          "default": false
+        },
+
         "min_cluster_size": {
           "type": "integer",
           "description": "The minimum number of points that a cluster must contain to be considered as valid.",
@@ -36,6 +42,7 @@
       },
       "required": [
         "fuse_unknown_only",
+        "override_class_with_unknown",
         "min_cluster_size",
         "cluster_2d_tolerance",
         "roi_scale_factor"
