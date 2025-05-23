@@ -17,6 +17,9 @@
 
 #include "autoware_utils/ros/published_time_publisher.hpp"
 
+#include <message_filters/subscriber.hpp>
+#include <message_filters/sync_policies/approximate_time.hpp>
+#include <message_filters/synchronizer.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/opencv.hpp>
@@ -25,9 +28,6 @@
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
 #include <nav_msgs/msg/occupancy_grid.hpp>
 
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <message_filters/synchronizer.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 

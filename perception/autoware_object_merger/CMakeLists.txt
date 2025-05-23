@@ -24,6 +24,9 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/object_association_merger_node.cpp
 )
 
+# Post Humble compatibility:
+target_compile_options(${PROJECT_NAME} PUBLIC -Wno-error=deprecated-declarations)
+
 target_link_libraries(${PROJECT_NAME}
   Eigen3::Eigen
 )
