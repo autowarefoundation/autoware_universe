@@ -18,11 +18,10 @@
 #include <autoware_utils_diagnostics/diagnostics_interface.hpp>
 #include <autoware_utils_logging/logger_level_configure.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <tier4_system_msgs/msg/service_log.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <autoware_internal_localization_msgs/srv/initialize_localization.hpp>
 #include <autoware_adapi_v1_msgs/msg/localization_initialization_state.hpp>
-
+#include <string>
 #include <memory>
 
 namespace autoware::pose_initializer
@@ -47,7 +46,6 @@ private:
   rclcpp::CallbackGroup::SharedPtr group_srv_;
   rclcpp::Publisher<PoseWithCovarianceStamped>::SharedPtr pub_reset_;
   rclcpp::Publisher<State>::SharedPtr pub_state_;
-  rclcpp::Publisher<tier4_system_msgs::msg::ServiceLog>::SharedPtr pub_logger_;
   rclcpp::Service<Initialize>::SharedPtr srv_initialize_;
   State state_;
   std::array<double, 36> output_pose_covariance_{};
