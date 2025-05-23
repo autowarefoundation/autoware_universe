@@ -33,7 +33,9 @@ public:
   VoxelGridBasedEuclideanCluster(bool use_height, int min_cluster_size, int max_cluster_size);
   VoxelGridBasedEuclideanCluster(
     bool use_height, int min_cluster_size, int max_cluster_size, float tolerance,
-    float voxel_leaf_size, int min_points_number_per_voxel);
+    float voxel_leaf_size, int min_points_number_per_voxel,
+    int min_voxel_cluster_size_for_filtering, int max_points_per_voxel_in_large_cluster,
+    int max_num_points_per_cluster);
   bool cluster(
     const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
     std::vector<pcl::PointCloud<pcl::PointXYZ>> & clusters) override;
@@ -52,15 +54,17 @@ public:
   }
 
 private:
-  pcl::VoxelGrid<pcl::PointXYZ> voxel_grid_;
-  float tolerance_;
-  float voxel_leaf_size_;
-  int min_points_number_per_voxel_;
-
   void publishDiagnosticsSummary(
     size_t skipped_cluster_count,
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pointcloud_msg);
   autoware_utils::DiagnosticsInterface * diagnostics_interface_ptr_{nullptr};
+  pcl::VoxelGrid<pcl::PointXYZ> voxel_grid_;
+  float tolerance_;
+  float voxel_leaf_size_;
+  int min_points_number_per_voxel_;
+  int min_voxel_cluster_size_for_filtering_;
+  int max_points_per_voxel_in_large_cluster_;
+  int max_num_points_per_cluster_;
 };
 
 }  // namespace autoware::euclidean_cluster
