@@ -24,10 +24,9 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
-#include <autoware_utils/geometry/boost_polygon_utils.hpp>
-#include <autoware_utils/math/normalization.hpp>
-#include <autoware_utils/math/unit_conversion.hpp>
-#include <autoware_utils/ros/msg_covariance.hpp>
+#include <autoware_utils_geometry/boost_polygon_utils.hpp>
+#include <autoware_utils_math/normalization.hpp>
+#include <autoware_utils_math/unit_conversion.hpp>
 
 #include <bits/stdc++.h>
 #include <tf2/utils.h>
@@ -51,7 +50,7 @@ VehicleTracker::VehicleTracker(
   // velocity deviation threshold
   //   if the predicted velocity is close to the observed velocity,
   //   the observed velocity is used as the measurement.
-  velocity_deviation_threshold_ = autoware_utils::kmph2mps(10);  // [m/s]
+  velocity_deviation_threshold_ = autoware_utils_math::kmph2mps(10);  // [m/s]
 
   if (object.shape.type != autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
     // set default initial size
@@ -93,7 +92,7 @@ VehicleTracker::VehicleTracker(
 
   // Set initial state
   {
-    using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+    using autoware_utils_geometry::xyzrpy_covariance_index::XYZRPY_COV_IDX;
     const double x = object.pose.position.x;
     const double y = object.pose.position.y;
     const double yaw = tf2::getYaw(object.pose.orientation);
@@ -289,7 +288,7 @@ bool VehicleTracker::getTrackedObject(
   const auto origin_yaw = tf2::getYaw(object_.pose.orientation);
   const auto ekf_pose_yaw = tf2::getYaw(pose.orientation);
   object.shape.footprint =
-    autoware_utils::rotate_polygon(object.shape.footprint, origin_yaw - ekf_pose_yaw);
+    autoware_utils_geometry::rotate_polygon(object.shape.footprint, origin_yaw - ekf_pose_yaw);
 
   return true;
 }
