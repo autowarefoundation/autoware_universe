@@ -423,7 +423,8 @@ private:
     const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area);
 
   std::optional<StopFactor> getNearestStopFactor(
-    const PathWithLaneId & ego_path, const std::vector<StopFactor> & stop_factors);
+    const PathWithLaneId & ego_path, const std::vector<StopFactor> & stop_factors,
+    const std::optional<StopFactor> & stop_factor_for_parked_vehicles);
 
   void setDistanceToStop(
     const PathWithLaneId & ego_path,
