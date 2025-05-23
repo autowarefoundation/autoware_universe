@@ -18,7 +18,6 @@
 #include "autoware_lanelet2_extension/utility/message_conversion.hpp"
 #include "autoware_lanelet2_extension/utility/query.hpp"
 #include "autoware_utils/geometry/geometry.hpp"
-#include "autoware_utils/system/time_keeper.hpp"
 
 #include <Eigen/Core>
 
@@ -43,7 +42,6 @@ namespace autoware::detected_object_validation
 {
 namespace lanelet_filter
 {
-using autoware_utils::ScopedTimeTrack;
 using TriangleMesh = std::vector<std::array<Eigen::Vector3d, 3>>;
 
 ObjectLaneletFilterNode::ObjectLaneletFilterNode(const rclcpp::NodeOptions & node_options)
