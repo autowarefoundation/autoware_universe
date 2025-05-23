@@ -23,7 +23,7 @@ HazardLightsSelector::HazardLightsSelector(const rclcpp::NodeOptions & node_opti
   using std::placeholders::_1;
 
   // Parameter
-  params_.update_rate = declare_parameter("update_rate", 10);
+  params_.update_rate = static_cast<int>(declare_parameter("update_rate", 10));
 
   // Subscriber
   sub_hazard_lights_command_from_planning_ =
