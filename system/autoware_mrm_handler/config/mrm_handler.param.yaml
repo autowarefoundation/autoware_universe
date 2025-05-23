@@ -15,3 +15,6 @@
     # setting whether to turn hazard lamp on for each situation
     turning_hazard_on:
       emergency: true
+
+    turning_indicator_on:
+      emergency: true
