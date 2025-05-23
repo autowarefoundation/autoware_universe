@@ -398,10 +398,10 @@ std::vector<PathWithLaneId> GeometricParallelParking::planOneTrial(
   const Point C_far_goal_coords = inverse_transform_point(C_far.position, arc_end_pose);
   const Point self_point_goal_coords = inverse_transform_point(start_pose.position, arc_end_pose);
 
-  const double alpha =
-    left_side_parking
-      ? M_PI_2 - psi + std::asin((self_point_goal_coords.y - C_far_goal_coords.y) / d_C_far_Einit)
-      : M_PI_2 + psi - std::asin((self_point_goal_coords.y - C_far_goal_coords.y) / d_C_far_Einit);
+  const double angle_offset =
+    std::asin((self_point_goal_coords.y - C_far_goal_coords.y) / d_C_far_Einit);
+  const double alpha = M_PI_2 + (left_side_parking ? 1.0 : -1.0) *
+                                  (is_forward ? psi + angle_offset : -psi + angle_offset);
 
   const double R_E_near = (std::pow(d_C_far_Einit, 2) - std::pow(R_E_far, 2)) /
                           (2 * (R_E_far + d_C_far_Einit * std::cos(alpha)));
