@@ -28,7 +28,6 @@
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>std_srvs</depend>
-  <depend>tier4_system_msgs</depend>
 
   <test_depend>ament_cmake_cppcheck</test_depend>
   <test_depend>ament_cmake_gmock</test_depend>

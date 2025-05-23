@@ -21,7 +21,6 @@
 #include "ndt_localization_trigger_module.hpp"
 #include "pose_error_check_module.hpp"
 #include "stop_check_module.hpp"
-#include <tier4_system_msgs/msg/service_log.hpp>
 #include <autoware_adapi_v1_msgs/msg/response_status.hpp>
 #include <memory>
 #include <sstream>
@@ -37,15 +36,14 @@ PoseInitializer::PoseInitializer(const rclcpp::NodeOptions & options)
   qos_state.reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
   qos_state.durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
   pub_state_ = create_publisher<autoware_adapi_v1_msgs::msg::LocalizationInitializationState>(
-                "localization/initialization_state",
+                "/localization/initialization_state",
                 qos_state);
   srv_initialize_ = create_service<autoware_internal_localization_msgs::srv::InitializeLocalization>(
-                    "localization/initialize",
+                    "/localization/initialize",
                     std::bind(&PoseInitializer::on_initialize, this, std::placeholders::_1, std::placeholders::_2),
                     rmw_qos_profile_services_default,
                     group_srv_);
   pub_reset_ = create_publisher<PoseWithCovarianceStamped>("pose_reset", 1);
-  pub_logger_ = create_publisher<tier4_system_msgs::msg::ServiceLog>("/service_log", 10);
 
   output_pose_covariance_ = get_covariance_parameter(this, "output_pose_covariance");
   gnss_particle_covariance_ = get_covariance_parameter(this, "gnss_particle_covariance");
@@ -158,23 +156,16 @@ void PoseInitializer::on_initialize(
   const Initialize::Request::SharedPtr req,
   const Initialize::Response::SharedPtr res)
 {
-  tier4_system_msgs::msg::ServiceLog service_log;
-  service_log.stamp = now();
-  service_log.type = tier4_system_msgs::msg::ServiceLog::SERVER_REQUEST;
-  service_log.name = service_name_;
-  service_log.node = service_node_;
-  service_log.yaml = to_yaml(*req);
-  pub_logger_->publish(service_log);
-
-  // NOTE: This function is not executed during initialization because mutually exclusive.
-  if (stop_check_ && !stop_check_->isVehicleStopped(stop_check_duration_)) {
-    autoware_adapi_v1_msgs::msg::ResponseStatus respose_status;
-    respose_status.success = false;
-    respose_status.code = Initialize::Response::ERROR_UNSAFE;
-    respose_status.message = "The vehicle is not stopped.";
-    throw respose_status;
-  }
   try {
+    // NOTE: This function is not executed during initialization because mutually exclusive.
+    if (stop_check_ && !stop_check_->isVehicleStopped(stop_check_duration_)) {
+      autoware_adapi_v1_msgs::msg::ResponseStatus respose_status;
+      respose_status.success = false;
+      respose_status.code = Initialize::Response::ERROR_UNSAFE;
+      respose_status.message = "The vehicle is not stopped.";
+      throw respose_status;
+    }
+
     if (req->method == Initialize::Request::AUTO) {
       change_state(State::INITIALIZING);
       change_node_trigger(false, false);
@@ -259,12 +250,6 @@ void PoseInitializer::on_initialize(
     res->status.message = error.message;
     change_state(State::UNINITIALIZED);
   }
-  service_log.stamp = now();
-  service_log.type = tier4_system_msgs::msg::ServiceLog::SERVER_RESPONSE;
-  service_log.name = service_name_;
-  service_log.node = service_node_;
-  service_log.yaml = to_yaml(*res);
-  pub_logger_->publish(service_log);
 }
 
 geometry_msgs::msg::PoseWithCovarianceStamped PoseInitializer::get_gnss_pose()
