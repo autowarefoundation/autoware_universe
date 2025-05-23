@@ -21,7 +21,7 @@
 #include "ndt_localization_trigger_module.hpp"
 #include "pose_error_check_module.hpp"
 #include "stop_check_module.hpp"
-
+#include <tier4_system_msgs/msg/service_log.hpp>
 #include <autoware_adapi_v1_msgs/msg/response_status.hpp>
 #include <memory>
 #include <sstream>
@@ -42,9 +42,10 @@ PoseInitializer::PoseInitializer(const rclcpp::NodeOptions & options)
   srv_initialize_ = create_service<autoware_internal_localization_msgs::srv::InitializeLocalization>(
                     "localization/initialize",
                     std::bind(&PoseInitializer::on_initialize, this, std::placeholders::_1, std::placeholders::_2),
-                    rclcpp::ServicesQoS().get_rmw_qos_profile(),
+                    rmw_qos_profile_services_default,
                     group_srv_);
   pub_reset_ = create_publisher<PoseWithCovarianceStamped>("pose_reset", 1);
+  pub_logger_ = create_publisher<tier4_system_msgs::msg::ServiceLog>("/service_log", 10);
 
   output_pose_covariance_ = get_covariance_parameter(this, "output_pose_covariance");
   gnss_particle_covariance_ = get_covariance_parameter(this, "gnss_particle_covariance");
@@ -157,6 +158,14 @@ void PoseInitializer::on_initialize(
   const Initialize::Request::SharedPtr req,
   const Initialize::Response::SharedPtr res)
 {
+  tier4_system_msgs::msg::ServiceLog service_log;
+  service_log.stamp = now();
+  service_log.type = tier4_system_msgs::msg::ServiceLog::SERVER_REQUEST;
+  service_log.name = service_name_;
+  service_log.node = service_node_;
+  service_log.yaml = to_yaml(*req);
+  pub_logger_->publish(service_log);
+
   // NOTE: This function is not executed during initialization because mutually exclusive.
   if (stop_check_ && !stop_check_->isVehicleStopped(stop_check_duration_)) {
     autoware_adapi_v1_msgs::msg::ResponseStatus respose_status;
@@ -250,6 +259,12 @@ void PoseInitializer::on_initialize(
     res->status.message = error.message;
     change_state(State::UNINITIALIZED);
   }
+  service_log.stamp = now();
+  service_log.type = tier4_system_msgs::msg::ServiceLog::SERVER_RESPONSE;
+  service_log.name = service_name_;
+  service_log.node = service_node_;
+  service_log.yaml = to_yaml(*res);
+  pub_logger_->publish(service_log);
 }
 
 geometry_msgs::msg::PoseWithCovarianceStamped PoseInitializer::get_gnss_pose()
