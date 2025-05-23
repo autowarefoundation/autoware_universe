@@ -84,7 +84,7 @@
         "recheck_ignore_distance": {
           "type": "number",
           "description": "The distance to ignore rechecking ground cluster [m]",
-          "default": 0.5,
+          "default": 20.0,
           "minimum": 0.0
         },
         "use_lowest_point": {
