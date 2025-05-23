@@ -15,11 +15,10 @@
 #ifndef POSE_INITIALIZER_CORE_HPP_
 #define POSE_INITIALIZER_CORE_HPP_
 
-#include <autoware/component_interface_specs_universe/localization.hpp>
 #include <autoware_utils_diagnostics/diagnostics_interface.hpp>
 #include <autoware_utils_logging/logger_level_configure.hpp>
 #include <rclcpp/rclcpp.hpp>
-
+#include <tier4_system_msgs/msg/service_log.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <autoware_internal_localization_msgs/srv/initialize_localization.hpp>
 #include <autoware_adapi_v1_msgs/msg/localization_initialization_state.hpp>
@@ -48,6 +47,7 @@ private:
   rclcpp::CallbackGroup::SharedPtr group_srv_;
   rclcpp::Publisher<PoseWithCovarianceStamped>::SharedPtr pub_reset_;
   rclcpp::Publisher<State>::SharedPtr pub_state_;
+  rclcpp::Publisher<tier4_system_msgs::msg::ServiceLog>::SharedPtr pub_logger_;
   rclcpp::Service<Initialize>::SharedPtr srv_initialize_;
   State state_;
   std::array<double, 36> output_pose_covariance_{};
@@ -71,6 +71,9 @@ private:
     const Initialize::Request::SharedPtr req,
     const Initialize::Response::SharedPtr res);
   PoseWithCovarianceStamped get_gnss_pose();
+
+  std::string service_name_ = "/localization/initialize";
+  std::string service_node_ = "/localization/util/pose_initializer";
 };
 }  // namespace autoware::pose_initializer
 
