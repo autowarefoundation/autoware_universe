@@ -14,8 +14,8 @@
 
 #include "localization_module.hpp"
 
-#include <autoware_internal_localization_msgs/srv/initialize_localization.hpp>
 #include <autoware_adapi_v1_msgs/msg/response_status.hpp>
+#include <autoware_internal_localization_msgs/srv/initialize_localization.hpp>
 
 #include <memory>
 #include <string>
