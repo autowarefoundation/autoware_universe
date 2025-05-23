@@ -63,7 +63,7 @@ Lanelet2MapFilterComponent::Lanelet2MapFilterComponent(const rclcpp::NodeOptions
   // Set parameter reconfigure
   {
     set_param_res_ = this->add_on_set_parameters_callback(
-      std::bind(&Lanelet2MapFilterComponent::paramCallback, this, _1));
+      std::bind(&Lanelet2MapFilterComponent::param_callback, this, _1));
   }
 
   // Set tf
@@ -72,7 +72,7 @@ Lanelet2MapFilterComponent::Lanelet2MapFilterComponent(const rclcpp::NodeOptions
   }
 }
 
-rcl_interfaces::msg::SetParametersResult Lanelet2MapFilterComponent::paramCallback(
+rcl_interfaces::msg::SetParametersResult Lanelet2MapFilterComponent::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   if (get_param(p, "voxel_size_x", voxel_size_x_)) {

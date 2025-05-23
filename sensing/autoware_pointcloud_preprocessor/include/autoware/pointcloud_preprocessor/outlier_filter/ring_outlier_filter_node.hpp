@@ -19,6 +19,7 @@
 #include "autoware/pointcloud_preprocessor/filter.hpp"
 #include "autoware/pointcloud_preprocessor/transform_info.hpp"
 
+#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <image_transport/image_transport.hpp>
 #include <point_cloud_msg_wrapper/point_cloud_msg_wrapper.hpp>
 
@@ -64,6 +65,7 @@ private:
   uint16_t max_rings_num_;
   size_t max_points_num_per_ring_;
   bool publish_outlier_pointcloud_;
+  double processing_time_threshold_;
 
   // for visibility score
   int noise_threshold_;
@@ -78,9 +80,9 @@ private:
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   /** \brief Parameter service callback */
-  rcl_interfaces::msg::SetParametersResult paramCallback(const std::vector<rclcpp::Parameter> & p);
+  rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> & p);
 
-  bool isCluster(const PointCloud2ConstPtr & input, std::pair<int, int> data_idx_both_ends)
+  bool is_cluster(const PointCloud2ConstPtr & input, std::pair<int, int> data_idx_both_ends) const
   {
     auto first_point =
       reinterpret_cast<const InputPointType *>(&input->data[data_idx_both_ends.first]);
@@ -94,9 +96,9 @@ private:
     return x * x + y * y + z * z >= object_length_threshold_ * object_length_threshold_;
   }
 
-  void setUpPointCloudFormat(
+  void set_up_pointcloud_format(
     const PointCloud2ConstPtr & input, PointCloud2 & formatted_points, size_t points_size);
-  float calculateVisibilityScore(const PointCloud2 & input);
+  float calculate_visibility_score(const PointCloud2 & input) const;
 
 public:
   PCL_MAKE_ALIGNED_OPERATOR_NEW

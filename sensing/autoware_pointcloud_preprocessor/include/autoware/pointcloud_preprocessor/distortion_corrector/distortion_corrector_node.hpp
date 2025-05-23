@@ -18,6 +18,7 @@
 #include "autoware/pointcloud_preprocessor/distortion_corrector/distortion_corrector.hpp"
 
 #include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -53,14 +54,20 @@ private:
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
 
+  // Parameters
   std::string base_frame_;
   bool use_imu_;
   bool use_3d_distortion_correction_;
   bool update_azimuth_and_distance_;
+  double processing_time_threshold_;
+  double mismatch_fraction_threshold_;
 
   std::optional<AngleConversion> angle_conversion_opt_;
 
   std::unique_ptr<DistortionCorrectorBase> distortion_corrector_;
+
+  // Diagnostic
+  std::unique_ptr<autoware_utils_diagnostics::DiagnosticsInterface> diagnostics_interface_;
 
   void pointcloud_callback(PointCloud2::UniquePtr pointcloud_msg);
 };
