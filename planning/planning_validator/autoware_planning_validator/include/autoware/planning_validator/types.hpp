@@ -20,6 +20,7 @@
 #include "autoware_planning_validator/msg/planning_validator_status.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/route_handler/route_handler.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
@@ -33,6 +34,7 @@
 
 namespace autoware::planning_validator
 {
+using autoware::route_handler::RouteHandler;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_planning_validator::msg::PlanningValidatorStatus;
@@ -134,6 +136,7 @@ struct PlanningValidatorContext
   std::shared_ptr<Updater> diag_updater = nullptr;
   std::shared_ptr<PlanningValidatorData> data = nullptr;
   std::shared_ptr<PlanningValidatorStatus> validation_status = nullptr;
+  std::shared_ptr<RouteHandler> route_handler = nullptr;
 
   void set_diag_id(const std::string & id)
   {

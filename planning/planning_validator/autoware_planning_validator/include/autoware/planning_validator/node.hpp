@@ -30,10 +30,13 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
+#include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
+#include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <memory>
 #include <string>
@@ -41,6 +44,8 @@
 namespace autoware::planning_validator
 {
 using autoware_internal_debug_msgs::msg::Float64Stamped;
+using autoware_map_msgs::msg::LaneletMapBin;
+using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_planning_validator::msg::PlanningValidatorStatus;
@@ -49,6 +54,7 @@ using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
+using sensor_msgs::msg::PointCloud2;
 
 class PlanningValidatorNode : public rclcpp::Node
 {
@@ -68,12 +74,23 @@ private:
   void publishDebugInfo();
   void displayStatus();
 
+  // subscriber
+  autoware_utils::InterProcessPollingSubscriber<
+    LaneletRoute, autoware_utils::polling_policy::Newest>
+    route_subscriber_{this, "~/input/route", rclcpp::QoS{1}.transient_local()};
+  autoware_utils::InterProcessPollingSubscriber<
+    LaneletMapBin, autoware_utils::polling_policy::Newest>
+    vector_map_subscriber_{this, "~/input/vector_map", rclcpp::QoS{1}.transient_local()};
+  autoware_utils::InterProcessPollingSubscriber<PointCloud2> sub_point_cloud_{
+    this, "~/input/pointcloud", autoware_utils::single_depth_sensor_qos()};
   autoware_utils::InterProcessPollingSubscriber<Odometry> sub_kinematics_{
     this, "~/input/kinematics"};
   autoware_utils::InterProcessPollingSubscriber<AccelWithCovarianceStamped> sub_acceleration_{
     this, "~/input/acceleration"};
   autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_trajectory_{
     this, "~/input/trajectory"};
+
+  // publisher
   rclcpp::Publisher<Trajectory>::SharedPtr pub_traj_;
   rclcpp::Publisher<PlanningValidatorStatus>::SharedPtr pub_status_;
   rclcpp::Publisher<Float64Stamped>::SharedPtr pub_processing_time_ms_;
@@ -86,6 +103,9 @@ private:
   bool is_critical_error_ = false;
 
   bool isAllValid(const PlanningValidatorStatus & status) const;
+
+  LaneletMapBin::ConstSharedPtr map_ptr_{nullptr};
+  LaneletRoute::ConstSharedPtr route_ptr_{nullptr};
 
   Trajectory::ConstSharedPtr soft_stop_trajectory_;
 

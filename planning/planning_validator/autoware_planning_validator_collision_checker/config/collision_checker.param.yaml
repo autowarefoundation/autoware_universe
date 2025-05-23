@@ -1,0 +1,16 @@
+/**:
+  ros__parameters:
+    collision_checker:
+      enable: true
+      detection_range: 50.0 # [m]
+      ttc_threshold: 1.0 # [s]
+
+      right_turn:
+        enable: true
+        check_oncoming_lanes: true
+        check_crossing_lanes: true
+
+      left_turn:
+        enable: true
+        check_oncoming_lanes: true
+        check_crossing_lanes: true

@@ -1,0 +1,3 @@
+<library path="autoware_planning_validator_collision_checker">
+  <class type="autoware::planning_validator::CollisionChecker" base_class_type="autoware::planning_validator::PluginInterface"/>
+</library>
