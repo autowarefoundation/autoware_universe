@@ -21,7 +21,9 @@
 #include "ndt_localization_trigger_module.hpp"
 #include "pose_error_check_module.hpp"
 #include "stop_check_module.hpp"
+
 #include <autoware_adapi_v1_msgs/msg/response_status.hpp>
+
 #include <memory>
 #include <sstream>
 #include <vector>
@@ -36,13 +38,13 @@ PoseInitializer::PoseInitializer(const rclcpp::NodeOptions & options)
   qos_state.reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
   qos_state.durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
   pub_state_ = create_publisher<autoware_adapi_v1_msgs::msg::LocalizationInitializationState>(
-                "/localization/initialization_state",
-                qos_state);
-  srv_initialize_ = create_service<autoware_internal_localization_msgs::srv::InitializeLocalization>(
-                    "/localization/initialize",
-                    std::bind(&PoseInitializer::on_initialize, this, std::placeholders::_1, std::placeholders::_2),
-                    rmw_qos_profile_services_default,
-                    group_srv_);
+    "/localization/initialization_state", qos_state);
+  srv_initialize_ =
+    create_service<autoware_internal_localization_msgs::srv::InitializeLocalization>(
+      "/localization/initialize",
+      std::bind(
+        &PoseInitializer::on_initialize, this, std::placeholders::_1, std::placeholders::_2),
+      rmw_qos_profile_services_default, group_srv_);
   pub_reset_ = create_publisher<PoseWithCovarianceStamped>("pose_reset", 1);
 
   output_pose_covariance_ = get_covariance_parameter(this, "output_pose_covariance");
@@ -153,8 +155,7 @@ void PoseInitializer::set_user_defined_initial_pose(
 }
 
 void PoseInitializer::on_initialize(
-  const Initialize::Request::SharedPtr req,
-  const Initialize::Response::SharedPtr res)
+  const Initialize::Request::SharedPtr req, const Initialize::Response::SharedPtr res)
 {
   try {
     // NOTE: This function is not executed during initialization because mutually exclusive.

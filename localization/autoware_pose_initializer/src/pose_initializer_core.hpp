@@ -18,11 +18,13 @@
 #include <autoware_utils_diagnostics/diagnostics_interface.hpp>
 #include <autoware_utils_logging/logger_level_configure.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
-#include <autoware_internal_localization_msgs/srv/initialize_localization.hpp>
+
 #include <autoware_adapi_v1_msgs/msg/localization_initialization_state.hpp>
-#include <string>
+#include <autoware_internal_localization_msgs/srv/initialize_localization.hpp>
+#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+
 #include <memory>
+#include <string>
 
 namespace autoware::pose_initializer
 {
@@ -66,8 +68,7 @@ private:
     const geometry_msgs::msg::Pose initial_pose, bool need_spin = false);
   void change_state(State::_state_type state);
   void on_initialize(
-    const Initialize::Request::SharedPtr req,
-    const Initialize::Response::SharedPtr res);
+    const Initialize::Request::SharedPtr req, const Initialize::Response::SharedPtr res);
   PoseWithCovarianceStamped get_gnss_pose();
 
   std::string service_name_ = "/localization/initialize";
