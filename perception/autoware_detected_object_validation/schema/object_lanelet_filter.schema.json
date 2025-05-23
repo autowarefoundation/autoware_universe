@@ -102,7 +102,7 @@
                 "enabled": {
                   "type": "boolean",
                   "default": false,
-                  "description": "If true, unknown objects under the lanelet will be filtered."
+                  "description": "If true, the objects not within the elevation range relative to the lanelet surface will be filtered."
                 },
                 "max_elevation_threshold": {
                   "type": "number",
