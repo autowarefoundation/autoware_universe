@@ -173,19 +173,22 @@ calculate_furthest_parked_vehicle(
   std::optional<autoware_perception_msgs::msg::PredictedObject> furthest_vehicle;
   geometry_msgs::msg::Point furthest_point;
   double furthest_parked_object_arc_length = 0.0;
+  const auto & update_search = [&](const auto & p, const auto & v) {
+    const auto pt = geometry_msgs::msg::Point().set__x(p.x()).set__y(p.y());
+    const auto arc_length = motion_utils::calcSignedArcLength(ego_path, 0UL, pt);
+    if (arc_length > furthest_parked_object_arc_length) {
+      furthest_parked_object_arc_length = arc_length;
+      furthest_vehicle = v;
+      furthest_point = pt;
+    }
+  };
   for (const auto & parked_vehicle : parked_vehicles) {
     const auto footprint = autoware_utils_geometry::to_polygon2d(parked_vehicle);
     if (boost::geometry::disjoint(footprint, search_area)) {
       continue;
     }
     for (const auto & p : footprint.outer()) {
-      const auto pt = geometry_msgs::msg::Point().set__x(p.x()).set__y(p.y());
-      const auto arc_length = motion_utils::calcSignedArcLength(ego_path, 0UL, pt);
-      if (arc_length > furthest_parked_object_arc_length) {
-        furthest_parked_object_arc_length = arc_length;
-        furthest_vehicle = parked_vehicle;
-        furthest_point = pt;
-      }
+      update_search(p, parked_vehicle);
     }
   }
   return std::make_pair(furthest_vehicle, furthest_point);
