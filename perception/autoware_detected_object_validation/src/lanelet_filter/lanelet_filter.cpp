@@ -643,7 +643,7 @@ bool ObjectLaneletFilterNode::isObjectAboveLanelet(
   const std::vector<BoxAndLanelet> & lanelets)
 {
   // assuming the positions are already the center of the cluster (convex hull)
-  // for an exact calculation of the cluster from the points,
+  // for an exact calculation of the center from the points,
   // we should use autoware_utils::transform_point before computing the cluster
   const double cx = object.kinematics.pose_with_covariance.pose.position.x;
   const double cy = object.kinematics.pose_with_covariance.pose.position.y;
