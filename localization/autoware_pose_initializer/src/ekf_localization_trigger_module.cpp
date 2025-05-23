@@ -15,7 +15,6 @@
 #include "ekf_localization_trigger_module.hpp"
 
 #include <autoware/component_interface_specs_universe/localization.hpp>
-// #include <autoware/component_interface_utils/rclcpp/exceptions.hpp>
 #include <autoware_adapi_v1_msgs/msg/response_status.hpp>
 
 #include <memory>
@@ -23,7 +22,6 @@
 
 namespace autoware::pose_initializer
 {
-// using ServiceException = autoware::component_interface_utils::ServiceException;
 using Initialize = autoware::component_interface_specs_universe::localization::Initialize;
 
 EkfLocalizationTriggerModule::EkfLocalizationTriggerModule(rclcpp::Node * node) : node_(node)
@@ -51,8 +49,6 @@ void EkfLocalizationTriggerModule::send_request(bool flag, bool need_spin) const
   }
 
   if (!client_ekf_trigger_->service_is_ready()) {
-    // throw autoware::component_interface_utils::ServiceUnready(
-    //   "EKF triggering service is not ready");
     autoware_adapi_v1_msgs::msg::ResponseStatus respose_status;
     respose_status.success = false;
     respose_status.code = autoware_adapi_v1_msgs::msg::ResponseStatus::SERVICE_UNREADY;
@@ -70,8 +66,6 @@ void EkfLocalizationTriggerModule::send_request(bool flag, bool need_spin) const
     RCLCPP_INFO(node_->get_logger(), "EKF %s succeeded", command_name.c_str());
   } else {
     RCLCPP_INFO(node_->get_logger(), "EKF %s failed", command_name.c_str());
-    // throw ServiceException(
-    //   Initialize::Service::Response::ERROR_ESTIMATION, "EKF " + command_name + " failed");
     autoware_adapi_v1_msgs::msg::ResponseStatus respose_status;
     respose_status.success = false;
     respose_status.code = Initialize::Service::Response::ERROR_ESTIMATION;
