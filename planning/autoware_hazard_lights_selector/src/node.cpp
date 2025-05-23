@@ -40,18 +40,10 @@ HazardLightsSelector::HazardLightsSelector(const rclcpp::NodeOptions & node_opti
     this->create_publisher<autoware_vehicle_msgs::msg::HazardLightsCommand>(
       "output/hazard_lights_command", 1);
 
-  // Service
-
-  // Client
-
   // Timer
   timer_ = this->create_wall_timer(
     std::chrono::milliseconds(1000 / params_.update_rate),
     std::bind(&HazardLightsSelector::on_timer, this));
-
-  // State
-
-  // Diagnostics
 }
 
 void HazardLightsSelector::on_hazard_lights_command_from_planning(

@@ -52,10 +52,6 @@ private:
   rclcpp::Publisher<autoware_vehicle_msgs::msg::HazardLightsCommand>::SharedPtr
     pub_hazard_lights_command_;
 
-  // Service
-
-  // Client
-
   // Timer
   rclcpp::TimerBase::SharedPtr timer_;
 
@@ -66,8 +62,6 @@ private:
     hazard_lights_command_from_planning_;
   autoware_vehicle_msgs::msg::HazardLightsCommand::ConstSharedPtr
     hazard_lights_command_from_system_;
-
-  // Diagnostics
 };
 }  // namespace autoware::hazard_lights_selector
 
