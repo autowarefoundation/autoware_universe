@@ -1143,14 +1143,14 @@ std::optional<StopFactor> CrosswalkModule::checkStopForParkedVehicles(
   const PathWithLaneId & ego_path, const geometry_msgs::msg::Point & first_path_point_on_crosswalk)
 {
   if (!planner_param_.parked_vehicles_stop_enable) {
-    parked_vehicles_stop_.previous_parked_vehicle_uuid.clear();
+    parked_vehicles_stop_.reset();
     return std::nullopt;
   }
   const auto & ego_pose = planner_data_->current_odometry->pose;
   const auto ego_idx = motion_utils::findNearestIndex(ego_path.points, ego_pose);
   if (!ego_idx) {
     RCLCPP_WARN(logger_, "[applyStopForParkedVehicles] could not find nearest index on the path");
-    parked_vehicles_stop_.previous_parked_vehicle_uuid.clear();
+    parked_vehicles_stop_.reset();
     return std::nullopt;
   }
   if (parked_vehicles_stop_.search_area.empty()) {  // only computed once
@@ -1162,14 +1162,13 @@ std::optional<StopFactor> CrosswalkModule::checkStopForParkedVehicles(
     parked_vehicles_stop_.search_area = search_area;
   }
   debug_data_.parked_vehicles_stop_search_area = parked_vehicles_stop_.search_area;
-  debug_data_.parked_vehicles_stop_already_stopped =
-    parked_vehicles_stop_.already_stopped_within_search_area;
-  const auto skip_condition = parked_vehicles_stop_.already_stopped_within_search_area ||
+  debug_data_.parked_vehicles_stop_already_stopped = parked_vehicles_stop_.already_stopped;
+  const auto skip_condition = parked_vehicles_stop_.already_stopped ||
                               parked_vehicles_stop_.search_area.empty() ||
                               is_planning_to_stop_in_search_area(
                                 ego_path.points, *ego_idx, parked_vehicles_stop_.search_area);
   if (skip_condition) {
-    parked_vehicles_stop_.previous_parked_vehicle_uuid.clear();
+    parked_vehicles_stop_.reset();
     return std::nullopt;
   }
 
@@ -1180,11 +1179,16 @@ std::optional<StopFactor> CrosswalkModule::checkStopForParkedVehicles(
   const auto ego_within_search_area =
     boost::geometry::distance(ego_footprint, parked_vehicles_stop_.search_area) <
     planner_param_.parked_vehicles_stop_parked_ego_inside_safe_area_margin;
-  if (
-    ego_within_search_area &&
-    planner_data_->isVehicleStopped(planner_param_.parked_vehicles_stop_min_ego_stop_duration)) {
-    parked_vehicles_stop_.already_stopped_within_search_area = true;
-    parked_vehicles_stop_.previous_parked_vehicle_uuid.clear();
+  const auto ego_close_to_previous_stop_pose =
+    parked_vehicles_stop_.previous_stop_pose &&
+    autoware_utils_geometry::calc_distance2d(*parked_vehicles_stop_.previous_stop_pose, ego_pose) <=
+      planner_param_.parked_vehicles_stop_parked_ego_inside_safe_area_margin;
+  const auto already_stopped_condition =
+    (ego_within_search_area || ego_close_to_previous_stop_pose) &&
+    planner_data_->isVehicleStopped(planner_param_.parked_vehicles_stop_min_ego_stop_duration);
+  if (already_stopped_condition) {
+    parked_vehicles_stop_.already_stopped = true;
+    parked_vehicles_stop_.reset();
     return std::nullopt;
   }
 
@@ -1198,7 +1202,7 @@ std::optional<StopFactor> CrosswalkModule::checkStopForParkedVehicles(
     calculate_furthest_parked_vehicle(
       ego_path.points, parked_vehicles, parked_vehicles_stop_.search_area);
   if (!furthest_parked_vehicle) {
-    parked_vehicles_stop_.previous_parked_vehicle_uuid.clear();
+    parked_vehicles_stop_.reset();
     return std::nullopt;
   }
   setObjectsOfInterestData(
@@ -1214,19 +1218,23 @@ std::optional<StopFactor> CrosswalkModule::checkStopForParkedVehicles(
   const auto parked_vehicle_stop_pose = calcLongitudinalOffsetPose(
     ego_path.points, furthest_footprint_point,
     -planner_data_->vehicle_info_.max_longitudinal_offset_m);
-  const auto stop_factor = calculate_parked_vehicles_stop_factor(
-    ego_path.points, ego_pose, default_stop_pose, parked_vehicle_stop_pose,
-    furthest_footprint_point, min_stop_distance);
+  auto stop_factor = calculate_parked_vehicles_stop_factor(
+    {default_stop_pose, parked_vehicle_stop_pose}, parked_vehicles_stop_.previous_stop_pose,
+    min_stop_distance, [&](const auto & p) {
+      return calcSignedArcLength(ego_path.points, ego_pose.position, p.position);
+    });
   if (!stop_factor) {
     RCLCPP_WARN_THROTTLE(
       logger_, *clock_, 1000UL,
       "[%lu][ParkedVehicleStop] could not stop without breaking the jerk and deceleration "
       "constraints",
       module_id_);
-    parked_vehicles_stop_.previous_parked_vehicle_uuid.clear();
+    parked_vehicles_stop_.reset();
   } else {
+    stop_factor->stop_factor_points.push_back(furthest_footprint_point);
     parked_vehicles_stop_.previous_parked_vehicle_uuid =
       to_hex_string(furthest_parked_vehicle->object_id);
+    parked_vehicles_stop_.previous_stop_pose = stop_factor->stop_pose;
   }
   return stop_factor;
 }

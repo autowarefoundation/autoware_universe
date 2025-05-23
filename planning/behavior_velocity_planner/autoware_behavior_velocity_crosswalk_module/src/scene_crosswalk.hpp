@@ -526,8 +526,15 @@ private:
   struct
   {
     lanelet::BasicPolygon2d search_area;
-    bool already_stopped_within_search_area = false;
+    bool already_stopped = false;
     std::string previous_parked_vehicle_uuid;
+    std::optional<geometry_msgs::msg::Pose> previous_stop_pose;
+
+    void reset()
+    {
+      previous_parked_vehicle_uuid.clear();
+      previous_stop_pose.reset();
+    }
   } parked_vehicles_stop_;
 };
 }  // namespace autoware::behavior_velocity_planner
