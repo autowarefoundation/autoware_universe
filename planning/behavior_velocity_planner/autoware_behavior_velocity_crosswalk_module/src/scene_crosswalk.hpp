@@ -22,9 +22,11 @@
 #include <autoware_lanelet2_extension/regulatory_elements/crosswalk.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils_uuid/uuid_helper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
+#include <autoware_perception_msgs/msg/detail/predicted_object__struct.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
@@ -188,7 +190,7 @@ public:
     double parked_vehicles_stop_min_ego_stop_duration;
     double parked_vehicles_stop_parked_ego_inside_safe_area_margin;
     double parked_vehicles_stop_parked_velocity_threshold;
-    double parked_vehicles_stop_parked_velocity_hysteresis;
+    double parked_vehicles_stop_vehicle_permanence_duration;
   };
 
   struct ObjectInfo
@@ -528,13 +530,45 @@ private:
   {
     lanelet::BasicPolygon2d search_area;
     bool already_stopped = false;
-    std::string previous_parked_vehicle_uuid;
+    std::optional<autoware_perception_msgs::msg::PredictedObject> previous_target_vehicle;
+    rclcpp::Time previous_detection_time;
     std::optional<geometry_msgs::msg::Pose> previous_stop_pose;
 
     void reset()
     {
-      previous_parked_vehicle_uuid.clear();
+      previous_target_vehicle.reset();
       previous_stop_pose.reset();
+    }
+
+    std::vector<autoware_perception_msgs::msg::PredictedObject>
+    update_and_add_previous_target_vehicle(
+      const std::vector<autoware_perception_msgs::msg::PredictedObject> & detected_objects,
+      const rclcpp::Time & current_time, const double permanence_duration)
+    {
+      if (
+        !previous_target_vehicle ||
+        (current_time - previous_detection_time).seconds() > permanence_duration) {
+        previous_target_vehicle.reset();
+        return detected_objects;
+      }
+      std::vector<autoware_perception_msgs::msg::PredictedObject>
+        detected_objects_with_previous_target;
+      detected_objects_with_previous_target.reserve(detected_objects.size() + 1);
+      bool found = false;
+      const auto previous_uuid =
+        autoware_utils_uuid::to_hex_string(previous_target_vehicle->object_id);
+      for (const auto & object : detected_objects) {
+        const auto uuid = autoware_utils_uuid::to_hex_string(object.object_id);
+        if (uuid == previous_uuid) {
+          previous_detection_time = current_time;
+          found = true;
+        }
+        detected_objects_with_previous_target.push_back(object);
+      }
+      if (!found) {
+        detected_objects_with_previous_target.push_back(*previous_target_vehicle);
+      }
+      return detected_objects_with_previous_target;
     }
   } parked_vehicles_stop_;
 };
