@@ -15,7 +15,6 @@
 #include "localization_module.hpp"
 
 #include <autoware/component_interface_specs_universe/localization.hpp>
-// #include <autoware/component_interface_utils/rclcpp/exceptions.hpp>
 #include <autoware_adapi_v1_msgs/msg/response_status.hpp>
 
 #include <memory>
@@ -41,7 +40,6 @@ std::tuple<PoseWithCovarianceStamped, bool> LocalizationModule::align_pose(
   req->pose_with_covariance = pose;
 
   if (!cli_align_->service_is_ready()) {
-    // throw autoware::component_interface_utils::ServiceUnready("align server is not ready.");
     autoware_adapi_v1_msgs::msg::ResponseStatus respose_status;
     respose_status.success = false;
     respose_status.code = autoware_adapi_v1_msgs::msg::ResponseStatus::SERVICE_UNREADY;
@@ -52,7 +50,6 @@ std::tuple<PoseWithCovarianceStamped, bool> LocalizationModule::align_pose(
   RCLCPP_INFO(logger_, "Call align server.");
   const auto res = cli_align_->async_send_request(req).get();
   if (!res->success) {
-    // throw ServiceException(Initialize::Service::Response::ERROR_ESTIMATION, "align server failed.");
     autoware_adapi_v1_msgs::msg::ResponseStatus respose_status;
     respose_status.success = false;
     respose_status.code = Initialize::Service::Response::ERROR_ESTIMATION;

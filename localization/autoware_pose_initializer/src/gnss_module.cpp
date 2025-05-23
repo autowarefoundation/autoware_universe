@@ -15,7 +15,6 @@
 #include "gnss_module.hpp"
 
 #include <autoware/component_interface_specs_universe/localization.hpp>
-// #include <autoware/component_interface_utils/rclcpp/exceptions.hpp>
 #include <autoware_adapi_v1_msgs/msg/response_status.hpp>
 
 #include <memory>
@@ -41,8 +40,6 @@ geometry_msgs::msg::PoseWithCovarianceStamped GnssModule::get_pose()
   using Initialize = autoware::component_interface_specs_universe::localization::Initialize;
 
   if (!pose_) {
-    // throw autoware::component_interface_utils::ServiceException(
-    //   Initialize::Service::Response::ERROR_GNSS, "The GNSS pose has not arrived.");
     autoware_adapi_v1_msgs::msg::ResponseStatus respose_status;
     respose_status.success = false;
     respose_status.code = Initialize::Service::Response::ERROR_GNSS;
@@ -52,8 +49,6 @@ geometry_msgs::msg::PoseWithCovarianceStamped GnssModule::get_pose()
 
   const auto elapsed = rclcpp::Time(pose_->header.stamp) - clock_->now();
   if (timeout_ < elapsed.seconds()) {
-    // throw autoware::component_interface_utils::ServiceException(
-    //   Initialize::Service::Response::ERROR_GNSS, "The GNSS pose is out of date.");
     autoware_adapi_v1_msgs::msg::ResponseStatus respose_status;
     respose_status.success = false;
     respose_status.code = Initialize::Service::Response::ERROR_GNSS;
