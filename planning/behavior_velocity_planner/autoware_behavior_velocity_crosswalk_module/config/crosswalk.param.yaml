@@ -15,7 +15,7 @@
         stop_distance_from_crosswalk: 3.5 # [m] make stop line away from crosswalk
         # For the case where the stop position is determined according to the object position.
         stop_distance_from_object_preferred: 3.0 # [m]
-        stop_distance_from_object_limit: 3.0 # [m]
+        stop_distance_from_crosswalk_limit: 3.0 # [m]
         min_acc_preferred: -1.0 # min acceleration [m/ss]
         min_jerk_preferred: -1.0 # min jerk [m/sss]
 
@@ -48,10 +48,10 @@
 
         consider_obj_on_crosswalk_on_red_light: true # consider and do not ignore objects if they are on the crosswalk when the crosswalk pedestrian traffic light is red
 
-        no_stop_decision: # parameters to determine stop cancel. {-$overrun_threshold_length + f($min_acc, $min_jerk)} is compared against distance to stop pose.
+        no_stop_decision: # parameters to determine stop cancel. the distance f($min_acc, $min_jerk) is compared against min(distance to stop pose, 0.1).
+          enable_no_stop_decision: true
           min_acc: -1.5 # min acceleration [m/ss]
           min_jerk: -1.5 # min jerk [m/sss]
-          overrun_threshold_length: 1.0 # [m] required to avoid giving up against backward movement of the stop position due to approaching pedestrians, etc.
 
         stop_object_velocity_threshold: 0.25 # [m/s] velocity threshold for the module to judge whether the objects is stopped (0.28 m/s = 1.0 kmph)
         min_object_velocity: 1.39 # [m/s] minimum object velocity (compare the estimated velocity by perception module with this parameter and adopt the larger one to calculate TTV. 1.39 m/s = 5.0 kmph)
