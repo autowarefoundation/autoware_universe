@@ -32,6 +32,8 @@ using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
 using TrafficSignalArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
 using TrafficSignal = autoware_perception_msgs::msg::TrafficLightGroup;
 using TrafficElement = autoware_perception_msgs::msg::TrafficLightElement;
+using PredictedTrafficLightState =
+  autoware_perception_msgs::msg::PredictedTrafficLightState;
 
 std::shared_ptr<autoware::test_utils::AutowareTestManager> generateTestManager()
 {
@@ -60,6 +62,7 @@ void generateMap(LaneletMapBin & vector_map_msg)
 
 void generatePerceptionMsg(TrafficSignalArray & perception_msg)
 {
+  perception_msg.stamp.sec = 10000;
   // traffic_light_group_id 1: 1012
   {
     TrafficSignal traffic_light_groups;
@@ -82,12 +85,29 @@ void generatePerceptionMsg(TrafficSignalArray & perception_msg)
       elements.confidence = 0.8;
       traffic_light_groups.elements.push_back(elements);
     }
+    // predicted state
+    {
+      PredictedTrafficLightState predictions;
+      predictions.predicted_stamp.sec = 10010;
+      {
+        TrafficElement elements;
+        elements.color = TrafficElement::RED;
+        elements.shape = TrafficElement::CIRCLE;
+        elements.status = TrafficElement::SOLID_ON;
+        elements.confidence = 0.9;
+        predictions.simultaneous_elements.push_back(elements);
+      }
+      predictions.reliability = 0.9;
+      predictions.information_source = PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION;
+      traffic_light_groups.predictions.push_back(predictions);
+    }
     perception_msg.traffic_light_groups.push_back(traffic_light_groups);
   }
 }
 
 void generateExternalMsg(TrafficSignalArray & external_msg)
 {
+  external_msg.stamp.sec = 10000;
   // traffic_light_group_id 1: 1012
   {
     TrafficSignal traffic_light_groups;
@@ -110,11 +130,80 @@ void generateExternalMsg(TrafficSignalArray & external_msg)
       elements.confidence = 0.5;
       traffic_light_groups.elements.push_back(elements);
     }
+    // predicted state
+    {
+      PredictedTrafficLightState predictions;
+      predictions.predicted_stamp.sec = 10010;
+      {
+        TrafficElement elements;
+        elements.color = TrafficElement::GREEN;
+        elements.shape = TrafficElement::CIRCLE;
+        elements.status = TrafficElement::SOLID_ON;
+        elements.confidence = 1.0;
+        predictions.simultaneous_elements.push_back(elements);
+      }
+      predictions.reliability = 1.0;
+      predictions.information_source = PredictedTrafficLightState::INFORMATION_SOURCE_V2I;
+      traffic_light_groups.predictions.push_back(predictions);
+    }
+    {
+      PredictedTrafficLightState predictions;
+      predictions.predicted_stamp.sec = 10030;
+      {
+        TrafficElement elements;
+        elements.color = TrafficElement::RED;
+        elements.shape = TrafficElement::CIRCLE;
+        elements.status = TrafficElement::SOLID_ON;
+        elements.confidence = 1.0;
+        predictions.simultaneous_elements.push_back(elements);
+      }
+      predictions.reliability = 1.0;
+      predictions.information_source = PredictedTrafficLightState::INFORMATION_SOURCE_V2I;
+      traffic_light_groups.predictions.push_back(predictions);
+    }
     external_msg.traffic_light_groups.push_back(traffic_light_groups);
   }
 }
 
-bool isMsgEqual(const TrafficSignalArray & input_msg, const TrafficSignalArray & gt_msg)
+bool isElementEqual(
+  const std::vector<TrafficElement> & input_element, const std::vector<TrafficElement> & gt_element)
+{
+  // check number of elements
+  if (input_element.size() != gt_element.size()) {
+    return false;
+  }
+
+  for (std::size_t element_idx = 0; element_idx < input_element.size(); ++element_idx) {
+    const auto & input_traffic_light_element = input_element.at(element_idx);
+    const auto & gt_traffic_light_element = gt_element.at(element_idx);
+
+    // check color
+    if (input_traffic_light_element.color != gt_traffic_light_element.color) {
+      return false;
+    }
+
+    // check shape
+    if (input_traffic_light_element.shape != gt_traffic_light_element.shape) {
+      return false;
+    }
+
+    // check status
+    if (input_traffic_light_element.status != gt_traffic_light_element.status) {
+      return false;
+    }
+
+    // check confidence
+    constexpr float error = std::numeric_limits<float>::epsilon();
+    if (
+      std::fabs(input_traffic_light_element.confidence - gt_traffic_light_element.confidence) >
+      error) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool isCurrentStatusEqual(const TrafficSignalArray & input_msg, const TrafficSignalArray & gt_msg)
 {
   // check number of groups
   if (input_msg.traffic_light_groups.size() != gt_msg.traffic_light_groups.size()) {
@@ -132,40 +221,36 @@ bool isMsgEqual(const TrafficSignalArray & input_msg, const TrafficSignalArray &
       return false;
     }
 
-    // check number of elements
-    if (input_traffic_light_group.elements.size() != gt_traffic_light_group.elements.size()) {
-      std::cout << input_traffic_light_group.elements.size() << std::endl;
-      std::cout << gt_traffic_light_group.elements.size() << std::endl;
+    // check elements
+    if (isElementEqual(
+      input_traffic_light_group.elements, gt_traffic_light_group.elements) == false) {
+        return false;
+    }
+  }
+  return true;
+}
+
+bool isPredictedStatusEqual(
+  const std::vector<PredictedTrafficLightState> & input_predicted_state, const std::vector<PredictedTrafficLightState> & gt_predicted_state)
+{
+  // check number of groups
+  if (input_predicted_state.size() != gt_predicted_state.size()) {
+    return false;
+  }
+
+  for (std::size_t group_idx = 0; group_idx < input_predicted_state.size(); ++group_idx) {
+    const auto & input_traffic_light_group = input_predicted_state.at(group_idx);
+    const auto & gt_traffic_light_group = gt_predicted_state.at(group_idx);
+
+    // check predicted_stamp
+    if (input_traffic_light_group.predicted_stamp != gt_traffic_light_group.predicted_stamp) {
       return false;
     }
 
-    for (std::size_t element_idx = 0; element_idx < input_traffic_light_group.elements.size();
-         ++element_idx) {
-      const auto & input_traffic_light_element = input_traffic_light_group.elements.at(element_idx);
-      const auto & gt_traffic_light_element = gt_traffic_light_group.elements.at(element_idx);
-
-      // check color
-      if (input_traffic_light_element.color != gt_traffic_light_element.color) {
+    // check elements
+    if (isElementEqual(
+      input_traffic_light_group.simultaneous_elements, gt_traffic_light_group.simultaneous_elements) == false) {
         return false;
-      }
-
-      // check shape
-      if (input_traffic_light_element.shape != gt_traffic_light_element.shape) {
-        return false;
-      }
-
-      // check status
-      if (input_traffic_light_element.status != gt_traffic_light_element.status) {
-        return false;
-      }
-
-      // check confidence
-      constexpr float error = std::numeric_limits<float>::epsilon();
-      if (
-        std::fabs(input_traffic_light_element.confidence - gt_traffic_light_element.confidence) >
-        error) {
-        return false;
-      }
     }
   }
   return true;
@@ -197,14 +282,18 @@ TEST(TrafficLightArbiterTest, testTrafficSignalOnlyPerceptionMsg)
   test_manager->set_subscriber<TrafficSignalArray>(output_topic, callback);
 
   // stamp preparation
-  perception_msg.stamp = test_target_node->now();
+  // perception_msg.stamp = test_target_node->now();
 
   test_manager->test_pub_msg<LaneletMapBin>(
     test_target_node, input_map_topic, vector_map_msg, rclcpp::QoS(1).transient_local());
   test_manager->test_pub_msg<TrafficSignalArray>(
     test_target_node, input_perception_topic, perception_msg);
 
-  EXPECT_EQ(isMsgEqual(latest_msg, perception_msg), true);
+  // check current state
+  EXPECT_EQ(isCurrentStatusEqual(latest_msg, perception_msg), true);
+  // check predicted state
+  EXPECT_EQ(
+    isPredictedStatusEqual(latest_msg.traffic_light_groups.at(0).predictions, perception_msg.traffic_light_groups.at(0).predictions), true);
   rclcpp::shutdown();
 }
 
@@ -233,14 +322,18 @@ TEST(TrafficLightArbiterTest, testTrafficSignalOnlyExternalMsg)
   test_manager->set_subscriber<TrafficSignalArray>(output_topic, callback);
 
   // stamp preparation
-  external_msg.stamp = test_target_node->now();
+  // external_msg.stamp = test_target_node->now();
 
   test_manager->test_pub_msg<LaneletMapBin>(
     test_target_node, input_map_topic, vector_map_msg, rclcpp::QoS(1).transient_local());
   test_manager->test_pub_msg<TrafficSignalArray>(
     test_target_node, input_external_topic, external_msg);
 
-  EXPECT_EQ(isMsgEqual(latest_msg, external_msg), true);
+  // check current state
+  EXPECT_EQ(isCurrentStatusEqual(latest_msg, external_msg), true);
+  // check predicted state
+  EXPECT_EQ(
+    isPredictedStatusEqual(latest_msg.traffic_light_groups.at(0).predictions, external_msg.traffic_light_groups.at(0).predictions), true);
   rclcpp::shutdown();
 }
 
@@ -275,8 +368,8 @@ TEST(TrafficLightArbiterTest, testTrafficSignalBothMsg)
   test_manager->set_subscriber<TrafficSignalArray>(output_topic, callback);
 
   // stamp preparation
-  external_msg.stamp = test_target_node->now();
-  perception_msg.stamp = test_target_node->now();
+  // external_msg.stamp = test_target_node->now();
+  // perception_msg.stamp = test_target_node->now();
 
   test_manager->test_pub_msg<LaneletMapBin>(
     test_target_node, input_map_topic, vector_map_msg, rclcpp::QoS(1).transient_local());
@@ -285,7 +378,18 @@ TEST(TrafficLightArbiterTest, testTrafficSignalBothMsg)
   test_manager->test_pub_msg<TrafficSignalArray>(
     test_target_node, input_perception_topic, perception_msg);
 
+  // check current state
   // latest_msg should be equal to perception_msg because it has higher confidence than external_msg
-  EXPECT_EQ(isMsgEqual(latest_msg, perception_msg), true);
+  EXPECT_EQ(isCurrentStatusEqual(latest_msg, perception_msg), true);
+  // check predicted state
+  std::vector<PredictedTrafficLightState> gt_predicted_state;
+  for (const auto & prediction : external_msg.traffic_light_groups.at(0).predictions) {
+    gt_predicted_state.push_back(prediction);
+  }
+  for (const auto & prediction : perception_msg.traffic_light_groups.at(0).predictions) {
+    gt_predicted_state.push_back(prediction);
+  }
+  EXPECT_EQ(
+    isPredictedStatusEqual(latest_msg.traffic_light_groups.at(0).predictions, gt_predicted_state), true);
   rclcpp::shutdown();
 }

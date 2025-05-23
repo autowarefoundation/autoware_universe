@@ -152,7 +152,7 @@ void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Tim
 {
   using ElementAndPriority = std::pair<Element, bool>;
   std::unordered_map<lanelet::Id, std::vector<ElementAndPriority>> regulatory_element_signals_map;
-  std::unordered_map<lanelet::Id, PredictedTrafficLightState> predicted_state_map;
+  std::unordered_map<lanelet::Id, std::vector<PredictedTrafficLightState>> predicted_state_map;
   for (const auto & signal : latest_external_msg_.traffic_light_groups) {
     predicted_state_map[signal.traffic_light_group_id] = signal.predictions;
   }
