@@ -76,12 +76,10 @@ ObjectLaneletFilterNode::ObjectLaneletFilterNode(const rclcpp::NodeOptions & nod
 
   filter_settings_.lanelet_object_elevation_filter =
     declare_parameter<bool>("filter_settings.lanelet_object_elevation_filter.enabled");
-  filter_settings_.max_elevation_threshold =
-    declare_parameter<double>(
-      "filter_settings.lanelet_object_elevation_filter.max_elevation_threshold");
-  filter_settings_.min_elevation_threshold =
-    declare_parameter<double>(
-      "filter_settings.lanelet_object_elevation_filter.min_elevation_threshold");
+  filter_settings_.max_elevation_threshold = declare_parameter<double>(
+    "filter_settings.lanelet_object_elevation_filter.max_elevation_threshold");
+  filter_settings_.min_elevation_threshold = declare_parameter<double>(
+    "filter_settings.lanelet_object_elevation_filter.min_elevation_threshold");
 
   filter_settings_.lanelet_extra_margin =
     declare_parameter<double>("filter_settings.lanelet_extra_margin");
@@ -305,9 +303,12 @@ bool isPointAboveLaneletMesh(
   }
 
   // if at least one point is within the range, we consider it to be in the range
-  if ((min_distance <= top_min_dist && top_min_dist <= max_distance) ||
-      (min_distance <= bottom_min_dist && bottom_min_dist <= max_distance)) return true;
-  else return false;
+  if (
+    (min_distance <= top_min_dist && top_min_dist <= max_distance) ||
+    (min_distance <= bottom_min_dist && bottom_min_dist <= max_distance))
+    return true;
+  else
+    return false;
 }
 
 void ObjectLaneletFilterNode::mapCallback(
@@ -398,8 +399,8 @@ bool ObjectLaneletFilterNode::filterObject(
     if (utils::hasBoundingBox(transformed_object)) {
       const auto footprint = setFootprint(transformed_object);
       for (const auto & point : footprint.points) {
-        const geometry_msgs::msg::Point32 point_transformed =
-          autoware_utils::transform_point(point, transformed_object.kinematics.pose_with_covariance.pose);
+        const geometry_msgs::msg::Point32 point_transformed = autoware_utils::transform_point(
+          point, transformed_object.kinematics.pose_with_covariance.pose);
         object_polygon.outer().emplace_back(point_transformed.x, point_transformed.y);
       }
       object_polygon.outer().push_back(object_polygon.outer().front());
@@ -417,8 +418,7 @@ bool ObjectLaneletFilterNode::filterObject(
     bool filter_pass = true;
     // 1. is polygon overlap with road lanelets or shoulder lanelets
     if (filter_settings_.lanelet_xy_overlap_filter) {
-      filter_pass = isObjectOverlapLanelets(transformed_object, object_polygon,
-        candidates);
+      filter_pass = isObjectOverlapLanelets(transformed_object, object_polygon, candidates);
     }
 
     // 2. check if objects velocity is the same with the lanelet direction
@@ -430,7 +430,7 @@ bool ObjectLaneletFilterNode::filterObject(
     }
 
     // 3. check if the object is above the lanelets
-    if (filter_settings_.lanelet_object_elevation_filter && filter_pass){
+    if (filter_settings_.lanelet_object_elevation_filter && filter_pass) {
       filter_pass = isObjectAboveLanelet(transformed_object, candidates);
     }
 
@@ -569,8 +569,8 @@ lanelet::BasicPolygon2d ObjectLaneletFilterNode::getPolygon(const lanelet::Const
 }
 
 bool ObjectLaneletFilterNode::isObjectOverlapLanelets(
-  const autoware_perception_msgs::msg::DetectedObject & object,
-  const Polygon2d & polygon, const std::vector<BoxAndLanelet> & candidates)
+  const autoware_perception_msgs::msg::DetectedObject & object, const Polygon2d & polygon,
+  const std::vector<BoxAndLanelet> & candidates)
 {
   // if object has bounding box, use polygon overlap
   if (utils::hasBoundingBox(object)) {
@@ -582,7 +582,7 @@ bool ObjectLaneletFilterNode::isObjectOverlapLanelets(
 
       for (const auto & candidate : candidates) {
         if (isInPolygon(point_transformed.x, point_transformed.y, candidate.second.polygon, 0.0)) {
-            return true;
+          return true;
         }
       }
     }
@@ -674,8 +674,9 @@ bool ObjectLaneletFilterNode::isObjectAboveLanelet(
     }
   }
 
-  return isPointAboveLaneletMesh(centroid, nearest_lanelet, half_dim_z,
-    filter_settings_.min_elevation_threshold, filter_settings_.max_elevation_threshold);
+  return isPointAboveLaneletMesh(
+    centroid, nearest_lanelet, half_dim_z, filter_settings_.min_elevation_threshold,
+    filter_settings_.max_elevation_threshold);
 }
 
 }  // namespace lanelet_filter
