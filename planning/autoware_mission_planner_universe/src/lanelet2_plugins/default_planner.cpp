@@ -214,9 +214,17 @@ bool DefaultPlanner::check_goal_footprint_inside_lanes(
   }
 
   // check if goal footprint is in the ego lane
-  autoware_utils::MultiPolygon2d difference;
-  boost::geometry::difference(goal_footprint, ego_lanes, difference);
-  return boost::geometry::is_empty(difference);
+  autoware_utils::MultiPolygon2d goal_footprint_outside_lanes = {goal_footprint};
+  for (const auto & ego_lane : ego_lanes) {
+    autoware_utils::MultiPolygon2d difference;
+    boost::geometry::difference(goal_footprint_outside_lanes, ego_lane, difference);
+    if (boost::geometry::is_empty(difference)) {
+      return true;
+    }
+    goal_footprint_outside_lanes = difference;
+  }
+
+  return false;
 }
 
 bool DefaultPlanner::is_goal_valid(
