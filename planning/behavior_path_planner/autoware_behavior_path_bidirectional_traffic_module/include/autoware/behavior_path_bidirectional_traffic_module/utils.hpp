@@ -44,6 +44,8 @@ lanelet::ConstLanelets get_outflow_lanelets(
   const lanelet::ConstLanelets & lanelets,
   const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> & get_next_lanelets);
 
+size_t uuid_to_key(const std::array<uint8_t, 16> & uuid);
+
 struct ConstLaneletsHash
 {
   size_t operator()(const lanelet::ConstLanelets & lanelets) const;

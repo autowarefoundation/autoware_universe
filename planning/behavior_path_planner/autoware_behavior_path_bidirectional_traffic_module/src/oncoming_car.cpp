@@ -15,6 +15,7 @@
 #include "autoware/behavior_path_bidirectional_traffic_module/oncoming_car.hpp"
 
 #include "autoware/behavior_path_bidirectional_traffic_module/bidirectional_lanelets.hpp"
+#include "autoware/behavior_path_bidirectional_traffic_module/utils.hpp"
 #include "autoware/trajectory/utils/closest.hpp"
 
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
@@ -23,7 +24,6 @@
 #include <fmt/core.h>
 
 #include <algorithm>
-#include <array>
 #include <utility>
 #include <vector>
 
@@ -48,15 +48,6 @@ autoware_perception_msgs::msg::PredictedObjects extract_car_objects(
   return car_objects;
 }
 
-size_t get_key(const std::array<unsigned char, 16> & uuid)
-{
-  return std::accumulate(
-    uuid.begin(), uuid.end(), static_cast<std::size_t>(0),
-    [](std::size_t seed, unsigned char byte) {
-      return seed ^ (static_cast<std::size_t>(byte) + 0x9e3779b9 + (seed << 6U) + (seed >> 2U));
-    });
-}
-
 OncomingCars::OncomingCars(
   ConnectedBidirectionalLanelets::SharedConstPtr bidirectional_lanelets,
   const double & time_to_include_in_oncoming_car,
@@ -67,10 +58,31 @@ OncomingCars::OncomingCars(
 {
 }
 
+const unique_identifier_msgs::msg::UUID & CarObject::get_uuid() const
+{
+  return uuid_;
+}
+
+const geometry_msgs::msg::Pose & CarObject::get_pose() const
+{
+  return pose_;
+}
+
+const double & CarObject::get_speed() const
+{
+  return speed_;
+}
+
+void CarObject::update(const geometry_msgs::msg::Pose & pose, const double & speed)
+{
+  pose_ = pose;
+  speed_ = speed;
+}
+
 std::optional<CarObject> find(const std::vector<CarObject> & oncoming_cars, const size_t & key)
 {
   auto it = std::find_if(oncoming_cars.begin(), oncoming_cars.end(), [key](const CarObject & car) {
-    return get_key(car.get_uuid().uuid) == key;
+    return uuid_to_key(car.get_uuid().uuid) == key;
   });
 
   if (it != oncoming_cars.end()) {
@@ -85,7 +97,7 @@ std::optional<autoware_perception_msgs::msg::PredictedObject> find(
 {
   auto it = std::find_if(
     car_objects.objects.begin(), car_objects.objects.end(),
-    [key](const auto & object) { return get_key(object.object_id.uuid) == key; });
+    [key](const auto & object) { return uuid_to_key(object.object_id.uuid) == key; });
 
   if (it != car_objects.objects.end()) {
     return *it;
@@ -111,7 +123,7 @@ void erase(std::vector<CarObject> * oncoming_cars, const size_t & key)
     std::remove_if(
       oncoming_cars->begin(), oncoming_cars->end(),
       [&key](const CarObject & oncoming_car) {
-        return get_key(oncoming_car.get_uuid().uuid) == key;
+        return uuid_to_key(oncoming_car.get_uuid().uuid) == key;
       }),
     oncoming_cars->end());
 }
@@ -155,7 +167,7 @@ void OncomingCars::update(
   std::vector<size_t> keys_to_erase;
 
   for (const auto & object : current_car_objects.objects) {
-    size_t object_key = get_key(object.object_id.uuid);
+    size_t object_key = uuid_to_key(object.object_id.uuid);
     bool running_opposite_lane =
       bidirectional_lanelets_->get_opposite()->is_object_on_this_lane(object);
     bool find_in_candidates = find(oncoming_cars_candidates_, object_key).has_value();
@@ -207,7 +219,7 @@ void OncomingCars::update(
   keys_to_erase.clear();
 
   for (auto & oncoming_car : oncoming_cars_) {
-    auto car_object = find(current_car_objects, get_key(oncoming_car.get_uuid().uuid));
+    auto car_object = find(current_car_objects, uuid_to_key(oncoming_car.get_uuid().uuid));
 
     bool should_remove_from_oncoming_car =
       !car_object.has_value() ||
@@ -216,9 +228,9 @@ void OncomingCars::update(
       (distance_on_lane(ego_pose, oncoming_car.get_pose(), bidirectional_lanelets_) < 0.0);
 
     if (should_remove_from_oncoming_car) {
-      // erase(&oncoming_cars_, oncoming_car);
-      keys_to_erase.emplace_back(get_key(oncoming_car.get_uuid().uuid));
-      logger_(fmt::format("Removed oncoming car: {:03X}", get_key(oncoming_car.get_uuid().uuid)));
+      keys_to_erase.emplace_back(uuid_to_key(oncoming_car.get_uuid().uuid));
+      logger_(
+        fmt::format("Removed oncoming car: {:03X}", uuid_to_key(oncoming_car.get_uuid().uuid)));
     } else {
       oncoming_car.update(
         car_object.value().kinematics.initial_pose_with_covariance.pose,
