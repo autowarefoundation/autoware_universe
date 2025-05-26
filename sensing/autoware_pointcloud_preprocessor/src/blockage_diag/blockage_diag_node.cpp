@@ -57,13 +57,12 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     blockage_kernel_ = declare_parameter<int>("blockage_kernel");
     blockage_buffering_frames_ = declare_parameter<int>("blockage_buffering_frames");
     blockage_buffering_interval_ = declare_parameter<int>("blockage_buffering_interval");
-
+    
     // Debug configuration
     publish_debug_image_ = declare_parameter<bool>("publish_debug_image");
 
     // Depth map configuration
-    // The maximum distance range of the LiDAR, in meters. The depth map is normalized to this
-    // value.
+    // The maximum distance range of the LiDAR, in meters. The depth map is normalized to this value.
     max_distance_range_ = declare_parameter<double>("max_distance_range");
 
     // Ground segmentation configuration
