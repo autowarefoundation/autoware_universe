@@ -81,11 +81,11 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
   updater_.setHardwareID("blockage_diag");
   updater_.add(
     std::string(this->get_namespace()) + ": blockage_validation", this,
-    &BlockageDiagComponent::onBlockageChecker);
+    &BlockageDiagComponent::run_blockage_check);
   if (enable_dust_diag_) {
     updater_.add(
       std::string(this->get_namespace()) + ": dust_validation", this,
-      &BlockageDiagComponent::dustChecker);
+      &BlockageDiagComponent::run_dust_check);
 
     ground_dust_ratio_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
       "blockage_diag/debug/ground_dust_ratio", rclcpp::SensorDataQoS());
@@ -114,7 +114,7 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     std::bind(&BlockageDiagComponent::param_callback, this, _1));
 }
 
-void BlockageDiagComponent::onBlockageChecker(DiagnosticStatusWrapper & stat)
+void BlockageDiagComponent::run_blockage_check(DiagnosticStatusWrapper & stat)
 {
   stat.add("ground_blockage_ratio", std::to_string(ground_blockage_ratio_));
   stat.add("ground_blockage_count", std::to_string(ground_blockage_count_));
@@ -153,7 +153,7 @@ void BlockageDiagComponent::onBlockageChecker(DiagnosticStatusWrapper & stat)
   stat.summary(level, msg);
 }
 
-void BlockageDiagComponent::dustChecker(diagnostic_updater::DiagnosticStatusWrapper & stat)
+void BlockageDiagComponent::run_dust_check(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   stat.add("ground_dust_ratio", std::to_string(ground_dust_ratio_));
   auto level = DiagnosticStatus::OK;
