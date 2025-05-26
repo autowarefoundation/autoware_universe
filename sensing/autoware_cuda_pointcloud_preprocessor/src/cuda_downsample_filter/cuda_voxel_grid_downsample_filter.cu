@@ -424,9 +424,12 @@ size_t CudaVoxelGridDownsampleFilter::searchValidVoxel(
   //// Determine temporary device strage requirements for sort operation
   void * tmp_storage = nullptr;
   size_t tmp_storage_bytes = 0;
+  ////// check how many bit is actually needed to express the number of voxels
+  size_t most_significant_bit_index =
+    std::floor(std::log2(num_voxels.x * num_voxels.y * num_voxels.z));
   cub::DeviceRadixSort::SortPairs(
     tmp_storage, tmp_storage_bytes, tmp_key_in, voxel_index_buffer_dev, tmp_val_in,
-    point_index_buffer_dev, voxel_info_.num_input_points, 0, sizeof(size_t) * 8, stream_);
+    point_index_buffer_dev, voxel_info_.num_input_points, 0, most_significant_bit_index, stream_);
 
   //// allocate temporary storage
   tmp_storage = allocateBufferFromPool<std::byte>(tmp_storage_bytes);
@@ -434,7 +437,7 @@ size_t CudaVoxelGridDownsampleFilter::searchValidVoxel(
   // Run sorting operation
   cub::DeviceRadixSort::SortPairs(
     tmp_storage, tmp_storage_bytes, tmp_key_in, voxel_index_buffer_dev, tmp_val_in,
-    point_index_buffer_dev, voxel_info_.num_input_points, 0, sizeof(size_t) * 8, stream_);
+    point_index_buffer_dev, voxel_info_.num_input_points, 0, most_significant_bit_index, stream_);
   returnBufferToPool(tmp_storage);
 
   //// Determine temporary device strage requirements for run-length encoding operation
