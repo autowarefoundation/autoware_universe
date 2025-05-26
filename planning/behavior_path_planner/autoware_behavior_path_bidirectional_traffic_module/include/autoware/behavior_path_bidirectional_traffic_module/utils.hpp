@@ -1,4 +1,4 @@
-// Copyright 2024 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,24 +15,22 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__UTILS_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__UTILS_HPP_
 
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include "autoware/trajectory/path_point_with_lane_id.hpp"
+
+#include <autoware/trajectory/forward.hpp>
 
 #include <geometry_msgs/msg/pose.hpp>
+
+#include <lanelet2_core/Forward.h>
 
 namespace autoware::behavior_path_planner
 {
 
-// struct EgoGeometry
-// {
-//   double width;
-//   double length;
+lanelet::Ids get_lane_ids(
+  const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
+    trajectory);
 
-//   autoware::universe_utils::Polygon2d make_polygon(const geometry_msgs::msg::Pose & ego_pose)
-//   const
-//   {
-//     return autoware::universe_utils::toFootprint(ego_pose, length / 2.0, -length / 2.0, width);
-//   }
-// };
+double compute_length_of_lanelets(const lanelet::ConstLanelet & lanelet);
 
 }  // namespace autoware::behavior_path_planner
 

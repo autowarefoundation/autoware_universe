@@ -14,7 +14,9 @@
 
 #include "autoware/behavior_path_bidirectional_traffic_module/connected_bidirectional_lanelets.hpp"
 
+#include "autoware/behavior_path_bidirectional_traffic_module/parameter.hpp"
 #include "autoware/trajectory/path_point_with_lane_id.hpp"
+#include "autoware/trajectory/utils/frenet_utils.hpp"
 #include "autoware/universe_utils/geometry/boost_geometry.hpp"
 #include "autoware/universe_utils/geometry/boost_polygon_utils.hpp"
 
@@ -23,6 +25,8 @@
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <rclcpp/logging.hpp>
 
+#include <geometry_msgs/msg/detail/point__struct.hpp>
+#include <geometry_msgs/msg/detail/pose__struct.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 
 #include <boost/geometry/algorithms/area.hpp>
@@ -105,9 +109,11 @@ ConnectedBidirectionalLanelets::search_connected_bidirectional_lanelets(
     get_next_lanelets, get_previous_lanelets, lanelet_b, lanelet_a,
     &connected_bidirectional_lanes_b, &connected_bidirectional_lanes_a);
   ConnectedBidirectionalLanelets connected_bidirectional_lanelets_a(
-    connected_bidirectional_lanes_a.begin(), connected_bidirectional_lanes_a.end());
+    connected_bidirectional_lanes_a.begin(), connected_bidirectional_lanes_a.end(),
+    get_next_lanelets, get_previous_lanelets);
   ConnectedBidirectionalLanelets connected_bidirectional_lanelets_b(
-    connected_bidirectional_lanes_b.begin(), connected_bidirectional_lanes_b.end());
+    connected_bidirectional_lanes_b.begin(), connected_bidirectional_lanes_b.end(),
+    get_next_lanelets, get_previous_lanelets);
   connected_bidirectional_lanelets_a.set_opposite_bidirectional_lanes(
     connected_bidirectional_lanelets_b);
   connected_bidirectional_lanelets_b.set_opposite_bidirectional_lanes(
@@ -230,6 +236,8 @@ ConnectedBidirectionalLanelets::ConnectedBidirectionalLanelets(
   const ConnectedBidirectionalLanelets & other)
 {
   bidirectional_lanes_ = other.bidirectional_lanes_;
+  lanelets_before_bidirectional_lanes_ = other.lanelets_before_bidirectional_lanes_;
+  lanelets_after_bidirectional_lanes_ = other.lanelets_after_bidirectional_lanes_;
   set_opposite_bidirectional_lanes(*other.opposite_bidirectional_lanes_);
   opposite_bidirectional_lanes_->set_opposite_bidirectional_lanes(*this);
 }
@@ -317,12 +325,62 @@ ConnectedBidirectionalLanelets::get_intersection_lanelets() const
 
 [[nodiscard]] double ConnectedBidirectionalLanelets::average_lane_width() const
 {
-  long double sum = 0.0;
+  long double length_sum = 0;
+  double area_sum = 0;
   for (const auto & lane : bidirectional_lanes_) {
-    sum += boost::geometry::area(lane.polygon2d().basicPolygon()) /
-           boost::geometry::length(lane.centerline2d());
+    length_sum += boost::geometry::length(lane.centerline2d());
+    area_sum += boost::geometry::area(lane.polygon2d().basicPolygon());
   }
-  return static_cast<double>(sum / bidirectional_lanes_.size());
+  return static_cast<double>(area_sum / length_sum);
+}
+
+[[nodiscard]] std::pair<bool, std::vector<geometry_msgs::msg::Pose>>
+ConnectedBidirectionalLanelets::check_if_is_possible_to_stop_and_suggest_alternative_stop_poses(
+  const geometry_msgs::msg::Pose & stopping_pose, const EgoParameters & ego_params) const
+{
+  for (const auto & lane : get_intersection_lanelets()) {
+    if (!boost::geometry::disjoint(
+          ego_params.ego_polygon(stopping_pose), lane.polygon2d().basicPolygon())) {
+      auto center_line = get_center_line();
+      auto ego_frenet = trajectory::compute_frenet_coordinate(center_line, stopping_pose);
+      if (!ego_frenet) {
+        return {false, {}};
+      }
+
+      std::vector<geometry_msgs::msg::Pose> alternative_stop_poses;
+
+      geometry_msgs::msg::Pose intersection_start_point;
+      intersection_start_point.position.x = lane.centerline2d().front().x();
+      intersection_start_point.position.y = lane.centerline2d().front().y();
+
+      auto intersection_start_point_frenet =
+        trajectory::compute_frenet_coordinate(center_line, intersection_start_point);
+
+      if (intersection_start_point_frenet) {
+        geometry_msgs::msg::Pose pose = stopping_pose;
+        pose.position.x = intersection_start_point.position.x;
+        pose.position.y = intersection_start_point.position.y;
+        alternative_stop_poses.emplace_back(pose);
+      }
+
+      geometry_msgs::msg::Pose intersection_end_point;
+      intersection_end_point.position.x = lane.centerline2d().back().x();
+      intersection_end_point.position.y = lane.centerline2d().back().y();
+
+      auto intersection_end_point_frenet =
+        trajectory::compute_frenet_coordinate(center_line, intersection_end_point);
+
+      if (intersection_end_point_frenet) {
+        geometry_msgs::msg::Pose pose = stopping_pose;
+        pose.position.x = intersection_end_point.position.x;
+        pose.position.y = intersection_end_point.position.y;
+        alternative_stop_poses.emplace_back(pose);
+      }
+
+      return {false, alternative_stop_poses};
+    }
+  }
+  return {true, {stopping_pose}};
 }
 
 std::optional<ConnectedBidirectionalLanelets> get_current_bidirectional_lane(

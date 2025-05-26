@@ -26,13 +26,15 @@ namespace autoware::behavior_path_planner
 void BidirectionalTrafficModuleManager::init(rclcpp::Node * node)
 {
   initInterface(node, {});
+  parameters_ = std::make_shared<BidirectionalTrafficModuleParameters>();
+  parameters_->init_from_node(node, "bidirectional_traffic");
 }
 
 std::unique_ptr<SceneModuleInterface>
 BidirectionalTrafficModuleManager::createNewSceneModuleInstance()
 {
   return std::make_unique<BidirectionalTrafficModule>(
-    "bidirectional_traffic", *node_, rtc_interface_ptr_map_,
+    "bidirectional_traffic", *node_, parameters_, rtc_interface_ptr_map_,
     objects_of_interest_marker_interface_ptr_map_, planning_factor_interface_);
 }
 

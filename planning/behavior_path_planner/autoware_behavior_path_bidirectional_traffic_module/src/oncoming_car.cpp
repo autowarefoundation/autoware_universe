@@ -42,7 +42,8 @@ std::vector<OncomingCar> OncomingCar::update_oncoming_cars_in_bidirectional_lane
   const std::vector<OncomingCar> & prev_oncoming_cars,
   const autoware_perception_msgs::msg::PredictedObjects & predicted_objects,
   const ConnectedBidirectionalLanelets & bidirectional_lanelets,
-  const geometry_msgs::msg::Pose & ego_pose, const std::function<void(std::string_view)> &)
+  const geometry_msgs::msg::Pose & ego_pose, const double & forward_looking_distance,
+  const std::function<void(std::string_view)> &)
 {
   std::vector<OncomingCar> oncoming_cars;
   for (const auto & object : predicted_objects.objects) {
@@ -63,13 +64,14 @@ std::vector<OncomingCar> OncomingCar::update_oncoming_cars_in_bidirectional_lane
 
     OncomingCar oncoming_car(object, opposite_bidirectional_lanelets);
 
-    if (oncoming_car.distance_from(ego_pose) < 0.0) {
+    double distance_from_ego = oncoming_car.distance_from(ego_pose);
+
+    if (distance_from_ego < 0.0 || distance_from_ego > forward_looking_distance) {
       continue;
     }
 
     oncoming_cars.emplace_back(oncoming_car);
   }
-
   return oncoming_cars;
 }
 

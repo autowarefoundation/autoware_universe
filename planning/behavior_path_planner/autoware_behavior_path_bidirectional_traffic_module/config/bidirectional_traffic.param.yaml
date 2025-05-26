@@ -1,0 +1,9 @@
+/**:
+  ros__parameters:
+    bidirectional_traffic:
+      foward_looking_distance: 30.0
+      keep_left_ratio: 0.6
+      pull_over_ratio: 0.8
+      time_to_prepare_pull_over: 0.5
+      default_shift_distance_to_pull_over: 1.0
+      max_curvature_increase: 10.0

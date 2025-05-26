@@ -15,8 +15,8 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__KEEP_LEFT_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__KEEP_LEFT_HPP_
 
+#include "autoware/behavior_path_bidirectional_traffic_module/connected_bidirectional_lanelets.hpp"
 #include "autoware/trajectory/forward.hpp"
-#include "autoware/trajectory/utils/find_intervals.hpp"
 
 #include <autoware_internal_planning_msgs/msg/path_point_with_lane_id.hpp>
 
@@ -24,14 +24,14 @@
 
 namespace autoware::behavior_path_planner
 {
+
 trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
 shift_trajectory_for_keep_left(
   const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
     trajectory,
-  const std::vector<trajectory::Interval> & bidirectional_lane_intervals_in_trajectory,
-  const double & keep_left_length_from_center,
-  const double & distance_to_shift_for_enter_bidirectional_lane,
-  const double & distance_to_shift_for_exit_bidirectional_lane);
+  const std::vector<ConnectedBidirectionalLanelets> & all_connected_bidirectional_lanelets,
+  const double & keep_left_ratio, const double & vehicle_width);
+
 }  // namespace autoware::behavior_path_planner
 
 #endif  // AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__KEEP_LEFT_HPP_

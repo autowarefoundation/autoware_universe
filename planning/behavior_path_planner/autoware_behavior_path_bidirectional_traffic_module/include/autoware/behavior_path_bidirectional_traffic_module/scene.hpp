@@ -39,6 +39,7 @@ class BidirectionalTrafficModule : public SceneModuleInterface
 public:
   BidirectionalTrafficModule(
     std::string_view name, rclcpp::Node & node,
+    const std::shared_ptr<BidirectionalTrafficModuleParameters> & parameters,
     const std::unordered_map<std::string, std::shared_ptr<RTCInterface>> & rtc_interface_ptr_map,
     std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
       objects_of_interest_marker_interface_ptr_map,
@@ -63,6 +64,8 @@ public:
   autoware::universe_utils::Polygon2d get_ego_polygon() const;
 
 private:
+  const std::shared_ptr<const BidirectionalTrafficModuleParameters> parameters_;
+
   mutable std::optional<std::vector<ConnectedBidirectionalLanelets>>
     all_bidirectional_lanes_in_map_;
 

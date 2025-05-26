@@ -16,8 +16,24 @@
 
 #include "autoware/universe_utils/geometry/boost_polygon_utils.hpp"
 
+#include <string_view>
+
 namespace autoware::behavior_path_planner
 {
+
+void BidirectionalTrafficModuleParameters::init_from_node(rclcpp::Node * node, std::string_view ns)
+{
+  forward_looking_distance =
+    node->declare_parameter<double>(std::string(ns) + ".forward_looking_distance");
+  keep_left_ratio = node->declare_parameter<double>(std::string(ns) + ".keep_left_ratio");
+  pull_over_ratio = node->declare_parameter<double>(std::string(ns) + ".pull_over_ratio");
+  time_to_prepare_pull_over =
+    node->declare_parameter<double>(std::string(ns) + ".time_to_prepare_pull_over");
+  default_shift_distance_to_pull_over =
+    node->declare_parameter<double>(std::string(ns) + ".default_shift_distance_to_pull_over");
+  max_curvature_increase =
+    node->declare_parameter<double>(std::string(ns) + ".max_curvature_increase");
+}
 
 EgoParameters::EgoParameters(
   const double & base_link2front, const double & base_link2rear, const double & vehicle_width)

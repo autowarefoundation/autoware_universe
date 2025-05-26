@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__MANAGER_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__MANAGER_HPP_
 
+#include "autoware/behavior_path_bidirectional_traffic_module/parameter.hpp"
 #include "autoware/behavior_path_planner_common/interface/scene_module_manager_interface.hpp"
 
 #include <memory>
@@ -33,6 +34,9 @@ public:
   std::unique_ptr<SceneModuleInterface> createNewSceneModuleInstance() override;
 
   void updateModuleParams(const std::vector<rclcpp::Parameter> & parameters) override;
+
+private:
+  std::shared_ptr<BidirectionalTrafficModuleParameters> parameters_;
 };
 
 }  // namespace autoware::behavior_path_planner

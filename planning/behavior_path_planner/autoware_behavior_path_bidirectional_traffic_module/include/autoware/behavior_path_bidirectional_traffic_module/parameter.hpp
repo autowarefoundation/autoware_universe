@@ -17,25 +17,35 @@
 
 #include "autoware/universe_utils/geometry/boost_geometry.hpp"
 
+#include <rclcpp/node.hpp>
+
 #include <geometry_msgs/msg/pose.hpp>
 
 #include <limits>
+#include <string_view>
 namespace autoware::behavior_path_planner
 {
 
 struct BidirectionalTrafficModuleParameters
 {
-  double foward_looking_distance = std::numeric_limits<double>::max();
-  double keep_left_ratio = 0.5;  // 0.0 to 1.0
+  double forward_looking_distance = std::numeric_limits<double>::max();
+  double keep_left_ratio = 0.5;  // 0.0 to 1.0. 0.0 means keep right, 1.0 means keep left.
   double pull_over_ratio = 0.7;  // keep_left_ratio to 1.0
-  double time_to_prepare_shift = 0.5;
+  double time_to_prepare_pull_over =
+    0.5;  // if ego starts to pull over when ego finds an oncoming car, it would be sudden. So, ego
+          // needs to prepare to pull over.
+  double default_shift_distance_to_pull_over = 0.5;
+  double default_shift_distance_to_keep_left = 0.5;
+  double max_curvature_increase = 0.1;
+
+  void init_from_node(rclcpp::Node * node, std::string_view ns = "bidirectional_traffic");
 };
 
 struct EgoParameters
 {
-  const double base_link2front;
-  const double base_link2rear;
-  const double vehicle_width;
+  double base_link2front;
+  double base_link2rear;
+  double vehicle_width;
 
   EgoParameters(
     const double & base_link2front, const double & base_link2rear, const double & vehicle_width);

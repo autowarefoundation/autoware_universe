@@ -62,6 +62,7 @@ public:
     const autoware_perception_msgs::msg::PredictedObjects & predicted_objects,
     const ConnectedBidirectionalLanelets & bidirectional_lanelets,
     const geometry_msgs::msg::Pose & ego_pose,
+    const double & forward_looking_distance,
     const std::function<void(std::string_view)> & logger = [](std::string_view) {});
 
   [[nodiscard]] double distance_from(const geometry_msgs::msg::Pose & pose) const

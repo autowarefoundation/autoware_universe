@@ -15,6 +15,7 @@
 
 #include "autoware/behavior_path_bidirectional_traffic_module/give_way.hpp"
 #include "autoware/behavior_path_bidirectional_traffic_module/keep_left.hpp"
+#include "autoware/behavior_path_bidirectional_traffic_module/parameter.hpp"
 #include "autoware/trajectory/path_point_with_lane_id.hpp"
 #include "autoware/trajectory/utils/find_intervals.hpp"
 #include "autoware/universe_utils/geometry/boost_geometry.hpp"
@@ -27,7 +28,6 @@
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
@@ -38,13 +38,13 @@ namespace autoware::behavior_path_planner
 
 BidirectionalTrafficModule::BidirectionalTrafficModule(
   std::string_view name, rclcpp::Node & node,
+  const std::shared_ptr<BidirectionalTrafficModuleParameters> & parameters,
   const std::unordered_map<std::string, std::shared_ptr<RTCInterface>> & rtc_interface_ptr_map,
   std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
     objects_of_interest_marker_interface_ptr_map,
   const std::shared_ptr<PlanningFactorInterface> & planning_factor_interface)
-: SceneModuleInterface{
-    name.data(), node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map,
-    planning_factor_interface}
+: SceneModuleInterface{name.data(), node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface},
+  parameters_(parameters)
 {
 }
 
@@ -89,17 +89,14 @@ BehaviorModuleOutput BidirectionalTrafficModule::plan()
   }
 
   *trajectory = shift_trajectory_for_keep_left(
-    *trajectory, bidirectional_lane_intervals_in_current_trajectory_, 0.5, 10.0, 10.0);
+    *trajectory, get_all_bidirectional_lanes_in_map(), parameters_->keep_left_ratio,
+    planner_data_->parameters.vehicle_width);
 
   if (give_way_) {
     const double speed = planner_data_->self_odometry->twist.twist.linear.x;
-    *trajectory =
-      give_way_->modify_trajectory(*trajectory, oncoming_cars_, getEgoPose(), speed < 0.01);
-    if (current_bidirectional_lane_) {
-      std::cerr << "Lane Width: " << current_bidirectional_lane_->average_lane_width() << std::endl;
-    }
+    *trajectory = give_way_->modify_trajectory(*trajectory, oncoming_cars_, getEgoPose(), speed);
     if (give_way_->is_stop_required()) {
-      PoseWithDetail stop_pose(*give_way_->get_stop_pose(), "");
+      PoseWithDetail stop_pose(*give_way_->get_stop_pose());
       stop_pose_ = stop_pose;
     } else {
       stop_pose_ = std::nullopt;
@@ -167,11 +164,13 @@ void BidirectionalTrafficModule::updateData()
 
   if (!current_bidirectional_lane_.has_value() && new_current_bidirectional_lane.has_value()) {
     give_way_.emplace(
-      *new_current_bidirectional_lane,          //
-      planner_data_->parameters.vehicle_width,  //
-      20.0,                                     //
-      10.0,                                     //
-      0.0);
+      *new_current_bidirectional_lane,  //
+      EgoParameters{
+        planner_data_->parameters.base_link2front, planner_data_->parameters.base_link2rear,
+        planner_data_->parameters.vehicle_width},
+      20.0,  //
+      10.0,  //
+      parameters_->pull_over_ratio);
 
     RCLCPP_INFO(getLogger(), "Entered Bidirectional Lane");
   }
@@ -183,7 +182,9 @@ void BidirectionalTrafficModule::updateData()
 
   // Update Oncoming Cars
   oncoming_cars_ = OncomingCar::update_oncoming_cars_in_bidirectional_lane(
-    oncoming_cars_, *planner_data_->dynamic_object, *current_bidirectional_lane_, getEgoPose());
+    oncoming_cars_, *planner_data_->dynamic_object, *current_bidirectional_lane_, getEgoPose(),
+    parameters_->forward_looking_distance,
+    [this](std::string_view msg) { RCLCPP_INFO(getLogger(), "%s", msg.data()); });
 }
 
 std::vector<ConnectedBidirectionalLanelets>
