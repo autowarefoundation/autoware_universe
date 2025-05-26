@@ -1245,7 +1245,9 @@ std::optional<StopFactor> CrosswalkModule::getNearestStopFactor(
   const PathWithLaneId & ego_path, const std::vector<StopFactor> & stop_factors,
   const std::optional<StopFactor> & stop_factor_for_parked_vehicles)
 {
-  if (stop_factors.empty() && stop_factor_for_parked_vehicles && !isRedSignalForPedestrians()) {
+  const auto use_parked_vehicles =
+    stop_factors.empty() && stop_factor_for_parked_vehicles && !isRedSignalForPedestrians();
+  if (use_parked_vehicles) {
     return stop_factor_for_parked_vehicles;
   }
   const auto get_distance_to_stop = [&](const auto & stop_factor) -> std::optional<double> {
