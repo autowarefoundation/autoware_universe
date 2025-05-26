@@ -217,7 +217,8 @@ std::optional<tier4_planning_msgs::msg::StopFactor> calculate_parked_vehicles_st
   const auto & update_min_pose = [&](const auto & pose) {
     if (pose) {
       const auto dist_to_pose = calc_distance_fn(*pose);
-      if (dist_to_pose < min_distance) {
+      const auto is_feasible = (!min_stop_distance || dist_to_pose >= min_stop_distance);
+      if (dist_to_pose < min_distance && is_feasible) {
         min_distance = dist_to_pose;
         min_pose = *pose;
         found = true;
@@ -226,9 +227,6 @@ std::optional<tier4_planning_msgs::msg::StopFactor> calculate_parked_vehicles_st
   };
   for (const auto & pose : candidate_stop_poses) {
     update_min_pose(pose);
-  }
-  if (min_stop_distance) {
-    min_distance = std::max(*min_stop_distance, min_distance);
   }
   // previous stop pose is reused without caring about the minimum stop distance
   update_min_pose(previous_stop_pose);
