@@ -405,6 +405,11 @@ Note that if a new stop obstacle appears and the previous closest obstacle remov
 | ---------------------------------------------------------- | ------ | -------------------------------------------------- |
 | `behavior_determination.stop_obstacle_hold_time_threshold` | double | maximum time for holding closest stop obstacle [s] |
 
+#### Parameters
+
+{{ json_to_markdown("planning/autoware_obstacle_cruise_planner/schema/default_common.schema.json") }}
+{{ json_to_markdown("planning/autoware_obstacle_cruise_planner/schema/obstacle_cruise_planner.schema.json") }}
+
 ## How To Debug
 
 How to debug can be seen [here](docs/debug.md).
