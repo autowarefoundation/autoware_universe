@@ -168,9 +168,6 @@ BehaviorModuleOutput LaneChangeInterface::planWaitingApproval()
 
   if (!module_type_->isValidPath()) {
     path_candidate_ = std::make_shared<PathWithLaneId>();
-    updateRTCStatus(
-      std::numeric_limits<double>::lowest(), std::numeric_limits<double>::lowest(), false,
-      State::WAITING_FOR_EXECUTION);
     return out;
   }
 
@@ -294,7 +291,7 @@ std::pair<LaneChangeStates, std::string_view> LaneChangeInterface::check_transit
     return {LaneChangeStates::Normal, "WaitingForApproval"};
   }
 
-  if (getCurrentStatus() == ModuleStatus::RUNNING && !module_type_->isValidPath()) {
+  if (!module_type_->isValidPath()) {
     return {LaneChangeStates::Cancel, "InvalidPath"};
   }
 
