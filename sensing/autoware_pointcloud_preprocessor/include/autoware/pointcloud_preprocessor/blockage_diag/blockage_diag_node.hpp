@@ -46,13 +46,13 @@ using diagnostic_updater::Updater;
 class BlockageDiagComponent : public autoware::pointcloud_preprocessor::Filter
 {
 protected:
-  virtual void filter(
-    const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output);
+  void filter(
+    const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output) override;
   /** \brief Parameter service callback result : needed to be hold */
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   /** \brief Parameter service callback */
-  rcl_interfaces::msg::SetParametersResult paramCallback(const std::vector<rclcpp::Parameter> & p);
+  rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> & p);
   image_transport::Publisher lidar_depth_map_pub_;
   image_transport::Publisher blockage_mask_pub_;
   image_transport::Publisher single_frame_dust_mask_pub;
@@ -67,8 +67,11 @@ protected:
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::StringStamped>::SharedPtr blockage_type_pub_;
 
 private:
-  void onBlockageChecker(DiagnosticStatusWrapper & stat);
-  void dustChecker(DiagnosticStatusWrapper & stat);
+  void run_blockage_check(DiagnosticStatusWrapper & stat);
+  void run_dust_check(DiagnosticStatusWrapper & stat);
+
+
+
   Updater updater_{this};
   int vertical_bins_;
   std::vector<double> angle_range_deg_;
