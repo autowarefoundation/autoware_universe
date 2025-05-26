@@ -16,9 +16,12 @@
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__BLOCKAGE_DIAG__BLOCKAGE_DIAG_NODE_HPP_
 
 #include "autoware/pointcloud_preprocessor/filter.hpp"
+#include "autoware/point_types/types.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <image_transport/image_transport.hpp>
+#include <opencv2/core/mat.hpp>
+#include <opencv2/core/types.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -42,6 +45,7 @@ namespace autoware::pointcloud_preprocessor
 {
 using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
+using autoware::point_types::PointXYZIRCAEDT;
 
 class BlockageDiagComponent : public autoware::pointcloud_preprocessor::Filter
 {
@@ -70,7 +74,36 @@ private:
   void run_blockage_check(DiagnosticStatusWrapper & stat);
   void run_dust_check(DiagnosticStatusWrapper & stat);
 
+  /**
+   * @brief Get the horizontal bin index of the given azimuth, if within the FoV.
+   *
+   * If the FoV wraps around, the azimuth is adjusted to be within the FoV.
+   * The bin is calculated as `(azimuth_deg - min_deg) / horizontal_resolution_` and any
+   * azimuth for which `min_deg < azimuth_deg <= max_deg` is valid.
+   *
+   * @param azimuth_deg The azimuth to get the bin index for.
+   * @return std::optional<int> The bin index if valid, otherwise `std::nullopt`.
+   */
+  std::optional<int> get_horizontal_bin(double azimuth_deg) const;
 
+  /**
+   * @brief Get the vertical bin index of the given channel, if within the FoV.
+   *
+   * Vertical bins and channels are usually equivalent, apart from the 0-based index of bins.
+   * If `is_channel_order_top2down_` is `false`, the bin order is reversed compared to the channel
+   * order.
+   *
+   * @param channel The channel to get the bin index for.
+   * @return std::optional<int> The bin index if valid, otherwise `std::nullopt`.
+   */
+  std::optional<int> get_vertical_bin(uint16_t channel) const;
+
+  /**
+   * @brief Get the dimensions of the mask, i.e. the number of horizontal and vertical bins.
+   *
+   * @return cv::Size The dimensions of the mask.
+   */
+  cv::Size get_mask_dimensions() const;
 
   Updater updater_{this};
   int vertical_bins_;
