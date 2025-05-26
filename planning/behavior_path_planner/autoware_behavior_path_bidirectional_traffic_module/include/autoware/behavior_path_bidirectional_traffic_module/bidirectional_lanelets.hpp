@@ -30,12 +30,13 @@
 #include <optional>
 #include <utility>
 #include <vector>
-
 namespace autoware::behavior_path_planner
 {
 class ConnectedBidirectionalLanelets
 {
 public:
+  friend class TestKeepLeft;
+
   using SharedPtr = std::shared_ptr<ConnectedBidirectionalLanelets>;
   using SharedConstPtr = std::shared_ptr<const ConnectedBidirectionalLanelets>;
 
@@ -65,13 +66,8 @@ public:
   [[nodiscard]] const lanelet::ConstLanelets & get_lanelets() const;
   [[nodiscard]] const lanelet::ConstLanelets & get_lanelets_before_entering() const;
   [[nodiscard]] const lanelet::ConstLanelets & get_lanelets_after_exiting() const;
-  [[nodiscard]] const lanelet::ConstLanelets & get_intersection_lanelets() const;
 
   [[nodiscard]] double average_lane_width() const;
-
-  [[nodiscard]] std::pair<bool, std::vector<geometry_msgs::msg::Pose>>
-  check_if_is_possible_to_stop_and_suggest_alternative_stop_poses(
-    const geometry_msgs::msg::Pose & stopping_pose, const EgoParameters & ego_params) const;
 
 private:
   const lanelet::ConstLanelets bidirectional_lanelets_;
@@ -94,11 +90,6 @@ std::optional<ConnectedBidirectionalLanelets::SharedConstPtr>
 get_bidirectional_lanelets_where_ego_is(
   const geometry_msgs::msg::Pose & ego_pose, const EgoParameters & ego_params,
   const std::vector<ConnectedBidirectionalLanelets::SharedConstPtr> & all_bidirectional_lanes);
-
-bool check_for_bidirectional_lanelets_in_trajectory(
-  const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-    trajectory,
-  const std::vector<ConnectedBidirectionalLanelets> & bidirectional_lanelets);
 
 }  // namespace autoware::behavior_path_planner
 

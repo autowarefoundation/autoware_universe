@@ -19,7 +19,9 @@
 #include "autoware/trajectory/utils/frenet_utils.hpp"
 #include "autoware/trajectory/utils/shift.hpp"
 
+#include <algorithm>
 #include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -33,6 +35,9 @@ NoNeedToGiveWay::modify_trajectory(
   const OncomingCars & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
   const double & ego_speed)
 {
+  if (ego_speed < 0.1) {
+    return trajectory;
+  }
   std::optional<CarObject> front_oncoming_car = oncoming_cars.get_front_oncoming_car();
   if (front_oncoming_car.has_value()) {
     bool go_to_shift_mode =
