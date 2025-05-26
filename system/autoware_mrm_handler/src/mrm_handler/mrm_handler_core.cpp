@@ -36,6 +36,8 @@ MrmHandler::MrmHandler(const rclcpp::NodeOptions & options) : Node("mrm_handler"
   param_.use_pull_over = declare_parameter<bool>("use_pull_over", false);
   param_.use_comfortable_stop = declare_parameter<bool>("use_comfortable_stop", false);
   param_.turning_hazard_on.emergency = declare_parameter<bool>("turning_hazard_on.emergency", true);
+  param_.turning_indicator_on.emergency =
+    declare_parameter<bool>("turning_indicator_on.emergency", true);
 
   using std::placeholders::_1;
 
@@ -46,6 +48,8 @@ MrmHandler::MrmHandler(const rclcpp::NodeOptions & options) : Node("mrm_handler"
       std::bind(&MrmHandler::onOperationModeAvailability, this, _1));
 
   // Publisher
+  pub_turn_indicator_cmd_ = create_publisher<autoware_vehicle_msgs::msg::TurnIndicatorsCommand>(
+    "~/output/turn_indicators", rclcpp::QoS{1});
   pub_hazard_cmd_ = create_publisher<autoware_vehicle_msgs::msg::HazardLightsCommand>(
     "~/output/hazard", rclcpp::QoS{1});
   pub_gear_cmd_ =
@@ -110,6 +114,21 @@ void MrmHandler::onOperationModeAvailability(
   const auto emergency_duration =
     (this->now() - stamp_autonomous_become_unavailable_.value()).seconds();
   is_emergency_holding_ = (emergency_duration > param_.timeout_emergency_recovery);
+}
+
+void MrmHandler::publishTurnIndicatorCmd()
+{
+  using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
+  TurnIndicatorsCommand msg;
+
+  msg.stamp = this->now();
+  if (param_.turning_indicator_on.emergency && isEmergency()) {
+    msg.command = TurnIndicatorsCommand::DISABLE;
+  } else {
+    msg.command = TurnIndicatorsCommand::NO_COMMAND;
+  }
+
+  pub_turn_indicator_cmd_->publish(msg);
 }
 
 void MrmHandler::publishHazardCmd()
@@ -358,6 +377,7 @@ void MrmHandler::onTimer()
 
   // Publish
   publishMrmState();
+  publishTurnIndicatorCmd();
   publishHazardCmd();
   publishGearCmd();
   publishEmergencyHolding();

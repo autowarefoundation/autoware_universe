@@ -2,6 +2,31 @@
 Changelog for package autoware_probabilistic_occupancy_grid_map
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(autoware_probabilistic_occupancy_grid_map): added target architectures for the ogm (`#10614 <https://github.com/autowarefoundation/autoware_universe/issues/10614>`_)
+  * chore: added target architectures for the ogm
+  * chore: mistook the compute capabilities of edge devices
+  ---------
+* chore: perception code owner update (`#10645 <https://github.com/autowarefoundation/autoware_universe/issues/10645>`_)
+  * chore: update maintainers in multiple perception packages
+  * Revert "chore: update maintainers in multiple perception packages"
+  This reverts commit f2838c33d6cd82bd032039e2a12b9cb8ba6eb584.
+  * chore: update maintainers in multiple perception packages
+  * chore: add Kok Seang Tan as maintainer in multiple perception packages
+  ---------
+* fix(probabilistic_occupancy_grid_map): add missing parameter for multi-lidar (`#10578 <https://github.com/autowarefoundation/autoware_universe/issues/10578>`_)
+  add new parameter for multi-lidar
+* fix(autoware_probabilistic_occupancy_grid_map): fix to avoid division by zero (`#10599 <https://github.com/autowarefoundation/autoware_universe/issues/10599>`_)
+* fix(autoware_probabilistic_occupancy_grid_map): incorrect placement of updateOrigin init call check (`#10565 <https://github.com/autowarefoundation/autoware_universe/issues/10565>`_)
+* fix(autoware_probabilistic_occupancy_grid_map): skipped first iteration (`#10558 <https://github.com/autowarefoundation/autoware_universe/issues/10558>`_)
+  fix: the first iteration fails due to how the algorithm is designed (the delta between poses is too high). However, the first iteration of the update routine is actually not needed in the first iteration, so I skipped it
+* Contributors: Amadeusz Szymko, Kento Yabuuchi, Kenzo Lobos Tsunekawa, Taekjin LEE, TaikiYamada4, Tomohito ANDO
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

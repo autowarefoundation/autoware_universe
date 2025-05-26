@@ -2,6 +2,24 @@
 Changelog for package autoware_operation_mode_transition_manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(operation_mode_transition_manager): add timeout of the input (`#10457 <https://github.com/autowarefoundation/autoware_universe/issues/10457>`_)
+  fix(operation_mode_transition_manager): add timeout for the input
+* refactor(operation_mode_transition_manager): less member variable (`#10453 <https://github.com/autowarefoundation/autoware_universe/issues/10453>`_)
+  * refactor(operatoin_mode_transition_manager): remove unnecessary member variable
+  * implement InputData
+  * fix
+  * fix
+  * resolve the reviews
+  * add maintainer
+  ---------
+* Contributors: TaikiYamada4, Takayuki Murooka
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

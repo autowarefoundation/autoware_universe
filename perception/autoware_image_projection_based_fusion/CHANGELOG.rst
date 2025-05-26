@@ -2,6 +2,26 @@
 Changelog for package autoware_image_projection_based_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* chore: perception code owner update (`#10645 <https://github.com/autowarefoundation/autoware_universe/issues/10645>`_)
+  * chore: update maintainers in multiple perception packages
+  * Revert "chore: update maintainers in multiple perception packages"
+  This reverts commit f2838c33d6cd82bd032039e2a12b9cb8ba6eb584.
+  * chore: update maintainers in multiple perception packages
+  * chore: add Kok Seang Tan as maintainer in multiple perception packages
+  ---------
+* fix(segmentation pointcloud fusion): fix launch for selectable camera IDs (`#10609 <https://github.com/autowarefoundation/autoware_universe/issues/10609>`_)
+  * fix(tier4_perception_launch): fix segmentation_pointcloud_fusion launch
+  * chore: remove duplicated line
+  ---------
+* fix(image_projection_based_fusion): fix redundantAssignment warning (`#10531 <https://github.com/autowarefoundation/autoware_universe/issues/10531>`_)
+* Contributors: Ryuta Kambe, Taekjin LEE, TaikiYamada4, badai nguyen
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble
