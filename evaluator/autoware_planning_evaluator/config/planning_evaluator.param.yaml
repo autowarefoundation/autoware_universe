@@ -70,7 +70,7 @@
       topic_prefix: /planning/planning_factors/ # topic prefix for planning factors
       time_count_threshold_s: 60.0 # [s] time threshold to count a stop as a new one
       dist_count_threshold_m: 5.0 # [m] distance threshold to count a stop as a new one
-      abnormal_deceleration_threshold_mps2: 3.0 # [m/s^2] abnormal deceleration threshold for a stop to be considered as abnormal
+      abnormal_deceleration_threshold_mps2: 2.0 # [m/s^2] abnormal deceleration threshold for a stop to be considered as abnormal
       module_list:  # list of modules to be checked for stop decision.
         - avoidance_by_lane_change
         - behavior_path_planner
