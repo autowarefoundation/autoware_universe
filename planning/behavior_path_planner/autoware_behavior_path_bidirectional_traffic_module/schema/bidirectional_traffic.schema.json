@@ -64,16 +64,18 @@
   "properties": {
     "/**": {
       "type": "object",
-      "ros__parameters": {
-        "type": "object",
-        "properties": {
-          "bidirectional_traffic": {
-            "type": "object",
-            "$ref": "#/definitions/bidirectional_traffic"
-          }
-        },
-        "required": ["bidirectional_traffic"],
-        "additionalProperties": false
+      "properties": {
+        "ros__parameters": {
+          "type": "object",
+          "properties": {
+            "bidirectional_traffic": {
+              "type": "object",
+              "$ref": "#/definitions/bidirectional_traffic"
+            }
+          },
+          "required": ["bidirectional_traffic"],
+          "additionalProperties": false
+        }
       },
       "required": ["ros__parameters"],
       "additionalProperties": false
