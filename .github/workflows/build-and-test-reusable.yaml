@@ -61,6 +61,8 @@ jobs:
   build-and-test:
     runs-on: ${{ fromJson(inputs.runner) }}
     container: ${{ inputs.container }}${{ inputs.container-suffix }}
+    outputs:
+      coverage-files: ${{ steps.test.outputs.coverage-report-files }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -161,15 +163,37 @@ jobs:
           target-packages: ${{ steps.get-self-packages.outputs.self-packages }}
           build-depends-repos: build_depends.repos
 
-      - name: Upload coverage to CodeCov
+      # Cache lcov/coverage directories for next job
+      - name: Upload coverage artifacts
         if: ${{ steps.test.outputs.coverage-report-files != '' }}
-        uses: codecov/codecov-action@v4
+        uses: actions/upload-artifact@v4
         with:
-          files: ${{ steps.test.outputs.coverage-report-files }}
-          fail_ci_if_error: false
-          verbose: true
-          flags: ${{ inputs.codecov-flag }}
-          token: ${{ secrets.CODECOV_TOKEN }}
+          name: coverage-${{ inputs.codecov-flag }}-${{ inputs.rosdistro }}
+          path: |
+            build
+            lcov
 
       - name: Show disk space after the tasks
         run: df -h
+
+  upload-coverage:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: ${{ needs.build-and-test.outputs.coverage-files != '' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-${{ inputs.codecov-flag }}-${{ inputs.rosdistro }}
+
+      - name: Upload coverage to CodeCov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ${{ needs.build-and-test.outputs.coverage-files }}
+          fail_ci_if_error: false
+          verbose: true
+          flags: ${{ inputs.codecov-flag }}
+          token: ${{ secrets.codecov-token }}

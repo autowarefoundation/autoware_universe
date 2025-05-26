@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__COLLISION_DETECTOR__NODE_HPP_
 #define AUTOWARE__COLLISION_DETECTOR__NODE_HPP_
 
+#include <autoware/motion_utils/vehicle/vehicle_state_checker.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
@@ -149,6 +150,8 @@ private:
 
   // Diagnostic Updater
   diagnostic_updater::Updater updater_;
+
+  std::unique_ptr<autoware::motion_utils::VehicleStopChecker> vehicle_stop_checker_;
 };
 }  // namespace autoware::collision_detector
 

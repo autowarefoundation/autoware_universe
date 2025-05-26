@@ -2,6 +2,79 @@
 Changelog for package autoware_multi_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* chore: perception code owner update (`#10645 <https://github.com/autowarefoundation/autoware_universe/issues/10645>`_)
+  * chore: update maintainers in multiple perception packages
+  * Revert "chore: update maintainers in multiple perception packages"
+  This reverts commit f2838c33d6cd82bd032039e2a12b9cb8ba6eb584.
+  * chore: update maintainers in multiple perception packages
+  * chore: add Kok Seang Tan as maintainer in multiple perception packages
+  ---------
+* feat(autoware_multi_object_tracker): tracker confidence check by its uncertainty (`#10378 <https://github.com/autowarefoundation/autoware_universe/issues/10378>`_)
+  * preparation
+  * feat(autoware_multi_object_tracker): enhance matrix initialization and add debug logging for tracker removal
+  * feat(autoware_multi_object_tracker): integrate max distance matrix for tracker removal logic
+  * refactor(autoware_multi_object_tracker): remove debug logging for tracker removal process
+  style(pre-commit): autofix
+  * refactor(autoware_multi_object_tracker): remove unused string include in association.cpp
+  * refactor(autoware_multi_object_tracker): remove commented debug logging in association.cpp
+  * refactor(autoware_multi_object_tracker): remove distance_threshold parameter and update related configurations
+  * refactor(tracker): implement isConfidentTracker method for object confidence assessment
+  * refactor(tracker): rename isConfidentTracker to isConfident and add isExpired method for object status management
+  * refactor(tracker): enhance updateWithoutMeasurement and isExpired methods for improved object status management
+  * refactor(tracker): adjust confidence and expiration thresholds for improved tracking accuracy
+  * refactor(tracker): add position covariance methods and improve confidence assessment logic
+  * refactor(tracker): add total existence probability calculation and improve debug output
+  * refactor(tracker): enhance debug output for expiration checks and adjust minor axis threshold
+  * refactor(tracker): simplify overlap removal logic by introducing canRemoveOverlappedTarget method
+  refactor(tracker): improve code readability by formatting and enhancing overlap removal logic
+  refactor(tracker): enhance UUID handling and improve confidence checks in tracker logic
+  refactor(tracker): improve debug output for confidence and expiration checks
+  * refactor(tracker): optimize overlap removal by using list iteration instead of sorting
+  * refactor(tracker): simplify existence probability retrieval and enhance code clarity
+  * refactor(debugger): streamline existence probability retrieval in TrackerObjectDebugger
+  * feat(tracker): add time parameter to position covariance and confidence checks
+  * refactor(tracker): enhance confidence checks by refining covariance thresholds and improving debug output
+  style(pre-commit): autofix
+  refactor(tracker): comment out debug messages in confidence and expiration checks for cleaner output
+  refactor(processor): simplify object retrieval in removeOverlappedTracker method
+  * refactor(tracker): remove redundant debug messages and enhance expiration checks with constants
+  * fix: set default value if the given existence probability is almost zero
+  * feat: merge overlapped trackers probability
+  * refactor(tracker): improve existence probability updates and add debug output for probability vectors
+  * style(pre-commit): autofix
+  * refactor(tracker): rename updateExistenceProbabilities to mergeExistenceProbabilities and simplify logic
+  * refactor(tracker): remove debug output from mergeOverlappedTracker function
+  * refactor(tracker): remove debug output for existence probabilities in mergeOverlappedTracker function
+  * refactor(tracker): include string header and simplify UUID string retrieval
+  * refactor(tracker): rename normalize parameter to clamp and update related logic
+  * refactor(tracker): rename EXPIRED_CONFIDENCE_THRESHOLD to EXPIRED_PROBABILITY_THRESHOLD for clarity
+  * refactor(tracker): add comment to clarify target removal condition in canMergeOverlappedTarget function
+  * style(pre-commit): autofix
+  * refactor(tracker): add validation checks for covariance matrix in getPositionCovarianceEigenSq and getPositionCovarianceSizeSq functions
+  * refactor(tracker): improve covariance validation logging in getPositionCovarianceEigenSq and getPositionCovarianceSizeSq functions
+  * refactor(tracker): optimize iterator handling in mergeOverlappedTracker function
+  * refactor(types): change default_existence_probability type from double to float
+  * refactor(tracker): rename getPositionCovarianceSizeSq to getPositionCovarianceDeterminant for clarity
+  * refactor(tracker): update covariance thresholds to mitigate drawbacks
+  * refactor(tracker): adjust covariance thresholds for confidence and expiration checks
+  Updated the covariance thresholds in the Tracker class to improve confidence and expiration logic, enhancing the accuracy of object tracking.
+  * fix: adjust existence probability threshold of expiration
+  * refactor(tracker): improve UUID formatting in tracker_base.hpp
+  Updated the UUID formatting logic in the Tracker class to use a constant for the UUID size and ensure proper type casting, enhancing code clarity and maintainability.
+  * fix(types): cap existence probability to a maximum of 0.999
+  Added a check to ensure that the existence probability does not exceed 0.999, addressing potential issues with overly high values that may not be set correctly.
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(multi_object_tracker): remove unused function getMeasurementYaw (`#10527 <https://github.com/autowarefoundation/autoware_universe/issues/10527>`_)
+* fix(multi_object_tracker): remove unused function isChannelSpawnEnabled (`#10528 <https://github.com/autowarefoundation/autoware_universe/issues/10528>`_)
+* Contributors: Ryuta Kambe, Taekjin LEE, TaikiYamada4
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

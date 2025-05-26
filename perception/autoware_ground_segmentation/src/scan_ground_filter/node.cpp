@@ -67,6 +67,8 @@ ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions &
 
     // grid mode parameters
     use_recheck_ground_cluster_ = declare_parameter<bool>("use_recheck_ground_cluster");
+    recheck_start_distance_ =
+      static_cast<float>(declare_parameter<double>("recheck_start_distance"));
     use_lowest_point_ = declare_parameter<bool>("use_lowest_point");
     detection_range_z_max_ = static_cast<float>(declare_parameter<double>("detection_range_z_max"));
     low_priority_region_x_ = static_cast<float>(declare_parameter<double>("low_priority_region_x"));
@@ -89,6 +91,7 @@ ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions &
       param.radial_divider_angle_rad = radial_divider_angle_rad_;
 
       param.use_recheck_ground_cluster = use_recheck_ground_cluster_;
+      param.recheck_start_distance = recheck_start_distance_;
       param.use_lowest_point = use_lowest_point_;
       param.detection_range_z_max = detection_range_z_max_;
       param.non_ground_height_threshold = non_ground_height_threshold_;
@@ -438,6 +441,9 @@ rcl_interfaces::msg::SetParametersResult ScanGroundFilterComponent::onParameter(
     RCLCPP_DEBUG_STREAM(
       get_logger(),
       "Setting use_recheck_ground_cluster to: " << std::boolalpha << use_recheck_ground_cluster_);
+  }
+  if (get_param(param, "recheck_start_distance", recheck_start_distance_)) {
+    RCLCPP_DEBUG(get_logger(), "Setting recheck_start_distance to: %f.", recheck_start_distance_);
   }
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;

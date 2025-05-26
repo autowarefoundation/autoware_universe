@@ -2,6 +2,27 @@
 Changelog for package autoware_compare_map_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* chore: perception code owner update (`#10645 <https://github.com/autowarefoundation/autoware_universe/issues/10645>`_)
+  * chore: update maintainers in multiple perception packages
+  * Revert "chore: update maintainers in multiple perception packages"
+  This reverts commit f2838c33d6cd82bd032039e2a12b9cb8ba6eb584.
+  * chore: update maintainers in multiple perception packages
+  * chore: add Kok Seang Tan as maintainer in multiple perception packages
+  ---------
+* chore(elevation_map): add @asa-naki to maitainer (`#10621 <https://github.com/autowarefoundation/autoware_universe/issues/10621>`_)
+* fix(autoware_compare_map_segmentation): handle empty output point cloud  (`#10572 <https://github.com/autowarefoundation/autoware_universe/issues/10572>`_)
+  * fix(voxel_based_compare_map_filter): handle empty output point cloud and set appropriate frame_id
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Kosuke Takeuchi, Taekjin LEE, TaikiYamada4
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

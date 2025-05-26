@@ -2,6 +2,17 @@
 Changelog for package autoware_pose_initializer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(localization): replace tier4_localization_msgs used by ndt_align_srv with autoware_internal_localization_msgs (`#10567 <https://github.com/autowarefoundation/autoware_universe/issues/10567>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(autoware_pose_initializer): fix deprecated autoware_utils header (`#10517 <https://github.com/autowarefoundation/autoware_universe/issues/10517>`_)
+* Contributors: Kazusa Hashimoto, TaikiYamada4, 心刚
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 

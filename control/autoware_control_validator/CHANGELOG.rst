@@ -2,6 +2,28 @@
 Changelog for package autoware_control_validator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(control_validator): add lateral jerk validation (`#10619 <https://github.com/autowarefoundation/autoware_universe/issues/10619>`_)
+  * feat(control_validator): add steering rate validation and update parameters
+  * feat(lateral_jerk_validator): rename and implement lateral jerk validation logic
+  - Steering rate validation has been renamed to lateral jerk validation for clarity.
+  - Updated the comment to assume constant velocity and adjusted related parameters.
+  ---------
+* refactor(control_validator): visualize stop reason to virtual wall (`#10593 <https://github.com/autowarefoundation/autoware_universe/issues/10593>`_)
+  * feat(control_validator): add error message generation based on validation status
+  * feat(control_validator): update push_virtual_wall method to include message display
+  * refactor(control_validator): update error messages for clarity in generate_error_message method
+  ---------
+* chore(control_validator): update maintainer (`#10594 <https://github.com/autowarefoundation/autoware_universe/issues/10594>`_)
+  update
+* fix(control_validator): fix less trajectory point check (`#10508 <https://github.com/autowarefoundation/autoware_universe/issues/10508>`_)
+* Contributors: Kyoichi Sugahara, TaikiYamada4, Yuki TAKAGI
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble
