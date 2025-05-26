@@ -74,14 +74,14 @@ private:
   std::set<autoware_perception_msgs::msg::PredictedObject, PredictedObjectsComparator>
     prev_car_objects_;
 
-  double time_to_include_in_oncoming_car_;
+  double time_to_promote_from_candidate_;
 
   std::function<void(std::string_view)> logger_;
 
 public:
   explicit OncomingCars(
     ConnectedBidirectionalLanelets::SharedConstPtr bidirectional_lanelets,
-    const double & time_to_include_in_oncoming_car = 0.1,
+    const double & time_to_promote_from_candidate = 0.1,
     const std::function<void(std::string_view)> & logger = [](std::string_view) {});
 
   void update(

@@ -25,6 +25,7 @@
 
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <boost/geometry/algorithms/area.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
@@ -203,11 +204,7 @@ ConnectedBidirectionalLanelets::get_overlap_interval(
 
 Eigen::Vector2d calc_pose_direction(const geometry_msgs::msg::Pose & pose)
 {
-  double x = pose.orientation.x;
-  double y = pose.orientation.y;
-  double z = pose.orientation.z;
-  double w = pose.orientation.w;
-  double yaw = atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z));
+  double yaw = tf2::getYaw(pose.orientation);
   return {cos(yaw), sin(yaw)};
 }
 

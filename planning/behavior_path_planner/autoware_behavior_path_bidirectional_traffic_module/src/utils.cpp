@@ -19,8 +19,10 @@
 #include <boost/geometry/algorithms/length.hpp>
 
 #include <lanelet2_core/geometry/Lanelet.h>
+#include <lanelet2_core/geometry/LineString.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 
+#include <algorithm>
 #include <unordered_set>
 #include <vector>
 
@@ -29,13 +31,17 @@ namespace autoware::behavior_path_planner
 
 bool has_common_part(const lanelet::Ids & lane_ids1, const lanelet::Ids & lane_ids2)
 {
-  std::unordered_set<lanelet::Id> lane_ids_set1(lane_ids1.begin(), lane_ids1.end());
-  for (const lanelet::Id & lane_id2 : lane_ids2) {
-    if (lane_ids_set1.find(lane_id2) != lane_ids_set1.end()) {
-      return true;
-    }
-  }
-  return false;
+  auto sorted_ids1 = lane_ids1;
+  auto sorted_ids2 = lane_ids2;
+  std::sort(sorted_ids1.begin(), sorted_ids1.end());
+  std::sort(sorted_ids2.begin(), sorted_ids2.end());
+
+  std::vector<lanelet::Id> intersection;
+  std::set_intersection(
+    sorted_ids1.begin(), sorted_ids1.end(), sorted_ids2.begin(), sorted_ids2.end(),
+    std::back_inserter(intersection));
+
+  return !intersection.empty();
 }
 
 double compute_length_of_lanelets(const lanelet::ConstLanelet & lanelet)
@@ -44,8 +50,7 @@ double compute_length_of_lanelets(const lanelet::ConstLanelet & lanelet)
   if (lanelet_length_cache.contains(lanelet.id())) {
     return lanelet_length_cache.get(lanelet.id()).value();
   }
-  auto centerline = lanelet::utils::to2D(lanelet.centerline());
-  const auto length = static_cast<double>(boost::geometry::length(centerline));
+  double length = lanelet::geometry::length3d(lanelet);
   lanelet_length_cache.put(lanelet.id(), length);
   return length;
 }

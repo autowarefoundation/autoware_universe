@@ -56,10 +56,10 @@ autoware_perception_msgs::msg::PredictedObjects extract_car_objects(
 
 OncomingCars::OncomingCars(
   ConnectedBidirectionalLanelets::SharedConstPtr bidirectional_lanelets,
-  const double & time_to_include_in_oncoming_car,
+  const double & time_to_promote_from_candidate,
   const std::function<void(std::string_view)> & logger)
 : bidirectional_lanelets_(std::move(bidirectional_lanelets)),
-  time_to_include_in_oncoming_car_(time_to_include_in_oncoming_car),
+  time_to_promote_from_candidate_(time_to_promote_from_candidate),
   logger_(logger)
 {
 }
@@ -173,6 +173,7 @@ void OncomingCars::update(
   std::vector<size_t> keys_to_erase;
 
   for (const auto & object : current_car_objects.objects) {
+    // add new candidate/active oncoming vehicle and promote candidate to active
     size_t object_key = uuid_to_key(object.object_id.uuid);
     bool running_opposite_lane =
       bidirectional_lanelets_->get_opposite()->is_object_on_this_lane(object);
@@ -189,7 +190,7 @@ void OncomingCars::update(
     }
     if (running_opposite_lane && find_in_candidates && !find_in_oncoming_cars) {
       const double elapsed_time = (time - oncoming_cars_candidates_[object_key]).seconds();
-      if (elapsed_time > time_to_include_in_oncoming_car_) {
+      if (elapsed_time > time_to_promote_from_candidate_) {
         oncoming_cars_.emplace_back(
           object.kinematics.initial_pose_with_covariance.pose,
           object.kinematics.initial_twist_with_covariance.twist.linear.x, object.object_id,
@@ -207,6 +208,7 @@ void OncomingCars::update(
   keys_to_erase.clear();
 
   for (const auto & [oncoming_cars_candidate, _] : oncoming_cars_candidates_) {
+    // remove objects that are not candidate/active now
     auto car_object = find(current_car_objects, oncoming_cars_candidate);
     bool should_remove_from_candidates =
       !car_object.has_value() ||
