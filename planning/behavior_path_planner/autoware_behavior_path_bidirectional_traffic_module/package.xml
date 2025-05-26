@@ -17,6 +17,7 @@
   <depend>autoware_behavior_path_planner_common</depend>
   <depend>autoware_trajectory</depend>
   <depend>autoware_universe_utils</depend>
+  <depend>autoware_utils</depend>
   <depend>fmt</depend>
   <depend>lanelet2_core</depend>
   <depend>pluginlib</depend>

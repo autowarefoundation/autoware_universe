@@ -23,16 +23,18 @@ namespace autoware::behavior_path_planner
 
 void BidirectionalTrafficModuleParameters::init_from_node(rclcpp::Node * node, std::string_view ns)
 {
-  forward_looking_distance =
-    node->declare_parameter<double>(std::string(ns) + ".forward_looking_distance");
-  keep_left_ratio = node->declare_parameter<double>(std::string(ns) + ".keep_left_ratio");
-  pull_over_ratio = node->declare_parameter<double>(std::string(ns) + ".pull_over_ratio");
   time_to_prepare_pull_over =
     node->declare_parameter<double>(std::string(ns) + ".time_to_prepare_pull_over");
-  default_shift_distance_to_pull_over =
-    node->declare_parameter<double>(std::string(ns) + ".default_shift_distance_to_pull_over");
-  max_curvature_increase =
-    node->declare_parameter<double>(std::string(ns) + ".max_curvature_increase");
+  min_distance_from_roadside =
+    node->declare_parameter<double>(std::string(ns) + ".min_distance_from_roadside");
+  keep_left_distance_from_center_line =
+    node->declare_parameter<double>(std::string(ns) + ".keep_left_distance_from_center_line");
+  shift_distance_to_pull_over_from_center_line = node->declare_parameter<double>(
+    std::string(ns) + ".shift_distance_to_pull_over_from_center_line");
+  wait_time_for_oncoming_car =
+    node->declare_parameter<double>(std::string(ns) + ".wait_time_for_oncoming_car");
+  max_lateral_jerk = node->declare_parameter<double>(std::string(ns) + ".max_lateral_jerk");
+  min_lateral_jerk = node->declare_parameter<double>(std::string(ns) + ".min_lateral_jerk");
 }
 
 EgoParameters::EgoParameters(
@@ -46,6 +48,13 @@ EgoParameters::EgoParameters(
 {
   return autoware::universe_utils::toFootprint(
     ego_pose, base_link2front, base_link2rear, vehicle_width);
+}
+
+EgoParameters EgoParameters::from_planner_data(const PlannerData & planner_data)
+{
+  return {
+    planner_data.parameters.base_link2front, planner_data.parameters.base_link2rear,
+    planner_data.parameters.vehicle_width};
 }
 
 };  // namespace autoware::behavior_path_planner

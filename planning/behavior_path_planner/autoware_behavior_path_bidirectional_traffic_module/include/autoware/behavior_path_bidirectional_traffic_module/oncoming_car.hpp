@@ -6,7 +6,6 @@
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
-// Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
@@ -15,62 +14,87 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__ONCOMING_CAR_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__ONCOMING_CAR_HPP_
 
-#include "autoware/behavior_path_bidirectional_traffic_module/connected_bidirectional_lanelets.hpp"
-#include "autoware/trajectory/utils/closest.hpp"
+#include "autoware/behavior_path_bidirectional_traffic_module/bidirectional_lanelets.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <rclcpp/time.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
-#include <unique_identifier_msgs/msg/detail/uuid__struct.hpp>
+#include <unique_identifier_msgs/msg/uuid.hpp>
 
+#include <cstddef>
 #include <functional>
+#include <map>
 #include <string_view>
-#include <utility>
 #include <vector>
 
 namespace autoware::behavior_path_planner
 {
+struct PredictedObjectsComparator
+{
+  bool operator()(
+    const autoware_perception_msgs::msg::PredictedObject & lhs,
+    const autoware_perception_msgs::msg::PredictedObject & rhs) const;
+};
 
-class OncomingCar
+class CarObject
 {
 private:
-  const autoware_perception_msgs::msg::PredictedObject object_;
-  const ConnectedBidirectionalLanelets bidirectional_lanelets_;
+  geometry_msgs::msg::Pose pose_;
+  double speed_;
+  unique_identifier_msgs::msg::UUID uuid_;
+  ConnectedBidirectionalLanelets::SharedConstPtr bidirectional_lanelets_;
 
 public:
-  explicit OncomingCar(
-    autoware_perception_msgs::msg::PredictedObject object,
-    ConnectedBidirectionalLanelets bidirectional_lanelets)
-  : object_(std::move(object)), bidirectional_lanelets_(std::move(bidirectional_lanelets))
+  CarObject(
+    geometry_msgs::msg::Pose pose, const double & speed, unique_identifier_msgs::msg::UUID uuid,
+    ConnectedBidirectionalLanelets::SharedConstPtr bidirectional_lanelets);
+
+  [[nodiscard]] const unique_identifier_msgs::msg::UUID & get_uuid() const { return uuid_; }
+
+  [[nodiscard]] const geometry_msgs::msg::Pose & get_pose() const { return pose_; }
+
+  [[nodiscard]] const double & get_speed() const { return speed_; }
+
+  void update(const geometry_msgs::msg::Pose & pose, const double & speed)
   {
+    pose_ = pose;
+    speed_ = speed;
   }
+};
 
-  [[nodiscard]] bool operator==(const autoware_perception_msgs::msg::PredictedObject & object) const
-  {
-    return object_.object_id == object.object_id;
-  }
+double distance_on_lane(
+  const geometry_msgs::msg::Pose & pose1, const geometry_msgs::msg::Pose & pose2,
+  const ConnectedBidirectionalLanelets::SharedConstPtr & bidirectional_lanelets);
+class OncomingCars
+{
+private:
+  std::vector<CarObject> oncoming_cars_;
+  std::map<size_t, rclcpp::Time> oncoming_cars_candidates_;
 
-  [[nodiscard]] auto get_uuid() const { return object_.object_id.uuid; }
+  ConnectedBidirectionalLanelets::SharedConstPtr bidirectional_lanelets_;
 
-  [[nodiscard]] auto get_pose() const
-  {
-    return object_.kinematics.initial_pose_with_covariance.pose;
-  }
+  std::set<autoware_perception_msgs::msg::PredictedObject, PredictedObjectsComparator>
+    prev_car_objects_;
 
-  static std::vector<OncomingCar> update_oncoming_cars_in_bidirectional_lane(
-    const std::vector<OncomingCar> & prev_oncoming_cars,
-    const autoware_perception_msgs::msg::PredictedObjects & predicted_objects,
-    const ConnectedBidirectionalLanelets & bidirectional_lanelets,
-    const geometry_msgs::msg::Pose & ego_pose,
-    const double & forward_looking_distance,
+  double time_to_include_in_oncoming_car_;
+
+  std::function<void(std::string_view)> logger_;
+
+public:
+  explicit OncomingCars(
+    ConnectedBidirectionalLanelets::SharedConstPtr bidirectional_lanelets,
+    const double & time_to_include_in_oncoming_car = 0.1,
     const std::function<void(std::string_view)> & logger = [](std::string_view) {});
 
-  [[nodiscard]] double distance_from(const geometry_msgs::msg::Pose & pose) const
-  {
-    auto center_line = bidirectional_lanelets_.get_center_line();
-    return autoware::trajectory::closest(center_line, pose) -
-           autoware::trajectory::closest(center_line, get_pose());
-  }
+  void update(
+    const autoware_perception_msgs::msg::PredictedObjects & predicted_objects,
+    const geometry_msgs::msg::Pose & ego_pose, const rclcpp::Time & time);
+
+  [[nodiscard]] const std::vector<CarObject> & get_oncoming_cars() const;
+
+  [[nodiscard]] std::optional<CarObject> get_front_oncoming_car() const;
+
+  [[nodiscard]] bool empty() const { return oncoming_cars_.empty(); }
 };
 
 }  // namespace autoware::behavior_path_planner
