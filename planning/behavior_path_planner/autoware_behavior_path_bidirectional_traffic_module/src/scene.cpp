@@ -13,10 +13,12 @@
 // limitations under the License.
 #include "autoware/behavior_path_bidirectional_traffic_module/scene.hpp"
 
+#include "autoware/behavior_path_bidirectional_traffic_module/give_way.hpp"
 #include "autoware/behavior_path_bidirectional_traffic_module/keep_left.hpp"
 #include "autoware/trajectory/path_point_with_lane_id.hpp"
 #include "autoware/trajectory/utils/find_intervals.hpp"
 
+#include <autoware/universe_utils/geometry/boost_geometry.hpp>
 #include <rclcpp/logging.hpp>
 
 #include <tier4_planning_msgs/msg/path_point_with_lane_id.hpp>
@@ -44,6 +46,19 @@ BidirectionalTrafficModule::BidirectionalTrafficModule(
 {
 }
 
+autoware::universe_utils::Polygon2d BidirectionalTrafficModule::get_ego_polygon(
+  const geometry_msgs::msg::Pose & ego_pose) const
+{
+  return autoware::universe_utils::toFootprint(
+    ego_pose, planner_data_->parameters.base_link2front, planner_data_->parameters.base_link2rear,
+    planner_data_->parameters.vehicle_width);
+}
+
+autoware::universe_utils::Polygon2d BidirectionalTrafficModule::get_ego_polygon() const
+{
+  return get_ego_polygon(getEgoPose());
+}
+
 CandidateOutput BidirectionalTrafficModule::planCandidate() const
 {
   // Implementation will be added here in the future.
@@ -67,12 +82,18 @@ BehaviorModuleOutput BidirectionalTrafficModule::plan()
     return module_output;
   }
 
-  if (bidirectional_lane_intervals_in_trajectory_.empty()) {
+  if (bidirectional_lane_intervals_in_current_trajectory_.empty()) {
     return module_output;
   }
 
   *trajectory = shift_trajectory_for_keep_left(
-    *trajectory, bidirectional_lane_intervals_in_trajectory_, 0.2, 10.0, 10.0);
+    *trajectory, bidirectional_lane_intervals_in_current_trajectory_, 0.0, 10.0, 10.0);
+
+  if (give_way_) {
+    double speed = planner_data_->self_odometry->twist.twist.linear.x;
+    *trajectory =
+      give_way_->modify_trajectory(*trajectory, oncoming_cars_, getEgoPose(), speed < 0.01);
+  }
 
   module_output.path.points = trajectory->restore();
 
@@ -87,12 +108,12 @@ BehaviorModuleOutput BidirectionalTrafficModule::planWaitingApproval()
 
 bool BidirectionalTrafficModule::isExecutionRequested() const
 {
-  return !bidirectional_lane_intervals_in_trajectory_.empty();
+  return !bidirectional_lane_intervals_in_current_trajectory_.empty();
 }
 
 bool BidirectionalTrafficModule::isExecutionReady() const
 {
-  return bidirectional_lane_searched_;
+  return true;
 }
 
 void BidirectionalTrafficModule::processOnEntry()
@@ -107,22 +128,6 @@ void BidirectionalTrafficModule::processOnExit()
 
 void BidirectionalTrafficModule::updateData()
 {
-  if (!bidirectional_lane_searched_) {
-    const lanelet::LaneletMap & map = *planner_data_->route_handler->getLaneletMapPtr();
-    auto get_next_lanelets = [this](const lanelet::ConstLanelet & lanelet) {
-      return planner_data_->route_handler->getNextLanelets(lanelet);
-    };
-    auto get_previous_lanelets = [this](const lanelet::ConstLanelet & lanelet) {
-      return planner_data_->route_handler->getPreviousLanelets(lanelet);
-    };
-    all_bidirectional_lanes_in_map_ =
-      ConnectedBidirectionalLanelets::search_bidirectional_lanes_on_map(
-        map, get_next_lanelets, get_previous_lanelets);
-    RCLCPP_INFO(
-      logger_, "Found %lu bidirectional lanes", all_bidirectional_lanes_in_map_.size() / 2);
-    bidirectional_lane_searched_ = true;
-  }
-
   PathWithLaneId previous_path = getPreviousModuleOutput().path;
 
   auto trajectory =
@@ -136,14 +141,65 @@ void BidirectionalTrafficModule::updateData()
   }
 
   // Update bidirectional lane intervals in trajectory
-  bidirectional_lane_intervals_in_trajectory_.clear();
-  for (const auto & bidirectional_lanes : all_bidirectional_lanes_in_map_) {
+  bidirectional_lane_intervals_in_current_trajectory_.clear();
+  for (auto & bidirectional_lanes : get_all_bidirectional_lanes_in_map()) {
     std::optional<trajectory::Interval> interval =
       bidirectional_lanes.get_overlap_interval(*trajectory);
     if (interval.has_value()) {
-      bidirectional_lane_intervals_in_trajectory_.emplace_back(*interval);
+      bidirectional_lane_intervals_in_current_trajectory_.emplace_back(*interval);
     }
   }
+
+  // Check if the ego vehicle is running on the bidirectional lane
+  auto new_current_bidirectional_lane = get_current_bidirectional_lane(
+    getEgoPose(), get_ego_polygon(), get_all_bidirectional_lanes_in_map());
+
+  if (!current_bidirectional_lane_.has_value() && new_current_bidirectional_lane.has_value()) {
+    give_way_.emplace(
+      *new_current_bidirectional_lane,          //
+      planner_data_->parameters.vehicle_width,  //
+      20.0,                                     //
+      10.0,                                     //
+      0.0);
+
+    RCLCPP_INFO(getLogger(), "Entered Bidirectional Lane");
+  }
+  if (current_bidirectional_lane_.has_value() && !new_current_bidirectional_lane.has_value()) {
+    give_way_.reset();
+    RCLCPP_INFO(getLogger(), "Exited Bidirectional Lane");
+  }
+  current_bidirectional_lane_ = new_current_bidirectional_lane;
+
+  // Update Oncoming Cars
+  oncoming_cars_ = OncomingCar::update_oncoming_cars_in_bidirectional_lane(
+    oncoming_cars_, *planner_data_->dynamic_object, *current_bidirectional_lane_, getEgoPose());
+
+  for (const auto & oncoming_car : oncoming_cars_) {
+    double distance = oncoming_car.distance_from(getEgoPose());
+    RCLCPP_INFO(getLogger(), "Oncoming Car: %f", distance);
+  }
+
+  RCLCPP_INFO(getLogger(), "OnComing Cars: %lu", oncoming_cars_.size());
+}
+
+std::vector<ConnectedBidirectionalLanelets>
+BidirectionalTrafficModule::get_all_bidirectional_lanes_in_map() const
+{
+  if (!all_bidirectional_lanes_in_map_.has_value()) {
+    const lanelet::LaneletMap & map = *planner_data_->route_handler->getLaneletMapPtr();
+    auto get_next_lanelets = [this](const lanelet::ConstLanelet & lanelet) {
+      return planner_data_->route_handler->getNextLanelets(lanelet);
+    };
+    auto get_previous_lanelets = [this](const lanelet::ConstLanelet & lanelet) {
+      return planner_data_->route_handler->getPreviousLanelets(lanelet);
+    };
+    all_bidirectional_lanes_in_map_ =
+      ConnectedBidirectionalLanelets::search_bidirectional_lanes_on_map(
+        map, get_next_lanelets, get_previous_lanelets);
+    RCLCPP_INFO(
+      getLogger(), "Found %lu bidirectional lanes", all_bidirectional_lanes_in_map_->size() / 2);
+  }
+  return all_bidirectional_lanes_in_map_.value();
 }
 
 void BidirectionalTrafficModule::acceptVisitor(

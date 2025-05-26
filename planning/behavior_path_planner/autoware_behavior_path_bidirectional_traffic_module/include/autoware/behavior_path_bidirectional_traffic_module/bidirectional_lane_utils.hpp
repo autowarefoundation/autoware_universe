@@ -16,8 +16,12 @@
 #define AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__BIDIRECTIONAL_LANE_UTILS_HPP_
 
 #include "autoware/trajectory/forward.hpp"
+#include "autoware/trajectory/point.hpp"
 #include "autoware/trajectory/utils/find_intervals.hpp"
 
+#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+
+#include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <tier4_planning_msgs/msg/path_point_with_lane_id.hpp>
 
 #include <lanelet2_core/Forward.h>
@@ -25,6 +29,7 @@
 #include <lanelet2_core/primitives/Lanelet.h>
 
 #include <functional>
+#include <memory>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -35,18 +40,14 @@ class ConnectedBidirectionalLanelets
 {
 private:
   std::vector<lanelet::ConstLanelet> bidirectional_lanes_;
-  ConnectedBidirectionalLanelets * opposite_bidirectional_lanes_{nullptr};
-
-  template <class Iterator>
-  ConnectedBidirectionalLanelets(const Iterator & begin, const Iterator & end)
-  : bidirectional_lanes_(begin, end)
-  {
-  }
+  std::shared_ptr<ConnectedBidirectionalLanelets> opposite_bidirectional_lanes_;
 
   void set_opposite_bidirectional_lanes(
-    ConnectedBidirectionalLanelets * opposite_bidirectional_lanes)
+    const ConnectedBidirectionalLanelets & opposite_bidirectional_lanes)
   {
-    opposite_bidirectional_lanes_ = opposite_bidirectional_lanes;
+    opposite_bidirectional_lanes_ = std::make_shared<ConnectedBidirectionalLanelets>(
+      opposite_bidirectional_lanes.bidirectional_lanes_.begin(),
+      opposite_bidirectional_lanes.bidirectional_lanes_.end());
   }
 
   static std::pair<ConnectedBidirectionalLanelets, ConnectedBidirectionalLanelets>
@@ -57,15 +58,43 @@ private:
     const lanelet::ConstLanelet & lanelet_a, const lanelet::ConstLanelet & lanelet_b);
 
 public:
+  template <class Iterator>
+  ConnectedBidirectionalLanelets(const Iterator & begin, const Iterator & end)
+  : bidirectional_lanes_(begin, end)
+  {
+  }
+
   static std::vector<ConnectedBidirectionalLanelets> search_bidirectional_lanes_on_map(
     const lanelet::LaneletMap & map,
     const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> & get_next_lanelets,
     const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> &
       get_previous_lanelets);
 
+  ConnectedBidirectionalLanelets(const ConnectedBidirectionalLanelets & other);
+
+  ConnectedBidirectionalLanelets & operator=(const ConnectedBidirectionalLanelets & other);
+
   [[nodiscard]] std::optional<trajectory::Interval> get_overlap_interval(
     const trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> & trajectory) const;
+
+  [[nodiscard]] bool is_object_on_this_lane(
+    const geometry_msgs::msg::Pose & obj_pose,
+    const autoware::universe_utils::Polygon2d & obj_polygon) const;
+
+  [[nodiscard]] bool is_object_on_this_lane(
+    const autoware_perception_msgs::msg::PredictedObject & obj) const;
+
+  [[nodiscard]] ConnectedBidirectionalLanelets get_opposite_bidirectional_lanes() const;
+
+  [[nodiscard]] trajectory::Trajectory<geometry_msgs::msg::Point> get_center_line() const;
+
+  [[nodiscard]] trajectory::Trajectory<geometry_msgs::msg::Point> get_left_line() const;
 };
+
+std::optional<ConnectedBidirectionalLanelets> get_current_bidirectional_lane(
+  const geometry_msgs::msg::Pose & ego_pose,
+  const autoware::universe_utils::Polygon2d & ego_polygon,
+  const std::vector<ConnectedBidirectionalLanelets> & all_bidirectional_lanes);
 
 }  // namespace autoware::behavior_path_planner
 

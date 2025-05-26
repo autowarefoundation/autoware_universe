@@ -13,10 +13,20 @@
 // limitations under the License.
 
 #include "autoware/behavior_path_bidirectional_traffic_module/bidirectional_lane_utils.hpp"
+#include "autoware/behavior_path_planner_common/utils/utils.hpp"
 #include "autoware/trajectory/path_point_with_lane_id.hpp"
+#include "autoware/universe_utils/geometry/boost_geometry.hpp"
+#include "autoware/universe_utils/geometry/boost_polygon_utils.hpp"
 
+#include <autoware_lanelet2_extension/utility/query.hpp>
+#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_vehicle_info_utils/vehicle_info.hpp>
 #include <rclcpp/logging.hpp>
 
+#include <boost/geometry/algorithms/buffer.hpp>
+#include <boost/geometry/algorithms/detail/disjoint/interface.hpp>
+
+#include <Eigen/src/Core/Matrix.h>
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/Lanelet.h>
@@ -27,7 +37,6 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-
 namespace autoware::behavior_path_planner
 {
 
@@ -95,9 +104,9 @@ ConnectedBidirectionalLanelets::search_connected_bidirectional_lanelets(
   ConnectedBidirectionalLanelets connected_bidirectional_lanelets_b(
     connected_bidirectional_lanes_b.begin(), connected_bidirectional_lanes_b.end());
   connected_bidirectional_lanelets_a.set_opposite_bidirectional_lanes(
-    &connected_bidirectional_lanelets_b);
+    connected_bidirectional_lanelets_b);
   connected_bidirectional_lanelets_b.set_opposite_bidirectional_lanes(
-    &connected_bidirectional_lanelets_a);
+    connected_bidirectional_lanelets_a);
   return {connected_bidirectional_lanelets_a, connected_bidirectional_lanelets_b};
 }
 
@@ -159,6 +168,144 @@ std::optional<trajectory::Interval> ConnectedBidirectionalLanelets::get_overlap_
     });
   if (interval.empty()) return std::nullopt;
   return interval.front();
+}
+
+Eigen::Vector2d calc_pose_direction(const geometry_msgs::msg::Pose & pose)
+{
+  double x = pose.orientation.x;
+  double y = pose.orientation.y;
+  double z = pose.orientation.z;
+  double w = pose.orientation.w;
+  double yaw = atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z));
+  return {cos(yaw), sin(yaw)};
+}
+
+Eigen::Vector2d calc_lanelet_direction(const lanelet::ConstLanelet & lanelet)
+{
+  return (lanelet.centerline2d().back().basicPoint2d() -
+          lanelet.centerline2d().front().basicPoint2d())
+    .normalized();
+}
+
+bool is_same_direction(
+  const Eigen::Vector2d & a, const Eigen::Vector2d & b, const double & eps = 1.0)
+{
+  return std::abs(a.dot(b) - 1) < eps;
+}
+
+bool ConnectedBidirectionalLanelets::is_object_on_this_lane(
+  const geometry_msgs::msg::Pose & obj_pose,
+  const autoware::universe_utils::Polygon2d & obj_polygon) const
+{
+  Eigen::Vector2d obj_direction = calc_pose_direction(obj_pose);
+
+  for (const auto & lanelet : bidirectional_lanes_) {
+    auto lanelet_polygon = lanelet.polygon2d().basicPolygon();
+    if (boost::geometry::disjoint(obj_polygon, lanelet_polygon)) {
+      continue;
+    }
+    Eigen::Vector2d lanelet_direction = calc_lanelet_direction(lanelet);
+    if (is_same_direction(obj_direction, lanelet_direction)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool ConnectedBidirectionalLanelets::is_object_on_this_lane(
+  const autoware_perception_msgs::msg::PredictedObject & obj) const
+{
+  autoware::universe_utils::Polygon2d obj_polygon = autoware::universe_utils::toPolygon2d(obj);
+  const geometry_msgs::msg::Pose obj_pose = obj.kinematics.initial_pose_with_covariance.pose;
+  return is_object_on_this_lane(obj_pose, obj_polygon);
+}
+ConnectedBidirectionalLanelets::ConnectedBidirectionalLanelets(
+  const ConnectedBidirectionalLanelets & other)
+{
+  bidirectional_lanes_ = other.bidirectional_lanes_;
+  set_opposite_bidirectional_lanes(*other.opposite_bidirectional_lanes_);
+  opposite_bidirectional_lanes_->set_opposite_bidirectional_lanes(*this);
+}
+
+ConnectedBidirectionalLanelets & ConnectedBidirectionalLanelets::operator=(
+  const ConnectedBidirectionalLanelets & other)
+{
+  if (this != &other) {
+    bidirectional_lanes_ = other.bidirectional_lanes_;
+    set_opposite_bidirectional_lanes(*other.opposite_bidirectional_lanes_);
+    opposite_bidirectional_lanes_->set_opposite_bidirectional_lanes(*this);
+  }
+  return *this;
+}
+
+[[nodiscard]] ConnectedBidirectionalLanelets
+ConnectedBidirectionalLanelets::get_opposite_bidirectional_lanes() const
+{
+  return *opposite_bidirectional_lanes_;
+}
+
+[[nodiscard]] trajectory::Trajectory<geometry_msgs::msg::Point>
+ConnectedBidirectionalLanelets::get_center_line() const
+{
+  std::vector<geometry_msgs::msg::Point> center_line;
+  for (const auto & lane : bidirectional_lanes_) {
+    for (const auto & point : lane.centerline()) {
+      geometry_msgs::msg::Point p;
+      p.x = point.x();
+      p.y = point.y();
+      p.z = point.z();
+      center_line.emplace_back(p);
+    }
+    if (lane != bidirectional_lanes_.back()) {
+      center_line.pop_back();
+    }
+  }
+  auto trajectory = trajectory::Trajectory<geometry_msgs::msg::Point>::Builder{}.build(center_line);
+
+  if (!trajectory) {
+    throw std::runtime_error("Failed to build trajectory in ConnectedBidirectionalLanelets");
+  }
+
+  return *trajectory;
+}
+
+[[nodiscard]] trajectory::Trajectory<geometry_msgs::msg::Point>
+ConnectedBidirectionalLanelets::get_left_line() const
+{
+  std::vector<geometry_msgs::msg::Point> left_line;
+  for (const auto & lane : bidirectional_lanes_) {
+    for (const auto & point : lane.leftBound()) {
+      geometry_msgs::msg::Point p;
+      p.x = point.x();
+      p.y = point.y();
+      p.z = point.z();
+      left_line.push_back(p);
+    }
+    if (lane != bidirectional_lanes_.back()) {
+      left_line.pop_back();
+    }
+  }
+
+  auto trajectory = trajectory::Trajectory<geometry_msgs::msg::Point>::Builder{}.build(left_line);
+
+  if (!trajectory) {
+    throw std::runtime_error("Failed to build trajectory in ConnectedBidirectionalLanelets");
+  }
+
+  return *trajectory;
+}
+
+std::optional<ConnectedBidirectionalLanelets> get_current_bidirectional_lane(
+  const geometry_msgs::msg::Pose & ego_pose,
+  const autoware::universe_utils::Polygon2d & ego_polygon,
+  const std::vector<ConnectedBidirectionalLanelets> & all_bidirectional_lanes)
+{
+  for (const auto & bidirectional_lane : all_bidirectional_lanes) {
+    if (bidirectional_lane.is_object_on_this_lane(ego_pose, ego_polygon)) {
+      return bidirectional_lane;
+    }
+  }
+  return std::nullopt;
 }
 
 }  // namespace autoware::behavior_path_planner
