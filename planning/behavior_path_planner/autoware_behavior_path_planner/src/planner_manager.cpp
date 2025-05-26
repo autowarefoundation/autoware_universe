@@ -920,7 +920,8 @@ SlotOutput SubPlannerManager::propagateFull(
 
   std::vector<SceneModulePtr> deleted_modules;
   for (size_t itr_num = 0; itr_num < max_iteration_num; ++itr_num) {
-    const auto approved_module_result = runApprovedModules(data, previous_slot_output.valid_output, deleted_modules);
+    const auto approved_module_result =
+      runApprovedModules(data, previous_slot_output.valid_output, deleted_modules);
     const auto & approved_module_output = approved_module_result.valid_output;
 
     // these status needs to be propagated to downstream slots
@@ -968,7 +969,8 @@ SlotOutput SubPlannerManager::propagateWithExclusiveCandidate(
   const std::shared_ptr<PlannerData> & data, const SlotOutput & previous_slot_output)
 {
   std::vector<SceneModulePtr> deleted_modules;
-  const auto approved_module_result = runApprovedModules(data, previous_slot_output.valid_output, deleted_modules);
+  const auto approved_module_result =
+    runApprovedModules(data, previous_slot_output.valid_output, deleted_modules);
   const auto & approved_module_output = approved_module_result.valid_output;
 
   // these status needs to be propagated to downstream slots
