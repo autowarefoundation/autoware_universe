@@ -143,7 +143,8 @@ bool VoxelGridBasedEuclideanCluster::cluster(
   std::iota(random_indices.begin(), random_indices.end(), 0);
   std::shuffle(random_indices.begin(), random_indices.end(), rng);
   for (size_t i = 0; i < random_indices.size(); ++i) {
-    const auto & point = pointcloud->points.at(random_indices[i]);
+    const size_t random_index = random_indices[i];
+    const auto & point = pointcloud->points.at(random_index);
     // for (size_t i = 0; i < pointcloud->points.size(); ++i) {
     // const auto & point = pointcloud->points.at(i);
     const int voxel_index =
@@ -166,7 +167,7 @@ bool VoxelGridBasedEuclideanCluster::cluster(
       auto & cluster_data_size = clusters_data_size.at(voxel_to_cluster_map_it->second);
       std::memcpy(
         &temporary_clusters.at(voxel_to_cluster_map_it->second).data[cluster_data_size],
-        &pointcloud_msg->data[i * point_step], point_step);
+        &pointcloud_msg->data[random_index * point_step], point_step);
       cluster_data_size += point_step;
       if (cluster_data_size == temporary_clusters.at(voxel_to_cluster_map_it->second).data.size()) {
         temporary_clusters.at(voxel_to_cluster_map_it->second)
