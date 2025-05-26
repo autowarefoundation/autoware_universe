@@ -66,33 +66,29 @@ std::pair<lanelet::BasicLineString2d, lanelet::BasicLineString2d> get_concatenat
 
 /// @brief get the crosswalk lanelet bound (left/right) that will first be crossed by the ego
 /// vehicle
-lanelet::BasicLineString2d get_nearest_crosswalk_bound(
+/// @warning assumes the sides of the crosswalk lanelet that are perpendicular to the road only have
+/// two points
+lanelet::BasicSegment2d get_nearest_crosswalk_bound(
   const lanelet::ConstLanelet & crosswalk_lanelet,
   const geometry_msgs::msg::Point & first_path_point_on_crosswalk)
 {
   const auto end_search_point =
     lanelet::BasicPoint2d(first_path_point_on_crosswalk.x, first_path_point_on_crosswalk.y);
-  const auto is_ego_coming_from_left_side_of_crosswalk =
-    lanelet::geometry::distance2d(
-      crosswalk_lanelet.leftBound2d().basicLineString(), end_search_point) <
-    lanelet::geometry::distance2d(
-      crosswalk_lanelet.rightBound2d().basicLineString(), end_search_point);
-  return is_ego_coming_from_left_side_of_crosswalk
-           ? crosswalk_lanelet.leftBound2d().basicLineString()
-           : crosswalk_lanelet.rightBound2d().basicLineString();
+  return lanelet::geometry::closestSegment(
+    crosswalk_lanelet.polygon2d().basicPolygon(), end_search_point);
 }
 
 std::pair<lanelet::BasicPoint2d, lanelet::BasicPoint2d> get_extreme_crosswalk_bound_points(
-  const lanelet::BasicLineString2d & path_bound, const lanelet::BasicLineString2d & crosswalk_bound)
+  const lanelet::BasicLineString2d & path_bound, const lanelet::BasicSegment2d & crosswalk_bound)
 {
   const auto dist_front =
-    lanelet::geometry::toArcCoordinates(path_bound, crosswalk_bound.front()).distance;
+    lanelet::geometry::toArcCoordinates(path_bound, crosswalk_bound.first).distance;
   const auto dist_back =
-    lanelet::geometry::toArcCoordinates(path_bound, crosswalk_bound.back()).distance;
+    lanelet::geometry::toArcCoordinates(path_bound, crosswalk_bound.second).distance;
   const auto left_end_point =
-    dist_front > dist_back ? crosswalk_bound.front() : crosswalk_bound.back();
+    dist_front > dist_back ? crosswalk_bound.first : crosswalk_bound.second;
   const auto right_end_point =
-    dist_front <= dist_back ? crosswalk_bound.front() : crosswalk_bound.back();
+    dist_front <= dist_back ? crosswalk_bound.first : crosswalk_bound.second;
   return {left_end_point, right_end_point};
 }
 
