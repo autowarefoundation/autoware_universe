@@ -26,14 +26,15 @@ MRM Handler is a node to select a proper MRM from a system failure state contain
 
 ### Output
 
-| Name                                    | Type                                              | Description                                           |
-| --------------------------------------- | ------------------------------------------------- | ----------------------------------------------------- |
-| `/system/emergency/gear_cmd`            | `autoware_vehicle_msgs::msg::GearCommand`         | Required to execute proper MRM (send gear cmd)        |
-| `/system/emergency/hazard_lights_cmd`   | `autoware_vehicle_msgs::msg::HazardLightsCommand` | Required to execute proper MRM (send turn signal cmd) |
-| `/system/fail_safe/mrm_state`           | `autoware_adapi_v1_msgs::msg::MrmState`           | Inform MRM execution state and selected MRM behavior  |
-| `/system/mrm/emergency_stop/operate`    | `tier4_system_msgs::srv::OperateMrm`              | Execution order for MRM emergency stop                |
-| `/system/mrm/comfortable_stop/operate`  | `tier4_system_msgs::srv::OperateMrm`              | Execution order for MRM comfortable stop              |
-| `/system/mrm/pull_over_manager/operate` | `tier4_system_msgs::srv::OperateMrm`              | Execution order for MRM pull over                     |
+| Name                                    | Type                                                | Description                                             |
+| --------------------------------------- | --------------------------------------------------- | ------------------------------------------------------- |
+| `/system/emergency/gear_cmd`            | `autoware_vehicle_msgs::msg::GearCommand`           | Required to execute proper MRM (send gear cmd)          |
+| `/system/emergency/turn_indicators_cmd` | `autoware_vehicle_msgs::msg::TurnIndicatorsCommand` | Required to execute proper MRM (send turn signal cmd)   |
+| `/system/emergency/hazard_lights_cmd`   | `autoware_vehicle_msgs::msg::HazardLightsCommand`   | Required to execute proper MRM (send hazard signal cmd) |
+| `/system/fail_safe/mrm_state`           | `autoware_adapi_v1_msgs::msg::MrmState`             | Inform MRM execution state and selected MRM behavior    |
+| `/system/mrm/emergency_stop/operate`    | `tier4_system_msgs::srv::OperateMrm`                | Execution order for MRM emergency stop                  |
+| `/system/mrm/comfortable_stop/operate`  | `tier4_system_msgs::srv::OperateMrm`                | Execution order for MRM comfortable stop                |
+| `/system/mrm/pull_over_manager/operate` | `tier4_system_msgs::srv::OperateMrm`                | Execution order for MRM pull over                       |
 
 ## Parameters
 

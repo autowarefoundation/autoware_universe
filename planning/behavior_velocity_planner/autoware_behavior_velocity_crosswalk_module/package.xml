@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_behavior_velocity_crosswalk_module</name>
-  <version>0.44.0</version>
+  <version>0.45.0</version>
   <description>The autoware_behavior_velocity_crosswalk_module package</description>
 
   <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
@@ -33,6 +33,7 @@
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_route_handler</depend>
+  <depend>autoware_signal_processing</depend>
   <depend>autoware_utils</depend>
   <depend>autoware_vehicle_info_utils</depend>
   <depend>eigen</depend>
