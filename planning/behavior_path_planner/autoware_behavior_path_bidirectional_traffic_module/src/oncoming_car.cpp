@@ -204,10 +204,10 @@ void OncomingCars::update(
 
   for (const auto & [oncoming_cars_candidate, _] : oncoming_cars_candidates_) {
     auto car_object = find(current_car_objects, oncoming_cars_candidate);
-    bool shold_remove_from_candidates =
+    bool should_remove_from_candidates =
       !car_object.has_value() ||
       !bidirectional_lanelets_->get_opposite()->is_object_on_this_lane(car_object.value());
-    if (shold_remove_from_candidates) {
+    if (should_remove_from_candidates) {
       // oncoming_cars_candidates_.erase(oncoming_cars_candidate);
       keys_to_erase.emplace_back(oncoming_cars_candidate);
     }

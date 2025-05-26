@@ -55,7 +55,7 @@ shift_trajectory_for_keep_left(
       bidirectional_lanelet->average_lane_width() / 2.0 - ego_params.vehicle_width / 2.0 -
         parameter.min_distance_from_roadside);
 
-    // Make a shift for entering the bidirectional lanelane
+    // Make a shift for entering the bidirectional lanelet
     lanelet::ConstLanelets lanelets_before_entering_bidirectional_lanelet = filter_lanelets_by_ids(
       bidirectional_lanelet->get_lanelets_before_entering(), trajectory.get_contained_lane_ids());
 

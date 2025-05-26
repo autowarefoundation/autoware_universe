@@ -127,8 +127,7 @@ BackToNormalLane::modify_trajectory(
   double ego_stop_pose_s =
     autoware::experimental::trajectory::closest(trajectory, ego_stop_pose.value().position);
 
-  double ego_s =
-    autoware::experimental::trajectory::closest(trajectory, ego_stop_pose.value().position);
+  double ego_s = autoware::experimental::trajectory::closest(trajectory, ego_pose);
 
   if (ego_s > ego_stop_pose_s + *give_way->get_shift_distance_to_back_to_normal_lane()) {
     give_way->transition_to<NoNeedToGiveWay>();
@@ -227,13 +226,13 @@ GiveWay::modify_trajectory_for_waiting(
     return trajectory;
   }
 
-  std::vector<experimental::trajectory::ShiftInterval> shifts;
   double stop_point =
     experimental::trajectory::closest(trajectory, ego_stop_point_for_waiting_.value());
 
   if (stop_point == 0.0) {
     return trajectory;
   }
+
   experimental::trajectory::ShiftInterval shift1{
     stop_point - *shift_distance_to_pull_over_,    // start
     shift1.start + *shift_distance_to_pull_over_,  // end
@@ -258,13 +257,15 @@ GiveWay::modify_trajectory_for_waiting(
   }
 
   if (stop_at_stop_point) {
-    double stop_point =
+    double stop_point_in_shifted_trajectory =
       experimental::trajectory::closest(*shifted_trajectory, ego_stop_point_for_waiting_.value());
     double ego_point = experimental::trajectory::closest(*shifted_trajectory, ego_pose.position);
     shifted_trajectory->longitudinal_velocity_mps()
-      .range(std::max(stop_point, ego_point), shifted_trajectory->length())
+      .range(std::max(stop_point_in_shifted_trajectory, ego_point), shifted_trajectory->length())
       .set(0.0);
-    insert_stop_wall_(shifted_trajectory->compute(std::max(stop_point, ego_point)).point.pose);
+    insert_stop_wall_(
+      shifted_trajectory->compute(std::max(stop_point_in_shifted_trajectory, ego_point))
+        .point.pose);
   }
   return *shifted_trajectory;
 }
