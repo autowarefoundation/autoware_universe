@@ -49,7 +49,7 @@ protected:
 };
 TEST_F(TestGiveWay, keepLeftTest)
 {
-  auto trajectory = autoware::trajectory::Trajectory<
+  auto trajectory = experimental::trajectory::Trajectory<
                       autoware_internal_planning_msgs::msg::PathPointWithLaneId>::Builder{}
                       .build(path.points);
   if (!trajectory) {

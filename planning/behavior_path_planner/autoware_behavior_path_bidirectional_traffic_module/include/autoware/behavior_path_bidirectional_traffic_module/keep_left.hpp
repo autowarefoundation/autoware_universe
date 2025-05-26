@@ -35,10 +35,10 @@ namespace autoware::behavior_path_planner
  * @param[in] logger The logger function
  * @return The shifted trajectory
  */
-trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+experimental::trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
 shift_trajectory_for_keep_left(
-  const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-    trajectory,
+  const experimental::trajectory::Trajectory<
+    autoware_internal_planning_msgs::msg::PathPointWithLaneId> & trajectory,
   const std::vector<ConnectedBidirectionalLanelets::SharedConstPtr> &
     all_connected_bidirectional_lanelets,
   const BidirectionalTrafficModuleParameters & parameter, const EgoParameters & ego_params,

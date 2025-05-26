@@ -47,7 +47,7 @@ protected:
 };
 TEST_F(TestKeepLeft, keepLeftTest)
 {
-  auto trajectory = autoware::trajectory::Trajectory<
+  auto trajectory = experimental::trajectory::Trajectory<
                       autoware_internal_planning_msgs::msg::PathPointWithLaneId>::Builder{}
                       .build(path.points);
   if (!trajectory) {
@@ -63,7 +63,7 @@ TEST_F(TestKeepLeft, keepLeftTest)
 
   std::vector<int> bidirectional_lanelet_ids = {37179, 42762, 39876};
 
-  auto intervals = trajectory::find_intervals(
+  auto intervals = experimental::trajectory::find_intervals(
     *trajectory, [&](const autoware_internal_planning_msgs::msg::PathPointWithLaneId & point) {
       for (const auto & lanelet_id : bidirectional_lanelet_ids) {
         if (
@@ -81,9 +81,9 @@ TEST_F(TestKeepLeft, keepLeftTest)
   auto bidirectional_lanelet_exiting = trajectory->compute(intervals[0].end);
 
   double shifted_trajectory_start_s =
-    trajectory::closest(shifted_trajectory, bidirectional_lanelet_entering);
+    experimental::trajectory::closest(shifted_trajectory, bidirectional_lanelet_entering);
   double shifted_trajectory_end_s =
-    trajectory::closest(shifted_trajectory, bidirectional_lanelet_exiting);
+    experimental::trajectory::closest(shifted_trajectory, bidirectional_lanelet_exiting);
 
   auto shifted_trajectory_start = shifted_trajectory.compute(shifted_trajectory_start_s);
 

@@ -32,6 +32,10 @@
 #include <vector>
 namespace autoware::behavior_path_planner
 {
+
+/**
+ * @brief Class representing a set of connected bidirectional lanelets
+ */
 class ConnectedBidirectionalLanelets
 {
 public:
@@ -40,33 +44,92 @@ public:
   using SharedPtr = std::shared_ptr<ConnectedBidirectionalLanelets>;
   using SharedConstPtr = std::shared_ptr<const ConnectedBidirectionalLanelets>;
 
+  /**
+   * @brief Search for all bidirectional lanelet pairs in the map
+   * @param map Lanelet2 map
+   * @param get_next_lanelets Function to get next lanelets
+   * @param get_prev_lanelets Function to get previous lanelets
+   * @return A list of connected bidirectional lanelet sets
+   */
   static std::vector<ConnectedBidirectionalLanelets::SharedConstPtr>
   search_bidirectional_lanes_on_map(
     const lanelet::LaneletMap & map,
     const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> & get_next_lanelets,
     const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> & get_prev_lanelets);
 
+  /**
+   * @brief Construct a bidirectional lanelet pair from two lanelets
+   * @param one_bidirectional_lanelet_pair A pair of lanelets
+   * @param get_next_lanelets Function to get next lanelets
+   * @param get_prev_lanelets Function to get previous lanelets
+   * @return A pair of connected bidirectional lanelet sets
+   */
   static std::pair<SharedConstPtr, SharedConstPtr> make_bidirectional_lane_pair(
     const std::pair<lanelet::ConstLanelet, lanelet::ConstLanelet> & one_bidirectional_lanelet_pair,
     const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> & get_next_lanelets,
     const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> & get_prev_lanelets);
 
-  [[nodiscard]] std::optional<trajectory::Interval> get_overlap_interval(
-    const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-      trajectory) const;
+  /**
+   * @brief Get interval of trajectory overlapping with this lane
+   * @param trajectory Input trajectory with lane IDs
+   * @return Optional interval if overlap exists
+   */
+  [[nodiscard]] std::optional<experimental::trajectory::Interval> get_overlap_interval(
+    const experimental::trajectory::Trajectory<
+      autoware_internal_planning_msgs::msg::PathPointWithLaneId> & trajectory) const;
+  /**
+   * @brief Check if object is on this lane (by pose and polygon)
+   * @param obj_pose Object pose
+   * @param obj_polygon Object polygon in 2D
+   * @return True if object lies on this lane
+   */
   [[nodiscard]] bool is_object_on_this_lane(
     const geometry_msgs::msg::Pose & obj_pose,
     const autoware::universe_utils::Polygon2d & obj_polygon) const;
+
+  /**
+   * @brief Check if predicted object is on this lane
+   * @param obj Predicted object message
+   * @return True if object lies on this lane
+   */
   [[nodiscard]] bool is_object_on_this_lane(
     const autoware_perception_msgs::msg::PredictedObject & obj) const;
 
+  /**
+   * @brief Get the opposite direction lanelet set
+   * @return Opposite lanelet set
+   */
   [[nodiscard]] SharedConstPtr get_opposite() const;
-  [[nodiscard]] trajectory::Trajectory<geometry_msgs::msg::Pose> get_center_line() const;
 
+  /**
+   * @brief Get centerline trajectory of lane
+   * @return Centerline trajectory
+   */
+  [[nodiscard]] experimental::trajectory::Trajectory<geometry_msgs::msg::Pose> get_center_line()
+    const;
+
+  /**
+   * @brief Get lanelets in this set
+   * @return Vector of lanelets
+   */
   [[nodiscard]] const lanelet::ConstLanelets & get_lanelets() const;
+
+  /**
+   * @brief Get inflow lanelets
+   * @return Lanelets leading into this set
+   */
   [[nodiscard]] const lanelet::ConstLanelets & get_lanelets_before_entering() const;
+
+  /**
+   * @brief Get outflow lanelets
+   * @return Lanelets leading out from this set
+   */
   [[nodiscard]] const lanelet::ConstLanelets & get_lanelets_after_exiting() const;
 
+  /**
+   * @brief Compute average lane width
+   * @return Average width in meters
+   */
   [[nodiscard]] double average_lane_width() const;
 
 private:
@@ -79,6 +142,9 @@ private:
     lanelet::ConstLanelets bidirectional_lanelets, lanelet::ConstLanelets lanelets_before_entering,
     lanelet::ConstLanelets lanelets_after_entering);
 
+  /**
+   * @brief Internal helper to recursively search connected bidirectional lanelets
+   */
   static std::pair<ConnectedBidirectionalLanelets, ConnectedBidirectionalLanelets>
   search_connected_bidirectional_lanelets(
     const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> & get_next_lanelets,
@@ -86,6 +152,13 @@ private:
     const lanelet::ConstLanelet & lanelet_a, const lanelet::ConstLanelet & lanelet_b);
 };
 
+/**
+ * @brief Find which bidirectional lanelet the ego vehicle is in
+ * @param ego_pose Pose of the ego vehicle
+ * @param ego_params Ego vehicle parameters
+ * @param all_bidirectional_lanes List of all connected bidirectional lanelets
+ * @return Optional bidirectional lane containing ego
+ */
 std::optional<ConnectedBidirectionalLanelets::SharedConstPtr>
 get_bidirectional_lanelets_where_ego_is(
   const geometry_msgs::msg::Pose & ego_pose, const EgoParameters & ego_params,

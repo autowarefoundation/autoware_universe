@@ -14,7 +14,7 @@
 
 #include "autoware/behavior_path_bidirectional_traffic_module/utils.hpp"
 
-#include "autoware_utils/system/lru_cache.hpp"
+#include "autoware_utils_system/lru_cache.hpp"
 
 #include <boost/geometry/algorithms/length.hpp>
 
@@ -39,7 +39,7 @@ bool has_common_part(const lanelet::Ids & lane_ids1, const lanelet::Ids & lane_i
 
 double compute_length_of_lanelets(const lanelet::ConstLanelet & lanelet)
 {
-  static autoware_utils::LRUCache<lanelet::Id, double> lanelet_length_cache(1000);
+  static autoware_utils_system::LRUCache<lanelet::Id, double> lanelet_length_cache(1000);
   if (lanelet_length_cache.contains(lanelet.id())) {
     return lanelet_length_cache.get(lanelet.id()).value();
   }
@@ -114,7 +114,7 @@ lanelet::ConstLanelets get_outflow_lanelets(
 size_t uuid_to_key(const std::array<uint8_t, 16> & uuid)
 {
   return std::accumulate(uuid.begin(), uuid.end(), size_t{0}, [](size_t seed, uint8_t byte) {
-    return seed ^ (static_cast<size_t>(byte) + 0x9e3779b9 + (seed << 6) + (seed >> 2));
+    return seed ^ (static_cast<size_t>(byte) + 0x9e3779b9 + (seed << 6U) + (seed >> 2U));
   });
 }
 

@@ -16,8 +16,9 @@
 #include "autoware/behavior_path_bidirectional_traffic_module/oncoming_car.hpp"
 #include "autoware/behavior_path_bidirectional_traffic_module/parameter.hpp"
 #include "autoware/motion_utils/trajectory/path_shift.hpp"
-#include "autoware/trajectory/utils/frenet_utils.hpp"
+#include "autoware/trajectory/utils/closest.hpp"
 #include "autoware/trajectory/utils/shift.hpp"
+#include "autoware_utils_geometry/geometry.hpp"
 
 #include <algorithm>
 #include <optional>
@@ -27,11 +28,11 @@
 
 namespace autoware::behavior_path_planner
 {
-trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+experimental::trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
 NoNeedToGiveWay::modify_trajectory(
   GiveWay * give_way,
-  const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-    trajectory,
+  const experimental::trajectory::Trajectory<
+    autoware_internal_planning_msgs::msg::PathPointWithLaneId> & trajectory,
   const OncomingCars & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
   const double & ego_speed)
 {
@@ -50,11 +51,11 @@ NoNeedToGiveWay::modify_trajectory(
   return trajectory;
 }
 
-trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+experimental::trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
 ApproachingToShift::modify_trajectory(
   GiveWay * give_way,
-  const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-    trajectory,
+  const experimental::trajectory::Trajectory<
+    autoware_internal_planning_msgs::msg::PathPointWithLaneId> & trajectory,
   const OncomingCars & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose, const double &)
 {
   if (oncoming_cars.empty()) {
@@ -66,34 +67,30 @@ ApproachingToShift::modify_trajectory(
     return trajectory;
   }
 
-  auto ego_stop_pose_frenet_coordinate =
-    autoware::trajectory::compute_frenet_coordinate(trajectory, ego_stop_pose.value().position);
+  double ego_stop_pose_s =
+    autoware::experimental::trajectory::closest(trajectory, ego_stop_pose.value().position);
 
-  if (!ego_stop_pose_frenet_coordinate.has_value()) {
+  double ego_s = autoware::experimental::trajectory::closest(trajectory, ego_pose.position);
+
+  std::optional<double> shift_distance_to_pull_over = give_way->get_shift_distance_to_pull_over();
+
+  if (!shift_distance_to_pull_over.has_value()) {
+    give_way->transition_to<NoNeedToGiveWay>();
     return trajectory;
   }
 
-  auto ego_frenet_coordinate =
-    autoware::trajectory::compute_frenet_coordinate(trajectory, ego_pose.position);
-
-  if (!ego_frenet_coordinate.has_value()) {
-    return trajectory;
-  }
-
-  if (
-    ego_frenet_coordinate->first >
-    ego_stop_pose_frenet_coordinate->first - *give_way->get_shift_distance_to_pull_over()) {
+  if (ego_stop_pose_s - ego_s < shift_distance_to_pull_over.value()) {
     give_way->transition_to<ShiftingRoadside>();
   }
 
   return give_way->modify_trajectory_for_waiting(trajectory, ego_pose, true);
 }
 
-trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+experimental::trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
 ShiftingRoadside::modify_trajectory(
   GiveWay * give_way,
-  const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-    trajectory,
+  const experimental::trajectory::Trajectory<
+    autoware_internal_planning_msgs::msg::PathPointWithLaneId> & trajectory,
   const OncomingCars &, const geometry_msgs::msg::Pose & ego_pose, const double & ego_speed)
 {
   if (ego_speed < 0.1) {
@@ -102,11 +99,11 @@ ShiftingRoadside::modify_trajectory(
   return give_way->modify_trajectory_for_waiting(trajectory, ego_pose, true);
 }
 
-trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+experimental::trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
 WaitingForOncomingCarsToPass::modify_trajectory(
   GiveWay * give_way,
-  const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-    trajectory,
+  const experimental::trajectory::Trajectory<
+    autoware_internal_planning_msgs::msg::PathPointWithLaneId> & trajectory,
   const OncomingCars & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose, const double &)
 {
   if (oncoming_cars.empty()) {
@@ -115,34 +112,25 @@ WaitingForOncomingCarsToPass::modify_trajectory(
   return give_way->modify_trajectory_for_waiting(trajectory, ego_pose, true);
 }
 
-trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+experimental::trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
 BackToNormalLane::modify_trajectory(
   GiveWay * give_way,
-  const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-    trajectory,
+  const experimental::trajectory::Trajectory<
+    autoware_internal_planning_msgs::msg::PathPointWithLaneId> & trajectory,
   const OncomingCars &, const geometry_msgs::msg::Pose & ego_pose, const double &)
 {
   auto ego_stop_pose = give_way->get_pull_over_pose();
   if (!ego_stop_pose.has_value()) {
     return trajectory;
   }
-  auto ego_stop_pose_frenet_coordinate =
-    autoware::trajectory::compute_frenet_coordinate(trajectory, ego_stop_pose.value().position);
 
-  if (!ego_stop_pose_frenet_coordinate.has_value()) {
-    give_way->transition_to<NoNeedToGiveWay>();
-  }
+  double ego_stop_pose_s =
+    autoware::experimental::trajectory::closest(trajectory, ego_stop_pose.value().position);
 
-  auto ego_frenet_coordinate =
-    autoware::trajectory::compute_frenet_coordinate(trajectory, ego_pose.position);
+  double ego_s =
+    autoware::experimental::trajectory::closest(trajectory, ego_stop_pose.value().position);
 
-  if (!ego_frenet_coordinate.has_value()) {
-    return trajectory;
-  }
-
-  if (
-    ego_frenet_coordinate->first > ego_stop_pose_frenet_coordinate->first +
-                                     *give_way->get_shift_distance_to_back_to_normal_lane()) {
+  if (ego_s > ego_stop_pose_s + *give_way->get_shift_distance_to_back_to_normal_lane()) {
     give_way->transition_to<NoNeedToGiveWay>();
   }
 
@@ -162,10 +150,10 @@ GiveWay::GiveWay(
 {
 }
 
-trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+experimental::trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
 GiveWay::modify_trajectory(
-  const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-    trajectory,
+  const experimental::trajectory::Trajectory<
+    autoware_internal_planning_msgs::msg::PathPointWithLaneId> & trajectory,
   const OncomingCars & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
   const double & ego_speed)
 {
@@ -177,7 +165,7 @@ bool GiveWay::decide_ego_stop_pose(
   const CarObject & front_oncoming_car)
 {
   auto center_line = bidirectional_lanelets_->get_center_line();
-  const double ego_s = autoware::trajectory::closest(center_line, ego_pose.position);
+  const double ego_s = autoware::experimental::trajectory::closest(center_line, ego_pose.position);
 
   double shift_prepare_distance = ego_speed * parameters_.time_to_prepare_pull_over;
 
@@ -229,47 +217,56 @@ bool GiveWay::decide_ego_stop_pose(
   return go_to_shift_mode;
 }
 
-trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+experimental::trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
 GiveWay::modify_trajectory_for_waiting(
-  const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-    trajectory,
+  const experimental::trajectory::Trajectory<
+    autoware_internal_planning_msgs::msg::PathPointWithLaneId> & trajectory,
   const geometry_msgs::msg::Pose & ego_pose, bool stop_at_stop_point) const
 {
   if (!ego_stop_point_for_waiting_.has_value()) {
     return trajectory;
   }
 
-  std::vector<trajectory::ShiftInterval> shifts;
-  trajectory::ShiftInterval shift1;
-  double stop_point = trajectory::closest(trajectory, ego_stop_point_for_waiting_.value());
+  std::vector<experimental::trajectory::ShiftInterval> shifts;
+  double stop_point =
+    experimental::trajectory::closest(trajectory, ego_stop_point_for_waiting_.value());
 
   if (stop_point == 0.0) {
     return trajectory;
   }
+  experimental::trajectory::ShiftInterval shift1{
+    stop_point - *shift_distance_to_pull_over_,    // start
+    shift1.start + *shift_distance_to_pull_over_,  // end
+    -autoware_utils_geometry::calc_distance2d(
+      trajectory.compute(stop_point), ego_stop_point_for_waiting_.value())  // lateral_offset
+  };
 
-  shift1.start = stop_point - *shift_distance_to_pull_over_;
-  shift1.end = shift1.start + *shift_distance_to_pull_over_;
-  shift1.lateral_offset = -autoware::universe_utils::calcDistance2d(
-    trajectory.compute(stop_point), ego_stop_point_for_waiting_.value());
+  experimental::trajectory::ShiftInterval shift2{
+    shift1.end,                                            // start
+    shift1.end + *shift_distance_to_back_to_normal_lane_,  // end
+    autoware_utils_geometry::calc_distance2d(
+      trajectory.compute(stop_point), ego_stop_point_for_waiting_.value())  // lateral_offset
+  };
 
-  trajectory::ShiftInterval shift2;
-  shift2.start = shift1.end;
-  shift2.end = shift2.start + *shift_distance_to_back_to_normal_lane_;
-  shift2.lateral_offset = autoware::universe_utils::calcDistance2d(
-    trajectory.compute(stop_point), ego_stop_point_for_waiting_.value());
+  experimental::trajectory::ShiftParameters shift_params{0.0, 0.0};
 
-  auto shifted_trajectory = trajectory::shift(trajectory, {shift1, shift2});
+  auto shifted_trajectory =
+    experimental::trajectory::shift(trajectory, {shift1, shift2}, shift_params);
+
+  if (!shifted_trajectory) {
+    return trajectory;
+  }
 
   if (stop_at_stop_point) {
     double stop_point =
-      trajectory::closest(shifted_trajectory, ego_stop_point_for_waiting_.value());
-    double ego_point = trajectory::closest(shifted_trajectory, ego_pose.position);
-    shifted_trajectory.longitudinal_velocity_mps()
-      .range(std::max(stop_point, ego_point), shifted_trajectory.length())
+      experimental::trajectory::closest(*shifted_trajectory, ego_stop_point_for_waiting_.value());
+    double ego_point = experimental::trajectory::closest(*shifted_trajectory, ego_pose.position);
+    shifted_trajectory->longitudinal_velocity_mps()
+      .range(std::max(stop_point, ego_point), shifted_trajectory->length())
       .set(0.0);
-    insert_stop_wall_(shifted_trajectory.compute(std::max(stop_point, ego_point)).point.pose);
+    insert_stop_wall_(shifted_trajectory->compute(std::max(stop_point, ego_point)).point.pose);
   }
-  return shifted_trajectory;
+  return *shifted_trajectory;
 }
 
 std::optional<geometry_msgs::msg::Pose> GiveWay::get_pull_over_pose() const

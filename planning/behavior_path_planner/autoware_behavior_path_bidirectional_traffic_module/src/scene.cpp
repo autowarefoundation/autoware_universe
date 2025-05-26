@@ -69,9 +69,9 @@ BehaviorModuleOutput BidirectionalTrafficModule::plan()
 
   PathWithLaneId previous_path = module_output.path;
 
-  auto trajectory =
-    trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>::Builder{}
-      .build(previous_path.points);
+  auto trajectory = experimental::trajectory::Trajectory<
+                      autoware_internal_planning_msgs::msg::PathPointWithLaneId>::Builder{}
+                      .build(previous_path.points);
 
   if (!trajectory) {
     RCLCPP_ERROR(getLogger(), "Failed to build trajectory in BidirectionalTrafficModule::plan");
@@ -121,9 +121,9 @@ void BidirectionalTrafficModule::updateData()
 {
   PathWithLaneId previous_path = getPreviousModuleOutput().path;
 
-  auto trajectory =
-    trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>::Builder{}
-      .build(previous_path.points);
+  auto trajectory = experimental::trajectory::Trajectory<
+                      autoware_internal_planning_msgs::msg::PathPointWithLaneId>::Builder{}
+                      .build(previous_path.points);
 
   if (!trajectory) {
     RCLCPP_ERROR(

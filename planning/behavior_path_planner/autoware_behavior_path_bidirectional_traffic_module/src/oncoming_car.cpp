@@ -135,8 +135,8 @@ double distance_on_lane(
   const ConnectedBidirectionalLanelets::SharedConstPtr & bidirectional_lanelets)
 {
   auto center_line = bidirectional_lanelets->get_center_line();
-  double distance = autoware::trajectory::closest(center_line, pose2) -
-                    autoware::trajectory::closest(center_line, pose1);
+  double distance = experimental::trajectory::closest(center_line, pose2) -
+                    experimental::trajectory::closest(center_line, pose1);
   return distance;
 }
 
@@ -259,7 +259,7 @@ std::optional<CarObject> OncomingCars::get_front_oncoming_car() const
   std::optional<CarObject> front_oncoming_car;
   for (const auto & oncoming_car : oncoming_cars_) {
     auto center_line = bidirectional_lanelets_->get_center_line();
-    double distance = autoware::trajectory::closest(center_line, oncoming_car.get_pose());
+    double distance = experimental::trajectory::closest(center_line, oncoming_car.get_pose());
     if (distance < min_distance) {
       min_distance = distance;
       front_oncoming_car = oncoming_car;

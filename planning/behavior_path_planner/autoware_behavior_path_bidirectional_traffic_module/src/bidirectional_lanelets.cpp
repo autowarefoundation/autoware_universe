@@ -19,7 +19,7 @@
 #include "autoware/trajectory/path_point_with_lane_id.hpp"
 #include "autoware/universe_utils/geometry/boost_geometry.hpp"
 #include "autoware/universe_utils/geometry/boost_polygon_utils.hpp"
-#include "autoware_utils/system/lru_cache.hpp"
+#include "autoware_utils_system/lru_cache.hpp"
 
 #include <Eigen/Core>
 
@@ -179,16 +179,17 @@ ConnectedBidirectionalLanelets::search_bidirectional_lanes_on_map(
   return bidirectional_lanelets;
 }
 
-std::optional<trajectory::Interval> ConnectedBidirectionalLanelets::get_overlap_interval(
-  const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-    trajectory) const
+std::optional<experimental::trajectory::Interval>
+ConnectedBidirectionalLanelets::get_overlap_interval(
+  const experimental::trajectory::Trajectory<
+    autoware_internal_planning_msgs::msg::PathPointWithLaneId> & trajectory) const
 {
   std::unordered_set<lanelet::Id> lane_ids_set;
   for (const auto & lanelet : bidirectional_lanelets_) {
     lane_ids_set.insert(lanelet.id());
   }
 
-  auto interval = trajectory::find_intervals(
+  auto interval = experimental::trajectory::find_intervals(
     trajectory,
     [&](const autoware_internal_planning_msgs::msg::PathPointWithLaneId & point) -> bool {
       for (const auto & lane_id : point.lane_ids) {
@@ -273,15 +274,16 @@ ConnectedBidirectionalLanelets::get_lanelets_after_exiting() const
   return lanelets_after_entering_;
 }
 
-[[nodiscard]] trajectory::Trajectory<geometry_msgs::msg::Pose>
+[[nodiscard]] experimental::trajectory::Trajectory<geometry_msgs::msg::Pose>
 ConnectedBidirectionalLanelets::get_center_line() const
 {
   // add cache
-  static autoware_utils::LRUCache<
-    lanelet::ConstLanelets, trajectory::Trajectory<geometry_msgs::msg::Point>, ConstLaneletsHashMap>
+  static autoware_utils_system::LRUCache<
+    lanelet::ConstLanelets, experimental::trajectory::Trajectory<geometry_msgs::msg::Point>,
+    ConstLaneletsHashMap>
     cache(1000);
   if (cache.contains(bidirectional_lanelets_)) {
-    return trajectory::Trajectory<geometry_msgs::msg::Pose>{
+    return experimental::trajectory::Trajectory<geometry_msgs::msg::Pose>{
       cache.get(bidirectional_lanelets_).value()};
   }
   std::vector<geometry_msgs::msg::Point> center_line;
@@ -297,7 +299,8 @@ ConnectedBidirectionalLanelets::get_center_line() const
       center_line.pop_back();
     }
   }
-  auto trajectory = trajectory::Trajectory<geometry_msgs::msg::Point>::Builder{}.build(center_line);
+  auto trajectory =
+    experimental::trajectory::Trajectory<geometry_msgs::msg::Point>::Builder{}.build(center_line);
 
   if (!trajectory) {
     throw std::runtime_error("Failed to build trajectory in ConnectedBidirectionalLanelets");
@@ -305,12 +308,13 @@ ConnectedBidirectionalLanelets::get_center_line() const
 
   cache.put(bidirectional_lanelets_, *trajectory);
 
-  return trajectory::Trajectory<geometry_msgs::msg::Pose>(*trajectory);
+  return experimental::trajectory::Trajectory<geometry_msgs::msg::Pose>{*trajectory};
 }
 
 [[nodiscard]] double ConnectedBidirectionalLanelets::average_lane_width() const
 {
-  static autoware_utils::LRUCache<lanelet::ConstLanelets, double, ConstLaneletsHashMap> cache(1000);
+  static autoware_utils_system::LRUCache<lanelet::ConstLanelets, double, ConstLaneletsHashMap>
+    cache(1000);
   if (cache.contains(bidirectional_lanelets_)) {
     return cache.get(bidirectional_lanelets_).value();
   }

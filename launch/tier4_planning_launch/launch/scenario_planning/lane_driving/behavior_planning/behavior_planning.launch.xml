@@ -252,6 +252,7 @@
         <param from="$(var behavior_path_planner_side_shift_module_param_path)"/>
         <param from="$(var behavior_path_planner_static_obstacle_avoidance_module_param_path)"/>
         <param from="$(var behavior_path_planner_avoidance_by_lc_module_param_path)"/>
+        <param from="$(var behavior_path_bidirectional_traffic_module_param_path)"/>
         <param from="$(var behavior_path_planner_dynamic_obstacle_avoidance_module_param_path)"/>
         <param from="$(var behavior_path_planner_lane_change_module_param_path)"/>
         <param from="$(var behavior_path_planner_goal_planner_module_param_path)"/>

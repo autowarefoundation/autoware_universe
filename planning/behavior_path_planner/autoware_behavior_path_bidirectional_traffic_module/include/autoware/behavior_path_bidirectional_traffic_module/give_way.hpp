@@ -36,11 +36,12 @@ class GiveWay;
 class GiveWayState
 {
 public:
-  virtual trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+  virtual experimental::trajectory::Trajectory<
+    autoware_internal_planning_msgs::msg::PathPointWithLaneId>
   modify_trajectory(
     GiveWay * give_way,
-    const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-      trajectory,
+    const experimental::trajectory::Trajectory<
+      autoware_internal_planning_msgs::msg::PathPointWithLaneId> & trajectory,
     const OncomingCars & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
     const double & ego_speed) = 0;
 
@@ -50,11 +51,11 @@ public:
 class NoNeedToGiveWay : public GiveWayState
 {
 public:
-  trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+  experimental::trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
   modify_trajectory(
     GiveWay * give_way,
-    const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-      trajectory,
+    const experimental::trajectory::Trajectory<
+      autoware_internal_planning_msgs::msg::PathPointWithLaneId> & trajectory,
     const OncomingCars & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
     const double & ego_speed) override;
 
@@ -64,11 +65,11 @@ public:
 class ApproachingToShift : public GiveWayState
 {
 public:
-  trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+  experimental::trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
   modify_trajectory(
     GiveWay * give_way,
-    const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-      trajectory,
+    const experimental::trajectory::Trajectory<
+      autoware_internal_planning_msgs::msg::PathPointWithLaneId> & trajectory,
     const OncomingCars & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
     const double & ego_speed) override;
 
@@ -78,11 +79,11 @@ public:
 class ShiftingRoadside : public GiveWayState
 {
 public:
-  trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+  experimental::trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
   modify_trajectory(
     GiveWay * give_way,
-    const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-      trajectory,
+    const experimental::trajectory::Trajectory<
+      autoware_internal_planning_msgs::msg::PathPointWithLaneId> & trajectory,
     const OncomingCars & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
     const double & ego_speed) override;
 
@@ -92,11 +93,11 @@ public:
 class WaitingForOncomingCarsToPass : public GiveWayState
 {
 public:
-  trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+  experimental::trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
   modify_trajectory(
     GiveWay * give_way,
-    const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-      trajectory,
+    const experimental::trajectory::Trajectory<
+      autoware_internal_planning_msgs::msg::PathPointWithLaneId> & trajectory,
     const OncomingCars & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
     const double & ego_speed) override;
 
@@ -106,11 +107,11 @@ public:
 class BackToNormalLane : public GiveWayState
 {
 public:
-  trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+  experimental::trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
   modify_trajectory(
     GiveWay * give_way,
-    const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-      trajectory,
+    const experimental::trajectory::Trajectory<
+      autoware_internal_planning_msgs::msg::PathPointWithLaneId> & trajectory,
     const OncomingCars & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
     const double & ego_speed) override;
 
@@ -140,10 +141,11 @@ public:
     const std::function<void(geometry_msgs::msg::Pose)> & insert_stop_wall =
       [](geometry_msgs::msg::Pose) {});
 
-  [[nodiscard]] trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+  [[nodiscard]] experimental::trajectory::Trajectory<
+    autoware_internal_planning_msgs::msg::PathPointWithLaneId>
   modify_trajectory(
-    const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-      trajectory,
+    const experimental::trajectory::Trajectory<
+      autoware_internal_planning_msgs::msg::PathPointWithLaneId> & trajectory,
     const OncomingCars & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
     const double & ego_speed);
 
@@ -157,10 +159,11 @@ public:
     const geometry_msgs::msg::Pose & ego_pose, const double & ego_speed,
     const CarObject & front_oncoming_car);
 
-  [[nodiscard]] trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+  [[nodiscard]] experimental::trajectory::Trajectory<
+    autoware_internal_planning_msgs::msg::PathPointWithLaneId>
   modify_trajectory_for_waiting(
-    const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
-      trajectory,
+    const experimental::trajectory::Trajectory<
+      autoware_internal_planning_msgs::msg::PathPointWithLaneId> & trajectory,
     const geometry_msgs::msg::Pose & ego_pose, bool stop_at_stop_point = false) const;
 
   [[nodiscard]] std::optional<geometry_msgs::msg::Pose> get_pull_over_pose() const;
