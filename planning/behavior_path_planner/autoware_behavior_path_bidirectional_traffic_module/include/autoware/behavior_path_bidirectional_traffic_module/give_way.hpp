@@ -36,6 +36,13 @@ class GiveWay;
 class GiveWayState
 {
 public:
+  GiveWayState() = default;
+  GiveWayState(const GiveWayState &) = delete;
+  GiveWayState(GiveWayState &&) = delete;
+  GiveWayState & operator=(const GiveWayState &) = delete;
+  GiveWayState & operator=(GiveWayState &&) = delete;
+  virtual ~GiveWayState() = default;
+
   virtual experimental::trajectory::Trajectory<
     autoware_internal_planning_msgs::msg::PathPointWithLaneId>
   modify_trajectory(
