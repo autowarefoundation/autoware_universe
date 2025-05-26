@@ -18,6 +18,7 @@
         center_pcl_shift: 0.0
         radial_divider_angle_deg: 1.0
         use_recheck_ground_cluster: true
+        recheck_start_distance: 20.0
         use_lowest_point: true
 
         # debug parameters
