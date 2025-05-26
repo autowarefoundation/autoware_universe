@@ -4,7 +4,7 @@
     voxel_leaf_size: 0.3
     min_points_number_per_voxel: 1
     min_cluster_size: 10
-    max_cluster_size: 1000 # this is the maximum number of voxels when clustered
+    max_cluster_size: 3000  # this is the maximum number of voxels when clustered
     max_num_points_per_cluster: 3000 # this is the maximum number of points in a cluster when ouputed
     min_voxel_cluster_size_for_filtering: 150  # Clusters below this number of voxels are exempt from per-voxel filtering
     max_points_per_voxel_in_large_cluster: 10  # Max points allowed per voxel in a large cluster
