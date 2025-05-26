@@ -1,0 +1,172 @@
+// Copyright 2024 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+#include "autoware/behavior_path_bidirectional_traffic_module/scene.hpp"
+
+#include "autoware/behavior_path_bidirectional_traffic_module/keep_left.hpp"
+#include "autoware/trajectory/path_point_with_lane_id.hpp"
+#include "autoware/trajectory/utils/find_intervals.hpp"
+
+#include <rclcpp/logging.hpp>
+
+#include <tier4_planning_msgs/msg/path_point_with_lane_id.hpp>
+
+#include <lanelet2_core/LaneletMap.h>
+#include <lanelet2_core/primitives/Lanelet.h>
+
+#include <memory>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
+namespace autoware::behavior_path_planner
+{
+
+BidirectionalTrafficModule::BidirectionalTrafficModule(
+  std::string_view name, rclcpp::Node & node,
+  const std::unordered_map<std::string, std::shared_ptr<RTCInterface>> & rtc_interface_ptr_map,
+  std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
+    objects_of_interest_marker_interface_ptr_map,
+  const std::shared_ptr<PlanningFactorInterface> & planning_factor_interface)
+: SceneModuleInterface{
+    name.data(), node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map,
+    planning_factor_interface}
+{
+}
+
+CandidateOutput BidirectionalTrafficModule::planCandidate() const
+{
+  // Implementation will be added here in the future.
+  return CandidateOutput{};
+}
+
+BehaviorModuleOutput BidirectionalTrafficModule::plan()
+{
+  using tier4_planning_msgs::msg::PathWithLaneId;
+
+  BehaviorModuleOutput module_output = getPreviousModuleOutput();
+
+  PathWithLaneId previous_path = module_output.path;
+
+  auto trajectory =
+    trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId>::Builder{}.build(
+      previous_path.points);
+
+  if (!trajectory) {
+    RCLCPP_ERROR(getLogger(), "Failed to build trajectory in BidirectionalTrafficModule::plan");
+    return module_output;
+  }
+
+  if (bidirectional_lane_intervals_in_trajectory_.empty()) {
+    return module_output;
+  }
+
+  *trajectory = shift_trajectory_for_keep_left(
+    *trajectory, bidirectional_lane_intervals_in_trajectory_, 0.2, 10.0, 10.0);
+
+  module_output.path.points = trajectory->restore();
+
+  return module_output;
+}
+
+BehaviorModuleOutput BidirectionalTrafficModule::planWaitingApproval()
+{
+  // Implementation will be added here in the future.
+  return BehaviorModuleOutput{};
+}
+
+bool BidirectionalTrafficModule::isExecutionRequested() const
+{
+  return !bidirectional_lane_intervals_in_trajectory_.empty();
+}
+
+bool BidirectionalTrafficModule::isExecutionReady() const
+{
+  return bidirectional_lane_searched_;
+}
+
+void BidirectionalTrafficModule::processOnEntry()
+{
+  // Implementation will be added here in the future.
+}
+
+void BidirectionalTrafficModule::processOnExit()
+{
+  // Implementation will be added here in the future.
+}
+
+void BidirectionalTrafficModule::updateData()
+{
+  if (!bidirectional_lane_searched_) {
+    const lanelet::LaneletMap & map = *planner_data_->route_handler->getLaneletMapPtr();
+    auto get_next_lanelets = [this](const lanelet::ConstLanelet & lanelet) {
+      return planner_data_->route_handler->getNextLanelets(lanelet);
+    };
+    auto get_previous_lanelets = [this](const lanelet::ConstLanelet & lanelet) {
+      return planner_data_->route_handler->getPreviousLanelets(lanelet);
+    };
+    all_bidirectional_lanes_in_map_ =
+      ConnectedBidirectionalLanelets::search_bidirectional_lanes_on_map(
+        map, get_next_lanelets, get_previous_lanelets);
+    RCLCPP_INFO(
+      logger_, "Found %lu bidirectional lanes", all_bidirectional_lanes_in_map_.size() / 2);
+    bidirectional_lane_searched_ = true;
+  }
+
+  PathWithLaneId previous_path = getPreviousModuleOutput().path;
+
+  auto trajectory =
+    trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId>::Builder{}.build(
+      previous_path.points);
+
+  if (!trajectory) {
+    RCLCPP_ERROR(
+      getLogger(), "Failed to build trajectory in BidirectionalTrafficModule::updateData");
+    return;
+  }
+
+  // Update bidirectional lane intervals in trajectory
+  bidirectional_lane_intervals_in_trajectory_.clear();
+  for (const auto & bidirectional_lanes : all_bidirectional_lanes_in_map_) {
+    std::optional<trajectory::Interval> interval =
+      bidirectional_lanes.get_overlap_interval(*trajectory);
+    if (interval.has_value()) {
+      bidirectional_lane_intervals_in_trajectory_.emplace_back(*interval);
+    }
+  }
+}
+
+void BidirectionalTrafficModule::acceptVisitor(
+  const std::shared_ptr<SceneModuleVisitor> & /* visitor */) const
+{
+  // Implementation will be added here in the future.
+}
+
+void BidirectionalTrafficModule::updateModuleParams(const std::any & /* parameters */)
+{
+  // Implementation will be added here in the future.
+}
+
+bool BidirectionalTrafficModule::canTransitSuccessState()
+{
+  // Implementation will be added here in the
+  return false;
+}
+
+bool BidirectionalTrafficModule::canTransitFailureState()
+{
+  // Implementation will be added here in the
+  return false;
+}
+
+}  // namespace autoware::behavior_path_planner
