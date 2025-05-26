@@ -168,8 +168,8 @@ void BidirectionalTrafficModule::updateData()
       EgoParameters{
         planner_data_->parameters.base_link2front, planner_data_->parameters.base_link2rear,
         planner_data_->parameters.vehicle_width},
-      20.0,  //
-      10.0,  //
+      parameters_->time_to_prepare_pull_over,            //
+      parameters_->default_shift_distance_to_pull_over,  //
       parameters_->pull_over_ratio);
 
     RCLCPP_INFO(getLogger(), "Entered Bidirectional Lane");
@@ -179,6 +179,10 @@ void BidirectionalTrafficModule::updateData()
     RCLCPP_INFO(getLogger(), "Exited Bidirectional Lane");
   }
   current_bidirectional_lane_ = new_current_bidirectional_lane;
+
+  if (!current_bidirectional_lane_.has_value()) {
+    return;
+  }
 
   // Update Oncoming Cars
   oncoming_cars_ = OncomingCar::update_oncoming_cars_in_bidirectional_lane(

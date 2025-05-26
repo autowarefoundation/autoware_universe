@@ -53,7 +53,14 @@ std::vector<OncomingCar> OncomingCar::update_oncoming_cars_in_bidirectional_lane
     const auto opposite_bidirectional_lanelets =
       bidirectional_lanelets.get_opposite_bidirectional_lanes();
 
-    if (!opposite_bidirectional_lanelets.is_object_on_this_lane(object)) {
+    if (
+      !opposite_bidirectional_lanelets.is_object_on_this_lane(object) &&
+      !bidirectional_lanelets.is_object_on_this_lane(object)) {
+      continue;
+    }
+    if (
+      bidirectional_lanelets.is_object_on_this_lane(object) &&
+      !prev_oncoming_cars_contains_object(prev_oncoming_cars, object)) {
       continue;
     }
     if (

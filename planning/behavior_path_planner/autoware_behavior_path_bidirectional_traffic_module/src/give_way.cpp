@@ -18,7 +18,6 @@
 #include "autoware/trajectory/utils/frenet_utils.hpp"
 #include "autoware/trajectory/utils/shift.hpp"
 
-#include <iostream>
 #include <utility>
 #include <vector>
 
@@ -32,7 +31,6 @@ NoNeedToGiveWay::modify_trajectory(
   const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
   const double & vehicle_speed)
 {
-  std::cerr << "No need to give way" << std::endl;
   if (!oncoming_cars.empty()) {
     give_way_->decide_ego_stop_pose(ego_pose, vehicle_speed);
     give_way_->transition_to<ApproachingToShift>(give_way_);
@@ -47,9 +45,9 @@ ApproachingToShift::modify_trajectory(
   const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
   const double &)
 {
-  std::cerr << "Approaching to shift" << std::endl;
   if (oncoming_cars.empty()) {
     give_way_->transition_to<NoNeedToGiveWay>(give_way_);
+    return trajectory;
   }
   auto ego_stop_pose = give_way_->get_stop_pose();
   if (!ego_stop_pose.has_value()) {
@@ -85,7 +83,6 @@ ShiftingRoadside::modify_trajectory(
     trajectory,
   const std::vector<OncomingCar> &, const geometry_msgs::msg::Pose &, const double & vehicle_speed)
 {
-  std::cerr << "Shifting roadside" << std::endl;
   if (vehicle_speed < 0.1) {
     give_way_->transition_to<WaitingForOncomingCarsToPass>(give_way_);
   }
@@ -98,7 +95,6 @@ WaitingForOncomingCarsToPass::modify_trajectory(
     trajectory,
   const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose &, const double &)
 {
-  std::cerr << "Waiting for oncoming cars to pass" << std::endl;
   if (oncoming_cars.empty()) {
     give_way_->transition_to<BackToNormalLane>(give_way_);
   }
@@ -111,7 +107,6 @@ BackToNormalLane::modify_trajectory(
     trajectory,
   const std::vector<OncomingCar> &, const geometry_msgs::msg::Pose &, const double &)
 {
-  std::cerr << "Back to normal lane" << std::endl;
   return give_way_->modify_trajectory_for_waiting(trajectory, false);
 }
 
@@ -160,13 +155,13 @@ void GiveWay::decide_ego_stop_pose(
   pose.position.y = pose_on_the_centerline.position.y + offset_world.y();
   pose.position.z = pose_on_the_centerline.position.z + offset_world.z();
 
-  auto [is_possible, poses] =
-    bidirectional_lanelets_.check_if_is_possible_to_stop_and_suggest_alternative_stop_poses(
-      pose, ego_params_);
+  // auto [is_possible, poses] =
+  //   bidirectional_lanelets_.check_if_is_possible_to_stop_and_suggest_alternative_stop_poses(
+  //     pose, ego_params_);
 
-  if (!is_possible) {
-    std::cerr << "Failed to find a stop point" << std::endl;
-  }
+  // if (!is_possible) {
+  //   std::cerr << "Failed to find a stop point" << std::endl;
+  // }
 
   ego_stop_point_for_waiting_ = pose;
 }
