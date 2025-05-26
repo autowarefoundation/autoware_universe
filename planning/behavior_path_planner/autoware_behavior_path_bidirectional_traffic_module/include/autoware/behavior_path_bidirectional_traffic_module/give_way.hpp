@@ -51,7 +51,7 @@ public:
     const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
     bool is_vehicle_stopped) = 0;
 
-  virtual bool is_stop_required() const = 0;
+  [[nodiscard]] virtual bool is_stop_required() const = 0;
 };
 
 class NoNeedToGiveWay : public GiveWayState
@@ -64,7 +64,7 @@ public:
     const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
     bool is_vehicle_stopped) override;
 
-  bool is_stop_required() const override { return false; }
+  [[nodiscard]] bool is_stop_required() const override { return false; }
 };
 
 class ShiftingRoadside : public GiveWayState
@@ -76,7 +76,7 @@ public:
     const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
     bool is_vehicle_stopped) override;
 
-  bool is_stop_required() const override { return true; }
+  [[nodiscard]] bool is_stop_required() const override { return true; }
 };
 
 class WaitingForOncomingCarsToPass : public GiveWayState
@@ -88,7 +88,7 @@ public:
     const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
     bool is_vehicle_stopped) override;
 
-  bool is_stop_required() const override { return true; }
+  [[nodiscard]] bool is_stop_required() const override { return true; }
 };
 
 class BackToNormalLane : public GiveWayState
@@ -100,7 +100,7 @@ public:
     const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
     bool is_vehicle_stopped) override;
 
-  bool is_stop_required() const override { return false; }
+  [[nodiscard]] bool is_stop_required() const override { return false; }
 };
 
 class GiveWay
@@ -135,24 +135,7 @@ public:
     state_ = std::make_shared<State>(std::forward<Args>(args)...);
   }
 
-  void decide_ego_stop_pose(const geometry_msgs::msg::Pose & ego_pose)
-  {
-    auto left = bidirectional_lanelets_.get_left_line();
-    auto ego = autoware::trajectory::closest(left, ego_pose.position);
-    auto pose_on_the_left_line = left.compute(ego + shift_starting_length_);
-    double shift = min_distance_to_left_ + vehicle_width_ / 2.0;
-    geometry_msgs::msg::Pose pose;
-
-    tf2::Quaternion q;
-    tf2::fromMsg(pose_on_the_left_line.orientation, q);
-    tf2::Vector3 offset(0.0, -shift, 0.0);
-    tf2::Vector3 offset_world = tf2::quatRotate(q, offset);
-    pose.position.x = pose_on_the_left_line.position.x + offset_world.x();
-    pose.position.y = pose_on_the_left_line.position.y + offset_world.y();
-    pose.position.z = pose_on_the_left_line.position.z + offset_world.z();
-
-    ego_stop_point_for_waiting_ = pose;
-  }
+  void decide_ego_stop_pose(const geometry_msgs::msg::Pose & ego_pose);
 
   [[nodiscard]] bool ego_reached_stop_point(const geometry_msgs::msg::Pose & ego_pose) const
   {
@@ -171,9 +154,9 @@ public:
     const trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> & trajectory,
     bool stop_at_stop_point = false) const;
 
-  bool is_stop_required() const { return state_->is_stop_required(); }
+  [[nodiscard]] bool is_stop_required() const { return state_->is_stop_required(); }
 
-  auto get_stop_pose() const { return ego_stop_point_for_waiting_; }
+  [[nodiscard]] auto get_stop_pose() const { return ego_stop_point_for_waiting_; }
 };
 
 }  // namespace autoware::behavior_path_planner

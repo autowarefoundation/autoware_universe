@@ -87,6 +87,25 @@ GiveWay::modify_trajectory(
   return state_->modify_trajectory(trajectory, oncoming_cars, ego_pose, is_vehicle_stopped);
 }
 
+void GiveWay::decide_ego_stop_pose(const geometry_msgs::msg::Pose & ego_pose)
+{
+  auto left = bidirectional_lanelets_.get_left_line();
+  auto ego = autoware::trajectory::closest(left, ego_pose.position);
+  auto pose_on_the_left_line = left.compute(ego + shift_starting_length_);
+  double shift = min_distance_to_left_ + vehicle_width_ / 2.0;
+  geometry_msgs::msg::Pose pose;
+
+  tf2::Quaternion q;
+  tf2::fromMsg(pose_on_the_left_line.orientation, q);
+  tf2::Vector3 offset(0.0, -shift, 0.0);
+  tf2::Vector3 offset_world = tf2::quatRotate(q, offset);
+  pose.position.x = pose_on_the_left_line.position.x + offset_world.x();
+  pose.position.y = pose_on_the_left_line.position.y + offset_world.y();
+  pose.position.z = pose_on_the_left_line.position.z + offset_world.z();
+
+  ego_stop_point_for_waiting_ = pose;
+}
+
 [[nodiscard]] trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId>
 GiveWay::modify_trajectory_for_waiting(
   const trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> & trajectory,

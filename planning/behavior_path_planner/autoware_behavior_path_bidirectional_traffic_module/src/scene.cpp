@@ -15,19 +15,18 @@
 
 #include "autoware/behavior_path_bidirectional_traffic_module/give_way.hpp"
 #include "autoware/behavior_path_bidirectional_traffic_module/keep_left.hpp"
-// #include "autoware/behavior_path_planner_common/data_manager.hpp"
 #include "autoware/trajectory/path_point_with_lane_id.hpp"
 #include "autoware/trajectory/utils/find_intervals.hpp"
+#include "autoware/universe_utils/geometry/boost_geometry.hpp"
 
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
 #include <rclcpp/logging.hpp>
 
+#include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <tier4_planning_msgs/msg/path_point_with_lane_id.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
@@ -89,18 +88,16 @@ BehaviorModuleOutput BidirectionalTrafficModule::plan()
   }
 
   *trajectory = shift_trajectory_for_keep_left(
-    *trajectory, bidirectional_lane_intervals_in_current_trajectory_, 0.0, 10.0, 10.0);
+    *trajectory, bidirectional_lane_intervals_in_current_trajectory_, 0.5, 10.0, 10.0);
 
   if (give_way_) {
-    double speed = planner_data_->self_odometry->twist.twist.linear.x;
+    const double speed = planner_data_->self_odometry->twist.twist.linear.x;
     *trajectory =
       give_way_->modify_trajectory(*trajectory, oncoming_cars_, getEgoPose(), speed < 0.01);
     if (give_way_->is_stop_required()) {
-      std::cerr << "Stop Required" << std::endl;
-      PoseWithDetail stop_pose(*give_way_->get_stop_pose(), "Stop pose detail");
+      PoseWithDetail stop_pose(*give_way_->get_stop_pose(), "");
       stop_pose_ = stop_pose;
     } else {
-      std::cerr << "Stop Not Required" << std::endl;
       stop_pose_ = std::nullopt;
     }
   }
@@ -183,8 +180,6 @@ void BidirectionalTrafficModule::updateData()
   // Update Oncoming Cars
   oncoming_cars_ = OncomingCar::update_oncoming_cars_in_bidirectional_lane(
     oncoming_cars_, *planner_data_->dynamic_object, *current_bidirectional_lane_, getEgoPose());
-
-  // RCLCPP_INFO(getLogger(), "OnComing Cars: %lu", oncoming_cars_.size());
 }
 
 std::vector<ConnectedBidirectionalLanelets>
