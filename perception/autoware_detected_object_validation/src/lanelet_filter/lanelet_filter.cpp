@@ -164,10 +164,10 @@ TriangleMesh createTriangleMeshFromLanelet(const lanelet::ConstLanelet & lanelet
 
   // take 2 points from each side and create 2 triangles
   for (size_t i = 0; i < n_shared - 1; ++i) {
-    Eigen::Vector3d a_l(left[i].x(), left[i].y(), left[i].z());
-    Eigen::Vector3d b_l(left[i + 1].x(), left[i + 1].y(), left[i + 1].z());
-    Eigen::Vector3d a_r(right[i].x(), right[i].y(), right[i].z());
-    Eigen::Vector3d b_r(right[i + 1].x(), right[i + 1].y(), right[i + 1].z());
+    const Eigen::Vector3d a_l(left[i].x(), left[i].y(), left[i].z());
+    const Eigen::Vector3d b_l(left[i + 1].x(), left[i + 1].y(), left[i + 1].z());
+    const Eigen::Vector3d a_r(right[i].x(), right[i].y(), right[i].z());
+    const Eigen::Vector3d b_r(right[i + 1].x(), right[i + 1].y(), right[i + 1].z());
 
     //
     // b_l .--. b_r
@@ -190,10 +190,10 @@ TriangleMesh createTriangleMeshFromLanelet(const lanelet::ConstLanelet & lanelet
       // we need at least 2 points from eash side
       if (i < 1 || j < 1) break;
 
-      Eigen::Vector3d a_l(left[i - 1].x(), left[i - 1].y(), left[i - 1].z());
-      Eigen::Vector3d b_l(left[i].x(), left[i].y(), left[i].z());
-      Eigen::Vector3d a_r(right[j - 1].x(), right[j - 1].y(), right[j - 1].z());
-      Eigen::Vector3d b_r(right[j].x(), right[j].y(), right[j].z());
+      const Eigen::Vector3d a_l(left[i - 1].x(), left[i - 1].y(), left[i - 1].z());
+      const Eigen::Vector3d b_l(left[i].x(), left[i].y(), left[i].z());
+      const Eigen::Vector3d a_r(right[j - 1].x(), right[j - 1].y(), right[j - 1].z());
+      const Eigen::Vector3d b_r(right[j].x(), right[j].y(), right[j].z());
 
       mesh.push_back({b_l, a_l, b_r});
       mesh.push_back({a_l, a_r, b_r});
@@ -209,10 +209,10 @@ TriangleMesh createTriangleMeshFromLanelet(const lanelet::ConstLanelet & lanelet
     for (size_t k = 0; k < n_extra; ++k) {
       if (i < 1 || j < 1) break;
 
-      Eigen::Vector3d a_l(left[i - 1].x(), left[i - 1].y(), left[i - 1].z());
-      Eigen::Vector3d b_l(left[i].x(), left[i].y(), left[i].z());
-      Eigen::Vector3d a_r(right[j - 1].x(), right[j - 1].y(), right[j - 1].z());
-      Eigen::Vector3d b_r(right[j].x(), right[j].y(), right[j].z());
+      const Eigen::Vector3d a_l(left[i - 1].x(), left[i - 1].y(), left[i - 1].z());
+      const Eigen::Vector3d b_l(left[i].x(), left[i].y(), left[i].z());
+      const Eigen::Vector3d a_r(right[j - 1].x(), right[j - 1].y(), right[j - 1].z());
+      const Eigen::Vector3d b_r(right[j].x(), right[j].y(), right[j].z());
 
       mesh.push_back({b_l, a_l, b_r});
       mesh.push_back({a_l, a_r, b_r});
@@ -228,8 +228,8 @@ TriangleMesh createTriangleMeshFromLanelet(const lanelet::ConstLanelet & lanelet
 // compute a normal vector that is pointing the Z+ from given triangle points
 Eigen::Vector3d computeFaceNormal(const std::array<Eigen::Vector3d, 3> & triangle_points)
 {
-  Eigen::Vector3d v1 = triangle_points[1] - triangle_points[0];
-  Eigen::Vector3d v2 = triangle_points[2] - triangle_points[0];
+  const Eigen::Vector3d v1 = triangle_points[1] - triangle_points[0];
+  const Eigen::Vector3d v2 = triangle_points[2] - triangle_points[0];
   Eigen::Vector3d normal = v1.cross(v2);
 
   // ensure the normal is pointing upward (Z+)
@@ -246,7 +246,7 @@ bool isPointAboveLaneletMesh(
   const Eigen::Vector3d & point, const lanelet::ConstLanelet & lanelet, const double & offset,
   const double & min_distance, const double & max_distance)
 {
-  TriangleMesh mesh = createTriangleMeshFromLanelet(lanelet);
+  const TriangleMesh mesh = createTriangleMeshFromLanelet(lanelet);
 
   if (mesh.size() == 0) return true;
 
@@ -260,7 +260,7 @@ bool isPointAboveLaneletMesh(
 
   // search the most nearest surface from the query point
   for (const auto & tri : mesh) {
-    Eigen::Vector3d plane_normal_vec = computeFaceNormal(tri);
+    const Eigen::Vector3d plane_normal_vec = computeFaceNormal(tri);
 
     const double cos_of_normal_and_z = plane_normal_vec.dot(Eigen::Vector3d::UnitZ());
     constexpr double cos_threshold = std::cos(M_PI / 3.0);
