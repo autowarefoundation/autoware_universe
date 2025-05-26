@@ -42,7 +42,7 @@ BidirectionalTrafficModule::BidirectionalTrafficModule(
   std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
     objects_of_interest_marker_interface_ptr_map,
   const std::shared_ptr<PlanningFactorInterface> & planning_factor_interface)
-: SceneModuleInterface{name.data(), node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface},
+: SceneModuleInterface{name.data(), node, rtc_interface_ptr_map, objects_of_interest_marker_interface_ptr_map, planning_factor_interface},  // NOLINT
   parameters_(parameters),
   has_trajectory_bidirectional_lane_overlap_(false)
 {
@@ -109,12 +109,10 @@ bool BidirectionalTrafficModule::isExecutionReady() const
 
 void BidirectionalTrafficModule::processOnEntry()
 {
-  // Implementation will be added here in the future.
 }
 
 void BidirectionalTrafficModule::processOnExit()
 {
-  // Implementation will be added here in the future.
 }
 
 void BidirectionalTrafficModule::updateData()
@@ -210,7 +208,6 @@ void BidirectionalTrafficModule::acceptVisitor(
 
 void BidirectionalTrafficModule::updateModuleParams(const std::any & /* parameters */)
 {
-  // Implementation will be added here in the future.
 }
 
 bool BidirectionalTrafficModule::canTransitSuccessState()
@@ -220,7 +217,6 @@ bool BidirectionalTrafficModule::canTransitSuccessState()
 
 bool BidirectionalTrafficModule::canTransitFailureState()
 {
-  // Implementation will be added here in the
   return false;
 }
 

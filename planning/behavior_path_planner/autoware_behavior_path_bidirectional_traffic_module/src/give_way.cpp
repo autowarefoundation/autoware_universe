@@ -129,7 +129,9 @@ BackToNormalLane::modify_trajectory(
 
   double ego_s = autoware::experimental::trajectory::closest(trajectory, ego_pose);
 
-  if (ego_s > ego_stop_pose_s + *give_way->get_shift_distance_to_back_to_normal_lane()) {
+  if (
+    ego_s > ego_stop_pose_s + *give_way->get_shift_distance_to_back_to_normal_lane() ||
+    ego_stop_pose_s == 0.0) {
     give_way->transition_to<NoNeedToGiveWay>();
   }
 

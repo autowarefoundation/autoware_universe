@@ -38,7 +38,11 @@ autoware_perception_msgs::msg::PredictedObjects extract_car_objects(
   auto is_car_object = [](const autoware_perception_msgs::msg::PredictedObject & object) {
     return !std::all_of(
       object.classification.begin(), object.classification.end(), [](const auto & c) {
-        return c.label != autoware_perception_msgs::msg::ObjectClassification::CAR;
+        return c.label != autoware_perception_msgs::msg::ObjectClassification::CAR &&
+               c.label != autoware_perception_msgs::msg::ObjectClassification::TRUCK &&
+               c.label != autoware_perception_msgs::msg::ObjectClassification::BUS &&
+               c.label != autoware_perception_msgs::msg::ObjectClassification::BICYCLE &&
+               c.label != autoware_perception_msgs::msg::ObjectClassification::MOTORCYCLE;
       });
   };
   autoware_perception_msgs::msg::PredictedObjects car_objects;
