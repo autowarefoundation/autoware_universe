@@ -12,23 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/behavior_path_bidirectional_traffic_module/bidirectional_lane_utils.hpp"
-#include "autoware/behavior_path_planner_common/utils/utils.hpp"
+#include "autoware/behavior_path_bidirectional_traffic_module/connected_bidirectional_lanelets.hpp"
+
 #include "autoware/trajectory/path_point_with_lane_id.hpp"
 #include "autoware/universe_utils/geometry/boost_geometry.hpp"
 #include "autoware/universe_utils/geometry/boost_polygon_utils.hpp"
 
+#include <Eigen/Core>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
-#include <autoware_vehicle_info_utils/vehicle_info.hpp>
 #include <rclcpp/logging.hpp>
 
-#include <boost/geometry/algorithms/buffer.hpp>
-#include <boost/geometry/algorithms/detail/disjoint/interface.hpp>
+#include <geometry_msgs/msg/detail/pose__struct.hpp>
 
-#include <Eigen/src/Core/Matrix.h>
+#include <boost/geometry/algorithms/disjoint.hpp>
+
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/LaneletMap.h>
+#include <lanelet2_core/geometry/Polygon.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 
 #include <algorithm>
@@ -37,6 +38,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
 namespace autoware::behavior_path_planner
 {
 
@@ -244,7 +246,7 @@ ConnectedBidirectionalLanelets::get_opposite_bidirectional_lanes() const
   return *opposite_bidirectional_lanes_;
 }
 
-[[nodiscard]] trajectory::Trajectory<geometry_msgs::msg::Point>
+[[nodiscard]] trajectory::Trajectory<geometry_msgs::msg::Pose>
 ConnectedBidirectionalLanelets::get_center_line() const
 {
   std::vector<geometry_msgs::msg::Point> center_line;
@@ -266,10 +268,10 @@ ConnectedBidirectionalLanelets::get_center_line() const
     throw std::runtime_error("Failed to build trajectory in ConnectedBidirectionalLanelets");
   }
 
-  return *trajectory;
+  return trajectory::Trajectory<geometry_msgs::msg::Pose>(*trajectory);
 }
 
-[[nodiscard]] trajectory::Trajectory<geometry_msgs::msg::Point>
+[[nodiscard]] trajectory::Trajectory<geometry_msgs::msg::Pose>
 ConnectedBidirectionalLanelets::get_left_line() const
 {
   std::vector<geometry_msgs::msg::Point> left_line;
@@ -292,7 +294,7 @@ ConnectedBidirectionalLanelets::get_left_line() const
     throw std::runtime_error("Failed to build trajectory in ConnectedBidirectionalLanelets");
   }
 
-  return *trajectory;
+  return trajectory::Trajectory<geometry_msgs::msg::Pose>(*trajectory);
 }
 
 std::optional<ConnectedBidirectionalLanelets> get_current_bidirectional_lane(

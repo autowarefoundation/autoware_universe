@@ -12,23 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__BIDIRECTIONAL_LANE_UTILS_HPP_
-#define AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__BIDIRECTIONAL_LANE_UTILS_HPP_
+#ifndef AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__CONNECTED_BIDIRECTIONAL_LANELETS_HPP_
+#define AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__CONNECTED_BIDIRECTIONAL_LANELETS_HPP_
 
 #include "autoware/trajectory/forward.hpp"
-#include "autoware/trajectory/point.hpp"
+#include "autoware/trajectory/pose.hpp"
 #include "autoware/trajectory/utils/find_intervals.hpp"
-
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include "autoware/universe_utils/geometry/boost_geometry.hpp"
 
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
+#include <geometry_msgs/msg/detail/pose__struct.hpp>
 #include <tier4_planning_msgs/msg/path_point_with_lane_id.hpp>
 
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 
-#include <functional>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -58,21 +57,28 @@ private:
     const lanelet::ConstLanelet & lanelet_a, const lanelet::ConstLanelet & lanelet_b);
 
 public:
-  template <class Iterator>
-  ConnectedBidirectionalLanelets(const Iterator & begin, const Iterator & end)
-  : bidirectional_lanes_(begin, end)
-  {
-  }
-
   static std::vector<ConnectedBidirectionalLanelets> search_bidirectional_lanes_on_map(
     const lanelet::LaneletMap & map,
     const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> & get_next_lanelets,
     const std::function<lanelet::ConstLanelets(const lanelet::ConstLanelet &)> &
       get_previous_lanelets);
 
+  template <class Iterator>
+  ConnectedBidirectionalLanelets(const Iterator & begin, const Iterator & end)
+  : bidirectional_lanes_(begin, end)
+  {
+  }
+
   ConnectedBidirectionalLanelets(const ConnectedBidirectionalLanelets & other);
 
   ConnectedBidirectionalLanelets & operator=(const ConnectedBidirectionalLanelets & other);
+
+  ConnectedBidirectionalLanelets(ConnectedBidirectionalLanelets && other) noexcept = default;
+
+  ConnectedBidirectionalLanelets & operator=(ConnectedBidirectionalLanelets && other) noexcept =
+    default;
+
+  ~ConnectedBidirectionalLanelets() = default;
 
   [[nodiscard]] std::optional<trajectory::Interval> get_overlap_interval(
     const trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> & trajectory) const;
@@ -86,9 +92,11 @@ public:
 
   [[nodiscard]] ConnectedBidirectionalLanelets get_opposite_bidirectional_lanes() const;
 
-  [[nodiscard]] trajectory::Trajectory<geometry_msgs::msg::Point> get_center_line() const;
+  [[nodiscard]] trajectory::Trajectory<geometry_msgs::msg::Pose> get_center_line() const;
 
-  [[nodiscard]] trajectory::Trajectory<geometry_msgs::msg::Point> get_left_line() const;
+  [[nodiscard]] trajectory::Trajectory<geometry_msgs::msg::Pose> get_left_line() const;
+
+  bool is_inside_intersection(const geometry_msgs::msg::Pose & ego_pose) const;
 };
 
 std::optional<ConnectedBidirectionalLanelets> get_current_bidirectional_lane(
@@ -98,4 +106,6 @@ std::optional<ConnectedBidirectionalLanelets> get_current_bidirectional_lane(
 
 }  // namespace autoware::behavior_path_planner
 
-#endif  // AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__BIDIRECTIONAL_LANE_UTILS_HPP_
+// clang-format off
+#endif  // AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__CONNECTED_BIDIRECTIONAL_LANELETS_HPP_  // NOLINT
+// clang-format on

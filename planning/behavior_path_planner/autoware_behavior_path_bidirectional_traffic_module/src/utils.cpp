@@ -1,4 +1,4 @@
-// Copyright 2024 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,19 +11,3 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
-#ifndef AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__PARAMETER_HPP_
-#define AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__PARAMETER_HPP_
-
-#include <limits>
-namespace autoware::behavior_path_planner
-{
-
-struct BidirectionalTrafficModuleParameters
-{
-  double foward_looking_distance = std::numeric_limits<double>::infinity();
-};
-
-};  // namespace autoware::behavior_path_planner
-
-#endif  // AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__PARAMETER_HPP_

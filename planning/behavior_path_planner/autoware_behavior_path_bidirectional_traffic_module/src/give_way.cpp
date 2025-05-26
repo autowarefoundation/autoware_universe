@@ -16,7 +16,6 @@
 #include "autoware/behavior_path_bidirectional_traffic_module/oncoming_car.hpp"
 #include "autoware/trajectory/utils/shift.hpp"
 
-#include <iostream>
 #include <vector>
 
 namespace autoware::behavior_path_planner
@@ -30,7 +29,6 @@ NoNeedToGiveWay::modify_trajectory(
   if (!oncoming_cars.empty()) {
     give_way_->decide_ego_stop_pose(ego_pose);
     give_way_->transition_to<ShiftingRoadside>(give_way_);
-    // return give_way_->modify_trajectory_for_waiting(trajectory, true);
   }
   return trajectory;
 }
@@ -41,7 +39,6 @@ ShiftingRoadside::modify_trajectory(
   const std::vector<OncomingCar> &, const geometry_msgs::msg::Pose &, bool is_vehicle_stopped)
 {
   if (is_vehicle_stopped) {
-    std::cerr << "Waiting for oncoming cars to pass" << std::endl;
     give_way_->transition_to<WaitingForOncomingCarsToPass>(give_way_);
   }
   return give_way_->modify_trajectory_for_waiting(trajectory, true);
@@ -64,7 +61,69 @@ BackToNormalLane::modify_trajectory(
   const std::vector<OncomingCar> &, const geometry_msgs::msg::Pose &, bool)
 {
   return give_way_->modify_trajectory_for_waiting(trajectory, false);
-  ;
+}
+
+GiveWay::GiveWay(
+  const ConnectedBidirectionalLanelets & bidirectional_lanelets,  //
+  const double & vehicle_width,                                   //
+  const double & shift_starting_length,                           //
+  const double & distance_to_shift,                               //
+  const double & min_distance_to_left)
+: bidirectional_lanelets_(bidirectional_lanelets),
+  state_(std::make_shared<NoNeedToGiveWay>(this)),
+  vehicle_width_(vehicle_width),
+  shift_starting_length_(shift_starting_length),
+  distance_to_shift_(distance_to_shift),
+  min_distance_to_left_(min_distance_to_left)
+{
+}
+
+[[nodiscard]] trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId>
+GiveWay::modify_trajectory(
+  const trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> & trajectory,
+  const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
+  bool is_vehicle_stopped)
+{
+  return state_->modify_trajectory(trajectory, oncoming_cars, ego_pose, is_vehicle_stopped);
+}
+
+[[nodiscard]] trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId>
+GiveWay::modify_trajectory_for_waiting(
+  const trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> & trajectory,
+  bool stop_at_stop_point) const
+{
+  if (!ego_stop_point_for_waiting_.has_value()) {
+    return trajectory;
+  }
+
+  std::vector<trajectory::ShiftInterval> shifts;
+  trajectory::ShiftInterval shift1;
+  double stop_point = trajectory::closest(trajectory, ego_stop_point_for_waiting_.value());
+
+  if (stop_point == 0.0) {
+    return trajectory;
+  }
+
+  shift1.start = stop_point - distance_to_shift_;
+  shift1.end = shift1.start + distance_to_shift_;
+  shift1.lateral_offset = -autoware::universe_utils::calcDistance2d(
+    trajectory.compute(stop_point), ego_stop_point_for_waiting_.value());
+
+  trajectory::ShiftInterval shift2;
+  shift2.start = shift1.end;
+  shift2.end = shift2.start + distance_to_shift_;
+  shift2.lateral_offset = autoware::universe_utils::calcDistance2d(
+    trajectory.compute(stop_point), ego_stop_point_for_waiting_.value());
+
+  auto shifted_trajectory = trajectory::shift(trajectory, {shift1, shift2});
+
+  if (stop_at_stop_point) {
+    auto stop_point = trajectory::closest(shifted_trajectory, ego_stop_point_for_waiting_.value());
+    shifted_trajectory.longitudinal_velocity_mps()
+      .range(stop_point, shifted_trajectory.length())
+      .set(0.0);
+  }
+  return shifted_trajectory;
 }
 
 }  // namespace autoware::behavior_path_planner

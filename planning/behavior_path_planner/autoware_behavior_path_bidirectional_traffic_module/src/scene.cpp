@@ -15,6 +15,7 @@
 
 #include "autoware/behavior_path_bidirectional_traffic_module/give_way.hpp"
 #include "autoware/behavior_path_bidirectional_traffic_module/keep_left.hpp"
+// #include "autoware/behavior_path_planner_common/data_manager.hpp"
 #include "autoware/trajectory/path_point_with_lane_id.hpp"
 #include "autoware/trajectory/utils/find_intervals.hpp"
 
@@ -26,6 +27,7 @@
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
@@ -93,6 +95,14 @@ BehaviorModuleOutput BidirectionalTrafficModule::plan()
     double speed = planner_data_->self_odometry->twist.twist.linear.x;
     *trajectory =
       give_way_->modify_trajectory(*trajectory, oncoming_cars_, getEgoPose(), speed < 0.01);
+    if (give_way_->is_stop_required()) {
+      std::cerr << "Stop Required" << std::endl;
+      PoseWithDetail stop_pose(*give_way_->get_stop_pose(), "Stop pose detail");
+      stop_pose_ = stop_pose;
+    } else {
+      std::cerr << "Stop Not Required" << std::endl;
+      stop_pose_ = std::nullopt;
+    }
   }
 
   module_output.path.points = trajectory->restore();
@@ -174,12 +184,7 @@ void BidirectionalTrafficModule::updateData()
   oncoming_cars_ = OncomingCar::update_oncoming_cars_in_bidirectional_lane(
     oncoming_cars_, *planner_data_->dynamic_object, *current_bidirectional_lane_, getEgoPose());
 
-  for (const auto & oncoming_car : oncoming_cars_) {
-    double distance = oncoming_car.distance_from(getEgoPose());
-    RCLCPP_INFO(getLogger(), "Oncoming Car: %f", distance);
-  }
-
-  RCLCPP_INFO(getLogger(), "OnComing Cars: %lu", oncoming_cars_.size());
+  // RCLCPP_INFO(getLogger(), "OnComing Cars: %lu", oncoming_cars_.size());
 }
 
 std::vector<ConnectedBidirectionalLanelets>

@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__ONCOMING_CAR_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__ONCOMING_CAR_HPP_
 
-#include "autoware/behavior_path_bidirectional_traffic_module/bidirectional_lane_utils.hpp"
+#include "autoware/behavior_path_bidirectional_traffic_module/connected_bidirectional_lanelets.hpp"
 #include "autoware/trajectory/utils/closest.hpp"
 
 #include <autoware/universe_utils/geometry/geometry.hpp>
@@ -40,8 +40,8 @@ private:
 public:
   explicit OncomingCar(
     autoware_perception_msgs::msg::PredictedObject object,
-    const ConnectedBidirectionalLanelets & bidirectional_lanelets)
-  : object_(std::move(object)), bidirectional_lanelets_(bidirectional_lanelets)
+    ConnectedBidirectionalLanelets bidirectional_lanelets)
+  : object_(std::move(object)), bidirectional_lanelets_(std::move(bidirectional_lanelets))
   {
   }
 
@@ -56,8 +56,6 @@ public:
   {
     return object_.kinematics.initial_pose_with_covariance.pose;
   }
-
-  [[nodiscard]] auto get_object() const { return object_; }
 
   static std::vector<OncomingCar> update_oncoming_cars_in_bidirectional_lane(
     const std::vector<OncomingCar> & prev_oncoming_cars,

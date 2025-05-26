@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__SCENE_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_BIDIRECTIONAL_TRAFFIC_MODULE__SCENE_HPP_
 
-#include "autoware/behavior_path_bidirectional_traffic_module/bidirectional_lane_utils.hpp"
+#include "autoware/behavior_path_bidirectional_traffic_module/connected_bidirectional_lanelets.hpp"
 #include "autoware/behavior_path_bidirectional_traffic_module/give_way.hpp"
 #include "autoware/behavior_path_bidirectional_traffic_module/oncoming_car.hpp"
 #include "autoware/behavior_path_planner_common/interface/scene_module_interface.hpp"
@@ -55,6 +55,7 @@ public:
   void updateModuleParams(const std::any & parameters) override;
   bool canTransitSuccessState() override;
   bool canTransitFailureState() override;
+  MarkerArray getModuleVirtualWall() override { return MarkerArray{}; }
 
   autoware::universe_utils::Polygon2d get_ego_polygon(
     const geometry_msgs::msg::Pose & ego_pose) const;
