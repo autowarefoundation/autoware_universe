@@ -21,8 +21,8 @@
 
 #include <rclcpp/logging.hpp>
 
+#include <autoware_internal_planning_msgs/msg/path_point_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
-#include <tier4_planning_msgs/msg/path_point_with_lane_id.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/Lanelet.h>
@@ -68,15 +68,15 @@ CandidateOutput BidirectionalTrafficModule::planCandidate() const
 
 BehaviorModuleOutput BidirectionalTrafficModule::plan()
 {
-  using tier4_planning_msgs::msg::PathWithLaneId;
+  using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
 
   BehaviorModuleOutput module_output = getPreviousModuleOutput();
 
   PathWithLaneId previous_path = module_output.path;
 
   auto trajectory =
-    trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId>::Builder{}.build(
-      previous_path.points);
+    trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>::Builder{}
+      .build(previous_path.points);
 
   if (!trajectory) {
     RCLCPP_ERROR(getLogger(), "Failed to build trajectory in BidirectionalTrafficModule::plan");
@@ -138,8 +138,8 @@ void BidirectionalTrafficModule::updateData()
   PathWithLaneId previous_path = getPreviousModuleOutput().path;
 
   auto trajectory =
-    trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId>::Builder{}.build(
-      previous_path.points);
+    trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>::Builder{}
+      .build(previous_path.points);
 
   if (!trajectory) {
     RCLCPP_ERROR(

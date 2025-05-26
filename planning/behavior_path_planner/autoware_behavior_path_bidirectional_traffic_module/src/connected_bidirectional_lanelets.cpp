@@ -152,7 +152,8 @@ ConnectedBidirectionalLanelets::search_bidirectional_lanes_on_map(
 }
 
 std::optional<trajectory::Interval> ConnectedBidirectionalLanelets::get_overlap_interval(
-  const trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> & trajectory) const
+  const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
+    trajectory) const
 {
   lanelet::Ids lane_ids(bidirectional_lanes_.size());
   std::transform(
@@ -162,7 +163,8 @@ std::optional<trajectory::Interval> ConnectedBidirectionalLanelets::get_overlap_
   std::unordered_set<lanelet::Id> lane_ids_set(lane_ids.begin(), lane_ids.end());
 
   auto interval = trajectory::find_intervals(
-    trajectory, [&](const tier4_planning_msgs::msg::PathPointWithLaneId & point) -> bool {
+    trajectory,
+    [&](const autoware_internal_planning_msgs::msg::PathPointWithLaneId & point) -> bool {
       for (const auto & lane_id : point.lane_ids) {
         return lane_ids_set.find(lane_id) != lane_ids_set.end();
       }

@@ -20,9 +20,9 @@
 #include "autoware/trajectory/utils/find_intervals.hpp"
 #include "autoware/universe_utils/geometry/boost_geometry.hpp"
 
+#include <autoware_internal_planning_msgs/msg/path_point_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <geometry_msgs/msg/detail/pose__struct.hpp>
-#include <tier4_planning_msgs/msg/path_point_with_lane_id.hpp>
 
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/LaneletMap.h>
@@ -81,7 +81,8 @@ public:
   ~ConnectedBidirectionalLanelets() = default;
 
   [[nodiscard]] std::optional<trajectory::Interval> get_overlap_interval(
-    const trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> & trajectory) const;
+    const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
+      trajectory) const;
 
   [[nodiscard]] bool is_object_on_this_lane(
     const geometry_msgs::msg::Pose & obj_pose,

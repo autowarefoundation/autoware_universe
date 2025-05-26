@@ -21,9 +21,10 @@
 namespace autoware::behavior_path_planner
 {
 
-trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId>
+trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
 shift_trajectory_for_keep_left(
-  const trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> & trajectory,
+  const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
+    trajectory,
   const std::vector<trajectory::Interval> & bidirectional_lane_intervals_in_trajectory,
   const double & keep_left_length_from_center,
   const double & distance_to_shift_for_enter_bidirectional_lane,

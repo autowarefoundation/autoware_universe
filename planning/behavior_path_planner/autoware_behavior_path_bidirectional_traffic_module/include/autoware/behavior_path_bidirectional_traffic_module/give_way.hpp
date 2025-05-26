@@ -46,8 +46,10 @@ protected:
 
 public:
   explicit GiveWayState(GiveWay * give_way) : give_way_(give_way) {}
-  virtual trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> modify_trajectory(
-    const trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> & trajectory,
+  virtual trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+  modify_trajectory(
+    const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
+      trajectory,
     const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
     bool is_vehicle_stopped) = 0;
 
@@ -59,8 +61,10 @@ class NoNeedToGiveWay : public GiveWayState
 public:
   explicit NoNeedToGiveWay(GiveWay * give_way) : GiveWayState(give_way) {}
 
-  trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> modify_trajectory(
-    const trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> & trajectory,
+  trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+  modify_trajectory(
+    const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
+      trajectory,
     const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
     bool is_vehicle_stopped) override;
 
@@ -71,8 +75,10 @@ class ShiftingRoadside : public GiveWayState
 {
 public:
   explicit ShiftingRoadside(GiveWay * give_way) : GiveWayState(give_way) {}
-  trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> modify_trajectory(
-    const trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> & trajectory,
+  trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+  modify_trajectory(
+    const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
+      trajectory,
     const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
     bool is_vehicle_stopped) override;
 
@@ -83,8 +89,10 @@ class WaitingForOncomingCarsToPass : public GiveWayState
 {
 public:
   explicit WaitingForOncomingCarsToPass(GiveWay * give_way) : GiveWayState(give_way) {}
-  trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> modify_trajectory(
-    const trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> & trajectory,
+  trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+  modify_trajectory(
+    const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
+      trajectory,
     const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
     bool is_vehicle_stopped) override;
 
@@ -95,8 +103,10 @@ class BackToNormalLane : public GiveWayState
 {
 public:
   explicit BackToNormalLane(GiveWay * give_way) : GiveWayState(give_way) {}
-  trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> modify_trajectory(
-    const trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> & trajectory,
+  trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
+  modify_trajectory(
+    const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
+      trajectory,
     const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
     bool is_vehicle_stopped) override;
 
@@ -123,9 +133,10 @@ public:
     const double & distance_to_shift,                               //
     const double & min_distance_to_left = 0.0);
 
-  [[nodiscard]] trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId>
+  [[nodiscard]] trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
   modify_trajectory(
-    const trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> & trajectory,
+    const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
+      trajectory,
     const std::vector<OncomingCar> & oncoming_cars, const geometry_msgs::msg::Pose & ego_pose,
     bool is_vehicle_stopped);
 
@@ -149,9 +160,10 @@ public:
 
   auto get_ego_stop_point() const { return ego_stop_point_for_waiting_; }
 
-  [[nodiscard]] trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId>
+  [[nodiscard]] trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>
   modify_trajectory_for_waiting(
-    const trajectory::Trajectory<tier4_planning_msgs::msg::PathPointWithLaneId> & trajectory,
+    const trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId> &
+      trajectory,
     bool stop_at_stop_point = false) const;
 
   [[nodiscard]] bool is_stop_required() const { return state_->is_stop_required(); }
