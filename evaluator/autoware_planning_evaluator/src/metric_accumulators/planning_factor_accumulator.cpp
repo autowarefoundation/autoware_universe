@@ -109,7 +109,7 @@ json PlanningFactorAccumulator::getOutputJson(const OutputMetric & output_metric
       auto & state = output_metric == OutputMetric::stop_decision
                        ? stop_decision_state_.at(module)
                        : abnormal_stop_decision_state_.at(module);
-      state.disable_current_stop_decision();
+      state.clear_current_stop_decision();
       // update the json output
       if (state.stop_decision_keep_time_accumulator.count() > 0) {
         j[module + "/count"] = state.stop_decision_keep_time_accumulator.count();

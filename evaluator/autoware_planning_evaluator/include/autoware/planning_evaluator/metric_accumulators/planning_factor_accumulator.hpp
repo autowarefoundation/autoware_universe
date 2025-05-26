@@ -112,7 +112,7 @@ private:
     {
     }
 
-    void disable_current_stop_decision()
+    void clear_current_stop_decision()
     {
       if (state_initialized) {
         stop_decision_keep_time_accumulator.add(stop_decision_keep_time);
@@ -135,7 +135,7 @@ private:
         dist_to_last_stop_line > parameters.dist_count_threshold_m) {
         // set new stop decision
         last_decision_time = cur_time;
-        disable_current_stop_decision();
+        clear_current_stop_decision();
 
       } else {
         // keep the last stop decision
