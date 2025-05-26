@@ -270,7 +270,6 @@ bool isPointAboveLaneletMesh(
       return true;
     }
 
-    // use offset to account for height
     Eigen::Vector3d vec_to_point = point - tri[0];
     double signed_dist = plane_normal_vec.dot(vec_to_point);
 
