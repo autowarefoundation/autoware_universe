@@ -21,13 +21,13 @@
           "type": "integer",
           "description": "The minimum number of points that a cluster must contain to be considered as valid.",
           "default": 2,
-          "exclusiveMinimum": 2
+          "minimum": 2
         },
         "max_cluster_size": {
           "type": "integer",
           "description": "The maximum number of points that a cluster must contain to be considered as valid.",
           "default": 20,
-          "exclusiveMinimum": 2
+          "minimum": 2
         },
         "cluster_2d_tolerance": {
           "type": "number",
@@ -53,7 +53,8 @@
         "override_class_with_unknown",
         "min_cluster_size",
         "cluster_2d_tolerance",
-        "roi_scale_factor"
+        "roi_scale_factor",
+        "max_object_size"
       ]
     }
   },
