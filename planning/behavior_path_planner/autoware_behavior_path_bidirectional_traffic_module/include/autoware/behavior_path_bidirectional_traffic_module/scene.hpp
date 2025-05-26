@@ -18,6 +18,7 @@
 #include "autoware/behavior_path_bidirectional_traffic_module/connected_bidirectional_lanelets.hpp"
 #include "autoware/behavior_path_bidirectional_traffic_module/give_way.hpp"
 #include "autoware/behavior_path_bidirectional_traffic_module/oncoming_car.hpp"
+#include "autoware/behavior_path_bidirectional_traffic_module/parameter.hpp"
 #include "autoware/behavior_path_planner_common/interface/scene_module_interface.hpp"
 #include "autoware/trajectory/utils/find_intervals.hpp"
 

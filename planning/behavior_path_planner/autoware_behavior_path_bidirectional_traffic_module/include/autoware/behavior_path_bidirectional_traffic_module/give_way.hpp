@@ -19,16 +19,15 @@
 #include "autoware/behavior_path_bidirectional_traffic_module/oncoming_car.hpp"
 #include "autoware/trajectory/forward.hpp"
 #include "autoware/trajectory/path_point_with_lane_id.hpp"
-#include "autoware/trajectory/utils/closest.hpp"
 #include "autoware/universe_utils/geometry/geometry.hpp"
 
-#include <autoware_perception_msgs/msg/predicted_object.hpp>
-#include <geometry_msgs/msg/detail/point__struct.hpp>
-#include <geometry_msgs/msg/detail/pose__struct.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
+#include <tf2/LinearMath/Vector3.hpp>
+#include <tf2/utils.hpp>
 
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2/LinearMath/Vector3.h>
-#include <tf2/impl/utils.h>
+#include <autoware_perception_msgs/msg/predicted_object.hpp>
+#include <geometry_msgs/msg/point.hpp>
+#include <geometry_msgs/msg/pose.hpp>
 
 #include <cmath>
 #include <memory>
@@ -127,10 +126,10 @@ private:
 
 public:
   GiveWay(
-    const ConnectedBidirectionalLanelets & bidirectional_lanelets,  //
-    const double & vehicle_width,                                   //
-    const double & shift_starting_length,                           //
-    const double & distance_to_shift,                               //
+    ConnectedBidirectionalLanelets bidirectional_lanelets,  //
+    const double & vehicle_width,                           //
+    const double & shift_starting_length,                   //
+    const double & distance_to_shift,                       //
     const double & min_distance_to_left = 0.0);
 
   [[nodiscard]] trajectory::Trajectory<autoware_internal_planning_msgs::msg::PathPointWithLaneId>

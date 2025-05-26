@@ -27,6 +27,7 @@
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
@@ -94,6 +95,9 @@ BehaviorModuleOutput BidirectionalTrafficModule::plan()
     const double speed = planner_data_->self_odometry->twist.twist.linear.x;
     *trajectory =
       give_way_->modify_trajectory(*trajectory, oncoming_cars_, getEgoPose(), speed < 0.01);
+    if (current_bidirectional_lane_) {
+      std::cerr << "Lane Width: " << current_bidirectional_lane_->average_lane_width() << std::endl;
+    }
     if (give_way_->is_stop_required()) {
       PoseWithDetail stop_pose(*give_way_->get_stop_pose(), "");
       stop_pose_ = stop_pose;

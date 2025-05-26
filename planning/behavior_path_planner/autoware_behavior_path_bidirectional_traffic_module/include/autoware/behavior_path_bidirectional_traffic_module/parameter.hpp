@@ -26,7 +26,8 @@ namespace autoware::behavior_path_planner
 struct BidirectionalTrafficModuleParameters
 {
   double foward_looking_distance = std::numeric_limits<double>::max();
-  double min_distance_from_left_line = 0.0;
+  double keep_left_ratio = 0.5;  // 0.0 to 1.0
+  double pull_over_ratio = 0.7;  // keep_left_ratio to 1.0
   double time_to_prepare_shift = 0.5;
 };
 

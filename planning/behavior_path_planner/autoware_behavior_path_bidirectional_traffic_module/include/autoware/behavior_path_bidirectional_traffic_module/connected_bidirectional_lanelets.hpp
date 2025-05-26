@@ -97,7 +97,9 @@ public:
 
   [[nodiscard]] trajectory::Trajectory<geometry_msgs::msg::Pose> get_left_line() const;
 
-  bool is_inside_intersection(const geometry_msgs::msg::Pose & ego_pose) const;
+  [[nodiscard]] std::vector<lanelet::ConstLanelet> get_intersection_lanelets() const;
+
+  [[nodiscard]] double average_lane_width() const;
 };
 
 std::optional<ConnectedBidirectionalLanelets> get_current_bidirectional_lane(

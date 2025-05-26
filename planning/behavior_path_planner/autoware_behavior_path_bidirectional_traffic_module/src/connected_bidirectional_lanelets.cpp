@@ -23,9 +23,11 @@
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <rclcpp/logging.hpp>
 
-#include <geometry_msgs/msg/detail/pose__struct.hpp>
+#include <geometry_msgs/msg/pose.hpp>
 
+#include <boost/geometry/algorithms/area.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
+#include <boost/geometry/algorithms/length.hpp>
 
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/LaneletMap.h>
@@ -35,6 +37,7 @@
 #include <algorithm>
 #include <list>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -55,7 +58,7 @@ void remove_lanelet_with_turn_direction(lanelet::ConstLanelets * lanelets)
     std::remove_if(
       lanelets->begin(), lanelets->end(),
       [](const lanelet::ConstLanelet & lanelet) {
-        std::string turn_direction = lanelet.attributeOr("turn_direction", "none");
+        std::string_view turn_direction = lanelet.attributeOr("turn_direction", "none");
         return turn_direction == "right" || turn_direction == "left";
       }),
     lanelets->end());
@@ -297,6 +300,29 @@ ConnectedBidirectionalLanelets::get_left_line() const
   }
 
   return trajectory::Trajectory<geometry_msgs::msg::Pose>(*trajectory);
+}
+
+[[nodiscard]] std::vector<lanelet::ConstLanelet>
+ConnectedBidirectionalLanelets::get_intersection_lanelets() const
+{
+  std::vector<lanelet::ConstLanelet> intersection_lanelets;
+  for (const auto & lane : bidirectional_lanes_) {
+    std::string_view turn_direction = lane.attributeOr("turn_direction", "none");
+    if (turn_direction == "straight") {
+      intersection_lanelets.emplace_back(lane);
+    }
+  }
+  return intersection_lanelets;
+}
+
+[[nodiscard]] double ConnectedBidirectionalLanelets::average_lane_width() const
+{
+  long double sum = 0.0;
+  for (const auto & lane : bidirectional_lanes_) {
+    sum += boost::geometry::area(lane.polygon2d().basicPolygon()) /
+           boost::geometry::length(lane.centerline2d());
+  }
+  return static_cast<double>(sum / bidirectional_lanes_.size());
 }
 
 std::optional<ConnectedBidirectionalLanelets> get_current_bidirectional_lane(

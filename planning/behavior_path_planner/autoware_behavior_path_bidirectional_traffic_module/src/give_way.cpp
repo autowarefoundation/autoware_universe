@@ -16,6 +16,7 @@
 #include "autoware/behavior_path_bidirectional_traffic_module/oncoming_car.hpp"
 #include "autoware/trajectory/utils/shift.hpp"
 
+#include <utility>
 #include <vector>
 
 namespace autoware::behavior_path_planner
@@ -68,12 +69,12 @@ BackToNormalLane::modify_trajectory(
 }
 
 GiveWay::GiveWay(
-  const ConnectedBidirectionalLanelets & bidirectional_lanelets,  //
-  const double & vehicle_width,                                   //
-  const double & shift_starting_length,                           //
-  const double & distance_to_shift,                               //
+  ConnectedBidirectionalLanelets bidirectional_lanelets,  //
+  const double & vehicle_width,                           //
+  const double & shift_starting_length,                   //
+  const double & distance_to_shift,                       //
   const double & min_distance_to_left)
-: bidirectional_lanelets_(bidirectional_lanelets),
+: bidirectional_lanelets_(std::move(bidirectional_lanelets)),
   state_(std::make_shared<NoNeedToGiveWay>(this)),
   vehicle_width_(vehicle_width),
   shift_starting_length_(shift_starting_length),
