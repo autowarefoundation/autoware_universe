@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <numeric>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -56,12 +57,13 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     blockage_kernel_ = declare_parameter<int>("blockage_kernel");
     blockage_buffering_frames_ = declare_parameter<int>("blockage_buffering_frames");
     blockage_buffering_interval_ = declare_parameter<int>("blockage_buffering_interval");
-    
+
     // Debug configuration
     publish_debug_image_ = declare_parameter<bool>("publish_debug_image");
 
     // Depth map configuration
-    // The maximum distance range of the LiDAR, in meters. The depth map is normalized to this value.
+    // The maximum distance range of the LiDAR, in meters. The depth map is normalized to this
+    // value.
     max_distance_range_ = declare_parameter<double>("max_distance_range");
 
     // Ground segmentation configuration
@@ -174,6 +176,48 @@ void BlockageDiagComponent::run_dust_check(diagnostic_updater::DiagnosticStatusW
     msg = msg + ": LIDAR ground dust";
   }
   stat.summary(level, msg);
+}
+
+cv::Size BlockageDiagComponent::get_mask_dimensions() const
+{
+  auto horizontal_bins = get_horizontal_bin(angle_range_deg_[1]);
+  if (!horizontal_bins) {
+    throw std::logic_error("Horizontal bin is not valid");
+  }
+
+  return {*horizontal_bins, vertical_bins_};
+}
+
+std::optional<int> BlockageDiagComponent::get_horizontal_bin(double azimuth_deg) const
+{
+  double min_deg = angle_range_deg_[0];
+  double max_deg = angle_range_deg_[1];
+
+  bool fov_wraps_around = (min_deg > max_deg);
+  if (fov_wraps_around) {
+    azimuth_deg += 360.0;
+    max_deg += 360.0;
+  }
+
+  bool azimuth_is_in_fov = ((azimuth_deg > min_deg) && (azimuth_deg <= max_deg));
+  if (!azimuth_is_in_fov) {
+    return std::nullopt;
+  }
+
+  return {static_cast<int>((azimuth_deg - min_deg) / horizontal_resolution_)};
+}
+
+std::optional<int> BlockageDiagComponent::get_vertical_bin(uint16_t channel) const
+{
+  if (channel >= vertical_bins_) {
+    return std::nullopt;
+  }
+
+  if (is_channel_order_top2down_) {
+    return {channel};
+  }
+
+  return {vertical_bins_ - channel - 1};
 }
 
 void BlockageDiagComponent::filter(
