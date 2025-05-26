@@ -30,25 +30,44 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
 : Filter("BlockageDiag", options)
 {
   {
-    // initialize params:
-    horizontal_ring_id_ = declare_parameter<int>("horizontal_ring_id");
-    blockage_ratio_threshold_ = declare_parameter<float>("blockage_ratio_threshold");
-    vertical_bins_ = declare_parameter<int>("vertical_bins");
+    // LiDAR configuration
+    // Horizontal FoV, expects two values: [min, max]
     angle_range_deg_ = declare_parameter<std::vector<double>>("angle_range");
+    // Whether the channel order is top-down (true) or bottom-up (false)
     is_channel_order_top2down_ = declare_parameter<bool>("is_channel_order_top2down");
-    blockage_count_threshold_ = declare_parameter<int>("blockage_count_threshold");
-    blockage_buffering_frames_ = declare_parameter<int>("blockage_buffering_frames");
-    blockage_buffering_interval_ = declare_parameter<int>("blockage_buffering_interval");
-    publish_debug_image_ = declare_parameter<bool>("publish_debug_image");
+
+    // Blockage mask format configuration
+    // The number of vertical bins in the mask. Has to equal the number of channels of the LiDAR.
+    vertical_bins_ = declare_parameter<int>("vertical_bins");
+    // The angular resolution of the mask, in degrees.
+    horizontal_resolution_ = declare_parameter<double>("horizontal_resolution");
+
+    // Dust detection configuration
     enable_dust_diag_ = declare_parameter<bool>("enable_dust_diag");
     dust_ratio_threshold_ = declare_parameter<float>("dust_ratio_threshold");
     dust_count_threshold_ = declare_parameter<int>("dust_count_threshold");
     dust_kernel_size_ = declare_parameter<int>("dust_kernel_size");
     dust_buffering_frames_ = declare_parameter<int>("dust_buffering_frames");
     dust_buffering_interval_ = declare_parameter<int>("dust_buffering_interval");
-    max_distance_range_ = declare_parameter<double>("max_distance_range");
-    horizontal_resolution_ = declare_parameter<double>("horizontal_resolution");
+
+    // Blockage detection configuration
+    blockage_ratio_threshold_ = declare_parameter<float>("blockage_ratio_threshold");
+    blockage_count_threshold_ = declare_parameter<int>("blockage_count_threshold");
     blockage_kernel_ = declare_parameter<int>("blockage_kernel");
+    blockage_buffering_frames_ = declare_parameter<int>("blockage_buffering_frames");
+    blockage_buffering_interval_ = declare_parameter<int>("blockage_buffering_interval");
+    
+    // Debug configuration
+    publish_debug_image_ = declare_parameter<bool>("publish_debug_image");
+
+    // Depth map configuration
+    // The maximum distance range of the LiDAR, in meters. The depth map is normalized to this value.
+    max_distance_range_ = declare_parameter<double>("max_distance_range");
+
+    // Ground segmentation configuration
+    // The ring ID that coincides with the horizon. Regions below are treated as ground,
+    // regions above are treated as sky.
+    horizontal_ring_id_ = declare_parameter<int>("horizontal_ring_id");
   }
   dust_mask_buffer.set_capacity(dust_buffering_frames_);
   no_return_mask_buffer.set_capacity(blockage_buffering_frames_);
