@@ -16,6 +16,7 @@
 
 #include "autoware/universe_utils/geometry/boost_polygon_utils.hpp"
 
+#include <string>
 #include <string_view>
 
 namespace autoware::behavior_path_planner

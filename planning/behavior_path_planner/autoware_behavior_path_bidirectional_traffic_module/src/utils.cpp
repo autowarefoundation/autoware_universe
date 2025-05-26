@@ -22,6 +22,7 @@
 #include <lanelet2_core/primitives/Lanelet.h>
 
 #include <unordered_set>
+#include <vector>
 
 namespace autoware::behavior_path_planner
 {

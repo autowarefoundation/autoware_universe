@@ -12,7 +12,7 @@ The main roles of this module are as follows:
 
 - Generating a driving trajectory along the left (or right) side of the road center
 
-  This module provides a function to generate a trajectory along the left (or right) side of the road center on bidirectional traffic lanes. In some countries, traffic laws require vehicles to drive on the left or right side of the road center on bidirectional roads. For example, in Japan, [Article 18, Paragraph 1 of the Road Traffic Act](https://laws.e-gov.go.jp/law/335AC0000000105#Mp-Ch_3-Se_1-At_18) requires that vehicles must keep to the left side of the road center. Because of these leagal requirement, this module provides the function to generate a trajectory that follows the left (or right) side of the road center on bidirectional roads.
+  This module provides a function to generate a trajectory along the left (or right) side of the road center on bidirectional traffic lanes. In some countries, traffic laws require vehicles to drive on the left or right side of the road center on bidirectional roads. For example, in Japan, [Article 18, Paragraph 1 of the Road Traffic Act](https://laws.e-gov.go.jp/law/335AC0000000105#Mp-Ch_3-Se_1-At_18) requires that vehicles must keep to the left side of the road center. Because of these legal requirements, this module provides the function to generate a trajectory that follows the left (or right) side of the road center on bidirectional roads.
 
 - Giving way to oncoming vehicles on bidirectional traffic roads
 
