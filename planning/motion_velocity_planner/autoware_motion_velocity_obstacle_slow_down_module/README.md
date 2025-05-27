@@ -15,7 +15,10 @@ This module is activated if the launch parameter `launch_obstacle_slow_down_modu
 Among obstacles which are not for cruising and stopping, the obstacles meeting the following condition are determined as obstacles for slowing down.
 
 - The object type is for slowing down according to `obstacle_filtering.object_type.*`.
-- The lateral distance from the object to the ego's trajectory is smaller than `obstacle_filtering.max_lat_margin`.
+- The lateral distance from the object to the ego's trajectory is smaller than `obstacle_filtering.max_lat_margin` and larger than `obstacle_filtering.min_lat_margin`.
+  - For the stable decision making, `obstacle_filtering.lat_hysteresis_margin` is applied for the hysteresis of the lateral margin.
+- The obstacle which meets the condition `obstacle_filtering.successive_num_to_entry_slow_down_condition` times in a row will be a target obstacle
+- The obstacle which was previously the target obstacle and does not meet the condition `obstacle_filtering.successive_num_to_entry_slow_down_condition` times in a row will not be a target obstacle.
 
 ### Slow Down Planning
 
@@ -40,6 +43,23 @@ Then, the slow down velocity is calculated by linear interpolation with the dist
 The calculated velocity is inserted in the trajectory where the obstacle is inside the area with `obstacle_filtering.max_lat_margin`.
 
 ![slow_down_planning](./docs/slow_down_planning.drawio.svg)
+
+The slow down point is inserted slow down velocity \* `slow_down_planning.time_margin_on_target_velocity` meters behind the obstacle.
+
+### Sudden deceleration suppression
+
+When the slow down point is inserted, the deceleration and jerk is supposet to be higher than `slow_down_planning.slow_down_min_acc` and slow_down_planning.slow_down_min_jerk` respectively. If the slow down point does not follow this condition, the velocity will be increased and the slow down point does not change.
+
+### Stable slow down planning
+
+The following low-pass filters will be applied.
+
+- `slow_down_planning.lpf_gain_slow_down_vel`
+  - slow down velocity
+- `slow_down_planning.lpf_gain_lat_dist`
+  - lateral distance of obstacles to the ego's trajectory to calculate the target velocity
+- `slow_down_planning.lpf_gain_dist_to_slow_down`
+  - distance to the slow down point
 
 ## Debugging
 
