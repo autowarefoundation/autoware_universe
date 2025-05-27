@@ -17,7 +17,6 @@
 
 #include "autoware/point_types/types.hpp"
 #include "autoware/pointcloud_preprocessor/filter.hpp"
-#include "autoware/point_types/types.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <image_transport/image_transport.hpp>
@@ -30,6 +29,7 @@
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <std_msgs/msg/header.hpp>
+
 #include <pcl/PCLPointCloud2.h>
 
 #include <pcl/PCLPointCloud2.h>
@@ -50,7 +50,6 @@ namespace autoware::pointcloud_preprocessor
 using autoware::point_types::PointXYZIRCAEDT;
 using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
-using autoware::point_types::PointXYZIRCAEDT;
 using PCLCloudXYZIRCAEDT = pcl::PointCloud<PointXYZIRCAEDT>;
 
 class BlockageDiagComponent : public autoware::pointcloud_preprocessor::Filter
@@ -77,7 +76,8 @@ protected:
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::StringStamped>::SharedPtr blockage_type_pub_;
 
 private:
-  struct DebugInfo {
+  struct DebugInfo
+  {
     std_msgs::msg::Header input_header;
     cv::Mat depth_image_16u;
     cv::Mat blockage_mask_multi_frame;
@@ -151,7 +151,7 @@ private:
 
   /**
    * @brief Make a binary, cleaned blockage mask from the input no-return mask.
-   * 
+   *
    * @param no_return_mask A mask where 255 is no-return and 0 is return.
    * @return cv::Mat The blockage mask. The data type is `CV_8UC1`.
    */
@@ -159,23 +159,25 @@ private:
 
   /**
    * @brief Update the internal blockage mask buffer and return the updated mask.
-   * 
+   *
    * @param blockage_mask The current blockage mask. The data type is `CV_8UC1`.
    * @return cv::Mat The updated aggregated blockage mask. The data type is `CV_8UC1`.
    */
   cv::Mat update_time_series_blockage_mask(const cv::Mat & blockage_mask);
 
   /**
-   * @brief Segments a given mask into two masks, according to the ground/sky segmentation parameters.
-   * 
+   * @brief Segments a given mask into two masks, according to the ground/sky segmentation
+   * parameters.
+   *
    * @param mask The input mask. The data type is `CV_8UC1`.
-   * @return std::pair<cv::Mat, cv::Mat> The pair {ground_mask, sky_mask}. The data type is `CV_8UC1`.
+   * @return std::pair<cv::Mat, cv::Mat> The pair {ground_mask, sky_mask}. The data type is
+   * `CV_8UC1`.
    */
   std::pair<cv::Mat, cv::Mat> segment_into_ground_and_sky(const cv::Mat & mask) const;
 
   /**
    * @brief Get the ratio of non-zero pixels in a given mask.
-   * 
+   *
    * @param mask The input mask. The data type is `CV_8UC1`.
    * @return float The ratio of non-zero pixels (e.g. 1.0 if all are non-zero, 0.0 if all are zero).
    */
@@ -183,21 +185,21 @@ private:
 
   /**
    * @brief Update the internal ground blockage info.
-   * 
+   *
    * @param ground_blockage_mask The ground blockage mask. The data type is `CV_8UC1`.
    */
   void update_ground_blockage_info(const cv::Mat & ground_blockage_mask);
 
   /**
    * @brief Update the internal sky blockage info.
-   * 
+   *
    * @param sky_blockage_mask The sky blockage mask. The data type is `CV_8UC1`.
    */
   void update_sky_blockage_info(const cv::Mat & sky_blockage_mask);
 
   /**
    * @brief Compute dust diagnostics and update the internal dust info.
-   * 
+   *
    * @param no_return_mask The no-return mask. The data type is `CV_8UC1`.
    * @param debug_info The debug info to publish if enabled.
    */
@@ -205,16 +207,16 @@ private:
 
   /**
    * @brief Publish the debug info if enabled.
-   * 
+   *
    * @param debug_info The debug info to publish.
    */
   void publish_debug_info(const DebugInfo & debug_info) const;
 
   Updater updater_{this};
-  
+
   // Debug parameters
   bool publish_debug_image_;
-  
+
   // LiDAR parameters
   double max_distance_range_{200.0};
 
@@ -256,13 +258,11 @@ private:
 
   // Dust detection state
   float ground_dust_ratio_ = -1.0f;
-  
+
   // Multi-frame dust detection state
   int dust_buffering_frame_counter_ = 0;
   int dust_frame_count_ = 0;
   boost::circular_buffer<cv::Mat> dust_mask_buffer{1};
-
-  
 
 public:
   PCL_MAKE_ALIGNED_OPERATOR_NEW
