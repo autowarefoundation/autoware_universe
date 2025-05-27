@@ -47,9 +47,9 @@ void calculate_current_footprint(
 
 /// @brief return true if an object should be ignored
 bool skip_object_condition(
-  const Object & object, const std::optional<DecisionHistory> & prev_decisions,
+  Object & object, const std::optional<DecisionHistory> & prev_decisions,
   const universe_utils::Segment2d & ego_rear_segment, const FilteringData & filtering_data,
-  const Parameters & params);
+  const Parameters & parameters);
 
 /// @brief get the predicted paths with confidence above threshold
 std::vector<autoware_perception_msgs::msg::PredictedPath> filter_by_confidence(
