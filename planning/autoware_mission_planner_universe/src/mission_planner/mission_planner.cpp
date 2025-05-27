@@ -24,6 +24,7 @@
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
+#include <fmt/format.h>
 #include <lanelet2_core/geometry/LineString.h>
 
 #include <algorithm>
@@ -34,6 +35,31 @@
 
 namespace autoware::mission_planner_universe
 {
+namespace
+{
+#define ROUTE_STATE_CASE(state) \
+  case RouteState::state:       \
+    return #state;
+
+std::string routeStateToString(const uint8_t state)
+{
+  switch (state) {
+    ROUTE_STATE_CASE(UNKNOWN)
+    ROUTE_STATE_CASE(INITIALIZING)
+    ROUTE_STATE_CASE(UNSET)
+    ROUTE_STATE_CASE(ROUTING)
+    ROUTE_STATE_CASE(SET)
+    ROUTE_STATE_CASE(REROUTING)
+    ROUTE_STATE_CASE(ARRIVED)
+    ROUTE_STATE_CASE(ABORTED)
+    ROUTE_STATE_CASE(INTERRUPTED)
+    default:
+      return "UNKNOWN(" + std::to_string(static_cast<int>(state)) + ")";
+  }
+}
+
+#undef ROUTE_STATE_CASE
+}  // namespace
 
 MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
 : Node("mission_planner", options),
@@ -241,7 +267,10 @@ void MissionPlanner::on_set_lanelet_route(
 
   if (state_.state != RouteState::UNSET && state_.state != RouteState::SET) {
     throw service_utils::ServiceException(
-      ResponseCode::ERROR_INVALID_STATE, "The route cannot be set in the current state.");
+      ResponseCode::ERROR_INVALID_STATE,
+      fmt::format(
+        "The lanelet route cannot be set in the current state: {}",
+        routeStateToString(state_.state)));
   }
   if (!is_mission_planner_ready_) {
     throw service_utils::ServiceException(
@@ -304,7 +333,10 @@ void MissionPlanner::on_set_waypoint_route(
 
   if (state_.state != RouteState::UNSET && state_.state != RouteState::SET) {
     throw service_utils::ServiceException(
-      ResponseCode::ERROR_INVALID_STATE, "The route cannot be set in the current state.");
+      ResponseCode::ERROR_INVALID_STATE,
+      fmt::format(
+        "The waypoint route cannot be set in the current state: {}",
+        routeStateToString(state_.state)));
   }
   if (!is_mission_planner_ready_) {
     throw service_utils::ServiceException(
