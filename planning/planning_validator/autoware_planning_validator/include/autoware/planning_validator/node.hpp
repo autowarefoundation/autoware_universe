@@ -77,10 +77,10 @@ private:
   // subscriber
   autoware_utils::InterProcessPollingSubscriber<
     LaneletRoute, autoware_utils::polling_policy::Newest>
-    route_subscriber_{this, "~/input/route", rclcpp::QoS{1}.transient_local()};
+    sub_route_{this, "~/input/route", rclcpp::QoS{1}.transient_local()};
   autoware_utils::InterProcessPollingSubscriber<
     LaneletMapBin, autoware_utils::polling_policy::Newest>
-    vector_map_subscriber_{this, "~/input/vector_map", rclcpp::QoS{1}.transient_local()};
+    sub_map_{this, "~/input/vector_map", rclcpp::QoS{1}.transient_local()};
   autoware_utils::InterProcessPollingSubscriber<PointCloud2> sub_point_cloud_{
     this, "~/input/pointcloud", autoware_utils::single_depth_sensor_qos()};
   autoware_utils::InterProcessPollingSubscriber<Odometry> sub_kinematics_{
@@ -106,6 +106,8 @@ private:
 
   LaneletMapBin::ConstSharedPtr map_ptr_{nullptr};
   LaneletRoute::ConstSharedPtr route_ptr_{nullptr};
+  bool has_received_map_{false};
+  bool has_received_route_{false};
 
   Trajectory::ConstSharedPtr soft_stop_trajectory_;
 

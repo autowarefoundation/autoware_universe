@@ -28,6 +28,7 @@
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <memory>
 #include <string>
@@ -43,6 +44,7 @@ using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
+using sensor_msgs::msg::PointCloud2;
 
 enum class InvalidTrajectoryHandlingType : uint8_t {
   PUBLISH_AS_IT_IS,
@@ -73,6 +75,7 @@ struct PlanningValidatorData
 
   Odometry::ConstSharedPtr current_kinematics;
   AccelWithCovarianceStamped::ConstSharedPtr current_acceleration;
+  PointCloud2::ConstSharedPtr current_pointcloud;
 
   bool is_ready(std::string & msg)
   {
@@ -126,6 +129,7 @@ struct PlanningValidatorContext
     data = std::make_shared<PlanningValidatorData>();
     validation_status = std::make_shared<PlanningValidatorStatus>();
     diag_updater = std::make_shared<Updater>(node);
+    route_handler = std::make_shared<RouteHandler>();
   }
 
   autoware::vehicle_info_utils::VehicleInfo vehicle_info;
