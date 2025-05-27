@@ -183,16 +183,16 @@ void getNearestCornerOrSurface(
   if (xl > length / 2.0) {
     anchor_x = length / 2.0;
   } else if (xl > -length / 2.0) {
-    anchor_x = 0;
-  } else {
     anchor_x = -length / 2.0;
+  } else {
+    anchor_x = 0;
   }
   if (yl > width / 2.0) {
     anchor_y = width / 2.0;
   } else if (yl > -width / 2.0) {
-    anchor_y = 0;
-  } else {
     anchor_y = -width / 2.0;
+  } else {
+    anchor_y = 0;
   }
 
   object.anchor_point.x = anchor_x;
@@ -206,7 +206,7 @@ void calcAnchorPointOffset(
   // copy value
   const geometry_msgs::msg::Point anchor_vector = updating_object.anchor_point;
   // invalid anchor
-  if (anchor_vector.x <= 1e-6 && anchor_vector.y <= 1e-6) {
+  if (std::abs(anchor_vector.x) <= 1e-6 && std::abs(anchor_vector.y) <= 1e-6) {
     return;
   }
   double input_yaw = tf2::getYaw(updating_object.pose.orientation);
