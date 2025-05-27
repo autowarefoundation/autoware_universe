@@ -65,4 +65,4 @@ So `is_fixed_size` parameter is recommended to set `true`, and size parameters i
 
 ### Parameter
 
-{{ json_to_markdown("perception/autoware_radar_object_clustering/config/radar_object_clustering.param.yaml/schema/radar_object_clustering.schema.json") }}
+{{ json_to_markdown("perception/autoware_radar_object_clustering/schema/radar_object_clustering.schema.json") }}
