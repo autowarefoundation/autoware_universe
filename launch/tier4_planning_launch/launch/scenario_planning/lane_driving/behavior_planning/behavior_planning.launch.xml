@@ -19,6 +19,7 @@
   <arg name="launch_start_planner_module" default="true"/>
   <arg name="launch_sampling_planner_module" default="true"/>
   <arg name="launch_side_shift_module" default="true"/>
+  <arg name="launch_bidirectional_traffic_module" default="true"/>
 
   <arg name="launch_crosswalk_module" default="true"/>
   <arg name="launch_walkway_module" default="true"/>
@@ -53,6 +54,11 @@
     name="behavior_path_planner_launch_modules"
     value="$(eval &quot;'$(var behavior_path_planner_launch_modules)' + 'autoware::behavior_path_planner::SideShiftModuleManager, '&quot;)"
     if="$(var launch_side_shift_module)"
+  />
+  <let
+    name="behavior_path_planner_launch_modules"
+    value="$(eval &quot;'$(var behavior_path_planner_launch_modules)' + 'autoware::behavior_path_planner::BidirectionalTrafficModuleManager, '&quot;)"
+    if="$(var launch_bidirectional_traffic_module)"
   />
   <let
     name="behavior_path_planner_launch_modules"
@@ -246,6 +252,7 @@
         <param from="$(var behavior_path_planner_side_shift_module_param_path)"/>
         <param from="$(var behavior_path_planner_static_obstacle_avoidance_module_param_path)"/>
         <param from="$(var behavior_path_planner_avoidance_by_lc_module_param_path)"/>
+        <param from="$(var behavior_path_bidirectional_traffic_module_param_path)"/>
         <param from="$(var behavior_path_planner_dynamic_obstacle_avoidance_module_param_path)"/>
         <param from="$(var behavior_path_planner_lane_change_module_param_path)"/>
         <param from="$(var behavior_path_planner_goal_planner_module_param_path)"/>
