@@ -1,8 +1,18 @@
 <launch>
+  <arg name="launch_latency_checker" default="true"/>
+  <arg name="launch_trajectory_checker" default="true"/>
   <arg name="launch_modules_list_end" default="&quot;&quot;]"/>
   <arg name="planning_validator_launch_modules" default="["/>
-  <let name="planning_validator_launch_modules" value="$(eval &quot;'$(var planning_validator_launch_modules)' + 'autoware::planning_validator::LatencyChecker, '&quot;)"/>
-  <let name="planning_validator_launch_modules" value="$(eval &quot;'$(var planning_validator_launch_modules)' + 'autoware::planning_validator::TrajectoryChecker, '&quot;)"/>
+  <let
+    name="planning_validator_launch_modules"
+    value="$(eval &quot;'$(var planning_validator_launch_modules)' + 'autoware::planning_validator::LatencyChecker, '&quot;)"
+    if="$(var launch_latency_checker)"
+  />
+  <let
+    name="planning_validator_launch_modules"
+    value="$(eval &quot;'$(var planning_validator_launch_modules)' + 'autoware::planning_validator::TrajectoryChecker, '&quot;)"
+    if="$(var launch_trajectory_checker)"
+  />
   <let name="planning_validator_launch_modules" value="$(eval &quot;'$(var planning_validator_launch_modules)' + '$(var launch_modules_list_end)'&quot;)"/>
 
   <arg name="planning_validator_param_path" default="$(find-pkg-share autoware_planning_validator)/config/planning_validator.param.yaml"/>
