@@ -1,6 +1,6 @@
 # `autoware_radar_object_clustering`
 
-This package contains a radar object clustering for [autoware_perception_msgs/msg/DetectedObject](https://github.com/autowarefoundation/autoware_msgs/tree/main/autoware_perception_msgs/msg/DetectedObject.idl) input.
+This package contains a radar object clustering for [autoware_perception_msgs/msg/DetectedObject](https://github.com/autowarefoundation/autoware_msgs/blob/main/autoware_perception_msgs/msg/DetectedObject.msg) input.
 
 This package can make clustered objects from radar DetectedObjects, the objects which is converted from RadarTracks by [radar_tracks_msgs_converter](https://github.com/autowarefoundation/autoware_universe/tree/main/perception/autoware_radar_tracks_msgs_converter) and is processed by noise filter.
 In other word, this package can combine multiple radar detections from one object into one and adjust class and size.
