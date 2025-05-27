@@ -1005,7 +1005,7 @@ Furthermore, if the path has become unsafe, there are three possible outcomes fo
 
 1. **CANCEL**: The approved path has become unsafe while ego is still in prepare phase. Lane change path is canceled, and the ego vehicle resumes its previous maneuver.
 2. **ABORT**: The approved path has become unsafe while ego is in lane changing phase. Lane change module generates a return path to bring the ego vehicle back to its current lane.
-3. **CRUISE** or **STOP**: If aborting is not feasible, the ego vehicle continues with the lane change. [Another module](https://autowarefoundation.github.io/autoware_universe/main/planning/autoware_obstacle_cruise_planner/) should decide whether the ego vehicle should cruise or stop in this scenario.
+3. **CRUISE** or **STOP**: If aborting is not feasible, the ego vehicle continues with the lane change. [Another module](https://autowarefoundation.github.io/autoware_universe/main/planning/motion_velocity_planner/autoware_motion_velocity_obstacle_cruise_module/) should decide whether the ego vehicle should cruise or stop in this scenario.
 
 **CANCEL** can be enabled by setting the `cancel.enable_on_prepare_phase` flag to `true`, and **ABORT** can be enabled by setting the `cancel.enable_on_lane_changing_phase` flag to true.
 

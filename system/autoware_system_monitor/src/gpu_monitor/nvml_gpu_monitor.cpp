@@ -284,9 +284,17 @@ void GPUMonitor::checkMemoryUsage(diagnostic_updater::DiagnosticStatusWrapper & 
       stat.add(fmt::format("GPU {}: content", index), nvmlErrorString(ret));
       return;
     }
+    if (memory.total == 0) {
+      stat.summary(DiagStatus::ERROR, "Total memory is 0");
+      stat.add(fmt::format("GPU {}: name", index), itr->name);
+      stat.add(fmt::format("GPU {}: bus-id", index), itr->pci.busId);
+      return;
+    }
 
     int level = DiagStatus::OK;
-    float usage = static_cast<float>(itr->utilization.memory) / 100.0;
+    const auto used_memory = static_cast<double>(memory.used);
+    const auto total_memory = static_cast<double>(memory.total);
+    const auto usage = static_cast<float>(used_memory / total_memory);
     if (usage >= memory_usage_error_) {
       level = std::max(level, static_cast<int>(DiagStatus::ERROR));
     } else if (usage >= memory_usage_warn_) {
@@ -295,7 +303,7 @@ void GPUMonitor::checkMemoryUsage(diagnostic_updater::DiagnosticStatusWrapper & 
 
     stat.add(fmt::format("GPU {}: status", index), load_dict_.at(level));
     stat.add(fmt::format("GPU {}: name", index), itr->name);
-    stat.addf(fmt::format("GPU {}: usage", index), "%d.0%%", itr->utilization.memory);
+    stat.addf(fmt::format("GPU {}: usage", index), "%.1f%%", usage * 100.0f);
     stat.add(fmt::format("GPU {}: total", index), toHumanReadable(memory.total));
     stat.add(fmt::format("GPU {}: used", index), toHumanReadable(memory.used));
     stat.add(fmt::format("GPU {}: free", index), toHumanReadable(memory.free));

@@ -20,6 +20,7 @@ namespace autoware::cuda_pointcloud_preprocessor
 {
 
 // Note: We can not use PCL nor uniform initialization here because of thrust
+#pragma pack(push, 1)
 struct OutputPointType
 {
   float x;
@@ -29,6 +30,7 @@ struct OutputPointType
   std::uint8_t return_type;
   std::uint16_t channel;
 };
+#pragma pack(pop)
 
 struct InputPointType
 {

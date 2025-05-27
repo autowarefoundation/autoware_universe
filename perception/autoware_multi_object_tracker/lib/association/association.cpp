@@ -180,7 +180,10 @@ double DataAssociation::calculateScore(
   const double mahalanobis_dist = getMahalanobisDistance(
     measurement_object.pose.position, tracked_object.pose.position,
     getXYCovariance(tracked_object.pose_covariance));
-  if (3.035 /*99%*/ <= mahalanobis_dist) return 0.0;
+  constexpr double mahalanobis_dist_threshold =
+    3.717;  // 99.99% confidence level for 2 degrees of freedom, square root of chi-square critical
+            // value of 13.816
+  if (mahalanobis_dist_threshold <= mahalanobis_dist) return 0.0;
 
   // 2d iou gate
   const double min_iou = config_.min_iou_matrix(tracker_label, measurement_label);

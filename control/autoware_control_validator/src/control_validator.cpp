@@ -47,6 +47,54 @@ void TrajectoryValidator::validate(
     res.max_distance_deviation <= max_distance_deviation_threshold;
 }
 
+void LateralJerkValidator::validate(
+  ControlValidatorStatus & res, const Odometry & kinematic_state, const Control & control_cmd,
+  const double wheel_base)
+{
+  const double filtered_velocity = measured_vel_lpf.filter(kinematic_state.twist.twist.linear.x);
+  const double steering_cmd = control_cmd.lateral.steering_tire_angle;
+
+  if (!prev_control_cmd_) {
+    prev_control_cmd_ = std::make_unique<Control>(control_cmd);
+    return;
+  }
+
+  // Calculate time difference
+  rclcpp::Time current_time(control_cmd.stamp);
+  rclcpp::Time prev_time(prev_control_cmd_->stamp);
+  const double dt = (current_time - prev_time).seconds();
+
+  const double prev_steering_cmd = prev_control_cmd_->lateral.steering_tire_angle;
+  const double steering_rate = (steering_cmd - prev_steering_cmd) / dt;
+
+  // Calculate lateral jerk with the formula
+  // j_y = (1/L) * [2V * a_x * θ + V^2 * (dθ/dt)]
+  //
+  // Where:
+  // - L: wheel base
+  // - V: longitudinal velocity
+  // - a_x: longitudinal acceleration (assumed to be zero for constant velocity)
+  // - dθ/dt: steering angle rate of change
+  //
+  // Note: The calculation assumes constant velocity (a_x = 0), so the first term is omitted.
+  const double lateral_jerk =
+    (1.0 / wheel_base) * (filtered_velocity * filtered_velocity * steering_rate);
+
+  res.steering_rate = steering_rate;
+  res.lateral_jerk = lateral_jerk;
+  // Note: Assuming left-right symmetry, only considering the magnitude of jerk
+  res.is_valid_lateral_jerk = std::abs(lateral_jerk) < lateral_jerk_threshold_;
+  if (!res.is_valid_lateral_jerk) {
+    RCLCPP_DEBUG(
+      logger_, "Lateral jerk is too high. %f > %f", std::abs(lateral_jerk),
+      lateral_jerk_threshold_);
+    RCLCPP_DEBUG(
+      logger_, "steering_cmd: %f, prev_steering_cmd: %f, dt: %f", steering_cmd,
+      prev_control_cmd_->lateral.steering_tire_angle, dt);
+  }
+  prev_control_cmd_ = std::make_unique<Control>(control_cmd);
+}
+
 void AccelerationValidator::validate(
   ControlValidatorStatus & res, const Odometry & kinematic_state, const Control & control_cmd,
   const AccelWithCovarianceStamped & loc_acc)
@@ -244,6 +292,12 @@ void ControlValidator::setup_diag()
     set_status(
       stat, validation_status_.is_valid_latency, "The latency is larger than expected value.");
   });
+
+  d.add(ns + "steering_rate", [&](auto & stat) {
+    set_status(
+      stat, validation_status_.is_valid_lateral_jerk,
+      "The lateral jerk is larger than expected value.");
+  });
 }
 
 void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
@@ -291,6 +345,10 @@ void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
 
   // validation process
   latency_validator.validate(validation_status_, *control_cmd_msg, *this);
+
+  lateral_jerk_validator.validate(
+    validation_status_, *kinematics_msg, *control_cmd_msg, vehicle_info_.wheel_base_m);
+
   if (predicted_trajectory_msg->points.size() < 2) {
     // TODO(takagi): This check should be moved into each of the individual validate() functions.
     // Passing the rclcpp::Logger as an argument to the validate() function is necessary.
@@ -334,13 +392,18 @@ void ControlValidator::publish_debug_info(const geometry_msgs::msg::Pose & ego_p
 
 bool ControlValidator::is_all_valid(const ControlValidatorStatus & s)
 {
-  return s.is_valid_max_distance_deviation && s.is_valid_acc && !s.is_rolling_back &&
-         !s.is_over_velocity && !s.has_overrun_stop_point && !s.will_overrun_stop_point;
+  return s.is_valid_lateral_jerk && s.is_valid_max_distance_deviation && s.is_valid_acc &&
+         !s.is_rolling_back && !s.is_over_velocity && !s.has_overrun_stop_point &&
+         !s.will_overrun_stop_point;
 }
 
 std::string ControlValidator::generate_error_message(const ControlValidatorStatus & s)
 {
   std::vector<std::string> error_messages;
+
+  if (!s.is_valid_lateral_jerk) {
+    error_messages.push_back("HIGH LATERAL JERK");
+  }
 
   if (!s.is_valid_max_distance_deviation) {
     error_messages.push_back("TRAJECTORY DEVIATION");
@@ -384,11 +447,11 @@ std::string ControlValidator::generate_error_message(const ControlValidatorStatu
 void ControlValidator::display_status()
 {
   if (!display_on_terminal_) return;
-  rclcpp::Clock clock{RCL_ROS_TIME};
+  static rclcpp::Clock clock{RCL_ROS_TIME};
 
-  const auto warn = [this, &clock](const bool status, const std::string & msg) {
+  const auto warn = [this](const bool status, const std::string & msg, const double value) {
     if (!status) {
-      RCLCPP_WARN_THROTTLE(get_logger(), clock, 1000, "%s", msg.c_str());
+      RCLCPP_WARN_THROTTLE(get_logger(), clock, 1000, "%s: %.2f", msg.c_str(), value);
     }
   };
 
@@ -396,7 +459,11 @@ void ControlValidator::display_status()
 
   warn(
     s.is_valid_max_distance_deviation,
-    "predicted trajectory is too far from planning trajectory!!");
+    "predicted trajectory is too far from planning trajectory with max distance deviation: ",
+    s.max_distance_deviation);
+  warn(
+    s.is_valid_lateral_jerk,
+    "lateral jerk exceeds safety threshold with steering rate: ", s.steering_rate);
 }
 
 }  // namespace autoware::control_validator

@@ -68,9 +68,6 @@ visualization_msgs::msg::Marker createDefaultMarker(
   const int32_t type, const geometry_msgs::msg::Vector3 & scale,
   const std_msgs::msg::ColorRGBA & color);
 
-visualization_msgs::msg::Marker createDeletedDefaultMarker(
-  const rclcpp::Time & now, const std::string & ns, const int32_t id);
-
 void appendMarkerArray(
   const visualization_msgs::msg::MarkerArray & additional_marker_array,
   visualization_msgs::msg::MarkerArray * marker_array,

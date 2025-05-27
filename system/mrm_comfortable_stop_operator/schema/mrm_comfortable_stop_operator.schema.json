@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MRM Comfortable Stop Operator",
+  "type": "object",
+  "definitions": {
+    "mrm_comfortable_stop_operator": {
+      "type": "object",
+      "properties": {
+        "update_rate": {
+          "type": "integer",
+          "description": "Timer callback frequency [Hz]",
+          "default": 10
+        },
+        "min_acceleration": {
+          "type": "number",
+          "description": "Minimum acceleration for comfortable stop [m/s^2]",
+          "default": -1.0
+        },
+        "max_jerk": {
+          "type": "number",
+          "description": "Maximum jerk for comfortable stop [m/s^3]",
+          "default": 0.3
+        },
+        "min_jerk": {
+          "type": "number",
+          "description": "Minimum jerk for comfortable stop [m/s^3]",
+          "default": -0.3
+        }
+      },
+      "required": ["update_rate", "min_acceleration", "max_jerk", "min_jerk"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/mrm_comfortable_stop_operator"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

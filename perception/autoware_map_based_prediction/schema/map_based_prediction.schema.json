@@ -6,11 +6,6 @@
     "map_based_prediction": {
       "type": "object",
       "properties": {
-        "enable_delay_compensation": {
-          "type": "boolean",
-          "default": true,
-          "description": "flag to enable the time delay compensation for the position of the object"
-        },
         "prediction_time_horizon": {
           "properties": {
             "vehicle": {
@@ -151,7 +146,6 @@
         }
       },
       "required": [
-        "enable_delay_compensation",
         "prediction_time_horizon",
         "lateral_control_time_horizon",
         "prediction_sampling_delta_time",

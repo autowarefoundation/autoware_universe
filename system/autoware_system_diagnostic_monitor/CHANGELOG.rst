@@ -2,6 +2,48 @@
 Changelog for package autoware_system_diagnostic_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(planning_validator): check for sudden shift in planning trajectory (`#10339 <https://github.com/autowarefoundation/autoware_universe/issues/10339>`_)
+  * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)
+  not sync github-release
+  * implement function to check for sudden shift in trajectory
+  * syntax and format fixes
+  * add diagnostic for trajectory shift
+  * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)
+  not sync github-release
+  * refactor planning validator parameters
+  * check enable flag for all validity checks
+  * add missing parameters
+  * add soft stop feature to planning validator
+  * add missing path in planning diagnostic config
+  * add debug markers and clean up code
+  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)"
+  This reverts commit 7badf6e90d0bb1002527c409b62db61cd8b44f37.
+  * set trajectory shift values in validation status
+  * update planning validator readme
+  * update planning validator test
+  * run pre-commit checks
+  * add missing include
+  * add unit test for trajectory shift check
+  * properly set is_critical_error\_ flag for all checks
+  * Update planning/autoware_planning_validator/include/autoware/planning_validator/parameters.hpp
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+  * revise logic for setting longitudinal shift value
+  * fix longitudinal shift check to prevent false positive at end of path
+  * improve stop trajectory computation
+  * fix spelling
+  * fix test files
+  * fix node interface tests and pubsub tests
+  ---------
+  Co-authored-by: Yutaka Kondo <yutaka.kondo@youtalk.jp>
+  Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
+* Contributors: TaikiYamada4, mkquda
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 

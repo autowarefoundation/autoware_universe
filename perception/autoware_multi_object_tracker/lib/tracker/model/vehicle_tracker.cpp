@@ -273,6 +273,7 @@ bool VehicleTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object) const
 {
   object = object_;
+  object.time = time;
 
   // predict from motion model
   auto & pose = object.pose;

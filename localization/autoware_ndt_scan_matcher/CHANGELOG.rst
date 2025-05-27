@@ -2,6 +2,33 @@
 Changelog for package autoware_ndt_scan_matcher
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(localization): replace tier4_localization_msgs used by ndt_align_srv with autoware_internal_localization_msgs (`#10567 <https://github.com/autowarefoundation/autoware_universe/issues/10567>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(ndt_scan_matcher): implicit double to float conversion (`#10542 <https://github.com/autowarefoundation/autoware_universe/issues/10542>`_)
+  * fix(ndt_scan_matcher): implicit double to float conversion
+  * use temp variable for casting
+  * change resolution variable type to the setLeafSize argument type
+  ---------
+* fix(autoware_ndt_scan_matcher): fix deprecated autoware_utils header (`#10512 <https://github.com/autowarefoundation/autoware_universe/issues/10512>`_)
+  * fix autoware_utils header
+  * style(pre-commit): autofix
+  * Update localization/autoware_ndt_scan_matcher/src/ndt_scan_matcher_core.cpp
+  Co-authored-by: RyuYamamoto <ryu.yamamoto@tier4.jp>
+  * Update localization/autoware_ndt_scan_matcher/src/ndt_scan_matcher_core.cpp
+  Co-authored-by: RyuYamamoto <ryu.yamamoto@tier4.jp>
+  * fix: add autoware_utils_logging to package.xml
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: RyuYamamoto <ryu.yamamoto@tier4.jp>
+* Contributors: Kazu, TaikiYamada4, ralwing, 心刚
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

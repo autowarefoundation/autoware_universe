@@ -21,7 +21,6 @@ Enabling and disabling modules involves managing settings in key configuration a
 The `default_preset.yaml` file acts as the primary configuration file, where planning modules can be disabled or enabled. Furthermore, users can also set the type of motion planner across various motion planners. For example:
 
 - `launch_avoidance_module`: Set to `true` to enable the avoidance module, or `false` to disable it.
-- `motion_stop_planner_type`: Set `default` to either `obstacle_stop_planner` or `obstacle_cruise_planner`.
 
 !!! note
 

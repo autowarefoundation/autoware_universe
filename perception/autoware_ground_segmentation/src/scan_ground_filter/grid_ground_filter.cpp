@@ -219,7 +219,7 @@ void GridGroundFilter::SegmentContinuousCell(
 
     // 3. local slope
     const float delta_radius = radius - prev_cell.avg_radius_;
-    if (abs(delta_z) < param_.global_slope_max_ratio * delta_radius) {
+    if (abs(delta_z) < param_.local_slope_max_ratio * delta_radius) {
       // this point is ground
       ground_bin.addPoint(radius, height, pt_idx);
       // go to the next point
@@ -275,8 +275,8 @@ void GridGroundFilter::SegmentDiscontinuousCell(
     }
     // 3. local slope
     const float delta_radius = radius - prev_cell.avg_radius_;
-    const float global_slope_threshold = param_.global_slope_max_ratio * delta_radius;
-    if (abs(delta_avg_z) < global_slope_threshold) {
+    const float local_slope_threshold = param_.local_slope_max_ratio * delta_radius;
+    if (abs(delta_avg_z) < local_slope_threshold) {
       // this point is ground
       ground_bin.addPoint(radius, height, pt_idx);
       // go to the next point
@@ -297,7 +297,7 @@ void GridGroundFilter::SegmentDiscontinuousCell(
       continue;
     }
     // 5. obstacle from local slope
-    if (delta_avg_z >= global_slope_threshold) {
+    if (delta_avg_z >= local_slope_threshold) {
       // this point is obstacle
       out_no_ground_indices.indices.push_back(pt_idx);
       // go to the next point
@@ -418,7 +418,7 @@ void GridGroundFilter::classify(pcl::PointIndices & out_no_ground_indices)
 
       // recheck ground bin
       if (
-        param_.use_recheck_ground_cluster && cell.avg_radius_ > param_.grid_mode_switch_radius &&
+        param_.use_recheck_ground_cluster && cell.avg_radius_ > param_.recheck_start_distance &&
         ground_bin.getGroundPointNum() > 0) {
         // recheck the ground cluster
         float reference_height = 0;

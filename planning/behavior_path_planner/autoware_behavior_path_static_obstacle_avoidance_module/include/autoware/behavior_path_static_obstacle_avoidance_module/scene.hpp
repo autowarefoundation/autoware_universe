@@ -482,7 +482,7 @@ private:
   ObjectDataArray clip_objects_;
 
   // TODO(Satoshi OTA) create detected object manager.
-  ObjectDataArray registered_objects_;
+  ObjectDataArray stored_objects_;
 
   // TODO(Satoshi OTA) remove this variable.
   mutable ObjectDataArray ego_stopped_objects_;

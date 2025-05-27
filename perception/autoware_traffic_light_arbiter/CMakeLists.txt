@@ -10,7 +10,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
-  PLUGIN "autoware::TrafficLightArbiter"
+  PLUGIN "autoware::traffic_light::TrafficLightArbiter"
   EXECUTABLE traffic_light_arbiter_node
 )
 
