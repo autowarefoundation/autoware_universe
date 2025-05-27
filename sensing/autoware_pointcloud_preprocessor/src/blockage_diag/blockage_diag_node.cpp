@@ -82,13 +82,14 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
   }
 
   updater_.setHardwareID("blockage_diag");
-  updater_.add(
-    std::string(this->get_namespace()) + ": blockage_validation", this,
-    &BlockageDiagComponent::run_blockage_check);
+  updater_.add(std::string(this->get_namespace()) + ": blockage_validation", [this](auto & stat) {
+    run_blockage_check(stat);
+  });
+
   if (enable_dust_diag_) {
-    updater_.add(
-      std::string(this->get_namespace()) + ": dust_validation", this,
-      &BlockageDiagComponent::run_dust_check);
+    updater_.add(std::string(this->get_namespace()) + ": dust_validation", [this](auto & stat) {
+      run_dust_check(stat);
+    });
 
     ground_dust_ratio_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
       "blockage_diag/debug/ground_dust_ratio", rclcpp::SensorDataQoS());
@@ -117,7 +118,7 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     std::bind(&BlockageDiagComponent::param_callback, this, _1));
 }
 
-void BlockageDiagComponent::run_blockage_check(DiagnosticStatusWrapper & stat)
+void BlockageDiagComponent::run_blockage_check(DiagnosticStatusWrapper & stat) const
 {
   stat.add("ground_blockage_ratio", std::to_string(ground_blockage_ratio_));
   stat.add("ground_blockage_count", std::to_string(ground_blockage_count_));
@@ -156,7 +157,7 @@ void BlockageDiagComponent::run_blockage_check(DiagnosticStatusWrapper & stat)
   stat.summary(level, msg);
 }
 
-void BlockageDiagComponent::run_dust_check(diagnostic_updater::DiagnosticStatusWrapper & stat)
+void BlockageDiagComponent::run_dust_check(diagnostic_updater::DiagnosticStatusWrapper & stat) const
 {
   stat.add("ground_dust_ratio", std::to_string(ground_dust_ratio_));
   auto level = DiagnosticStatus::OK;
@@ -180,50 +181,6 @@ void BlockageDiagComponent::run_dust_check(diagnostic_updater::DiagnosticStatusW
 }
 
 cv::Size BlockageDiagComponent::get_mask_dimensions() const
-{
-  auto horizontal_bins = get_horizontal_bin(angle_range_deg_[1]);
-  if (!horizontal_bins) {
-    throw std::logic_error("Horizontal bin is not valid");
-  }
-
-  return {*horizontal_bins, vertical_bins_};
-}
-
-std::optional<int> BlockageDiagComponent::get_horizontal_bin(double azimuth_deg) const
-{
-  double min_deg = angle_range_deg_[0];
-  double max_deg = angle_range_deg_[1];
-
-  bool fov_wraps_around = (min_deg > max_deg);
-  if (fov_wraps_around) {
-    azimuth_deg += 360.0;
-    max_deg += 360.0;
-  }
-
-  bool azimuth_is_in_fov = ((azimuth_deg > min_deg) && (azimuth_deg <= max_deg));
-  if (!azimuth_is_in_fov) {
-    return std::nullopt;
-  }
-
-  return {static_cast<int>((azimuth_deg - min_deg) / horizontal_resolution_)};
-}
-
-std::optional<int> BlockageDiagComponent::get_vertical_bin(uint16_t channel) const
-{
-  if (channel >= vertical_bins_) {
-    return std::nullopt;
-  }
-
-  if (is_channel_order_top2down_) {
-    return {channel};
-  }
-
-  return {vertical_bins_ - channel - 1};
-}
-
-void BlockageDiagComponent::filter(
-  const PointCloud2ConstPtr & input, [[maybe_unused]] const IndicesPtr & indices,
-  PointCloud2 & output)
 {
   auto horizontal_bins = get_horizontal_bin(angle_range_deg_[1]);
   if (!horizontal_bins) {
@@ -303,8 +260,9 @@ cv::Mat BlockageDiagComponent::quantize_to_8u(const cv::Mat & image_16u) const
   assert(image_16u.type() == CV_16UC1);
 
   cv::Mat image_8u(dimensions, CV_8UC1, cv::Scalar(0));
-  // UINT16_MAX = 65535, UINT8_MAX = 255, so downscale by ceil(65535 / 255) = 256.
-  image_16u.convertTo(image_8u, CV_8UC1, 1.0 / 256);
+  // FIXME(badai-nguyen): Is the normalization factor correct? `256` would be enough to prevent
+  // overflow.
+  image_16u.convertTo(image_8u, CV_8UC1, 1.0 / 300);
   return image_8u;
 }
 
@@ -592,6 +550,7 @@ void BlockageDiagComponent::filter(
   pcl::toROSMsg(pcl_input, output);
   output.header = input->header;
 }
+
 rcl_interfaces::msg::SetParametersResult BlockageDiagComponent::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
