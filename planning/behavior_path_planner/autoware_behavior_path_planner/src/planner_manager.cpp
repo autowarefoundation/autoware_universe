@@ -851,6 +851,7 @@ SlotOutput SubPlannerManager::runApprovedModules(
       results.erase(m->name());
       debug_info_.scene_status.emplace_back(
         m, SceneModuleUpdateInfo::Action::DELETE, "From Approved");
+      // NOTE(soblin): m is copied, so it is okay to call deleteExpiredModules
       deleted_modules.push_back(m);
       deleteExpiredModules(m);
     });
