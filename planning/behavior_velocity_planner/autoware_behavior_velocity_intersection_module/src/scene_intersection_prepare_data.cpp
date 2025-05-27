@@ -527,8 +527,9 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
                           planner_param_.conservative_merging.merging_judge_angle_threshold;
   const std::optional<size_t> maximum_footprint_overshoot_line_opt =
     is_merging ? util::find_maximum_footprint_overshoot_position(
-                   interpolated_path_info, local_footprint, first_attention_lane, turn_direction,
-                   first_footprint_inside_1st_attention_ip)
+                   interpolated_path_info, local_footprint, first_attention_lane,
+                   planner_param_.conservative_merging.minimum_lateral_distance_threshold,
+                   turn_direction, first_footprint_inside_1st_attention_ip)
                : std::nullopt;
   const auto maximum_footprint_overshoot_line_ip = maximum_footprint_overshoot_line_opt.value_or(0);
   struct IntersectionStopLinesTemp

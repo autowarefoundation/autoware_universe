@@ -297,6 +297,8 @@ IntersectionModuleManager::IntersectionModuleManager(rclcpp::Node & node)
   {
     ip.conservative_merging.enable_yield =
       get_or_declare_parameter<bool>(node, ns + ".conservative_merging.enable_yield");
+    ip.conservative_merging.minimum_lateral_distance_threshold = get_or_declare_parameter<double>(
+      node, ns + ".conservative_merging.minimum_lateral_distance_threshold");
     ip.conservative_merging.merging_judge_angle_threshold = get_or_declare_parameter<double>(
       node, ns + ".conservative_merging.merging_judge_angle_threshold");
   }

@@ -181,6 +181,7 @@ public:
     struct ConservativeMerging
     {
       bool enable_yield;
+      double minimum_lateral_distance_threshold;
       double merging_judge_angle_threshold;
     } conservative_merging;
 

@@ -415,8 +415,8 @@ std::vector<lanelet::CompoundPolygon3d> getPolygon3dFromLanelets(
 static std::optional<size_t> find_maximum_footprint_overshoot_position_impl(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
   const autoware_utils::LinearRing2d & local_footprint,
-  const lanelet::ConstLanelet & merging_target_lanelet, const size_t search_start_idx,
-  const size_t search_end_idx)
+  const lanelet::ConstLanelet & merging_target_lanelet, const double min_distance_threshold,
+  const size_t search_start_idx, const size_t search_end_idx)
 {
   if (search_start_idx >= path.points.size() || search_end_idx >= path.points.size()) {
     return std::nullopt;
@@ -467,6 +467,9 @@ static std::optional<size_t> find_maximum_footprint_overshoot_position_impl(
       closest_dist = footprint_to_boundary_distance;
       closest_index = i;
     }
+    if (footprint_to_boundary_distance < min_distance_threshold) {
+      return closest_index;
+    }
   }
   return closest_index;
 }
@@ -474,8 +477,8 @@ static std::optional<size_t> find_maximum_footprint_overshoot_position_impl(
 std::optional<size_t> find_maximum_footprint_overshoot_position(
   const InterpolatedPathInfo & interpolated_path_info,
   const autoware_utils::LinearRing2d & local_footprint,
-  const lanelet::ConstLanelet & merging_lanelet, const std::string & turn_direction,
-  const size_t search_start_idx)
+  const lanelet::ConstLanelet & merging_lanelet, const double min_distance_threshold,
+  const std::string & turn_direction, const size_t search_start_idx)
 {
   if (turn_direction != "left" && turn_direction != "right") {
     return std::nullopt;
@@ -484,7 +487,8 @@ std::optional<size_t> find_maximum_footprint_overshoot_position(
   const auto & path = interpolated_path_info.path;
   const auto & [_, intersection_end] = interpolated_path_info.lane_id_interval.value();
   return find_maximum_footprint_overshoot_position_impl(
-    path, local_footprint, merging_lanelet, search_start_idx, intersection_end);
+    path, local_footprint, merging_lanelet, min_distance_threshold, search_start_idx,
+    intersection_end);
 }
 
 }  // namespace autoware::behavior_velocity_planner::util

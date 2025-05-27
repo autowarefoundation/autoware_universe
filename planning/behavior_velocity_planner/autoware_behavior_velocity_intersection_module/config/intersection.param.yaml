@@ -112,6 +112,7 @@
 
       conservative_merging:
         enable_yield: false
+        minimum_lateral_distance_threshold: 0.2
         merging_judge_angle_threshold: 0.785
 
       debug:
