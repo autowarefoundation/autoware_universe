@@ -85,7 +85,6 @@ bool is_data_layout_compatible_with_point_xyzircaedt(
   same_layout &= field_time_stamp.count == 1;
   return same_layout;
 }
-
 }  // namespace autoware::cuda_pointcloud_preprocessor
 
 #endif  // AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__MEMORY_HPP_
