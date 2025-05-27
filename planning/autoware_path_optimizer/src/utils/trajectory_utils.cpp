@@ -39,15 +39,6 @@ namespace autoware::path_optimizer
 namespace trajectory_utils
 {
 
-template <>
-TrajectoryPoint convertToTrajectoryPoint(const ReferencePoint & ref_point)
-{
-  TrajectoryPoint traj_point;
-  traj_point.pose = autoware_utils::get_pose(ref_point);
-  traj_point.longitudinal_velocity_mps = autoware_utils::get_longitudinal_velocity(ref_point);
-  return traj_point;
-}
-
 ReferencePoint convertToReferencePoint(const TrajectoryPoint & traj_point)
 {
   ReferencePoint ref_point;

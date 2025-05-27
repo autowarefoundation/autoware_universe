@@ -95,9 +95,6 @@ TrajectoryPoint convertToTrajectoryPoint(const T & point)
   return traj_point;
 }
 
-template <>
-TrajectoryPoint convertToTrajectoryPoint(const ReferencePoint & ref_point);
-
 template <typename T>
 std::vector<TrajectoryPoint> convertToTrajectoryPoints(const std::vector<T> & points)
 {
