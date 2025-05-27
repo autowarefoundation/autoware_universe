@@ -35,7 +35,7 @@ VoxelGridBasedEuclideanClusterNode::VoxelGridBasedEuclideanClusterNode(
   const int max_points_per_voxel_in_large_cluster =
     this->declare_parameter("max_points_per_voxel_in_large_cluster", 10);
   const int max_voxel_cluster_for_output =
-    this->declare_parameter("max_voxel_cluster_for_output", 500);
+    this->declare_parameter("max_voxel_cluster_for_output", 800);
   cluster_ = std::make_shared<VoxelGridBasedEuclideanCluster>(
     use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
     min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,

@@ -75,6 +75,30 @@ sensor_msgs::msg::PointCloud2 generateClusterWithinVoxel(const int nb_points)
   return pointcloud;
 }
 
+sensor_msgs::msg::PointCloud2 generateClusterWithinVoxelUniform(const int nb_points)
+{
+  sensor_msgs::msg::PointCloud2 pointcloud;
+  setPointCloud2Fields(pointcloud);
+  const int total_points = nb_points * nb_points;
+  pointcloud.data.resize(total_points * pointcloud.point_step);
+
+  // generate one cluster with specified number of points within 1 voxel
+  for (int i = 0; i < nb_points; ++i) {
+    for (int j = 0; j < nb_points; ++j) {
+      PointXYZI point;
+      point.x = 0.3 * i / nb_points;  // point.x within 0.0 to 0.3
+      point.y = 0.3 * j / nb_points;  // point.y within 0.0 to 0.3
+      point.z = 0.0;
+      point.intensity = 0.0;
+      const int idx = (i * nb_points + j) * pointcloud.point_step;
+      memcpy(&pointcloud.data[idx], &point, pointcloud.point_step);
+    }
+  }
+  pointcloud.width = total_points;
+  pointcloud.row_step = pointcloud.point_step * total_points;
+  return pointcloud;
+}
+
 // Test case 1: Test case when the input pointcloud has only one cluster with points number equal to
 // max_cluster_size
 TEST(VoxelGridBasedEuclideanClusterTest, testcase1)
@@ -151,8 +175,8 @@ TEST(VoxelGridBasedEuclideanClusterTest, testcase2)
 // max_num_points_per_cluster
 TEST(VoxelGridBasedEuclideanClusterTest, testcase3)
 {
-  int nb_generated_points = 100;
-  sensor_msgs::msg::PointCloud2 pointcloud = generateClusterWithinVoxel(nb_generated_points);
+  int nb_generated_points = 10;
+  sensor_msgs::msg::PointCloud2 pointcloud = generateClusterWithinVoxelUniform(nb_generated_points);
 
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr pointcloud_msg =
     std::make_shared<sensor_msgs::msg::PointCloud2>(pointcloud);
@@ -165,7 +189,8 @@ TEST(VoxelGridBasedEuclideanClusterTest, testcase3)
   int max_cluster_size = 99;
   int min_voxel_cluster_size_for_filtering = 150;
   int max_points_per_voxel_in_large_cluster = 10;
-  int max_voxel_cluster_for_output = 1;
+  int max_voxel_cluster_for_output =
+    8;  // voxel num is 0.3*0.3/0.1^2 = 9, so max_voxel_cluster_for_output = 8 will be filtered out
   bool use_height = false;
   cluster_ = std::make_shared<autoware::euclidean_cluster::VoxelGridBasedEuclideanCluster>(
     use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
