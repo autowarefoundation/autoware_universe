@@ -40,11 +40,17 @@ struct ObjectParameters
   bool ignore_if_behind_ego;
   std::vector<std::string> ignore_objects_polygon_types;
   std::vector<std::string> ignore_objects_lanelet_subtypes;
+  double start_ignore_objects_time;
+  double start_ignore_objects_distance;
   std::vector<std::string> ignore_collisions_polygon_types;
   std::vector<std::string> ignore_collisions_lanelet_subtypes;
+  double start_ignore_collisions_time;
+  double start_ignore_collisions_distance;
   std::vector<std::string> cut_linestring_types;
   std::vector<std::string> cut_polygon_types;
   std::vector<std::string> cut_lanelet_subtypes;
+  double start_cut_time;
+  double start_cut_distance;
   bool cut_if_crossing_ego_from_behind;
   double confidence_filtering_threshold;
   bool confidence_filtering_only_use_highest;
@@ -204,12 +210,20 @@ struct Parameters
         get_object_parameter<std::vector<std::string>>(node, ns, label, ".ignore.polygon_types");
       object_parameters_per_label[label].ignore_objects_lanelet_subtypes =
         get_object_parameter<std::vector<std::string>>(node, ns, label, ".ignore.lanelet_subtypes");
+      object_parameters_per_label[label].start_ignore_objects_time =
+        get_object_parameter<double>(node, ns, label, ".ignore.start_ignore_time");
+      object_parameters_per_label[label].start_ignore_objects_distance =
+        get_object_parameter<double>(node, ns, label, ".ignore.start_ignore_distance");
       object_parameters_per_label[label].ignore_collisions_polygon_types =
         get_object_parameter<std::vector<std::string>>(
           node, ns, label, ".ignore_collisions.polygon_types");
       object_parameters_per_label[label].ignore_collisions_lanelet_subtypes =
         get_object_parameter<std::vector<std::string>>(
           node, ns, label, ".ignore_collisions.lanelet_subtypes");
+      object_parameters_per_label[label].start_ignore_collisions_time =
+        get_object_parameter<double>(node, ns, label, ".ignore_collisions.start_ignore_time");
+      object_parameters_per_label[label].start_ignore_collisions_distance =
+        get_object_parameter<double>(node, ns, label, ".ignore_collisions.start_ignore_distance");
       object_parameters_per_label[label].ignore_if_stopped =
         get_object_parameter<bool>(node, ns, label, ".ignore.if_stopped");
       object_parameters_per_label[label].stopped_velocity_threshold =
@@ -230,6 +244,10 @@ struct Parameters
       object_parameters_per_label[label].cut_if_crossing_ego_from_behind =
         get_object_parameter<bool>(
           node, ns, label, ".cut_predicted_paths.if_crossing_ego_from_behind");
+      object_parameters_per_label[label].start_cut_time =
+        get_object_parameter<double>(node, ns, label, ".cut_predicted_paths.start_cut_time");
+      object_parameters_per_label[label].start_cut_distance =
+        get_object_parameter<double>(node, ns, label, ".cut_predicted_paths.start_cut_distance");
     }
     debug.object_label = getOrDeclareParameter<std::string>(node, ns + ".debug.object_label");
 
@@ -291,7 +309,7 @@ struct Parameters
         params, ns + str + ".ignore.if_on_ego_trajectory",
         object_parameters_per_label[label].ignore_if_on_ego_trajectory);
       updateParam(
-        params, ns + ".ignore.if_behind_ego",
+        params, ns + str + ".ignore.if_behind_ego",
         object_parameters_per_label[label].ignore_if_behind_ego);
       updateParam(
         params, ns + str + ".ignore.lanelet_subtypes",
@@ -303,8 +321,20 @@ struct Parameters
         params, ns + str + ".ignore.polygon_types",
         object_parameters_per_label[label].ignore_objects_polygon_types);
       updateParam(
+        params, ns + str + ".ignore.start_ignore_time",
+        object_parameters_per_label[label].start_ignore_objects_time);
+      updateParam(
+        params, ns + str + ".ignore.start_ignore_distance",
+        object_parameters_per_label[label].start_ignore_objects_distance);
+      updateParam(
         params, ns + str + ".ignore_collisions.polygon_types",
         object_parameters_per_label[label].ignore_collisions_polygon_types);
+      updateParam(
+        params, ns + str + ".ignore_collisions.start_ignore_time",
+        object_parameters_per_label[label].start_ignore_collisions_time);
+      updateParam(
+        params, ns + str + ".ignore_collisions.start_ignore_distance",
+        object_parameters_per_label[label].start_ignore_collisions_distance);
       updateParam(
         params, ns + str + ".confidence_filtering.threshold",
         object_parameters_per_label[label].confidence_filtering_threshold);
@@ -323,6 +353,12 @@ struct Parameters
       updateParam(
         params, ns + str + ".cut_predicted_paths.linestring_types",
         object_parameters_per_label[label].cut_linestring_types);
+      updateParam(
+        params, ns + str + ".cut_predicted_paths.start_cut_time",
+        object_parameters_per_label[label].start_cut_time);
+      updateParam(
+        params, ns + str + ".cut_predicted_paths.start_cut_distance",
+        object_parameters_per_label[label].start_cut_distance);
     }
     updateParam(params, ns + ".debug.object_label", debug.object_label);
 
