@@ -60,7 +60,7 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 
 ## Assumptions / Known limits
 
-This nodes requires that the points of the input point cloud are in chronological order and that individual points follow the memory layout specified by [PointXYZIRCAEDT](https://github.com/autowarefoundation/autoware_core/blob/main/common/autoware_point_types/include/autoware/point_types/types.hpp#L95-L116).
+This nodes requires that the points of the input point cloud are in chronological order and that individual points follow the memory layout specified by [PointXYZIRCAEDT](https://github.com/autowarefoundation/autoware_core/blob/59f1e190b933eaf61fc765ba0db575d795fb8e19/common/autoware_point_types/include/autoware/point_types/types.hpp#L95-L116).
 
 ## (Optional) Error detection and handling
 
