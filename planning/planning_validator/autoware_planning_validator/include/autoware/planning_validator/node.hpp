@@ -81,7 +81,7 @@ private:
   autoware_utils::InterProcessPollingSubscriber<
     LaneletMapBin, autoware_utils::polling_policy::Newest>
     sub_map_{this, "~/input/vector_map", rclcpp::QoS{1}.transient_local()};
-  autoware_utils::InterProcessPollingSubscriber<PointCloud2> sub_point_cloud_{
+  autoware_utils::InterProcessPollingSubscriber<PointCloud2> sub_pointcloud_{
     this, "~/input/pointcloud", autoware_utils::single_depth_sensor_qos()};
   autoware_utils::InterProcessPollingSubscriber<Odometry> sub_kinematics_{
     this, "~/input/kinematics"};

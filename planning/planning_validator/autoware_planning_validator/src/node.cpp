@@ -129,7 +129,7 @@ void PlanningValidatorNode::setData()
   auto & data = context_->data;
   data->current_kinematics = sub_kinematics_.take_data();
   data->current_acceleration = sub_acceleration_.take_data();
-  data->current_pointcloud = sub_point_cloud_.take_data();
+  data->current_pointcloud = sub_pointcloud_.take_data();
   data->set_current_trajectory(sub_trajectory_.take_data());
 }
 

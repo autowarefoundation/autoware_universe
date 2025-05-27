@@ -4,6 +4,7 @@
       enable: true
       detection_range: 50.0 # [m]
       ttc_threshold: 1.0 # [s]
+      is_critical: true
 
       right_turn:
         enable: true
@@ -14,3 +15,16 @@
         enable: true
         check_oncoming_lanes: true
         check_crossing_lanes: true
+
+      pointcloud:
+        height_buffer: 0.5  # [m]
+        min_height: 0.5  # [m]
+        voxel_grid_filter:
+          x: 0.1
+          y: 0.1
+          z: 0.5
+        clustering:
+          cluster_tolerance: 0.5  #[m]
+          min_height: 0.5
+          min_size: 10
+          max_size: 10000
