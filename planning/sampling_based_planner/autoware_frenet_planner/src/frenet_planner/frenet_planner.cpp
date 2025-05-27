@@ -34,7 +34,6 @@
 
 namespace autoware::frenet_planner
 {
-// cppcheck-suppress unusedFunction
 std::vector<Trajectory> generateTrajectories(
   const autoware::sampler_common::transform::Spline2D & reference_spline,
   const FrenetState & initial_state, const SamplingParameters & sampling_parameters)
