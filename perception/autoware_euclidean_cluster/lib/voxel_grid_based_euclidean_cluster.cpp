@@ -40,14 +40,14 @@ VoxelGridBasedEuclideanCluster::VoxelGridBasedEuclideanCluster(
 VoxelGridBasedEuclideanCluster::VoxelGridBasedEuclideanCluster(
   bool use_height, int min_cluster_size, int max_cluster_size, float tolerance,
   float voxel_leaf_size, int min_points_number_per_voxel, int min_voxel_cluster_size_for_filtering,
-  int max_points_per_voxel_in_large_cluster, int max_num_points_per_cluster)
+  int max_points_per_voxel_in_large_cluster, int max_voxel_cluster_for_output)
 : EuclideanClusterInterface(use_height, min_cluster_size, max_cluster_size),
   tolerance_(tolerance),
   voxel_leaf_size_(voxel_leaf_size),
   min_points_number_per_voxel_(min_points_number_per_voxel),
   min_voxel_cluster_size_for_filtering_(min_voxel_cluster_size_for_filtering),
   max_points_per_voxel_in_large_cluster_(max_points_per_voxel_in_large_cluster),
-  max_num_points_per_cluster_(max_num_points_per_cluster)
+  max_voxel_cluster_for_output_(max_voxel_cluster_for_output)
 {
 }
 // TODO(badai-nguyen): remove this function when field copying also implemented for
@@ -125,13 +125,10 @@ bool VoxelGridBasedEuclideanCluster::cluster(
   std::vector<bool> is_large_cluster(cluster_indices.size(), false);
   std::vector<bool> is_extreme_large_cluster(cluster_indices.size(), false);
 
-  const size_t large_cluster_threshold = static_cast<size_t>(min_voxel_cluster_size_for_filtering_);
-  const size_t extreme_large_cluster_threshold = 2 * large_cluster_threshold;
-
   for (size_t cluster_idx = 0; cluster_idx < cluster_indices.size(); ++cluster_idx) {
-    const size_t cluster_size = cluster_indices[cluster_idx].indices.size();
-    is_large_cluster[cluster_idx] = cluster_size > large_cluster_threshold;
-    is_extreme_large_cluster[cluster_idx] = cluster_size > extreme_large_cluster_threshold;
+    const int cluster_size = static_cast<int>(cluster_indices[cluster_idx].indices.size());
+    is_large_cluster[cluster_idx] = cluster_size > min_voxel_cluster_size_for_filtering_;
+    is_extreme_large_cluster[cluster_idx] = cluster_size > max_voxel_cluster_for_output_;
   }
 
   // 6) Data copy
@@ -184,9 +181,6 @@ bool VoxelGridBasedEuclideanCluster::cluster(
       if (cluster_size < min_cluster_size_) {
         // Cluster size is below the minimum threshold; skip without messaging.
         // Here min_cluster_size_ is used as the minimum number of points in a cluster.
-        continue;
-      }
-      if (cluster_size > max_num_points_per_cluster_) {
         continue;
       }
       const auto & cluster = temporary_clusters.at(i);

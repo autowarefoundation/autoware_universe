@@ -34,12 +34,12 @@ VoxelGridBasedEuclideanClusterNode::VoxelGridBasedEuclideanClusterNode(
     this->declare_parameter("min_voxel_cluster_size_for_filtering", 150);
   const int max_points_per_voxel_in_large_cluster =
     this->declare_parameter("max_points_per_voxel_in_large_cluster", 10);
-  const int max_num_points_per_cluster =
-    this->declare_parameter("max_num_points_per_cluster", 3000);
+  const int max_voxel_cluster_for_output =
+    this->declare_parameter("max_voxel_cluster_for_output", 500);
   cluster_ = std::make_shared<VoxelGridBasedEuclideanCluster>(
     use_height, min_cluster_size, max_cluster_size, tolerance, voxel_leaf_size,
     min_points_number_per_voxel, min_voxel_cluster_size_for_filtering,
-    max_points_per_voxel_in_large_cluster, max_num_points_per_cluster);
+    max_points_per_voxel_in_large_cluster, max_voxel_cluster_for_output);
 
   using std::placeholders::_1;
   pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
