@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Bidirectional Traffic Module",
+  "type": "object",
+  "definitions": {
+    "bidirectional_traffic": {
+      "type": "object",
+      "properties": {
+        "time_to_prepare_pull_over": {
+          "type": "number",
+          "description": "Time to prepare for pull over. When an oncoming vehicle is detected, ego_speed x time_to_prepare_pull_over [m] starts shifting from ahead. Unit is **[s]**.",
+          "minimum": 0.0,
+          "default": 1.0
+        },
+        "min_distance_from_roadside": {
+          "type": "number",
+          "description": "Minimum distance from left roadside to pull over. Unit is **[m]**.",
+          "minimum": 0.0,
+          "default": 0.2
+        },
+        "keep_left_distance_from_center_line": {
+          "type": "number",
+          "description": "Distance to keep left from center line. Unit is **[m]**.",
+          "minimum": 0.0,
+          "default": 0.5
+        },
+        "shift_distance_to_pull_over_from_center_line": {
+          "type": "number",
+          "description": "Distance to shift to the left from center line when pulling over. Unit is **[m]**.",
+          "minimum": 0.0,
+          "default": 1.2
+        },
+        "wait_time_for_oncoming_car": {
+          "type": "number",
+          "description": "Wait time for oncoming car from ego vehicle stops to ego vehicle starts. Unit is **[s]**.",
+          "minimum": 0.0,
+          "default": 15.0
+        },
+        "max_lateral_jerk": {
+          "type": "number",
+          "description": "Maximum lateral jerk when pulling over. Unit is **[m/s^3]**.",
+          "minimum": 0.0,
+          "default": 3.0
+        },
+        "min_lateral_jerk": {
+          "type": "number",
+          "description": "Minimum lateral jerk when pulling over. Unit is **[m/s^3]**.",
+          "minimum": 0.0,
+          "default": 2.0
+        }
+      },
+      "required": [
+        "time_to_prepare_pull_over",
+        "min_distance_from_roadside",
+        "keep_left_distance_from_center_line",
+        "shift_distance_to_pull_over_from_center_line",
+        "wait_time_for_oncoming_car",
+        "max_lateral_jerk",
+        "min_lateral_jerk"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "type": "object",
+          "properties": {
+            "bidirectional_traffic": {
+              "type": "object",
+              "$ref": "#/definitions/bidirectional_traffic"
+            }
+          },
+          "required": ["bidirectional_traffic"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

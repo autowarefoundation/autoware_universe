@@ -32,6 +32,7 @@
 #include <lanelet2_routing/RoutingGraphContainer.h>
 
 #include <algorithm>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <set>
@@ -974,6 +975,7 @@ PathWithLaneId getCenterLinePath(
   PathWithLaneId reference_path;
 
   if (lanelet_sequence.empty()) {
+    std::cerr << "lanelet_sequence is empty" << std::endl;
     return reference_path;
   }
 
