@@ -1,0 +1,24 @@
+/**:
+  ros__parameters:
+    planning_hz: 10.0
+
+    # Operation option when invalid trajectory is detected
+    #  0: publish the trajectory even if it is invalid
+    #  1: stop publishing the trajectory
+    #  2: publish the last validated trajectory
+    handling_type:
+      noncritical: 0
+      critical: 2
+
+    publish_diag: true  # if true, diagnostic msg is published
+
+    # If the number of consecutive invalid trajectory exceeds this threshold, the Diag will be set to ERROR.
+    # (For example, threshold = 1 means, even if the trajectory is invalid, Diag will not be ERROR if
+    #  the next trajectory is valid.)
+    diag_error_count_threshold: 0
+    display_on_terminal: true # show error msg on terminal
+
+    # if handling type is 2 (use last valid traj), the following parameters are used to enable soft stop
+    enable_soft_stop_on_prev_traj: true
+    soft_stop_deceleration: -1.0 # [m/s^2]
+    soft_stop_jerk_lim: 0.3 # [m/s^3]
