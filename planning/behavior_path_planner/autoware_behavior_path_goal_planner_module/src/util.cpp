@@ -29,6 +29,7 @@
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/Lanelet.h>
+#include <lanelet2_core/primitives/LineString.h>
 #include <tf2/utils.h>
 #include <tf2_ros/transform_listener.h>
 
@@ -49,6 +50,81 @@ using autoware_utils::create_default_marker;
 using autoware_utils::create_marker_color;
 using autoware_utils::create_marker_scale;
 using autoware_utils::create_point;
+
+SegmentRtree extract_uncrossable_segments(
+  const lanelet::LaneletMap & lanelet_map, const Point & ego_point, const double max_distance)
+{
+  SegmentRtree uncrossable_segments_in_range;
+  LineString2d line;
+  const auto ego_p = Point2d{ego_point.x, ego_point.y};
+  for (const auto & ls : lanelet_map.lineStringLayer) {
+    if (has_types(ls, {"road_border"})) {
+      line.clear();
+      for (const auto & p : ls) line.push_back(Point2d{p.x(), p.y()});
+      for (auto segment_idx = 0LU; segment_idx + 1 < line.size(); ++segment_idx) {
+        Segment2d segment = {line[segment_idx], line[segment_idx + 1]};
+        if (boost::geometry::distance(segment, ego_p) < max_distance) {
+          uncrossable_segments_in_range.insert(segment);
+        }
+      }
+    }
+  }
+  return uncrossable_segments_in_range;
+}
+
+bool has_types(const lanelet::ConstLineString3d & ls, const std::vector<std::string> & types)
+{
+  constexpr auto no_type = "";
+  const auto type = ls.attributeOr(lanelet::AttributeName::Type, no_type);
+  return (type != no_type && std::find(types.begin(), types.end(), type) != types.end());
+}
+
+bool crosses_road_border(
+  const Point2d & ego_point, const Point2d & obj_point, const SegmentRtree & road_border_segments)
+{
+  // Create a line segment from ego to object
+  Segment2d ego_to_obj = {ego_point, obj_point};
+
+  // Check if this line segment intersects with any road border segment
+  for (const auto & border_segment : road_border_segments) {
+    // Check for intersection
+    if (boost::geometry::intersects(ego_to_obj, border_segment)) {
+      return true;
+    }
+  }
+
+  return false;  // No crossing found
+}
+
+// Improved filter_objects_by_road_border function
+PredictedObjects filter_objects_by_road_border(
+  const PredictedObjects & objects, const SegmentRtree & road_border_segments,
+  const Pose & ego_pose, const bool filter_opposite_side)
+{
+  if (road_border_segments.empty() || !filter_opposite_side) {
+    return objects;  // No filtering if no road borders or filtering not requested
+  }
+
+  PredictedObjects filtered_objects;
+  filtered_objects.header = objects.header;
+
+  // Ego position as reference point
+  const Point2d ego_point{ego_pose.position.x, ego_pose.position.y};
+
+  for (const auto & object : objects.objects) {
+    // Get object center position
+    const auto & obj_pose = object.kinematics.initial_pose_with_covariance.pose;
+    const Point2d obj_point{obj_pose.position.x, obj_pose.position.y};
+
+    // Check if a road border separates ego from object
+    if (!crosses_road_border(ego_point, obj_point, road_border_segments)) {
+      // If no road border separates them, keep the object
+      filtered_objects.objects.push_back(object);
+    }
+  }
+
+  return filtered_objects;
+}
 
 lanelet::ConstLanelets getPullOverLanes(
   const RouteHandler & route_handler, const bool left_side, const double backward_distance,
@@ -831,7 +907,7 @@ std::optional<Pose> calcClosestPose(
 autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
   const autoware_perception_msgs::msg::PredictedObjects & original_objects,
   const route_handler::RouteHandler & route_handler, const GoalPlannerParameters & parameters,
-  const double vehicle_width)
+  const double vehicle_width, const Pose & ego_pose)
 {
   const bool left_side_parking = parameters.parking_policy == ParkingPolicy::LEFT_SIDE;
   const auto pull_over_lanes = goal_planner_utils::getPullOverLanes(
@@ -841,6 +917,7 @@ autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
     pull_over_lanes, left_side_parking, parameters.detection_bound_offset,
     parameters.margin_from_boundary + parameters.max_lateral_offset + vehicle_width);
 
+  // Extract objects within the extraction polygon
   PredictedObjects dynamic_target_objects{};
   for (const auto & object : original_objects.objects) {
     const auto object_polygon = autoware_utils::to_polygon2d(object);
@@ -850,7 +927,14 @@ autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
       dynamic_target_objects.objects.push_back(object);
     }
   }
-  return dynamic_target_objects;
+  // Extract road border segments
+  const double road_border_search_distance = 100.0;
+  const auto road_border_segments = extract_uncrossable_segments(
+    *(route_handler.getLaneletMapPtr()), ego_pose.position, road_border_search_distance);
+  auto filtered_objects =
+    filter_objects_by_road_border(dynamic_target_objects, road_border_segments, ego_pose, true);
+
+  return filtered_objects;
 }
 
 bool is_goal_reachable_on_path(
