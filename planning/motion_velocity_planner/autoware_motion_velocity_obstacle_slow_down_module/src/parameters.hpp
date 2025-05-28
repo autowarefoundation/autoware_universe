@@ -163,19 +163,22 @@ struct SlowDownPlanningParam
     }
   }
 
-  std::string get_param_type(const ObjectClassification label) const
-  {
-    const auto type_str = object_types_maps.at(label.label);
-    if (object_type_specific_param_map.count(type_str) == 0) {
-      return "default";
-    }
-    return type_str;
-  }
   ObjectTypeSpecificParams get_object_param_by_label(
     const ObjectClassification label, const bool is_obstacle_moving) const
   {
+    const auto type_str = object_types_maps.at(label.label);
     const std::string movement_type = is_obstacle_moving ? "moving" : "static";
-    return object_type_specific_param_map.at(get_param_type(label) + "." + movement_type);
+    const std::string param_key = type_str + "." + movement_type;
+
+    // First, search for parameters with the specified type
+    const auto param_it = object_type_specific_param_map.find(param_key);
+    if (param_it != object_type_specific_param_map.end()) {
+      return param_it->second;
+    }
+
+    // If the specified type is not found, use default parameters
+    const std::string default_key = "default." + movement_type;
+    return object_type_specific_param_map.at(default_key);
   }
 };
 }  // namespace autoware::motion_velocity_planner

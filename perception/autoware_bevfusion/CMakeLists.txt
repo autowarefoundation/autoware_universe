@@ -74,10 +74,10 @@ option(SPCONV_AVAIL "spconv available" OFF)
 find_package(cumm)
 find_package(spconv)
 if(${cumm_FOUND} AND ${spconv_FOUND})
-  message("spconv is available!")
+  message(STATUS "spconv is available!")
   set(SPCONV_AVAIL ON)
 else()
-  message("spconv is NOT available")
+  message(WARNING "spconv is NOT available")
   set(SPCONV_AVAIL OFF)
 endif()
 
@@ -99,8 +99,16 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL AND SPCONV_AVAIL)
 
   add_definitions("-DTV_CUDA")
 
-  # cSpell:ignore expt
+  # cSpell:ignore expt gencode
   list(APPEND CUDA_NVCC_FLAGS "--expt-relaxed-constexpr -diag-suppress 1675 --extended-lambda")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_87,code=sm_87")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
+  # NOTE(knzo25): PTX support for newer GPUs until we can compile directly
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
+  # TODO(knzo25): enable when the driver supports it
+  # list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
 
   cuda_add_library(${PROJECT_NAME}_cuda_lib SHARED
     lib/postprocess/circle_nms_kernel.cu

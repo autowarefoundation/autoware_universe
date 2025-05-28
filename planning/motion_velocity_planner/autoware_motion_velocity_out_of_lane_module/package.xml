@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_motion_velocity_out_of_lane_module</name>
-  <version>0.44.0</version>
+  <version>0.45.0</version>
   <description>The motion_velocity_out_of_lane_module package</description>
 
   <maintainer email="maxime.clement@tier4.jp">Maxime Clement</maintainer>
@@ -18,6 +18,7 @@
 
   <depend>autoware_motion_utils</depend>
   <depend>autoware_motion_velocity_planner_common</depend>
+  <depend>autoware_object_recognition_utils</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_route_handler</depend>

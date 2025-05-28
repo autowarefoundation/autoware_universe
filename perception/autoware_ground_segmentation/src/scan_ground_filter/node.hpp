@@ -176,6 +176,7 @@ private:
 
   // grid mode parameters
   bool use_recheck_ground_cluster_;  // to enable recheck ground cluster
+  float recheck_start_distance_;     // distance to start rechecking ground cluster
   bool use_lowest_point_;  // to select lowest point for reference in recheck ground cluster,
                            // otherwise select middle point
   float detection_range_z_max_;

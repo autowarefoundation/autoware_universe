@@ -34,8 +34,19 @@ include_directories(
     ${CUDA_INCLUDE_DIRS}
 )
 
-list(APPEND CUDA_NVCC_FLAGS "--expt-relaxed-constexpr -diag-suppress 20012") # cSpell: ignore expt
+# cSpell: ignore expt gencode
+list(APPEND CUDA_NVCC_FLAGS "--expt-relaxed-constexpr -diag-suppress 20012")
+list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
+list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
+list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_87,code=sm_87")
+list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
+# NOTE(knzo25): PTX support for newer GPUs until we can compile directly
+list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
+# TODO(knzo25): enable when the driver supports it
+# list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
 
+################################################################################
+### cuda_pointcloud_preprocessor ###
 cuda_add_library(cuda_pointcloud_preprocessor_lib SHARED
   src/cuda_concatenate_data/cuda_combine_cloud_handler.cpp
   src/cuda_concatenate_data/cuda_combine_cloud_handler_kernel.cu
@@ -46,6 +57,7 @@ cuda_add_library(cuda_pointcloud_preprocessor_lib SHARED
   src/cuda_pointcloud_preprocessor/organize_kernels.cu
   src/cuda_pointcloud_preprocessor/outlier_kernels.cu
   src/cuda_pointcloud_preprocessor/undistort_kernels.cu
+  src/cuda_downsample_filter/cuda_voxel_grid_downsample_filter.cu
 )
 
 target_link_libraries(cuda_pointcloud_preprocessor_lib
@@ -64,6 +76,7 @@ target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
   ${sensor_msgs_INCLUDE_DIRS}
   ${tf2_INCLUDE_DIRS}
   ${tf2_msgs_INCLUDE_DIRS}
+  ${autoware_cuda_utils_INCLUDE_DIRS}
 )
 
 
@@ -71,6 +84,7 @@ target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
 ament_auto_add_library(cuda_pointcloud_preprocessor SHARED
   src/cuda_concatenate_data/cuda_concatenate_and_time_sync_node.cpp
   src/cuda_pointcloud_preprocessor/cuda_pointcloud_preprocessor_node.cpp
+  src/cuda_downsample_filter/cuda_voxel_grid_downsample_filter_node.cpp
 )
 
 target_link_libraries(cuda_pointcloud_preprocessor
@@ -90,6 +104,14 @@ rclcpp_components_register_node(cuda_pointcloud_preprocessor
   EXECUTABLE cuda_pointcloud_preprocessor_node
 )
 
+# ========== VoxelGrid downsample filter ==========
+rclcpp_components_register_node(cuda_pointcloud_preprocessor
+  PLUGIN "autoware::cuda_pointcloud_preprocessor::CudaVoxelGridDownsampleFilterNode"
+  EXECUTABLE cuda_voxel_grid_downsample_filter_node
+)
+
+################################################################################
+# Install
 install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}
 )
