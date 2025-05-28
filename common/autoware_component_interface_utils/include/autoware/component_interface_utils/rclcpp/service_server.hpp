@@ -19,7 +19,7 @@
 #include <autoware/component_interface_utils/rclcpp/interface.hpp>
 #include <rclcpp/node.hpp>
 
-#include <tier4_system_msgs/msg/service_log.hpp>
+#include <autoware_system_msgs/msg/service_log.hpp>
 
 #include <string>
 
@@ -49,7 +49,7 @@ public:
   RCLCPP_SMART_PTR_DEFINITIONS(Service)
   using SpecType = SpecT;
   using WrapType = rclcpp::Service<typename SpecT::Service>;
-  using ServiceLog = tier4_system_msgs::msg::ServiceLog;
+  using ServiceLog = autoware_system_msgs::msg::ServiceLog;
 
   /// Constructor.
   template <class CallbackT>
