@@ -89,10 +89,10 @@ GyroBiasEstimator::GyroBiasEstimator(const rclcpp::NodeOptions & options)
     diagnostics_info_.estimated_gyro_scale_z = std::nan("");
   }
   // EKF variables
-  estimated_scale = estimate_scale_init_; // scale init
-  P = ekf_variance_p_; // variance
-  Q = ekf_process_noise_q_; // process noise
-  R = ekf_measurement_noise_r_ * ekf_measurement_noise_r_; // measurement noise
+  estimated_scale = estimate_scale_init_;                   // scale init
+  P = ekf_variance_p_;                                      // variance
+  Q = ekf_process_noise_q_;                                 // process noise
+  R = ekf_measurement_noise_r_ * ekf_measurement_noise_r_;  // measurement noise
   start_time_check_scale = this->get_clock()->now();
   previous_scale = estimate_scale_init_;
 }
@@ -143,8 +143,8 @@ void GyroBiasEstimator::callback_pose(const PoseWithCovarianceStamped::ConstShar
   static rclcpp::Time last_time_rx_pose_ = this->get_clock()->now();
   double dt = (this->get_clock()->now() - last_time_rx_pose_).seconds();
   last_time_rx_pose_ = this->get_clock()->now();
-  static int window_scale_change = 0.0; // initial value
-  static double previous_yaw_angle = 0.0; // initial value
+  static int window_scale_change = 0.0;    // initial value
+  static double previous_yaw_angle = 0.0;  // initial value
 
   geometry_msgs::msg::TransformStamped::ConstSharedPtr tf_base2pose_ptr =
     // transform_listener_->get_latest_transform(output_frame_, pose_frame_);
@@ -153,12 +153,13 @@ void GyroBiasEstimator::callback_pose(const PoseWithCovarianceStamped::ConstShar
     RCLCPP_ERROR(
       this->get_logger(), "Please publish TF %s to %s", pose_frame_.c_str(), output_frame_.c_str());
 
-    diagnostics_info_.summary_message = "Skipped update (tf between base and pose is not available)";
+    diagnostics_info_.summary_message =
+      "Skipped update (tf between base and pose is not available)";
     return;
   }
 
   auto quat_rotated = tf_base2pose_ptr->transform.rotation;
-  
+
   // Convert to tf2 quaternion
   tf2::Quaternion quat(quat_rotated.x, quat_rotated.y, quat_rotated.z, quat_rotated.w);
 
@@ -170,20 +171,19 @@ void GyroBiasEstimator::callback_pose(const PoseWithCovarianceStamped::ConstShar
   double delta_angle = yaw_ndt - previous_yaw_angle;
   // Wrapping angle
   if (delta_angle > 180.0) {
-      unwrapped_angle -= 360.0;
+    unwrapped_angle -= 360.0;
   } else if (delta_angle < -180.0) {
-      unwrapped_angle += 360.0;
+    unwrapped_angle += 360.0;
   }
 
   ndt_yaw_rate = (unwrapped_angle - previous_yaw_angle) / dt;
 
   // scale = x_hat;
   previous_yaw_angle = unwrapped_angle;
-  try 
-  {
+  try {
     if (gyro_bias_.has_value()) {
       auto H = ndt_yaw_rate;
-      auto y = gyro_yaw_rate  - (estimated_scale * ndt_yaw_rate + gyro_bias_.value().z);
+      auto y = gyro_yaw_rate - (estimated_scale * ndt_yaw_rate + gyro_bias_.value().z);
       auto S = H * P * H + R;
       auto K = P * H / S;
       estimated_scale = estimated_scale + K * y;
@@ -202,11 +202,14 @@ void GyroBiasEstimator::callback_pose(const PoseWithCovarianceStamped::ConstShar
       if ((this->get_clock()->now() - start_time_check_scale).seconds() > time_window_secs_) {
         const std::vector<double> scale_all = scale_list_all_;
         scale_list_all_.clear();
-        double mean_scale_window = std::accumulate(scale_all.begin(), scale_all.end(), 0.0) / scale_all.size();
+        double mean_scale_window =
+          std::accumulate(scale_all.begin(), scale_all.end(), 0.0) / scale_all.size();
         // analyze_scale_window(scale_all);
         start_time_check_scale = this->get_clock()->now();
 
-        if (std::abs(mean_scale_window - previous_scale) > std::abs(previous_scale * threshold_scale_change_)) {
+        if (
+          std::abs(mean_scale_window - previous_scale) >
+          std::abs(previous_scale * threshold_scale_change_)) {
           window_scale_change++;
           RCLCPP_INFO(this->get_logger(), "Warning: changing scale");
           if (window_scale_change > static_cast<int>(num_consecutive_scale_change_)) {
@@ -221,10 +224,8 @@ void GyroBiasEstimator::callback_pose(const PoseWithCovarianceStamped::ConstShar
           }
         }
       }
-    } 
-  }
-  catch (...)
-  {
+    }
+  } catch (...) {
     RCLCPP_INFO(this->get_logger(), "Error getting gyro bias value");
   }
 }
