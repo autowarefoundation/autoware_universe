@@ -928,7 +928,8 @@ autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
     }
   }
   // Extract road border segments
-  const double road_border_search_distance = 100.0;
+  const double road_border_search_distance =
+    parameters.objects_filtering_params.object_check_forward_distance;
   const auto road_border_segments = extract_uncrossable_segments(
     *(route_handler.getLaneletMapPtr()), ego_pose.position, road_border_search_distance);
   auto filtered_objects =
