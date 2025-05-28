@@ -52,8 +52,7 @@ void CollisionChecker::setup_parameters(rclcpp::Node & node)
   params_.is_critical = get_or_declare_parameter<bool>(node, "collision_checker.is_critical");
   params_.detection_range =
     get_or_declare_parameter<double>(node, "collision_checker.detection_range");
-  params_.ttc_threshold =
-    get_or_declare_parameter<double>(node, "collision_checker.ttc_threshold");
+  params_.ttc_threshold = get_or_declare_parameter<double>(node, "collision_checker.ttc_threshold");
 
   params_.right_turn.enable =
     get_or_declare_parameter<bool>(node, "collision_checker.right_turn.enable");
@@ -98,22 +97,59 @@ void CollisionChecker::setup_diag()
 
 void CollisionChecker::validate(bool & is_critical)
 {
-  if (!context_->data->current_pointcloud) {
-    RCLCPP_WARN(logger_, "point cloud data is not available, skipping collision check.");
+  auto skip_validation = [&](const std::string & reason) {
+    RCLCPP_WARN(logger_, "%s", reason.c_str());
     is_critical = false;
-    return;
+  };
+
+  if (!context_->data->current_pointcloud) {
+    return skip_validation("point cloud data is not available, skipping collision check.");
   }
 
   if (!context_->route_handler->isHandlerReady()) {
-    RCLCPP_WARN(logger_, "route handler is not ready, skipping collision check.");
-    is_critical = false;
-    return;
+    return skip_validation("route handler is not ready, skipping collision check.");
+  }
+
+  const auto turn_direction = get_turn_direction();
+
+  if (turn_direction == Direction::NONE) {
+    return skip_validation("no turn direction detected, skipping collision check.");
   }
 }
 
+Direction CollisionChecker::get_turn_direction() const
+{
+  const auto & ego_pose = context_->data->current_kinematics->pose.pose;
+
+  lanelet::ConstLanelet closest_lanelet;
+  if (!context_->route_handler->getClosestLaneletWithinRoute(ego_pose, &closest_lanelet)) {
+    RCLCPP_ERROR(logger_, "failed to get closest lanelet within route");
+    return Direction::NONE;
+  }
+
+  const auto & trajectory = *context_->data->current_trajectory;
+  const auto forward_trajectory_length = autoware::motion_utils::calcSignedArcLength(
+    trajectory.points, ego_pose.position, trajectory.points.size() - 1);
+
+  const auto & lanelet_sequence =
+    context_->route_handler->getLaneletSequence(closest_lanelet, 0.0, forward_trajectory_length);
+
+  if (lanelet_sequence.empty()) {
+    RCLCPP_ERROR(logger_, "failed to get route lanelet sequence");
+    return Direction::NONE;
+  }
+
+  for (const auto & lanelet : lanelet_sequence) {
+    if (!lanelet.hasAttribute("turn_direction")) continue;
+    const lanelet::Attribute & attr = lanelet.attribute("turn_direction");
+    if (attr.value() == "right" && params_.right_turn.enable) return Direction::RIGHT;
+    if (attr.value() == "left" && params_.left_turn.enable) return Direction::LEFT;
+  }
+  return Direction::NONE;
+}
+
 void CollisionChecker::filter_pointcloud(
-  PointCloud2::ConstSharedPtr & input,
-  PointCloud::Ptr & filtered_pointcloud) const
+  PointCloud2::ConstSharedPtr & input, PointCloud::Ptr & filtered_pointcloud) const
 {
   if (input->data.empty()) return;
 
@@ -145,8 +181,7 @@ void CollisionChecker::filter_pointcloud(
     geometry_msgs::msg::TransformStamped transform_stamped;
     try {
       transform_stamped = context_->tf_buffer.lookupTransform(
-        "map", input->header.frame_id, input->header.stamp,
-        rclcpp::Duration::from_seconds(0.1));
+        "map", input->header.frame_id, input->header.stamp, rclcpp::Duration::from_seconds(0.1));
     } catch (tf2::TransformException & e) {
       RCLCPP_WARN(logger_, "no transform found for pointcloud: %s", e.what());
     }

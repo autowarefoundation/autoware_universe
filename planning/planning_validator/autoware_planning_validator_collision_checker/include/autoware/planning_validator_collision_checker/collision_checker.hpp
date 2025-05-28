@@ -18,24 +18,22 @@
 #include "autoware/planning_validator_collision_checker/parameters.hpp"
 
 #include <autoware/planning_validator/plugin_interface.hpp>
+#include <rclcpp/rclcpp.hpp>
 
+#include <pcl/common/transforms.h>
 #include <pcl/filters/crop_hull.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/registration/gicp.h>
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/surface/convex_hull.h>
-
-#include <pcl/common/transforms.h>
-#include <pcl/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <tf2/utils.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
-
-#include <rclcpp/rclcpp.hpp>
 
 #include <memory>
 #include <string>
@@ -44,6 +42,7 @@ namespace autoware::planning_validator
 {
 using sensor_msgs::msg::PointCloud2;
 using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
+using route_handler::Direction;
 
 class CollisionChecker : public PluginInterface
 {
@@ -58,10 +57,11 @@ public:
 private:
   void setup_parameters(rclcpp::Node & node);
 
+  [[nodiscard]] Direction get_turn_direction() const;
+
   void filter_pointcloud(
-    PointCloud2::ConstSharedPtr & input,
-    PointCloud::Ptr & filtered_point_cloud) const;
-  
+    PointCloud2::ConstSharedPtr & input, PointCloud::Ptr & filtered_point_cloud) const;
+
   CollisionCheckerParams params_;
 };
 

@@ -106,7 +106,7 @@ bool PlanningValidatorNode::isDataReady()
 
 void PlanningValidatorNode::setData()
 {
-  { // route
+  {  // route
     const auto msg = sub_route_.take_data();
     if (msg) {
       if (msg->segments.empty()) {
@@ -118,7 +118,7 @@ void PlanningValidatorNode::setData()
     }
   }
 
-  { // map
+  {  // map
     const auto msg = sub_map_.take_data();
     if (msg) {
       map_ptr_ = msg;
