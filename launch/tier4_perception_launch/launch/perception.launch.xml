@@ -50,9 +50,18 @@
   <!-- ML model parameters -->
   <arg name="lidar_detection_model_type" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[0]&quot;)"/>
   <arg name="lidar_detection_model_name" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[1] if '/' in '$(var lidar_detection_model)' else ''&quot;)"/>
+  <arg name="lidar_shortrange_detection_model_type" default="" description="options: `shortrange_centerpoint`">
+    <choice value="shortrange_centerpoint"/>
+    <choice value=""/>
+  </arg>
+  <arg name="lidar_shortrange_detection_model_name" default="" description="options: `shortrange_centerpoint`">
+    <choice value="shortrange_centerpoint"/>
+    <choice value=""/>
+  </arg>
   <arg name="bevfusion_model_path" default="$(var data_path)/bevfusion"/>
   <arg name="centerpoint_model_path" default="$(var data_path)/lidar_centerpoint"/>
   <arg name="transfusion_model_path" default="$(var data_path)/lidar_transfusion"/>
+  <arg name="shortrange_centerpoint_model_path" default="$(var data_path)/lidar_shortrange_centerpoint"/>
   <arg name="pointpainting_model_path" default="$(var data_path)/image_projection_based_fusion"/>
 
   <!-- Common parameters -->
@@ -240,6 +249,8 @@
           <arg name="mode" value="$(var mode)"/>
           <arg name="lidar_detection_model_type" value="$(var lidar_detection_model_type)"/>
           <arg name="lidar_detection_model_name" value="$(var lidar_detection_model_name)"/>
+		  <arg name="lidar_shortrange_detection_model_type" value="$(var lidar_shortrange_detection_model_type)"/>
+          <arg name="lidar_shortrange_detection_model_name" value="$(var lidar_shortrange_detection_model_name)"/>
           <arg name="use_multi_channel_tracker_merger" value="$(var use_multi_channel_tracker_merger)"/>
           <arg name="number_of_cameras" value="$(var image_number)"/>
           <arg name="input/camera0/image" value="$(var image_raw0)"/>
