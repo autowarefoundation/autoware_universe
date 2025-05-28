@@ -390,8 +390,7 @@ std::vector<TrajectoryPoint> PathOptimizer::optimizeTrajectory(const PlannerData
   const double elapsed_time = conditional_timer_->getElapsedTime().count();
   const bool elapsed_time_over_three_seconds = (elapsed_time > 3.0);
 
-  auto optimized_traj_points =
-     auto optimized_traj_points = [&]() {
+  auto optimized_traj_points = [&]() {
     if (optimized_traj_failed && elapsed_time_over_three_seconds) {
       return p.traj_points;
     } else if (optimized_traj_failed && !elapsed_time_over_three_seconds) {
