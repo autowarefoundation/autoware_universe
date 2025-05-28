@@ -13,7 +13,7 @@
 // limitations under the License.
 //
 // Co-developed by Tier IV, Inc. and Apex.AI, Inc.
-
+// cspell:ignore COLORMAPS colormap
 #include "tier4_perception_rviz_plugin/object_detection/detected_objects_wf_display.hpp"
 
 #include "tier4_perception_rviz_plugin/object_detection/detected_objects_wf_helper.hpp"
