@@ -57,7 +57,16 @@ public:
 private:
   void setup_parameters(rclcpp::Node & node);
 
-  [[nodiscard]] Direction get_turn_direction() const;
+  [[nodiscard]] lanelet::ConstLanelets get_trajectory_lanelets() const;
+
+  [[nodiscard]] Direction get_turn_direction(const lanelet::ConstLanelets & trajectory_lanelets) const;
+
+  [[nodiscard]] lanelet::ConstLanelets get_target_lanelets(
+    const lanelet::ConstLanelets & trajectory_lanelets, const Direction & direction) const;
+
+  [[nodiscard]] lanelet::ConstLanelets get_right_turn_target_lanelets(const lanelet::ConstLanelets & trajectory_lanelets) const;
+
+  [[nodiscard]] lanelet::ConstLanelets get_left_turn_target_lanelets(const lanelet::ConstLanelets & trajectory_lanelets) const;
 
   void filter_pointcloud(
     PointCloud2::ConstSharedPtr & input, PointCloud::Ptr & filtered_point_cloud) const;
