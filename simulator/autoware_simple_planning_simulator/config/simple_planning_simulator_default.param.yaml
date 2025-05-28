@@ -4,14 +4,22 @@
     origin_frame_id: "map"
     vehicle_model_type: "DELAY_STEER_ACC_GEARED"
     initialize_source: "INITIAL_POSE_TOPIC"
+    initial_engage_state: True
+    enable_road_slope_simulation: False
     timer_sampling_time_ms: 25
     add_measurement_noise: False
+    pos_noise_stddev: 1e-2
+    vel_noise_stddev: 1e-2
+    rpy_noise_stddev: 1e-4
+    steer_noise_stddev: 1e-4
     vel_lim: 30.0
     vel_rate_lim: 30.0
     steer_lim: 0.6
     steer_rate_lim: 6.28
     acc_time_delay: 0.1
     acc_time_constant: 0.1
+    vel_time_delay: 0.25
+    vel_time_constant: 0.5
     steer_time_delay: 0.1
     steer_time_constant: 0.1
     steer_dead_band: 0.0
