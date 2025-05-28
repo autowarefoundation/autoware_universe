@@ -48,6 +48,7 @@ private:
   void update_diagnostics(diagnostic_updater::DiagnosticStatusWrapper & stat);
   void callback_imu(const Imu::ConstSharedPtr imu_msg_ptr);
   void callback_odom(const Odometry::ConstSharedPtr odom_msg_ptr);
+  void callback_pose(const PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr);
   void timer_callback();
   void validate_gyro_bias();
 
@@ -59,8 +60,11 @@ private:
 
   rclcpp::Subscription<Imu>::SharedPtr imu_sub_;
   rclcpp::Subscription<Odometry>::SharedPtr odom_sub_;
+  rclcpp::Subscription<PoseWithCovarianceStamped>::SharedPtr pose_sub_;
   rclcpp::Publisher<Vector3Stamped>::SharedPtr gyro_bias_pub_;
+  rclcpp::Publisher<Vector3>::SharedPtr gyro_scale_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
+  rclcpp::Time start_time_check_scale;
 
   std::unique_ptr<GyroBiasEstimationModule> gyro_bias_estimation_module_;
 
@@ -72,6 +76,25 @@ private:
   const double diagnostics_updater_interval_sec_;
   const double straight_motion_ang_vel_upper_limit_;
 
+  const double estimate_scale_init_;
+  const double ekf_variance_p_;
+  const double ekf_process_noise_q_;
+  const double ekf_measurement_noise_r_;
+  const double time_window_secs_;
+  const double threshold_scale_change_;
+  const double threshold_error_rate_;
+  const double num_consecutive_scale_change_;
+
+  double ndt_yaw_rate;
+  double gyro_yaw_rate;
+  double previous_scale;
+
+  // EKF variables
+  double estimated_scale;
+  double P;
+  double Q;
+  double R;
+
   diagnostic_updater::Updater updater_;
 
   std::optional<Vector3> gyro_bias_;
@@ -82,6 +105,7 @@ private:
 
   std::vector<geometry_msgs::msg::Vector3Stamped> gyro_all_;
   std::vector<geometry_msgs::msg::PoseStamped> pose_buf_;
+  std::vector<double> scale_list_all_;
 
   struct DiagnosticsInfo
   {
@@ -93,6 +117,9 @@ private:
     double estimated_gyro_bias_x;
     double estimated_gyro_bias_y;
     double estimated_gyro_bias_z;
+    double estimated_gyro_scale_x;
+    double estimated_gyro_scale_y;
+    double estimated_gyro_scale_z;
   };
 
   DiagnosticsInfo diagnostics_info_;
