@@ -208,6 +208,7 @@ void CudaPointcloudPreprocessor::organizePointcloud()
     num_organized_points_ * sizeof(std::uint32_t), stream_);
 
   if (num_raw_points_ == 0) {
+    output_pointcloud_ptr_->data.reset();
     return;
   }
 
