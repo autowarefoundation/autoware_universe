@@ -399,7 +399,7 @@ std::vector<TrajectoryPoint> PathOptimizer::optimizeTrajectory(const PlannerData
       return std::move(*mpt_traj);
     }
   }();
-  is_optimization_failed_ = optimized_traj_failed || elapsed_time_over_three_seconds;
+  is_optimization_failed_ = optimized_traj_failed && elapsed_time_over_three_seconds;
 
   // 3. update velocity
   //    NOTE: When optimization failed or is skipped, velocity in trajectory points must
