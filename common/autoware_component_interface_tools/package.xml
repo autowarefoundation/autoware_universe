@@ -14,7 +14,7 @@
   <depend>fmt</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
-  <depend>tier4_system_msgs</depend>
+  <depend>autoware_system_msgs</depend>
   <depend>yaml_cpp_vendor</depend>
 
   <test_depend>ament_lint_auto</test_depend>
