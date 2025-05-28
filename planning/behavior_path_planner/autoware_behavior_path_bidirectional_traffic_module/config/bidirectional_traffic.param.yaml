@@ -1,0 +1,10 @@
+/**:
+  ros__parameters:
+    bidirectional_traffic:
+      time_to_prepare_pull_over: 1.0
+      min_distance_from_roadside: 0.2
+      keep_left_distance_from_center_line: 0.5
+      shift_distance_to_pull_over_from_center_line: 1.6
+      wait_time_for_oncoming_car: 15.0
+      max_lateral_jerk: 3.0
+      min_lateral_jerk: 2.0

@@ -1,0 +1,4 @@
+/**:
+  ros__parameters:
+    mean_threshold: 0.6
+    enable_debug: false

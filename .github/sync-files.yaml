@@ -1,0 +1,58 @@
+- repository: autowarefoundation/sync-file-templates
+  source-dir: sources
+  files:
+    - source: .github/ISSUE_TEMPLATE/bug.yaml
+    - source: .github/ISSUE_TEMPLATE/config.yml
+    - source: .github/ISSUE_TEMPLATE/task.yaml
+    - source: .github/dependabot.yaml
+    - source: .github/pull_request_template_complex.md
+      dest: .github/pull_request_template.md
+    - source: .github/stale.yml
+    - source: .github/workflows/cancel-previous-workflows.yaml
+    - source: .github/workflows/clang-tidy-pr-comments.yaml
+    - source: .github/workflows/clang-tidy-pr-comments-manually.yaml
+    - source: .github/workflows/comment-on-pr.yaml
+    - source: .github/workflows/delete-closed-pr-docs.yaml
+    - source: .github/workflows/deploy-docs.yaml
+    - source: .github/workflows/github-release.yaml
+    - source: .github/workflows/pre-commit.yaml
+    - source: .github/workflows/pre-commit-optional.yaml
+    - source: .github/workflows/pre-commit-optional-autoupdate.yaml
+    - source: .github/workflows/pre-commit-autoupdate.yaml
+    - source: .github/workflows/semantic-pull-request.yaml
+    - source: .github/workflows/spell-check-differential.yaml
+      pre-commands: |
+        sd "        with:\n" "        with:\n          local-cspell-json: .cspell.json\n" {source}
+    - source: .github/workflows/spell-check-daily.yaml
+      pre-commands: |
+        sd "        with:\n" "        with:\n          local-cspell-json: .cspell.json\n" {source}
+    - source: .github/workflows/sync-files.yaml
+    - source: .github/workflows/update-codeowners-from-packages.yaml
+    - source: docs/assets/js/mathjax.js
+    - source: .clang-format
+    - source: .markdown-link-check.json
+    - source: .markdownlint.yaml
+    - source: .pre-commit-config-optional.yaml
+    - source: .pre-commit-config.yaml
+    - source: .prettierignore
+    - source: .prettierrc.yaml
+    - source: .yamllint.yaml
+    - source: CODE_OF_CONDUCT.md
+    - source: CONTRIBUTING.md
+    - source: CPPLINT.cfg
+    - source: DISCLAIMER.md
+    - source: LICENSE
+    - source: mkdocs-base.yaml
+      dest: mkdocs.yaml
+      pre-commands: |
+        sd "Autoware Documentation" "Autoware Universe Documentation" {source}
+        sd "autoware-documentation" "autoware_universe" {source}
+        sd "repo_url: .*" "repo_url: https://github.com/autowarefoundation/autoware_universe" {source}
+        sd "/edit/main/docs/" "/edit/main/" {source}
+        sd "docs_dir: .*" "docs_dir: ." {source}
+        sd "assets/(\w+)" "docs/assets/\$1" {source}
+        sd -- \
+        "  - macros" \
+        "  - macros:
+              module_name: mkdocs_macros" {source}
+    - source: setup.cfg

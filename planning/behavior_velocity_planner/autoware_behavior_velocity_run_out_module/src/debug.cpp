@@ -1,0 +1,374 @@
+// Copyright 2022 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "debug.hpp"
+
+#include "scene.hpp"
+
+#include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
+
+#include <string>
+#include <vector>
+
+using autoware_utils::append_marker_array;
+using autoware_utils::calc_offset_pose;
+using autoware_utils::create_default_marker;
+using autoware_utils::create_marker_color;
+using autoware_utils::create_marker_orientation;
+using autoware_utils::create_marker_scale;
+using autoware_utils::create_point;
+
+namespace autoware::behavior_velocity_planner
+{
+namespace
+{
+RunOutDebug::TextWithPosition createDebugText(
+  const std::string & text, const geometry_msgs::msg::Pose pose, const float lateral_offset)
+{
+  const auto offset_pose = autoware_utils::calc_offset_pose(pose, 0, lateral_offset, 0);
+
+  RunOutDebug::TextWithPosition text_with_position;
+  text_with_position.text = text;
+  text_with_position.position = offset_pose.position;
+
+  return text_with_position;
+}
+
+visualization_msgs::msg::MarkerArray createPolygonMarkerArray(
+  const std::vector<std::vector<geometry_msgs::msg::Point>> & poly, const rclcpp::Time & time,
+  const std::string & ns, const geometry_msgs::msg::Vector3 & scale,
+  const std_msgs::msg::ColorRGBA & color, const double height)
+{
+  visualization_msgs::msg::MarkerArray marker_array;
+  for (size_t i = 0; i < poly.size(); i++) {
+    auto marker = create_default_marker(
+      "map", time, ns, i, visualization_msgs::msg::Marker::LINE_STRIP, scale, color);
+
+    for (const auto & p : poly.at(i)) {
+      const auto p_with_height = create_point(p.x, p.y, height);
+      marker.points.push_back(p_with_height);
+    }
+    // close the polygon
+    const auto & p = poly.at(i).front();
+    const auto p_with_height = create_point(p.x, p.y, height);
+    marker.points.push_back(p_with_height);
+
+    marker_array.markers.push_back(marker);
+  }
+
+  return marker_array;
+}
+
+}  // namespace
+
+RunOutDebug::RunOutDebug(rclcpp::Node & node) : node_(node)
+{
+  accel_reason_ = AccelReason::UNKNOWN;
+
+  pub_debug_values_ =
+    node.create_publisher<Float32MultiArrayStamped>("~/debug/run_out/debug_values", 1);
+  pub_accel_reason_ = node.create_publisher<Int32Stamped>("~/debug/run_out/accel_reason", 1);
+  pub_debug_pointcloud_ = node.create_publisher<PointCloud2>(
+    "~/debug/run_out/filtered_pointcloud", rclcpp::SensorDataQoS().keep_last(1));
+}
+
+void RunOutDebug::pushCollisionPoints(const geometry_msgs::msg::Point & point)
+{
+  const auto point_with_height = create_point(point.x, point.y, height_);
+  collision_points_.push_back(point_with_height);
+}
+
+void RunOutDebug::pushEgoCutLine(const std::vector<geometry_msgs::msg::Point> & line)
+{
+  for (const auto & point : line) {
+    const auto point_with_height = create_point(point.x, point.y, height_);
+    ego_cut_line_.push_back(point_with_height);
+  }
+}
+
+void RunOutDebug::pushCollisionPoints(const std::vector<geometry_msgs::msg::Point> & points)
+{
+  for (const auto & p : points) {
+    const auto point_with_height = create_point(p.x, p.y, height_);
+    collision_points_.push_back(point_with_height);
+  }
+}
+
+void RunOutDebug::pushNearestCollisionPoint(const geometry_msgs::msg::Point & point)
+{
+  const auto point_with_height = create_point(point.x, point.y, height_);
+  nearest_collision_point_.push_back(point_with_height);
+}
+
+void RunOutDebug::pushStopPose(const geometry_msgs::msg::Pose & pose)
+{
+  stop_pose_.push_back(pose);
+}
+
+void RunOutDebug::pushPredictedVehiclePolygons(
+  const std::vector<geometry_msgs::msg::Point> & polygon)
+{
+  predicted_vehicle_polygons_.push_back(polygon);
+}
+
+void RunOutDebug::pushPredictedObstaclePolygons(
+  const std::vector<geometry_msgs::msg::Point> & polygon)
+{
+  predicted_obstacle_polygons_.push_back(polygon);
+}
+void RunOutDebug::pushCollisionObstaclePolygons(
+  const std::vector<geometry_msgs::msg::Point> & polygon)
+{
+  collision_obstacle_polygons_.push_back(polygon);
+}
+
+void RunOutDebug::pushDetectionAreaPolygons(const Polygon2d & debug_polygon)
+{
+  std::vector<geometry_msgs::msg::Point> ros_points;
+  for (const auto & p : debug_polygon.outer()) {
+    ros_points.push_back(autoware_utils::create_point(p.x(), p.y(), 0.0));
+  }
+
+  detection_area_polygons_.push_back(ros_points);
+}
+
+void RunOutDebug::pushMandatoryDetectionAreaPolygons(const Polygon2d & debug_polygon)
+{
+  std::vector<geometry_msgs::msg::Point> ros_points;
+  for (const auto & p : debug_polygon.outer()) {
+    ros_points.push_back(autoware_utils::create_point(p.x(), p.y(), 0.0));
+  }
+
+  mandatory_detection_area_polygons_.push_back(ros_points);
+}
+
+void RunOutDebug::pushTravelTimeTexts(
+  const double travel_time, const geometry_msgs::msg::Pose pose, const float lateral_offset)
+{
+  std::stringstream sstream;
+  sstream << std::setprecision(4) << travel_time << "s";
+  travel_time_texts_.push_back(createDebugText(sstream.str(), pose, lateral_offset));
+}
+
+void RunOutDebug::clearDebugMarker()
+{
+  collision_points_.clear();
+  nearest_collision_point_.clear();
+  detection_area_polygons_.clear();
+  mandatory_detection_area_polygons_.clear();
+  predicted_vehicle_polygons_.clear();
+  predicted_obstacle_polygons_.clear();
+  collision_obstacle_polygons_.clear();
+  travel_time_texts_.clear();
+  ego_cut_line_.clear();
+}
+
+visualization_msgs::msg::MarkerArray RunOutDebug::createVisualizationMarkerArray()
+{
+  rclcpp::Time current_time = node_.now();
+
+  // create marker array from debug data
+  auto visualization_marker_array = createVisualizationMarkerArrayFromDebugData(current_time);
+
+  // clear debug data
+  clearDebugMarker();
+
+  return visualization_marker_array;
+}
+
+autoware::motion_utils::VirtualWalls RunOutDebug::createVirtualWalls()
+{
+  autoware::motion_utils::VirtualWalls virtual_walls;
+  autoware::motion_utils::VirtualWall wall;
+  wall.text = "run_out";
+  wall.style = autoware::motion_utils::VirtualWallType::stop;
+  for (const auto & p : stop_pose_) {
+    wall.pose = p;
+    virtual_walls.push_back(wall);
+  }
+  stop_pose_.clear();
+
+  return virtual_walls;
+}
+
+visualization_msgs::msg::MarkerArray RunOutDebug::createVisualizationMarkerArrayFromDebugData(
+  const builtin_interfaces::msg::Time & current_time) const
+{
+  visualization_msgs::msg::MarkerArray msg;
+
+  if (!collision_points_.empty()) {
+    auto marker = create_default_marker(
+      "map", current_time, "collision_points", 0, visualization_msgs::msg::Marker::SPHERE_LIST,
+      create_marker_scale(0.3, 0.3, 0.3), create_marker_color(0, 0.0, 1.0, 0.999));
+    for (const auto & p : collision_points_) {
+      marker.points.push_back(p);
+    }
+    msg.markers.push_back(marker);
+  }
+
+  if (!nearest_collision_point_.empty()) {
+    auto marker = create_default_marker(
+      "map", current_time, "nearest_collision_point", 0,
+      visualization_msgs::msg::Marker::SPHERE_LIST, create_marker_scale(0.6, 0.6, 0.6),
+      create_marker_color(1.0, 0, 0, 0.999));
+    for (const auto & p : nearest_collision_point_) {
+      marker.points.push_back(p);
+    }
+    msg.markers.push_back(marker);
+  }
+
+  if (!predicted_vehicle_polygons_.empty()) {
+    auto marker = create_default_marker(
+      "map", current_time, "predicted_vehicle_polygons", 0,
+      visualization_msgs::msg::Marker::LINE_STRIP, create_marker_scale(0.05, 0.0, 0.0),
+      create_marker_color(0.0, 1.0, 0.0, 0.999));
+
+    for (const auto & poly : predicted_vehicle_polygons_) {
+      for (const auto & p : poly) {
+        marker.points.push_back(p);
+      }
+      // close the polygon
+      marker.points.push_back(poly.front());
+    }
+
+    msg.markers.push_back(marker);
+  }
+
+  if (!predicted_obstacle_polygons_.empty()) {
+    append_marker_array(
+      createPolygonMarkerArray(
+        predicted_obstacle_polygons_, current_time, "predicted_obstacle_polygons",
+        create_marker_scale(0.02, 0.0, 0.0), create_marker_color(1.0, 1.0, 0.0, 0.999), height_),
+      &msg);
+  }
+
+  if (!collision_obstacle_polygons_.empty()) {
+    append_marker_array(
+      createPolygonMarkerArray(
+        collision_obstacle_polygons_, current_time, "collision_obstacle_polygons",
+        create_marker_scale(0.04, 0.0, 0.0), create_marker_color(1.0, 0.0, 0.0, 0.999), height_),
+      &msg);
+  }
+
+  if (!detection_area_polygons_.empty()) {
+    append_marker_array(
+      createPolygonMarkerArray(
+        detection_area_polygons_, current_time, "detection_area_polygons",
+        create_marker_scale(0.04, 0.0, 0.0), create_marker_color(0.0, 0.0, 1.0, 0.999), height_),
+      &msg);
+  }
+
+  if (!mandatory_detection_area_polygons_.empty()) {
+    append_marker_array(
+      createPolygonMarkerArray(
+        mandatory_detection_area_polygons_, current_time, "mandatory_detection_area_polygons",
+        create_marker_scale(0.04, 0.0, 0.0), create_marker_color(1.0, 1.0, 0.0, 0.999), height_),
+      &msg);
+  }
+
+  if (!ego_cut_line_.empty()) {
+    auto marker = create_default_marker(
+      "map", current_time, "ego_cut_line", 0, visualization_msgs::msg::Marker::LINE_LIST,
+      create_marker_scale(0.2, 0.2, 0.2), create_marker_color(0.7, 0.0, 0.7, 0.999));
+    for (const auto & p : ego_cut_line_) {
+      marker.points.push_back(p);
+    }
+    msg.markers.push_back(marker);
+  }
+
+  if (!travel_time_texts_.empty()) {
+    auto marker = create_default_marker(
+      "map", current_time, "travel_time_texts", 0,
+      visualization_msgs::msg::Marker::TEXT_VIEW_FACING, create_marker_scale(0.0, 0.0, 0.8),
+      create_marker_color(1.0, 1.0, 1.0, 0.999));
+
+    constexpr float height_offset = 2.0;
+    for (const auto & text : travel_time_texts_) {
+      marker.pose.position = text.position;
+      marker.pose.position.z += height_offset;
+      marker.text = text.text;
+
+      msg.markers.push_back(marker);
+      marker.id++;
+    }
+  }
+
+  return msg;
+}
+void RunOutDebug::setAccelReason(const AccelReason & accel_reason)
+{
+  accel_reason_ = accel_reason;
+}
+
+void RunOutDebug::publishDebugValue()
+{
+  // publish debug values
+  autoware_internal_debug_msgs::msg::Float32MultiArrayStamped debug_msg{};
+  debug_msg.stamp = node_.now();
+  for (const auto & v : debug_values_.getValues()) {
+    debug_msg.data.push_back(v);
+  }
+  pub_debug_values_->publish(debug_msg);
+
+  Int32Stamped accel_reason;
+  accel_reason.stamp = node_.now();
+  accel_reason.data = static_cast<int>(accel_reason_);
+  pub_accel_reason_->publish(accel_reason);
+}
+
+void RunOutDebug::publishFilteredPointCloud(
+  const pcl::PointCloud<pcl::PointXYZ> & pointcloud, const std_msgs::msg::Header header)
+{
+  PointCloud2 pc;
+  pcl::toROSMsg(pointcloud, pc);
+  pc.header = header;
+
+  pub_debug_pointcloud_->publish(pc);
+}
+
+void RunOutDebug::publishFilteredPointCloud(const PointCloud2 & pointcloud)
+{
+  pub_debug_pointcloud_->publish(pointcloud);
+}
+
+void RunOutDebug::publishEmptyPointCloud()
+{
+  PointCloud2 pc;
+  pcl::toROSMsg(pcl::PointCloud<pcl::PointXYZ>(), pc);
+  // set arbitrary frame id to avoid warning
+  pc.header.frame_id = "map";
+  pc.header.stamp = node_.now();
+
+  pub_debug_pointcloud_->publish(pc);
+}
+
+void RunOutDebug::setHeight(const double height)
+{
+  height_ = height;
+}
+
+// scene module
+visualization_msgs::msg::MarkerArray RunOutModule::createDebugMarkerArray()
+{
+  return debug_ptr_->createVisualizationMarkerArray();
+}
+
+autoware::motion_utils::VirtualWalls RunOutModule::createVirtualWalls()
+{
+  return debug_ptr_->createVirtualWalls();
+}
+
+}  // namespace autoware::behavior_velocity_planner

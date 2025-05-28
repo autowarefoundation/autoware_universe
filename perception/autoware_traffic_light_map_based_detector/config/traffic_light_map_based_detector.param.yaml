@@ -1,0 +1,13 @@
+/**:
+  ros__parameters:
+    max_vibration_pitch: 0.01745329251   # -0.5 ~ 0.5 deg in camera frame
+    max_vibration_yaw: 0.01745329251     # -0.5 ~ 0.5 deg in camera frame
+    max_vibration_height: 0.5            # -0.25 ~ 0.25 m in camera optical frame
+    max_vibration_width: 0.5             # -0.25 ~ 0.25 m in camera optical frame
+    max_vibration_depth: 0.5             # -0.25 ~ 0.25 m in camera optical frame
+    max_detection_range: 200.0
+    min_timestamp_offset: -0.3
+    max_timestamp_offset: 0.0
+    timestamp_sample_len: 0.02
+    car_traffic_light_max_angle_range: 40.0
+    pedestrian_traffic_light_max_angle_range: 80.0

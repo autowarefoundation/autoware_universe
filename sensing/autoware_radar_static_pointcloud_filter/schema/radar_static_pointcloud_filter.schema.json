@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Radar Static Pointcloud Filter Node",
+  "type": "object",
+  "definitions": {
+    "radar_static_pointcloud_filter": {
+      "type": "object",
+      "properties": {
+        "doppler_velocity_sd": {
+          "type": "number",
+          "default": "4.0",
+          "minimum": 0.0,
+          "description": "Standard deviation for radar doppler velocity. [m/s]"
+        },
+        "max_queue_size": {
+          "type": "integer",
+          "default": "5",
+          "minimum": 1,
+          "description": "Max queue size of input/output topics."
+        }
+      },
+      "required": ["doppler_velocity_sd", "max_queue_size"]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/radar_static_pointcloud_filter"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}

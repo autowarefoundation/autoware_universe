@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for RoI PointCloud Fusion Node",
+  "type": "object",
+  "definitions": {
+    "roi_pointcloud_fusion": {
+      "type": "object",
+      "properties": {
+        "fuse_unknown_only": {
+          "type": "boolean",
+          "description": "Whether to fuse only UNKNOWN clusters.",
+          "default": true
+        },
+        "override_class_with_unknown": {
+          "type": "boolean",
+          "description": "Whether to override class of output cluster with UNKNOWN. It is effective only when fuse_unknown_only is false.",
+          "default": false
+        },
+
+        "min_cluster_size": {
+          "type": "integer",
+          "description": "The minimum number of points that a cluster must contain to be considered as valid.",
+          "default": 2,
+          "minimum": 2
+        },
+        "max_cluster_size": {
+          "type": "integer",
+          "description": "The maximum number of points that a cluster must contain to be considered as valid.",
+          "default": 20,
+          "minimum": 2
+        },
+        "cluster_2d_tolerance": {
+          "type": "number",
+          "description": "A cluster tolerance measured in radial direction [m]",
+          "default": 0.5,
+          "exclusiveMinimum": 0.0
+        },
+        "roi_scale_factor": {
+          "type": "number",
+          "description": "A scale factor for resizing RoI while checking if points are inside the RoI.",
+          "default": 1.0,
+          "exclusiveMinimum": 0.0
+        },
+        "max_object_size": {
+          "type": "number",
+          "description": "The maximum size of the object to be considered as valid.",
+          "default": 2.0,
+          "exclusiveMinimum": 0.0
+        }
+      },
+      "required": [
+        "fuse_unknown_only",
+        "override_class_with_unknown",
+        "min_cluster_size",
+        "cluster_2d_tolerance",
+        "roi_scale_factor",
+        "max_object_size"
+      ]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/roi_pointcloud_fusion"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}

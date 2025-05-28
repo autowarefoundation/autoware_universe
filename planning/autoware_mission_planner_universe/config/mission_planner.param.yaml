@@ -1,0 +1,13 @@
+/**:
+  ros__parameters:
+    map_frame: map
+    arrival_check_angle_deg: 45.0
+    arrival_check_distance: 1.0
+    arrival_check_duration: 1.0
+    goal_angle_threshold_deg: 45.0
+    enable_correct_goal_pose: false
+    reroute_time_threshold: 10.0
+    minimum_reroute_length: 30.0
+    consider_no_drivable_lanes: false # This flag is for considering no_drivable_lanes in planning or not.
+    check_footprint_inside_lanes: true
+    allow_reroute_in_autonomous_mode: true

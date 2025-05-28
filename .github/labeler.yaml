@@ -1,0 +1,41 @@
+"type:ci":
+  - .github/**/*
+  - "*.json"
+  - "*.yaml"
+  - "*.cfg"
+  - .clang-format
+  - .gitignore
+  - .prettierignore
+"type:documentation":
+  - docs/**/*
+  - "**/*.md"
+  - "**/*.rst"
+  - "**/*.jpg"
+  - "**/*.png"
+  - "**/*.svg"
+"component:common":
+  - common/**/*
+"component:control":
+  - control/**/*
+"component:evaluator":
+  - evaluator/**/*
+"component:launch":
+  - launch/**/*
+"component:localization":
+  - localization/**/*
+"component:map":
+  - map/**/*
+"component:perception":
+  - perception/**/*
+"component:planning":
+  - planning/**/*
+"component:sensing":
+  - sensing/**/*
+"component:simulation":
+  - simulator/**/*
+"component:system":
+  - system/**/*
+"component:tools":
+  - tools/**/*
+"component:vehicle":
+  - vehicle/**/*

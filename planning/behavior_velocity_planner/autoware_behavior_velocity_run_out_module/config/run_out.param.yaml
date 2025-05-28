@@ -1,0 +1,74 @@
+/**:
+  ros__parameters:
+    run_out:
+      detection_method: "Object"  # [-] candidate: Object, ObjectWithoutPath, Points
+      target_obstacle_types: ["PEDESTRIAN", "BICYCLE", "MOTORCYCLE"] # [-] Obstacle types considered by this module
+      exclude_obstacles_already_in_path: true # If the obstacle is already on the ego's path footprint, ignore it.
+      use_partition_lanelet: true # [-] whether to use partition lanelet map data
+      suppress_on_crosswalk: true # [-] whether to suppress on crosswalk lanelet
+      use_ego_cut_line: true      # [-] filter obstacles that pass the backside of ego: if a dynamic obstacle's predicted path intersects this line, it is ignored
+      specify_decel_jerk: true    # [-] whether to specify jerk when ego decelerates
+      stop_margin: 2.5            # [m] the vehicle decelerates to be able to stop with this margin
+      passing_margin: 1.1         # [m] the vehicle begins to accelerate if the vehicle's front in predicted position is ahead of the obstacle + this margin
+      deceleration_jerk: -0.3     # [m/s^3] ego decelerates with this jerk when stopping for obstacles
+      detection_distance: 45.0    # [m] ahead distance from ego to detect the obstacles
+      detection_span: 1.0         # [m] calculate collision with this span to reduce calculation time
+      min_vel_ego_kmph: 3.6       # [km/h] min velocity to calculate time to collision
+      ego_cut_line_length: 3.0    # The width of the ego's cut line
+      ego_footprint_extra_margin: 0.5 # [m] expand the ego vehicles' footprint by this value on all sides when building the ego footprint path
+      keep_obstacle_on_path_time_threshold: 1.0 # [s] How much time a previous run out target obstacle is kept in the run out candidate list if it enters the ego path.
+      keep_stop_point_time: 1.0   # [s] If a stop point is issued by this module, keep the stop point for this many seconds. Only works if approach is disabled
+
+      # Parameter to create abstracted dynamic obstacles
+      dynamic_obstacle:
+        use_mandatory_area: false # [-] whether to use mandatory detection area
+        assume_fixed_velocity:
+          enable: false           # [-] If enabled, the obstacle's velocity is assumed to be within the minimum and maximum velocity values specified below
+          min_vel_kmph: 0.0       # [km/h] minimum velocity for dynamic obstacles
+          max_vel_kmph: 5.0       # [km/h] maximum velocity for dynamic obstacles
+        std_dev_multiplier: 1.96  # [-] min and max velocity of the obstacles are calculated from this value and covariance
+        diameter: 0.1             # [m] diameter of obstacles. used for creating dynamic obstacles from points
+        height: 2.0               # [m] height of obstacles. used for creating dynamic obstacles from points
+        max_prediction_time: 3.0  # [sec] create predicted path until this time
+        time_step: 0.5            # [sec] time step for each path step. used for creating dynamic obstacles from points or objects without path
+        points_interval: 0.1      # [m] divide obstacle points into groups with this interval, and detect only lateral nearest point. used only for Points method
+
+      # Parameter to prevent sudden stopping.
+      # If the deceleration jerk and acceleration exceed this value upon inserting a stop point,
+      # the deceleration will be moderated to stay under this value.
+      slow_down_limit:
+        enable: false
+        max_jerk: -0.7  # [m/s^3] minimum jerk deceleration for safe brake.
+        max_acc : -2.0  # [m/s^2] minimum accel deceleration for safe brake.
+
+      # Parameter to prevent abrupt stops caused by false positives in perception
+      ignore_momentary_detection:
+        enable: true
+        time_threshold: 0.5  # [sec] ignores detections that persist for less than this duration
+
+      # Typically used when the "detection_method" is set to ObjectWithoutPath or Points
+      # Approach if the ego has stopped in front of the obstacle for a certain period
+      # This avoids the issue of the ego continuously stopping in front of the obstacle
+      approaching:
+        enable: false
+        margin: 0.0           # [m] distance on how close ego approaches the obstacle
+        limit_vel_kmph: 3.0   # [km/h] limit velocity for approaching after stopping
+      # Parameters for state change when "approaching" is enabled
+        state:
+          stop_thresh: 0.01           # [m/s] threshold to decide if ego is stopping
+          stop_time_thresh: 3.0       # [sec] threshold for stopping time to transit to approaching state
+          disable_approach_dist: 3.0  # [m] end the approaching state if distance to the obstacle is longer than this value
+          keep_approach_duration: 1.0 # [sec] keep approach state for this duration to avoid chattering of state transition
+
+      # Only used when "detection_method" is set to Points
+      # Filters points by the detection area polygon to reduce computational cost
+      # The detection area is calculated based on the current velocity and acceleration and deceleration jerk constraints
+      detection_area:
+        margin_behind: 0.5 # [m] ahead margin for detection area length
+        margin_ahead: 1.0  # [m] behind margin for detection area length
+
+      # Only used when "detection_method" is set to Points
+      # Points in this area are detected even if it is in the no obstacle segmentation area
+      # The mandatory area is calculated based on the current velocity and acceleration and "decel_jerk" constraints
+      mandatory_area:
+        decel_jerk: -1.2 # [m/s^3] deceleration jerk for obstacles in this area

@@ -1,0 +1,41 @@
+<package format="3">
+  <name>autoware_operation_mode_transition_manager</name>
+  <version>0.45.0</version>
+  <description>The operation_mode_transition_manager package</description>
+  <maintainer email="takamasa.horibe@tier4.jp">Takamasa Horibe</maintainer>
+  <maintainer email="isamu.takagi@tier4.jp">Takagi, Isamu</maintainer>
+  <maintainer email="tomoya.kimura@tier4.jp">Tomoya Kimura</maintainer>
+  <maintainer email="takayuki.murooka@tier4.jp">Takayuki Murooka</maintainer>
+  <license>Apache License 2.0</license>
+
+  <author email="takamasa.horibe@tier4.jp">Takamasa Horibe</author>
+
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+  <build_depend>rosidl_default_generators</build_depend>
+
+  <depend>autoware_component_interface_specs_universe</depend>
+  <depend>autoware_component_interface_utils</depend>
+  <depend>autoware_control_msgs</depend>
+  <depend>autoware_motion_utils</depend>
+  <depend>autoware_utils</depend>
+  <depend>autoware_vehicle_info_utils</depend>
+  <depend>autoware_vehicle_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>std_srvs</depend>
+  <depend>tier4_control_msgs</depend>
+  <depend>tier4_system_msgs</depend>
+  <depend>tier4_vehicle_msgs</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>autoware_lint_common</test_depend>
+
+  <exec_depend>rosidl_default_runtime</exec_depend>
+  <member_of_group>rosidl_interface_packages</member_of_group>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

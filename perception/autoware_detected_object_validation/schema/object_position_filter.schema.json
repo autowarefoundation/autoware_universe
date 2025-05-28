@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Object Position Filter",
+  "type": "object",
+  "definitions": {
+    "object_position_filter_params": {
+      "type": "object",
+      "properties": {
+        "filter_target_label": {
+          "type": "object",
+          "properties": {
+            "UNKNOWN": {
+              "type": "boolean",
+              "default": true,
+              "description": "Filter for UNKNOWN label"
+            },
+            "CAR": {
+              "type": "boolean",
+              "default": false,
+              "description": "Filter for CAR label"
+            },
+            "TRUCK": {
+              "type": "boolean",
+              "default": false,
+              "description": "Filter for TRUCK label"
+            },
+            "BUS": {
+              "type": "boolean",
+              "default": false,
+              "description": "Filter for BUS label"
+            },
+            "TRAILER": {
+              "type": "boolean",
+              "default": false,
+              "description": "Filter for TRAILER label"
+            },
+            "MOTORCYCLE": {
+              "type": "boolean",
+              "default": false,
+              "description": "Filter for MOTORCYCLE label"
+            },
+            "BICYCLE": {
+              "type": "boolean",
+              "default": false,
+              "description": "Filter for BICYCLE label"
+            },
+            "PEDESTRIAN": {
+              "type": "boolean",
+              "default": false,
+              "description": "Filter for PEDESTRIAN label"
+            }
+          },
+          "required": [
+            "UNKNOWN",
+            "CAR",
+            "TRUCK",
+            "BUS",
+            "TRAILER",
+            "MOTORCYCLE",
+            "BICYCLE",
+            "PEDESTRIAN"
+          ]
+        },
+        "upper_bound_x": {
+          "type": "number",
+          "default": 100.0,
+          "description": "Upper bound for X coordinate"
+        },
+        "lower_bound_x": {
+          "type": "number",
+          "default": 0.0,
+          "description": "Lower bound for X coordinate"
+        },
+        "upper_bound_y": {
+          "type": "number",
+          "default": 10.0,
+          "description": "Upper bound for Y coordinate"
+        },
+        "lower_bound_y": {
+          "type": "number",
+          "default": -10.0,
+          "description": "Lower bound for Y coordinate"
+        }
+      },
+      "required": [
+        "filter_target_label",
+        "upper_bound_x",
+        "lower_bound_x",
+        "upper_bound_y",
+        "lower_bound_y"
+      ]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/object_position_filter_params"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}

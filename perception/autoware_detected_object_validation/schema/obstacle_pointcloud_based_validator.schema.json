@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Obstacle Pointcloud Based Validator",
+  "type": "object",
+  "definitions": {
+    "obstacle_pointcloud_based_validator": {
+      "type": "object",
+      "properties": {
+        "min_points_num": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "default": [10, 10, 10, 10, 10, 10, 10, 10],
+          "description": "The minimum number of obstacle point clouds in DetectedObjects"
+        },
+        "max_points_num": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "default": [10, 10, 10, 10, 10, 10, 10, 10],
+          "description": "The max number of obstacle point clouds in DetectedObjects"
+        },
+        "min_points_and_distance_ratio": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "default": [800, 800, 800, 800, 800, 800, 800, 800],
+          "description": "Threshold value of the number of point clouds per object when the distance from baselink is 1m, because the number of point clouds varies with the distance from baselink."
+        },
+        "validate_max_distance_m": {
+          "type": "number",
+          "default": 70.0,
+          "description": "The maximum distance from the baselink to the object to be validated"
+        },
+        "using_2d_validator": {
+          "type": "boolean",
+          "default": false,
+          "description": "The xy-plane projected (2D) obstacle point clouds will be used for validation"
+        },
+        "enable_debugger": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to create debug topics or not?"
+        }
+      },
+      "required": [
+        "min_points_num",
+        "max_points_num",
+        "min_points_and_distance_ratio",
+        "using_2d_validator",
+        "enable_debugger"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/obstacle_pointcloud_based_validator"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

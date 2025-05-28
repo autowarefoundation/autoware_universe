@@ -1,0 +1,102 @@
+# This file is automatically synced from:
+# https://github.com/autowarefoundation/sync-file-templates
+# To make changes, update the source repository and follow the guidelines in its README.
+
+site_name: Autoware Universe Documentation
+site_url: https://autowarefoundation.github.io/autoware_universe
+repo_url: https://github.com/autowarefoundation/autoware_universe
+edit_uri: https://github.com/autowarefoundation/autoware_universe/edit/main/
+docs_dir: .
+copyright: Copyright &copy; 2023 The Autoware Foundation
+
+theme:
+  name: material
+  features:
+    - navigation.expand
+    - navigation.indexes
+    - navigation.instant
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - navigation.footer
+  favicon: docs/assets/images/autoware-foundation.png
+  icon:
+    logo: fontawesome/solid/car
+    repo: fontawesome/brands/github
+  language: en
+  palette:
+    - scheme: default
+      primary: white
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    - scheme: slate
+      primary: grey
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+
+extra:
+  font:
+    text: Roboto
+    code: Roboto Mono
+  version:
+    provider: mike
+
+extra_css:
+  - docs/assets/css/extra.css
+  - https://use.fontawesome.com/releases/v5.15.4/css/all.css
+
+extra_javascript:
+  - docs/assets/js/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+plugins:
+  - awesome-pages
+  - exclude:
+      regex:
+        - ^(?!(.*/)?assets/).*\.(?!(.*\.)?md|(.*\.)?svg|(.*\.)?png|(.*\.)?gif|(.*\.)?jpg).*$
+        - ^(.*/)?[^.]*$
+  - macros:
+      module_name: mkdocs_macros
+  - mkdocs-video
+  - same-dir
+  # https://squidfunk.github.io/mkdocs-material/plugins/search/#config.separator
+  - search:
+      separator: '[\s\-_,:!=\[\]()"/]+|(?!\b)(?=[A-Z][a-z])|\.(?!\d)|&[lg]t;'
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - codehilite:
+      guess_lang: false
+  - fontawesome_markdown
+  - footnotes
+  - md_in_html
+  - mdx_math
+  - mdx_truly_sane_lists:
+      nested_indent: 2
+  - plantuml_markdown:
+      server: http://www.plantuml.com/plantuml
+      format: svg
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+  - pymdownx.highlight
+  - pymdownx.snippets:
+      auto_append:
+        - includes/abbreviations.md
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - toc:
+      permalink: "#"
+      toc_depth: 3

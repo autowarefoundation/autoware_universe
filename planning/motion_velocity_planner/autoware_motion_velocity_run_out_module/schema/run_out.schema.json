@@ -1,0 +1,300 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Run Out Module Configuration",
+  "description": "Schema for the parameters of the run_out module, which stops or slows down the ego vehicle before potential collisions",
+  "type": "object",
+  "definitions": {
+    "run_out": {
+      "type": "object",
+      "description": "Configuration for the run_out module.",
+      "properties": {
+        "collision": {
+          "type": "object",
+          "description": "collision parameters",
+          "properties": {
+            "time_margin": {
+              "type": "number",
+              "description": "[s] extra time margin used to determine collisions",
+              "default": 0.5
+            },
+            "time_overlap_tolerance": {
+              "type": "number",
+              "description": "[s] when calculating overlap time intervals, intervals are grouped if they are separated by less than this tolerance value",
+              "default": 0.1
+            },
+            "same_direction_angle_threshold": {
+              "type": "number",
+              "description": "[rad] threshold to determine if a collision is going in the same direction as the ego trajectory",
+              "default": 0.5
+            },
+            "opposite_direction_angle_threshold": {
+              "type": "number",
+              "description": "[rad] threshold around pi to determine if a collision is going in a direction opposite to the ego trajectory",
+              "default": 0.5
+            },
+            "ignore_conditions": {
+              "description": "conditions to ignore some collisions",
+              "type": "object",
+              "properties": {
+                "if_ego_arrives_first": {
+                  "type": "object",
+                  "description": "condition to ignore collisions if ego arrives first",
+                  "properties": {
+                    "enable": {
+                      "type": "boolean",
+                      "description": "enable the condition to ignore collisions if ego arrives first",
+                      "default": true
+                    },
+                    "margin": {
+                      "type": "object",
+                      "description": "mapping to calculate the time margin needed to decide if ego is first",
+                      "properties": {
+                        "ego_enter_times": {
+                          "type": "array",
+                          "description": "[s] predicted times when ego starts overlapping the path of the object",
+                          "default": "[0.0, 3.0]"
+                        },
+                        "time_margins": {
+                          "type": "array",
+                          "description": "[s] margin values used such that ego needs to enter the overlap before the object with this much margin to decide to ignore the collision",
+                          "default": "[0.0, 6.0]"
+                        }
+                      }
+                    },
+                    "max_overlap_duration": {
+                      "type": "number",
+                      "description": "[s] the collision is not ignored if ego is predicted to stay on the object's path for longer than this duration",
+                      "default": 2.0
+                    }
+                  }
+                },
+                "if_ego_arrives_first_and_cannot_stop": {
+                  "description": "collision where ego arrives first (margins not considered) and cannot stop before the collision",
+                  "type": "object",
+                  "properties": {
+                    "enable": {
+                      "type": "boolean",
+                      "description": "enable the condition to ignore collisions if ego arrives first and cannot stop",
+                      "default": true
+                    },
+                    "deceleration_limit": {
+                      "type": "number",
+                      "description": "[m/s²] deceleration used to determine if ego can stop before a collision",
+                      "default": 5.0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "slowdown": {
+          "description": "comfortable slowdown when detecting a collision",
+          "type": "object",
+          "properties": {
+            "on_time_buffer": {
+              "type": "number",
+              "description": "[s] successive collision detection time required to start the slowdown decision",
+              "default": 0.1
+            },
+            "off_time_buffer": {
+              "type": "number",
+              "description": "[s] successive non-collision detection time required to remove the slowdown decision",
+              "default": 0.5
+            },
+            "distance_buffer": {
+              "type": "number",
+              "description": "[m] longitudinal distance between the collision and the slowdown positions",
+              "default": 2.0
+            },
+            "deceleration_limit": {
+              "type": "number",
+              "description": "[m/s²] maximum deceleration that can be applied by the preventive slowdown",
+              "default": 4.0
+            }
+          }
+        },
+        "stop": {
+          "description": "emergency stop when detecting a collision",
+          "type": "object",
+          "properties": {
+            "on_time_buffer": {
+              "type": "number",
+              "description": "[s] successive collision detection time required to start the stopping decision",
+              "default": 0.5
+            },
+            "off_time_buffer": {
+              "type": "number",
+              "description": "[s] successive non-collision detection time required to remove a stopping decision",
+              "default": 0.5
+            },
+            "distance_buffer": {
+              "type": "number",
+              "description": "[m] longitudinal safety distance to keep between ego and the collision position",
+              "default": 2.0
+            },
+            "deceleration_limit": {
+              "type": "number",
+              "description": "[m/s²] if a stop causes a deceleration higher than this limit, an ERROR diagnostic is published",
+              "default": 5.0
+            },
+            "keep_condition": {
+              "description": "keep the stop decision if we still find any collision with the object within some time+distance range",
+              "type": "object",
+              "properties": {
+                "time": {
+                  "type": "number",
+                  "description": "[s] time along the ego trajectory",
+                  "default": 5.0
+                },
+                "distance": {
+                  "type": "number",
+                  "description": "[m] distance along the ego trajectory",
+                  "default": 5.0
+                }
+              }
+            }
+          }
+        },
+        "ego": {
+          "description": "additional margins to calculate the ego footprint used for collision detection",
+          "type": "object",
+          "properties": {
+            "lateral_margin": {
+              "type": "number",
+              "description": "[m] extra lateral margin",
+              "default": 0.0
+            },
+            "longitudinal_margin": {
+              "type": "number",
+              "description": "[m] extra longitudinal margin",
+              "default": 0.0
+            }
+          }
+        },
+        "objects": {
+          "type": "object",
+          "description": "object parameters",
+          "properties": {
+            "target_labels": {
+              "type": "array",
+              "description": "target labels",
+              "default": "['PEDESTRIAN', 'BICYCLE', 'MOTORCYCLE']"
+            },
+            "DEFAULT": {
+              "description": "default object parameters",
+              "type": "object",
+              "properties": {
+                "ignore": {
+                  "type": "object",
+                  "description": "option to ignore some objects",
+                  "properties": {
+                    "if_stopped": {
+                      "type": "boolean",
+                      "description": "if true, object with a velocity bellow the threshold are ignored",
+                      "default": false
+                    },
+                    "stopped_velocity_threshold": {
+                      "type": "number",
+                      "description": "[m/s] velocity threshold to decide if an object is stopped",
+                      "default": 0.5
+                    },
+                    "if_on_ego_trajectory": {
+                      "type": "boolean",
+                      "description": "if true, object located on the ego trajectory footprint are ignored",
+                      "default": true
+                    },
+                    "if_behind_ego": {
+                      "type": "boolean",
+                      "description": "if true, objects located behind the ego vehicles are ignored",
+                      "default": true
+                    },
+                    "polygon_types": {
+                      "type": "array",
+                      "description": "types of polygons in the vector map used to ignore objects",
+                      "default": "['NONE']"
+                    },
+                    "lanelet_subtypes": {
+                      "type": "array",
+                      "description": "subtypes of lanelets in the vector map used to ignore objects",
+                      "default": "['NONE']"
+                    }
+                  },
+                  "ignore_collisions": {
+                    "description": "option to ignore some collisions with the object",
+                    "type": "object",
+                    "properties": {
+                      "polygon_types": {
+                        "type": "array",
+                        "description": "types of polygons in the vector map where collisions are ignored",
+                        "default": "['NONE']"
+                      },
+                      "lanelet_subtypes": {
+                        "type": "array",
+                        "description": "subtypes of lanelets in the vector map used where collisions are ignored",
+                        "default": "['NONE']"
+                      }
+                    }
+                  },
+                  "confidence_filtering": {
+                    "type": "object",
+                    "properties": {
+                      "threshold": {
+                        "type": "number",
+                        "description": "only use predicted paths with a higher confidence value than this threshold",
+                        "default": 0.0
+                      },
+                      "only_use_highest": {
+                        "type": "boolean",
+                        "description": "if true, only the path(s) with the highest confidence are used",
+                        "default": true
+                      }
+                    }
+                  },
+                  "cut_predicted_paths": {
+                    "description": "to cut predicted paths of dynamic objects",
+                    "type": "object",
+                    "properties": {
+                      "if_crossing_ego_from_behind": {
+                        "type": "boolean",
+                        "description": "if true, cut after crossing the ego vehicle",
+                        "default": true
+                      },
+                      "polygon_types": {
+                        "type": "array",
+                        "description": "types of polygons in the vector map used to cut predicted paths",
+                        "default": "['NONE']"
+                      },
+                      "linestring_types": {
+                        "type": "array",
+                        "description": "types of linestrings in the vector map used to cut predicted paths",
+                        "default": "['guard_rail']"
+                      },
+                      "lanelet_subtypes": {
+                        "type": "array",
+                        "description": "subtypes of lanelets in the vector map used to cut predicted paths",
+                        "default": "['NONE']"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "debug": {
+          "type": "object",
+          "properties": {
+            "object_label": {
+              "type": "string",
+              "description": "debug markers specific to each object classification labels will only be published for this one",
+              "default": "PEDESTRIAN"
+            }
+          }
+        }
+      },
+      "required": ["collision", "slowdown", "stop", "ego", "objects", "debug"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,20 @@
+/**:
+  ros__parameters:
+    debug_mode: false
+    rosbag_length: 10.0
+    maximum_queue_size: 5
+    timeout_sec: 0.2
+    is_motion_compensated: true
+    publish_synchronized_pointcloud: true
+    keep_input_frame_in_synchronized_pointcloud: true
+    publish_previous_but_late_pointcloud: false
+    synchronized_pointcloud_postfix: pointcloud
+    input_twist_topic_type: twist
+    input_topics: [
+                    "/sensing/lidar/right/pointcloud_before_sync",
+                    "/sensing/lidar/top/pointcloud_before_sync",
+                    "/sensing/lidar/left/pointcloud_before_sync",
+                ]
+    output_frame: base_link
+    matching_strategy:
+      type: naive

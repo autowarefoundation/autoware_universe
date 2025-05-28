@@ -1,0 +1,27 @@
+<launch>
+  <arg name="config_file" default="$(find-pkg-share autoware_pose_initializer)/config/pose_initializer.param.yaml"/>
+  <arg name="ndt_enabled"/>
+  <arg name="gnss_enabled"/>
+  <arg name="ekf_enabled"/>
+  <arg name="yabloc_enabled"/>
+  <arg name="stop_check_enabled"/>
+
+  <arg name="sub_gnss_pose_cov" default="sub_gnss_pose_cov"/>
+  <arg name="gnss_initial_pose_auto_fix_target" default="pointcloud_map"/>
+
+  <node pkg="autoware_pose_initializer" exec="autoware_pose_initializer_node" output="both">
+    <param from="$(var config_file)" allow_substs="true"/>
+    <remap from="yabloc_align" to="/localization/pose_estimator/yabloc/initializer/yabloc_align_srv"/>
+    <remap from="ndt_align" to="/localization/pose_estimator/ndt_align_srv"/>
+    <remap from="stop_check_twist" to="/sensing/vehicle_velocity_converter/twist_with_covariance"/>
+    <remap from="gnss_pose_cov" to="$(var sub_gnss_pose_cov)"/>
+    <remap from="pose_reset" to="/initialpose3d"/>
+    <remap from="ekf_trigger_node" to="/localization/pose_twist_fusion_filter/trigger_node"/>
+    <remap from="ndt_trigger_node" to="/localization/pose_estimator/trigger_node"/>
+    <param name="map_height_fitter.map_loader_name" value="/map/pointcloud_map_loader"/>
+    <param name="map_height_fitter.target" value="$(var gnss_initial_pose_auto_fix_target)"/>
+    <remap from="~/pointcloud_map" to="/map/pointcloud_map"/>
+    <remap from="~/partial_map_load" to="/map/get_partial_pointcloud_map"/>
+    <remap from="~/vector_map" to="/map/vector_map"/>
+  </node>
+</launch>

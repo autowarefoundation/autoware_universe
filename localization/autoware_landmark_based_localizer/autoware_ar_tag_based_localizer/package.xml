@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autoware_ar_tag_based_localizer</name>
+  <version>0.45.0</version>
+  <description>The autoware_ar_tag_based_localizer package</description>
+  <maintainer email="shintaro.sakoda@tier4.jp">Shintaro Sakoda</maintainer>
+  <maintainer email="masahiro.sakamoto@tier4.jp">Masahiro Sakamoto</maintainer>
+  <maintainer email="yamato.ando@tier4.jp">Yamato Ando</maintainer>
+  <maintainer email="kento.yabuuchi.2@tier4.jp">Kento Yabuuchi</maintainer>
+  <maintainer email="anh.nguyen.2@tier4.jp">NGUYEN Viet Anh</maintainer>
+  <maintainer email="taiki.yamada@tier4.jp">Taiki Yamada</maintainer>
+  <maintainer email="ryu.yamamoto@tier4.jp">Ryu Yamamoto</maintainer>
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+
+  <test_depend>ament_index_cpp</test_depend>
+  <depend>aruco</depend>
+  <depend>autoware_landmark_manager</depend>
+  <depend>autoware_localization_util</depend>
+  <depend>cv_bridge</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>tf2_eigen</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>visualization_msgs</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

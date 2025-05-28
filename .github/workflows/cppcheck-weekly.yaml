@@ -1,0 +1,47 @@
+name: cppcheck-weekly
+
+on:
+  schedule:
+    - cron: 0 0 * * 1
+  workflow_dispatch:
+
+jobs:
+  cppcheck-weekly:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # cppcheck from apt does not yet support --check-level args, and thus install from snap
+      - name: Install Cppcheck from snap
+        run: |
+          sudo snap install cppcheck
+
+      # cspell: ignore suppr
+      - name: Run Cppcheck on all files
+        continue-on-error: true
+        id: cppcheck
+        run: |
+          cppcheck --enable=all --inconclusive --check-level=exhaustive -D'PLUGINLIB_EXPORT_CLASS(class_type, base_class)=' -Dslots= -DQ_SLOTS= --suppress=*:*/test/* --error-exitcode=1 --xml --inline-suppr . 2> cppcheck-report.xml
+        shell: bash
+
+      - name: Count errors by error ID and severity
+        run: |
+          #!/bin/bash
+          temp_file=$(mktemp)
+          grep -oP '(?<=id=")[^"]+" severity="[^"]+' cppcheck-report.xml | sed 's/" severity="/,/g' > "$temp_file"
+          echo "Error counts by error ID and severity:"
+          sort "$temp_file" | uniq -c
+          rm "$temp_file"
+        shell: bash
+
+      - name: Upload Cppcheck report
+        uses: actions/upload-artifact@v4
+        with:
+          name: cppcheck-report
+          path: cppcheck-report.xml
+
+      - name: Fail the job if Cppcheck failed
+        if: steps.cppcheck.outcome == 'failure'
+        run: exit 1

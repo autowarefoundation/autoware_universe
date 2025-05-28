@@ -1,0 +1,38 @@
+<launch>
+  <!-- AD API options -->
+  <arg name="launch_deprecated_api" default="false"/>
+  <arg name="launch_default_adapi" default="true"/>
+  <arg name="launch_rviz_adaptors" default="true"/>
+
+  <!-- rosbridge options -->
+  <arg name="rosbridge_enabled" default="false"/>
+  <arg name="rosbridge_respawn" default="true"/>
+  <arg name="rosbridge_max_message_size" default="10000000"/>
+
+  <!-- Deprecated API -->
+  <group if="$(var launch_deprecated_api)">
+    <include file="$(find-pkg-share tier4_autoware_api_launch)/launch/deprecated_api.launch.xml"/>
+  </group>
+
+  <!-- AD API -->
+  <group>
+    <include file="$(find-pkg-share autoware_default_adapi)/launch/default_adapi.launch.py" if="$(var launch_default_adapi)"/>
+    <include file="$(find-pkg-share autoware_adapi_adaptors)/launch/rviz_adaptors.launch.xml" if="$(var launch_rviz_adaptors)"/>
+  </group>
+
+  <!-- RTC controller -->
+  <group>
+    <push-ros-namespace namespace="autoware_api/external/rtc_controller"/>
+    <node_container pkg="rclcpp_components" exec="component_container_mt" name="container" namespace="" ros_args="--log-level autoware_api.external.rtc_controller.container:=warn">
+      <composable_node pkg="autoware_iv_external_api_adaptor" plugin="external_api::RTCController" name="node"/>
+    </node_container>
+  </group>
+
+  <!-- rosbridge -->
+  <group if="$(var rosbridge_enabled)">
+    <include file="$(find-pkg-share rosbridge_server)/launch/rosbridge_websocket_launch.xml">
+      <arg name="respawn" value="$(var rosbridge_respawn)"/>
+      <arg name="max_message_size" value="$(var rosbridge_max_message_size)"/>
+    </include>
+  </group>
+</launch>

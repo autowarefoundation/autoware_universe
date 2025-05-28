@@ -1,0 +1,34 @@
+/**:
+  ros__parameters:
+    update_rate: 10.0
+    system_emergency_heartbeat_timeout: 0.5
+    use_emergency_handling: true
+    check_external_emergency_heartbeat: $(var check_external_emergency_heartbeat)
+    enable_cmd_limit_filter: true
+    filter_activated_count_threshold: 5
+    filter_activated_velocity_threshold: 1.0
+    external_emergency_stop_heartbeat_timeout: 0.0
+    stop_hold_acceleration: -1.5
+    emergency_acceleration: -2.4
+    moderate_stop_service_acceleration: -1.5
+    stop_check_duration: 1.0
+    nominal:
+      vel_lim: 25.0
+      reference_speed_points: [0.1, 0.3, 20.0, 30.0]
+      steer_lim: [1.0, 1.0, 1.0, 0.8]
+      steer_rate_lim: [1.0, 1.0, 1.0, 0.8]
+      lon_acc_lim: [5.0, 5.0, 5.0, 4.0]
+      lon_jerk_lim: [80.0, 5.0, 5.0, 4.0] # The first element is required for quick pedal changes when stopping and starting.
+      lat_acc_lim: [5.0, 5.0, 5.0, 4.0]
+      lat_jerk_lim: [7.0, 7.0, 7.0, 6.0]
+      actual_steer_diff_lim: [1.0, 1.0, 1.0, 0.8]
+    on_transition:
+      vel_lim: 50.0
+      reference_speed_points: [20.0, 30.0]
+      steer_lim: [1.0, 0.8]
+      steer_rate_lim: [1.0, 0.8]
+      lon_acc_lim: [1.0, 0.9]
+      lon_jerk_lim: [0.5, 0.4]
+      lat_acc_lim: [2.0, 1.8]
+      lat_jerk_lim: [7.0, 6.0]
+      actual_steer_diff_lim: [1.0, 0.8]

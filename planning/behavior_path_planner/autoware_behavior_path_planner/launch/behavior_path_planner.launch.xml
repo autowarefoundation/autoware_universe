@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- common -->
+  <arg name="common_param_path"/>
+  <arg name="vehicle_param_file"/>
+  <arg name="nearest_search_param_path"/>
+
+  <!-- launch module -->
+  <arg name="behavior_path_planner_launch_modules"/>
+
+  <!-- module config path -->
+  <arg name="behavior_path_config_path"/>
+  <arg name="behavior_path_planner_common_param_path"/>
+  <arg name="behavior_path_planner_scene_module_manager_param_path"/>
+  <arg name="behavior_path_planner_side_shift_module_param_path"/>
+  <arg name="behavior_path_planner_avoidance_module_param_path"/>
+  <arg name="behavior_path_planner_avoidance_by_lc_module_param_path"/>
+  <arg name="behavior_path_planner_dynamic_avoidance_module_param_path"/>
+  <arg name="behavior_path_planner_lane_change_module_param_path"/>
+  <arg name="behavior_path_planner_goal_planner_module_param_path"/>
+  <arg name="behavior_path_planner_start_planner_module_param_path"/>
+  <arg name="behavior_path_planner_bidirectional_traffic_module_param_path"/>
+  <arg name="behavior_path_planner_sampling_planner_module_param_path"/>
+  <arg name="behavior_path_planner_drivable_area_expansion_param_path"/>
+
+  <node pkg="behavior_path_planner" exec="behavior_path_planner" name="behavior_path_planner" output="screen">
+    <!-- topic remap -->
+    <remap from="~/input/route" to="/planning/scenario_planning/scenario"/>
+    <remap from="~/input/vector_map" to="/map/vector_map"/>
+    <remap from="~/input/perception" to="/perception/object_recognition/objects"/>
+    <remap from="~/input/occupancy_grid_map" to="/perception/occupancy_grid_map/map"/>
+    <remap from="~/input/costmap" to="/planning/scenario_planning/parking/costmap_generator/occupancy_grid"/>
+    <remap from="~/input/traffic_signals" to="/perception/traffic_light_recognition/traffic_signals"/>
+    <remap from="~/input/odometry" to="/localization/kinematic_state"/>
+    <remap from="~/input/accel" to="/localization/acceleration"/>
+    <remap from="~/input/scenario" to="/planning/scenario_planning/scenario"/>
+    <remap from="~/output/path" to="path_with_lane_id"/>
+    <remap from="~/output/turn_indicators_cmd" to="/planning/turn_indicators_cmd"/>
+    <remap from="~/output/hazard_lights_cmd" to="/planning/behavior_path_planner/hazard_lights_cmd"/>
+    <remap from="~/output/modified_goal" to="/planning/scenario_planning/modified_goal"/>
+    <!-- params -->
+    <param name="launch_modules" value="$(var behavior_path_planner_launch_modules)"/>
+    <!-- load config -->
+    <param from="$(var common_param_path)"/>
+    <param from="$(var vehicle_param_file)"/>
+    <param from="$(var nearest_search_param_path)"/>
+    <param from="$(var behavior_path_planner_common_param_path)"/>
+    <param from="$(var behavior_path_planner_scene_module_manager_param_path)"/>
+    <param from="$(var behavior_path_planner_side_shift_module_param_path)"/>
+    <param from="$(var behavior_path_planner_avoidance_module_param_path)"/>
+    <param from="$(var behavior_path_planner_avoidance_by_lc_module_param_path)"/>
+    <param from="$(var behavior_path_planner_dynamic_avoidance_module_param_path)"/>
+    <param from="$(var behavior_path_planner_sampling_planner_module_param_path)"/>
+    <param from="$(var behavior_path_planner_lane_change_module_param_path)"/>
+    <param from="$(var behavior_path_planner_goal_planner_module_param_path)"/>
+    <param from="$(var behavior_path_planner_start_planner_module_param_path)"/>
+    <param from="$(var behavior_path_planner_bidirectional_traffic_module_param_path)"/>
+    <param from="$(var behavior_path_planner_drivable_area_expansion_param_path)"/>
+  </node>
+</launch>

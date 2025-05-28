@@ -1,0 +1,27 @@
+<!--
+  Copyright 2023 UCI SORA Lab
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+      http://www.apache.org/licenses/LICENSE-2.0
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<launch>
+  <arg name="input/vector_map" default="/map/vector_map"/>
+  <arg name="input/route" default="/planning/mission_planning/route"/>
+  <arg name="input/traffic_signals" default="judged/traffic_signals"/>
+  <arg name="output/traffic_signals" default="traffic_signals"/>
+  <arg name="param_path" default="$(find-pkg-share autoware_crosswalk_traffic_light_estimator)/config/crosswalk_traffic_light_estimator.param.yaml"/>
+
+  <node pkg="autoware_crosswalk_traffic_light_estimator" exec="crosswalk_traffic_light_estimator_node" name="crosswalk_traffic_light_estimator" output="screen">
+    <remap from="~/input/vector_map" to="$(var input/vector_map)"/>
+    <remap from="~/input/route" to="$(var input/route)"/>
+    <remap from="~/input/classified/traffic_signals" to="$(var input/traffic_signals)"/>
+    <remap from="~/output/traffic_signals" to="$(var output/traffic_signals)"/>
+    <param from="$(var param_path)"/>
+  </node>
+</launch>

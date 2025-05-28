@@ -1,0 +1,41 @@
+name: PR-Agent
+
+on:
+  pull_request:
+    types: [opened, labeled, unlabeled, synchronize]
+  issue_comment:
+
+jobs:
+  prevent-no-label-execution-pr-agent:
+    uses: autowarefoundation/autoware-github-actions/.github/workflows/prevent-no-label-execution.yaml@v1
+    with:
+      label: tag:pr-agent
+  pr_agent_job:
+    needs: prevent-no-label-execution-pr-agent
+    if: ${{ needs.prevent-no-label-execution-pr-agent.outputs.run == 'true' }}
+    runs-on: ubuntu-22.04
+    permissions:
+      issues: write
+      pull-requests: write
+      contents: read
+    name: Run pr agent on every pull request, respond to user comments
+    steps:
+      - name: PR Agent action step
+        id: pragent
+        uses: Codium-ai/pr-agent@main
+        env:
+          OPENAI_KEY: ${{ secrets.OPENAI_KEY_PR_AGENT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          github_action_config.auto_review: false
+          github_action_config.auto_describe: false
+          github_action_config.auto_improve: false
+          # https://github.com/Codium-ai/pr-agent/blob/main/pr_agent/settings/configuration.toml
+          pr_description.publish_labels: false
+          config.model: gpt-4o
+          config.model_turbo: gpt-4o
+          config.max_model_tokens: 64000
+          pr_code_suggestions.max_context_tokens: 12000
+          # cSpell:ignore commitable
+          pr_code_suggestions.commitable_code_suggestions: true
+          pr_reviewer.enable_review_labels_effort: false
+          pr_reviewer.enable_review_labels_security: false

@@ -1,0 +1,95 @@
+/**:
+  ros__parameters:
+    avoidance_by_lane_change:
+      execute_object_longitudinal_margin: 80.0
+      execute_only_when_lane_change_finish_before_object: false
+
+      # avoidance is performed for the object type with true
+      target_object:
+        car:
+          th_moving_speed: 1.0                         # [m/s]
+          th_moving_time: 1.0                          # [s]
+          max_expand_ratio: 0.0                        # [-]
+          envelope_buffer_margin: 0.3                  # [m]
+          lateral_margin:
+            soft_margin: 0.0                           # [m]
+            hard_margin: 0.0                           # [m]
+            hard_margin_for_parked_vehicle: 0.0        # [m]
+        truck:
+          th_moving_speed: 1.0                         # 3.6km/h
+          th_moving_time: 1.0
+          max_expand_ratio: 0.0
+          envelope_buffer_margin: 0.3
+          lateral_margin:
+            soft_margin: 0.0                           # [m]
+            hard_margin: 0.0                           # [m]
+            hard_margin_for_parked_vehicle: 0.0        # [m]
+        bus:
+          th_moving_speed: 1.0                         # 3.6km/h
+          th_moving_time: 1.0
+          max_expand_ratio: 0.0
+          envelope_buffer_margin: 0.3
+          lateral_margin:
+            soft_margin: 0.0                           # [m]
+            hard_margin: 0.0                           # [m]
+            hard_margin_for_parked_vehicle: 0.0        # [m]
+        trailer:
+          th_moving_speed: 1.0                         # 3.6km/h
+          th_moving_time: 1.0
+          max_expand_ratio: 0.0
+          envelope_buffer_margin: 0.3
+          lateral_margin:
+            soft_margin: 0.0                           # [m]
+            hard_margin: 0.0                           # [m]
+            hard_margin_for_parked_vehicle: 0.0        # [m]
+        unknown:
+          th_moving_speed: 0.28                        # 1.0km/h
+          th_moving_time: 1.0
+          max_expand_ratio: 0.0
+          envelope_buffer_margin: 0.3
+          lateral_margin:
+            soft_margin: 0.0                           # [m]
+            hard_margin: 0.0                           # [m]
+            hard_margin_for_parked_vehicle: 0.0        # [m]
+        bicycle:
+          th_moving_speed: 0.28                        # 1.0km/h
+          th_moving_time: 1.0
+          max_expand_ratio: 0.0
+          envelope_buffer_margin: 0.8
+          lateral_margin:
+            soft_margin: 0.0                           # [m]
+            hard_margin: 1.0                           # [m]
+            hard_margin_for_parked_vehicle: 1.0        # [m]
+        motorcycle:
+          th_moving_speed: 1.0                         # 3.6km/h
+          th_moving_time: 1.0
+          max_expand_ratio: 0.0
+          envelope_buffer_margin: 0.8
+          lateral_margin:
+            soft_margin: 0.0                           # [m]
+            hard_margin: 1.0                           # [m]
+            hard_margin_for_parked_vehicle: 1.0        # [m]
+        pedestrian:
+          th_moving_speed: 0.28                        # 1.0km/h
+          th_moving_time: 1.0
+          max_expand_ratio: 0.0
+          envelope_buffer_margin: 0.8
+          lateral_margin:
+            soft_margin: 0.0                           # [m]
+            hard_margin: 1.0                           # [m]
+            hard_margin_for_parked_vehicle: 1.0        # [m]
+        lower_distance_for_polygon_expansion: 0.0      # [m]
+        upper_distance_for_polygon_expansion: 1.0      # [m]
+
+      # For target object filtering
+      target_filtering:
+        # avoidance target type
+        target_type:
+          car: true                                    # [-]
+          truck: true                                  # [-]
+          bus: true                                    # [-]
+          trailer: true                                # [-]
+          unknown: true                                # [-]
+          bicycle: false                               # [-]
+          motorcycle: false                            # [-]
+          pedestrian: false                            # [-]

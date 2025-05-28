@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<launch>
+  <!--default parameter follows node setting -->
+  <arg name="input/obstacle_pointcloud" default="concatenated/pointcloud"/>
+  <arg name="input/raw_pointcloud" default="no_ground/oneshot/pointcloud"/>
+  <arg name="output" default="/perception/occupancy_grid_map/map"/>
+  <arg name="use_intra_process" default="false"/>
+  <arg name="use_multithread" default="false"/>
+  <arg name="pointcloud_container_name" default="pointcloud_container"/>
+  <arg name="occupancy_grid_map_method" description="options: pointcloud_based_occupancy_grid_map, laserscan_based_occupancy_grid_map, multi_lidar_pointcloud_based_occupancy_grid_map"/>
+  <arg name="occupancy_grid_map_param_path"/>
+  <arg name="occupancy_grid_map_updater" description="options: binary_bayes_filter"/>
+  <arg name="occupancy_grid_map_updater_param_path"/>
+  <arg name="input_obstacle_pointcloud" default="false" description="subscribe obstacle pointcloud"/>
+  <arg name="input_obstacle_and_raw_pointcloud" default="true" description="subscribe both obstacle and raw pointcloud"/>
+
+  <!--pointcloud based method-->
+  <group if="$(eval &quot;'$(var occupancy_grid_map_method)'=='pointcloud_based_occupancy_grid_map'&quot;)">
+    <include file="$(find-pkg-share autoware_probabilistic_occupancy_grid_map)/launch/pointcloud_based_occupancy_grid_map.launch.py">
+      <arg name="input/obstacle_pointcloud" value="$(var input/obstacle_pointcloud)"/>
+      <arg name="input/raw_pointcloud" value="$(var input/raw_pointcloud)"/>
+      <arg name="output" value="$(var output)"/>
+      <arg name="use_intra_process" value="$(var use_intra_process)"/>
+      <arg name="use_multithread" value="$(var use_multithread)"/>
+      <arg name="use_pointcloud_container" value="true"/>
+      <arg name="pointcloud_container_name" value="$(var pointcloud_container_name)"/>
+      <arg name="param_file" value="$(var occupancy_grid_map_param_path)"/>
+      <arg name="updater_type" value="$(var occupancy_grid_map_updater)"/>
+      <arg name="updater_param_file" value="$(var occupancy_grid_map_updater_param_path)"/>
+    </include>
+  </group>
+
+  <!--laserscan based method-->
+  <group if="$(eval &quot;'$(var occupancy_grid_map_method)'=='laserscan_based_occupancy_grid_map'&quot;)">
+    <include file="$(find-pkg-share autoware_probabilistic_occupancy_grid_map)/launch/laserscan_based_occupancy_grid_map.launch.py">
+      <arg name="input/obstacle_pointcloud" value="$(var input/obstacle_pointcloud)"/>
+      <arg name="input/raw_pointcloud" value="$(var input/raw_pointcloud)"/>
+      <arg name="output" value="$(var output)"/>
+      <arg name="use_intra_process" value="$(var use_intra_process)"/>
+      <arg name="use_multithread" value="$(var use_multithread)"/>
+      <arg name="use_pointcloud_container" value="true"/>
+      <arg name="pointcloud_container_name" value="$(var pointcloud_container_name)"/>
+      <arg name="param_file" value="$(var occupancy_grid_map_param_path)"/>
+      <arg name="updater_type" value="$(var occupancy_grid_map_updater)"/>
+      <arg name="updater_param_file" value="$(var occupancy_grid_map_updater_param_path)"/>
+      <arg name="input_obstacle_pointcloud" value="$(var input_obstacle_pointcloud)"/>
+      <arg name="input_obstacle_and_raw_pointcloud" value="$(var input_obstacle_and_raw_pointcloud)"/>
+    </include>
+  </group>
+
+  <!--multi lidar pointclouds based method-->
+  <group if="$(eval &quot;'$(var occupancy_grid_map_method)'=='multi_lidar_pointcloud_based_occupancy_grid_map'&quot;)">
+    <include file="$(find-pkg-share autoware_probabilistic_occupancy_grid_map)/launch/multi_lidar_pointcloud_based_occupancy_grid_map.launch.py">
+      <arg name="input/obstacle_pointcloud" value="$(var input/obstacle_pointcloud)"/>
+      <arg name="output" value="/perception/occupancy_grid_map/map"/>
+      <arg name="use_intra_process" value="true"/>
+      <arg name="use_multithread" value="true"/>
+      <arg name="use_pointcloud_container" value="true"/>
+      <arg name="pointcloud_container_name" value="$(var pointcloud_container_name)"/>
+      <arg name="multi_lidar_fusion_config_file" value="$(var occupancy_grid_map_param_path)"/>
+      <arg name="updater_type" value="$(var occupancy_grid_map_updater)"/>
+      <arg name="updater_param_file" value="$(var occupancy_grid_map_updater_param_path)"/>
+    </include>
+  </group>
+</launch>

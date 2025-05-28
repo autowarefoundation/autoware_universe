@@ -1,0 +1,245 @@
+# https://docs.codecov.com/docs/commit-status#project-status
+
+coverage:
+  status:
+    project:
+      default:
+        target: 0% # Make CI always succeed
+        threshold: 100% # Make CI always succeed
+    patch:
+      default:
+        target: 0% # Make CI always succeed
+        threshold: 100% # Make CI always succeed
+
+comment:
+  show_carryforward_flags: true
+
+flag_management:
+  default_rules:
+    carryforward: true
+    statuses:
+      - name_prefix: project-
+        type: project
+        target: 0% # Make CI always succeed
+        threshold: 100% # Make CI always succeed
+      - name_prefix: patch-
+        type: patch
+        target: 0% # Make CI always succeed
+        threshold: 100% # Make CI always succeed
+
+ignore:
+  - "**/test/*"
+  - "**/test/**/*"
+  - "**/debug.*"
+  - tools/**
+
+component_management:
+  individual_components:
+    # each entire component
+    - component_id: common-packages
+      name: Common Packages
+      paths:
+        - common/**/**
+
+    - component_id: control-packages
+      name: Control Packages
+      paths:
+        - control/**/**
+
+    - component_id: evaluator-packages
+      name: Evaluator Packages
+      paths:
+        - evaluator/**/**
+
+    - component_id: launch-packages
+      name: Launch Packages
+      paths:
+        - launch/**/**
+
+    - component_id: localization-packages
+      name: Localization Packages
+      paths:
+        - localization/**/**
+
+    - component_id: map-packages
+      name: map Packages
+      paths:
+        - map/**/**
+
+    - component_id: perception-packages
+      name: Perception Packages
+      paths:
+        - perception/**/**
+
+    - component_id: planning-packages
+      name: Planning Packages
+      paths:
+        - planning/**/**
+
+    - component_id: sensing-packages
+      name: Sensing Packages
+      paths:
+        - sensing/**/**
+
+    - component_id: simulator-packages
+      name: Simulator Packages
+      paths:
+        - simulator/**/**
+
+    - component_id: system-packages
+      name: System Packages
+      paths:
+        - system/**/**
+
+    - component_id: vehicle-packages
+      name: Vehicle Packages
+      paths:
+        - vehicle/**/**
+
+    # TIER IV maintained packages
+    - component_id: control-tier-iv-maintained-packages
+      name: Control TIER IV Maintained Packages
+      paths:
+        - control/autoware_autonomous_emergency_braking/**
+        - control/autoware_control_validator/**
+        - control/autoware_external_cmd_selector/**
+        # - control/autoware_joy_controller/**
+        - control/autoware_lane_departure_checker/**
+        - control/autoware_mpc_lateral_controller/**
+        - control/autoware_operation_mode_transition_manager/**
+        - control/autoware_pid_longitudinal_controller/**
+        # - control/autoware_pure_pursuit/**
+        - control/autoware_shift_decider/**
+        # - control/autoware_smart_mpc_trajectory_follower/**
+        - control/autoware_trajectory_follower_base/**
+        - control/autoware_trajectory_follower_node/**
+        - control/autoware_vehicle_cmd_gate/**
+        # - control/control_performance_analysis/**
+        - control/obstacle_collision_checker/**
+        # - control/predicted_path_checker/**
+        - control/autoware_collision_detector/**
+
+    - component_id: localization-tier-iv-maintained-packages
+      name: Localization TIER IV Maintained Packages
+      paths:
+        - localization/autoware_gyro_odometer/**
+        - localization/autoware_localization_error_monitor/**
+        - localization/autoware_localization_util/**
+        - localization/autoware_ndt_scan_matcher/**
+        - localization/autoware_pose_initializer/**
+        - localization/autoware_pose_instability_detector/**
+        - localization/autoware_stop_filter/**
+        - localization/autoware_twist2accel/**
+
+    - component_id: map-tier-iv-maintained-packages
+      name: Map TIER IV Maintained Packages
+      paths:
+        - map/**/**
+
+    - component_id: perception-tier-iv-maintained-packages
+      name: Perception TIER IV Maintained Packages
+      paths:
+        - perception/autoware_bytetrack/**
+        - perception/autoware_cluster_merger/**
+        - perception/autoware_compare_map_segmentation/**
+        - perception/autoware_crosswalk_traffic_light_estimator/**
+        - perception/autoware_detected_object_feature_remover/**
+        - perception/autoware_detected_object_validation/**
+        - perception/autoware_detection_by_tracker/**
+        - perception/autoware_elevation_map_loader/**
+        - perception/autoware_euclidean_cluster/**
+        - perception/autoware_ground_segmentation/**
+        - perception/autoware_image_projection_based_fusion/**
+        - perception/autoware_lidar_centerpoint/**
+        - perception/autoware_lidar_transfusion/**
+        - perception/autoware_map_based_prediction/**
+        - perception/autoware_multi_object_tracker/**
+        - perception/autoware_object_merger/**
+        - perception/autoware_object_range_splitter/**
+        - perception/autoware_object_velocity_splitter/**
+        - perception/autoware_occupancy_grid_map_outlier_filter/**
+        - perception/autoware_probabilistic_occupancy_grid_map/**
+        - perception/autoware_radar_crossing_objects_noise_filter/**
+        - perception/autoware_radar_fusion_to_detected_object/**
+        - perception/autoware_radar_object_clustering/**
+        - perception/autoware_radar_object_tracker/**
+        - perception/autoware_radar_tracks_msgs_converter/**
+        - perception/autoware_raindrop_cluster_filter/**
+        - perception/autoware_shape_estimation/**
+        - perception/autoware_simple_object_merger/**
+        - perception/autoware_tensorrt_classifier/**
+        - perception/autoware_tensorrt_yolox/**
+        - perception/autoware_tracking_object_merger/**
+        - perception/autoware_traffic_light_arbiter/**
+        - perception/autoware_traffic_light_classifier/**
+        - perception/autoware_traffic_light_fine_detector/**
+        - perception/autoware_traffic_light_map_based_detector/**
+        - perception/autoware_traffic_light_multi_camera_fusion/**
+        - perception/autoware_traffic_light_occlusion_predictor/**
+        - perception/autoware_traffic_light_visualization/**
+        - perception/image_projection_based_fusion/**
+        # - perception/lidar_apollo_instance_segmentation/**
+        - perception/lidar_centerpoint/**
+        - perception/perception_utils/**
+        - perception/tensorrt_yolo/**
+        - perception/tensorrt_yolox/**
+        - perception/traffic_light_classifier/**
+        - perception/traffic_light_fine_detector/**
+        - perception/traffic_light_ssd_fine_detector/**
+
+    - component_id: planning-tier-iv-maintained-packages
+      name: Planning TIER IV Maintained Packages
+      paths:
+        - planning/autoware_costmap_generator/**
+        - planning/autoware_external_velocity_limit_selector/**
+        - planning/autoware_freespace_planner/**
+        - planning/autoware_freespace_planning_algorithms/**
+        - planning/autoware_mission_planner_universe/**
+        # - planning/autoware_objects_of_interest_marker_interface/**
+        - planning/autoware_path_optimizer/**
+        - planning/autoware_path_smoother/**
+        - planning/autoware_planning_test_manager/**
+        # - planning/autoware_planning_topic_converter/**
+        - planning/autoware_planning_validator/**
+        # - planning/autoware_remaining_distance_time_calculator/**
+        - planning/autoware_route_handler/**
+        - planning/autoware_rtc_interface/**
+        - planning/autoware_scenario_selector/**
+        - planning/autoware_static_centerline_generator/**
+        - planning/autoware_surround_obstacle_checker/**
+        - planning/autoware_velocity_smoother/**
+        ##### behavior_path_planner #####
+        # - planning/behavior_path_planner/autoware_behavior_path_avoidance_by_lane_change_module/**
+        - planning/behavior_path_planner/autoware_behavior_path_goal_planner_module/**
+        - planning/behavior_path_planner/autoware_behavior_path_planner_common/**
+        - planning/behavior_path_planner/autoware_behavior_path_start_planner_module/**
+        # - planning/behavior_path_planner/autoware_behavior_path_dynamic_obstacle_avoidance_module/**
+        - planning/behavior_path_planner/autoware_behavior_path_lane_change_module/**
+        # - planning/behavior_path_planner/autoware_behavior_path_sampling_planner_module/**
+        - planning/behavior_path_planner/autoware_behavior_path_static_obstacle_avoidance_module/**
+        # - planning/behavior_path_planner/autoware_behavior_path_external_request_lane_change_module/**
+        - planning/behavior_path_planner/autoware_behavior_path_planner/**
+        - planning/behavior_path_planner/autoware_behavior_path_side_shift_module/**
+        ##### behavior_velocity_planner #####
+        - planning/behavior_velocity_planner/autoware_behavior_velocity_blind_spot_module/**
+        - planning/behavior_velocity_planner/autoware_behavior_velocity_crosswalk_module/**
+        - planning/behavior_velocity_planner/autoware_behavior_velocity_detection_area_module/**
+        - planning/behavior_velocity_planner/autoware_behavior_velocity_intersection_module/**
+        # - planning/behavior_velocity_planner/autoware_behavior_velocity_no_drivable_lane_module/**
+        - planning/behavior_velocity_planner/autoware_behavior_velocity_no_stopping_area_module/**
+        # - planning/behavior_velocity_planner/autoware_behavior_velocity_occlusion_spot_module/**
+        - planning/behavior_velocity_planner/autoware_behavior_velocity_planner/**
+        - planning/behavior_velocity_planner/autoware_behavior_velocity_planner_common/**
+        - planning/behavior_velocity_planner/autoware_behavior_velocity_run_out_module/**
+        # - planning/behavior_velocity_planner/autoware_behavior_velocity_speed_bump_module/**
+        - planning/behavior_velocity_planner/autoware_behavior_velocity_stop_line_module/**
+        # - planning/behavior_velocity_planner/autoware_behavior_velocity_template_module/**
+        - planning/behavior_velocity_planner/autoware_behavior_velocity_traffic_light_module/**
+        - planning/behavior_velocity_planner/autoware_behavior_velocity_virtual_traffic_light_module/**
+        - planning/behavior_velocity_planner/autoware_behavior_velocity_walkway_module/**
+        ##### motion_velocity_planner #####
+        - planning/motion_velocity_planner/autoware_motion_velocity_dynamic_obstacle_stop_module/**
+        - planning/motion_velocity_planner/autoware_motion_velocity_obstacle_velocity_limiter_module/**
+        - planning/motion_velocity_planner/autoware_motion_velocity_out_of_lane_module/**
+        #### sampling_based_planner
+        - planning/sampling_based_planner/autoware_bezier_sampler/**

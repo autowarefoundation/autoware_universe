@@ -1,0 +1,236 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Autoware Planning Evaluator Nodes",
+  "type": "object",
+  "definitions": {
+    "autoware_planning_evaluator": {
+      "type": "object",
+      "properties": {
+        "ego_frame": {
+          "description": "reference frame of ego",
+          "type": "string",
+          "default": "base_link"
+        },
+        "metrics_for_publish": {
+          "description": "metrics to collect and publish",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "curvature",
+            "point_interval",
+            "relative_angle",
+            "resampled_relative_angle",
+            "length",
+            "duration",
+            "velocity",
+            "acceleration",
+            "jerk",
+            "lateral_deviation",
+            "yaw_deviation",
+            "velocity_deviation",
+            "lateral_trajectory_displacement_local",
+            "lateral_trajectory_displacement_global",
+            "stability",
+            "stability_frechet",
+            "obstacle_distance",
+            "obstacle_ttc",
+            "modified_goal_longitudinal_deviation",
+            "modified_goal_lateral_deviation",
+            "modified_goal_yaw_deviation",
+            "stop_decision",
+            "abnormal_stop_decision",
+            "blinker_change_count",
+            "steer_change_count"
+          ]
+        },
+        "metrics_for_output": {
+          "description": "metrics to output to json file when the node is terminated",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "curvature",
+            "point_interval",
+            "relative_angle",
+            "resampled_relative_angle",
+            "length",
+            "duration",
+            "velocity",
+            "acceleration",
+            "jerk",
+            "lateral_deviation",
+            "yaw_deviation",
+            "velocity_deviation",
+            "lateral_trajectory_displacement_local",
+            "lateral_trajectory_displacement_global",
+            "stability",
+            "stability_frechet",
+            "obstacle_distance",
+            "obstacle_ttc",
+            "modified_goal_longitudinal_deviation",
+            "modified_goal_lateral_deviation",
+            "modified_goal_yaw_deviation",
+            "stop_decision",
+            "abnormal_stop_decision",
+            "blinker_change_count",
+            "steer_change_count"
+          ]
+        },
+        "trajectory": {
+          "description": "trajectory object",
+          "type": "object",
+          "properties": {
+            "min_point_dist_m": {
+              "description": "minimum distance between two successive points to use for angle calculation",
+              "type": "number",
+              "default": 0.1
+            },
+            "lookahead": {
+              "description": "lookahead object",
+              "type": "object",
+              "properties": {
+                "max_dist_m": {
+                  "description": "maximum distance from ego along the trajectory to use for calculation",
+                  "type": "number",
+                  "default": 5.0
+                },
+                "max_time_s": {
+                  "description": "maximum time ahead of ego along the trajectory to use for calculation",
+                  "type": "number",
+                  "default": 3.0
+                }
+              }
+            }
+          }
+        },
+        "obstacle": {
+          "description": "obstacle object",
+          "type": "object",
+          "properties": {
+            "dist_thr_m": {
+              "description": "distance between ego and the obstacle below which a collision is considered",
+              "type": "number",
+              "default": 1.0
+            }
+          }
+        },
+        "stop_decision": {
+          "description": "stop decision object",
+          "type": "object",
+          "properties": {
+            "topic_prefix": {
+              "description": "prefix of the topic to subscribe to for planning factors",
+              "type": "string",
+              "default": "/planning/planning_factors/"
+            },
+            "time_count_threshold_s": {
+              "description": "time [s] threshold to count a stop as a new one",
+              "type": "number",
+              "default": 60.0
+            },
+            "dist_count_threshold_m": {
+              "description": "distance [m] threshold to count a stop as a new one",
+              "type": "number",
+              "default": 5.0
+            },
+            "abnormal_deceleration_threshold_mps2": {
+              "description": "abnormal deceleration threshold [m/s^2] to count a stop as abnormal",
+              "type": "number",
+              "default": 2.0
+            },
+            "module_list": {
+              "description": "list of modules to be checked for stop decision, the `topic_prefix`/`module` topic should be available and publish the `autoware_internal_planning_msgs::PlanningFactorArray` message",
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [
+                "avoidance_by_lane_change",
+                "behavior_path_planner",
+                "blind_spot",
+                "crosswalk",
+                "detection_area",
+                "dynamic_obstacle_avoidance",
+                "dynamic_obstacle_stop",
+                "goal_planner",
+                "intersection",
+                "lane_change_left",
+                "lane_change_right",
+                "motion_velocity_planner",
+                "merge_from_private",
+                "no_drivable_lane",
+                "no_stopping_area",
+                "obstacle_cruise",
+                "obstacle_slow_down",
+                "obstacle_stop",
+                "occlusion_spot",
+                "out_of_lane",
+                "run_out",
+                "side_shift",
+                "start_planner",
+                "static_obstacle_avoidance",
+                "stop_line",
+                "surround_obstacle_checker",
+                "traffic_light",
+                "virtual_traffic_light",
+                "walkway"
+              ]
+            }
+          }
+        },
+        "blinker_change_count": {
+          "description": "blinker change count object",
+          "type": "object",
+          "properties": {
+            "window_duration_s": {
+              "description": "window duration [s] to count blinker changes for publishing",
+              "type": "number",
+              "default": 5.0
+            }
+          }
+        },
+        "steer_change_count": {
+          "description": "steer change count object",
+          "type": "object",
+          "properties": {
+            "window_duration_s": {
+              "description": "window duration [s] to count steer changes for publishing",
+              "type": "number",
+              "default": 5.0
+            },
+            "steer_rate_margin": {
+              "description": "margin of steer_rate [rad/s] around 0 to count as steer change",
+              "type": "number",
+              "default": 0.1
+            }
+          }
+        }
+      },
+      "required": [
+        "ego_frame",
+        "metrics_for_publish",
+        "metrics_for_output",
+        "trajectory",
+        "obstacle",
+        "stop_decision",
+        "blinker_change_count",
+        "steer_change_count"
+      ]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/autoware_planning_evaluator"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}

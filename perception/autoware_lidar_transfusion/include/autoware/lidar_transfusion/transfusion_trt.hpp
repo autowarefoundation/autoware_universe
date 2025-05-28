@@ -1,0 +1,100 @@
+// Copyright 2024 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef AUTOWARE__LIDAR_TRANSFUSION__TRANSFUSION_TRT_HPP_
+#define AUTOWARE__LIDAR_TRANSFUSION__TRANSFUSION_TRT_HPP_
+
+#include "autoware/lidar_transfusion/cuda_utils.hpp"
+#include "autoware/lidar_transfusion/postprocess/postprocess_kernel.hpp"
+#include "autoware/lidar_transfusion/preprocess/pointcloud_densification.hpp"
+#include "autoware/lidar_transfusion/preprocess/preprocess_kernel.hpp"
+#include "autoware/lidar_transfusion/preprocess/voxel_generator.hpp"
+#include "autoware/lidar_transfusion/utils.hpp"
+#include "autoware/lidar_transfusion/visibility_control.hpp"
+
+#include <autoware/tensorrt_common/tensorrt_common.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
+#include <cuda_blackboard/cuda_pointcloud2.hpp>
+
+#include <sensor_msgs/msg/point_cloud2.hpp>
+
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+namespace autoware::lidar_transfusion
+{
+
+class LIDAR_TRANSFUSION_PUBLIC TransfusionTRT
+{
+public:
+  explicit TransfusionTRT(
+    const tensorrt_common::TrtCommonConfig & trt_config,
+    const DensificationParam & densification_param, const TransfusionConfig config);
+  virtual ~TransfusionTRT();
+
+  bool detect(
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+    const tf2_ros::Buffer & tf_buffer, std::vector<Box3D> & det_boxes3d,
+    std::unordered_map<std::string, double> & proc_timing);
+
+protected:
+  void initTrt(const tensorrt_common::TrtCommonConfig & trt_config);
+
+  void initPtr();
+
+  bool preprocess(
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+    const tf2_ros::Buffer & tf_buffer);
+
+  bool inference();
+
+  bool postprocess(std::vector<Box3D> & det_boxes3d);
+
+  std::unique_ptr<autoware::tensorrt_common::TrtCommon> network_trt_ptr_{nullptr};
+  std::unique_ptr<VoxelGenerator> vg_ptr_{nullptr};
+  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{nullptr};
+  std::unique_ptr<PreprocessCuda> pre_ptr_{nullptr};
+  std::unique_ptr<PostprocessCuda> post_ptr_{nullptr};
+  cudaStream_t stream_{nullptr};
+
+  TransfusionConfig config_;
+
+  // input of pre-process
+
+  unsigned int voxel_features_size_{0};
+  unsigned int voxel_num_size_{0};
+  unsigned int voxel_idxs_size_{0};
+  unsigned int cls_size_{0};
+  unsigned int box_size_{0};
+  unsigned int dir_cls_size_{0};
+  cuda::unique_ptr<float[]> points_d_{nullptr};
+  cuda::unique_ptr<float[]> points_aux_d_{nullptr};
+  cuda::unique_ptr<unsigned int> params_input_d_{nullptr};
+  cuda::unique_ptr<unsigned int[]> shuffle_indices_d_{nullptr};
+  cuda::unique_ptr<float[]> voxel_features_d_{nullptr};
+  cuda::unique_ptr<unsigned int[]> voxel_num_d_{nullptr};
+  cuda::unique_ptr<unsigned int[]> voxel_idxs_d_{nullptr};
+  cuda::unique_ptr<float[]> cls_output_d_{nullptr};
+  cuda::unique_ptr<float[]> box_output_d_{nullptr};
+  cuda::unique_ptr<float[]> dir_cls_output_d_{nullptr};
+};
+
+}  // namespace autoware::lidar_transfusion
+
+#endif  // AUTOWARE__LIDAR_TRANSFUSION__TRANSFUSION_TRT_HPP_

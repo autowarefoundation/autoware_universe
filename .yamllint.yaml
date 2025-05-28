@@ -1,0 +1,26 @@
+# This file is automatically synced from:
+# https://github.com/autowarefoundation/sync-file-templates
+# To make changes, update the source repository and follow the guidelines in its README.
+
+extends: default
+
+ignore: |
+  *.param.yaml
+
+rules:
+  braces:
+    level: error
+    max-spaces-inside: 1 # To format with Prettier
+  comments:
+    level: error
+    min-spaces-from-content: 1 # To be compatible with C++ and Python
+  document-start:
+    level: error
+    present: false # Don't need document start markers
+  line-length: disable # Delegate to Prettier
+  truthy:
+    level: error
+    check-keys: false # To allow 'on' of GitHub Actions
+  quoted-strings:
+    level: error
+    required: only-when-needed # To keep consistent style

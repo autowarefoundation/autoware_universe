@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="node_name" default="$(anon object_association_merger)"/>
+  <arg name="input/object0" default="object0"/>
+  <arg name="input/object1" default="object1"/>
+  <arg name="output/object" default="merged_object"/>
+  <arg name="priority_mode" default="2" description="0: Object0, 1: Object1, 2: Confidence"/>
+  <arg name="data_association_matrix_path" default="$(find-pkg-share autoware_object_merger)/config/data_association_matrix.param.yaml"/>
+  <arg name="distance_threshold_list_path" default="$(find-pkg-share autoware_object_merger)/config/overlapped_judge.param.yaml"/>
+  <arg name="object_association_merger_param_path" default="$(find-pkg-share autoware_object_merger)/config/object_association_merger.param.yaml"/>
+
+  <node pkg="autoware_object_merger" exec="object_association_merger_node" name="$(var node_name)" output="screen">
+    <remap from="input/object0" to="$(var input/object0)"/>
+    <remap from="input/object1" to="$(var input/object1)"/>
+    <remap from="output/object" to="$(var output/object)"/>
+    <param from="$(var data_association_matrix_path)"/>
+    <param from="$(var distance_threshold_list_path)"/>
+    <param from="$(var object_association_merger_param_path)"/>
+
+    <!-- Be careful when moving this parameter to param.yaml, since this value depends on which part this launcher is called -->
+    <param name="priority_mode" value="$(var priority_mode)"/>
+  </node>
+</launch>

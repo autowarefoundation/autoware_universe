@@ -1,0 +1,75 @@
+<launch>
+  <arg name="enable_all_modules_auto_mode"/>
+  <arg name="is_simulation"/>
+  <!-- scenario selector -->
+  <group>
+    <include file="$(find-pkg-share autoware_scenario_selector)/launch/scenario_selector.launch.xml">
+      <arg name="input_lane_driving_trajectory" value="/planning/scenario_planning/lane_driving/trajectory"/>
+      <arg name="input_parking_trajectory" value="/planning/scenario_planning/parking/trajectory"/>
+      <arg name="input_lanelet_map" value="/map/vector_map"/>
+      <arg name="input_route" value="/planning/mission_planning/route"/>
+      <arg name="input_odometry" value="/localization/kinematic_state"/>
+      <arg name="input_operation_mode_state" value="/system/operation_mode/state"/>
+      <arg name="output_scenario" value="/planning/scenario_planning/scenario"/>
+      <arg name="output_trajectory" value="/planning/scenario_planning/scenario_selector/trajectory"/>
+      <arg name="is_parking_completed" value="/planning/scenario_planning/parking/is_completed"/>
+    </include>
+  </group>
+
+  <!-- velocity planning with max velocity, acceleration, jerk, stop point constraint -->
+  <group>
+    <!-- external velocity limit selector -->
+    <group>
+      <include file="$(find-pkg-share autoware_external_velocity_limit_selector)/launch/external_velocity_limit_selector.launch.xml">
+        <arg name="common_param_path" value="$(var common_param_path)"/>
+        <arg name="param_path" value="$(var velocity_smoother_param_path)"/>
+      </include>
+    </group>
+    <!-- motion velocity smoother -->
+    <group>
+      <node_container pkg="rclcpp_components" exec="component_container" name="velocity_smoother_container" namespace="">
+        <composable_node pkg="autoware_velocity_smoother" plugin="autoware::velocity_smoother::VelocitySmootherNode" name="velocity_smoother" namespace="">
+          <param name="algorithm_type" value="$(var velocity_smoother_type)"/>
+          <param from="$(var common_param_path)"/>
+          <param from="$(var nearest_search_param_path)"/>
+          <param from="$(var velocity_smoother_param_path)"/>
+          <param from="$(var velocity_smoother_type_param_path)"/>
+
+          <param name="publish_debug_trajs" value="false"/>
+          <remap from="~/input/trajectory" to="/planning/scenario_planning/scenario_selector/trajectory"/>
+          <remap from="~/output/trajectory" to="/planning/scenario_planning/velocity_smoother/trajectory"/>
+
+          <remap from="~/input/external_velocity_limit_mps" to="/planning/scenario_planning/max_velocity"/>
+          <remap from="~/input/acceleration" to="/localization/acceleration"/>
+          <remap from="~/input/operation_mode_state" to="/system/operation_mode/state"/>
+          <remap from="~/output/current_velocity_limit_mps" to="/planning/scenario_planning/current_max_velocity"/>
+        </composable_node>
+        <composable_node pkg="autoware_glog_component" plugin="autoware::glog_component::GlogComponent" name="glog_component" namespace=""/>
+      </node_container>
+    </group>
+  </group>
+
+  <!-- hazard lights selector -->
+  <group>
+    <include file="$(find-pkg-share autoware_hazard_lights_selector)/launch/hazard_lights_selector.launch.xml">
+      <arg name="hazard_lights_selector_param_path" value="$(var hazard_lights_selector_param_path)"/>
+    </include>
+  </group>
+
+  <!-- scenarios-->
+  <group>
+    <!-- lane driving -->
+    <group>
+      <include file="$(find-pkg-share tier4_planning_launch)/launch/scenario_planning/lane_driving.launch.xml">
+        <arg name="enable_all_modules_auto_mode" value="$(var enable_all_modules_auto_mode)"/>
+        <arg name="is_simulation" value="$(var is_simulation)"/>
+      </include>
+    </group>
+    <!-- parking -->
+    <group>
+      <include file="$(find-pkg-share tier4_planning_launch)/launch/scenario_planning/parking.launch.xml">
+        <arg name="container_type" value="component_container_mt"/>
+      </include>
+    </group>
+  </group>
+</launch>

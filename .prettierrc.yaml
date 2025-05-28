@@ -1,0 +1,24 @@
+# This file is automatically synced from:
+# https://github.com/autowarefoundation/sync-file-templates
+# To make changes, update the source repository and follow the guidelines in its README.
+
+printWidth: 100
+tabWidth: 2
+overrides:
+  - files: package.xml
+    options:
+      printWidth: 1000
+      xmlSelfClosingSpace: false
+      xmlWhitespaceSensitivity: ignore
+
+  - files: "*.launch.xml"
+    options:
+      printWidth: 200
+      xmlSelfClosingSpace: false
+      xmlWhitespaceSensitivity: ignore
+
+  - files: "*.xacro"
+    options:
+      printWidth: 200
+      xmlSelfClosingSpace: false
+      xmlWhitespaceSensitivity: ignore

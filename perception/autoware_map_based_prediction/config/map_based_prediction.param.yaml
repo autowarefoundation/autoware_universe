@@ -1,0 +1,58 @@
+/**:
+  ros__parameters:
+    prediction_time_horizon:
+      vehicle: 15.0 #[s]
+      pedestrian: 10.0 #[s]
+      unknown: 10.0 #[s]
+    lateral_control_time_horizon: 5.0 #[s]
+    prediction_sampling_delta_time: 0.5 #[s]
+    min_velocity_for_map_based_prediction: 1.39 #[m/s]
+    min_crosswalk_user_velocity: 1.39 #[m/s]
+    max_crosswalk_user_delta_yaw_threshold_for_lanelet: 0.785 #[m/s]
+    dist_threshold_for_searching_lanelet: 3.0 #[m]
+    delta_yaw_threshold_for_searching_lanelet: 0.785 #[rad]
+    sigma_lateral_offset: 0.5 #[m]
+    sigma_yaw_angle_deg: 5.0 #[angle degree]
+    object_buffer_time_length: 2.0 #[s]
+    history_time_length: 1.0 #[s]
+    check_lateral_acceleration_constraints: false # whether to check if the predicted path complies with lateral acceleration constraints
+    max_lateral_accel: 2.0 # [m/ss] max acceptable lateral acceleration for predicted vehicle paths
+    min_acceleration_before_curve: -2.0 # [m/ss] min acceleration a vehicle might take to decelerate before a curve
+    use_vehicle_acceleration: false # whether to consider current vehicle acceleration when predicting paths or not
+    speed_limit_multiplier: 1.5 # When using vehicle acceleration. Set vehicle's maximum predicted speed as the legal speed limit in that lanelet times this value
+    acceleration_exponential_half_life: 2.5 # [s] When using vehicle acceleration. The decaying acceleration model considers that the current vehicle acceleration will be halved after this many seconds
+    crosswalk_with_signal:
+      use_crosswalk_signal: true
+      threshold_velocity_assumed_as_stopping: 0.25 # [m/s] velocity threshold for the module to judge whether the objects is stopped
+      # If the pedestrian does not move for X seconds against green signal, the module judge that the pedestrian has no intention to walk.
+      distance_set_for_no_intention_to_walk: [1.0, 5.0] # [m] ascending order, keys of map
+      timeout_set_for_no_intention_to_walk: [1.0, 0.0] # [s] values of map
+    # parameter for shoulder lane prediction
+    prediction_time_horizon_rate_for_validate_shoulder_lane_length: 0.8
+    use_crosswalk_user_history:
+      match_lost_and_appeared_users: false
+      remember_lost_users: false
+
+    # parameters for lc prediction
+    lane_change_detection:
+      method: "lat_diff_distance" # choose from "lat_diff_distance" or "time_to_change_lane"
+      time_to_change_lane:
+        dist_threshold_for_lane_change_detection: 1.0 #[m]
+        time_threshold_for_lane_change_detection: 5.0 #[s]
+        cutoff_freq_of_velocity_for_lane_change_detection: 0.1 #[Hz]
+      lat_diff_distance:
+        dist_ratio_threshold_to_left_bound: -0.5 #[ratio]
+        dist_ratio_threshold_to_right_bound: 0.5 #[ratio
+        diff_dist_threshold_to_left_bound: 0.29 #[m]
+        diff_dist_threshold_to_right_bound: -0.29 #[m]
+      num_continuous_state_transition: 3
+      consider_only_routable_neighbours: false
+
+    reference_path_resolution: 0.5 #[m]
+
+    # debug parameters
+    publish_processing_time: false
+    publish_processing_time_detail: false
+    publish_debug_markers: false
+    processing_time_tolerance: 0.5 #[s]
+    processing_time_consecutive_excess_tolerance: 1.0 #[s]

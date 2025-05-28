@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Crop Box Filter Node",
+  "type": "object",
+  "definitions": {
+    "crop_box_filter": {
+      "type": "object",
+      "properties": {
+        "min_x": {
+          "type": "number",
+          "description": "minimum x-coordinate value for crop range in meters",
+          "default": "-1.0"
+        },
+        "min_y": {
+          "type": "number",
+          "description": "minimum y-coordinate value for crop range in meters",
+          "default": "-1.0"
+        },
+        "min_z": {
+          "type": "number",
+          "description": "minimum z-coordinate value for crop range in meters",
+          "default": "-1.0"
+        },
+        "max_x": {
+          "type": "number",
+          "description": "maximum x-coordinate value for crop range in meters",
+          "default": "1.0"
+        },
+        "max_y": {
+          "type": "number",
+          "description": "maximum y-coordinate value for crop range in meters",
+          "default": "1.0"
+        },
+        "max_z": {
+          "type": "number",
+          "description": "maximum z-coordinate value for crop range in meters",
+          "default": "1.0"
+        },
+        "negative": {
+          "type": "boolean",
+          "description": "if true, remove points within the box from the pointcloud; otherwise, remove points outside the box.",
+          "default": "false"
+        }
+      },
+      "required": ["min_x", "min_y", "min_z", "max_x", "max_y", "max_z", "negative"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/crop_box_filter"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

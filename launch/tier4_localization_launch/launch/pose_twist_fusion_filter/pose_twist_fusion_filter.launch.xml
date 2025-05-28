@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<launch>
+  <group>
+    <include file="$(find-pkg-share autoware_ekf_localizer)/launch/ekf_localizer.launch.xml">
+      <arg name="input_initial_pose_name" value="/initialpose3d"/>
+      <arg name="input_pose_with_cov_name" value="/localization/pose_estimator/pose_with_covariance"/>
+      <arg name="input_twist_with_cov_name" value="/localization/twist_estimator/twist_with_covariance"/>
+      <arg name="output_odom_name" value="kinematic_state"/>
+      <arg name="output_pose_name" value="pose"/>
+      <arg name="output_pose_with_covariance_name" value="/localization/pose_with_covariance"/>
+      <arg name="output_biased_pose_name" value="biased_pose"/>
+      <arg name="output_biased_pose_with_covariance_name" value="biased_pose_with_covariance"/>
+      <arg name="output_twist_name" value="twist"/>
+      <arg name="output_twist_with_covariance_name" value="twist_with_covariance"/>
+      <arg name="param_file" value="$(var ekf_localizer_param_path)"/>
+    </include>
+  </group>
+
+  <group>
+    <include file="$(find-pkg-share autoware_stop_filter)/launch/stop_filter.launch.xml">
+      <arg name="use_twist_with_covariance" value="True"/>
+      <arg name="input_odom_name" value="/localization/pose_twist_fusion_filter/kinematic_state"/>
+      <arg name="input_twist_with_covariance_name" value="/localization/pose_twist_fusion_filter/twist_with_covariance"/>
+      <arg name="output_odom_name" value="/localization/kinematic_state"/>
+      <arg name="param_path" value="$(var stop_filter_param_path)"/>
+    </include>
+  </group>
+
+  <group>
+    <include file="$(find-pkg-share autoware_twist2accel)/launch/twist2accel.launch.xml">
+      <arg name="in_odom" value="/localization/kinematic_state"/>
+      <arg name="in_twist" value="/localization/twist_estimator/twist_with_covariance"/>
+      <arg name="out_accel" value="/localization/acceleration"/>
+      <arg name="param_file" value="$(var twist2accel_param_path)"/>
+    </include>
+  </group>
+
+  <group>
+    <include file="$(find-pkg-share autoware_pose_instability_detector)/launch/pose_instability_detector.launch.xml">
+      <arg name="input_odometry" value="/localization/kinematic_state"/>
+      <arg name="input_twist" value="/localization/twist_estimator/twist_with_covariance"/>
+      <arg name="param_file" value="$(find-pkg-share autoware_pose_instability_detector)/config/pose_instability_detector.param.yaml"/>
+    </include>
+  </group>
+</launch>

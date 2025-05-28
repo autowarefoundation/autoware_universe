@@ -1,0 +1,32 @@
+<launch>
+  <arg name="input/pointcloud" default="/sensing/lidar/pointcloud"/>
+  <arg name="model" default="model_128"/>
+  <arg name="output/objects" default="labeled_clusters"/>
+  <arg name="build_only" default="false" description="shutdown node after TensorRT engine file is built"/>
+
+  <arg if="$(eval &quot;'$(var model)'=='model_16'&quot;)" name="base_name" default="vlp-16"/>
+  <arg if="$(eval &quot;'$(var model)'=='model_64'&quot;)" name="base_name" default="hdl-64"/>
+  <arg if="$(eval &quot;'$(var model)'=='model_128'&quot;)" name="base_name" default="vls-128"/>
+
+  <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
+  <arg name="trained_onnx_file" default="$(var data_path)/lidar_apollo_instance_segmentation/$(var base_name).onnx"/>
+  <arg name="param_file" default="$(find-pkg-share autoware_lidar_apollo_instance_segmentation)/config/$(var base_name).param.yaml"/>
+
+  <arg name="target_frame" default="base_link"/>
+  <arg name="z_offset" default="-2.0"/>
+
+  <arg name="precision" default="fp32"/>
+
+  <node pkg="autoware_lidar_apollo_instance_segmentation" exec="autoware_lidar_apollo_instance_segmentation_node" name="lidar_apollo_instance_segmentation" output="screen">
+    <remap from="input/pointcloud" to="$(var input/pointcloud)"/>
+    <remap from="output/labeled_clusters" to="$(var output/objects)"/>
+    <param name="onnx_file" value="$(var trained_onnx_file)"/>
+    <param name="z_offset" value="$(var z_offset)"/>
+    <param name="precision" value="$(var precision)"/>
+    <param name="target_frame" value="$(var target_frame)"/>
+    <param from="$(var param_file)"/>
+
+    <!-- This parameter shall NOT be included in param file. -->
+    <param name="build_only" value="$(var build_only)"/>
+  </node>
+</launch>

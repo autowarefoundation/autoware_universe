@@ -1,0 +1,31 @@
+# This file is automatically synced from:
+# https://github.com/autowarefoundation/sync-file-templates
+# To make changes, update the source repository and follow the guidelines in its README.
+
+name: pre-commit
+
+on:
+  pull_request:
+
+jobs:
+  pre-commit:
+    if: ${{ github.event.repository.private }} # Use pre-commit.ci for public repositories
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Generate token
+        id: generate-token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.PRIVATE_KEY }}
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Run pre-commit
+        uses: autowarefoundation/autoware-github-actions/pre-commit@v1
+        with:
+          pre-commit-config: .pre-commit-config.yaml
+          token: ${{ steps.generate-token.outputs.token }}

@@ -1,0 +1,55 @@
+name: build-and-test-daily
+
+on:
+  schedule:
+    - cron: 0 0 * * * # every day at midnight UTC
+  workflow_dispatch:
+
+jobs:
+  build-and-test-daily:
+    uses: ./.github/workflows/build-and-test-reusable.yaml
+    with:
+      runner: "['self-hosted', 'Linux', 'X64']"
+      container: ghcr.io/autowarefoundation/autoware:universe-devel
+      container-suffix: ""
+      pull-ccache: true
+      concurrency-group: build-and-test-daily-${{ github.ref }}-${{ github.run_id }}
+      codecov-flag: daily
+    secrets:
+      codecov-token: ${{ secrets.CODECOV_TOKEN }}
+
+  build-and-test-daily-cuda:
+    uses: ./.github/workflows/build-and-test-reusable.yaml
+    with:
+      runner: "['self-hosted', 'Linux', 'X64']"
+      container: ghcr.io/autowarefoundation/autoware:universe-devel
+      container-suffix: -cuda
+      pull-ccache: true
+      concurrency-group: build-and-test-daily-cuda-${{ github.ref }}-${{ github.run_id }}
+      codecov-flag: daily-cuda
+    secrets:
+      codecov-token: ${{ secrets.CODECOV_TOKEN }}
+
+  build-and-test-daily-arm64:
+    uses: ./.github/workflows/build-and-test-reusable.yaml
+    with:
+      runner: "['self-hosted', 'Linux', 'ARM64']"
+      container: ghcr.io/autowarefoundation/autoware:universe-devel
+      container-suffix: ""
+      build-pre-command: taskset --cpu-list 0-6
+      concurrency-group: build-and-test-daily-arm64-${{ github.ref }}-${{ github.run_id }}
+      codecov-flag: daily-arm64
+    secrets:
+      codecov-token: ${{ secrets.CODECOV_TOKEN }}
+
+  build-and-test-daily-arm64-cuda:
+    uses: ./.github/workflows/build-and-test-reusable.yaml
+    with:
+      runner: "['self-hosted', 'Linux', 'ARM64']"
+      container: ghcr.io/autowarefoundation/autoware:universe-devel
+      container-suffix: -cuda
+      build-pre-command: taskset --cpu-list 0-6
+      concurrency-group: build-and-test-daily-arm64-cuda-${{ github.ref }}-${{ github.run_id }}
+      codecov-flag: daily-arm64-cuda
+    secrets:
+      codecov-token: ${{ secrets.CODECOV_TOKEN }}

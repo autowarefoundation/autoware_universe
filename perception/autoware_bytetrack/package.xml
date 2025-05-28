@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autoware_bytetrack</name>
+  <version>0.45.0</version>
+  <description>ByteTrack implementation ported toward Autoware</description>
+  <maintainer email="manato.hirabayashi@tier4.jp">Manato HIRABAYASHI</maintainer>
+  <maintainer email="yoshi.ri@tier4.jp">Yoshi RI</maintainer>
+  <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
+  <maintainer email="lei.gu@tier4.jp">Lei Gu</maintainer>
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+  <buildtool_depend>cudnn_cmake_module</buildtool_depend>
+
+  <buildtool_export_depend>cudnn_cmake_module</buildtool_export_depend>
+  <buildtool_export_depend>tensorrt_cmake_module</buildtool_export_depend>
+
+  <depend>autoware_cuda_dependency_meta</depend>
+  <depend>autoware_cuda_utils</depend>
+  <depend>autoware_kalman_filter</depend>
+  <depend>autoware_perception_msgs</depend>
+  <depend>autoware_tensorrt_common</depend>
+  <depend>cv_bridge</depend>
+  <depend>eigen</depend>
+  <depend>image_transport</depend>
+  <depend>libboost-system-dev</depend>
+  <depend>libopencv-dev</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>sensor_msgs</depend>
+  <depend>tier4_perception_msgs</depend>
+  <depend>yaml-cpp</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>autoware_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

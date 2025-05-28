@@ -1,0 +1,25 @@
+<launch>
+  <arg name="output_metrics" default="false"/>
+  <arg name="input/odometry" default="/localization/kinematic_state"/>
+  <arg name="input/acceleration" default="/localization/acceleration"/>
+  <arg name="input/trajectory" default="/planning/scenario_planning/trajectory"/>
+  <arg name="input/vector_map" default="/map/vector_map"/>
+  <arg name="input/route" default="/planning/mission_planning/route"/>
+  <arg name="input/behavior_path" default="/planning/scenario_planning/lane_driving/behavior_planning/path_with_lane_id"/>
+  <arg name="input/steering_status" default="/vehicle/status/steering_status"/>
+
+  <!-- control evaluator -->
+  <group>
+    <node name="control_evaluator" exec="control_evaluator" pkg="autoware_control_evaluator">
+      <param from="$(find-pkg-share autoware_control_evaluator)/config/control_evaluator.param.yaml"/>
+      <param name="output_metrics" value="$(var output_metrics)"/>
+      <remap from="~/input/odometry" to="$(var input/odometry)"/>
+      <remap from="~/input/acceleration" to="$(var input/acceleration)"/>
+      <remap from="~/input/trajectory" to="$(var input/trajectory)"/>
+      <remap from="~/input/vector_map" to="$(var input/vector_map)"/>
+      <remap from="~/input/route" to="$(var input/route)"/>
+      <remap from="~/input/behavior_path" to="$(var input/behavior_path)"/>
+      <remap from="~/input/steering_status" to="$(var input/steering_status)"/>
+    </node>
+  </group>
+</launch>

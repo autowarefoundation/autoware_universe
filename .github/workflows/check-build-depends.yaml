@@ -1,0 +1,49 @@
+name: check-build-depends
+
+on:
+  pull_request:
+    paths:
+      - build_depends*.repos
+
+jobs:
+  check-build-depends:
+    runs-on: ubuntu-22.04
+    container: ${{ matrix.container }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rosdistro:
+          - humble
+        include:
+          - rosdistro: humble
+            container: ros:humble
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Remove exec_depend
+        uses: autowarefoundation/autoware-github-actions/remove-exec-depend@v1
+
+      - name: Get self packages
+        id: get-self-packages
+        uses: autowarefoundation/autoware-github-actions/get-self-packages@v1
+
+      - name: Prepare build_depends.repos file (main branch)
+        if: ${{ github.event.pull_request.base.ref != 'humble' }}
+        uses: ./.github/actions/combine-repos-action
+        with:
+          base_file: build_depends_humble.repos
+          overlay_file: build_depends_nightly.repos
+          output_file: build_depends.repos
+
+      - name: Prepare build_depends.repos file (humble branch)
+        if: ${{ github.event.pull_request.base.ref == 'humble' }}
+        run: cp build_depends_humble.repos build_depends.repos
+        shell: bash
+
+      - name: Build
+        uses: autowarefoundation/autoware-github-actions/colcon-build@v1
+        with:
+          rosdistro: ${{ matrix.rosdistro }}
+          target-packages: ${{ steps.get-self-packages.outputs.self-packages }}
+          build-depends-repos: build_depends.repos

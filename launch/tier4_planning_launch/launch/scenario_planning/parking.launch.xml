@@ -1,0 +1,38 @@
+<launch>
+  <!-- parking scenario -->
+  <group if="$(var launch_parking_module)">
+    <push-ros-namespace namespace="parking"/>
+
+    <node_container pkg="rclcpp_components" exec="$(var container_type)" name="parking_container" namespace="" output="screen">
+      <composable_node pkg="autoware_costmap_generator" plugin="autoware::costmap_generator::CostmapGenerator" name="costmap_generator" namespace="">
+        <!-- topic remap -->
+        <remap from="~/input/objects" to="/perception/object_recognition/objects"/>
+        <remap from="~/input/points_no_ground" to="/perception/obstacle_segmentation/pointcloud"/>
+        <remap from="~/input/vector_map" to="/map/vector_map"/>
+        <remap from="~/input/scenario" to="/planning/scenario_planning/scenario"/>
+        <remap from="~/output/grid_map" to="costmap_generator/grid_map"/>
+        <remap from="~/output/occupancy_grid" to="costmap_generator/occupancy_grid"/>
+        <!-- params -->
+        <param from="$(var vehicle_param_file)"/>
+        <param from="$(var costmap_generator_param_path)"/>
+        <extra_arg name="use_intra_process_comms" value="false"/>
+      </composable_node>
+
+      <composable_node pkg="autoware_freespace_planner" plugin="autoware::freespace_planner::FreespacePlannerNode" name="freespace_planner" namespace="">
+        <!-- topic remap -->
+        <remap from="~/input/route" to="/planning/mission_planning/route"/>
+        <remap from="~/input/scenario" to="/planning/scenario_planning/scenario"/>
+        <remap from="~/input/occupancy_grid" to="costmap_generator/occupancy_grid"/>
+        <remap from="~/input/odometry" to="/localization/kinematic_state"/>
+        <remap from="~/output/trajectory" to="/planning/scenario_planning/parking/trajectory"/>
+        <remap from="is_completed" to="/planning/scenario_planning/parking/is_completed"/>
+        <!-- params -->
+        <param from="$(var vehicle_param_file)"/>
+        <param from="$(var freespace_planner_param_path)"/>
+        <extra_arg name="use_intra_process_comms" value="false"/>
+      </composable_node>
+
+      <composable_node pkg="autoware_glog_component" plugin="autoware::glog_component::GlogComponent" name="glog_component" namespace=""/>
+    </node_container>
+  </group>
+</launch>

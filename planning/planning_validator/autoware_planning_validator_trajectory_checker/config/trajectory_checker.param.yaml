@@ -1,0 +1,66 @@
+/**:
+  ros__parameters:
+    trajectory_checker:
+      interval:
+        enable: true
+        threshold: 100.0
+        is_critical: false
+      curvature:
+        enable: true
+        threshold: 1.0
+        is_critical: false
+      relative_angle:
+        enable: true
+        threshold: 2.0 # (= 115 degree)
+        is_critical: false
+      lateral_accel:
+        enable: true
+        threshold: 9.8
+        is_critical: false
+      min_lon_accel:
+        enable: true
+        threshold: -9.8
+        is_critical: false
+      max_lon_accel:
+        enable: true
+        threshold: 9.8
+        is_critical: false
+      lateral_jerk:
+        enable: true
+        threshold: 7.0
+        is_critical: false
+      steering:
+        enable: true
+        threshold: 1.414
+        is_critical: false
+      steering_rate:
+        enable: true
+        threshold: 10.0
+        is_critical: false
+      distance_deviation:
+        enable: true
+        threshold: 100.0
+        is_critical: false
+      lon_distance_deviation:
+        enable: true
+        threshold: 1.0
+        is_critical: false
+      velocity_deviation:
+        enable: true
+        threshold: 100.0
+        is_critical: false
+      yaw_deviation:
+        enable: true
+        threshold: 1.5708 # (= 90 degrees)
+        is_critical: false
+      forward_trajectory_length:
+        enable: true
+        acceleration: -3.0
+        margin: 2.0
+        is_critical: false
+      trajectory_shift:
+        enable: true
+        lat_shift_th: 0.5
+        forward_shift_th: 1.0
+        backward_shift_th: 0.1
+        is_critical: true

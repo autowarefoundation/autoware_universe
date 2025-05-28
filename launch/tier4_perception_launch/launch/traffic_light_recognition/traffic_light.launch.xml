@@ -1,0 +1,121 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- options to switch launch function/module -->
+  <arg name="enable_image_decompressor" default="true" description="enable image decompressor"/>
+  <arg name="fusion_only"/>
+  <arg name="camera_namespaces"/>
+  <arg name="use_high_accuracy_detection"/>
+  <arg name="high_accuracy_detection_type"/>
+
+  <!-- parameters -->
+  <arg name="each_traffic_light_map_based_detector_param_path"/>
+  <arg name="traffic_light_fine_detector_param_path"/>
+  <arg name="yolox_traffic_light_detector_param_path"/>
+  <arg name="car_traffic_light_classifier_param_path"/>
+  <arg name="pedestrian_traffic_light_classifier_param_path"/>
+  <arg name="traffic_light_roi_visualizer_param_path"/>
+  <arg name="traffic_light_occlusion_predictor_param_path"/>
+  <arg name="traffic_light_multi_camera_fusion_param_path"/>
+  <arg name="traffic_light_arbiter_param_path"/>
+  <arg name="crosswalk_traffic_light_estimator_param_path"/>
+
+  <!-- ML parameters -->
+  <arg name="whole_image_detection/model_path"/>
+  <arg name="whole_image_detection/label_path"/>
+  <arg name="fine_detection/model_path"/>
+  <arg name="fine_detection/label_path"/>
+  <arg name="classification/car/model_path"/>
+  <arg name="classification/car/label_path"/>
+  <arg name="classification/pedestrian/model_path"/>
+  <arg name="classification/pedestrian/label_path"/>
+
+  <!-- topic -->
+  <arg name="input/vector_map" default="/map/vector_map" description="input vector map topic"/>
+  <arg name="input/route" default="/planning/mission_planning/route" description="input route topic"/>
+  <arg name="input/cloud" default="/sensing/lidar/top/pointcloud_raw_ex" description="input pointcloud topic for traffic_light_occlusion_predictor"/>
+  <arg name="internal/traffic_signals" default="/perception/traffic_light_recognition/internal/traffic_signals" description="topic from traffic_light_multi_camera_fusion"/>
+  <arg name="external/traffic_signals" default="/perception/traffic_light_recognition/external/traffic_signals" description="topic from V2X"/>
+  <arg name="judged/traffic_signals" default="/perception/traffic_light_recognition/judged/traffic_signals" description="topic from traffic_light_arbiter"/>
+  <arg name="output/traffic_signals" default="/perception/traffic_light_recognition/traffic_signals" description="final output topic as traffic light recognition"/>
+
+  <!-- detection and classification pipeline on each camera -->
+  <group unless="$(var fusion_only)">
+    <include file="$(find-pkg-share tier4_perception_launch)/launch/traffic_light_recognition/traffic_light_camera_info_relay.launch.py">
+      <arg name="camera_namespaces" value="$(var camera_namespaces)"/>
+    </include>
+    <include file="$(find-pkg-share tier4_perception_launch)/launch/traffic_light_recognition/traffic_light_map_based_detector.launch.py">
+      <arg name="camera_namespaces" value="$(var camera_namespaces)"/>
+      <arg name="input/vector_map" value="$(var input/vector_map)"/>
+      <arg name="input/route" value="$(var input/route)"/>
+      <arg name="use_high_accuracy_detection" value="$(var use_high_accuracy_detection)"/>
+      <arg name="param_path" value="$(var each_traffic_light_map_based_detector_param_path)"/>
+    </include>
+    <include file="$(find-pkg-share tier4_perception_launch)/launch/traffic_light_recognition/traffic_light_node_container.launch.py">
+      <arg name="enable_image_decompressor" value="$(var enable_image_decompressor)"/>
+      <arg name="camera_namespaces" value="$(var camera_namespaces)"/>
+      <arg name="use_high_accuracy_detection" value="$(var use_high_accuracy_detection)"/>
+      <arg name="high_accuracy_detection_type" value="$(var high_accuracy_detection_type)"/>
+      <arg name="traffic_light_fine_detector_param_path" value="$(var traffic_light_fine_detector_param_path)"/>
+      <arg name="yolox_traffic_light_detector_param_path" value="$(var yolox_traffic_light_detector_param_path)"/>
+      <arg name="car_traffic_light_classifier_param_path" value="$(var car_traffic_light_classifier_param_path)"/>
+      <arg name="pedestrian_traffic_light_classifier_param_path" value="$(var pedestrian_traffic_light_classifier_param_path)"/>
+      <arg name="traffic_light_roi_visualizer_param_path" value="$(var traffic_light_roi_visualizer_param_path)"/>
+      <arg name="whole_image_detection/model_path" value="$(var whole_image_detection/model_path)"/>
+      <arg name="whole_image_detection/label_path" value="$(var whole_image_detection/label_path)"/>
+      <arg name="fine_detection/model_path" value="$(var fine_detection/model_path)"/>
+      <arg name="fine_detection/label_path" value="$(var fine_detection/label_path)"/>
+      <arg name="classification/car/model_path" value="$(var classification/car/model_path)"/>
+      <arg name="classification/car/label_path" value="$(var classification/car/label_path)"/>
+      <arg name="classification/pedestrian/model_path" value="$(var classification/pedestrian/model_path)"/>
+      <arg name="classification/pedestrian/label_path" value="$(var classification/pedestrian/label_path)"/>
+      <arg name="use_intra_process" value="true"/>
+      <arg name="use_multithread" value="true"/>
+    </include>
+  </group>
+
+  <!-- check whether occlusion by traffic_light_occlusion_predictor on each camera -->
+  <group if="$(eval &quot;'$(var high_accuracy_detection_type)'=='fine_detection'&quot;)">
+    <include file="$(find-pkg-share tier4_perception_launch)/launch/traffic_light_recognition/traffic_light_occlusion_predictor.launch.py">
+      <arg name="camera_namespaces" value="$(var camera_namespaces)"/>
+      <arg name="input/cloud" value="$(var input/cloud)"/>
+      <arg name="input/vector_map" value="$(var input/vector_map)"/>
+      <arg name="param_path" value="$(var traffic_light_occlusion_predictor_param_path)"/>
+    </include>
+  </group>
+
+  <!-- all camera fusion by traffic_light_multi_camera_fusion -->
+  <group>
+    <include file="$(find-pkg-share autoware_traffic_light_multi_camera_fusion)/launch/traffic_light_multi_camera_fusion.launch.xml">
+      <arg name="camera_namespaces" value="$(var camera_namespaces)"/>
+      <arg name="input/vector_map" value="$(var input/vector_map)"/>
+      <arg name="output/traffic_signals" value="$(var internal/traffic_signals)"/>
+      <arg name="param_path" value="$(var traffic_light_multi_camera_fusion_param_path)"/>
+    </include>
+  </group>
+
+  <!-- V2X fusion by traffic_light_arbiter -->
+  <group>
+    <include file="$(find-pkg-share autoware_traffic_light_arbiter)/launch/traffic_light_arbiter.launch.xml">
+      <arg name="perception_traffic_signals" value="$(var internal/traffic_signals)"/>
+      <arg name="external_traffic_signals" value="$(var external/traffic_signals)"/>
+      <arg name="output_traffic_signals" value="$(var judged/traffic_signals)"/>
+      <arg name="param_path" value="$(var traffic_light_arbiter_param_path)"/>
+    </include>
+  </group>
+
+  <!-- post-process pedestrian traffic light recognition by crosswalk_traffic_light_estimator -->
+  <group>
+    <include file="$(find-pkg-share autoware_crosswalk_traffic_light_estimator)/launch/crosswalk_traffic_light_estimator.launch.xml">
+      <arg name="input/vector_map" value="$(var input/vector_map)"/>
+      <arg name="input/route" value="$(var input/route)"/>
+      <arg name="input/traffic_signals" value="$(var judged/traffic_signals)"/>
+      <arg name="output/traffic_signals" value="$(var output/traffic_signals)"/>
+      <arg name="param_path" value="$(var crosswalk_traffic_light_estimator_param_path)"/>
+    </include>
+  </group>
+
+  <!-- traffic light status visualizer on rviz -->
+  <group>
+    <include file="$(find-pkg-share autoware_traffic_light_visualization)/launch/traffic_light_map_visualizer.launch.xml"/>
+  </group>
+</launch>

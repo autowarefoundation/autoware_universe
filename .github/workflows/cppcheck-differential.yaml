@@ -1,0 +1,95 @@
+name: cppcheck-differential
+
+on:
+  pull_request:
+
+jobs:
+  cppcheck-differential:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Set PR fetch depth
+        run: echo "PR_FETCH_DEPTH=$(( ${{ github.event.pull_request.commits }} + 1 ))" >> "${GITHUB_ENV}"
+
+      - name: Checkout PR branch and all PR commits
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: ${{ env.PR_FETCH_DEPTH }}
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git
+
+      - name: Install colcon
+        run: |
+          sudo sh -c 'echo "deb [arch=amd64,arm64] http://repo.ros2.org/ubuntu/main `lsb_release -cs` main" > /etc/apt/sources.list.d/ros2-latest.list'
+          curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add -
+          sudo apt update
+          sudo apt install python3-colcon-common-extensions
+
+      # cppcheck from apt does not yet support --check-level args, and thus install from snap
+      - name: Install Cppcheck from snap
+        run: |
+          sudo snap install cppcheck
+
+      - name: Fetch the base branch with enough history for a common merge-base commit
+        run: git fetch origin ${{ github.base_ref }}
+        shell: bash
+
+      - name: Get modified packages
+        id: get-modified-packages
+        uses: autowarefoundation/autoware-github-actions/get-modified-packages@v1
+
+      - name: Get full paths of modified packages
+        id: get-full-paths
+        run: |
+          modified_packages="${{ steps.get-modified-packages.outputs.modified-packages }}"
+          paths=""
+          for pkg in $modified_packages; do
+            path=$(colcon list --packages-select $pkg | awk '{print $2}' | xargs realpath)
+            paths="$paths $path"
+          done
+          echo "full-paths=$paths" >> $GITHUB_OUTPUT
+
+      - name: Filter packages with no cpp/hpp files
+        id: filter-paths-no-cpp-files
+        run: |
+          filtered_paths=""
+          for dir in ${{ steps.get-full-paths.outputs.full-paths }}; do
+            if [ -d "$dir" ] && find "$dir" -name "*.cpp" | grep -q .; then
+              filtered_paths="$filtered_paths $dir"
+            fi
+          done
+          echo "filtered-full-paths=$filtered_paths" >> $GITHUB_OUTPUT
+
+      # cspell: ignore suppr
+      - name: Run Cppcheck on modified packages
+        if: ${{ steps.filter-paths-no-cpp-files.outputs.filtered-full-paths != '' }}
+        continue-on-error: true
+        id: cppcheck
+        run: |
+          echo "Running Cppcheck on modified packages: ${{ steps.filter-paths-no-cpp-files.outputs.filtered-full-paths }}"
+          cppcheck --enable=all --inconclusive --check-level=exhaustive -D'PLUGINLIB_EXPORT_CLASS(class_type, base_class)=' -Dslots= -DQ_SLOTS= --error-exitcode=1 --suppressions-list=.cppcheck_suppressions --inline-suppr ${{ steps.filter-paths-no-cpp-files.outputs.filtered-full-paths }} 2> cppcheck-report.txt
+        shell: bash
+
+      - name: Setup Problem Matchers for cppcheck
+        if: ${{ steps.filter-paths-no-cpp-files.outputs.filtered-full-paths != '' }}
+        run: echo "::add-matcher::.github/cppcheck-problem-matcher.json"
+
+      - name: Show cppcheck-report result
+        if: ${{ steps.filter-paths-no-cpp-files.outputs.filtered-full-paths != '' }}
+        run: |
+          cat cppcheck-report.txt
+
+      - name: Upload Cppcheck report
+        if: ${{ steps.filter-paths-no-cpp-files.outputs.filtered-full-paths != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cppcheck-report
+          path: cppcheck-report.txt
+
+      - name: Fail the job if Cppcheck failed
+        if: ${{ steps.filter-paths-no-cpp-files.outputs.filtered-full-paths != '' && steps.cppcheck.outcome == 'failure' }}
+        run: exit 1

@@ -1,0 +1,61 @@
+<launch>
+  <arg name="image_raw0" default="/image_raw0"/>
+  <arg name="image_raw1" default=""/>
+  <arg name="image_raw2" default=""/>
+  <arg name="image_raw3" default=""/>
+  <arg name="image_raw4" default=""/>
+  <arg name="image_raw5" default=""/>
+  <arg name="image_raw6" default=""/>
+  <arg name="image_raw7" default=""/>
+  <arg name="image_number" default="1"/>
+  <arg name="output_topic" default="rois"/>
+
+  <include if="$(eval &quot;'$(var image_number)'>='1'&quot;)" file="$(find-pkg-share autoware_tensorrt_yolox)/launch/yolox.launch.xml">
+    <arg name="yolox_node_name" value="tensorrt_yolox0"/>
+    <arg name="image_transport_decompressor_node_name" value="image_transport_decompressor_node0"/>
+    <arg name="input/image" value="$(var image_raw0)"/>
+    <arg name="output/objects" value="rois0"/>
+  </include>
+  <include if="$(eval &quot;'$(var image_number)'>='2'&quot;)" file="$(find-pkg-share autoware_tensorrt_yolox)/launch/yolox.launch.xml">
+    <arg name="yolox_node_name" value="tensorrt_yolox1"/>
+    <arg name="image_transport_decompressor_node_name" value="image_transport_decompressor_node1"/>
+    <arg name="input/image" value="$(var image_raw1)"/>
+    <arg name="output/objects" value="rois1"/>
+  </include>
+  <include if="$(eval &quot;'$(var image_number)'>='3'&quot;)" file="$(find-pkg-share autoware_tensorrt_yolox)/launch/yolox.launch.xml">
+    <arg name="yolox_node_name" value="tensorrt_yolox2"/>
+    <arg name="image_transport_decompressor_node_name" value="image_transport_decompressor_node2"/>
+    <arg name="input/image" value="$(var image_raw2)"/>
+    <arg name="output/objects" value="rois2"/>
+  </include>
+  <include if="$(eval &quot;'$(var image_number)'>='4'&quot;)" file="$(find-pkg-share autoware_tensorrt_yolox)/launch/yolox.launch.xml">
+    <arg name="yolox_node_name" value="tensorrt_yolox3"/>
+    <arg name="image_transport_decompressor_node_name" value="image_transport_decompressor_node3"/>
+    <arg name="input/image" value="$(var image_raw3)"/>
+    <arg name="output/objects" value="rois3"/>
+  </include>
+  <include if="$(eval &quot;'$(var image_number)'>='5'&quot;)" file="$(find-pkg-share autoware_tensorrt_yolox)/launch/yolox.launch.xml">
+    <arg name="yolox_node_name" value="tensorrt_yolox4"/>
+    <arg name="image_transport_decompressor_node_name" value="image_transport_decompressor_node4"/>
+    <arg name="input/image" value="$(var image_raw4)"/>
+    <arg name="output/objects" value="rois4"/>
+  </include>
+  <include if="$(eval &quot;'$(var image_number)'>='6'&quot;)" file="$(find-pkg-share autoware_tensorrt_yolox)/launch/yolox.launch.xml">
+    <arg name="yolox_node_name" value="tensorrt_yolox5"/>
+    <arg name="image_transport_decompressor_node_name" value="image_transport_decompressor_node5"/>
+    <arg name="input/image" value="$(var image_raw5)"/>
+    <arg name="output/objects" value="rois5"/>
+  </include>
+  <include if="$(eval &quot;'$(var image_number)'>='7'&quot;)" file="$(find-pkg-share autoware_tensorrt_yolox)/launch/yolox.launch.xml">
+    <arg name="yolox_node_name" value="tensorrt_yolox6"/>
+    <arg name="image_transport_decompressor_node_name" value="image_transport_decompressor_node6"/>
+    <arg name="input/image" value="$(var image_raw6)"/>
+    <arg name="output/objects" value="rois6"/>
+  </include>
+  <include if="$(eval &quot;'$(var image_number)'>='8'&quot;)" file="$(find-pkg-share autoware_tensorrt_yolox)/launch/yolox.launch.xml">
+    <arg name="yolox_node_name" value="tensorrt_yolox7"/>
+    <arg name="image_transport_decompressor_node_name" value="image_transport_decompressor_node7"/>
+    <arg name="input/image" value="$(var image_raw7)"/>
+    <arg name="output/objects" value="rois7"/>
+  </include>
+</launch>

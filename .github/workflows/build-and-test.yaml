@@ -1,0 +1,21 @@
+name: build-and-test
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    uses: ./.github/workflows/build-and-test-reusable.yaml
+    with:
+      runner: "['self-hosted', 'Linux', 'X64']"
+      container: ghcr.io/autowarefoundation/autoware:universe-devel
+      container-suffix: -cuda
+      concurrency-group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: false
+      pull-ccache: true
+      push-ccache: true
+      codecov-flag: total-cuda
+    secrets:
+      codecov-token: ${{ secrets.CODECOV_TOKEN }}

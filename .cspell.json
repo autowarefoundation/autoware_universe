@@ -1,0 +1,8 @@
+{
+  "ignorePaths": [
+    "perception/autoware_bytetrack/lib/**",
+    "planning/behavior_velocity_planner/autoware_behavior_velocity_intersection_module/scripts/**"
+  ],
+  "ignoreRegExpList": [],
+  "words": ["dltype", "tvmgen", "fromarray", "soblin", "brkay54", "libtensorrt"]
+}

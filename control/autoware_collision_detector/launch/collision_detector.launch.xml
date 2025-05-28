@@ -1,0 +1,12 @@
+<launch>
+  <arg name="param_path" default="$(find-pkg-share autoware_collision_detector)/config/collision_detector.param.yaml"/>
+
+  <arg name="input_objects" default="/perception/object_recognition/objects"/>
+  <arg name="input_pointcloud" default="/perception/obstacle_segmentation/pointcloud"/>
+
+  <node pkg="autoware_collision_detector" exec="autoware_collision_detector_node" name="collision_detector" output="screen">
+    <param from="$(var param_path)"/>
+    <remap from="~/input/pointcloud" to="$(var input_pointcloud)"/>
+    <remap from="~/input/objects" to="$(var input_objects)"/>
+  </node>
+</launch>

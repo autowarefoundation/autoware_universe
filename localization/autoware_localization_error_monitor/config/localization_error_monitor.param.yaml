@@ -1,0 +1,7 @@
+/**:
+  ros__parameters:
+    scale: 3.0
+    error_ellipse_size: 1.5
+    warn_ellipse_size: 1.2
+    error_ellipse_size_lateral_direction: 0.3
+    warn_ellipse_size_lateral_direction: 0.25

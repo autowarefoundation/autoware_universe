@@ -1,0 +1,39 @@
+/**:
+  ros__parameters:
+    # Static expansion
+    drivable_area_right_bound_offset: 0.0
+    drivable_area_left_bound_offset: 0.0
+    drivable_area_types_to_skip: [road_border]
+
+    # Dynamic expansion by using the path curvature
+    dynamic_expansion:
+      enabled: true
+      print_runtime: false
+      max_expansion_distance: 0.0 # [m] maximum distance by which the drivable area can be expended (0.0 means no limit)
+      min_bound_interval: 1.0  # [m] minimum interval between two consecutive bound points (before expansion)
+      smoothing:
+        curvature_average_window: 3  # window size used for smoothing the curvatures using a moving window average
+        max_bound_rate: 1.0  # [m/m] maximum rate of change of the bound lateral distance over its arc length
+        arc_length_range: 2.0  # [m] arc length range where an expansion distance is initially applied
+      ego:
+        extra_wheelbase: 0.0 # [m] extra length to add to the wheelbase
+        extra_front_overhang: 0.5 # [m] extra length to add to the front overhang
+        extra_width: 1.0 # [m] extra length to add to the width
+      object_exclusion:
+        exclude_static: true # if true, the drivable area is not expanded over static objects
+        exclude_dynamic: false # if true, the drivable area is not expanded in the predicted path of dynamic objects
+        th_stopped_object_velocity: 1.0 # [m/s] velocity threshold for static objects
+        safety_margin:
+          front: 0.75 # [m] margin to add to the front of object footprint
+          rear: 0.75 # [m] margin to add to the rear of object footprint
+          left: 0.75 # [m] margin to add to the left of object footprint
+          right: 0.75 # [m] margin to add to the rear of object footprint
+      path_preprocessing:
+        max_arc_length: 100.0 # [m] maximum arc length along the path where the ego footprint is projected (0.0 means no limit)
+        resample_interval: 2.0 # [m] fixed interval between resampled path points (0.0 means path points are directly used)
+        reuse_max_deviation: 0.5 # [m] if the path changes by more than this value, the curvatures are recalculated. Otherwise they are reused.
+      avoid_linestring:
+        types: # linestring types in the lanelet maps that will not be crossed when expanding the drivable area
+          - road_border
+          - curbstone
+        distance: 0.0 # [m] distance to keep between the drivable area and the linestrings to avoid

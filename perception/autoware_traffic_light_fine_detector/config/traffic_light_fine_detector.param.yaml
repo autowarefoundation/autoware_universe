@@ -1,0 +1,7 @@
+/**:
+  ros__parameters:
+    precision: fp16
+    score_thresh: 0.3
+    nms_thresh: 0.65
+    approximate_sync: false
+    gpu_id: 0

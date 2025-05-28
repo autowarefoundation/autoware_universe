@@ -1,0 +1,19 @@
+<launch>
+  <arg name="input/image" default="/camera/image_raw"/>
+  <arg name="input/rois" default="~/input/rois"/>
+  <arg name="input/rough/rois" default="~/rough/rois"/>
+  <arg name="input/traffic_signals" default="~/input/traffic_signals"/>
+  <arg name="output/image" default="~/debug/rois"/>
+  <arg name="use_high_accuracy_detection" default="true"/>
+  <arg name="use_image_transport" default="true"/>
+
+  <node pkg="autoware_traffic_light_visualization" exec="traffic_light_visualization_node" name="traffic_light_visualization">
+    <remap from="~/input/image" to="$(var input/image)"/>
+    <remap from="~/input/rois" to="$(var input/rois)"/>
+    <remap from="~/input/rough/rois" to="$(var input/rough/rois)"/>
+    <remap from="~/input/traffic_signals" to="$(var input/traffic_signals)"/>
+    <remap from="~/output/image" to="$(var output/image)"/>
+    <param name="use_high_accuracy_detection" value="$(var use_high_accuracy_detection)"/>
+    <param name="use_image_transport" value="$(var use_image_transport)"/>
+  </node>
+</launch>

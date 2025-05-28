@@ -1,0 +1,677 @@
+// Copyright 2020 Tier IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "autoware/lane_departure_checker/lane_departure_checker_node.hpp"
+
+#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware_lanelet2_extension/utility/query.hpp>
+#include <autoware_lanelet2_extension/utility/route_checker.hpp>
+#include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_lanelet2_extension/visualization/visualization.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
+
+#include <autoware_planning_msgs/msg/lanelet_segment.hpp>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+using autoware_utils::rad2deg;
+
+namespace
+{
+using autoware_planning_msgs::msg::LaneletSegment;
+
+std::array<geometry_msgs::msg::Point, 3> triangle2points(
+  const geometry_msgs::msg::Polygon & triangle)
+{
+  std::array<geometry_msgs::msg::Point, 3> points;
+  for (size_t i = 0; i < 3; ++i) {
+    const auto & p = triangle.points.at(i);
+
+    geometry_msgs::msg::Point point;
+    point.x = static_cast<double>(p.x);
+    point.y = static_cast<double>(p.y);
+    point.z = static_cast<double>(p.z);
+    points.at(i) = point;
+  }
+  return points;
+}
+
+std::map<lanelet::Id, lanelet::ConstLanelet> getRouteLanelets(
+  const lanelet::LaneletMapPtr & lanelet_map,
+  const lanelet::routing::RoutingGraphPtr & routing_graph,
+  const autoware_planning_msgs::msg::LaneletRoute::ConstSharedPtr & route_ptr,
+  const double vehicle_length)
+{
+  std::map<lanelet::Id, lanelet::ConstLanelet> route_lanelets;
+
+  bool is_route_valid = lanelet::utils::route::isRouteValid(*route_ptr, lanelet_map);
+  if (!is_route_valid) {
+    return route_lanelets;
+  }
+
+  // Add preceding lanes of front route_section to prevent detection errors
+  {
+    const auto extension_length = 2 * vehicle_length;
+
+    for (const auto & primitive : route_ptr->segments.front().primitives) {
+      const auto lane_id = primitive.id;
+      for (const auto & lanelet_sequence : lanelet::utils::query::getPrecedingLaneletSequences(
+             routing_graph, lanelet_map->laneletLayer.get(lane_id), extension_length)) {
+        for (const auto & preceding_lanelet : lanelet_sequence) {
+          route_lanelets[preceding_lanelet.id()] = preceding_lanelet;
+        }
+      }
+    }
+  }
+
+  for (const auto & route_section : route_ptr->segments) {
+    for (const auto & primitive : route_section.primitives) {
+      const auto lane_id = primitive.id;
+      route_lanelets[lane_id] = lanelet_map->laneletLayer.get(lane_id);
+    }
+  }
+
+  // Add succeeding lanes of last route_section to prevent detection errors
+  {
+    const auto extension_length = 2 * vehicle_length;
+
+    for (const auto & primitive : route_ptr->segments.back().primitives) {
+      const auto lane_id = primitive.id;
+      for (const auto & lanelet_sequence : lanelet::utils::query::getSucceedingLaneletSequences(
+             routing_graph, lanelet_map->laneletLayer.get(lane_id), extension_length)) {
+        for (const auto & succeeding_lanelet : lanelet_sequence) {
+          route_lanelets[succeeding_lanelet.id()] = succeeding_lanelet;
+        }
+      }
+    }
+  }
+
+  return route_lanelets;
+}
+
+template <typename T>
+void update_param(
+  const std::vector<rclcpp::Parameter> & parameters, const std::string & name, T & value)
+{
+  auto it = std::find_if(
+    parameters.cbegin(), parameters.cend(),
+    [&name](const rclcpp::Parameter & parameter) { return parameter.get_name() == name; });
+  if (it != parameters.cend()) {
+    value = it->template get_value<T>();
+  }
+}
+
+}  // namespace
+
+namespace autoware::lane_departure_checker
+{
+LaneDepartureCheckerNode::LaneDepartureCheckerNode(const rclcpp::NodeOptions & options)
+: Node("lane_departure_checker_node", options)
+{
+  using std::placeholders::_1;
+  node_param_ = NodeParam::init(*this);
+  param_ = init(*this);
+
+  // Vehicle Info
+  const auto vehicle_info = autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo();
+  vehicle_length_m_ = vehicle_info.vehicle_length_m;
+
+  // Parameter Callback
+  set_param_res_ =
+    add_on_set_parameters_callback(std::bind(&LaneDepartureCheckerNode::onParameter, this, _1));
+
+  // Core
+  boundary_departure_checker_ = std::make_unique<BoundaryDepartureChecker>(param_, vehicle_info);
+
+  // Publisher
+  processing_time_publisher_ =
+    this->create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "~/debug/processing_time_ms", 1);
+  // Nothing
+
+  // Diagnostic Updater
+  updater_.setHardwareID("lane_departure_checker");
+
+  updater_.add("lane_departure", this, &LaneDepartureCheckerNode::checkLaneDeparture);
+
+  // Timer
+  const auto period_ns = rclcpp::Rate(node_param_.update_rate).period();
+  timer_ = rclcpp::create_timer(
+    this, get_clock(), period_ns, std::bind(&LaneDepartureCheckerNode::onTimer, this));
+}
+
+bool LaneDepartureCheckerNode::isDataReady()
+{
+  if (!current_odom_) {
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 5000, "waiting for current_twist msg...");
+    return false;
+  }
+
+  if (!lanelet_map_) {
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 5000, "waiting for lanelet_map msg...");
+    return false;
+  }
+
+  if (!route_) {
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 5000, "waiting for route msg...");
+    return false;
+  }
+
+  if (!reference_trajectory_) {
+    RCLCPP_INFO_THROTTLE(
+      get_logger(), *get_clock(), 5000, "waiting for reference_trajectory msg...");
+    return false;
+  }
+
+  if (!predicted_trajectory_) {
+    RCLCPP_INFO_THROTTLE(
+      get_logger(), *get_clock(), 5000, "waiting for predicted_trajectory msg...");
+    return false;
+  }
+
+  if (!operation_mode_) {
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 5000, "waiting for operation_mode msg...");
+    return false;
+  }
+
+  if (!control_mode_) {
+    RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 5000, "waiting for control_mode msg...");
+    return false;
+  }
+
+  return true;
+}
+
+bool LaneDepartureCheckerNode::isDataTimeout()
+{
+  const auto now = this->now();
+
+  constexpr double th_pose_timeout = 1.0;
+  const auto pose_time_diff = rclcpp::Time(current_odom_->header.stamp) - now;
+  if (pose_time_diff.seconds() > th_pose_timeout) {
+    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000, "pose is timeout...");
+    return true;
+  }
+
+  return false;
+}
+
+bool LaneDepartureCheckerNode::isDataValid()
+{
+  if (reference_trajectory_->points.empty()) {
+    RCLCPP_ERROR_THROTTLE(
+      get_logger(), *get_clock(), 5000, "reference_trajectory is empty. Not expected!");
+    return false;
+  }
+
+  if (predicted_trajectory_->points.empty()) {
+    RCLCPP_DEBUG(get_logger(), "predicted_trajectory is empty. Not expected!");
+    return false;
+  }
+
+  return true;
+}
+
+void LaneDepartureCheckerNode::onTimer()
+{
+  std::map<std::string, double> processing_time_map;
+  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
+  stop_watch.tic("Total");
+
+  current_odom_ = sub_odom_.take_data();
+  route_ = sub_route_.take_data();
+  reference_trajectory_ = sub_reference_trajectory_.take_data();
+  predicted_trajectory_ = sub_predicted_trajectory_.take_data();
+  operation_mode_ = sub_operation_mode_.take_data();
+  control_mode_ = sub_control_mode_.take_data();
+
+  const auto lanelet_map_bin_msg = sub_lanelet_map_bin_.take_data();
+  if (lanelet_map_bin_msg) {
+    lanelet_map_ = std::make_shared<lanelet::LaneletMap>();
+    lanelet::utils::conversion::fromBinMsg(
+      *lanelet_map_bin_msg, lanelet_map_, &traffic_rules_, &routing_graph_);
+
+    // get all shoulder lanes
+    lanelet::ConstLanelets all_lanelets = lanelet::utils::query::laneletLayer(lanelet_map_);
+    shoulder_lanelets_ = lanelet::utils::query::shoulderLanelets(all_lanelets);
+  }
+
+  if (!isDataReady()) {
+    return;
+  }
+
+  if (isDataTimeout()) {
+    return;
+  }
+
+  if (!isDataValid()) {
+    return;
+  }
+
+  processing_time_map["Node: checkData"] = stop_watch.toc(true);
+
+  // In order to wait for both of map and route will be ready, write this not in callback but here
+  if (last_route_ != route_ && !route_->segments.empty()) {
+    std::map<lanelet::Id, lanelet::ConstLanelet>::iterator itr;
+
+    auto map_route_lanelets_ =
+      getRouteLanelets(lanelet_map_, routing_graph_, route_, vehicle_length_m_);
+
+    lanelet::ConstLanelets shared_lanelets_tmp;
+
+    for (itr = map_route_lanelets_.begin(); itr != map_route_lanelets_.end(); ++itr) {
+      const auto shared_lanelet = getAllSharedLineStringLanelets(
+        itr->second, node_param_.include_right_lanes, node_param_.include_left_lanes,
+        node_param_.include_opposite_lanes, node_param_.include_conflicting_lanes, true);
+      shared_lanelets_tmp.insert(
+        shared_lanelets_tmp.end(), shared_lanelet.begin(), shared_lanelet.end());
+    }
+    for (const auto & lanelet : shared_lanelets_tmp) {
+      map_route_lanelets_[lanelet.id()] = lanelet;
+    }
+    route_lanelets_.clear();
+    for (itr = map_route_lanelets_.begin(); itr != map_route_lanelets_.end(); ++itr) {
+      route_lanelets_.push_back(itr->second);
+    }
+    last_route_ = route_;
+  }
+  processing_time_map["Node: getRouteLanelets"] = stop_watch.toc(true);
+
+  input_.current_odom = current_odom_;
+  input_.lanelet_map = lanelet_map_;
+  input_.route = route_;
+  input_.route_lanelets = route_lanelets_;
+  input_.shoulder_lanelets = shoulder_lanelets_;
+  input_.reference_trajectory = reference_trajectory_;
+  input_.predicted_trajectory = predicted_trajectory_;
+  input_.boundary_types_to_detect = node_param_.boundary_types_to_detect;
+  processing_time_map["Node: setInputData"] = stop_watch.toc(true);
+
+  output_ = boundary_departure_checker_->update(input_);
+  processing_time_map["Node: update"] = stop_watch.toc(true);
+
+  updater_.force_update();
+  processing_time_map["Node: updateDiagnostics"] = stop_watch.toc(true);
+
+  debug_publisher_.publish<visualization_msgs::msg::MarkerArray>(
+    std::string("marker_array"), createMarkerArray());
+  processing_time_map["Node: publishDebugMarker"] = stop_watch.toc(true);
+
+  // Merge processing_time_map
+  for (const auto & m : output_.processing_time_map) {
+    processing_time_map["Core: " + m.first] = m.second;
+  }
+
+  processing_time_map["Total"] = stop_watch.toc("Total");
+  processing_diag_publisher_.publish(processing_time_map);
+  autoware_internal_debug_msgs::msg::Float64Stamped processing_time_msg;
+  processing_time_msg.stamp = get_clock()->now();
+  processing_time_msg.data = processing_time_map["Total"];
+  processing_time_publisher_->publish(processing_time_msg);
+}
+
+rcl_interfaces::msg::SetParametersResult LaneDepartureCheckerNode::onParameter(
+  const std::vector<rclcpp::Parameter> & parameters)
+{
+  rcl_interfaces::msg::SetParametersResult result;
+  result.successful = true;
+  result.reason = "success";
+
+  try {
+    // Enable feature
+    update_param(parameters, "will_out_of_lane_checker", node_param_.will_out_of_lane_checker);
+    update_param(parameters, "out_of_lane_checker", node_param_.out_of_lane_checker);
+    update_param(parameters, "boundary_departure_checker", node_param_.boundary_departure_checker);
+
+    // Node
+    update_param(parameters, "visualize_lanelet", node_param_.visualize_lanelet);
+    update_param(parameters, "include_right_lanes", node_param_.include_right_lanes);
+    update_param(parameters, "include_left_lanes", node_param_.include_left_lanes);
+    update_param(parameters, "include_opposite_lanes", node_param_.include_opposite_lanes);
+    update_param(parameters, "include_conflicting_lanes", node_param_.include_conflicting_lanes);
+    update_param(parameters, "boundary_departure_checker", node_param_.boundary_departure_checker);
+    update_param(parameters, "boundary_types_to_detect", node_param_.boundary_types_to_detect);
+
+    // Core
+    update_param(parameters, "footprint_margin_scale", param_.footprint_margin_scale);
+    update_param(parameters, "footprint_extra_margin", param_.footprint_extra_margin);
+    update_param(parameters, "resample_interval", param_.resample_interval);
+    update_param(parameters, "max_deceleration", param_.max_deceleration);
+    update_param(parameters, "delay_time", param_.delay_time);
+    update_param(parameters, "min_braking_distance", param_.min_braking_distance);
+
+    if (boundary_departure_checker_) {
+      boundary_departure_checker_->setParam(param_);
+    }
+  } catch (const rclcpp::exceptions::InvalidParameterTypeException & e) {
+    result.successful = false;
+    result.reason = e.what();
+  }
+
+  return result;
+}
+
+void LaneDepartureCheckerNode::checkLaneDeparture(
+  diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
+  int8_t level = DiagStatus::OK;
+  std::string msg = "OK";
+
+  if (output_.will_leave_lane && node_param_.will_out_of_lane_checker) {
+    level = DiagStatus::WARN;
+    msg = "vehicle will leave lane";
+  }
+
+  if (output_.is_out_of_lane && node_param_.out_of_lane_checker) {
+    level = DiagStatus::ERROR;
+    msg = "vehicle is out of lane";
+  }
+
+  if (output_.will_cross_boundary && node_param_.boundary_departure_checker) {
+    level = DiagStatus::ERROR;
+    msg = "vehicle will cross boundary";
+  }
+
+  stat.summary(level, msg);
+}
+
+visualization_msgs::msg::MarkerArray LaneDepartureCheckerNode::createMarkerArray() const
+{
+  using autoware_utils::create_default_marker;
+  using autoware_utils::create_marker_color;
+  using autoware_utils::create_marker_scale;
+
+  visualization_msgs::msg::MarkerArray marker_array;
+
+  const auto base_link_z = current_odom_->pose.pose.position.z;
+
+  if (node_param_.visualize_lanelet) {
+    // Route Lanelets
+    {
+      auto marker = create_default_marker(
+        "map", this->now(), "route_lanelets", 0, visualization_msgs::msg::Marker::TRIANGLE_LIST,
+        create_marker_scale(1.0, 1.0, 1.0), create_marker_color(0.0, 0.5, 0.5, 0.5));
+
+      for (const auto & lanelet : input_.route_lanelets) {
+        std::vector<geometry_msgs::msg::Polygon> triangles;
+        lanelet::visualization::lanelet2Triangle(lanelet, &triangles);
+
+        for (const auto & triangle : triangles) {
+          for (const auto & point : triangle2points(triangle)) {
+            marker.points.push_back(point);
+            marker.colors.push_back(marker.color);
+          }
+        }
+      }
+
+      marker_array.markers.push_back(marker);
+    }
+
+    // Candidate Lanelets
+    {
+      auto marker = create_default_marker(
+        "map", this->now(), "candidate_lanelets", 0, visualization_msgs::msg::Marker::TRIANGLE_LIST,
+        create_marker_scale(1.0, 1.0, 1.0), create_marker_color(1.0, 1.0, 0.0, 0.5));
+
+      for (const auto & lanelet : output_.candidate_lanelets) {
+        std::vector<geometry_msgs::msg::Polygon> triangles;
+        lanelet::visualization::lanelet2Triangle(lanelet, &triangles);
+
+        for (const auto & triangle : triangles) {
+          for (const auto & point : triangle2points(triangle)) {
+            marker.points.push_back(point);
+            marker.colors.push_back(marker.color);
+          }
+        }
+      }
+
+      marker_array.markers.push_back(marker);
+    }
+  }
+
+  if (output_.resampled_trajectory.size() >= 2) {
+    // Line of resampled_trajectory
+    {
+      auto marker = create_default_marker(
+        "map", this->now(), "resampled_trajectory_line", 0,
+        visualization_msgs::msg::Marker::LINE_STRIP, create_marker_scale(0.05, 0, 0),
+        create_marker_color(1.0, 1.0, 1.0, 0.999));
+
+      for (const auto & p : output_.resampled_trajectory) {
+        marker.points.push_back(p.pose.position);
+        marker.colors.push_back(marker.color);
+      }
+
+      marker_array.markers.push_back(marker);
+    }
+
+    // Points of resampled_trajectory
+    {
+      auto marker = create_default_marker(
+        "map", this->now(), "resampled_trajectory_points", 0,
+        visualization_msgs::msg::Marker::SPHERE_LIST, create_marker_scale(0.1, 0.1, 0.1),
+        create_marker_color(0.0, 1.0, 0.0, 0.999));
+
+      for (const auto & p : output_.resampled_trajectory) {
+        marker.points.push_back(p.pose.position);
+        marker.colors.push_back(marker.color);
+      }
+
+      marker_array.markers.push_back(marker);
+    }
+  }
+
+  // Vehicle Footprints
+  {
+    const auto color_ok = create_marker_color(0.0, 1.0, 0.0, 0.5);
+    const auto color_will_leave_lane = create_marker_color(0.5, 0.5, 0.0, 0.5);
+    const auto color_is_out_of_lane = create_marker_color(1.0, 0.0, 0.0, 0.5);
+
+    auto color = color_ok;
+    if (output_.will_leave_lane) {
+      color = color_will_leave_lane;
+    }
+    if (output_.is_out_of_lane) {
+      color = color_is_out_of_lane;
+    }
+
+    auto marker = create_default_marker(
+      "map", this->now(), "vehicle_footprints", 0, visualization_msgs::msg::Marker::LINE_LIST,
+      create_marker_scale(0.05, 0, 0), color);
+
+    for (const auto & vehicle_footprint : output_.vehicle_footprints) {
+      for (size_t i = 0; i < vehicle_footprint.size() - 1; ++i) {
+        const auto p1 = vehicle_footprint.at(i);
+        const auto p2 = vehicle_footprint.at(i + 1);
+
+        marker.points.push_back(autoware_utils::to_msg(p1.to_3d(base_link_z)));
+        marker.points.push_back(autoware_utils::to_msg(p2.to_3d(base_link_z)));
+      }
+    }
+
+    marker_array.markers.push_back(marker);
+  }
+
+  return marker_array;
+}
+
+lanelet::ConstLanelets LaneDepartureCheckerNode::getAllSharedLineStringLanelets(
+  const lanelet::ConstLanelet & current_lane, const bool is_right, const bool is_left,
+  const bool is_opposite, const bool is_conflicting, const bool & invert_opposite)
+{
+  lanelet::ConstLanelets shared{current_lane};
+
+  if (is_right) {
+    const lanelet::ConstLanelets all_right_lanelets =
+      getAllRightSharedLinestringLanelets(current_lane, is_opposite, invert_opposite);
+    shared.insert(shared.end(), all_right_lanelets.begin(), all_right_lanelets.end());
+  }
+
+  if (is_left) {
+    const lanelet::ConstLanelets all_left_lanelets =
+      getAllLeftSharedLinestringLanelets(current_lane, is_opposite, invert_opposite);
+    shared.insert(shared.end(), all_left_lanelets.begin(), all_left_lanelets.end());
+  }
+
+  if (is_conflicting) {
+    const auto conflicting_lanelets =
+      lanelet::utils::getConflictingLanelets(routing_graph_, current_lane);
+    shared.insert(shared.end(), conflicting_lanelets.begin(), conflicting_lanelets.end());
+  }
+  return shared;
+}
+
+lanelet::ConstLanelets LaneDepartureCheckerNode::getAllRightSharedLinestringLanelets(
+  const lanelet::ConstLanelet & lane, const bool & include_opposite, const bool & invert_opposite)
+{
+  lanelet::ConstLanelets linestring_shared;
+  auto lanelet_at_right = getRightLanelet(lane);
+  auto lanelet_at_right_opposite = getRightOppositeLanelets(lane);
+  while (lanelet_at_right) {
+    linestring_shared.push_back(lanelet_at_right.get());
+    lanelet_at_right = getRightLanelet(lanelet_at_right.get());
+    if (!lanelet_at_right) {
+      break;
+    }
+    lanelet_at_right_opposite = getRightOppositeLanelets(lanelet_at_right.get());
+  }
+
+  if (!lanelet_at_right_opposite.empty() && include_opposite) {
+    if (invert_opposite) {
+      linestring_shared.push_back(lanelet_at_right_opposite.front().invert());
+    } else {
+      linestring_shared.push_back(lanelet_at_right_opposite.front());
+    }
+    auto lanelet_at_left = getLeftLanelet(lanelet_at_right_opposite.front());
+    while (lanelet_at_left) {
+      if (invert_opposite) {
+        linestring_shared.push_back(lanelet_at_left.get().invert());
+      } else {
+        linestring_shared.push_back(lanelet_at_left.get());
+      }
+      lanelet_at_left = getLeftLanelet(lanelet_at_left.get());
+    }
+  }
+  return linestring_shared;
+}
+
+lanelet::ConstLanelets LaneDepartureCheckerNode::getAllLeftSharedLinestringLanelets(
+  const lanelet::ConstLanelet & lane, const bool & include_opposite, const bool & invert_opposite)
+{
+  lanelet::ConstLanelets linestring_shared;
+  auto lanelet_at_left = getLeftLanelet(lane);
+  auto lanelet_at_left_opposite = getLeftOppositeLanelets(lane);
+  while (lanelet_at_left) {
+    linestring_shared.push_back(lanelet_at_left.get());
+    lanelet_at_left = getLeftLanelet(lanelet_at_left.get());
+    if (!lanelet_at_left) {
+      break;
+    }
+    lanelet_at_left_opposite = getLeftOppositeLanelets(lanelet_at_left.get());
+  }
+
+  if (!lanelet_at_left_opposite.empty() && include_opposite) {
+    if (invert_opposite) {
+      linestring_shared.push_back(lanelet_at_left_opposite.front().invert());
+    } else {
+      linestring_shared.push_back(lanelet_at_left_opposite.front());
+    }
+    auto lanelet_at_right = getRightLanelet(lanelet_at_left_opposite.front());
+    while (lanelet_at_right) {
+      if (invert_opposite) {
+        linestring_shared.push_back(lanelet_at_right.get().invert());
+      } else {
+        linestring_shared.push_back(lanelet_at_right.get());
+      }
+      lanelet_at_right = getRightLanelet(lanelet_at_right.get());
+    }
+  }
+  return linestring_shared;
+}
+
+boost::optional<lanelet::ConstLanelet> LaneDepartureCheckerNode::getLeftLanelet(
+  const lanelet::ConstLanelet & lanelet)
+{
+  // routable lane
+  const auto & left_lane = routing_graph_->left(lanelet);
+  if (left_lane) {
+    return left_lane;
+  }
+
+  // non-routable lane (e.g. lane change infeasible)
+  const auto & adjacent_left_lane = routing_graph_->adjacentLeft(lanelet);
+  return adjacent_left_lane;
+}
+
+lanelet::Lanelets LaneDepartureCheckerNode::getLeftOppositeLanelets(
+  const lanelet::ConstLanelet & lanelet)
+{
+  const auto opposite_candidate_lanelets =
+    lanelet_map_->laneletLayer.findUsages(lanelet.leftBound().invert());
+
+  lanelet::Lanelets opposite_lanelets;
+  for (const auto & candidate_lanelet : opposite_candidate_lanelets) {
+    if (candidate_lanelet.rightBound().id() == lanelet.leftBound().id()) {
+      continue;
+    }
+
+    opposite_lanelets.push_back(candidate_lanelet);
+  }
+
+  return opposite_lanelets;
+}
+
+boost::optional<lanelet::ConstLanelet> LaneDepartureCheckerNode::getRightLanelet(
+  const lanelet::ConstLanelet & lanelet) const
+{
+  // routable lane
+  const auto & right_lane = routing_graph_->right(lanelet);
+  if (right_lane) {
+    return right_lane;
+  }
+
+  // non-routable lane (e.g. lane change infeasible)
+  const auto & adjacent_right_lane = routing_graph_->adjacentRight(lanelet);
+  return adjacent_right_lane;
+}
+
+lanelet::Lanelets LaneDepartureCheckerNode::getRightOppositeLanelets(
+  const lanelet::ConstLanelet & lanelet)
+{
+  const auto opposite_candidate_lanelets =
+    lanelet_map_->laneletLayer.findUsages(lanelet.rightBound().invert());
+
+  lanelet::Lanelets opposite_lanelets;
+  for (const auto & candidate_lanelet : opposite_candidate_lanelets) {
+    if (candidate_lanelet.leftBound().id() == lanelet.rightBound().id()) {
+      continue;
+    }
+
+    opposite_lanelets.push_back(candidate_lanelet);
+  }
+
+  return opposite_lanelets;
+}
+
+}  // namespace autoware::lane_departure_checker
+
+#include <rclcpp_components/register_node_macro.hpp>
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::lane_departure_checker::LaneDepartureCheckerNode)

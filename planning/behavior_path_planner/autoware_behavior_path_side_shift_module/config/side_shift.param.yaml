@@ -1,0 +1,10 @@
+/**:
+  ros__parameters:
+    side_shift:
+      min_distance_to_start_shifting: 5.0
+      time_to_start_shifting: 1.0
+      shifting_lateral_jerk: 0.2
+      min_shifting_distance: 5.0
+      min_shifting_speed: 5.56
+      shift_request_time_limit: 1.0
+      publish_debug_marker: false

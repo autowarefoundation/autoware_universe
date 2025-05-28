@@ -1,0 +1,37 @@
+/**:
+  ros__parameters:
+    user_defined_initial_pose:
+      enable: $(var user_defined_initial_pose/enable)
+      pose: $(var user_defined_initial_pose/pose)
+
+    gnss_pose_timeout: 3.0 # [sec]
+    stop_check_duration: 3.0 # [sec]
+    pose_error_threshold: 5.0 # [m]
+    pose_error_check_enabled: false # check initial pose error with gnss
+    ekf_enabled: $(var ekf_enabled)
+    gnss_enabled: $(var gnss_enabled)
+    yabloc_enabled: $(var yabloc_enabled)
+    ndt_enabled: $(var ndt_enabled)
+    stop_check_enabled: $(var stop_check_enabled)
+
+    # from gnss
+    gnss_particle_covariance:
+      [
+        1.0, 0.0, 0.0,  0.0,  0.0,  0.0,
+        0.0, 1.0, 0.0,  0.0,  0.0,  0.0,
+        0.0, 0.0, 0.01, 0.0,  0.0,  0.0,
+        0.0, 0.0, 0.0,  0.01, 0.0,  0.0,
+        0.0, 0.0, 0.0,  0.0,  0.01, 0.0,
+        0.0, 0.0, 0.0,  0.0,  0.0,  10.0,
+      ]
+
+    # output
+    output_pose_covariance:
+      [
+        1.0, 0.0, 0.0,  0.0,  0.0,  0.0,
+        0.0, 1.0, 0.0,  0.0,  0.0,  0.0,
+        0.0, 0.0, 0.01, 0.0,  0.0,  0.0,
+        0.0, 0.0, 0.0,  0.01, 0.0,  0.0,
+        0.0, 0.0, 0.0,  0.0,  0.01, 0.0,
+        0.0, 0.0, 0.0,  0.0,  0.0,  0.2,
+      ]

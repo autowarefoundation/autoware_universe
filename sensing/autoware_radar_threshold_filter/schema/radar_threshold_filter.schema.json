@@ -1,0 +1,114 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_radar_threshold_filter parameters",
+  "type": "object",
+  "definitions": {
+    "radar_threshold_filter": {
+      "type": "object",
+      "properties": {
+        "node_params": {
+          "type": "object",
+          "properties": {
+            "is_amplitude_filter": {
+              "type": "boolean",
+              "default": "true",
+              "description": "If true, amplitude filtering is enabled."
+            },
+            "amplitude_min": {
+              "type": "number",
+              "default": -10.0,
+              "description": "Minimum amplitude threshold."
+            },
+            "amplitude_max": {
+              "type": "number",
+              "default": 100.0,
+              "description": "Maximum amplitude threshold."
+            },
+            "is_range_filter": {
+              "type": "boolean",
+              "default": "false",
+              "description": "If true, range filtering is enabled."
+            },
+            "range_min": {
+              "type": "number",
+              "default": 20.0,
+              "description": "Minimum range threshold."
+            },
+            "range_max": {
+              "type": "number",
+              "default": 300.0,
+              "description": "Maximum range threshold."
+            },
+            "is_azimuth_filter": {
+              "type": "boolean",
+              "default": "true",
+              "description": "If true, azimuth filtering is enabled."
+            },
+            "azimuth_min": {
+              "type": "number",
+              "default": -1.2,
+              "description": "Minimum azimuth threshold (radians)."
+            },
+            "azimuth_max": {
+              "type": "number",
+              "default": 1.2,
+              "description": "Maximum azimuth threshold (radians)."
+            },
+            "is_z_filter": {
+              "type": "boolean",
+              "default": "false",
+              "description": "If true, Z filtering is enabled."
+            },
+            "z_min": {
+              "type": "number",
+              "default": -2.0,
+              "description": "Minimum Z threshold (meters)."
+            },
+            "z_max": {
+              "type": "number",
+              "default": 5.0,
+              "description": "Maximum Z threshold (meters)."
+            },
+            "max_queue_size": {
+              "type": "integer",
+              "default": 5,
+              "description": "Maximum size of the queue."
+            }
+          },
+          "required": [
+            "is_amplitude_filter",
+            "amplitude_min",
+            "amplitude_max",
+            "is_range_filter",
+            "range_min",
+            "range_max",
+            "is_azimuth_filter",
+            "azimuth_min",
+            "azimuth_max",
+            "is_z_filter",
+            "z_min",
+            "z_max",
+            "max_queue_size"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": ["node_params"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/radar_threshold_filter"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

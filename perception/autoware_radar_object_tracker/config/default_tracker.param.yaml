@@ -1,0 +1,9 @@
+/**:
+  ros__parameters:
+    car_tracker: "constant_turn_rate_motion_tracker"
+    truck_tracker: "constant_turn_rate_motion_tracker"
+    bus_tracker: "constant_turn_rate_motion_tracker"
+    trailer_tracker: "constant_turn_rate_motion_tracker"
+    pedestrian_tracker: "constant_turn_rate_motion_tracker"
+    bicycle_tracker: "constant_turn_rate_motion_tracker"
+    motorcycle_tracker: "constant_turn_rate_motion_tracker"

@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autoware_pcl_extensions</name>
+  <version>0.45.0</version>
+  <description>The autoware_pcl_extensions package</description>
+  <maintainer email="ryu.yamamoto@tier4.jp">Ryu Yamamoto</maintainer>
+  <maintainer email="kenzo.lobos@tier4.jp">Kenzo Lobos Tsunekawa</maintainer>
+  <maintainer email="david.wong@tier4.jp">David Wong</maintainer>
+
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+  <buildtool_depend>eigen3_cmake_module</buildtool_depend>
+
+  <buildtool_export_depend>eigen3_cmake_module</buildtool_export_depend>
+
+  <build_depend>eigen</build_depend>
+  <build_depend>range-v3</build_depend>
+
+  <build_export_depend>eigen</build_export_depend>
+
+  <depend>libpcl-all-dev</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>autoware_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

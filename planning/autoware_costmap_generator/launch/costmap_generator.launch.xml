@@ -1,0 +1,21 @@
+<launch>
+  <arg name="input_objects" default="~/input/objects"/>
+  <arg name="input_points_no_ground" default="~/input/points_no_ground"/>
+  <arg name="input_lanelet_map" default="~/input/vector_map"/>
+  <arg name="input_scenario" default="~/input/scenario"/>
+  <arg name="output_grid_map" default="~/output/grid_map"/>
+  <arg name="output_occupancy_grid" default="~/output/occupancy_grid"/>
+
+  <arg name="costmap_generator_param_file" default="$(find-pkg-share autoware_costmap_generator)/config/costmap_generator.param.yaml"/>
+
+  <node pkg="autoware_costmap_generator" exec="costmap_generator" name="costmap_generator" output="screen">
+    <remap from="~/input/objects" to="$(var input_objects)"/>
+    <remap from="~/input/points_no_ground" to="$(var input_points_no_ground)"/>
+    <remap from="~/input/vector_map" to="$(var input_lanelet_map)"/>
+    <remap from="~/input/scenario" to="$(var input_scenario)"/>
+    <remap from="~/output/grid_map" to="$(var output_grid_map)"/>
+    <remap from="~/output/occupancy_grid" to="$(var output_occupancy_grid)"/>
+
+    <param from="$(var costmap_generator_param_file)"/>
+  </node>
+</launch>

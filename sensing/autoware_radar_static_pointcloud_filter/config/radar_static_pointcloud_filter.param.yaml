@@ -1,0 +1,4 @@
+/**:
+  ros__parameters:
+    doppler_velocity_sd: 4.0
+    max_queue_size: 5

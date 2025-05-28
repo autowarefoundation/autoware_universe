@@ -1,0 +1,44 @@
+builtin_interfaces/Time stamp
+
+# states
+bool is_valid_size
+bool is_valid_finite_value
+bool is_valid_interval
+bool is_valid_relative_angle
+bool is_valid_curvature
+bool is_valid_lateral_acc
+bool is_valid_lateral_jerk
+bool is_valid_longitudinal_max_acc
+bool is_valid_longitudinal_min_acc
+bool is_valid_steering
+bool is_valid_steering_rate
+bool is_valid_velocity_deviation
+bool is_valid_distance_deviation
+bool is_valid_longitudinal_distance_deviation
+bool is_valid_forward_trajectory_length
+bool is_valid_latency
+bool is_valid_yaw_deviation
+bool is_valid_trajectory_shift
+
+# values
+int64 trajectory_size
+float64 max_interval_distance
+float64 max_relative_angle
+float64 max_curvature
+float64 max_lateral_acc
+float64 max_lateral_jerk
+float64 max_longitudinal_acc
+float64 min_longitudinal_acc
+float64 max_steering
+float64 max_steering_rate
+float64 velocity_deviation
+float64 distance_deviation
+float64 longitudinal_distance_deviation
+float64 forward_trajectory_length_required
+float64 forward_trajectory_length_measured
+float64 latency
+float64 yaw_deviation
+float64 lateral_shift
+float64 longitudinal_shift
+
+int64 invalid_count

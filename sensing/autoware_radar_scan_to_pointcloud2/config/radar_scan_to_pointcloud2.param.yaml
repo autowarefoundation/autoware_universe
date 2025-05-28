@@ -1,0 +1,5 @@
+/**:
+  ros__parameters:
+    publish_amplitude_pointcloud: true
+    publish_doppler_pointcloud: false
+    max_queue_size: 5

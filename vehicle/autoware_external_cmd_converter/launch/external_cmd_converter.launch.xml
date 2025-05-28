@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+  <node_container pkg="rclcpp_components" exec="component_container" name="external_cmd_converter_container" namespace="control"/>
+  <group>
+    <push-ros-namespace namespace="control"/>
+    <include file="$(find-pkg-share autoware_external_cmd_converter)/launch/external_cmd_converter.launch.py">
+      <arg name="use_intra_process" value="false"/>
+      <arg name="target_container" value="/control/external_cmd_converter_container"/>
+    </include>
+  </group>
+</launch>

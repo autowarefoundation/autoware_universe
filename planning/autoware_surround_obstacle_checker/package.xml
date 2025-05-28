@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autoware_surround_obstacle_checker</name>
+  <version>0.45.0</version>
+  <description>The autoware_surround_obstacle_checker package</description>
+  <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
+  <maintainer email="go.sakayori@tier4.jp">Go Sakayori</maintainer>
+  <license>Apache License 2.0</license>
+
+  <author email="satoshi.ota@tier4.jp">Satoshi Ota</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+  <buildtool_depend>eigen3_cmake_module</buildtool_depend>
+
+  <depend>autoware_internal_planning_msgs</depend>
+  <depend>autoware_motion_utils</depend>
+  <depend>autoware_perception_msgs</depend>
+  <depend>autoware_planning_factor_interface</depend>
+  <depend>autoware_planning_msgs</depend>
+  <depend>autoware_planning_test_manager</depend>
+  <depend>autoware_utils</depend>
+  <depend>autoware_vehicle_info_utils</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>eigen</depend>
+  <depend>generate_parameter_library</depend>
+  <depend>libpcl-all-dev</depend>
+  <depend>pcl_conversions</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_eigen</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>tier4_planning_msgs</depend>
+  <depend>visualization_msgs</depend>
+
+  <test_depend>ament_cmake_ros</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>autoware_lint_common</test_depend>
+  <test_depend>autoware_test_utils</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

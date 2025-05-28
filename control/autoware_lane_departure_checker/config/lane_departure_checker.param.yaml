@@ -1,0 +1,28 @@
+/**:
+  ros__parameters:
+    # Enable feature
+    will_out_of_lane_checker: false
+    out_of_lane_checker: false
+    boundary_departure_checker: true
+
+    # Node
+    update_rate: 10.0
+    visualize_lanelet: false
+    include_right_lanes: false
+    include_left_lanes: false
+    include_opposite_lanes: false
+    include_conflicting_lanes: false
+    boundary_types_to_detect: [curbstone]
+
+
+    # Core
+    footprint_margin_scale: 1.0
+    footprint_extra_margin: 0.0
+    resample_interval: 0.3
+    max_deceleration: 2.8
+    delay_time: 1.3
+    max_lateral_deviation: 2.0
+    max_longitudinal_deviation: 2.0
+    max_yaw_deviation_deg: 60.0
+    delta_yaw_threshold_for_closest_point: 1.570 #M_PI/2.0, delta yaw thres for closest point
+    min_braking_distance: 0.0

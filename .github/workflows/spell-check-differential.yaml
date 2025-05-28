@@ -1,0 +1,24 @@
+# This file is automatically synced from:
+# https://github.com/autowarefoundation/sync-file-templates
+# To make changes, update the source repository and follow the guidelines in its README.
+
+name: spell-check-differential
+
+on:
+  pull_request:
+
+jobs:
+  spell-check-differential:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run spell-check
+        uses: autowarefoundation/autoware-github-actions/spell-check@v1
+        with:
+          local-cspell-json: .cspell.json
+          cspell-json-url: https://raw.githubusercontent.com/autowarefoundation/autoware-spell-check-dict/main/.cspell.json
+          dict-packages: |
+            https://github.com/autowarefoundation/autoware-spell-check-dict
+            https://github.com/tier4/cspell-dicts

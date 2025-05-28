@@ -1,0 +1,16 @@
+/**:
+  ros__parameters:
+    # network
+    trt_precision: fp16
+    cloud_capacity: 2000000
+    onnx_path: "$(var model_path)/transfusion.onnx"
+    engine_path: "$(var model_path)/transfusion.engine"
+    # pre-process params
+    densification_num_past_frames: 1
+    densification_world_frame_id: map
+    # post-process params
+    circle_nms_dist_threshold: 0.5
+    iou_nms_search_distance_2d: 10.0
+    iou_nms_threshold: 0.1
+    yaw_norm_thresholds: [0.3, 0.3, 0.3, 0.3, 0.0]  # refers to the class_names
+    score_threshold: 0.1

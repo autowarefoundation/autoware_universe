@@ -1,0 +1,8 @@
+units:
+  - path: output
+    type: warn-to-ok
+    item:
+      path: input-0
+      type: diag
+      node: test
+      name: input-0

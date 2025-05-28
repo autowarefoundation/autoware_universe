@@ -1,0 +1,9 @@
+/**:
+  ros__parameters:
+    csv_path_accel_map: $(var csv_path_accel_map)
+    csv_path_brake_map: $(var csv_path_brake_map)
+    ref_vel_gain: 0.2
+    timer_rate: 0.5
+    wait_for_first_topic: false
+    control_command_timeout: 2.0
+    emergency_stop_timeout: 2.0

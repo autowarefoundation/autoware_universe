@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Parameters -->
+  <arg name="object_recognition_detection_object_merger_data_association_matrix_param_path" default="$(find-pkg-share autoware_object_merger)/config/data_association_matrix.param.yaml"/>
+  <arg name="object_recognition_detection_object_merger_distance_threshold_list_path" default="$(find-pkg-share autoware_object_merger)/config/overlapped_judge.param.yaml"/>
+
+  <!-- Pipeline junctions -->
+  <arg name="lidar_detection_model_type"/>
+  <arg name="use_detection_by_tracker"/>
+
+  <arg name="use_object_filter" description="use object filter"/>
+  <arg name="objects_filter_method"/>
+  <let name="without_dbt_and_filter" value="$(eval &quot;'$(var use_detection_by_tracker)'=='false' and '$(var use_object_filter)'=='false' &quot;)"/>
+
+  <!-- external interfaces -->
+  <arg name="input/lidar_ml/objects" default="$(var lidar_detection_model_type)/objects"/>
+  <arg name="input/lidar_rule/objects" default="clustering/objects"/>
+  <arg name="input/detection_by_tracker/objects" default="detection_by_tracker/objects"/>
+  <arg name="output/objects"/>
+
+  <!-- internal interfaces -->
+  <let name="merger1/input/objects0" value="$(var input/lidar_ml/objects)"/>
+  <let name="merger1/input/objects1" value="$(var input/lidar_rule/objects)"/>
+  <let name="merger1/output/objects" value="$(var output/objects)" if="$(var without_dbt_and_filter)"/>
+  <let name="merger1/output/objects" value="temporary_merged_objects" unless="$(var without_dbt_and_filter)"/>
+
+  <let name="merger2/input/objects0" value="$(var merger1/output/objects)"/>
+  <let name="merger2/input/objects1" value="$(var input/detection_by_tracker/objects)"/>
+  <let name="merger2/output/objects" value="objects_before_filter" if="$(var use_object_filter)"/>
+  <let name="merger2/output/objects" value="$(var output/objects)" unless="$(var use_object_filter)"/>
+
+  <let name="filter/input/objects" value="$(var merger2/output/objects)" if="$(var use_detection_by_tracker)"/>
+  <let name="filter/input/objects" value="$(var merger1/output/objects)" unless="$(var use_detection_by_tracker)"/>
+  <let name="filter/output/objects" value="$(var output/objects)"/>
+
+  <!-- 1st merger: ML detection + pointcloud cluster -->
+  <group>
+    <include file="$(find-pkg-share autoware_object_merger)/launch/object_association_merger.launch.xml">
+      <arg name="node_name" value="object_association_merger_alpha"/>
+      <arg name="input/object0" value="$(var merger1/input/objects0)"/>
+      <arg name="input/object1" value="$(var merger1/input/objects1)"/>
+      <arg name="output/object" value="$(var merger1/output/objects)"/>
+      <arg name="priority_mode" value="2"/>
+      <arg name="data_association_matrix_path" value="$(var object_recognition_detection_object_merger_data_association_matrix_param_path)"/>
+      <arg name="distance_threshold_list_path" value="$(var object_recognition_detection_object_merger_distance_threshold_list_path)"/>
+    </include>
+  </group>
+
+  <!-- 2nd merger: + detection_by_tracker -->
+  <group if="$(var use_detection_by_tracker)">
+    <include file="$(find-pkg-share autoware_object_merger)/launch/object_association_merger.launch.xml">
+      <arg name="node_name" value="object_association_merger_beta"/>
+      <arg name="input/object0" value="$(var merger2/input/objects0)"/>
+      <arg name="input/object1" value="$(var merger2/input/objects1)"/>
+      <arg name="output/object" value="$(var merger2/output/objects)"/>
+      <arg name="priority_mode" value="0"/>
+      <arg name="data_association_matrix_path" value="$(var object_recognition_detection_object_merger_data_association_matrix_param_path)"/>
+      <arg name="distance_threshold_list_path" value="$(var object_recognition_detection_object_merger_distance_threshold_list_path)"/>
+    </include>
+  </group>
+
+  <!-- Filter -->
+  <group>
+    <include file="$(find-pkg-share tier4_perception_launch)/launch/object_recognition/detection/filter/object_filter.launch.xml" if="$(var use_object_filter)">
+      <arg name="objects_filter_method" value="$(var objects_filter_method)"/>
+      <arg name="input/objects" value="$(var filter/input/objects)"/>
+      <arg name="output/objects" value="$(var filter/output/objects)"/>
+    </include>
+  </group>
+</launch>

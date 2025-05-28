@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>autoware_steer_offset_estimator</name>
+  <version>0.45.0</version>
+  <description>The steer_offset_estimator</description>
+  <maintainer email="taiki.tanaka@tier4.jp">Taiki Tanaka</maintainer>
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+
+  <depend>autoware_internal_debug_msgs</depend>
+  <depend>autoware_utils</depend>
+  <depend>autoware_vehicle_info_utils</depend>
+  <depend>autoware_vehicle_msgs</depend>
+  <depend>diagnostic_updater</depend>
+  <depend>geometry_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>std_msgs</depend>
+  <exec_depend>autoware_global_parameter_loader</exec_depend>
+  <exec_depend>autoware_pose2twist</exec_depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>autoware_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

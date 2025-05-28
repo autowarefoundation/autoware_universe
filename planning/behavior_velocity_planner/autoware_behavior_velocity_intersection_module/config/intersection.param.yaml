@@ -1,0 +1,123 @@
+/**:
+  ros__parameters:
+    intersection:
+      common:
+        attention_area_length: 200.0
+        attention_area_margin: 0.75
+        attention_area_angle_threshold: 0.785
+        use_intersection_area: false
+        default_stopline_margin: 3.0
+        stopline_overshoot_margin: 0.5
+        path_interpolation_ds: 0.1
+        max_accel: -2.8
+        max_jerk: -5.0
+        delay_response_time: 0.5
+        enable_pass_judge_before_default_stopline: false
+
+      stuck_vehicle:
+        target_type:
+          car: true
+          bus: true
+          truck: true
+          trailer: true
+          motorcycle: false
+          bicycle: false
+          unknown: false
+
+        turn_direction:
+          left: true
+          right: true
+          straight: true
+        use_stuck_stopline: true
+        stuck_vehicle_detect_dist: 5.0
+        stuck_vehicle_velocity_threshold: 0.833
+        # enable_front_car_decel_prediction: false
+        # assumed_front_car_decel: 1.0
+        disable_against_private_lane: true
+
+      yield_stuck:
+        target_type:
+          car: true
+          bus: true
+          truck: true
+          trailer: true
+          motorcycle: false
+          bicycle: false
+          unknown: false
+        turn_direction:
+          left: true
+          right: true
+          straight: false
+        distance_threshold: 5.0
+
+      collision_detection:
+        consider_wrong_direction_vehicle: false
+        collision_detection_hold_time: 0.5
+        min_predicted_path_confidence: 0.05
+        target_type:
+          car: true
+          bus: true
+          truck: true
+          trailer: true
+          motorcycle: true
+          bicycle: true
+          unknown: false
+        velocity_profile:
+          use_upstream: true
+          minimum_upstream_velocity: 0.01
+          default_velocity: 2.778
+          minimum_default_velocity: 1.388
+        fully_prioritized:
+          collision_start_margin_time: 2.0
+          collision_end_margin_time: 0.0
+        partially_prioritized:
+          collision_start_margin_time: 3.0
+          collision_end_margin_time: 2.0
+        not_prioritized:
+          collision_start_margin_time: 3.0
+          collision_end_margin_time: 2.0
+        yield_on_green_traffic_light:
+          distance_to_assigned_lanelet_start: 10.0
+          duration: 3.0
+          object_dist_to_stopline: 10.0
+        ignore_on_amber_traffic_light:
+          object_expected_deceleration:
+            car: 2.0
+            bike: 5.0
+        ignore_on_red_traffic_light:
+          object_margin_to_path: 2.0
+        avoid_collision_by_acceleration:
+          object_time_margin_to_collision_point: 4.0
+
+      occlusion:
+        enable: true
+        occlusion_attention_area_length: 70.0
+        free_space_max: 43
+        occupied_min: 58
+        denoise_kernel: 1.0
+        attention_lane_crop_curvature_threshold: 0.25
+        attention_lane_curvature_calculation_ds: 0.6
+        creep_during_peeking:
+          enable: false
+          creep_velocity: 0.8333
+        peeking_offset: -0.5
+        occlusion_required_clearance_distance: 55.0
+        possible_object_bbox: [1.9, 2.5]
+        ignore_parked_vehicle_speed_threshold: 0.8333
+        occlusion_detection_hold_time: 1.5
+        temporal_stop_time_before_peeking: 0.1
+        temporal_stop_before_attention_area: false
+        creep_velocity_without_traffic_light: 1.388
+        static_occlusion_with_traffic_light_timeout: 0.5
+
+      debug:
+        ttc: [0]
+
+      enable_rtc:
+        intersection: false
+        intersection_to_occlusion: false
+
+    merge_from_private:
+      stopline_margin: 3.0
+      stop_duration_sec: 1.0
+      stop_distance_threshold: 1.0

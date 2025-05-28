@@ -1,0 +1,110 @@
+/**:
+  ros__parameters:
+    ego_frame: base_link # reference frame of ego
+
+    metrics_for_publish:
+      - curvature
+      - point_interval
+      - relative_angle
+      - resampled_relative_angle
+      - length
+      - duration
+      - velocity
+      - acceleration
+      - jerk
+      - lateral_deviation
+      - yaw_deviation
+      - velocity_deviation
+      - lateral_trajectory_displacement_local
+      - lateral_trajectory_displacement_lookahead
+      - stability
+      - stability_frechet
+      - obstacle_distance
+      - obstacle_ttc
+      - modified_goal_longitudinal_deviation
+      - modified_goal_lateral_deviation
+      - modified_goal_yaw_deviation
+      - stop_decision
+      - abnormal_stop_decision
+      - blinker_change_count
+      - steer_change_count
+
+    metrics_for_output:
+      - curvature
+      - point_interval
+      - relative_angle
+      - resampled_relative_angle
+      - length
+      - duration
+      - velocity
+      - acceleration
+      - jerk
+      - lateral_deviation
+      - yaw_deviation
+      - velocity_deviation
+      - lateral_trajectory_displacement_local
+      - lateral_trajectory_displacement_lookahead
+      - stability
+      - stability_frechet
+      - obstacle_distance
+      - obstacle_ttc
+      - modified_goal_longitudinal_deviation
+      - modified_goal_lateral_deviation
+      - modified_goal_yaw_deviation
+      - stop_decision
+      - abnormal_stop_decision
+      - blinker_change_count
+      - steer_change_count
+
+    trajectory:
+      min_point_dist_m: 0.1 # [m] minimum distance between two successive points to use for angle calculation
+      evaluation_time_s: 5.0 # [s] time duration for trajectory evaluation in seconds
+      lookahead:
+        max_dist_m: 5.0 # [m] maximum distance from ego along the trajectory to use for calculation
+        max_time_s: 3.0 # [s] maximum time ahead of ego along the trajectory to use for calculation
+
+    obstacle:
+      dist_thr_m: 1.0 # [m] distance between ego and the obstacle below which a collision is considered
+
+    stop_decision:
+      topic_prefix: /planning/planning_factors/ # topic prefix for planning factors
+      time_count_threshold_s: 60.0 # [s] time threshold to count a stop as a new one
+      dist_count_threshold_m: 5.0 # [m] distance threshold to count a stop as a new one
+      abnormal_deceleration_threshold_mps2: 2.0 # [m/s^2] abnormal deceleration threshold for a stop to be considered as abnormal
+      module_list:  # list of modules to be checked for stop decision.
+        - avoidance_by_lane_change
+        - behavior_path_planner
+        - blind_spot
+        - crosswalk
+        - detection_area
+        - dynamic_obstacle_avoidance
+        - dynamic_obstacle_stop
+        - goal_planner
+        - intersection
+        - lane_change_left
+        - lane_change_right
+        - motion_velocity_planner
+        - merge_from_private
+        - no_drivable_lane
+        - no_stopping_area
+        - obstacle_cruise
+        - obstacle_slow_down
+        - obstacle_stop
+        - occlusion_spot
+        - out_of_lane
+        - run_out
+        - side_shift
+        - start_planner
+        - static_obstacle_avoidance
+        - stop_line
+        - surround_obstacle_checker
+        - traffic_light
+        - virtual_traffic_light
+        - walkway
+
+    blinker_change_count:
+      window_duration_s: 5.0 # [s] window duration of counting blinker change for publishing
+
+    steer_change_count:
+      window_duration_s: 5.0 # [s] window duration of counting steer change for publishing
+      steer_rate_margin: 0.2 # [rad/s] margin of steer_rate around 0 to count as steer change

@@ -1,0 +1,39 @@
+/**:
+  ros__parameters:
+    # Example of how to set offset parameters (Check the readme for more information), both lidar and camera run in 10 hz.
+    # msg3d's header timestamp: 0.000
+    # rois's header timestamp (camera 0-5):  0.059, 0.010, 0.026, 0.042, 0.076, 0.093
+    # offset = rois_timestamp- msg3d_timestamp
+    rois_timestamp_offsets: [0.059, 0.010, 0.026, 0.042, 0.076, 0.093]
+    rois_timeout_sec: 0.5
+    msg3d_timeout_sec: 0.05
+    image_buffer_size: 15
+    # projection setting for each ROI whether unrectify image
+    point_project_to_unrectified_image: [false, false, false, false, false, false]
+    filter_scope_min_x: -100.0
+    filter_scope_min_y: -100.0
+    filter_scope_min_z: -100.0
+    filter_scope_max_x: 100.0
+    filter_scope_max_y: 100.0
+    filter_scope_max_z: 100.0
+
+    # camera cache setting for each ROI
+    approximate_camera_projection: [true, true, true, true, true, true]
+    # grid size in pixels
+    approximation_grid_cell_width: 1.0
+    approximation_grid_cell_height: 1.0
+
+    # debug parameters
+    debug_mode: false
+    collector_debug_mode: false
+    publish_processing_time_detail: false
+
+    publish_previous_but_late_output_msg: false
+    rosbag_length: 10.0
+    # matching strategy
+    matching_strategy:
+      type: advanced
+      msg3d_noise_window: 0.02
+      rois_timestamp_noise_window: [0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+      # type: naive
+      # threshold: 0.05

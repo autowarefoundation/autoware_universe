@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Ndt Scan Matcher Node",
+  "definitions": {
+    "covariance_estimation": {
+      "type": "object",
+      "properties": {
+        "covariance_estimation_type": {
+          "type": "number",
+          "description": "2D Real-time Converged estimation type. 0=FIXED_VALUE, 1=LAPLACE_APPROXIMATION, 2=MULTI_NDT, 3=MULTI_NDT_SCORE (FIXED_VALUE mode does not perform 2D Real-time Converged estimation)",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 3
+        },
+        "initial_pose_offset_model_x": {
+          "type": "array",
+          "description": "Offset arrangement in covariance estimation [m]. initial_pose_offset_model_x & initial_pose_offset_model_y must have the same number of elements.",
+          "default": [0.0, 0.0, 0.5, -0.5, 1.0, -1.0]
+        },
+        "initial_pose_offset_model_y": {
+          "type": "array",
+          "description": "Offset arrangement in covariance estimation [m]. initial_pose_offset_model_x & initial_pose_offset_model_y must have the same number of elements.",
+          "default": [0.5, -0.5, 0.0, 0.0, 0.0, 0.0]
+        },
+        "temperature": {
+          "type": "number",
+          "description": "In MULTI_NDT_SCORE, the parameter that adjusts the estimated 2D covariance",
+          "default": 0.05,
+          "exclusiveMinimum": 0
+        },
+        "scale_factor": {
+          "type": "number",
+          "description": "Scale value for adjusting the estimated covariance by a constant multiplication",
+          "default": 1.0,
+          "exclusiveMinimum": 0
+        }
+      },
+
+      "required": [
+        "covariance_estimation_type",
+        "initial_pose_offset_model_x",
+        "initial_pose_offset_model_y",
+        "temperature",
+        "scale_factor"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

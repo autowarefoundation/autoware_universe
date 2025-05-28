@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for map_height_fitter",
+  "type": "object",
+  "definitions": {
+    "map_height_fitter": {
+      "type": "object",
+      "properties": {
+        "map_loader_name": {
+          "type": "string",
+          "description": "Node name of the map loader from which this map_height_fitter will retrieve its parameters",
+          "default": "/map/pointcloud_map_loader"
+        },
+        "target": {
+          "type": "string",
+          "description": "Target map to fit (choose from 'pointcloud_map', 'vector_map')",
+          "default": "pointcloud_map"
+        }
+      },
+      "required": ["map_loader_name", "target"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "type": "object",
+          "properties": {
+            "map_height_fitter": {
+              "$ref": "#/definitions/map_height_fitter"
+            }
+          }
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

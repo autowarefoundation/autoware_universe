@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="param_path" default="$(find-pkg-share autoware_external_cmd_selector)/config/external_cmd_selector.param.yaml"/>
+  <node_container pkg="rclcpp_components" exec="component_container" name="external_cmd_selector_container" namespace="control"/>
+  <group>
+    <push-ros-namespace namespace="control"/>
+    <include file="$(find-pkg-share autoware_external_cmd_selector)/launch/external_cmd_selector.launch.py">
+      <arg name="use_intra_process" value="false"/>
+      <arg name="target_container" value="/control/external_cmd_selector_container"/>
+      <arg name="external_cmd_selector_param_path" value="$(var param_path)"/>
+    </include>
+  </group>
+</launch>

@@ -1,0 +1,14 @@
+<launch>
+  <arg name="perception_traffic_signals" default="/internal/traffic_signals"/>
+  <arg name="external_traffic_signals" default="/external/traffic_signals"/>
+  <arg name="output_traffic_signals" default="/traffic_light_arbiter/traffic_signals"/>
+  <arg name="param_path" default="$(find-pkg-share autoware_traffic_light_arbiter)/config/traffic_light_arbiter.param.yaml"/>
+
+  <node pkg="autoware_traffic_light_arbiter" exec="traffic_light_arbiter_node" name="traffic_light_arbiter" output="screen">
+    <remap from="~/sub/vector_map" to="/map/vector_map"/>
+    <remap from="~/sub/perception_traffic_signals" to="$(var perception_traffic_signals)"/>
+    <remap from="~/sub/external_traffic_signals" to="$(var external_traffic_signals)"/>
+    <remap from="~/pub/traffic_signals" to="$(var output_traffic_signals)"/>
+    <param from="$(var param_path)"/>
+  </node>
+</launch>

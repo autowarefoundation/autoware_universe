@@ -1,0 +1,2 @@
+The function 'opencv_fast_atan2' in /autoware/src/universe/autoware_universe/common/autoware_universe_utils/src/math/trigonometry.cpp
+is a modified version of 'fastAtan2' in the OpenCV project. (https://github.com/opencv/opencv/blob/4.x/modules/core/src/mathfuncs_core.simd.hpp)

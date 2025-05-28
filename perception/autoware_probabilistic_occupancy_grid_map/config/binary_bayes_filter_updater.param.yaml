@@ -1,0 +1,8 @@
+/**:
+  ros__parameters:
+    probability_matrix:
+      occupied_to_occupied: 0.95
+      occupied_to_free: 0.05
+      free_to_occupied: 0.2
+      free_to_free: 0.8
+    v_ratio: 0.1

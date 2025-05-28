@@ -1,0 +1,21 @@
+/**:
+  ros__parameters:
+    map_frame: "map"
+    base_link_frame: "base_link"
+    # center of the grid map
+    gridmap_origin_frame: "base_link"
+    # ray-tracing center: main sensor frame is preferable like: "velodyne_top"
+    scan_origin_frame: "base_link"
+
+    height_filter:
+      use_height_filter: true
+      min_height: -1.0
+      max_height: 2.0
+
+    enable_single_frame_mode: false
+    map_length: 150.0
+    map_width: 150.0
+    map_resolution: 0.5
+
+    # debug parameters
+    publish_processing_time_detail: false

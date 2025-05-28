@@ -1,0 +1,39 @@
+/**:
+  ros__parameters:
+    out_of_lane:  # module to stop or slowdown before overlapping another lane with other objects
+      mode: ttc # mode used to consider a conflict with an object. "threshold", or "ttc"
+      skip_if_already_overlapping: false # do not run this module when ego already overlaps another lane
+      max_arc_length: 100.0  # [m] maximum trajectory arc length that is checked for out_of_lane collisions
+
+      threshold:
+        time_threshold: 5.0  # [s] consider objects that will reach an overlap within this time
+      ttc:
+        threshold: 1.0 # [s] threshold for difference in time to overlap region between ego and target object to trigger stop decision
+        release_threshold: 3.0 # [s] threshold for difference in time to the overlap region between ego and target object to release stop decision
+
+      objects:
+        minimum_velocity: 0.5  # [m/s] objects lower than this velocity will be ignored
+        predicted_path_min_confidence : 0.1  # when using predicted paths, ignore the ones whose confidence is lower than this value.
+        cut_predicted_paths_beyond_red_lights: true # if true, predicted paths are cut beyond the stop line of red traffic lights
+        ignore_behind_ego: false # if true, objects behind the ego vehicle are ignored
+
+      action:  # action to insert in the trajectory if an object causes a conflict at an overlap
+        use_map_stop_lines: true  # if true, try to stop at stop lines defined in the vector map
+        precision: 0.1  # [m] precision when inserting a stop pose in the trajectory
+        longitudinal_distance_buffer: 1.5  # [m] safety distance buffer to keep in front of the ego vehicle
+        lateral_distance_buffer: 1.0  # [m] safety distance buffer to keep on the side of the ego vehicle
+        min_on_duration: 0.3  # [s] minimum duration needed before a decision can be triggered
+        min_off_duration: 1.0  # [s] minimum duration needed before a decision can be canceled
+        update_distance_th: 5.0 # [m] distance threshold for updating previous stop pose position
+        slowdown:
+          distance_threshold: 30.0 # [m] insert a slowdown when closer than this distance from an overlap
+          velocity: 2.0  # [m/s] slowdown velocity
+        stop:
+          distance_threshold: 15.0 # [m] insert a stop when closer than this distance from an overlap
+
+      ego:
+        # extra footprint offsets to calculate out of lane collisions
+        extra_front_offset: 0.0 # [m] extra footprint front distance
+        extra_rear_offset: 0.0 # [m] extra footprint rear distance
+        extra_right_offset: 0.0 # [m] extra footprint right distance
+        extra_left_offset: 0.0 # [m] extra footprint left distance

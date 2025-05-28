@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <arg name="input/detected_objects" default="/perception/object_recognition/detection/objects"/>
+  <arg name="input/obstacle_pointcloud" default="/perception/obstacle_segmentation/pointcloud"/>
+  <arg name="output/objects" default="/perception/object_recognition/detection/validation/obstacle_pointcloud_based/objects"/>
+  <arg name="obstacle_pointcloud_based_validator_param_path" default="$(find-pkg-share autoware_detected_object_validation)/config/obstacle_pointcloud_based_validator.param.yaml"/>
+
+  <node pkg="autoware_detected_object_validation" exec="obstacle_pointcloud_based_validator_node" name="obstacle_pointcloud_based_validator_node" output="screen">
+    <remap from="~/input/detected_objects" to="$(var input/detected_objects)"/>
+    <remap from="~/input/obstacle_pointcloud" to="$(var input/obstacle_pointcloud)"/>
+    <remap from="~/output/objects" to="$(var output/objects)"/>
+    <param from="$(var obstacle_pointcloud_based_validator_param_path)"/>
+  </node>
+</launch>

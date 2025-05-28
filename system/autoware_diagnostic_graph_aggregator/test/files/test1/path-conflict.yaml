@@ -1,0 +1,5 @@
+units:
+  - path: /foo/bar
+    type: and
+  - path: /foo/bar
+    type: and

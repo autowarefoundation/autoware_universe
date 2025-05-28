@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Radar Scan to PointCloud2 Node",
+  "type": "object",
+  "definitions": {
+    "radar_scan_to_pointcloud2": {
+      "type": "object",
+      "properties": {
+        "publish_amplitude_pointcloud": {
+          "type": "boolean",
+          "description": "Whether publish radar pointcloud whose intensity is amplitude.",
+          "default": "true"
+        },
+        "publish_doppler_pointcloud": {
+          "type": "boolean",
+          "description": "Whether publish radar pointcloud whose intensity is doppler velocity.",
+          "default": "false"
+        },
+        "max_queue_size": {
+          "type": "integer",
+          "default": "5",
+          "minimum": 1,
+          "description": "Max queue size of input/output topics."
+        }
+      },
+      "required": ["publish_amplitude_pointcloud", "publish_doppler_pointcloud", "max_queue_size"]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/radar_scan_to_pointcloud2"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}

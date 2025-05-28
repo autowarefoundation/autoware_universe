@@ -1,0 +1,36 @@
+default:
+  # This file defines the parameters for the linear motion tracker.
+  # All this parameter coordinate is assumed to be in the vehicle coordinate system.
+  # So, the x axis is pointing to the front of the vehicle, y axis is pointing to the left of the vehicle.
+  ekf_params:
+    # random walk noise is used to model the acceleration noise
+    process_noise_std: # [m/s^2]
+      x: 0.5
+      y: 0.5
+      yaw: 0.1
+      vx: 1.0 # assume 1m/s velocity noise
+      wz: 0.4
+    measurement_noise_std:
+      x: 4.0 # [m]
+      y: 4.0 # [m]
+      # y: 0.02 # rad/m if use_polar_coordinate_in_measurement_noise is true
+      yaw: 0.2 # [rad]
+      vx: 10 # [m/s]
+    initial_covariance_std:
+      x: 3.0 # [m]
+      y: 6.0 # [m]
+      yaw: 10.0 # [rad]
+      vx: 100.0 # [m/s]
+      wz: 10.0 # [rad/s]
+  # input flag
+  trust_yaw_input: false # set true if yaw input of sensor is reliable
+  trust_twist_input: false # set true if twist input of sensor is reliable
+  use_polar_coordinate_in_measurement_noise: false # set true if you want to define the measurement noise in polar coordinate
+  assume_zero_yaw_rate: false # set true if you want to assume zero yaw rate
+  # output limitation
+  limit:
+    max_speed: 80.0 # [m/s]
+  # low pass filter is used to smooth the yaw and shape estimation
+  low_pass_filter:
+    time_constant: 1.0 # [s]
+    sampling_time: 0.1 # [s]

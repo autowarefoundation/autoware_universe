@@ -1,0 +1,10 @@
+units:
+  - path: /external/joystick_command
+    type: diag
+    node: external_command_checker
+    name: joystick_command
+
+  - path: /external/remote_command
+    type: diag
+    node: external_command_checker
+    name: remote_command
