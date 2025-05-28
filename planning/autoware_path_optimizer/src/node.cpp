@@ -391,7 +391,15 @@ std::vector<TrajectoryPoint> PathOptimizer::optimizeTrajectory(const PlannerData
   const bool elapsed_time_over_three_seconds = (elapsed_time > 3.0);
 
   auto optimized_traj_points =
-    optimized_traj_failed || elapsed_time_over_three_seconds ? p.traj_points : std::move(*mpt_traj);
+     auto optimized_traj_points = [&]() {
+    if (optimized_traj_failed && elapsed_time_over_three_seconds) {
+      return p.traj_points;
+    } else if (optimized_traj_failed && !elapsed_time_over_three_seconds) {
+      return getPrevOptimizedTrajectory(p.traj_points);
+    } else {
+      return std::move(*mpt_traj);
+    }
+  }();
   is_optimization_failed_ = optimized_traj_failed || elapsed_time_over_three_seconds;
 
   // 3. update velocity
