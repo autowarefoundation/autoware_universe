@@ -69,8 +69,8 @@ bool PointCloudDensification::enqueuePointCloud(
   const auto header = pointcloud_msg_ptr->header;
 
   if (param_.pointcloud_cache_size() > 1) {
-    auto transform_world2current =
-      getTransform(tf_buffer, header.frame_id, param_.world_frame_id(), header.stamp, param_.logger_name());
+    auto transform_world2current = getTransform(
+      tf_buffer, header.frame_id, param_.world_frame_id(), header.stamp, param_.logger_name());
     if (!transform_world2current) {
       return false;
     }

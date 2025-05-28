@@ -16,8 +16,8 @@
 #define AUTOWARE__LIDAR_CENTERPOINT__CENTERPOINT_CONFIG_HPP_
 
 #include <cstddef>
-#include <vector>
 #include <string>
+#include <vector>
 
 namespace autoware::lidar_centerpoint
 {
@@ -131,8 +131,8 @@ public:
   float offset_z_ = range_min_z_ + voxel_size_z_ / 2;
   std::size_t down_grid_size_x_ = grid_size_x_ / downsample_factor_;
   std::size_t down_grid_size_y_ = grid_size_y_ / downsample_factor_;
-  
-  // logger_name 
+
+  // logger_name
   std::string logger_name_{"lidar_centerpoint"};
 };
 

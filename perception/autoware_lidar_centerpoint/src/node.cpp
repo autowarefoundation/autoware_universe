@@ -73,8 +73,8 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
     this->declare_parameter<std::vector<int64_t>>("allow_remapping_by_area_matrix");
   const auto min_area_matrix = this->declare_parameter<std::vector<double>>("min_area_matrix");
   const auto max_area_matrix = this->declare_parameter<std::vector<double>>("max_area_matrix");
- 
-  // Set up logger name 
+
+  // Set up logger name
   this->logger_name_ = this->declare_parameter<std::string>("logger_name", "lidar_centerpoint");
 
   detection_class_remapper_.setParameters(

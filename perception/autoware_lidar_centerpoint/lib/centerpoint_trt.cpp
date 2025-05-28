@@ -182,7 +182,8 @@ bool CenterPointTRT::detect(
     cudaMemsetAsync(spatial_features_d_.get(), 0, spatial_features_size_ * sizeof(float), stream_));
 
   if (!preprocess(input_pointcloud_msg_ptr, tf_buffer)) {
-    RCLCPP_WARN(rclcpp::get_logger(config_.logger_name_.c_str()), "Fail to preprocess and skip to detect.");
+    RCLCPP_WARN(
+      rclcpp::get_logger(config_.logger_name_.c_str()), "Fail to preprocess and skip to detect.");
     return false;
   }
 
