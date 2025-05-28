@@ -249,7 +249,7 @@
           <arg name="mode" value="$(var mode)"/>
           <arg name="lidar_detection_model_type" value="$(var lidar_detection_model_type)"/>
           <arg name="lidar_detection_model_name" value="$(var lidar_detection_model_name)"/>
-		  <arg name="lidar_shortrange_detection_model_type" value="$(var lidar_shortrange_detection_model_type)"/>
+          <arg name="lidar_shortrange_detection_model_type" value="$(var lidar_shortrange_detection_model_type)"/>
           <arg name="lidar_shortrange_detection_model_name" value="$(var lidar_shortrange_detection_model_name)"/>
           <arg name="use_multi_channel_tracker_merger" value="$(var use_multi_channel_tracker_merger)"/>
           <arg name="number_of_cameras" value="$(var image_number)"/>
