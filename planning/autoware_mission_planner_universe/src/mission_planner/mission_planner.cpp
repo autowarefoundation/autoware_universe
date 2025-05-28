@@ -41,7 +41,7 @@ namespace
   case RouteState::state:       \
     return #state;
 
-std::string routeStateToString(const uint8_t state)
+std::string route_state_to_string(const uint8_t state)
 {
   switch (state) {
     ROUTE_STATE_CASE(UNKNOWN)
