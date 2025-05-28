@@ -7,6 +7,8 @@
   <arg name="freespace_planner_param_path"/>
   <!-- planning validator -->
   <arg name="planning_validator_param_path"/>
+  <arg name="planning_validator_latency_checker_param_path"/>
+  <arg name="planning_validator_trajectory_checker_param_path"/>
   <!-- Auto mode setting-->
   <arg name="enable_all_modules_auto_mode"/>
   <arg name="is_simulation"/>
@@ -33,9 +35,12 @@
     <!-- planning validator -->
     <group>
       <include file="$(find-pkg-share autoware_planning_validator)/launch/planning_validator.launch.xml">
+        <arg name="container_type" value="component_container_mt"/>
         <arg name="input_trajectory" value="/planning/scenario_planning/velocity_smoother/trajectory"/>
         <arg name="output_trajectory" value="/planning/scenario_planning/trajectory"/>
         <arg name="planning_validator_param_path" value="$(var planning_validator_param_path)"/>
+        <arg name="planning_validator_latency_checker_param_path" value="$(var planning_validator_latency_checker_param_path)"/>
+        <arg name="planning_validator_trajectory_checker_param_path" value="$(var planning_validator_trajectory_checker_param_path)"/>
       </include>
     </group>
 
