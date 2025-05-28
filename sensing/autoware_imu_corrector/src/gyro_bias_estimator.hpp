@@ -62,7 +62,7 @@ private:
   rclcpp::Subscription<Odometry>::SharedPtr odom_sub_;
   rclcpp::Subscription<PoseWithCovarianceStamped>::SharedPtr pose_sub_;
   rclcpp::Publisher<Vector3Stamped>::SharedPtr gyro_bias_pub_;
-  rclcpp::Publisher<Vector3>::SharedPtr gyro_scale_pub_;
+  rclcpp::Publisher<Vector3Stamped>::SharedPtr gyro_scale_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Time start_time_check_scale;
 

@@ -62,7 +62,7 @@ GyroBiasEstimator::GyroBiasEstimator(const rclcpp::NodeOptions & options)
   pose_sub_ = create_subscription<PoseWithCovarianceStamped>(
     "~/input/pose_ndt", rclcpp::SensorDataQoS(),
     [this](const PoseWithCovarianceStamped::ConstSharedPtr msg) { callback_pose(msg); });
-  gyro_scale_pub_ = create_publisher<Vector3>("~/output/gyro_scale", rclcpp::SensorDataQoS());
+  gyro_scale_pub_ = create_publisher<Vector3Stamped>("~/output/gyro_scale", rclcpp::SensorDataQoS());
 
   auto bound_timer_callback = std::bind(&GyroBiasEstimator::timer_callback, this);
   auto period_control = std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -189,12 +189,14 @@ void GyroBiasEstimator::callback_pose(const PoseWithCovarianceStamped::ConstShar
       estimated_scale = estimated_scale + K * y;
       P = (1 - K * H) * P;
 
-      geometry_msgs::msg::Vector3 vector_scale;
-      vector_scale.z = estimated_scale;
+      geometry_msgs::msg::Vector3Stamped vector_scale;
+
+      vector_scale.header.stamp = this->now();
+      vector_scale.vector.z = estimated_scale;
 
       // auto error_rate = (gyro_yaw_rate / estimated_scale - gyro_bias_.value().z) - ndt_yaw_rate;
-      vector_scale.x = ndt_yaw_rate;
-      vector_scale.y = (gyro_yaw_rate / estimated_scale - gyro_bias_.value().z);
+      vector_scale.vector.x = ndt_yaw_rate;
+      vector_scale.vector.y = (gyro_yaw_rate / estimated_scale - gyro_bias_.value().z);
       gyro_scale_pub_->publish(vector_scale);
       diagnostics_info_.estimated_gyro_scale_z = estimated_scale;
       scale_list_all_.push_back(estimated_scale);
