@@ -13,6 +13,7 @@
 // limitations under the License.
 #ifndef TIER4_PERCEPTION_RVIZ_PLUGIN__OBJECT_DETECTION__DETECTED_OBJECTS_WF_HELPER_HPP_
 #define TIER4_PERCEPTION_RVIZ_PLUGIN__OBJECT_DETECTION__DETECTED_OBJECTS_WF_HELPER_HPP_
+// cspell:ignore Viridis Parula COLORMAPS VIRIDIS PARULA colormap parula
 #include "tier4_perception_rviz_plugin/visibility_control.hpp"
 
 #include <QColor>

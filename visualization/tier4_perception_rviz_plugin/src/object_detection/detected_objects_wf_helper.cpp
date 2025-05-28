@@ -14,6 +14,7 @@
 //
 // Co-developed by Tier IV, Inc. and Apex.AI, Inc.
 
+// cspell:ignore Viridis Parula COLORMAPS VIRIDIS PARULA colormap parula
 #include "tier4_perception_rviz_plugin/object_detection/detected_objects_wf_helper.hpp"
 
 #include <algorithm>
