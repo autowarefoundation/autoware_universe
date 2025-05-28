@@ -270,7 +270,7 @@ void MissionPlanner::on_set_lanelet_route(
       ResponseCode::ERROR_INVALID_STATE,
       fmt::format(
         "The lanelet route cannot be set in the current state: {}",
-        routeStateToString(state_.state)));
+        route_state_to_string(state_.state)));
   }
   if (!is_mission_planner_ready_) {
     throw service_utils::ServiceException(
@@ -336,7 +336,7 @@ void MissionPlanner::on_set_waypoint_route(
       ResponseCode::ERROR_INVALID_STATE,
       fmt::format(
         "The waypoint route cannot be set in the current state: {}",
-        routeStateToString(state_.state)));
+        route_state_to_string(state_.state)));
   }
   if (!is_mission_planner_ready_) {
     throw service_utils::ServiceException(
