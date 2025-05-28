@@ -27,6 +27,7 @@
 
         <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware_universe/pull/6167 -->
         <param name="build_only" value="$(var build_only)"/>
+        <param name="logger_name" value="lidar_centerpoint"/>
       </composable_node>
     </load_composable_node>
   </group>
@@ -42,6 +43,7 @@
 
       <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware_universe/pull/6167 -->
       <param name="build_only" value="$(var build_only)"/>
+      <param name="logger_name" value="lidar_centerpoint"/>
     </node>
   </group>
 </launch>

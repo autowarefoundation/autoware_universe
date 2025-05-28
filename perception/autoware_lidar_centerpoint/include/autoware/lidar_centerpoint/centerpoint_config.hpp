@@ -17,6 +17,7 @@
 
 #include <cstddef>
 #include <vector>
+#include <string>
 
 namespace autoware::lidar_centerpoint
 {
@@ -29,7 +30,7 @@ public:
     const std::vector<double> & voxel_size, const std::size_t downsample_factor,
     const std::size_t encoder_in_feature_size, const float score_threshold,
     const float circle_nms_dist_threshold, const std::vector<double> yaw_norm_thresholds,
-    const bool has_variance)
+    const bool has_variance, const std::string logger_name = "lidar_centerpoint")
   {
     class_size_ = class_size;
     point_feature_size_ = point_feature_size;
@@ -130,6 +131,9 @@ public:
   float offset_z_ = range_min_z_ + voxel_size_z_ / 2;
   std::size_t down_grid_size_x_ = grid_size_x_ / downsample_factor_;
   std::size_t down_grid_size_y_ = grid_size_y_ / downsample_factor_;
+  
+  // logger_name 
+  std::string logger_name_{"lidar_centerpoint"};
 };
 
 }  // namespace autoware::lidar_centerpoint

@@ -34,7 +34,7 @@ namespace
 {
 boost::optional<geometry_msgs::msg::Transform> getTransform(
   const tf2_ros::Buffer & tf_buffer, const std::string & target_frame_id,
-  const std::string & source_frame_id, const rclcpp::Time & time)
+  const std::string & source_frame_id, const rclcpp::Time & time, const std::string & logger_name)
 {
   try {
     geometry_msgs::msg::TransformStamped transform_stamped;
@@ -42,7 +42,7 @@ boost::optional<geometry_msgs::msg::Transform> getTransform(
       target_frame_id, source_frame_id, time, rclcpp::Duration::from_seconds(0.5));
     return transform_stamped.transform;
   } catch (tf2::TransformException & ex) {
-    RCLCPP_WARN_STREAM(rclcpp::get_logger("lidar_centerpoint"), ex.what());
+    RCLCPP_WARN_STREAM(rclcpp::get_logger(logger_name.c_str()), ex.what());
     return boost::none;
   }
 }
@@ -70,7 +70,7 @@ bool PointCloudDensification::enqueuePointCloud(
 
   if (param_.pointcloud_cache_size() > 1) {
     auto transform_world2current =
-      getTransform(tf_buffer, header.frame_id, param_.world_frame_id(), header.stamp);
+      getTransform(tf_buffer, header.frame_id, param_.world_frame_id(), header.stamp, param_.logger_name());
     if (!transform_world2current) {
       return false;
     }
