@@ -85,6 +85,7 @@ public:
     offset_z_ = range_min_z_ + voxel_size_z_ / 2;
     down_grid_size_x_ = grid_size_x_ / downsample_factor_;
     down_grid_size_y_ = grid_size_y_ / downsample_factor_;
+	logger_name_ = logger_name;
   };
 
   // input params
