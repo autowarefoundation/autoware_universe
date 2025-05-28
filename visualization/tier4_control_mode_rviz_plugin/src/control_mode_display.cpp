@@ -70,7 +70,6 @@ void ControlModeDisplay::processMessage(
   std::string mode_str = getModeString(msg->mode);
   mode_label_->setText(QString::fromStdString(mode_str));
 
-  // モードに応じて背景色を変更
   QString bg_color;
   switch (msg->mode) {
     case 1:                  // AUTONOMOUS
