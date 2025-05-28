@@ -51,7 +51,7 @@
     <arg name="lidar_shortrange_model_param_path" default="$(find-pkg-share autoware_lidar_centerpoint)/config"/>
 
     <group>
-      <include file="$(find-pkg-share autoware_lidar_centerpoint)/launch/lidar_centerpoint.launch.xml">
+      <include file="$(find-pkg-share autoware_lidar_centerpoint)/launch/shortrange_lidar_centerpoint.launch.xml">
         <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
         <arg name="output/objects" value="$(var output/shortrange_objects)"/>
         <arg name="model_name" value="$(var lidar_shortrange_detection_model_name)"/>
