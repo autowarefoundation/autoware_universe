@@ -217,15 +217,19 @@ void calcAnchorPointOffset(
 
   // update offset
   tracking_offset = Eigen::Vector2d(anchor_vector.x, anchor_vector.y);
-  if (tracking_offset.x() > 0) {
+  if (tracking_offset.x() > 1e-6) {
     tracking_offset.x() -= length / 2.0;
-  } else if (tracking_offset.x() < 0) {
+  } else if (tracking_offset.x() < -1e-6) {
     tracking_offset.x() += length / 2.0;
+  } else {
+    tracking_offset.x() = 0.0;
   }
-  if (tracking_offset.y() > 0) {
+  if (tracking_offset.y() > 1e-6) {
     tracking_offset.y() -= width / 2.0;
-  } else if (tracking_offset.y() < 0) {
+  } else if (tracking_offset.y() < -1e-6) {
     tracking_offset.y() += width / 2.0;
+  } else {
+    tracking_offset.y() = 0.0;
   }
 
   // offset input object
