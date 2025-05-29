@@ -182,14 +182,14 @@ void getNearestCornerOrSurface(
   double anchor_y = 0;
   if (xl > length / 2.0) {
     anchor_x = length / 2.0;
-  } else if (xl > -length / 2.0) {
+  } else if (xl < -length / 2.0) {
     anchor_x = -length / 2.0;
   } else {
     anchor_x = 0;
   }
   if (yl > width / 2.0) {
     anchor_y = width / 2.0;
-  } else if (yl > -width / 2.0) {
+  } else if (yl < -width / 2.0) {
     anchor_y = -width / 2.0;
   } else {
     anchor_y = 0;
