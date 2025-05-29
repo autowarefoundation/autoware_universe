@@ -124,7 +124,19 @@ private:
     double estimated_gyro_scale_z;
   };
 
+  struct GyroInfo
+  {
+    unsigned char bias_status;
+    std::string bias_status_summary;
+    std::string bias_summary_message;
+    unsigned char scale_status;
+    std::string scale_status_summary;
+    std::string scale_summary_message;
+  };
+
   DiagnosticsInfo diagnostics_info_;
+  GyroInfo gyro_info_;
+  
 };
 }  // namespace autoware::imu_corrector
 
