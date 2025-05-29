@@ -57,6 +57,7 @@ public:
   {
     return RequiredSubscriptionInfo();
   }
+
 private:
   inline static const std::string ns_ = "obstacle_velocity_limiter";
   std::string module_name_;
