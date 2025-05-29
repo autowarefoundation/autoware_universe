@@ -240,6 +240,11 @@ bool isPredictedStatusEqual(
 
 bool isEqual(const TrafficSignalArray & input_msg, const TrafficSignalArray & gt_msg)
 {
+  // check stamp
+  if (input_msg.stamp != gt_msg.stamp) {
+    return false;
+  }
+
   // check number of groups
   if (input_msg.traffic_light_groups.size() != gt_msg.traffic_light_groups.size()) {
     return false;
@@ -340,9 +345,9 @@ TEST(TrafficLightArbiterTest, testWithoutPredictions)
   test_manager->test_pub_msg<LaneletMapBin>(
     test_target_node, input_map_topic, vector_map_msg, rclcpp::QoS(1).transient_local());
   test_manager->test_pub_msg<TrafficSignalArray>(
-    test_target_node, input_external_topic, external_msg);
-  test_manager->test_pub_msg<TrafficSignalArray>(
     test_target_node, input_perception_topic, perception_msg);
+  test_manager->test_pub_msg<TrafficSignalArray>(
+    test_target_node, input_external_topic, external_msg);
 
   EXPECT_TRUE(isEqual(latest_msg, external_msg));
   rclcpp::shutdown();
