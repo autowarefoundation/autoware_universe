@@ -567,17 +567,17 @@ lanelet::BasicPolygon2d ObjectLaneletFilterNode::getPolygon(const lanelet::Const
 
 bool ObjectLaneletFilterNode::isObjectOverlapLanelets(
   const autoware_perception_msgs::msg::DetectedObject & object, const Polygon2d & polygon,
-  const std::vector<BoxAndLanelet> & candidates)
+  const std::vector<BoxAndLanelet> & lanelet_candidates)
 {
   // if object has bounding box, use polygon overlap
   if (utils::hasBoundingBox(object)) {
-    return isPolygonOverlapLanelets(polygon, candidates);
+    return isPolygonOverlapLanelets(polygon, lanelet_candidates);
   } else {
     for (const auto & point : object.shape.footprint.points) {
       const geometry_msgs::msg::Point32 point_transformed =
         autoware_utils::transform_point(point, object.kinematics.pose_with_covariance.pose);
 
-      for (const auto & candidate : candidates) {
+      for (const auto & candidate : lanelet_candidates) {
         if (isInPolygon(point_transformed.x, point_transformed.y, candidate.second.polygon, 0.0)) {
           return true;
         }
@@ -588,9 +588,9 @@ bool ObjectLaneletFilterNode::isObjectOverlapLanelets(
 }
 
 bool ObjectLaneletFilterNode::isPolygonOverlapLanelets(
-  const Polygon2d & polygon, const std::vector<BoxAndLanelet> & candidates)
+  const Polygon2d & polygon, const std::vector<BoxAndLanelet> & lanelet_candidates)
 {
-  for (const auto & box_and_lanelet : candidates) {
+  for (const auto & box_and_lanelet : lanelet_candidates) {
     if (!bg::disjoint(polygon, box_and_lanelet.second.polygon)) {
       return true;
     }
@@ -601,7 +601,7 @@ bool ObjectLaneletFilterNode::isPolygonOverlapLanelets(
 
 bool ObjectLaneletFilterNode::isSameDirectionWithLanelets(
   const autoware_perception_msgs::msg::DetectedObject & object,
-  const std::vector<BoxAndLanelet> & candidates)
+  const std::vector<BoxAndLanelet> & lanelet_candidates)
 {
   const double object_yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
   const double object_velocity_norm = std::hypot(
@@ -616,7 +616,7 @@ bool ObjectLaneletFilterNode::isSameDirectionWithLanelets(
     return true;
   }
 
-  for (const auto & box_and_lanelet : candidates) {
+  for (const auto & box_and_lanelet : lanelet_candidates) {
     const bool is_in_lanelet =
       isInPolygon(object.kinematics.pose_with_covariance.pose, box_and_lanelet.second.polygon, 0.0);
     if (!is_in_lanelet) {
@@ -639,7 +639,7 @@ bool ObjectLaneletFilterNode::isSameDirectionWithLanelets(
 
 bool ObjectLaneletFilterNode::isObjectAboveLanelet(
   const autoware_perception_msgs::msg::DetectedObject & object,
-  const std::vector<BoxAndLanelet> & lanelets)
+  const std::vector<BoxAndLanelet> & lanelet_candidates)
 {
   // assuming the positions are already the center of the cluster (convex hull)
   // for an exact calculation of the center from the points,
@@ -655,7 +655,7 @@ bool ObjectLaneletFilterNode::isObjectAboveLanelet(
   double closest_lanelet_z_dist = std::numeric_limits<double>::infinity();
 
   // search for the nearest lanelet along the z-axis in case roads are layered
-  for (const auto & candidate_lanelet : lanelets) {
+  for (const auto & candidate_lanelet : lanelet_candidates) {
     const lanelet::ConstLanelet llt = candidate_lanelet.second.lanelet;
     const lanelet::ConstLineString3d line = llt.leftBound();
     if (line.size() == 0) continue;

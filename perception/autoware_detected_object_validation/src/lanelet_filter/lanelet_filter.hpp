@@ -117,15 +117,15 @@ private:
   std::vector<BoxAndLanelet> getIntersectedLanelets(const LinearRing2d &);
   bool isObjectOverlapLanelets(
     const autoware_perception_msgs::msg::DetectedObject & object, const Polygon2d & polygon,
-    const std::vector<BoxAndLanelet> & candidates);
+    const std::vector<BoxAndLanelet> & lanelet_candidates);
   bool isPolygonOverlapLanelets(
-    const Polygon2d & polygon, const std::vector<BoxAndLanelet> & candidates);
+    const Polygon2d & polygon, const std::vector<BoxAndLanelet> & lanelet_candidates);
   bool isSameDirectionWithLanelets(
     const autoware_perception_msgs::msg::DetectedObject & object,
-    const std::vector<BoxAndLanelet> & lanelets);
+    const std::vector<BoxAndLanelet> & lanelet_candidates);
   bool isObjectAboveLanelet(
     const autoware_perception_msgs::msg::DetectedObject & object,
-    const std::vector<BoxAndLanelet> & lanelets);
+    const std::vector<BoxAndLanelet> & lanelet_candidates);
   geometry_msgs::msg::Polygon setFootprint(const autoware_perception_msgs::msg::DetectedObject &);
 
   lanelet::BasicPolygon2d getPolygon(const lanelet::ConstLanelet & lanelet);
