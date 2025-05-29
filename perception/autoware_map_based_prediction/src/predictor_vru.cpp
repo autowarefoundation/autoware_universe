@@ -393,7 +393,7 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
       case autoware_perception_msgs::msg::TrackedObjectKinematics::SIGN_UNKNOWN: {
         const double & vx = object.kinematics.twist_with_covariance.twist.linear.x;
         if (vx < 0) {
-          // flip the angle
+          // flip the object orientation and velocity
           const auto original_yaw =
             tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
           mutable_object.kinematics.pose_with_covariance.pose.orientation =
