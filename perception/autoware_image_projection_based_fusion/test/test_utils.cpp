@@ -66,9 +66,10 @@ TEST(UtilsTest, closest_cluster_empty_cluster_test_case1)
   // testing closest_cluster function
   double cluster_2d_tolerance = 0.5;
   int min_cluster_size = 3;
+  float max_object_size = 2.0;  // Not used in this test case, but required by function signature
   sensor_msgs::msg::PointCloud2 output_cluster;
   autoware::image_projection_based_fusion::closest_cluster(
-    pointcloud, cluster_2d_tolerance, min_cluster_size, center, output_cluster);
+    pointcloud, cluster_2d_tolerance, min_cluster_size, max_object_size, center, output_cluster);
   EXPECT_EQ(output_cluster.data.size(), std::size_t(0));
 }
 
@@ -97,9 +98,10 @@ TEST(UtilsTest, closest_cluster_test_case2)
   // testing closest_cluster function
   double cluster_2d_tolerance = 0.5;
   int min_cluster_size = 3;
+  float max_object_size = 2.0;  // Not used in this test case, but required by function signature
   sensor_msgs::msg::PointCloud2 output_cluster;
   autoware::image_projection_based_fusion::closest_cluster(
-    pointcloud, cluster_2d_tolerance, min_cluster_size, center, output_cluster);
+    pointcloud, cluster_2d_tolerance, min_cluster_size, max_object_size, center, output_cluster);
   EXPECT_EQ(output_cluster.data.size(), dummy_x.size() * pointcloud.point_step);
 }
 
@@ -128,9 +130,10 @@ TEST(UtilsTest, closest_cluster_test_case3)
   // testing closest_cluster function
   double cluster_2d_tolerance = 0.5;
   int min_cluster_size = 3;
+  float max_object_size = 2.0;  // Not used in this test case, but required by function signature
   sensor_msgs::msg::PointCloud2 output_cluster;
   autoware::image_projection_based_fusion::closest_cluster(
-    pointcloud, cluster_2d_tolerance, min_cluster_size, center, output_cluster);
+    pointcloud, cluster_2d_tolerance, min_cluster_size, max_object_size, center, output_cluster);
   EXPECT_EQ(output_cluster.data.size(), 3 * pointcloud.point_step);
 }
 
@@ -159,9 +162,10 @@ TEST(UtilsTest, closest_cluster_test_case4)
   // testing closest_cluster function
   double cluster_2d_tolerance = 0.5;
   int min_cluster_size = 3;
+  float max_object_size = 2.0;  // Not used in this test case, but required by function signature
   sensor_msgs::msg::PointCloud2 output_cluster;
   autoware::image_projection_based_fusion::closest_cluster(
-    pointcloud, cluster_2d_tolerance, min_cluster_size, center, output_cluster);
+    pointcloud, cluster_2d_tolerance, min_cluster_size, max_object_size, center, output_cluster);
   EXPECT_EQ(output_cluster.data.size(), 6 * pointcloud.point_step);
 }
 

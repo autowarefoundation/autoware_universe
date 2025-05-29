@@ -1,0 +1,3 @@
+<library path="autoware_planning_validator_trajectory_checker">
+  <class type="autoware::planning_validator::TrajectoryChecker" base_class_type="autoware::planning_validator::PluginInterface"/>
+</library>
