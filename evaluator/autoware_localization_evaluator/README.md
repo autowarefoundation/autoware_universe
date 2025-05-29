@@ -4,4 +4,4 @@ The Localization Evaluator evaluates the performance of the localization system 
 
 ## Parameters
 
-{{ json_to_markdown("evaluator/localization_evaluator/schema/localization_evaluator.schema.json") }}
+{{ json_to_markdown("evaluator/autoware_localization_evaluator/schema/localization_evaluator.schema.json") }}
