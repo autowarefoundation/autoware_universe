@@ -329,7 +329,8 @@ private:
    * removed from approved_module_ptrs_.
    */
   SlotOutput runApprovedModules(
-    const std::shared_ptr<PlannerData> & data, const BehaviorModuleOutput & upstream_slot_output);
+    const std::shared_ptr<PlannerData> & data, const BehaviorModuleOutput & upstream_slot_output,
+    std::vector<SceneModulePtr> & deleted_modules);
 
   /**
    * @brief push back to approved_module_ptrs_.

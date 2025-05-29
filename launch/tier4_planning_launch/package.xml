@@ -65,8 +65,6 @@
   <exec_depend>autoware_freespace_planner</exec_depend>
   <exec_depend>autoware_glog_component</exec_depend>
   <exec_depend>autoware_mission_planner_universe</exec_depend>
-  <exec_depend>autoware_obstacle_cruise_planner</exec_depend>
-  <exec_depend>autoware_obstacle_stop_planner</exec_depend>
   <exec_depend>autoware_path_optimizer</exec_depend>
   <exec_depend>autoware_planning_evaluator</exec_depend>
   <exec_depend>autoware_planning_topic_converter</exec_depend>
