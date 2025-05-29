@@ -17,6 +17,7 @@
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
+#include <builtin_interfaces/msg/time.hpp>
 
 #include <gtest/gtest.h>
 
@@ -59,9 +60,10 @@ void generateMap(LaneletMapBin & vector_map_msg)
   lanelet::utils::conversion::toBinMsg(vector_map_ptr, &vector_map_msg);
 }
 
-void generatePerceptionMsg(TrafficSignalArray & perception_msg)
+void generatePerceptionMsg(
+  TrafficSignalArray & perception_msg, const builtin_interfaces::msg::Time & time)
 {
-  perception_msg.stamp.sec = 10000;
+  perception_msg.stamp = time;
   // traffic_light_group_id 1: 1012
   {
     TrafficSignal traffic_light_groups;
@@ -87,16 +89,17 @@ void generatePerceptionMsg(TrafficSignalArray & perception_msg)
     // predicted state
     {
       PredictedTrafficLightState predictions;
-      predictions.predicted_stamp.sec = 10010;
+      predictions.predicted_stamp = time;
+      predictions.predicted_stamp.sec += 10;
       {
         TrafficElement elements;
         elements.color = TrafficElement::RED;
         elements.shape = TrafficElement::CIRCLE;
         elements.status = TrafficElement::SOLID_ON;
-        elements.confidence = 0.9;
+        elements.confidence = 0.7;
         predictions.simultaneous_elements.push_back(elements);
       }
-      predictions.reliability = 0.9;
+      predictions.reliability = 1.0;
       predictions.information_source =
         PredictedTrafficLightState::INFORMATION_SOURCE_INTERNAL_ESTIMATION;
       traffic_light_groups.predictions.push_back(predictions);
@@ -105,9 +108,10 @@ void generatePerceptionMsg(TrafficSignalArray & perception_msg)
   }
 }
 
-void generateExternalMsg(TrafficSignalArray & external_msg)
+void generateExternalMsg(
+  TrafficSignalArray & external_msg, const builtin_interfaces::msg::Time & time)
 {
-  external_msg.stamp.sec = 10000;
+  external_msg.stamp = time;
   // traffic_light_group_id 1: 1012
   {
     TrafficSignal traffic_light_groups;
@@ -133,7 +137,8 @@ void generateExternalMsg(TrafficSignalArray & external_msg)
     // predicted state
     {
       PredictedTrafficLightState predictions;
-      predictions.predicted_stamp.sec = 10010;
+      predictions.predicted_stamp = time;
+      predictions.predicted_stamp.sec += 10;
       {
         TrafficElement elements;
         elements.color = TrafficElement::GREEN;
@@ -148,7 +153,8 @@ void generateExternalMsg(TrafficSignalArray & external_msg)
     }
     {
       PredictedTrafficLightState predictions;
-      predictions.predicted_stamp.sec = 10030;
+      predictions.predicted_stamp = time;
+      predictions.predicted_stamp.sec += 20;
       {
         TrafficElement elements;
         elements.color = TrafficElement::RED;
@@ -203,34 +209,6 @@ bool isElementEqual(
   return true;
 }
 
-bool isCurrentStatusEqual(const TrafficSignalArray & input_msg, const TrafficSignalArray & gt_msg)
-{
-  // check number of groups
-  if (input_msg.traffic_light_groups.size() != gt_msg.traffic_light_groups.size()) {
-    return false;
-  }
-
-  for (std::size_t group_idx = 0; group_idx < input_msg.traffic_light_groups.size(); ++group_idx) {
-    const auto & input_traffic_light_group = input_msg.traffic_light_groups.at(group_idx);
-    const auto & gt_traffic_light_group = gt_msg.traffic_light_groups.at(group_idx);
-
-    // check traffic_light_group_id
-    if (
-      input_traffic_light_group.traffic_light_group_id !=
-      gt_traffic_light_group.traffic_light_group_id) {
-      return false;
-    }
-
-    // check elements
-    if (
-      isElementEqual(input_traffic_light_group.elements, gt_traffic_light_group.elements) ==
-      false) {
-      return false;
-    }
-  }
-  return true;
-}
-
 bool isPredictedStatusEqual(
   const std::vector<PredictedTrafficLightState> & input_predicted_state,
   const std::vector<PredictedTrafficLightState> & gt_predicted_state)
@@ -260,6 +238,41 @@ bool isPredictedStatusEqual(
   return true;
 }
 
+bool isEqual(const TrafficSignalArray & input_msg, const TrafficSignalArray & gt_msg)
+{
+  // check number of groups
+  if (input_msg.traffic_light_groups.size() != gt_msg.traffic_light_groups.size()) {
+    return false;
+  }
+
+  for (std::size_t group_idx = 0; group_idx < input_msg.traffic_light_groups.size(); ++group_idx) {
+    const auto & input_traffic_light_group = input_msg.traffic_light_groups.at(group_idx);
+    const auto & gt_traffic_light_group = gt_msg.traffic_light_groups.at(group_idx);
+
+    // check traffic_light_group_id
+    if (
+      input_traffic_light_group.traffic_light_group_id !=
+      gt_traffic_light_group.traffic_light_group_id) {
+      return false;
+    }
+
+    // check elements
+    if (
+      isElementEqual(input_traffic_light_group.elements, gt_traffic_light_group.elements) ==
+      false) {
+      return false;
+    }
+
+    // check predictions
+    if (
+      isPredictedStatusEqual(
+        input_traffic_light_group.predictions, gt_traffic_light_group.predictions) == false) {
+      return false;
+    }
+  }
+  return true;
+}
+
 TEST(TrafficLightArbiterTest, testTrafficSignalOnlyPerceptionMsg)
 {
   rclcpp::init(0, nullptr);
@@ -274,10 +287,6 @@ TEST(TrafficLightArbiterTest, testTrafficSignalOnlyPerceptionMsg)
   LaneletMapBin vector_map_msg;
   generateMap(vector_map_msg);
 
-  // perception msg preparation
-  TrafficSignalArray perception_msg;
-  generatePerceptionMsg(perception_msg);
-
   // test callback preparation
   TrafficSignalArray latest_msg;
   auto callback = [&latest_msg](const TrafficSignalArray::ConstSharedPtr msg) {
@@ -285,22 +294,16 @@ TEST(TrafficLightArbiterTest, testTrafficSignalOnlyPerceptionMsg)
   };
   test_manager->set_subscriber<TrafficSignalArray>(output_topic, callback);
 
-  // stamp preparation
-  // perception_msg.stamp = test_target_node->now();
+  // perception msg preparation
+  TrafficSignalArray perception_msg;
+  generatePerceptionMsg(perception_msg, test_target_node->now());
 
   test_manager->test_pub_msg<LaneletMapBin>(
     test_target_node, input_map_topic, vector_map_msg, rclcpp::QoS(1).transient_local());
   test_manager->test_pub_msg<TrafficSignalArray>(
     test_target_node, input_perception_topic, perception_msg);
 
-  // check current state
-  EXPECT_EQ(isCurrentStatusEqual(latest_msg, perception_msg), true);
-  // check predicted state
-  EXPECT_EQ(
-    isPredictedStatusEqual(
-      latest_msg.traffic_light_groups.at(0).predictions,
-      perception_msg.traffic_light_groups.at(0).predictions),
-    true);
+  EXPECT_TRUE(isEqual(latest_msg, perception_msg));
   rclcpp::shutdown();
 }
 
@@ -317,10 +320,6 @@ TEST(TrafficLightArbiterTest, testTrafficSignalOnlyExternalMsg)
   LaneletMapBin vector_map_msg;
   generateMap(vector_map_msg);
 
-  // external msg preparation
-  TrafficSignalArray external_msg;
-  generateExternalMsg(external_msg);
-
   // test callback preparation
   TrafficSignalArray latest_msg;
   auto callback = [&latest_msg](const TrafficSignalArray::ConstSharedPtr msg) {
@@ -328,22 +327,16 @@ TEST(TrafficLightArbiterTest, testTrafficSignalOnlyExternalMsg)
   };
   test_manager->set_subscriber<TrafficSignalArray>(output_topic, callback);
 
-  // stamp preparation
-  // external_msg.stamp = test_target_node->now();
+  // external msg preparation
+  TrafficSignalArray external_msg;
+  generateExternalMsg(external_msg, test_target_node->now());
 
   test_manager->test_pub_msg<LaneletMapBin>(
     test_target_node, input_map_topic, vector_map_msg, rclcpp::QoS(1).transient_local());
   test_manager->test_pub_msg<TrafficSignalArray>(
     test_target_node, input_external_topic, external_msg);
 
-  // check current state
-  EXPECT_EQ(isCurrentStatusEqual(latest_msg, external_msg), true);
-  // check predicted state
-  EXPECT_EQ(
-    isPredictedStatusEqual(
-      latest_msg.traffic_light_groups.at(0).predictions,
-      external_msg.traffic_light_groups.at(0).predictions),
-    true);
+  EXPECT_TRUE(isEqual(latest_msg, external_msg));
   rclcpp::shutdown();
 }
 
@@ -362,14 +355,6 @@ TEST(TrafficLightArbiterTest, testTrafficSignalBothMsg)
   LaneletMapBin vector_map_msg;
   generateMap(vector_map_msg);
 
-  // perception preparation
-  TrafficSignalArray perception_msg;
-  generatePerceptionMsg(perception_msg);
-
-  // external preparation
-  TrafficSignalArray external_msg;
-  generateExternalMsg(external_msg);
-
   // test callback preparation
   TrafficSignalArray latest_msg;
   auto callback = [&latest_msg](const TrafficSignalArray::ConstSharedPtr msg) {
@@ -377,9 +362,13 @@ TEST(TrafficLightArbiterTest, testTrafficSignalBothMsg)
   };
   test_manager->set_subscriber<TrafficSignalArray>(output_topic, callback);
 
-  // stamp preparation
-  // external_msg.stamp = test_target_node->now();
-  // perception_msg.stamp = test_target_node->now();
+  // perception preparation
+  TrafficSignalArray perception_msg;
+  generatePerceptionMsg(perception_msg, test_target_node->now());
+
+  // external preparation
+  TrafficSignalArray external_msg;
+  generateExternalMsg(external_msg, test_target_node->now());
 
   test_manager->test_pub_msg<LaneletMapBin>(
     test_target_node, input_map_topic, vector_map_msg, rclcpp::QoS(1).transient_local());
@@ -388,19 +377,23 @@ TEST(TrafficLightArbiterTest, testTrafficSignalBothMsg)
   test_manager->test_pub_msg<TrafficSignalArray>(
     test_target_node, input_perception_topic, perception_msg);
 
-  // check current state
-  // latest_msg should be equal to perception_msg because it has higher confidence than external_msg
-  EXPECT_EQ(isCurrentStatusEqual(latest_msg, perception_msg), true);
-  // check predicted state
-  std::vector<PredictedTrafficLightState> gt_predicted_state;
-  for (const auto & prediction : external_msg.traffic_light_groups.at(0).predictions) {
-    gt_predicted_state.push_back(prediction);
+  // latest_msg should be equal to perception_msg without predictions because it has higher
+  // confidence than external_msg
+  TrafficSignalArray gt_msg = perception_msg;
+  // predictions should be equal to combined predictions of external_msg and perception_msg
+  for (auto & traffic_light_group : gt_msg.traffic_light_groups) {
+    for (const auto & traffic_light_group_ex : external_msg.traffic_light_groups) {
+      if (
+        traffic_light_group_ex.traffic_light_group_id ==
+        traffic_light_group.traffic_light_group_id) {
+        traffic_light_group.predictions.insert(
+          traffic_light_group.predictions.end(), traffic_light_group_ex.predictions.begin(),
+          traffic_light_group_ex.predictions.end());
+        break;
+      }
+    }
   }
-  for (const auto & prediction : perception_msg.traffic_light_groups.at(0).predictions) {
-    gt_predicted_state.push_back(prediction);
-  }
-  EXPECT_EQ(
-    isPredictedStatusEqual(latest_msg.traffic_light_groups.at(0).predictions, gt_predicted_state),
-    true);
+
+  EXPECT_TRUE(isEqual(latest_msg, gt_msg));
   rclcpp::shutdown();
 }
