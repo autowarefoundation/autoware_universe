@@ -392,7 +392,7 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
     switch (object.kinematics.orientation_availability) {
       case autoware_perception_msgs::msg::TrackedObjectKinematics::SIGN_UNKNOWN: {
         const double & vx = object.kinematics.twist_with_covariance.twist.linear.x;
-        if (vx < 0){        
+        if (vx < 0) {
           // flip the angle
           const auto original_yaw =
             tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
@@ -419,7 +419,7 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
   }
 
   auto predicted_object = utils::convertToPredictedObject(mutable_object);
-  
+
   {
     PredictedPath predicted_path =
       path_generator_->generatePathForNonVehicleObject(mutable_object, prediction_time_horizon_);
@@ -491,8 +491,8 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
             mutable_object, edge_points.front_center_point, edge_points.front_right_point,
             edge_points.front_left_point, prediction_time_horizon_ * 2.0,
             min_crosswalk_user_velocity_, max_crosswalk_user_delta_yaw_threshold_for_lanelet_)) {
-        PredictedPath predicted_path =
-          path_generator_->generatePathToTargetPoint(mutable_object, edge_points.front_center_point);
+        PredictedPath predicted_path = path_generator_->generatePathToTargetPoint(
+          mutable_object, edge_points.front_center_point);
         predicted_path.confidence = 1.0;
         predicted_object.kinematics.predicted_paths.push_back(predicted_path);
       }
@@ -539,8 +539,8 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
     }
 
     const auto reachable_crosswalk = isReachableCrosswalkEdgePoints(
-      mutable_object, surrounding_lanelets, surrounding_crosswalks, edge_points, prediction_time_horizon_,
-      min_crosswalk_user_velocity_);
+      mutable_object, surrounding_lanelets, surrounding_crosswalks, edge_points,
+      prediction_time_horizon_, min_crosswalk_user_velocity_);
 
     if (!reachable_crosswalk) {
       continue;
