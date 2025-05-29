@@ -24,44 +24,44 @@
   <arg name="centerpoint_model_path" default="$(var data_path)/lidar_centerpoint"/>
   <arg name="transfusion_model_path" default="$(var data_path)/lidar_transfusion"/>
 
-  <!-- ShortRange Lidar detector parameters -->
+  <!-- short_range Lidar detector parameters -->
   <arg name="use_short_range_detection" value="false" description="use short range detection for redundant VRU detection"/>
-  <arg name="lidar_shortrange_detection_model_type" description="options: `shortrange_centerpoint`">
-    <choice value="shortrange_centerpoint"/>
+  <arg name="lidar_short_range_detection_model_type" description="options: `short_range_centerpoint`">
+    <choice value="short_range_centerpoint"/>
   </arg>
-  <arg name="lidar_shortrange_detection_model_name" description="options: `shortrange_centerpoint`">
-    <choice value="shortrange_centerpoint"/>
+  <arg name="lidar_short_range_detection_model_name" description="options: `short_range_centerpoint`">
+    <choice value="short_range_centerpoint"/>
     <choice value=""/>
   </arg>
-  <arg name="shortrange_centerpoint_model_path" default="$(var data_path)/lidar_shortrange_centerpoint"/>
+  <arg name="short_range_centerpoint_model_path" default="$(var data_path)/lidar_short_range_centerpoint"/>
 
   <!-- External interfaces -->
   <arg name="node/pointcloud_container"/>
   <arg name="input/pointcloud"/>
   <arg name="output/objects"/>
-  <arg name="output/shortrange_objects"/>
+  <arg name="output/short_range_objects"/>
 
-  <!-- ShortRange detection -->
+  <!-- short_range detection -->
   <group if="$(var use_short_range_detection)">
-    <!-- ShortRange CenterPoint -->
-    <group if="$(eval &quot;'$(var lidar_shortrange_detection_model_type)'=='shortrange_centerpoint'&quot;)">
+    <!-- short_range CenterPoint -->
+    <group if="$(eval &quot;'$(var lidar_short_range_detection_model_type)'=='short_range_centerpoint'&quot;)">
       <let
-        name="lidar_shortrange_detection_model_name"
-        value="$(eval &quot;'shortrange_centerpoint' if ''=='$(var lidar_shortrange_detection_model_name)' else '$(var lidar_shortrange_detection_model_name)'&quot;)"
+        name="lidar_short_range_detection_model_name"
+        value="$(eval &quot;'short_range_centerpoint' if ''=='$(var lidar_short_range_detection_model_name)' else '$(var lidar_short_range_detection_model_name)'&quot;)"
       />
       <push-ros-namespace namespace="centerpoint"/>
-      <arg name="lidar_shortrange_model_param_path" default="$(find-pkg-share autoware_lidar_centerpoint)/config"/>
+      <arg name="lidar_short_range_model_param_path" default="$(find-pkg-share autoware_lidar_centerpoint)/config"/>
 
       <group>
-        <include file="$(find-pkg-share autoware_lidar_centerpoint)/launch/lidar_shortrange_centerpoint.launch.xml">
+        <include file="$(find-pkg-share autoware_lidar_centerpoint)/launch/lidar_short_range_centerpoint.launch.xml">
           <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
-          <arg name="output/objects" value="$(var output/shortrange_objects)"/>
-          <arg name="model_name" value="$(var lidar_shortrange_detection_model_name)"/>
-          <arg name="model_path" value="$(var shortrange_centerpoint_model_path)"/>
-          <arg name="model_param_path" value="$(var lidar_shortrange_model_param_path)/$(var lidar_shortrange_detection_model_name).param.yaml"/>
-          <arg name="ml_package_param_path" value="$(var shortrange_centerpoint_model_path)/$(var lidar_shortrange_detection_model_name)_ml_package.param.yaml"/>
-          <arg name="class_remapper_param_path" value="$(var shortrange_centerpoint_model_path)/detection_class_remapper.param.yaml"/>
-          <arg name="common_param_path" value="$(var lidar_shortrange_model_param_path)/shortrange_centerpoint_common.param.yaml"/>
+          <arg name="output/objects" value="$(var output/short_range_objects)"/>
+          <arg name="model_name" value="$(var lidar_short_range_detection_model_name)"/>
+          <arg name="model_path" value="$(var short_range_centerpoint_model_path)"/>
+          <arg name="model_param_path" value="$(var lidar_short_range_model_param_path)/$(var lidar_short_range_detection_model_name).param.yaml"/>
+          <arg name="ml_package_param_path" value="$(var short_range_centerpoint_model_path)/$(var lidar_short_range_detection_model_name)_ml_package.param.yaml"/>
+          <arg name="class_remapper_param_path" value="$(var short_range_centerpoint_model_path)/detection_class_remapper.param.yaml"/>
+          <arg name="common_param_path" value="$(var lidar_short_range_model_param_path)/short_range_centerpoint_common.param.yaml"/>
 
           <arg name="use_pointcloud_container" value="true"/>
           <arg name="pointcloud_container_name" value="$(var node/pointcloud_container)"/>
