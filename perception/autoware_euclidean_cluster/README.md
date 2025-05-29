@@ -42,8 +42,8 @@ This package has two clustering methods: `euclidean_cluster` and `voxel_grid_bas
 | Name               | Type  | Description                                                                                  |
 | ------------------ | ----- | -------------------------------------------------------------------------------------------- |
 | `use_height`       | bool  | use point.z for clustering                                                                   |
-| `min_cluster_size` | int   | the minimum number of voxels that a cluster needs to contain in order to be considered valid |
-| `max_cluster_size` | int   | the maximum number of voxels that a cluster needs to contain in order to be considered valid |
+| `min_cluster_size` | int   | the minimum number of points that a cluster needs to contain in order to be considered valid |
+| `max_cluster_size` | int   | the maximum number of points that a cluster needs to contain in order to be considered valid |
 | `tolerance`        | float | the spatial cluster tolerance as a measure in the L2 Euclidean space                         |
 
 #### voxel_grid_based_euclidean_cluster
