@@ -58,7 +58,7 @@ public:
     RequiredSubscriptionInfo required_subscription_info;
     required_subscription_info.predicted_objects = true;
     required_subscription_info.no_ground_pointcloud = true;
-    required_subscription_info.occupancy_grid = true;
+    required_subscription_info.occupancy_grid_map = true;
     return required_subscription_info;
   }
 
