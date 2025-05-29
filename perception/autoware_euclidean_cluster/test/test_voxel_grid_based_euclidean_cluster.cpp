@@ -171,8 +171,8 @@ TEST(VoxelGridBasedEuclideanClusterTest, testcase2)
   EXPECT_EQ(output.feature_objects.size(), 0);
 }
 
-// Test case 3: Test case when the input pointcloud has two clusters with points number greater to
-// max_num_points_per_cluster
+// Test case 3: Test case when the input pointcloud has cluster with voxel greater than
+// max_voxel_cluster_for_output
 TEST(VoxelGridBasedEuclideanClusterTest, testcase3)
 {
   int nb_generated_points = 10;
