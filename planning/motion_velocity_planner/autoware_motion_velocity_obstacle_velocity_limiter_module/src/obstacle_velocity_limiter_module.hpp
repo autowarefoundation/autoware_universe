@@ -53,7 +53,10 @@ public:
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> planner_data) override;
   std::string get_module_name() const override { return module_name_; }
-
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    return RequiredSubscriptionInfo();
+  }
 private:
   inline static const std::string ns_ = "obstacle_velocity_limiter";
   std::string module_name_;
