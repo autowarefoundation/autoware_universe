@@ -136,7 +136,6 @@ private:
 
   DiagnosticsInfo diagnostics_info_;
   GyroInfo gyro_info_;
-  
 };
 }  // namespace autoware::imu_corrector
 
