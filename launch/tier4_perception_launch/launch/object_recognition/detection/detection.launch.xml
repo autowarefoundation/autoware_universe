@@ -243,7 +243,7 @@
       <arg name="lidar_detection_model_name" value="$(var lidar_detection_model_name)"/>
       <arg name="lidar_shortrange_detection_model_type" value="$(var lidar_shortrange_detection_model_type)"/>
       <arg name="lidar_shortrange_detection_model_name" value="$(var lidar_shortrange_detection_model_name)"/>
-	  <arg name="use_short_range_detection" value="$(var use_short_range_detection)"/>
+      <arg name="use_short_range_detection" value="$(var use_short_range_detection)"/>
       <arg name="output/shortrange_objects" value="$(var lidar_ml_detector/output/shortrange_objects)"/>
     </include>
   </group>
