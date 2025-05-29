@@ -470,6 +470,7 @@ private:
     const double dist_ego_to_stop, const PathWithLaneId & sparse_resample_path,
     const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area);
 
+  bool isRedSignalForLanelet(const lanelet::ConstLanelet & lanelet) const;
   bool isRedSignalForEgo() const;
   bool isRedSignalForPedestrians() const;
 
