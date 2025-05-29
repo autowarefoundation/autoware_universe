@@ -84,6 +84,8 @@ private:
   const double threshold_scale_change_;
   const double threshold_error_rate_;
   const double num_consecutive_scale_change_;
+  const double min_allowed_scale_;
+  const double max_allowed_scale_;
 
   double ndt_yaw_rate;
   double gyro_yaw_rate;

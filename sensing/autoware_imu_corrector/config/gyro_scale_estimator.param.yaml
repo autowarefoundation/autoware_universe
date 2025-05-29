@@ -8,3 +8,5 @@
     threshold_scale_change: 0.15 # percentage change wrt current scale
     threshold_error_rate: 0.1
     num_consecutive_scale_change: 4.0 # after this number change the current scale
+    min_allowed_scale: 0.3 # minimum allowed scale
+    max_allowed_scale: 10.0 # maximum allowed scale

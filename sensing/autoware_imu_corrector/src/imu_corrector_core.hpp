@@ -18,8 +18,8 @@
 #include <autoware_utils/ros/transform_listener.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <sensor_msgs/msg/imu.hpp>
 #include <geometry_msgs/msg/vector3_stamped.hpp>
+#include <sensor_msgs/msg/imu.hpp>
 
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
@@ -42,13 +42,11 @@ private:
   void callback_bias(const Vector3Stamped::ConstSharedPtr bias_msg_ptr);
   void callback_scale(const Vector3Stamped::ConstSharedPtr scale_msg_ptr);
 
-
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
   rclcpp::Subscription<Vector3Stamped>::SharedPtr gyro_bias_sub_;
   rclcpp::Subscription<Vector3Stamped>::SharedPtr gyro_scale_sub_;
 
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
-  
 
   double angular_velocity_offset_x_imu_link_;
   double angular_velocity_offset_y_imu_link_;
