@@ -41,8 +41,9 @@
   <arg name="output/objects"/>
   <arg name="output/shortrange_objects"/>
 
-  <!-- ShortRange CenterPoint -->
+  <!-- ShortRange detection -->
   <group if="$(var use_short_range_detection)">
+    <!-- ShortRange CenterPoint -->
 	<group if="$(eval &quot;'$(var lidar_shortrange_detection_model_type)'=='shortrange_centerpoint'&quot;)">
 		<let
 		name="lidar_shortrange_detection_model_name"
