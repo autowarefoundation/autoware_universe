@@ -24,7 +24,7 @@
           y: 0.1
           z: 0.5
         clustering:
-          cluster_tolerance: 0.5  #[m]
+          tolerance: 0.5  #[m]
           min_height: 0.5
           min_size: 10
           max_size: 10000
