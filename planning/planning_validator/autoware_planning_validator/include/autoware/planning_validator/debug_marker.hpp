@@ -18,13 +18,20 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
+
+#include <lanelet2_core/geometry/Polygon.h>
+#include <lanelet2_core/primitives/Polygon.h>
 
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
+
+namespace autoware::planning_validator
+{
 
 class PlanningValidatorDebugMarkerPublisher
 {
@@ -36,6 +43,9 @@ public:
   void pushPoseMarker(const geometry_msgs::msg::Pose & pose, const std::string & ns, int id = 0);
   void pushVirtualWall(const geometry_msgs::msg::Pose & pose);
   void pushWarningMsg(const geometry_msgs::msg::Pose & pose, const std::string & msg);
+
+  void pushLaneletPolygonsMarker(const lanelet::BasicPolygons2d & polygon, const std::string & ns, int id = 0);
+
   void publish();
 
   void clearMarkers();
@@ -56,5 +66,7 @@ private:
     return marker_id_[ns]++;
   }
 };
+
+}  // namespace autoware::planning_validator
 
 #endif  // AUTOWARE__PLANNING_VALIDATOR__DEBUG_MARKER_HPP_

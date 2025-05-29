@@ -44,6 +44,13 @@ using sensor_msgs::msg::PointCloud2;
 using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
 using route_handler::Direction;
 
+struct CollisionCheckerLanelets
+{
+  lanelet::ConstLanelets trajectory_lanelets;
+  lanelet::ConstLanelets connected_lanelets;
+  lanelet::ConstLanelets target_lanelets;
+};
+
 class CollisionChecker : public PluginInterface
 {
 public:
@@ -57,22 +64,23 @@ public:
 private:
   void setup_parameters(rclcpp::Node & node);
 
-  [[nodiscard]] lanelet::ConstLanelets get_trajectory_lanelets() const;
-
   [[nodiscard]] Direction get_turn_direction(
     const lanelet::ConstLanelets & trajectory_lanelets) const;
 
-  [[nodiscard]] lanelet::ConstLanelets get_target_lanelets(
-    const lanelet::ConstLanelets & trajectory_lanelets, const Direction & direction) const;
+  [[nodiscard]] Direction get_lanelets(CollisionCheckerLanelets & lanelets) const;
 
-  [[nodiscard]] lanelet::ConstLanelets get_right_turn_target_lanelets(
-    const lanelet::ConstLanelets & trajectory_lanelets) const;
+  void set_trajectory_lanelets(CollisionCheckerLanelets & lanelets) const;
 
-  [[nodiscard]] lanelet::ConstLanelets get_left_turn_target_lanelets(
-    const lanelet::ConstLanelets & trajectory_lanelets) const;
+  void set_target_lanelets(CollisionCheckerLanelets & lanelets, const Direction & direction) const;
+
+  void set_right_turn_target_lanelets(CollisionCheckerLanelets & lanelets) const;
+
+  void set_left_turn_target_lanelets(CollisionCheckerLanelets & lanelets) const;
 
   void filter_pointcloud(
     PointCloud2::ConstSharedPtr & input, PointCloud::Ptr & filtered_point_cloud) const;
+
+  void set_lanelets_debug_marker(const CollisionCheckerLanelets & lanelets) const;
 
   CollisionCheckerParams params_;
 };
