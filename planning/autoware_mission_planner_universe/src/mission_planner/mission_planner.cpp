@@ -37,28 +37,23 @@ namespace autoware::mission_planner_universe
 {
 namespace
 {
-#define ROUTE_STATE_CASE(state) \
-  case RouteState::state:       \
-    return #state;
-
 std::string route_state_to_string(const uint8_t state)
 {
   switch (state) {
-    ROUTE_STATE_CASE(UNKNOWN)
-    ROUTE_STATE_CASE(INITIALIZING)
-    ROUTE_STATE_CASE(UNSET)
-    ROUTE_STATE_CASE(ROUTING)
-    ROUTE_STATE_CASE(SET)
-    ROUTE_STATE_CASE(REROUTING)
-    ROUTE_STATE_CASE(ARRIVED)
-    ROUTE_STATE_CASE(ABORTED)
-    ROUTE_STATE_CASE(INTERRUPTED)
-    default:
-      return "UNKNOWN(" + std::to_string(static_cast<int>(state)) + ")";
+      // clang-format off
+    case RouteState::UNKNOWN:      return "UNKNOWN";
+    case RouteState::INITIALIZING: return "INITIALIZING";
+    case RouteState::UNSET:        return "UNSET";
+    case RouteState::ROUTING:      return "ROUTING";
+    case RouteState::SET:          return "SET";
+    case RouteState::REROUTING:    return "REROUTING";
+    case RouteState::ARRIVED:      return "ARRIVED";
+    case RouteState::ABORTED:      return "ABORTED";
+    case RouteState::INTERRUPTED:  return "INTERRUPTED";
+    default: return "UNKNOWN(" + std::to_string(static_cast<int>(state)) + ")";
+      // clang-format on
   }
 }
-
-#undef ROUTE_STATE_CASE
 }  // namespace
 
 MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
