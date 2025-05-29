@@ -29,11 +29,11 @@
     <choice value="transfusion"/>
     <choice value=""/>
   </arg>
-  <arg name="lidar_shortrange_detection_model_type" default="" description="options: `shortrange_centerpoint`">
+  <arg name="use_short_range_detection" description="use short range detection for redundant VRU detection"/>
+  <arg name="lidar_shortrange_detection_model_type" description="options: `shortrange_centerpoint`">
     <choice value="shortrange_centerpoint"/>
-    <choice value=""/>
   </arg>
-  <arg name="lidar_shortrange_detection_model_name" default="" description="options: `shortrange_centerpoint`">
+  <arg name="lidar_shortrange_detection_model_name" description="options: `shortrange_centerpoint`">
     <choice value="shortrange_centerpoint"/>
     <choice value=""/>
   </arg>
@@ -243,6 +243,7 @@
       <arg name="lidar_detection_model_name" value="$(var lidar_detection_model_name)"/>
       <arg name="lidar_shortrange_detection_model_type" value="$(var lidar_shortrange_detection_model_type)"/>
       <arg name="lidar_shortrange_detection_model_name" value="$(var lidar_shortrange_detection_model_name)"/>
+	  <arg name="use_short_range_detection" value="$(var use_short_range_detection)"/>
       <arg name="output/shortrange_objects" value="$(var lidar_ml_detector/output/shortrange_objects)"/>
     </include>
   </group>
