@@ -43,6 +43,7 @@
 #include <boost/geometry/strategies/cartesian/buffer_point_square.hpp>
 
 #include <lanelet2_core/geometry/LineString.h>
+#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
 #include <lanelet2_core/primitives/Point.h>
 #include <lanelet2_core/primitives/Polygon.h>
 #include <lanelet2_routing/RoutingGraph.h>
@@ -1145,6 +1146,10 @@ std::optional<StopFactor> CrosswalkModule::checkStopForParkedVehicles(
     parked_vehicles_stop_.reset();
     return std::nullopt;
   }
+  if(isRedSignalForEgo()) {
+    parked_vehicles_stop_.reset();
+    return std::nullopt;
+  }
   const auto & ego_pose = planner_data_->current_odometry->pose;
   const auto ego_idx = motion_utils::findNearestIndex(ego_path.points, ego_pose);
   if (!ego_idx) {
@@ -1347,6 +1352,39 @@ void CrosswalkModule::updateObjectState(
 
   debug_data_.ignore_crosswalk = ignore_crosswalk;
   object_info_manager_.finalize();
+}
+
+bool CrosswalkModule::isRedSignalForEgo() const
+{
+  const auto traffic_lights_reg_elems =
+    road_.regulatoryElementsAs<const lanelet::TrafficLight>();
+
+  for (const auto & traffic_lights_reg_elem : traffic_lights_reg_elems) {
+    const auto traffic_signal_stamped_opt =
+      planner_data_->getTrafficSignal(traffic_lights_reg_elem->id());
+    if (!traffic_signal_stamped_opt) {
+      continue;
+    }
+    const auto & traffic_signal_stamped = traffic_signal_stamped_opt.value();
+
+    if (
+      planner_param_.traffic_light_state_timeout <
+      (clock_->now() - traffic_signal_stamped.stamp).seconds()) {
+      continue;
+    }
+
+    const auto & lights = traffic_signal_stamped.signal.elements;
+    if (lights.empty()) {
+      continue;
+    }
+
+    for (const auto & element : lights) {
+      if (element.color == TrafficLightElement::RED && element.shape == TrafficLightElement::CIRCLE)
+        return true;
+    }
+  }
+
+  return false;
 }
 
 bool CrosswalkModule::isRedSignalForPedestrians() const
