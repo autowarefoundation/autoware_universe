@@ -891,6 +891,9 @@ void AutowareStatePanel::onClickEmergencyButton()
 void AutowareStatePanel::onControlModeReport(
   const autoware_vehicle_msgs::msg::ControlModeReport::ConstSharedPtr msg)
 {
+  // Operation Mode (/api/operation_mode/state) is published only when state transition occurs.
+  // To monitor the vehicle's current control state in real-time, display the control mode
+  // (/vehicle/status/control_mode) in the state panel as a workaround.
   QString mode_str;
   QString bg_color;
   switch (msg->mode) {
