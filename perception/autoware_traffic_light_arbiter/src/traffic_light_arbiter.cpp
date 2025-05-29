@@ -159,10 +159,10 @@ void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Tim
       predictions.insert(predictions.end(), group.predictions.begin(), group.predictions.end());
     }
   };
-  std::unordered_map<lanelet::Id, std::vector<PredictedTrafficLightState>> predicted_state_map;
+  std::unordered_map<lanelet::Id, std::vector<PredictedTrafficLightState>> predictions_map;
   // add in order from perception msg
-  append_predictions(predicted_state_map, latest_perception_msg_.traffic_light_groups);
-  append_predictions(predicted_state_map, latest_external_msg_.traffic_light_groups);
+  append_predictions(predictions_map, latest_perception_msg_.traffic_light_groups);
+  append_predictions(predictions_map, latest_external_msg_.traffic_light_groups);
 
   if (map_regulatory_elements_set_ == nullptr) {
     RCLCPP_WARN_THROTTLE(
@@ -244,7 +244,7 @@ void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Tim
     TrafficSignal signal_msg;
     signal_msg.traffic_light_group_id = regulatory_element_id;
     signal_msg.elements = get_highest_confidence_elements(elements);
-    signal_msg.predictions = predicted_state_map[regulatory_element_id];
+    signal_msg.predictions = predictions_map[regulatory_element_id];
     output_signals_msg.traffic_light_groups.emplace_back(signal_msg);
   }
 

@@ -273,6 +273,81 @@ bool isEqual(const TrafficSignalArray & input_msg, const TrafficSignalArray & gt
   return true;
 }
 
+TEST(TrafficLightArbiterTest, testWithoutPredictions)
+{
+  rclcpp::init(0, nullptr);
+  const std::string input_map_topic = "/traffic_light_arbiter/sub/vector_map";
+  const std::string input_perception_topic =
+    "/traffic_light_arbiter/sub/perception_traffic_signals";
+  const std::string input_external_topic = "/traffic_light_arbiter/sub/external_traffic_signals";
+  const std::string output_topic = "/traffic_light_arbiter/pub/traffic_signals";
+  auto test_manager = generateTestManager();
+  auto test_target_node = generateNode();
+
+  // map preparation
+  LaneletMapBin vector_map_msg;
+  generateMap(vector_map_msg);
+
+  // test callback preparation
+  TrafficSignalArray latest_msg;
+  auto callback = [&latest_msg](const TrafficSignalArray::ConstSharedPtr msg) {
+    latest_msg = *msg;
+  };
+  test_manager->set_subscriber<TrafficSignalArray>(output_topic, callback);
+
+  // perception preparation
+  TrafficSignalArray perception_msg;
+  perception_msg.stamp = test_target_node->now();
+  {
+    TrafficSignal traffic_light_groups;
+    traffic_light_groups.traffic_light_group_id = 1012;
+    {
+      TrafficElement elements;
+      elements.color = TrafficElement::RED;
+      elements.shape = TrafficElement::CIRCLE;
+      elements.status = TrafficElement::SOLID_ON;
+      elements.confidence = 0.4;
+      traffic_light_groups.elements.push_back(elements);
+    }
+    perception_msg.traffic_light_groups.push_back(traffic_light_groups);
+  }
+
+  // external preparation
+  TrafficSignalArray external_msg;
+  external_msg.stamp = test_target_node->now();
+  {
+    TrafficSignal traffic_light_groups;
+    traffic_light_groups.traffic_light_group_id = 1012;
+    {
+      TrafficElement elements;
+      elements.color = TrafficElement::GREEN;
+      elements.shape = TrafficElement::CIRCLE;
+      elements.status = TrafficElement::SOLID_ON;
+      elements.confidence = 1.0;
+      traffic_light_groups.elements.push_back(elements);
+    }
+    {
+      TrafficElement elements;
+      elements.color = TrafficElement::GREEN;
+      elements.shape = TrafficElement::RIGHT_ARROW;
+      elements.status = TrafficElement::SOLID_ON;
+      elements.confidence = 1.0;
+      traffic_light_groups.elements.push_back(elements);
+    }
+    external_msg.traffic_light_groups.push_back(traffic_light_groups);
+  }
+
+  test_manager->test_pub_msg<LaneletMapBin>(
+    test_target_node, input_map_topic, vector_map_msg, rclcpp::QoS(1).transient_local());
+  test_manager->test_pub_msg<TrafficSignalArray>(
+    test_target_node, input_external_topic, external_msg);
+  test_manager->test_pub_msg<TrafficSignalArray>(
+    test_target_node, input_perception_topic, perception_msg);
+
+  EXPECT_TRUE(isEqual(latest_msg, external_msg));
+  rclcpp::shutdown();
+}
+
 TEST(TrafficLightArbiterTest, testTrafficSignalOnlyPerceptionMsg)
 {
   rclcpp::init(0, nullptr);
