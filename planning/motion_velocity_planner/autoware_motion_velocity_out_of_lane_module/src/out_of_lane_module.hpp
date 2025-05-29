@@ -47,9 +47,7 @@ public:
   std::string get_module_name() const override { return module_name_; }
   RequiredSubscriptionInfo getRequiredSubscriptions() const override
   {
-    RequiredSubscriptionInfo required_subscription_info;
-    required_subscription_info.predicted_objects = true;
-    return required_subscription_info;
+    return RequiredSubscriptionInfo();
   }
 
 private:

@@ -55,7 +55,11 @@ public:
   std::string get_module_name() const override { return module_name_; }
   RequiredSubscriptionInfo getRequiredSubscriptions() const override
   {
-    return RequiredSubscriptionInfo();
+    RequiredSubscriptionInfo required_subscription_info;
+    required_subscription_info.predicted_objects = true;
+    required_subscription_info.no_ground_pointcloud = true;
+    required_subscription_info.occupancy_grid = true;
+    return required_subscription_info;
   }
 
 private:
