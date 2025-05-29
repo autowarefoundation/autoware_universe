@@ -180,7 +180,6 @@ bool VoxelGridBasedEuclideanCluster::cluster(
       int cluster_size = static_cast<int>(i_cluster_data_size / point_step);
       if (cluster_size < min_cluster_size_) {
         // Cluster size is below the minimum threshold; skip without messaging.
-        // Here min_cluster_size_ is used as the minimum number of points in a cluster.
         continue;
       }
       const auto & cluster = temporary_clusters.at(i);
