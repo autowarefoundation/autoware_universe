@@ -456,7 +456,7 @@ std::pair<MarkerArray, MarkerArray> createGoalCandidatesMarkerArray(
     safe_goal_candidates.begin(), safe_goal_candidates.end(), std::back_inserter(pose_vector),
     [](const auto & goal_candidate) { return goal_candidate.goal_pose; });
 
-  auto info_marker_array = createPosesMarkerArray(pose_vector, "goal_candidates", color);
+  const auto info_marker_array = createPosesMarkerArray(pose_vector, "goal_candidates", color);
   auto debug_marker_array = createGoalPriorityTextsMarkerArray(
     pose_vector, "goal_candidates_priority", create_marker_color(1.0, 1.0, 1.0, 0.999));
   for (const auto & text_marker : createNumObjectsToAvoidTextsMarkerArray(
