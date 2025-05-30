@@ -25,7 +25,7 @@
   <arg name="transfusion_model_path" default="$(var data_path)/lidar_transfusion"/>
 
   <!-- short_range Lidar detector parameters -->
-  <arg name="use_short_range_detection" value="false" description="use short range detection for redundant VRU detection"/>
+  <arg name="use_short_range_detection" default="false" description="use short range detection for redundant VRU detection"/>
   <arg name="lidar_short_range_detection_model_type" description="options: `centerpoint_short_range`">
     <choice value="centerpoint_short_range"/>
   </arg>
