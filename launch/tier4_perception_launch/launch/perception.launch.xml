@@ -51,11 +51,11 @@
   <arg name="lidar_detection_model_type" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[0]&quot;)"/>
   <arg name="lidar_detection_model_name" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[1] if '/' in '$(var lidar_detection_model)' else ''&quot;)"/>
   <arg name="use_short_range_detection" default="false" description="use short range detection for redundant VRU detection"/>
-  <arg name="lidar_short_range_detection_model_type" default="short_range_centerpoint" description="options: `short_range_centerpoint`">
-    <choice value="short_range_centerpoint"/>
+  <arg name="lidar_short_range_detection_model_type" default="centerpoint_short_range" description="options: `centerpoint_short_range`">
+    <choice value="centerpoint_short_range"/>
   </arg>
-  <arg name="lidar_short_range_detection_model_name" default="short_range_centerpoint" description="options: `short_range_centerpoint`">
-    <choice value="short_range_centerpoint"/>
+  <arg name="lidar_short_range_detection_model_name" default="centerpoint_short_range" description="options: `centerpoint_short_range`">
+    <choice value="centerpoint_short_range"/>
     <choice value=""/>
   </arg>
   <arg name="bevfusion_model_path" default="$(var data_path)/bevfusion"/>

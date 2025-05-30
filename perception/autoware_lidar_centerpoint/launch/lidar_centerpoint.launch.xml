@@ -4,7 +4,7 @@
   <arg name="output/objects" default="objects"/>
   <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
   <arg name="node_name" default="lidar_centerpoint" description="node name for autoware_lidar_centerpoint_node"/>
-  <arg name="model_name" default="centerpoint_tiny" description="options: `centerpoint` or `centerpoint_tiny`"/>
+  <arg name="model_name" default="centerpoint_tiny" description="options: `centerpoint`, `centerpoint_tiny` or `centerpoint_short_range`"/>
   <arg name="model_path" default="$(var data_path)/$(var node_name)"/>
   <arg name="model_param_path" default="$(find-pkg-share autoware_lidar_centerpoint)/config/$(var model_name).param.yaml"/>
   <arg name="ml_package_param_path" default="$(var model_path)/$(var model_name)_ml_package.param.yaml"/>

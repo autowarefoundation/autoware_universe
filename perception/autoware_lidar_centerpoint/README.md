@@ -286,7 +286,7 @@ It also provides short_range detections using CenterPoint:
 ```bash
 cd /YOUR/AUTOWARE/PATH/Autoware
 source install/setup.bash
-ros2 launch autoware_lidar_centerpoint lidar_short_range_centerpoint.launch.xml model_name:=short_range_centerpoint model_path:=/PATH/TO/ONNX/FILE/
+ros2 launch autoware_lidar_centerpoint lidar_centerpoint.launch.xml model_name:=centerpoint_short_range model_path:=/PATH/TO/ONNX/FILE/
 ```
 
 ### Changelog
