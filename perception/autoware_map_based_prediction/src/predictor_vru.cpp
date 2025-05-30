@@ -401,14 +401,24 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
           mutable_object.kinematics.twist_with_covariance.twist.linear.x *= -1.0;
           mutable_object.kinematics.twist_with_covariance.twist.linear.y *= -1.0;
         }
+        // if the object is moving forward, use the orientation from the object
         break;
       }
       case autoware_perception_msgs::msg::TrackedObjectKinematics::UNAVAILABLE: {
-        // calculate the yaw from the velocity
         const auto & object_twist = object.kinematics.twist_with_covariance.twist;
-        const auto object_yaw = std::atan2(object_twist.linear.y, object_twist.linear.x);
-        mutable_object.kinematics.pose_with_covariance.pose.orientation =
-          autoware_utils::create_quaternion_from_yaw(autoware_utils::pi + object_yaw);
+        // if the velocity is not too small, calculate the yaw from the velocity
+        constexpr double VELOCITY_THRESHOLD = 1e-2; // 0.1 m/s
+        if (
+          object_twist.linear.x * object_twist.linear.x +
+            object_twist.linear.y * object_twist.linear.y >
+          VELOCITY_THRESHOLD) {
+          const auto object_vel_yaw = std::atan2(object_twist.linear.y, object_twist.linear.x);
+          const auto object_orientation =
+            tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
+          mutable_object.kinematics.pose_with_covariance.pose.orientation =
+            autoware_utils::create_quaternion_from_yaw(object_vel_yaw + object_orientation);
+        }
+        // if the velocity is too small, use the orientation from the object, as is
         break;
       }
       default: {
