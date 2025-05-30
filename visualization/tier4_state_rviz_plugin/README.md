@@ -17,6 +17,7 @@ This plugin also can engage from the panel.
 | `/api/motion/state`                      | `autoware_adapi_v1_msgs::msg::MotionState`                     | The topic represents the state of motion                      |
 | `/api/autoware/get/emergency`            | `tier4_external_api_msgs::msg::Emergency`                      | The topic represents the state of external emergency          |
 | `/vehicle/status/gear_status`            | `autoware_vehicle_msgs::msg::GearReport`                       | The topic represents the state of gear                        |
+| `/vehicle/status/control_mode`           | `autoware_vehicle_msgs::msg::ControlMode`                      | The topic represents the state of control mode                |
 
 ### Output
 

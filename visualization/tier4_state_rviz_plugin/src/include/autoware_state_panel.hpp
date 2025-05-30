@@ -50,6 +50,7 @@
 #include <autoware_adapi_v1_msgs/srv/clear_route.hpp>
 #include <autoware_adapi_v1_msgs/srv/initialize_localization.hpp>
 #include <autoware_internal_planning_msgs/msg/velocity_limit.hpp>
+#include <autoware_vehicle_msgs/msg/control_mode_report.hpp>
 #include <autoware_vehicle_msgs/msg/gear_report.hpp>
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
@@ -199,6 +200,11 @@ protected:
   CustomElevatedButton * emergency_button_ptr_;
 
   bool current_emergency_{false};
+
+  rclcpp::Subscription<autoware_vehicle_msgs::msg::ControlModeReport>::SharedPtr
+    sub_control_mode_report_;
+  QLabel * control_mode_label_{nullptr};
+  void onControlModeReport(const autoware_vehicle_msgs::msg::ControlModeReport::ConstSharedPtr msg);
 
   template <typename T>
   void callServiceWithoutResponse(const typename rclcpp::Client<T>::SharedPtr client)
