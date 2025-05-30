@@ -35,6 +35,7 @@ public:
 
 private:
   using Element = autoware_perception_msgs::msg::TrafficLightElement;
+  using PredictedTrafficLightState = autoware_perception_msgs::msg::PredictedTrafficLightState;
   using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
   using TrafficSignalArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
   using TrafficSignal = autoware_perception_msgs::msg::TrafficLightGroup;

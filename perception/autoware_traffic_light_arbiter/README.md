@@ -6,7 +6,7 @@ This package receives traffic signals from perception and external (e.g., V2X) c
 
 ## TrafficLightArbiter
 
-A node that merges traffic light/signal state from image recognition and external (e.g., V2X) systems to provide to a planning component.
+A node that merges traffic light/signal state from image recognition and external (e.g., V2X) systems to provide to a planning component. Merging is only applied to `elements` in the `TrafficLightGroup` msg, not to `predictions`.
 
 ### Signal Match Validator
 
