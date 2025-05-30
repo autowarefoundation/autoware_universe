@@ -53,9 +53,10 @@
       <arg name="lidar_short_range_model_param_path" default="$(find-pkg-share autoware_lidar_centerpoint)/config"/>
 
       <group>
-        <include file="$(find-pkg-share autoware_lidar_centerpoint)/launch/lidar_short_range_centerpoint.launch.xml">
+        <include file="$(find-pkg-share autoware_lidar_centerpoint)/launch/lidar_centerpoint.launch.xml">
           <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
           <arg name="output/objects" value="$(var output/short_range_objects)"/>
+          <arg name="node_name" value="lidar_shortrange_centerpoint"/>
           <arg name="model_name" value="$(var lidar_short_range_detection_model_name)"/>
           <arg name="model_path" value="$(var short_range_centerpoint_model_path)"/>
           <arg name="model_param_path" value="$(var lidar_short_range_model_param_path)/$(var lidar_short_range_detection_model_name).param.yaml"/>
@@ -126,6 +127,7 @@
       <include file="$(find-pkg-share autoware_lidar_centerpoint)/launch/lidar_centerpoint.launch.xml">
         <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
         <arg name="output/objects" value="$(var output/objects)"/>
+        <arg name="node_name" value="lidar_centerpoint"/>
         <arg name="model_name" value="$(var lidar_detection_model_name)"/>
         <arg name="model_path" value="$(var centerpoint_model_path)"/>
         <arg name="model_param_path" value="$(var lidar_model_param_path)/$(var lidar_detection_model_name).param.yaml"/>
