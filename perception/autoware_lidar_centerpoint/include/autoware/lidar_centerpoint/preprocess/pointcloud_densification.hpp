@@ -36,18 +36,23 @@ namespace autoware::lidar_centerpoint
 class DensificationParam
 {
 public:
-  DensificationParam(const std::string & world_frame_id, const unsigned int num_past_frames)
+  DensificationParam(
+    const std::string & world_frame_id, const unsigned int num_past_frames,
+    const std::string & logger_name = "lidar_centerpoint")
   : world_frame_id_(std::move(world_frame_id)),
-    pointcloud_cache_size_(num_past_frames + /*current frame*/ 1)
+    pointcloud_cache_size_(num_past_frames + /*current frame*/ 1),
+    logger_name_(std::move(logger_name))
   {
   }
 
   std::string world_frame_id() const { return world_frame_id_; }
   unsigned int pointcloud_cache_size() const { return pointcloud_cache_size_; }
+  std::string logger_name() const { return logger_name_; }
 
 private:
   std::string world_frame_id_;
   unsigned int pointcloud_cache_size_{1};
+  std::string logger_name_{"lidar_centerpoint"};
 };
 
 struct PointCloudWithTransform
