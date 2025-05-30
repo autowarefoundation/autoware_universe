@@ -1,6 +1,6 @@
 # autoware_diagnostic_graph_utils
 
-This package is a utility for diagnostic graph published by [diagnostic_graph_aggregator](../diagnostic_graph_aggregator/README.md).
+This package is a utility for diagnostic graph published by [diagnostic_graph_aggregator](../autoware_diagnostic_graph_aggregator/README.md).
 
 ## ROS node
 

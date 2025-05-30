@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>yabloc_pose_initializer</name>
-  <version>0.44.0</version>
+  <version>0.45.0</version>
   <description>The pose initializer</description>
   <maintainer email="kento.yabuuchi.2@tier4.jp">Kento Yabuuchi</maintainer>
   <maintainer email="masahiro.sakamoto@tier4.jp">Masahiro Sakamoto</maintainer>
@@ -16,6 +16,7 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
   <buildtool_depend>rosidl_default_generators</buildtool_depend>
 
+  <depend>autoware_internal_localization_msgs</depend>
   <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_map_msgs</depend>
   <depend>cv_bridge</depend>
@@ -24,7 +25,6 @@
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>
-  <depend>tier4_localization_msgs</depend>
   <depend>visualization_msgs</depend>
   <depend>yabloc_common</depend>
 

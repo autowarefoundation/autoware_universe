@@ -24,6 +24,7 @@
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
+#include <fmt/format.h>
 #include <lanelet2_core/geometry/LineString.h>
 
 #include <algorithm>
@@ -34,6 +35,26 @@
 
 namespace autoware::mission_planner_universe
 {
+namespace
+{
+std::string route_state_to_string(const uint8_t state)
+{
+  switch (state) {
+      // clang-format off
+    case RouteState::UNKNOWN:      return "UNKNOWN";
+    case RouteState::INITIALIZING: return "INITIALIZING";
+    case RouteState::UNSET:        return "UNSET";
+    case RouteState::ROUTING:      return "ROUTING";
+    case RouteState::SET:          return "SET";
+    case RouteState::REROUTING:    return "REROUTING";
+    case RouteState::ARRIVED:      return "ARRIVED";
+    case RouteState::ABORTED:      return "ABORTED";
+    case RouteState::INTERRUPTED:  return "INTERRUPTED";
+    default: return "UNKNOWN(" + std::to_string(static_cast<int>(state)) + ")";
+      // clang-format on
+  }
+}
+}  // namespace
 
 MissionPlanner::MissionPlanner(const rclcpp::NodeOptions & options)
 : Node("mission_planner", options),
@@ -241,7 +262,10 @@ void MissionPlanner::on_set_lanelet_route(
 
   if (state_.state != RouteState::UNSET && state_.state != RouteState::SET) {
     throw service_utils::ServiceException(
-      ResponseCode::ERROR_INVALID_STATE, "The route cannot be set in the current state.");
+      ResponseCode::ERROR_INVALID_STATE,
+      fmt::format(
+        "The lanelet route cannot be set in the current state: {}",
+        route_state_to_string(state_.state)));
   }
   if (!is_mission_planner_ready_) {
     throw service_utils::ServiceException(
@@ -304,7 +328,10 @@ void MissionPlanner::on_set_waypoint_route(
 
   if (state_.state != RouteState::UNSET && state_.state != RouteState::SET) {
     throw service_utils::ServiceException(
-      ResponseCode::ERROR_INVALID_STATE, "The route cannot be set in the current state.");
+      ResponseCode::ERROR_INVALID_STATE,
+      fmt::format(
+        "The waypoint route cannot be set in the current state: {}",
+        route_state_to_string(state_.state)));
   }
   if (!is_mission_planner_ready_) {
     throw service_utils::ServiceException(

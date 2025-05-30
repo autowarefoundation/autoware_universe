@@ -2,6 +2,41 @@
 Changelog for package autoware_traffic_light_selector
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* chore: update traffic light packages code owner (`#10644 <https://github.com/autowarefoundation/autoware_universe/issues/10644>`_)
+  chore: add Taekjin Lee as maintainer to multiple perception packages
+* feat(autoware_traffic_light_selector): new matching algorithm and unit test (`#10352 <https://github.com/autowarefoundation/autoware_universe/issues/10352>`_)
+  * refactor and test
+  * style(pre-commit): autofix
+  * add dependency
+  * unnecessary dependency
+  * chore
+  * fix typo
+  * remove change in category_merger
+  * chnage var name
+  * add validation shiftRoi
+  * add new matching algo
+  * modify unittest
+  * remove unnecessary file
+  * change type from uint8_t to int64_t
+  * change  variable name in looping
+  Co-authored-by: badai nguyen  <94814556+badai-nguyen@users.noreply.github.com>
+  * use move instead of copy
+  Co-authored-by: badai nguyen  <94814556+badai-nguyen@users.noreply.github.com>
+  * change variable name in utils
+  * apply  header file
+  * to pass cppcheck
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: badai nguyen <94814556+badai-nguyen@users.noreply.github.com>
+* Contributors: Masato Saeki, Taekjin LEE, TaikiYamada4
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 
