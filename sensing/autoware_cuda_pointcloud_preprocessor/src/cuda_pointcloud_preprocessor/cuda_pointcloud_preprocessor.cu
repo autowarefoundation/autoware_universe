@@ -308,6 +308,9 @@ void CudaPointcloudPreprocessor::organizePointcloud()
       stream_);
   }
 
+  // reuse device_indexes_tensor_ to store valid point location
+  thrust::fill(device_indexes_tensor_.begin(), device_indexes_tensor_.end(), 0);
+
   const int organized_points_blocks_per_grid =
     (num_organized_points_ + threads_per_block_ - 1) / threads_per_block_;
 
@@ -315,7 +318,7 @@ void CudaPointcloudPreprocessor::organizePointcloud()
     thrust::raw_pointer_cast(device_input_points_.data()),
     thrust::raw_pointer_cast(device_sorted_indexes_tensor_.data()),
     thrust::raw_pointer_cast(device_organized_points_.data()), num_rings_, max_points_per_ring_,
-    num_raw_points_,
+    thrust::raw_pointer_cast(device_indexes_tensor_.data()), num_raw_points_,
     threads_per_block_, organized_points_blocks_per_grid, stream_);
 }
 
@@ -414,6 +417,7 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   std::uint32_t * device_ring_outlier_mask =
     thrust::raw_pointer_cast(device_ring_outlier_mask_.data());
   std::uint32_t * device_indices = thrust::raw_pointer_cast(device_indices_.data());
+  std::uint32_t * device_is_valid_point = thrust::raw_pointer_cast(device_indexes_tensor_.data());
 
   const int blocks_per_grid = (num_organized_points_ + threads_per_block_ - 1) / threads_per_block_;
 
@@ -452,6 +456,11 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
 
   combineMasksLaunch(
     device_crop_mask, device_ring_outlier_mask, num_organized_points_, device_ring_outlier_mask,
+    threads_per_block_, blocks_per_grid, stream_);
+
+  // Mask out invalid points in the array
+  combineMasksLaunch(
+    device_is_valid_point, device_ring_outlier_mask, num_organized_points_, device_ring_outlier_mask,
     threads_per_block_, blocks_per_grid, stream_);
 
   thrust::inclusive_scan(

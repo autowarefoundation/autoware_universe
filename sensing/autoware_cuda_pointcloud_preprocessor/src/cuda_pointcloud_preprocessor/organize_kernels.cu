@@ -52,7 +52,8 @@ __global__ void organizeKernel(
 
 __global__ void gatherKernel(
   const InputPointType * __restrict__ input_points, const std::uint32_t * __restrict__ index_tensor,
-  InputPointType * __restrict__ output_points, int num_rings, int max_points_per_ring, size_t num_raw_points)
+  InputPointType * __restrict__ output_points, int num_rings, int max_points_per_ring,
+  std::uint32_t * __restrict__ is_valid_point, size_t num_raw_points)
 {
   const int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= num_rings * max_points_per_ring) {
@@ -66,8 +67,10 @@ __global__ void gatherKernel(
 
   if (input_idx < num_raw_points) {
     output_points[ring * max_points_per_ring + point] = input_points[input_idx];
+    is_valid_point[idx] = true;
   } else {
     output_points[ring * max_points_per_ring + point].distance = 0.0f;
+    is_valid_point[idx] = false;
   }
 }
 
@@ -98,11 +101,13 @@ void organizeLaunch(
 
 void gatherLaunch(
   const InputPointType * input_points, const std::uint32_t * index_tensor,
-  InputPointType * output_points, int num_rings, int max_points_per_ring, size_t num_raw_points,  int threads_per_block,
+  InputPointType * output_points, int num_rings, int max_points_per_ring,
+  std::uint32_t * is_valid_point, size_t num_raw_points,  int threads_per_block,
   int blocks_per_grid, cudaStream_t & stream)
 {
   gatherKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
-    input_points, index_tensor, output_points, num_rings, max_points_per_ring, num_raw_points);
+    input_points, index_tensor, output_points, num_rings, max_points_per_ring,
+    is_valid_point, num_raw_points);
 }
 
 }  // namespace autoware::cuda_pointcloud_preprocessor
