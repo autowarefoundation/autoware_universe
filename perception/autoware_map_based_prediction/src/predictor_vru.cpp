@@ -407,7 +407,7 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
       case autoware_perception_msgs::msg::TrackedObjectKinematics::UNAVAILABLE: {
         const auto & object_twist = object.kinematics.twist_with_covariance.twist;
         // if the velocity is not too small, calculate the yaw from the velocity
-        constexpr double VELOCITY_THRESHOLD = 1e-2; // 0.1 m/s
+        constexpr double VELOCITY_THRESHOLD = 1e-2;  // 0.1 m/s
         if (
           object_twist.linear.x * object_twist.linear.x +
             object_twist.linear.y * object_twist.linear.y >
