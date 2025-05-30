@@ -87,7 +87,8 @@ ObjectLaneletFilterNode::ObjectLaneletFilterNode(const rclcpp::NodeOptions & nod
     RCLCPP_WARN(
       this->get_logger(),
       "parameters of object_elevation_filter do not satisfy the relation: "
-      "min_elevation_threshold <= max_elevation_threshold");
+      "min_elevation_threshold (%f) <= max_elevation_threshold (%f)",
+      filter_settings_.min_elevation_threshold, filter_settings_.max_elevation_threshold);
   }
 
   // Set publisher/subscriber
