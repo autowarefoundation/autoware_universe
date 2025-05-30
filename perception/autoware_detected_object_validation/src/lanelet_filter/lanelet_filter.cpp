@@ -262,8 +262,10 @@ bool isPointAboveLaneletMesh(
   for (const auto & tri : mesh) {
     const Eigen::Vector3d plane_normal_vec = computeFaceNormal(tri);
 
+    // std::cos(M_PI / 3.0) -> 0.5;
+    // in some environment, or more recent c++, it can be constexpr
+    constexpr double cos_threshold = 0.5;
     const double cos_of_normal_and_z = plane_normal_vec.dot(Eigen::Vector3d::UnitZ());
-    constexpr double cos_threshold = std::cos(M_PI / 3.0);
 
     // if angle is too steep, consider as above for safety
     if (cos_of_normal_and_z < cos_threshold) {
@@ -658,7 +660,7 @@ bool ObjectLaneletFilterNode::isObjectAboveLanelet(
   for (const auto & candidate_lanelet : lanelet_candidates) {
     const lanelet::ConstLanelet llt = candidate_lanelet.second.lanelet;
     const lanelet::ConstLineString3d line = llt.leftBound();
-    if (line.size() == 0) continue;
+    if (line.empty()) continue;
 
     // assuming the roads have enough height difference to distinguish each other
     const double diff_z = cz - line[0].z();
