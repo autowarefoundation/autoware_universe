@@ -188,7 +188,7 @@ TriangleMesh createTriangleMeshFromLanelet(const lanelet::ConstLanelet & lanelet
     const size_t n_extra = n_left - n_right;
 
     for (size_t k = 0; k < n_extra; ++k) {
-      // we need at least 2 points from eash side
+      // we need at least 2 points from each side
       if (i < 1 || j < 1) break;
 
       const Eigen::Vector3d a_l(left[i - 1].x(), left[i - 1].y(), left[i - 1].z());
