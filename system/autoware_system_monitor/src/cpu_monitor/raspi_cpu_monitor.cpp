@@ -1,4 +1,4 @@
-// Copyright 2020 Autoware Foundation
+// Copyright 2020,2025 Autoware Foundation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ CPUMonitor::CPUMonitor(const rclcpp::NodeOptions & options) : CPUMonitorBase("cp
 {
 }
 
-void CPUMonitor::checkThrottling(diagnostic_updater::DiagnosticStatusWrapper & stat)
+void CPUMonitor::checkThermalThrottling(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
   int level = DiagStatus::OK;
   std::vector<std::string> status;
@@ -66,17 +66,17 @@ void CPUMonitor::checkThrottling(diagnostic_updater::DiagnosticStatusWrapper & s
 
   stat.add("status", boost::algorithm::join(status, ", "));
 
-  stat.summary(level, thermal_dict_.at(level));
+  stat.summary(level, thermal_dictionary_.at(level));
 }
 
-void CPUMonitor::getTempNames()
+void CPUMonitor::getTemperatureFileNames()
 {
   // thermal_zone0
-  std::vector<thermal_zone> therms;
-  SystemMonitorUtility::getThermalZone("cpu-thermal", &therms);
+  std::vector<thermal_zone> thermal_zones;
+  SystemMonitorUtility::getThermalZone("cpu-thermal", &thermal_zones);
 
-  for (auto itr = therms.begin(); itr != therms.end(); ++itr) {
-    temps_.emplace_back(itr->label_, itr->path_);
+  for (const auto & zone : thermal_zones) {
+    temperatures_.emplace_back(zone.label_, zone.path_);
   }
 }
 

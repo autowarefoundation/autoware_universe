@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020,2025 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ class CPUMonitor : public CPUMonitorBase
 public:
   /**
    * @brief constructor
-   * @param [in] node_name Name of the node.
    * @param [in] options Options associated with this node.
    */
   explicit CPUMonitor(const rclcpp::NodeOptions & options);
