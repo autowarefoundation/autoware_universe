@@ -265,6 +265,9 @@ void IntersectionModule::updateObjectInfoManagerCollision(
       }
       cutPredictPathWithinDuration(
         planner_data_->predicted_objects->header.stamp, passing_time, &predicted_path);
+      if (predicted_path.path.size() < 2) {
+        continue;
+      }
       const double time_step =
         predicted_path.time_step.sec + predicted_path.time_step.nanosec * 1e-9;
       const double horizon = time_step * static_cast<double>(predicted_path.path.size());
