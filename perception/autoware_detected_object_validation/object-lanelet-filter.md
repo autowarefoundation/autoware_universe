@@ -30,13 +30,14 @@ Description of the `filter_settings` in the parameters of the `object_lanelet_fi
 | ------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `debug`                                           | `bool`   | If `true`, publishes additional debug information, including visualization markers on the `~/debug/marker` topic for tools like RViz. |
 | `lanelet_extra_margin`                            | `double` | If `> 0`, expands the lanelet polygons used for overlap checks by this margin (in meters). If `<= 0`, polygon expansion is disabled.  |
-| `polygon_overlap_filter.enabled`                  | `bool`   | If `true`, enables filtering of objects based on their overlap with lanelet polygons.                                                 |
+| `lanelet_xy_overlap_filter.enabled`               | `bool`   | If `true`, enables filtering of objects based on their overlap with lanelet polygons.                                                 |
 | `lanelet_direction_filter.enabled`                | `bool`   | If `true`, enables filtering of objects based on their velocity direction relative to the lanelet.                                    |
 | `lanelet_direction_filter.velocity_yaw_threshold` | `double` | The yaw angle difference threshold (in radians) between the object’s velocity vector and the lanelet direction.                       |
 | `lanelet_direction_filter.object_speed_threshold` | `double` | The minimum speed (in m/s) of an object required for the direction filter to be applied.                                              |
-| `use_height_threshold`                            | `bool`   | If `true`, enables filtering of objects based on their height relative to the base_link frame.                                        |
-| `max_height_threshold`                            | `double` | The maximum allowable height (in meters) of an object relative to the base_link in the map frame.                                     |
-| `min_height_threshold`                            | `double` | The minimum allowable height (in meters) of an object relative to the base_link in the map frame.                                     |
+| `lanelet_object_elevation_filter.enabled`         | `bool`   | If `true`, enables filtering of objects based on their elevation relative to the nearest lanelet surface.                             |
+| `max_elevation_threshold`                         | `double` | The maximum allowable elevation (in meters) of an object relative to the nearest lanelet surface.                                     |
+| `min_elevation_threshold`                         | `double` | The minimum allowable elevation (in meters) of an object relative to the nearest lanelet surface.                                     |
+| `lanelet_extra_margin`                            | `double` | The margin value that will be added to the lanelet boundaries.                                                                        |
 
 ### Core Parameters
 
