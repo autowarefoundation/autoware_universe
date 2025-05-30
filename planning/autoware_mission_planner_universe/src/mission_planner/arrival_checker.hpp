@@ -40,7 +40,6 @@ private:
   double angle_;
   double duration_;
   std::optional<PoseWithUuidStamped> goal_with_uuid_;
-  rclcpp::Subscription<PoseWithUuidStamped>::SharedPtr sub_goal_;
   autoware::motion_utils::VehicleStopChecker vehicle_stop_checker_;
 };
 
