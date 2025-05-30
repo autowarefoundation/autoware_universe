@@ -20,8 +20,11 @@ namespace autoware::default_adapi
 {
 
 VehicleDoorNode::VehicleDoorNode(const rclcpp::NodeOptions & options)
-: Node("vehicle_door", options)
+: Node("vehicle_door", options), diagnostics_(this)
 {
+  diagnostics_.setHardwareID("none");
+  diagnostics_.add("state", this, &VehicleDoorNode::diagnose_state);
+
   const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
   group_cli_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   adaptor.relay_service(cli_layout_, srv_layout_, group_cli_);
@@ -34,6 +37,29 @@ VehicleDoorNode::VehicleDoorNode(const rclcpp::NodeOptions & options)
   check_autoware_control_ = declare_parameter<bool>("check_autoware_control");
   is_autoware_control_ = false;
   is_stop_mode_ = false;
+}
+
+void VehicleDoorNode::diagnose_state(diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  using diagnostic_msgs::msg::DiagnosticStatus;
+
+  if (!status_) {
+    stat.summary(DiagnosticStatus::ERROR, "Doors status is unknown.");
+    return;
+  }
+
+  bool is_closed = true;
+  for (const auto & door : status_->doors) {
+    if (door.status != autoware_adapi_v1_msgs::msg::DoorStatus::CLOSED) {
+      is_closed = false;
+      break;
+    }
+  }
+  if (is_closed) {
+    stat.summary(DiagnosticStatus::OK, "");
+  } else {
+    stat.summary(DiagnosticStatus::ERROR, " Doors are open.");
+  }
 }
 
 void VehicleDoorNode::on_operation_mode(const OperationModeState::Message::ConstSharedPtr msg)
