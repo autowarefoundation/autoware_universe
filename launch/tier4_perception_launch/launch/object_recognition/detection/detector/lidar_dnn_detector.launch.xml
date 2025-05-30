@@ -49,7 +49,7 @@
         name="lidar_short_range_detection_model_name"
         value="$(eval &quot;'centerpoint_short_range' if ''=='$(var lidar_short_range_detection_model_name)' else '$(var lidar_short_range_detection_model_name)'&quot;)"
       />
-      <push-ros-namespace namespace="centerpoint_short_range"/>
+      <push-ros-namespace namespace="short_range_centerpoint"/>
       <arg name="lidar_short_range_model_param_path" default="$(find-pkg-share autoware_lidar_centerpoint)/config"/>
 
       <group>
