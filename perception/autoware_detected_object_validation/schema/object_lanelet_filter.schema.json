@@ -64,7 +64,7 @@
         "filter_settings": {
           "type": "object",
           "properties": {
-            "polygon_overlap_filter": {
+            "lanelet_xy_overlap_filter": {
               "type": "object",
               "properties": {
                 "enabled": {
@@ -96,40 +96,44 @@
               },
               "required": ["enabled", "velocity_yaw_threshold", "object_speed_threshold"]
             },
-            "debug": {
-              "type": "boolean",
-              "default": false,
-              "description": "If true, debug information is enabled."
+            "lanelet_object_elevation_filter": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "If true, the objects not within the elevation range relative to the lanelet surface will be filtered."
+                },
+                "max_elevation_threshold": {
+                  "type": "number",
+                  "default": 5.0,
+                  "description": "Maximum elevation threshold for filtering objects (in meters)."
+                },
+                "min_elevation_threshold": {
+                  "type": "number",
+                  "default": 0.0,
+                  "description": "Minimum elevation threshold for filtering objects (in meters)."
+                }
+              },
+              "required": ["enabled", "max_elevation_threshold", "min_elevation_threshold"]
             },
             "lanelet_extra_margin": {
               "type": "number",
               "default": 0.0,
               "description": "Extra margin added to the lanelet boundaries."
             },
-            "use_height_threshold": {
+            "debug": {
               "type": "boolean",
               "default": false,
-              "description": "If true, height thresholds are used to filter objects."
-            },
-            "max_height_threshold": {
-              "type": "number",
-              "default": 10.0,
-              "description": "Maximum height threshold for filtering objects (in meters)."
-            },
-            "min_height_threshold": {
-              "type": "number",
-              "default": -1.0,
-              "description": "Minimum height threshold for filtering objects (in meters)."
+              "description": "If true, debug information is enabled."
             }
           },
           "required": [
-            "polygon_overlap_filter",
+            "lanelet_xy_overlap_filter",
             "lanelet_direction_filter",
-            "debug",
+            "lanelet_object_elevation_filter",
             "lanelet_extra_margin",
-            "use_height_threshold",
-            "max_height_threshold",
-            "min_height_threshold"
+            "debug"
           ]
         }
       },
