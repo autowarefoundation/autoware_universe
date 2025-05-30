@@ -44,12 +44,12 @@
   <!-- short_range detection -->
   <group if="$(var use_short_range_detection)">
     <!-- short_range CenterPoint -->
-    <group if="$(eval &quot;'$(var lidar_short_range_detection_model_type)'=='short_range_centerpoint'&quot;)">
+    <group if="$(eval &quot;'$(var lidar_short_range_detection_model_type)'=='centerpoint_short_range'&quot;)">
       <let
         name="lidar_short_range_detection_model_name"
-        value="$(eval &quot;'short_range_centerpoint' if ''=='$(var lidar_short_range_detection_model_name)' else '$(var lidar_short_range_detection_model_name)'&quot;)"
+        value="$(eval &quot;'centerpoint_short_range' if ''=='$(var lidar_short_range_detection_model_name)' else '$(var lidar_short_range_detection_model_name)'&quot;)"
       />
-      <push-ros-namespace namespace="centerpoint"/>
+      <push-ros-namespace namespace="centerpoint_short_range"/>
       <arg name="lidar_short_range_model_param_path" default="$(find-pkg-share autoware_lidar_centerpoint)/config"/>
 
       <group>
