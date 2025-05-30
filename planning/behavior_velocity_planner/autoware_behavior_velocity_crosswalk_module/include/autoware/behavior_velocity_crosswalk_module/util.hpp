@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/linestring.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
+
+#include <lanelet2_core/primitives/Polygon.h>
 
 #include <memory>
 #include <optional>
@@ -87,6 +89,10 @@ struct DebugData
   // occlusion data
   std::vector<lanelet::BasicPolygon2d> occlusion_detection_areas;
   geometry_msgs::msg::Point crosswalk_origin;
+
+  // parked vehicles stop
+  lanelet::BasicPolygon2d parked_vehicles_stop_search_area;
+  bool parked_vehicles_stop_already_stopped = false;
 };
 
 std::vector<std::pair<int64_t, lanelet::ConstLanelet>> getCrosswalksOnPath(
