@@ -53,13 +53,20 @@
 #ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__CROP_BOX_FILTER__CROP_BOX_FILTER_NODE_HPP_
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__CROP_BOX_FILTER__CROP_BOX_FILTER_NODE_HPP_
 
+#include "autoware/pointcloud_preprocessor/diagnostics/crop_box_diagnostics.hpp"
+#include "autoware/pointcloud_preprocessor/diagnostics/latency_diagnostics.hpp"
+#include "autoware/pointcloud_preprocessor/diagnostics/pass_rate_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/filter.hpp"
 #include "autoware/pointcloud_preprocessor/transform_info.hpp"
+
+#include <diagnostic_updater/diagnostic_updater.hpp>
 
 #include <geometry_msgs/msg/polygon_stamped.hpp>
 
 #include <pcl/filters/crop_box.h>
 
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::pointcloud_preprocessor
@@ -76,18 +83,19 @@ protected:
     const PointCloud2ConstPtr & input, const IndicesPtr & indices, PointCloud2 & output,
     const TransformInfo & transform_info) override;
 
-  void publishCropBoxPolygon();
+  void publish_crop_box_polygon();
 
 private:
   struct CropBoxParam
   {
-    float min_x;
-    float max_x;
-    float min_y;
-    float max_y;
-    float min_z;
-    float max_z;
+    double min_x{0.0};
+    double max_x{0.0};
+    double min_y{0.0};
+    double max_y{0.0};
+    double min_z{0.0};
+    double max_z{0.0};
     bool negative{false};
+    double processing_time_threshold_sec{0.0};
   } param_;
 
   rclcpp::Publisher<geometry_msgs::msg::PolygonStamped>::SharedPtr crop_box_polygon_pub_;
@@ -96,7 +104,13 @@ private:
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   /** \brief Parameter service callback */
-  rcl_interfaces::msg::SetParametersResult paramCallback(const std::vector<rclcpp::Parameter> & p);
+  rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> & p);
+  std::pair<int, std::string> evaluate_diagnostic_status(
+    const LatencyDiagnostics & latency_diagnostics,
+    const PassRateDiagnostics & pass_rate_diagnostics) const;
+  void publish_diagnostics(
+    const std::vector<std::shared_ptr<const DiagnosticsBase>> & diagnostics,
+    const std::pair<int, std::string> & level_and_message);
 
 public:
   PCL_MAKE_ALIGNED_OPERATOR_NEW

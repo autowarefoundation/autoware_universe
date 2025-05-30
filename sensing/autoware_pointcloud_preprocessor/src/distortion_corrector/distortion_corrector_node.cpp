@@ -41,6 +41,8 @@ DistortionCorrectorComponent::DistortionCorrectorComponent(const rclcpp::NodeOpt
   use_imu_ = declare_parameter<bool>("use_imu");
   use_3d_distortion_correction_ = declare_parameter<bool>("use_3d_distortion_correction");
   update_azimuth_and_distance_ = declare_parameter<bool>("update_azimuth_and_distance");
+  processing_time_threshold_sec_ = declare_parameter<float>("processing_time_threshold_sec");
+  mismatch_fraction_threshold_ = declare_parameter<float>("mismatch_fraction_threshold");
 
   // Publisher
   {
@@ -74,6 +76,10 @@ DistortionCorrectorComponent::DistortionCorrectorComponent(const rclcpp::NodeOpt
   } else {
     distortion_corrector_ = std::make_unique<DistortionCorrector2D>(*this);
   }
+
+  // Diagnostic
+  diagnostics_interface_ =
+    std::make_unique<autoware_utils::DiagnosticsInterface>(this, this->get_fully_qualified_name());
 }
 
 void DistortionCorrectorComponent::pointcloud_callback(PointCloud2::UniquePtr pointcloud_msg)
@@ -119,27 +125,68 @@ void DistortionCorrectorComponent::pointcloud_callback(PointCloud2::UniquePtr po
 
   distortion_corrector_->undistort_pointcloud(use_imu_, angle_conversion_opt_, *pointcloud_msg);
 
-  if (debug_publisher_) {
-    auto pipeline_latency_ms =
-      std::chrono::duration<double, std::milli>(
-        std::chrono::nanoseconds(
-          (this->get_clock()->now() - pointcloud_msg->header.stamp).nanoseconds()))
-        .count();
-    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-      "debug/pipeline_latency_ms", pipeline_latency_ms);
-  }
+  const rclcpp::Time stamp(pointcloud_msg->header.stamp);
+
+  const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
+  const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
+  const double pipeline_latency_ms =
+    std::chrono::duration<double, std::milli>(
+      std::chrono::nanoseconds((this->get_clock()->now() - stamp).nanoseconds()))
+      .count();
 
   undistorted_pointcloud_pub_->publish(std::move(pointcloud_msg));
-
-  // add processing time for debug
   if (debug_publisher_) {
-    const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
-    const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
     debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
     debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time_ms", processing_time_ms);
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "debug/pipeline_latency_ms", pipeline_latency_ms);
   }
+
+  auto latency_diagnostics =
+    std::make_shared<LatencyDiagnostics>(stamp, processing_time_ms, pipeline_latency_ms);
+  auto distortion_corrector_diagnostics = std::make_shared<DistortionCorrectorDiagnostics>(
+    distortion_corrector_->get_mismatch_count(), distortion_corrector_->get_mismatch_fraction(),
+    use_3d_distortion_correction_, update_azimuth_and_distance_);
+  auto level_and_msg =
+    evaluate_diagnostic_status(*latency_diagnostics, *distortion_corrector_diagnostics);
+  publish_diagnostics({latency_diagnostics, distortion_corrector_diagnostics}, level_and_msg);
+}
+
+std::pair<int, std::string> DistortionCorrectorComponent::evaluate_diagnostic_status(
+  const LatencyDiagnostics & latency_diagnostics,
+  const DistortionCorrectorDiagnostics & distortion_corrector_diagnostics) const
+{
+  if (distortion_corrector_diagnostics.mismatch_fraction > mismatch_fraction_threshold_) {
+    return {
+      diagnostic_msgs::msg::DiagnosticStatus::ERROR,
+      "Mismatch fraction " + std::to_string(distortion_corrector_diagnostics.mismatch_fraction) +
+        " exceeded threshold of " + std::to_string(mismatch_fraction_threshold_)};
+  }
+  if (latency_diagnostics.processing_time_ms > processing_time_threshold_sec_ * 1000.0) {
+    return {
+      diagnostic_msgs::msg::DiagnosticStatus::WARN,
+      "Processing time " + std::to_string(latency_diagnostics.processing_time_ms) +
+        " ms exceeded threshold of " + std::to_string(processing_time_threshold_sec_ * 1000.0) +
+        " ms"};
+  }
+  return {diagnostic_msgs::msg::DiagnosticStatus::OK, "Distortion correction successful"};
+}
+
+void DistortionCorrectorComponent::publish_diagnostics(
+  const std::vector<std::shared_ptr<const DiagnosticsBase>> & diagnostics_vec,
+  const std::pair<int, std::string> & level_and_message)
+{
+  // diagnostic
+  diagnostics_interface_->clear();
+  diagnostics_interface_->update_level_and_message(
+    level_and_message.first, level_and_message.second);
+  for (const auto & diag : diagnostics_vec) {
+    diag->add_to_interface(*diagnostics_interface_);
+  }
+
+  diagnostics_interface_->publish(this->get_clock()->now());
 }
 
 }  // namespace autoware::pointcloud_preprocessor

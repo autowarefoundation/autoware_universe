@@ -12,21 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__UTILS_HPP_
-#define AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__UTILS_HPP_
+#pragma once
 
-#include <string>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 
 namespace autoware::pointcloud_preprocessor
 {
+class DiagnosticsBase
+{
+public:
+  virtual ~DiagnosticsBase() = default;
 
-/**
- * @brief Format a timestamp to a string with 9 decimal places.
- * @param timestamp The timestamp to format.
- * @return A string representation of the timestamp.
- */
-std::string format_timestamp(double timestamp);
-
+  virtual void add_to_interface(autoware_utils::DiagnosticsInterface & interface) const = 0;
+};
 }  // namespace autoware::pointcloud_preprocessor
-
-#endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__UTILS_HPP_
