@@ -313,9 +313,11 @@ To inflate the masking behind objects, their footprint can be made bigger using 
 
 This feature makes ego stop before the crosswalk if there are other vehicles parked in front of the crosswalk, possibly obstructing the view of incoming pedestrians or bicycles.
 
-The feature is enabled with the `parked_vehicles_stop.enable` parameter.
-Moreover, the stop is only applied if the traffic light is not red for the crosswalk users,
-and if we are not already planning to stop for crosswalk users or stuck vehicles.
+The feature is enabled with the `parked_vehicles_stop.enable` parameter but is skipped when one of these conditions is true:
+
+- the traffic light is red for the crosswalk users: pedestrians are not supposed to cross so ego does not need to stop;
+- the traffic light is red for the ego vehicle: the traffic light module will add a stop if necessary;
+- we are already planning to stop for crosswalk users or stuck vehicles.
 
 Other vehicles are determined to be stopped if their velocity is less or equal to the `parked_vehicles_stop.parked_velocity_threshold` parameter.
 

@@ -1142,11 +1142,9 @@ std::optional<StopFactor> CrosswalkModule::checkStopForStuckVehicles(
 std::optional<StopFactor> CrosswalkModule::checkStopForParkedVehicles(
   const PathWithLaneId & ego_path, const geometry_msgs::msg::Point & first_path_point_on_crosswalk)
 {
-  if (!planner_param_.parked_vehicles_stop_enable) {
-    parked_vehicles_stop_.reset();
-    return std::nullopt;
-  }
-  if(isRedSignalForEgo()) {
+  if (
+    !planner_param_.parked_vehicles_stop_enable || isRedSignalForEgo() ||
+    isRedSignalForPedestrians()) {
     parked_vehicles_stop_.reset();
     return std::nullopt;
   }
@@ -1250,8 +1248,8 @@ std::optional<StopFactor> CrosswalkModule::getNearestStopFactor(
   const PathWithLaneId & ego_path, const std::vector<StopFactor> & stop_factors,
   const std::optional<StopFactor> & stop_factor_for_parked_vehicles)
 {
-  const auto use_parked_vehicles =
-    stop_factors.empty() && stop_factor_for_parked_vehicles && !isRedSignalForPedestrians();
+  // the parked vehicles stop feature is only used if there are no other crosswalk stops
+  const auto use_parked_vehicles = stop_factors.empty() && stop_factor_for_parked_vehicles;
   if (use_parked_vehicles) {
     return stop_factor_for_parked_vehicles;
   }
@@ -1354,9 +1352,9 @@ void CrosswalkModule::updateObjectState(
   object_info_manager_.finalize();
 }
 
-bool CrosswalkModule::isRedSignalForLanelet(const lanelet::ConstLanelet & lanelet) const {
-  const auto traffic_lights_reg_elems =
-    lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
+bool CrosswalkModule::isRedSignalForLanelet(const lanelet::ConstLanelet & lanelet) const
+{
+  const auto traffic_lights_reg_elems = lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
 
   for (const auto & traffic_lights_reg_elem : traffic_lights_reg_elems) {
     const auto traffic_signal_stamped_opt =
