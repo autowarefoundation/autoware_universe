@@ -248,7 +248,7 @@ bool isPointAboveLaneletMesh(
 {
   const TriangleMesh mesh = createTriangleMeshFromLanelet(lanelet);
 
-  if (mesh.size() == 0) return true;
+  if (mesh.empty()) return true;
 
   // for the query point
   double query_point_min_abs_dist = std::numeric_limits<double>::infinity();
