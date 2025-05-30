@@ -19,6 +19,7 @@
 
 #include <autoware_adapi_v1_msgs/msg/door_status_array.hpp>
 #include <autoware_adapi_v1_msgs/msg/vehicle_kinematics.hpp>
+#include <autoware_adapi_v1_msgs/msg/vehicle_metrics.hpp>
 #include <autoware_adapi_v1_msgs/msg/vehicle_status.hpp>
 #include <autoware_adapi_v1_msgs/srv/get_door_layout.hpp>
 #include <autoware_adapi_v1_msgs/srv/get_vehicle_dimensions.hpp>
@@ -42,6 +43,15 @@ struct VehicleStatus
   static constexpr char name[] = "/api/vehicle/status";
   static constexpr size_t depth = 1;
   static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT;
+  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_VOLATILE;
+};
+
+struct VehicleMetrics
+{
+  using Message = autoware_adapi_v1_msgs::msg::VehicleMetrics;
+  static constexpr char name[] = "/api/vehicle/metrics";
+  static constexpr size_t depth = 1;
+  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
   static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_VOLATILE;
 };
 
