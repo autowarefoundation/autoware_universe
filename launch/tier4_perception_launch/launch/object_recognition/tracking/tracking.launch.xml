@@ -27,6 +27,7 @@
   <!-- External interface -->
   <let name="input/detection_input_channels" value="['detected_objects']"/>
   <arg name="input/radar/objects" default="/perception/object_recognition/detection/radar/far_objects"/>
+  <arg name="input/radar/tracked_objects" default="/sensing/radar/front_center/tracked_objects"/>
   <arg name="output/objects" default="$(var ns)/objects"/>
 
   <group unless="$(var use_multi_channel_tracker_merger)">
@@ -39,7 +40,7 @@
     <let name="multi_object_tracker/output/objects" value="$(var ns)/near_objects" if="$(var use_radar_tracking_fusion)"/>
 
     <let name="tracker_merger/input/main_objects" value="$(var multi_object_tracker/output/objects)"/>
-    <let name="tracker_merger/input/sub_objects" value="$(var radar_tracker/output/objects)"/>
+    <let name="tracker_merger/input/sub_objects" value="$(var input/radar/tracked_objects)"/>
     <let name="tracker_merger/output/objects" value="$(var output/objects)"/>
 
     <!-- Multi object tracking -->
