@@ -36,6 +36,8 @@
   <test_depend>autoware_lint_common</test_depend>
   <test_depend>autoware_planning_validator_test_utils</test_depend>
 
+  <exec_depend>autoware_planning_validator_latency_checker</exec_depend>
+  <exec_depend>autoware_planning_validator_trajectory_checker</exec_depend>
   <exec_depend>rosidl_default_runtime</exec_depend>
   <member_of_group>rosidl_interface_packages</member_of_group>
 
