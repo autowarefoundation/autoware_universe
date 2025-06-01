@@ -19,6 +19,7 @@
 
 #include "autoware_utils/ros/debug_publisher.hpp"
 #include "autoware_utils/ros/published_time_publisher.hpp"
+#include "autoware_utils/system/stop_watch.hpp"
 #include "debugger.hpp"
 
 #include <rclcpp/rclcpp.hpp>
