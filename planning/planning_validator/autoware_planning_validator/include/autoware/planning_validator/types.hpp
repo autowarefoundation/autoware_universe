@@ -27,6 +27,7 @@
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <memory>
 #include <string>
@@ -41,6 +42,7 @@ using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
+using sensor_msgs::msg::PointCloud2;
 
 enum class InvalidTrajectoryHandlingType : uint8_t {
   PUBLISH_AS_IT_IS,
@@ -71,6 +73,7 @@ struct PlanningValidatorData
 
   Odometry::ConstSharedPtr current_kinematics;
   AccelWithCovarianceStamped::ConstSharedPtr current_acceleration;
+  PointCloud2::ConstSharedPtr obstacle_pointcloud;
 
   bool is_ready(std::string & msg)
   {
@@ -84,6 +87,10 @@ struct PlanningValidatorData
     }
     if (!current_acceleration) {
       msg = "current_acceleration";
+      return false;
+    }
+    if (!obstacle_pointcloud) {
+      msg = "obstacle_pointcloud";
       return false;
     }
     return true;

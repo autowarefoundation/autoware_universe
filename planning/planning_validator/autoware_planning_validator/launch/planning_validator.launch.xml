@@ -20,6 +20,7 @@
   <arg name="planning_validator_trajectory_checker_param_path" default="$(find-pkg-share autoware_planning_validator_trajectory_checker)/config/trajectory_checker.param.yaml"/>
   <arg name="input_trajectory" default="/planning/scenario_planning/velocity_smoother/trajectory"/>
   <arg name="output_trajectory" default="/planning/scenario_planning/trajectory"/>
+  <arg name="input_pointcloud" default="/perception/obstacle_segmentation/pointcloud"/>
 
   <group>
     <node_container pkg="rclcpp_components" exec="$(var container_type)" name="planning_validator_container" namespace="" args="" output="both">
@@ -27,6 +28,7 @@
         <remap from="~/input/trajectory" to="$(var input_trajectory)"/>
         <remap from="~/input/kinematics" to="/localization/kinematic_state"/>
         <remap from="~/input/acceleration" to="/localization/acceleration"/>
+        <remap from="~/input/pointcloud" to="$(var input_pointcloud)"/>
         <remap from="~/output/trajectory" to="$(var output_trajectory)"/>
         <remap from="~/output/validation_status" to="~/validation_status"/>
         <param name="launch_modules" value="$(var planning_validator_launch_modules)"/>

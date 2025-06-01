@@ -74,6 +74,8 @@ private:
     this, "~/input/acceleration"};
   autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_trajectory_{
     this, "~/input/trajectory"};
+  autoware_utils::InterProcessPollingSubscriber<PointCloud2> sub_pointcloud_{
+    this, "~/input/pointcloud", autoware_utils::single_depth_sensor_qos()};
   rclcpp::Publisher<Trajectory>::SharedPtr pub_traj_;
   rclcpp::Publisher<PlanningValidatorStatus>::SharedPtr pub_status_;
   rclcpp::Publisher<Float64Stamped>::SharedPtr pub_processing_time_ms_;
