@@ -33,7 +33,7 @@ namespace autoware::ptv3
 {
 
 PreprocessCuda::PreprocessCuda(const PTv3Config & config, cudaStream_t stream)
-: stream_(stream), config_(config)
+: config_(config), stream_(stream)
 {
   points_d_ = autoware::cuda_utils::make_unique<float[]>(
     config_.cloud_capacity_ * config_.num_point_feature_size_);
