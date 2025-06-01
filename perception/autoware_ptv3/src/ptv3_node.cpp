@@ -60,13 +60,9 @@ PTv3Node::PTv3Node(const rclcpp::NodeOptions & options) : Node("ptv3", options)
     this->declare_parameter<float>("ground_prob_threshold", descriptor);
 
   if (point_cloud_range.size() != 6) {
-    RCLCPP_ERROR(rclcpp::get_logger("ptv3"), "The size of point_cloud_range != 6");
-
     throw std::runtime_error("The size of point_cloud_range != 6");
   }
   if (voxel_size.size() != 3) {
-    RCLCPP_WARN_STREAM(rclcpp::get_logger("ptv3"), "The size of voxel_size != 3");
-
     throw std::runtime_error("The size of voxel_size != 3");
   }
 
