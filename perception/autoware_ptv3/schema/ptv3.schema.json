@@ -43,7 +43,7 @@
             "minimum": 0,
             "maximum": 255
           },
-          "description": "Red color codes for the segmented point cloud.",
+          "description": "Red component of the class to RGB map for the segmented point cloud. Must have the same number of elements as the number of classes.",
           "default": [255, 0, 255, 64, 0, 255]
         },
         "colors_green": {
@@ -53,7 +53,7 @@
             "minimum": 0,
             "maximum": 255
           },
-          "description": "Green color codes for the segmented point cloud.",
+          "description": "Green component of the class to RGB map for the segmented point cloud. Must have the same number of elements as the number of classes.",
           "default": [0, 0, 0, 64, 255, 255]
         },
         "colors_blue": {
@@ -63,7 +63,7 @@
             "minimum": 0,
             "maximum": 255
           },
-          "description": "Blue color codes for the segmented point cloud.",
+          "description": "Blue component of the class to RGB map for the segmented point cloud. Must have the same number of elements as the number of classes.",
           "default": [0, 255, 255, 64, 0, 255]
         },
         "ground_prob_threshold": {
