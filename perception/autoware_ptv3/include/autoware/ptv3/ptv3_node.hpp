@@ -28,11 +28,7 @@
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
-#include <cstddef>
 #include <memory>
-#include <optional>
-#include <string>
-#include <vector>
 
 namespace autoware::ptv3
 {

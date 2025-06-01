@@ -14,9 +14,6 @@
 
 #include "autoware/ptv3/ptv3_node.hpp"
 
-#include "autoware/ptv3/utils.hpp"
-
-#include <cstddef>
 #include <memory>
 #include <string>
 #include <unordered_map>

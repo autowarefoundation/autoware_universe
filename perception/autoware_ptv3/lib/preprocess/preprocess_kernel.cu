@@ -28,7 +28,6 @@
 #include <thrust/unique.h>
 
 #include <limits>
-#include <string>
 
 namespace autoware::ptv3
 {
