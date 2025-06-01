@@ -1,9 +1,9 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Parameters for bevfusion",
+  "title": "Parameters for ptv3",
   "type": "object",
   "definitions": {
-    "bevfusion": {
+    "ptv3": {
       "type": "object",
       "properties": {
         "class_names": {
@@ -53,7 +53,7 @@
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "$ref": "#/definitions/bevfusion"
+          "$ref": "#/definitions/ptv3"
         }
       },
       "required": ["ros__parameters"],
