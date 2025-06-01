@@ -89,9 +89,9 @@ public:
     }
 
     for (std::size_t i = 0; i < class_names_.size(); ++i) {
-      std::uint8_t r = static_cast<std::uint8_t>(colors_red[i]);
-      std::uint8_t g = static_cast<std::uint8_t>(colors_green[i]);
-      std::uint8_t b = static_cast<std::uint8_t>(colors_blue[i]);
+      auto r = static_cast<std::uint8_t>(colors_red[i]);
+      auto g = static_cast<std::uint8_t>(colors_green[i]);
+      auto b = static_cast<std::uint8_t>(colors_blue[i]);
       std::uint32_t rgb = (r << 16) | (g << 8) | b;
       float rgb_float;
       memcpy(&rgb_float, &rgb, sizeof(rgb_float));
