@@ -16,15 +16,11 @@
 #define AUTOWARE__PTV3__POSTPROCESS__POSTPROCESS_KERNEL_HPP_
 
 #include "autoware/ptv3/ptv3_config.hpp"
-#include "autoware/ptv3/utils.hpp"
 
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 
-#include <cuda.h>
 #include <cuda_runtime_api.h>
-
-#include <vector>
 
 namespace autoware::ptv3
 {
