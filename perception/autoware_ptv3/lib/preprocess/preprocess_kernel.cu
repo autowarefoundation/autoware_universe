@@ -151,9 +151,9 @@ __global__ void voxelizationHash64Kernel(
   }
 
   const float4 & point = points[idx];
-  const std::int32_t x = static_cast<std::int32_t>(std::floor(point.x / voxel_size_x));
-  const std::int32_t y = static_cast<std::int32_t>(std::floor(point.y / voxel_size_y));
-  const std::int32_t z = static_cast<std::int32_t>(std::floor(point.z / voxel_size_z));
+  const auto x = static_cast<std::int32_t>(std::floor(point.x / voxel_size_x));
+  const auto y = static_cast<std::int32_t>(std::floor(point.y / voxel_size_y));
+  const auto z = static_cast<std::int32_t>(std::floor(point.z / voxel_size_z));
 
   std::uint64_t hash = 14695981039346656037LL;
   hash *= 1099511628211LL;
