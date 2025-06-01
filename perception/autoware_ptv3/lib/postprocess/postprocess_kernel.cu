@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "autoware/ptv3/postprocess/postprocess_kernel.hpp"
+#include "autoware/ptv3/utils.hpp"
 
 #include <thrust/device_ptr.h>
 #include <thrust/execution_policy.h>
@@ -25,7 +26,7 @@ __global__ void paintPointcloudKernel(
   const float4 * input_features, const float * colors, const std::int64_t * labels,
   float4 * output_points, std::size_t num_points)
 {
-  const auto idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
     return;
   }
@@ -42,7 +43,7 @@ __global__ void createProbsPointcloudKernel(
   const float4 * input_features, const float * pred_probs, float * output_points,
   std::size_t num_classes, std::size_t num_points)
 {
-  const auto idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
     return;
   }
@@ -65,7 +66,7 @@ __global__ void computeGroundSegmentationMask(
   const int ground_label, const float ground_prob_threshold, std::size_t num_classes,
   std::size_t num_points)
 {
-  const auto idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
     return;
   }

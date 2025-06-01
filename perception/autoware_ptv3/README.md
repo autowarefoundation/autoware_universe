@@ -22,17 +22,17 @@ Autoware installs it automatically in its setup script. If needed, the user can 
 
 <!-- cSpell:ignore probs -->
 
-| Name                                   | Type                                    | Description                               |
-| -------------------------------------- | --------------------------------------- | ----------------------------------------- |
-| `~/output/segmented/pointcloud`        | `sensor_msgs::msg::PointCloud2`         | RGB segmented pointcloud.                 |
-| `~/output/ground_segmented/pointcloud` | `sensor_msgs::msg::PointCloud2`         | Class probabilities segmented pointcloud. |
-| `~/output/probs/pointcloud`            | `sensor_msgs::msg::PointCloud2`         | Pointcloud with the ground segmented out. |
-| `debug/cyclic_time_ms`                 | `tier4_debug_msgs::msg::Float64Stamped` | Cyclic time (ms).                         |
-| `debug/pipeline_latency_ms`            | `tier4_debug_msgs::msg::Float64Stamped` | Pipeline latency time (ms).               |
-| `debug/processing_time/preprocess_ms`  | `tier4_debug_msgs::msg::Float64Stamped` | Preprocess (ms).                          |
-| `debug/processing_time/inference_ms`   | `tier4_debug_msgs::msg::Float64Stamped` | Inference time (ms).                      |
-| `debug/processing_time/postprocess_ms` | `tier4_debug_msgs::msg::Float64Stamped` | Postprocess time (ms).                    |
-| `debug/processing_time/total_ms`       | `tier4_debug_msgs::msg::Float64Stamped` | Total processing time (ms).               |
+| Name                                   | Type                                                | Description                               |
+| -------------------------------------- | --------------------------------------------------- | ----------------------------------------- |
+| `~/output/segmented/pointcloud`        | `sensor_msgs::msg::PointCloud2`                     | RGB segmented pointcloud.                 |
+| `~/output/ground_segmented/pointcloud` | `sensor_msgs::msg::PointCloud2`                     | Class probabilities segmented pointcloud. |
+| `~/output/probs/pointcloud`            | `sensor_msgs::msg::PointCloud2`                     | Pointcloud with the ground segmented out. |
+| `debug/cyclic_time_ms`                 | `autoware_internal_debug_msgs::msg::Float64Stamped` | Cyclic time (ms).                         |
+| `debug/pipeline_latency_ms`            | `autoware_internal_debug_msgs::msg::Float64Stamped` | Pipeline latency time (ms).               |
+| `debug/processing_time/preprocess_ms`  | `autoware_internal_debug_msgs::msg::Float64Stamped` | Preprocess (ms).                          |
+| `debug/processing_time/inference_ms`   | `autoware_internal_debug_msgs::msg::Float64Stamped` | Inference time (ms).                      |
+| `debug/processing_time/postprocess_ms` | `autoware_internal_debug_msgs::msg::Float64Stamped` | Postprocess time (ms).                    |
+| `debug/processing_time/total_ms`       | `autoware_internal_debug_msgs::msg::Float64Stamped` | Total processing time (ms).               |
 
 ## Parameters
 

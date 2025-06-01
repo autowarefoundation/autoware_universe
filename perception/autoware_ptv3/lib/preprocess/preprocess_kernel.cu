@@ -89,7 +89,7 @@ __global__ void points2FeaturesKernel(
   const InputPointType * __restrict__ input_points, std::size_t points_size,
   float4 * __restrict__ output_points)
 {
-  const auto idx = blockIdx.x * blockDim.x + threadIdx.x;
+  const auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= points_size) {
     return;
   }
@@ -106,7 +106,7 @@ __global__ void cropKernel(
   float4 * __restrict__ points, std::uint32_t * __restrict__ mask, int num_points, float min_x,
   float min_y, float min_z, float max_x, float max_y, float max_z)
 {
-  auto idx = blockIdx.x * blockDim.x + threadIdx.x;
+  auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
     return;
   }
@@ -145,7 +145,7 @@ __global__ void voxelizationHash64Kernel(
   std::int32_t min_y, std::int32_t min_z)
 {
   // FNV64-1A
-  auto idx = blockIdx.x * blockDim.x + threadIdx.x;
+  auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
     return;
   }
@@ -171,7 +171,7 @@ __global__ void voxelizationHash32Kernel(
   float voxel_size_x, float voxel_size_y, float voxel_size_z, float min_x, float min_y, float min_z,
   std::uint32_t grid_x_size, std::uint32_t grid_xy_size)
 {
-  auto idx = blockIdx.x * blockDim.x + threadIdx.x;
+  auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
     return;
   }
@@ -192,7 +192,7 @@ __global__ void computeGridCoordsAndSerializationKernel(
   float voxel_size_z, std::int32_t min_x, std::int32_t min_y, std::int32_t min_z, int depth)
 {
   static_assert(sizeof(longlong3) == sizeof(std::uint64_t) * 3, "longlong3 must be 24 bytes");
-  auto idx = blockIdx.x * blockDim.x + threadIdx.x;
+  auto idx = static_cast<std::uint32_t>(blockIdx.x * blockDim.x + threadIdx.x);
   if (idx >= num_points) {
     return;
   }
