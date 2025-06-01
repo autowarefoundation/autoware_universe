@@ -6,7 +6,6 @@
   <arg name="probs/pointcloud" default="/sensing/lidar/concatenated/probs"/>
 
   <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
-  <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
   <arg name="model_name" default="ptv3">
     <choice value="ptv3"/>
     <choice value="ptv3_nuscenes"/>
