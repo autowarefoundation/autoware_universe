@@ -22,7 +22,6 @@ Models for pedestrians, bicycles (motorcycles), cars and unknown are available.
 The pedestrian or bicycle tracker is running at the same time as the respective EKF model in order to enable the transition between pedestrian and bicycle tracking.
 For big vehicles such as trucks and buses, we have separate models for passenger cars and large vehicles because they are difficult to distinguish from passenger cars and are not stable. Therefore, separate models are prepared for passenger cars and big vehicles, and these models are run at the same time as the respective EKF models to ensure stability.
 
-
 ## Inputs / Outputs
 
 ### Input
@@ -43,7 +42,7 @@ Up to 12 detection inputs can be configured (detection01 through detection12). E
 
 Example configurations:
 
-* Single detection input:
+- Single detection input:
 
 ```yaml
 input/detection01/objects: /perception/object_recognition/detection/objects
@@ -52,7 +51,7 @@ input/detection02/objects: input/objects02
 input/detection02/channel: none # Disabled
 ```
 
-* Multiple detection inputs:
+- Multiple detection inputs:
 
 ```yaml
 # lidar centerpoint
