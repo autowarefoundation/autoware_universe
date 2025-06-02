@@ -73,14 +73,13 @@ SegmentRtree extract_uncrossable_segments(
   lanelet::BoundingBox2d search_area(
     lanelet::BasicPoint2d(min_x, min_y), lanelet::BasicPoint2d(max_x, max_y));
 
-  auto linestrings = lanelet_map.lineStringLayer.search(search_area);
-  LineString2d line;
+  const auto linestrings = lanelet_map.lineStringLayer.search(search_area);
   for (const auto & ls : linestrings) {
     if (has_types(ls, {"road_border"})) {
-      line.clear();
+      LineString2d line;
       for (const auto & p : ls) line.push_back(Point2d{p.x(), p.y()});
       for (auto segment_idx = 0LU; segment_idx + 1 < line.size(); ++segment_idx) {
-        Segment2d segment = {line[segment_idx], line[segment_idx + 1]};
+        const Segment2d segment = {line[segment_idx], line[segment_idx + 1]};
         if (boost::geometry::intersects(segment, extraction_polygon)) {
           uncrossable_segments_in_range.insert(segment);
         }
@@ -101,7 +100,7 @@ bool crosses_road_border(
   const Point2d & ego_point, const Point2d & obj_point, const SegmentRtree & road_border_segments)
 {
   // Create a line segment from ego to object
-  Segment2d ego_to_obj = {ego_point, obj_point};
+  const Segment2d ego_to_obj = {ego_point, obj_point};
 
   // Check if this line segment intersects with any road border segment
   for (const auto & border_segment : road_border_segments) {
@@ -179,24 +178,9 @@ PredictedObjects filter_objects_by_road_border(
     const Point2d obj_center_point{obj_pose.position.x, obj_pose.position.y};
 
     std::vector<Point2d> points;
-    if (object.shape.type == Shape::POLYGON) {
-      // If ray to any footprint point is not blocked by segments, regard as true
-      const auto footprint = object.shape.footprint;
-      for (const auto point : footprint.points) {
-        points.push_back(Point2d(point.x, point.y));
-      }
-    } else if (object.shape.type == Shape::BOUNDING_BOX) {
-      // If ray to any bounding box corner point is not blocked by segments, regard as true
-      points = getBoundingBoxCornersFromObject(
-        obj_center_point,
-        object.shape.dimensions,  // Fixed typo: dimensions instead of dimensions
-        obj_pose.orientation);
-    } else {
-      // For other shapes (like cylinder), just use the center point
-      points.push_back(obj_center_point);
-    }
+    const auto obj_polygon = autoware_utils::to_polygon2d(object);
 
-    for (const auto & obj_point : points) {
+    for (const auto & obj_point : obj_polygon.outer()) {
       if (!crosses_road_border(ego_point, obj_point, road_border_segments)) {
         not_being_separated = true;
         break;
