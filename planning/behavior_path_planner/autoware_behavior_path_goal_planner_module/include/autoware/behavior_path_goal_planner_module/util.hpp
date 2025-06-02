@@ -54,6 +54,8 @@ using autoware_utils::Segment2d;
 
 using SegmentRtree = boost::geometry::index::rtree<Segment2d, boost::geometry::index::rstar<16>>;
 
+lanelet::BoundingBox2d polygon_to_boundingbox(const Polygon2d & polygon);
+
 SegmentRtree extract_uncrossable_segments(
   const lanelet::LaneletMap & lanelet_map, const Polygon2d & extraction_polygon);
 

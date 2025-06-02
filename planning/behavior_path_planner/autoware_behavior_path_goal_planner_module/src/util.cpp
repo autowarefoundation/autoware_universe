@@ -52,17 +52,15 @@ using autoware_utils::create_marker_color;
 using autoware_utils::create_marker_scale;
 using autoware_utils::create_point;
 
-SegmentRtree extract_uncrossable_segments(
-  const lanelet::LaneletMap & lanelet_map, const Polygon2d & extraction_polygon)
+lanelet::BoundingBox2d polygon_to_boundingbox(const Polygon2d & polygon)
 {
-  SegmentRtree uncrossable_segments_in_range;
   double min_x = std::numeric_limits<double>::max();
   double min_y = std::numeric_limits<double>::max();
   double max_x = std::numeric_limits<double>::lowest();
   double max_y = std::numeric_limits<double>::lowest();
 
   // Iterate through all points in the polygon to find min/max coordinates
-  for (const auto & point : extraction_polygon.outer()) {
+  for (const auto & point : polygon.outer()) {
     min_x = std::min(min_x, point.x());
     min_y = std::min(min_y, point.y());
     max_x = std::max(max_x, point.x());
@@ -70,8 +68,17 @@ SegmentRtree extract_uncrossable_segments(
   }
 
   // Create the bounding box
-  lanelet::BoundingBox2d search_area(
+  lanelet::BoundingBox2d bounding_box(
     lanelet::BasicPoint2d(min_x, min_y), lanelet::BasicPoint2d(max_x, max_y));
+  return bounding_box;
+}
+
+SegmentRtree extract_uncrossable_segments(
+  const lanelet::LaneletMap & lanelet_map, const Polygon2d & extraction_polygon)
+{
+  SegmentRtree uncrossable_segments_in_range;
+
+  auto search_area = polygon_to_boundingbox(extraction_polygon);
 
   const auto linestrings = lanelet_map.lineStringLayer.search(search_area);
   for (const auto & ls : linestrings) {
