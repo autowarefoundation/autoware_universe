@@ -262,9 +262,6 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
 bool TrackerProcessor::canMergeOverlappedTarget(
   const Tracker & target, const Tracker & other, const rclcpp::Time & time, const double iou) const
 {
-  std::unique_ptr<ScopedTimeTrack> st_ptr;
-  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
-
   // if the other is not confident, do not remove the target
   if (!other.isConfident(time)) {
     return false;
