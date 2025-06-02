@@ -102,12 +102,12 @@ void organizeLaunch(
 void gatherLaunch(
   const InputPointType * input_points, const std::uint32_t * index_tensor,
   InputPointType * output_points, int num_rings, int max_points_per_ring,
-  std::uint32_t * is_valid_point, size_t num_raw_points,  int threads_per_block,
-  int blocks_per_grid, cudaStream_t & stream)
+  std::uint32_t * is_valid_point, size_t num_raw_points, int threads_per_block, int blocks_per_grid,
+  cudaStream_t & stream)
 {
   gatherKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
-    input_points, index_tensor, output_points, num_rings, max_points_per_ring,
-    is_valid_point, num_raw_points);
+    input_points, index_tensor, output_points, num_rings, max_points_per_ring, is_valid_point,
+    num_raw_points);
 }
 
 }  // namespace autoware::cuda_pointcloud_preprocessor

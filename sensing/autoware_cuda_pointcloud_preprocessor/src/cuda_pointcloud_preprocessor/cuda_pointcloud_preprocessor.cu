@@ -244,7 +244,8 @@ void CudaPointcloudPreprocessor::organizePointcloud()
     device_indexes_tensor_.resize(num_organized_points_);
     thrust::fill(device_indexes_tensor_.begin(), device_indexes_tensor_.end(), num_raw_points_);
     device_sorted_indexes_tensor_.resize(num_organized_points_);
-    thrust::fill(device_sorted_indexes_tensor_.begin(), device_sorted_indexes_tensor_.end(), num_raw_points_);
+    thrust::fill(
+      device_sorted_indexes_tensor_.begin(), device_sorted_indexes_tensor_.end(), num_raw_points_);
     device_segment_offsets_.resize(num_rings_ + 1);
     device_organized_points_.resize(num_organized_points_);
     thrust::fill(
@@ -318,8 +319,8 @@ void CudaPointcloudPreprocessor::organizePointcloud()
     thrust::raw_pointer_cast(device_input_points_.data()),
     thrust::raw_pointer_cast(device_sorted_indexes_tensor_.data()),
     thrust::raw_pointer_cast(device_organized_points_.data()), num_rings_, max_points_per_ring_,
-    thrust::raw_pointer_cast(device_indexes_tensor_.data()), num_raw_points_,
-    threads_per_block_, organized_points_blocks_per_grid, stream_);
+    thrust::raw_pointer_cast(device_indexes_tensor_.data()), num_raw_points_, threads_per_block_,
+    organized_points_blocks_per_grid, stream_);
 }
 
 std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::process(
@@ -366,7 +367,7 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
 
   // Reset all contents in the device vector
   thrust::fill(
-      device_transformed_points_.begin(), device_transformed_points_.end(), InputPointType{});
+    device_transformed_points_.begin(), device_transformed_points_.end(), InputPointType{});
   thrust::fill(device_ring_outlier_mask_.begin(), device_ring_outlier_mask_.end(), 0);
   thrust::fill(device_crop_mask_.begin(), device_crop_mask_.end(), 0);
 
@@ -460,8 +461,8 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
 
   // Mask out invalid points in the array
   combineMasksLaunch(
-    device_is_valid_point, device_ring_outlier_mask, num_organized_points_, device_ring_outlier_mask,
-    threads_per_block_, blocks_per_grid, stream_);
+    device_is_valid_point, device_ring_outlier_mask, num_organized_points_,
+    device_ring_outlier_mask, threads_per_block_, blocks_per_grid, stream_);
 
   thrust::inclusive_scan(
     thrust::device, device_ring_outlier_mask, device_ring_outlier_mask + num_organized_points_,
