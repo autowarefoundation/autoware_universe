@@ -104,7 +104,7 @@ Interested in joining our meetings? We’d love to have you! For more informatio
 
 Occasionally, we publish papers specific to the Planning Component in Autoware. We encourage you to explore these publications and find valuable insights for your work. If you find them useful and incorporate any of our methodologies or algorithms in your projects, citing our papers would be immensely helpful. This support allows us to reach a broader audience and continue contributing to the field.
 
-If you use the Jerk Constrained Velocity Planning algorithm in the [Motion Velocity Smoother](./autoware_velocity_smoother/README.md) module in the Planning Component, we kindly request you cite the relevant paper.
+If you use the Jerk Constrained Velocity Planning algorithm in the [Motion Velocity Smoother](https://autowarefoundation.github.io/autoware_core/main/planning/autoware_velocity_smoother/) module in the Planning Component, we kindly request you cite the relevant paper.
 
 <!-- cspell:ignore Shimizu, Horibe, Watanabe, Kato -->
 

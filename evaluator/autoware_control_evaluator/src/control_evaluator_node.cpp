@@ -435,7 +435,7 @@ void ControlEvaluatorNode::onTimer()
   }
 
   // add boundary distance metrics
-  if (odom && behavior_path) {
+  if (odom && behavior_path && route_handler_.isHandlerReady()) {
     const Pose ego_pose = odom->pose.pose;
     AddBoundaryDistanceMetricMsg(*behavior_path, ego_pose);
   }

@@ -49,6 +49,13 @@
     </group>
   </group>
 
+  <!-- hazard lights selector -->
+  <group>
+    <include file="$(find-pkg-share autoware_hazard_lights_selector)/launch/hazard_lights_selector.launch.xml">
+      <arg name="hazard_lights_selector_param_path" value="$(var hazard_lights_selector_param_path)"/>
+    </include>
+  </group>
+
   <!-- scenarios-->
   <group>
     <!-- lane driving -->
