@@ -422,7 +422,6 @@ void ControlEvaluatorNode::onTimer()
     // add deviation metrics
     const auto traj = traj_sub_.take_data();
     if (traj && !traj->points.empty()) {
-      const Pose ego_pose = odom->pose.pose;
       AddLateralDeviationMetricMsg(*traj, ego_pose.position);
       AddYawDeviationMetricMsg(*traj, ego_pose);
     }
