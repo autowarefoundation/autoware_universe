@@ -191,10 +191,11 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
   // Create sorted list with non-UNKNOWN objects first, then by measurement count
   {
     std::unique_ptr<ScopedTimeTrack> st_sort_ptr;
-    if (time_keeper_) st_sort_ptr = std::make_unique<ScopedTimeTrack>("merger_tracker_sort", *time_keeper_);
+    if (time_keeper_)
+      st_sort_ptr = std::make_unique<ScopedTimeTrack>("merger_tracker_sort", *time_keeper_);
 
-  list_tracker_.sort(
-    [&time](const std::shared_ptr<Tracker> & a, const std::shared_ptr<Tracker> & b) {
+    list_tracker_.sort([&time](
+                         const std::shared_ptr<Tracker> & a, const std::shared_ptr<Tracker> & b) {
       bool a_unknown = (a->getHighestProbLabel() == Label::UNKNOWN);
       bool b_unknown = (b->getHighestProbLabel() == Label::UNKNOWN);
       if (a_unknown != b_unknown) {
@@ -212,50 +213,51 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
   // Iterate through the list of trackers
   {
     std::unique_ptr<ScopedTimeTrack> st_tracker_loop_ptr;
-    if (time_keeper_) st_tracker_loop_ptr = std::make_unique<ScopedTimeTrack>("merger_tracker_loop", *time_keeper_);
+    if (time_keeper_)
+      st_tracker_loop_ptr = std::make_unique<ScopedTimeTrack>("merger_tracker_loop", *time_keeper_);
 
-  for (auto itr1 = list_tracker_.begin(); itr1 != list_tracker_.end(); ++itr1) {
-    types::DynamicObject object1;
-    if (!(*itr1)->getTrackedObject(time, object1)) continue;
-    // Compare the current tracker with the remaining trackers
-    for (auto itr2 = std::next(itr1); itr2 != list_tracker_.end();) {
-      types::DynamicObject object2;
-      if (!(*itr2)->getTrackedObject(time, object2)) {
-        ++itr2;
-        continue;
-      }
-      // Calculate the distance between the two objects
-      const double distance = std::hypot(
-        object1.pose.position.x - object2.pose.position.x,
-        object1.pose.position.y - object2.pose.position.y);
-      const auto & label1 = !(*itr1)->getHighestProbLabel();
-      const auto & label2 = !(*itr2)->getHighestProbLabel();
-      const double max_dist_matrix_value = config_.max_dist_matrix(
-        label2, label1);  // Get the maximum distance threshold for the labels
+    for (auto itr1 = list_tracker_.begin(); itr1 != list_tracker_.end(); ++itr1) {
+      types::DynamicObject object1;
+      if (!(*itr1)->getTrackedObject(time, object1)) continue;
+      // Compare the current tracker with the remaining trackers
+      for (auto itr2 = std::next(itr1); itr2 != list_tracker_.end();) {
+        types::DynamicObject object2;
+        if (!(*itr2)->getTrackedObject(time, object2)) {
+          ++itr2;
+          continue;
+        }
+        // Calculate the distance between the two objects
+        const double distance = std::hypot(
+          object1.pose.position.x - object2.pose.position.x,
+          object1.pose.position.y - object2.pose.position.y);
+        const auto & label1 = !(*itr1)->getHighestProbLabel();
+        const auto & label2 = !(*itr2)->getHighestProbLabel();
+        const double max_dist_matrix_value = config_.max_dist_matrix(
+          label2, label1);  // Get the maximum distance threshold for the labels
 
-      // If the distance is too large, skip
-      if (distance > max_dist_matrix_value) {
-        ++itr2;
-        continue;
-      }
+        // If the distance is too large, skip
+        if (distance > max_dist_matrix_value) {
+          ++itr2;
+          continue;
+        }
 
-      // Check the Intersection over Union (IoU) between the two objects
-      constexpr double min_union_iou_area = 1e-2;
-      const auto iou = shapes::get2dIoU(object2, object1, min_union_iou_area);
+        // Check the Intersection over Union (IoU) between the two objects
+        constexpr double min_union_iou_area = 1e-2;
+        const auto iou = shapes::get2dIoU(object2, object1, min_union_iou_area);
 
-      // check if object2 should be removed
-      if (canMergeOverlappedTarget(*(*itr2), *(*itr1), time, iou)) {
-        // add existence probability to the tracker 1
-        (*itr1)->updateTotalExistenceProbability((*itr2)->getTotalExistenceProbability());
-        (*itr1)->mergeExistenceProbabilities((*itr2)->getExistenceProbabilityVector());
+        // check if object2 should be removed
+        if (canMergeOverlappedTarget(*(*itr2), *(*itr1), time, iou)) {
+          // add existence probability to the tracker 1
+          (*itr1)->updateTotalExistenceProbability((*itr2)->getTotalExistenceProbability());
+          (*itr1)->mergeExistenceProbabilities((*itr2)->getExistenceProbabilityVector());
 
-        // Remove from original list_tracker
-        itr2 = list_tracker_.erase(itr2);
-      } else {
-        ++itr2;  // Move to the next tracker
+          // Remove from original list_tracker
+          itr2 = list_tracker_.erase(itr2);
+        } else {
+          ++itr2;  // Move to the next tracker
+        }
       }
     }
-  }
   }
 }
 

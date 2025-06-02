@@ -203,7 +203,6 @@ bool PedestrianTracker::getTrackedObject(
     return true;
   }
 
-
   object = object_;
 
   // predict from motion model
