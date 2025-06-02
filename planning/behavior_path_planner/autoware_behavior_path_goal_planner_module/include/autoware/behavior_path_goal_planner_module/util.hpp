@@ -59,11 +59,6 @@ SegmentRtree extract_uncrossable_segments(
 
 bool has_types(const lanelet::ConstLineString3d & ls, const std::vector<std::string> & types);
 
-// Function to extract corner points from a bounding box
-std::vector<Point2d> getBoundingBoxCornersFromObject(
-  const Point2d & center_point, const geometry_msgs::msg::Vector3 & dimensions,
-  const geometry_msgs::msg::Quaternion & orientation);
-
 PredictedObjects filter_objects_by_road_border(
   const PredictedObjects & objects, const SegmentRtree & road_border_segments,
   const Pose & ego_pose, const bool filter_opposite_side);
