@@ -143,7 +143,6 @@ PredictedObjects filter_objects_by_road_border(
     const auto & obj_pose = object.kinematics.initial_pose_with_covariance.pose;
     const Point2d obj_center_point{obj_pose.position.x, obj_pose.position.y};
 
-    std::vector<Point2d> points;
     const auto obj_polygon = autoware_utils::to_polygon2d(object);
 
     for (const auto & obj_point : obj_polygon.outer()) {
