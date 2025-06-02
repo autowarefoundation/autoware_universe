@@ -116,6 +116,11 @@ install(DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}
 )
 
+install(
+  TARGETS cuda_pointcloud_preprocessor_lib
+  LIBRARY DESTINATION lib
+)
+
 ament_auto_package()
 
 # Set ROS_DISTRO macros
