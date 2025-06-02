@@ -59,6 +59,10 @@ lanelet::BoundingBox2d polygon_to_boundingbox(const Polygon2d & polygon);
 SegmentRtree extract_uncrossable_segments(
   const lanelet::LaneletMap & lanelet_map, const Polygon2d & extraction_polygon);
 
+void add_intersecting_segments(
+  const lanelet::ConstLineString3d & ls, const Polygon2d & extraction_polygon,
+  SegmentRtree & segments_rtree);
+
 bool has_types(const lanelet::ConstLineString3d & ls, const std::vector<std::string> & types);
 
 PredictedObjects filter_objects_by_road_border(

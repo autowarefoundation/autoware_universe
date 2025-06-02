@@ -77,23 +77,35 @@ SegmentRtree extract_uncrossable_segments(
   const lanelet::LaneletMap & lanelet_map, const Polygon2d & extraction_polygon)
 {
   SegmentRtree uncrossable_segments_in_range;
-
   auto search_area = polygon_to_boundingbox(extraction_polygon);
-
   const auto linestrings = lanelet_map.lineStringLayer.search(search_area);
+
   for (const auto & ls : linestrings) {
-    if (has_types(ls, {"road_border"})) {
-      LineString2d line;
-      for (const auto & p : ls) line.push_back(Point2d{p.x(), p.y()});
-      for (auto segment_idx = 0LU; segment_idx + 1 < line.size(); ++segment_idx) {
-        const Segment2d segment = {line[segment_idx], line[segment_idx + 1]};
-        if (boost::geometry::intersects(segment, extraction_polygon)) {
-          uncrossable_segments_in_range.insert(segment);
-        }
-      }
+    if (!has_types(ls, {"road_border"})) {
+      continue;
+    }
+
+    add_intersecting_segments(ls, extraction_polygon, uncrossable_segments_in_range);
+  }
+
+  return uncrossable_segments_in_range;
+}
+
+void add_intersecting_segments(
+  const lanelet::ConstLineString3d & ls, const Polygon2d & extraction_polygon,
+  SegmentRtree & segments_rtree)
+{
+  LineString2d line;
+  for (const auto & p : ls) {
+    line.push_back(Point2d{p.x(), p.y()});
+  }
+
+  for (auto segment_idx = 0LU; segment_idx + 1 < line.size(); ++segment_idx) {
+    const Segment2d segment = {line[segment_idx], line[segment_idx + 1]};
+    if (boost::geometry::intersects(segment, extraction_polygon)) {
+      segments_rtree.insert(segment);
     }
   }
-  return uncrossable_segments_in_range;
 }
 
 bool has_types(const lanelet::ConstLineString3d & ls, const std::vector<std::string> & types)
