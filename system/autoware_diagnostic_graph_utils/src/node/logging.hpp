@@ -46,6 +46,7 @@ private:
   std::string root_path_;
   std::ostringstream dump_text_;
   bool enable_terminal_log_;
+  std::string prev_error_graph_text_;
 };
 
 }  // namespace autoware::diagnostic_graph_utils
