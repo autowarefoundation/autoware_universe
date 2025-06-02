@@ -14,8 +14,9 @@
 
 #include "ekf_localization_trigger_module.hpp"
 
-#include <autoware_adapi_v1_msgs/msg/response_status.hpp>
 #include <autoware/component_interface_specs/localization.hpp>
+
+#include <autoware_adapi_v1_msgs/msg/response_status.hpp>
 
 #include <memory>
 #include <string>
