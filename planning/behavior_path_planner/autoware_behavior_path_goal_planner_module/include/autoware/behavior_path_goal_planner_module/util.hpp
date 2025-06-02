@@ -53,9 +53,14 @@ using autoware_utils::Segment2d;
 using SegmentRtree = boost::geometry::index::rtree<Segment2d, boost::geometry::index::rstar<16>>;
 
 SegmentRtree extract_uncrossable_segments(
-  const lanelet::LaneletMap & lanelet_map, const Point & ego_point, const double max_distance);
+  const lanelet::LaneletMap & lanelet_map, const Polygon2d & extraction_polygon);
 
 bool has_types(const lanelet::ConstLineString3d & ls, const std::vector<std::string> & types);
+
+// Function to extract corner points from a bounding box
+std::vector<Point2d> getBoundingBoxCornersFromObject(
+  const Point2d & center_point, const geometry_msgs::msg::Vector3 & dimensions, 
+  const geometry_msgs::msg::Quaternion & orientation); 
 
 PredictedObjects filter_objects_by_road_border(
   const PredictedObjects & objects, const SegmentRtree & road_border_segments,
