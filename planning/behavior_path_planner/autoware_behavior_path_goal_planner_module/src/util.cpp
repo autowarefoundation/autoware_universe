@@ -189,7 +189,7 @@ PredictedObjects filter_objects_by_road_border(
       // If ray to any bounding box corner point is not blocked by segments, regard as true
       points = getBoundingBoxCornersFromObject(
         obj_center_point,
-        object.shape.dimensions,  // Fixed typo: dimensions instead of demensions
+        object.shape.dimensions,  // Fixed typo: dimensions instead of dimensions
         obj_pose.orientation);
     } else {
       // For other shapes (like cylinder), just use the center point
