@@ -15,14 +15,14 @@
 #include "ndt_localization_trigger_module.hpp"
 
 #include <autoware_adapi_v1_msgs/msg/response_status.hpp>
-#include <autoware_internal_localization_msgs/srv/initialize_localization.hpp>
+#include <autoware/component_interface_specs/localization.hpp>
 
 #include <memory>
 #include <string>
 
 namespace autoware::pose_initializer
 {
-using Initialize = autoware_internal_localization_msgs::srv::InitializeLocalization;
+using Initialize = autoware::component_interface_specs::localization::Initialize;
 
 NdtLocalizationTriggerModule::NdtLocalizationTriggerModule(rclcpp::Node * node) : node_(node)
 {
@@ -68,7 +68,7 @@ void NdtLocalizationTriggerModule::send_request(bool flag, bool need_spin) const
     RCLCPP_INFO(node_->get_logger(), "NDT %s failed", command_name.c_str());
     autoware_adapi_v1_msgs::msg::ResponseStatus respose_status;
     respose_status.success = false;
-    respose_status.code = Initialize::Response::ERROR_ESTIMATION;
+    respose_status.code = Initialize::Service::Response::ERROR_ESTIMATION;
     respose_status.message = "NDT " + command_name + " failed";
     throw respose_status;
   }

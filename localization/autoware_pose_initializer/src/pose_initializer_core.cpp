@@ -37,11 +37,11 @@ PoseInitializer::PoseInitializer(const rclcpp::NodeOptions & options)
   rclcpp::QoS qos_state(1);
   qos_state.reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
   qos_state.durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
-  pub_state_ = create_publisher<autoware_adapi_v1_msgs::msg::LocalizationInitializationState>(
-    "/localization/initialization_state", qos_state);
+  pub_state_ = create_publisher<State::Message>(
+    State::name, autoware::component_interface_specs::get_qos<State>());
   srv_initialize_ =
-    create_service<autoware_internal_localization_msgs::srv::InitializeLocalization>(
-      "/localization/initialize",
+    create_service<Initialize::Service>(
+      Initialize::name,
       std::bind(
         &PoseInitializer::on_initialize, this, std::placeholders::_1, std::placeholders::_2),
       rmw_qos_profile_services_default, group_srv_);
@@ -49,7 +49,7 @@ PoseInitializer::PoseInitializer(const rclcpp::NodeOptions & options)
 
   output_pose_covariance_ = get_covariance_parameter(this, "output_pose_covariance");
   gnss_particle_covariance_ = get_covariance_parameter(this, "gnss_particle_covariance");
-
+a
   diagnostics_pose_reliable_ = std::make_unique<autoware_utils_diagnostics::DiagnosticsInterface>(
     this, "pose_initializer_status");
 
