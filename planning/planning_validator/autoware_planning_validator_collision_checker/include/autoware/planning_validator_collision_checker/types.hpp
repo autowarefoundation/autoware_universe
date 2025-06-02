@@ -12,11 +12,46 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__PLANNING_VALIDATOR_COLLISION_CHECKER__PARAMETERS_HPP_
-#define AUTOWARE__PLANNING_VALIDATOR_COLLISION_CHECKER__PARAMETERS_HPP_
+#ifndef AUTOWARE__PLANNING_VALIDATOR_COLLISION_CHECKER__TYPES_HPP_
+#define AUTOWARE__PLANNING_VALIDATOR_COLLISION_CHECKER__TYPES_HPP_
+
+#include <autoware/route_handler/route_handler.hpp>
+
+#include <autoware_planning_msgs/msg/trajectory.hpp>
+#include <autoware_planning_msgs/msg/trajectory_point.hpp>
+#include <geometry_msgs/msg/point.hpp>
+
+#include <lanelet2_core/primitives/Lanelet.h>
+#include <lanelet2_core/primitives/LineString.h>
+#include <lanelet2_core/primitives/Point.h>
+#include <lanelet2_core/primitives/Polygon.h>
 
 namespace autoware::planning_validator
 {
+using autoware_planning_msgs::msg::Trajectory;
+using autoware_planning_msgs::msg::TrajectoryPoint;
+using lanelet::BasicLineString2d;
+using lanelet::BasicPolygon2d;
+using lanelet::ConstLanelet;
+using lanelet::ConstLanelets;
+using route_handler::Direction;
+using route_handler::RouteHandler;
+
+using TrajectoryPoints = std::vector<TrajectoryPoint>;
+
+struct TargetLanelet
+{
+  lanelet::Id id;
+  lanelet::ConstLanelets lanelets;
+  geometry_msgs::msg::Point first_overlap_point;
+};
+
+struct CollisionCheckerLanelets
+{
+  lanelet::ConstLanelets trajectory_lanelets;
+  lanelet::ConstLanelets connected_lanelets;
+  lanelet::ConstLanelets target_lanelets;
+};
 
 struct DirectionCheckFlags
 {
@@ -61,4 +96,4 @@ struct CollisionCheckerParams
 
 }  // namespace autoware::planning_validator
 
-#endif  // AUTOWARE__PLANNING_VALIDATOR_COLLISION_CHECKER__PARAMETERS_HPP_
+#endif  // AUTOWARE__PLANNING_VALIDATOR_COLLISION_CHECKER__TYPES_HPP_

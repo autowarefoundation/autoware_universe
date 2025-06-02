@@ -15,10 +15,10 @@
 #ifndef AUTOWARE__PLANNING_VALIDATOR__DEBUG_MARKER_HPP_
 #define AUTOWARE__PLANNING_VALIDATOR__DEBUG_MARKER_HPP_
 
+#include <autoware_utils/geometry/boost_geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory.hpp>
-#include <autoware_utils/geometry/boost_geometry.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
@@ -44,7 +44,8 @@ public:
   void pushVirtualWall(const geometry_msgs::msg::Pose & pose);
   void pushWarningMsg(const geometry_msgs::msg::Pose & pose, const std::string & msg);
 
-  void pushLaneletPolygonsMarker(const lanelet::BasicPolygons2d & polygon, const std::string & ns, int id = 0);
+  void pushLaneletPolygonsMarker(
+    const lanelet::BasicPolygons2d & polygon, const std::string & ns, int id = 0);
 
   void publish();
 

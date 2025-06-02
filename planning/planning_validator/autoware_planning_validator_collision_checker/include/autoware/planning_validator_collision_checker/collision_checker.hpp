@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__PLANNING_VALIDATOR_COLLISION_CHECKER__COLLISION_CHECKER_HPP_
 #define AUTOWARE__PLANNING_VALIDATOR_COLLISION_CHECKER__COLLISION_CHECKER_HPP_
 
-#include "autoware/planning_validator_collision_checker/parameters.hpp"
+#include "autoware/planning_validator_collision_checker/types.hpp"
 
 #include <autoware/planning_validator/plugin_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -42,14 +42,6 @@ namespace autoware::planning_validator
 {
 using sensor_msgs::msg::PointCloud2;
 using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
-using route_handler::Direction;
-
-struct CollisionCheckerLanelets
-{
-  lanelet::ConstLanelets trajectory_lanelets;
-  lanelet::ConstLanelets connected_lanelets;
-  lanelet::ConstLanelets target_lanelets;
-};
 
 class CollisionChecker : public PluginInterface
 {
@@ -67,15 +59,8 @@ private:
   [[nodiscard]] Direction get_turn_direction(
     const lanelet::ConstLanelets & trajectory_lanelets) const;
 
-  [[nodiscard]] Direction get_lanelets(CollisionCheckerLanelets & lanelets) const;
-
-  void set_trajectory_lanelets(CollisionCheckerLanelets & lanelets) const;
-
-  void set_target_lanelets(CollisionCheckerLanelets & lanelets, const Direction & direction) const;
-
-  void set_right_turn_target_lanelets(CollisionCheckerLanelets & lanelets) const;
-
-  void set_left_turn_target_lanelets(CollisionCheckerLanelets & lanelets) const;
+  [[nodiscard]] Direction get_lanelets(
+    CollisionCheckerLanelets & lanelets, const TrajectoryPoints & trajectory_points) const;
 
   void filter_pointcloud(
     PointCloud2::ConstSharedPtr & input, PointCloud::Ptr & filtered_point_cloud) const;

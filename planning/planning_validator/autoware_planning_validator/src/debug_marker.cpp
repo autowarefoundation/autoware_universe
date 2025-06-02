@@ -24,12 +24,12 @@
 #include <string>
 #include <vector>
 
-
 namespace autoware::planning_validator
 {
 using visualization_msgs::msg::Marker;
 
-namespace {
+namespace
+{
 std_msgs::msg::ColorRGBA getColorFromId(int id)
 {
   using autoware_utils::create_marker_color;
@@ -40,7 +40,7 @@ std_msgs::msg::ColorRGBA getColorFromId(int id)
   } else if (id == 2) {
     return create_marker_color(0.0, 0.0, 1.0, 0.999);  // Blue
   }
-  return create_marker_color(1.0, 1.0, 1.0, 0.999);      // Default White
+  return create_marker_color(1.0, 1.0, 1.0, 0.999);  // Default White
 }
 }  // namespace
 
@@ -99,7 +99,8 @@ void PlanningValidatorDebugMarkerPublisher::pushVirtualWall(const geometry_msgs:
   autoware_utils::append_marker_array(stop_wall_marker, &marker_array_virtual_wall_, now);
 }
 
-void PlanningValidatorDebugMarkerPublisher::pushLaneletPolygonsMarker(const lanelet::BasicPolygons2d & polygons, const std::string & ns, int id)
+void PlanningValidatorDebugMarkerPublisher::pushLaneletPolygonsMarker(
+  const lanelet::BasicPolygons2d & polygons, const std::string & ns, int id)
 {
   visualization_msgs::msg::Marker marker = autoware_utils::create_default_marker(
     "map", node_->get_clock()->now(), ns, getMarkerId(ns), Marker::LINE_LIST,

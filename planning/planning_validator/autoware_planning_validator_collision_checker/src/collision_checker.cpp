@@ -14,6 +14,8 @@
 
 #include "autoware/planning_validator_collision_checker/collision_checker.hpp"
 
+#include "autoware/planning_validator_collision_checker/utils.hpp"
+
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/parameter.hpp>
@@ -45,16 +47,6 @@
 namespace autoware::planning_validator
 {
 using autoware_utils::get_or_declare_parameter;
-
-namespace
-{
-bool contains_lanelet(const lanelet::ConstLanelets & lanelets, const lanelet::Id id)
-{
-  return std::find_if(lanelets.begin(), lanelets.end(), [&](const auto & l) {
-           return l.id() == id;
-         }) != lanelets.end();
-};
-}  // namespace
 
 void CollisionChecker::init(
   rclcpp::Node & node, const std::string & name,
@@ -135,8 +127,15 @@ void CollisionChecker::validate(bool & is_critical)
     return skip_validation("route handler is not ready, skipping collision check.");
   }
 
+  const auto base_to_front_length =
+    context_->vehicle_info.front_overhang_m + context_->vehicle_info.wheel_base_m;
+  const auto ego_front_pose = autoware_utils::calc_offset_pose(
+    context_->data->current_kinematics->pose.pose, base_to_front_length, 0.0, 0.0);
+  const auto trajectory_points = collision_checker_utils::trim_trajectory_points(
+    context_->data->current_trajectory->points, ego_front_pose);
+
   CollisionCheckerLanelets lanelets;
-  const auto turn_direction = get_lanelets(lanelets);
+  const auto turn_direction = get_lanelets(lanelets, trajectory_points);
 
   if (turn_direction == Direction::NONE) return;
 
@@ -151,49 +150,30 @@ void CollisionChecker::validate(bool & is_critical)
   }
 }
 
-Direction CollisionChecker::get_lanelets(CollisionCheckerLanelets & lanelets) const
+Direction CollisionChecker::get_lanelets(
+  CollisionCheckerLanelets & lanelets, const TrajectoryPoints & trajectory_points) const
 {
-  set_trajectory_lanelets(lanelets);
+  const auto & ego_pose = context_->data->current_kinematics->pose.pose;
+  try {
+    collision_checker_utils::set_trajectory_lanelets(
+      trajectory_points, *context_->route_handler, ego_pose, lanelets);
+  } catch (const std::logic_error & e) {
+    RCLCPP_ERROR(logger_, "failed to get trajectory lanelets: %s", e.what());
+    return Direction::NONE;
+  }
 
   const auto turn_direction = get_turn_direction(lanelets.trajectory_lanelets);
 
   if (turn_direction == Direction::NONE) return turn_direction;
 
-  set_target_lanelets(lanelets, turn_direction);
+  if (turn_direction == Direction::RIGHT) {
+    collision_checker_utils::set_right_turn_target_lanelets(
+      trajectory_points, *context_->route_handler, lanelets);
+  } else {
+    collision_checker_utils::set_left_turn_target_lanelets(*context_->route_handler, lanelets);
+  }
 
   return turn_direction;
-}
-
-void CollisionChecker::set_trajectory_lanelets(CollisionCheckerLanelets & lanelets) const
-{
-  const auto & ego_pose = context_->data->current_kinematics->pose.pose;
-  const auto & route_handler = context_->route_handler;
-
-  lanelet::ConstLanelet closest_lanelet;
-  if (!route_handler->getClosestLaneletWithinRoute(ego_pose, &closest_lanelet)) {
-    RCLCPP_ERROR(logger_, "failed to get closest lanelet within route");
-    return;
-  }
-
-  const auto & trajectory = *context_->data->current_trajectory;
-  const auto forward_trajectory_length = autoware::motion_utils::calcSignedArcLength(
-    trajectory.points, ego_pose.position, trajectory.points.size() - 1);
-
-  lanelets.trajectory_lanelets = route_handler->getLaneletSequence(closest_lanelet, ego_pose, 0.0, forward_trajectory_length);
-
-  lanelet::ConstLanelets prev_lanelets;
-  if (route_handler->getPreviousLaneletsWithinRoute(closest_lanelet, &prev_lanelets)) {
-    lanelets.connected_lanelets.push_back(prev_lanelets.front());
-    for (const auto & connected_ll : route_handler->getNextLanelets(prev_lanelets.front())) {
-      lanelets.connected_lanelets.push_back(connected_ll);
-    }
-  }
-
-  for (const auto & ll : lanelets.trajectory_lanelets) {
-    for (const auto & connected_ll : route_handler->getNextLanelets(ll)) {
-      lanelets.connected_lanelets.push_back(connected_ll);
-    }
-  }
 }
 
 Direction CollisionChecker::get_turn_direction(
@@ -206,84 +186,6 @@ Direction CollisionChecker::get_turn_direction(
     if (attr.value() == "left" && params_.left_turn.enable) return Direction::LEFT;
   }
   return Direction::NONE;
-}
-
-void CollisionChecker::set_target_lanelets(
-  CollisionCheckerLanelets & lanelets, const Direction & direction) const
-{
-  if (direction == Direction::NONE) return;
-  if (direction == Direction::RIGHT){
-    set_right_turn_target_lanelets(lanelets);
-  } else {
-    set_left_turn_target_lanelets(lanelets);
-  }
-}
-
-void CollisionChecker::set_right_turn_target_lanelets(
-  CollisionCheckerLanelets & lanelets) const
-{
-  const auto & ego_pose = context_->data->current_kinematics->pose.pose;
-  const auto ego_front_offset =
-    context_->vehicle_info.front_overhang_m + context_->vehicle_info.wheel_base_m;
-  const auto ego_front_pose =
-    autoware_utils::calc_offset_pose(ego_pose, ego_front_offset, 0.0, 0.0);
-  const auto & trajectory = *context_->data->current_trajectory;
-  const auto ego_front_nearest_idx =
-    autoware::motion_utils::findNearestIndex(trajectory.points, ego_front_pose.position);
-  autoware_utils::LineString2d trajectory_ls;
-  for (size_t i = ego_front_nearest_idx; i < trajectory.points.size(); ++i) {
-    const auto & p = trajectory.points.at(i);
-    trajectory_ls.emplace_back(p.pose.position.x, p.pose.position.y);
-  }
-
-  auto is_road = [](const lanelet::ConstLanelet & ll) {
-    return ll.hasAttribute(lanelet::AttributeName::Subtype) &&
-           ll.attribute(lanelet::AttributeName::Subtype).value() == lanelet::AttributeValueString::Road;
-  };
-
-  const auto lanelet_map_ptr = context_->route_handler->getLaneletMapPtr();
-  const auto candidates = lanelet_map_ptr->laneletLayer.search(
-    boost::geometry::return_envelope<lanelet::BoundingBox2d>(trajectory_ls));
-  for (const auto & ll : candidates) {
-    const auto id = ll.id();
-    if (
-      is_road(ll) &&
-      !boost::geometry::disjoint(trajectory_ls, ll.polygon2d().basicPolygon()) &&
-      !contains_lanelet(lanelets.trajectory_lanelets, id) &&
-      !contains_lanelet(lanelets.connected_lanelets, id)) {
-      lanelets.target_lanelets.push_back(ll);
-    }
-  }
-}
-
-void CollisionChecker::set_left_turn_target_lanelets(
-  CollisionCheckerLanelets & lanelets) const
-{
-  std::optional<lanelet::ConstLanelet> turn_lanelet;
-  for (const auto & lanelet : lanelets.trajectory_lanelets) {
-    if (!lanelet.hasAttribute("turn_direction")){
-      if (turn_lanelet) break;  // If we already found a turn lanelet, we can stop checking
-      continue;
-    }
-    if (lanelet.attribute("turn_direction") == "left") {
-      turn_lanelet = lanelet;
-    } else if (turn_lanelet) {
-      break;
-    }
-  }
-
-  if (!turn_lanelet) return;
-
-  const auto & route_handler = context_->route_handler;
-
-  lanelet::ConstLanelet next_lanelet;
-  if (!route_handler->getNextLaneletWithinRoute(*turn_lanelet, &next_lanelet)) return;
-
-  const auto turn_lanelet_id = turn_lanelet->id();
-  for (const auto & lanelet : route_handler->getPreviousLanelets(next_lanelet)) {
-    if (lanelet.id() == turn_lanelet_id) continue;
-    lanelets.target_lanelets.push_back(lanelet);
-  }
 }
 
 void CollisionChecker::filter_pointcloud(
