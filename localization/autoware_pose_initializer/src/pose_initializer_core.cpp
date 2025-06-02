@@ -152,7 +152,8 @@ void PoseInitializer::set_user_defined_initial_pose(
 }
 
 void PoseInitializer::on_initialize(
-  const Initialize::Service::Request::SharedPtr req, const Initialize::Service::Response::SharedPtr res)
+  const Initialize::Service::Request::SharedPtr req,
+  const Initialize::Service::Response::SharedPtr res)
 {
   try {
     // NOTE: This function is not executed during initialization because mutually exclusive.

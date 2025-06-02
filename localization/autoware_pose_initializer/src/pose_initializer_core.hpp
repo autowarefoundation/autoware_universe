@@ -69,9 +69,9 @@ private:
     const geometry_msgs::msg::Pose initial_pose, bool need_spin = false);
   void change_state(State::Message::_state_type state);
   void on_initialize(
-    const Initialize::Service::Request::SharedPtr req, const Initialize::Service::Response::SharedPtr res);
+    const Initialize::Service::Request::SharedPtr req,
+    const Initialize::Service::Response::SharedPtr res);
   PoseWithCovarianceStamped get_gnss_pose();
-
 };
 }  // namespace autoware::pose_initializer
 
