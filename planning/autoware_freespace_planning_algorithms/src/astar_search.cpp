@@ -343,6 +343,17 @@ void AstarSearch::expandNodes(AstarNode & current_node, const bool is_back)
     AstarNode * next_node = &graph_[getKey(next_index)];
     if (next_node->status == NodeStatus::Closed || detectCollision(next_index)) continue;
 
+    geometry_msgs::msg::Pose relative_goal_pose;
+    relative_goal_pose.position.x =
+      goal_pose_.position.x - (next_pose.position.x - start_pose_.position.x);
+    relative_goal_pose.position.y =
+      goal_pose_.position.y - (next_pose.position.y - start_pose_.position.y);
+    const auto relative_goal_index =
+      pose2index(costmap_, relative_goal_pose, planner_common_param_.theta_size);
+    if (isOutOfRange(relative_goal_index)) {
+      continue;
+    }
+
     const auto obs_edt = getObstacleEDT(next_index);
     const bool is_direction_switch =
       (current_node.parent != nullptr) && (is_back != current_node.is_back);
