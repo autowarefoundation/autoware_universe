@@ -50,7 +50,7 @@ private:
   float total_existence_probability_;
 
   // cache
-  mutable rclcpp::Time cached_time_;
+  mutable int cached_time_;
   mutable types::DynamicObject cached_object_;
 
 public:
@@ -110,13 +110,13 @@ protected:
 
   void updateCache(const types::DynamicObject & object, const rclcpp::Time & time) const
   {
-    cached_time_ = time;
+    cached_time_ = time.nanoseconds();
     cached_object_ = object;
   }
 
   bool getCachedObject(const rclcpp::Time & time, types::DynamicObject & object) const
   {
-    if (cached_time_.nanoseconds() == time.nanoseconds()) {
+    if (cached_time_ == time.nanoseconds()) {
       object = cached_object_;
       return true;
     }
@@ -125,7 +125,7 @@ protected:
 
   void removeCache() const
   {
-    cached_time_ = rclcpp::Time(0, 0);
+    cached_time_ = 0;
     cached_object_ = types::DynamicObject();
   }
 
