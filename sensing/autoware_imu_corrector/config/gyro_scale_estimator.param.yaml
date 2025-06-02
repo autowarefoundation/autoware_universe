@@ -3,10 +3,14 @@
     estimate_scale_init: 1.0 # initial scale estimation for scale
     ekf_variance_p: 0.1 # initial variance
     ekf_process_noise_q: 3e-7 # estimated process noise
-    ekf_measurement_noise_r: 0.003 # device measurement noise
+    ekf_measurement_noise_r: 0.004 # device measurement noise
     time_window_secs: 5.0 # gather estimate scale samples during this time
-    threshold_scale_change: 0.15 # percentage change wrt current scale
+    threshold_scale_change: 0.07 # percentage change wrt current scale
     threshold_error_rate: 0.1
-    num_consecutive_scale_change: 4.0 # after this number change the current scale
+    num_consecutive_scale_change: 3.0 # number of time windows after change the current scale
     min_allowed_scale: 0.3 # minimum allowed scale
     max_allowed_scale: 10.0 # maximum allowed scale
+    scale_on_purpose: 1.0 # scale to apply on purpose
+    bias_on_purpose: 0.0 # bias to apply on purpose
+    drift_scale: 0.0 # 0.0001 # scale to apply on purpose for drift
+    drift_bias: 0.0 # 0.000001 # bias to apply on purpose for drift

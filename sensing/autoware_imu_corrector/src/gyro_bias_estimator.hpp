@@ -63,6 +63,7 @@ private:
   rclcpp::Subscription<PoseWithCovarianceStamped>::SharedPtr pose_sub_;
   rclcpp::Publisher<Vector3Stamped>::SharedPtr gyro_bias_pub_;
   rclcpp::Publisher<Vector3Stamped>::SharedPtr gyro_scale_pub_;
+  rclcpp::Publisher<Imu>::SharedPtr imu_scaled_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Time start_time_check_scale;
 
@@ -86,10 +87,17 @@ private:
   const double num_consecutive_scale_change_;
   const double min_allowed_scale_;
   const double max_allowed_scale_;
+  const double scale_on_purpose_;
+  const double bias_on_purpose_;
+  const double drift_scale_;
+  const double drift_bias;
 
   double ndt_yaw_rate;
   double gyro_yaw_rate;
   double previous_scale;
+
+  double final_bias_on_purpose_;
+  double final_scale_on_purpose_;
 
   // EKF variables
   double estimated_scale;
