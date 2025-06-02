@@ -172,7 +172,7 @@ PredictedObjects filter_objects_by_road_border(
 
   for (const auto & object : objects.objects) {
     // Get footprint
-    bool not_being_seperated = false;
+    bool not_being_separated = false;
 
     // Get object center position
     const auto & obj_pose = object.kinematics.initial_pose_with_covariance.pose;
@@ -198,12 +198,12 @@ PredictedObjects filter_objects_by_road_border(
 
     for (const auto & obj_point : points) {
       if (!crosses_road_border(ego_point, obj_point, road_border_segments)) {
-        not_being_seperated = true;
+        not_being_separated = true;
         break;
       }
     }
 
-    if (not_being_seperated) {
+    if (not_being_separated) {
       filtered_objects.objects.push_back(object);
     }
   }
