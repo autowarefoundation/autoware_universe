@@ -64,6 +64,7 @@ private:
   rclcpp::Publisher<Vector3Stamped>::SharedPtr gyro_bias_pub_;
   rclcpp::Publisher<Vector3Stamped>::SharedPtr gyro_scale_pub_;
   rclcpp::Publisher<Imu>::SharedPtr imu_scaled_pub_;
+  rclcpp::Publisher<Imu>::SharedPtr imu_scaled_flipped_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Time start_time_check_scale;
 

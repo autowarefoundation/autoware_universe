@@ -73,6 +73,7 @@ GyroBiasEstimator::GyroBiasEstimator(const rclcpp::NodeOptions & options)
   gyro_scale_pub_ =
     create_publisher<Vector3Stamped>("~/output/gyro_scale", rclcpp::SensorDataQoS());
   imu_scaled_pub_ = create_publisher<Imu>("~/output/imu_scaled", rclcpp::QoS{1});
+  imu_scaled_flipped_pub_ = create_publisher<Imu>("~/output/imu_scaled_flipped", rclcpp::QoS{1});
 
   auto bound_timer_callback = std::bind(&GyroBiasEstimator::timer_callback, this);
   auto period_control = std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -140,7 +141,7 @@ void GyroBiasEstimator::callback_imu(const Imu::ConstSharedPtr imu_msg_ptr)
   static auto bias_final = bias_on_purpose_;
   static auto scale_final = scale_on_purpose_;
   Imu imu_msg = *imu_msg_ptr;
-  imu_frame_ = imu_msg.header.frame_id;
+  imu_frame_ = imu_msg.header.frame_id; 
   geometry_msgs::msg::TransformStamped::ConstSharedPtr tf_imu2base_ptr =
     transform_listener_->get_latest_transform(imu_frame_, output_frame_);
   if (!tf_imu2base_ptr) {
@@ -159,12 +160,25 @@ void GyroBiasEstimator::callback_imu(const Imu::ConstSharedPtr imu_msg_ptr)
   Imu imu_msg_mod = imu_msg;
 
   imu_msg_mod.header.stamp = this->now();
-  imu_msg_mod.header.frame_id = "virtual_imu";  // imu_frame_;
-  imu_msg_mod.angular_velocity.x = -scale_final * imu_msg.angular_velocity.x + bias_final;
-  imu_msg_mod.angular_velocity.y = -scale_final * imu_msg.angular_velocity.y + bias_final;
-  imu_msg_mod.angular_velocity.z = -scale_final * imu_msg.angular_velocity.z + bias_final;
+  imu_msg_mod.header.frame_id = imu_msg_ptr->header.frame_id; // // imu_frame_;
+  imu_msg_mod.angular_velocity.x =
+    scale_final * imu_msg.angular_velocity.x + bias_final;
+    imu_msg_mod.angular_velocity.y =
+    scale_final * imu_msg.angular_velocity.y + bias_final;
+    imu_msg_mod.angular_velocity.z =
+    scale_final * imu_msg.angular_velocity.z + bias_final;
 
   imu_scaled_pub_->publish(imu_msg_mod);
+
+  Imu imu_msg_mod_flipped =  imu_msg_mod;
+  imu_msg_mod_flipped.angular_velocity.x =
+    -imu_msg_mod.angular_velocity.x;
+  imu_msg_mod_flipped.angular_velocity.y =
+    -imu_msg_mod.angular_velocity.y;
+  imu_msg_mod_flipped.angular_velocity.z =
+    -imu_msg_mod.angular_velocity.z;
+  
+  imu_scaled_flipped_pub_->publish(imu_msg_mod_flipped);
 
   geometry_msgs::msg::Vector3Stamped gyro;
   gyro.header.stamp = imu_msg_ptr->header.stamp;
@@ -203,13 +217,10 @@ void GyroBiasEstimator::callback_pose(const PoseWithCovarianceStamped::ConstShar
   static int window_scale_change = 0;  // Initialized once
   static double previous_yaw_angle = 0.0;
   auto pose_frame_ = pose_msg_ptr->header.frame_id;
-
-  double dt = (this->get_clock()->now() - last_time_rx_pose_).seconds();
+  
   if (dt == 0.0) {
     throw std::runtime_error("dt_pose is zero");
   }
-
-  last_time_rx_pose_ = this->get_clock()->now();
 
   geometry_msgs::msg::TransformStamped::ConstSharedPtr tf_base2pose_ptr =
     transform_listener_->get_latest_transform(pose_frame_, output_frame_);
