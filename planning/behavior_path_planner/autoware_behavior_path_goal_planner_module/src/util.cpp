@@ -1020,7 +1020,7 @@ autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
   if (objects_extraction_polygon.has_value()) {
     const auto road_border_segments = extract_uncrossable_segments(
     *(route_handler.getLaneletMapPtr()), objects_extraction_polygon.value());
-    auto filtered_objects =
+    const auto filtered_objects =
       filter_objects_by_road_border(dynamic_target_objects, road_border_segments, ego_pose, true);
     return filtered_objects;
   }
