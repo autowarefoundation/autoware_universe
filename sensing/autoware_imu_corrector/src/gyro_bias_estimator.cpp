@@ -137,7 +137,6 @@ void GyroBiasEstimator::callback_imu(const Imu::ConstSharedPtr imu_msg_ptr)
 
   // gyro_all_.push_back(gyro);
 
-  
   static auto bias_final = bias_on_purpose_;
   static auto scale_final = scale_on_purpose_;
   Imu imu_msg = *imu_msg_ptr;
@@ -160,14 +159,11 @@ void GyroBiasEstimator::callback_imu(const Imu::ConstSharedPtr imu_msg_ptr)
   Imu imu_msg_mod = imu_msg;
 
   imu_msg_mod.header.stamp = this->now();
-  imu_msg_mod.header.frame_id = "virtual_imu";// imu_frame_;
-  imu_msg_mod.angular_velocity.x =
-    -scale_final * imu_msg.angular_velocity.x + bias_final;
-    imu_msg_mod.angular_velocity.y =
-    -scale_final * imu_msg.angular_velocity.y + bias_final;
-    imu_msg_mod.angular_velocity.z =
-    -scale_final * imu_msg.angular_velocity.z + bias_final;
-  
+  imu_msg_mod.header.frame_id = "virtual_imu";  // imu_frame_;
+  imu_msg_mod.angular_velocity.x = -scale_final * imu_msg.angular_velocity.x + bias_final;
+  imu_msg_mod.angular_velocity.y = -scale_final * imu_msg.angular_velocity.y + bias_final;
+  imu_msg_mod.angular_velocity.z = -scale_final * imu_msg.angular_velocity.z + bias_final;
+
   imu_scaled_pub_->publish(imu_msg_mod);
 
   geometry_msgs::msg::Vector3Stamped gyro;
@@ -207,7 +203,7 @@ void GyroBiasEstimator::callback_pose(const PoseWithCovarianceStamped::ConstShar
   static int window_scale_change = 0;  // Initialized once
   static double previous_yaw_angle = 0.0;
   auto pose_frame_ = pose_msg_ptr->header.frame_id;
-  
+
   double dt = (this->get_clock()->now() - last_time_rx_pose_).seconds();
   if (dt == 0.0) {
     throw std::runtime_error("dt_pose is zero");
@@ -263,7 +259,8 @@ void GyroBiasEstimator::callback_pose(const PoseWithCovarianceStamped::ConstShar
       if (estimated_scale < 0.0) {
         gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
         gyro_info_.scale_status_summary = "ERR";
-        gyro_info_.scale_summary_message = "Scale is negative, please check the TF or unstable bias.";
+        gyro_info_.scale_summary_message =
+          "Scale is negative, please check the TF or unstable bias.";
       }
 
       vector_scale.header.stamp = this->now();
@@ -488,7 +485,6 @@ void GyroBiasEstimator::update_diagnostics(diagnostic_updater::DiagnosticStatusW
   stat.add("scale_on_purpose", f(final_scale_on_purpose_));
 
   stat.add("published_scale", f(previous_scale));
-  
 
   stat.add("gyro_bias_threshold", f(gyro_bias_threshold_));
 }
