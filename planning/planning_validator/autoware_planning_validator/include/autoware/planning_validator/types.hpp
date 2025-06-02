@@ -20,6 +20,7 @@
 #include "autoware_planning_validator/msg/planning_validator_status.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/route_handler/route_handler.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
@@ -34,6 +35,8 @@
 
 namespace autoware::planning_validator
 {
+using autoware_map_msgs::msg::LaneletMapBin;
+using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_planning_validator::msg::PlanningValidatorStatus;
@@ -75,6 +78,9 @@ struct PlanningValidatorData
   AccelWithCovarianceStamped::ConstSharedPtr current_acceleration;
   PointCloud2::ConstSharedPtr obstacle_pointcloud;
 
+  std::shared_ptr<autoware::route_handler::RouteHandler> route_handler{
+    std::make_shared<autoware::route_handler::RouteHandler>()};
+
   bool is_ready(std::string & msg)
   {
     if (!current_trajectory) {
@@ -91,6 +97,10 @@ struct PlanningValidatorData
     }
     if (!obstacle_pointcloud) {
       msg = "obstacle_pointcloud";
+      return false;
+    }
+    if (!route_handler->isHandlerReady()) {
+      msg = "route/map";
       return false;
     }
     return true;
@@ -119,6 +129,22 @@ struct PlanningValidatorData
       current_trajectory->points, current_kinematics->pose.pose);
     nearest_segment_index = autoware::motion_utils::findNearestSegmentIndex(
       current_trajectory->points, current_kinematics->pose.pose);
+  }
+
+  void set_route(const LaneletRoute::ConstSharedPtr & msg)
+  {
+    if (msg) {
+      if (!msg->segments.empty()) {
+        route_handler->setRoute(*msg);
+      }
+    }
+  }
+
+  void set_map(const LaneletMapBin::ConstSharedPtr & msg)
+  {
+    if (msg) {
+      route_handler->setMap(*msg);
+    }
   }
 };
 

@@ -111,6 +111,8 @@ void PlanningValidatorNode::setData()
   data->current_acceleration = sub_acceleration_.take_data();
   data->obstacle_pointcloud = sub_pointcloud_.take_data();
   data->set_current_trajectory(sub_trajectory_.take_data());
+  data->set_route(sub_route_.take_data());
+  data->set_map(sub_lanelet_map_bin_.take_data());
 }
 
 void PlanningValidatorNode::onTimer()
