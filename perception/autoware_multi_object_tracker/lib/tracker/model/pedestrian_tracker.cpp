@@ -132,6 +132,9 @@ bool PedestrianTracker::measureWithPose(const types::DynamicObject & object)
   constexpr double gain = 0.1;
   object_.pose.position.z = (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
 
+  // remove cached object
+  removeCache();
+
   return is_updated;
 }
 
@@ -195,6 +198,12 @@ bool PedestrianTracker::measure(
 bool PedestrianTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object) const
 {
+  // try to return cached object
+  if (getCachedObject(time, object)) {
+    return true;
+  }
+
+
   object = object_;
 
   // predict from motion model
@@ -212,6 +221,9 @@ bool PedestrianTracker::getTrackedObject(
   const auto ekf_pose_yaw = tf2::getYaw(pose.orientation);
   object.shape.footprint =
     autoware_utils::rotate_polygon(object.shape.footprint, origin_yaw - ekf_pose_yaw);
+
+  // cache object
+  updateCache(object, time);
 
   return true;
 }

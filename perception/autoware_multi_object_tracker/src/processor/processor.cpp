@@ -189,6 +189,10 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   // Create sorted list with non-UNKNOWN objects first, then by measurement count
+  {
+    std::unique_ptr<ScopedTimeTrack> st_sort_ptr;
+    if (time_keeper_) st_sort_ptr = std::make_unique<ScopedTimeTrack>("merger_tracker_sort", *time_keeper_);
+
   list_tracker_.sort(
     [&time](const std::shared_ptr<Tracker> & a, const std::shared_ptr<Tracker> & b) {
       bool a_unknown = (a->getHighestProbLabel() == Label::UNKNOWN);
@@ -203,8 +207,13 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
       return a->getElapsedTimeFromLastUpdate(time) <
              b->getElapsedTimeFromLastUpdate(time);  // Finally sort by elapsed time (smaller first)
     });
+  }
 
   // Iterate through the list of trackers
+  {
+    std::unique_ptr<ScopedTimeTrack> st_tracker_loop_ptr;
+    if (time_keeper_) st_tracker_loop_ptr = std::make_unique<ScopedTimeTrack>("merger_tracker_loop", *time_keeper_);
+
   for (auto itr1 = list_tracker_.begin(); itr1 != list_tracker_.end(); ++itr1) {
     types::DynamicObject object1;
     if (!(*itr1)->getTrackedObject(time, object1)) continue;
@@ -247,11 +256,15 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
       }
     }
   }
+  }
 }
 
 bool TrackerProcessor::canMergeOverlappedTarget(
   const Tracker & target, const Tracker & other, const rclcpp::Time & time, const double iou) const
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   // if the other is not confident, do not remove the target
   if (!other.isConfident(time)) {
     return false;

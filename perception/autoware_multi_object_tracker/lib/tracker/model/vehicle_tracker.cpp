@@ -189,6 +189,9 @@ bool VehicleTracker::measureWithPose(
   constexpr double gain = 0.1;
   object_.pose.position.z = (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
 
+  // remove cached object
+  removeCache();
+
   return is_updated;
 }
 
@@ -293,8 +296,10 @@ bool VehicleTracker::measure(
 bool VehicleTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object) const
 {
-  object = object_;
-  object.time = time;
+  // try to return cached object
+  if (getCachedObject(time, object)) {
+    return true;
+  }
 
   // predict from motion model
   auto & pose = object.pose;
@@ -311,6 +316,9 @@ bool VehicleTracker::getTrackedObject(
   const auto ekf_pose_yaw = tf2::getYaw(pose.orientation);
   object.shape.footprint =
     autoware_utils::rotate_polygon(object.shape.footprint, origin_yaw - ekf_pose_yaw);
+
+  // cache object
+  updateCache(object, time);
 
   return true;
 }
