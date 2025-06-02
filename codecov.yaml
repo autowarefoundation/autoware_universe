@@ -125,7 +125,6 @@ component_management:
         - localization/autoware_gyro_odometer/**
         - localization/autoware_localization_error_monitor/**
         - localization/autoware_localization_util/**
-        - localization/autoware_ndt_scan_matcher/**
         - localization/autoware_pose_initializer/**
         - localization/autoware_pose_instability_detector/**
         - localization/autoware_stop_filter/**
