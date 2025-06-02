@@ -50,7 +50,7 @@ private:
   rclcpp::Publisher<PoseWithCovarianceStamped>::SharedPtr pub_reset_;
   rclcpp::Publisher<State::Message>::SharedPtr pub_state_;
   rclcpp::Service<Initialize::Service>::SharedPtr srv_initialize_;
-  State state_;
+  State::Message state_;
   std::array<double, 36> output_pose_covariance_{};
   std::array<double, 36> gnss_particle_covariance_{};
   std::unique_ptr<GnssModule> gnss_;
@@ -67,13 +67,11 @@ private:
   void change_node_trigger(bool flag, bool need_spin = false);
   void set_user_defined_initial_pose(
     const geometry_msgs::msg::Pose initial_pose, bool need_spin = false);
-  void change_state(State::_state_type state);
+  void change_state(State::Message::_state_type state);
   void on_initialize(
-    const Initialize::Request::SharedPtr req, const Initialize::Response::SharedPtr res);
+    const Initialize::Service::Request::SharedPtr req, const Initialize::Service::Response::SharedPtr res);
   PoseWithCovarianceStamped get_gnss_pose();
 
-  std::string service_name_ = "/localization/initialize";
-  std::string service_node_ = "/localization/util/pose_initializer";
 };
 }  // namespace autoware::pose_initializer
 
