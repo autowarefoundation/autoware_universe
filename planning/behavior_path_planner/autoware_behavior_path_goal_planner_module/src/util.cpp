@@ -34,6 +34,7 @@
 #include <tf2_ros/transform_listener.h>
 
 #include <algorithm>
+#include <limits>
 #include <map>
 #include <memory>
 #include <string>
@@ -129,28 +130,24 @@ std::vector<Point2d> getBoundingBoxCornersFromObject(
 
   // Calculate the four corners of the bounding box
   // Front-right corner
-  corners.push_back(
-    Point2d{
-      center_point[0] + half_length * std::cos(yaw) - half_width * std::sin(yaw),
-      center_point[1] + half_length * std::sin(yaw) + half_width * std::cos(yaw)});
+  corners.push_back(Point2d{
+    center_point[0] + half_length * std::cos(yaw) - half_width * std::sin(yaw),
+    center_point[1] + half_length * std::sin(yaw) + half_width * std::cos(yaw)});
 
   // Front-left corner
-  corners.push_back(
-    Point2d{
-      center_point[0] + half_length * std::cos(yaw) + half_width * std::sin(yaw),
-      center_point[1] + half_length * std::sin(yaw) - half_width * std::cos(yaw)});
+  corners.push_back(Point2d{
+    center_point[0] + half_length * std::cos(yaw) + half_width * std::sin(yaw),
+    center_point[1] + half_length * std::sin(yaw) - half_width * std::cos(yaw)});
 
   // Rear-left corner
-  corners.push_back(
-    Point2d{
-      center_point[0] - half_length * std::cos(yaw) + half_width * std::sin(yaw),
-      center_point[1] - half_length * std::sin(yaw) - half_width * std::cos(yaw)});
+  corners.push_back(Point2d{
+    center_point[0] - half_length * std::cos(yaw) + half_width * std::sin(yaw),
+    center_point[1] - half_length * std::sin(yaw) - half_width * std::cos(yaw)});
 
   // Rear-right corner
-  corners.push_back(
-    Point2d{
-      center_point[0] - half_length * std::cos(yaw) - half_width * std::sin(yaw),
-      center_point[1] - half_length * std::sin(yaw) + half_width * std::cos(yaw)});
+  corners.push_back(Point2d{
+    center_point[0] - half_length * std::cos(yaw) - half_width * std::sin(yaw),
+    center_point[1] - half_length * std::sin(yaw) + half_width * std::cos(yaw)});
 
   // Also add the center point
   corners.push_back(center_point);
@@ -661,9 +658,8 @@ double calcLateralDeviationBetweenPaths(
       reference_path.points, target_point.point.pose.position);
     lateral_deviation = std::max(
       lateral_deviation,
-      std::abs(
-        autoware_utils::calc_lateral_deviation(
-          reference_path.points[nearest_index].point.pose, target_point.point.pose.position)));
+      std::abs(autoware_utils::calc_lateral_deviation(
+        reference_path.points[nearest_index].point.pose, target_point.point.pose.position)));
   }
   return lateral_deviation;
 }
@@ -1019,12 +1015,11 @@ autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
   // Extract road border segments
   if (objects_extraction_polygon.has_value()) {
     const auto road_border_segments = extract_uncrossable_segments(
-    *(route_handler.getLaneletMapPtr()), objects_extraction_polygon.value());
+      *(route_handler.getLaneletMapPtr()), objects_extraction_polygon.value());
     const auto filtered_objects =
       filter_objects_by_road_border(dynamic_target_objects, road_border_segments, ego_pose, true);
     return filtered_objects;
-  }
-  else {
+  } else {
     return dynamic_target_objects;
   }
 }

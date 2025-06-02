@@ -30,6 +30,7 @@
 
 #include <lanelet2_core/Forward.h>
 
+#include <limits>
 #include <map>
 #include <memory>
 #include <string>
@@ -59,8 +60,8 @@ bool has_types(const lanelet::ConstLineString3d & ls, const std::vector<std::str
 
 // Function to extract corner points from a bounding box
 std::vector<Point2d> getBoundingBoxCornersFromObject(
-  const Point2d & center_point, const geometry_msgs::msg::Vector3 & dimensions, 
-  const geometry_msgs::msg::Quaternion & orientation); 
+  const Point2d & center_point, const geometry_msgs::msg::Vector3 & dimensions,
+  const geometry_msgs::msg::Quaternion & orientation);
 
 PredictedObjects filter_objects_by_road_border(
   const PredictedObjects & objects, const SegmentRtree & road_border_segments,
