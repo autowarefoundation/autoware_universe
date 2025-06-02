@@ -113,47 +113,6 @@ bool crosses_road_border(
   return false;  // No crossing found
 }
 
-// Function to extract corner points from a bounding box
-std::vector<Point2d> getBoundingBoxCornersFromObject(
-  const Point2d & center_point, const geometry_msgs::msg::Vector3 & dimensions,
-  const geometry_msgs::msg::Quaternion & orientation)
-{
-  std::vector<Point2d> corners;
-
-  // Extract dimensions from the bounding box
-  const double half_length = dimensions.x / 2.0;
-  const double half_width = dimensions.y / 2.0;
-
-  // Convert quaternion to yaw angle
-  const double yaw = tf2::getYaw(orientation);
-
-  // Calculate the four corners of the bounding box
-  // Front-right corner
-  corners.push_back(Point2d{
-    center_point[0] + half_length * std::cos(yaw) - half_width * std::sin(yaw),
-    center_point[1] + half_length * std::sin(yaw) + half_width * std::cos(yaw)});
-
-  // Front-left corner
-  corners.push_back(Point2d{
-    center_point[0] + half_length * std::cos(yaw) + half_width * std::sin(yaw),
-    center_point[1] + half_length * std::sin(yaw) - half_width * std::cos(yaw)});
-
-  // Rear-left corner
-  corners.push_back(Point2d{
-    center_point[0] - half_length * std::cos(yaw) + half_width * std::sin(yaw),
-    center_point[1] - half_length * std::sin(yaw) - half_width * std::cos(yaw)});
-
-  // Rear-right corner
-  corners.push_back(Point2d{
-    center_point[0] - half_length * std::cos(yaw) - half_width * std::sin(yaw),
-    center_point[1] - half_length * std::sin(yaw) + half_width * std::cos(yaw)});
-
-  // Also add the center point
-  corners.push_back(center_point);
-
-  return corners;
-}
-
 // Improved filter_objects_by_road_border function
 PredictedObjects filter_objects_by_road_border(
   const PredictedObjects & objects, const SegmentRtree & road_border_segments,
