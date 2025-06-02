@@ -830,6 +830,7 @@ void GoalPlannerModule::processOnExit()
   resetPathCandidate();
   resetPathReference();
   debug_marker_.markers.clear();
+  info_marker_.markers.clear();
   context_data_ = std::nullopt;
 }
 
@@ -2521,6 +2522,7 @@ void GoalPlannerModule::setDebugData(const PullOverContextData & context_data)
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   debug_marker_.markers.clear();
+  info_marker_.markers.clear();
 
   using autoware::motion_utils::createStopVirtualWallMarker;
   using autoware_utils::create_default_marker;
@@ -2536,11 +2538,17 @@ void GoalPlannerModule::setDebugData(const PullOverContextData & context_data)
 
   const auto header = planner_data_->route_handler->getRouteHeader();
 
-  const auto add = [this](MarkerArray added) {
+  const auto add_debug_marker = [this](MarkerArray added) {
     for (auto & marker : added.markers) {
       marker.lifetime = rclcpp::Duration::from_seconds(1.5);
     }
     autoware_utils::append_marker_array(added, &debug_marker_);
+  };
+  const auto add_info_marker = [this](MarkerArray added) {
+    for (auto & marker : added.markers) {
+      marker.lifetime = rclcpp::Duration::from_seconds(1.5);
+    }
+    autoware_utils::append_marker_array(added, &info_marker_);
   };
   if (utils::isAllowedGoalModification(planner_data_->route_handler)) {
     // Visualize pull over areas
@@ -2549,11 +2557,14 @@ void GoalPlannerModule::setDebugData(const PullOverContextData & context_data)
                          ? create_marker_color(1.0, 1.0, 0.0, 0.999)   // yellow
                          : create_marker_color(0.0, 1.0, 0.0, 0.999);  // green
     const double z = planner_data_->route_handler->getGoalPose().position.z;
-    add(goal_planner_utils::createPullOverAreaMarkerArray(
+    add_info_marker(goal_planner_utils::createPullOverAreaMarkerArray(
       goal_searcher_->getAreaPolygons(), header, color, z));
 
     // Visualize goal candidates
-    add(goal_planner_utils::createGoalCandidatesMarkerArray(goal_candidates_, color));
+    const auto goal_candidates_markers =
+      goal_planner_utils::createGoalCandidatesMarkerArray(goal_candidates_, color);
+    add_info_marker(goal_candidates_markers.first);
+    add_debug_marker(goal_candidates_markers.second);
 
     // Visualize objects extraction polygon
     auto marker = autoware_utils::create_default_marker(
@@ -2574,23 +2585,25 @@ void GoalPlannerModule::setDebugData(const PullOverContextData & context_data)
   }
 
   // Visualize previous module output
-  add(createPathMarkerArray(
+  add_debug_marker(createPathMarkerArray(
     getPreviousModuleOutput().path, "previous_module_path", 0, 1.0, 0.0, 0.0));
 
   // Visualize path and related pose
   if (context_data.pull_over_path_opt) {
     const auto & pull_over_path = context_data.pull_over_path_opt.value();
-    add(
+    add_info_marker(
       createPoseMarkerArray(pull_over_path.start_pose(), "pull_over_start_pose", 0, 0.3, 0.3, 0.9));
-    add(createPoseMarkerArray(
+    add_info_marker(createPoseMarkerArray(
       pull_over_path.modified_goal_pose(), "pull_over_end_pose", 0, 0.3, 0.3, 0.9));
-    add(createPathMarkerArray(pull_over_path.full_path(), "full_path", 0, 0.0, 0.5, 0.9));
-    add(createPathMarkerArray(pull_over_path.getCurrentPath(), "current_path", 0, 0.9, 0.5, 0.0));
+    add_debug_marker(
+      createPathMarkerArray(pull_over_path.full_path(), "full_path", 0, 0.0, 0.5, 0.9));
+    add_debug_marker(
+      createPathMarkerArray(pull_over_path.getCurrentPath(), "current_path", 0, 0.9, 0.5, 0.0));
 
     // visualize each partial path
     for (size_t i = 0; i < pull_over_path.partial_paths().size(); ++i) {
       const auto & partial_path = pull_over_path.partial_paths().at(i);
-      add(
+      add_debug_marker(
         createPathMarkerArray(partial_path, "partial_path_" + std::to_string(i), 0, 0.9, 0.5, 0.9));
     }
 
@@ -2622,17 +2635,17 @@ void GoalPlannerModule::setDebugData(const PullOverContextData & context_data)
     // Visualize debug poses
     const auto & debug_poses = pull_over_path.debug_poses;
     for (size_t i = 0; i < debug_poses.size(); ++i) {
-      add(createPoseMarkerArray(
+      add_debug_marker(createPoseMarkerArray(
         debug_poses.at(i), "debug_pose_" + std::to_string(i), 0, 0.3, 0.3, 0.3));
     }
   }
 
   auto collision_check = debug_data_.collision_check;
   if (parameters_.safety_check_params.method == "RSS") {
-    add(showSafetyCheckInfo(collision_check, "object_debug_info"));
+    add_info_marker(showSafetyCheckInfo(collision_check, "object_debug_info"));
   }
-  add(showPredictedPath(collision_check, "ego_predicted_path"));
-  add(showPolygon(collision_check, "ego_and_target_polygon_relation"));
+  add_debug_marker(showPredictedPath(collision_check, "ego_predicted_path"));
+  add_debug_marker(showPolygon(collision_check, "ego_and_target_polygon_relation"));
 
   // set objects of interest
   for (const auto & [uuid, data] : collision_check) {
@@ -2662,7 +2675,7 @@ void GoalPlannerModule::setDebugData(const PullOverContextData & context_data)
         "elapsed_time_from_safe_start: " + std::to_string(elapsed_time_from_safe_start) + "\n";
     }
     marker_array.markers.push_back(marker);
-    add(marker_array);
+    add_debug_marker(marker_array);
   }
 
   // Visualize planner type text
@@ -2702,7 +2715,7 @@ void GoalPlannerModule::setDebugData(const PullOverContextData & context_data)
     }
 
     planner_type_marker_array.markers.push_back(marker);
-    add(planner_type_marker_array);
+    add_info_marker(planner_type_marker_array);
   }
 }
 

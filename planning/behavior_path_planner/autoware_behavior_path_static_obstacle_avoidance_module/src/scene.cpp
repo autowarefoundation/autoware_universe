@@ -93,8 +93,7 @@ bool StaticObstacleAvoidanceModule::isExecutionRequested() const
   RCLCPP_DEBUG(getLogger(), "AVOIDANCE isExecutionRequested");
 
   // Check ego is in preferred lane
-  updateInfoMarker(avoid_data_);
-  updateDebugMarker(BehaviorModuleOutput{}, avoid_data_, path_shifter_, debug_data_);
+  updateMarker(BehaviorModuleOutput{}, avoid_data_, path_shifter_, debug_data_);
 
   // there is object that should be avoid. return true.
   if (!!avoid_data_.stop_target_object) {
@@ -1151,8 +1150,7 @@ BehaviorModuleOutput StaticObstacleAvoidanceModule::plan()
   // update output data
   {
     updateEgoBehavior(data, spline_shift_path);
-    updateInfoMarker(avoid_data_);
-    updateDebugMarker(output, avoid_data_, path_shifter_, debug_data_);
+    updateMarker(output, avoid_data_, path_shifter_, debug_data_);
   }
 
   if (isDrivingSameLane(helper_->getPreviousDrivingLanes(), data.current_lanelets)) {
@@ -1588,7 +1586,9 @@ void StaticObstacleAvoidanceModule::updateRTCData()
   updateCandidateRTCStatus(output);
 }
 
-void StaticObstacleAvoidanceModule::updateInfoMarker(const AvoidancePlanningData & data) const
+void StaticObstacleAvoidanceModule::updateMarker(
+  const BehaviorModuleOutput & output, const AvoidancePlanningData & data,
+  const PathShifter & shifter, const DebugData & debug) const
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   using utils::static_obstacle_avoidance::createAmbiguousObjectsMarkerArray;
@@ -1596,21 +1596,19 @@ void StaticObstacleAvoidanceModule::updateInfoMarker(const AvoidancePlanningData
   using utils::static_obstacle_avoidance::createTargetObjectsMarkerArray;
 
   info_marker_.markers.clear();
-  append_marker_array(
-    createTargetObjectsMarkerArray(data.target_objects, "target_objects"), &info_marker_);
+  debug_marker_.markers.clear();
+
+  const auto target_objects_marker_array =
+    createTargetObjectsMarkerArray(data.target_objects, "target_objects");
+
+  append_marker_array(target_objects_marker_array.first, &info_marker_);
   append_marker_array(createStopTargetObjectMarkerArray(data), &info_marker_);
   append_marker_array(
     createAmbiguousObjectsMarkerArray(
       data.target_objects, getEgoPose(), parameters_->policy_ambiguous_vehicle),
     &info_marker_);
-}
 
-void StaticObstacleAvoidanceModule::updateDebugMarker(
-  const BehaviorModuleOutput & output, const AvoidancePlanningData & data,
-  const PathShifter & shifter, const DebugData & debug) const
-{
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
-  debug_marker_.markers.clear();
+  append_marker_array(target_objects_marker_array.second, &debug_marker_);
   debug_marker_ = utils::static_obstacle_avoidance::createDebugMarkerArray(
     output, data, shifter, debug, parameters_);
 }
