@@ -180,7 +180,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
   // so this needs to be checked before attention area validation
   // ==========================================================================================
   const auto is_stuck_status = isStuckStatus(*path, intersection_stoplines, path_lanelets);
-  if (is_stuck_status) {
+  if (is_stuck_status && can_smoothly_stop_at(is_stuck_status->stuck_stopline_idx)) {
     return is_stuck_status.value();
   }
 
