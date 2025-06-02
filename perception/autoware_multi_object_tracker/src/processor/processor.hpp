@@ -28,6 +28,7 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -55,7 +56,7 @@ public:
 
   const std::list<std::shared_ptr<Tracker>> & getListTracker() const { return list_tracker_; }
   // tracker processes
-  void predict(const rclcpp::Time & time);
+  void predict(const rclcpp::Time & time, const std::optional<geometry_msgs::msg::Pose> & ego_pose);
   void associate(
     const types::DynamicObjectList & detected_objects,
     std::unordered_map<int, int> & direct_assignment,
