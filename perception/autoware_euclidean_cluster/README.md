@@ -43,7 +43,6 @@ This package has two clustering methods: `euclidean_cluster` and `voxel_grid_bas
 
 #### voxel_grid_based_euclidean_cluster
 
-
 {{ json_to_markdown("perception/autoware_euclidean_cluster/schema/voxel_grid_based_euclidean_cluster.schema.json") }}
 
 | Name                                    | Type  | Description                                                                                                    |
