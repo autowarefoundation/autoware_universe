@@ -32,6 +32,7 @@
 #include <geometry_msgs/msg/point.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -48,6 +49,7 @@ private:
   rclcpp::Time last_update_with_measurement_time_;
   std::vector<float> existence_probabilities_;
   float total_existence_probability_;
+  std::optional<geometry_msgs::msg::Pose> ego_pose_;
 
   // cache
   mutable rclcpp::Time cached_time_;
@@ -142,6 +144,10 @@ protected:
 public:
   virtual bool getTrackedObject(const rclcpp::Time & time, types::DynamicObject & object) const = 0;
   virtual bool predict(const rclcpp::Time & time) = 0;
+  void setEgoPose(const std::optional<geometry_msgs::msg::Pose> & ego_pose);
+  double getBEVArea() const;
+  double getDistanceToEgo() const;
+  double computeAdaptiveThreshold(double base_threshold, double fallback_threshold) const;
 };
 
 }  // namespace autoware::multi_object_tracker

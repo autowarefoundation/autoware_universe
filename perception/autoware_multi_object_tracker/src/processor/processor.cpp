@@ -53,13 +53,15 @@ TrackerProcessor::TrackerProcessor(
   association_ = std::make_unique<DataAssociation>(associator_config);
 }
 
-void TrackerProcessor::predict(const rclcpp::Time & time)
+void TrackerProcessor::predict(
+  const rclcpp::Time & time, const std::optional<geometry_msgs::msg::Pose> & ego_pose)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
   for (auto itr = list_tracker_.begin(); itr != list_tracker_.end(); ++itr) {
     (*itr)->predict(time);
+    (*itr)->setEgoPose(ego_pose);
   }
 }
 
