@@ -206,8 +206,8 @@ void GyroBiasEstimator::callback_pose_msg(
   estimate_scale_gyro(pose_msg_ptr);
 }
 
-
-void GyroBiasEstimator::estimate_scale_gyro(const PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr)
+void GyroBiasEstimator::estimate_scale_gyro(
+  const PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr)
 {
   double dt = (this->get_clock()->now() - last_time_rx_pose_).seconds();
   last_time_rx_pose_ = this->get_clock()->now();
@@ -285,8 +285,8 @@ void GyroBiasEstimator::estimate_scale_gyro(const PoseWithCovarianceStamped::Con
     if ((this->get_clock()->now() - start_time_check_scale_).seconds() > time_window_secs_) {
       const std::vector<double> scale_all = scale_list_all_;
       scale_list_all_.clear();
-      double mean_scale_window =
-        std::accumulate(scale_all.begin(), scale_all.end(), 0.0) / static_cast<double>(scale_all.size());
+      double mean_scale_window = std::accumulate(scale_all.begin(), scale_all.end(), 0.0) /
+                                 static_cast<double>(scale_all.size());
       start_time_check_scale_ = this->get_clock()->now();
 
       if (
@@ -300,7 +300,7 @@ void GyroBiasEstimator::estimate_scale_gyro(const PoseWithCovarianceStamped::Con
           gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::WARN;
           gyro_info_.scale_status_summary = "WARN";
           gyro_info_.scale_summary_message = "Scale changed too much in a short time.";
-          previous_scale_ = mean_scale_window; // estimated_scale_;
+          previous_scale_ = mean_scale_window;  // estimated_scale_;
           window_scale_change_ = 0;
         }
       } else {
