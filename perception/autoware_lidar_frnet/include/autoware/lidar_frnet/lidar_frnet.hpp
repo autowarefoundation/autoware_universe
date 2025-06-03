@@ -80,12 +80,22 @@ private:
   utils::PostprocessingParams postprocessing_params_;
 
   cudaStream_t stream_;
+  // Inference
   CudaUniquePtr<float[]> points_d_{nullptr};         // N x 4 (x, y, z, intensity)
   CudaUniquePtr<int64_t[]> coors_d_{nullptr};        // N x 3 (0, y, x)
   CudaUniquePtr<int64_t[]> voxel_coors_d_{nullptr};  // M x 3 (0, y, x)
   CudaUniquePtr<int64_t[]> inverse_map_d_{nullptr};  // N
   CudaUniquePtr<float[]> seg_logit_d_{nullptr};      // NUM_CLASSES x 1
+  // Preprocess & Postprocess
   CudaUniquePtr<InputPointType[]> cloud_in_d_{nullptr};
+  CudaUniquePtr<int64_t[]> coors_keys_d_{nullptr};
+  CudaUniquePtr<uint32_t[]> num_points_d_{nullptr};
+  CudaUniquePtr<uint32_t[]> proj_idxs_d_{nullptr};
+  CudaUniquePtr<float[]> proj_2d_d_{nullptr};
+  CudaUniquePtr<OutputSegmentationPointType[]> seg_data_d_{nullptr};
+  CudaUniquePtr<OutputVisualizationPointType[]> viz_data_d_{nullptr};
+  CudaUniquePtr<InputPointType[]> cloud_filtered_d_{nullptr};
+  CudaUniquePtr<uint32_t[]> num_points_filtered_d_{nullptr};
 };
 
 }  // namespace autoware::lidar_frnet
