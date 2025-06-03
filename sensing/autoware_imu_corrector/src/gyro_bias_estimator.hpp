@@ -48,7 +48,7 @@ private:
   void update_diagnostics(diagnostic_updater::DiagnosticStatusWrapper & stat);
   void callback_imu(const Imu::ConstSharedPtr imu_msg_ptr);
   void callback_odom(const Odometry::ConstSharedPtr odom_msg_ptr);
-  void callback_pose(const PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr);
+  void callback_pose_msg(const PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr);
   void timer_callback();
   void validate_gyro_bias();
 
@@ -64,9 +64,9 @@ private:
   rclcpp::Publisher<Vector3Stamped>::SharedPtr gyro_bias_pub_;
   rclcpp::Publisher<Vector3Stamped>::SharedPtr gyro_scale_pub_;
   rclcpp::Publisher<Imu>::SharedPtr imu_scaled_pub_;
-  rclcpp::Publisher<Imu>::SharedPtr imu_scaled_flipped_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
-  rclcpp::Time start_time_check_scale;
+  rclcpp::Time start_time_check_scale_;
+  rclcpp::Time last_time_rx_pose_;
 
   std::unique_ptr<GyroBiasEstimationModule> gyro_bias_estimation_module_;
 
@@ -91,20 +91,25 @@ private:
   const double scale_on_purpose_;
   const double bias_on_purpose_;
   const double drift_scale_;
-  const double drift_bias;
+  const double drift_bias_;
 
-  double ndt_yaw_rate;
-  double gyro_yaw_rate;
-  double previous_scale;
+  int window_scale_change_;
+  double previous_yaw_angle_;
+
+  double ndt_yaw_rate_;
+  double gyro_yaw_rate_;
+  double previous_scale_;
 
   double final_bias_on_purpose_;
   double final_scale_on_purpose_;
+  double bias_final_;
+  double scale_final_;
 
   // EKF variables
-  double estimated_scale;
-  double P;
-  double Q;
-  double R;
+  double estimated_scale_;
+  double p_;
+  double q_;
+  double r_;
 
   diagnostic_updater::Updater updater_;
 

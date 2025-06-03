@@ -12,5 +12,5 @@
     max_allowed_scale: 10.0 # maximum allowed scale
     scale_on_purpose: 1.0 # scale to apply on purpose
     bias_on_purpose: 0.0 # bias to apply on purpose
-    drift_scale: 0.0 # 0.0001 # scale to apply on purpose for drift
-    drift_bias: 0.0 # 0.000001 # bias to apply on purpose for drift
+    drift_scale: 0.00000 # 0.0001 # scale to apply on purpose for drift
+    drift_bias: 0.000000 # 0.000001 # bias to apply on purpose for drift

@@ -6,7 +6,6 @@
   <arg name="output_gyro_bias" default="gyro_bias"/>
   <arg name="output_gyro_scale" default="gyro_scale"/>
   <arg name="output_imu_scaled" default="imu_scaled"/>
-  <arg name="output_imu_scaled_flipped" default="imu_scaled_flipped"/>
   <arg name="gyro_bias_estimator_param_file" default="$(find-pkg-share autoware_imu_corrector)/config/gyro_bias_estimator.param.yaml"/>
   <arg name="imu_corrector_param_file" default="$(find-pkg-share autoware_imu_corrector)/config/imu_corrector.param.yaml"/>
   <arg name="gyro_scale_estimator_param_file" default="$(find-pkg-share autoware_imu_corrector)/config/gyro_scale_estimator.param.yaml"/>
@@ -18,7 +17,6 @@
     <remap from="~/output/gyro_bias" to="$(var output_gyro_bias)"/>
     <remap from="~/output/gyro_scale" to="$(var output_gyro_scale)"/>
     <remap from="~/output/imu_scaled" to="$(var output_imu_scaled)"/>
-    <remap from="~/output/imu_scaled_flipped" to="$(var output_imu_scaled_flipped)"/>
     <param from="$(var gyro_bias_estimator_param_file)"/>
     <param from="$(var imu_corrector_param_file)"/>
     <param from="$(var gyro_scale_estimator_param_file)"/>
