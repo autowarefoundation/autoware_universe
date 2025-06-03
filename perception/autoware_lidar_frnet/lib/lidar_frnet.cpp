@@ -163,7 +163,6 @@ bool LidarFRNet::preprocess(
     proj_2d_d.get(),
     preprocessing_params_.interpolation.w * preprocessing_params_.interpolation.h * 4, stream_);
 
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   CHECK_CUDA_ERROR(preprocess_ptr_->projectPoints_launch(
     cloud_in_d.get(), input_num_points, num_points_d.get(), points_d_.get(), coors_d_.get(),
     coors_keys_d.get(), proj_idxs_d.get(), proj_2d_d.get()));
