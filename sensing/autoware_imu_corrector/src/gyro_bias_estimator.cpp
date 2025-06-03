@@ -203,6 +203,12 @@ void GyroBiasEstimator::callback_odom(const Odometry::ConstSharedPtr odom_msg_pt
 void GyroBiasEstimator::callback_pose_msg(
   const PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr)
 {
+  estimate_scale_gyro(pose_msg_ptr);
+}
+
+
+void GyroBiasEstimator::estimate_scale_gyro(const PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr)
+{
   double dt = (this->get_clock()->now() - last_time_rx_pose_).seconds();
   last_time_rx_pose_ = this->get_clock()->now();
   auto pose_frame = pose_msg_ptr->header.frame_id;
@@ -236,18 +242,14 @@ void GyroBiasEstimator::callback_pose_msg(
   double unwrapped_angle = yaw_ndt;
   double delta_angle = yaw_ndt - previous_yaw_angle_;
 
-  // Wrapping angle in case of big jumps
-  if (delta_angle > 180.0) {
-    unwrapped_angle -= 360.0;
-  } else if (delta_angle < -180.0) {
-    unwrapped_angle += 360.0;
-  }
+  unwrapped_angle = GyroBiasEstimationModule::wrap_angle(delta_angle, unwrapped_angle);
 
   ndt_yaw_rate_ = (unwrapped_angle - previous_yaw_angle_) / dt;
 
   previous_yaw_angle_ = unwrapped_angle;
 
   if (gyro_bias_.has_value()) {
+    // EKF update
     auto h = ndt_yaw_rate_;
     // auto y = gyro_yaw_rate_ - (estimated_scale_ * ndt_yaw_rate_ + gyro_bias_.value().z);
     auto y = gyro_yaw_rate_ - (estimated_scale_ * ndt_yaw_rate_ - gyro_bias_.value().z);
@@ -271,10 +273,11 @@ void GyroBiasEstimator::callback_pose_msg(
     }
 
     vector_scale.header.stamp = this->now();
-    vector_scale.vector.z = previous_scale_;
+
     // Scale on x , y axis is not estimated, but set to 1.0 for consistency
     vector_scale.vector.x = 1.0;
     vector_scale.vector.y = 1.0;
+    vector_scale.vector.z = previous_scale_;
     gyro_scale_pub_->publish(vector_scale);
     diagnostics_info_.estimated_gyro_scale_z = estimated_scale_;
     scale_list_all_.push_back(estimated_scale_);
@@ -283,7 +286,7 @@ void GyroBiasEstimator::callback_pose_msg(
       const std::vector<double> scale_all = scale_list_all_;
       scale_list_all_.clear();
       double mean_scale_window =
-        std::accumulate(scale_all.begin(), scale_all.end(), 0.0) / scale_all.size();
+        std::accumulate(scale_all.begin(), scale_all.end(), 0.0) / static_cast<double>(scale_all.size());
       start_time_check_scale_ = this->get_clock()->now();
 
       if (
@@ -297,7 +300,7 @@ void GyroBiasEstimator::callback_pose_msg(
           gyro_info_.scale_status = diagnostic_msgs::msg::DiagnosticStatus::WARN;
           gyro_info_.scale_status_summary = "WARN";
           gyro_info_.scale_summary_message = "Scale changed too much in a short time.";
-          previous_scale_ = estimated_scale_;
+          previous_scale_ = mean_scale_window; // estimated_scale_;
           window_scale_change_ = 0;
         }
       } else {

@@ -49,6 +49,7 @@ private:
   void callback_imu(const Imu::ConstSharedPtr imu_msg_ptr);
   void callback_odom(const Odometry::ConstSharedPtr odom_msg_ptr);
   void callback_pose_msg(const PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr);
+  void estimate_scale_gyro(const PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr);
   void timer_callback();
   void validate_gyro_bias();
 
