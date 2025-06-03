@@ -16,6 +16,7 @@
 #define AUTOWARE__PLANNING_VALIDATOR_COLLISION_CHECKER__TYPES_HPP_
 
 #include <autoware/route_handler/route_handler.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
@@ -32,6 +33,7 @@ using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using lanelet::BasicLineString2d;
 using lanelet::BasicPolygon2d;
+using lanelet::BasicPolygons2d;
 using lanelet::ConstLanelet;
 using lanelet::ConstLanelets;
 using route_handler::Direction;
@@ -43,15 +45,39 @@ struct TargetLanelet
 {
   lanelet::Id id;
   lanelet::ConstLanelets lanelets;
-  geometry_msgs::msg::Point first_overlap_point;
+  geometry_msgs::msg::Point overlap_point;
+  double ego_time_to_reach{};
+
+  TargetLanelet() = default;
+  TargetLanelet(
+    lanelet::Id id, const lanelet::ConstLanelets & lanelets,
+    const geometry_msgs::msg::Point & overlap_point, const double ego_time_to_reach)
+  : id(id), lanelets(lanelets), overlap_point(overlap_point), ego_time_to_reach(ego_time_to_reach)
+  {
+  }
 };
+
+using TargetLanelets = std::vector<TargetLanelet>;
 
 struct CollisionCheckerLanelets
 {
   lanelet::ConstLanelets trajectory_lanelets;
   lanelet::ConstLanelets connected_lanelets;
-  lanelet::ConstLanelets target_lanelets;
+  TargetLanelets target_lanelets;
 };
+
+struct PCDObject
+{
+  rclcpp::Time last_update_time;
+  geometry_msgs::msg::Pose pose;
+  lanelet::Id overlap_lanelet_id;
+  double track_duration{};
+  double distance_to_overlap{};
+  double velocity{};
+  double ttc{};
+};
+
+using PCDObjectsMap = std::unordered_map<lanelet::Id, PCDObject>;
 
 struct DirectionCheckFlags
 {

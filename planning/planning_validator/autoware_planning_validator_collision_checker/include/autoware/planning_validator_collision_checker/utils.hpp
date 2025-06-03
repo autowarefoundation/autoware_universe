@@ -23,12 +23,6 @@
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 
-#include <boost/geometry/algorithms/buffer.hpp>
-#include <boost/geometry/algorithms/disjoint.hpp>
-#include <boost/geometry/algorithms/envelope.hpp>
-#include <boost/geometry/algorithms/union.hpp>
-#include <boost/geometry/strategies/cartesian/buffer_point_square.hpp>
-
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/geometry/BoundingBox.h>
@@ -51,7 +45,8 @@ void set_right_turn_target_lanelets(
   CollisionCheckerLanelets & lanelets);
 
 void set_left_turn_target_lanelets(
-  const RouteHandler & route_handler, CollisionCheckerLanelets & lanelets);
+  const RouteHandler & route_handler, const TrajectoryPoints & trajectory_points,
+  CollisionCheckerLanelets & lanelets);
 
 }  // namespace autoware::planning_validator::collision_checker_utils
 

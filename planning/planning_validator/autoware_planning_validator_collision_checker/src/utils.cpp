@@ -16,6 +16,13 @@
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 
+#include <boost/geometry/algorithms/buffer.hpp>
+#include <boost/geometry/algorithms/disjoint.hpp>
+#include <boost/geometry/algorithms/envelope.hpp>
+#include <boost/geometry/algorithms/intersection.hpp>
+#include <boost/geometry/algorithms/union.hpp>
+#include <boost/geometry/strategies/cartesian/buffer_point_square.hpp>
+
 namespace autoware::planning_validator::collision_checker_utils
 {
 
@@ -67,6 +74,24 @@ void set_trajectory_lanelets(
   }
 }
 
+std::optional<size_t> get_overlap_index(
+  const lanelet::ConstLanelet & ll, const TrajectoryPoints & trajectory_points,
+  const autoware_utils::LineString2d & trajectory_ls)
+{
+  BasicLineString2d overlap_line;
+  boost::geometry::intersection(trajectory_ls, ll.polygon2d().basicPolygon(), overlap_line);
+  if (overlap_line.empty()) return {};
+
+  const auto nearest_idx_front = autoware::motion_utils::findNearestIndex(
+    trajectory_points,
+    geometry_msgs::msg::Point().set__x(overlap_line.front()[0]).set__y(overlap_line.front()[1]));
+  const auto nearest_idx_back = autoware::motion_utils::findNearestIndex(
+    trajectory_points,
+    geometry_msgs::msg::Point().set__x(overlap_line.back()[0]).set__y(overlap_line.back()[1]));
+
+  return std::min(nearest_idx_front, nearest_idx_back);
+}
+
 void set_right_turn_target_lanelets(
   const TrajectoryPoints & trajectory_points, const RouteHandler & route_handler,
   CollisionCheckerLanelets & lanelets)
@@ -88,16 +113,22 @@ void set_right_turn_target_lanelets(
   for (const auto & ll : candidates) {
     const auto id = ll.id();
     if (
-      is_road(ll) && !boost::geometry::disjoint(trajectory_ls, ll.polygon2d().basicPolygon()) &&
-      !contains_lanelet(lanelets.trajectory_lanelets, id) &&
+      is_road(ll) && !contains_lanelet(lanelets.trajectory_lanelets, id) &&
       !contains_lanelet(lanelets.connected_lanelets, id)) {
-      lanelets.target_lanelets.push_back(ll);
+      const auto overlap_index = get_overlap_index(ll, trajectory_points, trajectory_ls);
+      if (!overlap_index) continue;
+      const auto overlap_point = trajectory_points[*overlap_index].pose.position;
+      const auto time_to_reach =
+        rclcpp::Duration(trajectory_points[*overlap_index].time_from_start).seconds();
+      lanelets.target_lanelets.emplace_back(
+        ll.id(), lanelet::ConstLanelets{ll}, overlap_point, time_to_reach);
     }
   }
 }
 
 void set_left_turn_target_lanelets(
-  const RouteHandler & route_handler, CollisionCheckerLanelets & lanelets)
+  const RouteHandler & route_handler, const TrajectoryPoints & trajectory_points,
+  CollisionCheckerLanelets & lanelets)
 {
   std::optional<lanelet::ConstLanelet> turn_lanelet;
   for (const auto & lanelet : lanelets.trajectory_lanelets) {
@@ -117,10 +148,21 @@ void set_left_turn_target_lanelets(
   lanelet::ConstLanelet next_lanelet;
   if (!route_handler.getNextLaneletWithinRoute(*turn_lanelet, &next_lanelet)) return;
 
+  autoware_utils::LineString2d trajectory_ls;
+  for (const auto & p : trajectory_points) {
+    trajectory_ls.emplace_back(p.pose.position.x, p.pose.position.y);
+  }
+
   const auto turn_lanelet_id = turn_lanelet->id();
   for (const auto & lanelet : route_handler.getPreviousLanelets(next_lanelet)) {
     if (lanelet.id() == turn_lanelet_id) continue;
-    lanelets.target_lanelets.push_back(lanelet);
+    const auto overlap_index = get_overlap_index(lanelet, trajectory_points, trajectory_ls);
+    if (!overlap_index) continue;
+    const auto overlap_point = trajectory_points[*overlap_index].pose.position;
+    const auto time_to_reach =
+      rclcpp::Duration(trajectory_points[*overlap_index].time_from_start).seconds();
+    lanelets.target_lanelets.emplace_back(
+      lanelet.id(), lanelet::ConstLanelets{lanelet}, overlap_point, time_to_reach);
   }
 }
 

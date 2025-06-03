@@ -65,9 +65,24 @@ private:
   void filter_pointcloud(
     PointCloud2::ConstSharedPtr & input, PointCloud::Ptr & filtered_point_cloud) const;
 
+  void get_points_within(
+    const PointCloud::Ptr & input, const BasicPolygon2d & polygon,
+    const PointCloud::Ptr & output) const;
+
+  void cluster_pointcloud(const PointCloud::Ptr & input, PointCloud::Ptr & output) const;
+
   void set_lanelets_debug_marker(const CollisionCheckerLanelets & lanelets) const;
 
+  bool check_collision(
+    const TargetLanelets & target_lanelets, const PointCloud::Ptr & filtered_point_cloud,
+    const rclcpp::Time & time_stamp);
+
+  std::optional<PCDObject> get_pcd_object(
+    const rclcpp::Time & time_stamp, const PointCloud::Ptr & filtered_point_cloud,
+    const TargetLanelet & target_lanelet) const;
+
   CollisionCheckerParams params_;
+  PCDObjectsMap history_;
 };
 
 }  // namespace autoware::planning_validator

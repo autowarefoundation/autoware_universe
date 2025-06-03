@@ -78,6 +78,18 @@ void PlanningValidatorDebugMarkerPublisher::pushPoseMarker(
   marker_array_.markers.push_back(marker);
 }
 
+void PlanningValidatorDebugMarkerPublisher::pushPointMarker(
+  const geometry_msgs::msg::Point & point, const std::string & ns, int id)
+{
+  Marker marker = autoware_utils::create_default_marker(
+    "map", node_->get_clock()->now(), ns, getMarkerId(ns), Marker::SPHERE,
+    autoware_utils::create_marker_scale(0.3, 0.3, 0.3), getColorFromId(id));
+  marker.lifetime = rclcpp::Duration::from_seconds(0.2);
+  marker.pose.position = point;
+
+  marker_array_.markers.push_back(marker);
+}
+
 void PlanningValidatorDebugMarkerPublisher::pushWarningMsg(
   const geometry_msgs::msg::Pose & pose, const std::string & msg)
 {
