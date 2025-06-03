@@ -28,6 +28,19 @@ namespace autoware::lidar_frnet::utils
 constexpr uint32_t kernel_1d_size = 256;
 constexpr uint32_t kernel_2d_size = 16;
 
+struct ActiveComm
+{
+  ActiveComm(const bool is_seg_active, const bool is_viz_active, const bool is_filtered_active)
+  : seg(is_seg_active), viz(is_viz_active), filtered(is_filtered_active)
+  {
+  }
+  bool seg;
+  bool viz;
+  bool filtered;
+
+  explicit operator bool() const { return seg || viz || filtered; }
+};
+
 struct Dims2d
 {
   Dims2d() = default;

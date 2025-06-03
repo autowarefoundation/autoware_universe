@@ -32,8 +32,9 @@ public:
 
   cudaError_t fillCloud_launch(
     const InputPointType * cloud, const float * seg_logit, const int32_t num_points,
-    uint32_t * output_num_points_filtered, OutputSegmentationPointType * output_cloud_seg,
-    OutputVisualizationPointType * output_cloud_viz, InputPointType * output_cloud_filtered);
+    const utils::ActiveComm & active_comm, uint32_t * output_num_points_filtered,
+    OutputSegmentationPointType * output_cloud_seg, OutputVisualizationPointType * output_cloud_viz,
+    InputPointType * output_cloud_filtered);
 
 private:
   cudaStream_t stream_;

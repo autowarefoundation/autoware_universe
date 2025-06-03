@@ -83,7 +83,7 @@ LidarFRNet::LidarFRNet(
 bool LidarFRNet::process(
   const sensor_msgs::msg::PointCloud2 & cloud_in, sensor_msgs::msg::PointCloud2 & cloud_seg_out,
   sensor_msgs::msg::PointCloud2 & cloud_viz_out, sensor_msgs::msg::PointCloud2 & cloud_filtered,
-  std::unordered_map<std::string, double> & proc_timing)
+  const utils::ActiveComm & active_comm, std::unordered_map<std::string, double> & proc_timing)
 {
   stop_watch_ptr_->toc("processing/inner", true);
   std::call_once(init_cloud_, [&cloud_in]() {
@@ -127,7 +127,7 @@ bool LidarFRNet::process(
   proc_timing.emplace(
     "debug/processing_time/inference_ms", stop_watch_ptr_->toc("processing/inner", true));
 
-  if (!postprocess(input_num_points, cloud_seg_out, cloud_viz_out, cloud_filtered)) {
+  if (!postprocess(input_num_points, active_comm, cloud_seg_out, cloud_viz_out, cloud_filtered)) {
     RCLCPP_ERROR(logger_, "Postprocess failed.");
     return false;
   }
@@ -212,8 +212,9 @@ bool LidarFRNet::inference()
 }
 
 bool LidarFRNet::postprocess(
-  const uint32_t input_num_points, sensor_msgs::msg::PointCloud2 & cloud_seg_out,
-  sensor_msgs::msg::PointCloud2 & cloud_viz_out, sensor_msgs::msg::PointCloud2 & cloud_filtered)
+  const uint32_t input_num_points, const utils::ActiveComm & active_comm,
+  sensor_msgs::msg::PointCloud2 & cloud_seg_out, sensor_msgs::msg::PointCloud2 & cloud_viz_out,
+  sensor_msgs::msg::PointCloud2 & cloud_filtered)
 {
   cuda_utils::clear_async(seg_data_d_.get(), network_params_.num_points_profile.max, stream_);
   cuda_utils::clear_async(viz_data_d_.get(), network_params_.num_points_profile.max, stream_);
@@ -221,28 +222,37 @@ bool LidarFRNet::postprocess(
   cuda_utils::clear_async(num_points_filtered_d_.get(), 1, stream_);
   uint32_t num_points_filtered{0};
 
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   CHECK_CUDA_ERROR(postprocess_ptr_->fillCloud_launch(
-    cloud_in_d_.get(), seg_logit_d_.get(), input_num_points, num_points_filtered_d_.get(),
-    seg_data_d_.get(), viz_data_d_.get(), cloud_filtered_d_.get()));
+    cloud_in_d_.get(), seg_logit_d_.get(), input_num_points, active_comm,
+    num_points_filtered_d_.get(), seg_data_d_.get(), viz_data_d_.get(), cloud_filtered_d_.get()));
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    cloud_seg_out.data.data(), seg_data_d_.get(),
-    sizeof(OutputSegmentationPointType) * input_num_points, cudaMemcpyDeviceToHost, stream_));
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    cloud_viz_out.data.data(), viz_data_d_.get(),
-    sizeof(OutputVisualizationPointType) * input_num_points, cudaMemcpyDeviceToHost, stream_));
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    &num_points_filtered, num_points_filtered_d_.get(), sizeof(uint32_t), cudaMemcpyDeviceToHost,
-    stream_));
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    cloud_filtered.data.data(), cloud_filtered_d_.get(),
-    sizeof(InputPointType) * num_points_filtered, cudaMemcpyDeviceToHost, stream_));
-  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
-  cloud_filtered.data.resize(num_points_filtered * cloud_filtered.point_step);
-  cloud_filtered.width = num_points_filtered;
-  cloud_filtered.row_step = num_points_filtered * cloud_filtered.point_step;
 
+  if (active_comm.seg) {
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(
+      cloud_seg_out.data.data(), seg_data_d_.get(),
+      sizeof(OutputSegmentationPointType) * input_num_points, cudaMemcpyDeviceToHost, stream_));
+  }
+
+  if (active_comm.viz) {
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(
+      cloud_viz_out.data.data(), viz_data_d_.get(),
+      sizeof(OutputVisualizationPointType) * input_num_points, cudaMemcpyDeviceToHost, stream_));
+  }
+
+  if (active_comm.filtered) {
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(
+      &num_points_filtered, num_points_filtered_d_.get(), sizeof(uint32_t), cudaMemcpyDeviceToHost,
+      stream_));
+    CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+    CHECK_CUDA_ERROR(cudaMemcpyAsync(
+      cloud_filtered.data.data(), cloud_filtered_d_.get(),
+      sizeof(InputPointType) * num_points_filtered, cudaMemcpyDeviceToHost, stream_));
+    CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+    cloud_filtered.data.resize(num_points_filtered * cloud_filtered.point_step);
+    cloud_filtered.width = num_points_filtered;
+    cloud_filtered.row_step = num_points_filtered * cloud_filtered.point_step;
+  }
   return true;
 }
 

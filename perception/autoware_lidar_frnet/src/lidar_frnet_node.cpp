@@ -104,13 +104,18 @@ void LidarFRNetNode::cloudCallback(const sensor_msgs::msg::PointCloud2::ConstSha
     stop_watch_ptr_->toc("processing/total", true);
   }
 
-  const auto objects_sub_count = cloud_seg_pub_->get_subscription_count() +
-                                 cloud_seg_pub_->get_intra_process_subscription_count() +
-                                 cloud_viz_pub_->get_subscription_count() +
-                                 cloud_viz_pub_->get_intra_process_subscription_count() +
-                                 cloud_filtered_pub_->get_subscription_count() +
-                                 cloud_filtered_pub_->get_intra_process_subscription_count();
-  if (objects_sub_count < 1) {
+  const auto active_comm = utils::ActiveComm(
+    cloud_seg_pub_->get_subscription_count() +
+        cloud_seg_pub_->get_intra_process_subscription_count() >
+      0,
+    cloud_viz_pub_->get_subscription_count() +
+        cloud_viz_pub_->get_intra_process_subscription_count() >
+      0,
+    cloud_filtered_pub_->get_subscription_count() +
+        cloud_filtered_pub_->get_intra_process_subscription_count() >
+      0);
+
+  if (!active_comm) {
     return;
   }
 
@@ -119,7 +124,9 @@ void LidarFRNetNode::cloudCallback(const sensor_msgs::msg::PointCloud2::ConstSha
   auto cloud_viz_msg = ros_utils::getMsgFromLayout(*msg, cloud_viz_layout_);
   auto cloud_filtered_msg = ros_utils::getMsgFromLayout(*msg, cloud_filtered_layout_);
 
-  if (!frnet_->process(*msg, cloud_seg_msg, cloud_viz_msg, cloud_filtered_msg, proc_timing)) return;
+  if (!frnet_->process(
+        *msg, cloud_seg_msg, cloud_viz_msg, cloud_filtered_msg, active_comm, proc_timing))
+    return;
 
   cloud_seg_pub_->publish(cloud_seg_msg);
   cloud_viz_pub_->publish(cloud_viz_msg);

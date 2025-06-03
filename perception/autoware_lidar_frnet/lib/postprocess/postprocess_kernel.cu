@@ -51,6 +51,7 @@ PostprocessCuda::PostprocessCuda(const utils::PostprocessingParams & params, cud
 
 __global__ void fillCloud_kernel(
   const InputPointType * cloud, const float * seg_logit, const uint32_t num_points,
+  const bool active_comm_seg, const bool active_comm_viz, const bool active_comm_filtered,
   uint32_t * output_num_points_filtered, OutputSegmentationPointType * output_cloud_seg,
   OutputVisualizationPointType * output_cloud_viz, InputPointType * output_cloud_filtered)
 {
@@ -61,14 +62,6 @@ __global__ void fillCloud_kernel(
 
   const auto & point = cloud[point_idx];
   const uint32_t pred_idx = point_idx * const_num_classes;
-
-  output_cloud_seg[point_idx].x = point.x;
-  output_cloud_seg[point_idx].y = point.y;
-  output_cloud_seg[point_idx].z = point.z;
-
-  output_cloud_viz[point_idx].x = point.x;
-  output_cloud_viz[point_idx].y = point.y;
-  output_cloud_viz[point_idx].z = point.z;
 
   float best_score = -1e9;
   uint32_t class_id = const_num_classes - 1;
@@ -82,42 +75,55 @@ __global__ void fillCloud_kernel(
     }
   }
 
-  // Check if the class is excluded
-  bool excluded = false;
-  for (uint32_t i = 0; i < const_num_classes_excluded; i++) {
-    if (const_excluded_class_idxs[i] == class_id && best_score >= const_score_threshold) {
-      excluded = true;
-      break;
+  // Assign points to selected outputs only
+  if (active_comm_seg) {
+    output_cloud_seg[point_idx].x = point.x;
+    output_cloud_seg[point_idx].y = point.y;
+    output_cloud_seg[point_idx].z = point.z;
+    output_cloud_seg[point_idx].class_id = best_score >= const_score_threshold
+                                             ? static_cast<uint8_t>(class_id)
+                                             : static_cast<uint8_t>(const_num_classes - 1);
+  }
+
+  if (active_comm_viz) {
+    output_cloud_viz[point_idx].x = point.x;
+    output_cloud_viz[point_idx].y = point.y;
+    output_cloud_viz[point_idx].z = point.z;
+    output_cloud_viz[point_idx].rgb = best_score >= const_score_threshold
+                                        ? const_palette[class_id]
+                                        : const_palette[const_num_classes - 1];
+  }
+
+  if (active_comm_filtered) {
+    // Check if the class is excluded
+    bool excluded = false;
+    for (uint32_t i = 0; i < const_num_classes_excluded; i++) {
+      if (const_excluded_class_idxs[i] == class_id && best_score >= const_score_threshold) {
+        excluded = true;
+        break;
+      }
     }
-  }
 
-  // Process non-excluded points
-  if (!excluded) {
-    const uint32_t append_idx = atomicAdd(output_num_points_filtered, 1);
-    output_cloud_filtered[append_idx] = point;
-  }
-
-  // Assign visualization and segmentation outputs
-  if (best_score >= const_score_threshold) {
-    output_cloud_viz[point_idx].rgb = const_palette[class_id];
-    output_cloud_seg[point_idx].class_id = static_cast<uint8_t>(class_id);
-  } else {
-    output_cloud_viz[point_idx].rgb = const_palette[const_num_classes - 1];
-    output_cloud_seg[point_idx].class_id = static_cast<uint8_t>(const_num_classes - 1);
+    // Process non-excluded points
+    if (!excluded) {
+      const uint32_t append_idx = atomicAdd(output_num_points_filtered, 1);
+      output_cloud_filtered[append_idx] = point;
+    }
   }
 }
 
 cudaError_t PostprocessCuda::fillCloud_launch(
   const InputPointType * cloud, const float * seg_logit, const int32_t input_num_points,
-  uint32_t * output_num_points_filtered, OutputSegmentationPointType * output_cloud_seg,
-  OutputVisualizationPointType * output_cloud_viz, InputPointType * output_cloud_filtered)
+  const utils::ActiveComm & active_comm, uint32_t * output_num_points_filtered,
+  OutputSegmentationPointType * output_cloud_seg, OutputVisualizationPointType * output_cloud_viz,
+  InputPointType * output_cloud_filtered)
 {
   dim3 block(utils::divup(input_num_points, utils::kernel_1d_size));
   dim3 threads(utils::kernel_1d_size);
 
   fillCloud_kernel<<<block, threads, 0, stream_>>>(
-    cloud, seg_logit, input_num_points, output_num_points_filtered, output_cloud_seg,
-    output_cloud_viz, output_cloud_filtered);
+    cloud, seg_logit, input_num_points, active_comm.seg, active_comm.viz, active_comm.filtered,
+    output_num_points_filtered, output_cloud_seg, output_cloud_viz, output_cloud_filtered);
 
   return cudaGetLastError();
 }

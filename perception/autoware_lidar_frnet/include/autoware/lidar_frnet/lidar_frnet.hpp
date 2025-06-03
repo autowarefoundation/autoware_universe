@@ -57,14 +57,15 @@ public:
   bool process(
     const sensor_msgs::msg::PointCloud2 & cloud_in, sensor_msgs::msg::PointCloud2 & cloud_seg_out,
     sensor_msgs::msg::PointCloud2 & cloud_viz_out, sensor_msgs::msg::PointCloud2 & cloud_filtered,
-    std::unordered_map<std::string, double> & proc_timing);
+    const utils::ActiveComm & active_comm, std::unordered_map<std::string, double> & proc_timing);
 
 private:
   bool preprocess(const uint32_t input_num_points);
   bool inference();
   bool postprocess(
-    const uint32_t input_num_points, sensor_msgs::msg::PointCloud2 & cloud_seg_out,
-    sensor_msgs::msg::PointCloud2 & cloud_viz_out, sensor_msgs::msg::PointCloud2 & cloud_filtered);
+    const uint32_t input_num_points, const utils::ActiveComm & active_comm,
+    sensor_msgs::msg::PointCloud2 & cloud_seg_out, sensor_msgs::msg::PointCloud2 & cloud_viz_out,
+    sensor_msgs::msg::PointCloud2 & cloud_filtered);
   void initTensors();
 
   std::once_flag init_cloud_;
