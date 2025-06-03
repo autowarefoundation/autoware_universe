@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<library path="tier4_control_mode_rviz_plugin">
+  <class name="rviz_plugins/ControlModeDisplay"
+         type="rviz_plugins::ControlModeDisplay"
+         base_class_type="rviz_common::Panel">
+    <description>
+      A panel for displaying the control mode of the vehicle.
+    </description>
+  </class>
+</library>
