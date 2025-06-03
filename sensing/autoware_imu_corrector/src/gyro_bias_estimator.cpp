@@ -200,9 +200,9 @@ void GyroBiasEstimator::callback_odom(const Odometry::ConstSharedPtr odom_msg_pt
   pose_buf_.push_back(pose);
 }
 
-void GyroBiasEstimator::callback_pose_msg(const PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr)
+void GyroBiasEstimator::callback_pose_msg(
+  const PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr)
 {
-
   double dt = (this->get_clock()->now() - last_time_rx_pose_).seconds();
   last_time_rx_pose_ = this->get_clock()->now();
   auto pose_frame = pose_msg_ptr->header.frame_id;
