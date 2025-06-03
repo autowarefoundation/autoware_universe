@@ -198,10 +198,13 @@ void cut_predicted_path_footprint(
     }
   }
   if ((!cut_time || t > cut_time) && (!cut_distance || dist > cut_distance)) {
-    footprint.predicted_path_footprint.corner_linestrings[front_left].resize(cut_index);
-    footprint.predicted_path_footprint.corner_linestrings[front_right].resize(cut_index);
-    footprint.predicted_path_footprint.corner_linestrings[rear_left].resize(cut_index);
-    footprint.predicted_path_footprint.corner_linestrings[rear_right].resize(cut_index);
+    constexpr auto extra_indexes = 6;
+    for (const auto pos : {front_left, front_right, rear_left, rear_right}) {
+      footprint.predicted_path_footprint.corner_linestrings[pos].resize(cut_index);
+      footprint.predicted_path_footprint.corner_linestrings[pos].resize(
+        cut_index + extra_indexes,
+        footprint.predicted_path_footprint.corner_linestrings[pos].back());
+    }
   }
 }
 
