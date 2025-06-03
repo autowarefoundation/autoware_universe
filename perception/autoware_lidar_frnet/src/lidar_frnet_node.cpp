@@ -29,9 +29,9 @@ namespace autoware::lidar_frnet
 {
 LidarFRNetNode::LidarFRNetNode(const rclcpp::NodeOptions & options)
 : Node("lidar_frnet", options),
-  cloud_seg_layout_msg_(ros_utils::generateSegmentationCloudMsg()),
-  cloud_viz_layout_msg_(ros_utils::generateVisualizationCloudMsg()),
-  cloud_filtered_layout_msg_(ros_utils::generateFilteredCloudMsg())
+  cloud_seg_layout_(ros_utils::generateSegmentationPointCloudLayout()),
+  cloud_viz_layout_(ros_utils::generateVisualizationPointCloudLayout()),
+  cloud_filtered_layout_(ros_utils::generateFilteredPointCloudLayout())
 {
   auto class_names = declare_parameter<std::vector<std::string>>("class_names");
 
@@ -115,9 +115,9 @@ void LidarFRNetNode::cloudCallback(const sensor_msgs::msg::PointCloud2::ConstSha
   }
 
   std::unordered_map<std::string, double> proc_timing;
-  auto cloud_seg_msg = ros_utils::getMsgFromLayout(*msg, cloud_seg_layout_msg_);
-  auto cloud_viz_msg = ros_utils::getMsgFromLayout(*msg, cloud_viz_layout_msg_);
-  auto cloud_filtered_msg = ros_utils::getMsgFromLayout(*msg, cloud_filtered_layout_msg_);
+  auto cloud_seg_msg = ros_utils::getMsgFromLayout(*msg, cloud_seg_layout_);
+  auto cloud_viz_msg = ros_utils::getMsgFromLayout(*msg, cloud_viz_layout_);
+  auto cloud_filtered_msg = ros_utils::getMsgFromLayout(*msg, cloud_filtered_layout_);
 
   if (!frnet_->process(*msg, cloud_seg_msg, cloud_viz_msg, cloud_filtered_msg, proc_timing)) return;
 

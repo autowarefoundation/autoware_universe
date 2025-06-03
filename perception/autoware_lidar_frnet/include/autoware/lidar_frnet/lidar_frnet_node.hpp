@@ -16,6 +16,7 @@
 #define AUTOWARE__LIDAR_FRNET__LIDAR_FRNET_NODE_HPP_
 
 #include "autoware/lidar_frnet/lidar_frnet.hpp"
+#include "autoware/lidar_frnet/ros_utils.hpp"
 #include "autoware/lidar_frnet/utils.hpp"
 #include "autoware/lidar_frnet/visibility_control.hpp"
 
@@ -54,9 +55,9 @@ private:
   std::unique_ptr<LidarFRNet> frnet_{nullptr};
   std::unique_ptr<diagnostic_updater::Updater> diag_updater_{nullptr};
 
-  const sensor_msgs::msg::PointCloud2 cloud_seg_layout_msg_;
-  const sensor_msgs::msg::PointCloud2 cloud_viz_layout_msg_;
-  const sensor_msgs::msg::PointCloud2 cloud_filtered_layout_msg_;
+  const ros_utils::PointCloudLayout cloud_seg_layout_;
+  const ros_utils::PointCloudLayout cloud_viz_layout_;
+  const ros_utils::PointCloudLayout cloud_filtered_layout_;
 
   utils::DiagnosticParams diag_params_{};
   std::optional<double> last_processing_time_ms_;
