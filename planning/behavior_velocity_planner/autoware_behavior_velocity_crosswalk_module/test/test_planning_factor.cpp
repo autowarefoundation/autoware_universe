@@ -39,6 +39,24 @@ std::string get_absolute_path_to_test_config(
 namespace autoware::behavior_velocity_planner
 {
 
+template <class T>
+T loadMessageInYaml(
+  const std::string & yaml_file, std::vector<std::string> corrupted_check_list = {})
+{
+  const auto yaml_path = autoware::test_utils::get_absolute_path_to_test_config(
+    "autoware_behavior_velocity_crosswalk_module", yaml_file);
+
+  YAML::Node node = YAML::LoadFile(yaml_path);
+  for (auto & word : corrupted_check_list) {
+    if (node[word].IsNull()) {
+      throw std::runtime_error(
+        "Failed to parse YAML file: " + yaml_path + ". The file might be corrupted.");
+    }
+  }
+
+  return autoware::test_utils::parse<T>(node);
+}
+
 PathWithLaneId loadPathWithLaneIdInYaml()
 {
   const auto yaml_path = autoware::test_utils::get_absolute_path_to_test_config(
@@ -54,32 +72,15 @@ PathWithLaneId loadPathWithLaneIdInYaml()
 
 nav_msgs::msg::Odometry loadOdometryInYaml()
 {
-  const auto yaml_path = autoware::test_utils::get_absolute_path_to_test_config(
-    "autoware_behavior_velocity_crosswalk_module", "vehicle_odometry_data.yaml");
-
-  YAML::Node node = YAML::LoadFile(yaml_path);
-  if (!node["pose"]) {
-    throw std::runtime_error(
-      "Failed to parse YAML file: " + yaml_path + ". The file might be corrupted.");
-  }
-
-  return autoware::test_utils::parse<nav_msgs::msg::Odometry>(node);
+  return loadMessageInYaml<nav_msgs::msg::Odometry>("vehicle_odometry_data.yaml", {"pose"});
 }
 
 PredictedObjects loadPathObjectsInYaml()
 {
-  const auto yaml_path = autoware::test_utils::get_absolute_path_to_test_config(
-    "autoware_behavior_velocity_crosswalk_module", "dynamic_objects_data.yaml");
-
-  YAML::Node node = YAML::LoadFile(yaml_path);
-  if (!node["objects"]) {
-    throw std::runtime_error(
-      "Failed to parse YAML file: " + yaml_path + ". The file might be corrupted.");
-  }
-  return autoware::test_utils::parse<PredictedObjects>(node);
+  return loadMessageInYaml<PredictedObjects>("dynamic_objects_data.yaml", {"objects"});
 }
 
-TEST(PlanningModuleInterfaceTest, PlanningFactorTest)
+TEST(PlanningFactorTest, NodeTestWithPredictedObjects)
 {
   rclcpp::init(0, nullptr);
 
@@ -100,10 +101,13 @@ TEST(PlanningModuleInterfaceTest, PlanningFactorTest)
   const rclcpp::Node::SharedPtr test_node = test_manager->getTestNode();
   RCLCPP_INFO(rclcpp::get_logger("test_node"), "test");
 
+  autoware_internal_planning_msgs::msg::PlanningFactorArray::SharedPtr planning_factor_msg;
   const auto test_sub =
     test_node->create_subscription<autoware_internal_planning_msgs::msg::PlanningFactorArray>(
       output_planning_factors_topic, rclcpp::QoS{1},
-      [](const autoware_internal_planning_msgs::msg::PlanningFactorArray::SharedPtr msg) {
+      [&planning_factor_msg](
+        autoware_internal_planning_msgs::msg::PlanningFactorArray::SharedPtr msg) {
+        planning_factor_msg = msg;
         RCLCPP_INFO(
           rclcpp::get_logger("test_node"), "Received PlanningFactorArray with %zu factors",
           msg->factors.size());
@@ -170,8 +174,23 @@ TEST(PlanningModuleInterfaceTest, PlanningFactorTest)
   for (size_t i = 0; i < retry_count; ++i) {
     test_manager->publishInput(test_target_node, input_dynamic_objects_topic, objects, 1);
     test_manager->publishInput(test_target_node, input_odometry_topic, odometry, 1);
-    test_manager->publishInput(test_target_node, input_path_with_lane_id_topic, path, 2);
+    test_manager->publishInput(test_target_node, input_path_with_lane_id_topic, path, 1);
   }
+
+  // make sure planning_factor_msg is received
+  EXPECT_NE(planning_factor_msg, nullptr);
+
+  // check the size of factors
+  EXPECT_GT(planning_factor_msg->factors.size(), 0);
+  size_t total_safety_factors = 0;
+  for (auto & factor : planning_factor_msg->factors) {
+    // make sure detail is not empty
+    EXPECT_NE(factor.detail, "");
+
+    // make sure safety_factors is not empty
+    total_safety_factors += factor.safety_factors.factors.size();
+  }
+  EXPECT_GT(total_safety_factors, 0);
 
   // make sure behavior_path_planner is running
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);

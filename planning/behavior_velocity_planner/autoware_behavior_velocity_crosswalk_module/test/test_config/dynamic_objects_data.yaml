@@ -78,8 +78,10 @@ objects:
       initial_twist_with_covariance:
         twist:
           linear:
-            x: 0.014864897303520171
-            y: 0.0
+            # x: 0.014864897303520171
+            # y: 0.0
+            x: -0.479129
+            y: -0.142953
             z: 0.0
           angular:
             x: 0.0
