@@ -76,10 +76,10 @@ void ControlModeDisplay::processMessage(
       bg_color = "#4CAF50";  // Green
       break;
     case 4:                  // MANUAL
-      bg_color = "#2196F3";  // Blue
+      bg_color = "#F44336";  // Red
       break;
     case 5:                  // DISENGAGED
-      bg_color = "#F44336";  // Red
+      bg_color = "#FF9800";  // Orange
       break;
     default:
       bg_color = "#333333";  // Dark gray

@@ -21,8 +21,8 @@ The background color changes according to the mode, enabling intuitive status re
 | AUTONOMOUS               | 1     | Green     | Autonomous driving mode          |
 | AUTONOMOUS_STEER_ONLY    | 2     | Dark Gray | Autonomous steering control only |
 | AUTONOMOUS_VELOCITY_ONLY | 3     | Dark Gray | Autonomous velocity control only |
-| MANUAL                   | 4     | Blue      | Manual driving mode              |
-| DISENGAGED               | 5     | Red       | Control disengaged state         |
+| MANUAL                   | 4     | Red       | Manual driving mode              |
+| DISENGAGED               | 5     | Orange    | Control disengaged state         |
 | NOT_READY                | 6     | Dark Gray | System not ready                 |
 
 ## How to Use
