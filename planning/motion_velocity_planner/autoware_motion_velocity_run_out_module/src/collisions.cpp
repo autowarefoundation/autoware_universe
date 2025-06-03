@@ -312,8 +312,11 @@ void calculate_overlapping_collision(
       c.explanation = " no collision will happen because object is faster and enter first";
     } else {
       // adjust the collision time based on the velocity difference
+      const auto near_zero_ego_vel = std::abs(ego.first_intersection.ego_vel) < 1e-3;
       const auto catchup_time =
-        (time_margin * ego.first_intersection.vel_diff) / ego.first_intersection.ego_vel;
+        near_zero_ego_vel
+          ? 0.0
+          : (time_margin * ego.first_intersection.vel_diff) / ego.first_intersection.ego_vel;
       c.ego_collision_time += catchup_time;
       std::stringstream ss;
       ss << std::setprecision(2) << "coll_t = ego_enter_time[" << ego.first_intersection.ego_time
