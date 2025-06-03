@@ -1170,7 +1170,7 @@ std::optional<StopFactor> CrosswalkModule::checkStopForParkedVehicles(
                               is_planning_to_stop_in_search_area(
                                 ego_path.points, *ego_idx, parked_vehicles_stop_.search_area);
   if (skip_condition) {
-    parked_vehicles_stop_.reset();
+    // parked_vehicles_stop_.reset();
     return std::nullopt;
   }
 
@@ -1221,6 +1221,7 @@ std::optional<StopFactor> CrosswalkModule::checkStopForParkedVehicles(
   const auto parked_vehicle_stop_pose = calcLongitudinalOffsetPose(
     ego_path.points, furthest_footprint_point,
     -planner_data_->vehicle_info_.max_longitudinal_offset_m);
+  update_previous_stop_pose(parked_vehicles_stop_.previous_stop_pose, ego_path.points);
   auto stop_factor = calculate_parked_vehicles_stop_factor(
     {default_stop_pose, parked_vehicle_stop_pose}, parked_vehicles_stop_.previous_stop_pose,
     min_stop_distance, [&](const auto & p) {

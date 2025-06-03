@@ -254,4 +254,16 @@ std::vector<autoware_perception_msgs::msg::PredictedObject> get_parked_vehicles(
   }
   return vehicles;
 }
+
+void update_previous_stop_pose(
+  std::optional<geometry_msgs::msg::Pose> & previous_stop_pose,
+  const std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> & path)
+{
+  if (!previous_stop_pose) {
+    return;
+  }
+  const auto stop_arc_length =
+    motion_utils::calcSignedArcLength(path, 0UL, previous_stop_pose->position);
+  previous_stop_pose = motion_utils::calcInterpolatedPose(path, stop_arc_length);
+}
 }  // namespace autoware::behavior_velocity_planner

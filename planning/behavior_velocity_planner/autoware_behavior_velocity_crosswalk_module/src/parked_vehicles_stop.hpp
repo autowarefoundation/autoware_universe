@@ -15,6 +15,8 @@
 #ifndef PARKED_VEHICLES_STOP_HPP_
 #define PARKED_VEHICLES_STOP_HPP_
 
+#include <autoware/motion_utils/trajectory/interpolation.hpp>
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_point_with_lane_id.hpp>
@@ -84,6 +86,13 @@ std::vector<autoware_perception_msgs::msg::PredictedObject> get_parked_vehicles(
   const std::vector<autoware_perception_msgs::msg::PredictedObject> & objects,
   const double parked_velocity_threshold,
   const std::function<bool(autoware_perception_msgs::msg::PredictedObject)> & is_vehicle_fn);
+
+/// @brief update the previous stop pose to adapt to changes in the path shape
+/// @param [inout] previous_stop_pose the stop pose to update
+/// @param [in] path ego path
+void update_previous_stop_pose(
+  std::optional<geometry_msgs::msg::Pose> & previous_stop_pose,
+  const std::vector<autoware_internal_planning_msgs::msg::PathPointWithLaneId> & path);
 }  // namespace autoware::behavior_velocity_planner
 
 #endif  // PARKED_VEHICLES_STOP_HPP_
