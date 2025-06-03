@@ -362,7 +362,7 @@ Collision calculate_collision(
     ego.to - ego.from <= ignore_params.if_ego_arrives_first.max_overlap_duration;
   const auto is_ignored_ego_arrives_first_and_cannot_stop =
     !is_opposite_direction && ignore_params.if_ego_arrives_first_and_cannot_stop.enable &&
-    ego.from < object.from && ego.overlaps(object) &&
+    ego.from < object.from && is_overlapping_at_same_time &&
     ego.from < ignore_params.if_ego_arrives_first_and_cannot_stop.calculated_stop_time_limit;
   if (is_ignored_ego_arrives_first) {
     c.type = ignored_collision;
