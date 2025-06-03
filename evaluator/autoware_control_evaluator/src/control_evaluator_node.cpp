@@ -405,42 +405,43 @@ void ControlEvaluatorNode::AddStopDeviationMetricMsg(const Odometry & odom)
 void ControlEvaluatorNode::onTimer()
 {
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
-  const auto traj = traj_sub_.take_data();
+
   const auto odom = odometry_sub_.take_data();
-  const auto acc = accel_sub_.take_data();
-  const auto behavior_path = behavior_path_subscriber_.take_data();
-  const auto steering_status = steering_sub_.take_data();
-
-  // add deviation metrics
-  if (odom && traj && !traj->points.empty()) {
+  if (odom) {
     const Pose ego_pose = odom->pose.pose;
-    AddLateralDeviationMetricMsg(*traj, ego_pose.position);
-    AddYawDeviationMetricMsg(*traj, ego_pose);
-  }
 
-  // add goal deviation metrics
-  getRouteData();
-  if (odom && route_handler_.isHandlerReady()) {
-    const Pose ego_pose = odom->pose.pose;
-    AddLaneletInfoMsg(ego_pose);
-    AddGoalDeviationMetricMsg(*odom);
-  }
+    // add planning_factor related metrics
+    AddStopDeviationMetricMsg(*odom);
 
-  // add planning_factor related metrics
-  AddStopDeviationMetricMsg(*odom);
+    // add kinematic info
+    const auto acc = accel_sub_.take_data();
+    if (acc) {
+      AddKinematicStateMetricMsg(*odom, *acc);
+    }
 
-  // add kinematic info
-  if (odom && acc) {
-    AddKinematicStateMetricMsg(*odom, *acc);
-  }
+    // add deviation metrics
+    const auto traj = traj_sub_.take_data();
+    if (traj && !traj->points.empty()) {
+      AddLateralDeviationMetricMsg(*traj, ego_pose.position);
+      AddYawDeviationMetricMsg(*traj, ego_pose);
+    }
 
-  // add boundary distance metrics
-  if (odom && behavior_path && route_handler_.isHandlerReady()) {
-    const Pose ego_pose = odom->pose.pose;
-    AddBoundaryDistanceMetricMsg(*behavior_path, ego_pose);
+    getRouteData();
+    if (route_handler_.isHandlerReady()) {
+      // add goal deviation metrics
+      AddLaneletInfoMsg(ego_pose);
+      AddGoalDeviationMetricMsg(*odom);
+
+      // add boundary distance metrics
+      const auto behavior_path = behavior_path_subscriber_.take_data();
+      if (behavior_path) {
+        AddBoundaryDistanceMetricMsg(*behavior_path, ego_pose);
+      }
+    }
   }
 
   // add steering metrics
+  const auto steering_status = steering_sub_.take_data();
   if (steering_status) {
     AddSteeringMetricMsg(*steering_status);
   }
