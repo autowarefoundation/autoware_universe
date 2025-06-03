@@ -34,7 +34,6 @@
 #include <boost/geometry/algorithms/detail/overlaps/interface.hpp>
 
 #include <algorithm>
-#include <limits>
 #include <optional>
 #include <string>
 #include <utility>
@@ -180,8 +179,12 @@ void calculate_predicted_path_footprints(
 }
 
 void cut_predicted_path_footprint(
-  ObjectPredictedPathFootprint & footprint, const double cut_time, const double cut_distance)
+  ObjectPredictedPathFootprint & footprint, const std::optional<double> & cut_time,
+  const std::optional<double> & cut_distance)
 {
+  if (!cut_time && !cut_distance) {
+    return;
+  }
   auto cut_index = 0UL;
   auto t = 0.0;
   auto dist = 0.0;
@@ -190,11 +193,11 @@ void cut_predicted_path_footprint(
     const auto & segment = universe_utils::Segment2d(ls[cut_index], ls[cut_index + 1]);
     t += footprint.time_step;
     dist += static_cast<double>(boost::geometry::length(segment));
-    if (t >= cut_time || dist >= cut_distance) {
+    if ((!cut_time || t > cut_time) && (!cut_distance || dist > cut_distance)) {
       break;
     }
   }
-  if (t >= cut_time || dist >= cut_distance) {
+  if ((!cut_time || t > cut_time) && (!cut_distance || dist > cut_distance)) {
     footprint.predicted_path_footprint.corner_linestrings[front_left].resize(cut_index);
     footprint.predicted_path_footprint.corner_linestrings[front_right].resize(cut_index);
     footprint.predicted_path_footprint.corner_linestrings[rear_left].resize(cut_index);
@@ -202,12 +205,12 @@ void cut_predicted_path_footprint(
   }
 }
 
-std::pair<double, double> get_cut_predicted_path_time_and_distance(
+std::pair<std::optional<double>, std::optional<double>> get_cut_predicted_path_time_and_distance(
   const autoware::motion_velocity_planner::run_out::ObjectPredictedPathFootprint & path,
   const FilteringData & map_data)
 {
-  auto min_t = std::numeric_limits<double>::max();
-  auto min_dist = std::numeric_limits<double>::max();
+  auto min_t = std::optional<double>();
+  auto min_dist = std::optional<double>();
   for (const auto & corner : {front_left, front_right, rear_left, rear_right}) {
     auto found = false;
     auto t = 0.0;
@@ -223,8 +226,8 @@ std::pair<double, double> get_cut_predicted_path_time_and_distance(
       for (const auto & candidate : query_results) {
         if (universe_utils::intersect(
               segment.first, segment.second, candidate.first.first, candidate.first.second)) {
-          min_t = std::min(min_t, t);
-          min_dist = std::min(min_dist, dist);
+          min_t = std::min(min_t.value_or(t), t);
+          min_dist = std::min(min_dist.value_or(dist), dist);
           found = true;
           break;
         }
@@ -243,12 +246,22 @@ void filter_predicted_paths(
   for (auto & predicted_path_footprint : object.predicted_path_footprints) {
     auto [cut_time, cut_distance] =
       get_cut_predicted_path_time_and_distance(predicted_path_footprint, map_data);
-    // apply cut limit when cutting predicted path
-    cut_time = std::max(cut_time, params.start_cut_time);
-    cut_distance = std::max(cut_distance, params.start_cut_distance);
-    // apply prediction limit when ignoring the object
-    cut_time = std::min(cut_time, object.max_prediction_time.value_or(cut_time));
-    cut_distance = std::min(cut_distance, object.max_prediction_distance.value_or(cut_distance));
+    // apply the lower bound on cutting only when it is higher than the map based cut value
+    if (cut_time && params.start_cut_time != 0.0) {
+      cut_time = std::min(params.start_cut_time, *cut_time);
+    }
+    if (cut_distance && params.start_cut_distance != 0.0) {
+      cut_distance = std::max(params.start_cut_distance, *cut_distance);
+    }
+    // apply the upper bounds from the values set when "ignoring" the object
+    if (object.max_prediction_time) {
+      const auto upper_bound = *object.max_prediction_time;
+      cut_time = std::min(cut_time.value_or(upper_bound), upper_bound);
+    }
+    if (object.max_prediction_distance) {
+      const auto upper_bound = *object.max_prediction_distance;
+      cut_distance = std::min(cut_distance.value_or(upper_bound), upper_bound);
+    }
     cut_predicted_path_footprint(predicted_path_footprint, cut_time, cut_distance);
   }
 }
