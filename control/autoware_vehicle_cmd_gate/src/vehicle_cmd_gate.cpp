@@ -366,8 +366,8 @@ T VehicleCmdGate::getContinuousTopic(
     return current_topic;
   } else {
     if (topic_name != "") {
-      RCLCPP_INFO(
-        get_logger(),
+      RCLCPP_INFO_THROTTLE(
+        get_logger(), *get_clock(), 5000,
         "The operation mode is changed, but the %s is not received yet:", topic_name.c_str());
     }
     return *prev_topic;
@@ -405,6 +405,10 @@ void VehicleCmdGate::onTimer()
   const auto msg_emergency_command_hazard_light = emergency_hazard_light_cmd_sub_.take_data();
   if (msg_emergency_command_hazard_light)
     emergency_commands_.hazard_light = *msg_emergency_command_hazard_light;
+
+  const auto msg_emergency_command_turn_indicator = emergency_turn_indicator_cmd_sub_.take_data();
+  if (msg_emergency_command_turn_indicator)
+    emergency_commands_.turn_indicator = *msg_emergency_command_turn_indicator;
 
   const auto msg_emergency_command_gear = emergency_gear_cmd_sub_.take_data();
   if (msg_emergency_command_gear) emergency_commands_.gear = *msg_emergency_command_gear;
@@ -489,7 +493,9 @@ void VehicleCmdGate::onTimer()
       getContinuousTopic(prev_turn_indicator_, turn_indicator, "TurnIndicatorsCommand");
     turn_indicator_cmd_pub_->publish(*prev_turn_indicator_);
   } else {
-    if (msg_auto_command_turn_indicator || msg_remote_command_turn_indicator) {
+    if (
+      msg_auto_command_turn_indicator || msg_remote_command_turn_indicator ||
+      msg_emergency_command_turn_indicator) {
       prev_turn_indicator_ = std::make_shared<TurnIndicatorsCommand>(turn_indicator);
     }
     turn_indicator_cmd_pub_->publish(turn_indicator);

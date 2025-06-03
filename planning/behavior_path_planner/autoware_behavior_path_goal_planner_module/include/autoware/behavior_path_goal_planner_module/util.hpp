@@ -18,7 +18,7 @@
 #include "autoware/behavior_path_goal_planner_module/goal_candidate.hpp"
 #include "autoware/behavior_path_goal_planner_module/pull_over_planner/pull_over_planner_base.hpp"
 
-#include <autoware/lane_departure_checker/lane_departure_checker.hpp>
+#include <autoware/boundary_departure_checker/boundary_departure_checker.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
@@ -32,6 +32,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::behavior_path_planner::goal_planner_utils
@@ -163,7 +164,7 @@ MarkerArray createPosesMarkerArray(
   const std::vector<Pose> & poses, std::string && ns, const std_msgs::msg::ColorRGBA & color);
 MarkerArray createTextsMarkerArray(
   const std::vector<Pose> & poses, std::string && ns, const std_msgs::msg::ColorRGBA & color);
-MarkerArray createGoalCandidatesMarkerArray(
+std::pair<MarkerArray, MarkerArray> createGoalCandidatesMarkerArray(
   const GoalCandidates & goal_candidates, const std_msgs::msg::ColorRGBA & color);
 MarkerArray createLaneletPolygonMarkerArray(
   const lanelet::CompoundPolygon3d & polygon, const std_msgs::msg::Header & header,

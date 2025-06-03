@@ -76,10 +76,11 @@ lanelet::ConstLanelets getPullOverLanes(
   } else {
     outermost_lane = route_handler.getMostRightLanelet(closest_lane, false, true);
   }
-
-  constexpr bool only_route_lanes = false;
-  return route_handler.getLaneletSequence(
-    outermost_lane, backward_distance_with_buffer, forward_distance, only_route_lanes);
+  if (route_handler.isShoulderLanelet(outermost_lane)) {
+    return route_handler.get_shoulder_lanelet_sequence(
+      outermost_lane, backward_distance_with_buffer, forward_distance);
+  }
+  return {outermost_lane};
 }
 
 static double getOffsetToLanesBoundary(
@@ -442,7 +443,7 @@ MarkerArray createNumObjectsToAvoidTextsMarkerArray(
   return msg;
 }
 
-MarkerArray createGoalCandidatesMarkerArray(
+std::pair<MarkerArray, MarkerArray> createGoalCandidatesMarkerArray(
   const GoalCandidates & goal_candidates, const std_msgs::msg::ColorRGBA & color)
 {
   GoalCandidates safe_goal_candidates{};
@@ -455,21 +456,17 @@ MarkerArray createGoalCandidatesMarkerArray(
     safe_goal_candidates.begin(), safe_goal_candidates.end(), std::back_inserter(pose_vector),
     [](const auto & goal_candidate) { return goal_candidate.goal_pose; });
 
-  auto marker_array = createPosesMarkerArray(pose_vector, "goal_candidates", color);
-  for (const auto & text_marker :
-       createGoalPriorityTextsMarkerArray(
-         pose_vector, "goal_candidates_priority", create_marker_color(1.0, 1.0, 1.0, 0.999))
-         .markers) {
-    marker_array.markers.push_back(text_marker);
-  }
+  const auto info_marker_array = createPosesMarkerArray(pose_vector, "goal_candidates", color);
+  auto debug_marker_array = createGoalPriorityTextsMarkerArray(
+    pose_vector, "goal_candidates_priority", create_marker_color(1.0, 1.0, 1.0, 0.999));
   for (const auto & text_marker : createNumObjectsToAvoidTextsMarkerArray(
                                     safe_goal_candidates, "goal_candidates_num_objects_to_avoid",
                                     create_marker_color(0.5, 0.5, 0.5, 0.999))
                                     .markers) {
-    marker_array.markers.push_back(text_marker);
+    debug_marker_array.markers.push_back(text_marker);
   }
 
-  return marker_array;
+  return std::make_pair(info_marker_array, debug_marker_array);
 }
 
 MarkerArray createLaneletPolygonMarkerArray(
@@ -750,6 +747,9 @@ std::optional<Pose> calcRefinedGoal(
   const lanelet::ConstLanelets pull_over_lanes = goal_planner_utils::getPullOverLanes(
     *route_handler, left_side_parking, parameters.backward_goal_search_length,
     parameters.forward_goal_search_length);
+  if (pull_over_lanes.empty()) {
+    return {};
+  }
 
   lanelet::Lanelet closest_pull_over_lanelet{};
   lanelet::utils::query::getClosestLanelet(pull_over_lanes, goal_pose, &closest_pull_over_lanelet);

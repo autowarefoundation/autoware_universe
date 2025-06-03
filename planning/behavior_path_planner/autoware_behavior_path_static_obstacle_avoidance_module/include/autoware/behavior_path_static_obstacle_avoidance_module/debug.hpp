@@ -20,6 +20,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 namespace autoware::behavior_path_planner::utils::static_obstacle_avoidance
 {
@@ -37,7 +38,8 @@ MarkerArray createAvoidLineMarkerArray(
   const AvoidLineArray & shift_lines, std::string && ns, const float & r, const float & g,
   const float & b, const double & w);
 
-MarkerArray createTargetObjectsMarkerArray(const ObjectDataArray & objects, const std::string & ns);
+std::pair<MarkerArray, MarkerArray> createTargetObjectsMarkerArray(
+  const ObjectDataArray & objects, const std::string & ns);
 
 MarkerArray createOtherObjectsMarkerArray(
   const ObjectDataArray & objects, const ObjectInfo & info, const bool verbose);

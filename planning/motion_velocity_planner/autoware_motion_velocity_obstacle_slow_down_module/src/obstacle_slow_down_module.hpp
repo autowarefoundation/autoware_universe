@@ -58,6 +58,13 @@ public:
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> planner_data) override;
   std::string get_module_name() const override;
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    RequiredSubscriptionInfo required_subscription_info;
+    required_subscription_info.predicted_objects = true;
+    required_subscription_info.no_ground_pointcloud = true;
+    return required_subscription_info;
+  }
 
 private:
   std::string module_name_;
@@ -90,19 +97,20 @@ private:
   std::vector<autoware::motion_velocity_planner::SlowDownPointData>
   convert_point_cloud_to_slow_down_points(
     const PlannerData::Pointcloud & pointcloud, const std::vector<TrajectoryPoint> & traj_points,
+    const std::vector<Polygon2d> & decimated_traj_polys_with_lat_margin,
     const VehicleInfo & vehicle_info, const size_t ego_idx);
   std::vector<SlowDownObstacle> filter_slow_down_obstacle_for_predicted_object(
     const Odometry & odometry, const double ego_nearest_dist_threshold,
-    const double ego_nearest_yaw_threshold, const std::vector<TrajectoryPoint> & traj_points,
-    const std::vector<TrajectoryPoint> & decimated_traj_points,
+    const double ego_nearest_yaw_threshold,
+    const std::vector<Polygon2d> & decimated_traj_polys_with_lat_margin,
+    const std::vector<TrajectoryPoint> & traj_points,
     const std::vector<std::shared_ptr<PlannerData::Object>> & objects,
     const rclcpp::Time & predicted_objects_stamp, const VehicleInfo & vehicle_info,
     const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check);
   std::vector<SlowDownObstacle> filter_slow_down_obstacle_for_point_cloud(
-    const Odometry & odometry, const std::vector<TrajectoryPoint> & traj_points,
-    const std::vector<TrajectoryPoint> & decimated_traj_points,
-    const PlannerData::Pointcloud & point_cloud, const VehicleInfo & vehicle_info,
-    const TrajectoryPolygonCollisionCheck & trajectory_polygon_collision_check, size_t ego_idx);
+    const std::vector<TrajectoryPoint> & traj_points,
+    const std::vector<Polygon2d> & decimated_traj_polys_with_lat_margin,
+    const PlannerData::Pointcloud & point_cloud, const VehicleInfo & vehicle_info, size_t ego_idx);
   std::optional<SlowDownObstacle> create_slow_down_obstacle_for_predicted_object(
     const std::vector<TrajectoryPoint> & traj_points,
     const std::vector<Polygon2d> & decimated_traj_polys_with_lat_margin,

@@ -19,6 +19,7 @@
 
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
+#include <cuda_blackboard/cuda_pointcloud2.hpp>
 
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
@@ -27,6 +28,7 @@
 
 #include <cstddef>
 #include <list>
+#include <memory>
 #include <string>
 #include <utility>
 
@@ -54,9 +56,7 @@ private:
 
 struct PointCloudWithTransform
 {
-  CudaUniquePtr<InputPointType[]> data_d{nullptr};
-  std_msgs::msg::Header header;
-  std::size_t num_points{0};
+  std::shared_ptr<const cuda_blackboard::CudaPointCloud2> input_pointcloud_msg_ptr;
   Eigen::Affine3f affine_past2world;
 };
 
@@ -66,7 +66,8 @@ public:
   explicit PointCloudDensification(const DensificationParam & param, cudaStream_t stream);
 
   bool enqueuePointCloud(
-    const sensor_msgs::msg::PointCloud2 & msg, const tf2_ros::Buffer & tf_buffer);
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+    const tf2_ros::Buffer & tf_buffer);
 
   double getCurrentTimestamp() const { return current_timestamp_; }
   Eigen::Affine3f getAffineWorldToCurrent() const { return affine_world2current_; }
@@ -89,7 +90,9 @@ public:
   unsigned int getPointcloudCacheSize() const { return param_.getPointcloudCacheSize(); }
 
 private:
-  void enqueue(const sensor_msgs::msg::PointCloud2 & msg, const Eigen::Affine3f & affine);
+  void enqueue(
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+    const Eigen::Affine3f & affine);
   void dequeue();
 
   DensificationParam param_;

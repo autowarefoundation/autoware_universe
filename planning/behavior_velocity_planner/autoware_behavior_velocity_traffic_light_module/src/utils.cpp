@@ -126,14 +126,15 @@ auto createTargetPoint(
 
 auto calcStopPointAndInsertIndex(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & input_path,
-  const lanelet::ConstLineString3d & lanelet_stop_lines, const double & offset,
-  const double & stop_line_extend_length) -> std::optional<std::pair<size_t, Eigen::Vector2d>>
+  const lanelet::ConstLineString3d & lanelet_stop_lines, const double & offset)
+  -> std::optional<std::pair<size_t, Eigen::Vector2d>>
 {
   LineString2d stop_line;
 
   for (size_t i = 0; i < lanelet_stop_lines.size() - 1; ++i) {
-    stop_line = planning_utils::extendLine(
-      lanelet_stop_lines[i], lanelet_stop_lines[i + 1], stop_line_extend_length);
+    stop_line = planning_utils::extendSegmentToBounds(
+      {lanelet_stop_lines[i].basicPoint2d(), lanelet_stop_lines[i + 1].basicPoint2d()},
+      input_path.left_bound, input_path.right_bound);
 
     // Calculate stop pose and insert index,
     // if there is a collision point between path and stop line

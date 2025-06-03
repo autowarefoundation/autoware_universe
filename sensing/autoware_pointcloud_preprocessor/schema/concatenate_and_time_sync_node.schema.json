@@ -9,7 +9,7 @@
         "debug_mode": {
           "type": "boolean",
           "default": false,
-          "description": "Flag to enables debug mode to display additional logging information."
+          "description": "Flag to enable debug mode to display additional logging information."
         },
         "rosbag_length": {
           "type": "number",

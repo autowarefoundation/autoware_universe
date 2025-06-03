@@ -1329,6 +1329,12 @@
         "policy": {
           "type": "object",
           "properties": {
+            "detection_reliability": {
+              "type": "string",
+              "enum": ["reliable", "not_enough"],
+              "description": "policy for module behavior. select 'reliable' or 'not_enough'. 'reliable': this module fully trusts the perception results and makes all decisions automatically.  'not_enough': because the perception results are not fully reliable, the system waits for the operator's judgment in situations where long-range perception is required.",
+              "default": "reliable"
+            },
             "make_approval_request": {
               "type": "string",
               "enum": ["per_shift_line", "per_avoidance_maneuver"],

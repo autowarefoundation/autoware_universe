@@ -567,7 +567,11 @@ bool ProcessMonitor::getCommandLineFromPid(const std::string & pid, std::string 
   // Leave the last 0x00 (end-of-C-string) intact.
   std::replace(buffer.begin(), (buffer.end() - 1), '\0', ' ');
   // Make sure the last character is a null terminator.
-  *(buffer.end() - 1) = '\0';
+
+  // Although buffer.back() is safer and more idiomatic,
+  // using it here causes a compile error with -Werror=stringop-overflow.
+  // Therefore, we safely access the last element by index.
+  buffer[buffer.size() - 1] = '\0';
   try {
     std::string cmdline = std::string(buffer.begin(), (buffer.end() - 1));
     // Remove trailing spaces

@@ -125,7 +125,6 @@ component_management:
         - localization/autoware_gyro_odometer/**
         - localization/autoware_localization_error_monitor/**
         - localization/autoware_localization_util/**
-        - localization/autoware_ndt_scan_matcher/**
         - localization/autoware_pose_initializer/**
         - localization/autoware_pose_instability_detector/**
         - localization/autoware_stop_filter/**
@@ -196,8 +195,6 @@ component_management:
         - planning/autoware_freespace_planning_algorithms/**
         - planning/autoware_mission_planner_universe/**
         # - planning/autoware_objects_of_interest_marker_interface/**
-        - planning/autoware_obstacle_cruise_planner/**
-        # - planning/autoware_obstacle_stop_planner/**
         - planning/autoware_path_optimizer/**
         - planning/autoware_path_smoother/**
         - planning/autoware_planning_test_manager/**
