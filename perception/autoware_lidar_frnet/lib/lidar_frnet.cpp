@@ -105,12 +105,13 @@ bool LidarFRNet::process(
     return false;
   }
 
-  auto cloud_in_d = cuda_utils::make_unique<InputPointType[]>(input_num_points);
+  cuda_utils::clear_async(cloud_in_d_.get(), network_params_.num_points_profile.max, stream_);
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    cloud_in_d.get(), cloud_in.data.data(),
-    sizeof(std::uint8_t) * input_num_points * cloud_in.point_step, cudaMemcpyHostToDevice));
+    cloud_in_d_.get(), cloud_in.data.data(), sizeof(InputPointType) * input_num_points,
+    cudaMemcpyHostToDevice));
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
-  if (!preprocess(input_num_points, cloud_in_d)) {
+  if (!preprocess(input_num_points)) {
     RCLCPP_ERROR(logger_, "Preprocess failed.");
     return false;
   }
@@ -126,7 +127,7 @@ bool LidarFRNet::process(
   proc_timing.emplace(
     "debug/processing_time/inference_ms", stop_watch_ptr_->toc("processing/inner", true));
 
-  if (!postprocess(input_num_points, cloud_in_d, cloud_seg_out, cloud_viz_out, cloud_filtered)) {
+  if (!postprocess(input_num_points, cloud_seg_out, cloud_viz_out, cloud_filtered)) {
     RCLCPP_ERROR(logger_, "Postprocess failed.");
     return false;
   }
@@ -137,8 +138,7 @@ bool LidarFRNet::process(
   return true;
 }
 
-bool LidarFRNet::preprocess(
-  const uint32_t input_num_points, CudaUniquePtr<InputPointType[]> & cloud_in_d)
+bool LidarFRNet::preprocess(const uint32_t input_num_points)
 {
   auto coors_keys_d = cuda_utils::make_unique<int64_t[]>(network_params_.num_points_profile.max);
   auto num_points_d = cuda_utils::make_unique<uint32_t[]>(1);
@@ -163,8 +163,9 @@ bool LidarFRNet::preprocess(
     proj_2d_d.get(),
     preprocessing_params_.interpolation.w * preprocessing_params_.interpolation.h * 4, stream_);
 
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   CHECK_CUDA_ERROR(preprocess_ptr_->projectPoints_launch(
-    cloud_in_d.get(), input_num_points, num_points_d.get(), points_d_.get(), coors_d_.get(),
+    cloud_in_d_.get(), input_num_points, num_points_d.get(), points_d_.get(), coors_d_.get(),
     coors_keys_d.get(), proj_idxs_d.get(), proj_2d_d.get()));
   CHECK_CUDA_ERROR(preprocess_ptr_->interpolatePoints_launch(
     proj_idxs_d.get(), proj_2d_d.get(), num_points_d.get(), points_d_.get(), coors_d_.get(),
@@ -219,9 +220,8 @@ bool LidarFRNet::inference()
 }
 
 bool LidarFRNet::postprocess(
-  const uint32_t input_num_points, CudaUniquePtr<InputPointType[]> & cloud_in_d,
-  sensor_msgs::msg::PointCloud2 & cloud_seg_out, sensor_msgs::msg::PointCloud2 & cloud_viz_out,
-  sensor_msgs::msg::PointCloud2 & cloud_filtered)
+  const uint32_t input_num_points, sensor_msgs::msg::PointCloud2 & cloud_seg_out,
+  sensor_msgs::msg::PointCloud2 & cloud_viz_out, sensor_msgs::msg::PointCloud2 & cloud_filtered)
 {
   auto seg_data_d = cuda_utils::make_unique<OutputSegmentationPointType[]>(input_num_points);
   auto viz_data_d = cuda_utils::make_unique<OutputVisualizationPointType[]>(input_num_points);
@@ -231,7 +231,7 @@ bool LidarFRNet::postprocess(
   uint32_t num_points_filtered{0};
 
   CHECK_CUDA_ERROR(postprocess_ptr_->fillCloud_launch(
-    cloud_in_d.get(), seg_logit_d_.get(), input_num_points, num_points_filtered_d.get(),
+    cloud_in_d_.get(), seg_logit_d_.get(), input_num_points, num_points_filtered_d.get(),
     seg_data_d.get(), viz_data_d.get(), cloud_filtered_d.get()));
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
@@ -257,6 +257,7 @@ bool LidarFRNet::postprocess(
 
 void LidarFRNet::initTensors()
 {
+  cloud_in_d_ = cuda_utils::make_unique<InputPointType[]>(network_params_.num_points_profile.max);
   points_d_ = cuda_utils::make_unique<float[]>(network_params_.num_points_profile.max * 4);
   coors_d_ = cuda_utils::make_unique<int64_t[]>(network_params_.num_points_profile.max * 3);
   voxel_coors_d_ =

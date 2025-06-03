@@ -60,12 +60,11 @@ public:
     std::unordered_map<std::string, double> & proc_timing);
 
 private:
-  bool preprocess(const uint32_t input_num_points, CudaUniquePtr<InputPointType[]> & cloud_in_d);
+  bool preprocess(const uint32_t input_num_points);
   bool inference();
   bool postprocess(
-    const uint32_t input_num_points, CudaUniquePtr<InputPointType[]> & cloud_in_d,
-    sensor_msgs::msg::PointCloud2 & cloud_seg_out, sensor_msgs::msg::PointCloud2 & cloud_viz_out,
-    sensor_msgs::msg::PointCloud2 & cloud_filtered);
+    const uint32_t input_num_points, sensor_msgs::msg::PointCloud2 & cloud_seg_out,
+    sensor_msgs::msg::PointCloud2 & cloud_viz_out, sensor_msgs::msg::PointCloud2 & cloud_filtered);
   void initTensors();
 
   std::once_flag init_cloud_;
@@ -86,6 +85,7 @@ private:
   CudaUniquePtr<int64_t[]> voxel_coors_d_{nullptr};  // M x 3 (0, y, x)
   CudaUniquePtr<int64_t[]> inverse_map_d_{nullptr};  // N
   CudaUniquePtr<float[]> seg_logit_d_{nullptr};      // NUM_CLASSES x 1
+  CudaUniquePtr<InputPointType[]> cloud_in_d_{nullptr};
 };
 
 }  // namespace autoware::lidar_frnet
