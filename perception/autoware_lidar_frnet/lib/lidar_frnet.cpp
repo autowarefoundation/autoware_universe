@@ -156,11 +156,9 @@ bool LidarFRNet::preprocess(
   cuda_utils::clear_async(num_points_d.get(), 1, stream_);
   uint32_t num_unique_coors{0};
 
-  CHECK_CUDA_ERROR(cudaMemsetAsync(
-    proj_idxs_d.get(), 0,
-    preprocessing_params_.interpolation.w * preprocessing_params_.interpolation.h *
-      sizeof(uint32_t),
-    stream_));
+  cuda_utils::clear_async(
+    proj_idxs_d.get(),
+    preprocessing_params_.interpolation.w * preprocessing_params_.interpolation.h, stream_);
   CHECK_CUDA_ERROR(cudaMemsetAsync(
     proj_2d_d.get(), -1.0,
     preprocessing_params_.interpolation.w * preprocessing_params_.interpolation.h * sizeof(float) *
