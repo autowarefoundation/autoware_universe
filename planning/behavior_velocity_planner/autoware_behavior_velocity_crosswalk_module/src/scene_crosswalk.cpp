@@ -1,4 +1,4 @@
-// Copyright 2020-2023 Tier IV, Inc.
+// Copyright 2020-2023 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 #include "scene_crosswalk.hpp"
 
 #include "occluded_crosswalk.hpp"
+#include "parked_vehicles_stop.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/path_utilization.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
@@ -25,9 +26,26 @@
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
+#include <autoware_utils_uuid/uuid_helper.hpp>
+#include <rclcpp/logging.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_planning_msgs/msg/detail/path_with_lane_id__struct.hpp>
+#include <autoware_perception_msgs/msg/detail/object_classification__struct.hpp>
+#include <autoware_perception_msgs/msg/detail/predicted_object__struct.hpp>
+#include <autoware_perception_msgs/msg/detail/predicted_objects__struct.hpp>
+#include <geometry_msgs/msg/detail/point__struct.hpp>
+
+#include <boost/geometry/algorithms/buffer.hpp>
+#include <boost/geometry/algorithms/detail/disjoint/interface.hpp>
+#include <boost/geometry/strategies/cartesian/buffer_end_flat.hpp>
+#include <boost/geometry/strategies/cartesian/buffer_point_square.hpp>
+
 #include <lanelet2_core/geometry/LineString.h>
+#include <lanelet2_core/primitives/BasicRegulatoryElements.h>
+#include <lanelet2_core/primitives/Point.h>
+#include <lanelet2_core/primitives/Polygon.h>
 #include <lanelet2_routing/RoutingGraph.h>
 #include <lanelet2_routing/RoutingGraphContainer.h>
 
@@ -36,6 +54,7 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <tuple>
@@ -251,19 +270,28 @@ bool CrosswalkModule::modifyPathVelocity(PathWithLaneId * path)
   const auto sparse_resample_path =
     resamplePath(*path, resample_interval, false, true, true, false);
 
+  std::vector<StopFactor> stop_factors;
   // Decide to stop for crosswalk users
   const auto stop_factor_for_crosswalk_users = checkStopForCrosswalkUsers(
     *path, sparse_resample_path, first_path_point_on_crosswalk, last_path_point_on_crosswalk,
     default_stop_pose);
-
   // Decide to stop for stuck vehicle
   const auto stop_factor_for_stuck_vehicles = checkStopForStuckVehicles(
     sparse_resample_path, objects_ptr->objects, first_path_point_on_crosswalk,
     last_path_point_on_crosswalk, default_stop_pose);
+  for (const auto & stop_factor :
+       {stop_factor_for_crosswalk_users, stop_factor_for_stuck_vehicles}) {
+    if (stop_factor) {
+      stop_factors.push_back(*stop_factor);
+    }
+  }
+  // Decide to stop for parked vehicles (only if no other stop is planned)
+  const auto stop_factor_for_parked_vehicles =
+    checkStopForParkedVehicles(*path, first_path_point_on_crosswalk);
 
   // Get nearest stop factor
   const auto nearest_stop_factor =
-    getNearestStopFactor(*path, stop_factor_for_crosswalk_users, stop_factor_for_stuck_vehicles);
+    getNearestStopFactor(*path, stop_factors, stop_factor_for_parked_vehicles);
   recordTime(3);
 
   // Set safe or unsafe
@@ -1111,34 +1139,132 @@ std::optional<StopFactor> CrosswalkModule::checkStopForStuckVehicles(
   return {};
 }
 
-std::optional<StopFactor> CrosswalkModule::getNearestStopFactor(
-  const PathWithLaneId & ego_path,
-  const std::optional<StopFactor> & stop_factor_for_crosswalk_users,
-  const std::optional<StopFactor> & stop_factor_for_stuck_vehicles)
+std::optional<StopFactor> CrosswalkModule::checkStopForParkedVehicles(
+  const PathWithLaneId & ego_path, const geometry_msgs::msg::Point & first_path_point_on_crosswalk)
 {
-  const auto get_distance_to_stop = [&](const auto stop_factor) -> std::optional<double> {
-    const auto & ego_pos = planner_data_->current_odometry->pose.position;
-    if (!stop_factor) return std::nullopt;
-    return calcSignedArcLength(ego_path.points, ego_pos, stop_factor->stop_pose.position);
-  };
-  const auto dist_to_stop_for_crosswalk_users =
-    get_distance_to_stop(stop_factor_for_crosswalk_users);
-  const auto dist_to_stop_for_stuck_vehicles = get_distance_to_stop(stop_factor_for_stuck_vehicles);
+  if (
+    !planner_param_.parked_vehicles_stop_enable || isRedSignalForEgo() ||
+    isRedSignalForPedestrians()) {
+    parked_vehicles_stop_.reset();
+    return std::nullopt;
+  }
+  const auto & ego_pose = planner_data_->current_odometry->pose;
+  const auto ego_idx = motion_utils::findNearestIndex(ego_path.points, ego_pose);
+  if (!ego_idx) {
+    RCLCPP_WARN(logger_, "[applyStopForParkedVehicles] could not find nearest index on the path");
+    parked_vehicles_stop_.reset();
+    return std::nullopt;
+  }
+  if (parked_vehicles_stop_.search_area.empty()) {  // only computed once
+    const auto lanelets_on_path = planning_utils::getLaneletsOnPath(
+      ego_path, planner_data_->route_handler_->getLaneletMapPtr(), ego_pose);
+    const auto search_area = create_search_area(
+      crosswalk_, lanelets_on_path, first_path_point_on_crosswalk,
+      planner_param_.parked_vehicles_stop_search_distance);
+    parked_vehicles_stop_.search_area = search_area;
+  }
+  debug_data_.parked_vehicles_stop_search_area = parked_vehicles_stop_.search_area;
+  debug_data_.parked_vehicles_stop_already_stopped = parked_vehicles_stop_.already_stopped;
+  const auto skip_condition = parked_vehicles_stop_.already_stopped ||
+                              parked_vehicles_stop_.search_area.empty() ||
+                              is_planning_to_stop_in_search_area(
+                                ego_path.points, *ego_idx, parked_vehicles_stop_.search_area);
+  if (skip_condition) {
+    // parked_vehicles_stop_.reset();
+    return std::nullopt;
+  }
 
-  if (dist_to_stop_for_crosswalk_users) {
-    if (dist_to_stop_for_stuck_vehicles) {
-      if (*dist_to_stop_for_stuck_vehicles < *dist_to_stop_for_crosswalk_users) {
-        return stop_factor_for_stuck_vehicles;
-      }
+  const auto & vehicle_info = planner_data_->vehicle_info_;
+  const auto ego_footprint = autoware_utils_geometry::to_footprint(
+    ego_pose, vehicle_info.max_longitudinal_offset_m, vehicle_info.min_longitudinal_offset_m,
+    vehicle_info.max_lateral_offset_m);
+  const auto ego_within_search_area =
+    boost::geometry::distance(ego_footprint, parked_vehicles_stop_.search_area) <
+    planner_param_.parked_vehicles_stop_parked_ego_inside_safe_area_margin;
+  const auto ego_close_to_previous_stop_pose =
+    parked_vehicles_stop_.previous_stop_pose &&
+    autoware_utils_geometry::calc_distance2d(*parked_vehicles_stop_.previous_stop_pose, ego_pose) <=
+      planner_param_.parked_vehicles_stop_parked_ego_inside_safe_area_margin;
+  const auto already_stopped_condition =
+    (ego_within_search_area || ego_close_to_previous_stop_pose) &&
+    planner_data_->isVehicleStopped(planner_param_.parked_vehicles_stop_min_ego_stop_duration);
+  if (already_stopped_condition) {
+    parked_vehicles_stop_.already_stopped = true;
+    parked_vehicles_stop_.reset();
+    return std::nullopt;
+  }
+
+  const auto parked_vehicles = get_parked_vehicles(
+    planner_data_->predicted_objects->objects,
+    planner_param_.parked_vehicles_stop_parked_velocity_threshold, isVehicle);
+  const auto targets = parked_vehicles_stop_.update_and_add_previous_target_vehicle(
+    parked_vehicles, clock_->now(),
+    planner_param_.parked_vehicles_stop_vehicle_permanence_duration);
+  const auto no_previous_target = !parked_vehicles_stop_.previous_target_vehicle.has_value();
+
+  const auto [furthest_parked_vehicle, furthest_footprint_point] =
+    calculate_furthest_parked_vehicle(ego_path.points, targets, parked_vehicles_stop_.search_area);
+  if (!furthest_parked_vehicle) {
+    parked_vehicles_stop_.reset();
+    return std::nullopt;
+  }
+  setObjectsOfInterestData(
+    furthest_parked_vehicle->kinematics.initial_pose_with_covariance.pose,
+    furthest_parked_vehicle->shape, ColorName::RED);
+
+  const double ego_vel_non_negative =
+    std::max(0.0, planner_data_->current_velocity->twist.linear.x);
+  const auto min_stop_distance = motion_utils::calcDecelDistWithJerkAndAccConstraints(
+    ego_vel_non_negative, 0.0, planner_data_->current_acceleration->accel.accel.linear.x,
+    planner_param_.min_acc_preferred, 10.0, planner_param_.min_jerk_preferred);
+  const auto default_stop_pose = getDefaultStopPose(ego_path, first_path_point_on_crosswalk);
+  const auto parked_vehicle_stop_pose = calcLongitudinalOffsetPose(
+    ego_path.points, furthest_footprint_point,
+    -planner_data_->vehicle_info_.max_longitudinal_offset_m);
+  update_previous_stop_pose(parked_vehicles_stop_.previous_stop_pose, ego_path.points);
+  auto stop_factor = calculate_parked_vehicles_stop_factor(
+    {default_stop_pose, parked_vehicle_stop_pose}, parked_vehicles_stop_.previous_stop_pose,
+    min_stop_distance, [&](const auto & p) {
+      return calcSignedArcLength(ego_path.points, ego_pose.position, p.position);
+    });
+  if (!stop_factor) {
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 1000UL,
+      "[%lu][ParkedVehicleStop] could not stop without breaking the jerk and deceleration "
+      "constraints",
+      module_id_);
+    parked_vehicles_stop_.reset();
+  } else {
+    stop_factor->stop_factor_points.push_back(furthest_footprint_point);
+    parked_vehicles_stop_.previous_stop_pose = stop_factor->stop_pose;
+    if (no_previous_target) {
+      parked_vehicles_stop_.previous_target_vehicle = *furthest_parked_vehicle;
+      parked_vehicles_stop_.previous_detection_time = clock_->now();
     }
-    return stop_factor_for_crosswalk_users;
   }
+  return stop_factor;
+}
 
-  if (dist_to_stop_for_stuck_vehicles) {
-    return stop_factor_for_stuck_vehicles;
+std::optional<StopFactor> CrosswalkModule::getNearestStopFactor(
+  const PathWithLaneId & ego_path, const std::vector<StopFactor> & stop_factors,
+  const std::optional<StopFactor> & stop_factor_for_parked_vehicles)
+{
+  // the parked vehicles stop feature is only used if there are no other crosswalk stops
+  const auto use_parked_vehicles = stop_factors.empty() && stop_factor_for_parked_vehicles;
+  if (use_parked_vehicles) {
+    return stop_factor_for_parked_vehicles;
   }
-
-  return {};
+  const auto get_distance_to_stop = [&](const auto & stop_factor) -> std::optional<double> {
+    const auto & ego_pos = planner_data_->current_odometry->pose.position;
+    return calcSignedArcLength(ego_path.points, ego_pos, stop_factor.stop_pose.position);
+  };
+  const auto nearest_stop_factor_it = std::min_element(
+    stop_factors.begin(), stop_factors.end(), [&](const auto & sf1, const auto & sf2) {
+      return get_distance_to_stop(sf1) < get_distance_to_stop(sf2);
+    });
+  return (
+    nearest_stop_factor_it == stop_factors.end() ? std::nullopt
+                                                 : std::make_optional(*nearest_stop_factor_it));
 }
 
 void CrosswalkModule::updateObjectState(
@@ -1227,10 +1353,9 @@ void CrosswalkModule::updateObjectState(
   object_info_manager_.finalize();
 }
 
-bool CrosswalkModule::isRedSignalForPedestrians() const
+bool CrosswalkModule::isRedSignalForLanelet(const lanelet::ConstLanelet & lanelet) const
 {
-  const auto traffic_lights_reg_elems =
-    crosswalk_.regulatoryElementsAs<const lanelet::TrafficLight>();
+  const auto traffic_lights_reg_elems = lanelet.regulatoryElementsAs<const lanelet::TrafficLight>();
 
   for (const auto & traffic_lights_reg_elem : traffic_lights_reg_elems) {
     const auto traffic_signal_stamped_opt =
@@ -1238,7 +1363,7 @@ bool CrosswalkModule::isRedSignalForPedestrians() const
     if (!traffic_signal_stamped_opt) {
       continue;
     }
-    const auto traffic_signal_stamped = traffic_signal_stamped_opt.value();
+    const auto & traffic_signal_stamped = traffic_signal_stamped_opt.value();
 
     if (
       planner_param_.traffic_light_state_timeout <
@@ -1256,8 +1381,16 @@ bool CrosswalkModule::isRedSignalForPedestrians() const
         return true;
     }
   }
-
   return false;
+}
+bool CrosswalkModule::isRedSignalForEgo() const
+{
+  return isRedSignalForLanelet(road_);
+}
+
+bool CrosswalkModule::isRedSignalForPedestrians() const
+{
+  return isRedSignalForLanelet(crosswalk_);
 }
 
 bool CrosswalkModule::isVehicle(const PredictedObject & object)
