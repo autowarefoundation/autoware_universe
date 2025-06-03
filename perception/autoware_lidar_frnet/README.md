@@ -6,7 +6,7 @@ The `autoware_lidar_frnet` package is used for 3D semantic segmentation based on
 
 ## Inner-workings / Algorithms
 
-The implementation bases on FRNet [1] work. It uses TensorRT library for data process and network inference.
+The implementation is based on the FRNet [1] project. It uses TensorRT library for data processing and network inference.
 
 We trained the models using AWML [2].
 
