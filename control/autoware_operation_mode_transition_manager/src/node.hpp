@@ -32,15 +32,6 @@ namespace autoware::operation_mode_transition_manager
 class OperationModeTransitionManager : public rclcpp::Node
 {
 public:
-  struct InputData
-  {
-    Odometry kinematics;
-    Trajectory trajectory;
-    Control trajectory_follower_control_cmd;
-    Control control_cmd;
-    OperationModeState gate_operation_mode;
-  };
-
   explicit OperationModeTransitionManager(const rclcpp::NodeOptions & options);
 
 private:
@@ -78,15 +69,12 @@ private:
   rclcpp::Publisher<ModeChangeBase::DebugInfo>::SharedPtr pub_debug_info_;
   rclcpp::TimerBase::SharedPtr timer_;
   void onTimer();
-  std::optional<InputData> subscribeData();
-  bool isInputDataTimedOut(const InputData & input_data);
+  InputData subscribeData();
   void publishData();
   void changeControlMode(ControlModeCommandType mode);
   void changeOperationMode(std::optional<OperationMode> request_mode);
   void cancelTransition();
-  void processTransition(
-    const Odometry & kinematics, const Trajectory & trajectory,
-    const OperationModeState & gate_operation_mode);
+  void processTransition(const InputData & input_data);
 
   double transition_timeout_;
   double input_timeout_;

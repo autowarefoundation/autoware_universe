@@ -30,20 +30,27 @@
 
 namespace autoware::operation_mode_transition_manager
 {
+
 using Control = autoware_control_msgs::msg::Control;
 using Odometry = nav_msgs::msg::Odometry;
 using Trajectory = autoware_planning_msgs::msg::Trajectory;
+
+struct InputData
+{
+  std::optional<Odometry> kinematics;
+  std::optional<Trajectory> trajectory;
+  std::optional<Control> trajectory_follower_control_cmd;
+  std::optional<Control> control_cmd;
+  OperationModeState gate_operation_mode;
+};
 
 class ModeChangeBase
 {
 public:
   virtual ~ModeChangeBase() = default;
   virtual void update(bool) {}
-  virtual bool isModeChangeCompleted(
-    const Odometry & kinematics, const Trajectory & trajectory) = 0;
-  virtual bool isModeChangeAvailable(
-    const Odometry & kinematics, const Trajectory & trajectory,
-    const Control & trajectory_follower_control_cmd, const Control & control_cmd) = 0;
+  virtual bool isModeChangeCompleted(const InputData & input_data) = 0;
+  virtual bool isModeChangeAvailable(const InputData & input_data) = 0;
 
   using DebugInfo =
     autoware_operation_mode_transition_manager::msg::OperationModeTransitionManagerDebug;
@@ -53,12 +60,8 @@ public:
 class StopMode : public ModeChangeBase
 {
 public:
-  bool isModeChangeCompleted(const Odometry &, const Trajectory &) override { return true; }
-  bool isModeChangeAvailable(
-    const Odometry &, const Trajectory &, const Control &, const Control &) override
-  {
-    return true;
-  }
+  bool isModeChangeCompleted(const InputData &) override { return true; }
+  bool isModeChangeAvailable(const InputData &) override { return true; }
 };
 
 class AutonomousMode : public ModeChangeBase
@@ -66,10 +69,8 @@ class AutonomousMode : public ModeChangeBase
 public:
   explicit AutonomousMode(rclcpp::Node * node);
   void update(bool transition) override;
-  bool isModeChangeCompleted(const Odometry & kinematics, const Trajectory & trajectory) override;
-  bool isModeChangeAvailable(
-    const Odometry & kinematics, const Trajectory & trajectory,
-    const Control & trajectory_follower_control_cmd, const Control & control_cmd) override;
+  bool isModeChangeCompleted(const InputData & input_data) override;
+  bool isModeChangeAvailable(const InputData & input_data) override;
   DebugInfo getDebugInfo() override { return debug_info_; }
 
 private:
@@ -97,24 +98,16 @@ private:
 class LocalMode : public ModeChangeBase
 {
 public:
-  bool isModeChangeCompleted(const Odometry &, const Trajectory &) override { return true; }
-  bool isModeChangeAvailable(
-    const Odometry &, const Trajectory &, const Control &, const Control &) override
-  {
-    return true;
-  }
+  bool isModeChangeCompleted(const InputData &) override { return true; }
+  bool isModeChangeAvailable(const InputData &) override { return true; }
 };
 
 // TODO(Takagi, Isamu): Connect with status from remote operation node
 class RemoteMode : public ModeChangeBase
 {
 public:
-  bool isModeChangeCompleted(const Odometry &, const Trajectory &) override { return true; }
-  bool isModeChangeAvailable(
-    const Odometry &, const Trajectory &, const Control &, const Control &) override
-  {
-    return true;
-  }
+  bool isModeChangeCompleted(const InputData &) override { return true; }
+  bool isModeChangeAvailable(const InputData &) override { return true; }
 };
 
 }  // namespace autoware::operation_mode_transition_manager
