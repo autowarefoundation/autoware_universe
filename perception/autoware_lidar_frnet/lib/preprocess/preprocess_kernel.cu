@@ -254,17 +254,18 @@ void PreprocessCuda::generateUniqueCoors(
 
   // Original indices of coors
   thrust::device_vector<int64_t> sorted_idxs(num_points);
-  thrust::sequence(thrust::device, sorted_idxs.begin(), sorted_idxs.end(), 0);
+  thrust::sequence(thrust::cuda::par.on(stream_), sorted_idxs.begin(), sorted_idxs.end(), 0);
 
   // Sort indices by coors keys
   thrust::device_vector<int64_t> coors_keys_d(coors_keys, coors_keys + num_points);
   thrust::stable_sort_by_key(
-    thrust::device, coors_keys_d.begin(), coors_keys_d.end(), sorted_idxs.begin());
+    thrust::cuda::par.on(stream_), coors_keys_d.begin(), coors_keys_d.end(), sorted_idxs.begin());
 
   // Reorder coors based on the sorted indices
   thrust::device_vector<Coord> coors_sorted(num_points);
   thrust::gather(
-    thrust::device, sorted_idxs.begin(), sorted_idxs.end(), coors_d.begin(), coors_sorted.begin());
+    thrust::cuda::par.on(stream_), sorted_idxs.begin(), sorted_idxs.end(), coors_d.begin(),
+    coors_sorted.begin());
 
   // Generate inverse_map for the sorted coors (cannot be parallelized)
   thrust::host_vector<int64_t> idxs_update(num_points);
@@ -277,11 +278,12 @@ void PreprocessCuda::generateUniqueCoors(
   thrust::inclusive_scan(thrust::host, idxs_update.begin(), idxs_update.end(), labels_h.begin());
   thrust::device_vector<int64_t> labels(labels_h);
   thrust::scatter(
-    thrust::device, labels.begin(), labels.end(), sorted_idxs.begin(), output_inverse_map);
+    thrust::cuda::par.on(stream_), labels.begin(), labels.end(), sorted_idxs.begin(),
+    output_inverse_map);
 
   // Generate unique coors
   auto new_end = thrust::unique_copy(
-    thrust::device, coors_sorted.begin(), coors_sorted.end(),
+    thrust::cuda::par.on(stream_), coors_sorted.begin(), coors_sorted.end(),
     reinterpret_cast<Coord *>(output_voxel_coors));
   output_num_unique_coors = new_end - reinterpret_cast<Coord *>(output_voxel_coors);
 }
