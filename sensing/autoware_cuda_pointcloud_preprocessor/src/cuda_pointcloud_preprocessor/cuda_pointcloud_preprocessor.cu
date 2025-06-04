@@ -204,10 +204,11 @@ void CudaPointcloudPreprocessor::organizePointcloud()
     thrust::raw_pointer_cast(device_ring_index_.data()), 0, num_rings_ * sizeof(std::int32_t),
     stream_);
   cudaMemsetAsync(
-    thrust::raw_pointer_cast(device_indexes_tensor_.data()), 0xFF,
+    thrust::raw_pointer_cast(device_indexes_tensor_.data()), num_raw_points_,
     num_organized_points_ * sizeof(std::uint32_t), stream_);
 
   if (num_raw_points_ == 0) {
+    output_pointcloud_ptr_->data.reset();
     return;
   }
 
@@ -239,15 +240,26 @@ void CudaPointcloudPreprocessor::organizePointcloud()
     num_organized_points_ = num_rings_ * max_points_per_ring_;
 
     device_ring_index_.resize(num_rings_);
+    thrust::fill(device_ring_index_.begin(), device_ring_index_.end(), 0);
     device_indexes_tensor_.resize(num_organized_points_);
+    thrust::fill(device_indexes_tensor_.begin(), device_indexes_tensor_.end(), num_raw_points_);
     device_sorted_indexes_tensor_.resize(num_organized_points_);
+    thrust::fill(
+      device_sorted_indexes_tensor_.begin(), device_sorted_indexes_tensor_.end(), num_raw_points_);
     device_segment_offsets_.resize(num_rings_ + 1);
     device_organized_points_.resize(num_organized_points_);
+    thrust::fill(
+      device_organized_points_.begin(), device_organized_points_.end(), InputPointType{});
 
     device_transformed_points_.resize(num_organized_points_);
+    thrust::fill(
+      device_transformed_points_.begin(), device_transformed_points_.end(), InputPointType{});
     device_crop_mask_.resize(num_organized_points_);
+    thrust::fill(device_crop_mask_.begin(), device_crop_mask_.end(), 0);
     device_ring_outlier_mask_.resize(num_organized_points_);
+    thrust::fill(device_ring_outlier_mask_.begin(), device_ring_outlier_mask_.end(), 0);
     device_indices_.resize(num_organized_points_);
+    thrust::fill(device_indices_.begin(), device_indices_.end(), 0);
 
     preallocateOutput();
 
@@ -297,6 +309,9 @@ void CudaPointcloudPreprocessor::organizePointcloud()
       stream_);
   }
 
+  // reuse device_indexes_tensor_ to store valid point location
+  thrust::fill(device_indexes_tensor_.begin(), device_indexes_tensor_.end(), 0);
+
   const int organized_points_blocks_per_grid =
     (num_organized_points_ + threads_per_block_ - 1) / threads_per_block_;
 
@@ -304,7 +319,8 @@ void CudaPointcloudPreprocessor::organizePointcloud()
     thrust::raw_pointer_cast(device_input_points_.data()),
     thrust::raw_pointer_cast(device_sorted_indexes_tensor_.data()),
     thrust::raw_pointer_cast(device_organized_points_.data()), num_rings_, max_points_per_ring_,
-    threads_per_block_, organized_points_blocks_per_grid, stream_);
+    thrust::raw_pointer_cast(device_indexes_tensor_.data()), num_raw_points_, threads_per_block_,
+    organized_points_blocks_per_grid, stream_);
 }
 
 std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::process(
@@ -318,10 +334,28 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   num_raw_points_ = input_pointcloud_msg_ptr->width * input_pointcloud_msg_ptr->height;
   num_organized_points_ = num_rings_ * max_points_per_ring_;
 
+  if (num_raw_points_ == 0) {
+    output_pointcloud_ptr_->row_step = 0;
+    output_pointcloud_ptr_->width = 0;
+    output_pointcloud_ptr_->height = 1;
+
+    output_pointcloud_ptr_->fields = point_fields_;
+    output_pointcloud_ptr_->is_dense = true;
+    output_pointcloud_ptr_->is_bigendian = input_pointcloud_msg_ptr->is_bigendian;
+    output_pointcloud_ptr_->point_step = sizeof(OutputPointType);
+    output_pointcloud_ptr_->header.stamp = input_pointcloud_msg_ptr->header.stamp;
+
+    return std::move(output_pointcloud_ptr_);
+  }
+
   if (num_raw_points_ > device_input_points_.size()) {
     std::size_t new_capacity = (num_raw_points_ + 1024) / 1024 * 1024;
     device_input_points_.resize(new_capacity);
   }
+
+  // Reset all contents in the device vector
+  thrust::fill(device_input_points_.begin(), device_input_points_.end(), InputPointType{});
+  thrust::fill(device_organized_points_.begin(), device_organized_points_.end(), InputPointType{});
 
   cudaMemcpyAsync(
     thrust::raw_pointer_cast(device_input_points_.data()), input_pointcloud_msg_ptr->data.data(),
@@ -330,6 +364,12 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   cudaStreamSynchronize(stream_);
 
   organizePointcloud();
+
+  // Reset all contents in the device vector
+  thrust::fill(
+    device_transformed_points_.begin(), device_transformed_points_.end(), InputPointType{});
+  thrust::fill(device_ring_outlier_mask_.begin(), device_ring_outlier_mask_.end(), 0);
+  thrust::fill(device_crop_mask_.begin(), device_crop_mask_.end(), 0);
 
   tf2::Quaternion rotation_quaternion(
     transform_msg.transform.rotation.x, transform_msg.transform.rotation.y,
@@ -378,6 +418,7 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   std::uint32_t * device_ring_outlier_mask =
     thrust::raw_pointer_cast(device_ring_outlier_mask_.data());
   std::uint32_t * device_indices = thrust::raw_pointer_cast(device_indices_.data());
+  std::uint32_t * device_is_valid_point = thrust::raw_pointer_cast(device_indexes_tensor_.data());
 
   const int blocks_per_grid = (num_organized_points_ + threads_per_block_ - 1) / threads_per_block_;
 
@@ -417,6 +458,11 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   combineMasksLaunch(
     device_crop_mask, device_ring_outlier_mask, num_organized_points_, device_ring_outlier_mask,
     threads_per_block_, blocks_per_grid, stream_);
+
+  // Mask out invalid points in the array
+  combineMasksLaunch(
+    device_is_valid_point, device_ring_outlier_mask, num_organized_points_,
+    device_ring_outlier_mask, threads_per_block_, blocks_per_grid, stream_);
 
   thrust::inclusive_scan(
     thrust::device, device_ring_outlier_mask, device_ring_outlier_mask + num_organized_points_,

@@ -32,6 +32,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::behavior_path_planner::goal_planner_utils
@@ -163,7 +164,7 @@ MarkerArray createPosesMarkerArray(
   const std::vector<Pose> & poses, std::string && ns, const std_msgs::msg::ColorRGBA & color);
 MarkerArray createTextsMarkerArray(
   const std::vector<Pose> & poses, std::string && ns, const std_msgs::msg::ColorRGBA & color);
-MarkerArray createGoalCandidatesMarkerArray(
+std::pair<MarkerArray, MarkerArray> createGoalCandidatesMarkerArray(
   const GoalCandidates & goal_candidates, const std_msgs::msg::ColorRGBA & color);
 MarkerArray createLaneletPolygonMarkerArray(
   const lanelet::CompoundPolygon3d & polygon, const std_msgs::msg::Header & header,
