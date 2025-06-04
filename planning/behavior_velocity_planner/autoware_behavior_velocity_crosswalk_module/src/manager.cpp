@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -179,6 +179,20 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
   }
   cp.occlusion_extra_objects_size =
     get_or_declare_parameter<double>(node, ns + ".occlusion.extra_predicted_objects_size");
+
+  // param for parked vehicles stop
+  cp.parked_vehicles_stop_enable =
+    get_or_declare_parameter<bool>(node, ns + ".parked_vehicles_stop.enable");
+  cp.parked_vehicles_stop_search_distance =
+    get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.search_distance");
+  cp.parked_vehicles_stop_min_ego_stop_duration =
+    get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.min_ego_stop_duration");
+  cp.parked_vehicles_stop_parked_ego_inside_safe_area_margin = get_or_declare_parameter<double>(
+    node, ns + ".parked_vehicles_stop.ego_inside_safe_area_margin");
+  cp.parked_vehicles_stop_parked_velocity_threshold =
+    get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.parked_velocity_threshold");
+  cp.parked_vehicles_stop_vehicle_permanence_duration = get_or_declare_parameter<double>(
+    node, ns + ".parked_vehicles_stop.vehicle_permanence_duration");
 }
 
 void CrosswalkModuleManager::launchNewModules(const PathWithLaneId & path)

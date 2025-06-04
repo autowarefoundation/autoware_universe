@@ -15,15 +15,17 @@
 #ifndef POSE_INITIALIZER_CORE_HPP_
 #define POSE_INITIALIZER_CORE_HPP_
 
-#include <autoware/component_interface_specs_universe/localization.hpp>
-#include <autoware/component_interface_utils/rclcpp.hpp>
+#include <autoware/component_interface_specs/localization.hpp>
 #include <autoware_utils_diagnostics/diagnostics_interface.hpp>
 #include <autoware_utils_logging/logger_level_configure.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_adapi_v1_msgs/msg/localization_initialization_state.hpp>
+#include <autoware_internal_localization_msgs/srv/initialize_localization.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 
 #include <memory>
+#include <string>
 
 namespace autoware::pose_initializer
 {
@@ -40,15 +42,14 @@ public:
   explicit PoseInitializer(const rclcpp::NodeOptions & options);
 
 private:
-  using ServiceException = autoware::component_interface_utils::ServiceException;
-  using Initialize = autoware::component_interface_specs_universe::localization::Initialize;
-  using State = autoware::component_interface_specs_universe::localization::InitializationState;
+  using Initialize = autoware::component_interface_specs::localization::Initialize;
+  using State = autoware::component_interface_specs::localization::InitializationState;
   using PoseWithCovarianceStamped = geometry_msgs::msg::PoseWithCovarianceStamped;
 
   rclcpp::CallbackGroup::SharedPtr group_srv_;
   rclcpp::Publisher<PoseWithCovarianceStamped>::SharedPtr pub_reset_;
-  autoware::component_interface_utils::Publisher<State>::SharedPtr pub_state_;
-  autoware::component_interface_utils::Service<Initialize>::SharedPtr srv_initialize_;
+  rclcpp::Publisher<State::Message>::SharedPtr pub_state_;
+  rclcpp::Service<Initialize::Service>::SharedPtr srv_initialize_;
   State::Message state_;
   std::array<double, 36> output_pose_covariance_{};
   std::array<double, 36> gnss_particle_covariance_{};
