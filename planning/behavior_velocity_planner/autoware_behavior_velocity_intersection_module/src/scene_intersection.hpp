@@ -462,6 +462,18 @@ private:
    ***********************************************************
    ***********************************************************
    ***********************************************************
+   * @defgroup stuck-variables [var] stuck detection
+   * @{
+   */
+  //! indicate whether ego was trying to stop for stuck vehicle(for debouncing)
+  bool was_stopping_for_stuck_{false};
+  /** @} */
+
+private:
+  /**
+   ***********************************************************
+   ***********************************************************
+   ***********************************************************
    * @defgroup occlusion-variables [var] occlusion detection variables
    * @{
    */
