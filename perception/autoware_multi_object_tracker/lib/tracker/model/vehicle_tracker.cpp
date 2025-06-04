@@ -260,8 +260,29 @@ bool VehicleTracker::measure(
 
   // update object
   types::DynamicObject updating_object = in_object;
+  // turn 180 deg if the updating object heads opposite direction
+  {
+    const double this_yaw = motion_model_.getStateElement(IDX::YAW);
+    const double updating_yaw = tf2::getYaw(updating_object.pose.orientation);
+    double yaw_diff = updating_yaw - this_yaw;
+    while (yaw_diff > M_PI) yaw_diff -= 2 * M_PI;
+    while (yaw_diff < -M_PI) yaw_diff += 2 * M_PI;
+    if (std::abs(yaw_diff) > M_PI_2) {
+      tf2::Quaternion q;
+      q.setRPY(0, 0, updating_yaw + M_PI);
+      updating_object.pose.orientation = tf2::toMsg(q);
+      updating_object.anchor_point.x = -updating_object.anchor_point.x;
+      updating_object.anchor_point.y = -updating_object.anchor_point.y;
+    }
+  }
+
+  // update tracking offset
   shapes::calcAnchorPointOffset(object_, tracking_offset_, updating_object);
+
+  // update pose
   measureWithPose(updating_object, channel_info);
+
+  // update shape
   if (channel_info.trust_extension) {
     measureWithShape(updating_object);
   }
