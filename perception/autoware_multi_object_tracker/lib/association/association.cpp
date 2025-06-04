@@ -55,19 +55,23 @@ double getFormedYawAngle(
   const geometry_msgs::msg::Quaternion & measurement_quat,
   const geometry_msgs::msg::Quaternion & tracker_quat, const bool distinguish_front_or_back = true)
 {
-  const double measurement_yaw = autoware_utils::normalize_radian(tf2::getYaw(measurement_quat));
-  const double tracker_yaw = autoware_utils::normalize_radian(tf2::getYaw(tracker_quat));
-  const double angle_range = distinguish_front_or_back ? M_PI : M_PI_2;
-  const double angle_step = distinguish_front_or_back ? 2.0 * M_PI : M_PI;
-  // Fixed measurement_yaw to be in the range of +-90 or 180 degrees of X_t(IDX::YAW)
-  double measurement_fixed_yaw = measurement_yaw;
-  while (angle_range <= tracker_yaw - measurement_fixed_yaw) {
-    measurement_fixed_yaw = measurement_fixed_yaw + angle_step;
+  // Calculate raw difference
+  double diff = tf2::getYaw(measurement_quat) - tf2::getYaw(tracker_quat);
+
+  // Fast modulo to bring diff into [-2π, 2π] range
+  diff += (diff > M_PI) ? -2.0 * M_PI : (diff < -M_PI) ? 2.0 * M_PI : 0.0;
+
+  // For front/back distinction, use [-π, π] range
+  // For side distinction only, use [-π/2, π/2] range by folding at ±π/2
+  if (!distinguish_front_or_back) {
+    if (diff > M_PI_2) {
+      diff = M_PI - diff;
+    } else if (diff < -M_PI_2) {
+      diff = -M_PI - diff;
+    }
   }
-  while (angle_range <= measurement_fixed_yaw - tracker_yaw) {
-    measurement_fixed_yaw = measurement_fixed_yaw - angle_step;
-  }
-  return std::fabs(measurement_fixed_yaw - tracker_yaw);
+
+  return std::abs(diff);
 }
 }  // namespace
 
