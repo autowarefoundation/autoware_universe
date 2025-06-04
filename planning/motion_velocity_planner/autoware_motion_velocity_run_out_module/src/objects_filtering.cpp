@@ -109,11 +109,13 @@ bool skip_object_condition(
   }
   if (!filtering_data.ignore_objects_rtree.is_geometry_disjoint_from_rtree_polygons(
         object.current_footprint, filtering_data.ignore_objects_polygons)) {
-    if (params.start_ignore_objects_time == 0.0 && params.start_ignore_objects_distance == 0.0) {
+    if (
+      params.ignore_objects_preserved_time == 0.0 &&
+      params.ignore_objects_preserved_distance == 0.0) {
       return skip_object;
     }
-    object.max_prediction_time = params.start_ignore_objects_time;
-    object.max_prediction_distance = params.start_ignore_objects_distance;
+    object.max_prediction_time = params.ignore_objects_preserved_time;
+    object.max_prediction_distance = params.ignore_objects_preserved_distance;
   }
   return !skip_object;
 }
@@ -250,11 +252,11 @@ void filter_predicted_paths(
     auto [cut_time, cut_distance] =
       get_cut_predicted_path_time_and_distance(predicted_path_footprint, map_data);
     // apply the lower bound on cutting only when it is higher than the map based cut value
-    if (cut_time && params.start_cut_time != 0.0) {
-      cut_time = std::min(params.start_cut_time, *cut_time);
+    if (cut_time && params.cut_preserved_duration != 0.0) {
+      cut_time = std::min(params.cut_preserved_duration, *cut_time);
     }
-    if (cut_distance && params.start_cut_distance != 0.0) {
-      cut_distance = std::max(params.start_cut_distance, *cut_distance);
+    if (cut_distance && params.cut_preserved_distance != 0.0) {
+      cut_distance = std::max(params.cut_preserved_distance, *cut_distance);
     }
     // apply the upper bounds from the values set when "ignoring" the object
     if (object.max_prediction_time) {
