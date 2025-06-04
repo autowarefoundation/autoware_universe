@@ -24,7 +24,6 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
-#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/ros/msg_covariance.hpp>
@@ -310,12 +309,6 @@ bool VehicleTracker::getTrackedObject(
     RCLCPP_WARN(logger_, "VehicleTracker::getTrackedObject: Failed to get predicted state.");
     return false;
   }
-
-  // set shape
-  const auto origin_yaw = tf2::getYaw(object_.pose.orientation);
-  const auto ekf_pose_yaw = tf2::getYaw(pose.orientation);
-  object.shape.footprint =
-    autoware_utils::rotate_polygon(object.shape.footprint, origin_yaw - ekf_pose_yaw);
 
   // cache object
   updateCache(object, time);
