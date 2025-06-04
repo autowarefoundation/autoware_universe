@@ -58,8 +58,6 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
   ring_outlier_filter_parameters.distance_ratio = declare_parameter<float>("distance_ratio");
   ring_outlier_filter_parameters.object_length_threshold =
     declare_parameter<float>("object_length_threshold");
-  ring_outlier_filter_parameters.num_points_threshold =
-    declare_parameter<int>("num_points_threshold");
 
   const auto crop_box_min_x_vector = declare_parameter<std::vector<double>>("crop_box.min_x");
   const auto crop_box_min_y_vector = declare_parameter<std::vector<double>>("crop_box.min_y");
