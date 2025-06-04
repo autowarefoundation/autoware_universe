@@ -86,6 +86,8 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
     lib/lidar_frnet.cpp
   )
 
+  list(APPEND CUDA_NVCC_FLAGS "--expt-relaxed-constexpr -diag-suppress 1675 --extended-lambda")
+
   cuda_add_library(${PROJECT_NAME}_cuda_lib SHARED
     lib/postprocess/postprocess_kernel.cu
     lib/preprocess/preprocess_kernel.cu

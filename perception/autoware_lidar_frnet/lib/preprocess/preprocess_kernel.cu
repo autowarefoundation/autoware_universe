@@ -24,7 +24,6 @@
 #include <thrust/device_vector.h>
 #include <thrust/execution_policy.h>
 #include <thrust/gather.h>
-#include <thrust/host_vector.h>
 #include <thrust/sequence.h>
 #include <thrust/sort.h>
 #include <thrust/transform.h>
@@ -291,16 +290,18 @@ void PreprocessCuda::generateUniqueCoors(
     thrust::cuda::par.on(stream_), sorted_idxs.begin(), sorted_idxs.end(), coors_d.begin(),
     coors_sorted.begin());
 
-  // Generate inverse_map for the sorted coors (cannot be parallelized)
-  thrust::host_vector<int64_t> idxs_update(num_points);
-  thrust::host_vector<Coord> coors_sorted_h(coors_sorted);
+  // Generate inverse_map for the sorted coors
+  thrust::device_vector<int64_t> idxs_update(num_points);
+
+  auto not_equal = [] __device__(const Coord & a, const Coord & b) { return a == b ? 0 : 1; };
   thrust::transform(
-    thrust::host, coors_sorted_h.begin(), coors_sorted_h.end() - 1, coors_sorted_h.begin() + 1,
-    idxs_update.begin() + 1,
-    [](const Coord & a, const Coord & b) -> int64_t { return (a == b) ? 0 : 1; });
-  thrust::host_vector<int64_t> labels_h(num_points);
-  thrust::inclusive_scan(thrust::host, idxs_update.begin(), idxs_update.end(), labels_h.begin());
-  thrust::device_vector<int64_t> labels(labels_h);
+    thrust::cuda::par.on(stream_), coors_sorted.begin(), coors_sorted.end() - 1,
+    coors_sorted.begin() + 1, idxs_update.begin() + 1, not_equal);
+
+  thrust::device_vector<int64_t> labels(num_points);
+  thrust::inclusive_scan(
+    thrust::cuda::par.on(stream_), idxs_update.begin(), idxs_update.end(), labels.begin());
+
   thrust::scatter(
     thrust::cuda::par.on(stream_), labels.begin(), labels.end(), sorted_idxs.begin(),
     output_inverse_map);
