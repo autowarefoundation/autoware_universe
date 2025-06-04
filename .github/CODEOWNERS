@@ -185,7 +185,7 @@ simulator/tier4_dummy_object_rviz_plugin/** yukihiro.saito@tier4.jp
 system/autoware_bluetooth_monitor/** fumihito.ito@tier4.jp junya.sasaki@tier4.jp
 system/autoware_component_monitor/** baris@leodrive.ai memin@leodrive.ai yavuz@leodrive.ai
 system/autoware_component_state_monitor/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp
-system/autoware_default_adapi/** isamu.takagi@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
+system/autoware_default_adapi_universe/** isamu.takagi@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
 system/autoware_default_adapi_helpers/autoware_adapi_adaptors/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
 system/autoware_default_adapi_helpers/autoware_adapi_visualizers/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
 system/autoware_default_adapi_helpers/autoware_automatic_pose_initializer/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp

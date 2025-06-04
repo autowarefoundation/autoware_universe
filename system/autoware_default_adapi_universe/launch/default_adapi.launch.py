@@ -29,14 +29,14 @@ def create_api_node(node_name, class_name):
     return ComposableNode(
         namespace=str(fullname.parent),
         name=str(fullname.name),
-        package="autoware_default_adapi",
+        package="autoware_default_adapi_universe",
         plugin="autoware::default_adapi::" + class_name,
         parameters=[ParameterFile(LaunchConfiguration("config"))],
     )
 
 
 def get_default_config():
-    path = FindPackageShare("autoware_default_adapi")
+    path = FindPackageShare("autoware_default_adapi_universe")
     path = PathJoinSubstitution([path, "config/default_adapi.param.yaml"])
     return path
 
