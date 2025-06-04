@@ -16,6 +16,7 @@
 #include "autoware/lidar_frnet/utils.hpp"
 
 #include <autoware/cuda_utils/cuda_check_error.hpp>
+#include <cub/device/device_radix_sort.cuh>
 
 #include <cuda_fp16.h>
 #include <cuda_runtime.h>
@@ -257,9 +258,32 @@ void PreprocessCuda::generateUniqueCoors(
   thrust::sequence(thrust::cuda::par.on(stream_), sorted_idxs.begin(), sorted_idxs.end(), 0);
 
   // Sort indices by coors keys
-  thrust::device_vector<int64_t> coors_keys_d(coors_keys, coors_keys + num_points);
-  thrust::stable_sort_by_key(
-    thrust::cuda::par.on(stream_), coors_keys_d.begin(), coors_keys_d.end(), sorted_idxs.begin());
+  thrust::device_vector<int64_t> coors_keys_d(num_points);
+  int64_t * d_sorted_keys_output_ptr = thrust::raw_pointer_cast(coors_keys_d.data());
+  int64_t * d_values_inout_ptr = thrust::raw_pointer_cast(sorted_idxs.data());
+  void * d_temp_storage = nullptr;
+  size_t temp_storage_bytes = 0;
+
+  // Memory requirements calculation
+  // Note: If num_points is 0, CUB's SortPairs is a no-op and temp_storage_bytes will be 0
+  cub::DeviceRadixSort::SortPairs(
+    d_temp_storage, temp_storage_bytes, coors_keys, d_sorted_keys_output_ptr, d_values_inout_ptr,
+    d_values_inout_ptr, num_points, 0, sizeof(int64_t) * 8, stream_);
+
+  // Allocate temporary storage
+  thrust::device_vector<u_char> cub_temp_storage_buffer_d(temp_storage_bytes);
+  if (temp_storage_bytes > 0) {  // Only assign if memory is actually needed
+    d_temp_storage = thrust::raw_pointer_cast(cub_temp_storage_buffer_d.data());
+  } else {
+    d_temp_storage = nullptr;  // Ensure d_temp_storage is nullptr if no bytes are needed
+  }
+
+  // Perform the sort if there are points to sort
+  if (num_points > 0) {
+    cub::DeviceRadixSort::SortPairs(
+      d_temp_storage, temp_storage_bytes, coors_keys, d_sorted_keys_output_ptr, d_values_inout_ptr,
+      d_values_inout_ptr, num_points, 0, sizeof(int64_t) * 8, stream_);
+  }
 
   // Reorder coors based on the sorted indices
   thrust::device_vector<Coord> coors_sorted(num_points);
