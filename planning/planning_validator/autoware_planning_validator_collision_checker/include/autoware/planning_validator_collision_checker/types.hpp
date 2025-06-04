@@ -90,6 +90,7 @@ struct PointcloudParams
 {
   double height_buffer{};
   double min_height{};
+  double observation_time{};
 
   struct VoxelGridFilterParams
   {

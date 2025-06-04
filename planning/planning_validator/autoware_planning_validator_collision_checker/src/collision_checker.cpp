@@ -93,6 +93,8 @@ void CollisionChecker::setup_parameters(rclcpp::Node & node)
     get_or_declare_parameter<double>(node, "collision_checker.pointcloud.height_buffer");
   params_.pointcloud.min_height =
     get_or_declare_parameter<double>(node, "collision_checker.pointcloud.min_height");
+  params_.pointcloud.observation_time =
+    get_or_declare_parameter<double>(node, "collision_checker.pointcloud.observation_time");
   params_.pointcloud.voxel_grid_filter.x =
     get_or_declare_parameter<double>(node, "collision_checker.pointcloud.voxel_grid_filter.x");
   params_.pointcloud.voxel_grid_filter.y =
@@ -138,8 +140,11 @@ void CollisionChecker::validate(bool & is_critical)
     context_->vehicle_info.front_overhang_m + context_->vehicle_info.wheel_base_m;
   const auto ego_front_pose = autoware_utils::calc_offset_pose(
     context_->data->current_kinematics->pose.pose, base_to_front_length, 0.0, 0.0);
+
+  auto input_trajectory_points = context_->data->current_trajectory->points;
+  autoware::motion_utils::calculate_time_from_start(input_trajectory_points, ego_front_pose.position);
   const auto trajectory_points = collision_checker_utils::trim_trajectory_points(
-    context_->data->current_trajectory->points, ego_front_pose);
+    input_trajectory_points, ego_front_pose);
 
   CollisionCheckerLanelets lanelets;
   const auto turn_direction = get_lanelets(lanelets, trajectory_points);
@@ -267,30 +272,39 @@ bool CollisionChecker::check_collision(
     const auto pcd_object = get_pcd_object(time_stamp, filtered_point_cloud, target_lanelet);
     if (!pcd_object.has_value()) continue;
 
-    auto calculate_velocity =
-      [](const double & dl, const double & dt, const double & last_velocity) {
-        const auto max_accel = 10.0;
-        if (dt <= 1e-6) return last_velocity;
-        const auto raw_velocity = dl / dt;
-        if (std::abs(raw_velocity - last_velocity) / dt > max_accel) {
-          return 0.0;  // too high acceleration, reset velocity
-        }
-        return autoware::signal_processing::lowpassFilter(raw_velocity, last_velocity, 0.5);
-      };
+    auto update_object = [&](PCDObject & object, const PCDObject & new_data) {
+      const auto dt = (new_data.last_update_time - object.last_update_time).seconds();
+      const auto dl = object.distance_to_overlap - new_data.distance_to_overlap;
+      if (dt < 1e-6) return;  // too small time difference, skip update
+
+      object.track_duration += dt;
+      const auto max_accel = 10.0;
+      const auto raw_velocity = dl / dt;
+      const bool is_reliable = object.track_duration > params_.pointcloud.observation_time;
+      if (is_reliable && std::abs(raw_velocity - object.velocity) / dt > max_accel) {
+        object.velocity = 0.0;  // too high acceleration, reset velocity
+        object.track_duration = 0.0;  // reset track duration
+      } else {
+        object.velocity = autoware::signal_processing::lowpassFilter(
+          raw_velocity, object.velocity, 0.5);  // apply low-pass filter to velocity
+      }
+      object.last_update_time = new_data.last_update_time;
+      object.pose = new_data.pose;
+      object.distance_to_overlap = new_data.distance_to_overlap;
+      object.ttc = object.distance_to_overlap / object.velocity;
+    };
 
     if (history_.find(pcd_object->overlap_lanelet_id) == history_.end()) {
       history_[pcd_object->overlap_lanelet_id] = pcd_object.value();
     } else {
       auto & existing_object = history_[pcd_object->overlap_lanelet_id];
-      existing_object.pose = pcd_object->pose;
-      const auto dt = (time_stamp - existing_object.last_update_time).seconds();
-      const auto dl = pcd_object->distance_to_overlap - existing_object.distance_to_overlap;
-      existing_object.track_duration += dt;
-      existing_object.last_update_time = time_stamp;
-      existing_object.distance_to_overlap = pcd_object->distance_to_overlap;
-      existing_object.velocity = calculate_velocity(dl, dt, existing_object.velocity);
-      existing_object.ttc = existing_object.distance_to_overlap / existing_object.velocity;
-      if (
+      RCLCPP_INFO(logger_, "Tracked Object Prev: dist %f, vel %f",
+                  existing_object.distance_to_overlap, existing_object.velocity);
+      update_object(existing_object, pcd_object.value());
+
+      RCLCPP_INFO(logger_, "Tracked Object current: dist %f, vel %f, ttc %f",
+                  existing_object.distance_to_overlap, existing_object.velocity, existing_object.ttc);
+      if (existing_object.track_duration > params_.pointcloud.observation_time &&
         std::abs(existing_object.ttc - target_lanelet.ego_time_to_reach) < params_.ttc_threshold) {
         is_safe = false;
         context_->debug_pose_publisher->pushPointMarker(
