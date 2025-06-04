@@ -144,7 +144,7 @@ std::vector<autoware_perception_msgs::msg::PredictedPath> filter_by_confidence(
 
 void calculate_predicted_path_footprints(
   Object & object, const autoware_perception_msgs::msg::PredictedObject & predicted_object,
-  [[maybe_unused]] const Parameters & params)
+  const Parameters & params)
 {
   auto width = 0.0;
   auto half_length = 0.0;
@@ -182,7 +182,7 @@ void calculate_predicted_path_footprints(
 
 void cut_predicted_path_footprint(
   ObjectPredictedPathFootprint & footprint, const std::optional<double> & cut_time,
-  const std::optional<double> & cut_distance)
+  const std::optional<double> & cut_distance, const double standstill_duration_after_cut)
 {
   if (!cut_time && !cut_distance) {
     return;
@@ -200,11 +200,12 @@ void cut_predicted_path_footprint(
     }
   }
   if ((!cut_time || t > cut_time) && (!cut_distance || dist > cut_distance)) {
-    constexpr auto extra_indexes = 6;
+    const auto standstill_indexes =
+      static_cast<size_t>(standstill_duration_after_cut / footprint.time_step);
     for (const auto pos : {front_left, front_right, rear_left, rear_right}) {
       footprint.predicted_path_footprint.corner_linestrings[pos].resize(cut_index);
       footprint.predicted_path_footprint.corner_linestrings[pos].resize(
-        cut_index + extra_indexes,
+        cut_index + standstill_indexes,
         footprint.predicted_path_footprint.corner_linestrings[pos].back());
     }
   }
@@ -267,7 +268,8 @@ void filter_predicted_paths(
       const auto upper_bound = *object.max_prediction_distance;
       cut_distance = std::min(cut_distance.value_or(upper_bound), upper_bound);
     }
-    cut_predicted_path_footprint(predicted_path_footprint, cut_time, cut_distance);
+    cut_predicted_path_footprint(
+      predicted_path_footprint, cut_time, cut_distance, params.standstill_duration_after_cut);
   }
 }
 

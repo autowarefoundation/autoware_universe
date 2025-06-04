@@ -54,6 +54,7 @@ struct ObjectParameters
   bool cut_if_crossing_ego_from_behind;
   double confidence_filtering_threshold;
   bool confidence_filtering_only_use_highest;
+  double standstill_duration_after_cut;
 };
 
 /// @brief conditions to ignore collisions
@@ -248,6 +249,8 @@ struct Parameters
         get_object_parameter<double>(node, ns, label, ".cut_predicted_paths.preserved_duration");
       object_parameters_per_label[label].cut_preserved_distance =
         get_object_parameter<double>(node, ns, label, ".cut_predicted_paths.preserved_distance");
+      object_parameters_per_label[label].standstill_duration_after_cut =
+        get_object_parameter<double>(node, ns, label, ".standstill_duration_after_cut");
     }
     debug.object_label = getOrDeclareParameter<std::string>(node, ns + ".debug.object_label");
 
@@ -359,6 +362,9 @@ struct Parameters
       updateParam(
         params, ns + str + ".cut_predicted_paths.preserved_distance",
         object_parameters_per_label[label].cut_preserved_distance);
+      updateParam(
+        params, ns + str + ".standstill_duration_after_cut",
+        object_parameters_per_label[label].standstill_duration_after_cut);
     }
     updateParam(params, ns + ".debug.object_label", debug.object_label);
 
