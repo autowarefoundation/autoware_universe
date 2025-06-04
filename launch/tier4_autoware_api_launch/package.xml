@@ -12,7 +12,7 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
   <exec_depend>autoware_adapi_adaptors</exec_depend>
-  <exec_depend>autoware_default_adapi</exec_depend>
+  <exec_depend>autoware_default_adapi_universe</exec_depend>
   <exec_depend>autoware_iv_external_api_adaptor</exec_depend>
   <exec_depend>autoware_iv_internal_api_adaptor</exec_depend>
   <exec_depend>autoware_path_distance_calculator</exec_depend>
