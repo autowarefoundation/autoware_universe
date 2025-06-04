@@ -39,6 +39,7 @@
   <arg name="perception/enable_object_recognition" default="false" description="enable object recognition"/>
   <arg name="perception/enable_elevation_map" default="false" description="enable elevation map loader"/>
   <arg name="perception/enable_traffic_light" default="true" description="enable traffic light"/>
+  <arg name="perception/enable_occupancy_grid_map" default="true" description="enable occupancy grid map"/>
   <arg name="fusion_only" default="true" description="enable only camera and V2X fusion when enabling traffic light"/>
   <arg name="perception/use_base_link_z" default="true" description="dummy perception uses base_link z axis coordinate if it is true"/>
   <arg name="sensing/visible_range" default="300.0" description="visible range when using dummy perception"/>
@@ -68,17 +69,19 @@
 
     <group unless="$(var scenario_simulation)">
       <!-- Occupancy Grid -->
-      <push-ros-namespace namespace="occupancy_grid_map"/>
-      <include file="$(find-pkg-share tier4_perception_launch)/launch/occupancy_grid_map/probabilistic_occupancy_grid_map.launch.xml">
-        <arg name="input_obstacle_pointcloud" value="true"/>
-        <arg name="input_obstacle_and_raw_pointcloud" value="false"/>
-        <arg name="input/obstacle_pointcloud" value="/perception/obstacle_segmentation/pointcloud"/>
-        <arg name="output" value="/perception/occupancy_grid_map/map"/>
-        <arg name="occupancy_grid_map_method" value="laserscan_based_occupancy_grid_map"/>
-        <arg name="occupancy_grid_map_param_path" value="$(var laserscan_based_occupancy_grid_map_param_path)"/>
-        <arg name="occupancy_grid_map_updater" value="$(var occupancy_grid_map_updater)"/>
-        <arg name="occupancy_grid_map_updater_param_path" value="$(var occupancy_grid_map_updater_param_path)"/>
-      </include>
+      <group if="$(var perception/enable_occupancy_grid_map)">
+        <push-ros-namespace namespace="occupancy_grid_map"/>
+        <include file="$(find-pkg-share tier4_perception_launch)/launch/occupancy_grid_map/probabilistic_occupancy_grid_map.launch.xml">
+          <arg name="input_obstacle_pointcloud" value="true"/>
+          <arg name="input_obstacle_and_raw_pointcloud" value="false"/>
+          <arg name="input/obstacle_pointcloud" value="/perception/obstacle_segmentation/pointcloud"/>
+          <arg name="output" value="/perception/occupancy_grid_map/map"/>
+          <arg name="occupancy_grid_map_method" value="laserscan_based_occupancy_grid_map"/>
+          <arg name="occupancy_grid_map_param_path" value="$(var laserscan_based_occupancy_grid_map_param_path)"/>
+          <arg name="occupancy_grid_map_updater" value="$(var occupancy_grid_map_updater)"/>
+          <arg name="occupancy_grid_map_updater_param_path" value="$(var occupancy_grid_map_updater_param_path)"/>
+        </include>
+      </group>
     </group>
 
     <!-- perception module -->
