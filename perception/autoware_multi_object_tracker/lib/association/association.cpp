@@ -26,6 +26,7 @@
 #include <list>
 #include <memory>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace
@@ -40,7 +41,7 @@ double getMahalanobisDistance(
   tracker_point << tracker.x, tracker.y;
   Eigen::MatrixXd mahalanobis_squared = (measurement_point - tracker_point).transpose() *
                                         covariance.inverse() * (measurement_point - tracker_point);
-  return std::sqrt(mahalanobis_squared(0));
+  return mahalanobis_squared(0);
 }
 
 Eigen::Matrix2d getXYCovariance(const std::array<double, 36> & pose_covariance)
@@ -175,12 +176,14 @@ double DataAssociation::calculateScore(
   const double area = autoware_utils::get_area(measurement_object.shape);
   if (area < min_area || max_area < area) return 0.0;
 
-  // angle gate
+  // angle gate, only if the threshold is set less than pi
   const double max_rad = config_.max_rad_matrix(tracker_label, measurement_label);
-  const double angle =
-    getFormedYawAngle(measurement_object.pose.orientation, tracked_object.pose.orientation, false);
-  if (std::fabs(max_rad) < M_PI && std::fabs(max_rad) < std::fabs(angle)) {
-    return 0.0;
+  if (max_rad < 3.142) {
+    const double angle = getFormedYawAngle(
+      measurement_object.pose.orientation, tracked_object.pose.orientation, false);
+    if (std::fabs(max_rad) < M_PI && std::fabs(max_rad) < std::fabs(angle)) {
+      return 0.0;
+    }
   }
 
   // mahalanobis dist gate
@@ -188,8 +191,7 @@ double DataAssociation::calculateScore(
     measurement_object.pose.position, tracked_object.pose.position,
     getXYCovariance(tracked_object.pose_covariance));
   constexpr double mahalanobis_dist_threshold =
-    3.717;  // 99.99% confidence level for 2 degrees of freedom, square root of chi-square critical
-            // value of 13.816
+    13.816;  // 99.99% confidence level for 2 degrees of freedom, chi-square critical value
   if (mahalanobis_dist_threshold <= mahalanobis_dist) return 0.0;
 
   // 2d iou gate

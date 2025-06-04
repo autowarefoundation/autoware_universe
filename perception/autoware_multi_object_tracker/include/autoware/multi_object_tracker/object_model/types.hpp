@@ -100,6 +100,7 @@ struct DynamicObject
   // object extension (size and shape)
   autoware_perception_msgs::msg::Shape shape;
   geometry_msgs::msg::Point anchor_point;
+  double area;
 };
 
 struct DynamicObjectList
