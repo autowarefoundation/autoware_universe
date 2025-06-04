@@ -270,7 +270,7 @@ bool CrosswalkModule::modifyPathVelocity(PathWithLaneId * path)
   const auto sparse_resample_path =
     resamplePath(*path, resample_interval, false, true, true, false);
 
-  std::vector<StopFactor> stop_factors;
+  std::vector<StopPoseWithId> stop_factors;
   // Decide to stop for crosswalk users
   const auto stop_factor_for_crosswalk_users = checkStopForCrosswalkUsers(
     *path, sparse_resample_path, first_path_point_on_crosswalk, last_path_point_on_crosswalk,
@@ -290,13 +290,8 @@ bool CrosswalkModule::modifyPathVelocity(PathWithLaneId * path)
     checkStopForParkedVehicles(*path, first_path_point_on_crosswalk);
 
   // Get nearest stop factor
-<<<<<<< HEAD
   const auto nearest_stop_factor =
     getNearestStopFactor(*path, stop_factors, stop_factor_for_parked_vehicles);
-=======
-  const auto nearest_stop_factor = getNearestStopPoseWithId(
-    *path, stop_factor_for_crosswalk_users, stop_factor_for_stuck_vehicles);
->>>>>>> fbb50b8521 (feat(crosswalk_module): set infomation to PlanningFactor topic)
   recordTime(3);
 
   // Set safe or unsafe
@@ -1149,7 +1144,7 @@ std::optional<StopPoseWithId> CrosswalkModule::checkStopForStuckVehicles(
   return {};
 }
 
-std::optional<StopFactor> CrosswalkModule::checkStopForParkedVehicles(
+std::optional<StopPoseWithId> CrosswalkModule::checkStopForParkedVehicles(
   const PathWithLaneId & ego_path, const geometry_msgs::msg::Point & first_path_point_on_crosswalk)
 {
   if (
@@ -1252,12 +1247,13 @@ std::optional<StopFactor> CrosswalkModule::checkStopForParkedVehicles(
       parked_vehicles_stop_.previous_detection_time = clock_->now();
     }
   }
-  return stop_factor;
+  // return stop_factor;
+  return StopPoseWithId{stop_factor->stop_pose, {}};
 }
 
-std::optional<StopFactor> CrosswalkModule::getNearestStopFactor(
-  const PathWithLaneId & ego_path, const std::vector<StopFactor> & stop_factors,
-  const std::optional<StopFactor> & stop_factor_for_parked_vehicles)
+std::optional<StopPoseWithId> CrosswalkModule::getNearestStopFactor(
+  const PathWithLaneId & ego_path, const std::vector<StopPoseWithId> & stop_factors,
+  const std::optional<StopPoseWithId> & stop_factor_for_parked_vehicles)
 {
   // the parked vehicles stop feature is only used if there are no other crosswalk stops
   const auto use_parked_vehicles = stop_factors.empty() && stop_factor_for_parked_vehicles;

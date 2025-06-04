@@ -64,12 +64,6 @@ using autoware_utils::Polygon2d;
 using autoware_utils::StopWatch;
 using lanelet::autoware::Crosswalk;
 
-struct StopPoseWithId
-{
-  geometry_msgs::msg::Pose stop_pose;
-  std::vector<unique_identifier_msgs::msg::UUID> checked_object_ids;
-};
-
 namespace
 {
 /**
@@ -426,7 +420,7 @@ private:
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const std::optional<geometry_msgs::msg::Pose> & stop_pose);
 
-  std::optional<StopFactor> checkStopForParkedVehicles(
+  std::optional<StopPoseWithId> checkStopForParkedVehicles(
     const PathWithLaneId & ego_path,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk);
 
@@ -439,9 +433,9 @@ private:
     const PathWithLaneId & ego_path, const PredictedObject & object,
     const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area);
 
-  std::optional<StopFactor> getNearestStopFactor(
-    const PathWithLaneId & ego_path, const std::vector<StopFactor> & stop_factors,
-    const std::optional<StopFactor> & stop_factor_for_parked_vehicles);
+  std::optional<StopPoseWithId> getNearestStopFactor(
+    const PathWithLaneId & ego_path, const std::vector<StopPoseWithId> & stop_factors,
+    const std::optional<StopPoseWithId> & stop_factor_for_parked_vehicles);
 
   void setDistanceToStop(
     const PathWithLaneId & ego_path,
