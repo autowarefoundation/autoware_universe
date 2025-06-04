@@ -178,6 +178,13 @@ public:
       double static_occlusion_with_traffic_light_timeout;
     } occlusion;
 
+    struct ConservativeMerging
+    {
+      bool enable_yield;
+      double minimum_lateral_distance_threshold;
+      double merging_judge_angle_threshold;
+    } conservative_merging;
+
     struct Debug
     {
       std::vector<int64_t> ttc;

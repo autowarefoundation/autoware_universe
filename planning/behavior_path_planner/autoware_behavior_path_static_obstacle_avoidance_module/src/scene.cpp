@@ -358,6 +358,10 @@ void StaticObstacleAvoidanceModule::fillAvoidanceTargetObjects(
     if (!data.distance_to_red_traffic_light.has_value()) {
       return helper_->getForwardDetectionRange(data.closest_lanelet);
     }
+    if (data.distance_to_red_traffic_light.value() < -1.0) {
+      // The vehicle has already passed the stop line.
+      return helper_->getForwardDetectionRange(data.closest_lanelet);
+    }
     return std::min(
       helper_->getForwardDetectionRange(data.closest_lanelet),
       data.distance_to_red_traffic_light.value());
