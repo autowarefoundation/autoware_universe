@@ -345,6 +345,7 @@ void TrackerProcessor::getTentativeObjects(
 void TrackerProcessor::setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr)
 {
   time_keeper_ = std::move(time_keeper_ptr);
+  association_->setTimeKeeper(time_keeper_);
 }
 
 }  // namespace autoware::multi_object_tracker

@@ -215,7 +215,7 @@ void TrackerObjectDebugger::draw(
     marker.color.r = 1.0;
     marker.color.g = 1.0;
     marker.color.b = 1.0;  // white
-    marker.lifetime = rclcpp::Duration::from_seconds(0);
+    marker.lifetime = rclcpp::Duration::from_seconds(0.15);
 
     // get marker - existence_probability
     visualization_msgs::msg::Marker text_marker;

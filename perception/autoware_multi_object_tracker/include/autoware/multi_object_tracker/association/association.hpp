@@ -24,6 +24,7 @@
 #include "autoware/multi_object_tracker/association/solver/gnn_solver.hpp"
 #include "autoware/multi_object_tracker/tracker/tracker.hpp"
 
+#include <autoware_utils/system/time_keeper.hpp>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
@@ -52,6 +53,7 @@ private:
   AssociatorConfig config_;
   const double score_threshold_;
   std::unique_ptr<gnn_solver::GnnSolverInterface> gnn_solver_ptr_;
+  std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -69,6 +71,8 @@ public:
   Eigen::MatrixXd calcScoreMatrix(
     const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers);
+
+  void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr);
 };
 
 }  // namespace autoware::multi_object_tracker

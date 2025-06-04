@@ -72,6 +72,7 @@ double getFormedYawAngle(
 
 namespace autoware::multi_object_tracker
 {
+using autoware_utils::ScopedTimeTrack;
 
 DataAssociation::DataAssociation(const AssociatorConfig & config)
 : config_(config), score_threshold_(0.01)
@@ -84,6 +85,9 @@ void DataAssociation::assign(
   const Eigen::MatrixXd & src, std::unordered_map<int, int> & direct_assignment,
   std::unordered_map<int, int> & reverse_assignment)
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   std::vector<std::vector<double>> score(src.rows());
   for (int row = 0; row < src.rows(); ++row) {
     score.at(row).resize(src.cols());
@@ -116,6 +120,9 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
   const types::DynamicObjectList & measurements,
   const std::list<std::shared_ptr<Tracker>> & trackers)
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
   // Ensure that the detected_objects and list_tracker are not empty
   if (measurements.objects.empty() || trackers.empty()) {
     return Eigen::MatrixXd();
@@ -195,6 +202,11 @@ double DataAssociation::calculateScore(
   double score = (max_dist - std::min(dist, max_dist)) / max_dist;
   if (score < score_threshold_) score = 0.0;
   return score;
+}
+
+void DataAssociation::setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr)
+{
+  time_keeper_ = std::move(time_keeper_ptr);
 }
 
 }  // namespace autoware::multi_object_tracker
