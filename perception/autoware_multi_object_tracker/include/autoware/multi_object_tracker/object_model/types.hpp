@@ -118,6 +118,8 @@ DynamicObjectList toDynamicObjectList(
 
 autoware_perception_msgs::msg::TrackedObject toTrackedObjectMsg(const DynamicObject & dyn_object);
 
+double getArea(const autoware_perception_msgs::msg::Shape & shape);
+
 }  // namespace types
 }  // namespace autoware::multi_object_tracker
 

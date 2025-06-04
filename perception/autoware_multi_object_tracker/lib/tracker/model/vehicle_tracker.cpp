@@ -222,6 +222,7 @@ bool VehicleTracker::measureWithShape(const types::DynamicObject & object)
 
   // set shape type, which is bounding box
   object_.shape.type = object.shape.type;
+  object_.area = types::getArea(object.shape);
 
   // set maximum and minimum size
   limitObjectExtension(object_model_);

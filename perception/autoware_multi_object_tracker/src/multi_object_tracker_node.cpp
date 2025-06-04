@@ -365,23 +365,34 @@ void MultiObjectTracker::publish(const rclcpp::Time & time) const
   processor_->getTrackedObjects(time, output_msg);
 
   // Publish
-  tracked_objects_pub_->publish(output_msg);
-  published_time_publisher_->publish_if_subscribed(tracked_objects_pub_, output_msg.header.stamp);
-
-  // Publish debugger information if enabled
-  debugger_->endPublishTime(this->now(), time);
-
-  // Update the diagnostic values
-  const double min_extrapolation_time = (time - last_updated_time_).seconds();
-  debugger_->updateDiagnosticValues(min_extrapolation_time, output_msg.objects.size());
-
-  if (debugger_->shouldPublishTentativeObjects()) {
-    autoware_perception_msgs::msg::TrackedObjects tentative_output_msg;
-    tentative_output_msg.header.frame_id = world_frame_id_;
-    processor_->getTentativeObjects(time, tentative_output_msg);
-    debugger_->publishTentativeObjects(tentative_output_msg);
+  {
+    std::unique_ptr<ScopedTimeTrack> st_pub_ptr;
+    if (time_keeper_)
+      st_pub_ptr = std::make_unique<ScopedTimeTrack>("tracker_publish", *time_keeper_);
+    tracked_objects_pub_->publish(output_msg);
   }
-  debugger_->publishObjectsMarkers();
+
+  {
+    std::unique_ptr<ScopedTimeTrack> st_debug_ptr;
+    if (time_keeper_)
+      st_debug_ptr = std::make_unique<ScopedTimeTrack>("debug_publish", *time_keeper_);
+    published_time_publisher_->publish_if_subscribed(tracked_objects_pub_, output_msg.header.stamp);
+
+    // Publish debugger information if enabled
+    debugger_->endPublishTime(this->now(), time);
+
+    // Update the diagnostic values
+    const double min_extrapolation_time = (time - last_updated_time_).seconds();
+    debugger_->updateDiagnosticValues(min_extrapolation_time, output_msg.objects.size());
+
+    if (debugger_->shouldPublishTentativeObjects()) {
+      autoware_perception_msgs::msg::TrackedObjects tentative_output_msg;
+      tentative_output_msg.header.frame_id = world_frame_id_;
+      processor_->getTentativeObjects(time, tentative_output_msg);
+      debugger_->publishTentativeObjects(tentative_output_msg);
+    }
+    debugger_->publishObjectsMarkers();
+  }
 }
 
 }  // namespace autoware::multi_object_tracker

@@ -146,6 +146,7 @@ bool UnknownTracker::measure(
   // update object shape
   object_.shape = object.shape;
   object_.pose.orientation = object.pose.orientation;
+  object_.area = types::getArea(object.shape);
 
   // check time gap
   const double dt = motion_model_.getDeltaTime(time);

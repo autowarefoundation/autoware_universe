@@ -157,6 +157,7 @@ bool PedestrianTracker::measureWithShape(const types::DynamicObject & object)
 
     // update shape type, bounding box or cylinder
     object_.shape.type = object.shape.type;
+    object_.area = types::getArea(object.shape);
 
     // set maximum and minimum size
     limitObjectExtension(object_model_);

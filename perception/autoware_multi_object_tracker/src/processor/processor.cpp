@@ -160,10 +160,18 @@ void TrackerProcessor::prune(const rclcpp::Time & time)
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
+  if (time.nanoseconds() - last_prune_time_.nanoseconds() < 2000 /*2ms*/) {
+    // prune is called too frequently, skip
+    return;
+  }
+
   // Check tracker lifetime: if the tracker is old, delete it
   removeOldTracker(time);
   // Check tracker overlap: if the tracker is overlapped, delete the one with lower IOU
   mergeOverlappedTracker(time);
+
+  // update last prune time
+  last_prune_time_ = time;
 }
 
 void TrackerProcessor::removeOldTracker(const rclcpp::Time & time)

@@ -164,16 +164,17 @@ double DataAssociation::calculateScore(
   }
 
   const double max_dist = config_.max_dist_matrix(tracker_label, measurement_label);
-  const double dist =
-    autoware_utils::calc_distance2d(measurement_object.pose.position, tracked_object.pose.position);
+  const double dx = measurement_object.pose.position.x - tracked_object.pose.position.x;
+  const double dy = measurement_object.pose.position.y - tracked_object.pose.position.y;
+  const double dist_sq = dx * dx + dy * dy;
 
   // dist gate
-  if (max_dist < dist) return 0.0;
+  if (max_dist * max_dist < dist_sq) return 0.0;
 
   // area gate
   const double max_area = config_.max_area_matrix(tracker_label, measurement_label);
   const double min_area = config_.min_area_matrix(tracker_label, measurement_label);
-  const double area = autoware_utils::get_area(measurement_object.shape);
+  const double & area = measurement_object.area;
   if (area < min_area || max_area < area) return 0.0;
 
   // angle gate, only if the threshold is set less than pi
@@ -201,6 +202,7 @@ double DataAssociation::calculateScore(
   if (iou < min_iou) return 0.0;
 
   // all gate is passed
+  const double dist = std::sqrt(dist_sq);
   double score = (max_dist - std::min(dist, max_dist)) / max_dist;
   if (score < score_threshold_) score = 0.0;
   return score;
