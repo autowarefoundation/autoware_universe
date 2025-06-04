@@ -35,13 +35,19 @@ double getMahalanobisDistance(
   const geometry_msgs::msg::Point & measurement, const geometry_msgs::msg::Point & tracker,
   const Eigen::Matrix2d & covariance)
 {
-  Eigen::Vector2d measurement_point;
-  measurement_point << measurement.x, measurement.y;
-  Eigen::Vector2d tracker_point;
-  tracker_point << tracker.x, tracker.y;
-  Eigen::MatrixXd mahalanobis_squared = (measurement_point - tracker_point).transpose() *
-                                        covariance.inverse() * (measurement_point - tracker_point);
-  return mahalanobis_squared(0);
+  // Compute difference directly without intermediate vectors
+  const double dx = measurement.x - tracker.x;
+  const double dy = measurement.y - tracker.y;
+
+  // Pre-compute inverse elements (covariance is 2x2)
+  const double det = covariance(0, 0) * covariance(1, 1) - covariance(0, 1) * covariance(1, 0);
+  const double inv_det = 1.0 / det;
+  const double inv00 = covariance(1, 1) * inv_det;
+  const double inv01 = -covariance(0, 1) * inv_det;
+  const double inv11 = covariance(0, 0) * inv_det;
+
+  // Direct computation of (dx,dy) * inv_covariance * (dx,dy)^T
+  return dx * (inv00 * dx + inv01 * dy) + dy * (inv01 * dx + inv11 * dy);
 }
 
 Eigen::Matrix2d getXYCovariance(const std::array<double, 36> & pose_covariance)
@@ -167,13 +173,13 @@ double DataAssociation::calculateScore(
     return 0.0;
   }
 
-  const double max_dist = config_.max_dist_matrix(tracker_label, measurement_label);
+  const double max_dist_sq = config_.max_dist_matrix(tracker_label, measurement_label);
   const double dx = measurement_object.pose.position.x - tracked_object.pose.position.x;
   const double dy = measurement_object.pose.position.y - tracked_object.pose.position.y;
   const double dist_sq = dx * dx + dy * dy;
 
   // dist gate
-  if (max_dist * max_dist < dist_sq) return 0.0;
+  if (max_dist_sq < dist_sq) return 0.0;
 
   // area gate
   const double max_area = config_.max_area_matrix(tracker_label, measurement_label);
@@ -183,10 +189,10 @@ double DataAssociation::calculateScore(
 
   // angle gate, only if the threshold is set less than pi
   const double max_rad = config_.max_rad_matrix(tracker_label, measurement_label);
-  if (max_rad < 3.142) {
+  if (max_rad < M_PI) {
     const double angle = getFormedYawAngle(
       measurement_object.pose.orientation, tracked_object.pose.orientation, false);
-    if (std::fabs(max_rad) < M_PI && std::fabs(max_rad) < std::fabs(angle)) {
+    if (max_rad < std::fabs(angle)) {
       return 0.0;
     }
   }
@@ -207,6 +213,7 @@ double DataAssociation::calculateScore(
 
   // all gate is passed
   const double dist = std::sqrt(dist_sq);
+  const double max_dist = std::sqrt(max_dist_sq);
   double score = (max_dist - std::min(dist, max_dist)) / max_dist;
   if (score < score_threshold_) score = 0.0;
   return score;

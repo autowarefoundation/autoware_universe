@@ -226,16 +226,16 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
         continue;
       }
       // Calculate the distance between the two objects
-      const double distance = std::hypot(
-        object1.pose.position.x - object2.pose.position.x,
-        object1.pose.position.y - object2.pose.position.y);
+      const double dx = object1.pose.position.x - object2.pose.position.x;
+      const double dy = object1.pose.position.y - object2.pose.position.y;
+      const double distance_sq = dx * dx + dy * dy;
       const auto & label1 = !(*itr1)->getHighestProbLabel();
       const auto & label2 = !(*itr2)->getHighestProbLabel();
-      const double max_dist_matrix_value = config_.max_dist_matrix(
+      const double max_dist_sq = config_.max_dist_matrix(
         label2, label1);  // Get the maximum distance threshold for the labels
 
       // If the distance is too large, skip
-      if (distance > max_dist_matrix_value) {
+      if (distance_sq > max_dist_sq) {
         ++itr2;
         continue;
       }
