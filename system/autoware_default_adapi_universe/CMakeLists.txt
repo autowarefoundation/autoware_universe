@@ -40,7 +40,7 @@ rclcpp_components_register_nodes(${PROJECT_NAME}
   "autoware::default_adapi::PerceptionNode"
   "autoware::default_adapi::PlanningNode"
   "autoware::default_adapi::RoutingNode"
-  "autoware::default_adapi::VehicleNode"
+  "autoware::default_adapi::VehicleStatusNode"
   "autoware::default_adapi::VehicleInfoNode"
   "autoware::default_adapi::VehicleDoorNode"
 )
