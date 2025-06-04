@@ -54,10 +54,10 @@ public:
   cudaError_t projectPoints_launch(
     const InputPointType * cloud, const uint32_t num_points, uint32_t * output_num_points,
     float * output_points, int64_t * output_coors, int64_t * output_coors_keys,
-    uint32_t * output_proj_idxs, float * output_proj_2d);
+    uint32_t * output_proj_idxs, uint64_t * output_proj_2d);
 
   cudaError_t interpolatePoints_launch(
-    uint32_t * proj_idxs, float * proj_2d, uint32_t * output_num_points, float * output_points,
+    uint32_t * proj_idxs, uint64_t * proj_2d, uint32_t * output_num_points, float * output_points,
     int64_t * output_coors, int64_t * output_coors_keys);
 
 private:

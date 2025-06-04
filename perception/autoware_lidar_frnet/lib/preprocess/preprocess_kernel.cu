@@ -17,6 +17,7 @@
 
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 
+#include <cuda_fp16.h>
 #include <cuda_runtime.h>
 #include <thrust/binary_search.h>
 #include <thrust/device_vector.h>
@@ -48,6 +49,61 @@ PreprocessCuda::PreprocessCuda(const utils::PreprocessingParams & params, cudaSt
     const_frustum, &params.frustum, sizeof(utils::Dims2d), 0, cudaMemcpyHostToDevice));
 }
 
+struct alignas(8) half4
+{
+  __device__ half4() = default;
+  __device__ half4(__half x, __half y, __half z, __half w) : x(x), y(y), z(z), w(w) {}
+
+  __half x, y, z, w;
+};
+
+__device__ inline unsigned long long pack_half4(const half4 & h)
+{
+  unsigned long long packed = 0;
+  auto p = reinterpret_cast<uint16_t *>(&packed);
+  p[0] = __half_as_ushort(h.x);
+  p[1] = __half_as_ushort(h.y);
+  p[2] = __half_as_ushort(h.z);
+  p[3] = __half_as_ushort(h.w);
+  return packed;
+}
+
+__device__ inline void unpack_half4(unsigned long long packed, half4 & h)
+{
+  auto p = reinterpret_cast<uint16_t *>(&packed);
+  h.x = __ushort_as_half(p[0]);
+  h.y = __ushort_as_half(p[1]);
+  h.z = __ushort_as_half(p[2]);
+  h.w = __ushort_as_half(p[3]);
+}
+
+__device__ void atomicMaxByDepth_half4(unsigned long long * address, const half4 & new_val)
+{
+  half4 old_val;
+  unsigned long long old_packed = *address;
+
+  while (true) {
+    unpack_half4(old_packed, old_val);
+
+    float depth_old = __half2float(old_val.x) * __half2float(old_val.x) +
+                      __half2float(old_val.y) * __half2float(old_val.y) +
+                      __half2float(old_val.z) * __half2float(old_val.z);
+
+    float depth_new = __half2float(new_val.x) * __half2float(new_val.x) +
+                      __half2float(new_val.y) * __half2float(new_val.y) +
+                      __half2float(new_val.z) * __half2float(new_val.z);
+
+    if (depth_new <= depth_old) return;
+
+    unsigned long long new_packed = pack_half4(new_val);
+    unsigned long long prev = atomicCAS(address, old_packed, new_packed);
+
+    if (prev == old_packed) break;
+
+    old_packed = prev;  // retry
+  }
+}
+
 __device__ int2 project2d(const float3 point, const uint32_t scale_x, const uint32_t scale_y)
 {
   // Compute the depth
@@ -74,7 +130,7 @@ __device__ int2 project2d(const float3 point, const uint32_t scale_x, const uint
 __global__ void projectPoints_kernel(
   const InputPointType * cloud, const uint32_t num_points, uint32_t * output_num_points,
   float * output_points, int64_t * output_coors, int64_t * output_coors_keys,
-  uint32_t * output_proj_idxs, float * output_proj_2d)
+  uint32_t * output_proj_idxs, uint64_t * output_proj_2d)
 {
   uint32_t point_idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (point_idx >= num_points) return;
@@ -84,7 +140,6 @@ __global__ void projectPoints_kernel(
   const auto proj_point = project2d(point3d, const_interpolation.w, const_interpolation.h);
   const auto proj_coor = project2d(point3d, const_frustum.w, const_frustum.h);
   const auto proj_idx = proj_point.y * const_interpolation.w + proj_point.x;
-  float4 & proj_2d_point = reinterpret_cast<float4 *>(output_proj_2d)[proj_idx];
 
   // Writing to output arrays
   atomicAdd(output_num_points, 1);
@@ -101,24 +156,19 @@ __global__ void projectPoints_kernel(
   output_coors_keys[point_idx] = proj_coor.y * const_frustum.w + proj_coor.x;
 
   // Update projection if not yet filled
+  auto point_half4 = half4(point.x, point.y, point.z, point.intensity);
+  auto output_proj_2d_address = reinterpret_cast<unsigned long long *>(&output_proj_2d[proj_idx]);
   if (!atomicExch(&output_proj_idxs[proj_idx], 1)) {
-    proj_2d_point = make_float4(point.x, point.y, point.z, point.intensity);
+    *output_proj_2d_address = pack_half4(point_half4);
   } else {
-    // If alrady filled, promote further point
-    const auto depth_prev = sqrtf(
-      proj_2d_point.x * proj_2d_point.x + proj_2d_point.y * proj_2d_point.y +
-      proj_2d_point.z * proj_2d_point.z);
-    const auto depth_new = sqrtf(point.x * point.x + point.y * point.y + point.z * point.z);
-    if (depth_new > depth_prev) {
-      proj_2d_point = make_float4(point.x, point.y, point.z, point.intensity);
-    }
+    atomicMaxByDepth_half4(output_proj_2d_address, point_half4);
   }
 }
 
 cudaError_t PreprocessCuda::projectPoints_launch(
   const InputPointType * cloud, const uint32_t num_points, uint32_t * output_num_points,
   float * output_points, int64_t * output_coors, int64_t * output_coors_keys,
-  uint32_t * output_proj_idxs, float * output_proj_2d)
+  uint32_t * output_proj_idxs, uint64_t * output_proj_2d)
 {
   dim3 block(utils::divup(num_points, utils::kernel_1d_size));
   dim3 threads(utils::kernel_1d_size);
@@ -131,8 +181,8 @@ cudaError_t PreprocessCuda::projectPoints_launch(
 }
 
 __global__ void interpolatePoints_kernel(
-  const uint32_t * proj_idxs, float * proj_2d, uint32_t * output_num_points, float * output_points,
-  int64_t * output_coors, int64_t * output_coors_keys)
+  const uint32_t * proj_idxs, uint64_t * proj_2d, uint32_t * output_num_points,
+  float * output_points, int64_t * output_coors, int64_t * output_coors_keys)
 {
   uint32_t x = blockIdx.x * blockDim.x + threadIdx.x;
   uint32_t y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -151,14 +201,14 @@ __global__ void interpolatePoints_kernel(
       proj_idxs[(y * const_interpolation.w) + (x - 1)] &&
       proj_idxs[(y * const_interpolation.w) + (x + 1)]) {
       // Interpolate points
-      auto input_data4 = reinterpret_cast<float4 *>(proj_2d);
-      float4 left = input_data4[idx - 1];
-      float4 right = input_data4[idx + 1];
+      half4 left, right;
+      unpack_half4(proj_2d[idx - 1], left);
+      unpack_half4(proj_2d[idx + 1], right);
 
       // Compute the mean of the valid neighbors
       const auto interpolated_point = make_float4(
-        (left.x + right.x) * 0.5f, (left.y + right.y) * 0.5f, (left.z + right.z) * 0.5f,
-        (left.w + right.w) * 0.5f);
+        (__half2float(left.x + right.x)) * 0.5f, (__half2float(left.y + right.y)) * 0.5f,
+        (__half2float(left.z + right.z)) * 0.5f, (__half2float(left.w + right.w)) * 0.5f);
 
       auto append_idx = atomicAdd(output_num_points, 1);
       output_points[append_idx * 4 + 0] = interpolated_point.x;
@@ -180,7 +230,7 @@ __global__ void interpolatePoints_kernel(
 }
 
 cudaError_t PreprocessCuda::interpolatePoints_launch(
-  uint32_t * proj_idxs, float * proj_2d, uint32_t * output_num_points, float * output_points,
+  uint32_t * proj_idxs, uint64_t * proj_2d, uint32_t * output_num_points, float * output_points,
   int64_t * output_coors, int64_t * output_coors_keys)
 {
   dim3 block(

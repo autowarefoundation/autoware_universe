@@ -92,7 +92,7 @@ private:
   CudaUniquePtr<int64_t[]> coors_keys_d_{nullptr};
   CudaUniquePtr<uint32_t[]> num_points_d_{nullptr};
   CudaUniquePtr<uint32_t[]> proj_idxs_d_{nullptr};
-  CudaUniquePtr<float[]> proj_2d_d_{nullptr};
+  CudaUniquePtr<uint64_t[]> proj_2d_d_{nullptr};
   CudaUniquePtr<OutputSegmentationPointType[]> seg_data_d_{nullptr};
   CudaUniquePtr<OutputVisualizationPointType[]> viz_data_d_{nullptr};
   CudaUniquePtr<InputPointType[]> cloud_filtered_d_{nullptr};

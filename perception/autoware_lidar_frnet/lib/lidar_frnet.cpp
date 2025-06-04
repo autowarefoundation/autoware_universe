@@ -146,8 +146,8 @@ bool LidarFRNet::preprocess(const uint32_t input_num_points)
     proj_idxs_d_.get(),
     preprocessing_params_.interpolation.w * preprocessing_params_.interpolation.h, stream_);
   cuda_utils::clear_async(
-    proj_2d_d_.get(),
-    preprocessing_params_.interpolation.w * preprocessing_params_.interpolation.h * 4, stream_);
+    proj_2d_d_.get(), preprocessing_params_.interpolation.w * preprocessing_params_.interpolation.h,
+    stream_);
   cuda_utils::clear_async(points_d_.get(), network_params_.num_points_profile.max * 4, stream_);
   cuda_utils::clear_async(coors_d_.get(), network_params_.num_points_profile.max * 3, stream_);
   cuda_utils::clear_async(
@@ -263,8 +263,8 @@ void LidarFRNet::initTensors()
   num_points_d_ = cuda_utils::make_unique<uint32_t[]>(1);
   proj_idxs_d_ = cuda_utils::make_unique<uint32_t[]>(
     preprocessing_params_.interpolation.w * preprocessing_params_.interpolation.h);
-  proj_2d_d_ = cuda_utils::make_unique<float[]>(
-    preprocessing_params_.interpolation.w * preprocessing_params_.interpolation.h * 4);
+  proj_2d_d_ = cuda_utils::make_unique<uint64_t[]>(
+    preprocessing_params_.interpolation.w * preprocessing_params_.interpolation.h);
   seg_data_d_ =
     cuda_utils::make_unique<OutputSegmentationPointType[]>(network_params_.num_points_profile.max);
   viz_data_d_ =
