@@ -177,16 +177,18 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
   tracker_labels.reserve(trackers.size());
 
   // Build R-tree and store tracker data
-  size_t tracker_idx = 0;
-  for (const auto & tracker : trackers) {
-    types::DynamicObject tracked_object;
-    tracker->getTrackedObject(measurements.header.stamp, tracked_object);
-    tracked_objects.push_back(tracked_object);
-    tracker_labels.push_back(tracker->getHighestProbLabel());
+  {
+    size_t tracker_idx = 0;
+    for (const auto & tracker : trackers) {
+      types::DynamicObject tracked_object;
+      tracker->getTrackedObject(measurements.header.stamp, tracked_object);
+      tracked_objects.push_back(tracked_object);
+      tracker_labels.push_back(tracker->getHighestProbLabel());
 
-    Point p(tracked_object.pose.position.x, tracked_object.pose.position.y);
-    rtree_.insert(std::make_pair(p, tracker_idx));
-    ++tracker_idx;
+      Point p(tracked_object.pose.position.x, tracked_object.pose.position.y);
+      rtree_.insert(std::make_pair(p, tracker_idx));
+      ++tracker_idx;
+    }
   }
 
   // For each measurement, find nearby trackers using R-tree
