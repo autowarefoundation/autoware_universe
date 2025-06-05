@@ -29,7 +29,12 @@
           "description": "The time threshold to hold for history detected pedestrian traffic light color. The unit is second."
         }
       },
-      "required": ["use_last_detect_color", "use_pedestrian_detect", "last_detect_color_hold_time", "last_colors_hold_time"]
+      "required": [
+        "use_last_detect_color",
+        "use_pedestrian_detect",
+        "last_detect_color_hold_time",
+        "last_colors_hold_time"
+      ]
     }
   },
   "properties": {
