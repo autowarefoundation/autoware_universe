@@ -204,10 +204,12 @@ void CudaPointcloudPreprocessorNode::imuCallback(
   const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg)
 {
   while (!angular_velocity_queue_.empty()) {
+    /* *INDENT-OFF* */
     // for rosbag replay
-    bool backwards_time_jump_detected =
-      (rclcpp::Time(angular_velocity_queue_.front().header.stamp) >
-       rclcpp::Time(imu_msg->header.stamp));
+    bool backwards_time_jump_detected = rclcpp::Time(angular_velocity_queue_.front().header.stamp) >
+                                        rclcpp::Time(imu_msg->header.stamp);
+    /* *INDENT-ON* */
+
     bool is_queue_longer_than_1s =
       rclcpp::Time(angular_velocity_queue_.front().header.stamp) <
       rclcpp::Time(imu_msg->header.stamp) - rclcpp::Duration::from_seconds(1.0);
