@@ -17,7 +17,6 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   src/perception.cpp
   src/planning.cpp
   src/routing.cpp
-  src/vehicle.cpp
   src/vehicle_status.cpp
   src/vehicle_metrics.cpp
   src/vehicle_info.cpp
