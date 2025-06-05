@@ -453,7 +453,7 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
     ring_outlier_parameters_.distance_ratio,
     ring_outlier_parameters_.object_length_threshold *
       ring_outlier_parameters_.object_length_threshold,
-    ring_outlier_parameters_.num_points_threshold, threads_per_block_, blocks_per_grid, stream_);
+    threads_per_block_, blocks_per_grid, stream_);
 
   combineMasksLaunch(
     device_crop_mask, device_ring_outlier_mask, num_organized_points_, device_ring_outlier_mask,
