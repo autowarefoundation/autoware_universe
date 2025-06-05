@@ -248,6 +248,20 @@ void GyroBiasEstimator::estimate_scale_gyro(
 
   previous_yaw_angle_ = unwrapped_angle;
 
+  if (std::abs(ndt_yaw_rate_) < 0.01)
+  {
+    // If the yaw rate is too small, skip the update
+    gyro_info_.scale_summary_message = "Skipped scale update (yaw rate is too small)";
+    geometry_msgs::msg::Vector3Stamped vector_scale_skipped;
+    vector_scale_skipped.header.stamp = this->now();
+    // Scale on x , y axis is not estimated, but set to 1.0 for consistency
+    vector_scale_skipped.vector.x = 1.0;
+    vector_scale_skipped.vector.y = 1.0;
+    vector_scale_skipped.vector.z = previous_scale_;
+    gyro_scale_pub_->publish(vector_scale_skipped);
+    return;
+  }
+
   if (gyro_bias_.has_value()) {
     // EKF update
     auto h = ndt_yaw_rate_;
