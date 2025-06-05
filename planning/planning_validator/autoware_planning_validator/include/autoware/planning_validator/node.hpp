@@ -78,9 +78,9 @@ private:
   autoware_utils::InterProcessPollingSubscriber<
     LaneletRoute, autoware_utils::polling_policy::Newest>
     sub_route_{this, "~/input/route", rclcpp::QoS{1}.transient_local()};
-  autoware_utils::InterProcessPollingSubscriber<
+   autoware_utils::InterProcessPollingSubscriber<
     LaneletMapBin, autoware_utils::polling_policy::Newest>
-    sub_map_{this, "~/input/vector_map", rclcpp::QoS{1}.transient_local()};
+    sub_lanelet_map_bin_{this, "~/input/lanelet_map_bin", rclcpp::QoS{1}.transient_local()};
   autoware_utils::InterProcessPollingSubscriber<PointCloud2> sub_pointcloud_{
     this, "~/input/pointcloud", autoware_utils::single_depth_sensor_qos()};
   autoware_utils::InterProcessPollingSubscriber<Odometry> sub_kinematics_{

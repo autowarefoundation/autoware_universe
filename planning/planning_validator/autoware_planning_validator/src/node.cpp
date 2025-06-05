@@ -106,31 +106,13 @@ bool PlanningValidatorNode::isDataReady()
 
 void PlanningValidatorNode::setData()
 {
-  {  // route
-    const auto msg = sub_route_.take_data();
-    if (msg) {
-      if (msg->segments.empty()) {
-        RCLCPP_ERROR(get_logger(), "input route is empty. ignored");
-      } else {
-        route_ptr_ = msg;
-        has_received_route_ = true;
-      }
-    }
-  }
-
-  {  // map
-    const auto msg = sub_map_.take_data();
-    if (msg) {
-      map_ptr_ = msg;
-      has_received_map_ = true;
-    }
-  }
-
   auto & data = context_->data;
   data->current_kinematics = sub_kinematics_.take_data();
   data->current_acceleration = sub_acceleration_.take_data();
-  data->current_pointcloud = sub_pointcloud_.take_data();
+  data->obstacle_pointcloud = sub_pointcloud_.take_data();
   data->set_current_trajectory(sub_trajectory_.take_data());
+  data->set_route(sub_route_.take_data());
+  data->set_map(sub_lanelet_map_bin_.take_data());
 }
 
 void PlanningValidatorNode::onTimer()
@@ -138,32 +120,6 @@ void PlanningValidatorNode::onTimer()
   stop_watch_.tic(__func__);
 
   setData();
-
-  // check for map update
-  LaneletMapBin::ConstSharedPtr map_ptr{nullptr};
-  {
-    if (has_received_map_) {
-      map_ptr = map_ptr_;
-      has_received_map_ = false;
-    }
-  }
-
-  // check for route update
-  LaneletRoute::ConstSharedPtr route_ptr{nullptr};
-  {
-    if (has_received_route_) {
-      route_ptr = route_ptr_;
-      has_received_route_ = false;
-    }
-  }
-
-  if (map_ptr) {
-    context_->route_handler->setMap(*map_ptr);
-  }
-
-  if (route_ptr) {
-    context_->route_handler->setRoute(*route_ptr);
-  }
 
   if (!isDataReady()) return;
 

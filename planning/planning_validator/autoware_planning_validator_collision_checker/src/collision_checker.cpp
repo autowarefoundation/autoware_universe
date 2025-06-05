@@ -132,16 +132,16 @@ void CollisionChecker::validate(bool & is_critical)
     is_critical = false;
   };
 
-  if (!context_->data->current_pointcloud) {
+  if (!context_->data->obstacle_pointcloud) {
     return skip_validation("point cloud data is not available, skipping collision check.");
   }
 
-  if (!context_->route_handler->isHandlerReady()) {
+  if (!context_->data->route_handler->isHandlerReady()) {
     return skip_validation("route handler is not ready, skipping collision check.");
   }
 
   PointCloud::Ptr filtered_pointcloud(new PointCloud);
-  filter_pointcloud(context_->data->current_pointcloud, filtered_pointcloud);
+  filter_pointcloud(context_->data->obstacle_pointcloud, filtered_pointcloud);
 
   const auto base_to_front_length =
     context_->vehicle_info.front_overhang_m + context_->vehicle_info.wheel_base_m;
@@ -171,7 +171,7 @@ void CollisionChecker::validate(bool & is_critical)
 
   const auto is_safe = check_collision(
     lanelets.target_lanelets, filtered_pointcloud,
-    context_->data->current_pointcloud->header.stamp);
+    context_->data->obstacle_pointcloud->header.stamp);
 
   context_->validation_status->is_valid_collision_check = is_safe;
 }
@@ -182,7 +182,7 @@ Direction CollisionChecker::get_lanelets(
   const auto & ego_pose = context_->data->current_kinematics->pose.pose;
   try {
     collision_checker_utils::set_trajectory_lanelets(
-      trajectory_points, *context_->route_handler, ego_pose, lanelets);
+      trajectory_points, *context_->data->route_handler, ego_pose, lanelets);
   } catch (const std::logic_error & e) {
     RCLCPP_ERROR(logger_, "failed to get trajectory lanelets: %s", e.what());
     return Direction::NONE;
@@ -197,10 +197,10 @@ Direction CollisionChecker::get_lanelets(
   const auto time_horizon = std::max(params_.min_time_horizon, stopping_time);
   if (turn_direction == Direction::RIGHT) {
     collision_checker_utils::set_right_turn_target_lanelets(
-      trajectory_points, *context_->route_handler, params_, lanelets, time_horizon);
+      trajectory_points, *context_->data->route_handler, params_, lanelets, time_horizon);
   } else {
     collision_checker_utils::set_left_turn_target_lanelets(
-      trajectory_points, *context_->route_handler, params_, lanelets, time_horizon);
+      trajectory_points, *context_->data->route_handler, params_, lanelets, time_horizon);
   }
 
   return turn_direction;

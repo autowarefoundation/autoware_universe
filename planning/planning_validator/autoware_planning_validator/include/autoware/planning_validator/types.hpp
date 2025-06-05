@@ -39,6 +39,8 @@
 namespace autoware::planning_validator
 {
 using autoware::route_handler::RouteHandler;
+using autoware_map_msgs::msg::LaneletMapBin;
+using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_planning_validator::msg::PlanningValidatorStatus;
@@ -78,7 +80,9 @@ struct PlanningValidatorData
 
   Odometry::ConstSharedPtr current_kinematics;
   AccelWithCovarianceStamped::ConstSharedPtr current_acceleration;
-  PointCloud2::ConstSharedPtr current_pointcloud;
+  PointCloud2::ConstSharedPtr obstacle_pointcloud;
+
+  std::shared_ptr<RouteHandler> route_handler{std::make_shared<RouteHandler>()};
 
   bool is_ready(std::string & msg)
   {
@@ -92,6 +96,14 @@ struct PlanningValidatorData
     }
     if (!current_acceleration) {
       msg = "current_acceleration";
+      return false;
+    }
+    if (!obstacle_pointcloud) {
+      msg = "obstacle_pointcloud";
+      return false;
+    }
+    if (!route_handler->isHandlerReady()) {
+      msg = "route/map";
       return false;
     }
     return true;
@@ -121,6 +133,22 @@ struct PlanningValidatorData
     nearest_segment_index = autoware::motion_utils::findNearestSegmentIndex(
       current_trajectory->points, current_kinematics->pose.pose);
   }
+
+  void set_route(const LaneletRoute::ConstSharedPtr & msg)
+  {
+    if (msg) {
+      if (!msg->segments.empty()) {
+        route_handler->setRoute(*msg);
+      }
+    }
+  }
+
+  void set_map(const LaneletMapBin::ConstSharedPtr & msg)
+  {
+    if (msg) {
+      route_handler->setMap(*msg);
+    }
+  }
 };
 
 struct PlanningValidatorContext
@@ -134,7 +162,6 @@ struct PlanningValidatorContext
     data = std::make_shared<PlanningValidatorData>();
     validation_status = std::make_shared<PlanningValidatorStatus>();
     diag_updater = std::make_shared<Updater>(node);
-    route_handler = std::make_shared<RouteHandler>();
   }
 
   autoware::vehicle_info_utils::VehicleInfo vehicle_info;
@@ -145,7 +172,6 @@ struct PlanningValidatorContext
   std::shared_ptr<Updater> diag_updater = nullptr;
   std::shared_ptr<PlanningValidatorData> data = nullptr;
   std::shared_ptr<PlanningValidatorStatus> validation_status = nullptr;
-  std::shared_ptr<RouteHandler> route_handler = nullptr;
 
   tf2_ros::Buffer tf_buffer;
   tf2_ros::TransformListener tf_listener;
