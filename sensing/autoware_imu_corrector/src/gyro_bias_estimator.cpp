@@ -248,8 +248,7 @@ void GyroBiasEstimator::estimate_scale_gyro(
 
   previous_yaw_angle_ = unwrapped_angle;
 
-  if (std::abs(ndt_yaw_rate_) < 0.01)
-  {
+  if (std::abs(ndt_yaw_rate_) < 0.01) {
     // If the yaw rate is too small, skip the update
     gyro_info_.scale_summary_message = "Skipped scale update (yaw rate is too small)";
     geometry_msgs::msg::Vector3Stamped vector_scale_skipped;
