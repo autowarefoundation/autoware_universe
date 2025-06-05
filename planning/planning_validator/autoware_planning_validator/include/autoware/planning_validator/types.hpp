@@ -20,6 +20,7 @@
 #include "autoware_planning_validator/msg/planning_validator_status.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/route_handler/route_handler.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 
@@ -27,12 +28,15 @@
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <geometry_msgs/msg/accel_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <memory>
 #include <string>
 
 namespace autoware::planning_validator
 {
+using autoware_map_msgs::msg::LaneletMapBin;
+using autoware_planning_msgs::msg::LaneletRoute;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_planning_msgs::msg::TrajectoryPoint;
 using autoware_planning_validator::msg::PlanningValidatorStatus;
@@ -41,6 +45,7 @@ using diagnostic_updater::DiagnosticStatusWrapper;
 using diagnostic_updater::Updater;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
 using nav_msgs::msg::Odometry;
+using sensor_msgs::msg::PointCloud2;
 
 enum class InvalidTrajectoryHandlingType : uint8_t {
   PUBLISH_AS_IT_IS,
@@ -71,6 +76,10 @@ struct PlanningValidatorData
 
   Odometry::ConstSharedPtr current_kinematics;
   AccelWithCovarianceStamped::ConstSharedPtr current_acceleration;
+  PointCloud2::ConstSharedPtr obstacle_pointcloud;
+
+  std::shared_ptr<autoware::route_handler::RouteHandler> route_handler{
+    std::make_shared<autoware::route_handler::RouteHandler>()};
 
   bool is_ready(std::string & msg)
   {
@@ -84,6 +93,14 @@ struct PlanningValidatorData
     }
     if (!current_acceleration) {
       msg = "current_acceleration";
+      return false;
+    }
+    if (!obstacle_pointcloud) {
+      msg = "obstacle_pointcloud";
+      return false;
+    }
+    if (!route_handler->isHandlerReady()) {
+      msg = "route/map";
       return false;
     }
     return true;
@@ -112,6 +129,22 @@ struct PlanningValidatorData
       current_trajectory->points, current_kinematics->pose.pose);
     nearest_segment_index = autoware::motion_utils::findNearestSegmentIndex(
       current_trajectory->points, current_kinematics->pose.pose);
+  }
+
+  void set_route(const LaneletRoute::ConstSharedPtr & msg)
+  {
+    if (msg) {
+      if (!msg->segments.empty()) {
+        route_handler->setRoute(*msg);
+      }
+    }
+  }
+
+  void set_map(const LaneletMapBin::ConstSharedPtr & msg)
+  {
+    if (msg) {
+      route_handler->setMap(*msg);
+    }
   }
 };
 

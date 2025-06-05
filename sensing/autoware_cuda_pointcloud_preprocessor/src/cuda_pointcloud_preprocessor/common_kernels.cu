@@ -42,6 +42,9 @@ __global__ void cropBoxKernel(
 {
   for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num_points;
        idx += blockDim.x * gridDim.x) {
+    if (d_points[idx].distance == 0.0f) {
+      continue;
+    }
     const float x = d_points[idx].x;
     const float y = d_points[idx].y;
     const float z = d_points[idx].z;
