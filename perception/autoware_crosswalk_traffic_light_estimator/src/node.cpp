@@ -85,7 +85,7 @@ CrosswalkTrafficLightEstimatorNode::CrosswalkTrafficLightEstimatorNode(
   using std::placeholders::_1;
 
   use_last_detect_color_ = declare_parameter<bool>("use_last_detect_color");
-  use_pedestrian_detect_ = declare_parameter<bool>("use_pedestrian_detect");
+  use_pedestrian_signal_detect_ = declare_parameter<bool>("use_pedestrian_signal_detect");
   last_detect_color_hold_time_ = declare_parameter<double>("last_detect_color_hold_time");
   last_colors_hold_time_ = declare_parameter<double>("last_colors_hold_time");
 
@@ -299,7 +299,7 @@ void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
       size_t idx = valid_id2idx_map[id];
       auto signal = msg.traffic_light_groups[idx];
       // if invalid perception result exists or disable camera recognition, overwrite the estimation
-      if (use_pedestrian_detect_ == false || isInvalidDetectionStatus(signal)) {
+      if (use_pedestrian_signal_detect_ == false || isInvalidDetectionStatus(signal)) {
         TrafficSignalElement output_traffic_signal_element;
         output_traffic_signal_element.color = color;
         output_traffic_signal_element.shape = TrafficSignalElement::CIRCLE;
