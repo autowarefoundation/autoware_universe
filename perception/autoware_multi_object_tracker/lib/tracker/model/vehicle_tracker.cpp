@@ -300,6 +300,8 @@ bool VehicleTracker::getTrackedObject(
   if (getCachedObject(time, object)) {
     return true;
   }
+  object = object_;
+  object.time = time;
 
   // predict from motion model
   auto & pose = object.pose;

@@ -204,6 +204,7 @@ bool PedestrianTracker::getTrackedObject(
   }
 
   object = object_;
+  object.time = time;
 
   // predict from motion model
   auto & pose = object.pose;
