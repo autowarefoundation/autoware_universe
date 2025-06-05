@@ -86,16 +86,16 @@ void VehicleDoorNode::on_command(
     }
   }
   if (is_open) {
-    if (!is_stop_mode_) {
-      res->status.success = false;
-      res->status.code = autoware_adapi_v1_msgs::msg::ResponseStatus::UNKNOWN;
-      res->status.message = "The door cannot be opened except in stop mode.";
-      return;
-    }
     if (!is_autoware_control_ && check_autoware_control_) {
       res->status.success = false;
       res->status.code = autoware_adapi_v1_msgs::msg::ResponseStatus::UNKNOWN;
       res->status.message = "The door cannot be opened when autoware control is disabled.";
+      return;
+    }
+    if (!is_stop_mode_) {
+      res->status.success = false;
+      res->status.code = autoware_adapi_v1_msgs::msg::ResponseStatus::UNKNOWN;
+      res->status.message = "The door cannot be opened except in stop mode.";
       return;
     }
   }
