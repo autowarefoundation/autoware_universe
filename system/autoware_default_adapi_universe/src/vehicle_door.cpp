@@ -76,6 +76,13 @@ void VehicleDoorNode::on_command(
   const ExternalDoorCommand::Service::Request::SharedPtr req,
   const ExternalDoorCommand::Service::Response::SharedPtr res)
 {
+  if (!is_autoware_control_ && check_autoware_control_) {
+    res->status.success = false;
+    res->status.code = autoware_adapi_v1_msgs::msg::ResponseStatus::UNKNOWN;
+    res->status.message = "The door cannot be opened when autoware control is disabled.";
+    return;
+  }
+
   // For safety, do not open the door if the vehicle is not stopped.
   // https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-interfaces/ad-api/list/api/vehicle/doors/command/
   bool is_open = false;
@@ -85,19 +92,11 @@ void VehicleDoorNode::on_command(
       break;
     }
   }
-  if (is_open) {
-    if (!is_autoware_control_ && check_autoware_control_) {
-      res->status.success = false;
-      res->status.code = autoware_adapi_v1_msgs::msg::ResponseStatus::UNKNOWN;
-      res->status.message = "The door cannot be opened when autoware control is disabled.";
-      return;
-    }
-    if (!is_stop_mode_) {
-      res->status.success = false;
-      res->status.code = autoware_adapi_v1_msgs::msg::ResponseStatus::UNKNOWN;
-      res->status.message = "The door cannot be opened except in stop mode.";
-      return;
-    }
+  if (!is_stop_mode_ && is_open) {
+    res->status.success = false;
+    res->status.code = autoware_adapi_v1_msgs::msg::ResponseStatus::UNKNOWN;
+    res->status.message = "The door cannot be opened except in stop mode.";
+    return;
   }
   autoware::component_interface_utils::status::copy(cli_command_->call(req), res);
 }
