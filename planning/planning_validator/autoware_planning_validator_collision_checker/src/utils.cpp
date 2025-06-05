@@ -15,6 +15,7 @@
 #include "autoware/planning_validator_collision_checker/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware_lanelet2_extension/utility/utilities.hpp>
 
 #include <boost/geometry/algorithms/buffer.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
@@ -116,6 +117,24 @@ void set_right_turn_target_lanelets(
     return !params.right_turn.check_turning_lanes;
   };
 
+  auto extend_lanelet =
+    [&](const lanelet::ConstLanelet & ll, const geometry_msgs::msg::Pose & overlap_point) {
+      const auto distance_th = params.detection_range;
+      lanelet::ConstLanelets extended_lanelets{ll};
+      auto current_arc_length =
+        lanelet::utils::getArcCoordinates(extended_lanelets, overlap_point).length;
+      if (current_arc_length >= distance_th) return extended_lanelets;
+
+      while (current_arc_length < distance_th) {
+        const auto prev_lanelets = route_handler.getPreviousLanelets(ll);
+        if (prev_lanelets.empty()) break;  // No more previous lanelets to extend
+        extended_lanelets.push_back(prev_lanelets.front());
+        current_arc_length += lanelet::utils::getLaneletLength2d(prev_lanelets.front());
+      }
+      std::reverse(extended_lanelets.begin(), extended_lanelets.end());
+      return extended_lanelets;
+    };
+
   const auto lanelet_map_ptr = route_handler.getLaneletMapPtr();
   const auto candidates = lanelet_map_ptr->laneletLayer.search(
     boost::geometry::return_envelope<lanelet::BoundingBox2d>(trajectory_ls));
@@ -128,12 +147,13 @@ void set_right_turn_target_lanelets(
 
     const auto overlap_index = get_overlap_index(ll, trajectory_points, trajectory_ls);
     if (!overlap_index) continue;
-    const auto overlap_point = trajectory_points[*overlap_index].pose.position;
+    const auto overlap_point =
+      lanelet::utils::getClosestCenterPose(ll, trajectory_points[*overlap_index].pose.position);
     const auto time_to_reach =
       rclcpp::Duration(trajectory_points[*overlap_index].time_from_start).seconds();
     if (time_to_reach > time_horizon) continue;
     lanelets.target_lanelets.emplace_back(
-      ll.id(), lanelet::ConstLanelets{ll}, overlap_point, time_to_reach);
+      ll.id(), extend_lanelet(ll, overlap_point), overlap_point, time_to_reach);
   }
 }
 
@@ -171,17 +191,36 @@ void set_left_turn_target_lanelets(
     return !params.left_turn.check_turning_lanes;
   };
 
+  auto extend_lanelet =
+    [&](const lanelet::ConstLanelet & ll, const geometry_msgs::msg::Pose & overlap_point) {
+      const auto distance_th = params.detection_range;
+      lanelet::ConstLanelets extended_lanelets{ll};
+      auto current_arc_length =
+        lanelet::utils::getArcCoordinates(extended_lanelets, overlap_point).length;
+      if (current_arc_length >= distance_th) return extended_lanelets;
+
+      while (current_arc_length < distance_th) {
+        const auto prev_lanelets = route_handler.getPreviousLanelets(ll);
+        if (prev_lanelets.empty()) break;  // No more previous lanelets to extend
+        extended_lanelets.push_back(prev_lanelets.front());
+        current_arc_length += lanelet::utils::getLaneletLength2d(prev_lanelets.front());
+      }
+      std::reverse(extended_lanelets.begin(), extended_lanelets.end());
+      return extended_lanelets;
+    };
+
   const auto turn_lanelet_id = turn_lanelet->id();
   for (const auto & lanelet : route_handler.getPreviousLanelets(next_lanelet)) {
     if (lanelet.id() == turn_lanelet_id || ignore_turning(lanelet)) continue;
     const auto overlap_index = get_overlap_index(lanelet, trajectory_points, trajectory_ls);
     if (!overlap_index) continue;
-    const auto overlap_point = trajectory_points[*overlap_index].pose.position;
+    const auto overlap_point = lanelet::utils::getClosestCenterPose(
+      lanelet, trajectory_points[*overlap_index].pose.position);
     const auto time_to_reach =
       rclcpp::Duration(trajectory_points[*overlap_index].time_from_start).seconds();
     if (time_to_reach > time_horizon) continue;
     lanelets.target_lanelets.emplace_back(
-      lanelet.id(), lanelet::ConstLanelets{lanelet}, overlap_point, time_to_reach);
+      lanelet.id(), extend_lanelet(lanelet, overlap_point), overlap_point, time_to_reach);
   }
 }
 

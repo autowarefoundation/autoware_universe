@@ -48,13 +48,13 @@ struct TargetLanelet
 {
   lanelet::Id id;
   lanelet::ConstLanelets lanelets;
-  geometry_msgs::msg::Point overlap_point;
+  geometry_msgs::msg::Pose overlap_point;
   double ego_time_to_reach{};
 
   TargetLanelet() = default;
   TargetLanelet(
     lanelet::Id id, const lanelet::ConstLanelets & lanelets,
-    const geometry_msgs::msg::Point & overlap_point, const double ego_time_to_reach)
+    const geometry_msgs::msg::Pose & overlap_point, const double ego_time_to_reach)
   : id(id), lanelets(lanelets), overlap_point(overlap_point), ego_time_to_reach(ego_time_to_reach)
   {
   }

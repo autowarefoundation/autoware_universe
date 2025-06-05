@@ -351,10 +351,8 @@ std::optional<PCDObject> CollisionChecker::get_pcd_object(
 
   if (clustered_points->empty()) return pcd_object;
 
-  const auto overlap_center_pose =
-    lanelet::utils::getClosestCenterPose(combine_lanelet, target_lanelet.overlap_point);
   const auto overlap_arc_coord =
-    lanelet::utils::getArcCoordinates(target_lanelet.lanelets, overlap_center_pose);
+    lanelet::utils::getArcCoordinates(target_lanelet.lanelets, target_lanelet.overlap_point);
   auto min_arc_length = std::numeric_limits<double>::max();
   for (const auto & p : *clustered_points) {
     const auto p_geom = autoware_utils::create_point(p.x, p.y, p.z);
@@ -463,7 +461,7 @@ void CollisionChecker::set_lanelets_debug_marker(const CollisionCheckerLanelets 
         ll_polygons.push_back(ll.polygon2d().basicPolygon());
       }
       context_->debug_pose_publisher->pushPointMarker(
-        t_l.overlap_point, "collision_checker_target_lanelets", 2);
+        t_l.overlap_point.position, "collision_checker_target_lanelets", 2);
     }
     if (!ll_polygons.empty()) {
       context_->debug_pose_publisher->pushLaneletPolygonsMarker(
