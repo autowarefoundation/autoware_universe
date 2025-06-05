@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VEHICLE_HPP_
-#define VEHICLE_HPP_
+#ifndef VEHICLE_STATUS_HPP_
+#define VEHICLE_STATUS_HPP_
 
 #include <autoware/adapi_specs/vehicle.hpp>
 #include <autoware/component_interface_specs_universe/localization.hpp>
@@ -33,10 +33,10 @@
 namespace autoware::default_adapi
 {
 
-class VehicleNode : public rclcpp::Node
+class VehicleStatusNode : public rclcpp::Node
 {
 public:
-  explicit VehicleNode(const rclcpp::NodeOptions & options);
+  explicit VehicleStatusNode(const rclcpp::NodeOptions & options);
 
 private:
   rclcpp::CallbackGroup::SharedPtr group_cli_;
@@ -97,4 +97,4 @@ private:
 
 }  // namespace autoware::default_adapi
 
-#endif  // VEHICLE_HPP_
+#endif  // VEHICLE_STATUS_HPP_

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "vehicle.hpp"
+#include "vehicle_status.hpp"
 
 #include <autoware/geography_utils/height.hpp>
 #include <autoware/geography_utils/projection.hpp>
@@ -63,26 +63,27 @@ std::unordered_map<uint8_t, uint8_t> hazard_light_type_ = {
   {HazardLightsReport::ENABLE, ApiHazardLight::ENABLE},
 };
 
-VehicleNode::VehicleNode(const rclcpp::NodeOptions & options) : Node("vehicle", options)
+VehicleStatusNode::VehicleStatusNode(const rclcpp::NodeOptions & options)
+: Node("vehicle_status", options)
 {
   const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
   group_cli_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
   adaptor.init_pub(pub_kinematics_);
   adaptor.init_pub(pub_status_);
-  adaptor.init_sub(sub_kinematic_state_, this, &VehicleNode::kinematic_state);
-  adaptor.init_sub(sub_acceleration_, this, &VehicleNode::acceleration_status);
-  adaptor.init_sub(sub_steering_, this, &VehicleNode::steering_status);
-  adaptor.init_sub(sub_gear_state_, this, &VehicleNode::gear_status);
-  adaptor.init_sub(sub_turn_indicator_, this, &VehicleNode::turn_indicator_status);
-  adaptor.init_sub(sub_map_projector_info_, this, &VehicleNode::map_projector_info);
-  adaptor.init_sub(sub_hazard_light_, this, &VehicleNode::hazard_light_status);
-  adaptor.init_sub(sub_energy_level_, this, &VehicleNode::energy_status);
+  adaptor.init_sub(sub_kinematic_state_, this, &VehicleStatusNode::kinematic_state);
+  adaptor.init_sub(sub_acceleration_, this, &VehicleStatusNode::acceleration_status);
+  adaptor.init_sub(sub_steering_, this, &VehicleStatusNode::steering_status);
+  adaptor.init_sub(sub_gear_state_, this, &VehicleStatusNode::gear_status);
+  adaptor.init_sub(sub_turn_indicator_, this, &VehicleStatusNode::turn_indicator_status);
+  adaptor.init_sub(sub_map_projector_info_, this, &VehicleStatusNode::map_projector_info);
+  adaptor.init_sub(sub_hazard_light_, this, &VehicleStatusNode::hazard_light_status);
+  adaptor.init_sub(sub_energy_level_, this, &VehicleStatusNode::energy_status);
 
   const auto rate = rclcpp::Rate(10);
   timer_ = rclcpp::create_timer(this, get_clock(), rate.period(), [this]() { on_timer(); });
 }
 
-uint8_t VehicleNode::mapping(
+uint8_t VehicleStatusNode::mapping(
   std::unordered_map<uint8_t, uint8_t> hash_map, uint8_t input, uint8_t default_value)
 {
   if (hash_map.find(input) == hash_map.end()) {
@@ -92,52 +93,54 @@ uint8_t VehicleNode::mapping(
   }
 }
 
-void VehicleNode::kinematic_state(const autoware::component_interface_specs_universe::localization::
-                                    KinematicState::Message::ConstSharedPtr msg_ptr)
+void VehicleStatusNode::kinematic_state(
+  const autoware::component_interface_specs_universe::localization::KinematicState::Message::
+    ConstSharedPtr msg_ptr)
 {
   kinematic_state_msgs_ = msg_ptr;
 }
 
-void VehicleNode::acceleration_status(const autoware::component_interface_specs_universe::
-                                        localization::Acceleration::Message::ConstSharedPtr msg_ptr)
+void VehicleStatusNode::acceleration_status(
+  const autoware::component_interface_specs_universe::localization::Acceleration::Message::
+    ConstSharedPtr msg_ptr)
 {
   acceleration_msgs_ = msg_ptr;
 }
 
-void VehicleNode::steering_status(const autoware::component_interface_specs_universe::vehicle::
-                                    SteeringStatus::Message::ConstSharedPtr msg_ptr)
+void VehicleStatusNode::steering_status(const autoware::component_interface_specs_universe::
+                                          vehicle::SteeringStatus::Message::ConstSharedPtr msg_ptr)
 {
   steering_status_msgs_ = msg_ptr;
 }
 
-void VehicleNode::gear_status(const GearReport::ConstSharedPtr msg_ptr)
+void VehicleStatusNode::gear_status(const GearReport::ConstSharedPtr msg_ptr)
 {
   gear_status_msgs_ = msg_ptr;
 }
 
-void VehicleNode::turn_indicator_status(const TurnIndicatorsReport::ConstSharedPtr msg_ptr)
+void VehicleStatusNode::turn_indicator_status(const TurnIndicatorsReport::ConstSharedPtr msg_ptr)
 {
   turn_indicator_status_msgs_ = msg_ptr;
 }
 
-void VehicleNode::hazard_light_status(const HazardLightsReport::ConstSharedPtr msg_ptr)
+void VehicleStatusNode::hazard_light_status(const HazardLightsReport::ConstSharedPtr msg_ptr)
 {
   hazard_light_status_msgs_ = msg_ptr;
 }
 
-void VehicleNode::energy_status(
+void VehicleStatusNode::energy_status(
   const autoware::component_interface_specs_universe::vehicle::EnergyStatus::Message::ConstSharedPtr
     msg_ptr)
 {
   energy_status_msgs_ = msg_ptr;
 }
 
-void VehicleNode::map_projector_info(const MapProjectorInfo::ConstSharedPtr msg_ptr)
+void VehicleStatusNode::map_projector_info(const MapProjectorInfo::ConstSharedPtr msg_ptr)
 {
   map_projector_info_ = msg_ptr;
 }
 
-void VehicleNode::publish_kinematics()
+void VehicleStatusNode::publish_kinematics()
 {
   if (!kinematic_state_msgs_ || !acceleration_msgs_ || !map_projector_info_) return;
 
@@ -170,7 +173,7 @@ void VehicleNode::publish_kinematics()
   pub_kinematics_->publish(vehicle_kinematics);
 }
 
-void VehicleNode::publish_status()
+void VehicleStatusNode::publish_status()
 {
   if (
     !steering_status_msgs_ || !gear_status_msgs_ || !turn_indicator_status_msgs_ ||
@@ -188,7 +191,7 @@ void VehicleNode::publish_status()
   pub_status_->publish(vehicle_status);
 }
 
-void VehicleNode::on_timer()
+void VehicleStatusNode::on_timer()
 {
   publish_kinematics();
   publish_status();
@@ -197,4 +200,4 @@ void VehicleNode::on_timer()
 }  // namespace autoware::default_adapi
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::default_adapi::VehicleNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::default_adapi::VehicleStatusNode)
