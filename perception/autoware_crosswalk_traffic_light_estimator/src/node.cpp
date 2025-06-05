@@ -85,6 +85,7 @@ CrosswalkTrafficLightEstimatorNode::CrosswalkTrafficLightEstimatorNode(
   using std::placeholders::_1;
 
   use_last_detect_color_ = declare_parameter<bool>("use_last_detect_color");
+  use_pedestrian_signal_detect_ = declare_parameter<bool>("use_pedestrian_signal_detect");
   last_detect_color_hold_time_ = declare_parameter<double>("last_detect_color_hold_time");
   last_colors_hold_time_ = declare_parameter<double>("last_colors_hold_time");
 
@@ -294,26 +295,24 @@ void CrosswalkTrafficLightEstimatorNode::setCrosswalkTrafficSignal(
 
   for (const auto & tl_reg_elem : tl_reg_elems) {
     auto id = tl_reg_elem->id();
-    // if valid prediction exists, overwrite the estimation; else, use the estimation
     if (valid_id2idx_map.count(id)) {
       size_t idx = valid_id2idx_map[id];
       auto signal = msg.traffic_light_groups[idx];
-      if (isInvalidDetectionStatus(signal)) {
+      // if invalid perception result exists or disable camera recognition, overwrite the estimation
+      if (use_pedestrian_signal_detect_ == false || isInvalidDetectionStatus(signal)) {
         TrafficSignalElement output_traffic_signal_element;
         output_traffic_signal_element.color = color;
         output_traffic_signal_element.shape = TrafficSignalElement::CIRCLE;
         output_traffic_signal_element.confidence = 1.0;
-        if (output.traffic_light_groups[idx].elements.empty()) {
-          output.traffic_light_groups[idx].elements.push_back(output_traffic_signal_element);
-        } else {
-          output.traffic_light_groups[idx].elements[0] = output_traffic_signal_element;
-        }
+        output.traffic_light_groups[idx].elements.clear();
+        output.traffic_light_groups[idx].elements.push_back(output_traffic_signal_element);
         continue;
       }
-      updateFlashingState(signal);  // check if it is flashing
-      // update output msg according to flashing and current state
+      // if flashing, update output msg according to flashing and current state
+      updateFlashingState(signal);
       output.traffic_light_groups[idx].elements[0].color = updateAndGetColorState(signal);
     } else {
+      // if perception result does not exist, add it estimated by vehicle traffic signals
       TrafficSignal output_traffic_signal;
       TrafficSignalElement output_traffic_signal_element;
       output_traffic_signal_element.color = color;

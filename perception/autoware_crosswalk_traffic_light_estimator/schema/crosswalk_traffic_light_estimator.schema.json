@@ -9,16 +9,32 @@
         "use_last_detect_color": {
           "type": "boolean",
           "default": true,
-          "description": "If this parameter is true, this module estimates pedestrian's traffic signal as RED not only when vehicle's traffic signal is detected as GREEN/AMBER but also when detection results change GREEN/AMBER to UNKNOWN. (If detection results change RED or AMBER to UNKNOWN, this module estimates pedestrian's traffic signal as UNKNOWN.) If this parameter is false, this module use only latest detection results for estimation. (Only when the detection result is GREEN/AMBER, this module estimates pedestrian's traffic signal as RED.)."
+          "description": "If this parameter is `true`, this module estimates pedestrian's traffic signal as RED not only when vehicle's traffic signal is detected as GREEN/AMBER but also when detection results change GREEN/AMBER to UNKNOWN. (If detection results change RED or AMBER to UNKNOWN, this module estimates pedestrian's traffic signal as UNKNOWN.) If this parameter is `false`, this module use only latest detection results for estimation. (Only when the detection result is GREEN/AMBER, this module estimates pedestrian's traffic signal as RED.)."
+        },
+        "use_pedestrian_signal_detect": {
+          "type": "boolean",
+          "default": true,
+          "description": "If this parameter is `true`, use the pedestrian's traffic signal estimated by the perception pipeline. If `false`, overwrite it with pedestrian's signals estimated from vehicle traffic signals, HDMap, and route."
         },
         "last_detect_color_hold_time": {
           "type": "number",
           "default": 2.0,
           "exclusiveMinimum": 0.0,
-          "description": "The time threshold to hold for last detect color."
+          "description": "The time threshold to hold for last detect color. The unit is second."
+        },
+        "last_colors_hold_time": {
+          "type": "number",
+          "default": 1.0,
+          "exclusiveMinimum": 0.0,
+          "description": "The time threshold to hold for history detected pedestrian traffic light color. The unit is second."
         }
       },
-      "required": ["use_last_detect_color", "last_detect_color_hold_time"]
+      "required": [
+        "use_last_detect_color",
+        "use_pedestrian_signal_detect",
+        "last_detect_color_hold_time",
+        "last_colors_hold_time"
+      ]
     }
   },
   "properties": {
