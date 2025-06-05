@@ -44,7 +44,7 @@ void VehicleDoorNode::diagnose_state(diagnostic_updater::DiagnosticStatusWrapper
   using diagnostic_msgs::msg::DiagnosticStatus;
 
   if (!status_) {
-    stat.summary(DiagnosticStatus::ERROR, "Doors status is unknown.");
+    stat.summary(DiagnosticStatus::ERROR, "The door status is unknown.");
     return;
   }
 
@@ -58,7 +58,7 @@ void VehicleDoorNode::diagnose_state(diagnostic_updater::DiagnosticStatusWrapper
   if (is_closed) {
     stat.summary(DiagnosticStatus::OK, "");
   } else {
-    stat.summary(DiagnosticStatus::ERROR, " Doors are open.");
+    stat.summary(DiagnosticStatus::ERROR, "The door is open.");
   }
 }
 
@@ -78,18 +78,24 @@ void VehicleDoorNode::on_command(
 {
   // For safety, do not open the door if the vehicle is not stopped.
   // https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-interfaces/ad-api/list/api/vehicle/doors/command/
-  if (!is_stop_mode_ || (!is_autoware_control_ && check_autoware_control_)) {
-    bool is_open = false;
-    for (const auto & door : req->doors) {
-      if (door.command == autoware_adapi_v1_msgs::msg::DoorCommand::OPEN) {
-        is_open = true;
-        break;
-      }
+  bool is_open = false;
+  for (const auto & door : req->doors) {
+    if (door.command == autoware_adapi_v1_msgs::msg::DoorCommand::OPEN) {
+      is_open = true;
+      break;
     }
-    if (is_open) {
+  }
+  if (is_open) {
+    if (!is_stop_mode_) {
       res->status.success = false;
       res->status.code = autoware_adapi_v1_msgs::msg::ResponseStatus::UNKNOWN;
-      res->status.message = "Doors cannot be opened if the vehicle is not stopped.";
+      res->status.message = "The door cannot be opened except in stop mode.";
+      return;
+    }
+    if (!is_autoware_control_ && check_autoware_control_) {
+      res->status.success = false;
+      res->status.code = autoware_adapi_v1_msgs::msg::ResponseStatus::UNKNOWN;
+      res->status.message = "The door cannot be opened when autoware control is disabled.";
       return;
     }
   }
