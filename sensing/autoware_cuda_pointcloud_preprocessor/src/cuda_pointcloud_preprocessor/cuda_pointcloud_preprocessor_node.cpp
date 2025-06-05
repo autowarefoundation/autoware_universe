@@ -205,8 +205,9 @@ void CudaPointcloudPreprocessorNode::imuCallback(
 {
   while (!angular_velocity_queue_.empty()) {
     // for rosbag replay
-    bool backwards_time_jump_detected = rclcpp::Time(angular_velocity_queue_.front().header.stamp) >
-                                        rclcpp::Time(imu_msg->header.stamp);
+    bool backwards_time_jump_detected =
+      (rclcpp::Time(angular_velocity_queue_.front().header.stamp) >
+       rclcpp::Time(imu_msg->header.stamp));
     bool is_queue_longer_than_1s =
       rclcpp::Time(angular_velocity_queue_.front().header.stamp) <
       rclcpp::Time(imu_msg->header.stamp) - rclcpp::Duration::from_seconds(1.0);
