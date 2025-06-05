@@ -1247,7 +1247,6 @@ std::optional<StopPoseWithId> CrosswalkModule::checkStopForParkedVehicles(
       parked_vehicles_stop_.previous_detection_time = clock_->now();
     }
   }
-  // return stop_factor;
   return StopPoseWithId{stop_factor->stop_pose, {}};
 }
 

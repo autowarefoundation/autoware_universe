@@ -1,4 +1,4 @@
-// Copyright 2024 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -129,68 +129,30 @@ TEST(PlanningFactorTest, NodeTestWithPredictedObjects)
         }
       });
 
-  // const auto path_sub = test_node->create_subscription<autoware_planning_msgs::msg::Path>(
-  //   "/behavior_velocity_planner_node/output/path", rclcpp::QoS{1},
-  //   [](const autoware_planning_msgs::msg::Path::SharedPtr msg) {
-  //     RCLCPP_INFO(
-  //       rclcpp::get_logger("test_node"), "Received Path with %zu points", msg->points.size());
-  //     auto distance = 0.0;
-  //     for (size_t i = 1; i < msg->points.size(); ++i) {
-  //       const auto & p1 = msg->points[i - 1];
-  //       const auto & p2 = msg->points[i];
-  //       distance += std::hypot(
-  //         p2.pose.position.x - p1.pose.position.x, p2.pose.position.y - p1.pose.position.y);
-  //     }
-  //     RCLCPP_INFO(rclcpp::get_logger("test_node"), "Total distance of path: %.2f meters",
-  //     distance);
-
-  //     // start point
-  //     RCLCPP_INFO(
-  //       rclcpp::get_logger("test_node"), "Start point: (%.2f, %.2f)",
-  //       msg->points.front().pose.position.x, msg->points.front().pose.position.y);
-  //     // end point
-  //     RCLCPP_INFO(
-  //       rclcpp::get_logger("test_node"), "End point: (%.2f, %.2f)",
-  //       msg->points.back().pose.position.x, msg->points.back().pose.position.y);
-  //   });
-
-  // std::map<std::string, std::vector<std::string>> topic_list =
-  //   test_node->get_topic_names_and_types();
-
-  // for (const auto & topic : topic_list) {
-  //   RCLCPP_INFO(
-  //     rclcpp::get_logger("test_node"), "Topic: %s, Types: %zu", topic.first.c_str(),
-  //     topic.second.size());
-  //   for (const auto & type : topic.second) {
-  //     RCLCPP_INFO(rclcpp::get_logger("test_node"), "  Type: %s", type.c_str());
-  //   }
-  // }
-
   auto objects = loadPathObjectsInYaml();
   auto odometry = loadOdometryInYaml();
   auto path = loadPathWithLaneIdInYaml();
+  test_manager->publishInput(test_target_node, input_dynamic_objects_topic, objects, 5);
+  test_manager->publishInput(test_target_node, input_odometry_topic, odometry, 5);
+  test_manager->publishInput(test_target_node, input_path_with_lane_id_topic, path, 5);
 
-  const size_t retry_count = 5;
-  for (size_t i = 0; i < retry_count; ++i) {
-    test_manager->publishInput(test_target_node, input_dynamic_objects_topic, objects, 1);
-    test_manager->publishInput(test_target_node, input_odometry_topic, odometry, 1);
-    test_manager->publishInput(test_target_node, input_path_with_lane_id_topic, path, 1);
-  }
+  // spin once
+  rclcpp::spin_some(test_target_node);
+  rclcpp::spin_some(test_manager->getTestNode());
 
   // make sure planning_factor_msg is received
   EXPECT_NE(planning_factor_msg, nullptr);
 
-  // check the size of factors
   EXPECT_GT(planning_factor_msg->factors.size(), 0);
-  size_t total_safety_factors = 0;
   for (auto & factor : planning_factor_msg->factors) {
-    // make sure detail is not empty
     EXPECT_NE(factor.detail, "");
 
     // make sure safety_factors is not empty
-    total_safety_factors += factor.safety_factors.factors.size();
+    EXPECT_GT(factor.safety_factors.factors.size(), 0);
+    for (auto & safety_factor : factor.safety_factors.factors) {
+      EXPECT_GT(safety_factor.points.size(), 0);
+    }
   }
-  EXPECT_GT(total_safety_factors, 0);
 
   // make sure behavior_path_planner is running
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
