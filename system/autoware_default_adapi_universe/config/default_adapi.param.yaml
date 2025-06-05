@@ -20,6 +20,10 @@
       period: 1.0
       use_fqn: true
 
+/adapi/node/vehicle_metrics:
+  ros__parameters:
+    update_rate: 0.1
+
 /adapi/node/vehicle_door:
   ros__parameters:
     check_autoware_control: true
