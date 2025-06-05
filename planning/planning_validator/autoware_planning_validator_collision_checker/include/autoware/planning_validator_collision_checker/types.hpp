@@ -27,6 +27,9 @@
 #include <lanelet2_core/primitives/Point.h>
 #include <lanelet2_core/primitives/Polygon.h>
 
+#include <unordered_map>
+#include <vector>
+
 namespace autoware::planning_validator
 {
 using autoware_planning_msgs::msg::Trajectory;
@@ -84,6 +87,7 @@ struct DirectionCheckFlags
   bool enable{};
   bool check_oncoming_lanes{};
   bool check_crossing_lanes{};
+  bool check_turning_lanes{};
 };
 
 struct PointcloudParams
@@ -114,6 +118,8 @@ struct CollisionCheckerParams
   bool is_critical{};
   double detection_range{};
   double ttc_threshold{};
+  double ego_deceleration{};
+  double min_time_horizon{};
 
   DirectionCheckFlags right_turn;
   DirectionCheckFlags left_turn;

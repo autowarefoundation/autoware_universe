@@ -23,6 +23,8 @@
 #include <boost/geometry/algorithms/union.hpp>
 #include <boost/geometry/strategies/cartesian/buffer_point_square.hpp>
 
+#include <algorithm>
+
 namespace autoware::planning_validator::collision_checker_utils
 {
 
@@ -94,7 +96,8 @@ std::optional<size_t> get_overlap_index(
 
 void set_right_turn_target_lanelets(
   const TrajectoryPoints & trajectory_points, const RouteHandler & route_handler,
-  CollisionCheckerLanelets & lanelets)
+  const CollisionCheckerParams & params, CollisionCheckerLanelets & lanelets,
+  const double time_horizon)
 {
   autoware_utils::LineString2d trajectory_ls;
   for (const auto & p : trajectory_points) {
@@ -107,28 +110,37 @@ void set_right_turn_target_lanelets(
              lanelet::AttributeValueString::Road;
   };
 
+  auto ignore_turning = [&params](const lanelet::ConstLanelet & ll) {
+    if (!ll.hasAttribute("turn_direction")) return false;
+    if (ll.attribute("turn_direction") == "straight") return false;
+    return !params.right_turn.check_turning_lanes;
+  };
+
   const auto lanelet_map_ptr = route_handler.getLaneletMapPtr();
   const auto candidates = lanelet_map_ptr->laneletLayer.search(
     boost::geometry::return_envelope<lanelet::BoundingBox2d>(trajectory_ls));
   for (const auto & ll : candidates) {
     const auto id = ll.id();
     if (
-      is_road(ll) && !contains_lanelet(lanelets.trajectory_lanelets, id) &&
-      !contains_lanelet(lanelets.connected_lanelets, id)) {
-      const auto overlap_index = get_overlap_index(ll, trajectory_points, trajectory_ls);
-      if (!overlap_index) continue;
-      const auto overlap_point = trajectory_points[*overlap_index].pose.position;
-      const auto time_to_reach =
-        rclcpp::Duration(trajectory_points[*overlap_index].time_from_start).seconds();
-      lanelets.target_lanelets.emplace_back(
-        ll.id(), lanelet::ConstLanelets{ll}, overlap_point, time_to_reach);
-    }
+      !is_road(ll) || ignore_turning(ll) || contains_lanelet(lanelets.trajectory_lanelets, id) ||
+      contains_lanelet(lanelets.connected_lanelets, id))
+      continue;
+
+    const auto overlap_index = get_overlap_index(ll, trajectory_points, trajectory_ls);
+    if (!overlap_index) continue;
+    const auto overlap_point = trajectory_points[*overlap_index].pose.position;
+    const auto time_to_reach =
+      rclcpp::Duration(trajectory_points[*overlap_index].time_from_start).seconds();
+    if (time_to_reach > time_horizon) continue;
+    lanelets.target_lanelets.emplace_back(
+      ll.id(), lanelet::ConstLanelets{ll}, overlap_point, time_to_reach);
   }
 }
 
 void set_left_turn_target_lanelets(
-  const RouteHandler & route_handler, const TrajectoryPoints & trajectory_points,
-  CollisionCheckerLanelets & lanelets)
+  const TrajectoryPoints & trajectory_points, const RouteHandler & route_handler,
+  const CollisionCheckerParams & params, CollisionCheckerLanelets & lanelets,
+  const double time_horizon)
 {
   std::optional<lanelet::ConstLanelet> turn_lanelet;
   for (const auto & lanelet : lanelets.trajectory_lanelets) {
@@ -153,14 +165,21 @@ void set_left_turn_target_lanelets(
     trajectory_ls.emplace_back(p.pose.position.x, p.pose.position.y);
   }
 
+  auto ignore_turning = [&params](const lanelet::ConstLanelet & ll) {
+    if (!ll.hasAttribute("turn_direction")) return false;
+    if (ll.attribute("turn_direction") == "straight") return false;
+    return !params.left_turn.check_turning_lanes;
+  };
+
   const auto turn_lanelet_id = turn_lanelet->id();
   for (const auto & lanelet : route_handler.getPreviousLanelets(next_lanelet)) {
-    if (lanelet.id() == turn_lanelet_id) continue;
+    if (lanelet.id() == turn_lanelet_id || ignore_turning(lanelet)) continue;
     const auto overlap_index = get_overlap_index(lanelet, trajectory_points, trajectory_ls);
     if (!overlap_index) continue;
     const auto overlap_point = trajectory_points[*overlap_index].pose.position;
     const auto time_to_reach =
       rclcpp::Duration(trajectory_points[*overlap_index].time_from_start).seconds();
+    if (time_to_reach > time_horizon) continue;
     lanelets.target_lanelets.emplace_back(
       lanelet.id(), lanelet::ConstLanelets{lanelet}, overlap_point, time_to_reach);
   }

@@ -3,18 +3,20 @@
     collision_checker:
       enable: true
       detection_range: 50.0 # [m]
-      ttc_threshold: 1.0 # [s]
+      ttc_threshold: 2.0 # [s]
       is_critical: true
+      ego_deceleration: 1.0 # [m/s^2]
+      min_time_horizon: 10.0 # [s]
 
       right_turn:
         enable: true
         check_oncoming_lanes: true
         check_crossing_lanes: true
+        check_turning_lanes: false
 
       left_turn:
         enable: true
-        check_oncoming_lanes: true
-        check_crossing_lanes: true
+        check_turning_lanes: false
 
       pointcloud:
         height_buffer: 0.5  # [m]

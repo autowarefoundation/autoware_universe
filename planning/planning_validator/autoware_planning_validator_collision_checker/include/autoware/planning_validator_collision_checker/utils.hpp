@@ -30,6 +30,8 @@
 #include <lanelet2_core/primitives/BoundingBox.h>
 #include <lanelet2_routing/RoutingGraph.h>
 
+#include <limits>
+
 namespace autoware::planning_validator::collision_checker_utils
 {
 
@@ -42,11 +44,13 @@ void set_trajectory_lanelets(
 
 void set_right_turn_target_lanelets(
   const TrajectoryPoints & trajectory_points, const RouteHandler & route_handler,
-  CollisionCheckerLanelets & lanelets);
+  const CollisionCheckerParams & params, CollisionCheckerLanelets & lanelets,
+  const double time_horizon = std::numeric_limits<double>::max());
 
 void set_left_turn_target_lanelets(
-  const RouteHandler & route_handler, const TrajectoryPoints & trajectory_points,
-  CollisionCheckerLanelets & lanelets);
+  const TrajectoryPoints & trajectory_points, const RouteHandler & route_handler,
+  const CollisionCheckerParams & params, CollisionCheckerLanelets & lanelets,
+  const double time_horizon = std::numeric_limits<double>::max());
 
 }  // namespace autoware::planning_validator::collision_checker_utils
 
