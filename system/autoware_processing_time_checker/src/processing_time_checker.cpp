@@ -70,7 +70,7 @@ ProcessingTimeChecker::ProcessingTimeChecker(const rclcpp::NodeOptions & node_op
     // register module name
     if (module_name) {
       module_name_map_.insert_or_assign(processing_time_topic_name, *module_name);
-      processing_time_accumulator_map_.insert_or_assign(*module_name, Accumulator<double>());
+      processing_time_accumulator_map_.insert_or_assign(*module_name, Accumulator<double>(true,100));
     } else {
       throw std::invalid_argument("The format of the processing time topic name is not correct.");
     }
@@ -109,10 +109,12 @@ ProcessingTimeChecker::~ProcessingTimeChecker()
     nlohmann::json j;
     for (const auto & accumulator_iterator : processing_time_accumulator_map_) {
       const auto module_name = accumulator_iterator.first;
-      const auto processing_time_accumulator = accumulator_iterator.second;
+      auto processing_time_accumulator = accumulator_iterator.second;
       j[module_name + "/min"] = processing_time_accumulator.min();
       j[module_name + "/max"] = processing_time_accumulator.max();
       j[module_name + "/mean"] = processing_time_accumulator.mean();
+      j[module_name + "/percentile_90"] = processing_time_accumulator.quantile(90.0);
+      j[module_name + "/percentile_99"] = processing_time_accumulator.quantile(99.0);
       j[module_name + "/count"] = processing_time_accumulator.count();
       j[module_name + "/description"] = "processing time of " + module_name + "[ms]";
     }
