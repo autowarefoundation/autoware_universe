@@ -63,7 +63,8 @@ std::unordered_map<uint8_t, uint8_t> hazard_light_type_ = {
   {HazardLightsReport::ENABLE, ApiHazardLight::ENABLE},
 };
 
-VehicleStatusNode::VehicleStatusNode(const rclcpp::NodeOptions & options) : Node("vehicle", options)
+VehicleStatusNode::VehicleStatusNode(const rclcpp::NodeOptions & options)
+: Node("vehicle_status", options)
 {
   const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
   group_cli_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
