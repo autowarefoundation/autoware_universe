@@ -182,7 +182,8 @@ bool CenterPointTRT::detect(
     cudaMemsetAsync(spatial_features_d_.get(), 0, spatial_features_size_ * sizeof(float), stream_));
 
   if (!preprocess(input_pointcloud_msg_ptr, tf_buffer)) {
-    RCLCPP_WARN(rclcpp::get_logger("lidar_centerpoint"), "Fail to preprocess and skip to detect.");
+    RCLCPP_WARN(
+      rclcpp::get_logger(config_.logger_name_.c_str()), "Fail to preprocess and skip to detect.");
     return false;
   }
 
@@ -198,7 +199,7 @@ bool CenterPointTRT::detect(
   if (num_pillars >= config_.max_voxel_size_) {
     rclcpp::Clock clock{RCL_ROS_TIME};
     RCLCPP_WARN_THROTTLE(
-      rclcpp::get_logger("lidar_centerpoint"), clock, 1000,
+      rclcpp::get_logger(config_.logger_name_.c_str()), clock, 1000,
       "The actual number of pillars (%u) exceeds its maximum value (%zu). "
       "Please considering increasing it since it may limit the detection performance.",
       num_pillars, config_.max_voxel_size_);
@@ -282,7 +283,7 @@ void CenterPointTRT::postProcess(std::vector<Box3D> & det_boxes3d)
     head_out_heatmap_d_.get(), head_out_offset_d_.get(), head_out_z_d_.get(), head_out_dim_d_.get(),
     head_out_rot_d_.get(), head_out_vel_d_.get(), det_boxes3d, stream_));
   if (det_boxes3d.size() == 0) {
-    RCLCPP_DEBUG_STREAM(rclcpp::get_logger("lidar_centerpoint"), "No detected boxes.");
+    RCLCPP_DEBUG_STREAM(rclcpp::get_logger(config_.logger_name_.c_str()), "No detected boxes.");
   }
 }
 

@@ -84,6 +84,7 @@ private:
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{nullptr};
 
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
+  std::string logger_name_{"lidar_centerpoint"};
 };
 
 }  // namespace autoware::lidar_centerpoint

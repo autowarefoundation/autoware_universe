@@ -1,0 +1,12 @@
+/**:
+  ros__parameters:
+    model_params:
+      class_names: ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"]
+      point_feature_size: 4
+      max_voxel_size: 40000
+      point_cloud_range: [-51.2, -51.2, -3.0, 51.2, 51.2, 5.0]
+      voxel_size: [0.16, 0.16, 8.0]
+      downsample_factor: 4
+      encoder_in_feature_size: 10
+      has_variance: false
+      has_twist: false

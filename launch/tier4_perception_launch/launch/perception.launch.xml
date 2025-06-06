@@ -50,9 +50,18 @@
   <!-- ML model parameters -->
   <arg name="lidar_detection_model_type" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[0]&quot;)"/>
   <arg name="lidar_detection_model_name" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[1] if '/' in '$(var lidar_detection_model)' else ''&quot;)"/>
+  <arg name="use_short_range_detection" default="false" description="use short range detection for redundant VRU detection"/>
+  <arg name="lidar_short_range_detection_model_type" default="centerpoint_short_range" description="options: `centerpoint_short_range`">
+    <choice value="centerpoint_short_range"/>
+  </arg>
+  <arg name="lidar_short_range_detection_model_name" default="centerpoint_short_range" description="options: `centerpoint_short_range`">
+    <choice value="centerpoint_short_range"/>
+    <choice value=""/>
+  </arg>
   <arg name="bevfusion_model_path" default="$(var data_path)/bevfusion"/>
   <arg name="centerpoint_model_path" default="$(var data_path)/lidar_centerpoint"/>
   <arg name="transfusion_model_path" default="$(var data_path)/lidar_transfusion"/>
+  <arg name="short_range_centerpoint_model_path" default="$(var data_path)/lidar_short_range_centerpoint"/>
   <arg name="pointpainting_model_path" default="$(var data_path)/image_projection_based_fusion"/>
 
   <!-- Common parameters -->
@@ -240,6 +249,9 @@
           <arg name="mode" value="$(var mode)"/>
           <arg name="lidar_detection_model_type" value="$(var lidar_detection_model_type)"/>
           <arg name="lidar_detection_model_name" value="$(var lidar_detection_model_name)"/>
+          <arg name="use_short_range_detection" value="$(var use_short_range_detection)"/>
+          <arg name="lidar_short_range_detection_model_type" value="$(var lidar_short_range_detection_model_type)"/>
+          <arg name="lidar_short_range_detection_model_name" value="$(var lidar_short_range_detection_model_name)"/>
           <arg name="use_multi_channel_tracker_merger" value="$(var use_multi_channel_tracker_merger)"/>
           <arg name="number_of_cameras" value="$(var image_number)"/>
           <arg name="input/camera0/image" value="$(var image_raw0)"/>

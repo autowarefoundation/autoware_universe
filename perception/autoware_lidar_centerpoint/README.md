@@ -279,6 +279,16 @@ source install/setup.bash
 ros2 launch autoware_lidar_centerpoint lidar_centerpoint.launch.xml  model_name:=centerpoint_custom  model_path:=/PATH/TO/ONNX/FILE/
 ```
 
+#### Launch the lidar_short_range_centerpoint node
+
+It also provides short_range detections using CenterPoint:
+
+```bash
+cd /YOUR/AUTOWARE/PATH/Autoware
+source install/setup.bash
+ros2 launch autoware_lidar_centerpoint lidar_centerpoint.launch.xml model_name:=centerpoint_short_range model_path:=/PATH/TO/ONNX/FILE/
+```
+
 ### Changelog
 
 #### v1 (2022/07/06)
