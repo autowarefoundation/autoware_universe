@@ -356,7 +356,7 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForCrosswalkUse
   // Check pedestrian for stop
   // NOTE: first stop point and its minimum distance from ego to stop
   std::optional<double> dist_nearest_cp;
-  std::vector<unique_identifier_msgs::msg::UUID> object_id_type_pairs;
+  std::vector<unique_identifier_msgs::msg::UUID> object_ids;
   for (const auto & object_info : object_info_manager_.objects) {
     const auto & object = object_info.second;
     const auto & collision_point_opt = object.collision_point;
@@ -367,8 +367,7 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForCrosswalkUse
         continue;
       }
 
-      // stop_factor_points.push_back(object.position);
-      object_id_type_pairs.emplace_back(object_info.first);
+      object_ids.emplace_back(object_info.first);
 
       const auto dist_ego2cp =
         calcSignedArcLength(sparse_resample_path.points, ego_pos, collision_point.collision_point);
@@ -386,7 +385,7 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForCrosswalkUse
   if (!decided_stop_pose_opt.has_value()) {
     return {};
   }
-  return StopPoseWithObjectUuids{decided_stop_pose_opt.value(), object_id_type_pairs};
+  return StopPoseWithObjectUuids{decided_stop_pose_opt.value(), object_ids};
 }
 
 std::optional<geometry_msgs::msg::Pose> CrosswalkModule::calcStopPose(
@@ -1577,17 +1576,29 @@ SafetyFactorArray CrosswalkModule::createSafetyFactorArray(
 
     // TODO(odashima): add a predicted path used for the decision
 
-    const auto & object = object_info_manager_.objects.at(object_id);
-    if (object.collision_point) {
+    if (object_info_manager_.objects.count(object_id) > 0) {
+      const auto & object = object_info_manager_.objects.at(object_id);
       safety_factor.ttc_begin = object.collision_point->time_to_collision;
       // TODO(odashima): add a correct value
       safety_factor.ttc_end = object.collision_point->time_to_collision;
+
+      const auto & position = object.position;
+      safety_factor.points = {position};
     } else {
-      safety_factor.ttc_begin = 0.0;
-      safety_factor.ttc_end = 0.0;
+      const auto objects_ptr = planner_data_->predicted_objects;
+      for (const auto & object : objects_ptr->objects) {
+        if (object.object_id == object_id) {
+          // TODO(odashima): add a correct value
+          safety_factor.ttc_begin = 0.0;
+          safety_factor.ttc_end = 0.0;
+
+          const auto & position = object.kinematics.initial_pose_with_covariance.pose.position;
+          safety_factor.points = {position};
+          break;
+        }
+      }
     }
-    const auto & position = object.position;
-    safety_factor.points = {position};
+
     safety_factor.is_safe = false;
 
     safety_factors.factors.push_back(safety_factor);
