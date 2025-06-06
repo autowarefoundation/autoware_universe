@@ -56,6 +56,7 @@ namespace autoware::behavior_velocity_planner
 {
 namespace bg = boost::geometry;
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
+using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
@@ -358,7 +359,7 @@ public:
       return objects.at(uuid).collision_state;
     }
 
-    struct UUIDHash
+    struct UuidHash
     {
       size_t operator()(const unique_identifier_msgs::msg::UUID & u) const
       {
@@ -366,7 +367,7 @@ public:
       }
     };
 
-    std::unordered_map<unique_identifier_msgs::msg::UUID, ObjectInfo, UUIDHash> objects;
+    std::unordered_map<unique_identifier_msgs::msg::UUID, ObjectInfo, UuidHash> objects;
     std::vector<unique_identifier_msgs::msg::UUID> current_uuids_;
   };
 
@@ -408,19 +409,19 @@ private:
     const std::optional<geometry_msgs::msg::Pose> & default_stop_pose_opt,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk);
 
-  std::optional<StopPoseWithId> checkStopForCrosswalkUsers(
+  std::optional<StopPoseWithObjectUuids> checkStopForCrosswalkUsers(
     const PathWithLaneId & ego_path, const PathWithLaneId & sparse_resample_path,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const std::optional<geometry_msgs::msg::Pose> & default_stop_pose);
 
-  std::optional<StopPoseWithId> checkStopForStuckVehicles(
+  std::optional<StopPoseWithObjectUuids> checkStopForStuckVehicles(
     const PathWithLaneId & ego_path, const std::vector<PredictedObject> & objects,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const std::optional<geometry_msgs::msg::Pose> & stop_pose);
 
-  std::optional<StopPoseWithId> checkStopForParkedVehicles(
+  std::optional<StopPoseWithObjectUuids> checkStopForParkedVehicles(
     const PathWithLaneId & ego_path,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk);
 
@@ -433,19 +434,20 @@ private:
     const PathWithLaneId & ego_path, const PredictedObject & object,
     const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area);
 
-  std::optional<StopPoseWithId> getNearestStopFactor(
-    const PathWithLaneId & ego_path, const std::vector<StopPoseWithId> & stop_factors,
-    const std::optional<StopPoseWithId> & stop_factor_for_parked_vehicles);
+  std::optional<StopPoseWithObjectUuids> getNearestStopFactor(
+    const PathWithLaneId & ego_path, const std::vector<StopPoseWithObjectUuids> & stop_factors,
+    const std::optional<StopPoseWithObjectUuids> & stop_factor_for_parked_vehicles);
 
   void setDistanceToStop(
     const PathWithLaneId & ego_path,
     const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
-    const std::optional<StopPoseWithId> & stop_factor);
+    const std::optional<StopPoseWithObjectUuids> & stop_factor);
 
-  void planGo(PathWithLaneId & ego_path, const std::optional<StopPoseWithId> & stop_factor) const;
+  void planGo(
+    PathWithLaneId & ego_path, const std::optional<StopPoseWithObjectUuids> & stop_factor) const;
 
   void planStop(
-    PathWithLaneId & ego_path, const std::optional<StopPoseWithId> & nearest_stop_factor,
+    PathWithLaneId & ego_path, const std::optional<StopPoseWithObjectUuids> & nearest_stop_factor,
     const std::optional<geometry_msgs::msg::Pose> & default_stop_pose);
 
   // minor functions
@@ -494,7 +496,11 @@ private:
     const autoware::vehicle_info_utils::VehicleInfo & vehicle_info);
 
   bool checkRestartSuppression(
-    const PathWithLaneId & ego_path, const std::optional<StopPoseWithId> & stop_factor) const;
+    const PathWithLaneId & ego_path,
+    const std::optional<StopPoseWithObjectUuids> & stop_factor) const;
+
+  SafetyFactorArray createSafetyFactorArray(
+    const std::optional<StopPoseWithObjectUuids> & stop_factor) const;
 
   void recordTime(const int step_num)
   {

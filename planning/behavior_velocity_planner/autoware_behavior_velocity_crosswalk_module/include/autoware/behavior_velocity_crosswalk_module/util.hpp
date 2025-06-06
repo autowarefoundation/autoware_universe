@@ -57,7 +57,7 @@ struct CollisionPoint
   double time_to_vehicle{};
 };
 
-struct StopPoseWithId
+struct StopPoseWithObjectUuids
 {
   geometry_msgs::msg::Pose stop_pose;
   std::vector<unique_identifier_msgs::msg::UUID> checked_object_ids;
