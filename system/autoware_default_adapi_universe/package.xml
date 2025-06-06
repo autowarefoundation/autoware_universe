@@ -15,6 +15,7 @@
   <depend>autoware_adapi_specs</depend>
   <depend>autoware_adapi_v1_msgs</depend>
   <depend>autoware_adapi_version_msgs</depend>
+  <depend>autoware_component_interface_specs</depend>
   <depend>autoware_component_interface_specs_universe</depend>
   <depend>autoware_component_interface_utils</depend>
   <depend>autoware_diagnostic_graph_utils</depend>
