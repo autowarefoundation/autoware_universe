@@ -68,7 +68,7 @@ UnknownTracker::UnknownTracker(const rclcpp::Time & time, const types::DynamicOb
 
     double vx = 0.0;
     double vy = 0.0;
-    if (object.kinematics.has_twist && enable_velocity_estimation_) {
+    if (object.kinematics.has_twist) {
       const double & vel_x = object.twist.linear.x;
       const double & vel_y = object.twist.linear.y;
       vx = std::cos(yaw) * vel_x - std::sin(yaw) * vel_y;
@@ -122,11 +122,11 @@ UnknownTracker::UnknownTracker(const rclcpp::Time & time, const types::DynamicOb
 
 bool UnknownTracker::predict(const rclcpp::Time & time)
 {
-  if (!enable_velocity_estimation_) {
-    return true;
+  if (enable_velocity_estimation_) {
+    return motion_model_.predictState(time);
   }
 
-  return motion_model_.predictState(time);
+  return true;
 }
 
 bool UnknownTracker::measureWithPose(const types::DynamicObject & object)
