@@ -744,9 +744,10 @@ bool RearCollisionChecker::is_safe(DebugData & debug)
     return true;
   }
 
-  const auto current_lanes = utils::get_current_lanes(
-    context_, predicted_stop_line.value(), p.common.pointcloud.range.forward,
-    p.common.pointcloud.range.backward);
+  constexpr double forward = 100.0;
+  constexpr double backward = 100.0;
+  const auto current_lanes =
+    utils::get_current_lanes(context_, predicted_stop_line.value(), forward, backward);
   {
     debug.current_lanes = current_lanes;
     debug.predicted_front_line = predicted_stop_line.value();
