@@ -196,8 +196,8 @@ void prepare_stop_lines_rtree(
       const auto traffic_signal_stamped = planner_data.get_traffic_signal(element->id());
       if (
         traffic_signal_stamped.has_value() && element->stopLine().has_value() &&
-        autoware::traffic_light_utils::isTrafficSignalStop(
-          ll, traffic_signal_stamped.value().signal)) {
+        autoware::traffic_light_utils::isTrafficElementsStop(
+          ll, traffic_signal_stamped.value().signal.elements)) {
         stop_line_node.second.stop_line.clear();
         for (const auto & p : element->stopLine()->basicLineString()) {
           stop_line_node.second.stop_line.emplace_back(p.x(), p.y());

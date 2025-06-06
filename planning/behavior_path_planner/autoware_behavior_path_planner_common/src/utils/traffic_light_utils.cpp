@@ -94,8 +94,8 @@ std::optional<double> calcDistanceToRedTrafficLight(
         continue;
       }
 
-      if (!autoware::traffic_light_utils::isTrafficSignalStop(
-            lanelet, traffic_signal_stamped.value().signal)) {
+      if (!autoware::traffic_light_utils::isTrafficElementsStop(
+            lanelet, traffic_signal_stamped.value().signal.elements)) {
         continue;
       }
 
@@ -145,8 +145,8 @@ bool isTrafficSignalStop(
         continue;
       }
 
-      if (autoware::traffic_light_utils::isTrafficSignalStop(
-            lanelet, traffic_signal_stamped.value().signal)) {
+      if (autoware::traffic_light_utils::isTrafficElementsStop(
+            lanelet, traffic_signal_stamped.value().signal.elements)) {
         return true;
       }
     }
