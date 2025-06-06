@@ -35,8 +35,11 @@ private:
   using CallbackGroup = rclcpp::CallbackGroup::SharedPtr;
 
   template <class SharedPtrT, class InstanceT>
-  using MessageCallback =
+  using MessagePtrCallback =
     void (InstanceT::*)(const typename SharedPtrT::element_type::SpecType::Message::ConstSharedPtr);
+  template <class SharedPtrT, class InstanceT>
+  using MessageRefCallback =
+    void (InstanceT::*)(const typename SharedPtrT::element_type::SpecType::Message &);
 
   template <class SharedPtrT, class InstanceT>
   using ServiceCallback = void (InstanceT::*)(
@@ -97,11 +100,21 @@ public:
     init_srv(srv, [cli, timeout](auto req, auto res) { *res = *cli->call(req, timeout); }, group);
   }
 
-  /// Create a subscription wrapper.
+  /// Create a subscription wrapper for pointer callback.
   template <class SharedPtrT, class InstanceT>
   void init_sub(
     SharedPtrT & sub, InstanceT * instance,
-    MessageCallback<SharedPtrT, InstanceT> && callback) const
+    MessagePtrCallback<SharedPtrT, InstanceT> && callback) const
+  {
+    using std::placeholders::_1;
+    init_sub(sub, std::bind(callback, instance, _1));
+  }
+
+  /// Create a subscription wrapper for reference callback.
+  template <class SharedPtrT, class InstanceT>
+  void init_sub(
+    SharedPtrT & sub, InstanceT * instance,
+    MessageRefCallback<SharedPtrT, InstanceT> && callback) const
   {
     using std::placeholders::_1;
     init_sub(sub, std::bind(callback, instance, _1));
