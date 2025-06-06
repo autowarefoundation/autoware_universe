@@ -129,9 +129,9 @@ TEST(PlanningFactorTest, NodeTestWithPredictedObjects)
         }
       });
 
-  auto objects = loadPathObjectsInYaml();
-  auto odometry = loadOdometryInYaml();
-  auto path = loadPathWithLaneIdInYaml();
+  const auto objects = loadPathObjectsInYaml();
+  const auto odometry = loadOdometryInYaml();
+  const auto path = loadPathWithLaneIdInYaml();
   test_manager->publishInput(test_target_node, input_dynamic_objects_topic, objects, 5);
   test_manager->publishInput(test_target_node, input_odometry_topic, odometry, 5);
   test_manager->publishInput(test_target_node, input_path_with_lane_id_topic, path, 5);
@@ -140,22 +140,31 @@ TEST(PlanningFactorTest, NodeTestWithPredictedObjects)
   rclcpp::spin_some(test_target_node);
   rclcpp::spin_some(test_manager->getTestNode());
 
+  // make sure behavior_path_planner is running
+  EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
+
+  // NOTE: In this test, the objects variable contains only one pedestrian.
+  const auto expected_object_id = objects.objects.front().object_id;
+  const auto expected_object_type = autoware_internal_planning_msgs::msg::SafetyFactor::OBJECT;
+
   // make sure planning_factor_msg is received
   EXPECT_NE(planning_factor_msg, nullptr);
 
-  EXPECT_GT(planning_factor_msg->factors.size(), 0);
-  for (auto & factor : planning_factor_msg->factors) {
-    EXPECT_NE(factor.detail, "");
+  // make sure planning_factor_msg is not empty
+  EXPECT_EQ(planning_factor_msg->factors.size(), 1);
 
-    // make sure safety_factors is not empty
-    EXPECT_GT(factor.safety_factors.factors.size(), 0);
-    for (auto & safety_factor : factor.safety_factors.factors) {
-      EXPECT_GT(safety_factor.points.size(), 0);
-    }
-  }
+  const auto & factor = planning_factor_msg->factors.front();
+  EXPECT_NE(factor.detail, "");
+  EXPECT_FALSE(factor.safety_factors.is_safe);
 
-  // make sure behavior_path_planner is running
-  EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
+  // make sure safety_factors is not empty
+  EXPECT_EQ(factor.safety_factors.factors.size(), 1);
+
+  const auto & safety_factor = factor.safety_factors.factors.front();
+  EXPECT_EQ(safety_factor.type, expected_object_type);
+  EXPECT_FALSE(safety_factor.is_safe);
+  EXPECT_EQ(safety_factor.points.size(), 1);
+  EXPECT_EQ(safety_factor.object_id, expected_object_id);
 
   rclcpp::shutdown();
 }
