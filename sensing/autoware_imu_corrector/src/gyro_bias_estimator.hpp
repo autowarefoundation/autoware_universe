@@ -48,6 +48,8 @@ private:
   void update_diagnostics(diagnostic_updater::DiagnosticStatusWrapper & stat);
   void callback_imu(const Imu::ConstSharedPtr imu_msg_ptr);
   void callback_odom(const Odometry::ConstSharedPtr odom_msg_ptr);
+  void callback_pose_msg(const PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr);
+  void estimate_scale_gyro(const PoseWithCovarianceStamped::ConstSharedPtr pose_msg_ptr);
   void timer_callback();
   void validate_gyro_bias();
 
@@ -59,8 +61,13 @@ private:
 
   rclcpp::Subscription<Imu>::SharedPtr imu_sub_;
   rclcpp::Subscription<Odometry>::SharedPtr odom_sub_;
+  rclcpp::Subscription<PoseWithCovarianceStamped>::SharedPtr pose_sub_;
   rclcpp::Publisher<Vector3Stamped>::SharedPtr gyro_bias_pub_;
+  rclcpp::Publisher<Vector3Stamped>::SharedPtr gyro_scale_pub_;
+  rclcpp::Publisher<Imu>::SharedPtr imu_scaled_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
+  rclcpp::Time start_time_check_scale_;
+  rclcpp::Time last_time_rx_pose_;
 
   std::unique_ptr<GyroBiasEstimationModule> gyro_bias_estimation_module_;
 
@@ -72,6 +79,39 @@ private:
   const double diagnostics_updater_interval_sec_;
   const double straight_motion_ang_vel_upper_limit_;
 
+  const double estimate_scale_init_;
+  const double ekf_variance_p_;
+  const double ekf_process_noise_q_;
+  const double ekf_measurement_noise_r_;
+  const double time_window_secs_;
+  const double threshold_scale_change_;
+  const double threshold_error_rate_;
+  const double num_consecutive_scale_change_;
+  const double min_allowed_scale_;
+  const double max_allowed_scale_;
+  const double scale_on_purpose_;
+  const double bias_on_purpose_;
+  const double drift_scale_;
+  const double drift_bias_;
+
+  int window_scale_change_;
+  double previous_yaw_angle_;
+
+  double ndt_yaw_rate_;
+  double gyro_yaw_rate_;
+  double previous_scale_;
+
+  double final_bias_on_purpose_;
+  double final_scale_on_purpose_;
+  double bias_final_;
+  double scale_final_;
+
+  // EKF variables
+  double estimated_scale_;
+  double p_;
+  double q_;
+  double r_;
+
   diagnostic_updater::Updater updater_;
 
   std::optional<Vector3> gyro_bias_;
@@ -82,6 +122,7 @@ private:
 
   std::vector<geometry_msgs::msg::Vector3Stamped> gyro_all_;
   std::vector<geometry_msgs::msg::PoseStamped> pose_buf_;
+  std::vector<double> scale_list_all_;
 
   struct DiagnosticsInfo
   {
@@ -93,9 +134,23 @@ private:
     double estimated_gyro_bias_x;
     double estimated_gyro_bias_y;
     double estimated_gyro_bias_z;
+    double estimated_gyro_scale_x;
+    double estimated_gyro_scale_y;
+    double estimated_gyro_scale_z;
+  };
+
+  struct GyroInfo
+  {
+    unsigned char bias_status;
+    std::string bias_status_summary;
+    std::string bias_summary_message;
+    unsigned char scale_status;
+    std::string scale_status_summary;
+    std::string scale_summary_message;
   };
 
   DiagnosticsInfo diagnostics_info_;
+  GyroInfo gyro_info_;
 };
 }  // namespace autoware::imu_corrector
 

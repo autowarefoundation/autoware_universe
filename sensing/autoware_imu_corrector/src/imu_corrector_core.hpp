@@ -18,6 +18,7 @@
 #include <autoware_utils/ros/transform_listener.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <geometry_msgs/msg/vector3_stamped.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 
 #include <tf2_ros/buffer.h>
@@ -31,14 +32,19 @@ namespace autoware::imu_corrector
 class ImuCorrector : public rclcpp::Node
 {
   using COV_IDX = autoware_utils::xyz_covariance_index::XYZ_COV_IDX;
+  using Vector3Stamped = geometry_msgs::msg::Vector3Stamped;
 
 public:
   explicit ImuCorrector(const rclcpp::NodeOptions & options);
 
 private:
   void callback_imu(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg_ptr);
+  void callback_bias(const Vector3Stamped::ConstSharedPtr bias_msg_ptr);
+  void callback_scale(const Vector3Stamped::ConstSharedPtr scale_msg_ptr);
 
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_sub_;
+  rclcpp::Subscription<Vector3Stamped>::SharedPtr gyro_bias_sub_;
+  rclcpp::Subscription<Vector3Stamped>::SharedPtr gyro_scale_sub_;
 
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
 
@@ -49,6 +55,9 @@ private:
   double angular_velocity_stddev_xx_imu_link_;
   double angular_velocity_stddev_yy_imu_link_;
   double angular_velocity_stddev_zz_imu_link_;
+
+  Vector3Stamped gyro_bias_;
+  Vector3Stamped gyro_scale_;
 
   double accel_stddev_imu_link_;
 
