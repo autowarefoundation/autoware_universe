@@ -314,7 +314,7 @@ double Tracker::computeAdaptiveThreshold(
   constexpr double BEV_AREA_NORMALIZER = 12.0;  // Normalization factor for BEV influence
   constexpr double DISTANCE_GAIN = 6.0;         // Max value added by distance influence
   constexpr double DISTANCE_SLOPE = 0.03;       // Slope of sigmoid
-  constexpr double SLOPE_DISTANCE = 120.0;      // Inflection point of sigmoid
+  constexpr double DISTANCE_OFFSET = 120.0;     // Inflection point of sigmoid
 
   const double clamped_bev_area = std::min(getBEVArea(), MAX_BEV_AREA);
 
@@ -323,7 +323,7 @@ double Tracker::computeAdaptiveThreshold(
   const double bev_area_influence =
     BEV_AREA_GAIN * std::pow(clamped_bev_area, 2) / BEV_AREA_NORMALIZER;
   const double distance_influence =
-    DISTANCE_GAIN / (1.0 + std::exp(-DISTANCE_SLOPE * (distance - OFFSET_DISTANCE)));
+    DISTANCE_GAIN / (1.0 + std::exp(-DISTANCE_SLOPE * (distance - DISTANCE_OFFSET)));
   return base_threshold + bev_area_influence + distance_influence;
 }
 
