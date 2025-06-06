@@ -17,9 +17,9 @@
 #include "autoware/point_types/types.hpp"
 
 #include <algorithm>
-#include <numeric>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::pointcloud_preprocessor
