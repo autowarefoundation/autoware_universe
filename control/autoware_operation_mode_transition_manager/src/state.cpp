@@ -80,9 +80,13 @@ void AutonomousMode::update(bool transition)
   }
 }
 
-bool AutonomousMode::isModeChangeCompleted(
-  const Odometry & kinematics, const Trajectory & trajectory)
+bool AutonomousMode::isModeChangeCompleted(const InputData & input_data)
 {
+  if (!input_data.kinematics) return false;
+  if (!input_data.trajectory) return false;
+  const auto & kinematics = input_data.kinematics.value();
+  const auto & trajectory = input_data.trajectory.value();
+
   if (!check_engage_condition_) {
     return true;
   }
@@ -209,10 +213,17 @@ std::pair<bool, bool> AutonomousMode::hasDangerLateralAcceleration(
   return {has_large_lat_acc, has_large_lat_acc_diff};
 }
 
-bool AutonomousMode::isModeChangeAvailable(
-  const Odometry & kinematics, const Trajectory & trajectory,
-  const Control & trajectory_follower_control_cmd, const Control & control_cmd)
+bool AutonomousMode::isModeChangeAvailable(const InputData & input_data)
 {
+  if (!input_data.kinematics) return false;
+  if (!input_data.trajectory) return false;
+  if (!input_data.trajectory_follower_control_cmd) return false;
+  if (!input_data.control_cmd) return false;
+  const auto & kinematics = input_data.kinematics.value();
+  const auto & trajectory = input_data.trajectory.value();
+  const auto & trajectory_follower_control_cmd = input_data.trajectory_follower_control_cmd.value();
+  const auto & control_cmd = input_data.control_cmd.value();
+
   if (!check_engage_condition_) {
     setAllOk(debug_info_);
     return true;
