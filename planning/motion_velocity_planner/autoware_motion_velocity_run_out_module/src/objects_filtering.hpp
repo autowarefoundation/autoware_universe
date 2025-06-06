@@ -47,33 +47,34 @@ void calculate_current_footprint(
 
 /// @brief return true if an object should be ignored
 bool skip_object_condition(
-  const Object & object, const std::optional<DecisionHistory> & prev_decisions,
+  Object & object, const std::optional<DecisionHistory> & prev_decisions,
   const universe_utils::Segment2d & ego_rear_segment, const FilteringData & filtering_data,
-  const Parameters & params);
+  const Parameters & parameters);
 
 /// @brief get the predicted paths with confidence above threshold
 std::vector<autoware_perception_msgs::msg::PredictedPath> filter_by_confidence(
   const std::vector<autoware_perception_msgs::msg::PredictedPath> & predicted_paths,
   const uint8_t label, const Parameters & params);
 
+/// @brief cut a predicted path after the given index and repeat the last point for the given
+/// duration
+void cut_predicted_path_footprint(
+  ObjectPredictedPathFootprint & footprint, const size_t cut_index,
+  const double standstill_duration_after_cut);
+
 /// @brief calculate the predicted path footprints of an object
 void calculate_predicted_path_footprints(
   Object & object, const autoware_perception_msgs::msg::PredictedObject & predicted_object,
-  [[maybe_unused]] const Parameters & params);
+  const Parameters & params);
 
-/// @brief return true if the incoming vector crosses from the rear
-bool crosses_from_the_rear(
-  const universe_utils::Segment2d & incoming, const universe_utils::Segment2d & rear);
-
-/// @brief cut a footprint after the given index
-void cut_footprint_after_index(ObjectPredictedPathFootprint & footprint, const size_t index);
-
-/// @brief calculate the first index of the given footprint that crosses a cut segment
+/// @brief calculate the first index of a predicted path that crosses a cut line in the map data
 std::optional<size_t> get_cut_predicted_path_index(
-  const ObjectPredictedPathFootprint & predicted_path_footprint, const FilteringData & map_data);
+  const autoware::motion_velocity_planner::run_out::ObjectPredictedPathFootprint & path,
+  const FilteringData & map_data);
 
-/// @brief filter predicted paths of an object used map filtering data
-void filter_predicted_paths(Object & object, const FilteringData & map_data);
+/// @brief filter predicted paths of an object using the map filtering data
+void filter_predicted_paths(
+  Object & object, const FilteringData & map_data, const ObjectParameters & params);
 
 /// @brief prepare data for the dynamic objects and their path footprints to use for collision
 /// detection
