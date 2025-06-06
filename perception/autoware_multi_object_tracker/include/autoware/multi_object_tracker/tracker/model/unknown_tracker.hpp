@@ -42,7 +42,9 @@ private:
   bool enable_velocity_estimation_;
 
 public:
-  UnknownTracker(const rclcpp::Time & time, const types::DynamicObject & object, const bool enable_velocity_estimation);
+  UnknownTracker(
+    const rclcpp::Time & time, const types::DynamicObject & object,
+    const bool enable_velocity_estimation);
 
   bool predict(const rclcpp::Time & time) override;
   bool measure(

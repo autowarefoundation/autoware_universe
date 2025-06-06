@@ -194,8 +194,8 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         config.confident_count_threshold[class_label] = static_cast<int>(value);
       }
 
-      config.enable_unknown_object_velocity_estimation = declare_parameter<bool>(
-        "enable_unknown_object_velocity_estimation");
+      config.enable_unknown_object_velocity_estimation =
+        declare_parameter<bool>("enable_unknown_object_velocity_estimation");
     }
 
     AssociatorConfig associator_config;

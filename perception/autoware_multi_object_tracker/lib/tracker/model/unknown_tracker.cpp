@@ -34,11 +34,15 @@
 namespace autoware::multi_object_tracker
 {
 
-UnknownTracker::UnknownTracker(const rclcpp::Time & time, const types::DynamicObject & object, const bool enable_velocity_estimation)
-: Tracker(time, object), logger_(rclcpp::get_logger("UnknownTracker")), enable_velocity_estimation_(enable_velocity_estimation)
+UnknownTracker::UnknownTracker(
+  const rclcpp::Time & time, const types::DynamicObject & object,
+  const bool enable_velocity_estimation)
+: Tracker(time, object),
+  logger_(rclcpp::get_logger("UnknownTracker")),
+  enable_velocity_estimation_(enable_velocity_estimation)
 {
   // initialize motion model only if velocity estimation is enabled
-  if (!enable_velocity_estimation_){
+  if (!enable_velocity_estimation_) {
     return;
   }
 
