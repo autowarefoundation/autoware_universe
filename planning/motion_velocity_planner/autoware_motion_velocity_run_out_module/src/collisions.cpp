@@ -312,8 +312,11 @@ void calculate_overlapping_collision(
       c.explanation = " no collision will happen because object is faster and enter first";
     } else {
       // adjust the collision time based on the velocity difference
+      const auto near_zero_ego_vel = std::abs(ego.first_intersection.ego_vel) < 1e-3;
       const auto catchup_time =
-        (time_margin * ego.first_intersection.vel_diff) / ego.first_intersection.ego_vel;
+        near_zero_ego_vel
+          ? 0.0
+          : (time_margin * ego.first_intersection.vel_diff) / ego.first_intersection.ego_vel;
       c.ego_collision_time += catchup_time;
       std::stringstream ss;
       ss << std::setprecision(2) << "coll_t = ego_enter_time[" << ego.first_intersection.ego_time
@@ -362,7 +365,7 @@ Collision calculate_collision(
     ego.to - ego.from <= ignore_params.if_ego_arrives_first.max_overlap_duration;
   const auto is_ignored_ego_arrives_first_and_cannot_stop =
     !is_opposite_direction && ignore_params.if_ego_arrives_first_and_cannot_stop.enable &&
-    ego.from < object.from && ego.overlaps(object) &&
+    ego.from < object.from && is_overlapping_at_same_time &&
     ego.from < ignore_params.if_ego_arrives_first_and_cannot_stop.calculated_stop_time_limit;
   if (is_ignored_ego_arrives_first) {
     c.type = ignored_collision;
@@ -416,30 +419,43 @@ std::vector<Collision> calculate_interval_collisions(
   collisions.push_back(calculate_collision(ego_combined, object_combined, params));
   return collisions;
 }
+
 std::vector<TimeOverlapIntervalPair> calculate_ego_and_object_time_overlap_intervals(
   const TrajectoryCornerFootprint & ego_footprint,
-  const ObjectPredictedPathFootprint & object_footprint, const FilteringData & filtering_data,
-  const double min_arc_length)
+  const ObjectPredictedPathFootprint & object_footprint)
 {
   std::vector<TimeOverlapIntervalPair> all_overlap_intervals;
   for (const auto & corner_ls : object_footprint.predicted_path_footprint.corner_linestrings) {
     const std::vector<FootprintIntersection> footprint_intersections =
       calculate_intersections(corner_ls, ego_footprint, object_footprint.time_step);
     const auto intervals = calculate_overlap_intervals(footprint_intersections);
-    for (const auto & interval : intervals) {
-      const auto is_before_min_arc_length =
-        interval.ego.first_intersection.arc_length <= min_arc_length;
-      const universe_utils::MultiPoint2d interval_intersections = {
-        interval.ego.first_intersection.intersection, interval.ego.last_intersection.intersection};
-      if (
-        !is_before_min_arc_length &&
-        filtering_data.ignore_collisions_rtree.is_geometry_disjoint_from_rtree_polygons(
-          interval_intersections, filtering_data.ignore_collisions_polygons)) {
-        all_overlap_intervals.push_back(interval);
-      }
-    }
+    all_overlap_intervals.insert(all_overlap_intervals.end(), intervals.begin(), intervals.end());
   }
   return all_overlap_intervals;
+}
+
+std::vector<TimeOverlapIntervalPair> filter_time_overlap_intervals(
+  const std::vector<TimeOverlapIntervalPair> & intervals, const FilteringData & filtering_data,
+  const double min_arc_length, const ObjectParameters & params)
+{
+  std::vector<TimeOverlapIntervalPair> filtered_overlap_intervals;
+  for (const auto & interval : intervals) {
+    const auto is_before_min_arc_length =
+      interval.ego.first_intersection.arc_length <= min_arc_length;
+    const universe_utils::MultiPoint2d interval_intersections = {
+      interval.ego.first_intersection.intersection, interval.ego.last_intersection.intersection};
+    const auto can_be_ignored =
+      interval.ego.first_intersection.ego_time >= params.start_ignore_collisions_time &&
+      interval.ego.first_intersection.arc_length >= params.start_ignore_collisions_distance;
+    const auto ignored =
+      can_be_ignored &&
+      !filtering_data.ignore_collisions_rtree.is_geometry_disjoint_from_rtree_polygons(
+        interval_intersections, filtering_data.ignore_collisions_polygons);
+    if (!is_before_min_arc_length && !ignored) {
+      filtered_overlap_intervals.push_back(interval);
+    }
+  }
+  return filtered_overlap_intervals;
 }
 
 void calculate_object_collisions(
@@ -450,9 +466,12 @@ void calculate_object_collisions(
   for (const auto & predicted_path_footprint : object.predicted_path_footprints) {
     // combining overlap intervals over all corner footprints gives bad results
     // the current way to calculate collisions independently for each corner footprint is best
-    const auto time_overlap_intervals = calculate_ego_and_object_time_overlap_intervals(
-      ego_footprint, predicted_path_footprint, filtering_data[object.label], min_arc_length);
-    const auto collisions = calculate_interval_collisions(time_overlap_intervals, params);
+    const auto time_overlap_intervals =
+      calculate_ego_and_object_time_overlap_intervals(ego_footprint, predicted_path_footprint);
+    const auto filtered_time_overlap_intervals = filter_time_overlap_intervals(
+      time_overlap_intervals, filtering_data[object.label], min_arc_length,
+      params.object_parameters_per_label[object.label]);
+    const auto collisions = calculate_interval_collisions(filtered_time_overlap_intervals, params);
     for (const auto & c : collisions) {
       const auto is_after_overlap = c.ego_collision_time > c.ego_time_interval.to;
       if (!is_after_overlap) {
