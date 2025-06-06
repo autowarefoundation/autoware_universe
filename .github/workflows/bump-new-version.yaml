@@ -1,0 +1,46 @@
+name: bump-new-version
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_branch:
+        description: The branch to merge from, which can be from the original or a forked repository.
+        required: true
+        default: main
+      target_branch:
+        description: The branch to merge into, owned by the original repository owner.
+        required: true
+        default: main
+      bump_version:
+        description: The type of version bump to apply.
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      source_repository_owner:
+        description: The owner of the source repository (organization or user).
+        required: false
+        default: autowarefoundation
+
+jobs:
+  update-versions:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+
+      - name: Run
+        uses: autowarefoundation/autoware-github-actions/bump-new-version@v1
+        with:
+          github_token: ${{ steps.generate-token.outputs.token }}
+          source_branch: ${{ github.event.inputs.source_branch }}
+          target_branch: ${{ github.event.inputs.target_branch }}
+          bump_version: ${{ github.event.inputs.bump_version }}
+          source_repository_owner: ${{ github.event.inputs.source_repository_owner }}
