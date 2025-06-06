@@ -9,7 +9,7 @@ on:
       target_branch:
         description: The branch to merge into, owned by the original repository owner.
         required: true
-        default: main
+        default: humble
       bump_version:
         description: The type of version bump to apply.
         required: true
