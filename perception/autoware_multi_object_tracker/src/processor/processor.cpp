@@ -35,6 +35,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -223,9 +224,6 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
       is_unknown(false),
       is_valid(false)
     {
-      // object.pose = geometry_msgs::msg::Pose();
-      // object.twist = geometry_msgs::msg::Twist();
-      // object.shape = autoware_perception_msgs::msg::Shape();
     }
   };
 
@@ -338,12 +336,19 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     }
   }
 
-  // Final pass: remove merged trackers
-  // Sort in reverse order to maintain valid indices
-  std::sort(to_remove.begin(), to_remove.end(), std::greater<size_t>());
+  // Final pass: remove merged trackers efficiently using batch removal
+  std::unordered_set<std::shared_ptr<Tracker>> trackers_to_remove;
+  trackers_to_remove.reserve(to_remove.size());
+
+  // Collect all trackers to remove in a set for O(1) lookup
   for (const auto idx : to_remove) {
-    list_tracker_.remove(valid_trackers[idx].tracker);
+    trackers_to_remove.insert(valid_trackers[idx].tracker);
   }
+
+  // Remove all marked trackers in a single pass
+  list_tracker_.remove_if([&trackers_to_remove](const std::shared_ptr<Tracker> & tracker) {
+    return trackers_to_remove.count(tracker) > 0;
+  });
 }
 
 bool TrackerProcessor::canMergeOverlappedTarget(
