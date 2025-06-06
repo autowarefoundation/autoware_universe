@@ -285,45 +285,50 @@ void Tracker::getPositionCovarianceEigenSq(
   minor_axis_sq = es.eigenvalues().real().minCoeff();
 }
 
-void Tracker::setEgoPose(const std::optional<geometry_msgs::msg::Pose> & ego_pose)
-{
-  ego_pose_ = ego_pose;
-}
-
 double Tracker::getBEVArea() const
 {
   const auto & dims = object_.shape.dimensions;
   return dims.x * dims.y;
 }
 
-double Tracker::getDistanceToEgo() const
+double Tracker::getDistanceToEgo(const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
 {
   constexpr double INVALID_DISTANCE = -1.0;
-  if (!ego_pose_) {
+  if (!ego_pose) {
     return INVALID_DISTANCE;
-  } else {
-    const auto & p = object_.pose.position;
-    const auto & e = ego_pose_->position;
-    return std::hypot(p.x - e.x, p.y - e.y);
   }
+  const auto & p = object_.pose.position;
+  const auto & e = ego_pose->position;
+  return std::hypot(p.x - e.x, p.y - e.y);
 }
 
-double Tracker::computeAdaptiveThreshold(double base_threshold, double fallback_threshold) const
+double Tracker::computeAdaptiveThreshold(
+  double base_threshold, double fallback_threshold,
+  const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
 {
-  const double distance = getDistanceToEgo();
-  if (distance <= 0.0) return fallback_threshold;
+  const double distance = getDistanceToEgo(ego_pose);
+  if (distance < 0.0) return fallback_threshold;
 
-  constexpr double MAX_BEV_AREA = 20.0;  // [m^2]
+  constexpr double MAX_BEV_AREA = 20.0;         // [m^2]
+  constexpr double BEV_AREA_GAIN = 0.03;        // Gain for BEV area influence
+  constexpr double BEV_AREA_NORMALIZER = 12.0;  // Normalization factor for BEV influence
+  constexpr double DISTANCE_GAIN = 6.0;         // Max value added by distance influence
+  constexpr double DISTANCE_SLOPE = 0.03;       // Slope of sigmoid
+  constexpr double SLOPE_DISTANCE = 120.0;      // Inflection point of sigmoid
+
   const double clamped_bev_area = std::min(getBEVArea(), MAX_BEV_AREA);
 
   // bev_area_influence ranges from 0 to 1 (normalized quadratic curve)
   // distance_influence ranges from 0.16 to 3 for distance 0 to 120 m (offset sigmoid curve)
-  const double bev_area_influence = 0.03 * std::pow(clamped_bev_area, 2) / 12.0;
-  const double distance_influence = 6.0 / (1 + std::exp(-0.03 * (distance - 120.0)));
+  const double bev_area_influence =
+    BEV_AREA_GAIN * std::pow(clamped_bev_area, 2) / BEV_AREA_NORMALIZER;
+  const double distance_influence =
+    DISTANCE_GAIN / (1.0 + std::exp(-DISTANCE_SLOPE * (distance - OFFSET_DISTANCE)));
   return base_threshold + bev_area_influence + distance_influence;
 }
 
-bool Tracker::isConfident(const rclcpp::Time & time) const
+bool Tracker::isConfident(
+  const rclcpp::Time & time, const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
 {
   // check the number of measurements. if the measurement is too small, definitely not confident
   const int count = getTotalMeasurementCount();
@@ -343,8 +348,8 @@ bool Tracker::isConfident(const rclcpp::Time & time) const
 
   // if the existence probability is high and the covariance is small enough with respect to its
   // distance to ego and its bev area, the tracker is confident
-  const double adaptive_threshold =
-    computeAdaptiveThreshold(1.6, 2.6);  // base threshold is 1.6, fallback threshold is 2.6;
+  // base threshold is 1.6, fallback threshold is 2.6;
+  const double adaptive_threshold = computeAdaptiveThreshold(1.6, 2.6, ego_pose);
 
   if (getTotalExistenceProbability() > 0.50 && major_axis_sq < adaptive_threshold) {
     return true;
@@ -353,7 +358,8 @@ bool Tracker::isConfident(const rclcpp::Time & time) const
   return false;
 }
 
-bool Tracker::isExpired(const rclcpp::Time & now) const
+bool Tracker::isExpired(
+  const rclcpp::Time & now, const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
 {
   // check the number of no measurements
   const double elapsed_time = getElapsedTimeFromLastUpdate(now);
@@ -383,8 +389,8 @@ bool Tracker::isExpired(const rclcpp::Time & now) const
     getPositionCovarianceEigenSq(now, major_axis_sq, minor_axis_sq);
     // major_cov: base_threshold is 2.8, fallback threshold is 3.8;
     // minor_cov: base_threshold is 2.7, fallback threshold is 3.7;
-    const double major_cov_threshold = computeAdaptiveThreshold(2.8, 3.8);
-    const double minor_cov_threshold = computeAdaptiveThreshold(2.7, 3.7);
+    const double major_cov_threshold = computeAdaptiveThreshold(2.8, 3.8, ego_pose);
+    const double minor_cov_threshold = computeAdaptiveThreshold(2.7, 3.7, ego_pose);
     if (major_axis_sq > major_cov_threshold || minor_axis_sq > minor_cov_threshold) {
       return true;
     }

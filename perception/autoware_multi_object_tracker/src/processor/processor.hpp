@@ -99,6 +99,7 @@ private:
     const types::DynamicObject & object, const rclcpp::Time & time) const;
 
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
+  std::optional<geometry_msgs::msg::Pose> ego_pose_;
 };
 
 }  // namespace autoware::multi_object_tracker
