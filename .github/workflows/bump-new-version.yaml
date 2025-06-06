@@ -4,9 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       source_branch:
-        description: The branch to merge from, which can be from the original or a forked repository.
+        description: The branch (or commit hash) to merge from, which can be from the original or a forked repository.
         required: true
-        default: main
       target_branch:
         description: The branch to merge into, owned by the original repository owner.
         required: true
