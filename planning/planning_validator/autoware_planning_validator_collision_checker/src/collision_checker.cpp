@@ -147,14 +147,14 @@ void CollisionChecker::validate(bool & is_critical)
   PointCloud::Ptr filtered_pointcloud(new PointCloud);
   filter_pointcloud(context_->data->obstacle_pointcloud, filtered_pointcloud);
 
+  static constexpr double min_traj_vel = 0.1;
   const auto base_to_front_length =
     context_->vehicle_info.front_overhang_m + context_->vehicle_info.wheel_base_m;
   const auto ego_front_pose = autoware_utils::calc_offset_pose(
     context_->data->current_kinematics->pose.pose, base_to_front_length, 0.0, 0.0);
-
   auto input_trajectory_points = context_->data->current_trajectory->points;
   autoware::motion_utils::calculate_time_from_start(
-    input_trajectory_points, ego_front_pose.position, 0.1);
+    input_trajectory_points, ego_front_pose.position, min_traj_vel);
   const auto trajectory_points =
     collision_checker_utils::trim_trajectory_points(input_trajectory_points, ego_front_pose);
 

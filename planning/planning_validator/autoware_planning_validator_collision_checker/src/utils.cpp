@@ -82,8 +82,8 @@ std::optional<size_t> get_overlap_index(
   const autoware_utils::LineString2d & trajectory_ls)
 {
   BasicLineString2d overlap_line;
-  boost::geometry::intersection(trajectory_ls, ll.polygon2d().basicPolygon(), overlap_line);
-  if (overlap_line.empty()) return {};
+  boost::geometry::intersection(ll.polygon2d().basicPolygon(), trajectory_ls, overlap_line);
+  if (overlap_line.size() <= 1) return {};
 
   const auto nearest_idx_front = autoware::motion_utils::findNearestIndex(
     trajectory_points,
