@@ -45,8 +45,11 @@ TrackerProcessor::TrackerProcessor(
   association_ = std::make_unique<DataAssociation>(associator_config);
 }
 
-void TrackerProcessor::predict(const rclcpp::Time & time)
+void TrackerProcessor::predict(
+  const rclcpp::Time & time, const std::optional<geometry_msgs::msg::Pose> & ego_pose)
 {
+  ego_pose_ = ego_pose;
+
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
@@ -174,7 +177,7 @@ void TrackerProcessor::removeOldTracker(const rclcpp::Time & time)
   // Check elapsed time from last update
   for (auto itr = list_tracker_.begin(); itr != list_tracker_.end(); ++itr) {
     // If the tracker is expired, delete it
-    if ((*itr)->isExpired(time)) {
+    if ((*itr)->isExpired(time, ego_pose_)) {
       auto erase_itr = itr;
       --itr;
       list_tracker_.erase(erase_itr);
@@ -253,7 +256,7 @@ bool TrackerProcessor::canMergeOverlappedTarget(
   const Tracker & target, const Tracker & other, const rclcpp::Time & time, const double iou) const
 {
   // if the other is not confident, do not remove the target
-  if (!other.isConfident(time)) {
+  if (!other.isConfident(time, ego_pose_)) {
     return false;
   }
 
@@ -307,7 +310,7 @@ void TrackerProcessor::getTrackedObjects(
   types::DynamicObject tracked_object;
   for (const auto & tracker : list_tracker_) {
     // check if the tracker is confident, if not, skip
-    if (!tracker->isConfident(time)) continue;
+    if (tracker->isConfident(time, ego_pose_)) continue;
     // Get the tracked object, extrapolated to the given time
     if (tracker->getTrackedObject(time, tracked_object)) {
       tracked_objects.objects.push_back(types::toTrackedObjectMsg(tracked_object));
@@ -326,7 +329,7 @@ void TrackerProcessor::getTentativeObjects(
   types::DynamicObject tracked_object;
   for (const auto & tracker : list_tracker_) {
     // check if the tracker is confident, if so, skip
-    if (tracker->isConfident(time)) continue;
+    if (tracker->isConfident(time, ego_pose_)) continue;
     // Get the tracked object, extrapolated to the given time
     if (tracker->getTrackedObject(time, tracked_object)) {
       tentative_objects.objects.push_back(types::toTrackedObjectMsg(tracked_object));
