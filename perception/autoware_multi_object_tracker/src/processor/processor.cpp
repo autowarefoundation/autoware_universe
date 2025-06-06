@@ -152,7 +152,8 @@ std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
       return std::make_shared<PedestrianAndBicycleTracker>(time, object);
     if (tracker == "pedestrian_tracker") return std::make_shared<PedestrianTracker>(time, object);
   }
-  return std::make_shared<UnknownTracker>(time, object);
+  return std::make_shared<UnknownTracker>(
+    time, object, config_.enable_unknown_object_velocity_estimation);
 }
 
 void TrackerProcessor::prune(const rclcpp::Time & time)
