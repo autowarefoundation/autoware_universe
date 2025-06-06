@@ -26,7 +26,6 @@
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/detail/overlaps/interface.hpp>
 
-#include <utility>
 #include <vector>
 
 namespace autoware::motion_velocity_planner::run_out
@@ -57,21 +56,19 @@ std::vector<autoware_perception_msgs::msg::PredictedPath> filter_by_confidence(
   const std::vector<autoware_perception_msgs::msg::PredictedPath> & predicted_paths,
   const uint8_t label, const Parameters & params);
 
-/// @brief cut a predicted path beyond the given time and distance and repeat the last point for the
-/// given duration
-/// @details the path is cut from the first point that is beyond both the given time and distance
+/// @brief cut a predicted path after the given index and repeat the last point for the given
+/// duration
 void cut_predicted_path_footprint(
-  ObjectPredictedPathFootprint & footprint, const std::optional<double> & cut_time,
-  const std::optional<double> & cut_distance, const double standstill_duration_after_cut);
+  ObjectPredictedPathFootprint & footprint, const size_t cut_index,
+  const double standstill_duration_after_cut);
 
 /// @brief calculate the predicted path footprints of an object
 void calculate_predicted_path_footprints(
   Object & object, const autoware_perception_msgs::msg::PredictedObject & predicted_object,
   const Parameters & params);
 
-/// @brief calculate the time and distance where a predicted path should be cut according to the map
-/// filtering data
-std::pair<std::optional<double>, std::optional<double>> get_cut_predicted_path_time_and_distance(
+/// @brief calculate the first index of a predicted path that crosses a cut line in the map data
+std::optional<size_t> get_cut_predicted_path_index(
   const autoware::motion_velocity_planner::run_out::ObjectPredictedPathFootprint & path,
   const FilteringData & map_data);
 

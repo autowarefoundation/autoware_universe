@@ -40,8 +40,6 @@ struct ObjectParameters
   bool ignore_if_behind_ego;
   std::vector<std::string> ignore_objects_polygon_types;
   std::vector<std::string> ignore_objects_lanelet_subtypes;
-  double ignore_objects_preserved_time;
-  double ignore_objects_preserved_distance;
   std::vector<std::string> ignore_collisions_polygon_types;
   std::vector<std::string> ignore_collisions_lanelet_subtypes;
   double start_ignore_collisions_time;
@@ -49,11 +47,11 @@ struct ObjectParameters
   std::vector<std::string> cut_linestring_types;
   std::vector<std::string> cut_polygon_types;
   std::vector<std::string> cut_lanelet_subtypes;
-  double cut_preserved_duration;
-  double cut_preserved_distance;
   bool cut_if_crossing_ego_from_behind;
   double confidence_filtering_threshold;
   bool confidence_filtering_only_use_highest;
+  double preserved_duration;
+  double preserved_distance;
   double standstill_duration_after_cut;
 };
 
@@ -211,10 +209,6 @@ struct Parameters
         get_object_parameter<std::vector<std::string>>(node, ns, label, ".ignore.polygon_types");
       object_parameters_per_label[label].ignore_objects_lanelet_subtypes =
         get_object_parameter<std::vector<std::string>>(node, ns, label, ".ignore.lanelet_subtypes");
-      object_parameters_per_label[label].ignore_objects_preserved_time =
-        get_object_parameter<double>(node, ns, label, ".ignore.preserved_duration");
-      object_parameters_per_label[label].ignore_objects_preserved_distance =
-        get_object_parameter<double>(node, ns, label, ".ignore.preserved_distance");
       object_parameters_per_label[label].ignore_collisions_polygon_types =
         get_object_parameter<std::vector<std::string>>(
           node, ns, label, ".ignore_collisions.polygon_types");
@@ -245,10 +239,10 @@ struct Parameters
       object_parameters_per_label[label].cut_if_crossing_ego_from_behind =
         get_object_parameter<bool>(
           node, ns, label, ".cut_predicted_paths.if_crossing_ego_from_behind");
-      object_parameters_per_label[label].cut_preserved_duration =
-        get_object_parameter<double>(node, ns, label, ".cut_predicted_paths.preserved_duration");
-      object_parameters_per_label[label].cut_preserved_distance =
-        get_object_parameter<double>(node, ns, label, ".cut_predicted_paths.preserved_distance");
+      object_parameters_per_label[label].preserved_duration =
+        get_object_parameter<double>(node, ns, label, ".preserved_duration");
+      object_parameters_per_label[label].preserved_distance =
+        get_object_parameter<double>(node, ns, label, ".preserved_distance");
       object_parameters_per_label[label].standstill_duration_after_cut =
         get_object_parameter<double>(node, ns, label, ".standstill_duration_after_cut");
     }
@@ -324,12 +318,6 @@ struct Parameters
         params, ns + str + ".ignore.polygon_types",
         object_parameters_per_label[label].ignore_objects_polygon_types);
       updateParam(
-        params, ns + str + ".ignore.preserved_duration",
-        object_parameters_per_label[label].ignore_objects_preserved_time);
-      updateParam(
-        params, ns + str + ".ignore.preserved_distance",
-        object_parameters_per_label[label].ignore_objects_preserved_distance);
-      updateParam(
         params, ns + str + ".ignore_collisions.polygon_types",
         object_parameters_per_label[label].ignore_collisions_polygon_types);
       updateParam(
@@ -357,14 +345,14 @@ struct Parameters
         params, ns + str + ".cut_predicted_paths.linestring_types",
         object_parameters_per_label[label].cut_linestring_types);
       updateParam(
-        params, ns + str + ".cut_predicted_paths.preserved_duration",
-        object_parameters_per_label[label].cut_preserved_duration);
-      updateParam(
-        params, ns + str + ".cut_predicted_paths.preserved_distance",
-        object_parameters_per_label[label].cut_preserved_distance);
-      updateParam(
         params, ns + str + ".standstill_duration_after_cut",
         object_parameters_per_label[label].standstill_duration_after_cut);
+      updateParam(
+        params, ns + str + ".preserved_duration",
+        object_parameters_per_label[label].preserved_duration);
+      updateParam(
+        params, ns + str + ".preserved_distance",
+        object_parameters_per_label[label].preserved_distance);
     }
     updateParam(params, ns + ".debug.object_label", debug.object_label);
 

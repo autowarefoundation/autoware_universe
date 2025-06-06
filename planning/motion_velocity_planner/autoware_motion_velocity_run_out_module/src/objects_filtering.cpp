@@ -109,13 +109,10 @@ bool skip_object_condition(
   }
   if (!filtering_data.ignore_objects_rtree.is_geometry_disjoint_from_rtree_polygons(
         object.current_footprint, filtering_data.ignore_objects_polygons)) {
-    if (
-      params.ignore_objects_preserved_time == 0.0 &&
-      params.ignore_objects_preserved_distance == 0.0) {
+    if (params.preserved_duration == 0.0 && params.preserved_distance == 0.0) {
       return skip_object;
     }
-    object.max_prediction_time = params.ignore_objects_preserved_time;
-    object.max_prediction_distance = params.ignore_objects_preserved_distance;
+    object.ignore_but_preserve_predicted_paths = true;
   }
   return !skip_object;
 }
@@ -181,29 +178,14 @@ void calculate_predicted_path_footprints(
 }
 
 void cut_predicted_path_footprint(
-  ObjectPredictedPathFootprint & footprint, const std::optional<double> & cut_time,
-  const std::optional<double> & cut_distance, const double standstill_duration_after_cut)
+  ObjectPredictedPathFootprint & footprint, const size_t cut_index,
+  const double standstill_duration_after_cut)
 {
-  if (!cut_time && !cut_distance) {
-    return;
-  }
-  auto cut_index = 0UL;
-  auto t = 0.0;
-  auto dist = 0.0;
-  const auto & ls = footprint.predicted_path_footprint.corner_linestrings[front_left];
-  for (; cut_index + 1 < ls.size(); ++cut_index) {
-    const auto & segment = universe_utils::Segment2d(ls[cut_index], ls[cut_index + 1]);
-    t += footprint.time_step;
-    dist += static_cast<double>(boost::geometry::length(segment));
-    if ((!cut_time || t > cut_time) && (!cut_distance || dist > cut_distance)) {
-      break;
-    }
-  }
-  if ((!cut_time || t > cut_time) && (!cut_distance || dist > cut_distance)) {
-    const auto standstill_indexes =
-      static_cast<size_t>(standstill_duration_after_cut / footprint.time_step);
-    for (const auto pos : {front_left, front_right, rear_left, rear_right}) {
-      footprint.predicted_path_footprint.corner_linestrings[pos].resize(cut_index);
+  const auto standstill_indexes =
+    static_cast<size_t>(standstill_duration_after_cut / footprint.time_step);
+  for (const auto pos : {front_left, front_right, rear_left, rear_right}) {
+    footprint.predicted_path_footprint.corner_linestrings[pos].resize(cut_index);
+    if (cut_index > 0UL) {
       footprint.predicted_path_footprint.corner_linestrings[pos].resize(
         cut_index + standstill_indexes,
         footprint.predicted_path_footprint.corner_linestrings[pos].back());
@@ -211,65 +193,78 @@ void cut_predicted_path_footprint(
   }
 }
 
-std::pair<std::optional<double>, std::optional<double>> get_cut_predicted_path_time_and_distance(
+std::optional<size_t> get_cut_predicted_path_index(
   const autoware::motion_velocity_planner::run_out::ObjectPredictedPathFootprint & path,
   const FilteringData & map_data)
 {
-  auto min_t = std::optional<double>();
-  auto min_dist = std::optional<double>();
+  const auto crosses_cut_line_in_map = [&](const auto & segment) {
+    std::vector<SegmentNode> query_results;
+    map_data.cut_predicted_paths_rtree.query(
+      boost::geometry::index::intersects(segment), std::back_inserter(query_results));
+    for (const auto & candidate : query_results) {
+      if (universe_utils::intersect(
+            segment.first, segment.second, candidate.first.first, candidate.first.second)) {
+        return true;
+      }
+    }
+    return false;
+  };
+  std::optional<size_t> cut_index;
   for (const auto & corner : {front_left, front_right, rear_left, rear_right}) {
-    auto found = false;
-    auto t = 0.0;
-    auto dist = 0.0;
     const auto & ls = path.predicted_path_footprint.corner_linestrings[corner];
     for (auto i = 0UL; i + 1 < ls.size(); ++i) {
       const auto & segment = universe_utils::Segment2d(ls[i], ls[i + 1]);
-      t += path.time_step;
-      dist += static_cast<double>(boost::geometry::length(segment));
-      std::vector<SegmentNode> query_results;
-      map_data.cut_predicted_paths_rtree.query(
-        boost::geometry::index::intersects(segment), std::back_inserter(query_results));
-      for (const auto & candidate : query_results) {
-        if (universe_utils::intersect(
-              segment.first, segment.second, candidate.first.first, candidate.first.second)) {
-          min_t = std::min(min_t.value_or(t), t);
-          min_dist = std::min(min_dist.value_or(dist), dist);
-          found = true;
-          break;
-        }
-      }
-      if (found) {
+      if (crosses_cut_line_in_map(segment)) {
+        cut_index = std::min(cut_index.value_or(i), i);
         break;
       }
     }
   }
-  return {min_t, min_dist};
+  return cut_index;
+}
+
+size_t get_preserved_cut_index(
+  const autoware::motion_velocity_planner::run_out::ObjectPredictedPathFootprint & path,
+  const double time, const double distance)
+{
+  if (time == 0.0 && distance == 0.0) {
+    return 0UL;
+  }
+  double t = 0.0;
+  double d = 0.0;
+  const auto & ls = path.predicted_path_footprint.corner_linestrings[front_left];
+  for (auto i = 0UL; i + 1 < ls.size(); ++i) {
+    const auto & segment = universe_utils::Segment2d(ls[i], ls[i + 1]);
+    t += path.time_step;
+    d += static_cast<double>(boost::geometry::length(segment));
+    if ((time == 0.0 || t >= time) && (distance == 0.0 || d >= distance)) {
+      return i + 1;
+    }
+  }
+  return path.predicted_path_footprint.size() == 0 ? 0UL : path.predicted_path_footprint.size() - 1;
 }
 
 void filter_predicted_paths(
   Object & object, const FilteringData & map_data, const ObjectParameters & params)
 {
   for (auto & predicted_path_footprint : object.predicted_path_footprints) {
-    auto [cut_time, cut_distance] =
-      get_cut_predicted_path_time_and_distance(predicted_path_footprint, map_data);
-    // apply the lower bound on cutting only when it is higher than the map based cut value
-    if (cut_time && params.cut_preserved_duration != 0.0) {
-      cut_time = std::min(params.cut_preserved_duration, *cut_time);
+    std::optional<size_t> cut_index;
+    if (object.ignore_but_preserve_predicted_paths) {
+      cut_index = get_preserved_cut_index(
+        predicted_path_footprint, params.preserved_duration, params.preserved_distance);
+    } else {
+      cut_index = get_cut_predicted_path_index(predicted_path_footprint, map_data);
+      if (cut_index) {
+        cut_index = std::max(
+          *cut_index,
+          get_preserved_cut_index(
+            predicted_path_footprint, params.preserved_duration, params.preserved_distance));
+      }
     }
-    if (cut_distance && params.cut_preserved_distance != 0.0) {
-      cut_distance = std::max(params.cut_preserved_distance, *cut_distance);
+    if (cut_index) {
+      cut_predicted_path_footprint(
+        predicted_path_footprint, *cut_index, params.standstill_duration_after_cut);
     }
-    // apply the upper bounds from the values set when "ignoring" the object
-    if (object.max_prediction_time) {
-      const auto upper_bound = *object.max_prediction_time;
-      cut_time = std::min(cut_time.value_or(upper_bound), upper_bound);
-    }
-    if (object.max_prediction_distance) {
-      const auto upper_bound = *object.max_prediction_distance;
-      cut_distance = std::min(cut_distance.value_or(upper_bound), upper_bound);
-    }
-    cut_predicted_path_footprint(
-      predicted_path_footprint, cut_time, cut_distance, params.standstill_duration_after_cut);
   }
 }
 
