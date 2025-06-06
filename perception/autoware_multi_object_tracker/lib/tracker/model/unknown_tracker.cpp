@@ -34,9 +34,14 @@
 namespace autoware::multi_object_tracker
 {
 
-UnknownTracker::UnknownTracker(const rclcpp::Time & time, const types::DynamicObject & object)
-: Tracker(time, object), logger_(rclcpp::get_logger("UnknownTracker"))
+UnknownTracker::UnknownTracker(const rclcpp::Time & time, const types::DynamicObject & object, const bool enable_velocity_estimation)
+: Tracker(time, object), logger_(rclcpp::get_logger("UnknownTracker")), enable_velocity_estimation_(enable_velocity_estimation)
 {
+  // initialize motion model only if velocity estimation is enabled
+  if (!enable_velocity_estimation_){
+    return;
+  }
+
   // Set motion model parameters
   {
     constexpr double q_stddev_x = 0.5;         // [m/s]
@@ -63,7 +68,7 @@ UnknownTracker::UnknownTracker(const rclcpp::Time & time, const types::DynamicOb
 
     double vx = 0.0;
     double vy = 0.0;
-    if (object.kinematics.has_twist) {
+    if (object.kinematics.has_twist && enable_velocity_estimation_) {
       const double & vel_x = object.twist.linear.x;
       const double & vel_y = object.twist.linear.y;
       vx = std::cos(yaw) * vel_x - std::sin(yaw) * vel_y;
@@ -117,19 +122,26 @@ UnknownTracker::UnknownTracker(const rclcpp::Time & time, const types::DynamicOb
 
 bool UnknownTracker::predict(const rclcpp::Time & time)
 {
+  if (!enable_velocity_estimation_) {
+    return true;
+  }
+
   return motion_model_.predictState(time);
 }
 
 bool UnknownTracker::measureWithPose(const types::DynamicObject & object)
 {
-  // update motion model
-  bool is_updated = false;
-  {
-    const double x = object.pose.position.x;
-    const double y = object.pose.position.y;
+  bool is_updated = true;
 
-    is_updated = motion_model_.updateStatePose(x, y, object.pose_covariance);
-    motion_model_.limitStates();
+  if (enable_velocity_estimation_) {
+    // update motion model
+    {
+      const double x = object.pose.position.x;
+      const double y = object.pose.position.y;
+
+      is_updated = motion_model_.updateStatePose(x, y, object.pose_covariance);
+      motion_model_.limitStates();
+    }
   }
 
   // position z
@@ -148,14 +160,16 @@ bool UnknownTracker::measure(
   object_.pose.orientation = object.pose.orientation;
   object_.area = types::getArea(object.shape);
 
-  // check time gap
-  const double dt = motion_model_.getDeltaTime(time);
-  if (0.01 /*10msec*/ < dt) {
-    RCLCPP_WARN(
-      logger_,
-      "UnknownTracker::measure There is a large gap between predicted time and measurement time. "
-      "(%f)",
-      dt);
+  if (enable_velocity_estimation_) {
+    // check time gap
+    const double dt = motion_model_.getDeltaTime(time);
+    if (0.01 /*10msec*/ < dt) {
+      RCLCPP_WARN(
+        logger_,
+        "UnknownTracker::measure There is a large gap between predicted time and measurement time. "
+        "(%f)",
+        dt);
+    }
   }
 
   // update object
@@ -169,14 +183,16 @@ bool UnknownTracker::getTrackedObject(
 {
   object = object_;
 
-  // predict from motion model
-  auto & pose = object.pose;
-  auto & pose_cov = object.pose_covariance;
-  auto & twist = object.twist;
-  auto & twist_cov = object.twist_covariance;
-  if (!motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov)) {
-    RCLCPP_WARN(logger_, "UnknownTracker::getTrackedObject: Failed to get predicted state.");
-    return false;
+  if (enable_velocity_estimation_) {
+    // predict from motion model
+    auto & pose = object.pose;
+    auto & pose_cov = object.pose_covariance;
+    auto & twist = object.twist;
+    auto & twist_cov = object.twist_covariance;
+    if (!motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov)) {
+      RCLCPP_WARN(logger_, "UnknownTracker::getTrackedObject: Failed to get predicted state.");
+      return false;
+    }
   }
 
   return true;

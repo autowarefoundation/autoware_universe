@@ -193,6 +193,9 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         int64_t value = declare_parameter<int64_t>("confident_count_threshold." + class_name);
         config.confident_count_threshold[class_label] = static_cast<int>(value);
       }
+
+      config.enable_unknown_object_velocity_estimation = declare_parameter<bool>(
+        "enable_unknown_object_velocity_estimation");
     }
 
     AssociatorConfig associator_config;
