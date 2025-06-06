@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__PLANNING_VALIDATOR__DEBUG_MARKER_HPP_
 #define AUTOWARE__PLANNING_VALIDATOR__DEBUG_MARKER_HPP_
 
+#include "autoware_planning_validator/msg/planning_validator_status.hpp"
+
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -32,6 +34,7 @@
 
 namespace autoware::planning_validator
 {
+using autoware_planning_validator::msg::PlanningValidatorStatus;
 
 class PlanningValidatorDebugMarkerPublisher
 {
@@ -47,6 +50,46 @@ public:
 
   void pushLaneletPolygonsMarker(
     const lanelet::BasicPolygons2d & polygon, const std::string & ns, int id = 0);
+
+  std::string getStatusDebugString(const PlanningValidatorStatus & status) const
+  {
+    std::stringstream ss;
+
+    auto append_string = [&ss](const std::string & str) {
+      if (ss.str().empty())
+        ss << "[";
+      else
+        ss << " | ";
+      ss << str;
+    };
+
+    if (!status.is_valid_latency) append_string("latency");
+    if (!status.is_valid_size) append_string("traj_size");
+    if (!status.is_valid_finite_value) append_string("infinite_value");
+    if (!status.is_valid_interval) append_string("interval");
+    if (!status.is_valid_relative_angle) append_string("relative_angle");
+    if (!status.is_valid_distance_deviation) append_string("distance_deviation");
+    if (!status.is_valid_longitudinal_distance_deviation) append_string("lon_distance_deviation");
+    if (!status.is_valid_velocity_deviation) append_string("velocity_deviation");
+    if (!status.is_valid_longitudinal_max_acc) append_string("lon_max_acc");
+    if (!status.is_valid_longitudinal_min_acc) append_string("lon_min_acc");
+    if (!status.is_valid_lateral_acc) append_string("lat_acc");
+    if (!status.is_valid_lateral_jerk) append_string("lat_jerk");
+    if (!status.is_valid_yaw_deviation) append_string("yaw_deviation");
+    if (!status.is_valid_curvature) append_string("curvature");
+    if (!status.is_valid_steering) append_string("steering");
+    if (!status.is_valid_steering_rate) append_string("steering_rate");
+    if (!status.is_valid_forward_trajectory_length) append_string("forward_traj_length");
+    if (!status.is_valid_trajectory_shift) append_string("traj_shift");
+    if (!status.is_valid_collision_check) append_string("collision");
+
+    if (ss.str().empty()) {
+      return "";
+    }
+
+    ss << "]";
+    return ss.str();
+  }
 
   void publish();
 

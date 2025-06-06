@@ -81,6 +81,7 @@ void CollisionChecker::setup_parameters(rclcpp::Node & node)
     get_or_declare_parameter<double>(node, "collision_checker.ego_deceleration");
   params_.min_time_horizon =
     get_or_declare_parameter<double>(node, "collision_checker.min_time_horizon");
+  params_.timeout = get_or_declare_parameter<double>(node, "collision_checker.timeout");
 
   params_.right_turn.enable =
     get_or_declare_parameter<bool>(node, "collision_checker.right_turn.enable");
@@ -121,14 +122,17 @@ void CollisionChecker::setup_parameters(rclcpp::Node & node)
 void CollisionChecker::setup_diag()
 {
   context_->add_diag(
-    "planning_validation_collision_check", context_->validation_status->is_valid_collision_check,
-    "risk of collision at intersection turn", params_.is_critical);
+    "intersection_validation_collision_check",
+    context_->validation_status->is_valid_collision_check, "risk of collision at intersection turn",
+    params_.is_critical);
 }
 
 void CollisionChecker::validate(bool & is_critical)
 {
+  context_->validation_status->is_valid_collision_check = true;
+
   auto skip_validation = [&](const std::string & reason) {
-    RCLCPP_WARN(logger_, "%s", reason.c_str());
+    RCLCPP_WARN_THROTTLE(logger_, *clock_, 1000, "%s", reason.c_str());
     is_critical = false;
   };
 
@@ -150,7 +154,7 @@ void CollisionChecker::validate(bool & is_critical)
 
   auto input_trajectory_points = context_->data->current_trajectory->points;
   autoware::motion_utils::calculate_time_from_start(
-    input_trajectory_points, ego_front_pose.position);
+    input_trajectory_points, ego_front_pose.position, 0.1);
   const auto trajectory_points =
     collision_checker_utils::trim_trajectory_points(input_trajectory_points, ego_front_pose);
 
@@ -169,11 +173,24 @@ void CollisionChecker::validate(bool & is_critical)
     return skip_validation("failed to get target lanelets, skipping collision check.");
   }
 
-  const auto is_safe = check_collision(
+  context_->validation_status->is_valid_collision_check = check_collision(
     lanelets.target_lanelets, filtered_pointcloud,
     context_->data->obstacle_pointcloud->header.stamp);
 
-  context_->validation_status->is_valid_collision_check = is_safe;
+  if (!context_->validation_status->is_valid_collision_check) {
+    last_invalid_time_ = context_->data->obstacle_pointcloud->header.stamp;
+    return;
+  }
+
+  if (!last_invalid_time_) return;
+
+  const auto time_since_last_invalid = (clock_->now() - *last_invalid_time_).seconds();
+  if (time_since_last_invalid < params_.timeout) {
+    context_->validation_status->is_valid_collision_check = false;
+    return;
+  }
+
+  last_invalid_time_.reset();
 }
 
 Direction CollisionChecker::get_lanelets(

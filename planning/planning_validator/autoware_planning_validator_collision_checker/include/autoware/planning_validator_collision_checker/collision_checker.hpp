@@ -83,6 +83,7 @@ private:
 
   CollisionCheckerParams params_;
   PCDObjectsMap history_;
+  std::optional<rclcpp::Time> last_invalid_time_;
 };
 
 }  // namespace autoware::planning_validator

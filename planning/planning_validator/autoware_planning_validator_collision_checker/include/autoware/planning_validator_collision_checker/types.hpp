@@ -120,6 +120,7 @@ struct CollisionCheckerParams
   double ttc_threshold{};
   double ego_deceleration{};
   double min_time_horizon{};
+  double timeout{};
 
   DirectionCheckFlags right_turn;
   DirectionCheckFlags left_turn;

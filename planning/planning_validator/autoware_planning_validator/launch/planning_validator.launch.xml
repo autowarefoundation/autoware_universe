@@ -40,13 +40,10 @@
       <composable_node pkg="autoware_planning_validator" plugin="autoware::planning_validator::PlanningValidatorNode" name="planning_validator" namespace="">
         <remap from="~/input/pointcloud" to="$(var input_pointcloud)"/>
         <remap from="~/input/trajectory" to="$(var input_trajectory)"/>
-        <remap from="~/input/vector_map" to="$(var input_vector_map_topic_name)"/>
+        <remap from="~/input/lanelet_map_bin" to="$(var input_vector_map_topic_name)"/>
         <remap from="~/input/route" to="$(var input_route_topic_name)"/>
         <remap from="~/input/kinematics" to="/localization/kinematic_state"/>
         <remap from="~/input/acceleration" to="/localization/acceleration"/>
-        <remap from="~/input/pointcloud" to="$(var input_pointcloud)"/>
-        <remap from="~/input/lanelet_map_bin" to="$(var input_vector_map_topic_name)"/>
-        <remap from="~/input/route" to="$(var input_route_topic_name)"/>
         <remap from="~/output/trajectory" to="$(var output_trajectory)"/>
         <remap from="~/output/validation_status" to="~/validation_status"/>
         <param name="launch_modules" value="$(var planning_validator_launch_modules)"/>

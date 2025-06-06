@@ -78,7 +78,7 @@ private:
   autoware_utils::InterProcessPollingSubscriber<
     LaneletRoute, autoware_utils::polling_policy::Newest>
     sub_route_{this, "~/input/route", rclcpp::QoS{1}.transient_local()};
-   autoware_utils::InterProcessPollingSubscriber<
+  autoware_utils::InterProcessPollingSubscriber<
     LaneletMapBin, autoware_utils::polling_policy::Newest>
     sub_lanelet_map_bin_{this, "~/input/lanelet_map_bin", rclcpp::QoS{1}.transient_local()};
   autoware_utils::InterProcessPollingSubscriber<PointCloud2> sub_pointcloud_{
@@ -103,11 +103,6 @@ private:
   bool is_critical_error_ = false;
 
   bool isAllValid(const PlanningValidatorStatus & status) const;
-
-  LaneletMapBin::ConstSharedPtr map_ptr_{nullptr};
-  LaneletRoute::ConstSharedPtr route_ptr_{nullptr};
-  bool has_received_map_{false};
-  bool has_received_route_{false};
 
   Trajectory::ConstSharedPtr soft_stop_trajectory_;
 
