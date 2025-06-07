@@ -45,7 +45,6 @@
         max_deceleration: -2.0
 
       ego:
-        footprint_buffer: -0.5
         reaction_time: 1.2
         min_velocity: 1.38                              # [m/s]
         max_velocity: 16.6                              # [m/s]
@@ -53,14 +52,14 @@
         max_deceleration: -4.0
         max_positive_jerk: 5.0
         max_negative_jerk: -5.0
+        nominal_deceleration: -1.5
+        nominal_positive_jerk: 0.6
+        nominal_negative_jerk: -0.6
 
       blind_spot:
         check:
           left: true
           right: false
-        active_distance:
-          start: 20.0
-          end: -10.0
         offset:
           inner: 0.1
           outer: 0.3

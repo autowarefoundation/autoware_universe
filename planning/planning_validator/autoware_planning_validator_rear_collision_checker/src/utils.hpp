@@ -26,20 +26,15 @@
 
 namespace autoware::planning_validator::utils
 {
-
-auto calc_predicted_stop_line(
-  const std::shared_ptr<PlanningValidatorContext> & context,
-  const rear_collision_checker_node::Params & parameters)
-  -> std::optional<autoware_utils::LineString3d>;
-
 auto check_shift_behavior(
   const lanelet::ConstLanelets & lanelets,
-  const std::shared_ptr<PlanningValidatorContext> & context) -> Behavior;
+  const std::shared_ptr<PlanningValidatorContext> & context,
+  const rear_collision_checker_node::Params & parameters, DebugData & debug) -> Behavior;
 
 auto check_turn_behavior(
   const lanelet::ConstLanelets & lanelets,
   const std::shared_ptr<PlanningValidatorContext> & context,
-  const rear_collision_checker_node::Params & parameters) -> Behavior;
+  const rear_collision_checker_node::Params & parameters, DebugData & debug) -> Behavior;
 
 void cut_by_lanelets(const lanelet::ConstLanelets & lanelets, DetectionAreas & detection_areas);
 
@@ -49,8 +44,7 @@ auto generate_half_lanelet(
   -> lanelet::ConstLanelet;
 
 auto get_current_lanes(
-  const std::shared_ptr<PlanningValidatorContext> & context,
-  const autoware_utils::LineString3d & stop_line, const double forward_distance,
+  const std::shared_ptr<PlanningValidatorContext> & context, const double forward_distance,
   const double backward_distance) -> lanelet::ConstLanelets;
 
 auto get_obstacle_points(const lanelet::BasicPolygons3d & polygons, const PointCloud & points)
@@ -78,8 +72,9 @@ auto create_pointcloud_object_marker_array(
   const PointCloudObjects & objects, const std::string & ns,
   const rear_collision_checker_node::Params & parameters) -> MarkerArray;
 
-auto create_line_marker_array(const autoware_utils::LineString3d & line, const std::string & ns)
-  -> MarkerArray;
+auto create_line_marker_array(
+  const autoware_utils::LineString3d & line, const std::string & ns,
+  const std_msgs::msg::ColorRGBA & color) -> MarkerArray;
 }  // namespace autoware::planning_validator::utils
 
 #endif  // UTILS_HPP_

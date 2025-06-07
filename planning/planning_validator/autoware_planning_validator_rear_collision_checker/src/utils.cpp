@@ -70,14 +70,6 @@ std::optional<lanelet::ConstLanelet> get_sibling_straight_lanelet(
   return std::nullopt;
 }
 
-bool is_within_lanes(
-  const lanelet::ConstLanelets & lanelets, const autoware_utils::LineString2d & stop_line)
-{
-  const auto combine_lanelet = lanelet::utils::combineLaneletsShape(lanelets);
-
-  return boost::geometry::within(stop_line, combine_lanelet.polygon2d().basicPolygon());
-}
-
 std::pair<lanelet::BasicPoint2d, double> get_smallest_enclosing_circle(
   const lanelet::BasicPolygon2d & poly)
 {
@@ -141,12 +133,11 @@ std::pair<lanelet::BasicPoint2d, double> get_smallest_enclosing_circle(
 
   return std::make_pair(center, radius_squared);
 }
-}  // namespace
 
 auto calc_predicted_stop_line(
-  const std::shared_ptr<PlanningValidatorContext> & context,
-  const rear_collision_checker_node::Params & parameters)
-  -> std::optional<autoware_utils::LineString3d>
+  const std::shared_ptr<PlanningValidatorContext> & context, const double max_deceleration,
+  const double max_positive_jerk, const double max_negative_jerk)
+  -> std::optional<std::pair<autoware_utils::LineString3d, double>>
 {
   const auto & points = context->data->current_trajectory->points;
   const auto & ego_pose = context->data->current_kinematics->pose.pose;
@@ -155,9 +146,6 @@ auto calc_predicted_stop_line(
   const auto & vehicle_info = context->vehicle_info;
 
   constexpr double target_velocity = 0.0;
-  const auto & max_deceleration = parameters.common.ego.max_deceleration;
-  const auto & max_positive_jerk = parameters.common.ego.max_positive_jerk;
-  const auto & max_negative_jerk = parameters.common.ego.max_negative_jerk;
 
   autoware_utils::LineString3d stop_line;
 
@@ -182,12 +170,14 @@ auto calc_predicted_stop_line(
     p_future.value(), 0.0, -0.5 * vehicle_info.vehicle_width_m, 0.0);
   stop_line.emplace_back(p1.position.x, p1.position.y, ego_pose.position.z);
   stop_line.emplace_back(p2.position.x, p2.position.y, ego_pose.position.z);
-  return stop_line;
+  return std::make_pair(stop_line, stop_distance.value());
 }
+}  // namespace
 
 auto check_shift_behavior(
   const lanelet::ConstLanelets & lanelets,
-  const std::shared_ptr<PlanningValidatorContext> & context) -> Behavior
+  const std::shared_ptr<PlanningValidatorContext> & context,
+  const rear_collision_checker_node::Params & parameters, DebugData & debug) -> Behavior
 {
   const auto & points = context->data->current_trajectory->points;
   const auto & ego_pose = context->data->current_kinematics->pose.pose;
@@ -216,6 +206,22 @@ auto check_shift_behavior(
     }
   }
 
+  const auto constraints = parameters.common.ego;
+  const auto reachable_point = calc_predicted_stop_line(
+    context, constraints.nominal_deceleration, constraints.nominal_positive_jerk,
+    constraints.nominal_negative_jerk);
+  const auto stoppable_point = calc_predicted_stop_line(
+    context, constraints.max_deceleration, constraints.max_positive_jerk,
+    constraints.max_negative_jerk);
+  if (!reachable_point.has_value() || !stoppable_point.has_value()) {
+    return Behavior::NONE;
+  }
+
+  {
+    debug.reachable_line = reachable_point.value().first;
+    debug.stoppable_line = stoppable_point.value().first;
+  }
+
   for (size_t i = 0; i < points.size(); i++) {
     const auto p1 = autoware_utils::calc_offset_pose(
       autoware_utils::get_pose(points.at(i)), 0.0, 0.5 * vehicle_width, 0.0);
@@ -224,6 +230,27 @@ auto check_shift_behavior(
     autoware_utils::LineString2d axle;
     axle.emplace_back(p1.position.x, p1.position.y);
     axle.emplace_back(p2.position.x, p2.position.y);
+
+    const auto distance = autoware::motion_utils::calcSignedArcLength(points, nearest_idx, i);
+    if (reachable_point.value().second < distance) {
+      autoware_utils::LineString2d line_2d{
+        reachable_point.value().first.front().to_2d(),
+        reachable_point.value().first.back().to_2d()};
+      if (boost::geometry::within(line_2d, combine_lanelet.polygon2d().basicPolygon())) {
+        debug.text = "sufficient longitudinal distance before potential conflict.";
+        break;
+      }
+    }
+
+    if (stoppable_point.value().second > distance) {
+      autoware_utils::LineString2d line_2d{
+        stoppable_point.value().first.front().to_2d(),
+        stoppable_point.value().first.back().to_2d()};
+      if (!boost::geometry::within(line_2d, combine_lanelet.polygon2d().basicPolygon())) {
+        debug.text = "unable to stop within current lane under limited braking.";
+        break;
+      }
+    }
 
     const auto is_left_shift = boost::geometry::intersects(
       axle, lanelet::utils::to2D(combine_lanelet.leftBound()).basicLineString());
@@ -244,7 +271,7 @@ auto check_shift_behavior(
 auto check_turn_behavior(
   const lanelet::ConstLanelets & lanelets,
   const std::shared_ptr<PlanningValidatorContext> & context,
-  const rear_collision_checker_node::Params & parameters) -> Behavior
+  const rear_collision_checker_node::Params & parameters, DebugData & debug) -> Behavior
 {
   const auto & points = context->data->current_trajectory->points;
   const auto & ego_pose = context->data->current_kinematics->pose.pose;
@@ -283,28 +310,39 @@ auto check_turn_behavior(
   };
 
   const auto & p = parameters.common.blind_spot;
+  const auto constraints = parameters.common.ego;
+  const auto reachable_point = calc_predicted_stop_line(
+    context, constraints.nominal_deceleration, constraints.nominal_positive_jerk,
+    constraints.nominal_negative_jerk);
+  const auto stoppable_point = calc_predicted_stop_line(
+    context, constraints.max_deceleration, constraints.max_positive_jerk,
+    constraints.max_negative_jerk);
+  if (!reachable_point.has_value() || !stoppable_point.has_value()) {
+    return Behavior::NONE;
+  }
 
-  const auto exceed_dead_line = [&points, &ego_pose, &p, &conflict_point, &vehicle_info](
-                                  const auto & sibling_straight_lanelet, const auto distance,
-                                  const auto is_right) {
-    if (!sibling_straight_lanelet.has_value()) {
-      return distance < p.active_distance.end;
-    }
+  {
+    debug.reachable_line = reachable_point.value().first;
+    debug.stoppable_line = stoppable_point.value().first;
+  }
 
-    if (!sibling_straight_lanelet.has_value()) {
-      return distance < p.active_distance.end;
-    }
+  const auto exceed_dead_line =
+    [&points, &ego_pose, &p, &conflict_point, &stoppable_point, &vehicle_info](
+      const auto & sibling_straight_lanelet, const auto distance, const auto is_right) {
+      if (!sibling_straight_lanelet.has_value()) {
+        return distance < stoppable_point.value().second;
+      }
 
-    const auto dead_line_point = conflict_point(sibling_straight_lanelet.value(), is_right);
-    if (!dead_line_point.has_value()) {
-      return distance < p.active_distance.end;
-    }
+      const auto dead_line_point = conflict_point(sibling_straight_lanelet.value(), is_right);
+      if (!dead_line_point.has_value()) {
+        return distance < stoppable_point.value().second;
+      }
 
-    return autoware::motion_utils::calcSignedArcLength(
-             points, ego_pose.position, dead_line_point.value()) -
-             vehicle_info.max_longitudinal_offset_m <
-           0.0;
-  };
+      return autoware::motion_utils::calcSignedArcLength(
+               points, ego_pose.position, dead_line_point.value()) -
+               vehicle_info.max_longitudinal_offset_m <
+             stoppable_point.value().second;
+    };
 
   double total_length = 0.0;
   for (const auto & lane : lanelets) {
@@ -318,32 +356,34 @@ auto check_turn_behavior(
       const auto sibling_straight_lanelet = get_sibling_straight_lanelet(lane, routing_graph_ptr);
 
       if (exceed_dead_line(sibling_straight_lanelet, distance, false)) {
+        debug.text = "unable to stop before the conflict area under limited braking.";
         continue;
       }
 
       if (!distance_to_stop_point.has_value()) {
-        return distance < p.active_distance.start ? Behavior::TURN_LEFT : Behavior::NONE;
+        return distance < reachable_point.value().second ? Behavior::TURN_LEFT : Behavior::NONE;
       }
       if (distance_to_stop_point.value() < distance + buffer) {
         return Behavior::NONE;
       }
-      return distance < p.active_distance.start ? Behavior::TURN_LEFT : Behavior::NONE;
+      return distance < reachable_point.value().second ? Behavior::TURN_LEFT : Behavior::NONE;
     }
 
     if (turn_direction == "right" && p.check.right) {
       const auto sibling_straight_lanelet = get_sibling_straight_lanelet(lane, routing_graph_ptr);
 
       if (exceed_dead_line(sibling_straight_lanelet, distance, true)) {
+        debug.text = "unable to stop before the conflict area under limited braking.";
         continue;
       }
 
       if (!distance_to_stop_point.has_value()) {
-        return distance < p.active_distance.start ? Behavior::TURN_RIGHT : Behavior::NONE;
+        return distance < reachable_point.value().second ? Behavior::TURN_RIGHT : Behavior::NONE;
       }
       if (distance_to_stop_point.value() < distance + buffer) {
         return Behavior::NONE;
       }
-      return distance < p.active_distance.start ? Behavior::TURN_RIGHT : Behavior::NONE;
+      return distance < reachable_point.value().second ? Behavior::TURN_RIGHT : Behavior::NONE;
     }
   }
 
@@ -377,42 +417,19 @@ void cut_by_lanelets(const lanelet::ConstLanelets & lanelets, DetectionAreas & d
 }
 
 auto get_current_lanes(
-  const std::shared_ptr<PlanningValidatorContext> & context,
-  const autoware_utils::LineString3d & stop_line, const double forward_distance,
+  const std::shared_ptr<PlanningValidatorContext> & context, const double forward_distance,
   const double backward_distance) -> lanelet::ConstLanelets
 {
   const auto & ego_pose = context->data->current_kinematics->pose.pose;
   const auto & route_handler = context->data->route_handler;
-  const auto & vehicle_info = context->vehicle_info;
 
   lanelet::ConstLanelet closest_lanelet;
   if (!route_handler->getClosestLaneletWithinRoute(ego_pose, &closest_lanelet)) {
     return {};
   }
 
-  const auto current_lanes = route_handler->getLaneletSequence(
+  return route_handler->getLaneletSequence(
     closest_lanelet, ego_pose, backward_distance, forward_distance);
-
-  autoware_utils::LineString2d stop_line_2d{stop_line.front().to_2d(), stop_line.back().to_2d()};
-
-  if (is_within_lanes(current_lanes, stop_line_2d)) {
-    return current_lanes;
-  }
-
-  const auto start_pose = route_handler->getOriginalStartPose();
-  const auto pull_out_start_lane_opt =
-    route_handler->getPullOutStartLane(start_pose, vehicle_info.vehicle_width_m);
-  if (!pull_out_start_lane_opt.has_value()) {
-    return {};
-  }
-
-  const auto road_shoulder_lanes =
-    route_handler->getShoulderLaneletSequence(pull_out_start_lane_opt.value(), start_pose);
-  if (is_within_lanes(road_shoulder_lanes, stop_line_2d)) {
-    return road_shoulder_lanes;
-  }
-
-  return {};
 }
 
 auto get_previous_polygons_with_lane_recursively(
@@ -652,8 +669,9 @@ auto create_pointcloud_object_marker_array(
   return msg;
 }
 
-auto create_line_marker_array(const autoware_utils::LineString3d & line, const std::string & ns)
-  -> MarkerArray
+auto create_line_marker_array(
+  const autoware_utils::LineString3d & line, const std::string & ns,
+  const std_msgs::msg::ColorRGBA & color) -> MarkerArray
 {
   MarkerArray msg;
 
@@ -663,8 +681,7 @@ auto create_line_marker_array(const autoware_utils::LineString3d & line, const s
 
   auto marker = autoware_utils::create_default_marker(
     "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, 0L, Marker::LINE_STRIP,
-    autoware_utils::create_marker_scale(0.3, 0.1, 0.1),
-    autoware_utils::create_marker_color(1.0, 0.0, 0.42, 0.999));
+    autoware_utils::create_marker_scale(0.3, 0.1, 0.1), color);
   marker.points.push_back(autoware_utils::to_msg(line.front()));
   marker.points.push_back(autoware_utils::to_msg(line.back()));
 

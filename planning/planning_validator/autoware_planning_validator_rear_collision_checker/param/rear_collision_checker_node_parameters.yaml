@@ -105,16 +105,18 @@ rear_collision_checker_node:
         type: double
 
     ego:
-      footprint_buffer:
-        type: double
       reaction_time:
         type: double
         validation:
           gt<>: [0.0]
       min_velocity:
         type: double
+        validation:
+          gt<>: [0.0]
       max_velocity:
         type: double
+        validation:
+          gt<>: [0.0]
       max_acceleration:
         type: double
         validation:
@@ -127,6 +129,14 @@ rear_collision_checker_node:
           gt<>: [0.0]
       max_negative_jerk:
         type: double
+      nominal_deceleration:
+        type: double
+      nominal_positive_jerk:
+        type: double
+        validation:
+          gt<>: [0.0]
+      nominal_negative_jerk:
+        type: double
 
     blind_spot:
       check:
@@ -134,13 +144,6 @@ rear_collision_checker_node:
           type: bool
         right:
           type: bool
-      active_distance:
-        start:
-          type: double
-          validation:
-            gt<>: [0.0]
-        end:
-          type: double
       offset:
         inner:
           type: double

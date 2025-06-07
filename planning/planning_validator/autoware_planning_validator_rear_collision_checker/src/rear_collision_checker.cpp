@@ -750,30 +750,20 @@ bool RearCollisionChecker::is_safe(DebugData & debug)
     debug.cluster_points = obstacle_pointcloud;
   }
 
-  const auto predicted_stop_line = utils::calc_predicted_stop_line(context_, p);
-
-  if (!predicted_stop_line.has_value()) {
-    return true;
-  }
-
   constexpr double forward = 100.0;
   constexpr double backward = 100.0;
-  const auto current_lanes =
-    utils::get_current_lanes(context_, predicted_stop_line.value(), forward, backward);
-  {
-    debug.current_lanes = current_lanes;
-    debug.predicted_front_line = predicted_stop_line.value();
-  }
+  const auto current_lanes = utils::get_current_lanes(context_, forward, backward);
+  const auto combine_lanelet = lanelet::utils::combineLaneletsShape(current_lanes);
 
   if (current_lanes.empty()) {
-    debug.text = "EGO CAN'T STOP WITHIN CURRENT LANE.";
+    debug.text = "failed to identify the current driving lane.";
   }
 
-  const auto turn_behavior = utils::check_turn_behavior(current_lanes, context_, p);
-
-  const auto shift_behavior = utils::check_shift_behavior(current_lanes, context_);
+  const auto turn_behavior = utils::check_turn_behavior(current_lanes, context_, p, debug);
+  const auto shift_behavior = utils::check_shift_behavior(current_lanes, context_, p, debug);
 
   {
+    debug.current_lanes = current_lanes;
     debug.turn_behavior = turn_behavior;
     debug.shift_behavior = shift_behavior;
   }
@@ -814,7 +804,7 @@ bool RearCollisionChecker::is_safe(DebugData & debug)
 
     {
       RCLCPP_ERROR(logger_, "[RCC] Continuous collision risk detected.");
-      debug.text = "RISK OF COLLISION!!!";
+      debug.text = "continuous collision risk detected.";
     }
   }
 
@@ -844,9 +834,14 @@ void RearCollisionChecker::publish_marker(const DebugData & debug) const
   };
 
   {
-    add(utils::create_line_marker_array(debug.predicted_front_line, "predicted_front_line"));
+    add(utils::create_line_marker_array(
+      debug.reachable_line, "reachable_line",
+      autoware_utils::create_marker_color(1.0, 0.67, 0.0, 0.999)));
+    add(utils::create_line_marker_array(
+      debug.stoppable_line, "stoppable_line",
+      autoware_utils::create_marker_color(1.0, 0.0, 0.42, 0.999)));
     add(lanelet::visualization::laneletsAsTriangleMarkerArray(
-      "detection_lanes_for_objects", debug.get_detection_lanes(),
+      "detection_lanes", debug.get_detection_lanes(),
       autoware_utils::create_marker_color(1.0, 0.0, 0.42, 0.2)));
     add(lanelet::visualization::laneletsAsTriangleMarkerArray(
       "current_lanes", debug.current_lanes,
@@ -854,7 +849,7 @@ void RearCollisionChecker::publish_marker(const DebugData & debug) const
     add(utils::create_pointcloud_object_marker_array(
       debug.pointcloud_objects, "pointcloud_objects", param_listener_->get_params()));
     add(utils::create_polygon_marker_array(
-      debug.get_detection_polygons(), "detection_areas_for_pointcloud",
+      debug.get_detection_polygons(), "detection_areas",
       autoware_utils::create_marker_color(1.0, 0.0, 0.42, 0.999)));
     add(utils::create_polygon_marker_array(
       debug.hull_polygons, "hull_polygons",

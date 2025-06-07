@@ -113,7 +113,9 @@ using PointCloudObjects = std::vector<PointCloudObject>;
 
 struct DebugData
 {
-  autoware_utils::LineString3d predicted_front_line;
+  autoware_utils::LineString3d reachable_line;
+
+  autoware_utils::LineString3d stoppable_line;
 
   lanelet::ConstLanelets current_lanes;
 
