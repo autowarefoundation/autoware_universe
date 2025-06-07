@@ -78,7 +78,9 @@ private:
 
   void publish_marker(const DebugData & debug) const;
 
-  rclcpp::Publisher<PointCloud2>::SharedPtr pub_obstacle_pointcloud_;
+  rclcpp::Publisher<PointCloud2>::SharedPtr pub_voxel_pointcloud_;
+
+  rclcpp::Publisher<PointCloud2>::SharedPtr pub_cluster_pointcloud_;
 
   rclcpp::Publisher<MarkerArray>::SharedPtr pub_debug_marker_;
 

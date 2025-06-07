@@ -75,8 +75,11 @@ void RearCollisionChecker::init(
   param_listener_ = std::make_unique<rear_collision_checker_node::ParamListener>(
     node.get_node_parameters_interface());
 
-  pub_obstacle_pointcloud_ =
-    node.create_publisher<PointCloud2>("~/rear_collision_checker/debug/pointcloud", 1);
+  pub_cluster_pointcloud_ =
+    node.create_publisher<PointCloud2>("~/rear_collision_checker/debug/cluster_points", 1);
+
+  pub_voxel_pointcloud_ =
+    node.create_publisher<PointCloud2>("~/rear_collision_checker/debug/voxel_points", 1);
 
   pub_debug_marker_ =
     node.create_publisher<MarkerArray>("~/rear_collision_checker/debug/marker", 20);
@@ -171,7 +174,7 @@ void RearCollisionChecker::fill_velocity(PointCloudObject & pointcloud_object)
 
     if (dt < 1e-6) {
       pointcloud_object.velocity = previous_data.velocity;
-      pointcloud_object.tracking_duration = previous_data.tracking_duration + dt;
+      pointcloud_object.tracking_duration = previous_data.tracking_duration;
       pointcloud_object.relative_distance_with_delay_compensation =
         pointcloud_object.relative_distance -
         pointcloud_object.velocity * p.common.pointcloud.latency;
@@ -185,9 +188,10 @@ void RearCollisionChecker::fill_velocity(PointCloudObject & pointcloud_object)
 
     if (
       is_reliable && std::abs(raw_velocity - previous_data.velocity) / dt > assumed_acceleration) {
-      // closest point may jumped. reset tracking history.
-      pointcloud_object.velocity = 0.0;
-      pointcloud_object.tracking_duration = 0.0;
+      // closest point may jumped. don't use the data.
+      pointcloud_object.velocity = previous_data.velocity;
+      pointcloud_object.tracking_duration = previous_data.tracking_duration;
+      pointcloud_object.detail = "the estimated velocity may be an outlier.";
     } else {
       // keep tracking.
       pointcloud_object.velocity =
@@ -309,6 +313,14 @@ auto RearCollisionChecker::filter_pointcloud([[maybe_unused]] DebugData & debug)
     debug.pointcloud_nums.push_back(output->size());
   }
 
+  {
+    const auto obstacle_pointcloud = std::make_shared<sensor_msgs::msg::PointCloud2>();
+    pcl::toROSMsg(*output, *obstacle_pointcloud);
+    obstacle_pointcloud->header.stamp = context_->data->obstacle_pointcloud->header.stamp;
+    obstacle_pointcloud->header.frame_id = "map";
+    debug.voxel_points = obstacle_pointcloud;
+  }
+
   return output;
 }
 
@@ -368,7 +380,7 @@ auto RearCollisionChecker::get_clustered_pointcloud(
     pcl::toROSMsg(*points_belonging_to_cluster_hulls, *obstacle_pointcloud);
     obstacle_pointcloud->header.stamp = context_->data->obstacle_pointcloud->header.stamp;
     obstacle_pointcloud->header.frame_id = "map";
-    debug.obstacle_pointcloud = obstacle_pointcloud;
+    debug.cluster_points = obstacle_pointcloud;
   }
 
   return points_belonging_to_cluster_hulls;
@@ -735,7 +747,7 @@ bool RearCollisionChecker::is_safe(DebugData & debug)
     const auto obstacle_pointcloud = std::make_shared<sensor_msgs::msg::PointCloud2>();
     obstacle_pointcloud->header.stamp = context_->data->obstacle_pointcloud->header.stamp;
     obstacle_pointcloud->header.frame_id = "map";
-    debug.obstacle_pointcloud = obstacle_pointcloud;
+    debug.cluster_points = obstacle_pointcloud;
   }
 
   const auto predicted_stop_line = utils::calc_predicted_stop_line(context_, p);
@@ -855,8 +867,12 @@ void RearCollisionChecker::publish_marker(const DebugData & debug) const
 
   pub_debug_marker_->publish(msg);
 
-  if (debug.obstacle_pointcloud) {
-    pub_obstacle_pointcloud_->publish(*debug.obstacle_pointcloud);
+  if (debug.cluster_points) {
+    pub_cluster_pointcloud_->publish(*debug.cluster_points);
+  }
+
+  if (debug.voxel_points) {
+    pub_voxel_pointcloud_->publish(*debug.voxel_points);
   }
 
   {

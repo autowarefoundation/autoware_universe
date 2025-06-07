@@ -105,6 +105,8 @@ struct PointCloudObject
   bool ignore;
 
   bool is_vru;
+
+  std::string detail{""};
 };
 
 using PointCloudObjects = std::vector<PointCloudObject>;
@@ -119,7 +121,9 @@ struct DebugData
 
   DetectionAreas detection_areas;
 
-  sensor_msgs::msg::PointCloud2::SharedPtr obstacle_pointcloud;
+  sensor_msgs::msg::PointCloud2::SharedPtr cluster_points;
+
+  sensor_msgs::msg::PointCloud2::SharedPtr voxel_points;
 
   Behavior turn_behavior{Behavior::NONE};
 

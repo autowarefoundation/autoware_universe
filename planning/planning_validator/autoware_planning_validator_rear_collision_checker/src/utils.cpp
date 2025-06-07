@@ -637,10 +637,10 @@ auto create_pointcloud_object_marker_array(
       ss << std::fixed << std::setprecision(2);
       ss << "TrackingDuration:" << object.tracking_duration
          << "[s]\nMovingTime:" << object.moving_time
-         << "[s]\nRelativeDistance(w/DC):" << object.relative_distance
-         << "[m]\nRelativeDistance(w/oDC):" << object.relative_distance_with_delay_compensation
+         << "[s]\nRelativeDistance(RAW):" << object.relative_distance
+         << "[m]\nRelativeDistance(w/DC):" << object.relative_distance_with_delay_compensation
          << "[m]\nVelocity:" << object.velocity << "[m/s]\nRSSDistance" << object.rss_distance
-         << "[m]\nFurthestLaneID:" << object.furthest_lane.id();
+         << "[m]\nFurthestLaneID:" << object.furthest_lane.id() << "\nDetail:" << object.detail;
 
       marker.text = ss.str();
       marker.pose = object.pose;
