@@ -1,9 +1,9 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Parameters for occupancy_grid_map_outlier",
+  "title": "autoware_occupancy_grid_map_outlier_filter parameters",
   "type": "object",
   "definitions": {
-    "occupancy_grid_map_outlier": {
+    "occupancy_grid_map_outlier_filter": {
       "type": "object",
       "properties": {
         "radius_search_2d_filter.search_radius": {
@@ -76,7 +76,7 @@
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "$ref": "#/definitions/occupancy_grid_map_outlier"
+          "$ref": "#/definitions/occupancy_grid_map_outlier_filter"
         }
       },
       "required": ["ros__parameters"]
