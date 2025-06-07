@@ -472,9 +472,8 @@ auto RearCollisionChecker::get_pointcloud_objects(
     const auto stop_distance_ego =
       0.5 * std::pow(current_velocity, 2.0) / std::abs(max_deceleration_ego);
 
-    const auto forward_distance =
-      p.common.pointcloud.range.forward + context_->vehicle_info.max_longitudinal_offset_m;
-    const auto backward_distance = p.common.pointcloud.range.backward -
+    const auto forward_distance = context_->vehicle_info.max_longitudinal_offset_m;
+    const auto backward_distance = p.common.pointcloud.range.buffer -
                                    context_->vehicle_info.min_longitudinal_offset_m +
                                    std::max(0.0, stop_distance_object - stop_distance_ego);
 
@@ -494,9 +493,8 @@ auto RearCollisionChecker::get_pointcloud_objects(
     const auto stop_distance_ego =
       0.5 * std::pow(current_velocity, 2.0) / std::abs(max_deceleration_ego);
 
-    const auto forward_distance =
-      p.common.pointcloud.range.forward + context_->vehicle_info.max_longitudinal_offset_m;
-    const auto backward_distance = p.common.pointcloud.range.backward -
+    const auto forward_distance = context_->vehicle_info.max_longitudinal_offset_m;
+    const auto backward_distance = p.common.pointcloud.range.buffer -
                                    context_->vehicle_info.min_longitudinal_offset_m +
                                    std::max(0.0, stop_distance_object - stop_distance_ego);
 

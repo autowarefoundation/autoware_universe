@@ -15,11 +15,7 @@ rear_collision_checker_node:
           type: double
           validation:
             gt_eq<>: [0.0]
-        forward:
-          type: double
-          validation:
-            gt_eq<>: [0.0]
-        backward:
+        buffer:
           type: double
           validation:
             gt_eq<>: [0.0]

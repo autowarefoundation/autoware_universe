@@ -6,10 +6,8 @@
 
       pointcloud:
         range:
-          static: false
           dead_zone: 0.3
-          forward: 0.0
-          backward: 0.0
+          buffer: 3.0
         crop_box_filter:
           x:
             max: 10.0
