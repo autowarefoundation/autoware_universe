@@ -232,7 +232,8 @@ std::optional<Pose> calcClosestPose(
 autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
   const autoware_perception_msgs::msg::PredictedObjects & original_objects,
   const route_handler::RouteHandler & route_handler, const GoalPlannerParameters & parameters,
-  const double vehicle_width, const Pose & ego_pose);
+  const double vehicle_width, const Pose & ego_pose,
+  std::optional<std::reference_wrapper<Polygon2d>> debug_objects_extraction_polygon = std::nullopt);
 
 bool is_goal_reachable_on_path(
   const lanelet::ConstLanelets current_lanes, const route_handler::RouteHandler & route_handler,
