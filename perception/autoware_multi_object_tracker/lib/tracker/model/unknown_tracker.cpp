@@ -21,6 +21,7 @@
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/ros/msg_covariance.hpp>
+#include <cmath>
 
 #include <bits/stdc++.h>
 #include <tf2/utils.h>
@@ -212,47 +213,43 @@ bool UnknownTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object) const
 {
   // keep the original pose
-  const auto original_pose = object_.pose;
+  const double original_x = object_.pose.position.x;
+  const double original_y = object_.pose.position.y;
 
-  // get the object shape
+  // get the object
   object = object_;
 
   if (enable_velocity_estimation_) {
     // predict from motion model
-    auto & pose = object.pose;
-    auto & pose_cov = object.pose_covariance;
-    auto & twist = object.twist;
-    auto & twist_cov = object.twist_covariance;
-    if (!motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov)) {
+    if (!motion_model_.getPredictedState(time, object.pose, object.pose_covariance, object.twist, object.twist_covariance)) {
       RCLCPP_WARN(logger_, "UnknownTracker::getTrackedObject: Failed to get predicted state.");
       return false;
     }
   } else {
     // predict from static motion model
-    auto & pose = object.pose;
-    auto & pose_cov = object.pose_covariance;
-    auto & twist = object.twist;
-    auto & twist_cov = object.twist_covariance;
-    if (!static_motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov)) {
+    if (!static_motion_model_.getPredictedState(time, object.pose, object.pose_covariance, object.twist, object.twist_covariance)) {
       RCLCPP_WARN(logger_, "UnknownTracker::getTrackedObject: Failed to get predicted state.");
       return false;
     }
   }
 
-  const double offset_x = original_pose.position.x - object.pose.position.x;
-  const double offset_y = original_pose.position.y - object.pose.position.y;
+  // Calculate offset once
+  const double offset_x = original_x - object.pose.position.x;
+  const double offset_y = original_y - object.pose.position.y;
 
-  // Transform global offset to local coordinates
-  const auto yaw = tf2::getYaw(object.pose.orientation);
-  const Eigen::Matrix2d R_inverse =
-    Eigen::Rotation2Dd(-yaw).toRotationMatrix();  // Inverse rotation
-  const Eigen::Vector2d global_offset(offset_x, offset_y);
-  const Eigen::Vector2d local_offset = R_inverse * global_offset;
+  // Pre-calculate rotation values
+  const double yaw = tf2::getYaw(object.pose.orientation);
+  const double cos_yaw = cos(-yaw);  // Negative yaw for inverse rotation
+  const double sin_yaw = sin(-yaw);
+
+  // Transform global offset to local coordinates and apply to footprint points
+  const double local_x = offset_x * cos_yaw - offset_y * sin_yaw;
+  const double local_y = offset_x * sin_yaw + offset_y * cos_yaw;
 
   // Apply local offset to footprint points
   for (auto & point : object.shape.footprint.points) {
-    point.x += local_offset.x();
-    point.y += local_offset.y();
+    point.x += local_x;
+    point.y += local_y;
   }
 
   return true;
