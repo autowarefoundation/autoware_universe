@@ -22,6 +22,7 @@
 #define EIGEN_MPL2_ONLY
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/tracker/util/adaptive_threshold_cache.hpp"
 
 #include <Eigen/Core>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
@@ -76,9 +77,11 @@ public:
   void getPositionCovarianceEigenSq(
     const rclcpp::Time & time, double & major_axis_sq, double & minor_axis_sq) const;
   bool isConfident(
-    const rclcpp::Time & time, const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
+    const rclcpp::Time & time, const AdaptiveThresholdCache & cache,
+    const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
   bool isExpired(
-    const rclcpp::Time & time, const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
+    const rclcpp::Time & time, const AdaptiveThresholdCache & cache,
+    const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
   float getKnownObjectProbability() const;
   double getPositionCovarianceDeterminant() const;
 
@@ -148,7 +151,7 @@ public:
   double getBEVArea() const;
   double getDistanceToEgo(const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
   double computeAdaptiveThreshold(
-    double base_threshold, double fallback_threshold,
+    double base_threshold, double fallback_threshold, const AdaptiveThresholdCache & cache,
     const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
 };
 

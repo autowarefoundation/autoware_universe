@@ -18,6 +18,7 @@
 #include "autoware/multi_object_tracker/association/association.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
+#include "autoware/multi_object_tracker/tracker/util/adaptive_threshold_cache.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -77,8 +78,6 @@ public:
     const rclcpp::Time & time,
     autoware_perception_msgs::msg::TrackedObjects & tentative_objects) const;
 
-  void getExistenceProbabilities(std::vector<std::vector<float>> & existence_vectors) const;
-
   void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr);
 
 private:
@@ -100,6 +99,7 @@ private:
 
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
   std::optional<geometry_msgs::msg::Pose> ego_pose_;
+  AdaptiveThresholdCache adaptive_threshold_cache_;
 };
 
 }  // namespace autoware::multi_object_tracker
