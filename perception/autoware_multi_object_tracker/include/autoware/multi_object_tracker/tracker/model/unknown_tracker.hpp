@@ -23,6 +23,7 @@
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/cv_motion_model.hpp"
+#include "autoware/multi_object_tracker/tracker/motion_model/static_motion_model.hpp"
 
 #include <autoware/kalman_filter/kalman_filter.hpp>
 
@@ -37,7 +38,7 @@ private:
   object_model::ObjectModel object_model_ = object_model::unknown;
 
   CVMotionModel motion_model_;
-  using IDX = CVMotionModel::IDX;
+  StaticMotionModel static_motion_model_;
 
   bool enable_velocity_estimation_;
 

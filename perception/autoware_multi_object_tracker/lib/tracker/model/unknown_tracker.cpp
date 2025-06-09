@@ -43,7 +43,28 @@ UnknownTracker::UnknownTracker(
 {
   // initialize motion model only if velocity estimation is enabled
   if (!enable_velocity_estimation_) {
-    return;
+    // Set motion model parameters
+    constexpr double q_stddev_x = 0.5;  // [m/s]
+    constexpr double q_stddev_y = 0.5;  // [m/s]
+
+    static_motion_model_.setMotionParams(q_stddev_x, q_stddev_y);
+
+    // Set initial state
+    using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+    auto pose_cov = object.pose_covariance;
+    if (!object.kinematics.has_position_covariance) {
+      constexpr double p0_stddev_x = 1.0;  // [m]
+      constexpr double p0_stddev_y = 1.0;  // [m]
+
+      const double p0_cov_x = p0_stddev_x * p0_stddev_x;
+      const double p0_cov_y = p0_stddev_y * p0_stddev_y;
+
+      pose_cov[XYZRPY_COV_IDX::X_X] = p0_cov_x;
+      pose_cov[XYZRPY_COV_IDX::Y_Y] = p0_cov_y;
+      pose_cov[XYZRPY_COV_IDX::X_Y] = 0.0;
+      pose_cov[XYZRPY_COV_IDX::Y_X] = 0.0;
+    }
+    static_motion_model_.initialize(time, object.pose.position.x, object.pose.position.y, pose_cov);
   }
 
   // Set motion model parameters
@@ -128,6 +149,8 @@ bool UnknownTracker::predict(const rclcpp::Time & time)
 {
   if (enable_velocity_estimation_) {
     return motion_model_.predictState(time);
+  } else {
+    return static_motion_model_.predictState(time);
   }
 
   return true;
@@ -139,13 +162,18 @@ bool UnknownTracker::measureWithPose(const types::DynamicObject & object)
 
   if (enable_velocity_estimation_) {
     // update motion model
-    {
-      const double x = object.pose.position.x;
-      const double y = object.pose.position.y;
+    const double x = object.pose.position.x;
+    const double y = object.pose.position.y;
 
-      is_updated = motion_model_.updateStatePose(x, y, object.pose_covariance);
-      motion_model_.limitStates();
-    }
+    is_updated = motion_model_.updateStatePose(x, y, object.pose_covariance);
+    motion_model_.limitStates();
+
+  } else {
+    // update static motion model
+    const double x = object.pose.position.x;
+    const double y = object.pose.position.y;
+
+    is_updated = static_motion_model_.updateStatePose(x, y, object.pose_covariance);
   }
 
   // position z
@@ -194,6 +222,16 @@ bool UnknownTracker::getTrackedObject(
     auto & twist = object.twist;
     auto & twist_cov = object.twist_covariance;
     if (!motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov)) {
+      RCLCPP_WARN(logger_, "UnknownTracker::getTrackedObject: Failed to get predicted state.");
+      return false;
+    }
+  } else {
+    // predict from static motion model
+    auto & pose = object.pose;
+    auto & pose_cov = object.pose_covariance;
+    auto & twist = object.twist;
+    auto & twist_cov = object.twist_covariance;
+    if (!static_motion_model_.getPredictedState(time, pose, pose_cov, twist, twist_cov)) {
       RCLCPP_WARN(logger_, "UnknownTracker::getTrackedObject: Failed to get predicted state.");
       return false;
     }
