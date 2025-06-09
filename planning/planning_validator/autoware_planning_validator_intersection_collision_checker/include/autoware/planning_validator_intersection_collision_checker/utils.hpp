@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__PLANNING_VALIDATOR_COLLISION_CHECKER__UTILS_HPP_
-#define AUTOWARE__PLANNING_VALIDATOR_COLLISION_CHECKER__UTILS_HPP_
+#ifndef AUTOWARE__PLANNING_VALIDATOR_INTERSECTION_COLLISION_CHECKER__UTILS_HPP_
+#define AUTOWARE__PLANNING_VALIDATOR_INTERSECTION_COLLISION_CHECKER__UTILS_HPP_
 
-#include "autoware/planning_validator_collision_checker/types.hpp"
+#include "autoware/planning_validator_intersection_collision_checker/types.hpp"
 
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -54,4 +54,4 @@ void set_left_turn_target_lanelets(
 
 }  // namespace autoware::planning_validator::collision_checker_utils
 
-#endif  // AUTOWARE__PLANNING_VALIDATOR_COLLISION_CHECKER__UTILS_HPP_
+#endif  // AUTOWARE__PLANNING_VALIDATOR_INTERSECTION_COLLISION_CHECKER__UTILS_HPP_

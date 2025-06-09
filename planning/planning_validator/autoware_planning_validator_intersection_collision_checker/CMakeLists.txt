@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(autoware_planning_validator_collision_checker)
+project(autoware_planning_validator_intersection_collision_checker)
 
 find_package(autoware_cmake REQUIRED)
 autoware_package()

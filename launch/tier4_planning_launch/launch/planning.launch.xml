@@ -9,7 +9,7 @@
   <arg name="planning_validator_param_path"/>
   <arg name="planning_validator_latency_checker_param_path"/>
   <arg name="planning_validator_trajectory_checker_param_path"/>
-  <arg name="planning_validator_collision_checker_param_path"/>
+  <arg name="planning_validator_intersection_collision_checker_param_path"/>
   <!-- Auto mode setting-->
   <arg name="enable_all_modules_auto_mode"/>
   <arg name="is_simulation"/>
@@ -42,7 +42,7 @@
         <arg name="planning_validator_param_path" value="$(var planning_validator_param_path)"/>
         <arg name="planning_validator_latency_checker_param_path" value="$(var planning_validator_latency_checker_param_path)"/>
         <arg name="planning_validator_trajectory_checker_param_path" value="$(var planning_validator_trajectory_checker_param_path)"/>
-        <arg name="planning_validator_collision_checker_param_path" value="$(var planning_validator_collision_checker_param_path)"/>
+        <arg name="planning_validator_intersection_collision_checker_param_path" value="$(var planning_validator_intersection_collision_checker_param_path)"/>
       </include>
     </group>
 

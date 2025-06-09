@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__PLANNING_VALIDATOR_COLLISION_CHECKER__TYPES_HPP_
-#define AUTOWARE__PLANNING_VALIDATOR_COLLISION_CHECKER__TYPES_HPP_
+#ifndef AUTOWARE__PLANNING_VALIDATOR_INTERSECTION_COLLISION_CHECKER__TYPES_HPP_
+#define AUTOWARE__PLANNING_VALIDATOR_INTERSECTION_COLLISION_CHECKER__TYPES_HPP_
 
 #include <autoware/route_handler/route_handler.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -140,4 +140,4 @@ struct CollisionCheckerParams
 
 }  // namespace autoware::planning_validator
 
-#endif  // AUTOWARE__PLANNING_VALIDATOR_COLLISION_CHECKER__TYPES_HPP_
+#endif  // AUTOWARE__PLANNING_VALIDATOR_INTERSECTION_COLLISION_CHECKER__TYPES_HPP_

@@ -3,7 +3,7 @@
     collision_checker:
       enable: true
       detection_range: 50.0 # [m]
-      ttc_threshold: 3.0 # [s]
+      ttc_threshold: 1.0 # [s]
       is_critical: false
       ego_deceleration: 1.0 # [m/s^2]
       min_time_horizon: 10.0 # [s]

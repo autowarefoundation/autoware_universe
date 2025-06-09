@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/planning_validator_collision_checker/collision_checker.hpp"
+#include "autoware/planning_validator_intersection_collision_checker/intersection_collision_checker.hpp"
 
-#include "autoware/planning_validator_collision_checker/utils.hpp"
+#include "autoware/planning_validator_intersection_collision_checker/utils.hpp"
 
 #include <autoware/signal_processing/lowpass_filter_1d.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
@@ -56,7 +56,7 @@ namespace autoware::planning_validator
 {
 using autoware_utils::get_or_declare_parameter;
 
-void CollisionChecker::init(
+void IntersectionCollisionChecker::init(
   rclcpp::Node & node, const std::string & name,
   const std::shared_ptr<PlanningValidatorContext> & context)
 {
@@ -71,7 +71,7 @@ void CollisionChecker::init(
   setup_diag();
 }
 
-void CollisionChecker::setup_parameters(rclcpp::Node & node)
+void IntersectionCollisionChecker::setup_parameters(rclcpp::Node & node)
 {
   params_.enable = get_or_declare_parameter<bool>(node, "collision_checker.enable");
   params_.is_critical = get_or_declare_parameter<bool>(node, "collision_checker.is_critical");
@@ -120,7 +120,7 @@ void CollisionChecker::setup_parameters(rclcpp::Node & node)
     get_or_declare_parameter<int>(node, "collision_checker.pointcloud.clustering.max_size");
 }
 
-void CollisionChecker::setup_diag()
+void IntersectionCollisionChecker::setup_diag()
 {
   context_->add_diag(
     "intersection_validation_collision_check",
@@ -128,7 +128,7 @@ void CollisionChecker::setup_diag()
     params_.is_critical);
 }
 
-void CollisionChecker::validate(bool & is_critical)
+void IntersectionCollisionChecker::validate(bool & is_critical)
 {
   context_->validation_status->is_valid_collision_check = true;
 
@@ -185,7 +185,7 @@ void CollisionChecker::validate(bool & is_critical)
   last_invalid_time_.reset();
 }
 
-EgoTrajectory CollisionChecker::get_ego_trajectory() const
+EgoTrajectory IntersectionCollisionChecker::get_ego_trajectory() const
 {
   EgoTrajectory ego_traj;
   static constexpr double min_traj_vel = 0.1;
@@ -213,7 +213,7 @@ EgoTrajectory CollisionChecker::get_ego_trajectory() const
   return ego_traj;
 }
 
-Direction CollisionChecker::get_lanelets(
+Direction IntersectionCollisionChecker::get_lanelets(
   CollisionCheckerLanelets & lanelets, const EgoTrajectory & ego_trajectory) const
 {
   const auto & ego_pose = context_->data->current_kinematics->pose.pose;
@@ -243,7 +243,7 @@ Direction CollisionChecker::get_lanelets(
   return turn_direction;
 }
 
-Direction CollisionChecker::get_turn_direction(
+Direction IntersectionCollisionChecker::get_turn_direction(
   const lanelet::ConstLanelets & trajectory_lanelets) const
 {
   for (const auto & lanelet : trajectory_lanelets) {
@@ -255,7 +255,7 @@ Direction CollisionChecker::get_turn_direction(
   return Direction::NONE;
 }
 
-void CollisionChecker::filter_pointcloud(
+void IntersectionCollisionChecker::filter_pointcloud(
   PointCloud2::ConstSharedPtr & input, PointCloud::Ptr & filtered_pointcloud) const
 {
   if (input->data.empty()) return;
@@ -306,7 +306,7 @@ void CollisionChecker::filter_pointcloud(
   }
 }
 
-bool CollisionChecker::check_collision(
+bool IntersectionCollisionChecker::check_collision(
   const TargetLanelets & target_lanelets, const PointCloud::Ptr & filtered_point_cloud,
   const rclcpp::Time & time_stamp)
 {
@@ -379,7 +379,7 @@ bool CollisionChecker::check_collision(
   return is_safe;
 }
 
-std::optional<PCDObject> CollisionChecker::get_pcd_object(
+std::optional<PCDObject> IntersectionCollisionChecker::get_pcd_object(
   const rclcpp::Time & time_stamp, const PointCloud::Ptr & filtered_point_cloud,
   const TargetLanelet & target_lanelet) const
 {
@@ -426,7 +426,7 @@ std::optional<PCDObject> CollisionChecker::get_pcd_object(
   return pcd_object;
 }
 
-void CollisionChecker::get_points_within(
+void IntersectionCollisionChecker::get_points_within(
   const PointCloud::Ptr & input, const BasicPolygon2d & polygon,
   const PointCloud::Ptr & output) const
 {
@@ -439,7 +439,7 @@ void CollisionChecker::get_points_within(
   }
 }
 
-void CollisionChecker::cluster_pointcloud(
+void IntersectionCollisionChecker::cluster_pointcloud(
   const PointCloud::Ptr & input, PointCloud::Ptr & output) const
 {
   if (input->empty()) return;
@@ -479,7 +479,8 @@ void CollisionChecker::cluster_pointcloud(
   }
 }
 
-void CollisionChecker::set_lanelets_debug_marker(const CollisionCheckerLanelets & lanelets) const
+void IntersectionCollisionChecker::set_lanelets_debug_marker(
+  const CollisionCheckerLanelets & lanelets) const
 {
   {  // trajectory lanelets
     lanelet::BasicPolygons2d ll_polygons;
@@ -520,4 +521,5 @@ void CollisionChecker::set_lanelets_debug_marker(const CollisionCheckerLanelets 
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::planning_validator::CollisionChecker, autoware::planning_validator::PluginInterface)
+  autoware::planning_validator::IntersectionCollisionChecker,
+  autoware::planning_validator::PluginInterface)

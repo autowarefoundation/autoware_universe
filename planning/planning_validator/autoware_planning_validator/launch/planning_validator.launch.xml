@@ -1,7 +1,7 @@
 <launch>
   <arg name="launch_latency_checker" default="true"/>
   <arg name="launch_trajectory_checker" default="true"/>
-  <arg name="launch_collision_checker" default="true"/>
+  <arg name="launch_intersection_collision_checker" default="true"/>
   <arg name="launch_modules_list_end" default="&quot;&quot;]"/>
   <arg name="planning_validator_launch_modules" default="["/>
   <let
@@ -16,15 +16,15 @@
   />
   <let
     name="planning_validator_launch_modules"
-    value="$(eval &quot;'$(var planning_validator_launch_modules)' + 'autoware::planning_validator::CollisionChecker, '&quot;)"
-    if="$(var launch_collision_checker)"
+    value="$(eval &quot;'$(var planning_validator_launch_modules)' + 'autoware::planning_validator::IntersectionCollisionChecker, '&quot;)"
+    if="$(var launch_intersection_collision_checker)"
   />
   <let name="planning_validator_launch_modules" value="$(eval &quot;'$(var planning_validator_launch_modules)' + '$(var launch_modules_list_end)'&quot;)"/>
 
   <arg name="planning_validator_param_path" default="$(find-pkg-share autoware_planning_validator)/config/planning_validator.param.yaml"/>
   <arg name="planning_validator_latency_checker_param_path" default="$(find-pkg-share autoware_planning_validator_latency_checker)/config/latency_checker.param.yaml"/>
   <arg name="planning_validator_trajectory_checker_param_path" default="$(find-pkg-share autoware_planning_validator_trajectory_checker)/config/trajectory_checker.param.yaml"/>
-  <arg name="planning_validator_collision_checker_param_path" default="$(find-pkg-share autoware_planning_validator_trajectory_checker)/config/collision_checker.param.yaml"/>
+  <arg name="planning_validator_intersection_collision_checker_param_path" default="$(find-pkg-share autoware_planning_validator_trajectory_checker)/config/intersection_collision_checker.param.yaml"/>
   <arg name="input_trajectory" default="/planning/scenario_planning/velocity_smoother/trajectory"/>
   <arg name="input_pointcloud" default="/perception/obstacle_segmentation/pointcloud"/>
   <arg name="input_route_topic_name" default="/planning/mission_planning/route"/>
@@ -50,7 +50,7 @@
         <param from="$(var planning_validator_param_path)"/>
         <param from="$(var planning_validator_latency_checker_param_path)"/>
         <param from="$(var planning_validator_trajectory_checker_param_path)"/>
-        <param from="$(var planning_validator_collision_checker_param_path)"/>
+        <param from="$(var planning_validator_intersection_collision_checker_param_path)"/>
         <extra_arg name="use_intra_process_comms" value="false"/>
       </composable_node>
     </node_container>

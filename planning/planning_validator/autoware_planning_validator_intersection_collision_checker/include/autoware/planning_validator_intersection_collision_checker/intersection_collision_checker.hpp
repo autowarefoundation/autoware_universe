@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__PLANNING_VALIDATOR_COLLISION_CHECKER__COLLISION_CHECKER_HPP_
-#define AUTOWARE__PLANNING_VALIDATOR_COLLISION_CHECKER__COLLISION_CHECKER_HPP_
+#ifndef AUTOWARE__PLANNING_VALIDATOR_INTERSECTION_COLLISION_CHECKER__INTERSECTION_COLLISION_CHECKER_HPP_  // NOLINT
+#define AUTOWARE__PLANNING_VALIDATOR_INTERSECTION_COLLISION_CHECKER__INTERSECTION_COLLISION_CHECKER_HPP_  // NOLINT
 
-#include "autoware/planning_validator_collision_checker/types.hpp"
+#include "autoware/planning_validator_intersection_collision_checker/types.hpp"
 
 #include <autoware/planning_validator/plugin_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -43,7 +43,7 @@ namespace autoware::planning_validator
 using sensor_msgs::msg::PointCloud2;
 using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
 
-class CollisionChecker : public PluginInterface
+class IntersectionCollisionChecker : public PluginInterface
 {
 public:
   void init(
@@ -90,4 +90,6 @@ private:
 
 }  // namespace autoware::planning_validator
 
-#endif  // AUTOWARE__PLANNING_VALIDATOR_COLLISION_CHECKER__COLLISION_CHECKER_HPP_
+// clang-format off
+#endif  // AUTOWARE__PLANNING_VALIDATOR_INTERSECTION_COLLISION_CHECKER__INTERSECTION_COLLISION_CHECKER_HPP_  // NOLINT
+// clang-format on
