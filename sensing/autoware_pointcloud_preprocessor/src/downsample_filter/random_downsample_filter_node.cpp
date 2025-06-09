@@ -63,7 +63,7 @@ RandomDownsampleFilterComponent::RandomDownsampleFilterComponent(
 
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&RandomDownsampleFilterComponent::paramCallback, this, _1));
+    std::bind(&RandomDownsampleFilterComponent::param_callback, this, _1));
 }
 
 void RandomDownsampleFilterComponent::filter(
@@ -87,7 +87,7 @@ void RandomDownsampleFilterComponent::filter(
   output.header = input->header;
 }
 
-rcl_interfaces::msg::SetParametersResult RandomDownsampleFilterComponent::paramCallback(
+rcl_interfaces::msg::SetParametersResult RandomDownsampleFilterComponent::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);

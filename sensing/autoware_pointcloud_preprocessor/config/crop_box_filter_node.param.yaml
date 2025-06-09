@@ -7,3 +7,4 @@
     max_y: 1.0
     max_z: 1.0
     negative: false
+    processing_time_threshold_sec: 0.01

@@ -63,7 +63,7 @@ PassThroughFilterComponent::PassThroughFilterComponent(const rclcpp::NodeOptions
 {
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&PassThroughFilterComponent::paramCallback, this, _1));
+    std::bind(&PassThroughFilterComponent::param_callback, this, _1));
 }
 
 void PassThroughFilterComponent::filter(
@@ -76,7 +76,7 @@ void PassThroughFilterComponent::filter(
   output = *input;
 }
 
-rcl_interfaces::msg::SetParametersResult PassThroughFilterComponent::paramCallback(
+rcl_interfaces::msg::SetParametersResult PassThroughFilterComponent::param_callback(
   [[maybe_unused]] const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/pointcloud_preprocessor/concatenate_data/utils.hpp"
+#pragma once
 
 #include <iomanip>
 #include <sstream>
@@ -21,7 +21,7 @@
 namespace autoware::pointcloud_preprocessor
 {
 
-std::string format_timestamp(double timestamp)
+inline std::string format_timestamp(double timestamp)
 {
   std::ostringstream oss;
   oss << std::fixed << std::setprecision(9) << timestamp;

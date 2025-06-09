@@ -71,6 +71,11 @@
           "description": "The threshold value for distinguishing noise from valid points in the frequency image",
           "default": "2",
           "minimum": 0
+        },
+        "processing_time_threshold_sec": {
+          "type": "number",
+          "description": "Threshold in seconds. If the processing time of the node exceeds this value, a diagnostic warning will be issued.",
+          "default": 0.01
         }
       },
       "required": [
@@ -84,7 +89,8 @@
         "max_distance",
         "vertical_bins",
         "horizontal_bins",
-        "noise_threshold"
+        "noise_threshold",
+        "processing_time_threshold_sec"
       ],
       "additionalProperties": false
     }
