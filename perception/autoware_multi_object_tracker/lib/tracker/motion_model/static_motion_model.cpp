@@ -15,6 +15,7 @@
 #define EIGEN_MPL2_ONLY
 
 #include "autoware/multi_object_tracker/tracker/motion_model/static_motion_model.hpp"
+
 #include "autoware/multi_object_tracker/tracker/motion_model/motion_model_base.hpp"
 
 #include <Eigen/Core>
@@ -104,7 +105,7 @@ bool StaticMotionModel::adjustPosition(const double & x, const double & y)
 
 bool StaticMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) const
 {
-  /*  Motion model: Constant velocity model
+  /*  Motion model: static
    *
    * x_{k+1}   = x_k
    * y_{k+1}   = y_k

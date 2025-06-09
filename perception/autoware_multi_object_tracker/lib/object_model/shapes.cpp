@@ -95,25 +95,27 @@ bool convertConvexHullToBoundingBox(
   // look for bounding box boundary
   float max_x = -std::numeric_limits<float>::infinity();
   float max_y = -std::numeric_limits<float>::infinity();
+  float max_z = -std::numeric_limits<float>::infinity();
   float min_x = std::numeric_limits<float>::infinity();
   float min_y = std::numeric_limits<float>::infinity();
-  float max_z = -std::numeric_limits<float>::infinity();
   float min_z = std::numeric_limits<float>::infinity();
 
   for (const auto & point : input_object.shape.footprint.points) {
     max_x = std::max(max_x, point.x);
     max_y = std::max(max_y, point.y);
+    max_z = std::max(max_z, point.z);
     min_x = std::min(min_x, point.x);
     min_y = std::min(min_y, point.y);
-    max_z = std::max(max_z, point.z);
     min_z = std::min(min_z, point.z);
   }
 
-  // calc new center
+  // calc new center in local coordinates
+  const Eigen::Vector2d new_local_center{(max_x + min_x) / 2.0, (max_y + min_y) / 2.0};
+
+  // transform to global for the object's position
   const Eigen::Vector2d center{input_object.pose.position.x, input_object.pose.position.y};
   const auto yaw = tf2::getYaw(input_object.pose.orientation);
   const Eigen::Matrix2d R_inv = Eigen::Rotation2Dd(-yaw).toRotationMatrix();
-  const Eigen::Vector2d new_local_center{(max_x + min_x) / 2.0, (max_y + min_y) / 2.0};
   const Eigen::Vector2d new_center = center + R_inv.transpose() * new_local_center;
 
   // set output parameters
@@ -125,6 +127,12 @@ bool convertConvexHullToBoundingBox(
   output_object.shape.dimensions.x = max_x - min_x;
   output_object.shape.dimensions.y = max_y - min_y;
   output_object.shape.dimensions.z = max_z - min_z;
+
+  // adjust footprint points in local coordinates
+  for (auto & point : output_object.shape.footprint.points) {
+    point.x -= new_local_center.x();
+    point.y -= new_local_center.y();
+  }
 
   return true;
 }
