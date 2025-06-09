@@ -120,9 +120,8 @@ UnknownTracker::UnknownTracker(
     }
   } else {
     // Set motion model parameters
-    constexpr double q_stddev_x = 1.0;  // [m/s]
-    constexpr double q_stddev_y = 1.0;  // [m/s]
-
+    constexpr double q_stddev_x = 2.5;  // [m/s]
+    constexpr double q_stddev_y = q_stddev_x;
     static_motion_model_.setMotionParams(q_stddev_x, q_stddev_y);
 
     // Set initial state
@@ -231,7 +230,6 @@ bool UnknownTracker::getTrackedObject(
   } else {
     // predict from static motion model
     auto & pose = object.pose;
-    // geometry_msgs::msg::Pose pose;
     auto & pose_cov = object.pose_covariance;
     auto & twist = object.twist;
     auto & twist_cov = object.twist_covariance;
