@@ -86,6 +86,8 @@ private:
 
   std::unique_ptr<DataAssociation> association_;
 
+  mutable rclcpp::Time last_prune_time_;
+
   std::list<std::shared_ptr<Tracker>> list_tracker_;
   void removeOldTracker(const rclcpp::Time & time);
   void mergeOverlappedTracker(const rclcpp::Time & time);
