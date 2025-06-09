@@ -48,11 +48,11 @@ void print_values(int i, const T1 & name, const T2 & a, const T3 &... b)
 // global params
 const std::vector<double> reference_speed_points = {5., 10., 15., 20.};
 const std::vector<double> steer_lim = {0.5, 0.3, 0.2, 0.1};
-const std::vector<double> steer_rate_lim = {0.5, 0.3, 0.2, 0.1};
-const std::vector<double> lon_acc_lim = {1.5, 1.0, 0.8, 0.6};
-const std::vector<double> lon_jerk_lim = {1.4, 0.9, 0.7, 0.5};
-const std::vector<double> lat_acc_lim = {2.0, 1.6, 1.2, 0.8};
-const std::vector<double> lat_jerk_lim = {1.7, 1.3, 0.9, 0.6};
+const std::vector<double> cmd_steer_rate_lim = {0.5, 0.3, 0.2, 0.1};
+const std::vector<double> vel_diff_lim_from_lon_acc = {1.5, 1.0, 0.8, 0.6};
+const std::vector<double> acc_diff_lim_from_lon_jerk = {1.4, 0.9, 0.7, 0.5};
+const std::vector<double> steer_lim_from_lat_acc = {2.0, 1.6, 1.2, 0.8};
+const std::vector<double> steer_lim_from_lat_jerk = {1.7, 1.3, 0.9, 0.6};
 const std::vector<double> actual_steer_diff_lim = {0.5, 0.4, 0.2, 0.1};
 const double wheelbase = 2.89;
 
@@ -291,10 +291,14 @@ public:
     avg_lat_acc /= denominator;
     avg_lat_jerk /= denominator;
 
-    const auto max_lon_acc_lim = *std::max_element(lon_acc_lim.begin(), lon_acc_lim.end());
-    const auto max_lon_jerk_lim = *std::max_element(lon_jerk_lim.begin(), lon_jerk_lim.end());
-    const auto max_lat_acc_lim = *std::max_element(lat_acc_lim.begin(), lat_acc_lim.end());
-    const auto max_lat_jerk_lim = *std::max_element(lat_jerk_lim.begin(), lat_jerk_lim.end());
+    const auto max_lon_acc_lim =
+      *std::max_element(vel_diff_lim_from_lon_acc.begin(), vel_diff_lim_from_lon_acc.end());
+    const auto max_lon_jerk_lim =
+      *std::max_element(acc_diff_lim_from_lon_jerk.begin(), acc_diff_lim_from_lon_jerk.end());
+    const auto max_lat_acc_lim =
+      *std::max_element(steer_lim_from_lat_acc.begin(), steer_lim_from_lat_acc.end());
+    const auto max_lat_jerk_lim =
+      *std::max_element(steer_lim_from_lat_jerk.begin(), steer_lim_from_lat_jerk.end());
 
     // This test is designed to verify that the filter is applied correctly. However, if topic
     // communication is delayed, the allowable range of change in the command values between the
@@ -393,13 +397,12 @@ std::shared_ptr<VehicleCmdGate> generateNode()
 
   node_options.append_parameter_override("wheel_base", wheelbase);
   override("nominal.reference_speed_points", reference_speed_points);
-  override("nominal.reference_speed_points", reference_speed_points);
   override("nominal.steer_lim", steer_lim);
-  override("nominal.steer_rate_lim", steer_rate_lim);
-  override("nominal.lon_acc_lim", lon_acc_lim);
-  override("nominal.lon_jerk_lim", lon_jerk_lim);
-  override("nominal.lat_acc_lim", lat_acc_lim);
-  override("nominal.lat_jerk_lim", lat_jerk_lim);
+  override("nominal.cmd_steer_rate_lim", cmd_steer_rate_lim);
+  override("nominal.vel_diff_lim_from_lon_acc", vel_diff_lim_from_lon_acc);
+  override("nominal.acc_diff_lim_from_lon_jerk", acc_diff_lim_from_lon_jerk);
+  override("nominal.steer_lim_from_lat_acc", steer_lim_from_lat_acc);
+  override("nominal.steer_lim_from_lat_jerk", steer_lim_from_lat_jerk);
   override("nominal.actual_steer_diff_lim", actual_steer_diff_lim);
 
   return std::make_shared<VehicleCmdGate>(node_options);

@@ -39,11 +39,11 @@ void setFilterParams(
   p.wheel_base = wheelbase;
   p.reference_speed_points = speed_points;
   p.steer_lim = steer_lim;
-  p.steer_rate_lim = steer_rate_lim;
-  p.lat_acc_lim = lat_a;
-  p.lat_jerk_lim = lat_j;
-  p.lon_acc_lim = a;
-  p.lon_jerk_lim = j;
+  p.cmd_steer_rate_lim = steer_rate_lim;
+  p.steer_lim_from_lat_acc = lat_a;
+  p.steer_lim_from_lat_jerk = lat_j;
+  p.vel_diff_lim_from_lon_acc = a;
+  p.acc_diff_lim_from_lon_jerk = j;
   p.actual_steer_diff_lim = steer_diff;
 
   f.setParam(p);
@@ -282,11 +282,11 @@ TEST(VehicleCmdFilter, VehicleCmdFilterInterpolate)
   p.vel_lim = 20.0;
   p.reference_speed_points = std::vector<double>{2.0, 4.0, 10.0};
   p.steer_lim = std::vector<double>{0.1, 0.2, 0.3};
-  p.steer_rate_lim = std::vector<double>{0.2, 0.1, 0.05};
-  p.lon_acc_lim = std::vector<double>{0.3, 0.4, 0.5};
-  p.lon_jerk_lim = std::vector<double>{0.4, 0.4, 0.7};
-  p.lat_acc_lim = std::vector<double>{0.1, 0.2, 0.3};
-  p.lat_jerk_lim = std::vector<double>{0.9, 0.7, 0.1};
+  p.cmd_steer_rate_lim = std::vector<double>{0.2, 0.1, 0.05};
+  p.vel_diff_lim_from_lon_acc = std::vector<double>{0.3, 0.4, 0.5};
+  p.acc_diff_lim_from_lon_jerk = std::vector<double>{0.4, 0.4, 0.7};
+  p.steer_lim_from_lat_acc = std::vector<double>{0.1, 0.2, 0.3};
+  p.steer_lim_from_lat_jerk = std::vector<double>{0.9, 0.7, 0.1};
   p.actual_steer_diff_lim = std::vector<double>{0.1, 0.3, 0.2};
   filter.setParam(p);
 
@@ -383,7 +383,7 @@ TEST(VehicleCmdFilter, VehicleCmdFilterInterpolate)
 
   // steer angle rate lim
   // p.reference_speed_points = std::vector<double>{2.0, 4.0, 10.0};
-  // p.steer_rate_lim = std::vector<double>{0.2, 0.1, 0.05};
+  // p.cmd_steer_rate_lim = std::vector<double>{0.2, 0.1, 0.05};
   {
     const auto calcSteerRateFromAngle = [&](const auto & cmd) {
       return (cmd.steering_tire_angle - 0.0) / DT;

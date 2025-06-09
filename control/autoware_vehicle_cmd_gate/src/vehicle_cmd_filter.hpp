@@ -80,13 +80,13 @@ private:
   static double limitDiff(const double curr, const double prev, const double diff_lim);
 
   double interpolateFromSpeed(const LimitArray & limits) const;
-  double getLonAccLim() const;
-  double getLonJerkLim() const;
-  double getLatAccLim() const;
-  double getLatJerkLim() const;
+  double getVelDiffLimFromLonAcc() const;
+  double getAccDiffLimFromLonJerk() const;
+  double getSteerLimFromLatAcc() const;
+  double getSteerLimFromLatJerk() const;
   double getSteerLim() const;
-  double getSteerRateLim() const;
-  double getSteerDiffLim() const;
+  double getCmdSteerRateLim() const;
+  double getActualSteerDiffLim() const;
 };
 }  // namespace autoware::vehicle_cmd_gate
 
