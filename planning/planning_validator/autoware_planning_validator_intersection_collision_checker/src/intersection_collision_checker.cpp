@@ -23,6 +23,7 @@
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/transform/transforms.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include <boost/geometry/algorithms/buffer.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
@@ -38,12 +39,6 @@
 #include <lanelet2_core/geometry/Polygon.h>
 #include <lanelet2_core/primitives/BoundingBox.h>
 #include <lanelet2_routing/RoutingGraph.h>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#else
-#include <tf2_eigen/tf2_eigen.hpp>
-#endif
 
 #include <algorithm>
 #include <limits>
@@ -145,9 +140,6 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
     return skip_validation("route handler is not ready, skipping collision check.");
   }
 
-  PointCloud::Ptr filtered_pointcloud(new PointCloud);
-  filter_pointcloud(context_->data->obstacle_pointcloud, filtered_pointcloud);
-
   const auto ego_trajectory = get_ego_trajectory();
 
   CollisionCheckerLanelets lanelets;
@@ -155,7 +147,7 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
 
   set_lanelets_debug_marker(lanelets);
 
-  if (turn_direction == Direction::NONE || filtered_pointcloud->empty()) return;
+  if (turn_direction == Direction::NONE) return;
 
   if (lanelets.trajectory_lanelets.empty()) {
     return skip_validation("failed to get trajectory lanelets, skipping collision check.");
@@ -164,6 +156,10 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
   if (lanelets.target_lanelets.empty()) {
     return skip_validation("failed to get target lanelets, skipping collision check.");
   }
+
+  PointCloud::Ptr filtered_pointcloud(new PointCloud);
+  filter_pointcloud(context_->data->obstacle_pointcloud, filtered_pointcloud);
+  if (filtered_pointcloud->empty()) return;
 
   context_->validation_status->is_valid_collision_check = check_collision(
     lanelets.target_lanelets, filtered_pointcloud,
@@ -367,9 +363,10 @@ bool IntersectionCollisionChecker::check_collision(
     }
   }
 
+  static constexpr double max_history_time = 1.0;
   auto itr = history_.begin();
   while (itr != history_.end()) {
-    if ((clock_->now() - itr->second.last_update_time).seconds() > 1.0) {
+    if ((clock_->now() - itr->second.last_update_time).seconds() > max_history_time) {
       itr = history_.erase(itr);
     } else {
       itr++;
@@ -458,12 +455,19 @@ void IntersectionCollisionChecker::cluster_pointcloud(
     return cluster_idx;
   });
 
+  const auto ego_base_z = context_->data->current_kinematics->pose.pose.position.z;
+  auto above_height_threshold = [&](const double z) {
+    const auto rel_height = z - ego_base_z;
+    return rel_height > params_.pointcloud.clustering.min_height;
+  };
+
   for (const auto & indices : cluster_indices) {
     PointCloud::Ptr cluster(new PointCloud);
     bool cluster_above_height_threshold{false};
     for (const auto & index : indices.indices) {
       const auto & p = (*input)[index];
-      cluster_above_height_threshold |= (p.z > params_.pointcloud.clustering.min_height);
+
+      cluster_above_height_threshold |= above_height_threshold(p.z);
       cluster->push_back(p);
     }
     if (!cluster_above_height_threshold) continue;
