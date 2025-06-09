@@ -133,6 +133,9 @@ struct GoalPlannerParameters
   // hysteresis parameter
   double hysteresis_factor_expand_rate{0.0};
 
+  // path decision state controller
+  double check_collision_duration{1.0};  // Duration to check collision before deciding path
+
   // path safety checker
   utils::path_safety_checker::EgoPredictedPathParams ego_predicted_path_params{};
   utils::path_safety_checker::ObjectsFilteringParams objects_filtering_params{};

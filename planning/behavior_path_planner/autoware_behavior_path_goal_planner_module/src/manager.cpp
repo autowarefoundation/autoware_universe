@@ -422,6 +422,12 @@ GoalPlannerParameters GoalPlannerModuleManager::initGoalPlannerParameters(
     p.print_debug_info = node->declare_parameter<bool>(ns + "print_debug_info");
   }
 
+  // path decision state controller
+  {
+    const std::string ns = base_ns + "path_decision_state_controller.";
+    p.check_collision_duration = node->declare_parameter<double>(ns + "check_collision_duration");
+  }
+
   // validation of parameters
   if (p.shift_sampling_num < 1) {
     RCLCPP_FATAL_STREAM(
@@ -853,6 +859,12 @@ void GoalPlannerModuleManager::updateModuleParams(
   {
     const std::string ns = base_ns + "debug.";
     update_param<bool>(parameters, ns + "print_debug_info", p->print_debug_info);
+  }
+
+  // path decision state controller
+  {
+    const std::string ns = base_ns + "path_decision_state_controller.";
+    update_param<double>(parameters, ns + "check_collision_duration", p->check_collision_duration);
   }
 
   std::for_each(observers_.begin(), observers_.end(), [&p](const auto & observer) {
