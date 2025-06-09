@@ -33,12 +33,12 @@ struct VehicleCmdFilterParam
   double wheel_base;
   double vel_lim;
   LimitArray reference_speed_points;
-  LimitArray lon_acc_lim;
-  LimitArray lon_jerk_lim;
-  LimitArray lat_acc_lim;
-  LimitArray lat_jerk_lim;
+  LimitArray vel_diff_lim_from_lon_acc;
+  LimitArray acc_diff_lim_from_lon_jerk;
+  LimitArray steer_lim_from_lat_acc;
+  LimitArray steer_lim_from_lat_jerk;
   LimitArray steer_lim;
-  LimitArray steer_rate_lim;
+  LimitArray cmd_steer_rate_lim;
   LimitArray actual_steer_diff_lim;
 };
 class VehicleCmdFilter
