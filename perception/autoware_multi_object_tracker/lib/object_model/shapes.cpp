@@ -17,7 +17,6 @@
 #include <Eigen/Geometry>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
-#include <cmath>
 
 #include <autoware_perception_msgs/msg/shape.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -27,6 +26,7 @@
 #include <tf2/utils.h>
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <string>
 #include <vector>

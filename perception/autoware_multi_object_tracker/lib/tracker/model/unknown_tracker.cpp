@@ -21,10 +21,11 @@
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/ros/msg_covariance.hpp>
-#include <cmath>
 
 #include <bits/stdc++.h>
 #include <tf2/utils.h>
+
+#include <cmath>
 
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -221,13 +222,15 @@ bool UnknownTracker::getTrackedObject(
 
   if (enable_velocity_estimation_) {
     // predict from motion model
-    if (!motion_model_.getPredictedState(time, object.pose, object.pose_covariance, object.twist, object.twist_covariance)) {
+    if (!motion_model_.getPredictedState(
+          time, object.pose, object.pose_covariance, object.twist, object.twist_covariance)) {
       RCLCPP_WARN(logger_, "UnknownTracker::getTrackedObject: Failed to get predicted state.");
       return false;
     }
   } else {
     // predict from static motion model
-    if (!static_motion_model_.getPredictedState(time, object.pose, object.pose_covariance, object.twist, object.twist_covariance)) {
+    if (!static_motion_model_.getPredictedState(
+          time, object.pose, object.pose_covariance, object.twist, object.twist_covariance)) {
       RCLCPP_WARN(logger_, "UnknownTracker::getTrackedObject: Failed to get predicted state.");
       return false;
     }
