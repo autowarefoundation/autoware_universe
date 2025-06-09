@@ -17,9 +17,14 @@
 
 #include <rclcpp/qos.hpp>
 
+#include <autoware_adapi_v1_msgs/msg/acceleration_command.hpp>
 #include <autoware_adapi_v1_msgs/msg/door_status_array.hpp>
+#include <autoware_adapi_v1_msgs/msg/pedals_command.hpp>
+#include <autoware_adapi_v1_msgs/msg/steering_command.hpp>
 #include <autoware_adapi_v1_msgs/msg/vehicle_kinematics.hpp>
+#include <autoware_adapi_v1_msgs/msg/vehicle_metrics.hpp>
 #include <autoware_adapi_v1_msgs/msg/vehicle_status.hpp>
+#include <autoware_adapi_v1_msgs/msg/velocity_command.hpp>
 #include <autoware_adapi_v1_msgs/srv/get_door_layout.hpp>
 #include <autoware_adapi_v1_msgs/srv/get_vehicle_dimensions.hpp>
 #include <autoware_adapi_v1_msgs/srv/set_door_command.hpp>
@@ -42,6 +47,15 @@ struct VehicleStatus
   static constexpr char name[] = "/api/vehicle/status";
   static constexpr size_t depth = 1;
   static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT;
+  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_VOLATILE;
+};
+
+struct VehicleMetrics
+{
+  using Message = autoware_adapi_v1_msgs::msg::VehicleMetrics;
+  static constexpr char name[] = "/api/vehicle/metrics";
+  static constexpr size_t depth = 1;
+  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
   static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_VOLATILE;
 };
 
@@ -70,6 +84,42 @@ struct DoorStatus
   static constexpr size_t depth = 1;
   static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
   static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;
+};
+
+struct PedalsCommand
+{
+  using Message = autoware_adapi_v1_msgs::msg::PedalsCommand;
+  static constexpr char name[] = "/api/vehicle/command/pedals";
+  static constexpr size_t depth = 1;
+  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT;
+  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_VOLATILE;
+};
+
+struct AccelerationCommand
+{
+  using Message = autoware_adapi_v1_msgs::msg::AccelerationCommand;
+  static constexpr char name[] = "/api/vehicle/command/acceleration";
+  static constexpr size_t depth = 1;
+  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT;
+  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_VOLATILE;
+};
+
+struct VelocityCommand
+{
+  using Message = autoware_adapi_v1_msgs::msg::VelocityCommand;
+  static constexpr char name[] = "/api/vehicle/command/velocity";
+  static constexpr size_t depth = 1;
+  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT;
+  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_VOLATILE;
+};
+
+struct SteeringCommand
+{
+  using Message = autoware_adapi_v1_msgs::msg::SteeringCommand;
+  static constexpr char name[] = "/api/vehicle/command/steering";
+  static constexpr size_t depth = 1;
+  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT;
+  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_VOLATILE;
 };
 
 }  // namespace autoware::adapi_specs::vehicle

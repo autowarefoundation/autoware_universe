@@ -67,7 +67,10 @@ void LoggingNode::on_timer()
 
     // show on terminal
     if (enable_terminal_log_ && error_graph_text != prev_error_graph_text_) {
-      RCLCPP_WARN_STREAM(get_logger(), prefix_message << std::endl << error_graph_text);
+      RCLCPP_WARN_STREAM_THROTTLE(
+        get_logger(), *get_clock(), 3000 /* ms */,
+        prefix_message << std::endl
+                       << error_graph_text);
     }
 
     // publish debug topic
