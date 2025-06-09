@@ -276,13 +276,16 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
   boost::geometry::index::rtree<Value, boost::geometry::index::quadratic<16>> rtree;
 
   // Insert valid trackers into R-tree
+  std::vector<ValueType> rtree_points;
+  rtree_points.reserve(valid_trackers.size());
   for (size_t i = 0; i < valid_trackers.size(); ++i) {
     const auto & data = valid_trackers[i];
     if (!data.is_valid) continue;
 
     Point p(data.object.pose.position.x, data.object.pose.position.y);
-    rtree.insert(std::make_pair(p, i));
+    rtree_points.push_back(std::make_pair(p, i));
   }
+  rtree.insert(rtree_points.begin(), rtree_points.end());
 
   // Vector to store indices of trackers to remove
   std::vector<size_t> to_remove;
