@@ -22,6 +22,7 @@
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <magic_enum.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -1021,6 +1022,83 @@ bool is_goal_reachable_on_path(
   // if goal is not in current_lanes and current_shoulder_lanes, do not execute goal_planner,
   // because goal arc coordinates cannot be calculated.
   return goal_is_in_current_segment_lanes || goal_is_in_current_shoulder_lanes;
+}
+
+bool hasPreviousModulePathShapeChanged(
+  const BehaviorModuleOutput & upstream_module_output,
+  const BehaviorModuleOutput & last_upstream_module_output)
+{
+  // Calculate the lateral distance between each point of the current path and the nearest point of
+  // the last path
+  constexpr double LATERAL_DEVIATION_THRESH = 0.1;
+  for (const auto & p : upstream_module_output.path.points) {
+    const size_t nearest_seg_idx = autoware::motion_utils::findNearestSegmentIndex(
+      last_upstream_module_output.path.points, p.point.pose.position);
+    const auto seg_front = last_upstream_module_output.path.points.at(nearest_seg_idx);
+    const auto seg_back = last_upstream_module_output.path.points.at(nearest_seg_idx + 1);
+    // Check if the target point is within the segment
+    const Eigen::Vector3d segment_vec{
+      seg_back.point.pose.position.x - seg_front.point.pose.position.x,
+      seg_back.point.pose.position.y - seg_front.point.pose.position.y, 0.0};
+    const Eigen::Vector3d target_vec{
+      p.point.pose.position.x - seg_front.point.pose.position.x,
+      p.point.pose.position.y - seg_front.point.pose.position.y, 0.0};
+    const double dot_product = segment_vec.x() * target_vec.x() + segment_vec.y() * target_vec.y();
+    const double segment_length_squared =
+      segment_vec.x() * segment_vec.x() + segment_vec.y() * segment_vec.y();
+    if (dot_product < 0 || dot_product > segment_length_squared) {
+      // p.point.pose.position is not within the segment, skip lateral distance check
+      continue;
+    }
+    const double lateral_distance = std::abs(autoware::motion_utils::calcLateralOffset(
+      last_upstream_module_output.path.points, p.point.pose.position, nearest_seg_idx));
+    if (lateral_distance > LATERAL_DEVIATION_THRESH) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool hasDeviatedFromPath(
+  const Point & ego_position, const BehaviorModuleOutput & upstream_module_output)
+{
+  constexpr double LATERAL_DEVIATION_THRESH = 0.1;
+  return std::abs(autoware::motion_utils::calcLateralOffset(
+           upstream_module_output.path.points, ego_position)) > LATERAL_DEVIATION_THRESH;
+}
+
+bool has_previous_module_path_velocity_changed(
+  const BehaviorModuleOutput & upstream_module_output,
+  const BehaviorModuleOutput & last_upstream_module_output)
+{
+  static constexpr double ZERO_VELOCITY = 0.0;
+  static constexpr double STOPLINE_POSITION_THRESH = 0.1;
+
+  auto find_stopline =
+    [&](const BehaviorModuleOutput & module_output) -> std::optional<geometry_msgs::msg::Point> {
+    for (const auto & p : module_output.path.points) {
+      if (std::fabs(p.point.longitudinal_velocity_mps) == ZERO_VELOCITY) {
+        return p.point.pose.position;
+      }
+    }
+    return std::nullopt;
+  };
+  const auto has_stopline_now = find_stopline(upstream_module_output);
+  const auto had_stopline_last = find_stopline(last_upstream_module_output);
+  if (has_stopline_now) {
+    if (!had_stopline_last) {
+      return true;
+    }
+    if (
+      std::fabs(autoware_utils_geometry::calc_distance3d(*has_stopline_now, *had_stopline_last)) >
+      STOPLINE_POSITION_THRESH) {
+      // stopline position have changed
+      return true;
+    }
+    return false;
+  }
+  // !has_stopline_now
+  return had_stopline_last.has_value();
 }
 
 }  // namespace autoware::behavior_path_planner::goal_planner_utils
