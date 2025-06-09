@@ -25,6 +25,7 @@
 #include <boost/geometry/strategies/cartesian/buffer_point_square.hpp>
 
 #include <algorithm>
+#include <utility>
 
 namespace autoware::planning_validator::collision_checker_utils
 {
@@ -77,13 +78,13 @@ void set_trajectory_lanelets(
   }
 }
 
-std::optional<size_t> get_overlap_index(
+std::optional<std::pair<size_t, size_t>> get_overlap_index(
   const lanelet::ConstLanelet & ll, const TrajectoryPoints & trajectory_points,
   const autoware_utils::LineString2d & trajectory_ls)
 {
   BasicLineString2d overlap_line;
   boost::geometry::intersection(ll.polygon2d().basicPolygon(), trajectory_ls, overlap_line);
-  if (overlap_line.size() <= 1) return {};
+  if (overlap_line.empty()) return {};
 
   const auto nearest_idx_front = autoware::motion_utils::findNearestIndex(
     trajectory_points,
@@ -92,16 +93,18 @@ std::optional<size_t> get_overlap_index(
     trajectory_points,
     geometry_msgs::msg::Point().set__x(overlap_line.back()[0]).set__y(overlap_line.back()[1]));
 
-  return std::min(nearest_idx_front, nearest_idx_back);
+  if (nearest_idx_back > nearest_idx_front) return {{nearest_idx_front, nearest_idx_back}};
+
+  return {{nearest_idx_back, nearest_idx_front}};
 }
 
 void set_right_turn_target_lanelets(
-  const TrajectoryPoints & trajectory_points, const RouteHandler & route_handler,
+  const EgoTrajectory & ego_traj, const RouteHandler & route_handler,
   const CollisionCheckerParams & params, CollisionCheckerLanelets & lanelets,
   const double time_horizon)
 {
   autoware_utils::LineString2d trajectory_ls;
-  for (const auto & p : trajectory_points) {
+  for (const auto & p : ego_traj.front_traj) {
     trajectory_ls.emplace_back(p.pose.position.x, p.pose.position.y);
   }
 
@@ -145,20 +148,24 @@ void set_right_turn_target_lanelets(
       contains_lanelet(lanelets.connected_lanelets, id))
       continue;
 
-    const auto overlap_index = get_overlap_index(ll, trajectory_points, trajectory_ls);
-    if (!overlap_index) continue;
+    const auto overlap_index = get_overlap_index(ll, ego_traj.front_traj, trajectory_ls);
+    if (!overlap_index || overlap_index->first < ego_traj.front_index) continue;
+    const auto mid_idx = (overlap_index->first + overlap_index->second) / 2;
     const auto overlap_point =
-      lanelet::utils::getClosestCenterPose(ll, trajectory_points[*overlap_index].pose.position);
-    const auto time_to_reach =
-      rclcpp::Duration(trajectory_points[*overlap_index].time_from_start).seconds();
-    if (time_to_reach > time_horizon) continue;
+      lanelet::utils::getClosestCenterPose(ll, ego_traj.front_traj[mid_idx].pose.position);
+    std::pair<double, double> overlap_time;
+    overlap_time.first =
+      rclcpp::Duration(ego_traj.front_traj[overlap_index->first].time_from_start).seconds();
+    overlap_time.second =
+      rclcpp::Duration(ego_traj.back_traj[overlap_index->second].time_from_start).seconds();
+    if (overlap_time.first > time_horizon) continue;
     lanelets.target_lanelets.emplace_back(
-      ll.id(), extend_lanelet(ll, overlap_point), overlap_point, time_to_reach);
+      ll.id(), extend_lanelet(ll, overlap_point), overlap_point, overlap_time);
   }
 }
 
 void set_left_turn_target_lanelets(
-  const TrajectoryPoints & trajectory_points, const RouteHandler & route_handler,
+  const EgoTrajectory & ego_traj, const RouteHandler & route_handler,
   const CollisionCheckerParams & params, CollisionCheckerLanelets & lanelets,
   const double time_horizon)
 {
@@ -181,7 +188,7 @@ void set_left_turn_target_lanelets(
   if (!route_handler.getNextLaneletWithinRoute(*turn_lanelet, &next_lanelet)) return;
 
   autoware_utils::LineString2d trajectory_ls;
-  for (const auto & p : trajectory_points) {
+  for (const auto & p : ego_traj.front_traj) {
     trajectory_ls.emplace_back(p.pose.position.x, p.pose.position.y);
   }
 
@@ -212,15 +219,18 @@ void set_left_turn_target_lanelets(
   const auto turn_lanelet_id = turn_lanelet->id();
   for (const auto & lanelet : route_handler.getPreviousLanelets(next_lanelet)) {
     if (lanelet.id() == turn_lanelet_id || ignore_turning(lanelet)) continue;
-    const auto overlap_index = get_overlap_index(lanelet, trajectory_points, trajectory_ls);
-    if (!overlap_index) continue;
+    const auto overlap_index = get_overlap_index(lanelet, ego_traj.front_traj, trajectory_ls);
+    if (!overlap_index || overlap_index->first < ego_traj.front_index) continue;
     const auto overlap_point = lanelet::utils::getClosestCenterPose(
-      lanelet, trajectory_points[*overlap_index].pose.position);
-    const auto time_to_reach =
-      rclcpp::Duration(trajectory_points[*overlap_index].time_from_start).seconds();
-    if (time_to_reach > time_horizon) continue;
+      lanelet, ego_traj.front_traj[overlap_index->first].pose.position);
+    std::pair<double, double> overlap_time;
+    overlap_time.first =
+      rclcpp::Duration(ego_traj.front_traj[overlap_index->first].time_from_start).seconds();
+    overlap_time.second =
+      rclcpp::Duration(ego_traj.back_traj[overlap_index->first].time_from_start).seconds();
+    if (overlap_time.first > time_horizon) continue;
     lanelets.target_lanelets.emplace_back(
-      lanelet.id(), extend_lanelet(lanelet, overlap_point), overlap_point, time_to_reach);
+      lanelet.id(), extend_lanelet(lanelet, overlap_point), overlap_point, overlap_time);
   }
 }
 

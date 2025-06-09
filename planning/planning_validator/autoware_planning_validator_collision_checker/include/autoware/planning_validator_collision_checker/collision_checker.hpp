@@ -56,11 +56,13 @@ public:
 private:
   void setup_parameters(rclcpp::Node & node);
 
+  [[nodiscard]] EgoTrajectory get_ego_trajectory() const;
+
   [[nodiscard]] Direction get_turn_direction(
     const lanelet::ConstLanelets & trajectory_lanelets) const;
 
   [[nodiscard]] Direction get_lanelets(
-    CollisionCheckerLanelets & lanelets, const TrajectoryPoints & trajectory_points) const;
+    CollisionCheckerLanelets & lanelets, const EgoTrajectory & ego_trajectory) const;
 
   void filter_pointcloud(
     PointCloud2::ConstSharedPtr & input, PointCloud::Ptr & filtered_point_cloud) const;

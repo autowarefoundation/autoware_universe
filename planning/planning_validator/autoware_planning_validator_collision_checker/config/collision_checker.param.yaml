@@ -7,6 +7,7 @@
       is_critical: false
       ego_deceleration: 1.0 # [m/s^2]
       min_time_horizon: 10.0 # [s]
+      timeout: 1.0 # [s]
 
       right_turn:
         enable: true

@@ -49,6 +49,7 @@
 #include <limits>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::planning_validator
@@ -147,19 +148,10 @@ void CollisionChecker::validate(bool & is_critical)
   PointCloud::Ptr filtered_pointcloud(new PointCloud);
   filter_pointcloud(context_->data->obstacle_pointcloud, filtered_pointcloud);
 
-  static constexpr double min_traj_vel = 0.1;
-  const auto base_to_front_length =
-    context_->vehicle_info.front_overhang_m + context_->vehicle_info.wheel_base_m;
-  const auto ego_front_pose = autoware_utils::calc_offset_pose(
-    context_->data->current_kinematics->pose.pose, base_to_front_length, 0.0, 0.0);
-  auto input_trajectory_points = context_->data->current_trajectory->points;
-  autoware::motion_utils::calculate_time_from_start(
-    input_trajectory_points, ego_front_pose.position, min_traj_vel);
-  const auto trajectory_points =
-    collision_checker_utils::trim_trajectory_points(input_trajectory_points, ego_front_pose);
+  const auto ego_trajectory = get_ego_trajectory();
 
   CollisionCheckerLanelets lanelets;
-  const auto turn_direction = get_lanelets(lanelets, trajectory_points);
+  const auto turn_direction = get_lanelets(lanelets, ego_trajectory);
 
   set_lanelets_debug_marker(lanelets);
 
@@ -193,13 +185,41 @@ void CollisionChecker::validate(bool & is_critical)
   last_invalid_time_.reset();
 }
 
+EgoTrajectory CollisionChecker::get_ego_trajectory() const
+{
+  EgoTrajectory ego_traj;
+  static constexpr double min_traj_vel = 0.1;
+  const auto base_to_front_offset =
+    context_->vehicle_info.front_overhang_m + context_->vehicle_info.wheel_base_m;
+  const auto base_to_back_offset = -1.0 * context_->vehicle_info.rear_overhang_m;
+
+  const auto ego_front_pose = autoware_utils::calc_offset_pose(
+    context_->data->current_kinematics->pose.pose, base_to_front_offset, 0.0, 0.0);
+  const auto ego_back_pose = autoware_utils::calc_offset_pose(
+    context_->data->current_kinematics->pose.pose, base_to_back_offset, 0.0, 0.0);
+
+  ego_traj.front_traj = context_->data->current_trajectory->points;
+  ego_traj.back_traj = context_->data->current_trajectory->points;
+  autoware::motion_utils::calculate_time_from_start(
+    ego_traj.front_traj, ego_front_pose.position, min_traj_vel);
+  autoware::motion_utils::calculate_time_from_start(
+    ego_traj.back_traj, ego_back_pose.position, min_traj_vel);
+
+  ego_traj.front_index =
+    autoware::motion_utils::findNearestIndex(ego_traj.front_traj, ego_front_pose.position);
+  ego_traj.back_index =
+    autoware::motion_utils::findNearestIndex(ego_traj.back_traj, ego_back_pose.position);
+
+  return ego_traj;
+}
+
 Direction CollisionChecker::get_lanelets(
-  CollisionCheckerLanelets & lanelets, const TrajectoryPoints & trajectory_points) const
+  CollisionCheckerLanelets & lanelets, const EgoTrajectory & ego_trajectory) const
 {
   const auto & ego_pose = context_->data->current_kinematics->pose.pose;
   try {
     collision_checker_utils::set_trajectory_lanelets(
-      trajectory_points, *context_->data->route_handler, ego_pose, lanelets);
+      ego_trajectory.front_traj, *context_->data->route_handler, ego_pose, lanelets);
   } catch (const std::logic_error & e) {
     RCLCPP_ERROR(logger_, "failed to get trajectory lanelets: %s", e.what());
     return Direction::NONE;
@@ -214,10 +234,10 @@ Direction CollisionChecker::get_lanelets(
   const auto time_horizon = std::max(params_.min_time_horizon, stopping_time);
   if (turn_direction == Direction::RIGHT) {
     collision_checker_utils::set_right_turn_target_lanelets(
-      trajectory_points, *context_->data->route_handler, params_, lanelets, time_horizon);
+      ego_trajectory, *context_->data->route_handler, params_, lanelets, time_horizon);
   } else {
     collision_checker_utils::set_left_turn_target_lanelets(
-      trajectory_points, *context_->data->route_handler, params_, lanelets, time_horizon);
+      ego_trajectory, *context_->data->route_handler, params_, lanelets, time_horizon);
   }
 
   return turn_direction;
@@ -291,6 +311,14 @@ bool CollisionChecker::check_collision(
   const rclcpp::Time & time_stamp)
 {
   bool is_safe = true;
+
+  auto ego_object_overlap_time =
+    [](const double object_ttc, const std::pair<double, double> & ego_time) {
+      if (object_ttc > ego_time.second) return object_ttc - ego_time.second;
+      if (object_ttc < ego_time.first) return ego_time.first - object_ttc;
+      return 0.0;
+    };
+
   for (const auto & target_lanelet : target_lanelets) {
     if (target_lanelet.lanelets.empty()) continue;
 
@@ -327,7 +355,8 @@ bool CollisionChecker::check_collision(
 
       if (
         existing_object.track_duration > params_.pointcloud.observation_time &&
-        std::abs(existing_object.ttc - target_lanelet.ego_time_to_reach) < params_.ttc_threshold) {
+        ego_object_overlap_time(existing_object.ttc, target_lanelet.ego_overlap_time) <
+          params_.ttc_threshold) {
         is_safe = false;
         context_->debug_pose_publisher->pushPointMarker(
           existing_object.pose.position, "collision_checker_pcd_objects", 0);

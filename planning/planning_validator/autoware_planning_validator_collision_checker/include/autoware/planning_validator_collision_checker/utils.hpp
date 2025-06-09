@@ -43,12 +43,12 @@ void set_trajectory_lanelets(
   const geometry_msgs::msg::Pose & ego_pose, CollisionCheckerLanelets & lanelets);
 
 void set_right_turn_target_lanelets(
-  const TrajectoryPoints & trajectory_points, const RouteHandler & route_handler,
+  const EgoTrajectory & ego_traj, const RouteHandler & route_handler,
   const CollisionCheckerParams & params, CollisionCheckerLanelets & lanelets,
   const double time_horizon = std::numeric_limits<double>::max());
 
 void set_left_turn_target_lanelets(
-  const TrajectoryPoints & trajectory_points, const RouteHandler & route_handler,
+  const EgoTrajectory & ego_traj, const RouteHandler & route_handler,
   const CollisionCheckerParams & params, CollisionCheckerLanelets & lanelets,
   const double time_horizon = std::numeric_limits<double>::max());
 

@@ -28,6 +28,7 @@
 #include <lanelet2_core/primitives/Polygon.h>
 
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 namespace autoware::planning_validator
@@ -44,18 +45,27 @@ using route_handler::RouteHandler;
 
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
+struct EgoTrajectory
+{
+  TrajectoryPoints front_traj;
+  TrajectoryPoints back_traj;
+  size_t front_index;
+  size_t back_index;
+};
+
 struct TargetLanelet
 {
   lanelet::Id id;
   lanelet::ConstLanelets lanelets;
   geometry_msgs::msg::Pose overlap_point;
-  double ego_time_to_reach{};
+  std::pair<double, double> ego_overlap_time;
 
   TargetLanelet() = default;
   TargetLanelet(
     lanelet::Id id, const lanelet::ConstLanelets & lanelets,
-    const geometry_msgs::msg::Pose & overlap_point, const double ego_time_to_reach)
-  : id(id), lanelets(lanelets), overlap_point(overlap_point), ego_time_to_reach(ego_time_to_reach)
+    const geometry_msgs::msg::Pose & overlap_point,
+    const std::pair<double, double> ego_overlap_time)
+  : id(id), lanelets(lanelets), overlap_point(overlap_point), ego_overlap_time(ego_overlap_time)
   {
   }
 };
