@@ -149,7 +149,7 @@ public:
   virtual bool getTrackedObject(const rclcpp::Time & time, types::DynamicObject & object) const = 0;
   virtual bool predict(const rclcpp::Time & time) = 0;
   double getBEVArea() const;
-  double getDistanceToEgo(const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
+  double getDistanceSqToEgo(const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
   double computeAdaptiveThreshold(
     double base_threshold, double fallback_threshold, const AdaptiveThresholdCache & cache,
     const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;

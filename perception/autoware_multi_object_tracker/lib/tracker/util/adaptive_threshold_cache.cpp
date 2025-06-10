@@ -14,6 +14,7 @@
 
 #include "autoware/multi_object_tracker/tracker/util/adaptive_threshold_cache.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 namespace autoware::multi_object_tracker
@@ -51,16 +52,16 @@ void AdaptiveThresholdCache::initializeBEVAreaInfluenceTable()
   }
 }
 
-double AdaptiveThresholdCache::getDistanceInfluence(double distance) const
+double AdaptiveThresholdCache::getDistanceInfluence(double distance_sq) const
 {
-  size_t index = static_cast<size_t>(distance * DISTANCE_BIN_INV);
+  size_t index = static_cast<size_t>(distance_sq * DISTANCE_SQ_BIN_INV);
   index = std::min(index, DISTANCE_BIN_NUM - 1);
   return distance_influence_table_[index];
 }
 
 double AdaptiveThresholdCache::getBEVAreaInfluence(double bev_area) const
 {
-  size_t index = static_cast<size_t>(std::min(bev_area, MAX_BEV_AREA));
+  size_t index = static_cast<size_t>(bev_area);
   index = std::min(index, BEV_AREA_BIN_NUM - 1);
   return bev_area_influence_table_[index];
 }

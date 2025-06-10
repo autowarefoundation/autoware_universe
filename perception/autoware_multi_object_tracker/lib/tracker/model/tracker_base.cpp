@@ -291,28 +291,30 @@ double Tracker::getBEVArea() const
   return dims.x * dims.y;
 }
 
-double Tracker::getDistanceToEgo(const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
+double Tracker::getDistanceSqToEgo(const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
 {
-  constexpr double INVALID_DISTANCE = -1.0;
+  constexpr double INVALID_DISTANCE_SQ = -1.0;
   if (!ego_pose) {
-    return INVALID_DISTANCE;
+    return INVALID_DISTANCE_SQ;
   }
   const auto & p = object_.pose.position;
   const auto & e = ego_pose->position;
-  return std::hypot(p.x - e.x, p.y - e.y);
+  const double dx = p.x - e.x;
+  const double dy = p.y - e.y;
+  return dx * dx + dy * dy;
 }
 
 double Tracker::computeAdaptiveThreshold(
   double base_threshold, double fallback_threshold, const AdaptiveThresholdCache & cache,
   const std::optional<geometry_msgs::msg::Pose> & ego_pose) const
 {
-  const double distance = getDistanceToEgo(ego_pose);
-  if (distance < 0.0) return fallback_threshold;
+  const double distance_sq = getDistanceSqToEgo(ego_pose);
+  if (distance_sq < 0.0) return fallback_threshold;
 
   const double bev_area = getBEVArea();
 
   const double bev_area_influence = cache.getBEVAreaInfluence(bev_area);
-  const double distance_influence = cache.getDistanceInfluence(distance);
+  const double distance_influence = cache.getDistanceInfluence(distance_sq);
 
   return base_threshold + bev_area_influence + distance_influence;
 }
