@@ -99,4 +99,17 @@ Polyline::value_type Polyline::find_center() const
   const auto & p1 = waypoints_[segment_index + 1];
   return p0.lerp(p1, t);
 }
+
+std::vector<Polyline> trim_neighbors(
+  const std::vector<Polyline> & polylines, const AgentState & state_from, double distance_tolerance)
+{
+  std::vector<Polyline> output;
+  for (const auto & polyline : polylines) {
+    if (polyline.distance_from(state_from) > distance_tolerance) {
+      continue;
+    }
+    output.emplace_back(polyline);
+  }
+  return output;
+}
 }  // namespace autoware::simpl::archetype

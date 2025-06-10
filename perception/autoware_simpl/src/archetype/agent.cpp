@@ -68,7 +68,11 @@ AgentHistory AgentHistory::transform_to_current() const
   const auto & current_state = current();
   AgentHistory output(agent_id, queue_.size());
   for (const auto & state_t : *this) {
-    output.update(state_t.transform(current_state));
+    if (state_t.is_valid) {
+      output.update(state_t.transform(current_state));
+    } else {
+      output.update({});
+    }
   }
   return output;
 }
@@ -76,18 +80,16 @@ AgentHistory AgentHistory::transform_to_current() const
 std::vector<AgentHistory> trim_neighbors(
   const std::vector<AgentHistory> & histories, const AgentState & state_from, size_t top_k)
 {
-  auto sortable = histories;
+  auto output = histories;
+
   std::sort(
-    sortable.begin(), sortable.end(),
-    [&state_from](const AgentHistory & h1, const AgentHistory h2) {
-      const auto d1 = h1.distance_from(state_from);
-      const auto d2 = h2.distance_from(state_from);
-      return d1 < d2;
+    output.begin(), output.end(), [&state_from](const AgentHistory & a, const AgentHistory & b) {
+      return a.distance_from(state_from) < b.distance_from(state_from);
     });
 
-  std::vector<AgentHistory> output;
-  for (size_t i = 0; i < sortable.size() && i < top_k; ++i) {
-    output.emplace_back(sortable.at(i));
+  // keep only the top_k closest agents
+  if (output.size() > top_k) {
+    output.erase(output.begin() + top_k, output.end());
   }
   return output;
 }

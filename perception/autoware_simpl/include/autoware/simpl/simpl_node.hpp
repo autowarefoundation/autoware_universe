@@ -148,9 +148,6 @@ private:
 
   //!< Number of past timestamps.
   int num_past_;
-
-  //!< Distance threshold to separate points into a polyline.
-  double polyline_distance_threshold_;
 };
 }  // namespace autoware::simpl
 #endif  // AUTOWARE__SIMPL__SIMPL_NODE_HPP_

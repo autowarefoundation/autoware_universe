@@ -140,13 +140,15 @@ double sine_pe(const NodePoint & v1, const double v2_x, const double v2_y)
 
 PreProcessor::PreProcessor(
   const std::vector<size_t> & label_ids, size_t max_num_agent, size_t num_past,
-  size_t max_num_polyline, size_t max_num_point, double break_distance)
+  size_t max_num_polyline, size_t max_num_point, double polyline_range_distance,
+  double polyline_break_distance)
 : label_ids_(label_ids),
   max_num_agent_(max_num_agent),
   num_past_(num_past),
   max_num_polyline_(max_num_polyline),
   max_num_point_(max_num_point),
-  break_distance_(break_distance)
+  polyline_range_distance_(polyline_range_distance),
+  polyline_break_distance_(polyline_break_distance)
 {
 }
 
@@ -237,8 +239,12 @@ MapMetadata PreProcessor::process_map(
   const std::vector<archetype::Polyline> & polylines,
   const archetype::AgentState & current_ego) const
 {
+  // trim neighbor polylines
+  auto result = archetype::trim_neighbors(polylines, current_ego, polyline_range_distance_);
+
   // w.r.t map coordinate frame
-  auto result = break_polylines(polylines, max_num_point_, break_distance_);
+  result = break_polylines(result, max_num_point_, polyline_break_distance_);
+
   std::sort(
     result.begin(), result.end(),
     [&current_ego](const archetype::Polyline & p1, const archetype::Polyline & p2) {

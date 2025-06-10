@@ -44,14 +44,9 @@ public:
   void convert(const lanelet::LaneletMapConstPtr lanelet_map_ptr);
 
   /**
-   * @brief Extract points whose distance from the input state is less than a threshold.
-   * Returns `std::nullopt` if there is no extracted points.
-   *
-   * @param state_from Origin to check distance from this.
-   * @param distance_threshold Distance threshold.
+   * @brief Return polylines if inner container contains any polylines.
    */
-  std::optional<std::vector<archetype::Polyline>> extract(
-    const archetype::AgentState & state_from, double distance_threshold);
+  std::optional<std::vector<archetype::Polyline>> polylines();
 
 private:
   /**
