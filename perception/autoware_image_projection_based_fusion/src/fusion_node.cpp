@@ -503,13 +503,12 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::diagnostic_callback(
 {
   for (const auto & status : diagnostic_msg->status) {
     // Filter for the concatenate_and_time_sync_node diagnostic message
-    if (
-      status.name == std::string_view("concatenate_data: /sensing/lidar/concatenate_data_status")) {
+    if (status.name == std::string_view("concatenate_data: /sensing/lidar/concatenate_data")) {
       std::optional<double> concatenate_timestamp_opt;
 
       // First pass: Locate concatenated_cloud_timestamp
       for (const auto & value : status.values) {
-        if (value.key == std::string_view("concatenated_cloud_timestamp")) {
+        if (value.key == std::string_view("Concatenated pointcloud timestamp")) {
           try {
             concatenate_timestamp_opt = std::stod(value.value);
           } catch (const std::exception & e) {
