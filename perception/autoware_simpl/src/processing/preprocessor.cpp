@@ -16,6 +16,7 @@
 
 #include "autoware/simpl/processing/preprocessor.hpp"
 
+#include "autoware/simpl/archetype/agent.hpp"
 #include "autoware/simpl/archetype/map.hpp"
 #include "autoware/simpl/archetype/polyline.hpp"
 
@@ -174,13 +175,15 @@ AgentMetadata PreProcessor::process_agent(
   std::vector<std::string> agent_ids;
   NodePoints node_centers(max_num_agent_);
   NodePoints node_vectors(max_num_agent_);
-  // TODO(ktro2828): sort by distance and predict only agent where the current state is valid
-  for (size_t n = 0; n < histories.size() && n < max_num_agent_; ++n) {
-    const auto & history = histories.at(n);
-    const auto & current = history.current();
+
+  // trim top-k nearest neighbor histories
+  const auto neighbor_histories = archetype::trim_neighbors(histories, current_ego, max_num_agent_);
+  for (size_t n = 0; n < neighbor_histories.size(); ++n) {
+    const auto & history = neighbor_histories.at(n);
+    agent_ids.emplace_back(history.agent_id);
 
     // extract current state
-    agent_ids.emplace_back(history.agent_id);
+    const auto & current = history.current();
 
     // retrieve node data
     const auto center = current.transform(current_ego);

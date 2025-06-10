@@ -16,6 +16,7 @@
 
 #include "autoware/simpl/archetype/exception.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <sstream>
 #include <string>
@@ -68,6 +69,25 @@ AgentHistory AgentHistory::transform_to_current() const
   AgentHistory output(agent_id, queue_.size());
   for (const auto & state_t : *this) {
     output.update(state_t.transform(current_state));
+  }
+  return output;
+}
+
+std::vector<AgentHistory> trim_neighbors(
+  const std::vector<AgentHistory> & histories, const AgentState & state_from, size_t top_k)
+{
+  auto sortable = histories;
+  std::sort(
+    sortable.begin(), sortable.end(),
+    [&state_from](const AgentHistory & h1, const AgentHistory h2) {
+      const auto d1 = h1.distance_from(state_from);
+      const auto d2 = h2.distance_from(state_from);
+      return d1 < d2;
+    });
+
+  std::vector<AgentHistory> output;
+  for (size_t i = 0; i < sortable.size() && i < top_k; ++i) {
+    output.emplace_back(sortable.at(i));
   }
   return output;
 }
