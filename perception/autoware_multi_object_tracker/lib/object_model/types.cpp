@@ -119,7 +119,7 @@ double getArea(const autoware_perception_msgs::msg::Shape & shape)
     case autoware_perception_msgs::msg::Shape::BOUNDING_BOX:
       return shape.dimensions.x * shape.dimensions.y;
     case autoware_perception_msgs::msg::Shape::CYLINDER:
-      return shape.dimensions.x * shape.dimensions.x * M_PI;
+      return shape.dimensions.x * shape.dimensions.x * M_PI * 0.25;
     case autoware_perception_msgs::msg::Shape::POLYGON: {
       double area = 0.0;
       for (size_t i = 0; i < shape.footprint.points.size(); ++i) {
