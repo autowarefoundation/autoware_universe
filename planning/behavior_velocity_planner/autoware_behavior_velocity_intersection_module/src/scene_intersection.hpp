@@ -349,6 +349,9 @@ public:
   InternalDebugData & getInternalDebugData() const { return internal_debug_data_; }
 
 private:
+  autoware_internal_planning_msgs::msg::SafetyFactorArray safety_factor_array_;
+
+private:
   /**
    ***********************************************************
    ***********************************************************
