@@ -128,4 +128,16 @@ double GyroBiasEstimationModule::wrap_angle(double delta_angle, double unwrapped
   return unwrapped_angle;
 }
 
+double GyroBiasEstimationModule::wrap_angle_rad(double delta_angle, double unwrapped_angle)
+{
+  const double pi = 3.14159;
+  // Wrapping angle in case of big jumps
+  if (delta_angle > pi) {
+    unwrapped_angle -= 2 * pi;
+  } else if (delta_angle < -pi) {
+    unwrapped_angle += 2 * pi;
+  }
+  return unwrapped_angle;
+}
+
 }  // namespace autoware::imu_corrector

@@ -29,6 +29,7 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include <Eigen/Dense>
 
 namespace autoware::imu_corrector
 {
@@ -40,6 +41,8 @@ private:
   using Vector3Stamped = geometry_msgs::msg::Vector3Stamped;
   using Vector3 = geometry_msgs::msg::Vector3;
   using Odometry = nav_msgs::msg::Odometry;
+  using Vector2d = Eigen::Vector2d;
+  using Matrix2d = Eigen::Matrix2d;
 
 public:
   explicit GyroBiasEstimator(const rclcpp::NodeOptions & options);
@@ -64,10 +67,12 @@ private:
   rclcpp::Subscription<PoseWithCovarianceStamped>::SharedPtr pose_sub_;
   rclcpp::Publisher<Vector3Stamped>::SharedPtr gyro_bias_pub_;
   rclcpp::Publisher<Vector3Stamped>::SharedPtr gyro_scale_pub_;
+  rclcpp::Publisher<Vector3Stamped>::SharedPtr gyro_debug_pub_;
   rclcpp::Publisher<Imu>::SharedPtr imu_scaled_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Time start_time_check_scale_;
   rclcpp::Time last_time_rx_pose_;
+  rclcpp::Time last_time_rx_imu_;
 
   std::unique_ptr<GyroBiasEstimationModule> gyro_bias_estimation_module_;
 
@@ -83,6 +88,9 @@ private:
   const double ekf_variance_p_;
   const double ekf_process_noise_q_;
   const double ekf_measurement_noise_r_;
+  const double ekf_variance_p_a_;
+  const double ekf_process_noise_q_a_;
+  const double ekf_measurement_noise_r_a_;
   const double time_window_secs_;
   const double threshold_scale_change_;
   const double threshold_error_rate_;
@@ -93,6 +101,18 @@ private:
   const double bias_on_purpose_;
   const double drift_scale_;
   const double drift_bias_;
+  
+  const double alpha_;  // comp filter
+  const double alpha_ndt_rate_;
+  const double threshlod_to_estimate_scale_;
+  const double percentage_scale_rate_allow_correct_;
+  const double counter_correct_big_change_;
+  const double alpha_big_change_;
+
+
+  double filtered_scale_angle_;
+  double filtered_scale_rate_;
+  double big_change_scale_rate_;
 
   int window_scale_change_;
   double previous_yaw_angle_;
@@ -100,6 +120,20 @@ private:
   double ndt_yaw_rate_;
   double gyro_yaw_rate_;
   double previous_scale_;
+  double previous_gyro_rate_;
+  double previous_ndt_rate_;
+  double accel_yaw_gyro_;
+  double accel_yaw_ndt_;
+
+  double gyro_yaw_angle_;
+  double ndt_yaw_angle_;
+  double gyro_corrected_yaw_angle_;
+
+  double big_change_detect_;
+  
+  bool has_gyro_yaw_angle_init_;
+  bool gyro_angle_restarted_;
+
 
   double final_bias_on_purpose_;
   double final_scale_on_purpose_;
@@ -112,6 +146,8 @@ private:
   double q_;
   double r_;
 
+  
+
   diagnostic_updater::Updater updater_;
 
   std::optional<Vector3> gyro_bias_;
@@ -123,6 +159,7 @@ private:
   std::vector<geometry_msgs::msg::Vector3Stamped> gyro_all_;
   std::vector<geometry_msgs::msg::PoseStamped> pose_buf_;
   std::vector<double> scale_list_all_;
+  std::vector<double> scale_out_range_;
 
   struct DiagnosticsInfo
   {
