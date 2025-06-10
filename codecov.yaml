@@ -125,7 +125,6 @@ component_management:
         - localization/autoware_gyro_odometer/**
         - localization/autoware_localization_error_monitor/**
         - localization/autoware_localization_util/**
-        - localization/autoware_pose_initializer/**
         - localization/autoware_pose_instability_detector/**
         - localization/autoware_stop_filter/**
         - localization/autoware_twist2accel/**
@@ -138,6 +137,7 @@ component_management:
     - component_id: perception-tier-iv-maintained-packages
       name: Perception TIER IV Maintained Packages
       paths:
+        - perception/autoware_bevfusion/**
         - perception/autoware_bytetrack/**
         - perception/autoware_cluster_merger/**
         - perception/autoware_compare_map_segmentation/**
@@ -158,9 +158,7 @@ component_management:
         - perception/autoware_object_velocity_splitter/**
         - perception/autoware_occupancy_grid_map_outlier_filter/**
         - perception/autoware_probabilistic_occupancy_grid_map/**
-        - perception/autoware_radar_crossing_objects_noise_filter/**
         - perception/autoware_radar_fusion_to_detected_object/**
-        - perception/autoware_radar_object_clustering/**
         - perception/autoware_radar_object_tracker/**
         - perception/autoware_radar_tracks_msgs_converter/**
         - perception/autoware_raindrop_cluster_filter/**

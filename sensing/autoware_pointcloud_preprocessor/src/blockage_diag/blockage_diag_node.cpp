@@ -92,7 +92,7 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     "blockage_diag/debug/sky_blockage_ratio", rclcpp::SensorDataQoS());
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&BlockageDiagComponent::paramCallback, this, _1));
+    std::bind(&BlockageDiagComponent::param_callback, this, _1));
 }
 
 void BlockageDiagComponent::onBlockageChecker(DiagnosticStatusWrapper & stat)
@@ -411,7 +411,7 @@ void BlockageDiagComponent::filter(
   pcl::toROSMsg(*pcl_input, output);
   output.header = input->header;
 }
-rcl_interfaces::msg::SetParametersResult BlockageDiagComponent::paramCallback(
+rcl_interfaces::msg::SetParametersResult BlockageDiagComponent::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);

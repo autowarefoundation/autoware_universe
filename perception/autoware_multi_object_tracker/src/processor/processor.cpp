@@ -23,11 +23,19 @@
 
 #include <autoware_perception_msgs/msg/tracked_objects.hpp>
 
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/box.hpp>
+#include <boost/geometry/geometries/point.hpp>
+#include <boost/geometry/index/rtree.hpp>
+
+#include <algorithm>
+#include <functional>
 #include <iterator>
 #include <map>
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -160,10 +168,18 @@ void TrackerProcessor::prune(const rclcpp::Time & time)
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
+  if (time.nanoseconds() - last_prune_time_.nanoseconds() < 2000 /*2ms*/) {
+    // prune is called too frequently, skip
+    return;
+  }
+
   // Check tracker lifetime: if the tracker is old, delete it
   removeOldTracker(time);
   // Check tracker overlap: if the tracker is overlapped, delete the one with lower IOU
   mergeOverlappedTracker(time);
+
+  // update last prune time
+  last_prune_time_ = time;
 }
 
 void TrackerProcessor::removeOldTracker(const rclcpp::Time & time)
@@ -188,65 +204,154 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  // Create sorted list with non-UNKNOWN objects first, then by measurement count
-  list_tracker_.sort(
-    [&time](const std::shared_ptr<Tracker> & a, const std::shared_ptr<Tracker> & b) {
-      bool a_unknown = (a->getHighestProbLabel() == Label::UNKNOWN);
-      bool b_unknown = (b->getHighestProbLabel() == Label::UNKNOWN);
-      if (a_unknown != b_unknown) {
-        return b_unknown;  // Put non-UNKNOWN objects first
+  // Pre-filter valid trackers and cache their data
+  struct TrackerData
+  {
+    std::shared_ptr<Tracker> tracker;
+    types::DynamicObject object;
+    uint8_t label;
+    double measurement_count;
+    double elapsed_time;
+    bool is_unknown;
+    bool is_valid;
+
+    explicit TrackerData(const std::shared_ptr<Tracker> & t)
+    : tracker(t),
+      object(),
+      label(0),
+      measurement_count(0.0),
+      elapsed_time(0.0),
+      is_unknown(false),
+      is_valid(false)
+    {
+    }
+  };
+
+  std::vector<TrackerData> valid_trackers;
+  valid_trackers.reserve(list_tracker_.size());
+
+  // First pass: collect valid trackers and their data
+  for (const auto & tracker : list_tracker_) {
+    TrackerData data(tracker);
+
+    // Get tracked object and basic data
+    if (!tracker->getTrackedObject(time, data.object)) {
+      continue;
+    }
+
+    data.label = tracker->getHighestProbLabel();
+    data.is_unknown = (data.label == Label::UNKNOWN);
+    data.measurement_count = tracker->getTotalMeasurementCount();
+    data.elapsed_time = tracker->getElapsedTimeFromLastUpdate(time);
+    data.is_valid = true;
+
+    valid_trackers.push_back(std::move(data));
+  }
+
+  // Sort valid trackers by priority
+  std::sort(
+    valid_trackers.begin(), valid_trackers.end(), [](const TrackerData & a, const TrackerData & b) {
+      if (a.is_unknown != b.is_unknown) {
+        return b.is_unknown;  // Non-unknown first
       }
-      if (a->getTotalMeasurementCount() != b->getTotalMeasurementCount()) {
-        return a->getTotalMeasurementCount() >
-               b->getTotalMeasurementCount();  // Then sort by measurement count
+      if (a.measurement_count != b.measurement_count) {
+        return a.measurement_count > b.measurement_count;
       }
-      return a->getElapsedTimeFromLastUpdate(time) <
-             b->getElapsedTimeFromLastUpdate(time);  // Finally sort by elapsed time (smaller first)
+      return a.elapsed_time < b.elapsed_time;
     });
 
-  // Iterate through the list of trackers
-  for (auto itr1 = list_tracker_.begin(); itr1 != list_tracker_.end(); ++itr1) {
-    types::DynamicObject object1;
-    if (!(*itr1)->getTrackedObject(time, object1)) continue;
-    // Compare the current tracker with the remaining trackers
-    for (auto itr2 = std::next(itr1); itr2 != list_tracker_.end();) {
-      types::DynamicObject object2;
-      if (!(*itr2)->getTrackedObject(time, object2)) {
-        ++itr2;
-        continue;
-      }
-      // Calculate the distance between the two objects
-      const double distance = std::hypot(
-        object1.pose.position.x - object2.pose.position.x,
-        object1.pose.position.y - object2.pose.position.y);
-      const auto & label1 = !(*itr1)->getHighestProbLabel();
-      const auto & label2 = !(*itr2)->getHighestProbLabel();
-      const double max_dist_matrix_value = config_.max_dist_matrix(
-        label2, label1);  // Get the maximum distance threshold for the labels
+  // search distance per label
+  size_t label_size = config_.max_dist_matrix.cols();
+  std::vector<double> search_distance_sq_per_label(label_size, 0.0);
+  for (size_t i = 0; i < label_size; ++i) {
+    for (size_t j = 0; j < label_size; ++j) {
+      search_distance_sq_per_label[i] =
+        std::max(search_distance_sq_per_label[i], config_.max_dist_matrix(j, i));
+    }
+  }
 
-      // If the distance is too large, skip
-      if (distance > max_dist_matrix_value) {
-        ++itr2;
-        continue;
-      }
+  // Build spatial index for quick neighbor lookup
+  using Point = boost::geometry::model::point<double, 2, boost::geometry::cs::cartesian>;
+  using Value = std::pair<Point, size_t>;  // Point and index into valid_trackers
+  boost::geometry::index::rtree<Value, boost::geometry::index::quadratic<16>> rtree;
 
-      // Check the Intersection over Union (IoU) between the two objects
+  // Insert valid trackers into R-tree
+  std::vector<ValueType> rtree_points;
+  rtree_points.reserve(valid_trackers.size());
+  for (size_t i = 0; i < valid_trackers.size(); ++i) {
+    const auto & data = valid_trackers[i];
+    if (!data.is_valid) continue;
+
+    Point p(data.object.pose.position.x, data.object.pose.position.y);
+    rtree_points.push_back(std::make_pair(p, i));
+  }
+  rtree.insert(rtree_points.begin(), rtree_points.end());
+
+  // Vector to store indices of trackers to remove
+  std::vector<size_t> to_remove;
+  to_remove.reserve(valid_trackers.size() / 4);  // Reasonable initial capacity
+
+  // Second pass: merge overlapping trackers
+  for (size_t i = 0; i < valid_trackers.size(); ++i) {
+    auto & data1 = valid_trackers[i];
+    if (!data1.is_valid || !data1.tracker->isConfident(time)) continue;
+
+    // Find nearby trackers using R-tree
+    std::vector<Value> nearby;
+    nearby.reserve(16);  // Reasonable initial capacity
+
+    Point p1(data1.object.pose.position.x, data1.object.pose.position.y);
+    double max_search_dist_sq = search_distance_sq_per_label[data1.label];
+
+    // Query R-tree with circle
+    rtree.query(
+      boost::geometry::index::satisfies([&](const Value & v) {
+        if (v.second <= i) return false;  // Skip already processed and self
+
+        const double dx = boost::geometry::get<0>(v.first) - data1.object.pose.position.x;
+        const double dy = boost::geometry::get<1>(v.first) - data1.object.pose.position.y;
+        return dx * dx + dy * dy <= max_search_dist_sq;
+      }),
+      std::back_inserter(nearby));
+
+    // Process nearby trackers
+    for (const auto & [p2, idx2] : nearby) {
+      auto & data2 = valid_trackers[idx2];
+      if (!data2.is_valid) continue;
+
+      // Calculate IoU only if necessary
       constexpr double min_union_iou_area = 1e-2;
-      const auto iou = shapes::get2dIoU(object2, object1, min_union_iou_area);
+      const auto iou = shapes::get2dIoU(data2.object, data1.object, min_union_iou_area);
 
-      // check if object2 should be removed
-      if (canMergeOverlappedTarget(*(*itr2), *(*itr1), time, iou)) {
-        // add existence probability to the tracker 1
-        (*itr1)->updateTotalExistenceProbability((*itr2)->getTotalExistenceProbability());
-        (*itr1)->mergeExistenceProbabilities((*itr2)->getExistenceProbabilityVector());
+      // Skip if IoU is too small
+      if (iou < 1e-6) continue;
 
-        // Remove from original list_tracker
-        itr2 = list_tracker_.erase(itr2);
-      } else {
-        ++itr2;  // Move to the next tracker
+      if (canMergeOverlappedTarget(*data2.tracker, *data1.tracker, time, iou)) {
+        // Merge tracker2 into tracker1
+        data1.tracker->updateTotalExistenceProbability(
+          data2.tracker->getTotalExistenceProbability());
+        data1.tracker->mergeExistenceProbabilities(data2.tracker->getExistenceProbabilityVector());
+
+        // Mark tracker2 for removal
+        data2.is_valid = false;
+        to_remove.push_back(idx2);
       }
     }
   }
+
+  // Final pass: remove merged trackers efficiently using batch removal
+  std::unordered_set<std::shared_ptr<Tracker>> trackers_to_remove;
+  trackers_to_remove.reserve(to_remove.size());
+
+  // Collect all trackers to remove in a set for O(1) lookup
+  for (const auto idx : to_remove) {
+    trackers_to_remove.insert(valid_trackers[idx].tracker);
+  }
+
+  // Remove all marked trackers in a single pass
+  list_tracker_.remove_if([&trackers_to_remove](const std::shared_ptr<Tracker> & tracker) {
+    return trackers_to_remove.count(tracker) > 0;
+  });
 }
 
 bool TrackerProcessor::canMergeOverlappedTarget(
@@ -337,6 +442,7 @@ void TrackerProcessor::getTentativeObjects(
 void TrackerProcessor::setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr)
 {
   time_keeper_ = std::move(time_keeper_ptr);
+  association_->setTimeKeeper(time_keeper_);
 }
 
 }  // namespace autoware::multi_object_tracker

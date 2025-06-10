@@ -452,6 +452,12 @@ When ego approached the start of the temporarily selected pull over path within 
 ![state_transition](./images/goal_planner-state-transition.drawio.svg)
 [Open]({{ drawio("/planning/behavior_path_planner/autoware_behavior_path_goal_planner_module/images/goal_planner-state-transition.drawio.svg") }})
 
+### Parameters for path decision state controller
+
+| Name                     | Unit | Type   | Description                                                                                                                                                                 | Default value |
+| :----------------------- | :--- | :----- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------ |
+| check_collision_duration | [s]  | double | Duration to continuously check collision before transition from DECIDING to DECIDED state. This ensures the path remains safe for a period of time before final commitment. | 1.0           |
+
 ## Unimplemented parts / limitations
 
 - Only shift pull over can be executed concurrently with other modules

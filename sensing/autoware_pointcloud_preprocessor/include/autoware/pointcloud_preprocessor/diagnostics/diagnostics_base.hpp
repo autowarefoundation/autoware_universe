@@ -1,4 +1,4 @@
-// Copyright 2024 TierIV
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,15 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <rclcpp/rclcpp.hpp>
+#pragma once
 
-#include <gtest/gtest.h>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 
-int main(int argc, char * argv[])
+#include <string>
+
+namespace autoware::pointcloud_preprocessor
 {
-  testing::InitGoogleTest(&argc, argv);
-  rclcpp::init(argc, argv);
-  bool result = RUN_ALL_TESTS();
-  rclcpp::shutdown();
-  return result;
-}
+class DiagnosticsBase
+{
+public:
+  virtual ~DiagnosticsBase() = default;
+
+  virtual void add_to_interface(autoware_utils::DiagnosticsInterface & interface) const = 0;
+
+  [[nodiscard]] virtual std::optional<std::pair<int, std::string>> evaluate_status() const
+  {
+    return std::nullopt;
+  }
+};
+}  // namespace autoware::pointcloud_preprocessor

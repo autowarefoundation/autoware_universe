@@ -12,21 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__UTILS_HPP_
-#define AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__UTILS_HPP_
+#pragma once
 
-#include <string>
+#include <autoware/pointcloud_preprocessor/diagnostics/diagnostics_base.hpp>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 
 namespace autoware::pointcloud_preprocessor
 {
 
-/**
- * @brief Format a timestamp to a string with 9 decimal places.
- * @param timestamp The timestamp to format.
- * @return A string representation of the timestamp.
- */
-std::string format_timestamp(double timestamp);
+class CropBoxDiagnostics : public DiagnosticsBase
+{
+public:
+  explicit CropBoxDiagnostics(int skipped_count) : skipped_count_(skipped_count) {}
+
+  void add_to_interface(autoware_utils::DiagnosticsInterface & interface) const override
+  {
+    interface.add_key_value("Skipped NaN point count", skipped_count_);
+  }
+
+private:
+  int skipped_count_;
+};
 
 }  // namespace autoware::pointcloud_preprocessor
-
-#endif  // AUTOWARE__POINTCLOUD_PREPROCESSOR__CONCATENATE_DATA__UTILS_HPP_
