@@ -268,8 +268,9 @@ double DataAssociation::calculateScore(
     measurement_object.pose.position, tracked_object.pose.position,
     getXYCovariance(tracked_object.pose_covariance));
   constexpr double mahalanobis_dist_threshold =
-    11.62;  // This is a empirical value, around to 99.5% confidence level for 2 degrees of freedom,
-            // chi-square critical value
+    11.62;  // This is an empirical value corresponding to the 99.6% confidence level
+            // for a chi-square distribution with 2 degrees of freedom (critical value).
+
   if (mahalanobis_dist >= mahalanobis_dist_threshold) return 0.0;
 
   // 2d iou gate
