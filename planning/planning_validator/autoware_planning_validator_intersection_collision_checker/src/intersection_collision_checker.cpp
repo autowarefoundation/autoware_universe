@@ -68,51 +68,54 @@ void IntersectionCollisionChecker::init(
 
 void IntersectionCollisionChecker::setup_parameters(rclcpp::Node & node)
 {
-  params_.enable = get_or_declare_parameter<bool>(node, "collision_checker.enable");
-  params_.is_critical = get_or_declare_parameter<bool>(node, "collision_checker.is_critical");
+  params_.enable = get_or_declare_parameter<bool>(node, "intersection_collision_checker.enable");
+  params_.is_critical =
+    get_or_declare_parameter<bool>(node, "intersection_collision_checker.is_critical");
   params_.detection_range =
-    get_or_declare_parameter<double>(node, "collision_checker.detection_range");
-  params_.ttc_threshold = get_or_declare_parameter<double>(node, "collision_checker.ttc_threshold");
+    get_or_declare_parameter<double>(node, "intersection_collision_checker.detection_range");
+  params_.ttc_threshold =
+    get_or_declare_parameter<double>(node, "intersection_collision_checker.ttc_threshold");
   params_.ego_deceleration =
-    get_or_declare_parameter<double>(node, "collision_checker.ego_deceleration");
+    get_or_declare_parameter<double>(node, "intersection_collision_checker.ego_deceleration");
   params_.min_time_horizon =
-    get_or_declare_parameter<double>(node, "collision_checker.min_time_horizon");
-  params_.timeout = get_or_declare_parameter<double>(node, "collision_checker.timeout");
+    get_or_declare_parameter<double>(node, "intersection_collision_checker.min_time_horizon");
+  params_.timeout =
+    get_or_declare_parameter<double>(node, "intersection_collision_checker.timeout");
 
   params_.right_turn.enable =
-    get_or_declare_parameter<bool>(node, "collision_checker.right_turn.enable");
-  params_.right_turn.check_oncoming_lanes =
-    get_or_declare_parameter<bool>(node, "collision_checker.right_turn.check_oncoming_lanes");
-  params_.right_turn.check_crossing_lanes =
-    get_or_declare_parameter<bool>(node, "collision_checker.right_turn.check_crossing_lanes");
-  params_.right_turn.check_turning_lanes =
-    get_or_declare_parameter<bool>(node, "collision_checker.right_turn.check_turning_lanes");
+    get_or_declare_parameter<bool>(node, "intersection_collision_checker.right_turn.enable");
+  params_.right_turn.check_oncoming_lanes = get_or_declare_parameter<bool>(
+    node, "intersection_collision_checker.right_turn.check_oncoming_lanes");
+  params_.right_turn.check_crossing_lanes = get_or_declare_parameter<bool>(
+    node, "intersection_collision_checker.right_turn.check_crossing_lanes");
+  params_.right_turn.check_turning_lanes = get_or_declare_parameter<bool>(
+    node, "intersection_collision_checker.right_turn.check_turning_lanes");
 
   params_.left_turn.enable =
-    get_or_declare_parameter<bool>(node, "collision_checker.left_turn.enable");
-  params_.left_turn.check_turning_lanes =
-    get_or_declare_parameter<bool>(node, "collision_checker.left_turn.check_turning_lanes");
+    get_or_declare_parameter<bool>(node, "intersection_collision_checker.left_turn.enable");
+  params_.left_turn.check_turning_lanes = get_or_declare_parameter<bool>(
+    node, "intersection_collision_checker.left_turn.check_turning_lanes");
 
-  params_.pointcloud.height_buffer =
-    get_or_declare_parameter<double>(node, "collision_checker.pointcloud.height_buffer");
+  params_.pointcloud.height_buffer = get_or_declare_parameter<double>(
+    node, "intersection_collision_checker.pointcloud.height_buffer");
   params_.pointcloud.min_height =
-    get_or_declare_parameter<double>(node, "collision_checker.pointcloud.min_height");
-  params_.pointcloud.observation_time =
-    get_or_declare_parameter<double>(node, "collision_checker.pointcloud.observation_time");
-  params_.pointcloud.voxel_grid_filter.x =
-    get_or_declare_parameter<double>(node, "collision_checker.pointcloud.voxel_grid_filter.x");
-  params_.pointcloud.voxel_grid_filter.y =
-    get_or_declare_parameter<double>(node, "collision_checker.pointcloud.voxel_grid_filter.y");
-  params_.pointcloud.voxel_grid_filter.z =
-    get_or_declare_parameter<double>(node, "collision_checker.pointcloud.voxel_grid_filter.z");
-  params_.pointcloud.clustering.tolerance =
-    get_or_declare_parameter<double>(node, "collision_checker.pointcloud.clustering.tolerance");
-  params_.pointcloud.clustering.min_height =
-    get_or_declare_parameter<double>(node, "collision_checker.pointcloud.clustering.min_height");
-  params_.pointcloud.clustering.min_size =
-    get_or_declare_parameter<int>(node, "collision_checker.pointcloud.clustering.min_size");
-  params_.pointcloud.clustering.max_size =
-    get_or_declare_parameter<int>(node, "collision_checker.pointcloud.clustering.max_size");
+    get_or_declare_parameter<double>(node, "intersection_collision_checker.pointcloud.min_height");
+  params_.pointcloud.observation_time = get_or_declare_parameter<double>(
+    node, "intersection_collision_checker.pointcloud.observation_time");
+  params_.pointcloud.voxel_grid_filter.x = get_or_declare_parameter<double>(
+    node, "intersection_collision_checker.pointcloud.voxel_grid_filter.x");
+  params_.pointcloud.voxel_grid_filter.y = get_or_declare_parameter<double>(
+    node, "intersection_collision_checker.pointcloud.voxel_grid_filter.y");
+  params_.pointcloud.voxel_grid_filter.z = get_or_declare_parameter<double>(
+    node, "intersection_collision_checker.pointcloud.voxel_grid_filter.z");
+  params_.pointcloud.clustering.tolerance = get_or_declare_parameter<double>(
+    node, "intersection_collision_checker.pointcloud.clustering.tolerance");
+  params_.pointcloud.clustering.min_height = get_or_declare_parameter<double>(
+    node, "intersection_collision_checker.pointcloud.clustering.min_height");
+  params_.pointcloud.clustering.min_size = get_or_declare_parameter<int>(
+    node, "intersection_collision_checker.pointcloud.clustering.min_size");
+  params_.pointcloud.clustering.max_size = get_or_declare_parameter<int>(
+    node, "intersection_collision_checker.pointcloud.clustering.max_size");
 }
 
 void IntersectionCollisionChecker::setup_diag()
