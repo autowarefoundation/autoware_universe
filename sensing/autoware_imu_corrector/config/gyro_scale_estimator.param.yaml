@@ -1,16 +1,25 @@
 /**:
   ros__parameters:
     estimate_scale_init: 1.0 # initial scale estimation for scale
-    ekf_variance_p: 0.1 # initial variance
-    ekf_process_noise_q: 3e-7 # estimated process noise
-    ekf_measurement_noise_r: 0.004 # device measurement noise
-    time_window_secs: 5.0 # gather estimate scale samples during this time
-    threshold_scale_change: 0.07 # percentage change wrt current scale
+    ekf_variance_p: 0.001 # initial variance
+    ekf_process_noise_q: 3e-11 # estimated process noise
+    ekf_measurement_noise_r: 0.00002 # device measurement noise
+    time_window_secs: 10.0 # gather estimate scale samples during this time
+    threshold_scale_change: 0.04 # percentage change wrt current scale
     threshold_error_rate: 0.1
     num_consecutive_scale_change: 3.0 # number of time windows after change the current scale
-    min_allowed_scale: 0.3 # minimum allowed scale
-    max_allowed_scale: 10.0 # maximum allowed scale
+    min_allowed_scale: 0.8 # minimum allowed scale
+    max_allowed_scale: 3.0 # maximum allowed scale
     scale_on_purpose: 1.0 # scale to apply on purpose
     bias_on_purpose: 0.0 # bias to apply on purpose
-    drift_scale: 0.00000 # 0.0001 # scale to apply on purpose for drift
+    drift_scale: 0.000000 # 0.0001 # scale to apply on purpose for drift
     drift_bias: 0.000000 # 0.000001 # bias to apply on purpose for drift
+    ekf_variance_p_a: 0.1 # initial variance
+    ekf_process_noise_q_a: 3e-10 # estimated process noise
+    ekf_measurement_noise_r_a: 0.001 # device measurement noise
+    alpha: 0.98 #0.98
+    alpha_ndt_rate: 0.5
+    threshlod_to_estimate_scale: 0.14 # angular speed radians
+    percentage_scale_rate_allow_correct: 0.08 # ignore scale changes above this value
+    counter_correct_big_change: 6.0
+    alpha_big_change: 0.87
