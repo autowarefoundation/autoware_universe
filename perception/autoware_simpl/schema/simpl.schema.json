@@ -23,7 +23,7 @@
             }
           }
         },
-        "processing": {
+        "preprocess": {
           "type": "object",
           "properties": {
             "labels": {
@@ -60,6 +60,23 @@
               "default": 20,
               "minimum": 1
             },
+            "polyline_range_threshold": {
+              "type": "number",
+              "description": "Distance threshold from the ego vehicle to filter out map polylines [m].",
+              "default": 100.0,
+              "minimum": 1.0
+            },
+            "polyline_break_distance": {
+              "type": "number",
+              "description": "If the distance of two points is greater than this value they are separated into two polylines [m].",
+              "default": 5.0,
+              "minimum": 1.0
+            }
+          }
+        },
+        "postprocess": {
+          "type": "object",
+          "properties": {
             "num_mode": {
               "type": "integer",
               "description": "Number of predicted modes for a single agent ($M$).",
@@ -78,23 +95,11 @@
               "default": 0.15,
               "minimum": 0.0,
               "maximum": 1.0
-            },
-            "polyline_break_distance": {
-              "type": "number",
-              "description": "If the distance of two points is greater than this value they are separated into two polylines [m].",
-              "default": 5.0,
-              "minimum": 1.0
-            },
-            "polyline_distance_threshold": {
-              "type": "number",
-              "description": "Distance threshold from the ego vehicle to filter out map points [m].",
-              "default": 100.0,
-              "minimum": 1.0
             }
           }
         }
       },
-      "required": ["detector", "processing"]
+      "required": ["detector", "preprocess", "postprocess"]
     }
   },
   "properties": {

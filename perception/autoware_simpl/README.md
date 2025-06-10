@@ -43,20 +43,35 @@ The implementation bases on SIMPL [1] [2] work. It uses TensorRT library for dat
 
 Now we are preparing a library to train and deploy SIMPL and other ML models featuring motion prediction tasks.
 
+## Testing
+
+Unit tests are provided and can be run with:
+
+```shell
+colcon test --packages-select autoware_simpl
+colcon test-result --all
+```
+
+To print the test's details with while the tests are being run, use the `--event-handlers console_cohesion+` option to print the details directly to the console:
+
+```shell
+colcon test --event-handlers console_cohesion+ --packages-select autoware_simpl
+```
+
 ## Assumptions / Known limits
 
 ### Number of predicted agents
 
-We have not supported the dynamic shape inference yet. Therefore, the number of predicted agents must be fixed as `processing.max_num_agent` ($N$).
+We have not supported the dynamic shape inference yet. Therefore, the number of predicted agents must be fixed as `preprocess.max_num_agent` ($N$).
 This value is determined when exporting ONNX.
 
 Note that the following parameters are also determined when exporting ONNX:
 
-- `processing.num_past`: $T_{past}$
-- `processing.max_num_polyline`: $K$
-- `processing.max_num_point`: $P$
-- `processing.num_mode`: $M$
-- `processing.num_future`: $T_{future}$
+- `preprocess.num_past`: $T_{past}$
+- `preprocess.max_num_polyline`: $K$
+- `preprocess.max_num_point`: $P$
+- `postprocess.num_mode`: $M$
+- `postprocess.num_future`: $T_{future}$
 
 ### Agent History Lifetime
 

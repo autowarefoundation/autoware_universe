@@ -80,26 +80,29 @@ SimplEgoNode::SimplEgoNode(const rclcpp::NodeOptions & options) : rclcpp::Node("
 
   {
     // Pre-processor
-    const auto label_names = declare_parameter<std::vector<std::string>>("processing.labels");
+    const auto label_names = declare_parameter<std::vector<std::string>>("preprocess.labels");
     const auto label_ids = archetype::to_label_ids(label_names);
-    const auto max_num_agent = declare_parameter<int>("processing.max_num_agent");
-    num_past_ = declare_parameter<int>("processing.num_past");
-    const auto max_num_polyline = declare_parameter<int>("processing.max_num_polyline");
-    const auto max_num_point = declare_parameter<int>("processing.max_num_point");
-    const auto break_distance = declare_parameter<double>("processing.polyline_break_distance");
+    const auto max_num_agent = declare_parameter<int>("preprocess.max_num_agent");
+    num_past_ = declare_parameter<int>("preprocess.num_past");
+    const auto max_num_polyline = declare_parameter<int>("preprocess.max_num_polyline");
+    const auto max_num_point = declare_parameter<int>("preprocess.max_num_point");
+    const auto polyline_range_distance =
+      declare_parameter<double>("preprocess.polyline_range_distance");
+    const auto polyline_break_distance =
+      declare_parameter<double>("preprocess.polyline_break_distance");
 
     preprocessor_ = std::make_unique<processing::PreProcessor>(
-      label_ids, max_num_agent, num_past_, max_num_polyline, max_num_point, break_distance);
+      label_ids, max_num_agent, num_past_, max_num_polyline, max_num_point, polyline_range_distance,
+      polyline_break_distance);
+  }
 
+  {
     // Post-processor
-    const auto num_mode = declare_parameter<int>("processing.num_mode");
-    const auto num_future = declare_parameter<int>("processing.num_future");
-    const auto score_threshold = declare_parameter<double>("processing.score_threshold");
+    const auto num_mode = declare_parameter<int>("postprocess.num_mode");
+    const auto num_future = declare_parameter<int>("postprocess.num_future");
+    const auto score_threshold = declare_parameter<double>("postprocess.score_threshold");
     postprocessor_ =
       std::make_unique<processing::PostProcessor>(num_mode, num_future, score_threshold);
-
-    polyline_distance_threshold_ =
-      declare_parameter<double>("processing.polyline_distance_threshold");
   }
 
   {
@@ -137,6 +140,8 @@ SimplEgoNode::SimplEgoNode(const rclcpp::NodeOptions & options) : rclcpp::Node("
       this->create_publisher<MarkerArray>("~/debug/histories", rclcpp::QoS{1});
     polyline_marker_publisher_ =
       this->create_publisher<MarkerArray>("~/debug/map_points", rclcpp::QoS{1});
+    processed_map_marker_publisher_ =
+      this->create_publisher<MarkerArray>("~/debug/processed_map", rclcpp::QoS{1});
   }
 }
 
@@ -151,8 +156,7 @@ void SimplEgoNode::callback()
   }
   const auto & current_ego = current_ego_opt.value();
 
-  const auto polylines_opt =
-    lanelet_converter_ptr_->extract(current_ego, polyline_distance_threshold_);
+  const auto polylines_opt = lanelet_converter_ptr_->polylines();
   if (!polylines_opt) {
     RCLCPP_WARN(get_logger(), "No map points.");
     return;
@@ -196,8 +200,11 @@ void SimplEgoNode::callback()
       debug::create_history_marker_array(history_map_, *current_header_);
     const auto polyline_marker_array =
       debug::create_polyline_marker_array(polylines, *current_header_);
+    const auto processed_map_marker_array = debug::create_processed_map_marker_array(
+      map_metadata.tensor.polylines, map_metadata.centers, map_metadata.vectors, *current_header_);
     history_marker_publisher_->publish(history_marker_array);
     polyline_marker_publisher_->publish(polyline_marker_array);
+    processed_map_marker_publisher_->publish(processed_map_marker_array);
   }
 }
 

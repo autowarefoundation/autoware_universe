@@ -81,12 +81,12 @@ archetype::Result<TrtSimpl::output_type> TrtSimpl::do_inference(
   out_trajectory_d_ = cuda_utils::make_unique<float[]>(trajectory_size);
 
   // Set tensors addresses
-  std::vector<void *> buffers{
+  std::vector<void *> tensors{
     in_agent_d_.get(), in_map_d_.get(), in_rpe_d_.get(), out_score_d_.get(),
     out_trajectory_d_.get()};
-  if (!trt_common_->setTensorsAddresses(buffers)) {
+  if (!trt_common_->setTensorsAddresses(tensors)) {
     return archetype::Err<output_type>(
-      archetype::SimplError_t::TensorRT, "Failed to set tensors addresses");
+      archetype::SimplError_t::TensorRT, "Failed to set tensor addresses");
   }
 
   // Execute inference

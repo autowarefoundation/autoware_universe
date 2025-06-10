@@ -243,18 +243,10 @@ void LaneletConverter::convert(const lanelet::LaneletMapConstPtr lanelet_map_ptr
   }
 }
 
-std::optional<std::vector<archetype::Polyline>> LaneletConverter::extract(
-  const archetype::AgentState & state_from, double distance_threshold)
+std::optional<std::vector<archetype::Polyline>> LaneletConverter::polylines()
 {
   std::lock_guard<std::mutex> lock(container_mtx_);
-  std::vector<archetype::Polyline> outputs;
-  for (const auto & polyline : container_) {
-    if (polyline.distance_from(state_from) > distance_threshold) {
-      continue;
-    }
-    outputs.emplace_back(polyline);
-  }
-  return outputs.size() == 0 ? std::nullopt : std::make_optional(outputs);
+  return container_.empty() ? std::nullopt : std::make_optional(container_);
 }
 
 archetype::Polyline LaneletConverter::from_linestring(

@@ -121,6 +121,7 @@ private:
   //!< Debug marker publisher.
   rclcpp::Publisher<MarkerArray>::SharedPtr history_marker_publisher_;
   rclcpp::Publisher<MarkerArray>::SharedPtr polyline_marker_publisher_;
+  rclcpp::Publisher<MarkerArray>::SharedPtr processed_map_marker_publisher_;
 
   //!< Pointer to lanelet map.
   lanelet::LaneletMapPtr lanelet_map_ptr_;
@@ -151,9 +152,6 @@ private:
 
   //!< Number of past timestamps.
   int num_past_;
-
-  //!< Distance threshold to separate points into a polyline.
-  double polyline_distance_threshold_;
 };
 }  // namespace autoware::simpl
 #endif  // AUTOWARE__SIMPL__SIMPL_EGO_NODE_HPP_

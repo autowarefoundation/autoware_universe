@@ -112,11 +112,13 @@ public:
    * @param num_past Number of past timestamps.
    * @param max_num_polyline Maximum number of polylines.
    * @param max_num_point Maximum number of points in a single polyline.
-   * @param break_distance Distance threshold to break two polylines.
+   * @param polyline_range_distance Distance threshold from ego to trim polylines [m].
+   * @param polyline_break_distance Distance threshold to break two polylines [m].
    */
   PreProcessor(
     const std::vector<size_t> & label_ids, size_t max_num_agent, size_t num_past,
-    size_t max_num_polyline, size_t max_num_point, double break_distance);
+    size_t max_num_polyline, size_t max_num_point, double polyline_range_distance,
+    double polyline_break_distance);
 
   /**
    * @brief Execute preprocessing.
@@ -161,12 +163,13 @@ private:
   RpeTensor process_rpe(
     const AgentMetadata & agent_metadata, const MapMetadata & map_metadata) const;
 
-  const std::vector<size_t> label_ids_;  //!< Vector of predictable label ids.
-  const size_t max_num_agent_;           //!< Maximum number of predictable agents (N).
-  const size_t num_past_;                //!< Number of past timestamps (Tp).
-  const size_t max_num_polyline_;        //!< Maximum number of polylines (K).
-  const size_t max_num_point_;           //!< Maximum number of points in a single polyline (P).
-  const double break_distance_;          //!< Distance threshold to break two polylines.
+  const std::vector<size_t> label_ids_;   //!< Vector of predictable label ids.
+  const size_t max_num_agent_;            //!< Maximum number of predictable agents (N).
+  const size_t num_past_;                 //!< Number of past timestamps (Tp).
+  const size_t max_num_polyline_;         //!< Maximum number of polylines (K).
+  const size_t max_num_point_;            //!< Maximum number of points in a single polyline (P).
+  const double polyline_range_distance_;  //!< Distance threshold from ego to trim polylines [m].
+  const double polyline_break_distance_;  //!< Distance threshold to break two polylines [m].
 };
 }  // namespace autoware::simpl::processing
 #endif  // AUTOWARE__SIMPL__PROCESSING__PREPROCESSOR_HPP_

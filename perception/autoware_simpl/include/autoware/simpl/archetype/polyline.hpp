@@ -178,5 +178,16 @@ private:
   std::vector<value_type> waypoints_;  //!< Points container.
   value_type center_;                  //!< Center of polyline.
 };
+
+/**
+ * @brief Trim neighbor polylines that the distance of center from an agent is less than the
+ * specified tolerance.
+ *
+ * @param polylines Vector of polylines.
+ * @param state_from Agent state.
+ * @param range_distance Tolerance value of distance from polyline to agent.
+ */
+std::vector<Polyline> trim_neighbors(
+  const std::vector<Polyline> & polylines, const AgentState & state_from, double range_distance);
 }  // namespace autoware::simpl::archetype
 #endif  // AUTOWARE__SIMPL__ARCHETYPE__POLYLINE_HPP_

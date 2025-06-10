@@ -17,10 +17,7 @@ find_package(CUDNN REQUIRED)
 find_package(TENSORRT REQUIRED)
 
 # --- check CUDA tools and TensorRT version ---
-if(NOT
-   (CUDAToolkit_FOUND
-    AND CUDNN_FOUND
-    AND TENSORRT_FOUND))
+if(NOT (CUDAToolkit_FOUND AND CUDNN_FOUND AND TENSORRT_FOUND))
   message(FATAL_ERROR "cuda, cudnn, tensorrt libraries are not found")
 endif()
 
@@ -45,8 +42,23 @@ rclcpp_components_register_node(
   ${PROJECT_NAME}_ego_exe)
 
 if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  ament_lint_auto_find_test_dependencies()
+  ament_add_ros_isolated_gtest(test_simpl
+    # archetype
+    test/test_agent.cpp
+    test/test_exception.cpp
+    test/test_fixed_queue.cpp
+    test/test_map.cpp
+    test/test_polyline.cpp
+    test/test_result.cpp
+    test/test_tensor.cpp
+    # conversion
+    test/test_lanelet_conversion.cpp
+    test/test_tracked_object_conversion.cpp
+    # processing
+    test/test_postprocessor.cpp
+    test/test_preprocessor.cpp)
+
+  target_link_libraries(test_simpl ${PROJECT_NAME})
 endif()
 
 ament_auto_package(INSTALL_TO_SHARE launch config data)
