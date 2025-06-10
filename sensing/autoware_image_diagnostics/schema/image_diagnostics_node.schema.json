@@ -1,0 +1,134 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Image Diagnostics Node",
+  "type": "object",
+  "definitions": {
+    "image_diagnostics_node": {
+      "type": "object",
+      "properties": {
+        "debug": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to enable debug mode. If true, the node will publish debug images for visualization and analysis."
+        },
+        "image_resize_height": {
+          "type": "integer",
+          "default": 480,
+          "minimum": 0,
+          "description": "Target height to resize the input image before block analysis. Width is scaled proportionally."
+        },
+        "consecutive_error_frame_threshold": {
+          "type": "integer",
+          "default": 3,
+          "minimum": 1,
+          "description": "Number of consecutive frames with errors before triggering an error status."
+        },
+        "num_blocks_horizontal": {
+          "type": "integer",
+          "default": 5,
+          "minimum": 0,
+          "description": "Number of horizontal divisions to split the image into for diagnostics."
+        },
+        "num_blocks_vertical": {
+          "type": "integer",
+          "default": 5,
+          "minimum": 0,
+          "description": "Number of vertical divisions to split the image into for diagnostics."
+        },
+        "blockage_region_error_threshold": {
+          "type": "integer",
+          "default": 5,
+          "minimum": 0,
+          "description": "Number of blockage blocks above which an error is issued."
+        },
+        "blockage_ratio_threshold": {
+          "type": "number",
+          "default": 0.9,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Ratio of dark pixels in a block above which it is considered blocked."
+        },
+        "blockage_intensity_threshold": {
+          "type": "integer",
+          "default": 10,
+          "minimum": 0,
+          "maximum": 255,
+          "description": "Pixel intensity threshold for binary image conversion during blockage detection."
+        },
+        "blockage_frequency_ratio_threshold": {
+          "type": "number",
+          "default": 0.3,
+          "minimum": 0.0,
+          "description": "Average frequency magnitude below which a block is considered blocked due to lack of detail."
+        },
+        "shadow_region_error_threshold": {
+          "type": "integer",
+          "default": 20,
+          "minimum": 0,
+          "description": "Number of shadowed (dark) blocks above which an error is issued."
+        },
+        "shadow_intensity_threshold": {
+          "type": "integer",
+          "default": 10,
+          "minimum": 0,
+          "maximum": 255,
+          "description": "Pixel intensity below which a block is considered dark or shadowed."
+        },
+        "highlight_region_error_threshold": {
+          "type": "integer",
+          "default": 3,
+          "minimum": 0,
+          "description": "Number of highlighted (overexposed) blocks above which an error is issued."
+        },
+        "highlight_intensity_threshold": {
+          "type": "integer",
+          "default": 230,
+          "minimum": 0,
+          "maximum": 255,
+          "description": "Pixel intensity above which a block is considered highlight clipping."
+        },
+        "low_visibility_region_error_threshold": {
+          "type": "integer",
+          "default": 4,
+          "minimum": 0,
+          "description": "Number of low visibility (blurred or foggy) blocks above which an error is issued."
+        },
+        "low_visibility_frequency_threshold": {
+          "type": "number",
+          "default": 4.0,
+          "minimum": 0.0,
+          "description": "Average frequency magnitude below which a block is considered low visibility."
+        }
+      },
+      "required": [
+        "debug",
+        "consecutive_error_frame_threshold",
+        "image_resize_height",
+        "num_blocks_horizontal",
+        "num_blocks_vertical",
+        "blockage_region_error_threshold",
+        "blockage_ratio_threshold",
+        "blockage_intensity_threshold",
+        "blockage_frequency_ratio_threshold",
+        "shadow_region_error_threshold",
+        "shadow_intensity_threshold",
+        "highlight_region_error_threshold",
+        "highlight_intensity_threshold",
+        "low_visibility_region_error_threshold",
+        "low_visibility_frequency_threshold"
+      ]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/image_diagnostics_node"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}
