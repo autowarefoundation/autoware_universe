@@ -28,18 +28,30 @@ TrtSimpl::TrtSimpl(const tensorrt_common::TrtCommonConfig & config)
 {
   trt_common_ = std::make_unique<tensorrt_common::TrtCommon>(config);
 
-  using ProfileDims = tensorrt_common::ProfileDims;
+  // TODO(ktro2828): add support of dynamic shape inference
+  auto profile_dims = std::make_unique<std::vector<tensorrt_common::ProfileDims>>();
+  auto network_io = std::make_unique<std::vector<tensorrt_common::NetworkIO>>();
+  {
+    constexpr size_t num_input = 3;   // (agent, map, rpe)
+    constexpr size_t num_output = 2;  // (score, trajectory)
+    // input profiles
+    for (size_t i = 0; i < num_input; ++i) {
+      const auto dims = trt_common_->getInputDims(i);
+      profile_dims->emplace_back(i, dims, dims, dims);
 
-  // NOTE: Only static inference is supported
-  constexpr size_t num_input = 3;
-  std::vector<ProfileDims> profile_dims;
-  for (size_t i = 0; i < num_input; ++i) {
-    const auto dims = trt_common_->getInputDims(i);
-    profile_dims.emplace_back(i, dims, dims, dims);
+      const auto name = trt_common_->getIOTensorName(i);
+      network_io->emplace_back(name, dims);
+    }
+
+    // output profiles
+    for (size_t i = 0; i < num_output; ++i) {
+      const auto dims = trt_common_->getOutputDims(i);
+      const auto name = trt_common_->getIOTensorName(i + num_input);
+      network_io->emplace_back(name, dims);
+    }
   }
 
-  auto profile_dims_ptr = std::make_unique<std::vector<ProfileDims>>(profile_dims);
-  if (!trt_common_->setup(std::move(profile_dims_ptr))) {
+  if (!trt_common_->setup(std::move(profile_dims), std::move(network_io))) {
     throw archetype::SimplException(
       archetype::SimplError_t::TensorRT, "Failed to setup TensorRT engine.");
   }
