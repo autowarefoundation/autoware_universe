@@ -79,6 +79,16 @@ struct AgentState
   static size_t num_attribute() { return 8; }
 
   /**
+   * @brief Return the distance from another agent.
+   *
+   * @param other Another agent state.
+   */
+  double distance_from(const AgentState & other) const
+  {
+    return std::hypot(x - other.x, y - other.y);
+  }
+
+  /**
    * @brief Transform state to input state coordinate frame.
    *
    * @param to_state Agent state in the target coordinate frame.
@@ -139,6 +149,13 @@ public:
   void update(const value_type & state) noexcept { queue_.push_back(state); }
 
   /**
+   * @brief Return distance from the current state to another agent.
+   *
+   * @param other Another agent state.
+   */
+  double distance_from(const AgentState & other) const { return current().distance_from(other); }
+
+  /**
    * @brief Transform states to current coordinate frame.
    */
   AgentHistory transform_to_current() const;
@@ -197,5 +214,16 @@ public:
 private:
   FixedQueue<value_type> queue_;  //!< Agent state container.
 };
+
+/**
+ * @brief Trim top-k nearest neighbor agent histories by comparing the distance from the current
+ * states.
+ *
+ * @param histories Source histories.
+ * @param state_from Agent state.
+ * @param top_k Maximum number of agents to be trimmed.
+ */
+std::vector<AgentHistory> trim_neighbors(
+  const std::vector<AgentHistory> & histories, const AgentState & state_from, size_t top_k);
 }  // namespace autoware::simpl::archetype
 #endif  // AUTOWARE__SIMPL__ARCHETYPE__AGENT_HPP_
