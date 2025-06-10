@@ -128,8 +128,9 @@ void set_right_turn_target_lanelets(
         lanelet::utils::getArcCoordinates(extended_lanelets, overlap_point).length;
       if (current_arc_length >= distance_th) return extended_lanelets;
 
+      lanelet::ConstLanelets prev_lanelets = {ll};
       while (current_arc_length < distance_th) {
-        const auto prev_lanelets = route_handler.getPreviousLanelets(ll);
+        prev_lanelets = route_handler.getPreviousLanelets(prev_lanelets.front());
         if (prev_lanelets.empty()) break;  // No more previous lanelets to extend
         extended_lanelets.push_back(prev_lanelets.front());
         current_arc_length += lanelet::utils::getLaneletLength2d(prev_lanelets.front());
@@ -206,8 +207,9 @@ void set_left_turn_target_lanelets(
         lanelet::utils::getArcCoordinates(extended_lanelets, overlap_point).length;
       if (current_arc_length >= distance_th) return extended_lanelets;
 
+      lanelet::ConstLanelets prev_lanelets = {ll};
       while (current_arc_length < distance_th) {
-        const auto prev_lanelets = route_handler.getPreviousLanelets(ll);
+        prev_lanelets = route_handler.getPreviousLanelets(prev_lanelets.front());
         if (prev_lanelets.empty()) break;  // No more previous lanelets to extend
         extended_lanelets.push_back(prev_lanelets.front());
         current_arc_length += lanelet::utils::getLaneletLength2d(prev_lanelets.front());
