@@ -1568,7 +1568,7 @@ SafetyFactorArray CrosswalkModule::createSafetyFactorArray(
   safety_factors.header.stamp = clock_->now();
   safety_factors.header.frame_id = "map";
 
-  for (const auto & object_id : stop_factor.value().checked_object_ids) {
+  for (const auto & object_id : stop_factor.value().target_object_ids) {
     autoware_internal_planning_msgs::msg::SafetyFactor safety_factor;
 
     safety_factor.type = autoware_internal_planning_msgs::msg::SafetyFactor::OBJECT;
@@ -1584,19 +1584,6 @@ SafetyFactorArray CrosswalkModule::createSafetyFactorArray(
 
       const auto & position = object.position;
       safety_factor.points = {position};
-    } else {
-      const auto objects_ptr = planner_data_->predicted_objects;
-      for (const auto & object : objects_ptr->objects) {
-        if (object.object_id == object_id) {
-          // TODO(odashima): add a correct value
-          safety_factor.ttc_begin = 0.0;
-          safety_factor.ttc_end = 0.0;
-
-          const auto & position = object.kinematics.initial_pose_with_covariance.pose.position;
-          safety_factor.points = {position};
-          break;
-        }
-      }
     }
 
     safety_factor.is_safe = false;
