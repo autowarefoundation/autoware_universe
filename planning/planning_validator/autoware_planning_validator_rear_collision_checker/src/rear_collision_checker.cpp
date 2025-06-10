@@ -25,6 +25,7 @@
 #include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/transform/transforms.hpp>
 #include <magic_enum.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include <pcl/filters/crop_hull.h>
 #include <pcl/filters/extract_indices.h>
@@ -35,12 +36,6 @@
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/surface/convex_hull.h>
 #include <pcl_conversions/pcl_conversions.h>
-
-#ifdef ROS_DISTRO_GALACTIC
-#include <tf2_eigen/tf2_eigen.h>
-#else
-#include <tf2_eigen/tf2_eigen.hpp>
-#endif
 
 #include <algorithm>
 #include <limits>
@@ -67,10 +62,6 @@ void RearCollisionChecker::init(
   last_safe_time_ = clock_->now();
 
   last_unsafe_time_ = clock_->now();
-
-  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(clock_);
-
-  tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
 
   param_listener_ = std::make_unique<rear_collision_checker_node::ParamListener>(
     node.get_node_parameters_interface());
@@ -101,7 +92,7 @@ void RearCollisionChecker::validate(bool & is_critical)
 
   DebugData debug_data;
 
-  context_->validation_status->is_no_collision_risk_rear = is_safe(debug_data);
+  context_->validation_status->is_valid_rear_collision_check = is_safe(debug_data);
 
   is_critical = false;
 
@@ -115,7 +106,7 @@ void RearCollisionChecker::validate(bool & is_critical)
 void RearCollisionChecker::setup_diag()
 {
   context_->add_diag(
-    "rear_collision_risk", context_->validation_status->is_no_collision_risk_rear,
+    "rear_collision_risk", context_->validation_status->is_valid_rear_collision_check,
     "obstacle detected behind the vehicle", false);
 }
 
@@ -291,7 +282,7 @@ auto RearCollisionChecker::filter_pointcloud([[maybe_unused]] DebugData & debug)
 
     geometry_msgs::msg::TransformStamped transform_stamped;
     try {
-      transform_stamped = tf_buffer_->lookupTransform(
+      transform_stamped = context_->tf_buffer.lookupTransform(
         "map", context_->data->obstacle_pointcloud->header.frame_id,
         context_->data->obstacle_pointcloud->header.stamp, rclcpp::Duration::from_seconds(0.1));
     } catch (tf2::TransformException & e) {

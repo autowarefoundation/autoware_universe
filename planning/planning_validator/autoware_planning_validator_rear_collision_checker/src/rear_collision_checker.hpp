@@ -21,10 +21,6 @@
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <tf2/utils.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
-
 #include <map>
 #include <memory>
 #include <string>
@@ -92,10 +88,6 @@ private:
   rclcpp::Time last_safe_time_;
 
   rclcpp::Time last_unsafe_time_;
-
-  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
-
-  std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
 
   std::unique_ptr<rear_collision_checker_node::ParamListener> param_listener_;
 
