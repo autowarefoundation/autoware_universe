@@ -736,16 +736,20 @@ void GoalPlannerModule::updateData()
     dynamic_target_objects, parameters_.th_moving_object_velocity);
 
   const auto & upstream_module_path = getPreviousModuleOutput().path;
-  const bool upstream_module_has_stopline =
-    std::find_if(
-      upstream_module_path.points.begin(), upstream_module_path.points.end(),
-      [&](const auto & point) {
-        return std::fabs(point.point.longitudinal_velocity_mps) == 0.0;
-      }) != upstream_module_path.points.end();
+  const auto stopline_it = std::find_if(
+    upstream_module_path.points.begin(), upstream_module_path.points.end(),
+    [&](const auto & point) { return std::fabs(point.point.longitudinal_velocity_mps) == 0.0; });
+  /*
+    NOTE(soblin): this is a hack for lane_change bug randomly inserting a stopline at the end of the
+    path.
+   */
+  const bool upstream_module_has_stopline_except_terminal =
+    static_cast<unsigned>(std::distance(upstream_module_path.points.begin(), stopline_it)) + 1 <
+    upstream_module_path.points.size();
   path_decision_controller_.transit_state(
-    pull_over_path_recv, upstream_module_has_stopline, clock_->now(), static_target_objects,
-    dynamic_target_objects, planner_data_, occupancy_grid_map_, is_current_safe, parameters_,
-    goal_searcher, debug_data_.ego_polygons_expanded);
+    pull_over_path_recv, upstream_module_has_stopline_except_terminal, clock_->now(),
+    static_target_objects, dynamic_target_objects, planner_data_, occupancy_grid_map_,
+    is_current_safe, parameters_, goal_searcher, debug_data_.ego_polygons_expanded);
   const auto new_decision_state = path_decision_controller_.get_current_state();
 
   auto [lane_parking_response, freespace_parking_response] = syncWithThreads();
