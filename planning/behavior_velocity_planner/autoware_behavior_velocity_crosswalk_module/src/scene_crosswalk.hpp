@@ -140,13 +140,13 @@ public:
     double max_slow_down_accel;
     double no_relax_velocity;
     // param for stuck vehicle
-    bool enable_stuck_check_in_intersection{false};
-    double stuck_vehicle_velocity;
-    double max_stuck_vehicle_lateral_offset;
+    bool enable_obstruction_prevention{false};
+    double front_vehicle_velocity;
+    double max_front_vehicle_lateral_offset;
     double required_clearance;
-    double min_acc_for_stuck_vehicle;
-    double max_jerk_for_stuck_vehicle;
-    double min_jerk_for_stuck_vehicle;
+    double min_acc_for_front_vehicle;
+    double max_jerk_for_front_vehicle;
+    double min_jerk_for_front_vehicle;
     // param for pass judge logic
     std::vector<double> ego_pass_first_margin_x;
     std::vector<double> ego_pass_first_margin_y;
@@ -390,7 +390,7 @@ private:
   void applySlowDown(
     PathWithLaneId & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
-    const float safety_slow_down_speed);
+    const float safety_slow_down_speed, const std::string & reason);
 
   void applySlowDownByLanelet2Map(
     PathWithLaneId & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
@@ -415,7 +415,7 @@ private:
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const std::optional<geometry_msgs::msg::Pose> & default_stop_pose);
 
-  std::optional<StopPoseWithObjectUuids> checkStopForStuckVehicles(
+  std::optional<StopPoseWithObjectUuids> checkStopForObstructionPrevention(
     const PathWithLaneId & ego_path, const std::vector<PredictedObject> & objects,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
@@ -434,8 +434,10 @@ private:
     const PathWithLaneId & ego_path, const PredictedObject & object,
     const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area);
 
-  std::optional<StopPoseWithObjectUuids> getNearestStopFactor(
-    const PathWithLaneId & ego_path, const std::vector<StopPoseWithObjectUuids> & stop_factors,
+  std::pair<std::optional<StopPoseWithObjectUuids>, std::string> getNearestStopFactorAndReason(
+    const PathWithLaneId & ego_path,
+    const std::optional<StopPoseWithObjectUuids> & stop_factor_for_crosswalk_users,
+    const std::optional<StopPoseWithObjectUuids> & stop_factor_for_obstruction_preventions,
     const std::optional<StopPoseWithObjectUuids> & stop_factor_for_parked_vehicles);
 
   void setDistanceToStop(
@@ -448,7 +450,8 @@ private:
 
   void planStop(
     PathWithLaneId & ego_path, const std::optional<StopPoseWithObjectUuids> & nearest_stop_factor,
-    const std::optional<geometry_msgs::msg::Pose> & default_stop_pose);
+    const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
+    const std::string & reason) const;
 
   // minor functions
   std::pair<double, double> getAttentionRange(

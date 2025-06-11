@@ -76,20 +76,20 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
     get_or_declare_parameter<double>(node, ns + ".slow_down.no_relax_velocity");
 
   // param for stuck vehicle
-  cp.enable_stuck_check_in_intersection =
-    get_or_declare_parameter<bool>(node, ns + ".stuck_vehicle.enable_stuck_check_in_intersection");
-  cp.stuck_vehicle_velocity =
-    get_or_declare_parameter<double>(node, ns + ".stuck_vehicle.stuck_vehicle_velocity");
-  cp.max_stuck_vehicle_lateral_offset =
-    get_or_declare_parameter<double>(node, ns + ".stuck_vehicle.max_stuck_vehicle_lateral_offset");
+  cp.enable_obstruction_prevention = get_or_declare_parameter<bool>(
+    node, ns + ".obstruction_prevention.enable_obstruction_prevention");
+  cp.front_vehicle_velocity =
+    get_or_declare_parameter<double>(node, ns + ".obstruction_prevention.front_vehicle_velocity");
+  cp.max_front_vehicle_lateral_offset = get_or_declare_parameter<double>(
+    node, ns + ".obstruction_prevention.max_front_vehicle_lateral_offset");
   cp.required_clearance =
-    get_or_declare_parameter<double>(node, ns + ".stuck_vehicle.required_clearance");
-  cp.min_acc_for_stuck_vehicle =
-    get_or_declare_parameter<double>(node, ns + ".stuck_vehicle.min_acc");
-  cp.max_jerk_for_stuck_vehicle =
-    get_or_declare_parameter<double>(node, ns + ".stuck_vehicle.max_jerk");
-  cp.min_jerk_for_stuck_vehicle =
-    get_or_declare_parameter<double>(node, ns + ".stuck_vehicle.min_jerk");
+    get_or_declare_parameter<double>(node, ns + ".obstruction_prevention.required_clearance");
+  cp.min_acc_for_front_vehicle =
+    get_or_declare_parameter<double>(node, ns + ".obstruction_prevention.min_acc");
+  cp.max_jerk_for_front_vehicle =
+    get_or_declare_parameter<double>(node, ns + ".obstruction_prevention.max_jerk");
+  cp.min_jerk_for_front_vehicle =
+    get_or_declare_parameter<double>(node, ns + ".obstruction_prevention.min_jerk");
 
   // param for pass judge logic
   cp.ego_pass_first_margin_x =

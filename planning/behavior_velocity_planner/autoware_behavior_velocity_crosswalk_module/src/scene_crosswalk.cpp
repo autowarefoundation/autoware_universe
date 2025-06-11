@@ -265,23 +265,18 @@ bool CrosswalkModule::modifyPathVelocity(PathWithLaneId * path)
   const auto stop_factor_for_crosswalk_users = checkStopForCrosswalkUsers(
     *path, sparse_resample_path, first_path_point_on_crosswalk, last_path_point_on_crosswalk,
     default_stop_pose);
-  // Decide to stop for stuck vehicle
-  const auto stop_factor_for_stuck_vehicles = checkStopForStuckVehicles(
+  // Decide to stop for obstruction prevention
+  const auto stop_factor_for_obstruction_preventions = checkStopForObstructionPrevention(
     sparse_resample_path, objects_ptr->objects, first_path_point_on_crosswalk,
     last_path_point_on_crosswalk, default_stop_pose);
-  for (const auto & stop_factor :
-       {stop_factor_for_crosswalk_users, stop_factor_for_stuck_vehicles}) {
-    if (stop_factor) {
-      stop_factors.push_back(*stop_factor);
-    }
-  }
   // Decide to stop for parked vehicles (only if no other stop is planned)
   const auto stop_factor_for_parked_vehicles =
     checkStopForParkedVehicles(*path, first_path_point_on_crosswalk);
 
-  // Get nearest stop factor
-  const auto nearest_stop_factor =
-    getNearestStopFactor(*path, stop_factors, stop_factor_for_parked_vehicles);
+  // Get nearest stop factor and reason
+  const auto [nearest_stop_factor, reason] = getNearestStopFactorAndReason(
+    *path, stop_factor_for_crosswalk_users, stop_factor_for_obstruction_preventions,
+    stop_factor_for_parked_vehicles);
   recordTime(3);
 
   // Set safe or unsafe
@@ -295,7 +290,7 @@ bool CrosswalkModule::modifyPathVelocity(PathWithLaneId * path)
   if (isActivated()) {
     planGo(*path, nearest_stop_factor);
   } else {
-    planStop(*path, nearest_stop_factor, default_stop_pose);
+    planStop(*path, nearest_stop_factor, default_stop_pose, reason);
   }
   recordTime(4);
 
@@ -887,7 +882,7 @@ CollisionPoint CrosswalkModule::createCollisionPoint(
 void CrosswalkModule::applySlowDown(
   PathWithLaneId & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
   const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
-  const float safety_slow_down_speed)
+  const float safety_slow_down_speed, const std::string & reason)
 {
   const auto & ego_pos = planner_data_->current_odometry->pose.position;
   const auto ego_path = output;
@@ -937,8 +932,7 @@ void CrosswalkModule::applySlowDown(
     planning_factor_interface_->add(
       output.points, planner_data_->current_odometry->pose, *slowdown_pose,
       autoware_internal_planning_msgs::msg::PlanningFactor::SLOW_DOWN, safety_factor,
-      true /*is_driving_forward*/, safety_slow_down_speed, 0.0 /*shift distance*/,
-      "crosswalk_safety_slowdown_for_approaching");
+      true /*is_driving_forward*/, safety_slow_down_speed, 0.0 /*shift distance*/, reason);
   }
 }
 
@@ -951,7 +945,7 @@ void CrosswalkModule::applySlowDownByLanelet2Map(
   }
   applySlowDown(
     output, first_path_point_on_crosswalk, last_path_point_on_crosswalk,
-    static_cast<float>(crosswalk_.attribute("safety_slow_down_speed").asDouble().get()));
+    static_cast<float>(crosswalk_.attribute("safety_slow_down_speed").asDouble().get()), "map");
 }
 
 void CrosswalkModule::applySlowDownByOcclusion(
@@ -1006,7 +1000,7 @@ void CrosswalkModule::applySlowDownByOcclusion(
     const auto target_velocity = calcTargetVelocity(first_path_point_on_crosswalk, output);
     applySlowDown(
       output, first_path_point_on_crosswalk, last_path_point_on_crosswalk,
-      std::max(target_velocity, planner_param_.occlusion_slow_down_velocity));
+      std::max(target_velocity, planner_param_.occlusion_slow_down_velocity), "occlusion");
     debug_data_.virtual_wall_suffix = " (occluded)";
   } else {
     most_recent_occlusion_time_.reset();
@@ -1053,7 +1047,7 @@ Polygon2d CrosswalkModule::getAttentionArea(
   return attention_area;
 }
 
-std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForStuckVehicles(
+std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForObstructionPrevention(
   const PathWithLaneId & ego_path, const std::vector<PredictedObject> & objects,
   const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
   const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
@@ -1066,7 +1060,7 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForStuckVehicle
   }
 
   // skip stuck vehicle checking for crosswalk which is in intersection.
-  if (!p.enable_stuck_check_in_intersection) {
+  if (!p.enable_obstruction_prevention) {
     std::string turn_direction = road_.attributeOr("turn_direction", "else");
     if (turn_direction == "right" || turn_direction == "left" || turn_direction == "straight") {
       if (!road_.regulatoryElementsAs<const lanelet::TrafficLight>().empty()) {
@@ -1081,13 +1075,13 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForStuckVehicle
     }
 
     const auto & obj_vel = object.kinematics.initial_twist_with_covariance.twist.linear;
-    if (p.stuck_vehicle_velocity < std::hypot(obj_vel.x, obj_vel.y)) {
+    if (p.front_vehicle_velocity < std::hypot(obj_vel.x, obj_vel.y)) {
       continue;
     }
 
     const auto & obj_pose = object.kinematics.initial_pose_with_covariance.pose;
     const auto lateral_offset = calcLateralOffset(ego_path.points, obj_pose.position);
-    if (p.max_stuck_vehicle_lateral_offset < std::abs(lateral_offset)) {
+    if (p.max_front_vehicle_lateral_offset < std::abs(lateral_offset)) {
       continue;
     }
 
@@ -1107,8 +1101,8 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForStuckVehicle
       // the vehicles.
       const auto braking_distance = calcDecelDistWithJerkAndAccConstraints(
         planner_data_->current_velocity->twist.linear.x, 0.0,
-        planner_data_->current_acceleration->accel.accel.linear.x, p.min_acc_for_stuck_vehicle,
-        p.max_jerk_for_stuck_vehicle, p.min_jerk_for_stuck_vehicle);
+        planner_data_->current_acceleration->accel.accel.linear.x, p.min_acc_for_front_vehicle,
+        p.max_jerk_for_front_vehicle, p.min_jerk_for_front_vehicle);
       if (!braking_distance) {
         return {};
       }
@@ -1239,26 +1233,43 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForParkedVehicl
   return StopPoseWithObjectUuids{stop_factor->stop_pose, {}};
 }
 
-std::optional<StopPoseWithObjectUuids> CrosswalkModule::getNearestStopFactor(
-  const PathWithLaneId & ego_path, const std::vector<StopPoseWithObjectUuids> & stop_factors,
+std::pair<std::optional<StopPoseWithObjectUuids>, std::string>
+CrosswalkModule::getNearestStopFactorAndReason(
+  const PathWithLaneId & ego_path,
+  const std::optional<StopPoseWithObjectUuids> & stop_factor_for_crosswalk_users,
+  const std::optional<StopPoseWithObjectUuids> & stop_factor_for_obstruction_preventions,
   const std::optional<StopPoseWithObjectUuids> & stop_factor_for_parked_vehicles)
 {
   // the parked vehicles stop feature is only used if there are no other crosswalk stops
-  const auto use_parked_vehicles = stop_factors.empty() && stop_factor_for_parked_vehicles;
+  const auto use_parked_vehicles = !stop_factor_for_crosswalk_users &&
+                                   !stop_factor_for_obstruction_preventions &&
+                                   stop_factor_for_parked_vehicles;
   if (use_parked_vehicles) {
-    return stop_factor_for_parked_vehicles;
+    return {stop_factor_for_parked_vehicles, "parked vehicles"};
   }
+
   const auto get_distance_to_stop = [&](const auto & stop_factor) -> std::optional<double> {
     const auto & ego_pos = planner_data_->current_odometry->pose.position;
-    return calcSignedArcLength(ego_path.points, ego_pos, stop_factor.stop_pose.position);
+    return calcSignedArcLength(ego_path.points, ego_pos, stop_factor->stop_pose.position);
   };
-  const auto nearest_stop_factor_it = std::min_element(
-    stop_factors.begin(), stop_factors.end(), [&](const auto & sf1, const auto & sf2) {
-      return get_distance_to_stop(sf1) < get_distance_to_stop(sf2);
-    });
-  return (
-    nearest_stop_factor_it == stop_factors.end() ? std::nullopt
-                                                 : std::make_optional(*nearest_stop_factor_it));
+
+  std::optional<StopPoseWithObjectUuids> nearest_stop_factor{std::nullopt};
+  std::string reason = "";
+
+  if (stop_factor_for_crosswalk_users) {
+    nearest_stop_factor = stop_factor_for_crosswalk_users;
+    reason = "";
+  }
+  if (stop_factor_for_obstruction_preventions) {
+    if (
+      !nearest_stop_factor || get_distance_to_stop(stop_factor_for_obstruction_preventions) <
+                                get_distance_to_stop(nearest_stop_factor)) {
+      nearest_stop_factor = stop_factor_for_obstruction_preventions;
+      reason = "obstruction prevention";
+    }
+  }
+
+  return {nearest_stop_factor, reason};
 }
 
 void CrosswalkModule::updateObjectState(
@@ -1513,7 +1524,8 @@ void CrosswalkModule::planGo(
 
 void CrosswalkModule::planStop(
   PathWithLaneId & ego_path, const std::optional<StopPoseWithObjectUuids> & nearest_stop_factor,
-  const std::optional<geometry_msgs::msg::Pose> & default_stop_pose)
+  const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
+  const std::string & reason) const
 {
   // Calculate stop factor
   auto stop_factor = [&]() -> std::optional<StopPoseWithObjectUuids> {
@@ -1541,7 +1553,7 @@ void CrosswalkModule::planStop(
   planning_factor_interface_->add(
     ego_path.points, planner_data_->current_odometry->pose, stop_factor->stop_pose,
     autoware_internal_planning_msgs::msg::PlanningFactor::STOP, safety_factors,
-    true /*is_driving_forward*/, 0.0 /*velocity*/, 0.0 /*shift distance*/, "crosswalk_stop");
+    true /*is_driving_forward*/, 0.0 /*velocity*/, 0.0 /*shift distance*/, reason);
 }
 
 bool CrosswalkModule::checkRestartSuppression(

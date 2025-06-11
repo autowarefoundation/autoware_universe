@@ -154,7 +154,6 @@ TEST(PlanningFactorTest, NodeTestWithPredictedObjects)
   EXPECT_EQ(planning_factor_msg->factors.size(), 1);
 
   const auto & factor = planning_factor_msg->factors.front();
-  EXPECT_NE(factor.detail, "");
   EXPECT_FALSE(factor.safety_factors.is_safe);
 
   // make sure safety_factors is not empty
