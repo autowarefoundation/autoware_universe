@@ -4,7 +4,7 @@
   <arg name="input/processing_time_prediction" default="/perception/object_recognition/prediction/map_based_prediction/debug/processing_time_ms"/>
   <arg name="input/processing_time_tracking" default="/perception/object_recognition/tracking/multi_object_tracker/debug/meas_to_tracked_object_ms"/>
   <arg name="input/validation_status" default="/planning/planning_validator/validation_status"/>
-  <arg name="input/processing_time_control" default="/control/command/topic_delay_ms"/>
+  <arg name="input/processing_time_control" default="/control/control_system_latency"/>
 
   <!-- Parameters -->
   <arg name="config_file" default="$(find-pkg-share autoware_sensor_to_control_latency_checker)/config/sensor_to_control_latency_checker.param.yaml"/>
