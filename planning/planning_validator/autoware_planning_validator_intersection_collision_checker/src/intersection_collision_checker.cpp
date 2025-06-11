@@ -131,7 +131,7 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
   context_->validation_status->is_valid_collision_check = true;
 
   auto skip_validation = [&](const std::string & reason) {
-    RCLCPP_WARN_THROTTLE(logger_, *clock_, 1000, "%s", reason.c_str());
+    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "%s", reason.c_str());
     is_critical = false;
   };
 
