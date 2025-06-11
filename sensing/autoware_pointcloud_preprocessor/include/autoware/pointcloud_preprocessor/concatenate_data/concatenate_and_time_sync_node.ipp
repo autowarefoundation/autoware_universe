@@ -208,7 +208,7 @@ void PointCloudConcatenateDataSynchronizerComponentTemplated<MsgTraits>::cloud_c
   std::shared_ptr<CloudCollector<MsgTraits>> selected_collector = nullptr;
 
   // For each callback, check whether there is an existing collector that matches this cloud
-  std::optional<std::shared_ptr<CloudCollector<MsgTraits>>> cloud_collector = std::nullopt;
+  std::optional<std::shared_ptr<CloudCollector<MsgTraits>>> cloud_collector{};
   MatchingParams matching_params;
   matching_params.topic_name = topic_name;
   matching_params.cloud_arrival_time = cloud_arrival_time;
