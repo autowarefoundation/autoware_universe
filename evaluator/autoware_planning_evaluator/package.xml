@@ -2,10 +2,11 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_planning_evaluator</name>
-  <version>0.44.0</version>
+  <version>0.45.0</version>
   <description>ROS 2 node for evaluating planners</description>
   <maintainer email="maxime.clement@tier4.jp">Maxime CLEMENT</maintainer>
   <maintainer email="kyoichi.sugahara@tier4.jp">Kyoichi Sugahara</maintainer>
+  <maintainer email="kosuke.takeuchi@tier4.jp">Kosuke Takeuchi</maintainer>
   <maintainer email="temkei.kem@tier4.jp">Temkei Kem</maintainer>
   <license>Apache License 2.0</license>
 

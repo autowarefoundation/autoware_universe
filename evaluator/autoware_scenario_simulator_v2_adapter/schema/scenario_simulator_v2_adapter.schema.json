@@ -17,6 +17,7 @@
           "items": {
             "type": "string"
           },
+          "default": [],
           "description": "The topic name list of the processing time."
         }
       },

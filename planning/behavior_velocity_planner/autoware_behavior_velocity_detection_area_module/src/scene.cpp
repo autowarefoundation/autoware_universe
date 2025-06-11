@@ -165,7 +165,7 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
   if (planner_param_.use_pass_judge_line) {
     const auto current_velocity = planner_data_->current_velocity->twist.linear.x;
     const double pass_judge_line_distance = planning_utils::calcJudgeLineDistWithAccLimit(
-      current_velocity, planner_data_->current_acceleration->accel.accel.linear.x,
+      current_velocity, planner_data_->max_stop_acceleration_threshold,
       planner_data_->delay_response_time);
     if (
       state_ != State::STOP &&

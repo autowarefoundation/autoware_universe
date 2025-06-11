@@ -35,7 +35,7 @@ The node outputs `UserDefinedValue` messages that are converted from the receive
 
 ## Parameters
 
-{{ json_to_markdown("src/autoware/universe/evaluator/scenario_simulator_v2_adapter/schema/scenario_simulator_v2_adapter.schema.json") }}
+{{ json_to_markdown("evaluator/autoware_scenario_simulator_v2_adapter/schema/scenario_simulator_v2_adapter.schema.json") }}
 
 ## Assumptions / Known limits
 

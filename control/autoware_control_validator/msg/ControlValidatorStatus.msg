@@ -5,12 +5,15 @@ bool is_valid_max_distance_deviation
 bool is_valid_acc
 bool is_rolling_back
 bool is_over_velocity
+bool is_valid_lateral_jerk
 bool has_overrun_stop_point
 bool will_overrun_stop_point
 bool is_valid_latency
 
 # values
 float64 max_distance_deviation
+float64 steering_rate
+float64 lateral_jerk
 float64 desired_acc
 float64 measured_acc
 float64 target_vel

@@ -209,7 +209,8 @@ TEST(DetectedObjectValidationTest, testObjectLaneletFilterEmptyObjects)
   rclcpp::shutdown();
 }
 
-TEST(DetectedObjectValidationTest, testObjectLaneletFilterHeightThreshold)
+/// @brief Test with lanelet object elevation filter
+TEST(DetectedObjectValidationTest, testObjectLaneletObjectElevationFilter)
 {
   rclcpp::init(0, nullptr);
 
@@ -222,9 +223,13 @@ TEST(DetectedObjectValidationTest, testObjectLaneletFilterHeightThreshold)
   node_options.arguments(
     {"--ros-args", "--params-file",
      detected_object_validation_dir + "/config/object_lanelet_filter.param.yaml"});
-  node_options.append_parameter_override("filter_settings.use_height_threshold", true);
-  node_options.append_parameter_override("filter_settings.max_height_threshold", 2.0);
-  node_options.append_parameter_override("filter_settings.min_height_threshold", 0.0);
+  node_options.append_parameter_override("filter_target_label.UNKNOWN", true);
+  node_options.append_parameter_override(
+    "filter_settings.lanelet_object_elevation_filter.enabled", true);
+  node_options.append_parameter_override(
+    "filter_settings.lanelet_object_elevation_filter.max_elevation_threshold", 5.0);
+  node_options.append_parameter_override(
+    "filter_settings.lanelet_object_elevation_filter.min_elevation_threshold", 0.0);
 
   auto test_target_node = std::make_shared<ObjectLaneletFilterNode>(node_options);
 
@@ -250,53 +255,124 @@ TEST(DetectedObjectValidationTest, testObjectLaneletFilterHeightThreshold)
   DetectedObjects input_objects;
   input_objects.header.frame_id = "base_link";
 
-  // (A) Object in-lane, height=1.5 => expected to remain
+  // check objects in the elevation range
+  // (A) Object in-lane, and both query points are within the range
+  //     z pos.:
+  //       centroid: 1.0
+  //       top point: 1.5
+  //       bottom point: 0.5
+  //  => expected to remain
   {
     DetectedObject obj;
     obj.classification.resize(1);
     obj.classification[0].label = ObjectClassification::UNKNOWN;
     obj.kinematics.pose_with_covariance.pose.position.x = 0.0;
     obj.kinematics.pose_with_covariance.pose.position.y = 0.0;
+    obj.kinematics.pose_with_covariance.pose.position.z = 1.0;
     obj.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
     obj.shape.dimensions.x = 2.0;
     obj.shape.dimensions.y = 2.0;
-    obj.shape.dimensions.z = 1.5;
+    obj.shape.dimensions.z = 1.0;
     input_objects.objects.push_back(obj);
   }
 
-  // (B) Object in-lane, height=3.0 => expected to be filtered out
+  // (B) Object in-lane, and top query point is within the range
+  //     z pos.:
+  //       centroid: -1.0
+  //       top point: 0.0
+  //       bottom point: -2.0
+  //  => expected to remain
   {
     DetectedObject obj;
     obj.classification.resize(1);
     obj.classification[0].label = ObjectClassification::UNKNOWN;
-    obj.kinematics.pose_with_covariance.pose.position.x = 5.0;
+    obj.kinematics.pose_with_covariance.pose.position.x = 0.0;
     obj.kinematics.pose_with_covariance.pose.position.y = 0.0;
+    obj.kinematics.pose_with_covariance.pose.position.z = -1.0;
     obj.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
     obj.shape.dimensions.x = 2.0;
     obj.shape.dimensions.y = 2.0;
-    obj.shape.dimensions.z = 3.0;
+    obj.shape.dimensions.z = 2.0;
     input_objects.objects.push_back(obj);
   }
 
-  // Publish the objects (Round 1)
+  // (C) Object in-lane, and bottom query point is within the range
+  //     z pos.:
+  //       centroid: 6.0
+  //       top point: 7.0
+  //       bottom point: 5.0
+  //  => expected to remain
+  {
+    DetectedObject obj;
+    obj.classification.resize(1);
+    obj.classification[0].label = ObjectClassification::UNKNOWN;
+    obj.kinematics.pose_with_covariance.pose.position.x = 0.0;
+    obj.kinematics.pose_with_covariance.pose.position.y = 0.0;
+    obj.kinematics.pose_with_covariance.pose.position.z = 6.0;
+    obj.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+    obj.shape.dimensions.x = 2.0;
+    obj.shape.dimensions.y = 2.0;
+    obj.shape.dimensions.z = 2.0;
+    input_objects.objects.push_back(obj);
+  }
+
+  // Publish the objects (test objects in the range)
   test_manager->test_pub_msg<DetectedObjects>(test_target_node, input_object_topic, input_objects);
 
-  // 5) Check result => only the first object remains
-  EXPECT_EQ(latest_msg.objects.size(), 1U)
-    << "Height filter is enabled => only the shorter object (1.5m) should remain.";
+  // 5) Check result => all objects should remain
+  EXPECT_EQ(latest_msg.objects.size(), 3U)
+    << "lanelet_object_elevation_filter is enabled "
+    << "=> objects in the elevation range [0.0, 5.0] should remain.";
 
-  // 6) Second scenario: place ego at z=1.3, effectively lowering object's relative height
-  auto tf_node_after = createStaticTfBroadcasterNode(
-    "map", "base_link", geometry_msgs::build<geometry_msgs::msg::Vector3>().x(0.0).y(0.0).z(1.3),
-    geometry_msgs::build<geometry_msgs::msg::Quaternion>().x(0.0).y(0.0).z(0.0).w(1.0),
-    "my_test_tf_broadcaster_2");
+  input_objects.objects.clear();
+  // check objects outside the elevation range
+  // (D) Object in-lane, and both query points are within the range
+  //     z pos.:
+  //       centroid: -4.0
+  //       top point: -1.0
+  //       bottom point: -7.0
+  //  => expected to be removed
+  {
+    DetectedObject obj;
+    obj.classification.resize(1);
+    obj.classification[0].label = ObjectClassification::UNKNOWN;
+    obj.kinematics.pose_with_covariance.pose.position.x = 0.0;
+    obj.kinematics.pose_with_covariance.pose.position.y = 0.0;
+    obj.kinematics.pose_with_covariance.pose.position.z = -4.0;
+    obj.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+    obj.shape.dimensions.x = 2.0;
+    obj.shape.dimensions.y = 2.0;
+    obj.shape.dimensions.z = 6.0;
+    input_objects.objects.push_back(obj);
+  }
 
-  // Publish the same objects (Round 2)
+  // (E) Object in-lane, and top query point is within the range
+  //     z pos.:
+  //       centroid: 7.0
+  //       top point: 8.0
+  //       bottom point: 6.0
+  //  => expected to be removed
+  {
+    DetectedObject obj;
+    obj.classification.resize(1);
+    obj.classification[0].label = ObjectClassification::UNKNOWN;
+    obj.kinematics.pose_with_covariance.pose.position.x = 0.0;
+    obj.kinematics.pose_with_covariance.pose.position.y = 0.0;
+    obj.kinematics.pose_with_covariance.pose.position.z = 7.0;
+    obj.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+    obj.shape.dimensions.x = 2.0;
+    obj.shape.dimensions.y = 2.0;
+    obj.shape.dimensions.z = 2.0;
+    input_objects.objects.push_back(obj);
+  }
+
+  // Publish the objects (test objects outside the range)
   test_manager->test_pub_msg<DetectedObjects>(test_target_node, input_object_topic, input_objects);
 
-  // 7) Check result => now both objects remain because each one's height above base_link is < 2.0
-  EXPECT_EQ(latest_msg.objects.size(), 2U)
-    << "With ego at z=1.3, the 3.0m object is effectively only ~1.7m above ego => remain.";
+  // 6) Check result => no objects remain
+  EXPECT_EQ(latest_msg.objects.size(), 0U)
+    << "lanelet_object_elevation_filter is enabled "
+    << "=> objects not within the elevation range [0.0, 5.0] should be removed.";
 
   rclcpp::shutdown();
 }

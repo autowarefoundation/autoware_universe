@@ -793,7 +793,7 @@ BehaviorModuleOutput StartPlannerModule::plan()
 
       if (!stop_path.has_value()) return current_path;
       // Insert stop point in the path if needed
-      RCLCPP_ERROR_THROTTLE(
+      RCLCPP_DEBUG_THROTTLE(
         getLogger(), *clock_, 5000, "Insert stop point in the path because of dynamic objects");
       status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(stop_path.value());
       std::string stop_reason = "unsafe against dynamic objects";
@@ -1938,7 +1938,7 @@ void StartPlannerModule::setDebugData()
         create_marker_scale(0.2, 0.2, 0.2), purple_color);
       footprint_marker.lifetime = rclcpp::Duration::from_seconds(1.5);
       addFootprintMarker(footprint_marker, debug_data_.estimated_stop_pose.value(), vehicle_info_);
-      debug_marker_.markers.push_back(footprint_marker);
+      info_marker_.markers.push_back(footprint_marker);
     }
 
     // set objects of interest
@@ -1974,14 +1974,14 @@ void StartPlannerModule::setDebugData()
     laneletsAsTriangleMarkerArray(
       "departure_check_lanes_for_shift_pull_out_path", debug_data_.departure_check_lanes,
       cyan_color),
-    debug_marker_);
+    info_marker_);
 
   const auto pull_out_lanes = start_planner_utils::getPullOutLanes(
     planner_data_, planner_data_->parameters.backward_path_length + parameters_->max_back_distance);
   add(
     laneletsAsTriangleMarkerArray(
       "pull_out_lanes_for_static_objects_collision_check", pull_out_lanes, pink_color),
-    debug_marker_);
+    info_marker_);
 }
 
 void StartPlannerModule::logPullOutStatus(rclcpp::Logger::Level log_level) const

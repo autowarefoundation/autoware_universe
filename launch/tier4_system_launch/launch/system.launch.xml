@@ -92,7 +92,7 @@
 
     <!-- Diagnostic Graph Aggregator -->
     <group>
-      <include file="$(find-pkg-share autoware_system_diagnostic_monitor)/launch/system_diagnostic_monitor.launch.xml">
+      <include file="$(find-pkg-share autoware_diagnostic_graph_aggregator)/launch/aggregator.launch.xml">
         <arg name="param_file" value="$(var diagnostic_graph_aggregator_param_path)"/>
         <arg name="graph_file" value="$(var diagnostic_graph_aggregator_graph_path)"/>
       </include>

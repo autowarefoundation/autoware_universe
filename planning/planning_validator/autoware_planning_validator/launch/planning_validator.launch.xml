@@ -1,0 +1,47 @@
+<launch>
+  <arg name="launch_latency_checker" default="true"/>
+  <arg name="launch_trajectory_checker" default="true"/>
+  <arg name="launch_modules_list_end" default="&quot;&quot;]"/>
+  <arg name="planning_validator_launch_modules" default="["/>
+  <let
+    name="planning_validator_launch_modules"
+    value="$(eval &quot;'$(var planning_validator_launch_modules)' + 'autoware::planning_validator::LatencyChecker, '&quot;)"
+    if="$(var launch_latency_checker)"
+  />
+  <let
+    name="planning_validator_launch_modules"
+    value="$(eval &quot;'$(var planning_validator_launch_modules)' + 'autoware::planning_validator::TrajectoryChecker, '&quot;)"
+    if="$(var launch_trajectory_checker)"
+  />
+  <let name="planning_validator_launch_modules" value="$(eval &quot;'$(var planning_validator_launch_modules)' + '$(var launch_modules_list_end)'&quot;)"/>
+
+  <arg name="planning_validator_param_path" default="$(find-pkg-share autoware_planning_validator)/config/planning_validator.param.yaml"/>
+  <arg name="planning_validator_latency_checker_param_path" default="$(find-pkg-share autoware_planning_validator_latency_checker)/config/latency_checker.param.yaml"/>
+  <arg name="planning_validator_trajectory_checker_param_path" default="$(find-pkg-share autoware_planning_validator_trajectory_checker)/config/trajectory_checker.param.yaml"/>
+  <arg name="input_trajectory" default="/planning/scenario_planning/velocity_smoother/trajectory"/>
+  <arg name="output_trajectory" default="/planning/scenario_planning/trajectory"/>
+  <arg name="input_pointcloud" default="/perception/obstacle_segmentation/pointcloud"/>
+  <arg name="input_route_topic_name" default="/planning/mission_planning/route"/>
+  <arg name="input_vector_map_topic_name" default="/map/vector_map"/>
+
+  <group>
+    <node_container pkg="rclcpp_components" exec="$(var container_type)" name="planning_validator_container" namespace="" args="" output="both">
+      <composable_node pkg="autoware_glog_component" plugin="autoware::glog_component::GlogComponent" name="glog_component" namespace=""/>
+      <composable_node pkg="autoware_planning_validator" plugin="autoware::planning_validator::PlanningValidatorNode" name="planning_validator" namespace="">
+        <remap from="~/input/trajectory" to="$(var input_trajectory)"/>
+        <remap from="~/input/kinematics" to="/localization/kinematic_state"/>
+        <remap from="~/input/acceleration" to="/localization/acceleration"/>
+        <remap from="~/input/pointcloud" to="$(var input_pointcloud)"/>
+        <remap from="~/input/lanelet_map_bin" to="$(var input_vector_map_topic_name)"/>
+        <remap from="~/input/route" to="$(var input_route_topic_name)"/>
+        <remap from="~/output/trajectory" to="$(var output_trajectory)"/>
+        <remap from="~/output/validation_status" to="~/validation_status"/>
+        <param name="launch_modules" value="$(var planning_validator_launch_modules)"/>
+        <param from="$(var planning_validator_param_path)"/>
+        <param from="$(var planning_validator_latency_checker_param_path)"/>
+        <param from="$(var planning_validator_trajectory_checker_param_path)"/>
+        <extra_arg name="use_intra_process_comms" value="false"/>
+      </composable_node>
+    </node_container>
+  </group>
+</launch>

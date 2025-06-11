@@ -30,7 +30,7 @@ PointcloudAccumulatorComponent::PointcloudAccumulatorComponent(const rclcpp::Nod
 
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&PointcloudAccumulatorComponent::paramCallback, this, _1));
+    std::bind(&PointcloudAccumulatorComponent::param_callback, this, _1));
 }
 
 void PointcloudAccumulatorComponent::filter(
@@ -55,7 +55,7 @@ void PointcloudAccumulatorComponent::filter(
   output.header = input->header;
 }
 
-rcl_interfaces::msg::SetParametersResult PointcloudAccumulatorComponent::paramCallback(
+rcl_interfaces::msg::SetParametersResult PointcloudAccumulatorComponent::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);

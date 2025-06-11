@@ -90,6 +90,29 @@ private:
 };
 
 /**
+ * @class LateralJerkValidator
+ * @brief Validates lateral jerk is not too high.
+ */
+class LateralJerkValidator
+{
+public:
+  explicit LateralJerkValidator(rclcpp::Node & node)
+  : lateral_jerk_threshold_{get_or_declare_parameter<double>(node, "thresholds.lateral_jerk")},
+    logger_{node.get_logger()},
+    measured_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")} {};
+
+  void validate(
+    ControlValidatorStatus & res, const Odometry & kinematic_state, const Control & control_cmd,
+    const double wheel_base);
+
+private:
+  double lateral_jerk_threshold_{};  // m/s^3
+  rclcpp::Logger logger_;
+  std::unique_ptr<Control> prev_control_cmd_{};
+  autoware::signal_processing::LowpassFilter1d measured_vel_lpf;
+};
+
+/**
  * @class AccelerationValidator
  * @brief Validates deviation between output acceleration and measured acceleration.
  */
@@ -261,6 +284,7 @@ private:
 
   // individual validators
   LatencyValidator latency_validator{*this};
+  LateralJerkValidator lateral_jerk_validator{*this};
   TrajectoryValidator trajectory_validator{*this};
   AccelerationValidator acceleration_validator{*this};
   VelocityValidator velocity_validator{*this};

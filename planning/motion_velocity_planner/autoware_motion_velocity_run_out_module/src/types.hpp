@@ -302,6 +302,7 @@ struct Object
   uint8_t label;
   bool has_target_label = false;
   std::vector<Collision> collisions;  // collisions with the ego trajectory
+  bool ignore_but_preserve_predicted_paths = false;
 };
 /// @brief data to filter predicted paths and collisions
 struct FilteringData
