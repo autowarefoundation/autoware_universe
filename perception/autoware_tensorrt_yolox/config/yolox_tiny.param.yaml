@@ -1,7 +1,10 @@
 # cspell:ignore semseg
 /**:
   ros__parameters:
-
+    model_path: "models/yolox_tiny.onnx"
+    label_path: "models/coco_labels.txt"
+    color_map_path: "models/color_map.txt"
+    
     # refine segmentation mask by overlay roi class
     # disable when sematic segmentation accuracy is good enough
     is_roi_overlap_segment: true
