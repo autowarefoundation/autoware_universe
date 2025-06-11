@@ -12,16 +12,17 @@ This module is activated when there is a detection area on the target lane.
 
 ### Module Parameters
 
-| Parameter                           | Type   | Description                                                                                        |
-| ----------------------------------- | ------ | -------------------------------------------------------------------------------------------------- |
-| `use_dead_line`                     | bool   | [-] weather to use dead line or not                                                                |
-| `use_pass_judge_line`               | bool   | [-] weather to use pass judge line or not                                                          |
-| `state_clear_time`                  | double | [s] when the vehicle is stopping for certain time without incoming obstacle, move to STOPPED state |
-| `stop_margin`                       | double | [m] a margin that the vehicle tries to stop before stop_line                                       |
-| `dead_line_margin`                  | double | [m] ignore threshold that vehicle behind is collide with ego vehicle or not                        |
-| `hold_stop_margin_distance`         | double | [m] parameter for restart prevention (See Algorithm section)                                       |
-| `distance_to_judge_over_stop_line`  | double | [m] parameter for judging that the stop line has been crossed                                      |
-| `suppress_pass_judge_when_stopping` | bool   | [m] parameter for suppressing pass judge when stopping                                             |
+| Parameter                           | Type   | Description                                                                                                                                              |
+| ----------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `use_dead_line`                     | bool   | [-] weather to use dead line or not                                                                                                                      |
+| `use_pass_judge_line`               | bool   | [-] weather to use pass judge line or not                                                                                                                |
+| `state_clear_time`                  | double | [s] when the vehicle is stopping for certain time without incoming obstacle, move to STOPPED state                                                       |
+| `stop_margin`                       | double | [m] a margin that the vehicle tries to stop before stop_line                                                                                             |
+| `dead_line_margin`                  | double | [m] ignore threshold that vehicle behind is collide with ego vehicle or not                                                                              |
+| `hold_stop_margin_distance`         | double | [m] parameter for restart prevention (See Algorithm section)                                                                                             |
+| `distance_to_judge_over_stop_line`  | double | [m] parameter for judging that the stop line has been crossed                                                                                            |
+| `suppress_pass_judge_when_stopping` | bool   | [m] parameter for suppressing pass judge when stopping                                                                                                   |
+| `enable_detected_obstacle_logging`  | bool   | [-] enable/disable logging of detected obstacle positions, time elapsed since last detection, and ego vehicle position when ego-vehicle is in STOP state |
 
 ### Inner-workings / Algorithm
 
@@ -29,7 +30,7 @@ This module is activated when there is a detection area on the target lane.
 2. Inserts stop point l[m] in front of the stop line
 3. Inserts a pass judge point to a point where the vehicle can stop with a max deceleration
 4. Sets velocity as zero behind the stop line when the ego-vehicle is in front of the pass judge point
-5. If the ego vehicle has passed the pass judge point already, it doesn’t stop and pass through.
+5. If the ego vehicle has passed the pass judge point already, it doesn't stop and pass through.
 
 #### Flowchart
 
