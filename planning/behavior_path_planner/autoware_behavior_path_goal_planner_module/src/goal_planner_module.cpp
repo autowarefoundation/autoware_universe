@@ -317,9 +317,18 @@ void LaneParkingPlanner::onTimer()
       RCLCPP_DEBUG(getLogger(), "has deviated from last previous module path");
       return true;
     }
-    if (goal_planner_utils::has_previous_module_path_velocity_changed(
-          upstream_module_output, original_upstream_module_output_)) {
-      RCLCPP_DEBUG(getLogger(), "previous module changed stopline");
+    const auto & upstream_module_path = upstream_module_output.path;
+    const auto stopline_it = std::find_if(
+      upstream_module_path.points.begin(), upstream_module_path.points.end(),
+      [&](const auto & point) { return std::fabs(point.point.longitudinal_velocity_mps) == 0.0; });
+    /*
+      NOTE(soblin): this is a hack for lane_change bug randomly inserting a stopline at the end of
+      the path.
+     */
+    const bool upstream_module_has_stopline_except_terminal =
+      static_cast<unsigned>(std::distance(upstream_module_path.points.begin(), stopline_it)) + 1 <
+      upstream_module_path.points.size();
+    if (upstream_module_has_stopline_except_terminal) {
       return true;
     }
 
