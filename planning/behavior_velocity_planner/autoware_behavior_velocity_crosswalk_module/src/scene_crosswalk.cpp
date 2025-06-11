@@ -260,7 +260,6 @@ bool CrosswalkModule::modifyPathVelocity(PathWithLaneId * path)
   const auto sparse_resample_path =
     resamplePath(*path, resample_interval, false, true, true, false);
 
-  std::vector<StopPoseWithObjectUuids> stop_factors;
   // Decide to stop for crosswalk users
   const auto stop_factor_for_crosswalk_users = checkStopForCrosswalkUsers(
     *path, sparse_resample_path, first_path_point_on_crosswalk, last_path_point_on_crosswalk,
