@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "autoware_trajectory_follower_node parameters",
+  "title": "autoware_simple_trajectory_follower parameters",
   "type": "object",
   "definitions": {
     "simple_trajectory_follower": {
