@@ -145,7 +145,6 @@ Giving the longitudinal controller information about steer convergence allows it
 {{ json_to_markdown("control/autoware_trajectory_follower_node/schema/trajectory_follower_node.schema.json") }}
 {{ json_to_markdown("control/autoware_trajectory_follower_node/schema/simple_trajectory_follower.schema.json") }}
 
-
 ##### Parameter Details
 
 - `timeout_thr_sec`: duration in second after which input messages are discarded.
