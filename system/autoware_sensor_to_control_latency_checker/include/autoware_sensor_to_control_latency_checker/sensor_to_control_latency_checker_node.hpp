@@ -52,8 +52,8 @@ private:
   // History of received values (with timestamps)
   std::deque<TimestampedValue> meas_to_tracked_object_history_{};
   std::deque<TimestampedValue> processing_time_history_{};
-  std::deque<TimestampedValue> processing_time_latency_history_{};
-  std::deque<TimestampedValue> topic_delay_history_{};
+  std::deque<TimestampedValue> planning_system_latency_history_{};
+  std::deque<TimestampedValue> control_system_latency_history_{};
 
   // Current total latency
   double total_latency_ms_{};
@@ -66,7 +66,7 @@ private:
   rclcpp::Subscription<autoware_planning_validator::msg::PlanningValidatorStatus>::SharedPtr
     validation_status_sub_;
   rclcpp::Subscription<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
-    topic_delay_sub_;
+    control_system_latency_sub_;
 
   // Publishers
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
@@ -88,7 +88,8 @@ private:
     const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg);
   void onValidationStatus(
     const autoware_planning_validator::msg::PlanningValidatorStatus::ConstSharedPtr msg);
-  void onTopicDelay(const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg);
+  void onControlSystemLatency(
+    const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg);
   void onTimer();
   void calculateTotalLatency();
   void publishTotalLatency();
@@ -100,7 +101,7 @@ private:
   double getLatestValue(const std::deque<TimestampedValue> & history) const;
   rclcpp::Time getLatestTimestamp(const std::deque<TimestampedValue> & history) const;
   bool hasValidData(const std::deque<TimestampedValue> & history) const;
-  size_t getHistorySize(const std::deque<TimestampedValue> & history) const;
+  bool isTimestampOlder(const rclcpp::Time & timestamp1, const rclcpp::Time & timestamp2) const;
 };
 
 }  // namespace autoware::system::sensor_to_control_latency_checker

@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <deque>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -29,12 +30,10 @@ SensorToControlLatencyCheckerNode::SensorToControlLatencyCheckerNode(
   const rclcpp::NodeOptions & options)
 : Node("sensor_to_control_latency_checker", options), diagnostic_updater_(this)
 {
-  // Get parameters (default values are set in header)
   update_rate_ = declare_parameter<double>("update_rate", update_rate_);
   latency_threshold_ms_ = declare_parameter<double>("latency_threshold_ms", latency_threshold_ms_);
   window_size_ = declare_parameter<int>("window_size", window_size_);
 
-  // Create subscribers
   meas_to_tracked_object_sub_ =
     create_subscription<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "~/input/processing_time_tracking", 10,
@@ -54,9 +53,11 @@ SensorToControlLatencyCheckerNode::SensorToControlLatencyCheckerNode(
       std::bind(
         &SensorToControlLatencyCheckerNode::onValidationStatus, this, std::placeholders::_1));
 
-  topic_delay_sub_ = create_subscription<autoware_internal_debug_msgs::msg::Float64Stamped>(
-    "~/input/processing_time_control", 10,
-    std::bind(&SensorToControlLatencyCheckerNode::onTopicDelay, this, std::placeholders::_1));
+  control_system_latency_sub_ =
+    create_subscription<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "~/input/processing_time_control", 10,
+      std::bind(
+        &SensorToControlLatencyCheckerNode::onControlSystemLatency, this, std::placeholders::_1));
 
   // Create publishers
   total_latency_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
@@ -96,23 +97,21 @@ void SensorToControlLatencyCheckerNode::onProcessingTimePrediction(
 void SensorToControlLatencyCheckerNode::onValidationStatus(
   const autoware_planning_validator::msg::PlanningValidatorStatus::ConstSharedPtr msg)
 {
-  updateHistory(processing_time_latency_history_, msg->stamp, msg->latency);
-  RCLCPP_DEBUG(get_logger(), "Received processing_time_latency_ms: %.2f", msg->latency);
+  updateHistory(planning_system_latency_history_, msg->stamp, msg->latency);
+  RCLCPP_DEBUG(get_logger(), "Received planning_system_latency_ms: %.2f", msg->latency);
 }
 
-void SensorToControlLatencyCheckerNode::onTopicDelay(
+void SensorToControlLatencyCheckerNode::onControlSystemLatency(
   const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg)
 {
-  updateHistory(topic_delay_history_, msg->stamp, msg->data);
-  RCLCPP_DEBUG(get_logger(), "Received topic_delay_ms: %.2f", msg->data);
+  updateHistory(control_system_latency_history_, msg->stamp, msg->data);
+  RCLCPP_DEBUG(get_logger(), "Received control_system_latency_ms: %.2f", msg->data);
 }
 
 void SensorToControlLatencyCheckerNode::onTimer()
 {
-  // Calculate total latency
   calculateTotalLatency();
 
-  // Publish results
   publishTotalLatency();
 
   // Update diagnostics
@@ -123,38 +122,38 @@ void SensorToControlLatencyCheckerNode::calculateTotalLatency()
 {
   total_latency_ms_ = 0.0;
 
-  // Get topic_delay data (most recent)
-  double topic_delay_ms = 0.0;
-  rclcpp::Time topic_delay_timestamp = rclcpp::Time(0);
-  if (hasValidData(topic_delay_history_)) {
-    topic_delay_ms = getLatestValue(topic_delay_history_);
-    topic_delay_timestamp = getLatestTimestamp(topic_delay_history_);
-    total_latency_ms_ += topic_delay_ms;
+  // Get control_system_latency data (most recent)
+  double control_system_latency_ms = 0.0;
+  rclcpp::Time control_system_latency_timestamp = rclcpp::Time(0);
+  if (hasValidData(control_system_latency_history_)) {
+    control_system_latency_ms = getLatestValue(control_system_latency_history_);
+    control_system_latency_timestamp = getLatestTimestamp(control_system_latency_history_);
+    total_latency_ms_ += control_system_latency_ms;
   }
 
-  // Get processing_time_latency data (older than topic_delay_timestamp)
-  double processing_time_latency_ms = 0.0;
-  rclcpp::Time processing_time_latency_timestamp = rclcpp::Time(0);
-  if (hasValidData(processing_time_latency_history_)) {
-    // Find the most recent value that is older than topic_delay_timestamp
-    for (auto it = processing_time_latency_history_.rbegin();
-         it != processing_time_latency_history_.rend(); ++it) {
-      if (it->timestamp < topic_delay_timestamp) {
-        processing_time_latency_ms = it->value;
-        processing_time_latency_timestamp = it->timestamp;
-        total_latency_ms_ += processing_time_latency_ms;
+  // Get processing_time_latency data (older than control_system_latency_timestamp)
+  double planning_system_latency_ms = 0.0;
+  rclcpp::Time planning_system_latency_timestamp = rclcpp::Time(0);
+  if (hasValidData(planning_system_latency_history_)) {
+    // Find the most recent value that is older than control_system_latency_timestamp
+    for (auto it = planning_system_latency_history_.rbegin();
+         it != planning_system_latency_history_.rend(); ++it) {
+      if (isTimestampOlder(it->timestamp, control_system_latency_timestamp)) {
+        planning_system_latency_ms = it->value;
+        planning_system_latency_timestamp = it->timestamp;
+        total_latency_ms_ += planning_system_latency_ms;
         break;
       }
     }
   }
 
-  // Get processing_time data (older than processing_time_latency_timestamp)
+  // Get processing_time data (older than planning_system_latency_timestamp)
   double processing_time_ms = 0.0;
   rclcpp::Time processing_time_timestamp = rclcpp::Time(0);
   if (hasValidData(processing_time_history_)) {
-    // Find the most recent value that is older than processing_time_latency_timestamp
+    // Find the most recent value that is older than planning_system_latency_timestamp
     for (auto it = processing_time_history_.rbegin(); it != processing_time_history_.rend(); ++it) {
-      if (it->timestamp < processing_time_latency_timestamp) {
+      if (isTimestampOlder(it->timestamp, planning_system_latency_timestamp)) {
         processing_time_ms = it->value;
         processing_time_timestamp = it->timestamp;
         total_latency_ms_ += processing_time_ms;
@@ -169,7 +168,7 @@ void SensorToControlLatencyCheckerNode::calculateTotalLatency()
     // Find the most recent value that is older than processing_time_timestamp
     for (auto it = meas_to_tracked_object_history_.rbegin();
          it != meas_to_tracked_object_history_.rend(); ++it) {
-      if (it->timestamp < processing_time_timestamp) {
+      if (isTimestampOlder(it->timestamp, processing_time_timestamp)) {
         meas_to_tracked_object_ms = it->value;
         total_latency_ms_ += meas_to_tracked_object_ms;
         break;
@@ -179,10 +178,10 @@ void SensorToControlLatencyCheckerNode::calculateTotalLatency()
 
   RCLCPP_DEBUG(
     get_logger(),
-    "Total latency calculation (timestamp-ordered): topic_delay=%.2f + "
+    "Total latency calculation (timestamp-ordered): control_system_latency=%.2f + "
     "processing_time_latency=%.2f + processing_time=%.2f + meas_to_tracked_object=%.2f = %.2f ms",
-    topic_delay_ms, processing_time_latency_ms, processing_time_ms, meas_to_tracked_object_ms,
-    total_latency_ms_);
+    control_system_latency_ms, planning_system_latency_ms, processing_time_ms,
+    meas_to_tracked_object_ms, total_latency_ms_);
 }
 
 void SensorToControlLatencyCheckerNode::publishTotalLatency()
@@ -199,20 +198,21 @@ void SensorToControlLatencyCheckerNode::publishTotalLatency()
                                        : 0.0;
   double processing_time_ms =
     hasValidData(processing_time_history_) ? getLatestValue(processing_time_history_) : 0.0;
-  double processing_time_latency_ms = hasValidData(processing_time_latency_history_)
-                                        ? getLatestValue(processing_time_latency_history_)
+  double planning_system_latency_ms = hasValidData(planning_system_latency_history_)
+                                        ? getLatestValue(planning_system_latency_history_)
                                         : 0.0;
-  double topic_delay_ms =
-    hasValidData(topic_delay_history_) ? getLatestValue(topic_delay_history_) : 0.0;
+  double control_system_latency_ms = hasValidData(control_system_latency_history_)
+                                       ? getLatestValue(control_system_latency_history_)
+                                       : 0.0;
 
   debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/meas_to_tracked_object_ms", meas_to_tracked_object_ms);
   debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/processing_time_ms", processing_time_ms);
   debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-    "debug/processing_time_latency_ms", processing_time_latency_ms);
+    "debug/planning_system_latency_ms", planning_system_latency_ms);
   debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
-    "debug/topic_delay_ms", topic_delay_ms);
+    "debug/control_system_latency_ms", control_system_latency_ms);
   debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/total_latency_ms", total_latency_ms_);
 
@@ -225,49 +225,55 @@ void SensorToControlLatencyCheckerNode::publishTotalLatency()
 void SensorToControlLatencyCheckerNode::checkTotalLatency(
   diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  // Get latest values (with initialization check)
+  // Get latest values
   double meas_to_tracked_object_ms = hasValidData(meas_to_tracked_object_history_)
                                        ? getLatestValue(meas_to_tracked_object_history_)
                                        : 0.0;
   double processing_time_ms =
     hasValidData(processing_time_history_) ? getLatestValue(processing_time_history_) : 0.0;
-  double processing_time_latency_ms = hasValidData(processing_time_latency_history_)
-                                        ? getLatestValue(processing_time_latency_history_)
+  double planning_system_latency_ms = hasValidData(planning_system_latency_history_)
+                                        ? getLatestValue(planning_system_latency_history_)
                                         : 0.0;
-  double topic_delay_ms =
-    hasValidData(topic_delay_history_) ? getLatestValue(topic_delay_history_) : 0.0;
+  double control_system_latency_ms = hasValidData(control_system_latency_history_)
+                                       ? getLatestValue(control_system_latency_history_)
+                                       : 0.0;
 
   stat.add("Total Latency (ms)", total_latency_ms_);
   stat.add("Threshold (ms)", latency_threshold_ms_);
   stat.add("meas_to_tracked_object_ms", meas_to_tracked_object_ms);
   stat.add("processing_time_ms", processing_time_ms);
-  stat.add("processing_time_latency_ms", processing_time_latency_ms);
-  stat.add("topic_delay_ms", topic_delay_ms);
-
-  // Also add history sizes and initialization status
-  stat.add(
-    "meas_to_tracked_object_history_size",
-    static_cast<int>(getHistorySize(meas_to_tracked_object_history_)));
-  stat.add(
-    "processing_time_history_size", static_cast<int>(getHistorySize(processing_time_history_)));
-  stat.add(
-    "processing_time_latency_history_size",
-    static_cast<int>(getHistorySize(processing_time_latency_history_)));
-  stat.add("topic_delay_history_size", static_cast<int>(getHistorySize(topic_delay_history_)));
-
-  stat.add("meas_to_tracked_object_initialized", hasValidData(meas_to_tracked_object_history_));
-  stat.add("processing_time_initialized", hasValidData(processing_time_history_));
-  stat.add("processing_time_latency_initialized", hasValidData(processing_time_latency_history_));
-  stat.add("topic_delay_initialized", hasValidData(topic_delay_history_));
+  stat.add("planning_system_latency_ms", planning_system_latency_ms);
+  stat.add("control_system_latency_ms", control_system_latency_ms);
 
   // Check if all data is initialized
   bool all_data_initialized =
     hasValidData(meas_to_tracked_object_history_) && hasValidData(processing_time_history_) &&
-    hasValidData(processing_time_latency_history_) && hasValidData(topic_delay_history_);
+    hasValidData(planning_system_latency_history_) && hasValidData(control_system_latency_history_);
 
   if (!all_data_initialized) {
+    // Add detailed information about which data is not initialized
+    std::string uninitialized_data = "";
+    if (!hasValidData(meas_to_tracked_object_history_)) {
+      if (!uninitialized_data.empty()) uninitialized_data += ", ";
+      uninitialized_data += "meas_to_tracked_object";
+    }
+    if (!hasValidData(processing_time_history_)) {
+      if (!uninitialized_data.empty()) uninitialized_data += ", ";
+      uninitialized_data += "processing_time";
+    }
+    if (!hasValidData(planning_system_latency_history_)) {
+      if (!uninitialized_data.empty()) uninitialized_data += ", ";
+      uninitialized_data += "processing_time_latency";
+    }
+    if (!hasValidData(control_system_latency_history_)) {
+      if (!uninitialized_data.empty()) uninitialized_data += ", ";
+      uninitialized_data += "control_system_latency";
+    }
+
+    stat.add("uninitialized_data", uninitialized_data);
     stat.summary(
-      diagnostic_msgs::msg::DiagnosticStatus::WARN, "Some latency data not yet initialized");
+      diagnostic_msgs::msg::DiagnosticStatus::OK,
+      "Some latency data not yet initialized: " + uninitialized_data);
   } else if (total_latency_ms_ > latency_threshold_ms_) {
     stat.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "Total latency exceeds threshold");
   } else {
@@ -279,7 +285,7 @@ void SensorToControlLatencyCheckerNode::checkTotalLatency(
 void SensorToControlLatencyCheckerNode::updateHistory(
   std::deque<TimestampedValue> & history, const rclcpp::Time & timestamp, double value)
 {
-  // Add new value to history (direct construction)
+  // Add new value to history
   history.emplace_back(timestamp, value);
 
   // Remove old data if window size is exceeded
@@ -312,10 +318,16 @@ bool SensorToControlLatencyCheckerNode::hasValidData(
   return !history.empty();
 }
 
-size_t SensorToControlLatencyCheckerNode::getHistorySize(
-  const std::deque<TimestampedValue> & history) const
+bool SensorToControlLatencyCheckerNode::isTimestampOlder(
+  const rclcpp::Time & timestamp1, const rclcpp::Time & timestamp2) const
 {
-  return history.size();
+  try {
+    return timestamp1 < timestamp2;
+  } catch (const std::runtime_error & e) {
+    // If timestamps have different time sources, compare nanoseconds directly
+    RCLCPP_DEBUG(get_logger(), "Timestamp comparison failed, using nanoseconds: %s", e.what());
+    return timestamp1.nanoseconds() < timestamp2.nanoseconds();
+  }
 }
 
 }  // namespace autoware::system::sensor_to_control_latency_checker
