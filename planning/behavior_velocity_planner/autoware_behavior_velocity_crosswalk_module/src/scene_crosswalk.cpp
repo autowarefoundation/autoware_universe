@@ -1074,13 +1074,13 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForObstructionP
     }
 
     const auto & obj_vel = object.kinematics.initial_twist_with_covariance.twist.linear;
-    if (p.front_vehicle_velocity < std::hypot(obj_vel.x, obj_vel.y)) {
+    if (p.target_vehicle_velocity < std::hypot(obj_vel.x, obj_vel.y)) {
       continue;
     }
 
     const auto & obj_pose = object.kinematics.initial_pose_with_covariance.pose;
     const auto lateral_offset = calcLateralOffset(ego_path.points, obj_pose.position);
-    if (p.max_front_vehicle_lateral_offset < std::abs(lateral_offset)) {
+    if (p.max_target_vehicle_lateral_offset < std::abs(lateral_offset)) {
       continue;
     }
 
@@ -1100,8 +1100,8 @@ std::optional<StopPoseWithObjectUuids> CrosswalkModule::checkStopForObstructionP
       // the vehicles.
       const auto braking_distance = calcDecelDistWithJerkAndAccConstraints(
         planner_data_->current_velocity->twist.linear.x, 0.0,
-        planner_data_->current_acceleration->accel.accel.linear.x, p.min_acc_for_front_vehicle,
-        p.max_jerk_for_front_vehicle, p.min_jerk_for_front_vehicle);
+        planner_data_->current_acceleration->accel.accel.linear.x, p.min_acc_for_target_vehicle,
+        p.max_jerk_for_target_vehicle, p.min_jerk_for_target_vehicle);
       if (!braking_distance) {
         return {};
       }

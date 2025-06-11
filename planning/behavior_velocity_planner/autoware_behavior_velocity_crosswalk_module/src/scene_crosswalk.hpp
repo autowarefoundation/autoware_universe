@@ -141,12 +141,12 @@ public:
     double no_relax_velocity;
     // param for stuck vehicle
     bool enable_obstruction_prevention{false};
-    double front_vehicle_velocity;
-    double max_front_vehicle_lateral_offset;
+    double target_vehicle_velocity;
+    double max_target_vehicle_lateral_offset;
     double required_clearance;
-    double min_acc_for_front_vehicle;
-    double max_jerk_for_front_vehicle;
-    double min_jerk_for_front_vehicle;
+    double min_acc_for_target_vehicle;
+    double max_jerk_for_target_vehicle;
+    double min_jerk_for_target_vehicle;
     // param for pass judge logic
     std::vector<double> ego_pass_first_margin_x;
     std::vector<double> ego_pass_first_margin_y;

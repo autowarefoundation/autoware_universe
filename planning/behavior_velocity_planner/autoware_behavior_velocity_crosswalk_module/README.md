@@ -242,14 +242,14 @@ When there is a low-speed or stopped vehicle ahead of the crosswalk, and there i
 
 In the `obstruction_prevention` namespace, the following parameters are defined.
 
-| Parameter                          | Unit    | Type   | Description                                                             |
-| ---------------------------------- | ------- | ------ | ----------------------------------------------------------------------- |
-| `front_vehicle_velocity`           | [m/s]   | double | maximum velocity threshold whether the target vehicle is stopped or not |
-| `max_front_vehicle_lateral_offset` | [m]     | double | maximum lateral offset of the target vehicle position                   |
-| `required_clearance`               | [m]     | double | clearance to be secured between the ego and the ahead vehicle           |
-| `min_acc`                          | [m/ss]  | double | minimum acceleration to stop                                            |
-| `min_jerk`                         | [m/sss] | double | minimum jerk to stop                                                    |
-| `max_jerk`                         | [m/sss] | double | maximum jerk to stop                                                    |
+| Parameter                           | Unit    | Type   | Description                                                             |
+| ----------------------------------- | ------- | ------ | ----------------------------------------------------------------------- |
+| `target_vehicle_velocity`           | [m/s]   | double | maximum velocity threshold whether the target vehicle is stopped or not |
+| `max_target_vehicle_lateral_offset` | [m]     | double | maximum lateral offset of the target vehicle position                   |
+| `required_clearance`                | [m]     | double | clearance to be secured between the ego and the ahead vehicle           |
+| `min_acc`                           | [m/ss]  | double | minimum acceleration to stop                                            |
+| `min_jerk`                          | [m/sss] | double | minimum jerk to stop                                                    |
+| `max_jerk`                          | [m/sss] | double | maximum jerk to stop                                                    |
 
 ### Map Slow Down Behavior
 
