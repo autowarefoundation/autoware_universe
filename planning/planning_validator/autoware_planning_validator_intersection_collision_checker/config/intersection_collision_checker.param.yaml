@@ -1,0 +1,34 @@
+/**:
+  ros__parameters:
+    intersection_collision_checker:
+      enable: true
+      detection_range: 50.0 # [m]
+      ttc_threshold: 1.0 # [s]
+      is_critical: false
+      ego_deceleration: 1.0 # [m/s^2]
+      min_time_horizon: 10.0 # [s]
+      timeout: 1.0 # [s]
+
+      right_turn:
+        enable: true
+        check_oncoming_lanes: true
+        check_crossing_lanes: true
+        check_turning_lanes: false
+
+      left_turn:
+        enable: true
+        check_turning_lanes: false
+
+      pointcloud:
+        height_buffer: 0.5  # [m]
+        min_height: 0.5  # [m]
+        voxel_grid_filter:
+          x: 0.1
+          y: 0.1
+          z: 0.5
+        clustering:
+          tolerance: 0.5  #[m]
+          min_height: 0.5
+          min_size: 10
+          max_size: 10000
+        observation_time: 0.3  # [s]
