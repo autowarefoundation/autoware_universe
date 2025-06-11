@@ -72,9 +72,6 @@ void RearCollisionChecker::init(
   pub_voxel_pointcloud_ =
     node.create_publisher<PointCloud2>("~/rear_collision_checker/debug/voxel_points", 1);
 
-  pub_debug_marker_ =
-    node.create_publisher<MarkerArray>("~/rear_collision_checker/debug/marker", 20);
-
   pub_string_ = node.create_publisher<StringStamped>("~/rear_collision_checker/debug/state", 1);
 
   pub_debug_processing_time_detail_ = node.create_publisher<autoware_utils::ProcessingTimeDetail>(
@@ -843,13 +840,13 @@ void RearCollisionChecker::publish_marker(const DebugData & debug) const
     add(utils::create_polygon_marker_array(
       debug.hull_polygons, "hull_polygons",
       autoware_utils::create_marker_color(0.0, 0.0, 1.0, 0.999)));
+
+    std::for_each(msg.markers.begin(), msg.markers.end(), [](auto & marker) {
+      marker.lifetime = rclcpp::Duration::from_seconds(0.5);
+    });
+
+    context_->debug_pose_publisher->pushMarkers(msg);
   }
-
-  std::for_each(msg.markers.begin(), msg.markers.end(), [](auto & marker) {
-    marker.lifetime = rclcpp::Duration::from_seconds(0.5);
-  });
-
-  pub_debug_marker_->publish(msg);
 
   if (debug.cluster_points) {
     pub_cluster_pointcloud_->publish(*debug.cluster_points);

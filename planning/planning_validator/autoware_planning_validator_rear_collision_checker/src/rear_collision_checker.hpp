@@ -78,8 +78,6 @@ private:
 
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_cluster_pointcloud_;
 
-  rclcpp::Publisher<MarkerArray>::SharedPtr pub_debug_marker_;
-
   rclcpp::Publisher<StringStamped>::SharedPtr pub_string_;
 
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
