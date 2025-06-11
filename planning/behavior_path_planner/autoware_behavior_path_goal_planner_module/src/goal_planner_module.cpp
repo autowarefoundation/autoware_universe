@@ -317,17 +317,8 @@ void LaneParkingPlanner::onTimer()
       RCLCPP_DEBUG(getLogger(), "has deviated from last previous module path");
       return true;
     }
-    const auto & upstream_module_path = upstream_module_output.path;
-    const auto stopline_it = std::find_if(
-      upstream_module_path.points.begin(), upstream_module_path.points.end(),
-      [&](const auto & point) { return std::fabs(point.point.longitudinal_velocity_mps) == 0.0; });
-    /*
-      NOTE(soblin): this is a hack for lane_change bug randomly inserting a stopline at the end of
-      the path.
-     */
     const bool upstream_module_has_stopline_except_terminal =
-      static_cast<unsigned>(std::distance(upstream_module_path.points.begin(), stopline_it)) + 1 <
-      upstream_module_path.points.size();
+      goal_planner_utils::has_stopline_except_terminal(upstream_module_output.path);
     if (upstream_module_has_stopline_except_terminal) {
       return true;
     }
@@ -744,17 +735,8 @@ void GoalPlannerModule::updateData()
   const auto static_target_objects = utils::path_safety_checker::filterObjectsByVelocity(
     dynamic_target_objects, parameters_.th_moving_object_velocity);
 
-  const auto & upstream_module_path = getPreviousModuleOutput().path;
-  const auto stopline_it = std::find_if(
-    upstream_module_path.points.begin(), upstream_module_path.points.end(),
-    [&](const auto & point) { return std::fabs(point.point.longitudinal_velocity_mps) == 0.0; });
-  /*
-    NOTE(soblin): this is a hack for lane_change bug randomly inserting a stopline at the end of the
-    path.
-   */
   const bool upstream_module_has_stopline_except_terminal =
-    static_cast<unsigned>(std::distance(upstream_module_path.points.begin(), stopline_it)) + 1 <
-    upstream_module_path.points.size();
+    goal_planner_utils::has_stopline_except_terminal(getPreviousModuleOutput().path);
   path_decision_controller_.transit_state(
     pull_over_path_recv, upstream_module_has_stopline_except_terminal, clock_->now(),
     static_target_objects, dynamic_target_objects, planner_data_, occupancy_grid_map_,

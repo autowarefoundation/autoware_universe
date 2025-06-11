@@ -1101,4 +1101,13 @@ bool has_previous_module_path_velocity_changed(
   return had_stopline_last.has_value();
 }
 
+bool has_stopline_except_terminal(const PathWithLaneId & path)
+{
+  const auto stopline_it = std::find_if(
+    path.points.begin(), path.points.end(),
+    [](const auto & point) { return std::fabs(point.point.longitudinal_velocity_mps) == 0.0; });
+  return static_cast<unsigned>(std::distance(path.points.begin(), stopline_it)) + 1 <
+         path.points.size();
+}
+
 }  // namespace autoware::behavior_path_planner::goal_planner_utils

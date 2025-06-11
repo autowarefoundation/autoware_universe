@@ -246,11 +246,11 @@ bool hasDeviatedFromPath(
   const Point & ego_position, const BehaviorModuleOutput & upstream_module_output);
 
 /**
- * @brief check if stopline existance and position have changed
+ * @brief check if stopline exists execept for the terminal
+ * @note except for terminal, to account for lane change bug that inserts stopline at the end
+ * randomly
  */
-bool has_previous_module_path_velocity_changed(
-  const BehaviorModuleOutput & upstream_module_output,
-  const BehaviorModuleOutput & last_upstream_module_output);
+bool has_stopline_except_terminal(const PathWithLaneId & path);
 
 }  // namespace autoware::behavior_path_planner::goal_planner_utils
 
