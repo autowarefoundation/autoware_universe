@@ -142,6 +142,7 @@ private:
     Metric::steering_rate,
     Metric::steering_acceleration,
     Metric::stop_deviation,
+    Metric::closest_object_distance
   };
 
   std::array<Accumulator<double>, static_cast<size_t>(Metric::SIZE)>
