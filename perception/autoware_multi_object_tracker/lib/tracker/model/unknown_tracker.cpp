@@ -122,7 +122,7 @@ UnknownTracker::UnknownTracker(
     }
   } else {
     // Set motion model parameters
-    constexpr double q_stddev_x = 2.5;  // [m/s]
+    constexpr double q_stddev_x = 5.0;  // [m/s]
     constexpr double q_stddev_y = q_stddev_x;
     static_motion_model_.setMotionParams(q_stddev_x, q_stddev_y);
 
