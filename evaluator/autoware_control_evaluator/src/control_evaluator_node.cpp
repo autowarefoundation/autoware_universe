@@ -402,6 +402,28 @@ void ControlEvaluatorNode::AddStopDeviationMetricMsg(const Odometry & odom)
   }
 }
 
+void ControlEvaluatorNode::AddObjectMetricMsg(const Odometry & odom, const PredictedObjects & objects)
+{
+  if (objects.objects.empty()) {
+    return;
+  }
+
+  const auto ego_polygon = metrics::createEgoPolygon(
+    odom.pose.pose,
+    vehicle_info_);
+  
+  double minimum_distance = std::numeric_limits<double>::max();
+  for (const auto & object : objects.objects) {
+    const auto & object_polygon = metrics::createObjPolygon(object);
+    const auto distance = metrics::calcPolygonDistance(ego_polygon, object_polygon);
+    if (distance < minimum_distance) {
+      minimum_distance = distance;
+    }
+  }
+
+  AddMetricMsg(Metric::closest_object_distance, minimum_distance);
+}
+
 void ControlEvaluatorNode::onTimer()
 {
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
@@ -412,6 +434,12 @@ void ControlEvaluatorNode::onTimer()
 
     // add planning_factor related metrics
     AddStopDeviationMetricMsg(*odom);
+
+    // add object related metrics
+    const auto objects = objects_sub_.take_data();
+    if (objects) {
+      AddObjectMetricMsg(*odom, *objects);
+    }
 
     // add kinematic info
     const auto acc = accel_sub_.take_data();
