@@ -728,6 +728,7 @@ bool RearCollisionChecker::is_safe(DebugData & debug)
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const auto p = param_listener_->get_params();
+  const auto now = clock_->now();
 
   {
     const auto obstacle_pointcloud = std::make_shared<sensor_msgs::msg::PointCloud2>();
@@ -745,8 +746,11 @@ bool RearCollisionChecker::is_safe(DebugData & debug)
     debug.text = "failed to identify the current driving lane.";
   }
 
-  const auto turn_behavior = utils::check_turn_behavior(current_lanes, context_, p, debug);
-  const auto shift_behavior = utils::check_shift_behavior(current_lanes, context_, p, debug);
+  const auto is_unsafe_holding = (now - last_unsafe_time_).seconds() < p.common.off_time_buffer;
+  const auto turn_behavior =
+    utils::check_turn_behavior(current_lanes, is_unsafe_holding, context_, p, debug);
+  const auto shift_behavior =
+    utils::check_shift_behavior(current_lanes, is_unsafe_holding, context_, p, debug);
 
   {
     debug.current_lanes = current_lanes;
@@ -774,7 +778,6 @@ bool RearCollisionChecker::is_safe(DebugData & debug)
   }
 
   {
-    const auto now = clock_->now();
     if (is_safe(pointcloud_objects, debug)) {
       last_safe_time_ = now;
       if ((now - last_unsafe_time_).seconds() > p.common.off_time_buffer) {

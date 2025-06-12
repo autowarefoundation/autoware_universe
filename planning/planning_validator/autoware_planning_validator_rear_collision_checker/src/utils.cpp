@@ -149,16 +149,20 @@ auto calc_predicted_stop_line(
 
   autoware_utils::LineString3d stop_line;
 
-  const auto stop_distance = autoware::motion_utils::calcDecelDistWithJerkAndAccConstraints(
-    current_velocity, target_velocity, current_acceleration, max_deceleration, max_positive_jerk,
-    max_negative_jerk);
+  const auto stop_distance = [&]() -> double {
+    const auto opt_stop_distance = autoware::motion_utils::calcDecelDistWithJerkAndAccConstraints(
+      current_velocity, target_velocity, current_acceleration, max_deceleration, max_positive_jerk,
+      max_negative_jerk);
 
-  if (!stop_distance.has_value()) {
-    return std::nullopt;
-  }
+    if (opt_stop_distance.has_value()) {
+      return opt_stop_distance.value();
+    }
+
+    return 0.0;
+  }();
 
   const auto p_future = autoware::motion_utils::calcLongitudinalOffsetPose(
-    points, ego_pose.position, vehicle_info.max_longitudinal_offset_m + stop_distance.value());
+    points, ego_pose.position, vehicle_info.max_longitudinal_offset_m + stop_distance);
 
   if (!p_future.has_value()) {
     return std::nullopt;
@@ -170,12 +174,12 @@ auto calc_predicted_stop_line(
     p_future.value(), 0.0, -0.5 * vehicle_info.vehicle_width_m, 0.0);
   stop_line.emplace_back(p1.position.x, p1.position.y, ego_pose.position.z);
   stop_line.emplace_back(p2.position.x, p2.position.y, ego_pose.position.z);
-  return std::make_pair(stop_line, stop_distance.value());
+  return std::make_pair(stop_line, stop_distance);
 }
 }  // namespace
 
 auto check_shift_behavior(
-  const lanelet::ConstLanelets & lanelets,
+  const lanelet::ConstLanelets & lanelets, const bool is_unsafe_holding,
   const std::shared_ptr<PlanningValidatorContext> & context,
   const rear_collision_checker_node::Params & parameters, DebugData & debug) -> Behavior
 {
@@ -232,7 +236,7 @@ auto check_shift_behavior(
     axle.emplace_back(p2.position.x, p2.position.y);
 
     const auto distance = autoware::motion_utils::calcSignedArcLength(points, nearest_idx, i);
-    if (reachable_point.value().second < distance) {
+    if (reachable_point.value().second < distance && !is_unsafe_holding) {
       autoware_utils::LineString2d line_2d{
         reachable_point.value().first.front().to_2d(),
         reachable_point.value().first.back().to_2d()};
@@ -269,7 +273,7 @@ auto check_shift_behavior(
 }
 
 auto check_turn_behavior(
-  const lanelet::ConstLanelets & lanelets,
+  const lanelet::ConstLanelets & lanelets, const bool is_unsafe_holding,
   const std::shared_ptr<PlanningValidatorContext> & context,
   const rear_collision_checker_node::Params & parameters, DebugData & debug) -> Behavior
 {
@@ -352,6 +356,8 @@ auto check_turn_behavior(
 
     total_length += lanelet::utils::getLaneletLength2d(lane);
 
+    const auto is_reachable = distance < reachable_point.value().second || is_unsafe_holding;
+
     if (turn_direction == "left" && p.check.left) {
       const auto sibling_straight_lanelet = get_sibling_straight_lanelet(lane, routing_graph_ptr);
 
@@ -361,12 +367,12 @@ auto check_turn_behavior(
       }
 
       if (!distance_to_stop_point.has_value()) {
-        return distance < reachable_point.value().second ? Behavior::TURN_LEFT : Behavior::NONE;
+        return is_reachable ? Behavior::TURN_LEFT : Behavior::NONE;
       }
       if (distance_to_stop_point.value() < distance + buffer) {
         return Behavior::NONE;
       }
-      return distance < reachable_point.value().second ? Behavior::TURN_LEFT : Behavior::NONE;
+      return is_reachable ? Behavior::TURN_LEFT : Behavior::NONE;
     }
 
     if (turn_direction == "right" && p.check.right) {
@@ -378,12 +384,12 @@ auto check_turn_behavior(
       }
 
       if (!distance_to_stop_point.has_value()) {
-        return distance < reachable_point.value().second ? Behavior::TURN_RIGHT : Behavior::NONE;
+        return is_reachable ? Behavior::TURN_RIGHT : Behavior::NONE;
       }
       if (distance_to_stop_point.value() < distance + buffer) {
         return Behavior::NONE;
       }
-      return distance < reachable_point.value().second ? Behavior::TURN_RIGHT : Behavior::NONE;
+      return is_reachable ? Behavior::TURN_RIGHT : Behavior::NONE;
     }
   }
 

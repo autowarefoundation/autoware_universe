@@ -2,7 +2,7 @@
   ros__parameters:
     common:
       on_time_buffer: 0.5                           # [s]
-      off_time_buffer: 0.5                          # [s]
+      off_time_buffer: 1.5                          # [s]
 
       pointcloud:
         range:
