@@ -33,10 +33,9 @@ namespace
 /**
  * @brief Break polylines.
  *
- * @param polylines
- * @param max_num_point
- * @param break_distance
- * @return std::vector<archetype::Polyline>
+ * @param polylines Vector of source polylines.
+ * @param max_num_point Maximum number of points contained in a single polyline.
+ * @param break_distance Distance threshold to break two polylines.
  */
 std::vector<archetype::Polyline> break_polylines(
   const std::vector<archetype::Polyline> & polylines, size_t max_num_point, double break_distance)
@@ -87,7 +86,6 @@ std::vector<archetype::Polyline> break_polylines(
  * @param to_x X location w.r.t other coordinate.
  * @param to_y Y location w.r.t other coordinate.
  * @param to_yaw Yaw angle w.r.t other coordinate.
- * @return archetype::MapPoint
  */
 archetype::MapPoint transform2d(
   const archetype::MapPoint & from, double to_x, double to_y, double to_yaw)

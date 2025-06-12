@@ -24,6 +24,14 @@ namespace autoware::simpl::archetype
 {
 namespace
 {
+/**
+ * @brief Transform map point.
+ *
+ * @param from Source map points.
+ * @param to_x X coordinate of the target frame.
+ * @param to_y Y coordinate of the target frame.
+ * @param to_yaw Yaw angle of the target frame [rad].
+ */
 MapPoint transform_point(const archetype::MapPoint & from, double to_x, double to_y, double to_yaw)
 {
   double vcos = std::cos(to_yaw);

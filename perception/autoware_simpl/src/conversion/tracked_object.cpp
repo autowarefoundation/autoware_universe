@@ -28,7 +28,6 @@ namespace
  * @brief Return `archetype::AgentLabel` from `TrackedObject` message.
  *
  * @param object Tracked object.
- * @return archetype::AgentLabel
  */
 archetype::AgentLabel to_agent_label(const autoware_perception_msgs::msg::TrackedObject & object)
 {
@@ -57,7 +56,6 @@ archetype::AgentLabel to_agent_label(const autoware_perception_msgs::msg::Tracke
  *
  * @param velocity Linear velocity vector.
  * @param yaw Yaw angle [rad] in global coordinate frame.
- * @return std::pair<double, double>
  */
 std::pair<double, double> local_to_global(const geometry_msgs::msg::Vector3 & velocity, double yaw)
 {

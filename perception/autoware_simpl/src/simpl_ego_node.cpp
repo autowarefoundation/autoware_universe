@@ -34,6 +34,11 @@ namespace autoware::simpl
 {
 namespace
 {
+/**
+ * @brief Convert `Odometry` to `TrackedObject`.
+ *
+ * @param odometry Odometry.
+ */
 autoware_perception_msgs::msg::TrackedObject to_tracked_object(
   const nav_msgs::msg::Odometry & odometry)
 {
