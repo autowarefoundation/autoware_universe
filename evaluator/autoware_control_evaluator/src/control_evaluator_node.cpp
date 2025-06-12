@@ -402,16 +402,15 @@ void ControlEvaluatorNode::AddStopDeviationMetricMsg(const Odometry & odom)
   }
 }
 
-void ControlEvaluatorNode::AddObjectMetricMsg(const Odometry & odom, const PredictedObjects & objects)
+void ControlEvaluatorNode::AddObjectMetricMsg(
+  const Odometry & odom, const PredictedObjects & objects)
 {
   if (objects.objects.empty()) {
     return;
   }
 
-  const auto ego_polygon = metrics::createEgoPolygon(
-    odom.pose.pose,
-    vehicle_info_);
-  
+  const auto ego_polygon = metrics::createEgoPolygon(odom.pose.pose, vehicle_info_);
+
   double minimum_distance = std::numeric_limits<double>::max();
   for (const auto & object : objects.objects) {
     const auto & object_polygon = metrics::createObjPolygon(object);

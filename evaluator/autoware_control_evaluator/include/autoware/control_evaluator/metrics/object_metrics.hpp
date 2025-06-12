@@ -15,13 +15,13 @@
 #ifndef AUTOWARE__CONTROL_EVALUATOR__METRICS__OBJECT_METRICS_HPP_
 #define AUTOWARE__CONTROL_EVALUATOR__METRICS__OBJECT_METRICS_HPP_
 
-#include <geometry_msgs/msg/pose.hpp>
-#include <geometry_msgs/msg/polygon.hpp>
-#include <geometry_msgs/msg/point32.hpp>
-
 #include <autoware_utils_geometry/boost_geometry.hpp>
-#include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
+
+#include <autoware_perception_msgs/msg/predicted_object.hpp>
+#include <geometry_msgs/msg/point32.hpp>
+#include <geometry_msgs/msg/polygon.hpp>
+#include <geometry_msgs/msg/pose.hpp>
 
 namespace control_diagnostics
 {
@@ -36,8 +36,8 @@ namespace metrics
  * @return ego vehicle polygon
  **/
 autoware_utils::Polygon2d createEgoPolygon(
-    const geometry_msgs::msg::Pose & ego_pose,
-    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info);
+  const geometry_msgs::msg::Pose & ego_pose,
+  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info);
 
 /**
  * @brief Create the object polygon.
@@ -45,8 +45,7 @@ autoware_utils::Polygon2d createEgoPolygon(
  * @return object polygon
  **/
 autoware_utils::Polygon2d createObjPolygon(
-    const autoware_perception_msgs::msg::PredictedObject & object);
-
+  const autoware_perception_msgs::msg::PredictedObject & object);
 
 /**
  * @brief Calculate the distance between two polygons.
@@ -55,8 +54,7 @@ autoware_utils::Polygon2d createObjPolygon(
  * @return distance
  **/
 double calcPolygonDistance(
-    const autoware_utils::Polygon2d & polygon1,
-    const autoware_utils::Polygon2d & polygon2);
+  const autoware_utils::Polygon2d & polygon1, const autoware_utils::Polygon2d & polygon2);
 
 }  // namespace metrics
 }  // namespace control_diagnostics

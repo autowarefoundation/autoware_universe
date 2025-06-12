@@ -17,6 +17,7 @@
 #include "autoware_utils/geometry/geometry.hpp"
 
 #include <boost/geometry.hpp>
+
 #include <tf2/utils.h>
 
 namespace control_diagnostics
@@ -35,12 +36,12 @@ geometry_msgs::msg::Point32 createPoint32(const double x, const double y, const 
 }
 
 autoware_utils::Polygon2d createEgoPolygon(
-    const geometry_msgs::msg::Pose & ego_pose,
-    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info)
+  const geometry_msgs::msg::Pose & ego_pose,
+  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info)
 {
   const autoware_utils::LinearRing2d local_ego_footprint = vehicle_info.createFootprint();
-  const autoware_utils::LinearRing2d ego_footprint = autoware_utils::transform_vector(
-    local_ego_footprint, autoware_utils::pose2transform(ego_pose));
+  const autoware_utils::LinearRing2d ego_footprint =
+    autoware_utils::transform_vector(local_ego_footprint, autoware_utils::pose2transform(ego_pose));
 
   autoware_utils::Polygon2d ego_polygon;
   ego_polygon.outer() = ego_footprint;
@@ -51,22 +52,21 @@ autoware_utils::Polygon2d createEgoPolygon(
 }
 
 autoware_utils::Polygon2d createObjPolygon(
-    const geometry_msgs::msg::Pose & pose,
-    const geometry_msgs::msg::Polygon & footprint)
+  const geometry_msgs::msg::Pose & pose, const geometry_msgs::msg::Polygon & footprint)
 {
-    geometry_msgs::msg::Polygon transformed_polygon{};
-    geometry_msgs::msg::TransformStamped geometry_tf{};
-    geometry_tf.transform = autoware_utils::pose2transform(pose);
-    tf2::doTransform(footprint, transformed_polygon, geometry_tf);
+  geometry_msgs::msg::Polygon transformed_polygon{};
+  geometry_msgs::msg::TransformStamped geometry_tf{};
+  geometry_tf.transform = autoware_utils::pose2transform(pose);
+  tf2::doTransform(footprint, transformed_polygon, geometry_tf);
 
-    autoware_utils::Polygon2d object_polygon;
-    for (const auto & p : transformed_polygon.points) {
-        object_polygon.outer().push_back(autoware_utils::Point2d(p.x, p.y));
-    }
+  autoware_utils::Polygon2d object_polygon;
+  for (const auto & p : transformed_polygon.points) {
+    object_polygon.outer().push_back(autoware_utils::Point2d(p.x, p.y));
+  }
 
-    bg::correct(object_polygon);
+  bg::correct(object_polygon);
 
-    return object_polygon;
+  return object_polygon;
 }
 
 autoware_utils_geometry::Polygon2d createObjPolygon(
@@ -120,8 +120,7 @@ autoware_utils_geometry::Polygon2d createObjPolygon(
 }
 
 double calcPolygonDistance(
-  const autoware_utils::Polygon2d & polygon1,
-  const autoware_utils::Polygon2d & polygon2)
+  const autoware_utils::Polygon2d & polygon1, const autoware_utils::Polygon2d & polygon2)
 {
   return bg::distance(polygon1, polygon2);
 }

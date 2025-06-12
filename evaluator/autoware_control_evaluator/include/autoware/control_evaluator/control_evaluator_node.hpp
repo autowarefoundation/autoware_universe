@@ -16,8 +16,8 @@
 #define AUTOWARE__CONTROL_EVALUATOR__CONTROL_EVALUATOR_NODE_HPP_
 
 #include "autoware/control_evaluator/metrics/deviation_metrics.hpp"
-#include "autoware/control_evaluator/metrics/object_metrics.hpp"
 #include "autoware/control_evaluator/metrics/metric.hpp"
+#include "autoware/control_evaluator/metrics/object_metrics.hpp"
 #include "autoware_utils/math/accumulator.hpp"
 
 #include <autoware/route_handler/route_handler.hpp>
