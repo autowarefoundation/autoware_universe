@@ -1067,40 +1067,6 @@ bool hasDeviatedFromPath(
            upstream_module_output.path.points, ego_position)) > LATERAL_DEVIATION_THRESH;
 }
 
-bool has_previous_module_path_velocity_changed(
-  const BehaviorModuleOutput & upstream_module_output,
-  const BehaviorModuleOutput & last_upstream_module_output)
-{
-  static constexpr double ZERO_VELOCITY = 0.0;
-  static constexpr double STOPLINE_POSITION_THRESH = 0.1;
-
-  auto find_stopline =
-    [&](const BehaviorModuleOutput & module_output) -> std::optional<geometry_msgs::msg::Point> {
-    for (const auto & p : module_output.path.points) {
-      if (std::fabs(p.point.longitudinal_velocity_mps) == ZERO_VELOCITY) {
-        return p.point.pose.position;
-      }
-    }
-    return std::nullopt;
-  };
-  const auto has_stopline_now = find_stopline(upstream_module_output);
-  const auto had_stopline_last = find_stopline(last_upstream_module_output);
-  if (has_stopline_now) {
-    if (!had_stopline_last) {
-      return true;
-    }
-    if (
-      std::fabs(autoware_utils_geometry::calc_distance3d(*has_stopline_now, *had_stopline_last)) >
-      STOPLINE_POSITION_THRESH) {
-      // stopline position have changed
-      return true;
-    }
-    return false;
-  }
-  // !has_stopline_now
-  return had_stopline_last.has_value();
-}
-
 bool has_stopline_except_terminal(const PathWithLaneId & path)
 {
   const auto stopline_it = std::find_if(
