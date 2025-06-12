@@ -62,6 +62,7 @@ public:
     double hold_stop_margin_distance;
     double distance_to_judge_over_stop_line;
     bool suppress_pass_judge_when_stopping;
+    bool enable_detected_obstacle_logging;
   };
 
   DetectionAreaModule(
@@ -77,6 +78,16 @@ public:
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
+
+  std::vector<int64_t> getRegulatoryElementIds() const override
+  {
+    return {detection_area_reg_elem_.id()};
+  }
+  std::vector<int64_t> getLaneletIds() const override { return {lane_id_}; }
+  std::vector<int64_t> getLineIds() const override
+  {
+    return {detection_area_reg_elem_.stopLine().id()};
+  }
 
 private:
   // Lane id
@@ -94,6 +105,16 @@ private:
 
   // Debug
   DebugData debug_data_;
+
+  /**
+   * @brief Print positions of detected obstacle, time elapsed since last detection, and ego vehicle
+   * position
+   * @param obstacle_points Points representing detected obstacles in the detection area
+   * @param self_pose Current pose of the ego vehicle
+   */
+  void print_detected_obstacle(
+    const std::vector<geometry_msgs::msg::Point> & obstacle_points,
+    const geometry_msgs::msg::Pose & self_pose) const;
 };
 }  // namespace autoware::behavior_velocity_planner
 

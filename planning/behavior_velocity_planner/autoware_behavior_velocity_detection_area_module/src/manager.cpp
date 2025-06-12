@@ -52,6 +52,8 @@ DetectionAreaModuleManager::DetectionAreaModuleManager(rclcpp::Node & node)
     get_or_declare_parameter<double>(node, ns + ".distance_to_judge_over_stop_line");
   planner_param_.suppress_pass_judge_when_stopping =
     get_or_declare_parameter<bool>(node, ns + ".suppress_pass_judge_when_stopping");
+  planner_param_.enable_detected_obstacle_logging =
+    get_or_declare_parameter<bool>(node, ns + ".enable_detected_obstacle_logging");
 }
 
 void DetectionAreaModuleManager::launchNewModules(

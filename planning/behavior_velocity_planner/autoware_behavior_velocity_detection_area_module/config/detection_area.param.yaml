@@ -10,3 +10,4 @@
       distance_to_judge_over_stop_line: 0.5
       enable_rtc: false # If set to true, the scene modules require approval from the rtc (request to cooperate) function. If set to false, the modules can be executed without requiring rtc approval
       suppress_pass_judge_when_stopping: false
+      enable_detected_obstacle_logging: false # Enable/disable detected obstacle logging
