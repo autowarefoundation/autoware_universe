@@ -2,6 +2,19 @@
 Changelog for package autoware_pose_estimator_arbiter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* fix(autoware_pose_estimator_arbiter): fix deprecated autoware_utils header (`#10510 <https://github.com/autowarefoundation/autoware_universe/issues/10510>`_)
+  * fix autoware_utils header
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Kazu, TaikiYamada4
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 

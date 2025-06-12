@@ -209,15 +209,14 @@ void updateClipObject(ObjectDataArray & clip_objects, AvoidancePlanningData & da
 
 /**
  * @brief compensate lost objects until a certain time elapses.
- * @param previous stopped object.
  * @param avoidance planning data.
+ * @param previous stopped object.
  * @param current time.
  * @param avoidance parameters which includes duration of compensation.
  */
 void compensateLostTargetObjects(
-  ObjectDataArray & stored_objects, AvoidancePlanningData & data, const rclcpp::Time & now,
-  const std::shared_ptr<const PlannerData> & planner_data,
-  const std::shared_ptr<AvoidanceParameters> & parameters);
+  AvoidancePlanningData & data, const ObjectDataArray & stored_objects,
+  const std::shared_ptr<const PlannerData> & planner_data);
 
 void filterTargetObjects(
   ObjectDataArray & objects, AvoidancePlanningData & data, const double forward_detection_range,
@@ -275,6 +274,10 @@ double calcDistanceToAvoidStartLine(
  * @return error eclipse long radius.
  */
 double calcErrorEclipseLongRadius(const PoseWithCovariance & pose);
+
+void updateStoredObjects(
+  ObjectDataArray & stored_objects, const ObjectDataArray & current_objects,
+  const rclcpp::Time & now, const std::shared_ptr<AvoidanceParameters> & parameters);
 
 }  // namespace autoware::behavior_path_planner::utils::static_obstacle_avoidance
 

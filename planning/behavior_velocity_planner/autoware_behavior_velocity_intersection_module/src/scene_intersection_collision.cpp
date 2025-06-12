@@ -265,11 +265,17 @@ void IntersectionModule::updateObjectInfoManagerCollision(
       }
       cutPredictPathWithinDuration(
         planner_data_->predicted_objects->header.stamp, passing_time, &predicted_path);
+      if (predicted_path.path.size() < 2) {
+        continue;
+      }
       const double time_step =
         predicted_path.time_step.sec + predicted_path.time_step.nanosec * 1e-9;
       const double horizon = time_step * static_cast<double>(predicted_path.path.size());
       predicted_path =
         autoware::object_recognition_utils::resamplePredictedPath(predicted_path, 0.1, horizon);
+      if (predicted_path.path.size() < 2) {
+        continue;
+      }
       const auto object_passage_interval_opt = findPassageInterval(
         predicted_path, predicted_object.shape, ego_poly,
         intersection_lanelets.first_attention_lane(),

@@ -93,6 +93,10 @@ double calculate_keep_stop_distance_range(
   std::vector<double> arc_lengths = {0.0};
   for (auto i = 1UL; i < trajectory.size(); ++i) {
     const auto t = rclcpp::Duration(trajectory[i].time_from_start).seconds();
+    if (times.back() >= t) {
+      // we skip trajectory points where the predicted time decreases to avoid interpolation errors
+      continue;
+    }
     const auto arc_length_delta = universe_utils::calcDistance2d(trajectory[i - 1], trajectory[i]);
     times.push_back(t);
     arc_lengths.push_back(arc_lengths.back() + arc_length_delta);

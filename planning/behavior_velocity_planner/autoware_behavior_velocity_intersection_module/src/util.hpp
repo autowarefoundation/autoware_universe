@@ -27,6 +27,7 @@
 
 #include <optional>
 #include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -135,6 +136,21 @@ getFirstPointInsidePolygonsByFootprint(
 
 std::vector<lanelet::CompoundPolygon3d> getPolygon3dFromLanelets(
   const lanelet::ConstLanelets & ll_vec);
+
+/*
+ * @brief along the interpolated_path, find the position where footprint approaches the lane
+ * boundary of merging_lanelet most closely, but upto the distance of min_distance_threshold
+ * @param merging_lanelet the target lanelet to which interpolated_path_info merges into
+ * @param min_distance_threshold the distance threshold that ego is allowed to approach toward the
+ * boundary
+ * @param turn_direction "left" or "right"
+ * @param search_start_idx the index which is used to start the search from
+ */
+std::optional<size_t> find_maximum_footprint_overshoot_position(
+  const InterpolatedPathInfo & interpolated_path_info,
+  const autoware_utils::LinearRing2d & local_footprint,
+  const lanelet::ConstLanelet & merging_lanelet, const double min_distance_threshold,
+  const std::string & turn_direction, const size_t search_start_idx);
 
 }  // namespace autoware::behavior_velocity_planner::util
 

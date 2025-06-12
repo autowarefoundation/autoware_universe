@@ -35,19 +35,6 @@ namespace autoware::motion_velocity_planner
 {
 namespace
 {
-double calc_diff_angle_against_trajectory(
-  const std::vector<TrajectoryPoint> & traj_points, const geometry_msgs::msg::Pose & target_pose)
-{
-  const size_t nearest_idx =
-    autoware::motion_utils::findNearestIndex(traj_points, target_pose.position);
-  const double traj_yaw = tf2::getYaw(traj_points.at(nearest_idx).pose.orientation);
-
-  const double target_yaw = tf2::getYaw(target_pose.orientation);
-
-  const double diff_yaw = autoware_utils::normalize_radian(target_yaw - traj_yaw);
-  return diff_yaw;
-}
-
 std::vector<PredictedPath> resample_highest_confidence_predicted_paths(
   const std::vector<PredictedPath> & predicted_paths, const double time_interval,
   const double time_horizon, const size_t num_paths)
@@ -814,7 +801,7 @@ bool ObstacleCruiseModule::is_obstacle_crossing(
   const std::vector<TrajectoryPoint> & traj_points,
   const std::shared_ptr<PlannerData::Object> object) const
 {
-  const double diff_angle = calc_diff_angle_against_trajectory(
+  const double diff_angle = autoware::motion_utils::calc_diff_angle_against_trajectory(
     traj_points, object->predicted_object.kinematics.initial_pose_with_covariance.pose);
 
   // NOTE: Currently predicted objects does not have orientation availability even

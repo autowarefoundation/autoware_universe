@@ -277,6 +277,21 @@
                       }
                     }
                   }
+                },
+                "preserved_duration": {
+                  "type": "number",
+                  "description": "[s] when cutting a predicted path or ignoring an object, at least this much duration is preserved from the predicted paths",
+                  "default": 0.0
+                },
+                "preserved_distance": {
+                  "type": "number",
+                  "description": "[m] when cutting a predicted path or ignoring an object, at least this much distance is preserved from the predicted paths",
+                  "default": 0.0
+                },
+                "standstill_duration_after_cut": {
+                  "type": "number",
+                  "description": "[s] after cutting a predicted path, assume the object stands still at the last point for this duration",
+                  "default": 2.0
                 }
               }
             }

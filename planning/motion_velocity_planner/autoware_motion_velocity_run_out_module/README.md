@@ -67,6 +67,9 @@ First, we only keep predicted paths that have a confidence value above the `conf
 If, `confidence_filtering.only_use_highest` is set to `true` then for each object only the predicted paths that have the higher confidence value are kept.
 Next, the remaining predicted paths are cut according to the segments prepared in the previous step.
 
+To guarantee that parts of the predicted paths are never ignored,
+parameters `preserved_duration` and `preserved_distance` can be used to set a minimum duration and/or distance that cannot be cut or ignored.
+
 The following figures shows an example where crosswalks are used to ignore pedestrians and to cut their predicted paths.
 
 | debug markers (`objects_footprints`)                        | objects of interest                                     |
