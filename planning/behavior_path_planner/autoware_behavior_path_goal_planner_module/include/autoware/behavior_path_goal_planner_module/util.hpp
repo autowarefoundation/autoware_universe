@@ -246,7 +246,7 @@ bool hasDeviatedFromPath(
   const Point & ego_position, const BehaviorModuleOutput & upstream_module_output);
 
 /**
- * @brief check if stopline exists execept for the terminal
+ * @brief check if stopline exists except for the terminal
  * @note except for terminal, to account for lane change bug that inserts stopline at the end
  * randomly
  */
