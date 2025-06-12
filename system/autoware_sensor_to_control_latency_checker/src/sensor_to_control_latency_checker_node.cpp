@@ -30,9 +30,9 @@ SensorToControlLatencyCheckerNode::SensorToControlLatencyCheckerNode(
   const rclcpp::NodeOptions & options)
 : Node("sensor_to_control_latency_checker", options), diagnostic_updater_(this)
 {
-  update_rate_ = declare_parameter<double>("update_rate", update_rate_);
-  latency_threshold_ms_ = declare_parameter<double>("latency_threshold_ms", latency_threshold_ms_);
-  window_size_ = declare_parameter<int>("window_size", window_size_);
+  update_rate_ = declare_parameter<double>("update_rate");
+  latency_threshold_ms_ = declare_parameter<double>("latency_threshold_ms");
+  window_size_ = declare_parameter<int>("window_size");
 
   meas_to_tracked_object_sub_ =
     create_subscription<autoware_internal_debug_msgs::msg::Float64Stamped>(
@@ -90,7 +90,7 @@ void SensorToControlLatencyCheckerNode::onMeasToTrackedObject(
 void SensorToControlLatencyCheckerNode::onProcessingTimePrediction(
   const autoware_internal_debug_msgs::msg::Float64Stamped::ConstSharedPtr msg)
 {
-  updateHistory(processing_time_history_, msg->stamp, msg->data);
+  updateHistory(map_based_prediction_processing_time_history_, msg->stamp, msg->data);
   RCLCPP_DEBUG(get_logger(), "Received processing_time_ms: %.2f", msg->data);
 }
 
@@ -149,26 +149,27 @@ void SensorToControlLatencyCheckerNode::calculateTotalLatency()
 
   // Get processing_time data (older than planning_system_latency_timestamp)
   double processing_time_ms = 0.0;
-  rclcpp::Time processing_time_timestamp = rclcpp::Time(0);
-  if (hasValidData(processing_time_history_)) {
+  rclcpp::Time map_based_prediction_processing_time_timestamp = rclcpp::Time(0);
+  if (hasValidData(map_based_prediction_processing_time_history_)) {
     // Find the most recent value that is older than planning_system_latency_timestamp
-    for (auto it = processing_time_history_.rbegin(); it != processing_time_history_.rend(); ++it) {
+    for (auto it = map_based_prediction_processing_time_history_.rbegin();
+         it != map_based_prediction_processing_time_history_.rend(); ++it) {
       if (isTimestampOlder(it->timestamp, planning_system_latency_timestamp)) {
         processing_time_ms = it->value;
-        processing_time_timestamp = it->timestamp;
+        map_based_prediction_processing_time_timestamp = it->timestamp;
         total_latency_ms_ += processing_time_ms;
         break;
       }
     }
   }
 
-  // Get meas_to_tracked_object data (older than processing_time_timestamp)
+  // Get meas_to_tracked_object data (older than map_based_prediction_processing_time_timestamp)
   double meas_to_tracked_object_ms = 0.0;
   if (hasValidData(meas_to_tracked_object_history_)) {
-    // Find the most recent value that is older than processing_time_timestamp
+    // Find the most recent value that is older than map_based_prediction_processing_time_timestamp
     for (auto it = meas_to_tracked_object_history_.rbegin();
          it != meas_to_tracked_object_history_.rend(); ++it) {
-      if (isTimestampOlder(it->timestamp, processing_time_timestamp)) {
+      if (isTimestampOlder(it->timestamp, map_based_prediction_processing_time_timestamp)) {
         meas_to_tracked_object_ms = it->value;
         total_latency_ms_ += meas_to_tracked_object_ms;
         break;
@@ -196,8 +197,9 @@ void SensorToControlLatencyCheckerNode::publishTotalLatency()
   double meas_to_tracked_object_ms = hasValidData(meas_to_tracked_object_history_)
                                        ? getLatestValue(meas_to_tracked_object_history_)
                                        : 0.0;
-  double processing_time_ms =
-    hasValidData(processing_time_history_) ? getLatestValue(processing_time_history_) : 0.0;
+  double processing_time_ms = hasValidData(map_based_prediction_processing_time_history_)
+                                ? getLatestValue(map_based_prediction_processing_time_history_)
+                                : 0.0;
   double planning_system_latency_ms = hasValidData(planning_system_latency_history_)
                                         ? getLatestValue(planning_system_latency_history_)
                                         : 0.0;
@@ -229,8 +231,9 @@ void SensorToControlLatencyCheckerNode::checkTotalLatency(
   double meas_to_tracked_object_ms = hasValidData(meas_to_tracked_object_history_)
                                        ? getLatestValue(meas_to_tracked_object_history_)
                                        : 0.0;
-  double processing_time_ms =
-    hasValidData(processing_time_history_) ? getLatestValue(processing_time_history_) : 0.0;
+  double processing_time_ms = hasValidData(map_based_prediction_processing_time_history_)
+                                ? getLatestValue(map_based_prediction_processing_time_history_)
+                                : 0.0;
   double planning_system_latency_ms = hasValidData(planning_system_latency_history_)
                                         ? getLatestValue(planning_system_latency_history_)
                                         : 0.0;
@@ -246,9 +249,10 @@ void SensorToControlLatencyCheckerNode::checkTotalLatency(
   stat.add("control_system_latency_ms", control_system_latency_ms);
 
   // Check if all data is initialized
-  bool all_data_initialized =
-    hasValidData(meas_to_tracked_object_history_) && hasValidData(processing_time_history_) &&
-    hasValidData(planning_system_latency_history_) && hasValidData(control_system_latency_history_);
+  bool all_data_initialized = hasValidData(meas_to_tracked_object_history_) &&
+                              hasValidData(map_based_prediction_processing_time_history_) &&
+                              hasValidData(planning_system_latency_history_) &&
+                              hasValidData(control_system_latency_history_);
 
   if (!all_data_initialized) {
     // Add detailed information about which data is not initialized
@@ -257,7 +261,7 @@ void SensorToControlLatencyCheckerNode::checkTotalLatency(
       if (!uninitialized_data.empty()) uninitialized_data += ", ";
       uninitialized_data += "meas_to_tracked_object";
     }
-    if (!hasValidData(processing_time_history_)) {
+    if (!hasValidData(map_based_prediction_processing_time_history_)) {
       if (!uninitialized_data.empty()) uninitialized_data += ", ";
       uninitialized_data += "processing_time";
     }
