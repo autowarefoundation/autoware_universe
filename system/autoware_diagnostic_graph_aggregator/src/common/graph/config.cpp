@@ -19,6 +19,7 @@
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
+#include <deque>
 #include <filesystem>
 #include <queue>
 #include <regex>
