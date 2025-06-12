@@ -79,7 +79,10 @@ public:
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
 
-  std::vector<int64_t> getRegulatoryElementIds() const { return {detection_area_reg_elem_.id()}; }
+  std::vector<int64_t> getRegulatoryElementIds() const override
+  {
+    return {detection_area_reg_elem_.id()};
+  }
   std::vector<int64_t> getLaneletIds() const override { return {lane_id_}; }
   std::vector<int64_t> getLineIds() const override
   {
