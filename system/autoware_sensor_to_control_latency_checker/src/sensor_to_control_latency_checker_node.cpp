@@ -34,6 +34,13 @@ SensorToControlLatencyCheckerNode::SensorToControlLatencyCheckerNode(
   latency_threshold_ms_ = declare_parameter<double>("latency_threshold_ms");
   window_size_ = declare_parameter<int>("window_size");
 
+  // Initialize offset parameters
+  sensor_offset_ms_ = declare_parameter<double>("sensor_offset_ms");
+  perception_offset_ms_ = declare_parameter<double>("perception_offset_ms");
+  planning_offset_ms_ = declare_parameter<double>("planning_offset_ms");
+  control_offset_ms_ = declare_parameter<double>("control_offset_ms");
+  vehicle_offset_ms_ = declare_parameter<double>("vehicle_offset_ms");
+
   meas_to_tracked_object_sub_ =
     create_subscription<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "~/input/processing_time_tracking", 10,
@@ -183,6 +190,20 @@ void SensorToControlLatencyCheckerNode::calculateTotalLatency()
     "processing_time_latency=%.2f + processing_time=%.2f + meas_to_tracked_object=%.2f = %.2f ms",
     control_system_latency_ms, planning_system_latency_ms, processing_time_ms,
     meas_to_tracked_object_ms, total_latency_ms_);
+
+  // Add offset processing times for each layer
+  total_latency_ms_ += sensor_offset_ms_;
+  total_latency_ms_ += perception_offset_ms_;
+  total_latency_ms_ += planning_offset_ms_;
+  total_latency_ms_ += control_offset_ms_;
+  total_latency_ms_ += vehicle_offset_ms_;
+
+  RCLCPP_DEBUG(
+    get_logger(),
+    "Total latency with offsets: %.2f ms (sensor_offset=%.2f + perception_offset=%.2f + "
+    "planning_offset=%.2f + control_offset=%.2f + vehicle_offset=%.2f)",
+    total_latency_ms_, sensor_offset_ms_, perception_offset_ms_, planning_offset_ms_,
+    control_offset_ms_, vehicle_offset_ms_);
 }
 
 void SensorToControlLatencyCheckerNode::publishTotalLatency()

@@ -49,6 +49,13 @@ private:
   double latency_threshold_ms_{};
   int window_size_{};
 
+  // Offset processing times for each layer (ms)
+  double sensor_offset_ms_{};
+  double perception_offset_ms_{};
+  double planning_offset_ms_{};
+  double control_offset_ms_{};
+  double vehicle_offset_ms_{};
+
   // History of received values (with timestamps)
   std::deque<TimestampedValue> meas_to_tracked_object_history_{};
   std::deque<TimestampedValue> map_based_prediction_processing_time_history_{};
