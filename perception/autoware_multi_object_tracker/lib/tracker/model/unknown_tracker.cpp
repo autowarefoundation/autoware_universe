@@ -38,10 +38,11 @@ namespace autoware::multi_object_tracker
 
 UnknownTracker::UnknownTracker(
   const rclcpp::Time & time, const types::DynamicObject & object,
-  const bool enable_velocity_estimation)
+  const bool enable_velocity_estimation, const bool enable_position_extrapolation)
 : Tracker(time, object),
   logger_(rclcpp::get_logger("UnknownTracker")),
-  enable_velocity_estimation_(enable_velocity_estimation)
+  enable_velocity_estimation_(enable_velocity_estimation),
+  enable_position_extrapolation_(enable_position_extrapolation)
 {
   if (enable_velocity_estimation_) {
     // Set motion model parameters
@@ -211,11 +212,19 @@ bool UnknownTracker::measure(
 }
 
 bool UnknownTracker::getTrackedObject(
-  const rclcpp::Time & time, types::DynamicObject & object) const
+  const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
 {
   // keep the original pose
   const double original_x = object_.pose.position.x;
   const double original_y = object_.pose.position.y;
+
+  auto time_object = time;
+
+  if (!enable_position_extrapolation_ && to_publish) {
+    // if it is for publish and extrapolation is disabled, limit the time to the last updated time
+    const auto last_measurement_time = getLatestMeasurementTime();
+    time_object = time.seconds() > last_measurement_time.seconds() ? last_measurement_time : time;
+  }
 
   // get the object
   object = object_;
@@ -223,14 +232,16 @@ bool UnknownTracker::getTrackedObject(
   if (enable_velocity_estimation_) {
     // predict from motion model
     if (!motion_model_.getPredictedState(
-          time, object.pose, object.pose_covariance, object.twist, object.twist_covariance)) {
+          time_object, object.pose, object.pose_covariance, object.twist,
+          object.twist_covariance)) {
       RCLCPP_WARN(logger_, "UnknownTracker::getTrackedObject: Failed to get predicted state.");
       return false;
     }
   } else {
     // predict from static motion model
     if (!static_motion_model_.getPredictedState(
-          time, object.pose, object.pose_covariance, object.twist, object.twist_covariance)) {
+          time_object, object.pose, object.pose_covariance, object.twist,
+          object.twist_covariance)) {
       RCLCPP_WARN(logger_, "UnknownTracker::getTrackedObject: Failed to get predicted state.");
       return false;
     }

@@ -196,6 +196,8 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
 
       config.enable_unknown_object_velocity_estimation =
         declare_parameter<bool>("enable_unknown_object_velocity_estimation");
+      config.enable_unknown_object_extrapolation =
+        declare_parameter<bool>("enable_unknown_object_extrapolation");
     }
 
     AssociatorConfig associator_config;

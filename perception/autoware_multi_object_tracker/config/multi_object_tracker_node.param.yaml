@@ -15,7 +15,8 @@
     ego_frame_id: base_link
     enable_delay_compensation: false
     consider_odometry_uncertainty: false
-    enable_unknown_object_velocity_estimation: false
+    enable_unknown_object_velocity_estimation: true
+    enable_unknown_object_extrapolation: false
 
     # tracker parameters
     tracker_lifetime: 1.0  # [s]

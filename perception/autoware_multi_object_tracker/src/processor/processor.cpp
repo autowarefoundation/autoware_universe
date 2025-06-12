@@ -164,7 +164,8 @@ std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
     if (tracker == "pedestrian_tracker") return std::make_shared<PedestrianTracker>(time, object);
   }
   return std::make_shared<UnknownTracker>(
-    time, object, config_.enable_unknown_object_velocity_estimation);
+    time, object, config_.enable_unknown_object_velocity_estimation,
+    config_.enable_unknown_object_extrapolation);
 }
 
 void TrackerProcessor::prune(const rclcpp::Time & time)
@@ -419,7 +420,7 @@ void TrackerProcessor::getTrackedObjects(
     // check if the tracker is confident, if not, skip
     if (!tracker->isConfident(time, adaptive_threshold_cache_, ego_pose_)) continue;
     // Get the tracked object, extrapolated to the given time
-    if (tracker->getTrackedObject(time, tracked_object)) {
+    if (tracker->getTrackedObject(time, tracked_object, true)) {
       tracked_objects.objects.push_back(types::toTrackedObjectMsg(tracked_object));
     }
   }
