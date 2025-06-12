@@ -81,7 +81,7 @@ public:
     const std::shared_ptr<PlanningValidatorStatus> & status);
   bool check_valid_yaw_deviation(
     const std::shared_ptr<const PlanningValidatorData> & data,
-    const std::shared_ptr<PlanningValidatorStatus> & status);
+    const std::shared_ptr<PlanningValidatorStatus> & status, const bool is_new_trajectory);
   bool check_trajectory_shift(
     const std::shared_ptr<const PlanningValidatorData> & data,
     const std::shared_ptr<PlanningValidatorStatus> & status);
