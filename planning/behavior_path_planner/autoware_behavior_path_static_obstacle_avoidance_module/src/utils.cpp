@@ -43,7 +43,6 @@
 namespace autoware::behavior_path_planner::utils::static_obstacle_avoidance
 {
 
-using autoware::behavior_path_planner::utils::traffic_light::calcDistanceToRedTrafficLight;
 using autoware::behavior_path_planner::utils::traffic_light::getDistanceToNextTrafficLight;
 using autoware_perception_msgs::msg::TrafficLightElement;
 
@@ -1753,81 +1752,25 @@ void fillObjectStoppableJudge(
 }
 
 void compensateLostTargetObjects(
-  ObjectDataArray & stored_objects, AvoidancePlanningData & data, const rclcpp::Time & now,
-  const std::shared_ptr<const PlannerData> & planner_data,
-  const std::shared_ptr<AvoidanceParameters> & parameters)
+  AvoidancePlanningData & data, const ObjectDataArray & stored_objects,
+  const std::shared_ptr<const PlannerData> & planner_data)
 {
-  const auto include = [](const auto & objects, const auto & search_id) {
-    return std::any_of(objects.begin(), objects.end(), [&search_id](const auto & o) {
-      return o.object.object_id == search_id;
-    });
-  };
-
-  // STEP.1 UPDATE STORED OBJECTS.
-  const auto match = [&data](auto & object) {
-    const auto & search_id = object.object.object_id;
-    const auto same_id_object = std::find_if(
-      data.target_objects.begin(), data.target_objects.end(),
-      [&search_id](const auto & o) { return o.object.object_id == search_id; });
-
-    // same id object is detected. update registered.
-    if (same_id_object != data.target_objects.end()) {
-      object = *same_id_object;
-      return true;
-    }
-
-    const auto similar_pos_obj = std::find_if(
-      data.target_objects.begin(), data.target_objects.end(), [&object](const auto & o) {
-        constexpr auto POS_THR = 1.5;
-        return calc_distance2d(object.getPose(), o.getPose()) < POS_THR;
-      });
-
-    // same id object is not detected, but object is found around registered. update registered.
-    if (similar_pos_obj != data.target_objects.end()) {
-      object = *similar_pos_obj;
-      return true;
-    }
-
-    // Same ID nor similar position object does not found.
-    return false;
-  };
-
-  // STEP1-1: REMOVE EXPIRED OBJECTS.
-  const auto itr = std::remove_if(
-    stored_objects.begin(), stored_objects.end(), [&now, &match, &parameters](auto & o) {
-      if (!match(o)) {
-        o.lost_time = (now - o.last_seen).seconds();
-      } else {
-        o.last_seen = now;
-        o.lost_time = 0.0;
-      }
-
-      return o.lost_time > parameters->object_last_seen_threshold;
-    });
-
-  stored_objects.erase(itr, stored_objects.end());
-
-  // STEP1-2: UPDATE STORED OBJECTS IF THERE ARE NEW OBJECTS.
-  for (const auto & current_object : data.target_objects) {
-    if (!include(stored_objects, current_object.object.object_id)) {
-      stored_objects.push_back(current_object);
-    }
-  }
-
-  // STEP2: COMPENSATE CURRENT TARGET OBJECTS
+  // Check if object is currently detected
   const auto is_detected = [&](const auto & object_id) {
     return std::any_of(
       data.target_objects.begin(), data.target_objects.end(),
       [&object_id](const auto & o) { return o.object.object_id == object_id; });
   };
 
+  // Check if object should be ignored
   const auto is_ignored = [&](const auto & object_id) {
     return std::any_of(
       data.other_objects.begin(), data.other_objects.end(),
       [&object_id](const auto & o) { return o.object.object_id == object_id; });
   };
 
-  for (auto & stored_object : stored_objects) {
+  // Add stored objects that are not currently detected or ignored
+  for (const auto & stored_object : stored_objects) {
     if (is_detected(stored_object.object.object_id)) {
       continue;
     }
@@ -1836,10 +1779,68 @@ void compensateLostTargetObjects(
     }
 
     const auto & ego_pos = planner_data->self_odometry->pose.pose.position;
-    fillLongitudinalAndLengthByClosestEnvelopeFootprint(
-      data.reference_path_rough, ego_pos, stored_object);
+    auto object_copy = stored_object;
+    utils::static_obstacle_avoidance::fillLongitudinalAndLengthByClosestEnvelopeFootprint(
+      data.reference_path_rough, ego_pos, object_copy);
 
-    data.target_objects.push_back(stored_object);
+    data.target_objects.push_back(object_copy);
+  }
+}
+
+void updateStoredObjects(
+  ObjectDataArray & stored_objects, const ObjectDataArray & current_objects,
+  const rclcpp::Time & now, const std::shared_ptr<AvoidanceParameters> & parameters)
+{
+  // Match function to update stored objects with current detections
+  const auto match = [&current_objects](auto & object) {
+    const auto & search_id = object.object.object_id;
+    const auto same_id_object = std::find_if(
+      current_objects.begin(), current_objects.end(),
+      [&search_id](const auto & o) { return o.object.object_id == search_id; });
+
+    if (same_id_object != current_objects.end()) {
+      object = *same_id_object;
+      return true;
+    }
+
+    const auto similar_pos_obj =
+      std::find_if(current_objects.begin(), current_objects.end(), [&object](const auto & o) {
+        constexpr double position_threshold = 1.5;
+        return calc_distance2d(object.getPose(), o.getPose()) < position_threshold;
+      });
+
+    if (similar_pos_obj != current_objects.end()) {
+      object = *similar_pos_obj;
+      return true;
+    }
+
+    return false;
+  };
+
+  // Remove expired objects
+  const auto itr = std::remove_if(
+    stored_objects.begin(), stored_objects.end(), [&now, &match, &parameters](auto & o) {
+      if (!match(o)) {
+        o.lost_time = (now - o.last_seen).seconds();
+      } else {
+        o.last_seen = now;
+        o.lost_time = 0.0;
+      }
+      return o.lost_time > parameters->object_last_seen_threshold;
+    });
+  stored_objects.erase(itr, stored_objects.end());
+
+  // Add new objects
+  const auto include = [](const auto & objects, const auto & search_id) {
+    return std::any_of(objects.begin(), objects.end(), [&search_id](const auto & o) {
+      return o.object.object_id == search_id;
+    });
+  };
+
+  for (const auto & current_object : current_objects) {
+    if (!include(stored_objects, current_object.object.object_id)) {
+      stored_objects.push_back(current_object);
+    }
   }
 }
 

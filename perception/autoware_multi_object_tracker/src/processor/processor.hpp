@@ -68,8 +68,7 @@ public:
     const std::unordered_map<int, int> & reverse_assignment);
   void prune(const rclcpp::Time & time);
 
-  // output
-  bool isConfidentTracker(const std::shared_ptr<Tracker> & tracker) const;
+  // output processes
   void getTrackedObjects(
     const rclcpp::Time & time,
     autoware_perception_msgs::msg::TrackedObjects & tracked_objects) const;
@@ -87,9 +86,14 @@ private:
 
   std::unique_ptr<DataAssociation> association_;
 
+  mutable rclcpp::Time last_prune_time_;
+
   std::list<std::shared_ptr<Tracker>> list_tracker_;
   void removeOldTracker(const rclcpp::Time & time);
-  void removeOverlappedTracker(const rclcpp::Time & time);
+  void mergeOverlappedTracker(const rclcpp::Time & time);
+  bool canMergeOverlappedTarget(
+    const Tracker & target, const Tracker & other, const rclcpp::Time & time,
+    const double iou) const;
   std::shared_ptr<Tracker> createNewTracker(
     const types::DynamicObject & object, const rclcpp::Time & time) const;
 

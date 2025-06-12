@@ -58,8 +58,6 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
   ring_outlier_filter_parameters.distance_ratio = declare_parameter<float>("distance_ratio");
   ring_outlier_filter_parameters.object_length_threshold =
     declare_parameter<float>("object_length_threshold");
-  ring_outlier_filter_parameters.num_points_threshold =
-    declare_parameter<int>("num_points_threshold");
 
   const auto crop_box_min_x_vector = declare_parameter<std::vector<double>>("crop_box.min_x");
   const auto crop_box_min_y_vector = declare_parameter<std::vector<double>>("crop_box.min_y");
@@ -177,8 +175,6 @@ bool CudaPointcloudPreprocessorNode::getTransform(
 void CudaPointcloudPreprocessorNode::twistCallback(
   const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr twist_msg_ptr)
 {
-  twist_queue_.push_back(*twist_msg_ptr);
-
   while (!twist_queue_.empty()) {
     // for replay rosbag
     bool backwards_time_jump_detected =
@@ -195,29 +191,25 @@ void CudaPointcloudPreprocessorNode::twistCallback(
       break;
     }
   }
+
+  auto it = std::lower_bound(
+    twist_queue_.begin(), twist_queue_.end(), twist_msg_ptr->header.stamp,
+    [](const auto & twist, const auto & stamp) {
+      return rclcpp::Time(twist.header.stamp) < stamp;
+    });
+  twist_queue_.insert(it, *twist_msg_ptr);
 }
 
 void CudaPointcloudPreprocessorNode::imuCallback(
   const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg)
 {
-  tf2::Transform imu_to_base_tf2{};
-  getTransform(base_frame_, imu_msg->header.frame_id, &imu_to_base_tf2);
-  geometry_msgs::msg::TransformStamped imu_to_base_msg;
-  imu_to_base_msg.transform.rotation = tf2::toMsg(imu_to_base_tf2.getRotation());
-
-  geometry_msgs::msg::Vector3Stamped angular_velocity;
-  angular_velocity.vector = imu_msg->angular_velocity;
-
-  geometry_msgs::msg::Vector3Stamped transformed_angular_velocity;
-  tf2::doTransform(angular_velocity, transformed_angular_velocity, imu_to_base_msg);
-  transformed_angular_velocity.header = imu_msg->header;
-  angular_velocity_queue_.push_back(transformed_angular_velocity);
-
-  /* *INDENT-OFF* */
   while (!angular_velocity_queue_.empty()) {
+    /* *INDENT-OFF* */
     // for rosbag replay
     bool backwards_time_jump_detected = rclcpp::Time(angular_velocity_queue_.front().header.stamp) >
                                         rclcpp::Time(imu_msg->header.stamp);
+    /* *INDENT-ON* */
+
     bool is_queue_longer_than_1s =
       rclcpp::Time(angular_velocity_queue_.front().header.stamp) <
       rclcpp::Time(imu_msg->header.stamp) - rclcpp::Duration::from_seconds(1.0);
@@ -230,7 +222,25 @@ void CudaPointcloudPreprocessorNode::imuCallback(
       break;
     }
   }
-  /* *INDENT-ON* */
+
+  tf2::Transform imu_to_base_tf2{};
+  getTransform(base_frame_, imu_msg->header.frame_id, &imu_to_base_tf2);
+  geometry_msgs::msg::TransformStamped imu_to_base_msg;
+  imu_to_base_msg.transform.rotation = tf2::toMsg(imu_to_base_tf2.getRotation());
+
+  geometry_msgs::msg::Vector3Stamped angular_velocity;
+  angular_velocity.vector = imu_msg->angular_velocity;
+
+  geometry_msgs::msg::Vector3Stamped transformed_angular_velocity;
+  tf2::doTransform(angular_velocity, transformed_angular_velocity, imu_to_base_msg);
+  transformed_angular_velocity.header = imu_msg->header;
+
+  auto it = std::lower_bound(
+    angular_velocity_queue_.begin(), angular_velocity_queue_.end(), imu_msg->header.stamp,
+    [](const auto & angular_velocity, const auto & stamp) {
+      return rclcpp::Time(angular_velocity.header.stamp) < stamp;
+    });
+  angular_velocity_queue_.insert(it, transformed_angular_velocity);
 }
 
 void CudaPointcloudPreprocessorNode::pointcloudCallback(

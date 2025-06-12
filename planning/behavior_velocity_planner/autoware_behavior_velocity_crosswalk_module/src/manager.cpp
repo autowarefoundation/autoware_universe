@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -50,8 +50,8 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
     get_or_declare_parameter<double>(node, ns + ".stop_position.stop_distance_from_crosswalk");
   cp.stop_distance_from_object_preferred = get_or_declare_parameter<double>(
     node, ns + ".stop_position.stop_distance_from_object_preferred");
-  cp.stop_distance_from_object_limit =
-    get_or_declare_parameter<double>(node, ns + ".stop_position.stop_distance_from_object_limit");
+  cp.stop_distance_from_crosswalk_limit = get_or_declare_parameter<double>(
+    node, ns + ".stop_position.stop_distance_from_crosswalk_limit");
   cp.stop_position_threshold =
     get_or_declare_parameter<double>(node, ns + ".stop_position.stop_position_threshold");
   cp.min_acc_preferred =
@@ -108,12 +108,12 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
     get_or_declare_parameter<double>(node, ns + ".pass_judge.ego_min_assumed_speed");
   cp.consider_obj_on_crosswalk_on_red_light =
     get_or_declare_parameter<bool>(node, ns + ".pass_judge.consider_obj_on_crosswalk_on_red_light");
+  cp.enable_no_stop_decision = get_or_declare_parameter<bool>(
+    node, ns + ".pass_judge.no_stop_decision.enable_no_stop_decision");
   cp.min_acc_for_no_stop_decision =
     get_or_declare_parameter<double>(node, ns + ".pass_judge.no_stop_decision.min_acc");
   cp.min_jerk_for_no_stop_decision =
     get_or_declare_parameter<double>(node, ns + ".pass_judge.no_stop_decision.min_jerk");
-  cp.overrun_threshold_length_for_no_stop_decision = get_or_declare_parameter<double>(
-    node, ns + ".pass_judge.no_stop_decision.overrun_threshold_length");
   cp.stop_object_velocity =
     get_or_declare_parameter<double>(node, ns + ".pass_judge.stop_object_velocity_threshold");
   cp.min_object_velocity =
@@ -179,6 +179,20 @@ CrosswalkModuleManager::CrosswalkModuleManager(rclcpp::Node & node)
   }
   cp.occlusion_extra_objects_size =
     get_or_declare_parameter<double>(node, ns + ".occlusion.extra_predicted_objects_size");
+
+  // param for parked vehicles stop
+  cp.parked_vehicles_stop_enable =
+    get_or_declare_parameter<bool>(node, ns + ".parked_vehicles_stop.enable");
+  cp.parked_vehicles_stop_search_distance =
+    get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.search_distance");
+  cp.parked_vehicles_stop_min_ego_stop_duration =
+    get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.min_ego_stop_duration");
+  cp.parked_vehicles_stop_parked_ego_inside_safe_area_margin = get_or_declare_parameter<double>(
+    node, ns + ".parked_vehicles_stop.ego_inside_safe_area_margin");
+  cp.parked_vehicles_stop_parked_velocity_threshold =
+    get_or_declare_parameter<double>(node, ns + ".parked_vehicles_stop.parked_velocity_threshold");
+  cp.parked_vehicles_stop_vehicle_permanence_duration = get_or_declare_parameter<double>(
+    node, ns + ".parked_vehicles_stop.vehicle_permanence_duration");
 }
 
 void CrosswalkModuleManager::launchNewModules(const PathWithLaneId & path)

@@ -28,6 +28,7 @@
 #include <pcl/point_types.h>
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace autoware::behavior_velocity_planner::detection_area

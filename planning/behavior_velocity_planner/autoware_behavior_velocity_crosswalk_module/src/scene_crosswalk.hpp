@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,12 +18,15 @@
 #include "autoware/behavior_velocity_crosswalk_module/util.hpp"
 
 #include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
+#include <autoware/signal_processing/lowpass_filter_1d.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/crosswalk.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils_uuid/uuid_helper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
+#include <autoware_perception_msgs/msg/detail/predicted_object__struct.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
@@ -34,6 +37,7 @@
 #include <lanelet2_core/geometry/Polygon.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/LineString.h>
+#include <lanelet2_core/primitives/Polygon.h>
 #include <pcl/common/distances.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -120,7 +124,7 @@ public:
     bool show_processing_time;
     // param for stop position
     double stop_distance_from_object_preferred;
-    double stop_distance_from_object_limit;
+    double stop_distance_from_crosswalk_limit;
     double stop_distance_from_crosswalk;
     double stop_position_threshold;
     double min_acc_preferred;
@@ -150,9 +154,9 @@ public:
     double ego_pass_later_additional_margin;
     double ego_min_assumed_speed;
     bool consider_obj_on_crosswalk_on_red_light;
+    bool enable_no_stop_decision;
     double min_acc_for_no_stop_decision;
     double min_jerk_for_no_stop_decision;
-    double overrun_threshold_length_for_no_stop_decision;
     double stop_object_velocity;
     double min_object_velocity;
     bool disable_yield_for_new_stopped_object;
@@ -180,6 +184,13 @@ public:
     bool occlusion_ignore_behind_predicted_objects;
     std::vector<double> occlusion_ignore_velocity_thresholds;
     double occlusion_extra_objects_size;
+    // param for parked vehicles stop
+    bool parked_vehicles_stop_enable;
+    double parked_vehicles_stop_search_distance;
+    double parked_vehicles_stop_min_ego_stop_duration;
+    double parked_vehicles_stop_parked_ego_inside_safe_area_margin;
+    double parked_vehicles_stop_parked_velocity_threshold;
+    double parked_vehicles_stop_vehicle_permanence_duration;
   };
 
   struct ObjectInfo
@@ -385,7 +396,8 @@ private:
 
   std::optional<geometry_msgs::msg::Pose> calcStopPose(
     const PathWithLaneId & ego_path, double dist_nearest_cp,
-    const std::optional<geometry_msgs::msg::Pose> & default_stop_pose_opt);
+    const std::optional<geometry_msgs::msg::Pose> & default_stop_pose_opt,
+    const geometry_msgs::msg::Point & first_path_point_on_crosswalk);
 
   std::optional<StopFactor> checkStopForCrosswalkUsers(
     const PathWithLaneId & ego_path, const PathWithLaneId & sparse_resample_path,
@@ -399,6 +411,10 @@ private:
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const std::optional<geometry_msgs::msg::Pose> & stop_pose);
 
+  std::optional<StopFactor> checkStopForParkedVehicles(
+    const PathWithLaneId & ego_path,
+    const geometry_msgs::msg::Point & first_path_point_on_crosswalk);
+
   std::optional<double> findEgoPassageDirectionAlongPath(
     const PathWithLaneId & sparse_resample_path) const;
   std::optional<double> findObjectPassageDirectionAlongVehicleLane(
@@ -409,9 +425,8 @@ private:
     const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area);
 
   std::optional<StopFactor> getNearestStopFactor(
-    const PathWithLaneId & ego_path,
-    const std::optional<StopFactor> & stop_factor_for_crosswalk_users,
-    const std::optional<StopFactor> & stop_factor_for_stuck_vehicles);
+    const PathWithLaneId & ego_path, const std::vector<StopFactor> & stop_factors,
+    const std::optional<StopFactor> & stop_factor_for_parked_vehicles);
 
   void setDistanceToStop(
     const PathWithLaneId & ego_path,
@@ -455,6 +470,8 @@ private:
     const double dist_ego_to_stop, const PathWithLaneId & sparse_resample_path,
     const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area);
 
+  bool isRedSignalForLanelet(const lanelet::ConstLanelet & lanelet) const;
+  bool isRedSignalForEgo() const;
   bool isRedSignalForPedestrians() const;
 
   static bool isVehicle(const PredictedObject & object);
@@ -499,6 +516,8 @@ private:
   // Stop watch
   StopWatch<std::chrono::milliseconds> stop_watch_;
 
+  autoware::signal_processing::LowpassFilter1d pref_stop_x_position_{0.9};
+
   // whether ego passed safety_slow_point
   bool passed_safety_slow_point_;
 
@@ -508,6 +527,52 @@ private:
   // occluded space time buffer
   std::optional<rclcpp::Time> current_initial_occlusion_time_;
   std::optional<rclcpp::Time> most_recent_occlusion_time_;
+
+  struct
+  {
+    lanelet::BasicPolygon2d search_area;
+    bool already_stopped = false;
+    std::optional<autoware_perception_msgs::msg::PredictedObject> previous_target_vehicle;
+    rclcpp::Time previous_detection_time;
+    std::optional<geometry_msgs::msg::Pose> previous_stop_pose;
+
+    void reset()
+    {
+      previous_target_vehicle.reset();
+      previous_stop_pose.reset();
+    }
+
+    std::vector<autoware_perception_msgs::msg::PredictedObject>
+    update_and_add_previous_target_vehicle(
+      const std::vector<autoware_perception_msgs::msg::PredictedObject> & detected_objects,
+      const rclcpp::Time & current_time, const double permanence_duration)
+    {
+      if (
+        !previous_target_vehicle ||
+        (current_time - previous_detection_time).seconds() > permanence_duration) {
+        previous_target_vehicle.reset();
+        return detected_objects;
+      }
+      std::vector<autoware_perception_msgs::msg::PredictedObject>
+        detected_objects_with_previous_target;
+      detected_objects_with_previous_target.reserve(detected_objects.size() + 1);
+      bool found = false;
+      const auto previous_uuid =
+        autoware_utils_uuid::to_hex_string(previous_target_vehicle->object_id);
+      for (const auto & object : detected_objects) {
+        const auto uuid = autoware_utils_uuid::to_hex_string(object.object_id);
+        if (uuid == previous_uuid) {
+          previous_detection_time = current_time;
+          found = true;
+        }
+        detected_objects_with_previous_target.push_back(object);
+      }
+      if (!found) {
+        detected_objects_with_previous_target.push_back(*previous_target_vehicle);
+      }
+      return detected_objects_with_previous_target;
+    }
+  } parked_vehicles_stop_;
 };
 }  // namespace autoware::behavior_velocity_planner
 

@@ -81,6 +81,12 @@
           "description": "Enable recheck ground cluster",
           "default": "true"
         },
+        "recheck_start_distance": {
+          "type": "number",
+          "description": "The distance to start rechecking ground cluster [m]",
+          "default": 20.0,
+          "minimum": 0.0
+        },
         "use_lowest_point": {
           "type": "boolean",
           "description": "To select lowest point for reference in recheck ground cluster, otherwise select middle point",
@@ -108,6 +114,7 @@
         "center_pcl_shift",
         "radial_divider_angle_deg",
         "use_recheck_ground_cluster",
+        "recheck_start_distance",
         "use_lowest_point",
         "publish_processing_time_detail"
       ],
