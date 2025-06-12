@@ -26,6 +26,13 @@ namespace autoware::simpl::processing
 {
 namespace
 {
+/**
+ * @brief Convert predicted confidence and waypoints to `PredictedPath` with `TrackedObject`.
+ *
+ * @param confidence Predicted confidence.
+ * @param waypoints Predicted waypoints.
+ * @param tracked_object Tracked object.
+ */
 PostProcessor::PredictedPath to_predicted_path(
   double confidence, const std::vector<std::pair<double, double>> & waypoints,
   const PostProcessor::TrackedObject & tracked_object)
@@ -52,6 +59,11 @@ PostProcessor::PredictedPath to_predicted_path(
   return output;
 }
 
+/**
+ * @brief Construct `PredictedObject` with `TrackedObject`.
+ *
+ * @param input Tracked object.
+ */
 PostProcessor::PredictedObject from_tracked_object(const PostProcessor::TrackedObject & input)
 {
   PostProcessor::PredictedObject output;

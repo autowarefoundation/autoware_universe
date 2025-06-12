@@ -116,11 +116,6 @@ private:
   //!< Predicted objects publisher.
   rclcpp::Publisher<PredictedObjects>::SharedPtr objects_publisher_;
 
-  //!< Debug marker publisher
-  rclcpp::Publisher<MarkerArray>::SharedPtr history_marker_publisher_;
-  rclcpp::Publisher<MarkerArray>::SharedPtr polyline_marker_publisher_;
-  rclcpp::Publisher<MarkerArray>::SharedPtr processed_map_marker_publisher_;
-
   //!< Pointer to lanelet map.
   lanelet::LaneletMapPtr lanelet_map_ptr_;
 
@@ -142,9 +137,14 @@ private:
   //!< Post-processor.
   std::unique_ptr<processing::PostProcessor> postprocessor_;
 
-  //!< Debugger
+  //!< Debugger for processing time.
   std::unique_ptr<autoware_utils_system::StopWatch<std::chrono::milliseconds>> stopwatch_ptr_;
   std::unique_ptr<autoware_utils_debug::DebugPublisher> processing_time_publisher_;
+
+  //!< Debugger for marker.
+  rclcpp::Publisher<MarkerArray>::SharedPtr history_marker_publisher_;
+  rclcpp::Publisher<MarkerArray>::SharedPtr polyline_marker_publisher_;
+  rclcpp::Publisher<MarkerArray>::SharedPtr processed_map_marker_publisher_;
 
   //!< Number of past timestamps.
   int num_past_;
