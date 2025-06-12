@@ -102,52 +102,37 @@ void TrajectoryChecker::setup_diag()
   const auto & status = context_->validation_status;
 
   std::string ns = "trajectory_validation_";
-  // constexpr bool default_critical = false;
-  context_->add_diag(ns + "size", status->is_valid_size, "invalid trajectory size is found");
-  context_->add_diag(ns + "finite", status->is_valid_finite_value, "infinite value is found");
-  context_->add_diag(
-    ns + "interval", status->is_valid_interval, "points interval is too large",
-    params_.interval.is_critical);
-  context_->add_diag(
-    ns + "relative_angle", status->is_valid_relative_angle, "relative angle is too large",
-    params_.relative_angle.is_critical);
-  context_->add_diag(
-    ns + "curvature", status->is_valid_curvature, "curvature is too large",
-    params_.curvature.is_critical);
-  context_->add_diag(
-    ns + "lateral_acceleration", status->is_valid_lateral_acc, "lateral acceleration is too large",
-    params_.lateral_accel.is_critical);
-  context_->add_diag(
-    ns + "acceleration", status->is_valid_longitudinal_max_acc, "acceleration is too large",
-    params_.max_lon_accel.is_critical);
-  context_->add_diag(
-    ns + "deceleration", status->is_valid_longitudinal_min_acc, "deceleration is too large",
-    params_.min_lon_accel.is_critical);
-  context_->add_diag(
-    ns + "steering", status->is_valid_steering, "steering angle is too large",
-    params_.steering.is_critical);
-  context_->add_diag(
-    ns + "steering_rate", status->is_valid_steering_rate, "steering rate is too large",
-    params_.steering_rate.is_critical);
-  context_->add_diag(
-    ns + "velocity_deviation", status->is_valid_velocity_deviation,
-    "velocity deviation is too large", params_.velocity_deviation.is_critical);
-  context_->add_diag(
-    ns + "distance_deviation", status->is_valid_distance_deviation,
-    "distance deviation is too large", params_.distance_deviation.is_critical);
-  context_->add_diag(
-    ns + "longitudinal_distance_deviation", status->is_valid_longitudinal_distance_deviation,
-    "longitudinal distance deviation is too large", params_.lon_distance_deviation.is_critical);
-  context_->add_diag(
-    ns + "yaw_deviation", status->is_valid_yaw_deviation,
-    "difference between vehicle yaw and closest trajectory yaw is too large",
-    params_.yaw_deviation.is_critical);
-  context_->add_diag(
-    ns + "forward_trajectory_length", status->is_valid_forward_trajectory_length,
-    "trajectory length is too short", params_.forward_trajectory_length.is_critical);
-  context_->add_diag(
-    ns + "trajectory_shift", status->is_valid_trajectory_shift,
-    "detected sudden shift in trajectory", params_.trajectory_shift.is_critical);
+  const auto add_diag = [&](
+                          const std::string & name, const bool & status, const std::string & msg) {
+    context_->add_diag(ns + name, status, msg, is_critical_error_);
+  };
+
+  add_diag("size", status->is_valid_size, "invalid trajectory size is found");
+  add_diag("finite", status->is_valid_finite_value, "infinite value is found");
+  add_diag("interval", status->is_valid_interval, "points interval is too large");
+  add_diag("relative_angle", status->is_valid_relative_angle, "relative angle is too large");
+  add_diag("curvature", status->is_valid_curvature, "curvature is too large");
+  add_diag(
+    "lateral_acceleration", status->is_valid_lateral_acc, "lateral acceleration is too large");
+  add_diag("acceleration", status->is_valid_longitudinal_max_acc, "acceleration is too large");
+  add_diag("deceleration", status->is_valid_longitudinal_min_acc, "deceleration is too large");
+  add_diag("steering", status->is_valid_steering, "steering angle is too large");
+  add_diag("steering_rate", status->is_valid_steering_rate, "steering rate is too large");
+  add_diag(
+    "velocity_deviation", status->is_valid_velocity_deviation, "velocity deviation is too large");
+  add_diag(
+    "distance_deviation", status->is_valid_distance_deviation, "distance deviation is too large");
+  add_diag(
+    "longitudinal_distance_deviation", status->is_valid_longitudinal_distance_deviation,
+    "longitudinal distance deviation is too large");
+  add_diag(
+    "yaw_deviation", status->is_valid_yaw_deviation,
+    "difference between vehicle yaw and closest trajectory yaw is too large");
+  add_diag(
+    "forward_trajectory_length", status->is_valid_forward_trajectory_length,
+    "trajectory length is too short");
+  add_diag(
+    "trajectory_shift", status->is_valid_trajectory_shift, "detected sudden shift in trajectory");
 }
 
 void TrajectoryChecker::validate(bool & is_critical)
