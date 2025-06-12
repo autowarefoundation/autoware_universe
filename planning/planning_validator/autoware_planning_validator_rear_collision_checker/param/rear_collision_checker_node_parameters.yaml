@@ -65,6 +65,10 @@ rear_collision_checker_node:
           type: double
           validation:
             gt_eq<>: [0.0]
+        max_acceleration:
+          type: double
+          validation:
+            gt_eq<>: [0.0]
       latency:
         type: double
         validation:

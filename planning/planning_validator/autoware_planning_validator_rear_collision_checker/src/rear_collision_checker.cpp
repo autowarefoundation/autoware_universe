@@ -169,13 +169,13 @@ void RearCollisionChecker::fill_velocity(PointCloudObject & pointcloud_object)
       return;
     }
 
-    constexpr double assumed_acceleration = 30.0;
     const auto raw_velocity = dx / dt + context_->data->current_kinematics->twist.twist.linear.x;
     const auto is_reliable =
       previous_data.tracking_duration > p.common.pointcloud.velocity_estimation.observation_time;
 
     if (
-      is_reliable && std::abs(raw_velocity - previous_data.velocity) / dt > assumed_acceleration) {
+      is_reliable && std::abs(raw_velocity - previous_data.velocity) / dt >
+                       p.common.pointcloud.velocity_estimation.max_acceleration) {
       // closest point may jumped. don't use the data.
       pointcloud_object.velocity = previous_data.velocity;
       pointcloud_object.tracking_duration = previous_data.tracking_duration;
