@@ -11,7 +11,7 @@
 
   <license>Apache License 2.0</license>
 
-  <author email="alqudah.mohammad@tier4.jp">Alqudah Mohammad</author>
+  <author email="satoshi.ota@tier4.jp">Satoshi Ota</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
