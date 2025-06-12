@@ -51,7 +51,7 @@ private:
 
   // History of received values (with timestamps)
   std::deque<TimestampedValue> meas_to_tracked_object_history_{};
-  std::deque<TimestampedValue> processing_time_history_{};
+  std::deque<TimestampedValue> map_based_prediction_processing_time_history_{};
   std::deque<TimestampedValue> planning_system_latency_history_{};
   std::deque<TimestampedValue> control_system_latency_history_{};
 
