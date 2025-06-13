@@ -1613,8 +1613,10 @@ void StaticObstacleAvoidanceModule::updateMarker(
     &info_marker_);
 
   append_marker_array(target_objects_marker_array.second, &debug_marker_);
-  debug_marker_ = utils::static_obstacle_avoidance::createDebugMarkerArray(
-    output, data, shifter, debug, parameters_);
+  append_marker_array(
+    utils::static_obstacle_avoidance::createDebugMarkerArray(
+      output, data, shifter, debug, parameters_),
+    &debug_marker_);
 }
 
 void StaticObstacleAvoidanceModule::updateAvoidanceDebugData(
