@@ -146,23 +146,6 @@ void TrajectoryChecker::setup_diag()
     "detected sudden shift in trajectory", params_.trajectory_shift.is_critical);
 }
 
-/// @brief return true if there is a large shift between the 2 trajectories
-bool has_large_shift(const Trajectory & previous, const Trajectory & current)
-{
-  constexpr auto points_to_check = 10UL;
-  constexpr auto limit = 0.5;
-  const auto current_size = current.points.size();
-  for (auto i = 0UL; i < current_size; i += std::max(1UL, current_size / points_to_check)) {
-    const auto & current_position = current.points[i].pose.position;
-    const auto trajectory_shift =
-      motion_utils::calcLateralOffset(previous.points, current_position);
-    if (trajectory_shift >= limit) {
-      return true;
-    }
-  }
-  return false;
-}
-
 void TrajectoryChecker::validate(bool & is_critical)
 {
   const auto & data = context_->data;
@@ -172,13 +155,6 @@ void TrajectoryChecker::validate(bool & is_critical)
   const auto terminateValidation = [&](const auto & ss) {
     RCLCPP_ERROR_STREAM_THROTTLE(logger_, *clock_, 3000, ss);
   };
-
-  const auto is_new_traj =
-    !data->last_valid_trajectory ||
-    has_large_shift(*data->last_valid_trajectory, *data->resampled_current_trajectory);
-  if (is_new_traj) {
-    std::printf("/!\\ NEW TRAJ\n");
-  }
 
   status->is_valid_size = check_valid_size(data, status);
   if (!status->is_valid_size) {
@@ -200,7 +176,7 @@ void TrajectoryChecker::validate(bool & is_critical)
   status->is_valid_distance_deviation = check_valid_distance_deviation(data, status);
   status->is_valid_longitudinal_distance_deviation =
     check_valid_longitudinal_distance_deviation(data, status);
-  status->is_valid_yaw_deviation = check_valid_yaw_deviation(data, status, is_new_traj);
+  status->is_valid_yaw_deviation = check_valid_yaw_deviation(data, status);
   status->is_valid_forward_trajectory_length = check_valid_forward_trajectory_length(data, status);
   status->is_valid_trajectory_shift = check_trajectory_shift(data, status);
   status->is_valid_relative_angle = check_valid_relative_angle(data, status);
@@ -552,9 +528,26 @@ bool TrajectoryChecker::check_valid_longitudinal_distance_deviation(
   return true;
 }
 
+bool is_yaw_changed_around_ego(
+  const std::shared_ptr<const PlanningValidatorData> & data,
+  const autoware_planning_msgs::msg::TrajectoryPoint & trajectory_point)
+{
+  if (!data->last_valid_trajectory) {
+    return true;
+  }
+  const auto interpolated_previous_trajectory_point =
+    motion_utils::calcInterpolatedPoint(*data->last_valid_trajectory, trajectory_point.pose);
+  const auto yaw_shift_with_previous_trajectory = std::abs(angles::shortest_angular_distance(
+    tf2::getYaw(trajectory_point.pose.orientation),
+    tf2::getYaw(interpolated_previous_trajectory_point.pose.orientation)));
+  constexpr auto yaw_modification_limit = 0.1;
+  const auto is_yaw_changed = yaw_shift_with_previous_trajectory > yaw_modification_limit;
+  return is_yaw_changed;
+}
+
 bool TrajectoryChecker::check_valid_yaw_deviation(
   const std::shared_ptr<const PlanningValidatorData> & data,
-  const std::shared_ptr<PlanningValidatorStatus> & status, const bool is_new_trajectory)
+  const std::shared_ptr<PlanningValidatorStatus> & status)
 {
   if (!params_.yaw_deviation.enable) {
     return true;
@@ -569,7 +562,9 @@ bool TrajectoryChecker::check_valid_yaw_deviation(
     tf2::getYaw(interpolated_trajectory_point.pose.orientation),
     tf2::getYaw(ego_pose.orientation)));
 
-  if (is_new_trajectory && status->yaw_deviation > params_.yaw_deviation.threshold) {
+  if (
+    is_yaw_changed_around_ego(data, interpolated_trajectory_point) &&
+    status->yaw_deviation > params_.yaw_deviation.threshold) {
     is_critical_error_ |= params_.yaw_deviation.is_critical;
     return false;
   }
