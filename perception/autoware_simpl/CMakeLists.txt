@@ -37,10 +37,6 @@ rclcpp_components_register_node(
   ${PROJECT_NAME} PLUGIN "autoware::simpl::SimplNode" EXECUTABLE
   ${PROJECT_NAME}_exe)
 
-rclcpp_components_register_node(
-  ${PROJECT_NAME} PLUGIN "autoware::simpl::SimplEgoNode" EXECUTABLE
-  ${PROJECT_NAME}_ego_exe)
-
 if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(test_simpl
     # archetype
