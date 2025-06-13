@@ -63,6 +63,8 @@ void RunOutModule::init(rclcpp::Node & node, const std::string & module_name)
 
   debug_publisher_ =
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/" + ns_ + "/debug_markers", 1);
+  debug_trajectory_publisher_ = node.create_publisher<autoware_planning_msgs::msg::Trajectory>(
+    "~/debug/" + ns_ + "/trajectory", 1);
   virtual_wall_publisher_ =
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/" + ns_ + "/virtual_walls", 1);
   processing_diag_publisher_ = std::make_shared<autoware_utils::ProcessingTimePublisher>(
@@ -70,8 +72,6 @@ void RunOutModule::init(rclcpp::Node & node, const std::string & module_name)
   processing_time_publisher_ =
     node.create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "~/debug/" + ns_ + "/processing_time_ms", 1);
-  debug_trajectory_publisher_ = node.create_publisher<autoware_planning_msgs::msg::Trajectory>(
-    "~/debug/" + ns_ + "/trajectory", 1);
   timekeeper_publisher_ = node.create_publisher<autoware::universe_utils::ProcessingTimeDetail>(
     "~/" + ns_ + "/processing_time", 1);
   time_keeper_ = std::make_shared<autoware::universe_utils::TimeKeeper>(timekeeper_publisher_);
@@ -121,38 +121,6 @@ void RunOutModule::update_unfeasible_stop_status(diagnostic_updater::DiagnosticS
   }
   stat.addf("Unfeasible deceleration", "%2.2f", unfeasible_stop_deceleration_.value_or(0.0));
   unfeasible_stop_deceleration_.reset();
-}
-
-void RunOutModule::publish_debug_trajectory(
-  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
-  const VelocityPlanningResult & planning_result)
-{
-  autoware_planning_msgs::msg::Trajectory debug_trajectory;
-  debug_trajectory.header.frame_id = "map";
-  debug_trajectory.header.stamp = clock_->now();
-  debug_trajectory.points = trajectory;
-  for (const auto & stop_point : planning_result.stop_points) {
-    const auto length = motion_utils::calcSignedArcLength(debug_trajectory.points, 0, stop_point);
-    motion_utils::insertStopPoint(length, debug_trajectory.points);
-  }
-  for (const auto & slowdown_point : planning_result.slowdown_intervals) {
-    const auto from_seg_idx =
-      autoware::motion_utils::findNearestSegmentIndex(debug_trajectory.points, slowdown_point.from);
-    const auto from_insert_idx = autoware::motion_utils::insertTargetPoint(
-      from_seg_idx, slowdown_point.from, debug_trajectory.points);
-    const auto to_seg_idx =
-      autoware::motion_utils::findNearestSegmentIndex(debug_trajectory.points, slowdown_point.to);
-    const auto to_insert_idx = autoware::motion_utils::insertTargetPoint(
-      to_seg_idx, slowdown_point.to, debug_trajectory.points);
-    if (from_insert_idx && to_insert_idx) {
-      for (auto idx = *from_insert_idx; idx <= *to_insert_idx; ++idx) {
-        debug_trajectory.points[idx].longitudinal_velocity_mps = std::min(
-          debug_trajectory.points[idx].longitudinal_velocity_mps,
-          static_cast<float>(slowdown_point.velocity));
-      }
-    }
-  }
-  debug_trajectory_publisher_->publish(debug_trajectory);
 }
 
 VelocityPlanningResult RunOutModule::plan(
@@ -222,7 +190,6 @@ VelocityPlanningResult RunOutModule::plan(
         .calculated_stop_time_limit,
       filtering_data_to_publish));
   }
-  publish_debug_trajectory(smoothed_trajectory_points, result);
   objects_of_interest_marker_interface_->publishMarkerArray();
   time_keeper_->end_track("publish_debug()");
 

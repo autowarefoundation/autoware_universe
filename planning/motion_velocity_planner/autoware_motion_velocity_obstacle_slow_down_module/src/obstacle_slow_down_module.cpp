@@ -213,6 +213,8 @@ void ObstacleSlowDownModule::init(rclcpp::Node & node, const std::string & modul
   virtual_wall_publisher_ =
     node.create_publisher<MarkerArray>("~/obstacle_slow_down/virtual_walls", 1);
   debug_publisher_ = node.create_publisher<MarkerArray>("~/obstacle_slow_down/debug_markers", 1);
+  debug_trajectory_publisher_ = node.create_publisher<autoware_planning_msgs::msg::Trajectory>(
+    "~/debug/obstacle_slow_down/trajectory", 1);
 
   // module publisher
   debug_slow_down_planning_info_pub_ =
