@@ -1,0 +1,12 @@
+/**:
+  ros__parameters:
+    update_rate: 10.0
+    initial_operation_mode: stop
+    command_modes:
+      - stop
+      - autonomous
+      - local
+      - remote
+      - pull_over
+      - comfortable_stop
+      - emergency_stop
