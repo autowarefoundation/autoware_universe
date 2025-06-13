@@ -1,4 +1,4 @@
-// Copyright 2025 TIER IV, Inc.
+// Copyright 2024 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 
 /*
  * Licensed to Ted Dunning under one or more
@@ -52,28 +51,29 @@
 namespace digestible
 {
 
-template <typename Values = float, typename Weight = unsigned>
+template<typename Values = float, typename Weight = unsigned>
 struct centroid
 {
   Values mean;
   Weight weight;
 
-  centroid(Values new_mean, Weight new_weight) : mean(new_mean), weight(new_weight) {}
+  centroid(Values new_mean, Weight new_weight)
+  : mean(new_mean), weight(new_weight) {}
 };
 
-template <typename Values = float, typename Weight = unsigned>
+template<typename Values = float, typename Weight = unsigned>
 inline bool operator<(const centroid<Values, Weight> & lhs, const centroid<Values, Weight> & rhs)
 {
-  return (lhs.mean < rhs.mean);
+  return lhs.mean < rhs.mean;
 }
 
-template <typename Values = float, typename Weight = unsigned>
+template<typename Values = float, typename Weight = unsigned>
 inline bool operator>(const centroid<Values, Weight> & lhs, const centroid<Values, Weight> & rhs)
 {
-  return (lhs.mean > rhs.mean);
+  return lhs.mean > rhs.mean;
 }
 
-template <typename Values = float, typename Weight = unsigned>
+template<typename Values = float, typename Weight = unsigned>
 class tdigest
 {
   using centroid_t = centroid<Values, Weight>;
@@ -83,7 +83,8 @@ class tdigest
     std::vector<centroid_t> values;
     Weight total_weight;
 
-    explicit tdigest_impl(size_t size) : total_weight(0) { values.reserve(size); }
+    explicit tdigest_impl(size_t size)
+    : total_weight(0) {values.reserve(size);}
 
     tdigest_impl() = delete;
 
@@ -94,11 +95,11 @@ class tdigest
       assert(weight);
       values.emplace_back(value, weight);
       total_weight += weight;
-      return (
-        values.size() != values.capacity() ? insert_result::OK : insert_result::NEED_COMPRESS);
+      return
+        values.size() != values.capacity() ? insert_result::OK : insert_result::NEED_COMPRESS;
     }
 
-    insert_result insert(const centroid_t & val) { return (insert(val.mean, val.weight)); }
+    insert_result insert(const centroid_t & val) {return insert(val.mean, val.weight);}
 
     void reset()
     {
@@ -106,7 +107,7 @@ class tdigest
       total_weight = 0;
     }
 
-    size_t capacity() const { return (values.capacity()); }
+    size_t capacity() const {return values.capacity();}
   };
 
   tdigest_impl one;
@@ -140,7 +141,7 @@ public:
    * @param value
    *  value to insert
    */
-  void insert(Values value) { insert(value, 1); }
+  void insert(Values value) {insert(value, 1);}
 
   /**
    * Inserts the given value with the given weight into the t-digest input buffer.
@@ -216,7 +217,7 @@ public:
   /**
    * Return number of centroids in the t-digest
    */
-  size_t centroid_count() const { return ((*active).values.size()); }
+  size_t centroid_count() const {return (*active).values.size();}
 
   /**
    * Retrieve the number of merged data points in the t-digest
@@ -224,7 +225,7 @@ public:
    * @return
    *   the total weight of all data
    */
-  size_t size() const { return ((*active).total_weight); }
+  size_t size() const {return (*active).total_weight;}
 
   /**
    * Retrieve maximum value seen by this t-digest.
@@ -233,7 +234,7 @@ public:
    * @return
    *  maximum value seen by this t-digest.
    */
-  Values max() const { return (max_val); }
+  Values max() const {return max_val;}
 
   /**
    * Retrieve minimum value seen by this t-digest.
@@ -242,10 +243,10 @@ public:
    * @return
    *  minimum value seen by this t-digest.
    */
-  Values min() const { return (min_val); }
+  Values min() const {return min_val;}
 };
 
-template <typename Values, typename Weight>
+template<typename Values, typename Weight>
 tdigest<Values, Weight>::tdigest(size_t size)
 : one(size),
   two(size),
@@ -257,7 +258,7 @@ tdigest<Values, Weight>::tdigest(size_t size)
 {
 }
 
-template <typename Values, typename Weight>
+template<typename Values, typename Weight>
 tdigest<Values, Weight>::tdigest(const tdigest<Values, Weight> & other)
 : one(other.one),
   two(other.two),
@@ -269,7 +270,7 @@ tdigest<Values, Weight>::tdigest(const tdigest<Values, Weight> & other)
 {
 }
 
-template <typename Values, typename Weight>
+template<typename Values, typename Weight>
 void tdigest<Values, Weight>::swap(tdigest<Values, Weight> & other)
 {
   std::swap(one, other.one);
@@ -282,38 +283,38 @@ void tdigest<Values, Weight>::swap(tdigest<Values, Weight> & other)
   std::swap(run_forward, other.run_forward);
 }
 
-template <typename Values, typename Weight>
+template<typename Values, typename Weight>
 tdigest<Values, Weight>::tdigest(tdigest<Values, Weight> && other) noexcept
 : tdigest(other.one.capacity())
 {
   swap(other);
 }
 
-template <typename Values, typename Weight>
+template<typename Values, typename Weight>
 tdigest<Values, Weight> & tdigest<Values, Weight>::operator=(tdigest<Values, Weight> other)
 {
   swap(other);
-  return (*this);
+  return *this;
 }
 
-template <typename Values, typename Weight>
+template<typename Values, typename Weight>
 void tdigest<Values, Weight>::insert(const tdigest<Values, Weight> & src)
 {
   max_val = std::max(max_val, src.max_val);
   min_val = std::min(min_val, src.min_val);
 
   auto insert_fn = [this](const auto & val) {
-    if (buffer.insert(val) == tdigest_impl::insert_result::NEED_COMPRESS) {
-      merge();
-    }
-  };
+      if (buffer.insert(val) == tdigest_impl::insert_result::NEED_COMPRESS) {
+        merge();
+      }
+    };
 
   std::for_each(src.active->values.begin(), src.active->values.end(), insert_fn);
   // Explicitly merge any unmerged data for a consistent end state.
   merge();
 }
 
-template <typename Values, typename Weight>
+template<typename Values, typename Weight>
 void tdigest<Values, Weight>::reset()
 {
   one.reset();
@@ -324,16 +325,16 @@ void tdigest<Values, Weight>::reset()
   max_val = std::numeric_limits<Values>::lowest();
 }
 
-template <typename Values, typename Weight>
+template<typename Values, typename Weight>
 std::vector<std::pair<Values, Weight>> tdigest<Values, Weight>::get() const
 {
   std::vector<std::pair<Values, Weight>> to_return;
 
   std::transform(
     active->values.begin(), active->values.end(), std::back_inserter(to_return),
-    [](const centroid_t & val) { return (std::make_pair(val.mean, val.weight)); });
+    [](const centroid_t & val) {return std::make_pair(val.mean, val.weight);});
 
-  return (to_return);
+  return to_return;
 }
 
 /**
@@ -347,7 +348,7 @@ std::vector<std::pair<Values, Weight>> tdigest<Values, Weight>::get() const
  */
 inline double Z(double compression, double n)
 {
-  return (4 * log(n / compression) + 24);
+  return 4 * log(n / compression) + 24;
 }
 
 /**
@@ -356,7 +357,7 @@ inline double Z(double compression, double n)
  */
 inline double normalizer_fn(double compression, double n)
 {
-  return (compression / Z(compression, n));
+  return compression / Z(compression, n);
 }
 
 /**
@@ -368,12 +369,12 @@ inline double k(double q, double normalizer)
   const double q_min = 1e-15;
   const double q_max = 1 - q_min;
   if (q < q_min) {
-    return (2 * k(q_min, normalizer));
+    return 2 * k(q_min, normalizer);
   } else if (q > q_max) {
-    return (2 * k(q_max, normalizer));
+    return 2 * k(q_max, normalizer);
   }
 
-  return (log(q / (1 - q)) * normalizer);
+  return log(q / (1 - q)) * normalizer;
 }
 
 /**
@@ -383,14 +384,14 @@ inline double k(double q, double normalizer)
 inline double q(double k, double normalizer)
 {
   double w = exp(k / normalizer);
-  return (w / (1 + w));
+  return w / (1 + w);
 }
 
 /**
  * Based on the equivalent function in the reference implementation available here:
  * https://github.com/tdunning/t-digest
  */
-template <typename Values, typename Weight>
+template<typename Values, typename Weight>
 void tdigest<Values, Weight>::merge()
 {
   auto & inactive = (&one == active) ? two : one;
@@ -434,27 +435,27 @@ void tdigest<Values, Weight>::merge()
   double mean_to_add = inputs.front().mean;
 
   auto compress_fn = [&inactive, new_total_weight, &k1, normalizer, &next_q_limit_weight,
-                      &weight_so_far, &weight_to_add, &mean_to_add](const centroid_t & current) {
-    if ((weight_so_far + weight_to_add + current.weight) <= next_q_limit_weight) {
-      weight_to_add += current.weight;
-      assert(weight_to_add);
-      mean_to_add = mean_to_add + (current.mean - mean_to_add) * current.weight / weight_to_add;
+      &weight_so_far, &weight_to_add, &mean_to_add](const centroid_t & current) {
+      if ((weight_so_far + weight_to_add + current.weight) <= next_q_limit_weight) {
+        weight_to_add += current.weight;
+        assert(weight_to_add);
+        mean_to_add = mean_to_add + (current.mean - mean_to_add) * current.weight / weight_to_add;
 
-    } else {
-      weight_so_far += weight_to_add;
+      } else {
+        weight_so_far += weight_to_add;
 
-      double new_q = static_cast<double>(weight_so_far) / static_cast<double>(new_total_weight);
-      k1 = k(new_q, normalizer);
-      next_q_limit_weight = new_total_weight * q(k1 + 1, normalizer);
+        double new_q = static_cast<double>(weight_so_far) / static_cast<double>(new_total_weight);
+        k1 = k(new_q, normalizer);
+        next_q_limit_weight = new_total_weight * q(k1 + 1, normalizer);
 
-      if constexpr (std::is_integral<Values>::value) {
-        mean_to_add = std::round(mean_to_add);
+        if constexpr (std::is_integral<Values>::value) {
+          mean_to_add = std::round(mean_to_add);
+        }
+        inactive.insert(mean_to_add, weight_to_add);
+        mean_to_add = current.mean;
+        weight_to_add = current.weight;
       }
-      inactive.insert(mean_to_add, weight_to_add);
-      mean_to_add = current.mean;
-      weight_to_add = current.weight;
-    }
-  };
+    };
 
   std::for_each(inputs.begin() + 1, inputs.end(), compress_fn);
 
@@ -480,21 +481,22 @@ void tdigest<Values, Weight>::merge()
 
 inline double lerp(double a, double b, double t) noexcept
 {
-  if ((a <= 0 && b >= 0) || (a >= 0 && b <= 0)) return t * b + (1 - t) * a;
+  if ((a <= 0 && b >= 0) || (a >= 0 && b <= 0)) {return t * b + (1 - t) * a;}
 
-  if (t == 1) return b;
+  if (t == 1) {return b;}
   const double x = a + t * (b - a);
-  if ((t > 1) == (b > a))
+  if ((t > 1) == (b > a)) {
     return b < x ? x : b;
-  else
+  } else {
     return x < b ? x : b;
+  }
 }
 
 /**
  * Based on the equivalent function in the reference implementation available here:
  * https://github.com/tdunning/t-digest
  */
-template <typename Values, typename Weight>
+template<typename Values, typename Weight>
 double tdigest<Values, Weight>::quantile(double p) const
 {
   if (p < 0 || p > 100) {
@@ -502,52 +504,52 @@ double tdigest<Values, Weight>::quantile(double p) const
   }
 
   if (active->values.empty()) {
-    return (0);
+    return 0;
   } else if (active->values.size() == 1) {
-    return (active->values.front().mean);
+    return active->values.front().mean;
   }
 
   const Weight index = (p / 100) * active->total_weight;
 
   if (index < 1) {
-    return (min_val);
+    return min_val;
   }
 
   // centroid.
   const auto & first = active->values.front();
   if (first.weight > 1 && index < (first.weight / 2)) {
-    return (lerp(min_val, first.mean, static_cast<double>(index - 1) / (first.weight / 2 - 1)));
+    return lerp(min_val, first.mean, static_cast<double>(index - 1) / (first.weight / 2 - 1));
   }
 
   if (index > active->total_weight - 1) {
-    return (max_val);
+    return max_val;
   }
 
   // centroid.
   const auto & last = active->values.back();
   if (last.weight > 1 && active->total_weight - index <= last.weight / 2) {
-    return (
+    return
       max_val - static_cast<double>(active->total_weight - index - 1) / (last.weight / 2 - 1) *
-                  (max_val - last.mean));
+      (max_val - last.mean);
   }
 
   Weight weight_so_far = active->values.front().weight / 2;
   double quantile = 0;
   auto quantile_fn = [index, &weight_so_far, &quantile](
-                       const centroid_t & left, const centroid_t & right) {
-    Weight delta_weight = (left.weight + right.weight) / 2;
-    if (weight_so_far + delta_weight > index) {
-      Weight lower = index - weight_so_far;
-      Weight upper = weight_so_far + delta_weight - index;
+    const centroid_t & left, const centroid_t & right) {
+      Weight delta_weight = (left.weight + right.weight) / 2;
+      if (weight_so_far + delta_weight > index) {
+        Weight lower = index - weight_so_far;
+        Weight upper = weight_so_far + delta_weight - index;
 
-      quantile = (left.mean * upper + right.mean * lower) / (lower + upper);
+        quantile = (left.mean * upper + right.mean * lower) / (lower + upper);
 
-      return (true);
-    }
+        return true;
+      }
 
-    weight_so_far += delta_weight;
-    return (false);
-  };
+      weight_so_far += delta_weight;
+      return false;
+    };
 
   // Even though we're using adjacent_find here, we don't actually intend to find
   // anything.  We just want to iterate over pairs of centroids until we calculate
@@ -563,31 +565,31 @@ double tdigest<Values, Weight>::quantile(double p) const
     return active->values.back().mean;
   }
 
-  return (quantile);
+  return quantile;
 }
 
 /**
  * Based on the equivalent function in the reference implementation available here:
  * https://github.com/tdunning/t-digest
  */
-template <typename Values, typename Weight>
+template<typename Values, typename Weight>
 double tdigest<Values, Weight>::cumulative_distribution(Values x) const
 {
   if (active->values.empty()) {
-    return (1.0);
+    return 1.0;
   }
 
   if (active->values.size() == 1) {
     if (x < min_val) {
-      return (0);
+      return 0;
     }
     if (x > max_val) {
-      return (1.0);
+      return 1.0;
     }
     if (x - min_val <= (max_val - min_val)) {
-      return (0.5);
+      return 0.5;
     }
-    return ((x - min_val) / (max_val - min_val));
+    return (x - min_val) / (max_val - min_val);
   }
 
   // From here on out we divide by active->total_weight in multiple places
@@ -599,44 +601,44 @@ double tdigest<Values, Weight>::cumulative_distribution(Values x) const
   if (x < active->values.front().mean) {
     const auto & first = active->values.front();
     if (first.mean - min_val > 0) {
-      return (
+      return
         lerp(1, first.weight / 2 - 1, (x - min_val) / (first.mean - min_val)) /
-        active->total_weight);
+        active->total_weight;
     }
-    return (0);
+    return 0;
   }
   if (x > active->values.back().mean) {
     const auto & last = active->values.back();
     if (max_val - last.mean > 0) {
-      return (
+      return
         1 -
         (lerp(
-          1, last.weight / 2 - 1, (max_val - x) / (max_val - last.mean) / active->total_weight)));
+          1, last.weight / 2 - 1, (max_val - x) / (max_val - last.mean) / active->total_weight));
     }
-    return (1.0);
+    return 1.0;
   }
 
   Weight weight_so_far = 0;
   double cdf = 0;
   auto cdf_fn = [x, &weight_so_far, &cdf, total_weight = active->total_weight](
-                  const centroid_t & left, const centroid_t & right) {
-    assert(total_weight);
-    if (left.mean <= x && x < right.mean) {
-      // x is bracketed between left and right.
+    const centroid_t & left, const centroid_t & right) {
+      assert(total_weight);
+      if (left.mean <= x && x < right.mean) {
+        // x is bracketed between left and right.
 
-      Weight delta_weight = (right.weight + left.weight) / static_cast<Weight>(2);
-      double base = weight_so_far + (left.weight / static_cast<Weight>(2));
+        Weight delta_weight = (right.weight + left.weight) / static_cast<Weight>(2);
+        double base = weight_so_far + (left.weight / static_cast<Weight>(2));
 
-      cdf = lerp(
-              base, base + delta_weight,
-              static_cast<double>((x - left.mean)) / (right.mean - left.mean)) /
-            total_weight;
-      return (true);
-    }
+        cdf = lerp(
+          base, base + delta_weight,
+          static_cast<double>((x - left.mean)) / (right.mean - left.mean)) /
+          total_weight;
+        return true;
+      }
 
-    weight_so_far += left.weight;
-    return (false);
-  };
+      weight_so_far += left.weight;
+      return false;
+    };
 
   auto it = std::adjacent_find(active->values.begin(), active->values.end(), cdf_fn);
 
@@ -644,11 +646,11 @@ double tdigest<Values, Weight>::cumulative_distribution(Values x) const
   if (it == active->values.end()) {
     // Might be between max_val and the last centroid.
     if (x == active->values.back().mean) {
-      return ((1 - 0.5 / active->total_weight));
+      return 1 - 0.5 / active->total_weight;
     }
   }
 
-  return (cdf);
+  return cdf;
 }
 
 }  // namespace digestible
