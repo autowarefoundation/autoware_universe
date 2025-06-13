@@ -18,8 +18,11 @@
 
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <nlohmann/json.hpp>
+
+#include <boost/geometry.hpp>
 
 #include <chrono>
 #include <cstdlib>
@@ -35,6 +38,8 @@
 
 namespace control_diagnostics
 {
+namespace bg = boost::geometry;
+
 ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_options)
 : Node("control_evaluator", node_options),
   vehicle_info_(autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo())
@@ -410,7 +415,16 @@ void ControlEvaluatorNode::AddObjectMetricMsg(
     return;
   }
 
-  const auto ego_polygon = metrics::createEgoPolygon(odom.pose.pose, vehicle_info_);
+  const auto ego_polygon = [&]() -> autoware_utils::Polygon2d {
+    const autoware_utils::LinearRing2d local_ego_footprint = vehicle_info_.createFootprint();
+    const autoware_utils::LinearRing2d ego_footprint = autoware_utils::transform_vector(
+      local_ego_footprint, autoware_utils::pose2transform(odom.pose.pose));
+
+    autoware_utils::Polygon2d ego_polygon;
+    ego_polygon.outer() = ego_footprint;
+    bg::correct(ego_polygon);
+    return ego_polygon;
+  }();
 
   double minimum_distance = std::numeric_limits<double>::max();
   for (const auto & object : objects.objects) {
@@ -419,8 +433,9 @@ void ControlEvaluatorNode::AddObjectMetricMsg(
     if (center_distance > distance_filter_thr_m_) {
       continue;
     }
-    const auto & object_polygon = metrics::createObjPolygon(object);
-    const auto distance = metrics::calcPolygonDistance(ego_polygon, object_polygon);
+
+    const auto & object_polygon = autoware_utils::to_polygon2d(object);
+    const auto distance = bg::distance(ego_polygon, object_polygon);
     if (distance < minimum_distance) {
       minimum_distance = distance;
     }
