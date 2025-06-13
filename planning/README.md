@@ -21,7 +21,6 @@ Enabling and disabling modules involves managing settings in key configuration a
 The `default_preset.yaml` file acts as the primary configuration file, where planning modules can be disabled or enabled. Furthermore, users can also set the type of motion planner across various motion planners. For example:
 
 - `launch_avoidance_module`: Set to `true` to enable the avoidance module, or `false` to disable it.
-- `motion_stop_planner_type`: Set `default` to either `obstacle_stop_planner` or `obstacle_cruise_planner`.
 
 !!! note
 
@@ -105,7 +104,7 @@ Interested in joining our meetings? We’d love to have you! For more informatio
 
 Occasionally, we publish papers specific to the Planning Component in Autoware. We encourage you to explore these publications and find valuable insights for your work. If you find them useful and incorporate any of our methodologies or algorithms in your projects, citing our papers would be immensely helpful. This support allows us to reach a broader audience and continue contributing to the field.
 
-If you use the Jerk Constrained Velocity Planning algorithm in the [Motion Velocity Smoother](./autoware_velocity_smoother/README.md) module in the Planning Component, we kindly request you cite the relevant paper.
+If you use the Jerk Constrained Velocity Planning algorithm in the [Motion Velocity Smoother](https://autowarefoundation.github.io/autoware_core/main/planning/autoware_velocity_smoother/) module in the Planning Component, we kindly request you cite the relevant paper.
 
 <!-- cspell:ignore Shimizu, Horibe, Watanabe, Kato -->
 

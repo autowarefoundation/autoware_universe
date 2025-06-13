@@ -25,13 +25,25 @@
           "type": "boolean",
           "description": "Flag to update the azimuth and distance values of each point after undistortion. If set to false, the azimuth and distance values will remain unchanged after undistortion, resulting in a mismatch with the updated x, y, z coordinates.",
           "default": "false"
+        },
+        "processing_time_threshold_sec": {
+          "type": "number",
+          "description": "Threshold in seconds. If the processing time of the node exceeds this value, a diagnostic warning will be issued.",
+          "default": 0.01
+        },
+        "timestamp_mismatch_fraction_threshold": {
+          "type": "number",
+          "description": "Threshold for the fraction of points that lack corresponding twist or IMU data within the allowed timestamp tolerance.",
+          "default": 0.01
         }
       },
       "required": [
         "base_frame",
         "use_imu",
         "use_3d_distortion_correction",
-        "update_azimuth_and_distance"
+        "update_azimuth_and_distance",
+        "processing_time_threshold_sec",
+        "timestamp_mismatch_fraction_threshold"
       ]
     }
   },

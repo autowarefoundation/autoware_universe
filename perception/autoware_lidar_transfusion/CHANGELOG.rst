@@ -2,6 +2,31 @@
 Changelog for package autoware_lidar_transfusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* chore: perception code owner update (`#10645 <https://github.com/autowarefoundation/autoware_universe/issues/10645>`_)
+  * chore: update maintainers in multiple perception packages
+  * Revert "chore: update maintainers in multiple perception packages"
+  This reverts commit f2838c33d6cd82bd032039e2a12b9cb8ba6eb584.
+  * chore: update maintainers in multiple perception packages
+  * chore: add Kok Seang Tan as maintainer in multiple perception packages
+  ---------
+* feat(autoware_lidar_transfusion): added target architectures for transfusion (`#10615 <https://github.com/autowarefoundation/autoware_universe/issues/10615>`_)
+  * chore: added target architectures for transfusion
+  * chore: removed unnecessary flag
+  * chore: mistook the architecture of edge devices
+  ---------
+* feat(autoware_lidar_transfusion): introduce cuda blackboard to transfusion (`#10513 <https://github.com/autowarefoundation/autoware_universe/issues/10513>`_)
+  * feat(autoware_lidar_transfusion): introduce cuda blackboard to transfusion
+  * fix(autoware_lidar_transfusion): clang-tidy errors
+  ---------
+  Co-authored-by: Kenzo Lobos Tsunekawa <kenzo.lobos@tier4.jp>
+* Contributors: Amadeusz Szymko, Kenzo Lobos Tsunekawa, Taekjin LEE, TaikiYamada4
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

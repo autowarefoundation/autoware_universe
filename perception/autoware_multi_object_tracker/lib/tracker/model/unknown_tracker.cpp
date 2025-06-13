@@ -18,7 +18,6 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
-#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/ros/msg_covariance.hpp>
@@ -147,6 +146,7 @@ bool UnknownTracker::measure(
   // update object shape
   object_.shape = object.shape;
   object_.pose.orientation = object.pose.orientation;
+  object_.area = types::getArea(object.shape);
 
   // check time gap
   const double dt = motion_model_.getDeltaTime(time);

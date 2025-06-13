@@ -168,9 +168,7 @@ void OperationModeTransitionManager::cancelTransition()
   transition_.reset();
 }
 
-void OperationModeTransitionManager::processTransition(
-  const Odometry & kinematics, const Trajectory & trajectory,
-  const OperationModeState & gate_operation_mode)
+void OperationModeTransitionManager::processTransition(const InputData & input_data)
 {
   const bool current_control = control_mode_report_.mode == ControlModeReport::AUTONOMOUS;
 
@@ -200,11 +198,11 @@ void OperationModeTransitionManager::processTransition(
 
   // Check completion when engaged, otherwise engage after the gate reflects transition.
   if (current_control) {
-    if (modes_.at(current_mode_)->isModeChangeCompleted(kinematics, trajectory)) {
+    if (modes_.at(current_mode_)->isModeChangeCompleted(input_data)) {
       return transition_.reset();
     }
   } else {
-    if (transition_->is_engage_requested && gate_operation_mode.is_in_transition) {
+    if (transition_->is_engage_requested && input_data.gate_operation_mode.is_in_transition) {
       transition_->is_engage_requested = false;
       return changeControlMode(ControlModeCommand::Request::AUTONOMOUS);
     }
@@ -214,22 +212,13 @@ void OperationModeTransitionManager::processTransition(
 void OperationModeTransitionManager::onTimer()
 {
   const auto input_data = subscribeData();
-  if (!input_data || isInputDataTimedOut(*input_data)) {
-    // NOTE: The planning component depends on the output of the operation_mode_transition_manager.
-    // Therefore, even when the trajectory is not published yet, the
-    // operation_mode_transition_manager has to publish the output.
-    publishData();
-    return;
-  }
 
   for (const auto & [type, mode] : modes_) {
     mode->update(current_mode_ == type && transition_);
   }
 
   for (const auto & [type, mode] : modes_) {
-    available_mode_change_[type] = mode->isModeChangeAvailable(
-      input_data->kinematics, input_data->trajectory, input_data->trajectory_follower_control_cmd,
-      input_data->control_cmd);
+    available_mode_change_[type] = mode->isModeChangeAvailable(input_data);
   }
 
   // Check sync timeout to the compatible interface.
@@ -254,44 +243,57 @@ void OperationModeTransitionManager::onTimer()
   }
 
   if (transition_) {
-    processTransition(
-      input_data->kinematics, input_data->trajectory, input_data->gate_operation_mode);
+    processTransition(input_data);
   }
 
   publishData();
 }
 
-std::optional<OperationModeTransitionManager::InputData>
-OperationModeTransitionManager::subscribeData()
+InputData OperationModeTransitionManager::subscribeData()
 {
   InputData input_data;
 
-  // NOTE: Regarding some of the following inputs, do not update is_ready
-  // since the planning component depends on the output of this node.
-  bool is_ready = true;
-
   const auto kinematics_ptr = sub_kinematics_.take_data();
   if (kinematics_ptr) {
-    input_data.kinematics = *kinematics_ptr;
-  } else {
-    is_ready = false;
+    if (input_timeout_ < (now() - kinematics_ptr->header.stamp).seconds()) {
+      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 3000, "Subscribed kinematics is timed out.");
+    } else {
+      input_data.kinematics = *kinematics_ptr;
+    }
   }
 
   const auto trajectory_ptr = sub_trajectory_.take_data();
   if (trajectory_ptr) {
-    input_data.trajectory = *trajectory_ptr;
+    if (input_timeout_ < (now() - trajectory_ptr->header.stamp).seconds()) {
+      RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 3000, "Subscribed trajectory is timed out.");
+    } else {
+      input_data.trajectory = *trajectory_ptr;
+    }
   }
 
   const auto trajectory_follower_control_cmd_ptr = sub_trajectory_follower_control_cmd_.take_data();
   if (trajectory_follower_control_cmd_ptr) {
-    input_data.trajectory_follower_control_cmd = *trajectory_follower_control_cmd_ptr;
+    if (input_timeout_ < (now() - trajectory_follower_control_cmd_ptr->stamp).seconds()) {
+      RCLCPP_WARN_THROTTLE(
+        get_logger(), *get_clock(), 3000,
+        "Subscribed trajectory_follower_control_cmd is timed out.");
+    } else {
+      input_data.trajectory_follower_control_cmd = *trajectory_follower_control_cmd_ptr;
+    }
   }
 
   const auto control_cmd_ptr = sub_control_cmd_.take_data();
   if (control_cmd_ptr) {
-    input_data.control_cmd = *control_cmd_ptr;
+    if (input_timeout_ < (now() - control_cmd_ptr->stamp).seconds()) {
+      RCLCPP_WARN_THROTTLE(
+        get_logger(), *get_clock(), 3000, "Subscribed control_cmd is timed out.");
+    } else {
+      input_data.control_cmd = *control_cmd_ptr;
+    }
   }
 
+  // NOTE: Do not check the timeout of gate_operation_mode since the timestamp of this node's output
+  // is used in the vehicle_cmd_gate node, which is updated only when the state changes.
   const auto gate_operation_mode_ptr = sub_gate_operation_mode_.take_data();
   if (gate_operation_mode_ptr) {
     input_data.gate_operation_mode = *gate_operation_mode_ptr;
@@ -307,40 +309,9 @@ OperationModeTransitionManager::subscribeData()
     // NOTE: This will be used outside the onTimer function. Therefore, it
     // has to be a member variable
     control_mode_report_ = *control_mode_report_ptr;
-  } else {
-    is_ready = false;
   }
 
-  return is_ready ? input_data : std::optional<InputData>{};
-}
-
-bool OperationModeTransitionManager::isInputDataTimedOut(const InputData & input_data)
-{
-  if (input_timeout_ < (now() - input_data.kinematics.header.stamp).seconds()) {
-    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 3000, "Subscribed kinematics is timed out.");
-    return true;
-  }
-
-  if (input_timeout_ < (now() - input_data.trajectory.header.stamp).seconds()) {
-    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 3000, "Subscribed trajectory is timed out.");
-    return true;
-  }
-
-  if (input_timeout_ < (now() - input_data.trajectory_follower_control_cmd.stamp).seconds()) {
-    RCLCPP_WARN_THROTTLE(
-      get_logger(), *get_clock(), 3000, "Subscribed trajectory_follower_control_cmd is timed out.");
-    return true;
-  }
-
-  if (input_timeout_ < (now() - input_data.control_cmd.stamp).seconds()) {
-    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 3000, "Subscribed control_cmd is timed out.");
-    return true;
-  }
-
-  // NOTE: Do not check the timeout of gate_operation_mode since the timestamp of this node's output
-  // is used in the vehicle_cmd_gate node, which is updated only when the state changes.
-
-  return false;
+  return input_data;
 }
 
 void OperationModeTransitionManager::publishData()

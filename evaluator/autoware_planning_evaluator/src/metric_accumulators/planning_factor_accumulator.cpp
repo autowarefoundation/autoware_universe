@@ -59,7 +59,7 @@ void PlanningFactorAccumulator::update(
                                     ego_state.twist.twist.linear.x /
                                     (2.0 * parameters.abnormal_deceleration_threshold_mps2);
     const bool vel_near_to_stop = std::abs(ego_state.twist.twist.linear.x) <
-                                  0.277778;  // don't count abnormal stop if vel < 1km/h
+                                  1.38888;  // don't count abnormal stop if vel < 5km/h
     if (!vel_near_to_stop && closest_stop_point->distance < min_dist_to_stop) {
       abnormal_stop_decision_state_[module_name].update_stop_decision(
         closest_stop_point.value(), cur_time, parameters);
@@ -109,7 +109,7 @@ json PlanningFactorAccumulator::getOutputJson(const OutputMetric & output_metric
       auto & state = output_metric == OutputMetric::stop_decision
                        ? stop_decision_state_.at(module)
                        : abnormal_stop_decision_state_.at(module);
-      state.disable_current_stop_decision();
+      state.clear_current_stop_decision();
       // update the json output
       if (state.stop_decision_keep_time_accumulator.count() > 0) {
         j[module + "/count"] = state.stop_decision_keep_time_accumulator.count();

@@ -22,6 +22,7 @@
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <magic_enum.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -29,10 +30,12 @@
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/Lanelet.h>
+#include <lanelet2_core/primitives/LineString.h>
 #include <tf2/utils.h>
 #include <tf2_ros/transform_listener.h>
 
 #include <algorithm>
+#include <limits>
 #include <map>
 #include <memory>
 #include <string>
@@ -49,6 +52,122 @@ using autoware_utils::create_default_marker;
 using autoware_utils::create_marker_color;
 using autoware_utils::create_marker_scale;
 using autoware_utils::create_point;
+
+lanelet::BoundingBox2d polygon_to_boundingbox(const Polygon2d & polygon)
+{
+  double min_x = std::numeric_limits<double>::max();
+  double min_y = std::numeric_limits<double>::max();
+  double max_x = std::numeric_limits<double>::lowest();
+  double max_y = std::numeric_limits<double>::lowest();
+
+  // Iterate through all points in the polygon to find min/max coordinates
+  for (const auto & point : polygon.outer()) {
+    min_x = std::min(min_x, point.x());
+    min_y = std::min(min_y, point.y());
+    max_x = std::max(max_x, point.x());
+    max_y = std::max(max_y, point.y());
+  }
+
+  // Create the bounding box
+  lanelet::BoundingBox2d bounding_box(
+    lanelet::BasicPoint2d(min_x, min_y), lanelet::BasicPoint2d(max_x, max_y));
+  return bounding_box;
+}
+
+SegmentRtree extract_uncrossable_segments(
+  const lanelet::LaneletMap & lanelet_map, const Polygon2d & extraction_polygon)
+{
+  SegmentRtree uncrossable_segments_in_range;
+  auto search_area = polygon_to_boundingbox(extraction_polygon);
+  const auto linestrings = lanelet_map.lineStringLayer.search(search_area);
+
+  for (const auto & ls : linestrings) {
+    if (!has_types(ls, {"road_border"})) {
+      continue;
+    }
+
+    add_intersecting_segments(ls, extraction_polygon, uncrossable_segments_in_range);
+  }
+
+  return uncrossable_segments_in_range;
+}
+
+void add_intersecting_segments(
+  const lanelet::ConstLineString3d & ls, const Polygon2d & extraction_polygon,
+  SegmentRtree & segments_rtree)
+{
+  LineString2d line;
+  for (const auto & p : ls) {
+    line.push_back(Point2d{p.x(), p.y()});
+  }
+
+  for (auto segment_idx = 0LU; segment_idx + 1 < line.size(); ++segment_idx) {
+    const Segment2d segment = {line[segment_idx], line[segment_idx + 1]};
+    if (boost::geometry::intersects(segment, extraction_polygon)) {
+      segments_rtree.insert(segment);
+    }
+  }
+}
+
+bool has_types(const lanelet::ConstLineString3d & ls, const std::vector<std::string> & types)
+{
+  constexpr auto no_type = "";
+  const auto type = ls.attributeOr(lanelet::AttributeName::Type, no_type);
+  return (type != no_type && std::find(types.begin(), types.end(), type) != types.end());
+}
+
+bool crosses_road_border(
+  const Point2d & ego_point, const Point2d & obj_point, const SegmentRtree & road_border_segments)
+{
+  // Create a line segment from ego to object
+  const Segment2d ego_to_obj = {ego_point, obj_point};
+
+  // Check if this line segment intersects with any road border segment
+  for (const auto & border_segment : road_border_segments) {
+    // Check for intersection
+    if (boost::geometry::intersects(ego_to_obj, border_segment)) {
+      return true;
+    }
+  }
+
+  return false;  // No crossing found
+}
+
+// Improved filter_objects_by_road_border function
+PredictedObjects filter_objects_by_road_border(
+  const PredictedObjects & objects, const SegmentRtree & road_border_segments,
+  const Pose & ego_pose, const bool filter_opposite_side)
+{
+  if (road_border_segments.empty() || !filter_opposite_side) {
+    return objects;  // No filtering if no road borders or filtering not requested
+  }
+
+  PredictedObjects filtered_objects;
+  filtered_objects.header = objects.header;
+
+  // Ego position as reference point
+  const Point2d ego_point{ego_pose.position.x, ego_pose.position.y};
+
+  for (const auto & object : objects.objects) {
+    // Get footprint
+    bool not_being_separated = false;
+
+    const auto obj_polygon = autoware_utils::to_polygon2d(object);
+
+    for (const auto & obj_point : obj_polygon.outer()) {
+      if (!crosses_road_border(ego_point, obj_point, road_border_segments)) {
+        not_being_separated = true;
+        break;
+      }
+    }
+
+    if (not_being_separated) {
+      filtered_objects.objects.push_back(object);
+    }
+  }
+
+  return filtered_objects;
+}
 
 lanelet::ConstLanelets getPullOverLanes(
   const RouteHandler & route_handler, const bool left_side, const double backward_distance,
@@ -443,7 +562,7 @@ MarkerArray createNumObjectsToAvoidTextsMarkerArray(
   return msg;
 }
 
-MarkerArray createGoalCandidatesMarkerArray(
+std::pair<MarkerArray, MarkerArray> createGoalCandidatesMarkerArray(
   const GoalCandidates & goal_candidates, const std_msgs::msg::ColorRGBA & color)
 {
   GoalCandidates safe_goal_candidates{};
@@ -456,21 +575,17 @@ MarkerArray createGoalCandidatesMarkerArray(
     safe_goal_candidates.begin(), safe_goal_candidates.end(), std::back_inserter(pose_vector),
     [](const auto & goal_candidate) { return goal_candidate.goal_pose; });
 
-  auto marker_array = createPosesMarkerArray(pose_vector, "goal_candidates", color);
-  for (const auto & text_marker :
-       createGoalPriorityTextsMarkerArray(
-         pose_vector, "goal_candidates_priority", create_marker_color(1.0, 1.0, 1.0, 0.999))
-         .markers) {
-    marker_array.markers.push_back(text_marker);
-  }
+  const auto info_marker_array = createPosesMarkerArray(pose_vector, "goal_candidates", color);
+  auto debug_marker_array = createGoalPriorityTextsMarkerArray(
+    pose_vector, "goal_candidates_priority", create_marker_color(1.0, 1.0, 1.0, 0.999));
   for (const auto & text_marker : createNumObjectsToAvoidTextsMarkerArray(
                                     safe_goal_candidates, "goal_candidates_num_objects_to_avoid",
                                     create_marker_color(0.5, 0.5, 0.5, 0.999))
                                     .markers) {
-    marker_array.markers.push_back(text_marker);
+    debug_marker_array.markers.push_back(text_marker);
   }
 
-  return marker_array;
+  return std::make_pair(info_marker_array, debug_marker_array);
 }
 
 MarkerArray createLaneletPolygonMarkerArray(
@@ -831,7 +946,8 @@ std::optional<Pose> calcClosestPose(
 autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
   const autoware_perception_msgs::msg::PredictedObjects & original_objects,
   const route_handler::RouteHandler & route_handler, const GoalPlannerParameters & parameters,
-  const double vehicle_width)
+  const double vehicle_width, const Pose & ego_pose,
+  std::optional<std::reference_wrapper<Polygon2d>> debug_objects_extraction_polygon)
 {
   const bool left_side_parking = parameters.parking_policy == ParkingPolicy::LEFT_SIDE;
   const auto pull_over_lanes = goal_planner_utils::getPullOverLanes(
@@ -841,6 +957,12 @@ autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
     pull_over_lanes, left_side_parking, parameters.detection_bound_offset,
     parameters.margin_from_boundary + parameters.max_lateral_offset + vehicle_width);
 
+  // Store extraction polygon for debugging if the optional parameter is provided
+  if (debug_objects_extraction_polygon && objects_extraction_polygon.has_value()) {
+    debug_objects_extraction_polygon->get() = objects_extraction_polygon.value();
+  }
+
+  // Extract objects within the extraction polygon
   PredictedObjects dynamic_target_objects{};
   for (const auto & object : original_objects.objects) {
     const auto object_polygon = autoware_utils::to_polygon2d(object);
@@ -850,7 +972,16 @@ autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
       dynamic_target_objects.objects.push_back(object);
     }
   }
-  return dynamic_target_objects;
+  // Extract road border segments
+  if (objects_extraction_polygon.has_value()) {
+    const auto road_border_segments = extract_uncrossable_segments(
+      *(route_handler.getLaneletMapPtr()), objects_extraction_polygon.value());
+    const auto filtered_objects =
+      filter_objects_by_road_border(dynamic_target_objects, road_border_segments, ego_pose, true);
+    return filtered_objects;
+  } else {
+    return dynamic_target_objects;
+  }
 }
 
 bool is_goal_reachable_on_path(
@@ -891,6 +1022,58 @@ bool is_goal_reachable_on_path(
   // if goal is not in current_lanes and current_shoulder_lanes, do not execute goal_planner,
   // because goal arc coordinates cannot be calculated.
   return goal_is_in_current_segment_lanes || goal_is_in_current_shoulder_lanes;
+}
+
+bool hasPreviousModulePathShapeChanged(
+  const BehaviorModuleOutput & upstream_module_output,
+  const BehaviorModuleOutput & last_upstream_module_output)
+{
+  // Calculate the lateral distance between each point of the current path and the nearest point of
+  // the last path
+  constexpr double LATERAL_DEVIATION_THRESH = 0.1;
+  for (const auto & p : upstream_module_output.path.points) {
+    const size_t nearest_seg_idx = autoware::motion_utils::findNearestSegmentIndex(
+      last_upstream_module_output.path.points, p.point.pose.position);
+    const auto seg_front = last_upstream_module_output.path.points.at(nearest_seg_idx);
+    const auto seg_back = last_upstream_module_output.path.points.at(nearest_seg_idx + 1);
+    // Check if the target point is within the segment
+    const Eigen::Vector3d segment_vec{
+      seg_back.point.pose.position.x - seg_front.point.pose.position.x,
+      seg_back.point.pose.position.y - seg_front.point.pose.position.y, 0.0};
+    const Eigen::Vector3d target_vec{
+      p.point.pose.position.x - seg_front.point.pose.position.x,
+      p.point.pose.position.y - seg_front.point.pose.position.y, 0.0};
+    const double dot_product = segment_vec.x() * target_vec.x() + segment_vec.y() * target_vec.y();
+    const double segment_length_squared =
+      segment_vec.x() * segment_vec.x() + segment_vec.y() * segment_vec.y();
+    if (dot_product < 0 || dot_product > segment_length_squared) {
+      // p.point.pose.position is not within the segment, skip lateral distance check
+      continue;
+    }
+    const double lateral_distance = std::abs(autoware::motion_utils::calcLateralOffset(
+      last_upstream_module_output.path.points, p.point.pose.position, nearest_seg_idx));
+    if (lateral_distance > LATERAL_DEVIATION_THRESH) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool hasDeviatedFromPath(
+  const Point & ego_position, const BehaviorModuleOutput & upstream_module_output)
+{
+  constexpr double LATERAL_DEVIATION_THRESH = 0.1;
+  return std::abs(autoware::motion_utils::calcLateralOffset(
+           upstream_module_output.path.points, ego_position)) > LATERAL_DEVIATION_THRESH;
+}
+
+bool has_stopline_except_terminal(const PathWithLaneId & path)
+{
+  const auto stopline_it = std::find_if(
+    path.points.begin(), path.points.end(),
+    [](const auto & point) { return std::fabs(point.point.longitudinal_velocity_mps) == 0.0; });
+  return static_cast<unsigned>(std::distance(path.points.begin(), stopline_it)) + 1 <
+         path.points.size();
 }
 
 }  // namespace autoware::behavior_path_planner::goal_planner_utils

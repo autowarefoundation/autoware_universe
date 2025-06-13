@@ -15,6 +15,8 @@
 #ifndef TRAFFIC_LIGHT_MAP_BASED_DETECTOR_NODE_HPP_
 #define TRAFFIC_LIGHT_MAP_BASED_DETECTOR_NODE_HPP_
 
+#include "traffic_light_map_based_detector_process.hpp"
+
 #include <autoware_lanelet2_extension/regulatory_elements/autoware_traffic_light.hpp>
 #include <rclcpp/rclcpp.hpp>
 

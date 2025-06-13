@@ -107,12 +107,12 @@ void VoxelBasedCompareMapFilterComponent::input_indices_callback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud, const PointIndicesConstPtr indices)
 {
   // If cloud is given, check if it's valid
-  if (!isValid(cloud)) {
+  if (!is_valid(cloud)) {
     RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid input!");
     return;
   }
   // If indices are given, check if they are valid
-  if (indices && !isValid(indices)) {
+  if (indices && !is_valid(indices)) {
     RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid indices!");
     return;
   }
@@ -152,7 +152,7 @@ void VoxelBasedCompareMapFilterComponent::input_indices_callback(
     vindices.reset(new std::vector<int>(indices->indices));
   }
 
-  computePublish(cloud_tf, vindices);
+  compute_publish(cloud_tf, vindices);
 }
 
 bool VoxelBasedCompareMapFilterComponent::convert_output_costly(
