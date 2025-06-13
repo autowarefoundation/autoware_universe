@@ -1,5 +1,17 @@
-#ifndef DIGESTIBLE_HPP_
-#define DIGESTIBLE_HPP_
+// Copyright 2025 TIER IV, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 
 /*
  * Licensed to Ted Dunning under one or more
@@ -18,6 +30,16 @@
  * limitations under the License.
  */
 
+/*
+ * This file is derived from the digestible project:
+ * https://github.com/SpirentOrion/digestible
+ * Original implementation by Ted Dunning and Spirent Communications
+ */
+
+
+#ifndef DIGESTIBLE_HPP_
+#define DIGESTIBLE_HPP_
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -30,9 +52,6 @@
 namespace digestible
 {
 
-// XXX: yes, this could be a std::pair. But being able to refer to values by name
-// instead of .first and .second makes merge(), quantile(), and
-// cumulative_distribution() way more readable.
 template <typename Values = float, typename Weight = unsigned>
 struct centroid
 {
@@ -93,10 +112,6 @@ class tdigest
   tdigest_impl one;
   tdigest_impl two;
 
-  // XXX: buffer multiplier must be > 0. BUT how much greater
-  // will affect size vs speed balance. The effects of which
-  // have not been studied. Set to 2 to favor size. Informal
-  // benchmarks for this value yielded acceptable results.
   static constexpr size_t buffer_multiplier = 2;
   tdigest_impl buffer;
 
@@ -463,12 +478,6 @@ void tdigest<Values, Weight>::merge()
   new_inactive->reset();
 }
 
-/**
- * XXX: replace with std::lerp when C++20 support becomes available.
- * This version adapted from libcxx, which is part of the LLVM project
- * under an "Apache 2.0 license with LLVM Exceptions." The project can be
- * found at https://github.com/llvm-mirror/libcxx
- */
 inline double lerp(double a, double b, double t) noexcept
 {
   if ((a <= 0 && b >= 0) || (a >= 0 && b <= 0)) return t * b + (1 - t) * a;
@@ -504,7 +513,6 @@ double tdigest<Values, Weight>::quantile(double p) const
     return (min_val);
   }
 
-  // For smaller quantiles, interpolate between minimum value and the first
   // centroid.
   const auto & first = active->values.front();
   if (first.weight > 1 && index < (first.weight / 2)) {
@@ -515,7 +523,6 @@ double tdigest<Values, Weight>::quantile(double p) const
     return (max_val);
   }
 
-  // For larger quantiles, interpolate between maximum value and the last
   // centroid.
   const auto & last = active->values.back();
   if (last.weight > 1 && active->total_weight - index <= last.weight / 2) {
