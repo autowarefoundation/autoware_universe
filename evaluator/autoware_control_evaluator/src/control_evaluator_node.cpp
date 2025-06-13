@@ -434,7 +434,7 @@ void ControlEvaluatorNode::AddObjectMetricMsg(
       continue;
     }
 
-    const auto & object_polygon = autoware_utils::to_polygon2d(object);
+    const auto object_polygon = autoware_utils::to_polygon2d(object);
     const auto distance = bg::distance(ego_polygon, object_polygon);
     if (distance < minimum_distance) {
       minimum_distance = distance;
