@@ -15,3 +15,5 @@
           - traffic_light
           - virtual_traffic_light
           - walkway
+    object_metrics:
+      distance_filter_thr_m: 30.0 # [m] distance filter threshold for predicted objects

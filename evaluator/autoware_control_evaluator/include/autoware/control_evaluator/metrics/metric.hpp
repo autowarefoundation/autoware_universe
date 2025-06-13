@@ -1,4 +1,4 @@
-// Copyright 2021 Tier IV, Inc.
+// Copyright 2021 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ enum class Metric {
   steering_rate,
   steering_acceleration,
   stop_deviation,
+  closest_object_distance,
   SIZE,
 };
 
@@ -58,6 +59,7 @@ static const std::unordered_map<std::string, Metric> str_to_metric = {
   {"steering_rate", Metric::steering_rate},
   {"steering_acceleration", Metric::steering_acceleration},
   {"stop_deviation", Metric::stop_deviation},
+  {"closest_object_distance", Metric::closest_object_distance},
 };
 
 static const std::unordered_map<Metric, std::string> metric_to_str = {
@@ -75,6 +77,7 @@ static const std::unordered_map<Metric, std::string> metric_to_str = {
   {Metric::steering_rate, "steering_rate"},
   {Metric::steering_acceleration, "steering_acceleration"},
   {Metric::stop_deviation, "stop_deviation"},
+  {Metric::closest_object_distance, "closest_object_distance"},
 };
 
 // Metrics descriptions
@@ -93,6 +96,9 @@ static const std::unordered_map<Metric, std::string> metric_descriptions = {
   {Metric::steering_rate, "Steering angle rate[rad/s]"},
   {Metric::steering_acceleration, "Steering angle acceleration[rad/s^2]"},
   {Metric::stop_deviation, "Deviation to the stop line when the ego stop by a module[m]"},
+  {Metric::closest_object_distance,
+   "Distance to the closest object[m], the objects outside of the distance_filter_thr_m (default: "
+   "30m) are ignored"},
 };
 
 namespace details
