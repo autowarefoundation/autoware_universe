@@ -329,14 +329,14 @@ void CudaPointcloudPreprocessor::organizePointcloud()
 }
 
 std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::process(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr input_pointcloud_msg_ptr,
+  const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg,
   const geometry_msgs::msg::TransformStamped & transform_msg,
   const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,
   const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue,
   const std::uint32_t first_point_rel_stamp_nsec)
 {
-  auto frame_id = input_pointcloud_msg_ptr->header.frame_id;
-  num_raw_points_ = input_pointcloud_msg_ptr->width * input_pointcloud_msg_ptr->height;
+  auto frame_id = input_pointcloud_msg.header.frame_id;
+  num_raw_points_ = input_pointcloud_msg.width * input_pointcloud_msg.height;
   num_organized_points_ = num_rings_ * max_points_per_ring_;
 
   if (num_raw_points_ == 0) {
@@ -346,9 +346,9 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
 
     output_pointcloud_ptr_->fields = point_fields_;
     output_pointcloud_ptr_->is_dense = true;
-    output_pointcloud_ptr_->is_bigendian = input_pointcloud_msg_ptr->is_bigendian;
+    output_pointcloud_ptr_->is_bigendian = input_pointcloud_msg.is_bigendian;
     output_pointcloud_ptr_->point_step = sizeof(OutputPointType);
-    output_pointcloud_ptr_->header.stamp = input_pointcloud_msg_ptr->header.stamp;
+    output_pointcloud_ptr_->header.stamp = input_pointcloud_msg.header.stamp;
 
     return std::move(output_pointcloud_ptr_);
   }
@@ -363,7 +363,7 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   thrust::fill(device_organized_points_.begin(), device_organized_points_.end(), InputPointType{});
 
   cudaMemcpyAsync(
-    thrust::raw_pointer_cast(device_input_points_.data()), input_pointcloud_msg_ptr->data.data(),
+    thrust::raw_pointer_cast(device_input_points_.data()), input_pointcloud_msg.data.data(),
     num_raw_points_ * sizeof(InputPointType), cudaMemcpyHostToDevice, stream_);
 
   cudaStreamSynchronize(stream_);
@@ -399,8 +399,8 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   transform_struct.m33 = static_cast<float>(rotation_matrix[2][2]);
 
   // Twist preprocessing
-  std::uint64_t pointcloud_stamp_nsec = 1'000'000'000 * input_pointcloud_msg_ptr->header.stamp.sec +
-                                        input_pointcloud_msg_ptr->header.stamp.nanosec;
+  std::uint64_t pointcloud_stamp_nsec = 1'000'000'000 * input_pointcloud_msg.header.stamp.sec +
+                                        input_pointcloud_msg.header.stamp.nanosec;
 
   if (undistortion_type_ == UndistortionType::Undistortion3D) {
     setupTwist3DStructs(
@@ -519,9 +519,9 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
 
   output_pointcloud_ptr_->fields = point_fields_;
   output_pointcloud_ptr_->is_dense = true;
-  output_pointcloud_ptr_->is_bigendian = input_pointcloud_msg_ptr->is_bigendian;
+  output_pointcloud_ptr_->is_bigendian = input_pointcloud_msg.is_bigendian;
   output_pointcloud_ptr_->point_step = sizeof(OutputPointType);
-  output_pointcloud_ptr_->header.stamp = input_pointcloud_msg_ptr->header.stamp;
+  output_pointcloud_ptr_->header.stamp = input_pointcloud_msg.header.stamp;
 
   return std::move(output_pointcloud_ptr_);
 }

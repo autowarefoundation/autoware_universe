@@ -23,6 +23,10 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wall -Wextra -Wpedantic -Wunused-function)
 endif()
 
+if(USE_AGNOCAST)
+    add_definitions(-DUSE_AGNOCAST_ENABLED)
+endif()
+
 if(BUILD_TESTING)
     find_package(ament_lint_auto REQUIRED)
     ament_lint_auto_find_test_dependencies()
@@ -74,6 +78,16 @@ target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
   ${tf2_INCLUDE_DIRS}
   ${tf2_msgs_INCLUDE_DIRS}
 )
+
+if(USE_AGNOCAST)
+    target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
+        ${autoware_agnocast_wrapper_INCLUDE_DIRS}
+        ${agnocastlib_INCLUDE_DIRS}
+    )
+    target_link_libraries(cuda_pointcloud_preprocessor_lib
+        ${agnocastlib_LIBRARIES}
+    )
+endif()
 
 
 # Targets

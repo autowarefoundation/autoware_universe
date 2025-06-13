@@ -58,7 +58,7 @@ public:
   [[nodiscard]] int getNumNanPoints() const { return static_cast<int>(num_nan_points_); }
 
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> process(
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr input_pointcloud_msg_ptr,
+    const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg,
     const geometry_msgs::msg::TransformStamped & transform_msg,
     const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,
     const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue,

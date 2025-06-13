@@ -18,6 +18,7 @@
 #include "autoware/cuda_pointcloud_preprocessor/cuda_pointcloud_preprocessor.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <autoware/point_types/types.hpp>
 #include <autoware/universe_utils/ros/debug_publisher.hpp>
 #include <autoware/universe_utils/ros/polling_subscriber.hpp>
@@ -85,30 +86,30 @@ private:
 
   // Callback
   void pointcloudCallback(
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr input_pointcloud_msg_ptr);
+    const AUTOWARE_MESSAGE_SHARED_PTR(sensor_msgs::msg::PointCloud2) & input_pointcloud_msg_ptr);
   void cudaPointcloudCallback(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> cuda_msg);
   void twistCallback(
-    const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr pointcloud_msg);
+    const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr & twist_msg_ptr);
   void imuCallback(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg);
 
   // Helper Functions
 
   void validatePointcloudLayout(
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input_pointcloud_msg_ptr);
+    const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg);
   double getFirstPointTimestamp(
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input_pointcloud_msg_ptr);
+    const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg);
 
   void updateTwistQueue(double first_point_stamp);
   void updateImuQueue(double first_point_stamp);
   std::optional<geometry_msgs::msg::TransformStamped> lookupTransformToBase(
     const std::string & source_frame);
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> processPointcloud(
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input_pointcloud_msg_ptr,
+    const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg,
     const geometry_msgs::msg::TransformStamped & transform_msg);
 
   void publishDiagnostics(
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & input_pointcloud_msg_ptr,
+    const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg,
     const std::unique_ptr<cuda_blackboard::CudaPointCloud2> & output_pointcloud_ptr);
 
   tf2_ros::Buffer tf2_buffer_;
@@ -130,7 +131,7 @@ private:
   autoware::universe_utils::InterProcessPollingSubscriber<
     geometry_msgs::msg::TwistWithCovarianceStamped,
     autoware::universe_utils::polling_policy::All>::SharedPtr twist_sub_;
-  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_{};
+  AUTOWARE_SUBSCRIPTION_PTR(sensor_msgs::msg::PointCloud2) pointcloud_sub_;
 
   // CUDA pub
   std::unique_ptr<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>> pub_;
@@ -139,6 +140,9 @@ private:
 
   std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
   std::unique_ptr<autoware::universe_utils::DebugPublisher> debug_publisher_;
+
+  // Callback group for pointcloud subscription
+  rclcpp::CallbackGroup::SharedPtr pointcloud_callback_group_;
 };
 
 }  // namespace autoware::cuda_pointcloud_preprocessor
