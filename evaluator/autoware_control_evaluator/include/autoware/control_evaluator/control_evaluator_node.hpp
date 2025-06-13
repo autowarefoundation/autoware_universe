@@ -80,6 +80,7 @@ public:
   void AddYawDeviationMetricMsg(const Trajectory & traj, const Pose & ego_pose);
   void AddGoalDeviationMetricMsg(const Odometry & odom);
   void AddBoundaryDistanceMetricMsg(const PathWithLaneId & behavior_path, const Pose & ego_pose);
+  void AddUncrossableBoundaryDistanceMetricMsg(const Pose & ego_pose);
 
   void AddLaneletInfoMsg(const Pose & ego_pose);
   void AddKinematicStateMetricMsg(

@@ -16,11 +16,13 @@
 
 #include "autoware/control_evaluator/metrics/metrics_utils.hpp"
 
+#include <autoware/boundary_departure_checker/utils.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
@@ -241,6 +243,65 @@ void ControlEvaluatorNode::AddBoundaryDistanceMetricMsg(
   }
 }
 
+void ControlEvaluatorNode::AddUncrossableBoundaryDistanceMetricMsg(const Pose & ego_pose)
+{
+  namespace bdc_utils = autoware::boundary_departure_checker::utils;
+  constexpr auto extra_margin{2.0};
+  const auto search_distance =
+    std::max(vehicle_info_.vehicle_width_m, vehicle_info_.vehicle_length_m) + extra_margin;
+  const auto nearby_uncrossable_lines = bdc_utils::get_linestrings_near_footprint(
+    route_handler_.getLaneletMapPtr()->lineStringLayer, ego_pose, search_distance);
+
+  if (nearby_uncrossable_lines.empty()) {
+    return;
+  }
+
+  const auto transformed_pose = autoware_utils::pose2transform(ego_pose);
+  const auto local_fp = vehicle_info_.createFootprint();
+  const auto current_fp = autoware_utils::transform_vector(local_fp, transformed_pose);
+  const auto side = bdc_utils::get_footprint_sides(current_fp, false, false);
+
+  auto nearest_left = search_distance;
+  auto nearest_right = search_distance;
+
+  bool is_overlapping = false;
+  for (const auto & nearby_ls : nearby_uncrossable_lines) {
+    LineString2d boundary;
+    const auto & basic_ls = nearby_ls.basicLineString();
+    boundary.reserve(basic_ls.size());
+    for (size_t idx = 0; idx + 1 < basic_ls.size(); ++idx) {
+      const autoware_utils::Point2d curr_pt = {basic_ls[idx].x(), basic_ls[idx].y()};
+      const autoware_utils::Point2d next_pt = {basic_ls[idx + 1].x(), basic_ls[idx + 1].y()};
+
+      const autoware_utils::Segment2d segment = {curr_pt, next_pt};
+
+      is_overlapping = !boost::geometry::disjoint(current_fp, segment);
+
+      if (is_overlapping) {
+        nearest_left = 0.0;
+        nearest_right = 0.0;
+        break;
+      }
+
+      const auto dist_to_left = boost::geometry::distance(segment, side.left);
+      const auto dist_to_right = boost::geometry::distance(segment, side.right);
+      if (dist_to_left < dist_to_right) {
+        nearest_left = std::min(dist_to_left, nearest_left);
+      } else {
+        nearest_right = std::min(dist_to_right, nearest_right);
+      }
+    }
+    if (is_overlapping) {
+      break;
+    }
+  }
+  const Metric metric_left = Metric::left_uncrossable_boundary_distance;
+  AddMetricMsg(metric_left, nearest_left);
+
+  const Metric metric_right = Metric::right_uncrossable_boundary_distance;
+  AddMetricMsg(metric_right, nearest_right);
+}
+
 void ControlEvaluatorNode::AddKinematicStateMetricMsg(
   const Odometry & odom, const AccelWithCovarianceStamped & accel_stamped)
 {
@@ -438,6 +499,10 @@ void ControlEvaluatorNode::onTimer()
         AddBoundaryDistanceMetricMsg(*behavior_path, ego_pose);
       }
     }
+  }
+
+  if (odom) {
+    AddUncrossableBoundaryDistanceMetricMsg(odom->pose.pose);
   }
 
   // add steering metrics
