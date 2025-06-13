@@ -46,7 +46,7 @@ geometry_msgs::msg::Point interpolated_point_at_time(
   }
   const auto next_time = rclcpp::Duration(std::next(prev_it)->time_from_start).seconds();
   if (next_time == prev_time) {
-    return next_time->pose.position;
+    return std::next(prev_it)->pose.position;
   }
   const auto t_delta = next_time - prev_time;
   const auto t_diff = time - prev_time;
