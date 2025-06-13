@@ -118,9 +118,6 @@ ProcessingTimeChecker::~ProcessingTimeChecker()
       j[module_name + "/max"] = processing_time_accumulator.max();
       j[module_name + "/mean"] = processing_time_accumulator.mean();
       j[module_name + "/percentile_95"] = processing_time_tdigest.quantile(95.0);
-      j[module_name + "/percentile_96"] = processing_time_tdigest.quantile(96.0);
-      j[module_name + "/percentile_97"] = processing_time_tdigest.quantile(97.0);
-      j[module_name + "/percentile_98"] = processing_time_tdigest.quantile(98.0);
       j[module_name + "/percentile_99"] = processing_time_tdigest.quantile(99.0);
       j[module_name + "/count"] = processing_time_accumulator.count();
       j[module_name + "/description"] = "processing time of " + module_name + "[ms]";
