@@ -22,38 +22,60 @@ Models for pedestrians, bicycles (motorcycles), cars and unknown are available.
 The pedestrian or bicycle tracker is running at the same time as the respective EKF model in order to enable the transition between pedestrian and bicycle tracking.
 For big vehicles such as trucks and buses, we have separate models for passenger cars and large vehicles because they are difficult to distinguish from passenger cars and are not stable. Therefore, separate models are prepared for passenger cars and big vehicles, and these models are run at the same time as the respective EKF models to ensure stability.
 
-<!-- Write how this package works. Flowcharts and figures are great. Add sub-sections as you like.
-
-Example:
-  ### Flowcharts
-
-  ...(PlantUML or something)
-
-  ### State Transitions
-
-  ...(PlantUML or something)
-
-  ### How to filter target obstacles
-
-  ...
-
-  ### How to optimize trajectory
-
-  ...
--->
-
 ## Inputs / Outputs
 
 ### Input
 
 Multiple inputs are pre-defined in the input channel parameters (described below) and the inputs can be configured
 
-| Name                      | Type                       | Description            |
-| ------------------------- | -------------------------- | ---------------------- |
-| `selected_input_channels` | `std::vector<std::string>` | array of channel names |
+| Name                        | Type          | Description                 |
+| --------------------------- | ------------- | --------------------------- |
+| `input/detection**/objects` | `std::string` | input topic                 |
+| `input/detection**/channel` | `std::string` | input channel configuration |
 
-- default value: `selected_input_channels:="['detected_objects']"`, merged DetectedObject message
-- multi-input example: `selected_input_channels:="['lidar_centerpoint','camera_lidar_fusion','detection_by_tracker','radar_far']"`
+rule of the channel configuration
+
+- 'none' or empty : Indicates that this detection input channel is not used/disabled
+- Any other string : Specifies a custom channel name to be used for the detection input, configured in `schema/input_channels.schema.json`
+
+Up to 12 detection inputs can be configured (detection01 through detection12). Each input consists of an objects topic and its corresponding channel configuration.
+
+Example configurations:
+
+- Single detection input:
+
+```yaml
+input/detection01/objects: /perception/object_recognition/detection/objects
+input/detection01/channel: detected_objects # general input channel type
+input/detection02/objects: input/objects02
+input/detection02/channel: none # Disabled
+```
+
+- Multiple detection inputs:
+
+```yaml
+# lidar centerpoint
+input/detection01/objects: /perception/object_recognition/detection/lidar_centerpoint/objects
+input/detection01/channel: lidar_centerpoint
+
+# camera lidar fusion
+input/detection02/objects: /perception/object_recognition/detection/clustering/camera_lidar_fusion/objects
+input/detection02/channel: camera_lidar_fusion
+
+# detection by tracker
+input/detection03/objects: /perception/object_recognition/detection/detection_by_tracker/objects
+input/detection03/channel: detection_by_tracker
+
+# radar
+input/detection04/objects: /perception/object_recognition/detection/radar/objects
+input/detection04/channel: radar
+
+# disable
+input/detection05/objects: input/objects05
+input/detection05/channel: none # Disabled
+```
+
+Up to 12 detection inputs can be configured (detection01 through detection12). Each input consists of an objects topic and its corresponding channel configuration.
 
 ### Output
 
@@ -69,7 +91,12 @@ Multiple inputs are pre-defined in the input channel parameters (described below
 
 ### Core Parameters
 
+- Node
+
 {{ json_to_markdown("perception/autoware_multi_object_tracker/schema/multi_object_tracker_node.schema.json") }}
+
+- Association
+
 {{ json_to_markdown("perception/autoware_multi_object_tracker/schema/data_association_matrix.schema.json") }}
 
 #### Simulation parameters
@@ -108,8 +135,8 @@ This package makes use of external code.
 | --------------------------------------------------------- | --------------------------------------------------------- | ------------------------------------ |
 | [muSSP](src/data_association/mu_successive_shortest_path) | [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0) | <https://github.com/yu-lab-vt/muSSP> |
 
-[1] C. Wang, Y. Wang, Y. Wang, C.-t. Wu, and G. Yu, “muSSP: Efficient
-Min-cost Flow Algorithm for Multi-object Tracking,” NeurIPS, 2019
+[1] C. Wang, Y. Wang, Y. Wang, C.-t. Wu, and G. Yu, "muSSP: Efficient
+Min-cost Flow Algorithm for Multi-object Tracking," NeurIPS, 2019
 
 ## (Optional) Future extensions / Unimplemented parts
 

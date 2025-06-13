@@ -14,7 +14,7 @@
 #include "autoware/behavior_path_planner_common/turn_signal_decider.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include "autoware_planning_msgs/msg/path_point.hpp"
 #include <geometry_msgs/msg/twist.hpp>
@@ -26,14 +26,14 @@ using autoware::behavior_path_planner::PathWithLaneId;
 using autoware::behavior_path_planner::Pose;
 using autoware::behavior_path_planner::TurnSignalDecider;
 using autoware::behavior_path_planner::TurnSignalInfo;
-using autoware::universe_utils::createPoint;
-using autoware::universe_utils::createQuaternionFromYaw;
+using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
 using autoware_planning_msgs::msg::PathPoint;
+using autoware_utils::create_point;
+using autoware_utils::create_quaternion_from_yaw;
 using autoware_vehicle_msgs::msg::HazardLightsCommand;
 using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Twist;
-using tier4_planning_msgs::msg::PathPointWithLaneId;
 
 constexpr double nearest_dist_threshold = 5.0;
 constexpr double nearest_yaw_threshold = M_PI / 3.0;
@@ -82,25 +82,25 @@ TEST(BehaviorPathPlanningTurnSignal, Condition1)
 
   TurnSignalInfo intersection_signal_info;
   intersection_signal_info.turn_signal.command = TurnIndicatorsCommand::ENABLE_LEFT;
-  intersection_signal_info.desired_start_point.position = createPoint(0.0, 0.0, 0.0);
-  intersection_signal_info.desired_start_point.orientation = createQuaternionFromYaw(0.0);
-  intersection_signal_info.desired_end_point.position = createPoint(65.0, 0.0, 0.0);
-  intersection_signal_info.desired_end_point.orientation = createQuaternionFromYaw(0.0);
-  intersection_signal_info.required_start_point.position = createPoint(35.0, 0.0, 0.0);
-  intersection_signal_info.required_start_point.orientation = createQuaternionFromYaw(0.0);
-  intersection_signal_info.required_end_point.position = createPoint(48.0, 0.0, 0.0);
-  intersection_signal_info.required_end_point.orientation = createQuaternionFromYaw(0.0);
+  intersection_signal_info.desired_start_point.position = create_point(0.0, 0.0, 0.0);
+  intersection_signal_info.desired_start_point.orientation = create_quaternion_from_yaw(0.0);
+  intersection_signal_info.desired_end_point.position = create_point(65.0, 0.0, 0.0);
+  intersection_signal_info.desired_end_point.orientation = create_quaternion_from_yaw(0.0);
+  intersection_signal_info.required_start_point.position = create_point(35.0, 0.0, 0.0);
+  intersection_signal_info.required_start_point.orientation = create_quaternion_from_yaw(0.0);
+  intersection_signal_info.required_end_point.position = create_point(48.0, 0.0, 0.0);
+  intersection_signal_info.required_end_point.orientation = create_quaternion_from_yaw(0.0);
 
   TurnSignalInfo behavior_signal_info;
   behavior_signal_info.turn_signal.command = TurnIndicatorsCommand::ENABLE_RIGHT;
-  behavior_signal_info.desired_start_point.position = createPoint(5.0, 0.0, 0.0);
-  behavior_signal_info.desired_start_point.orientation = createQuaternionFromYaw(0.0);
-  behavior_signal_info.desired_end_point.position = createPoint(70.0, 0.0, 0.0);
-  behavior_signal_info.desired_end_point.orientation = createQuaternionFromYaw(0.0);
-  behavior_signal_info.required_start_point.position = createPoint(45.0, 0.0, 0.0);
-  behavior_signal_info.required_start_point.orientation = createQuaternionFromYaw(0.0);
-  behavior_signal_info.required_end_point.position = createPoint(50.0, 0.0, 0.0);
-  behavior_signal_info.required_end_point.orientation = createQuaternionFromYaw(0.0);
+  behavior_signal_info.desired_start_point.position = create_point(5.0, 0.0, 0.0);
+  behavior_signal_info.desired_start_point.orientation = create_quaternion_from_yaw(0.0);
+  behavior_signal_info.desired_end_point.position = create_point(70.0, 0.0, 0.0);
+  behavior_signal_info.desired_end_point.orientation = create_quaternion_from_yaw(0.0);
+  behavior_signal_info.required_start_point.position = create_point(45.0, 0.0, 0.0);
+  behavior_signal_info.required_start_point.orientation = create_quaternion_from_yaw(0.0);
+  behavior_signal_info.required_end_point.position = create_point(50.0, 0.0, 0.0);
+  behavior_signal_info.required_end_point.orientation = create_quaternion_from_yaw(0.0);
 
   // current pose on the behavior desired start
   {
@@ -231,25 +231,25 @@ TEST(BehaviorPathPlanningTurnSignal, Condition2)
 
   TurnSignalInfo intersection_signal_info;
   intersection_signal_info.turn_signal.command = TurnIndicatorsCommand::ENABLE_LEFT;
-  intersection_signal_info.desired_start_point.position = createPoint(0.0, 0.0, 0.0);
-  intersection_signal_info.desired_start_point.orientation = createQuaternionFromYaw(0.0);
-  intersection_signal_info.desired_end_point.position = createPoint(65.0, 0.0, 0.0);
-  intersection_signal_info.desired_end_point.orientation = createQuaternionFromYaw(0.0);
-  intersection_signal_info.required_start_point.position = createPoint(35.0, 0.0, 0.0);
-  intersection_signal_info.required_start_point.orientation = createQuaternionFromYaw(0.0);
-  intersection_signal_info.required_end_point.position = createPoint(50.0, 0.0, 0.0);
-  intersection_signal_info.required_end_point.orientation = createQuaternionFromYaw(0.0);
+  intersection_signal_info.desired_start_point.position = create_point(0.0, 0.0, 0.0);
+  intersection_signal_info.desired_start_point.orientation = create_quaternion_from_yaw(0.0);
+  intersection_signal_info.desired_end_point.position = create_point(65.0, 0.0, 0.0);
+  intersection_signal_info.desired_end_point.orientation = create_quaternion_from_yaw(0.0);
+  intersection_signal_info.required_start_point.position = create_point(35.0, 0.0, 0.0);
+  intersection_signal_info.required_start_point.orientation = create_quaternion_from_yaw(0.0);
+  intersection_signal_info.required_end_point.position = create_point(50.0, 0.0, 0.0);
+  intersection_signal_info.required_end_point.orientation = create_quaternion_from_yaw(0.0);
 
   TurnSignalInfo behavior_signal_info;
   behavior_signal_info.turn_signal.command = TurnIndicatorsCommand::ENABLE_RIGHT;
-  behavior_signal_info.desired_start_point.position = createPoint(5.0, 0.0, 0.0);
-  behavior_signal_info.desired_start_point.orientation = createQuaternionFromYaw(0.0);
-  behavior_signal_info.desired_end_point.position = createPoint(70.0, 0.0, 0.0);
-  behavior_signal_info.desired_end_point.orientation = createQuaternionFromYaw(0.0);
-  behavior_signal_info.required_start_point.position = createPoint(40.0, 0.0, 0.0);
-  behavior_signal_info.required_start_point.orientation = createQuaternionFromYaw(0.0);
-  behavior_signal_info.required_end_point.position = createPoint(45.0, 0.0, 0.0);
-  behavior_signal_info.required_end_point.orientation = createQuaternionFromYaw(0.0);
+  behavior_signal_info.desired_start_point.position = create_point(5.0, 0.0, 0.0);
+  behavior_signal_info.desired_start_point.orientation = create_quaternion_from_yaw(0.0);
+  behavior_signal_info.desired_end_point.position = create_point(70.0, 0.0, 0.0);
+  behavior_signal_info.desired_end_point.orientation = create_quaternion_from_yaw(0.0);
+  behavior_signal_info.required_start_point.position = create_point(40.0, 0.0, 0.0);
+  behavior_signal_info.required_start_point.orientation = create_quaternion_from_yaw(0.0);
+  behavior_signal_info.required_end_point.position = create_point(45.0, 0.0, 0.0);
+  behavior_signal_info.required_end_point.orientation = create_quaternion_from_yaw(0.0);
 
   // current pose on the behavior desired start
   {
@@ -344,25 +344,25 @@ TEST(BehaviorPathPlanningTurnSignal, Condition3)
 
   TurnSignalInfo intersection_signal_info;
   intersection_signal_info.turn_signal.command = TurnIndicatorsCommand::ENABLE_LEFT;
-  intersection_signal_info.desired_start_point.position = createPoint(0.0, 0.0, 0.0);
-  intersection_signal_info.desired_start_point.orientation = createQuaternionFromYaw(0.0);
-  intersection_signal_info.desired_end_point.position = createPoint(65.0, 0.0, 0.0);
-  intersection_signal_info.desired_end_point.orientation = createQuaternionFromYaw(0.0);
-  intersection_signal_info.required_start_point.position = createPoint(35.0, 0.0, 0.0);
-  intersection_signal_info.required_start_point.orientation = createQuaternionFromYaw(0.0);
-  intersection_signal_info.required_end_point.position = createPoint(50.0, 0.0, 0.0);
-  intersection_signal_info.required_end_point.orientation = createQuaternionFromYaw(0.0);
+  intersection_signal_info.desired_start_point.position = create_point(0.0, 0.0, 0.0);
+  intersection_signal_info.desired_start_point.orientation = create_quaternion_from_yaw(0.0);
+  intersection_signal_info.desired_end_point.position = create_point(65.0, 0.0, 0.0);
+  intersection_signal_info.desired_end_point.orientation = create_quaternion_from_yaw(0.0);
+  intersection_signal_info.required_start_point.position = create_point(35.0, 0.0, 0.0);
+  intersection_signal_info.required_start_point.orientation = create_quaternion_from_yaw(0.0);
+  intersection_signal_info.required_end_point.position = create_point(50.0, 0.0, 0.0);
+  intersection_signal_info.required_end_point.orientation = create_quaternion_from_yaw(0.0);
 
   TurnSignalInfo behavior_signal_info;
   behavior_signal_info.turn_signal.command = TurnIndicatorsCommand::ENABLE_RIGHT;
-  behavior_signal_info.desired_start_point.position = createPoint(5.0, 0.0, 0.0);
-  behavior_signal_info.desired_start_point.orientation = createQuaternionFromYaw(0.0);
-  behavior_signal_info.desired_end_point.position = createPoint(70.0, 0.0, 0.0);
-  behavior_signal_info.desired_end_point.orientation = createQuaternionFromYaw(0.0);
-  behavior_signal_info.required_start_point.position = createPoint(30.0, 0.0, 0.0);
-  behavior_signal_info.required_start_point.orientation = createQuaternionFromYaw(0.0);
-  behavior_signal_info.required_end_point.position = createPoint(45.0, 0.0, 0.0);
-  behavior_signal_info.required_end_point.orientation = createQuaternionFromYaw(0.0);
+  behavior_signal_info.desired_start_point.position = create_point(5.0, 0.0, 0.0);
+  behavior_signal_info.desired_start_point.orientation = create_quaternion_from_yaw(0.0);
+  behavior_signal_info.desired_end_point.position = create_point(70.0, 0.0, 0.0);
+  behavior_signal_info.desired_end_point.orientation = create_quaternion_from_yaw(0.0);
+  behavior_signal_info.required_start_point.position = create_point(30.0, 0.0, 0.0);
+  behavior_signal_info.required_start_point.orientation = create_quaternion_from_yaw(0.0);
+  behavior_signal_info.required_end_point.position = create_point(45.0, 0.0, 0.0);
+  behavior_signal_info.required_end_point.orientation = create_quaternion_from_yaw(0.0);
 
   // current pose on the behavior desired start
   {

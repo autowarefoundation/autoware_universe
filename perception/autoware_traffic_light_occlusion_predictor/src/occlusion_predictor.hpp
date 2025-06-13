@@ -16,8 +16,8 @@
 #ifndef OCCLUSION_PREDICTOR_HPP_
 #define OCCLUSION_PREDICTOR_HPP_
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/pcl_conversion.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/pcl_conversion.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 

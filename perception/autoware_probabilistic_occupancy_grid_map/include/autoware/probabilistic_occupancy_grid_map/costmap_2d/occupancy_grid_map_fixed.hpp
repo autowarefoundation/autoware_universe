@@ -16,6 +16,7 @@
 #define AUTOWARE__PROBABILISTIC_OCCUPANCY_GRID_MAP__COSTMAP_2D__OCCUPANCY_GRID_MAP_FIXED_HPP_
 
 #include "autoware/probabilistic_occupancy_grid_map/costmap_2d/occupancy_grid_map_base.hpp"
+#include "autoware/probabilistic_occupancy_grid_map/utils/cuda_pointcloud.hpp"
 
 namespace autoware::occupancy_grid_map
 {
@@ -28,21 +29,20 @@ class OccupancyGridMapFixedBlindSpot : public OccupancyGridMapInterface
 {
 public:
   OccupancyGridMapFixedBlindSpot(
-    const unsigned int cells_size_x, const unsigned int cells_size_y, const float resolution);
+    const bool use_cuda, const unsigned int cells_size_x, const unsigned int cells_size_y,
+    const float resolution);
 
   void updateWithPointCloud(
-    const PointCloud2 & raw_pointcloud, const PointCloud2 & obstacle_pointcloud,
+    const CudaPointCloud2 & raw_pointcloud, const CudaPointCloud2 & obstacle_pointcloud,
     const Pose & robot_pose, const Pose & scan_origin) override;
-
-  using OccupancyGridMapInterface::raytrace;
-  using OccupancyGridMapInterface::setCellValue;
-  using OccupancyGridMapInterface::setFieldOffsets;
-  using OccupancyGridMapInterface::updateOrigin;
 
   void initRosParam(rclcpp::Node & node) override;
 
-private:
+protected:
   double distance_margin_;
+
+  autoware::cuda_utils::CudaUniquePtr<std::uint64_t[]> raw_points_tensor_;
+  autoware::cuda_utils::CudaUniquePtr<std::uint64_t[]> obstacle_points_tensor_;
 };
 
 }  // namespace costmap_2d

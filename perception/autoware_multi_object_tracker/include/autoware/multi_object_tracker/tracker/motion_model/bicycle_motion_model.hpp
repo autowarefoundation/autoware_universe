@@ -94,6 +94,10 @@ public:
     const double & x, const double & y, const double & yaw,
     const std::array<double, 36> & pose_cov);
 
+  bool updateStatePoseVel(
+    const double & x, const double & y, const std::array<double, 36> & pose_cov, const double & vel,
+    const std::array<double, 36> & twist_cov);
+
   bool updateStatePoseHeadVel(
     const double & x, const double & y, const double & yaw, const std::array<double, 36> & pose_cov,
     const double & vel, const std::array<double, 36> & twist_cov);

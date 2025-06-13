@@ -38,15 +38,9 @@ public:
   /**
    * @brief Push a virtual wall
    * @param pose pose of the virtual wall
+   * @param msg message to be displayed
    */
-  void push_virtual_wall(const geometry_msgs::msg::Pose & pose);
-
-  /**
-   * @brief Push a warning message
-   * @param pose pose of the warning message
-   * @param msg warning message
-   */
-  void push_warning_msg(const geometry_msgs::msg::Pose & pose, const std::string & msg);
+  void push_virtual_wall(const geometry_msgs::msg::Pose & pose, const std::string & msg);
 
   /**
    * @brief Publish markers

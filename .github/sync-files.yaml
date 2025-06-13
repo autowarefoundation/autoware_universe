@@ -9,7 +9,6 @@
       dest: .github/pull_request_template.md
     - source: .github/stale.yml
     - source: .github/workflows/cancel-previous-workflows.yaml
-    - source: .github/workflows/check-build-depends.yaml
     - source: .github/workflows/clang-tidy-pr-comments.yaml
     - source: .github/workflows/clang-tidy-pr-comments-manually.yaml
     - source: .github/workflows/comment-on-pr.yaml
@@ -47,8 +46,8 @@
       dest: mkdocs.yaml
       pre-commands: |
         sd "Autoware Documentation" "Autoware Universe Documentation" {source}
-        sd "autoware-documentation" "autoware.universe" {source}
-        sd "repo_url: .*" "repo_url: https://github.com/autowarefoundation/autoware.universe" {source}
+        sd "autoware-documentation" "autoware_universe" {source}
+        sd "repo_url: .*" "repo_url: https://github.com/autowarefoundation/autoware_universe" {source}
         sd "/edit/main/docs/" "/edit/main/" {source}
         sd "docs_dir: .*" "docs_dir: ." {source}
         sd "assets/(\w+)" "docs/assets/\$1" {source}

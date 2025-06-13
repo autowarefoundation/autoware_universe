@@ -16,6 +16,9 @@ endif()
 
 # Build non-CUDA dependent nodes
 ament_auto_add_library(${PROJECT_NAME} SHARED
+  src/camera_projection.cpp
+  src/fusion_collector.cpp
+  src/fusion_matching_strategy.cpp
   src/fusion_node.cpp
   src/debugger.cpp
   src/utils/geometry.cpp

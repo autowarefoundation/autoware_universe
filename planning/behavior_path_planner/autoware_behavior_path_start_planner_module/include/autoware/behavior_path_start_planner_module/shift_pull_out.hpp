@@ -17,35 +17,37 @@
 
 #include "autoware/behavior_path_start_planner_module/pull_out_path.hpp"
 #include "autoware/behavior_path_start_planner_module/pull_out_planner_base.hpp"
-#include "autoware/universe_utils/system/time_keeper.hpp"
+#include "autoware_utils/system/time_keeper.hpp"
 
-#include <autoware/lane_departure_checker/lane_departure_checker.hpp>
+#include <autoware/boundary_departure_checker/boundary_departure_checker.hpp>
 
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <memory>
 #include <vector>
 
 namespace autoware::behavior_path_planner
 {
-using autoware::lane_departure_checker::LaneDepartureChecker;
+using autoware::boundary_departure_checker::BoundaryDepartureChecker;
 
 class ShiftPullOut : public PullOutPlannerBase
 {
 public:
   explicit ShiftPullOut(
     rclcpp::Node & node, const StartPlannerParameters & parameters,
-    std::shared_ptr<LaneDepartureChecker> & lane_departure_checker,
-    std::shared_ptr<universe_utils::TimeKeeper> time_keeper);
+    std::shared_ptr<autoware_utils::TimeKeeper> time_keeper =
+      std::make_shared<autoware_utils::TimeKeeper>());
 
   PlannerType getPlannerType() const override { return PlannerType::SHIFT; };
   std::optional<PullOutPath> plan(
     const Pose & start_pose, const Pose & goal_pose,
+    const std::shared_ptr<const PlannerData> & planner_data,
     PlannerDebugData & planner_debug_data) override;
 
   std::vector<PullOutPath> calcPullOutPaths(
     const RouteHandler & route_handler, const lanelet::ConstLanelets & road_lanes,
-    const Pose & start_pose, const Pose & goal_pose);
+    const Pose & start_pose, const Pose & goal_pose,
+    const BehaviorPathPlannerParameters & behavior_path_parameters);
 
   double calcBeforeShiftedArcLength(
     const PathWithLaneId & path, const double target_after_arc_length, const double dr);
@@ -54,7 +56,9 @@ public:
     ShiftedPath & shifted_path, const Pose & start_pose, const Pose & end_pose,
     const double longitudinal_acc, const double lateral_acc);
 
-  std::shared_ptr<LaneDepartureChecker> lane_departure_checker_;
+  std::shared_ptr<BoundaryDepartureChecker> boundary_departure_checker_;
+
+  friend class TestShiftPullOut;
 
 private:
   // Calculate longitudinal distance based on the acceleration limit, curvature limit, and the

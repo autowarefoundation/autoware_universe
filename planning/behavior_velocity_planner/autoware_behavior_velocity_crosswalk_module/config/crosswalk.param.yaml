@@ -13,11 +13,9 @@
 
         # For the Lanelet2 map with no explicit stop lines
         stop_distance_from_crosswalk: 3.5 # [m] make stop line away from crosswalk
-        # For the case where the crosswalk width is very wide
-        far_object_threshold: 10.0 # [m] If objects cross X meters behind the stop line, the stop position is determined according to the object position (stop_distance_from_object meters before the object).
         # For the case where the stop position is determined according to the object position.
         stop_distance_from_object_preferred: 3.0 # [m]
-        stop_distance_from_object_limit: 3.0 # [m]
+        stop_distance_from_crosswalk_limit: 3.0 # [m]
         min_acc_preferred: -1.0 # min acceleration [m/ss]
         min_jerk_preferred: -1.0 # min jerk [m/sss]
 
@@ -29,10 +27,10 @@
         no_relax_velocity: 2.78 # [m/s] if the current velocity is less than X m/s, ego always stops at the stop position(not relax deceleration constraints 2.78 m/s = 10 kmph)
 
       # params to prevent stopping on crosswalks due to another vehicle ahead
-      stuck_vehicle:
-        enable_stuck_check_in_intersection: false # [-] flag to enable stuck vehicle checking for crosswalk which is in intersection
-        stuck_vehicle_velocity: 1.0 # [m/s] threshold velocity whether other vehicles are assumed to be stuck or not.
-        max_stuck_vehicle_lateral_offset: 2.0 # [m] The feature does not handle the vehicles farther than this value to the ego's path.
+      obstruction_prevention:
+        enable_obstruction_prevention: false # [-] flag to enable obstruction prevention checking for crosswalk which is in intersection
+        target_vehicle_velocity: 1.0 # [m/s] threshold velocity whether other vehicles are assumed to be stuck or not.
+        max_target_vehicle_lateral_offset: 2.0 # [m] The feature does not handle the vehicles farther than this value to the ego's path.
         required_clearance: 6.0 # [m] clearance to be secured between the ego and the ahead vehicle
         min_acc: -1.0 # min acceleration [m/ss]
         min_jerk: -1.0 # min jerk [m/sss]
@@ -48,10 +46,12 @@
         ego_pass_later_additional_margin: 0.5 # [s] additional time margin for object pass first situation to suppress chattering
         ego_min_assumed_speed: 2.0 # [m/s] assumed speed to calculate the time to collision point
 
-        no_stop_decision: # parameters to determine stop cancel. {-$overrun_threshold_length + f($min_acc, $min_jerk)} is compared against distance to stop pose.
+        consider_obj_on_crosswalk_on_red_light: true # consider and do not ignore objects if they are on the crosswalk when the crosswalk pedestrian traffic light is red
+
+        no_stop_decision: # parameters to determine stop cancel. the distance f($min_acc, $min_jerk) is compared against min(distance to stop pose, 0.1).
+          enable_no_stop_decision: true
           min_acc: -1.5 # min acceleration [m/ss]
           min_jerk: -1.5 # min jerk [m/sss]
-          overrun_threshold_length: 1.0 # [m] required to avoid giving up against backward movement of the stop position due to approaching pedestrians, etc.
 
         stop_object_velocity_threshold: 0.25 # [m/s] velocity threshold for the module to judge whether the objects is stopped (0.28 m/s = 1.0 kmph)
         min_object_velocity: 1.39 # [m/s] minimum object velocity (compare the estimated velocity by perception module with this parameter and adopt the larger one to calculate TTV. 1.39 m/s = 5.0 kmph)
@@ -93,3 +93,12 @@
           custom_labels: ["PEDESTRIAN"]  # labels for which to define a non-default velocity threshold (see autoware_perception_msgs::msg::ObjectClassification for all the labels)
           custom_thresholds: [0.0]  # velocities of the custom labels
         extra_predicted_objects_size: 0.5  # [m] extra size added to the objects for masking the occlusions
+
+      # param for parked vehicles stop
+      parked_vehicles_stop:
+        enable: false # if true, ego will stop if there are parked vehicles before the crosswalk
+        search_distance: 10.0  # [m] distance ahead of the crosswalk where to search for parked vehicles
+        min_ego_stop_duration: 1.0  # [s] minimum duration ego should stop before it can continue
+        vehicle_permanence_duration: 0.5  # [s] if an object disappears or is no longer classified as parked vehicle, its last state is still used for this duration
+        ego_inside_safe_area_margin: 0.3  # [m] margin used to consider if ego is inside the search area. Should be higher than the expected longitudinal error when stopping.
+        parked_velocity_threshold: 0.5  # [m/s] vehicle are considered to be parked if their velocity is less or equal this threshold

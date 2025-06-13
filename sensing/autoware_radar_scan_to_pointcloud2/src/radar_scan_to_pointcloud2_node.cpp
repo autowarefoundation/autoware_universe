@@ -106,19 +106,23 @@ RadarScanToPointcloud2Node::RadarScanToPointcloud2Node(const rclcpp::NodeOptions
   node_param_.publish_amplitude_pointcloud =
     declare_parameter<bool>("publish_amplitude_pointcloud");
   node_param_.publish_doppler_pointcloud = declare_parameter<bool>("publish_doppler_pointcloud");
+  node_param_.max_queue_size = declare_parameter<int64_t>("max_queue_size");
 
   // Subscriber
   sub_radar_ = create_subscription<RadarScan>(
-    "~/input/radar", rclcpp::QoS{1}, std::bind(&RadarScanToPointcloud2Node::onData, this, _1));
+    "~/input/radar", rclcpp::SensorDataQoS().keep_last(node_param_.max_queue_size),
+    std::bind(&RadarScanToPointcloud2Node::onData, this, _1));
 
   {
     rclcpp::PublisherOptions pub_options;
     pub_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
     // Publisher
-    pub_amplitude_pointcloud_ =
-      create_publisher<PointCloud2>("~/output/amplitude_pointcloud", 1, pub_options);
-    pub_doppler_pointcloud_ =
-      create_publisher<PointCloud2>("~/output/doppler_pointcloud", 1, pub_options);
+    pub_amplitude_pointcloud_ = create_publisher<PointCloud2>(
+      "~/output/amplitude_pointcloud",
+      rclcpp::SensorDataQoS().keep_last(node_param_.max_queue_size), pub_options);
+    pub_doppler_pointcloud_ = create_publisher<PointCloud2>(
+      "~/output/doppler_pointcloud", rclcpp::SensorDataQoS().keep_last(node_param_.max_queue_size),
+      pub_options);
   }
 }
 
@@ -131,6 +135,7 @@ rcl_interfaces::msg::SetParametersResult RadarScanToPointcloud2Node::onSetParam(
     auto & p = node_param_;
     update_param(params, "publish_amplitude_pointcloud", p.publish_amplitude_pointcloud);
     update_param(params, "publish_doppler_pointcloud", p.publish_doppler_pointcloud);
+    update_param(params, "max_queue_size", p.max_queue_size);
   } catch (const rclcpp::exceptions::InvalidParameterTypeException & e) {
     result.successful = false;
     result.reason = e.what();

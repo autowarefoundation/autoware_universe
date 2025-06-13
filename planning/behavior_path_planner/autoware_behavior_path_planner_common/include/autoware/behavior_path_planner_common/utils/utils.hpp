@@ -19,8 +19,10 @@
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
 #include <autoware/route_handler/route_handler.hpp>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 
+#include <autoware_internal_planning_msgs/msg/path_point_with_lane_id.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/object_classification.hpp>
 #include <autoware_perception_msgs/msg/predicted_object.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
@@ -29,8 +31,6 @@
 #include <geometry_msgs/msg/point.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
-#include <tier4_planning_msgs/msg/path_point_with_lane_id.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <lanelet2_core/Forward.h>
 
@@ -47,13 +47,13 @@ using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_perception_msgs::msg::PredictedPath;
 
 using autoware::route_handler::RouteHandler;
-using autoware::universe_utils::LinearRing2d;
-using autoware::universe_utils::Polygon2d;
+using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
+using autoware_utils::LinearRing2d;
+using autoware_utils::Polygon2d;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::Vector3;
-using tier4_planning_msgs::msg::PathPointWithLaneId;
-using tier4_planning_msgs::msg::PathWithLaneId;
 
 static constexpr double eps = 0.01;
 
@@ -178,7 +178,7 @@ bool checkCollisionWithExtraStoppingMargin(
  * @return Has collision or not
  */
 bool checkCollisionBetweenPathFootprintsAndObjects(
-  const autoware::universe_utils::LinearRing2d & vehicle_footprint, const PathWithLaneId & ego_path,
+  const autoware_utils::LinearRing2d & vehicle_footprint, const PathWithLaneId & ego_path,
   const PredictedObjects & dynamic_objects, const double margin);
 
 /**
@@ -186,7 +186,7 @@ bool checkCollisionBetweenPathFootprintsAndObjects(
  * @return Has collision or not
  */
 bool checkCollisionBetweenFootprintAndObjects(
-  const autoware::universe_utils::LinearRing2d & vehicle_footprint, const Pose & ego_pose,
+  const autoware_utils::LinearRing2d & vehicle_footprint, const Pose & ego_pose,
   const PredictedObjects & dynamic_objects, const double margin);
 
 /**

@@ -65,7 +65,7 @@ DualReturnOutlierFilterComponent::DualReturnOutlierFilterComponent(
 
   image_pub_ =
     image_transport::create_publisher(this, "dual_return_outlier_filter/debug/frequency_image");
-  visibility_pub_ = create_publisher<tier4_debug_msgs::msg::Float32Stamped>(
+  visibility_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
     "dual_return_outlier_filter/debug/visibility", rclcpp::SensorDataQoS());
   {
     rclcpp::PublisherOptions pub_options;
@@ -75,7 +75,7 @@ DualReturnOutlierFilterComponent::DualReturnOutlierFilterComponent(
   }
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&DualReturnOutlierFilterComponent::paramCallback, this, _1));
+    std::bind(&DualReturnOutlierFilterComponent::param_callback, this, _1));
 }
 
 void DualReturnOutlierFilterComponent::onVisibilityChecker(DiagnosticStatusWrapper & stat)
@@ -322,7 +322,7 @@ void DualReturnOutlierFilterComponent::filter(
   frequency_image_msg->header = input->header;
   // Publish histogram image
   image_pub_.publish(frequency_image_msg);
-  tier4_debug_msgs::msg::Float32Stamped visibility_msg;
+  autoware_internal_debug_msgs::msg::Float32Stamped visibility_msg;
   visibility_msg.data = (1.0f - filled);
   visibility_msg.stamp = now();
   visibility_pub_->publish(visibility_msg);
@@ -338,7 +338,7 @@ void DualReturnOutlierFilterComponent::filter(
   output.header = input->header;
 }
 
-rcl_interfaces::msg::SetParametersResult DualReturnOutlierFilterComponent::paramCallback(
+rcl_interfaces::msg::SetParametersResult DualReturnOutlierFilterComponent::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);

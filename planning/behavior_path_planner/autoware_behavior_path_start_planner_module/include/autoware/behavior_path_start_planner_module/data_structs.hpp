@@ -26,7 +26,6 @@
 
 #include <string>
 #include <vector>
-
 namespace autoware::behavior_path_planner
 {
 
@@ -51,29 +50,34 @@ struct PlannerDebugData
 {
 public:
   PlannerType planner_type;
-  std::vector<std::string> conditions_evaluation;
-  double required_margin{0.0};
   double backward_distance{0.0};
+  double required_margin{0.0};
+  std::vector<std::string> conditions_evaluation;
 
-  auto header_str() const
+  static std::string double_to_str(double value, int precision = 1)
   {
-    std::stringstream ss;
-    ss << std::left << std::setw(20) << "| Planner type " << std::setw(20) << "| Required margin "
-       << std::setw(20) << "| Backward distance " << std::setw(25) << "| Condition evaluation |"
-       << "\n";
-    return ss.str();
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(precision) << value;
+    return oss.str();
   }
 
-  auto str() const
+  static std::string to_planner_type_name(PlannerType pt)
   {
-    std::stringstream ss;
-    for (const auto & result : conditions_evaluation) {
-      ss << std::left << std::setw(23) << magic_enum::enum_name(planner_type) << std::setw(23)
-         << (std::to_string(required_margin) + "[m]") << std::setw(23)
-         << (std::to_string(backward_distance) + "[m]") << std::setw(25) << result << "\n";
+    // Adding whitespace for column width alignment in RViz display
+    switch (pt) {
+      case PlannerType::NONE:
+        return "NONE                  ";
+      case PlannerType::SHIFT:
+        return "SHIFT               ";
+      case PlannerType::GEOMETRIC:
+        return "GEOMETRIC   ";
+      case PlannerType::STOP:
+        return "STOP                  ";
+      case PlannerType::FREESPACE:
+        return "FREESPACE   ";
+      default:
+        return "UNKNOWN";
     }
-    ss << std::setw(40);
-    return ss.str();
   }
 };
 struct StartPlannerDebugData
@@ -97,6 +101,7 @@ struct StartPlannerDebugData
 
 struct StartPlannerParameters
 {
+  static StartPlannerParameters init(rclcpp::Node & node);
   double th_arrived_distance{0.0};
   double th_stopped_velocity{0.0};
   double th_stopped_time{0.0};

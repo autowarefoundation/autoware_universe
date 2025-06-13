@@ -77,10 +77,10 @@ struct GoalPlannerParameters
   int obstacle_threshold{0};
 
   // object recognition
-  bool use_object_recognition{false};
   std::vector<double> object_recognition_collision_check_soft_margins{};
   std::vector<double> object_recognition_collision_check_hard_margins{};
   double object_recognition_collision_check_max_extra_stopping_margin{0.0};
+  double collision_check_outer_margin_factor{0.0};
   double th_moving_object_velocity{0.0};
   double detection_bound_offset{0.0};
   double outer_road_detection_offset{0.0};
@@ -88,6 +88,7 @@ struct GoalPlannerParameters
 
   // pull over general params
   double pull_over_minimum_request_length{0.0};
+  double pull_over_prepare_length{0.0};
   double pull_over_velocity{0.0};
   double pull_over_minimum_velocity{0.0};
   double decide_path_distance{0.0};
@@ -119,12 +120,21 @@ struct GoalPlannerParameters
   AstarParam astar_parameters{};
   RRTStarParam rrt_star_parameters{};
 
+  struct BezierParking
+  {
+    double pull_over_angle_threshold;
+    double after_shift_straight_distance;
+  } bezier_parking;
+
   // stop condition
   double maximum_deceleration_for_stop{0.0};
   double maximum_jerk_for_stop{0.0};
 
   // hysteresis parameter
   double hysteresis_factor_expand_rate{0.0};
+
+  // path decision state controller
+  double check_collision_duration{1.0};  // Duration to check collision before deciding path
 
   // path safety checker
   utils::path_safety_checker::EgoPredictedPathParams ego_predicted_path_params{};

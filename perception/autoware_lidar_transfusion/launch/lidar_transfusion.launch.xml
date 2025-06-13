@@ -8,6 +8,7 @@
   <arg name="model_param_path" default="$(find-pkg-share autoware_lidar_transfusion)/config/$(var model_name).param.yaml"/>
   <arg name="ml_package_param_path" default="$(var model_path)/$(var model_name)_ml_package.param.yaml"/>
   <arg name="class_remapper_param_path" default="$(find-pkg-share autoware_lidar_transfusion)/config/detection_class_remapper.param.yaml"/>
+  <arg name="common_param_path" default="$(find-pkg-share autoware_lidar_transfusion)/config/transfusion_common.param.yaml"/>
   <arg name="build_only" default="false" description="shutdown node after TensorRT engine file is built"/>
   <arg name="log_level" default="info"/>
 
@@ -18,12 +19,14 @@
     <load_composable_node target="$(var pointcloud_container_name)">
       <composable_node pkg="autoware_lidar_transfusion" plugin="autoware::lidar_transfusion::LidarTransfusionNode" name="lidar_transfusion">
         <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+        <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda"/>
         <remap from="~/output/objects" to="$(var output/objects)"/>
         <param from="$(var model_param_path)" allow_substs="true"/>
         <param from="$(var ml_package_param_path)" allow_substs="true"/>
         <param from="$(var class_remapper_param_path)"/>
+        <param from="$(var common_param_path)"/>
 
-        <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware.universe/pull/6167 -->
+        <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware_universe/pull/6167 -->
         <param name="build_only" value="$(var build_only)"/>
       </composable_node>
     </load_composable_node>
@@ -31,12 +34,14 @@
   <group unless="$(var use_pointcloud_container)">
     <node pkg="autoware_lidar_transfusion" exec="autoware_lidar_transfusion_node" name="lidar_transfusion" output="screen" args="--ros-args --log-level $(var log_level)">
       <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+      <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda"/>
       <remap from="~/output/objects" to="$(var output/objects)"/>
       <param from="$(var model_param_path)" allow_substs="true"/>
       <param from="$(var ml_package_param_path)" allow_substs="true"/>
       <param from="$(var class_remapper_param_path)"/>
+      <param from="$(var common_param_path)"/>
 
-      <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware.universe/pull/6167 -->
+      <!-- This parameter shall NOT be included in param file. See also: https://github.com/autowarefoundation/autoware_universe/pull/6167 -->
       <param name="build_only" value="$(var build_only)"/>
     </node>
   </group>

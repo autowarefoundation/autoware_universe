@@ -1,13 +1,21 @@
 /**:
   ros__parameters:
     lane_change:
+      time_limit: 50.0 # [ms]
       backward_lane_length: 200.0
       backward_length_buffer_for_end_of_lane: 3.0 # [m]
       backward_length_buffer_for_blocking_object: 3.0 # [m]
       backward_length_from_intersection: 5.0 # [m]
+      enable_stopped_vehicle_buffer: true
 
       # turn signal
       min_length_for_turn_signal_activation: 10.0 # [m]
+
+      # terminal path
+      terminal_path:
+        enable: true
+        disable_near_goal: true
+        stop_at_boundary: false
 
       # trajectory generation
       trajectory:
@@ -22,6 +30,7 @@
         lon_acc_sampling_num: 5
         lat_acc_sampling_num: 3
         lane_changing_decel_factor: 0.5
+        th_prepare_curvature: 0.03 # [/]
 
       # delay lane change
       delay_lane_change:
@@ -29,6 +38,12 @@
         check_only_parked_vehicle: false
         min_road_shoulder_width: 0.5  # [m]
         th_parked_vehicle_shift_ratio: 0.6
+
+      # trajectory generation near terminal using frenet planner
+      frenet:
+        enable: true
+        th_yaw_diff: 10.0  # [deg]
+        th_curvature_smoothing: 0.1 # [/]
 
       # safety check
       safety_check:
@@ -43,6 +58,7 @@
           lateral_distance_max_threshold: 2.0
           longitudinal_distance_min_threshold: 3.0
           longitudinal_velocity_delta_time: 0.0
+          extended_polygon_policy: "rectangle"
         parked:
           expected_front_deceleration: -1.0
           expected_rear_deceleration: -2.0
@@ -51,6 +67,7 @@
           lateral_distance_max_threshold: 1.0
           longitudinal_distance_min_threshold: 3.0
           longitudinal_velocity_delta_time: 0.0
+          extended_polygon_policy: "rectangle"
         cancel:
           expected_front_deceleration: -1.0
           expected_rear_deceleration: -2.0
@@ -59,6 +76,7 @@
           lateral_distance_max_threshold: 1.0
           longitudinal_distance_min_threshold: 2.5
           longitudinal_velocity_delta_time: 0.0
+          extended_polygon_policy: "rectangle"
         stuck:
           expected_front_deceleration: -1.0
           expected_rear_deceleration: -1.0
@@ -67,6 +85,7 @@
           lateral_distance_max_threshold: 2.0
           longitudinal_distance_min_threshold: 3.0
           longitudinal_velocity_delta_time: 0.0
+          extended_polygon_policy: "rectangle"
 
         # lane expansion for object filtering
         lane_expansion:
@@ -108,7 +127,8 @@
           intersection: true
           turns: true
         prediction_time_resolution: 0.5
-        yaw_diff_threshold: 3.1416
+        th_incoming_object_yaw: 2.3562 # [rad]
+        yaw_diff_threshold: 3.1416 # [rad]
         check_current_lanes: false
         check_other_lanes: false
         use_all_predicted_paths: false

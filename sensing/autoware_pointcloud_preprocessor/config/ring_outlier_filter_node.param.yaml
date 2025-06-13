@@ -1,8 +1,7 @@
 /**:
   ros__parameters:
     distance_ratio: 1.03
-    object_length_threshold: 0.1
-    num_points_threshold: 4
+    object_length_threshold: 0.05
     max_rings_num: 128
     max_points_num_per_ring: 4000
     publish_outlier_pointcloud: false
@@ -12,3 +11,4 @@
     vertical_bins: 128
     horizontal_bins: 36
     noise_threshold: 2
+    processing_time_threshold_sec: 0.01

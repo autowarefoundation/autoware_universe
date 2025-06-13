@@ -19,10 +19,12 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__PEDESTRIAN_AND_BICYCLE_TRACKER_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__PEDESTRIAN_AND_BICYCLE_TRACKER_HPP_
 
-#include "autoware/kalman_filter/kalman_filter.hpp"
-#include "autoware/multi_object_tracker/tracker/model/bicycle_tracker.hpp"
+#include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/pedestrian_tracker.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
+#include "autoware/multi_object_tracker/tracker/model/vehicle_tracker.hpp"
+
+#include <autoware/kalman_filter/kalman_filter.hpp>
 
 namespace autoware::multi_object_tracker
 {
@@ -31,21 +33,16 @@ class PedestrianAndBicycleTracker : public Tracker
 {
 private:
   PedestrianTracker pedestrian_tracker_;
-  BicycleTracker bicycle_tracker_;
+  VehicleTracker bicycle_tracker_;
 
 public:
-  PedestrianAndBicycleTracker(
-    const rclcpp::Time & time, const autoware_perception_msgs::msg::DetectedObject & object,
-    const geometry_msgs::msg::Transform & self_transform, const size_t channel_size,
-    const uint & channel_index);
+  PedestrianAndBicycleTracker(const rclcpp::Time & time, const types::DynamicObject & object);
 
   bool predict(const rclcpp::Time & time) override;
   bool measure(
-    const autoware_perception_msgs::msg::DetectedObject & object, const rclcpp::Time & time,
-    const geometry_msgs::msg::Transform & self_transform) override;
-  bool getTrackedObject(
-    const rclcpp::Time & time,
-    autoware_perception_msgs::msg::TrackedObject & object) const override;
+    const types::DynamicObject & object, const rclcpp::Time & time,
+    const types::InputChannel & channel_info) override;
+  bool getTrackedObject(const rclcpp::Time & time, types::DynamicObject & object) const override;
   virtual ~PedestrianAndBicycleTracker() {}
 };
 

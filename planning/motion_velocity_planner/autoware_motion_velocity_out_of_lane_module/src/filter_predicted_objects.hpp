@@ -20,6 +20,7 @@
 #include <autoware/motion_velocity_planner_common/planner_data.hpp>
 
 #include <optional>
+#include <vector>
 
 namespace autoware::motion_velocity_planner::out_of_lane
 {
@@ -29,13 +30,13 @@ namespace autoware::motion_velocity_planner::out_of_lane
 /// @param [in] object_front_overhang extra distance to cut ahead of the stop line
 void cut_predicted_path_beyond_line(
   autoware_perception_msgs::msg::PredictedPath & predicted_path,
-  const universe_utils::LineString2d & stop_line, const double object_front_overhang);
+  const autoware_utils::LineString2d & stop_line, const double object_front_overhang);
 
 /// @brief find the next red light stop line along the given path
 /// @param [in] path predicted path to check for a stop line
 /// @param [in] ego_data ego data with the stop lines information
 /// @return the first red light stop line found along the path (if any)
-std::optional<universe_utils::LineString2d> find_next_stop_line(
+std::optional<autoware_utils::LineString2d> find_next_stop_line(
   const autoware_perception_msgs::msg::PredictedPath & path, const EgoData & ego_data);
 
 /// @brief cut predicted path beyond stop lines of red lights
@@ -44,6 +45,11 @@ std::optional<universe_utils::LineString2d> find_next_stop_line(
 void cut_predicted_path_beyond_red_lights(
   autoware_perception_msgs::msg::PredictedPath & predicted_path, const EgoData & ego_data,
   const double object_front_overhang);
+
+/// @brief resample the predicted paths such that there are no gaps between successive footprints
+void resample_predicted_paths(
+  std::vector<autoware_perception_msgs::msg::PredictedPath> & predicted_paths,
+  const autoware_perception_msgs::msg::Shape & shape);
 
 /// @brief filter predicted objects and their predicted paths
 /// @param [in] planner_data planner data

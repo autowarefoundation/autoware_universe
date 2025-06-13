@@ -17,7 +17,7 @@
 #include "autoware/interpolation/linear_interpolation.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware/mpc_lateral_controller/mpc_utils.hpp"
-#include "autoware/universe_utils/math/unit_conversion.hpp"
+#include "autoware_utils/math/unit_conversion.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 #include <fmt/format.h>
@@ -31,9 +31,9 @@
 
 namespace autoware::motion::control::mpc_lateral_controller
 {
-using autoware::universe_utils::calcDistance2d;
-using autoware::universe_utils::normalizeRadian;
-using autoware::universe_utils::rad2deg;
+using autoware_utils::calc_distance2d;
+using autoware_utils::normalize_radian;
+using autoware_utils::rad2deg;
 
 MPC::MPC(rclcpp::Node & node)
 {
@@ -301,7 +301,7 @@ std::pair<ResultWithReason, MPCData> MPC::getData(
   // get data
   data.steer = static_cast<double>(current_steer.steering_tire_angle);
   data.lateral_err = MPCUtils::calcLateralError(current_pose, data.nearest_pose);
-  data.yaw_err = normalizeRadian(
+  data.yaw_err = normalize_radian(
     tf2::getYaw(current_pose.orientation) - tf2::getYaw(data.nearest_pose.orientation));
 
   // get predicted steer
@@ -526,7 +526,7 @@ MPCMatrix MPC::generateMPCMatrix(
     // get reference input (feed-forward)
     m_vehicle_model_ptr->setCurvature(ref_smooth_k);
     m_vehicle_model_ptr->calculateReferenceInput(Uref);
-    if (std::fabs(Uref(0, 0)) < autoware::universe_utils::deg2rad(m_param.zero_ff_steer_deg)) {
+    if (std::fabs(Uref(0, 0)) < autoware_utils::deg2rad(m_param.zero_ff_steer_deg)) {
       Uref(0, 0) = 0.0;  // ignore curvature noise
     }
     m.Uref_ex.block(i * DIM_U, 0, DIM_U, 1) = Uref;

@@ -21,6 +21,8 @@
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware/path_optimizer/common_structs.hpp"
 #include "autoware/path_optimizer/type_alias.hpp"
+#include "autoware/path_optimizer/utils/geometry_utils.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 
 #include <Eigen/Core>
 
@@ -34,18 +36,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-
-namespace autoware::universe_utils
-{
-template <>
-geometry_msgs::msg::Point getPoint(const autoware::path_optimizer::ReferencePoint & p);
-
-template <>
-geometry_msgs::msg::Pose getPose(const autoware::path_optimizer::ReferencePoint & p);
-
-template <>
-double getLongitudinalVelocity(const autoware::path_optimizer::ReferencePoint & p);
-}  // namespace autoware::universe_utils
 
 namespace autoware::path_optimizer
 {
@@ -68,7 +58,7 @@ std::optional<size_t> getPointIndexAfter(
   // search forward
   if (sum_length < min_offset) {
     for (size_t i = target_seg_idx + 1; i < points.size(); ++i) {
-      sum_length += autoware::universe_utils::calcDistance2d(points.at(i), points.at(i - 1));
+      sum_length += autoware_utils::calc_distance2d(points.at(i), points.at(i - 1));
       if (min_offset < sum_length) {
         output_idx = i - 1;
       }
@@ -82,7 +72,7 @@ std::optional<size_t> getPointIndexAfter(
   // search backward
   for (size_t i = target_seg_idx; 0 < i;
        --i) {  // NOTE: use size_t since i is always positive value
-    sum_length -= autoware::universe_utils::calcDistance2d(points.at(i), points.at(i - 1));
+    sum_length -= autoware_utils::calc_distance2d(points.at(i), points.at(i - 1));
     if (sum_length < min_offset) {
       output_idx = i - 1;
     }
@@ -98,7 +88,7 @@ template <typename T>
 TrajectoryPoint convertToTrajectoryPoint(const T & point)
 {
   TrajectoryPoint traj_point;
-  traj_point.pose = autoware::universe_utils::getPose(point);
+  traj_point.pose = autoware_utils::get_pose(point);
   traj_point.longitudinal_velocity_mps = point.longitudinal_velocity_mps;
   traj_point.lateral_velocity_mps = point.lateral_velocity_mps;
   traj_point.heading_rate_rps = point.heading_rate_rps;
@@ -106,14 +96,7 @@ TrajectoryPoint convertToTrajectoryPoint(const T & point)
 }
 
 template <>
-inline TrajectoryPoint convertToTrajectoryPoint(const ReferencePoint & ref_point)
-{
-  TrajectoryPoint traj_point;
-  traj_point.pose = autoware::universe_utils::getPose(ref_point);
-  traj_point.longitudinal_velocity_mps =
-    autoware::universe_utils::getLongitudinalVelocity(ref_point);
-  return traj_point;
-}
+TrajectoryPoint convertToTrajectoryPoint(const ReferencePoint & ref_point);
 
 template <typename T>
 std::vector<TrajectoryPoint> convertToTrajectoryPoints(const std::vector<T> & points)
@@ -169,7 +152,7 @@ std::optional<size_t> updateFrontPointForFix(
 {
   // calculate front point to insert in points as a fixed point
   const size_t front_seg_idx_for_fix = trajectory_utils::findEgoSegmentIndex(
-    points_for_fix, autoware::universe_utils::getPose(points.front()), ego_nearest_param);
+    points_for_fix, autoware_utils::get_pose(points.front()), ego_nearest_param);
   const size_t front_point_idx_for_fix = front_seg_idx_for_fix;
   const auto & front_fix_point = points_for_fix.at(front_point_idx_for_fix);
 
@@ -183,7 +166,7 @@ std::optional<size_t> updateFrontPointForFix(
     return std::nullopt;
   }
 
-  const double dist = autoware::universe_utils::calcDistance2d(points.front(), front_fix_point);
+  const double dist = autoware_utils::calc_distance2d(points.front(), front_fix_point);
 
   // check if deviation is not too large
   constexpr double max_lat_error = 3.0;

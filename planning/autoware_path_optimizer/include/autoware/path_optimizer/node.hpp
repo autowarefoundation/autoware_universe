@@ -20,13 +20,15 @@
 #include "autoware/path_optimizer/mpt_optimizer.hpp"
 #include "autoware/path_optimizer/replan_checker.hpp"
 #include "autoware/path_optimizer/type_alias.hpp"
-#include "autoware/universe_utils/ros/logger_level_configure.hpp"
-#include "autoware/universe_utils/ros/polling_subscriber.hpp"
-#include "autoware/universe_utils/system/stop_watch.hpp"
-#include "autoware/universe_utils/system/time_keeper.hpp"
+#include "autoware/path_optimizer/utils/conditional_timer.hpp"
+#include "autoware_utils/ros/logger_level_configure.hpp"
+#include "autoware_utils/ros/polling_subscriber.hpp"
+#include "autoware_utils/system/stop_watch.hpp"
+#include "autoware_utils/system/time_keeper.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 
-#include <autoware/universe_utils/ros/published_time_publisher.hpp>
+#include <autoware_utils/ros/published_time_publisher.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/publisher.hpp>
 
 #include <algorithm>
@@ -67,7 +69,8 @@ protected:  // for the static_centerline_generator package
   // argument variables
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_{};
   mutable std::shared_ptr<DebugData> debug_data_ptr_{nullptr};
-  mutable std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_{nullptr};
+  mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_{nullptr};
+  mutable std::shared_ptr<ConditionalTimer> conditional_timer_{nullptr};
 
   // flags for some functions
   bool enable_pub_debug_marker_;
@@ -76,6 +79,7 @@ protected:  // for the static_centerline_generator package
   bool enable_outside_drivable_area_stop_;
   bool enable_skip_optimization_;
   bool enable_reset_prev_optimization_;
+  bool is_optimization_failed_{false};
   bool use_footprint_polygon_for_outside_drivable_area_check_;
 
   // core algorithms
@@ -92,15 +96,14 @@ protected:  // for the static_centerline_generator package
 
   // interface subscriber
   rclcpp::Subscription<Path>::SharedPtr path_sub_;
-  autoware::universe_utils::InterProcessPollingSubscriber<Odometry> ego_odom_sub_{
-    this, "~/input/odometry"};
+  autoware_utils::InterProcessPollingSubscriber<Odometry> ego_odom_sub_{this, "~/input/odometry"};
 
   // debug publisher
   rclcpp::Publisher<Trajectory>::SharedPtr debug_extended_traj_pub_;
   rclcpp::Publisher<MarkerArray>::SharedPtr debug_markers_pub_;
   rclcpp::Publisher<StringStamped>::SharedPtr debug_calculation_time_str_pub_;
   rclcpp::Publisher<Float64Stamped>::SharedPtr debug_calculation_time_float_pub_;
-  rclcpp::Publisher<autoware::universe_utils::ProcessingTimeDetail>::SharedPtr
+  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
     debug_processing_time_detail_pub_;
 
   // parameter callback
@@ -124,6 +127,7 @@ protected:  // for the static_centerline_generator package
     const std::vector<TrajectoryPoint> & traj_points,
     const std::vector<TrajectoryPoint> & optimized_points) const;
   void publishDebugData(const Header & header) const;
+  void onCheckPathOptimizationValid(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
   // functions in generateOptimizedTrajectory
   std::vector<TrajectoryPoint> optimizeTrajectory(const PlannerData & planner_data);
@@ -141,11 +145,14 @@ protected:  // for the static_centerline_generator package
 private:
   double vehicle_stop_margin_outside_drivable_area_;
 
-  std::unique_ptr<autoware::universe_utils::LoggerLevelConfigure> logger_configure_;
+  std::unique_ptr<autoware_utils::LoggerLevelConfigure> logger_configure_;
 
-  std::unique_ptr<autoware::universe_utils::PublishedTimePublisher> published_time_publisher_;
+  std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
 
-  autoware::universe_utils::StopWatch<std::chrono::milliseconds> stop_watch_;
+  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch_;
+
+  // diag
+  diagnostic_updater::Updater updater_{this};
 };
 }  // namespace autoware::path_optimizer
 

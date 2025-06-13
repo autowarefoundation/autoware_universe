@@ -18,9 +18,10 @@
 #include "autoware/tracking_object_merger/association/data_association.hpp"
 #include "autoware/tracking_object_merger/utils/tracker_state.hpp"
 #include "autoware/tracking_object_merger/utils/utils.hpp"
-#include "autoware/universe_utils/ros/debug_publisher.hpp"
-#include "autoware/universe_utils/ros/published_time_publisher.hpp"
-#include "autoware/universe_utils/system/stop_watch.hpp"
+#include "autoware/universe_utils/ros/diagnostics_interface.hpp"
+#include "autoware_utils/ros/debug_publisher.hpp"
+#include "autoware_utils/ros/published_time_publisher.hpp"
+#include "autoware_utils/system/stop_watch.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -76,6 +77,7 @@ private:
   TrackerState createNewTracker(
     const MEASUREMENT_STATE input_index, rclcpp::Time current_time,
     const autoware_perception_msgs::msg::TrackedObject & input_object);
+  void updateDiagnostics();
 
 private:
   tf2_ros::Buffer tf_buffer_;
@@ -86,8 +88,8 @@ private:
   // debug object publisher
   rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr debug_object_pub_;
   bool publish_interpolated_sub_objects_;
-  std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
-  std::unique_ptr<autoware::universe_utils::DebugPublisher> processing_time_publisher_;
+  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
+  std::unique_ptr<autoware_utils::DebugPublisher> processing_time_publisher_;
 
   /* handle objects */
   std::unordered_map<MEASUREMENT_STATE, std::function<void(TrackedObject &, const TrackedObject &)>>
@@ -106,7 +108,7 @@ private:
   // tracker default settings
   TrackerStateParameter tracker_state_parameter_;
 
-  std::unique_ptr<autoware::universe_utils::PublishedTimePublisher> published_time_publisher_;
+  std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
 
   // merge policy (currently not used)
   struct
@@ -129,6 +131,13 @@ private:
     bool enable = false;
     std::string path;
   } logging_;
+
+  // diagnostics
+  std::unique_ptr<autoware::universe_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
+  double delay_main_objects_tolerance_;
+  double duration_empty_main_objects_tolerance_;
+  double delay_sub_objects_tolerance_;
+  bool is_empty_previous_main_objects_;
 };
 
 }  // namespace autoware::tracking_object_merger

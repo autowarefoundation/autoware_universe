@@ -230,7 +230,6 @@ If the target object is inside the road or crosswalk, this module outputs one or
 
 | Parameter                                                        | Unit  | Type   | Description                                                                                                                           |
 | ---------------------------------------------------------------- | ----- | ------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `enable_delay_compensation`                                      | [-]   | bool   | flag to enable the time delay compensation for the position of the object                                                             |
 | `prediction_time_horizon`                                        | [s]   | double | predict time duration for predicted path                                                                                              |
 | `lateral_control_time_horizon`                                   | [s]   | double | time duration for predicted path will reach the reference path (mostly center of the lane)                                            |
 | `prediction_sampling_delta_time`                                 | [s]   | double | sampling time for points in predicted path                                                                                            |

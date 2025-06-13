@@ -16,24 +16,29 @@
 #define AUTOWARE__PROBABILISTIC_OCCUPANCY_GRID_MAP__UPDATER__OGM_UPDATER_INTERFACE_HPP_
 
 #include "autoware/probabilistic_occupancy_grid_map/cost_value/cost_value.hpp"
+#include "autoware/probabilistic_occupancy_grid_map/costmap_2d/occupancy_grid_map_base.hpp"
 
-#include <nav2_costmap_2d/costmap_2d.hpp>
+#ifdef USE_CUDA
+#include "autoware/probabilistic_occupancy_grid_map/utils/utils_kernel.hpp"
+#endif
+
 #include <rclcpp/node.hpp>
 
 namespace autoware::occupancy_grid_map
 {
 namespace costmap_2d
 {
-class OccupancyGridMapUpdaterInterface : public nav2_costmap_2d::Costmap2D
+class OccupancyGridMapUpdaterInterface : public OccupancyGridMapInterface
 {
 public:
   OccupancyGridMapUpdaterInterface(
-    const unsigned int cells_size_x, const unsigned int cells_size_y, const float resolution)
-  : Costmap2D(cells_size_x, cells_size_y, resolution, 0.f, 0.f, cost_value::NO_INFORMATION)
+    bool use_cuda, const unsigned int cells_size_x, const unsigned int cells_size_y,
+    const float resolution)
+  : OccupancyGridMapInterface(use_cuda, cells_size_x, cells_size_y, resolution)
   {
   }
   virtual ~OccupancyGridMapUpdaterInterface() = default;
-  virtual bool update(const Costmap2D & single_frame_occupancy_grid_map) = 0;
+  virtual bool update(const OccupancyGridMapInterface & single_frame_occupancy_grid_map) = 0;
   virtual void initRosParam(rclcpp::Node & node) = 0;
 };
 

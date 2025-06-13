@@ -19,6 +19,10 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <autoware_utils/math/unit_conversion.hpp>
+#include <autoware_utils/ros/msg_covariance.hpp>
+
+#include <tf2/utils.h>
 
 #include <algorithm>
 
@@ -26,7 +30,7 @@ namespace autoware::multi_object_tracker
 {
 namespace uncertainty
 {
-using autoware::universe_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
+using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
 
 object_model::StateCovariance covarianceFromObjectClass(const ObjectClassification & object_class)
 {
@@ -48,6 +52,9 @@ object_model::StateCovariance covarianceFromObjectClass(const ObjectClassificati
     case ObjectClassification::PEDESTRIAN:
       obj_class_model = object_model::pedestrian;
       break;
+    case ObjectClassification::UNKNOWN:
+      obj_class_model = object_model::unknown;
+      break;
     default:
       obj_class_model = object_model::normal_vehicle;
       break;
@@ -55,10 +62,10 @@ object_model::StateCovariance covarianceFromObjectClass(const ObjectClassificati
   return obj_class_model.measurement_covariance;
 }
 
-DetectedObject modelUncertaintyByClass(
-  const DetectedObject & object, const ObjectClassification & object_class)
+types::DynamicObject modelUncertaintyByClass(
+  const types::DynamicObject & object, const ObjectClassification & object_class)
 {
-  DetectedObject updating_object = object;
+  types::DynamicObject updating_object = object;
 
   // measurement noise covariance
   const object_model::StateCovariance measurement_covariance =
@@ -68,10 +75,10 @@ DetectedObject modelUncertaintyByClass(
   const auto & r_cov_y = measurement_covariance.pos_y;
 
   // yaw angle
-  const double pose_yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
+  const double pose_yaw = tf2::getYaw(object.pose.orientation);
 
   // fill position covariance matrix
-  auto & pose_cov = updating_object.kinematics.pose_with_covariance.covariance;
+  auto & pose_cov = updating_object.pose_covariance;
   const double cos_yaw = std::cos(pose_yaw);
   const double sin_yaw = std::sin(pose_yaw);
   const double sin_2yaw = std::sin(2.0 * pose_yaw);
@@ -87,14 +94,13 @@ DetectedObject modelUncertaintyByClass(
   pose_cov[XYZRPY_COV_IDX::YAW_Y] = 0.0;                           // yaw - y
   pose_cov[XYZRPY_COV_IDX::YAW_YAW] = measurement_covariance.yaw;  // yaw - yaw
   const bool is_yaw_available =
-    object.kinematics.orientation_availability !=
-    autoware_perception_msgs::msg::DetectedObjectKinematics::UNAVAILABLE;
+    object.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE;
   if (!is_yaw_available) {
     pose_cov[XYZRPY_COV_IDX::YAW_YAW] *= 1e3;  // yaw is not available, multiply large value
   }
 
   // fill twist covariance matrix
-  auto & twist_cov = updating_object.kinematics.twist_with_covariance.covariance;
+  auto & twist_cov = updating_object.twist_covariance;
   twist_cov[XYZRPY_COV_IDX::X_X] = measurement_covariance.vel_long;
   twist_cov[XYZRPY_COV_IDX::X_Y] = 0.0;
   twist_cov[XYZRPY_COV_IDX::Y_X] = 0.0;
@@ -103,10 +109,11 @@ DetectedObject modelUncertaintyByClass(
   return updating_object;
 }
 
-DetectedObjects modelUncertainty(const DetectedObjects & detected_objects)
+types::DynamicObjectList modelUncertainty(const types::DynamicObjectList & detected_objects)
 {
-  DetectedObjects updating_objects;
+  types::DynamicObjectList updating_objects;
   updating_objects.header = detected_objects.header;
+  updating_objects.channel_index = detected_objects.channel_index;
   for (const auto & object : detected_objects.objects) {
     if (object.kinematics.has_position_covariance) {
       updating_objects.objects.push_back(object);
@@ -119,7 +126,7 @@ DetectedObjects modelUncertainty(const DetectedObjects & detected_objects)
   return updating_objects;
 }
 
-void normalizeUncertainty(DetectedObjects & detected_objects)
+void normalizeUncertainty(types::DynamicObjectList & detected_objects)
 {
   constexpr double min_cov_dist = 1e-4;
   constexpr double min_cov_rad = 1e-6;
@@ -127,20 +134,20 @@ void normalizeUncertainty(DetectedObjects & detected_objects)
 
   for (auto & object : detected_objects.objects) {
     // normalize position covariance
-    auto & pose_cov = object.kinematics.pose_with_covariance.covariance;
+    auto & pose_cov = object.pose_covariance;
     pose_cov[XYZRPY_COV_IDX::X_X] = std::max(pose_cov[XYZRPY_COV_IDX::X_X], min_cov_dist);
     pose_cov[XYZRPY_COV_IDX::Y_Y] = std::max(pose_cov[XYZRPY_COV_IDX::Y_Y], min_cov_dist);
     pose_cov[XYZRPY_COV_IDX::Z_Z] = std::max(pose_cov[XYZRPY_COV_IDX::Z_Z], min_cov_dist);
     pose_cov[XYZRPY_COV_IDX::YAW_YAW] = std::max(pose_cov[XYZRPY_COV_IDX::YAW_YAW], min_cov_rad);
 
     // normalize twist covariance
-    auto & twist_cov = object.kinematics.twist_with_covariance.covariance;
+    auto & twist_cov = object.twist_covariance;
     twist_cov[XYZRPY_COV_IDX::X_X] = std::max(twist_cov[XYZRPY_COV_IDX::X_X], min_cov_vel);
     twist_cov[XYZRPY_COV_IDX::Y_Y] = std::max(twist_cov[XYZRPY_COV_IDX::Y_Y], min_cov_vel);
   }
 }
 
-void addOdometryUncertainty(const Odometry & odometry, DetectedObjects & detected_objects)
+void addOdometryUncertainty(const Odometry & odometry, types::DynamicObjectList & detected_objects)
 {
   const auto & odom_pose = odometry.pose.pose;
   const auto & odom_pose_cov = odometry.pose.covariance;
@@ -172,8 +179,8 @@ void addOdometryUncertainty(const Odometry & odometry, DetectedObjects & detecte
   const double & cov_yaw_rate = odom_twist_cov[35];
 
   for (auto & object : detected_objects.objects) {
-    auto & object_pose = object.kinematics.pose_with_covariance.pose;
-    auto & object_pose_cov = object.kinematics.pose_with_covariance.covariance;
+    auto & object_pose = object.pose;
+    auto & object_pose_cov = object.pose_covariance;
     const double dx = object_pose.position.x - odom_pose.position.x;
     const double dy = object_pose.position.y - odom_pose.position.y;
     const double r2 = dx * dx + dy * dy;
@@ -209,7 +216,7 @@ void addOdometryUncertainty(const Odometry & odometry, DetectedObjects & detecte
     object_pose_cov[XYZRPY_COV_IDX::Y_Y] = m_pose_cov(1, 1);
 
     // 2. add odometry velocity uncertainty to the object velocity covariance
-    auto & object_twist_cov = object.kinematics.twist_with_covariance.covariance;
+    auto & object_twist_cov = object.twist_covariance;
     Eigen::MatrixXd m_twist_cov = Eigen::MatrixXd(2, 2);
     m_twist_cov << object_twist_cov[XYZRPY_COV_IDX::X_X], object_twist_cov[XYZRPY_COV_IDX::X_Y],
       object_twist_cov[XYZRPY_COV_IDX::Y_X], object_twist_cov[XYZRPY_COV_IDX::Y_Y];

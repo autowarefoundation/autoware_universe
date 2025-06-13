@@ -18,14 +18,16 @@
 #include "autoware/behavior_path_planner_common/interface/scene_module_interface.hpp"
 #include "autoware/behavior_path_planner_common/interface/scene_module_manager_interface.hpp"
 #include "autoware/behavior_path_planner_common/interface/scene_module_visitor.hpp"
-#include "autoware/universe_utils/ros/debug_publisher.hpp"
-#include "autoware/universe_utils/system/stop_watch.hpp"
+#include "autoware_utils/ros/debug_publisher.hpp"
+#include "autoware_utils/system/stop_watch.hpp"
 
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
+#include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <lanelet2_core/primitives/Lanelet.h>
 
@@ -39,13 +41,13 @@
 namespace autoware::behavior_path_planner
 {
 
-using autoware::universe_utils::StopWatch;
-using tier4_planning_msgs::msg::PathWithLaneId;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
+using autoware_utils::StopWatch;
 using SceneModulePtr = std::shared_ptr<SceneModuleInterface>;
 using SceneModuleManagerPtr = std::shared_ptr<SceneModuleManagerInterface>;
-using DebugPublisher = autoware::universe_utils::DebugPublisher;
-using DebugDoubleMsg = tier4_debug_msgs::msg::Float64Stamped;
-using DebugStringMsg = tier4_debug_msgs::msg::StringStamped;
+using DebugPublisher = autoware_utils::DebugPublisher;
+using DebugDoubleMsg = autoware_internal_debug_msgs::msg::Float64Stamped;
+using DebugStringMsg = autoware_internal_debug_msgs::msg::StringStamped;
 
 struct SceneModuleUpdateInfo
 {
@@ -327,7 +329,8 @@ private:
    * removed from approved_module_ptrs_.
    */
   SlotOutput runApprovedModules(
-    const std::shared_ptr<PlannerData> & data, const BehaviorModuleOutput & upstream_slot_output);
+    const std::shared_ptr<PlannerData> & data, const BehaviorModuleOutput & upstream_slot_output,
+    std::vector<SceneModulePtr> & deleted_modules);
 
   /**
    * @brief push back to approved_module_ptrs_.
@@ -573,6 +576,8 @@ private:
   ModuleUpdateInfo debug_info_;
 
   std::shared_ptr<SceneModuleVisitor> debug_msg_ptr_;
+
+  mutable std::optional<BehaviorModuleOutput> last_valid_reference_path_;
 };
 }  // namespace autoware::behavior_path_planner
 

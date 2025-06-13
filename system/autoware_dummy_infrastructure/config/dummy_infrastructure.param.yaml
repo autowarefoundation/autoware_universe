@@ -1,0 +1,11 @@
+/**:
+  ros__parameters:
+    update_rate_hz: 10.0
+    use_first_command: false
+    use_command_state: true
+    instrument_id: '0'
+    approval: true
+    is_finalized: true
+    auto_approval_mode: true
+    stop_distance_threshold: 1.0
+    stop_velocity_threshold: 0.1

@@ -26,7 +26,7 @@
 #include <memory>
 #include <unordered_set>
 
-namespace autoware
+namespace autoware::traffic_light
 {
 class TrafficLightArbiter : public rclcpp::Node
 {
@@ -35,6 +35,7 @@ public:
 
 private:
   using Element = autoware_perception_msgs::msg::TrafficLightElement;
+  using PredictedTrafficLightState = autoware_perception_msgs::msg::PredictedTrafficLightState;
   using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
   using TrafficSignalArray = autoware_perception_msgs::msg::TrafficLightGroupArray;
   using TrafficSignal = autoware_perception_msgs::msg::TrafficLightGroup;
@@ -51,6 +52,7 @@ private:
 
   std::unique_ptr<std::unordered_set<lanelet::Id>> map_regulatory_elements_set_;
 
+  double external_delay_tolerance_;
   double external_time_tolerance_;
   double perception_time_tolerance_;
   bool external_priority_;
@@ -60,6 +62,6 @@ private:
   TrafficSignalArray latest_external_msg_;
   std::unique_ptr<SignalMatchValidator> signal_match_validator_;
 };
-}  // namespace autoware
+}  // namespace autoware::traffic_light
 
 #endif  // AUTOWARE__TRAFFIC_LIGHT_ARBITER__TRAFFIC_LIGHT_ARBITER_HPP_

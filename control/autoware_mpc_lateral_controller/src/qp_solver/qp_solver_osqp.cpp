@@ -19,7 +19,8 @@
 
 namespace autoware::motion::control::mpc_lateral_controller
 {
-QPSolverOSQP::QPSolverOSQP(const rclcpp::Logger & logger) : logger_{logger}
+QPSolverOSQP::QPSolverOSQP(const rclcpp::Logger & logger, rclcpp::Clock::SharedPtr clock)
+: logger_{logger}, clock_{clock}
 {
 }
 bool QPSolverOSQP::solve(
@@ -54,11 +55,11 @@ bool QPSolverOSQP::solve(
   /* execute optimization */
   auto result = osqpsolver_.optimize(h_mat, osqpA, f, lower_bound, upper_bound);
 
-  std::vector<double> U_osqp = std::get<0>(result);
+  std::vector<double> U_osqp = result.primal_solution;
   u = Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, 1>>(
     &U_osqp[0], static_cast<Eigen::Index>(U_osqp.size()), 1);
 
-  const int status_val = std::get<3>(result);
+  const int status_val = result.solution_status;
   if (status_val != 1) {
     RCLCPP_WARN(logger_, "optimization failed : %s", osqpsolver_.getStatusMessage().c_str());
     return false;
@@ -71,11 +72,13 @@ bool QPSolverOSQP::solve(
   }
 
   // polish status: successful (1), unperformed (0), (-1) unsuccessful
-  int status_polish = std::get<2>(result);
+  int status_polish = result.polish_status;
   if (status_polish == -1 || status_polish == 0) {
     const auto s = (status_polish == 0) ? "Polish process is not performed in osqp."
                                         : "Polish process failed in osqp.";
-    RCLCPP_INFO(logger_, "%s The required accuracy is met, but the solution can be inaccurate.", s);
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 1000,
+      "%s The required accuracy is met, but the solution can be inaccurate.", s);
     return true;
   }
   return true;

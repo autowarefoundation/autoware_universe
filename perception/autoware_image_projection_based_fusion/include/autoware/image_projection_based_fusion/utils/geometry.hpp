@@ -64,6 +64,10 @@ bool is_inside(
   const sensor_msgs::msg::RegionOfInterest & outer,
   const sensor_msgs::msg::RegionOfInterest & inner, const double outer_offset_scale = 1.1);
 
+bool isPointInsideRoi(
+  const sensor_msgs::msg::RegionOfInterest & roi, const double camera_point_x,
+  const double camera_point_y, const double roi_scale_factor);
+
 void sanitizeROI(sensor_msgs::msg::RegionOfInterest & roi, const int width, const int height);
 
 }  // namespace autoware::image_projection_based_fusion

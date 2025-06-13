@@ -15,7 +15,7 @@
 #ifndef CLUSTER_MERGER_NODE_HPP_
 #define CLUSTER_MERGER_NODE_HPP_
 
-#include "autoware/universe_utils/ros/transform_listener.hpp"
+#include "autoware_utils/ros/transform_listener.hpp"
 #include "message_filters/subscriber.h"
 #include "message_filters/sync_policies/approximate_time.h"
 #include "message_filters/synchronizer.h"

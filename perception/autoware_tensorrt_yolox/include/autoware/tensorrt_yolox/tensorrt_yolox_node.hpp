@@ -18,8 +18,8 @@
 #include "autoware/object_recognition_utils/object_recognition_utils.hpp"
 
 #include <autoware/tensorrt_yolox/tensorrt_yolox.hpp>
-#include <autoware/universe_utils/ros/debug_publisher.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 #include <image_transport/image_transport.hpp>
 #include <opencv2/opencv.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -108,8 +108,8 @@ private:
     {"MOTORBIKE", 8},   // motorcycle
   };
   RoiOverlaySemsegLabel roi_overlay_segment_labels_;
-  std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
-  std::unique_ptr<autoware::universe_utils::DebugPublisher> debug_publisher_;
+  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
+  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
 };
 
 }  // namespace autoware::tensorrt_yolox

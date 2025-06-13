@@ -16,8 +16,8 @@
 
   <!-- AD API -->
   <group>
-    <include file="$(find-pkg-share autoware_default_adapi)/launch/default_adapi.launch.py" if="$(var launch_default_adapi)"/>
-    <include file="$(find-pkg-share ad_api_adaptors)/launch/rviz_adaptors.launch.xml" if="$(var launch_rviz_adaptors)"/>
+    <include file="$(find-pkg-share autoware_default_adapi_universe)/launch/default_adapi.launch.py" if="$(var launch_default_adapi)"/>
+    <include file="$(find-pkg-share autoware_adapi_adaptors)/launch/rviz_adaptors.launch.xml" if="$(var launch_rviz_adaptors)"/>
   </group>
 
   <!-- RTC controller -->

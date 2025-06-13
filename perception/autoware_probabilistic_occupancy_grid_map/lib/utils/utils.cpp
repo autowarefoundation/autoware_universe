@@ -1,4 +1,4 @@
-// Copyright 2023 Tier IV, Inc.
+// Copyright 2024 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,11 @@
 
 #include "autoware/probabilistic_occupancy_grid_map/utils/utils.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#ifdef USE_CUDA
+#include <autoware/cuda_utils/cuda_check_error.hpp>
+#endif
+
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <string>
 
@@ -47,22 +51,47 @@ bool transformPointcloud(
   return true;
 }
 
-// used in pointcloud based occupancy grid map
-void transformPointcloud(
-  const sensor_msgs::msg::PointCloud2 & input, const geometry_msgs::msg::Pose & pose,
-  sensor_msgs::msg::PointCloud2 & output)
+#ifdef USE_CUDA
+bool transformPointcloudAsync(
+  CudaPointCloud2 & input, const tf2_ros::Buffer & tf2, const std::string & target_frame,
+  autoware::cuda_utils::CudaUniquePtr<Eigen::Matrix3f> & device_rotation,
+  autoware::cuda_utils::CudaUniquePtr<Eigen::Vector3f> & device_translation)
 {
-  const auto transform = autoware::universe_utils::pose2transform(pose);
-  Eigen::Matrix4f tf_matrix = tf2::transformToEigen(transform).matrix().cast<float>();
+  geometry_msgs::msg::TransformStamped tf_stamped;
+  // lookup transform
+  try {
+    tf_stamped = tf2.lookupTransform(
+      target_frame, input.header.frame_id, input.header.stamp, rclcpp::Duration::from_seconds(0.5));
+  } catch (tf2::TransformException & ex) {
+    RCLCPP_WARN(
+      rclcpp::get_logger("probabilistic_occupancy_grid_map"), "Failed to lookup transform: %s",
+      ex.what());
+    return false;
+  }
+  // transform pointcloud
+  Eigen::Matrix4f tf_matrix = tf2::transformToEigen(tf_stamped.transform).matrix().cast<float>();
+  Eigen::Matrix3f rotation = tf_matrix.block<3, 3>(0, 0);
+  Eigen::Vector3f translation = tf_matrix.block<3, 1>(0, 3);
 
-  pcl_ros::transformPointCloud(tf_matrix, input, output);
-  output.header.stamp = input.header.stamp;
-  output.header.frame_id = "";
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    device_rotation.get(), rotation.data(), sizeof(Eigen::Matrix3f), cudaMemcpyHostToDevice,
+    input.stream));
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    device_translation.get(), translation.data(), sizeof(Eigen::Vector3f), cudaMemcpyHostToDevice,
+    input.stream));
+
+  transformPointCloudLaunch(
+    input.data.get(), input.width * input.height, input.point_step, device_rotation.get(),
+    device_translation.get(), input.stream);
+
+  input.header.frame_id = target_frame;
+  return true;
 }
+#endif
 
 Eigen::Matrix4f getTransformMatrix(const geometry_msgs::msg::Pose & pose)
 {
-  auto transform = autoware::universe_utils::pose2transform(pose);
+  auto transform = autoware_utils::pose2transform(pose);
   Eigen::Matrix4f tf_matrix = tf2::transformToEigen(transform).matrix().cast<float>();
   return tf_matrix;
 }
@@ -105,7 +134,7 @@ geometry_msgs::msg::Pose getPose(
   geometry_msgs::msg::TransformStamped tf_stamped;
   tf_stamped = tf2.lookupTransform(
     target_frame, source_header.frame_id, source_header.stamp, rclcpp::Duration::from_seconds(0.5));
-  pose = autoware::universe_utils::transform2pose(tf_stamped.transform);
+  pose = autoware_utils::transform2pose(tf_stamped.transform);
   return pose;
 }
 
@@ -117,7 +146,7 @@ geometry_msgs::msg::Pose getPose(
   geometry_msgs::msg::TransformStamped tf_stamped;
   tf_stamped =
     tf2.lookupTransform(target_frame, source_frame, stamp, rclcpp::Duration::from_seconds(0.5));
-  pose = autoware::universe_utils::transform2pose(tf_stamped.transform);
+  pose = autoware_utils::transform2pose(tf_stamped.transform);
   return pose;
 }
 
@@ -143,52 +172,6 @@ geometry_msgs::msg::Pose getInversePose(const geometry_msgs::msg::Pose & pose)
   inv_pose.orientation.z = inv_tf.getRotation().z();
   inv_pose.orientation.w = inv_tf.getRotation().w();
   return inv_pose;
-}
-
-/**
- * @brief extract Common Pointcloud between obstacle pc and raw pc
- * @param obstacle_pc
- * @param raw_pc
- * @param output_obstacle_pc
- */
-bool extractCommonPointCloud(
-  const sensor_msgs::msg::PointCloud2 & obstacle_pc, const sensor_msgs::msg::PointCloud2 & raw_pc,
-  sensor_msgs::msg::PointCloud2 & output_obstacle_pc)
-{
-  // Convert to vector of 3d points
-  std::vector<MyPoint3d> v_obstacle_pc, v_raw_pc, v_output_obstacle_pc;
-  for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(obstacle_pc, "x"),
-       iter_y(obstacle_pc, "y"), iter_z(obstacle_pc, "z");
-       iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z) {
-    v_obstacle_pc.push_back(MyPoint3d(*iter_x, *iter_y, *iter_z));
-  }
-  for (sensor_msgs::PointCloud2ConstIterator<float> iter_x(raw_pc, "x"), iter_y(raw_pc, "y"),
-       iter_z(raw_pc, "z");
-       iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z) {
-    v_raw_pc.push_back(MyPoint3d(*iter_x, *iter_y, *iter_z));
-  }
-
-  // sort pointclouds for searching cross points: O(nlogn)
-  std::sort(v_obstacle_pc.begin(), v_obstacle_pc.end(), [](auto a, auto b) { return a < b; });
-  std::sort(v_raw_pc.begin(), v_raw_pc.end(), [](auto a, auto b) { return a < b; });
-
-  // calc intersection points of two pointclouds: O(n)
-  std::set_intersection(
-    v_obstacle_pc.begin(), v_obstacle_pc.end(), v_raw_pc.begin(), v_raw_pc.end(),
-    std::back_inserter(v_output_obstacle_pc));
-  if (v_output_obstacle_pc.size() == 0) {
-    return false;
-  }
-
-  // Convert to ros msg
-  pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_output(new pcl::PointCloud<pcl::PointXYZ>);
-  for (auto p : v_output_obstacle_pc) {
-    pcl_output->push_back(pcl::PointXYZ(p.x, p.y, p.z));
-  }
-  pcl::toROSMsg(*pcl_output, output_obstacle_pc);
-  output_obstacle_pc.header = obstacle_pc.header;
-
-  return true;
 }
 
 }  // namespace utils

@@ -33,9 +33,9 @@ public:
     auto wrapped_callback = [logger, callback](
                               typename ServiceT::Request::SharedPtr request,
                               typename ServiceT::Response::SharedPtr response) {
-      RCLCPP_INFO(logger, "service request");
+      RCLCPP_DEBUG(logger, "service request");
       callback(request, response);
-      RCLCPP_INFO(logger, "service response");
+      RCLCPP_DEBUG(logger, "service response");
     };
     return wrapped_callback;
   }

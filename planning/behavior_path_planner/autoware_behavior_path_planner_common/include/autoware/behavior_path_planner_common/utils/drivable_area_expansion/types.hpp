@@ -15,12 +15,12 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__DRIVABLE_AREA_EXPANSION__TYPES_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__DRIVABLE_AREA_EXPANSION__TYPES_HPP_
 
-#include "autoware/universe_utils/geometry/boost_geometry.hpp"
+#include "autoware_utils/geometry/boost_geometry.hpp"
 
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_planning_msgs/msg/path_point.hpp>
 #include <geometry_msgs/msg/point.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <boost/geometry/index/rtree.hpp>
 
@@ -29,20 +29,20 @@
 
 namespace autoware::behavior_path_planner::drivable_area_expansion
 {
+using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::PathPoint;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
-using tier4_planning_msgs::msg::PathPointWithLaneId;
-using tier4_planning_msgs::msg::PathWithLaneId;
 
-using autoware::universe_utils::LineString2d;
-using autoware::universe_utils::MultiLineString2d;
-using autoware::universe_utils::MultiPoint2d;
-using autoware::universe_utils::MultiPolygon2d;
-using autoware::universe_utils::Point2d;
-using autoware::universe_utils::Polygon2d;
-using autoware::universe_utils::Segment2d;
+using autoware_utils::LineString2d;
+using autoware_utils::MultiLineString2d;
+using autoware_utils::MultiPoint2d;
+using autoware_utils::MultiPolygon2d;
+using autoware_utils::Point2d;
+using autoware_utils::Polygon2d;
+using autoware_utils::Segment2d;
 
 using SegmentRtree = boost::geometry::index::rtree<Segment2d, boost::geometry::index::rstar<16>>;
 

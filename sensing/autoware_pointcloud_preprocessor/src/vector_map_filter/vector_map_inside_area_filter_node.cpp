@@ -20,19 +20,18 @@
 
 namespace
 {
-autoware::universe_utils::Box2d calcBoundingBox(
-  const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & input_cloud)
+autoware_utils::Box2d calcBoundingBox(const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & input_cloud)
 {
   MultiPoint2d candidate_points;
   for (const auto & p : input_cloud->points) {
     candidate_points.emplace_back(p.x, p.y);
   }
 
-  return boost::geometry::return_envelope<autoware::universe_utils::Box2d>(candidate_points);
+  return boost::geometry::return_envelope<autoware_utils::Box2d>(candidate_points);
 }
 
 lanelet::ConstPolygons3d calcIntersectedPolygons(
-  const autoware::universe_utils::Box2d & bounding_box, const lanelet::ConstPolygons3d & polygons)
+  const autoware_utils::Box2d & bounding_box, const lanelet::ConstPolygons3d & polygons)
 {
   lanelet::ConstPolygons3d intersected_polygons;
   for (const auto & polygon : polygons) {
@@ -85,12 +84,7 @@ VectorMapInsideAreaFilterComponent::VectorMapInsideAreaFilterComponent(
 
   // Set tf
   {
-    rclcpp::Clock::SharedPtr ros_clock = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
-    tf_buffer_ = std::make_shared<tf2_ros::Buffer>(ros_clock);
-    auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
-      get_node_base_interface(), get_node_timers_interface());
-    tf_buffer_->setCreateTimerInterface(timer_interface);
-    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+    managed_tf_buffer_ = std::make_shared<managed_transform_buffer::ManagedTransformBuffer>();
   }
 }
 
@@ -123,13 +117,12 @@ void VectorMapInsideAreaFilterComponent::filter(
     const std::string base_link_frame = "base_link";
     z_threshold_in_base_link = z_threshold_;
     if (input->header.frame_id != base_link_frame) {
-      try {
-        // get z difference from baselink to input frame
-        const auto transform =
-          tf_buffer_->lookupTransform(input->header.frame_id, base_link_frame, input->header.stamp);
-        *z_threshold_in_base_link += transform.transform.translation.z;
-      } catch (const tf2::TransformException & e) {
-        RCLCPP_WARN(get_logger(), "Failed to transform z_threshold to base_link frame");
+      auto transform_opt = managed_tf_buffer_->getTransform<geometry_msgs::msg::TransformStamped>(
+        input->header.frame_id, base_link_frame, input->header.stamp,
+        rclcpp::Duration::from_seconds(0.0), this->get_logger());
+      if (transform_opt) {
+        *z_threshold_in_base_link += transform_opt->transform.translation.z;
+      } else {
         z_threshold_in_base_link = std::nullopt;
       }
     }

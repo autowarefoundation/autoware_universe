@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "autoware_radar_objects_adapter parameters",
+  "type": "object",
+  "definitions": {
+    "radar_objects_adapter": {
+      "type": "object",
+      "properties": {
+        "default_position_z": {
+          "type": "number",
+          "description": "The default z-coordinate in meters of the position of radar objects in the case the radar does not provide it.",
+          "default": 0.0
+        },
+        "default_velocity_z": {
+          "type": "number",
+          "description": "The default z-coordinate in meters per second of the velocity of radar objects in the case the radar does not provide it.",
+          "default": 0.0
+        },
+        "default_acceleration_z": {
+          "type": "number",
+          "description": "The default z-coordinate in meters per squared second of the acceleration of radar objects in the case the radar does not provide it.",
+          "default": 0.0
+        },
+        "default_size_x": {
+          "type": "number",
+          "description": "The default x-coordinate in meters of the size of radar objects in the case the radar does not provide it.",
+          "default": 5.0
+        },
+
+        "default_size_y": {
+          "type": "number",
+          "description": "The default y-coordinate in meters of the size of radar objects in the case the radar does not provide it.",
+          "default": 2.0
+        },
+
+        "default_size_z": {
+          "type": "number",
+          "description": "The default z-coordinate in meters of the size of radar objects in the case the radar does not provide it.",
+          "default": 2.0
+        }
+      },
+      "required": [
+        "default_position_z",
+        "default_velocity_z",
+        "default_acceleration_z",
+        "default_size_x",
+        "default_size_y",
+        "default_size_z"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/radar_objects_adapter"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

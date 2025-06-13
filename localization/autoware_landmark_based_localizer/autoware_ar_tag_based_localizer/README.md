@@ -73,7 +73,7 @@ The image below shows the trajectory when the sample is executed and plotted.
 
 The pull request video below should also be helpful.
 
-<https://github.com/autowarefoundation/autoware.universe/pull/4347#issuecomment-1663155248>
+<https://github.com/autowarefoundation/autoware_universe/pull/4347#issuecomment-1663155248>
 
 ## Principle
 

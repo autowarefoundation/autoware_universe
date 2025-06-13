@@ -210,7 +210,7 @@ std::shared_ptr<QPSolverInterface> MpcLateralController::createQPSolverInterface
   }
 
   if (qp_solver_type == "osqp") {
-    qpsolver_ptr = std::make_shared<QPSolverOSQP>(logger_);
+    qpsolver_ptr = std::make_shared<QPSolverOSQP>(logger_, clock_);
     return qpsolver_ptr;
   }
 
@@ -326,6 +326,7 @@ trajectory_follower::LateralOutput MpcLateralController::run(
 
   if (isStoppedState()) {
     // Reset input buffer
+    debug_throttle("Stopped state detected, use previous control command");
     for (auto & value : m_mpc->m_input_buffer) {
       value = m_ctrl_cmd_prev.steering_tire_angle;
     }
@@ -335,6 +336,7 @@ trajectory_follower::LateralOutput MpcLateralController::run(
   }
 
   if (!mpc_solved_status.result) {
+    debug_throttle("MPC is not solved, use stop control command");
     ctrl_cmd = getStopControlCommand();
   }
 
@@ -441,6 +443,7 @@ bool MpcLateralController::isStoppedState() const
 
   const auto latest_published_cmd = m_ctrl_cmd_prev;  // use prev_cmd as a latest published command
   if (m_keep_steer_control_until_converged && !isSteerConverged(latest_published_cmd)) {
+    debug_throttle("steering is not converged.");
     return false;  // not stopState: keep control
   }
 
@@ -461,7 +464,7 @@ bool MpcLateralController::isStoppedState() const
     auto covered_distance = 0.0;
     for (auto i = nearest + 1; i < m_current_trajectory.points.size(); ++i) {
       min_vel = std::min(min_vel, m_current_trajectory.points.at(i).longitudinal_velocity_mps);
-      covered_distance += autoware::universe_utils::calcDistance2d(
+      covered_distance += autoware_utils::calc_distance2d(
         m_current_trajectory.points.at(i - 1).pose, m_current_trajectory.points.at(i).pose);
       if (covered_distance > distance_margin) break;
     }
@@ -670,7 +673,7 @@ bool MpcLateralController::isTrajectoryShapeChanged() const
   // TODO(Horibe): update implementation to check trajectory shape around ego vehicle.
   // Now temporally check the goal position.
   for (const auto & trajectory : m_trajectory_buffer) {
-    const auto change_distance = autoware::universe_utils::calcDistance2d(
+    const auto change_distance = autoware_utils::calc_distance2d(
       trajectory.points.back().pose, m_current_trajectory.points.back().pose);
     if (change_distance > m_new_traj_end_dist) {
       return true;

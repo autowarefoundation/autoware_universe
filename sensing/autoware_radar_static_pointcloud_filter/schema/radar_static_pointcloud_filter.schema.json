@@ -11,9 +11,15 @@
           "default": "4.0",
           "minimum": 0.0,
           "description": "Standard deviation for radar doppler velocity. [m/s]"
+        },
+        "max_queue_size": {
+          "type": "integer",
+          "default": "5",
+          "minimum": 1,
+          "description": "Max queue size of input/output topics."
         }
       },
-      "required": ["doppler_velocity_sd"]
+      "required": ["doppler_velocity_sd", "max_queue_size"]
     }
   },
   "properties": {

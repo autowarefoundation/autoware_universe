@@ -21,12 +21,14 @@ ament_auto_add_library(autoware_universe_utils SHARED
   src/geometry/sat_2d.cpp
   src/math/sin_table.cpp
   src/math/trigonometry.cpp
+  src/ros/diagnostics_interface.cpp
   src/ros/msg_operation.cpp
   src/ros/marker_helper.cpp
   src/ros/logger_level_configure.cpp
   src/system/backtrace.cpp
   src/system/time_keeper.cpp
   src/geometry/ear_clipping.cpp
+  src/geometry/polygon_clip.cpp
 )
 
 target_link_libraries(autoware_universe_utils

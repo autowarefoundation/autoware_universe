@@ -16,3 +16,5 @@
       is_z_filter: false
       z_min: -2.0
       z_max: 5.0
+
+      max_queue_size: 5

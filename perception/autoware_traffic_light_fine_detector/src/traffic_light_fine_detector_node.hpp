@@ -22,9 +22,9 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_debug_msgs/msg/float32_stamped.hpp>
 #include <sensor_msgs/image_encodings.hpp>
 #include <sensor_msgs/msg/image.hpp>
-#include <tier4_debug_msgs/msg/float32_stamped.hpp>
 #include <tier4_perception_msgs/msg/traffic_light_roi_array.hpp>
 
 #if __has_include(<cv_bridge/cv_bridge.hpp>)
@@ -148,7 +148,7 @@ private:
   message_filters::Subscriber<TrafficLightRoiArray> expect_roi_sub_;
   std::mutex connect_mutex_;
   rclcpp::Publisher<TrafficLightRoiArray>::SharedPtr output_roi_pub_;
-  rclcpp::Publisher<tier4_debug_msgs::msg::Float32Stamped>::SharedPtr exe_time_pub_;
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float32Stamped>::SharedPtr exe_time_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
 
   typedef message_filters::sync_policies::ExactTime<

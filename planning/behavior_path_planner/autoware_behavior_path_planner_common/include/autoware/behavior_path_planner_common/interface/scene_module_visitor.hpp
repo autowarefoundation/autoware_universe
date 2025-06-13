@@ -16,6 +16,7 @@
 #define AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__INTERFACE__SCENE_MODULE_VISITOR_HPP_
 
 #include "tier4_planning_msgs/msg/detail/avoidance_debug_msg_array__struct.hpp"
+#include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
 
 #include <memory>
 namespace autoware::behavior_path_planner
@@ -31,16 +32,20 @@ class SideShiftModule;
 
 using tier4_planning_msgs::msg::AvoidanceDebugMsg;
 using tier4_planning_msgs::msg::AvoidanceDebugMsgArray;
+using DebugStringMsg = autoware_internal_debug_msgs::msg::StringStamped;
 
 class SceneModuleVisitor
 {
 public:
   void visitAvoidanceModule(const StaticObstacleAvoidanceModule * module) const;
+  void visitStartPlannerModule(const StartPlannerModule * module) const;
 
   std::shared_ptr<AvoidanceDebugMsgArray> getAvoidanceModuleDebugMsg() const;
+  std::shared_ptr<DebugStringMsg> getStartPlannerModuleDebugMsg() const;
 
 protected:
   mutable std::shared_ptr<AvoidanceDebugMsgArray> avoidance_visitor_;
+  mutable std::shared_ptr<DebugStringMsg> start_planner_visitor_;
 };
 }  // namespace autoware::behavior_path_planner
 

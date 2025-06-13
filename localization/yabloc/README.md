@@ -81,4 +81,4 @@ These topics are not visualized by default.
 - In places where there are few road surface markings, such as intersections, the estimation heavily relies on GNSS, IMU, and vehicle's wheel odometry.
 - If the road boundary or road surface markings are not included in the Lanelet2, the estimation is likely to fail.
 - The sample rosbag provided in the autoware tutorial does not include images, so it is not possible to run YabLoc with it.
-  - If you want to test the functionality of YabLoc, the sample test data provided in this [PR](https://github.com/autowarefoundation/autoware.universe/pull/3946) is useful.
+  - If you want to test the functionality of YabLoc, the sample test data provided in this [PR](https://github.com/autowarefoundation/autoware_universe/pull/3946) is useful.

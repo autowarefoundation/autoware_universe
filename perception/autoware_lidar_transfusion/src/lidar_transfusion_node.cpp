@@ -16,6 +16,8 @@
 
 #include "autoware/lidar_transfusion/utils.hpp"
 
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
+
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -75,7 +77,6 @@ LidarTransfusionNode::LidarTransfusionNode(const rclcpp::NodeOptions & options)
   const float score_threshold =
     static_cast<float>(this->declare_parameter<double>("score_threshold", descriptor));
 
-  NetworkParam network_param(onnx_path, engine_path, trt_precision);
   DensificationParam densification_param(
     densification_world_frame_id, densification_num_past_frames);
   TransfusionConfig config(
@@ -91,21 +92,42 @@ LidarTransfusionNode::LidarTransfusionNode(const rclcpp::NodeOptions & options)
   detection_class_remapper_.setParameters(
     allow_remapping_by_area_matrix, min_area_matrix, max_area_matrix);
 
-  detector_ptr_ = std::make_unique<TransfusionTRT>(network_param, densification_param, config);
+  // diagnostics parameters
+  max_allowed_processing_time_ms_ =
+    declare_parameter<double>("diagnostics.max_allowed_processing_time_ms");
+  max_acceptable_consecutive_delay_ms_ =
+    declare_parameter<double>("diagnostics.max_acceptable_consecutive_delay_ms");
 
-  cloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-    "~/input/pointcloud", rclcpp::SensorDataQoS{}.keep_last(1),
-    std::bind(&LidarTransfusionNode::cloudCallback, this, std::placeholders::_1));
+  auto trt_config = tensorrt_common::TrtCommonConfig(onnx_path, trt_precision, engine_path);
+
+  detector_ptr_ = std::make_unique<TransfusionTRT>(trt_config, densification_param, config);
+
+  cloud_sub_ =
+    std::make_unique<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
+      *this, "~/input/pointcloud",
+      std::bind(&LidarTransfusionNode::cloudCallback, this, std::placeholders::_1));
 
   objects_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
     "~/output/objects", rclcpp::QoS(1));
 
-  published_time_pub_ = std::make_unique<autoware::universe_utils::PublishedTimePublisher>(this);
+  published_time_pub_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
+
+  // setup diagnostics
+  {
+    const double validation_callback_interval_ms =
+      declare_parameter<double>("diagnostics.validation_callback_interval_ms");
+
+    diagnostic_processing_time_updater_.setHardwareID(this->get_name());
+    diagnostic_processing_time_updater_.add(
+      "processing_time_status", this, &LidarTransfusionNode::diagnoseProcessingTime);
+    // msec -> sec
+    diagnostic_processing_time_updater_.setPeriod(validation_callback_interval_ms / 1e3);
+  }
 
   // initialize debug tool
   {
-    using autoware::universe_utils::DebugPublisher;
-    using autoware::universe_utils::StopWatch;
+    using autoware_utils::DebugPublisher;
+    using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ptr_ = std::make_unique<DebugPublisher>(this, this->get_name());
     stop_watch_ptr_->tic("cyclic");
@@ -118,7 +140,8 @@ LidarTransfusionNode::LidarTransfusionNode(const rclcpp::NodeOptions & options)
   }
 }
 
-void LidarTransfusionNode::cloudCallback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr msg)
+void LidarTransfusionNode::cloudCallback(
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg)
 {
   const auto objects_sub_count =
     objects_pub_->get_subscription_count() + objects_pub_->get_intra_process_subscription_count();
@@ -132,7 +155,7 @@ void LidarTransfusionNode::cloudCallback(const sensor_msgs::msg::PointCloud2::Co
 
   std::vector<Box3D> det_boxes3d;
   std::unordered_map<std::string, double> proc_timing;
-  bool is_success = detector_ptr_->detect(*msg, tf_buffer_, det_boxes3d, proc_timing);
+  bool is_success = detector_ptr_->detect(msg, tf_buffer_, det_boxes3d, proc_timing);
   if (!is_success) {
     return;
   }
@@ -155,7 +178,6 @@ void LidarTransfusionNode::cloudCallback(const sensor_msgs::msg::PointCloud2::Co
     objects_pub_->publish(output_msg);
     published_time_pub_->publish_if_subscribed(objects_pub_, output_msg.header.stamp);
   }
-
   // add processing time for debug
   if (debug_publisher_ptr_ && stop_watch_ptr_) {
     const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic", true);
@@ -165,16 +187,74 @@ void LidarTransfusionNode::cloudCallback(const sensor_msgs::msg::PointCloud2::Co
         std::chrono::nanoseconds(
           (this->get_clock()->now() - output_msg.header.stamp).nanoseconds()))
         .count();
-    debug_publisher_ptr_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
-    debug_publisher_ptr_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/pipeline_latency_ms", pipeline_latency_ms);
-    debug_publisher_ptr_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time/total_ms", processing_time_ms);
     for (const auto & [topic, time_ms] : proc_timing) {
-      debug_publisher_ptr_->publish<tier4_debug_msgs::msg::Float64Stamped>(topic, time_ms);
+      debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+        topic, time_ms);
     }
+
+    last_processing_time_ms_ = processing_time_ms;
   }
+}
+
+void LidarTransfusionNode::diagnoseProcessingTime(
+  diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  const rclcpp::Time timestamp_now = this->get_clock()->now();
+  diagnostic_msgs::msg::DiagnosticStatus::_level_type diag_level =
+    diagnostic_msgs::msg::DiagnosticStatus::OK;
+  std::stringstream message{"OK"};
+
+  // Check if the node has performed inference
+  if (last_processing_time_ms_) {
+    // check processing time is acceptable
+    if (last_processing_time_ms_ > max_allowed_processing_time_ms_) {
+      stat.add("is_processing_time_ms_in_expected_range", false);
+
+      message.clear();
+      message << "Processing time exceeds the acceptable limit of "
+              << max_allowed_processing_time_ms_ << " ms by "
+              << (last_processing_time_ms_.value() - max_allowed_processing_time_ms_) << " ms.";
+
+      // in case the processing starts with a delayed inference
+      if (!last_in_time_processing_timestamp_) {
+        last_in_time_processing_timestamp_ = timestamp_now;
+      }
+
+      diag_level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+    } else {
+      stat.add("is_processing_time_ms_in_expected_range", true);
+      last_in_time_processing_timestamp_ = timestamp_now;
+    }
+    stat.add("processing_time_ms", last_processing_time_ms_.value());
+
+    const double delayed_state_duration =
+      std::chrono::duration<double, std::milli>(
+        std::chrono::nanoseconds(
+          (timestamp_now - last_in_time_processing_timestamp_.value()).nanoseconds()))
+        .count();
+
+    // check consecutive delays
+    if (delayed_state_duration > max_acceptable_consecutive_delay_ms_) {
+      stat.add("is_consecutive_processing_delay_in_range", false);
+
+      message << " Processing delay has consecutively exceeded the acceptable limit continuously.";
+
+      diag_level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+    } else {
+      stat.add("is_consecutive_processing_delay_in_range", true);
+    }
+    stat.add("consecutive_processing_delay_ms", delayed_state_duration);
+  } else {
+    message << "Waiting for the node to perform inference.";
+  }
+
+  stat.summary(diag_level, message.str());
 }
 
 }  // namespace autoware::lidar_transfusion

@@ -1,0 +1,4 @@
+remaining_distance_time_calculator:
+  update_rate:
+    type: double
+    description: Timer callback period. [Hz]

@@ -149,7 +149,7 @@ namespace autoware::joy_controller
 {
 void AutowareJoyControllerNode::onJoy()
 {
-  const auto msg = sub_joy_.takeData();
+  const auto msg = sub_joy_.take_data();
   if (!msg) {
     return;
   }
@@ -200,7 +200,7 @@ void AutowareJoyControllerNode::onOdometry()
     return;
   }
 
-  const auto msg = sub_odom_.takeData();
+  const auto msg = sub_odom_.take_data();
   if (!msg) {
     return;
   }

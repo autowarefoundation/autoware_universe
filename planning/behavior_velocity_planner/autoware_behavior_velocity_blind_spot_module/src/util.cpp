@@ -34,7 +34,7 @@ namespace autoware::behavior_velocity_planner
 namespace
 {
 static bool hasLaneIds(
-  const tier4_planning_msgs::msg::PathPointWithLaneId & p, const lanelet::Id id)
+  const autoware_internal_planning_msgs::msg::PathPointWithLaneId & p, const lanelet::Id id)
 {
   for (const auto & pid : p.lane_ids) {
     if (pid == id) {
@@ -45,7 +45,7 @@ static bool hasLaneIds(
 }
 
 static std::optional<std::pair<size_t, size_t>> findLaneIdInterval(
-  const tier4_planning_msgs::msg::PathWithLaneId & p, const lanelet::Id id)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & p, const lanelet::Id id)
 {
   bool found = false;
   size_t start = 0;
@@ -73,8 +73,8 @@ static std::optional<std::pair<size_t, size_t>> findLaneIdInterval(
 }  // namespace
 
 std::optional<InterpolatedPathInfo> generateInterpolatedPathInfo(
-  const lanelet::Id lane_id, const tier4_planning_msgs::msg::PathWithLaneId & input_path,
-  rclcpp::Logger logger)
+  const lanelet::Id lane_id,
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & input_path, rclcpp::Logger logger)
 {
   constexpr double ds = 0.2;
   InterpolatedPathInfo interpolated_path_info;
@@ -86,6 +86,27 @@ std::optional<InterpolatedPathInfo> generateInterpolatedPathInfo(
   interpolated_path_info.lane_id_interval =
     findLaneIdInterval(interpolated_path_info.path, lane_id);
   return interpolated_path_info;
+}
+
+std::optional<size_t> getFirstPointIntersectsLineByFootprint(
+  const lanelet::ConstLineString2d & line, const InterpolatedPathInfo & interpolated_path_info,
+  const autoware_utils::LinearRing2d & footprint, const double vehicle_length)
+{
+  const auto & path_ip = interpolated_path_info.path;
+  const auto [lane_start, lane_end] = interpolated_path_info.lane_id_interval.value();
+  const size_t vehicle_length_idx = static_cast<size_t>(vehicle_length / interpolated_path_info.ds);
+  const size_t start =
+    static_cast<size_t>(std::max<int>(0, static_cast<int>(lane_start) - vehicle_length_idx));
+  const auto line2d = line.basicLineString();
+  for (auto i = start; i <= lane_end; ++i) {
+    const auto & base_pose = path_ip.points.at(i).point.pose;
+    const auto path_footprint =
+      autoware_utils::transform_vector(footprint, autoware_utils::pose2transform(base_pose));
+    if (boost::geometry::intersects(path_footprint, line2d)) {
+      return std::make_optional<size_t>(i);
+    }
+  }
+  return std::nullopt;
 }
 
 std::optional<lanelet::ConstLanelet> getSiblingStraightLanelet(
@@ -200,15 +221,9 @@ static lanelet::LineString3d removeConst(lanelet::ConstLineString3d line)
   return lanelet::LineString3d(lanelet::InvalId, pts);
 }
 
-lanelet::ConstLanelets generateBlindSpotLanelets(
-  const std::shared_ptr<autoware::route_handler::RouteHandler> route_handler,
-  const TurnDirection turn_direction, const lanelet::Id lane_id,
-  const tier4_planning_msgs::msg::PathWithLaneId & path, const double ignore_width_from_centerline,
-  const double adjacent_extend_width, const double opposite_adjacent_extend_width)
+std::vector<lanelet::Id> find_lane_ids_upto(
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const lanelet::Id lane_id)
 {
-  const auto lanelet_map_ptr = route_handler->getLaneletMapPtr();
-  const auto routing_graph_ptr = route_handler->getRoutingGraphPtr();
-
   std::vector<int64_t> lane_ids;
   /* get lane ids until intersection */
   for (const auto & point : path.points) {
@@ -216,19 +231,29 @@ lanelet::ConstLanelets generateBlindSpotLanelets(
     for (const auto id : point.lane_ids) {
       if (id == lane_id) {
         found_intersection_lane = true;
-        lane_ids.push_back(lane_id);
         break;
       }
       // make lane_ids unique
-      if (std::find(lane_ids.begin(), lane_ids.end(), lane_id) == lane_ids.end()) {
-        lane_ids.push_back(lane_id);
+      if (std::find(lane_ids.begin(), lane_ids.end(), id) == lane_ids.end()) {
+        lane_ids.push_back(id);
       }
     }
     if (found_intersection_lane) break;
   }
+  return lane_ids;
+}
+
+lanelet::ConstLanelets generateBlindSpotLanelets(
+  const std::shared_ptr<autoware::route_handler::RouteHandler> route_handler,
+  const TurnDirection turn_direction, const std::vector<lanelet::Id> & lane_ids_upto_intersection,
+  const double ignore_width_from_centerline, const double adjacent_extend_width,
+  const double opposite_adjacent_extend_width)
+{
+  const auto lanelet_map_ptr = route_handler->getLaneletMapPtr();
+  const auto routing_graph_ptr = route_handler->getRoutingGraphPtr();
 
   lanelet::ConstLanelets blind_spot_lanelets;
-  for (const auto i : lane_ids) {
+  for (const auto i : lane_ids_upto_intersection) {
     const auto lane = lanelet_map_ptr->laneletLayer.get(i);
     const auto ego_half_lanelet =
       generateHalfLanelet(lane, turn_direction, ignore_width_from_centerline);
@@ -301,16 +326,35 @@ lanelet::ConstLanelets generateBlindSpotLanelets(
       blind_spot_lanelets.push_back(ego_half_lanelet);
     }
   }
+
+  // add next straight lanelet if exists
+  if (!lane_ids_upto_intersection.empty()) {
+    for (const auto & next : routing_graph_ptr->following(
+           lanelet_map_ptr->laneletLayer.get(lane_ids_upto_intersection.back()))) {
+      if (next.attributeOr("turn_direction", "else") == std::string("straight")) {
+        const auto next_straight_lanelet =
+          generateHalfLanelet(next, turn_direction, ignore_width_from_centerline);
+        const double left_offset =
+          (turn_direction == TurnDirection::LEFT) ? adjacent_extend_width : 0.0;
+        const double right_offset =
+          (turn_direction == TurnDirection::RIGHT) ? adjacent_extend_width : 0.0;
+        blind_spot_lanelets.push_back(
+          lanelet::utils::getExpandedLanelet(next_straight_lanelet, left_offset, right_offset));
+        break;
+      }
+    }
+  }
   return blind_spot_lanelets;
 }
 
 std::optional<lanelet::CompoundPolygon3d> generateBlindSpotPolygons(
-  [[maybe_unused]] const tier4_planning_msgs::msg::PathWithLaneId & path,
+  [[maybe_unused]] const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
   [[maybe_unused]] const size_t closest_idx, const lanelet::ConstLanelets & blind_spot_lanelets,
   const geometry_msgs::msg::Pose & stop_line_pose, const double backward_detection_length)
 {
   const auto stop_line_arc_ego =
-    lanelet::utils::getArcCoordinates(blind_spot_lanelets, stop_line_pose).length;
+    lanelet::utils::getArcCoordinates(blind_spot_lanelets, stop_line_pose).length +
+    lanelet::utils::getLaneletLength3d(blind_spot_lanelets.back());
   const auto detection_area_start_length_ego =
     std::max<double>(stop_line_arc_ego - backward_detection_length, 0.0);
   return lanelet::utils::getPolygonFromArcLength(

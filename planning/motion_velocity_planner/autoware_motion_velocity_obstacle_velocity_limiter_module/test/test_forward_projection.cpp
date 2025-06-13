@@ -14,7 +14,7 @@
 
 #include "../src/forward_projection.hpp"
 #include "../src/types.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 
 #include <geometry_msgs/msg/point.hpp>
 

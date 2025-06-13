@@ -15,9 +15,10 @@
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/footprints.hpp"
 
 #include "autoware/behavior_path_planner_common/utils/drivable_area_expansion/parameters.hpp"
+#include "autoware/behavior_path_planner_common/utils/path_safety_checker/objects_filtering.hpp"
 
-#include <autoware/universe_utils/geometry/boost_polygon_utils.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <boost/geometry/strategies/transform/matrix_transformers.hpp>
 
@@ -37,28 +38,48 @@ Polygon2d create_footprint(const geometry_msgs::msg::Pose & pose, const Polygon2
 {
   const auto angle = tf2::getYaw(pose.orientation);
   return translate_polygon(
-    autoware::universe_utils::rotatePolygon(base_footprint, angle), pose.position.x,
-    pose.position.y);
+    autoware_utils::rotate_polygon(base_footprint, angle), pose.position.x, pose.position.y);
 }
 
 MultiPolygon2d create_object_footprints(
   const autoware_perception_msgs::msg::PredictedObjects & objects,
   const DrivableAreaExpansionParameters & params)
 {
+  using behavior_path_planner::utils::path_safety_checker::filter::velocity_filter;
+
   MultiPolygon2d footprints;
-  if (params.avoid_dynamic_objects) {
-    for (const auto & object : objects.objects) {
-      const auto front = object.shape.dimensions.x / 2 + params.dynamic_objects_extra_front_offset;
-      const auto rear = -object.shape.dimensions.x / 2 - params.dynamic_objects_extra_rear_offset;
-      const auto left = object.shape.dimensions.y / 2 + params.dynamic_objects_extra_left_offset;
-      const auto right = -object.shape.dimensions.y / 2 - params.dynamic_objects_extra_right_offset;
-      Polygon2d base_footprint;
-      base_footprint.outer() = {
-        Point2d{front, left}, Point2d{front, right}, Point2d{rear, right}, Point2d{rear, left},
-        Point2d{front, left}};
+  if (!params.object_exclusion.exclude_dynamic && !params.object_exclusion.exclude_static) {
+    return footprints;
+  }
+
+  auto get_base_footprint = [&](const auto & object) {
+    const auto front = object.shape.dimensions.x / 2 + params.object_exclusion.front_offset;
+    const auto rear = -object.shape.dimensions.x / 2 - params.object_exclusion.rear_offset;
+    const auto left = object.shape.dimensions.y / 2 + params.object_exclusion.left_offset;
+    const auto right = -object.shape.dimensions.y / 2 - params.object_exclusion.right_offset;
+    Polygon2d footprint;
+    footprint.outer() = {
+      Point2d{front, left}, Point2d{front, right}, Point2d{rear, right}, Point2d{rear, left},
+      Point2d{front, left}};
+    return footprint;
+  };
+
+  for (const auto & object : objects.objects) {
+    const auto base_footprint = get_base_footprint(object);
+    if (params.object_exclusion.exclude_dynamic) {
       for (const auto & path : object.kinematics.predicted_paths)
         for (const auto & pose : path.path)
           footprints.push_back(create_footprint(pose, base_footprint));
+      continue;
+    }
+
+    if (
+      params.object_exclusion.exclude_static &&
+      velocity_filter(
+        object.kinematics.initial_twist_with_covariance.twist,
+        -std::numeric_limits<double>::epsilon(), params.object_exclusion.stopped_obj_vel_th)) {
+      footprints.push_back(
+        create_footprint(object.kinematics.initial_pose_with_covariance.pose, base_footprint));
     }
   }
   return footprints;

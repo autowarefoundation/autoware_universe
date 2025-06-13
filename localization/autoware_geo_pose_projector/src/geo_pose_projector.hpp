@@ -15,7 +15,7 @@
 #ifndef GEO_POSE_PROJECTOR_HPP_
 #define GEO_POSE_PROJECTOR_HPP_
 
-#include <autoware/component_interface_specs/map.hpp>
+#include <autoware/component_interface_specs_universe/map.hpp>
 #include <autoware/component_interface_utils/rclcpp.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -35,7 +35,7 @@ class GeoPoseProjector : public rclcpp::Node
 private:
   using GeoPoseWithCovariance = geographic_msgs::msg::GeoPoseWithCovarianceStamped;
   using PoseWithCovariance = geometry_msgs::msg::PoseWithCovarianceStamped;
-  using MapProjectorInfo = autoware::component_interface_specs::map::MapProjectorInfo;
+  using MapProjectorInfo = autoware::component_interface_specs_universe::map::MapProjectorInfo;
 
 public:
   explicit GeoPoseProjector(const rclcpp::NodeOptions & options);

@@ -14,7 +14,7 @@
 
 #include "autoware/behavior_path_side_shift_module/manager.hpp"
 
-#include "autoware/universe_utils/ros/update_param.hpp"
+#include "autoware_utils/ros/update_param.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -48,12 +48,12 @@ void SideShiftModuleManager::init(rclcpp::Node * node)
 void SideShiftModuleManager::updateModuleParams(
   [[maybe_unused]] const std::vector<rclcpp::Parameter> & parameters)
 {
-  using autoware::universe_utils::updateParam;
+  using autoware_utils::update_param;
 
   [[maybe_unused]] auto p = parameters_;
 
   [[maybe_unused]] const std::string ns = "side_shift.";
-  // updateParam<bool>(parameters, ns + ..., ...);
+  // update_param<bool>(parameters, ns + ..., ...);
 
   std::for_each(observers_.begin(), observers_.end(), [&p](const auto & observer) {
     if (!observer.expired()) observer.lock()->updateModuleParams(p);

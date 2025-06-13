@@ -20,19 +20,7 @@ This implementation inherits `autoware::pointcloud_preprocessor::Filter` class, 
 
 #### Core Parameters
 
-| Name                    | Type   | Description                                                     |
-| ----------------------- | ------ | --------------------------------------------------------------- |
-| `base_frame`            | string | base_link frame                                                 |
-| `has_static_tf_only`    | bool   | Flag to listen TF only once                                     |
-| `unit_axis`             | string | The axis which we need to search ground plane                   |
-| `max_iterations`        | int    | The maximum number of iterations                                |
-| `outlier_threshold`     | double | The distance threshold to the model [m]                         |
-| `plane_slope_threshold` | double | The slope threshold to prevent mis-fitting [deg]                |
-| `voxel_size_x`          | double | voxel size x [m]                                                |
-| `voxel_size_y`          | double | voxel size y [m]                                                |
-| `voxel_size_z`          | double | voxel size z [m]                                                |
-| `height_threshold`      | double | The height threshold from ground plane for no ground points [m] |
-| `debug`                 | bool   | whether to output debug information                             |
+{{ json_to_markdown("perception/autoware_ground_segmentation/schema/ransac_ground_filter.schema.json") }}
 
 ## Assumptions / Known limits
 

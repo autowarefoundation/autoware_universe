@@ -35,3 +35,5 @@
 
     # debug parameters
     publish_processing_time_detail: false
+    processing_time_tolerance_ms: 50.0 # [ms]
+    processing_time_consecutive_excess_tolerance_ms: 1000.0 # [ms]

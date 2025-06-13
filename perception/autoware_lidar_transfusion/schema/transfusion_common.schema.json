@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for TransFusion Diagnostics",
+  "type": "object",
+  "definitions": {
+    "transfusion_common": {
+      "type": "object",
+      "properties": {
+        "diagnostics": {
+          "type": "object",
+          "description": "Parameters for diagnostics.",
+          "properties": {
+            "max_allowed_processing_time_ms": {
+              "type": "number",
+              "description": "A threshold value for the allowed processing time. If the processing time exceeds this value, it will be considered a warning state. [ms]",
+              "default": 200.0,
+              "minimum": 0.0
+            },
+            "max_acceptable_consecutive_delay_ms": {
+              "type": "number",
+              "description": "A threshold value for the error state. If the duration since the last processing timestamp, which ended within max_allowed_processing_time_ms, exceeds this value, it will be considered an error state. [ms]",
+              "default": 1000.0,
+              "minimum": 0.0
+            },
+            "validation_callback_interval_ms": {
+              "type": "number",
+              "description": "An interval value for a timer callback that checks whether the current state meets the max_acceptable_consecutive_delay_ms condition. [ms]",
+              "default": 100.0,
+              "minimum": 1.0
+            }
+          }
+        }
+      },
+      "required": ["diagnostics"]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/transfusion_common"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}

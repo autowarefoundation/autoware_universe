@@ -4,9 +4,23 @@
   <arg name="ns" description="current namespace"/>
 
   <!-- Lidar + Camera detector parameters -->
-  <arg name="lidar_detection_model_type" description="options: `transfusion`, `centerpoint`, `pointpainting`, `apollo`, `clustering`"/>
-  <arg name="lidar_detection_model_name" description="options: `transfusion`, `centerpoint`, `centerpoint_tiny`, `centerpoint_sigma`, `pointpainting`"/>
-  <arg name="use_roi_based_cluster"/>
+  <arg name="lidar_detection_model_type">
+    <choice value="bevfusion"/>
+    <choice value="centerpoint"/>
+    <choice value="pointpainting"/>
+    <choice value="transfusion"/>
+    <choice value="apollo"/>
+    <choice value="clustering"/>
+  </arg>
+  <arg name="lidar_detection_model_name">
+    <choice value="bevfusion_lidar"/>
+    <choice value="centerpoint"/>
+    <choice value="centerpoint_tiny"/>
+    <choice value="centerpoint_sigma"/>
+    <choice value="pointpainting"/>
+    <choice value="transfusion"/>
+    <choice value=""/>
+  </arg>
   <arg name="use_low_intensity_cluster_filter"/>
   <arg name="use_image_segmentation_based_filter"/>
 
@@ -37,6 +51,9 @@
   <arg name="input/camera7/info"/>
   <arg name="input/camera7/rois"/>
 
+  <arg name="segmentation_pointcloud_fusion_camera_ids"/>
+  <arg name="image_topic_name"/>
+
   <arg name="node/pointcloud_container"/>
   <arg name="input/pointcloud"/>
   <arg name="input/pointcloud_map/pointcloud"/>
@@ -55,21 +72,17 @@
 
   <let name="euclidean_cluster/input/pointcloud" value="$(var segmentation_based_filtered/output/pointcloud)" if="$(var use_image_segmentation_based_filter)"/>
   <let name="euclidean_cluster/input/pointcloud" value="$(var input/pointcloud_map/pointcloud)" unless="$(var use_image_segmentation_based_filter)"/>
-  <let name="clustering/clusters" value="$(var ns)/clustering/clusters"/>
-  <let name="euclidean_cluster/output/clusters" value="$(var ns)/clustering/euclidean_cluster/clusters" if="$(var use_roi_based_cluster)"/>
-  <let name="euclidean_cluster/output/clusters" value="$(var clustering/clusters)" unless="$(var use_roi_based_cluster)"/>
-  <let name="roi_cluster/input/pointcloud" value="$(var input/pointcloud_map/pointcloud)"/>
-  <let name="roi_cluster/output/clusters" value="$(var ns)/clustering/roi_cluster/clusters"/>
-  <let name="roi_merged_cluster/output/clusters" value="$(var clustering/clusters)"/>
-  <let name="shape_estimation1/input/clusters" value="$(var clustering/clusters)"/>
+  <let name="euclidean_cluster/output/clusters" value="$(var ns)/clustering/clusters"/>
+  <let name="shape_estimation1/input/clusters" value="$(var euclidean_cluster/output/clusters)"/>
   <let name="shape_estimation1/output/objects" value="$(var output/clustering/cluster_objects)"/>
 
-  <let name="roi_cluster_fusion/input/clusters" value="$(var ns)/clustering/clusters"/>
+  <let name="roi_cluster_fusion/input/clusters" value="$(var euclidean_cluster/output/clusters)"/>
   <let name="roi_cluster_fusion/output/clusters" value="$(var ns)/clustering/camera_lidar_fusion/clusters"/>
   <let name="low_intensity_cluster_filter/input/clusters" value="$(var roi_cluster_fusion/output/clusters)"/>
   <let name="low_intensity_cluster_filter/output/clusters" value="$(var ns)/clustering/camera_lidar_fusion/filtered/clusters"/>
-  <let name="shape_estimation2/input/clusters" value="$(var low_intensity_cluster_filter/output/clusters)" if="$(var use_low_intensity_cluster_filter)"/>
+
   <let name="shape_estimation2/input/clusters" value="$(var roi_cluster_fusion/output/clusters)" unless="$(var use_low_intensity_cluster_filter)"/>
+  <let name="shape_estimation2/input/clusters" value="$(var low_intensity_cluster_filter/output/clusters)" if="$(var use_low_intensity_cluster_filter)"/>
   <let name="shape_estimation2/output/objects" value="$(var ns)/clustering/camera_lidar_fusion/objects_with_feature"/>
   <let name="detected_object_feature_remover/input/objects_with_feature" value="$(var shape_estimation2/output/objects)"/>
   <let name="detected_object_feature_remover/output/objects" value="$(var output/rule_detector/objects)"/>
@@ -125,6 +138,7 @@
       <arg name="model_param_path" value="$(var lidar_model_param_path)/$(var lidar_detection_model_name).param.yaml"/>
       <arg name="ml_package_param_path" value="$(var model_path)/$(var lidar_detection_model_name)_ml_package.param.yaml"/>
       <arg name="class_remapper_param_path" value="$(var model_path)/detection_class_remapper.param.yaml"/>
+      <arg name="common_param_path" value="$(var pointpainting_fusion_common_param_path)"/>
       <arg name="use_pointcloud_container" value="true"/>
       <arg name="pointcloud_container_name" value="$(var node/pointcloud_container)"/>
     </include>
@@ -132,9 +146,11 @@
 
   <!-- Image_segmentation based filter, apply for camera0 only-->
   <group>
-    <include file="$(find-pkg-share autoware_image_projection_based_fusion)/launch/segmentation_pointcloud_fusion.launch.xml" if="$(var use_image_segmentation_based_filter)">
+    <include file="$(find-pkg-share autoware_image_projection_based_fusion)/launch/segmentation_pointcloud_fusion.launch.py" if="$(var use_image_segmentation_based_filter)">
       <arg name="input/pointcloud" value="$(var segmentation_based_filtered/input/pointcloud)"/>
       <arg name="output/pointcloud" value="$(var segmentation_based_filtered/output/pointcloud)"/>
+      <arg name="image_topic_name" value="$(var image_topic_name)"/>
+      <arg name="fusion_camera_ids" value="$(var segmentation_pointcloud_fusion_camera_ids)"/>
     </include>
   </group>
 
@@ -147,52 +163,6 @@
         <arg name="output_clusters" value="$(var euclidean_cluster/output/clusters)"/>
         <arg name="use_low_height_cropbox" value="$(var use_low_height_cropbox)"/>
         <arg name="use_pointcloud_container" value="false"/>
-      </include>
-    </group>
-
-    <!-- roi based clustering -->
-    <group>
-      <push-ros-namespace namespace="roi_cluster"/>
-      <group>
-        <include file="$(find-pkg-share autoware_image_projection_based_fusion)/launch/roi_pointcloud_fusion.launch.xml" if="$(var use_roi_based_cluster)">
-          <arg name="input/rois_number" value="$(var number_of_cameras)"/>
-          <arg name="input/rois0" value="$(var input/camera0/rois)"/>
-          <arg name="input/rois1" value="$(var input/camera1/rois)"/>
-          <arg name="input/rois2" value="$(var input/camera2/rois)"/>
-          <arg name="input/rois3" value="$(var input/camera3/rois)"/>
-          <arg name="input/rois4" value="$(var input/camera4/rois)"/>
-          <arg name="input/rois5" value="$(var input/camera5/rois)"/>
-          <arg name="input/rois6" value="$(var input/camera6/rois)"/>
-          <arg name="input/rois7" value="$(var input/camera7/rois)"/>
-          <arg name="input/camera_info0" value="$(var input/camera0/info)"/>
-          <arg name="input/camera_info1" value="$(var input/camera1/info)"/>
-          <arg name="input/camera_info2" value="$(var input/camera2/info)"/>
-          <arg name="input/camera_info3" value="$(var input/camera3/info)"/>
-          <arg name="input/camera_info4" value="$(var input/camera4/info)"/>
-          <arg name="input/camera_info5" value="$(var input/camera5/info)"/>
-          <arg name="input/camera_info6" value="$(var input/camera6/info)"/>
-          <arg name="input/camera_info7" value="$(var input/camera7/info)"/>
-          <arg name="input/image0" value="$(var input/camera0/image)"/>
-          <arg name="input/image1" value="$(var input/camera1/image)"/>
-          <arg name="input/image2" value="$(var input/camera2/image)"/>
-          <arg name="input/image3" value="$(var input/camera3/image)"/>
-          <arg name="input/image4" value="$(var input/camera4/image)"/>
-          <arg name="input/image5" value="$(var input/camera5/image)"/>
-          <arg name="input/image6" value="$(var input/camera6/image)"/>
-          <arg name="input/image7" value="$(var input/camera7/image)"/>
-          <arg name="input/pointcloud" value="$(var roi_cluster/input/pointcloud)"/>
-          <arg name="output_clusters" value="$(var roi_cluster/output/clusters)"/>
-          <arg name="param_path" value="$(var roi_pointcloud_fusion_param_path)"/>
-        </include>
-      </group>
-    </group>
-
-    <!-- simple_cluster_merger -->
-    <group>
-      <include file="$(find-pkg-share autoware_cluster_merger)/launch/cluster_merger.launch.xml" if="$(var use_roi_based_cluster)">
-        <arg name="input/cluster0" value="$(var euclidean_cluster/output/clusters)"/>
-        <arg name="input/cluster1" value="$(var roi_cluster/output/clusters)"/>
-        <arg name="output/clusters" value="$(var roi_merged_cluster/output/clusters)"/>
       </include>
     </group>
 

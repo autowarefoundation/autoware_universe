@@ -19,7 +19,7 @@
 #include "stopper/base_stopper.hpp"
 #include "switch_rule/base_switch_rule.hpp"
 
-#include <autoware/universe_utils/ros/logger_level_configure.hpp>
+#include <autoware_utils_logging/logger_level_configure.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
@@ -53,7 +53,7 @@ private:
   // Set of running pose estimators specified by ros param `pose_sources`
   const std::unordered_set<PoseEstimatorType> running_estimator_list_;
   // Configuration to allow changing the log level by service
-  const std::unique_ptr<autoware::universe_utils::LoggerLevelConfigure> logger_configure_;
+  const std::unique_ptr<autoware_utils_logging::LoggerLevelConfigure> logger_configure_;
 
   // This is passed to several modules (stoppers & rule) so that all modules can access common data
   // without passing them as arguments. Also, modules can register subscriber callbacks through

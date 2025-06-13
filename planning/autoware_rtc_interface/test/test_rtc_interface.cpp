@@ -14,7 +14,7 @@
 
 #include "autoware/rtc_interface/rtc_interface.hpp"
 
-#include <autoware/universe_utils/ros/uuid_helper.hpp>
+#include <autoware_utils/ros/uuid_helper.hpp>
 #include <rclcpp/node.hpp>
 #include <rclcpp/time.hpp>
 
@@ -56,7 +56,7 @@ protected:
 
 TEST_F(RTCInterfaceTest, uuid_to_string)
 {
-  auto uuid = autoware::universe_utils::generateUUID();
+  auto uuid = autoware_utils::generate_uuid();
   rclcpp::Time stamp(1.0, 0);
 
   // Condition: no registered uuid

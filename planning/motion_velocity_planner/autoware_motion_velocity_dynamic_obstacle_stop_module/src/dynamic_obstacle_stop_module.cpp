@@ -23,16 +23,16 @@
 
 #include <autoware/motion_utils/distance/distance.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/parameter.hpp>
-#include <autoware/universe_utils/ros/update_param.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/parameter.hpp>
+#include <autoware_utils/ros/published_time_publisher.hpp>
+#include <autoware_utils/ros/update_param.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 
 #include <algorithm>
 #include <map>
 #include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace autoware::motion_velocity_planner
@@ -43,31 +43,36 @@ void DynamicObstacleStopModule::init(rclcpp::Node & node, const std::string & mo
   module_name_ = module_name;
   logger_ = node.get_logger().get_child(ns_);
   clock_ = node.get_clock();
-  velocity_factor_interface_.init(autoware::motion_utils::PlanningBehavior::ROUTE_OBSTACLE);
+
+  planning_factor_interface_ =
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
+      &node, "dynamic_obstacle_stop");
 
   debug_publisher_ =
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/" + ns_ + "/debug_markers", 1);
   virtual_wall_publisher_ =
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/" + ns_ + "/virtual_walls", 1);
-  processing_diag_publisher_ = std::make_shared<autoware::universe_utils::ProcessingTimePublisher>(
+  processing_diag_publisher_ = std::make_shared<autoware_utils::ProcessingTimePublisher>(
     &node, "~/debug/" + ns_ + "/processing_time_ms_diag");
-  processing_time_publisher_ = node.create_publisher<tier4_debug_msgs::msg::Float64Stamped>(
-    "~/debug/" + ns_ + "/processing_time_ms", 1);
+  processing_time_publisher_ =
+    node.create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "~/debug/" + ns_ + "/processing_time_ms", 1);
 
-  using autoware::universe_utils::getOrDeclareParameter;
+  using autoware_utils::get_or_declare_parameter;
   auto & p = params_;
-  p.extra_object_width = getOrDeclareParameter<double>(node, ns_ + ".extra_object_width");
-  p.minimum_object_velocity = getOrDeclareParameter<double>(node, ns_ + ".minimum_object_velocity");
-  p.stop_distance_buffer = getOrDeclareParameter<double>(node, ns_ + ".stop_distance_buffer");
-  p.time_horizon = getOrDeclareParameter<double>(node, ns_ + ".time_horizon");
-  p.hysteresis = getOrDeclareParameter<double>(node, ns_ + ".hysteresis");
-  p.add_duration_buffer = getOrDeclareParameter<double>(node, ns_ + ".add_stop_duration_buffer");
+  p.extra_object_width = get_or_declare_parameter<double>(node, ns_ + ".extra_object_width");
+  p.minimum_object_velocity =
+    get_or_declare_parameter<double>(node, ns_ + ".minimum_object_velocity");
+  p.stop_distance_buffer = get_or_declare_parameter<double>(node, ns_ + ".stop_distance_buffer");
+  p.time_horizon = get_or_declare_parameter<double>(node, ns_ + ".time_horizon");
+  p.hysteresis = get_or_declare_parameter<double>(node, ns_ + ".hysteresis");
+  p.add_duration_buffer = get_or_declare_parameter<double>(node, ns_ + ".add_stop_duration_buffer");
   p.remove_duration_buffer =
-    getOrDeclareParameter<double>(node, ns_ + ".remove_stop_duration_buffer");
+    get_or_declare_parameter<double>(node, ns_ + ".remove_stop_duration_buffer");
   p.minimum_object_distance_from_ego_trajectory =
-    getOrDeclareParameter<double>(node, ns_ + ".minimum_object_distance_from_ego_trajectory");
+    get_or_declare_parameter<double>(node, ns_ + ".minimum_object_distance_from_ego_trajectory");
   p.ignore_unavoidable_collisions =
-    getOrDeclareParameter<bool>(node, ns_ + ".ignore_unavoidable_collisions");
+    get_or_declare_parameter<bool>(node, ns_ + ".ignore_unavoidable_collisions");
 
   const auto vehicle_info = autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo();
   p.ego_lateral_offset =
@@ -77,36 +82,49 @@ void DynamicObstacleStopModule::init(rclcpp::Node & node, const std::string & mo
 
 void DynamicObstacleStopModule::update_parameters(const std::vector<rclcpp::Parameter> & parameters)
 {
-  using autoware::universe_utils::updateParam;
+  using autoware_utils::update_param;
   auto & p = params_;
-  updateParam(parameters, ns_ + ".extra_object_width", p.extra_object_width);
-  updateParam(parameters, ns_ + ".minimum_object_velocity", p.minimum_object_velocity);
-  updateParam(parameters, ns_ + ".stop_distance_buffer", p.stop_distance_buffer);
-  updateParam(parameters, ns_ + ".time_horizon", p.time_horizon);
-  updateParam(parameters, ns_ + ".hysteresis", p.hysteresis);
-  updateParam(parameters, ns_ + ".add_stop_duration_buffer", p.add_duration_buffer);
-  updateParam(parameters, ns_ + ".remove_stop_duration_buffer", p.remove_duration_buffer);
-  updateParam(
+  update_param(parameters, ns_ + ".extra_object_width", p.extra_object_width);
+  update_param(parameters, ns_ + ".minimum_object_velocity", p.minimum_object_velocity);
+  update_param(parameters, ns_ + ".stop_distance_buffer", p.stop_distance_buffer);
+  update_param(parameters, ns_ + ".time_horizon", p.time_horizon);
+  update_param(parameters, ns_ + ".hysteresis", p.hysteresis);
+  update_param(parameters, ns_ + ".add_stop_duration_buffer", p.add_duration_buffer);
+  update_param(parameters, ns_ + ".remove_stop_duration_buffer", p.remove_duration_buffer);
+  update_param(
     parameters, ns_ + ".minimum_object_distance_from_ego_trajectory",
     p.minimum_object_distance_from_ego_trajectory);
-  updateParam(parameters, ns_ + ".ignore_unavoidable_collisions", p.ignore_unavoidable_collisions);
+  update_param(parameters, ns_ + ".ignore_unavoidable_collisions", p.ignore_unavoidable_collisions);
+}
+
+void DynamicObstacleStopModule::publish_processing_time(const double processing_time_ms)
+{
+  autoware_internal_debug_msgs::msg::Float64Stamped processing_time_msg;
+  processing_time_msg.stamp = clock_->now();
+  processing_time_msg.data = processing_time_ms;
+  processing_time_publisher_->publish(processing_time_msg);
 }
 
 VelocityPlanningResult DynamicObstacleStopModule::plan(
-  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & ego_trajectory_points,
+  [[maybe_unused]] const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> &
+    raw_trajectory_points,
+  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
   const std::shared_ptr<const PlannerData> planner_data)
 {
   VelocityPlanningResult result;
   debug_data_.reset_data();
-  if (ego_trajectory_points.size() < 2) return result;
+  autoware_utils::StopWatch<std::chrono::microseconds> stopwatch;
+  if (smoothed_trajectory_points.size() < 2) {
+    publish_processing_time(stopwatch.toc() / 1000);
+    return result;
+  }
 
-  autoware::universe_utils::StopWatch<std::chrono::microseconds> stopwatch;
   stopwatch.tic();
   stopwatch.tic("preprocessing");
   dynamic_obstacle_stop::EgoData ego_data;
   ego_data.pose = planner_data->current_odometry.pose.pose;
-  ego_data.trajectory = ego_trajectory_points;
-  autoware::motion_utils::removeOverlapPoints(ego_data.trajectory);
+  ego_data.trajectory = smoothed_trajectory_points;
+  ego_data.trajectory = autoware::motion_utils::removeOverlapPoints(ego_data.trajectory);
   ego_data.first_trajectory_idx =
     autoware::motion_utils::findNearestSegmentIndex(ego_data.trajectory, ego_data.pose.position);
   ego_data.longitudinal_offset_to_first_trajectory_idx =
@@ -130,7 +148,7 @@ VelocityPlanningResult DynamicObstacleStopModule::plan(
       ? 0.0
       : params_.hysteresis;
   const auto dynamic_obstacles = dynamic_obstacle_stop::filter_predicted_objects(
-    planner_data->predicted_objects, ego_data, params_, hysteresis);
+    planner_data->objects, ego_data, params_, hysteresis);
 
   const auto preprocessing_duration_us = stopwatch.toc("preprocessing");
 
@@ -159,15 +177,9 @@ VelocityPlanningResult DynamicObstacleStopModule::plan(
     debug_data_.stop_pose = stop_pose;
     if (stop_pose) {
       result.stop_points.push_back(stop_pose->position);
-      const auto stop_pose_reached =
-        planner_data->current_odometry.twist.twist.linear.x < 1e-3 &&
-        autoware::universe_utils::calcDistance2d(ego_data.pose, *stop_pose) < 1e-3;
-      velocity_factor_interface_.set(
-        ego_trajectory_points, ego_data.pose, *stop_pose,
-        stop_pose_reached ? autoware::motion_utils::VelocityFactor::STOPPED
-                          : autoware::motion_utils::VelocityFactor::APPROACHING,
-        "dynamic_obstacle_stop");
-      result.velocity_factor = velocity_factor_interface_.get();
+      planning_factor_interface_->add(
+        smoothed_trajectory_points, ego_data.pose, *stop_pose, PlanningFactor::STOP,
+        SafetyFactorArray{});
       create_virtual_walls();
     }
   }
@@ -190,10 +202,7 @@ VelocityPlanningResult DynamicObstacleStopModule::plan(
   processing_times["collisions"] = collisions_duration_us / 1000;
   processing_times["Total"] = total_time_us / 1000;
   processing_diag_publisher_->publish(processing_times);
-  tier4_debug_msgs::msg::Float64Stamped processing_time_msg;
-  processing_time_msg.stamp = clock_->now();
-  processing_time_msg.data = processing_times["Total"];
-  processing_time_publisher_->publish(processing_time_msg);
+  publish_processing_time(processing_times["Total"]);
   return result;
 }
 

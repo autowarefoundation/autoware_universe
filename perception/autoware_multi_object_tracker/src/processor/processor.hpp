@@ -15,8 +15,11 @@
 #ifndef PROCESSOR__PROCESSOR_HPP_
 #define PROCESSOR__PROCESSOR_HPP_
 
+#include "autoware/multi_object_tracker/association/association.hpp"
+#include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 
+#include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "autoware_perception_msgs/msg/detected_objects.hpp"
@@ -36,34 +39,36 @@ using LabelType = autoware_perception_msgs::msg::ObjectClassification::_label_ty
 struct TrackerProcessorConfig
 {
   std::map<LabelType, std::string> tracker_map;
-  size_t channel_size;
   float tracker_lifetime;                              // [s]
   float min_known_object_removal_iou;                  // ratio [0, 1]
   float min_unknown_object_removal_iou;                // ratio [0, 1]
-  double distance_threshold;                           // [m]
   std::map<LabelType, int> confident_count_threshold;  // [count]
+  Eigen::MatrixXd max_dist_matrix;
 };
 
 class TrackerProcessor
 {
 public:
-  explicit TrackerProcessor(const TrackerProcessorConfig & config);
+  TrackerProcessor(
+    const TrackerProcessorConfig & config, const AssociatorConfig & associator_config,
+    const std::vector<types::InputChannel> & channels_config);
 
   const std::list<std::shared_ptr<Tracker>> & getListTracker() const { return list_tracker_; }
   // tracker processes
   void predict(const rclcpp::Time & time);
+  void associate(
+    const types::DynamicObjectList & detected_objects,
+    std::unordered_map<int, int> & direct_assignment,
+    std::unordered_map<int, int> & reverse_assignment) const;
   void update(
-    const autoware_perception_msgs::msg::DetectedObjects & detected_objects,
-    const geometry_msgs::msg::Transform & self_transform,
-    const std::unordered_map<int, int> & direct_assignment, const uint & channel_index);
+    const types::DynamicObjectList & detected_objects,
+    const std::unordered_map<int, int> & direct_assignment);
   void spawn(
-    const autoware_perception_msgs::msg::DetectedObjects & detected_objects,
-    const geometry_msgs::msg::Transform & self_transform,
-    const std::unordered_map<int, int> & reverse_assignment, const uint & channel_index);
+    const types::DynamicObjectList & detected_objects,
+    const std::unordered_map<int, int> & reverse_assignment);
   void prune(const rclcpp::Time & time);
 
-  // output
-  bool isConfidentTracker(const std::shared_ptr<Tracker> & tracker) const;
+  // output processes
   void getTrackedObjects(
     const rclcpp::Time & time,
     autoware_perception_msgs::msg::TrackedObjects & tracked_objects) const;
@@ -73,14 +78,26 @@ public:
 
   void getExistenceProbabilities(std::vector<std::vector<float>> & existence_vectors) const;
 
+  void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr);
+
 private:
-  TrackerProcessorConfig config_;
+  const TrackerProcessorConfig config_;
+  const std::vector<types::InputChannel> & channels_config_;
+
+  std::unique_ptr<DataAssociation> association_;
+
+  mutable rclcpp::Time last_prune_time_;
+
   std::list<std::shared_ptr<Tracker>> list_tracker_;
   void removeOldTracker(const rclcpp::Time & time);
-  void removeOverlappedTracker(const rclcpp::Time & time);
+  void mergeOverlappedTracker(const rclcpp::Time & time);
+  bool canMergeOverlappedTarget(
+    const Tracker & target, const Tracker & other, const rclcpp::Time & time,
+    const double iou) const;
   std::shared_ptr<Tracker> createNewTracker(
-    const autoware_perception_msgs::msg::DetectedObject & object, const rclcpp::Time & time,
-    const geometry_msgs::msg::Transform & self_transform, const uint & channel_index) const;
+    const types::DynamicObject & object, const rclcpp::Time & time) const;
+
+  std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 };
 
 }  // namespace autoware::multi_object_tracker

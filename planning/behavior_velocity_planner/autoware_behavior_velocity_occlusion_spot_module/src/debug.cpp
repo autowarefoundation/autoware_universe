@@ -18,7 +18,7 @@
 #include <autoware/behavior_velocity_planner_common/utilization/debug.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
-#include <autoware/universe_utils/ros/marker_helper.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
 
 #include <cmath>
 #include <string>
@@ -30,12 +30,12 @@ namespace
 {
 using builtin_interfaces::msg::Time;
 using BasicPolygons = std::vector<lanelet::BasicPolygon2d>;
-using autoware::universe_utils::appendMarkerArray;
-using autoware::universe_utils::calcOffsetPose;
-using autoware::universe_utils::createMarkerColor;
-using autoware::universe_utils::createMarkerOrientation;
-using autoware::universe_utils::createMarkerPosition;
-using autoware::universe_utils::createMarkerScale;
+using autoware_utils::append_marker_array;
+using autoware_utils::calc_offset_pose;
+using autoware_utils::create_marker_color;
+using autoware_utils::create_marker_orientation;
+using autoware_utils::create_marker_position;
+using autoware_utils::create_marker_scale;
 using occlusion_spot_utils::PossibleCollisionInfo;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
@@ -48,8 +48,8 @@ std::vector<Marker> makeDebugInfoMarker(
   debug_marker.header.frame_id = "map";
   debug_marker.id = id;
   debug_marker.action = Marker::ADD;
-  debug_marker.pose.position = createMarkerPosition(0.0, 0.0, 0.0);
-  debug_marker.pose.orientation = createMarkerOrientation(0, 0, 0, 1.0);
+  debug_marker.pose.position = create_marker_position(0.0, 0.0, 0.0);
+  debug_marker.pose.orientation = create_marker_orientation(0, 0, 0, 1.0);
   debug_marker.lifetime = rclcpp::Duration::from_seconds(0.5);
   const auto & pc = possible_collision;
   // for collision point with margin
@@ -57,8 +57,8 @@ std::vector<Marker> makeDebugInfoMarker(
     debug_marker.ns = "collision_point";
     debug_marker.type = Marker::CYLINDER;
     debug_marker.pose = pc.collision_with_margin.pose;
-    debug_marker.scale = createMarkerScale(0.5, 0.5, 0.5);
-    debug_marker.color = createMarkerColor(1.0, 0.0, 0.0, 0.5);
+    debug_marker.scale = create_marker_scale(0.5, 0.5, 0.5);
+    debug_marker.color = create_marker_color(1.0, 0.0, 0.0, 0.5);
     debug_markers.push_back(debug_marker);
   }
   // cylinder at collision_point point
@@ -66,8 +66,8 @@ std::vector<Marker> makeDebugInfoMarker(
     debug_marker.ns = "collision_point_with_margin";
     debug_marker.type = Marker::CYLINDER;
     debug_marker.pose = pc.collision_pose;
-    debug_marker.scale = createMarkerScale(0.5, 0.5, 0.5);
-    debug_marker.color = createMarkerColor(1.0, 0.5, 0.0, 0.5);
+    debug_marker.scale = create_marker_scale(0.5, 0.5, 0.5);
+    debug_marker.color = create_marker_color(1.0, 0.5, 0.0, 0.5);
     debug_markers.push_back(debug_marker);
   }
 
@@ -76,8 +76,8 @@ std::vector<Marker> makeDebugInfoMarker(
     debug_marker.ns = "obstacle";
     debug_marker.type = Marker::CYLINDER;
     debug_marker.pose.position = pc.obstacle_info.position;
-    debug_marker.color = createMarkerColor(0.5, 0.5, 0.5, 0.5);
-    debug_marker.scale = createMarkerScale(0.8, 0.8, 1.5);
+    debug_marker.color = create_marker_color(0.5, 0.5, 0.5, 0.5);
+    debug_marker.scale = create_marker_scale(0.8, 0.8, 1.5);
     debug_markers.push_back(debug_marker);
   }
 
@@ -85,8 +85,8 @@ std::vector<Marker> makeDebugInfoMarker(
   {
     debug_marker.ns = "from_obj_to_collision";
     debug_marker.type = Marker::ARROW;
-    debug_marker.scale = createMarkerScale(0.05, 0.2, 0.5);
-    debug_marker.color = createMarkerColor(0.1, 0.1, 0.1, 0.5);
+    debug_marker.scale = create_marker_scale(0.05, 0.2, 0.5);
+    debug_marker.color = create_marker_color(0.1, 0.1, 0.1, 0.5);
     debug_marker.points = {pc.obstacle_info.position, pc.intersection_pose.position};
     debug_markers.push_back(debug_marker);
   }
@@ -97,7 +97,7 @@ std::vector<Marker> makeDebugInfoMarker(
     debug_marker.type = Marker::TEXT_VIEW_FACING;
     debug_marker.pose = pc.collision_with_margin.pose;
     debug_marker.scale.z = 1.0;
-    debug_marker.color = createMarkerColor(1.0, 1.0, 0.0, 1.0);
+    debug_marker.color = create_marker_color(1.0, 1.0, 0.0, 1.0);
     std::ostringstream string_stream;
     auto r = [](const double v) { return std::round(v * 100.0) / 100.0; };
     const double len = r(pc.arc_lane_dist_at_collision.length);
@@ -140,15 +140,15 @@ MarkerArray makePolygonMarker(
   debug_marker.id = planning_utils::bitShift(id);
   debug_marker.type = Marker::LINE_STRIP;
   debug_marker.action = Marker::ADD;
-  debug_marker.pose.position = createMarkerPosition(0.0, 0.0, 0);
-  debug_marker.pose.orientation = createMarkerOrientation(0, 0, 0, 1.0);
-  debug_marker.scale = createMarkerScale(0.1, 0.1, 0.1);
-  debug_marker.color = createMarkerColor(1.0, 1.0, 1.0, 0.5);
+  debug_marker.pose.position = create_marker_position(0.0, 0.0, 0);
+  debug_marker.pose.orientation = create_marker_orientation(0, 0, 0, 1.0);
+  debug_marker.scale = create_marker_scale(0.1, 0.1, 0.1);
+  debug_marker.color = create_marker_color(1.0, 1.0, 1.0, 0.5);
   debug_marker.lifetime = rclcpp::Duration::from_seconds(0.5);
   debug_marker.ns = ns;
   for (const auto & poly : polygons) {
     for (const auto & p : poly) {
-      geometry_msgs::msg::Point point = createMarkerPosition(p.x(), p.y(), z + 0.5);
+      geometry_msgs::msg::Point point = create_marker_position(p.x(), p.y(), z + 0.5);
       debug_marker.points.push_back(point);
     }
     debug_markers.markers.push_back(debug_marker);
@@ -168,15 +168,15 @@ MarkerArray makeSlicePolygonMarker(
   debug_marker.id = planning_utils::bitShift(id);
   debug_marker.type = Marker::LINE_STRIP;
   debug_marker.action = Marker::ADD;
-  debug_marker.pose.position = createMarkerPosition(0.0, 0.0, 0);
-  debug_marker.pose.orientation = createMarkerOrientation(0, 0, 0, 1.0);
-  debug_marker.scale = createMarkerScale(0.1, 0.1, 0.1);
-  debug_marker.color = createMarkerColor(1.0, 0.0, 1.0, 0.3);
+  debug_marker.pose.position = create_marker_position(0.0, 0.0, 0);
+  debug_marker.pose.orientation = create_marker_orientation(0, 0, 0, 1.0);
+  debug_marker.scale = create_marker_scale(0.1, 0.1, 0.1);
+  debug_marker.color = create_marker_color(1.0, 0.0, 1.0, 0.3);
   debug_marker.lifetime = rclcpp::Duration::from_seconds(0.1);
   debug_marker.ns = ns;
   for (const auto & slice : slices) {
     for (const auto & p : slice.outer()) {
-      geometry_msgs::msg::Point point = createMarkerPosition(p.x(), p.y(), z);
+      geometry_msgs::msg::Point point = create_marker_position(p.x(), p.y(), z);
       debug_marker.points.push_back(point);
     }
     debug_markers.markers.push_back(debug_marker);
@@ -192,21 +192,21 @@ MarkerArray OcclusionSpotModule::createDebugMarkerArray()
   const auto now = this->clock_->now();
   MarkerArray debug_marker_array;
   if (!debug_data_.possible_collisions.empty()) {
-    appendMarkerArray(makeDebugInfoMarkers(debug_data_), &debug_marker_array, now);
+    append_marker_array(makeDebugInfoMarkers(debug_data_), &debug_marker_array, now);
   }
   if (!debug_data_.detection_area_polygons.empty()) {
-    appendMarkerArray(
+    append_marker_array(
       makeSlicePolygonMarker(
         debug_data_.detection_area_polygons, "detection_area", module_id_, debug_data_.z),
       &debug_marker_array, now);
   }
   if (!debug_data_.close_partition.empty() && param_.is_show_occlusion) {
-    appendMarkerArray(
+    append_marker_array(
       makePolygonMarker(debug_data_.close_partition, "close_partition", module_id_, debug_data_.z),
       &debug_marker_array, now);
   }
   if (!debug_data_.occlusion_points.empty()) {
-    appendMarkerArray(
+    append_marker_array(
       debug::createPointsMarkerArray(
         debug_data_.occlusion_points, "occlusion", module_id_, now, 0.5, 0.5, 0.5, 1.0, 0.0, 0.0),
       &debug_marker_array, now);
@@ -222,7 +222,7 @@ autoware::motion_utils::VirtualWalls OcclusionSpotModule::createVirtualWalls()
   wall.style = autoware::motion_utils::VirtualWallType::slowdown;
   for (size_t id = 0; id < debug_data_.debug_poses.size(); id++) {
     wall.pose =
-      calcOffsetPose(debug_data_.debug_poses.at(id), debug_data_.baselink_to_front, 0.0, 0.0);
+      calc_offset_pose(debug_data_.debug_poses.at(id), debug_data_.baselink_to_front, 0.0, 0.0);
     virtual_walls.push_back(wall);
   }
   return virtual_walls;

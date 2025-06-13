@@ -13,9 +13,10 @@
 // limitations under the License.
 
 #pragma once
-
 #include "autoware/euclidean_cluster/euclidean_cluster_interface.hpp"
 #include "autoware/euclidean_cluster/utils.hpp"
+
+#include <rclcpp/node.hpp>
 
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/point_types.h>
@@ -31,7 +32,9 @@ public:
   VoxelGridBasedEuclideanCluster(bool use_height, int min_cluster_size, int max_cluster_size);
   VoxelGridBasedEuclideanCluster(
     bool use_height, int min_cluster_size, int max_cluster_size, float tolerance,
-    float voxel_leaf_size, int min_points_number_per_voxel);
+    float voxel_leaf_size, int min_points_number_per_voxel,
+    int min_voxel_cluster_size_for_filtering, int max_points_per_voxel_in_large_cluster,
+    int max_voxel_cluster_for_output);
   bool cluster(
     const pcl::PointCloud<pcl::PointXYZ>::ConstPtr & pointcloud,
     std::vector<pcl::PointCloud<pcl::PointXYZ>> & clusters) override;
@@ -50,6 +53,9 @@ private:
   float tolerance_;
   float voxel_leaf_size_;
   int min_points_number_per_voxel_;
+  int min_voxel_cluster_size_for_filtering_;
+  int max_points_per_voxel_in_large_cluster_;
+  int max_voxel_cluster_for_output_;
 };
 
 }  // namespace autoware::euclidean_cluster

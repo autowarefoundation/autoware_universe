@@ -15,8 +15,10 @@
 #include "filter_predicted_objects.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/object_recognition_utils/predicted_path_utils.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <boost/geometry/algorithms/detail/intersects/interface.hpp>
 #include <boost/geometry/algorithms/intersects.hpp>
@@ -32,7 +34,7 @@ namespace autoware::motion_velocity_planner::out_of_lane
 {
 void cut_predicted_path_beyond_line(
   autoware_perception_msgs::msg::PredictedPath & predicted_path,
-  const universe_utils::LineString2d & stop_line, const double object_front_overhang)
+  const autoware_utils::LineString2d & stop_line, const double object_front_overhang)
 {
   if (predicted_path.path.empty() || stop_line.size() < 2) return;
 
@@ -54,7 +56,7 @@ void cut_predicted_path_beyond_line(
     auto cut_idx = stop_line_idx;
     double arc_length = 0;
     while (cut_idx > 0 && arc_length < object_front_overhang) {
-      arc_length += universe_utils::calcDistance2d(
+      arc_length += autoware_utils::calc_distance2d(
         predicted_path.path[cut_idx], predicted_path.path[cut_idx - 1]);
       --cut_idx;
     }
@@ -62,17 +64,17 @@ void cut_predicted_path_beyond_line(
   }
 }
 
-std::optional<universe_utils::LineString2d> find_next_stop_line(
+std::optional<autoware_utils::LineString2d> find_next_stop_line(
   const autoware_perception_msgs::msg::PredictedPath & path, const EgoData & ego_data)
 {
-  universe_utils::LineString2d query_path;
+  autoware_utils::LineString2d query_path;
   for (const auto & p : path.path) query_path.emplace_back(p.position.x, p.position.y);
   std::vector<StopLineNode> query_results;
   ego_data.stop_lines_rtree.query(
     boost::geometry::index::intersects(query_path), std::back_inserter(query_results));
   auto earliest_intersecting_index = query_path.size();
-  std::optional<universe_utils::LineString2d> earliest_stop_line;
-  universe_utils::Segment2d path_segment;
+  std::optional<autoware_utils::LineString2d> earliest_stop_line;
+  autoware_utils::Segment2d path_segment;
   for (const auto & [_, stop_line] : query_results) {
     for (auto index = 0UL; index + 1 < query_path.size(); ++index) {
       path_segment.first = query_path[index];
@@ -102,27 +104,62 @@ void cut_predicted_path_beyond_red_lights(
   }
 }
 
+void resample_predicted_paths(
+  std::vector<autoware_perception_msgs::msg::PredictedPath> & predicted_paths,
+  const autoware_perception_msgs::msg::Shape & shape)
+{
+  auto min_gap_distance = 0.0;
+  if (
+    shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX ||
+    shape.type == autoware_perception_msgs::msg::Shape::CYLINDER) {
+    min_gap_distance = shape.dimensions.x;
+  } else {  // POLYGON not implemented
+    return;
+  }
+  for (auto & path : predicted_paths) {
+    const auto time_step = rclcpp::Duration(path.time_step).seconds();
+    const auto time_horizon = time_step * static_cast<double>(path.path.size() - 1);
+    auto max_distance_interval = 0.0;
+    for (auto i = 0UL; i + 1 < path.path.size(); ++i) {
+      max_distance_interval = std::max(
+        max_distance_interval, autoware_utils::calc_distance2d(path.path[i], path.path[i + 1]));
+    }
+    const auto resample_ratio = min_gap_distance / max_distance_interval;
+    if (resample_ratio > 1.0) {
+      continue;
+    }
+    const auto new_time_step = resample_ratio * time_step;
+    const auto new_path =
+      object_recognition_utils::resamplePredictedPath(path, new_time_step, time_horizon);
+    path.time_step = new_path.time_step;
+    path.path = new_path.path;
+  }
+}
+
 autoware_perception_msgs::msg::PredictedObjects filter_predicted_objects(
   const PlannerData & planner_data, const EgoData & ego_data, const PlannerParam & params)
 {
   autoware_perception_msgs::msg::PredictedObjects filtered_objects;
-  filtered_objects.header = planner_data.predicted_objects.header;
-  for (const auto & object : planner_data.predicted_objects.objects) {
+  filtered_objects.header = planner_data.predicted_objects_header;
+  for (const auto & object : planner_data.objects) {
+    const auto & predicted_object = object->predicted_object;
     const auto is_pedestrian =
-      std::find_if(object.classification.begin(), object.classification.end(), [](const auto & c) {
-        return c.label == autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN;
-      }) != object.classification.end();
+      std::find_if(
+        predicted_object.classification.begin(), predicted_object.classification.end(),
+        [](const auto & c) {
+          return c.label == autoware_perception_msgs::msg::ObjectClassification::PEDESTRIAN;
+        }) != predicted_object.classification.end();
     if (is_pedestrian) continue;
 
     const auto is_coming_from_behind =
       motion_utils::calcSignedArcLength(
         ego_data.trajectory_points, 0UL,
-        object.kinematics.initial_pose_with_covariance.pose.position) < 0.0;
+        predicted_object.kinematics.initial_pose_with_covariance.pose.position) < 0.0;
     if (params.objects_ignore_behind_ego && is_coming_from_behind) {
       continue;
     }
 
-    auto filtered_object = object;
+    auto filtered_object = predicted_object;
     const auto is_invalid_predicted_path = [&](const auto & predicted_path) {
       const auto is_low_confidence = predicted_path.confidence < params.objects_min_confidence;
       const auto no_overlap_path = motion_utils::removeOverlapPoints(predicted_path.path);
@@ -130,10 +167,10 @@ autoware_perception_msgs::msg::PredictedObjects filter_predicted_objects(
       const auto lat_offset_to_current_ego =
         std::abs(motion_utils::calcLateralOffset(no_overlap_path, ego_data.pose.position));
       const auto is_crossing_ego =
-        lat_offset_to_current_ego <=
-        object.shape.dimensions.y / 2.0 + std::max(
-                                            params.left_offset + params.extra_left_offset,
-                                            params.right_offset + params.extra_right_offset);
+        lat_offset_to_current_ego <= predicted_object.shape.dimensions.y / 2.0 +
+                                       std::max(
+                                         params.left_offset + params.extra_left_offset,
+                                         params.right_offset + params.extra_right_offset);
       return is_low_confidence || is_crossing_ego;
     };
     auto & predicted_paths = filtered_object.kinematics.predicted_paths;
@@ -151,7 +188,8 @@ autoware_perception_msgs::msg::PredictedObjects filter_predicted_objects(
       predicted_paths.end());
 
     if (!filtered_object.kinematics.predicted_paths.empty())
-      filtered_objects.objects.push_back(filtered_object);
+      resample_predicted_paths(predicted_paths, filtered_object.shape);
+    filtered_objects.objects.push_back(filtered_object);
   }
   return filtered_objects;
 }

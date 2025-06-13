@@ -2,15 +2,13 @@
 
 ## Purpose / Role
 
-Plan path around the goal.
-
-- Arrive at the designated goal.
-- Modify the goal to avoid obstacles or to pull over at the side of the lane.
+goal_planner generates a smooth path toward the goal and additionally searches for safe path and goal to execute dynamic pull_over on the road shoulders lanes following the traffic rules.
 
 ## Design
 
-If goal modification is not allowed, park at the designated fixed goal. (`fixed_goal_planner` in the figure below)
-When allowed, park in accordance with the specified policy(e.g pull over on left/right side of the lane). (`rough_goal_planner` in the figure below). Currently rough goal planner only support pull_over feature, but it would be desirable to be able to accommodate various parking policies in the future.
+If goal modification is not allowed, just park at the designated fixed goal using `fixed_goal_planner`.
+
+If allowed, `rough_goal_planner` works to park around the vacant spots in the shoulder lanes around the goal by executing pull_over toward left or right side of the road lanes.
 
 ```plantuml
 @startuml
@@ -35,8 +33,6 @@ package goal_planner{
         struct PullOverPath{}
 
         abstract class PullOverPlannerBase {}
-        abstract class GoalsearcherBase {}
-
     }
 
     package fixed_goal_planner <<Rectangle>>{
@@ -62,7 +58,6 @@ package freespace_planning_algorithms
 ShiftPullOver --|> PullOverPlannerBase
 GeometricPullOver --|> PullOverPlannerBase
 FreeSpacePullOver --|> PullOverPlannerBase
-GoalSearcher --|> GoalSearcherBase
 DefaultFixedPlanner --|> FixedGoalPlannerBase
 
 PathShifter --o ShiftPullOver
@@ -71,29 +66,26 @@ AstarSearch --o FreeSpacePullOver
 RRTStar --o FreeSpacePullOver
 
 PullOverPlannerBase --o GoalPlannerModule
-GoalSearcherBase --o GoalPlannerModule
 FixedGoalPlannerBase --o GoalPlannerModule
 
 PullOverPath --o PullOverPlannerBase
-GoalCandidates --o GoalSearcherBase
 
 @enduml
 ```
 
-## start condition
+## trigger condition
 
 ### fixed_goal_planner
 
-This is a very simple function that plans a smooth path to a specified goal. This function does not require approval and always runs with the other modules.
+`fixed_goal_planner` just plans a smooth path to the designated goal.
 _NOTE: this planner does not perform the several features described below, such as "goal search", "collision check", "safety check", etc._
 
-Executed when both conditions are met.
+`fixed_goal_planner` is used when both conditions are met.
 
 - Route is set with `allow_goal_modification=false`. This is the default.
-- The goal is set in the normal lane. In other words, it is NOT `road_shoulder`.
-- Ego-vehicle exists in the same lane sequence as the goal.
+- The goal is set on `road` lanes.
 
-If the target path contains a goal, modify the points of the path so that the path and the goal are connected smoothly. This process will change the shape of the path by the distance of `refine_goal_search_radius_range` from the goal. Note that this logic depends on the interpolation algorithm that will be executed in a later module (at the moment it uses spline interpolation), so it needs to be updated in the future.
+If the path given to goal_planner covers the goal, `fixed_goal_planner` smoothly connects the goal and the path points around the goal within the radius of `refine_goal_search_radius_range` using spline interpolation.
 
 ![path_goal_refinement](./images/path_goal_refinement.drawio.svg)
 
@@ -103,25 +95,21 @@ If the target path contains a goal, modify the points of the path so that the pa
 
 #### pull over on road lane
 
-- The distance between the goal and ego-vehicle is shorter than `pull_over_minimum_request_length`.
-- Route is set with `allow_goal_modification=true` .
+`rough_goal_planner` is triggered following the [behavior_path_planner scene module interface](https://autowarefoundation.github.io/autoware_universe/main/planning/behavior_path_planner/autoware_behavior_path_planner/docs/behavior_path_planner_manager_design/) namely through `isExecutionRequested` function and it returns true when following two conditions are met.
+
+- The distance between the goal and ego get shorter than $\max$(`pull_over_minimum_request_length`, stop distance with decel and jerk constraints).
+- Route is set with `allow_goal_modification=true` or is on a `road_shoulder` type lane.
   - We can set this option with [SetRoute](https://github.com/autowarefoundation/autoware_adapi_msgs/blob/main/autoware_adapi_v1_msgs/routing/srv/SetRoute.srv#L2) api service.
   - We support `2D Rough Goal Pose` with the key bind `r` in RViz, but in the future there will be a panel of tools to manipulate various Route API from RViz.
-- The terminal point of the current path is in the same lane sequence as the goal. If goal is on the road shoulder, then it is in the adjacent road lane sequence.
 
 <img src="https://user-images.githubusercontent.com/39142679/237929950-989ca6c3-d48c-4bb5-81e5-e8d6a38911aa.png" width="600">
-
-#### pull over on shoulder lane
-
-- The distance between the goal and ego-vehicle is shorter than `pull_over_minimum_request_length`.
-- Goal is set in the `road_shoulder`.
 
 <img src="https://user-images.githubusercontent.com/39142679/237929941-2ce26ea5-c84d-4d17-8cdc-103f5246db90.png" width="600">
 
 ## finish condition
 
-- The distance to the goal from your vehicle is lower than threshold (default: < `1m`).
-- The ego-vehicle is stopped.
+- The distance to the goal from ego is lower than threshold (default: < `1m`).
+- Ego is stopped.
   - The speed is lower than threshold (default: < `0.01m/s`).
 
 ## General parameters for goal_planner
@@ -135,33 +123,43 @@ If the target path contains a goal, modify the points of the path so that the pa
 
 ## **Goal Search**
 
-To realize pull over even when an obstacle exists near the original goal, a collision free area is searched within a certain range around the original goal. The goal found will be published as `/planning/scenario_planning/modified_goal`.
+To execute safe pull over in the presence of parked vehicles and other obstacles, collision free areas are searched within a certain range around the original goal. The selected best goal pose will be published as `/planning/scenario_planning/modified_goal`.
 
 [goal search video](https://user-images.githubusercontent.com/39142679/188359594-c6724e3e-1cb7-4051-9a18-8d2c67d4dee9.mp4)
 
-1. The original goal is set, and the refined goal pose is obtained by moving in the direction normal to the lane center line and keeping `margin_from_boundary` from the edge of the lane.
-   ![refined_goal](./images/goal_planner-refined_goal.drawio.svg)
+First, the original(designated) goal is provided, and a refined goal pose is obtained so that it is at least `margin_from_boundary` offset from the edge of the lane.
 
-2. Using `refined_goal` as the base goal, search for candidate goals in the range of `-forward_goal_search_length` to `backward_goal_search_length` in the longitudinal direction and `longitudinal_margin` to `longitudinal_margin+max_lateral_offset` in th lateral direction based on refined_goal.
-   ![goal_candidates](./images/goal_planner-goal_candidates.drawio.svg)
+![refined_goal](./images/goal_planner-refined_goal.drawio.svg)
 
-3. Each candidate goal is prioritized and a path is generated for each planner for each goal. The priority of a candidate goal is determined by its distance from the base goal. The ego vehicle tries to park for the highest possible goal. The distance is determined by the selected policy. In case `minimum_longitudinal_distance`, sort with smaller longitudinal distances taking precedence over smaller lateral distances. In case `minimum_weighted_distance`, sort with the sum of weighted lateral distance and longitudinal distance. This means the distance is calculated by `longitudinal_distance + lateral_cost*lateral_distance`
-   ![goal_distance](./images/goal_planner-goal_distance.drawio.svg)
-   The following figure is an example of minimum_weighted_distance.​ The white number indicates the goal candidate priority, and the smaller the number, the higher the priority. the 0 goal indicates the base goal.
-   ![goal_priority_rviz_with_goal](./images/goal_priority_with_goal.png)
-   ![goal_priority_rviz](./images/goal_priority_rviz.png)
+Second, goal candidates are searched in the interval of [`-forward_goal_search_length`, `backward_goal_search_length`] in the longitudinal direction and in the interval of [`longitudinal_margin`,`longitudinal_margin+max_lateral_offset`] in the lateral direction centered around the refined goal.
 
-4. If the footprint in each goal candidate is within `object_recognition_collision_check_margin` of that of the object, it is determined to be unsafe. These goals are not selected. If `use_occupancy_grid_for_goal_search` is enabled, collision detection on the grid is also performed with `occupancy_grid_collision_check_margin`.
+![goal_candidates](./images/goal_planner-goal_candidates.drawio.svg)
 
-Red goals candidates in the image indicate unsafe ones.
+Each goal candidate is prioritized and pull over paths are generated by each planner for each goal candidate. The priority of a goal candidate is determined by a sort policy using several distance metrics from the refined goal.
 
-![is_safe](./images/goal_planner-is_safe.drawio.svg)
+The `minimum_longitudinal_distance` policy sorts the goal candidates to assign higher priority to goal with smaller longitudinal distance and then auxiliary to goal with smaller lateral distance, to prioritize goal candidates that are close to the original goal.
 
-It is possible to keep `longitudinal_margin` in the longitudinal direction apart from the collision margin for obstacles from the goal candidate. This is intended to provide natural spacing for parking and efficient departure.
+The `minimum_weighted_distance` policy sorts the goal candidates by the weighted sum of lateral distance and longitudinal distance `longitudinal_distance + lateral_cost*lateral_distance`.
+
+![goal_distance](./images/goal_planner-goal_distance.drawio.svg)
+
+The following figure is an example of minimum_weighted_distance.​ The white number indicates the goal candidate priority, and the smaller the number, the higher the priority. the 0 goal indicates the original refined goal.
+
+![goal_priority_rviz_with_goal](./images/goal_priority_with_goal.png)
+
+To achieve a goal pose which is easy to start the maneuvering after arrival, the goal candidate pose is aligned so that ego center becomes parallel to the shoulder lane boundary at that pose.
+
+![goal_pose_align](./images/goal_planner-goal-pose-correct.drawio.svg)
+
+If the footprint in each goal candidate is within `object_recognition_collision_check_margin` from one of the parked object, or the longitudinal distance to one of the parked objects from that goal candidate is less than `longitudinal_margin`, it is determined to be unsafe. These goals are not selected. If `use_occupancy_grid_for_goal_search` is enabled, collision detection on the grid is also performed with `occupancy_grid_collision_check_margin`.
+
+Red goal candidates in the below figure indicate unsafe ones.
 
 ![longitudinal_margin](./images/goal_planner-longitudinal_margin.drawio.svg)
 
-Also, if `prioritize_goals_before_objects` is enabled, To arrive at each goal, the number of objects that need to be avoided in the target range is counted, and those with the lowest number are given priority.
+![is_safe](./images/goal_planner-is_safe.drawio.svg)
+
+Also, if `prioritize_goals_before_objects` is enabled, the number of objects that need to be avoided before reaching the goal is counted, and the goal candidate with the number are prioritized.
 
 The images represent a count of objects to be avoided at each range, with priority given to those with the lowest number, regardless of the aforementioned distances.
 
@@ -170,6 +168,10 @@ The images represent a count of objects to be avoided at each range, with priori
 The gray numbers represent objects to avoid, and you can see that the goal in front has a higher priority in this case.
 
 ![goal_priority_object_to_avoid_rviz.png](./images/goal_priority_object_to_avoid_rviz.png)
+
+### BusStopArea
+
+If the flag `use_bus_stop_area` is true, the goal search is limited inside the `BusStopArea` regulatory element polygon. The goal candidates are searched more densely compared to road shoulder parking method, and the goal candidate that keeps the ego footprint inside the `BusStopArea` is accepted. Refer to [BusStopArea spec](https://github.com/autowarefoundation/autoware_lanelet2_extension/blob/main/autoware_lanelet2_extension/docs/extra_regulatory_elements.md#bus-stop-area) for more detail.
 
 ### Parameters for goal search
 
@@ -189,21 +191,39 @@ The gray numbers represent objects to avoid, and you can see that the goal in fr
 
 ## **Pull Over**
 
-There are three path generation methods.
-The path is generated with a certain margin (default: `0.75 m`) from the boundary of shoulder lane.
+Since the path candidates generation is time consuming, goal_planner employs two separate threads to generate path candidates in the background and get latest candidates asynchronously. One is `LaneParkingThread` which plans path candidates on road shoulder lanes and the other is `FreespaceParkingThread` which plans on freespace area. The normal process of goal_planner is executed on the main thread.
 
-The process is time consuming because multiple planners are used to generate path for each candidate goal. Therefore, in this module, the path generation is performed in a thread different from the main thread.
-Path generation is performed at the timing when the shape of the output path of the previous module changes. If a new module launches, it is expected to go to the previous stage before the goal planner, in which case the goal planner re-generates the path. The goal planner is expected to run at the end of multiple modules, which is achieved by `keep_last` in the planner manager.
+Although the two threads are running periodically, the primary background process is performed only when following conditions are met in order not to consume computational resource.
 
-Threads in the goal planner are shown below.
+- ego has approached the goal within the threshold of `pull_over_prepare_length`
+- upstream module path shape has changed from the one which was sent by the main thread in previous process
+- upstream module path shape has changed from the one which was used for path candidates generation in the previous process
+
+`LaneParkingThread` executes either
+
+- _shift_ based path planning
+- _arc forward_, _arc backward_ path planning
+- _bezier_ based path planning
+
+depending on the situation and configuration. If `use_bus_stop_area` is true and the goal is on a BusStopArea regulatory element and the estimated pull over angle(the difference of pose between the shift start and shift end) is larger than `bezier_parking.pull_over_angle_threshold`, [_bezier_ based path planner](https://autowarefoundation.github.io/autoware_universe/main/planning/sampling_based_planner/autoware_bezier_sampler/) works to generate path candidates. Otherwise [_shift_ based path planner](https://autowarefoundation.github.io/autoware_universe/main/planning/behavior_path_planner/autoware_behavior_path_planner_common/docs/behavior_path_planner_path_generation_design/) works. _bezier_ based path planner tends to generate more natural paths on a curved lane than _shift_ based path planner, so it is used if the shift requires a certain amount of pose rotation.
+
+The overall flow is as follows.
 
 ![threads.png](./images/goal_planner-threads.drawio.svg)
 
-The main thread will be the one called from the planner manager flow.
+The main thread and the each thread communicate by sending _request_ and _response_ respectively. The main thread sends latest main thread data as `LaneParkingRequest/FreespaceParkingRequest` and each thread sets `LaneParkingResponse/FreespaceParkingResponse` as the output when it's finished. The bluish blocks on the flow diagram are the _critical section_.
 
-- The goal candidate generation and path candidate generation are done in a separate thread(lane path generation thread).
-- The path candidates generated there are referred to by the main thread, and the one judged to be valid for the current planner data (e.g. ego and object information) is selected from among them. valid means no sudden deceleration, no collision with obstacles, etc. The selected path will be the output of this module.
-- If there is no path selected, or if the selected path is collision and ego is stuck, a separate thread(freespace path generation thread) will generate a path using freespace planning algorithm. If a valid free space path is found, it will be the output of the module. If the object moves and the pull over path generated along the lane is collision-free, the path is used as output again. See also the section on freespace parking for more information on the flow of generating freespace paths.
+While
+
+- there are no path candidates, or
+- the threads fail to generate candidates, or
+- the main thread cannot nail down that the selected candidate is SAFE against dynamic objects(which means the DecisionState is not still `DECIDED`)
+
+the main thread inserts a stop pose either at `closest_start_pose` which is the closest shift start pose among the path candidates, or at the position which is certain distance before the closest goal candidate.
+
+Once the main thread finally selected the best pull over path, goal_planner transits to `DECIDED` state and it sets `SAFE` as the RTC status(NOTE: this `SAFE` means that "a safe pull over path has been finally selected".)
+
+If there are no path candidates or the selected path is not SAFE and thus `the LaneParkingThread` causes ego to get stuck, the `FreespaceParkingThread` is triggered by the stuck detection and it starts generating path candidates using [freespace parking algorithms](https://autowarefoundation.github.io/autoware_universe/main/planning/autoware_freespace_planning_algorithms/). If a valid freespace path is found and ego is still stuck, the freespace path is used instead. If the selected lane parking pull over path becomes collision-free again in case the blocking parked objects moved, and the path is continuous from current freespace path, lane parking pull over path is selected again.
 
 | Name                                  | Unit   | Type   | Description                                                                                                                                                                    | Default value                            |
 | :------------------------------------ | :----- | :----- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------- |
@@ -218,12 +238,11 @@ The main thread will be the one called from the planner manager flow.
 
 ### **shift parking**
 
-Pull over distance is calculated by the speed, lateral deviation, and the lateral jerk.
-The lateral jerk is searched for among the predetermined minimum and maximum values, and the one satisfies ready conditions described above is output.
+Pull over distance is calculated by the speed, lateral deviation, and the lateral jerk. The lateral jerk is searched for among the predetermined minimum and maximum values.
 
 1. Apply uniform offset to centerline of shoulder lane for ensuring margin
-2. In the section between merge start and end, path is shifted by a method that is used to generate avoidance path (four segmental constant jerk polynomials)
-3. Combine this path with center line of road lane
+2. The interval of shift start and end is shifted by the [_shift_ based path planner](https://autowarefoundation.github.io/autoware_universe/main/planning/behavior_path_planner/autoware_behavior_path_planner_common/docs/behavior_path_planner_path_generation_design/)
+3. Combine this path with center line of road lane and the remaining shoulder lane centerline
 
 ![shift_parking](./images/shift_parking.drawio.svg)
 
@@ -242,15 +261,16 @@ The lateral jerk is searched for among the predetermined minimum and maximum val
 
 ### **geometric parallel parking**
 
-Generate two arc paths with discontinuous curvature. It stops twice in the middle of the path to control the steer on the spot. There are two path generation methods: forward and backward.
+This method generate two arc paths with discontinuous curvature. It stops twice in the middle of the path to do [dry steering](https://en.wikipedia.org/wiki/Dry_steering). There are two path generation methods: forward and backward.
+
 See also [[1]](https://www.sciencedirect.com/science/article/pii/S1474667015347431) for details of the algorithm. There is also [a simple python implementation](https://github.com/kosuke55/geometric-parallel-parking).
 
 #### Parameters geometric parallel parking
 
-| Name                    | Unit  | Type   | Description                                                                                                                         | Default value |
-| :---------------------- | :---- | :----- | :---------------------------------------------------------------------------------------------------------------------------------- | :------------ |
-| arc_path_interval       | [m]   | double | interval between arc path points                                                                                                    | 1.0           |
-| pull_over_max_steer_rad | [rad] | double | maximum steer angle for path generation. it may not be possible to control steer up to max_steer_angle in vehicle_info when stopped | 0.35          |
+| Name                         | Unit | Type   | Description                                                                                              | Default value |
+| :--------------------------- | :--- | :----- | :------------------------------------------------------------------------------------------------------- | :------------ |
+| arc_path_interval            | [m]  | double | interval between arc path points                                                                         | 1.0           |
+| max_steer_angle_margin_scale | [-]  | double | scaling factor applied to the maximum steering angle (max_steer_angle) defined in vehicle_info parameter | 0.72          |
 
 #### arc forward parking
 
@@ -288,8 +308,9 @@ Generate two backward arc paths.
 
 ### freespace parking
 
-If the vehicle gets stuck with `lane_parking`, run `freespace_parking`.
-To run this feature, you need to set `parking_lot` to the map, `activate_by_scenario` of [costmap_generator](../costmap_generator/README.md) to `false` and `enable_freespace_parking` to `true`
+If the vehicle gets stuck with `LaneParkingPlanning`, `FreespaceParkingPlanner` is triggered.
+
+To run this feature, you need to set `parking_lot` to the map, `activate_by_scenario` of [costmap_generator](../../autoware_costmap_generator/README.md) to `false` and `enable_freespace_parking` to `true`
 
 ![pull_over_freespace_parking_flowchart](./images/pull_over_freespace_parking_flowchart.drawio.svg)
 
@@ -303,11 +324,21 @@ Simultaneous execution with `avoidance_module` in the flowchart is under develop
 | :----------------------- | :--- | :--- | :------------------------------------------------------------------------------------------------------------------- | :------------ |
 | enable_freespace_parking | [-]  | bool | This flag enables freespace parking, which runs when the vehicle is stuck due to e.g. obstacles in the parking area. | true          |
 
-See [freespace_planner](../autoware_freespace_planner/README.md) for other parameters.
+See [freespace_planner](../../autoware_freespace_planner/README.md) for other parameters.
+
+### bezier parking
+
+_shift_ based path planner tends to generate unnatural path when the shift lane is curved as illustrated below.
+
+<img src="./images/bad_shift_path.png" width="600">
+
+_bezier_ based path planner interpolates the shift path start and end pose using tbe bezier curve for a several combination of parameters, to obtain a better result through the later selection process. In the below screenshot the goal is on a BusStopArea and `use_bus_stop_area` is set to true, so _bezier_ planner is triggered instead. Internally, goal*planner first tries to use \_shift* planner, and if it turns out that the shift start and end is not parallel, it switches to _bezier_ planner from the next process.
+
+<img src="./images/bezier_path.png" width="600">
 
 ## **collision check for path generation**
 
-To select a safe one from the path candidates, a collision check with obstacles is performed.
+To select a safe one from the path candidates, collision is checked against parked objects for each path.
 
 ### **occupancy grid based collision check**
 
@@ -326,12 +357,16 @@ Generate footprints from ego-vehicle path points and determine obstacle collisio
 
 ### **object recognition based collision check**
 
-A collision decision is made for each of the path candidates, and a collision-free path is selected.
-There are three main margins at this point.
+collision is checked for each of the path candidates. There are three margins for this purpose.
 
 - `object_recognition_collision_check_margin` is margin in all directions of ego.
 - In the forward direction, a margin is added by the braking distance calculated from the current speed and maximum deceleration. The maximum distance is The maximum value of the distance is suppressed by the `object_recognition_collision_check_max_extra_stopping_margin`
 - In curves, the lateral margin is larger than in straight lines.This is because curves are more prone to control errors or to fear when close to objects (The maximum value is limited by `object_recognition_collision_check_max_extra_stopping_margin`, although it has no basis.)
+
+Before these margins are applied, objects are filtered based on their location relative to road boundaries (linestring with[road_border](https://github.com/fzi-forschungszentrum-informatik/Lanelet2/blob/50239be48aa5a911d7347fdb828ee79dde2b2666/lanelet2_core/doc/LinestringTagging.md#as-lane-boundary) type ).
+Objects located on the opposite side of relevant road borders from the ego vehicle are excluded from the collision check process. This ensures that the planner focuses only on objects that pose a potential risk within the intended driving corridor.
+
+<img src="./images/goal_planner-object-road-border.svg" alt="road_border_filter" width="60%">
 
 ![collision_check_margin](./images/goal_planner-collision_check_margin.drawio.svg)
 
@@ -345,6 +380,7 @@ Then there is the concept of soft and hard margins. Although not currently param
 | object_recognition_collision_check_soft_margins              | [m]  | vector[double] | soft margins for collision check when path generation. It is not strictly the distance between footprints, but the maximum distance when ego and objects are oriented. | [5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0] |
 | object_recognition_collision_check_hard_margins              | [m]  | vector[double] | hard margins for collision check when path generation                                                                                                                  | [0.6]                                         |
 | object_recognition_collision_check_max_extra_stopping_margin | [m]  | double         | maximum value when adding longitudinal distance margin for collision check considering stopping distance                                                               | 1.0                                           |
+| collision_check_outer_margin_factor                          | [-]  | double         | factor to extend the collision check margin from the inside margin to the outside in the curved path                                                                   | 2.0                                           |
 | detection_bound_offset                                       | [m]  | double         | expand pull over lane with this offset to make detection area for collision check of path generation                                                                   | 15.0                                          |
 
 ## **safety check**
@@ -384,7 +420,6 @@ In addition, the safety check has a time hysteresis, and if the path is judged "
 
 | Name                                 | Unit  | Type   | Description                                                                                              | Default value                |
 | :----------------------------------- | :---- | :----- | :------------------------------------------------------------------------------------------------------- | :--------------------------- |
-| enable_safety_check                  | [-]   | bool   | flag whether to use safety check                                                                         | true                         |
 | method                               | [-]   | string | method for safety check. `RSS` or `integral_predicted_polygon`                                           | `integral_predicted_polygon` |
 | keep_unsafe_time                     | [s]   | double | safety check Hysteresis time. if the path is judged "safe" for the time it is finally treated as "safe". | 3.0                          |
 | check_all_predicted_path             | -     | bool   | Flag to check all predicted paths                                                                        | true                         |
@@ -412,9 +447,16 @@ In addition, the safety check has a time hysteresis, and if the path is judged "
 
 ## **path deciding**
 
-When `decide_path_distance` closer to the start of the pull over, if it is collision-free at that time and safe for the predicted path of the objects, it transitions to DECIDING. If it is safe for a certain period of time, it moves to DECIDED.
+When ego approached the start of the temporarily selected pull over path within the distance of `decide_path_distance`, if it is collision-free at that time and safe against dynamic objects, it transitions to `DECIDING`. And if those conditions hold for a certain period of time, it transitions to `DECIDED` and the selected path is fixed.
 
-![path_deciding](./images/goal_planner-deciding_path.drawio.svg)
+![state_transition](./images/goal_planner-state-transition.drawio.svg)
+[Open]({{ drawio("/planning/behavior_path_planner/autoware_behavior_path_goal_planner_module/images/goal_planner-state-transition.drawio.svg") }})
+
+### Parameters for path decision state controller
+
+| Name                     | Unit | Type   | Description                                                                                                                                                                 | Default value |
+| :----------------------- | :--- | :----- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------ |
+| check_collision_duration | [s]  | double | Duration to continuously check collision before transition from DECIDING to DECIDED state. This ensures the path remains safe for a period of time before final commitment. | 1.0           |
 
 ## Unimplemented parts / limitations
 

@@ -24,10 +24,7 @@ void setSignalUnknown(tier4_perception_msgs::msg::TrafficLight & signal, float c
   signal.elements.resize(1);
   signal.elements[0].shape = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
   signal.elements[0].color = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
-  // the default value is -1, which means to not set confidence
-  if (confidence > 0) {
-    signal.elements[0].confidence = confidence;
-  }
+  signal.elements[0].confidence = confidence;
 }
 
 bool hasTrafficLightCircleColor(

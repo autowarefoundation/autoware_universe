@@ -21,6 +21,7 @@
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware_path_sampler/common_structs.hpp"
 #include "autoware_path_sampler/type_alias.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 #include "eigen3/Eigen/Core"
 
@@ -42,8 +43,8 @@ namespace geometry_utils
 template <typename T1, typename T2>
 bool isSamePoint(const T1 & t1, const T2 & t2)
 {
-  const auto p1 = autoware::universe_utils::getPoint(t1);
-  const auto p2 = autoware::universe_utils::getPoint(t2);
+  const auto p1 = autoware_utils::get_point(t1);
+  const auto p2 = autoware_utils::get_point(t2);
 
   constexpr double epsilon = 1e-6;
   if (epsilon < std::abs(p1.x - p2.x) || epsilon < std::abs(p1.y - p2.y)) {

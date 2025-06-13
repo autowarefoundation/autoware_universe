@@ -31,13 +31,26 @@
 namespace autoware::operation_mode_transition_manager
 {
 
+using Control = autoware_control_msgs::msg::Control;
+using Odometry = nav_msgs::msg::Odometry;
+using Trajectory = autoware_planning_msgs::msg::Trajectory;
+
+struct InputData
+{
+  std::optional<Odometry> kinematics;
+  std::optional<Trajectory> trajectory;
+  std::optional<Control> trajectory_follower_control_cmd;
+  std::optional<Control> control_cmd;
+  OperationModeState gate_operation_mode;
+};
+
 class ModeChangeBase
 {
 public:
   virtual ~ModeChangeBase() = default;
-  virtual void update([[maybe_unused]] bool transition) {}
-  virtual bool isModeChangeCompleted() = 0;
-  virtual bool isModeChangeAvailable() = 0;
+  virtual void update(bool) {}
+  virtual bool isModeChangeCompleted(const InputData & input_data) = 0;
+  virtual bool isModeChangeAvailable(const InputData & input_data) = 0;
 
   using DebugInfo =
     autoware_operation_mode_transition_manager::msg::OperationModeTransitionManagerDebug;
@@ -47,8 +60,8 @@ public:
 class StopMode : public ModeChangeBase
 {
 public:
-  bool isModeChangeCompleted() override { return true; }
-  bool isModeChangeAvailable() override { return true; }
+  bool isModeChangeCompleted(const InputData &) override { return true; }
+  bool isModeChangeAvailable(const InputData &) override { return true; }
 };
 
 class AutonomousMode : public ModeChangeBase
@@ -56,21 +69,15 @@ class AutonomousMode : public ModeChangeBase
 public:
   explicit AutonomousMode(rclcpp::Node * node);
   void update(bool transition) override;
-  bool isModeChangeCompleted() override;
-  bool isModeChangeAvailable() override;
+  bool isModeChangeCompleted(const InputData & input_data) override;
+  bool isModeChangeAvailable(const InputData & input_data) override;
   DebugInfo getDebugInfo() override { return debug_info_; }
 
 private:
-  bool hasDangerAcceleration();
-  std::pair<bool, bool> hasDangerLateralAcceleration();
+  bool hasDangerAcceleration(const Odometry & kinematics, const Control & control_cmd);
+  std::pair<bool, bool> hasDangerLateralAcceleration(
+    const Odometry & kinematics, const Control & control_cmd);
 
-  using Control = autoware_control_msgs::msg::Control;
-  using Odometry = nav_msgs::msg::Odometry;
-  using Trajectory = autoware_planning_msgs::msg::Trajectory;
-  rclcpp::Subscription<Control>::SharedPtr sub_control_cmd_;
-  rclcpp::Subscription<Control>::SharedPtr sub_trajectory_follower_control_cmd_;
-  rclcpp::Subscription<Odometry>::SharedPtr sub_kinematics_;
-  rclcpp::Subscription<Trajectory>::SharedPtr sub_trajectory_;
   rclcpp::Logger logger_;
   rclcpp::Clock::SharedPtr clock_;
 
@@ -80,9 +87,6 @@ private:
   double nearest_yaw_deviation_threshold_;   // [rad] for finding nearest index
   EngageAcceptableParam engage_acceptable_param_;
   StableCheckParam stable_check_param_;
-  Control control_cmd_;
-  Control trajectory_follower_control_cmd_;
-  Odometry kinematics_;
   Trajectory trajectory_;
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
 
@@ -94,16 +98,16 @@ private:
 class LocalMode : public ModeChangeBase
 {
 public:
-  bool isModeChangeCompleted() override { return true; }
-  bool isModeChangeAvailable() override { return true; }
+  bool isModeChangeCompleted(const InputData &) override { return true; }
+  bool isModeChangeAvailable(const InputData &) override { return true; }
 };
 
 // TODO(Takagi, Isamu): Connect with status from remote operation node
 class RemoteMode : public ModeChangeBase
 {
 public:
-  bool isModeChangeCompleted() override { return true; }
-  bool isModeChangeAvailable() override { return true; }
+  bool isModeChangeCompleted(const InputData &) override { return true; }
+  bool isModeChangeAvailable(const InputData &) override { return true; }
 };
 
 }  // namespace autoware::operation_mode_transition_manager

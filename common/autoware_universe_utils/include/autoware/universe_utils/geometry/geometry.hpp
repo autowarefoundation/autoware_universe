@@ -27,6 +27,7 @@
 #define EIGEN_MPL2_ONLY
 #include <Eigen/Core>
 
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_planning_msgs/msg/path.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <geometry_msgs/msg/point32.hpp>
@@ -38,7 +39,6 @@
 #include <geometry_msgs/msg/twist_with_covariance.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <tf2/utils.h>
 
@@ -105,6 +105,12 @@ geometry_msgs::msg::Point getPoint(const T & p)
 }
 
 template <>
+inline geometry_msgs::msg::Point getPoint(const Point2d & p)
+{
+  return geometry_msgs::build<geometry_msgs::msg::Point>().x(p.x()).y(p.y()).z(0.0);
+}
+
+template <>
 inline geometry_msgs::msg::Point getPoint(const geometry_msgs::msg::Point & p)
 {
   return p;
@@ -135,7 +141,8 @@ inline geometry_msgs::msg::Point getPoint(const autoware_planning_msgs::msg::Pat
 }
 
 template <>
-inline geometry_msgs::msg::Point getPoint(const tier4_planning_msgs::msg::PathPointWithLaneId & p)
+inline geometry_msgs::msg::Point getPoint(
+  const autoware_internal_planning_msgs::msg::PathPointWithLaneId & p)
 {
   return p.point.pose.position;
 }
@@ -172,7 +179,8 @@ inline geometry_msgs::msg::Pose getPose(const autoware_planning_msgs::msg::PathP
 }
 
 template <>
-inline geometry_msgs::msg::Pose getPose(const tier4_planning_msgs::msg::PathPointWithLaneId & p)
+inline geometry_msgs::msg::Pose getPose(
+  const autoware_internal_planning_msgs::msg::PathPointWithLaneId & p)
 {
   return p.point.pose;
 }
@@ -197,7 +205,8 @@ inline double getLongitudinalVelocity(const autoware_planning_msgs::msg::PathPoi
 }
 
 template <>
-inline double getLongitudinalVelocity(const tier4_planning_msgs::msg::PathPointWithLaneId & p)
+inline double getLongitudinalVelocity(
+  const autoware_internal_planning_msgs::msg::PathPointWithLaneId & p)
 {
   return p.point.longitudinal_velocity_mps;
 }
@@ -236,7 +245,8 @@ inline void setPose(
 
 template <>
 inline void setPose(
-  const geometry_msgs::msg::Pose & pose, tier4_planning_msgs::msg::PathPointWithLaneId & p)
+  const geometry_msgs::msg::Pose & pose,
+  autoware_internal_planning_msgs::msg::PathPointWithLaneId & p)
 {
   p.point.pose = pose;
 }
@@ -279,7 +289,7 @@ inline void setLongitudinalVelocity(
 
 template <>
 inline void setLongitudinalVelocity(
-  const float velocity, tier4_planning_msgs::msg::PathPointWithLaneId & p)
+  const float velocity, autoware_internal_planning_msgs::msg::PathPointWithLaneId & p)
 {
   p.point.longitudinal_velocity_mps = velocity;
 }
@@ -576,6 +586,9 @@ bool isTwistCovarianceValid(const geometry_msgs::msg::TwistWithCovariance & twis
 std::optional<geometry_msgs::msg::Point> intersect(
   const geometry_msgs::msg::Point & p1, const geometry_msgs::msg::Point & p2,
   const geometry_msgs::msg::Point & p3, const geometry_msgs::msg::Point & p4);
+
+std::optional<Point2d> intersect(
+  const Point2d & p1, const Point2d & p2, const Point2d & p3, const Point2d & p4);
 
 /**
  * @brief Check if 2 convex polygons intersect using the GJK algorithm

@@ -1,0 +1,20 @@
+# Default configuration for mrm handler
+---
+/**:
+  ros__parameters:
+    update_rate: 10
+    timeout_operation_mode_availability: 0.5
+    timeout_call_mrm_behavior: 0.01
+    timeout_cancel_mrm_behavior: 0.01
+    use_emergency_holding: false
+    timeout_emergency_recovery: 5.0
+    use_parking_after_stopped: false
+    use_pull_over: false
+    use_comfortable_stop: false
+
+    # setting whether to turn hazard lamp on for each situation
+    turning_hazard_on:
+      emergency: true
+
+    turning_indicator_on:
+      emergency: true

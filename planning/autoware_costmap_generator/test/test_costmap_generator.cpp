@@ -25,7 +25,7 @@
 #include <vector>
 
 using autoware::costmap_generator::CostmapGenerator;
-using tier4_planning_msgs::msg::Scenario;
+using autoware_internal_planning_msgs::msg::Scenario;
 
 class TestCostmapGenerator : public ::testing::Test
 {

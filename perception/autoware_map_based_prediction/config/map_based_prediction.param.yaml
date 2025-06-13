@@ -1,6 +1,5 @@
 /**:
   ros__parameters:
-    enable_delay_compensation: true
     prediction_time_horizon:
       vehicle: 15.0 #[s]
       pedestrian: 10.0 #[s]
@@ -55,3 +54,5 @@
     publish_processing_time: false
     publish_processing_time_detail: false
     publish_debug_markers: false
+    processing_time_tolerance: 0.5 #[s]
+    processing_time_consecutive_excess_tolerance: 1.0 #[s]

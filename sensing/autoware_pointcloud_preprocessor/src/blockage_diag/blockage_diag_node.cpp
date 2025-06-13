@@ -68,7 +68,7 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
       std::string(this->get_namespace()) + ": dust_validation", this,
       &BlockageDiagComponent::dustChecker);
 
-    ground_dust_ratio_pub_ = create_publisher<tier4_debug_msgs::msg::Float32Stamped>(
+    ground_dust_ratio_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
       "blockage_diag/debug/ground_dust_ratio", rclcpp::SensorDataQoS());
     if (publish_debug_image_) {
       single_frame_dust_mask_pub =
@@ -86,13 +86,13 @@ BlockageDiagComponent::BlockageDiagComponent(const rclcpp::NodeOptions & options
     blockage_mask_pub_ =
       image_transport::create_publisher(this, "blockage_diag/debug/blockage_mask_image");
   }
-  ground_blockage_ratio_pub_ = create_publisher<tier4_debug_msgs::msg::Float32Stamped>(
+  ground_blockage_ratio_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
     "blockage_diag/debug/ground_blockage_ratio", rclcpp::SensorDataQoS());
-  sky_blockage_ratio_pub_ = create_publisher<tier4_debug_msgs::msg::Float32Stamped>(
+  sky_blockage_ratio_pub_ = create_publisher<autoware_internal_debug_msgs::msg::Float32Stamped>(
     "blockage_diag/debug/sky_blockage_ratio", rclcpp::SensorDataQoS());
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&BlockageDiagComponent::paramCallback, this, _1));
+    std::bind(&BlockageDiagComponent::param_callback, this, _1));
 }
 
 void BlockageDiagComponent::onBlockageChecker(DiagnosticStatusWrapper & stat)
@@ -315,7 +315,7 @@ void BlockageDiagComponent::filter(
     cv::Mat ground_mask(cv::Size(ideal_horizontal_bins, horizontal_ring_id_), CV_8UC1);
     cv::vconcat(sky_blank, single_dust_ground_img, single_dust_img);
 
-    tier4_debug_msgs::msg::Float32Stamped ground_dust_ratio_msg;
+    autoware_internal_debug_msgs::msg::Float32Stamped ground_dust_ratio_msg;
     ground_dust_ratio_ = static_cast<float>(cv::countNonZero(single_dust_ground_img)) /
                          (single_dust_ground_img.cols * single_dust_ground_img.rows);
     ground_dust_ratio_msg.data = ground_dust_ratio_;
@@ -386,12 +386,12 @@ void BlockageDiagComponent::filter(
     }
   }
 
-  tier4_debug_msgs::msg::Float32Stamped ground_blockage_ratio_msg;
+  autoware_internal_debug_msgs::msg::Float32Stamped ground_blockage_ratio_msg;
   ground_blockage_ratio_msg.data = ground_blockage_ratio_;
   ground_blockage_ratio_msg.stamp = now();
   ground_blockage_ratio_pub_->publish(ground_blockage_ratio_msg);
 
-  tier4_debug_msgs::msg::Float32Stamped sky_blockage_ratio_msg;
+  autoware_internal_debug_msgs::msg::Float32Stamped sky_blockage_ratio_msg;
   sky_blockage_ratio_msg.data = sky_blockage_ratio_;
   sky_blockage_ratio_msg.stamp = now();
   sky_blockage_ratio_pub_->publish(sky_blockage_ratio_msg);
@@ -411,7 +411,7 @@ void BlockageDiagComponent::filter(
   pcl::toROSMsg(*pcl_input, output);
   output.header = input->header;
 }
-rcl_interfaces::msg::SetParametersResult BlockageDiagComponent::paramCallback(
+rcl_interfaces::msg::SetParametersResult BlockageDiagComponent::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);

@@ -15,14 +15,8 @@
         "object_length_threshold": {
           "type": "number",
           "description": "object_length_threshold",
-          "default": "0.1",
+          "default": "0.05",
           "minimum": 0.0
-        },
-        "num_points_threshold": {
-          "type": "integer",
-          "description": "num_points_threshold",
-          "default": "4",
-          "minimum": 0
         },
         "max_rings_num": {
           "type": "integer",
@@ -77,12 +71,16 @@
           "description": "The threshold value for distinguishing noise from valid points in the frequency image",
           "default": "2",
           "minimum": 0
+        },
+        "processing_time_threshold_sec": {
+          "type": "number",
+          "description": "Threshold in seconds. If the processing time of the node exceeds this value, a diagnostic warning will be issued.",
+          "default": 0.01
         }
       },
       "required": [
         "distance_ratio",
         "object_length_threshold",
-        "num_points_threshold",
         "max_rings_num",
         "max_points_num_per_ring",
         "publish_outlier_pointcloud",
@@ -91,7 +89,8 @@
         "max_distance",
         "vertical_bins",
         "horizontal_bins",
-        "noise_threshold"
+        "noise_threshold",
+        "processing_time_threshold_sec"
       ],
       "additionalProperties": false
     }

@@ -122,12 +122,9 @@ component_management:
     - component_id: localization-tier-iv-maintained-packages
       name: Localization TIER IV Maintained Packages
       paths:
-        - localization/autoware_ekf_localizer/**
         - localization/autoware_gyro_odometer/**
         - localization/autoware_localization_error_monitor/**
         - localization/autoware_localization_util/**
-        - localization/autoware_ndt_scan_matcher/**
-        - localization/autoware_pose_initializer/**
         - localization/autoware_pose_instability_detector/**
         - localization/autoware_stop_filter/**
         - localization/autoware_twist2accel/**
@@ -140,6 +137,7 @@ component_management:
     - component_id: perception-tier-iv-maintained-packages
       name: Perception TIER IV Maintained Packages
       paths:
+        - perception/autoware_bevfusion/**
         - perception/autoware_bytetrack/**
         - perception/autoware_cluster_merger/**
         - perception/autoware_compare_map_segmentation/**
@@ -160,9 +158,7 @@ component_management:
         - perception/autoware_object_velocity_splitter/**
         - perception/autoware_occupancy_grid_map_outlier_filter/**
         - perception/autoware_probabilistic_occupancy_grid_map/**
-        - perception/autoware_radar_crossing_objects_noise_filter/**
         - perception/autoware_radar_fusion_to_detected_object/**
-        - perception/autoware_radar_object_clustering/**
         - perception/autoware_radar_object_tracker/**
         - perception/autoware_radar_tracks_msgs_converter/**
         - perception/autoware_raindrop_cluster_filter/**
@@ -195,10 +191,8 @@ component_management:
         - planning/autoware_external_velocity_limit_selector/**
         - planning/autoware_freespace_planner/**
         - planning/autoware_freespace_planning_algorithms/**
-        - planning/autoware_mission_planner/**
+        - planning/autoware_mission_planner_universe/**
         # - planning/autoware_objects_of_interest_marker_interface/**
-        - planning/autoware_obstacle_cruise_planner/**
-        # - planning/autoware_obstacle_stop_planner/**
         - planning/autoware_path_optimizer/**
         - planning/autoware_path_smoother/**
         - planning/autoware_planning_test_manager/**
@@ -244,7 +238,5 @@ component_management:
         - planning/motion_velocity_planner/autoware_motion_velocity_dynamic_obstacle_stop_module/**
         - planning/motion_velocity_planner/autoware_motion_velocity_obstacle_velocity_limiter_module/**
         - planning/motion_velocity_planner/autoware_motion_velocity_out_of_lane_module/**
-        - planning/motion_velocity_planner/autoware_motion_velocity_planner_common/**
-        - planning/motion_velocity_planner/autoware_motion_velocity_planner_node/**
         #### sampling_based_planner
         - planning/sampling_based_planner/autoware_bezier_sampler/**

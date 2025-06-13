@@ -33,11 +33,20 @@ class DynamicObstacleStopModule : public PluginModuleInterface
 {
 public:
   void init(rclcpp::Node & node, const std::string & module_name) override;
+  void publish_planning_factor() override { planning_factor_interface_->publish(); };
   void update_parameters(const std::vector<rclcpp::Parameter> & parameters) override;
+  void publish_processing_time(const double processing_time_ms);
   VelocityPlanningResult plan(
-    const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & ego_trajectory_points,
+    const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & raw_trajectory_points,
+    const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
     const std::shared_ptr<const PlannerData> planner_data) override;
   std::string get_module_name() const override { return module_name_; }
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    RequiredSubscriptionInfo required_subscription_info;
+    required_subscription_info.predicted_objects = true;
+    return required_subscription_info;
+  }
 
 private:
   visualization_msgs::msg::MarkerArray create_debug_marker_array();
@@ -45,7 +54,7 @@ private:
 
   inline static const std::string ns_ = "dynamic_obstacle_stop";
   std::string module_name_;
-  rclcpp::Clock::SharedPtr clock_{};
+  rclcpp::Clock::SharedPtr clock_;
 
   dynamic_obstacle_stop::PlannerParam params_;
   dynamic_obstacle_stop::ObjectStopDecisionMap object_map_;

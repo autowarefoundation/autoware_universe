@@ -195,7 +195,7 @@ Although it has a cons to converge to the local minima, it can get a good soluti
   - The point on the vehicle, offset forward with this parameter from the base link` tries to follow the reference path.
 
 - change or tune the method to approximate footprints with a set of circles.
-  - See [here](https://autowarefoundation.github.io/autoware.universe/main/planning/path_optimizer/docs/mpt/#collision-free)
+  - See [here](https://autowarefoundation.github.io/autoware_universe/main/planning/path_optimizer/docs/mpt/#collision-free)
   - Tuning means changing the ratio of circle's radius.
 
 ### Computation time
@@ -214,6 +214,10 @@ Although it has a cons to converge to the local minima, it can get a good soluti
 - `option.enable_skip_optimization` skips MPT optimization.
 - `option.enable_calculation_time_info` enables showing each calculation time for functions and total calculation time on the terminal.
 - `option.enable_outside_drivable_area_stop` enables stopping just before the generated trajectory point will be outside the drivable area.
+
+### Parameters
+
+{{ json_to_markdown("planning/autoware_path_optimizer/schema/path_optimizer.schema.json") }}
 
 ## How To Debug
 

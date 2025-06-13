@@ -1,75 +1,224 @@
-# concatenate_data
+# concatenate_and_time_synchronize_node
 
 ## Purpose
 
-Many self-driving cars combine multiple LiDARs to expand the sensing range. Therefore, a function to combine a plurality of point clouds is required.
+The `concatenate_and_time_synchronize_node` is a node designed to combine and synchronize multiple point clouds into a single, unified point cloud. By integrating data from multiple LiDARs, this node significantly enhances the sensing range and coverage of autonomous vehicles, enabling more accurate perception of the surrounding environment. Synchronization ensures that point clouds are aligned temporally, reducing errors caused by mismatched timestamps.
 
-To combine multiple sensor data with a similar timestamp, the [message_filters](https://github.com/ros2/message_filters) is often used in the ROS-based system, but this requires the assumption that all inputs can be received. Since safety must be strongly considered in autonomous driving, the point clouds concatenate node must be designed so that even if one sensor fails, the remaining sensor information can be output.
+For example, consider a vehicle equipped with three LiDAR sensors mounted on the left, right, and top positions. Each LiDAR captures data from its respective field of view, as shown below:
 
-## Inner-workings / Algorithms
+|                       Left                        |                       Top                       |                        Right                        |
+| :-----------------------------------------------: | :---------------------------------------------: | :-------------------------------------------------: |
+| ![Concatenate Left](./image/concatenate_left.png) | ![Concatenate Top](./image/concatenate_top.png) | ![Concatenate Right](./image/concatenate_right.png) |
 
-The figure below represents the reception time of each sensor data and how it is combined in the case.
+After processing the data through the `concatenate_and_time_synchronize_node`, the outputs from all LiDARs are combined into a single comprehensive point cloud that provides a complete view of the environment:
 
-![concatenate_data_timing_chart](./image/concatenate_data.drawio.svg)
+![Full Scene View](./image/concatenate_all.png)
+
+This resulting point cloud allows autonomous systems to detect obstacles, map the environment, and navigate more effectively, leveraging the complementary fields of view from multiple LiDAR sensors.
+
+## Inner Workings / Algorithms
+
+![concatenate_algorithm](./image/concatenate_algorithm.drawio.svg)
+
+### Step 1: Match and Create Collector
+
+When a point cloud arrives, its timestamp is checked, and an offset is subtracted to get the reference timestamp. The node then checks if there is an existing collector with the same reference timestamp. If such a collector exists, the point cloud is added to it. If no such collector exists, a new collector is created with the reference timestamp.
+
+### Step 2: Trigger the Timer
+
+Once a collector is created, a timer for that collector starts counting down (this value is defined by `timeout_sec`). The collector begins to concatenate the point clouds either when all point clouds defined in `input_topics` have been collected or when the timer counts down to zero.
+
+### Step 3: Concatenate the Point Clouds
+
+The concatenation process involves merging multiple point clouds into a single, concatenated point cloud. The timestamp of the concatenated point cloud will be the earliest timestamp from the input point clouds. By setting the parameter `is_motion_compensated` to `true`, the node will consider the timestamps of the input point clouds and utilize the `twist` information from `geometry_msgs::msg::TwistWithCovarianceStamped` to compensate for motion, aligning the point cloud to the selected (earliest) timestamp.
+
+### Step 4: Publish the Point Cloud
+
+After concatenation, the concatenated point cloud is published, and the collector is deleted to free up resources.
 
 ## Inputs / Outputs
 
 ### Input
 
-| Name            | Type                                             | Description                                                                   |
-| --------------- | ------------------------------------------------ | ----------------------------------------------------------------------------- |
-| `~/input/twist` | `geometry_msgs::msg::TwistWithCovarianceStamped` | The vehicle odometry is used to interpolate the timestamp of each sensor data |
+| Name            | Type                                             | Description                                                                                                                                              |
+| --------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `~/input/twist` | `geometry_msgs::msg::TwistWithCovarianceStamped` | Twist information adjusts the point cloud scans based on vehicle motion, allowing LiDARs with different timestamps to be synchronized for concatenation. |
+| `~/input/odom`  | `nav_msgs::msg::Odometry`                        | Vehicle odometry adjusts the point cloud scans based on vehicle motion, allowing LiDARs with different timestamps to be synchronized for concatenation.  |
+
+By setting the `input_twist_topic_type` parameter to `twist` or `odom`, the subscriber will subscribe to either `~/input/twist` or `~/input/odom`. If the user doesn't want to use the twist information or vehicle odometry to compensate for motion, set `is_motion_compensated` to `false`.
 
 ### Output
 
 | Name              | Type                            | Description               |
 | ----------------- | ------------------------------- | ------------------------- |
-| `~/output/points` | `sensor_msgs::msg::Pointcloud2` | concatenated point clouds |
-
-## Parameters
-
-| Name                 | Type             | Default Value | Description                                                         |
-| -------------------- | ---------------- | ------------- | ------------------------------------------------------------------- |
-| `input/points`       | vector of string | []            | input topic names that type must be `sensor_msgs::msg::Pointcloud2` |
-| `input_frame`        | string           | ""            | input frame id                                                      |
-| `output_frame`       | string           | ""            | output frame id                                                     |
-| `has_static_tf_only` | bool             | false         | flag to listen TF only once                                         |
-| `max_queue_size`     | int              | 5             | max queue size of input/output topics                               |
+| `~/output/points` | `sensor_msgs::msg::Pointcloud2` | Concatenated point clouds |
 
 ### Core Parameters
 
-| Name                              | Type             | Default Value | Description                                                                                                                                                                                                                                                |
-| --------------------------------- | ---------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `timeout_sec`                     | double           | 0.1           | tolerance of time to publish next pointcloud [s]<br>When this time limit is exceeded, the filter concatenates and publishes pointcloud, even if not all the point clouds are subscribed.                                                                   |
-| `input_offset`                    | vector of double | []            | This parameter can control waiting time for each input sensor pointcloud [s]. You must to set the same length of offsets with input pointclouds numbers. <br> For its tuning, please see [actual usage page](#how-to-tuning-timeout_sec-and-input_offset). |
-| `publish_synchronized_pointcloud` | bool             | false         | If true, publish the time synchronized pointclouds. All input pointclouds are transformed and then re-published as message named `<original_msg_name>_synchronized`.                                                                                       |
-| `input_twist_topic_type`          | std::string      | twist         | Topic type for twist. Currently support `twist` or `odom`.                                                                                                                                                                                                 |
+{{ json_to_markdown("sensing/autoware_pointcloud_preprocessor/schema/concatenate_and_time_sync_node.schema.json") }}
 
-## Actual Usage
+### Parameter Settings
 
-For the example of actual usage of this node, please refer to the [preprocessor.launch.py](../launch/preprocessor.launch.py) file.
+If you didn't synchronize your LiDAR sensors, set the `type` parameter of `matching_strategy` to `naive` to concatenate the point clouds directly. However, if your LiDAR sensors are synchronized, set type to `advanced` and adjust the `lidar_timestamp_offsets` and `lidar_timestamp_noise_window` parameters accordingly.
 
-### How to tuning timeout_sec and input_offset
+The three parameters, `timeout_sec`, `lidar_timestamp_offsets`, and `lidar_timestamp_noise_window`, are essential for efficiently collecting point clouds in the same collector and managing edge cases (point cloud drops or delays) effectively.
 
-The values in `timeout_sec` and `input_offset` are used in the timer_callback to control concatenation timings.
+#### timeout_sec
 
-- Assumptions
-  - when the timer runs out, we concatenate the pointclouds in the buffer
-  - when the first pointcloud comes to buffer, we reset the timer to `timeout_sec`
-  - when the second and later pointclouds comes to buffer, we reset the timer to `timeout_sec` - `input_offset`
-  - we assume all lidar has same frequency
+When network issues occur or when point clouds experience delays in the previous processing pipeline, some point clouds may be delayed or dropped. To address this, the `timeout_sec` parameter is used. Once the timer is created, it will start counting down from `timeout_sec`. If the timer reaches zero, the collector will not wait for delayed or dropped point clouds but will concatenate the remaining point clouds in the collector directly. The figure below demonstrates how `timeout_sec` works with `concatenate_and_time_sync_node` when `timeout_sec` is set to `0.12` (120 ms).
 
-| Name           | Description                                          | How to tune                                                                                                                                                          |
-| -------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `timeout_sec`  | timeout sec for default timer                        | To avoid mis-concatenation, at least this value must be shorter than sampling time.                                                                                  |
-| `input_offset` | timeout extension when a pointcloud comes to buffer. | The amount of waiting time will be `timeout_sec` - `input_offset`. So, you will need to set larger value for the last-coming pointcloud and smaller for fore-coming. |
+![concatenate_edge_case](./image/concatenate_edge_case.drawio.svg)
 
-### Node separation options for future
+#### lidar_timestamp_offsets
 
-Since the pointcloud concatenation has two process, "time synchronization" and "pointcloud concatenation", it is possible to separate these processes.
+Since different vehicles have varied designs for LiDAR scanning, the timestamps of each LiDAR may differ. Users need to know the offsets between each LiDAR and set the values in `lidar_timestamp_offsets`.
 
-In the future, Nodes will be completely separated in order to achieve node loosely coupled nature, but currently both nodes can be selected for backward compatibility ([See this PR](https://github.com/autowarefoundation/autoware.universe/pull/3312)).
+To monitor the timestamps of each LiDAR, run the following command:
 
-## Assumptions / Known limits
+```bash
+ros2 topic echo "pointcloud_topic" --field header
+```
 
-It is necessary to assume that the vehicle odometry value exists, the sensor data and odometry timestamp are correct, and the TF from `base_link` to `sensor_frame` is also correct.
+The timestamps should increase steadily by approximately 100 ms, as per the Autoware default. You should see output like this:
+
+```bash
+nanosec: 156260951
+nanosec: 257009560
+nanosec: 355444581
+```
+
+This pattern indicates a LiDAR timestamp of 0.05.
+
+If there are three LiDARs (left, right, top), and the timestamps for the left, right, and top point clouds are `0.01`, `0.05`, and `0.09` seconds respectively, the parameters should be set as [0.0, 0.04, 0.08]. This reflects the timestamp differences between the current point cloud and the point cloud with the earliest timestamp. Note that the order of the `lidar_timestamp_offsets` corresponds to the order of the `input_topics`.
+
+The figure below demonstrates how `lidar_timestamp_offsets` works with `concatenate_and_time_sync_node`.
+
+![ideal_timestamp_offset](./image/ideal_timestamp_offset.drawio.svg)
+
+#### lidar_timestamp_noise_window
+
+Additionally, due to the mechanical design of LiDARs, there may be some jitter in the timestamps of each scan, as shown in the image below. For example, if the scan frequency is set to 10 Hz (scanning every 100 ms), the timestamps between each scan might not be exactly 100 ms apart. To handle this noise, the `lidar_timestamp_noise_window` parameter is provided.
+
+Users can use [this tool](https://github.com/tier4/timestamp_analyzer) to visualize the noise between each scan.
+
+![jitter](./image/jitter.png)
+
+From the example above, the noise ranges from 0 to 8 ms, so the user should set `lidar_timestamp_noise_window` to `0.008`.
+
+The figure below demonstrates how `lidar_timestamp_noise_window` works with the `concatenate_and_time_sync_node`. If the green `X` is within the range of the red triangles, it indicates that the point cloud matches the reference timestamp of the collector.
+
+![noise_timestamp_offset](./image/noise_timestamp_offset.drawio.svg)
+
+## Launch
+
+```bash
+# The launch file will read the parameters from the concatenate_and_time_sync_node.param.yaml
+ros2 launch autoware_pointcloud_preprocessor concatenate_and_time_sync_node.launch.xml
+```
+
+## Test
+
+```bash
+# build autoware_pointcloud_preprocessor
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-up-to autoware_pointcloud_preprocessor
+
+# test autoware_pointcloud_preprocessor
+colcon test --packages-select autoware_pointcloud_preprocessor --event-handlers console_cohesion+
+```
+
+## Debug and Diagnostics
+
+To verify whether the node has successfully concatenated the point clouds, the user can examine rqt or the `/diagnostics` topic using the following command:
+
+```bash
+ros2 topic echo /diagnostics
+```
+
+Below is an example output when the point clouds are concatenated successfully:
+
+- Each point cloud has a value of `True`.
+- The `Pointcloud concatenation succeeded` is `True`.
+- The `level` value is `\0`. (diagnostic_msgs::msg::DiagnosticStatus::OK)
+
+```bash
+header:
+  stamp:
+    sec: 1722492015
+    nanosec: 848508777
+  frame_id: ''
+status:
+- level: "\0"
+  name: 'concatenate_and_time_sync_node: concat_status'
+  message: Concatenated pointcloud is published and include all topics
+  hardware_id: concatenate_data_checker
+  values:
+  - key: Concatenated pointcloud timestamp
+    value: '1718260240.159229994'
+  - key: Minimum reference timestamp
+    value: '1718260240.149230003'
+  - key: Maximum reference timestamp
+    value: '1718260240.169229984'
+  - key: Timestamp: /sensing/lidar/left/pointcloud_before_sync
+    value: '1718260240.159229994'
+  - key: Concatenated: /sensing/lidar/left/pointcloud_before_sync
+    value: 'True'
+  - key: Timestamp: /sensing/lidar/right/pointcloud_before_sync
+    value: '1718260240.194104910'
+  - key: Concatenated: /sensing/lidar/right/pointcloud_before_sync
+    value: 'True'
+  - key: Timestamp: /sensing/lidar/top/pointcloud_before_sync
+    value: '1718260240.234578133'
+  - key: Concatenated: /sensing/lidar/top/pointcloud_before_sync
+    value: 'True'
+  - key: Pointcloud concatenation succeeded
+    value: 'True'
+```
+
+Below is an example when point clouds fail to concatenate successfully.
+
+- Some point clouds might have values of `False`.
+- The `Pointcloud concatenation succeeded` is `False`.
+- The `level` value is `\x02`. (diagnostic_msgs::msg::DiagnosticStatus::ERROR)
+
+```bash
+header:
+  stamp:
+    sec: 1722492663
+    nanosec: 344942959
+  frame_id: ''
+status:
+- level: "\x02"
+  name: 'concatenate_and_time_sync_node: concat_status'
+  message: Concatenated pointcloud is published but miss some topics
+  hardware_id: concatenate_data_checker
+  values:
+  - key: Concatenated pointcloud timestamp
+    value: '1718260240.859827995'
+  - key: Minimum reference timestamp
+    value: '1718260240.849828005'
+  - key: Maximum reference timestamp
+    value: '1718260240.869827986'
+  - key: Timestamp: /sensing/lidar/left/pointcloud_before_sync/timestamp
+    value: '1718260240.859827995'
+  - key: Concatenated: /sensing/lidar/left/pointcloud_before_sync
+    value: 'True'
+  - key: Timestamp: /sensing/lidar/right/pointcloud_before_sync/timestamp
+    value: '1718260240.895193815'
+  - key: Concatenated: /sensing/lidar/right/pointcloud_before_sync
+    value: 'True'
+  - key: Concatenated: /sensing/lidar/top/pointcloud_before_sync
+    value: 'False'
+  - key: Pointcloud concatenation succeeded
+    value: 'False'
+```
+
+## Node separation options
+
+There is also an option to separate the concatenate_and_time_sync_node into two nodes: one for `time synchronization` and another for `concatenate pointclouds` ([See this PR](https://github.com/autowarefoundation/autoware_universe/pull/3312)).
+
+Note that the `concatenate_pointclouds` and `time_synchronizer_nodelet` are using the [old design](https://github.com/autowarefoundation/autoware_universe/blob/9bb228fe5b7fa4c6edb47e4713c73489a02366e1/sensing/autoware_pointcloud_preprocessor/docs/concatenate-data.md) of the concatenate node.
+
+## Assumptions / Known Limits
+
+- If `is_motion_compensated` is set to `false`, the `concatenate_and_time_sync_node` will directly concatenate the point clouds without applying for motion compensation. This can save several milliseconds depending on the number of LiDARs being concatenated. Therefore, if the timestamp differences between point clouds are negligible, the user can set `is_motion_compensated` to `false` and omit the need for twist or odometry input for the node.
+- As mentioned above, the user should clearly understand how their LiDAR's point cloud timestamps are managed to set the parameters correctly. If the user does not synchronize the point clouds, please set `matching_strategy.type` to `naive`.

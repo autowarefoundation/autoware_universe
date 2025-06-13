@@ -6,16 +6,6 @@
     "yolox_tiny": {
       "type": "object",
       "properties": {
-        "model_path": {
-          "type": "string",
-          "default": "$(var data_path)/tensorrt_yolox/$(var model_name).onnx",
-          "description": "Path to onnx model."
-        },
-        "label_path": {
-          "type": "string",
-          "default": "$(var data_path)/tensorrt_yolox/label.txt",
-          "description": "Path to label file."
-        },
         "score_threshold": {
           "type": "number",
           "default": 0.35,
@@ -82,8 +72,6 @@
         }
       },
       "required": [
-        "model_path",
-        "label_path",
         "score_threshold",
         "nms_threshold",
         "precision",
