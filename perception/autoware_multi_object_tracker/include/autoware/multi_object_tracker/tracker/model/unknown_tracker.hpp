@@ -23,6 +23,7 @@
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/cv_motion_model.hpp"
+#include "autoware/multi_object_tracker/tracker/motion_model/static_motion_model.hpp"
 
 #include <autoware/kalman_filter/kalman_filter.hpp>
 
@@ -37,10 +38,15 @@ private:
   object_model::ObjectModel object_model_ = object_model::unknown;
 
   CVMotionModel motion_model_;
-  using IDX = CVMotionModel::IDX;
+  StaticMotionModel static_motion_model_;
+
+  bool enable_velocity_estimation_;
+  bool enable_position_extrapolation_;
 
 public:
-  UnknownTracker(const rclcpp::Time & time, const types::DynamicObject & object);
+  UnknownTracker(
+    const rclcpp::Time & time, const types::DynamicObject & object,
+    const bool enable_velocity_estimation, const bool enable_position_extrapolation);
 
   bool predict(const rclcpp::Time & time) override;
   bool measure(
@@ -48,7 +54,9 @@ public:
     const types::InputChannel & channel_info) override;
   bool measureWithPose(const types::DynamicObject & object);
   bool measureWithShape(const types::DynamicObject & object);
-  bool getTrackedObject(const rclcpp::Time & time, types::DynamicObject & object) const override;
+  bool getTrackedObject(
+    const rclcpp::Time & time, types::DynamicObject & object,
+    const bool to_publish = false) const override;
 };
 
 }  // namespace autoware::multi_object_tracker
