@@ -33,8 +33,18 @@
   <arg name="launch_rqt_robot_monitor" default="false"/>
   <arg name="launch_rqt_runtime_monitor_err" default="false"/>
 
+  <!-- temporary: control_command_gate migration -->
+  <arg name="use_control_command_gate" default="false"/>
+
   <group>
     <push-ros-namespace namespace="/system"/>
+
+    <group if="$(var use_control_command_gate)">
+      <include file="$(find-pkg-share autoware_command_mode_switcher)/launch/switcher.launch.xml"/>
+    </group>
+    <group if="$(var use_control_command_gate)">
+      <include file="$(find-pkg-share autoware_command_mode_decider)/launch/decider.launch.xml"/>
+    </group>
 
     <!-- System Monitor -->
     <group if="$(var launch_system_monitor)">
@@ -79,7 +89,7 @@
     </group>
 
     <!-- MRM Operator -->
-    <group>
+    <group unless="$(var use_control_command_gate)">
       <include file="$(find-pkg-share autoware_mrm_comfortable_stop_operator)/launch/mrm_comfortable_stop_operator.launch.py">
         <arg name="config_file" value="$(var mrm_comfortable_stop_operator_param_path)"/>
       </include>
@@ -104,7 +114,7 @@
     </group>
 
     <!-- MRM Handler -->
-    <group>
+    <group unless="$(var use_control_command_gate)">
       <include file="$(find-pkg-share autoware_mrm_handler)/launch/mrm_handler.launch.xml">
         <arg name="config_file" value="$(var mrm_handler_param_path)"/>
       </include>
