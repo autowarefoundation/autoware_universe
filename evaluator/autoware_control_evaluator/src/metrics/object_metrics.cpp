@@ -69,7 +69,7 @@ autoware_utils::Polygon2d createObjPolygon(
   return object_polygon;
 }
 
-autoware_utils_geometry::Polygon2d createObjPolygon(
+autoware_utils::Polygon2d createObjPolygon(
   const geometry_msgs::msg::Pose & pose, const geometry_msgs::msg::Vector3 & size)
 {
   const double length_m = size.x / 2.0;
@@ -85,7 +85,7 @@ autoware_utils_geometry::Polygon2d createObjPolygon(
   return createObjPolygon(pose, polygon);
 }
 
-autoware_utils_geometry::Polygon2d createObjPolygonForCylinder(
+autoware_utils::Polygon2d createObjPolygonForCylinder(
   const geometry_msgs::msg::Pose & pose, const double diameter)
 {
   geometry_msgs::msg::Polygon polygon{};
@@ -102,7 +102,7 @@ autoware_utils_geometry::Polygon2d createObjPolygonForCylinder(
   return createObjPolygon(pose, polygon);
 }
 
-autoware_utils_geometry::Polygon2d createObjPolygon(
+autoware_utils::Polygon2d createObjPolygon(
   const autoware_perception_msgs::msg::PredictedObject & object)
 {
   const auto & object_pose = object.kinematics.initial_pose_with_covariance.pose;
