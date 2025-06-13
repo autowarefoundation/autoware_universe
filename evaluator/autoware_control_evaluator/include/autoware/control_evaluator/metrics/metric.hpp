@@ -96,7 +96,9 @@ static const std::unordered_map<Metric, std::string> metric_descriptions = {
   {Metric::steering_rate, "Steering angle rate[rad/s]"},
   {Metric::steering_acceleration, "Steering angle acceleration[rad/s^2]"},
   {Metric::stop_deviation, "Deviation to the stop line when the ego stop by a module[m]"},
-  {Metric::closest_object_distance, "Distance to the closest object[m]"},
+  {Metric::closest_object_distance,
+   "Distance to the closest object[m], the objects outside of the distance_filter_thr_m (default: "
+   "30m) are ignored"},
 };
 
 namespace details

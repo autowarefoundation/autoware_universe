@@ -64,6 +64,7 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
 
   // Parameters
   output_metrics_ = declare_parameter<bool>("output_metrics");
+  distance_filter_thr_m_ = declare_parameter<double>("object_metrics.distance_filter_thr_m");
 
   // Timer callback to publish evaluator diagnostics
   using namespace std::literals::chrono_literals;
@@ -413,11 +414,20 @@ void ControlEvaluatorNode::AddObjectMetricMsg(
 
   double minimum_distance = std::numeric_limits<double>::max();
   for (const auto & object : objects.objects) {
+    const double center_distance = autoware_utils::calc_distance2d(
+      odom.pose.pose.position, object.kinematics.initial_pose_with_covariance.pose.position);
+    if (center_distance > distance_filter_thr_m_) {
+      continue;
+    }
     const auto & object_polygon = metrics::createObjPolygon(object);
     const auto distance = metrics::calcPolygonDistance(ego_polygon, object_polygon);
     if (distance < minimum_distance) {
       minimum_distance = distance;
     }
+  }
+
+  if (minimum_distance == std::numeric_limits<double>::max()) {
+    return;
   }
 
   AddMetricMsg(Metric::closest_object_distance, minimum_distance);

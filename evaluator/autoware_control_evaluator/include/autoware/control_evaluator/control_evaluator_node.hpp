@@ -124,6 +124,7 @@ private:
 
   // Parameters
   bool output_metrics_;
+  double distance_filter_thr_m_;
 
   // Metric
   const std::vector<Metric> metrics_ = {// collect all metrics
