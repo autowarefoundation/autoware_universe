@@ -489,7 +489,6 @@ TEST(TrajectoryCheckerModule, DiagCheckDistanceDeviation)
 
   // Larger distance deviation than threshold -> must be NG
   const auto error_distance = test_utils::THRESHOLD_DISTANCE_DEVIATION * scale_margin;
-  test(error_distance, 0.0, false);
   test(0.0, error_distance, false);
   test(0.0, -error_distance, false);
   test(error_distance, error_distance, false);
@@ -497,6 +496,10 @@ TEST(TrajectoryCheckerModule, DiagCheckDistanceDeviation)
 
   // Smaller distance deviation than threshold -> must be OK
   const auto ok_distance = test_utils::THRESHOLD_DISTANCE_DEVIATION / scale_margin;
+  // Longitudinal error does not cause failure
+  test(error_distance, 0.0, true);
+  test(error_distance, ok_distance, true);
+  test(error_distance, -ok_distance, true);
   test(ok_distance, 0.0, true);
   test(0.0, ok_distance, true);
   test(0.0, -ok_distance, true);
