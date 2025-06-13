@@ -209,13 +209,40 @@ void apply_edits(FileConfig & config)
   // List units to remove and links from/to them.
   std::unordered_set<UnitConfig *> remove_units;
   std::unordered_set<LinkConfig *> remove_links;
+  const auto remove_by_regex = [&](EditConfig & edit) {
+    const auto raw_regex = edit.data.optional("regex").text();
+    if (raw_regex.empty()) {
+      return false;
+    }
+
+    const std::regex regex{raw_regex};
+    bool is_any_removed = false;
+    for (const auto & [path, unit] : path_to_unit) {
+      if (std::regex_match(path, regex)) {
+        remove_units.insert(unit);
+        is_any_removed = true;
+      }
+    }
+
+    if (!is_any_removed) {
+      throw PathNotFound(edit.data.path(), raw_regex);
+    } else {
+      return true;
+    }
+  };
+  const auto remove_by_fullpath = [&](EditConfig & edit) {
+    const auto path = edit.data.required("path").text();
+    if (path_to_unit.count(path) == 0) {
+      throw PathNotFound(edit.data.path(), path);
+    } else {
+      remove_units.insert(path_to_unit.at(path));
+      return true;
+    }
+  };
+
   for (const auto & edit : config.edits) {
     if (edit->type == edit_name::remove) {
-      const auto path = edit->data.required("path").text();
-      if (path_to_unit.count(path) == 0) {
-        throw PathNotFound(edit->data.path(), path);
-      }
-      remove_units.insert(path_to_unit.at(path));
+      remove_by_regex(*edit) || remove_by_fullpath(*edit);
     }
   }
   for (const auto & link : config.links) {
