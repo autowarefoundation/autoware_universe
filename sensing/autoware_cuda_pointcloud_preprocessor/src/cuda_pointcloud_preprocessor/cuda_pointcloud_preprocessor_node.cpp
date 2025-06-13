@@ -21,6 +21,7 @@
 #include "autoware/pointcloud_preprocessor/diagnostics/latency_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/pass_rate_diagnostics.hpp"
 
+#include <agnocast/agnocast_subscription.hpp>
 #include <autoware/point_types/types.hpp>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
@@ -107,10 +108,21 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
     std::make_unique<autoware_utils::DiagnosticsInterface>(this, this->get_fully_qualified_name());
 
   // Subscriber
+  #ifdef USE_AGNOCAST_ENABLED
+  agnocast::SubscriptionOptions sub_options{};
+  #else
   rclcpp::SubscriptionOptions sub_options;
   sub_options.use_intra_process_comm = rclcpp::IntraProcessSetting::Enable;
+  #endif
 
-  pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
+  // Create mutually exclusive callback group for pointcloud subscription
+  // Agnocast requires to be in a mutually exclusive callback group with no native ROS subscriptions
+  pointcloud_callback_group_ = create_callback_group(
+    rclcpp::CallbackGroupType::MutuallyExclusive);
+
+  sub_options.callback_group = pointcloud_callback_group_;
+
+  pointcloud_sub_ = AUTOWARE_CREATE_SUBSCRIPTION(sensor_msgs::msg::PointCloud2,
     "~/input/pointcloud", rclcpp::SensorDataQoS{}.keep_last(1),
     std::bind(&CudaPointcloudPreprocessorNode::pointcloudCallback, this, std::placeholders::_1),
     sub_options);
@@ -176,7 +188,7 @@ bool CudaPointcloudPreprocessorNode::getTransform(
 }
 
 void CudaPointcloudPreprocessorNode::twistCallback(
-  const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr twist_msg_ptr)
+  const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr & twist_msg_ptr)
 {
   while (!twist_queue_.empty()) {
     // for replay rosbag
@@ -245,7 +257,7 @@ void CudaPointcloudPreprocessorNode::imuCallback(
 }
 
 void CudaPointcloudPreprocessorNode::pointcloudCallback(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr input_pointcloud_msg_ptr)
+  const AUTOWARE_MESSAGE_SHARED_PTR(sensor_msgs::msg::PointCloud2) & input_pointcloud_msg_ptr)
 {
   stop_watch_ptr_->toc("processing_time", true);
   const auto & input_pointcloud_msg = *input_pointcloud_msg_ptr;
