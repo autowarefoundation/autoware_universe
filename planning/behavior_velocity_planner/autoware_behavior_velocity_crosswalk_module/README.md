@@ -17,14 +17,15 @@ title modifyPathVelocity
 start
 :getPathEndPointsOnCrosswalk;
 group apply slow down
-  :applySlowDownByLanleet2Map;
+  :applySlowDownByLanelet2Map;
   :applySlowDownByOcclusion;
 end group
 group calculate stop pose
   :getDefaultStopPose;
   :resamplePath;
   :checkStopForCrosswalkUsers;
-  :checkStopForStuckVehicles;
+  :checkStopForObstructionPrevention;
+  :checkStopForParkedVehicles;
 end group
 group apply stop
   :getNearestStopFactor;
@@ -228,7 +229,7 @@ In the `pass_judge` namespace, the following parameters are defined.
 | -------------------------------------- | --- | ---- | ------------------------------------------------------------------------------------------------ |
 | `disable_yield_for_new_stopped_object` | [-] | bool | If set to true, the new stopped object will be ignored around the crosswalk with a traffic light |
 
-### Stuck Prevention on the Crosswalk
+### Obstruction Prevention on the Crosswalk
 
 The feature will make the ego not to stop on the crosswalk.
 When there is a low-speed or stopped vehicle ahead of the crosswalk, and there is not enough space between the crosswalk and the vehicle, the crosswalk module plans to stop before the crosswalk even if there are no pedestrians or bicycles.
@@ -236,21 +237,21 @@ When there is a low-speed or stopped vehicle ahead of the crosswalk, and there i
 `min_acc`, `min_jerk`, and `max_jerk` are met. If the ego cannot stop before the crosswalk with these parameters, the stop position will move forward.
 
 <figure markdown>
-  ![stuck_vehicle_attention_range](docs/stuck_vehicle_detection.svg){width=600}
+  ![obstruction_prevention_attention_range](docs/obstruction_prevention.svg){width=600}
 </figure>
 
-In the `stuck_vehicle` namespace, the following parameters are defined.
+In the `obstruction_prevention` namespace, the following parameters are defined.
 
-| Parameter                          | Unit    | Type   | Description                                                             |
-| ---------------------------------- | ------- | ------ | ----------------------------------------------------------------------- |
-| `stuck_vehicle_velocity`           | [m/s]   | double | maximum velocity threshold whether the target vehicle is stopped or not |
-| `max_stuck_vehicle_lateral_offset` | [m]     | double | maximum lateral offset of the target vehicle position                   |
-| `required_clearance`               | [m]     | double | clearance to be secured between the ego and the ahead vehicle           |
-| `min_acc`                          | [m/ss]  | double | minimum acceleration to stop                                            |
-| `min_jerk`                         | [m/sss] | double | minimum jerk to stop                                                    |
-| `max_jerk`                         | [m/sss] | double | maximum jerk to stop                                                    |
+| Parameter                           | Unit    | Type   | Description                                                             |
+| ----------------------------------- | ------- | ------ | ----------------------------------------------------------------------- |
+| `target_vehicle_velocity`           | [m/s]   | double | maximum velocity threshold whether the target vehicle is stopped or not |
+| `max_target_vehicle_lateral_offset` | [m]     | double | maximum lateral offset of the target vehicle position                   |
+| `required_clearance`                | [m]     | double | clearance to be secured between the ego and the ahead vehicle           |
+| `min_acc`                           | [m/ss]  | double | minimum acceleration to stop                                            |
+| `min_jerk`                          | [m/sss] | double | minimum jerk to stop                                                    |
+| `max_jerk`                          | [m/sss] | double | maximum jerk to stop                                                    |
 
-### Safety Slow Down Behavior
+### Map Slow Down Behavior
 
 In the current autoware implementation, if no target object is detected around a crosswalk, the ego vehicle will not slow down for the crosswalk.
 However, it may be desirable to slow down in situations, for example, where there are blind spots.
@@ -308,6 +309,34 @@ To inflate the masking behind objects, their footprint can be made bigger using 
 | `ignore_velocity_thresholds.custom_thresholds` | [-]   | double list | velocities of the custom labels                                                                                                            |
 | `extra_predicted_objects_size`                 | [m]   | double      | extra size added to the objects for masking the occlusions                                                                                 |
 
+### Stop for parked vehicles
+
+This feature makes ego stop before the crosswalk if there are other vehicles parked in front of the crosswalk, possibly obstructing the view of incoming pedestrians or bicycles.
+
+The feature is enabled with the `parked_vehicles_stop.enable` parameter but is skipped when one of these conditions is true:
+
+- the traffic light is red for the crosswalk users: pedestrians are not supposed to cross so ego does not need to stop;
+- the traffic light is red for the ego vehicle: the traffic light module will add a stop if necessary;
+- we are already planning to stop for crosswalk users or stuck vehicles.
+
+Other vehicles are determined to be stopped if their velocity is less or equal to the `parked_vehicles_stop.parked_velocity_threshold` parameter.
+
+A search area is built along the ego path ahead of the crosswalk by a distance set with the `parked_vehicles_stop.search_distance` parameter.
+
+A stop is planned such that ego will be aligned with the furthest parked vehicle along the ego path within the search area.
+Once ego stops inside the search area for at least the duration set by `parked_vehicles_stop.min_ego_stop_duration`, the stop is removed and no more stop for parked vehicles will be triggered for that crosswalk.
+
+To prevent chattering caused by noise in the detected objects, once an object is selected for stopping, its last state will keep being considered for at least a duration of `parked_vehicles_stop.vehicle_permanence_duration`, even if the object is no longer detected or if it is no longer parked.
+
+| Parameter                                          | Unit  | Type   | Description                                                                                                                   |
+| -------------------------------------------------- | ----- | ------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `parked_vehicles_stop.enable`                      | [-]   | bool   | if true, ego will stop if there are parked vehicles before the crosswalk                                                      |
+| `parked_vehicles_stop.search_distance`             | [m]   | double | distance ahead of the crosswalk where to search for parked vehicles                                                           |
+| `parked_vehicles_stop.min_ego_stop_duration`       | [s]   | double | minimum duration ego should stop before it can continue                                                                       |
+| `parked_vehicles_stop.vehicle_permanence_duration` | [s]   | double | [s] if an object disappears or is no longer classified as parked vehicle, its last state is still used for this duration      |
+| `parked_vehicles_stop.ego_inside_safe_area_margin` | [m]   | double | margin used to consider if ego is inside the search area. Should be higher than the expected longitudinal error when stopping |
+| `parked_vehicles_stop.parked_velocity_threshold`   | [m/s] | double | vehicle are considered to be parked if their velocity is less or equal this threshold                                         |
+
 ### Others
 
 In the `common` namespace, the following parameters are defined.
@@ -361,7 +390,7 @@ The label of each plot is `<crosswalk module id>-<pedestrian uuid>`.
 ### Behavior
 
 - Q. The ego stopped around the crosswalk even though there were no crosswalk user objects.
-  - A. See [Stuck Vehicle Detection](https://autowarefoundation.github.io/autoware_universe/pr-5583/planning/autoware_behavior_velocity_crosswalk_module/#stuck-vehicle-detection).
+  - A. See [Obstruction Prevention on the Crosswalk](#obstruction-prevention-on-the-crosswalk)
 - Q. The crosswalk virtual wall suddenly appeared resulting in the sudden stop.
   - A. There may be a crosswalk user started moving when the ego was close to the crosswalk.
 - Q. The crosswalk module decides to stop even when the pedestrian traffic light is red.
@@ -372,9 +401,9 @@ The label of each plot is `<crosswalk module id>-<pedestrian uuid>`.
 ### Parameter Tuning
 
 - Q. The ego's yield behavior is too conservative.
-  - A. Tune `ego_pass_later_margin` described in [Yield Decision](https://autowarefoundation.github.io/autoware_universe/pr-5583/planning/autoware_behavior_velocity_crosswalk_module/#stuck-vehicle-detection)
+  - A. Tune `ego_pass_later_margin` described in [Yield Decision](#yield-the-way-to-the-pedestrians)
 - Q. The ego's yield behavior is too aggressive.
-  - A. Tune `ego_pass_later_margin` described in [Yield Decision](https://autowarefoundation.github.io/autoware_universe/pr-5583/planning/autoware_behavior_velocity_crosswalk_module/#stuck-vehicle-detection)
+  - A. Tune `ego_pass_later_margin` described in [Yield Decision](#yield-the-way-to-the-pedestrians)
 
 ## References/External links
 

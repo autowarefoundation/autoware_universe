@@ -22,9 +22,19 @@
 #include <tier4_control_msgs/msg/is_stopped.hpp>
 #include <tier4_control_msgs/srv/set_pause.hpp>
 #include <tier4_control_msgs/srv/set_stop.hpp>
+#include <tier4_vehicle_msgs/msg/actuation_command_stamped.hpp>
 
 namespace autoware::component_interface_specs_universe::control
 {
+
+struct ActuationCommand
+{
+  using Message = tier4_vehicle_msgs::msg::ActuationCommandStamped;
+  static constexpr char name[] = "/control/command/actuation_cmd";
+  static constexpr size_t depth = 1;
+  static constexpr auto reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
+  static constexpr auto durability = RMW_QOS_POLICY_DURABILITY_VOLATILE;
+};
 
 struct SetPause
 {
