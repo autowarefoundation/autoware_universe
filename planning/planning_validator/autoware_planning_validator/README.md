@@ -151,14 +151,14 @@ The following parameters can be set for the `autoware_planning_validator`:
 
 #### Deviation Check
 
-| Name                                        | Type   | Description                                                                  | Default value |
-| :------------------------------------------ | :----- | :--------------------------------------------------------------------------- | :------------ |
-| `validity_checks.deviation.enable`          | bool   | flag to enable/disable deviation validation check                            | true          |
-| `validity_checks.deviation.velocity_th`     | double | max valid velocity deviation between ego and nearest trajectory point [m/s]  | 100.0         |
-| `validity_checks.deviation.distance_th`     | double | max valid euclidean distance between ego and nearest trajectory point [m]    | 100.0         |
-| `validity_checks.deviation.lon_distance_th` | double | max valid longitudinal distance between ego and nearest trajectory point [m] | 2.0           |
-| `validity_checks.deviation.yaw_th`          | double | max valid yaw deviation between ego and nearest trajectory point [rad]       | 1.5708        |
-| `validity_checks.deviation.is_critical`     | bool   | if true, will use handling type specified for critical checks                | false         |
+| Name                                        | Type   | Description                                                                   | Default value |
+| :------------------------------------------ | :----- | :---------------------------------------------------------------------------- | :------------ |
+| `validity_checks.deviation.enable`          | bool   | flag to enable/disable deviation validation check                             | true          |
+| `validity_checks.deviation.velocity_th`     | double | max valid velocity deviation between ego and nearest trajectory point [m/s]   | 100.0         |
+| `validity_checks.deviation.distance_th`     | double | max valid lateral distance between ego and the nearest trajectory segment [m] | 100.0         |
+| `validity_checks.deviation.lon_distance_th` | double | max valid longitudinal distance between ego and nearest trajectory point [m]  | 2.0           |
+| `validity_checks.deviation.yaw_th`          | double | max valid yaw deviation between ego and nearest trajectory point [rad]        | 1.5708        |
+| `validity_checks.deviation.is_critical`     | bool   | if true, will use handling type specified for critical checks                 | false         |
 
 #### Forward Trajectory Length Check
 
