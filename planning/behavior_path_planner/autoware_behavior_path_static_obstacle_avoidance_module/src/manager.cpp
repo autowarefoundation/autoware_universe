@@ -106,6 +106,8 @@ void StaticObstacleAvoidanceModuleManager::updateModuleParams(
     update_param<double>(
       parameters, ns + "object_check_return_pose_distance", p->object_check_return_pose_distance);
     update_param<double>(parameters, ns + "max_compensation_time", p->object_last_seen_threshold);
+    update_param<double>(
+      parameters, ns + "unstable_classification_time", p->unstable_classification_time);
   }
 
   {

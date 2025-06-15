@@ -454,6 +454,11 @@ ObjectData StaticObstacleAvoidanceModule::createObjectData(
   utils::static_obstacle_avoidance::fillObjectMovingTime(
     object_data, stopped_objects_, parameters_);
 
+  // Update classification unstable objects.
+  utils::static_obstacle_avoidance::updateClassificationUnstableObjects(
+    object_data, unknown_type_object_first_seen_time_map_,
+    parameters_->unstable_classification_time);
+
   // Calc lateral deviation from path to target object.
   object_data.direction = calc_lateral_deviation(object_closest_pose, object_pose.position) > 0.0
                             ? Direction::LEFT

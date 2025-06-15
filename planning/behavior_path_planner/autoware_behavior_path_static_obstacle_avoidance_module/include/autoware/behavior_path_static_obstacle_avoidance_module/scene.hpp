@@ -485,6 +485,8 @@ private:
   // TODO(Satoshi OTA) remove this variable.
   mutable ObjectDataArray stopped_objects_;
 
+  mutable std::unordered_map<std::string, rclcpp::Time> unknown_type_object_first_seen_time_map_;
+
   mutable size_t safe_count_{0};
 
   mutable DebugData debug_data_;
