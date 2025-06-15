@@ -5,6 +5,7 @@
   <description>autoware_cuda_pointcloud_preprocessor</description>
   <maintainer email="kenzo.lobos@tier4.jp">Kenzo Lobos-Tsunekawa</maintainer>
   <maintainer email="amadeusz.szymko.2@tier4.jp">Amadeusz Szymko</maintainer>
+  <maintainer email="max.schmeller@tier4.jp">Max Schmeller</maintainer>
   <author email="kenzo.lobos@tier4.jp">Kenzo Lobos-Tsunekawa</author>
   <license>Apache License 2.0</license>
 
