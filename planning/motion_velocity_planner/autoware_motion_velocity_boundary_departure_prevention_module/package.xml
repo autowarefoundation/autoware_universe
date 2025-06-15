@@ -5,7 +5,13 @@
   <version>0.43.0</version>
   <description>boundary departure prevention feature in motion_velocity_planner</description>
 
+  <maintainer email="alqudah.mohammad@tier4.jp">Alqudah Mohammad</maintainer>
+  <maintainer email="Kotakkucu@gmail.com">Takumi Odashima</maintainer>
+  <maintainer email="maxime.clement@tier4.jp">Maxime Clement</maintainer>
   <maintainer email="zulfaqar.azmi@tier4.jp">Zulfaqar Azmi</maintainer>
+
+
+  <author email="zulfaqar.azmi@tier4.jp">Zulfaqar Azmi</author>
 
   <license>Apache License 2.0</license>
 
