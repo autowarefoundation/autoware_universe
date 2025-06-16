@@ -1,0 +1,12 @@
+/**:
+  ros__parameters:
+    update_rate: 10.0
+    latency_threshold_ms: 100.0
+    window_size: 10
+
+    # Offset processing times for each layer (ms)
+    sensor_offset_ms: 0.0
+    perception_offset_ms: 0.0
+    planning_offset_ms: 0.0
+    control_offset_ms: 0.0
+    vehicle_offset_ms: 0.0

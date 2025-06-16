@@ -51,6 +51,12 @@ Also, when `convert_actuation_to_steering_status: true`, this node receives the 
 A feature that compensates for control commands according to the dynamic characteristics of the vehicle.
 This feature works when `use_vehicle_adaptor: true` is set and requires `control_horizon` to be enabled, so you need to set `enable_control_cmd_horizon_pub: true` in the trajectory_follower node.
 
+### Latency Measurement
+
+This node includes a latency measurement feature that tracks the time difference between receiving a control command and publishing the corresponding actuation command. The measured latency is published as a debug topic, which can be useful for performance monitoring and system optimization.
+
+The latency is calculated as the time difference between the timestamp of the incoming control command and the current time when the actuation command is published. When the input `control_cmd` contains a timestamp that represents the time when the control module started processing (propagated through the control pipeline), the `control_system_latency` represents the overall processing time of the entire control module system.
+
 ## Input topics
 
 | Name                       | Type                                       | Description                                                                                                                                                                                                                                                                                       |
@@ -70,10 +76,11 @@ Input topics when vehicle_adaptor is enabled
 
 ## Output topics
 
-| Name                       | Type                                             | Description                                                                                                                          |
-| -------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `~/output/actuation_cmd`   | tier4_vehicle_msgs::msg::ActuationCommandStamped | actuation command for vehicle to apply mechanical input                                                                              |
-| `~/output/steering_status` | autoware_vehicle_msgs::msg::SteeringReport       | publish only when `convert_actuation_to_steering_status: true`. steer tire angle is calculated from steer wheel angle and published. |
+| Name                              | Type                                              | Description                                                                                                                          |
+| --------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `~/output/actuation_cmd`          | tier4_vehicle_msgs::msg::ActuationCommandStamped  | actuation command for vehicle to apply mechanical input                                                                              |
+| `~/output/steering_status`        | autoware_vehicle_msgs::msg::SteeringReport        | publish only when `convert_actuation_to_steering_status: true`. steer tire angle is calculated from steer wheel angle and published. |
+| `~/output/control_system_latency` | autoware_internal_debug_msgs::msg::Float64Stamped | control system latency measurement from control command reception to actuation command publication                                   |
 
 ## Parameters
 
