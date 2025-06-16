@@ -414,7 +414,7 @@ void ControlEvaluatorNode::AddStopDeviationMetricMsg(const Odometry & odom)
   // find the stop decision closest to the ego only, the other stop decisions are not accumulated
   const auto min_distance_pair = std::min_element(
     min_distances.begin(), min_distances.end(),
-    [](const auto & a, const auto & b) { return a.second < b.second; });
+    [](const auto & a, const auto & b) { return std::abs(a.second) < std::abs(b.second); });
 
   const auto [closest_module_name, closest_min_distance] = *min_distance_pair;
   const bool is_ego_stopped_near_stop_decision =
