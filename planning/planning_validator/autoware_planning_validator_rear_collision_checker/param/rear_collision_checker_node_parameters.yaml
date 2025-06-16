@@ -92,7 +92,7 @@ rear_collision_checker_node:
       max_deceleration:
         type: double
 
-    vru:
+    vulnerable_road_user:
       reaction_time:
         type: double
         validation:

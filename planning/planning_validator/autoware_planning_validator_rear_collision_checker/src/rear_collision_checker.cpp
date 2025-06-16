@@ -115,8 +115,8 @@ void RearCollisionChecker::fill_rss_distance(PointCloudObjects & objects) const
 
   for (auto & object : objects) {
     if (object.is_vru) {
-      const auto & delay_object = p.common.vru.reaction_time;
-      const auto & max_deceleration_object = p.common.vru.max_deceleration;
+      const auto & delay_object = p.common.vulnerable_road_user.reaction_time;
+      const auto & max_deceleration_object = p.common.vulnerable_road_user.max_deceleration;
       const auto stop_distance_object =
         delay_object * object.velocity +
         0.5 * std::pow(object.velocity, 2.0) / std::abs(max_deceleration_object);
@@ -126,7 +126,7 @@ void RearCollisionChecker::fill_rss_distance(PointCloudObjects & objects) const
       object.rss_distance = stop_distance_object - stop_distance_ego;
       object.safe = object.rss_distance < object.relative_distance_with_delay_compensation;
       object.ignore = object.moving_time < p.common.filter.moving_time ||
-                      object.velocity > p.common.vru.max_velocity;
+                      object.velocity > p.common.vulnerable_road_user.max_velocity;
     } else {
       const auto & delay_object = p.common.vehicle.reaction_time;
       const auto & max_deceleration_object = p.common.vehicle.max_deceleration;
@@ -450,12 +450,13 @@ auto RearCollisionChecker::get_pointcloud_objects(
   const auto current_velocity = context_->data->current_kinematics->twist.twist.linear.x;
 
   {
-    const auto delay_object = p.common.vru.reaction_time;
-    const auto max_deceleration_object = p.common.vru.max_deceleration;
+    const auto delay_object = p.common.vulnerable_road_user.reaction_time;
+    const auto max_deceleration_object = p.common.vulnerable_road_user.max_deceleration;
 
-    const auto stop_distance_object =
-      delay_object * p.common.vru.max_velocity +
-      0.5 * std::pow(p.common.vru.max_velocity, 2.0) / std::abs(max_deceleration_object);
+    const auto stop_distance_object = delay_object * p.common.vulnerable_road_user.max_velocity +
+                                      0.5 *
+                                        std::pow(p.common.vulnerable_road_user.max_velocity, 2.0) /
+                                        std::abs(max_deceleration_object);
     const auto stop_distance_ego =
       0.5 * std::pow(current_velocity, 2.0) / std::abs(max_deceleration_ego);
 
