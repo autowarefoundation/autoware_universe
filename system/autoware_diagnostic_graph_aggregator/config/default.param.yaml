@@ -4,3 +4,4 @@
     rate: 10.0
     input_qos_depth: 1000
     graph_qos_depth: 1
+    graph_file: "string"  # This parameter expects a string value.
