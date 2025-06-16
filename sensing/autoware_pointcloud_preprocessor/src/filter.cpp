@@ -100,18 +100,18 @@ autoware::pointcloud_preprocessor::Filter::Filter(
   subscribe(filter_name);
 
   // Set tf_listener, tf_buffer.
-  setupTF();
+  setup_tf();
 
   // Set parameter service callback
   set_param_res_filter_ = this->add_on_set_parameters_callback(
-    std::bind(&Filter::filterParamCallback, this, std::placeholders::_1));
+    std::bind(&Filter::filter_param_callback, this, std::placeholders::_1));
 
   published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
   RCLCPP_DEBUG(this->get_logger(), "[Filter Constructor] successfully created.");
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void autoware::pointcloud_preprocessor::Filter::setupTF()
+void autoware::pointcloud_preprocessor::Filter::setup_tf()
 {
   managed_tf_buffer_ = std::make_unique<managed_transform_buffer::ManagedTransformBuffer>();
 }
@@ -182,7 +182,7 @@ void autoware::pointcloud_preprocessor::Filter::unsubscribe()
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // TODO(sykwer): Temporary Implementation: Delete this function definition when all the filter nodes
 // conform to new API.
-void autoware::pointcloud_preprocessor::Filter::computePublish(
+void autoware::pointcloud_preprocessor::Filter::compute_publish(
   const PointCloud2ConstPtr & input, const IndicesPtr & indices)
 {
   auto output = std::make_unique<PointCloud2>();
@@ -202,7 +202,7 @@ void autoware::pointcloud_preprocessor::Filter::computePublish(
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 rcl_interfaces::msg::SetParametersResult
-autoware::pointcloud_preprocessor::Filter::filterParamCallback(
+autoware::pointcloud_preprocessor::Filter::filter_param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);
@@ -228,12 +228,12 @@ void autoware::pointcloud_preprocessor::Filter::input_indices_callback(
   const PointCloud2ConstPtr cloud, const PointIndicesConstPtr indices)
 {
   // If cloud is given, check if it's valid
-  if (!isValid(cloud)) {
+  if (!is_valid(cloud)) {
     RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid input!");
     return;
   }
   // If indices are given, check if they are valid
-  if (indices && !isValid(indices)) {
+  if (indices && !is_valid(indices)) {
     RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid indices!");
     return;
   }
@@ -284,7 +284,7 @@ void autoware::pointcloud_preprocessor::Filter::input_indices_callback(
     vindices.reset(new std::vector<int>(indices->indices));
   }
 
-  computePublish(cloud_tf, vindices);
+  compute_publish(cloud_tf, vindices);
 }
 
 // Returns false in error cases
@@ -390,12 +390,12 @@ void autoware::pointcloud_preprocessor::Filter::faster_input_indices_callback(
     return;
   }
 
-  if (!isValid(cloud)) {
+  if (!is_valid(cloud)) {
     RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid input!");
     return;
   }
 
-  if (indices && !isValid(indices)) {
+  if (indices && !is_valid(indices)) {
     RCLCPP_ERROR(this->get_logger(), "[input_indices_callback] Invalid indices!");
     return;
   }

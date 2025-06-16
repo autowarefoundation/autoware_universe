@@ -49,6 +49,10 @@ private:
   std::vector<float> existence_probabilities_;
   float total_existence_probability_;
 
+  // cache
+  mutable rclcpp::Time cached_time_;
+  mutable types::DynamicObject cached_object_;
+
 public:
   Tracker(const rclcpp::Time & time, const types::DynamicObject & object);
   virtual ~Tracker() = default;
@@ -103,6 +107,27 @@ public:
 
 protected:
   types::DynamicObject object_;
+
+  void updateCache(const types::DynamicObject & object, const rclcpp::Time & time) const
+  {
+    cached_time_ = time;
+    cached_object_ = object;
+  }
+
+  bool getCachedObject(const rclcpp::Time & time, types::DynamicObject & object) const
+  {
+    if (cached_time_.nanoseconds() == time.nanoseconds()) {
+      object = cached_object_;
+      return true;
+    }
+    return false;
+  }
+
+  void removeCache() const
+  {
+    cached_time_ = rclcpp::Time();
+    cached_object_ = types::DynamicObject();
+  }
 
   void updateClassification(
     const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification);

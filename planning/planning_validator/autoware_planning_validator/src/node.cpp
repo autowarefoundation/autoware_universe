@@ -109,7 +109,10 @@ void PlanningValidatorNode::setData()
   auto & data = context_->data;
   data->current_kinematics = sub_kinematics_.take_data();
   data->current_acceleration = sub_acceleration_.take_data();
+  data->obstacle_pointcloud = sub_pointcloud_.take_data();
   data->set_current_trajectory(sub_trajectory_.take_data());
+  data->set_route(sub_route_.take_data());
+  data->set_map(sub_lanelet_map_bin_.take_data());
 }
 
 void PlanningValidatorNode::onTimer()
@@ -148,7 +151,8 @@ bool PlanningValidatorNode::isAllValid(const PlanningValidatorStatus & s) const
          s.is_valid_longitudinal_min_acc && s.is_valid_steering && s.is_valid_steering_rate &&
          s.is_valid_velocity_deviation && s.is_valid_distance_deviation &&
          s.is_valid_longitudinal_distance_deviation && s.is_valid_forward_trajectory_length &&
-         s.is_valid_latency && s.is_valid_yaw_deviation && s.is_valid_trajectory_shift;
+         s.is_valid_latency && s.is_valid_yaw_deviation && s.is_valid_trajectory_shift &&
+         s.is_valid_collision_check;
 }
 
 void PlanningValidatorNode::publishTrajectory()
@@ -236,7 +240,9 @@ void PlanningValidatorNode::publishDebugInfo()
     auto offset_pose = front_pose;
     shiftPose(offset_pose, 0.25);
     context_->debug_pose_publisher->pushVirtualWall(front_pose);
-    context_->debug_pose_publisher->pushWarningMsg(offset_pose, "INVALID PLANNING");
+    const auto status_debug_str = context_->debug_pose_publisher->getStatusDebugString(*status);
+    context_->debug_pose_publisher->pushWarningMsg(
+      offset_pose, "INVALID PLANNING" + status_debug_str);
   }
   context_->debug_pose_publisher->publish();
 }
@@ -273,6 +279,7 @@ void PlanningValidatorNode::displayStatus()
   warn(s->is_valid_latency, "planning component latency is larger than threshold!!");
   warn(s->is_valid_yaw_deviation, "planning trajectory yaw difference from ego yaw is too large!!");
   warn(s->is_valid_trajectory_shift, "planning trajectory had sudden shift!!");
+  warn(s->is_valid_collision_check, "planning trajectory leads to collision!!");
 }
 
 }  // namespace autoware::planning_validator

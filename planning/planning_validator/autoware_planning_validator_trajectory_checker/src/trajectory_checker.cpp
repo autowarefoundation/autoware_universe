@@ -17,6 +17,7 @@
 #include "autoware/planning_validator_trajectory_checker/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
+#include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -448,14 +449,13 @@ bool TrajectoryChecker::check_valid_distance_deviation(
   }
 
   if (!data->nearest_point_index) return false;
-  const auto idx = *data->nearest_point_index;
+  const auto idx = *data->nearest_segment_index;
 
-  const auto & trajectory = *data->current_trajectory;
-  const auto ego_pose = data->current_kinematics->pose.pose;
+  const auto & trajectory = data->current_trajectory->points;
+  const auto & ego_position = data->current_kinematics->pose.pose.position;
+  status->distance_deviation = motion_utils::calcLateralOffset(trajectory, ego_position, idx);
 
-  status->distance_deviation = autoware_utils::calc_distance2d(trajectory.points.at(idx), ego_pose);
-
-  if (status->distance_deviation > params_.distance_deviation.threshold) {
+  if (std::abs(status->distance_deviation) > params_.distance_deviation.threshold) {
     is_critical_error_ |= params_.distance_deviation.is_critical;
     return false;
   }
