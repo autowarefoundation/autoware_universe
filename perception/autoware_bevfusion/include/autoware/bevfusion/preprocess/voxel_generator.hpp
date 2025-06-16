@@ -22,6 +22,7 @@
 #include <autoware/cuda_utils/cuda_check_error.hpp>
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #include <autoware/point_types/types.hpp>
+#include <cuda_blackboard/cuda_pointcloud2.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -44,10 +45,8 @@ public:
     cudaStream_t stream);
   std::size_t generateSweepPoints(CudaUniquePtr<float[]> & points_d);
   bool enqueuePointCloud(
-    const sensor_msgs::msg::PointCloud2 & msg, const tf2_ros::Buffer & tf_buffer);
-  void initCloudInfo(const sensor_msgs::msg::PointCloud2 & msg);
-  std::tuple<const std::uint32_t, const std::uint8_t, const std::uint8_t> getFieldInfo(
-    const sensor_msgs::msg::PointCloud2 & msg, const std::string & field_name);
+    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+    const tf2_ros::Buffer & tf_buffer);
 
 private:
   std::unique_ptr<PointCloudDensification> pd_ptr_{nullptr};

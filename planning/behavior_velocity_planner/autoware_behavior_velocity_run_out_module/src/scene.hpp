@@ -22,6 +22,7 @@
 #include "utils.hpp"
 
 #include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 
 #include <memory>
 #include <optional>

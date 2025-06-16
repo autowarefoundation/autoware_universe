@@ -30,11 +30,11 @@ GeometricPullOver::GeometricPullOver(
   rclcpp::Node & node, const GoalPlannerParameters & parameters, const bool is_forward)
 : PullOverPlannerBase{node, parameters},
   parallel_parking_parameters_{parameters.parallel_parking_parameters},
-  lane_departure_checker_{[&]() {
-    auto lane_departure_checker_params = lane_departure_checker::Param{};
-    lane_departure_checker_params.footprint_extra_margin =
+  boundary_departure_checker_{[&]() {
+    auto boundary_departure_checker_params = boundary_departure_checker::Param{};
+    boundary_departure_checker_params.footprint_extra_margin =
       parameters.lane_departure_check_expansion_margin;
-    return LaneDepartureChecker{lane_departure_checker_params, vehicle_info_};
+    return BoundaryDepartureChecker{boundary_departure_checker_params, vehicle_info_};
   }()},
   is_forward_{is_forward},
   left_side_parking_{parameters.parking_policy == ParkingPolicy::LEFT_SIDE}
@@ -81,7 +81,8 @@ std::optional<PullOverPath> GeometricPullOver::plan(
   // todo: Implement lane departure detection that does not depend on the footprint
   const auto resampled_arc_path =
     utils::resamplePathWithSpline(arc_path, parameters_.center_line_path_interval / 2);
-  if (lane_departure_checker_.checkPathWillLeaveLane({departure_check_lane}, arc_path)) return {};
+  if (boundary_departure_checker_.checkPathWillLeaveLane({departure_check_lane}, arc_path))
+    return {};
 
   auto pull_over_path_opt = PullOverPath::create(
     getPlannerType(), id, planner_.getPaths(), planner_.getStartPose(), modified_goal_pose,

@@ -2,6 +2,18 @@
 Changelog for package autoware_motion_velocity_out_of_lane_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(out_of_lane): resample object predicted paths to prevent empty gaps (`#10606 <https://github.com/autowarefoundation/autoware_universe/issues/10606>`_)
+  Co-authored-by: mkquda <168697710+mkquda@users.noreply.github.com>
+* fix(motion_velocity_planner): add missing header (`#10560 <https://github.com/autowarefoundation/autoware_universe/issues/10560>`_)
+* fix(out_of_lane): throttle log message to avoid spamming the logs (`#10562 <https://github.com/autowarefoundation/autoware_universe/issues/10562>`_)
+* Contributors: Masaki Baba, Maxime CLEMENT, TaikiYamada4
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

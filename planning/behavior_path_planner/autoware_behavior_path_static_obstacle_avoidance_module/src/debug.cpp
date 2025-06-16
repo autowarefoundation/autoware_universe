@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::behavior_path_planner::utils::static_obstacle_avoidance
@@ -80,7 +81,7 @@ MarkerArray createObjectPolygonMarkerArray(const ObjectDataArray & objects, std:
   for (const auto & object : objects) {
     auto marker = create_default_marker(
       "map", rclcpp::Clock{RCL_ROS_TIME}.now(), ns, 0L, Marker::LINE_STRIP,
-      create_marker_scale(0.1, 0.0, 0.0), create_marker_color(1.0, 1.0, 1.0, 0.999));
+      create_marker_scale(0.1, 0.0, 0.0), create_marker_color(1.0, 1.0, 1.0, 0.5));
 
     for (const auto & p : object.envelope_poly.outer()) {
       marker.points.push_back(create_point(p.x(), p.y(), object.getPosition().z));
@@ -193,42 +194,58 @@ MarkerArray createOverhangLaneletMarkerArray(const ObjectDataArray & objects, st
   return msg;
 }
 
-MarkerArray avoidableObjectsMarkerArray(const ObjectDataArray & objects, std::string && ns)
+std::pair<MarkerArray, MarkerArray> avoidableObjectsMarkerArray(
+  const ObjectDataArray & objects, std::string && ns)
 {
-  MarkerArray msg;
-  msg.markers.reserve(objects.size() * 5);
+  MarkerArray info_marker_array;
+  info_marker_array.markers.reserve(objects.size() * 5);
+
+  MarkerArray debug_marker_array;
+  debug_marker_array.markers.reserve(objects.size() * 5);
 
   append_marker_array(
     createObjectsCubeMarkerArray(
       objects, ns + "_cube", create_marker_scale(3.0, 1.5, 1.5),
       create_marker_color(1.0, 1.0, 0.0, 0.8)),
-    &msg);
+    &info_marker_array);
 
-  append_marker_array(createObjectInfoMarkerArray(objects, ns + "_info", true), &msg);
-  append_marker_array(createObjectPolygonMarkerArray(objects, ns + "_envelope_polygon"), &msg);
-  append_marker_array(createToDrivableBoundDistance(objects, ns + "_to_drivable_bound"), &msg);
-  append_marker_array(createOverhangLaneletMarkerArray(objects, ns + "_overhang_lanelet"), &msg);
+  append_marker_array(
+    createObjectInfoMarkerArray(objects, ns + "_info", true), &debug_marker_array);
+  append_marker_array(
+    createObjectPolygonMarkerArray(objects, ns + "_envelope_polygon"), &info_marker_array);
+  append_marker_array(
+    createToDrivableBoundDistance(objects, ns + "_to_drivable_bound"), &debug_marker_array);
+  append_marker_array(
+    createOverhangLaneletMarkerArray(objects, ns + "_overhang_lanelet"), &debug_marker_array);
 
-  return msg;
+  return std::make_pair(info_marker_array, debug_marker_array);
 }
 
-MarkerArray unAvoidableObjectsMarkerArray(const ObjectDataArray & objects, std::string && ns)
+std::pair<MarkerArray, MarkerArray> unAvoidableObjectsMarkerArray(
+  const ObjectDataArray & objects, std::string && ns)
 {
-  MarkerArray msg;
-  msg.markers.reserve(objects.size() * 5);
+  MarkerArray info_marker_array;
+  info_marker_array.markers.reserve(objects.size() * 5);
+
+  MarkerArray debug_marker_array;
+  debug_marker_array.markers.reserve(objects.size() * 5);
 
   append_marker_array(
     createObjectsCubeMarkerArray(
       objects, ns + "_cube", create_marker_scale(3.0, 1.5, 1.5),
       create_marker_color(1.0, 0.0, 0.0, 0.8)),
-    &msg);
+    &info_marker_array);
 
-  append_marker_array(createObjectInfoMarkerArray(objects, ns + "_info", true), &msg);
-  append_marker_array(createObjectPolygonMarkerArray(objects, ns + "_envelope_polygon"), &msg);
-  append_marker_array(createToDrivableBoundDistance(objects, ns + "_to_drivable_bound"), &msg);
-  append_marker_array(createOverhangLaneletMarkerArray(objects, ns + "_overhang_lanelet"), &msg);
+  append_marker_array(
+    createObjectInfoMarkerArray(objects, ns + "_info", true), &debug_marker_array);
+  append_marker_array(
+    createObjectPolygonMarkerArray(objects, ns + "_envelope_polygon"), &info_marker_array);
+  append_marker_array(
+    createToDrivableBoundDistance(objects, ns + "_to_drivable_bound"), &debug_marker_array);
+  append_marker_array(
+    createOverhangLaneletMarkerArray(objects, ns + "_overhang_lanelet"), &debug_marker_array);
 
-  return msg;
+  return std::make_pair(info_marker_array, debug_marker_array);
 }
 
 MarkerArray createTurnSignalMarkerArray(const TurnSignalInfo & turn_signal_info, std::string && ns)
@@ -374,7 +391,8 @@ MarkerArray createAvoidLineMarkerArray(
   return msg;
 }
 
-MarkerArray createTargetObjectsMarkerArray(const ObjectDataArray & objects, const std::string & ns)
+std::pair<MarkerArray, MarkerArray> createTargetObjectsMarkerArray(
+  const ObjectDataArray & objects, const std::string & ns)
 {
   ObjectDataArray avoidable;
   ObjectDataArray unavoidable;
@@ -386,13 +404,22 @@ MarkerArray createTargetObjectsMarkerArray(const ObjectDataArray & objects, cons
     }
   }
 
-  MarkerArray msg;
-  msg.markers.reserve(objects.size() * 4);
+  MarkerArray info_marker_array;
+  info_marker_array.markers.reserve(objects.size() * 4);
+  MarkerArray debug_marker_array;
+  debug_marker_array.markers.reserve(objects.size() * 4);
 
-  append_marker_array(avoidableObjectsMarkerArray(avoidable, "avoidable_" + ns), &msg);
-  append_marker_array(unAvoidableObjectsMarkerArray(unavoidable, "unavoidable_" + ns), &msg);
+  const auto avoidable_objects_marker_array =
+    avoidableObjectsMarkerArray(avoidable, "avoidable_" + ns);
+  append_marker_array(avoidable_objects_marker_array.first, &info_marker_array);
+  append_marker_array(avoidable_objects_marker_array.second, &debug_marker_array);
 
-  return msg;
+  const auto unavoidable_objects_marker_array =
+    unAvoidableObjectsMarkerArray(unavoidable, "unavoidable_" + ns);
+  append_marker_array(unavoidable_objects_marker_array.first, &info_marker_array);
+  append_marker_array(unavoidable_objects_marker_array.second, &debug_marker_array);
+
+  return std::make_pair(info_marker_array, debug_marker_array);
 }
 
 MarkerArray createOtherObjectsMarkerArray(

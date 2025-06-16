@@ -20,6 +20,7 @@
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info.hpp>
 #include <nlohmann/json.hpp>
 #include <rclcpp/clock.hpp>

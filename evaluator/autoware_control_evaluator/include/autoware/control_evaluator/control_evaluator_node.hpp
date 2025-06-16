@@ -1,4 +1,4 @@
-// Copyright 2025 Tier IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_internal_planning_msgs/msg/planning_factor.hpp>
 #include <autoware_internal_planning_msgs/msg/planning_factor_array.hpp>
+#include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <tier4_metric_msgs/msg/metric.hpp>
@@ -48,6 +49,7 @@
 namespace control_diagnostics
 {
 using autoware::vehicle_info_utils::VehicleInfo;
+using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_utils::Accumulator;
 using autoware_utils::LineString2d;
@@ -79,6 +81,7 @@ public:
   void AddLateralDeviationMetricMsg(const Trajectory & traj, const Point & ego_point);
   void AddYawDeviationMetricMsg(const Trajectory & traj, const Pose & ego_pose);
   void AddGoalDeviationMetricMsg(const Odometry & odom);
+  void AddObjectMetricMsg(const Odometry & odom, const PredictedObjects & objects);
   void AddBoundaryDistanceMetricMsg(const PathWithLaneId & behavior_path, const Pose & ego_pose);
 
   void AddLaneletInfoMsg(const Pose & ego_pose);
@@ -103,7 +106,8 @@ private:
     this, "~/input/behavior_path"};
   autoware_utils::InterProcessPollingSubscriber<SteeringReport> steering_sub_{
     this, "~/input/steering_status"};
-
+  autoware_utils::InterProcessPollingSubscriber<PredictedObjects> objects_sub_{
+    this, "~/input/objects"};
   std::unordered_map<
     std::string, autoware_utils::InterProcessPollingSubscriber<PlanningFactorArray>>
     planning_factors_sub_;
@@ -119,25 +123,25 @@ private:
 
   // Parameters
   bool output_metrics_;
+  double distance_filter_thr_m_;
 
   // Metric
-  const std::vector<Metric> metrics_ = {
-    // collect all metrics
-    Metric::velocity,
-    Metric::acceleration,
-    Metric::jerk,
-    Metric::lateral_deviation,
-    Metric::yaw_deviation,
-    Metric::goal_longitudinal_deviation,
-    Metric::goal_lateral_deviation,
-    Metric::goal_yaw_deviation,
-    Metric::left_boundary_distance,
-    Metric::right_boundary_distance,
-    Metric::steering_angle,
-    Metric::steering_rate,
-    Metric::steering_acceleration,
-    Metric::stop_deviation,
-  };
+  const std::vector<Metric> metrics_ = {// collect all metrics
+                                        Metric::velocity,
+                                        Metric::acceleration,
+                                        Metric::jerk,
+                                        Metric::lateral_deviation,
+                                        Metric::yaw_deviation,
+                                        Metric::goal_longitudinal_deviation,
+                                        Metric::goal_lateral_deviation,
+                                        Metric::goal_yaw_deviation,
+                                        Metric::left_boundary_distance,
+                                        Metric::right_boundary_distance,
+                                        Metric::steering_angle,
+                                        Metric::steering_rate,
+                                        Metric::steering_acceleration,
+                                        Metric::stop_deviation,
+                                        Metric::closest_object_distance};
 
   std::array<Accumulator<double>, static_cast<size_t>(Metric::SIZE)>
     metric_accumulators_;  // 3(min, max, mean) * metric_size

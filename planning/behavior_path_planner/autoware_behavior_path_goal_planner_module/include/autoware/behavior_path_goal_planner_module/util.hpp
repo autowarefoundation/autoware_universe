@@ -17,8 +17,9 @@
 
 #include "autoware/behavior_path_goal_planner_module/goal_candidate.hpp"
 #include "autoware/behavior_path_goal_planner_module/pull_over_planner/pull_over_planner_base.hpp"
+#include "autoware_utils/geometry/boost_geometry.hpp"
 
-#include <autoware/lane_departure_checker/lane_departure_checker.hpp>
+#include <autoware/boundary_departure_checker/boundary_departure_checker.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
@@ -29,9 +30,11 @@
 
 #include <lanelet2_core/Forward.h>
 
+#include <limits>
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::behavior_path_planner::goal_planner_utils
@@ -45,6 +48,29 @@ using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 using Shape = autoware_perception_msgs::msg::Shape;
 using Polygon2d = autoware_utils::Polygon2d;
+using autoware_utils::LineString2d;
+using autoware_utils::Point2d;
+using autoware_utils::Segment2d;
+
+using SegmentRtree = boost::geometry::index::rtree<Segment2d, boost::geometry::index::rstar<16>>;
+
+lanelet::BoundingBox2d polygon_to_boundingbox(const Polygon2d & polygon);
+
+SegmentRtree extract_uncrossable_segments(
+  const lanelet::LaneletMap & lanelet_map, const Polygon2d & extraction_polygon);
+
+void add_intersecting_segments(
+  const lanelet::ConstLineString3d & ls, const Polygon2d & extraction_polygon,
+  SegmentRtree & segments_rtree);
+
+bool has_types(const lanelet::ConstLineString3d & ls, const std::vector<std::string> & types);
+
+PredictedObjects filter_objects_by_road_border(
+  const PredictedObjects & objects, const SegmentRtree & road_border_segments,
+  const Pose & ego_pose, const bool filter_opposite_side);
+
+bool crosses_road_border(
+  const Point2d & ego_point, const Point2d & obj_point, const SegmentRtree & road_border_segments);
 
 lanelet::ConstLanelets getPullOverLanes(
   const RouteHandler & route_handler, const bool left_side, const double backward_distance,
@@ -163,7 +189,7 @@ MarkerArray createPosesMarkerArray(
   const std::vector<Pose> & poses, std::string && ns, const std_msgs::msg::ColorRGBA & color);
 MarkerArray createTextsMarkerArray(
   const std::vector<Pose> & poses, std::string && ns, const std_msgs::msg::ColorRGBA & color);
-MarkerArray createGoalCandidatesMarkerArray(
+std::pair<MarkerArray, MarkerArray> createGoalCandidatesMarkerArray(
   const GoalCandidates & goal_candidates, const std_msgs::msg::ColorRGBA & color);
 MarkerArray createLaneletPolygonMarkerArray(
   const lanelet::CompoundPolygon3d & polygon, const std_msgs::msg::Header & header,
@@ -206,11 +232,25 @@ std::optional<Pose> calcClosestPose(
 autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
   const autoware_perception_msgs::msg::PredictedObjects & original_objects,
   const route_handler::RouteHandler & route_handler, const GoalPlannerParameters & parameters,
-  const double vehicle_width);
+  const double vehicle_width, const Pose & ego_pose,
+  std::optional<std::reference_wrapper<Polygon2d>> debug_objects_extraction_polygon = std::nullopt);
 
 bool is_goal_reachable_on_path(
   const lanelet::ConstLanelets current_lanes, const route_handler::RouteHandler & route_handler,
   const bool left_side_parking);
+
+bool hasPreviousModulePathShapeChanged(
+  const BehaviorModuleOutput & upstream_module_output,
+  const BehaviorModuleOutput & last_upstream_module_output);
+bool hasDeviatedFromPath(
+  const Point & ego_position, const BehaviorModuleOutput & upstream_module_output);
+
+/**
+ * @brief check if stopline exists except for the terminal
+ * @note except for terminal, to account for lane change bug that inserts stopline at the end
+ * randomly
+ */
+bool has_stopline_except_terminal(const PathWithLaneId & path);
 
 }  // namespace autoware::behavior_path_planner::goal_planner_utils
 

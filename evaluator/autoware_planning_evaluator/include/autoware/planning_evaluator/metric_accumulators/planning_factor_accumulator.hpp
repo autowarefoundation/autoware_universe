@@ -97,7 +97,7 @@ private:
     Accumulator<double> stop_decision_keep_time_accumulator;
 
     // trigger if the state is updated
-    bool state_updated, state_Initialized;
+    bool state_updated, state_initialized;
 
     explicit StopDecisionState()
     : last_decision_time(0.0),
@@ -108,14 +108,18 @@ private:
       distance_to_stop(0.0),
       stop_decision_keep_time_accumulator(),
       state_updated(false),
-      state_Initialized(false)
+      state_initialized(false)
     {
     }
 
-    void disable_current_stop_decision()
+    void clear_current_stop_decision()
     {
-      stop_decision_keep_time_accumulator.add(stop_decision_keep_time);
-      stop_decision_keep_time = 0.0;
+      if (state_initialized) {
+        stop_decision_keep_time_accumulator.add(stop_decision_keep_time);
+        stop_decision_keep_time = 0.0;
+      } else {
+        state_initialized = true;
+      }
     }
 
     void update_stop_decision(
@@ -131,11 +135,7 @@ private:
         dist_to_last_stop_line > parameters.dist_count_threshold_m) {
         // set new stop decision
         last_decision_time = cur_time;
-        if (state_Initialized) {
-          disable_current_stop_decision();
-        } else {
-          state_Initialized = true;
-        }
+        clear_current_stop_decision();
 
       } else {
         // keep the last stop decision

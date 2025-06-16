@@ -2,6 +2,16 @@
 Changelog for package autoware_radar_threshold_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(radar_threshold_filter): add schema file for radar_threshold_filter and upadted the README file (`#9980 <https://github.com/autowarefoundation/autoware_universe/issues/9980>`_)
+  Co-authored-by: Ryohsuke Mitsudome <ryohsuke.mitsudome@tier4.jp>
+* Contributors: TaikiYamada4, Vishal Chauhan
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 

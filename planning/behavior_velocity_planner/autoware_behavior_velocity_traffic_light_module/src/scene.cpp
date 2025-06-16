@@ -74,8 +74,7 @@ bool TrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
   // Calculate stop pose and insert index
   const auto stop_line = calcStopPointAndInsertIndex(
     input_path, lanelet_stop_lines,
-    planner_param_.stop_margin + planner_data_->vehicle_info_.max_longitudinal_offset_m,
-    planner_data_->stop_line_extend_length);
+    planner_param_.stop_margin + planner_data_->vehicle_info_.max_longitudinal_offset_m);
 
   if (!stop_line.has_value()) {
     RCLCPP_WARN_STREAM_ONCE(

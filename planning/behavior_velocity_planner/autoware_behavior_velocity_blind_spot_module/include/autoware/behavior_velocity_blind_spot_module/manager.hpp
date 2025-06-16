@@ -38,6 +38,13 @@ public:
 
   const char * getModuleName() override { return "blind_spot"; }
 
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    RequiredSubscriptionInfo required_subscription_info;
+    required_subscription_info.predicted_objects = true;
+    return required_subscription_info;
+  }
+
 private:
   PlannerParam planner_param_;
 

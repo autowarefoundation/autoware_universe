@@ -15,6 +15,7 @@
 #include "filter_predicted_objects.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/object_recognition_utils/predicted_path_utils.hpp>
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -103,6 +104,38 @@ void cut_predicted_path_beyond_red_lights(
   }
 }
 
+void resample_predicted_paths(
+  std::vector<autoware_perception_msgs::msg::PredictedPath> & predicted_paths,
+  const autoware_perception_msgs::msg::Shape & shape)
+{
+  auto min_gap_distance = 0.0;
+  if (
+    shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX ||
+    shape.type == autoware_perception_msgs::msg::Shape::CYLINDER) {
+    min_gap_distance = shape.dimensions.x;
+  } else {  // POLYGON not implemented
+    return;
+  }
+  for (auto & path : predicted_paths) {
+    const auto time_step = rclcpp::Duration(path.time_step).seconds();
+    const auto time_horizon = time_step * static_cast<double>(path.path.size() - 1);
+    auto max_distance_interval = 0.0;
+    for (auto i = 0UL; i + 1 < path.path.size(); ++i) {
+      max_distance_interval = std::max(
+        max_distance_interval, autoware_utils::calc_distance2d(path.path[i], path.path[i + 1]));
+    }
+    const auto resample_ratio = min_gap_distance / max_distance_interval;
+    if (resample_ratio > 1.0) {
+      continue;
+    }
+    const auto new_time_step = resample_ratio * time_step;
+    const auto new_path =
+      object_recognition_utils::resamplePredictedPath(path, new_time_step, time_horizon);
+    path.time_step = new_path.time_step;
+    path.path = new_path.path;
+  }
+}
+
 autoware_perception_msgs::msg::PredictedObjects filter_predicted_objects(
   const PlannerData & planner_data, const EgoData & ego_data, const PlannerParam & params)
 {
@@ -155,7 +188,8 @@ autoware_perception_msgs::msg::PredictedObjects filter_predicted_objects(
       predicted_paths.end());
 
     if (!filtered_object.kinematics.predicted_paths.empty())
-      filtered_objects.objects.push_back(filtered_object);
+      resample_predicted_paths(predicted_paths, filtered_object.shape);
+    filtered_objects.objects.push_back(filtered_object);
   }
   return filtered_objects;
 }

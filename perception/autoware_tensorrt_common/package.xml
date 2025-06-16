@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_tensorrt_common</name>
-  <version>0.44.0</version>
+  <version>0.45.0</version>
   <description>tensorrt utility wrapper</description>
 
   <author email="taichi.higashide@tier4.jp">Taichi Higashide</author>
@@ -10,6 +10,7 @@
   <maintainer email="manato.hirabayashi@tier4.jp">Manato Hirabayashi</maintainer>
   <maintainer email="amadeusz.szymko.2@tier4.jp">Amadeusz Szymko</maintainer>
   <maintainer email="kenzo.lobos@tier4.jp">Kenzo Lobos-Tsunekawa</maintainer>
+  <maintainer email="masato.saeki@tier4.jp">Masato Saeki</maintainer>
 
   <license>Apache License 2.0</license>
 

@@ -129,28 +129,6 @@ bool convertConvexHullToBoundingBox(
   return true;
 }
 
-bool getMeasurementYaw(
-  const types::DynamicObject & object, const double & predicted_yaw, double & measurement_yaw)
-{
-  measurement_yaw = tf2::getYaw(object.pose.orientation);
-
-  // check orientation sign is known or not, and fix the limiting delta yaw
-  double limiting_delta_yaw = M_PI_2;
-  if (object.kinematics.orientation_availability == types::OrientationAvailability::AVAILABLE) {
-    limiting_delta_yaw = M_PI;
-  }
-  // limiting delta yaw, even the availability is unknown
-  while (std::fabs(predicted_yaw - measurement_yaw) > limiting_delta_yaw) {
-    if (measurement_yaw < predicted_yaw) {
-      measurement_yaw += 2 * limiting_delta_yaw;
-    } else {
-      measurement_yaw -= 2 * limiting_delta_yaw;
-    }
-  }
-  // return false if the orientation is unknown
-  return object.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE;
-}
-
 enum BBOX_IDX {
   FRONT_SURFACE = 0,
   RIGHT_SURFACE = 1,
@@ -204,17 +182,17 @@ void getNearestCornerOrSurface(
   double anchor_y = 0;
   if (xl > length / 2.0) {
     anchor_x = length / 2.0;
-  } else if (xl > -length / 2.0) {
-    anchor_x = 0;
-  } else {
+  } else if (xl < -length / 2.0) {
     anchor_x = -length / 2.0;
+  } else {
+    anchor_x = 0;
   }
   if (yl > width / 2.0) {
     anchor_y = width / 2.0;
-  } else if (yl > -width / 2.0) {
-    anchor_y = 0;
-  } else {
+  } else if (yl < -width / 2.0) {
     anchor_y = -width / 2.0;
+  } else {
+    anchor_y = 0;
   }
 
   object.anchor_point.x = anchor_x;
@@ -228,7 +206,7 @@ void calcAnchorPointOffset(
   // copy value
   const geometry_msgs::msg::Point anchor_vector = updating_object.anchor_point;
   // invalid anchor
-  if (anchor_vector.x <= 1e-6 && anchor_vector.y <= 1e-6) {
+  if (std::abs(anchor_vector.x) <= 1e-6 && std::abs(anchor_vector.y) <= 1e-6) {
     return;
   }
   double input_yaw = tf2::getYaw(updating_object.pose.orientation);
@@ -239,15 +217,19 @@ void calcAnchorPointOffset(
 
   // update offset
   tracking_offset = Eigen::Vector2d(anchor_vector.x, anchor_vector.y);
-  if (tracking_offset.x() > 0) {
+  if (tracking_offset.x() > 1e-6) {
     tracking_offset.x() -= length / 2.0;
-  } else if (tracking_offset.x() < 0) {
+  } else if (tracking_offset.x() < -1e-6) {
     tracking_offset.x() += length / 2.0;
+  } else {
+    tracking_offset.x() = 0.0;
   }
-  if (tracking_offset.y() > 0) {
+  if (tracking_offset.y() > 1e-6) {
     tracking_offset.y() -= width / 2.0;
-  } else if (tracking_offset.y() < 0) {
+  } else if (tracking_offset.y() < -1e-6) {
     tracking_offset.y() += width / 2.0;
+  } else {
+    tracking_offset.y() = 0.0;
   }
 
   // offset input object

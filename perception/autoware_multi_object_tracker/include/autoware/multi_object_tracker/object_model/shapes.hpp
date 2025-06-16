@@ -34,9 +34,6 @@ double get2dIoU(
 bool convertConvexHullToBoundingBox(
   const types::DynamicObject & input_object, types::DynamicObject & output_object);
 
-bool getMeasurementYaw(
-  const types::DynamicObject & object, const double & predicted_yaw, double & measurement_yaw);
-
 void getNearestCornerOrSurface(
   const geometry_msgs::msg::Transform & self_transform, types::DynamicObject & object);
 

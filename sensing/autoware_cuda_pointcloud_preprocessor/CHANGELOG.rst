@@ -2,6 +2,50 @@
 Changelog for package autoware_cuda_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(autoware_cuda_pointcloud_preprocessor): added target architectures for the cuda pointcloud preprocessor (`#10612 <https://github.com/autowarefoundation/autoware_universe/issues/10612>`_)
+  * chore: added target architectures for the cuda pointcloud preprocessor
+  * chore: mistook the compute capabilities of edge devices
+  * chore: cspell
+  ---------
+* perf(autoware_tensorrt_common): set cudaSetDeviceFlags explicitly (`#10523 <https://github.com/autowarefoundation/autoware_universe/issues/10523>`_)
+  * Synchronize CUDA stream by blocking instead of spin
+  * Use blocking-sync in BEVFusion
+  * Call cudaSetDeviceFlags in tensorrt_common
+* feat(autoware_cuda_pointcloud_preprocessor): replace imu and twist callback with polling subscriber (`#10509 <https://github.com/autowarefoundation/autoware_universe/issues/10509>`_)
+  * feat(cuda_pointcloud_preprocessor): replace subscriptions with InterProcessPollingSubscriber for twist and IMU data
+  * fix(cuda_pointcloud_preprocessor): remove unused twist_queue\_ variable
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Takahisa.Ishikawa <takahisa.ishikawa@tier4.jp>
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Kenzo Lobos Tsunekawa <kenzo.lobos@tier4.jp>
+* feat(autoware_cuda_pointcloud_preprocessor): pointcloud concatenation (`#10300 <https://github.com/autowarefoundation/autoware_universe/issues/10300>`_)
+  * feat: cuda accelerated version of the pointcloud concatenation
+  * chore: removed duplicated include
+  * chore: changed to header blocks from pragmas :c
+  * chore: removed yaml and schema since this node uses the same interface as the non-gpu node
+  * chore: fixed rebased induced error
+  * fix: used the wrong point type
+  * chore: changed pointer to auto
+  * chore: rewrote equation for clarity
+  * chore: added a comment regarding the reallocation strategy
+  * chore: reflected latest changes in the templated version of the concat
+  * chore: addressed cppcheck reports
+  * chore: fixed dead link
+  * chore: solving uncrustify conflicts
+  * chore: more uncrustify
+  * chore: yet another uncrustify related error
+  * chore: hopefully last uncrustify error
+  * chore: now fixing uncrustify on source files
+  ---------
+* Contributors: Kenzo Lobos Tsunekawa, TaikiYamada4, Takahisa Ishikawa, prime number
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 

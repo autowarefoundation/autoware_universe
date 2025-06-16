@@ -101,8 +101,10 @@ SimpleObjectMergerNode::SimpleObjectMergerNode(const rclcpp::NodeOptions & node_
   transform_listener_ = std::make_shared<autoware_utils::TransformListener>(this);
   if (input_topic_size == 2) {
     // Trigger the process and publish by message_filter
-    input0_.subscribe(this, node_param_.topic_names.at(0), rclcpp::QoS{1}.get_rmw_qos_profile());
-    input1_.subscribe(this, node_param_.topic_names.at(1), rclcpp::QoS{1}.get_rmw_qos_profile());
+    input0_.subscribe(
+      this, node_param_.topic_names.at(0), rclcpp::QoS{1}.best_effort().get_rmw_qos_profile());
+    input1_.subscribe(
+      this, node_param_.topic_names.at(1), rclcpp::QoS{1}.best_effort().get_rmw_qos_profile());
     sync_ptr_ = std::make_shared<Sync>(SyncPolicy(10), input0_, input1_);
     sync_ptr_->registerCallback(std::bind(
       &SimpleObjectMergerNode::approximateMerger, this, std::placeholders::_1,
@@ -116,8 +118,8 @@ SimpleObjectMergerNode::SimpleObjectMergerNode(const rclcpp::NodeOptions & node_
     for (size_t i = 0; i < input_topic_size; i++) {
       std::function<void(const DetectedObjects::ConstSharedPtr msg)> func =
         std::bind(&SimpleObjectMergerNode::onData, this, std::placeholders::_1, i);
-      sub_objects_array.at(i) =
-        create_subscription<DetectedObjects>(node_param_.topic_names.at(i), rclcpp::QoS{1}, func);
+      sub_objects_array.at(i) = create_subscription<DetectedObjects>(
+        node_param_.topic_names.at(i), rclcpp::QoS{1}.best_effort(), func);
     }
 
     // process callback
@@ -127,7 +129,7 @@ SimpleObjectMergerNode::SimpleObjectMergerNode(const rclcpp::NodeOptions & node_
   }
 
   // Publisher
-  pub_objects_ = create_publisher<DetectedObjects>("~/output/objects", 1);
+  pub_objects_ = create_publisher<DetectedObjects>("~/output/objects", rclcpp::QoS{1}.reliable());
 }
 
 void SimpleObjectMergerNode::approximateMerger(
