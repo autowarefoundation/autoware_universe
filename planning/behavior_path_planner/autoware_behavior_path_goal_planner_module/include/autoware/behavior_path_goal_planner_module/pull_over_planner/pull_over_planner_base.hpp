@@ -91,6 +91,8 @@ public:
 
   std::vector<Pose> debug_poses{};
 
+  std::optional<PathWithLaneId> debug_processed_prev_module_path;
+
 private:
   PullOverPath(
     const PullOverPlannerType & type, const size_t id, const Pose & start_pose,
