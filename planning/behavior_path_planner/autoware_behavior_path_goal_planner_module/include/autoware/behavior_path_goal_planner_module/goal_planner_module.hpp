@@ -122,12 +122,6 @@ bool isOnModifiedGoal(
   const Pose & current_pose, const std::optional<GoalCandidate> & modified_goal_opt,
   const GoalPlannerParameters & parameters);
 
-bool hasPreviousModulePathShapeChanged(
-  const BehaviorModuleOutput & upstream_module_output,
-  const BehaviorModuleOutput & last_upstream_module_output);
-bool hasDeviatedFromPath(
-  const Point & ego_position, const BehaviorModuleOutput & upstream_module_output);
-
 bool needPathUpdate(
   const Pose & current_pose, const double path_update_duration, const rclcpp::Time & now,
   const std::optional<GoalCandidate> & modified_goal,

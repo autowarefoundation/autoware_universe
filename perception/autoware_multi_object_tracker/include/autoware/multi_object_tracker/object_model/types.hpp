@@ -15,6 +15,8 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__OBJECT_MODEL__TYPES_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__OBJECT_MODEL__TYPES_HPP_
 
+#include <rclcpp/rclcpp.hpp>
+
 #include <autoware_perception_msgs/msg/detected_object.hpp>
 #include <autoware_perception_msgs/msg/detected_object_kinematics.hpp>
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
@@ -40,7 +42,8 @@ namespace autoware::multi_object_tracker
 namespace types
 {
 // constants
-constexpr size_t max_channel_size = 16;
+constexpr size_t max_channel_size = 12;
+constexpr float default_existence_probability = 0.75;
 
 // channel configuration
 struct InputChannel
@@ -73,6 +76,9 @@ struct ObjectKinematics
 
 struct DynamicObject
 {
+  // time
+  rclcpp::Time time;
+
   // identification
   unique_identifier_msgs::msg::UUID uuid = unique_identifier_msgs::msg::UUID();
 
@@ -94,6 +100,7 @@ struct DynamicObject
   // object extension (size and shape)
   autoware_perception_msgs::msg::Shape shape;
   geometry_msgs::msg::Point anchor_point;
+  double area;
 };
 
 struct DynamicObjectList
@@ -110,6 +117,8 @@ DynamicObjectList toDynamicObjectList(
   const autoware_perception_msgs::msg::DetectedObjects & det_objects, const uint channel_index = 0);
 
 autoware_perception_msgs::msg::TrackedObject toTrackedObjectMsg(const DynamicObject & dyn_object);
+
+double getArea(const autoware_perception_msgs::msg::Shape & shape);
 
 }  // namespace types
 }  // namespace autoware::multi_object_tracker

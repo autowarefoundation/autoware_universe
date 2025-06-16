@@ -294,6 +294,15 @@ IntersectionModuleManager::IntersectionModuleManager(rclcpp::Node & node)
       node, ns + ".occlusion.static_occlusion_with_traffic_light_timeout");
   }
 
+  {
+    ip.conservative_merging.enable_yield =
+      get_or_declare_parameter<bool>(node, ns + ".conservative_merging.enable_yield");
+    ip.conservative_merging.minimum_lateral_distance_threshold = get_or_declare_parameter<double>(
+      node, ns + ".conservative_merging.minimum_lateral_distance_threshold");
+    ip.conservative_merging.merging_judge_angle_threshold = get_or_declare_parameter<double>(
+      node, ns + ".conservative_merging.merging_judge_angle_threshold");
+  }
+
   ip.debug.ttc = get_or_declare_parameter<std::vector<int64_t>>(node, ns + ".debug.ttc");
 
   decision_state_pub_ =

@@ -75,7 +75,7 @@ PickupBasedVoxelGridDownsampleFilterComponent::PickupBasedVoxelGridDownsampleFil
 
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&PickupBasedVoxelGridDownsampleFilterComponent::paramCallback, this, _1));
+    std::bind(&PickupBasedVoxelGridDownsampleFilterComponent::param_callback, this, _1));
 }
 
 void PickupBasedVoxelGridDownsampleFilterComponent::filter(
@@ -159,7 +159,7 @@ void PickupBasedVoxelGridDownsampleFilterComponent::filter(
 }
 
 rcl_interfaces::msg::SetParametersResult
-PickupBasedVoxelGridDownsampleFilterComponent::paramCallback(
+PickupBasedVoxelGridDownsampleFilterComponent::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);

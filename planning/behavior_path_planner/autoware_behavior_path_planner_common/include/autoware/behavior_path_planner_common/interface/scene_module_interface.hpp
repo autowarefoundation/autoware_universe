@@ -83,8 +83,10 @@ public:
     std::unordered_map<std::string, std::shared_ptr<RTCInterface>> rtc_interface_ptr_map,
     std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>>
       objects_of_interest_marker_interface_ptr_map,
-    const std::shared_ptr<PlanningFactorInterface> planning_factor_interface)
+    const std::shared_ptr<PlanningFactorInterface> planning_factor_interface,
+    const ModuleStatus initial_state = ModuleStatus::IDLE)
   : name_{name},
+    current_state_{initial_state},
     logger_{node.get_logger().get_child(name)},
     clock_{node.get_clock()},
     rtc_interface_ptr_map_(std::move(rtc_interface_ptr_map)),

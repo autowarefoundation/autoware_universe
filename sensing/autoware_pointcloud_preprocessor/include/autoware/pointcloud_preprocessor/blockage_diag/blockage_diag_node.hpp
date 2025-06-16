@@ -52,7 +52,7 @@ protected:
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   /** \brief Parameter service callback */
-  rcl_interfaces::msg::SetParametersResult paramCallback(const std::vector<rclcpp::Parameter> & p);
+  rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> & p);
   image_transport::Publisher lidar_depth_map_pub_;
   image_transport::Publisher blockage_mask_pub_;
   image_transport::Publisher single_frame_dust_mask_pub;
