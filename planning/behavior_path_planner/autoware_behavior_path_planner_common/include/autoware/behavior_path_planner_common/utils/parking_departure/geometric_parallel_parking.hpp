@@ -115,7 +115,7 @@ public:
     const lanelet::ConstLanelets & road_lanes, const lanelet::ConstLanelets & shoulder_lanes,
     const bool is_forward, const bool left_side_parking, const double end_pose_offset,
     const double lane_departure_margin, const double arc_path_interval,
-    const std::shared_ptr<autoware::lane_departure_checker::LaneDepartureChecker>
+    const std::shared_ptr<autoware::boundary_departure_checker::BoundaryDepartureChecker>
       lane_departure_checker);
 
 private:
@@ -136,7 +136,7 @@ private:
     const lanelet::ConstLanelets & road_lanes, const lanelet::ConstLanelets & pull_over_lanes,
     const bool is_forward, const bool left_side_parking, const double end_pose_offset,
     const double lane_departure_margin, const double arc_path_interval,
-    const std::shared_ptr<autoware::lane_departure_checker::LaneDepartureChecker>
+    const std::shared_ptr<autoware::boundary_departure_checker::BoundaryDepartureChecker>
       autoware_lane_departure_checker);
   PathWithLaneId generateArcPath(
     const Pose & center, const double radius, const double start_yaw, double end_yaw,
