@@ -99,7 +99,7 @@ void LivoxTagFilterNode::onPointCloud(const sensor_msgs::msg::PointCloud2::Const
 
   // Publish ROS message
   auto tag_filtered_msg_ptr = std::make_unique<sensor_msgs::msg::PointCloud2>();
-  pcl::toROSMsg(tag_filtered_points, *tag_filtered_msg_ptr);
+  pcl::toROSMsg(*tag_filtered_points_xyzirc, *tag_filtered_msg_ptr);
   tag_filtered_msg_ptr->header = msg->header;
 
   pub_pointcloud_->publish(std::move(tag_filtered_msg_ptr));
