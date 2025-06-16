@@ -1,4 +1,4 @@
-// Copyright 2025 Tier IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,8 +18,11 @@
 
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <nlohmann/json.hpp>
+
+#include <boost/geometry.hpp>
 
 #include <chrono>
 #include <cstdlib>
@@ -35,6 +38,8 @@
 
 namespace control_diagnostics
 {
+namespace bg = boost::geometry;
+
 ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_options)
 : Node("control_evaluator", node_options),
   vehicle_info_(autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo())
@@ -64,6 +69,7 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
 
   // Parameters
   output_metrics_ = declare_parameter<bool>("output_metrics");
+  distance_filter_thr_m_ = declare_parameter<double>("object_metrics.distance_filter_thr_m");
 
   // Timer callback to publish evaluator diagnostics
   using namespace std::literals::chrono_literals;
@@ -402,6 +408,46 @@ void ControlEvaluatorNode::AddStopDeviationMetricMsg(const Odometry & odom)
   }
 }
 
+void ControlEvaluatorNode::AddObjectMetricMsg(
+  const Odometry & odom, const PredictedObjects & objects)
+{
+  if (objects.objects.empty()) {
+    return;
+  }
+
+  const auto ego_polygon = [&]() -> autoware_utils::Polygon2d {
+    const autoware_utils::LinearRing2d local_ego_footprint = vehicle_info_.createFootprint();
+    const autoware_utils::LinearRing2d ego_footprint = autoware_utils::transform_vector(
+      local_ego_footprint, autoware_utils::pose2transform(odom.pose.pose));
+
+    autoware_utils::Polygon2d ego_polygon;
+    ego_polygon.outer() = ego_footprint;
+    bg::correct(ego_polygon);
+    return ego_polygon;
+  }();
+
+  double minimum_distance = std::numeric_limits<double>::max();
+  for (const auto & object : objects.objects) {
+    const double center_distance = autoware_utils::calc_distance2d(
+      odom.pose.pose.position, object.kinematics.initial_pose_with_covariance.pose.position);
+    if (center_distance > distance_filter_thr_m_) {
+      continue;
+    }
+
+    const auto object_polygon = autoware_utils::to_polygon2d(object);
+    const auto distance = bg::distance(ego_polygon, object_polygon);
+    if (distance < minimum_distance) {
+      minimum_distance = distance;
+    }
+  }
+
+  if (minimum_distance == std::numeric_limits<double>::max()) {
+    return;
+  }
+
+  AddMetricMsg(Metric::closest_object_distance, minimum_distance);
+}
+
 void ControlEvaluatorNode::onTimer()
 {
   autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
@@ -412,6 +458,12 @@ void ControlEvaluatorNode::onTimer()
 
     // add planning_factor related metrics
     AddStopDeviationMetricMsg(*odom);
+
+    // add object related metrics
+    const auto objects = objects_sub_.take_data();
+    if (objects) {
+      AddObjectMetricMsg(*odom, *objects);
+    }
 
     // add kinematic info
     const auto acc = accel_sub_.take_data();

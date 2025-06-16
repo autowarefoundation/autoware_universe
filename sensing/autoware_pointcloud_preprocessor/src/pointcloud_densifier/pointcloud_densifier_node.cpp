@@ -72,7 +72,7 @@ PointCloudDensifierNode::PointCloudDensifierNode(const rclcpp::NodeOptions & opt
   {
     using std::placeholders::_1;
     set_param_res_ = this->add_on_set_parameters_callback(
-      std::bind(&PointCloudDensifierNode::paramCallback, this, _1));
+      std::bind(&PointCloudDensifierNode::param_callback, this, _1));
   }
 
   // Initialize Managed TF buffer
@@ -281,7 +281,7 @@ bool PointCloudDensifierNode::isValidTransform(const Eigen::Matrix4d & transform
                                     1e-3;  // Check if it's a proper rigid transformation
 }
 
-rcl_interfaces::msg::SetParametersResult PointCloudDensifierNode::paramCallback(
+rcl_interfaces::msg::SetParametersResult PointCloudDensifierNode::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);

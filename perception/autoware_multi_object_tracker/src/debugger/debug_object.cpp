@@ -60,18 +60,11 @@ TrackerObjectDebugger::TrackerObjectDebugger(
 {
   // initialize markers
   markers_.markers.clear();
-  current_ids_.clear();
-  previous_ids_.clear();
   message_time_ = rclcpp::Time(0, 0);
 }
 
 void TrackerObjectDebugger::reset()
 {
-  // maintain previous ids
-  previous_ids_.clear();
-  previous_ids_ = current_ids_;
-  current_ids_.clear();
-
   // clear markers, object data list
   object_data_list_.clear();
   markers_.markers.clear();
@@ -138,11 +131,6 @@ void TrackerObjectDebugger::process()
 
   // Check if object_data_list_ is empty
   if (object_data_list_.empty()) return;
-
-  // update uuid_int
-  for (const auto & object_data : object_data_list_) {
-    current_ids_.insert(uuidToInt(object_data.uuid));
-  }
 
   // sort by uuid, collect the same uuid object_data as a group, and loop for the groups
   object_data_groups_.clear();
@@ -215,7 +203,7 @@ void TrackerObjectDebugger::draw(
     marker.color.r = 1.0;
     marker.color.g = 1.0;
     marker.color.b = 1.0;  // white
-    marker.lifetime = rclcpp::Duration::from_seconds(0);
+    marker.lifetime = rclcpp::Duration::from_seconds(0.15);
 
     // get marker - existence_probability
     visualization_msgs::msg::Marker text_marker;
@@ -382,32 +370,6 @@ void TrackerObjectDebugger::getMessage(visualization_msgs::msg::MarkerArray & ma
 
   // draw markers
   draw(object_data_groups_, marker_array);
-
-  // remove old markers
-  for (const auto & previous_id : previous_ids_) {
-    if (current_ids_.find(previous_id) != current_ids_.end()) {
-      continue;
-    }
-
-    visualization_msgs::msg::Marker delete_marker;
-    delete_marker.header.frame_id = frame_id_;
-    delete_marker.header.stamp = message_time_;
-    delete_marker.id = previous_id;
-    delete_marker.action = visualization_msgs::msg::Marker::DELETE;
-
-    delete_marker.ns = "existence_probability";
-    marker_array.markers.push_back(delete_marker);
-
-    delete_marker.ns = "track_boxes";
-    marker_array.markers.push_back(delete_marker);
-
-    for (size_t idx = 0; idx < channels_config_.size(); idx++) {
-      delete_marker.ns = "detect_boxes_" + channels_config_[idx].short_name;
-      marker_array.markers.push_back(delete_marker);
-      delete_marker.ns = "association_lines_" + channels_config_[idx].short_name;
-      marker_array.markers.push_back(delete_marker);
-    }
-  }
 
   return;
 }

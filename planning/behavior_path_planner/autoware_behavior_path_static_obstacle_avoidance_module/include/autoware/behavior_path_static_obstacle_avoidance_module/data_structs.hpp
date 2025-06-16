@@ -277,6 +277,8 @@ struct AvoidanceParameters
   // lost_count and the registered object will be removed when the count exceeds this max count.
   double object_last_seen_threshold{0.0};
 
+  double unstable_classification_time{0.0};
+
   // The avoidance path generation is performed when the shift distance of the
   // avoidance points is greater than this threshold.
   // In multiple targets case: if there are multiple vehicles in a row to be avoided, no new
@@ -390,6 +392,10 @@ struct ObjectData  // avoidance target
 
   // distance factor for perception noise (0.0~1.0)
   double distance_factor{0.0};
+
+  // Objects that have not been classified as UNKNOWN for a certain period of time may not be
+  // UNKNOWN.
+  bool is_classification_unstable{false};
 
   // count up when object disappeared. Removed when it exceeds threshold.
   rclcpp::Time last_seen{rclcpp::Clock(RCL_ROS_TIME).now()};

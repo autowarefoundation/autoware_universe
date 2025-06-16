@@ -36,9 +36,10 @@ rclcpp_components_register_node(aggregator
 
 if(BUILD_TESTING)
   get_filename_component(RESOURCE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/test/files ABSOLUTE)
-  ament_auto_add_gtest(gtest_${PROJECT_NAME}
+  ament_auto_add_gmock(gtest_${PROJECT_NAME}
     test/src/test1.cpp
     test/src/test2.cpp
+    test/src/test3.cpp
     test/src/utils.cpp
   )
   target_compile_definitions(gtest_${PROJECT_NAME} PRIVATE TEST_RESOURCE_PATH="${RESOURCE_PATH}")
