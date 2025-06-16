@@ -101,6 +101,8 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
 
   for (const auto & [topic, cloud] : topic_to_cloud_map) {
     pc_stamps.emplace_back(cloud->header.stamp);
+    concatenate_cloud_result.topic_to_original_stamp_map[topic] =
+      rclcpp::Time(cloud->header.stamp).seconds();
   }
 
   std::sort(pc_stamps.begin(), pc_stamps.end(), std::greater<rclcpp::Time>());
