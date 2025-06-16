@@ -744,6 +744,7 @@ bool RearCollisionChecker::is_safe(DebugData & debug)
 
   if (current_lanes.empty()) {
     debug.text = "failed to identify the current driving lane.";
+    return true;
   }
 
   const auto is_unsafe_holding = (now - last_unsafe_time_).seconds() < p.common.off_time_buffer;
