@@ -32,7 +32,7 @@ class GeometricPullOut : public PullOutPlannerBase
 {
 public:
   explicit GeometricPullOut(
-    rclcpp::Node & node, const StartPlannerParameters & parameters,
+    rclcpp::Node & node, const StartPlannerParameters & parameters, const bool use_clothoid,
     std::shared_ptr<autoware_utils::TimeKeeper> time_keeper =
       std::make_shared<autoware_utils::TimeKeeper>());
 
@@ -46,6 +46,7 @@ public:
   ParallelParkingParameters parallel_parking_parameters_;
   std::shared_ptr<autoware::boundary_departure_checker::BoundaryDepartureChecker>
     boundary_departure_checker_;
+  const bool use_clothoid_;
 
   friend class TestGeometricPullOut;
 };

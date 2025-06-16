@@ -35,10 +35,11 @@ namespace autoware::behavior_path_planner
 using start_planner_utils::getPullOutLanes;
 
 GeometricPullOut::GeometricPullOut(
-  rclcpp::Node & node, const StartPlannerParameters & parameters,
+  rclcpp::Node & node, const StartPlannerParameters & parameters, const bool use_clothoid,
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper)
 : PullOutPlannerBase{node, parameters, time_keeper},
-  parallel_parking_parameters_{parameters.parallel_parking_parameters}
+  parallel_parking_parameters_{parameters.parallel_parking_parameters},
+  use_clothoid_{use_clothoid}
 {
   auto boundary_departure_checker_params = autoware::boundary_departure_checker::Param{};
   boundary_departure_checker_params.footprint_extra_margin =
@@ -72,7 +73,7 @@ std::optional<PullOutPath> GeometricPullOut::plan(
   planner_.setTurningRadius(planner_data->parameters, max_steer_angle);
   planner_.setPlannerData(planner_data);
   const bool found_valid_path = planner_.planPullOut(
-    start_pose, goal_pose, road_lanes, pull_out_lanes, left_side_start,
+    start_pose, goal_pose, road_lanes, pull_out_lanes, left_side_start, use_clothoid_,
     boundary_departure_checker_);
   if (!found_valid_path) {
     planner_debug_data.conditions_evaluation.emplace_back("no path found");
@@ -82,7 +83,9 @@ std::optional<PullOutPath> GeometricPullOut::plan(
   // collision check with stop objects in pull out lanes
   const auto arc_path = planner_.getArcPath();
 
-  const double velocity = parallel_parking_parameters_.forward_parking_velocity;
+  const double velocity = use_clothoid_
+                            ? parallel_parking_parameters_.clothoid_forward_parking_velocity
+                            : parallel_parking_parameters_.forward_parking_velocity;
 
   if (parameters_.divide_pull_out_path) {
     output.partial_paths = planner_.getPaths();

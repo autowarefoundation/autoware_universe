@@ -116,6 +116,7 @@ struct StartPlannerParameters
     object_types_to_check_for_path_generation{};
   double center_line_path_interval{0.0};
   double lane_departure_check_expansion_margin{0.0};
+  double geometric_pull_out_max_steer_angle_margin_scale{0.0};
 
   // shift pull out
   bool enable_shift_pull_out{false};
@@ -132,6 +133,7 @@ struct StartPlannerParameters
   double maximum_longitudinal_deviation{0.0};
   // geometric pull out
   bool enable_geometric_pull_out{false};
+  bool enable_clothoid_pull_out{false};
   double geometric_collision_check_distance_from_end{0.0};
   bool divide_pull_out_path{false};
   ParallelParkingParameters parallel_parking_parameters{};
