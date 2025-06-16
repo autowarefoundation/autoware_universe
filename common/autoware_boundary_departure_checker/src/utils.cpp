@@ -68,7 +68,7 @@ DeparturePoint create_departure_point(
   point.th_dist_hysteresis = th_dist_hysteresis_m;
   point.dist_on_traj = projection_to_bound.lon_dist_on_ref_traj - lon_offset_m;
   point.idx_from_ego_traj = projection_to_bound.ego_sides_idx;
-  point.can_be_removed = (point.departure_type == DepartureType::NONE);
+  point.can_be_removed = (point.departure_type == DepartureType::NONE) || point.dist_on_traj <= 0.0;
   return point;
 }
 }  // namespace

@@ -39,6 +39,11 @@ DepartureIntervals init_departure_intervals(
   DepartureIntervals departure_intervals;
   size_t idx = 0;
   while (idx < departure_points.size()) {
+    if (departure_points[idx].can_be_removed) {
+      ++idx;
+      continue;
+    }
+
     DepartureInterval interval;
     interval.start = aw_ref_traj.compute(departure_points[idx].dist_on_traj);
     interval.start_dist_on_traj = departure_points[idx].dist_on_traj;
@@ -56,28 +61,33 @@ DepartureIntervals init_departure_intervals(
       }
 
       if (!has_type(enable_type, curr.departure_type)) {
+        ++idx_end;
         continue;
       }
 
       if (curr.can_be_removed) {
+        ++idx_end;
         continue;
       }
 
       const auto & prev = departure_points[idx_end - 1];
       const auto diff = std::abs(curr.dist_on_traj - prev.dist_on_traj);
 
-      if (diff < vehicle_length_m) {
-        interval.candidates.push_back(curr);
-        ++idx_end;
-      } else {
+      if (diff >= vehicle_length_m) {
         break;
       }
+      interval.candidates.push_back(curr);
+      ++idx_end;
+    }
+    if (interval.candidates.size() < 2) {
+      ++idx;
+      continue;
     }
 
     interval.end = aw_ref_traj.compute(interval.candidates.back().dist_on_traj);
     interval.end_dist_on_traj = interval.candidates.back().dist_on_traj;
     departure_intervals.push_back(interval);
-    idx = idx_end;
+    idx = idx_end + 1;
   }
   return departure_intervals;
 }
