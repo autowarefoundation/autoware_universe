@@ -70,7 +70,7 @@ private:
   std::unique_ptr<DistortionCorrectorBase> distortion_corrector_;
 
   // Diagnostic
-  std::unique_ptr<autoware_utils_diagnostics::DiagnosticsInterface> diagnostics_interface_;
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_;
 
   void pointcloud_callback(PointCloud2::UniquePtr pointcloud_msg);
   void publish_diagnostics(const std::vector<std::shared_ptr<const DiagnosticsBase>> & diagnostics);
