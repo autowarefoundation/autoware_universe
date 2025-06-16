@@ -92,6 +92,7 @@ public:
   {
     return (current_time - last_update_with_measurement_time_).seconds();
   }
+  rclcpp::Time getLatestMeasurementTime() const { return last_update_with_measurement_time_; }
 
   std::string getUuidString() const
   {
@@ -140,7 +141,9 @@ protected:
     const types::InputChannel & channel_info) = 0;
 
 public:
-  virtual bool getTrackedObject(const rclcpp::Time & time, types::DynamicObject & object) const = 0;
+  virtual bool getTrackedObject(
+    const rclcpp::Time & time, types::DynamicObject & object,
+    const bool to_publish = false) const = 0;
   virtual bool predict(const rclcpp::Time & time) = 0;
 };
 
