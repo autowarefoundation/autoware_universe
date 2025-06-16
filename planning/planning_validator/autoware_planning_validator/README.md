@@ -35,7 +35,7 @@ The following features are supported for trajectory validation and can have thre
 - **Distance deviation** : invalid if the ego is too far from the trajectory
 - **Longitudinal distance deviation** : invalid if the trajectory is too far from ego in longitudinal direction
 - **Forward trajectory length** : invalid if the trajectory length is not enough to stop within a given deceleration
-- **Yaw difference** : invalid if the difference between the ego yaw and closest trajectory yaw is too large
+- **Yaw difference** : invalid if the difference between the ego yaw and closest trajectory yaw is too large (only checked when the closest trajectory yaw changed by more than `nearest_yaw_trajectory_shift_required_for_checking` between the previous and current trajectory)
 - **Trajectory Shift** : invalid if the lat./long. distance between two consecutive trajectories near the Ego exceed the thresholds.
 
 The following features are to be implemented.
