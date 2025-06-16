@@ -351,9 +351,8 @@ auto RearCollisionChecker::get_clustered_pointcloud(
     pcl::ConvexHull<pcl::PointXYZ> hull;
     hull.setDimension(2);
     hull.setInputCloud(cluster);
-    std::vector<pcl::Vertices> polygons;
     PointCloud::Ptr surface_hull(new PointCloud);
-    hull.reconstruct(*surface_hull, polygons);
+    hull.reconstruct(*surface_hull);
     autoware_utils::Polygon3d hull_polygon;
     for (const auto & p : *surface_hull) {
       points_belonging_to_cluster_hulls->push_back(p);
