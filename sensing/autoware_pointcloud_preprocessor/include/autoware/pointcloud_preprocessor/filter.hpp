@@ -172,7 +172,7 @@ protected:
   std::mutex mutex_;
 
   /** \brief The diagnostic message */
-  std::unique_ptr<autoware_utils_diagnostics::DiagnosticsInterface> diagnostics_interface_;
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_;
 
   /** \brief processing time publisher. **/
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
