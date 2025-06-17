@@ -316,7 +316,7 @@ auto RearCollisionChecker::get_clustered_pointcloud(
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
-  const auto p = param_listener_->get_params().common.pointcloud;
+  const auto parameter = param_listener_->get_params().common.pointcloud;
   const auto base_link_z = context_->data->current_kinematics->pose.pose.position.z;
 
   const auto points_belonging_to_cluster_hulls = std::make_shared<PointCloud>();
@@ -328,9 +328,9 @@ auto RearCollisionChecker::get_clustered_pointcloud(
     pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
     tree->setInputCloud(in);
     pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-    ec.setClusterTolerance(p.clustering.cluster_tolerance);
-    ec.setMinClusterSize(p.clustering.min_cluster_size);
-    ec.setMaxClusterSize(p.clustering.max_cluster_size);
+    ec.setClusterTolerance(parameter.clustering.cluster_tolerance);
+    ec.setMinClusterSize(parameter.clustering.min_cluster_size);
+    ec.setMaxClusterSize(parameter.clustering.max_cluster_size);
     ec.setSearchMethod(tree);
     ec.setInputCloud(in);
     ec.extract(cluster_idx);
@@ -342,7 +342,7 @@ auto RearCollisionChecker::get_clustered_pointcloud(
     for (const auto & index : indices.indices) {
       const auto & point = (*in)[index];
       cluster_surpasses_threshold_height |=
-        (point.z - base_link_z) > p.clustering.min_cluster_height;
+        (point.z - base_link_z) > parameter.clustering.min_cluster_height;
       cluster->push_back(point);
     }
     if (!cluster_surpasses_threshold_height) continue;

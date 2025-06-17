@@ -400,7 +400,7 @@ void cut_by_lanelets(const lanelet::ConstLanelets & lanelets, DetectionAreas & d
 {
   const auto combine_lanelet = lanelet::utils::combineLaneletsShape(lanelets);
 
-  for (auto & [original, lanelets] : detection_areas) {
+  for (auto & [original, _] : detection_areas) {
     if (original.empty()) {
       continue;
     }
