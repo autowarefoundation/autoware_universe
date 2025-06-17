@@ -43,10 +43,10 @@ bool match(const std::string & target, const std::string & expect)
 TEST(GraphLevel, Timeout)
 {
   // clang-format off
-  const auto input      = "KKKKKKKKKK--------------------";
-  const auto result_0_5 = "KKKKKKKKKKKKKKEEEEEEEEEEEEEEEE";
-  const auto result_1_0 = "KKKKKKKKKKKKKKKKKKKEEEEEEEEEEE";
-  const auto result_1_5 = "KKKKKKKKKKKKKKKKKKKKKKKKEEEEEE";
+  const auto input      = "KKKKKKKKKK--------------------";  // cspell:disable-line
+  const auto result_0_5 = "KKKKKKKKKKKKKKEEEEEEEEEEEEEEEE";  // cspell:disable-line
+  const auto result_1_0 = "KKKKKKKKKKKKKKKKKKKEEEEEEEEEEE";  // cspell:disable-line
+  const auto result_1_5 = "KKKKKKKKKKKKKKKKKKKKKKKKEEEEEE";  // cspell:disable-line
   // clang-format on
 
   autoware::diagnostic_graph_aggregator::TimelineTest test;
@@ -66,11 +66,11 @@ TEST(GraphLevel, Timeout)
 TEST(GraphLevel, Latch1)
 {
   // clang-format off
-  const auto input      = "KKKKKEKKEEEKKEEEEEKKKKK";
-  const auto result_off = "KKKKKEKKEEEKKEEEEEKKKKK";
-  const auto result_0_0 = "KKKKKEEEEEEEEEEEEEEEEEE";
-  const auto result_0_2 = "KKKKKEKKEEEEEEEEEEEEEEE";
-  const auto result_0_4 = "KKKKKEKKEEEKKEEEEEEEEEE";
+  const auto input      = "KKKKKEKKEEEKKEEEEEKKKKK";  // cspell:disable-line
+  const auto result_off = "KKKKKEKKEEEKKEEEEEKKKKK";  // cspell:disable-line
+  const auto result_0_0 = "KKKKKEEEEEEEEEEEEEEEEEE";  // cspell:disable-line
+  const auto result_0_2 = "KKKKKEKKEEEEEEEEEEEEEEE";  // cspell:disable-line
+  const auto result_0_4 = "KKKKKEKKEEEKKEEEEEEEEEE";  // cspell:disable-line
   // clang-format on
 
   autoware::diagnostic_graph_aggregator::TimelineTest test;
@@ -90,8 +90,8 @@ TEST(GraphLevel, Latch1)
 TEST(GraphLevel, Latch2)
 {
   // clang-format off
-  const auto input  = "KKKKKEKKKKKKKKKKKKKK";
-  const auto result = "KKKKKEEEEEKKKKKKKKKK";
+  const auto input  = "KKKKKEKKKKKKKKKKKKKK";  // cspell:disable-line
+  const auto result = "KKKKKEEEEEKKKKKKKKKK";  // cspell:disable-line
   // clang-format on
 
   autoware::diagnostic_graph_aggregator::TimelineTest test;
@@ -106,8 +106,8 @@ TEST(GraphLevel, Latch2)
 TEST(GraphLevel, Latch3)
 {
   // clang-format off
-  const auto input  = "KKKKKEKKKKKKKKKKKKKK";
-  const auto result = "KKKKKEEEEEEEEEEKKKKK";
+  const auto input  = "KKKKKEKKKKKKKKKKKKKK";  // cspell:disable-line
+  const auto result = "KKKKKEEEEEEEEEEKKKKK";  // cspell:disable-line
   // clang-format on
 
   autoware::diagnostic_graph_aggregator::TimelineTest test;
@@ -122,8 +122,8 @@ TEST(GraphLevel, Latch3)
 TEST(GraphLevel, Latch4)
 {
   // clang-format off
-  const auto input  = "KKKKKEEEEEEEEEEEEEEE";
-  const auto result = "KKKKKEEEEEEEEEEEEEEE";
+  const auto input  = "KKKKKEEEEEEEEEEEEEEE";  // cspell:disable-line
+  const auto result = "KKKKKEEEEEEEEEEEEEEE";  // cspell:disable-line
   // clang-format on
 
   autoware::diagnostic_graph_aggregator::TimelineTest test;
@@ -138,8 +138,8 @@ TEST(GraphLevel, Latch4)
 TEST(GraphLevel, Latch5)
 {
   // clang-format off
-  const auto input  = "KKKKKEWWWWWWWWWKKKKK";
-  const auto result = "KKKKKEEEEEWWWWWWWWWW";
+  const auto input  = "KKKKKEWWWWWWWWWKKKKK";  // cspell:disable-line
+  const auto result = "KKKKKEEEEEWWWWWWWWWW";  // cspell:disable-line
   // clang-format on
 
   autoware::diagnostic_graph_aggregator::TimelineTest test;
@@ -154,10 +154,10 @@ TEST(GraphLevel, Latch5)
 TEST(GraphLevel, Hysteresis1)
 {
   // clang-format off
-  const auto input      = "KKKKKKKKKKKKKKKEEEEEEEEEE";
-  const auto result_0_0 = "----------KKKKKEEEEEEEEEE";
-  const auto result_0_2 = "----------KKKKKKKEEEEEEEE";
-  const auto result_0_4 = "----------KKKKKKKKKEEEEEE";
+  const auto input      = "KKKKKKKKKKKKKKKEEEEEEEEEE";  // cspell:disable-line
+  const auto result_0_0 = "----------KKKKKEEEEEEEEEE";  // cspell:disable-line
+  const auto result_0_2 = "----------KKKKKKKEEEEEEEE";  // cspell:disable-line
+  const auto result_0_4 = "----------KKKKKKKKKEEEEEE";  // cspell:disable-line
   // clang-format on
 
   autoware::diagnostic_graph_aggregator::TimelineTest test;
@@ -177,10 +177,10 @@ TEST(GraphLevel, Hysteresis1)
 TEST(GraphLevel, Hysteresis2)
 {
   // clang-format off
-  const auto input      = "EEEEEEEEEEEEEEEKKKKKKKKKK";
-  const auto result_0_0 = "----------EEEEEKKKKKKKKKK";
-  const auto result_0_2 = "----------EEEEEEEKKKKKKKK";
-  const auto result_0_4 = "----------EEEEEEEEEKKKKKK";
+  const auto input      = "EEEEEEEEEEEEEEEKKKKKKKKKK";  // cspell:disable-line
+  const auto result_0_0 = "----------EEEEEKKKKKKKKKK";  // cspell:disable-line
+  const auto result_0_2 = "----------EEEEEEEKKKKKKKK";  // cspell:disable-line
+  const auto result_0_4 = "----------EEEEEEEEEKKKKKK";  // cspell:disable-line
   // clang-format on
 
   autoware::diagnostic_graph_aggregator::TimelineTest test;
@@ -200,10 +200,10 @@ TEST(GraphLevel, Hysteresis2)
 TEST(GraphLevel, Hysteresis3)
 {
   // clang-format off
-  const auto input      = "KKKKKKKKKKKKKKKEKKKKKEEEKKKKKEEEEEKKKKK";
-  const auto result_0_0 = "----------KKKKKEKKKKKEEEKKKKKEEEEEKKKKK";
-  const auto result_0_2 = "----------KKKKKKKKKKKKKEEEKKKKKEEEEEKKK";
-  const auto result_0_4 = "----------KKKKKKKKKKKKKKKKKKKKKKKEEEEEK";
+  const auto input      = "KKKKKKKKKKKKKKKEKKKKKEEEKKKKKEEEEEKKKKK";  // cspell:disable-line
+  const auto result_0_0 = "----------KKKKKEKKKKKEEEKKKKKEEEEEKKKKK";  // cspell:disable-line
+  const auto result_0_2 = "----------KKKKKKKKKKKKKEEEKKKKKEEEEEKKK";  // cspell:disable-line
+  const auto result_0_4 = "----------KKKKKKKKKKKKKKKKKKKKKKKEEEEEK";  // cspell:disable-line
   // clang-format on
 
   autoware::diagnostic_graph_aggregator::TimelineTest test;
@@ -223,10 +223,10 @@ TEST(GraphLevel, Hysteresis3)
 TEST(GraphLevel, Hysteresis4)
 {
   // clang-format off
-  const auto input      = "KKKKKKKKKKKKKKKEWEWEEEWEEEWEEEEEWEEEEEWEEEEE";
-  const auto result_0_0 = "----------KKKKKEWEWEEEWEEEWEEEEEWEEEEEWEEEEE";
-  const auto result_0_2 = "----------KKKKKKKWWWWEEEEEEEEEEEEEEEEEEEEEEE";
-  const auto result_0_4 = "----------KKKKKKKKKWWWWWWWWWWWWEEEEEEEEEEEEE";
+  const auto input      = "KKKKKKKKKKKKKKKEWEWEEEWEEEWEEEEEWEEEEEWEEEEE";  // cspell:disable-line
+  const auto result_0_0 = "----------KKKKKEWEWEEEWEEEWEEEEEWEEEEEWEEEEE";  // cspell:disable-line
+  const auto result_0_2 = "----------KKKKKKKWWWWEEEEEEEEEEEEEEEEEEEEEEE";  // cspell:disable-line
+  const auto result_0_4 = "----------KKKKKKKKKWWWWWWWWWWWWEEEEEEEEEEEEE";  // cspell:disable-line
   // clang-format on
 
   autoware::diagnostic_graph_aggregator::TimelineTest test;
@@ -246,8 +246,8 @@ TEST(GraphLevel, Hysteresis4)
 TEST(GraphLevel, Combination)
 {
   // clang-format off
-  const auto input  = "KKKKKKKKKKKKKKKEEEEEEKKKKEKKKKEKKKK";
-  const auto result = "----------KKKKKKKKKKEEEEEEEEEEEEEEE";
+  const auto input  = "KKKKKKKKKKKKKKKEEEEEEKKKKEKKKKEKKKK";  // cspell:disable-line
+  const auto result = "----------KKKKKKKKKKEEEEEEEEEEEEEEE";  // cspell:disable-line
   // clang-format on
 
   autoware::diagnostic_graph_aggregator::TimelineTest test;
