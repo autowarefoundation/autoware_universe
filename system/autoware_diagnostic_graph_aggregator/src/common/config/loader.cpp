@@ -34,6 +34,8 @@
 #include <utility>
 #include <vector>
 
+// cspell: ignore yamls
+
 namespace autoware::diagnostic_graph_aggregator
 {
 

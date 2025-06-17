@@ -24,6 +24,8 @@
 #include <unordered_set>
 #include <vector>
 
+// cspell: ignore yamls
+
 namespace autoware::diagnostic_graph_aggregator
 {
 
