@@ -71,13 +71,13 @@ void IntersectionCollisionChecker::setup_diag()
 {
   context_->add_diag(
     "intersection_validation_collision_check",
-    context_->validation_status->is_valid_collision_check, "risk of collision at intersection turn",
-    false);
+    context_->validation_status->is_valid_intersection_collision_check,
+    "risk of collision at intersection turn", false);
 }
 
 void IntersectionCollisionChecker::validate(bool & is_critical)
 {
-  context_->validation_status->is_valid_collision_check = true;
+  context_->validation_status->is_valid_intersection_collision_check = true;
 
   params_ = param_listener_->get_params();
   const auto & p = params_.icc_parameters;
@@ -118,11 +118,11 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
   filter_pointcloud(context_->data->obstacle_pointcloud, filtered_pointcloud);
   if (filtered_pointcloud->empty()) return;
 
-  context_->validation_status->is_valid_collision_check = check_collision(
+  context_->validation_status->is_valid_intersection_collision_check = check_collision(
     lanelets.target_lanelets, filtered_pointcloud,
     context_->data->obstacle_pointcloud->header.stamp);
 
-  if (!context_->validation_status->is_valid_collision_check) {
+  if (!context_->validation_status->is_valid_intersection_collision_check) {
     last_invalid_time_ = context_->data->obstacle_pointcloud->header.stamp;
     return;
   }
@@ -131,7 +131,7 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
 
   const auto time_since_last_invalid = (clock_->now() - *last_invalid_time_).seconds();
   if (time_since_last_invalid < p.timeout) {
-    context_->validation_status->is_valid_collision_check = false;
+    context_->validation_status->is_valid_intersection_collision_check = false;
     return;
   }
 
