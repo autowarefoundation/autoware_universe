@@ -15,9 +15,11 @@
 #ifndef CONTROL_COMMAND_GATE_HPP_
 #define CONTROL_COMMAND_GATE_HPP_
 
+#include "command/filter.hpp"
 #include "command/interface.hpp"
 #include "command/selector.hpp"
 
+#include <autoware_command_mode_types/sources.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -36,10 +38,12 @@ public:
   explicit ControlCmdGate(const rclcpp::NodeOptions & options);
 
 private:
-  static inline const std::string builtin = "builtin";
+  static constexpr uint16_t unknown = autoware::command_mode_types::sources::unknown;
+  static constexpr uint16_t builtin = autoware::command_mode_types::sources::builtin;
   using CommandSourceStatus = tier4_system_msgs::msg::CommandSourceStatus;
   using SelectCommandSource = tier4_system_msgs::srv::SelectCommandSource;
 
+  void publish_source_status();
   void on_timer();
   void on_select_source(
     const SelectCommandSource::Request::SharedPtr req,
@@ -51,6 +55,10 @@ private:
 
   diagnostic_updater::Updater diag_;
   std::unique_ptr<CommandSelector> selector_;
+  CommandFilter * output_filter_;
+
+  uint16_t current_source_ = 0;
+  bool transition_flag_ = false;
 };
 
 }  // namespace autoware::control_command_gate

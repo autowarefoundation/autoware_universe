@@ -19,23 +19,23 @@
 namespace autoware::control_command_gate
 {
 
-CommandSubscription::CommandSubscription(const std::string & name, rclcpp::Node & node)
-: CommandSource(name)
+CommandSubscription::CommandSubscription(uint16_t id, const std::string & name, rclcpp::Node & node)
+: CommandSource(id, name)
 {
   using std::placeholders::_1;
   const auto control_qos = rclcpp::QoS(5);
-  const auto durable_qos = rclcpp::QoS(1).transient_local();
+  const auto volatile_qos = rclcpp::QoS(1);
   const auto prefix = "~/inputs/" + name + "/";
 
   sub_control_ = node.create_subscription<Control>(
     prefix + "control", control_qos, std::bind(&CommandSubscription::on_control, this, _1));
   sub_gear_ = node.create_subscription<GearCommand>(
-    prefix + "gear", durable_qos, std::bind(&CommandSubscription::on_gear, this, _1));
+    prefix + "gear", volatile_qos, std::bind(&CommandSubscription::on_gear, this, _1));
   sub_turn_indicators_ = node.create_subscription<TurnIndicatorsCommand>(
-    prefix + "turn_indicators", durable_qos,
+    prefix + "turn_indicators", volatile_qos,
     std::bind(&CommandSubscription::on_turn_indicators, this, _1));
   sub_hazard_lights_ = node.create_subscription<HazardLightsCommand>(
-    prefix + "hazard_lights", durable_qos,
+    prefix + "hazard_lights", volatile_qos,
     std::bind(&CommandSubscription::on_hazard_lights, this, _1));
 }
 

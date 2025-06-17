@@ -27,7 +27,7 @@ namespace autoware::control_command_gate
 class CommandSubscription : public CommandSource
 {
 public:
-  CommandSubscription(const std::string & name, rclcpp::Node & node);
+  CommandSubscription(uint16_t id, const std::string & name, rclcpp::Node & node);
   void resend_last_command() override;
 
 private:

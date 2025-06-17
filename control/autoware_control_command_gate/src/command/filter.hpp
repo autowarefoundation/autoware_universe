@@ -31,6 +31,8 @@ public:
   void set_nominal_filter_params(const VehicleCmdFilterParam & p);
   void set_transition_filter_params(const VehicleCmdFilterParam & p);
   void set_transition_flag(bool flag);
+  bool get_transition_flag() const { return transition_flag_; }
+
   void on_control(const Control & msg) override;
 
 private:

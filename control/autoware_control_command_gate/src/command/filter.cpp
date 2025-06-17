@@ -22,7 +22,6 @@ namespace autoware::control_command_gate
 CommandFilter::CommandFilter(std::unique_ptr<CommandOutput> && output, rclcpp::Node & node)
 : CommandBridge(std::move(output)), node_(node), vehicle_status_(node)
 {
-  // TODO(Takagi, Isamu): This may be replaced by removing this class from the pipeline.
   enable_command_limit_filter_ = node_.declare_parameter<bool>("enable_command_limit_filter");
   transition_flag_ = false;
 }

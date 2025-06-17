@@ -20,7 +20,8 @@
 namespace autoware::control_command_gate
 {
 
-CommandSource::CommandSource(const std::string & name) : name_(name)
+CommandSource::CommandSource(uint16_t id, const std::string & name)
+: source_id_(id), source_name_(name)
 {
   output_ = nullptr;
 }
@@ -31,7 +32,7 @@ TimeoutDiag * CommandSource::create_diag_task(
   if (timeout_) {
     throw std::logic_error("timeout diag has already been created");
   }
-  timeout_ = std::make_unique<TimeoutDiag>(params, clock, "timeout_" + name());
+  timeout_ = std::make_unique<TimeoutDiag>(params, clock, "timeout_" + source_name_);
   return timeout_.get();
 }
 

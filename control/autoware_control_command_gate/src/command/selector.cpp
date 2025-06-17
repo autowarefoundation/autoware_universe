@@ -24,17 +24,14 @@
 namespace autoware::control_command_gate
 {
 
-CommandSelector::CommandSelector(
-  const rclcpp::Logger & logger, SourceChangeCallback on_change_source)
-: logger_(logger)
+CommandSelector::CommandSelector(const rclcpp::Logger & logger) : logger_(logger)
 {
-  on_change_source_ = std::move(on_change_source);
 }
 
 void CommandSelector::add_source(std::unique_ptr<CommandSource> && source)
 {
   source->set_output(nullptr);
-  sources_.emplace(source->name(), std::move(source));
+  sources_.emplace(source->id(), std::move(source));
 }
 
 void CommandSelector::set_output(std::unique_ptr<CommandOutput> && output)
@@ -51,35 +48,46 @@ void CommandSelector::update()
   const auto iter = sources_.find(current_source_);
   if (iter == sources_.end()) {
     RCLCPP_ERROR_STREAM(logger_, "Selected source not found. Switched to builtin source.");
-    select(builtin_source_);
-    return;
+    return select_source(builtin_source_);
   }
 
   const auto & source = iter->second;
   if (source->is_timeout()) {
     RCLCPP_ERROR_STREAM(logger_, "Selected source is timeout. Switched to builtin source.");
-    select(builtin_source_);
-    return;
+    return select_source(builtin_source_);
   }
 }
 
-bool CommandSelector::select(const std::string & name)
+void CommandSelector::select_builtin_source(const uint16_t target)
 {
-  const auto iter = sources_.find(name);
-  if (iter == sources_.end()) {
-    return false;
-  }
-  for (auto & [key, source] : sources_) {
-    if (key == name) {
+  builtin_source_ = target;
+  select_source(builtin_source_);
+}
+
+void CommandSelector::select_source(const uint16_t target)
+{
+  for (auto & [id, source] : sources_) {
+    if (id == target) {
       source->set_output(output_.get());
       source->resend_last_command();
     } else {
       source->set_output(nullptr);
     }
   }
-  current_source_ = name;
-  on_change_source_(name);
-  return true;
+  current_source_ = target;
+}
+
+std::string CommandSelector::select(const uint16_t target)
+{
+  const auto iter = sources_.find(target);
+  if (iter == sources_.end()) {
+    return "target command source is invalid: " + std::to_string(target);
+  }
+  if (iter->second->is_timeout()) {
+    return "target command source is timeout: " + std::to_string(target);
+  }
+  select_source(target);
+  return std::string();
 }
 
 }  // namespace autoware::control_command_gate

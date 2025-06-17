@@ -22,14 +22,14 @@ namespace autoware::control_command_gate
 CommandPublisher::CommandPublisher(rclcpp::Node & node)
 {
   const auto control_qos = rclcpp::QoS(5);
-  const auto durable_qos = rclcpp::QoS(1).transient_local();
+  const auto volatile_qos = rclcpp::QoS(1);
 
   pub_control_ = node.create_publisher<Control>("~/output/control", control_qos);
-  pub_gear_ = node.create_publisher<GearCommand>("~/output/gear", durable_qos);
+  pub_gear_ = node.create_publisher<GearCommand>("~/output/gear", volatile_qos);
   pub_turn_indicators_ =
-    node.create_publisher<TurnIndicatorsCommand>("~/output/turn_indicators", durable_qos);
+    node.create_publisher<TurnIndicatorsCommand>("~/output/turn_indicators", volatile_qos);
   pub_hazard_lights_ =
-    node.create_publisher<HazardLightsCommand>("~/output/hazard_lights", durable_qos);
+    node.create_publisher<HazardLightsCommand>("~/output/hazard_lights", volatile_qos);
 }
 
 void CommandPublisher::on_control(const Control & msg)
