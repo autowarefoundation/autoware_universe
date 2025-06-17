@@ -36,8 +36,7 @@ struct SetLaneletRoute
 struct SetWaypointRoute
 {
   using Service = autoware_planning_msgs::srv::SetWaypointRoute;
-  static constexpr char name[] =
-    "/planning/set_waypoint_route";
+  static constexpr char name[] = "/planning/set_waypoint_route";
 };
 
 struct ClearRoute
