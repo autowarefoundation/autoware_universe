@@ -130,6 +130,18 @@ void PlanningValidatorDebugMarkerPublisher::pushLaneletPolygonsMarker(
   marker_array_.markers.push_back(marker);
 }
 
+void PlanningValidatorDebugMarkerPublisher::pushMarker(
+  const visualization_msgs::msg::Marker & marker)
+{
+  marker_array_.markers.push_back(marker);
+}
+
+void PlanningValidatorDebugMarkerPublisher::pushMarkers(
+  const visualization_msgs::msg::MarkerArray & markers)
+{
+  autoware_utils::append_marker_array(markers, &marker_array_);
+}
+
 void PlanningValidatorDebugMarkerPublisher::publish()
 {
   debug_viz_pub_->publish(marker_array_);

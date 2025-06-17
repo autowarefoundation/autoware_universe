@@ -20,6 +20,7 @@ bool is_valid_latency
 bool is_valid_yaw_deviation
 bool is_valid_trajectory_shift
 bool is_valid_collision_check
+bool is_valid_rear_collision_check
 
 # values
 int64 trajectory_size
