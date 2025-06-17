@@ -35,6 +35,19 @@ These factors can result in the vehicle unintentionally approaching or crossing 
 - **Absorbs minor localization errors**: If the ego vehicle’s estimated position is slightly off due to GPS drift or sensor noise, an expanded footprint prevents false detections by tolerating small position shifts. This reduces the chance of incorrectly flagging a boundary crossing.
 - **Compensates for map inaccuracies**: Slight misalignments in Lanelet2 map geometries, such as curb or road edge misplacement, can lead to false positives. An enlarged footprint creates a buffer that allows for safe operation even when the map boundary is not perfectly aligned with the real-world one.
 
+<div align="center">
+  <table>
+    <tr>
+      <th>Without Abnormality Margins</th>
+      <th>With Localization Abnormality Margin</th>
+    </tr>
+    <tr>
+      <td><img src="./images/normal_no_abnormalities_footprint.png" alt="Footprint without abnormality margin" width="250"></td>
+      <td><img src="./images/localization_abnormalities_footprint.png" alt="Footprint with localization abnormality margin" width="250"></td>
+    </tr>
+  </table>
+</div>
+
 By expanding the footprint, the system introduces a safety margin that accounts for minor localization and mapping uncertainties, especially critical at higher speeds.he expanded footprint creates a small buffer or "safety margin," allowing the vehicle to operate safely despite minor abnormality.
 
 ### Steering Abnormality
@@ -47,21 +60,23 @@ Unexpected steering behavior can cause the vehicle to deviate from its planned t
 
 In such cases, the actual motion of the vehicle diverges from the MPC trajectory, increasing the risk of departure.
 
-<div align="center">
-    <table>
-        <tr>
-            <td><img src="./images/normal_no_abnormalities_footprint.png" alt="Without considering abnormality" width="300"></td>
-        </tr>
-        <tr>
-            <td><img src="./images/localization_abnormalities_footprint.png" alt="With localization abrnormality margin" width="300"></td>
-        </tr>
-    </table>
-</div>
-
 #### How steering margin helps with steering abnormality
 
 - **Catches lateral deviations early**: If the vehicle drifts due to steering faults, like stuck actuators or sudden command spikes, the expanded margin ahead of the vehicle can detect the deviation before the ego crosses into an unsafe region.
 - **Predicts future risk along the path**: The margin extends along the forward direction of the predicted path, enabling the system to foresee potential boundary violations caused by small steering errors that compound over time.
+
+<div align="center">
+  <table>
+    <tr>
+      <th>Without Abnormality Margins</th>
+      <th>With Steering Abnormality Margin</th>
+    </tr>
+    <tr>
+      <td><img src="./images/normal_no_abnormalities_footprint.png" alt="Footprint without abnormality margin" width="250"></td>
+      <td><img src="./images/steering_abnormalities_footprint.png" alt="Footprint with localization abnormality margin" width="250"></td>
+    </tr>
+  </table>
+</div>
 
 This method works even when control outputs are inaccurate. Because the margin is computed using the predicted path, not just the current pose, it accounts for latency, actuator delays, and other uncertainties in vehicle response. This allows the system to trigger early mitigation actions, such as slowing down or stopping, before the situation becomes critical.
 
@@ -78,6 +93,19 @@ This discrepancy becomes more problematic when the vehicle is near an uncrossabl
 - **Accounts for ego being ahead of the predicted pose**: During lane changes, avoidance maneuvers, or turns on curved roads, the ego vehicle may move faster than expected or take a slightly different path than predicted. By extending the footprint longitudinally (in the direction of motion), the system accounts for the ego vehicle possibly being ahead of the current MPC trajectory point.
 - **Uses speed-scaled margins**: The longitudinal margin is scaled based on the current vehicle speed, with an added buffer. At higher speeds, a larger margin is used to reflect the increased risk and reduced reaction time.
 - **Captures mismatches during dynamic maneuvers**: In situations where heading is changing quickly, like on curved roads or during lateral motion, the ego’s actual position may significantly deviate from the MPC path. The extended footprint covers this discrepancy and helps detect boundary risks even if the predicted path appears safe.
+
+<div align="center">
+  <table>
+    <tr>
+      <th>Without Abnormality Margins</th>
+      <th>With Longitudinal Tracking Abnormality Margin</th>
+    </tr>
+    <tr>
+      <td><img src="./images/normal_no_abnormalities_footprint_curved.png" alt="Footprint without abnormality margin" width="250"></td>
+      <td><img src="./images/longitudinal_abnormalities_footprint.png" alt="Footprint with localization abnormality margin" width="250"></td>
+    </tr>
+  </table>
+</div>
 
 This approach helps bridge the gap between prediction and reality. By expanding the footprint in the heading direction, the system ensures safe operation even when there are longitudinal tracking mismatches due to control delay, road surface changes, or other dynamic factors.
 
@@ -97,7 +125,7 @@ if (Is ego near goal?) then (yes)
   stop
 else (no)
   :Generate reference trajectory;
-  :Check if goal shifted.\nReset the module if true.;
+  :Check if goal shifted. Reset the module if true.;
   :Get abnormalities data;
   :Get closest projection to boundaries;
   :Get departure points;
@@ -120,7 +148,7 @@ The diagram below illustrates how the module processes predicted trajectory poin
 skinparam defaultTextAlignment center
 skinparam backgroundColor #WHITE
 
-title Getting abnormalities data;
+title Getting abnormalities data
 start
 :Generate initial margin footprint's margin\nconsidering current pose's covariance;
 :Generate footprints for all AbnormalityType;

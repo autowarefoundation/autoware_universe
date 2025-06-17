@@ -75,7 +75,8 @@ struct NodeParam
       get_or_declare_parameter<double>(node, module_name + "th_pt_shift.dist_m");
     th_pt_shift_angle_rad = autoware_utils_math::deg2rad(
       get_or_declare_parameter<double>(node, module_name + "th_pt_shift.angle_deg"));
-    th_goal_shift_dist_m = get_or_declare_parameter<double>(node, "th_pt_shift.goal_dist_m");
+    th_goal_shift_dist_m =
+      get_or_declare_parameter<double>(node, module_name + "th_pt_shift.goal_dist_m");
 
     bdc_param.th_max_lateral_query_num =
       get_or_declare_parameter<int>(node, module_name + "th_max_lateral_query_num");
