@@ -305,7 +305,9 @@ bool IntersectionCollisionChecker::check_collision(
       object.last_update_time = new_data.last_update_time;
       object.pose = new_data.pose;
       object.distance_to_overlap = new_data.distance_to_overlap;
-      object.ttc = object.distance_to_overlap / object.velocity;
+      object.delay_compensated_distance_to_overlap =
+        std::max(0.0, object.distance_to_overlap - object.velocity * p.pointcloud.latency);
+      object.ttc = object.delay_compensated_distance_to_overlap / object.velocity;
     };
 
     if (history_.find(pcd_object->overlap_lanelet_id) == history_.end()) {
@@ -381,6 +383,7 @@ std::optional<PCDObject> IntersectionCollisionChecker::get_pcd_object(
     object.overlap_lanelet_id = target_lanelet.id;
     object.track_duration = 0.0;
     object.distance_to_overlap = arc_length_to_overlap;
+    object.delay_compensated_distance_to_overlap = arc_length_to_overlap;
     object.velocity = 0.0;
     object.ttc = std::numeric_limits<double>::max();
     pcd_object = object;

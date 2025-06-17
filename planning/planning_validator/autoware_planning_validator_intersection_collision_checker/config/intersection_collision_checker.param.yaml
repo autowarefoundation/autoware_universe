@@ -32,3 +32,4 @@
           min_size: 10
           max_size: 10000
         observation_time: 0.3  # [s]
+        latency: 0.3

@@ -87,6 +87,7 @@ struct PCDObject
   lanelet::Id overlap_lanelet_id;
   double track_duration{};
   double distance_to_overlap{};
+  double delay_compensated_distance_to_overlap{};
   double velocity{};
   double ttc{};
 };

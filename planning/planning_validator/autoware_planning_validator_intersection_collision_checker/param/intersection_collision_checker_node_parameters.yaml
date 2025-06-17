@@ -84,3 +84,7 @@ intersection_collision_checker_node:
         type: double
         validation:
           gt_eq<>: [0.0]
+      latency:
+        type: double
+        validation:
+          gt_eq<>: [0.0]
