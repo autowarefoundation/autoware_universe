@@ -69,3 +69,65 @@ This discrepancy becomes more problematic when the vehicle is near an uncrossabl
 - **Captures mismatches during dynamic maneuvers**: In situations where heading is changing quickly, like on curved roads or during lateral motion, the ego’s actual position may significantly deviate from the MPC path. The extended footprint covers this discrepancy and helps detect boundary risks even if the predicted path appears safe.
 
 This approach helps bridge the gap between prediction and reality. By expanding the footprint in the heading direction, the system ensures safe operation even when there are longitudinal tracking mismatches due to control delay, road surface changes, or other dynamic factors.
+
+## Processing Flow
+
+The following diagram shows the high-level processing flow of the Boundary Departure Prevention Module. It outlines the steps from checking proximity to the goal, through trajectory and abnormality analysis, to the publication of debug and diagnostic data.
+
+```plantuml
+@startuml
+skinparam defaultTextAlignment center
+skinparam backgroundColor #WHITE
+
+title General Processing Flow
+start
+if (Is ego near goal?) then (yes)
+  #LightPink:Disable Boundary Departure Checker;
+  stop
+else (no)
+  :Generate reference trajectory;
+  :Check if goal shifted. Reset the module if true.;
+  :Get abnormalities data;
+  :Get closest projection to boundaries;
+  :Get departure points;
+  :Get critical departure points;
+  :Find and update departure intervals;
+  :Get slow down intervals;
+endif
+#LightBlue:Publish debug info;
+#LightBlue:Publish diagnostics;
+stop
+@enduml
+```
+
+### Generating abnormalities data
+
+The diagram below illustrates how the module processes predicted trajectory points to generate footprints with embedded abnormality margins and find their projections relative to nearby map boundaries.
+
+```planuml
+@startuml
+skinparam defaultTextAlignment center
+skinparam backgroundColor #WHITE
+
+title Getting abnormalities data;
+start
+:Generate initial margin footprint's margin\nconsidering current pose's covariance;
+:Generate footprints for all AbnormalityType;
+:Find segments nearest to ego's predicted path.\nThe segments are separated to left and right;
+:Project left side of ego to the nearest left segment,\nand right side of ego to the nearest right segment;
+
+stop
+@enduml
+```
+
+### Find and update departure intervals
+
+!!! Warning
+
+    TBA
+
+### Get slow down intervals
+
+!!! Warning
+
+    TBA
