@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -47,9 +48,7 @@ std::vector<archetype::Polyline> break_polylines(
 
   std::vector<archetype::MapPoint> flattened;
   for (const auto & polyline : polylines) {
-    for (const auto & point : polyline) {
-      flattened.emplace_back(point);
-    }
+    std::copy(polyline.begin(), polyline.end(), std::back_inserter(flattened));
   }
 
   std::vector<archetype::MapPoint> buffer;
