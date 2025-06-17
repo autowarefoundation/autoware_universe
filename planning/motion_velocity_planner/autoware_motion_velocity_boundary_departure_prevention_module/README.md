@@ -47,6 +47,17 @@ Unexpected steering behavior can cause the vehicle to deviate from its planned t
 
 In such cases, the actual motion of the vehicle diverges from the MPC trajectory, increasing the risk of departure.
 
+<div align="center">
+    <table>
+        <tr>
+            <td><img src="./images/normal_no_abnormalities_footprint.png" alt="Without considering abnormality" width="300"></td>
+        </tr>
+        <tr>
+            <td><img src="./images/localization_abnormalities_footprint.png" alt="With localization abrnormality margin" width="300"></td>
+        </tr>
+    </table>
+</div>
+
 #### How steering margin helps with steering abnormality
 
 - **Catches lateral deviations early**: If the vehicle drifts due to steering faults, like stuck actuators or sudden command spikes, the expanded margin ahead of the vehicle can detect the deviation before the ego crosses into an unsafe region.
@@ -86,7 +97,7 @@ if (Is ego near goal?) then (yes)
   stop
 else (no)
   :Generate reference trajectory;
-  :Check if goal shifted. Reset the module if true.;
+  :Check if goal shifted.\nReset the module if true.;
   :Get abnormalities data;
   :Get closest projection to boundaries;
   :Get departure points;
@@ -104,7 +115,7 @@ stop
 
 The diagram below illustrates how the module processes predicted trajectory points to generate footprints with embedded abnormality margins and find their projections relative to nearby map boundaries.
 
-```planuml
+```plantuml
 @startuml
 skinparam defaultTextAlignment center
 skinparam backgroundColor #WHITE
