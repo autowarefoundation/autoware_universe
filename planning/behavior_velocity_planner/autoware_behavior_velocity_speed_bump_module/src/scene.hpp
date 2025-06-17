@@ -19,6 +19,7 @@
 
 #include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/speed_bump.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <memory>
@@ -56,7 +57,7 @@ public:
     const int64_t module_id, const int64_t lane_id,
     const lanelet::autoware::SpeedBump & speed_bump_reg_elem, const PlannerParam & planner_param,
     const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock,
-    const std::shared_ptr<universe_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 

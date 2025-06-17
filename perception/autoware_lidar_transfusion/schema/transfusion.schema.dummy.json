@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Parameters for LiDAR TransFusion Node",
-  "$comment": "This schema is not considered in CI workflow. See https://github.com/autowarefoundation/autoware.universe/pull/8205#issuecomment-2255074224.",
+  "$comment": "This schema is not considered in CI workflow. See https://github.com/autowarefoundation/autoware_universe/pull/8205#issuecomment-2255074224.",
   "type": "object",
   "definitions": {
     "transfusion": {

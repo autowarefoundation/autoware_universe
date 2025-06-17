@@ -1,4 +1,4 @@
-// Copyright 2025 Tier IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 #include "tf2_ros/transform_broadcaster.h"
 
 #include <autoware/control_evaluator/control_evaluator_node.hpp>
+#include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
@@ -38,7 +39,10 @@ using EvalNode = control_diagnostics::ControlEvaluatorNode;
 using Trajectory = autoware_planning_msgs::msg::Trajectory;
 using TrajectoryPoint = autoware_planning_msgs::msg::TrajectoryPoint;
 using MetricArrayMsg = tier4_metric_msgs::msg::MetricArray;
+using autoware_internal_planning_msgs::msg::PlanningFactor;
+using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
+using geometry_msgs::msg::Pose;
 using nav_msgs::msg::Odometry;
 
 constexpr double epsilon = 1e-6;
@@ -51,10 +55,13 @@ protected:
     rclcpp::init(0, nullptr);
 
     rclcpp::NodeOptions options;
+    const auto share_dir =
+      ament_index_cpp::get_package_share_directory("autoware_control_evaluator");
     const auto autoware_test_utils_dir =
       ament_index_cpp::get_package_share_directory("autoware_test_utils");
     options.arguments(
-      {"--ros-args", "-p", "output_metrics:=false", "--params-file",
+      {"--ros-args", "-p", "output_metrics:=true", "--params-file",
+       share_dir + "/config/control_evaluator.param.yaml", "--params-file",
        autoware_test_utils_dir + "/config/test_vehicle_info.param.yaml"});
 
     dummy_node = std::make_shared<rclcpp::Node>("control_evaluator_test_node", options);
@@ -76,6 +83,9 @@ protected:
       rclcpp::create_publisher<Odometry>(dummy_node, "/control_evaluator/input/odometry", 1);
     acc_pub_ = rclcpp::create_publisher<AccelWithCovarianceStamped>(
       dummy_node, "/control_evaluator/input/acceleration", 1);
+    planning_factor_interface_ =
+      std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
+        dummy_node.get(), "stop_line");
     tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(dummy_node);
     publishEgoPose(0.0, 0.0, 0.0);
   }
@@ -169,6 +179,23 @@ protected:
     }
     return metric_value_;
   }
+
+  double publishPlanningFactorAndGetStopDeviationMetric(
+    const double distance, const double stop_point_x, const double stop_point_y)
+  {
+    Pose stop_point = Pose();
+    stop_point.position.x = stop_point_x;
+    stop_point.position.y = stop_point_y;
+
+    planning_factor_interface_->add(
+      distance, stop_point, PlanningFactor::STOP, SafetyFactorArray({}));
+    planning_factor_interface_->publish();
+    while (!metric_updated_) {
+      spin_some();
+    }
+    return metric_value_;
+  }
+
   void spin_some()
   {
     rclcpp::spin_some(eval_node);
@@ -186,10 +213,42 @@ protected:
   rclcpp::Publisher<Trajectory>::SharedPtr traj_pub_;
   rclcpp::Publisher<Odometry>::SharedPtr odom_pub_;
   rclcpp::Publisher<AccelWithCovarianceStamped>::SharedPtr acc_pub_;
+  std::unique_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
+    planning_factor_interface_;
+
   rclcpp::Subscription<MetricArrayMsg>::SharedPtr metric_sub_;
   // TF broadcaster
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 };
+
+TEST_F(EvalTest, TestYawDeviationABS)
+{
+  auto setYaw = [](geometry_msgs::msg::Quaternion & msg, const double yaw_rad) {
+    tf2::Quaternion q;
+    q.setRPY(0.0, 0.0, yaw_rad);
+    msg.x = q.x();
+    msg.y = q.y();
+    msg.z = q.z();
+    msg.w = q.w();
+  };
+  setTargetMetric("yaw_deviation_abs");
+  Trajectory t = makeTrajectory({{0.0, 0.0}, {1.0, 0.0}});
+  for (auto & p : t.points) {
+    setYaw(p.pose.orientation, M_PI);
+  }
+
+  publishEgoPose(0.0, 0.0, M_PI);
+  EXPECT_NEAR(publishTrajectoryAndGetMetric(t), 0.0, epsilon);
+
+  publishEgoPose(0.0, 0.0, 0.0);
+  EXPECT_NEAR(publishTrajectoryAndGetMetric(t), M_PI, epsilon);
+
+  publishEgoPose(0.0, 0.0, 2 * M_PI);
+  EXPECT_NEAR(publishTrajectoryAndGetMetric(t), M_PI, epsilon);
+
+  publishEgoPose(0.0, 0.0, -M_PI);
+  EXPECT_NEAR(publishTrajectoryAndGetMetric(t), 0.0, epsilon);
+}
 
 TEST_F(EvalTest, TestYawDeviation)
 {
@@ -207,19 +266,16 @@ TEST_F(EvalTest, TestYawDeviation)
     setYaw(p.pose.orientation, M_PI);
   }
 
-  publishEgoPose(0.0, 0.0, M_PI);
-  EXPECT_NEAR(publishTrajectoryAndGetMetric(t), 0.0, epsilon);
-
   publishEgoPose(0.0, 0.0, 0.0);
-  EXPECT_NEAR(publishTrajectoryAndGetMetric(t), M_PI, epsilon);
+  EXPECT_NEAR(publishTrajectoryAndGetMetric(t), -M_PI, epsilon);
 
-  publishEgoPose(0.0, 0.0, -M_PI);
-  EXPECT_NEAR(publishTrajectoryAndGetMetric(t), 0.0, epsilon);
+  publishEgoPose(0.0, 0.0, 2 * M_PI);
+  EXPECT_NEAR(publishTrajectoryAndGetMetric(t), M_PI, epsilon);
 }
 
-TEST_F(EvalTest, TestLateralDeviation)
+TEST_F(EvalTest, TestLateralDeviationABS)
 {
-  setTargetMetric("lateral_deviation");
+  setTargetMetric("lateral_deviation_abs");
   Trajectory t = makeTrajectory({{0.0, 0.0}, {1.0, 0.0}});
 
   publishEgoPose(0.0, 0.0, 0.0);
@@ -227,11 +283,26 @@ TEST_F(EvalTest, TestLateralDeviation)
 
   publishEgoPose(1.0, 1.0, 0.0);
   EXPECT_NEAR(publishTrajectoryAndGetMetric(t), 1.0, epsilon);
+
+  publishEgoPose(1.0, -1.0, 0.0);
+  EXPECT_NEAR(publishTrajectoryAndGetMetric(t), 1.0, epsilon);
+}
+
+TEST_F(EvalTest, TestLateralDeviation)
+{
+  setTargetMetric("lateral_deviation");
+  Trajectory t = makeTrajectory({{0.0, 0.0}, {1.0, 0.0}});
+
+  publishEgoPose(1.0, 1.0, 0.0);
+  EXPECT_NEAR(publishTrajectoryAndGetMetric(t), 1.0, epsilon);
+
+  publishEgoPose(1.0, -1.0, 0.0);
+  EXPECT_NEAR(publishTrajectoryAndGetMetric(t), -1.0, epsilon);
 }
 
 TEST_F(EvalTest, TestKinematicStateAcc)
 {
-  setTargetMetric("kinematic_state/acc");
+  setTargetMetric("acceleration");
   Trajectory t = makeTrajectory({{0.0, 0.0}, {1.0, 0.0}});
   publishTrajectory(t);
   publishEgoPose(0.0, 0.0, 0.0);
@@ -240,11 +311,25 @@ TEST_F(EvalTest, TestKinematicStateAcc)
 
 TEST_F(EvalTest, TestKinematicStateJerk)
 {
-  setTargetMetric("kinematic_state/jerk");
+  setTargetMetric("jerk");
   Trajectory t = makeTrajectory({{0.0, 0.0}, {1.0, 0.0}});
   publishTrajectory(t);
   publishEgoPose(0.0, 0.0, 0.0);
   // there is about 0.1 sec delay in spin_some
   publishEgoAcc(0.0);
   EXPECT_NEAR(publishEgoAccAndGetMetric(1), 10.0, 0.5);
+}
+
+TEST_F(EvalTest, TestStopDeviation)
+{
+  setTargetMetric("stop_deviation/stop_line");
+  EXPECT_NEAR(publishPlanningFactorAndGetStopDeviationMetric(-5.0, 4.0, 3.0), -5.0, epsilon);
+}
+
+TEST_F(EvalTest, TestStopDeviationABS)
+{
+  setTargetMetric("stop_deviation_abs/stop_line");
+  EXPECT_NEAR(publishPlanningFactorAndGetStopDeviationMetric(-5.0, 4.0, 3.0), 5.0, epsilon);
+
+  EXPECT_NEAR(publishPlanningFactorAndGetStopDeviationMetric(5.0, 4.0, 3.0), 5.0, epsilon);
 }

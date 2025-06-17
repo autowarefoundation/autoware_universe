@@ -17,7 +17,7 @@
 #include <autoware/behavior_velocity_planner_common/utilization/path_utilization.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/clock.hpp>
 
 #include <boost/geometry/geometry.hpp>
@@ -78,7 +78,7 @@ std::optional<LineString2d> generate_stop_line(
       std::vector<Point2d> collision_points;
       boost::geometry::intersection(area_poly, line, collision_points);
       if (!collision_points.empty()) {
-        const double yaw = autoware::universe_utils::calcAzimuthAngle(p0, p1);
+        const double yaw = autoware_utils::calc_azimuth_angle(p0, p1);
         const double w = ego_width;
         const double l = stop_line_margin;
         stop_line.emplace_back(
@@ -159,7 +159,7 @@ Polygon2d generate_ego_no_stopping_area_lane_polygon(
   }
   const auto no_stopping_area = no_stopping_area_reg_elem.noStoppingAreas().front();
   for (size_t i = ego_area_start_idx; i < pp.size() - 1; ++i) {
-    dist_from_start_sum += autoware::universe_utils::calcDistance2d(pp.at(i), pp.at(i - 1));
+    dist_from_start_sum += autoware_utils::calc_distance2d(pp.at(i), pp.at(i - 1));
     const auto & p = pp.at(i).point.pose.position;
     // TODO(someone): within will skip points on the edge of polygons so some points can be skipped
     // depending on the interpolation
@@ -186,12 +186,12 @@ Polygon2d generate_ego_no_stopping_area_lane_polygon(
   // decide end idx with extract distance
   size_t ego_area_end_idx = ego_area_start_idx;
   for (size_t i = ego_area_start_idx; i < pp.size() - 1; ++i) {
-    dist_from_start_sum += autoware::universe_utils::calcDistance2d(pp.at(i), pp.at(i - 1));
+    dist_from_start_sum += autoware_utils::calc_distance2d(pp.at(i), pp.at(i - 1));
     const auto & p = pp.at(i).point.pose.position;
     // TODO(someone): within will skip points on the edge of polygons so some points can be skipped
     // depending on the interpolation
     if (!bg::within(Point2d{p.x, p.y}, lanelet::utils::to2D(no_stopping_area).basicPolygon())) {
-      dist_from_area_sum += autoware::universe_utils::calcDistance2d(pp.at(i), pp.at(i - 1));
+      dist_from_area_sum += autoware_utils::calc_distance2d(pp.at(i), pp.at(i - 1));
     }
     if (dist_from_start_sum > max_polygon_length || dist_from_area_sum > margin) {
       break;
@@ -248,13 +248,14 @@ bool check_stop_lines_in_no_stopping_area(
 std::optional<LineString2d> get_stop_line_geometry2d(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
   const lanelet::autoware::NoStoppingArea & no_stopping_area_reg_elem,
-  const double stop_line_margin, const double stop_line_extend_length, const double vehicle_width)
+  const double stop_line_margin, const double vehicle_width)
 {
   const auto & stop_line = no_stopping_area_reg_elem.stopLine();
   if (stop_line && stop_line->size() >= 2) {
     // get stop line from map
-    return planning_utils::extendLine(
-      stop_line.value()[0], stop_line.value()[1], stop_line_extend_length);
+    return planning_utils::extendSegmentToBounds(
+      {(*stop_line)[0].basicPoint2d(), (*stop_line)[1].basicPoint2d()}, path.left_bound,
+      path.right_bound);
   }
   return generate_stop_line(
     path, no_stopping_area_reg_elem.noStoppingAreas(), vehicle_width, stop_line_margin);

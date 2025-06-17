@@ -41,7 +41,7 @@ BlindSpotModule::BlindSpotModule(
   const int64_t module_id, const int64_t lane_id, const TurnDirection turn_direction,
   const std::shared_ptr<const PlannerData> planner_data, const PlannerParam & planner_param,
   const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
-  const std::shared_ptr<universe_utils::TimeKeeper> time_keeper,
+  const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface)
 : SceneModuleInterfaceWithRTC(module_id, logger, clock, time_keeper, planning_factor_interface),
@@ -191,7 +191,7 @@ static std::optional<size_t> getDuplicatedPointIdx(
     const auto & p = path.points.at(i).point.pose.position;
 
     constexpr double min_dist = 0.001;
-    if (autoware::universe_utils::calcDistance2d(p, point) < min_dist) {
+    if (autoware_utils::calc_distance2d(p, point) < min_dist) {
       return i;
     }
   }

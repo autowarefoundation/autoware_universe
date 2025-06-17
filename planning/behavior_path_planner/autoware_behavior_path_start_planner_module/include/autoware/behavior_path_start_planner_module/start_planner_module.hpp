@@ -230,7 +230,7 @@ private:
   bool receivedNewRoute() const;
 
   bool isModuleRunning() const;
-  bool isCurrentPoseOnMiddleOfTheRoad() const;
+  bool isCurrentPoseOnEgoCenterline() const;
 
   /**
    * @brief Check if the ego vehicle is preventing the rear vehicle from passing through.
@@ -335,6 +335,7 @@ ego pose.
   bool hasReachedPullOutEnd() const;
   bool hasFinishedBackwardDriving() const;
   bool hasCollisionWithDynamicObjects() const;
+  bool isInsideLanelets() const;
   bool isStopped();
   bool hasFinishedCurrentPath();
   void updateSafetyCheckTargetObjectsData(

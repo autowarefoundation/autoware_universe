@@ -22,10 +22,12 @@
 #include <autoware/lidar_centerpoint/preprocess/pointcloud_densification.hpp>
 #include <autoware/lidar_centerpoint/ros_utils.hpp>
 #include <autoware/lidar_centerpoint/utils.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/math/constants.hpp>
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/constants.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <pcl_ros/transforms.hpp>
+
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
 
 #include <omp.h>
 
@@ -36,7 +38,7 @@
 
 namespace
 {
-using autoware::universe_utils::ScopedTimeTrack;
+using autoware_utils::ScopedTimeTrack;
 
 Eigen::Affine3f _transformToEigen(const geometry_msgs::msg::Transform & t)
 {
@@ -155,10 +157,16 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
   const auto min_area_matrix = this->declare_parameter<std::vector<double>>("min_area_matrix");
   const auto max_area_matrix = this->declare_parameter<std::vector<double>>("max_area_matrix");
 
+  // diagnostics parameters
+  max_allowed_processing_time_ms_ =
+    declare_parameter<double>("diagnostics.max_allowed_processing_time_ms");
+  max_acceptable_consecutive_delay_ms_ =
+    declare_parameter<double>("diagnostics.max_acceptable_consecutive_delay_ms");
+
   // subscriber
   std::function<void(const PointCloudMsgType::ConstSharedPtr msg)> sub_callback =
-    std::bind(&PointPaintingFusionNode::subCallback, this, std::placeholders::_1);
-  det3d_sub_ = this->create_subscription<PointCloudMsgType>(
+    std::bind(&PointPaintingFusionNode::sub_callback, this, std::placeholders::_1);
+  msg3d_sub_ = this->create_subscription<PointCloudMsgType>(
     "~/input/pointcloud", rclcpp::SensorDataQoS().keep_last(3), sub_callback);
 
   // publisher
@@ -192,12 +200,81 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
   detector_ptr_ = std::make_unique<image_projection_based_fusion::PointPaintingTRT>(
     encoder_param, head_param, densification_param, config);
   diagnostics_interface_ptr_ =
-    std::make_unique<autoware::universe_utils::DiagnosticsInterface>(this, "pointpainting_trt");
+    std::make_unique<autoware_utils::DiagnosticsInterface>(this, "pointpainting_trt");
+
+  // setup diagnostics
+  {
+    stop_watch_ptr_->tic("pointpainting_processing_time");
+
+    const double validation_callback_interval_ms =
+      declare_parameter<double>("diagnostics.pointpainting_validation_callback_interval_ms");
+    diagnostic_processing_time_updater_.setHardwareID(this->get_name());
+    diagnostic_processing_time_updater_.add(
+      "pointpainting_processing_time_status", this,
+      &PointPaintingFusionNode::diagnosePointPaintingProcessingTime);
+    // msec -> sec
+    diagnostic_processing_time_updater_.setPeriod(validation_callback_interval_ms / 1e3);
+  }
 
   if (this->declare_parameter("build_only", false)) {
     RCLCPP_INFO(this->get_logger(), "TensorRT engine is built and shutdown node.");
     rclcpp::shutdown();
   }
+}
+
+void PointPaintingFusionNode::diagnosePointPaintingProcessingTime(
+  diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  const rclcpp::Time timestamp_now = this->get_clock()->now();
+  diagnostic_msgs::msg::DiagnosticStatus::_level_type diag_level =
+    diagnostic_msgs::msg::DiagnosticStatus::OK;
+  std::stringstream message{"OK"};
+
+  // Check if the node has performed inference
+  if (last_processing_time_ms_) {
+    // check processing time is acceptable
+    if (last_processing_time_ms_ > max_allowed_processing_time_ms_) {
+      stat.add("is_processing_time_ms_in_expected_range", false);
+
+      message.clear();
+      message << "Processing time exceeds the acceptable limit of "
+              << max_allowed_processing_time_ms_ << " ms by "
+              << (last_processing_time_ms_.value() - max_allowed_processing_time_ms_) << " ms.";
+
+      // in case the processing starts with a delayed inference
+      if (!last_in_time_processing_timestamp_) {
+        last_in_time_processing_timestamp_ = timestamp_now;
+      }
+
+      diag_level = diagnostic_msgs::msg::DiagnosticStatus::WARN;
+    } else {
+      stat.add("is_processing_time_ms_in_expected_range", true);
+      last_in_time_processing_timestamp_ = timestamp_now;
+    }
+    stat.add("processing_time_ms", last_processing_time_ms_.value());
+
+    const double delayed_state_duration =
+      std::chrono::duration<double, std::milli>(
+        std::chrono::nanoseconds(
+          (timestamp_now - last_in_time_processing_timestamp_.value()).nanoseconds()))
+        .count();
+
+    // check consecutive delays
+    if (delayed_state_duration > max_acceptable_consecutive_delay_ms_) {
+      stat.add("is_consecutive_processing_delay_in_range", false);
+
+      message << " Processing delay has consecutively exceeded the acceptable limit continuously.";
+
+      diag_level = diagnostic_msgs::msg::DiagnosticStatus::ERROR;
+    } else {
+      stat.add("is_consecutive_processing_delay_in_range", true);
+    }
+    stat.add("consecutive_processing_delay_ms", delayed_state_duration);
+  } else {
+    message << "Waiting for the node to perform inference.";
+  }
+
+  stat.summary(diag_level, message.str());
 }
 
 void PointPaintingFusionNode::preprocess(PointCloudMsgType & painted_pointcloud_msg)
@@ -258,9 +335,9 @@ void PointPaintingFusionNode::preprocess(PointCloudMsgType & painted_pointcloud_
     static_cast<uint32_t>(painted_pointcloud_msg.data.size() / painted_pointcloud_msg.height);
 }
 
-void PointPaintingFusionNode::fuseOnSingleImage(
+void PointPaintingFusionNode::fuse_on_single_image(
   __attribute__((unused)) const PointCloudMsgType & input_pointcloud_msg,
-  const Det2dStatus<RoiMsgType> & det2d, const RoiMsgType & input_roi_msg,
+  const Det2dStatus<RoiMsgType> & det2d_status, const RoiMsgType & input_rois_msg,
   PointCloudMsgType & painted_pointcloud_msg)
 {
   if (painted_pointcloud_msg.data.empty() || painted_pointcloud_msg.fields.empty()) {
@@ -269,7 +346,7 @@ void PointPaintingFusionNode::fuseOnSingleImage(
     return;
   }
 
-  auto num_bbox = (input_roi_msg.feature_objects).size();
+  auto num_bbox = (input_rois_msg.feature_objects).size();
   if (num_bbox == 0) {
     return;
   }
@@ -285,8 +362,8 @@ void PointPaintingFusionNode::fuseOnSingleImage(
   Eigen::Affine3f lidar2cam_affine;
   {
     const auto transform_stamped_optional = getTransformStamped(
-      tf_buffer_, /*target*/ input_roi_msg.header.frame_id,
-      /*source*/ painted_pointcloud_msg.header.frame_id, input_roi_msg.header.stamp);
+      tf_buffer_, /*target*/ input_rois_msg.header.frame_id,
+      /*source*/ painted_pointcloud_msg.header.frame_id, input_rois_msg.header.stamp);
     if (!transform_stamped_optional) {
       return;
     }
@@ -314,7 +391,7 @@ dc   | dc dc dc  dc ||zc|
                      |dc|
    **/
 
-  auto objects = input_roi_msg.feature_objects;
+  auto objects = input_rois_msg.feature_objects;
   int iterations = painted_pointcloud_msg.data.size() / painted_pointcloud_msg.point_step;
   // iterate points
   // Requires 'OMP_NUM_THREADS=N'
@@ -338,13 +415,13 @@ dc   | dc dc dc  dc ||zc|
       p_y = point_camera.y();
       p_z = point_camera.z();
 
-      if (det2d.camera_projector_ptr->isOutsideHorizontalView(p_x, p_z)) {
+      if (det2d_status.camera_projector_ptr->isOutsideHorizontalView(p_x, p_z)) {
         continue;
       }
 
       // project
       Eigen::Vector2d projected_point;
-      if (det2d.camera_projector_ptr->calcImageProjectedPoint(
+      if (det2d_status.camera_projector_ptr->calcImageProjectedPoint(
             cv::Point3d(p_x, p_y, p_z), projected_point)) {
         // iterate 2d bbox
         for (const auto & feature_object : objects) {
@@ -373,7 +450,7 @@ dc   | dc dc dc  dc ||zc|
       if (time_keeper_)
         inner_st_ptr = std::make_unique<ScopedTimeTrack>("publish debug message", *time_keeper_);
 
-      for (const auto & feature_object : input_roi_msg.feature_objects) {
+      for (const auto & feature_object : input_rois_msg.feature_objects) {
         debug_image_rois.push_back(feature_object.feature.roi);
       }
 
@@ -383,7 +460,7 @@ dc   | dc dc dc  dc ||zc|
 
       debugger_->image_rois_ = debug_image_rois;
       debugger_->obstacle_points_ = debug_image_points;
-      debugger_->publishImage(det2d.id, input_roi_msg.header.stamp);
+      debugger_->publishImage(det2d_status.id, input_rois_msg.header.stamp);
     }
   }
 }
@@ -393,6 +470,9 @@ void PointPaintingFusionNode::postprocess(
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
+  stop_watch_ptr_->toc("pointpainting_processing_time", true);
+
   diagnostics_interface_ptr_->clear();
 
   output_msg.header = painted_pointcloud_msg.header;
@@ -439,6 +519,10 @@ void PointPaintingFusionNode::postprocess(
   output_msg.objects = iou_bev_nms_.apply(raw_objects);
 
   detection_class_remapper_.mapClasses(output_msg);
+
+  // update processing time for diagnosis
+  const double processing_time_ms = stop_watch_ptr_->toc("pointpainting_processing_time");
+  last_processing_time_ms_ = processing_time_ms;
 
   // publish debug message: painted pointcloud
   if (debugger_ && painted_point_pub_ptr_->get_subscription_count() > 0) {

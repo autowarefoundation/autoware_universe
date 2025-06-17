@@ -32,11 +32,11 @@ namespace autoware::behavior_path_planner
 {
 ShiftPullOver::ShiftPullOver(rclcpp::Node & node, const GoalPlannerParameters & parameters)
 : PullOverPlannerBase{node, parameters},
-  lane_departure_checker_{[&]() {
-    auto lane_departure_checker_params = lane_departure_checker::Param{};
-    lane_departure_checker_params.footprint_extra_margin =
+  boundary_departure_checker_{[&]() {
+    auto boundary_departure_checker_params = boundary_departure_checker::Param{};
+    boundary_departure_checker_params.footprint_extra_margin =
       parameters.lane_departure_check_expansion_margin;
-    return LaneDepartureChecker{lane_departure_checker_params, vehicle_info_};
+    return BoundaryDepartureChecker{boundary_departure_checker_params, vehicle_info_};
   }()},
   left_side_parking_{parameters.parking_policy == ParkingPolicy::LEFT_SIDE}
 {
@@ -109,31 +109,6 @@ PathWithLaneId ShiftPullOver::generateReferencePath(
   return road_lane_reference_path;
 }
 
-std::optional<PathWithLaneId> ShiftPullOver::cropPrevModulePath(
-  const PathWithLaneId & prev_module_path, const Pose & shift_end_pose) const
-{
-  // clip previous module path to shift end pose nearest segment index
-  const size_t shift_end_idx = autoware::motion_utils::findNearestSegmentIndex(
-    prev_module_path.points, shift_end_pose.position);
-  std::vector<PathPointWithLaneId> clipped_points{
-    prev_module_path.points.begin(), prev_module_path.points.begin() + shift_end_idx};
-  if (clipped_points.empty()) {
-    return std::nullopt;
-  }
-
-  // add projected shift end pose to clipped points
-  PathPointWithLaneId projected_point = clipped_points.back();
-  const double offset = autoware::motion_utils::calcSignedArcLength(
-    prev_module_path.points, shift_end_idx, shift_end_pose.position);
-  projected_point.point.pose =
-    autoware::universe_utils::calcOffsetPose(clipped_points.back().point.pose, offset, 0, 0);
-  clipped_points.push_back(projected_point);
-  auto clipped_prev_module_path = prev_module_path;
-  clipped_prev_module_path.points = clipped_points;
-
-  return clipped_prev_module_path;
-}
-
 std::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
   const GoalCandidate & goal_candidate, const size_t id,
   const std::shared_ptr<const PlannerData> planner_data,
@@ -147,7 +122,7 @@ std::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
 
   // shift end pose is longitudinal offset from goal pose to improve parking angle accuracy
   const Pose shift_end_pose =
-    autoware::universe_utils::calcOffsetPose(goal_pose, -after_shift_straight_distance, 0, 0);
+    autoware_utils::calc_offset_pose(goal_pose, -after_shift_straight_distance, 0, 0);
 
   // calculate lateral shift of previous module path terminal pose from road lane reference path
   const auto road_lane_reference_path_to_shift_end = utils::resamplePathWithSpline(
@@ -183,7 +158,7 @@ std::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
   const Pose & shift_end_pose_prev_module_path =
     processed_prev_module_path->points.back().point.pose;
   const double shift_end_road_to_target_distance =
-    autoware::universe_utils::inverseTransformPoint(
+    autoware_utils::inverse_transform_point(
       shift_end_pose.position, shift_end_pose_prev_module_path)
       .y;
 
@@ -200,6 +175,7 @@ std::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
   PathShifter path_shifter{};
   path_shifter.setPath(processed_prev_module_path.value());
   ShiftLine shift_line{};
+  if (!shift_start_pose) return std::nullopt;
   shift_line.start = *shift_start_pose;
   shift_line.end = shift_end_pose;
   shift_line.end_shift_length = shift_end_road_to_target_distance;
@@ -303,8 +279,8 @@ std::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
   // todo: Implement lane departure detection that does not depend on the footprint
   const auto resampled_parking_path = utils::resamplePathWithSpline(
     pull_over_path.parking_path(), parameters_.center_line_path_interval / 2);
-  const bool is_in_lanes =
-    !lane_departure_checker_.checkPathWillLeaveLane({departure_check_lane}, resampled_parking_path);
+  const bool is_in_lanes = !boundary_departure_checker_.checkPathWillLeaveLane(
+    {departure_check_lane}, resampled_parking_path);
 
   if (!is_in_parking_lots && !is_in_lanes) {
     return {};

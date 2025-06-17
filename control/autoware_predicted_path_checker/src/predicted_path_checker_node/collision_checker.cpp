@@ -14,7 +14,7 @@
 
 #include "autoware/predicted_path_checker/collision_checker.hpp"
 
-#include <autoware/universe_utils/ros/marker_helper.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
 #include <rclcpp/logging.hpp>
 
 #include <limits>
@@ -81,12 +81,12 @@ CollisionChecker::checkTrajectoryForCollision(
       double distance_to_current = std::numeric_limits<double>::max();
       double distance_to_history = std::numeric_limits<double>::max();
       if (found_collision_at_dynamic_objects) {
-        distance_to_current = autoware::universe_utils::calcDistance2d(
-          p_front, found_collision_at_dynamic_objects.get().first);
+        distance_to_current =
+          autoware_utils::calc_distance2d(p_front, found_collision_at_dynamic_objects.get().first);
       }
       if (found_collision_at_history) {
         distance_to_history =
-          autoware::universe_utils::calcDistance2d(p_front, found_collision_at_history.get().first);
+          autoware_utils::calc_distance2d(p_front, found_collision_at_history.get().first);
       } else {
         predicted_object_history_.clear();
       }
@@ -141,7 +141,7 @@ CollisionChecker::checkObstacleHistory(
     bool is_init = false;
     std::pair<geometry_msgs::msg::Point, PredictedObject> nearest_collision_object_with_point;
     for (const auto & p : collision_points_in_history) {
-      double norm = autoware::universe_utils::calcDistance2d(p.first, base_pose);
+      double norm = autoware_utils::calc_distance2d(p.first, base_pose);
       if (norm < min_norm || !is_init) {
         min_norm = norm;
         nearest_collision_object_with_point = p;

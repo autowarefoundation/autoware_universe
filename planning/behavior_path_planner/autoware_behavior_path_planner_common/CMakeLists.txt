@@ -42,6 +42,10 @@ if(BUILD_TESTING)
   ${PROJECT_NAME}
   )
 
+  ament_target_dependencies(test_${PROJECT_NAME}_utilities
+    autoware_test_utils
+  )
+
   ament_add_ros_isolated_gmock(test_${PROJECT_NAME}_drivable_area_expansion
     test/test_drivable_area_expansion.cpp
     test/test_footprints.cpp
@@ -52,12 +56,20 @@ if(BUILD_TESTING)
     ${PROJECT_NAME}
   )
 
+  ament_target_dependencies(test_${PROJECT_NAME}_drivable_area_expansion
+    autoware_test_utils
+  )
+
   ament_add_ros_isolated_gmock(test_${PROJECT_NAME}_occupancy_grid_based_collision_detector
     test/test_occupancy_grid_based_collision_detector.cpp
   )
 
   target_link_libraries(test_${PROJECT_NAME}_occupancy_grid_based_collision_detector
     ${PROJECT_NAME}
+  )
+
+  ament_target_dependencies(test_${PROJECT_NAME}_occupancy_grid_based_collision_detector
+    autoware_test_utils
   )
 
   ament_add_ros_isolated_gmock(test_${PROJECT_NAME}_safety_check
@@ -69,6 +81,10 @@ if(BUILD_TESTING)
     ${PROJECT_NAME}
   )
 
+  ament_target_dependencies(test_${PROJECT_NAME}_safety_check
+    autoware_test_utils
+  )
+
   ament_add_ros_isolated_gmock(test_${PROJECT_NAME}_parking_departure
     test/test_parking_departure_utils.cpp
   )
@@ -77,12 +93,20 @@ if(BUILD_TESTING)
     ${PROJECT_NAME}
   )
 
+  ament_target_dependencies(test_${PROJECT_NAME}_parking_departure
+    autoware_test_utils
+  )
+
   ament_add_ros_isolated_gmock(test_${PROJECT_NAME}_path_shifter
     test/test_path_shifter.cpp
   )
 
   target_link_libraries(test_${PROJECT_NAME}_path_shifter
     ${PROJECT_NAME}
+  )
+
+  ament_target_dependencies(test_${PROJECT_NAME}_path_shifter
+    autoware_test_utils
   )
 
   ament_add_ros_isolated_gmock(test_${PROJECT_NAME}_turn_signal

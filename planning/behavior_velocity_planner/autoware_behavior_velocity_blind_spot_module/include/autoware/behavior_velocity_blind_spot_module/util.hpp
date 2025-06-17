@@ -16,7 +16,7 @@
 #define AUTOWARE__BEHAVIOR_VELOCITY_BLIND_SPOT_MODULE__UTIL_HPP_
 
 #include <autoware/route_handler/route_handler.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
@@ -54,7 +54,7 @@ std::optional<InterpolatedPathInfo> generateInterpolatedPathInfo(
 
 std::optional<size_t> getFirstPointIntersectsLineByFootprint(
   const lanelet::ConstLineString2d & line, const InterpolatedPathInfo & interpolated_path_info,
-  const autoware::universe_utils::LinearRing2d & footprint, const double vehicle_length);
+  const autoware_utils::LinearRing2d & footprint, const double vehicle_length);
 
 std::optional<lanelet::ConstLanelet> getSiblingStraightLanelet(
   const lanelet::Lanelet assigned_lane,

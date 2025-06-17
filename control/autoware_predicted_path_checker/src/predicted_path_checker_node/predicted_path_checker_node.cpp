@@ -16,9 +16,9 @@
 
 #include <autoware/motion_utils/marker/marker_helper.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/geometry/pose_deviation.hpp>
-#include <autoware/universe_utils/math/unit_conversion.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/pose_deviation.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <algorithm>
@@ -68,7 +68,7 @@ PredictedPathCheckerNode::PredictedPathCheckerNode(const rclcpp::NodeOptions & n
     declare_parameter("collision_checker_params.chattering_threshold", 0.2);
 
   // Subscriber
-  self_pose_listener_ = std::make_shared<autoware::universe_utils::SelfPoseListener>(this);
+  self_pose_listener_ = std::make_shared<autoware_utils::SelfPoseListener>(this);
 
   sub_dynamic_objects_ = create_subscription<PredictedObjects>(
     "~/input/objects", rclcpp::SensorDataQoS(),
@@ -98,7 +98,7 @@ PredictedPathCheckerNode::PredictedPathCheckerNode(const rclcpp::NodeOptions & n
   updater_.add("predicted_path_checker", this, &PredictedPathCheckerNode::checkVehicleState);
 
   // Wait for first self pose
-  self_pose_listener_->waitForFirstPose();
+  self_pose_listener_->wait_for_first_pose();
 
   // Timer
   initTimer(1.0 / node_param_.update_rate);
@@ -225,7 +225,7 @@ bool PredictedPathCheckerNode::isDataTimeout()
 
 void PredictedPathCheckerNode::onTimer()
 {
-  current_pose_ = self_pose_listener_->getCurrentPose();
+  current_pose_ = self_pose_listener_->get_current_pose();
 
   if (!isDataReady()) {
     return;
@@ -435,13 +435,13 @@ bool PredictedPathCheckerNode::isItDiscretePoint(
   const auto nearest_point = calcInterpolatedPoint(
     reference_trajectory, collision_point.pose.position, *nearest_segment, false);
 
-  const auto distance = autoware::universe_utils::calcDistance2d(
-    nearest_point.pose.position, collision_point.pose.position);
+  const auto distance =
+    autoware_utils::calc_distance2d(nearest_point.pose.position, collision_point.pose.position);
 
   const auto yaw_diff =
-    std::abs(autoware::universe_utils::calcYawDeviation(nearest_point.pose, collision_point.pose));
+    std::abs(autoware_utils::calc_yaw_deviation(nearest_point.pose, collision_point.pose));
   return distance >= node_param_.distinct_point_distance_threshold ||
-         yaw_diff >= autoware::universe_utils::deg2rad(node_param_.distinct_point_yaw_threshold);
+         yaw_diff >= autoware_utils::deg2rad(node_param_.distinct_point_yaw_threshold);
 }
 
 Trajectory PredictedPathCheckerNode::cutTrajectory(
@@ -457,8 +457,8 @@ Trajectory PredictedPathCheckerNode::cutTrajectory(
   for (size_t i = 1; i < trajectory.points.size(); ++i) {
     const auto & point = trajectory.points.at(i);
 
-    const auto p1 = autoware::universe_utils::fromMsg(cut.points.back().pose.position);
-    const auto p2 = autoware::universe_utils::fromMsg(point.pose.position);
+    const auto p1 = autoware_utils::from_msg(cut.points.back().pose.position);
+    const auto p2 = autoware_utils::from_msg(point.pose.position);
     const auto points_distance = boost::geometry::distance(p1.to_2d(), p2.to_2d());
 
     const auto remain_distance = length - total_length;
@@ -485,7 +485,7 @@ Trajectory PredictedPathCheckerNode::cutTrajectory(
     cut.points.push_back(point);
     total_length += points_distance;
   }
-  autoware::motion_utils::removeOverlapPoints(cut.points);
+  cut.points = autoware::motion_utils::removeOverlapPoints(cut.points);
 
   return cut;
 }
@@ -531,7 +531,7 @@ std::pair<double, double> PredictedPathCheckerNode::calculateProjectedVelAndAcc(
   const auto velocity_obj = object.kinematics.initial_twist_with_covariance.twist.linear.x;
   const auto acceleration_obj =
     object.kinematics.initial_acceleration_with_covariance.accel.linear.x;
-  const auto k = std::cos(autoware::universe_utils::normalizeRadian(
+  const auto k = std::cos(autoware_utils::normalize_radian(
     tf2::getYaw(orientation_obj) - tf2::getYaw(orientation_stop_point)));
   const auto projected_velocity = velocity_obj * k;
   const auto projected_acceleration = acceleration_obj * k;
@@ -559,8 +559,8 @@ void PredictedPathCheckerNode::filterObstacles(
     const double max_length = calcObstacleMaxLength(object.shape);
     const size_t seg_idx = autoware::motion_utils::findNearestSegmentIndex(
       traj, object.kinematics.initial_pose_with_covariance.pose.position);
-    const auto p_front = autoware::universe_utils::getPoint(traj.at(seg_idx));
-    const auto p_back = autoware::universe_utils::getPoint(traj.at(seg_idx + 1));
+    const auto p_front = autoware_utils::get_point(traj.at(seg_idx));
+    const auto p_back = autoware_utils::get_point(traj.at(seg_idx + 1));
     const auto & p_target = object.kinematics.initial_pose_with_covariance.pose.position;
     const Eigen::Vector3d segment_vec{p_back.x - p_front.x, p_back.y - p_front.y, 0.0};
     const Eigen::Vector3d target_vec{p_target.x - p_front.x, p_target.y - p_front.y, 0.0};

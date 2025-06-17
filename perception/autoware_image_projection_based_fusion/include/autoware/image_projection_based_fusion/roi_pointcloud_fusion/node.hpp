@@ -34,9 +34,9 @@ private:
   rclcpp::Publisher<PointCloudMsgType>::SharedPtr point_pub_ptr_;
   rclcpp::Publisher<PointCloudMsgType>::SharedPtr cluster_debug_pub_;
 
-  void fuseOnSingleImage(
-    const PointCloudMsgType & input_pointcloud_msg, const Det2dStatus<RoiMsgType> & det2d,
-    const RoiMsgType & input_roi_msg, PointCloudMsgType & output_pointcloud_msg) override;
+  void fuse_on_single_image(
+    const PointCloudMsgType & input_pointcloud_msg, const Det2dStatus<RoiMsgType> & det2d_status,
+    const RoiMsgType & input_rois_msg, PointCloudMsgType & output_pointcloud_msg) override;
 
   void postprocess(const PointCloudMsgType & pointcloud_msg, ClusterMsgType & output_msg) override;
 
@@ -44,8 +44,11 @@ private:
 
   int min_cluster_size_{1};
   int max_cluster_size_{20};
+  double max_object_size_{2.0};
   bool fuse_unknown_only_{true};
   double cluster_2d_tolerance_;
+  double roi_scale_factor_{1.0};
+  bool override_class_with_unknown_{false};
 
   std::vector<ClusterObjType> output_fused_objects_;
 };

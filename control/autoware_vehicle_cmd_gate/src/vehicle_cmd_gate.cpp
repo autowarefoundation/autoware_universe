@@ -14,7 +14,7 @@
 
 #include "vehicle_cmd_gate.hpp"
 
-#include "autoware/universe_utils/ros/update_param.hpp"
+#include "autoware_utils/ros/update_param.hpp"
 #include "marker_helper.hpp"
 
 #include <rclcpp/logging.hpp>
@@ -216,10 +216,9 @@ VehicleCmdGate::VehicleCmdGate(const rclcpp::NodeOptions & node_options)
   timer_pub_status_ = rclcpp::create_timer(
     this, get_clock(), period_ns, std::bind(&VehicleCmdGate::publishStatus, this));
 
-  logger_configure_ = std::make_unique<autoware::universe_utils::LoggerLevelConfigure>(this);
+  logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
 
-  published_time_publisher_ =
-    std::make_unique<autoware::universe_utils::PublishedTimePublisher>(this);
+  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 
   // Parameter Callback
   set_param_res_ =
@@ -229,25 +228,25 @@ VehicleCmdGate::VehicleCmdGate(const rclcpp::NodeOptions & node_options)
 rcl_interfaces::msg::SetParametersResult VehicleCmdGate::onParameter(
   const std::vector<rclcpp::Parameter> & parameters)
 {
-  using autoware::universe_utils::updateParam;
+  using autoware_utils::update_param;
   // Parameter
-  updateParam<bool>(parameters, "use_emergency_handling", use_emergency_handling_);
-  updateParam<bool>(
+  update_param<bool>(parameters, "use_emergency_handling", use_emergency_handling_);
+  update_param<bool>(
     parameters, "check_external_emergency_heartbeat", check_external_emergency_heartbeat_);
-  updateParam<double>(
+  update_param<double>(
     parameters, "system_emergency_heartbeat_timeout", system_emergency_heartbeat_timeout_);
-  updateParam<double>(
+  update_param<double>(
     parameters, "external_emergency_stop_heartbeat_timeout",
     external_emergency_stop_heartbeat_timeout_);
-  updateParam<double>(parameters, "stop_hold_acceleration", stop_hold_acceleration_);
-  updateParam<double>(parameters, "emergency_acceleration", emergency_acceleration_);
-  updateParam<double>(
+  update_param<double>(parameters, "stop_hold_acceleration", stop_hold_acceleration_);
+  update_param<double>(parameters, "emergency_acceleration", emergency_acceleration_);
+  update_param<double>(
     parameters, "moderate_stop_service_acceleration", moderate_stop_service_acceleration_);
-  updateParam<double>(parameters, "stop_check_duration", stop_check_duration_);
-  updateParam<bool>(parameters, "enable_cmd_limit_filter", enable_cmd_limit_filter_);
-  updateParam<int>(
+  update_param<double>(parameters, "stop_check_duration", stop_check_duration_);
+  update_param<bool>(parameters, "enable_cmd_limit_filter", enable_cmd_limit_filter_);
+  update_param<int>(
     parameters, "filter_activated_count_threshold", filter_activated_count_threshold_);
-  updateParam<double>(
+  update_param<double>(
     parameters, "filter_activated_velocity_threshold", filter_activated_velocity_threshold_);
 
   // Vehicle Parameter
@@ -255,16 +254,16 @@ rcl_interfaces::msg::SetParametersResult VehicleCmdGate::onParameter(
   {
     VehicleCmdFilterParam p = filter_.getParam();
     p.wheel_base = vehicle_info.wheel_base_m;
-    updateParam<double>(parameters, "nominal.vel_lim", p.vel_lim);
-    updateParam<std::vector<double>>(
+    update_param<double>(parameters, "nominal.vel_lim", p.vel_lim);
+    update_param<std::vector<double>>(
       parameters, "nominal.reference_speed_points", p.reference_speed_points);
-    updateParam<std::vector<double>>(parameters, "nominal.steer_lim", p.steer_lim);
-    updateParam<std::vector<double>>(parameters, "nominal.steer_rate_lim", p.steer_rate_lim);
-    updateParam<std::vector<double>>(parameters, "nominal.lon_acc_lim", p.lon_acc_lim);
-    updateParam<std::vector<double>>(parameters, "nominal.lon_jerk_lim", p.lon_jerk_lim);
-    updateParam<std::vector<double>>(parameters, "nominal.lat_acc_lim", p.lat_acc_lim);
-    updateParam<std::vector<double>>(parameters, "nominal.lat_jerk_lim", p.lat_jerk_lim);
-    updateParam<std::vector<double>>(
+    update_param<std::vector<double>>(parameters, "nominal.steer_lim", p.steer_lim);
+    update_param<std::vector<double>>(parameters, "nominal.steer_rate_lim", p.steer_rate_lim);
+    update_param<std::vector<double>>(parameters, "nominal.lon_acc_lim", p.lon_acc_lim);
+    update_param<std::vector<double>>(parameters, "nominal.lon_jerk_lim", p.lon_jerk_lim);
+    update_param<std::vector<double>>(parameters, "nominal.lat_acc_lim", p.lat_acc_lim);
+    update_param<std::vector<double>>(parameters, "nominal.lat_jerk_lim", p.lat_jerk_lim);
+    update_param<std::vector<double>>(
       parameters, "nominal.actual_steer_diff_lim", p.actual_steer_diff_lim);
     filter_.setParam(p);
   }
@@ -272,16 +271,16 @@ rcl_interfaces::msg::SetParametersResult VehicleCmdGate::onParameter(
   {
     VehicleCmdFilterParam p = filter_on_transition_.getParam();
     p.wheel_base = vehicle_info.wheel_base_m;
-    updateParam<double>(parameters, "on_transition.vel_lim", p.vel_lim);
-    updateParam<std::vector<double>>(
+    update_param<double>(parameters, "on_transition.vel_lim", p.vel_lim);
+    update_param<std::vector<double>>(
       parameters, "on_transition.reference_speed_points", p.reference_speed_points);
-    updateParam<std::vector<double>>(parameters, "on_transition.steer_lim", p.steer_lim);
-    updateParam<std::vector<double>>(parameters, "on_transition.steer_rate_lim", p.steer_rate_lim);
-    updateParam<std::vector<double>>(parameters, "on_transition.lon_acc_lim", p.lon_acc_lim);
-    updateParam<std::vector<double>>(parameters, "on_transition.lon_jerk_lim", p.lon_jerk_lim);
-    updateParam<std::vector<double>>(parameters, "on_transition.lat_acc_lim", p.lat_acc_lim);
-    updateParam<std::vector<double>>(parameters, "on_transition.lat_jerk_lim", p.lat_jerk_lim);
-    updateParam<std::vector<double>>(
+    update_param<std::vector<double>>(parameters, "on_transition.steer_lim", p.steer_lim);
+    update_param<std::vector<double>>(parameters, "on_transition.steer_rate_lim", p.steer_rate_lim);
+    update_param<std::vector<double>>(parameters, "on_transition.lon_acc_lim", p.lon_acc_lim);
+    update_param<std::vector<double>>(parameters, "on_transition.lon_jerk_lim", p.lon_jerk_lim);
+    update_param<std::vector<double>>(parameters, "on_transition.lat_acc_lim", p.lat_acc_lim);
+    update_param<std::vector<double>>(parameters, "on_transition.lat_jerk_lim", p.lat_jerk_lim);
+    update_param<std::vector<double>>(
       parameters, "on_transition.actual_steer_diff_lim", p.actual_steer_diff_lim);
     filter_on_transition_.setParam(p);
   }
@@ -367,8 +366,8 @@ T VehicleCmdGate::getContinuousTopic(
     return current_topic;
   } else {
     if (topic_name != "") {
-      RCLCPP_INFO(
-        get_logger(),
+      RCLCPP_INFO_THROTTLE(
+        get_logger(), *get_clock(), 5000,
         "The operation mode is changed, but the %s is not received yet:", topic_name.c_str());
     }
     return *prev_topic;
@@ -377,37 +376,41 @@ T VehicleCmdGate::getContinuousTopic(
 
 void VehicleCmdGate::onTimer()
 {
-  autoware::universe_utils::StopWatch<std::chrono::milliseconds> stop_watch;
+  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch;
 
   // Subscriber for auto
-  const auto msg_auto_command_turn_indicator = auto_turn_indicator_cmd_sub_.takeData();
+  const auto msg_auto_command_turn_indicator = auto_turn_indicator_cmd_sub_.take_data();
   if (msg_auto_command_turn_indicator)
     auto_commands_.turn_indicator = *msg_auto_command_turn_indicator;
 
-  const auto msg_auto_command_hazard_light = auto_hazard_light_cmd_sub_.takeData();
+  const auto msg_auto_command_hazard_light = auto_hazard_light_cmd_sub_.take_data();
   if (msg_auto_command_hazard_light) auto_commands_.hazard_light = *msg_auto_command_hazard_light;
 
-  const auto msg_auto_command_gear = auto_gear_cmd_sub_.takeData();
+  const auto msg_auto_command_gear = auto_gear_cmd_sub_.take_data();
   if (msg_auto_command_gear) auto_commands_.gear = *msg_auto_command_gear;
 
   // Subscribe for external
-  const auto msg_remote_command_turn_indicator = remote_turn_indicator_cmd_sub_.takeData();
+  const auto msg_remote_command_turn_indicator = remote_turn_indicator_cmd_sub_.take_data();
   if (msg_remote_command_turn_indicator)
     remote_commands_.turn_indicator = *msg_remote_command_turn_indicator;
 
-  const auto msg_remote_command_hazard_light = remote_hazard_light_cmd_sub_.takeData();
+  const auto msg_remote_command_hazard_light = remote_hazard_light_cmd_sub_.take_data();
   if (msg_remote_command_hazard_light)
     remote_commands_.hazard_light = *msg_remote_command_hazard_light;
 
-  const auto msg_remote_command_gear = remote_gear_cmd_sub_.takeData();
+  const auto msg_remote_command_gear = remote_gear_cmd_sub_.take_data();
   if (msg_remote_command_gear) remote_commands_.gear = *msg_remote_command_gear;
 
   // Subscribe for emergency
-  const auto msg_emergency_command_hazard_light = emergency_hazard_light_cmd_sub_.takeData();
+  const auto msg_emergency_command_hazard_light = emergency_hazard_light_cmd_sub_.take_data();
   if (msg_emergency_command_hazard_light)
     emergency_commands_.hazard_light = *msg_emergency_command_hazard_light;
 
-  const auto msg_emergency_command_gear = emergency_gear_cmd_sub_.takeData();
+  const auto msg_emergency_command_turn_indicator = emergency_turn_indicator_cmd_sub_.take_data();
+  if (msg_emergency_command_turn_indicator)
+    emergency_commands_.turn_indicator = *msg_emergency_command_turn_indicator;
+
+  const auto msg_emergency_command_gear = emergency_gear_cmd_sub_.take_data();
   if (msg_emergency_command_gear) emergency_commands_.gear = *msg_emergency_command_gear;
 
   updater_.force_update();
@@ -490,7 +493,9 @@ void VehicleCmdGate::onTimer()
       getContinuousTopic(prev_turn_indicator_, turn_indicator, "TurnIndicatorsCommand");
     turn_indicator_cmd_pub_->publish(*prev_turn_indicator_);
   } else {
-    if (msg_auto_command_turn_indicator || msg_remote_command_turn_indicator) {
+    if (
+      msg_auto_command_turn_indicator || msg_remote_command_turn_indicator ||
+      msg_emergency_command_turn_indicator) {
       prev_turn_indicator_ = std::make_shared<TurnIndicatorsCommand>(turn_indicator);
     }
     turn_indicator_cmd_pub_->publish(turn_indicator);
@@ -570,6 +575,7 @@ void VehicleCmdGate::publishControlCommands(const Commands & commands)
       filtered_control.longitudinal = createLongitudinalStopControlCmd();
     } else {
       filtered_control = createStopControlCmd();
+      filtered_control.stamp = commands.control.stamp;
     }
   }
 
@@ -577,6 +583,7 @@ void VehicleCmdGate::publishControlCommands(const Commands & commands)
   if (enable_cmd_limit_filter_) {
     // Apply limit filtering
     filtered_control = filterControlCommand(filtered_control);
+    filtered_control.stamp = commands.control.stamp;
   }
   // tmp: Publish vehicle emergency status
   VehicleEmergencyStamped vehicle_cmd_emergency;
@@ -742,10 +749,11 @@ Control VehicleCmdGate::createEmergencyStopControlCmd() const
   return cmd;
 }
 
-void VehicleCmdGate::onExternalEmergencyStopHeartbeat(
-  [[maybe_unused]] Heartbeat::ConstSharedPtr msg)
+void VehicleCmdGate::onExternalEmergencyStopHeartbeat(Heartbeat::ConstSharedPtr msg)
 {
-  external_emergency_stop_heartbeat_received_time_ = std::make_shared<rclcpp::Time>(this->now());
+  if (msg->ready) {
+    external_emergency_stop_heartbeat_received_time_ = std::make_shared<rclcpp::Time>(this->now());
+  }
 }
 
 void VehicleCmdGate::onGateMode(GateMode::ConstSharedPtr msg)

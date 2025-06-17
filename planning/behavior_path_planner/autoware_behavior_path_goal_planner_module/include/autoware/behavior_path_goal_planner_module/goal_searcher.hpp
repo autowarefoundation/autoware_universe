@@ -27,9 +27,9 @@
 
 namespace autoware::behavior_path_planner
 {
-using autoware::universe_utils::LinearRing2d;
+using autoware_utils::LinearRing2d;
 using BasicPolygons2d = std::vector<lanelet::BasicPolygon2d>;
-using autoware::universe_utils::MultiPolygon2d;
+using autoware_utils::MultiPolygon2d;
 
 class GoalSearcher
 {
@@ -59,6 +59,8 @@ public:
     const PredictedObjects & objects) const;
 
   MultiPolygon2d getAreaPolygons() const { return area_polygons_; }
+
+  bool bus_stop_area_available() const { return !bus_stop_area_polygons_.empty(); }
 
 private:
   GoalSearcher(

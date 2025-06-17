@@ -16,7 +16,7 @@
 #define LANELET2_PLUGINS__UTILITY_FUNCTIONS_HPP_
 
 #include <autoware/route_handler/route_handler.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -44,8 +44,7 @@ bool exists(const std::vector<T> & vectors, const T & item)
   return false;
 }
 
-autoware::universe_utils::Polygon2d convert_linear_ring_to_polygon(
-  autoware::universe_utils::LinearRing2d footprint);
+autoware_utils::Polygon2d convert_linear_ring_to_polygon(autoware_utils::LinearRing2d footprint);
 void insert_marker_array(
   visualization_msgs::msg::MarkerArray * a1, const visualization_msgs::msg::MarkerArray & a2);
 

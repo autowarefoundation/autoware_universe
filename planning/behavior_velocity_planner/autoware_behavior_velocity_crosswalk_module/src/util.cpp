@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,9 +17,9 @@
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 
@@ -50,9 +50,9 @@ namespace autoware::behavior_velocity_planner
 {
 namespace bg = boost::geometry;
 using autoware::motion_utils::calcSignedArcLength;
-using autoware::universe_utils::createPoint;
-using autoware::universe_utils::Line2d;
-using autoware::universe_utils::Point2d;
+using autoware_utils::create_point;
+using autoware_utils::Line2d;
+using autoware_utils::Point2d;
 
 std::vector<std::pair<int64_t, lanelet::ConstLanelet>> getCrosswalksOnPath(
   const geometry_msgs::msg::Pose & current_pose,
@@ -144,10 +144,10 @@ getPathEndPointsOnCrosswalk(
 
   const auto compare = [&](const Point2d & p1, const Point2d & p2) {
     const auto dist_l1 =
-      calcSignedArcLength(ego_path.points, size_t(0), createPoint(p1.x(), p1.y(), ego_pos.z));
+      calcSignedArcLength(ego_path.points, size_t(0), create_point(p1.x(), p1.y(), ego_pos.z));
 
     const auto dist_l2 =
-      calcSignedArcLength(ego_path.points, size_t(0), createPoint(p2.x(), p2.y(), ego_pos.z));
+      calcSignedArcLength(ego_path.points, size_t(0), create_point(p2.x(), p2.y(), ego_pos.z));
 
     return dist_l1 < dist_l2;
   };
@@ -161,8 +161,8 @@ getPathEndPointsOnCrosswalk(
   const auto & front_intersects = intersects.front();
   const auto & back_intersects = intersects.back();
   return std::make_pair(
-    createPoint(front_intersects.x(), front_intersects.y(), ego_pos.z),
-    createPoint(back_intersects.x(), back_intersects.y(), ego_pos.z));
+    create_point(front_intersects.x(), front_intersects.y(), ego_pos.z),
+    create_point(back_intersects.x(), back_intersects.y(), ego_pos.z));
 }
 
 std::vector<geometry_msgs::msg::Point> getLinestringIntersects(
@@ -195,20 +195,20 @@ std::vector<geometry_msgs::msg::Point> getLinestringIntersects(
 
   const auto compare = [&](const Point2d & p1, const Point2d & p2) {
     const auto dist_l1 =
-      calcSignedArcLength(ego_path.points, size_t(0), createPoint(p1.x(), p1.y(), ego_pos.z));
+      calcSignedArcLength(ego_path.points, size_t(0), create_point(p1.x(), p1.y(), ego_pos.z));
 
     const auto dist_l2 =
-      calcSignedArcLength(ego_path.points, size_t(0), createPoint(p2.x(), p2.y(), ego_pos.z));
+      calcSignedArcLength(ego_path.points, size_t(0), create_point(p2.x(), p2.y(), ego_pos.z));
 
     return dist_l1 < dist_l2;
   };
 
   std::sort(intersects.begin(), intersects.end(), compare);
 
-  // convert autoware::universe_utils::Point2d to geometry::msg::Point
+  // convert autoware_utils::Point2d to geometry::msg::Point
   std::vector<geometry_msgs::msg::Point> geometry_points;
   for (const auto & p : intersects) {
-    geometry_points.push_back(createPoint(p.x(), p.y(), ego_pos.z));
+    geometry_points.push_back(create_point(p.x(), p.y(), ego_pos.z));
   }
   return geometry_points;
 }

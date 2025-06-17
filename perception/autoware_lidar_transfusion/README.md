@@ -20,15 +20,15 @@ We trained the models using <https://github.com/open-mmlab/mmdetection3d>.
 
 ### Output
 
-| Name                                   | Type                                             | Description                 |
-| -------------------------------------- | ------------------------------------------------ | --------------------------- |
-| `~/output/objects`                     | `autoware_perception_msgs::msg::DetectedObjects` | Detected objects.           |
-| `debug/cyclic_time_ms`                 | `tier4_debug_msgs::msg::Float64Stamped`          | Cyclic time (ms).           |
-| `debug/pipeline_latency_ms`            | `tier4_debug_msgs::msg::Float64Stamped`          | Pipeline latency time (ms). |
-| `debug/processing_time/preprocess_ms`  | `tier4_debug_msgs::msg::Float64Stamped`          | Preprocess (ms).            |
-| `debug/processing_time/inference_ms`   | `tier4_debug_msgs::msg::Float64Stamped`          | Inference time (ms).        |
-| `debug/processing_time/postprocess_ms` | `tier4_debug_msgs::msg::Float64Stamped`          | Postprocess time (ms).      |
-| `debug/processing_time/total_ms`       | `tier4_debug_msgs::msg::Float64Stamped`          | Total processing time (ms). |
+| Name                                   | Type                                                | Description                 |
+| -------------------------------------- | --------------------------------------------------- | --------------------------- |
+| `~/output/objects`                     | `autoware_perception_msgs::msg::DetectedObjects`    | Detected objects.           |
+| `debug/cyclic_time_ms`                 | `autoware_internal_debug_msgs::msg::Float64Stamped` | Cyclic time (ms).           |
+| `debug/pipeline_latency_ms`            | `autoware_internal_debug_msgs::msg::Float64Stamped` | Pipeline latency time (ms). |
+| `debug/processing_time/preprocess_ms`  | `autoware_internal_debug_msgs::msg::Float64Stamped` | Preprocess (ms).            |
+| `debug/processing_time/inference_ms`   | `autoware_internal_debug_msgs::msg::Float64Stamped` | Inference time (ms).        |
+| `debug/processing_time/postprocess_ms` | `autoware_internal_debug_msgs::msg::Float64Stamped` | Postprocess time (ms).      |
+| `debug/processing_time/total_ms`       | `autoware_internal_debug_msgs::msg::Float64Stamped` | Total processing time (ms). |
 
 ## Parameters
 

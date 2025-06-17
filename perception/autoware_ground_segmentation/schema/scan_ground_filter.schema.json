@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Scan Ground Filter Node Params",
+  "type": "object",
+  "definitions": {
+    "scan_ground_filter": {
+      "type": "object",
+      "properties": {
+        "global_slope_max_angle_deg": {
+          "type": "number",
+          "description": "The global angle to classify as the ground or object [deg]. A large threshold may reduce false positive of high slope road classification but it may lead to increase false negative of non-ground classification, particularly for small objects.",
+          "default": 10.0
+        },
+        "local_slope_max_angle_deg": {
+          "type": "number",
+          "description": "The local angle to classify as the ground or object [deg] when comparing with adjacent point. A small value enhance accuracy classification of object with inclined surface. This should be considered together with split_points_distance_tolerance value.",
+          "default": 13.0
+        },
+        "split_points_distance_tolerance": {
+          "type": "number",
+          "description": "The xy-distance threshold to distinguish far and near [m]",
+          "default": 0.2
+        },
+        "use_virtual_ground_point": {
+          "type": "boolean",
+          "description": "Whether to use the ground center of front wheels as the virtual ground point",
+          "default": "true"
+        },
+        "split_height_distance": {
+          "type": "number",
+          "description": "The height threshold to distinguish ground and non-ground pointcloud when comparing with adjacent points [m]. A small threshold improves classification of non-ground point, especially for high elevation resolution pointcloud lidar. However, it might cause false positive for small step-like road surface or misaligned multiple lidar configuration.",
+          "default": 0.2
+        },
+        "non_ground_height_threshold": {
+          "type": "number",
+          "description": "Height threshold of non ground objects [m] as split_height_distance and applied only for elevation_grid_mode",
+          "default": 0.2
+        },
+        "grid_size_m": {
+          "type": "number",
+          "description": "The first grid size [m], applied only for elevation_grid_mode. A large value enhances the prediction stability for ground surface. suitable for rough surface or multiple lidar configuration.",
+          "default": 0.1
+        },
+        "grid_mode_switch_radius": {
+          "type": "number",
+          "description": "The distance where grid division mode change from by distance to by vertical angle [m], applied only for elevation_grid_mode",
+          "default": 20.0
+        },
+        "gnd_grid_buffer_size": {
+          "type": "integer",
+          "description": "Number of grids using to estimate local ground slope, applied only for elevation_grid_mode",
+          "default": 4
+        },
+        "detection_range_z_max": {
+          "type": "number",
+          "description": "Maximum height of detection range [m], applied only for elevation_grid_mode",
+          "default": 2.5
+        },
+        "elevation_grid_mode": {
+          "type": "boolean",
+          "description": "Elevation grid scan mode option",
+          "default": "true"
+        },
+        "low_priority_region_x": {
+          "type": "number",
+          "description": "The non-zero x threshold in back side from which small objects detection is low priority [m]",
+          "default": -20.0
+        },
+        "center_pcl_shift": {
+          "type": "number",
+          "description": "The x-axis offset of addition LiDARs from vehicle center of mass [m], recommended to use only for additional LiDARs in elevation_grid_mode",
+          "default": 0.0
+        },
+        "radial_divider_angle_deg": {
+          "type": "number",
+          "description": "The angle which divide the whole pointcloud to sliced group [deg]",
+          "default": 1.0
+        },
+        "use_recheck_ground_cluster": {
+          "type": "boolean",
+          "description": "Enable recheck ground cluster",
+          "default": "true"
+        },
+        "recheck_start_distance": {
+          "type": "number",
+          "description": "The distance to start rechecking ground cluster [m]",
+          "default": 20.0,
+          "minimum": 0.0
+        },
+        "use_lowest_point": {
+          "type": "boolean",
+          "description": "To select lowest point for reference in recheck ground cluster, otherwise select middle point",
+          "default": "true"
+        },
+        "publish_processing_time_detail": {
+          "type": "boolean",
+          "description": "publish_processing_time_detail",
+          "default": "false"
+        }
+      },
+      "required": [
+        "global_slope_max_angle_deg",
+        "local_slope_max_angle_deg",
+        "split_points_distance_tolerance",
+        "use_virtual_ground_point",
+        "split_height_distance",
+        "non_ground_height_threshold",
+        "grid_size_m",
+        "grid_mode_switch_radius",
+        "gnd_grid_buffer_size",
+        "detection_range_z_max",
+        "elevation_grid_mode",
+        "low_priority_region_x",
+        "center_pcl_shift",
+        "radial_divider_angle_deg",
+        "use_recheck_ground_cluster",
+        "recheck_start_distance",
+        "use_lowest_point",
+        "publish_processing_time_detail"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/scan_ground_filter"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

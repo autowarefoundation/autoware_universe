@@ -14,7 +14,7 @@
 
 #include "autoware/dummy_perception_publisher/node.hpp"
 
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils_geometry/geometry.hpp"
 
 #include <pcl/filters/voxel_grid_occlusion_estimation.h>
 #include <tf2/LinearMath/Quaternion.h>
@@ -98,7 +98,7 @@ ObjectInfo::ObjectInfo(
   }
 
   const auto current_pose =
-    autoware::universe_utils::calcOffsetPose(initial_pose, move_distance, 0.0, 0.0);
+    autoware_utils_geometry::calc_offset_pose(initial_pose, move_distance, 0.0, 0.0);
 
   // calculate tf from map to moved_object
   geometry_msgs::msg::Transform ros_map2moved_object;

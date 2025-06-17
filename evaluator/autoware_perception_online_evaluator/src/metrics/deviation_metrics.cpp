@@ -14,8 +14,8 @@
 
 #include "autoware/perception_online_evaluator/metrics/deviation_metrics.hpp"
 
-#include "autoware/universe_utils/geometry/geometry.hpp"
-#include "autoware/universe_utils/geometry/pose_deviation.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/pose_deviation.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 
@@ -35,7 +35,7 @@ double calcLateralDeviation(const std::vector<Pose> & ref_path, const Pose & tar
   const size_t nearest_index =
     autoware::motion_utils::findNearestIndex(ref_path, target_pose.position);
   return std::abs(
-    autoware::universe_utils::calcLateralDeviation(ref_path[nearest_index], target_pose.position));
+    autoware_utils::calc_lateral_deviation(ref_path[nearest_index], target_pose.position));
 }
 
 double calcYawDeviation(const std::vector<Pose> & ref_path, const Pose & target_pose)
@@ -46,7 +46,7 @@ double calcYawDeviation(const std::vector<Pose> & ref_path, const Pose & target_
 
   const size_t nearest_index =
     autoware::motion_utils::findNearestIndex(ref_path, target_pose.position);
-  return std::abs(autoware::universe_utils::calcYawDeviation(ref_path[nearest_index], target_pose));
+  return std::abs(autoware_utils::calc_yaw_deviation(ref_path[nearest_index], target_pose));
 }
 
 }  // namespace metrics

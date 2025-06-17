@@ -17,7 +17,7 @@
 
 #include "interpolated_path_info.hpp"
 
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 #include <rclcpp/logger.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_object_kinematics.hpp>
@@ -27,6 +27,7 @@
 
 #include <optional>
 #include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -79,7 +80,7 @@ bool isOverTargetIndex(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
   const geometry_msgs::msg::Pose & current_pose, const size_t target_idx);
 
-std::optional<autoware::universe_utils::Polygon2d> getIntersectionArea(
+std::optional<autoware_utils::Polygon2d> getIntersectionArea(
   lanelet::ConstLanelet assigned_lane, lanelet::LaneletMapConstPtr lanelet_map_ptr);
 
 /**
@@ -120,7 +121,7 @@ void retrievePathsBackward(
  */
 std::optional<size_t> getFirstPointInsidePolygonByFootprint(
   const lanelet::CompoundPolygon3d & polygon, const InterpolatedPathInfo & interpolated_path_info,
-  const autoware::universe_utils::LinearRing2d & footprint, const double vehicle_length);
+  const autoware_utils::LinearRing2d & footprint, const double vehicle_length);
 
 /**
  * @brief find the index of the first point where vehicle footprint intersects with the given
@@ -131,10 +132,25 @@ std::optional<std::pair<
 getFirstPointInsidePolygonsByFootprint(
   const std::vector<lanelet::CompoundPolygon3d> & polygons,
   const InterpolatedPathInfo & interpolated_path_info,
-  const autoware::universe_utils::LinearRing2d & footprint, const double vehicle_length);
+  const autoware_utils::LinearRing2d & footprint, const double vehicle_length);
 
 std::vector<lanelet::CompoundPolygon3d> getPolygon3dFromLanelets(
   const lanelet::ConstLanelets & ll_vec);
+
+/*
+ * @brief along the interpolated_path, find the position where footprint approaches the lane
+ * boundary of merging_lanelet most closely, but upto the distance of min_distance_threshold
+ * @param merging_lanelet the target lanelet to which interpolated_path_info merges into
+ * @param min_distance_threshold the distance threshold that ego is allowed to approach toward the
+ * boundary
+ * @param turn_direction "left" or "right"
+ * @param search_start_idx the index which is used to start the search from
+ */
+std::optional<size_t> find_maximum_footprint_overshoot_position(
+  const InterpolatedPathInfo & interpolated_path_info,
+  const autoware_utils::LinearRing2d & local_footprint,
+  const lanelet::ConstLanelet & merging_lanelet, const double min_distance_threshold,
+  const std::string & turn_direction, const size_t search_start_idx);
 
 }  // namespace autoware::behavior_velocity_planner::util
 

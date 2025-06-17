@@ -14,8 +14,8 @@
 
 #include "autoware/behavior_path_planner_common/utils/path_shifter/path_shifter.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <autoware_planning_msgs/msg/detail/trajectory__struct.hpp>
 
@@ -350,8 +350,8 @@ TEST_F(PathShifterTest, generate)
   // Condition: next index of start index would be end index
   std::vector<ShiftLine> lines;
   ShiftLine line;
-  line.start.position = universe_utils::createPoint(0.0, 0.0, 0.0);
-  line.end.position = universe_utils::createPoint(1.1, 0.0, 0.0);
+  line.start.position = autoware_utils::create_point(0.0, 0.0, 0.0);
+  line.end.position = autoware_utils::create_point(1.1, 0.0, 0.0);
   lines.push_back(line);
   path_shifter_.setShiftLines(lines);
   EXPECT_FALSE(path_shifter_.generate(&shifted_path));

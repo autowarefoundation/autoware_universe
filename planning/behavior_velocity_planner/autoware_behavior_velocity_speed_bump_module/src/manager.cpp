@@ -15,9 +15,9 @@
 #include "manager.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware/universe_utils/ros/parameter.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/speed_bump.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
+#include <autoware_utils/ros/parameter.hpp>
 
 #include <tf2/utils.h>
 
@@ -30,27 +30,28 @@
 
 namespace autoware::behavior_velocity_planner
 {
-using autoware::universe_utils::getOrDeclareParameter;
+using autoware_utils::get_or_declare_parameter;
 using lanelet::autoware::SpeedBump;
 
 SpeedBumpModuleManager::SpeedBumpModuleManager(rclcpp::Node & node)
 : SceneModuleManagerInterface(node, getModuleName())
 {
   std::string ns(SpeedBumpModuleManager::getModuleName());
-  planner_param_.slow_start_margin = getOrDeclareParameter<double>(node, ns + ".slow_start_margin");
-  planner_param_.slow_end_margin = getOrDeclareParameter<double>(node, ns + ".slow_end_margin");
-  planner_param_.print_debug_info = getOrDeclareParameter<bool>(node, ns + ".print_debug_info");
+  planner_param_.slow_start_margin =
+    get_or_declare_parameter<double>(node, ns + ".slow_start_margin");
+  planner_param_.slow_end_margin = get_or_declare_parameter<double>(node, ns + ".slow_end_margin");
+  planner_param_.print_debug_info = get_or_declare_parameter<bool>(node, ns + ".print_debug_info");
 
   // limits for speed bump height and slow down speed
   ns += ".speed_calculation";
   planner_param_.speed_calculation_min_height =
-    static_cast<float>(getOrDeclareParameter<double>(node, ns + ".min_height"));
+    static_cast<float>(get_or_declare_parameter<double>(node, ns + ".min_height"));
   planner_param_.speed_calculation_max_height =
-    static_cast<float>(getOrDeclareParameter<double>(node, ns + ".max_height"));
+    static_cast<float>(get_or_declare_parameter<double>(node, ns + ".max_height"));
   planner_param_.speed_calculation_min_speed =
-    static_cast<float>(getOrDeclareParameter<double>(node, ns + ".min_speed"));
+    static_cast<float>(get_or_declare_parameter<double>(node, ns + ".min_speed"));
   planner_param_.speed_calculation_max_speed =
-    static_cast<float>(getOrDeclareParameter<double>(node, ns + ".max_speed"));
+    static_cast<float>(get_or_declare_parameter<double>(node, ns + ".max_speed"));
 }
 
 void SpeedBumpModuleManager::launchNewModules(

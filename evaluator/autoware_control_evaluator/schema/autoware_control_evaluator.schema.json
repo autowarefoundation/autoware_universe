@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for Autoware Control Evaluator Nodes",
+  "type": "object",
+  "definitions": {
+    "autoware_control_evaluator": {
+      "type": "object",
+      "properties": {
+        "planning_factor_metrics": {
+          "description": "metrics' parameters for planning_factor evaluation",
+          "type": "object",
+          "properties": {
+            "topic_prefix": {
+              "description": "prefix of the topics to subscribe to",
+              "type": "string",
+              "default": "/planning/planning_factors/"
+            },
+            "stop_deviation": {
+              "description": "stop_deviation metrics' parameters",
+              "type": "object",
+              "properties": {
+                "module_list": {
+                  "description": "list of modules' name to evaluate",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "default": [
+                    "blind_spot",
+                    "crosswalk",
+                    "detection_area",
+                    "intersection",
+                    "merge_from_private",
+                    "no_drivable_lane",
+                    "no_stopping_area",
+                    "stop_line",
+                    "traffic_light",
+                    "virtual_traffic_light",
+                    "walkway"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "object_metrics": {
+          "description": "metrics' parameters for object-related metrics",
+          "type": "object",
+          "properties": {
+            "distance_filter_thr_m": {
+              "description": "maximum distance to the predicted objects to be considered",
+              "type": "number",
+              "default": 30.0
+            }
+          }
+        }
+      },
+      "required": ["planning_factor_metrics", "object_metrics"]
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/autoware_control_evaluator"
+        }
+      },
+      "required": ["ros__parameters"]
+    }
+  },
+  "required": ["/**"]
+}

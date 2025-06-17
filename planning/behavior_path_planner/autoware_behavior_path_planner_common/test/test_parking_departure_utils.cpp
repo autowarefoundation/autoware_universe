@@ -176,7 +176,7 @@ TEST(BehaviorPathPlanningParkingDepartureUtil, initializeCollisionCheckDebugMap)
   using autoware::behavior_path_planner::utils::parking_departure::initializeCollisionCheckDebugMap;
 
   autoware::behavior_path_planner::CollisionCheckDebugMap debug_map;
-  auto uuid1 = autoware::universe_utils::toBoostUUID(autoware::universe_utils::generateUUID());
+  auto uuid1 = autoware_utils::to_boost_uuid(autoware_utils::generate_uuid());
   autoware::behavior_path_planner::utils::path_safety_checker::CollisionCheckDebug debug_info;
   debug_map[uuid1] = debug_info;
 

@@ -61,7 +61,7 @@ void BlindSpotModuleManager::launchNewModules(
     registerModule(std::make_shared<BlindSpotModule>(
       module_id, lane_id, turn_direction, planner_data_, planner_param_,
       logger_.get_child("blind_spot_module"), clock_, time_keeper_, planning_factor_interface_));
-    generateUUID(module_id);
+    generate_uuid(module_id);
     updateRTCStatus(
       getUUID(module_id), true, State::WAITING_FOR_EXECUTION, std::numeric_limits<double>::lowest(),
       path.header.stamp);

@@ -41,12 +41,12 @@ set(${PROJECT_NAME}_lib
   lib/tracker/model/tracker_base.cpp
   lib/tracker/model/vehicle_tracker.cpp
   lib/tracker/model/multiple_vehicle_tracker.cpp
-  lib/tracker/model/bicycle_tracker.cpp
   lib/tracker/model/pedestrian_tracker.cpp
   lib/tracker/model/pedestrian_and_bicycle_tracker.cpp
   lib/tracker/model/unknown_tracker.cpp
   lib/tracker/model/pass_through_tracker.cpp
   lib/uncertainty/uncertainty_processor.cpp
+  lib/tracker/util/adaptive_threshold_cache.cpp
 )
 ament_auto_add_library(${PROJECT_NAME} SHARED
   ${${PROJECT_NAME}_src}

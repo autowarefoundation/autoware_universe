@@ -27,8 +27,10 @@ namespace autoware::multi_object_tracker
 {
 
 Odometry::Odometry(
-  rclcpp::Node & node, const std::string & world_frame_id, bool enable_odometry_uncertainty)
+  rclcpp::Node & node, const std::string & world_frame_id, const std::string & ego_frame_id,
+  bool enable_odometry_uncertainty)
 : node_(node),
+  ego_frame_id_(ego_frame_id),
   world_frame_id_(world_frame_id),
   tf_buffer_(node_.get_clock()),
   tf_listener_(tf_buffer_),
@@ -157,20 +159,23 @@ std::optional<types::DynamicObjectList> Odometry::transformObjects(
       tf2::fromMsg(*ros_target2objects_world, tf_target2objects_world);
     }
     for (auto & object : output_objects.objects) {
-      auto & pose_with_cov = object.kinematics.pose_with_covariance;
-      tf2::fromMsg(pose_with_cov.pose, tf_objects_world2objects);
+      auto & pose = object.pose;
+      auto & pose_cov = object.pose_covariance;
+      tf2::fromMsg(pose, tf_objects_world2objects);
       tf_target2objects = tf_target2objects_world * tf_objects_world2objects;
       // transform pose, frame difference and object pose
-      tf2::toMsg(tf_target2objects, pose_with_cov.pose);
+      tf2::toMsg(tf_target2objects, pose);
       // transform covariance, only the frame difference
-      pose_with_cov.covariance =
-        tf2::transformCovariance(pose_with_cov.covariance, tf_target2objects_world);
+      pose_cov = tf2::transformCovariance(pose_cov, tf_target2objects_world);
     }
   }
   // Add the odometry uncertainty to the object uncertainty
   if (enable_odometry_uncertainty_) {
     // Create a modeled odometry message
     const auto odometry = getOdometryFromTf(input_objects.header.stamp);
+    if (!odometry) {
+      return std::nullopt;
+    }
     // Add the odometry uncertainty to the object uncertainty
     uncertainty::addOdometryUncertainty(odometry.value(), output_objects);
   }

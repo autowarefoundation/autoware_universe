@@ -21,7 +21,7 @@ jobs:
   build-and-test-differential-arm64:
     needs: make-sure-label-is-present
     if: ${{ needs.make-sure-label-is-present.outputs.result == 'true' }}
-    runs-on: codebuild-autoware-us-east-1-${{ github.run_id }}-${{ github.run_attempt }}-arm-3.0-large
+    runs-on: [self-hosted, Linux, ARM64]
     container: ${{ matrix.container }}${{ matrix.container-suffix }}
     strategy:
       fail-fast: false
@@ -68,7 +68,7 @@ jobs:
         shell: bash
 
       - name: Prepare build_depends.repos file (main branch)
-        if: ${{ github.event.pull_request.base.ref == 'main' }}
+        if: ${{ github.event.pull_request.base.ref != 'humble' }}
         uses: ./.github/actions/combine-repos-action
         with:
           base_file: build_depends_humble.repos
