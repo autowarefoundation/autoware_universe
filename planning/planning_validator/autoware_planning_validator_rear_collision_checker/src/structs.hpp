@@ -86,25 +86,25 @@ struct PointCloudObject
 
   lanelet::ConstLanelet furthest_lane;
 
-  double tracking_duration;
+  double tracking_duration{0.0};
 
-  double absolute_distance;
+  double absolute_distance{0.0};
 
-  double relative_distance;
+  double relative_distance{0.0};
 
-  double relative_distance_with_delay_compensation;
+  double relative_distance_with_delay_compensation{0.0};
 
-  double rss_distance;
+  double rss_distance{0.0};
 
-  double velocity;
+  double velocity{0.0};
 
-  double moving_time;
+  double moving_time{0.0};
 
-  bool safe;
+  bool safe{true};
 
-  bool ignore;
+  bool ignore{false};
 
-  bool is_vru;
+  bool is_vru{false};
 
   std::string detail{""};
 };

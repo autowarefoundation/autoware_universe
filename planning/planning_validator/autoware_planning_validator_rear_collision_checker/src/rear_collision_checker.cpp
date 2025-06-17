@@ -866,7 +866,7 @@ void RearCollisionChecker::publish_marker(const DebugData & debug) const
     ss << "SAFE:" << debug.is_safe << "\n";
     ss << "TURN:" << magic_enum::enum_name(debug.turn_behavior) << "\n";
     ss << "SHIFT:" << magic_enum::enum_name(debug.shift_behavior) << "\n";
-    ss << "INFO:" << debug.text.c_str() << "\n";
+    ss << "INFO:" << debug.text << "\n";
     ss << "TRACKING OBJECTS:" << debug.pointcloud_objects.size() << "\n";
     ss << "PC NUM:";
     for (const auto num : debug.pointcloud_nums) {

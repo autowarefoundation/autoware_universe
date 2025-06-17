@@ -54,7 +54,7 @@ private:
 
   auto get_pointcloud_objects(
     const lanelet::ConstLanelets & current_lanes, const Behavior & shift_behavior,
-    const Behavior & turn_behavior, DebugData & detection_areas) -> PointCloudObjects;
+    const Behavior & turn_behavior, DebugData & debug) -> PointCloudObjects;
 
   auto get_pointcloud_objects_on_adjacent_lane(
     const lanelet::ConstLanelets & current_lanes, const Behavior & shift_behavior,
