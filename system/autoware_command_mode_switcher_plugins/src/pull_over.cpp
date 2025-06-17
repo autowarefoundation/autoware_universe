@@ -12,23 +12,17 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#ifndef SWITCHERS__REMOTE_HPP_
-#define SWITCHERS__REMOTE_HPP_
-
-#include "common/plugin.hpp"
-
-#include <string>
+#include "pull_over.hpp"
 
 namespace autoware::command_mode_switcher
 {
 
-class RemoteSwitcher : public SwitcherPlugin
+void PullOverSwitcher::initialize()
 {
-public:
-  std::string name() const override { return "remote"; }
-  std::string source() const override { return "remote"; }
-};
+}
 
 }  // namespace autoware::command_mode_switcher
 
-#endif  // SWITCHERS__REMOTE_HPP_
+#include <pluginlib/class_list_macros.hpp>
+PLUGINLIB_EXPORT_CLASS(
+  autoware::command_mode_switcher::PullOverSwitcher, autoware::command_mode_switcher::CommandPlugin)

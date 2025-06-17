@@ -12,14 +12,26 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "autonomous.hpp"
+#ifndef COMMON__COMMAND_CONTAINER_HPP_
+#define COMMON__COMMAND_CONTAINER_HPP_
+
+#include "autoware_command_mode_switcher/command_plugin.hpp"
+
+#include <tier4_system_msgs/msg/command_mode_status_item.hpp>
+
+#include <memory>
 
 namespace autoware::command_mode_switcher
 {
 
+struct Command
+{
+  explicit Command(std::shared_ptr<CommandPlugin> plugin);
+
+  std::shared_ptr<CommandPlugin> plugin;
+  tier4_system_msgs::msg::CommandModeStatusItem status;
+};
+
 }  // namespace autoware::command_mode_switcher
 
-#include <pluginlib/class_list_macros.hpp>
-PLUGINLIB_EXPORT_CLASS(
-  autoware::command_mode_switcher::AutonomousSwitcher,
-  autoware::command_mode_switcher::SwitcherPlugin)
+#endif  // COMMON__COMMAND_CONTAINER_HPP_

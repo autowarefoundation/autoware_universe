@@ -12,23 +12,25 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#ifndef SWITCHERS__PULL_OVER_HPP_
-#define SWITCHERS__PULL_OVER_HPP_
+#ifndef STOP_HPP_
+#define STOP_HPP_
 
-#include "common/plugin.hpp"
-
-#include <string>
+#include <autoware_command_mode_switcher/command_plugin.hpp>
+#include <autoware_command_mode_types/modes.hpp>
+#include <autoware_command_mode_types/sources.hpp>
 
 namespace autoware::command_mode_switcher
 {
 
-class PullOverSwitcher : public SwitcherPlugin
+class StopSwitcher : public CommandPlugin
 {
 public:
-  std::string name() const override { return "pull_over"; }
-  std::string source() const override { return "main"; }
+  uint16_t mode() const override { return autoware::command_mode_types::modes::stop; }
+  uint16_t source() const override { return autoware::command_mode_types::sources::stop; }
+  bool autoware_control() const override { return true; }
+  void initialize() override;
 };
 
 }  // namespace autoware::command_mode_switcher
 
-#endif  // SWITCHERS__PULL_OVER_HPP_
+#endif  // STOP_HPP_

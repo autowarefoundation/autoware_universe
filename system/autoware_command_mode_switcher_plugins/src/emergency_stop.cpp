@@ -17,9 +17,13 @@
 namespace autoware::command_mode_switcher
 {
 
+void EmergencyStopSwitcher::initialize()
+{
+}
+
 }  // namespace autoware::command_mode_switcher
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
   autoware::command_mode_switcher::EmergencyStopSwitcher,
-  autoware::command_mode_switcher::SwitcherPlugin)
+  autoware::command_mode_switcher::CommandPlugin)

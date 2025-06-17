@@ -12,33 +12,21 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#ifndef COMMON__CONTEXT_HPP_
-#define COMMON__CONTEXT_HPP_
-
-#include <rclcpp/rclcpp.hpp>
-
-#include <tier4_system_msgs/srv/select_command_source.hpp>
-
-#include <string>
-#include <vector>
+#include "autonomous.hpp"
 
 namespace autoware::command_mode_switcher
 {
 
-class SwitcherContext
+void AutonomousSwitcher::initialize()
 {
-public:
-  using SelectCommandSource = tier4_system_msgs::srv::SelectCommandSource;
-
-  explicit SwitcherContext(rclcpp::Node & node);
-  bool select_source(const std::string & source);
-
-private:
-  rclcpp::Node & node_;
-  rclcpp::CallbackGroup::SharedPtr group_;
-  rclcpp::Client<SelectCommandSource>::SharedPtr cli_select_;
-};
+  sub_transition_completed_ = node_->create_subscription<ModeChangeAvailable>(
+    "~/command_mode/transition/completed", rclcpp::QoS(1),
+    [this](const ModeChangeAvailable & msg) { transition_completed_ = msg.available; });
+}
 
 }  // namespace autoware::command_mode_switcher
 
-#endif  // COMMON__CONTEXT_HPP_
+#include <pluginlib/class_list_macros.hpp>
+PLUGINLIB_EXPORT_CLASS(
+  autoware::command_mode_switcher::AutonomousSwitcher,
+  autoware::command_mode_switcher::CommandPlugin)

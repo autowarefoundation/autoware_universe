@@ -12,13 +12,17 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "stop.hpp"
+#include "local.hpp"
 
 namespace autoware::command_mode_switcher
 {
+
+void LocalSwitcher::initialize()
+{
+}
 
 }  // namespace autoware::command_mode_switcher
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::command_mode_switcher::StopSwitcher, autoware::command_mode_switcher::SwitcherPlugin)
+  autoware::command_mode_switcher::LocalSwitcher, autoware::command_mode_switcher::CommandPlugin)

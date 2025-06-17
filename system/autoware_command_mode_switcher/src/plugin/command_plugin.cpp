@@ -12,23 +12,14 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#ifndef SWITCHERS__AUTONOMOUS_HPP_
-#define SWITCHERS__AUTONOMOUS_HPP_
-
-#include "common/plugin.hpp"
-
-#include <string>
+#include <autoware_command_mode_switcher/command_plugin.hpp>
 
 namespace autoware::command_mode_switcher
 {
 
-class AutonomousSwitcher : public SwitcherPlugin
+SourceState CommandPlugin::update_source_state(bool request)
 {
-public:
-  std::string name() const override { return "autonomous"; }
-  std::string source() const override { return "main"; }
-};
+  return SourceState{request, !request};
+}
 
 }  // namespace autoware::command_mode_switcher
-
-#endif  // SWITCHERS__AUTONOMOUS_HPP_

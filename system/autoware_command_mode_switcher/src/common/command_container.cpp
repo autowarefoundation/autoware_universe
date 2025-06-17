@@ -12,14 +12,14 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#include "comfortable_stop.hpp"
+#include "command_container.hpp"
 
 namespace autoware::command_mode_switcher
 {
 
-}  // namespace autoware::command_mode_switcher
+Command::Command(std::shared_ptr<CommandPlugin> plugin) : plugin(plugin)
+{
+  status.mode = plugin->mode();
+}
 
-#include <pluginlib/class_list_macros.hpp>
-PLUGINLIB_EXPORT_CLASS(
-  autoware::command_mode_switcher::ComfortableStopSwitcher,
-  autoware::command_mode_switcher::SwitcherPlugin)
+}  // namespace autoware::command_mode_switcher
