@@ -28,9 +28,6 @@
   <depend>autoware_utils_system</depend>
   <depend>geometry_msgs</depend>
   <depend>lanelet2_core</depend>
-  <depend>lanelet2_extension</depend>
-  <depend>lanelet2_routing</depend>
-  <depend>lanelet2_traffic_rules</depend>
   <depend>libgoogle-glog-dev</depend>
   <depend>nav_msgs</depend>
   <depend>rclcpp</depend>

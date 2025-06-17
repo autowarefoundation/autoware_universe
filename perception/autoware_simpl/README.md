@@ -18,6 +18,7 @@ The implementation bases on SIMPL [1] [2] work. It uses TensorRT library for dat
 
 - $P_{score}\in R^{N\times M}$: Predicted scores for each agent and mode.
 - $P_{trajectory}\in R^{N\times M\times T_{future}\times D_{trajectory}}$: Predicted trajectories for each agent and mode.
+  - Where, $D_{trajectory}$ is $(x, y, v_x, v_y)$ in the agent local coordinate frame.
 
 ## Inputs / Outputs
 
@@ -26,7 +27,7 @@ The implementation bases on SIMPL [1] [2] work. It uses TensorRT library for dat
 | Name                            | Type                                            | Description           |
 | ------------------------------- | ----------------------------------------------- | --------------------- |
 | `~/input/objects`               | `autoware_perception_msgs::msg::TrackedObjects` | Input tracked agents. |
-| `~/input/vector_map`            | `autoware_map_msgs::msg::LeneletMapBin`         | Input vector map.     |
+| `~/input/vector_map`            | `autoware_map_msgs::msg::LaneletMapBin`         | Input vector map.     |
 | `/localization/kinematic_state` | `nav_msgs::msg::Odometry`                       | Ego vehicle odometry. |
 
 ### Outputs
