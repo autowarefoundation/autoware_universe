@@ -14,6 +14,8 @@
 
 #include "livox_tag_filter_node.hpp"
 
+#include "autoware/point_types/types.hpp"
+
 #include <pcl_conversions/pcl_conversions.h>
 
 #include <memory>
@@ -36,6 +38,7 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(
 
 namespace autoware::livox_tag_filter
 {
+using autoware::point_types::PointXYZIRC;
 LivoxTagFilterNode::LivoxTagFilterNode(const rclcpp::NodeOptions & node_options)
 : Node("livox_tag_filter", node_options)
 {
@@ -79,10 +82,24 @@ void LivoxTagFilterNode::onPointCloud(const sensor_msgs::msg::PointCloud2::Const
 
     tag_filtered_points.push_back(p);
   }
+  // convert pointcloud type to xyzirc
+  pcl::PointCloud<PointXYZIRC>::Ptr tag_filtered_points_xyzirc =
+    std::make_shared<pcl::PointCloud<PointXYZIRC>>();
+
+  tag_filtered_points_xyzirc->resize(tag_filtered_points.size());
+  for (size_t i = 0; i < tag_filtered_points.size(); ++i) {
+    const auto & p = tag_filtered_points[i];
+    (*tag_filtered_points_xyzirc)[i].x = p.x;
+    (*tag_filtered_points_xyzirc)[i].y = p.y;
+    (*tag_filtered_points_xyzirc)[i].z = p.z;
+    (*tag_filtered_points_xyzirc)[i].intensity = p.intensity;
+    (*tag_filtered_points_xyzirc)[i].return_type = 0;
+    (*tag_filtered_points_xyzirc)[i].channel = 0;
+  }
 
   // Publish ROS message
   auto tag_filtered_msg_ptr = std::make_unique<sensor_msgs::msg::PointCloud2>();
-  pcl::toROSMsg(tag_filtered_points, *tag_filtered_msg_ptr);
+  pcl::toROSMsg(*tag_filtered_points_xyzirc, *tag_filtered_msg_ptr);
   tag_filtered_msg_ptr->header = msg->header;
 
   pub_pointcloud_->publish(std::move(tag_filtered_msg_ptr));
