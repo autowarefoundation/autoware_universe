@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
-    intersection_collision_checker:
+    icc_parameters:
       enable: true
       detection_range: 50.0 # [m]
       ttc_threshold: 1.0 # [s]

@@ -54,8 +54,6 @@ public:
   std::string get_module_name() const override { return module_name_; };
 
 private:
-  void setup_parameters(rclcpp::Node & node);
-
   [[nodiscard]] EgoTrajectory get_ego_trajectory() const;
 
   [[nodiscard]] Direction get_turn_direction(
@@ -83,7 +81,9 @@ private:
     const rclcpp::Time & time_stamp, const PointCloud::Ptr & filtered_point_cloud,
     const TargetLanelet & target_lanelet) const;
 
-  CollisionCheckerParams params_;
+  std::unique_ptr<intersection_collision_checker_node::ParamListener> param_listener_;
+  intersection_collision_checker_node::Params params_;
+
   PCDObjectsMap history_;
   std::optional<rclcpp::Time> last_invalid_time_;
 };

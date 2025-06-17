@@ -100,9 +100,10 @@ std::optional<std::pair<size_t, size_t>> get_overlap_index(
 
 void set_right_turn_target_lanelets(
   const EgoTrajectory & ego_traj, const RouteHandler & route_handler,
-  const CollisionCheckerParams & params, CollisionCheckerLanelets & lanelets,
+  const intersection_collision_checker_node::Params & params, CollisionCheckerLanelets & lanelets,
   const double time_horizon)
 {
+  const auto & p = params.icc_parameters;
   autoware_utils::LineString2d trajectory_ls;
   for (const auto & p : ego_traj.front_traj) {
     trajectory_ls.emplace_back(p.pose.position.x, p.pose.position.y);
@@ -114,15 +115,15 @@ void set_right_turn_target_lanelets(
              lanelet::AttributeValueString::Road;
   };
 
-  auto ignore_turning = [&params](const lanelet::ConstLanelet & ll) {
+  auto ignore_turning = [&p](const lanelet::ConstLanelet & ll) {
     if (!ll.hasAttribute("turn_direction")) return false;
     if (ll.attribute("turn_direction") == "straight") return false;
-    return !params.right_turn.check_turning_lanes;
+    return !p.right_turn.check_turning_lanes;
   };
 
   auto extend_lanelet =
     [&](const lanelet::ConstLanelet & ll, const geometry_msgs::msg::Pose & overlap_point) {
-      const auto distance_th = params.detection_range;
+      const auto distance_th = p.detection_range;
       lanelet::ConstLanelets extended_lanelets{ll};
       auto current_arc_length =
         lanelet::utils::getArcCoordinates(extended_lanelets, overlap_point).length;
@@ -167,7 +168,7 @@ void set_right_turn_target_lanelets(
 
 void set_left_turn_target_lanelets(
   const EgoTrajectory & ego_traj, const RouteHandler & route_handler,
-  const CollisionCheckerParams & params, CollisionCheckerLanelets & lanelets,
+  const intersection_collision_checker_node::Params & params, CollisionCheckerLanelets & lanelets,
   const double time_horizon)
 {
   std::optional<lanelet::ConstLanelet> turn_lanelet;
@@ -193,15 +194,17 @@ void set_left_turn_target_lanelets(
     trajectory_ls.emplace_back(p.pose.position.x, p.pose.position.y);
   }
 
-  auto ignore_turning = [&params](const lanelet::ConstLanelet & ll) {
+  const auto & p = params.icc_parameters;
+
+  auto ignore_turning = [&p](const lanelet::ConstLanelet & ll) {
     if (!ll.hasAttribute("turn_direction")) return false;
     if (ll.attribute("turn_direction") == "straight") return false;
-    return !params.left_turn.check_turning_lanes;
+    return !p.left_turn.check_turning_lanes;
   };
 
   auto extend_lanelet =
     [&](const lanelet::ConstLanelet & ll, const geometry_msgs::msg::Pose & overlap_point) {
-      const auto distance_th = params.detection_range;
+      const auto distance_th = p.detection_range;
       lanelet::ConstLanelets extended_lanelets{ll};
       auto current_arc_length =
         lanelet::utils::getArcCoordinates(extended_lanelets, overlap_point).length;

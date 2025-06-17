@@ -16,6 +16,7 @@
 #define AUTOWARE__PLANNING_VALIDATOR_INTERSECTION_COLLISION_CHECKER__TYPES_HPP_
 
 #include <autoware/route_handler/route_handler.hpp>
+#include <autoware_planning_validator_intersection_collision_checker/intersection_collision_checker_node_parameters.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory.hpp>
@@ -91,52 +92,6 @@ struct PCDObject
 };
 
 using PCDObjectsMap = std::unordered_map<lanelet::Id, PCDObject>;
-
-struct DirectionCheckFlags
-{
-  bool enable{};
-  bool check_oncoming_lanes{};
-  bool check_crossing_lanes{};
-  bool check_turning_lanes{};
-};
-
-struct PointcloudParams
-{
-  double height_buffer{};
-  double min_height{};
-  double observation_time{};
-
-  struct VoxelGridFilterParams
-  {
-    double x{};
-    double y{};
-    double z{};
-  } voxel_grid_filter;
-
-  struct ClusteringParams
-  {
-    double tolerance{};
-    double min_height{};
-    int min_size{};
-    int max_size{};
-  } clustering;
-};
-
-struct CollisionCheckerParams
-{
-  bool enable{};
-  bool is_critical{};
-  double detection_range{};
-  double ttc_threshold{};
-  double ego_deceleration{};
-  double min_time_horizon{};
-  double timeout{};
-
-  DirectionCheckFlags right_turn;
-  DirectionCheckFlags left_turn;
-
-  PointcloudParams pointcloud;
-};
 
 }  // namespace autoware::planning_validator
 
