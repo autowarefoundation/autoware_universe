@@ -68,7 +68,7 @@ void StopModeOperator::publish_trigger_command()
 
   HazardLightsCommand hazard_lights;
   hazard_lights.stamp = stamp;
-  hazard_lights.command = HazardLightsCommand::ENABLE;
+  hazard_lights.command = HazardLightsCommand::DISABLE;
   pub_hazard_lights_->publish(hazard_lights);
 }
 
