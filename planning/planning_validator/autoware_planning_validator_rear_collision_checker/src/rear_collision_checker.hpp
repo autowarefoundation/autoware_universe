@@ -43,9 +43,9 @@ private:
 
   void fill_velocity(PointCloudObject & pointcloud_object);
 
-  auto filter_pointcloud(DebugData & debug_data) const -> PointCloud::Ptr;
+  auto filter_pointcloud(DebugData & debug) const -> PointCloud::Ptr;
 
-  auto get_clustered_pointcloud(const PointCloud::Ptr in, DebugData & debug_data) const
+  auto get_clustered_pointcloud(const PointCloud::Ptr in, DebugData & debug) const
     -> PointCloud::Ptr;
 
   auto get_pointcloud_object(

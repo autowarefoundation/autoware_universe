@@ -225,8 +225,7 @@ void RearCollisionChecker::fill_velocity(PointCloudObject & pointcloud_object)
   update_history(pointcloud_object);
 }
 
-auto RearCollisionChecker::filter_pointcloud([[maybe_unused]] DebugData & debug) const
-  -> PointCloud::Ptr
+auto RearCollisionChecker::filter_pointcloud(DebugData & debug) const -> PointCloud::Ptr
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -244,7 +243,7 @@ auto RearCollisionChecker::filter_pointcloud([[maybe_unused]] DebugData & debug)
   }
 
   {
-    autoware_utils::ScopedTimeTrack st("crop_x", *time_keeper_);
+    autoware_utils::ScopedTimeTrack scoped_time_track("crop_x", *time_keeper_);
 
     pcl::PassThrough<pcl::PointXYZ> filter;
     filter.setInputCloud(output);
@@ -259,7 +258,7 @@ auto RearCollisionChecker::filter_pointcloud([[maybe_unused]] DebugData & debug)
   }
 
   {
-    autoware_utils::ScopedTimeTrack st("crop_z", *time_keeper_);
+    autoware_utils::ScopedTimeTrack scoped_time_track("crop_z", *time_keeper_);
 
     pcl::PassThrough<pcl::PointXYZ> filter;
     filter.setInputCloud(output);
@@ -275,7 +274,7 @@ auto RearCollisionChecker::filter_pointcloud([[maybe_unused]] DebugData & debug)
   }
 
   {
-    autoware_utils::ScopedTimeTrack st("transform", *time_keeper_);
+    autoware_utils::ScopedTimeTrack scoped_time_track("transform", *time_keeper_);
 
     geometry_msgs::msg::TransformStamped transform_stamped;
     try {
@@ -292,7 +291,7 @@ auto RearCollisionChecker::filter_pointcloud([[maybe_unused]] DebugData & debug)
   }
 
   {
-    autoware_utils::ScopedTimeTrack st("voxel_grid_filter", *time_keeper_);
+    autoware_utils::ScopedTimeTrack scoped_time_track("voxel_grid_filter", *time_keeper_);
 
     pcl::VoxelGrid<pcl::PointXYZ> filter;
     filter.setInputCloud(output);
