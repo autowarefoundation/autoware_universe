@@ -80,10 +80,11 @@ lanelet::Optional<std::string> to_subtype(const lanelet::ConstLineString3d & lin
 
 archetype::MapLabel to_boundary_label(const lanelet::ConstLineString3d & linestring)
 {
-  if (auto t = to_type(linestring); t && MAP_LABEL_MAPPING.count(*t)) {
-    return MAP_LABEL_MAPPING.at(*t);
-  } else if (auto t = to_subtype(linestring); t && MAP_LABEL_MAPPING.count(*t)) {
-    return MAP_LABEL_MAPPING.at(*t);
+  if (auto t_type = to_type(linestring); t_type && MAP_LABEL_MAPPING.count(*t_type)) {
+    return MAP_LABEL_MAPPING.at(*t_type);
+  } else if (auto t_subtype = to_subtype(linestring);
+             t_subtype && MAP_LABEL_MAPPING.count(*t_subtype)) {
+    return MAP_LABEL_MAPPING.at(*t_subtype);
   } else {
     return archetype::MapLabel::UNKNOWN;
   }
