@@ -40,9 +40,12 @@ private:
   using CommandSourceStatus = tier4_system_msgs::msg::CommandSourceStatus;
   using SelectCommandSource = tier4_system_msgs::srv::SelectCommandSource;
 
+  void on_timer();
   void on_select_source(
     const SelectCommandSource::Request::SharedPtr req,
     const SelectCommandSource::Response::SharedPtr res);
+
+  rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Publisher<CommandSourceStatus>::SharedPtr pub_status_;
   rclcpp::Service<SelectCommandSource>::SharedPtr srv_select_;
 

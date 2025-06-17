@@ -14,7 +14,7 @@
 
 #include "control_command_gate.hpp"
 
-#include "command/emergency.hpp"
+#include "command/builtin.hpp"
 #include "command/filter.hpp"
 #include "command/publisher.hpp"
 #include "command/source.hpp"
@@ -63,7 +63,7 @@ ControlCmdGate::ControlCmdGate(const rclcpp::NodeOptions & options)
     pub_status_->publish(status);
   };
 
-  selector_ = std::make_unique<CommandSelector>(on_change_source);
+  selector_ = std::make_unique<CommandSelector>(get_logger(), on_change_source);
   diag_.setHardwareID("none");
 
   TimeoutDiag::Params params;
@@ -122,7 +122,16 @@ ControlCmdGate::ControlCmdGate(const rclcpp::NodeOptions & options)
     if (!selector_->select(initial_source)) {
       throw std::invalid_argument("invalid initial source: " + initial_source);
     }
+    selector_->select_builtin_source(builtin);
   }
+
+  const auto period = rclcpp::Rate(declare_parameter<double>("rate")).period();
+  timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { on_timer(); });
+}
+
+void ControlCmdGate::on_timer()
+{
+  selector_->update();
 }
 
 void ControlCmdGate::on_select_source(

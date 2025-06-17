@@ -18,6 +18,8 @@
 #include "interface.hpp"
 #include "source.hpp"
 
+#include <rclcpp/logger.hpp>
+
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -30,13 +32,18 @@ class CommandSelector
 public:
   using SourceChangeCallback = std::function<void(const std::string &)>;
 
-  explicit CommandSelector(SourceChangeCallback on_change_source);
+  CommandSelector(const rclcpp::Logger & logger, SourceChangeCallback on_change_source);
   void add_source(std::unique_ptr<CommandSource> && source);
   void set_output(std::unique_ptr<CommandOutput> && output);
+  void update();
   bool select(const std::string & name);
+  void select_builtin_source(const std::string & name) { builtin_source_ = name; }
 
 private:
+  rclcpp::Logger logger_;
   SourceChangeCallback on_change_source_;
+  std::string builtin_source_;
+  std::string current_source_;
   std::unordered_map<std::string, std::unique_ptr<CommandSource>> sources_;
   std::unique_ptr<CommandOutput> output_;
 };

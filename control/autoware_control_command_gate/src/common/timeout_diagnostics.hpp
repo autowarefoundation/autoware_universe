@@ -33,8 +33,11 @@ public:
   };
 
 public:
+  using DiagnosticStatus = diagnostic_msgs::msg::DiagnosticStatus;
+
   TimeoutDiag(const Params & params, const rclcpp::Clock & clock, const std::string & name);
   void update();
+  bool is_error() const { return level_ >= DiagnosticStatus::ERROR; }
 
 private:
   void run(diagnostic_updater::DiagnosticStatusWrapper & stat) override;
@@ -42,7 +45,7 @@ private:
   const Params params_;
   rclcpp::Clock clock_;
   std::optional<rclcpp::Time> last_stamp_;
-  std::optional<double> duration_;
+  uint8_t level_;
 };
 
 }  // namespace autoware::control_command_gate

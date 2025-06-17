@@ -23,34 +23,33 @@ TimeoutDiag::TimeoutDiag(
   const Params & params, const rclcpp::Clock & clock, const std::string & name)
 : DiagnosticTask(name), params_(params), clock_(clock)
 {
+  level_ = DiagnosticStatus::STALE;
 }
 
 void TimeoutDiag::update()
 {
-  const auto now = clock_.now();
-  if (last_stamp_) {
-    duration_ = (now - *last_stamp_).seconds();
-  }
-  last_stamp_ = now;
+  last_stamp_ = clock_.now();
 }
 
 void TimeoutDiag::run(diagnostic_updater::DiagnosticStatusWrapper & stat)
 {
-  using diagnostic_msgs::msg::DiagnosticStatus;
-
-  if (!duration_) {
+  if (!last_stamp_) {
     stat.summary(DiagnosticStatus::ERROR, "no data");
     return;
   }
 
-  if (*duration_ > params_.error_duration_) {
-    stat.summary(DiagnosticStatus::ERROR, "timeout");
-  } else if (*duration_ > params_.warn_duration_) {
-    stat.summary(DiagnosticStatus::WARN, "late");
+  const auto duration = (clock_.now() - *last_stamp_).seconds();
+
+  if (duration < params_.warn_duration_) {
+    level_ = DiagnosticStatus::OK;
+  } else if (duration < params_.error_duration_) {
+    level_ = DiagnosticStatus::WARN;
   } else {
-    stat.summary(DiagnosticStatus::OK, "OK");
+    level_ = DiagnosticStatus::ERROR;
   }
-  stat.add("duration", *duration_);
+
+  stat.summary(level_, "");
+  stat.add("duration", duration);
 }
 
 }  // namespace autoware::control_command_gate

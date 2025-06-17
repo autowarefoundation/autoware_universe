@@ -33,7 +33,9 @@ public:
 
   std::string name() const { return name_; }
   void set_output(CommandOutput * output);
+
   TimeoutDiag * create_diag_task(const TimeoutDiag::Params & params, const rclcpp::Clock & clock);
+  bool is_timeout() const { return timeout_->is_error(); }
 
 protected:
   void send_control(const Control & msg);

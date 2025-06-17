@@ -14,6 +14,8 @@
 
 #include "selector.hpp"
 
+#include <rclcpp/logging.hpp>
+
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -22,7 +24,9 @@
 namespace autoware::control_command_gate
 {
 
-CommandSelector::CommandSelector(SourceChangeCallback on_change_source)
+CommandSelector::CommandSelector(
+  const rclcpp::Logger & logger, SourceChangeCallback on_change_source)
+: logger_(logger)
 {
   on_change_source_ = std::move(on_change_source);
 }
@@ -36,6 +40,27 @@ void CommandSelector::add_source(std::unique_ptr<CommandSource> && source)
 void CommandSelector::set_output(std::unique_ptr<CommandOutput> && output)
 {
   output_ = std::move(output);
+}
+
+void CommandSelector::update()
+{
+  if (current_source_ == builtin_source_) {
+    return;
+  }
+
+  const auto iter = sources_.find(current_source_);
+  if (iter == sources_.end()) {
+    RCLCPP_ERROR_STREAM(logger_, "Selected source not found. Switched to builtin source.");
+    select(builtin_source_);
+    return;
+  }
+
+  const auto & source = iter->second;
+  if (source->is_timeout()) {
+    RCLCPP_ERROR_STREAM(logger_, "Selected source is timeout. Switched to builtin source.");
+    select(builtin_source_);
+    return;
+  }
 }
 
 bool CommandSelector::select(const std::string & name)
@@ -52,6 +77,7 @@ bool CommandSelector::select(const std::string & name)
       source->set_output(nullptr);
     }
   }
+  current_source_ = name;
   on_change_source_(name);
   return true;
 }

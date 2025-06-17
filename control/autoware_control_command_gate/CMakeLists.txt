@@ -10,7 +10,7 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   "src/command/selector.cpp"
   "src/command/source.cpp"
   "src/command/subscription.cpp"
-  "src/command/emergency.cpp"
+  "src/command/builtin.cpp"
   "src/command/publisher.cpp"
   "src/command/filter.cpp"
   "src/common/control_command_filter.cpp"

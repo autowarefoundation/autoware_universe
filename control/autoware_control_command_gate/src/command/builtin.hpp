@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef COMMAND__EMERGENCY_HPP_
-#define COMMAND__EMERGENCY_HPP_
+#ifndef COMMAND__BUILTIN_HPP_
+#define COMMAND__BUILTIN_HPP_
 
 #include "source.hpp"
 
@@ -43,4 +43,4 @@ private:
 
 }  // namespace autoware::control_command_gate
 
-#endif  // COMMAND__EMERGENCY_HPP_
+#endif  // COMMAND__BUILTIN_HPP_
