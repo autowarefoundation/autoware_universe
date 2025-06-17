@@ -331,7 +331,7 @@ auto check_turn_behavior(
   }
 
   const auto exceed_dead_line =
-    [&points, &ego_pose, &p, &conflict_point, &stoppable_point, &vehicle_info](
+    [&points, &ego_pose, &conflict_point, &stoppable_point, &vehicle_info](
       const auto & sibling_straight_lanelet, const auto distance, const auto is_right) {
       if (!sibling_straight_lanelet.has_value()) {
         return distance < stoppable_point.value().second;
