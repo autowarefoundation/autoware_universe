@@ -20,7 +20,7 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 #include "autoware/behavior_path_start_planner_module/util.hpp"
 #include "autoware/motion_utils/trajectory/path_with_lane_id.hpp"
-#include "autoware/universe_utils/geometry/boost_polygon_utils.hpp"
+#include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
@@ -32,8 +32,8 @@
 #include <vector>
 
 using autoware::motion_utils::findNearestIndex;
-using autoware::universe_utils::calcDistance2d;
-using autoware::universe_utils::calcOffsetPose;
+using autoware_utils::calc_distance2d;
+using autoware_utils::calc_offset_pose;
 using lanelet::utils::getArcCoordinates;
 namespace autoware::behavior_path_planner
 {
@@ -41,15 +41,15 @@ using start_planner_utils::getPullOutLanes;
 
 ShiftPullOut::ShiftPullOut(
   rclcpp::Node & node, const StartPlannerParameters & parameters,
-  std::shared_ptr<universe_utils::TimeKeeper> time_keeper)
+  std::shared_ptr<autoware_utils::TimeKeeper> time_keeper)
 : PullOutPlannerBase{node, parameters, time_keeper}
 {
-  autoware::lane_departure_checker::Param lane_departure_checker_params;
-  lane_departure_checker_params.footprint_extra_margin =
+  autoware::boundary_departure_checker::Param boundary_departure_checker_params;
+  boundary_departure_checker_params.footprint_extra_margin =
     parameters.lane_departure_check_expansion_margin;
-  lane_departure_checker_ =
-    std::make_shared<autoware::lane_departure_checker::LaneDepartureChecker>(
-      lane_departure_checker_params, vehicle_info_, time_keeper_);
+  boundary_departure_checker_ =
+    std::make_shared<autoware::boundary_departure_checker::BoundaryDepartureChecker>(
+      boundary_departure_checker_params, vehicle_info_, time_keeper_);
 }
 
 std::optional<PullOutPath> ShiftPullOut::plan(
@@ -75,13 +75,13 @@ std::optional<PullOutPath> ShiftPullOut::plan(
   const auto lanelet_map_ptr = planner_data->route_handler->getLaneletMapPtr();
 
   std::vector<lanelet::Id> fused_id_start_to_end{};
-  std::optional<autoware::universe_utils::Polygon2d> fused_polygon_start_to_end = std::nullopt;
+  std::optional<autoware_utils::Polygon2d> fused_polygon_start_to_end = std::nullopt;
 
   std::vector<lanelet::Id> fused_id_crop_points{};
-  std::optional<autoware::universe_utils::Polygon2d> fused_polygon_crop_points = std::nullopt;
+  std::optional<autoware_utils::Polygon2d> fused_polygon_crop_points = std::nullopt;
   // get safe path
   for (auto & pull_out_path : pull_out_paths) {
-    universe_utils::ScopedTimeTrack st("get safe path", *time_keeper_);
+    autoware_utils::ScopedTimeTrack st("get safe path", *time_keeper_);
 
     // shift path is not separate but only one.
     auto & shift_path = pull_out_path.partial_paths.front();
@@ -105,7 +105,7 @@ std::optional<PullOutPath> ShiftPullOut::plan(
 
       PathWithLaneId path_with_only_first_pose{};
       path_with_only_first_pose.points.push_back(path_shift_start_to_end.points.front());
-      return !lane_departure_checker_->checkPathWillLeaveLane(
+      return !boundary_departure_checker_->checkPathWillLeaveLane(
         lanelet_map_ptr, path_with_only_first_pose);
     });
 
@@ -115,7 +115,7 @@ std::optional<PullOutPath> ShiftPullOut::plan(
     // computational cost.
 
     if (
-      is_lane_departure_check_required && lane_departure_checker_->checkPathWillLeaveLane(
+      is_lane_departure_check_required && boundary_departure_checker_->checkPathWillLeaveLane(
                                             lanelet_map_ptr, path_shift_start_to_end,
                                             fused_id_start_to_end, fused_polygon_start_to_end)) {
       planner_debug_data.conditions_evaluation.emplace_back("lane departure");
@@ -132,7 +132,7 @@ std::optional<PullOutPath> ShiftPullOut::plan(
         shift_path.points, start_pose, common_parameters.ego_nearest_dist_threshold,
         common_parameters.ego_nearest_yaw_threshold);
 
-    const auto cropped_path = lane_departure_checker_->cropPointsOutsideOfLanes(
+    const auto cropped_path = boundary_departure_checker_->cropPointsOutsideOfLanes(
       lanelet_map_ptr, shift_path, start_segment_idx, fused_id_crop_points,
       fused_polygon_crop_points);
     if (cropped_path.points.empty()) {
@@ -238,7 +238,7 @@ std::vector<PullOutPath> ShiftPullOut::calcPullOutPaths(
   const Pose & start_pose, const Pose & goal_pose,
   const BehaviorPathPlannerParameters & behavior_path_parameters)
 {
-  universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   std::vector<PullOutPath> candidate_paths{};
 

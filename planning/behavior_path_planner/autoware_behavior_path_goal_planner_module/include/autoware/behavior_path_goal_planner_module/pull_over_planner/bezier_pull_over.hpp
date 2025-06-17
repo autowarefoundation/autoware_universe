@@ -24,7 +24,7 @@
 
 namespace autoware::behavior_path_planner
 {
-using autoware::lane_departure_checker::LaneDepartureChecker;
+using autoware::boundary_departure_checker::BoundaryDepartureChecker;
 
 class BezierPullOver : public PullOverPlannerBase
 {
@@ -41,7 +41,7 @@ public:
     const BehaviorModuleOutput & upstream_module_output);
 
 private:
-  const LaneDepartureChecker lane_departure_checker_;
+  const BoundaryDepartureChecker boundary_departure_checker_;
 
   const bool left_side_parking_;
 

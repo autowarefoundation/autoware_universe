@@ -14,24 +14,27 @@
 
 #include "autoware/lidar_centerpoint/preprocess/pointcloud_densification.hpp"
 
-#include "pcl_conversions/pcl_conversions.h"
-#include "pcl_ros/transforms.hpp"
+#include <pcl_ros/transforms.hpp>
 
-#include "boost/optional.hpp"
+#include <boost/optional.hpp>
 
+#include <pcl_conversions/pcl_conversions.h>
+
+#include <memory>
 #include <string>
 #include <utility>
+
 #ifdef ROS_DISTRO_GALACTIC
-#include "tf2_eigen/tf2_eigen.h"
+#include <tf2_eigen/tf2_eigen.h>
 #else
-#include "tf2_eigen/tf2_eigen.hpp"
+#include <tf2_eigen/tf2_eigen.hpp>
 #endif
 
 namespace
 {
 boost::optional<geometry_msgs::msg::Transform> getTransform(
   const tf2_ros::Buffer & tf_buffer, const std::string & target_frame_id,
-  const std::string & source_frame_id, const rclcpp::Time & time)
+  const std::string & source_frame_id, const rclcpp::Time & time, const std::string & logger_name)
 {
   try {
     geometry_msgs::msg::TransformStamped transform_stamped;
@@ -39,7 +42,7 @@ boost::optional<geometry_msgs::msg::Transform> getTransform(
       target_frame_id, source_frame_id, time, rclcpp::Duration::from_seconds(0.5));
     return transform_stamped.transform;
   } catch (tf2::TransformException & ex) {
-    RCLCPP_WARN_STREAM(rclcpp::get_logger("lidar_centerpoint"), ex.what());
+    RCLCPP_WARN_STREAM(rclcpp::get_logger(logger_name.c_str()), ex.what());
     return boost::none;
   }
 }
@@ -60,22 +63,22 @@ PointCloudDensification::PointCloudDensification(const DensificationParam & para
 }
 
 bool PointCloudDensification::enqueuePointCloud(
-  const sensor_msgs::msg::PointCloud2 & pointcloud_msg, const tf2_ros::Buffer & tf_buffer,
-  cudaStream_t stream)
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & pointcloud_msg_ptr,
+  const tf2_ros::Buffer & tf_buffer)
 {
-  const auto header = pointcloud_msg.header;
+  const auto header = pointcloud_msg_ptr->header;
 
   if (param_.pointcloud_cache_size() > 1) {
-    auto transform_world2current =
-      getTransform(tf_buffer, header.frame_id, param_.world_frame_id(), header.stamp);
+    auto transform_world2current = getTransform(
+      tf_buffer, header.frame_id, param_.world_frame_id(), header.stamp, param_.logger_name());
     if (!transform_world2current) {
       return false;
     }
     auto affine_world2current = transformToEigen(transform_world2current.get());
 
-    enqueue(pointcloud_msg, affine_world2current, stream);
+    enqueue(pointcloud_msg_ptr, affine_world2current);
   } else {
-    enqueue(pointcloud_msg, Eigen::Affine3f::Identity(), stream);
+    enqueue(pointcloud_msg_ptr, Eigen::Affine3f::Identity());
   }
 
   dequeue();
@@ -84,24 +87,13 @@ bool PointCloudDensification::enqueuePointCloud(
 }
 
 void PointCloudDensification::enqueue(
-  const sensor_msgs::msg::PointCloud2 & msg, const Eigen::Affine3f & affine_world2current,
-  cudaStream_t stream)
+  const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
+  const Eigen::Affine3f & affine_world2current)
 {
   affine_world2current_ = affine_world2current;
-  current_timestamp_ = rclcpp::Time(msg.header.stamp).seconds();
-
-  assert(sizeof(uint8_t) * msg.width * msg.height * msg.point_step % sizeof(float) == 0);
-  auto points_d = cuda::make_unique<float[]>(
-    sizeof(uint8_t) * msg.width * msg.height * msg.point_step / sizeof(float));
-  CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    points_d.get(), msg.data.data(), sizeof(uint8_t) * msg.width * msg.height * msg.point_step,
-    cudaMemcpyHostToDevice, stream));
-
-  PointCloudWithTransform pointcloud = {
-    std::move(points_d), msg.header, msg.width * msg.height, msg.point_step,
-    affine_world2current.inverse()};
-
-  pointcloud_cache_.push_front(std::move(pointcloud));
+  current_timestamp_ = rclcpp::Time(msg_ptr->header.stamp).seconds();
+  PointCloudWithTransform pointcloud = {msg_ptr, affine_world2current.inverse()};
+  pointcloud_cache_.push_front(pointcloud);
 }
 
 void PointCloudDensification::dequeue()

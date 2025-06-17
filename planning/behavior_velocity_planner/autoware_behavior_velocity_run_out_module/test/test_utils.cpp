@@ -18,8 +18,8 @@
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <rclcpp/clock.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/time.hpp>
@@ -68,10 +68,10 @@ class TestRunOutUtils : public ::testing::Test
 TEST_F(TestRunOutUtils, testFindLongitudinalNearestPoint)
 {
   std::vector<geometry_msgs::msg::Point> poly;
-  poly.push_back(autoware::universe_utils::createPoint(0.0, 1.0, 0.0));
-  poly.push_back(autoware::universe_utils::createPoint(0.0, -1.0, 0.0));
-  poly.push_back(autoware::universe_utils::createPoint(1.0, 1.0, 0.0));
-  poly.push_back(autoware::universe_utils::createPoint(1.0, 0.0, 0.0));
+  poly.push_back(autoware_utils::create_point(0.0, 1.0, 0.0));
+  poly.push_back(autoware_utils::create_point(0.0, -1.0, 0.0));
+  poly.push_back(autoware_utils::create_point(1.0, 1.0, 0.0));
+  poly.push_back(autoware_utils::create_point(1.0, 0.0, 0.0));
 
   const auto boost_poly = createBoostPolyFromMsg(poly);
   EXPECT_FALSE(boost_poly.outer().empty());

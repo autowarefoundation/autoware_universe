@@ -58,7 +58,7 @@
 #include <autoware/cuda_utils/cuda_unique_ptr.hpp>
 #endif
 
-#include <autoware/universe_utils/math/unit_conversion.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 #include <nav2_costmap_2d/costmap_2d.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
@@ -99,9 +99,9 @@ public:
   double min_height_;
   double max_height_;
 
-  const double min_angle_ = autoware::universe_utils::deg2rad(-180.0);
-  const double max_angle_ = autoware::universe_utils::deg2rad(180.0);
-  const double angle_increment_inv_ = 1.0 / autoware::universe_utils::deg2rad(0.1);
+  const double min_angle_ = autoware_utils::deg2rad(-180.0);
+  const double max_angle_ = autoware_utils::deg2rad(180.0);
+  const double angle_increment_inv_ = 1.0 / autoware_utils::deg2rad(0.1);
 
   Eigen::Matrix4f mat_map_, mat_scan_;
 
@@ -121,6 +121,7 @@ protected:
 
   double resolution_inv_;
   bool use_cuda_;
+  bool first_iteration_{true};
 
 #ifdef USE_CUDA
   cudaStream_t stream_;

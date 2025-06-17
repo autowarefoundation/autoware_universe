@@ -11,22 +11,12 @@
           "description": "Enable or disable approximate synchronization.",
           "default": false
         },
-        "classifier_label_path": {
-          "type": "string",
-          "description": "Path to the label file for the traffic light classifier.",
-          "default": "$(var traffic_light_classifier_model_path)/$(var pedestrian_traffic_light_classifier_label_name)"
-        },
-        "classifier_model_path": {
-          "type": "string",
-          "description": "Path to the ONNX model file for the traffic light classifier.",
-          "default": "$(var traffic_light_classifier_model_path)/$(var pedestrian_traffic_light_classifier_model_name).onnx"
-        },
-        "classifier_precision": {
+        "precision": {
           "type": "string",
           "description": "Precision used for traffic light classifier inference. Valid values: [fp32, fp16, int8].",
           "default": "fp16"
         },
-        "classifier_mean": {
+        "mean": {
           "type": "array",
           "description": "Mean values used for input normalization [R, G, B].",
           "items": {
@@ -34,7 +24,7 @@
           },
           "default": [123.675, 116.28, 103.53]
         },
-        "classifier_std": {
+        "std": {
           "type": "array",
           "description": "Standard deviation values used for input normalization [R, G, B].",
           "items": {
@@ -52,7 +42,7 @@
           "description": "Type of classifier used. {0: hsv_filter, 1: cnn}.",
           "default": 1
         },
-        "classify_traffic_light_type": {
+        "traffic_light_type": {
           "type": "integer",
           "description": "Type of traffic light to classify. {0: car, 1: pedestrian}.",
           "default": 1
@@ -60,14 +50,12 @@
       },
       "required": [
         "approximate_sync",
-        "classifier_label_path",
-        "classifier_model_path",
-        "classifier_precision",
-        "classifier_mean",
-        "classifier_std",
+        "precision",
+        "mean",
+        "std",
         "backlight_threshold",
         "classifier_type",
-        "classify_traffic_light_type"
+        "traffic_light_type"
       ],
       "additionalProperties": false
     }

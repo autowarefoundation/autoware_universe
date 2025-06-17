@@ -20,9 +20,10 @@
 #include "autoware/probabilistic_occupancy_grid_map/updater/ogm_updater_interface.hpp"
 #include "autoware/probabilistic_occupancy_grid_map/utils/cuda_pointcloud.hpp"
 
-#include <autoware/universe_utils/ros/debug_publisher.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <builtin_interfaces/msg/time.hpp>
 #include <laser_geometry/laser_geometry.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -59,6 +60,7 @@ private:
   void obstaclePointcloudCallback(const PointCloud2::ConstSharedPtr & input_obstacle_msg);
   void rawPointcloudCallback(const PointCloud2::ConstSharedPtr & input_raw_msg);
   void onPointcloudWithObstacleAndRaw();
+  void checkProcessingTime(double processing_time_ms);
 
   OccupancyGrid::UniquePtr OccupancyGridMapToMsgPtr(
     const std::string & frame_id, const Time & stamp, const float & robot_pose_z,
@@ -68,8 +70,8 @@ private:
   rclcpp::Publisher<OccupancyGrid>::SharedPtr occupancy_grid_map_pub_;
   rclcpp::Subscription<PointCloud2>::SharedPtr obstacle_pointcloud_sub_ptr_;
   rclcpp::Subscription<PointCloud2>::SharedPtr raw_pointcloud_sub_ptr_;
-  std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{};
-  std::unique_ptr<autoware::universe_utils::DebugPublisher> debug_publisher_ptr_{};
+  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_{};
+  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_ptr_{};
 
   std::shared_ptr<Buffer> tf2_{std::make_shared<Buffer>(get_clock())};
   std::shared_ptr<TransformListener> tf2_listener_{std::make_shared<TransformListener>(*tf2_)};
@@ -80,6 +82,9 @@ private:
   cudaStream_t stream_;
   CudaPointCloud2 raw_pointcloud_;
   CudaPointCloud2 obstacle_pointcloud_;
+
+  autoware::cuda_utils::CudaUniquePtr<Eigen::Matrix3f> device_rotation_;
+  autoware::cuda_utils::CudaUniquePtr<Eigen::Vector3f> device_translation_;
 
   // ROS Parameters
   std::string map_frame_;
@@ -93,9 +98,13 @@ private:
   bool filter_obstacle_pointcloud_by_raw_pointcloud_;
 
   // time keeper
-  rclcpp::Publisher<autoware::universe_utils::ProcessingTimeDetail>::SharedPtr
+  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
     detailed_processing_time_publisher_;
-  std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_;
+  std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
+  // diagnostics
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
+  double processing_time_tolerance_ms_;
+  double processing_time_consecutive_excess_tolerance_ms_;
 };
 
 }  // namespace autoware::occupancy_grid_map

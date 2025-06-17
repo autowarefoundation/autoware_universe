@@ -48,6 +48,7 @@
 
 #include "classifier/color_classifier.hpp"
 
+#include <autoware_utils/ros/diagnostics_interface.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
@@ -88,6 +89,9 @@ private:
   rclcpp::Publisher<tier4_perception_msgs::msg::TrafficLightArray>::SharedPtr
     traffic_signal_array_pub_;
   std::shared_ptr<ClassifierInterface> classifier_ptr_;
+
+  std::unique_ptr<autoware_utils::DiagnosticsInterface>
+    diagnostics_interface_ptr_;  //!< Diagnostic handler.
 
   double backlight_threshold_;
   bool is_harsh_backlight(const cv::Mat & img) const;

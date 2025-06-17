@@ -1,0 +1,19 @@
+/**:
+  ros__parameters:
+    planning_factor_metrics:
+      topic_prefix: /planning/planning_factors/
+      stop_deviation:
+        module_list: # list of modules to be checked for stop deviation. Here we assume that the `module` inside the planning_factors should be the same as the topic name.
+          - blind_spot
+          - crosswalk
+          - detection_area
+          - intersection
+          - merge_from_private
+          - no_drivable_lane
+          - no_stopping_area
+          - stop_line
+          - traffic_light
+          - virtual_traffic_light
+          - walkway
+    object_metrics:
+      distance_filter_thr_m: 30.0 # [m] distance filter threshold for predicted objects

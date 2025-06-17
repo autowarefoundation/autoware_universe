@@ -60,8 +60,8 @@ PickupBasedVoxelGridDownsampleFilterComponent::PickupBasedVoxelGridDownsampleFil
 {
   // initialize debug tool
   {
-    using autoware::universe_utils::DebugPublisher;
-    using autoware::universe_utils::StopWatch;
+    using autoware_utils::DebugPublisher;
+    using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ = std::make_unique<DebugPublisher>(this, this->get_name());
     stop_watch_ptr_->tic("cyclic_time");
@@ -75,7 +75,7 @@ PickupBasedVoxelGridDownsampleFilterComponent::PickupBasedVoxelGridDownsampleFil
 
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&PickupBasedVoxelGridDownsampleFilterComponent::paramCallback, this, _1));
+    std::bind(&PickupBasedVoxelGridDownsampleFilterComponent::param_callback, this, _1));
 }
 
 void PickupBasedVoxelGridDownsampleFilterComponent::filter(
@@ -159,7 +159,7 @@ void PickupBasedVoxelGridDownsampleFilterComponent::filter(
 }
 
 rcl_interfaces::msg::SetParametersResult
-PickupBasedVoxelGridDownsampleFilterComponent::paramCallback(
+PickupBasedVoxelGridDownsampleFilterComponent::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);

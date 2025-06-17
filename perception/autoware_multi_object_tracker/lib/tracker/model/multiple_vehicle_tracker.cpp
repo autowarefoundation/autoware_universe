@@ -22,17 +22,12 @@
 
 namespace autoware::multi_object_tracker
 {
-
-using Label = autoware_perception_msgs::msg::ObjectClassification;
-
 MultipleVehicleTracker::MultipleVehicleTracker(
-  const rclcpp::Time & time, const types::DynamicObject & object, const size_t channel_size)
-: Tracker(time, object.classification, channel_size),
-  normal_vehicle_tracker_(object_model::normal_vehicle, time, object, channel_size),
-  big_vehicle_tracker_(object_model::big_vehicle, time, object, channel_size)
+  const rclcpp::Time & time, const types::DynamicObject & object)
+: Tracker(time, object),
+  normal_vehicle_tracker_(object_model::normal_vehicle, time, object),
+  big_vehicle_tracker_(object_model::big_vehicle, time, object)
 {
-  // initialize existence probability
-  initializeExistenceProbabilities(object.channel_index, object.existence_probability);
 }
 
 bool MultipleVehicleTracker::predict(const rclcpp::Time & time)
@@ -44,14 +39,11 @@ bool MultipleVehicleTracker::predict(const rclcpp::Time & time)
 
 bool MultipleVehicleTracker::measure(
   const types::DynamicObject & object, const rclcpp::Time & time,
-  const geometry_msgs::msg::Transform & self_transform)
+  const types::InputChannel & channel_info)
 {
-  big_vehicle_tracker_.measure(object, time, self_transform);
-  normal_vehicle_tracker_.measure(object, time, self_transform);
-  if (
-    autoware::object_recognition_utils::getHighestProbLabel(object.classification) !=
-    Label::UNKNOWN)
-    updateClassification(object.classification);
+  big_vehicle_tracker_.measure(object, time, channel_info);
+  normal_vehicle_tracker_.measure(object, time, channel_info);
+
   return true;
 }
 
@@ -66,8 +58,8 @@ bool MultipleVehicleTracker::getTrackedObject(
   } else if (label == Label::BUS || label == Label::TRUCK || label == Label::TRAILER) {
     big_vehicle_tracker_.getTrackedObject(time, object);
   }
-  object.object_id = getUUID();
-  object.classification = getClassification();
+  object.uuid = object_.uuid;
+  object.classification = object_.classification;
   return true;
 }
 

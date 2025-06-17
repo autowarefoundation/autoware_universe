@@ -38,7 +38,7 @@
 namespace autoware::ground_segmentation
 {
 using autoware::pointcloud_preprocessor::get_param;
-using autoware::universe_utils::ScopedTimeTrack;
+using autoware_utils::ScopedTimeTrack;
 
 RayGroundFilterComponent::RayGroundFilterComponent(const rclcpp::NodeOptions & options)
 : Filter("RayGroundFilter", options)
@@ -70,15 +70,15 @@ RayGroundFilterComponent::RayGroundFilterComponent(const rclcpp::NodeOptions & o
 
   using std::placeholders::_1;
   set_param_res_ = this->add_on_set_parameters_callback(
-    std::bind(&RayGroundFilterComponent::paramCallback, this, _1));
+    std::bind(&RayGroundFilterComponent::param_callback, this, _1));
 
   bool use_time_keeper = declare_parameter<bool>("publish_processing_time_detail");
   if (use_time_keeper) {
     detailed_processing_time_publisher_ =
-      this->create_publisher<autoware::universe_utils::ProcessingTimeDetail>(
+      this->create_publisher<autoware_utils::ProcessingTimeDetail>(
         "~/debug/processing_time_detail_ms", 1);
-    auto time_keeper = autoware::universe_utils::TimeKeeper(detailed_processing_time_publisher_);
-    time_keeper_ = std::make_shared<autoware::universe_utils::TimeKeeper>(time_keeper);
+    auto time_keeper = autoware_utils::TimeKeeper(detailed_processing_time_publisher_);
+    time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(time_keeper);
   }
 }
 
@@ -365,7 +365,7 @@ void RayGroundFilterComponent::filter(
   output = *no_ground_cloud_msg_ptr;
 }
 
-rcl_interfaces::msg::SetParametersResult RayGroundFilterComponent::paramCallback(
+rcl_interfaces::msg::SetParametersResult RayGroundFilterComponent::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);

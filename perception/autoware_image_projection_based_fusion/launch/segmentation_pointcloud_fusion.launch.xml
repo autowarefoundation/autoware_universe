@@ -3,19 +3,19 @@
   <arg name="input/mask0" default="/perception/object_recognition/detection/mask0"/>
   <arg name="input/camera_info0" default="/sensing/camera/camera0/camera_info"/>
   <arg name="input/mask1" default="/perception/object_recognition/detection/mask1"/>
-  <arg name="input/camera_info1" default="/sensing/camera/camera0/camera_info"/>
+  <arg name="input/camera_info1" default="/sensing/camera/camera1/camera_info"/>
   <arg name="input/mask2" default="/perception/object_recognition/detection/mask2"/>
-  <arg name="input/camera_info2" default="/sensing/camera/camera0/camera_info"/>
+  <arg name="input/camera_info2" default="/sensing/camera/camera2/camera_info"/>
   <arg name="input/mask3" default="/perception/object_recognition/detection/mask3"/>
-  <arg name="input/camera_info3" default="/sensing/camera/camera0/camera_info"/>
+  <arg name="input/camera_info3" default="/sensing/camera/camera3/camera_info"/>
   <arg name="input/mask4" default="/perception/object_recognition/detection/mask4"/>
-  <arg name="input/camera_info4" default="/sensing/camera/camera0/camera_info"/>
+  <arg name="input/camera_info4" default="/sensing/camera/camera4/camera_info"/>
   <arg name="input/mask5" default="/perception/object_recognition/detection/mask5"/>
-  <arg name="input/camera_info5" default="/sensing/camera/camera0/camera_info"/>
+  <arg name="input/camera_info5" default="/sensing/camera/camera5/camera_info"/>
   <arg name="input/mask6" default="/perception/object_recognition/detection/mask6"/>
-  <arg name="input/camera_info6" default="/sensing/camera/camera0/camera_info"/>
+  <arg name="input/camera_info6" default="/sensing/camera/camera6/camera_info"/>
   <arg name="input/mask7" default="/perception/object_recognition/detection/mask7"/>
-  <arg name="input/camera_info7" default="/sensing/camera/camera0/camera_info"/>
+  <arg name="input/camera_info7" default="/sensing/camera/camera7/camera_info"/>
   <arg name="input/pointcloud" default="/sensing/lidar/top/outlier_filtered/pointcloud"/>
   <arg name="output/pointcloud" default="output/pointcloud"/>
   <arg name="sync_param_path" default="$(find-pkg-share autoware_image_projection_based_fusion)/config/fusion_common.param.yaml"/>

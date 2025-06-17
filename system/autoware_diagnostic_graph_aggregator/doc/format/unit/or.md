@@ -9,3 +9,5 @@ Note that error level `stale` is treated as `error`.
 | ------ | -------------------------------------- | -------- | ------------------------------------ |
 | `type` | <code>string</code>                    | yes      | Specify `or` when using this object. |
 | `list` | <code>list\[[unit](../unit.md)]</code> | yes      | List of input unit objects.          |
+
+If `list` is undeclared or empty, this object is evaluated as `error`.

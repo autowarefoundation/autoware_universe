@@ -19,8 +19,8 @@
 #include <gtest/gtest.h>
 
 using autoware::test_utils::createPose;
-using autoware::universe_utils::Point2d;
-using autoware::universe_utils::Polygon2d;
+using autoware_utils::Point2d;
+using autoware_utils::Polygon2d;
 
 constexpr auto epsilon = 1e-6;
 
@@ -104,18 +104,19 @@ TEST(FootprintTest, create_object_footprints)
   objects.objects.push_back(object);
 
   autoware::behavior_path_planner::drivable_area_expansion::DrivableAreaExpansionParameters params;
-  params.avoid_dynamic_objects = false;
-  params.dynamic_objects_extra_front_offset = 0.5;
-  params.dynamic_objects_extra_rear_offset = 0.5;
-  params.dynamic_objects_extra_left_offset = 0.5;
-  params.dynamic_objects_extra_right_offset = 0.5;
+  params.object_exclusion.exclude_static = false;
+  params.object_exclusion.exclude_dynamic = false;
+  params.object_exclusion.front_offset = 0.5;
+  params.object_exclusion.rear_offset = 0.5;
+  params.object_exclusion.left_offset = 0.5;
+  params.object_exclusion.right_offset = 0.5;
 
   // Condition: doesn't avoid dynamic objects
   auto footprints = create_object_footprints(objects, params);
   EXPECT_TRUE(footprints.empty());
 
   // Condition: single object and single point path
-  params.avoid_dynamic_objects = true;
+  params.object_exclusion.exclude_dynamic = true;
   footprints = create_object_footprints(objects, params);
 
   ASSERT_EQ(footprints.size(), 1);

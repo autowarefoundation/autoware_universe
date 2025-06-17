@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__OCCUPANCY_GRID_BASED_COLLISION_DETECTOR__OCCUPANCY_GRID_BASED_COLLISION_DETECTOR_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__UTILS__OCCUPANCY_GRID_BASED_COLLISION_DETECTOR__OCCUPANCY_GRID_BASED_COLLISION_DETECTOR_HPP_
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>

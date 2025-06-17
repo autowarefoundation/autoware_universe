@@ -15,9 +15,9 @@
 #include "planning_factor_rviz_plugin.hpp"
 
 #include <autoware/motion_utils/marker/marker_helper.hpp>
-#include <autoware/universe_utils/math/constants.hpp>
-#include <autoware/universe_utils/math/trigonometry.hpp>
-#include <autoware/universe_utils/ros/marker_helper.hpp>
+#include <autoware_utils/math/constants.hpp>
+#include <autoware_utils/math/trigonometry.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
 
 #include <string>
 
@@ -27,8 +27,8 @@ namespace autoware::rviz_plugins
 using autoware::motion_utils::createDeadLineVirtualWallMarker;
 using autoware::motion_utils::createSlowDownVirtualWallMarker;
 using autoware::motion_utils::createStopVirtualWallMarker;
-using autoware::universe_utils::createDefaultMarker;
-using autoware::universe_utils::createMarkerScale;
+using autoware_utils::create_default_marker;
+using autoware_utils::create_marker_scale;
 
 namespace
 {
@@ -39,7 +39,7 @@ std_msgs::msg::ColorRGBA convertFromColorCode(const uint64_t code, const float a
   const float g = static_cast<int>((code << 48) >> 56) / 255.0;
   const float b = static_cast<int>((code << 56) >> 56) / 255.0;
 
-  return autoware::universe_utils::createMarkerColor(r, g, b, alpha);
+  return autoware_utils::create_marker_color(r, g, b, alpha);
 }
 
 std_msgs::msg::ColorRGBA getGreen(const float alpha)
@@ -69,10 +69,10 @@ visualization_msgs::msg::Marker createArrowMarker(
   const double head_width = 0.5 * arrow_length;
   const double head_height = 0.5 * arrow_length;
 
-  auto marker = createDefaultMarker(
+  auto marker = create_default_marker(
     "map", rclcpp::Clock{RCL_ROS_TIME}.now(), name + "_arrow", id,
-    visualization_msgs::msg::Marker::ARROW, createMarkerScale(line_width, head_width, head_height),
-    color);
+    visualization_msgs::msg::Marker::ARROW,
+    create_marker_scale(line_width, head_width, head_height), color);
 
   geometry_msgs::msg::Point src, dst;
   src = position;
@@ -91,17 +91,17 @@ visualization_msgs::msg::Marker createCircleMarker(
   const std_msgs::msg::ColorRGBA & color, const std::string & name, const double radius,
   const double height_offset, const double line_width = 0.1)
 {
-  auto marker = createDefaultMarker(
+  auto marker = create_default_marker(
     "map", rclcpp::Clock{RCL_ROS_TIME}.now(), name, id, visualization_msgs::msg::Marker::LINE_STRIP,
-    createMarkerScale(line_width, 0.0, 0.0), color);
+    create_marker_scale(line_width, 0.0, 0.0), color);
 
   constexpr size_t num_points = 20;
   for (size_t i = 0; i < num_points; ++i) {
     geometry_msgs::msg::Point point;
     const double ratio = static_cast<double>(i) / static_cast<double>(num_points);
-    const double theta = 2 * autoware::universe_utils::pi * ratio;
-    point.x = position.x + radius * autoware::universe_utils::cos(theta);
-    point.y = position.y + radius * autoware::universe_utils::sin(theta);
+    const double theta = 2 * autoware_utils::pi * ratio;
+    point.x = position.x + radius * autoware_utils::cos(theta);
+    point.y = position.y + radius * autoware_utils::sin(theta);
     point.z = position.z + height_offset;
     marker.points.push_back(point);
   }
@@ -114,9 +114,9 @@ visualization_msgs::msg::Marker createNameTextMarker(
   const size_t id, const geometry_msgs::msg::Point & position, const std::string & name,
   const double height_offset, const double text_size = 0.5)
 {
-  auto marker = createDefaultMarker(
+  auto marker = create_default_marker(
     "map", rclcpp::Clock{RCL_ROS_TIME}.now(), name + "_name_text", id,
-    visualization_msgs::msg::Marker::TEXT_VIEW_FACING, createMarkerScale(0.0, 0.0, text_size),
+    visualization_msgs::msg::Marker::TEXT_VIEW_FACING, create_marker_scale(0.0, 0.0, text_size),
     getGray(0.999));
 
   marker.text = name;
@@ -149,14 +149,14 @@ visualization_msgs::msg::MarkerArray createTargetMarker(
 }  // namespace
 
 void PlanningFactorRvizPlugin::processMessage(
-  const tier4_planning_msgs::msg::PlanningFactorArray::ConstSharedPtr msg)
+  const autoware_internal_planning_msgs::msg::PlanningFactorArray::ConstSharedPtr msg)
 {
   size_t i = 0L;
   for (const auto & factor : msg->factors) {
     const auto text = factor.module + (factor.detail.empty() ? "" : " (" + factor.detail + ")");
 
     switch (factor.behavior) {
-      case tier4_planning_msgs::msg::PlanningFactor::STOP:
+      case autoware_internal_planning_msgs::msg::PlanningFactor::STOP:
         for (const auto & control_point : factor.control_points) {
           const auto virtual_wall = createStopVirtualWallMarker(
             control_point.pose, text, msg->header.stamp, i++, baselink2front_.getFloat());
@@ -164,7 +164,7 @@ void PlanningFactorRvizPlugin::processMessage(
         }
         break;
 
-      case tier4_planning_msgs::msg::PlanningFactor::SLOW_DOWN:
+      case autoware_internal_planning_msgs::msg::PlanningFactor::SLOW_DOWN:
         for (const auto & control_point : factor.control_points) {
           const auto virtual_wall = createSlowDownVirtualWallMarker(
             control_point.pose, text, msg->header.stamp, i++, baselink2front_.getFloat());

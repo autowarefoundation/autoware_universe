@@ -15,28 +15,28 @@
 #include "autoware/predicted_path_checker/debug_marker.hpp"
 
 #include <autoware/motion_utils/marker/marker_helper.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/marker_helper.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
 #ifdef ROS_DISTRO_GALACTIC
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #else
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #endif
 
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 
 #include <memory>
 #include <vector>
 
 using autoware::motion_utils::createDeletedStopVirtualWallMarker;
 using autoware::motion_utils::createStopVirtualWallMarker;
-using autoware::universe_utils::appendMarkerArray;
-using autoware::universe_utils::calcOffsetPose;
-using autoware::universe_utils::createDefaultMarker;
-using autoware::universe_utils::createMarkerColor;
-using autoware::universe_utils::createMarkerOrientation;
-using autoware::universe_utils::createMarkerScale;
-using autoware::universe_utils::createPoint;
+using autoware_utils::append_marker_array;
+using autoware_utils::calc_offset_pose;
+using autoware_utils::create_default_marker;
+using autoware_utils::create_marker_color;
+using autoware_utils::create_marker_orientation;
+using autoware_utils::create_marker_scale;
+using autoware_utils::create_point;
 
 namespace autoware::predicted_path_checker
 {
@@ -51,7 +51,7 @@ PredictedPathCheckerDebugNode::PredictedPathCheckerDebugNode(
 }
 
 bool PredictedPathCheckerDebugNode::pushPolygon(
-  const autoware::universe_utils::Polygon2d & polygon, const double z, const PolygonType & type)
+  const autoware_utils::Polygon2d & polygon, const double z, const PolygonType & type)
 {
   std::vector<Eigen::Vector3d> eigen_polygon;
   for (const auto & point : polygon.outer()) {
@@ -82,7 +82,7 @@ bool PredictedPathCheckerDebugNode::pushPolygon(
 }
 
 bool PredictedPathCheckerDebugNode::pushPolyhedron(
-  const autoware::universe_utils::Polygon2d & polyhedron, const double z_min, const double z_max,
+  const autoware_utils::Polygon2d & polyhedron, const double z_min, const double z_max,
   const PolygonType & type)
 {
   std::vector<Eigen::Vector3d> eigen_polyhedron;
@@ -166,22 +166,22 @@ visualization_msgs::msg::MarkerArray PredictedPathCheckerDebugNode::makeVirtualW
   rclcpp::Time current_time = node_->now();
 
   if (stop_pose_ptr_ != nullptr) {
-    const auto p = calcOffsetPose(*stop_pose_ptr_, base_link2front_, 0.0, 0.0);
+    const auto p = calc_offset_pose(*stop_pose_ptr_, base_link2front_, 0.0, 0.0);
     const auto markers =
       createStopVirtualWallMarker(p, "obstacle on predicted path", current_time, 0);
-    appendMarkerArray(markers, &msg);
+    append_marker_array(markers, &msg);
   } else {
     const auto markers = createDeletedStopVirtualWallMarker(current_time, 0);
-    appendMarkerArray(markers, &msg);
+    append_marker_array(markers, &msg);
   }
 
   if (collision_pose_ptr_ != nullptr) {
     const auto markers =
       createStopVirtualWallMarker(*collision_pose_ptr_, "collision_point", current_time, 1);
-    appendMarkerArray(markers, &msg);
+    append_marker_array(markers, &msg);
   } else {
     const auto markers = createDeletedStopVirtualWallMarker(current_time, 1);
-    appendMarkerArray(markers, &msg);
+    append_marker_array(markers, &msg);
   }
 
   return msg;
@@ -194,64 +194,64 @@ visualization_msgs::msg::MarkerArray PredictedPathCheckerDebugNode::makeVisualiz
 
   // cube
   if (!vehicle_polyhedrons_.empty()) {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", current_time, "detection_cubes", 0, visualization_msgs::msg::Marker::LINE_LIST,
-      createMarkerScale(0.01, 0.0, 0.0), createMarkerColor(0.0, 1.0, 0.0, 0.999));
+      create_marker_scale(0.01, 0.0, 0.0), create_marker_color(0.0, 1.0, 0.0, 0.999));
 
     for (size_t i = 0; i < vehicle_polyhedrons_.size(); ++i) {
       for (size_t j = 0; j < vehicle_polyhedrons_.at(i).size(); ++j) {
         const auto & p = vehicle_polyhedrons_.at(i).at(j);
-        marker.points.push_back(createPoint(p.x(), p.y(), p.z()));
+        marker.points.push_back(create_point(p.x(), p.y(), p.z()));
       }
     }
 
     for (size_t i = 0; i < vehicle_polyhedrons_.size(); ++i) {
       for (size_t j = 0; j + 2 < vehicle_polyhedrons_.at(i).size(); ++j) {
         const auto & p = vehicle_polyhedrons_.at(i).at(j);
-        marker.points.push_back(createPoint(p.x(), p.y(), p.z()));
+        marker.points.push_back(create_point(p.x(), p.y(), p.z()));
         const auto & p1 = vehicle_polyhedrons_.at(i).at(j + 2);
-        marker.points.push_back(createPoint(p1.x(), p1.y(), p1.z()));
+        marker.points.push_back(create_point(p1.x(), p1.y(), p1.z()));
       }
       const auto & p = vehicle_polyhedrons_.at(i).at(1);
-      marker.points.push_back(createPoint(p.x(), p.y(), p.z()));
+      marker.points.push_back(create_point(p.x(), p.y(), p.z()));
       const auto & p1 = vehicle_polyhedrons_.at(i).at(vehicle_polyhedrons_.at(i).size() - 1);
-      marker.points.push_back(createPoint(p1.x(), p1.y(), p1.z()));
+      marker.points.push_back(create_point(p1.x(), p1.y(), p1.z()));
       const auto & p2 = vehicle_polyhedrons_.at(i).at(0);
-      marker.points.push_back(createPoint(p2.x(), p2.y(), p2.z()));
+      marker.points.push_back(create_point(p2.x(), p2.y(), p2.z()));
       const auto & p3 = vehicle_polyhedrons_.at(i).at(vehicle_polyhedrons_.at(i).size() - 2);
-      marker.points.push_back(createPoint(p3.x(), p3.y(), p3.z()));
+      marker.points.push_back(create_point(p3.x(), p3.y(), p3.z()));
     }
 
     msg.markers.push_back(marker);
   }
 
   if (!collision_polyhedrons_.empty()) {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", current_time, "collision_cubes", 0, visualization_msgs::msg::Marker::LINE_LIST,
-      createMarkerScale(0.05, 0.0, 0.0), createMarkerColor(1.0, 0.0, 0.0, 0.999));
+      create_marker_scale(0.05, 0.0, 0.0), create_marker_color(1.0, 0.0, 0.0, 0.999));
 
     for (size_t i = 0; i < collision_polyhedrons_.size(); ++i) {
       for (size_t j = 0; j < collision_polyhedrons_.at(i).size(); ++j) {
         const auto & p = collision_polyhedrons_.at(i).at(j);
-        marker.points.push_back(createPoint(p.x(), p.y(), p.z()));
+        marker.points.push_back(create_point(p.x(), p.y(), p.z()));
       }
     }
 
     for (size_t i = 0; i < collision_polyhedrons_.size(); ++i) {
       for (size_t j = 0; j + 2 < collision_polyhedrons_.at(i).size(); ++j) {
         const auto & p = collision_polyhedrons_.at(i).at(j);
-        marker.points.push_back(createPoint(p.x(), p.y(), p.z()));
+        marker.points.push_back(create_point(p.x(), p.y(), p.z()));
         const auto & p1 = collision_polyhedrons_.at(i).at(j + 2);
-        marker.points.push_back(createPoint(p1.x(), p1.y(), p1.z()));
+        marker.points.push_back(create_point(p1.x(), p1.y(), p1.z()));
       }
       const auto & p = collision_polyhedrons_.at(i).at(1);
-      marker.points.push_back(createPoint(p.x(), p.y(), p.z()));
+      marker.points.push_back(create_point(p.x(), p.y(), p.z()));
       const auto & p1 = collision_polyhedrons_.at(i).at(collision_polyhedrons_.at(i).size() - 1);
-      marker.points.push_back(createPoint(p1.x(), p1.y(), p1.z()));
+      marker.points.push_back(create_point(p1.x(), p1.y(), p1.z()));
       const auto & p2 = collision_polyhedrons_.at(i).at(0);
-      marker.points.push_back(createPoint(p2.x(), p2.y(), p2.z()));
+      marker.points.push_back(create_point(p2.x(), p2.y(), p2.z()));
       const auto & p3 = collision_polyhedrons_.at(i).at(collision_polyhedrons_.at(i).size() - 2);
-      marker.points.push_back(createPoint(p3.x(), p3.y(), p3.z()));
+      marker.points.push_back(create_point(p3.x(), p3.y(), p3.z()));
     }
 
     msg.markers.push_back(marker);
@@ -259,22 +259,22 @@ visualization_msgs::msg::MarkerArray PredictedPathCheckerDebugNode::makeVisualiz
 
   // polygon
   if (!vehicle_polygons_.empty()) {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", current_time, "detection_polygons", 0, visualization_msgs::msg::Marker::LINE_LIST,
-      createMarkerScale(0.01, 0.0, 0.0), createMarkerColor(0.0, 1.0, 0.0, 0.999));
+      create_marker_scale(0.01, 0.0, 0.0), create_marker_color(0.0, 1.0, 0.0, 0.999));
 
     for (size_t i = 0; i < vehicle_polygons_.size(); ++i) {
       for (size_t j = 0; j < vehicle_polygons_.at(i).size(); ++j) {
         {
           const auto & p = vehicle_polygons_.at(i).at(j);
-          marker.points.push_back(createPoint(p.x(), p.y(), p.z()));
+          marker.points.push_back(create_point(p.x(), p.y(), p.z()));
         }
         if (j + 1 == vehicle_polygons_.at(i).size()) {
           const auto & p = vehicle_polygons_.at(i).at(0);
-          marker.points.push_back(createPoint(p.x(), p.y(), p.z()));
+          marker.points.push_back(create_point(p.x(), p.y(), p.z()));
         } else {
           const auto & p = vehicle_polygons_.at(i).at(j + 1);
-          marker.points.push_back(createPoint(p.x(), p.y(), p.z()));
+          marker.points.push_back(create_point(p.x(), p.y(), p.z()));
         }
       }
     }
@@ -282,22 +282,22 @@ visualization_msgs::msg::MarkerArray PredictedPathCheckerDebugNode::makeVisualiz
   }
 
   if (!collision_polygons_.empty()) {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", current_time, "collision_polygons", 0, visualization_msgs::msg::Marker::LINE_LIST,
-      createMarkerScale(0.05, 0.0, 0.0), createMarkerColor(1.0, 0.0, 0.0, 0.999));
+      create_marker_scale(0.05, 0.0, 0.0), create_marker_color(1.0, 0.0, 0.0, 0.999));
 
     for (size_t i = 0; i < collision_polygons_.size(); ++i) {
       for (size_t j = 0; j < collision_polygons_.at(i).size(); ++j) {
         {
           const auto & p = collision_polygons_.at(i).at(j);
-          marker.points.push_back(createPoint(p.x(), p.y(), p.z()));
+          marker.points.push_back(create_point(p.x(), p.y(), p.z()));
         }
         if (j + 1 == collision_polygons_.at(i).size()) {
           const auto & p = collision_polygons_.at(i).at(0);
-          marker.points.push_back(createPoint(p.x(), p.y(), p.z()));
+          marker.points.push_back(create_point(p.x(), p.y(), p.z()));
         } else {
           const auto & p = collision_polygons_.at(i).at(j + 1);
-          marker.points.push_back(createPoint(p.x(), p.y(), p.z()));
+          marker.points.push_back(create_point(p.x(), p.y(), p.z()));
         }
       }
     }
@@ -305,18 +305,18 @@ visualization_msgs::msg::MarkerArray PredictedPathCheckerDebugNode::makeVisualiz
   }
 
   if (stop_obstacle_point_ptr_ != nullptr) {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", current_time, "stop_obstacle_point", 0, visualization_msgs::msg::Marker::SPHERE,
-      createMarkerScale(0.25, 0.25, 0.25), createMarkerColor(1.0, 0.0, 0.0, 0.999));
+      create_marker_scale(0.25, 0.25, 0.25), create_marker_color(1.0, 0.0, 0.0, 0.999));
     marker.pose.position = *stop_obstacle_point_ptr_;
     msg.markers.push_back(marker);
   }
 
   if (stop_obstacle_point_ptr_ != nullptr) {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", current_time, "stop_obstacle_text", 0,
-      visualization_msgs::msg::Marker::TEXT_VIEW_FACING, createMarkerScale(0.0, 0.0, 1.0),
-      createMarkerColor(1.0, 1.0, 1.0, 0.999));
+      visualization_msgs::msg::Marker::TEXT_VIEW_FACING, create_marker_scale(0.0, 0.0, 1.0),
+      create_marker_color(1.0, 1.0, 1.0, 0.999));
     marker.pose.position = *stop_obstacle_point_ptr_;
     marker.pose.position.z += 2.0;
     marker.text = "!";

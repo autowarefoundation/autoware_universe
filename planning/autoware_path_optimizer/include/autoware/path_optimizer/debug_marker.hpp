@@ -16,8 +16,8 @@
 
 #include "autoware/path_optimizer/common_structs.hpp"
 #include "autoware/path_optimizer/type_alias.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
-#include "autoware/universe_utils/ros/marker_helper.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
+#include "autoware_utils/ros/marker_helper.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 #include "rclcpp/clock.hpp"
 

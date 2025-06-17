@@ -21,8 +21,9 @@
 #include "autoware/path_optimizer/common_structs.hpp"
 #include "autoware/path_optimizer/state_equation_generator.hpp"
 #include "autoware/path_optimizer/type_alias.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
-#include "autoware/universe_utils/system/time_keeper.hpp"
+#include "autoware/path_optimizer/utils/conditional_timer.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
+#include "autoware_utils/system/time_keeper.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 #include "gtest/gtest.h"
 
@@ -57,6 +58,15 @@ struct Bounds
     lower_bound -= offset;
     upper_bound -= offset;
   }
+
+  friend std::ostream & operator<<(std::ostream & os, const Bounds & bounds)
+  {
+    os << "Bounds: {\n";
+    os << "\tlower_bound: " << bounds.lower_bound << ",\n";
+    os << "\tupper_bound: " << bounds.upper_bound << "\n";
+    os << "}\n";
+    return os;
+  }
 };
 
 struct KinematicState
@@ -65,6 +75,15 @@ struct KinematicState
   double yaw{0.0};
 
   Eigen::Vector2d toEigenVector() const { return Eigen::Vector2d{lat, yaw}; }
+
+  friend std::ostream & operator<<(std::ostream & os, const KinematicState & state)
+  {
+    os << "KinematicState: {\n";
+    os << "\tlat: " << state.lat << ",\n";
+    os << "\tyaw: " << state.yaw << "\n";
+    os << "}\n";
+    return os;
+  }
 };
 
 struct ReferencePoint
@@ -75,9 +94,9 @@ struct ReferencePoint
   // additional information
   double curvature{0.0};
   double delta_arc_length{0.0};
-  double alpha{0.0};                          // for minimizing lateral error
-  Bounds bounds{};                            // bounds on `pose`
-  std::vector<std::optional<double>> beta{};  // for collision-free constraint
+  double alpha{0.0};           // for minimizing lateral error
+  Bounds bounds{};             // bounds on `pose`
+  std::vector<double> beta{};  // for collision-free constraint
   double normalized_avoidance_cost{0.0};
 
   // bounds and its local pose on each collision-free constraint
@@ -92,11 +111,60 @@ struct ReferencePoint
 
   double getYaw() const { return tf2::getYaw(pose.orientation); }
 
+  friend std::ostream & operator<<(std::ostream & os, const ReferencePoint & ref_point)
+  {
+    os << "ReferencePoint: {\n";
+    os << "\tpose: " << ref_point.pose.position.x << ", " << ref_point.pose.position.y << ",\n";
+    os << "\tlongitudinal_velocity_mps: " << ref_point.longitudinal_velocity_mps << ",\n";
+    os << "\tcurvature: " << ref_point.curvature << ",\n";
+    os << "\tdelta_arc_length: " << ref_point.delta_arc_length << ",\n";
+    os << "\talpha: " << ref_point.alpha << ",\n";
+    os << "\tbounds: " << ref_point.bounds << ",\n";
+    os << "\tbeta: [";
+    for (const auto & b : ref_point.beta) {
+      os << b << ", ";
+    }
+    os << "],\n";
+    os << "\tnormalized_avoidance_cost: " << ref_point.normalized_avoidance_cost << ",\n";
+    os << "\tbounds_on_constraints: [";
+    for (const auto & b : ref_point.bounds_on_constraints) {
+      os << b << ", ";
+    }
+    os << "],\n";
+    os << "\tpose_on_constraints: [";
+    for (const auto & p : ref_point.pose_on_constraints) {
+      os << "(" << p.position.x << ", " << p.position.y << ") , ";
+    }
+    os << "],\n";
+    os << "\tfixed_kinematic_state: ";
+    if (ref_point.fixed_kinematic_state) {
+      os << *ref_point.fixed_kinematic_state;
+    } else {
+      os << "nullopt";
+    }
+    os << ",\n";
+    os << "\toptimized_kinematic_state: " << ref_point.optimized_kinematic_state << ",\n";
+    os << "\toptimized_input: " << ref_point.optimized_input << ",\n";
+    os << "\tslack_variables: ";
+    if (ref_point.slack_variables) {
+      os << "[";
+      for (const auto & s : *ref_point.slack_variables) {
+        os << s << ", ";
+      }
+      os << "]";
+    } else {
+      os << "nullopt";
+    }
+    os << "\n";
+    os << "}\n";
+    return os;
+  }
+
   geometry_msgs::msg::Pose offsetDeviation(const double lat_dev, const double yaw_dev) const
   {
-    auto pose_with_deviation = autoware::universe_utils::calcOffsetPose(pose, 0.0, lat_dev, 0.0);
+    auto pose_with_deviation = autoware_utils::calc_offset_pose(pose, 0.0, lat_dev, 0.0);
     pose_with_deviation.orientation =
-      autoware::universe_utils::createQuaternionFromYaw(getYaw() + yaw_dev);
+      autoware_utils::create_quaternion_from_yaw(getYaw() + yaw_dev);
     return pose_with_deviation;
   }
 };
@@ -108,9 +176,9 @@ public:
     rclcpp::Node * node, const bool enable_debug_info, const EgoNearestParam ego_nearest_param,
     const autoware::vehicle_info_utils::VehicleInfo & vehicle_info,
     const TrajectoryParam & traj_param, const std::shared_ptr<DebugData> debug_data_ptr,
-    const std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_);
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_);
 
-  std::vector<TrajectoryPoint> optimizeTrajectory(const PlannerData & planner_data);
+  std::optional<std::vector<TrajectoryPoint>> optimizeTrajectory(const PlannerData & planner_data);
   std::optional<std::vector<TrajectoryPoint>> getPrevOptimizedTrajectoryPoints() const;
 
   void initialize(const bool enable_debug_info, const TrajectoryParam & traj_param);
@@ -126,12 +194,30 @@ private:
   {
     Eigen::SparseMatrix<double> Q;
     Eigen::SparseMatrix<double> R;
+
+    friend std::ostream & operator<<(std::ostream & os, const ValueMatrix & matrix)
+    {
+      os << "ValueMatrix: {\n";
+      os << "\tQ: (Sparse Matrix):" << matrix.Q;
+      os << "\tR: (Sparse Matrix):" << matrix.R;
+      os << "}\n";
+      return os;
+    }
   };
 
   struct ObjectiveMatrix
   {
     Eigen::MatrixXd hessian;
     Eigen::VectorXd gradient;
+
+    friend std::ostream & operator<<(std::ostream & os, const ObjectiveMatrix & matrix)
+    {
+      os << "ObjectiveMatrix: {\n";
+      os << "\thessian:\n" << matrix.hessian << "\n";
+      os << "\tgradient:\n" << matrix.gradient << "\n";
+      os << "}\n";
+      return os;
+    }
   };
 
   struct ConstraintMatrix
@@ -139,6 +225,16 @@ private:
     Eigen::MatrixXd linear;
     Eigen::VectorXd lower_bound;
     Eigen::VectorXd upper_bound;
+
+    friend std::ostream & operator<<(std::ostream & os, const ConstraintMatrix & matrix)
+    {
+      os << "ConstraintMatrix: {\n";
+      os << "\tlinear:\n" << matrix.linear << "\n";
+      os << "\tlower_bound:\n" << matrix.lower_bound << "\n";
+      os << "\tupper_bound:\n" << matrix.upper_bound << "\n";
+      os << "}\n";
+      return os;
+    }
   };
 
   struct MPTParam
@@ -223,7 +319,7 @@ private:
   autoware::vehicle_info_utils::VehicleInfo vehicle_info_;
   TrajectoryParam traj_param_;
   mutable std::shared_ptr<DebugData> debug_data_ptr_;
-  mutable std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_;
+  mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
   rclcpp::Logger logger_;
   MPTParam mpt_param_;
 

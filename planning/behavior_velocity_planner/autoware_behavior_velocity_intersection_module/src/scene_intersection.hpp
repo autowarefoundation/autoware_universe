@@ -178,6 +178,13 @@ public:
       double static_occlusion_with_traffic_light_timeout;
     } occlusion;
 
+    struct ConservativeMerging
+    {
+      bool enable_yield;
+      double minimum_lateral_distance_threshold;
+      double merging_judge_angle_threshold;
+    } conservative_merging;
+
     struct Debug
     {
       std::vector<int64_t> ttc;
@@ -226,6 +233,7 @@ public:
     std::optional<std::vector<lanelet::CompoundPolygon3d>> yield_stuck_detect_area{std::nullopt};
 
     std::optional<geometry_msgs::msg::Polygon> candidate_collision_ego_lane_polygon{std::nullopt};
+    std::optional<geometry_msgs::msg::Polygon> candidate_collision_object_polygon{std::nullopt};
     autoware_perception_msgs::msg::PredictedObjects safe_under_traffic_control_targets;
     autoware_perception_msgs::msg::PredictedObjects unsafe_targets;
     autoware_perception_msgs::msg::PredictedObjects misjudge_targets;
@@ -306,7 +314,7 @@ public:
     const PlannerParam & planner_param, const std::set<lanelet::Id> & associative_ids,
     const std::string & turn_direction, const bool has_traffic_light, rclcpp::Node & node,
     const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
-    const std::shared_ptr<universe_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 
@@ -447,6 +455,18 @@ private:
 
   //! save previous priority level to detect change from NotPrioritized to Prioritized
   TrafficPrioritizedLevel previous_prioritized_level_{TrafficPrioritizedLevel::NOT_PRIORITIZED};
+  /** @} */
+
+private:
+  /**
+   ***********************************************************
+   ***********************************************************
+   ***********************************************************
+   * @defgroup stuck-variables [var] stuck detection
+   * @{
+   */
+  //! indicate whether ego was trying to stop for stuck vehicle(for debouncing)
+  bool was_stopping_for_stuck_{false};
   /** @} */
 
 private:
