@@ -52,7 +52,8 @@ private:
   [[nodiscard]] bool is_data_ready(std::unordered_map<std::string, double> & processing_times);
   [[nodiscard]] bool is_data_valid() const;
   [[nodiscard]] bool is_data_timeout(const Odometry & odom) const;
-  [[nodiscard]] bool is_goal_changed(const Pose & new_goal);
+  [[nodiscard]] bool is_goal_changed(
+    const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const Pose & new_goal);
 
   // === Internal logic
 

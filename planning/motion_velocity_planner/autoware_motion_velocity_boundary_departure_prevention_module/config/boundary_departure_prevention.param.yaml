@@ -8,6 +8,7 @@
       th_pt_shift:
         dist_m: 0.2
         angle_deg: 5.0
+        goal_dist_m: 1.0
 
       abnormality:
         normal:

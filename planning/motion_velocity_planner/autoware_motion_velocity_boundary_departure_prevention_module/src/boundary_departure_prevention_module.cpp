@@ -221,10 +221,6 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
       std::make_unique<SlowDownInterpolator>(node_param_.bdc_param.th_trigger);
   }
 
-  if (is_goal_changed(planner_data->route_handler->getGoalPose())) {
-    output_ = Output();
-  }
-
   auto result_opt = plan_slow_down_intervals(raw_trajectory_points, planner_data);
 
   processing_time_publisher_->publish(std::invoke([&]() {
@@ -291,16 +287,29 @@ bool BoundaryDeparturePreventionModule::is_data_timeout(const Odometry & odom) c
   return false;
 }
 
-bool BoundaryDeparturePreventionModule::is_goal_changed(const Pose & new_goal)
+bool BoundaryDeparturePreventionModule::is_goal_changed(
+  const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const Pose & new_goal)
 {
   if (!prev_goal_ptr_) {
     prev_goal_ptr_ = std::make_unique<Pose>(new_goal);
-    return true;
+    return false;
   }
 
-  const auto diff = autoware_utils::calc_distance2d(*prev_goal_ptr_, new_goal);
-  constexpr auto th_goal_changed{0.5};
-  return diff < th_goal_changed;
+  const auto diff_to_new_goal = autoware_utils::calc_distance2d(*prev_goal_ptr_, new_goal);
+
+  if (diff_to_new_goal < node_param_.th_goal_shift_dist_m) {
+    *prev_goal_ptr_ = new_goal;
+    return false;
+  }
+
+  const auto dist_on_curr_traj = trajectory::closest(aw_ref_traj, *prev_goal_ptr_);
+  const auto goal_on_curr_traj = aw_ref_traj.compute(dist_on_curr_traj);
+
+  const auto diff_on_curr_traj =
+    autoware_utils::calc_distance2d(*prev_goal_ptr_, goal_on_curr_traj.pose);
+  *prev_goal_ptr_ = new_goal;
+
+  return diff_on_curr_traj >= node_param_.th_goal_shift_dist_m;
 }
 
 tl::expected<VelocityPlanningResult, std::string>
@@ -343,6 +352,11 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
     return tl::make_unexpected(ref_traj_pts_opt.error().what);
   }
   toc_curr_watch("get_ref_traj");
+
+  if (is_goal_changed(*ref_traj_pts_opt, raw_trajectory_points.back().pose)) {
+    RCLCPP_WARN(logger_, "Goal changed.");
+    output_ = Output();
+  }
 
   const auto abnormality_data_opt = boundary_departure_checker_ptr_->get_abnormalities_data(
     ego_pred_traj_ptr_->points, *ref_traj_pts_opt, curr_pose, *steering_angle_ptr_);
@@ -473,16 +487,22 @@ std::unordered_map<DepartureType, bool> BoundaryDeparturePreventionModule::get_d
 
   const auto & th_trigger = node_param_.bdc_param.th_trigger;
 
-  for (const auto & side_key : g_side_keys) {
-    diag[DepartureType::NEAR_BOUNDARY] = std::any_of(
+  const auto has_type = [&](const DepartureType type, const SideKey side_key) {
+    const auto is_type = [type](const DeparturePoint & pt) { return pt.departure_type == type; };
+
+    return std::any_of(
       output_.departure_points[side_key].cbegin(), output_.departure_points[side_key].cend(),
-      [](const DeparturePoint & pt) { return pt.departure_type == DepartureType::NEAR_BOUNDARY; });
-    diag[DepartureType::APPROACHING_DEPARTURE] = std::any_of(
-      output_.departure_points[side_key].begin(), output_.departure_points[side_key].end(),
-      [](const DeparturePoint & pt) {
-        return pt.departure_type == DepartureType::APPROACHING_DEPARTURE;
-      });
-  }
+      is_type);
+  };
+
+  diag[DepartureType::NEAR_BOUNDARY] = std::any_of(
+    g_side_keys.begin(), g_side_keys.end(),
+    [&](const SideKey side_key) { return has_type(DepartureType::NEAR_BOUNDARY, side_key); });
+
+  diag[DepartureType::APPROACHING_DEPARTURE] =
+    std::any_of(g_side_keys.begin(), g_side_keys.end(), [&](const SideKey side_key) {
+      return has_type(DepartureType::APPROACHING_DEPARTURE, side_key);
+    });
 
   diag[DepartureType::CRITICAL_DEPARTURE] = std::any_of(
     output_.critical_departure_points.cbegin(), output_.critical_departure_points.cend(),
