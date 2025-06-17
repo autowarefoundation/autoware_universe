@@ -19,6 +19,7 @@
 #include "autoware_command_mode_decider/status.hpp"
 
 #include <autoware/universe_utils/ros/polling_subscriber.hpp>
+#include <autoware_command_mode_decider/msg/decider_debug.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -41,6 +42,7 @@ namespace autoware::command_mode_decider
 
 using autoware_adapi_v1_msgs::msg::MrmState;
 using autoware_adapi_v1_msgs::msg::OperationModeState;
+using autoware_command_mode_decider::msg::DeciderDebug;
 using autoware_common_msgs::msg::ResponseStatus;
 using autoware_vehicle_msgs::msg::ControlModeReport;
 using tier4_system_msgs::msg::CommandModeAvailability;
@@ -66,6 +68,7 @@ private:
   void sync_command_mode();
   void publish_operation_mode_state();
   void publish_mrm_state();
+  void publish_decider_debug();
 
   void on_diagnostics(diagnostic_updater::DiagnosticStatusWrapper & status);
   void on_timer();
@@ -92,6 +95,7 @@ private:
   rclcpp::Service<ChangeOperationMode>::SharedPtr srv_operation_mode_;
   rclcpp::Publisher<OperationModeState>::SharedPtr pub_operation_mode_;
   rclcpp::Publisher<MrmState>::SharedPtr pub_mrm_state_;
+  rclcpp::Publisher<DeciderDebug>::SharedPtr pub_debug_;
 
   diagnostic_updater::Updater diagnostics_;
   pluginlib::ClassLoader<DeciderPlugin> loader_;
