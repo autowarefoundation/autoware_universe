@@ -19,6 +19,18 @@
 namespace autoware::diagnostic_graph_utils
 {
 
+std::vector<DiagUnit *> DiagUnit::child_units() const
+{
+  std::vector<DiagUnit *> result;
+  for (const auto & child : child_links()) result.push_back(child->child());
+  return result;
+}
+
+std::vector<DiagLink *> DiagUnit::child_links() const
+{
+  return child_links_;
+}
+
 DiagUnit::DiagnosticStatus DiagNode::create_diagnostic_status() const
 {
   DiagnosticStatus status;
@@ -31,14 +43,14 @@ DiagUnit::DiagnosticStatus DiagLeaf::create_diagnostic_status() const
 {
   DiagnosticStatus status;
   status.level = level();
-  status.name = path();
+  status.name = name();
   status.message = status_.message;
   status.hardware_id = status_.hardware_id;
   status.values = status_.values;
   return status;
 }
 
-void DiagGraph::create(const DiagGraphStruct & msg)
+bool DiagGraph::create(const DiagGraphStruct & msg)
 {
   nodes_.clear();
   diags_.clear();
@@ -46,23 +58,19 @@ void DiagGraph::create(const DiagGraphStruct & msg)
 
   created_stamp_ = msg.stamp;
   id_ = msg.id;
-  for (const auto & node : msg.nodes) nodes_.push_back(std::make_unique<DiagNode>(node));
-  for (const auto & diag : msg.diags) diags_.push_back(std::make_unique<DiagLeaf>(diag));
 
-  const auto get_child = [this](bool is_leaf, size_t index) -> DiagUnit * {
-    if (is_leaf) {
-      return diags_.at(index).get();
-    } else {
-      return nodes_.at(index).get();
-    }
-  };
+  int index = 0;
+  for (const auto & node : msg.nodes) nodes_.push_back(std::make_unique<DiagNode>(index++, node));
+  for (const auto & diag : msg.diags) diags_.push_back(std::make_unique<DiagLeaf>(index++, diag));
+  for (const auto & node : nodes_) units_.push_back(node.get());
+  for (const auto & diag : diags_) units_.push_back(diag.get());
 
-  for (const auto & data : msg.links) {
-    DiagNode * parent = nodes_.at(data.parent).get();
-    DiagUnit * child = get_child(data.is_leaf, data.child);
-    const auto link = links_.emplace_back(std::make_unique<DiagLink>(data, parent, child)).get();
-    parent->add_child({link, child});
+  for (const auto & link : msg.links) {
+    DiagUnit * p = units_.at(link.parent);
+    DiagUnit * c = units_.at(link.child);
+    p->add_child(links_.emplace_back(std::make_unique<DiagLink>(link, p, c)).get());
   }
+  return true;
 }
 
 bool DiagGraph::update(const DiagGraphStatus & msg)
@@ -91,10 +99,7 @@ std::vector<T *> create_ptrs(const std::vector<std::unique_ptr<T>> & list)
 
 std::vector<DiagUnit *> DiagGraph::units() const
 {
-  std::vector<DiagUnit *> result;
-  extend_ptrs(result, nodes_);
-  extend_ptrs(result, diags_);
-  return result;
+  return units_;
 }
 
 std::vector<DiagNode *> DiagGraph::nodes() const
