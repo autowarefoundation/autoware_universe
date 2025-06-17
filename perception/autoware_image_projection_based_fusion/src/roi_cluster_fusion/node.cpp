@@ -171,7 +171,7 @@ void RoiClusterFusionNode::fuse_on_single_image(
       auto cluster_roi = cluster_map.second;
       sanitizeROI(image_roi, camera_info.width, camera_info.height);
       sanitizeROI(cluster_roi, camera_info.width, camera_info.height);
-      if (is_use_non_trust_object_iou_mode || is_roi_label_known) {
+      if (is_use_non_trust_object_iou_mode || (!is_roi_label_known)) {
         iou = cal_iou_by_mode(cluster_roi, image_roi, non_trust_object_iou_mode_);
       } else {
         iou = cal_iou_by_mode(cluster_roi, image_roi, trust_object_iou_mode_);
