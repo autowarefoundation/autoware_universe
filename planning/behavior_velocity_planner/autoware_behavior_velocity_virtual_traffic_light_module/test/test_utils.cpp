@@ -131,7 +131,7 @@ TEST(VirtualTrafficLightTest, ToAutowarePoints)
 
 TEST(VirtualTrafficLightTest, CalcCenter)
 {
-  autoware::universe_utils::LineString3d line_string;
+  autoware_utils::LineString3d line_string;
   line_string.emplace_back(1.0, 2.0, 3.0);
   line_string.emplace_back(4.0, 5.0, 6.0);
 
@@ -158,7 +158,7 @@ TEST(VirtualTrafficLightTest, CalcHeadPose)
 
 TEST(VirtualTrafficLightTest, ConvertToGeomPoint)
 {
-  autoware::universe_utils::Point3d point(1.0, 2.0, 3.0);
+  autoware_utils::Point3d point(1.0, 2.0, 3.0);
   auto geom_point = convertToGeomPoint(point);
 
   EXPECT_DOUBLE_EQ(geom_point.x, 1.0);
@@ -385,7 +385,7 @@ TEST(VirtualTrafficLightTest, FindLastCollisionBeforeEndLine)
   // 1) find first collision point
   {
     std::cout << "----- find first collision point -----" << std::endl;
-    autoware::universe_utils::LineString3d target_line;
+    autoware_utils::LineString3d target_line;
     target_line.emplace_back(0.0, -1.0, 0.0);
     target_line.emplace_back(0.0, 1.0, 0.0);
 
@@ -401,7 +401,7 @@ TEST(VirtualTrafficLightTest, FindLastCollisionBeforeEndLine)
   {
     std::cout << "----- find middle collision point -----" << std::endl;
 
-    autoware::universe_utils::LineString3d target_line;
+    autoware_utils::LineString3d target_line;
     target_line.emplace_back(5.0, -1.0, 0.0);
     target_line.emplace_back(5.0, 1.0, 0.0);
 
@@ -418,7 +418,7 @@ TEST(VirtualTrafficLightTest, FindLastCollisionBeforeEndLine)
   {
     std::cout << "----- find middle collision point -----" << std::endl;
 
-    autoware::universe_utils::LineString3d target_line;
+    autoware_utils::LineString3d target_line;
     target_line.emplace_back(4.5, -1.0, 0.0);
     target_line.emplace_back(4.5, 1.0, 0.0);
 
@@ -431,19 +431,19 @@ TEST(VirtualTrafficLightTest, FindLastCollisionBeforeEndLine)
     EXPECT_EQ(result.value().index, 5);
   }
 
-  // std::vector<autoware::universe_utils::LineString3d>
+  // std::vector<autoware_utils::LineString3d>
   // 3) find middle collision point with multi target lines
   {
     std::cout << "----- find collision point with multi target lines -----" << std::endl;
 
-    std::vector<autoware::universe_utils::LineString3d> target_lines;
+    std::vector<autoware_utils::LineString3d> target_lines;
     {
-      autoware::universe_utils::LineString3d target_line1;
+      autoware_utils::LineString3d target_line1;
 
       target_line1.emplace_back(3.5, -1.0, 0.0);
       target_line1.emplace_back(3.5, 1.0, 0.0);
 
-      autoware::universe_utils::LineString3d target_line2;
+      autoware_utils::LineString3d target_line2;
       target_line2.emplace_back(6.5, -1.0, 0.0);
       target_line2.emplace_back(6.5, 1.0, 0.0);
 

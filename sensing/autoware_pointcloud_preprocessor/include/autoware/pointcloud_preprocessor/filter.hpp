@@ -54,31 +54,30 @@
 
 #include "autoware/pointcloud_preprocessor/transform_info.hpp"
 
-#include <memory>
-#include <string>
-#include <vector>
-
-// PCL includes
 #include <boost/thread/mutex.hpp>
 
-#include <pcl/filters/filter.h>
-#include <sensor_msgs/msg/point_cloud2.h>
-// PCL includes
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/synchronizer.h>
+#include <pcl/filters/filter.h>
 #include <pcl/pcl_base.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_msgs/msg/model_coefficients.h>
 #include <pcl_msgs/msg/point_indices.h>
+#include <sensor_msgs/msg/point_cloud2.h>
 
-// Include tier4 autoware utils
-#include <autoware/universe_utils/ros/debug_publisher.hpp>
-#include <autoware/universe_utils/ros/managed_transform_buffer.hpp>
-#include <autoware/universe_utils/ros/published_time_publisher.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <memory>
+#include <string>
+#include <vector>
+
+// Autoware utils
+#include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
+#include <autoware_utils/ros/published_time_publisher.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
+#include <managed_transform_buffer/managed_transform_buffer.hpp>
 
 namespace autoware::pointcloud_preprocessor
 {
@@ -169,16 +168,16 @@ protected:
    * if input.header.frame_id is different. */
   std::string tf_output_frame_;
 
-  /** \brief The flag to indicate if only static TF are used. */
-  bool has_static_tf_only_;
-
   /** \brief Internal mutex. */
   std::mutex mutex_;
 
+  /** \brief The diagnostic message */
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_;
+
   /** \brief processing time publisher. **/
-  std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
-  std::unique_ptr<autoware::universe_utils::DebugPublisher> debug_publisher_;
-  std::unique_ptr<autoware::universe_utils::PublishedTimePublisher> published_time_publisher_;
+  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
+  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
+  std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
 
   /** \brief Virtual abstract filter method. To be implemented by every child.
    * \param input the input point cloud dataset.
@@ -206,7 +205,11 @@ protected:
    * \param input the input point cloud dataset.
    * \param indices a pointer to the vector of point indices to use.
    */
-  void computePublish(const PointCloud2ConstPtr & input, const IndicesPtr & indices);
+  virtual void compute_publish(const PointCloud2ConstPtr & input, const IndicesPtr & indices);
+  /** \brief PointCloud2 + Indices data callback. */
+  virtual void input_indices_callback(
+    const PointCloud2ConstPtr cloud, const PointIndicesConstPtr indices);
+  virtual bool convert_output_costly(std::unique_ptr<PointCloud2> & output);
 
   //////////////////////
   // from PCLNodelet //
@@ -238,9 +241,9 @@ protected:
    * versus an exact one (false by default). */
   bool approximate_sync_ = false;
 
-  std::unique_ptr<autoware::universe_utils::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
+  std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
 
-  inline bool isValid(
+  inline bool is_valid(
     const PointCloud2ConstPtr & cloud, const std::string & /*topic_name*/ = "input")
   {
     if (cloud->width * cloud->height * cloud->point_step != cloud->data.size()) {
@@ -255,13 +258,13 @@ protected:
     return true;
   }
 
-  inline bool isValid(
+  static inline bool is_valid(
     const PointIndicesConstPtr & /*indices*/, const std::string & /*topic_name*/ = "indices")
   {
     return true;
   }
 
-  inline bool isValid(
+  static inline bool is_valid(
     const ModelCoefficientsConstPtr & /*model*/, const std::string & /*topic_name*/ = "model")
   {
     return true;
@@ -272,29 +275,24 @@ private:
   OnSetParametersCallbackHandle::SharedPtr set_param_res_filter_;
 
   /** \brief Parameter service callback */
-  rcl_interfaces::msg::SetParametersResult filterParamCallback(
+  rcl_interfaces::msg::SetParametersResult filter_param_callback(
     const std::vector<rclcpp::Parameter> & p);
 
   /** \brief Synchronized input, and indices.*/
   std::shared_ptr<ExactTimeSyncPolicy> sync_input_indices_e_;
   std::shared_ptr<ApproximateTimeSyncPolicy> sync_input_indices_a_;
 
-  /** \brief PointCloud2 + Indices data callback. */
-  void input_indices_callback(const PointCloud2ConstPtr cloud, const PointIndicesConstPtr indices);
-
   /** \brief Get a matrix for conversion from the original frame to the target frame */
   bool calculate_transform_matrix(
     const std::string & target_frame, const sensor_msgs::msg::PointCloud2 & from,
     TransformInfo & transform_info /*output*/);
-
-  bool convert_output_costly(std::unique_ptr<PointCloud2> & output);
 
   // TODO(sykwer): Temporary Implementation: Remove this interface when all the filter nodes conform
   // to new API.
   void faster_input_indices_callback(
     const PointCloud2ConstPtr cloud, const PointIndicesConstPtr indices);
 
-  void setupTF();
+  void setup_tf();
 };
 }  // namespace autoware::pointcloud_preprocessor
 

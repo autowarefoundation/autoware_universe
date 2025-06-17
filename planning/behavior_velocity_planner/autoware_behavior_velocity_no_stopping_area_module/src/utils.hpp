@@ -17,8 +17,8 @@
 
 #include <autoware/behavior_velocity_planner_common/planner_data.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/arc_lane_util.hpp>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/no_stopping_area.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 #include <rclcpp/logger.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
@@ -33,7 +33,7 @@
 namespace autoware::behavior_velocity_planner::no_stopping_area
 {
 using PathIndexWithPose = std::pair<size_t, geometry_msgs::msg::Pose>;    // front index, pose
-using PathIndexWithPoint2d = std::pair<size_t, universe_utils::Point2d>;  // front index, point2d
+using PathIndexWithPoint2d = std::pair<size_t, autoware_utils::Point2d>;  // front index, point2d
 using PathIndexWithOffset = std::pair<size_t, double>;                    // front index, offset
 
 struct PassJudge
@@ -99,7 +99,7 @@ void insert_stop_point(
  * @param ego_width [m] width of ego
  * @param stop_line_margin [m] margin to keep between the stop line and the no stopping areas
  **/
-std::optional<universe_utils::LineString2d> generate_stop_line(
+std::optional<autoware_utils::LineString2d> generate_stop_line(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
   const lanelet::ConstPolygons3d & no_stopping_areas, const double ego_width,
   const double stop_line_margin);
@@ -152,15 +152,13 @@ bool check_stop_lines_in_no_stopping_area(
  * @param path ego path
  * @param no_stopping_area_reg_elem no_stopping_area regulatory element
  * @param stop_line_margin [m] margin between the stop line and the start of the no stopping area
- * @param stop_line_extend_length [m] extra length to add on each side of the stop line (only added
- * to the stop line of the regulatory element)
  * @param vehicle_width [m] width of the ego vehicle
  * @return generated stop line
  */
-std::optional<universe_utils::LineString2d> get_stop_line_geometry2d(
+std::optional<autoware_utils::LineString2d> get_stop_line_geometry2d(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
   const lanelet::autoware::NoStoppingArea & no_stopping_area_reg_elem,
-  const double stop_line_margin, const double stop_line_extend_length, const double vehicle_width);
+  const double stop_line_margin, const double vehicle_width);
 
 }  // namespace autoware::behavior_velocity_planner::no_stopping_area
 

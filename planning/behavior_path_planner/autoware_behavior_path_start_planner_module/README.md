@@ -170,7 +170,7 @@ The approach to collision safety is divided into two main components: generating
     Consider a scenario in a "geometric pull out path" where the clearance from the path to a static obstacle is minimal, and there is a stopped vehicle ahead. In this case, although the path may meet safety standards and thus be generated, a concurrently operating avoidance module might deem it impossible to avoid the obstacle, potentially leading to vehicle deadlock. To ensure there is enough distance for avoidance maneuvers, the distance to the front obstacle is assessed. Increasing this parameter can prevent immobilization within the avoidance module but may also lead to the frequent generation of backward paths or geometric pull out path, resulting in paths that may seem unnatural to humans.
 
   - Why is a margin from the rear object necessary?
-    For objects ahead, another behavior module can intervene, allowing the path to overwrite itself through an avoidance plan, even if the clearance from the path to a static obstacle is minimal, thus maintaining a safe distance from static obstacles. However, for objects behind the vehicle, it is impossible for other behavior modules other than the start_planner to alter the path to secure a margin, potentially leading to a deadlock by an action module like "obstacle_cruise_planner" and subsequent immobilization. Therefore, a margin is set for stationary objects at the rear.
+    For objects ahead, another behavior module can intervene, allowing the path to overwrite itself through an avoidance plan, even if the clearance from the path to a static obstacle is minimal, thus maintaining a safe distance from static obstacles. However, for objects behind the vehicle, it is impossible for other behavior modules other than the start_planner to alter the path to secure a margin, potentially leading to a deadlock by an action module like "obstacle_stop_module" and subsequent immobilization. Therefore, a margin is set for stationary objects at the rear.
 
 Here's the expression of the steps start pose searching steps, considering the `collision_check_margins` is set at [2.0, 1.0, 0.5, 0.1] as example. The process is as follows:
 
@@ -494,14 +494,14 @@ See also [[1]](https://www.sciencedirect.com/science/article/pii/S14746670153474
 
 #### parameters for geometric pull out
 
-| Name                                  | Unit  | Type   | Description                                                                                                                                               | Default value |
-| :------------------------------------ | :---- | :----- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------ |
-| enable_geometric_pull_out             | [-]   | bool   | flag whether to enable geometric pull out                                                                                                                 | true          |
-| divide_pull_out_path                  | [-]   | bool   | flag whether to divide arc paths. The path is assumed to be divided because the curvature is not continuous. But it requires a stop during the departure. | false         |
-| geometric_pull_out_velocity           | [m/s] | double | velocity of geometric pull out                                                                                                                            | 1.0           |
-| lane_departure_margin                 | [m]   | double | margin of deviation to lane right                                                                                                                         | 0.2           |
-| lane_departure_check_expansion_margin | [m]   | double | margin to expand the ego vehicle footprint when doing lane departure checks                                                                               | 0.0           |
-| pull_out_max_steer_angle              | [rad] | double | maximum steer angle for path generation                                                                                                                   | 0.26          |
+| Name                                            | Unit  | Type   | Description                                                                                                                                               | Default value |
+| :---------------------------------------------- | :---- | :----- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------ |
+| enable_geometric_pull_out                       | [-]   | bool   | flag whether to enable geometric pull out                                                                                                                 | true          |
+| divide_pull_out_path                            | [-]   | bool   | flag whether to divide arc paths. The path is assumed to be divided because the curvature is not continuous. But it requires a stop during the departure. | false         |
+| geometric_pull_out_velocity                     | [m/s] | double | velocity of geometric pull out                                                                                                                            | 1.0           |
+| lane_departure_margin                           | [m]   | double | margin of deviation to lane right                                                                                                                         | 0.2           |
+| lane_departure_check_expansion_margin           | [m]   | double | margin to expand the ego vehicle footprint when doing lane departure checks                                                                               | 0.0           |
+| geometric_pull_out_max_steer_angle_margin_scale | [-]   | double | scaling factor applied to the maximum steering angle (max_steer_angle) defined in vehicle_info parameter                                                  | 0.72          |
 
 ## **backward pull out start point search**
 
@@ -525,7 +525,7 @@ If a safe path cannot be generated from the current position, search backwards f
 ### **freespace pull out**
 
 If the vehicle gets stuck with pull out along lanes, execute freespace pull out.
-To run this feature, you need to set `parking_lot` to the map, `activate_by_scenario` of [costmap_generator](../autoware_costmap_generator/README.md) to `false` and `enable_freespace_planner` to `true`
+To run this feature, you need to set `parking_lot` to the map, `activate_by_scenario` of [costmap_generator](../../autoware_costmap_generator/README.md) to `false` and `enable_freespace_planner` to `true`
 
 <img src="https://user-images.githubusercontent.com/39142679/270964106-ae688bca-1709-4e06-98c4-90f671bb8246.png" width="600">
 
@@ -544,4 +544,4 @@ To run this feature, you need to set `parking_lot` to the map, `activate_by_scen
 | end_pose_search_end_distance   | [m]  | double | distance from ego to the end point of the search for the end point in the freespace_pull_out driving lane                                | 30.0          |
 | end_pose_search_interval       | [m]  | bool   | interval to search for the end point in the freespace_pull_out driving lane                                                              | 2.0           |
 
-See [freespace_planner](../autoware_freespace_planner/README.md) for other parameters.
+See [freespace_planner](../../autoware_freespace_planner/README.md) for other parameters.

@@ -21,8 +21,8 @@
 #include "autoware/behavior_path_planner_common/utils/utils.hpp"
 
 #include <autoware/motion_utils/trajectory/path_shift.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
 #include <autoware_frenet_planner/frenet_planner.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 #include <range/v3/action/insert.hpp>
 #include <range/v3/action/remove_if.hpp>
 #include <range/v3/algorithm.hpp>
@@ -53,8 +53,8 @@ using autoware::frenet_planner::SamplingParameters;
 using autoware::route_handler::Direction;
 using autoware::sampler_common::FrenetPoint;
 using autoware::sampler_common::transform::Spline2D;
-using autoware::universe_utils::LineString2d;
-using autoware::universe_utils::Point2d;
+using autoware_utils::LineString2d;
+using autoware_utils::Point2d;
 using geometry_msgs::msg::Pose;
 
 template <typename T>
@@ -158,8 +158,8 @@ std::optional<double> exceed_yaw_threshold(
 
   const auto & p1 = std::prev(prepare.end() - 1)->point.pose;
   const auto & p2 = std::next(lane_changing.begin())->point.pose;
-  const auto yaw_diff_rad = std::abs(autoware::universe_utils::normalizeRadian(
-    tf2::getYaw(p1.orientation) - tf2::getYaw(p2.orientation)));
+  const auto yaw_diff_rad = std::abs(
+    autoware_utils::normalize_radian(tf2::getYaw(p1.orientation) - tf2::getYaw(p2.orientation)));
   if (yaw_diff_rad > yaw_th_rad) {
     return yaw_diff_rad;
   }
@@ -244,11 +244,11 @@ std::vector<double> calc_curvatures(
          points | ranges::views::drop(nearest_segment_idx),
          points | ranges::views::drop(nearest_segment_idx + 1),
          points | ranges::views::drop(nearest_segment_idx + 2))) {
-    const auto point1 = autoware::universe_utils::getPoint(p1);
-    const auto point2 = autoware::universe_utils::getPoint(p2);
-    const auto point3 = autoware::universe_utils::getPoint(p3);
+    const auto point1 = autoware_utils::get_point(p1);
+    const auto point2 = autoware_utils::get_point(p2);
+    const auto point3 = autoware_utils::get_point(p3);
 
-    curvatures.push_back(autoware::universe_utils::calcCurvature(point1, point2, point3));
+    curvatures.push_back(autoware_utils::calc_curvature(point1, point2, point3));
   }
 
   return curvatures;
@@ -486,7 +486,7 @@ LaneChangePath construct_candidate_path(
     point.lane_ids = target_lane_reference_path.points.at(*nearest_idx).lane_ids;
   }
 
-  constexpr auto yaw_diff_th = autoware::universe_utils::deg2rad(5.0);
+  constexpr auto yaw_diff_th = autoware_utils::deg2rad(5.0);
   if (
     const auto yaw_diff_opt =
       exceed_yaw_threshold(prepare_segment, shifted_path.path, yaw_diff_th)) {
@@ -510,7 +510,7 @@ std::vector<lane_change::TrajectoryGroup> generate_frenet_candidates(
   const std::vector<LaneChangePhaseMetrics> & prep_metrics)
 {
   std::vector<lane_change::TrajectoryGroup> trajectory_groups;
-  universe_utils::StopWatch<std::chrono::microseconds> sw;
+  autoware_utils::StopWatch<std::chrono::microseconds> sw;
 
   const auto & transient_data = common_data_ptr->transient_data;
   const auto & current_lanes = common_data_ptr->lanes_ptr->current;
@@ -551,7 +551,7 @@ std::vector<lane_change::TrajectoryGroup> generate_frenet_candidates(
     double ref_s = 0.0;
     for (auto it = target_lane_reference_path.points.begin();
          std::next(it) != target_lane_reference_path.points.end(); ++it) {
-      ref_s += universe_utils::calcDistance2d(*it, *std::next(it));
+      ref_s += autoware_utils::calc_distance2d(*it, *std::next(it));
       target_ref_path_sums.push_back(ref_s);
     }
 
@@ -678,8 +678,8 @@ std::optional<LaneChangePath> get_candidate_path(
   const auto th_yaw_diff_deg = common_data_ptr->lc_param_ptr->frenet.th_yaw_diff_deg;
   if (
     const auto yaw_diff_opt = exceed_yaw_threshold(
-      prepare_segment, shifted_path.path, autoware::universe_utils::deg2rad(th_yaw_diff_deg))) {
-    const auto yaw_diff_deg = autoware::universe_utils::rad2deg(yaw_diff_opt.value());
+      prepare_segment, shifted_path.path, autoware_utils::deg2rad(th_yaw_diff_deg))) {
+    const auto yaw_diff_deg = autoware_utils::rad2deg(yaw_diff_opt.value());
     const auto err_msg = fmt::format(
       "Excessive yaw difference {yaw_diff:2.2f}[deg]. The threshold is {th_yaw_diff:2.2f}[deg].",
       fmt::arg("yaw_diff", yaw_diff_deg), fmt::arg("th_yaw_diff", th_yaw_diff_deg));
@@ -739,11 +739,10 @@ void append_target_ref_to_candidate(
   for (const auto & [p2, p3] : ranges::views::zip(
          points | ranges::views::drop(lc_end_idx + 1),
          points | ranges::views::drop(lc_end_idx + 2))) {
-    const auto point1 = autoware::universe_utils::getPoint(candidate_path.back().point.pose);
-    const auto point2 = autoware::universe_utils::getPoint(p2);
-    const auto point3 = autoware::universe_utils::getPoint(p3);
-    const auto curvature =
-      std::abs(autoware::universe_utils::calcCurvature(point1, point2, point3));
+    const auto point1 = autoware_utils::get_point(candidate_path.back().point.pose);
+    const auto point2 = autoware_utils::get_point(p2);
+    const auto point3 = autoware_utils::get_point(p3);
+    const auto curvature = std::abs(autoware_utils::calc_curvature(point1, point2, point3));
     if (curvature < th_curvature_smoothing) {
       candidate_path.push_back(p2);
     }

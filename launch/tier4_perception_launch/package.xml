@@ -2,17 +2,19 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>tier4_perception_launch</name>
-  <version>0.41.0</version>
+  <version>0.45.0</version>
   <description>The tier4_perception_launch package</description>
   <maintainer email="yukihiro.saito@tier4.jp">Yukihiro Saito</maintainer>
-  <maintainer email="shunsuke.miura@tier4.jp">Shunsuke Miura</maintainer>
   <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
   <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
+  <maintainer email="masato.saeki@tier4.jp">Masato Saeki</maintainer>
+
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
+  <exec_depend>autoware_bevfusion</exec_depend>
   <exec_depend>autoware_cluster_merger</exec_depend>
   <exec_depend>autoware_compare_map_segmentation</exec_depend>
   <exec_depend>autoware_crosswalk_traffic_light_estimator</exec_depend>
@@ -25,20 +27,23 @@
   <exec_depend>autoware_image_projection_based_fusion</exec_depend>
   <exec_depend>autoware_image_transport_decompressor</exec_depend>
   <exec_depend>autoware_lidar_apollo_instance_segmentation</exec_depend>
+  <exec_depend>autoware_lidar_centerpoint</exec_depend>
+  <exec_depend>autoware_lidar_transfusion</exec_depend>
   <exec_depend>autoware_map_based_prediction</exec_depend>
   <exec_depend>autoware_multi_object_tracker</exec_depend>
   <exec_depend>autoware_object_merger</exec_depend>
   <exec_depend>autoware_object_range_splitter</exec_depend>
   <exec_depend>autoware_object_velocity_splitter</exec_depend>
   <exec_depend>autoware_occupancy_grid_map_outlier_filter</exec_depend>
+  <exec_depend>autoware_perception_online_evaluator</exec_depend>
   <exec_depend>autoware_pointcloud_preprocessor</exec_depend>
   <exec_depend>autoware_probabilistic_occupancy_grid_map</exec_depend>
-  <exec_depend>autoware_radar_crossing_objects_noise_filter</exec_depend>
   <exec_depend>autoware_radar_fusion_to_detected_object</exec_depend>
-  <exec_depend>autoware_radar_object_clustering</exec_depend>
   <exec_depend>autoware_radar_object_tracker</exec_depend>
   <exec_depend>autoware_raindrop_cluster_filter</exec_depend>
   <exec_depend>autoware_shape_estimation</exec_depend>
+  <exec_depend>autoware_simple_object_merger</exec_depend>
+  <exec_depend>autoware_tensorrt_yolox</exec_depend>
   <exec_depend>autoware_tracking_object_merger</exec_depend>
   <exec_depend>autoware_traffic_light_arbiter</exec_depend>
   <exec_depend>autoware_traffic_light_classifier</exec_depend>

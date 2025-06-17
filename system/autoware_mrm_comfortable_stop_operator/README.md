@@ -16,27 +16,15 @@ MRM comfortable stop operator is a node that generates comfortable stop commands
 
 ### Output
 
-| Name                                   | Type                                                  | Description                  |
-| -------------------------------------- | ----------------------------------------------------- | ---------------------------- |
-| `~/output/mrm/comfortable_stop/status` | `tier4_system_msgs::msg::MrmBehaviorStatus`           | MRM execution status         |
-| `~/output/velocity_limit`              | `tier4_planning_msgs::msg::VelocityLimit`             | Velocity limit command       |
-| `~/output/velocity_limit/clear`        | `tier4_planning_msgs::msg::VelocityLimitClearCommand` | Velocity limit clear command |
+| Name                                   | Type                                                              | Description                  |
+| -------------------------------------- | ----------------------------------------------------------------- | ---------------------------- |
+| `~/output/mrm/comfortable_stop/status` | `tier4_system_msgs::msg::MrmBehaviorStatus`                       | MRM execution status         |
+| `~/output/velocity_limit`              | `autoware_internal_planning_msgs::msg::VelocityLimit`             | Velocity limit command       |
+| `~/output/velocity_limit/clear`        | `autoware_internal_planning_msgs::msg::VelocityLimitClearCommand` | Velocity limit clear command |
 
 ## Parameters
 
-### Node Parameters
-
-| Name        | Type | Default value | Explanation                   |
-| ----------- | ---- | ------------- | ----------------------------- |
-| update_rate | int  | `10`          | Timer callback frequency [Hz] |
-
-### Core Parameters
-
-| Name             | Type   | Default value | Explanation                                       |
-| ---------------- | ------ | ------------- | ------------------------------------------------- |
-| min_acceleration | double | `-1.0`        | Minimum acceleration for comfortable stop [m/s^2] |
-| max_jerk         | double | `0.3`         | Maximum jerk for comfortable stop [m/s^3]         |
-| min_jerk         | double | `-0.3`        | Minimum jerk for comfortable stop [m/s^3]         |
+{{ json_to_markdown("system/mrm_comfortable_stop_operator/schema/mrm_comfortable_stop_operator.schema.json") }}
 
 ## Assumptions / Known limits
 

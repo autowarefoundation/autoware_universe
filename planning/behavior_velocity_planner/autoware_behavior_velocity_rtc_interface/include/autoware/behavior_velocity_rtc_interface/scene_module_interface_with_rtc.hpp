@@ -18,7 +18,8 @@
 #include <autoware/behavior_velocity_planner_common/planner_data.hpp>
 #include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware/rtc_interface/rtc_interface.hpp>
-#include <autoware/universe_utils/ros/parameter.hpp>
+#include <autoware_utils/ros/parameter.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <builtin_interfaces/msg/time.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
@@ -41,8 +42,8 @@ namespace autoware::behavior_velocity_planner
 {
 
 using autoware::rtc_interface::RTCInterface;
-using autoware::universe_utils::getOrDeclareParameter;
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
+using autoware_utils::get_or_declare_parameter;
 using builtin_interfaces::msg::Time;
 using tier4_rtc_msgs::msg::Module;
 using tier4_rtc_msgs::msg::State;
@@ -53,7 +54,7 @@ class SceneModuleInterfaceWithRTC : public SceneModuleInterface
 public:
   explicit SceneModuleInterfaceWithRTC(
     const int64_t module_id, rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock,
-    const std::shared_ptr<universe_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
   virtual ~SceneModuleInterfaceWithRTC() = default;
@@ -117,7 +118,7 @@ protected:
 
   UUID getUUID(const int64_t & module_id) const;
 
-  void generateUUID(const int64_t & module_id);
+  void generate_uuid(const int64_t & module_id);
 
   void removeUUID(const int64_t & module_id);
 
@@ -131,11 +132,11 @@ protected:
     bool enable_rtc = true;
 
     try {
-      enable_rtc = getOrDeclareParameter<bool>(node, "enable_all_modules_auto_mode")
+      enable_rtc = get_or_declare_parameter<bool>(node, "enable_all_modules_auto_mode")
                      ? false
-                     : getOrDeclareParameter<bool>(node, param_name);
+                     : get_or_declare_parameter<bool>(node, param_name);
     } catch (const std::exception & e) {
-      enable_rtc = getOrDeclareParameter<bool>(node, param_name);
+      enable_rtc = get_or_declare_parameter<bool>(node, param_name);
     }
 
     return enable_rtc;

@@ -15,7 +15,7 @@
 #include "test.hpp"
 
 #include "autoware/autonomous_emergency_braking/node.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/time.hpp>
@@ -35,9 +35,9 @@
 
 namespace autoware::motion::control::autonomous_emergency_braking::test
 {
-using autoware::universe_utils::Polygon2d;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
+using autoware_utils::Polygon2d;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::TransformStamped;
@@ -58,7 +58,7 @@ Imu make_imu_message(
 {
   Imu imu_msg;
   imu_msg.header = header;
-  imu_msg.orientation = autoware::universe_utils::createQuaternionFromYaw(yaw);
+  imu_msg.orientation = autoware_utils::create_quaternion_from_yaw(yaw);
   imu_msg.angular_velocity.z = angular_velocity_z;
   imu_msg.linear_acceleration.x = ax;
   imu_msg.linear_acceleration.y = ay;
@@ -327,7 +327,7 @@ TEST_F(TestAEB, checkConvertObjectToPolygon)
   geometry_msgs::msg::Transform transform;
 
   constexpr double yaw{0.0};
-  transform.rotation = autoware::universe_utils::createQuaternionFromYaw(yaw);
+  transform.rotation = autoware_utils::create_quaternion_from_yaw(yaw);
   geometry_msgs::msg::Vector3 translation;
   translation.x = 1.0;
   translation.y = 0.0;

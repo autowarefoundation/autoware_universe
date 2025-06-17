@@ -23,8 +23,8 @@
 
 #define EIGEN_MPL2_ONLY
 #include <Eigen/Core>
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
+#include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/detection_area.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -38,7 +38,7 @@ using PathIndexWithPoint2d = std::pair<size_t, Point2d>;                // front
 using PathIndexWithOffset = std::pair<size_t, double>;                  // front index, offset
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
 
-class DetectionAreaModule : public SceneModuleInterface
+class DetectionAreaModule : public SceneModuleInterfaceWithRTC
 {
 public:
   enum class State { GO, STOP };
@@ -62,6 +62,7 @@ public:
     double hold_stop_margin_distance;
     double distance_to_judge_over_stop_line;
     bool suppress_pass_judge_when_stopping;
+    bool enable_detected_obstacle_logging;
   };
 
   DetectionAreaModule(
@@ -69,7 +70,7 @@ public:
     const lanelet::autoware::DetectionArea & detection_area_reg_elem,
     const PlannerParam & planner_param, const rclcpp::Logger & logger,
     const rclcpp::Clock::SharedPtr clock,
-    const std::shared_ptr<universe_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 
@@ -77,6 +78,16 @@ public:
 
   visualization_msgs::msg::MarkerArray createDebugMarkerArray() override;
   autoware::motion_utils::VirtualWalls createVirtualWalls() override;
+
+  std::vector<int64_t> getRegulatoryElementIds() const override
+  {
+    return {detection_area_reg_elem_.id()};
+  }
+  std::vector<int64_t> getLaneletIds() const override { return {lane_id_}; }
+  std::vector<int64_t> getLineIds() const override
+  {
+    return {detection_area_reg_elem_.stopLine().id()};
+  }
 
 private:
   // Lane id
@@ -94,6 +105,16 @@ private:
 
   // Debug
   DebugData debug_data_;
+
+  /**
+   * @brief Print positions of detected obstacle, time elapsed since last detection, and ego vehicle
+   * position
+   * @param obstacle_points Points representing detected obstacles in the detection area
+   * @param self_pose Current pose of the ego vehicle
+   */
+  void print_detected_obstacle(
+    const std::vector<geometry_msgs::msg::Point> & obstacle_points,
+    const geometry_msgs::msg::Pose & self_pose) const;
 };
 }  // namespace autoware::behavior_velocity_planner
 

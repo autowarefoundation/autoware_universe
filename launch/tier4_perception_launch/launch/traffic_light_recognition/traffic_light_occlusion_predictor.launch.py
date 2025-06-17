@@ -30,12 +30,14 @@ def create_traffic_light_occlusion_predictor(namespace):
     include = PathJoinSubstitution([package, "launch/traffic_light_occlusion_predictor.launch.xml"])
 
     arguments = {
-        "input/camera_info": f"/sensing/camera/{namespace}/camera_info",
         "input/cloud": LaunchConfiguration("input/cloud"),
+        "input/vector_map": LaunchConfiguration("input/vector_map"),
+        "input/camera_info": f"/sensing/camera/{namespace}/camera_info",
         "input/rois": f"/perception/traffic_light_recognition/{namespace}/detection/rois",
-        "input/car/traffic_signals": "classified/car/traffic_signals",
-        "input/pedestrian/traffic_signals": "classified/pedestrian/traffic_signals",
+        "input/car/traffic_signals": "car/traffic_signals",
+        "input/pedestrian/traffic_signals": "pedestrian/traffic_signals",
         "output/traffic_signals": f"/perception/traffic_light_recognition/{namespace}/classification/traffic_signals",
+        "param_path": LaunchConfiguration("param_path"),
     }.items()
 
     group = GroupAction(
@@ -50,23 +52,23 @@ def create_traffic_light_occlusion_predictor(namespace):
 
 
 def launch_setup(context, *args, **kwargs):
-    # Load all camera namespaces
-    all_camera_namespaces = LaunchConfiguration("all_camera_namespaces").perform(context)
+    # Load camera namespaces
+    camera_namespaces = LaunchConfiguration("camera_namespaces").perform(context)
 
     # Convert string to list
-    all_camera_namespaces = yaml.load(all_camera_namespaces, Loader=yaml.FullLoader)
-    if not isinstance(all_camera_namespaces, list):
+    camera_namespaces = yaml.load(camera_namespaces, Loader=yaml.FullLoader)
+    if not isinstance(camera_namespaces, list):
         raise ValueError(
-            "all_camera_namespaces is not a list. You should declare it like `['camera6', 'camera7']`."
+            "camera_namespaces is not a list. You should declare it like `['camera6', 'camera7']`."
         )
-    if not all((isinstance(v, str) for v in all_camera_namespaces)):
+    if not all((isinstance(v, str) for v in camera_namespaces)):
         raise ValueError(
-            "all_camera_namespaces is not a list of strings. You should declare it like `['camera6', 'camera7']`."
+            "camera_namespaces is not a list of strings. You should declare it like `['camera6', 'camera7']`."
         )
 
     # Create containers for all cameras
     traffic_light_recognition_containers = [
-        create_traffic_light_occlusion_predictor(namespace) for namespace in all_camera_namespaces
+        create_traffic_light_occlusion_predictor(namespace) for namespace in camera_namespaces
     ]
     return traffic_light_recognition_containers
 
@@ -80,8 +82,10 @@ def generate_launch_description():
             DeclareLaunchArgument(name, default_value=default_value, description=description)
         )
 
-    add_launch_arg("all_camera_namespaces", "[camera6, camera7]")
-    add_launch_arg("input/cloud", "/sensing/lidar/top/pointcloud_raw_ex")
+    add_launch_arg("camera_namespaces")
+    add_launch_arg("input/cloud")
+    add_launch_arg("input/vector_map")
+    add_launch_arg("param_path")
 
     return launch.LaunchDescription(
         [

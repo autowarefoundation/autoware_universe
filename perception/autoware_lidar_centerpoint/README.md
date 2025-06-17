@@ -20,11 +20,11 @@ We trained the models using <https://github.com/open-mmlab/mmdetection3d>.
 
 ### Output
 
-| Name                       | Type                                             | Description          |
-| -------------------------- | ------------------------------------------------ | -------------------- |
-| `~/output/objects`         | `autoware_perception_msgs::msg::DetectedObjects` | detected objects     |
-| `debug/cyclic_time_ms`     | `tier4_debug_msgs::msg::Float64Stamped`          | cyclic time (msg)    |
-| `debug/processing_time_ms` | `tier4_debug_msgs::msg::Float64Stamped`          | processing time (ms) |
+| Name                       | Type                                                | Description          |
+| -------------------------- | --------------------------------------------------- | -------------------- |
+| `~/output/objects`         | `autoware_perception_msgs::msg::DetectedObjects`    | detected objects     |
+| `debug/cyclic_time_ms`     | `autoware_internal_debug_msgs::msg::Float64Stamped` | cyclic time (msg)    |
+| `debug/processing_time_ms` | `autoware_internal_debug_msgs::msg::Float64Stamped` | processing time (ms) |
 
 ## Parameters
 
@@ -277,6 +277,16 @@ point_cloud_range, point_feature_size, voxel_size, etc. according to the trainin
 cd /YOUR/AUTOWARE/PATH/Autoware
 source install/setup.bash
 ros2 launch autoware_lidar_centerpoint lidar_centerpoint.launch.xml  model_name:=centerpoint_custom  model_path:=/PATH/TO/ONNX/FILE/
+```
+
+#### Launch the lidar_short_range_centerpoint node
+
+It also provides short_range detections using CenterPoint:
+
+```bash
+cd /YOUR/AUTOWARE/PATH/Autoware
+source install/setup.bash
+ros2 launch autoware_lidar_centerpoint lidar_centerpoint.launch.xml model_name:=centerpoint_short_range model_path:=/PATH/TO/ONNX/FILE/
 ```
 
 ### Changelog

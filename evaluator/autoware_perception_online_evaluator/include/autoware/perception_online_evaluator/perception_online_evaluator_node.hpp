@@ -17,7 +17,7 @@
 
 #include "autoware/perception_online_evaluator/metrics_calculator.hpp"
 #include "autoware/perception_online_evaluator/parameters.hpp"
-#include "autoware/universe_utils/math/accumulator.hpp"
+#include "autoware_utils/math/accumulator.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
@@ -36,9 +36,9 @@
 
 namespace autoware::perception_diagnostics
 {
-using autoware::universe_utils::Accumulator;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObjects;
+using autoware_utils::Accumulator;
 using nav_msgs::msg::Odometry;
 using TFMessage = tf2_msgs::msg::TFMessage;
 

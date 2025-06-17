@@ -137,7 +137,7 @@ ros2 topic echo /diagnostics
 Below is an example output when the point clouds are concatenated successfully:
 
 - Each point cloud has a value of `True`.
-- The `cloud_concatenation_success` is `True`.
+- The `Pointcloud concatenation succeeded` is `True`.
 - The `level` value is `\0`. (diagnostic_msgs::msg::DiagnosticStatus::OK)
 
 ```bash
@@ -152,32 +152,32 @@ status:
   message: Concatenated pointcloud is published and include all topics
   hardware_id: concatenate_data_checker
   values:
-  - key: concatenated_cloud_timestamp
+  - key: Concatenated pointcloud timestamp
     value: '1718260240.159229994'
-  - key: reference_timestamp_min
+  - key: Minimum reference timestamp
     value: '1718260240.149230003'
-  - key: reference_timestamp_max
+  - key: Maximum reference timestamp
     value: '1718260240.169229984'
-  - key: /sensing/lidar/left/pointcloud_before_sync/timestamp
+  - key: Timestamp: /sensing/lidar/left/pointcloud_before_sync
     value: '1718260240.159229994'
-  - key: /sensing/lidar/left/pointcloud_before_sync/is_concatenated
+  - key: Concatenated: /sensing/lidar/left/pointcloud_before_sync
     value: 'True'
-  - key: /sensing/lidar/right/pointcloud_before_sync/timestamp
+  - key: Timestamp: /sensing/lidar/right/pointcloud_before_sync
     value: '1718260240.194104910'
-  - key: /sensing/lidar/right/pointcloud_before_sync/is_concatenated
+  - key: Concatenated: /sensing/lidar/right/pointcloud_before_sync
     value: 'True'
-  - key: /sensing/lidar/top/pointcloud_before_sync/timestamp
+  - key: Timestamp: /sensing/lidar/top/pointcloud_before_sync
     value: '1718260240.234578133'
-  - key: /sensing/lidar/top/pointcloud_before_sync/is_concatenated
+  - key: Concatenated: /sensing/lidar/top/pointcloud_before_sync
     value: 'True'
-  - key: cloud_concatenation_success
+  - key: Pointcloud concatenation succeeded
     value: 'True'
 ```
 
 Below is an example when point clouds fail to concatenate successfully.
 
 - Some point clouds might have values of `False`.
-- The `cloud_concatenation_success` is `False`.
+- The `Pointcloud concatenation succeeded` is `False`.
 - The `level` value is `\x02`. (diagnostic_msgs::msg::DiagnosticStatus::ERROR)
 
 ```bash
@@ -192,31 +192,31 @@ status:
   message: Concatenated pointcloud is published but miss some topics
   hardware_id: concatenate_data_checker
   values:
-  - key: concatenated_cloud_timestamp
+  - key: Concatenated pointcloud timestamp
     value: '1718260240.859827995'
-  - key: reference_timestamp_min
+  - key: Minimum reference timestamp
     value: '1718260240.849828005'
-  - key: reference_timestamp_max
+  - key: Maximum reference timestamp
     value: '1718260240.869827986'
-  - key: /sensing/lidar/left/pointcloud_before_sync/timestamp
+  - key: Timestamp: /sensing/lidar/left/pointcloud_before_sync/timestamp
     value: '1718260240.859827995'
-  - key: /sensing/lidar/left/pointcloud_before_sync/is_concatenated
+  - key: Concatenated: /sensing/lidar/left/pointcloud_before_sync
     value: 'True'
-  - key: /sensing/lidar/right/pointcloud_before_sync/timestamp
+  - key: Timestamp: /sensing/lidar/right/pointcloud_before_sync/timestamp
     value: '1718260240.895193815'
-  - key: /sensing/lidar/right/pointcloud_before_sync/is_concatenated
+  - key: Concatenated: /sensing/lidar/right/pointcloud_before_sync
     value: 'True'
-  - key: /sensing/lidar/top/pointcloud_before_sync/is_concatenated
+  - key: Concatenated: /sensing/lidar/top/pointcloud_before_sync
     value: 'False'
-  - key: cloud_concatenation_success
+  - key: Pointcloud concatenation succeeded
     value: 'False'
 ```
 
 ## Node separation options
 
-There is also an option to separate the concatenate_and_time_sync_node into two nodes: one for `time synchronization` and another for `concatenate pointclouds` ([See this PR](https://github.com/autowarefoundation/autoware.universe/pull/3312)).
+There is also an option to separate the concatenate_and_time_sync_node into two nodes: one for `time synchronization` and another for `concatenate pointclouds` ([See this PR](https://github.com/autowarefoundation/autoware_universe/pull/3312)).
 
-Note that the `concatenate_pointclouds` and `time_synchronizer_nodelet` are using the [old design](https://github.com/autowarefoundation/autoware.universe/blob/9bb228fe5b7fa4c6edb47e4713c73489a02366e1/sensing/autoware_pointcloud_preprocessor/docs/concatenate-data.md) of the concatenate node.
+Note that the `concatenate_pointclouds` and `time_synchronizer_nodelet` are using the [old design](https://github.com/autowarefoundation/autoware_universe/blob/9bb228fe5b7fa4c6edb47e4713c73489a02366e1/sensing/autoware_pointcloud_preprocessor/docs/concatenate-data.md) of the concatenate node.
 
 ## Assumptions / Known Limits
 

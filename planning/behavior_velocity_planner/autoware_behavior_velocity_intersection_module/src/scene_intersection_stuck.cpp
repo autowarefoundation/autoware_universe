@@ -18,6 +18,7 @@
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for toGeomPoly
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
@@ -294,7 +295,7 @@ bool IntersectionModule::checkStuckVehicleInIntersection(const PathLanelets & pa
     }
 
     // check if the footprint is in the stuck detect area
-    const auto obj_footprint = autoware::universe_utils::toPolygon2d(object);
+    const auto obj_footprint = autoware_utils::to_polygon2d(object);
     // NOTE: in order not to stop too much
     const bool is_in_stuck_area = bg::within(
       to_bg2d(object.kinematics.initial_pose_with_covariance.pose.position),

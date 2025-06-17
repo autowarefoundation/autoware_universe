@@ -17,7 +17,7 @@
 #include "autoware/image_projection_based_fusion/utils/geometry.hpp"
 #include "autoware/image_projection_based_fusion/utils/utils.hpp"
 
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <perception_utils/run_length_encoder.hpp>
 
 #include <memory>
@@ -33,7 +33,7 @@
 
 namespace autoware::image_projection_based_fusion
 {
-using autoware::universe_utils::ScopedTimeTrack;
+using autoware_utils::ScopedTimeTrack;
 
 SegmentPointCloudFusionNode::SegmentPointCloudFusionNode(const rclcpp::NodeOptions & options)
 : FusionNode<PointCloudMsgType, Image, PointCloudMsgType>("segmentation_pointcloud_fusion", options)
@@ -62,8 +62,8 @@ void SegmentPointCloudFusionNode::preprocess(__attribute__((unused))
   return;
 }
 
-void SegmentPointCloudFusionNode::fuseOnSingleImage(
-  const PointCloudMsgType & input_pointcloud_msg, const Det2dStatus<Image> & det2d,
+void SegmentPointCloudFusionNode::fuse_on_single_image(
+  const PointCloudMsgType & input_pointcloud_msg, const Det2dStatus<Image> & det2d_status,
   [[maybe_unused]] const Image & input_mask,
   __attribute__((unused)) PointCloudMsgType & output_cloud)
 {
@@ -77,7 +77,8 @@ void SegmentPointCloudFusionNode::fuseOnSingleImage(
     return;
   }
 
-  const sensor_msgs::msg::CameraInfo & camera_info = det2d.camera_projector_ptr->getCameraInfo();
+  const sensor_msgs::msg::CameraInfo & camera_info =
+    det2d_status.camera_projector_ptr->getCameraInfo();
   std::vector<uint8_t> mask_data(input_mask.data.begin(), input_mask.data.end());
   cv::Mat mask = perception_utils::runLengthDecoder(mask_data, input_mask.height, input_mask.width);
 
@@ -121,13 +122,16 @@ void SegmentPointCloudFusionNode::fuseOnSingleImage(
       *reinterpret_cast<float *>(&transformed_cloud.data[global_offset + y_offset]);
     float transformed_z =
       *reinterpret_cast<float *>(&transformed_cloud.data[global_offset + z_offset]);
-    // skip filtering pointcloud behind the camera or too far from camera
-    if (transformed_z <= 0.0 || transformed_z > filter_distance_threshold_) {
+    // skip pointcloud out of FOV
+    if (det2d_status.camera_projector_ptr->isOutsideHorizontalView(transformed_x, transformed_z)) {
+      continue;
+    }
+    if (transformed_z > filter_distance_threshold_) {
       continue;
     }
 
     Eigen::Vector2d projected_point;
-    if (!det2d.camera_projector_ptr->calcImageProjectedPoint(
+    if (!det2d_status.camera_projector_ptr->calcImageProjectedPoint(
           cv::Point3d(transformed_x, transformed_y, transformed_z), projected_point)) {
       continue;
     }
@@ -151,6 +155,7 @@ void SegmentPointCloudFusionNode::postprocess(
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
+  output_msg = pointcloud_msg;
   output_msg.header = pointcloud_msg.header;
   output_msg.data.clear();
   output_msg.data.resize(pointcloud_msg.data.size());
@@ -165,8 +170,14 @@ void SegmentPointCloudFusionNode::postprocess(
   }
 
   output_msg.data.resize(output_pointcloud_size);
-  output_msg.row_step = output_pointcloud_size / output_msg.height;
-  output_msg.width = output_pointcloud_size / output_msg.point_step / output_msg.height;
+  if (output_msg.height != 0 && output_msg.point_step != 0) {
+    output_msg.row_step = output_pointcloud_size / output_msg.height;
+    output_msg.width = output_pointcloud_size / output_msg.point_step / output_msg.height;
+  } else {
+    RCLCPP_ERROR(this->get_logger(), "output_msg.height or output_msg.point_step is 0");
+    output_msg.row_step = 0;
+    output_msg.width = 0;
+  }
 
   filter_global_offset_set_.clear();
   return;

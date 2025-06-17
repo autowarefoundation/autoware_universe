@@ -69,14 +69,13 @@ auto createTargetPoint(
  * @param input path.
  * @param stop line.
  * @param longitudinal offset.
- * @param extend length to find intersection point between path and stop line.
  * @return first: insert point index, second: insert point position. if there is no intersection
  * point, return std::nullopt.
  */
 auto calcStopPointAndInsertIndex(
   const autoware_internal_planning_msgs::msg::PathWithLaneId & input_path,
-  const lanelet::ConstLineString3d & lanelet_stop_lines, const double & offset,
-  const double & stop_line_extend_length) -> std::optional<std::pair<size_t, Eigen::Vector2d>>;
+  const lanelet::ConstLineString3d & lanelet_stop_lines, const double & offset)
+  -> std::optional<std::pair<size_t, Eigen::Vector2d>>;
 
 }  // namespace autoware::behavior_velocity_planner
 

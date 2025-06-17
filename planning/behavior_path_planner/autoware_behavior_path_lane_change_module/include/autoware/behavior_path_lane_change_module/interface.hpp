@@ -23,7 +23,7 @@
 #include "autoware/behavior_path_planner_common/turn_signal_decider.hpp"
 #include "autoware/behavior_path_planner_common/utils/path_shifter/path_shifter.hpp"
 
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
@@ -113,7 +113,7 @@ protected:
     const double start_distance, const double finish_distance, const bool safe,
     const uint8_t & state)
   {
-    universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+    autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
     for (const auto & [module_name, ptr] : rtc_interface_ptr_map_) {
       if (ptr) {
         ptr->updateCooperateStatus(

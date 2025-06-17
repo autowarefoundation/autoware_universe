@@ -15,7 +15,7 @@
 #include "autoware/freespace_planner/freespace_planner_node.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
-#include <autoware_planning_test_manager/autoware_planning_test_manager.hpp>
+#include <autoware/planning_test_manager/autoware_planning_test_manager.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
 
 #include <gtest/gtest.h>
@@ -63,7 +63,7 @@ void publishMandatoryTopics(
     autoware::test_utils::makeCostMapMsg());
   test_manager->publishInput(
     test_target_node, "freespace_planner/input/scenario",
-    autoware::test_utils::makeScenarioMsg(tier4_planning_msgs::msg::Scenario::PARKING));
+    autoware::test_utils::makeScenarioMsg(autoware_internal_planning_msgs::msg::Scenario::PARKING));
 }
 
 // the following tests are disable because they randomly fail

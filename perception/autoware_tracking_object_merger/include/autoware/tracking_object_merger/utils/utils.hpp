@@ -17,7 +17,7 @@
 #ifndef AUTOWARE__TRACKING_OBJECT_MERGER__UTILS__UTILS_HPP_
 #define AUTOWARE__TRACKING_OBJECT_MERGER__UTILS__UTILS_HPP_
 
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 

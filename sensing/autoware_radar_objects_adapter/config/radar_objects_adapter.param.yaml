@@ -1,0 +1,8 @@
+/**:
+  ros__parameters:
+    default_position_z: 0.0
+    default_velocity_z: 0.0
+    default_acceleration_z: 0.0
+    default_size_x: 5.0
+    default_size_y: 2.0
+    default_size_z: 2.0

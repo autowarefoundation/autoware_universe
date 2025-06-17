@@ -20,7 +20,9 @@
 #define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MODEL__TRACKER_BASE_HPP_
 
 #define EIGEN_MPL2_ONLY
+#include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/tracker/util/adaptive_threshold_cache.hpp"
 
 #include <Eigen/Core>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
@@ -31,6 +33,8 @@
 #include <geometry_msgs/msg/point.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
+#include <optional>
+#include <string>
 #include <vector>
 
 namespace autoware::multi_object_tracker
@@ -39,11 +43,6 @@ namespace autoware::multi_object_tracker
 class Tracker
 {
 private:
-  unique_identifier_msgs::msg::UUID uuid_;
-
-  // classification
-  std::vector<autoware_perception_msgs::msg::ObjectClassification> classification_;
-
   // existence states
   int no_measurement_count_;
   int total_no_measurement_count_;
@@ -52,33 +51,43 @@ private:
   std::vector<float> existence_probabilities_;
   float total_existence_probability_;
 
+  // cache
+  mutable rclcpp::Time cached_time_;
+  mutable types::DynamicObject cached_object_;
+
 public:
-  Tracker(
-    const rclcpp::Time & time,
-    const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification,
-    const size_t & channel_size);
+  Tracker(const rclcpp::Time & time, const types::DynamicObject & object);
   virtual ~Tracker() = default;
 
+  // tracker probabilities
   void initializeExistenceProbabilities(
     const uint & channel_index, const float & existence_probability);
-  bool getExistenceProbabilityVector(std::vector<float> & existence_vector) const
-  {
-    existence_vector = existence_probabilities_;
-    return existence_vector.size() > 0;
-  }
+  std::vector<float> getExistenceProbabilityVector() const { return existence_probabilities_; }
+  float getTotalExistenceProbability() const { return total_existence_probability_; }
+  void updateTotalExistenceProbability(const float & existence_probability);
+  void mergeExistenceProbabilities(std::vector<float> existence_probabilities);
+
+  // object update
   bool updateWithMeasurement(
     const types::DynamicObject & object, const rclcpp::Time & measurement_time,
-    const geometry_msgs::msg::Transform & self_transform);
+    const types::InputChannel & channel_info);
   bool updateWithoutMeasurement(const rclcpp::Time & now);
 
-  // classification
-  std::vector<autoware_perception_msgs::msg::ObjectClassification> getClassification() const
-  {
-    return classification_;
-  }
+  // object life management
+  void getPositionCovarianceEigenSq(
+    const rclcpp::Time & time, double & major_axis_sq, double & minor_axis_sq) const;
+  bool isConfident(
+    const rclcpp::Time & time, const AdaptiveThresholdCache & cache,
+    const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
+  bool isExpired(
+    const rclcpp::Time & time, const AdaptiveThresholdCache & cache,
+    const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
+  float getKnownObjectProbability() const;
+  double getPositionCovarianceDeterminant() const;
+
   std::uint8_t getHighestProbLabel() const
   {
-    return autoware::object_recognition_utils::getHighestProbLabel(classification_);
+    return autoware::object_recognition_utils::getHighestProbLabel(object_.classification);
   }
 
   // existence states
@@ -90,29 +99,60 @@ public:
     return (current_time - last_update_with_measurement_time_).seconds();
   }
 
-protected:
-  unique_identifier_msgs::msg::UUID getUUID() const { return uuid_; }
-  void setClassification(
-    const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification)
+  std::string getUuidString() const
   {
-    classification_ = classification;
+    const auto uuid_msg = object_.uuid;
+    std::stringstream ss;
+    constexpr size_t UUID_SIZE = 16;
+    ss << std::hex << std::setfill('0');
+    for (size_t i = 0; i < UUID_SIZE; ++i) {
+      ss << std::setw(2) << static_cast<int>(uuid_msg.uuid[i]);
+    }
+    return ss.str();
   }
+
+protected:
+  types::DynamicObject object_;
+
+  void updateCache(const types::DynamicObject & object, const rclcpp::Time & time) const
+  {
+    cached_time_ = time;
+    cached_object_ = object;
+  }
+
+  bool getCachedObject(const rclcpp::Time & time, types::DynamicObject & object) const
+  {
+    if (cached_time_.nanoseconds() == time.nanoseconds()) {
+      object = cached_object_;
+      return true;
+    }
+    return false;
+  }
+
+  void removeCache() const
+  {
+    cached_time_ = rclcpp::Time();
+    cached_object_ = types::DynamicObject();
+  }
+
   void updateClassification(
     const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification);
 
-  // virtual functions
-public:
-  virtual geometry_msgs::msg::PoseWithCovariance getPoseWithCovariance(
-    const rclcpp::Time & time) const;
+  void limitObjectExtension(const object_model::ObjectModel object_model);
 
-protected:
+  // virtual functions
   virtual bool measure(
     const types::DynamicObject & object, const rclcpp::Time & time,
-    const geometry_msgs::msg::Transform & self_transform) = 0;
+    const types::InputChannel & channel_info) = 0;
 
 public:
   virtual bool getTrackedObject(const rclcpp::Time & time, types::DynamicObject & object) const = 0;
   virtual bool predict(const rclcpp::Time & time) = 0;
+  double getBEVArea() const;
+  double getDistanceSqToEgo(const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
+  double computeAdaptiveThreshold(
+    double base_threshold, double fallback_threshold, const AdaptiveThresholdCache & cache,
+    const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
 };
 
 }  // namespace autoware::multi_object_tracker

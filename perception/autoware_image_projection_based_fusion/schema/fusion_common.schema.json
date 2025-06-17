@@ -6,24 +6,26 @@
     "fusion_common": {
       "type": "object",
       "properties": {
-        "input_offset_ms": {
+        "rois_timestamp_offsets": {
           "type": "array",
-          "description": "An array of timestamp offsets for each camera [ms].",
-          "default": [61.67, 111.67, 45.0, 28.33, 78.33, 95.0]
+          "items": {
+            "type": "number"
+          },
+          "description": "The timestamp offset between each RoIs and the msg3d in seconds.",
+          "minItems": 2,
+          "default": [0.059, 0.01, 0.026, 0.042, 0.076, 0.093]
         },
-        "timeout_ms": {
+        "rois_timeout_sec": {
           "type": "number",
-          "description": "A timeout value can be assigned within a single frame [ms].",
-          "default": 70.0,
-          "minimum": 1.0,
-          "maximum": 100.0
+          "description": "Timer's timeout duration in seconds when the collector created by RoIs msg.",
+          "default": 0.5,
+          "minimum": 0.001
         },
-        "match_threshold_ms": {
+        "msg3d_timeout_sec": {
           "type": "number",
-          "description": "A maximum threshold value to synchronize RoIs from multiple cameras [ms].",
-          "default": 50.0,
-          "minimum": 0.0,
-          "maximum": 100.0
+          "description": "Timer's timeout duration in seconds when the collector received msg3d.",
+          "default": 0.05,
+          "minimum": 0.001
         },
         "image_buffer_size": {
           "type": "integer",
@@ -35,11 +37,6 @@
           "type": "array",
           "description": "An array of options indicating whether to project point to unrectified image or not.",
           "default": [false, false, false, false, false, false]
-        },
-        "debug_mode": {
-          "type": "boolean",
-          "description": "Whether to debug or not.",
-          "default": false
         },
         "filter_scope_min_x": {
           "type": "number",
@@ -85,6 +82,86 @@
           "type": "number",
           "description": "The height of grid cell used in approximated projection [pixel].",
           "default": 1.0
+        },
+        "debug_mode": {
+          "type": "boolean",
+          "description": "Flag to enable or disable debug message output.",
+          "default": false
+        },
+        "collector_debug_mode": {
+          "type": "boolean",
+          "description": "Flag to enable or disable collector's debug message output.",
+          "default": false
+        },
+        "publish_processing_time_detail": {
+          "type": "boolean",
+          "description": "Flag to publish detail message for processing time.",
+          "default": false
+        },
+        "publish_previous_but_late_output_msg": {
+          "type": "boolean",
+          "description": "Flag to indicate if the current fusion result should be published if its timestamp is earlier than the previous published fusion result.",
+          "default": false
+        },
+        "rosbag_length": {
+          "type": "number",
+          "description": "This value determine if the rosbag has started from the beginning again. The value should be set smaller than the actual length of the bag.",
+          "default": 10.0
+        },
+        "matching_strategy": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["naive", "advanced"],
+              "default": "advanced",
+              "description": "Set it to `advanced` if you want to use more accurate and complicated logic for matching LiDAR and camera; otherwise, set it to `naive`."
+            },
+            "threshold": {
+              "type": "number",
+              "description": "A maximum threshold value to synchronize RoIs from multiple cameras in seconds.",
+              "default": 0.05,
+              "minimum": 0.0,
+              "maximum": 0.1
+            },
+            "msg3d_noise_window": {
+              "type": "number",
+              "description": "msg3d noise window in seconds.",
+              "default": 0.001,
+              "minimum": 0.0
+            },
+            "rois_timestamp_noise_window": {
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0.0
+              },
+              "default": [0.005, 0.005, 0.005, 0.005, 0.005, 0.005],
+              "minItems": 2,
+              "description": "List of camera timestamp noise windows in seconds. The noise values should be specified in the same order as the input_topics."
+            }
+          },
+          "required": ["type"],
+          "dependencies": {
+            "type": {
+              "oneOf": [
+                {
+                  "properties": { "type": { "const": "naive" } },
+                  "required": ["threshold"],
+                  "not": {
+                    "required": ["msg3d_noise_window", "rois_timestamp_noise_window"]
+                  }
+                },
+                {
+                  "properties": { "type": { "const": "advanced" } },
+                  "required": ["msg3d_noise_window", "rois_timestamp_noise_window"],
+                  "not": {
+                    "required": ["threshold"]
+                  }
+                }
+              ]
+            }
+          }
         }
       }
     }

@@ -15,7 +15,7 @@
 #include "autoware/trajectory_follower_node/simple_trajectory_follower.hpp"
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/pose_deviation.hpp>
+#include <autoware_utils/geometry/pose_deviation.hpp>
 
 #include <algorithm>
 
@@ -23,8 +23,8 @@ namespace simple_trajectory_follower
 {
 
 using autoware::motion_utils::findNearestIndex;
-using autoware::universe_utils::calcLateralDeviation;
-using autoware::universe_utils::calcYawDeviation;
+using autoware_utils::calc_lateral_deviation;
+using autoware_utils::calc_yaw_deviation;
 
 SimpleTrajectoryFollower::SimpleTrajectoryFollower(const rclcpp::NodeOptions & options)
 : Node("simple_trajectory_follower", options)
@@ -68,9 +68,9 @@ void SimpleTrajectoryFollower::updateClosest()
 double SimpleTrajectoryFollower::calcSteerCmd()
 {
   const auto lat_err =
-    calcLateralDeviation(closest_traj_point_.pose, odometry_->pose.pose.position) -
+    calc_lateral_deviation(closest_traj_point_.pose, odometry_->pose.pose.position) -
     lateral_deviation_;
-  const auto yaw_err = calcYawDeviation(closest_traj_point_.pose, odometry_->pose.pose);
+  const auto yaw_err = calc_yaw_deviation(closest_traj_point_.pose, odometry_->pose.pose);
 
   // linearized pure_pursuit control
   constexpr auto wheel_base = 4.0;
@@ -109,7 +109,7 @@ bool SimpleTrajectoryFollower::processData()
 {
   bool is_ready = true;
   const auto & getData = [](auto & dest, auto & sub) {
-    const auto temp = sub.takeData();
+    const auto temp = sub.take_data();
     if (!temp) return false;
     dest = temp;
     return true;

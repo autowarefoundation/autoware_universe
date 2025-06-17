@@ -16,7 +16,7 @@
 #define AUTOWARE__KINEMATIC_EVALUATOR__KINEMATIC_EVALUATOR_NODE_HPP_
 
 #include "autoware/kinematic_evaluator/metrics_calculator.hpp"
-#include "autoware/universe_utils/math/accumulator.hpp"
+#include "autoware_utils/math/accumulator.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
@@ -33,7 +33,7 @@
 
 namespace autoware::kinematic_diagnostics
 {
-using autoware::universe_utils::Accumulator;
+using autoware_utils::Accumulator;
 using diagnostic_msgs::msg::DiagnosticArray;
 using diagnostic_msgs::msg::DiagnosticStatus;
 

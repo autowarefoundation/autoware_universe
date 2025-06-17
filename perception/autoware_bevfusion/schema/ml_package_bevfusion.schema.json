@@ -1,0 +1,207 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for bevfusion",
+  "type": "object",
+  "definitions": {
+    "bevfusion": {
+      "type": "object",
+      "properties": {
+        "class_names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Predicted classes' names.",
+          "default": ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"],
+          "uniqueItems": true
+        },
+        "voxels_num": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "Voxel ranges used during inference [min, opt, max].",
+          "default": [5000, 30000, 60000]
+        },
+        "point_cloud_range": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Range in meters of the pointcloud in meters [min_x, min_y, min_z, max_x, max_y, max_z].",
+          "default": [-76.8, -76.8, -3.0, 76.8, 76.8, 5.0],
+          "minItems": 6,
+          "maxItems": 6
+        },
+        "voxel_size": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Voxels size [x, y, z] in meters.",
+          "default": [0.3, 0.3, 8.0],
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "num_proposals": {
+          "type": "integer",
+          "description": "Number of object proposals.",
+          "default": 500,
+          "minimum": 1
+        },
+        "out_size_factor": {
+          "type": "integer",
+          "description": "Output size factor using in the network.",
+          "default": 8,
+          "minimum": 1
+        },
+        "max_points_per_voxel": {
+          "type": "integer",
+          "description": "Maximum number of points that a voxel can hold.",
+          "default": 10,
+          "minimum": 1
+        },
+        "d_bound": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "Distance bounds used in the view transform in meters (min, max, and step).",
+          "default": [1.0, 166.2, 1.4],
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "x_bound": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "x-axis bounds used in the view transform in meters (min, max, and step).",
+          "default": [-122.4, 122.4, 0.68],
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "y_bound": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "y-axis bounds used in the view transform in meters (min, max, and step).",
+          "default": [-122.4, 122.4, 0.68],
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "z_bound": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "z-axis bounds used in the view transform in meters (min, max, and step).",
+          "default": [-10.0, 10.0, 20.0],
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "num_cameras": {
+          "type": "integer",
+          "description": "Number of cameras to use.",
+          "default": 6,
+          "minimum": 0
+        },
+        "raw_image_height": {
+          "type": "integer",
+          "description": "Raw image height in pixels.",
+          "default": 1080,
+          "minimum": 0
+        },
+        "raw_image_width": {
+          "type": "integer",
+          "description": "Raw image width in pixels.",
+          "default": 1440,
+          "minimum": 0
+        },
+        "img_aug_scale_x": {
+          "type": "number",
+          "description": "Raw image scaling before ROI extraction.",
+          "default": 0.489,
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "img_aug_scale_y": {
+          "type": "number",
+          "description": "Raw image scaling before ROI extraction.",
+          "default": 0.489,
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "roi_height": {
+          "type": "integer",
+          "description": "ROI image height (input to the network) in pixels.",
+          "default": 384,
+          "minimum": 0
+        },
+        "roi_width": {
+          "type": "integer",
+          "description": "ROI image width (input to the network) in pixels.",
+          "default": 704,
+          "minimum": 0
+        },
+        "features_height": {
+          "type": "integer",
+          "description": "Image features height (output of the image backbone) in pixels.",
+          "default": 48,
+          "minimum": 0
+        },
+        "features_width": {
+          "type": "integer",
+          "description": "Image features width (output of the image backbone) in pixels.",
+          "default": 88,
+          "minimum": 0
+        },
+        "num_depth_features": {
+          "type": "integer",
+          "description": "Number of depth features used in the view transform.",
+          "default": 118,
+          "minimum": 0
+        }
+      },
+      "required": [
+        "class_names",
+        "voxels_num",
+        "point_cloud_range",
+        "voxel_size",
+        "num_proposals",
+        "out_size_factor",
+        "max_points_per_voxel",
+        "d_bound",
+        "x_bound",
+        "y_bound",
+        "z_bound",
+        "num_cameras",
+        "raw_image_height",
+        "raw_image_width",
+        "img_aug_scale_x",
+        "img_aug_scale_y",
+        "roi_height",
+        "roi_width",
+        "features_height",
+        "features_width",
+        "num_depth_features"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/bevfusion"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}

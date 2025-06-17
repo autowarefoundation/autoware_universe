@@ -15,7 +15,8 @@
 #ifndef PROCESSING_TIME_CHECKER_HPP_
 #define PROCESSING_TIME_CHECKER_HPP_
 
-#include "autoware/universe_utils/math/accumulator.hpp"
+#include "autoware_utils/math/accumulator.hpp"
+#include "digestible.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -29,7 +30,8 @@
 
 namespace autoware::processing_time_checker
 {
-using autoware::universe_utils::Accumulator;
+using autoware_utils::Accumulator;
+using digestible::tdigest;
 using MetricMsg = tier4_metric_msgs::msg::Metric;
 using MetricArrayMsg = tier4_metric_msgs::msg::MetricArray;
 using autoware_internal_debug_msgs::msg::Float64Stamped;
@@ -57,6 +59,7 @@ private:
   std::unordered_map<std::string, double> processing_time_map_{};
   // module name - accumulator
   std::unordered_map<std::string, Accumulator<double>> processing_time_accumulator_map_{};
+  std::unordered_map<std::string, tdigest<double>> processing_time_tdigest_map_{};
 };
 }  // namespace autoware::processing_time_checker
 

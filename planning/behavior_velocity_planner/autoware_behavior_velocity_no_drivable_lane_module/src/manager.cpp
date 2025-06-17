@@ -15,21 +15,21 @@
 #include "manager.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware/universe_utils/ros/parameter.hpp>
+#include <autoware_utils/ros/parameter.hpp>
 
 #include <memory>
 #include <string>
 
 namespace autoware::behavior_velocity_planner
 {
-using autoware::universe_utils::getOrDeclareParameter;
+using autoware_utils::get_or_declare_parameter;
 
 NoDrivableLaneModuleManager::NoDrivableLaneModuleManager(rclcpp::Node & node)
 : SceneModuleManagerInterface(node, getModuleName())
 {
   const std::string ns(NoDrivableLaneModuleManager::getModuleName());
-  planner_param_.stop_margin = getOrDeclareParameter<double>(node, ns + ".stop_margin");
-  planner_param_.print_debug_info = getOrDeclareParameter<bool>(node, ns + ".print_debug_info");
+  planner_param_.stop_margin = get_or_declare_parameter<double>(node, ns + ".stop_margin");
+  planner_param_.print_debug_info = get_or_declare_parameter<bool>(node, ns + ".print_debug_info");
 }
 
 void NoDrivableLaneModuleManager::launchNewModules(

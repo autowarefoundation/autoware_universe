@@ -16,18 +16,18 @@
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/marker_helper.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
 
 #include <vector>
 
 namespace autoware::behavior_velocity_planner
 {
-using autoware::universe_utils::appendMarkerArray;
-using autoware::universe_utils::createDefaultMarker;
-using autoware::universe_utils::createMarkerColor;
-using autoware::universe_utils::createMarkerScale;
-using autoware::universe_utils::createPoint;
+using autoware_utils::append_marker_array;
+using autoware_utils::create_default_marker;
+using autoware_utils::create_marker_color;
+using autoware_utils::create_marker_scale;
+using autoware_utils::create_point;
 using visualization_msgs::msg::Marker;
 
 namespace
@@ -41,11 +41,11 @@ visualization_msgs::msg::MarkerArray createNoDrivableLaneMarkers(
 
   // No Drivable Lane Polygon
   if (!debug_data.no_drivable_lane_polygon.empty()) {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", now, "no_drivable_lane polygon", uid, Marker::LINE_STRIP,
-      createMarkerScale(0.1, 0.0, 0.0), createMarkerColor(1.0, 1.0, 1.0, 0.999));
+      create_marker_scale(0.1, 0.0, 0.0), create_marker_color(1.0, 1.0, 1.0, 0.999));
     for (const auto & p : debug_data.no_drivable_lane_polygon) {
-      marker.points.push_back(createPoint(p.x, p.y, p.z));
+      marker.points.push_back(create_point(p.x, p.y, p.z));
     }
     marker.points.push_back(marker.points.front());
     msg.markers.push_back(marker);
@@ -53,16 +53,16 @@ visualization_msgs::msg::MarkerArray createNoDrivableLaneMarkers(
 
   // Path - polygon intersection points
   {
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       "map", now, "path_polygon intersection points", uid, Marker::POINTS,
-      createMarkerScale(0.25, 0.25, 0.0), createMarkerColor(1.0, 0.0, 0.0, 0.999));
+      create_marker_scale(0.25, 0.25, 0.0), create_marker_color(1.0, 0.0, 0.0, 0.999));
     const auto & p_first = debug_data.path_polygon_intersection.first_intersection_point;
     if (p_first) {
-      marker.points.push_back(createPoint(p_first->x, p_first->y, p_first->z));
+      marker.points.push_back(create_point(p_first->x, p_first->y, p_first->z));
     }
     const auto & p_second = debug_data.path_polygon_intersection.second_intersection_point;
     if (p_second) {
-      marker.points.push_back(createPoint(p_second->x, p_second->y, p_second->z));
+      marker.points.push_back(create_point(p_second->x, p_second->y, p_second->z));
     }
     if (!marker.points.empty()) msg.markers.push_back(marker);
   }
@@ -96,7 +96,7 @@ visualization_msgs::msg::MarkerArray NoDrivableLaneModule::createDebugMarkerArra
   visualization_msgs::msg::MarkerArray debug_marker_array;
   const auto now = this->clock_->now();
 
-  appendMarkerArray(
+  append_marker_array(
     createNoDrivableLaneMarkers(debug_data_, this->clock_->now(), module_id_), &debug_marker_array);
 
   return debug_marker_array;

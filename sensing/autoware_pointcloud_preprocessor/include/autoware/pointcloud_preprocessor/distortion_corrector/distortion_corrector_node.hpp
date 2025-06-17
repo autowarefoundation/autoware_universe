@@ -15,11 +15,13 @@
 #ifndef AUTOWARE__POINTCLOUD_PREPROCESSOR__DISTORTION_CORRECTOR__DISTORTION_CORRECTOR_NODE_HPP_
 #define AUTOWARE__POINTCLOUD_PREPROCESSOR__DISTORTION_CORRECTOR__DISTORTION_CORRECTOR_NODE_HPP_
 
+#include "autoware/pointcloud_preprocessor/diagnostics/diagnostics_base.hpp"
 #include "autoware/pointcloud_preprocessor/distortion_corrector/distortion_corrector.hpp"
 
-#include <autoware/universe_utils/ros/debug_publisher.hpp>
-#include <autoware/universe_utils/ros/polling_subscriber.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
+#include <autoware_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <geometry_msgs/msg/twist_stamped.hpp>
@@ -29,6 +31,8 @@
 
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace autoware::pointcloud_preprocessor
 {
@@ -41,28 +45,35 @@ public:
   explicit DistortionCorrectorComponent(const rclcpp::NodeOptions & options);
 
 private:
-  autoware::universe_utils::InterProcessPollingSubscriber<
-    geometry_msgs::msg::TwistWithCovarianceStamped,
-    autoware::universe_utils::polling_policy::All>::SharedPtr twist_sub_;
-  autoware::universe_utils::InterProcessPollingSubscriber<
-    sensor_msgs::msg::Imu, autoware::universe_utils::polling_policy::All>::SharedPtr imu_sub_;
+  autoware_utils::InterProcessPollingSubscriber<
+    geometry_msgs::msg::TwistWithCovarianceStamped, autoware_utils::polling_policy::All>::SharedPtr
+    twist_sub_;
+  autoware_utils::InterProcessPollingSubscriber<
+    sensor_msgs::msg::Imu, autoware_utils::polling_policy::All>::SharedPtr imu_sub_;
   rclcpp::Subscription<PointCloud2>::SharedPtr pointcloud_sub_;
 
   rclcpp::Publisher<PointCloud2>::SharedPtr undistorted_pointcloud_pub_;
 
-  std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
-  std::unique_ptr<autoware::universe_utils::DebugPublisher> debug_publisher_;
+  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
+  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
 
+  // Parameters
   std::string base_frame_;
   bool use_imu_;
   bool use_3d_distortion_correction_;
   bool update_azimuth_and_distance_;
+  double processing_time_threshold_sec_;
+  double timestamp_mismatch_fraction_threshold_;
 
   std::optional<AngleConversion> angle_conversion_opt_;
 
   std::unique_ptr<DistortionCorrectorBase> distortion_corrector_;
 
+  // Diagnostic
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_;
+
   void pointcloud_callback(PointCloud2::UniquePtr pointcloud_msg);
+  void publish_diagnostics(const std::vector<std::shared_ptr<const DiagnosticsBase>> & diagnostics);
 };
 
 }  // namespace autoware::pointcloud_preprocessor

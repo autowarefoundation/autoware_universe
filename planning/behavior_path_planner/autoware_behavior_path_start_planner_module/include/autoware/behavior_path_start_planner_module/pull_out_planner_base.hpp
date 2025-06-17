@@ -20,7 +20,7 @@
 #include "autoware/behavior_path_start_planner_module/data_structs.hpp"
 #include "autoware/behavior_path_start_planner_module/pull_out_path.hpp"
 #include "autoware/behavior_path_start_planner_module/util.hpp"
-#include "autoware/universe_utils/system/time_keeper.hpp"
+#include "autoware_utils/system/time_keeper.hpp"
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
@@ -31,8 +31,8 @@
 
 namespace autoware::behavior_path_planner
 {
-using autoware::universe_utils::LinearRing2d;
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
+using autoware_utils::LinearRing2d;
 using geometry_msgs::msg::Pose;
 
 class PullOutPlannerBase
@@ -40,8 +40,8 @@ class PullOutPlannerBase
 public:
   explicit PullOutPlannerBase(
     rclcpp::Node & node, const StartPlannerParameters & parameters,
-    std::shared_ptr<universe_utils::TimeKeeper> time_keeper =
-      std::make_shared<universe_utils::TimeKeeper>())
+    std::shared_ptr<autoware_utils::TimeKeeper> time_keeper =
+      std::make_shared<autoware_utils::TimeKeeper>())
   : parameters_{parameters},
     vehicle_info_{autoware::vehicle_info_utils::VehicleInfoUtils(node).getVehicleInfo()},
     vehicle_footprint_{vehicle_info_.createFootprint()},
@@ -71,7 +71,7 @@ protected:
   LinearRing2d vehicle_footprint_;
   double collision_check_margin_;
 
-  mutable std::shared_ptr<universe_utils::TimeKeeper> time_keeper_;
+  mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 };
 }  // namespace autoware::behavior_path_planner
 

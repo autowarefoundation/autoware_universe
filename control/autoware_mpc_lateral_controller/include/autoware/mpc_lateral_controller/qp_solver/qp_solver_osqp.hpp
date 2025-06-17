@@ -29,7 +29,7 @@ public:
   /**
    * @brief constructor
    */
-  explicit QPSolverOSQP(const rclcpp::Logger & logger);
+  QPSolverOSQP(const rclcpp::Logger & logger, rclcpp::Clock::SharedPtr clock_);
 
   /**
    * @brief destructor
@@ -60,6 +60,7 @@ public:
 private:
   autoware::osqp_interface::OSQPInterface osqpsolver_;
   rclcpp::Logger logger_;
+  rclcpp::Clock::SharedPtr clock_;
 };
 }  // namespace autoware::motion::control::mpc_lateral_controller
 #endif  // AUTOWARE__MPC_LATERAL_CONTROLLER__QP_SOLVER__QP_SOLVER_OSQP_HPP_

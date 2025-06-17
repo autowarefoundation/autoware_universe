@@ -18,7 +18,7 @@
 #include "autoware_test_utils/autoware_test_utils.hpp"
 #include "autoware_test_utils/mock_data_parser.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
 #include <autoware_internal_planning_msgs/msg/detail/path_with_lane_id__struct.hpp>
 #include <autoware_perception_msgs/msg/detail/traffic_light_group__struct.hpp>
@@ -97,7 +97,7 @@ protected:
   {
     nav_msgs::msg::Odometry odometry;
     odometry.pose.pose = planner_data_->self_odometry->pose.pose;
-    odometry.twist.twist.linear = autoware::universe_utils::createVector3(0.0, 0.0, 0.0);
+    odometry.twist.twist.linear = autoware_utils::create_vector3(0.0, 0.0, 0.0);
     planner_data_->self_odometry = std::make_shared<const nav_msgs::msg::Odometry>(odometry);
   }
 

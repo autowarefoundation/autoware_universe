@@ -17,7 +17,7 @@
 #include "autoware/mpc_lateral_controller/mpc_lateral_controller.hpp"
 #include "autoware/pid_longitudinal_controller/pid_longitudinal_controller.hpp"
 #include "autoware/pure_pursuit/autoware_pure_pursuit_lateral_controller.hpp"
-#include "autoware/universe_utils/ros/marker_helper.hpp"
+#include "autoware_utils/ros/marker_helper.hpp"
 
 #include <autoware/trajectory_follower_base/lateral_controller_base.hpp>
 
@@ -116,10 +116,9 @@ Controller::Controller(const rclcpp::NodeOptions & node_options) : Node("control
       this, get_clock(), period_ns, std::bind(&Controller::callbackTimerControl, this));
   }
 
-  logger_configure_ = std::make_unique<autoware::universe_utils::LoggerLevelConfigure>(this);
+  logger_configure_ = std::make_unique<autoware_utils::LoggerLevelConfigure>(this);
 
-  published_time_publisher_ =
-    std::make_unique<autoware::universe_utils::PublishedTimePublisher>(this);
+  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 }
 
 Controller::LateralControllerMode Controller::getLateralControllerMode(
@@ -149,7 +148,7 @@ bool Controller::processData(rclcpp::Clock & clock)
   };
 
   const auto & getData = [&logData](auto & dest, auto & sub, const std::string & data_type = "") {
-    const auto temp = sub.takeData();
+    const auto temp = sub.take_data();
     if (temp) {
       dest = temp;
       return true;
@@ -205,6 +204,9 @@ boost::optional<trajectory_follower::InputData> Controller::createInputData(rclc
 
 void Controller::callbackTimerControl()
 {
+  autoware_control_msgs::msg::Control out;
+  out.stamp = this->now();
+
   // 1. create input data
   const auto input_data = createInputData(*get_clock());
   if (!input_data) {
@@ -240,8 +242,6 @@ void Controller::callbackTimerControl()
   if (isTimeOut(lon_out, lat_out)) return;
 
   // 5. publish control command
-  autoware_control_msgs::msg::Control out;
-  out.stamp = this->now();
   out.lateral = lat_out.control_cmd;
   out.longitudinal = lon_out.control_cmd;
   control_cmd_pub_->publish(out);
@@ -268,10 +268,10 @@ void Controller::publishDebugMarker(
 
   // steer converged marker
   {
-    auto marker = autoware::universe_utils::createDefaultMarker(
+    auto marker = autoware_utils::create_default_marker(
       "map", this->now(), "steer_converged", 0, visualization_msgs::msg::Marker::TEXT_VIEW_FACING,
-      autoware::universe_utils::createMarkerScale(0.0, 0.0, 1.0),
-      autoware::universe_utils::createMarkerColor(1.0, 1.0, 1.0, 0.99));
+      autoware_utils::create_marker_scale(0.0, 0.0, 1.0),
+      autoware_utils::create_marker_color(1.0, 1.0, 1.0, 0.99));
     marker.pose = input_data.current_odometry.pose.pose;
 
     std::stringstream ss;
