@@ -12,52 +12,46 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "graph/units.hpp"
-
-#include "config/entity.hpp"
 #include "graph/links.hpp"
-#include "graph/nodes.hpp"
+
+#include "graph/units.hpp"
 #include "utils/memory.hpp"
 
-#include <memory>
-#include <string>
-#include <utility>
 #include <vector>
 
 namespace autoware::diagnostic_graph_aggregator
 {
 
-void BaseUnit::finalize(int index, std::vector<BaseUnit *> parents)
+bool LinkPort::empty() const
 {
-  index_ = index;
-  parents_ = parents;
+  return units_.empty();
 }
 
-std::vector<BaseUnit *> BaseUnit::child_units() const
+std::vector<BaseUnit *> LinkPort::iterate() const
 {
-  std::vector<BaseUnit *> result;
-  for (const auto & port : ports()) {
-    for (const auto & unit : port->iterate()) {
-      result.push_back(unit);
-    }
-  }
-  return result;
+  return units_;
 }
 
-std::vector<NodeUnit *> BaseUnit::child_nodes() const
+LinkItem::LinkItem(BaseUnit * unit)
 {
-  return filter<NodeUnit>(child_units());
+  units_.push_back(unit);
 }
 
-std::vector<BaseUnit *> BaseUnit::parent_units() const
+DiagnosticLevel LinkItem::level() const
 {
-  return parents_;
+  return units_.front()->level();
 }
 
-LinkUnit::LinkUnit(ConfigYaml yaml)
+LinkList::LinkList(const std::vector<BaseUnit *> & units)
 {
-  path_ = yaml.optional("path").text("");
-  link_ = yaml.required("link").text("");
+  units_ = units;
+}
+
+std::vector<DiagnosticLevel> LinkList::levels() const
+{
+  std::vector<DiagnosticLevel> levels;
+  for (const auto & unit : units_) levels.push_back(unit->level());
+  return levels;
 }
 
 }  // namespace autoware::diagnostic_graph_aggregator

@@ -12,52 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "graph/units.hpp"
+#include "graph/logic.hpp"
 
 #include "config/entity.hpp"
-#include "graph/links.hpp"
-#include "graph/nodes.hpp"
-#include "utils/memory.hpp"
+#include "config/errors.hpp"
 
 #include <memory>
 #include <string>
-#include <utility>
-#include <vector>
 
 namespace autoware::diagnostic_graph_aggregator
 {
 
-void BaseUnit::finalize(int index, std::vector<BaseUnit *> parents)
+std::unique_ptr<Logic> LogicFactory::Create(Parser & parser)
 {
-  index_ = index;
-  parents_ = parents;
-}
-
-std::vector<BaseUnit *> BaseUnit::child_units() const
-{
-  std::vector<BaseUnit *> result;
-  for (const auto & port : ports()) {
-    for (const auto & unit : port->iterate()) {
-      result.push_back(unit);
-    }
+  const auto iter = logics_.find(parser.type());
+  if (iter != logics_.end()) {
+    return iter->second(parser);
   }
-  return result;
+  throw UnknownLogic(parser.type());
 }
 
-std::vector<NodeUnit *> BaseUnit::child_nodes() const
+void LogicFactory::Register(const std::string & type, Function function)
 {
-  return filter<NodeUnit>(child_units());
-}
-
-std::vector<BaseUnit *> BaseUnit::parent_units() const
-{
-  return parents_;
-}
-
-LinkUnit::LinkUnit(ConfigYaml yaml)
-{
-  path_ = yaml.optional("path").text("");
-  link_ = yaml.required("link").text("");
+  logics_[type] = function;
 }
 
 }  // namespace autoware::diagnostic_graph_aggregator
