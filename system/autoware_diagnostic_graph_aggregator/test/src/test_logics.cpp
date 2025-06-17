@@ -20,7 +20,6 @@
 
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
-#include <tier4_system_msgs/msg/diagnostic_graph.hpp>
 
 #include <gtest/gtest.h>
 
