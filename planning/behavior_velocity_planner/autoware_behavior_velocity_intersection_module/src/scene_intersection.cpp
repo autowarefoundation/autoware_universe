@@ -280,7 +280,8 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
   safety_factor_array_.header.stamp = clock_->now();
   safety_factor_array_.header.frame_id = "map";
   for (const auto & object_info : object_info_manager_.attentionObjects()) {
-    if (!object_info->unsafe_info()) {
+    const auto & unsafe_info = object_info->unsafe_info();
+    if (!unsafe_info) {
       continue;
     }
     setObjectsOfInterestData(
@@ -293,8 +294,8 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
 
     // TODO(odashima): add a predicted path used for dicision.
     // safety_factor.predicted_path =
-    safety_factor.ttc_begin = object_info->unsafe_info()->interval_time.first;
-    safety_factor.ttc_end = object_info->unsafe_info()->interval_time.second;
+    safety_factor.ttc_begin = unsafe_info->interval_time.first;
+    safety_factor.ttc_end = unsafe_info->interval_time.second;
     safety_factor.is_safe = false;
 
     safety_factor.points = {
@@ -1087,7 +1088,7 @@ void reactRTCApprovalByDecisionResult(
         path->points, path->points.at(decision_result.closest_idx).point.pose,
         path->points.at(stopline_idx).point.pose,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP, safety_factor_array,
-        true /*is_driving_forward*/, 0.0, 0.0 /*shift distance*/, "occlusion with collision");
+        true /*is_driving_forward*/, 0.0, 0.0 /*shift distance*/, "absence traffic light");
     }
   }
   if (!rtc_occlusion_approved && decision_result.temporal_stop_before_attention_required) {
