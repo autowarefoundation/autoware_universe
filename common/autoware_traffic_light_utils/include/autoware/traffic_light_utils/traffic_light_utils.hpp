@@ -27,6 +27,8 @@
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Transform.h>
 
+#include <vector>
+
 namespace autoware::traffic_light_utils
 {
 
@@ -43,7 +45,8 @@ void setSignalUnknown(tier4_perception_msgs::msg::TrafficLight & signal, float c
  * @return True if a circle-shaped light with the specified color is found, false otherwise.
  */
 bool hasTrafficLightCircleColor(
-  const autoware_perception_msgs::msg::TrafficLightGroup & tl_state, const uint8_t & lamp_color);
+  const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & elements,
+  const uint8_t & lamp_color);
 
 /**
  * @brief Checks if a traffic light state includes a light with the specified shape.
@@ -55,7 +58,8 @@ bool hasTrafficLightCircleColor(
  * @return True if a light with the specified shape is found, false otherwise.
  */
 bool hasTrafficLightShape(
-  const autoware_perception_msgs::msg::TrafficLightGroup & tl_state, const uint8_t & lamp_shape);
+  const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & elements,
+  const uint8_t & lamp_shape);
 
 /**
  * @brief Determines if a traffic signal indicates a stop for the given lanelet.

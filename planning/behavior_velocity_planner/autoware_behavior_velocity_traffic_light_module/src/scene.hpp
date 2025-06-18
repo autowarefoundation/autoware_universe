@@ -67,6 +67,11 @@ public:
     // Restart Suppression Parameter
     double max_behind_dist_to_stop_for_restart_suppression;
     double min_behind_dist_to_stop_for_restart_suppression;
+    // V2I Parameter
+    bool v2i_use_remaining_time;
+    double v2i_last_time_allowed_to_pass;
+    double v2i_velocity_threshold;
+    double v2i_required_time_to_departure;
   };
 
 public:
@@ -94,6 +99,8 @@ public:
 
 private:
   bool isStopSignal();
+
+  bool willTrafficLightTurnRedBeforeReachingStopLine(const double & distance_to_stop_line) const;
 
   autoware_internal_planning_msgs::msg::PathWithLaneId insertStopPose(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & input,
