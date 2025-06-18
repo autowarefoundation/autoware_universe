@@ -18,6 +18,7 @@
   <depend>autoware_control_msgs</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_utils</depend>
+  <depend>autoware_utils_rclcpp</depend>
   <depend>autoware_vehicle_info_utils</depend>
   <depend>autoware_vehicle_msgs</depend>
   <depend>geometry_msgs</depend>
