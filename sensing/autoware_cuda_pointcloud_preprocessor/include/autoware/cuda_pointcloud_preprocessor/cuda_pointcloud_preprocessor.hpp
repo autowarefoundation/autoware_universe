@@ -37,6 +37,13 @@
 namespace autoware::cuda_pointcloud_preprocessor
 {
 
+struct ProcessingStats
+{
+  int mismatch_count{0};
+  int num_crop_box_passed_points{0};
+  int num_nan_points{0};
+};
+
 class CudaPointcloudPreprocessor
 {
 public:
@@ -50,9 +57,10 @@ public:
   void setUndistortionType(const UndistortionType & undistortion_type);
 
   void preallocateOutput();
+  [[nodiscard]] ProcessingStats getProcessingStats() const { return stats_; }
 
   std::unique_ptr<cuda_blackboard::CudaPointCloud2> process(
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr input_pointcloud_msg_ptr,
+    const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg,
     const geometry_msgs::msg::TransformStamped & transform_msg,
     const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,
     const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue,
@@ -79,6 +87,8 @@ private:
   const int threads_per_block_{256};
   cudaMemPool_t device_memory_pool_;
 
+  ProcessingStats stats_;
+
   // Organizing buffers
   thrust::device_vector<InputPointType> device_input_points_;
   thrust::device_vector<InputPointType> device_organized_points_;
@@ -96,6 +106,8 @@ private:
   thrust::device_vector<InputPointType> device_transformed_points_{};
   thrust::device_vector<OutputPointType> device_output_points_{};
   thrust::device_vector<std::uint32_t> device_crop_mask_{};
+  thrust::device_vector<std::uint8_t> device_nan_mask_{};
+  thrust::device_vector<std::uint8_t> device_mismatch_mask_{};
   thrust::device_vector<std::uint32_t> device_ring_outlier_mask_{};
   thrust::device_vector<std::uint32_t> device_indices_{};
   thrust::device_vector<TwistStruct2D> device_twist_2d_structs_{};
