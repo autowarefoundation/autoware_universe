@@ -62,6 +62,13 @@ struct AssociatorConfig
   Eigen::MatrixXd min_iou_matrix;
 };
 
+struct InverseCovariance2D
+{
+  double inv00;  // (d / det)
+  double inv01;  // (-b / det)
+  double inv11;  // (a / det)
+};
+
 class DataAssociation
 {
 private:
@@ -94,7 +101,8 @@ public:
 
   double calculateScore(
     const types::DynamicObject & tracked_object, const std::uint8_t tracker_label,
-    const types::DynamicObject & measurement_object, const std::uint8_t measurement_label) const;
+    const types::DynamicObject & measurement_object, const std::uint8_t measurement_label,
+    const InverseCovariance2D & inv_cov) const;
 
   Eigen::MatrixXd calcScoreMatrix(
     const types::DynamicObjectList & measurements,
