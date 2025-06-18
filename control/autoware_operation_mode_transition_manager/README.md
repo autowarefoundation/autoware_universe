@@ -53,8 +53,8 @@ Here we see that `autoware_operation_mode_transition_manager` has multiple state
 
 For the mode transition:
 
-- /system/operation_mode/change_autoware_control [`tier4_system_msgs/srv/ChangeAutowareControl`]: change operation mode to Autonomous
-- /system/operation_mode/change_operation_mode [`tier4_system_msgs/srv/ChangeOperationMode`]: change operation mode
+- /system/operation_mode/change_autoware_control [`autoware_system_msgs/srv/ChangeAutowareControl`]: change operation mode to Autonomous
+- /system/operation_mode/change_operation_mode [`autoware_system_msgs/srv/ChangeOperationMode`]: change operation mode
 
 For the transition availability/completion check:
 
