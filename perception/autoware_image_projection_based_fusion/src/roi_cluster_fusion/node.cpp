@@ -87,12 +87,12 @@ void RoiClusterFusionNode::fuse_on_single_image(
   geometry_msgs::msg::TransformStamped transform_stamped;
   {
     const auto transform_stamped_optional = getTransformStamped(
-      tf_buffer_, /*target*/ camera_info.header.frame_id,
-      /*source*/ input_cluster_msg.header.frame_id, camera_info.header.stamp);
+      tf_buffer_, /*target*/ input_rois_msg.header.frame_id,
+      /*source*/ input_cluster_msg.header.frame_id, input_rois_msg.header.stamp);
     if (!transform_stamped_optional) {
       RCLCPP_WARN_STREAM(
         get_logger(), "Failed to get transform from " << input_cluster_msg.header.frame_id << " to "
-                                                      << camera_info.header.frame_id);
+                                                      << input_rois_msg.header.frame_id);
       return;
     }
     transform_stamped = transform_stamped_optional.value();
