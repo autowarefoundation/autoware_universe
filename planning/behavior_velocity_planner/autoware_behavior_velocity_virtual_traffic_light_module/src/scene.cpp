@@ -284,7 +284,7 @@ bool VirtualTrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
     return true;
   }
 
-  // Stop at stop_line if finalization isn't completed
+  // Stop at end_line if finalization isn't completed
   if (!virtual_traffic_light_state_->is_finalized) {
     logInfoThrottle(
       5000, "finalization isn't completed, insert stop velocity at end line (ID: %s)",
