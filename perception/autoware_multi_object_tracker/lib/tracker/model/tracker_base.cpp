@@ -21,6 +21,7 @@
 #include <autoware_utils/geometry/geometry.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <random>
 #include <vector>
@@ -109,7 +110,7 @@ void Tracker::mergeExistenceProbabilities(std::vector<float> existence_probabili
 
 bool Tracker::updateWithMeasurement(
   const types::DynamicObject & object, const rclcpp::Time & measurement_time,
-  const types::InputChannel & channel_info)
+  const types::InputChannel & channel_info, bool significant_shape_change)
 {
   // Update existence probability
   {
@@ -163,11 +164,60 @@ bool Tracker::updateWithMeasurement(
     object_.kinematics.orientation_availability = types::OrientationAvailability::SIGN_UNKNOWN;
   }
 
-  // Update object
-  measure(object, measurement_time, channel_info);
+  if (!significant_shape_change) {
+    // Update object normally
+    measure(object, measurement_time, channel_info);
 
-  // Update object status
-  getTrackedObject(measurement_time, object_);
+    // Update object status
+    getTrackedObject(measurement_time, object_);
+
+    // Renew ema_shape_
+    ema_shape_.clear();
+  } else {
+    bool is_bbox = object.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+    Eigen::Vector3d meas_shape{
+      object.shape.dimensions.x, object.shape.dimensions.y, object.shape.dimensions.z};
+    if (!ema_shape_.isInitialized()) {
+      ema_shape_.initialize(meas_shape, is_bbox);
+    } else {
+      ema_shape_.update(meas_shape, is_bbox);
+    }
+
+    // Weak update based on prediction
+    ++weak_update_count_;
+    types::DynamicObject pred;
+    getTrackedObject(measurement_time, pred);
+
+    // Create pseudo measurement
+    createPseudoMeasurement(object, pred);
+
+    // Update blended pose
+    object_.pose = pred.pose;
+
+    // Update shape if weak update continues too long or latest measurement shape is stable
+    bool is_meas_stable = ema_shape_.isStable();
+    if (weak_update_count_ >= WEAK_UPDATE_MAX_COUNT || is_meas_stable) {
+      object_.shape = object.shape;
+      // Use ema_shape_ if latest measurement shape is not stable
+      if (!is_meas_stable) {
+        Eigen::Vector3d ema_shape;
+        if (ema_shape_.getBBoxValue(ema_shape)) {
+          object_.shape.dimensions.x = ema_shape[0];
+          object_.shape.dimensions.y = ema_shape[1];
+          object_.shape.dimensions.z = ema_shape[2];
+          object_.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
+        }
+      }
+
+      // measure to update Kalman filter internal states
+      measure(object, measurement_time, channel_info);
+      // reset weak_update_count_
+      weak_update_count_ = 0;
+    }
+  }
+
+  // update time
+  object_.time = measurement_time;
 
   return true;
 }
@@ -189,6 +239,35 @@ bool Tracker::updateWithoutMeasurement(const rclcpp::Time & timestamp)
   // Update object status
   getTrackedObject(timestamp, object_);
 
+  return true;
+}
+
+bool Tracker::createPseudoMeasurement(
+  const types::DynamicObject & meas, types::DynamicObject & pred)
+{
+  // Apply linear fall‑off weight on dist square
+  const double dx = meas.pose.position.x - pred.pose.position.x;
+  const double dy = meas.pose.position.y - pred.pose.position.y;
+  const double dist2 = dx * dx + dy * dy;
+  constexpr double d_max_square_inv = 1 / 2.0;
+  constexpr double min_w = 0.05;
+  const double w_pose = std::clamp(1.0 - dist2 * d_max_square_inv, min_w, 1.0);
+
+  // Blend position
+  pred.pose.position.x = pred.pose.position.x * (1 - w_pose) + meas.pose.position.x * w_pose;
+  pred.pose.position.y = pred.pose.position.y * (1 - w_pose) + meas.pose.position.y * w_pose;
+
+  // Blend orientation by yaw availability
+  bool is_yaw_available =
+    meas.kinematics.orientation_availability != types::OrientationAvailability::UNAVAILABLE;
+  if (is_yaw_available) {
+    double yaw_pred = tf2::getYaw(pred.pose.orientation);
+    double yaw_meas = tf2::getYaw(meas.pose.orientation);
+    double yaw_fused = yaw_pred * (1 - w_pose) + yaw_meas * w_pose;
+    tf2::Quaternion q;
+    q.setRPY(0, 0, yaw_fused);
+    pred.pose.orientation = tf2::toMsg(q);
+  }
   return true;
 }
 
