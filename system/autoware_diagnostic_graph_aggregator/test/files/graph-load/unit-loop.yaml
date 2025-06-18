@@ -1,0 +1,9 @@
+units:
+  - type: and
+    path: /node1
+    list:
+      - { type: link, link: /node2 }
+  - type: and
+    path: /node2
+    list:
+      - { type: link, link: /node1 }

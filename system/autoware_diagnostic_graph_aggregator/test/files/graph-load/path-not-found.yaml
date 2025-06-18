@@ -1,0 +1,5 @@
+units:
+  - type: and
+    path: /node1
+  - type: link
+    link: /node2

@@ -50,7 +50,7 @@ void DiagnosticsNode::on_create(DiagGraph::ConstSharedPtr graph)
   msg.links.reserve(links.size());
   for (const auto & unit : units) {
     msg.nodes.emplace_back();
-    msg.nodes.back().path = unit->path();
+    msg.nodes.back().path = unit->path_or_name();
   }
   for (const auto & link : links) {
     msg.links.emplace_back();

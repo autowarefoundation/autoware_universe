@@ -15,9 +15,11 @@
 #ifndef COMMON__GRAPH__GRAPH_HPP_
 #define COMMON__GRAPH__GRAPH_HPP_
 
-#include "types.hpp"
+#include "types/diagnostics.hpp"
+#include "types/forward.hpp"
+#include "utils/logger.hpp"
 
-#include <rclcpp/rclcpp.hpp>
+#include <rclcpp/time.hpp>
 
 #include <memory>
 #include <string>
@@ -30,25 +32,28 @@ namespace autoware::diagnostic_graph_aggregator
 class Graph
 {
 public:
-  void create(const std::string & file, const std::string & id = "");
-  void update(const rclcpp::Time & stamp);  // cppcheck-suppress functionConst
-  bool update(const rclcpp::Time & stamp, const DiagnosticStatus & status);
-  const auto & nodes() const { return nodes_; }
-  const auto & units() const { return units_; }
-  DiagGraphStruct create_struct(const rclcpp::Time & stamp) const;
-  DiagGraphStatus create_status(const rclcpp::Time & stamp) const;
+  explicit Graph(const std::string & path);
+  Graph(const std::string & path, const std::string & id, std::shared_ptr<Logger> logger);
+  ~Graph();
+  void update(const rclcpp::Time & stamp);
+  bool update(const rclcpp::Time & stamp, const DiagnosticArray & array);
+  DiagGraphStruct create_struct_msg(const rclcpp::Time & stamp) const;
+  DiagGraphStatus create_status_msg(const rclcpp::Time & stamp) const;
+  DiagnosticArray create_unknown_msg(const rclcpp::Time & stamp) const;
 
-  Graph();   // For unique_ptr members.
-  ~Graph();  // For unique_ptr members.
+  void reset();
+  std::vector<NodeUnit *> nodes() const { return nodes_; }
+  std::vector<DiagUnit *> diags() const { return diags_; }
 
 private:
-  // Note: keep order correspondence between links and unit children for viewer.
-  std::vector<std::unique_ptr<NodeUnit>> nodes_;
-  std::vector<std::unique_ptr<DiagUnit>> diags_;
-  std::vector<std::unique_ptr<UnitLink>> links_;
-  std::vector<BaseUnit *> units_;
-  std::unordered_map<std::string, DiagUnit *> names_;
   std::string id_;
+  std::vector<std::unique_ptr<NodeUnit>> alloc_nodes_;
+  std::vector<std::unique_ptr<DiagUnit>> alloc_diags_;
+  std::vector<std::unique_ptr<LinkPort>> alloc_ports_;
+  std::vector<NodeUnit *> nodes_;
+  std::vector<DiagUnit *> diags_;
+  std::unordered_map<std::string, DiagUnit *> diag_dict_;
+  std::unordered_map<std::string, DiagnosticStatus> unknown_diags_;
 };
 
 }  // namespace autoware::diagnostic_graph_aggregator

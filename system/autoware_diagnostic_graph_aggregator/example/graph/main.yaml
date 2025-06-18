@@ -35,3 +35,4 @@ units:
     list:
       - { type: link, link: /functions/pose_estimation }
       - { type: link, link: /functions/obstacle_detection }
+#   - path: /autoware/modes/autonomous
