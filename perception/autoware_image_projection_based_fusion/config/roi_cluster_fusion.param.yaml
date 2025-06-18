@@ -1,9 +1,9 @@
 /**:
   ros__parameters:
     fusion_distance: 100.0
-    trust_object_distance: 100.0
-    trust_object_iou_mode: "iou"
-    non_trust_object_iou_mode: "iou_x"
+    strict_iou_fusion_distance: 100.0
+    strict_iou_match_mode: "iou"
+    rough_iou_match_mode: "iou_x"
     use_cluster_semantic_type: false
     only_allow_inside_cluster: true
     roi_scale_factor: 1.1
