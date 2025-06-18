@@ -228,7 +228,6 @@ bool VirtualTrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
     return true;
   }
 
-  // Find corresponding state
   // Stop at stop_line if no message received
   if (!virtual_traffic_light_state_) {
     setModuleState<State::REQUESTING>();
