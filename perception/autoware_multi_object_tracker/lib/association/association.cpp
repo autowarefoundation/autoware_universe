@@ -275,16 +275,6 @@ double DataAssociation::calculateScore(
   const double & area = measurement_object.area;
   if (area < min_area || area > max_area) return INVALID_SCORE;
 
-  // // angle gate, only if the threshold is set less than pi
-  // const double max_rad = config_.max_rad_matrix(tracker_label, measurement_label);
-  // if (max_rad < M_PI) {
-  //   const double angle = getFormedYawAngle(
-  //     measurement_object.pose.orientation, tracked_object.pose.orientation, false);
-  //   if (max_rad < std::fabs(angle)) {
-  //     return INVALID_SCORE;
-  //   }
-  // }
-
   // mahalanobis dist gate
   const double mahalanobis_dist = getMahalanobisDistanceFast(dx, dy, inv_cov);
 
