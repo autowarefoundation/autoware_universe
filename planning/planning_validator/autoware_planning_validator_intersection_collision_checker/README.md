@@ -55,3 +55,41 @@ Target lenelets are then expanded, if necessary, up to `detection_range`
 The image below shows the target lanelets at a left turn intersection. (`left.check_turning_lanes` set to **TRUE**)
 
 ![left-turn-target-lanes](./images/left_turn_target_lanelets.png)
+
+## Parameters
+
+| Name               | Unit   | Type   | Description                                                                                 | Default value |
+| :----------------- | ------ | ------ | ------------------------------------------------------------------------------------------- | ------------- |
+| `enable`           | [-]    | bool   | Flag to enable/disable the check globally                                                   | true          |
+| `detection_range`  | [m]    | double | Range of detection from ego position, pointcloud points beyond this range are filtered out  | 50.0          |
+| `ttc_threshold`    | [s]    | double | Threshold value for the difference between ego and object reach times to trigger and a stop | 1.0           |
+| `ego_deceleration` | [m/ss] | double | Ego deceleration relate used to estimate ego stopping time                                  | 1.0           |
+| `min_time_horizon` | [s]    | double | Minimum time horizon to check ahead along ego trajectory                                    | 10.0          |
+| `timeout`          | [s]    | double | Duration to keep stop decision after collision is no longer detected                        | 1.0           |
+
+### Lanelet Selection Flags
+
+| Name                              | Type | Description                                     | Default value |
+| :-------------------------------- | ---- | ----------------------------------------------- | ------------- |
+| `right_turn.enable`               | bool | Flag to enable/disable the check at right turns | true          |
+| `right_turn.check_oncoming_lanes` | bool | Flag to enable/disable checking oncoming lanes  | true          |
+| `right_turn.check_crossing_lanes` | bool | Flag to enable/disable checking crossing lanes  | true          |
+| `right_turn.check_turn_lanes`     | bool | Flag to enable/disable checking turning lanes   | true          |
+| `left_turn.enable`                | bool | Flag to enable/disable the check at left turns  | true          |
+| `left_turn.check_turn_lanes`      | bool | Flag to enable/disable checking turning lanes   | true          |
+
+### Pointcloud Parameters
+
+| Name                               | Unit | Type   | Description                                                                    | Default value |
+| :--------------------------------- | ---- | ------ | ------------------------------------------------------------------------------ | ------------- |
+| `pointcloud.height_buffer`         | [m]  | double | Height offset to add above ego vehicle height when filtering pointcloud points | true          |
+| `pointcloud.min_height`            | [m]  | double | Minimum height threshold for filtering pointcloud points                       | 50.0          |
+| `pointcloud.voxel_grid_filter.x`   | [m]  | double | x value for voxel leaf size                                                    | 1.0           |
+| `pointcloud.voxel_grid_filter.y`   | [m]  | double | y value for voxel leaf size                                                    | 1.0           |
+| `pointcloud.voxel_grid_filter.z`   | [m]  | double | z value for voxel leaf size                                                    | 10.0          |
+| `pointcloud.clustering.tolerance`  | [m]  | double | Distance tolerance between two points in a cluster                             | 1.0           |
+| `pointcloud.clustering.min_height` | [m]  | double | Minimum height of a cluster to be considered as a target                       | 1.0           |
+| `pointcloud.clustering.min_size`   | [-]  | double | Minimum number of points in a cluster to be considered as a target             | 1.0           |
+| `pointcloud.clustering.max_size`   | [-]  | double | Maximum number of points in a cluster to be considered as a target             | 1.0           |
+| `pointcloud.observation_time`      | [s]  | double | Minimum detection time for a pointcloud object to be considered reliable       | 1.0           |
+| `pointcloud.latency`               | [s]  | double | Time delay used to compensate for latency in pointcloud data                   | 1.0           |
