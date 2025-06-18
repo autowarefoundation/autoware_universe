@@ -15,12 +15,12 @@
 #ifndef DIAGNOSTICS_HPP_
 #define DIAGNOSTICS_HPP_
 
-#include "autoware/diagnostic_graph_utils/subscription.hpp"
-
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/diag_graph_status.hpp>
 #include <autoware_adapi_v1_msgs/msg/diag_graph_struct.hpp>
+#include <tier4_system_msgs/msg/diag_graph_status.hpp>
+#include <tier4_system_msgs/msg/diag_graph_struct.hpp>
 
 namespace autoware::default_adapi
 {
@@ -31,14 +31,29 @@ public:
   explicit DiagnosticsNode(const rclcpp::NodeOptions & options);
 
 private:
-  using DiagGraph = autoware::diagnostic_graph_utils::DiagGraph;
-  using DiagUnit = autoware::diagnostic_graph_utils::DiagUnit;
-  using DiagLink = autoware::diagnostic_graph_utils::DiagLink;
-  void on_create(DiagGraph::ConstSharedPtr graph);
-  void on_update(DiagGraph::ConstSharedPtr graph);
-  rclcpp::Publisher<autoware_adapi_v1_msgs::msg::DiagGraphStruct>::SharedPtr pub_struct_;
-  rclcpp::Publisher<autoware_adapi_v1_msgs::msg::DiagGraphStatus>::SharedPtr pub_status_;
-  autoware::diagnostic_graph_utils::DiagGraphSubscription sub_graph_;
+  using InternalGraphStruct = tier4_system_msgs::msg::DiagGraphStruct;
+  using InternalGraphStatus = tier4_system_msgs::msg::DiagGraphStatus;
+  using InternalNodeStruct = tier4_system_msgs::msg::DiagNodeStruct;
+  using InternalNodeStatus = tier4_system_msgs::msg::DiagNodeStatus;
+  using InternalLeafStruct = tier4_system_msgs::msg::DiagLeafStruct;
+  using InternalLeafStatus = tier4_system_msgs::msg::DiagLeafStatus;
+  using InternalLinkStruct = tier4_system_msgs::msg::DiagLinkStruct;
+  using ExternalGraphStruct = autoware_adapi_v1_msgs::msg::DiagGraphStruct;
+  using ExternalGraphStatus = autoware_adapi_v1_msgs::msg::DiagGraphStatus;
+  using ExternalNodeStruct = autoware_adapi_v1_msgs::msg::DiagNodeStruct;
+  using ExternalNodeStatus = autoware_adapi_v1_msgs::msg::DiagNodeStatus;
+  using ExternalLeafStruct = autoware_adapi_v1_msgs::msg::DiagLeafStruct;
+  using ExternalLeafStatus = autoware_adapi_v1_msgs::msg::DiagLeafStatus;
+  using ExternalLinkStruct = autoware_adapi_v1_msgs::msg::DiagLinkStruct;
+  using ExternalKeyValue = autoware_adapi_v1_msgs::msg::KvString;
+
+  void on_struct(const InternalGraphStruct & internal);
+  void on_status(const InternalGraphStatus & internal);
+
+  rclcpp::Publisher<ExternalGraphStruct>::SharedPtr pub_struct_;
+  rclcpp::Publisher<ExternalGraphStatus>::SharedPtr pub_status_;
+  rclcpp::Subscription<InternalGraphStruct>::SharedPtr sub_struct_;
+  rclcpp::Subscription<InternalGraphStatus>::SharedPtr sub_status_;
 };
 
 }  // namespace autoware::default_adapi
