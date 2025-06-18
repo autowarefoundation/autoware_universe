@@ -1,0 +1,19 @@
+<launch>
+  <arg name="param_file" default="$(find-pkg-share autoware_diagnostic_graph_aggregator)/config/merge.param.yaml"/>
+  <arg name="~/output/struct" default="/diagnostics_graph/struct"/>
+  <arg name="~/output/status" default="/diagnostics_graph/status"/>
+  <arg name="~/input1/struct" default="/diagnostics_graph/struct1"/>
+  <arg name="~/input1/status" default="/diagnostics_graph/status1"/>
+  <arg name="~/input2/struct" default="/diagnostics_graph/struct2"/>
+  <arg name="~/input2/status" default="/diagnostics_graph/status2"/>
+
+  <node pkg="autoware_diagnostic_graph_aggregator" exec="merge_node">
+    <param from="$(var param_file)"/>
+    <remap from="~/output/struct" to="$(var ~/output/struct)"/>
+    <remap from="~/output/status" to="$(var ~/output/status)"/>
+    <remap from="~/input1/struct" to="$(var ~/input1/struct)"/>
+    <remap from="~/input1/status" to="$(var ~/input1/status)"/>
+    <remap from="~/input2/struct" to="$(var ~/input2/struct)"/>
+    <remap from="~/input2/status" to="$(var ~/input2/status)"/>
+  </node>
+</launch>
