@@ -43,8 +43,8 @@ using autoware_utils::ScopedTimeTrack;
 RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
 : FusionNode<ClusterMsgType, RoiMsgType, ClusterMsgType>("roi_cluster_fusion", options)
 {
-  trust_object_iou_mode_ = declare_parameter<std::string>("trust_object_iou_mode");
-  non_trust_object_iou_mode_ = declare_parameter<std::string>("non_trust_object_iou_mode");
+  strict_iou_match_mode_ = declare_parameter<std::string>("strict_iou_match_mode");
+  rough_iou_match_mode_ = declare_parameter<std::string>("rough_iou_match_mode");
   use_cluster_semantic_type_ = declare_parameter<bool>("use_cluster_semantic_type");
   only_allow_inside_cluster_ = declare_parameter<bool>("only_allow_inside_cluster");
   roi_scale_factor_ = declare_parameter<double>("roi_scale_factor");
@@ -52,7 +52,7 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
   unknown_iou_threshold_ = declare_parameter<double>("unknown_iou_threshold");
   remove_unknown_ = declare_parameter<bool>("remove_unknown");
   fusion_distance_ = declare_parameter<double>("fusion_distance");
-  trust_object_distance_ = declare_parameter<double>("trust_object_distance");
+  strict_iou_fusion_distance_ = declare_parameter<double>("strict_iou_fusion_distance");
 
   // publisher
   pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
@@ -165,16 +165,16 @@ void RoiClusterFusionNode::fuse_on_single_image(
       feature_obj.object.classification.front().label != ObjectClassification::UNKNOWN;
     for (const auto & cluster_map : m_cluster_roi) {
       double iou(0.0);
-      bool is_use_non_trust_object_iou_mode = is_far_enough(
-        input_cluster_msg.feature_objects.at(cluster_map.first), trust_object_distance_);
+      bool use_rough_iou_match = is_far_enough(
+        input_cluster_msg.feature_objects.at(cluster_map.first), strict_iou_fusion_distance_);
       auto image_roi = feature_obj.feature.roi;
       auto cluster_roi = cluster_map.second;
       sanitizeROI(image_roi, camera_info.width, camera_info.height);
       sanitizeROI(cluster_roi, camera_info.width, camera_info.height);
-      if (is_use_non_trust_object_iou_mode || is_roi_label_known) {
-        iou = cal_iou_by_mode(cluster_roi, image_roi, non_trust_object_iou_mode_);
+      if (use_rough_iou_match || (!is_roi_label_known)) {
+        iou = cal_iou_by_mode(cluster_roi, image_roi, rough_iou_match_mode_);
       } else {
-        iou = cal_iou_by_mode(cluster_roi, image_roi, trust_object_iou_mode_);
+        iou = cal_iou_by_mode(cluster_roi, image_roi, strict_iou_match_mode_);
       }
 
       const bool passed_inside_cluster_gate =
