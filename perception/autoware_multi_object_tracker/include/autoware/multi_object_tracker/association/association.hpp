@@ -59,7 +59,6 @@ struct AssociatorConfig
   Eigen::MatrixXd max_dist_matrix;
   Eigen::MatrixXd max_area_matrix;
   Eigen::MatrixXd min_area_matrix;
-  Eigen::MatrixXd max_rad_matrix;
   Eigen::MatrixXd min_giou_matrix;
 };
 
