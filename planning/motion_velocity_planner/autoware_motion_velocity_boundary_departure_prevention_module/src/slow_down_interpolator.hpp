@@ -12,24 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef SLOW_DOWN_INTERPOLATOR_HPP_
+#define SLOW_DOWN_INTERPOLATOR_HPP_
+
 #include "type_alias.hpp"
 
 #include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/motion_velocity_planner_common/planner_data.hpp>
 #include <tl_expected/expected.hpp>
 
-#include <fmt/format.h>
-
-#include <algorithm>
-#include <limits>
-#include <memory>
 #include <string>
 #include <vector>
-
-#ifndef SLOW_DOWN_INTERPOLATOR_HPP_
-#define SLOW_DOWN_INTERPOLATOR_HPP_
-
-namespace autoware::motion_velocity_planner
+namespace autoware::motion_velocity_planner::utils
 {
 
 class SlowDownInterpolator
@@ -37,137 +31,77 @@ class SlowDownInterpolator
 public:
   explicit SlowDownInterpolator(const TriggerThreshold & th_trigger) : th_trigger_(th_trigger) {}
 
+  /**
+   * @brief Calculates a deceleration plan for the ego vehicle toward the boundary.
+   *
+   * This function computes how far in advance the vehicle should start slowing down,
+   * what velocity it should aim for at the slow-down point, and what deceleration value
+   * would achieve that, based on the current velocity, lateral and longitudinal distances,
+   * and the side of the vehicle approaching the boundary.
+   *
+   * @param curr_vel Current velocity of the vehicle in meters per second.
+   * @param lon_dist_to_bound_m Distance along the trajectory to the boundary point.
+   * @param lat_dist_to_bound_m Lateral distance from the ego to the boundary (positive or
+   * negative).
+   * @param side_key Specifies whether the left or right boundary is used for threshold lookup.
+   * @return A tuple containing:
+   *         - distance to start slowing down,
+   *         - target velocity at the boundary,
+   *         - expected deceleration.
+   *         Returns an error message if the deceleration exceeds the threshold.
+   */
   [[nodiscard]] tl::expected<std::tuple<double, double, double>, std::string> get_interp_to_point(
     const double curr_vel, const double lon_dist_to_bound_m, double lat_dist_to_bound_m,
-    const SideKey side_key) const
-  {
-    const auto interp_vel_mps = interp_velocity(curr_vel, lat_dist_to_bound_m, side_key);
-    const auto exp_decel_mps2 =
-      calc_expected_deceleration(curr_vel, interp_vel_mps, lon_dist_to_bound_m);
-
-    const auto max_decel = th_trigger_.th_acc_mps2.max;
-    if (std::abs(exp_decel_mps2) > std::abs(max_decel)) {
-      return tl::unexpected<std::string>(
-        "Expected deceleration for the interpolated velocity exceeded threshold.");
-    }
-
-    const auto exp_jerk = interp_jerk(lat_dist_to_bound_m, exp_decel_mps2, side_key);
-    const auto exp_vel = calc_new_velocity(curr_vel, exp_decel_mps2, exp_jerk, lon_dist_to_bound_m);
-
-    const auto rel_dist_m =
-      std::max((interp_vel_mps * interp_vel_mps - curr_vel * curr_vel) / (2 * exp_decel_mps2), 0.0);
-
-    return std::make_tuple(rel_dist_m, exp_vel, exp_decel_mps2);
-  }
+    const SideKey side_key) const;
 
 private:
+  /**
+   * @brief Estimates the deceleration required to reach the target velocity over a given distance.
+   *
+   * Uses the standard kinematic formula and clamps the result between the minimum and maximum
+   * allowed deceleration values.
+   *
+   * @param curr_vel Current velocity.
+   * @param target_vel Desired velocity.
+   * @param arclength_to_point_m Distance available for deceleration.
+   * @return Estimated deceleration, clamped within configured thresholds.
+   */
   [[nodiscard]] double calc_expected_deceleration(
-    const double curr_vel, const double target_vel, const double arclength_to_point_m) const
-  {
-    const auto & th_acc_mps2 = th_trigger_.th_acc_mps2;
-    if (arclength_to_point_m < std::numeric_limits<double>::epsilon()) {
-      return th_acc_mps2.max;
-    }
+    const double curr_vel, const double target_vel, const double arclength_to_point_m) const;
 
-    const auto raw_decel =
-      (target_vel * target_vel - curr_vel * curr_vel) / (2.0 * arclength_to_point_m);
-    return std::clamp(raw_decel, th_acc_mps2.max, th_acc_mps2.min);
-  }
-
-  [[nodiscard]] static double calc_dist_to_point(
-    const Point & curr_point, const Point & slow_down_point)
-  {
-    return autoware_utils::calc_distance2d(curr_point, slow_down_point);
-  }
-
-  [[nodiscard]] double interp_velocity(
-    const double curr_vel, const double lat_dist, const SideKey side_key) const
-  {
-    if (curr_vel <= th_trigger_.th_vel_mps.min) {
-      return th_trigger_.th_vel_mps.min;
-    }
-
-    const auto min_dist = th_trigger_.th_dist_to_boundary_m[side_key].min;
-    const auto max_dist = th_trigger_.th_dist_to_boundary_m[side_key].max;
-    const auto lat_dist_axis = get_lat_dist_axis(side_key);
-
-    const auto vel_axis = get_vel_axis();
-    if (lat_dist >= max_dist) {
-      return vel_axis.back();
-    }
-
-    if (lat_dist <= min_dist) {
-      return vel_axis.front();
-    }
-
-    const auto exp_dist = lat_dist < max_dist ? lat_dist : max_dist;
-    return autoware::interpolation::lerp(lat_dist_axis, vel_axis, exp_dist);
-  }
-
-  [[nodiscard]] std::vector<double> get_lat_dist_axis(const SideKey side_key) const
-  {
-    return {
-      th_trigger_.th_dist_to_boundary_m[side_key].min,
-      th_trigger_.th_dist_to_boundary_m[side_key].max};
-  }
-
-  [[nodiscard]] std::vector<double> get_vel_axis() const
-  {
-    return {th_trigger_.th_vel_mps.min, th_trigger_.th_vel_mps.max};
-  }
-
+  /**
+   * @brief Calculates the velocity at the slow-down point considering acceleration and jerk.
+   *
+   * This method simulates velocity change under constant jerk followed by constant acceleration,
+   * and clamps the result to ensure it does not drop below the configured minimum velocity.
+   *
+   * @param curr_vel Current velocity of the ego vehicle.
+   * @param a_target Target acceleration after the jerk phase.
+   * @param jerk Applied jerk value.
+   * @param lon_dist_to_point_m Distance available for deceleration.
+   * @return Estimated target velocity at the end of the slow-down interval.
+   */
   [[nodiscard]] double calc_new_velocity(
     const double curr_vel, const double a_target, const double jerk,
-    const double lon_dist_to_point_m) const
-  {
-    const auto th_slow_down_vel = th_trigger_.th_vel_mps.min;
+    const double lon_dist_to_point_m) const;
 
-    if (curr_vel < th_slow_down_vel) {
-      return th_slow_down_vel;
-    }
+  [[nodiscard]] static double calc_dist_to_point(
+    const Point & curr_point, const Point & slow_down_point);
 
-    const double t = lon_dist_to_point_m / std::max(curr_vel, 1e-6);  // avoid div by zero
-    const double t_j = std::abs(a_target / std::max(jerk, 1e-6));
+  [[nodiscard]] double interp_velocity(
+    const double curr_vel, const double lat_dist, const SideKey side_key) const;
 
-    if (t <= t_j) {
-      return std::clamp(
-        curr_vel + 0.5 * jerk * t * t, th_slow_down_vel,
-        std::max(th_slow_down_vel + std::numeric_limits<double>::epsilon(), curr_vel));
-    }
+  [[nodiscard]] std::vector<double> get_lat_dist_axis(const SideKey side_key) const;
 
-    const double delta_v1 = 0.5 * a_target * a_target / jerk;
-    const double delta_v2 = a_target * (t - t_j);
-
-    return std::clamp(
-      curr_vel + delta_v1 + delta_v2, th_slow_down_vel,
-      std::max(th_slow_down_vel + std::numeric_limits<double>::epsilon(), curr_vel));
-  };
+  [[nodiscard]] std::vector<double> get_vel_axis() const;
 
   [[nodiscard]] double interp_jerk(
     const double lat_dist_to_bound_m, const double expected_decel_mps2,
-    const SideKey side_key) const
-  {
-    const auto th_dist_to_boundary_m = th_trigger_.th_dist_to_boundary_m[side_key];
-    const auto lat_ratio = (th_dist_to_boundary_m.max - lat_dist_to_bound_m) /
-                           (th_dist_to_boundary_m.max - th_dist_to_boundary_m.min);
+    const SideKey side_key) const;
 
-    const auto th_decel_mps2 = th_trigger_.th_acc_mps2;
-    const auto max_decel = std::abs(th_decel_mps2.max);
-    const auto min_decel = std::abs(th_decel_mps2.min);
-    const auto lon_ratio = (std::abs(expected_decel_mps2) - min_decel) / (max_decel - min_decel);
-
-    const auto combined_ratio = 0.5 * lat_ratio + 0.5 * lon_ratio;
-
-    const auto min_jerk = th_trigger_.th_jerk_mps3.min;
-    const auto max_jerk = th_trigger_.th_jerk_mps3.max;
-    if (combined_ratio <= 0.0) return min_jerk;
-    if (combined_ratio >= 1.0) return max_jerk;
-
-    return autoware::interpolation::lerp(min_jerk, max_jerk, combined_ratio);
-  }
   TriggerThreshold th_trigger_;
 };
 
-}  // namespace autoware::motion_velocity_planner
+}  // namespace autoware::motion_velocity_planner::utils
 
 #endif  // SLOW_DOWN_INTERPOLATOR_HPP_

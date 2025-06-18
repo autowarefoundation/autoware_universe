@@ -25,12 +25,18 @@
 #include <utility>
 #include <vector>
 
-namespace autoware::motion_velocity_planner::utils
+namespace
 {
+using autoware::boundary_departure_checker::DepartureType;
+
 bool has_type(const std::unordered_set<DepartureType> & enable_type, const DepartureType & type)
 {
   return enable_type.find(type) != enable_type.end();
 }
+}  // namespace
+
+namespace autoware::motion_velocity_planner::utils
+{
 DepartureIntervals init_departure_intervals(
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
   const DeparturePoints & departure_points, const double vehicle_length_m, const SideKey side_key,

@@ -218,7 +218,7 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
 
   if (!slow_down_interpolator_ptr_) {
     slow_down_interpolator_ptr_ =
-      std::make_unique<SlowDownInterpolator>(node_param_.bdc_param.th_trigger);
+      std::make_unique<utils::SlowDownInterpolator>(node_param_.bdc_param.th_trigger);
   }
 
   auto result_opt = plan_slow_down_intervals(raw_trajectory_points, planner_data);

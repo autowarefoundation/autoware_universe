@@ -69,7 +69,7 @@ private:
   Output output_;
   NodeParam node_param_;
   rclcpp::TimerBase::SharedPtr timer_ptr_;
-  std::unique_ptr<SlowDownInterpolator> slow_down_interpolator_ptr_;
+  std::unique_ptr<utils::SlowDownInterpolator> slow_down_interpolator_ptr_;
   MarkerArray debug_marker_;
   MarkerArray slow_down_wall_marker_;
   std::unique_ptr<Pose> prev_goal_ptr_;
