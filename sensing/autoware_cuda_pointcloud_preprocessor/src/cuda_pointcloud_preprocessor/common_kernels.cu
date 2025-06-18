@@ -37,7 +37,8 @@ __global__ void transformPointsKernel(
 }
 
 __global__ void cropBoxKernel(
-  InputPointType * __restrict__ d_points, std::uint32_t * __restrict__ output_mask, int num_points,
+  InputPointType * __restrict__ d_points, std::uint32_t * __restrict__ output_crop_mask,
+  std::uint8_t * __restrict__ output_nan_mask, int num_points,
   const CropBoxParameters * __restrict__ crop_box_parameters_ptr, int num_crop_boxes)
 {
   for (int idx = blockIdx.x * blockDim.x + threadIdx.x; idx < num_points;
@@ -49,7 +50,12 @@ __global__ void cropBoxKernel(
     const float y = d_points[idx].y;
     const float z = d_points[idx].z;
 
-    std::uint32_t mask = 1;
+    if (!isfinite(x) || !isfinite(y) || !isfinite(z)) {
+      output_nan_mask[idx] = 1;
+      continue;
+    }
+
+    std::uint32_t passed_crop_box_mask = 1;
 
     for (int i = 0; i < num_crop_boxes; i++) {
       const CropBoxParameters & crop_box_parameters = crop_box_parameters_ptr[i];
@@ -59,11 +65,11 @@ __global__ void cropBoxKernel(
       const float & max_x = crop_box_parameters.max_x;
       const float & max_y = crop_box_parameters.max_y;
       const float & max_z = crop_box_parameters.max_z;
-      mask &=
+      passed_crop_box_mask &=
         (x <= min_x || x >= max_x) || (y <= min_y || y >= max_y) || (z <= min_z || z >= max_z);
     }
 
-    output_mask[idx] = mask;
+    output_crop_mask[idx] = passed_crop_box_mask;
   }
 }
 
@@ -104,12 +110,13 @@ void transformPointsLaunch(
 }
 
 void cropBoxLaunch(
-  InputPointType * d_points, std::uint32_t * output_mask, int num_points,
-  const CropBoxParameters * crop_box_parameters_ptr, int num_crop_boxes, int threads_per_block,
-  int blocks_per_grid, cudaStream_t & stream)
+  InputPointType * d_points, std::uint32_t * output_crop_mask, std::uint8_t * output_nan_mask,
+  int num_points, const CropBoxParameters * crop_box_parameters_ptr, int num_crop_boxes,
+  int threads_per_block, int blocks_per_grid, cudaStream_t & stream)
 {
   cropBoxKernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(
-    d_points, output_mask, num_points, crop_box_parameters_ptr, num_crop_boxes);
+    d_points, output_crop_mask, output_nan_mask, num_points, crop_box_parameters_ptr,
+    num_crop_boxes);
 }
 
 void combineMasksLaunch(

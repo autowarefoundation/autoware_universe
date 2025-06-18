@@ -16,7 +16,7 @@
   <depend>autoware_cuda_utils</depend>
   <depend>autoware_point_types</depend>
   <depend>autoware_pointcloud_preprocessor</depend>
-  <depend>autoware_universe_utils</depend>
+  <depend>autoware_utils</depend>
   <depend>cuda_blackboard</depend>
   <depend>diagnostic_msgs</depend>
   <depend>rclcpp</depend>

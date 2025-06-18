@@ -126,6 +126,8 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
 
   for (const auto & [topic, cloud] : topic_to_cloud_map) {
     pc_stamps.emplace_back(cloud->header.stamp);
+    concatenate_cloud_result.topic_to_original_stamp_map[topic] =
+      rclcpp::Time(cloud->header.stamp).seconds();
   }
   std::sort(pc_stamps.begin(), pc_stamps.end(), std::greater<rclcpp::Time>());
   const auto oldest_stamp = pc_stamps.back();
@@ -165,9 +167,6 @@ CombineCloudHandler<PointCloud2Traits>::combine_pointclouds(
     managed_tf_buffer_->transformPointcloud(
       output_frame_, *xyzirc_cloud, *transformed_cloud_ptr, xyzirc_cloud->header.stamp,
       rclcpp::Duration::from_seconds(1.0), node_.get_logger());
-
-    concatenate_cloud_result.topic_to_original_stamp_map[topic] =
-      rclcpp::Time(cloud->header.stamp).seconds();
 
     // compensate pointcloud
     std::unique_ptr<sensor_msgs::msg::PointCloud2> transformed_delay_compensated_cloud_ptr;

@@ -27,9 +27,9 @@ void transformPointsLaunch(
   TransformStruct transform, int threads_per_block, int blocks_per_grid, cudaStream_t & stream);
 
 void cropBoxLaunch(
-  InputPointType * d_points, std::uint32_t * output_mask, int num_points,
-  const CropBoxParameters * crop_box_parameters_ptr, int num_crop_boxes, int threads_per_block,
-  int blocks_per_grid, cudaStream_t & stream);
+  InputPointType * d_points, std::uint32_t * output_crop_mask, std::uint8_t * output_nan_mask,
+  int num_points, const CropBoxParameters * crop_box_parameters_ptr, int num_crop_boxes,
+  int threads_per_block, int blocks_per_grid, cudaStream_t & stream);
 
 void combineMasksLaunch(
   const std::uint32_t * mask1, const std::uint32_t * mask2, int num_points,

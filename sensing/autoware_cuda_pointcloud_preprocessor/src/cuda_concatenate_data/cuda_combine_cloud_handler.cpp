@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/* *INDENT-OFF* */
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_combine_cloud_handler.hpp"
 
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_combine_cloud_handler_kernel.hpp"
@@ -101,6 +100,8 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
 
   for (const auto & [topic, cloud] : topic_to_cloud_map) {
     pc_stamps.emplace_back(cloud->header.stamp);
+    concatenate_cloud_result.topic_to_original_stamp_map[topic] =
+      rclcpp::Time(cloud->header.stamp).seconds();
   }
 
   std::sort(pc_stamps.begin(), pc_stamps.end(), std::greater<rclcpp::Time>());
@@ -280,4 +281,3 @@ CombineCloudHandler<CudaPointCloud2Traits>::combine_pointclouds(
 
 template class autoware::pointcloud_preprocessor::CombineCloudHandler<
   autoware::pointcloud_preprocessor::CudaPointCloud2Traits>;
-/* *INDENT-ON* */

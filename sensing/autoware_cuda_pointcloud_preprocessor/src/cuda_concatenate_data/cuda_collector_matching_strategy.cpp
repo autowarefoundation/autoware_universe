@@ -15,9 +15,7 @@
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_traits.hpp"
 #include "autoware/pointcloud_preprocessor/concatenate_data/collector_matching_strategy.hpp"
 
-/* *INDENT-OFF* */
 template class autoware::pointcloud_preprocessor::NaiveMatchingStrategy<
   autoware::pointcloud_preprocessor::CudaPointCloud2Traits>;
 template class autoware::pointcloud_preprocessor::AdvancedMatchingStrategy<
   autoware::pointcloud_preprocessor::CudaPointCloud2Traits>;
-/* *INDENT-ON* */
