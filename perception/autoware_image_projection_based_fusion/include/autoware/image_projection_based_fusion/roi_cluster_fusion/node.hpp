@@ -48,7 +48,7 @@ private:
     0.1;  // keep small value to lessen affect on merger object stage
   bool remove_unknown_;
   double fusion_distance_;
-  double trust_object_distance_;
+  double strict_iou_fusion_distance_;
   std::string rough_iou_match_mode_{"iou_x"};
 
   bool is_far_enough(const ClusterObjType & obj, const double distance_threshold);
