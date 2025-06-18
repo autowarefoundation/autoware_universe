@@ -19,9 +19,9 @@
 
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
 #include <autoware_adapi_v1_msgs/srv/change_operation_mode.hpp>
+#include <autoware_system_msgs/srv/change_operation_mode.hpp>
 #include <autoware_vehicle_msgs/msg/control_mode_report.hpp>
 #include <autoware_vehicle_msgs/srv/control_mode_command.hpp>
-#include <autoware_system_msgs/srv/change_operation_mode.hpp>
 
 #include <cmath>
 #include <optional>
