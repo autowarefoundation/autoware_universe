@@ -165,7 +165,7 @@ std::shared_ptr<Tracker> TrackerProcessor::createNewTracker(
   }
   return std::make_shared<UnknownTracker>(
     time, object, config_.enable_unknown_object_velocity_estimation,
-    config_.enable_unknown_object_extrapolation);
+    config_.enable_unknown_object_motion_output);
 }
 
 void TrackerProcessor::prune(const rclcpp::Time & time)
@@ -420,7 +420,8 @@ void TrackerProcessor::getTrackedObjects(
     // check if the tracker is confident, if not, skip
     if (!tracker->isConfident(time, adaptive_threshold_cache_, ego_pose_)) continue;
     // Get the tracked object, extrapolated to the given time
-    if (tracker->getTrackedObject(time, tracked_object, true)) {
+    constexpr bool to_publish = true;
+    if (tracker->getTrackedObject(time, tracked_object, to_publish)) {
       tracked_objects.objects.push_back(types::toTrackedObjectMsg(tracked_object));
     }
   }
@@ -439,7 +440,8 @@ void TrackerProcessor::getTentativeObjects(
     // check if the tracker is confident, if so, skip
     if (tracker->isConfident(time, adaptive_threshold_cache_, ego_pose_)) continue;
     // Get the tracked object, extrapolated to the given time
-    if (tracker->getTrackedObject(time, tracked_object)) {
+    constexpr bool to_publish = false;
+    if (tracker->getTrackedObject(time, tracked_object, to_publish)) {
       tentative_objects.objects.push_back(types::toTrackedObjectMsg(tracked_object));
     }
   }

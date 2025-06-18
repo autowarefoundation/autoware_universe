@@ -16,7 +16,7 @@
     enable_delay_compensation: false
     consider_odometry_uncertainty: false
     enable_unknown_object_velocity_estimation: true
-    enable_unknown_object_extrapolation: false
+    enable_unknown_object_motion_output: false
 
     # tracker parameters
     tracker_lifetime: 1.0  # [s]

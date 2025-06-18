@@ -41,12 +41,12 @@ private:
   StaticMotionModel static_motion_model_;
 
   bool enable_velocity_estimation_;
-  bool enable_position_extrapolation_;
+  bool enable_motion_output_;
 
 public:
   UnknownTracker(
     const rclcpp::Time & time, const types::DynamicObject & object,
-    const bool enable_velocity_estimation, const bool enable_position_extrapolation);
+    const bool enable_velocity_estimation, const bool enable_motion_output);
 
   bool predict(const rclcpp::Time & time) override;
   bool measure(

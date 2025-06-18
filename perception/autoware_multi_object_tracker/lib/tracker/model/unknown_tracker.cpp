@@ -38,11 +38,11 @@ namespace autoware::multi_object_tracker
 
 UnknownTracker::UnknownTracker(
   const rclcpp::Time & time, const types::DynamicObject & object,
-  const bool enable_velocity_estimation, const bool enable_position_extrapolation)
+  const bool enable_velocity_estimation, const bool enable_motion_output)
 : Tracker(time, object),
   logger_(rclcpp::get_logger("UnknownTracker")),
   enable_velocity_estimation_(enable_velocity_estimation),
-  enable_position_extrapolation_(enable_position_extrapolation)
+  enable_motion_output_(enable_motion_output)
 {
   if (enable_velocity_estimation_) {
     // Set motion model parameters
@@ -220,11 +220,12 @@ bool UnknownTracker::getTrackedObject(
 
   auto time_object = time;
 
-  if (!enable_position_extrapolation_ && to_publish) {
-    // if it is for publish and extrapolation is disabled, limit the time to the last updated time
+  if (to_publish) {
+    // if it is for publish, limit the time to the last updated time
     const auto last_measurement_time = getLatestMeasurementTime();
     time_object = time.seconds() > last_measurement_time.seconds() ? last_measurement_time : time;
   }
+  // else, allow extrapolation
 
   // get the object
   object = object_;
@@ -247,23 +248,37 @@ bool UnknownTracker::getTrackedObject(
     }
   }
 
-  // Calculate offset once
-  const double offset_x = original_x - object.pose.position.x;
-  const double offset_y = original_y - object.pose.position.y;
+  if (to_publish) {
+    // bring back the original pose
+    object.pose.position.x = original_x;
+    object.pose.position.y = original_y;
+  } else {
+    // for tracking
 
-  // Pre-calculate rotation values
-  const double yaw = tf2::getYaw(object.pose.orientation);
-  const double cos_yaw = cos(-yaw);  // Negative yaw for inverse rotation
-  const double sin_yaw = sin(-yaw);
+    // Calculate offset once
+    const double offset_x = original_x - object.pose.position.x;
+    const double offset_y = original_y - object.pose.position.y;
 
-  // Transform global offset to local coordinates and apply to footprint points
-  const double local_x = offset_x * cos_yaw - offset_y * sin_yaw;
-  const double local_y = offset_x * sin_yaw + offset_y * cos_yaw;
+    // Pre-calculate rotation values
+    const double yaw = tf2::getYaw(object.pose.orientation);
+    const double cos_yaw = cos(-yaw);  // Negative yaw for inverse rotation
+    const double sin_yaw = sin(-yaw);
 
-  // Apply local offset to footprint points
-  for (auto & point : object.shape.footprint.points) {
-    point.x += local_x;
-    point.y += local_y;
+    // Transform global offset to local coordinates and apply to footprint points
+    const double local_x = offset_x * cos_yaw - offset_y * sin_yaw;
+    const double local_y = offset_x * sin_yaw + offset_y * cos_yaw;
+
+    // Apply local offset to footprint points
+    for (auto & point : object.shape.footprint.points) {
+      point.x += local_x;
+      point.y += local_y;
+    }
+  }
+
+  if (!enable_motion_output_ && to_publish) {
+    // if motion output is disabled, zero velocity
+    object.twist.linear.x = 0.0;
+    object.twist.linear.y = 0.0;
   }
 
   return true;
