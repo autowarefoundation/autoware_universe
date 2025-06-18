@@ -37,24 +37,16 @@
 
 namespace
 {
-bool is_uncrossable_type(
-  std::vector<std::string> boundary_types_to_detect, const lanelet::ConstLineString3d & ls)
-{
-  constexpr auto no_type = "";
-  const auto type = ls.attributeOr(lanelet::AttributeName::Type, no_type);
-  return (
-    type != no_type &&
-    std::find(boundary_types_to_detect.begin(), boundary_types_to_detect.end(), type) !=
-      boundary_types_to_detect.end());
-};
-
 using autoware::boundary_departure_checker::ClosestProjectionsToBound;
 using autoware::boundary_departure_checker::ClosestProjectionToBound;
 using autoware::boundary_departure_checker::DeparturePoint;
 using autoware::boundary_departure_checker::DeparturePoints;
 using autoware::boundary_departure_checker::DepartureType;
-using autoware::boundary_departure_checker::SideKey;
+using autoware::boundary_departure_checker::Segment2d;
+using autoware::boundary_departure_checker::SegmentWithIdx;
 using autoware::boundary_departure_checker::VehicleInfo;
+using autoware::boundary_departure_checker::utils::to_segment_2d;
+namespace bg = boost::geometry;
 
 DeparturePoint create_departure_point(
   const ClosestProjectionToBound & projection_to_bound, const double th_dist_hysteresis_m,
@@ -71,10 +63,7 @@ DeparturePoint create_departure_point(
   point.can_be_removed = (point.departure_type == DepartureType::NONE) || point.dist_on_traj <= 0.0;
   return point;
 }
-}  // namespace
 
-namespace autoware::boundary_departure_checker::utils
-{
 void erase_after_first_match(DeparturePoints & departure_points)
 {
   const auto find_cri_dpt = [](const DeparturePoint & point) {
@@ -91,129 +80,25 @@ void erase_after_first_match(DeparturePoints & departure_points)
   }
 }
 
-DeparturePoints get_departure_points(
-  const std::vector<ClosestProjectionToBound> & projections_to_bound,
-  const double th_dist_hysteresis_m, const double lon_offset_m)
+std::vector<SegmentWithIdx> create_local_segments(const lanelet::ConstLineString3d & linestring)
 {
-  DeparturePoints departure_points;
-  departure_points.reserve(projections_to_bound.size());
-  for (const auto & projection_to_bound : projections_to_bound) {
-    const auto point =
-      create_departure_point(projection_to_bound, th_dist_hysteresis_m, lon_offset_m);
-
-    if (point.can_be_removed) {
-      continue;
-    }
-
-    departure_points.push_back(point);
+  std::vector<SegmentWithIdx> local_segments;
+  local_segments.reserve(linestring.size());
+  const auto basic_ls = linestring.basicLineString();
+  for (size_t i = 0; i + 1 < basic_ls.size(); ++i) {
+    const auto segment = to_segment_2d(basic_ls.at(i), basic_ls.at(i + 1));
+    local_segments.emplace_back(bg::return_envelope<Segment2d>(segment), linestring.id(), i, i + 1);
   }
-
-  std::sort(departure_points.begin(), departure_points.end());
-  utils::erase_after_first_match(departure_points);
-  return departure_points;
+  return local_segments;
 }
+}  // namespace
 
+namespace autoware::boundary_departure_checker::utils
+{
 double calc_dist_on_traj(
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const Point2d & point)
 {
   return trajectory::closest(aw_ref_traj, to_geom_pt(point));
-}
-
-std::vector<LinearRing2d> create_vehicle_footprints(
-  const TrajectoryPoints & trajectory, const VehicleInfo & vehicle_info,
-  const FootprintMargin & uncertainty_fp_margin, const LongitudinalConfig & longitudinal_config)
-{
-  std::vector<LinearRing2d> vehicle_footprints;
-  vehicle_footprints.reserve(trajectory.size());
-  std::transform(
-    trajectory.begin(), trajectory.end(), std::back_inserter(vehicle_footprints),
-    [&](const TrajectoryPoint & p) -> LinearRing2d {
-      using autoware_utils::transform_vector;
-      using autoware_utils::pose2transform;
-
-      auto margin = uncertainty_fp_margin;
-      const auto & lon_tracking = longitudinal_config.lon_tracking;
-      margin.lon_m +=
-        (p.longitudinal_velocity_mps * lon_tracking.scale) + lon_tracking.extra_margin_m;
-      const auto local_vehicle_footprint = vehicle_info.createFootprint(margin.lat_m, margin.lon_m);
-      return transform_vector(local_vehicle_footprint, pose2transform(p.pose));
-    });
-
-  return vehicle_footprints;
-}
-
-std::vector<LinearRing2d> create_vehicle_footprints(
-  const TrajectoryPoints & trajectory, const VehicleInfo & vehicle_info,
-  const FootprintMargin & margin)
-{
-  const auto local_vehicle_footprint = vehicle_info.createFootprint(margin.lat_m, margin.lon_m);
-
-  std::vector<LinearRing2d> vehicle_footprints;
-  vehicle_footprints.reserve(trajectory.size());
-  std::transform(
-    trajectory.begin(), trajectory.end(), std::back_inserter(vehicle_footprints),
-    [&](const auto & p) -> LinearRing2d {
-      using autoware_utils::transform_vector;
-      using autoware_utils::pose2transform;
-      return transform_vector(local_vehicle_footprint, pose2transform(p.pose));
-    });
-
-  return vehicle_footprints;
-}
-
-std::vector<LinearRing2d> create_vehicle_footprints(
-  const TrajectoryPoints & trajectory, const VehicleInfo & vehicle_info,
-  const SteeringReport & current_steering)
-{
-  constexpr auto steering_rate_gain = 1.0;
-  constexpr auto steering_rate_rad_per_s = 0.25;
-
-  std::vector<LinearRing2d> vehicle_footprints;
-  vehicle_footprints.reserve(trajectory.size());
-  std::transform(
-    trajectory.begin(), trajectory.end(), std::back_inserter(vehicle_footprints),
-    [&](const TrajectoryPoint & p) -> LinearRing2d {
-      using autoware_utils::transform_vector;
-      using autoware_utils::pose2transform;
-      const double raw_angle_rad =
-        current_steering.steering_tire_angle +
-        (steering_rate_rad_per_s * rclcpp::Duration(p.time_from_start).seconds());
-
-      constexpr auto min_angle = autoware_utils::deg2rad(-89);
-      constexpr auto max_angle = autoware_utils::deg2rad(89);
-      const double clamped_angle_rad = std::clamp(raw_angle_rad, min_angle, max_angle);
-
-      const auto local_vehicle_footprint = vehicle_info.createFootprint(
-        std::max(std::tan(clamped_angle_rad) * steering_rate_gain, 0.0), 0.0, 0.0, 0.0, 0.0, true);
-      return transform_vector(local_vehicle_footprint, pose2transform(p.pose));
-    });
-
-  return vehicle_footprints;
-}
-
-std::vector<LinearRing2d> create_ego_footprints(
-  const AbnormalityType abnormality_type, const FootprintMargin & uncertainty_fp_margin,
-  const TrajectoryPoints & ego_pred_traj, const SteeringReport & current_steering,
-  const VehicleInfo & vehicle_info, const Param & param)
-{
-  if (abnormality_type == AbnormalityType::LONGITUDINAL) {
-    const auto longitudinal_config_opt =
-      param.get_abnormality_config<LongitudinalConfig>(abnormality_type);
-    return create_vehicle_footprints(
-      ego_pred_traj, vehicle_info, uncertainty_fp_margin, longitudinal_config_opt->get());
-  }
-
-  if (abnormality_type == AbnormalityType::STEERING) {
-    return utils::create_vehicle_footprints(ego_pred_traj, vehicle_info, current_steering);
-  }
-
-  FootprintMargin margin = uncertainty_fp_margin;
-  if (abnormality_type == AbnormalityType::LOCALIZATION) {
-    const auto loc_config_opt = param.get_abnormality_config<LocalizationConfig>(abnormality_type);
-    const auto & footprint_envelop = loc_config_opt->get().footprint_envelop;
-    margin = margin + footprint_envelop;
-  }
-  return utils::create_vehicle_footprints(ego_pred_traj, vehicle_info, margin);
 }
 
 TrajectoryPoints cutTrajectory(const TrajectoryPoints & trajectory, const double length)
@@ -393,8 +278,199 @@ double calcMaxSearchLengthForBoundaries(
   return autoware::motion_utils::calcArcLength(trajectory.points) + max_ego_search_length;
 }
 
+FootprintMargin calc_margin_from_covariance(
+  const geometry_msgs::msg::PoseWithCovariance & covariance, const double scale)
+{
+  const auto cov_in_map = covariance.covariance;
+  Eigen::Matrix2d cov_xy_map;
+  cov_xy_map << cov_in_map[0 * 6 + 0], cov_in_map[0 * 6 + 1], cov_in_map[1 * 6 + 0],
+    cov_in_map[1 * 6 + 1];
+
+  const double yaw_vehicle = tf2::getYaw(covariance.pose.orientation);
+
+  // To get a position in a transformed coordinate, rotate the inverse direction
+  Eigen::Matrix2d r_map2vehicle;
+  r_map2vehicle << std::cos(-yaw_vehicle), -std::sin(-yaw_vehicle), std::sin(-yaw_vehicle),
+    std::cos(-yaw_vehicle);
+  // Rotate covariance E((X, Y)^t*(X, Y)) = E(R*(x,y)*(x,y)^t*R^t)
+  // when Rotate point (X, Y)^t= R*(x, y)^t.
+  const Eigen::Matrix2d cov_xy_vehicle = r_map2vehicle * cov_xy_map * r_map2vehicle.transpose();
+
+  // The longitudinal/lateral length is represented
+  // in cov_xy_vehicle(0,0), cov_xy_vehicle(1,1) respectively.
+  return FootprintMargin{cov_xy_vehicle(0, 0) * scale, cov_xy_vehicle(1, 1) * scale};
+}
+
+std::vector<LinearRing2d> create_vehicle_footprints(
+  const TrajectoryPoints & trajectory, const VehicleInfo & vehicle_info,
+  const FootprintMargin & uncertainty_fp_margin, const LongitudinalConfig & longitudinal_config)
+{
+  std::vector<LinearRing2d> vehicle_footprints;
+  vehicle_footprints.reserve(trajectory.size());
+  std::transform(
+    trajectory.begin(), trajectory.end(), std::back_inserter(vehicle_footprints),
+    [&](const TrajectoryPoint & p) -> LinearRing2d {
+      using autoware_utils::transform_vector;
+      using autoware_utils::pose2transform;
+
+      auto margin = uncertainty_fp_margin;
+      const auto & lon_tracking = longitudinal_config.lon_tracking;
+      margin.lon_m +=
+        (p.longitudinal_velocity_mps * lon_tracking.scale) + lon_tracking.extra_margin_m;
+      const auto local_vehicle_footprint = vehicle_info.createFootprint(margin.lat_m, margin.lon_m);
+      return transform_vector(local_vehicle_footprint, pose2transform(p.pose));
+    });
+
+  return vehicle_footprints;
+}
+
+std::vector<LinearRing2d> create_vehicle_footprints(
+  const TrajectoryPoints & trajectory, const VehicleInfo & vehicle_info,
+  const FootprintMargin & margin)
+{
+  const auto local_vehicle_footprint = vehicle_info.createFootprint(margin.lat_m, margin.lon_m);
+
+  std::vector<LinearRing2d> vehicle_footprints;
+  vehicle_footprints.reserve(trajectory.size());
+  std::transform(
+    trajectory.begin(), trajectory.end(), std::back_inserter(vehicle_footprints),
+    [&](const auto & p) -> LinearRing2d {
+      using autoware_utils::transform_vector;
+      using autoware_utils::pose2transform;
+      return transform_vector(local_vehicle_footprint, pose2transform(p.pose));
+    });
+
+  return vehicle_footprints;
+}
+
+std::vector<LinearRing2d> create_vehicle_footprints(
+  const TrajectoryPoints & trajectory, const VehicleInfo & vehicle_info,
+  const SteeringReport & current_steering)
+{
+  constexpr auto steering_rate_gain = 1.0;
+  constexpr auto steering_rate_rad_per_s = 0.25;
+
+  std::vector<LinearRing2d> vehicle_footprints;
+  vehicle_footprints.reserve(trajectory.size());
+  std::transform(
+    trajectory.begin(), trajectory.end(), std::back_inserter(vehicle_footprints),
+    [&](const TrajectoryPoint & p) -> LinearRing2d {
+      using autoware_utils::transform_vector;
+      using autoware_utils::pose2transform;
+      const double raw_angle_rad =
+        current_steering.steering_tire_angle +
+        (steering_rate_rad_per_s * rclcpp::Duration(p.time_from_start).seconds());
+
+      constexpr auto min_angle = autoware_utils::deg2rad(-89);
+      constexpr auto max_angle = autoware_utils::deg2rad(89);
+      const double clamped_angle_rad = std::clamp(raw_angle_rad, min_angle, max_angle);
+
+      const auto local_vehicle_footprint = vehicle_info.createFootprint(
+        std::max(std::tan(clamped_angle_rad) * steering_rate_gain, 0.0), 0.0, 0.0, 0.0, 0.0, true);
+      return transform_vector(local_vehicle_footprint, pose2transform(p.pose));
+    });
+
+  return vehicle_footprints;
+}
+
+std::vector<LinearRing2d> create_ego_footprints(
+  const AbnormalityType abnormality_type, const FootprintMargin & uncertainty_fp_margin,
+  const TrajectoryPoints & ego_pred_traj, const SteeringReport & current_steering,
+  const VehicleInfo & vehicle_info, const Param & param)
+{
+  if (abnormality_type == AbnormalityType::LONGITUDINAL) {
+    const auto longitudinal_config_opt =
+      param.get_abnormality_config<LongitudinalConfig>(abnormality_type);
+    return create_vehicle_footprints(
+      ego_pred_traj, vehicle_info, uncertainty_fp_margin, longitudinal_config_opt->get());
+  }
+
+  if (abnormality_type == AbnormalityType::STEERING) {
+    return utils::create_vehicle_footprints(ego_pred_traj, vehicle_info, current_steering);
+  }
+
+  FootprintMargin margin = uncertainty_fp_margin;
+  if (abnormality_type == AbnormalityType::LOCALIZATION) {
+    const auto loc_config_opt = param.get_abnormality_config<LocalizationConfig>(abnormality_type);
+    const auto & footprint_envelop = loc_config_opt->get().footprint_envelop;
+    margin = margin + footprint_envelop;
+  }
+  return utils::create_vehicle_footprints(ego_pred_traj, vehicle_info, margin);
+}
+
+Side<Segment2d> get_footprint_sides(
+  const LinearRing2d & footprint, const bool use_center_right, const bool use_center_left)
+{
+  const auto center_right = use_center_right ? 2 : 3;
+  const auto center_left = use_center_left ? 5 : 4;
+
+  const auto & right_front = footprint[1];
+  const auto & right_back = footprint[center_right];
+
+  const auto & left_front = footprint[6];
+  const auto & left_back = footprint[center_left];
+
+  Side<Segment2d> side;
+  side.right = {Point2d(right_front.x(), right_front.y()), Point2d(right_back.x(), right_back.y())};
+  side.left = {Point2d(left_front.x(), left_front.y()), Point2d(left_back.x(), left_back.y())};
+
+  return side;
+}
+
+EgoSide get_ego_side_from_footprint(
+  const Footprint & footprint, const bool use_center_right, const bool use_center_left)
+{
+  auto fp_side = get_footprint_sides(footprint, use_center_right, use_center_left);
+  EgoSide ego_side;
+  ego_side.left = std::move(fp_side.left);
+  ego_side.right = std::move(fp_side.right);
+  return ego_side;
+}
+
+EgoSides get_sides_from_footprints(
+  const Footprints & footprints, const bool use_center_right, const bool use_center_left)
+{
+  EgoSides footprints_sides;
+  footprints_sides.reserve(footprints.size());
+  for (const auto & footprint : footprints) {
+    auto ego_side = get_ego_side_from_footprint(footprint, use_center_right, use_center_left);
+    footprints_sides.push_back(ego_side);
+  }
+
+  return footprints_sides;
+}
+
+bool is_uncrossable_type(
+  std::vector<std::string> boundary_types_to_detect, const lanelet::ConstLineString3d & ls)
+{
+  constexpr auto no_type = "";
+  const auto type = ls.attributeOr(lanelet::AttributeName::Type, no_type);
+  return (
+    type != no_type &&
+    std::find(boundary_types_to_detect.begin(), boundary_types_to_detect.end(), type) !=
+      boundary_types_to_detect.end());
+};
+
+UncrossableBoundRTree build_uncrossable_boundaries_rtree(
+  const lanelet::LaneletMap & lanelet_map,
+  const std::vector<std::string> & boundary_types_to_detect)
+{
+  std::vector<SegmentWithIdx> segments;
+  segments.reserve(lanelet_map.lineStringLayer.size());
+  for (const auto & linestring : lanelet_map.lineStringLayer) {
+    if (!is_uncrossable_type(boundary_types_to_detect, linestring)) {
+      continue;
+    }
+
+    auto local_segments = create_local_segments(linestring);
+    std::move(local_segments.begin(), local_segments.end(), std::back_inserter(segments));
+  }
+
+  return {segments.begin(), segments.end()};
+}
+
 tl::expected<std::tuple<Point2d, Point2d, double>, std::string> point_to_segment_projection(
-  const Point2d & p, const Segment2d & segment, const bool swap_points = false)
+  const Point2d & p, const Segment2d & segment, const bool swap_points)
 {
   const auto & p1 = segment.first;
   const auto & p2 = segment.second;
@@ -473,66 +549,6 @@ tl::expected<ProjectionToBound, std::string> segment_to_segment_nearest_projecti
   return *min_elem;
 }
 
-std::vector<SegmentWithIdx> create_local_segments(const lanelet::ConstLineString3d & linestring)
-{
-  std::vector<SegmentWithIdx> local_segments;
-  local_segments.reserve(linestring.size());
-  const auto basic_ls = linestring.basicLineString();
-  for (size_t i = 0; i + 1 < basic_ls.size(); ++i) {
-    const auto segment = to_segment_2d(basic_ls.at(i), basic_ls.at(i + 1));
-    local_segments.emplace_back(bg::return_envelope<Segment2d>(segment), linestring.id(), i, i + 1);
-  }
-  return local_segments;
-}
-
-tl::expected<double, std::string> get_nearest_boundary_segment_from_point(
-  const std::vector<SegmentWithIdx> & segments, const Point2d & point)
-{
-  if (segments.empty()) {
-    return tl::make_unexpected(std::string(__func__) + ": invalid boundary segment.");
-  }
-
-  std::optional<double> curr_min_lat;
-  for (const auto & [segment, ll_id, st_idx, end_idx] : segments) {
-    if (const auto projection_opt = utils::point_to_segment_projection(point, segment)) {
-      const auto dist = std::get<2>(*projection_opt);
-      if (!curr_min_lat || curr_min_lat > dist) {
-        curr_min_lat = dist;
-      }
-    }
-  }
-
-  if (curr_min_lat) {
-    return *curr_min_lat;
-  }
-
-  return tl::make_unexpected("Unable to find closest distance.");
-}
-
-UncrossableBoundRTree build_uncrossable_boundaries_rtree(
-  const lanelet::LineStringLayer & linestring_layer,
-  const std::vector<std::string> & boundary_types_to_detect)
-{
-  std::vector<SegmentWithIdx> segments;
-  for (const auto & linestring : linestring_layer) {
-    if (!is_uncrossable_type(boundary_types_to_detect, linestring)) {
-      continue;
-    }
-
-    auto local_segments = create_local_segments(linestring);
-    std::move(local_segments.begin(), local_segments.end(), std::back_inserter(segments));
-  }
-
-  return {segments.begin(), segments.end()};
-}
-
-UncrossableBoundRTree build_uncrossable_boundaries_rtree(
-  const lanelet::LaneletMap & lanelet_map,
-  const std::vector<std::string> & boundary_types_to_detect)
-{
-  return build_uncrossable_boundaries_rtree(lanelet_map.lineStringLayer, boundary_types_to_detect);
-}
-
 ProjectionToBound find_closest_segment(
   const Segment2d & ego_side_seg, const Segment2d & ego_rear_seg, const size_t curr_fp_idx,
   const std::vector<SegmentWithIdx> & boundary_segments)
@@ -595,82 +611,6 @@ ProjectionsToBound get_closest_boundary_segments_from_side(
   return side;
 }
 
-Side<Segment2d> get_footprint_sides(
-  const LinearRing2d & footprint, const bool use_center_right, const bool use_center_left)
-{
-  const auto center_right = use_center_right ? 2 : 3;
-  const auto center_left = use_center_left ? 5 : 4;
-
-  const auto & right_front = footprint[1];
-  const auto & right_back = footprint[center_right];
-
-  const auto & left_front = footprint[6];
-  const auto & left_back = footprint[center_left];
-
-  Side<Segment2d> side;
-  side.right = {Point2d(right_front.x(), right_front.y()), Point2d(right_back.x(), right_back.y())};
-  side.left = {Point2d(left_front.x(), left_front.y()), Point2d(left_back.x(), left_back.y())};
-
-  return side;
-}
-
-double cross_2d(const Point2d & point, const Segment2d & seg)
-{
-  const auto & [p1, p2] = seg;
-  return (p2.x() - p1.x()) * (point.y() - p1.y()) - (p2.y() - p1.y()) * (point.x() - p1.x());
-}
-
-bool is_point_left_of_line(const Point2d & point, const Segment2d & seg)
-{
-  return cross_2d(point, seg) > 0.0;
-}
-
-FootprintMargin calc_margin_from_covariance(
-  const geometry_msgs::msg::PoseWithCovariance & covariance, const double scale)
-{
-  const auto cov_in_map = covariance.covariance;
-  Eigen::Matrix2d cov_xy_map;
-  cov_xy_map << cov_in_map[0 * 6 + 0], cov_in_map[0 * 6 + 1], cov_in_map[1 * 6 + 0],
-    cov_in_map[1 * 6 + 1];
-
-  const double yaw_vehicle = tf2::getYaw(covariance.pose.orientation);
-
-  // To get a position in a transformed coordinate, rotate the inverse direction
-  Eigen::Matrix2d r_map2vehicle;
-  r_map2vehicle << std::cos(-yaw_vehicle), -std::sin(-yaw_vehicle), std::sin(-yaw_vehicle),
-    std::cos(-yaw_vehicle);
-  // Rotate covariance E((X, Y)^t*(X, Y)) = E(R*(x,y)*(x,y)^t*R^t)
-  // when Rotate point (X, Y)^t= R*(x, y)^t.
-  const Eigen::Matrix2d cov_xy_vehicle = r_map2vehicle * cov_xy_map * r_map2vehicle.transpose();
-
-  // The longitudinal/lateral length is represented
-  // in cov_xy_vehicle(0,0), cov_xy_vehicle(1,1) respectively.
-  return FootprintMargin{cov_xy_vehicle(0, 0) * scale, cov_xy_vehicle(1, 1) * scale};
-}
-
-EgoSide get_ego_side_from_footprint(
-  const Footprint & footprint, const bool use_center_right, const bool use_center_left)
-{
-  auto fp_side = get_footprint_sides(footprint, use_center_right, use_center_left);
-  EgoSide ego_side;
-  ego_side.left = std::move(fp_side.left);
-  ego_side.right = std::move(fp_side.right);
-  return ego_side;
-}
-
-EgoSides get_sides_from_footprints(
-  const Footprints & footprints, const bool use_center_right, const bool use_center_left)
-{
-  EgoSides footprints_sides;
-  footprints_sides.reserve(footprints.size());
-  for (const auto & footprint : footprints) {
-    auto ego_side = get_ego_side_from_footprint(footprint, use_center_right, use_center_left);
-    footprints_sides.push_back(ego_side);
-  }
-
-  return footprints_sides;
-}
-
 double compute_braking_distance(
   double v_init, double v_end, double acc, double jerk, double t_braking_delay)
 {
@@ -689,4 +629,25 @@ double compute_braking_distance(
   return d1 + d2 + v_init * t_braking_delay;
 }
 
+DeparturePoints get_departure_points(
+  const std::vector<ClosestProjectionToBound> & projections_to_bound,
+  const double th_dist_hysteresis_m, const double lon_offset_m)
+{
+  DeparturePoints departure_points;
+  departure_points.reserve(projections_to_bound.size());
+  for (const auto & projection_to_bound : projections_to_bound) {
+    const auto point =
+      create_departure_point(projection_to_bound, th_dist_hysteresis_m, lon_offset_m);
+
+    if (point.can_be_removed) {
+      continue;
+    }
+
+    departure_points.push_back(point);
+  }
+
+  std::sort(departure_points.begin(), departure_points.end());
+  erase_after_first_match(departure_points);
+  return departure_points;
+}
 }  // namespace autoware::boundary_departure_checker::utils

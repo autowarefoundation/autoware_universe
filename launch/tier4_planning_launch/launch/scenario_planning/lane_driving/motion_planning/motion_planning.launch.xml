@@ -159,46 +159,6 @@
   </group>
 
   <!-- plan slowdown or stops on the final trajectory -->
-  <group>
-    <load_composable_node target="/planning/scenario_planning/lane_driving/motion_planning/motion_planning_container">
-      <composable_node pkg="autoware_motion_velocity_planner" plugin="autoware::motion_velocity_planner::MotionVelocityPlannerNode" name="motion_velocity_planner" namespace="">
-        <!-- topic remap -->
-        <remap from="~/input/trajectory" to="path_optimizer/trajectory"/>
-        <remap from="~/input/vector_map" to="/map/vector_map"/>
-        <remap from="~/input/vehicle_odometry" to="/localization/kinematic_state"/>
-        <remap from="~/input/accel" to="/localization/acceleration"/>
-        <remap from="~/input/dynamic_objects" to="/perception/object_recognition/objects"/>
-        <remap from="~/input/no_ground_pointcloud" to="/perception/obstacle_segmentation/pointcloud"/>
-        <remap from="~/input/traffic_signals" to="/perception/traffic_light_recognition/traffic_signals"/>
-        <remap from="~/input/virtual_traffic_light_states" to="/perception/virtual_traffic_light_states"/>
-        <remap from="~/input/occupancy_grid" to="/perception/occupancy_grid_map/map"/>
-        <remap from="~/output/trajectory" to="$(var interface_output_topic)"/>
-        <remap from="~/output/velocity_limit" to="/planning/scenario_planning/max_velocity_candidates"/>
-        <remap from="~/output/clear_velocity_limit" to="/planning/scenario_planning/clear_velocity_limit"/>
-        <remap from="~/output/stop_reasons" to="/planning/scenario_planning/status/stop_reasons"/>
-        <remap from="~/output/velocity_factors" to="/planning/velocity_factors/motion_velocity_planner"/>
-        <!-- params -->
-        <param name="launch_modules" value="$(var motion_velocity_planner_launch_modules)"/>
-        <param from="$(var common_param_path)"/>
-        <param from="$(var vehicle_param_file)"/>
-        <param from="$(var nearest_search_param_path)"/>
-        <param from="$(var velocity_smoother_param_path)"/>
-        <param from="$(var motion_velocity_planner_velocity_smoother_type_param_path)"/>
-        <param from="$(var motion_velocity_planner_param_path)"/>
-        <param from="$(var motion_velocity_planner_obstacle_stop_module_param_path)"/>
-        <param from="$(var motion_velocity_planner_obstacle_slow_down_module_param_path)"/>
-        <param from="$(var motion_velocity_planner_obstacle_cruise_module_param_path)"/>
-        <param from="$(var motion_velocity_planner_dynamic_obstacle_stop_module_param_path)"/>
-        <param from="$(var motion_velocity_planner_out_of_lane_module_param_path)"/>
-        <param from="$(var motion_velocity_planner_obstacle_velocity_limiter_param_path)"/>
-        <param from="$(var motion_velocity_planner_run_out_param_path)"/>
-        <param from="$(var motion_velocity_planner_boundary_departure_prevention_module_param_path)"/>
-        <!-- <param from="$(var motion_velocity_planner_template_param_path)"/> -->
-        <!-- composable node config -->
-        <extra_arg name="use_intra_process_comms" value="false"/>
-      </composable_node>
-    </load_composable_node>
-  </group>
 
   <!-- surround obstacle check -->
   <group if="$(var launch_surround_obstacle_checker)">
@@ -222,4 +182,42 @@
       </composable_node>
     </load_composable_node>
   </group>
+  <node
+    pkg="autoware_motion_velocity_planner"
+    exec="autoware_motion_velocity_planner_node"
+    name="motion_velocity_planner"
+    launch-prefix="xterm -l -lf /home/zulfaqarazmi/develop/aw.txt -e gdb -ex run --args"
+  >
+    <!-- topic remap -->
+    <remap from="~/input/trajectory" to="path_optimizer/trajectory"/>
+    <remap from="~/input/vector_map" to="/map/vector_map"/>
+    <remap from="~/input/vehicle_odometry" to="/localization/kinematic_state"/>
+    <remap from="~/input/accel" to="/localization/acceleration"/>
+    <remap from="~/input/dynamic_objects" to="/perception/object_recognition/objects"/>
+    <remap from="~/input/no_ground_pointcloud" to="/perception/obstacle_segmentation/pointcloud"/>
+    <remap from="~/input/traffic_signals" to="/perception/traffic_light_recognition/traffic_signals"/>
+    <remap from="~/input/virtual_traffic_light_states" to="/perception/virtual_traffic_light_states"/>
+    <remap from="~/input/occupancy_grid" to="/perception/occupancy_grid_map/map"/>
+    <remap from="~/output/trajectory" to="$(var interface_output_topic)"/>
+    <remap from="~/output/velocity_limit" to="/planning/scenario_planning/max_velocity_candidates"/>
+    <remap from="~/output/clear_velocity_limit" to="/planning/scenario_planning/clear_velocity_limit"/>
+    <remap from="~/output/stop_reasons" to="/planning/scenario_planning/status/stop_reasons"/>
+    <remap from="~/output/velocity_factors" to="/planning/velocity_factors/motion_velocity_planner"/>
+    <!-- params -->
+    <param name="launch_modules" value="$(var motion_velocity_planner_launch_modules)"/>
+    <param from="$(var common_param_path)"/>
+    <param from="$(var vehicle_param_file)"/>
+    <param from="$(var nearest_search_param_path)"/>
+    <param from="$(var velocity_smoother_param_path)"/>
+    <param from="$(var motion_velocity_planner_velocity_smoother_type_param_path)"/>
+    <param from="$(var motion_velocity_planner_param_path)"/>
+    <param from="$(var motion_velocity_planner_obstacle_stop_module_param_path)"/>
+    <param from="$(var motion_velocity_planner_obstacle_slow_down_module_param_path)"/>
+    <param from="$(var motion_velocity_planner_obstacle_cruise_module_param_path)"/>
+    <param from="$(var motion_velocity_planner_dynamic_obstacle_stop_module_param_path)"/>
+    <param from="$(var motion_velocity_planner_out_of_lane_module_param_path)"/>
+    <param from="$(var motion_velocity_planner_obstacle_velocity_limiter_param_path)"/>
+    <param from="$(var motion_velocity_planner_run_out_param_path)"/>
+    <param from="$(var motion_velocity_planner_boundary_departure_prevention_module_param_path)"/>
+  </node>
 </launch>

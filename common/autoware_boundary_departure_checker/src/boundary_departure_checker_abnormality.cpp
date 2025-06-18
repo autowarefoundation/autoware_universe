@@ -246,7 +246,8 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
       std::abs(min_to_bound.back().lon_dist_on_ref_traj - min_pt->lon_dist_on_ref_traj) < 0.5) {
       continue;
     }
-    min_pt->lon_dist_on_ref_traj = utils::calc_dist_on_traj(aw_ref_traj, min_pt->pt_on_ego);
+    min_pt->lon_dist_on_ref_traj =
+      trajectory::closest(aw_ref_traj, utils::to_geom_pt(min_pt->pt_on_ego));
     min_to_bound.push_back(*min_pt);
     if (min_to_bound.back().departure_type == DepartureType::CRITICAL_DEPARTURE) {
       break;
