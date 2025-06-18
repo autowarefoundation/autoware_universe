@@ -43,16 +43,6 @@
         0.001,  0.000, 0.000,  0.000, 0.000,    0.100,     0.100,   0.100,      #MOTORBIKE
         0.001,  0.000, 0.000,  0.000, 0.000,    0.100,     0.100,   0.100,      #BICYCLE
         0.001,  0.000, 0.000,  0.000, 0.000,    0.100,     0.100,   0.100]      #PEDESTRIAN
-    max_rad_matrix: # If value is greater than pi, it will be ignored.
-      #UNKNOWN, CAR,   TRUCK, BUS,    TRAILER MOTORBIKE, BICYCLE, PEDESTRIAN
-      [3.150,   3.150, 3.150, 3.150,  3.150,  3.150,     3.150,   3.150,      #UNKNOWN
-       3.150,   1.047, 1.047, 1.047,  1.047,  3.150,     3.150,   3.150,      #CAR
-       3.150,   1.047, 1.047, 1.047,  1.047,  3.150,     3.150,   3.150,      #TRUCK
-       3.150,   1.047, 1.047, 1.047,  1.047,  3.150,     3.150,   3.150,      #BUS
-       3.150,   1.047, 1.047, 1.047,  1.047,  3.150,     3.150,   3.150,      #TRAILER
-       3.150,   3.150, 3.150, 3.150,  3.150,  3.150,     3.150,   3.150,      #MOTORBIKE
-       3.150,   3.150, 3.150, 3.150,  3.150,  3.150,     3.150,   3.150,      #BICYCLE
-       3.150,   3.150, 3.150, 3.150,  3.150,  3.150,     3.150,   3.150]      #PEDESTRIAN
 
     min_iou_matrix: # If value is negative, it will be ignored.
       #UNKNOWN, CAR,   TRUCK, BUS,    TRAILER,  MOTORBIKE, BICYCLE, PEDESTRIAN
