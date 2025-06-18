@@ -23,9 +23,9 @@ namespace autoware::diagnostic_graph_aggregator
 
 struct GraphData;
 struct FileData;
+struct FileContext;
 
 class ConfigYaml;
-class FileContext;
 class Parser;
 
 class Graph;
