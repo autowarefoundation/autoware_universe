@@ -111,7 +111,7 @@ CommandModeDeciderBase::CommandModeDeciderBase(const rclcpp::NodeOptions & optio
     std::bind(&CommandModeDeciderBase::on_change_autoware_control, this, _1, _2));
 
   pub_mrm_state_ = create_publisher<MrmState>("~/mrm/state", rclcpp::QoS(1));
-  pub_debug_ = create_publisher<DeciderDebug>("~/debug", rclcpp::QoS(1));
+  pub_debug_ = create_publisher<Int32MultiArrayStamped>("~/debug", rclcpp::QoS(1));
 
   const auto period = rclcpp::Rate(declare_parameter<double>("update_rate")).period();
   timer_ = rclcpp::create_timer(this, get_clock(), period, [this]() { on_timer(); });
@@ -448,14 +448,16 @@ void CommandModeDeciderBase::publish_mrm_state()
 
 void CommandModeDeciderBase::publish_decider_debug()
 {
-  DeciderDebug msg;
+  Int32MultiArrayStamped msg;
   msg.stamp = now();
-  msg.request_autoware_control = system_request_.autoware_control;
-  msg.request_operation_mode = system_request_.operation_mode;
-  msg.request_command_modes = request_modes_;
-  msg.curr_command_mode = curr_mode_;
-  msg.curr_operation_mode = curr_operation_mode_;
-  msg.last_operation_mode = last_mode_;
+  msg.data.push_back(curr_mode_);
+  msg.data.push_back(curr_operation_mode_);
+  msg.data.push_back(last_mode_);
+  msg.data.push_back(system_request_.autoware_control);
+  msg.data.push_back(system_request_.operation_mode);
+  for (const auto mode : request_modes_) {
+    msg.data.push_back(mode);
+  }
   pub_debug_->publish(msg);
 }
 

@@ -19,13 +19,13 @@
 #include "autoware_command_mode_decider/status.hpp"
 
 #include <autoware/universe_utils/ros/polling_subscriber.hpp>
-#include <autoware_command_mode_decider/msg/decider_debug.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/mrm_state.hpp>
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
+#include <autoware_internal_debug_msgs/msg/int32_multi_array_stamped.hpp>
 #include <autoware_vehicle_msgs/msg/control_mode_report.hpp>
 #include <tier4_system_msgs/msg/command_mode_availability.hpp>
 #include <tier4_system_msgs/msg/command_mode_request.hpp>
@@ -42,8 +42,8 @@ namespace autoware::command_mode_decider
 
 using autoware_adapi_v1_msgs::msg::MrmState;
 using autoware_adapi_v1_msgs::msg::OperationModeState;
-using autoware_command_mode_decider::msg::DeciderDebug;
 using autoware_common_msgs::msg::ResponseStatus;
+using autoware_internal_debug_msgs::msg::Int32MultiArrayStamped;
 using autoware_vehicle_msgs::msg::ControlModeReport;
 using tier4_system_msgs::msg::CommandModeAvailability;
 using tier4_system_msgs::msg::CommandModeRequest;
@@ -95,7 +95,7 @@ private:
   rclcpp::Service<ChangeOperationMode>::SharedPtr srv_operation_mode_;
   rclcpp::Publisher<OperationModeState>::SharedPtr pub_operation_mode_;
   rclcpp::Publisher<MrmState>::SharedPtr pub_mrm_state_;
-  rclcpp::Publisher<DeciderDebug>::SharedPtr pub_debug_;
+  rclcpp::Publisher<Int32MultiArrayStamped>::SharedPtr pub_debug_;
 
   diagnostic_updater::Updater diagnostics_;
   pluginlib::ClassLoader<DeciderPlugin> loader_;
