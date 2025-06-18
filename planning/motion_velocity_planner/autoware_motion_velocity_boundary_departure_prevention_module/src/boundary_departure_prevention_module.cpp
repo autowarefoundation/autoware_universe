@@ -78,7 +78,6 @@ void BoundaryDeparturePreventionModule::update_parameters(
   auto & pp = node_param_;
 
   const std::string module_name{"boundary_departure_prevention."};
-  update_param(parameters, module_name + "th_data_timeout_s", pp.th_data_timeout_s);
   update_param(
     parameters, module_name + "boundary_types_to_detect", pp.bdc_param.boundary_types_to_detect);
   update_param(

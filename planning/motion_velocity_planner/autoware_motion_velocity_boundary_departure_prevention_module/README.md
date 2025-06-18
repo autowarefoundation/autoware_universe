@@ -203,3 +203,7 @@ Example of the nearest projections are shown in the following images:
 !!! Warning
 
     TBA
+
+## Parameters
+
+{{ json_to_markdown("planning/motion_velocity_planner/autoware_motion_velocity_boundary_departure_prevention_module/schema/boundary_departure_prevention.schema.json") }}

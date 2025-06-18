@@ -54,7 +54,6 @@ struct Output
 
 struct NodeParam
 {
-  double th_data_timeout_s{1.0};
   double th_pt_shift_dist_m{1.0};
   double th_pt_shift_angle_rad{autoware_utils_math::deg2rad(2.0)};
   double th_goal_shift_dist_m{1.0};
@@ -66,7 +65,6 @@ struct NodeParam
   explicit NodeParam(rclcpp::Node & node)
   {
     const std::string module_name{"boundary_departure_prevention."};
-    th_data_timeout_s = get_or_declare_parameter<double>(node, module_name + "th_data_timeout_s");
     bdc_param.boundary_types_to_detect = get_or_declare_parameter<std::vector<std::string>>(
       node, module_name + "boundary_types_to_detect");
     bdc_param.th_dist_hysteresis_m =
