@@ -43,6 +43,9 @@ private:
   bool enable_velocity_estimation_;
   bool enable_motion_output_;
 
+  autoware_perception_msgs::msg::Shape last_shape_;
+  geometry_msgs::msg::Pose last_pose_;
+
 public:
   UnknownTracker(
     const rclcpp::Time & time, const types::DynamicObject & object,

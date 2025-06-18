@@ -192,6 +192,7 @@ bool UnknownTracker::measure(
   object_.shape = object.shape;
   object_.pose = object.pose;
   object_.area = types::getArea(object.shape);
+  last_pose_ = object.pose;
 
   if (enable_velocity_estimation_) {
     // check time gap
@@ -214,10 +215,6 @@ bool UnknownTracker::measure(
 bool UnknownTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object, const bool to_publish) const
 {
-  // keep the original pose
-  const double original_x = object_.pose.position.x;
-  const double original_y = object_.pose.position.y;
-
   auto time_object = time;
 
   if (to_publish) {
@@ -249,36 +246,12 @@ bool UnknownTracker::getTrackedObject(
   }
 
   if (to_publish) {
-    // bring back the original pose
-    object.pose.position.x = original_x;
-    object.pose.position.y = original_y;
-  } else {
-    // for tracking
-
-    // Calculate offset once
-    const double offset_x = original_x - object.pose.position.x;
-    const double offset_y = original_y - object.pose.position.y;
-
-    // Pre-calculate rotation values
-    const double yaw = tf2::getYaw(object.pose.orientation);
-    const double cos_yaw = cos(-yaw);  // Negative yaw for inverse rotation
-    const double sin_yaw = sin(-yaw);
-
-    // Transform global offset to local coordinates and apply to footprint points
-    const double local_x = offset_x * cos_yaw - offset_y * sin_yaw;
-    const double local_y = offset_x * sin_yaw + offset_y * cos_yaw;
-
-    // Apply local offset to footprint points
-    for (auto & point : object.shape.footprint.points) {
-      point.x += local_x;
-      point.y += local_y;
+    // back to the input pose to match with the polygon shape
+    object.pose = last_pose_;
+    if (!enable_motion_output_) {
+      object.twist.linear.x = 0.0;
+      object.twist.linear.y = 0.0;
     }
-  }
-
-  if (!enable_motion_output_ && to_publish) {
-    // if motion output is disabled, zero velocity
-    object.twist.linear.x = 0.0;
-    object.twist.linear.y = 0.0;
   }
 
   return true;
