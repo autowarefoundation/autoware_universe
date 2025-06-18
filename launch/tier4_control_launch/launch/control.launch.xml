@@ -48,7 +48,7 @@
 
   <!-- temporary: control_command_gate migration -->
   <arg name="use_control_command_gate" default="false"/>
-  <let name="operation_mode_transition_manager_plugin" value="FlagNode" if="$(var use_control_command_gate)"/>
+  <let name="operation_mode_transition_manager_plugin" value="AutonomousModeTransitionFlagNode" if="$(var use_control_command_gate)"/>
   <let name="operation_mode_transition_manager_plugin" value="OperationModeTransitionManager" unless="$(var use_control_command_gate)"/>
 
   <group>
