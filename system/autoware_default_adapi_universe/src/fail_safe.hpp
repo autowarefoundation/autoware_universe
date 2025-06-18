@@ -34,15 +34,15 @@ public:
   explicit FailSafeNode(const rclcpp::NodeOptions & options);
 
 private:
-  using MrmDescriptions = autoware::adapi_specs::fail_safe::MrmDescriptions::Service;
+  using MrmDescription = autoware::adapi_specs::fail_safe::MrmDescription::Service;
   using MrmState = autoware::adapi_specs::fail_safe::MrmState::Message;
-  Srv<autoware::adapi_specs::fail_safe::MrmDescriptions> srv_mrm_descriptions_;
+  Srv<autoware::adapi_specs::fail_safe::MrmDescription> srv_mrm_description_;
   Pub<autoware::adapi_specs::fail_safe::MrmState> pub_mrm_state_;
   Sub<autoware::component_interface_specs_universe::system::MrmState> sub_mrm_state_;
   MrmState prev_state_;
   void on_state(const MrmState::ConstSharedPtr msg);
-  void on_mrm_descriptions(
-    const MrmDescriptions::Request::SharedPtr req, const MrmDescriptions::Response::SharedPtr res);
+  void on_mrm_description(
+    const MrmDescription::Request::SharedPtr req, const MrmDescription::Response::SharedPtr res);
 
   std::vector<autoware_adapi_v1_msgs::msg::MrmDescription> descriptions_;
 };

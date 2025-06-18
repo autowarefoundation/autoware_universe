@@ -34,7 +34,7 @@ FailSafeNode::FailSafeNode(const rclcpp::NodeOptions & options)
   const auto adaptor = autoware::component_interface_utils::NodeAdaptor(this);
   adaptor.init_pub(pub_mrm_state_);
   adaptor.init_sub(sub_mrm_state_, this, &FailSafeNode::on_state);
-  adaptor.init_srv(srv_mrm_descriptions_, this, &FailSafeNode::on_mrm_descriptions);
+  adaptor.init_srv(srv_mrm_description_, this, &FailSafeNode::on_mrm_description);
   prev_state_.state = MrmState::UNKNOWN;
 
   // Get mrm descriptions from parameters
@@ -68,8 +68,8 @@ void FailSafeNode::on_state(const MrmState::ConstSharedPtr msg)
   }
 }
 
-void FailSafeNode::on_mrm_descriptions(
-  const MrmDescriptions::Request::SharedPtr, const MrmDescriptions::Response::SharedPtr res)
+void FailSafeNode::on_mrm_description(
+  const MrmDescription::Request::SharedPtr, const MrmDescription::Response::SharedPtr res)
 {
   res->descriptions = descriptions_;
   res->status.success = true;
