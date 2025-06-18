@@ -167,12 +167,14 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         std::make_pair(Label::BUS, this->declare_parameter<std::string>("bus_tracker")));
       config.tracker_map.insert(
         std::make_pair(Label::TRAILER, this->declare_parameter<std::string>("trailer_tracker")));
-      config.tracker_map.insert(std::make_pair(
-        Label::PEDESTRIAN, this->declare_parameter<std::string>("pedestrian_tracker")));
+      config.tracker_map.insert(
+        std::make_pair(
+          Label::PEDESTRIAN, this->declare_parameter<std::string>("pedestrian_tracker")));
       config.tracker_map.insert(
         std::make_pair(Label::BICYCLE, this->declare_parameter<std::string>("bicycle_tracker")));
-      config.tracker_map.insert(std::make_pair(
-        Label::MOTORCYCLE, this->declare_parameter<std::string>("motorcycle_tracker")));
+      config.tracker_map.insert(
+        std::make_pair(
+          Label::MOTORCYCLE, this->declare_parameter<std::string>("motorcycle_tracker")));
 
       // Declare parameters
       config.tracker_lifetime = declare_parameter<double>("tracker_lifetime");
@@ -225,8 +227,8 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         initializeMatrixDouble(this->declare_parameter<std::vector<double>>("min_area_matrix"));
       associator_config.max_rad_matrix =
         initializeMatrixDouble(this->declare_parameter<std::vector<double>>("max_rad_matrix"));
-      associator_config.min_iou_matrix =
-        initializeMatrixDouble(this->declare_parameter<std::vector<double>>("min_iou_matrix"));
+      associator_config.min_giou_matrix =
+        initializeMatrixDouble(this->declare_parameter<std::vector<double>>("min_giou_matrix"));
 
       // pre-process
       const int label_num = associator_config.max_dist_matrix.rows();
