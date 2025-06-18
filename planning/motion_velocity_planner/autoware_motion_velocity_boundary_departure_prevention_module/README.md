@@ -36,10 +36,10 @@ These factors can result in the vehicle unintentionally approaching or crossing 
 - **Compensates for map inaccuracies**: Slight misalignments in Lanelet2 map geometries, such as curb or road edge misplacement, can lead to false positives. An enlarged footprint creates a buffer that allows for safe operation even when the map boundary is not perfectly aligned with the real-world one.
 
 <div align="center">
-  <table>
+  <table style="table-layout: fixed; width: 600px;">
     <tr>
-      <th style="text-align: center;">Without Abnormality Margins</th>
-      <th style="text-align: center;">With Localization Abnormality Margin</th>
+      <th style="text-align: center; width: 50%; word-wrap: break-word; white-space: normal;">Without Abnormality Margins</th>
+      <th style="text-align: center; width: 50%; word-wrap: break-word; white-space: normal;">With Localization Abnormality Margin</th>
     </tr>
     <tr>
       <td style="text-align: center;"><img src="./images/normal_no_abnormalities_footprint.png" alt="Footprint without abnormality margin" width="250"></td>
@@ -66,10 +66,10 @@ In such cases, the actual motion of the vehicle diverges from the MPC trajectory
 - **Predicts future risk along the path**: The margin extends along the forward direction of the predicted path, enabling the system to foresee potential boundary violations caused by small steering errors that compound over time.
 
 <div align="center">
-  <table>
+  <table style="table-layout: fixed; width: 600px;">
     <tr>
-      <th style="text-align: center;">Without Abnormality Margins</th>
-      <th style="text-align: center;">With Steering Abnormality Margin</th>
+      <th style="text-align: center; width: 50%; word-wrap: break-word; white-space: normal;">Without Abnormality Margins</th>
+      <th style="text-align: center; width: 50%; word-wrap: break-word; white-space: normal;">With Steering Abnormality Margin</th>
     </tr>
     <tr>
       <td style="text-align: center;"><img src="./images/normal_no_abnormalities_footprint.png" alt="Footprint without abnormality margin" width="250"></td>
@@ -95,10 +95,10 @@ This discrepancy becomes more problematic when the vehicle is near an uncrossabl
 - **Captures mismatches during dynamic maneuvers**: In situations where heading is changing quickly, like on curved roads or during lateral motion, the ego’s actual position may significantly deviate from the MPC path. The extended footprint covers this discrepancy and helps detect boundary risks even if the predicted path appears safe.
 
 <div align="center">
-  <table>
+  <table style="table-layout: fixed; width: 600px;">
     <tr>
-      <th style="text-align: center;">Without Abnormality Margins</th>
-      <th style="text-align: center;">With Longitudinal Tracking Abnormality Margin</th>
+      <th style="text-align: center; width: 50%; word-wrap: break-word; white-space: normal;"> Without Abnormality Margins </th>
+      <th style="text-align: center; width: 50%; word-wrap: break-word; white-space: normal;"> With Longitudinal Tracking Abnormality Margin </th>
     </tr>
     <tr>
       <td style="text-align: center;"><img src="./images/normal_no_abnormalities_footprint_curved.png" alt="Footprint without abnormality margin" width="250"></td>
@@ -108,6 +108,45 @@ This discrepancy becomes more problematic when the vehicle is near an uncrossabl
 </div>
 
 This approach helps bridge the gap between prediction and reality. By expanding the footprint in the heading direction, the system ensures safe operation even when there are longitudinal tracking mismatches due to control delay, road surface changes, or other dynamic factors.
+
+## Types of Departure
+
+The Boundary Departure Prevention Module classifies boundary risk into three types, each representing a different level of severity based on the proximity between the predicted footprint (including abnormality margins) and the road boundary.
+
+<div align="center">
+  <table style="table-layout: fixed; width: 800px;">
+    <tr>
+      <th style="text-align: center; width: 50%; word-wrap: break-word; white-space: normal;">Near-Boundary</th>
+      <th style="text-align: center; width: 50%; word-wrap: break-word; white-space: normal;">Approaching Departure and Critical Departure</th>
+    </tr>
+    <tr>
+      <td style="text-align: center;"><img src="./images/departure_type_near_boundary.png" alt="Departure type near boundary" width="350"></td>
+      <td style="text-align: center;"><img src="./images/departure_type_approaching_critical.png" alt="Departure type approaching and critical" width="350"></td>
+    </tr>
+  </table>
+</div>
+
+### 1. Near-Boundary
+
+The ego vehicle is approaching a road boundary but remains within a tolerable margin. This condition may arise:
+
+- On narrow roads or lanes with minimal space.
+- When expanded abnormality margins bring the footprint closer to the edge.
+- During turns or lateral maneuvers near curbs.
+
+### 2. Approaching Departure
+
+The ego vehicle is still some distance away from the boundary, but its predicted path will eventually lead to a critical departure if no action is taken. This condition is triggered only when a critical departure is detected at a future point along the path.
+
+### 3. Critical Departure
+
+A portion of the normal (non-expanded) ego footprint crosses an uncrossable boundary. This condition is treated as a safety-critical violation.
+
+Unlike other departure types, abnormality margins are not considered in this judgment. Including them would increase the risk of false positives, especially on narrow or constrained roads. Instead, only the actual predicted footprint is used to determine a critical departure. Upon detecting a critical departure:
+
+- The module does not insert a stop, but instead, it relies on previously triggered Approaching Departure to have already reduced the vehicle’s speed.
+- The module can publish a diagnostic status, which can be configured to escalate to ERROR level.
+- The ERROR level diagnostic can be connected to an external MRM (Minimum Risk Maneuver) system, which is responsible for issuing a full stop command.
 
 ## Processing Flow
 
@@ -176,14 +215,14 @@ The projection function returns the projected point on the boundary, the corresp
 Example of the nearest projections are shown in the following images:
 
 <div align="center">
-  <table>
+  <table style="table-layout: fixed; width: 800px;">
     <tr>
-      <th style="text-align: center;">Going near the boundary</th>
-      <th style="text-align: center;">Heading towards and departing from boundaries</th>
+      <th style="text-align: center; width: 50%; word-wrap: break-word; white-space: normal;">Going near the boundary</th>
+      <th style="text-align: center; width: 50%; word-wrap: break-word; white-space: normal;">Heading towards and departing from boundaries</th>
     </tr>
     <tr>
-      <td style="text-align: center;"><img src="./images/determining_closest_projection_1.png" alt="Projections near boundary" width="250"></td>
-      <td style="text-align: center;"><img src="./images/determining_closest_projection_2.png" alt="Projections at boundaries" width="250"></td>
+      <td style="text-align: center;"><img src="./images/determining_closest_projection_1.png" alt="Projections near boundary" width="350"></td>
+      <td style="text-align: center;"><img src="./images/determining_closest_projection_2.png" alt="Projections at boundaries" width="350"></td>
     </tr>
   </table>
 </div>
