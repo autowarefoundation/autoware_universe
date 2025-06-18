@@ -31,6 +31,9 @@ ament_auto_add_library(aggregator SHARED
 ament_auto_add_library(converter SHARED
   "src/node/converter.cpp"
 )
+ament_auto_add_library(merge SHARED
+  "src/node/merge.cpp"
+)
 target_include_directories(${PROJECT_NAME} PRIVATE "src/common")
 target_include_directories(aggregator PRIVATE "src/common")
 
@@ -45,6 +48,11 @@ rclcpp_components_register_node(aggregator
 rclcpp_components_register_node(converter
   PLUGIN "autoware::diagnostic_graph_aggregator::ConverterNode"
   EXECUTABLE "converter_node"
+)
+
+rclcpp_components_register_node(merge
+  PLUGIN "autoware::diagnostic_graph_aggregator::MergeNode"
+  EXECUTABLE "merge_node"
 )
 
 if(BUILD_TESTING)
