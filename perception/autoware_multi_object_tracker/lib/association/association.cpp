@@ -23,6 +23,8 @@
 #include <autoware_utils/math/unit_conversion.hpp>
 
 #include <algorithm>
+#include <array>
+#include <iostream>
 #include <list>
 #include <memory>
 #include <unordered_map>
@@ -31,6 +33,7 @@
 
 namespace
 {
+
 double getMahalanobisDistance(
   const geometry_msgs::msg::Point & measurement, const geometry_msgs::msg::Point & tracker,
   const Eigen::Matrix2d & covariance)
@@ -150,10 +153,49 @@ void DataAssociation::assign(
   }
 }
 
+namespace
+{
+size_t g_call_count = 0;
+std::vector<double> g_build_times;
+std::vector<double> g_query_times;
+
+constexpr size_t kBenchmarkInterval = 100;
+
+void printStats()
+{
+  auto compute_stats = [](const std::vector<double> & times) {
+    double sum = std::accumulate(times.begin(), times.end(), 0.0);
+    double avg = sum / times.size();
+    auto [min_it, max_it] = std::minmax_element(times.begin(), times.end());
+    return std::make_tuple(avg, *min_it, *max_it);
+  };
+
+  auto [avg_build, min_build, max_build] = compute_stats(g_build_times);
+  auto [avg_query, min_query, max_query] = compute_stats(g_query_times);
+
+  std::cout << "===== [RTREE] Performance over " << g_call_count << " calls =====\n";
+
+  std::cout << "Build Time (us): avg = " << avg_build << ", min = " << min_build
+            << ", max = " << max_build << std::endl;
+  std::cout << "Query Time (us): avg = " << avg_query << ", min = " << min_query
+            << ", max = " << max_query << std::endl;
+
+  // g_build_times.clear();
+  // g_query_times.clear();
+}
+}  // namespace
+
 Eigen::MatrixXd DataAssociation::calcScoreMatrix(
   const types::DynamicObjectList & measurements,
   const std::list<std::shared_ptr<Tracker>> & trackers)
 {
+  std::unique_ptr<ScopedTimeTrack> st_ptr;
+  if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
+
+  auto time_us = [] {
+    return std::chrono::steady_clock::now().time_since_epoch() / std::chrono::microseconds(1);
+  };
+
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
@@ -167,15 +209,15 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
     Eigen::MatrixXd::Zero(trackers.size(), measurements.objects.size());
 
   // Pre-allocate vectors to avoid reallocations
+
+  const auto t_build_start = time_us();
+
   rtree_.clear();
-  std::vector<ValueType> nearby_trackers;
-  nearby_trackers.reserve(std::min(size_t{100}, trackers.size()));  // Reasonable initial capacity
 
   std::vector<types::DynamicObject> tracked_objects;
   std::vector<std::uint8_t> tracker_labels;
   tracked_objects.reserve(trackers.size());
   tracker_labels.reserve(trackers.size());
-
   // Build R-tree and store tracker data
   {
     size_t tracker_idx = 0;
@@ -194,10 +236,15 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
     rtree_.insert(rtree_points.begin(), rtree_points.end());
   }
 
+  const auto t_build_end = time_us();
+
+  const auto t_query_start = time_us();
+
   // For each measurement, find nearby trackers using R-tree
+
   for (size_t measurement_idx = 0; measurement_idx < measurements.objects.size();
        ++measurement_idx) {
-    const auto & measurement_object = measurements.objects.at(measurement_idx);
+    const auto & measurement_object = measurements.objects[measurement_idx];
     const auto measurement_label =
       autoware::object_recognition_utils::getHighestProbLabel(measurement_object.classification);
 
@@ -206,14 +253,18 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
 
     // Use circle query instead of box for more precise filtering
     Point measurement_point(measurement_object.pose.position.x, measurement_object.pose.position.y);
-    nearby_trackers.clear();  // Reuse vector
-    rtree_.query(
-      bgi::satisfies([&](const ValueType & v) {
-        const double dx = bg::get<0>(v.first) - measurement_object.pose.position.x;
-        const double dy = bg::get<1>(v.first) - measurement_object.pose.position.y;
-        return dx * dx + dy * dy <= max_squared_dist;
-      }),
-      std::back_inserter(nearby_trackers));
+
+    std::vector<ValueType> nearby_trackers;
+    nearby_trackers.reserve(std::min(size_t{100}, trackers.size()));  // Reasonable initial capacity
+
+    std::vector<ValueType> temp_candidates;
+    // Compute search bounding box (square that contains the circle)
+    const double max_dist = std::sqrt(max_squared_dist);
+    const Box query_box(
+      Point(measurement_point.get<0>() - max_dist, measurement_point.get<1>() - max_dist),
+      Point(measurement_point.get<0>() + max_dist, measurement_point.get<1>() + max_dist));
+    // Initial R-tree box query
+    rtree_.query(bgi::within(query_box), std::back_inserter(nearby_trackers));
 
     // Process nearby trackers
     for (const auto & tracker_value : nearby_trackers) {
@@ -226,6 +277,13 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
         calculateScore(tracked_object, tracker_label, measurement_object, measurement_label);
       score_matrix(tracker_idx, measurement_idx) = score;
     }
+  }
+  const auto t_query_end = time_us();
+  // Collect timings
+  g_build_times.push_back(static_cast<double>(t_build_end - t_build_start));
+  g_query_times.push_back(static_cast<double>(t_query_end - t_query_start));
+  if (++g_call_count % kBenchmarkInterval == 0) {
+    printStats();
   }
 
   return score_matrix;
@@ -267,6 +325,7 @@ double DataAssociation::calculateScore(
   const double mahalanobis_dist = getMahalanobisDistance(
     measurement_object.pose.position, tracked_object.pose.position,
     getXYCovariance(tracked_object.pose_covariance));
+
   constexpr double mahalanobis_dist_threshold =
     13.816;  // 99.99% confidence level for 2 degrees of freedom, chi-square critical value
   if (mahalanobis_dist >= mahalanobis_dist_threshold) return 0.0;

@@ -71,8 +71,7 @@ private:
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 
   // R-tree for spatial indexing of trackers
-  bgi::rtree<ValueType, bgi::quadratic<16>> rtree_;
-
+  bgi::rtree<ValueType, bgi::quadratic<8>> rtree_;
   // Cache of maximum squared distances per measurement class
   // For each measurement class, stores the maximum squared distance it could match with any tracker
   // class
