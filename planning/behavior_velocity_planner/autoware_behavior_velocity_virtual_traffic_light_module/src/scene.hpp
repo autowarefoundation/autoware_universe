@@ -105,8 +105,6 @@ public:
     const tier4_v2x_msgs::msg::VirtualTrafficLightStateArray::ConstSharedPtr
       virtual_traffic_light_states);
 
-  State getState() const;
-
   void updateLoggerWithState();
 
   std::vector<int64_t> getRegulatoryElementIds() const override { return {reg_elem_.id()}; }
