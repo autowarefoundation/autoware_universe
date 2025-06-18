@@ -5,7 +5,7 @@
     merge_frame_id: "map"
     time_sync_threshold: 0.999
     sub_object_timeout_sec: 0.8
-    publish_interpolated_sub_objects: true #for debug
+    publish_interpolated_sub_objects: true # for debug
 
     # choose the input sensor type for each object type
     # "lidar", "radar", "camera" are available
@@ -25,3 +25,8 @@
     # logging settings
     enable_logging: false
     logging_file_path: "association_log.json"
+
+    # diagnostics
+    delay_main_objects_tolerance: 1.0 # [sec]
+    duration_empty_main_objects_tolerance: 5.0 # [sec]
+    delay_sub_objects_tolerance: 5.0 # [sec]

@@ -32,16 +32,16 @@ Also, even if both can be activated at the same time, the Kalman Filter may be a
 
 ### Supporting pose_estimators
 
-- [ndt_scan_matcher](https://github.com/autowarefoundation/autoware.universe/tree/main/localization/autoware_ndt_scan_matcher)
+- [ndt_scan_matcher](https://github.com/autowarefoundation/autoware_core/tree/main/localization/autoware_ndt_scan_matcher)
 - [eagleye](https://autowarefoundation.github.io/autoware-documentation/main/how-to-guides/integrating-autoware/launch-autoware/localization/eagleye/)
-- [yabloc](https://github.com/autowarefoundation/autoware.universe/tree/main/localization/yabloc)
-- [landmark_based_localizer](https://github.com/autowarefoundation/autoware.universe/tree/main/localization/autoware_landmark_based_localizer)
+- [yabloc](https://github.com/autowarefoundation/autoware_universe/tree/main/localization/yabloc)
+- [landmark_based_localizer](https://github.com/autowarefoundation/autoware_universe/tree/main/localization/autoware_landmark_based_localizer)
 
 ### Demonstration
 
 The following video demonstrates the switching of four different pose estimators.
 
-<div><video controls src="https://github.com/autowarefoundation/autoware.universe/assets/24854875/d4d48be4-748e-4ffc-bde2-d498911ed3a1" muted="false" width="800"></video></div>
+<div><video controls src="https://github.com/autowarefoundation/autoware_universe/assets/24854875/d4d48be4-748e-4ffc-bde2-d498911ed3a1" muted="false" width="800"></video></div>
 
 Users can reproduce the demonstration using the following data and launch command:
 

@@ -15,9 +15,9 @@
 #ifndef SCAN_GROUND_FILTER__GRID_HPP_
 #define SCAN_GROUND_FILTER__GRID_HPP_
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/math/normalization.hpp>
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/normalization.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -96,7 +96,7 @@ float pseudoTan(const float theta)
 
 namespace autoware::ground_segmentation
 {
-using autoware::universe_utils::ScopedTimeTrack;
+using autoware_utils::ScopedTimeTrack;
 
 struct Point
 {
@@ -153,7 +153,7 @@ public:
   }
   ~Grid() = default;
 
-  void setTimeKeeper(std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_ptr)
+  void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr)
   {
     time_keeper_ = std::move(time_keeper_ptr);
   }
@@ -285,7 +285,7 @@ private:
   std::vector<Cell> cells_;
 
   // debug information
-  std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_;
+  std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 
   // Generate grid geometry
   // the grid is cylindrical mesh grid

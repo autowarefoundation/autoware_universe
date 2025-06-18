@@ -28,6 +28,7 @@
 #include <magic_enum.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <boost/geometry.hpp>
 #include <boost/geometry/algorithms/within.hpp>
 
 #include <lanelet2_core/geometry/Lanelet.h>
@@ -48,7 +49,7 @@ using autoware::behavior_path_planner::utils::parking_departure::initializeColli
 using autoware::behavior_path_planner::utils::path_safety_checker::ExtendedPredictedObject;
 using autoware::motion_utils::calcLateralOffset;
 using autoware::motion_utils::calcLongitudinalOffsetPose;
-using autoware::universe_utils::calcOffsetPose;
+using autoware_utils::calc_offset_pose;
 
 // set as macro so that calling function name will be printed.
 // debug print is heavy. turn on only when debugging.
@@ -205,7 +206,7 @@ void StartPlannerModule::updateObjectsFilteringParams(
 
 void StartPlannerModule::updateData()
 {
-  universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   // The method PlannerManager::run() calls SceneModuleInterface::setData and
   // SceneModuleInterface::setPreviousModuleOutput() before this module's run() method is called
@@ -271,8 +272,7 @@ bool StartPlannerModule::hasFinishedBackwardDriving() const
 {
   // check ego car is close enough to pull out start pose and stopped
   const auto current_pose = planner_data_->self_odometry->pose.pose;
-  const auto distance =
-    autoware::universe_utils::calcDistance2d(current_pose, status_.pull_out_start_pose);
+  const auto distance = autoware_utils::calc_distance2d(current_pose, status_.pull_out_start_pose);
 
   const bool is_near = distance < parameters_->th_arrived_distance;
   const double ego_vel = utils::l2Norm(planner_data_->self_odometry->twist.twist.linear);
@@ -336,6 +336,57 @@ bool StartPlannerModule::hasCollisionWithDynamicObjects() const
   return !isSafePath();
 }
 
+bool StartPlannerModule::isInsideLanelets() const
+{
+  const auto & current_pose = planner_data_->self_odometry->pose.pose;
+  const auto vehicle_footprint = autoware_utils::transform_vector(
+    vehicle_info_.createFootprint(), autoware_utils::pose2transform(current_pose));
+
+  lanelet::BasicPolygon2d footprint_polygon;
+  for (const auto & point : vehicle_footprint) {
+    footprint_polygon.push_back({point.x(), point.y()});
+  }
+
+  // Find lanelets that intersect with the vehicle footprint
+  const auto & lanelets_distance_pair = lanelet::geometry::findWithin2d(
+    planner_data_->route_handler->getLaneletMapPtr()->laneletLayer, footprint_polygon, 0.0);
+
+  if (lanelets_distance_pair.empty()) {
+    return false;
+  }
+
+  // Combine all intersecting lanelets into a single MultiPolygon
+  autoware_utils::MultiPolygon2d combined_lanelets;
+  bool first_lanelet = true;
+
+  for (const auto & [distance, lanelet] : lanelets_distance_pair) {
+    const auto & poly = lanelet.polygon2d().basicPolygon();
+
+    autoware_utils::Polygon2d lanelet_polygon;
+    auto & outer = lanelet_polygon.outer();
+
+    for (const auto & p : poly) {
+      outer.push_back({p.x(), p.y()});
+    }
+
+    boost::geometry::correct(lanelet_polygon);
+
+    // Handle the first lanelet differently to avoid unnecessary operations
+    if (first_lanelet) {
+      boost::geometry::convert(lanelet_polygon, combined_lanelets);
+      first_lanelet = false;
+    } else {
+      // Union the current lanelet with the combined lanelets
+      autoware_utils::MultiPolygon2d result;
+      boost::geometry::union_(combined_lanelets, lanelet_polygon, result);
+      combined_lanelets = result;
+    }
+  }
+
+  // Check if the vehicle footprint is completely within the combined lanelets
+  return boost::geometry::within(footprint_polygon, combined_lanelets);
+}
+
 bool StartPlannerModule::isExecutionRequested() const
 {
   if (isModuleRunning()) {
@@ -343,12 +394,12 @@ bool StartPlannerModule::isExecutionRequested() const
   }
 
   // Return false and do not request execution if any of the following conditions are true:
-  // - The start pose is on the middle of the road.
+  // - The start pose is on the centerline or on "waypoints" (custom centerline)
   // - The vehicle has already arrived at the start position planner.
   // - The vehicle has reached the goal position.
   // - The vehicle is still moving.
   if (
-    isCurrentPoseOnMiddleOfTheRoad() || isCloseToOriginalStartPose() || hasArrivedAtGoal() ||
+    isCurrentPoseOnEgoCenterline() || isCloseToOriginalStartPose() || hasArrivedAtGoal() ||
     isMoving()) {
     return false;
   }
@@ -368,19 +419,21 @@ bool StartPlannerModule::isModuleRunning() const
   return getCurrentStatus() == ModuleStatus::RUNNING;
 }
 
-bool StartPlannerModule::isCurrentPoseOnMiddleOfTheRoad() const
+bool StartPlannerModule::isCurrentPoseOnEgoCenterline() const
 {
+  const auto & lanelet_map_ptr = planner_data_->route_handler->getLaneletMapPtr();
   const Pose & current_pose = planner_data_->self_odometry->pose.pose;
   const lanelet::ConstLanelets current_lanes = utils::getCurrentLanes(planner_data_);
   const double lateral_distance_to_center_lane =
-    lanelet::utils::getArcCoordinates(current_lanes, current_pose).distance;
+    lanelet::utils::getArcCoordinatesOnEgoCenterline(current_lanes, current_pose, lanelet_map_ptr)
+      .distance;
 
   return std::abs(lateral_distance_to_center_lane) < parameters_->th_distance_to_middle_of_the_road;
 }
 
 bool StartPlannerModule::isPreventingRearVehicleFromPassingThrough() const
 {
-  universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   // prepare poses for preventing check
   // - current_pose
@@ -411,7 +464,7 @@ bool StartPlannerModule::isPreventingRearVehicleFromPassingThrough() const
 
 bool StartPlannerModule::isPreventingRearVehicleFromPassingThrough(const Pose & ego_pose) const
 {
-  universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const auto & dynamic_object = planner_data_->dynamic_object;
   const auto & route_handler = planner_data_->route_handler;
@@ -429,7 +482,7 @@ bool StartPlannerModule::isPreventingRearVehicleFromPassingThrough(const Pose & 
       boundary_line.begin(), boundary_line.end(), [&boundary_path](const auto & boundary_point) {
         const double x = boundary_point.x();
         const double y = boundary_point.y();
-        boundary_path.push_back(autoware::universe_utils::createPoint(x, y, 0.0));
+        boundary_path.push_back(autoware_utils::create_point(x, y, 0.0));
       });
 
     return std::fabs(calcLateralOffset(boundary_path, search_pose.position));
@@ -442,7 +495,7 @@ bool StartPlannerModule::isPreventingRearVehicleFromPassingThrough(const Pose & 
     autoware::motion_utils::findNearestSegmentIndex(centerline_path.points, start_pose);
   if (!start_pose_nearest_segment_index) return false;
 
-  const auto start_pose_point_msg = autoware::universe_utils::createPoint(
+  const auto start_pose_point_msg = autoware_utils::create_point(
     start_pose.position.x, start_pose.position.y, start_pose.position.z);
   const auto starting_pose_lateral_offset = autoware::motion_utils::calcLateralOffset(
     centerline_path.points, start_pose_point_msg, start_pose_nearest_segment_index.value());
@@ -457,8 +510,8 @@ bool StartPlannerModule::isPreventingRearVehicleFromPassingThrough(const Pose & 
       geometry_msgs::msg::Pose & ego_overhang_point_as_pose,
       const bool ego_is_merging_from_the_left) -> std::optional<std::pair<double, double>> {
     const auto local_vehicle_footprint = vehicle_info_.createFootprint();
-    const auto vehicle_footprint =
-      transformVector(local_vehicle_footprint, autoware::universe_utils::pose2transform(ego_pose));
+    const auto vehicle_footprint = autoware_utils::transform_vector(
+      local_vehicle_footprint, autoware_utils::pose2transform(ego_pose));
     double smallest_lateral_gap_between_ego_and_border = std::numeric_limits<double>::max();
     double corresponding_lateral_gap_with_other_lane_bound = std::numeric_limits<double>::max();
 
@@ -569,7 +622,7 @@ bool StartPlannerModule::isPreventingRearVehicleFromPassingThrough(const Pose & 
 bool StartPlannerModule::isCloseToOriginalStartPose() const
 {
   const Pose start_pose = planner_data_->route_handler->getOriginalStartPose();
-  return autoware::universe_utils::calcDistance2d(
+  return autoware_utils::calc_distance2d(
            start_pose.position, planner_data_->self_odometry->pose.pose.position) >
          parameters_->th_arrived_distance;
 }
@@ -577,7 +630,7 @@ bool StartPlannerModule::isCloseToOriginalStartPose() const
 bool StartPlannerModule::hasArrivedAtGoal() const
 {
   const Pose goal_pose = planner_data_->route_handler->getGoalPose();
-  return autoware::universe_utils::calcDistance2d(
+  return autoware_utils::calc_distance2d(
            goal_pose.position, planner_data_->self_odometry->pose.pose.position) <
          parameters_->th_arrived_distance;
 }
@@ -610,18 +663,46 @@ bool StartPlannerModule::isExecutionReady() const
 {
   // Evaluate safety. The situation is not safe if any of the following conditions are met:
   // 1. pull out path has not been found
-  // 2. there is a moving objects around ego
-  // 3. waiting for approval and there is a collision with dynamic objects
+  // 2. waiting for approval, AND any of the following conditions:
+  //    a. there are moving objects around ego
+  //    b. there is a collision with dynamic objects (if collision detection is required)
 
-  const bool is_safe = [&]() -> bool {
-    if (!status_.found_pull_out_path) return false;
-    if (!isWaitingApproval()) return true;
-    if (!noMovingObjectsAround()) return false;
-    return !(requiresDynamicObjectsCollisionDetection() && hasCollisionWithDynamicObjects());
-  }();
+  bool is_safe = true;
+  std::string stop_reason = "";
+  // Check pull out path
+  if (!status_.found_pull_out_path) {
+    is_safe = false;
+    const bool is_inside_lanelets = isInsideLanelets();
+
+    // TODO(Sugahara): Improve error messaging to clearly:
+    // 1. Current position is within lane, but candidate path violates lane boundaries
+    // 2. Current position is within lane, but path from backed position violate lane boundaries
+    // 3. Current position is within lane, but insufficient clearance from static obstacles
+    // Currently assuming most failures are type 3 (obstacle clearance issues)
+    // since type 1 is an edge case and type 2 doesn't occur when backward path is disabled.
+    // Future work should provide appropriate messages for each case.
+
+    if (!parameters_->enable_back && !is_inside_lanelets) {
+      stop_reason = "ego outside lanes";
+    } else if (is_inside_lanelets) {
+      stop_reason = "unsafe against static objects";
+    } else {
+      stop_reason = "failed to generate valid path";
+    }
+
+  } else if (isWaitingApproval()) {
+    // Check for moving objects around
+    if (!noMovingObjectsAround()) {
+      is_safe = false;
+      stop_reason = "unsafe against moving objects around";
+    } else if (requiresDynamicObjectsCollisionDetection() && hasCollisionWithDynamicObjects()) {
+      is_safe = false;
+      stop_reason = "unsafe against dynamic objects";
+    }
+  }
 
   if (!is_safe) {
-    stop_pose_ = PoseWithDetail(planner_data_->self_odometry->pose.pose);
+    stop_pose_ = PoseWithDetail(planner_data_->self_odometry->pose.pose, stop_reason);
   }
 
   return is_safe;
@@ -662,7 +743,7 @@ bool StartPlannerModule::canTransitSuccessState()
 
 BehaviorModuleOutput StartPlannerModule::plan()
 {
-  universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   if (isWaitingApproval()) {
     clearWaitingApproval();
@@ -680,7 +761,7 @@ BehaviorModuleOutput StartPlannerModule::plan()
   }
 
   const auto path = std::invoke([&]() {
-    universe_utils::ScopedTimeTrack st2("plan path", *time_keeper_);
+    autoware_utils::ScopedTimeTrack st2("plan path", *time_keeper_);
 
     if (!status_.driving_forward && !status_.backward_driving_complete) {
       return status_.backward_path;
@@ -712,9 +793,11 @@ BehaviorModuleOutput StartPlannerModule::plan()
 
       if (!stop_path.has_value()) return current_path;
       // Insert stop point in the path if needed
-      RCLCPP_ERROR_THROTTLE(
+      RCLCPP_DEBUG_THROTTLE(
         getLogger(), *clock_, 5000, "Insert stop point in the path because of dynamic objects");
       status_.prev_stop_path_after_approval = std::make_shared<PathWithLaneId>(stop_path.value());
+      std::string stop_reason = "unsafe against dynamic objects";
+      stop_pose_ = PoseWithDetail(stop_pose_.value().pose, stop_reason);
       status_.stop_pose = stop_pose_;
       return stop_path.value();
     }
@@ -798,7 +881,7 @@ PathWithLaneId StartPlannerModule::getFullPath() const
 
 BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
 {
-  universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   updatePullOutStatus();
 
@@ -894,7 +977,7 @@ void StartPlannerModule::planWithPriority(
   const std::vector<Pose> & start_pose_candidates, const Pose & refined_start_pose,
   const Pose & goal_pose, const std::string & search_priority)
 {
-  universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   if (start_pose_candidates.empty()) return;
 
@@ -903,7 +986,7 @@ void StartPlannerModule::planWithPriority(
 
   std::vector<PlannerDebugData> debug_data_vector;
   {  // create a scope for the scoped time track
-    universe_utils::ScopedTimeTrack st2("findPullOutPaths", *time_keeper_);
+    autoware_utils::ScopedTimeTrack st2("findPullOutPaths", *time_keeper_);
 
     for (const auto & collision_check_margin : parameters_->collision_check_margins) {
       for (const auto & [index, planner] : order_priority) {
@@ -925,7 +1008,7 @@ void StartPlannerModule::planWithPriority(
 PriorityOrder StartPlannerModule::determinePriorityOrder(
   const std::string & search_priority, const size_t start_pose_candidates_num)
 {
-  universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   PriorityOrder order_priority;
   if (search_priority == "efficient_path") {
@@ -955,7 +1038,7 @@ bool StartPlannerModule::findPullOutPath(
   // if start_pose_candidate is far from refined_start_pose, backward driving is necessary
   constexpr double epsilon = 0.01;
   const double backwards_distance =
-    autoware::universe_utils::calcDistance2d(start_pose_candidate, refined_start_pose);
+    autoware_utils::calc_distance2d(start_pose_candidate, refined_start_pose);
   const bool backward_is_unnecessary = backwards_distance < epsilon;
 
   planner->setCollisionCheckMargin(collision_check_margin);
@@ -1016,7 +1099,7 @@ PathWithLaneId StartPlannerModule::generateStopPath() const
 {
   const auto & current_pose = planner_data_->self_odometry->pose.pose;
   constexpr double dummy_path_distance = 1.0;
-  const auto moved_pose = calcOffsetPose(current_pose, dummy_path_distance, 0, 0);
+  const auto moved_pose = calc_offset_pose(current_pose, dummy_path_distance, 0, 0);
 
   // convert Pose to PathPointWithLaneId with 0 velocity.
   auto toPathPointWithLaneId = [this](const Pose & pose) {
@@ -1096,7 +1179,7 @@ std::vector<DrivableLanes> StartPlannerModule::generateDrivableLanes(
 
 void StartPlannerModule::updatePullOutStatus()
 {
-  universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   // skip updating if enough time has not passed for preventing chattering between back and
   // start_planner
@@ -1160,13 +1243,13 @@ void StartPlannerModule::updateStatusAfterBackwardDriving()
   // To enable approval of the forward path, the RTC status is removed.
   removeRTCStatus();
   for (auto & itr : uuid_map_) {
-    itr.second = generateUUID();
+    itr.second = generate_uuid();
   }
 }
 
 PathWithLaneId StartPlannerModule::calcBackwardPathFromStartPose() const
 {
-  universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const Pose start_pose = planner_data_->route_handler->getOriginalStartPose();
   const auto pull_out_lanes = start_planner_utils::getPullOutLanes(
@@ -1186,7 +1269,8 @@ PathWithLaneId StartPlannerModule::calcBackwardPathFromStartPose() const
 
   // shift all path points laterally to align with the start pose
   for (auto & path_point : path.points) {
-    path_point.point.pose = calcOffsetPose(path_point.point.pose, 0, arc_position_pose.distance, 0);
+    path_point.point.pose =
+      calc_offset_pose(path_point.point.pose, 0, arc_position_pose.distance, 0);
   }
 
   return path;
@@ -1195,7 +1279,7 @@ PathWithLaneId StartPlannerModule::calcBackwardPathFromStartPose() const
 std::vector<Pose> StartPlannerModule::searchPullOutStartPoseCandidates(
   const PathWithLaneId & back_path_from_start_pose) const
 {
-  universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   std::vector<Pose> pull_out_start_pose_candidates{};
   const auto start_pose = planner_data_->route_handler->getOriginalStartPose();
@@ -1261,7 +1345,7 @@ PredictedObjects StartPlannerModule::filterStopObjectsInPullOutLanes(
   const double velocity_threshold, const double object_check_forward_distance,
   const double object_check_backward_distance) const
 {
-  universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const auto stop_objects = utils::path_safety_checker::filterObjectsByVelocity(
     *planner_data_->dynamic_object, velocity_threshold);
@@ -1290,7 +1374,7 @@ PredictedObjects StartPlannerModule::filterStopObjectsInPullOutLanes(
 bool StartPlannerModule::hasReachedFreespaceEnd() const
 {
   const auto & current_pose = planner_data_->self_odometry->pose.pose;
-  return autoware::universe_utils::calcDistance2d(current_pose, status_.pull_out_path.end_pose) <
+  return autoware_utils::calc_distance2d(current_pose, status_.pull_out_path.end_pose) <
          parameters_->th_arrived_distance;
 }
 
@@ -1332,8 +1416,8 @@ bool StartPlannerModule::hasFinishedCurrentPath()
   const auto current_path = getCurrentPath();
   const auto current_path_end = current_path.points.back();
   const auto self_pose = planner_data_->self_odometry->pose.pose;
-  const bool is_near_target = autoware::universe_utils::calcDistance2d(
-                                current_path_end, self_pose) < parameters_->th_arrived_distance;
+  const bool is_near_target =
+    autoware_utils::calc_distance2d(current_path_end, self_pose) < parameters_->th_arrived_distance;
 
   return is_near_target && isStopped();
 }
@@ -1412,7 +1496,7 @@ TurnSignalInfo StartPlannerModule::calcTurnSignalInfo()
 
 bool StartPlannerModule::isSafePath() const
 {
-  universe_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   // TODO(Sugahara): should safety check for backward path
 
@@ -1691,9 +1775,9 @@ void SceneModuleVisitor::visitStartPlannerModule(const StartPlannerModule * modu
 
 void StartPlannerModule::setDebugData()
 {
-  using autoware::universe_utils::createDefaultMarker;
-  using autoware::universe_utils::createMarkerColor;
-  using autoware::universe_utils::createMarkerScale;
+  using autoware_utils::create_default_marker;
+  using autoware_utils::create_marker_color;
+  using autoware_utils::create_marker_scale;
   using lanelet::visualization::laneletsAsTriangleMarkerArray;
   using marker_utils::addFootprintMarker;
   using marker_utils::createFootprintMarkerArray;
@@ -1706,18 +1790,18 @@ void StartPlannerModule::setDebugData()
   using marker_utils::showSafetyCheckInfo;
   using visualization_msgs::msg::Marker;
 
-  const auto red_color = createMarkerColor(1.0, 0.0, 0.0, 0.999);
-  const auto cyan_color = createMarkerColor(0.0, 1.0, 1.0, 0.2);
-  const auto pink_color = createMarkerColor(1.0, 0.5, 0.5, 0.35);
-  const auto purple_color = createMarkerColor(1.0, 0.0, 1.0, 0.99);
-  const auto white_color = createMarkerColor(1.0, 1.0, 1.0, 0.99);
+  const auto red_color = create_marker_color(1.0, 0.0, 0.0, 0.999);
+  const auto cyan_color = create_marker_color(0.0, 1.0, 1.0, 0.2);
+  const auto pink_color = create_marker_color(1.0, 0.5, 0.5, 0.35);
+  const auto purple_color = create_marker_color(1.0, 0.0, 1.0, 0.99);
+  const auto white_color = create_marker_color(1.0, 1.0, 1.0, 0.99);
 
   const auto life_time = rclcpp::Duration::from_seconds(1.5);
   auto add = [&](MarkerArray added, MarkerArray & target_marker_array) {
     for (auto & marker : added.markers) {
       marker.lifetime = life_time;
     }
-    autoware::universe_utils::appendMarkerArray(added, &target_marker_array);
+    autoware_utils::append_marker_array(added, &target_marker_array);
   };
 
   debug_marker_.markers.clear();
@@ -1755,9 +1839,9 @@ void StartPlannerModule::setDebugData()
         createPoseMarkerArray(
           *collision_check_end_pose, "static_collision_check_end_pose", 0, 1.0, 0.0, 0.0),
         info_marker_);
-      auto marker = createDefaultMarker(
+      auto marker = create_default_marker(
         "map", rclcpp::Clock{RCL_ROS_TIME}.now(), "static_collision_check_end_polygon", 0,
-        Marker::LINE_STRIP, createMarkerScale(0.1, 0.1, 0.1), red_color);
+        Marker::LINE_STRIP, create_marker_scale(0.1, 0.1, 0.1), red_color);
       addFootprintMarker(marker, *collision_check_end_pose, vehicle_info_);
       marker.lifetime = life_time;
       info_marker_.markers.push_back(marker);
@@ -1767,12 +1851,12 @@ void StartPlannerModule::setDebugData()
   {
     MarkerArray start_pose_footprint_marker_array{};
     MarkerArray start_pose_text_marker_array{};
-    Marker footprint_marker = createDefaultMarker(
+    Marker footprint_marker = create_default_marker(
       "map", rclcpp::Clock{RCL_ROS_TIME}.now(), "start_pose_candidates", 0, Marker::LINE_STRIP,
-      createMarkerScale(0.2, 0.2, 0.2), purple_color);
-    Marker text_marker = createDefaultMarker(
+      create_marker_scale(0.2, 0.2, 0.2), purple_color);
+    Marker text_marker = create_default_marker(
       "map", rclcpp::Clock{RCL_ROS_TIME}.now(), "start_pose_candidates_idx", 0,
-      visualization_msgs::msg::Marker::TEXT_VIEW_FACING, createMarkerScale(0.3, 0.3, 0.3),
+      visualization_msgs::msg::Marker::TEXT_VIEW_FACING, create_marker_scale(0.3, 0.3, 0.3),
       purple_color);
     footprint_marker.lifetime = rclcpp::Duration::from_seconds(1.5);
     text_marker.lifetime = rclcpp::Duration::from_seconds(1.5);
@@ -1794,9 +1878,9 @@ void StartPlannerModule::setDebugData()
   // visualize the footprint from pull_out_start pose to pull_out_end pose along the path
   {
     MarkerArray pull_out_path_footprint_marker_array{};
-    Marker pull_out_path_footprint_marker = createDefaultMarker(
+    Marker pull_out_path_footprint_marker = create_default_marker(
       "map", rclcpp::Clock{RCL_ROS_TIME}.now(), "shift_path_footprint", 0, Marker::LINE_STRIP,
-      createMarkerScale(0.2, 0.2, 0.2), pink_color);
+      create_marker_scale(0.2, 0.2, 0.2), pink_color);
     pull_out_path_footprint_marker.lifetime = rclcpp::Duration::from_seconds(1.5);
     PathWithLaneId path_shift_start_to_end{};
     const auto shift_path = status_.pull_out_path.partial_paths.front();
@@ -1849,12 +1933,12 @@ void StartPlannerModule::setDebugData()
 
     // visualize estimated_stop_pose for isPreventingRearVehicleFromPassingThrough()
     if (debug_data_.estimated_stop_pose.has_value()) {
-      auto footprint_marker = createDefaultMarker(
+      auto footprint_marker = create_default_marker(
         "map", rclcpp::Clock{RCL_ROS_TIME}.now(), "estimated_stop_pose", 0, Marker::LINE_STRIP,
-        createMarkerScale(0.2, 0.2, 0.2), purple_color);
+        create_marker_scale(0.2, 0.2, 0.2), purple_color);
       footprint_marker.lifetime = rclcpp::Duration::from_seconds(1.5);
       addFootprintMarker(footprint_marker, debug_data_.estimated_stop_pose.value(), vehicle_info_);
-      debug_marker_.markers.push_back(footprint_marker);
+      info_marker_.markers.push_back(footprint_marker);
     }
 
     // set objects of interest
@@ -1871,9 +1955,9 @@ void StartPlannerModule::setDebugData()
   {
     visualization_msgs::msg::MarkerArray planner_type_marker_array{};
     const auto color = status_.found_pull_out_path ? white_color : red_color;
-    auto marker = createDefaultMarker(
+    auto marker = create_default_marker(
       header.frame_id, header.stamp, "planner_type", 0,
-      visualization_msgs::msg::Marker::TEXT_VIEW_FACING, createMarkerScale(0.0, 0.0, 1.0), color);
+      visualization_msgs::msg::Marker::TEXT_VIEW_FACING, create_marker_scale(0.0, 0.0, 1.0), color);
     marker.pose = status_.pull_out_start_pose;
     if (!status_.driving_forward) {
       marker.text = "BACK -> ";
@@ -1890,14 +1974,14 @@ void StartPlannerModule::setDebugData()
     laneletsAsTriangleMarkerArray(
       "departure_check_lanes_for_shift_pull_out_path", debug_data_.departure_check_lanes,
       cyan_color),
-    debug_marker_);
+    info_marker_);
 
   const auto pull_out_lanes = start_planner_utils::getPullOutLanes(
     planner_data_, planner_data_->parameters.backward_path_length + parameters_->max_back_distance);
   add(
     laneletsAsTriangleMarkerArray(
       "pull_out_lanes_for_static_objects_collision_check", pull_out_lanes, pink_color),
-    debug_marker_);
+    info_marker_);
 }
 
 void StartPlannerModule::logPullOutStatus(rclcpp::Logger::Level log_level) const

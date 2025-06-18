@@ -74,15 +74,19 @@ def generate_launch_description():
         ),
         # input
         DeclareLaunchArgument(
-            "in/external_control_cmd",
-            default_value="/external/selected/external_control_cmd",
+            "in/pedals_cmd",
+            default_value="/external/selected/pedals_cmd",
         ),
         DeclareLaunchArgument(
-            "in/shift_cmd",
+            "in/steering_cmd",
+            default_value="/external/selected/steering_cmd",
+        ),
+        DeclareLaunchArgument(
+            "in/gear_cmd",
             default_value="/external/selected/gear_cmd",
         ),
         DeclareLaunchArgument(
-            "in/emergency_stop",
+            "in/heartbeat",
             default_value="/external/selected/heartbeat",
         ),
         DeclareLaunchArgument(
@@ -98,10 +102,6 @@ def generate_launch_description():
             "out/control_cmd",
             default_value="/external/selected/control_cmd",
         ),
-        DeclareLaunchArgument(
-            "out/latest_external_control_cmd",
-            default_value="/api/external/get/command/selected/control",
-        ),
     ]
 
     component = ComposableNode(
@@ -109,13 +109,13 @@ def generate_launch_description():
         plugin="autoware::external_cmd_converter::ExternalCmdConverterNode",
         name="external_cmd_converter",
         remappings=[
-            _create_mapping_tuple("in/external_control_cmd"),
-            _create_mapping_tuple("in/shift_cmd"),
-            _create_mapping_tuple("in/emergency_stop"),
+            _create_mapping_tuple("in/pedals_cmd"),
+            _create_mapping_tuple("in/steering_cmd"),
+            _create_mapping_tuple("in/gear_cmd"),
+            _create_mapping_tuple("in/heartbeat"),
             _create_mapping_tuple("in/current_gate_mode"),
             _create_mapping_tuple("in/odometry"),
             _create_mapping_tuple("out/control_cmd"),
-            _create_mapping_tuple("out/latest_external_control_cmd"),
         ],
         parameters=[
             dict(  # noqa: C406 for using helper function

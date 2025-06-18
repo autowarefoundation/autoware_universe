@@ -236,7 +236,7 @@ void __device__ raytrace(
 
 __global__ void transformPointCloudKernel(
   std::uint8_t * points, std::size_t num_points, std::size_t points_step,
-  const Eigen::Matrix3f & rotation, const Eigen::Vector3f & translation)
+  const Eigen::Matrix3f * rotation, const Eigen::Vector3f * translation)
 {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= num_points) {
@@ -244,7 +244,7 @@ __global__ void transformPointCloudKernel(
   }
 
   Eigen::Map<Eigen::Vector3f> point_map(reinterpret_cast<float *>(points + idx * points_step));
-  point_map = rotation * point_map + translation;
+  point_map = rotation[0] * point_map + translation[0];
 }
 
 __global__ void copyMapRegionKernel(
@@ -271,10 +271,10 @@ __global__ void copyMapRegionKernel(
 
 void transformPointCloudLaunch(
   std::uint8_t * points, std::size_t num_points, std::size_t points_step,
-  const Eigen::Matrix3f & rotation, const Eigen::Vector3f & translation, cudaStream_t stream)
+  const Eigen::Matrix3f * rotation, const Eigen::Vector3f * translation, cudaStream_t stream)
 {
   // Launch kernel
-  int threads_per_block = 256;
+  const int threads_per_block = 256;
   int num_blocks = (num_points + threads_per_block - 1) / threads_per_block;
   transformPointCloudKernel<<<num_blocks, threads_per_block, 0, stream>>>(
     points, num_points, points_step, rotation, translation);
@@ -290,6 +290,10 @@ void copyMapRegionLaunch(
   const int threads_per_block = 256;
   const int num_blocks =
     (region_size_x * region_size_y + threads_per_block - 1) / threads_per_block;
+
+  if (num_blocks == 0) {
+    return;
+  }
 
   copyMapRegionKernel<<<num_blocks, threads_per_block, 0, stream>>>(
     source_map, sm_lower_left_x, sm_lower_left_y, sm_size_x, sm_size_y, dest_map, dm_lower_left_x,

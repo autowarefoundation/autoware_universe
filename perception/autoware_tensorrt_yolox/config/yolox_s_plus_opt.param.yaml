@@ -22,9 +22,6 @@
       PEDESTRIAN : true
       ANIMAL: true
 
-    model_path: "$(var data_path)/tensorrt_yolox/$(var model_name).onnx"
-    label_path: "$(var data_path)/tensorrt_yolox/label.txt"
-    color_map_path: "$(var data_path)/tensorrt_yolox/semseg_color_map.csv"
     score_threshold: 0.35
     nms_threshold: 0.7
 

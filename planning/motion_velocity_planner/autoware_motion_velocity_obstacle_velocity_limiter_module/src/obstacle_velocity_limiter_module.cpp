@@ -22,9 +22,9 @@
 
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/update_param.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/update_param.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/duration.hpp>
 #include <rclcpp/logging.hpp>
@@ -53,7 +53,7 @@ void ObstacleVelocityLimiterModule::init(rclcpp::Node & node, const std::string 
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/" + ns_ + "/debug_markers", 1);
   virtual_wall_publisher_ =
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/" + ns_ + "/virtual_walls", 1);
-  processing_diag_publisher_ = std::make_shared<autoware::universe_utils::ProcessingTimePublisher>(
+  processing_diag_publisher_ = std::make_shared<autoware_utils::ProcessingTimePublisher>(
     &node, "~/debug/" + ns_ + "/processing_time_ms_diag");
   processing_time_publisher_ =
     node.create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
@@ -140,7 +140,7 @@ VelocityPlanningResult ObstacleVelocityLimiterModule::plan(
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
   const std::shared_ptr<const PlannerData> planner_data)
 {
-  autoware::universe_utils::StopWatch<std::chrono::microseconds> stopwatch;
+  autoware_utils::StopWatch<std::chrono::microseconds> stopwatch;
   stopwatch.tic();
   VelocityPlanningResult result;
   stopwatch.tic("preprocessing");

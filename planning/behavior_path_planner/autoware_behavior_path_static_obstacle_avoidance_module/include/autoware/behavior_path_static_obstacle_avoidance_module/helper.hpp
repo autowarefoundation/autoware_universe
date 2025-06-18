@@ -527,7 +527,7 @@ public:
       (std::sqrt(v0 * v0 + 2.0 * p->max_acceleration * x_end) - v0) / p->max_acceleration;
     const auto v_end = v0 + p->max_acceleration * t_end;
 
-    max_v_point_ = std::make_pair(getPose(path.points.back()), v_end);
+    max_v_point_ = std::make_pair(autoware_utils::get_pose(path.points.back()), v_end);
   }
 
   void reset()

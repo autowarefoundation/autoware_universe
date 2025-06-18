@@ -28,10 +28,10 @@
 #include <autoware/planning_factor_interface/planning_factor_interface.hpp>
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware/rtc_interface/rtc_interface.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/marker_helper.hpp>
-#include <autoware/universe_utils/ros/uuid_helper.hpp>
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
+#include <autoware_utils/ros/uuid_helper.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <magic_enum.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -56,12 +56,12 @@ using autoware::objects_of_interest_marker_interface::ColorName;
 using autoware::objects_of_interest_marker_interface::ObjectsOfInterestMarkerInterface;
 using autoware::planning_factor_interface::PlanningFactorInterface;
 using autoware::rtc_interface::RTCInterface;
-using autoware::universe_utils::calcOffsetPose;
-using autoware::universe_utils::generateUUID;
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
+using autoware_internal_planning_msgs::msg::PlanningFactor;
+using autoware_internal_planning_msgs::msg::SafetyFactorArray;
+using autoware_utils::calc_offset_pose;
+using autoware_utils::generate_uuid;
 using tier4_planning_msgs::msg::AvoidanceDebugMsgArray;
-using tier4_planning_msgs::msg::PlanningFactor;
-using tier4_planning_msgs::msg::SafetyFactorArray;
 using tier4_rtc_msgs::msg::State;
 using unique_identifier_msgs::msg::UUID;
 using visualization_msgs::msg::MarkerArray;
@@ -83,18 +83,20 @@ public:
     std::unordered_map<std::string, std::shared_ptr<RTCInterface>> rtc_interface_ptr_map,
     std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>>
       objects_of_interest_marker_interface_ptr_map,
-    const std::shared_ptr<PlanningFactorInterface> planning_factor_interface)
+    const std::shared_ptr<PlanningFactorInterface> planning_factor_interface,
+    const ModuleStatus initial_state = ModuleStatus::IDLE)
   : name_{name},
+    current_state_{initial_state},
     logger_{node.get_logger().get_child(name)},
     clock_{node.get_clock()},
     rtc_interface_ptr_map_(std::move(rtc_interface_ptr_map)),
     objects_of_interest_marker_interface_ptr_map_(
       std::move(objects_of_interest_marker_interface_ptr_map)),
     planning_factor_interface_{planning_factor_interface},
-    time_keeper_(std::make_shared<universe_utils::TimeKeeper>())
+    time_keeper_(std::make_shared<autoware_utils::TimeKeeper>())
   {
     for (const auto & [module_name, ptr] : rtc_interface_ptr_map_) {
-      uuid_map_.emplace(module_name, generateUUID());
+      uuid_map_.emplace(module_name, generate_uuid());
     }
   }
 
@@ -220,7 +222,7 @@ public:
     previous_module_output_ = previous_module_output;
   }
 
-  std::shared_ptr<universe_utils::TimeKeeper> getTimeKeeper() const { return time_keeper_; }
+  std::shared_ptr<autoware_utils::TimeKeeper> getTimeKeeper() const { return time_keeper_; }
 
   /**
    * @brief set planner data
@@ -264,7 +266,7 @@ public:
 
     const auto & base_link2front = planner_data_->parameters.base_link2front;
     return PoseWithDetail(
-      calcOffsetPose(stop_pose_.value().pose, base_link2front, 0.0, 0.0),
+      calc_offset_pose(stop_pose_.value().pose, base_link2front, 0.0, 0.0),
       stop_pose_.value().detail);
   }
 
@@ -276,7 +278,7 @@ public:
 
     const auto & base_link2front = planner_data_->parameters.base_link2front;
     return PoseWithDetail(
-      calcOffsetPose(slow_pose_.value().pose, base_link2front, 0.0, 0.0),
+      calc_offset_pose(slow_pose_.value().pose, base_link2front, 0.0, 0.0),
       slow_pose_.value().detail);
   }
 
@@ -288,7 +290,7 @@ public:
 
     const auto & base_link2front = planner_data_->parameters.base_link2front;
     return PoseWithDetail(
-      calcOffsetPose(dead_pose_.value().pose, base_link2front, 0.0, 0.0),
+      calc_offset_pose(dead_pose_.value().pose, base_link2front, 0.0, 0.0),
       dead_pose_.value().detail);
   }
 
@@ -629,7 +631,7 @@ protected:
 
   mutable MarkerArray drivable_lanes_marker_;
 
-  mutable std::shared_ptr<universe_utils::TimeKeeper> time_keeper_;
+  mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 };
 
 }  // namespace autoware::behavior_path_planner

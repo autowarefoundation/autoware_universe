@@ -16,12 +16,12 @@
 #define MISSION_PLANNER__MISSION_PLANNER_HPP_
 
 #include "arrival_checker.hpp"
-#include "autoware/universe_utils/ros/polling_subscriber.hpp"
+#include "autoware_utils/ros/polling_subscriber.hpp"
 
 #include <autoware/mission_planner_universe/mission_planner_plugin.hpp>
 #include <autoware/route_handler/route_handler.hpp>
-#include <autoware/universe_utils/ros/logger_level_configure.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils/ros/logger_level_configure.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 #include <pluginlib/class_loader.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -70,8 +70,7 @@ class MissionPlanner : public rclcpp::Node
 {
 public:
   explicit MissionPlanner(const rclcpp::NodeOptions & options);
-  void publish_processing_time(
-    autoware::universe_utils::StopWatch<std::chrono::milliseconds> stop_watch);
+  void publish_processing_time(autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch);
 
 private:
   ArrivalChecker arrival_checker_;
@@ -92,8 +91,8 @@ private:
   rclcpp::Subscription<PoseWithUuidStamped>::SharedPtr sub_modified_goal_;
   rclcpp::Subscription<Odometry>::SharedPtr sub_odometry_;
   rclcpp::Subscription<OperationModeState>::SharedPtr sub_operation_mode_state_;
-  autoware::universe_utils::InterProcessPollingSubscriber<RerouteAvailability>
-    sub_reroute_availability_{this, "~/input/reroute_availability"};
+  autoware_utils::InterProcessPollingSubscriber<RerouteAvailability> sub_reroute_availability_{
+    this, "~/input/reroute_availability"};
 
   rclcpp::Subscription<LaneletMapBin>::SharedPtr sub_vector_map_;
   rclcpp::Publisher<MarkerArray>::SharedPtr pub_marker_;
@@ -145,7 +144,7 @@ private:
   bool allow_reroute_in_autonomous_mode_;
   bool check_reroute_safety(const LaneletRoute & original_route, const LaneletRoute & target_route);
 
-  std::unique_ptr<autoware::universe_utils::LoggerLevelConfigure> logger_configure_;
+  std::unique_ptr<autoware_utils::LoggerLevelConfigure> logger_configure_;
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
     pub_processing_time_;
 };

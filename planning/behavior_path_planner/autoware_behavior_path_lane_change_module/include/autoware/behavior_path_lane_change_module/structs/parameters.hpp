@@ -18,7 +18,7 @@
 #include "autoware/behavior_path_planner_common/utils/path_safety_checker/path_safety_checker_parameters.hpp"
 
 #include <autoware/interpolation/linear_interpolation.hpp>
-#include <autoware/universe_utils/math/unit_conversion.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 
 #include <utility>
 #include <vector>
@@ -189,7 +189,7 @@ struct Parameters
   // finish judge parameter
   double lane_change_finish_judge_buffer{3.0};
   double th_finish_judge_lateral_diff{0.2};
-  double th_finish_judge_yaw_diff{autoware::universe_utils::deg2rad(3.0)};
+  double th_finish_judge_yaw_diff{autoware_utils::deg2rad(3.0)};
 
   // debug marker
   bool publish_debug_marker{false};

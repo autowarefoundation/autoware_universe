@@ -15,8 +15,8 @@
 #include "../src/utils.hpp"
 
 #include <autoware/behavior_velocity_planner_common/planner_data.hpp>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 #include <rclcpp/clock.hpp>
 #include <rclcpp/logger.hpp>
 
@@ -35,7 +35,10 @@
 #include <lanelet2_core/primitives/Polygon.h>
 
 #include <stdexcept>
+#include <vector>
 
+namespace
+{
 template <class Point, class Polygon>
 bool point_in_polygon(const Point & p, const Polygon & poly)
 {
@@ -43,6 +46,15 @@ bool point_in_polygon(const Point & p, const Polygon & poly)
            return p.x() == o.x() && p.y() == o.y();
          }) != poly.outer().end();
 }
+
+std::vector<geometry_msgs::msg::Point> make_bound(
+  const lanelet::BasicPoint2d & start, const lanelet::BasicPoint2d & end)
+{
+  return {
+    geometry_msgs::msg::Point{}.set__x(start.x()).set__y(start.y()),
+    geometry_msgs::msg::Point{}.set__x(end.x()).set__y(end.y())};
+};
+}  // namespace
 
 autoware_internal_planning_msgs::msg::PathWithLaneId generate_straight_path(
   const size_t nb_points, const float velocity = 0.0, const double resolution = 1.0)
@@ -225,7 +237,7 @@ TEST(NoStoppingAreaTest, generateEgoNoStoppingAreaLanePolygon)
 {
   using autoware::behavior_velocity_planner::no_stopping_area::
     generate_ego_no_stopping_area_lane_polygon;
-  using autoware::universe_utils::Point2d;
+  using autoware_utils::Point2d;
   geometry_msgs::msg::Pose ego_pose;  // ego at (0,0)
   ego_pose.position.x = 0.0;
   ego_pose.position.y = 0.0;
@@ -250,7 +262,7 @@ TEST(NoStoppingAreaTest, generateEgoNoStoppingAreaLanePolygon)
     const auto lane_poly = generate_ego_no_stopping_area_lane_polygon(
       path, ego_pose, *no_stopping_area_reg_elem, margin, max_polygon_length, path_expand_width,
       logger, clock);
-    autoware::universe_utils::Polygon2d simplified_poly;
+    autoware_utils::Polygon2d simplified_poly;
     EXPECT_FALSE(lane_poly.outer().empty());
     EXPECT_TRUE(lane_poly.inners().empty());
     // simplify the polygon to make it easier to check
@@ -271,7 +283,7 @@ TEST(NoStoppingAreaTest, generateEgoNoStoppingAreaLanePolygon)
     const auto lane_poly = generate_ego_no_stopping_area_lane_polygon(
       path, ego_pose, *no_stopping_area_reg_elem, big_margin, max_polygon_length, path_expand_width,
       logger, clock);
-    autoware::universe_utils::Polygon2d simplified_poly;
+    autoware_utils::Polygon2d simplified_poly;
     EXPECT_FALSE(lane_poly.outer().empty());
     EXPECT_TRUE(lane_poly.inners().empty());
     // simplify the polygon to make it easier to check
@@ -289,7 +301,7 @@ TEST(NoStoppingAreaTest, generateEgoNoStoppingAreaLanePolygon)
     const auto lane_poly = generate_ego_no_stopping_area_lane_polygon(
       path, ego_pose, *no_stopping_area_reg_elem, margin, small_polygon_length, path_expand_width,
       logger, clock);
-    autoware::universe_utils::Polygon2d simplified_poly;
+    autoware_utils::Polygon2d simplified_poly;
     EXPECT_FALSE(lane_poly.outer().empty());
     EXPECT_TRUE(lane_poly.inners().empty());
     // simplify the polygon to make it easier to check
@@ -358,7 +370,7 @@ TEST(NoStoppingAreaTest, checkStopLinesInNoStoppingArea)
 {
   using autoware::behavior_velocity_planner::no_stopping_area::check_stop_lines_in_no_stopping_area;
   autoware_internal_planning_msgs::msg::PathWithLaneId path;
-  autoware::universe_utils::Polygon2d poly;
+  autoware_utils::Polygon2d poly;
   autoware::behavior_velocity_planner::no_stopping_area::DebugData debug_data;
 
   // empty inputs
@@ -397,35 +409,36 @@ TEST(NoStoppingAreaTest, getStopLineGeometry2d)
 {
   using autoware::behavior_velocity_planner::no_stopping_area::generate_stop_line;
   using autoware::behavior_velocity_planner::no_stopping_area::get_stop_line_geometry2d;
-  const autoware_internal_planning_msgs::msg::PathWithLaneId path = generate_straight_path(10);
+  autoware_internal_planning_msgs::msg::PathWithLaneId path = generate_straight_path(10);
+  path.left_bound = make_bound({0.0, 1.0}, {9.0, 1.0});
+  path.right_bound = make_bound({0.0, -1.0}, {9.0, -1.0});
   lanelet::Polygon3d no_stopping_area;
   no_stopping_area.push_back(lanelet::Point3d(lanelet::InvalId, 3.0, -1.0));
   no_stopping_area.push_back(lanelet::Point3d(lanelet::InvalId, 3.0, 1.0));
   no_stopping_area.push_back(lanelet::Point3d(lanelet::InvalId, 5.0, 1.0));
   no_stopping_area.push_back(lanelet::Point3d(lanelet::InvalId, 5.0, -1.0));
   double stop_line_margin = 1.0;
-  double stop_line_extend_length = 1.0;
   double vehicle_width = 1.0;
   {  // get stop line of the regulatory element extended by the extend length
     lanelet::LineString3d reg_elem_stop_line;
-    reg_elem_stop_line.push_back(lanelet::Point3d(lanelet::InvalId, 0.0, 0.0));
-    reg_elem_stop_line.push_back(lanelet::Point3d(lanelet::InvalId, 1.0, 0.0));
+    reg_elem_stop_line.push_back(lanelet::Point3d(lanelet::InvalId, 1.0, 0.5));
+    reg_elem_stop_line.push_back(lanelet::Point3d(lanelet::InvalId, 1.0, -0.5));
     const auto no_stopping_area_reg_elem = lanelet::autoware::NoStoppingArea::make(
       lanelet::InvalId, {}, {no_stopping_area}, reg_elem_stop_line);
-    const auto stop_line = get_stop_line_geometry2d(
-      path, *no_stopping_area_reg_elem, stop_line_margin, stop_line_extend_length, vehicle_width);
+    const auto stop_line =
+      get_stop_line_geometry2d(path, *no_stopping_area_reg_elem, stop_line_margin, vehicle_width);
     ASSERT_TRUE(stop_line.has_value());
     ASSERT_EQ(stop_line->size(), 2UL);
-    EXPECT_EQ(stop_line->front().x(), -1.0);
-    EXPECT_EQ(stop_line->front().y(), 0.0);
-    EXPECT_EQ(stop_line->back().x(), 2.0);
-    EXPECT_EQ(stop_line->back().y(), 0.0);
+    EXPECT_EQ(stop_line->front().x(), 1.0);
+    EXPECT_EQ(stop_line->front().y(), 1.0);
+    EXPECT_EQ(stop_line->back().x(), 1.0);
+    EXPECT_EQ(stop_line->back().y(), -1.0);
   }
   {  // regulatory element has no stop line -> get the same stop line as generate_stop_line
     const auto no_stopping_area_reg_elem =
       lanelet::autoware::NoStoppingArea::make(lanelet::InvalId, {}, {no_stopping_area}, {});
-    const auto stop_line = get_stop_line_geometry2d(
-      path, *no_stopping_area_reg_elem, stop_line_margin, stop_line_extend_length, vehicle_width);
+    const auto stop_line =
+      get_stop_line_geometry2d(path, *no_stopping_area_reg_elem, stop_line_margin, vehicle_width);
     const auto generated_stop_line =
       generate_stop_line(path, {no_stopping_area}, vehicle_width, stop_line_margin);
     ASSERT_TRUE(stop_line.has_value());

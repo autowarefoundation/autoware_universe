@@ -19,10 +19,10 @@
 #include "autoware/interpolation/spline_interpolation.hpp"
 #include "autoware/interpolation/spline_interpolation_points_2d.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
 #include "autoware_path_sampler/common_structs.hpp"
 #include "autoware_path_sampler/type_alias.hpp"
 #include "autoware_sampler_common/structures.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 #include "eigen3/Eigen/Core"
 
 #include "autoware_planning_msgs/msg/path_point.hpp"
@@ -53,7 +53,7 @@ std::optional<size_t> getPointIndexAfter(
   // search forward
   if (sum_length < offset) {
     for (size_t i = target_seg_idx + 1; i < points.size(); ++i) {
-      sum_length += autoware::universe_utils::calcDistance2d(points.at(i), points.at(i - 1));
+      sum_length += autoware_utils::calc_distance2d(points.at(i), points.at(i - 1));
       if (offset < sum_length) {
         return i - 1;
       }
@@ -65,7 +65,7 @@ std::optional<size_t> getPointIndexAfter(
   // search backward
   for (size_t i = target_seg_idx; 0 < i;
        --i) {  // NOTE: use size_t since i is always positive value
-    sum_length -= autoware::universe_utils::calcDistance2d(points.at(i), points.at(i - 1));
+    sum_length -= autoware_utils::calc_distance2d(points.at(i), points.at(i - 1));
     if (sum_length < offset) {
       return i - 1;
     }
@@ -78,7 +78,7 @@ template <typename T>
 TrajectoryPoint convertToTrajectoryPoint(const T & point)
 {
   TrajectoryPoint traj_point;
-  traj_point.pose = autoware::universe_utils::getPose(point);
+  traj_point.pose = autoware_utils::get_pose(point);
   traj_point.longitudinal_velocity_mps = point.longitudinal_velocity_mps;
   traj_point.lateral_velocity_mps = point.lateral_velocity_mps;
   traj_point.heading_rate_rps = point.heading_rate_rps;
@@ -149,7 +149,7 @@ std::optional<size_t> updateFrontPointForFix(
 {
   // calculate front point to insert in points as a fixed point
   const size_t front_seg_idx_for_fix = trajectory_utils::findEgoSegmentIndex(
-    points_for_fix, autoware::universe_utils::getPose(points.front()), ego_nearest_param);
+    points_for_fix, autoware_utils::get_pose(points.front()), ego_nearest_param);
   const size_t front_point_idx_for_fix = front_seg_idx_for_fix;
   const auto & front_fix_point = points_for_fix.at(front_point_idx_for_fix);
 
@@ -163,7 +163,7 @@ std::optional<size_t> updateFrontPointForFix(
     return std::nullopt;
   }
 
-  const double dist = autoware::universe_utils::calcDistance2d(points.front(), front_fix_point);
+  const double dist = autoware_utils::calc_distance2d(points.front(), front_fix_point);
 
   // check if deviation is not too large
   constexpr double max_lat_error = 3.0;

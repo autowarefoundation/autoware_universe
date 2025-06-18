@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Current namespace -->
+  <arg name="ns" description="current namespace"/>
+  <arg name="pipeline_ns" description="pipeline namespace"/>
+  <arg name="input/pointcloud"/>
+  <arg name="fusion_camera_ids" default="[0]" description="camera IDs used for fusion"/>
+  <arg name="image_topic_name" default="image_raw" description="topic name of camera image"/>
+  <arg name="irregular_object_detector_param_path"/>
+  <!-- small unknown object detector -->
+  <group>
+    <push-ros-namespace namespace="$(var pipeline_ns)"/>
+    <group>
+      <include file="$(find-pkg-share tier4_perception_launch)/launch/object_recognition/detection/detector/camera_lidar_irregular_object_detector.launch.py">
+        <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
+        <arg name="output_topic" value="clusters"/>
+        <arg name="pointcloud_container_name" value="$(var node/pointcloud_container)"/>
+        <arg name="fusion_camera_ids" value="$(var fusion_camera_ids)"/>
+        <arg name="image_topic_name" value="$(var image_topic_name)"/>
+        <arg name="irregular_object_detector_param_path" value="$(var irregular_object_detector_param_path)"/>
+      </include>
+    </group>
+    <!-- Unknown Object Convex Hull estimation -->
+    <group>
+      <include file="$(find-pkg-share autoware_shape_estimation)/launch/shape_estimation.launch.xml">
+        <arg name="input/objects" value="clusters"/>
+        <arg name="output/objects" value="objects_with_feature"/>
+      </include>
+    </group>
+
+    <!-- convert DynamicObjectsWithFeatureArray to DynamicObjects -->
+    <group>
+      <include file="$(find-pkg-share autoware_detected_object_feature_remover)/launch/detected_object_feature_remover.launch.xml">
+        <arg name="input" value="objects_with_feature"/>
+        <arg name="output" value="objects"/>
+      </include>
+    </group>
+  </group>
+</launch>

@@ -20,7 +20,7 @@
 #include <autoware/behavior_velocity_planner_common/plugin_interface.hpp>
 #include <autoware/behavior_velocity_planner_common/plugin_wrapper.hpp>
 #include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
-#include <autoware/universe_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils/ros/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
@@ -40,6 +40,11 @@ public:
 
   const char * getModuleName() override { return "virtual_traffic_light"; }
 
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    return RequiredSubscriptionInfo{};
+  }
+
 private:
   VirtualTrafficLightModule::PlannerParam planner_param_;
 
@@ -50,7 +55,7 @@ private:
   std::function<bool(const std::shared_ptr<VirtualTrafficLightModule> &)> getModuleExpiredFunction(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
 
-  autoware::universe_utils::InterProcessPollingSubscriber<
+  autoware_utils::InterProcessPollingSubscriber<
     tier4_v2x_msgs::msg::VirtualTrafficLightStateArray>::SharedPtr
     sub_virtual_traffic_light_states_;
 

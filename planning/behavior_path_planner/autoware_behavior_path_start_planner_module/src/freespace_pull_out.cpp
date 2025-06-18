@@ -86,7 +86,7 @@ std::optional<PullOutPath> FreespacePullOut::plan(
     const size_t index = std::distance(last_path.points.begin(), it);
     if (index == 0) continue;
     const double distance =
-      autoware::universe_utils::calcDistance2d(end_pose.position, it->point.pose.position);
+      autoware_utils::calc_distance2d(end_pose.position, it->point.pose.position);
     if (distance < th_end_distance) {
       last_path.points.erase(it, last_path.points.end());
       break;

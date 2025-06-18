@@ -21,6 +21,18 @@
 
 #include <cstddef>
 #include <memory>
+#include <vector>
+
+namespace
+{
+std::vector<geometry_msgs::msg::Point> make_bound(
+  const lanelet::BasicPoint2d & start, const lanelet::BasicPoint2d & end)
+{
+  return {
+    geometry_msgs::msg::Point{}.set__x(start.x()).set__y(start.y()),
+    geometry_msgs::msg::Point{}.set__x(end.x()).set__y(end.y())};
+};
+}  // namespace
 
 TEST(TestUtils, getStopLine)
 {
@@ -37,18 +49,12 @@ TEST(TestUtils, getStopLine)
   detection_areas.push_back(area);
   auto detection_area =
     lanelet::autoware::DetectionArea::make(lanelet::InvalId, {}, detection_areas, line);
-  {
-    const double extend_length = 0.0;
-    const auto stop_line = get_stop_line_geometry2d(*detection_area, extend_length);
-    ASSERT_EQ(stop_line.size(), 2UL);
-    EXPECT_EQ(stop_line[0].x(), line[0].x());
-    EXPECT_EQ(stop_line[0].y(), line[0].y());
-    EXPECT_EQ(stop_line[1].x(), line[1].x());
-    EXPECT_EQ(stop_line[1].y(), line[1].y());
-  }
   // extended line
-  for (auto extend_length = -2.0; extend_length < 2.0; extend_length += 0.1) {
-    const auto stop_line = get_stop_line_geometry2d(*detection_area, extend_length);
+  for (auto extend_length = 0.0; extend_length < 2.0; extend_length += 0.1) {
+    autoware_internal_planning_msgs::msg::PathWithLaneId path;
+    path.left_bound = make_bound({-1.0, -1.0 - extend_length}, {1.0, -1.0 - extend_length});
+    path.right_bound = make_bound({-1.0, 1.0 + extend_length}, {1.0, 1.0 + extend_length});
+    const auto stop_line = get_stop_line_geometry2d(*detection_area, path);
     ASSERT_EQ(stop_line.size(), 2UL);
     EXPECT_EQ(stop_line[0].x(), line[0].x());
     EXPECT_EQ(stop_line[0].y(), line[0].y() - extend_length);

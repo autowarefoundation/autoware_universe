@@ -842,7 +842,7 @@ This module inserts a stop point only when the ego can potentially avoid the obj
 
 !!! info
 
-    In this situation, the obstacle stop feature in [obstacle_cruise_planner](../../autoware_obstacle_cruise_planner/README.md) is responsible for ego vehicle safety.
+    In this situation, the obstacle stop feature in [obstacle_cruise_module](https://autowarefoundation.github.io/autoware_universe/main/planning/motion_velocity_planner/autoware_motion_velocity_obstacle_cruise_module/) is responsible for ego vehicle safety.
 
 ![fig](./images/path_generation/insufficient_drivable_space.png)
 
@@ -1198,7 +1198,7 @@ Details are explained in [How to prevent shift line chattering that is caused by
 
 If the module cannot find a safe avoidance path, the vehicle may stop or continue along its current path without performing an avoidance maneuver.
 If there is a target object and there is enough space to avoid, the ego vehicle would stop at a position where an avoidance path could be generated; this is called the [yield manuever](#yield-maneuver).
-On the other hand, where there is not enough space, this module has nothing to do and the [obstacle cruise planner](../../autoware_obstacle_cruise_planner/README.md) would be in charge of the object.
+On the other hand, where there is not enough space, this module has nothing to do and the [obstacle cruise module](https://autowarefoundation.github.io/autoware_universe/main/planning/motion_velocity_planner/autoware_motion_velocity_obstacle_cruise_module/) would be in charge of the object.
 
 #### There seems to be an avoidance path, but the vehicle stops. What is happening?
 

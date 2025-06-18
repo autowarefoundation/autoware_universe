@@ -19,7 +19,8 @@
 
 #include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
@@ -49,7 +50,7 @@ public:
     const int64_t module_id, const std::shared_ptr<const PlannerData> & planner_data,
     const PlannerParam & planner_param, const rclcpp::Logger & logger,
     const rclcpp::Clock::SharedPtr clock,
-    const std::shared_ptr<universe_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 
@@ -64,7 +65,7 @@ public:
 private:
   // Parameter
   PlannerParam param_;
-  autoware::universe_utils::StopWatch<std::chrono::milliseconds> stop_watch_;
+  autoware_utils::StopWatch<std::chrono::milliseconds> stop_watch_;
   std::vector<lanelet::BasicPolygon2d> partition_lanelets_;
 
 protected:

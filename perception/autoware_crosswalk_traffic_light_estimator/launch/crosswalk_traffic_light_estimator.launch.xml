@@ -11,13 +11,17 @@
   limitations under the License.
 -->
 <launch>
-  <arg name="crosswalk_traffic_light_estimator_param_file" default="$(find-pkg-share autoware_crosswalk_traffic_light_estimator)/config/crosswalk_traffic_light_estimator.param.yaml"/>
+  <arg name="input/vector_map" default="/map/vector_map"/>
+  <arg name="input/route" default="/planning/mission_planning/route"/>
+  <arg name="input/traffic_signals" default="judged/traffic_signals"/>
+  <arg name="output/traffic_signals" default="traffic_signals"/>
+  <arg name="param_path" default="$(find-pkg-share autoware_crosswalk_traffic_light_estimator)/config/crosswalk_traffic_light_estimator.param.yaml"/>
 
   <node pkg="autoware_crosswalk_traffic_light_estimator" exec="crosswalk_traffic_light_estimator_node" name="crosswalk_traffic_light_estimator" output="screen">
-    <remap from="~/input/vector_map" to="/map/vector_map"/>
-    <remap from="~/input/route" to="/planning/mission_planning/route"/>
-    <remap from="~/input/classified/traffic_signals" to="classified/traffic_signals"/>
-    <remap from="~/output/traffic_signals" to="traffic_signals"/>
-    <param from="$(var crosswalk_traffic_light_estimator_param_file)"/>
+    <remap from="~/input/vector_map" to="$(var input/vector_map)"/>
+    <remap from="~/input/route" to="$(var input/route)"/>
+    <remap from="~/input/classified/traffic_signals" to="$(var input/traffic_signals)"/>
+    <remap from="~/output/traffic_signals" to="$(var output/traffic_signals)"/>
+    <param from="$(var param_path)"/>
   </node>
 </launch>

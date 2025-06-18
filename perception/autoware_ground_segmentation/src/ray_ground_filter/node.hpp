@@ -45,7 +45,7 @@
 #ifndef RAY_GROUND_FILTER__NODE_HPP_
 #define RAY_GROUND_FILTER__NODE_HPP_
 
-#include "autoware/universe_utils/system/time_keeper.hpp"
+#include "autoware_utils/system/time_keeper.hpp"
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
@@ -70,8 +70,6 @@
 #include <boost/geometry/geometries/linestring.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/optional.hpp>
-
-#include <tf2_ros/transform_listener.h>
 
 #include <chrono>
 #include <memory>
@@ -144,9 +142,9 @@ private:
                                                          // ground classification
 
   // time keeper related
-  rclcpp::Publisher<autoware::universe_utils::ProcessingTimeDetail>::SharedPtr
+  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr
     detailed_processing_time_publisher_;
-  std::shared_ptr<autoware::universe_utils::TimeKeeper> time_keeper_;
+  std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 
   /*!
    * Output transformed PointCloud from in_cloud_ptr->header.frame_id to in_target_frame
@@ -207,7 +205,7 @@ private:
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
 
   /** \brief Parameter service callback */
-  rcl_interfaces::msg::SetParametersResult paramCallback(const std::vector<rclcpp::Parameter> & p);
+  rcl_interfaces::msg::SetParametersResult param_callback(const std::vector<rclcpp::Parameter> & p);
 
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW

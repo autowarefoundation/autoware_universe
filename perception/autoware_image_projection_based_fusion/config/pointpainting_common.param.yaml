@@ -1,0 +1,11 @@
+/**:
+  ros__parameters:
+    diagnostics:
+      # When the processing time exceeds the max_allowed_processing_time,
+      # a warning will be triggered.
+      max_allowed_processing_time_ms: 200.0 # in milliseconds
+      # If the warning is triggered and if a timestamp of last normal processing is more than
+      # max_acceptable_consecutive_delay_ms, an error diagnostic message will be sent.
+      max_acceptable_consecutive_delay_ms: 1000.0
+      # interval of diagnostic callback in milliseconds
+      pointpainting_validation_callback_interval_ms: 100.0 # in milliseconds

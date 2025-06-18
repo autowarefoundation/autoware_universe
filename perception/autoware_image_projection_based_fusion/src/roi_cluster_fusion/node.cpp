@@ -16,7 +16,7 @@
 
 #include <autoware/image_projection_based_fusion/utils/geometry.hpp>
 #include <autoware/image_projection_based_fusion/utils/utils.hpp>
-#include <autoware/universe_utils/system/time_keeper.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
@@ -38,13 +38,13 @@
 
 namespace autoware::image_projection_based_fusion
 {
-using autoware::universe_utils::ScopedTimeTrack;
+using autoware_utils::ScopedTimeTrack;
 
 RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
 : FusionNode<ClusterMsgType, RoiMsgType, ClusterMsgType>("roi_cluster_fusion", options)
 {
-  trust_object_iou_mode_ = declare_parameter<std::string>("trust_object_iou_mode");
-  non_trust_object_iou_mode_ = declare_parameter<std::string>("non_trust_object_iou_mode");
+  strict_iou_match_mode_ = declare_parameter<std::string>("strict_iou_match_mode");
+  rough_iou_match_mode_ = declare_parameter<std::string>("rough_iou_match_mode");
   use_cluster_semantic_type_ = declare_parameter<bool>("use_cluster_semantic_type");
   only_allow_inside_cluster_ = declare_parameter<bool>("only_allow_inside_cluster");
   roi_scale_factor_ = declare_parameter<double>("roi_scale_factor");
@@ -52,7 +52,7 @@ RoiClusterFusionNode::RoiClusterFusionNode(const rclcpp::NodeOptions & options)
   unknown_iou_threshold_ = declare_parameter<double>("unknown_iou_threshold");
   remove_unknown_ = declare_parameter<bool>("remove_unknown");
   fusion_distance_ = declare_parameter<double>("fusion_distance");
-  trust_object_distance_ = declare_parameter<double>("trust_object_distance");
+  strict_iou_fusion_distance_ = declare_parameter<double>("strict_iou_fusion_distance");
 
   // publisher
   pub_ptr_ = this->create_publisher<ClusterMsgType>("output", rclcpp::QoS{1});
@@ -73,25 +73,26 @@ void RoiClusterFusionNode::preprocess(ClusterMsgType & output_cluster_msg)
   }
 }
 
-void RoiClusterFusionNode::fuseOnSingleImage(
-  const ClusterMsgType & input_cluster_msg, const Det2dStatus<RoiMsgType> & det2d,
-  const RoiMsgType & input_roi_msg, ClusterMsgType & output_cluster_msg)
+void RoiClusterFusionNode::fuse_on_single_image(
+  const ClusterMsgType & input_cluster_msg, const Det2dStatus<RoiMsgType> & det2d_status,
+  const RoiMsgType & input_rois_msg, ClusterMsgType & output_cluster_msg)
 {
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  const sensor_msgs::msg::CameraInfo & camera_info = det2d.camera_projector_ptr->getCameraInfo();
+  const sensor_msgs::msg::CameraInfo & camera_info =
+    det2d_status.camera_projector_ptr->getCameraInfo();
 
   // get transform from cluster frame id to camera optical frame id
   geometry_msgs::msg::TransformStamped transform_stamped;
   {
     const auto transform_stamped_optional = getTransformStamped(
-      tf_buffer_, /*target*/ camera_info.header.frame_id,
-      /*source*/ input_cluster_msg.header.frame_id, camera_info.header.stamp);
+      tf_buffer_, /*target*/ input_rois_msg.header.frame_id,
+      /*source*/ input_cluster_msg.header.frame_id, input_rois_msg.header.stamp);
     if (!transform_stamped_optional) {
       RCLCPP_WARN_STREAM(
         get_logger(), "Failed to get transform from " << input_cluster_msg.header.frame_id << " to "
-                                                      << camera_info.header.frame_id);
+                                                      << input_rois_msg.header.frame_id);
       return;
     }
     transform_stamped = transform_stamped_optional.value();
@@ -129,7 +130,7 @@ void RoiClusterFusionNode::fuseOnSingleImage(
       }
 
       Eigen::Vector2d projected_point;
-      if (det2d.camera_projector_ptr->calcImageProjectedPoint(
+      if (det2d_status.camera_projector_ptr->calcImageProjectedPoint(
             cv::Point3d(*iter_x, *iter_y, *iter_z), projected_point)) {
         const int px = static_cast<int>(projected_point.x());
         const int py = static_cast<int>(projected_point.y());
@@ -156,7 +157,7 @@ void RoiClusterFusionNode::fuseOnSingleImage(
     if (debugger_) debugger_->obstacle_rois_.push_back(roi);
   }
 
-  for (const auto & feature_obj : input_roi_msg.feature_objects) {
+  for (const auto & feature_obj : input_rois_msg.feature_objects) {
     int index = -1;
     bool associated = false;
     double max_iou = 0.0;
@@ -164,16 +165,16 @@ void RoiClusterFusionNode::fuseOnSingleImage(
       feature_obj.object.classification.front().label != ObjectClassification::UNKNOWN;
     for (const auto & cluster_map : m_cluster_roi) {
       double iou(0.0);
-      bool is_use_non_trust_object_iou_mode = is_far_enough(
-        input_cluster_msg.feature_objects.at(cluster_map.first), trust_object_distance_);
+      bool use_rough_iou_match = is_far_enough(
+        input_cluster_msg.feature_objects.at(cluster_map.first), strict_iou_fusion_distance_);
       auto image_roi = feature_obj.feature.roi;
       auto cluster_roi = cluster_map.second;
       sanitizeROI(image_roi, camera_info.width, camera_info.height);
       sanitizeROI(cluster_roi, camera_info.width, camera_info.height);
-      if (is_use_non_trust_object_iou_mode || is_roi_label_known) {
-        iou = cal_iou_by_mode(cluster_roi, image_roi, non_trust_object_iou_mode_);
+      if (use_rough_iou_match || (!is_roi_label_known)) {
+        iou = cal_iou_by_mode(cluster_roi, image_roi, rough_iou_match_mode_);
       } else {
-        iou = cal_iou_by_mode(cluster_roi, image_roi, trust_object_iou_mode_);
+        iou = cal_iou_by_mode(cluster_roi, image_roi, strict_iou_match_mode_);
       }
 
       const bool passed_inside_cluster_gate =
@@ -210,7 +211,7 @@ void RoiClusterFusionNode::fuseOnSingleImage(
 
   // note: debug objects are safely cleared in fusion_node.cpp
   if (debugger_) {
-    debugger_->publishImage(det2d.id, input_roi_msg.header.stamp);
+    debugger_->publishImage(det2d_status.id, input_rois_msg.header.stamp);
   }
 }
 

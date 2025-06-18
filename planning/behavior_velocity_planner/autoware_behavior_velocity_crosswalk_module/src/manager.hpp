@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -42,6 +42,15 @@ public:
   explicit CrosswalkModuleManager(rclcpp::Node & node);
 
   const char * getModuleName() override { return "crosswalk"; }
+
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    RequiredSubscriptionInfo required_subscription_info;
+    required_subscription_info.traffic_signals = true;
+    required_subscription_info.predicted_objects = true;
+    required_subscription_info.occupancy_grid_map = true;
+    return required_subscription_info;
+  }
 
 private:
   CrosswalkModule::PlannerParam crosswalk_planner_param_{};

@@ -64,6 +64,9 @@ public:
     double yellow_light_stop_velocity;
     double stop_time_hysteresis;
     bool enable_pass_judge;
+    // Restart Suppression Parameter
+    double max_behind_dist_to_stop_for_restart_suppression;
+    double min_behind_dist_to_stop_for_restart_suppression;
   };
 
 public:
@@ -71,7 +74,7 @@ public:
     const int64_t lane_id, const lanelet::TrafficLight & traffic_light_reg_elem,
     lanelet::ConstLanelet lane, const PlannerParam & planner_param, const rclcpp::Logger logger,
     const rclcpp::Clock::SharedPtr clock,
-    const std::shared_ptr<universe_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 

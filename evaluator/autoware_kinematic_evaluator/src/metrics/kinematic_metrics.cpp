@@ -19,10 +19,10 @@ namespace autoware::kinematic_diagnostics
 namespace metrics
 {
 
-autoware::universe_utils::Accumulator<double> updateVelocityStats(
-  const double & value, const autoware::universe_utils::Accumulator<double> stat_prev)
+autoware_utils::Accumulator<double> updateVelocityStats(
+  const double & value, const autoware_utils::Accumulator<double> stat_prev)
 {
-  autoware::universe_utils::Accumulator<double> stat(stat_prev);
+  autoware_utils::Accumulator<double> stat(stat_prev);
   stat.add(value);
   return stat;
 }

@@ -15,7 +15,7 @@
 #include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
-#include <autoware/universe_utils/ros/uuid_helper.hpp>
+#include <autoware_utils/ros/uuid_helper.hpp>
 
 #include <algorithm>
 #include <limits>
@@ -28,7 +28,7 @@ namespace autoware::behavior_velocity_planner
 
 SceneModuleInterfaceWithRTC::SceneModuleInterfaceWithRTC(
   const int64_t module_id, rclcpp::Logger logger, rclcpp::Clock::SharedPtr clock,
-  const std::shared_ptr<universe_utils::TimeKeeper> time_keeper,
+  const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
   const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
     planning_factor_interface)
 : SceneModuleInterface(module_id, logger, clock, time_keeper, planning_factor_interface),
@@ -85,9 +85,9 @@ UUID SceneModuleManagerInterfaceWithRTC::getUUID(const int64_t & module_id) cons
   return map_uuid_.at(module_id);
 }
 
-void SceneModuleManagerInterfaceWithRTC::generateUUID(const int64_t & module_id)
+void SceneModuleManagerInterfaceWithRTC::generate_uuid(const int64_t & module_id)
 {
-  map_uuid_.insert({module_id, autoware::universe_utils::generateUUID()});
+  map_uuid_.insert({module_id, autoware_utils::generate_uuid()});
 }
 
 void SceneModuleManagerInterfaceWithRTC::removeUUID(const int64_t & module_id)

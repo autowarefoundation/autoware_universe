@@ -16,10 +16,10 @@
 
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 
 #include <boost/geometry.hpp>
 // #include <boost/geometry/algorithms/detail/distance/interface.hpp>
@@ -50,8 +50,7 @@ lanelet::ConstLanelets get_current_lanes(const RouteHandler & route_handler, con
 }
 
 double calc_distance_to_line(
-  const autoware::universe_utils::LinearRing2d & vehicle_footprint,
-  const autoware::universe_utils::LineString2d & line)
+  const autoware_utils::LinearRing2d & vehicle_footprint, const autoware_utils::LineString2d & line)
 {
   return boost::geometry::distance(vehicle_footprint, line);
 }

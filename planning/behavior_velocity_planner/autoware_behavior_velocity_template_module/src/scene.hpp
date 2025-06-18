@@ -16,6 +16,7 @@
 #define SCENE_HPP_
 
 #include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <memory>
@@ -30,7 +31,7 @@ class TemplateModule : public SceneModuleInterface
 public:
   TemplateModule(
     const int64_t module_id, const rclcpp::Logger & logger, const rclcpp::Clock::SharedPtr clock,
-    const std::shared_ptr<universe_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
       planning_factor_interface);
 

@@ -7,10 +7,7 @@
   <!-- Pipeline junctions -->
   <arg name="lidar_detection_model_type"/>
   <arg name="use_detection_by_tracker"/>
-
-  <arg name="use_validator"/>
-  <arg name="objects_validation_method"/>
-  <arg name="use_pointcloud_map"/>
+  <arg name="use_irregular_object_detector"/>
 
   <arg name="use_object_filter" description="use object filter"/>
   <arg name="objects_filter_method"/>
@@ -42,24 +39,21 @@
   <arg name="input/camera7/image"/>
   <arg name="input/camera7/info"/>
   <arg name="input/camera7/rois"/>
-  <arg name="input/pointcloud_map/pointcloud"/>
-  <arg name="input/obstacle_segmentation/pointcloud"/>
   <arg name="input/lidar_ml/objects"/>
   <arg name="input/lidar_rule/objects"/>
   <arg name="input/detection_by_tracker/objects"/>
   <arg name="output/objects" default="objects"/>
 
   <!-- internal interfaces -->
-  <let name="camera_roi_fusion/input/objects" value="$(var input/lidar_ml/objects)"/>
-  <let name="camera_roi_fusion/output/objects" value="$(var lidar_detection_model_type)/roi_fusion/objects"/>
+  <let name="detected_object_roi_filter/input/objects" value="$(var input/lidar_ml/objects)"/>
+  <let name="detected_object_roi_filter/output/objects" value="$(var lidar_detection_model_type)/roi_fusion/objects"/>
 
-  <let name="validator/input/objects" value="$(var camera_roi_fusion/output/objects)"/>
-  <let name="validator/input/obstacle_pointcloud" value="$(var input/pointcloud_map/pointcloud)" if="$(var use_pointcloud_map)"/>
-  <let name="validator/input/obstacle_pointcloud" value="$(var input/obstacle_segmentation/pointcloud)" unless="$(var use_pointcloud_map)"/>
-  <let name="validator/output/objects" value="$(var lidar_detection_model_type)/validation/objects"/>
+  <let name="merger0/input/objects0" value="$(var detected_object_roi_filter/output/objects)"/>
+  <let name="merger0/input/objects1" value="$(var detected_irregular_object/output/objects)"/>
+  <let name="merger0/output/objects" value="$(var lidar_detection_model_type)_irregular_object_merger/objects"/>
 
-  <let name="merger1/input/objects0" value="$(var validator/output/objects)" if="$(var use_validator)"/>
-  <let name="merger1/input/objects0" value="$(var input/lidar_ml/objects)" unless="$(var use_validator)"/>
+  <let name="merger1/input/objects0" value="$(var detected_object_roi_filter/output/objects)" unless="$(var use_irregular_object_detector)"/>
+  <let name="merger1/input/objects0" value="$(var merger0/output/objects)" if="$(var use_irregular_object_detector)"/>
   <let name="merger1/input/objects1" value="$(var input/lidar_rule/objects)"/>
   <let name="merger1/output/objects" value="$(var output/objects)" if="$(var without_dbt_and_filter)"/>
   <let name="merger1/output/objects" value="$(var lidar_detection_model_type)_roi_cluster_fusion/objects" unless="$(var without_dbt_and_filter)"/>
@@ -73,7 +67,7 @@
   <let name="filter/input/objects" value="$(var merger1/output/objects)" unless="$(var use_detection_by_tracker)"/>
   <let name="filter/output/objects" value="$(var output/objects)"/>
 
-  <!-- Camera ROI fusion -->
+  <!-- Detected object filter by ROI -->
   <group>
     <include file="$(find-pkg-share autoware_image_projection_based_fusion)/launch/roi_detected_object_fusion.launch.xml">
       <arg name="input/rois_number" value="$(var number_of_cameras)"/>
@@ -101,20 +95,21 @@
       <arg name="input/image5" value="$(var input/camera5/image)"/>
       <arg name="input/image6" value="$(var input/camera6/image)"/>
       <arg name="input/image7" value="$(var input/camera7/image)"/>
-      <arg name="input/objects" value="$(var camera_roi_fusion/input/objects)"/>
-      <arg name="output/objects" value="$(var camera_roi_fusion/output/objects)"/>
+      <arg name="input/objects" value="$(var detected_object_roi_filter/input/objects)"/>
+      <arg name="output/objects" value="$(var detected_object_roi_filter/output/objects)"/>
       <arg name="param_path" value="$(var roi_detected_object_fusion_param_path)"/>
     </include>
   </group>
 
-  <!-- Validator -->
-  <group if="$(var use_validator)">
-    <include file="$(find-pkg-share tier4_perception_launch)/launch/object_recognition/detection/filter/object_validator.launch.xml">
-      <arg name="input/obstacle_pointcloud" value="$(var validator/input/obstacle_pointcloud)"/>
-      <arg name="input/objects" value="$(var validator/input/objects)"/>
-      <arg name="output/objects" value="$(var validator/output/objects)"/>
-      <arg name="objects_validation_method" value="$(var objects_validation_method)"/>
-    </include>
+  <!-- merger: irregular_objects + ml_lidar -->
+  <group if="$(var use_irregular_object_detector)">
+    <let name="simple_object_merger_param_path" value="$(find-pkg-share autoware_simple_object_merger)/config/simple_object_merger.param.yaml"/>
+    <node pkg="autoware_simple_object_merger" exec="simple_object_merger_node" name="simple_object_merger" output="screen">
+      <remap from="~/output/objects" to="$(var merger0/output/objects)"/>
+      <param from="$(var simple_object_merger_param_path)" allow_substs="true"/>
+      <param name="update_rate_hz" value="10.0"/>
+      <param name="input_topics" value="[$(var merger0/input/objects0),$(var merger0/input/objects1)]"/>
+    </node>
   </group>
 
   <!-- 1st merger: camera_lidar_fusion + lidar cluster-->

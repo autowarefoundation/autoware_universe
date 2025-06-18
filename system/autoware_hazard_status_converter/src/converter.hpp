@@ -16,7 +16,7 @@
 #define CONVERTER_HPP_
 
 #include <autoware/diagnostic_graph_utils/subscription.hpp>
-#include <autoware/universe_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils/ros/polling_subscriber.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_system_msgs/msg/hazard_status_stamped.hpp>
@@ -40,8 +40,7 @@ private:
   void on_update(DiagGraph::ConstSharedPtr graph);
   autoware::diagnostic_graph_utils::DiagGraphSubscription sub_graph_;
   rclcpp::Publisher<HazardStatusStamped>::SharedPtr pub_hazard_;
-  autoware::universe_utils::InterProcessPollingSubscriber<
-    tier4_system_msgs::msg::EmergencyHoldingState>
+  autoware_utils::InterProcessPollingSubscriber<tier4_system_msgs::msg::EmergencyHoldingState>
     sub_emergency_holding_{this, "~/input/emergency_holding"};
 
   DiagUnit * auto_mode_root_;
