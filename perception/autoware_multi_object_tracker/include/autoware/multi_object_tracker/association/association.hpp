@@ -59,11 +59,14 @@ struct AssociatorConfig
   Eigen::MatrixXd max_dist_matrix;
   Eigen::MatrixXd max_area_matrix;
   Eigen::MatrixXd min_area_matrix;
+<<<<<<< HEAD
   Eigen::MatrixXd max_rad_matrix;
 <<<<<<< HEAD
   Eigen::MatrixXd min_iou_matrix;
   double unknown_association_giou_threshold;
 =======
+=======
+>>>>>>> 1f51c7044 (chore: remove unused angle gate logic and related config)
   Eigen::MatrixXd min_giou_matrix;
 >>>>>>> bf2f4c290 (refactor: rebase to latest version and solve conflict)
 };

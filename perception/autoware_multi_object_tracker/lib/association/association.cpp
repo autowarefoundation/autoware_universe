@@ -291,6 +291,7 @@ double DataAssociation::calculateScore(
   const double & area = measurement_object.area;
   if (area < min_area || area > max_area) return INVALID_SCORE;
 
+<<<<<<< HEAD
   // dist gate
   const double max_dist_sq = config_.max_dist_matrix(tracker_label, measurement_label);
   const double dx = measurement_object.pose.position.x - tracked_object.pose.position.x;
@@ -298,6 +299,8 @@ double DataAssociation::calculateScore(
   const double dist_sq = dx * dx + dy * dy;
   if (dist_sq > max_dist_sq) return INVALID_SCORE;
 
+=======
+>>>>>>> 036777107 (chore: remove unused angle gate logic and related config)
   // mahalanobis dist gate
   const double mahalanobis_dist = getMahalanobisDistanceFast(dx, dy, inv_cov);
   constexpr double mahalanobis_dist_threshold =
