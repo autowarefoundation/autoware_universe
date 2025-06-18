@@ -30,29 +30,31 @@
 
 namespace
 {
+constexpr double INVALID_SCORE = -1.0;
 
-double getFormedYawAngle(
-  const geometry_msgs::msg::Quaternion & measurement_quat,
-  const geometry_msgs::msg::Quaternion & tracker_quat, const bool distinguish_front_or_back = true)
-{
-  // Calculate raw difference
-  double diff = tf2::getYaw(measurement_quat) - tf2::getYaw(tracker_quat);
+// double getFormedYawAngle(
+//   const geometry_msgs::msg::Quaternion & measurement_quat,
+//   const geometry_msgs::msg::Quaternion & tracker_quat, const bool distinguish_front_or_back =
+//   true)
+// {
+//   // Calculate raw difference
+//   double diff = tf2::getYaw(measurement_quat) - tf2::getYaw(tracker_quat);
 
-  // Fast modulo to bring diff into [-2π, 2π] range
-  diff += (diff > M_PI) ? -2.0 * M_PI : (diff < -M_PI) ? 2.0 * M_PI : 0.0;
+//   // Fast modulo to bring diff into [-2π, 2π] range
+//   diff += (diff > M_PI) ? -2.0 * M_PI : (diff < -M_PI) ? 2.0 * M_PI : 0.0;
 
-  // For front/back distinction, use [-π, π] range
-  // For side distinction only, use [-π/2, π/2] range by folding at ±π/2
-  if (!distinguish_front_or_back) {
-    if (diff > M_PI_2) {
-      diff = M_PI - diff;
-    } else if (diff < -M_PI_2) {
-      diff = -M_PI - diff;
-    }
-  }
+//   // For front/back distinction, use [-π, π] range
+//   // For side distinction only, use [-π/2, π/2] range by folding at ±π/2
+//   if (!distinguish_front_or_back) {
+//     if (diff > M_PI_2) {
+//       diff = M_PI - diff;
+//     } else if (diff < -M_PI_2) {
+//       diff = -M_PI - diff;
+//     }
+//   }
 
-  return std::abs(diff);
-}
+//   return std::abs(diff);
+// }
 }  // namespace
 
 namespace autoware::multi_object_tracker
@@ -61,7 +63,7 @@ using autoware_utils_debug::ScopedTimeTrack;
 using Label = autoware_perception_msgs::msg::ObjectClassification;
 
 DataAssociation::DataAssociation(const AssociatorConfig & config)
-: config_(config), score_threshold_(0.01)
+: config_(config), score_threshold_(0.0)
 {
   // Initialize the GNN solver
   gnn_solver_ptr_ = std::make_unique<gnn_solver::MuSSP>();
@@ -168,6 +170,9 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
   Eigen::MatrixXd score_matrix =
     Eigen::MatrixXd::Zero(trackers.size(), measurements.objects.size());
 
+  // Clear previous tracker/measurement pair that shape significantly changed
+  significant_shape_change_set_.clear();
+
   // Pre-allocate vectors to avoid reallocations
   std::vector<types::DynamicObject> tracked_objects;
   std::vector<std::uint8_t> tracker_labels;
@@ -248,11 +253,16 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
       // Calculate score for this tracker-measurement pair
       const auto & tracked_object = tracked_objects[tracker_idx];
       const auto tracker_label = tracker_labels[tracker_idx];
-      const double score = calculateScore(
-        tracked_object, tracker_label, measurement_object, measurement_label,
-        tracker_inverse_covariances[tracker_idx]);
 
+      bool significant_shape_change = false;
+      double score = calculateScore(
+        tracked_object, tracker_label, measurement_object, measurement_label,
+        tracker_inverse_covariances[tracker_idx], significant_shape_change);
       score_matrix(tracker_idx, measurement_idx) = score;
+
+      if (significant_shape_change) {
+        significant_shape_change_set_.insert((uint64_t(tracker_idx) << 32) | measurement_idx);
+      }
     }
   }
 
@@ -262,7 +272,7 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
 double DataAssociation::calculateScore(
   const types::DynamicObject & tracked_object, const std::uint8_t tracker_label,
   const types::DynamicObject & measurement_object, const std::uint8_t measurement_label,
-  const InverseCovariance2D & inv_cov) const
+  const InverseCovariance2D & inv_cov, bool & significant_shape_change) const
 {
   // when the tracker and measurements are unknown, use generalized IoU
   if (tracker_label == Label::UNKNOWN && measurement_label == Label::UNKNOWN) {
@@ -279,45 +289,56 @@ double DataAssociation::calculateScore(
   const double max_area = config_.max_area_matrix(tracker_label, measurement_label);
   const double min_area = config_.min_area_matrix(tracker_label, measurement_label);
   const double & area = measurement_object.area;
-  if (area < min_area || area > max_area) return 0.0;
+  if (area < min_area || area > max_area) return INVALID_SCORE;
 
   // dist gate
   const double max_dist_sq = config_.max_dist_matrix(tracker_label, measurement_label);
   const double dx = measurement_object.pose.position.x - tracked_object.pose.position.x;
   const double dy = measurement_object.pose.position.y - tracked_object.pose.position.y;
   const double dist_sq = dx * dx + dy * dy;
-  if (dist_sq > max_dist_sq) return 0.0;
+  if (dist_sq > max_dist_sq) return INVALID_SCORE;
 
   // mahalanobis dist gate
   const double mahalanobis_dist = getMahalanobisDistanceFast(dx, dy, inv_cov);
   constexpr double mahalanobis_dist_threshold =
     11.62;  // This is an empirical value corresponding to the 99.6% confidence level
             // for a chi-square distribution with 2 degrees of freedom (critical value).
-  if (mahalanobis_dist >= mahalanobis_dist_threshold) return 0.0;
+  if (mahalanobis_dist >= mahalanobis_dist_threshold) return INVALID_SCORE;
 
-  // angle gate, only if the threshold is set less than pi
-  const double max_rad = config_.max_rad_matrix(tracker_label, measurement_label);
-  if (max_rad < M_PI) {
-    const double angle = getFormedYawAngle(
-      measurement_object.pose.orientation, tracked_object.pose.orientation, false);
-    if (max_rad < std::fabs(angle)) {
-      return 0.0;
+  const double min_giou = config_.min_giou_matrix(tracker_label, measurement_label);
+  double giou = measurement_label == Label::PEDESTRIAN
+                  ? shapes::get1dIoU(measurement_object, tracked_object)
+                  : shapes::get3dGeneralizedIoU(measurement_object, tracked_object);
+  // return giou value over threshold as similarity score
+  // for pedestrian use simplified 1d iou
+  if (giou < min_giou) return INVALID_SCORE;
+
+  // check if shape changes too much for vehicle labels
+  constexpr double CheckGiouThreshold = 0.3;
+  constexpr double AreaRatioThreshold = 1.5;
+  constexpr uint8_t VehicleLabelMin = 1;  // CAR
+  constexpr uint8_t VehicleLabelMax = 4;  // TRAILER
+
+  if (
+    giou < CheckGiouThreshold && tracker_label >= VehicleLabelMin &&
+    tracker_label <= VehicleLabelMax) {
+    // BEV‑area ratio
+    const double area_trk = tracked_object.area;
+    const double area_meas = measurement_object.area;
+    const double area_ratio = std::max(area_trk, area_meas) / std::min(area_trk, area_meas);
+
+    if (area_ratio > AreaRatioThreshold) {
+      significant_shape_change = true;
     }
   }
 
-  const double ratio_sq = dist_sq / max_dist_sq;
-  const double score = 1.0 - std::sqrt(ratio_sq);
-  if (score < score_threshold_) return 0.0;
+  return giou;
+}
 
-  // 2d iou gate
-  const double min_iou = config_.min_iou_matrix(tracker_label, measurement_label);
-  constexpr double min_union_iou_area = 1e-2;
-  const double iou = measurement_label == Label::PEDESTRIAN
-                       ? shapes::get1dIoU(measurement_object, tracked_object)
-                       : shapes::get2dIoU(measurement_object, tracked_object, min_union_iou_area);
-  if (iou < min_iou) return 0.0;
-
-  return score;
+bool DataAssociation::hasSignificantShapeChange(size_t tracker_idx, size_t measurement_idx) const
+{
+  uint64_t key = (uint64_t(tracker_idx) << 32) | measurement_idx;
+  return significant_shape_change_set_.count(key);object_tracker association)
 }
 
 }  // namespace autoware::multi_object_tracker

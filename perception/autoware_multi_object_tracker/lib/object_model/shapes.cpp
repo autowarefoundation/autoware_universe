@@ -28,6 +28,7 @@
 #include <cmath>
 #include <limits>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace autoware::multi_object_tracker
@@ -103,6 +104,18 @@ double get1dIoU(
   const double intersection_length = r1 + r2 - dist;
   const double iou = intersection_length * r2 / (r1 * r1) * 0.5;
   return iou;
+}
+
+inline double getConvexShapeArea(
+  const autoware_utils::Polygon2d & source_polygon,
+  const autoware_utils::Polygon2d & target_polygon)
+{
+  boost::geometry::model::multi_polygon<autoware_utils::Polygon2d> union_polygons;
+  boost::geometry::union_(source_polygon, target_polygon, union_polygons);
+
+  autoware_utils::Polygon2d hull;
+  boost::geometry::convex_hull(union_polygons, hull);
+  return boost::geometry::area(hull);
 }
 
 double get2dIoU(
@@ -237,6 +250,48 @@ bool convertConvexHullToBoundingBox(
   }
 
   return true;
+}
+
+std::pair<double, double> getObjectZRange(const types::DynamicObject & object)
+{
+  const double center_z = object.pose.position.z;
+  const double height = object.shape.dimensions.z;
+  const double min_z = center_z - height / 2.0;
+  const double max_z = center_z + height / 2.0;
+  return {min_z, max_z};
+}
+
+double get3dGeneralizedIoU(
+  const types::DynamicObject & source_object, const types::DynamicObject & target_object)
+{
+  static const double MIN_AREA = 1e-6;
+
+  const auto source_polygon = autoware_utils::to_polygon2d(source_object.pose, source_object.shape);
+  if (boost::geometry::area(source_polygon) < MIN_AREA) return 0.0;
+  const auto target_polygon = autoware_utils::to_polygon2d(target_object.pose, target_object.shape);
+  if (boost::geometry::area(target_polygon) < MIN_AREA) return 0.0;
+
+  const double union_area = getUnionArea(source_polygon, target_polygon);
+  if (union_area < MIN_AREA) return 0.0;
+
+  const double intersection_area = getIntersectionArea(source_polygon, target_polygon);
+  const double convex_area = getConvexShapeArea(source_polygon, target_polygon);
+
+  const auto [z_min_src, z_max_src] = getObjectZRange(source_object);
+  const auto [z_min_tgt, z_max_tgt] = getObjectZRange(target_object);
+
+  const double height_overlap =
+    std::max(0.0, std::min(z_max_src, z_max_tgt) - std::max(z_min_src, z_min_tgt));
+  if (height_overlap <= 0.0) return 0.0;
+
+  const double total_height = std::max(z_max_src, z_max_tgt) - std::min(z_min_src, z_min_tgt);
+
+  const double intersection_volume = intersection_area * height_overlap;
+  const double union_volume = union_area * total_height;
+  const double convex_volume = convex_area * total_height;
+
+  const double iou = std::min(1.0, intersection_volume / union_volume);
+  return iou - (convex_volume - union_volume) / convex_volume;
 }
 
 }  // namespace shapes

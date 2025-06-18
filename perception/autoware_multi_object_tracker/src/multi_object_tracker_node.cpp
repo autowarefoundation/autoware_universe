@@ -289,8 +289,8 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         initializeMatrixDouble(this->declare_parameter<std::vector<double>>("min_area_matrix"));
       associator_config.max_rad_matrix =
         initializeMatrixDouble(this->declare_parameter<std::vector<double>>("max_rad_matrix"));
-      associator_config.min_iou_matrix =
-        initializeMatrixDouble(this->declare_parameter<std::vector<double>>("min_iou_matrix"));
+      associator_config.min_giou_matrix =
+        initializeMatrixDouble(this->declare_parameter<std::vector<double>>("min_giou_matrix"));
 
       // pre-process
       const int label_num = associator_config.max_dist_matrix.rows();
