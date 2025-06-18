@@ -42,6 +42,7 @@ DiagUnit::~DiagUnit()
 
 DiagLeafStruct DiagUnit::create_struct()
 {
+  struct_.parent = parent_units().front()->index();
   return struct_;
 }
 
