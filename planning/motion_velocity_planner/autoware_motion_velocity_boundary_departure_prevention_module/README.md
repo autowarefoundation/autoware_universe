@@ -38,12 +38,12 @@ These factors can result in the vehicle unintentionally approaching or crossing 
 <div align="center">
   <table>
     <tr>
-      <th>Without Abnormality Margins</th>
-      <th>With Localization Abnormality Margin</th>
+      <th style="text-align: center;">Without Abnormality Margins</th>
+      <th style="text-align: center;">With Localization Abnormality Margin</th>
     </tr>
     <tr>
-      <td><img src="./images/normal_no_abnormalities_footprint.png" alt="Footprint without abnormality margin" width="250"></td>
-      <td><img src="./images/localization_abnormalities_footprint.png" alt="Footprint with localization abnormality margin" width="250"></td>
+      <td style="text-align: center;"><img src="./images/normal_no_abnormalities_footprint.png" alt="Footprint without abnormality margin" width="250"></td>
+      <td style="text-align: center;"><img src="./images/localization_abnormalities_footprint.png" alt="Footprint with localization abnormality margin" width="250"></td>
     </tr>
   </table>
 </div>
@@ -68,12 +68,12 @@ In such cases, the actual motion of the vehicle diverges from the MPC trajectory
 <div align="center">
   <table>
     <tr>
-      <th>Without Abnormality Margins</th>
-      <th>With Steering Abnormality Margin</th>
+      <th style="text-align: center;">Without Abnormality Margins</th>
+      <th style="text-align: center;">With Steering Abnormality Margin</th>
     </tr>
     <tr>
-      <td><img src="./images/normal_no_abnormalities_footprint.png" alt="Footprint without abnormality margin" width="250"></td>
-      <td><img src="./images/steering_abnormalities_footprint.png" alt="Footprint with localization abnormality margin" width="250"></td>
+      <td style="text-align: center;"><img src="./images/normal_no_abnormalities_footprint.png" alt="Footprint without abnormality margin" width="250"></td>
+      <td style="text-align: center;"><img src="./images/steering_abnormalities_footprint.png" alt="Footprint with localization abnormality margin" width="250"></td>
     </tr>
   </table>
 </div>
@@ -97,12 +97,12 @@ This discrepancy becomes more problematic when the vehicle is near an uncrossabl
 <div align="center">
   <table>
     <tr>
-      <th>Without Abnormality Margins</th>
-      <th>With Longitudinal Tracking Abnormality Margin</th>
+      <th style="text-align: center;">Without Abnormality Margins</th>
+      <th style="text-align: center;">With Longitudinal Tracking Abnormality Margin</th>
     </tr>
     <tr>
-      <td><img src="./images/normal_no_abnormalities_footprint_curved.png" alt="Footprint without abnormality margin" width="250"></td>
-      <td><img src="./images/longitudinal_abnormalities_footprint.png" alt="Footprint with localization abnormality margin" width="250"></td>
+      <td style="text-align: center;"><img src="./images/normal_no_abnormalities_footprint_curved.png" alt="Footprint without abnormality margin" width="250"></td>
+      <td style="text-align: center;"><img src="./images/longitudinal_abnormalities_footprint.png" alt="Footprint with localization abnormality margin" width="250"></td>
     </tr>
   </table>
 </div>
@@ -158,6 +158,39 @@ start
 stop
 @enduml
 ```
+
+#### Determining Closest Projection to Boundaries
+
+To assess how close the ego vehicle is to nearby uncrossable boundaries, the `BoundaryDepartureChecker` class calculates the nearest lateral projection between each predicted footprint and the map boundary segments. This is done separately for the left and right sides of the vehicle.
+
+Each footprint includes left and right edge segments. These segments are projected onto nearby map segments to compute the shortest lateral distance from the vehicle to the boundary.
+
+For each pair of ego-side and boundary segments:
+
+1. If the segments intersect, the intersection point is used as the projection result.
+2. If not, the algorithm checks all endpoint-to-segment projections, from the ego footprint segment to the boundary segment, and vice versa.
+3. Among all valid candidates, the one with the shortest lateral distance is selected.
+
+The projection function returns the projected point on the boundary, the corresponding point on the ego segment, and the computed distance.
+
+Example of the nearest projections are shown in the following images:
+
+<div align="center">
+  <table>
+    <tr>
+      <th style="text-align: center;">Going near the boundary</th>
+      <th style="text-align: center;">Heading towards and departing from boundaries</th>
+    </tr>
+    <tr>
+      <td style="text-align: center;"><img src="./images/determining_closest_projection_1.png" alt="Projections near boundary" width="250"></td>
+      <td style="text-align: center;"><img src="./images/determining_closest_projection_2.png" alt="Projections at boundaries" width="250"></td>
+    </tr>
+  </table>
+</div>
+
+- Each vehicle box represents a predicted footprint along the path.
+- Red arrows show the closest projection to the left boundary.
+- Purple arrows show the closest projection to the right boundary.
 
 ### Find and update departure intervals
 
