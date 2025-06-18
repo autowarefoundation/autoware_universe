@@ -38,6 +38,7 @@
 #include <list>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -59,8 +60,12 @@ struct AssociatorConfig
   Eigen::MatrixXd max_area_matrix;
   Eigen::MatrixXd min_area_matrix;
   Eigen::MatrixXd max_rad_matrix;
+<<<<<<< HEAD
   Eigen::MatrixXd min_iou_matrix;
   double unknown_association_giou_threshold;
+=======
+  Eigen::MatrixXd min_giou_matrix;
+>>>>>>> bf2f4c290 (refactor: rebase to latest version and solve conflict)
 };
 
 struct InverseCovariance2D
@@ -88,6 +93,9 @@ private:
   // Cache of squared distances for each class pair to avoid sqrt in inner loop
   Eigen::MatrixXd squared_distance_matrix_;
 
+  /// Hash-set for (tracker_idx, measurement_idx) pairs flagged for significant shape change
+  std::unordered_set<uint64_t> significant_shape_change_set_;
+
   // Helper to compute max search distances from config
   void updateMaxSearchDistances();
 
@@ -103,13 +111,19 @@ public:
   double calculateScore(
     const types::DynamicObject & tracked_object, const std::uint8_t tracker_label,
     const types::DynamicObject & measurement_object, const std::uint8_t measurement_label,
-    const InverseCovariance2D & inv_cov) const;
+    const InverseCovariance2D & inv_cov, bool & significant_shape_change) const;
 
   Eigen::MatrixXd calcScoreMatrix(
     const types::DynamicObjectList & measurements,
     const std::list<std::shared_ptr<Tracker>> & trackers);
 
+<<<<<<< HEAD
   void setTimeKeeper(std::shared_ptr<autoware_utils_debug::TimeKeeper> time_keeper_ptr);
+=======
+  bool hasSignificantShapeChange(size_t tracker_idx, size_t measurement_idx) const;
+
+  void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr);
+>>>>>>> 0d53ea2b0 (refactor: rebase to latest version and solve conflict)
 };
 
 }  // namespace autoware::multi_object_tracker

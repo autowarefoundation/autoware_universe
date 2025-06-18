@@ -109,7 +109,7 @@ void Tracker::mergeExistenceProbabilities(std::vector<float> existence_probabili
 
 bool Tracker::updateWithMeasurement(
   const types::DynamicObject & object, const rclcpp::Time & measurement_time,
-  const types::InputChannel & channel_info)
+  const types::InputChannel & channel_info, bool weak_update)
 {
   // Update existence probability
   {
@@ -163,11 +163,53 @@ bool Tracker::updateWithMeasurement(
     object_.kinematics.orientation_availability = types::OrientationAvailability::SIGN_UNKNOWN;
   }
 
-  // Update object
-  measure(object, measurement_time, channel_info);
+  if (weak_update) {
+    // Weak update based on prediction
+    types::DynamicObject pred;
+    getTrackedObject(measurement_time, pred);
 
-  // Update object status
-  getTrackedObject(measurement_time, object_);
+    // Apply linear fall‑off weight on dist square
+    const double dx = object.pose.position.x - pred.pose.position.x;
+    const double dy = object.pose.position.y - pred.pose.position.y;
+    const double dist2 = dx * dx + dy * dy;
+    constexpr double d_max_square_inv = 1 / (2.0 * 2.0);
+    constexpr double min_w = 0.1;
+    const double w_pose = std::clamp(1.0 - dist2 * d_max_square_inv, min_w, 1.0);
+
+    // Blend position
+    object_.pose.position.x = pred.pose.position.x * (1 - w_pose) + object.pose.position.x * w_pose;
+    object_.pose.position.y = pred.pose.position.y * (1 - w_pose) + object.pose.position.y * w_pose;
+    object_.pose.position.z = pred.pose.position.z;
+
+    // Blend yaw orientation
+    const double yaw_pred = tf2::getYaw(pred.pose.orientation);
+    const double yaw_meas = tf2::getYaw(object.pose.orientation);
+    const double yaw_fused = yaw_pred * (1 - w_pose) + yaw_meas * w_pose;
+    tf2::Quaternion q;
+    q.setRPY(0, 0, yaw_fused);
+    object_.pose.orientation = tf2::toMsg(q);
+
+    // Slow shape smoothing
+    auto & dims = object_.shape.dimensions;            // current
+    const auto & dims_meas = object.shape.dimensions;  // measured
+    constexpr double w_shape = 0.2;
+    dims.x = dims.x * (1 - w_shape) + dims_meas.x * w_shape;
+    dims.y = dims.y * (1 - w_shape) + dims_meas.y * w_shape;
+    dims.z = dims.z * (1 - w_shape) + dims_meas.z * w_shape;
+    object_.shape.type = object.shape.type;
+    object_.area = types::getArea(object_.shape);
+
+    // Cache fused state
+    object_.time = measurement_time;
+    updateCache(object_, measurement_time);
+
+  } else {
+    // Update object normally
+    measure(object, measurement_time, channel_info);
+
+    // Update object status
+    getTrackedObject(measurement_time, object_);
+  }
 
   return true;
 }
