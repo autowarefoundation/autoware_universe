@@ -41,3 +41,13 @@
     diagnostic_updater:
       period: 1.0
       use_fqn: true
+
+/adapi/node/fail_safe:
+  ros__parameters:
+    mrm_descriptions:
+      emergency_stop:
+        behavior: 2
+        description: "Emergency stop"
+      comfortable_stop:
+        behavior: 3
+        description: "Comfortable stop"
