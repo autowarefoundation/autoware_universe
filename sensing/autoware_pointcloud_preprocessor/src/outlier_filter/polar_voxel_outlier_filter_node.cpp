@@ -30,21 +30,6 @@
 namespace autoware::pointcloud_preprocessor
 {
 
-// Local definition of PointXYZIRCAEDT structure to avoid dependency issues
-struct PointXYZIRCAEDTLocal
-{
-  float x;
-  float y;
-  float z;
-  uint8_t intensity;
-  uint8_t return_type;
-  uint16_t channel;
-  float azimuth;
-  float elevation;
-  float distance;
-  uint32_t time_stamp;
-};
-
 PolarVoxelOutlierFilterComponent::PolarVoxelOutlierFilterComponent(
   const rclcpp::NodeOptions & options)
 : Filter("PolarVoxelOutlierFilter", options)
@@ -138,21 +123,29 @@ void PolarVoxelOutlierFilterComponent::filterPointXYZIRCAEDT(
   // Copy input to output initially, then we'll filter it
   output = *input;
   
-  // Map to store point counts per polar voxel
-  std::map<PolarVoxelIndex, std::vector<size_t>> voxel_point_map;
+  // Structure to hold both first and second returns for each voxel
+  struct VoxelPoints {
+    std::vector<size_t> first_returns;
+    std::vector<size_t> second_returns;
+  };
+  
+  // Map to store point counts per polar voxel with separate vectors for first and second returns
+  std::map<PolarVoxelIndex, VoxelPoints> voxel_point_map;
 
   // Create iterators for the required fields
   sensor_msgs::PointCloud2ConstIterator<float> iter_distance(*input, "distance");
   sensor_msgs::PointCloud2ConstIterator<float> iter_azimuth(*input, "azimuth");
   sensor_msgs::PointCloud2ConstIterator<float> iter_elevation(*input, "elevation");
+  sensor_msgs::PointCloud2ConstIterator<uint8_t> iter_return_type(*input, "return_type");
 
   size_t point_idx = 0;
   // First pass: count points in each polar voxel using pre-computed coordinates
-  for (; iter_distance != iter_distance.end(); ++iter_distance, ++iter_azimuth, ++iter_elevation, ++point_idx) {
+  for (; iter_distance != iter_distance.end(); ++iter_distance, ++iter_azimuth, ++iter_elevation, ++iter_return_type, ++point_idx) {
     // Use pre-computed polar coordinates from the point
     double radius = static_cast<double>(*iter_distance);
     double azimuth = static_cast<double>(*iter_azimuth);
     double elevation = static_cast<double>(*iter_elevation);
+    uint8_t return_type = *iter_return_type;
 
     // Skip invalid points
     if (!std::isfinite(radius) || !std::isfinite(azimuth) || !std::isfinite(elevation)) {
@@ -165,14 +158,30 @@ void PolarVoxelOutlierFilterComponent::filterPointXYZIRCAEDT(
     }
 
     PolarVoxelIndex voxel_idx = polarToPolarVoxel(radius, azimuth, elevation);
-    voxel_point_map[voxel_idx].push_back(point_idx);
+    
+    // Add point to appropriate vector based on return type
+    if (return_type == 1) {  // First return
+      voxel_point_map[voxel_idx].first_returns.push_back(point_idx);
+    } else {  // Second or subsequent returns
+      voxel_point_map[voxel_idx].second_returns.push_back(point_idx);
+    }
   }
 
   // Collect valid point indices
   std::vector<bool> valid_points(input->width * input->height, false);
+  
   for (const auto & voxel_entry : voxel_point_map) {
-    if (static_cast<int>(voxel_entry.second.size()) >= voxel_points_threshold_) {
-      for (size_t idx : voxel_entry.second) {
+    const auto & first_returns = voxel_entry.second.first_returns;
+    const auto & second_returns = voxel_entry.second.second_returns;
+    
+    // Check if either first or second returns meet the threshold
+    if (static_cast<int>(first_returns.size()) >= voxel_points_threshold_ ||
+        static_cast<int>(second_returns.size()) >= voxel_points_threshold_) {
+      // Add all points from both vectors
+      for (size_t idx : first_returns) {
+        valid_points[idx] = true;
+      }
+      for (size_t idx : second_returns) {
         valid_points[idx] = true;
       }
     }
