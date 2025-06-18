@@ -119,7 +119,7 @@ void VirtualTrafficLightModuleManager::modifyPathVelocity(
   //       of virtual traffic light states is set here.
   const auto virtual_traffic_light_states = sub_virtual_traffic_light_states_->take_data();
   for (const auto & scene_module : scene_modules_) {
-    scene_module->setVirtualTrafficLightStates(virtual_traffic_light_states);
+    scene_module->setCorrespondingVirtualTrafficLightState(virtual_traffic_light_states);
   }
 
   SceneModuleManagerInterface<VirtualTrafficLightModule>::modifyPathVelocity(path);

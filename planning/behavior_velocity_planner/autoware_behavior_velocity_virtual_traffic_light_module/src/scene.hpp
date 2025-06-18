@@ -32,8 +32,11 @@
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_routing/RoutingGraph.h>
 
+#include <functional>
 #include <memory>
+#include <optional>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 namespace autoware::behavior_velocity_planner
@@ -58,6 +61,7 @@ public:
     std::optional<autoware_utils::LineString3d> stop_line{};
     autoware_utils::LineString3d start_line{};
     std::vector<autoware_utils::LineString3d> end_lines{};
+    std::string stop_line_id_for_log{};
   };
 
   struct ModuleData
@@ -97,25 +101,68 @@ public:
   void setInfrastructureCommand(
     const std::optional<tier4_v2x_msgs::msg::InfrastructureCommand> & command);
 
-  void setVirtualTrafficLightStates(
+  void setCorrespondingVirtualTrafficLightState(
     const tier4_v2x_msgs::msg::VirtualTrafficLightStateArray::ConstSharedPtr
       virtual_traffic_light_states);
+
+  void updateLoggerWithState();
+
+  std::vector<int64_t> getRegulatoryElementIds() const override { return {reg_elem_.id()}; }
+  std::vector<int64_t> getLaneletIds() const override { return {lane_id_}; }
+  std::vector<int64_t> getLineIds() const override
+  {
+    std::vector<int64_t> line_ids;
+
+    line_ids.push_back(reg_elem_.getStartLine().id());
+
+    if (reg_elem_.getStopLine()) {
+      line_ids.push_back(reg_elem_.getStopLine()->id());
+    }
+
+    for (const auto & end_line : reg_elem_.getEndLines()) {
+      line_ids.push_back(end_line.id());
+    }
+
+    return line_ids;
+  }
 
 private:
   const int64_t lane_id_;
   const lanelet::autoware::VirtualTrafficLight & reg_elem_;
   const lanelet::ConstLanelet lane_;
   const PlannerParam planner_param_;
-  tier4_v2x_msgs::msg::VirtualTrafficLightStateArray::ConstSharedPtr virtual_traffic_light_states_;
+  std::optional<tier4_v2x_msgs::msg::VirtualTrafficLightState> virtual_traffic_light_state_;
   State state_{State::NONE};
   tier4_v2x_msgs::msg::InfrastructureCommand command_;
   std::optional<tier4_v2x_msgs::msg::InfrastructureCommand> infrastructure_command_;
   MapData map_data_;
   ModuleData module_data_;
+  rclcpp::Logger base_logger_;
+
+  void setModuleState(
+    const State new_state, const std::optional<int64_t> end_line_id = std::nullopt);
+
+  template <State StateValue>
+  void setModuleState()
+  {
+    static_assert(
+      StateValue != State::FINALIZING && StateValue != State::FINALIZED,
+      "FINALIZING and FINALIZED states require end_line_id parameter");
+    setModuleState(StateValue);
+  }
+
+  template <State StateValue>
+  void setModuleState(const int64_t end_line_id)
+  {
+    static_assert(
+      StateValue == State::FINALIZING || StateValue == State::FINALIZED,
+      "This overload is only for FINALIZING and FINALIZED states");
+    setModuleState(StateValue, end_line_id);
+  }
 
   void updateInfrastructureCommand();
 
-  std::optional<size_t> getPathIndexOfFirstEndLine();
+  std::optional<std::pair<size_t, int64_t>> getPathIndexOfFirstEndLine();
 
   bool isBeforeStartLine(const size_t end_line_idx);
 
@@ -124,8 +171,6 @@ private:
   bool isAfterAnyEndLine(const size_t end_line_idx);
 
   bool isNearAnyEndLine(const size_t end_line_idx);
-
-  std::optional<tier4_v2x_msgs::msg::VirtualTrafficLightState> findCorrespondingState();
 
   bool isStateTimeout(const tier4_v2x_msgs::msg::VirtualTrafficLightState & state);
 
@@ -136,6 +181,8 @@ private:
 
   void insertStopVelocityAtEndLine(
     autoware_internal_planning_msgs::msg::PathWithLaneId * path, const size_t end_line_idx);
+
+  std::string stateToString(State state) const;
 };
 }  // namespace autoware::behavior_velocity_planner
 #endif  // SCENE_HPP_
