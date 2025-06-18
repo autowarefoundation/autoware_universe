@@ -11,7 +11,7 @@ ament_auto_add_library(autoware_operation_mode_transition_manager_node SHARED
   src/data.cpp
   src/node.cpp
   src/state.cpp
-  src/flag_node.cpp
+  src/autonomous_mode_transition_flag_node.cpp
 )
 
 rclcpp_components_register_node(autoware_operation_mode_transition_manager_node
@@ -20,8 +20,8 @@ rclcpp_components_register_node(autoware_operation_mode_transition_manager_node
 )
 
 rclcpp_components_register_node(autoware_operation_mode_transition_manager_node
-  PLUGIN "autoware::operation_mode_transition_manager::FlagNode"
-  EXECUTABLE flag_node
+  PLUGIN "autoware::operation_mode_transition_manager::AutonomousModeTransitionFlagNode"
+  EXECUTABLE autonomous_mode_transition_flag_node
 )
 
 rosidl_generate_interfaces(

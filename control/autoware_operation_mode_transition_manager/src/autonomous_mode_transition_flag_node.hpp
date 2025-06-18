@@ -12,8 +12,8 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-#ifndef FLAG_NODE_HPP_
-#define FLAG_NODE_HPP_
+#ifndef AUTONOMOUS_MODE_TRANSITION_FLAG_NODE_HPP_
+#define AUTONOMOUS_MODE_TRANSITION_FLAG_NODE_HPP_
 
 #include "state.hpp"
 
@@ -27,10 +27,10 @@
 namespace autoware::operation_mode_transition_manager
 {
 
-class FlagNode : public rclcpp::Node
+class AutonomousModeTransitionFlagNode : public rclcpp::Node
 {
 public:
-  explicit FlagNode(const rclcpp::NodeOptions & options);
+  explicit AutonomousModeTransitionFlagNode(const rclcpp::NodeOptions & options);
 
 private:
   using ModeChangeAvailable = tier4_system_msgs::msg::ModeChangeAvailable;
@@ -55,4 +55,4 @@ private:
 
 }  // namespace autoware::operation_mode_transition_manager
 
-#endif  // FLAG_NODE_HPP_
+#endif  // AUTONOMOUS_MODE_TRANSITION_FLAG_NODE_HPP_
