@@ -3,26 +3,6 @@
   "title": "Parameters for boundary_departure_prevention_module",
   "type": "object",
   "definitions": {
-    "footprint_envelop": {
-      "type": "object",
-      "properties": {
-        "lon_m": {
-          "type": "number",
-          "description": "Longitudinal margin added to footprint [m].",
-          "default": 0.25,
-          "minimum": 0.0
-        },
-        "lat_m": {
-          "type": "number",
-          "description": "Lateral margin added to footprint [m].",
-          "default": 0.25,
-          "minimum": 0.0
-        }
-      },
-      "required": ["lon_m", "lat_m"],
-      "additionalProperties": false
-    },
-
     "boundary_departure_prevention_module": {
       "type": "object",
       "properties": {
@@ -73,10 +53,6 @@
           "properties": {
             "normal": {
               "type": "object",
-              "default": {
-                "enable": true,
-                "footprint_envelop": { "lon_m": 0.0, "lat_m": 0.0 }
-              },
               "properties": {
                 "enable": {
                   "type": "boolean",
@@ -84,7 +60,23 @@
                   "default": "true"
                 },
                 "footprint_envelop": {
-                  "$ref": "#/definitions/footprint_envelop"
+                  "type": "object",
+                  "properties": {
+                    "lon_m": {
+                      "type": "number",
+                      "description": "Longitudinal margin added to footprint [m].",
+                      "default": 0.25,
+                      "minimum": 0.0
+                    },
+                    "lat_m": {
+                      "type": "number",
+                      "description": "Lateral margin added to footprint [m].",
+                      "default": 0.25,
+                      "minimum": 0.0
+                    }
+                  },
+                  "required": ["lon_m", "lat_m"],
+                  "additionalProperties": false
                 }
               },
               "required": ["enable", "footprint_envelop"],
@@ -93,10 +85,6 @@
 
             "localization": {
               "type": "object",
-              "default": {
-                "enable": true,
-                "footprint_envelop": { "lon_m": 0.25, "lat_m": 0.25 }
-              },
               "properties": {
                 "enable": {
                   "type": "boolean",
@@ -104,7 +92,23 @@
                   "default": "true"
                 },
                 "footprint_envelop": {
-                  "$ref": "#/definitions/footprint_envelop"
+                  "type": "object",
+                  "properties": {
+                    "lon_m": {
+                      "type": "number",
+                      "description": "Longitudinal margin added to footprint [m].",
+                      "default": 0.25,
+                      "minimum": 0.0
+                    },
+                    "lat_m": {
+                      "type": "number",
+                      "description": "Lateral margin added to footprint [m].",
+                      "default": 0.25,
+                      "minimum": 0.0
+                    }
+                  },
+                  "required": ["lon_m", "lat_m"],
+                  "additionalProperties": false
                 }
               },
               "required": ["enable", "footprint_envelop"],
