@@ -68,8 +68,8 @@ VirtualTrafficLightModule::VirtualTrafficLightModule(
     map_data_.end_lines = toAutowarePoints(reg_elem_.getEndLines());
 
     // Set stop line ID for logging (safe to use in log messages)
-    map_data_.stop_line_id_for_log =
-      reg_elem_.getStopLine() ? std::to_string(reg_elem_.getStopLine()->id()) : "none";
+    const auto stop_line = reg_elem_.getStopLine();
+    map_data_.stop_line_id_for_log = stop_line ? std::to_string(stop_line->id()) : "none";
   }
 
   // Custom tags
