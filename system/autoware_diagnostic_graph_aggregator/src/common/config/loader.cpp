@@ -239,7 +239,9 @@ void ConfigLoader::resolve_links()
   }
   for (const auto & port : ports_) {
     for (auto & unit : port->units_) {
-      if (LinkUnit * link = dynamic_cast<LinkUnit *>(unit)) {
+      // TODO(Takagi, Isamu): remove cppcheck-suppress after fixing the issue.
+      // cppcheck-suppress constVariablePointer
+      if (const auto link = dynamic_cast<LinkUnit *>(unit)) {
         unit = links.at(link);  // Replace link unit link.
       }
     }
