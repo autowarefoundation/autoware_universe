@@ -1,60 +1,72 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Parameters for occupancy_grid_map_outlier",
+  "title": "autoware_occupancy_grid_map_outlier_filter parameter",
   "type": "object",
   "definitions": {
-    "occupancy_grid_map_outlier": {
+    "occupancy_grid_map_outlier_filter": {
       "type": "object",
       "properties": {
         "radius_search_2d_filter.search_radius": {
           "type": "number",
+          "description": "Radius used when calculating the density.",
           "default": 1.0,
-          "description": "Radius when calculating the density"
+          "minimum": 0.0
         },
         "radius_search_2d_filter.min_points_and_distance_ratio": {
           "type": "number",
+          "description": "Threshold value of the number of point clouds per radius when the distance from the base link is 1m.",
           "default": 400.0,
-          "description": "Threshold value of the number of point clouds per radius when the distance from baselink is 1m, because the number of point clouds varies with the distance from baselink"
+          "minimum": 0.0
         },
         "radius_search_2d_filter.min_points": {
-          "type": "number",
+          "type": "integer",
+          "description": "Minimum number of point clouds per radius.",
           "default": 4,
-          "description": "Minimum number of point clouds per radius"
+          "minimum": 1
         },
         "radius_search_2d_filter.max_points": {
-          "type": "number",
+          "type": "integer",
+          "description": "Maximum number of point clouds per radius.",
           "default": 70,
-          "description": "Maximum number of point clouds per radius"
+          "minimum": 1
         },
         "radius_search_2d_filter.max_filter_points_nb": {
-          "type": "number",
+          "type": "integer",
+          "description": "Maximum number of point clouds to be filtered.",
           "default": 15000,
-          "description": "Maximum number of point clouds to be filtered"
+          "minimum": 1
         },
         "map_frame": {
           "type": "string",
-          "default": "map",
-          "description": "map frame id"
+          "description": "The frame ID for the map.",
+          "default": "map"
         },
         "base_link_frame": {
           "type": "string",
-          "default": "base_link",
-          "description": "base link frame id"
+          "description": "The frame ID for the base link.",
+          "default": "base_link"
         },
         "cost_threshold": {
-          "type": "number",
+          "type": "integer",
+          "description": "Cost threshold for occupancy grid map (0-100), where 100 indicates a high probability of an obstacle.",
           "default": 45,
-          "description": "Cost threshold of occupancy grid map (0~100). 100 means 100% probability that there is an obstacle, close to 50 means that it is indistinguishable whether it is an obstacle or free space, 0 means that there is no obstacle"
+          "minimum": 0,
+          "maximum": 100
         },
         "use_radius_search_2d_filter": {
           "type": "boolean",
-          "default": true,
-          "description": "Whether or not to apply density-based outlier filters to objects that are judged to have low probability of occupancy on the occupancy grid map"
+          "description": "Enable or disable the 2D radius search filter.",
+          "default": true
         },
         "enable_debugger": {
           "type": "boolean",
-          "default": false,
-          "description": "Whether to output the point cloud for debugging"
+          "description": "Enable or disable debugging output.",
+          "default": false
+        },
+        "publish_processing_time_detail": {
+          "type": "boolean",
+          "description": "Enable or disable publishing of processing time details.",
+          "default": false
         }
       },
       "required": [
@@ -67,8 +79,10 @@
         "base_link_frame",
         "cost_threshold",
         "use_radius_search_2d_filter",
-        "enable_debugger"
-      ]
+        "enable_debugger",
+        "publish_processing_time_detail"
+      ],
+      "additionalProperties": false
     }
   },
   "properties": {
@@ -76,11 +90,13 @@
       "type": "object",
       "properties": {
         "ros__parameters": {
-          "$ref": "#/definitions/occupancy_grid_map_outlier"
+          "$ref": "#/definitions/occupancy_grid_map_outlier_filter"
         }
       },
-      "required": ["ros__parameters"]
+      "required": ["ros__parameters"],
+      "additionalProperties": false
     }
   },
-  "required": ["/**"]
+  "required": ["/**"],
+  "additionalProperties": false
 }
