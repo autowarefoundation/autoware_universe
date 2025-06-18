@@ -52,6 +52,7 @@ DiagUnit::DiagnosticStatus DiagLeaf::create_diagnostic_status() const
 
 bool DiagGraph::create(const DiagGraphStruct & msg)
 {
+  units_.clear();
   nodes_.clear();
   diags_.clear();
   links_.clear();
@@ -60,15 +61,21 @@ bool DiagGraph::create(const DiagGraphStruct & msg)
   id_ = msg.id;
 
   int index = 0;
-  for (const auto & node : msg.nodes) nodes_.push_back(std::make_unique<DiagNode>(index++, node));
-  for (const auto & diag : msg.diags) diags_.push_back(std::make_unique<DiagLeaf>(index++, diag));
-  for (const auto & node : nodes_) units_.push_back(node.get());
-  for (const auto & diag : diags_) units_.push_back(diag.get());
-
+  for (const auto & node : msg.nodes) {
+    auto unit = nodes_.emplace_back(std::make_unique<DiagNode>(index++, node)).get();
+    units_.push_back(unit);
+  }
+  for (const auto & diag : msg.diags) {
+    auto unit = diags_.emplace_back(std::make_unique<DiagLeaf>(index++, diag)).get();
+    units_.push_back(unit);
+    DiagUnit * p = nodes_.at(diag.parent).get();
+    DiagUnit * c = unit;
+    p->add_child(links_.emplace_back(std::make_unique<DiagLink>(p, c)).get());
+  }
   for (const auto & link : msg.links) {
-    DiagUnit * p = units_.at(link.parent);
-    DiagUnit * c = units_.at(link.child);
-    p->add_child(links_.emplace_back(std::make_unique<DiagLink>(link, p, c)).get());
+    DiagUnit * p = nodes_.at(link.parent).get();
+    DiagUnit * c = nodes_.at(link.child).get();
+    p->add_child(links_.emplace_back(std::make_unique<DiagLink>(p, c)).get());
   }
   return true;
 }
@@ -79,7 +86,6 @@ bool DiagGraph::update(const DiagGraphStatus & msg)
   updated_stamp_ = msg.stamp;
   for (size_t i = 0; i < msg.nodes.size(); ++i) nodes_[i]->update(msg.nodes[i]);
   for (size_t i = 0; i < msg.diags.size(); ++i) diags_[i]->update(msg.diags[i]);
-  for (size_t i = 0; i < msg.links.size(); ++i) links_[i]->update(msg.links[i]);
   return true;
 }
 

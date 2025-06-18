@@ -61,20 +61,15 @@ private:
 class DiagLink
 {
 public:
-  using DiagLinkStruct = tier4_system_msgs::msg::DiagLinkStruct;
-  using DiagLinkStatus = tier4_system_msgs::msg::DiagLinkStatus;
-  DiagLink(const DiagLinkStruct & msg, DiagUnit * parent, DiagUnit * child) : struct_(msg)
+  DiagLink(DiagUnit * parent, DiagUnit * child)
   {
     parent_ = parent;
     child_ = child;
   }
-  void update(const DiagLinkStatus & msg) { status_ = msg; }
   DiagUnit * parent() const { return parent_; }
   DiagUnit * child() const { return child_; }
 
 private:
-  DiagLinkStruct struct_;
-  DiagLinkStatus status_;
   DiagUnit * parent_;
   DiagUnit * child_;
 };
