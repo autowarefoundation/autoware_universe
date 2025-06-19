@@ -319,7 +319,6 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
   // autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const auto & vehicle_info = planner_data->vehicle_info_;
-  const auto & ll_map_ptr = planner_data->route_handler->getLaneletMapPtr();
   const auto & curr_odom = planner_data->current_odometry;
   const auto & curr_pose = curr_odom.pose;
   const auto & curr_position = curr_pose.pose.position;
