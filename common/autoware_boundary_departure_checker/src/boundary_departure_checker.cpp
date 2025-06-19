@@ -14,19 +14,28 @@
 
 #include "autoware/boundary_departure_checker/boundary_departure_checker.hpp"
 
+#include "autoware/boundary_departure_checker/conversion.hpp"
 #include "autoware/boundary_departure_checker/utils.hpp"
 
+#include <autoware/trajectory/trajectory_point.hpp>
+#include <autoware/trajectory/utils/closest.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <range/v3/algorithm.hpp>
+#include <range/v3/view.hpp>
+#include <tl_expected/expected.hpp>
 
 #include <boost/geometry.hpp>
 
+#include <fmt/format.h>
 #include <lanelet2_core/geometry/Polygon.h>
 #include <tf2/utils.h>
 
 #include <algorithm>
+#include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace
@@ -45,13 +54,10 @@ double calcBrakingDistance(
 
 bool isInAnyLane(const lanelet::ConstLanelets & candidate_lanelets, const Point2d & point)
 {
-  for (const auto & ll : candidate_lanelets) {
-    if (boost::geometry::within(point, ll.polygon2d().basicPolygon())) {
-      return true;
-    }
-  }
-
-  return false;
+  return std::any_of(
+    candidate_lanelets.begin(), candidate_lanelets.end(), [&](const lanelet::ConstLanelet & ll) {
+      return boost::geometry::within(point, ll.polygon2d().basicPolygon());
+    });
 }
 
 }  // namespace
@@ -151,7 +157,7 @@ std::vector<std::pair<double, lanelet::Lanelet>> BoundaryDepartureChecker::getLa
     utils::createVehicleFootprints(path, *vehicle_info_ptr_, param_.footprint_extra_margin);
   LinearRing2d footprint_hull = utils::createHullFromFootprints(vehicle_footprints);
 
-  lanelet::BasicPolygon2d footprint_hull_basic_polygon = toBasicPolygon2D(footprint_hull);
+  auto footprint_hull_basic_polygon = utils::to_basic_polygon_2d(footprint_hull);
 
   // Find all lanelets that intersect the footprint hull
   return lanelet::geometry::findWithin2d(
@@ -173,7 +179,7 @@ std::optional<autoware_utils::Polygon2d> BoundaryDepartureChecker::getFusedLanel
   for (size_t i = 0; i < lanelets_distance_pair.size(); ++i) {
     const auto & route_lanelet = lanelets_distance_pair.at(i).second;
     const auto & p = route_lanelet.polygon2d().basicPolygon();
-    autoware_utils::Polygon2d poly = toPolygon2D(p);
+    auto poly = utils::to_polygon_2d(p);
     boost::geometry::union_(lanelet_unions, poly, result);
     lanelet_unions = result;
     result.clear();
@@ -207,7 +213,7 @@ bool BoundaryDepartureChecker::updateFusedLaneletPolygonForPath(
     if (id_exist) continue;
 
     const auto & p = route_lanelet.polygon2d().basicPolygon();
-    autoware_utils::Polygon2d poly = toPolygon2D(p);
+    auto poly = utils::to_polygon_2d(p);
     boost::geometry::union_(lanelet_unions, poly, result);
     lanelet_unions = result;
     result.clear();
@@ -321,35 +327,6 @@ bool BoundaryDepartureChecker::isOutOfLane(
   return false;
 }
 
-SegmentRtree BoundaryDepartureChecker::extractUncrossableBoundaries(
-  const lanelet::LaneletMap & lanelet_map, const geometry_msgs::msg::Point & ego_point,
-  const double max_search_length, const std::vector<std::string> & boundary_types_to_detect)
-{
-  const auto has_types =
-    [](const lanelet::ConstLineString3d & ls, const std::vector<std::string> & types) {
-      constexpr auto no_type = "";
-      const auto type = ls.attributeOr(lanelet::AttributeName::Type, no_type);
-      return (type != no_type && std::find(types.begin(), types.end(), type) != types.end());
-    };
-
-  SegmentRtree uncrossable_segments_in_range;
-  LineString2d line;
-  const auto ego_p = Point2d{ego_point.x, ego_point.y};
-  for (const auto & ls : lanelet_map.lineStringLayer) {
-    if (has_types(ls, boundary_types_to_detect)) {
-      line.clear();
-      for (const auto & p : ls) line.push_back(Point2d{p.x(), p.y()});
-      for (auto segment_idx = 0LU; segment_idx + 1 < line.size(); ++segment_idx) {
-        const Segment2d segment = {line[segment_idx], line[segment_idx + 1]};
-        if (boost::geometry::distance(segment, ego_p) < max_search_length) {
-          uncrossable_segments_in_range.insert(segment);
-        }
-      }
-    }
-  }
-  return uncrossable_segments_in_range;
-}
-
 bool BoundaryDepartureChecker::willCrossBoundary(
   const std::vector<LinearRing2d> & vehicle_footprints,
   const SegmentRtree & uncrossable_segments) const
@@ -366,30 +343,4 @@ bool BoundaryDepartureChecker::willCrossBoundary(
   }
   return false;
 }
-
-lanelet::BasicPolygon2d BoundaryDepartureChecker::toBasicPolygon2D(
-  const LinearRing2d & footprint_hull) const
-{
-  lanelet::BasicPolygon2d basic_polygon;
-  for (const auto & point : footprint_hull) {
-    Eigen::Vector2d p(point.x(), point.y());
-    basic_polygon.push_back(p);
-  }
-  return basic_polygon;
-}
-
-autoware_utils::Polygon2d BoundaryDepartureChecker::toPolygon2D(
-  const lanelet::BasicPolygon2d & poly) const
-{
-  autoware_utils::Polygon2d polygon;
-  auto & outer = polygon.outer();
-
-  for (const auto & p : poly) {
-    autoware_utils::Point2d p2d(p.x(), p.y());
-    outer.push_back(p2d);
-  }
-  boost::geometry::correct(polygon);
-  return polygon;
-}
-
 }  // namespace autoware::boundary_departure_checker

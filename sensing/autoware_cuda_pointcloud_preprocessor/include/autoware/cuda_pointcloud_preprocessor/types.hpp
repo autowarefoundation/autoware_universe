@@ -78,7 +78,6 @@ struct RingOutlierFilterParameters
   float object_length_threshold{std::nanf("")};
 };
 
-/* *INDENT-OFF* */
 template <typename T>
 class MemoryPoolAllocator
 {
@@ -98,8 +97,6 @@ public:
 protected:
   cudaMemPool_t m_pool;
 };
-/* *INDENT-ON* */
-
 }  // namespace autoware::cuda_pointcloud_preprocessor
 
 #endif  // AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__TYPES_HPP_
