@@ -25,6 +25,9 @@
 #include <autoware_utils/transform/transforms.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
+#include <autoware_internal_planning_msgs/msg/planning_factor.hpp>
+#include <autoware_internal_planning_msgs/msg/safety_factor_array.hpp>
+
 #include <boost/geometry/algorithms/buffer.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
 #include <boost/geometry/algorithms/envelope.hpp>
@@ -49,6 +52,8 @@
 
 namespace autoware::planning_validator
 {
+using autoware_internal_planning_msgs::msg::PlanningFactor;
+using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 using autoware_utils::get_or_declare_parameter;
 
 void IntersectionCollisionChecker::init(
@@ -63,6 +68,10 @@ void IntersectionCollisionChecker::init(
 
   param_listener_ = std::make_unique<intersection_collision_checker_node::ParamListener>(
     node.get_node_parameters_interface());
+
+  planning_factor_interface_ =
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
+      &node, "intersection_collision_checker");
 
   setup_diag();
 }
@@ -122,8 +131,18 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
     lanelets.target_lanelets, filtered_pointcloud,
     context_->data->obstacle_pointcloud->header.stamp);
 
+  const auto & ego_pose = context_->data->current_kinematics->pose.pose;
+  const auto & traj_points = context_->data->current_trajectory->points;
+  auto publish_planning_factor = [&]() {
+    planning_factor_interface_->add(
+      traj_points, ego_pose, ego_pose, PlanningFactor::STOP, SafetyFactorArray{}, true, 0.0, 0.0,
+      "intersection_collision_checker(module detected possible collision)");
+    planning_factor_interface_->publish();
+  };
+
   if (!context_->validation_status->is_valid_intersection_collision_check) {
     last_invalid_time_ = context_->data->obstacle_pointcloud->header.stamp;
+    publish_planning_factor();
     return;
   }
 
@@ -132,6 +151,7 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
   const auto time_since_last_invalid = (clock_->now() - *last_invalid_time_).seconds();
   if (time_since_last_invalid < p.timeout) {
     context_->validation_status->is_valid_intersection_collision_check = false;
+    publish_planning_factor();
     return;
   }
 
