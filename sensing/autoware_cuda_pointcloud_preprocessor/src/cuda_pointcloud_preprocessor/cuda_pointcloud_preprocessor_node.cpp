@@ -107,8 +107,8 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
   diagnostics_interface_ =
     std::make_unique<autoware_utils::DiagnosticsInterface>(this, this->get_fully_qualified_name());
 
-  // Subscriber
-  #ifdef USE_AGNOCAST_ENABLED
+// Subscriber
+#ifdef USE_AGNOCAST_ENABLED
   agnocast::SubscriptionOptions sub_options{};
 #else
   rclcpp::SubscriptionOptions sub_options;
