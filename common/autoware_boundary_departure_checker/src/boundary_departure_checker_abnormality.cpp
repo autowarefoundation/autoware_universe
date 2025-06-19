@@ -123,38 +123,35 @@ BoundaryDepartureChecker::get_boundary_segments_from_side(
   const auto & rtree = *uncrossable_boundaries_rtree_ptr_;
   const auto & linestring_layer = lanelet_map_ptr_->lineStringLayer;
 
-  const auto closest_segment =
-    [&](const auto & ego_seg, const auto & compare_seg, auto & output_side) {
-      std::vector<SegmentWithIdx> nearest_raw;
+  const auto closest_segment = [&](
+                                 const auto & ego_seg, const auto & compare_seg,
+                                 auto & output_side) {
+    std::vector<SegmentWithIdx> nearest_raw;
 
-      const lanelet::BasicPoint2d ego_start{ego_seg.first.x(), ego_seg.first.y()};
-      rtree.query(bgi::nearest(ego_start, max_lat_query_num), std::back_inserter(nearest_raw));
+    const lanelet::BasicPoint2d ego_start{ego_seg.first.x(), ego_seg.first.y()};
+    rtree.query(bgi::nearest(ego_start, max_lat_query_num), std::back_inserter(nearest_raw));
 
-      for (const auto & nearest : nearest_raw) {
-        const auto ll_id = std::get<1>(nearest);
-        const auto basic_ls = linestring_layer.get(ll_id).basicLineString();
+    for (const auto & nearest : nearest_raw) {
+      const auto & id = std::get<1>(nearest);
+      const auto basic_ls = linestring_layer.get(id.linestring_id).basicLineString();
 
-        const auto idx_curr = std::get<2>(nearest);
-        const auto idx_next = std::get<3>(nearest);
-        const auto seg = utils::to_segment_2d(basic_ls.at(idx_curr), basic_ls.at(idx_next));
+      const auto seg =
+        utils::to_segment_2d(basic_ls.at(id.segment_start_idx), basic_ls.at(id.segment_end_idx));
 
-        const auto dist_from_curr_side = bg::comparable_distance(ego_seg, seg);
-        const auto dist_from_compare_side = bg::comparable_distance(compare_seg, seg);
+      const auto dist_from_curr_side = bg::comparable_distance(ego_seg, seg);
+      const auto dist_from_compare_side = bg::comparable_distance(compare_seg, seg);
 
-        if (dist_from_compare_side < dist_from_curr_side) {
-          continue;
-        }
-
-        const auto found = [&](const SegmentWithIdx & output_seg) {
-          const auto & [out_seg, out_ll_id, out_ls_idx_curr, out_ls_idx_next] = output_seg;
-          return out_ll_id == ll_id && out_ls_idx_curr == idx_curr;
-        };
-
-        if (!std::any_of(output_side.begin(), output_side.end(), found)) {
-          output_side.push_back(std::make_tuple(seg, ll_id, idx_curr, idx_next));
-        }
+      if (dist_from_compare_side < dist_from_curr_side) {
+        continue;
       }
-    };
+
+      const auto found = [&](const SegmentWithIdx & output_seg) { return output_seg.second == id; };
+
+      if (!std::any_of(output_side.begin(), output_side.end(), found)) {
+        output_side.emplace_back(seg, id);
+      }
+    }
+  };
 
   BoundarySideWithIdx boundary_sides_with_idx;
   for (const auto & fp : ego_sides_from_footprints) {

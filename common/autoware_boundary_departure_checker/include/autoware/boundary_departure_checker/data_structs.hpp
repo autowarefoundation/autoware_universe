@@ -147,6 +147,35 @@ struct ClosestProjectionToBound : ProjectionToBound
 };
 
 using BoundarySide = Side<std::vector<Segment2d>>;
+
+struct IdxForRTreeSegment
+{
+  lanelet::Id linestring_id{lanelet::InvalId};
+  size_t segment_start_idx{std::numeric_limits<size_t>::max()};
+  size_t segment_end_idx{std::numeric_limits<size_t>::max()};
+
+  IdxForRTreeSegment() = default;
+  IdxForRTreeSegment(lanelet::Id linestring_id, size_t segment_start_idx, size_t segment_end_idx)
+  : linestring_id(linestring_id),
+    segment_start_idx(segment_start_idx),
+    segment_end_idx(segment_end_idx)
+  {
+  }
+  /* compare only the identifiers and indices */
+  [[nodiscard]] constexpr bool operator==(const IdxForRTreeSegment & rhs) const noexcept
+  {
+    return linestring_id == rhs.linestring_id && segment_start_idx == rhs.segment_start_idx &&
+           segment_end_idx == rhs.segment_end_idx;
+  }
+
+  [[nodiscard]] constexpr bool operator!=(const IdxForRTreeSegment & rhs) const noexcept
+  {
+    return !(*this == rhs);
+  }
+};
+
+using SegmentWithIdx = std::pair<Segment2d, IdxForRTreeSegment>;
+using UncrossableBoundRTree = boost::geometry::index::rtree<SegmentWithIdx, bgi::rstar<16>>;
 using BoundarySideWithIdx = Side<std::vector<SegmentWithIdx>>;
 using ProjectionsToBound = Side<std::vector<ProjectionToBound>>;
 using ClosestProjectionsToBound = Side<std::vector<ClosestProjectionToBound>>;

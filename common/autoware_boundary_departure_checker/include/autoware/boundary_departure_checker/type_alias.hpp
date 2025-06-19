@@ -26,7 +26,6 @@
 
 #include <lanelet2_core/geometry/Polygon.h>
 
-#include <tuple>
 #include <vector>
 
 #ifndef AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__TYPE_ALIAS_HPP_
@@ -52,10 +51,8 @@ using autoware_utils::Segment2d;
 
 using autoware::vehicle_info_utils::VehicleInfo;  // NOLINT
 
-using SegmentWithIdx = std::tuple<Segment2d, lanelet::Id, size_t, size_t>;
 namespace bg = boost::geometry;
-namespace bgi = bg::index;
-using UncrossableBoundRTree = boost::geometry::index::rtree<SegmentWithIdx, bgi::rstar<16>>;
+namespace bgi = bg::index;                        // NOLINT
 namespace trajectory = experimental::trajectory;  // NOLINT
 
 using geometry_msgs::msg::Point;

@@ -42,6 +42,7 @@ using autoware::boundary_departure_checker::ClosestProjectionToBound;
 using autoware::boundary_departure_checker::DeparturePoint;
 using autoware::boundary_departure_checker::DeparturePoints;
 using autoware::boundary_departure_checker::DepartureType;
+using autoware::boundary_departure_checker::IdxForRTreeSegment;
 using autoware::boundary_departure_checker::Segment2d;
 using autoware::boundary_departure_checker::SegmentWithIdx;
 using autoware::boundary_departure_checker::VehicleInfo;
@@ -87,7 +88,8 @@ std::vector<SegmentWithIdx> create_local_segments(const lanelet::ConstLineString
   const auto basic_ls = linestring.basicLineString();
   for (size_t i = 0; i + 1 < basic_ls.size(); ++i) {
     const auto segment = to_segment_2d(basic_ls.at(i), basic_ls.at(i + 1));
-    local_segments.emplace_back(bg::return_envelope<Segment2d>(segment), linestring.id(), i, i + 1);
+    local_segments.emplace_back(
+      bg::return_envelope<Segment2d>(segment), IdxForRTreeSegment(linestring.id(), i, i + 1));
   }
   return local_segments;
 }
@@ -554,7 +556,7 @@ ProjectionToBound find_closest_segment(
   const std::vector<SegmentWithIdx> & boundary_segments)
 {
   std::optional<ProjectionToBound> closest_proj;
-  for (const auto & [seg, ll_id, idx_curr, idx_next] : boundary_segments) {
+  for (const auto & [seg, id] : boundary_segments) {
     const auto & [ego_lr, ego_rr] = ego_rear_seg;
     const auto & [seg_f, seg_r] = seg;
     // we can assume that before front touches boundary, either left or right side will touch
