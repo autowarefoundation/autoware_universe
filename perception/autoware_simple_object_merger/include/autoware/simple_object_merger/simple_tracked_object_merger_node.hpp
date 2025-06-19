@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef AUTOWARE__SIMPLE_OBJECT_MERGER__TRACKED_OBJECT_SIMPLE_MERGER__NODE_HPP_
-#define AUTOWARE__SIMPLE_OBJECT_MERGER__TRACKED_OBJECT_SIMPLE_MERGER__NODE_HPP_
+#ifndef AUTOWARE__SIMPLE_OBJECT_MERGER__SIMPLE_TRACKED_OBJECT_MERGER_NODE_HPP_
+#define AUTOWARE__SIMPLE_OBJECT_MERGER__SIMPLE_TRACKED_OBJECT_MERGER_NODE_HPP_
 
 #include "autoware/simple_object_merger/simple_object_merger_base.hpp"
 #include "autoware_utils/ros/transform_listener.hpp"
@@ -38,11 +38,11 @@ struct UUIDMapping
   bool is_mapped_uuid = false;
 };
 
-class TrackedObjectSimpleMergerNode
+class SimpleTrackedObjectMergerNode
 : public SimpleObjectMergerBase<autoware_perception_msgs::msg::TrackedObjects>
 {
 public:
-  explicit TrackedObjectSimpleMergerNode(const rclcpp::NodeOptions & node_options);
+  explicit SimpleTrackedObjectMergerNode(const rclcpp::NodeOptions & node_options);
 
 private:
   rclcpp::Duration uuid_mapping_cleanup_threshold_ = rclcpp::Duration::from_seconds(30.0);
@@ -59,4 +59,4 @@ private:
 
 }  // namespace autoware::simple_object_merger
 
-#endif  // AUTOWARE__SIMPLE_OBJECT_MERGER__TRACKED_OBJECT_SIMPLE_MERGER__NODE_HPP_
+#endif  // AUTOWARE__SIMPLE_OBJECT_MERGER__SIMPLE_TRACKED_OBJECT_MERGER_NODE_HPP_

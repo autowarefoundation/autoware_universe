@@ -12,18 +12,18 @@ include_directories(
 # Targets
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/simple_object_merger_base.cpp
-  src/detected_object_simple_merger/node.cpp
-  src/tracked_object_simple_merger/node.cpp
+  src/simple_detected_object_merger_node.cpp
+  src/simple_tracked_object_merger_node.cpp
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
-  PLUGIN "autoware::simple_object_merger::DetectedObjectSimpleMergerNode"
-  EXECUTABLE detected_object_simple_merger_node
+  PLUGIN "autoware::simple_object_merger::SimpleDetectedObjectMergerNode"
+  EXECUTABLE simple_object_merger_node
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
-  PLUGIN "autoware::simple_object_merger::TrackedObjectSimpleMergerNode"
-  EXECUTABLE tracked_object_simple_merger_node
+  PLUGIN "autoware::simple_object_merger::SimpleTrackedObjectMergerNode"
+  EXECUTABLE simple_tracked_object_merger_node
 )
 
 # Tests

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/simple_object_merger/detected_object_simple_merger/node.hpp"
+#include "autoware/simple_object_merger/simple_detected_object_merger_node.hpp"
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
 
@@ -27,14 +27,14 @@ using std::chrono::duration;
 using std::chrono::duration_cast;
 using std::chrono::nanoseconds;
 
-DetectedObjectSimpleMergerNode::DetectedObjectSimpleMergerNode(
+SimpleDetectedObjectMergerNode::SimpleDetectedObjectMergerNode(
   const rclcpp::NodeOptions & node_options)
-: SimpleObjectMergerBase<DetectedObjects>("detected_object_simple_merger", node_options)
+: SimpleObjectMergerBase<DetectedObjects>("simple_object_merger", node_options)
 {
   // required by RCLCPP_COMPONENTS_REGISTER_NODE macro.
 }
 
-void DetectedObjectSimpleMergerNode::approximateMerger(
+void SimpleDetectedObjectMergerNode::approximateMerger(
   const DetectedObjects::ConstSharedPtr & object_msg0,
   const DetectedObjects::ConstSharedPtr & object_msg1)
 {
@@ -64,7 +64,7 @@ void DetectedObjectSimpleMergerNode::approximateMerger(
   pub_objects_->publish(output_objects);
 }
 
-void DetectedObjectSimpleMergerNode::onTimer()
+void SimpleDetectedObjectMergerNode::onTimer()
 {
   if (!isDataReady()) {
     return;
@@ -109,4 +109,4 @@ void DetectedObjectSimpleMergerNode::onTimer()
 }  // namespace autoware::simple_object_merger
 
 #include "rclcpp_components/register_node_macro.hpp"
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::simple_object_merger::DetectedObjectSimpleMergerNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::simple_object_merger::SimpleDetectedObjectMergerNode)

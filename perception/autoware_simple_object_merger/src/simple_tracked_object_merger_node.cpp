@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/simple_object_merger/tracked_object_simple_merger/node.hpp"
+#include "autoware/simple_object_merger/simple_tracked_object_merger_node.hpp"
 
 #include <geometry_msgs/msg/pose_stamped.hpp>
 
@@ -82,15 +82,15 @@ void generateNewUUID(
   }
 }
 
-TrackedObjectSimpleMergerNode::TrackedObjectSimpleMergerNode(
+SimpleTrackedObjectMergerNode::SimpleTrackedObjectMergerNode(
   const rclcpp::NodeOptions & node_options)
-: SimpleObjectMergerBase<TrackedObjects>("tracked_object_simple_merger", node_options)
+: SimpleObjectMergerBase<TrackedObjects>("simple_tracked_object_merger", node_options)
 {
   uuid_mapping_cleanup_threshold_ =
     rclcpp::Duration::from_seconds(declare_parameter<float>("uuid_mapping_cleanup_threshold"));
 }
 
-void TrackedObjectSimpleMergerNode::approximateMerger(
+void SimpleTrackedObjectMergerNode::approximateMerger(
   const TrackedObjects::ConstSharedPtr & object_msg0,
   const TrackedObjects::ConstSharedPtr & object_msg1)
 {
@@ -126,7 +126,7 @@ void TrackedObjectSimpleMergerNode::approximateMerger(
   cleanupUUIDMap();
 }
 
-void TrackedObjectSimpleMergerNode::onTimer()
+void SimpleTrackedObjectMergerNode::onTimer()
 {
   if (!isDataReady()) {
     return;
@@ -171,7 +171,7 @@ void TrackedObjectSimpleMergerNode::onTimer()
   cleanupUUIDMap();
 }
 
-void TrackedObjectSimpleMergerNode::mapUUID(TrackedObject & object, const int & node_id)
+void SimpleTrackedObjectMergerNode::mapUUID(TrackedObject & object, const int & node_id)
 {
   rclcpp::Time now = this->now();
 
@@ -208,7 +208,7 @@ void TrackedObjectSimpleMergerNode::mapUUID(TrackedObject & object, const int & 
   }
 }
 
-void TrackedObjectSimpleMergerNode::cleanupUUIDMap()
+void SimpleTrackedObjectMergerNode::cleanupUUIDMap()
 {
   rclcpp::Time now = this->now();
 
@@ -224,4 +224,4 @@ void TrackedObjectSimpleMergerNode::cleanupUUIDMap()
 }  // namespace autoware::simple_object_merger
 
 #include "rclcpp_components/register_node_macro.hpp"
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::simple_object_merger::TrackedObjectSimpleMergerNode)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::simple_object_merger::SimpleTrackedObjectMergerNode)

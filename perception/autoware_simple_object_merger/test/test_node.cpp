@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "autoware/simple_object_merger/detected_object_simple_merger/node.hpp"
-#include "autoware/simple_object_merger/tracked_object_simple_merger/node.hpp"
+#include "autoware/simple_object_merger/simple_detected_object_merger_node.hpp"
+#include "autoware/simple_object_merger/simple_tracked_object_merger_node.hpp"
 
 #include <ament_index_cpp/get_package_share_directory.hpp>
 #include <autoware_test_utils/autoware_test_utils.hpp>
@@ -33,8 +33,8 @@
 #include <string>
 #include <vector>
 
-using autoware::simple_object_merger::DetectedObjectSimpleMergerNode;
-using autoware::simple_object_merger::TrackedObjectSimpleMergerNode;
+using autoware::simple_object_merger::SimpleDetectedObjectMergerNode;
+using autoware::simple_object_merger::SimpleTrackedObjectMergerNode;
 using autoware_perception_msgs::msg::DetectedObject;
 using autoware_perception_msgs::msg::DetectedObjects;
 using autoware_perception_msgs::msg::TrackedObject;
@@ -42,7 +42,7 @@ using autoware_perception_msgs::msg::TrackedObjects;
 
 namespace
 {
-// instantiation for doTransform
+// Instantiation for doTransform
 static const auto _ = []() {
   geometry_msgs::msg::PoseStamped in, out;
   geometry_msgs::msg::TransformStamped tf;
@@ -56,23 +56,23 @@ std::shared_ptr<autoware::test_utils::AutowareTestManager> generateTestManager()
   return std::make_shared<autoware::test_utils::AutowareTestManager>();
 }
 
-/// @brief Create an instance of DetectedObjectSimpleMergerNode with a parameter file
-std::shared_ptr<DetectedObjectSimpleMergerNode> generateDetectedObjectSimpleMergerNode()
+/// @brief Create an instance of SimpleDetectedObjectMergerNode with a parameter file
+std::shared_ptr<SimpleDetectedObjectMergerNode> generateSimpleDetectedObjectMergerNode()
 {
   auto node_options = rclcpp::NodeOptions{};
   const auto simple_object_merger_dir =
     ament_index_cpp::get_package_share_directory("autoware_simple_object_merger");
   node_options.arguments(
     {"--ros-args", "--params-file",
-     simple_object_merger_dir + "/config/detected_object_simple_merger.param.yaml"});
+     simple_object_merger_dir + "/config/simple_object_merger.param.yaml"});
   node_options.append_parameter_override(
     "input_topics", std::vector<std::string>{"input/node_A", "input/node_B"});
 
-  return std::make_shared<DetectedObjectSimpleMergerNode>(node_options);
+  return std::make_shared<SimpleDetectedObjectMergerNode>(node_options);
 }
 
-/// @brief Create an instance of TrackedObjectSimpleMergerNode with a parameter file
-std::shared_ptr<TrackedObjectSimpleMergerNode> generateTrackedObjectSimpleMergerNode(
+/// @brief Create an instance of SimpleTrackedObjectMergerNode with a parameter file
+std::shared_ptr<SimpleTrackedObjectMergerNode> generateSimpleTrackedObjectMergerNode(
   std::vector<std::string> input_topics = {"input/node_A", "input/node_B"},
   float uuid_mapping_cleanup_threshold = 30.0)
 {
@@ -81,12 +81,12 @@ std::shared_ptr<TrackedObjectSimpleMergerNode> generateTrackedObjectSimpleMerger
     ament_index_cpp::get_package_share_directory("autoware_simple_object_merger");
   node_options.arguments(
     {"--ros-args", "--params-file",
-     simple_object_merger_dir + "/config/tracked_object_simple_merger.param.yaml"});
+     simple_object_merger_dir + "/config/simple_tracked_object_merger.param.yaml"});
   node_options.append_parameter_override("input_topics", input_topics);
   node_options.append_parameter_override(
     "uuid_mapping_cleanup_threshold", uuid_mapping_cleanup_threshold);
 
-  return std::make_shared<TrackedObjectSimpleMergerNode>(node_options);
+  return std::make_shared<SimpleTrackedObjectMergerNode>(node_options);
 }
 
 std::shared_ptr<rclcpp::Node> createStaticTfBroadcasterNode(
@@ -116,14 +116,14 @@ std::shared_ptr<rclcpp::Node> createStaticTfBroadcasterNode(
 
 }  // namespace
 
-/// @brief Test topic merging with DetectedObjectSimpleMergerNode
-TEST(DetectedObjectSimpleMergerTest, testObjectMerging)
+/// @brief Test topic merging with SimpleDetectedObjectMergerNode
+TEST(SimpleDetectedObjectMergerTest, testObjectMerging)
 {
   rclcpp::init(0, nullptr);
 
   // Setup test manager and node
   auto test_manager = generateTestManager();
-  auto test_target_node = generateDetectedObjectSimpleMergerNode();
+  auto test_target_node = generateSimpleDetectedObjectMergerNode();
 
   // Create a TF broadcaster node
   auto tf_node = createStaticTfBroadcasterNode(
@@ -132,7 +132,7 @@ TEST(DetectedObjectSimpleMergerTest, testObjectMerging)
     "my_test_tf_broadcaster_1");
 
   // Subscribe to the output topic
-  const std::string output_topic = "/detected_object_simple_merger/output/objects";
+  const std::string output_topic = "/simple_object_merger/output/objects";
   DetectedObjects latest_msg;
   auto output_callback = [&latest_msg](const DetectedObjects::ConstSharedPtr msg) {
     latest_msg = *msg;
@@ -169,14 +169,14 @@ TEST(DetectedObjectSimpleMergerTest, testObjectMerging)
   rclcpp::shutdown();
 }
 
-/// @brief Test topic merging with TrackedObjectSimpleMergerNode
-TEST(TrackedObjectSimpleMergerNodeTest, testObjectMerging)
+/// @brief Test topic merging with SimpleTrackedObjectMergerNode
+TEST(SimpleTrackedObjectMergerNodeTest, testObjectMerging)
 {
   rclcpp::init(0, nullptr);
 
   // Setup test manager and node
   auto test_manager = generateTestManager();
-  auto test_target_node = generateTrackedObjectSimpleMergerNode();
+  auto test_target_node = generateSimpleTrackedObjectMergerNode();
 
   // Create a TF broadcaster node
   auto tf_node = createStaticTfBroadcasterNode(
@@ -185,7 +185,7 @@ TEST(TrackedObjectSimpleMergerNodeTest, testObjectMerging)
     "my_test_tf_broadcaster_1");
 
   // Subscribe to the output topic
-  const std::string output_topic = "/tracked_object_simple_merger/output/objects";
+  const std::string output_topic = "/simple_tracked_object_merger/output/objects";
   TrackedObjects latest_msg;
   auto output_callback = [&latest_msg](const TrackedObjects::ConstSharedPtr msg) {
     latest_msg = *msg;
@@ -279,16 +279,16 @@ TEST(TrackedObjectSimpleMergerNodeTest, testObjectMerging)
   rclcpp::shutdown();
 }
 
-// test the case that input nodes exist more than 2
-/// @brief Test topic merging with TrackedObjectSimpleMergerNode
-TEST(TrackedObjectSimpleMergerNodeTest, testThreeNodeObjectMerging)
+// Test the case that input nodes exist more than 2
+/// @brief Test topic merging with SimpleTrackedObjectMergerNode
+TEST(SimpleTrackedObjectMergerNodeTest, testThreeNodeObjectMerging)
 {
   rclcpp::init(0, nullptr);
 
   // Setup test manager and node
   auto test_manager = generateTestManager();
   auto test_target_node =
-    generateTrackedObjectSimpleMergerNode({"input/node_A", "input/node_B", "input/node_C"}, 30.0);
+    generateSimpleTrackedObjectMergerNode({"input/node_A", "input/node_B", "input/node_C"}, 30.0);
 
   // Create a TF broadcaster node
   auto tf_node = createStaticTfBroadcasterNode(
@@ -297,7 +297,7 @@ TEST(TrackedObjectSimpleMergerNodeTest, testThreeNodeObjectMerging)
     "my_test_tf_broadcaster_1");
 
   // Subscribe to the output topic
-  const std::string output_topic = "/tracked_object_simple_merger/output/objects";
+  const std::string output_topic = "/simple_tracked_object_merger/output/objects";
   TrackedObjects latest_msg;
   auto output_callback = [&latest_msg](const TrackedObjects::ConstSharedPtr msg) {
     latest_msg = *msg;
@@ -364,16 +364,16 @@ TEST(TrackedObjectSimpleMergerNodeTest, testThreeNodeObjectMerging)
   rclcpp::shutdown();
 }
 
-/// @brief Test TrackedObjectSimpleMergerNode's mapping gets cleaned up properly
-TEST(TrackedObjectSimpleMergerNodeTest, testUUIDMappingCleanUp)
+/// @brief Test SimpleTrackedObjectMergerNode's mapping gets cleaned up properly
+TEST(SimpleTrackedObjectMergerNodeTest, testUUIDMappingCleanUp)
 {
   rclcpp::init(0, nullptr);
 
   // Setup test manager and node
   auto test_manager = generateTestManager();
-  // create a node that forget the mapping immediately
+  // Create a node that forget the mapping immediately
   auto test_target_node =
-    generateTrackedObjectSimpleMergerNode({"input/node_A", "input/node_B"}, 0.0);
+    generateSimpleTrackedObjectMergerNode({"input/node_A", "input/node_B"}, 0.0);
 
   // Create a TF broadcaster node
   auto tf_node = createStaticTfBroadcasterNode(
@@ -382,7 +382,7 @@ TEST(TrackedObjectSimpleMergerNodeTest, testUUIDMappingCleanUp)
     "my_test_tf_broadcaster_1");
 
   // Subscribe to the output topic
-  const std::string output_topic = "/tracked_object_simple_merger/output/objects";
+  const std::string output_topic = "/simple_tracked_object_merger/output/objects";
   TrackedObjects latest_msg;
   auto output_callback = [&latest_msg](const TrackedObjects::ConstSharedPtr msg) {
     latest_msg = *msg;
