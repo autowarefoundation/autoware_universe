@@ -1,0 +1,384 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for boundary_departure_prevention_module",
+  "type": "object",
+  "definitions": {
+    "boundary_departure_prevention_module": {
+      "type": "object",
+      "properties": {
+        "boundary_types_to_detect": {
+          "type": "array",
+          "description": "Linestring boundary tags to be treated as uncrossable.",
+          "items": { "type": "string", "enum": ["road_border"] },
+          "default": ["road_border"]
+        },
+
+        "th_max_lateral_query_num": {
+          "type": "integer",
+          "description": "Number of nearest boundaries to search from each ego side segment.",
+          "default": 5
+        },
+
+        "th_dist_hysteresis_m": {
+          "type": "number",
+          "description": "Minimum distance between critical points to avoid duplicates [m].",
+          "default": 1.0
+        },
+
+        "th_pt_shift": {
+          "type": "object",
+          "properties": {
+            "dist_m": {
+              "type": "number",
+              "description": "Distance threshold to discard points on shifted paths [m].",
+              "default": 0.2
+            },
+            "angle_deg": {
+              "type": "number",
+              "description": "Angle threshold to discard points on shifted paths [deg].",
+              "default": 5.0
+            },
+            "goal_dist_m": {
+              "type": "number",
+              "description": "Minimum goal shift distance to trigger module reset [m].",
+              "default": 1.0
+            }
+          },
+          "required": ["dist_m", "angle_deg", "goal_dist_m"],
+          "additionalProperties": false
+        },
+
+        "abnormality": {
+          "type": "object",
+          "properties": {
+            "normal": {
+              "type": "object",
+              "properties": {
+                "enable": {
+                  "type": "boolean",
+                  "description": "Enable basic footprint margin expansion without any condition.",
+                  "default": "true"
+                },
+                "footprint_envelop": {
+                  "type": "object",
+                  "properties": {
+                    "lon_m": {
+                      "type": "number",
+                      "description": "Longitudinal margin added to footprint [m].",
+                      "default": 0.25,
+                      "minimum": 0.0
+                    },
+                    "lat_m": {
+                      "type": "number",
+                      "description": "Lateral margin added to footprint [m].",
+                      "default": 0.25,
+                      "minimum": 0.0
+                    }
+                  },
+                  "required": ["lon_m", "lat_m"],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["enable", "footprint_envelop"],
+              "additionalProperties": false
+            },
+
+            "localization": {
+              "type": "object",
+              "properties": {
+                "enable": {
+                  "type": "boolean",
+                  "description": "Enable additional margin to handle localization uncertainty.",
+                  "default": "true"
+                },
+                "footprint_envelop": {
+                  "type": "object",
+                  "properties": {
+                    "lon_m": {
+                      "type": "number",
+                      "description": "Longitudinal margin added to footprint [m].",
+                      "default": 0.25,
+                      "minimum": 0.0
+                    },
+                    "lat_m": {
+                      "type": "number",
+                      "description": "Lateral margin added to footprint [m].",
+                      "default": 0.25,
+                      "minimum": 0.0
+                    }
+                  },
+                  "required": ["lon_m", "lat_m"],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["enable", "footprint_envelop"],
+              "additionalProperties": false
+            },
+
+            "longitudinal": {
+              "type": "object",
+              "properties": {
+                "enable": {
+                  "type": "boolean",
+                  "description": "Enable velocity-based dynamic longitudinal margin adjustment",
+                  "default": "true"
+                },
+                "lon_tracking": {
+                  "type": "object",
+                  "properties": {
+                    "scale": {
+                      "type": "number",
+                      "description": "Scale factor for margin based on velocity.",
+                      "default": 1.0
+                    },
+                    "extra_margin_m": {
+                      "type": "number",
+                      "description": "Extra margin added on top of velocity-based margin [m].",
+                      "default": 0.0
+                    }
+                  },
+                  "required": ["scale", "extra_margin_m"],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["enable", "lon_tracking"],
+              "additionalProperties": false
+            },
+
+            "steering": {
+              "type": "object",
+              "properties": {
+                "enable": {
+                  "type": "boolean",
+                  "description": "Enable steering-aware footprint margin.",
+                  "default": "false"
+                },
+                "steering_rate_rps": {
+                  "type": "number",
+                  "description": "Steering rate [rad/s] used to compute curvature-induced lateral margin.",
+                  "default": 1.0
+                }
+              },
+              "required": ["enable", "steering_rate_rps"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["normal", "localization", "longitudinal", "steering"],
+          "additionalProperties": false
+        },
+
+        "diagnostic": {
+          "type": "object",
+          "properties": {
+            "near_boundary": {
+              "type": "integer",
+              "description": "Diagnostic level when vehicle is near a boundary (0:OK,1:WARN,2:ERROR).",
+              "default": 1
+            },
+            "approaching_departure": {
+              "type": "integer",
+              "description": "Diagnostic level when vehicle is moving toward a boundary (0:OK,1:WARN,2:ERROR).",
+              "default": 1
+            },
+            "critical_departure": {
+              "type": "integer",
+              "description": "Diagnostic level when vehicle is likely to leave the boundary (0:OK,1:WARN,2:ERROR).",
+              "default": 1
+            }
+          },
+          "required": ["near_boundary", "approaching_departure", "critical_departure"],
+          "additionalProperties": false
+        },
+
+        "slow_down_behavior": {
+          "type": "object",
+          "properties": {
+            "enable": {
+              "type": "object",
+              "properties": {
+                "slow_down_near_boundary": {
+                  "type": "boolean",
+                  "description": "Enable speed reduction when near boundary.",
+                  "default": "false"
+                },
+                "slow_down_before_departure": {
+                  "type": "boolean",
+                  "description": "Enable speed reduction just before departure.",
+                  "default": "false"
+                },
+                "stop_before_departure": {
+                  "type": "boolean",
+                  "description": "Enable speed reduction if near departure.",
+                  "default": "false"
+                }
+              },
+              "required": [
+                "slow_down_near_boundary",
+                "slow_down_before_departure",
+                "stop_before_departure"
+              ],
+              "additionalProperties": false
+            },
+
+            "th_trigger": {
+              "type": "object",
+              "properties": {
+                "th_vel_kmph": {
+                  "type": "object",
+                  "properties": {
+                    "min": {
+                      "type": "number",
+                      "description": "Minimum speed for the slow down logic [km/h].",
+                      "default": 5.0
+                    },
+                    "max": {
+                      "type": "number",
+                      "description": "Maximum speed to consider for interpolating deceleration [km/h].",
+                      "default": 30.0
+                    }
+                  },
+                  "required": ["min", "max"],
+                  "additionalProperties": false
+                },
+
+                "th_acc_mps2": {
+                  "type": "object",
+                  "properties": {
+                    "min": {
+                      "type": "number",
+                      "description": "Comfortable deceleration when slowing down [m/s²].",
+                      "default": -1.0
+                    },
+                    "max": {
+                      "type": "number",
+                      "description": "Hardest deceleration allowed when slowing down [m/s²].",
+                      "default": -2.5
+                    }
+                  },
+                  "required": ["min", "max"],
+                  "additionalProperties": false
+                },
+
+                "th_jerk_mps3": {
+                  "type": "object",
+                  "properties": {
+                    "min": {
+                      "type": "number",
+                      "description": "Minimum jerk value applied during slowdown interpolation [m/s³].",
+                      "default": -1.0
+                    },
+                    "max": {
+                      "type": "number",
+                      "description": "Maximum jerk value applied during slowdown interpolation [m/s³].",
+                      "default": -1.5
+                    }
+                  },
+                  "required": ["min", "max"],
+                  "additionalProperties": false
+                },
+
+                "brake_delay_s": {
+                  "type": "number",
+                  "description": "Time delay before deceleration starts after triggering slowdown [s].",
+                  "default": 1.3
+                },
+
+                "dist_error_m": {
+                  "type": "number",
+                  "description": "Allowed stopping error distance from the desired stopping point [m].",
+                  "default": 1.0
+                },
+
+                "th_dist_to_boundary_m": {
+                  "type": "object",
+                  "properties": {
+                    "left": {
+                      "type": "object",
+                      "properties": {
+                        "min": {
+                          "type": "number",
+                          "description": "Closest lateral distance from the boundary used for velocity and jerk interpolation [m].",
+                          "default": 0.01
+                        },
+                        "max": {
+                          "type": "number",
+                          "description": "Furthest lateral distance from the boundary used for velocity and jerk interpolation [m].",
+                          "default": 0.5
+                        }
+                      },
+                      "required": ["min", "max"],
+                      "additionalProperties": false
+                    },
+                    "right": {
+                      "type": "object",
+                      "properties": {
+                        "min": {
+                          "type": "number",
+                          "description": "Closest lateral distance from the boundary used for velocity and jerk interpolation [m].",
+                          "default": 0.01
+                        },
+                        "max": {
+                          "type": "number",
+                          "description": "Furthest lateral distance from the boundary used for velocity and jerk interpolation [m].",
+                          "default": 0.5
+                        }
+                      },
+                      "required": ["min", "max"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": ["left", "right"],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "th_vel_kmph",
+                "th_acc_mps2",
+                "th_jerk_mps3",
+                "brake_delay_s",
+                "dist_error_m",
+                "th_dist_to_boundary_m"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": ["enable", "th_trigger"],
+          "additionalProperties": false
+        }
+      },
+
+      "required": [
+        "boundary_types_to_detect",
+        "th_max_lateral_query_num",
+        "th_dist_hysteresis_m",
+        "th_pt_shift",
+        "abnormality",
+        "diagnostic",
+        "slow_down_behavior"
+      ],
+      "additionalProperties": false
+    }
+  },
+
+  "properties": {
+    "/**": {
+      "properties": {
+        "ros__parameters": {
+          "type": "object",
+          "properties": {
+            "boundary_departure_prevention": {
+              "$ref": "#/definitions/boundary_departure_prevention_module"
+            }
+          },
+          "required": ["boundary_departure_prevention"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+
+  "required": ["/**"],
+  "additionalProperties": false
+}
