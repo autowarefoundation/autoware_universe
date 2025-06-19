@@ -37,6 +37,8 @@ struct Params
   float min_jerk;
 };
 
+// Plugins cannot be initialized in the constructor.
+// cppcheck-suppress noConstructor
 class ComfortableStopSwitcher : public CommandPlugin
 {
 public:
