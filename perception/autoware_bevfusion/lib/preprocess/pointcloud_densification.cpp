@@ -54,8 +54,7 @@ Eigen::Affine3f transformToEigen(const geometry_msgs::msg::Transform & t)
 namespace autoware::bevfusion
 {
 
-PointCloudDensification::PointCloudDensification(const DensificationParam & param)
-: param_(param)
+PointCloudDensification::PointCloudDensification(const DensificationParam & param) : param_(param)
 {
 }
 
