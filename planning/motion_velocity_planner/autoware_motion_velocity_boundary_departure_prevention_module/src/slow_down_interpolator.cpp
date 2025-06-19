@@ -21,7 +21,7 @@
 
 namespace autoware::motion_velocity_planner::experimental::utils
 {
-tl::expected<std::tuple<double, double, double>, std::string>
+tl::expected<SlowDownInterpolator::SlowDownPlan, std::string>
 SlowDownInterpolator::get_interp_to_point(
   const double curr_vel, const double lon_dist_to_bound_m, double lat_dist_to_bound_m,
   const SideKey side_key) const
@@ -42,7 +42,7 @@ SlowDownInterpolator::get_interp_to_point(
   const auto rel_dist_m =
     std::max((interp_vel_mps * interp_vel_mps - curr_vel * curr_vel) / (2 * exp_decel_mps2), 0.0);
 
-  return std::make_tuple(rel_dist_m, exp_vel, exp_decel_mps2);
+  return SlowDownPlan{rel_dist_m, exp_vel, exp_decel_mps2};
 }
 
 double SlowDownInterpolator::calc_expected_deceleration(

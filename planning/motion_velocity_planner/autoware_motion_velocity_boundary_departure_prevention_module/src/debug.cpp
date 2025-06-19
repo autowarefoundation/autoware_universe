@@ -211,11 +211,11 @@ Marker create_boundary_segments_marker(
 
   const auto to_geom = [base_link_z](const auto & pt) { return to_msg(pt.to_3d(base_link_z)); };
   marker.color = color::medium_orchid();
-  for (const auto & [segment, ll_id, idx_curr, idx_next] : boundaries.left) {
+  for (const auto & [segment, id] : boundaries.left) {
     marker.points.push_back(to_geom(segment.first));
     marker.points.push_back(to_geom(segment.second));
   }
-  for (const auto & [segment, ll_id, idx_curr, idx_next] : boundaries.right) {
+  for (const auto & [segment, id] : boundaries.right) {
     marker.points.push_back(to_geom(segment.first));
     marker.points.push_back(to_geom(segment.second));
   }

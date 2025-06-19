@@ -29,6 +29,13 @@ namespace autoware::motion_velocity_planner::experimental::utils
 class SlowDownInterpolator
 {
 public:
+  struct SlowDownPlan
+  {
+    double rel_dist_m;
+    double target_vel_mps;
+    double expected_decel;
+  };
+
   explicit SlowDownInterpolator(const TriggerThreshold & th_trigger) : th_trigger_(th_trigger) {}
 
   /**
@@ -50,7 +57,7 @@ public:
    *         - expected deceleration.
    *         Returns an error message if the deceleration exceeds the threshold.
    */
-  [[nodiscard]] tl::expected<std::tuple<double, double, double>, std::string> get_interp_to_point(
+  [[nodiscard]] tl::expected<SlowDownPlan, std::string> get_interp_to_point(
     const double curr_vel, const double lon_dist_to_bound_m, double lat_dist_to_bound_m,
     const SideKey side_key) const;
 
