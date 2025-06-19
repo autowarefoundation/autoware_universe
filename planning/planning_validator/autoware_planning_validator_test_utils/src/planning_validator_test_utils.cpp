@@ -363,6 +363,9 @@ rclcpp::NodeOptions getNodeOptionsWithDefaultParams()
   node_options.append_parameter_override(
     "trajectory_checker.yaw_deviation.threshold", THRESHOLD_YAW_DEVIATION);
   node_options.append_parameter_override("trajectory_checker.yaw_deviation.is_critical", false);
+  node_options.append_parameter_override(
+    "trajectory_checker.yaw_deviation.nearest_yaw_trajectory_shift_required_for_checking",
+    PARAMETER_NEAREST_YAW_TRAJECTORY_SHIFT_REQUIRED_FOR_CHECKING);
 
   node_options.append_parameter_override("trajectory_checker.steering.enable", true);
   node_options.append_parameter_override(
