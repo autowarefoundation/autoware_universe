@@ -42,13 +42,6 @@ using autoware_perception_msgs::msg::TrackedObjects;
 
 namespace
 {
-// Instantiation for doTransform
-static const auto _ = []() {
-  geometry_msgs::msg::PoseStamped in, out;
-  geometry_msgs::msg::TransformStamped tf;
-  tf2::doTransform(in, out, tf);
-  return 0;
-}();
 
 /// @brief Create a test manager (custom utility for Autoware tests)
 std::shared_ptr<autoware::test_utils::AutowareTestManager> generateTestManager()
