@@ -3,6 +3,7 @@ project(autoware_cuda_pointcloud_preprocessor)
 
 find_package(ament_cmake_auto REQUIRED)
 find_package(CUDA)
+find_package(agnocastlib)
 
 if(NOT ${CUDA_FOUND})
   message(WARNING "cuda was not found, so the autoware_cuda_pointcloud_preprocessor package will not be built.")
@@ -10,6 +11,10 @@ if(NOT ${CUDA_FOUND})
 elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(CMAKE_CUDA_FLAGS ${CMAKE_CUDA_FLAGS} "-g -G")
   set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-g -G")
+endif()
+
+if(USE_AGNOCAST AND NOT agnocastlib_FOUND)
+  message(FATAL_ERROR "agnocastlib is required when USE_AGNOCAST is enabled")
 endif()
 
 ament_auto_find_build_dependencies()
@@ -21,6 +26,10 @@ endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_compile_options(-Wall -Wextra -Wpedantic -Wunused-function)
+endif()
+
+if(USE_AGNOCAST)
+    add_definitions(-DUSE_AGNOCAST_ENABLED)
 endif()
 
 if(BUILD_TESTING)
@@ -79,6 +88,16 @@ target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
   ${tf2_msgs_INCLUDE_DIRS}
   ${autoware_cuda_utils_INCLUDE_DIRS}
 )
+
+if(USE_AGNOCAST)
+    target_include_directories(cuda_pointcloud_preprocessor_lib SYSTEM PRIVATE
+        ${autoware_agnocast_wrapper_INCLUDE_DIRS}
+        ${agnocastlib_INCLUDE_DIRS}
+    )
+    target_link_libraries(cuda_pointcloud_preprocessor_lib
+        ${agnocastlib_LIBRARIES}
+    )
+endif()
 
 
 # Targets

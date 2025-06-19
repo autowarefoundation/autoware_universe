@@ -21,6 +21,7 @@
 #include "autoware/pointcloud_preprocessor/diagnostics/latency_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/diagnostics/pass_rate_diagnostics.hpp"
 
+#include <agnocast/agnocast_subscription.hpp>
 #include <autoware/point_types/types.hpp>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
@@ -106,12 +107,23 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
   diagnostics_interface_ =
     std::make_unique<autoware_utils::DiagnosticsInterface>(this, this->get_fully_qualified_name());
 
-  // Subscriber
+// Subscriber
+#ifdef USE_AGNOCAST_ENABLED
+  agnocast::SubscriptionOptions sub_options{};
+#else
   rclcpp::SubscriptionOptions sub_options;
   sub_options.use_intra_process_comm = rclcpp::IntraProcessSetting::Enable;
+#endif
 
-  pointcloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-    "~/input/pointcloud", rclcpp::SensorDataQoS{}.keep_last(1),
+  // Create mutually exclusive callback group for pointcloud subscription
+  // Agnocast requires to be in a mutually exclusive callback group with no native ROS subscriptions
+  pointcloud_callback_group_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+
+  sub_options.callback_group = pointcloud_callback_group_;
+
+  // cppcheck-suppress unknownMacro
+  pointcloud_sub_ = AUTOWARE_CREATE_SUBSCRIPTION(
+    sensor_msgs::msg::PointCloud2, "~/input/pointcloud", rclcpp::SensorDataQoS{}.keep_last(1),
     std::bind(&CudaPointcloudPreprocessorNode::pointcloudCallback, this, std::placeholders::_1),
     sub_options);
 
@@ -176,15 +188,15 @@ bool CudaPointcloudPreprocessorNode::getTransform(
 }
 
 void CudaPointcloudPreprocessorNode::twistCallback(
-  const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr twist_msg_ptr)
+  const geometry_msgs::msg::TwistWithCovarianceStamped & twist_msg)
 {
   while (!twist_queue_.empty()) {
     // for replay rosbag
     bool backwards_time_jump_detected =
-      rclcpp::Time(twist_queue_.front().header.stamp) > rclcpp::Time(twist_msg_ptr->header.stamp);
+      rclcpp::Time(twist_queue_.front().header.stamp) > rclcpp::Time(twist_msg.header.stamp);
     bool is_queue_longer_than_1s =
       rclcpp::Time(twist_queue_.front().header.stamp) <
-      rclcpp::Time(twist_msg_ptr->header.stamp) - rclcpp::Duration::from_seconds(1.0);
+      rclcpp::Time(twist_msg.header.stamp) - rclcpp::Duration::from_seconds(1.0);
 
     if (backwards_time_jump_detected) {
       twist_queue_.clear();
@@ -196,24 +208,23 @@ void CudaPointcloudPreprocessorNode::twistCallback(
   }
 
   auto it = std::lower_bound(
-    twist_queue_.begin(), twist_queue_.end(), twist_msg_ptr->header.stamp,
+    twist_queue_.begin(), twist_queue_.end(), twist_msg.header.stamp,
     [](const auto & twist, const auto & stamp) {
       return rclcpp::Time(twist.header.stamp) < stamp;
     });
-  twist_queue_.insert(it, *twist_msg_ptr);
+  twist_queue_.insert(it, twist_msg);
 }
 
-void CudaPointcloudPreprocessorNode::imuCallback(
-  const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg)
+void CudaPointcloudPreprocessorNode::imuCallback(const sensor_msgs::msg::Imu & imu_msg)
 {
   while (!angular_velocity_queue_.empty()) {
     // for rosbag replay
     bool backwards_time_jump_detected = rclcpp::Time(angular_velocity_queue_.front().header.stamp) >
-                                        rclcpp::Time(imu_msg->header.stamp);
+                                        rclcpp::Time(imu_msg.header.stamp);
 
     bool is_queue_longer_than_1s =
       rclcpp::Time(angular_velocity_queue_.front().header.stamp) <
-      rclcpp::Time(imu_msg->header.stamp) - rclcpp::Duration::from_seconds(1.0);
+      rclcpp::Time(imu_msg.header.stamp) - rclcpp::Duration::from_seconds(1.0);
 
     if (backwards_time_jump_detected) {
       angular_velocity_queue_.clear();
@@ -225,19 +236,19 @@ void CudaPointcloudPreprocessorNode::imuCallback(
   }
 
   tf2::Transform imu_to_base_tf2{};
-  getTransform(base_frame_, imu_msg->header.frame_id, &imu_to_base_tf2);
+  getTransform(base_frame_, imu_msg.header.frame_id, &imu_to_base_tf2);
   geometry_msgs::msg::TransformStamped imu_to_base_msg;
   imu_to_base_msg.transform.rotation = tf2::toMsg(imu_to_base_tf2.getRotation());
 
   geometry_msgs::msg::Vector3Stamped angular_velocity;
-  angular_velocity.vector = imu_msg->angular_velocity;
+  angular_velocity.vector = imu_msg.angular_velocity;
 
   geometry_msgs::msg::Vector3Stamped transformed_angular_velocity;
   tf2::doTransform(angular_velocity, transformed_angular_velocity, imu_to_base_msg);
-  transformed_angular_velocity.header = imu_msg->header;
+  transformed_angular_velocity.header = imu_msg.header;
 
   auto it = std::lower_bound(
-    angular_velocity_queue_.begin(), angular_velocity_queue_.end(), imu_msg->header.stamp,
+    angular_velocity_queue_.begin(), angular_velocity_queue_.end(), imu_msg.header.stamp,
     [](const auto & angular_velocity, const auto & stamp) {
       return rclcpp::Time(angular_velocity.header.stamp) < stamp;
     });
@@ -245,7 +256,8 @@ void CudaPointcloudPreprocessorNode::imuCallback(
 }
 
 void CudaPointcloudPreprocessorNode::pointcloudCallback(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr input_pointcloud_msg_ptr)
+  // cppcheck-suppress unknownMacro
+  AUTOWARE_MESSAGE_UNIQUE_PTR(sensor_msgs::msg::PointCloud2) input_pointcloud_msg_ptr)
 {
   stop_watch_ptr_->toc("processing_time", true);
   const auto & input_pointcloud_msg = *input_pointcloud_msg_ptr;
@@ -313,7 +325,7 @@ void CudaPointcloudPreprocessorNode::updateTwistQueue(double first_point_stamp)
   std::vector<geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr> twist_msgs =
     twist_sub_->take_data();
   for (const auto & msg : twist_msgs) {
-    twistCallback(msg);
+    twistCallback(*msg);
   }
   while (twist_queue_.size() > 1 &&
          rclcpp::Time(twist_queue_.front().header.stamp).seconds() < first_point_stamp) {
@@ -327,7 +339,7 @@ void CudaPointcloudPreprocessorNode::updateImuQueue(double first_point_stamp)
 
   std::vector<sensor_msgs::msg::Imu::ConstSharedPtr> imu_msgs = imu_sub_->take_data();
   for (const auto & msg : imu_msgs) {
-    imuCallback(msg);
+    imuCallback(*msg);
   }
   while (angular_velocity_queue_.size() > 1 &&
          rclcpp::Time(angular_velocity_queue_.front().header.stamp).seconds() < first_point_stamp) {

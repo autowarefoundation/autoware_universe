@@ -18,6 +18,7 @@
 #include "autoware/cuda_pointcloud_preprocessor/cuda_pointcloud_preprocessor.hpp"
 #include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
 
+#include <autoware/agnocast_wrapper/autoware_agnocast_wrapper.hpp>
 #include <autoware/point_types/types.hpp>
 #include <autoware_utils/ros/debug_publisher.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
@@ -83,13 +84,10 @@ private:
     tf2::Transform * tf2_transform_ptr);
 
   // Callback
-  void pointcloudCallback(
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr input_pointcloud_msg_ptr);
-  void cudaPointcloudCallback(
-    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> cuda_msg);
-  void twistCallback(
-    const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr pointcloud_msg);
-  void imuCallback(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg);
+  void pointcloudCallback(AUTOWARE_MESSAGE_UNIQUE_PTR(sensor_msgs::msg::PointCloud2)
+                            input_pointcloud_msg_ptr);
+  void twistCallback(const geometry_msgs::msg::TwistWithCovarianceStamped & twist_msg);
+  void imuCallback(const sensor_msgs::msg::Imu & imu_msg);
 
   // Helper Functions
   void validatePointcloudLayout(const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg);
@@ -130,7 +128,7 @@ private:
   autoware_utils::InterProcessPollingSubscriber<
     geometry_msgs::msg::TwistWithCovarianceStamped, autoware_utils::polling_policy::All>::SharedPtr
     twist_sub_;
-  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_{};
+  AUTOWARE_SUBSCRIPTION_PTR(sensor_msgs::msg::PointCloud2) pointcloud_sub_;
 
   // CUDA pub
   std::unique_ptr<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>> pub_;
@@ -139,6 +137,9 @@ private:
 
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
+
+  // Callback group for pointcloud subscription
+  rclcpp::CallbackGroup::SharedPtr pointcloud_callback_group_;
 };
 
 }  // namespace autoware::cuda_pointcloud_preprocessor
