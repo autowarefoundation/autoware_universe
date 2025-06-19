@@ -279,7 +279,7 @@ void Tracker::getPositionCovarianceEigenSq(
     minor_axis_sq = 0.0;
     return;
   }
-  // Direct eigenvalue calculation for 2x2 symmetric matrix (faster than EigenSolver)
+  // Direct eigenvalue calculation for 2x2 symmetric matrix
   const double a = covariance(0, 0);
   const double b = covariance(0, 1);
   const double c = covariance(1, 1);

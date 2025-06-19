@@ -58,13 +58,6 @@ target_link_libraries(${PROJECT_NAME}
   glog::glog
 )
 
-# if(BUILD_TESTING)
-#   find_package(ament_cmake_gtest REQUIRED)
-#   ament_auto_add_gtest(test_multi_object_tracker
-#     test/test_multi_object_tracker.cpp
-#   )
-# endif()
-
 rclcpp_components_register_node(${PROJECT_NAME}
   PLUGIN "autoware::multi_object_tracker::MultiObjectTracker"
   EXECUTABLE multi_object_tracker_node

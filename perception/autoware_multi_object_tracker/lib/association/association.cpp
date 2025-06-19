@@ -24,7 +24,6 @@
 
 #include <algorithm>
 #include <array>
-#include <iostream>
 #include <list>
 #include <memory>
 #include <unordered_map>
@@ -48,7 +47,7 @@ inline double getMahalanobisDistance(
   const double b = covariance(0, 1);  // covariance(1, 0) should be equal
   const double d = covariance(1, 1);
 
-  // Compute determinant using symmetry (b² instead of b*c)
+  // Compute determinant using symmetry (b*b instead of b*c)
   const double det = a * d - b * b;
 
   // Compute numerator using expanded quadratic form
@@ -155,44 +154,12 @@ void DataAssociation::assign(
   }
 }
 
-namespace
-{
-size_t g_call_count = 0;
-std::vector<double> g_build_times;
-std::vector<double> g_query_times;
-
-constexpr size_t kBenchmarkInterval = 100;
-
-void printStats()
-{
-  auto compute_stats = [](const std::vector<double> & times) {
-    double sum = std::accumulate(times.begin(), times.end(), 0.0);
-    double avg = sum / times.size();
-    auto [min_it, max_it] = std::minmax_element(times.begin(), times.end());
-    return std::make_tuple(avg, *min_it, *max_it);
-  };
-
-  auto [avg_build, min_build, max_build] = compute_stats(g_build_times);
-  auto [avg_query, min_query, max_query] = compute_stats(g_query_times);
-
-  std::cout << "===== [RTREE] Performance over " << g_call_count << " calls =====\n";
-
-  std::cout << "Build Time (us): avg = " << avg_build << ", min = " << min_build
-            << ", max = " << max_build << std::endl;
-  std::cout << "Query Time (us): avg = " << avg_query << ", min = " << min_query
-            << ", max = " << max_query << std::endl;
-
-  // g_build_times.clear();
-  // g_query_times.clear();
-}
-}  // namespace
-
 inline double getMahalanobisDistanceFast(double dx, double dy, const InverseCovariance2D & inv_cov)
 {
   return dx * dx * inv_cov.inv00 + 2.0 * dx * dy * inv_cov.inv01 + dy * dy * inv_cov.inv11;
 }
 
-// Fused: Directly computes inverse covariance from pose_covariance array
+// Directly computes inverse covariance from pose_covariance array
 inline InverseCovariance2D precomputeInverseCovarianceFromPose(
   const std::array<double, 36> & pose_covariance)
 {
@@ -219,10 +186,6 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
   std::unique_ptr<ScopedTimeTrack> st_ptr;
   if (time_keeper_) st_ptr = std::make_unique<ScopedTimeTrack>(__func__, *time_keeper_);
 
-  auto time_us = [] {
-    return std::chrono::steady_clock::now().time_since_epoch() / std::chrono::microseconds(1);
-  };
-
   // Ensure that the detected_objects and list_tracker are not empty
   if (measurements.objects.empty() || trackers.empty()) {
     return Eigen::MatrixXd();
@@ -233,11 +196,6 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
     Eigen::MatrixXd::Zero(trackers.size(), measurements.objects.size());
 
   // Pre-allocate vectors to avoid reallocations
-
-  const auto t_build_start = time_us();
-
-  rtree_.clear();
-
   std::vector<types::DynamicObject> tracked_objects;
   std::vector<std::uint8_t> tracker_labels;
   tracked_objects.reserve(trackers.size());
@@ -246,6 +204,7 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
   {
     size_t tracker_idx = 0;
     std::vector<ValueType> rtree_points;
+    rtree_.clear();
     rtree_points.reserve(trackers.size());
     for (const auto & tracker : trackers) {
       types::DynamicObject tracked_object;
@@ -259,10 +218,6 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
     }
     rtree_.insert(rtree_points.begin(), rtree_points.end());
   }
-
-  const auto t_build_end = time_us();
-
-  const auto t_query_start = time_us();
 
   // Pre-compute inverse covariance for each tracker
   std::vector<InverseCovariance2D> inv_covs;
@@ -288,7 +243,6 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
     std::vector<ValueType> nearby_trackers;
     nearby_trackers.reserve(std::min(size_t{100}, trackers.size()));  // Reasonable initial capacity
 
-    std::vector<ValueType> temp_candidates;
     // Compute search bounding box (square that contains the circle)
     const double max_dist = std::sqrt(max_squared_dist);
     const Box query_box(
@@ -309,13 +263,6 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
         inv_covs[tracker_idx]);
       score_matrix(tracker_idx, measurement_idx) = score;
     }
-  }
-  const auto t_query_end = time_us();
-  // Collect timings
-  g_build_times.push_back(static_cast<double>(t_build_end - t_build_start));
-  g_query_times.push_back(static_cast<double>(t_query_end - t_query_start));
-  if (++g_call_count % kBenchmarkInterval == 0) {
-    printStats();
   }
 
   return score_matrix;
@@ -356,9 +303,6 @@ double DataAssociation::calculateScore(
 
   // mahalanobis dist gate
   const double mahalanobis_dist = getMahalanobisDistanceFast(dx, dy, inv_cov);
-  // const double mahalanobis_dist = getMahalanobisDistance(
-  //   measurement_object.pose.position, tracked_object.pose.position,
-  //   getXYCovariance(tracked_object.pose_covariance));
 
   constexpr double mahalanobis_dist_threshold =
     13.816;  // 99.99% confidence level for 2 degrees of freedom, chi-square critical value
