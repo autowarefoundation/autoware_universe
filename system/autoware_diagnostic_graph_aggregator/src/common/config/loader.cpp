@@ -223,7 +223,7 @@ void ConfigLoader::resolve_links()
   }
 
   // Resolve link units.
-  for (auto & start : raws(links_)) {
+  for (const auto & start : raws(links_)) {
     std::unordered_set<LinkUnit *> visited;
     BaseUnit * unit = start;
     while (const auto link = dynamic_cast<LinkUnit *>(unit)) {
@@ -239,6 +239,8 @@ void ConfigLoader::resolve_links()
   }
   for (const auto & port : ports_) {
     for (auto & unit : port->units_) {
+      // TODO(Takagi, Isamu): remove cppcheck-suppress after fixing the issue.
+      // cppcheck-suppress constVariablePointer
       if (const auto link = dynamic_cast<LinkUnit *>(unit)) {
         unit = links.at(link);  // Replace link unit link.
       }
