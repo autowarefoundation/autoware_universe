@@ -26,6 +26,7 @@
 // ROS includes
 #include <managed_transform_buffer/managed_transform_buffer.hpp>
 
+#include <autoware_sensing_msgs/msg/concatenated_point_cloud_info.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <geometry_msgs/msg/twist_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -37,6 +38,7 @@ template <typename MsgTraits>
 struct ConcatenatedCloudResult
 {
   typename MsgTraits::PointCloudMessage::UniquePtr concatenate_cloud_ptr{nullptr};
+  autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::UniquePtr concatenate_cloud_info_ptr;
   std::optional<std::unordered_map<std::string, typename MsgTraits::PointCloudMessage::UniquePtr>>
     topic_to_transformed_cloud_map;
   std::unordered_map<std::string, double> topic_to_original_stamp_map;

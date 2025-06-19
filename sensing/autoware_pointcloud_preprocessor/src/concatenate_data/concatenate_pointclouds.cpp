@@ -14,6 +14,7 @@
 
 #include "autoware/pointcloud_preprocessor/concatenate_data/concatenate_pointclouds.hpp"
 
+#include "autoware/pointcloud_preprocessor/concatenate_data/utils.hpp"
 #include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 
 #include <pcl_ros/transforms.hpp>
@@ -102,6 +103,9 @@ PointCloudConcatenationComponent::PointCloudConcatenationComponent(
     pub_options.qos_overriding_options = rclcpp::QosOverridingOptions::with_default_policies();
     pub_output_ = this->create_publisher<PointCloud2>(
       "output", rclcpp::SensorDataQoS().keep_last(maximum_queue_size_), pub_options);
+    pub_output_info_ =
+      this->create_publisher<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
+        "output_info", rclcpp::SensorDataQoS().keep_last(maximum_queue_size_), pub_options);
   }
 
   // Subscribers
@@ -230,7 +234,8 @@ void PointCloudConcatenationComponent::checkSyncStatus()
 }
 
 void PointCloudConcatenationComponent::combineClouds(
-  sensor_msgs::msg::PointCloud2::SharedPtr & concat_cloud_ptr)
+  sensor_msgs::msg::PointCloud2::SharedPtr & concat_cloud_ptr,
+  autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr & concat_cloud_info_ptr)
 {
   for (const auto & e : cloud_stdmap_) {
     if (e.second != nullptr) {
@@ -247,9 +252,18 @@ void PointCloudConcatenationComponent::combineClouds(
       } else {
         pcl::concatenatePointCloud(*concat_cloud_ptr, *transformed_cloud_ptr, *concat_cloud_ptr);
       }
+      if (concat_cloud_info_ptr == nullptr) {
+        concat_cloud_info_ptr =
+          std::make_shared<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>();
+      }
+      utils::append_source_point_cloud_info(
+        *transformed_cloud_ptr, e.first, *concat_cloud_info_ptr);
     } else {
       not_subscribed_topic_names_.insert(e.first);
     }
+  }
+  if (concat_cloud_info_ptr != nullptr && concat_cloud_ptr != nullptr) {
+    utils::set_concatenated_point_cloud_info(*concat_cloud_ptr, *concat_cloud_info_ptr);
   }
 }
 
@@ -257,10 +271,11 @@ void PointCloudConcatenationComponent::publish()
 {
   stop_watch_ptr_->toc("processing_time", true);
   sensor_msgs::msg::PointCloud2::SharedPtr concat_cloud_ptr = nullptr;
+  autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr concat_cloud_info_ptr = nullptr;
   not_subscribed_topic_names_.clear();
 
   checkSyncStatus();
-  combineClouds(concat_cloud_ptr);
+  combineClouds(concat_cloud_ptr, concat_cloud_info_ptr);
 
   for (const auto & e : cloud_stdmap_) {
     if (e.second != nullptr) {
@@ -279,7 +294,10 @@ void PointCloudConcatenationComponent::publish()
   // publish concatenated pointcloud
   if (concat_cloud_ptr) {
     auto output = std::make_unique<sensor_msgs::msg::PointCloud2>(*concat_cloud_ptr);
+    auto output_info = std::make_unique<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>(
+      *concat_cloud_info_ptr);
     pub_output_->publish(std::move(output));
+    pub_output_info_->publish(std::move(output_info));
   } else {
     RCLCPP_WARN(this->get_logger(), "concat_cloud_ptr is nullptr, skipping pointcloud publish.");
   }
