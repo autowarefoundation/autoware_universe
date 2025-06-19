@@ -54,9 +54,7 @@ Eigen::Affine3f transformToEigen(const geometry_msgs::msg::Transform & t)
 namespace autoware::bevfusion
 {
 
-PointCloudDensification::PointCloudDensification(
-  const DensificationParam & param, cudaStream_t stream)
-: param_(param), stream_(stream)
+PointCloudDensification::PointCloudDensification(const DensificationParam & param) : param_(param)
 {
 }
 

@@ -75,7 +75,6 @@ private:
   tf2_ros::TransformListener tf_listener_{tf_buffer_};
 
   DetectionClassRemapper detection_class_remapper_;
-  float score_threshold_{0.0};
   std::vector<std::string> class_names_;
   std::optional<std::string> lidar_frame_;
   float max_camera_lidar_delay_;
