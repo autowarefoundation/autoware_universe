@@ -16,8 +16,8 @@
 #define AUTOWARE__LIDAR_CENTERPOINT__CENTERPOINT_TRT_HPP_
 
 #include "autoware/lidar_centerpoint/cuda_utils.hpp"
-#include "autoware/lidar_centerpoint/preprocess/preprocess_kernel.hpp"
 #include "autoware/lidar_centerpoint/postprocess/postprocess_kernel.hpp"
+#include "autoware/lidar_centerpoint/preprocess/preprocess_kernel.hpp"
 #include "autoware/lidar_centerpoint/preprocess/voxel_generator.hpp"
 
 #include <autoware/tensorrt_common/tensorrt_common.hpp>

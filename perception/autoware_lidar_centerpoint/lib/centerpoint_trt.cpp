@@ -219,7 +219,7 @@ bool CenterPointTRT::preprocess(
     return false;
   }
 
-  cuda::clear_async(num_voxels_d_.get(), 1, stream_);  
+  cuda::clear_async(num_voxels_d_.get(), 1, stream_);
   cuda::clear_async(voxels_buffer_d_.get(), voxels_buffer_size_, stream_);
   cuda::clear_async(mask_d_.get(), mask_size_, stream_);
   cuda::clear_async(voxels_d_.get(), voxels_size_, stream_);
@@ -231,15 +231,15 @@ bool CenterPointTRT::preprocess(
   const std::size_t random_offset = std::rand() % config_.cloud_capacity_;
 
   pre_ptr_->shufflePoints_launch(
-	points_aux_d_.get(), shuffle_indices_d_.get(), points_d_.get(), count, config_.cloud_capacity_,
-    random_offset
-  );
+    points_aux_d_.get(), shuffle_indices_d_.get(), points_d_.get(), count, config_.cloud_capacity_,
+    random_offset);
 
   pre_ptr_->generateVoxels_random_launch(
     points_d_.get(), config_.cloud_capacity_, mask_d_.get(), voxels_buffer_d_.get());
 
   pre_ptr_->generateBaseFeatures_launch(
-    mask_d_.get(), voxels_buffer_d_.get(), num_voxels_d_.get(), voxels_d_.get(), num_points_per_voxel_d_.get(), coordinates_d_.get());
+    mask_d_.get(), voxels_buffer_d_.get(), num_voxels_d_.get(), voxels_d_.get(),
+    num_points_per_voxel_d_.get(), coordinates_d_.get());
 
   pre_ptr_->generateFeatures_launch(
     voxels_d_.get(), num_points_per_voxel_d_.get(), coordinates_d_.get(), num_voxels_d_.get(),

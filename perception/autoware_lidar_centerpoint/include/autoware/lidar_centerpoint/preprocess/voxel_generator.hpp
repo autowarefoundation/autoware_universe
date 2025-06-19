@@ -15,8 +15,8 @@
 #ifndef AUTOWARE__LIDAR_CENTERPOINT__PREPROCESS__VOXEL_GENERATOR_HPP_
 #define AUTOWARE__LIDAR_CENTERPOINT__PREPROCESS__VOXEL_GENERATOR_HPP_
 
-#include "autoware/lidar_centerpoint/cuda_utils.hpp"
 #include "autoware/lidar_centerpoint/centerpoint_config.hpp"
+#include "autoware/lidar_centerpoint/cuda_utils.hpp"
 #include "autoware/lidar_centerpoint/preprocess/pointcloud_densification.hpp"
 #include "autoware/lidar_centerpoint/preprocess/preprocess_kernel.hpp"
 
