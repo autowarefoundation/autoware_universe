@@ -259,9 +259,8 @@ cv::Mat BlockageDiagComponent::quantize_to_8u(const cv::Mat & image_16u) const
   assert(image_16u.type() == CV_16UC1);
 
   cv::Mat image_8u(dimensions, CV_8UC1, cv::Scalar(0));
-  // FIXME(badai-nguyen): Is the normalization factor correct? `256` would be enough to prevent
-  // overflow.
-  image_16u.convertTo(image_8u, CV_8UC1, 1.0 / 300);
+  // UINT16_MAX = 65535, UINT8_MAX = 255, so downscale by ceil(65535 / 255) = 256.
+  image_16u.convertTo(image_8u, CV_8UC1, 1.0 / 256);
   return image_8u;
 }
 
