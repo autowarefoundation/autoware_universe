@@ -33,8 +33,6 @@
 
 #include <pcl/PCLPointCloud2.h>
 
-#include <pcl/PCLPointCloud2.h>
-
 #if __has_include(<cv_bridge/cv_bridge.hpp>)
 #include <cv_bridge/cv_bridge.hpp>
 #else
