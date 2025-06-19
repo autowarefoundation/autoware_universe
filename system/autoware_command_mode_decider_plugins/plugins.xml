@@ -1,0 +1,3 @@
+<library path="autoware_command_mode_decider_plugins">
+  <class base_class_type="autoware::command_mode_decider::DeciderPlugin" type="autoware::command_mode_decider::CommandModeDecider"/>
+</library>
