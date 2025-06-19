@@ -23,8 +23,7 @@ InternalInitializeRequest convert_request(const ExternalInitializeRequest & exte
 {
   auto internal = std::make_shared<InternalInitializeRequest::element_type>();
   internal->pose_with_covariance = external->pose;
-  internal->method =
-    autoware_internal_localization_msgs::srv::InitializeLocalization::Request::AUTO;
+  internal->method = autoware_localization_msgs::srv::InitializeLocalization::Request::AUTO;
   return internal;
 }
 

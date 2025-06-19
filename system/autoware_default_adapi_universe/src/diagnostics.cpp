@@ -34,8 +34,26 @@ DiagnosticsNode::DiagnosticsNode(const rclcpp::NodeOptions & options) : Node("di
   sub_status_ = create_subscription<InternalGraphStatus>(
     "/diagnostics_graph/status", qos_status, std::bind(&DiagnosticsNode::on_status, this, _1));
 
-  group_cli_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
-  adaptor.relay_service(cli_layout_, srv_layout_, group_cli_);
+  std::unordered_map<DiagUnit *, size_t> unit_indices_;
+  for (size_t i = 0; i < units.size(); ++i) {
+    unit_indices_[units[i]] = i;
+  }
+
+  autoware_adapi_v1_msgs::msg::DiagGraphStruct msg;
+  msg.stamp = graph->created_stamp();
+  msg.id = graph->id();
+  msg.nodes.reserve(units.size());
+  msg.links.reserve(links.size());
+  for (const auto & unit : units) {
+    msg.nodes.emplace_back();
+    msg.nodes.back().path = unit->path_or_name();
+  }
+  for (const auto & link : links) {
+    msg.links.emplace_back();
+    msg.links.back().parent = unit_indices_.at(link->parent());
+    msg.links.back().child = unit_indices_.at(link->child());
+  }
+  pub_struct_->publish(msg);
 }
 
 void DiagnosticsNode::on_struct(const InternalGraphStruct & internal)
