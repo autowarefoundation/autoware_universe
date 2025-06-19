@@ -85,12 +85,6 @@ double SlowDownInterpolator::calc_new_velocity(
     std::max(th_slow_down_vel + std::numeric_limits<double>::epsilon(), curr_vel));
 };
 
-double SlowDownInterpolator::calc_dist_to_point(
-  const Point & curr_point, const Point & slow_down_point)
-{
-  return autoware_utils::calc_distance2d(curr_point, slow_down_point);
-}
-
 double SlowDownInterpolator::interp_velocity(
   const double curr_vel, const double lat_dist, const SideKey side_key) const
 {
@@ -111,8 +105,7 @@ double SlowDownInterpolator::interp_velocity(
     return vel_axis.front();
   }
 
-  const auto exp_dist = lat_dist < max_dist ? lat_dist : max_dist;
-  return autoware::interpolation::lerp(lat_dist_axis, vel_axis, exp_dist);
+  return autoware::interpolation::lerp(lat_dist_axis, vel_axis, lat_dist);
 }
 
 std::vector<double> SlowDownInterpolator::get_lat_dist_axis(const SideKey side_key) const

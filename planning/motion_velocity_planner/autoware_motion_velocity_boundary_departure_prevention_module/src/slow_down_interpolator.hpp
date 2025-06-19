@@ -85,9 +85,6 @@ private:
     const double curr_vel, const double a_target, const double jerk,
     const double lon_dist_to_point_m) const;
 
-  [[nodiscard]] static double calc_dist_to_point(
-    const Point & curr_point, const Point & slow_down_point);
-
   [[nodiscard]] double interp_velocity(
     const double curr_vel, const double lat_dist, const SideKey side_key) const;
 
