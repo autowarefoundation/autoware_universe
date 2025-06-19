@@ -6,8 +6,8 @@
   <description>The autoware_boundary_departure_checker package</description>
   <maintainer email="alqudah.mohammad@tier4.jp">Alqudah Mohammad</maintainer>
   <maintainer email="kyoichi.sugahara@tier4.jp">Kyoichi Sugahara</maintainer>
-  <maintainer email="makoto.kurihara@tier4.jp">Makoto Kurihara</maintainer>
-  <maintainer email="takayuki.murooka@tier4.jp">Takayuki Murooka</maintainer>
+  <maintainer email="Kotakkucu@gmail.com">Takumi Odashima</maintainer>
+  <maintainer email="maxime.clement@tier4.jp">Maxime Clement</maintainer>
   <maintainer email="zulfaqar.azmi@tier4.jp">Zulfaqar Azmi</maintainer>
 
   <license>Apache License 2.0</license>

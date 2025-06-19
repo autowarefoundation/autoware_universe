@@ -32,9 +32,10 @@ void ConverterNode::on_update(DiagGraph::ConstSharedPtr graph)
   DiagnosticArray array;
   array.header.stamp = graph->updated_stamp();
   for (const auto & unit : graph->units()) {
-    if (unit->path().empty()) continue;
+    if (unit->path_or_name().empty()) continue;
     array.status.push_back(unit->create_diagnostic_status());
   }
+
   pub_array_->publish(array);
 }
 

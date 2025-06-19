@@ -20,6 +20,8 @@
 #include "autoware/behavior_path_static_obstacle_avoidance_module/data_structs.hpp"
 
 #include <memory>
+#include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -190,6 +192,17 @@ void fillObjectEnvelopePolygon(
 void fillObjectMovingTime(
   ObjectData & object_data, ObjectDataArray & stopped_objects,
   const std::shared_ptr<AvoidanceParameters> & parameters);
+
+/**
+ * @brief update classification unstable objects.
+ * @param current detected object.
+ * @param unknown type object first seen time map.
+ * @param unstable classification time.
+ */
+void updateClassificationUnstableObjects(
+  ObjectData & object_data,
+  std::unordered_map<std::string, rclcpp::Time> & unknown_type_object_first_seen_time_map,
+  const double unstable_classification_time);
 
 /**
  * @brief check whether ego has to avoid the objects.

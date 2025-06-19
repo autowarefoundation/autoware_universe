@@ -39,7 +39,11 @@ struct TrajectoryCheckerParams
   TrajectoryCheck velocity_deviation;
   TrajectoryCheck distance_deviation;
   TrajectoryCheck lon_distance_deviation;
-  TrajectoryCheck yaw_deviation;
+
+  struct YawDeviation : TrajectoryCheck
+  {
+    double nearest_yaw_trajectory_shift_required_for_checking{};
+  } yaw_deviation;
 
   struct TrajectoryShift : TrajectoryCheck
   {

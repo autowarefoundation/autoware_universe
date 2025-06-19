@@ -25,7 +25,6 @@
 namespace autoware::pointcloud_preprocessor
 {
 
-/* *INDENT-OFF* */
 template <>
 class CombineCloudHandler<CudaPointCloud2Traits> : public CombineCloudHandlerBase
 {
@@ -55,6 +54,5 @@ public:
 
   void allocate_pointclouds() override;
 };
-/* *INDENT-ON* */
 
 }  // namespace autoware::pointcloud_preprocessor

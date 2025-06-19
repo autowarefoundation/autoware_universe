@@ -33,6 +33,16 @@
           "default": "0.05",
           "minimum": 0.0
         },
+        "processing_time_threshold_sec": {
+          "type": "number",
+          "description": "Threshold in seconds. If the processing time of the node exceeds this value, a diagnostic warning will be issued.",
+          "default": 0.01
+        },
+        "timestamp_mismatch_fraction_threshold": {
+          "type": "number",
+          "description": "Threshold for the fraction of points that lack corresponding twist or IMU data within the allowed timestamp tolerance.",
+          "default": 0.01
+        },
         "crop_box.min_x": {
           "type": "array",
           "description": "An array in which each element is the minimum x value in a crop box",
@@ -70,6 +80,8 @@
         "use_3d_distortion_correction",
         "distance_ratio",
         "object_length_threshold",
+        "processing_time_threshold_sec",
+        "timestamp_mismatch_fraction_threshold",
         "crop_box.min_x",
         "crop_box.min_y",
         "crop_box.min_z",

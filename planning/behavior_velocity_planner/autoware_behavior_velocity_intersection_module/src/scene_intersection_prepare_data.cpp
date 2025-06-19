@@ -264,9 +264,12 @@ Result<IntersectionModule::BasicData, InternalError> IntersectionModule::prepare
   const auto lanelets_on_path =
     planning_utils::getLaneletsOnPath(*path, lanelet_map_ptr, current_pose);
   // see the doc for struct PathLanelets
+  const auto closest_idx_ip = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
+    path_ip.points, current_pose, planner_data_->ego_nearest_dist_threshold,
+    planner_data_->ego_nearest_yaw_threshold);
   const auto path_lanelets_opt = generatePathLanelets(
     lanelets_on_path, interpolated_path_info, first_conflicting_area, conflicting_area,
-    first_attention_area_opt, intersection_lanelets.attention_area(), closest_idx);
+    first_attention_area_opt, intersection_lanelets.attention_area(), closest_idx_ip);
   if (!path_lanelets_opt.has_value()) {
     return make_err<IntersectionModule::BasicData, InternalError>(
       "failed to generate PathLanelets");
