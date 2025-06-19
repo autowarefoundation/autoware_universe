@@ -5,7 +5,7 @@
 This package subscribes to multiple commands, selects one and publish it.
 Here, unless otherwise specified, command refers to a set of four commands: control, gear, turn_indicators, and hazard_lights.
 Each command input is identified as a command source, an arbitrary string.
-The node also applies a nominal filter to the selected commands to correct for obvious abnomal values.
+The node also applies a nominal filter to the selected commands to correct for obvious abnormal values.
 
 ![dataflow](./doc/dataflow.drawio.svg)
 
