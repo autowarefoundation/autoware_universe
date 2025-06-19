@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "graph/graph.hpp"
-#include "graph/units.hpp"
+#include "graph/nodes.hpp"
 
 #include <iostream>
 #include <string>
@@ -21,40 +21,39 @@
 namespace autoware::diagnostic_graph_aggregator
 {
 
-void dump_unit(const BaseUnit * unit, const std::string & indent = "", bool root = true)
+void dump_unit(const NodeUnit * unit, const std::string & indent = "", bool root = true)
 {
   const auto path = unit->path().empty() ? "" : unit->path() + " ";
   const auto type = "(" + unit->type() + ")";
   std::cout << indent << "- " << path << type << std::endl;
 
-  if (root || unit->parent_size() == 1) {
-    for (const auto link : unit->child_links()) {
-      dump_unit(link->child(), indent + "    ", false);
+  if (root || unit->parent_units().size() == 1) {
+    for (const auto child : unit->child_nodes()) {
+      dump_unit(child, indent + "    ", false);
     }
   }
 }
 
 void dump_root(const std::string & path)
 {
-  Graph graph;
-  graph.create(path);
+  Graph graph(path);
 
   std::cout << "===== Top-level trees ============================" << std::endl;
-  for (const auto & unit : graph.units()) {
-    if (unit->parent_size() == 0 && unit->child_links().size() != 0) {
+  for (const auto & unit : graph.nodes()) {
+    if (unit->parent_units().size() == 0 && unit->child_nodes().size() != 0) {
       dump_unit(unit);
     }
   }
   std::cout << "===== Subtrees ===================================" << std::endl;
-  for (const auto & unit : graph.units()) {
-    if (unit->parent_size() >= 2 && unit->child_links().size() != 0) {
+  for (const auto & unit : graph.nodes()) {
+    if (unit->parent_units().size() >= 2 && unit->child_nodes().size() != 0) {
       dump_unit(unit);
     }
   }
 
   std::cout << "===== Isolated units =============================" << std::endl;
-  for (const auto & unit : graph.units()) {
-    if (unit->parent_size() == 0 && unit->child_links().size() == 0) {
+  for (const auto & unit : graph.nodes()) {
+    if (unit->parent_units().size() == 0 && unit->child_nodes().size() == 0) {
       dump_unit(unit);
     }
   }

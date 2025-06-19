@@ -23,10 +23,10 @@
 #include <autoware_adapi_v1_msgs/srv/set_route.hpp>
 #include <autoware_adapi_v1_msgs/srv/set_route_points.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
-#include <tier4_planning_msgs/msg/route_state.hpp>
-#include <tier4_planning_msgs/srv/clear_route.hpp>
-#include <tier4_planning_msgs/srv/set_lanelet_route.hpp>
-#include <tier4_planning_msgs/srv/set_waypoint_route.hpp>
+#include <autoware_planning_msgs/msg/route_state.hpp>
+#include <autoware_planning_msgs/srv/clear_route.hpp>
+#include <autoware_planning_msgs/srv/set_lanelet_route.hpp>
+#include <autoware_planning_msgs/srv/set_waypoint_route.hpp>
 
 namespace autoware::default_adapi::conversion
 {
@@ -37,19 +37,19 @@ ExternalRoute create_empty_route(const rclcpp::Time & stamp);
 ExternalRoute convert_route(const InternalRoute & internal);
 
 using ExternalState = autoware_adapi_v1_msgs::msg::RouteState;
-using InternalState = tier4_planning_msgs::msg::RouteState;
+using InternalState = autoware_planning_msgs::msg::RouteState;
 ExternalState convert_state(const InternalState & internal);
 
 using ExternalClearRequest = autoware_adapi_v1_msgs::srv::ClearRoute::Request::SharedPtr;
-using InternalClearRequest = tier4_planning_msgs::srv::ClearRoute::Request::SharedPtr;
+using InternalClearRequest = autoware_planning_msgs::srv::ClearRoute::Request::SharedPtr;
 InternalClearRequest convert_request(const ExternalClearRequest & external);
 
 using ExternalLaneletRequest = autoware_adapi_v1_msgs::srv::SetRoute::Request::SharedPtr;
-using InternalLaneletRequest = tier4_planning_msgs::srv::SetLaneletRoute::Request::SharedPtr;
+using InternalLaneletRequest = autoware_planning_msgs::srv::SetLaneletRoute::Request::SharedPtr;
 InternalLaneletRequest convert_request(const ExternalLaneletRequest & external);
 
 using ExternalWaypointRequest = autoware_adapi_v1_msgs::srv::SetRoutePoints::Request::SharedPtr;
-using InternalWaypointRequest = tier4_planning_msgs::srv::SetWaypointRoute::Request::SharedPtr;
+using InternalWaypointRequest = autoware_planning_msgs::srv::SetWaypointRoute::Request::SharedPtr;
 InternalWaypointRequest convert_request(const ExternalWaypointRequest & external);
 
 using ExternalResponse = autoware_adapi_v1_msgs::msg::ResponseStatus;
