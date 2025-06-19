@@ -39,7 +39,7 @@ public:
   uint16_t get_source() const { return current_source_; }
 
 private:
-  void select_source(const uint16_t source);
+  void select_source(const uint16_t target);
 
   rclcpp::Logger logger_;
   uint16_t builtin_source_;
