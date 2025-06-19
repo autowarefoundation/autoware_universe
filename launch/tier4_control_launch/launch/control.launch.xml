@@ -37,7 +37,7 @@
   <arg name="aeb_param_path"/>
   <arg name="predicted_path_checker_param_path"/>
   <arg name="collision_detector_param_path"/>
-  <arg name="control_command_gate_param_path"/>
+  <arg name="control_command_gate_param_path" default="$(find-pkg-share autoware_control_command_gate)/config/default.param.yaml"/>
 
   <!-- component -->
   <arg name="use_intra_process" default="false" description="use ROS 2 component container communication"/>

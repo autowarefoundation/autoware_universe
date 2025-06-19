@@ -26,9 +26,9 @@
   <arg name="diagnostic_graph_aggregator_graph_path"/>
   <arg name="diag_struct_topic" default="/diagnostics_graph/struct"/>
   <arg name="diag_status_topic" default="/diagnostics_graph/status"/>
-  <arg name="availability_converter_param_path"/>
-  <arg name="command_mode_switcher_param_path"/>
-  <arg name="command_mode_decider_param_path"/>
+  <arg name="availability_converter_param_path" default="$(find-pkg-share autoware_diagnostic_graph_aggregator)/config/converter.param.yaml"/>
+  <arg name="command_mode_switcher_param_path" default="$(find-pkg-share autoware_command_mode_switcher)/config/default.param.yaml"/>
+  <arg name="command_mode_decider_param_path" default="$(find-pkg-share autoware_command_mode_decider)/config/default.param.yaml"/>
   <arg name="mrm_state_topic" default="/system/fail_safe/mrm_state"/>
   <arg name="change_operation_mode_srv" default="/system/operation_mode/change_operation_mode"/>
   <arg name="change_autoware_control_srv" default="/system/operation_mode/change_autoware_control"/>
