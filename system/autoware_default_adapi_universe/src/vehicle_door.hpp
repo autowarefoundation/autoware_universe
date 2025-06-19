@@ -19,6 +19,7 @@
 #include <autoware/component_interface_specs_universe/system.hpp>
 #include <autoware/component_interface_specs_universe/vehicle.hpp>
 #include <autoware/component_interface_utils/status.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <optional>
@@ -44,12 +45,14 @@ private:
   using ExternalDoorLayout = autoware::adapi_specs::vehicle::DoorLayout;
   using ExternalDoorCommand = autoware::adapi_specs::vehicle::DoorCommand;
 
+  void diagnose_state(diagnostic_updater::DiagnosticStatusWrapper & stat);
   void on_operation_mode(const OperationModeState::Message::ConstSharedPtr msg);
   void on_status(InternalDoorStatus::Message::ConstSharedPtr msg);
   void on_command(
     const ExternalDoorCommand::Service::Request::SharedPtr req,
     const ExternalDoorCommand::Service::Response::SharedPtr res);
 
+  diagnostic_updater::Updater diagnostics_;
   rclcpp::CallbackGroup::SharedPtr group_cli_;
   Srv<ExternalDoorCommand> srv_command_;
   Srv<ExternalDoorLayout> srv_layout_;

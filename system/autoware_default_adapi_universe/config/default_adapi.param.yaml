@@ -1,3 +1,9 @@
+/**:
+  ros__parameters:
+    diagnostic_updater:
+      period: 1.0
+      use_fqn: true
+
 /adapi/node/autoware_state:
   ros__parameters:
     update_rate: 10.0
@@ -7,18 +13,9 @@
     require_accept_start: false
     stop_check_duration: 1.0
 
-/adapi/node/localization:
-  ros__parameters:
-    diagnostic_updater:
-      period: 1.0
-      use_fqn: true
-
 /adapi/node/routing:
   ros__parameters:
     stop_check_duration: 1.0
-    diagnostic_updater:
-      period: 1.0
-      use_fqn: true
 
 /adapi/node/vehicle_metrics:
   ros__parameters:
@@ -35,9 +32,3 @@
 /adapi/node/manual/remote:
   ros__parameters:
     mode: remote
-
-/adapi/node/mrm_request:
-  ros__parameters:
-    diagnostic_updater:
-      period: 1.0
-      use_fqn: true
