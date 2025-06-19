@@ -24,7 +24,7 @@
 #ifndef PARAMETERS_HPP_
 #define PARAMETERS_HPP_
 
-namespace autoware::motion_velocity_planner
+namespace autoware::motion_velocity_planner::experimental
 {
 struct PredictedPathFootprint
 {
@@ -253,6 +253,6 @@ struct NodeParam
     });
   }
 };
-}  // namespace autoware::motion_velocity_planner
+}  // namespace autoware::motion_velocity_planner::experimental
 
 #endif  // PARAMETERS_HPP_

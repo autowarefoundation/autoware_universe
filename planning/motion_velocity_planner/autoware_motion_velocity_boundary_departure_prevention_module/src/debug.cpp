@@ -82,7 +82,7 @@ inline ColorRGBA grey(float a = 0.99)
 }
 }  // namespace color
 
-namespace autoware::motion_velocity_planner::debug
+namespace autoware::motion_velocity_planner::experimental::debug
 {
 Marker create_ego_sides_marker(
   const EgoSides & ego_sides_from_footprints, Marker marker, std::string && ns,
@@ -321,4 +321,4 @@ MarkerArray create_debug_marker_array(
   return marker_array;
 }
 
-}  // namespace autoware::motion_velocity_planner::debug
+}  // namespace autoware::motion_velocity_planner::experimental::debug

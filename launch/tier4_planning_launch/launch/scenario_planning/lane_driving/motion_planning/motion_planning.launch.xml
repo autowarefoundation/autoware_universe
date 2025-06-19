@@ -51,7 +51,7 @@
   />
   <let
     name="motion_velocity_planner_launch_modules"
-    value="$(eval &quot;'$(var motion_velocity_planner_launch_modules)' + 'autoware::motion_velocity_planner::BoundaryDeparturePreventionModule, '&quot;)"
+    value="$(eval &quot;'$(var motion_velocity_planner_launch_modules)' + 'autoware::motion_velocity_planner::experimental::BoundaryDeparturePreventionModule, '&quot;)"
     if="$(var launch_boundary_departure_prevention_module)"
   />
 

@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-namespace autoware::motion_velocity_planner::utils
+namespace autoware::motion_velocity_planner::experimental::utils
 {
 tl::expected<std::tuple<double, double, double>, std::string>
 SlowDownInterpolator::get_interp_to_point(
@@ -141,4 +141,4 @@ double SlowDownInterpolator::interp_jerk(
 
   return autoware::interpolation::lerp(min_jerk, max_jerk, combined_ratio);
 }
-}  // namespace autoware::motion_velocity_planner::utils
+}  // namespace autoware::motion_velocity_planner::experimental::utils

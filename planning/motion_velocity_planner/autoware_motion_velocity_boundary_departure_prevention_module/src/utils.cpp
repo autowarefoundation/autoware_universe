@@ -35,7 +35,7 @@ bool has_type(const std::unordered_set<DepartureType> & enable_type, const Depar
 }
 }  // namespace
 
-namespace autoware::motion_velocity_planner::utils
+namespace autoware::motion_velocity_planner::experimental::utils
 {
 DepartureIntervals init_departure_intervals(
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
@@ -383,4 +383,4 @@ std::optional<std::pair<double, double>> is_point_shifted(
   }
   return std::nullopt;
 }
-}  // namespace autoware::motion_velocity_planner::utils
+}  // namespace autoware::motion_velocity_planner::experimental::utils

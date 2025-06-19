@@ -17,7 +17,7 @@
 
 #include "parameters.hpp"
 
-namespace autoware::motion_velocity_planner::debug
+namespace autoware::motion_velocity_planner::experimental::debug
 {
 
 Marker create_departure_points_marker(
@@ -27,6 +27,6 @@ Marker create_departure_points_marker(
 MarkerArray create_debug_marker_array(
   const Output & output, const Trajectory & ego_traj, const rclcpp::Clock::SharedPtr & clock_ptr,
   const double base_link_z, const NodeParam & node_param);
-}  // namespace autoware::motion_velocity_planner::debug
+}  // namespace autoware::motion_velocity_planner::experimental::debug
 
 #endif  // DEBUG_HPP_

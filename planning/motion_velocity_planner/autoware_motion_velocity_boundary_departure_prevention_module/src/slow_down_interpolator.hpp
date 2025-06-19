@@ -23,7 +23,7 @@
 
 #include <string>
 #include <vector>
-namespace autoware::motion_velocity_planner::utils
+namespace autoware::motion_velocity_planner::experimental::utils
 {
 
 class SlowDownInterpolator
@@ -99,6 +99,6 @@ private:
   TriggerThreshold th_trigger_;
 };
 
-}  // namespace autoware::motion_velocity_planner::utils
+}  // namespace autoware::motion_velocity_planner::experimental::utils
 
 #endif  // SLOW_DOWN_INTERPOLATOR_HPP_

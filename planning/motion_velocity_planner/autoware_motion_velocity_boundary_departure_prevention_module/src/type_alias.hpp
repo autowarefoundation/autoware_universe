@@ -42,7 +42,7 @@
 
 #include <vector>
 
-namespace autoware::motion_velocity_planner
+namespace autoware::motion_velocity_planner::experimental
 {
 using autoware_map_msgs::msg::LaneletMapBin;
 using autoware_planning_msgs::msg::Trajectory;
@@ -75,7 +75,7 @@ using DiagStatus = diagnostic_msgs::msg::DiagnosticStatus;
 
 namespace bg = boost::geometry;                             // NOLINT
 namespace bgi = boost::geometry::index;                     // NOLINT
-namespace trajectory = experimental::trajectory;            // NOLINT
+namespace trajectory = autoware::experimental::trajectory;  // NOLINT
 namespace bdc_utils = boundary_departure_checker::utils;    // NOLINT
 namespace polling_policy = autoware_utils::polling_policy;  // NOLINT
 
@@ -115,6 +115,6 @@ using boundary_departure_checker::LongitudinalConfig;
 using boundary_departure_checker::NormalConfig;
 using boundary_departure_checker::SteeringConfig;
 using boundary_departure_checker::TriggerThreshold;
-}  // namespace autoware::motion_velocity_planner
+}  // namespace autoware::motion_velocity_planner::experimental
 
 #endif  // TYPE_ALIAS_HPP_

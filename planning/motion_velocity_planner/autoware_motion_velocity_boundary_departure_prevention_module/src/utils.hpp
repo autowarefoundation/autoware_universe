@@ -23,7 +23,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace autoware::motion_velocity_planner::utils
+namespace autoware::motion_velocity_planner::experimental::utils
 {
 
 /**
@@ -207,5 +207,5 @@ std::vector<std::tuple<Pose, Pose, double>> get_slow_down_intervals(
 std::optional<std::pair<double, double>> is_point_shifted(
   const Pose & prev_iter_pt, const Pose & curr_iter_pt, const double th_shift_m,
   const double th_yaw_diff_rad);
-}  // namespace autoware::motion_velocity_planner::utils
+}  // namespace autoware::motion_velocity_planner::experimental::utils
 #endif  // UTILS_HPP_

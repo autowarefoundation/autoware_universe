@@ -32,7 +32,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace autoware::motion_velocity_planner
+namespace autoware::motion_velocity_planner::experimental
 {
 
 void BoundaryDeparturePreventionModule::init(
@@ -516,9 +516,9 @@ std::unordered_map<DepartureType, bool> BoundaryDeparturePreventionModule::get_d
 
   return diag;
 }
-}  // namespace autoware::motion_velocity_planner
+}  // namespace autoware::motion_velocity_planner::experimental
 
 #include <pluginlib/class_list_macros.hpp>
 PLUGINLIB_EXPORT_CLASS(
-  autoware::motion_velocity_planner::BoundaryDeparturePreventionModule,
+  autoware::motion_velocity_planner::experimental::BoundaryDeparturePreventionModule,
   autoware::motion_velocity_planner::PluginModuleInterface)

@@ -28,7 +28,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace autoware::motion_velocity_planner
+namespace autoware::motion_velocity_planner::experimental
 {
 class BoundaryDeparturePreventionModule : public PluginModuleInterface
 {
@@ -93,5 +93,5 @@ private:
 
   mutable std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
 };
-}  // namespace autoware::motion_velocity_planner
+}  // namespace autoware::motion_velocity_planner::experimental
 #endif  // BOUNDARY_DEPARTURE_PREVENTION_MODULE_HPP_
