@@ -30,45 +30,46 @@
 namespace autoware::diagnostic_graph_utils
 {
 
+class DiagGraph;
+class DiagUnit;
+class DiagNode;
+class DiagLeaf;
 class DiagLink;
+
 class DiagUnit
 {
 public:
   using DiagnosticStatus = diagnostic_msgs::msg::DiagnosticStatus;
   using DiagnosticLevel = DiagnosticStatus::_level_type;
 
+  explicit DiagUnit(int index) : index_(index) {}
   virtual ~DiagUnit() = default;
-
-  struct DiagChild
-  {
-    DiagLink * link;
-    DiagUnit * unit;
-  };
-
   virtual DiagnosticStatus create_diagnostic_status() const = 0;
   virtual DiagnosticLevel level() const = 0;
-  virtual std::string type() const = 0;
-  virtual std::string path() const = 0;
-  virtual std::vector<DiagChild> children() const = 0;
+  virtual std::string path_or_name() const = 0;
+
+  int index() const { return index_; }
+  std::vector<DiagUnit *> child_units() const;
+  std::vector<DiagLink *> child_links() const;
+  void add_child(DiagLink * link) { child_links_.push_back(link); }
+
+private:
+  int index_;
+  std::vector<DiagLink *> child_links_;
 };
 
 class DiagLink
 {
 public:
-  using DiagLinkStruct = tier4_system_msgs::msg::DiagLinkStruct;
-  using DiagLinkStatus = tier4_system_msgs::msg::DiagLinkStatus;
-  DiagLink(const DiagLinkStruct & msg, DiagUnit * parent, DiagUnit * child) : struct_(msg)
+  DiagLink(DiagUnit * parent, DiagUnit * child)
   {
     parent_ = parent;
     child_ = child;
   }
-  void update(const DiagLinkStatus & msg) { status_ = msg; }
   DiagUnit * parent() const { return parent_; }
   DiagUnit * child() const { return child_; }
 
 private:
-  DiagLinkStruct struct_;
-  DiagLinkStatus status_;
   DiagUnit * parent_;
   DiagUnit * child_;
 };
@@ -78,20 +79,21 @@ class DiagNode : public DiagUnit
 public:
   using DiagNodeStruct = tier4_system_msgs::msg::DiagNodeStruct;
   using DiagNodeStatus = tier4_system_msgs::msg::DiagNodeStatus;
-  explicit DiagNode(const DiagNodeStruct & msg) : struct_(msg) {}
-  void update(const DiagNodeStatus & msg) { status_ = msg; }
 
+  explicit DiagNode(int index, const DiagNodeStruct & msg) : DiagUnit(index), struct_(msg) {}
   DiagnosticStatus create_diagnostic_status() const override;
   DiagnosticLevel level() const override { return status_.level; }
-  std::string type() const override { return struct_.type; }
-  std::string path() const override { return struct_.path; }
-  std::vector<DiagChild> children() const override { return children_; }
-  void add_child(const DiagChild & child) { children_.push_back(child); }
+  DiagnosticLevel input_level() const { return status_.input_level; }
+  DiagnosticLevel latch_level() const { return status_.latch_level; }
+
+  void update(const DiagNodeStatus & msg) { status_ = msg; }
+  std::string type() const { return struct_.type; }
+  std::string path() const { return struct_.path; }
+  std::string path_or_name() const override { return path(); }
 
 private:
   DiagNodeStruct struct_;
   DiagNodeStatus status_;
-  std::vector<DiagChild> children_;
 };
 
 class DiagLeaf : public DiagUnit
@@ -99,14 +101,15 @@ class DiagLeaf : public DiagUnit
 public:
   using DiagLeafStruct = tier4_system_msgs::msg::DiagLeafStruct;
   using DiagLeafStatus = tier4_system_msgs::msg::DiagLeafStatus;
-  explicit DiagLeaf(const DiagLeafStruct & msg) : struct_(msg) {}
-  void update(const DiagLeafStatus & msg) { status_ = msg; }
 
+  explicit DiagLeaf(int index, const DiagLeafStruct & msg) : DiagUnit(index), struct_(msg) {}
   DiagnosticStatus create_diagnostic_status() const override;
   DiagnosticLevel level() const override { return status_.level; }
-  std::string type() const override { return struct_.type; }
-  std::string path() const override { return struct_.path; }
-  std::vector<DiagChild> children() const override { return {}; }
+  DiagnosticLevel input_level() const { return status_.input_level; }
+
+  void update(const DiagLeafStatus & msg) { status_ = msg; }
+  std::string name() const { return struct_.name; }
+  std::string path_or_name() const override { return name(); }
 
 private:
   DiagLeafStruct struct_;
@@ -120,7 +123,7 @@ public:
   using DiagGraphStatus = tier4_system_msgs::msg::DiagGraphStatus;
   using SharedPtr = std::shared_ptr<DiagGraph>;
   using ConstSharedPtr = std::shared_ptr<const DiagGraph>;
-  void create(const DiagGraphStruct & msg);
+  bool create(const DiagGraphStruct & msg);
   bool update(const DiagGraphStatus & msg);
   rclcpp::Time created_stamp() const { return created_stamp_; }
   rclcpp::Time updated_stamp() const { return updated_stamp_; }
@@ -137,6 +140,7 @@ private:
   std::vector<std::unique_ptr<DiagNode>> nodes_;
   std::vector<std::unique_ptr<DiagLeaf>> diags_;
   std::vector<std::unique_ptr<DiagLink>> links_;
+  std::vector<DiagUnit *> units_;
 };
 
 }  // namespace autoware::diagnostic_graph_utils
