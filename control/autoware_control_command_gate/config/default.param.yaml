@@ -1,0 +1,35 @@
+/**:
+  ros__parameters:
+    inputs: [11, 12, 13, 14, 21]  # See autoware_command_mode_types/sources.hpp
+    inputs_names:
+      11: stop
+      12: main
+      13: local
+      14: remote
+      21: emergency_stop
+    rate: 10.0
+    builtin_emergency_acceleration: -2.4
+    diag_timeout_warn_duration: 1.0
+    diag_timeout_error_duration: 2.0
+    stop_check_duration: 1.0
+    enable_command_limit_filter: true
+    nominal_filter:
+      vel_lim: 25.0
+      reference_speed_points: [0.1, 0.3, 20.0, 30.0]
+      steer_lim: [1.0, 1.0, 1.0, 0.8]
+      steer_rate_lim: [1.0, 1.0, 1.0, 0.8]
+      lon_acc_lim: [5.0, 5.0, 5.0, 4.0]
+      lon_jerk_lim: [80.0, 5.0, 5.0, 4.0] # The first element is required for quick pedal changes when stopping and starting.
+      lat_acc_lim: [5.0, 5.0, 5.0, 4.0]
+      lat_jerk_lim: [7.0, 7.0, 7.0, 6.0]
+      actual_steer_diff_lim: [1.0, 1.0, 1.0, 0.8]
+    transition_filter:
+      vel_lim: 50.0
+      reference_speed_points: [20.0, 30.0]
+      steer_lim: [1.0, 0.8]
+      steer_rate_lim: [1.0, 0.8]
+      lon_acc_lim: [1.0, 0.9]
+      lon_jerk_lim: [0.5, 0.4]
+      lat_acc_lim: [2.0, 1.8]
+      lat_jerk_lim: [7.0, 6.0]
+      actual_steer_diff_lim: [1.0, 0.8]
