@@ -15,7 +15,7 @@
 #ifndef NODE__AGGREGATOR_HPP_
 #define NODE__AGGREGATOR_HPP_
 
-#include "availability.hpp"
+#include "command_mode_mapping.hpp"
 #include "graph/graph.hpp"
 
 #include <rclcpp/rclcpp.hpp>
@@ -34,18 +34,21 @@ public:
   ~AggregatorNode();
 
 private:
-  Graph graph_;
-  std::unique_ptr<ModesAvailability> modes_;
+  std::unique_ptr<Graph> graph_;
+  std::unique_ptr<CommandModeMapping> availability_;
+
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::Subscription<DiagnosticArray>::SharedPtr sub_input_;
-  rclcpp::Publisher<DiagnosticArray>::SharedPtr pub_unknown_;
   rclcpp::Publisher<DiagGraphStruct>::SharedPtr pub_struct_;
   rclcpp::Publisher<DiagGraphStatus>::SharedPtr pub_status_;
-  DiagnosticArray create_unknown_diags(const rclcpp::Time & stamp);
+  rclcpp::Publisher<DiagnosticArray>::SharedPtr pub_unknown_;
+  rclcpp::Service<ResetDiagGraph>::SharedPtr srv_reset_;
+
   void on_timer();
   void on_diag(const DiagnosticArray & msg);
-
-  std::unordered_map<std::string, DiagnosticStatus> unknown_diags_;
+  void on_reset(
+    const ResetDiagGraph::Request::SharedPtr request,
+    const ResetDiagGraph::Response::SharedPtr response);
 };
 
 }  // namespace autoware::diagnostic_graph_aggregator
