@@ -220,10 +220,11 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
   }
 
   // Pre-compute inverse covariance for each tracker
-  std::vector<InverseCovariance2D> inv_covs;
-  inv_covs.reserve(tracked_objects.size());
+  std::vector<InverseCovariance2D> inverse_covariances;
+  inverse_covariances.reserve(tracked_objects.size());
   for (const auto & tracked_object : tracked_objects) {
-    inv_covs.push_back(precomputeInverseCovarianceFromPose(tracked_object.pose_covariance));
+    inverse_covariances.push_back(
+      precomputeInverseCovarianceFromPose(tracked_object.pose_covariance));
   }
 
   // For each measurement, find nearby trackers using R-tree
@@ -260,7 +261,7 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
       // The actual distance check was already done in the R-tree query
       double score = calculateScore(
         tracked_object, tracker_label, measurement_object, measurement_label,
-        inv_covs[tracker_idx]);
+        inverse_covariances[tracker_idx]);
       score_matrix(tracker_idx, measurement_idx) = score;
     }
   }
