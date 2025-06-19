@@ -94,7 +94,6 @@ private:
   using ElectionStatus = tier4_external_api_msgs::msg::ElectionStatus;
   void on_election_status(const ElectionStatus & msg);
 
-  rclcpp::Node & node_;
   rclcpp::Subscription<ElectionStatus>::SharedPtr sub_election_status_;
 
   Callback notification_callback_;

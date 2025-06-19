@@ -44,7 +44,7 @@ VehicleGateInterface::VehicleGateInterface(rclcpp::Node & node, Callback callbac
     std::bind(&VehicleGateInterface::on_control_mode, this, std::placeholders::_1));
 }
 
-NetworkGateInterface::NetworkGateInterface(rclcpp::Node & node, Callback callback) : node_(node)
+NetworkGateInterface::NetworkGateInterface(rclcpp::Node & node, Callback callback)
 {
   notification_callback_ = callback;
   ecu_ = std::nullopt;
