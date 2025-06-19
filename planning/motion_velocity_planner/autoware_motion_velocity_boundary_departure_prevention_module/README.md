@@ -32,8 +32,8 @@ These factors can result in the vehicle unintentionally approaching or crossing 
 
 #### How Footprint Expansion Helps with Localization and Map Errors
 
-- **Absorbs minor localization errors**: If the ego vehicle’s estimated position is slightly off due to GPS drift or sensor noise, an expanded footprint prevents false detections by tolerating small position shifts. This reduces the chance of incorrectly flagging a boundary crossing.
-- **Compensates for map inaccuracies**: Slight misalignments in Lanelet2 map geometries, such as curb or road edge misplacement, can lead to false positives. An enlarged footprint creates a buffer that allows for safe operation even when the map boundary is not perfectly aligned with the real-world one.
+- **Provides a conservative buffer for localization errors**: If the ego vehicle’s estimated position is off due to GPS drift or sensor noise, the expanded footprint increases the likelihood of detecting potential boundary conflicts. While this may lead to conservative (and possibly false) detections, it helps ensure safety by accounting for uncertainty in the vehicle’s true position.
+- **Compensates for map inaccuracies**: Slight misalignments in Lanelet2 map geometries, such as curb or road edge misplacement, can make it difficult to rely on raw map boundaries. Expanding the footprint ensures that even with these inaccuracies, the system remains cautious and avoids unintentional boundary violations.
 
 <div align="center">
   <table style="table-layout: fixed; width: 600px;">
