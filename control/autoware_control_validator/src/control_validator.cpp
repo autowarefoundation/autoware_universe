@@ -19,6 +19,8 @@
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 
+#include <angles/angles/angles.h>
+
 #include <algorithm>
 #include <cstdint>
 #include <memory>
@@ -182,6 +184,18 @@ void OverrunValidator::validate(
   res.has_overrun_stop_point =
     res.dist_to_stop < -overrun_stop_point_dist_th && res.nearest_trajectory_vel < 1e-3;
   res.will_overrun_stop_point = res.pred_dist_to_stop < -will_overrun_stop_point_dist_th;
+}
+
+void YawValidator::validate(
+  ControlValidatorStatus & res, const Trajectory & reference_trajectory,
+  const Odometry & kinematics)
+{
+  const auto interpolated_trajectory_point =
+    motion_utils::calcInterpolatedPoint(reference_trajectory, kinematics.pose.pose);
+  res.yaw_deviation = std::abs(angles::shortest_angular_distance(
+    tf2::getYaw(interpolated_trajectory_point.pose.orientation),
+    tf2::getYaw(kinematics.pose.pose.orientation)));
+  res.is_valid_yaw = res.yaw_deviation <= yaw_deviation_th_;
 }
 
 ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)
@@ -361,6 +375,7 @@ void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
     validation_status_, *kinematics_msg, *control_cmd_msg, *acceleration_msg);
   velocity_validator.validate(validation_status_, *reference_trajectory_msg, *kinematics_msg);
   overrun_validator.validate(validation_status_, *reference_trajectory_msg, *kinematics_msg);
+  yaw_validator.validate(validation_status_, *reference_trajectory_msg, *kinematics_msg);
 
   // post process
   validation_status_.invalid_count =
