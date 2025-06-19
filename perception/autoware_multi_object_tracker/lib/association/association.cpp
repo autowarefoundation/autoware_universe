@@ -54,13 +54,6 @@ inline double getMahalanobisDistance(
   return (d * dx * dx - 2.0 * b * dx * dy + a * dy * dy) / det;
 }
 
-// Eigen::Matrix2d getXYCovariance(const std::array<double, 36> & pose_covariance)
-// {
-//   Eigen::Matrix2d covariance;
-//   covariance << pose_covariance[0], pose_covariance[1], pose_covariance[6], pose_covariance[7];
-//   return covariance;
-// }
-
 double getFormedYawAngle(
   const geometry_msgs::msg::Quaternion & measurement_quat,
   const geometry_msgs::msg::Quaternion & tracker_quat, const bool distinguish_front_or_back = true)
@@ -220,10 +213,10 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
   }
 
   // Pre-compute inverse covariance for each tracker
-  std::vector<InverseCovariance2D> inverse_covariances;
-  inverse_covariances.reserve(tracked_objects.size());
+  std::vector<InverseCovariance2D> tracker_inverse_covariances;
+  tracker_inverse_covariances.reserve(tracked_objects.size());
   for (const auto & tracked_object : tracked_objects) {
-    inverse_covariances.push_back(
+    tracker_inverse_covariances.push_back(
       precomputeInverseCovarianceFromPose(tracked_object.pose_covariance));
   }
 
@@ -261,7 +254,7 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
       // The actual distance check was already done in the R-tree query
       double score = calculateScore(
         tracked_object, tracker_label, measurement_object, measurement_label,
-        inverse_covariances[tracker_idx]);
+        tracker_inverse_covariances[tracker_idx]);
       score_matrix(tracker_idx, measurement_idx) = score;
     }
   }
