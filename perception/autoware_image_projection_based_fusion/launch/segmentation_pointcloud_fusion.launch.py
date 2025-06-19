@@ -45,7 +45,7 @@ class SegmentationPointcloudFusion:
         approximate_camera_projection = []
         rois_timestamp_noise_window = []
         point_project_to_unrectified_image = []
-        image_topic_name = LaunchConfiguration("image_topic_name")
+        image_topic_name = LaunchConfiguration("image_topic_name").perform(context)
 
         for index, camera_id in enumerate(self.camera_ids):
             mask_timestamp_offsets.append(

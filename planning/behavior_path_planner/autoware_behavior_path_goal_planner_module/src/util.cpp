@@ -22,6 +22,7 @@
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/ros/marker_helper.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 #include <magic_enum.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -945,7 +946,8 @@ std::optional<Pose> calcClosestPose(
 autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
   const autoware_perception_msgs::msg::PredictedObjects & original_objects,
   const route_handler::RouteHandler & route_handler, const GoalPlannerParameters & parameters,
-  const double vehicle_width, const Pose & ego_pose)
+  const double vehicle_width, const Pose & ego_pose,
+  std::optional<std::reference_wrapper<Polygon2d>> debug_objects_extraction_polygon)
 {
   const bool left_side_parking = parameters.parking_policy == ParkingPolicy::LEFT_SIDE;
   const auto pull_over_lanes = goal_planner_utils::getPullOverLanes(
@@ -954,6 +956,11 @@ autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
   const auto objects_extraction_polygon = goal_planner_utils::generateObjectExtractionPolygon(
     pull_over_lanes, left_side_parking, parameters.detection_bound_offset,
     parameters.margin_from_boundary + parameters.max_lateral_offset + vehicle_width);
+
+  // Store extraction polygon for debugging if the optional parameter is provided
+  if (debug_objects_extraction_polygon && objects_extraction_polygon.has_value()) {
+    debug_objects_extraction_polygon->get() = objects_extraction_polygon.value();
+  }
 
   // Extract objects within the extraction polygon
   PredictedObjects dynamic_target_objects{};
@@ -1015,6 +1022,58 @@ bool is_goal_reachable_on_path(
   // if goal is not in current_lanes and current_shoulder_lanes, do not execute goal_planner,
   // because goal arc coordinates cannot be calculated.
   return goal_is_in_current_segment_lanes || goal_is_in_current_shoulder_lanes;
+}
+
+bool hasPreviousModulePathShapeChanged(
+  const BehaviorModuleOutput & upstream_module_output,
+  const BehaviorModuleOutput & last_upstream_module_output)
+{
+  // Calculate the lateral distance between each point of the current path and the nearest point of
+  // the last path
+  constexpr double LATERAL_DEVIATION_THRESH = 0.1;
+  for (const auto & p : upstream_module_output.path.points) {
+    const size_t nearest_seg_idx = autoware::motion_utils::findNearestSegmentIndex(
+      last_upstream_module_output.path.points, p.point.pose.position);
+    const auto seg_front = last_upstream_module_output.path.points.at(nearest_seg_idx);
+    const auto seg_back = last_upstream_module_output.path.points.at(nearest_seg_idx + 1);
+    // Check if the target point is within the segment
+    const Eigen::Vector3d segment_vec{
+      seg_back.point.pose.position.x - seg_front.point.pose.position.x,
+      seg_back.point.pose.position.y - seg_front.point.pose.position.y, 0.0};
+    const Eigen::Vector3d target_vec{
+      p.point.pose.position.x - seg_front.point.pose.position.x,
+      p.point.pose.position.y - seg_front.point.pose.position.y, 0.0};
+    const double dot_product = segment_vec.x() * target_vec.x() + segment_vec.y() * target_vec.y();
+    const double segment_length_squared =
+      segment_vec.x() * segment_vec.x() + segment_vec.y() * segment_vec.y();
+    if (dot_product < 0 || dot_product > segment_length_squared) {
+      // p.point.pose.position is not within the segment, skip lateral distance check
+      continue;
+    }
+    const double lateral_distance = std::abs(autoware::motion_utils::calcLateralOffset(
+      last_upstream_module_output.path.points, p.point.pose.position, nearest_seg_idx));
+    if (lateral_distance > LATERAL_DEVIATION_THRESH) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool hasDeviatedFromPath(
+  const Point & ego_position, const BehaviorModuleOutput & upstream_module_output)
+{
+  constexpr double LATERAL_DEVIATION_THRESH = 0.1;
+  return std::abs(autoware::motion_utils::calcLateralOffset(
+           upstream_module_output.path.points, ego_position)) > LATERAL_DEVIATION_THRESH;
+}
+
+bool has_stopline_except_terminal(const PathWithLaneId & path)
+{
+  const auto stopline_it = std::find_if(
+    path.points.begin(), path.points.end(),
+    [](const auto & point) { return std::fabs(point.point.longitudinal_velocity_mps) == 0.0; });
+  return static_cast<unsigned>(std::distance(path.points.begin(), stopline_it)) + 1 <
+         path.points.size();
 }
 
 }  // namespace autoware::behavior_path_planner::goal_planner_utils

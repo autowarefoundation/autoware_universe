@@ -27,6 +27,7 @@
 
 #include <cuda_runtime.h>
 #include <tf2/utils.h>
+#include <thrust/count.h>
 #include <thrust/execution_policy.h>
 #include <thrust/reduce.h>
 #include <thrust/scan.h>
@@ -256,6 +257,10 @@ void CudaPointcloudPreprocessor::organizePointcloud()
       device_transformed_points_.begin(), device_transformed_points_.end(), InputPointType{});
     device_crop_mask_.resize(num_organized_points_);
     thrust::fill(device_crop_mask_.begin(), device_crop_mask_.end(), 0);
+    device_nan_mask_.resize(num_organized_points_);
+    thrust::fill(device_nan_mask_.begin(), device_nan_mask_.end(), 0);
+    device_mismatch_mask_.resize(num_organized_points_);
+    thrust::fill(device_mismatch_mask_.begin(), device_mismatch_mask_.end(), 0);
     device_ring_outlier_mask_.resize(num_organized_points_);
     thrust::fill(device_ring_outlier_mask_.begin(), device_ring_outlier_mask_.end(), 0);
     device_indices_.resize(num_organized_points_);
@@ -324,14 +329,14 @@ void CudaPointcloudPreprocessor::organizePointcloud()
 }
 
 std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::process(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr input_pointcloud_msg_ptr,
+  const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg,
   const geometry_msgs::msg::TransformStamped & transform_msg,
   const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,
   const std::deque<geometry_msgs::msg::Vector3Stamped> & angular_velocity_queue,
   const std::uint32_t first_point_rel_stamp_nsec)
 {
-  auto frame_id = input_pointcloud_msg_ptr->header.frame_id;
-  num_raw_points_ = input_pointcloud_msg_ptr->width * input_pointcloud_msg_ptr->height;
+  auto frame_id = input_pointcloud_msg.header.frame_id;
+  num_raw_points_ = input_pointcloud_msg.width * input_pointcloud_msg.height;
   num_organized_points_ = num_rings_ * max_points_per_ring_;
 
   if (num_raw_points_ == 0) {
@@ -341,9 +346,9 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
 
     output_pointcloud_ptr_->fields = point_fields_;
     output_pointcloud_ptr_->is_dense = true;
-    output_pointcloud_ptr_->is_bigendian = input_pointcloud_msg_ptr->is_bigendian;
+    output_pointcloud_ptr_->is_bigendian = input_pointcloud_msg.is_bigendian;
     output_pointcloud_ptr_->point_step = sizeof(OutputPointType);
-    output_pointcloud_ptr_->header.stamp = input_pointcloud_msg_ptr->header.stamp;
+    output_pointcloud_ptr_->header.stamp = input_pointcloud_msg.header.stamp;
 
     return std::move(output_pointcloud_ptr_);
   }
@@ -358,7 +363,7 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   thrust::fill(device_organized_points_.begin(), device_organized_points_.end(), InputPointType{});
 
   cudaMemcpyAsync(
-    thrust::raw_pointer_cast(device_input_points_.data()), input_pointcloud_msg_ptr->data.data(),
+    thrust::raw_pointer_cast(device_input_points_.data()), input_pointcloud_msg.data.data(),
     num_raw_points_ * sizeof(InputPointType), cudaMemcpyHostToDevice, stream_);
 
   cudaStreamSynchronize(stream_);
@@ -369,6 +374,8 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   thrust::fill(
     device_transformed_points_.begin(), device_transformed_points_.end(), InputPointType{});
   thrust::fill(device_ring_outlier_mask_.begin(), device_ring_outlier_mask_.end(), 0);
+  thrust::fill(device_mismatch_mask_.begin(), device_mismatch_mask_.end(), 0);
+  thrust::fill(device_nan_mask_.begin(), device_nan_mask_.end(), 0);
   thrust::fill(device_crop_mask_.begin(), device_crop_mask_.end(), 0);
 
   tf2::Quaternion rotation_quaternion(
@@ -392,8 +399,8 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   transform_struct.m33 = static_cast<float>(rotation_matrix[2][2]);
 
   // Twist preprocessing
-  std::uint64_t pointcloud_stamp_nsec = 1'000'000'000 * input_pointcloud_msg_ptr->header.stamp.sec +
-                                        input_pointcloud_msg_ptr->header.stamp.nanosec;
+  std::uint64_t pointcloud_stamp_nsec = 1'000'000'000 * input_pointcloud_msg.header.stamp.sec +
+                                        input_pointcloud_msg.header.stamp.nanosec;
 
   if (undistortion_type_ == UndistortionType::Undistortion3D) {
     setupTwist3DStructs(
@@ -415,6 +422,8 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   InputPointType * device_transformed_points =
     thrust::raw_pointer_cast(device_transformed_points_.data());
   std::uint32_t * device_crop_mask = thrust::raw_pointer_cast(device_crop_mask_.data());
+  std::uint8_t * device_nan_mask = thrust::raw_pointer_cast(device_nan_mask_.data());
+  std::uint8_t * device_mismatch_mask = thrust::raw_pointer_cast(device_mismatch_mask_.data());
   std::uint32_t * device_ring_outlier_mask =
     thrust::raw_pointer_cast(device_ring_outlier_mask_.data());
   std::uint32_t * device_indices = thrust::raw_pointer_cast(device_indices_.data());
@@ -426,28 +435,33 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
     thrust::raw_pointer_cast(device_organized_points_.data()), device_transformed_points,
     num_organized_points_, transform_struct, threads_per_block_, blocks_per_grid, stream_);
 
+  // Crop box filter
   int crop_box_blocks_per_grid = std::min(blocks_per_grid, max_blocks_per_grid_);
   if (host_crop_box_structs_.size() > 0) {
     cropBoxLaunch(
-      device_transformed_points, device_crop_mask, num_organized_points_,
+      device_transformed_points, device_crop_mask, device_nan_mask, num_organized_points_,
       thrust::raw_pointer_cast(device_crop_box_structs_.data()), host_crop_box_structs_.size(),
       crop_box_blocks_per_grid, threads_per_block_, stream_);
   } else {
     thrust::fill(thrust::device, device_crop_mask, device_crop_mask + num_organized_points_, 1);
   }
 
+  // Undistortion
   if (
     undistortion_type_ == UndistortionType::Undistortion3D && device_twist_3d_structs_.size() > 0) {
     undistort3DLaunch(
       device_transformed_points, num_organized_points_, device_twist_3d_structs,
-      device_twist_3d_structs_.size(), threads_per_block_, blocks_per_grid, stream_);
+      device_twist_3d_structs_.size(), device_mismatch_mask, threads_per_block_, blocks_per_grid,
+      stream_);
   } else if (
     undistortion_type_ == UndistortionType::Undistortion2D && device_twist_2d_structs_.size() > 0) {
     undistort2DLaunch(
       device_transformed_points, num_organized_points_, device_twist_2d_structs,
-      device_twist_2d_structs_.size(), threads_per_block_, blocks_per_grid, stream_);
+      device_twist_2d_structs_.size(), device_mismatch_mask, threads_per_block_, blocks_per_grid,
+      stream_);
   }
 
+  // Ring outlier
   ringOutlierFilterLaunch(
     device_transformed_points, device_ring_outlier_mask, num_rings_, max_points_per_ring_,
     ring_outlier_parameters_.distance_ratio,
@@ -472,7 +486,22 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
   cudaMemcpyAsync(
     &num_output_points, device_indices + num_organized_points_ - 1, sizeof(std::uint32_t),
     cudaMemcpyDeviceToHost, stream_);
+
   cudaStreamSynchronize(stream_);
+
+  // Get information and extract points after filters
+  std::uint32_t num_crop_box_passed_points =
+    thrust::count(thrust::device, device_crop_mask_.begin(), device_crop_mask_.end(), 1);
+
+  std::uint32_t num_nan_points =
+    thrust::count(thrust::device, device_nan_mask_.begin(), device_nan_mask_.end(), 1);
+
+  std::uint32_t mismatch_count =
+    thrust::count(thrust::device, device_mismatch_mask_.begin(), device_mismatch_mask_.end(), 1);
+
+  stats_.num_nan_points = static_cast<int>(num_nan_points);
+  stats_.num_crop_box_passed_points = static_cast<int>(num_crop_box_passed_points);
+  stats_.mismatch_count = static_cast<int>(mismatch_count);
 
   if (num_output_points > 0) {
     extractPointsLaunch(
@@ -490,9 +519,9 @@ std::unique_ptr<cuda_blackboard::CudaPointCloud2> CudaPointcloudPreprocessor::pr
 
   output_pointcloud_ptr_->fields = point_fields_;
   output_pointcloud_ptr_->is_dense = true;
-  output_pointcloud_ptr_->is_bigendian = input_pointcloud_msg_ptr->is_bigendian;
+  output_pointcloud_ptr_->is_bigendian = input_pointcloud_msg.is_bigendian;
   output_pointcloud_ptr_->point_step = sizeof(OutputPointType);
-  output_pointcloud_ptr_->header.stamp = input_pointcloud_msg_ptr->header.stamp;
+  output_pointcloud_ptr_->header.stamp = input_pointcloud_msg.header.stamp;
 
   return std::move(output_pointcloud_ptr_);
 }

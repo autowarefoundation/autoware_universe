@@ -4,12 +4,11 @@
   <name>autoware_object_velocity_splitter</name>
   <version>0.45.0</version>
   <description>autoware_object_velocity_splitter</description>
-  <maintainer email="satoshi.tanaka@tier4.jp">Sathshi Tanaka</maintainer>
   <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
   <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>
   <maintainer email="lei.gu@tier4.jp">Lei Gu</maintainer>
   <license>Apache License 2.0</license>
-  <author email="satoshi.tanaka@tier4.jp">Sathshi Tanaka</author>
+  <author email="satoshi.tanaka@tier4.jp">Satoshi Tanaka</author>
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
 

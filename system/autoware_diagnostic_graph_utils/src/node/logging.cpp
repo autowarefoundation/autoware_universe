@@ -47,9 +47,9 @@ void LoggingNode::on_create(DiagGraph::ConstSharedPtr graph)
 {
   // Search root node.
   root_unit_ = nullptr;
-  for (const auto & unit : graph->units()) {
-    if (unit->path() == root_path_) {
-      root_unit_ = unit;
+  for (const auto & node : graph->nodes()) {
+    if (node->path() == root_path_) {
+      root_unit_ = node;
       return;
     }
   }
@@ -67,7 +67,10 @@ void LoggingNode::on_timer()
 
     // show on terminal
     if (enable_terminal_log_ && error_graph_text != prev_error_graph_text_) {
-      RCLCPP_WARN_STREAM(get_logger(), prefix_message << std::endl << error_graph_text);
+      RCLCPP_WARN_STREAM_THROTTLE(
+        get_logger(), *get_clock(), 3000 /* ms */,
+        prefix_message << std::endl
+                       << error_graph_text);
     }
 
     // publish debug topic
@@ -113,14 +116,14 @@ void LoggingNode::dump_unit(DiagUnit * unit, int depth, const std::string & inde
     return;
   }
 
-  std::string path = unit->path();
+  std::string path = unit->path_or_name();
   if (path.empty()) {
     path = "[anonymous group]";
   }
 
   dump_text_ << indent << "- " + path << " " << text_level(unit->level()) << std::endl;
-  for (const auto & child : unit->children()) {
-    dump_unit(child.unit, depth + 1, indent + "    ");
+  for (const auto & child : unit->child_units()) {
+    dump_unit(child, depth + 1, indent + "    ");
   }
 }
 

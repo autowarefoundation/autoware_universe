@@ -144,6 +144,8 @@
         merging_vehicle:
           th_overhang_distance: 0.0                     # [m]
 
+        unstable_classification_time: 2.0                # [s] If the object is classified as UNKNOWN type for less than unstable_classification_time seconds, it is probably not an unknown type.
+
         # params for avoidance of vehicle type objects that are ambiguous as to whether they are parked.
         avoidance_for_ambiguous_vehicle:
           # policy for ego behavior for ambiguous vehicle.

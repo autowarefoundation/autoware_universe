@@ -232,11 +232,25 @@ std::optional<Pose> calcClosestPose(
 autoware_perception_msgs::msg::PredictedObjects extract_dynamic_objects(
   const autoware_perception_msgs::msg::PredictedObjects & original_objects,
   const route_handler::RouteHandler & route_handler, const GoalPlannerParameters & parameters,
-  const double vehicle_width, const Pose & ego_pose);
+  const double vehicle_width, const Pose & ego_pose,
+  std::optional<std::reference_wrapper<Polygon2d>> debug_objects_extraction_polygon = std::nullopt);
 
 bool is_goal_reachable_on_path(
   const lanelet::ConstLanelets current_lanes, const route_handler::RouteHandler & route_handler,
   const bool left_side_parking);
+
+bool hasPreviousModulePathShapeChanged(
+  const BehaviorModuleOutput & upstream_module_output,
+  const BehaviorModuleOutput & last_upstream_module_output);
+bool hasDeviatedFromPath(
+  const Point & ego_position, const BehaviorModuleOutput & upstream_module_output);
+
+/**
+ * @brief check if stopline exists except for the terminal
+ * @note except for terminal, to account for lane change bug that inserts stopline at the end
+ * randomly
+ */
+bool has_stopline_except_terminal(const PathWithLaneId & path);
 
 }  // namespace autoware::behavior_path_planner::goal_planner_utils
 

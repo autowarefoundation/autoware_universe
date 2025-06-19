@@ -47,7 +47,8 @@ VirtualTrafficLightModule::VirtualTrafficLightModule(
   lane_id_(lane_id),
   reg_elem_(reg_elem),
   lane_(lane),
-  planner_param_(planner_param)
+  planner_param_(planner_param),
+  base_logger_(logger)
 {
   // Get map data
   const auto instrument = reg_elem_.getVirtualTrafficLight();
@@ -65,6 +66,10 @@ VirtualTrafficLightModule::VirtualTrafficLightModule(
     map_data_.stop_line = toAutowarePoints(reg_elem_.getStopLine());
     map_data_.start_line = toAutowarePoints(reg_elem_.getStartLine());
     map_data_.end_lines = toAutowarePoints(reg_elem_.getEndLines());
+
+    // Set stop line ID for logging (safe to use in log messages)
+    const auto stop_line = reg_elem_.getStopLine();
+    map_data_.stop_line_id_for_log = stop_line ? std::to_string(stop_line->id()) : "none";
   }
 
   // Custom tags
@@ -95,8 +100,81 @@ VirtualTrafficLightModule::VirtualTrafficLightModule(
   command_.id = map_data_.instrument_id;
   command_.custom_tags = map_data_.custom_tags;
 
-  // Add instrument information to the logger
-  logger_ = logger_.get_child((map_data_.instrument_type + "_" + map_data_.instrument_id).c_str());
+  // Set up base logger with instrument information
+  base_logger_ =
+    base_logger_.get_child((map_data_.instrument_type + "_" + map_data_.instrument_id).c_str());
+  updateLoggerWithState();
+}
+
+void VirtualTrafficLightModule::setModuleState(
+  const State new_state, const std::optional<int64_t> end_line_id)
+{
+  // +----------+
+  // |   NONE   |
+  // +----------+
+  //      |
+  //      | vehicle is before start line
+  //      v
+  // +----------+
+  // |REQUESTING|
+  // +----------+
+  //      |
+  //      | vehicle has passed stop line
+  //      v
+  // +----------+
+  // | PASSING  |
+  // +----------+
+  //      |
+  //      +-------------------------------------------+
+  //      | - vehicle is near end line                | vehicle has passed end line
+  //      | - finalization isn't completed            |
+  //      v                                           v
+  // +----------+                                 +-----------+
+  // |FINALIZING|                                 | FINALIZED |
+  // +----------+                                 +-----------+
+
+  if (state_ == new_state) {
+    return;
+  }
+
+  // NONE -> REQUESTING
+  if (state_ == State::NONE && new_state == State::REQUESTING) {
+    logInfo(
+      "State transition: NONE -> REQUESTING as vehicle is before start line (ID: %ld)",
+      reg_elem_.getStartLine().id());
+  }
+
+  // REQUESTING -> PASSING
+  if (state_ == State::REQUESTING && new_state == State::PASSING) {
+    logInfo(
+      "State transition: REQUESTING -> PASSING as vehicle has passed stop line (ID: %s)",
+      map_data_.stop_line_id_for_log.c_str());
+  }
+
+  // PASSING -> FINALIZING
+  if (state_ == State::PASSING && new_state == State::FINALIZING) {
+    if (end_line_id.has_value()) {
+      logInfo(
+        "State transition: PASSING -> FINALIZING as vehicle is near end line (ID: %ld)",
+        end_line_id.value());
+    } else {
+      logInfo("State transition: PASSING -> FINALIZING as vehicle is near end line");
+    }
+  }
+
+  // PASSING -> FINALIZED
+  if (state_ == State::PASSING && new_state == State::FINALIZED) {
+    if (end_line_id.has_value()) {
+      logInfo(
+        "State transition: PASSING -> FINALIZED as vehicle has passed end line (ID: %ld)",
+        end_line_id.value());
+    } else {
+      logInfo("State transition: PASSING -> FINALIZED as vehicle has passed end line");
+    }
+  }
+
+  state_ = new_state;
+  updateLoggerWithState();
 }
 
 bool VirtualTrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
@@ -114,51 +192,59 @@ bool VirtualTrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
   // Calculate path index of end line
   // NOTE: In order to deal with u-turn or self-crossing path, only start/stop lines before the end
   // line are used when whether the ego is before/after the start/stop/end lines is calculated.
-  const auto opt_end_line_idx = getPathIndexOfFirstEndLine();
-  if (!opt_end_line_idx) {
+  const auto opt_end_line_result = getPathIndexOfFirstEndLine();
+  if (!opt_end_line_result) {
     return true;
   }
-  const size_t end_line_idx = opt_end_line_idx.value();
+  const size_t end_line_idx = opt_end_line_result->first;
+  const int64_t end_line_id = opt_end_line_result->second;
 
   // Do nothing if vehicle is before start line
   if (isBeforeStartLine(end_line_idx)) {
-    RCLCPP_DEBUG(logger_, "before start_line");
-    state_ = State::NONE;
+    logDebug("before start_line");
+    setModuleState<State::NONE>();
+    updateInfrastructureCommand();
+    return true;
+  }
+
+  // Do nothing if state is already FINALIZED
+  if (state_ == State::FINALIZED) {
+    logInfoThrottle(5000, "state is already FINALIZED");
     updateInfrastructureCommand();
     return true;
   }
 
   // Do nothing if vehicle is after any end line
-  if (isAfterAnyEndLine(end_line_idx) || state_ == State::FINALIZED) {
-    RCLCPP_DEBUG(logger_, "after end_line");
-    state_ = State::FINALIZED;
+  if (isAfterAnyEndLine(end_line_idx)) {
+    setModuleState<State::FINALIZED>(end_line_id);
     updateInfrastructureCommand();
     return true;
   }
-
-  // Set state
-  state_ = State::REQUESTING;
 
   // Don't need to stop if there is no stop_line
-  if (!map_data_.stop_line) {
+  if (!map_data_.stop_line || !reg_elem_.getStopLine()) {
+    logWarnThrottle(5000, "no stop line is found, do nothing in this module");
     updateInfrastructureCommand();
     return true;
   }
 
-  // Find corresponding state
-  const auto virtual_traffic_light_state = findCorrespondingState();
-
   // Stop at stop_line if no message received
-  if (!virtual_traffic_light_state) {
-    RCLCPP_DEBUG(logger_, "no message received");
+  if (!virtual_traffic_light_state_) {
+    setModuleState<State::REQUESTING>();
+    logInfoThrottle(
+      5000, "no message received for instrument (ID: %s), stop at stop line (ID: %s)",
+      map_data_.instrument_id.c_str(), map_data_.stop_line_id_for_log.c_str());
     insertStopVelocityAtStopLine(path, end_line_idx);
     updateInfrastructureCommand();
     return true;
   }
 
   // Stop at stop_line if no right is given
-  if (!hasRightOfWay(*virtual_traffic_light_state)) {
-    RCLCPP_DEBUG(logger_, "no right is given");
+  if (!hasRightOfWay(*virtual_traffic_light_state_)) {
+    setModuleState<State::REQUESTING>();
+    logInfoThrottle(
+      5000, "no right of way for instrument (ID: %s) is given, stop at stop line (ID: %s)",
+      map_data_.instrument_id.c_str(), map_data_.stop_line_id_for_log.c_str());
     insertStopVelocityAtStopLine(path, end_line_idx);
     updateInfrastructureCommand();
     return true;
@@ -166,8 +252,11 @@ bool VirtualTrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
 
   // Stop at stop_line if state is timeout before stop_line
   if (isBeforeStopLine(end_line_idx)) {
-    if (isStateTimeout(*virtual_traffic_light_state)) {
-      RCLCPP_DEBUG(logger_, "state is timeout before stop line");
+    setModuleState<State::REQUESTING>();
+    if (isStateTimeout(*virtual_traffic_light_state_)) {
+      logWarnThrottle(
+        5000, "virtual traffic light state is timeout, stop at stop line (ID: %s)",
+        map_data_.stop_line_id_for_log.c_str());
       insertStopVelocityAtStopLine(path, end_line_idx);
     }
 
@@ -176,24 +265,33 @@ bool VirtualTrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
   }
 
   // After stop_line
-  state_ = State::PASSING;
+  if (state_ == State::REQUESTING) {
+    setModuleState<State::PASSING>();
+  }
 
   // Check timeout after stop_line if the option is on
   if (
-    planner_param_.check_timeout_after_stop_line && isStateTimeout(*virtual_traffic_light_state)) {
-    RCLCPP_DEBUG(logger_, "state is timeout after stop line");
+    planner_param_.check_timeout_after_stop_line && isStateTimeout(*virtual_traffic_light_state_)) {
+    setModuleState<State::PASSING>();
+    logWarnThrottle(
+      5000,
+      "virtual traffic light state is timeout after stop line, insert stop velocity at stop line "
+      "(ID: %s)",
+      map_data_.stop_line_id_for_log.c_str());
     insertStopVelocityAtStopLine(path, end_line_idx);
     updateInfrastructureCommand();
     return true;
   }
 
-  // Stop at stop_line if finalization isn't completed
-  if (!virtual_traffic_light_state->is_finalized) {
-    RCLCPP_DEBUG(logger_, "finalization isn't completed");
+  // Stop at end_line if finalization isn't completed
+  if (!virtual_traffic_light_state_->is_finalized) {
+    logInfoThrottle(
+      5000, "finalization isn't completed, insert stop velocity at end line (ID: %s)",
+      map_data_.stop_line_id_for_log.c_str());
     insertStopVelocityAtEndLine(path, end_line_idx);
 
     if (isNearAnyEndLine(end_line_idx) && planner_data_->isVehicleStopped()) {
-      state_ = State::FINALIZING;
+      setModuleState<State::FINALIZING>(end_line_id);
     }
   }
 
@@ -208,10 +306,15 @@ void VirtualTrafficLightModule::updateInfrastructureCommand()
   setInfrastructureCommand(command_);
 }
 
-std::optional<size_t> VirtualTrafficLightModule::getPathIndexOfFirstEndLine()
+std::optional<std::pair<size_t, int64_t>> VirtualTrafficLightModule::getPathIndexOfFirstEndLine()
 {
-  std::optional<size_t> min_seg_idx;
-  for (const auto & end_line : map_data_.end_lines) {
+  std::optional<std::pair<size_t, int64_t>> min_result;
+  const auto original_end_lines = reg_elem_.getEndLines();
+
+  for (size_t i = 0; i < map_data_.end_lines.size() && i < original_end_lines.size(); ++i) {
+    const auto & end_line = map_data_.end_lines[i];
+    const auto & original_end_line = original_end_lines[i];
+
     geometry_msgs::msg::Point end_line_p1;
     end_line_p1.x = end_line.front().x();
     end_line_p1.y = end_line.front().y();
@@ -232,13 +335,14 @@ std::optional<size_t> VirtualTrafficLightModule::getPathIndexOfFirstEndLine()
 
     const size_t collision_seg_idx = collision->first;
 
-    if (!min_seg_idx || collision_seg_idx < min_seg_idx.value()) {
-      min_seg_idx =
-        collision_seg_idx + 1;  // NOTE: In order that min_seg_idx will be after the end line
+    if (!min_result || collision_seg_idx < min_result->first) {
+      min_result = std::make_pair(
+        collision_seg_idx + 1,  // NOTE: In order that min_seg_idx will be after the end line
+        original_end_line.id());
     }
   }
 
-  return min_seg_idx;
+  return min_result;
 }
 
 bool VirtualTrafficLightModule::isBeforeStartLine(const size_t end_line_idx)
@@ -336,29 +440,12 @@ bool VirtualTrafficLightModule::isNearAnyEndLine(const size_t end_line_idx)
   return std::abs(signed_arc_length) < planner_param_.near_line_distance;
 }
 
-std::optional<tier4_v2x_msgs::msg::VirtualTrafficLightState>
-VirtualTrafficLightModule::findCorrespondingState()
-{
-  // Note: This variable is set by virtual traffic light's manager.
-  if (!virtual_traffic_light_states_) {
-    return {};
-  }
-
-  for (const auto & state : virtual_traffic_light_states_->states) {
-    if (state.id == map_data_.instrument_id) {
-      return state;
-    }
-  }
-
-  return {};
-}
-
 bool VirtualTrafficLightModule::isStateTimeout(
   const tier4_v2x_msgs::msg::VirtualTrafficLightState & state)
 {
   const auto delay = (clock_->now() - rclcpp::Time(state.stamp)).seconds();
   if (delay > planner_param_.max_delay_sec) {
-    RCLCPP_DEBUG(logger_, "delay=%f, max_delay=%f", delay, planner_param_.max_delay_sec);
+    logDebug("delay=%f, max_delay=%f", delay, planner_param_.max_delay_sec);
     return true;
   }
 
@@ -481,10 +568,68 @@ void VirtualTrafficLightModule::setInfrastructureCommand(
   infrastructure_command_ = command;
 }
 
-void VirtualTrafficLightModule::setVirtualTrafficLightStates(
+void VirtualTrafficLightModule::setCorrespondingVirtualTrafficLightState(
   const tier4_v2x_msgs::msg::VirtualTrafficLightStateArray::ConstSharedPtr
     virtual_traffic_light_states)
 {
-  virtual_traffic_light_states_ = virtual_traffic_light_states;
+  if (!virtual_traffic_light_states) {
+    return;
+  }
+
+  for (const auto & state : virtual_traffic_light_states->states) {
+    if (state.id != map_data_.instrument_id) {
+      continue;
+    }
+
+    const bool has_previous_state = virtual_traffic_light_state_.has_value();
+
+    const bool prev_has_right_of_way =
+      has_previous_state ? hasRightOfWay(*virtual_traffic_light_state_) : false;
+    const bool has_right_of_way = hasRightOfWay(state);
+    if (!prev_has_right_of_way && has_right_of_way) {
+      logInfo(
+        "received message for instrument (ID: %s) is updated : right of way is given, approval: "
+        "true, finalized: %s, stamp: %ld.%09ld",
+        state.id.c_str(), state.is_finalized ? "true" : "false", state.stamp.sec,
+        state.stamp.nanosec);
+    }
+
+    const bool prev_finalized =
+      has_previous_state ? virtual_traffic_light_state_->is_finalized : false;
+    const bool current_finalized = state.is_finalized;
+    if (!prev_finalized && current_finalized) {
+      logInfo(
+        "received message for instrument (ID: %s) is updated : finalization is completed, "
+        "approval: %s, finalized: true, stamp: %ld.%09ld",
+        state.id.c_str(), state.approval ? "true" : "false", state.stamp.sec, state.stamp.nanosec);
+    }
+
+    virtual_traffic_light_state_ = state;
+    return;
+  }
+}
+
+std::string VirtualTrafficLightModule::stateToString(State state) const
+{
+  switch (state) {
+    case State::NONE:
+      return "NONE";
+    case State::REQUESTING:
+      return "REQUESTING";
+    case State::PASSING:
+      return "PASSING";
+    case State::FINALIZING:
+      return "FINALIZING";
+    case State::FINALIZED:
+      return "FINALIZED";
+    default:
+      return "UNKNOWN";
+  }
+}
+
+void VirtualTrafficLightModule::updateLoggerWithState()
+{
+  const std::string state_name = stateToString(state_);
+  logger_ = base_logger_.get_child(("state: " + state_name).c_str());
 }
 }  // namespace autoware::behavior_velocity_planner
