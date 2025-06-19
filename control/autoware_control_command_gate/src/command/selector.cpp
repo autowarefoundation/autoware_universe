@@ -14,6 +14,7 @@
 
 #include "selector.hpp"
 
+#include <autoware_command_mode_types/sources.hpp>
 #include <rclcpp/logging.hpp>
 
 #include <memory>
