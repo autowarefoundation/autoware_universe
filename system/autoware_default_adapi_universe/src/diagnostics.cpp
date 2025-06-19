@@ -23,6 +23,7 @@ namespace autoware::default_adapi
 DiagnosticsNode::DiagnosticsNode(const rclcpp::NodeOptions & options) : Node("diagnostics", options)
 {
   using std::placeholders::_1;
+  using std::placeholders::_2;
   const auto qos_struct = rclcpp::QoS(1).transient_local();
   const auto qos_status = rclcpp::QoS(1).best_effort();
 
@@ -34,26 +35,11 @@ DiagnosticsNode::DiagnosticsNode(const rclcpp::NodeOptions & options) : Node("di
   sub_status_ = create_subscription<InternalGraphStatus>(
     "/diagnostics_graph/status", qos_status, std::bind(&DiagnosticsNode::on_status, this, _1));
 
-  std::unordered_map<DiagUnit *, size_t> unit_indices_;
-  for (size_t i = 0; i < units.size(); ++i) {
-    unit_indices_[units[i]] = i;
-  }
-
-  autoware_adapi_v1_msgs::msg::DiagGraphStruct msg;
-  msg.stamp = graph->created_stamp();
-  msg.id = graph->id();
-  msg.nodes.reserve(units.size());
-  msg.links.reserve(links.size());
-  for (const auto & unit : units) {
-    msg.nodes.emplace_back();
-    msg.nodes.back().path = unit->path_or_name();
-  }
-  for (const auto & link : links) {
-    msg.links.emplace_back();
-    msg.links.back().parent = unit_indices_.at(link->parent());
-    msg.links.back().child = unit_indices_.at(link->child());
-  }
-  pub_struct_->publish(msg);
+  group_cli_ = create_callback_group(rclcpp::CallbackGroupType::MutuallyExclusive);
+  cli_reset_ = create_client<InternalReset>(
+    "/diagnostics_graph/reset", rmw_qos_profile_services_default, group_cli_);
+  srv_reset_ = create_service<ExternalReset>(
+    "/api/system/diagnostics/reset", std::bind(&DiagnosticsNode::on_reset, this, _1, _2));
 }
 
 void DiagnosticsNode::on_struct(const InternalGraphStruct & internal)
@@ -65,6 +51,7 @@ void DiagnosticsNode::on_struct(const InternalGraphStruct & internal)
   };
   const auto convert_diag = [](const InternalLeafStruct & internal) {
     ExternalLeafStruct external;
+    external.parent = internal.parent;
     external.name = internal.name;
     return external;
   };
@@ -120,6 +107,31 @@ void DiagnosticsNode::on_status(const InternalGraphStatus & internal)
   for (const auto & node : internal.nodes) external.nodes.push_back(convert_node(node));
   for (const auto & diag : internal.diags) external.diags.push_back(convert_diag(diag));
   pub_status_->publish(external);
+}
+
+void DiagnosticsNode::on_reset(
+  const ExternalReset::Request::SharedPtr, const ExternalReset::Response::SharedPtr res)
+{
+  using autoware_adapi_v1_msgs::msg::ResponseStatus;
+
+  if (!cli_reset_->service_is_ready()) {
+    res->status.success = false;
+    res->status.code = ResponseStatus::SERVICE_UNREADY;
+    return;
+  }
+
+  auto internal_req = std::make_shared<InternalReset::Request>();
+  auto future = cli_reset_->async_send_request(internal_req);
+  if (future.wait_for(std::chrono::seconds(1)) != std::future_status::ready) {
+    res->status.success = false;
+    res->status.code = ResponseStatus::SERVICE_TIMEOUT;
+    return;
+  }
+
+  const auto internal_res = future.get();
+  res->status.success = internal_res->status.success;
+  res->status.code = internal_res->status.code;
+  res->status.message = internal_res->status.message;
 }
 
 }  // namespace autoware::default_adapi
