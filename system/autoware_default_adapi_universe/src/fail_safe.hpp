@@ -23,6 +23,8 @@
 // This file should be included after messages.
 #include "utils/types.hpp"
 
+#include <vector>
+
 namespace autoware::default_adapi
 {
 
@@ -32,11 +34,17 @@ public:
   explicit FailSafeNode(const rclcpp::NodeOptions & options);
 
 private:
+  using MrmDescription = autoware::adapi_specs::fail_safe::MrmDescription::Service;
   using MrmState = autoware::adapi_specs::fail_safe::MrmState::Message;
+  Srv<autoware::adapi_specs::fail_safe::MrmDescription> srv_mrm_description_;
   Pub<autoware::adapi_specs::fail_safe::MrmState> pub_mrm_state_;
   Sub<autoware::component_interface_specs_universe::system::MrmState> sub_mrm_state_;
   MrmState prev_state_;
   void on_state(const MrmState::ConstSharedPtr msg);
+  void on_mrm_description(
+    const MrmDescription::Request::SharedPtr req, const MrmDescription::Response::SharedPtr res);
+
+  std::vector<autoware_adapi_v1_msgs::msg::MrmDescription> descriptions_;
 };
 
 }  // namespace autoware::default_adapi
