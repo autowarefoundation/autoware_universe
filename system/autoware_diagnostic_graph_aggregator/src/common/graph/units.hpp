@@ -15,214 +15,75 @@
 #ifndef COMMON__GRAPH__UNITS_HPP_
 #define COMMON__GRAPH__UNITS_HPP_
 
-#include "names.hpp"
-#include "types.hpp"
+#include "config/yaml.hpp"
+#include "types/diagnostics.hpp"
+#include "types/forward.hpp"
 
 #include <rclcpp/time.hpp>
 
-#include <optional>
+#include <memory>
 #include <string>
 #include <vector>
 
 namespace autoware::diagnostic_graph_aggregator
 {
 
-class UnitLink
-{
-public:
-  UnitLink() : parent_(nullptr), child_(nullptr), struct_(), status_() {}
-
-  void initialize_object(BaseUnit * parent, BaseUnit * child);
-  void initialize_struct();
-  void initialize_status();  // cppcheck-suppress functionStatic
-  DiagLinkStruct create_struct() const { return struct_; }
-  DiagLinkStatus create_status() const { return status_; }
-  BaseUnit * parent() const { return parent_; }
-  BaseUnit * child() const { return child_; }
-
-private:
-  BaseUnit * parent_;
-  BaseUnit * child_;
-  DiagLinkStruct struct_;
-  DiagLinkStatus status_;
-};
-
 class BaseUnit
 {
 public:
-  explicit BaseUnit(const UnitLoader & unit);
   virtual ~BaseUnit() = default;
   virtual DiagnosticLevel level() const = 0;
-  virtual std::string path() const = 0;
-  virtual std::string type() const = 0;
-  virtual std::vector<UnitLink *> child_links() const = 0;
-  virtual bool is_leaf() const = 0;
-  size_t index() const { return index_; }
-  size_t parent_size() const { return parents_.size(); }
+  virtual std::vector<LinkPort *> ports() const = 0;
+  virtual std::string debug() const { return "NotImplemented"; }
 
-protected:
-  bool update();
-
-private:
-  virtual void update_status() = 0;
-  size_t index_;
-  std::vector<UnitLink *> parents_;
-  std::optional<DiagnosticLevel> prev_level_;
-};
-
-class NodeUnit : public BaseUnit
-{
-public:
-  explicit NodeUnit(const UnitLoader & unit);
-  void initialize_struct();
-  void initialize_status();
-  bool is_leaf() const override { return false; }
-  DiagNodeStruct create_struct() const { return struct_; }
-  DiagNodeStatus create_status() const { return status_; }
-  DiagnosticLevel level() const override { return status_.level; }
-  std::string path() const override { return struct_.path; }
-
-protected:
-  DiagNodeStruct struct_;
-  DiagNodeStatus status_;
-};
-
-class LeafUnit : public BaseUnit
-{
-public:
-  explicit LeafUnit(const UnitLoader & unit);
-  void initialize_struct();
-  void initialize_status();
-  bool is_leaf() const override { return true; }
-  DiagLeafStruct create_struct() const { return struct_; }
-  DiagLeafStatus create_status() const { return status_; }
-  DiagnosticLevel level() const override { return status_.level; }
-  std::string name() const { return struct_.name; }
-  std::string path() const override { return struct_.path; }
-
-protected:
-  DiagLeafStruct struct_;
-  DiagLeafStatus status_;
-};
-
-class DiagUnit : public LeafUnit
-{
-public:
-  explicit DiagUnit(const UnitLoader & unit);
-  std::string type() const override { return unit_name::diag; }
-  std::vector<UnitLink *> child_links() const override { return {}; }
-  bool on_time(const rclcpp::Time & stamp);
-  bool on_diag(const rclcpp::Time & stamp, const DiagnosticStatus & status);
+  void finalize(int index, std::vector<BaseUnit *> parents);
+  int index() const { return index_; }
+  std::vector<BaseUnit *> child_units() const;
+  std::vector<NodeUnit *> child_nodes() const;
+  std::vector<BaseUnit *> parent_units() const;
 
 private:
-  void update_status() override;
-  double timeout_;
-  std::optional<rclcpp::Time> last_updated_time_;
+  int index_;
+  std::vector<BaseUnit *> parents_;
 };
 
-class MaxUnit : public NodeUnit
+class TempUnit : public BaseUnit
 {
 public:
-  explicit MaxUnit(const UnitLoader & unit);
-  std::string type() const override { return unit_name::max; }
-  std::vector<UnitLink *> child_links() const override { return links_; }
+  DiagnosticLevel level() const override { throw std::logic_error("TempUnit"); }
+  std::vector<LinkPort *> ports() const override { return {}; }
+};
 
-protected:
-  std::vector<UnitLink *> links_;
+class TempNode : public TempUnit
+{
+public:
+  explicit TempNode(ConfigYaml yaml) { yaml_ = yaml; }
+  ConfigYaml yaml() const { return yaml_; }
 
 private:
-  void update_status() override;
+  ConfigYaml yaml_;
 };
 
-class ShortCircuitMaxUnit : public MaxUnit
+class TempDiag : public TempUnit
 {
 public:
-  using MaxUnit::MaxUnit;
-  std::string type() const override { return unit_name::short_circuit_max; }
+  explicit TempDiag(ConfigYaml yaml) { yaml_ = yaml; }
+  ConfigYaml yaml() const { return yaml_; }
 
 private:
-  void update_status() override;  // cppcheck-suppress uselessOverride
+  ConfigYaml yaml_;
 };
 
-class MinUnit : public NodeUnit
+class LinkUnit : public TempUnit
 {
 public:
-  explicit MinUnit(const UnitLoader & unit);
-  std::string type() const override { return unit_name::min; }
-  std::vector<UnitLink *> child_links() const override { return links_; }
-
-protected:
-  std::vector<UnitLink *> links_;
+  explicit LinkUnit(ConfigYaml yaml);
+  std::string path() const { return path_; }
+  std::string link() const { return link_; }
 
 private:
-  void update_status() override;
-};
-
-class RemapUnit : public NodeUnit
-{
-public:
-  explicit RemapUnit(const UnitLoader & unit);
-  std::vector<UnitLink *> child_links() const override { return {link_}; }
-
-protected:
-  UnitLink * link_;
-  DiagnosticLevel level_from_;
-  DiagnosticLevel level_to_;
-
-private:
-  void update_status() override;
-};
-
-class WarnToOkUnit : public RemapUnit
-{
-public:
-  explicit WarnToOkUnit(const UnitLoader & unit);
-  std::string type() const override { return unit_name::warn_to_ok; }
-};
-
-class WarnToErrorUnit : public RemapUnit
-{
-public:
-  explicit WarnToErrorUnit(const UnitLoader & unit);
-  std::string type() const override { return unit_name::warn_to_error; }
-};
-
-class ConstUnit : public NodeUnit
-{
-public:
-  using NodeUnit::NodeUnit;
-  std::vector<UnitLink *> child_links() const override { return {}; }
-
-private:
-  void update_status() override;
-};
-
-class OkUnit : public ConstUnit
-{
-public:
-  explicit OkUnit(const UnitLoader & unit);
-  std::string type() const override { return unit_name::ok; }
-};
-
-class WarnUnit : public ConstUnit
-{
-public:
-  explicit WarnUnit(const UnitLoader & unit);
-  std::string type() const override { return unit_name::warn; }
-};
-
-class ErrorUnit : public ConstUnit
-{
-public:
-  explicit ErrorUnit(const UnitLoader & unit);
-  std::string type() const override { return unit_name::error; }
-};
-
-class StaleUnit : public ConstUnit
-{
-public:
-  explicit StaleUnit(const UnitLoader & unit);
-  std::string type() const override { return unit_name::stale; }
+  std::string path_;
+  std::string link_;
 };
 
 }  // namespace autoware::diagnostic_graph_aggregator

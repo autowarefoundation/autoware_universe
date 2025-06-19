@@ -30,11 +30,13 @@ namespace autoware::cuda_pointcloud_preprocessor
 {
 void undistort2DLaunch(
   InputPointType * input_points, int num_points, TwistStruct2D * twist_structs, int num_twists,
-  int threads_per_block, int blocks_per_grid, cudaStream_t & stream);
+  std::uint8_t * output_mismatch_mask, int threads_per_block, int blocks_per_grid,
+  cudaStream_t & stream);
 
 void undistort3DLaunch(
   InputPointType * input_points, int num_points, TwistStruct3D * twist_structs, int num_twists,
-  int threads_per_block, int blocks_per_grid, cudaStream_t & stream);
+  std::uint8_t * output_mismatch_mask, int threads_per_block, int blocks_per_grid,
+  cudaStream_t & stream);
 
 void setupTwist2DStructs(
   const std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> & twist_queue,

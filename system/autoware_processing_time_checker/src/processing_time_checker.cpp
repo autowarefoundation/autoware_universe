@@ -71,6 +71,7 @@ ProcessingTimeChecker::ProcessingTimeChecker(const rclcpp::NodeOptions & node_op
     if (module_name) {
       module_name_map_.insert_or_assign(processing_time_topic_name, *module_name);
       processing_time_accumulator_map_.insert_or_assign(*module_name, Accumulator<double>());
+      processing_time_tdigest_map_.insert_or_assign(*module_name, tdigest<double>(100));
     } else {
       throw std::invalid_argument("The format of the processing time topic name is not correct.");
     }
@@ -87,6 +88,7 @@ ProcessingTimeChecker::ProcessingTimeChecker(const rclcpp::NodeOptions & node_op
         [this, &module_name]([[maybe_unused]] const Float64Stamped & msg) {
           processing_time_map_.insert_or_assign(module_name, msg.data);
           processing_time_accumulator_map_.at(module_name).add(msg.data);
+          processing_time_tdigest_map_.at(module_name).insert(msg.data);
         }));
     // clang-format on
   }
@@ -110,9 +112,13 @@ ProcessingTimeChecker::~ProcessingTimeChecker()
     for (const auto & accumulator_iterator : processing_time_accumulator_map_) {
       const auto module_name = accumulator_iterator.first;
       const auto processing_time_accumulator = accumulator_iterator.second;
+      auto processing_time_tdigest = processing_time_tdigest_map_.at(module_name);
+      processing_time_tdigest.merge();
       j[module_name + "/min"] = processing_time_accumulator.min();
       j[module_name + "/max"] = processing_time_accumulator.max();
       j[module_name + "/mean"] = processing_time_accumulator.mean();
+      j[module_name + "/percentile_95"] = processing_time_tdigest.quantile(95.0);
+      j[module_name + "/percentile_99"] = processing_time_tdigest.quantile(99.0);
       j[module_name + "/count"] = processing_time_accumulator.count();
       j[module_name + "/description"] = "processing time of " + module_name + "[ms]";
     }

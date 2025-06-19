@@ -20,10 +20,33 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <string>
-#include <unordered_map>
+#include <vector>
 
 namespace autoware::diagnostic_graph_utils
 {
+
+struct TableWidth
+{
+  size_t index;
+  size_t level;
+  size_t input;
+  size_t latch;
+  size_t data;
+  size_t type;
+  size_t links;
+};
+
+struct TableLine
+{
+  std::string str(const TableWidth & width) const;
+  std::string index;
+  std::string level;
+  std::string input;
+  std::string latch;
+  std::string type;
+  std::string data;   // node path or diag name
+  std::string links;  // node children
+};
 
 class DumpNode : public rclcpp::Node
 {
@@ -35,16 +58,12 @@ private:
   void on_update(DiagGraph::ConstSharedPtr graph);
   DiagGraphSubscription sub_graph_;
 
-  struct TableLine
-  {
-    int index;
-    std::string text1;
-    std::string text2;
-  };
-
-  std::unordered_map<DiagUnit *, TableLine> table_;
-  std::string header_;
+  TableWidth width_;
+  std::string node_header_;
+  std::string diag_header_;
   std::string border_;
+  std::vector<TableLine> node_table_;
+  std::vector<TableLine> diag_table_;
 };
 
 }  // namespace autoware::diagnostic_graph_utils

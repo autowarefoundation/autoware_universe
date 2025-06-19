@@ -51,6 +51,10 @@ public:
   void pushLaneletPolygonsMarker(
     const lanelet::BasicPolygons2d & polygon, const std::string & ns, int id = 0);
 
+  void pushMarker(const visualization_msgs::msg::Marker & marker);
+
+  void pushMarkers(const visualization_msgs::msg::MarkerArray & marker);
+
   std::string getStatusDebugString(const PlanningValidatorStatus & status) const
   {
     std::stringstream ss;

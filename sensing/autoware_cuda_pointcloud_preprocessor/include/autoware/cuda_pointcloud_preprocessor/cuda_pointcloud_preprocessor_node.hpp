@@ -19,9 +19,10 @@
 #include "autoware/cuda_pointcloud_preprocessor/point_types.hpp"
 
 #include <autoware/point_types/types.hpp>
-#include <autoware/universe_utils/ros/debug_publisher.hpp>
-#include <autoware/universe_utils/ros/polling_subscriber.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
+#include <autoware_utils/ros/polling_subscriber.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 #include <cuda_blackboard/cuda_adaptation.hpp>
 #include <cuda_blackboard/cuda_blackboard_publisher.hpp>
 #include <cuda_blackboard/cuda_blackboard_subscriber.hpp>
@@ -40,13 +41,12 @@
 #include <deque>
 #include <memory>
 #include <string>
+#include <utility>
 
-/* *INDENT-OFF* */
 #define CHECK_OFFSET(structure1, structure2, field)             \
   static_assert(                                                \
     offsetof(structure1, field) == offsetof(structure2, field), \
     "Offset of " #field " in " #structure1 " does not match expected offset.")
-/* *INDENT-ON* */
 
 namespace autoware::cuda_pointcloud_preprocessor
 {
@@ -91,19 +91,45 @@ private:
     const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr pointcloud_msg);
   void imuCallback(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg);
 
+  // Helper Functions
+  void validatePointcloudLayout(const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg);
+  std::pair<double, std::uint32_t> getFirstPointTimeInfo(
+    const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg);
+
+  void updateTwistQueue(double first_point_stamp);
+  void updateImuQueue(double first_point_stamp);
+  std::optional<geometry_msgs::msg::TransformStamped> lookupTransformToBase(
+    const std::string & source_frame);
+  std::unique_ptr<cuda_blackboard::CudaPointCloud2> processPointcloud(
+    const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg,
+    const geometry_msgs::msg::TransformStamped & transform_msg,
+    const std::uint32_t first_point_rel_stamp);
+
+  void publishDiagnostics(
+    const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg,
+    const std::unique_ptr<cuda_blackboard::CudaPointCloud2> & output_pointcloud_ptr);
+
   tf2_ros::Buffer tf2_buffer_;
   tf2_ros::TransformListener tf2_listener_;
 
+  // Diagnostic
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_;
+
   std::string base_frame_;
+  bool use_3d_undistortion_;
+  bool use_imu_;
+  double processing_time_threshold_sec_;
+  double timestamp_mismatch_fraction_threshold_;
+
   std::deque<geometry_msgs::msg::TwistWithCovarianceStamped> twist_queue_;
   std::deque<geometry_msgs::msg::Vector3Stamped> angular_velocity_queue_;
 
   // Subscribers
-  autoware::universe_utils::InterProcessPollingSubscriber<
-    sensor_msgs::msg::Imu, autoware::universe_utils::polling_policy::All>::SharedPtr imu_sub_;
-  autoware::universe_utils::InterProcessPollingSubscriber<
-    geometry_msgs::msg::TwistWithCovarianceStamped,
-    autoware::universe_utils::polling_policy::All>::SharedPtr twist_sub_;
+  autoware_utils::InterProcessPollingSubscriber<
+    sensor_msgs::msg::Imu, autoware_utils::polling_policy::All>::SharedPtr imu_sub_;
+  autoware_utils::InterProcessPollingSubscriber<
+    geometry_msgs::msg::TwistWithCovarianceStamped, autoware_utils::polling_policy::All>::SharedPtr
+    twist_sub_;
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_sub_{};
 
   // CUDA pub
@@ -111,8 +137,8 @@ private:
 
   std::unique_ptr<CudaPointcloudPreprocessor> cuda_pointcloud_preprocessor_;
 
-  std::unique_ptr<autoware::universe_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
-  std::unique_ptr<autoware::universe_utils::DebugPublisher> debug_publisher_;
+  std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
+  std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_;
 };
 
 }  // namespace autoware::cuda_pointcloud_preprocessor

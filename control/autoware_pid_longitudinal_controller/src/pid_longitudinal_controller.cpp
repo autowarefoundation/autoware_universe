@@ -863,7 +863,10 @@ PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
     m_prev_raw_ctrl_cmd = raw_ctrl_cmd;
 
     // calc acc feedback
-    const double acc_err = control_data.current_motion.acc - raw_ctrl_cmd.acc;
+    const double vel_sign = (control_data.shift == Shift::Forward)
+                              ? 1.0
+                              : (control_data.shift == Shift::Reverse ? -1.0 : 0.0);
+    const double acc_err = control_data.current_motion.acc * vel_sign - raw_ctrl_cmd.acc;
     m_debug_values.setValues(DebugValues::TYPE::ERROR_ACC, acc_err);
     m_lpf_acc_error->filter(acc_err);
     m_debug_values.setValues(DebugValues::TYPE::ERROR_ACC_FILTERED, m_lpf_acc_error->getValue());
