@@ -121,6 +121,7 @@ CudaPointcloudPreprocessorNode::CudaPointcloudPreprocessorNode(
 
   sub_options.callback_group = pointcloud_callback_group_;
 
+  // cppcheck-suppress unknownMacro
   pointcloud_sub_ = AUTOWARE_CREATE_SUBSCRIPTION(
     sensor_msgs::msg::PointCloud2, "~/input/pointcloud", rclcpp::SensorDataQoS{}.keep_last(1),
     std::bind(&CudaPointcloudPreprocessorNode::pointcloudCallback, this, std::placeholders::_1),
@@ -255,6 +256,7 @@ void CudaPointcloudPreprocessorNode::imuCallback(const sensor_msgs::msg::Imu & i
 }
 
 void CudaPointcloudPreprocessorNode::pointcloudCallback(
+  // cppcheck-suppress unknownMacro
   AUTOWARE_MESSAGE_UNIQUE_PTR(sensor_msgs::msg::PointCloud2) input_pointcloud_msg_ptr)
 {
   stop_watch_ptr_->toc("processing_time", true);

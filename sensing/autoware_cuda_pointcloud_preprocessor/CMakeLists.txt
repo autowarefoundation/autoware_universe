@@ -13,7 +13,7 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} "-g -G")
 endif()
 
-if (USE_AGNOCAST AND NOT agnocastlib_FOUND)
+if(USE_AGNOCAST AND NOT agnocastlib_FOUND)
   message(FATAL_ERROR "agnocastlib is required when USE_AGNOCAST is enabled")
 endif()
 
