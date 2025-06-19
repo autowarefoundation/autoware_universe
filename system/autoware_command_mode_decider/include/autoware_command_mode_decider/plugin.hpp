@@ -40,7 +40,7 @@ public:
   virtual uint16_t to_mrm_behavior(uint16_t command_mode) = 0;
 
   virtual std::vector<uint16_t> decide(
-    const RequestModeStatus & request, const CommandModeStatusTable & status) = 0;
+    const RequestModeStatus & request, const CommandModeStatusTable & table) = 0;
 
 protected:
   rclcpp::Node * node_;

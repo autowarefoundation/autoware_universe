@@ -30,7 +30,7 @@ public:
   uint16_t to_mrm_behavior(uint16_t command_mode) override;
 
   std::vector<uint16_t> decide(
-    const RequestModeStatus & request, const CommandModeStatusTable & status) override;
+    const RequestModeStatus & request, const CommandModeStatusTable & table) override;
 };
 
 }  // namespace autoware::command_mode_decider
