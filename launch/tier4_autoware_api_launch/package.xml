@@ -15,9 +15,10 @@
   <exec_depend>autoware_default_adapi_universe</exec_depend>
   <exec_depend>autoware_iv_external_api_adaptor</exec_depend>
   <exec_depend>autoware_iv_internal_api_adaptor</exec_depend>
-  <exec_depend>autoware_path_distance_calculator</exec_depend>
   <exec_depend>awapi_awiv_adapter</exec_depend>
   <exec_depend>rosbridge_server</exec_depend>
+  <exec_depend>tier4_autoware_api_extension</exec_depend>
+  <exec_depend>tier4_deprecated_api_adapter</exec_depend>
   <exec_depend>topic_tools</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
