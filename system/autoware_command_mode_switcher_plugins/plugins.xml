@@ -1,0 +1,9 @@
+<library path="autoware_command_mode_switcher_plugins">
+  <class base_class_type="autoware::command_mode_switcher::CommandPlugin" type="autoware::command_mode_switcher::StopSwitcher"/>
+  <class base_class_type="autoware::command_mode_switcher::CommandPlugin" type="autoware::command_mode_switcher::AutonomousSwitcher"/>
+  <class base_class_type="autoware::command_mode_switcher::CommandPlugin" type="autoware::command_mode_switcher::LocalSwitcher"/>
+  <class base_class_type="autoware::command_mode_switcher::CommandPlugin" type="autoware::command_mode_switcher::RemoteSwitcher"/>
+  <class base_class_type="autoware::command_mode_switcher::CommandPlugin" type="autoware::command_mode_switcher::EmergencyStopSwitcher"/>
+  <class base_class_type="autoware::command_mode_switcher::CommandPlugin" type="autoware::command_mode_switcher::ComfortableStopSwitcher"/>
+  <class base_class_type="autoware::command_mode_switcher::CommandPlugin" type="autoware::command_mode_switcher::PullOverSwitcher"/>
+</library>
