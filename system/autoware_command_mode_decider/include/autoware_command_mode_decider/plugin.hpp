@@ -33,6 +33,7 @@ struct RequestModeStatus
 class DeciderPlugin
 {
 public:
+  virtual ~DeciderPlugin() = default;
   void construct(rclcpp::Node * node);
 
   virtual uint16_t from_operation_mode(uint16_t operation_mode) = 0;
