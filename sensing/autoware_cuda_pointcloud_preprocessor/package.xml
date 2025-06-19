@@ -26,6 +26,7 @@
   <depend>tf2_msgs</depend>
   <depend>tier4_debug_msgs</depend>
   <depend>autoware_agnocast_wrapper</depend>
+  <depend>agnocastlib</depend>
 
   <test_depend>ament_clang_format</test_depend>
   <test_depend>ament_lint_auto</test_depend>

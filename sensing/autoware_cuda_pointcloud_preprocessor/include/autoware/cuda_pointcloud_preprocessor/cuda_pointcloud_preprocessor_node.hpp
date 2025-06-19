@@ -84,13 +84,10 @@ private:
     tf2::Transform * tf2_transform_ptr);
 
   // Callback
-  void pointcloudCallback(
-    const AUTOWARE_MESSAGE_SHARED_PTR(sensor_msgs::msg::PointCloud2) & input_pointcloud_msg_ptr);
-  void cudaPointcloudCallback(
-    const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> cuda_msg);
-  void twistCallback(
-    const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr & twist_msg_ptr);
-  void imuCallback(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg);
+  void pointcloudCallback(AUTOWARE_MESSAGE_UNIQUE_PTR(sensor_msgs::msg::PointCloud2)
+                            input_pointcloud_msg_ptr);
+  void twistCallback(const geometry_msgs::msg::TwistWithCovarianceStamped & twist_msg);
+  void imuCallback(const sensor_msgs::msg::Imu & imu_msg);
 
   // Helper Functions
   void validatePointcloudLayout(const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg);
