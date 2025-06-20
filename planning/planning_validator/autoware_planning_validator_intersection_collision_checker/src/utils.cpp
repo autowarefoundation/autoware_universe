@@ -156,8 +156,8 @@ void set_right_turn_target_lanelets(
 {
   const auto & p = params.icc_parameters;
   autoware_utils::LineString2d trajectory_ls;
-  for (const auto & p : ego_traj.front_traj) {
-    trajectory_ls.emplace_back(p.pose.position.x, p.pose.position.y);
+  for (const auto & traj_p : ego_traj.front_traj) {
+    trajectory_ls.emplace_back(traj_p.pose.position.x, traj_p.pose.position.y);
   }
 
   auto is_road = [](const lanelet::ConstLanelet & ll) {

@@ -449,10 +449,10 @@ void IntersectionCollisionChecker::cluster_pointcloud(
     PointCloud::Ptr cluster(new PointCloud);
     bool cluster_above_height_threshold{false};
     for (const auto & index : indices.indices) {
-      const auto & p = (*input)[index];
+      const auto & point = (*input)[index];
 
-      cluster_above_height_threshold |= above_height_threshold(p.z);
-      cluster->push_back(p);
+      cluster_above_height_threshold |= above_height_threshold(point.z);
+      cluster->push_back(point);
     }
     if (!cluster_above_height_threshold) continue;
 
@@ -461,8 +461,8 @@ void IntersectionCollisionChecker::cluster_pointcloud(
     hull.setInputCloud(cluster);
     PointCloud::Ptr surface_hull(new PointCloud);
     hull.reconstruct(*surface_hull);
-    for (const auto & p : *surface_hull) {
-      output->push_back(p);
+    for (const auto & point : *surface_hull) {
+      output->push_back(point);
     }
   }
 }
