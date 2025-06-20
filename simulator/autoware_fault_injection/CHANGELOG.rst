@@ -5,7 +5,7 @@ Changelog for package autoware_fault_injection
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* fix(autoware_fault_injection): fix deprecated autoware_utils header (`#10521 <https://github.com/TaikiYamada4/autoware_universe/issues/10521>`_)
+* fix(autoware_fault_injection): fix deprecated autoware_utils header (`#10521 <https://github.com/autowarefoundation/autoware_universe/issues/10521>`_)
   * fix autoware_utils header
   * remove include
   ---------

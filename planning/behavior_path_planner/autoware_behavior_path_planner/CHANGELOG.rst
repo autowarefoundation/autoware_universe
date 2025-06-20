@@ -5,17 +5,17 @@ Changelog for package autoware_behavior_path_planner
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* chore(default_adapi): rename package (`#10756 <https://github.com/TaikiYamada4/autoware_universe/issues/10756>`_)
-* feat(hazard_lights_selector): add a hazard lights selector package (`#10692 <https://github.com/TaikiYamada4/autoware_universe/issues/10692>`_)
+* chore(default_adapi): rename package (`#10756 <https://github.com/autowarefoundation/autoware_universe/issues/10756>`_)
+* feat(hazard_lights_selector): add a hazard lights selector package (`#10692 <https://github.com/autowarefoundation/autoware_universe/issues/10692>`_)
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
   Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
-* fix(lane_change, behavior_path_planner): fix failure to do lane change (`#10694 <https://github.com/TaikiYamada4/autoware_universe/issues/10694>`_)
-  * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/TaikiYamada4/autoware_universe/issues/1776>`_)
+* fix(lane_change, behavior_path_planner): fix failure to do lane change (`#10694 <https://github.com/autowarefoundation/autoware_universe/issues/10694>`_)
+  * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)
   not sync github-release
   * set initial state of LC module to waiting approval, update RTC status when no valid path
   * store deleted modules ptrs in vector
   * revert unnecessary changes
-  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/TaikiYamada4/autoware_universe/issues/1776>`_)"
+  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)"
   This reverts commit 871a8540ade845c7c9a193029d407b411a4d685b.
   * fix format
   * Update planning/behavior_path_planner/autoware_behavior_path_planner/src/planner_manager.cpp
@@ -23,11 +23,11 @@ Changelog for package autoware_behavior_path_planner
   Co-authored-by: Yutaka Kondo <yutaka.kondo@youtalk.jp>
   Co-authored-by: GitHub Action <action@github.com>
   Co-authored-by: Mamoru Sobue <mamoru.sobue@tier4.jp>
-* fix(planning): fix links in documentations (`#10704 <https://github.com/TaikiYamada4/autoware_universe/issues/10704>`_)
+* fix(planning): fix links in documentations (`#10704 <https://github.com/autowarefoundation/autoware_universe/issues/10704>`_)
   * fix(planning): fix links in documentations
   * fix pre-commit
   ---------
-* feat(autoware_behavior_path_bidirectional_traffic_module): add a functionality for bidirectional traffic (`#10394 <https://github.com/TaikiYamada4/autoware_universe/issues/10394>`_)
+* feat(autoware_behavior_path_bidirectional_traffic_module): add a functionality for bidirectional traffic (`#10394 <https://github.com/autowarefoundation/autoware_universe/issues/10394>`_)
   * add bidirectional traffic module
   * first version
   * add virtual wall

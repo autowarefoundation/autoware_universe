@@ -5,18 +5,18 @@ Changelog for package autoware_behavior_path_planner_common
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* fix(autoware_behavior_path_planner_common): modify geometric parallel parking path planning (`#10734 <https://github.com/TaikiYamada4/autoware_universe/issues/10734>`_)
+* fix(autoware_behavior_path_planner_common): modify geometric parallel parking path planning (`#10734 <https://github.com/autowarefoundation/autoware_universe/issues/10734>`_)
   * fix: geometric parallel parking￼
   * boundary check of both side in geometric parking
   ---------
   Co-authored-by: Takumi Ito <takumi.ito@tier4.jp>
-* fix(lane_change, behavior_path_planner): fix failure to do lane change (`#10694 <https://github.com/TaikiYamada4/autoware_universe/issues/10694>`_)
-  * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/TaikiYamada4/autoware_universe/issues/1776>`_)
+* fix(lane_change, behavior_path_planner): fix failure to do lane change (`#10694 <https://github.com/autowarefoundation/autoware_universe/issues/10694>`_)
+  * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)
   not sync github-release
   * set initial state of LC module to waiting approval, update RTC status when no valid path
   * store deleted modules ptrs in vector
   * revert unnecessary changes
-  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/TaikiYamada4/autoware_universe/issues/1776>`_)"
+  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)"
   This reverts commit 871a8540ade845c7c9a193029d407b411a4d685b.
   * fix format
   * Update planning/behavior_path_planner/autoware_behavior_path_planner/src/planner_manager.cpp
@@ -24,7 +24,7 @@ Changelog for package autoware_behavior_path_planner_common
   Co-authored-by: Yutaka Kondo <yutaka.kondo@youtalk.jp>
   Co-authored-by: GitHub Action <action@github.com>
   Co-authored-by: Mamoru Sobue <mamoru.sobue@tier4.jp>
-* feat(autoware_behavior_path_bidirectional_traffic_module): add a functionality for bidirectional traffic (`#10394 <https://github.com/TaikiYamada4/autoware_universe/issues/10394>`_)
+* feat(autoware_behavior_path_bidirectional_traffic_module): add a functionality for bidirectional traffic (`#10394 <https://github.com/autowarefoundation/autoware_universe/issues/10394>`_)
   * add bidirectional traffic module
   * first version
   * add virtual wall

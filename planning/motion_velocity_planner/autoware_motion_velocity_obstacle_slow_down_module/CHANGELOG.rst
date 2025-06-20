@@ -5,12 +5,12 @@ Changelog for package autoware_motion_velocity_obstacle_slow_down_module
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(autoware_motion_velocity_planner): only wait for required subscriptions (`#10732 <https://github.com/TaikiYamada4/autoware_universe/issues/10732>`_)
-* feat(obstacle_slow_down): update parameter explanation (`#10721 <https://github.com/TaikiYamada4/autoware_universe/issues/10721>`_)
+* feat(autoware_motion_velocity_planner): only wait for required subscriptions (`#10732 <https://github.com/autowarefoundation/autoware_universe/issues/10732>`_)
+* feat(obstacle_slow_down): update parameter explanation (`#10721 <https://github.com/autowarefoundation/autoware_universe/issues/10721>`_)
   * feat(obstacle_slow_down): update parameter explanation
   * update
   ---------
-* fix(obstacle_slow_down_module): fix object type specified params bug (`#10672 <https://github.com/TaikiYamada4/autoware_universe/issues/10672>`_)
+* fix(obstacle_slow_down_module): fix object type specified params bug (`#10672 <https://github.com/autowarefoundation/autoware_universe/issues/10672>`_)
 * Contributors: Ryohsuke Mitsudome, TaikiYamada4, Takayuki Murooka, Yuki TAKAGI
 
 0.45.0 (2025-05-22)

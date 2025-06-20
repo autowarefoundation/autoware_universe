@@ -5,14 +5,14 @@ Changelog for package autoware_behavior_velocity_detection_area_module
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(detection_area): improve log message (`#10797 <https://github.com/TaikiYamada4/autoware_universe/issues/10797>`_)
+* feat(detection_area): improve log message (`#10797 <https://github.com/autowarefoundation/autoware_universe/issues/10797>`_)
   * feat(detection_area): improve log message
   feat(detection_area): improve log message
   * fix clang-tidy
   * false
   ---------
-* fix(detection_area): fix args for calcJudgeLineDistWithAccLimit (`#10777 <https://github.com/TaikiYamada4/autoware_universe/issues/10777>`_)
-* fix(planning): fix links in documentations (`#10704 <https://github.com/TaikiYamada4/autoware_universe/issues/10704>`_)
+* fix(detection_area): fix args for calcJudgeLineDistWithAccLimit (`#10777 <https://github.com/autowarefoundation/autoware_universe/issues/10777>`_)
+* fix(planning): fix links in documentations (`#10704 <https://github.com/autowarefoundation/autoware_universe/issues/10704>`_)
   * fix(planning): fix links in documentations
   * fix pre-commit
   ---------

@@ -5,7 +5,7 @@ Changelog for package autoware_ground_segmentation
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(autoware_pointcloud_preprocessor): add diagnostic message (`#10579 <https://github.com/TaikiYamada4/autoware_universe/issues/10579>`_)
+* feat(autoware_pointcloud_preprocessor): add diagnostic message (`#10579 <https://github.com/autowarefoundation/autoware_universe/issues/10579>`_)
   * feat: add diag msg
   * chore: fix code
   * chore: remove outlier count in ring
@@ -33,7 +33,7 @@ Changelog for package autoware_ground_segmentation
   * chore: fix diagnostic key
   * chore: change function naming
   ---------
-* fix(scan_ground_segmentation): separate parameter for recheck ignore distance (`#10686 <https://github.com/TaikiYamada4/autoware_universe/issues/10686>`_)
+* fix(scan_ground_segmentation): separate parameter for recheck ignore distance (`#10686 <https://github.com/autowarefoundation/autoware_universe/issues/10686>`_)
   * fix(scan_ground_segmentation): fix recheck effective range
   * feat: separate param for recheck region
   * chore: docs and test update

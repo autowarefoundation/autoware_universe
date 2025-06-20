@@ -5,7 +5,7 @@ Changelog for package tier4_planning_launch
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(motion_velocity_planner): boundary departure prevention module (`#10817 <https://github.com/TaikiYamada4/autoware_universe/issues/10817>`_)
+* feat(motion_velocity_planner): boundary departure prevention module (`#10817 <https://github.com/autowarefoundation/autoware_universe/issues/10817>`_)
   * feat(motion_velocity_planner): boundary departure prevention module
   * add maintainers
   * Add initial readme
@@ -37,9 +37,9 @@ Changelog for package tier4_planning_launch
   * fix build failure due to clang-tidy
   ---------
   Co-authored-by: Maxime CLEMENT <78338830+maxime-clem@users.noreply.github.com>
-* feat(planning_validator): implement redundant collision prevention feature when ego makes a turn at intersection (`#10750 <https://github.com/TaikiYamada4/autoware_universe/issues/10750>`_)
+* feat(planning_validator): implement redundant collision prevention feature when ego makes a turn at intersection (`#10750 <https://github.com/autowarefoundation/autoware_universe/issues/10750>`_)
   * create planning latency validator plugin module
-  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/TaikiYamada4/autoware_universe/issues/1776>`_)"
+  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)"
   This reverts commit 871a8540ade845c7c9a193029d407b411a4d685b.
   * create planning trajectory validator plugin module
   * Update planning/planning_validator/autoware_planning_validator/src/manager.cpp
@@ -98,11 +98,11 @@ Changelog for package tier4_planning_launch
   ---------
   Co-authored-by: GitHub Action <action@github.com>
   Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
-* refactor(planning_validator): implement plugin structure for planning validator node (`#10571 <https://github.com/TaikiYamada4/autoware_universe/issues/10571>`_)
-  * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/TaikiYamada4/autoware_universe/issues/1776>`_)
+* refactor(planning_validator): implement plugin structure for planning validator node (`#10571 <https://github.com/autowarefoundation/autoware_universe/issues/10571>`_)
+  * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)
   not sync github-release
   * create planning latency validator plugin module
-  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/TaikiYamada4/autoware_universe/issues/1776>`_)"
+  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)"
   This reverts commit 871a8540ade845c7c9a193029d407b411a4d685b.
   * create planning trajectory validator plugin module
   * Update planning/planning_validator/autoware_planning_validator/src/manager.cpp
@@ -139,10 +139,10 @@ Changelog for package tier4_planning_launch
   Co-authored-by: Yutaka Kondo <yutaka.kondo@youtalk.jp>
   Co-authored-by: GitHub Action <action@github.com>
   Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
-* feat(hazard_lights_selector): add a hazard lights selector package (`#10692 <https://github.com/TaikiYamada4/autoware_universe/issues/10692>`_)
+* feat(hazard_lights_selector): add a hazard lights selector package (`#10692 <https://github.com/autowarefoundation/autoware_universe/issues/10692>`_)
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
   Co-authored-by: Mamoru Sobue <hilo.soblin@gmail.com>
-* feat(autoware_behavior_path_bidirectional_traffic_module): add a functionality for bidirectional traffic (`#10394 <https://github.com/TaikiYamada4/autoware_universe/issues/10394>`_)
+* feat(autoware_behavior_path_bidirectional_traffic_module): add a functionality for bidirectional traffic (`#10394 <https://github.com/autowarefoundation/autoware_universe/issues/10394>`_)
   * add bidirectional traffic module
   * first version
   * add virtual wall
@@ -170,7 +170,7 @@ Changelog for package tier4_planning_launch
   * fix
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* feat!: remove obstacle_stop_planner and obstacle_cruise_planner (`#10695 <https://github.com/TaikiYamada4/autoware_universe/issues/10695>`_)
+* feat!: remove obstacle_stop_planner and obstacle_cruise_planner (`#10695 <https://github.com/autowarefoundation/autoware_universe/issues/10695>`_)
   * feat: remove obstacle_stop_planner and obstacle_cruise_planner
   * update
   * fix

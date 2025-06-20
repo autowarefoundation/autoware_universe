@@ -5,8 +5,8 @@ Changelog for package autoware_scenario_simulator_v2_adapter
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(scenario_simulator_v2_adapter): updated the read me file and schema (`#10189 <https://github.com/TaikiYamada4/autoware_universe/issues/10189>`_)
-* docs(evaluator): fix documentation links (`#10702 <https://github.com/TaikiYamada4/autoware_universe/issues/10702>`_)
+* feat(scenario_simulator_v2_adapter): updated the read me file and schema (`#10189 <https://github.com/autowarefoundation/autoware_universe/issues/10189>`_)
+* docs(evaluator): fix documentation links (`#10702 <https://github.com/autowarefoundation/autoware_universe/issues/10702>`_)
   fix documentation links
 * Contributors: TaikiYamada4, Vishal Chauhan, Yuxuan Liu
 

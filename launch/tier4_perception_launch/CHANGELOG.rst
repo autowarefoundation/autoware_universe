@@ -5,14 +5,14 @@ Changelog for package tier4_perception_launch
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(tier4_simulator_launch): add use_pointcloud_container argument (`#10770 <https://github.com/TaikiYamada4/autoware_universe/issues/10770>`_)
-* chore(perception): remove unused object filter packages (`#10654 <https://github.com/TaikiYamada4/autoware_universe/issues/10654>`_)
+* feat(tier4_simulator_launch): add use_pointcloud_container argument (`#10770 <https://github.com/autowarefoundation/autoware_universe/issues/10770>`_)
+* chore(perception): remove unused object filter packages (`#10654 <https://github.com/autowarefoundation/autoware_universe/issues/10654>`_)
   * Remove autoware_radar_crossing_objects_noise_filter package, including all related files such as CMakeLists.txt, README.md, configuration files, and documentation. This cleanup eliminates unused components from the perception module.
   * Refactor perception launch files: comment out unused radar parameters related to crossing objects and clustering. This cleanup aligns with the recent removal of the autoware_radar_crossing_objects_noise_filter package, streamlining the configuration for the perception module.
   * Update codecov.yaml to include new paths for perception components and remove references to deprecated radar packages. This change enhances the configuration for the perception module by ensuring only relevant components are tracked.
   * Update README.md to clarify post-processing requirements for output objects in the autoware_simple_object_merger package.
   ---------
-* feat(autoware_lidar_centerpoint): add ShortRange centerpoint as another new node base on autoware_lidar_centerpoint (`#10727 <https://github.com/TaikiYamada4/autoware_universe/issues/10727>`_)
+* feat(autoware_lidar_centerpoint): add ShortRange centerpoint as another new node base on autoware_lidar_centerpoint (`#10727 <https://github.com/autowarefoundation/autoware_universe/issues/10727>`_)
   * Add shortrange_centerpoint launcher to autoware_lidar_centerpoint
   * style(pre-commit): autofix
   * Update README.md to include launching of shortrange centerpoint
@@ -37,7 +37,7 @@ Changelog for package tier4_perception_launch
   * Update short range centerpoint namespace
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* chore(multi_object_tracker): multi channel multi-object-tracker, set topic by launcher (`#10577 <https://github.com/TaikiYamada4/autoware_universe/issues/10577>`_)
+* chore(multi_object_tracker): multi channel multi-object-tracker, set topic by launcher (`#10577 <https://github.com/autowarefoundation/autoware_universe/issues/10577>`_)
   * fix(multi_object_tracker): update input channel configuration and reduce max channel size
   * fix(tracking): update input channels and correct radar detection topic names
   * fix(tracking): update radar detection channel and remove deprecated parameters

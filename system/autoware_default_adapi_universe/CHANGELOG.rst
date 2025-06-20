@@ -5,11 +5,11 @@ Changelog for package autoware_default_adapi
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(default_adapi_universe): add mrm description api (`#10838 <https://github.com/TaikiYamada4/autoware_universe/issues/10838>`_)
+* feat(default_adapi_universe): add mrm description api (`#10838 <https://github.com/autowarefoundation/autoware_universe/issues/10838>`_)
   * feat(default_adapi_universe): add mrm description api
   * update message name
   ---------
-* feat(default_adapi_universe): support diag level latch and filter (`#10846 <https://github.com/TaikiYamada4/autoware_universe/issues/10846>`_)
+* feat(default_adapi_universe): support diag level latch and filter (`#10846 <https://github.com/autowarefoundation/autoware_universe/issues/10846>`_)
   * update aggregator
   * update utils
   * update hazard converter
@@ -23,16 +23,16 @@ Changelog for package autoware_default_adapi
   * feat(default_adapi_universe): support diagnostics latch
   * relay reset service
   ---------
-* feat(default_adapi): add vehicle door diags (`#10735 <https://github.com/TaikiYamada4/autoware_universe/issues/10735>`_)
+* feat(default_adapi): add vehicle door diags (`#10735 <https://github.com/autowarefoundation/autoware_universe/issues/10735>`_)
   * feat(default_adapi): add vehicle door diags
   * modify response
   * fix check order
   * fix check order
   ---------
-* feat(default_adapi_universe): rename command api (`#10834 <https://github.com/TaikiYamada4/autoware_universe/issues/10834>`_)
-* feat!: replace autoware_internal_localization_msgs with autoware_localization_msgs for InitializeLocalization service (`#10844 <https://github.com/TaikiYamada4/autoware_universe/issues/10844>`_)
+* feat(default_adapi_universe): rename command api (`#10834 <https://github.com/autowarefoundation/autoware_universe/issues/10834>`_)
+* feat!: replace autoware_internal_localization_msgs with autoware_localization_msgs for InitializeLocalization service (`#10844 <https://github.com/autowarefoundation/autoware_universe/issues/10844>`_)
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* feat(diagnostic_graph_aggregator): support latch and dependent error (`#10829 <https://github.com/TaikiYamada4/autoware_universe/issues/10829>`_)
+* feat(diagnostic_graph_aggregator): support latch and dependent error (`#10829 <https://github.com/autowarefoundation/autoware_universe/issues/10829>`_)
   * update aggregator
   * update utils
   * update hazard converter
@@ -46,12 +46,12 @@ Changelog for package autoware_default_adapi
   * fix for cppcheck
   * fix for cppcheck
   ---------
-* feat!: replace tier4_planning_msgs service with autoware_planning_msgs (`#10827 <https://github.com/TaikiYamada4/autoware_universe/issues/10827>`_)
+* feat!: replace tier4_planning_msgs service with autoware_planning_msgs (`#10827 <https://github.com/autowarefoundation/autoware_universe/issues/10827>`_)
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* feat(default_adapi): add vehicle command api (`#10764 <https://github.com/TaikiYamada4/autoware_universe/issues/10764>`_)
-* feat(default_adapi): add vehicle metrics api (`#10553 <https://github.com/TaikiYamada4/autoware_universe/issues/10553>`_)
-* refactor(default_adapi): rename vehicle status file (`#10761 <https://github.com/TaikiYamada4/autoware_universe/issues/10761>`_)
-* chore(default_adapi): rename package (`#10756 <https://github.com/TaikiYamada4/autoware_universe/issues/10756>`_)
+* feat(default_adapi): add vehicle command api (`#10764 <https://github.com/autowarefoundation/autoware_universe/issues/10764>`_)
+* feat(default_adapi): add vehicle metrics api (`#10553 <https://github.com/autowarefoundation/autoware_universe/issues/10553>`_)
+* refactor(default_adapi): rename vehicle status file (`#10761 <https://github.com/autowarefoundation/autoware_universe/issues/10761>`_)
+* chore(default_adapi): rename package (`#10756 <https://github.com/autowarefoundation/autoware_universe/issues/10756>`_)
 * Contributors: Ryohsuke Mitsudome, TaikiYamada4, Takagi, Isamu
 
 0.45.0 (2025-05-22)

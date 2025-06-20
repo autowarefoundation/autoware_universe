@@ -5,7 +5,7 @@ Changelog for package tier4_perception_rviz_plugin
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(tier4_perception_rviz_plugin): add RViz plugin for DetectedObjectsWithFeature message visualization (`#10575 <https://github.com/TaikiYamada4/autoware_universe/issues/10575>`_)
+* feat(tier4_perception_rviz_plugin): add RViz plugin for DetectedObjectsWithFeature message visualization (`#10575 <https://github.com/autowarefoundation/autoware_universe/issues/10575>`_)
   * Add tier4_perception_rviz_plugin package with object detection visualization features (re-implementation)
   - Introduced a new package `tier4_perception_rviz_plugin` for visualizing object detection outputs.
   - Implemented core functionalities including a display for `DetectedObjectsWithFeature`.

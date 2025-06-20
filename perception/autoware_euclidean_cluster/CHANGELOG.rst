@@ -5,7 +5,7 @@ Changelog for package autoware_euclidean_cluster
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(autoware_pointcloud_preprocessor): add diagnostic message (`#10579 <https://github.com/TaikiYamada4/autoware_universe/issues/10579>`_)
+* feat(autoware_pointcloud_preprocessor): add diagnostic message (`#10579 <https://github.com/autowarefoundation/autoware_universe/issues/10579>`_)
   * feat: add diag msg
   * chore: fix code
   * chore: remove outlier count in ring
@@ -33,7 +33,7 @@ Changelog for package autoware_euclidean_cluster
   * chore: fix diagnostic key
   * chore: change function naming
   ---------
-* feat(autoware_euclidean_cluster): enhance VoxelGridBasedEuclideanCluster with Large Cluster Filtering Parameters (`#10618 <https://github.com/TaikiYamada4/autoware_universe/issues/10618>`_)
+* feat(autoware_euclidean_cluster): enhance VoxelGridBasedEuclideanCluster with Large Cluster Filtering Parameters (`#10618 <https://github.com/autowarefoundation/autoware_universe/issues/10618>`_)
   * Squashed commit of the following:
   commit cf3035909ccad94003b2b06f8608b6cb887b221a
   Author: lei.gu <lei.gu@tier4.jp>

@@ -5,7 +5,7 @@ Changelog for package autoware_radar_tracks_noise_filter
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* chore(radar): delete maintainer for radar packages (`#10815 <https://github.com/TaikiYamada4/autoware_universe/issues/10815>`_)
+* chore(radar): delete maintainer for radar packages (`#10815 <https://github.com/autowarefoundation/autoware_universe/issues/10815>`_)
   * chore(radar): delete maintainer name
   * fix typo
   ---------

@@ -5,7 +5,7 @@ Changelog for package autoware_pose_estimator_arbiter
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(autoware_ndt_scan_matcher)!: port the package to Autoware Core (`#10688 <https://github.com/TaikiYamada4/autoware_universe/issues/10688>`_)
+* feat(autoware_ndt_scan_matcher)!: port the package to Autoware Core (`#10688 <https://github.com/autowarefoundation/autoware_universe/issues/10688>`_)
 * Contributors: Ryohsuke Mitsudome, TaikiYamada4
 
 0.45.0 (2025-05-22)

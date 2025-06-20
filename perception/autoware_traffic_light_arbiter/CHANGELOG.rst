@@ -5,7 +5,7 @@ Changelog for package autoware_traffic_light_arbiter
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(autoware_traffic_light_arbiter): adopt new traffic light message (`#10652 <https://github.com/TaikiYamada4/autoware_universe/issues/10652>`_)
+* feat(autoware_traffic_light_arbiter): adopt new traffic light message (`#10652 <https://github.com/autowarefoundation/autoware_universe/issues/10652>`_)
   * copy predicted_tl_state
   * fundamental commit for test
   * style(pre-commit): autofix

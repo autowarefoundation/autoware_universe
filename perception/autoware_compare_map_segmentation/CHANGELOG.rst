@@ -5,7 +5,7 @@ Changelog for package autoware_compare_map_segmentation
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(autoware_pointcloud_preprocessor): add diagnostic message (`#10579 <https://github.com/TaikiYamada4/autoware_universe/issues/10579>`_)
+* feat(autoware_pointcloud_preprocessor): add diagnostic message (`#10579 <https://github.com/autowarefoundation/autoware_universe/issues/10579>`_)
   * feat: add diag msg
   * chore: fix code
   * chore: remove outlier count in ring

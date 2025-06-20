@@ -5,7 +5,7 @@ Changelog for package tier4_system_launch
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(launch): add option for control command gate (`#10173 <https://github.com/TaikiYamada4/autoware_universe/issues/10173>`_)
+* feat(launch): add option for control command gate (`#10173 <https://github.com/autowarefoundation/autoware_universe/issues/10173>`_)
   * feat(launch): add option for control command gate
   * rename package
   * update
@@ -14,7 +14,7 @@ Changelog for package tier4_system_launch
   * default value
   ---------
   Co-authored-by: TetsuKawa <kawaguchitnon@icloud.com>
-* feat(system_diagnostic_monitor)!: remove package (`#10639 <https://github.com/TaikiYamada4/autoware_universe/issues/10639>`_)
+* feat(system_diagnostic_monitor)!: remove package (`#10639 <https://github.com/autowarefoundation/autoware_universe/issues/10639>`_)
   feat(system_diagnostic_monitor)\!: remove package
 * Contributors: TaikiYamada4, Takagi, Isamu
 

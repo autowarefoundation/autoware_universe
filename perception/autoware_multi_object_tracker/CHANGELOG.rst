@@ -5,7 +5,7 @@ Changelog for package autoware_multi_object_tracker
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat: add adaptive covariance threshold for tracker lifecycle management (`#10743 <https://github.com/TaikiYamada4/autoware_universe/issues/10743>`_)
+* feat: add adaptive covariance threshold for tracker lifecycle management (`#10743 <https://github.com/autowarefoundation/autoware_universe/issues/10743>`_)
   * feat: add adaptive covariance threshold for tracker lifecycle management
   * fix: exclude equal condition when distance is 0 (potential bug)
   fix: remove unnecessary else
@@ -24,10 +24,10 @@ Changelog for package autoware_multi_object_tracker
   ---------
   Co-authored-by: Jian Kang <jian.kang@tier4.jp>
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* fix(multi_object_tracker): correct area calculation for cylinder shape in getArea function (`#10790 <https://github.com/TaikiYamada4/autoware_universe/issues/10790>`_)
+* fix(multi_object_tracker): correct area calculation for cylinder shape in getArea function (`#10790 <https://github.com/autowarefoundation/autoware_universe/issues/10790>`_)
   fix(multi_object_tracker): correct area calculation for CYLINDER shape in getArea function
   Updated the area calculation for the CYLINDER shape to use a quarter of the cylinder's base area, ensuring accurate area representation in the multi-object tracker.
-* perf(autoware_multi_object_tracker): tracker association and merge process efficiency improvement (`#10744 <https://github.com/TaikiYamada4/autoware_universe/issues/10744>`_)
+* perf(autoware_multi_object_tracker): tracker association and merge process efficiency improvement (`#10744 <https://github.com/autowarefoundation/autoware_universe/issues/10744>`_)
   * feat(multi_object_tracker): implement caching for tracked objects
   - Added caching mechanism in Tracker class to store and retrieve DynamicObject instances based on time.
   - Introduced methods to update, retrieve, and remove cached objects.
@@ -95,7 +95,7 @@ Changelog for package autoware_multi_object_tracker
   - Updated both DataAssociation and TrackerProcessor classes to implement this optimization, enhancing overall efficiency in tracker management.
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* chore(multi_object_tracker): multi channel multi-object-tracker, set topic by launcher (`#10577 <https://github.com/TaikiYamada4/autoware_universe/issues/10577>`_)
+* chore(multi_object_tracker): multi channel multi-object-tracker, set topic by launcher (`#10577 <https://github.com/autowarefoundation/autoware_universe/issues/10577>`_)
   * fix(multi_object_tracker): update input channel configuration and reduce max channel size
   * fix(tracking): update input channels and correct radar detection topic names
   * fix(tracking): update radar detection channel and remove deprecated parameters
@@ -108,12 +108,12 @@ Changelog for package autoware_multi_object_tracker
   * style(pre-commit): autofix
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* fix(autoware_multi_object_tracker): bug fix of anchor point (`#10722 <https://github.com/TaikiYamada4/autoware_universe/issues/10722>`_)
+* fix(autoware_multi_object_tracker): bug fix of anchor point (`#10722 <https://github.com/autowarefoundation/autoware_universe/issues/10722>`_)
   * fix(shapes): correct anchor point calculation logic and improve precision check for anchor vector
   * fix(shapes): enhance anchor point offset logic to improve precision and handle edge cases
   * fix(shapes): revert wrong fix with readability improvement
   ---------
-* fix(autoware_multi_object_tracker): update Mahalanobis distance threshold for data association (`#10648 <https://github.com/TaikiYamada4/autoware_universe/issues/10648>`_)
+* fix(autoware_multi_object_tracker): update Mahalanobis distance threshold for data association (`#10648 <https://github.com/autowarefoundation/autoware_universe/issues/10648>`_)
   * refactor(autoware_multi_object_tracker): update Mahalanobis distance threshold for data association
   Changed the Mahalanobis distance threshold from 3.035 to a new critical value of 3.717, corresponding to a 99.99% confidence level for improved accuracy in object tracking.
   * style(pre-commit): autofix

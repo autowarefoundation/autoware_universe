@@ -5,9 +5,9 @@ Changelog for package autoware_planning_validator_intersection_collision_checker
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(planning_validator): implement redundant collision prevention feature when ego makes a turn at intersection (`#10750 <https://github.com/TaikiYamada4/autoware_universe/issues/10750>`_)
+* feat(planning_validator): implement redundant collision prevention feature when ego makes a turn at intersection (`#10750 <https://github.com/autowarefoundation/autoware_universe/issues/10750>`_)
   * create planning latency validator plugin module
-  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/TaikiYamada4/autoware_universe/issues/1776>`_)"
+  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)"
   This reverts commit 871a8540ade845c7c9a193029d407b411a4d685b.
   * create planning trajectory validator plugin module
   * Update planning/planning_validator/autoware_planning_validator/src/manager.cpp

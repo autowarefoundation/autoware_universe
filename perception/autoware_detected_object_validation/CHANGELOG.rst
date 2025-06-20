@@ -5,10 +5,10 @@ Changelog for package autoware_detected_object_validation
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(obstacle_pointcloud_validator): add processing time ms for track… (`#10738 <https://github.com/TaikiYamada4/autoware_universe/issues/10738>`_)
+* feat(obstacle_pointcloud_validator): add processing time ms for track… (`#10738 <https://github.com/autowarefoundation/autoware_universe/issues/10738>`_)
   feat(obstacle_pointcloud_validator): add processing time ms for tracking perception performance
   Co-authored-by: Jian Kang <jian.kang@tier4.jp>
-* feat(autoware_detected_object_validation): add lanelet object elevation filter (`#10649 <https://github.com/TaikiYamada4/autoware_universe/issues/10649>`_)
+* feat(autoware_detected_object_validation): add lanelet object elevation filter (`#10649 <https://github.com/autowarefoundation/autoware_universe/issues/10649>`_)
   * add 3d lanelet filter
   * style(pre-commit): autofix
   * add missing include

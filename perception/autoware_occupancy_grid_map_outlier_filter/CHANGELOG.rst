@@ -5,7 +5,7 @@ Changelog for package autoware_occupancy_grid_map_outlier_filter
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(autoware_occupancy_grid_map_outlier_filter): updated the readme file and json schema for running mkdocs server functionally (`#10192 <https://github.com/TaikiYamada4/autoware_universe/issues/10192>`_)
+* feat(autoware_occupancy_grid_map_outlier_filter): updated the readme file and json schema for running mkdocs server functionally (`#10192 <https://github.com/autowarefoundation/autoware_universe/issues/10192>`_)
   feat(autoware_occupancy_grid_map_outlier_filter): upadted the readme file and json schema for running mkdocs server functionally
   Co-authored-by: Takagi, Isamu <43976882+isamu-takagi@users.noreply.github.com>
 * Contributors: TaikiYamada4, Vishal Chauhan

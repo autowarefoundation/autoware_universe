@@ -5,18 +5,18 @@ Changelog for package autoware_behavior_path_static_obstacle_avoidance_module
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(static_obstacle_avoidance): modify rviz visualization (`#10826 <https://github.com/TaikiYamada4/autoware_universe/issues/10826>`_)
+* feat(static_obstacle_avoidance): modify rviz visualization (`#10826 <https://github.com/autowarefoundation/autoware_universe/issues/10826>`_)
   chore(static_obstacle_avoidance): modify rviz visualization
-* fix(static_obstacle_avoidance): fixed an issue where the detection of lane departure into the oncoming lane was inaccurate (`#10811 <https://github.com/TaikiYamada4/autoware_universe/issues/10811>`_)
-* fix(autoware_static_obstacle_avoidance): fix classification method of unstable object (`#10813 <https://github.com/TaikiYamada4/autoware_universe/issues/10813>`_)
+* fix(static_obstacle_avoidance): fixed an issue where the detection of lane departure into the oncoming lane was inaccurate (`#10811 <https://github.com/autowarefoundation/autoware_universe/issues/10811>`_)
+* fix(autoware_static_obstacle_avoidance): fix classification method of unstable object (`#10813 <https://github.com/autowarefoundation/autoware_universe/issues/10813>`_)
   * fix
   * fix
   * update schema
   ---------
-* fix(static_obstacle_avoidance): debug marker is not published properly (`#10804 <https://github.com/TaikiYamada4/autoware_universe/issues/10804>`_)
-* fix(static_obstacle_avoidance): fix slow down logic (`#10794 <https://github.com/TaikiYamada4/autoware_universe/issues/10794>`_)
-* fix(static_obstacle_avoidance): module doesn't generate detection area properly (`#10747 <https://github.com/TaikiYamada4/autoware_universe/issues/10747>`_)
-* feat(behavior_path_planner): organize a part of behavior path info/debug markers (`#10729 <https://github.com/TaikiYamada4/autoware_universe/issues/10729>`_)
+* fix(static_obstacle_avoidance): debug marker is not published properly (`#10804 <https://github.com/autowarefoundation/autoware_universe/issues/10804>`_)
+* fix(static_obstacle_avoidance): fix slow down logic (`#10794 <https://github.com/autowarefoundation/autoware_universe/issues/10794>`_)
+* fix(static_obstacle_avoidance): module doesn't generate detection area properly (`#10747 <https://github.com/autowarefoundation/autoware_universe/issues/10747>`_)
+* feat(behavior_path_planner): organize a part of behavior path info/debug markers (`#10729 <https://github.com/autowarefoundation/autoware_universe/issues/10729>`_)
   * feat(behavior_path_planner): organize a part of behavior path info/debug markers
   * Update planning/behavior_path_planner/autoware_behavior_path_goal_planner_module/src/goal_planner_module.cpp
   Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
@@ -24,7 +24,7 @@ Changelog for package autoware_behavior_path_static_obstacle_avoidance_module
   Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
   ---------
   Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
-* feat!: remove obstacle_stop_planner and obstacle_cruise_planner (`#10695 <https://github.com/TaikiYamada4/autoware_universe/issues/10695>`_)
+* feat!: remove obstacle_stop_planner and obstacle_cruise_planner (`#10695 <https://github.com/autowarefoundation/autoware_universe/issues/10695>`_)
   * feat: remove obstacle_stop_planner and obstacle_cruise_planner
   * update
   * fix

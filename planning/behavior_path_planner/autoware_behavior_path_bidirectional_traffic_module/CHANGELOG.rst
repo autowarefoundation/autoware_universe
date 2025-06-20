@@ -5,7 +5,7 @@ Changelog for package autoware_behavior_path_bidirectional_traffic_module
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(autoware_behavior_path_bidirectional_traffic_module): add a functionality for bidirectional traffic (`#10394 <https://github.com/TaikiYamada4/autoware_universe/issues/10394>`_)
+* feat(autoware_behavior_path_bidirectional_traffic_module): add a functionality for bidirectional traffic (`#10394 <https://github.com/autowarefoundation/autoware_universe/issues/10394>`_)
   * add bidirectional traffic module
   * first version
   * add virtual wall

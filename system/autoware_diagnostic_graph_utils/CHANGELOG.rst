@@ -5,7 +5,7 @@ Changelog for package autoware_diagnostic_graph_utils
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(diagnostic_graph_aggregator): support latch and dependent error (`#10829 <https://github.com/TaikiYamada4/autoware_universe/issues/10829>`_)
+* feat(diagnostic_graph_aggregator): support latch and dependent error (`#10829 <https://github.com/autowarefoundation/autoware_universe/issues/10829>`_)
   * update aggregator
   * update utils
   * update hazard converter
@@ -19,9 +19,9 @@ Changelog for package autoware_diagnostic_graph_utils
   * fix for cppcheck
   * fix for cppcheck
   ---------
-* feat(autoware_deignostic_graph_utils): throttle warning message (`#10758 <https://github.com/TaikiYamada4/autoware_universe/issues/10758>`_)
-* docs(system): fix system documentation link (`#10707 <https://github.com/TaikiYamada4/autoware_universe/issues/10707>`_)
-* feat(diagnostic_graph_utils): show the error graph on the terminal only when it changes (`#10665 <https://github.com/TaikiYamada4/autoware_universe/issues/10665>`_)
+* feat(autoware_deignostic_graph_utils): throttle warning message (`#10758 <https://github.com/autowarefoundation/autoware_universe/issues/10758>`_)
+* docs(system): fix system documentation link (`#10707 <https://github.com/autowarefoundation/autoware_universe/issues/10707>`_)
+* feat(diagnostic_graph_utils): show the error graph on the terminal only when it changes (`#10665 <https://github.com/autowarefoundation/autoware_universe/issues/10665>`_)
   * feat(diagnostic_graph_utils): show the error graph on the terminal only when it changes
   * update
   ---------

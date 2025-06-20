@@ -5,8 +5,8 @@ Changelog for package autoware_lidar_centerpoint
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* chore(perception): delete maintainer name (`#10816 <https://github.com/TaikiYamada4/autoware_universe/issues/10816>`_)
-* feat(autoware_lidar_centerpoint): add ShortRange centerpoint as another new node base on autoware_lidar_centerpoint (`#10727 <https://github.com/TaikiYamada4/autoware_universe/issues/10727>`_)
+* chore(perception): delete maintainer name (`#10816 <https://github.com/autowarefoundation/autoware_universe/issues/10816>`_)
+* feat(autoware_lidar_centerpoint): add ShortRange centerpoint as another new node base on autoware_lidar_centerpoint (`#10727 <https://github.com/autowarefoundation/autoware_universe/issues/10727>`_)
   * Add shortrange_centerpoint launcher to autoware_lidar_centerpoint
   * style(pre-commit): autofix
   * Update README.md to include launching of shortrange centerpoint

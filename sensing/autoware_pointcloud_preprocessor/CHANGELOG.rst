@@ -5,7 +5,7 @@ Changelog for package autoware_pointcloud_preprocessor
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* refactor(blockage_diag): split up `filter` function, add doc comments (`#10708 <https://github.com/TaikiYamada4/autoware_universe/issues/10708>`_)
+* refactor(blockage_diag): split up `filter` function, add doc comments (`#10708 <https://github.com/autowarefoundation/autoware_universe/issues/10708>`_)
   * chore(blockage_diag): explain parameters in the code
   * chore(blockage_diag): make method naming and ovrerrides conformant
   * refactor(blockage_diag): size/index calculation functions
@@ -15,7 +15,7 @@ Changelog for package autoware_pointcloud_preprocessor
   * chore: downscale by 256 to fit uint8_max exactly
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* feat(autoware_cuda_pointcloud_preprocessor): diagnostic for cuda pointcloud preprocessor (`#10793 <https://github.com/TaikiYamada4/autoware_universe/issues/10793>`_)
+* feat(autoware_cuda_pointcloud_preprocessor): diagnostic for cuda pointcloud preprocessor (`#10793 <https://github.com/autowarefoundation/autoware_universe/issues/10793>`_)
   * feat: add ring, crop box diag
   * feat: add distortion correction
   * feat: add concat diagnostics
@@ -40,12 +40,12 @@ Changelog for package autoware_pointcloud_preprocessor
   * chore(autoware_cuda_pointcloud_preprocessor): disable uncrustify
   ---------
   Co-authored-by: Max SCHMELLER <max.schmeller@tier4.jp>
-* fix(autoware_pointcloud_preprocessor): unify diagnostic interface namespace (`#10807 <https://github.com/TaikiYamada4/autoware_universe/issues/10807>`_)
+* fix(autoware_pointcloud_preprocessor): unify diagnostic interface namespace (`#10807 <https://github.com/autowarefoundation/autoware_universe/issues/10807>`_)
   fix: unify diagnostic interface namespace
-* fix: -Werror=maybe-uninitialized (`#10791 <https://github.com/TaikiYamada4/autoware_universe/issues/10791>`_)
+* fix: -Werror=maybe-uninitialized (`#10791 <https://github.com/autowarefoundation/autoware_universe/issues/10791>`_)
   fix: -Werror=maybe-uninitialized
-  `#10591 <https://github.com/TaikiYamada4/autoware_universe/issues/10591>`_
-* feat(autoware_pointcloud_preprocessor): add diagnostic message (`#10579 <https://github.com/TaikiYamada4/autoware_universe/issues/10579>`_)
+  `#10591 <https://github.com/autowarefoundation/autoware_universe/issues/10591>`_
+* feat(autoware_pointcloud_preprocessor): add diagnostic message (`#10579 <https://github.com/autowarefoundation/autoware_universe/issues/10579>`_)
   * feat: add diag msg
   * chore: fix code
   * chore: remove outlier count in ring

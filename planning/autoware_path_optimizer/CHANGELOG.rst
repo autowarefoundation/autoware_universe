@@ -5,13 +5,13 @@ Changelog for package autoware_path_optimizer
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* fix(path_optimizer): undefined behavior when optimizer failure (`#10726 <https://github.com/TaikiYamada4/autoware_universe/issues/10726>`_)
+* fix(path_optimizer): undefined behavior when optimizer failure (`#10726 <https://github.com/autowarefoundation/autoware_universe/issues/10726>`_)
   * change AND condition to OR
   * fix condition again
   Co-authored-by: Arjun Jagdish Ram <arjun.ram@tier4.jp>
   * fix build error
   * revert is_optimization_failed\_ condition
-  * minor refactoring (`#1 <https://github.com/TaikiYamada4/autoware_universe/issues/1>`_)
+  * minor refactoring (`#1 <https://github.com/autowarefoundation/autoware_universe/issues/1>`_)
   ---------
   Co-authored-by: Arjun Jagdish Ram <arjun.ram@tier4.jp>
   Co-authored-by: Takayuki Murooka <takayuki5168@gmail.com>

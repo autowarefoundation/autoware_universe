@@ -5,14 +5,14 @@ Changelog for package autoware_cuda_pointcloud_preprocessor
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(autoware_cuda_pointcloud_preprocessor): agnocast support (`#10812 <https://github.com/TaikiYamada4/autoware_universe/issues/10812>`_)
+* feat(autoware_cuda_pointcloud_preprocessor): agnocast support (`#10812 <https://github.com/autowarefoundation/autoware_universe/issues/10812>`_)
   * feat(autoware_cuda_pointcloud_preprocessor): add Agnocast support for incoming pointclouds
   * chore: make compilable both with and without agnocast
   * style(pre-commit): autofix
   * ci: statisfy cppcheck and cmake_lint
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* feat(autoware_cuda_pointcloud_preprocessor): diagnostic for cuda pointcloud preprocessor (`#10793 <https://github.com/TaikiYamada4/autoware_universe/issues/10793>`_)
+* feat(autoware_cuda_pointcloud_preprocessor): diagnostic for cuda pointcloud preprocessor (`#10793 <https://github.com/autowarefoundation/autoware_universe/issues/10793>`_)
   * feat: add ring, crop box diag
   * feat: add distortion correction
   * feat: add concat diagnostics
@@ -37,15 +37,15 @@ Changelog for package autoware_cuda_pointcloud_preprocessor
   * chore(autoware_cuda_pointcloud_preprocessor): disable uncrustify
   ---------
   Co-authored-by: Max SCHMELLER <max.schmeller@tier4.jp>
-* chore(autoware_cuda_pointcloud_preprocessor): add myself as maintainer (`#10809 <https://github.com/TaikiYamada4/autoware_universe/issues/10809>`_)
-* fix(cuda_pointcloud_preprocessor): ensure ordered twist/imu queues (`#10748 <https://github.com/TaikiYamada4/autoware_universe/issues/10748>`_)
+* chore(autoware_cuda_pointcloud_preprocessor): add myself as maintainer (`#10809 <https://github.com/autowarefoundation/autoware_universe/issues/10809>`_)
+* fix(cuda_pointcloud_preprocessor): ensure ordered twist/imu queues (`#10748 <https://github.com/autowarefoundation/autoware_universe/issues/10748>`_)
   * fix(cuda_pointcloud_preprocessor): ensure ordered twist/imu queues
   * chore: satisfy uncrustify
   * chore: uncrustify and clang-format conflict, disable uncrustify for statement
   ---------
   Co-authored-by: Max SCHMELLER <msc.schmeller@tier4.jp>
-* feat(cuda_pointcloud_preprocessor): update filtering parameter and process (`#10555 <https://github.com/TaikiYamada4/autoware_universe/issues/10555>`_)
-* fix(cuda_pointcloud_preprocessor): reset data when receiving zero siz… (`#10723 <https://github.com/TaikiYamada4/autoware_universe/issues/10723>`_)
+* feat(cuda_pointcloud_preprocessor): update filtering parameter and process (`#10555 <https://github.com/autowarefoundation/autoware_universe/issues/10555>`_)
+* fix(cuda_pointcloud_preprocessor): reset data when receiving zero siz… (`#10723 <https://github.com/autowarefoundation/autoware_universe/issues/10723>`_)
   * fix(cuda_pointcloud_preprocessor): reset data when receiving zero size pointcloud
   * fix(cuda_pointcloud_preprocessor): hotfix for ghost output
   - insert memory region reset for every iteration
@@ -56,9 +56,9 @@ Changelog for package autoware_cuda_pointcloud_preprocessor
   Co-authored-by: Manato HIRABAYASHI <manato.hirabayashi@tier4.jp>
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
   Co-authored-by: Manato Hirabayashi <3022416+manato@users.noreply.github.com>
-* fix(autoware_cuda_pointcloud_preprocessor): fix CMakeLists.txt to install cuda_pointcloud_preprocessor library (`#10740 <https://github.com/TaikiYamada4/autoware_universe/issues/10740>`_)
+* fix(autoware_cuda_pointcloud_preprocessor): fix CMakeLists.txt to install cuda_pointcloud_preprocessor library (`#10740 <https://github.com/autowarefoundation/autoware_universe/issues/10740>`_)
   Co-authored-by: Amadeusz Szymko <amadeusz.szymko.2@tier4.jp>
-* feat: accelerate voxel filter (`#10566 <https://github.com/TaikiYamada4/autoware_universe/issues/10566>`_)
+* feat: accelerate voxel filter (`#10566 <https://github.com/autowarefoundation/autoware_universe/issues/10566>`_)
   * feat: add cuda_voxel_grid_downsample_filter
   * refactor(cuda_voxel_grid_downsample_filter): clean up codes
   * fix(cuda_voxel_grid_downsample_filter): suppress warning for arithmetic on pointer to void

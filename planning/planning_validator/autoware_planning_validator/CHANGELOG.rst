@@ -5,8 +5,8 @@ Changelog for package autoware_planning_validator
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* feat(planning_validator): add condition to check the yaw deviation (`#10818 <https://github.com/TaikiYamada4/autoware_universe/issues/10818>`_)
-* feat(planning_validator): implement a collision detection feature for rearward objects of the vehicle (`#10800 <https://github.com/TaikiYamada4/autoware_universe/issues/10800>`_)
+* feat(planning_validator): add condition to check the yaw deviation (`#10818 <https://github.com/autowarefoundation/autoware_universe/issues/10818>`_)
+* feat(planning_validator): implement a collision detection feature for rearward objects of the vehicle (`#10800 <https://github.com/autowarefoundation/autoware_universe/issues/10800>`_)
   * feat(planning_validator): add new flag
   * feat(rear_collision_checker): add new validator plugin
   * fix: current lane extraction range
@@ -27,10 +27,10 @@ Changelog for package autoware_planning_validator
   * fix: cppcheck
   * fix: clang tidy
   ---------
-* fix(planning_validator): fix the lateral distance calculation (`#10801 <https://github.com/TaikiYamada4/autoware_universe/issues/10801>`_)
-* feat(planning_validator): implement redundant collision prevention feature when ego makes a turn at intersection (`#10750 <https://github.com/TaikiYamada4/autoware_universe/issues/10750>`_)
+* fix(planning_validator): fix the lateral distance calculation (`#10801 <https://github.com/autowarefoundation/autoware_universe/issues/10801>`_)
+* feat(planning_validator): implement redundant collision prevention feature when ego makes a turn at intersection (`#10750 <https://github.com/autowarefoundation/autoware_universe/issues/10750>`_)
   * create planning latency validator plugin module
-  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/TaikiYamada4/autoware_universe/issues/1776>`_)"
+  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)"
   This reverts commit 871a8540ade845c7c9a193029d407b411a4d685b.
   * create planning trajectory validator plugin module
   * Update planning/planning_validator/autoware_planning_validator/src/manager.cpp
@@ -89,17 +89,17 @@ Changelog for package autoware_planning_validator
   ---------
   Co-authored-by: GitHub Action <action@github.com>
   Co-authored-by: Satoshi OTA <44889564+satoshi-ota@users.noreply.github.com>
-* feat(planning_validator): subscribe additional topic for collision detection (`#10745 <https://github.com/TaikiYamada4/autoware_universe/issues/10745>`_)
+* feat(planning_validator): subscribe additional topic for collision detection (`#10745 <https://github.com/autowarefoundation/autoware_universe/issues/10745>`_)
   * feat(planning_validator): subscribe pointcloud
   * feat(planning_validator): subscribe route and map
   * fix(planning_validator): load glog component
   * fix: unexpected test fail
   ---------
-* refactor(planning_validator): implement plugin structure for planning validator node (`#10571 <https://github.com/TaikiYamada4/autoware_universe/issues/10571>`_)
-  * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/TaikiYamada4/autoware_universe/issues/1776>`_)
+* refactor(planning_validator): implement plugin structure for planning validator node (`#10571 <https://github.com/autowarefoundation/autoware_universe/issues/10571>`_)
+  * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)
   not sync github-release
   * create planning latency validator plugin module
-  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/TaikiYamada4/autoware_universe/issues/1776>`_)"
+  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/autowarefoundation/autoware_universe/issues/1776>`_)"
   This reverts commit 871a8540ade845c7c9a193029d407b411a4d685b.
   * create planning trajectory validator plugin module
   * Update planning/planning_validator/autoware_planning_validator/src/manager.cpp

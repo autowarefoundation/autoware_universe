@@ -5,12 +5,12 @@ Changelog for package autoware_bevfusion
 0.46.0 (2025-06-20)
 -------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
-* fix(autoware_bevfusion): fix clang-tidy errors by removing unused fields (`#10850 <https://github.com/TaikiYamada4/autoware_universe/issues/10850>`_)
+* fix(autoware_bevfusion): fix clang-tidy errors by removing unused fields (`#10850 <https://github.com/autowarefoundation/autoware_universe/issues/10850>`_)
   * fix clang-tidy errors by removing unused fields
   * style(pre-commit): autofix
   ---------
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
-* fix(cmake): update spconv availability messages to use STATUS and WAR… (`#10690 <https://github.com/TaikiYamada4/autoware_universe/issues/10690>`_)
+* fix(cmake): update spconv availability messages to use STATUS and WAR… (`#10690 <https://github.com/autowarefoundation/autoware_universe/issues/10690>`_)
   fix(cmake): update spconv availability messages to use STATUS and WARNING
 * Contributors: Taiki Yamada, TaikiYamada4, Yukihiro Saito
 
