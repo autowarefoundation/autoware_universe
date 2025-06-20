@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/* *INDENT-OFF* */
 #include "autoware/cuda_pointcloud_preprocessor/cuda_downsample_filter/cuda_voxel_grid_downsample_filter_node.hpp"
-/* *INDENT-ON* */
 
 #include "autoware/pointcloud_preprocessor/utility/memory.hpp"
 
@@ -37,7 +35,6 @@ CudaVoxelGridDownsampleFilterNode::CudaVoxelGridDownsampleFilterNode(
     return;
   }
 
-  /* *INDENT-OFF* */
   sub_ =
     std::make_shared<cuda_blackboard::CudaBlackboardSubscriber<cuda_blackboard::CudaPointCloud2>>(
       *this, "~/input/pointcloud",
@@ -47,7 +44,6 @@ CudaVoxelGridDownsampleFilterNode::CudaVoxelGridDownsampleFilterNode(
   pub_ =
     std::make_unique<cuda_blackboard::CudaBlackboardPublisher<cuda_blackboard::CudaPointCloud2>>(
       *this, "~/output/pointcloud");
-  /* *INDENT-ON* */
 
   cuda_voxel_grid_downsample_filter_ = std::make_unique<CudaVoxelGridDownsampleFilter>(
     voxel_size_x, voxel_size_y, voxel_size_z, max_mem_pool_size_in_byte);

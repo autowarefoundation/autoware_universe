@@ -1,0 +1,7 @@
+units:
+  - type: diag
+    path: path0
+    node: dummy
+    name: name0
+    hysteresis: 0.5
+    latch: 0.0

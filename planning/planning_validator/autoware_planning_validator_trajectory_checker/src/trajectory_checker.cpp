@@ -18,6 +18,7 @@
 
 #include <autoware/motion_utils/trajectory/interpolation.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -74,7 +75,11 @@ void TrajectoryChecker::setup_parameters(rclcpp::Node & node)
     set_validation_params(p.distance_deviation, t + "distance_deviation");
     set_validation_params(p.lon_distance_deviation, t + "lon_distance_deviation");
     set_validation_params(p.velocity_deviation, t + "velocity_deviation");
+
     set_validation_params(p.yaw_deviation, t + "yaw_deviation");
+    p.yaw_deviation.nearest_yaw_trajectory_shift_required_for_checking =
+      get_or_declare_parameter<double>(
+        node, t + "yaw_deviation.nearest_yaw_trajectory_shift_required_for_checking");
 
     set_validation_flags(p.trajectory_shift, t + "trajectory_shift");
     p.trajectory_shift.lat_shift_th =
@@ -527,6 +532,21 @@ bool TrajectoryChecker::check_valid_longitudinal_distance_deviation(
   return true;
 }
 
+double nearest_trajectory_yaw_shift(
+  const Trajectory::ConstSharedPtr last_valid_trajectory,
+  const autoware_planning_msgs::msg::TrajectoryPoint & trajectory_point)
+{
+  if (!last_valid_trajectory) {
+    return true;
+  }
+  const auto interpolated_previous_trajectory_point =
+    motion_utils::calcInterpolatedPoint(*last_valid_trajectory, trajectory_point.pose);
+  const auto yaw_shift_with_previous_trajectory = std::abs(angles::shortest_angular_distance(
+    tf2::getYaw(trajectory_point.pose.orientation),
+    tf2::getYaw(interpolated_previous_trajectory_point.pose.orientation)));
+  return yaw_shift_with_previous_trajectory;
+}
+
 bool TrajectoryChecker::check_valid_yaw_deviation(
   const std::shared_ptr<const PlanningValidatorData> & data,
   const std::shared_ptr<PlanningValidatorStatus> & status)
@@ -544,7 +564,10 @@ bool TrajectoryChecker::check_valid_yaw_deviation(
     tf2::getYaw(interpolated_trajectory_point.pose.orientation),
     tf2::getYaw(ego_pose.orientation)));
 
-  if (status->yaw_deviation > params_.yaw_deviation.threshold) {
+  const auto check_condition =
+    nearest_trajectory_yaw_shift(data->last_valid_trajectory, interpolated_trajectory_point) >
+    params_.yaw_deviation.nearest_yaw_trajectory_shift_required_for_checking;
+  if (check_condition && status->yaw_deviation > params_.yaw_deviation.threshold) {
     is_critical_error_ |= params_.yaw_deviation.is_critical;
     return false;
   }
