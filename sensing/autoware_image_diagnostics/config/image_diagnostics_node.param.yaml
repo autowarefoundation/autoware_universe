@@ -22,4 +22,4 @@
 
     ## === Low visibility thresholds ===
     low_visibility_region_error_threshold: 4
-    low_visibility_frequency_threshold: 4.0
+    low_visibility_frequency_threshold: 4.5
