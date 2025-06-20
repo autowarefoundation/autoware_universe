@@ -29,6 +29,7 @@
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
 #include <autoware_control_msgs/msg/control.hpp>
 #include <autoware_internal_debug_msgs/msg/float32_multi_array_stamped.hpp>
+#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_vehicle_msgs/msg/steering_report.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
@@ -43,6 +44,7 @@ namespace autoware::raw_vehicle_cmd_converter
 {
 using Control = autoware_control_msgs::msg::Control;
 using autoware_internal_debug_msgs::msg::Float32MultiArrayStamped;
+using autoware_internal_debug_msgs::msg::Float64Stamped;
 using tier4_vehicle_msgs::msg::ActuationCommandStamped;
 using tier4_vehicle_msgs::msg::ActuationStatusStamped;
 using TwistStamped = geometry_msgs::msg::TwistStamped;
@@ -50,6 +52,7 @@ using Odometry = nav_msgs::msg::Odometry;
 using Steering = autoware_vehicle_msgs::msg::SteeringReport;
 using autoware_adapi_v1_msgs::msg::OperationModeState;
 using geometry_msgs::msg::AccelWithCovarianceStamped;
+
 class DebugValues
 {
 public:
@@ -83,6 +86,7 @@ public:
   rclcpp::Publisher<ActuationCommandStamped>::SharedPtr pub_actuation_cmd_;
   rclcpp::Publisher<Steering>::SharedPtr pub_steering_status_;
   rclcpp::Publisher<Control>::SharedPtr pub_compensated_control_cmd_;
+  rclcpp::Publisher<Float64Stamped>::SharedPtr pub_control_system_latency_;
   //!< @brief subscriber for vehicle command
   rclcpp::Subscription<Control>::SharedPtr sub_control_cmd_;
   rclcpp::Subscription<ActuationStatusStamped>::SharedPtr sub_actuation_status_;
@@ -105,6 +109,7 @@ public:
   ActuationStatusStamped::ConstSharedPtr actuation_status_ptr_;
   Odometry::ConstSharedPtr current_odometry_;
   Control::ConstSharedPtr control_cmd_ptr_;
+  rclcpp::Time control_cmd_stamp_;
   AccelMap accel_map_;
   BrakeMap brake_map_;
   SteerMap steer_map_;

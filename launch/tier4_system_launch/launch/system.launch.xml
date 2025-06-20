@@ -4,6 +4,7 @@
   <arg name="component_state_monitor_topic_path"/>
   <arg name="duplicated_node_checker_param_path"/>
   <arg name="processing_time_checker_param_path"/>
+  <arg name="sensor_to_control_latency_checker_param_path"/>
   <arg name="mrm_comfortable_stop_operator_param_path"/>
   <arg name="mrm_emergency_stop_operator_param_path"/>
   <arg name="dummy_diag_publisher_param_path"/>
@@ -88,6 +89,11 @@
       <include file="$(find-pkg-share autoware_processing_time_checker)/launch/processing_time_checker.launch.xml">
         <arg name="config_file" value="$(var processing_time_checker_param_path)"/>
       </include>
+    </group>
+
+    <!-- Sensor to Control Latency Checker -->
+    <group>
+      <include file="$(find-pkg-share autoware_sensor_to_control_latency_checker)/launch/sensor_to_control_latency_checker.launch.xml"/>
     </group>
 
     <!-- Service Log Checker -->
