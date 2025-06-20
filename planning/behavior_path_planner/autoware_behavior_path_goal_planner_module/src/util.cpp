@@ -1121,6 +1121,6 @@ lanelet::ConstLanelets get_reference_lanelets_for_pullover(
       /*forward_only_in_route*/ false);
   }
   return planner_data->route_handler->getLaneletSequence(
-    *lane_change_complete_lane, backward_length, forward_length);
+    *lane_change_complete_lane, backward_length, forward_length, false /* extend outward route */);
 }
 }  // namespace autoware::behavior_path_planner::goal_planner_utils

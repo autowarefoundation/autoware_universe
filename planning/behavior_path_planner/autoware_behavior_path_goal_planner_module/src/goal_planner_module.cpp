@@ -262,6 +262,7 @@ void LaneParkingPlanner::onTimer()
     return;
   }
   const auto & local_request = local_request_opt.value();
+
   const auto & goal_candidates = local_request.goal_candidates_;
   const auto & local_planner_data = local_request.get_planner_data();
   const auto & upstream_module_output = local_request.get_upstream_module_output();
@@ -269,7 +270,13 @@ void LaneParkingPlanner::onTimer()
   const auto & prev_data = local_request.get_prev_data();
   const auto trigger_thread_on_approach = local_request.trigger_thread_on_approach();
   const auto use_bus_stop_area = local_request.use_bus_stop_area_;
-  const auto lane_change_status_changed = local_request.lane_change_status_changed();
+  const auto last_lane_change_trigger_time_saved =
+    last_lane_change_trigger_time_saved_;  // NOTE: copy, not reference
+  const auto & last_lane_change_trigger_time_req = local_request.last_lane_change_trigger_time();
+  last_lane_change_trigger_time_saved_ = last_lane_change_trigger_time_req;
+
+  const auto lane_change_status_changed_since_last_wakeup = is_lane_change_context_expired(
+    last_lane_change_trigger_time_saved, last_lane_change_trigger_time_req);
 
   if (!trigger_thread_on_approach) {
     return;
@@ -292,6 +299,13 @@ void LaneParkingPlanner::onTimer()
       if (response_.pull_over_path_candidates.empty()) {
         return true;
       }
+    }
+    if (lane_change_status_changed_since_last_wakeup) {
+      RCLCPP_INFO(
+        getLogger(),
+        "[LaneParkingPlanner]: lane change has been executed or cancelled since last wakeup of "
+        "LaneParking thread, so replan");
+      return true;
     }
     const std::optional<GoalCandidate> modified_goal_opt =
       pull_over_path_opt
@@ -316,10 +330,6 @@ void LaneParkingPlanner::onTimer()
         local_planner_data->self_odometry->pose.pose.position, original_upstream_module_output_) &&
       current_state != PathDecisionState::DecisionKind::DECIDED) {
       RCLCPP_DEBUG(getLogger(), "has deviated from last previous module path");
-      return true;
-    }
-    if (lane_change_status_changed) {
-      RCLCPP_INFO(getLogger(), "[LaneParkingPlanner]: lane_change_status changed, so replan");
       return true;
     }
     const bool upstream_module_has_stopline_except_terminal =
@@ -364,6 +374,7 @@ void LaneParkingPlanner::onTimer()
       getLogger(), "generated %lu pull over path candidates",
       response_.pull_over_path_candidates.size());
     response_.sorted_bezier_indices_opt = std::move(sorted_indices_opt);
+    response_.last_lane_change_trigger_time = last_lane_change_trigger_time_req;
   }
 }
 
@@ -628,7 +639,7 @@ std::pair<LaneParkingResponse, FreespaceParkingResponse> GoalPlannerModule::sync
     lane_parking_request_.value().update(
       *planner_data_, getCurrentStatus(), getPreviousModuleOutput(), pull_over_path,
       path_decision_controller_.get_current_state(), trigger_thread_on_approach_,
-      lane_change_status_changed_);
+      last_lane_change_trigger_time_);
     // NOTE: RouteHandler holds several shared pointers in it, so just copying PlannerData as
     // value does not adds the reference counts of RouteHandler.lanelet_map_ptr_ and others. Since
     // behavior_path_planner::run() updates
@@ -640,7 +651,17 @@ std::pair<LaneParkingResponse, FreespaceParkingResponse> GoalPlannerModule::sync
     // `planner_data_.is_route_handler_updated` variable is set true by behavior_path_planner
     // (although this flag is not implemented yet). In that case, lane_parking_request members
     // except for route_handler should be copied from planner_data_
-    lane_parking_response = lane_parking_response_;
+    const auto & lane_change_triggered_thread_side =
+      lane_parking_response_.last_lane_change_trigger_time;
+    if (!is_lane_change_context_expired(
+          lane_change_triggered_thread_side, last_lane_change_trigger_time_)) {
+      lane_parking_response = lane_parking_response_;
+    } else {
+      RCLCPP_INFO(
+        getLogger(),
+        "lane change has been executed or cancelled while LaneParking thread was planning. Reject "
+        "the response and wait for LaneParking thread to complete");
+    }
   }
 
   FreespaceParkingResponse freespace_parking_response;
@@ -660,6 +681,7 @@ std::pair<LaneParkingResponse, FreespaceParkingResponse> GoalPlannerModule::sync
     // freespace_parking_request_.value().update, and it is shared with goal_planner_module. Next,
     // goal_planner_module update it and pass it to freespace_parking_request.
     occupancy_grid_map_ = freespace_parking_request_.value().get_occupancy_grid_map();
+    // TODO(soblin): should we consider lane change trigger just before ego parks in a freespace ?
     freespace_parking_response = freespace_parking_response_;
   }
   // end of critical section
@@ -699,6 +721,9 @@ void GoalPlannerModule::updateData()
   lane_change_status_changed_ =
     prev_lane_change_detected_ && prev_lane_change_detected_.value() != lane_change_detected;
   prev_lane_change_detected_ = lane_change_detected;
+  if (lane_change_status_changed_) {
+    last_lane_change_trigger_time_ = clock_->now();
+  }
 
   const lanelet::ConstLanelets current_lanes =
     utils::getCurrentLanesFromPath(getPreviousModuleOutput().reference_path, planner_data_);
