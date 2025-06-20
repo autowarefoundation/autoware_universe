@@ -23,11 +23,11 @@
 #include <opencv2/core.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <autoware_internal_localization_msgs/srv/pose_with_covariance_stamped.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <tier4_localization_msgs/srv/pose_with_covariance_stamped.hpp>
 
 #include <memory>
 
@@ -41,7 +41,7 @@ public:
   using PointCloud2 = sensor_msgs::msg::PointCloud2;
   using Image = sensor_msgs::msg::Image;
   using LaneletMapBin = autoware_map_msgs::msg::LaneletMapBin;
-  using RequestPoseAlignment = tier4_localization_msgs::srv::PoseWithCovarianceStamped;
+  using RequestPoseAlignment = autoware_internal_localization_msgs::srv::PoseWithCovarianceStamped;
 
   explicit CameraPoseInitializer(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
 

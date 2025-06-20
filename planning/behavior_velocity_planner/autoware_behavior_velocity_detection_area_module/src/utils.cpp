@@ -23,6 +23,7 @@
 #include <lanelet2_core/geometry/Point.h>
 
 #include <memory>
+#include <sstream>
 #include <utility>
 #include <vector>
 

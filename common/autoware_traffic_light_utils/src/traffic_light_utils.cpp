@@ -14,7 +14,10 @@
 
 #include "autoware/traffic_light_utils/traffic_light_utils.hpp"
 
+#include <autoware_perception_msgs/msg/traffic_light_element.hpp>
+
 #include <string>
+#include <vector>
 
 namespace autoware::traffic_light_utils
 {
@@ -26,35 +29,37 @@ void setSignalUnknown(tier4_perception_msgs::msg::TrafficLight & signal, float c
   signal.elements[0].color = tier4_perception_msgs::msg::TrafficLightElement::UNKNOWN;
   signal.elements[0].confidence = confidence;
 }
-
 bool hasTrafficLightCircleColor(
-  const autoware_perception_msgs::msg::TrafficLightGroup & tl_state, const uint8_t & lamp_color)
+  const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & elements,
+  const uint8_t & lamp_color)
 {
   const auto it_lamp =
-    std::find_if(tl_state.elements.begin(), tl_state.elements.end(), [&lamp_color](const auto & x) {
+    std::find_if(elements.begin(), elements.end(), [&lamp_color](const auto & x) {
       return x.shape == autoware_perception_msgs::msg::TrafficLightElement::CIRCLE &&
              x.color == lamp_color;
     });
 
-  return it_lamp != tl_state.elements.end();
+  return it_lamp != elements.end();
 }
 
 bool hasTrafficLightShape(
-  const autoware_perception_msgs::msg::TrafficLightGroup & tl_state, const uint8_t & lamp_shape)
+  const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & elements,
+  const uint8_t & lamp_shape)
 {
   const auto it_lamp = std::find_if(
-    tl_state.elements.begin(), tl_state.elements.end(),
+    elements.begin(), elements.end(),
     [&lamp_shape](const auto & x) { return x.shape == lamp_shape; });
 
-  return it_lamp != tl_state.elements.end();
+  return it_lamp != elements.end();
 }
 
 bool isTrafficSignalStop(
   const lanelet::ConstLanelet & lanelet,
   const autoware_perception_msgs::msg::TrafficLightGroup & tl_state)
 {
+  const auto & elements = tl_state.elements;
   if (hasTrafficLightCircleColor(
-        tl_state, autoware_perception_msgs::msg::TrafficLightElement::GREEN)) {
+        elements, autoware_perception_msgs::msg::TrafficLightElement::GREEN)) {
     return false;
   }
 
@@ -66,18 +71,18 @@ bool isTrafficSignalStop(
   if (
     turn_direction == "right" &&
     hasTrafficLightShape(
-      tl_state, autoware_perception_msgs::msg::TrafficLightElement::RIGHT_ARROW)) {
+      elements, autoware_perception_msgs::msg::TrafficLightElement::RIGHT_ARROW)) {
     return false;
   }
   if (
     turn_direction == "left" &&
     hasTrafficLightShape(
-      tl_state, autoware_perception_msgs::msg::TrafficLightElement::LEFT_ARROW)) {
+      elements, autoware_perception_msgs::msg::TrafficLightElement::LEFT_ARROW)) {
     return false;
   }
   if (
     turn_direction == "straight" &&
-    hasTrafficLightShape(tl_state, autoware_perception_msgs::msg::TrafficLightElement::UP_ARROW)) {
+    hasTrafficLightShape(elements, autoware_perception_msgs::msg::TrafficLightElement::UP_ARROW)) {
     return false;
   }
 

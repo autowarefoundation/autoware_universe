@@ -137,6 +137,7 @@ struct GridGroundFilterParameter
   size_t radial_dividers_num;
 
   bool use_recheck_ground_cluster;
+  float recheck_start_distance;
   bool use_lowest_point;
   float detection_range_z_max;
   float non_ground_height_threshold;

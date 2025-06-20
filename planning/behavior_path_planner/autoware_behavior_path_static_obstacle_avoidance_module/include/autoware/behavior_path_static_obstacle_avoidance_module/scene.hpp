@@ -359,16 +359,11 @@ private:
   // generate output data
 
   /**
-   * @brief fill debug markers.
+   * @brief fill info and debug markers.
    */
-  void updateDebugMarker(
+  void updateMarker(
     const BehaviorModuleOutput & output, const AvoidancePlanningData & data,
     const PathShifter & shifter, const DebugData & debug) const;
-
-  /**
-   * @brief fill information markers that are shown in Rviz by default.
-   */
-  void updateInfoMarker(const AvoidancePlanningData & data) const;
 
   /**
    * @brief fill debug msg that are published as a topic.
@@ -482,13 +477,15 @@ private:
   ObjectDataArray clip_objects_;
 
   // TODO(Satoshi OTA) create detected object manager.
-  ObjectDataArray registered_objects_;
+  ObjectDataArray stored_objects_;
 
   // TODO(Satoshi OTA) remove this variable.
   mutable ObjectDataArray ego_stopped_objects_;
 
   // TODO(Satoshi OTA) remove this variable.
   mutable ObjectDataArray stopped_objects_;
+
+  mutable std::unordered_map<std::string, rclcpp::Time> unknown_type_object_first_seen_time_map_;
 
   mutable size_t safe_count_{0};
 

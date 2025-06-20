@@ -48,14 +48,17 @@ This package has two clustering methods: `euclidean_cluster` and `voxel_grid_bas
 
 #### voxel_grid_based_euclidean_cluster
 
-| Name                          | Type  | Description                                                                                  |
-| ----------------------------- | ----- | -------------------------------------------------------------------------------------------- |
-| `use_height`                  | bool  | use point.z for clustering                                                                   |
-| `min_cluster_size`            | int   | the minimum number of points that a cluster needs to contain in order to be considered valid |
-| `max_cluster_size`            | int   | the maximum number of points that a cluster needs to contain in order to be considered valid |
-| `tolerance`                   | float | the spatial cluster tolerance as a measure in the L2 Euclidean space                         |
-| `voxel_leaf_size`             | float | the voxel leaf size of x and y                                                               |
-| `min_points_number_per_voxel` | int   | the minimum number of points for a voxel                                                     |
+| Name                                    | Type  | Description                                                                                                    |
+| --------------------------------------- | ----- | -------------------------------------------------------------------------------------------------------------- |
+| `use_height`                            | bool  | use point.z for clustering                                                                                     |
+| `min_cluster_size`                      | int   | the minimum number of voxels that a cluster needs to contain in order to be considered valid                   |
+| `max_cluster_size`                      | int   | the maximum number of voxels that a cluster needs to contain in order to be considered valid                   |
+| `tolerance`                             | float | the spatial cluster tolerance as a measure in the L2 Euclidean space                                           |
+| `voxel_leaf_size`                       | float | the voxel leaf size of x and y                                                                                 |
+| `min_points_number_per_voxel`           | int   | the minimum number of points for a voxel                                                                       |
+| `min_voxel_cluster_size_for_filtering`  | int   | The minimum voxel cluster size for a cluster to be checked for being a large cluster.                          |
+| `max_points_per_voxel_in_large_cluster` | int   | The maximum points per voxel allowed in large clusters (used for filtering dense clusters).                    |
+| `max_voxel_cluster_for_output`          | int   | The maximum number of voxel clusters to output. If the voxels exceeds this value, the cluster will be skipped. |
 
 ## Assumptions / Known limits
 

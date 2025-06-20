@@ -61,6 +61,17 @@
             }
           },
           "required": ["emergency"]
+        },
+        "turning_indicator_on": {
+          "type": "object",
+          "properties": {
+            "emergency": {
+              "type": "boolean",
+              "description": "If this parameter is true, turning indicators will be disabled during emergency state.",
+              "default": "true"
+            }
+          },
+          "required": ["emergency"]
         }
       },
       "required": [
@@ -73,7 +84,8 @@
         "use_parking_after_stopped",
         "use_pull_over",
         "use_comfortable_stop",
-        "turning_hazard_on"
+        "turning_hazard_on",
+        "turning_indicator_on"
       ],
       "additionalProperties": false
     }

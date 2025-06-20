@@ -74,6 +74,9 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
   const auto min_area_matrix = this->declare_parameter<std::vector<double>>("min_area_matrix");
   const auto max_area_matrix = this->declare_parameter<std::vector<double>>("max_area_matrix");
 
+  // Set up logger name
+  this->logger_name_ = this->declare_parameter<std::string>("logger_name", "lidar_centerpoint");
+
   detection_class_remapper_.setParameters(
     allow_remapping_by_area_matrix, min_area_matrix, max_area_matrix);
 
@@ -88,22 +91,22 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
   TrtCommonConfig encoder_param(encoder_onnx_path, trt_precision, encoder_engine_path);
   TrtCommonConfig head_param(head_onnx_path, trt_precision, head_engine_path);
   DensificationParam densification_param(
-    densification_world_frame_id, densification_num_past_frames);
+    densification_world_frame_id, densification_num_past_frames, this->logger_name_);
 
   if (point_cloud_range.size() != 6) {
     RCLCPP_WARN_STREAM(
-      rclcpp::get_logger("lidar_centerpoint"),
+      rclcpp::get_logger(this->logger_name_.c_str()),
       "The size of point_cloud_range != 6: use the default parameters.");
   }
   if (voxel_size.size() != 3) {
     RCLCPP_WARN_STREAM(
-      rclcpp::get_logger("lidar_centerpoint"),
+      rclcpp::get_logger(this->logger_name_.c_str()),
       "The size of voxel_size != 3: use the default parameters.");
   }
   CenterPointConfig config(
     class_names_.size(), point_feature_size, cloud_capacity, max_voxel_size, point_cloud_range,
     voxel_size, downsample_factor, encoder_in_feature_size, score_threshold,
-    circle_nms_dist_threshold, yaw_norm_thresholds, has_variance_);
+    circle_nms_dist_threshold, yaw_norm_thresholds, has_variance_, this->logger_name_);
   detector_ptr_ =
     std::make_unique<CenterPointTRT>(encoder_param, head_param, densification_param, config);
   diagnostics_centerpoint_trt_ =
@@ -127,7 +130,7 @@ LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_opti
     using autoware_utils::DebugPublisher;
     using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
-    debug_publisher_ptr_ = std::make_unique<DebugPublisher>(this, "lidar_centerpoint");
+    debug_publisher_ptr_ = std::make_unique<DebugPublisher>(this, this->logger_name_.c_str());
     stop_watch_ptr_->tic("cyclic_time");
     stop_watch_ptr_->tic("processing_time");
   }

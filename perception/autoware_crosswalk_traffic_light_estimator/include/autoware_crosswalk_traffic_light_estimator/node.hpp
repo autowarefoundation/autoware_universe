@@ -101,6 +101,7 @@ private:
 
   // Node param
   bool use_last_detect_color_;
+  bool use_pedestrian_signal_detect_;
   double last_detect_color_hold_time_;
   double last_colors_hold_time_;
 

@@ -19,8 +19,8 @@
 
 #include <autoware_adapi_v1_msgs/msg/mrm_state.hpp>
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
-#include <tier4_system_msgs/srv/change_autoware_control.hpp>
-#include <tier4_system_msgs/srv/change_operation_mode.hpp>
+#include <autoware_system_msgs/srv/change_autoware_control.hpp>
+#include <autoware_system_msgs/srv/change_operation_mode.hpp>
 
 namespace autoware::component_interface_specs_universe::system
 {
@@ -36,13 +36,13 @@ struct MrmState
 
 struct ChangeAutowareControl
 {
-  using Service = tier4_system_msgs::srv::ChangeAutowareControl;
+  using Service = autoware_system_msgs::srv::ChangeAutowareControl;
   static constexpr char name[] = "/system/operation_mode/change_autoware_control";
 };
 
 struct ChangeOperationMode
 {
-  using Service = tier4_system_msgs::srv::ChangeOperationMode;
+  using Service = autoware_system_msgs::srv::ChangeOperationMode;
   static constexpr char name[] = "/system/operation_mode/change_operation_mode";
 };
 

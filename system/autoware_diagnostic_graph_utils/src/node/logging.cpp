@@ -47,9 +47,9 @@ void LoggingNode::on_create(DiagGraph::ConstSharedPtr graph)
 {
   // Search root node.
   root_unit_ = nullptr;
-  for (const auto & unit : graph->units()) {
-    if (unit->path() == root_path_) {
-      root_unit_ = unit;
+  for (const auto & node : graph->nodes()) {
+    if (node->path() == root_path_) {
+      root_unit_ = node;
       return;
     }
   }
@@ -63,19 +63,39 @@ void LoggingNode::on_timer()
     dump_text_.str("");
     dump_text_.clear(std::stringstream::goodbit);
     dump_unit(root_unit_, 0, "");
+    const auto error_graph_text = dump_text_.str();
 
-    if (enable_terminal_log_) {
-      RCLCPP_WARN_STREAM(get_logger(), prefix_message << std::endl << dump_text_.str());
+    // show on terminal
+    if (enable_terminal_log_ && error_graph_text != prev_error_graph_text_) {
+      RCLCPP_WARN_STREAM_THROTTLE(
+        get_logger(), *get_clock(), 3000 /* ms */,
+        prefix_message << std::endl
+                       << error_graph_text);
     }
 
-    autoware_internal_debug_msgs::msg::StringStamped message;
-    message.stamp = now();
-    message.data = dump_text_.str();
-    pub_error_graph_text_->publish(message);
+    // publish debug topic
+    autoware_internal_debug_msgs::msg::StringStamped error_graph_message;
+    error_graph_message.stamp = now();
+    error_graph_message.data = error_graph_text;
+    pub_error_graph_text_->publish(error_graph_message);
+
+    // update previous value
+    prev_error_graph_text_ = error_graph_text;
   } else {
-    autoware_internal_debug_msgs::msg::StringStamped message;
-    message.stamp = now();
-    pub_error_graph_text_->publish(message);
+    const std::string error_graph_text{""};
+
+    // publish debug topic
+    autoware_internal_debug_msgs::msg::StringStamped error_graph_message;
+    error_graph_message.stamp = now();
+    pub_error_graph_text_->publish(error_graph_message);
+
+    // show on terminal
+    if (enable_terminal_log_ && error_graph_text != prev_error_graph_text_) {
+      RCLCPP_INFO_STREAM(get_logger(), "The target mode is available now.");
+    }
+
+    // update previous value
+    prev_error_graph_text_ = error_graph_text;
   }
 }
 
@@ -96,14 +116,14 @@ void LoggingNode::dump_unit(DiagUnit * unit, int depth, const std::string & inde
     return;
   }
 
-  std::string path = unit->path();
+  std::string path = unit->path_or_name();
   if (path.empty()) {
     path = "[anonymous group]";
   }
 
   dump_text_ << indent << "- " + path << " " << text_level(unit->level()) << std::endl;
-  for (const auto & child : unit->children()) {
-    dump_unit(child.unit, depth + 1, indent + "    ");
+  for (const auto & child : unit->child_units()) {
+    dump_unit(child, depth + 1, indent + "    ");
   }
 }
 
