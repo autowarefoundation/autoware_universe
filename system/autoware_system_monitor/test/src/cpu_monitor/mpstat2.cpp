@@ -1,4 +1,4 @@
-// Copyright 2020 Autoware Foundation
+// Copyright 2020,2025 Autoware Foundation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
  * @brief dummy mpstat executable to provide nothing
  */
 
-int main(int argc, char ** argv)
+int main(int /* argc */, char ** /* argv */)
 {
   return 0;
 }
