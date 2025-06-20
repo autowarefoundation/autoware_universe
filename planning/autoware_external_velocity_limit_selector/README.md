@@ -57,7 +57,7 @@ Example:
 
 ### Common parameters from vehicle description
 
-{{ json_to_markdown("planning/autoware_external_velocity_limit_selector/schema/default_common.schema.json") }}
+{{json_to_markdown("planning/autoware_external_velocity_limit_selector/schema/default_common.schema.json")}}
 
 ## Assumptions / Known limits
 
