@@ -15,7 +15,7 @@
 #ifndef VEHICLE_COMMAND_HPP_
 #define VEHICLE_COMMAND_HPP_
 
-#include <autoware/adapi_specs/vehicle.hpp>
+#include <autoware/adapi_specs/control.hpp>
 #include <autoware/component_interface_specs/control.hpp>
 #include <autoware/component_interface_specs_universe/control.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -32,10 +32,10 @@ public:
   explicit VehicleCommandNode(const rclcpp::NodeOptions & options);
 
 private:
-  using ExternalPedals = autoware::adapi_specs::vehicle::PedalsCommand;
-  using ExternalAcceleration = autoware::adapi_specs::vehicle::AccelerationCommand;
-  using ExternalVelocity = autoware::adapi_specs::vehicle::VelocityCommand;
-  using ExternalSteering = autoware::adapi_specs::vehicle::SteeringCommand;
+  using ExternalPedals = autoware::adapi_specs::control::PedalsCommand;
+  using ExternalAcceleration = autoware::adapi_specs::control::AccelerationCommand;
+  using ExternalVelocity = autoware::adapi_specs::control::VelocityCommand;
+  using ExternalSteering = autoware::adapi_specs::control::SteeringCommand;
   using InternalControl = autoware::component_interface_specs::control::ControlCommand;
   using InternalActuation = autoware::component_interface_specs_universe::control::ActuationCommand;
 

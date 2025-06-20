@@ -18,7 +18,7 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_adapi_v1_msgs/srv/initialize_localization.hpp>
-#include <autoware_internal_localization_msgs/srv/initialize_localization.hpp>
+#include <autoware_localization_msgs/srv/initialize_localization.hpp>
 
 namespace autoware::default_adapi::localization_conversion
 {
@@ -26,7 +26,7 @@ namespace autoware::default_adapi::localization_conversion
 using ExternalInitializeRequest =
   autoware_adapi_v1_msgs::srv::InitializeLocalization::Request::SharedPtr;
 using InternalInitializeRequest =
-  autoware_internal_localization_msgs::srv::InitializeLocalization::Request::SharedPtr;
+  autoware_localization_msgs::srv::InitializeLocalization::Request::SharedPtr;
 InternalInitializeRequest convert_request(const ExternalInitializeRequest & external);
 
 using ExternalResponse = autoware_adapi_v1_msgs::msg::ResponseStatus;

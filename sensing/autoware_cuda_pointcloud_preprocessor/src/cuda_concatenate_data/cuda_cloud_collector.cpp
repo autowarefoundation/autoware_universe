@@ -16,7 +16,5 @@
 
 #include "autoware/cuda_pointcloud_preprocessor/cuda_concatenate_data/cuda_traits.hpp"
 
-/* *INDENT-OFF* */
 template class autoware::pointcloud_preprocessor::CloudCollector<
   autoware::pointcloud_preprocessor::CudaPointCloud2Traits>;
-/* *INDENT-ON* */

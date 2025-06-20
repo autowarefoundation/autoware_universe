@@ -132,49 +132,6 @@ bool isOnModifiedGoal(
   return isOnModifiedGoal(current_pose, modified_goal_opt.value(), parameters);
 }
 
-bool hasPreviousModulePathShapeChanged(
-  const BehaviorModuleOutput & upstream_module_output,
-  const BehaviorModuleOutput & last_upstream_module_output)
-{
-  // Calculate the lateral distance between each point of the current path and the nearest point of
-  // the last path
-  constexpr double LATERAL_DEVIATION_THRESH = 0.1;
-  for (const auto & p : upstream_module_output.path.points) {
-    const size_t nearest_seg_idx = autoware::motion_utils::findNearestSegmentIndex(
-      last_upstream_module_output.path.points, p.point.pose.position);
-    const auto seg_front = last_upstream_module_output.path.points.at(nearest_seg_idx);
-    const auto seg_back = last_upstream_module_output.path.points.at(nearest_seg_idx + 1);
-    // Check if the target point is within the segment
-    const Eigen::Vector3d segment_vec{
-      seg_back.point.pose.position.x - seg_front.point.pose.position.x,
-      seg_back.point.pose.position.y - seg_front.point.pose.position.y, 0.0};
-    const Eigen::Vector3d target_vec{
-      p.point.pose.position.x - seg_front.point.pose.position.x,
-      p.point.pose.position.y - seg_front.point.pose.position.y, 0.0};
-    const double dot_product = segment_vec.x() * target_vec.x() + segment_vec.y() * target_vec.y();
-    const double segment_length_squared =
-      segment_vec.x() * segment_vec.x() + segment_vec.y() * segment_vec.y();
-    if (dot_product < 0 || dot_product > segment_length_squared) {
-      // p.point.pose.position is not within the segment, skip lateral distance check
-      continue;
-    }
-    const double lateral_distance = std::abs(autoware::motion_utils::calcLateralOffset(
-      last_upstream_module_output.path.points, p.point.pose.position, nearest_seg_idx));
-    if (lateral_distance > LATERAL_DEVIATION_THRESH) {
-      return true;
-    }
-  }
-  return false;
-}
-
-bool hasDeviatedFromPath(
-  const Point & ego_position, const BehaviorModuleOutput & upstream_module_output)
-{
-  constexpr double LATERAL_DEVIATION_THRESH = 0.1;
-  return std::abs(autoware::motion_utils::calcLateralOffset(
-           upstream_module_output.path.points, ego_position)) > LATERAL_DEVIATION_THRESH;
-}
-
 bool needPathUpdate(
   const Pose & current_pose, const double path_update_duration, const rclcpp::Time & now,
   const std::optional<GoalCandidate> & modified_goal,
@@ -343,26 +300,28 @@ void LaneParkingPlanner::onTimer()
           local_planner_data->self_odometry->pose.pose, modified_goal_opt, parameters_)) {
       return false;
     }
-    if (hasDeviatedFromPath(
+    if (goal_planner_utils::hasDeviatedFromPath(
           local_planner_data->self_odometry->pose.pose.position, upstream_module_output)) {
       RCLCPP_DEBUG(getLogger(), "has deviated from current previous module path");
       return false;
     }
-    if (hasPreviousModulePathShapeChanged(
+    if (goal_planner_utils::hasPreviousModulePathShapeChanged(
           upstream_module_output, original_upstream_module_output_)) {
       RCLCPP_DEBUG(getLogger(), "has previous module path shape changed");
       return true;
     }
     if (
-      hasDeviatedFromPath(
+      goal_planner_utils::hasDeviatedFromPath(
         local_planner_data->self_odometry->pose.pose.position, original_upstream_module_output_) &&
       current_state != PathDecisionState::DecisionKind::DECIDED) {
       RCLCPP_DEBUG(getLogger(), "has deviated from last previous module path");
       return true;
     }
-    // TODO(someone): The generated path inherits the velocity of the path of the previous module.
-    // Therefore, if the velocity of the path of the previous module changes (e.g. stop points are
-    // inserted, deleted), the path should be regenerated.
+    const bool upstream_module_has_stopline_except_terminal =
+      goal_planner_utils::has_stopline_except_terminal(upstream_module_output.path);
+    if (upstream_module_has_stopline_except_terminal) {
+      return true;
+    }
 
     return false;
   });
@@ -776,10 +735,12 @@ void GoalPlannerModule::updateData()
   const auto static_target_objects = utils::path_safety_checker::filterObjectsByVelocity(
     dynamic_target_objects, parameters_.th_moving_object_velocity);
 
+  const bool upstream_module_has_stopline_except_terminal =
+    goal_planner_utils::has_stopline_except_terminal(getPreviousModuleOutput().path);
   path_decision_controller_.transit_state(
-    pull_over_path_recv, clock_->now(), static_target_objects, dynamic_target_objects,
-    planner_data_, occupancy_grid_map_, is_current_safe, parameters_, goal_searcher,
-    debug_data_.ego_polygons_expanded);
+    pull_over_path_recv, upstream_module_has_stopline_except_terminal, clock_->now(),
+    static_target_objects, dynamic_target_objects, planner_data_, occupancy_grid_map_,
+    is_current_safe, parameters_, goal_searcher, debug_data_.ego_polygons_expanded);
   const auto new_decision_state = path_decision_controller_.get_current_state();
 
   auto [lane_parking_response, freespace_parking_response] = syncWithThreads();

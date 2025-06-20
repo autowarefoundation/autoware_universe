@@ -24,6 +24,14 @@
   <arg name="mrm_handler_param_path"/>
   <arg name="diagnostic_graph_aggregator_param_path"/>
   <arg name="diagnostic_graph_aggregator_graph_path"/>
+  <arg name="diag_struct_topic" default="/diagnostics_graph/struct"/>
+  <arg name="diag_status_topic" default="/diagnostics_graph/status"/>
+  <arg name="availability_converter_param_path" default="$(find-pkg-share autoware_diagnostic_graph_aggregator)/config/converter.param.yaml"/>
+  <arg name="command_mode_switcher_param_path" default="$(find-pkg-share autoware_command_mode_switcher)/config/default.param.yaml"/>
+  <arg name="command_mode_decider_param_path" default="$(find-pkg-share autoware_command_mode_decider)/config/default.param.yaml"/>
+  <arg name="mrm_state_topic" default="/system/fail_safe/mrm_state"/>
+  <arg name="change_operation_mode_srv" default="/system/operation_mode/change_operation_mode"/>
+  <arg name="change_autoware_control_srv" default="/system/operation_mode/change_autoware_control"/>
 
   <let name="sensor_launch_pkg" value="$(find-pkg-share $(var sensor_model)_launch)"/>
 
@@ -33,8 +41,25 @@
   <arg name="launch_rqt_robot_monitor" default="false"/>
   <arg name="launch_rqt_runtime_monitor_err" default="false"/>
 
+  <!-- temporary: control_command_gate migration -->
+  <arg name="use_control_command_gate" default="false"/>
+
   <group>
     <push-ros-namespace namespace="/system"/>
+
+    <group if="$(var use_control_command_gate)">
+      <include file="$(find-pkg-share autoware_command_mode_switcher)/launch/switcher.launch.xml">
+        <arg name="config" value="$(var command_mode_switcher_param_path)"/>
+      </include>
+    </group>
+    <group if="$(var use_control_command_gate)">
+      <include file="$(find-pkg-share autoware_command_mode_decider)/launch/decider.launch.xml">
+        <arg name="config" value="$(var command_mode_decider_param_path)"/>
+        <arg name="~/operation_mode/change_operation_mode" value="$(var change_operation_mode_srv)"/>
+        <arg name="~/operation_mode/change_autoware_control" value="$(var change_autoware_control_srv)"/>
+        <arg name="~/mrm/state" value="$(var mrm_state_topic)"/>
+      </include>
+    </group>
 
     <!-- System Monitor -->
     <group if="$(var launch_system_monitor)">
@@ -79,7 +104,7 @@
     </group>
 
     <!-- MRM Operator -->
-    <group>
+    <group unless="$(var use_control_command_gate)">
       <include file="$(find-pkg-share autoware_mrm_comfortable_stop_operator)/launch/mrm_comfortable_stop_operator.launch.py">
         <arg name="config_file" value="$(var mrm_comfortable_stop_operator_param_path)"/>
       </include>
@@ -95,6 +120,9 @@
       <include file="$(find-pkg-share autoware_diagnostic_graph_aggregator)/launch/aggregator.launch.xml">
         <arg name="param_file" value="$(var diagnostic_graph_aggregator_param_path)"/>
         <arg name="graph_file" value="$(var diagnostic_graph_aggregator_graph_path)"/>
+        <arg name="~/struct" value="$(var diag_struct_topic)"/>
+        <arg name="~/status" value="$(var diag_status_topic)"/>
+        <arg name="converter_param_file" value="$(var availability_converter_param_path)"/>
       </include>
     </group>
 
@@ -104,7 +132,7 @@
     </group>
 
     <!-- MRM Handler -->
-    <group>
+    <group unless="$(var use_control_command_gate)">
       <include file="$(find-pkg-share autoware_mrm_handler)/launch/mrm_handler.launch.xml">
         <arg name="config_file" value="$(var mrm_handler_param_path)"/>
       </include>

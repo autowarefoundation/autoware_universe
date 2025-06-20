@@ -63,7 +63,7 @@ struct PointCloudWithTransform
 class PointCloudDensification
 {
 public:
-  explicit PointCloudDensification(const DensificationParam & param, cudaStream_t stream);
+  explicit PointCloudDensification(const DensificationParam & param);
 
   bool enqueuePointCloud(
     const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & msg_ptr,
@@ -99,7 +99,6 @@ private:
   double current_timestamp_{0.0};
   Eigen::Affine3f affine_world2current_;
   std::list<PointCloudWithTransform> pointcloud_cache_;
-  cudaStream_t stream_;
 };
 
 }  // namespace autoware::bevfusion

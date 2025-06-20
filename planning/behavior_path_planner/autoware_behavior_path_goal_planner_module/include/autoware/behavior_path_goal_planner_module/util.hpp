@@ -239,6 +239,19 @@ bool is_goal_reachable_on_path(
   const lanelet::ConstLanelets current_lanes, const route_handler::RouteHandler & route_handler,
   const bool left_side_parking);
 
+bool hasPreviousModulePathShapeChanged(
+  const BehaviorModuleOutput & upstream_module_output,
+  const BehaviorModuleOutput & last_upstream_module_output);
+bool hasDeviatedFromPath(
+  const Point & ego_position, const BehaviorModuleOutput & upstream_module_output);
+
+/**
+ * @brief check if stopline exists except for the terminal
+ * @note except for terminal, to account for lane change bug that inserts stopline at the end
+ * randomly
+ */
+bool has_stopline_except_terminal(const PathWithLaneId & path);
+
 }  // namespace autoware::behavior_path_planner::goal_planner_utils
 
 #endif  // AUTOWARE__BEHAVIOR_PATH_GOAL_PLANNER_MODULE__UTIL_HPP_

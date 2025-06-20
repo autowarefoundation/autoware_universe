@@ -454,6 +454,11 @@ ObjectData StaticObstacleAvoidanceModule::createObjectData(
   utils::static_obstacle_avoidance::fillObjectMovingTime(
     object_data, stopped_objects_, parameters_);
 
+  // Update classification unstable objects.
+  utils::static_obstacle_avoidance::updateClassificationUnstableObjects(
+    object_data, unknown_type_object_first_seen_time_map_,
+    parameters_->unstable_classification_time);
+
   // Calc lateral deviation from path to target object.
   object_data.direction = calc_lateral_deviation(object_closest_pose, object_pose.position) > 0.0
                             ? Direction::LEFT
@@ -843,20 +848,44 @@ bool StaticObstacleAvoidanceModule::isSafePath(
     return false;
   }();
 
-  if (
-    !avoid_data_.target_objects.empty() &&
-    parameters_->policy_detection_reliability == "not_enough") {
+  const auto is_within_current_lane = [&, this](const auto is_right) {
+    if (avoid_data_.new_shift_line.empty()) return true;
+
+    const auto combine_lanelet = lanelet::utils::combineLaneletsShape(avoid_data_.current_lanelets);
+    const auto bound = is_right
+                         ? lanelet::utils::to2D(combine_lanelet.rightBound().basicLineString())
+                         : lanelet::utils::to2D(combine_lanelet.leftBound().basicLineString());
+    for (size_t i = 0; i < avoid_data_.new_shift_line.back().end_idx; ++i) {
+      const auto transform =
+        autoware_utils::pose2transform(autoware_utils::get_pose(shifted_path.path.points.at(i)));
+      const auto footprint = autoware_utils::transform_vector(
+        planner_data_->parameters.vehicle_info.createFootprint(), transform);
+      if (boost::geometry::intersects(footprint, bound)) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  if (parameters_->policy_detection_reliability == "not_enough") {
     if (has_left_shift) {
-      const auto opposite_lanes = planner_data_->route_handler->getLeftOppositeLanelets(
-        avoid_data_.target_objects.front().overhang_lanelet);
-      if (!opposite_lanes.empty()) {
+      const auto exist_adjacent_lane = std::all_of(
+        avoid_data_.current_lanelets.begin(), avoid_data_.current_lanelets.end(),
+        [this](const auto & lane) {
+          return planner_data_->route_handler->getLeftLanelet(lane, true, false);
+        });
+      if (!exist_adjacent_lane && !is_within_current_lane(false)) {
         return false;
       }
     }
     if (has_right_shift) {
-      const auto opposite_lanes = planner_data_->route_handler->getRightOppositeLanelets(
-        avoid_data_.target_objects.front().overhang_lanelet);
-      if (!opposite_lanes.empty()) {
+      const auto exist_adjacent_lane = std::all_of(
+        avoid_data_.current_lanelets.begin(), avoid_data_.current_lanelets.end(),
+        [this](const auto & lane) {
+          return planner_data_->route_handler->getRightLanelet(lane, true, false);
+        });
+      if (!exist_adjacent_lane && !is_within_current_lane(true)) {
         return false;
       }
     }
@@ -1613,8 +1642,10 @@ void StaticObstacleAvoidanceModule::updateMarker(
     &info_marker_);
 
   append_marker_array(target_objects_marker_array.second, &debug_marker_);
-  debug_marker_ = utils::static_obstacle_avoidance::createDebugMarkerArray(
-    output, data, shifter, debug, parameters_);
+  append_marker_array(
+    utils::static_obstacle_avoidance::createDebugMarkerArray(
+      output, data, shifter, debug, parameters_),
+    &debug_marker_);
 }
 
 void StaticObstacleAvoidanceModule::updateAvoidanceDebugData(
@@ -1955,7 +1986,7 @@ void StaticObstacleAvoidanceModule::insertPrepareVelocity(ShiftedPath & shifted_
   // insert slow down speed.
   const double current_target_velocity = autoware::motion_utils::calc_feasible_velocity_from_jerk(
     shift_length, helper_->getLateralMinJerkLimit(), distance_to_object);
-  if (current_target_velocity < getEgoSpeed() + parameters_->buf_slow_down_speed) {
+  if (current_target_velocity + parameters_->buf_slow_down_speed < getEgoSpeed()) {
     utils::static_obstacle_avoidance::insertDecelPoint(
       getEgoPosition(), decel_distance, parameters_->velocity_map.front(), shifted_path.path,
       slow_pose_);

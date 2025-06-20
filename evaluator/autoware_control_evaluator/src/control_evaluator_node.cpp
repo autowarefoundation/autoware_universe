@@ -1,4 +1,4 @@
-// Copyright 2025 Tier IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,8 +18,11 @@
 
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
 #include <nlohmann/json.hpp>
+
+#include <boost/geometry.hpp>
 
 #include <chrono>
 #include <cstdlib>
@@ -35,6 +38,8 @@
 
 namespace control_diagnostics
 {
+namespace bg = boost::geometry;
+
 ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_options)
 : Node("control_evaluator", node_options),
   vehicle_info_(autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo())
@@ -55,6 +60,7 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
       module_name, autoware_utils::InterProcessPollingSubscriber<PlanningFactorArray>(
                      this, topic_prefix + module_name));
     stop_deviation_accumulators_.emplace(module_name, Accumulator<double>());
+    stop_deviation_abs_accumulators_.emplace(module_name, Accumulator<double>());
   }
 
   // Publisher
@@ -64,6 +70,7 @@ ControlEvaluatorNode::ControlEvaluatorNode(const rclcpp::NodeOptions & node_opti
 
   // Parameters
   output_metrics_ = declare_parameter<bool>("output_metrics");
+  distance_filter_thr_m_ = declare_parameter<double>("object_metrics.distance_filter_thr_m");
 
   // Timer callback to publish evaluator diagnostics
   using namespace std::literals::chrono_literals;
@@ -103,6 +110,18 @@ ControlEvaluatorNode::~ControlEvaluatorNode()
       j[base_name + "max"] = stop_deviation_accumulator.max();
       j[base_name + "mean"] = stop_deviation_accumulator.mean();
       j[base_name + "count"] = stop_deviation_accumulator.count();
+    }
+    j["stop_deviation_abs/description"] = metric_descriptions.at(Metric::stop_deviation_abs);
+    for (const auto & [module_name, stop_deviation_abs_accumulator] :
+         stop_deviation_abs_accumulators_) {
+      if (stop_deviation_abs_accumulator.count() == 0) {
+        continue;
+      }
+      const std::string base_name = "stop_deviation_abs/" + module_name + "/";
+      j[base_name + "min"] = stop_deviation_abs_accumulator.min();
+      j[base_name + "max"] = stop_deviation_abs_accumulator.max();
+      j[base_name + "mean"] = stop_deviation_abs_accumulator.mean();
+      j[base_name + "count"] = stop_deviation_abs_accumulator.count();
     }
 
     // get output folder
@@ -312,18 +331,20 @@ void ControlEvaluatorNode::AddSteeringMetricMsg(const SteeringReport & steering_
 void ControlEvaluatorNode::AddLateralDeviationMetricMsg(
   const Trajectory & traj, const Point & ego_point)
 {
-  const Metric metric = Metric::lateral_deviation;
   const double metric_value = metrics::calcLateralDeviation(traj, ego_point);
+  const double metric_value_abs = std::abs(metric_value);
 
-  AddMetricMsg(metric, metric_value);
+  AddMetricMsg(Metric::lateral_deviation, metric_value);
+  AddMetricMsg(Metric::lateral_deviation_abs, metric_value_abs);
 }
 
 void ControlEvaluatorNode::AddYawDeviationMetricMsg(const Trajectory & traj, const Pose & ego_pose)
 {
-  const Metric metric = Metric::yaw_deviation;
   const double metric_value = metrics::calcYawDeviation(traj, ego_pose);
+  const double metric_value_abs = std::abs(metric_value);
 
-  AddMetricMsg(metric, metric_value);
+  AddMetricMsg(Metric::yaw_deviation, metric_value);
+  AddMetricMsg(Metric::yaw_deviation_abs, metric_value_abs);
 }
 
 void ControlEvaluatorNode::AddGoalDeviationMetricMsg(const Odometry & odom)
@@ -331,10 +352,13 @@ void ControlEvaluatorNode::AddGoalDeviationMetricMsg(const Odometry & odom)
   const Pose ego_pose = odom.pose.pose;
   const double longitudinal_deviation_value =
     metrics::calcLongitudinalDeviation(route_handler_.getGoalPose(), ego_pose.position);
+  const double longitudinal_deviation_value_abs = std::abs(longitudinal_deviation_value);
   const double lateral_deviation_value =
     metrics::calcLateralDeviation(route_handler_.getGoalPose(), ego_pose.position);
+  const double lateral_deviation_value_abs = std::abs(lateral_deviation_value);
   const double yaw_deviation_value =
     metrics::calcYawDeviation(route_handler_.getGoalPose(), ego_pose);
+  const double yaw_deviation_value_abs = std::abs(yaw_deviation_value);
 
   const bool is_ego_stopped_near_goal =
     std::abs(longitudinal_deviation_value) < 3.0 && std::abs(odom.twist.twist.linear.x) < 0.001;
@@ -343,18 +367,24 @@ void ControlEvaluatorNode::AddGoalDeviationMetricMsg(const Odometry & odom)
     Metric::goal_longitudinal_deviation, longitudinal_deviation_value, is_ego_stopped_near_goal);
   AddMetricMsg(Metric::goal_lateral_deviation, lateral_deviation_value, is_ego_stopped_near_goal);
   AddMetricMsg(Metric::goal_yaw_deviation, yaw_deviation_value, is_ego_stopped_near_goal);
+  AddMetricMsg(
+    Metric::goal_longitudinal_deviation_abs, longitudinal_deviation_value_abs,
+    is_ego_stopped_near_goal);
+  AddMetricMsg(
+    Metric::goal_lateral_deviation_abs, lateral_deviation_value_abs, is_ego_stopped_near_goal);
+  AddMetricMsg(Metric::goal_yaw_deviation_abs, yaw_deviation_value_abs, is_ego_stopped_near_goal);
 }
 
 void ControlEvaluatorNode::AddStopDeviationMetricMsg(const Odometry & odom)
 {
-  const auto get_min_distance =
+  const auto get_min_distance_signed =
     [](const PlanningFactorArray::ConstSharedPtr & planning_factors) -> std::optional<double> {
     std::optional<double> min_distance = std::nullopt;
     for (const auto & factor : planning_factors->factors) {
       if (factor.behavior == PlanningFactor::STOP) {
         for (const auto & control_point : factor.control_points) {
-          const auto cur_distance = std::abs(control_point.distance);
-          if (!min_distance || cur_distance < *min_distance) {
+          const auto cur_distance = control_point.distance;
+          if (!min_distance || std::abs(cur_distance) < std::abs(*min_distance)) {
             min_distance = cur_distance;
           }
         }
@@ -372,7 +402,7 @@ void ControlEvaluatorNode::AddStopDeviationMetricMsg(const Odometry & odom)
       stop_deviation_modules_.count(module_name) == 0) {
       continue;
     }
-    const auto min_distance = get_min_distance(planning_factors);
+    const auto min_distance = get_min_distance_signed(planning_factors);
     if (min_distance) {
       min_distances.emplace_back(module_name, *min_distance);
     }
@@ -381,25 +411,71 @@ void ControlEvaluatorNode::AddStopDeviationMetricMsg(const Odometry & odom)
     return;
   }
 
-  // find the stop decision closest to the ego, accumulate its metric
+  // find the stop decision closest to the ego only, the other stop decisions are not accumulated
   const auto min_distance_pair = std::min_element(
     min_distances.begin(), min_distances.end(),
-    [](const auto & a, const auto & b) { return a.second < b.second; });
+    [](const auto & a, const auto & b) { return std::abs(a.second) < std::abs(b.second); });
 
   const auto [closest_module_name, closest_min_distance] = *min_distance_pair;
   const bool is_ego_stopped_near_stop_decision =
     std::abs(closest_min_distance) < 3.0 && std::abs(odom.twist.twist.linear.x) < 0.001;
   if (output_metrics_ && is_ego_stopped_near_stop_decision) {
     stop_deviation_accumulators_[closest_module_name].add(closest_min_distance);
+    stop_deviation_abs_accumulators_[closest_module_name].add(std::abs(closest_min_distance));
   }
 
-  // add metrics
+  // add metrics for each module
   for (const auto & [module_name, min_distance] : min_distances) {
     MetricMsg metric_msg;
     metric_msg.name = "stop_deviation/" + module_name;
     metric_msg.value = std::to_string(min_distance);
     metrics_msg_.metric_array.push_back(metric_msg);
+
+    MetricMsg metric_msg_abs;
+    metric_msg_abs.name = "stop_deviation_abs/" + module_name;
+    metric_msg_abs.value = std::to_string(std::abs(min_distance));
+    metrics_msg_.metric_array.push_back(metric_msg_abs);
   }
+}
+
+void ControlEvaluatorNode::AddObjectMetricMsg(
+  const Odometry & odom, const PredictedObjects & objects)
+{
+  if (objects.objects.empty()) {
+    return;
+  }
+
+  const auto ego_polygon = [&]() -> autoware_utils::Polygon2d {
+    const autoware_utils::LinearRing2d local_ego_footprint = vehicle_info_.createFootprint();
+    const autoware_utils::LinearRing2d ego_footprint = autoware_utils::transform_vector(
+      local_ego_footprint, autoware_utils::pose2transform(odom.pose.pose));
+
+    autoware_utils::Polygon2d ego_polygon;
+    ego_polygon.outer() = ego_footprint;
+    bg::correct(ego_polygon);
+    return ego_polygon;
+  }();
+
+  double minimum_distance = std::numeric_limits<double>::max();
+  for (const auto & object : objects.objects) {
+    const double center_distance = autoware_utils::calc_distance2d(
+      odom.pose.pose.position, object.kinematics.initial_pose_with_covariance.pose.position);
+    if (center_distance > distance_filter_thr_m_) {
+      continue;
+    }
+
+    const auto object_polygon = autoware_utils::to_polygon2d(object);
+    const auto distance = bg::distance(ego_polygon, object_polygon);
+    if (distance < minimum_distance) {
+      minimum_distance = distance;
+    }
+  }
+
+  if (minimum_distance == std::numeric_limits<double>::max()) {
+    return;
+  }
+
+  AddMetricMsg(Metric::closest_object_distance, minimum_distance);
 }
 
 void ControlEvaluatorNode::onTimer()
@@ -412,6 +488,12 @@ void ControlEvaluatorNode::onTimer()
 
     // add planning_factor related metrics
     AddStopDeviationMetricMsg(*odom);
+
+    // add object related metrics
+    const auto objects = objects_sub_.take_data();
+    if (objects) {
+      AddObjectMetricMsg(*odom, *objects);
+    }
 
     // add kinematic info
     const auto acc = accel_sub_.take_data();
