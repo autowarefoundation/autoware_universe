@@ -54,6 +54,7 @@ public:
     std::vector<geometry_msgs::msg::Point> traffic_light_points;
     std::optional<geometry_msgs::msg::Point> highest_confidence_traffic_light_point = {
       std::nullopt};
+    bool is_remaining_time_used{false};
   };
 
   struct PlannerParam
