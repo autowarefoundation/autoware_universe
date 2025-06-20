@@ -26,7 +26,6 @@
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <autoware_internal_planning_msgs/msg/planning_factor.hpp>
-#include <autoware_internal_planning_msgs/msg/safety_factor_array.hpp>
 
 #include <boost/geometry/algorithms/buffer.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
@@ -127,6 +126,7 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
   filter_pointcloud(context_->data->obstacle_pointcloud, filtered_pointcloud);
   if (filtered_pointcloud->empty()) return;
 
+  safety_factor_array_ = SafetyFactorArray{};
   context_->validation_status->is_valid_intersection_collision_check = check_collision(
     lanelets.target_lanelets, filtered_pointcloud,
     context_->data->obstacle_pointcloud->header.stamp);
@@ -134,9 +134,10 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
   const auto & ego_pose = context_->data->current_kinematics->pose.pose;
   const auto & traj_points = context_->data->current_trajectory->points;
   auto publish_planning_factor = [&]() {
+    safety_factor_array_.is_safe = false;
+    safety_factor_array_.detail = "possible collision at intersection";
     planning_factor_interface_->add(
-      traj_points, ego_pose, ego_pose, PlanningFactor::STOP, SafetyFactorArray{}, true, 0.0, 0.0,
-      "intersection_collision_checker(module detected possible collision)");
+      traj_points, ego_pose, ego_pose, PlanningFactor::STOP, safety_factor_array_);
     planning_factor_interface_->publish();
   };
 
@@ -343,6 +344,7 @@ bool IntersectionCollisionChecker::check_collision(
         is_safe = false;
         context_->debug_pose_publisher->pushPointMarker(
           existing_object.pose.position, "collision_checker_pcd_objects", 0);
+        add_safety_factor(existing_object.pose.position, target_lanelet.ego_overlap_time.first);
       } else {
         context_->debug_pose_publisher->pushPointMarker(
           existing_object.pose.position, "collision_checker_pcd_objects", 1);
@@ -509,6 +511,17 @@ void IntersectionCollisionChecker::set_lanelets_debug_marker(
         ll_polygons, "collision_checker_target_lanelets", 2);
     }
   }
+}
+
+void IntersectionCollisionChecker::add_safety_factor(
+  geometry_msgs::msg::Point & obs_point, const double ttc)
+{
+  SafetyFactor factor;
+  factor.is_safe = false;
+  factor.type = SafetyFactor::POINTCLOUD;
+  factor.ttc_begin = ttc;
+  factor.points.push_back(obs_point);
+  safety_factor_array_.factors.push_back(factor);
 }
 
 }  // namespace autoware::planning_validator
