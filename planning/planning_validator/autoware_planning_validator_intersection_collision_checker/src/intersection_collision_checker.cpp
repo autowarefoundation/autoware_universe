@@ -18,29 +18,20 @@
 
 #include <autoware/signal_processing/lowpass_filter_1d.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
-#include <autoware_utils/geometry/boost_geometry.hpp>
-#include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/parameter.hpp>
-#include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/transform/transforms.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <autoware_internal_planning_msgs/msg/planning_factor.hpp>
 
-#include <boost/geometry/algorithms/buffer.hpp>
-#include <boost/geometry/algorithms/disjoint.hpp>
-#include <boost/geometry/algorithms/envelope.hpp>
-#include <boost/geometry/algorithms/union.hpp>
-#include <boost/geometry/strategies/cartesian/buffer_point_square.hpp>
-
-#include <lanelet2_core/Forward.h>
-#include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_core/geometry/BoundingBox.h>
-#include <lanelet2_core/geometry/LineString.h>
-#include <lanelet2_core/geometry/Point.h>
-#include <lanelet2_core/geometry/Polygon.h>
-#include <lanelet2_core/primitives/BoundingBox.h>
-#include <lanelet2_routing/RoutingGraph.h>
+#include <pcl/filters/crop_hull.h>
+#include <pcl/filters/extract_indices.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/registration/gicp.h>
+#include <pcl/segmentation/extract_clusters.h>
+#include <pcl/surface/convex_hull.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 #include <algorithm>
 #include <limits>

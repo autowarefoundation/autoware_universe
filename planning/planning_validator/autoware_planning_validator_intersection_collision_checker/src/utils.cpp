@@ -17,12 +17,8 @@
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 
-#include <boost/geometry/algorithms/buffer.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
-#include <boost/geometry/algorithms/envelope.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
-#include <boost/geometry/algorithms/union.hpp>
-#include <boost/geometry/strategies/cartesian/buffer_point_square.hpp>
 
 #include <algorithm>
 #include <cmath>
