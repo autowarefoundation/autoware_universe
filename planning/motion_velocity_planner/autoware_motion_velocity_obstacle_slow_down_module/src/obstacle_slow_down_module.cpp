@@ -612,7 +612,7 @@ ObstacleSlowDownModule::create_slow_down_obstacle_for_predicted_object(
     obj_uuid_str,
     predicted_objects_stamp,
     object->predicted_object.classification.at(0),
-    object->get_predicted_pose(clock_->now(), predicted_objects_stamp),
+    object->get_predicted_current_pose(clock_->now(), predicted_objects_stamp),
     object->get_lon_vel_relative_to_traj(traj_points),
     object->get_lat_vel_relative_to_traj(traj_points),
     dist_from_obj_poly_to_traj_poly,
