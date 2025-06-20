@@ -12,11 +12,13 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
+  <depend>agnocastlib</depend>
+  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_cuda_dependency_meta</depend>
   <depend>autoware_cuda_utils</depend>
   <depend>autoware_point_types</depend>
   <depend>autoware_pointcloud_preprocessor</depend>
-  <depend>autoware_universe_utils</depend>
+  <depend>autoware_utils</depend>
   <depend>cuda_blackboard</depend>
   <depend>diagnostic_msgs</depend>
   <depend>rclcpp</depend>
