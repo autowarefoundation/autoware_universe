@@ -34,9 +34,9 @@ To get the target lanelets, we first find all lanelets intersecting with ego tra
 - Lanelets that have `turn_direction` attribute and are not `STRAIGHT`. (If parameter `right_turn.check_turning_lanes` is **FALSE**)
 - Lanelets that are determined to be **crossing** lanes. (If parameter `right_turn.check_crossing_lanes` is **FALSE**)
 
-Target lenelets are then expanded, if necessary, up to `detection_range`
+Target lanelets are then expanded, if necessary, up to `detection_range`
 
-The image below shows the target lanelets at a righ turn intersection. (`right_turn.check_turning_lanes` set to **FALSE**)
+The image below shows the target lanelets at a right turn intersection. (`right_turn.check_turning_lanes` set to **FALSE**)
 
 ![right-turn-target-lanes](./images/right_turn_target_lanelets.png)
 
@@ -51,7 +51,7 @@ To get the target lanelets in case of a left turn:
   - Lanelets with a "time to reach" exceeding the time horizon
   - Lanelets that have `turn_direction` attribute and are not `STRAIGHT`. (If parameter `left_turn.check_turning_lanes` is **FALSE**)
 
-Target lenelets are then expanded, if necessary, up to `detection_range`
+Target lanelets are then expanded, if necessary, up to `detection_range`
 
 The image below shows the target lanelets at a left turn intersection. (`left.check_turning_lanes` set to **TRUE**)
 
