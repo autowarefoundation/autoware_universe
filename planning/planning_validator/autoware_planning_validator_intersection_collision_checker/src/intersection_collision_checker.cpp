@@ -61,7 +61,7 @@ void IntersectionCollisionChecker::init(
 
   planning_factor_interface_ =
     std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      &node, "intersection_collision_checker");
+      &node, module_name_);
 
   setup_diag();
 }
@@ -127,6 +127,7 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
   auto publish_planning_factor = [&]() {
     safety_factor_array_.is_safe = false;
     safety_factor_array_.detail = "possible collision at intersection";
+    safety_factor_array_.header.stamp = clock_->now();
     planning_factor_interface_->add(
       traj_points, ego_pose, ego_pose, PlanningFactor::STOP, safety_factor_array_);
     planning_factor_interface_->publish();
