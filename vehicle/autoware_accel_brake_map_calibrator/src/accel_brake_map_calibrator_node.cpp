@@ -35,22 +35,22 @@ AccelBrakeMapCalibrator::AccelBrakeMapCalibrator(const rclcpp::NodeOptions & nod
 {
   transform_listener_ = std::make_shared<autoware_utils::TransformListener>(this);
   // get parameter
-  update_hz_ = declare_parameter<double>("update_hz", 10.0);
-  covariance_ = declare_parameter<double>("initial_covariance", 0.05);
-  velocity_min_threshold_ = declare_parameter<double>("velocity_min_threshold", 0.1);
-  velocity_diff_threshold_ = declare_parameter<double>("velocity_diff_threshold", 0.556);
-  pedal_diff_threshold_ = declare_parameter<double>("pedal_diff_threshold", 0.03);
-  max_steer_threshold_ = declare_parameter<double>("max_steer_threshold", 0.2);
-  max_pitch_threshold_ = declare_parameter<double>("max_pitch_threshold", 0.02);
-  max_jerk_threshold_ = declare_parameter<double>("max_jerk_threshold", 0.7);
-  pedal_velocity_thresh_ = declare_parameter<double>("pedal_velocity_thresh", 0.15);
-  max_accel_ = declare_parameter<double>("max_accel", 5.0);
-  min_accel_ = declare_parameter<double>("min_accel", -5.0);
-  pedal_to_accel_delay_ = declare_parameter<double>("pedal_to_accel_delay", 0.3);
-  max_data_count_ = static_cast<int>(declare_parameter("max_data_count", 200));
+  update_hz_ = declare_parameter<double>("update_hz");
+  covariance_ = declare_parameter<double>("initial_covariance");
+  velocity_min_threshold_ = declare_parameter<double>("velocity_min_threshold");
+  velocity_diff_threshold_ = declare_parameter<double>("velocity_diff_threshold");
+  pedal_diff_threshold_ = declare_parameter<double>("pedal_diff_threshold");
+  max_steer_threshold_ = declare_parameter<double>("max_steer_threshold");
+  max_pitch_threshold_ = declare_parameter<double>("max_pitch_threshold");
+  max_jerk_threshold_ = declare_parameter<double>("max_jerk_threshold");
+  pedal_velocity_thresh_ = declare_parameter<double>("pedal_velocity_thresh");
+  max_accel_ = declare_parameter<double>("max_accel");
+  min_accel_ = declare_parameter<double>("min_accel");
+  pedal_to_accel_delay_ = declare_parameter<double>("pedal_to_accel_delay");
+  max_data_count_ = static_cast<int>(declare_parameter("max_data_count"));
   pedal_accel_graph_output_ = declare_parameter<bool>("pedal_accel_graph_output", false);
   progress_file_output_ = declare_parameter<bool>("progress_file_output", false);
-  precision_ = static_cast<int>(declare_parameter("precision", 3));
+  precision_ = static_cast<int>(declare_parameter("precision"));
   const auto get_pitch_method_str = declare_parameter("get_pitch_method", std::string("tf"));
   if (get_pitch_method_str == std::string("tf")) {
     get_pitch_method_ = GET_PITCH_METHOD::TF;
@@ -72,7 +72,7 @@ AccelBrakeMapCalibrator::AccelBrakeMapCalibrator(const rclcpp::NodeOptions & nod
     return;
   }
 
-  update_suggest_thresh_ = declare_parameter<double>("update_suggest_thresh", 0.7);
+  update_suggest_thresh_ = declare_parameter<double>("update_suggest_thresh");
   csv_calibrated_map_dir_ = declare_parameter("csv_calibrated_map_dir", std::string(""));
   output_accel_file_ = csv_calibrated_map_dir_ + "/accel_map.csv";
   output_brake_file_ = csv_calibrated_map_dir_ + "/brake_map.csv";
