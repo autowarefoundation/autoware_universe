@@ -13,6 +13,7 @@
   <depend>autoware_adapi_v1_msgs</depend>
   <depend>autoware_command_mode_types</depend>
   <depend>autoware_internal_debug_msgs</depend>
+  <depend>autoware_system_msgs</depend>
   <depend>autoware_universe_utils</depend>
   <depend>diagnostic_updater</depend>
   <depend>pluginlib</depend>
