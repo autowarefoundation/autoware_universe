@@ -1,4 +1,4 @@
-// Copyright 2024 AutoCore, Inc.
+// Copyright 2025 AutoCore, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -58,8 +58,6 @@ void box3DToDetectedObjects(
     if (b.score < score_thre) continue;
     autoware_perception_msgs::msg::DetectedObject obj;
 
-    Eigen::Vector3f center(b.x, b.y, b.z + b.h / 2.);
-
     obj.existence_probability = b.score;
     // classification
     autoware_perception_msgs::msg::ObjectClassification classification;
@@ -72,10 +70,11 @@ void box3DToDetectedObjects(
     obj.classification.emplace_back(classification);
 
     // pose and shape
+    // set box center (x, y, z + h/2) to object's position
     geometry_msgs::msg::Point p;
-    p.x = center.x();
-    p.y = center.y();
-    p.z = center.z();
+    p.x = b.x;
+    p.y = b.y;
+    p.z = b.z + b.h / 2.0;
     obj.kinematics.pose_with_covariance.pose.position = p;
 
     tf2::Quaternion q;
@@ -124,7 +123,6 @@ void getCameraIntrinsics(
 
 void imageTransport(std::vector<cv::Mat> imgs, uchar * out_imgs, size_t width, size_t height)
 {
-  uchar * temp = new uchar[width * height * 3];
   uchar * temp_gpu = nullptr;
   CHECK_CUDA(cudaMalloc(&temp_gpu, width * height * 3));
 
@@ -133,7 +131,6 @@ void imageTransport(std::vector<cv::Mat> imgs, uchar * out_imgs, size_t width, s
     CHECK_CUDA(cudaMemcpy(temp_gpu, imgs[i].data, width * height * 3, cudaMemcpyHostToDevice));
     convert_RGBHWC_to_BGRCHW(temp_gpu, out_imgs + i * width * height * 3, 3, height, width);
   }
-  delete[] temp;
   CHECK_CUDA(cudaFree(temp_gpu));
 }
 

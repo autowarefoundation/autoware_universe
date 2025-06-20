@@ -1,4 +1,4 @@
-// Copyright 2024 AutoCore, Inc.
+// Copyright 2025 AutoCore, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,25 +32,16 @@ TRTBEVDetNode::TRTBEVDetNode(const rclcpp::NodeOptions & node_options)
   RCLCPP_INFO(this->get_logger(), "Using precision mode: %s", precision_.c_str());
 
   // Only start camera info subscription and tf listener at the beginning
-  img_N_ = this->declare_parameter<int>("data_params.CAM_NUM", 6);  // camera num 6
+  img_n_ = this->declare_parameter<int>("data_params.CAM_NUM", 6);  // camera num 6
 
-  caminfo_received_ = std::vector<bool>(img_N_, false);
-  cams_intrin_ = std::vector<Eigen::Matrix3f>(img_N_);
-  cams2ego_rot_ = std::vector<Eigen::Quaternion<float>>(img_N_);
-  cams2ego_trans_ = std::vector<Eigen::Translation3f>(img_N_);
+  caminfo_received_ = std::vector<bool>(img_n_, false);
+  cams_intrin_ = std::vector<Eigen::Matrix3f>(img_n_);
+  cams2ego_rot_ = std::vector<Eigen::Quaternion<float>>(img_n_);
+  cams2ego_trans_ = std::vector<Eigen::Translation3f>(img_n_);
 
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-  startCameraInfoSubscription();
-
-  // Wait for camera info and tf transform initialization
-  timer_ = this->create_wall_timer(
-    std::chrono::milliseconds(100), std::bind(&TRTBEVDetNode::checkInitialization, this));
-}
-
-void TRTBEVDetNode::initModel()
-{
   score_thre_ = this->declare_parameter<float>("post_process_params.score_threshold", 0.2);
 
   model_config_ = this->declare_parameter("model_config", "bevdet_r50_4dlongterm_depth.yaml");
@@ -66,23 +57,32 @@ void TRTBEVDetNode::initModel()
   class_names_ =
     this->declare_parameter<std::vector<std::string>>("post_process_params.class_names");
 
-  RCLCPP_INFO_STREAM(this->get_logger(), "Successful load config!");
+  startCameraInfoSubscription();
 
-  sampleData_.param = camParams(cams_intrin_, cams2ego_rot_, cams2ego_trans_);
+  // Wait for camera info and tf transform initialization
+  initialization_check_timer_ = this->create_wall_timer(
+    std::chrono::milliseconds(100), std::bind(&TRTBEVDetNode::checkInitialization, this));
+}
 
-  RCLCPP_INFO_STREAM(this->get_logger(), "Successful load image params!");
+void TRTBEVDetNode::initModel()
+{
+  RCLCPP_INFO_STREAM(this->get_logger(), "Successfully loaded config!");
+
+  inference_input_.param = camParams(cams_intrin_, cams2ego_rot_, cams2ego_trans_);
+
+  RCLCPP_INFO_STREAM(this->get_logger(), "Successfully loaded image params!");
 
   bevdet_ = std::make_shared<BEVDet>(
-    model_config_, img_N_, sampleData_.param.cams_intrin, sampleData_.param.cams2ego_rot,
-    sampleData_.param.cams2ego_trans, onnx_file_, engine_file_, precision_);
+    model_config_, img_n_, inference_input_.param.cams_intrin, inference_input_.param.cams2ego_rot,
+    inference_input_.param.cams2ego_trans, onnx_file_, engine_file_, precision_);
 
-  RCLCPP_INFO_STREAM(this->get_logger(), "Successful create bevdet!");
+  RCLCPP_INFO_STREAM(this->get_logger(), "Successfully created bevdet!");
 
   CHECK_CUDA(cudaMalloc(
-    reinterpret_cast<void **>(&imgs_dev_), img_N_ * 3 * img_w_ * img_h_ * sizeof(uchar)));
+    reinterpret_cast<void **>(&imgs_dev_), img_n_ * 3 * img_w_ * img_h_ * sizeof(uchar)));
 
   pub_boxes_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
-    "~/output/boxes", rclcpp::QoS{1});
+    "~/output/boxes", rclcpp::SensorDataQoS{}.keep_last(1));
 }
 
 void TRTBEVDetNode::checkInitialization()
@@ -92,8 +92,8 @@ void TRTBEVDetNode::checkInitialization()
       this->get_logger(), "Camera Info and TF Transform Initialization completed!");
     initModel();
     startImageSubscription();
-    timer_->cancel();
-    timer_.reset();
+    initialization_check_timer_->cancel();
+    initialization_check_timer_.reset();
   } else {
     RCLCPP_INFO_THROTTLE(
       this->get_logger(), *this->get_clock(), 5000,
@@ -110,17 +110,17 @@ void TRTBEVDetNode::startImageSubscription()
   using std::placeholders::_5;
   using std::placeholders::_6;
 
-  sub_f_img_.subscribe(this, "~/input/topic_img_f", rclcpp::QoS{1}.get_rmw_qos_profile());
-  sub_b_img_.subscribe(this, "~/input/topic_img_b", rclcpp::QoS{1}.get_rmw_qos_profile());
+  sub_f_img_.subscribe(this, "~/input/topic_img_front", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_b_img_.subscribe(this, "~/input/topic_img_back", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
 
-  sub_fl_img_.subscribe(this, "~/input/topic_img_fl", rclcpp::QoS{1}.get_rmw_qos_profile());
-  sub_fr_img_.subscribe(this, "~/input/topic_img_fr", rclcpp::QoS{1}.get_rmw_qos_profile());
+  sub_fl_img_.subscribe(this, "~/input/topic_img_front_left", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_fr_img_.subscribe(this, "~/input/topic_img_front_right", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
 
-  sub_bl_img_.subscribe(this, "~/input/topic_img_bl", rclcpp::QoS{1}.get_rmw_qos_profile());
-  sub_br_img_.subscribe(this, "~/input/topic_img_br", rclcpp::QoS{1}.get_rmw_qos_profile());
+  sub_bl_img_.subscribe(this, "~/input/topic_img_back_left", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_br_img_.subscribe(this, "~/input/topic_img_back_right", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
 
   sync_ = std::make_shared<Sync>(
-    MySyncPolicy(10), sub_fl_img_, sub_f_img_, sub_fr_img_, sub_bl_img_, sub_b_img_, sub_br_img_);
+    MultiCameraApproxSync(10), sub_fl_img_, sub_f_img_, sub_fr_img_, sub_bl_img_, sub_b_img_, sub_br_img_);
 
   sync_->registerCallback(std::bind(&TRTBEVDetNode::callback, this, _1, _2, _3, _4, _5, _6));
 }
@@ -130,27 +130,27 @@ void TRTBEVDetNode::startCameraInfoSubscription()
   // cams: ["CAM_FRONT_LEFT", "CAM_FRONT", "CAM_FRONT_RIGHT", "CAM_BACK_LEFT", "CAM_BACK",
   // "CAM_BACK_RIGHT"]
   sub_fl_caminfo_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
-    "~/input/topic_img_fl/camera_info", rclcpp::QoS{1},
+    "~/input/topic_img_front_left/camera_info", rclcpp::SensorDataQoS{}.keep_last(1),
     [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) { cameraInfoCallback(0, msg); });
 
   sub_f_caminfo_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
-    "~/input/topic_img_f/camera_info", rclcpp::QoS{1},
+    "~/input/topic_img_front/camera_info", rclcpp::SensorDataQoS{}.keep_last(1),
     [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) { cameraInfoCallback(1, msg); });
 
   sub_fr_caminfo_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
-    "~/input/topic_img_fr/camera_info", rclcpp::QoS{1},
+    "~/input/topic_img_front_right/camera_info", rclcpp::SensorDataQoS{}.keep_last(1),
     [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) { cameraInfoCallback(2, msg); });
 
   sub_bl_caminfo_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
-    "~/input/topic_img_bl/camera_info", rclcpp::QoS{1},
+    "~/input/topic_img_back_left/camera_info", rclcpp::SensorDataQoS{}.keep_last(1),
     [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) { cameraInfoCallback(3, msg); });
 
   sub_b_caminfo_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
-    "~/input/topic_img_b/camera_info", rclcpp::QoS{1},
+    "~/input/topic_img_back/camera_info", rclcpp::SensorDataQoS{}.keep_last(1),
     [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) { cameraInfoCallback(4, msg); });
 
   sub_br_caminfo_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
-    "~/input/topic_img_br/camera_info", rclcpp::QoS{1},
+    "~/input/topic_img_back_right/camera_info", rclcpp::SensorDataQoS{}.keep_last(1),
     [this](const sensor_msgs::msg::CameraInfo::SharedPtr msg) { cameraInfoCallback(5, msg); });
 }
 
@@ -164,12 +164,12 @@ void TRTBEVDetNode::callback(
 {
   cv::Mat img_fl, img_f, img_fr, img_bl, img_b, img_br;
   std::vector<cv::Mat> imgs;
-  img_fl = cv_bridge::toCvShare(msg_fl_img, "bgr8")->image;
-  img_f = cv_bridge::toCvShare(msg_f_img, "bgr8")->image;
-  img_fr = cv_bridge::toCvShare(msg_fr_img, "bgr8")->image;
-  img_bl = cv_bridge::toCvShare(msg_bl_img, "bgr8")->image;
-  img_b = cv_bridge::toCvShare(msg_b_img, "bgr8")->image;
-  img_br = cv_bridge::toCvShare(msg_br_img, "bgr8")->image;
+  img_fl = cv_bridge::toCvShare(msg_fl_img, "bgr8")->image.clone();
+  img_f  = cv_bridge::toCvShare(msg_f_img, "bgr8")->image.clone();
+  img_fr = cv_bridge::toCvShare(msg_fr_img, "bgr8")->image.clone();
+  img_bl = cv_bridge::toCvShare(msg_bl_img, "bgr8")->image.clone();
+  img_b  = cv_bridge::toCvShare(msg_b_img, "bgr8")->image.clone();
+  img_br = cv_bridge::toCvShare(msg_br_img, "bgr8")->image.clone();
 
   imgs.emplace_back(img_fl);
   imgs.emplace_back(img_f);
@@ -180,14 +180,12 @@ void TRTBEVDetNode::callback(
 
   imageTransport(imgs, imgs_dev_, img_w_, img_h_);
 
-  // uchar *imgs_dev
-  sampleData_.imgs_dev = imgs_dev_;
+  inference_input_.imgs_dev = imgs_dev_;
 
   std::vector<Box> ego_boxes;
-  ego_boxes.clear();
-  float time = 0.f;
+  float inference_duration = 0.f;
 
-  bevdet_->DoInfer(sampleData_, ego_boxes, time);
+  bevdet_->DoInfer(inference_input_, ego_boxes, inference_duration);
 
   autoware_perception_msgs::msg::DetectedObjects bevdet_objects;
   bevdet_objects.header.frame_id = "base_link";
@@ -214,9 +212,15 @@ void TRTBEVDetNode::cameraInfoCallback(int idx, const sensor_msgs::msg::CameraIn
 
   Eigen::Quaternion<float> rot;
   Eigen::Translation3f translation;
-  getTransform(
-    tf_buffer_->lookupTransform("base_link", msg->header.frame_id, rclcpp::Time(0)), rot,
-    translation);
+  try {
+    getTransform(
+      tf_buffer_->lookupTransform("base_link", msg->header.frame_id, rclcpp::Time(0)),
+      rot, translation
+    );
+  } catch (tf2::TransformException &ex) {
+    RCLCPP_WARN(this->get_logger(), "Transform lookup failed: %s", ex.what());
+    return;
+  }
   cams2ego_rot_[idx] = rot;
   cams2ego_trans_[idx] = translation;
 

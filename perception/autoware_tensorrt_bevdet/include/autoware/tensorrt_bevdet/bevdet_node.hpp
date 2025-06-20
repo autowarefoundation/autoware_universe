@@ -1,4 +1,4 @@
-// Copyright 2024 AutoCore, Inc.
+// Copyright 2025 AutoCore, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ class TRTBEVDetNode : public rclcpp::Node
    * (Bird's Eye View) images.
    */
 private:
-  size_t img_N_;    ///< Number of images
+  size_t img_n_;    ///< Number of images
   uint32_t img_w_;  ///< Width of the images
   uint32_t img_h_;  ///< Height of the images
 
@@ -68,7 +68,7 @@ private:
   std::vector<std::string> imgs_name_;    ///< Names of the images
   std::vector<std::string> class_names_;  ///< Names of the object classes
 
-  camsData sampleData_;             ///< Sample data for camera parameters
+  camsData inference_input_;             ///< Inference inpput for camera parameters
   std::shared_ptr<BEVDet> bevdet_;  ///< Object for performing object detection
 
   uchar * imgs_dev_ = nullptr;  ///< Device pointer for storing the images
@@ -127,13 +127,13 @@ private:
   typedef message_filters::sync_policies::ApproximateTime<
     sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::Image,
     sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::Image>
-    MySyncPolicy;
+    MultiCameraApproxSync;
 
-  typedef message_filters::Synchronizer<MySyncPolicy> Sync;
+  typedef message_filters::Synchronizer<MultiCameraApproxSync> Sync;
   std::shared_ptr<Sync> sync_;  ///< Synchronizer for synchronizing image callbacks
 
   // Timer for checking initialization
-  rclcpp::TimerBase::SharedPtr timer_;  ///< Timer for checking initialization
+  rclcpp::TimerBase::SharedPtr initialization_check_timer_;  ///< Timer for checking initialization
 
   /**
    * @brief Starts the subscription to camera info topics for each camera.

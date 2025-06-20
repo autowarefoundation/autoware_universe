@@ -3,20 +3,20 @@
   <!-- cspell:ignore nuscenes, bevdet, dlongterm -->
 
   <!-- input topic name -->
-  <arg name="input/img_fl" default="/nuscenes/CAM_FRONT_LEFT/image"/>
-  <arg name="input/img_f" default="/nuscenes/CAM_FRONT/image"/>
-  <arg name="input/img_fr" default="/nuscenes/CAM_FRONT_RIGHT/image"/>
-  <arg name="input/img_bl" default="/nuscenes/CAM_BACK_LEFT/image"/>
-  <arg name="input/img_b" default="/nuscenes/CAM_BACK/image"/>
-  <arg name="input/img_br" default="/nuscenes/CAM_BACK_RIGHT/image"/>
-  <arg name="output/boxes" default="/nuscenes/bboxes"/>
+  <arg name="input/img_front_left" default="input/camera0/image"/>
+  <arg name="input/img_front" default="input/camera1/image"/>
+  <arg name="input/img_front_right" default="input/camera2/image"/>
+  <arg name="input/img_back_left" default="input/camera3/image"/>
+  <arg name="input/img_back" default="input/camera4/image"/>
+  <arg name="input/img_back_right" default="input/camera5/image"/>
+  <arg name="output/boxes" default="/bboxes"/>
 
-  <arg name="input/img_fl/camera_info" default="/nuscenes/CAM_FRONT_LEFT/camera_info"/>
-  <arg name="input/img_f/camera_info" default="/nuscenes/CAM_FRONT/camera_info"/>
-  <arg name="input/img_fr/camera_info" default="/nuscenes/CAM_FRONT_RIGHT/camera_info"/>
-  <arg name="input/img_bl/camera_info" default="/nuscenes/CAM_BACK_LEFT/camera_info"/>
-  <arg name="input/img_b/camera_info" default="/nuscenes/CAM_BACK/camera_info"/>
-  <arg name="input/img_br/camera_info" default="/nuscenes/CAM_BACK_RIGHT/camera_info"/>
+  <arg name="input/img_front_left/camera_info" default="input/camera0/info"/>
+  <arg name="input/img_front/camera_info" default="input/camera1/info"/>
+  <arg name="input/img_front_right/camera_info" default="input/camera2/info"/>
+  <arg name="input/img_back_left/camera_info" default="input/camera3/info"/>
+  <arg name="input/img_back/camera_info" default="input/camera4/info"/>
+  <arg name="input/img_back_right/camera_info" default="input/camera5/info"/>
 
   <arg name="data_path" default="$(env HOME)/autoware_data"/>
   <arg name="model_name" default="bevdet_one_lt_d"/>
@@ -29,19 +29,19 @@
   <!-- bevdet node -->
   <node pkg="autoware_tensorrt_bevdet" exec="autoware_tensorrt_bevdet_node" name="tensorrt_bevdet" output="screen">
     <!-- ros topic name -->
-    <remap from="~/input/topic_img_fl" to="$(var input/img_fl)"/>
-    <remap from="~/input/topic_img_f" to="$(var input/img_f)"/>
-    <remap from="~/input/topic_img_fr" to="$(var input/img_fr)"/>
-    <remap from="~/input/topic_img_bl" to="$(var input/img_bl)"/>
-    <remap from="~/input/topic_img_b" to="$(var input/img_b)"/>
-    <remap from="~/input/topic_img_br" to="$(var input/img_br)"/>
+    <remap from="~/input/topic_img_front_left" to="$(var input/img_front_left)"/>
+    <remap from="~/input/topic_img_front" to="$(var input/img_front)"/>
+    <remap from="~/input/topic_img_front_right" to="$(var input/img_front_right)"/>
+    <remap from="~/input/topic_img_back_left" to="$(var input/img_back_left)"/>
+    <remap from="~/input/topic_img_back" to="$(var input/img_back)"/>
+    <remap from="~/input/topic_img_back_right" to="$(var input/img_back_right)"/>
 
-    <remap from="~/input/topic_img_fl/camera_info" to="$(var input/img_fl/camera_info)"/>
-    <remap from="~/input/topic_img_f/camera_info" to="$(var input/img_f/camera_info)"/>
-    <remap from="~/input/topic_img_fr/camera_info" to="$(var input/img_fr/camera_info)"/>
-    <remap from="~/input/topic_img_bl/camera_info" to="$(var input/img_bl/camera_info)"/>
-    <remap from="~/input/topic_img_b/camera_info" to="$(var input/img_b/camera_info)"/>
-    <remap from="~/input/topic_img_br/camera_info" to="$(var input/img_br/camera_info)"/>
+    <remap from="~/input/topic_img_front_left/camera_info" to="$(var input/img_front_left/camera_info)"/>
+    <remap from="~/input/topic_img_front/camera_info" to="$(var input/img_front/camera_info)"/>
+    <remap from="~/input/topic_img_front_right/camera_info" to="$(var input/img_front_right/camera_info)"/>
+    <remap from="~/input/topic_img_back_left/camera_info" to="$(var input/img_back_left/camera_info)"/>
+    <remap from="~/input/topic_img_back/camera_info" to="$(var input/img_back/camera_info)"/>
+    <remap from="~/input/topic_img_back_right/camera_info" to="$(var input/img_back_right/camera_info)"/>
 
     <remap from="~/output/boxes" to="$(var output/boxes)"/>
 
