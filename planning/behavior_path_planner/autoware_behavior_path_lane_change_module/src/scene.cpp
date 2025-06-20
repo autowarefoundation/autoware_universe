@@ -1031,7 +1031,7 @@ FilteredLanesObjects NormalLaneChange::filter_objects() const
   ranges::sort(target_lane_leading.stopped, dist_comparator);
   ranges::sort(target_lane_leading.moving, dist_comparator);
   ranges::sort(filtered_objects.target_lane_trailing, [](const auto & obj1, const auto & obj2) {
-    return obj1.dist_from_ego > obj2.dist_from_ego;
+    return obj2.dist_from_ego < obj1.dist_from_ego;
   });
 
   lane_change_debug_.filtered_objects = filtered_objects;
