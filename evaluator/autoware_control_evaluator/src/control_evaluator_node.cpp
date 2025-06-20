@@ -579,9 +579,7 @@ void ControlEvaluatorNode::onTimer()
         AddBoundaryDistanceMetricMsg(*behavior_path, ego_pose);
       }
     }
-  }
 
-  if (odom) {
     AddUncrossableBoundaryDistanceMetricMsg(odom->pose.pose);
   }
 
