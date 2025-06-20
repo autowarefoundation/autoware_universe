@@ -207,8 +207,8 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
   const auto & ll_map_ptr = planner_data->route_handler->getLaneletMapPtr();
 
   if (!boundary_departure_checker_ptr_) {
-    boundary_departure_checker_ptr_ =
-      std::make_unique<BoundaryDepartureChecker>(ll_map_ptr, vehicle_info, node_param_.bdc_param);
+    boundary_departure_checker_ptr_ = std::make_unique<BoundaryDepartureChecker>(
+      ll_map_ptr, vehicle_info, node_param_.bdc_param, time_keeper_);
   }
 
   if (!slow_down_interpolator_ptr_) {
@@ -474,6 +474,8 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 std::unordered_map<DepartureType, bool> BoundaryDeparturePreventionModule::get_diagnostics(
   const double curr_vel, const double dist_with_offset_m)
 {
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
   std::unordered_map<DepartureType, bool> diag{
     {DepartureType::NEAR_BOUNDARY, false},
     {DepartureType::APPROACHING_DEPARTURE, false},
