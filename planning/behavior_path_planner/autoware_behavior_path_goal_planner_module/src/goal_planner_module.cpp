@@ -269,6 +269,7 @@ void LaneParkingPlanner::onTimer()
   const auto & prev_data = local_request.get_prev_data();
   const auto trigger_thread_on_approach = local_request.trigger_thread_on_approach();
   const auto use_bus_stop_area = local_request.use_bus_stop_area_;
+  const auto lane_change_status_changed = local_request.lane_change_status_changed();
 
   if (!trigger_thread_on_approach) {
     return;
@@ -315,6 +316,10 @@ void LaneParkingPlanner::onTimer()
         local_planner_data->self_odometry->pose.pose.position, original_upstream_module_output_) &&
       current_state != PathDecisionState::DecisionKind::DECIDED) {
       RCLCPP_DEBUG(getLogger(), "has deviated from last previous module path");
+      return true;
+    }
+    if (lane_change_status_changed) {
+      RCLCPP_INFO(getLogger(), "[LaneParkingPlanner]: lane_change_status changed, so replan");
       return true;
     }
     const bool upstream_module_has_stopline_except_terminal =
@@ -622,7 +627,8 @@ std::pair<LaneParkingResponse, FreespaceParkingResponse> GoalPlannerModule::sync
     // count is affected
     lane_parking_request_.value().update(
       *planner_data_, getCurrentStatus(), getPreviousModuleOutput(), pull_over_path,
-      path_decision_controller_.get_current_state(), trigger_thread_on_approach_);
+      path_decision_controller_.get_current_state(), trigger_thread_on_approach_,
+      lane_change_status_changed_);
     // NOTE: RouteHandler holds several shared pointers in it, so just copying PlannerData as
     // value does not adds the reference counts of RouteHandler.lanelet_map_ptr_ and others. Since
     // behavior_path_planner::run() updates
@@ -685,6 +691,15 @@ void GoalPlannerModule::updateData()
     goal_candidates_ = generateGoalCandidates(goal_searcher_.value(), use_bus_stop_area_);
   }
 
+  const auto lane_change_detected =
+    goal_planner_utils::find_lane_change_completed_lanelet(
+      getPreviousModuleOutput().path, planner_data_->route_handler->getLaneletMapPtr(),
+      planner_data_->route_handler->getRoutingGraphPtr())
+      .has_value();
+  lane_change_status_changed_ =
+    prev_lane_change_detected_ && prev_lane_change_detected_.value() != lane_change_detected;
+  prev_lane_change_detected_ = lane_change_detected;
+
   const lanelet::ConstLanelets current_lanes =
     utils::getCurrentLanesFromPath(getPreviousModuleOutput().reference_path, planner_data_);
 
@@ -707,6 +722,10 @@ void GoalPlannerModule::updateData()
   }
 
   if (getCurrentStatus() == ModuleStatus::IDLE) {
+    if (lane_change_status_changed_) {
+      [[maybe_unused]] const auto send_only_request = syncWithThreads();
+      RCLCPP_INFO(getLogger(), "restart preparing goal candidates since lane_change is detected");
+    }
     return;
   }
 
@@ -740,7 +759,8 @@ void GoalPlannerModule::updateData()
   path_decision_controller_.transit_state(
     pull_over_path_recv, upstream_module_has_stopline_except_terminal, clock_->now(),
     static_target_objects, dynamic_target_objects, planner_data_, occupancy_grid_map_,
-    is_current_safe, parameters_, goal_searcher, debug_data_.ego_polygons_expanded);
+    is_current_safe, lane_change_status_changed_, parameters_, goal_searcher,
+    debug_data_.ego_polygons_expanded);
   const auto new_decision_state = path_decision_controller_.get_current_state();
 
   auto [lane_parking_response, freespace_parking_response] = syncWithThreads();
@@ -2561,6 +2581,11 @@ void GoalPlannerModule::setDebugData(const PullOverContextData & context_data)
       createPathMarkerArray(pull_over_path.full_path(), "full_path", 0, 0.0, 0.5, 0.9));
     add_debug_marker(
       createPathMarkerArray(pull_over_path.getCurrentPath(), "current_path", 0, 0.9, 0.5, 0.0));
+    if (pull_over_path.debug_processed_prev_module_path) {
+      add_debug_marker(createPathMarkerArray(
+        pull_over_path.debug_processed_prev_module_path.value(), "processed_prev_module_path", 0,
+        0.9, 0.5, 0.9));
+    }
 
     // visualize each partial path
     for (size_t i = 0; i < pull_over_path.partial_paths().size(); ++i) {

@@ -302,6 +302,11 @@ private:
   const bool left_side_parking_;
 
   bool trigger_thread_on_approach_{false};
+
+  // signal path generator and state manager to regenerate path candidates and remain NOT_DECIDED
+  std::optional<bool> prev_lane_change_detected_{};
+  bool lane_change_status_changed_{false};
+
   // pre-generate lane parking paths in a separate thread
   rclcpp::TimerBase::SharedPtr lane_parking_timer_;
   rclcpp::CallbackGroup::SharedPtr lane_parking_timer_cb_group_;
