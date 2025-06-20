@@ -2,6 +2,9 @@
 Changelog for package tier4_vehicle_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 0.45.0 (2025-05-22)
 -------------------
 

@@ -2,6 +2,11 @@
 Changelog for package tier4_simulator_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* feat(tier4_simulator_launch): add use_pointcloud_container argument (`#10770 <https://github.com/TaikiYamada4/autoware_universe/issues/10770>`_)
+* Contributors: Ryohsuke Mitsudome
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base

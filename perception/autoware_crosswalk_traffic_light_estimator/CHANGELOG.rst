@@ -2,6 +2,17 @@
 Changelog for package autoware_crosswalk_traffic_light_estimator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(autoware_crosswalk_traffic_light_estimator): add parameters to use pedestrian traffic signal result estimated in perception pipeline (`#10763 <https://github.com/TaikiYamada4/autoware_universe/issues/10763>`_)
+  * add flag to use pedestrian signals result
+  * style(pre-commit): autofix
+  * change param name
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Masato Saeki, TaikiYamada4
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base

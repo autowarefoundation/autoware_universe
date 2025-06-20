@@ -2,6 +2,32 @@
 Changelog for package autoware_diagnostic_graph_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(diagnostic_graph_aggregator): support latch and dependent error (`#10829 <https://github.com/TaikiYamada4/autoware_universe/issues/10829>`_)
+  * update aggregator
+  * update utils
+  * update hazard converter
+  * update adapi
+  * fix build error
+  * ignore spell check for yamls
+  * fix copyright year
+  * ignore spell check for timeline
+  * change link index to fix out of bounds access
+  * reflect link index change to utils
+  * fix for cppcheck
+  * fix for cppcheck
+  ---------
+* feat(autoware_deignostic_graph_utils): throttle warning message (`#10758 <https://github.com/TaikiYamada4/autoware_universe/issues/10758>`_)
+* docs(system): fix system documentation link (`#10707 <https://github.com/TaikiYamada4/autoware_universe/issues/10707>`_)
+* feat(diagnostic_graph_utils): show the error graph on the terminal only when it changes (`#10665 <https://github.com/TaikiYamada4/autoware_universe/issues/10665>`_)
+  * feat(diagnostic_graph_utils): show the error graph on the terminal only when it changes
+  * update
+  ---------
+  Co-authored-by: Takagi, Isamu <43976882+isamu-takagi@users.noreply.github.com>
+* Contributors: Ryohsuke Mitsudome, TaikiYamada4, Takagi, Isamu, Takayuki Murooka, Yuxuan Liu
+
 0.45.0 (2025-05-22)
 -------------------
 

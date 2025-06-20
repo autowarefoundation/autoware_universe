@@ -2,6 +2,20 @@
 Changelog for package autoware_processing_time_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(processing_time_checker): output 99th and 95th percentile of processing time statics (`#10810 <https://github.com/TaikiYamada4/autoware_universe/issues/10810>`_)
+  * implement digestible in processing_time_checker
+  * remove debug
+  * change to 100
+  * license
+  * fix copyright
+  * pre-commit
+  ---------
+* docs(system): fix system documentation link (`#10707 <https://github.com/TaikiYamada4/autoware_universe/issues/10707>`_)
+* Contributors: Kem (TiankuiXian), TaikiYamada4, Yuxuan Liu
+
 0.45.0 (2025-05-22)
 -------------------
 

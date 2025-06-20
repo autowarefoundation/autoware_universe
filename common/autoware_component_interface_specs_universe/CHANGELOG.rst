@@ -2,6 +2,21 @@
 Changelog for package autoware_component_interface_specs_universe
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat!: replace tier4_system_msgs with autoware_system_msgs for services (`#10842 <https://github.com/TaikiYamada4/autoware_universe/issues/10842>`_)
+  * feat!: replace tier4_system_msgs with autoware_system_msgs for services
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat!: replace autoware_internal_localization_msgs with autoware_localization_msgs for InitializeLocalization service (`#10844 <https://github.com/TaikiYamada4/autoware_universe/issues/10844>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat!: replace tier4_planning_msgs service with autoware_planning_msgs (`#10827 <https://github.com/TaikiYamada4/autoware_universe/issues/10827>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(default_adapi): add vehicle command api (`#10764 <https://github.com/TaikiYamada4/autoware_universe/issues/10764>`_)
+* Contributors: Ryohsuke Mitsudome, TaikiYamada4, Takagi, Isamu
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base

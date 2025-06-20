@@ -2,6 +2,12 @@
 Changelog for package autoware_component_interface_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(default_adapi): add vehicle command api (`#10764 <https://github.com/TaikiYamada4/autoware_universe/issues/10764>`_)
+* Contributors: TaikiYamada4, Takagi, Isamu
+
 0.45.0 (2025-05-22)
 -------------------
 

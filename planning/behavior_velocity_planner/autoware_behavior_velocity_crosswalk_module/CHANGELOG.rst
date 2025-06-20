@@ -2,6 +2,32 @@
 Changelog for package autoware_behavior_velocity_crosswalk_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(crosswalk_module): add infomation to PlanningFactor topic in crosswalk_module (`#10759 <https://github.com/TaikiYamada4/autoware_universe/issues/10759>`_)
+  * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/TaikiYamada4/autoware_universe/issues/1776>`_)
+  not sync github-release
+  * feat(crosswalk_module): set infomation to PlanningFactor topic
+  * feat(crosswalk_module): add test
+  * wip: create test case
+  * fix to parked vehicles stop
+  * tidy up
+  * fix cmake
+  * Revert "chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/TaikiYamada4/autoware_universe/issues/1776>`_)"
+  This reverts commit 41f03b1e967cfe124197960e41ba7e920e4646aa.
+  * apply some review, fix code style
+  * apply some review for tests
+  * fix out_of_rage error
+  * fix: apply suggestions from code review
+  * change safety factor detail and rename stuck vehicle to obstruction prevention
+  * delete dead variable
+  * fix some parameter name
+  ---------
+  Co-authored-by: Yutaka Kondo <yutaka.kondo@youtalk.jp>
+* feat(crosswalk_module): add parked vehicles stop feature (`#10667 <https://github.com/TaikiYamada4/autoware_universe/issues/10667>`_)
+* Contributors: Kotakku, Maxime CLEMENT, TaikiYamada4
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base

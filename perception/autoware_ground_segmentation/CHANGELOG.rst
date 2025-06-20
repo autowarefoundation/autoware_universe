@@ -2,6 +2,47 @@
 Changelog for package autoware_ground_segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(autoware_pointcloud_preprocessor): add diagnostic message (`#10579 <https://github.com/TaikiYamada4/autoware_universe/issues/10579>`_)
+  * feat: add diag msg
+  * chore: fix code
+  * chore: remove outlier count in ring
+  * chore: move format timestamp to utility
+  * chore: add paramter to schema
+  * chore: add parameter for cluster
+  * chore: clean code
+  * chore: fix schema
+  * chore: move diagnostic updater to filter base class
+  * chore: fix schema
+  * chore: fix spell error
+  * chore: set up diagnostic updater
+  * refactor: utilize autoware_utils diagnostic message
+  * chore: add publish
+  * chore: add detail message
+  * chore: const for time difference
+  * refactor: structure diagnostics to class
+  * chore: const reference
+  * chore: clean logic
+  * chore: modify function name
+  * chore: update parameter
+  * chore: move evaluate status into diagnostic
+  * chore: fix description for concatenated pointcloud
+  * chore: timestamp mismatch threshold
+  * chore: fix diagnostic key
+  * chore: change function naming
+  ---------
+* fix(scan_ground_segmentation): separate parameter for recheck ignore distance (`#10686 <https://github.com/TaikiYamada4/autoware_universe/issues/10686>`_)
+  * fix(scan_ground_segmentation): fix recheck effective range
+  * feat: separate param for recheck region
+  * chore: docs and test update
+  * chore: docs
+  * chore: rename param
+  * chore: fix schema
+  ---------
+* Contributors: TaikiYamada4, Yi-Hsiang Fang (Vivid), badai nguyen
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base

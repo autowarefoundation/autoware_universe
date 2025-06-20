@@ -2,6 +2,15 @@
 Changelog for package autoware_radar_fusion_to_detected_object
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* chore(radar): delete maintainer for radar packages (`#10815 <https://github.com/TaikiYamada4/autoware_universe/issues/10815>`_)
+  * chore(radar): delete maintainer name
+  * fix typo
+  ---------
+* Contributors: Satoshi Tanaka, TaikiYamada4
+
 0.45.0 (2025-05-22)
 -------------------
 

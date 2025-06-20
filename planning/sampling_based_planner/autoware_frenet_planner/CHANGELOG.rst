@@ -2,6 +2,12 @@
 Changelog for package autoware_frenet_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* fix(sampling_based_planner): remove unmatched suppression (`#10700 <https://github.com/TaikiYamada4/autoware_universe/issues/10700>`_)
+* Contributors: Ryuta Kambe, TaikiYamada4
+
 0.45.0 (2025-05-22)
 -------------------
 

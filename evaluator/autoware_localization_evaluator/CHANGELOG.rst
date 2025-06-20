@@ -2,6 +2,13 @@
 Changelog for package autoware_localization_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* docs(evaluator): fix documentation links (`#10702 <https://github.com/TaikiYamada4/autoware_universe/issues/10702>`_)
+  fix documentation links
+* Contributors: TaikiYamada4, Yuxuan Liu
+
 0.45.0 (2025-05-22)
 -------------------
 

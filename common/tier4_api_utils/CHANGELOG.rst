@@ -2,6 +2,13 @@
 Changelog for package tier4_api_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* docs(common/tier4_api_utils): fix link (`#10701 <https://github.com/TaikiYamada4/autoware_universe/issues/10701>`_)
+  fix link
+* Contributors: TaikiYamada4, Yuxuan Liu
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base

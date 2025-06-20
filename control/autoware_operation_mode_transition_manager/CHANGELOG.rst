@@ -2,6 +2,21 @@
 Changelog for package autoware_operation_mode_transition_manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat!: replace tier4_system_msgs with autoware_system_msgs for services (`#10842 <https://github.com/TaikiYamada4/autoware_universe/issues/10842>`_)
+  * feat!: replace tier4_system_msgs with autoware_system_msgs for services
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(operaton_mode_transition_manager): add flag node (`#10828 <https://github.com/TaikiYamada4/autoware_universe/issues/10828>`_)
+  * feat(operaton_mode_transition_manager): add flag node
+  * rename node
+  ---------
+* fix(operation_mode_transition_manager): fix mode change without route (`#10749 <https://github.com/TaikiYamada4/autoware_universe/issues/10749>`_)
+* Contributors: Ryohsuke Mitsudome, TaikiYamada4, Takagi, Isamu
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
