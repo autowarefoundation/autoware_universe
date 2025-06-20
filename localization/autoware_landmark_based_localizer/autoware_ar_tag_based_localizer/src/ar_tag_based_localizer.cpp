@@ -70,7 +70,7 @@
 #include <tf2_eigen/tf2_eigen.hpp>
 #endif
 
-#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils_geometry/geometry.hpp>
 
 ArTagBasedLocalizer::ArTagBasedLocalizer(const rclcpp::NodeOptions & options)
 : rclcpp::Node("ar_tag_based_localizer", options), cam_info_received_(false)
@@ -192,7 +192,8 @@ void ArTagBasedLocalizer::image_callback(const Image::ConstSharedPtr & msg)
     pose_array_msg.header.stamp = sensor_stamp;
     pose_array_msg.header.frame_id = "map";
     for (const Landmark & landmark : landmarks) {
-      const Pose detected_marker_on_map = autoware_utils::transform_pose(landmark.pose, self_pose);
+      const Pose detected_marker_on_map =
+        autoware_utils_geometry::transform_pose(landmark.pose, self_pose);
       pose_array_msg.poses.push_back(detected_marker_on_map);
     }
     detected_tag_pose_pub_->publish(pose_array_msg);
@@ -201,7 +202,7 @@ void ArTagBasedLocalizer::image_callback(const Image::ConstSharedPtr & msg)
   // calc new_self_pose
   const Pose new_self_pose =
     landmark_manager_.calculate_new_self_pose(landmarks, self_pose, consider_orientation_);
-  const Pose diff_pose = autoware_utils::inverse_transform_pose(new_self_pose, self_pose);
+  const Pose diff_pose = autoware_utils_geometry::inverse_transform_pose(new_self_pose, self_pose);
   const double distance =
     std::hypot(diff_pose.position.x, diff_pose.position.y, diff_pose.position.z);
 
