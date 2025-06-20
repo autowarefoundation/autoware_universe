@@ -2,6 +2,9 @@
 Changelog for package autoware_probabilistic_occupancy_grid_map
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -23,6 +26,9 @@ Changelog for package autoware_probabilistic_occupancy_grid_map
 * fix(autoware_probabilistic_occupancy_grid_map): skipped first iteration (`#10558 <https://github.com/autowarefoundation/autoware_universe/issues/10558>`_)
   fix: the first iteration fails due to how the algorithm is designed (the delta between poses is too high). However, the first iteration of the update routine is actually not needed in the first iteration, so I skipped it
 * Contributors: Amadeusz Szymko, Kento Yabuuchi, Kenzo Lobos Tsunekawa, Taekjin LEE, TaikiYamada4, Tomohito ANDO
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

@@ -2,6 +2,21 @@
 Changelog for package autoware_simple_object_merger
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* chore(radar): delete maintainer for radar packages (`#10815 <https://github.com/autowarefoundation/autoware_universe/issues/10815>`_)
+  * chore(radar): delete maintainer name
+  * fix typo
+  ---------
+* chore(perception): remove unused object filter packages (`#10654 <https://github.com/autowarefoundation/autoware_universe/issues/10654>`_)
+  * Remove autoware_radar_crossing_objects_noise_filter package, including all related files such as CMakeLists.txt, README.md, configuration files, and documentation. This cleanup eliminates unused components from the perception module.
+  * Refactor perception launch files: comment out unused radar parameters related to crossing objects and clustering. This cleanup aligns with the recent removal of the autoware_radar_crossing_objects_noise_filter package, streamlining the configuration for the perception module.
+  * Update codecov.yaml to include new paths for perception components and remove references to deprecated radar packages. This change enhances the configuration for the perception module by ensuring only relevant components are tracked.
+  * Update README.md to clarify post-processing requirements for output objects in the autoware_simple_object_merger package.
+  ---------
+* Contributors: Satoshi Tanaka, Taekjin LEE, TaikiYamada4
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -23,6 +38,9 @@ Changelog for package autoware_simple_object_merger
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
   Co-authored-by: Ryohsuke Mitsudome <43976834+mitsudome-r@users.noreply.github.com>
 * Contributors: Taekjin LEE, TaikiYamada4, Vishal Chauhan
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

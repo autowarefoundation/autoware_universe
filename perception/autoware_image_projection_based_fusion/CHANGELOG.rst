@@ -2,6 +2,32 @@
 Changelog for package autoware_image_projection_based_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* fix(roi_cluster_fusion): fix typo (`#10833 <https://github.com/autowarefoundation/autoware_universe/issues/10833>`_)
+  * fix(roi_cluster_fusion): fix typo
+  * rename variable
+  * refactor: rename parameter
+  ---------
+* fix(roi_cluster_fusion): fix target frame's timestamp (`#10831 <https://github.com/autowarefoundation/autoware_universe/issues/10831>`_)
+  * chore: fix target frame timestamp
+  * chore: fix timestamp
+  ---------
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* fix(segmentation_pointcloud_fusion): add missing context  (`#10823 <https://github.com/autowarefoundation/autoware_universe/issues/10823>`_)
+  add perform(context)
+* fix(autoware_image_projection_based_fusion): fix parsing value of concatenate diagnostic (`#10792 <https://github.com/autowarefoundation/autoware_universe/issues/10792>`_)
+  fix: fix key value
+* fix(roi_pointcloud_fusion): add remap output option (`#10655 <https://github.com/autowarefoundation/autoware_universe/issues/10655>`_)
+  * fix(roi_pointcloud_fusion): add remap output option
+  * chore: docs update
+  * fix: update refine cluster func
+  * chore: fix schema
+  * fix: test utils
+  ---------
+* Contributors: Kento Yabuuchi, TaikiYamada4, Yi-Hsiang Fang (Vivid), badai nguyen
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -18,6 +44,9 @@ Changelog for package autoware_image_projection_based_fusion
   ---------
 * fix(image_projection_based_fusion): fix redundantAssignment warning (`#10531 <https://github.com/autowarefoundation/autoware_universe/issues/10531>`_)
 * Contributors: Ryuta Kambe, Taekjin LEE, TaikiYamada4, badai nguyen
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

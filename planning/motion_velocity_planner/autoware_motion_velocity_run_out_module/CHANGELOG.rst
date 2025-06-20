@@ -2,6 +2,19 @@
 Changelog for package autoware_motion_velocity_run_out_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* fix(run_out): fix  numerical stability in run_out interpolation (`#10808 <https://github.com/autowarefoundation/autoware_universe/issues/10808>`_)
+  * fix(run_out): fix  numerical stability in run_out interpolation
+  * fix build
+  ---------
+* feat(run_out): option to preserve parts of ignored predicted paths (`#10754 <https://github.com/autowarefoundation/autoware_universe/issues/10754>`_)
+* chore(run_out): add Alqudah Mohammad as maintainer (`#10762 <https://github.com/autowarefoundation/autoware_universe/issues/10762>`_)
+* fix(run_out): guard against decreasing ego trajectory times (`#10746 <https://github.com/autowarefoundation/autoware_universe/issues/10746>`_)
+* feat(autoware_motion_velocity_planner): only wait for required subscriptions (`#10732 <https://github.com/autowarefoundation/autoware_universe/issues/10732>`_)
+* Contributors: Maxime CLEMENT, Ryohsuke Mitsudome, TaikiYamada4, Yuxuan Liu
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base

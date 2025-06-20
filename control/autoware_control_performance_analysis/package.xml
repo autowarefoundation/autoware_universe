@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_control_performance_analysis</name>
-  <version>0.45.0</version>
+  <version>0.46.0</version>
   <description>Controller Performance Evaluation</description>
   <maintainer email="berkay@leodrive.ai">Berkay Karaman</maintainer>
   <maintainer email="taiki.tanaka@tier4.jp">Taiki Tanaka</maintainer>

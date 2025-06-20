@@ -2,7 +2,30 @@
 Changelog for package autoware_mission_planner_universe
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat!: replace tier4_planning_msgs service with autoware_planning_msgs (`#10827 <https://github.com/autowarefoundation/autoware_universe/issues/10827>`_)
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(mission_planner): print route state when set_route fails (`#10697 <https://github.com/autowarefoundation/autoware_universe/issues/10697>`_)
+  * feat(mission_planner): print route state when set_route fails
+  * Update planning/autoware_mission_planner_universe/src/mission_planner/mission_planner.cpp
+  Co-authored-by: Takagi, Isamu <43976882+isamu-takagi@users.noreply.github.com>
+  * snake_case
+  * without macro
+  ---------
+  Co-authored-by: Takagi, Isamu <43976882+isamu-takagi@users.noreply.github.com>
+* fix(mission_planner): fix check if goal footprint is inside route (`#10681 <https://github.com/autowarefoundation/autoware_universe/issues/10681>`_)
+  * fix checking if goal footprint is in ego lanes
+  * change goal footprint check method
+  * fix unit test
+  ---------
+* Contributors: Kosuke Takeuchi, Mitsuhiro Sakamoto, Ryohsuke Mitsudome, TaikiYamada4
+
 0.45.0 (2025-05-22)
+-------------------
+
+0.44.2 (2025-06-10)
 -------------------
 
 0.44.1 (2025-05-01)

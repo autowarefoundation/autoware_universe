@@ -2,11 +2,17 @@
 Changelog for package yabloc_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * fix(yabloc_common): fix deprecated autoware_utils header (`#10496 <https://github.com/autowarefoundation/autoware_universe/issues/10496>`_)
 * Contributors: Masaki Baba, TaikiYamada4
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

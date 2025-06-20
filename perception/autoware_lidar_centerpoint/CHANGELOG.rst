@@ -2,6 +2,37 @@
 Changelog for package autoware_lidar_centerpoint
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* chore(perception): delete maintainer name (`#10816 <https://github.com/autowarefoundation/autoware_universe/issues/10816>`_)
+* feat(autoware_lidar_centerpoint): add ShortRange centerpoint as another new node base on autoware_lidar_centerpoint (`#10727 <https://github.com/autowarefoundation/autoware_universe/issues/10727>`_)
+  * Add shortrange_centerpoint launcher to autoware_lidar_centerpoint
+  * style(pre-commit): autofix
+  * Update README.md to include launching of shortrange centerpoint
+  * style(pre-commit): autofix
+  * Add option to launch shortrange centerpoint in tier4_perception_launch
+  * Add option to launch shortrange centerpoint in tier4_perception_launch
+  * style(pre-commit): autofix
+  * Update correct launcher name in lidar_dnn_detection.launch.xml
+  * Fix Update typo in lidar_dnn_detector launcher for shortrange centerpoint
+  * Add use_short_range_detection to launcher for switching shortrange detection
+  * Add use_short_range_detection to launcher for switching shortrange detection
+  * Format spaces
+  * style(pre-commit): autofix
+  * Rename shortrange to short_range
+  * Change shor_range centerpoint to one of the centerpoint variants
+  * Fix shortrange spelling warning
+  * Fix default value for use_short_range_centerpoint and fix missing short_range_centerpoint_common.param.yaml
+  * Fix default value for use_short_range_centerpoint
+  * Rename short_range_centerpoint to centerpoint_short_range for model name and type
+  * Rename short_range_centerpoint to centerpoint_short_range for model name and type
+  * Update value to default
+  * Update short range centerpoint namespace
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Kok Seang Tan, Satoshi Tanaka, TaikiYamada4
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -21,6 +52,9 @@ Changelog for package autoware_lidar_centerpoint
   * chore: mistook the capabilities of edge devices
   ---------
 * Contributors: Kenzo Lobos Tsunekawa, Kok Seang Tan, Taekjin LEE, TaikiYamada4
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

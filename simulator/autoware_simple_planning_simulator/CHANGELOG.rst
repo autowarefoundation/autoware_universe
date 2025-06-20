@@ -2,7 +2,16 @@
 Changelog for package autoware_simple_planning_simulator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* fix(autoware_simple_planning_simulator ): fix deprecated autoware_utils header (`#10520 <https://github.com/autowarefoundation/autoware_universe/issues/10520>`_)
+* Contributors: Kazusa Hashimoto, TaikiYamada4
+
 0.45.0 (2025-05-22)
+-------------------
+
+0.44.2 (2025-06-10)
 -------------------
 
 0.44.1 (2025-05-01)
