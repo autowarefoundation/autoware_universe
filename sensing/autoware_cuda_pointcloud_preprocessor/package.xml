@@ -12,6 +12,8 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
+  <depend>agnocastlib</depend>
+  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_cuda_dependency_meta</depend>
   <depend>autoware_cuda_utils</depend>
   <depend>autoware_point_types</depend>

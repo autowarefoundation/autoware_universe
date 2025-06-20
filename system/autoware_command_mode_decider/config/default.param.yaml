@@ -1,0 +1,17 @@
+/**:
+  ros__parameters:
+    update_rate: 10.0
+    transition_timeout: 10.0
+    request_timeout: 1.0
+    plugin_name: autoware::command_mode_decider::CommandModeDecider
+    command_modes:  # See autoware_command_mode_types/modes.hpp
+      - 1000  # manual
+      - 1001  # stop
+      - 1002  # autonomous
+      - 1003  # local
+      - 1004  # remote
+      - 2001  # emergency_stop
+      - 2002  # comfortable_stop
+      - 2003  # pull_over
+    initial_operation_mode: 1001
+    initial_autoware_control: true

@@ -1,0 +1,10 @@
+<launch>
+  <arg name="config" default="$(find-pkg-share autoware_stop_mode_operator)/config/default.param.yaml"/>
+  <node pkg="autoware_stop_mode_operator" exec="stop_mode_operator_node">
+    <param from="$(var config)"/>
+    <remap from="~/control" to="/control/control_command_gate/inputs/stop/control"/>
+    <remap from="~/gear" to="/control/control_command_gate/inputs/stop/gear"/>
+    <remap from="~/turn_indicators" to="/control/control_command_gate/inputs/stop/turn_indicators"/>
+    <remap from="~/hazard_lights" to="/control/control_command_gate/inputs/stop/hazard_lights"/>
+  </node>
+</launch>
