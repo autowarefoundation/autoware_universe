@@ -112,6 +112,7 @@ private:
     std::string, autoware_utils::InterProcessPollingSubscriber<PlanningFactorArray>>
     planning_factors_sub_;
   std::unordered_map<std::string, Accumulator<double>> stop_deviation_accumulators_;
+  std::unordered_map<std::string, Accumulator<double>> stop_deviation_abs_accumulators_;
   std::unordered_set<std::string> stop_deviation_modules_;
 
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
@@ -131,16 +132,22 @@ private:
                                         Metric::acceleration,
                                         Metric::jerk,
                                         Metric::lateral_deviation,
+                                        Metric::lateral_deviation_abs,
                                         Metric::yaw_deviation,
+                                        Metric::yaw_deviation_abs,
                                         Metric::goal_longitudinal_deviation,
+                                        Metric::goal_longitudinal_deviation_abs,
                                         Metric::goal_lateral_deviation,
+                                        Metric::goal_lateral_deviation_abs,
                                         Metric::goal_yaw_deviation,
+                                        Metric::goal_yaw_deviation_abs,
                                         Metric::left_boundary_distance,
                                         Metric::right_boundary_distance,
                                         Metric::steering_angle,
                                         Metric::steering_rate,
                                         Metric::steering_acceleration,
                                         Metric::stop_deviation,
+                                        Metric::stop_deviation_abs,
                                         Metric::closest_object_distance};
 
   std::array<Accumulator<double>, static_cast<size_t>(Metric::SIZE)>

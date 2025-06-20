@@ -53,6 +53,7 @@
         enable: true
         threshold: 1.5708 # (= 90 degrees)
         is_critical: false
+        nearest_yaw_trajectory_shift_required_for_checking: 0.1  # [rad] yaw deviation is only checked if the nearest yaw jumped by more than this value between the previous and current trajectory
       forward_trajectory_length:
         enable: true
         acceleration: -3.0
