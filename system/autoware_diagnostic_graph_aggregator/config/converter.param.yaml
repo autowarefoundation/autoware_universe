@@ -1,0 +1,9 @@
+/**:
+  ros__parameters:
+    stop: 1001
+    autonomous: 1002
+    local: 1003
+    remote: 1004
+    emergency_stop: 2001
+    comfortable_stop: 2002
+    pull_over: 2003

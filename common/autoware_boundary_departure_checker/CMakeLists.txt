@@ -6,7 +6,9 @@ autoware_package()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/boundary_departure_checker.cpp
+  src/boundary_departure_checker_abnormality.cpp
   src/utils.cpp
+  src/conversion.cpp
 )
 
 if(BUILD_TESTING)

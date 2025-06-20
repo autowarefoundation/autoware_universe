@@ -22,7 +22,6 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
-#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/ros/msg_covariance.hpp>
@@ -132,6 +131,9 @@ bool PedestrianTracker::measureWithPose(const types::DynamicObject & object)
   constexpr double gain = 0.1;
   object_.pose.position.z = (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
 
+  // remove cached object
+  removeCache();
+
   return is_updated;
 }
 
@@ -155,6 +157,7 @@ bool PedestrianTracker::measureWithShape(const types::DynamicObject & object)
 
     // update shape type, bounding box or cylinder
     object_.shape.type = object.shape.type;
+    object_.area = types::getArea(object.shape);
 
     // set maximum and minimum size
     limitObjectExtension(object_model_);
@@ -195,7 +198,13 @@ bool PedestrianTracker::measure(
 bool PedestrianTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object) const
 {
+  // try to return cached object
+  if (getCachedObject(time, object)) {
+    return true;
+  }
+
   object = object_;
+  object.time = time;
 
   // predict from motion model
   auto & pose = object.pose;
@@ -207,11 +216,8 @@ bool PedestrianTracker::getTrackedObject(
     return false;
   }
 
-  // set shape
-  const auto origin_yaw = tf2::getYaw(object_.pose.orientation);
-  const auto ekf_pose_yaw = tf2::getYaw(pose.orientation);
-  object.shape.footprint =
-    autoware_utils::rotate_polygon(object.shape.footprint, origin_yaw - ekf_pose_yaw);
+  // cache object
+  updateCache(object, time);
 
   return true;
 }

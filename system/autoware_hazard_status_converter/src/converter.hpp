@@ -36,6 +36,7 @@ private:
   using HazardStatusStamped = autoware_system_msgs::msg::HazardStatusStamped;
   using DiagGraph = autoware::diagnostic_graph_utils::DiagGraph;
   using DiagUnit = autoware::diagnostic_graph_utils::DiagUnit;
+  using DiagNode = autoware::diagnostic_graph_utils::DiagNode;
   void on_create(DiagGraph::ConstSharedPtr graph);
   void on_update(DiagGraph::ConstSharedPtr graph);
   autoware::diagnostic_graph_utils::DiagGraphSubscription sub_graph_;
@@ -43,7 +44,7 @@ private:
   autoware_utils::InterProcessPollingSubscriber<tier4_system_msgs::msg::EmergencyHoldingState>
     sub_emergency_holding_{this, "~/input/emergency_holding"};
 
-  DiagUnit * auto_mode_root_;
+  DiagNode * auto_mode_root_;
   std::unordered_set<DiagUnit *> auto_mode_tree_;
 };
 

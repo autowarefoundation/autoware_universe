@@ -726,7 +726,7 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
       m_pid_vel.reset();
       m_lpf_vel_error->reset(0.0);
       // prevent the car from taking a long time to start to move
-      m_prev_ctrl_cmd.acc = std::max(0.0, m_prev_raw_ctrl_cmd.acc);
+      m_prev_raw_ctrl_cmd.acc = std::max(0.0, m_prev_raw_ctrl_cmd.acc);
       return changeControlState(ControlState::DRIVE);
     }
     return;
@@ -863,7 +863,10 @@ PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
     m_prev_raw_ctrl_cmd = raw_ctrl_cmd;
 
     // calc acc feedback
-    const double acc_err = control_data.current_motion.acc - raw_ctrl_cmd.acc;
+    const double vel_sign = (control_data.shift == Shift::Forward)
+                              ? 1.0
+                              : (control_data.shift == Shift::Reverse ? -1.0 : 0.0);
+    const double acc_err = control_data.current_motion.acc * vel_sign - raw_ctrl_cmd.acc;
     m_debug_values.setValues(DebugValues::TYPE::ERROR_ACC, acc_err);
     m_lpf_acc_error->filter(acc_err);
     m_debug_values.setValues(DebugValues::TYPE::ERROR_ACC_FILTERED, m_lpf_acc_error->getValue());

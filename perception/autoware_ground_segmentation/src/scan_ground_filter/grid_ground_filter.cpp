@@ -418,7 +418,7 @@ void GridGroundFilter::classify(pcl::PointIndices & out_no_ground_indices)
 
       // recheck ground bin
       if (
-        param_.use_recheck_ground_cluster && cell.avg_radius_ > param_.grid_mode_switch_radius &&
+        param_.use_recheck_ground_cluster && cell.avg_radius_ > param_.recheck_start_distance &&
         ground_bin.getGroundPointNum() > 0) {
         // recheck the ground cluster
         float reference_height = 0;

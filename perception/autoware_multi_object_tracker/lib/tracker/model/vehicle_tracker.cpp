@@ -24,7 +24,6 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
-#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/ros/msg_covariance.hpp>
@@ -189,6 +188,9 @@ bool VehicleTracker::measureWithPose(
   constexpr double gain = 0.1;
   object_.pose.position.z = (1.0 - gain) * object_.pose.position.z + gain * object.pose.position.z;
 
+  // remove cached object
+  removeCache();
+
   return is_updated;
 }
 
@@ -220,6 +222,7 @@ bool VehicleTracker::measureWithShape(const types::DynamicObject & object)
 
   // set shape type, which is bounding box
   object_.shape.type = object.shape.type;
+  object_.area = types::getArea(object.shape);
 
   // set maximum and minimum size
   limitObjectExtension(object_model_);
@@ -260,8 +263,29 @@ bool VehicleTracker::measure(
 
   // update object
   types::DynamicObject updating_object = in_object;
+  // turn 180 deg if the updating object heads opposite direction
+  {
+    const double this_yaw = motion_model_.getStateElement(IDX::YAW);
+    const double updating_yaw = tf2::getYaw(updating_object.pose.orientation);
+    double yaw_diff = updating_yaw - this_yaw;
+    while (yaw_diff > M_PI) yaw_diff -= 2 * M_PI;
+    while (yaw_diff < -M_PI) yaw_diff += 2 * M_PI;
+    if (std::abs(yaw_diff) > M_PI_2) {
+      tf2::Quaternion q;
+      q.setRPY(0, 0, updating_yaw + M_PI);
+      updating_object.pose.orientation = tf2::toMsg(q);
+      updating_object.anchor_point.x = -updating_object.anchor_point.x;
+      updating_object.anchor_point.y = -updating_object.anchor_point.y;
+    }
+  }
+
+  // update tracking offset
   shapes::calcAnchorPointOffset(object_, tracking_offset_, updating_object);
+
+  // update pose
   measureWithPose(updating_object, channel_info);
+
+  // update shape
   if (channel_info.trust_extension) {
     measureWithShape(updating_object);
   }
@@ -272,6 +296,10 @@ bool VehicleTracker::measure(
 bool VehicleTracker::getTrackedObject(
   const rclcpp::Time & time, types::DynamicObject & object) const
 {
+  // try to return cached object
+  if (getCachedObject(time, object)) {
+    return true;
+  }
   object = object_;
   object.time = time;
 
@@ -285,11 +313,8 @@ bool VehicleTracker::getTrackedObject(
     return false;
   }
 
-  // set shape
-  const auto origin_yaw = tf2::getYaw(object_.pose.orientation);
-  const auto ekf_pose_yaw = tf2::getYaw(pose.orientation);
-  object.shape.footprint =
-    autoware_utils::rotate_polygon(object.shape.footprint, origin_yaw - ekf_pose_yaw);
+  // cache object
+  updateCache(object, time);
 
   return true;
 }

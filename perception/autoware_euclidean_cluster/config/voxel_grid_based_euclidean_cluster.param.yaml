@@ -4,7 +4,19 @@
     voxel_leaf_size: 0.3
     min_points_number_per_voxel: 1
     min_cluster_size: 10
-    max_cluster_size: 3000
+    max_cluster_size: 3000  # this is the maximum number of voxels when clustered
+    max_voxel_cluster_for_output: 800  # Maximum number of voxels in a cluster when outputted
+    # Voxel Counts (0.3m*0.3m voxel, ignoring height):
+    # Based on Japanese vehicle size regulations:
+    # - Regular truck: 12m x 2.5m = ~333 voxels
+    # - Semi-trailer: 16.5m x 2.5m = ~458 voxels
+    # - Full trailer: 25m x 2.5m = ~694 voxels
+    # Adding 15% margin for safety: 694 * 1.15 ~ 800
+    min_voxel_cluster_size_for_filtering: 65  # Clusters below this number of voxels are exempt from per-voxel filtering
+    # This threshold is based on a medium-sized truck (5.0m x 1.8m).
+    # Its full footprint covers about 100 voxels (0.3m x 0.3m grid),
+    # but LiDAR typically captures only ~60–70% due to occlusion.
+    max_points_per_voxel_in_large_cluster: 10  # Max points allowed per voxel in a large cluster
     use_height: false
     input_frame: "base_link"
 
@@ -16,3 +28,4 @@
     max_z: 2.0
     min_z: -10.0
     negative: false
+    processing_time_threshold_sec: 0.01

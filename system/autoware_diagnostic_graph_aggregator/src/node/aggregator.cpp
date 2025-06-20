@@ -30,32 +30,35 @@ AggregatorNode::AggregatorNode(const rclcpp::NodeOptions & options) : Node("aggr
     const auto graph_file = declare_parameter<std::string>("graph_file");
     std::ostringstream id;
     id << std::hex << stamp.nanoseconds();
-    graph_.create(graph_file, id.str());
+    graph_ = std::make_unique<Graph>(graph_file, id.str(), nullptr);
   }
 
   // Init plugins.
-  if (declare_parameter<bool>("use_operation_mode_availability")) {
-    modes_ = std::make_unique<ModesAvailability>(*this, graph_);
+  if (declare_parameter<bool>("use_command_mode_mappings")) {
+    availability_ = std::make_unique<CommandModeMapping>(*this, *graph_);
   }
 
   // Init ros interface.
   {
     const auto qos_input = rclcpp::QoS(declare_parameter<int64_t>("input_qos_depth"));
-    const auto qos_unknown = rclcpp::QoS(1);  // TODO(Takagi, Isamu): parameter
+    const auto qos_unknown = rclcpp::QoS(1);
     const auto qos_struct = rclcpp::QoS(1).transient_local();
     const auto qos_status = rclcpp::QoS(declare_parameter<int64_t>("graph_qos_depth"));
     const auto callback = std::bind(&AggregatorNode::on_diag, this, std::placeholders::_1);
     sub_input_ = create_subscription<DiagnosticArray>("/diagnostics", qos_input, callback);
-    pub_unknown_ = create_publisher<DiagnosticArray>("/diagnostics_graph/unknowns", qos_unknown);
-    pub_struct_ = create_publisher<DiagGraphStruct>("/diagnostics_graph/struct", qos_struct);
-    pub_status_ = create_publisher<DiagGraphStatus>("/diagnostics_graph/status", qos_status);
+    pub_struct_ = create_publisher<DiagGraphStruct>("~/struct", qos_struct);
+    pub_status_ = create_publisher<DiagGraphStatus>("~/status", qos_status);
+    pub_unknown_ = create_publisher<DiagnosticArray>("~/unknowns", qos_unknown);
+    srv_reset_ = create_service<ResetDiagGraph>(
+      "~/reset",
+      std::bind(&AggregatorNode::on_reset, this, std::placeholders::_1, std::placeholders::_2));
 
     const auto rate = rclcpp::Rate(declare_parameter<double>("rate"));
     timer_ = rclcpp::create_timer(this, get_clock(), rate.period(), [this]() { on_timer(); });
   }
 
   // Send structure topic once.
-  pub_struct_->publish(graph_.create_struct(stamp));
+  pub_struct_->publish(graph_->create_struct_msg(stamp));
 }
 
 AggregatorNode::~AggregatorNode()
@@ -63,38 +66,30 @@ AggregatorNode::~AggregatorNode()
   // For unique_ptr members.
 }
 
-DiagnosticArray AggregatorNode::create_unknown_diags(const rclcpp::Time & stamp)
-{
-  DiagnosticArray msg;
-  msg.header.stamp = stamp;
-  for (const auto & [name, diag] : unknown_diags_) msg.status.push_back(diag);
-  return msg;
-}
-
 void AggregatorNode::on_timer()
 {
   // Check timeout of diag units.
   const auto stamp = now();
-  graph_.update(stamp);
+  graph_->update(stamp);
 
   // Publish status.
-  pub_status_->publish(graph_.create_status(stamp));
-  pub_unknown_->publish(create_unknown_diags(stamp));
-  if (modes_) modes_->update(stamp);
+  pub_status_->publish(graph_->create_status_msg(stamp));
+  pub_unknown_->publish(graph_->create_unknown_msg(stamp));
+
+  // Update plugins.
+  if (availability_) availability_->update(stamp);
 }
 
 void AggregatorNode::on_diag(const DiagnosticArray & msg)
 {
-  // Update status. Store it as unknown if it does not exist in the graph.
-  const auto & stamp = msg.header.stamp;
-  for (const auto & status : msg.status) {
-    if (!graph_.update(stamp, status)) {
-      unknown_diags_[status.name] = status;
-    }
-  }
+  graph_->update(now(), msg);
+}
 
-  // TODO(Takagi, Isamu): Publish immediately when graph status changes.
-  // pub_status_->publish();
+void AggregatorNode::on_reset(
+  const ResetDiagGraph::Request::SharedPtr, const ResetDiagGraph::Response::SharedPtr response)
+{
+  graph_->reset();
+  response->status.success = true;
 }
 
 }  // namespace autoware::diagnostic_graph_aggregator

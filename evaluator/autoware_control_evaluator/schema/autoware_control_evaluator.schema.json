@@ -42,9 +42,20 @@
               }
             }
           }
+        },
+        "object_metrics": {
+          "description": "metrics' parameters for object-related metrics",
+          "type": "object",
+          "properties": {
+            "distance_filter_thr_m": {
+              "description": "maximum distance to the predicted objects to be considered",
+              "type": "number",
+              "default": 30.0
+            }
+          }
         }
       },
-      "required": ["planning_factor_metrics"]
+      "required": ["planning_factor_metrics", "object_metrics"]
     }
   },
   "properties": {
