@@ -75,6 +75,7 @@ using TargetLanelets = std::vector<TargetLanelet>;
 
 struct CollisionCheckerLanelets
 {
+  lanelet::ConstLanelet first_turn_lanelet;
   lanelet::ConstLanelets trajectory_lanelets;
   lanelet::ConstLanelets connected_lanelets;
   TargetLanelets target_lanelets;

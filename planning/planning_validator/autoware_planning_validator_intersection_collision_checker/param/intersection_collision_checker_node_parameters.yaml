@@ -10,8 +10,6 @@ intersection_collision_checker_node:
       type: double
       validation:
         gt_eq<>: [0.0]
-    is_critical:
-      type: bool
     ego_deceleration:
       type: double
       validation:
@@ -28,12 +26,14 @@ intersection_collision_checker_node:
     right_turn:
       enable:
         type: bool
-      check_oncoming_lanes:
-        type: bool
       check_crossing_lanes:
         type: bool
       check_turning_lanes:
         type: bool
+      crossing_lane_angle_th:
+        type: double
+        validation:
+          gt<>: [0.0]
 
     left_turn:
       enable:

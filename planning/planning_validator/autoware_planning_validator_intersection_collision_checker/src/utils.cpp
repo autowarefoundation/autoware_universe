@@ -25,6 +25,7 @@
 #include <boost/geometry/strategies/cartesian/buffer_point_square.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <utility>
 
 namespace autoware::planning_validator::collision_checker_utils
@@ -37,7 +38,12 @@ bool contains_lanelet(const lanelet::ConstLanelets & lanelets, const lanelet::Id
   return std::find_if(lanelets.begin(), lanelets.end(), [&](const auto & l) {
            return l.id() == id;
          }) != lanelets.end();
-};
+}
+
+bool is_turn_lanelet(const lanelet::ConstLanelet & ll)
+{
+  return ll.hasAttribute("turn_direction") && ll.attribute("turn_direction") != "straight";
+}
 }  // namespace
 
 TrajectoryPoints trim_trajectory_points(
@@ -63,7 +69,15 @@ void set_trajectory_lanelets(
   lanelets.trajectory_lanelets =
     route_handler.getLaneletSequence(closest_lanelet, ego_pose, 0.0, forward_trajectory_length);
 
-  lanelet::ConstLanelets prev_lanelets;
+  lanelet::ConstLanelets prev_lanelets{closest_lanelet};
+  if (is_turn_lanelet(closest_lanelet)) {
+    while (route_handler.getPreviousLaneletsWithinRoute(prev_lanelets.front(), &prev_lanelets) &&
+           is_turn_lanelet(prev_lanelets.front())) {
+      lanelets.trajectory_lanelets.insert(
+        lanelets.trajectory_lanelets.begin(), prev_lanelets.front());
+    }
+  }
+
   if (route_handler.getPreviousLaneletsWithinRoute(closest_lanelet, &prev_lanelets)) {
     lanelets.connected_lanelets.push_back(prev_lanelets.front());
     for (const auto & connected_ll : route_handler.getNextLanelets(prev_lanelets.front())) {
@@ -71,11 +85,15 @@ void set_trajectory_lanelets(
     }
   }
 
+  std::optional<lanelet::ConstLanelet> first_turn_ll;
   for (const auto & ll : lanelets.trajectory_lanelets) {
+    if (!first_turn_ll && is_turn_lanelet(ll)) first_turn_ll = ll;
     for (const auto & connected_ll : route_handler.getNextLanelets(ll)) {
       lanelets.connected_lanelets.push_back(connected_ll);
     }
   }
+
+  if (first_turn_ll) lanelets.first_turn_lanelet = *first_turn_ll;
 }
 
 std::optional<std::pair<size_t, size_t>> get_overlap_index(
@@ -98,6 +116,43 @@ std::optional<std::pair<size_t, size_t>> get_overlap_index(
   return {{nearest_idx_back, nearest_idx_front}};
 }
 
+bool is_crossing_lane(
+  const lanelet::ConstLanelet & ll, const lanelet::ConstLanelet & ref_ll, const double angle_th)
+{
+  const auto ref_center_line = ref_ll.centerline2d();
+  if (ref_center_line.size() < 2) return false;
+  const auto & front_it = ref_center_line.begin();
+  const Eigen::Vector2d ref_direction(
+    (front_it->basicPoint2d() - std::next(front_it)->basicPoint2d()).normalized());
+
+  const auto center_line = ll.centerline2d();
+  if (center_line.size() < 2) return false;
+  const Eigen::Vector2d direction(
+    (center_line.front().basicPoint2d() - center_line.back().basicPoint2d()).normalized());
+
+  const auto threshold = std::abs(cos(angle_th));
+  return std::abs(ref_direction.dot(direction)) < threshold;
+}
+
+lanelet::ConstLanelets extend_lanelet(
+  const RouteHandler & route_handler, const lanelet::ConstLanelet & ll,
+  const geometry_msgs::msg::Pose & ref_point, const double distance_th)
+{
+  lanelet::ConstLanelets extended_lanelets{ll};
+  auto current_arc_length = lanelet::utils::getArcCoordinates(extended_lanelets, ref_point).length;
+  if (current_arc_length >= distance_th) return extended_lanelets;
+
+  lanelet::ConstLanelets prev_lanelets = {ll};
+  while (current_arc_length < distance_th) {
+    prev_lanelets = route_handler.getPreviousLanelets(prev_lanelets.front());
+    if (prev_lanelets.empty()) break;  // No more previous lanelets to extend
+    extended_lanelets.push_back(prev_lanelets.front());
+    current_arc_length += lanelet::utils::getLaneletLength2d(prev_lanelets.front());
+  }
+  std::reverse(extended_lanelets.begin(), extended_lanelets.end());
+  return extended_lanelets;
+}
+
 void set_right_turn_target_lanelets(
   const EgoTrajectory & ego_traj, const RouteHandler & route_handler,
   const intersection_collision_checker_node::Params & params, CollisionCheckerLanelets & lanelets,
@@ -115,29 +170,19 @@ void set_right_turn_target_lanelets(
              lanelet::AttributeValueString::Road;
   };
 
-  auto ignore_turning = [&p](const lanelet::ConstLanelet & ll) {
-    if (!ll.hasAttribute("turn_direction")) return false;
-    if (ll.attribute("turn_direction") == "straight") return false;
-    return !p.right_turn.check_turning_lanes;
+  auto ignore_lanelet = [&](const lanelet::ConstLanelet & ll) {
+    if (is_turn_lanelet(ll)) {
+      return !p.right_turn.check_turning_lanes;
+    }
+    if (is_crossing_lane(ll, lanelets.first_turn_lanelet, p.right_turn.crossing_lane_angle_th)) {
+      return !p.right_turn.check_crossing_lanes;
+    }
+    return false;
   };
 
-  auto extend_lanelet =
+  auto extend =
     [&](const lanelet::ConstLanelet & ll, const geometry_msgs::msg::Pose & overlap_point) {
-      const auto distance_th = p.detection_range;
-      lanelet::ConstLanelets extended_lanelets{ll};
-      auto current_arc_length =
-        lanelet::utils::getArcCoordinates(extended_lanelets, overlap_point).length;
-      if (current_arc_length >= distance_th) return extended_lanelets;
-
-      lanelet::ConstLanelets prev_lanelets = {ll};
-      while (current_arc_length < distance_th) {
-        prev_lanelets = route_handler.getPreviousLanelets(prev_lanelets.front());
-        if (prev_lanelets.empty()) break;  // No more previous lanelets to extend
-        extended_lanelets.push_back(prev_lanelets.front());
-        current_arc_length += lanelet::utils::getLaneletLength2d(prev_lanelets.front());
-      }
-      std::reverse(extended_lanelets.begin(), extended_lanelets.end());
-      return extended_lanelets;
+      return extend_lanelet(route_handler, ll, overlap_point, p.detection_range);
     };
 
   const auto lanelet_map_ptr = route_handler.getLaneletMapPtr();
@@ -146,7 +191,7 @@ void set_right_turn_target_lanelets(
   for (const auto & ll : candidates) {
     const auto id = ll.id();
     if (
-      !is_road(ll) || ignore_turning(ll) || contains_lanelet(lanelets.trajectory_lanelets, id) ||
+      !is_road(ll) || ignore_lanelet(ll) || contains_lanelet(lanelets.trajectory_lanelets, id) ||
       contains_lanelet(lanelets.connected_lanelets, id))
       continue;
 
@@ -162,7 +207,7 @@ void set_right_turn_target_lanelets(
       rclcpp::Duration(ego_traj.back_traj[overlap_index->second].time_from_start).seconds();
     if (overlap_time.first > time_horizon) continue;
     lanelets.target_lanelets.emplace_back(
-      ll.id(), extend_lanelet(ll, overlap_point), overlap_point, overlap_time);
+      ll.id(), extend(ll, overlap_point), overlap_point, overlap_time);
   }
 }
 
@@ -202,23 +247,9 @@ void set_left_turn_target_lanelets(
     return !p.left_turn.check_turning_lanes;
   };
 
-  auto extend_lanelet =
+  auto extend =
     [&](const lanelet::ConstLanelet & ll, const geometry_msgs::msg::Pose & overlap_point) {
-      const auto distance_th = p.detection_range;
-      lanelet::ConstLanelets extended_lanelets{ll};
-      auto current_arc_length =
-        lanelet::utils::getArcCoordinates(extended_lanelets, overlap_point).length;
-      if (current_arc_length >= distance_th) return extended_lanelets;
-
-      lanelet::ConstLanelets prev_lanelets = {ll};
-      while (current_arc_length < distance_th) {
-        prev_lanelets = route_handler.getPreviousLanelets(prev_lanelets.front());
-        if (prev_lanelets.empty()) break;  // No more previous lanelets to extend
-        extended_lanelets.push_back(prev_lanelets.front());
-        current_arc_length += lanelet::utils::getLaneletLength2d(prev_lanelets.front());
-      }
-      std::reverse(extended_lanelets.begin(), extended_lanelets.end());
-      return extended_lanelets;
+      return extend_lanelet(route_handler, ll, overlap_point, p.detection_range);
     };
 
   const auto turn_lanelet_id = turn_lanelet->id();
@@ -235,7 +266,7 @@ void set_left_turn_target_lanelets(
       rclcpp::Duration(ego_traj.back_traj[overlap_index->first].time_from_start).seconds();
     if (overlap_time.first > time_horizon) continue;
     lanelets.target_lanelets.emplace_back(
-      lanelet.id(), extend_lanelet(lanelet, overlap_point), overlap_point, overlap_time);
+      lanelet.id(), extend(lanelet, overlap_point), overlap_point, overlap_time);
   }
 }
 
