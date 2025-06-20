@@ -106,7 +106,6 @@
         ignore_parked_vehicle_speed_threshold: 0.8333
         occlusion_detection_hold_time: 1.5
         temporal_stop_time_before_peeking: 0.1
-        temporal_stop_before_attention_area: false
         creep_velocity_without_traffic_light: 1.388
         static_occlusion_with_traffic_light_timeout: 0.5
 
