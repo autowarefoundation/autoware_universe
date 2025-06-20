@@ -2,8 +2,8 @@
 Changelog for package autoware_motion_velocity_run_out_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * fix(run_out): fix  numerical stability in run_out interpolation (`#10808 <https://github.com/TaikiYamada4/autoware_universe/issues/10808>`_)
   * fix(run_out): fix  numerical stability in run_out interpolation

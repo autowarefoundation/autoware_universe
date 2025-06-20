@@ -2,8 +2,8 @@
 Changelog for package autoware_planning_validator_rear_collision_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * feat(planning_validator): implement a collision detection feature for rearward objects of the vehicle (`#10800 <https://github.com/TaikiYamada4/autoware_universe/issues/10800>`_)
   * feat(planning_validator): add new flag

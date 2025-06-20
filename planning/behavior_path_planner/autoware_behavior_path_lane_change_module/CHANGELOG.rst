@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_lane_change_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * fix(lane_change, behavior_path_planner): fix failure to do lane change (`#10694 <https://github.com/TaikiYamada4/autoware_universe/issues/10694>`_)
   * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/TaikiYamada4/autoware_universe/issues/1776>`_)

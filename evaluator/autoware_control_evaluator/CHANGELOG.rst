@@ -2,8 +2,8 @@
 Changelog for package autoware_control_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * feat(control_evaluator): change metrics to non-absolute and add absolute metrics (`#10820 <https://github.com/TaikiYamada4/autoware_universe/issues/10820>`_)
   change metric name to _abs, and add no-abs metrics

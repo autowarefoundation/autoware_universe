@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_static_obstacle_avoidance_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * feat(static_obstacle_avoidance): modify rviz visualization (`#10826 <https://github.com/TaikiYamada4/autoware_universe/issues/10826>`_)
   chore(static_obstacle_avoidance): modify rviz visualization

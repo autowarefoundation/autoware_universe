@@ -2,8 +2,8 @@
 Changelog for package autoware_hazard_status_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * feat(diagnostic_graph_aggregator): support latch and dependent error (`#10829 <https://github.com/TaikiYamada4/autoware_universe/issues/10829>`_)
   * update aggregator

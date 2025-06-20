@@ -2,8 +2,8 @@
 Changelog for package tier4_perception_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * feat(tier4_simulator_launch): add use_pointcloud_container argument (`#10770 <https://github.com/TaikiYamada4/autoware_universe/issues/10770>`_)
 * chore(perception): remove unused object filter packages (`#10654 <https://github.com/TaikiYamada4/autoware_universe/issues/10654>`_)

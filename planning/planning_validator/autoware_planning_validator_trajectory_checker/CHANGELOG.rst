@@ -2,8 +2,8 @@
 Changelog for package autoware_planning_validator_trajectory_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * feat(planning_validator): add condition to check the yaw deviation (`#10818 <https://github.com/TaikiYamada4/autoware_universe/issues/10818>`_)
 * fix(planning_validator): fix the lateral distance calculation (`#10801 <https://github.com/TaikiYamada4/autoware_universe/issues/10801>`_)

@@ -2,8 +2,8 @@
 Changelog for package autoware_boundary_departure_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * feat(motion_velocity_planner): boundary departure prevention module (`#10817 <https://github.com/TaikiYamada4/autoware_universe/issues/10817>`_)
   * feat(motion_velocity_planner): boundary departure prevention module

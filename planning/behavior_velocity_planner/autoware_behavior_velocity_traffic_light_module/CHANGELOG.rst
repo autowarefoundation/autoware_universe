@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_velocity_traffic_light_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * feat(autoware_behavior_velocity_traffic_light_module): add v2i (`#10768 <https://github.com/TaikiYamada4/autoware_universe/issues/10768>`_)
   add v2i

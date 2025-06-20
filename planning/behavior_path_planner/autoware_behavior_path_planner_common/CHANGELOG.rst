@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_planner_common
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * fix(autoware_behavior_path_planner_common): modify geometric parallel parking path planning (`#10734 <https://github.com/TaikiYamada4/autoware_universe/issues/10734>`_)
   * fix: geometric parallel parking￼

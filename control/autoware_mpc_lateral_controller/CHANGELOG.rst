@@ -2,8 +2,8 @@
 Changelog for package autoware_mpc_lateral_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * feat: change info messages to debug, and debug_throttle method (`#10757 <https://github.com/TaikiYamada4/autoware_universe/issues/10757>`_)
   change info messages to debug, and debug_throttle method

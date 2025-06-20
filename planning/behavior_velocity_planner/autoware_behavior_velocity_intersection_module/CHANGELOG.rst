@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_velocity_intersection_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * fix(intersection): fix path lanelets generation (`#10843 <https://github.com/TaikiYamada4/autoware_universe/issues/10843>`_)
 * feat(intersection): consider brake feasiblity for stuck vehicle (`#10742 <https://github.com/TaikiYamada4/autoware_universe/issues/10742>`_)

@@ -2,8 +2,8 @@
 Changelog for package autoware_image_projection_based_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * fix(roi_cluster_fusion): fix typo (`#10833 <https://github.com/TaikiYamada4/autoware_universe/issues/10833>`_)
   * fix(roi_cluster_fusion): fix typo

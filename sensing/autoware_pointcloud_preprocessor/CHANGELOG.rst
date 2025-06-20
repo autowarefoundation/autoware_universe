@@ -2,8 +2,8 @@
 Changelog for package autoware_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * refactor(blockage_diag): split up `filter` function, add doc comments (`#10708 <https://github.com/TaikiYamada4/autoware_universe/issues/10708>`_)
   * chore(blockage_diag): explain parameters in the code

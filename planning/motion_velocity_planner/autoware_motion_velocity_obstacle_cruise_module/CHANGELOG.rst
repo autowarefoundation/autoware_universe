@@ -2,8 +2,8 @@
 Changelog for package autoware_motion_velocity_obstacle_cruise_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * feat(autoware_motion_velocity_planner): only wait for required subscriptions (`#10732 <https://github.com/TaikiYamada4/autoware_universe/issues/10732>`_)
 * feat(obstacle_stop_module): maintain larger stop distance for opposing traffic (`#10647 <https://github.com/TaikiYamada4/autoware_universe/issues/10647>`_)

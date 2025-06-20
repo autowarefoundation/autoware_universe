@@ -2,8 +2,8 @@
 Changelog for package tier4_simulator_launch
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * feat(tier4_simulator_launch): add use_pointcloud_container argument (`#10770 <https://github.com/TaikiYamada4/autoware_universe/issues/10770>`_)
 * Contributors: Ryohsuke Mitsudome
 

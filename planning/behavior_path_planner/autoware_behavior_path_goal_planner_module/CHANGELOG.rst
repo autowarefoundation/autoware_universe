@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_goal_planner_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * feat(goal_planner): check previous module's stopline when regenerate candidates (`#10776 <https://github.com/TaikiYamada4/autoware_universe/issues/10776>`_)
 * feat(goal_planner): add param of path_decision_state_controller.check_collision_duration (`#10767 <https://github.com/TaikiYamada4/autoware_universe/issues/10767>`_)

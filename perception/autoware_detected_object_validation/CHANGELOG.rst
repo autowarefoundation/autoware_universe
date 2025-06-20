@@ -2,8 +2,8 @@
 Changelog for package autoware_detected_object_validation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * feat(obstacle_pointcloud_validator): add processing time ms for track… (`#10738 <https://github.com/TaikiYamada4/autoware_universe/issues/10738>`_)
   feat(obstacle_pointcloud_validator): add processing time ms for tracking perception performance

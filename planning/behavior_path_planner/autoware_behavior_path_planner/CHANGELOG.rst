@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_planner
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * chore(default_adapi): rename package (`#10756 <https://github.com/TaikiYamada4/autoware_universe/issues/10756>`_)
 * feat(hazard_lights_selector): add a hazard lights selector package (`#10692 <https://github.com/TaikiYamada4/autoware_universe/issues/10692>`_)

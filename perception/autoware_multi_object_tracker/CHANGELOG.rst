@@ -2,8 +2,8 @@
 Changelog for package autoware_multi_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * feat: add adaptive covariance threshold for tracker lifecycle management (`#10743 <https://github.com/TaikiYamada4/autoware_universe/issues/10743>`_)
   * feat: add adaptive covariance threshold for tracker lifecycle management

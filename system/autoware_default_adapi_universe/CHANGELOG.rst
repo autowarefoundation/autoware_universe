@@ -2,8 +2,8 @@
 Changelog for package autoware_default_adapi
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * feat(default_adapi_universe): add mrm description api (`#10838 <https://github.com/TaikiYamada4/autoware_universe/issues/10838>`_)
   * feat(default_adapi_universe): add mrm description api

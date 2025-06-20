@@ -2,8 +2,8 @@
 Changelog for package autoware_cuda_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * feat(autoware_cuda_pointcloud_preprocessor): agnocast support (`#10812 <https://github.com/TaikiYamada4/autoware_universe/issues/10812>`_)
   * feat(autoware_cuda_pointcloud_preprocessor): add Agnocast support for incoming pointclouds

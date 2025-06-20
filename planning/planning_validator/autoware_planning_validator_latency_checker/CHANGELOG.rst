@@ -2,8 +2,8 @@
 Changelog for package autoware_planning_validator_latency_checker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * refactor(planning_validator): implement plugin structure for planning validator node (`#10571 <https://github.com/TaikiYamada4/autoware_universe/issues/10571>`_)
   * chore(sync-files.yaml): not synchronize `github-release.yaml` (`#1776 <https://github.com/TaikiYamada4/autoware_universe/issues/1776>`_)

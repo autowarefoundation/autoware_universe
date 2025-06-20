@@ -2,8 +2,8 @@
 Changelog for package autoware_behavior_path_start_planner_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * feat(behavior_path_planner): organize a part of behavior path info/debug markers (`#10729 <https://github.com/TaikiYamada4/autoware_universe/issues/10729>`_)
   * feat(behavior_path_planner): organize a part of behavior path info/debug markers

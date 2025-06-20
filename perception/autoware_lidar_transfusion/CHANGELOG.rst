@@ -2,8 +2,8 @@
 Changelog for package autoware_lidar_transfusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * chore(perception): delete maintainer name (`#10816 <https://github.com/TaikiYamada4/autoware_universe/issues/10816>`_)
 * Contributors: Satoshi Tanaka, TaikiYamada4

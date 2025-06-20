@@ -2,8 +2,8 @@
 Changelog for package autoware_tensorrt_plugins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * fix(cmake): update spconv availability messages to use STATUS and WAR… (`#10690 <https://github.com/TaikiYamada4/autoware_universe/issues/10690>`_)
   fix(cmake): update spconv availability messages to use STATUS and WARNING

@@ -2,8 +2,8 @@
 Changelog for package autoware_operation_mode_transition_manager
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.46.0 (2025-06-20)
+-------------------
 * Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
 * feat!: replace tier4_system_msgs with autoware_system_msgs for services (`#10842 <https://github.com/TaikiYamada4/autoware_universe/issues/10842>`_)
   * feat!: replace tier4_system_msgs with autoware_system_msgs for services
