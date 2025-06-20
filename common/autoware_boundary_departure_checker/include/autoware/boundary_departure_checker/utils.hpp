@@ -410,6 +410,24 @@ double compute_braking_distance(
 DeparturePoints get_departure_points(
   const std::vector<ClosestProjectionToBound> & projections_to_bound,
   const double th_dist_hysteresis_m, const double lon_offset_m);
+
+/**
+ * @brief Get nearby uncrossable linestrings around a given pose.
+ *
+ * Searches the linestring layer for geometry within a square bounding box
+ * centered at the given ego pose. Only linestrings with a type included
+ * in the provided uncrossable boundary types are returned.
+ *
+ * @param linestring_layer Layer containing all linestrings in the map.
+ * @param ego_pose Reference pose to define the search area.
+ * @param search_distance Search range around the ego pose (in meters).
+ * @param uncrossable_boundary_types List of boundary type tags considered uncrossable.
+ * @return Vector of nearby linestrings that are tagged as uncrossable.
+ */
+std::vector<lanelet::ConstLineString3d> get_uncrossable_linestrings_near_pose(
+  const lanelet::LineStringLayer & linestring_layer, const Pose & ego_pose,
+  const double search_distance,
+  const std::vector<std::string> & uncrossable_boundary_types = {"road_border"});
 }  // namespace autoware::boundary_departure_checker::utils
 
 #endif  // AUTOWARE__BOUNDARY_DEPARTURE_CHECKER__UTILS_HPP_

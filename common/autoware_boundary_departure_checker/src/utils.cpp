@@ -652,4 +652,25 @@ DeparturePoints get_departure_points(
   erase_after_first_match(departure_points);
   return departure_points;
 }
+
+std::vector<lanelet::ConstLineString3d> get_uncrossable_linestrings_near_pose(
+  const lanelet::LineStringLayer & linestring_layer, const Pose & ego_pose,
+  const double search_distance, const std::vector<std::string> & uncrossable_boundary_types)
+{
+  const auto bbox = lanelet::BoundingBox2d(
+    lanelet::BasicPoint2d{
+      ego_pose.position.x - search_distance, ego_pose.position.y - search_distance},
+    lanelet::BasicPoint2d{
+      ego_pose.position.x + search_distance, ego_pose.position.y + search_distance});
+
+  auto nearby_linestrings = linestring_layer.search(bbox);
+
+  const auto remove_itr = std::remove_if(
+    nearby_linestrings.begin(), nearby_linestrings.end(),
+    [&](const auto & ls) { return !is_uncrossable_type(uncrossable_boundary_types, ls); });
+
+  nearby_linestrings.erase(remove_itr, nearby_linestrings.end());
+
+  return nearby_linestrings;
+}
 }  // namespace autoware::boundary_departure_checker::utils
