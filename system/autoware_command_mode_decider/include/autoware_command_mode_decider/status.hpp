@@ -42,6 +42,7 @@ struct CommandModeStatusItem
   uint16_t mode() const { return message_.mode; }
   uint16_t mrm() const { return message_.mrm; }
   bool request() const { return message_.request; }
+  bool operator!=(const CommandModeStatusItem & other) const { return message_ != other.message_; }
 
 private:
   StatusMessage message_;
@@ -70,9 +71,9 @@ class CommandModeStatusTable
 {
 public:
   void init(const std::vector<uint16_t> & modes);
-  void set(const StatusMessage & item, const rclcpp::Time & stamp);
-  void set(const AvailabilityMessage & item, const rclcpp::Time & stamp);
-  void set(uint16_t mode, bool drivable, const rclcpp::Time & stamp);
+  bool set(const StatusMessage & item, const rclcpp::Time & stamp);
+  bool set(const AvailabilityMessage & item, const rclcpp::Time & stamp);
+  bool set(uint16_t mode, bool drivable, const rclcpp::Time & stamp);
   void check_timeout(const rclcpp::Time & now);
   bool ready() const;
   bool available(uint16_t mode, bool is_manual) const;
