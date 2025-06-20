@@ -22,6 +22,7 @@
 #define EIGEN_MPL2_ONLY
 #include "autoware/multi_object_tracker/object_model/object_model.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
+#include "autoware/multi_object_tracker/tracker/util/adaptive_threshold_cache.hpp"
 
 #include <Eigen/Core>
 #include <autoware/object_recognition_utils/object_recognition_utils.hpp>
@@ -32,6 +33,7 @@
 #include <geometry_msgs/msg/point.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -48,6 +50,10 @@ private:
   rclcpp::Time last_update_with_measurement_time_;
   std::vector<float> existence_probabilities_;
   float total_existence_probability_;
+
+  // cache
+  mutable rclcpp::Time cached_time_;
+  mutable types::DynamicObject cached_object_;
 
 public:
   Tracker(const rclcpp::Time & time, const types::DynamicObject & object);
@@ -70,8 +76,12 @@ public:
   // object life management
   void getPositionCovarianceEigenSq(
     const rclcpp::Time & time, double & major_axis_sq, double & minor_axis_sq) const;
-  bool isConfident(const rclcpp::Time & time) const;
-  bool isExpired(const rclcpp::Time & time) const;
+  bool isConfident(
+    const rclcpp::Time & time, const AdaptiveThresholdCache & cache,
+    const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
+  bool isExpired(
+    const rclcpp::Time & time, const AdaptiveThresholdCache & cache,
+    const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
   float getKnownObjectProbability() const;
   double getPositionCovarianceDeterminant() const;
 
@@ -104,6 +114,27 @@ public:
 protected:
   types::DynamicObject object_;
 
+  void updateCache(const types::DynamicObject & object, const rclcpp::Time & time) const
+  {
+    cached_time_ = time;
+    cached_object_ = object;
+  }
+
+  bool getCachedObject(const rclcpp::Time & time, types::DynamicObject & object) const
+  {
+    if (cached_time_.nanoseconds() == time.nanoseconds()) {
+      object = cached_object_;
+      return true;
+    }
+    return false;
+  }
+
+  void removeCache() const
+  {
+    cached_time_ = rclcpp::Time();
+    cached_object_ = types::DynamicObject();
+  }
+
   void updateClassification(
     const std::vector<autoware_perception_msgs::msg::ObjectClassification> & classification);
 
@@ -117,6 +148,11 @@ protected:
 public:
   virtual bool getTrackedObject(const rclcpp::Time & time, types::DynamicObject & object) const = 0;
   virtual bool predict(const rclcpp::Time & time) = 0;
+  double getBEVArea() const;
+  double getDistanceSqToEgo(const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
+  double computeAdaptiveThreshold(
+    double base_threshold, double fallback_threshold, const AdaptiveThresholdCache & cache,
+    const std::optional<geometry_msgs::msg::Pose> & ego_pose) const;
 };
 
 }  // namespace autoware::multi_object_tracker

@@ -20,6 +20,7 @@
 #include <autoware/interpolation/spline_interpolation_points_2d.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/regulatory_elements/road_marking.hpp>  // for lanelet::autoware::RoadMarking
+#include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/geometry.hpp>
@@ -263,9 +264,12 @@ Result<IntersectionModule::BasicData, InternalError> IntersectionModule::prepare
   const auto lanelets_on_path =
     planning_utils::getLaneletsOnPath(*path, lanelet_map_ptr, current_pose);
   // see the doc for struct PathLanelets
+  const auto closest_idx_ip = autoware::motion_utils::findFirstNearestIndexWithSoftConstraints(
+    path_ip.points, current_pose, planner_data_->ego_nearest_dist_threshold,
+    planner_data_->ego_nearest_yaw_threshold);
   const auto path_lanelets_opt = generatePathLanelets(
     lanelets_on_path, interpolated_path_info, first_conflicting_area, conflicting_area,
-    first_attention_area_opt, intersection_lanelets.attention_area(), closest_idx);
+    first_attention_area_opt, intersection_lanelets.attention_area(), closest_idx_ip);
   if (!path_lanelets_opt.has_value()) {
     return make_err<IntersectionModule::BasicData, InternalError>(
       "failed to generate PathLanelets");
@@ -511,6 +515,26 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
     second_pass_judge_line_valid = true;
   }
 
+  // (9) the position where ego footprint most approaches the opposite boundary of
+  const std::string turn_direction = assigned_lanelet.attributeOr("turn_direction", "else");
+  const auto compute_lane_end_azimuth = [](const lanelet::ConstLanelet & lane) {
+    const auto & centerline = lane.centerline();
+    const auto & p1 = centerline[(centerline.size() - 2)];
+    const auto & p2 = centerline.back();
+    return autoware_utils_geometry::calc_azimuth_angle(
+      lanelet::utils::conversion::toGeomMsgPt(p1), lanelet::utils::conversion::toGeomMsgPt(p2));
+  };
+  const double merging_angle_diff = autoware_utils_math::normalize_radian(
+    compute_lane_end_azimuth(assigned_lanelet) - compute_lane_end_azimuth(first_attention_lane));
+  const bool is_merging = std::fabs(merging_angle_diff) <
+                          planner_param_.conservative_merging.merging_judge_angle_threshold;
+  const std::optional<size_t> maximum_footprint_overshoot_line_opt =
+    is_merging ? util::find_maximum_footprint_overshoot_position(
+                   interpolated_path_info, local_footprint, first_attention_lane,
+                   planner_param_.conservative_merging.minimum_lateral_distance_threshold,
+                   turn_direction, first_footprint_inside_1st_attention_ip)
+               : std::nullopt;
+  const auto maximum_footprint_overshoot_line_ip = maximum_footprint_overshoot_line_opt.value_or(0);
   struct IntersectionStopLinesTemp
   {
     size_t closest_idx{0};
@@ -522,6 +546,7 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
     size_t first_pass_judge_line{0};
     size_t second_pass_judge_line{0};
     size_t occlusion_wo_tl_pass_judge_line{0};
+    size_t most_footprint_overshoot_line{0};
   };
 
   IntersectionStopLinesTemp intersection_stoplines_temp;
@@ -535,7 +560,9 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
     {&first_pass_judge_line_ip, &intersection_stoplines_temp.first_pass_judge_line},
     {&second_pass_judge_line_ip, &intersection_stoplines_temp.second_pass_judge_line},
     {&occlusion_wo_tl_pass_judge_line_ip,
-     &intersection_stoplines_temp.occlusion_wo_tl_pass_judge_line}};
+     &intersection_stoplines_temp.occlusion_wo_tl_pass_judge_line},
+    {&maximum_footprint_overshoot_line_ip,
+     &intersection_stoplines_temp.most_footprint_overshoot_line}};
   stoplines.sort(
     [](const auto & it1, const auto & it2) { return *(std::get<0>(it1)) < *(std::get<0>(it2)); });
   for (const auto & [stop_idx_ip, stop_idx] : stoplines) {
@@ -578,6 +605,10 @@ std::optional<IntersectionStopLines> IntersectionModule::generateIntersectionSto
   if (second_pass_judge_line_valid) {
     intersection_stoplines.second_pass_judge_line =
       intersection_stoplines_temp.second_pass_judge_line;
+  }
+  if (maximum_footprint_overshoot_line_opt) {
+    intersection_stoplines.maximum_footprint_overshoot_line =
+      intersection_stoplines_temp.most_footprint_overshoot_line;
   }
   intersection_stoplines.first_pass_judge_line = intersection_stoplines_temp.first_pass_judge_line;
   intersection_stoplines.occlusion_wo_tl_pass_judge_line =

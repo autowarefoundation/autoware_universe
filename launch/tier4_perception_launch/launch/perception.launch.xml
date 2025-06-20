@@ -16,8 +16,6 @@
   <arg name="object_recognition_detection_pointpainting_fusion_common_param_path"/>
   <arg name="object_recognition_detection_lidar_model_param_path"/>
   <arg name="object_recognition_detection_radar_lanelet_filtering_range_param_path"/>
-  <arg name="object_recognition_detection_radar_crossing_objects_noise_filter_param_path"/>
-  <arg name="object_recognition_detection_radar_object_clustering_param_path"/>
   <arg name="object_recognition_detection_object_velocity_splitter_radar_param_path"/>
   <arg name="object_recognition_detection_object_velocity_splitter_radar_fusion_param_path"/>
   <arg name="object_recognition_detection_object_range_splitter_radar_param_path"/>
@@ -50,9 +48,18 @@
   <!-- ML model parameters -->
   <arg name="lidar_detection_model_type" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[0]&quot;)"/>
   <arg name="lidar_detection_model_name" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[1] if '/' in '$(var lidar_detection_model)' else ''&quot;)"/>
+  <arg name="use_short_range_detection" default="false" description="use short range detection for redundant VRU detection"/>
+  <arg name="lidar_short_range_detection_model_type" default="centerpoint_short_range" description="options: `centerpoint_short_range`">
+    <choice value="centerpoint_short_range"/>
+  </arg>
+  <arg name="lidar_short_range_detection_model_name" default="centerpoint_short_range" description="options: `centerpoint_short_range`">
+    <choice value="centerpoint_short_range"/>
+    <choice value=""/>
+  </arg>
   <arg name="bevfusion_model_path" default="$(var data_path)/bevfusion"/>
   <arg name="centerpoint_model_path" default="$(var data_path)/lidar_centerpoint"/>
   <arg name="transfusion_model_path" default="$(var data_path)/lidar_transfusion"/>
+  <arg name="short_range_centerpoint_model_path" default="$(var data_path)/lidar_short_range_centerpoint"/>
   <arg name="pointpainting_model_path" default="$(var data_path)/image_projection_based_fusion"/>
 
   <!-- Common parameters -->
@@ -240,6 +247,9 @@
           <arg name="mode" value="$(var mode)"/>
           <arg name="lidar_detection_model_type" value="$(var lidar_detection_model_type)"/>
           <arg name="lidar_detection_model_name" value="$(var lidar_detection_model_name)"/>
+          <arg name="use_short_range_detection" value="$(var use_short_range_detection)"/>
+          <arg name="lidar_short_range_detection_model_type" value="$(var lidar_short_range_detection_model_type)"/>
+          <arg name="lidar_short_range_detection_model_name" value="$(var lidar_short_range_detection_model_name)"/>
           <arg name="use_multi_channel_tracker_merger" value="$(var use_multi_channel_tracker_merger)"/>
           <arg name="number_of_cameras" value="$(var image_number)"/>
           <arg name="input/camera0/image" value="$(var image_raw0)"/>
@@ -279,7 +289,6 @@
           <arg name="outlier_param_path" value="$(var object_recognition_detection_outlier_param_path)"/>
           <arg name="voxel_grid_based_euclidean_param_path" value="$(var object_recognition_detection_voxel_grid_based_euclidean_cluster_param_path)"/>
           <arg name="radar_lanelet_filtering_range_param_path" value="$(var object_recognition_detection_radar_lanelet_filtering_range_param_path)"/>
-          <arg name="radar_object_clustering_param_path" value="$(var object_recognition_detection_radar_object_clustering_param_path)"/>
           <arg name="detection_by_tracker_param_path" value="$(var object_recognition_detection_detection_by_tracker_param)"/>
 
           <arg name="use_detection_by_tracker" value="$(var use_detection_by_tracker)"/>
@@ -303,6 +312,7 @@
         <push-ros-namespace namespace="tracking"/>
         <include file="$(find-pkg-share tier4_perception_launch)/launch/object_recognition/tracking/tracking.launch.xml">
           <arg name="mode" value="$(var mode)"/>
+          <arg name="lidar_detection_model_type" value="$(var lidar_detection_model_type)"/>
           <arg
             name="object_recognition_tracking_radar_object_tracker_data_association_matrix_param_path"
             value="$(var object_recognition_tracking_radar_object_tracker_data_association_matrix_param_path)"

@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,19 +22,23 @@
 #include <autoware_lanelet2_extension/regulatory_elements/crosswalk.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils_uuid/uuid_helper.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
+#include <autoware_perception_msgs/msg/detail/predicted_object__struct.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <boost/assert.hpp>
 #include <boost/assign/list_of.hpp>
+#include <boost/functional/hash.hpp>
 
 #include <lanelet2_core/geometry/Point.h>
 #include <lanelet2_core/geometry/Polygon.h>
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/LineString.h>
+#include <lanelet2_core/primitives/Polygon.h>
 #include <pcl/common/distances.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -52,6 +56,7 @@ namespace autoware::behavior_velocity_planner
 {
 namespace bg = boost::geometry;
 using autoware_internal_planning_msgs::msg::PathWithLaneId;
+using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 using autoware_perception_msgs::msg::ObjectClassification;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
@@ -135,13 +140,13 @@ public:
     double max_slow_down_accel;
     double no_relax_velocity;
     // param for stuck vehicle
-    bool enable_stuck_check_in_intersection{false};
-    double stuck_vehicle_velocity;
-    double max_stuck_vehicle_lateral_offset;
+    bool enable_obstruction_prevention{false};
+    double target_vehicle_velocity;
+    double max_target_vehicle_lateral_offset;
     double required_clearance;
-    double min_acc_for_stuck_vehicle;
-    double max_jerk_for_stuck_vehicle;
-    double min_jerk_for_stuck_vehicle;
+    double min_acc_for_target_vehicle;
+    double max_jerk_for_target_vehicle;
+    double min_jerk_for_target_vehicle;
     // param for pass judge logic
     std::vector<double> ego_pass_first_margin_x;
     std::vector<double> ego_pass_first_margin_y;
@@ -181,6 +186,13 @@ public:
     bool occlusion_ignore_behind_predicted_objects;
     std::vector<double> occlusion_ignore_velocity_thresholds;
     double occlusion_extra_objects_size;
+    // param for parked vehicles stop
+    bool parked_vehicles_stop_enable;
+    double parked_vehicles_stop_search_distance;
+    double parked_vehicles_stop_min_ego_stop_duration;
+    double parked_vehicles_stop_parked_ego_inside_safe_area_margin;
+    double parked_vehicles_stop_parked_velocity_threshold;
+    double parked_vehicles_stop_vehicle_permanence_duration;
   };
 
   struct ObjectInfo
@@ -285,11 +297,11 @@ public:
   {
     void init() { current_uuids_.clear(); }
     void update(
-      const std::string & uuid, const geometry_msgs::msg::Point & position, const double vel,
-      const rclcpp::Time & now, const bool is_ego_yielding, const bool has_traffic_light,
-      const std::optional<CollisionPoint> & collision_point, const uint8_t classification,
-      const PlannerParam & planner_param, const lanelet::BasicPolygon2d & crosswalk_polygon,
-      const Polygon2d & attention_area,
+      const unique_identifier_msgs::msg::UUID & uuid, const geometry_msgs::msg::Point & position,
+      const double vel, const rclcpp::Time & now, const bool is_ego_yielding,
+      const bool has_traffic_light, const std::optional<CollisionPoint> & collision_point,
+      const uint8_t classification, const PlannerParam & planner_param,
+      const lanelet::BasicPolygon2d & crosswalk_polygon, const Polygon2d & attention_area,
       const std::optional<double> & ego_crosswalk_passage_direction)
     {
       // update current uuids
@@ -321,7 +333,7 @@ public:
     void finalize()
     {
       // remove objects not set in current_uuids_
-      std::vector<std::string> obsolete_uuids;
+      std::vector<unique_identifier_msgs::msg::UUID> obsolete_uuids;
       for (const auto & object : objects) {
         if (
           std::find(current_uuids_.begin(), current_uuids_.end(), object.first) ==
@@ -342,13 +354,21 @@ public:
       }
       return object_info_vec;
     }
-    CollisionState getCollisionState(const std::string & uuid) const
+    CollisionState getCollisionState(const unique_identifier_msgs::msg::UUID & uuid) const
     {
       return objects.at(uuid).collision_state;
     }
 
-    std::unordered_map<std::string, ObjectInfo> objects;
-    std::vector<std::string> current_uuids_;
+    struct UuidHash
+    {
+      size_t operator()(const unique_identifier_msgs::msg::UUID & u) const
+      {
+        return boost::hash_range(u.uuid.begin(), u.uuid.end());
+      }
+    };
+
+    std::unordered_map<unique_identifier_msgs::msg::UUID, ObjectInfo, UuidHash> objects;
+    std::vector<unique_identifier_msgs::msg::UUID> current_uuids_;
   };
 
   CrosswalkModule(
@@ -370,7 +390,7 @@ private:
   void applySlowDown(
     PathWithLaneId & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
-    const float safety_slow_down_speed);
+    const float safety_slow_down_speed, const std::string & reason);
 
   void applySlowDownByLanelet2Map(
     PathWithLaneId & output, const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
@@ -389,17 +409,21 @@ private:
     const std::optional<geometry_msgs::msg::Pose> & default_stop_pose_opt,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk);
 
-  std::optional<StopFactor> checkStopForCrosswalkUsers(
+  std::optional<StopPoseWithObjectUuids> checkStopForCrosswalkUsers(
     const PathWithLaneId & ego_path, const PathWithLaneId & sparse_resample_path,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const std::optional<geometry_msgs::msg::Pose> & default_stop_pose);
 
-  std::optional<StopFactor> checkStopForStuckVehicles(
+  std::optional<StopPoseWithObjectUuids> checkStopForObstructionPrevention(
     const PathWithLaneId & ego_path, const std::vector<PredictedObject> & objects,
     const geometry_msgs::msg::Point & first_path_point_on_crosswalk,
     const geometry_msgs::msg::Point & last_path_point_on_crosswalk,
     const std::optional<geometry_msgs::msg::Pose> & stop_pose);
+
+  std::optional<StopPoseWithObjectUuids> checkStopForParkedVehicles(
+    const PathWithLaneId & ego_path,
+    const geometry_msgs::msg::Point & first_path_point_on_crosswalk);
 
   std::optional<double> findEgoPassageDirectionAlongPath(
     const PathWithLaneId & sparse_resample_path) const;
@@ -410,21 +434,24 @@ private:
     const PathWithLaneId & ego_path, const PredictedObject & object,
     const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area);
 
-  std::optional<StopFactor> getNearestStopFactor(
+  std::pair<std::optional<StopPoseWithObjectUuids>, std::string> getNearestStopFactorAndReason(
     const PathWithLaneId & ego_path,
-    const std::optional<StopFactor> & stop_factor_for_crosswalk_users,
-    const std::optional<StopFactor> & stop_factor_for_stuck_vehicles);
+    const std::optional<StopPoseWithObjectUuids> & stop_factor_for_crosswalk_users,
+    const std::optional<StopPoseWithObjectUuids> & stop_factor_for_obstruction_preventions,
+    const std::optional<StopPoseWithObjectUuids> & stop_factor_for_parked_vehicles);
 
   void setDistanceToStop(
     const PathWithLaneId & ego_path,
     const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
-    const std::optional<StopFactor> & stop_factor);
+    const std::optional<StopPoseWithObjectUuids> & stop_factor);
 
-  void planGo(PathWithLaneId & ego_path, const std::optional<StopFactor> & stop_factor) const;
+  void planGo(
+    PathWithLaneId & ego_path, const std::optional<StopPoseWithObjectUuids> & stop_factor) const;
 
   void planStop(
-    PathWithLaneId & ego_path, const std::optional<StopFactor> & nearest_stop_factor,
-    const std::optional<geometry_msgs::msg::Pose> & default_stop_pose);
+    PathWithLaneId & ego_path, const std::optional<StopPoseWithObjectUuids> & nearest_stop_factor,
+    const std::optional<geometry_msgs::msg::Pose> & default_stop_pose,
+    const std::string & reason) const;
 
   // minor functions
   std::pair<double, double> getAttentionRange(
@@ -457,6 +484,8 @@ private:
     const double dist_ego_to_stop, const PathWithLaneId & sparse_resample_path,
     const std::pair<double, double> & crosswalk_attention_range, const Polygon2d & attention_area);
 
+  bool isRedSignalForLanelet(const lanelet::ConstLanelet & lanelet) const;
+  bool isRedSignalForEgo() const;
   bool isRedSignalForPedestrians() const;
 
   static bool isVehicle(const PredictedObject & object);
@@ -470,7 +499,11 @@ private:
     const autoware::vehicle_info_utils::VehicleInfo & vehicle_info);
 
   bool checkRestartSuppression(
-    const PathWithLaneId & ego_path, const std::optional<StopFactor> & stop_factor) const;
+    const PathWithLaneId & ego_path,
+    const std::optional<StopPoseWithObjectUuids> & stop_factor) const;
+
+  SafetyFactorArray createSafetyFactorArray(
+    const std::optional<StopPoseWithObjectUuids> & stop_factor) const;
 
   void recordTime(const int step_num)
   {
@@ -512,6 +545,52 @@ private:
   // occluded space time buffer
   std::optional<rclcpp::Time> current_initial_occlusion_time_;
   std::optional<rclcpp::Time> most_recent_occlusion_time_;
+
+  struct
+  {
+    lanelet::BasicPolygon2d search_area;
+    bool already_stopped = false;
+    std::optional<autoware_perception_msgs::msg::PredictedObject> previous_target_vehicle;
+    rclcpp::Time previous_detection_time;
+    std::optional<geometry_msgs::msg::Pose> previous_stop_pose;
+
+    void reset()
+    {
+      previous_target_vehicle.reset();
+      previous_stop_pose.reset();
+    }
+
+    std::vector<autoware_perception_msgs::msg::PredictedObject>
+    update_and_add_previous_target_vehicle(
+      const std::vector<autoware_perception_msgs::msg::PredictedObject> & detected_objects,
+      const rclcpp::Time & current_time, const double permanence_duration)
+    {
+      if (
+        !previous_target_vehicle ||
+        (current_time - previous_detection_time).seconds() > permanence_duration) {
+        previous_target_vehicle.reset();
+        return detected_objects;
+      }
+      std::vector<autoware_perception_msgs::msg::PredictedObject>
+        detected_objects_with_previous_target;
+      detected_objects_with_previous_target.reserve(detected_objects.size() + 1);
+      bool found = false;
+      const auto previous_uuid =
+        autoware_utils_uuid::to_hex_string(previous_target_vehicle->object_id);
+      for (const auto & object : detected_objects) {
+        const auto uuid = autoware_utils_uuid::to_hex_string(object.object_id);
+        if (uuid == previous_uuid) {
+          previous_detection_time = current_time;
+          found = true;
+        }
+        detected_objects_with_previous_target.push_back(object);
+      }
+      if (!found) {
+        detected_objects_with_previous_target.push_back(*previous_target_vehicle);
+      }
+      return detected_objects_with_previous_target;
+    }
+  } parked_vehicles_stop_;
 };
 }  // namespace autoware::behavior_velocity_planner
 
