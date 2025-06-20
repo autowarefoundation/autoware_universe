@@ -21,6 +21,7 @@
   <depend>autoware_signal_processing</depend>
   <depend>autoware_trajectory</depend>
   <depend>autoware_utils</depend>
+  <depend>generate_parameter_library</depend>
   <depend>libboost-dev</depend>
   <depend>pluginlib</depend>
   <depend>rclcpp</depend>
