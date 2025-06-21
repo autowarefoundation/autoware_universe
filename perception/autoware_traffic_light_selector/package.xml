@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_traffic_light_selector</name>
-  <version>0.45.0</version>
+  <version>0.46.0</version>
   <description>The ROS 2 autoware_traffic_light_selector package</description>
   <maintainer email="yukihiro.saito@tier4.jp">Yukihiro Saito</maintainer>
   <maintainer email="dai.nguyen@tier4.jp">Dai Nguyen</maintainer>

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_simple_object_merger</name>
-  <version>0.45.0</version>
+  <version>0.46.0</version>
   <description>autoware_simple_object_merger</description>
   <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
   <maintainer email="taekjin.lee@tier4.jp">Taekjin Lee</maintainer>

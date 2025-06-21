@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>autoware_cuda_pointcloud_preprocessor</name>
-  <version>0.45.0</version>
+  <version>0.46.0</version>
   <description>autoware_cuda_pointcloud_preprocessor</description>
   <maintainer email="kenzo.lobos@tier4.jp">Kenzo Lobos-Tsunekawa</maintainer>
   <maintainer email="amadeusz.szymko.2@tier4.jp">Amadeusz Szymko</maintainer>
@@ -12,6 +12,8 @@
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
+  <depend>agnocastlib</depend>
+  <depend>autoware_agnocast_wrapper</depend>
   <depend>autoware_cuda_dependency_meta</depend>
   <depend>autoware_cuda_utils</depend>
   <depend>autoware_point_types</depend>
