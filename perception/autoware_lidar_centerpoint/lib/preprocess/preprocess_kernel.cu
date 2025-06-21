@@ -465,12 +465,10 @@ cudaError_t PreprocessCuda::generateSweepPoints_launch(
 
   if (config_.point_feature_size_ == POINT_DIM_XYZT) {
     generateSweepPoints_kernel<POINT_DIM_XYZT><<<blocks, threads, 0, stream_>>>(
-      input_points, points_size, time_lag, transform_array,
-      output_points);
+      input_points, points_size, time_lag, transform_array, output_points);
   } else if (config_.point_feature_size_ == POINT_DIM_XYZIT) {
     generateSweepPoints_kernel<POINT_DIM_XYZIT><<<blocks, threads, 0, stream_>>>(
-      input_points, points_size, time_lag, transform_array,
-      output_points);
+      input_points, points_size, time_lag, transform_array, output_points);
   } else {
     throw std::runtime_error("Value of point_features_size is not supported!");
   }
@@ -517,8 +515,8 @@ cudaError_t PreprocessCuda::generateVoxels_random_launch(
     generateVoxels_random_kernel<<<blocks, threads, 0, stream_>>>(
       points, points_size, config_.range_min_x_, config_.range_max_x_, config_.range_min_y_,
       config_.range_max_y_, config_.range_min_z_, config_.range_max_z_, config_.voxel_size_x_,
-      config_.voxel_size_y_, config_.voxel_size_z_, config_.grid_size_y_, config_.grid_size_x_, mask,
-      voxels);
+      config_.voxel_size_y_, config_.voxel_size_z_, config_.grid_size_y_, config_.grid_size_x_,
+      mask, voxels);
   } else if (config_.point_feature_size_ == POINT_DIM_XYZIT) {
     generateIntensityVoxels_random_kernel<<<blocks, threads, 0, stream_>>>(
       points, points_size, config_.range_min_x_, config_.range_max_x_, config_.range_min_y_,
