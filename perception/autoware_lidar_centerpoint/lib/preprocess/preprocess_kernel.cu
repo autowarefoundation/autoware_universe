@@ -41,7 +41,7 @@ namespace
 const std::size_t MAX_POINT_IN_VOXEL_SIZE = 32;  // the same as max_point_in_voxel_size_ in config
 const std::size_t WARPS_PER_BLOCK = 4;
 
-const std::size_t POINT_DIM_XYZT = 4; // X, Y, Z, Time_lag
+const std::size_t POINT_DIM_XYZT = 4;   // X, Y, Z, Time_lag
 const std::size_t POINT_DIM_XYZIT = 5;  // X, Y, Z, Intensity, Time_lag
 const std::size_t ENCODER_NUM_FEATURES_9 = 9;
 const std::size_t ENCODER_NUM_FEATURES_10 = 10;
@@ -68,20 +68,20 @@ __global__ void generateSweepPoints_kernel(
   float input_y = input_point->y;
   float input_z = input_point->z;
 
-  output_points[point_idx * POINT_NUM_FEATURES] = transform_array[0] * input_x +
-                                            transform_array[4] * input_y +
-                                            transform_array[8] * input_z + transform_array[12];
-  output_points[point_idx * POINT_NUM_FEATURES + 1] = transform_array[1] * input_x +
-                                                transform_array[5] * input_y +
-                                                transform_array[9] * input_z + transform_array[13];
-  output_points[point_idx * POINT_NUM_FEATURES + 2] = transform_array[2] * input_x +
-                                                transform_array[6] * input_y +
-                                                transform_array[10] * input_z + transform_array[14];
-  
-                                                // Time_lag 
+  output_points[point_idx * POINT_NUM_FEATURES] =
+    transform_array[0] * input_x + transform_array[4] * input_y + transform_array[8] * input_z +
+    transform_array[12];
+  output_points[point_idx * POINT_NUM_FEATURES + 1] =
+    transform_array[1] * input_x + transform_array[5] * input_y + transform_array[9] * input_z +
+    transform_array[13];
+  output_points[point_idx * POINT_NUM_FEATURES + 2] =
+    transform_array[2] * input_x + transform_array[6] * input_y + transform_array[10] * input_z +
+    transform_array[14];
+
+  // Time_lag
   if (POINT_NUM_FEATURES == POINT_DIM_XYZT) {
     output_points[point_idx * POINT_NUM_FEATURES + 3] = time_lag;
-  // Intensity & time_lag
+    // Intensity & time_lag
   } else {
     auto input_intensity = static_cast<float>(input_point->intensity);
     output_points[point_idx * POINT_NUM_FEATURES + 3] = input_intensity;
@@ -150,7 +150,6 @@ __global__ void generateVoxels_random_kernel(
   atomicExch(address + 2, point.z);
   atomicExch(address + 3, point.w);
 }
-
 
 __global__ void generateIntensityVoxels_random_kernel(
   const float * points, std::size_t points_size, float min_x_range, float max_x_range,
@@ -221,7 +220,7 @@ __global__ void generateBaseFeatures_kernel(
       int outIndex = current_pillarId * MAX_POINT_IN_VOXEL_SIZE + i;
       ((float4 *)voxel_features)[outIndex] = ((float4 *)voxels)[inIndex];
     }
-  } else { 
+  } else {
     for (int i = 0; i < count; i++) {
       int inIndex = voxel_index * MAX_POINT_IN_VOXEL_SIZE + i;
       int outIndex = current_pillarId * MAX_POINT_IN_VOXEL_SIZE + i;
@@ -375,7 +374,7 @@ __global__ void generateIntensityFeatures_kernel(
     pillarSumSM[threadIdx.x] = {0, 0, 0};
   }
 
-  #pragma unroll
+#pragma unroll
   for (int i = 0; i < POINT_DIM_XYZIT; i++) {
     int pillarSMId = pillar_idx_inBlock * MAX_POINT_IN_VOXEL_SIZE * POINT_DIM_XYZIT +
                      i * MAX_POINT_IN_VOXEL_SIZE + point_idx;
@@ -494,7 +493,7 @@ cudaError_t PreprocessCuda::shufflePoints_launch(
   if (config_.point_features_size_ == POINT_DIM_XYZT) {
     shufflePoints_kernel<POINT_DIM_XYZT><<<blocks, threads, 0, stream_>>>(
       points, indices, shuffled_points, points_size, max_size, offset);
-  } else if(config_.point_feature_size_ == POINT_DIM_XYZIT) {
+  } else if (config_.point_feature_size_ == POINT_DIM_XYZIT) {
     shufflePoints_kernel<POINT_DIM_XYZIT><<<blocks, threads, 0, stream_>>>(
       points, indices, shuffled_points, points_size, max_size, offset);
   } else {
@@ -513,19 +512,19 @@ cudaError_t PreprocessCuda::generateVoxels_random_launch(
   if (blocks.x == 0) {
     return cudaGetLastError();
   }
-  
+
   if (config_.point_feature_size_ == POINT_DIM_XYZT) {
     generateVoxels_random_kernel<<<blocks, threads, 0, stream_>>>(
       points, points_size, config_.range_min_x_, config_.range_max_x_, config_.range_min_y_,
       config_.range_max_y_, config_.range_min_z_, config_.range_max_z_, config_.voxel_size_x_,
-      config_.voxel_size_y_, config_.voxel_size_z_, config_.grid_size_y_, config_.grid_size_x_, mask,
-      voxels);
+      config_.voxel_size_y_, config_.voxel_size_z_, config_.grid_size_y_, config_.grid_size_x_,
+      mask, voxels);
   } else if (config_.point_feature_size == POINT_DIM_XYZIT) {
     generateIntensityVoxels_random_kernel<<<blocks, threads, 0, stream_>>>(
       points, points_size, config_.range_min_x_, config_.range_max_x_, config_.range_min_y_,
       config_.range_max_y_, config_.range_min_z_, config_.range_max_z_, config_.voxel_size_x_,
-      config_.voxel_size_y_, config_.voxel_size_z_, config_.grid_size_y_, config_.grid_size_x_, mask,
-      voxels);
+      config_.voxel_size_y_, config_.voxel_size_z_, config_.grid_size_y_, config_.grid_size_x_,
+      mask, voxels);
   } else {
     throw std::runtime_error("Value of point_features_size is not supported!");
   }
@@ -544,7 +543,7 @@ cudaError_t PreprocessCuda::generateBaseFeatures_launch(
   dim3 blocks = {
     (static_cast<unsigned int>(config_.grid_size_y_) + threads.x - 1) / threads.x,
     (static_cast<unsigned int>(config_.grid_size_x_) + threads.y - 1) / threads.y};
-  
+
   if (config_.point_feature_size_ == POINT_DIM_XYZT) {
     generateBaseFeatures_kernel<POINT_DIM_XYZT><<<blocks, threads, 0, stream_>>>(
       mask, voxels, config_.grid_size_y_, config_.grid_size_x_, config_.max_voxel_size_, pillar_num,
