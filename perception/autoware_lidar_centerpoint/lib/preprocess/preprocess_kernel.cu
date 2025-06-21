@@ -167,8 +167,8 @@ __global__ void generateIntensityVoxels_random_kernel(
   float t = points[point_idx * 5 + 4];
 
   if (
-    x < min_x_range || x >= max_x_range || y < min_y_range ||
-    y >= max_y_range || z < min_z_range || z >= max_z_range)
+    x < min_x_range || x >= max_x_range || y < min_y_range || y >= max_y_range || z < min_z_range ||
+    z >= max_z_range)
     return;
 
   int voxel_idx = floorf((x - min_x_range) / pillar_x_size);
