@@ -167,12 +167,12 @@ __global__ void generateIntensityVoxels_random_kernel(
   float t = points[point_idx * 5 + 4];
 
   if (
-    point.x < min_x_range || point.x >= max_x_range || point.y < min_y_range ||
-    point.y >= max_y_range || point.z < min_z_range || point.z >= max_z_range)
+    x < min_x_range || x >= max_x_range || y < min_y_range ||
+    y >= max_y_range || z < min_z_range || z >= max_z_range)
     return;
 
-  int voxel_idx = floorf((point.x - min_x_range) / pillar_x_size);
-  int voxel_idy = floorf((point.y - min_y_range) / pillar_y_size);
+  int voxel_idx = floorf((x - min_x_range) / pillar_x_size);
+  int voxel_idy = floorf((y - min_y_range) / pillar_y_size);
   voxel_idx = voxel_idx < 0 ? 0 : voxel_idx >= grid_x_size ? grid_x_size - 1 : voxel_idx;
   voxel_idy = voxel_idy < 0 ? 0 : voxel_idy >= grid_y_size ? grid_y_size - 1 : voxel_idy;
   unsigned int voxel_index = (grid_x_size - 1 - voxel_idx) * grid_y_size + voxel_idy;
