@@ -78,7 +78,7 @@ __global__ void generateSweepPoints_kernel(
                                                 transform_array[6] * input_y +
                                                 transform_array[10] * input_z + transform_array[14];
   
-  // Time_lag 
+                                                // Time_lag 
   if (POINT_NUM_FEATURES == POINT_DIM_XYZT) {
     output_points[point_idx * POINT_NUM_FEATURES + 3] = time_lag;
   // Intensity & time_lag
