@@ -78,7 +78,13 @@ public:
   double getLateralMinJerkLimit() const
   {
     const auto idx = getConstraintsMapIndex(getEgoSpeed(), parameters_->velocity_map);
-    return parameters_->lateral_min_jerk_map.at(idx);
+    return parameters_->avoid_lateral_min_jerk_map.at(idx);
+  }
+
+  double getReturnLateralMinJerkLimit() const
+  {
+    const auto idx = getConstraintsMapIndex(getEgoSpeed(), parameters_->velocity_map);
+    return parameters_->return_lateral_min_jerk_map.at(idx);
   }
 
   double getLateralMaxJerkLimit() const
@@ -119,7 +125,17 @@ public:
     const auto & p = parameters_;
     const auto nominal_speed = std::max(getEgoSpeed(), p->nominal_avoidance_speed);
     const auto nominal_jerk =
-      p->lateral_min_jerk_map.at(getConstraintsMapIndex(nominal_speed, p->velocity_map));
+      p->avoid_lateral_min_jerk_map.at(getConstraintsMapIndex(nominal_speed, p->velocity_map));
+    return autoware::motion_utils::calc_longitudinal_dist_from_jerk(
+      shift_length, nominal_jerk, nominal_speed);
+  }
+
+  double getNominalReturnDistance(const double shift_length) const
+  {
+    const auto & p = parameters_;
+    const auto nominal_speed = std::max(getEgoSpeed(), p->nominal_avoidance_speed);
+    const auto nominal_jerk =
+      p->return_lateral_min_jerk_map.at(getConstraintsMapIndex(nominal_speed, p->velocity_map));
     return autoware::motion_utils::calc_longitudinal_dist_from_jerk(
       shift_length, nominal_jerk, nominal_speed);
   }
@@ -136,6 +152,13 @@ public:
     const auto distance_from_jerk = autoware::motion_utils::calc_longitudinal_dist_from_jerk(
       shift_length, getLateralMinJerkLimit(), getAvoidanceEgoSpeed());
     return std::max(getNominalAvoidanceDistance(shift_length), distance_from_jerk);
+  }
+
+  double getMaxReturnDistance(const double shift_length) const
+  {
+    const auto distance_from_jerk = autoware::motion_utils::calc_longitudinal_dist_from_jerk(
+      shift_length, getReturnLateralMinJerkLimit(), getAvoidanceEgoSpeed());
+    return std::max(getNominalReturnDistance(shift_length), distance_from_jerk);
   }
 
   double getSharpAvoidanceDistance(const double shift_length) const
