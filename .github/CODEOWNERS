@@ -19,6 +19,7 @@ common/autoware_universe_utils/** mamoru.sobue@tier4.jp takamasa.horibe@tier4.jp
 common/tier4_api_utils/** isamu.takagi@tier4.jp
 control/autoware_autonomous_emergency_braking/** alqudah.mohammad@tier4.jp daniel.sanchez@tier4.jp kyoichi.sugahara@tier4.jp mamoru.sobue@tier4.jp takamasa.horibe@tier4.jp tomoya.kimura@tier4.jp
 control/autoware_collision_detector/** go.sakayori@tier4.jp kyoichi.sugahara@tier4.jp tomohito.ando@tier4.jp
+control/autoware_control_command_gate/** isamu.takagi@tier4.jp
 control/autoware_control_performance_analysis/** berkay@leodrive.ai fumiya.watanabe@tier4.jp junya.sasaki@tier4.jp satoshi.ota@tier4.jp shumpei.wakabayashi@tier4.jp taiki.tanaka@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp tomoya.kimura@tier4.jp
 control/autoware_control_validator/** kyoichi.sugahara@tier4.jp makoto.kurihara@tier4.jp mamoru.sobue@tier4.jp takayuki.murooka@tier4.jp yuki.takagi@tier4.jp
 control/autoware_external_cmd_selector/** fumiya.watanabe@tier4.jp satoshi.ota@tier4.jp shumpei.wakabayashi@tier4.jp taiki.tanaka@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp tomoya.kimura@tier4.jp
@@ -32,6 +33,7 @@ control/autoware_predicted_path_checker/** berkay@leodrive.ai junya.sasaki@tier4
 control/autoware_pure_pursuit/** takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 control/autoware_shift_decider/** takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 control/autoware_smart_mpc_trajectory_follower/** kosuke.takeuchi@tier4.jp masayuki.aino@proxima-ai-tech.com takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
+control/autoware_stop_mode_operator/** isamu.takagi@tier4.jp
 control/autoware_trajectory_follower_base/** takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 control/autoware_trajectory_follower_node/** takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 control/autoware_vehicle_cmd_gate/** takamasa.horibe@tier4.jp tomoya.kimura@tier4.jp
@@ -147,6 +149,7 @@ planning/behavior_velocity_planner/autoware_behavior_velocity_template_module/**
 planning/behavior_velocity_planner/autoware_behavior_velocity_traffic_light_module/** mamoru.sobue@tier4.jp satoshi.ota@tier4.jp shumpei.wakabayashi@tier4.jp tomoya.kimura@tier4.jp
 planning/behavior_velocity_planner/autoware_behavior_velocity_virtual_traffic_light_module/** kosuke.takeuchi@tier4.jp mamoru.sobue@tier4.jp shumpei.wakabayashi@tier4.jp tomoya.kimura@tier4.jp
 planning/behavior_velocity_planner/autoware_behavior_velocity_walkway_module/** satoshi.ota@tier4.jp shumpei.wakabayashi@tier4.jp takayuki.murooka@tier4.jp tomoya.kimura@tier4.jp
+planning/motion_velocity_planner/autoware_motion_velocity_boundary_departure_prevention_module/** alqudah.mohammad@tier4.jp maxime.clement@tier4.jp takumi.odashima@tier4.jp zulfaqar.azmi@tier4.jp
 planning/motion_velocity_planner/autoware_motion_velocity_dynamic_obstacle_stop_module/** mamoru.sobue@tier4.jp maxime.clement@tier4.jp
 planning/motion_velocity_planner/autoware_motion_velocity_obstacle_cruise_module/** maxime.clement@tier4.jp takayuki.murooka@tier4.jp yuki.takagi@tier4.jp
 planning/motion_velocity_planner/autoware_motion_velocity_obstacle_slow_down_module/** arjun.ram@tier4.jp maxime.clement@tier4.jp takayuki.murooka@tier4.jp yuki.takagi@tier4.jp
@@ -184,10 +187,13 @@ simulator/autoware_simple_planning_simulator/** junya.sasaki@tier4.jp kotaro.yos
 simulator/autoware_vehicle_door_simulator/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp
 simulator/tier4_dummy_object_rviz_plugin/** yukihiro.saito@tier4.jp
 system/autoware_bluetooth_monitor/** fumihito.ito@tier4.jp junya.sasaki@tier4.jp
+system/autoware_command_mode_decider/** isamu.takagi@tier4.jp
+system/autoware_command_mode_decider_plugins/** isamu.takagi@tier4.jp
+system/autoware_command_mode_switcher/** isamu.takagi@tier4.jp
+system/autoware_command_mode_switcher_plugins/** isamu.takagi@tier4.jp
 system/autoware_command_mode_types/** isamu.takagi@tier4.jp
 system/autoware_component_monitor/** baris@leodrive.ai memin@leodrive.ai yavuz@leodrive.ai
 system/autoware_component_state_monitor/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp
-system/autoware_default_adapi_helpers/autoware_adapi_adaptors/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
 system/autoware_default_adapi_helpers/autoware_adapi_visualizers/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
 system/autoware_default_adapi_helpers/autoware_automatic_pose_initializer/** isamu.takagi@tier4.jp junya.sasaki@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
 system/autoware_default_adapi_universe/** isamu.takagi@tier4.jp ryohsuke.mitsudome@tier4.jp yukihiro.saito@tier4.jp
