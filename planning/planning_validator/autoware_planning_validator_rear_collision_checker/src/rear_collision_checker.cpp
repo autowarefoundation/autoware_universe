@@ -87,7 +87,7 @@ void RearCollisionChecker::init(
 
   planning_factor_interface_ =
     std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      &node, module_name_);
+      &node, "rear_collision_checker");
 
   setup_diag();
 }

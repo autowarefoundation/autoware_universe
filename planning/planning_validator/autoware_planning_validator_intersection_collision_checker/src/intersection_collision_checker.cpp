@@ -61,7 +61,7 @@ void IntersectionCollisionChecker::init(
 
   planning_factor_interface_ =
     std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
-      &node, module_name_);
+      &node, "intersection_collision_checker");
 
   setup_diag();
 }
