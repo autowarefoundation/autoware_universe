@@ -22,7 +22,12 @@
 #include <autoware/freespace_planning_algorithms/abstract_algorithm.hpp>
 #include <autoware/freespace_planning_algorithms/astar_search.hpp>
 #include <autoware/freespace_planning_algorithms/rrtstar.hpp>
+
+#if __has_include(<magic_enum/magic_enum.hpp>)
+#include <magic_enum/magic_enum.hpp>
+#else
 #include <magic_enum.hpp>
+#endif
 
 #include <string>
 #include <vector>

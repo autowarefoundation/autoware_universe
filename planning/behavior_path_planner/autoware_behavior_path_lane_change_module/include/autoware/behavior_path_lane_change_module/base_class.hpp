@@ -25,7 +25,13 @@
 #include "autoware_utils/system/stop_watch.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
+
+#if __has_include(<magic_enum/magic_enum.hpp>)
+#include <magic_enum/magic_enum.hpp>
+#else
 #include <magic_enum.hpp>
+#endif
+
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
