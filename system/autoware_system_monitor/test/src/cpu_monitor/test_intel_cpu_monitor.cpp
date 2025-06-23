@@ -152,15 +152,11 @@ class CPUMonitorTestSuite : public ::testing::Test
 public:
   CPUMonitorTestSuite() : monitor_(nullptr), sub_(nullptr)
   {
-    // Get directory of executable
-    const fs::path exe_path(argv_[0]);
-    exe_dir_ = exe_path.parent_path().generic_string();
   }
 
 protected:
   std::unique_ptr<TestCPUMonitor> monitor_;
   rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr sub_;
-  std::string exe_dir_;
 
   void SetUp()
   {

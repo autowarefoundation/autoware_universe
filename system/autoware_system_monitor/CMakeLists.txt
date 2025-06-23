@@ -210,14 +210,6 @@ if(BUILD_TESTING)
     ${CPU_MONITOR_SOURCE}
   )
 
-  ament_auto_add_executable(mpstat1
-    test/src/cpu_monitor/mpstat1.cpp
-  )
-
-  ament_auto_add_executable(mpstat2
-    test/src/cpu_monitor/mpstat2.cpp
-  )
-
   target_include_directories(test_cpu_monitor
     PRIVATE "include"
   )
