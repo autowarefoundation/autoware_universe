@@ -279,7 +279,9 @@ void PlanningValidatorNode::displayStatus()
   warn(s->is_valid_latency, "planning component latency is larger than threshold!!");
   warn(s->is_valid_yaw_deviation, "planning trajectory yaw difference from ego yaw is too large!!");
   warn(s->is_valid_trajectory_shift, "planning trajectory had sudden shift!!");
-  warn(s->is_valid_intersection_collision_check, "planning trajectory leads to collision!! (objects within intersection)");
+  warn(
+    s->is_valid_intersection_collision_check,
+    "planning trajectory leads to collision!! (intersection objects)");
   warn(s->is_valid_rear_collision_check, "planning trajectory leads to collision!! (rear objects)");
 }
 
