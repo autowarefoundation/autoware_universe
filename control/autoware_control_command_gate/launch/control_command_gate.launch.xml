@@ -1,0 +1,14 @@
+<launch>
+  <arg name="config" default="$(find-pkg-share autoware_control_command_gate)/config/default.param.yaml"/>
+  <node pkg="autoware_control_command_gate" exec="control_command_gate_node">
+    <param from="$(var config)"/>
+    <remap from="~/output/control" to="/control/command/control_cmd"/>
+    <remap from="~/output/gear" to="/control/command/gear_cmd"/>
+    <remap from="~/output/turn_indicators" to="/control/command/turn_indicators_cmd"/>
+    <remap from="~/output/hazard_lights" to="/control/command/hazard_lights_cmd"/>
+    <remap from="~/inputs/main/control" to="/control/trajectory_follower/control_cmd"/>
+    <remap from="~/inputs/main/gear" to="/control/shift_decider/gear_cmd"/>
+    <remap from="~/inputs/main/hazard_lights" to="/planning/hazard_lights_cmd"/>
+    <remap from="~/inputs/main/turn_indicators" to="/planning/turn_indicators_cmd"/>
+  </node>
+</launch>

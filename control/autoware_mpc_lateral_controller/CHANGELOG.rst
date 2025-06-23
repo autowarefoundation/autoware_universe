@@ -2,7 +2,19 @@
 Changelog for package autoware_mpc_lateral_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat: change info messages to debug, and debug_throttle method (`#10757 <https://github.com/autowarefoundation/autoware_universe/issues/10757>`_)
+  change info messages to debug, and debug_throttle method
+* feat: mpc info throttle msgs (`#10687 <https://github.com/autowarefoundation/autoware_universe/issues/10687>`_)
+  add info msgs
+* Contributors: TaikiYamada4, danielsanchezaran
+
 0.45.0 (2025-05-22)
+-------------------
+
+0.44.2 (2025-06-10)
 -------------------
 
 0.44.1 (2025-05-01)
