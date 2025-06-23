@@ -392,7 +392,8 @@ VelocityPlanningResult OutOfLaneModule::plan(
   const auto filter_predicted_objects_us = stopwatch.toc("filter_predicted_objects");
 
   stopwatch.tic("calculate_time_collisions");
-  out_of_lane::calculate_objects_time_collisions(out_of_lane_data, objects.objects);
+  out_of_lane::calculate_objects_time_collisions(
+    out_of_lane_data, objects.objects, *planner_data->route_handler);
   const auto calculate_time_collisions_us = stopwatch.toc("calculate_time_collisions");
 
   stopwatch.tic("calculate_times");

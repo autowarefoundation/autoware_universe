@@ -16,8 +16,10 @@
 
 #include "types.hpp"
 
+#include <autoware/route_handler/route_handler.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 #include <rclcpp/duration.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
@@ -27,10 +29,16 @@
 
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/geometry/BoundingBox.h>
+#include <lanelet2_core/geometry/Lanelet.h>
+#include <lanelet2_core/geometry/Point.h>
+#include <lanelet2_core/geometry/Polygon.h>
 #include <lanelet2_core/primitives/BoundingBox.h>
 #include <lanelet2_core/primitives/Polygon.h>
+#include <lanelet2_routing/RoutingGraph.h>
 
 #include <algorithm>
+#include <chrono>
+#include <iostream>
 #include <iterator>
 #include <limits>
 #include <unordered_set>
@@ -55,13 +63,105 @@ void update_collision_times(
   }
 }
 
+bool at_least_one_lanelet_in_common(const lanelet::ConstLanelets & lls1, const lanelet::Ids & lls2)
+{
+  for (const auto & ll : lls1) {
+    if (std::binary_search(lls2.begin(), lls2.end(), ll.id())) {
+      return true;
+    }
+  }
+  return false;
+}
+
+lanelet::Ids get_predicted_path_lanelet_ids(
+  const autoware_perception_msgs::msg::PredictedPath & predicted_path,
+  const route_handler::RouteHandler & route_handler, const lanelet::ConstLanelet & lanelet,
+  const size_t path_idx, const bool already_entered_lanelet)
+{
+  const auto & point = predicted_path.path[path_idx].position;
+  const lanelet::BasicPoint2d search_point(point.x, point.y);
+
+  if (lanelet::geometry::within(search_point, lanelet.polygon2d().basicPolygon())) {
+    if (path_idx + 1 == predicted_path.path.size()) {  // found a full valid lanelet sequence
+      return {lanelet.id()};
+    }
+    return get_predicted_path_lanelet_ids(
+      predicted_path, route_handler, lanelet, path_idx + 1, true);
+  }
+
+  if (!already_entered_lanelet) {
+    return {};
+  }
+
+  const lanelet::ConstLanelets succeeding_lanelets =
+    route_handler.getRoutingGraphPtr()->following(lanelet);
+  lanelet::Ids possible_ids;
+  for (const auto & ll : succeeding_lanelets) {
+    if (lanelet::geometry::within(search_point, ll.polygon2d().basicPolygon())) {
+      if (path_idx + 1 == predicted_path.path.size()) {  // found a full valid lanelet sequence
+        possible_ids.push_back(ll.id());
+      } else {  // continue the search
+        const auto ids =
+          get_predicted_path_lanelet_ids(predicted_path, route_handler, ll, path_idx + 1, false);
+        if (!ids.empty()) {  // not empty means that a full path was found
+          possible_ids.push_back(ll.id());
+          possible_ids.insert(possible_ids.end(), ids.begin(), ids.end());
+        }
+      }
+    }
+  }
+  return possible_ids;
+}
+
+/**
+ * @brief Finds lanelet ids followed by a PredictedPath.
+ *
+ * @param predicted_path The predicted path of an object.
+ * @param route_handler the route handler with the lanelet map and routing graph
+ * @return the lanelet ids followed by the path
+ */
+lanelet::Ids get_predicted_path_lanelet_ids(
+  const autoware_perception_msgs::msg::PredictedPath & predicted_path,
+  const route_handler::RouteHandler & route_handler)
+{
+  lanelet::Ids followed_ids;
+
+  if (predicted_path.path.empty()) {
+    return followed_ids;
+  }
+
+  const auto & start_point = predicted_path.path.front().position;
+  const lanelet::BasicPoint2d search_point(start_point.x, start_point.y);
+  const auto initial_lanelets =
+    route_handler.getLaneletMapPtr()->laneletLayer.search({search_point, search_point});
+
+  // For each nearby lanelet, traverse the routing graph to find a sequence of
+  // succeeding lanelets that aligns with the predicted path.
+  for (const auto & start_lanelet : initial_lanelets) {
+    if (lanelet::geometry::within(search_point, start_lanelet.polygon2d().basicPolygon())) {
+      const auto ids =
+        get_predicted_path_lanelet_ids(predicted_path, route_handler, start_lanelet, 1UL, true);
+      followed_ids.insert(followed_ids.end(), ids.begin(), ids.end());
+    }
+  }
+
+  // Remove duplicate ids
+  std::sort(followed_ids.begin(), followed_ids.end());
+  followed_ids.erase(std::unique(followed_ids.begin(), followed_ids.end()), followed_ids.end());
+  return followed_ids;
+}
+
 void calculate_object_path_time_collisions(
   OutOfLaneData & out_of_lane_data,
   const autoware_perception_msgs::msg::PredictedPath & object_path,
-  const autoware_perception_msgs::msg::Shape & object_shape)
+  const autoware_perception_msgs::msg::Shape & object_shape,
+  const route_handler::RouteHandler & route_handler)
 {
   const auto time_step = rclcpp::Duration(object_path.time_step).seconds();
   auto time = 0.0;
+  autoware_utils::StopWatch<std::chrono::microseconds> sw;
+  const auto object_path_lanelet_ids = get_predicted_path_lanelet_ids(object_path, route_handler);
+  std::cout << sw.toc() << "us\n";
   for (const auto & object_pose : object_path.path) {
     const auto object_footprint = autoware_utils::to_polygon2d(object_pose, object_shape);
     std::vector<OutAreaNode> query_results;
@@ -70,7 +170,10 @@ void calculate_object_path_time_collisions(
       std::back_inserter(query_results));
     std::unordered_set<size_t> potential_collision_indexes;
     for (const auto & [_, index] : query_results) {
-      potential_collision_indexes.insert(index);
+      const auto & out_lanelets = out_of_lane_data.outside_points[index].overlapped_lanelets;
+      if (at_least_one_lanelet_in_common(out_lanelets, object_path_lanelet_ids)) {
+        potential_collision_indexes.insert(index);
+      }
     }
     update_collision_times(out_of_lane_data, potential_collision_indexes, object_footprint, time);
     time += time_step;
@@ -79,11 +182,12 @@ void calculate_object_path_time_collisions(
 
 void calculate_objects_time_collisions(
   OutOfLaneData & out_of_lane_data,
-  const std::vector<autoware_perception_msgs::msg::PredictedObject> & objects)
+  const std::vector<autoware_perception_msgs::msg::PredictedObject> & objects,
+  const route_handler::RouteHandler & route_handler)
 {
   for (const auto & object : objects) {
     for (const auto & path : object.kinematics.predicted_paths) {
-      calculate_object_path_time_collisions(out_of_lane_data, path, object.shape);
+      calculate_object_path_time_collisions(out_of_lane_data, path, object.shape, route_handler);
     }
   }
 }
