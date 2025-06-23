@@ -191,6 +191,9 @@ ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)
 
   sub_control_cmd_ = create_subscription<Control>(
     "~/input/control_cmd", 1, std::bind(&ControlValidator::on_control_cmd, this, _1));
+  sub_operational_state_ =
+    autoware_utils::InterProcessPollingSubscriber<OperationModeState>::create_subscription(
+      this, "~/input/operational_mode_state", 1);
   sub_kinematics_ =
     autoware_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry>::create_subscription(
       this, "~/input/kinematics", 1);
@@ -300,6 +303,24 @@ void ControlValidator::setup_diag()
   });
 }
 
+bool ControlValidator::infer_autonomous_control_state(const OperationModeState::ConstSharedPtr msg)
+{
+  return (msg->mode == OperationModeState::AUTONOMOUS) && (msg->is_autoware_control_enabled);
+}
+
+void ControlValidator::validation_filtering(ControlValidatorStatus & res)
+{
+  // Set all boolean status into valid state
+  res.is_valid_max_distance_deviation = true;
+  res.is_valid_acc = true;
+  res.is_rolling_back = false;
+  res.is_over_velocity = false;
+  res.is_valid_lateral_jerk = true;
+  res.has_overrun_stop_point = false;
+  res.will_overrun_stop_point = false;
+  res.is_valid_latency = true;
+}
+
 void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
 {
   stop_watch.tic();
@@ -329,6 +350,10 @@ void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
       get_logger(), *get_clock(), 1000,
       "reference_trajectory size is less than 2. Cannot validate.");
     return;
+  }
+  OperationModeState::ConstSharedPtr operation_mode_msg = sub_operational_state_->take_data();
+  if (operation_mode_msg) {
+    flag_autonomous_control_enabled_ = infer_autonomous_control_state(operation_mode_msg);
   }
   Odometry::ConstSharedPtr kinematics_msg = sub_kinematics_->take_data();
   if (!kinematics_msg) {
@@ -362,9 +387,14 @@ void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
   velocity_validator.validate(validation_status_, *reference_trajectory_msg, *kinematics_msg);
   overrun_validator.validate(validation_status_, *reference_trajectory_msg, *kinematics_msg);
 
+  if (!flag_autonomous_control_enabled_) {
+    validation_filtering(validation_status_);
+  }
+
   // post process
   validation_status_.invalid_count =
     is_all_valid(validation_status_) ? 0 : validation_status_.invalid_count + 1;
+
   diag_updater_.force_update();
 
   publish_debug_info(kinematics_msg->pose.pose);
