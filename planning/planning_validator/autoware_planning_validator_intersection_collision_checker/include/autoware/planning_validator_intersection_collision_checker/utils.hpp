@@ -44,12 +44,12 @@ void set_trajectory_lanelets(
 
 void set_right_turn_target_lanelets(
   const EgoTrajectory & ego_traj, const RouteHandler & route_handler,
-  const CollisionCheckerParams & params, CollisionCheckerLanelets & lanelets,
+  const intersection_collision_checker_node::Params & params, CollisionCheckerLanelets & lanelets,
   const double time_horizon = std::numeric_limits<double>::max());
 
 void set_left_turn_target_lanelets(
   const EgoTrajectory & ego_traj, const RouteHandler & route_handler,
-  const CollisionCheckerParams & params, CollisionCheckerLanelets & lanelets,
+  const intersection_collision_checker_node::Params & params, CollisionCheckerLanelets & lanelets,
   const double time_horizon = std::numeric_limits<double>::max());
 
 }  // namespace autoware::planning_validator::collision_checker_utils

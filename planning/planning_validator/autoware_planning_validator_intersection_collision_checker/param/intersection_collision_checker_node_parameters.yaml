@@ -1,0 +1,94 @@
+intersection_collision_checker_node:
+  icc_parameters:
+    enable:
+      type: bool
+    detection_range:
+      type: double
+      validation:
+        gt_eq<>: [0.0]
+    ttc_threshold:
+      type: double
+      validation:
+        gt_eq<>: [0.0]
+    ego_deceleration:
+      type: double
+      validation:
+        gt_eq<>: [0.0]
+    min_time_horizon:
+      type: double
+      validation:
+        gt_eq<>: [0.0]
+    on_time_buffer:
+      type: double
+      validation:
+        gt_eq<>: [0.0]
+    off_time_buffer:
+      type: double
+      validation:
+        gt_eq<>: [0.0]
+
+    right_turn:
+      enable:
+        type: bool
+      check_crossing_lanes:
+        type: bool
+      check_turning_lanes:
+        type: bool
+      crossing_lane_angle_th:
+        type: double
+        validation:
+          gt<>: [0.0]
+
+    left_turn:
+      enable:
+        type: bool
+      check_turning_lanes:
+        type: bool
+
+    pointcloud:
+      height_buffer:
+        type: double
+        validation:
+          gt_eq<>: [0.0]
+      min_height:
+        type: double
+        validation:
+          gt_eq<>: [0.0]
+      voxel_grid_filter:
+        x:
+          type: double
+          validation:
+            gt<>: [0.0]
+        y:
+          type: double
+          validation:
+            gt<>: [0.0]
+        z:
+          type: double
+          validation:
+            gt<>: [0.0]
+      clustering:
+        tolerance:
+          type: double
+          validation:
+            gt<>: [0.0]
+        min_height:
+          type: double
+          validation:
+            gt_eq<>: [0.0]
+        min_size:
+          type: int
+          validation:
+            gt<>: [0]
+        max_size:
+          type: int
+          validation:
+            gt<>: [0]
+      observation_time:
+        type: double
+        validation:
+          gt_eq<>: [0.0]
+      latency:
+        type: double
+        validation:
+          gt_eq<>: [0.0]

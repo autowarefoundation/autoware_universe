@@ -74,6 +74,8 @@ private:
 
   void publish_marker(const DebugData & debug) const;
 
+  void publish_planning_factor(const DebugData & debug) const;
+
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_voxel_pointcloud_;
 
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_cluster_pointcloud_;
