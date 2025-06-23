@@ -16,7 +16,7 @@
 #define AUTOWARE__MPC_LATERAL_CONTROLLER__MPC_UTILS_HPP_
 
 #include "rclcpp/rclcpp.hpp"
-#include "tf2/utils.h"
+#include "tf2/utils.hpp"
 
 #include <Eigen/Core>
 

@@ -19,7 +19,7 @@
 #include "autoware/path_smoother/type_alias.hpp"
 #include "autoware/path_smoother/utils/geometry_utils.hpp"
 #include "autoware/path_smoother/utils/trajectory_utils.hpp"
-#include "tf2/utils.h"
+#include "tf2/utils.hpp"
 
 #include <Eigen/Core>
 #include <Eigen/Sparse>

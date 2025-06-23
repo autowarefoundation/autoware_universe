@@ -66,6 +66,11 @@
 #include <autoware_utils/system/stop_watch.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <managed_transform_buffer/managed_transform_buffer.hpp>
+#include <message_filters/pass_through.hpp>
+#include <message_filters/subscriber.hpp>
+#include <message_filters/sync_policies/approximate_time.hpp>
+#include <message_filters/sync_policies/exact_time.hpp>
+#include <message_filters/synchronizer.hpp>
 #include <point_cloud_msg_wrapper/point_cloud_msg_wrapper.hpp>
 
 #include <autoware_internal_debug_msgs/msg/int32_stamped.hpp>
@@ -75,12 +80,6 @@
 #include <geometry_msgs/msg/twist_stamped.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
-
-#include <message_filters/pass_through.h>
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <message_filters/sync_policies/exact_time.h>
-#include <message_filters/synchronizer.h>
 
 namespace autoware::pointcloud_preprocessor
 {

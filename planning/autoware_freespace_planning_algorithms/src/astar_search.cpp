@@ -19,9 +19,8 @@
 
 #include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
-
-#include <tf2/LinearMath/Transform.h>
-#include <tf2/utils.h>
+#include <tf2/LinearMath/Transform.hpp>
+#include <tf2/utils.hpp>
 
 #include <limits>
 #include <memory>

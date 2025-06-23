@@ -21,6 +21,7 @@
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/subscription.hpp>
+#include <tf2/utils.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
@@ -31,7 +32,6 @@
 
 #include <boost/optional.hpp>
 
-#include <tf2/utils.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 

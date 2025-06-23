@@ -30,7 +30,7 @@
 
 #include <fmt/format.h>
 #include <lanelet2_core/geometry/Polygon.h>
-#include <tf2/utils.h>
+#include <tf2/utils.hpp>
 
 #include <algorithm>
 #include <memory>

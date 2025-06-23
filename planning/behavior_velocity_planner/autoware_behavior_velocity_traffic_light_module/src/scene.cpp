@@ -24,7 +24,7 @@
 #include <boost/geometry/algorithms/distance.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
 
-#include <tf2/utils.h>
+#include <tf2/utils.hpp>
 
 #include <memory>
 

@@ -21,8 +21,8 @@
 
 #include <lanelet2_core/LaneletMap.h>
 #include <lanelet2_core/primitives/Lanelet.h>
-#include <tf2/LinearMath/Transform.h>
-#include <tf2/LinearMath/Vector3.h>
+#include <tf2/LinearMath/Transform.hpp>
+#include <tf2/LinearMath/Vector3.hpp>
 
 #include <vector>
 
