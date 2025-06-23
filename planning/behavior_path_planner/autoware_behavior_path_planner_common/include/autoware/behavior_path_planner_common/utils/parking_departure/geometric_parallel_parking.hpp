@@ -18,7 +18,7 @@
 #include "autoware/behavior_path_planner_common/data_manager.hpp"
 #include "autoware/behavior_path_planner_common/parameters.hpp"
 
-#include <autoware/lane_departure_checker/lane_departure_checker.hpp>
+#include <autoware/boundary_departure_checker/boundary_departure_checker.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
@@ -82,7 +82,6 @@ public:
   bool planPullOut(
     const Pose & start_pose, const Pose & goal_pose, const lanelet::ConstLanelets & road_lanes,
     const lanelet::ConstLanelets & pull_over_lanes, const bool left_side_start,
-    const bool use_clothoid,
     const std::shared_ptr<autoware::boundary_departure_checker::BoundaryDepartureChecker>
       autoware_lane_departure_checker);
   void setParameters(const ParallelParkingParameters & parameters) { parameters_ = parameters; }

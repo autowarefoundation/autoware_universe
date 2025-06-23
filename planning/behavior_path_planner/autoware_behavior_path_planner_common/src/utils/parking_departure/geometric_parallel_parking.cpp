@@ -258,7 +258,6 @@ bool GeometricParallelParking::planPullOver(
 bool GeometricParallelParking::planPullOut(
   const Pose & start_pose, const Pose & goal_pose, const lanelet::ConstLanelets & road_lanes,
   const lanelet::ConstLanelets & pull_over_lanes, const bool left_side_start,
-  const bool use_clothoid,
   const std::shared_ptr<autoware::boundary_departure_checker::BoundaryDepartureChecker>
     lane_departure_checker)
 {
@@ -278,20 +277,12 @@ bool GeometricParallelParking::planPullOut(
 
     // plan reverse path of parking. end_pose <-> start_pose
     std::vector<PathWithLaneId> arc_paths;
-    if (use_clothoid) {
-      const double L_min = std::abs(
-        parameters_.pull_out_velocity *
-        (parameters_.pull_out_max_steer_angle / parameters_.pull_out_steer_rate_lim));
-      arc_paths = planOneTrialClothoid(
-        *end_pose, start_pose, R_E_min_, L_min, road_lanes, pull_over_lanes, is_forward,
-        left_side_start, start_pose_offset, parameters_.pull_out_lane_departure_margin,
-        parameters_.pull_out_arc_path_interval, lane_departure_checker);
-    } else {
-      arc_paths = planOneTrial(
-        *end_pose, start_pose, R_E_min_, road_lanes, pull_over_lanes, is_forward, left_side_start,
-        start_pose_offset, parameters_.pull_out_lane_departure_margin,
-        parameters_.pull_out_arc_path_interval, lane_departure_checker);
-    }
+
+    arc_paths = planOneTrial(
+      *end_pose, start_pose, R_E_min_, road_lanes, pull_over_lanes, is_forward, left_side_start,
+      start_pose_offset, parameters_.pull_out_lane_departure_margin,
+      parameters_.pull_out_arc_path_interval, lane_departure_checker);
+
     if (arc_paths.empty()) {
       // not found path
       continue;

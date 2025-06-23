@@ -37,7 +37,10 @@ public:
 
   PullOverPlannerType getPlannerType() const override
   {
-    return is_forward_ ? PullOverPlannerType::ARC_FORWARD : PullOverPlannerType::ARC_BACKWARD;
+    return use_clothoid_ ? is_forward_ ? PullOverPlannerType::CLOTHOID_FORWARD
+                                       : PullOverPlannerType::CLOTHOID_BACKWARD
+           : is_forward_ ? PullOverPlannerType::ARC_FORWARD
+                         : PullOverPlannerType::ARC_BACKWARD;
   }
   Pose getCr() const { return planner_.getCr(); }
   Pose getCl() const { return planner_.getCl(); }
