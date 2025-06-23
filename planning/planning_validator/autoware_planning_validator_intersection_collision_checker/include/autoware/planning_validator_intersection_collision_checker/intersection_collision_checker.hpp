@@ -46,6 +46,8 @@ public:
   std::string get_module_name() const override { return module_name_; };
 
 private:
+  [[nodiscard]] bool is_safe(const TargetLanelets & target_lanelets);
+
   [[nodiscard]] EgoTrajectory get_ego_trajectory() const;
 
   [[nodiscard]] Direction get_turn_direction(
@@ -79,7 +81,8 @@ private:
   intersection_collision_checker_node::Params params_;
 
   PCDObjectsMap history_;
-  std::optional<rclcpp::Time> last_invalid_time_;
+  rclcpp::Time last_invalid_time_;
+  rclcpp::Time last_valid_time_;
   SafetyFactorArray safety_factor_array_;
 };
 

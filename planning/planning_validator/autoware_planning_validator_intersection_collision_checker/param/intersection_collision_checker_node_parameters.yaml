@@ -18,7 +18,11 @@ intersection_collision_checker_node:
       type: double
       validation:
         gt_eq<>: [0.0]
-    timeout:
+    on_time_buffer:
+      type: double
+      validation:
+        gt_eq<>: [0.0]
+    off_time_buffer:
       type: double
       validation:
         gt_eq<>: [0.0]

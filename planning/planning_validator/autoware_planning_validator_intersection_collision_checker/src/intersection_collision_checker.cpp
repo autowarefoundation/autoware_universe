@@ -56,6 +56,9 @@ void IntersectionCollisionChecker::init(
   logger_ = node.get_logger();
   context_ = context;
 
+  last_valid_time_ = clock_->now();
+  last_invalid_time_ = clock_->now();
+
   param_listener_ = std::make_unique<intersection_collision_checker_node::ParamListener>(
     node.get_node_parameters_interface());
 
@@ -113,14 +116,19 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
     return skip_validation("failed to get target lanelets, skipping collision check.");
   }
 
+  context_->validation_status->is_valid_intersection_collision_check =
+    is_safe(lanelets.target_lanelets);
+}
+
+bool IntersectionCollisionChecker::is_safe(const TargetLanelets & target_lanelets)
+{
   PointCloud::Ptr filtered_pointcloud(new PointCloud);
   filter_pointcloud(context_->data->obstacle_pointcloud, filtered_pointcloud);
-  if (filtered_pointcloud->empty()) return;
+  if (filtered_pointcloud->empty()) return true;
 
   safety_factor_array_ = SafetyFactorArray{};
-  context_->validation_status->is_valid_intersection_collision_check = check_collision(
-    lanelets.target_lanelets, filtered_pointcloud,
-    context_->data->obstacle_pointcloud->header.stamp);
+  const bool is_safe = check_collision(
+    target_lanelets, filtered_pointcloud, context_->data->obstacle_pointcloud->header.stamp);
 
   const auto & ego_pose = context_->data->current_kinematics->pose.pose;
   const auto & traj_points = context_->data->current_trajectory->points;
@@ -133,22 +141,23 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
     planning_factor_interface_->publish();
   };
 
-  if (!context_->validation_status->is_valid_intersection_collision_check) {
-    last_invalid_time_ = context_->data->obstacle_pointcloud->header.stamp;
-    publish_planning_factor();
-    return;
+  const auto & p = params_.icc_parameters;
+  const auto now = clock_->now();
+
+  if (is_safe) {
+    last_valid_time_ = now;
+    if ((now - last_invalid_time_).seconds() > p.off_time_buffer) {
+      return true;
+    }
+  } else {
+    last_invalid_time_ = now;
+    if ((now - last_valid_time_).seconds() < p.on_time_buffer) {
+      return true;
+    }
   }
 
-  if (!last_invalid_time_) return;
-
-  const auto time_since_last_invalid = (clock_->now() - *last_invalid_time_).seconds();
-  if (time_since_last_invalid < p.timeout) {
-    context_->validation_status->is_valid_intersection_collision_check = false;
-    publish_planning_factor();
-    return;
-  }
-
-  last_invalid_time_.reset();
+  publish_planning_factor();
+  return false;
 }
 
 EgoTrajectory IntersectionCollisionChecker::get_ego_trajectory() const
