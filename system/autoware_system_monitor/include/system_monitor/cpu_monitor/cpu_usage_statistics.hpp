@@ -79,6 +79,14 @@ public:
 
 private:
   /**
+   * @brief Delete the default constructors and assignemt operators
+   */
+  CpuUsageStatistics(const CpuUsageStatistics &) = delete;
+  CpuUsageStatistics(const CpuUsageStatistics &&) = delete;
+  CpuUsageStatistics operator=(const CpuUsageStatistics &) = delete;
+  CpuUsageStatistics operator=(const CpuUsageStatistics &&) = delete;
+
+  /**
    * @brief Swap the current and previous statistics
    */
   void swap_statistics();
@@ -134,3 +142,4 @@ private:
 };
 
 #endif  // SYSTEM_MONITOR__CPU_MONITOR__CPU_USAGE_STATISTICS_HPP_
+
