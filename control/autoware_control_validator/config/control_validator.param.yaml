@@ -20,6 +20,7 @@
       assumed_limit_acc: 5.0
       assumed_delay_time: 0.2
       nominal_latency: 0.01
+      yaw_deviation: 1.0
 
     acc_lpf_gain: 0.97 # Time constant 1.11s
     vel_lpf_gain: 0.9 # Time constant 0.33
