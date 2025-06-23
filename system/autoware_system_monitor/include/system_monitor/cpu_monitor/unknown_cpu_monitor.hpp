@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020,2025 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,10 +29,16 @@ class CPUMonitor : public CPUMonitorBase
 public:
   /**
    * @brief constructor
-   * @param [in] node_name Name of the node.
    * @param [in] options Options associated with this node.
    */
   explicit CPUMonitor(const rclcpp::NodeOptions & options);
+
+  /**
+   * @brief constructor with node_name argument, required by TestCPUMonitor
+   * @param [in] node_name The name of the node instance.
+   * @param [in] options   Options associated with this node.
+   */
+  CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options);
 };
 
 #endif  // SYSTEM_MONITOR__CPU_MONITOR__UNKNOWN_CPU_MONITOR_HPP_

@@ -1,4 +1,4 @@
-// Copyright 2020 Autoware Foundation
+// Copyright 2020,2025 Autoware Foundation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,19 +28,31 @@ CPUMonitor::CPUMonitor(const rclcpp::NodeOptions & options) : CPUMonitorBase("cp
 {
 }
 
-void CPUMonitor::checkThrottling(diagnostic_updater::DiagnosticStatusWrapper & /* stat */)
+CPUMonitor::CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
+: CPUMonitorBase(node_name, options)
+{
+}
+
+void CPUMonitor::checkThermalThrottling()
 {
   // TODO(Fumihito Ito): implement me
 }
 
-void CPUMonitor::getTempNames()
+void CPUMonitor::updateThermalThrottlingImpl(
+  diagnostic_updater::DiagnosticStatusWrapper & /* stat */)
+{
+  // TODO(Fumihito Ito): implement me
+}
+
+// This function is called from a locked context in the timer callback.
+void CPUMonitor::getTemperatureFileNames()
 {
   // Jetson TX1 TX2 Nano: thermal_zone1, Xavier: thermal_zone0
-  std::vector<thermal_zone> therms;
-  SystemMonitorUtility::getThermalZone("CPU-therm", &therms);
+  std::vector<thermal_zone> thermal_zones;
+  SystemMonitorUtility::getThermalZone("CPU-therm", &thermal_zones);
 
-  for (auto itr = therms.begin(); itr != therms.end(); ++itr) {
-    temps_.emplace_back(itr->label_, itr->path_);
+  for (const auto & zone : thermal_zones) {
+    temperatures_.emplace_back(zone.label_, zone.path_);
   }
 }
 

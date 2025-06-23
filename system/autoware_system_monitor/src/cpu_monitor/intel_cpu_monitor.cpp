@@ -1,4 +1,4 @@
-// Copyright 2020 Autoware Foundation
+// Copyright 2020,2025 Autoware Foundation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,21 +40,28 @@ namespace fs = boost::filesystem;
 CPUMonitor::CPUMonitor(const rclcpp::NodeOptions & options) : CPUMonitorBase("cpu_monitor", options)
 {
   msr_reader_port_ = declare_parameter<int>("msr_reader_port", 7634);
-
-  this->getTempNames();
-  this->getFreqNames();
 }
 
-void CPUMonitor::checkThrottling(diagnostic_updater::DiagnosticStatusWrapper & stat)
+CPUMonitor::CPUMonitor(const std::string & node_name, const rclcpp::NodeOptions & options)
+: CPUMonitorBase(node_name, options)
+{
+  msr_reader_port_ = declare_parameter<int>("msr_reader_port", 7634);
+}
+
+void CPUMonitor::checkThermalThrottling()
 {
   // Remember start time to measure elapsed time
-  const auto t_start = SystemMonitorUtility::startMeasurement();
+  const auto t_start = std::chrono::high_resolution_clock::now();
 
   // Create a new socket
   int sock = socket(AF_INET, SOCK_STREAM, 0);
   if (sock < 0) {
-    stat.summary(DiagStatus::ERROR, "socket error");
-    stat.add("socket", strerror(errno));
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
+    thermal_throttling_data_.clear();
+    thermal_throttling_data_.summary_status = DiagStatus::ERROR;
+    thermal_throttling_data_.summary_message = "socket error";
+    thermal_throttling_data_.error_key = "socket";
+    thermal_throttling_data_.error_value = strerror(errno);
     return;
   }
 
@@ -64,8 +71,12 @@ void CPUMonitor::checkThrottling(diagnostic_updater::DiagnosticStatusWrapper & s
   tv.tv_usec = 0;
   int ret = setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
   if (ret < 0) {
-    stat.summary(DiagStatus::ERROR, "setsockopt error");
-    stat.add("setsockopt", strerror(errno));
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
+    thermal_throttling_data_.clear();
+    thermal_throttling_data_.summary_status = DiagStatus::ERROR;
+    thermal_throttling_data_.summary_message = "setsockopt error";
+    thermal_throttling_data_.error_key = "setsockopt";
+    thermal_throttling_data_.error_value = strerror(errno);
     close(sock);
     return;
   }
@@ -79,8 +90,12 @@ void CPUMonitor::checkThrottling(diagnostic_updater::DiagnosticStatusWrapper & s
   // cppcheck-suppress cstyleCast
   ret = connect(sock, (struct sockaddr *)&addr, sizeof(addr));
   if (ret < 0) {
-    stat.summary(DiagStatus::ERROR, "connect error");
-    stat.add("connect", strerror(errno));
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
+    thermal_throttling_data_.clear();
+    thermal_throttling_data_.summary_status = DiagStatus::ERROR;
+    thermal_throttling_data_.summary_message = "connect error";
+    thermal_throttling_data_.error_key = "connect";
+    thermal_throttling_data_.error_value = strerror(errno);
     close(sock);
     return;
   }
@@ -89,15 +104,23 @@ void CPUMonitor::checkThrottling(diagnostic_updater::DiagnosticStatusWrapper & s
   char buf[1024] = "";
   ret = recv(sock, buf, sizeof(buf) - 1, 0);
   if (ret < 0) {
-    stat.summary(DiagStatus::ERROR, "recv error");
-    stat.add("recv", strerror(errno));
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
+    thermal_throttling_data_.clear();
+    thermal_throttling_data_.summary_status = DiagStatus::ERROR;
+    thermal_throttling_data_.summary_message = "recv error";
+    thermal_throttling_data_.error_key = "recv";
+    thermal_throttling_data_.error_value = strerror(errno);
     close(sock);
     return;
   }
   // No data received
   if (ret == 0) {
-    stat.summary(DiagStatus::ERROR, "recv error");
-    stat.add("recv", "No data received");
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
+    thermal_throttling_data_.clear();
+    thermal_throttling_data_.summary_status = DiagStatus::ERROR;
+    thermal_throttling_data_.summary_message = "recv error";
+    thermal_throttling_data_.error_key = "recv";
+    thermal_throttling_data_.error_value = "No data received";
     close(sock);
     return;
   }
@@ -105,8 +128,12 @@ void CPUMonitor::checkThrottling(diagnostic_updater::DiagnosticStatusWrapper & s
   // Close the file descriptor FD
   ret = close(sock);
   if (ret < 0) {
-    stat.summary(DiagStatus::ERROR, "close error");
-    stat.add("close", strerror(errno));
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
+    thermal_throttling_data_.clear();
+    thermal_throttling_data_.summary_status = DiagStatus::ERROR;
+    thermal_throttling_data_.summary_message = "close error";
+    thermal_throttling_data_.error_key = "close";
+    thermal_throttling_data_.error_value = strerror(errno);
     return;
   }
 
@@ -118,21 +145,31 @@ void CPUMonitor::checkThrottling(diagnostic_updater::DiagnosticStatusWrapper & s
     boost::archive::text_iarchive oa(iss);
     oa >> info;
   } catch (const std::exception & e) {
-    stat.summary(DiagStatus::ERROR, "recv error");
-    stat.add("recv", e.what());
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
+    thermal_throttling_data_.clear();
+    thermal_throttling_data_.summary_status = DiagStatus::ERROR;
+    thermal_throttling_data_.summary_message = "recv error";
+    thermal_throttling_data_.error_key = "recv";
+    thermal_throttling_data_.error_value = e.what();
     return;
   }
 
   // msr_reader returns an error
   if (info.error_code_ != 0) {
-    stat.summary(DiagStatus::ERROR, "msr_reader error");
-    stat.add("msr_reader", strerror(info.error_code_));
+    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
+    thermal_throttling_data_.clear();
+    thermal_throttling_data_.summary_status = DiagStatus::ERROR;
+    thermal_throttling_data_.summary_message = "msr_reader error";
+    thermal_throttling_data_.error_key = "msr_reader";
+    thermal_throttling_data_.error_value = strerror(info.error_code_);
     return;
   }
 
   int whole_level = DiagStatus::OK;
   int index = 0;
 
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
+  thermal_throttling_data_.clear();
   for (auto itr = info.pkg_thermal_status_.begin(); itr != info.pkg_thermal_status_.end();
        ++itr, ++index) {
     int level = DiagStatus::OK;
@@ -140,18 +177,41 @@ void CPUMonitor::checkThrottling(diagnostic_updater::DiagnosticStatusWrapper & s
       level = DiagStatus::ERROR;
     }
 
-    stat.add(fmt::format("CPU {}: Pkg Thermal Status", index), thermal_dict_.at(level));
+    thermal_throttling_data_.core_data.emplace_back(
+      fmt::format("CPU {}: Pkg Thermal Status", index), thermal_dictionary_.at(level));
 
     whole_level = std::max(whole_level, level);
   }
 
-  stat.summary(whole_level, thermal_dict_.at(whole_level));
+  thermal_throttling_data_.summary_status = whole_level;
+  thermal_throttling_data_.summary_message = thermal_dictionary_.at(whole_level);
 
-  // Measure elapsed time since start time and report
-  SystemMonitorUtility::stopMeasurement(t_start, stat);
+  // Measure elapsed time since start time.
+  const auto t_end = std::chrono::high_resolution_clock::now();
+  const float elapsed_ms = std::chrono::duration<float, std::milli>(t_end - t_start).count();
+  thermal_throttling_data_.elapsed_ms = elapsed_ms;
 }
 
-void CPUMonitor::getTempNames()
+void CPUMonitor::updateThermalThrottlingImpl(diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
+
+  if (!thermal_throttling_data_.error_key.empty()) {
+    stat.summary(thermal_throttling_data_.summary_status, thermal_throttling_data_.summary_message);
+    stat.add(thermal_throttling_data_.error_key, thermal_throttling_data_.error_value);
+    return;
+  }
+
+  for (const auto & core_data : thermal_throttling_data_.core_data) {
+    stat.add(core_data.first, core_data.second);
+  }
+
+  stat.summary(thermal_throttling_data_.summary_status, thermal_throttling_data_.summary_message);
+  stat.addf("execution time", "%f ms", thermal_throttling_data_.elapsed_ms);
+}
+
+// This function is called from a locked context in the timer callback.
+void CPUMonitor::getTemperatureFileNames()
 {
   const fs::path root("/sys/devices/platform/coretemp.0");
 
@@ -166,43 +226,46 @@ void CPUMonitor::getTempNames()
     }
 
     std::cmatch match;
-    const std::string temp_input = path.generic_string();
+    const std::string temperature_input = path.generic_string();
 
     // /sys/devices/platform/coretemp.0/hwmon/hwmon[0-9]/temp[0-9]_input ?
-    if (!std::regex_match(temp_input.c_str(), match, std::regex(".*temp(\\d+)_input"))) {
+    if (!std::regex_match(temperature_input.c_str(), match, std::regex(".*temp(\\d+)_input"))) {
       continue;
     }
 
-    cpu_temp_info temp;
-    temp.path_ = temp_input;
-    temp.label_ = path.filename().generic_string();
+    CpuTemperatureInfo temperature;
+    temperature.path_ = temperature_input;
+    temperature.label_ = path.filename().generic_string();
 
-    std::string label = boost::algorithm::replace_all_copy(temp_input, "input", "label");
+    std::string label = boost::algorithm::replace_all_copy(temperature_input, "input", "label");
     const fs::path label_path(label);
     fs::ifstream ifs(label_path, std::ios::in);
+    // If the label file exists, read the label from the file.
     if (ifs) {
       std::string line;
       if (std::getline(ifs, line)) {
-        temp.label_ = line;
+        temperature.label_ = line;
       }
+      ifs.close();
     }
-    ifs.close();
-    temps_.push_back(temp);
+    temperatures_.push_back(temperature);
   }
 
-  std::sort(temps_.begin(), temps_.end(), [](const cpu_temp_info & c1, const cpu_temp_info & c2) {
-    std::smatch match;
-    const std::regex filter(".*temp(\\d+)_input");
-    int n1 = 0;
-    int n2 = 0;
-    if (std::regex_match(c1.path_, match, filter)) {
-      n1 = std::stoi(match[1].str());
-    }
-    if (std::regex_match(c2.path_, match, filter)) {
-      n2 = std::stoi(match[1].str());
-    }
-    return n1 < n2;
-  });  // NOLINT
+  std::sort(
+    temperatures_.begin(), temperatures_.end(),
+    [](const CpuTemperatureInfo & c1, const CpuTemperatureInfo & c2) {
+      std::smatch match;
+      const std::regex filter(".*temp(\\d+)_input");
+      int n1 = 0;
+      int n2 = 0;
+      if (std::regex_match(c1.path_, match, filter)) {
+        n1 = std::stoi(match[1].str());
+      }
+      if (std::regex_match(c2.path_, match, filter)) {
+        n2 = std::stoi(match[1].str());
+      }
+      return n1 < n2;
+    });  // NOLINT
 }
 
 #include <rclcpp_components/register_node_macro.hpp>
