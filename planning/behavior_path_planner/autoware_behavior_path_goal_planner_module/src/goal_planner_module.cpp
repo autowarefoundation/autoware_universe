@@ -1827,7 +1827,8 @@ PathWithLaneId GoalPlannerModule::generateStopPath(
     const double s_start = std::max(0.0, s_current - common_parameters.backward_path_length);
     const bool is_arc_backward =
       pull_over_path_opt.has_value() &&
-      pull_over_path_opt.value().type() == PullOverPlannerType::ARC_BACKWARD;
+      (pull_over_path_opt.value().type() == PullOverPlannerType::ARC_BACKWARD ||
+       pull_over_path_opt.value().type() == PullOverPlannerType::CLOTHOID_BACKWARD);
     const Pose path_end_pose =
       is_arc_backward ? pull_over_path_opt.value().start_pose() : route_handler->getGoalPose();
     const double s_end = std::clamp(
