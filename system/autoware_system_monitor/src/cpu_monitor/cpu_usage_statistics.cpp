@@ -87,29 +87,31 @@ void CpuUsageStatistics::update_cpu_statistics()
   }
 
   // Process each CPU's statistics
-  for (const auto & core_info : current_statistics_) {
-    const std::string & cpu_name = core_info.name;
-    const CpuStatistics & stats = core_info;
+  for (const CpuStatistics & current_data : current_statistics_) {
+    const std::string & cpu_name = current_data.name;
 
-    // Skip if we don't have previous stats for this CPU
-    auto prev_iter =
+    // Skip if we don't have previous statistics data for this CPU (not expected)
+    auto iterator =
       std::find_if(previous_statistics_.begin(), previous_statistics_.end(),
         [cpu_name](const CpuStatistics & statistics) { return statistics.name == cpu_name; });
-    if (prev_iter == previous_statistics_.end()) {
+    if (iterator == previous_statistics_.end()) {
       continue;
     }
+    const CpuStatistics previous_data = *iterator;
 
-    // Calculate deltas
-    uint64_t user_delta = stats.user - prev_iter->user;
-    uint64_t nice_delta = stats.nice - prev_iter->nice;
-    uint64_t system_delta = stats.system - prev_iter->system;
-    uint64_t idle_delta = stats.idle - prev_iter->idle;
-    uint64_t iowait_delta = stats.iowait - prev_iter->iowait;
-    uint64_t irq_delta = stats.irq - prev_iter->irq;
-    uint64_t softirq_delta = stats.softirq - prev_iter->softirq;
-    uint64_t steal_delta = stats.steal - prev_iter->steal;
-    uint64_t guest_delta = stats.guest - prev_iter->guest;
-    uint64_t guest_nice_delta = stats.guest_nice - prev_iter->guest_nice;
+    // Calculate deltas : Can be huge values, but never be negative values.
+    // clang-format off
+    uint64_t user_delta       = current_data.user       - previous_data.user;
+    uint64_t nice_delta       = current_data.nice       - previous_data.nice;
+    uint64_t system_delta     = current_data.system     - previous_data.system;
+    uint64_t idle_delta       = current_data.idle       - previous_data.idle;
+    uint64_t iowait_delta     = current_data.iowait     - previous_data.iowait;
+    uint64_t irq_delta        = current_data.irq        - previous_data.irq;
+    uint64_t softirq_delta    = current_data.softirq    - previous_data.softirq;
+    uint64_t steal_delta      = current_data.steal      - previous_data.steal;
+    uint64_t guest_delta      = current_data.guest      - previous_data.guest;
+    uint64_t guest_nice_delta = current_data.guest_nice - previous_data.guest_nice;
+    // clang-format on
 
     // Calculate total time delta
     uint64_t total_delta = user_delta + nice_delta + system_delta +
