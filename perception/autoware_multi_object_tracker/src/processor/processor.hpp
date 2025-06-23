@@ -18,6 +18,7 @@
 #include "autoware/multi_object_tracker/association/association.hpp"
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
+#include "autoware/multi_object_tracker/tracker/util/adaptive_threshold_cache.hpp"
 
 #include <autoware_utils/system/time_keeper.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -28,6 +29,7 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -55,7 +57,7 @@ public:
 
   const std::list<std::shared_ptr<Tracker>> & getListTracker() const { return list_tracker_; }
   // tracker processes
-  void predict(const rclcpp::Time & time);
+  void predict(const rclcpp::Time & time, const std::optional<geometry_msgs::msg::Pose> & ego_pose);
   void associate(
     const types::DynamicObjectList & detected_objects,
     std::unordered_map<int, int> & direct_assignment,
@@ -75,8 +77,6 @@ public:
   void getTentativeObjects(
     const rclcpp::Time & time,
     autoware_perception_msgs::msg::TrackedObjects & tentative_objects) const;
-
-  void getExistenceProbabilities(std::vector<std::vector<float>> & existence_vectors) const;
 
   void setTimeKeeper(std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_ptr);
 
@@ -98,6 +98,8 @@ private:
     const types::DynamicObject & object, const rclcpp::Time & time) const;
 
   std::shared_ptr<autoware_utils::TimeKeeper> time_keeper_;
+  std::optional<geometry_msgs::msg::Pose> ego_pose_;
+  AdaptiveThresholdCache adaptive_threshold_cache_;
 };
 
 }  // namespace autoware::multi_object_tracker

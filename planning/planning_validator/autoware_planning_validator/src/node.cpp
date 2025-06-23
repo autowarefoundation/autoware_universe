@@ -152,7 +152,7 @@ bool PlanningValidatorNode::isAllValid(const PlanningValidatorStatus & s) const
          s.is_valid_velocity_deviation && s.is_valid_distance_deviation &&
          s.is_valid_longitudinal_distance_deviation && s.is_valid_forward_trajectory_length &&
          s.is_valid_latency && s.is_valid_yaw_deviation && s.is_valid_trajectory_shift &&
-         s.is_valid_collision_check;
+         s.is_valid_collision_check && s.is_valid_rear_collision_check;
 }
 
 void PlanningValidatorNode::publishTrajectory()
@@ -280,6 +280,7 @@ void PlanningValidatorNode::displayStatus()
   warn(s->is_valid_yaw_deviation, "planning trajectory yaw difference from ego yaw is too large!!");
   warn(s->is_valid_trajectory_shift, "planning trajectory had sudden shift!!");
   warn(s->is_valid_collision_check, "planning trajectory leads to collision!!");
+  warn(s->is_valid_rear_collision_check, "planning trajectory leads to collision!! (rear objects)");
 }
 
 }  // namespace autoware::planning_validator

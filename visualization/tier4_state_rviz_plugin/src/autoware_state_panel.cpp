@@ -558,6 +558,7 @@ void AutowareStatePanel::onRoute(const RouteState::ConstSharedPtr msg)
     default:
       state = None;
       bgColor = QColor(autoware::state_rviz_plugin::colors::default_colors.info.c_str());
+      route_state = QString("Routing | Unknown(%1)").arg(msg->state);
       break;
   }
 
@@ -610,6 +611,7 @@ void AutowareStatePanel::onLocalization(const LocalizationInitializationState::C
     default:
       state = None;
       bgColor = QColor(autoware::state_rviz_plugin::colors::default_colors.info.c_str());
+      localization_state = QString("Localization | Unknown(%1)").arg(msg->state);
       break;
   }
 
@@ -656,6 +658,7 @@ void AutowareStatePanel::onMotion(const MotionState::ConstSharedPtr msg)
     default:
       state = Danger;
       bgColor = QColor(autoware::state_rviz_plugin::colors::default_colors.info.c_str());
+      motion_state = QString("Motion | Unknown(%1)").arg(msg->state);
       break;
   }
 
@@ -714,7 +717,7 @@ void AutowareStatePanel::onMRMState(const MRMState::ConstSharedPtr msg)
     default:
       state = None;
       bgColor = QColor(autoware::state_rviz_plugin::colors::default_colors.info.c_str());
-      mrm_state = "MRM State | Unknown";
+      mrm_state = QString("MRM State | Unknown(%1)").arg(msg->state);
       break;
   }
 
@@ -758,7 +761,7 @@ void AutowareStatePanel::onMRMState(const MRMState::ConstSharedPtr msg)
       default:
         behavior_state = Crash;
         behavior_bgColor = QColor(autoware::state_rviz_plugin::colors::default_colors.info.c_str());
-        mrm_behavior = "MRM Behavior | Unknown";
+        mrm_behavior = QString("MRM Behavior | Unknown(%1)").arg(msg->behavior);
         break;
     }
 

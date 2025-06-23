@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/* *INDENT-OFF* */
 #ifndef AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_CONCATENATE_DATA__CUDA_CONCATENATE_AND_TIME_SYNC_NODE_HPP_
 #define AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_CONCATENATE_DATA__CUDA_CONCATENATE_AND_TIME_SYNC_NODE_HPP_
 
@@ -44,4 +43,3 @@ public:
 }  // namespace autoware::cuda_pointcloud_preprocessor
 
 #endif  // AUTOWARE__CUDA_POINTCLOUD_PREPROCESSOR__CUDA_CONCATENATE_DATA__CUDA_CONCATENATE_AND_TIME_SYNC_NODE_HPP_
-/* *INDENT-ON* */

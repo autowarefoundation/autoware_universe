@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_topic_relay_controller</name>
-  <version>0.45.0</version>
+  <version>0.46.0</version>
   <description>The topic_relay_controller ROS 2 package</description>
   <maintainer email="makoto.kurihara@tier4.jp">Makoto Kurihara</maintainer>
   <maintainer email="tetsuhiro.kawaguchi@tier4.jp">Tetsuhiro Kawaguchi</maintainer>

@@ -2,7 +2,16 @@
 Changelog for package autoware_pure_pursuit
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* refactor(pure_pursuit): rework parameters (`#8196 <https://github.com/autowarefoundation/autoware_universe/issues/8196>`_)
+* Contributors: Batuhan Beytekin, TaikiYamada4
+
 0.45.0 (2025-05-22)
+-------------------
+
+0.44.2 (2025-06-10)
 -------------------
 
 0.44.1 (2025-05-01)
