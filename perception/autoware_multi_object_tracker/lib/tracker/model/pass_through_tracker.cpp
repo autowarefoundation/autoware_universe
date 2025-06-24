@@ -72,7 +72,8 @@ bool PassThroughTracker::measure(
 }
 
 bool PassThroughTracker::getTrackedObject(
-  const rclcpp::Time & time, types::DynamicObject & object) const
+  const rclcpp::Time & time, types::DynamicObject & object,
+  [[maybe_unused]] const bool to_publish) const
 {
   using autoware_utils::xyzrpy_covariance_index::XYZRPY_COV_IDX;
   object = object_;
