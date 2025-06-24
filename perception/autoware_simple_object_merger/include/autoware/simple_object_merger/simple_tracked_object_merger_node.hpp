@@ -51,7 +51,7 @@ private:
   void approximateMerger(
     const TrackedObjects::ConstSharedPtr & object_msg0,
     const TrackedObjects::ConstSharedPtr & object_msg1) override;
-  void onTimer();
+  void onTimer() override;
 
   void mapUUID(TrackedObject & object, const int & node_id);
   void cleanupUUIDMap();

@@ -36,7 +36,7 @@ private:
     const DetectedObjects::ConstSharedPtr & object_msg0,
     const DetectedObjects::ConstSharedPtr & object_msg1) override;
 
-  void onTimer();
+  void onTimer() override;
 };
 
 }  // namespace autoware::simple_object_merger
