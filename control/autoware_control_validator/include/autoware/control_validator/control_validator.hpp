@@ -199,6 +199,28 @@ private:
 };
 
 /**
+ * @class YawValidator
+ * @brief Calculate whether the vehicle orientation deviated from the trajectory
+ */
+class YawValidator
+{
+public:
+  explicit YawValidator(rclcpp::Node & node)
+  : yaw_deviation_error_th_{get_or_declare_parameter<double>(
+      node, "thresholds.yaw_deviation_error")},
+    yaw_deviation_warn_th_{
+      get_or_declare_parameter<double>(node, "thresholds.yaw_deviation_warn")} {};
+
+  void validate(
+    ControlValidatorStatus & res, const Trajectory & reference_trajectory,
+    const Odometry & kinematics) const;
+
+private:
+  const double yaw_deviation_error_th_;
+  const double yaw_deviation_warn_th_;
+};
+
+/**
  * @class ControlValidator
  * @brief Validates control commands by comparing predicted trajectories against reference
  * trajectories.
@@ -289,6 +311,7 @@ private:
   AccelerationValidator acceleration_validator{*this};
   VelocityValidator velocity_validator{*this};
   OverrunValidator overrun_validator{*this};
+  YawValidator yaw_validator{*this};
 };
 }  // namespace autoware::control_validator
 
