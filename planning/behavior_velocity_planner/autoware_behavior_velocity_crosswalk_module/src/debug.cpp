@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -188,6 +188,25 @@ visualization_msgs::msg::MarkerArray createCrosswalkMarkers(
       "map", now, "crosswalk_origin", uid, Marker::SPHERE, create_marker_scale(0.25, 0.25, 0.25),
       create_marker_color(1.0, 1.0, 1.0, 0.5));
     marker.pose.position = debug_data.crosswalk_origin;
+    msg.markers.push_back(marker);
+  }
+
+  // parked vehicles stop
+  {
+    const auto color = debug_data.parked_vehicles_stop_already_stopped
+                         ? create_marker_color(1.0, 1.0, 1.0, 0.5)
+                         : create_marker_color(1.0, 0.0, 0.0, 0.5);
+    auto marker = create_default_marker(
+      "map", now, "parked_vehicles_stop_search_area", uid, Marker::LINE_STRIP,
+      create_marker_scale(0.25, 0.25, 0.0), color);
+    marker.lifetime.sec = 0.0;
+    marker.lifetime.nanosec = 0.0;
+    for (const auto & p : debug_data.parked_vehicles_stop_search_area) {
+      marker.points.push_back(create_point(p.x(), p.y(), 0.0));
+    }
+    if (!marker.points.empty()) {
+      marker.points.push_back(marker.points.front());
+    }
     msg.markers.push_back(marker);
   }
 

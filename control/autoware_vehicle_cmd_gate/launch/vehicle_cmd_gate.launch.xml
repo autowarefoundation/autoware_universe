@@ -21,6 +21,7 @@
     <remap from="input/gate_mode" to="/control/gate_mode_cmd"/>
 
     <remap from="input/emergency/control_cmd" to="/system/emergency/control_cmd"/>
+    <remap from="input/emergency/turn_indicators_cmd" to="/system/emergency/turn_indicators_cmd"/>
     <remap from="input/emergency/hazard_lights_cmd" to="/system/emergency/hazard_lights_cmd"/>
     <remap from="input/emergency/gear_cmd" to="/system/emergency/gear_cmd"/>
     <remap from="input/mrm_state" to="/system/fail_safe/mrm_state"/>

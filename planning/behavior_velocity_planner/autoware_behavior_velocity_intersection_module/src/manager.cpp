@@ -286,12 +286,19 @@ IntersectionModuleManager::IntersectionModuleManager(rclcpp::Node & node)
       get_or_declare_parameter<double>(node, ns + ".occlusion.occlusion_detection_hold_time");
     ip.occlusion.temporal_stop_time_before_peeking =
       get_or_declare_parameter<double>(node, ns + ".occlusion.temporal_stop_time_before_peeking");
-    ip.occlusion.temporal_stop_before_attention_area =
-      get_or_declare_parameter<bool>(node, ns + ".occlusion.temporal_stop_before_attention_area");
     ip.occlusion.creep_velocity_without_traffic_light = get_or_declare_parameter<double>(
       node, ns + ".occlusion.creep_velocity_without_traffic_light");
     ip.occlusion.static_occlusion_with_traffic_light_timeout = get_or_declare_parameter<double>(
       node, ns + ".occlusion.static_occlusion_with_traffic_light_timeout");
+  }
+
+  {
+    ip.conservative_merging.enable_yield =
+      get_or_declare_parameter<bool>(node, ns + ".conservative_merging.enable_yield");
+    ip.conservative_merging.minimum_lateral_distance_threshold = get_or_declare_parameter<double>(
+      node, ns + ".conservative_merging.minimum_lateral_distance_threshold");
+    ip.conservative_merging.merging_judge_angle_threshold = get_or_declare_parameter<double>(
+      node, ns + ".conservative_merging.merging_judge_angle_threshold");
   }
 
   ip.debug.ttc = get_or_declare_parameter<std::vector<int64_t>>(node, ns + ".debug.ttc");

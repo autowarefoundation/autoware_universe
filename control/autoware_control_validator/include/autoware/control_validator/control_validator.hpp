@@ -90,6 +90,29 @@ private:
 };
 
 /**
+ * @class LateralJerkValidator
+ * @brief Validates lateral jerk is not too high.
+ */
+class LateralJerkValidator
+{
+public:
+  explicit LateralJerkValidator(rclcpp::Node & node)
+  : lateral_jerk_threshold_{get_or_declare_parameter<double>(node, "thresholds.lateral_jerk")},
+    logger_{node.get_logger()},
+    measured_vel_lpf{get_or_declare_parameter<double>(node, "vel_lpf_gain")} {};
+
+  void validate(
+    ControlValidatorStatus & res, const Odometry & kinematic_state, const Control & control_cmd,
+    const double wheel_base);
+
+private:
+  double lateral_jerk_threshold_{};  // m/s^3
+  rclcpp::Logger logger_;
+  std::unique_ptr<Control> prev_control_cmd_{};
+  autoware::signal_processing::LowpassFilter1d measured_vel_lpf;
+};
+
+/**
  * @class AccelerationValidator
  * @brief Validates deviation between output acceleration and measured acceleration.
  */
@@ -173,6 +196,28 @@ private:
   const double assumed_limit_acc;
   const double assumed_delay_time;
   autoware::signal_processing::LowpassFilter1d vehicle_vel_lpf;
+};
+
+/**
+ * @class YawValidator
+ * @brief Calculate whether the vehicle orientation deviated from the trajectory
+ */
+class YawValidator
+{
+public:
+  explicit YawValidator(rclcpp::Node & node)
+  : yaw_deviation_error_th_{get_or_declare_parameter<double>(
+      node, "thresholds.yaw_deviation_error")},
+    yaw_deviation_warn_th_{
+      get_or_declare_parameter<double>(node, "thresholds.yaw_deviation_warn")} {};
+
+  void validate(
+    ControlValidatorStatus & res, const Trajectory & reference_trajectory,
+    const Odometry & kinematics) const;
+
+private:
+  const double yaw_deviation_error_th_;
+  const double yaw_deviation_warn_th_;
 };
 
 /**
@@ -261,10 +306,12 @@ private:
 
   // individual validators
   LatencyValidator latency_validator{*this};
+  LateralJerkValidator lateral_jerk_validator{*this};
   TrajectoryValidator trajectory_validator{*this};
   AccelerationValidator acceleration_validator{*this};
   VelocityValidator velocity_validator{*this};
   OverrunValidator overrun_validator{*this};
+  YawValidator yaw_validator{*this};
 };
 }  // namespace autoware::control_validator
 

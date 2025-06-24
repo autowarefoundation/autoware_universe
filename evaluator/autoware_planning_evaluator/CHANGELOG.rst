@@ -2,6 +2,33 @@
 Changelog for package autoware_planning_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat!: remove obstacle_stop_planner and obstacle_cruise_planner (`#10695 <https://github.com/autowarefoundation/autoware_universe/issues/10695>`_)
+  * feat: remove obstacle_stop_planner and obstacle_cruise_planner
+  * update
+  * fix
+  ---------
+* fix(planning_evaluator): fix bug of abnormal_stop metric, and turn its threshold (`#10628 <https://github.com/autowarefoundation/autoware_universe/issues/10628>`_)
+  * fix bug
+  * change threeshold
+  * update abnormal_deceleration_threshold_mps2
+  * change back threshold
+  * add takeuchi san as maintainer
+  * rename func
+  ---------
+* Contributors: Kem (TiankuiXian), TaikiYamada4, Takayuki Murooka
+
+0.45.0 (2025-05-22)
+-------------------
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
 0.44.0 (2025-04-18)
 -------------------
 * Merge remote-tracking branch 'origin/main' into humble

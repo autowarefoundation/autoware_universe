@@ -173,10 +173,16 @@ public:
       double ignore_parked_vehicle_speed_threshold;
       double occlusion_detection_hold_time;
       double temporal_stop_time_before_peeking;
-      bool temporal_stop_before_attention_area;
       double creep_velocity_without_traffic_light;
       double static_occlusion_with_traffic_light_timeout;
     } occlusion;
+
+    struct ConservativeMerging
+    {
+      bool enable_yield;
+      double minimum_lateral_distance_threshold;
+      double merging_judge_angle_threshold;
+    } conservative_merging;
 
     struct Debug
     {
@@ -226,6 +232,7 @@ public:
     std::optional<std::vector<lanelet::CompoundPolygon3d>> yield_stuck_detect_area{std::nullopt};
 
     std::optional<geometry_msgs::msg::Polygon> candidate_collision_ego_lane_polygon{std::nullopt};
+    std::optional<geometry_msgs::msg::Polygon> candidate_collision_object_polygon{std::nullopt};
     autoware_perception_msgs::msg::PredictedObjects safe_under_traffic_control_targets;
     autoware_perception_msgs::msg::PredictedObjects unsafe_targets;
     autoware_perception_msgs::msg::PredictedObjects misjudge_targets;
@@ -454,6 +461,18 @@ private:
    ***********************************************************
    ***********************************************************
    ***********************************************************
+   * @defgroup stuck-variables [var] stuck detection
+   * @{
+   */
+  //! indicate whether ego was trying to stop for stuck vehicle(for debouncing)
+  bool was_stopping_for_stuck_{false};
+  /** @} */
+
+private:
+  /**
+   ***********************************************************
+   ***********************************************************
+   ***********************************************************
    * @defgroup occlusion-variables [var] occlusion detection variables
    * @{
    */
@@ -464,9 +483,6 @@ private:
 
   //! debouncing for stable CLEARED decision
   StateMachine occlusion_stop_state_machine_;
-
-  //! debouncing for the brief stop at the boundary of attention area(if required by the flag)
-  StateMachine temporal_stop_before_attention_state_machine_;
 
   //! time counter for the stuck detection due to occlusion caused static objects
   StateMachine static_occlusion_timeout_state_machine_;
