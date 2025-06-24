@@ -424,8 +424,8 @@ DeparturePoints get_departure_points(
  * @param uncrossable_boundary_types List of boundary type tags considered uncrossable.
  * @return Vector of nearby linestrings that are tagged as uncrossable.
  */
-std::vector<lanelet::ConstLineString3d> get_uncrossable_linestrings_near_pose(
-  const lanelet::LineStringLayer & linestring_layer, const Pose & ego_pose,
+tl::expected<std::vector<lanelet::LineString3d>, std::string> get_uncrossable_linestrings_near_pose(
+  const lanelet::LaneletMapPtr & lanelet_map_ptr, const Pose & ego_pose,
   const double search_distance,
   const std::vector<std::string> & uncrossable_boundary_types = {"road_border"});
 }  // namespace autoware::boundary_departure_checker::utils

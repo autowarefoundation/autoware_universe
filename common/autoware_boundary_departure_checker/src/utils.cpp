@@ -653,23 +653,39 @@ DeparturePoints get_departure_points(
   return departure_points;
 }
 
-std::vector<lanelet::ConstLineString3d> get_uncrossable_linestrings_near_pose(
-  const lanelet::LineStringLayer & linestring_layer, const Pose & ego_pose,
+tl::expected<std::vector<lanelet::LineString3d>, std::string> get_uncrossable_linestrings_near_pose(
+  const lanelet::LaneletMapPtr & lanelet_map_ptr, const Pose & ego_pose,
   const double search_distance, const std::vector<std::string> & uncrossable_boundary_types)
 {
-  const auto bbox = lanelet::BoundingBox2d(
-    lanelet::BasicPoint2d{
-      ego_pose.position.x - search_distance, ego_pose.position.y - search_distance},
-    lanelet::BasicPoint2d{
-      ego_pose.position.x + search_distance, ego_pose.position.y + search_distance});
+  if (!lanelet_map_ptr) {
+    return tl::make_unexpected("lanelet_map_ptr is null");
+  }
 
-  auto nearby_linestrings = linestring_layer.search(bbox);
+  if (search_distance < 0.0) {
+    return tl::make_unexpected("Search distance must be non-negative.");
+  }
+
+  const auto p = lanelet::BasicPoint2d(ego_pose.position.x, ego_pose.position.y);
+
+  if (!std::isfinite(p.x()) || !std::isfinite(p.y())) {
+    return tl::make_unexpected("ego_pose contains non-finite values.");
+  }
+
+  const auto offset = lanelet::BasicPoint2d(search_distance, search_distance);
+  auto bbox = lanelet::BoundingBox2d(p - offset, p + offset);
+
+  auto nearby_linestrings = lanelet_map_ptr->lineStringLayer.search(bbox);
 
   const auto remove_itr = std::remove_if(
     nearby_linestrings.begin(), nearby_linestrings.end(),
     [&](const auto & ls) { return !is_uncrossable_type(uncrossable_boundary_types, ls); });
 
   nearby_linestrings.erase(remove_itr, nearby_linestrings.end());
+
+  if (nearby_linestrings.empty()) {
+    return tl::make_unexpected(
+      "No nearby uncrossable boundaries within " + std::to_string(search_distance) + " meter.");
+  }
 
   return nearby_linestrings;
 }

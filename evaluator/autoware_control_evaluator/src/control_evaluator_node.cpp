@@ -267,14 +267,19 @@ void ControlEvaluatorNode::AddUncrossableBoundaryDistanceMetricMsg(const Pose & 
 {
   namespace bdc_utils = autoware::boundary_departure_checker::utils;
   constexpr auto extra_margin{5.0};
-  const auto search_distance =
-    std::max(vehicle_info_.vehicle_width_m, vehicle_info_.vehicle_length_m) + extra_margin;
-  const auto nearby_uncrossable_lines = bdc_utils::get_uncrossable_linestrings_near_pose(
-    route_handler_.getLaneletMapPtr()->lineStringLayer, ego_pose, search_distance);
 
-  if (nearby_uncrossable_lines.empty()) {
+  const auto search_distance =
+    std::max(vehicle_info_.max_longitudinal_offset_m, vehicle_info_.max_lateral_offset_m) +
+    extra_margin;
+
+  const auto nearby_uncrossable_lines_opt = bdc_utils::get_uncrossable_linestrings_near_pose(
+    route_handler_.getLaneletMapPtr(), ego_pose, search_distance);
+
+  if (!nearby_uncrossable_lines_opt) {
     return;
   }
+
+  const auto & nearby_uncrossable_lines = *nearby_uncrossable_lines_opt;
 
   const auto transformed_pose = autoware_utils::pose2transform(ego_pose);
   const auto local_fp = vehicle_info_.createFootprint();
@@ -580,7 +585,7 @@ void ControlEvaluatorNode::onTimer()
       }
     }
 
-    AddUncrossableBoundaryDistanceMetricMsg(odom->pose.pose);
+    AddUncrossableBoundaryDistanceMetricMsg(ego_pose);
   }
 
   // add steering metrics
