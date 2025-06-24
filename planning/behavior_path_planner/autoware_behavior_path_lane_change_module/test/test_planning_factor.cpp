@@ -122,9 +122,6 @@ public:
     rclcpp::init(0, nullptr);
 
     initModule();
-
-    total_safety_factors_ = 0;
-    total_object_id_hits_ = 0;
   }
 
   void initModule()
@@ -146,12 +143,9 @@ public:
   const std::string input_dynamic_objects_topic = "behavior_path_planner/input/perception";
   const std::string input_occupancy_grid_topic = "behavior_path_planner/input/occupancy_grid_map";
 
-  void setupForLaneChange(
-    const std::string output_planning_factors_topic,
-    const std::string input_dynamic_objects_data_file,
-    const std::string input_occupancy_grid_data_file, const std::string input_odometry_data_file,
-    const std::string input_route_data_file)
+  void setupForLaneChangeRight()
   {
+    const std::string output_planning_factors_topic = "planning/planning_factors/lane_change_right";
     sub_planning_factor_ =
       test_node_->create_subscription<autoware_internal_planning_msgs::msg::PlanningFactorArray>(
         output_planning_factors_topic, rclcpp::QoS{1},
@@ -159,10 +153,10 @@ public:
           planning_factor_msg_ = msg;
         });
 
-    objects_ = loadPathObjectsInYaml(input_dynamic_objects_data_file);
-    occupancy_grid_ = loadOccupancyGridInYaml(input_occupancy_grid_data_file);
-    odometry_ = loadOdometryInYaml(input_odometry_data_file);
-    route_ = loadRouteInYaml(input_route_data_file);
+    route_ = loadRouteInYaml("route_data_lane_change_right.yaml");
+    odometry_ = loadOdometryInYaml("vehicle_odometry_data_lane_change_right.yaml");
+    objects_ = loadPathObjectsInYaml("dynamic_objects_data_lane_change_right.yaml");
+    occupancy_grid_ = loadOccupancyGridInYaml("occupancy_grid_data_lane_change_right.yaml");
 
     test_manager_->publishInput(test_target_node_, input_dynamic_objects_topic, objects_);
     test_manager_->publishInput(test_target_node_, input_occupancy_grid_topic, occupancy_grid_);
@@ -170,7 +164,29 @@ public:
     test_manager_->publishInput(test_target_node_, input_route_topic, route_);
   }
 
-  void validatePlanningFactor()
+  void setupForLaneChangeLeft()
+  {
+    test_node_ = test_manager_->getTestNode();
+    const std::string output_planning_factors_topic = "planning/planning_factors/lane_change_left";
+    sub_planning_factor_ =
+      test_node_->create_subscription<autoware_internal_planning_msgs::msg::PlanningFactorArray>(
+        output_planning_factors_topic, rclcpp::QoS{1},
+        [this](autoware_internal_planning_msgs::msg::PlanningFactorArray::SharedPtr msg) {
+          planning_factor_msg_ = msg;
+        });
+
+    route_ = loadRouteInYaml("route_data_lane_change_left.yaml");
+    odometry_ = loadOdometryInYaml("vehicle_odometry_data_lane_change_left.yaml");
+    objects_ = loadPathObjectsInYaml("dynamic_objects_data_lane_change_left.yaml");
+    occupancy_grid_ = loadOccupancyGridInYaml("occupancy_grid_data_lane_change_left.yaml");
+
+    test_manager_->publishInput(test_target_node_, input_dynamic_objects_topic, objects_);
+    test_manager_->publishInput(test_target_node_, input_occupancy_grid_topic, occupancy_grid_);
+    test_manager_->publishInput(test_target_node_, input_odometry_topic, odometry_);
+    test_manager_->publishInput(test_target_node_, input_route_topic, route_);
+  }
+
+  void testPlanningFactor()
   {
     // make sure behavior_path_planner is running
     EXPECT_GE(test_manager_->getReceivedTopicNum(), 1);
@@ -181,6 +197,8 @@ public:
     // make sure planning_factor_msg_ is not empty
     EXPECT_GE(planning_factor_msg_->factors.size(), 1);
 
+    size_t total_safety_factors = 0;
+    size_t total_object_id_hits = 0;
     for (const auto & factor : planning_factor_msg_->factors) {
       EXPECT_FALSE(factor.safety_factors.is_safe);
 
@@ -190,34 +208,29 @@ public:
         EXPECT_LT(control_point.distance, 200.0);
       }
 
-      validateSafetyFactors(factor.safety_factors.factors);
+      for (auto & safety_factor : factor.safety_factors.factors) {
+        ++total_safety_factors;
+
+        const auto expected_object_type =
+          autoware_internal_planning_msgs::msg::SafetyFactor::OBJECT;
+        EXPECT_EQ(safety_factor.type, expected_object_type);
+        EXPECT_FALSE(safety_factor.is_safe);
+        EXPECT_EQ(safety_factor.points.size(), 1);
+
+        const bool is_object_id_included = std::any_of(
+          objects_.objects.begin(), objects_.objects.end(),
+          [&](const auto & object) { return object.object_id == safety_factor.object_id; });
+        if (is_object_id_included) {
+          ++total_object_id_hits;
+        }
+      }
     }
 
     // make sure safety_factors is not empty
-    EXPECT_GE(total_safety_factors_, 1);
+    EXPECT_GE(total_safety_factors, 1);
 
     // make sure object_id is included in safety_factors
-    EXPECT_GE(total_object_id_hits_, 1);
-  }
-
-  void validateSafetyFactors(
-    const std::vector<autoware_internal_planning_msgs::msg::SafetyFactor> & safety_factors)
-  {
-    for (auto & safety_factor : safety_factors) {
-      ++total_safety_factors_;
-
-      const auto expected_object_type = autoware_internal_planning_msgs::msg::SafetyFactor::OBJECT;
-      EXPECT_EQ(safety_factor.type, expected_object_type);
-      EXPECT_FALSE(safety_factor.is_safe);
-      EXPECT_EQ(safety_factor.points.size(), 1);
-
-      const bool is_object_id_included = std::any_of(
-        objects_.objects.begin(), objects_.objects.end(),
-        [&](const auto & object) { return object.object_id == safety_factor.object_id; });
-      if (is_object_id_included) {
-        ++total_object_id_hits_;
-      }
-    }
+    EXPECT_GE(total_object_id_hits, 1);
   }
 
   void TearDown() override
@@ -239,35 +252,18 @@ public:
   Odometry odometry_;
   PredictedObjects objects_;
   OccupancyGrid occupancy_grid_;
-  size_t total_safety_factors_ = 0;
-  size_t total_object_id_hits_ = 0;
 };
 
 TEST_F(PlanningFactorTest, LaneChangeRight)
 {
-  const std::string output_planning_factors_topic = "planning/planning_factors/lane_change_right";
-  const std::string input_dynamic_objects_data_file = "dynamic_objects_data_lane_change_right.yaml";
-  const std::string input_occupancy_grid_data_file = "occupancy_grid_data_lane_change_right.yaml";
-  const std::string input_odometry_data_file = "vehicle_odometry_data_lane_change_right.yaml";
-  const std::string input_route_data_file = "route_data_lane_change_right.yaml";
-
-  setupForLaneChange(
-    output_planning_factors_topic, input_dynamic_objects_data_file, input_occupancy_grid_data_file,
-    input_odometry_data_file, input_route_data_file);
-  validatePlanningFactor();
+  setupForLaneChangeRight();
+  testPlanningFactor();
 }
 
 TEST_F(PlanningFactorTest, LaneChangeLeft)
 {
-  const std::string output_planning_factors_topic = "planning/planning_factors/lane_change_left";
-  const std::string input_dynamic_objects_data_file = "dynamic_objects_data_lane_change_left.yaml";
-  const std::string input_occupancy_grid_data_file = "occupancy_grid_data_lane_change_left.yaml";
-  const std::string input_odometry_data_file = "vehicle_odometry_data_lane_change_left.yaml";
-  const std::string input_route_data_file = "route_data_lane_change_left.yaml";
-  setupForLaneChange(
-    output_planning_factors_topic, input_dynamic_objects_data_file, input_occupancy_grid_data_file,
-    input_odometry_data_file, input_route_data_file);
-  validatePlanningFactor();
+  setupForLaneChangeLeft();
+  testPlanningFactor();
 }
 
 }  // namespace autoware::behavior_path_planner
