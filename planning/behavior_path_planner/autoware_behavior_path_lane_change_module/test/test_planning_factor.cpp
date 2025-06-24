@@ -141,7 +141,6 @@ public:
   const std::string input_route_topic = "behavior_path_planner/input/route";
   const std::string input_odometry_topic = "behavior_path_planner/input/odometry";
   const std::string input_dynamic_objects_topic = "behavior_path_planner/input/perception";
-  const std::string input_occupancy_grid_topic = "behavior_path_planner/input/occupancy_grid_map";
 
   void setupForLaneChangeRight()
   {
@@ -156,10 +155,8 @@ public:
     route_ = loadRouteInYaml("route_data_lane_change_right.yaml");
     odometry_ = loadOdometryInYaml("vehicle_odometry_data_lane_change_right.yaml");
     objects_ = loadPathObjectsInYaml("dynamic_objects_data_lane_change_right.yaml");
-    occupancy_grid_ = loadOccupancyGridInYaml("occupancy_grid_data_lane_change_right.yaml");
 
     test_manager_->publishInput(test_target_node_, input_dynamic_objects_topic, objects_);
-    test_manager_->publishInput(test_target_node_, input_occupancy_grid_topic, occupancy_grid_);
     test_manager_->publishInput(test_target_node_, input_odometry_topic, odometry_);
     test_manager_->publishInput(test_target_node_, input_route_topic, route_);
   }
@@ -178,10 +175,8 @@ public:
     route_ = loadRouteInYaml("route_data_lane_change_left.yaml");
     odometry_ = loadOdometryInYaml("vehicle_odometry_data_lane_change_left.yaml");
     objects_ = loadPathObjectsInYaml("dynamic_objects_data_lane_change_left.yaml");
-    occupancy_grid_ = loadOccupancyGridInYaml("occupancy_grid_data_lane_change_left.yaml");
 
     test_manager_->publishInput(test_target_node_, input_dynamic_objects_topic, objects_);
-    test_manager_->publishInput(test_target_node_, input_occupancy_grid_topic, occupancy_grid_);
     test_manager_->publishInput(test_target_node_, input_odometry_topic, odometry_);
     test_manager_->publishInput(test_target_node_, input_route_topic, route_);
   }
@@ -251,7 +246,6 @@ public:
   LaneletRoute route_;
   Odometry odometry_;
   PredictedObjects objects_;
-  OccupancyGrid occupancy_grid_;
 };
 
 TEST_F(PlanningFactorTest, LaneChangeRight)
