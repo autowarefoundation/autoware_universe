@@ -320,7 +320,7 @@ AvoidOutlines ShiftLineGenerator::generateAvoidOutline(
 
     // use absolute dist for return-to-center, relative dist from current for avoiding.
     const auto feasible_return_distance =
-      helper_->getMaxAvoidanceDistance(feasible_shift_profile.value().first);
+      helper_->getMaxReturnDistance(feasible_shift_profile.value().first);
 
     AvoidLine al_avoid;
     {
@@ -1176,7 +1176,7 @@ AvoidLineArray ShiftLineGenerator::addReturnShiftLine(
   const auto & arclength_from_ego = data.arclength_from_ego;
 
   const auto nominal_prepare_distance = helper_->getNominalPrepareDistance();
-  const auto nominal_avoid_distance = helper_->getMaxAvoidanceDistance(last_sl.end_shift_length);
+  const auto nominal_avoid_distance = helper_->getMaxReturnDistance(last_sl.end_shift_length);
 
   if (arclength_from_ego.empty()) {
     return ret;

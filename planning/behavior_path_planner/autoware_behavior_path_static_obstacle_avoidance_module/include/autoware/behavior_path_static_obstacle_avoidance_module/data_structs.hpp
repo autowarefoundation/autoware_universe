@@ -325,8 +325,11 @@ struct AvoidanceParameters
   // target velocity matrix
   std::vector<double> velocity_map;
 
-  // Minimum lateral jerk limitation map.
-  std::vector<double> lateral_min_jerk_map;
+  // Minimum lateral jerk limitation map for avoidance maneuver.
+  std::vector<double> avoid_lateral_min_jerk_map;
+
+  // Minimum lateral jerk limitation map for return maneuver.
+  std::vector<double> return_lateral_min_jerk_map;
 
   // Maximum lateral jerk limitation map.
   std::vector<double> lateral_max_jerk_map;

@@ -1385,9 +1385,21 @@
                   "default": [0.5, 0.5, 0.5]
                 },
                 "min_jerk_values": {
-                  "type": "array",
-                  "description": "Avoidance path is generated with this jerk when there is enough distance from ego.",
-                  "default": [0.2, 0.2, 0.2]
+                  "type": "object",
+                  "properties": {
+                    "avoid": {
+                      "type": "array",
+                      "description": "Minimum lateral jerk constraint when laterally shifting to avoid an obstacle.",
+                      "default": [0.2, 0.2, 0.2]
+                    },
+                    "return": {
+                      "type": "array",
+                      "description": "Minimum lateral jerk constraint when laterally shifting to return to the original lane.",
+                      "default": [0.2, 0.2, 0.2]
+                    }
+                  },
+                  "required": ["avoid", "return"],
+                  "additionalProperties": false
                 },
                 "max_jerk_values": {
                   "type": "array",
