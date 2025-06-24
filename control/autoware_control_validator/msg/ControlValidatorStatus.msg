@@ -9,6 +9,8 @@ bool is_valid_lateral_jerk
 bool has_overrun_stop_point
 bool will_overrun_stop_point
 bool is_valid_latency
+bool is_valid_yaw
+bool is_warn_yaw
 
 # values
 float64 max_distance_deviation
@@ -22,5 +24,6 @@ float64 dist_to_stop
 float64 pred_dist_to_stop
 float64 nearest_trajectory_vel
 float64 latency
+float64 yaw_deviation
 
 int64 invalid_count
