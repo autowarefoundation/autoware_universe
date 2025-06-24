@@ -173,7 +173,6 @@ public:
       double ignore_parked_vehicle_speed_threshold;
       double occlusion_detection_hold_time;
       double temporal_stop_time_before_peeking;
-      bool temporal_stop_before_attention_area;
       double creep_velocity_without_traffic_light;
       double static_occlusion_with_traffic_light_timeout;
     } occlusion;
@@ -484,9 +483,6 @@ private:
 
   //! debouncing for stable CLEARED decision
   StateMachine occlusion_stop_state_machine_;
-
-  //! debouncing for the brief stop at the boundary of attention area(if required by the flag)
-  StateMachine temporal_stop_before_attention_state_machine_;
 
   //! time counter for the stuck detection due to occlusion caused static objects
   StateMachine static_occlusion_timeout_state_machine_;
