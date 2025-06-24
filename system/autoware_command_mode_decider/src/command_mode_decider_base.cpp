@@ -180,13 +180,13 @@ void CommandModeDeciderBase::on_timer()
 
 void CommandModeDeciderBase::on_control_mode(const ControlModeReport & msg)
 {
-  if (prev_control_mode_ == msg.mode) return;
+  const auto is_changed = prev_control_mode_ != msg.mode;
   prev_control_mode_ = msg.mode;
   curr_autoware_control_ = (msg.mode == ControlModeReport::AUTONOMOUS);
   curr_manual_control_ = (msg.mode == ControlModeReport::MANUAL);
 
   // Check override.
-  if (curr_manual_control_) {
+  if (is_changed && curr_manual_control_) {
     if (system_request_.autoware_control) {
       // curr_mode_ and last_mode_ will be updated in the update_current_mode function.
       system_request_.autoware_control = false;
@@ -198,6 +198,7 @@ void CommandModeDeciderBase::on_control_mode(const ControlModeReport & msg)
   {
     StatusMessage item;
     item.mode = autoware::command_mode_types::modes::manual;
+    item.mrm = StatusMessage::NORMAL;
     item.transition = false;
     item.request = curr_manual_control_;
     item.vehicle_selected = curr_manual_control_;
@@ -217,6 +218,9 @@ void CommandModeDeciderBase::on_control_mode(const ControlModeReport & msg)
     command_mode_status_.set(item, msg.stamp);
   }
 
+  if (!is_changed) {
+    return;
+  }
   update();
 }
 
@@ -229,7 +233,6 @@ void CommandModeDeciderBase::on_status(const CommandModeStatus & msg)
   if (!is_changed) {
     return;
   }
-
   update();
 }
 
@@ -242,7 +245,6 @@ void CommandModeDeciderBase::on_availability(const CommandModeAvailability & msg
   if (!is_changed) {
     return;
   }
-
   update();
 }
 
