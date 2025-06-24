@@ -1,0 +1,7 @@
+/**:
+  ros__parameters:
+    update_rate_hz: 20.0
+    new_frame_id: "map"
+    timeout_threshold: 1.0
+    input_topics: [""]
+    uuid_mapping_cleanup_threshold: 30.0 # in sec.
