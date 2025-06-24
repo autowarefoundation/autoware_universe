@@ -20,6 +20,7 @@
 #ifndef SYSTEM_MONITOR__CPU_MONITOR__CPU_USAGE_STATISTICS_HPP_
 #define SYSTEM_MONITOR__CPU_MONITOR__CPU_USAGE_STATISTICS_HPP_
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -128,10 +129,10 @@ private:
   };
 
   bool first_call_;  // Flag to indicate first call of update_cpu_statistics().
-  std::vector<CpuStatistics> statistics_1_;  // Previous CPU statistics
-  std::vector<CpuStatistics> statistics_2_;  // Previous CPU statistics
-  std::vector<CpuStatistics> & current_statistics_;   // Current CPU statistics
-  std::vector<CpuStatistics> & previous_statistics_;  // Previous CPU statistics
+  std::vector<CpuStatistics> statistics_1_;  // CPU statistics of CPUs
+  std::vector<CpuStatistics> statistics_2_;  // CPU statistics of CPUs
+  std::vector<CpuStatistics> & current_statistics_;   // Reference to current CPU statistics
+  std::vector<CpuStatistics> & previous_statistics_;  // Reference to previous CPU statistics
 
   /**
    * @brief Vector of CPU usage statistics for each core

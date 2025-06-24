@@ -20,14 +20,12 @@
 #include "system_monitor/cpu_monitor/cpu_usage_statistics.hpp"
 
 #include <algorithm>
-#include <chrono>
 #include <cstdint>
 #include <fstream>
 #include <iomanip>
 #include <sstream>
 #include <string>
-#include <thread>
-#include <unistd.h>
+#include <utility>
 #include <vector>
 
 CpuUsageStatistics::CpuUsageStatistics()
@@ -126,17 +124,19 @@ void CpuUsageStatistics::update_cpu_statistics()
     float total_all_delta_float = static_cast<float>(total_all_delta);
     CoreUsageInfo core_usage;
     core_usage.name = cpu_name;
-    core_usage.user_percent = (static_cast<float>(user_delta) / total_all_delta_float) * 100.0f;
-    core_usage.nice_percent = (static_cast<float>(nice_delta) / total_all_delta_float) * 100.0f;
-    core_usage.system_percent = (static_cast<float>(system_delta) / total_all_delta_float) * 100.0f;
-    core_usage.idle_percent = (static_cast<float>(idle_delta) / total_all_delta_float) * 100.0f;
-    core_usage.iowait_percent = (static_cast<float>(iowait_delta) / total_all_delta_float) * 100.0f;
-    core_usage.irq_percent = (static_cast<float>(irq_delta) / total_all_delta_float) * 100.0f;
-    core_usage.softirq_percent = (static_cast<float>(softirq_delta) / total_all_delta_float) * 100.0f;
-    core_usage.steal_percent = (static_cast<float>(steal_delta) / total_all_delta_float) * 100.0f;
-    core_usage.guest_percent = (static_cast<float>(guest_delta) / total_all_delta_float) * 100.0f;
+    // clang-format off
+    core_usage.user_percent       = (static_cast<float>(user_delta)       / total_all_delta_float) * 100.0f;
+    core_usage.nice_percent       = (static_cast<float>(nice_delta)       / total_all_delta_float) * 100.0f;
+    core_usage.system_percent     = (static_cast<float>(system_delta)     / total_all_delta_float) * 100.0f;
+    core_usage.idle_percent       = (static_cast<float>(idle_delta)       / total_all_delta_float) * 100.0f;
+    core_usage.iowait_percent     = (static_cast<float>(iowait_delta)     / total_all_delta_float) * 100.0f;
+    core_usage.irq_percent        = (static_cast<float>(irq_delta)        / total_all_delta_float) * 100.0f;
+    core_usage.softirq_percent    = (static_cast<float>(softirq_delta)    / total_all_delta_float) * 100.0f;
+    core_usage.steal_percent      = (static_cast<float>(steal_delta)      / total_all_delta_float) * 100.0f;
+    core_usage.guest_percent      = (static_cast<float>(guest_delta)      / total_all_delta_float) * 100.0f;
     core_usage.guest_nice_percent = (static_cast<float>(guest_nice_delta) / total_all_delta_float) * 100.0f;
     core_usage.total_usage_percent = 100.0f - core_usage.idle_percent;
+    // clang-format on
 
     // Add to CPU info
     core_usage_info_.push_back(core_usage);
