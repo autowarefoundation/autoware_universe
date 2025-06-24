@@ -292,7 +292,7 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
     safety_factor.object_id = object_info->predicted_object().object_id;
     safety_factor.type = autoware_internal_planning_msgs::msg::SafetyFactor::OBJECT;
 
-    // TODO(odashima): add a predicted path used for dicision.
+    // TODO(odashima): add a predicted path used for decision.
     // safety_factor.predicted_path =
     safety_factor.ttc_begin = unsafe_info->interval_time.first;
     safety_factor.ttc_end = unsafe_info->interval_time.second;
