@@ -26,6 +26,7 @@
 #include <tf2/utils.h>
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <string>
 #include <vector>
@@ -88,43 +89,57 @@ bool convertConvexHullToBoundingBox(
   const types::DynamicObject & input_object, types::DynamicObject & output_object)
 {
   // check footprint size
-  if (input_object.shape.footprint.points.size() < 3) {
+  const auto & points = input_object.shape.footprint.points;
+  if (points.size() < 3) {
     return false;
   }
 
-  // look for bounding box boundary
-  float max_x = -std::numeric_limits<float>::infinity();
-  float max_y = -std::numeric_limits<float>::infinity();
-  float min_x = std::numeric_limits<float>::infinity();
-  float min_y = std::numeric_limits<float>::infinity();
-  float max_z = -std::numeric_limits<float>::infinity();
-  float min_z = std::numeric_limits<float>::infinity();
+  // Pre-allocate boundary values using first point
+  float max_x = points[0].x;
+  float max_y = points[0].y;
+  float max_z = points[0].z;
+  float min_x = points[0].x;
+  float min_y = points[0].y;
+  float min_z = points[0].z;
 
-  for (const auto & point : input_object.shape.footprint.points) {
-    max_x = std::max(max_x, point.x);
-    max_y = std::max(max_y, point.y);
-    min_x = std::min(min_x, point.x);
-    min_y = std::min(min_y, point.y);
-    max_z = std::max(max_z, point.z);
-    min_z = std::min(min_z, point.z);
+  // Start from second point since we used first point for initialization
+  for (size_t i = 1; i < points.size(); ++i) {
+    const auto & point = points[i];
+    // Use direct comparison instead of std::max/min
+    if (point.x > max_x) max_x = point.x;
+    if (point.y > max_y) max_y = point.y;
+    if (point.z > max_z) max_z = point.z;
+    if (point.x < min_x) min_x = point.x;
+    if (point.y < min_y) min_y = point.y;
+    if (point.z < min_z) min_z = point.z;
   }
 
-  // calc new center
-  const Eigen::Vector2d center{input_object.pose.position.x, input_object.pose.position.y};
-  const auto yaw = tf2::getYaw(input_object.pose.orientation);
-  const Eigen::Matrix2d R_inv = Eigen::Rotation2Dd(-yaw).toRotationMatrix();
-  const Eigen::Vector2d new_local_center{(max_x + min_x) / 2.0, (max_y + min_y) / 2.0};
-  const Eigen::Vector2d new_center = center + R_inv.transpose() * new_local_center;
+  // calc new center in local coordinates - avoid division by 2.0 twice
+  const double center_x = (max_x + min_x) * 0.5;
+  const double center_y = (max_y + min_y) * 0.5;
 
-  // set output parameters
+  // transform to global for the object's position
+  const double yaw = tf2::getYaw(input_object.pose.orientation);
+  const double cos_yaw = cos(yaw);
+  const double sin_yaw = sin(yaw);
+  const double dx = center_x * cos_yaw - center_y * sin_yaw;
+  const double dy = center_x * sin_yaw + center_y * cos_yaw;
+
+  // set output parameters - avoid unnecessary copying
   output_object = input_object;
-  output_object.pose.position.x = new_center.x();
-  output_object.pose.position.y = new_center.y();
+  output_object.pose.position.x += dx;
+  output_object.pose.position.y += dy;
 
   output_object.shape.type = autoware_perception_msgs::msg::Shape::BOUNDING_BOX;
   output_object.shape.dimensions.x = max_x - min_x;
   output_object.shape.dimensions.y = max_y - min_y;
   output_object.shape.dimensions.z = max_z - min_z;
+
+  // adjust footprint points in local coordinates - use references to avoid copies
+  for (auto & point : output_object.shape.footprint.points) {
+    point.x -= center_x;
+    point.y -= center_y;
+  }
 
   return true;
 }

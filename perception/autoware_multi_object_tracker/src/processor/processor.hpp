@@ -46,6 +46,8 @@ struct TrackerProcessorConfig
   float min_unknown_object_removal_iou;                // ratio [0, 1]
   std::map<LabelType, int> confident_count_threshold;  // [count]
   Eigen::MatrixXd max_dist_matrix;
+  bool enable_unknown_object_velocity_estimation;
+  bool enable_unknown_object_motion_output;
 };
 
 class TrackerProcessor

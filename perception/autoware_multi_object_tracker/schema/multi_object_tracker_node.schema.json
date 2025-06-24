@@ -66,6 +66,16 @@
           "description": "If True, consider odometry uncertainty in tracking.",
           "default": false
         },
+        "enable_unknown_object_velocity_estimation": {
+          "type": "boolean",
+          "description": "If True, enable velocity estimation for unknown objects.",
+          "default": true
+        },
+        "enable_unknown_object_motion_output": {
+          "type": "boolean",
+          "description": "If True, export unknown object velocity.",
+          "default": false
+        },
         "tracker_lifetime": {
           "type": "number",
           "description": "Lifetime of the tracker in seconds.",

@@ -49,7 +49,9 @@ public:
     const types::InputChannel & channel_info) override;
   bool measureWithPose(const types::DynamicObject & object);
   bool measureWithShape(const types::DynamicObject & object);
-  bool getTrackedObject(const rclcpp::Time & time, types::DynamicObject & object) const override;
+  bool getTrackedObject(
+    const rclcpp::Time & time, types::DynamicObject & object,
+    const bool to_publish = false) const override;
 };
 
 }  // namespace autoware::multi_object_tracker
