@@ -317,6 +317,7 @@ void ControlValidator::setup_diag()
   d.add(ns + "yaw_deviation", [&](auto & stat) {
     set_status(
       stat, validation_status_.is_valid_yaw, "The vehicle yaw has deviated from the trajectory.");
+    // TODO(someone): implement the dual thresholds for WARN/ERROR for the other metrics
     if (validation_status_.is_valid_yaw && validation_status_.is_warn_yaw) {
       stat.summary(
         DiagnosticStatus::WARN, "The vehicle yaw is deviating but is still under the error value.");
