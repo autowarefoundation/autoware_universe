@@ -75,7 +75,7 @@ public:
     return 0 < idx ? idx - 1 : 0;
   }
 
-  double getLateralMinJerkLimit() const
+  double getAvoidanceLateralMinJerkLimit() const
   {
     const auto idx = getConstraintsMapIndex(getEgoSpeed(), parameters_->velocity_map);
     return parameters_->avoid_lateral_min_jerk_map.at(idx);
@@ -150,7 +150,7 @@ public:
   double getMaxAvoidanceDistance(const double shift_length) const
   {
     const auto distance_from_jerk = autoware::motion_utils::calc_longitudinal_dist_from_jerk(
-      shift_length, getLateralMinJerkLimit(), getAvoidanceEgoSpeed());
+      shift_length, getAvoidanceLateralMinJerkLimit(), getAvoidanceEgoSpeed());
     return std::max(getNominalAvoidanceDistance(shift_length), distance_from_jerk);
   }
 
@@ -254,7 +254,7 @@ public:
     const auto max_shift_length = std::max(
       std::abs(parameters_->max_right_shift_length), std::abs(parameters_->max_left_shift_length));
     const auto dynamic_distance = autoware::motion_utils::calc_longitudinal_dist_from_jerk(
-      max_shift_length, getLateralMinJerkLimit(), speed);
+      max_shift_length, getAvoidanceLateralMinJerkLimit(), speed);
 
     return std::clamp(
       1.5 * dynamic_distance + getNominalPrepareDistance(),
