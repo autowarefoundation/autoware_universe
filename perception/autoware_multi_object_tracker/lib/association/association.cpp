@@ -261,7 +261,8 @@ Eigen::MatrixXd DataAssociation::calcScoreMatrix(
       score_matrix(tracker_idx, measurement_idx) = score;
 
       if (significant_shape_change) {
-        significant_shape_change_set_.insert((uint64_t(tracker_idx) << 32) | measurement_idx);
+        significant_shape_change_set_.insert(
+          (static_cast<uint64_t>(tracker_idx) << 32) | measurement_idx);
       }
     }
   }
@@ -340,8 +341,13 @@ double DataAssociation::calculateScore(
 
 bool DataAssociation::hasSignificantShapeChange(size_t tracker_idx, size_t measurement_idx) const
 {
+<<<<<<< HEAD
   uint64_t key = (uint64_t(tracker_idx) << 32) | measurement_idx;
   return significant_shape_change_set_.count(key);object_tracker association)
+=======
+  uint64_t key = (static_cast<uint64_t>(tracker_idx) << 32) | measurement_idx;
+  return significant_shape_change_set_.count(key);
+>>>>>>> ede95465f (fix: cppcheck error)
 }
 
 }  // namespace autoware::multi_object_tracker
