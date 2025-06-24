@@ -31,8 +31,6 @@ using autoware::behavior_path_planner::generateTestManager;
 using autoware::behavior_path_planner::publishMandatoryTopics;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::LaneletRoute;
-using nav_msgs::msg::MapMetaData;
-using nav_msgs::msg::OccupancyGrid;
 using nav_msgs::msg::Odometry;
 
 namespace autoware::test_utils
@@ -42,28 +40,6 @@ std::string get_absolute_path_to_test_data(
 {
   const auto dir = ament_index_cpp::get_package_share_directory(package_name);
   return dir + "/test_data/" + config_filename;
-}
-
-template <>
-MapMetaData parse(const YAML::Node & node)
-{
-  MapMetaData msg;
-  msg.map_load_time = parse<builtin_interfaces::msg::Time>(node["map_load_time"]);
-  msg.resolution = node["resolution"].as<float>();
-  msg.width = node["width"].as<uint32_t>();
-  msg.height = node["height"].as<uint32_t>();
-  msg.origin = parse<geometry_msgs::msg::Pose>(node["origin"]);
-  return msg;
-}
-
-template <>
-OccupancyGrid parse(const YAML::Node & node)
-{
-  OccupancyGrid msg;
-  msg.header = parse<std_msgs::msg::Header>(node["header"]);
-  msg.info = parse<MapMetaData>(node["info"]);
-  msg.data = node["data"].as<std::vector<int8_t>>();
-  return msg;
 }
 
 }  // namespace autoware::test_utils
@@ -109,11 +85,6 @@ PredictedObjects loadPathObjectsInYaml(const std::string & yaml_file = "dynamic_
   return loadMessageInYaml<PredictedObjects>(yaml_file, {"objects"});
 }
 
-OccupancyGrid loadOccupancyGridInYaml(const std::string & yaml_file = "occupancy_grid_data.yaml")
-{
-  return loadMessageInYaml<OccupancyGrid>(yaml_file, {"data", "info"});
-}
-
 TEST(PlanningFactorTest, NodeTestWithPredictedObjects)
 {
   rclcpp::init(0, nullptr);
@@ -145,17 +116,14 @@ TEST(PlanningFactorTest, NodeTestWithPredictedObjects)
   const std::string input_route_topic = "behavior_path_planner/input/route";
   const std::string input_odometry_topic = "behavior_path_planner/input/odometry";
   const std::string input_dynamic_objects_topic = "behavior_path_planner/input/perception";
-  const std::string input_occupancy_grid_topic = "behavior_path_planner/input/occupancy_grid_map";
 
   const auto route = loadRouteInYaml();
   const auto odometry = loadOdometryInYaml();
   const auto objects = loadPathObjectsInYaml();
-  const auto occupancy_grid = loadOccupancyGridInYaml();
 
   test_manager->publishInput(test_target_node, input_route_topic, route);
   test_manager->publishInput(test_target_node, input_odometry_topic, odometry);
   test_manager->publishInput(test_target_node, input_dynamic_objects_topic, objects);
-  test_manager->publishInput(test_target_node, input_occupancy_grid_topic, occupancy_grid);
 
   // make sure behavior_path_planner is running
   EXPECT_GE(test_manager->getReceivedTopicNum(), 1);
