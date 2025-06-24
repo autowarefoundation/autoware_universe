@@ -279,10 +279,16 @@ void Tracker::getPositionCovarianceEigenSq(
     minor_axis_sq = 0.0;
     return;
   }
-  // calculate the eigenvalues of the covariance matrix
-  Eigen::EigenSolver<Eigen::Matrix2d> es(covariance);
-  major_axis_sq = es.eigenvalues().real().maxCoeff();
-  minor_axis_sq = es.eigenvalues().real().minCoeff();
+  // Direct eigenvalue calculation for 2x2 symmetric matrix
+  const double a = covariance(0, 0);
+  const double b = covariance(0, 1);
+  const double c = covariance(1, 1);
+  const double trace = a + c;
+  const double det = a * c - b * b;
+  const double sqrt_term = std::sqrt(trace * trace / 4.0 - det);
+
+  major_axis_sq = trace / 2.0 + sqrt_term;
+  minor_axis_sq = trace / 2.0 - sqrt_term;
 }
 
 double Tracker::getBEVArea() const
