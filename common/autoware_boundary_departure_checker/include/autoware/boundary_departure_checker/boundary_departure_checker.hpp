@@ -216,9 +216,10 @@ private:
     const lanelet::ConstLanelets & candidate_lanelets,
     const std::vector<LinearRing2d> & vehicle_footprints) const;
 
-  static SegmentRtree extractUncrossableBoundaries(
+  SegmentRtree extractUncrossableBoundaries(
     const lanelet::LaneletMap & lanelet_map, const geometry_msgs::msg::Point & ego_point,
-    const double max_search_length, const std::vector<std::string> & boundary_types_to_detect);
+    const double max_search_length,
+    const std::vector<std::string> & boundary_types_to_detect) const;
 
   bool willCrossBoundary(
     const std::vector<LinearRing2d> & vehicle_footprints,

@@ -2,6 +2,14 @@
 Changelog for package autoware_occupancy_grid_map_outlier_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(autoware_occupancy_grid_map_outlier_filter): updated the readme file and json schema for running mkdocs server functionally (`#10192 <https://github.com/autowarefoundation/autoware_universe/issues/10192>`_)
+  feat(autoware_occupancy_grid_map_outlier_filter): upadted the readme file and json schema for running mkdocs server functionally
+  Co-authored-by: Takagi, Isamu <43976882+isamu-takagi@users.noreply.github.com>
+* Contributors: TaikiYamada4, Vishal Chauhan
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -13,6 +21,9 @@ Changelog for package autoware_occupancy_grid_map_outlier_filter
   * chore: add Kok Seang Tan as maintainer in multiple perception packages
   ---------
 * Contributors: Taekjin LEE, TaikiYamada4
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

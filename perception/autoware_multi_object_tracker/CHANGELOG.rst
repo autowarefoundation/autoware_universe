@@ -2,6 +2,127 @@
 Changelog for package autoware_multi_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat: add adaptive covariance threshold for tracker lifecycle management (`#10743 <https://github.com/autowarefoundation/autoware_universe/issues/10743>`_)
+  * feat: add adaptive covariance threshold for tracker lifecycle management
+  * fix: exclude equal condition when distance is 0 (potential bug)
+  fix: remove unnecessary else
+  chore: add variable name for adaptive covariance calculation formula
+  refactor: store ego pose info in TrackerProcessor
+  * style(pre-commit): autofix
+  * fix: error in variable name
+  * feat: use cache to store pre-calculated adaptive threshold components
+  perf: replace divide and exp function in formula with alternatives to reduce computational cost
+  fix: correct wrong modification on if condition
+  fix: remove unused function definition
+  * fix: rebase conflict
+  * perf: use distance_sq to remove runtime root square for faster computation
+  fix: add missed library inclusion
+  * fix: add missed source file to CMakeList
+  ---------
+  Co-authored-by: Jian Kang <jian.kang@tier4.jp>
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(multi_object_tracker): correct area calculation for cylinder shape in getArea function (`#10790 <https://github.com/autowarefoundation/autoware_universe/issues/10790>`_)
+  fix(multi_object_tracker): correct area calculation for CYLINDER shape in getArea function
+  Updated the area calculation for the CYLINDER shape to use a quarter of the cylinder's base area, ensuring accurate area representation in the multi-object tracker.
+* perf(autoware_multi_object_tracker): tracker association and merge process efficiency improvement (`#10744 <https://github.com/autowarefoundation/autoware_universe/issues/10744>`_)
+  * feat(multi_object_tracker): implement caching for tracked objects
+  - Added caching mechanism in Tracker class to store and retrieve DynamicObject instances based on time.
+  - Introduced methods to update, retrieve, and remove cached objects.
+  - Updated PedestrianTracker and VehicleTracker to utilize the caching functionality during object tracking.
+  This enhancement improves the efficiency of object retrieval in the tracking process.
+  * refactor(multi_object_tracker): remove unnecessary ScopedTimeTrack instantiation
+  - Eliminated the ScopedTimeTrack pointer from the canMergeOverlappedTarget method to streamline the code.
+  - This change simplifies the function without affecting its logic or performance.
+  * style(pre-commit): autofix
+  * refactor(multi_object_tracker): optimize cache handling and streamline sorting logic
+  - Changed cached_time\_ from rclcpp::Time to int for improved efficiency in the Tracker class.
+  - Updated methods to handle cached time as nanoseconds directly, simplifying cache management.
+  - Removed unnecessary ScopedTimeTrack instantiations in the mergeOverlappedTracker method to enhance code clarity and performance.
+  - Streamlined the sorting logic for list_tracker\_ to eliminate redundant scopes, improving readability.
+  * refactor(multi_object_tracker): change cached_time\_ type to rclcpp::Time for improved cache management
+  - Updated cached_time\_ from int to rclcpp::Time to enhance type safety and clarity in cache handling.
+  - Modified related methods to accommodate the new type, ensuring consistent time comparisons and cache updates.
+  - This change simplifies the cache management logic in the Tracker class.
+  * refactor(multi_object_tracker): remove unused boost_polygon_utils includes
+  - Eliminated unnecessary inclusion of <autoware_utils/geometry/boost_polygon_utils.hpp> from PedestrianTracker, UnknownTracker, and VehicleTracker files.
+  - This cleanup reduces dependencies and improves code clarity without affecting functionality.
+  * feat(multi_object_tracker): integrate TimeKeeper for performance tracking
+  - Added a shared pointer for TimeKeeper in the DataAssociation class to enable performance tracking of association methods.
+  - Implemented ScopedTimeTrack in the assign and calcScoreMatrix methods to measure execution time.
+  - Updated TrackerProcessor to set the TimeKeeper for the association, enhancing performance monitoring capabilities.
+  - Adjusted marker lifetime in TrackerObjectDebugger for improved visualization timing.
+  * feat(multi_object_tracker): add area attribute to DynamicObject and refine distance calculation
+  - Introduced a new 'area' attribute in the DynamicObject structure to enhance object representation.
+  - Updated the Mahalanobis distance calculation to return the squared distance directly, improving performance and clarity.
+  - Refined angle gate logic to ensure proper threshold checks for angle comparisons in the DataAssociation class.
+  * style(pre-commit): autofix
+  * feat(multi_object_tracker): enhance area calculations and update distance metrics
+  - Added a new function to calculate the area of different shape types, improving object representation.
+  - Updated the distance calculation in the DataAssociation class to use squared distance for performance optimization.
+  - Refined area gate logic to utilize the new area attribute in DynamicObject, ensuring accurate object scoring during tracking.
+  * fix(multi_object_tracker): optimize yaw angle calculation for object tracking
+  - Refactored the yaw angle calculation in the getFormedYawAngle function to improve accuracy and performance.
+  - Replaced the previous fixed measurement logic with a more efficient raw difference calculation and fast modulo operation.
+  - Enhanced front/back and side distinction handling for angle comparisons, ensuring correct angle thresholds are applied.
+  * refactor(multi_object_tracker): optimize distance calculations and improve configuration handling
+  - Refactored the Mahalanobis distance calculation to eliminate intermediate vector creation, enhancing performance.
+  - Updated distance checks in DataAssociation and TrackerProcessor to use squared distances for efficiency.
+  - Added pre-processing of configuration matrices in MultiObjectTracker to ensure proper initialization of distance and angle thresholds.
+  * refactor(multi_object_tracker): simplify id management in TrackerObjectDebugger
+  - Removed the handling of previous and current IDs in the TrackerObjectDebugger class to streamline the marker management process.
+  - Eliminated unnecessary clearing and updating of ID sets, improving code clarity and reducing complexity in the reset and process methods.
+  * feat(multi_object_tracker): implement R-tree for efficient spatial indexing in DataAssociation
+  - Introduced an R-tree structure for spatial indexing of trackers, enhancing the efficiency of distance calculations during object association.
+  - Added a method to update maximum search distances based on configuration, optimizing the association process.
+  - Refactored the score matrix calculation to utilize the R-tree for querying nearby trackers, improving performance in the assignment of measurements to tracked objects.
+  * feat(multi_object_tracker): enhance tracker merging with R-tree spatial indexing
+  - Implemented a two-pass merging process for overlapping trackers, utilizing an R-tree for efficient spatial queries.
+  - Introduced a TrackerData structure to pre-filter and store valid tracker information, improving data handling.
+  - Optimized the merging logic by calculating IoU only when necessary and marking merged trackers for removal.
+  - Updated distance calculations to leverage squared distances for performance improvements.
+  * chore: avoid override
+  * feat(multi_object_tracker): add time attribute to tracked objects in trackers
+  - Updated the PedestrianTracker and VehicleTracker classes to include a time attribute in the tracked object structure.
+  - Ensured that the time is set when retrieving tracked objects, enhancing the temporal accuracy of tracking data.
+  * feat(multi_object_tracker): optimize tracker removal process in mergeOverlappedTracker
+  - Introduced an unordered_set for efficient batch removal of merged trackers, improving performance during the final pass of tracker merging.
+  - Removed commented-out code for clarity and streamlined the merging logic.
+  * feat(multi_object_tracker): optimize R-tree insertion for tracker data
+  - Refactored the insertion of tracker data into the R-tree by using a vector to batch insert points, improving performance during spatial indexing.
+  - Updated both DataAssociation and TrackerProcessor classes to implement this optimization, enhancing overall efficiency in tracker management.
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* chore(multi_object_tracker): multi channel multi-object-tracker, set topic by launcher (`#10577 <https://github.com/autowarefoundation/autoware_universe/issues/10577>`_)
+  * fix(multi_object_tracker): update input channel configuration and reduce max channel size
+  * fix(tracking): update input channels and correct radar detection topic names
+  * fix(tracking): update radar detection channel and remove deprecated parameters
+  * fix(tracking): update input arguments for detection channels and objects in tracking.launch.xml
+  * fix(tracking): simplify conditionals for radar and camera lidar fusion in tracking.launch.xml
+  * fix(multi_object_tracker): remove deprecated input channel topics from schema
+  * fix(multi_object_tracker): update output argument naming for consistency in launch files and publisher
+  * docs(multi_object_tracker): update README input channel configuration to reflect type changes
+  * Update README.md
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* fix(autoware_multi_object_tracker): bug fix of anchor point (`#10722 <https://github.com/autowarefoundation/autoware_universe/issues/10722>`_)
+  * fix(shapes): correct anchor point calculation logic and improve precision check for anchor vector
+  * fix(shapes): enhance anchor point offset logic to improve precision and handle edge cases
+  * fix(shapes): revert wrong fix with readability improvement
+  ---------
+* fix(autoware_multi_object_tracker): update Mahalanobis distance threshold for data association (`#10648 <https://github.com/autowarefoundation/autoware_universe/issues/10648>`_)
+  * refactor(autoware_multi_object_tracker): update Mahalanobis distance threshold for data association
+  Changed the Mahalanobis distance threshold from 3.035 to a new critical value of 3.717, corresponding to a 99.99% confidence level for improved accuracy in object tracking.
+  * style(pre-commit): autofix
+  * refactor(autoware_multi_object_tracker): rename Mahalanobis distance threshold for clarity
+  Updated the Mahalanobis distance threshold variable name to better reflect its purpose in the data association process, enhancing code readability.
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Kang, Taekjin LEE, TaikiYamada4
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -71,6 +192,9 @@ Changelog for package autoware_multi_object_tracker
 * fix(multi_object_tracker): remove unused function getMeasurementYaw (`#10527 <https://github.com/autowarefoundation/autoware_universe/issues/10527>`_)
 * fix(multi_object_tracker): remove unused function isChannelSpawnEnabled (`#10528 <https://github.com/autowarefoundation/autoware_universe/issues/10528>`_)
 * Contributors: Ryuta Kambe, Taekjin LEE, TaikiYamada4
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

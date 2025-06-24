@@ -63,6 +63,8 @@ tl::expected<AbnormalitiesData, std::string> BoundaryDepartureChecker::get_abnor
   const geometry_msgs::msg::PoseWithCovariance & curr_pose_with_cov,
   const SteeringReport & current_steering)
 {
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
   if (predicted_traj.empty()) {
     return tl::make_unexpected("Ego predicted trajectory is empty");
   }
@@ -106,6 +108,8 @@ tl::expected<BoundarySideWithIdx, std::string>
 BoundaryDepartureChecker::get_boundary_segments_from_side(
   const EgoSides & ego_sides_from_footprints)
 {
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
   if (!lanelet_map_ptr_) {
     return tl::make_unexpected(std::string(__func__) + ": invalid lanelet_map_ptr");
   }
@@ -167,6 +171,8 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries_side(
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
   const Abnormalities<ProjectionsToBound> & projections_to_bound, const SideKey side_key)
 {
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
   const auto & abnormality_to_check = param_ptr_->abnormality_types_to_compensate;
 
   if (abnormality_to_check.empty()) {
@@ -258,6 +264,8 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries(
   const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj,
   const Abnormalities<ProjectionsToBound> & projections_to_bound)
 {
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
   ClosestProjectionsToBound min_to_bound;
 
   for (const auto side_key : g_side_keys) {
@@ -297,6 +305,8 @@ BoundaryDepartureChecker::get_closest_projections_to_boundaries(
 Side<DeparturePoints> BoundaryDepartureChecker::get_departure_points(
   const ClosestProjectionsToBound & projections_to_bound, const double lon_offset_m)
 {
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
   const auto th_dist_hysteresis_m = param_ptr_->th_dist_hysteresis_m;
 
   Side<DeparturePoints> departure_points;
@@ -312,6 +322,7 @@ BoundaryDepartureChecker::build_uncrossable_boundaries_tree(
   const lanelet::LaneletMapPtr & lanelet_map_ptr)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
   if (!lanelet_map_ptr) {
     return tl::make_unexpected("lanelet_map_ptr is null");
   }
@@ -326,8 +337,10 @@ BoundaryDepartureChecker::build_uncrossable_boundaries_tree(
 
 SegmentRtree BoundaryDepartureChecker::extractUncrossableBoundaries(
   const lanelet::LaneletMap & lanelet_map, const geometry_msgs::msg::Point & ego_point,
-  const double max_search_length, const std::vector<std::string> & boundary_types_to_detect)
+  const double max_search_length, const std::vector<std::string> & boundary_types_to_detect) const
 {
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
   const auto has_types =
     [](const lanelet::ConstLineString3d & ls, const std::vector<std::string> & types) {
       constexpr auto no_type = "";

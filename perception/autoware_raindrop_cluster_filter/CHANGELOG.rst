@@ -2,6 +2,9 @@
 Changelog for package autoware_raindrop_cluster_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -14,6 +17,9 @@ Changelog for package autoware_raindrop_cluster_filter
   ---------
 * feat(autoware_raindrop_cluster_filter): created Schema file and updated ReadME file for parameters setting (`#10010 <https://github.com/autowarefoundation/autoware_universe/issues/10010>`_)
 * Contributors: Taekjin LEE, TaikiYamada4, Vishal Chauhan
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

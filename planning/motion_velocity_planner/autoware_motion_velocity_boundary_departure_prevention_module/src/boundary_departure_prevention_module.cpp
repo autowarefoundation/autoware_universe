@@ -45,7 +45,7 @@ void BoundaryDeparturePreventionModule::init(
 
   subscribe_topics(node);
   publish_topics(node);
-  // time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(processing_time_detail_pub_);
+  time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(processing_time_detail_pub_);
 
   updater_ptr_ = std::make_unique<diagnostic_updater::Updater>(&node);
   updater_ptr_->setHardwareID("motion_velocity_boundary_departure_prevention");
@@ -72,7 +72,7 @@ void BoundaryDeparturePreventionModule::init(
 void BoundaryDeparturePreventionModule::update_parameters(
   const std::vector<rclcpp::Parameter> & parameters)
 {
-  // autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   using autoware_utils::update_param;
   auto & pp = node_param_;
@@ -162,8 +162,6 @@ void BoundaryDeparturePreventionModule::update_parameters(
 
 void BoundaryDeparturePreventionModule::subscribe_topics(rclcpp::Node & node)
 {
-  // autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
-
   sub_ego_pred_traj_ = node.create_subscription<Trajectory>(
     "/control/trajectory_follower/lateral/predicted_trajectory", rclcpp::QoS{1},
     [&](const Trajectory::ConstSharedPtr msg) { ego_pred_traj_ptr_ = msg; });
@@ -182,8 +180,6 @@ void BoundaryDeparturePreventionModule::subscribe_topics(rclcpp::Node & node)
 
 void BoundaryDeparturePreventionModule::publish_topics(rclcpp::Node & node)
 {
-  // autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
-
   const std::string ns = "boundary_departure_prevention";
 
   debug_publisher_ =
@@ -195,7 +191,7 @@ void BoundaryDeparturePreventionModule::publish_topics(rclcpp::Node & node)
     "~/debug/processing_time_detail_ms/" + ns, 1);
 
   processing_time_publisher_ =
-    node.create_publisher<Float64Stamped>("~/debug/obstacle_slow_down/processing_time_ms", 1);
+    node.create_publisher<Float64Stamped>("~/debug/" + ns + "/processing_time_ms", 1);
 }
 
 VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
@@ -203,7 +199,7 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
   [[maybe_unused]] const TrajectoryPoints & smoothed_trajectory_points,
   const std::shared_ptr<const PlannerData> planner_data)
 {
-  // autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   StopWatch<std::chrono::milliseconds> stopwatch_ms;
   stopwatch_ms.tic("plan");
 
@@ -211,8 +207,8 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
   const auto & ll_map_ptr = planner_data->route_handler->getLaneletMapPtr();
 
   if (!boundary_departure_checker_ptr_) {
-    boundary_departure_checker_ptr_ =
-      std::make_unique<BoundaryDepartureChecker>(ll_map_ptr, vehicle_info, node_param_.bdc_param);
+    boundary_departure_checker_ptr_ = std::make_unique<BoundaryDepartureChecker>(
+      ll_map_ptr, vehicle_info, node_param_.bdc_param, time_keeper_);
   }
 
   if (!slow_down_interpolator_ptr_) {
@@ -241,7 +237,7 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
 bool BoundaryDeparturePreventionModule::is_data_ready(
   [[maybe_unused]] std::unordered_map<std::string, double> & processing_times)
 {
-  // autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   if (!ego_pred_traj_ptr_) {
     RCLCPP_INFO_THROTTLE(
@@ -260,7 +256,7 @@ bool BoundaryDeparturePreventionModule::is_data_ready(
 
 bool BoundaryDeparturePreventionModule::is_data_valid() const
 {
-  // autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   if (ego_pred_traj_ptr_->points.empty()) {
     RCLCPP_INFO_THROTTLE(
@@ -272,7 +268,7 @@ bool BoundaryDeparturePreventionModule::is_data_valid() const
 
 bool BoundaryDeparturePreventionModule::is_data_timeout(const Odometry & odom) const
 {
-  // autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const auto now = clock_ptr_->now();
   const auto time_diff_s = (rclcpp::Time(odom.header.stamp) - now).seconds();
@@ -316,7 +312,7 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
   const TrajectoryPoints & raw_trajectory_points,
   const std::shared_ptr<const PlannerData> & planner_data)
 {
-  // autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const auto & vehicle_info = planner_data->vehicle_info_;
   const auto & curr_odom = planner_data->current_odometry;
@@ -478,6 +474,8 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
 std::unordered_map<DepartureType, bool> BoundaryDeparturePreventionModule::get_diagnostics(
   const double curr_vel, const double dist_with_offset_m)
 {
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
   std::unordered_map<DepartureType, bool> diag{
     {DepartureType::NEAR_BOUNDARY, false},
     {DepartureType::APPROACHING_DEPARTURE, false},

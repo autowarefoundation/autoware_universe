@@ -2,6 +2,22 @@
 Changelog for package tier4_perception_rviz_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(tier4_perception_rviz_plugin): add RViz plugin for DetectedObjectsWithFeature message visualization (`#10575 <https://github.com/autowarefoundation/autoware_universe/issues/10575>`_)
+  * Add tier4_perception_rviz_plugin package with object detection visualization features (re-implementation)
+  - Introduced a new package `tier4_perception_rviz_plugin` for visualizing object detection outputs.
+  - Implemented core functionalities including a display for `DetectedObjectsWithFeature`.
+  - Added support for color mapping and a colorbar widget for enhanced visualization.
+  - Included necessary CMake and package configuration files.
+  * Updated maintainers in tier4_perception_rviz_plugin package.xml
+  * Added cspell ignore comments for color map terms in detected_objects_wf_helper.hpp and detected_objects_wf_helper.cpp to prevent spelling errors during linting.
+  * Add cspell ignore comment for color map terms in detected_objects_wf_display.cpp to prevent linting errors.
+  * Update package.xml to add maintainer information for tier4_perception_rviz_plugin
+  ---------
+* Contributors: TaikiYamada4, lei.gu
+
 0.44.0 (2025-04-18)
 -------------------
 

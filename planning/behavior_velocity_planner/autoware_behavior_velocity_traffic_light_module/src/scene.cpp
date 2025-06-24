@@ -126,9 +126,15 @@ bool TrafficLightModule::modifyPathVelocity(PathWithLaneId * path)
         : 0.0;
     bool to_be_stopped =
       is_stop_signal && (is_prev_state_stop_ || time_diff > planner_param_.stop_time_hysteresis);
+
+    debug_data_.is_remaining_time_used = false;
     if (planner_param_.v2i_use_remaining_time) {
       const bool will_traffic_light_turn_red_before_reaching_stop_line =
         willTrafficLightTurnRedBeforeReachingStopLine(signed_arc_length_to_stop_point);
+      if (will_traffic_light_turn_red_before_reaching_stop_line && !is_stop_signal) {
+        debug_data_.is_remaining_time_used = true;
+      }
+
       to_be_stopped = to_be_stopped || will_traffic_light_turn_red_before_reaching_stop_line;
     }
 
