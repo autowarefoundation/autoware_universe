@@ -33,27 +33,6 @@
 namespace
 {
 
-inline double getMahalanobisDistance(
-  const geometry_msgs::msg::Point & measurement, const geometry_msgs::msg::Point & tracker,
-  const Eigen::Matrix2d & covariance)
-{
-  // Compute difference directly without intermediate vectors
-  const double dx = measurement.x - tracker.x;
-  const double dy = measurement.y - tracker.y;
-
-  // Pre-compute inverse elements (covariance is 2x2)
-  // Extract elements of the symmetric covariance matrix
-  const double a = covariance(0, 0);
-  const double b = covariance(0, 1);  // covariance(1, 0) should be equal
-  const double d = covariance(1, 1);
-
-  // Compute determinant using symmetry (b*b instead of b*c)
-  const double det = a * d - b * b;
-
-  // Compute numerator using expanded quadratic form
-  return (d * dx * dx - 2.0 * b * dx * dy + a * dy * dy) / det;
-}
-
 double getFormedYawAngle(
   const geometry_msgs::msg::Quaternion & measurement_quat,
   const geometry_msgs::msg::Quaternion & tracker_quat, const bool distinguish_front_or_back = true)
