@@ -1120,7 +1120,29 @@ lanelet::ConstLanelets get_reference_lanelets_for_pullover(
       path, planner_data, backward_length, forward_length,
       /*forward_only_in_route*/ false);
   }
-  return planner_data->route_handler->getLaneletSequence(
-    *lane_change_complete_lane, backward_length, forward_length, false /* extend outward route */);
+  auto route_lanes = planner_data->route_handler->getLaneletSequence(
+    *lane_change_complete_lane, backward_length, forward_length);
+  const double remaining_distance =
+    forward_length + backward_length - lanelet::utils::getLaneletLength3d(route_lanes);
+  if (route_lanes.empty() || remaining_distance <= 0.0) {
+    return route_lanes;
+  }
+  double acc_dist = 0.0;
+  auto last_lanelet = route_lanes.back();
+  while (acc_dist < remaining_distance) {
+    const auto nexts = routing_graph->following(last_lanelet);
+    if (nexts.empty()) {
+      break;
+    }
+    const auto & next = nexts.front();
+    if (lanelet::utils::contains(route_lanes, next)) {
+      // loop
+      break;
+    }
+    last_lanelet = next;
+    route_lanes.push_back(next);
+    acc_dist += lanelet::utils::getLaneletLength3d(next);
+  }
+  return route_lanes;
 }
 }  // namespace autoware::behavior_path_planner::goal_planner_utils
