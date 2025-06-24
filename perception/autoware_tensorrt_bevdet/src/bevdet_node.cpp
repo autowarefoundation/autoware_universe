@@ -110,17 +110,28 @@ void TRTBEVDetNode::startImageSubscription()
   using std::placeholders::_5;
   using std::placeholders::_6;
 
-  sub_f_img_.subscribe(this, "~/input/topic_img_front", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
-  sub_b_img_.subscribe(this, "~/input/topic_img_back", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_f_img_.subscribe(
+    this, "~/input/topic_img_front", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_b_img_.subscribe(
+    this, "~/input/topic_img_back", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
 
-  sub_fl_img_.subscribe(this, "~/input/topic_img_front_left", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
-  sub_fr_img_.subscribe(this, "~/input/topic_img_front_right", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_fl_img_.subscribe(
+    this, "~/input/topic_img_front_left",
+    rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_fr_img_.subscribe(
+    this, "~/input/topic_img_front_right",
+    rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
 
-  sub_bl_img_.subscribe(this, "~/input/topic_img_back_left", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
-  sub_br_img_.subscribe(this, "~/input/topic_img_back_right", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_bl_img_.subscribe(
+    this, "~/input/topic_img_back_left",
+    rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_br_img_.subscribe(
+    this, "~/input/topic_img_back_right",
+    rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
 
   sync_ = std::make_shared<Sync>(
-    MultiCameraApproxSync(10), sub_fl_img_, sub_f_img_, sub_fr_img_, sub_bl_img_, sub_b_img_, sub_br_img_);
+    MultiCameraApproxSync(10), sub_fl_img_, sub_f_img_, sub_fr_img_, sub_bl_img_, sub_b_img_,
+    sub_br_img_);
 
   sync_->registerCallback(std::bind(&TRTBEVDetNode::callback, this, _1, _2, _3, _4, _5, _6));
 }
@@ -165,10 +176,10 @@ void TRTBEVDetNode::callback(
   cv::Mat img_fl, img_f, img_fr, img_bl, img_b, img_br;
   std::vector<cv::Mat> imgs;
   img_fl = cv_bridge::toCvShare(msg_fl_img, "bgr8")->image.clone();
-  img_f  = cv_bridge::toCvShare(msg_f_img, "bgr8")->image.clone();
+  img_f = cv_bridge::toCvShare(msg_f_img, "bgr8")->image.clone();
   img_fr = cv_bridge::toCvShare(msg_fr_img, "bgr8")->image.clone();
   img_bl = cv_bridge::toCvShare(msg_bl_img, "bgr8")->image.clone();
-  img_b  = cv_bridge::toCvShare(msg_b_img, "bgr8")->image.clone();
+  img_b = cv_bridge::toCvShare(msg_b_img, "bgr8")->image.clone();
   img_br = cv_bridge::toCvShare(msg_br_img, "bgr8")->image.clone();
 
   imgs.emplace_back(img_fl);
@@ -214,10 +225,9 @@ void TRTBEVDetNode::cameraInfoCallback(int idx, const sensor_msgs::msg::CameraIn
   Eigen::Translation3f translation;
   try {
     getTransform(
-      tf_buffer_->lookupTransform("base_link", msg->header.frame_id, rclcpp::Time(0)),
-      rot, translation
-    );
-  } catch (tf2::TransformException &ex) {
+      tf_buffer_->lookupTransform("base_link", msg->header.frame_id, rclcpp::Time(0)), rot,
+      translation);
+  } catch (tf2::TransformException & ex) {
     RCLCPP_WARN(this->get_logger(), "Transform lookup failed: %s", ex.what());
     return;
   }
