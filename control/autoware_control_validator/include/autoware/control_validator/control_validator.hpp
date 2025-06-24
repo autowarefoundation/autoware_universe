@@ -206,14 +206,18 @@ class YawValidator
 {
 public:
   explicit YawValidator(rclcpp::Node & node)
-  : yaw_deviation_th_{get_or_declare_parameter<double>(node, "thresholds.yaw_deviation")} {};
+  : yaw_deviation_error_th_{get_or_declare_parameter<double>(
+      node, "thresholds.yaw_deviation_error")},
+    yaw_deviation_warn_th_{
+      get_or_declare_parameter<double>(node, "thresholds.yaw_deviation_warn")} {};
 
   void validate(
     ControlValidatorStatus & res, const Trajectory & reference_trajectory,
-    const Odometry & kinematics);
+    const Odometry & kinematics) const;
 
 private:
-  const double yaw_deviation_th_;
+  const double yaw_deviation_error_th_;
+  const double yaw_deviation_warn_th_;
 };
 
 /**

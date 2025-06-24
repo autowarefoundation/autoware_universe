@@ -10,6 +10,7 @@ bool has_overrun_stop_point
 bool will_overrun_stop_point
 bool is_valid_latency
 bool is_valid_yaw
+bool is_warn_yaw
 
 # values
 float64 max_distance_deviation
