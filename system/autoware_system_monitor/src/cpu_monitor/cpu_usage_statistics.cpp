@@ -125,16 +125,16 @@ void CpuUsageStatistics::update_cpu_statistics()
     CoreUsageInfo core_usage;
     core_usage.name = cpu_name;
     // clang-format off
-    core_usage.user_percent       = (static_cast<float>(user_delta)       / total_all_delta_float) * 100.0f;
-    core_usage.nice_percent       = (static_cast<float>(nice_delta)       / total_all_delta_float) * 100.0f;
-    core_usage.system_percent     = (static_cast<float>(system_delta)     / total_all_delta_float) * 100.0f;
-    core_usage.idle_percent       = (static_cast<float>(idle_delta)       / total_all_delta_float) * 100.0f;
-    core_usage.iowait_percent     = (static_cast<float>(iowait_delta)     / total_all_delta_float) * 100.0f;
-    core_usage.irq_percent        = (static_cast<float>(irq_delta)        / total_all_delta_float) * 100.0f;
-    core_usage.softirq_percent    = (static_cast<float>(softirq_delta)    / total_all_delta_float) * 100.0f;
-    core_usage.steal_percent      = (static_cast<float>(steal_delta)      / total_all_delta_float) * 100.0f;
-    core_usage.guest_percent      = (static_cast<float>(guest_delta)      / total_all_delta_float) * 100.0f;
-    core_usage.guest_nice_percent = (static_cast<float>(guest_nice_delta) / total_all_delta_float) * 100.0f;
+    core_usage.user_percent       = (static_cast<float>(user_delta)       / total_all_delta_float) * 100.0f;  // NOLINT
+    core_usage.nice_percent       = (static_cast<float>(nice_delta)       / total_all_delta_float) * 100.0f;  // NOLINT
+    core_usage.system_percent     = (static_cast<float>(system_delta)     / total_all_delta_float) * 100.0f;  // NOLINT
+    core_usage.idle_percent       = (static_cast<float>(idle_delta)       / total_all_delta_float) * 100.0f;  // NOLINT
+    core_usage.iowait_percent     = (static_cast<float>(iowait_delta)     / total_all_delta_float) * 100.0f;  // NOLINT
+    core_usage.irq_percent        = (static_cast<float>(irq_delta)        / total_all_delta_float) * 100.0f;  // NOLINT
+    core_usage.softirq_percent    = (static_cast<float>(softirq_delta)    / total_all_delta_float) * 100.0f;  // NOLINT
+    core_usage.steal_percent      = (static_cast<float>(steal_delta)      / total_all_delta_float) * 100.0f;  // NOLINT
+    core_usage.guest_percent      = (static_cast<float>(guest_delta)      / total_all_delta_float) * 100.0f;  // NOLINT
+    core_usage.guest_nice_percent = (static_cast<float>(guest_nice_delta) / total_all_delta_float) * 100.0f;  // NOLINT
     core_usage.total_usage_percent = 100.0f - core_usage.idle_percent;
     // clang-format on
 

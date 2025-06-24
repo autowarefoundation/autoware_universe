@@ -79,9 +79,6 @@ public:
   CoreUsageInfo get_core_usage_info(int32_t core_index) const;
 
 private:
-  /**
-   * @brief Delete the default constructors and assignemt operators
-   */
   CpuUsageStatistics(const CpuUsageStatistics &) = delete;
   CpuUsageStatistics(const CpuUsageStatistics &&) = delete;
   CpuUsageStatistics operator=(const CpuUsageStatistics &) = delete;
