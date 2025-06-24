@@ -18,6 +18,7 @@ The listed features below does not always correspond to the latest implementatio
 - **Lateral jerk** : invalid when the lateral jerk exceeds the configured threshold. The validation uses the vehicle's velocity and steering angle rate to calculate the resulting lateral jerk. The calculation assumes constant velocity (acceleration is zero).
 - **Deviation check between reference trajectory and predicted trajectory** : invalid when the largest deviation between the predicted trajectory and reference trajectory is greater than the given threshold.
 - **Yaw deviation**: invalid when the difference between the yaw of the ego vehicle and the nearest (interpolated) trajectory yaw is greater than the given threshold.
+  - 2 thresholds are implemented, one to trigger a warning diagnostic, and one to trigger an error diagnostic.
 
 ![trajectory_deviation](./image/trajectory_deviation.drawio.svg)
 
@@ -73,4 +74,5 @@ The input trajectory is detected as invalid if the index exceeds the following t
 | `thresholds.will_overrun_stop_point_dist` | double | threshold distance to overrun stop point [m]                                                                | 1.0           |
 | `thresholds.assumed_limit_acc`            | double | assumed acceleration for over run estimation [m]                                                            | 5.0           |
 | `thresholds.assumed_delay_time`           | double | assumed delay for over run estimation [m]                                                                   | 0.2           |
-| `thresholds.yaw_deviation`                | double | threshold angle to validate the vehicle yaw related to the nearest trajectory yaw [rad]                     | 1.0           |
+| `thresholds.yaw_deviation_error`          | double | threshold angle to validate the vehicle yaw related to the nearest trajectory yaw [rad]                     | 1.0           |
+| `thresholds.yaw_deviation_warn`           | double | threshold angle to trigger a WARN diagnostic [rad]                                                          | 0.5           |
