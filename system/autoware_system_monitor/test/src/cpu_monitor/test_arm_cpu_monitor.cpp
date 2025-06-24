@@ -138,9 +138,7 @@ private:
 class CPUMonitorTestSuite : public ::testing::Test
 {
 public:
-  CPUMonitorTestSuite() : monitor_(nullptr), sub_(nullptr)
-  {
-  }
+  CPUMonitorTestSuite() : monitor_(nullptr), sub_(nullptr) {}
 
 protected:
   std::unique_ptr<TestCPUMonitor> monitor_;

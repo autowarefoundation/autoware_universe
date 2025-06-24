@@ -139,9 +139,7 @@ private:
 class CPUMonitorTestSuite : public ::testing::Test
 {
 public:
-  CPUMonitorTestSuite()
-  {
-  }
+  CPUMonitorTestSuite() {}
 
 protected:
   std::unique_ptr<TestCPUMonitor> monitor_;

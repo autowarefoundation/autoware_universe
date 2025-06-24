@@ -29,8 +29,11 @@
 #include <vector>
 
 CpuUsageStatistics::CpuUsageStatistics()
-  : first_call_(true), statistics_1_(), statistics_2_(),
-    current_statistics_(statistics_1_), previous_statistics_(statistics_2_)
+: first_call_(true),
+  statistics_1_(),
+  statistics_2_(),
+  current_statistics_(statistics_1_),
+  previous_statistics_(statistics_2_)
 {
 }
 
@@ -64,13 +67,13 @@ void CpuUsageStatistics::update_cpu_statistics()
       }
 
       CpuStatistics statistics;
-      iss >> statistics.user >> statistics.nice >> statistics.system >> statistics.idle
-        >> statistics.iowait >> statistics.irq >> statistics.softirq >> statistics.steal
-        >> statistics.guest >> statistics.guest_nice;
+      iss >> statistics.user >> statistics.nice >> statistics.system >> statistics.idle >>
+        statistics.iowait >> statistics.irq >> statistics.softirq >> statistics.steal >>
+        statistics.guest >> statistics.guest_nice;
 
       statistics.name = cpu_name;
       current_statistics_.push_back(statistics);
-    } catch (const std::exception& e) {
+    } catch (const std::exception & e) {
       // Log error but continue processing other lines
       continue;
     }
@@ -89,9 +92,9 @@ void CpuUsageStatistics::update_cpu_statistics()
     const std::string & cpu_name = current_data.name;
 
     // Skip if we don't have previous statistics data for this CPU (not expected)
-    auto iterator =
-      std::find_if(previous_statistics_.begin(), previous_statistics_.end(),
-        [cpu_name](const CpuStatistics & statistics) { return statistics.name == cpu_name; });
+    auto iterator = std::find_if(
+      previous_statistics_.begin(), previous_statistics_.end(),
+      [cpu_name](const CpuStatistics & statistics) { return statistics.name == cpu_name; });
     if (iterator == previous_statistics_.end()) {
       continue;
     }
@@ -112,8 +115,8 @@ void CpuUsageStatistics::update_cpu_statistics()
     // clang-format on
 
     // Calculate total time delta
-    uint64_t total_delta = user_delta + nice_delta + system_delta +
-                          iowait_delta + irq_delta + softirq_delta + steal_delta;
+    uint64_t total_delta = user_delta + nice_delta + system_delta + iowait_delta + irq_delta +
+                           softirq_delta + steal_delta;
     uint64_t total_all_delta = total_delta + idle_delta;
 
     // Skip if total time delta is zero
