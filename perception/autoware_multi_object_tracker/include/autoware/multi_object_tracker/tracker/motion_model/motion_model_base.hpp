@@ -29,8 +29,6 @@
 
 namespace autoware::multi_object_tracker
 {
-// using autoware::kalman_filter::KalmanFilter;
-
 template <int StateSize, int MeasurementSize = 2>
 class MotionModel
 {
@@ -45,7 +43,6 @@ protected:
   mutable KalmanFilterTemplate<StateSize, MeasurementSize> tmp_ekf_for_no_update_;
   // Dimensionality constants (accessible to derived classes)
   static constexpr int DIM = StateSize;
-  // static constexpr int DIM_Y = MeasurementSize;
 
 public:
   // Add these type aliases for convenience
