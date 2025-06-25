@@ -153,13 +153,13 @@ __global__ void generateVoxels_random_kernel(
   atomicExch(address + 1, y);
   atomicExch(address + 2, z);
   if (POINT_NUM_FEATURES == POINT_DIM_XYZT) {
-	const float t = points[point_idx * POINT_NUM_FEATURES + 3];
-	atomicExch(address + 3, t);  // Time_lag
+    const float t = points[point_idx * POINT_NUM_FEATURES + 3];
+    atomicExch(address + 3, t);  // Time_lag
   } else if (POINT_NUM_FEATURES == POINT_DIM_XYZIT) {
-	const float i = points[point_idx * POINT_NUM_FEATURES + 3];
-	const float t = points[point_idx * POINT_NUM_FEATURES + 4];
-	atomicExch(address + 3, i);  // Intensity
-	atomicExch(address + 4, t);  // Time_lag
+    const float i = points[point_idx * POINT_NUM_FEATURES + 3];
+    const float t = points[point_idx * POINT_NUM_FEATURES + 4];
+    atomicExch(address + 3, i);  // Intensity
+    atomicExch(address + 4, t);  // Time_lag
   }
 }
 
