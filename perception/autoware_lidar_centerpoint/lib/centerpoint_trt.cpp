@@ -18,6 +18,7 @@
 #include "autoware/lidar_centerpoint/network/scatter_kernel.hpp"
 #include "autoware/lidar_centerpoint/preprocess/preprocess_kernel.hpp"
 
+#include <autoware/cuda_utils/cuda_utils.hpp>
 #include <autoware_utils/math/constants.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
 
@@ -214,17 +215,19 @@ bool CenterPointTRT::preprocess(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & input_pointcloud_msg_ptr,
   const tf2_ros::Buffer & tf_buffer)
 {
+  using autoware::cuda_utils::clear_async;
+
   bool is_success = vg_ptr_->enqueuePointCloud(input_pointcloud_msg_ptr, tf_buffer);
   if (!is_success) {
     return false;
   }
 
-  cuda::clear_async(num_voxels_d_.get(), 1, stream_);
-  cuda::clear_async(voxels_buffer_d_.get(), voxels_buffer_size_, stream_);
-  cuda::clear_async(mask_d_.get(), mask_size_, stream_);
-  cuda::clear_async(voxels_d_.get(), voxels_size_, stream_);
-  cuda::clear_async(coordinates_d_.get(), coordinates_size_, stream_);
-  cuda::clear_async(num_points_per_voxel_d_.get(), config_.max_voxel_size_, stream_);
+  clear_async(num_voxels_d_.get(), 1, stream_);
+  clear_async(voxels_buffer_d_.get(), voxels_buffer_size_, stream_);
+  clear_async(mask_d_.get(), mask_size_, stream_);
+  clear_async(voxels_d_.get(), voxels_size_, stream_);
+  clear_async(coordinates_d_.get(), coordinates_size_, stream_);
+  clear_async(num_points_per_voxel_d_.get(), config_.max_voxel_size_, stream_);
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   const std::size_t count = vg_ptr_->generateSweepPoints(points_aux_d_.get());

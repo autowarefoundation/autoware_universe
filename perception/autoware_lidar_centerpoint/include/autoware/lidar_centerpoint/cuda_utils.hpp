@@ -114,13 +114,6 @@ inline T * get_next_ptr(std::size_t num_elem, void *& workspace, std::size_t & w
   workspace = reinterpret_cast<void *>(reinterpret_cast<uintptr_t>(workspace) + size);
   return ptr;
 }
-
-template <typename T>
-void clear_async(T * ptr, std::size_t num_elem, cudaStream_t stream)
-{
-  CHECK_CUDA_ERROR(::cudaMemsetAsync(ptr, 0, sizeof(T) * num_elem, stream));
-}
-
 }  // namespace cuda
 
 #endif  // AUTOWARE__LIDAR_CENTERPOINT__CUDA_UTILS_HPP_
