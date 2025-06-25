@@ -128,9 +128,9 @@ __global__ void generateVoxels_random_kernel(
   int point_idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (point_idx >= points_size) return;
 
-  const float & x = points[point_idx * POINT_NUM_FEATURES];
-  const float & y = points[point_idx * POINT_NUM_FEATURES + 1];
-  const float & z = points[point_idx * POINT_NUM_FEATURES + 2];
+  const float x = points[point_idx * POINT_NUM_FEATURES];
+  const float y = points[point_idx * POINT_NUM_FEATURES + 1];
+  const float z = points[point_idx * POINT_NUM_FEATURES + 2];
 
   if (
     x < min_x_range || x >= max_x_range || y < min_y_range || y >= max_y_range || z < min_z_range ||
