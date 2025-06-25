@@ -344,6 +344,8 @@ void ControlValidator::validation_filtering(ControlValidatorStatus & res)
   res.has_overrun_stop_point = false;
   res.will_overrun_stop_point = false;
   res.is_valid_latency = true;
+  res.is_valid_yaw = true;
+  res.is_warn_yaw = false;
 }
 
 void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
@@ -414,6 +416,11 @@ void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
   yaw_validator.validate(validation_status_, *reference_trajectory_msg, *kinematics_msg);
 
   if (!flag_autonomous_control_enabled_) {
+    // if warnings or errors are being suppressed, printing simple logs
+    if (!is_all_valid(validation_status_)) {
+      RCLCPP_DEBUG_THROTTLE(
+        get_logger(), *get_clock(), 3000, "Suppressing control validation during manual driving");
+    }
     validation_filtering(validation_status_);
   }
 
@@ -450,7 +457,7 @@ bool ControlValidator::is_all_valid(const ControlValidatorStatus & s)
 {
   return s.is_valid_lateral_jerk && s.is_valid_max_distance_deviation && s.is_valid_acc &&
          !s.is_rolling_back && !s.is_over_velocity && !s.has_overrun_stop_point &&
-         !s.will_overrun_stop_point;
+         !s.will_overrun_stop_point && s.is_valid_yaw && !s.is_warn_yaw;
 }
 
 std::string ControlValidator::generate_error_message(const ControlValidatorStatus & s)
