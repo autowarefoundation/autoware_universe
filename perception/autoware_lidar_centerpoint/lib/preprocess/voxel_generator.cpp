@@ -89,7 +89,6 @@ std::size_t VoxelGenerator::generateSweepPoints(float * points_d)
 
     point_counter += sweep_num_points;
   }
-
   return point_counter;
 }
 

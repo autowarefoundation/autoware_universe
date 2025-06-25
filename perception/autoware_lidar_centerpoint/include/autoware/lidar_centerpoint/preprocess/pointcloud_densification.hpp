@@ -80,7 +80,6 @@ public:
   {
     return iter == pointcloud_cache_.end();
   }
-
   unsigned int pointcloud_cache_size() const { return param_.pointcloud_cache_size(); }
 
 private:
