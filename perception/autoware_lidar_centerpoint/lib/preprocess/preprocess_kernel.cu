@@ -132,8 +132,6 @@ __global__ void generateVoxels_random_kernel(
   const float & y = points[point_idx * POINT_NUM_FEATURES + 1];
   const float & z = points[point_idx * POINT_NUM_FEATURES + 2];
 
-  //   float4 point = ((float4 *)points)[point_idx];
-
   if (
     x < min_x_range || x >= max_x_range || y < min_y_range || y >= max_y_range || z < min_z_range ||
     z >= max_z_range)
@@ -151,17 +149,17 @@ __global__ void generateVoxels_random_kernel(
 
   float * address =
     voxels + (voxel_index * MAX_POINT_IN_VOXEL_SIZE + point_id) * POINT_NUM_FEATURES;
-  atomicExch(address + 0, x);
+  atomicExch(address, x);
   atomicExch(address + 1, y);
   atomicExch(address + 2, z);
   if (POINT_NUM_FEATURES == POINT_DIM_XYZT) {
-    const float & t = points[point_idx * POINT_NUM_FEATURES + 3];
-    atomicExch(address + 3, t);  // Time_lag
+	const float t = points[point_idx * POINT_NUM_FEATURES + 3];
+	atomicExch(address + 3, t);  // Time_lag
   } else if (POINT_NUM_FEATURES == POINT_DIM_XYZIT) {
-    const float & i = points[point_idx * POINT_NUM_FEATURES + 3];
-    const float & t = points[point_idx * POINT_NUM_FEATURES + 4];
-    atomicExch(address + 3, i);  // Intensity
-    atomicExch(address + 4, t);  // Time_lag
+	const float i = points[point_idx * POINT_NUM_FEATURES + 3];
+	const float t = points[point_idx * POINT_NUM_FEATURES + 4];
+	atomicExch(address + 3, i);  // Intensity
+	atomicExch(address + 4, t);  // Time_lag
   }
 }
 
