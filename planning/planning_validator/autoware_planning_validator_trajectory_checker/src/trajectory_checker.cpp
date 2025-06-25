@@ -537,7 +537,7 @@ double nearest_trajectory_yaw_shift(
   const autoware_planning_msgs::msg::TrajectoryPoint & trajectory_point)
 {
   if (!last_valid_trajectory) {
-    return true;
+    return 0.0;
   }
   const auto interpolated_previous_trajectory_point =
     motion_utils::calcInterpolatedPoint(*last_valid_trajectory, trajectory_point.pose);
