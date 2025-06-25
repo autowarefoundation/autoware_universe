@@ -1,23 +1,23 @@
 /**:
   ros__parameters:
-    intersection_collision_checker:
+    icc_parameters:
       enable: true
       detection_range: 50.0 # [m]
       ttc_threshold: 1.0 # [s]
-      is_critical: false
       ego_deceleration: 1.0 # [m/s^2]
       min_time_horizon: 10.0 # [s]
-      timeout: 1.0 # [s]
+      on_time_buffer: 0.3 # [s]
+      off_time_buffer: 1.0 # [s]
 
       right_turn:
         enable: true
-        check_oncoming_lanes: true
         check_crossing_lanes: true
-        check_turning_lanes: false
+        check_turning_lanes: true
+        crossing_lane_angle_th: 0.785398 # [rad] (45 deg)
 
       left_turn:
         enable: true
-        check_turning_lanes: false
+        check_turning_lanes: true
 
       pointcloud:
         height_buffer: 0.5  # [m]
@@ -32,3 +32,4 @@
           min_size: 10
           max_size: 10000
         observation_time: 0.3  # [s]
+        latency: 0.3
