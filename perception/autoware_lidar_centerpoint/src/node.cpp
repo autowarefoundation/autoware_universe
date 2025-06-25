@@ -38,7 +38,7 @@ namespace autoware::lidar_centerpoint
 LidarCenterPointNode::LidarCenterPointNode(const rclcpp::NodeOptions & node_options)
 : Node("lidar_center_point", node_options), tf_buffer_(this->get_clock())
 {
-  const float score_thresholds =
+  const auto score_thresholds =
 	this->declare_parameter<std::vector<double>>("post_process_params.score_thresholds");
   const float circle_nms_dist_threshold = static_cast<float>(
     this->declare_parameter<double>("post_process_params.circle_nms_dist_threshold"));

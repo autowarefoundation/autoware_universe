@@ -123,8 +123,7 @@ public:
   std::size_t head_out_vel_size_{2};
 
   // post-process params
-  // All default to 0.35f, but can be overridden by the user
-  std::vector<float> float score_thresholds_(class_size_, 0.35f);
+  std::vector<float> score_thresholds_{};
   float circle_nms_dist_threshold_{1.5f};
   std::vector<float> yaw_norm_thresholds_{};
 
