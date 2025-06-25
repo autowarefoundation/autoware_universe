@@ -61,7 +61,6 @@ std::size_t VoxelGenerator::generateSweepPoints(float * points_d)
     const auto & input_pointcloud_msg_ptr = pc_cache_iter->input_pointcloud_msg_ptr;
     auto sweep_num_points = input_pointcloud_msg_ptr->height * input_pointcloud_msg_ptr->width;
     auto output_offset = point_counter * config_.point_feature_size_;
-    // auto point_step = input_pointcloud_msg_ptr->point_step;
     auto affine_past2current =
       pd_ptr_->getAffineWorldToCurrent() * pc_cache_iter->affine_past2world;
     float time_lag = static_cast<float>(

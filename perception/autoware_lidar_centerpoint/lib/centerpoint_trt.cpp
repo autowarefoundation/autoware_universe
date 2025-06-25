@@ -18,6 +18,7 @@
 #include "autoware/lidar_centerpoint/network/scatter_kernel.hpp"
 #include "autoware/lidar_centerpoint/preprocess/preprocess_kernel.hpp"
 
+#include <autoware/cuda_utils/cuda_utils.hpp>
 #include <autoware_utils/math/constants.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
 
@@ -40,7 +41,7 @@ CenterPointTRT::CenterPointTRT(
 : config_(config)
 {
   vg_ptr_ = std::make_unique<VoxelGenerator>(densification_param, config_, stream_);
-  pre_ptr_ = std::make_unique<PreprocessCuda>(config_, stream_);
+  pre_proc_ptr_ = std::make_unique<PreprocessCuda>(config_, stream_);
   post_proc_ptr_ = std::make_unique<PostProcessCUDA>(config_);
 
   initPtr();
@@ -214,34 +215,36 @@ bool CenterPointTRT::preprocess(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & input_pointcloud_msg_ptr,
   const tf2_ros::Buffer & tf_buffer)
 {
+  using autoware::cuda_utils::clear_async;
+
   bool is_success = vg_ptr_->enqueuePointCloud(input_pointcloud_msg_ptr, tf_buffer);
   if (!is_success) {
     return false;
   }
 
-  cuda::clear_async(num_voxels_d_.get(), 1, stream_);
-  cuda::clear_async(voxels_buffer_d_.get(), voxels_buffer_size_, stream_);
-  cuda::clear_async(mask_d_.get(), mask_size_, stream_);
-  cuda::clear_async(voxels_d_.get(), voxels_size_, stream_);
-  cuda::clear_async(coordinates_d_.get(), coordinates_size_, stream_);
-  cuda::clear_async(num_points_per_voxel_d_.get(), config_.max_voxel_size_, stream_);
+  clear_async(num_voxels_d_.get(), 1, stream_);
+  clear_async(voxels_buffer_d_.get(), voxels_buffer_size_, stream_);
+  clear_async(mask_d_.get(), mask_size_, stream_);
+  clear_async(voxels_d_.get(), voxels_size_, stream_);
+  clear_async(coordinates_d_.get(), coordinates_size_, stream_);
+  clear_async(num_points_per_voxel_d_.get(), config_.max_voxel_size_, stream_);
   CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
 
   const std::size_t count = vg_ptr_->generateSweepPoints(points_aux_d_.get());
   const std::size_t random_offset = std::rand() % config_.cloud_capacity_;
 
-  pre_ptr_->shufflePoints_launch(
+  pre_proc_ptr_->shufflePoints_launch(
     points_aux_d_.get(), shuffle_indices_d_.get(), points_d_.get(), count, config_.cloud_capacity_,
     random_offset);
 
-  pre_ptr_->generateVoxels_random_launch(
+  pre_proc_ptr_->generateVoxels_random_launch(
     points_d_.get(), config_.cloud_capacity_, mask_d_.get(), voxels_buffer_d_.get());
 
-  pre_ptr_->generateBaseFeatures_launch(
+  pre_proc_ptr_->generateBaseFeatures_launch(
     mask_d_.get(), voxels_buffer_d_.get(), num_voxels_d_.get(), voxels_d_.get(),
     num_points_per_voxel_d_.get(), coordinates_d_.get());
 
-  pre_ptr_->generateFeatures_launch(
+  pre_proc_ptr_->generateFeatures_launch(
     voxels_d_.get(), num_points_per_voxel_d_.get(), coordinates_d_.get(), num_voxels_d_.get(),
     encoder_in_features_d_.get());
 
