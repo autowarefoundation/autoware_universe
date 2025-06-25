@@ -78,38 +78,6 @@ lanelet::Ids get_predicted_path_lanelet_ids(
   const route_handler::RouteHandler & route_handler, const lanelet::ConstLanelet & lanelet,
   const size_t path_idx, const bool already_entered_lanelet)
 {
-  const auto & point = predicted_path.path[path_idx].position;
-  const lanelet::BasicPoint2d search_point(point.x, point.y);
-
-  if (lanelet::geometry::within(search_point, lanelet.polygon2d().basicPolygon())) {
-    if (path_idx + 1 == predicted_path.path.size()) {  // found a full valid lanelet sequence
-      return {lanelet.id()};
-    }
-    return get_predicted_path_lanelet_ids(
-      predicted_path, route_handler, lanelet, path_idx + 1, true);
-  }
-
-  if (!already_entered_lanelet) {
-    return {};
-  }
-
-  const lanelet::ConstLanelets succeeding_lanelets =
-    route_handler.getRoutingGraphPtr()->following(lanelet);
-  lanelet::Ids possible_ids;
-  for (const auto & ll : succeeding_lanelets) {
-    if (lanelet::geometry::within(search_point, ll.polygon2d().basicPolygon())) {
-      if (path_idx + 1 == predicted_path.path.size()) {  // found a full valid lanelet sequence
-        possible_ids.push_back(ll.id());
-      } else {  // continue the search
-        const auto ids =
-          get_predicted_path_lanelet_ids(predicted_path, route_handler, ll, path_idx + 1, false);
-        if (!ids.empty()) {  // not empty means that a full path was found
-          possible_ids.push_back(ll.id());
-          possible_ids.insert(possible_ids.end(), ids.begin(), ids.end());
-        }
-      }
-    }
-  }
   return possible_ids;
 }
 
@@ -137,11 +105,59 @@ lanelet::Ids get_predicted_path_lanelet_ids(
 
   // For each nearby lanelet, traverse the routing graph to find a sequence of
   // succeeding lanelets that aligns with the predicted path.
+  struct SearchState
+  {
+    lanelet::ConstLanelet previous_lanelet;
+    size_t current_idx{};
+    bool already_entered_lanelet = false;
+    std::vector<lanelet::Id> path_ids;
+  };
+  std::stack<SearchState> search_stack;
+  SearchState ss;
   for (const auto & start_lanelet : initial_lanelets) {
     if (lanelet::geometry::within(search_point, start_lanelet.polygon2d().basicPolygon())) {
-      const auto ids =
-        get_predicted_path_lanelet_ids(predicted_path, route_handler, start_lanelet, 1UL, true);
-      followed_ids.insert(followed_ids.end(), ids.begin(), ids.end());
+      ss.previous_lanelet = start_lanelet;
+      ss.current_idx = 1UL;
+      ss.already_entered_lanelet = true;
+      search_stack.push(ss);
+    }
+  }
+  while (!search_stack.empty()) {
+    auto & ss = search_stack.top();
+    const auto & p = predicted_path.path[ss.current_idx].position;
+    const lanelet::BasicPoint2d search_point(p.x, p.y);
+
+    if (lanelet::geometry::within(search_point, ss.previous_lanelet.polygon2d().basicPolygon())) {
+      if (ss.current_idx + 1 == predicted_path.path.size()) {  // found a full valid lanelet
+                                                               // sequence
+        followed_ids.push_back(ss.previous_lanelet.id());
+        followed_ids.insert(followed_ids.end(), ss.path_ids.begin(), ss.path_ids.end());
+      }
+      if (!ss.already_entered_lanelet) {
+        ss.already_entered_lanelet = true;
+        ss.current_idx++;
+        ss.path_ids.
+      }
+    } else {
+      search_stack.pop();
+    }
+
+    const lanelet::ConstLanelets succeeding_lanelets =
+      route_handler.getRoutingGraphPtr()->following(lanelet);
+    lanelet::Ids possible_ids;
+    for (const auto & ll : succeeding_lanelets) {
+      if (lanelet::geometry::within(search_point, ll.polygon2d().basicPolygon())) {
+        if (path_idx + 1 == predicted_path.path.size()) {  // found a full valid lanelet sequence
+          possible_ids.push_back(ll.id());
+        } else {  // continue the search
+          const auto ids =
+            get_predicted_path_lanelet_ids(predicted_path, route_handler, ll, path_idx + 1, false);
+          if (!ids.empty()) {  // not empty means that a full path was found
+            possible_ids.push_back(ll.id());
+            possible_ids.insert(possible_ids.end(), ids.begin(), ids.end());
+          }
+        }
+      }
     }
   }
 
