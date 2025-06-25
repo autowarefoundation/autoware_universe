@@ -119,56 +119,27 @@ __global__ void shufflePoints_kernel(
   }
 }
 
+
+template <std::size_t POINT_NUM_FEATURES>
 __global__ void generateVoxels_random_kernel(
   const float * points, std::size_t points_size, float min_x_range, float max_x_range,
   float min_y_range, float max_y_range, float min_z_range, float max_z_range, float pillar_x_size,
-  float pillar_y_size, float pillar_z_size, int grid_y_size, int grid_x_size, unsigned int * mask,
+  float pillar_y_size, int grid_y_size, int grid_x_size, unsigned int * mask,
   float * voxels)
 {
   int point_idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (point_idx >= points_size) return;
 
-  float4 point = ((float4 *)points)[point_idx];
+
+  const float &x = points[point_idx * POINT_NUM_FEATURES];
+  const float &y = points[point_idx * POINT_NUM_FEATURES + 1];
+  const float &z = points[point_idx * POINT_NUM_FEATURES + 2];
+  
+//   float4 point = ((float4 *)points)[point_idx];
 
   if (
-    point.x < min_x_range || point.x >= max_x_range || point.y < min_y_range ||
-    point.y >= max_y_range || point.z < min_z_range || point.z >= max_z_range)
-    return;
-
-  int voxel_idx = floorf((point.x - min_x_range) / pillar_x_size);
-  int voxel_idy = floorf((point.y - min_y_range) / pillar_y_size);
-  voxel_idx = voxel_idx < 0 ? 0 : voxel_idx >= grid_x_size ? grid_x_size - 1 : voxel_idx;
-  voxel_idy = voxel_idy < 0 ? 0 : voxel_idy >= grid_y_size ? grid_y_size - 1 : voxel_idy;
-  unsigned int voxel_index = (grid_x_size - 1 - voxel_idx) * grid_y_size + voxel_idy;
-
-  unsigned int point_id = atomicAdd(&(mask[voxel_index]), 1);
-
-  if (point_id >= MAX_POINT_IN_VOXEL_SIZE) return;
-  float * address = voxels + (voxel_index * MAX_POINT_IN_VOXEL_SIZE + point_id) * 4;
-  atomicExch(address + 0, point.x);
-  atomicExch(address + 1, point.y);
-  atomicExch(address + 2, point.z);
-  atomicExch(address + 3, point.w);
-}
-
-__global__ void generateIntensityVoxels_random_kernel(
-  const float * points, std::size_t points_size, float min_x_range, float max_x_range,
-  float min_y_range, float max_y_range, float min_z_range, float max_z_range, float pillar_x_size,
-  float pillar_y_size, float pillar_z_size, int grid_y_size, int grid_x_size, unsigned int * mask,
-  float * voxels)
-{
-  int point_idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (point_idx >= points_size) return;
-
-  float x = points[point_idx * 5];
-  float y = points[point_idx * 5 + 1];
-  float z = points[point_idx * 5 + 2];
-  float i = points[point_idx * 5 + 3];
-  float t = points[point_idx * 5 + 4];
-
-  if (
-    x < min_x_range || x >= max_x_range || y < min_y_range || y >= max_y_range || z < min_z_range ||
-    z >= max_z_range)
+    x < min_x_range || x >= max_x_range || y < min_y_range ||
+    y >= max_y_range || z < min_z_range || z >= max_z_range)
     return;
 
   int voxel_idx = floorf((x - min_x_range) / pillar_x_size);
@@ -180,12 +151,20 @@ __global__ void generateIntensityVoxels_random_kernel(
   unsigned int point_id = atomicAdd(&(mask[voxel_index]), 1);
 
   if (point_id >= MAX_POINT_IN_VOXEL_SIZE) return;
-  float * address = voxels + (voxel_index * MAX_POINT_IN_VOXEL_SIZE + point_id) * POINT_DIM_XYZIT;
+
+  float * address = voxels + (voxel_index * MAX_POINT_IN_VOXEL_SIZE + point_id) * POINT_NUM_FEATURES;
   atomicExch(address + 0, x);
   atomicExch(address + 1, y);
   atomicExch(address + 2, z);
-  atomicExch(address + 3, i);
-  atomicExch(address + 4, t);
+  if (POINT_NUM_FEATURES == POINT_DIM_XYZT) {
+	const float& t = points[point_idx * POINT_NUM_FEATURES + 3];
+	atomicExch(address + 3, t);  // Time_lag
+  } else if (POINT_NUM_FEATURES == POINT_DIM_XYZIT) {
+	const float& i = points[point_idx * POINT_NUM_FEATURES + 3];
+	const float& t = points[point_idx * POINT_NUM_FEATURES + 4];
+	atomicExch(address + 3, i);  // Intensity
+	atomicExch(address + 4, t);  // Time_lag
+  }
 }
 
 template <std::size_t POINT_NUM_FEATURES>
@@ -512,16 +491,16 @@ cudaError_t PreprocessCuda::generateVoxels_random_launch(
   }
 
   if (config_.point_feature_size_ == POINT_DIM_XYZT) {
-    generateVoxels_random_kernel<<<blocks, threads, 0, stream_>>>(
+    generateVoxels_random_kernel<POINT_DIM_XYZT><<<blocks, threads, 0, stream_>>>(
       points, points_size, config_.range_min_x_, config_.range_max_x_, config_.range_min_y_,
       config_.range_max_y_, config_.range_min_z_, config_.range_max_z_, config_.voxel_size_x_,
-      config_.voxel_size_y_, config_.voxel_size_z_, config_.grid_size_y_, config_.grid_size_x_,
+      config_.voxel_size_y_, config_.grid_size_y_, config_.grid_size_x_,
       mask, voxels);
   } else if (config_.point_feature_size_ == POINT_DIM_XYZIT) {
-    generateIntensityVoxels_random_kernel<<<blocks, threads, 0, stream_>>>(
+	generateVoxels_random_kernel<POINT_DIM_XYZIT><<<blocks, threads, 0, stream_>>>(
       points, points_size, config_.range_min_x_, config_.range_max_x_, config_.range_min_y_,
       config_.range_max_y_, config_.range_min_z_, config_.range_max_z_, config_.voxel_size_x_,
-      config_.voxel_size_y_, config_.voxel_size_z_, config_.grid_size_y_, config_.grid_size_x_,
+      config_.voxel_size_y_, config_.grid_size_y_, config_.grid_size_x_,
       mask, voxels);
   } else {
     throw std::runtime_error("Value of point_features_size is not supported!");
