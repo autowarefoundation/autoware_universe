@@ -286,6 +286,8 @@ Trajectory convertToAutowareTrajectory(const MPCTrajectory & input)
     p.pose.orientation = autoware_utils::create_quaternion_from_yaw(input.yaw.at(i));
     p.longitudinal_velocity_mps =
       static_cast<decltype(p.longitudinal_velocity_mps)>(input.vx.at(i));
+    p.time_from_start =
+      rclcpp::Duration::from_seconds(input.relative_time.at(i) - input.relative_time.front());
     output.points.push_back(p);
     if (output.points.size() == output.points.max_size()) {
       break;
