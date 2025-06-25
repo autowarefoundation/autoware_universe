@@ -457,7 +457,7 @@ bool ControlValidator::is_all_valid(const ControlValidatorStatus & s)
 {
   return s.is_valid_lateral_jerk && s.is_valid_max_distance_deviation && s.is_valid_acc &&
          !s.is_rolling_back && !s.is_over_velocity && !s.has_overrun_stop_point &&
-         !s.will_overrun_stop_point && s.is_valid_yaw && !s.is_warn_yaw;
+         !s.will_overrun_stop_point && s.is_valid_yaw;
 }
 
 std::string ControlValidator::generate_error_message(const ControlValidatorStatus & s)
