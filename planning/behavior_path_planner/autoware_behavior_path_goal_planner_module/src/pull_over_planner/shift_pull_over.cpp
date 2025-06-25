@@ -54,9 +54,8 @@ std::optional<PullOverPath> ShiftPullOver::plan(
   const int shift_sampling_num = parameters_.shift_sampling_num;
   const double jerk_resolution = std::abs(max_jerk - min_jerk) / shift_sampling_num;
 
-  const auto road_lanes = utils::getExtendedCurrentLanesFromPath(
-    upstream_module_output.path, planner_data, backward_search_length, forward_search_length,
-    /*forward_only_in_route*/ false);
+  const auto road_lanes = goal_planner_utils::get_reference_lanelets_for_pullover(
+    upstream_module_output.path, planner_data, backward_search_length, forward_search_length);
 
   const auto pull_over_lanes = goal_planner_utils::getPullOverLanes(
     *route_handler, left_side_parking_, backward_search_length, forward_search_length);
@@ -286,6 +285,7 @@ std::optional<PullOverPath> ShiftPullOver::generatePullOverPath(
     return {};
   }
 
+  pull_over_path.debug_processed_prev_module_path = processed_prev_module_path;
   return pull_over_path;
 }
 

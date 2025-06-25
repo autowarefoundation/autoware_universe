@@ -252,6 +252,23 @@ bool hasDeviatedFromPath(
  */
 bool has_stopline_except_terminal(const PathWithLaneId & path);
 
+/**
+ * @brief find the lanelet that has changed "laterally" from previous lanelet on the routing graph
+ * @return the lanelet that changed "laterally" if the path is lane changing, otherwise nullopt
+ */
+std::optional<lanelet::ConstLanelet> find_lane_change_completed_lanelet(
+  const PathWithLaneId & path, const lanelet::LaneletMapConstPtr lanelet_map,
+  const lanelet::routing::RoutingGraphConstPtr routing_graph);
+
+/**
+ * @brief generate lanelets with which pull over path is aligned
+ * @note if lane changing path is detected, this returns lanelets aligned with later part of the
+ * lane changing path
+ */
+lanelet::ConstLanelets get_reference_lanelets_for_pullover(
+  const PathWithLaneId & path, const std::shared_ptr<const PlannerData> & planner_data,
+  const double backward_length, const double forward_length);
+
 }  // namespace autoware::behavior_path_planner::goal_planner_utils
 
 #endif  // AUTOWARE__BEHAVIOR_PATH_GOAL_PLANNER_MODULE__UTIL_HPP_

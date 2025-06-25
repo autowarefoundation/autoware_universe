@@ -1076,4 +1076,73 @@ bool has_stopline_except_terminal(const PathWithLaneId & path)
          path.points.size();
 }
 
+std::optional<lanelet::ConstLanelet> find_lane_change_completed_lanelet(
+  const PathWithLaneId & path, const lanelet::LaneletMapConstPtr lanelet_map,
+  const lanelet::routing::RoutingGraphConstPtr routing_graph)
+{
+  std::vector<lanelet::Id> path_lane_ids;
+  for (const auto & point : path.points) {
+    const auto & lane_ids = point.lane_ids;
+    for (const auto & lane_id : lane_ids) {
+      if (std::find(path_lane_ids.begin(), path_lane_ids.end(), lane_id) == path_lane_ids.end()) {
+        path_lane_ids.push_back(lane_id);
+      }
+    }
+  }
+
+  if (path_lane_ids.size() < 2) {
+    return std::nullopt;
+  }
+  for (unsigned i = 0, j = 1; i < path_lane_ids.size() && j < path_lane_ids.size(); i++, j++) {
+    const auto & lane1 = lanelet_map->laneletLayer.get(path_lane_ids.at(i));
+    const auto & lane2 = lanelet_map->laneletLayer.get(path_lane_ids.at(j));
+    const auto & followings = routing_graph->following(lane1);
+    if (std::any_of(followings.begin(), followings.end(), [&](const auto & lane) {
+          return lane.id() == lane2.id();
+        })) {
+      continue;
+    }
+    return lane2;
+  }
+  return std::nullopt;
+}
+
+lanelet::ConstLanelets get_reference_lanelets_for_pullover(
+  const PathWithLaneId & path, const std::shared_ptr<const PlannerData> & planner_data,
+  const double backward_length, const double forward_length)
+{
+  const auto & routing_graph = planner_data->route_handler->getRoutingGraphPtr();
+  const auto & lanelet_map = planner_data->route_handler->getLaneletMapPtr();
+  const auto lane_change_complete_lane =
+    find_lane_change_completed_lanelet(path, lanelet_map, routing_graph);
+  if (!lane_change_complete_lane) {
+    return utils::getExtendedCurrentLanesFromPath(
+      path, planner_data, backward_length, forward_length,
+      /*forward_only_in_route*/ false);
+  }
+  auto route_lanes = planner_data->route_handler->getLaneletSequence(
+    *lane_change_complete_lane, backward_length, forward_length);
+  const double remaining_distance =
+    forward_length + backward_length - lanelet::utils::getLaneletLength3d(route_lanes);
+  if (route_lanes.empty() || remaining_distance <= 0.0) {
+    return route_lanes;
+  }
+  double acc_dist = 0.0;
+  auto last_lanelet = route_lanes.back();
+  while (acc_dist < remaining_distance) {
+    const auto nexts = routing_graph->following(last_lanelet);
+    if (nexts.empty()) {
+      break;
+    }
+    const auto & next = nexts.front();
+    if (lanelet::utils::contains(route_lanes, next)) {
+      // loop
+      break;
+    }
+    last_lanelet = next;
+    route_lanes.push_back(next);
+    acc_dist += lanelet::utils::getLaneletLength3d(next);
+  }
+  return route_lanes;
+}
 }  // namespace autoware::behavior_path_planner::goal_planner_utils
