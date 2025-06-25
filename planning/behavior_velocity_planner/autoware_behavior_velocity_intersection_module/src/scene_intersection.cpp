@@ -1071,7 +1071,8 @@ void reactRTCApprovalByDecisionResult(
   const double baselink2front, autoware_internal_planning_msgs::msg::PathWithLaneId * path,
   autoware_internal_planning_msgs::msg::SafetyFactorArray & safety_factor_array,
   planning_factor_interface::PlanningFactorInterface * planning_factor_interface,
-  planning_factor_interface::PlanningFactorInterface * planning_factor_interface_for_occlusion,
+  [[maybe_unused]] planning_factor_interface::PlanningFactorInterface *
+    planning_factor_interface_for_occlusion,
   IntersectionModule::DebugData * debug_data)
 {
   RCLCPP_DEBUG(
