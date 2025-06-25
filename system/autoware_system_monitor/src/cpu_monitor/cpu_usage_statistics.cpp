@@ -124,9 +124,8 @@ void CpuUsageStatistics::update_cpu_statistics()
     // clang-format on
 
     // Calculate total time delta
-    const uint64_t total_delta =
-      user_delta + nice_delta + system_delta + idle_delta +
-      iowait_delta + irq_delta + softirq_delta + steal_delta;
+    const uint64_t total_delta = user_delta + nice_delta + system_delta + idle_delta +
+                                 iowait_delta + irq_delta + softirq_delta + steal_delta;
 
     // Skip if total time delta is zero
     if (total_delta == 0) {
