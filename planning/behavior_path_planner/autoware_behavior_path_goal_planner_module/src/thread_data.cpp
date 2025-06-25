@@ -27,7 +27,7 @@ bool is_lane_change_context_expired(
     // when "saved" lane change was not detected but now detected, so expired
     // which means between "saved" and now, lane change was triggered
 
-    // when "saved" lane changes was detected but now not detectecd, so expired
+    // when "saved" lane changes was detected but now not detected, so expired
     // which means between "saved" and now, lane change was cancelled
     return true;
   }
