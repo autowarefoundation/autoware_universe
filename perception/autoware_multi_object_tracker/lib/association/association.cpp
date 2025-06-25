@@ -31,30 +31,6 @@
 namespace
 {
 constexpr double INVALID_SCORE = -1.0;
-
-// double getFormedYawAngle(
-//   const geometry_msgs::msg::Quaternion & measurement_quat,
-//   const geometry_msgs::msg::Quaternion & tracker_quat, const bool distinguish_front_or_back =
-//   true)
-// {
-//   // Calculate raw difference
-//   double diff = tf2::getYaw(measurement_quat) - tf2::getYaw(tracker_quat);
-
-//   // Fast modulo to bring diff into [-2π, 2π] range
-//   diff += (diff > M_PI) ? -2.0 * M_PI : (diff < -M_PI) ? 2.0 * M_PI : 0.0;
-
-//   // For front/back distinction, use [-π, π] range
-//   // For side distinction only, use [-π/2, π/2] range by folding at ±π/2
-//   if (!distinguish_front_or_back) {
-//     if (diff > M_PI_2) {
-//       diff = M_PI - diff;
-//     } else if (diff < -M_PI_2) {
-//       diff = -M_PI - diff;
-//     }
-//   }
-
-//   return std::abs(diff);
-// }
 }  // namespace
 
 namespace autoware::multi_object_tracker
