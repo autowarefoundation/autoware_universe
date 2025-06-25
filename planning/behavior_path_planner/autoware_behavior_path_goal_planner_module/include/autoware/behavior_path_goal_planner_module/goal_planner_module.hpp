@@ -178,6 +178,9 @@ private:
   std::atomic<bool> & is_lane_parking_cb_running_;
   rclcpp::Logger logger_;
 
+  // last_lane_change_trigger_time of the request which was used when this was waken-up previously
+  std::optional<rclcpp::Time> last_lane_change_trigger_time_saved_;
+
   std::vector<std::shared_ptr<PullOverPlannerBase>> pull_over_planners_;
   BehaviorModuleOutput
     original_upstream_module_output_;  //<! upstream_module_output used for generating last
@@ -302,6 +305,12 @@ private:
   const bool left_side_parking_;
 
   bool trigger_thread_on_approach_{false};
+
+  // signal path generator and state manager to regenerate path candidates and remain NOT_DECIDED
+  std::optional<rclcpp::Time> last_lane_change_trigger_time_{};
+  std::optional<bool> prev_lane_change_detected_{};
+  bool lane_change_status_changed_{false};
+
   // pre-generate lane parking paths in a separate thread
   rclcpp::TimerBase::SharedPtr lane_parking_timer_;
   rclcpp::CallbackGroup::SharedPtr lane_parking_timer_cb_group_;

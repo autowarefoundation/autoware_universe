@@ -39,7 +39,7 @@ inline double getSumArea(const std::vector<autoware_utils::Polygon2d> & polygons
 {
   return std::accumulate(
     polygons.begin(), polygons.end(), 0.0,
-    [](double acc, autoware_utils::Polygon2d p) { return acc + boost::geometry::area(p); });
+    [](double acc, const autoware_utils::Polygon2d & p) { return acc + boost::geometry::area(p); });
 }
 
 inline double getIntersectionArea(
