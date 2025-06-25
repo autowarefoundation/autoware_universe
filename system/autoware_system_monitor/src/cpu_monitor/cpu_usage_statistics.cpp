@@ -37,14 +37,11 @@ CpuUsageStatistics::CpuUsageStatistics()
 {
 }
 
-void CpuUsageStatistics::update_cpu_statistics()
+bool CpuUsageStatistics::update_current_cpu_statistics()
 {
-  core_usage_info_.clear();
-  // The vector is cleared, but the allocated memory won't be released.
-
   std::ifstream stat_file("/proc/stat");
   if (!stat_file.is_open()) {
-    return;
+    return false;
   }
 
   current_statistics_.clear();  // Allocated memory area won't be released.
@@ -80,6 +77,18 @@ void CpuUsageStatistics::update_cpu_statistics()
   }
   stat_file.close();
 
+  return true;
+}
+
+void CpuUsageStatistics::update_cpu_statistics()
+{
+  core_usage_info_.clear();
+  // The vector is cleared, but the allocated memory won't be released.
+
+  if (!update_current_cpu_statistics()) {
+    return;
+  }
+
   // If this is the first call, just store the current statistics.
   if (first_call_) {
     swap_statistics();
@@ -102,42 +111,42 @@ void CpuUsageStatistics::update_cpu_statistics()
 
     // Calculate deltas : Can be huge values, but never be negative values.
     // clang-format off
-    uint64_t user_delta       = current_data.user       - previous_data.user;
-    uint64_t nice_delta       = current_data.nice       - previous_data.nice;
-    uint64_t system_delta     = current_data.system     - previous_data.system;
-    uint64_t idle_delta       = current_data.idle       - previous_data.idle;
-    uint64_t iowait_delta     = current_data.iowait     - previous_data.iowait;
-    uint64_t irq_delta        = current_data.irq        - previous_data.irq;
-    uint64_t softirq_delta    = current_data.softirq    - previous_data.softirq;
-    uint64_t steal_delta      = current_data.steal      - previous_data.steal;
-    uint64_t guest_delta      = current_data.guest      - previous_data.guest;
-    uint64_t guest_nice_delta = current_data.guest_nice - previous_data.guest_nice;
+    const uint64_t user_delta       = current_data.user       - previous_data.user;
+    const uint64_t nice_delta       = current_data.nice       - previous_data.nice;
+    const uint64_t system_delta     = current_data.system     - previous_data.system;
+    const uint64_t idle_delta       = current_data.idle       - previous_data.idle;
+    const uint64_t iowait_delta     = current_data.iowait     - previous_data.iowait;
+    const uint64_t irq_delta        = current_data.irq        - previous_data.irq;
+    const uint64_t softirq_delta    = current_data.softirq    - previous_data.softirq;
+    const uint64_t steal_delta      = current_data.steal      - previous_data.steal;
+    const uint64_t guest_delta      = current_data.guest      - previous_data.guest;
+    const uint64_t guest_nice_delta = current_data.guest_nice - previous_data.guest_nice;
     // clang-format on
 
     // Calculate total time delta
-    uint64_t total_delta = user_delta + nice_delta + system_delta + iowait_delta + irq_delta +
-                           softirq_delta + steal_delta;
-    uint64_t total_all_delta = total_delta + idle_delta;
+    const uint64_t total_delta =
+      user_delta + nice_delta + system_delta + idle_delta +
+      iowait_delta + irq_delta + softirq_delta + steal_delta;
 
     // Skip if total time delta is zero
-    if (total_all_delta == 0) {
+    if (total_delta == 0) {
       continue;
     }
 
-    float total_all_delta_float = static_cast<float>(total_all_delta);
+    const float total_delta_float = static_cast<float>(total_delta);
     CoreUsageInfo core_usage;
     core_usage.name = cpu_name;
     // clang-format off
-    core_usage.user_percent       = (static_cast<float>(user_delta)       / total_all_delta_float) * 100.0f;  // NOLINT
-    core_usage.nice_percent       = (static_cast<float>(nice_delta)       / total_all_delta_float) * 100.0f;  // NOLINT
-    core_usage.system_percent     = (static_cast<float>(system_delta)     / total_all_delta_float) * 100.0f;  // NOLINT
-    core_usage.idle_percent       = (static_cast<float>(idle_delta)       / total_all_delta_float) * 100.0f;  // NOLINT
-    core_usage.iowait_percent     = (static_cast<float>(iowait_delta)     / total_all_delta_float) * 100.0f;  // NOLINT
-    core_usage.irq_percent        = (static_cast<float>(irq_delta)        / total_all_delta_float) * 100.0f;  // NOLINT
-    core_usage.softirq_percent    = (static_cast<float>(softirq_delta)    / total_all_delta_float) * 100.0f;  // NOLINT
-    core_usage.steal_percent      = (static_cast<float>(steal_delta)      / total_all_delta_float) * 100.0f;  // NOLINT
-    core_usage.guest_percent      = (static_cast<float>(guest_delta)      / total_all_delta_float) * 100.0f;  // NOLINT
-    core_usage.guest_nice_percent = (static_cast<float>(guest_nice_delta) / total_all_delta_float) * 100.0f;  // NOLINT
+    core_usage.user_percent       = (static_cast<float>(user_delta)       / total_delta_float) * 100.0f;  // NOLINT
+    core_usage.nice_percent       = (static_cast<float>(nice_delta)       / total_delta_float) * 100.0f;  // NOLINT
+    core_usage.system_percent     = (static_cast<float>(system_delta)     / total_delta_float) * 100.0f;  // NOLINT
+    core_usage.idle_percent       = (static_cast<float>(idle_delta)       / total_delta_float) * 100.0f;  // NOLINT
+    core_usage.iowait_percent     = (static_cast<float>(iowait_delta)     / total_delta_float) * 100.0f;  // NOLINT
+    core_usage.irq_percent        = (static_cast<float>(irq_delta)        / total_delta_float) * 100.0f;  // NOLINT
+    core_usage.softirq_percent    = (static_cast<float>(softirq_delta)    / total_delta_float) * 100.0f;  // NOLINT
+    core_usage.steal_percent      = (static_cast<float>(steal_delta)      / total_delta_float) * 100.0f;  // NOLINT
+    core_usage.guest_percent      = (static_cast<float>(guest_delta)      / total_delta_float) * 100.0f;  // NOLINT
+    core_usage.guest_nice_percent = (static_cast<float>(guest_nice_delta) / total_delta_float) * 100.0f;  // NOLINT
     core_usage.total_usage_percent = 100.0f - core_usage.idle_percent;
     // clang-format on
 

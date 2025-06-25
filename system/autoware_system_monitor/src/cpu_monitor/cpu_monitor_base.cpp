@@ -242,7 +242,7 @@ void CPUMonitorBase::checkUsage()
 
     // CpuUsageToLevel() converts usage to warning and error levels.
     // It also counts occurrence of warning and error in addition to conversion.
-    float total_usage = usage.total_usage_percent * 1e-2;
+    const float total_usage = usage.total_usage_percent * 1e-2;
     int level;
     if (!usage.name.empty()) {
       level = CpuUsageToLevel(usage.name, total_usage);

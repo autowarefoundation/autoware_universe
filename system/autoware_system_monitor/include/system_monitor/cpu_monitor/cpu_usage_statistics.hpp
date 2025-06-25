@@ -65,9 +65,15 @@ public:
   };
 
   /**
-   * @brief Update CPU statistics data
+   * @brief Update CPU statistics data by comparing current and previous statistics
    */
   void update_cpu_statistics();
+
+  /**
+   * @brief Update current CPU statistics data by reading /proc/stat
+   * @return true if the update is successful, false otherwise
+   */
+  bool update_current_cpu_statistics();
 
   /**
    * @brief Get the number of cores including the "all" core
