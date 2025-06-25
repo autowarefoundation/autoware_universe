@@ -226,10 +226,11 @@ __global__ void generateFeatures_kernel(
 
   unsigned int num_pillars = num_voxels[0];
   if (pillar_idx >= num_pillars) return;
-  
+
   // point dimemension is 5 if feature size in encoder is 11, otherwise 4
-  constexpr int point_dim = (ENCODER_IN_FEATURE_SIZE >= ENCODER_NUM_FEATURES_11) ? POINT_DIM_XYZIT : POINT_DIM_XYZT;
-  
+  constexpr int point_dim =
+    (ENCODER_IN_FEATURE_SIZE >= ENCODER_NUM_FEATURES_11) ? POINT_DIM_XYZIT : POINT_DIM_XYZT;
+
   // load src
   __shared__ float pillarSM[WARPS_PER_BLOCK][MAX_POINT_IN_VOXEL_SIZE][point_dim];
   __shared__ float3 pillarSumSM[WARPS_PER_BLOCK];
@@ -243,12 +244,12 @@ __global__ void generateFeatures_kernel(
     pillarSumSM[threadIdx.x] = {0, 0, 0};
   }
 
-  #pragma unroll
+#pragma unroll
   for (int i = 0; i < point_dim; i++) {
     int pillarSMId = pillar_idx_inBlock * MAX_POINT_IN_VOXEL_SIZE * point_dim +
                      i * MAX_POINT_IN_VOXEL_SIZE + point_idx;
-    int voxel_feature_id = pillar_idx * MAX_POINT_IN_VOXEL_SIZE * point_dim +
-                           i * MAX_POINT_IN_VOXEL_SIZE + point_idx;
+    int voxel_feature_id =
+      pillar_idx * MAX_POINT_IN_VOXEL_SIZE * point_dim + i * MAX_POINT_IN_VOXEL_SIZE + point_idx;
     ((float *)pillarSM)[pillarSMId] = ((float *)voxel_features)[voxel_feature_id];
   }
   __syncthreads();
@@ -291,7 +292,7 @@ __global__ void generateFeatures_kernel(
     pillarOutSM[pillar_idx_inBlock][point_idx][3] = pillarSM[pillar_idx_inBlock][point_idx][3];
 
     if (ENCODER_IN_FEATURE_SIZE == ENCODER_NUM_FEATURES_11) {
-	  pillarOutSM[pillar_idx_inBlock][point_idx][4] = pillarSM[pillar_idx_inBlock][point_idx][4];
+      pillarOutSM[pillar_idx_inBlock][point_idx][4] = pillarSM[pillar_idx_inBlock][point_idx][4];
       pillarOutSM[pillar_idx_inBlock][point_idx][5] = mean.x;
       pillarOutSM[pillar_idx_inBlock][point_idx][6] = mean.y;
       pillarOutSM[pillar_idx_inBlock][point_idx][7] = mean.z;
@@ -299,18 +300,18 @@ __global__ void generateFeatures_kernel(
       pillarOutSM[pillar_idx_inBlock][point_idx][8] = center.x;
       pillarOutSM[pillar_idx_inBlock][point_idx][9] = center.y;
       pillarOutSM[pillar_idx_inBlock][point_idx][10] = center.z;
-	} else {
+    } else {
       pillarOutSM[pillar_idx_inBlock][point_idx][4] = mean.x;
       pillarOutSM[pillar_idx_inBlock][point_idx][5] = mean.y;
       pillarOutSM[pillar_idx_inBlock][point_idx][6] = mean.z;
 
       pillarOutSM[pillar_idx_inBlock][point_idx][7] = center.x;
       pillarOutSM[pillar_idx_inBlock][point_idx][8] = center.y;
-	  
+
       if (ENCODER_IN_FEATURE_SIZE == ENCODER_NUM_FEATURES_10) {
-      	pillarOutSM[pillar_idx_inBlock][point_idx][9] = center.z;
+        pillarOutSM[pillar_idx_inBlock][point_idx][9] = center.z;
       }
-	}
+    }
 
   } else {
     pillarOutSM[pillar_idx_inBlock][point_idx][0] = 0;
@@ -331,7 +332,6 @@ __global__ void generateFeatures_kernel(
     if (ENCODER_IN_FEATURE_SIZE >= ENCODER_NUM_FEATURES_11) {
       pillarOutSM[pillar_idx_inBlock][point_idx][10] = 0;
     }
-
   }
 
   __syncthreads();
