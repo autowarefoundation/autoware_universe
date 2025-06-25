@@ -18,6 +18,7 @@
 #include "autoware/lidar_centerpoint/network/scatter_kernel.hpp"
 #include "autoware/lidar_centerpoint/preprocess/preprocess_kernel.hpp"
 
+#include <autoware/cuda_utils/cuda_utils.hpp>
 #include <autoware_utils/math/constants.hpp>
 #include <autoware_utils/ros/diagnostics_interface.hpp>
 
@@ -39,7 +40,8 @@ CenterPointTRT::CenterPointTRT(
   const DensificationParam & densification_param, const CenterPointConfig & config)
 : config_(config)
 {
-  vg_ptr_ = std::make_unique<VoxelGenerator>(densification_param, config_);
+  vg_ptr_ = std::make_unique<VoxelGenerator>(densification_param, config_, stream_);
+  pre_proc_ptr_ = std::make_unique<PreprocessCuda>(config_, stream_);
   post_proc_ptr_ = std::make_unique<PostProcessCUDA>(config_);
 
   initPtr();
@@ -213,44 +215,40 @@ bool CenterPointTRT::preprocess(
   const std::shared_ptr<const cuda_blackboard::CudaPointCloud2> & input_pointcloud_msg_ptr,
   const tf2_ros::Buffer & tf_buffer)
 {
+  using autoware::cuda_utils::clear_async;
+
   bool is_success = vg_ptr_->enqueuePointCloud(input_pointcloud_msg_ptr, tf_buffer);
   if (!is_success) {
     return false;
   }
 
-  const std::size_t count = vg_ptr_->generateSweepPoints(points_aux_d_.get(), stream_);
+  clear_async(num_voxels_d_.get(), 1, stream_);
+  clear_async(voxels_buffer_d_.get(), voxels_buffer_size_, stream_);
+  clear_async(mask_d_.get(), mask_size_, stream_);
+  clear_async(voxels_d_.get(), voxels_size_, stream_);
+  clear_async(coordinates_d_.get(), coordinates_size_, stream_);
+  clear_async(num_points_per_voxel_d_.get(), config_.max_voxel_size_, stream_);
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
+
+  const std::size_t count = vg_ptr_->generateSweepPoints(points_aux_d_.get());
   const std::size_t random_offset = std::rand() % config_.cloud_capacity_;
-  CHECK_CUDA_ERROR(shufflePoints_launch(
+
+  pre_proc_ptr_->shufflePoints_launch(
     points_aux_d_.get(), shuffle_indices_d_.get(), points_d_.get(), count, config_.cloud_capacity_,
-    random_offset, stream_));
+    random_offset);
 
-  CHECK_CUDA_ERROR(cudaMemsetAsync(num_voxels_d_.get(), 0, sizeof(unsigned int), stream_));
-  CHECK_CUDA_ERROR(
-    cudaMemsetAsync(voxels_buffer_d_.get(), 0, voxels_buffer_size_ * sizeof(float), stream_));
-  CHECK_CUDA_ERROR(cudaMemsetAsync(mask_d_.get(), 0, mask_size_ * sizeof(int), stream_));
-  CHECK_CUDA_ERROR(cudaMemsetAsync(voxels_d_.get(), 0, voxels_size_ * sizeof(float), stream_));
-  CHECK_CUDA_ERROR(
-    cudaMemsetAsync(coordinates_d_.get(), 0, coordinates_size_ * sizeof(int), stream_));
-  CHECK_CUDA_ERROR(cudaMemsetAsync(
-    num_points_per_voxel_d_.get(), 0, config_.max_voxel_size_ * sizeof(float), stream_));
+  pre_proc_ptr_->generateVoxels_random_launch(
+    points_d_.get(), config_.cloud_capacity_, mask_d_.get(), voxels_buffer_d_.get());
 
-  CHECK_CUDA_ERROR(generateVoxels_random_launch(
-    points_d_.get(), config_.cloud_capacity_, config_.range_min_x_, config_.range_max_x_,
-    config_.range_min_y_, config_.range_max_y_, config_.range_min_z_, config_.range_max_z_,
-    config_.voxel_size_x_, config_.voxel_size_y_, config_.voxel_size_z_, config_.grid_size_y_,
-    config_.grid_size_x_, mask_d_.get(), voxels_buffer_d_.get(), stream_));
+  pre_proc_ptr_->generateBaseFeatures_launch(
+    mask_d_.get(), voxels_buffer_d_.get(), num_voxels_d_.get(), voxels_d_.get(),
+    num_points_per_voxel_d_.get(), coordinates_d_.get());
 
-  CHECK_CUDA_ERROR(generateBaseFeatures_launch(
-    mask_d_.get(), voxels_buffer_d_.get(), config_.grid_size_y_, config_.grid_size_x_,
-    config_.max_voxel_size_, num_voxels_d_.get(), voxels_d_.get(), num_points_per_voxel_d_.get(),
-    coordinates_d_.get(), stream_));
-
-  CHECK_CUDA_ERROR(generateFeatures_launch(
+  pre_proc_ptr_->generateFeatures_launch(
     voxels_d_.get(), num_points_per_voxel_d_.get(), coordinates_d_.get(), num_voxels_d_.get(),
-    config_.max_voxel_size_, config_.voxel_size_x_, config_.voxel_size_y_, config_.voxel_size_z_,
-    config_.range_min_x_, config_.range_min_y_, config_.range_min_z_, encoder_in_features_d_.get(),
-    config_.encoder_in_feature_size_, stream_));
+    encoder_in_features_d_.get());
 
+  CHECK_CUDA_ERROR(cudaStreamSynchronize(stream_));
   return true;
 }
 

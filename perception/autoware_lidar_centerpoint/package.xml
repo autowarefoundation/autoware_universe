@@ -17,6 +17,7 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
   <depend>autoware_cuda_dependency_meta</depend>
+  <depend>autoware_cuda_utils</depend>
   <depend>autoware_object_recognition_utils</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_tensorrt_common</depend>
