@@ -14,7 +14,6 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
   <buildtool_depend>eigen3_cmake_module</buildtool_depend>
 
-  <depend>autoware_kalman_filter</depend>
   <depend>autoware_object_recognition_utils</depend>
   <depend>autoware_perception_msgs</depend>
   <depend>autoware_utils</depend>
