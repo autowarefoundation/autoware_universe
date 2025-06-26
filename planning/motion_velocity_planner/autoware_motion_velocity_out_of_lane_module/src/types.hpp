@@ -58,6 +58,10 @@ struct PlannerParam
   double objects_min_vel;          // [m/s] objects lower than this velocity will be ignored
   double objects_min_confidence;   // minimum confidence to consider a predicted path
   bool objects_ignore_behind_ego;  // if true, objects behind the ego vehicle are ignored
+  bool
+    validate_predicted_paths_on_lanelets;  // if true, an out of lane collision is only considered
+                                           // if the predicted path fully follows a sequence of
+                                           // lanelets that include the out of lane lanelet
 
   // action to insert in the trajectory if an object causes a collision at an overlap
   double lon_dist_buffer;      // [m] safety distance buffer to keep in front of the ego vehicle

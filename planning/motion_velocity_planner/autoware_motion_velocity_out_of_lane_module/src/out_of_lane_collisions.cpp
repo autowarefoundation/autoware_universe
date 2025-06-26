@@ -173,7 +173,8 @@ void calculate_object_path_time_collisions(
   OutOfLaneData & out_of_lane_data,
   const autoware_perception_msgs::msg::PredictedPath & object_path,
   const autoware_perception_msgs::msg::Shape & object_shape,
-  const route_handler::RouteHandler & route_handler)
+  const route_handler::RouteHandler & route_handler,
+  const bool validate_predicted_paths_on_lanelets)
 {
   const auto time_step = rclcpp::Duration(object_path.time_step).seconds();
   auto time = 0.0;
@@ -187,7 +188,9 @@ void calculate_object_path_time_collisions(
     std::unordered_set<size_t> potential_collision_indexes;
     for (const auto & [_, index] : query_results) {
       const auto & out_lanelets = out_of_lane_data.outside_points[index].overlapped_lanelets;
-      if (at_least_one_lanelet_in_common(out_lanelets, object_path_lanelet_ids)) {
+      if (
+        !validate_predicted_paths_on_lanelets ||
+        at_least_one_lanelet_in_common(out_lanelets, object_path_lanelet_ids)) {
         potential_collision_indexes.insert(index);
       }
     }
@@ -199,11 +202,13 @@ void calculate_object_path_time_collisions(
 void calculate_objects_time_collisions(
   OutOfLaneData & out_of_lane_data,
   const std::vector<autoware_perception_msgs::msg::PredictedObject> & objects,
-  const route_handler::RouteHandler & route_handler)
+  const route_handler::RouteHandler & route_handler,
+  const bool validate_predicted_paths_on_lanelets)
 {
   for (const auto & object : objects) {
     for (const auto & path : object.kinematics.predicted_paths) {
-      calculate_object_path_time_collisions(out_of_lane_data, path, object.shape, route_handler);
+      calculate_object_path_time_collisions(
+        out_of_lane_data, path, object.shape, route_handler, validate_predicted_paths_on_lanelets);
     }
   }
 }
