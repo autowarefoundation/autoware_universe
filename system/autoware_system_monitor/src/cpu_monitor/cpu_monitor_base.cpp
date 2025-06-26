@@ -20,12 +20,10 @@
 #include "system_monitor/cpu_monitor/cpu_monitor_base.hpp"
 
 #include "system_monitor/cpu_monitor/cpu_information.hpp"
+#include "system_monitor/cpu_monitor/cpu_usage_statistics.hpp"
 #include "system_monitor/system_monitor_utility.hpp"
 
 #include <boost/filesystem.hpp>
-#include <boost/process.hpp>
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/property_tree/ptree.hpp>
 #include <boost/thread.hpp>
 
 #include <fmt/format.h>
@@ -38,9 +36,7 @@
 #include <utility>
 #include <vector>
 
-namespace bp = boost::process;
 namespace fs = boost::filesystem;
-namespace pt = boost::property_tree;
 
 CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::NodeOptions & options)
 : Node(node_name, options),
@@ -49,7 +45,6 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
   num_cores_(0),
   temperatures_(),
   frequencies_(),
-  mpstat_exists_(false),
   usage_warn_(declare_parameter<float>(
     "usage_warn", 0.96,
     rcl_interfaces::msg::ParameterDescriptor().set__read_only(true).set__description(
@@ -90,10 +85,6 @@ CPUMonitorBase::CPUMonitorBase(const std::string & node_name, const rclcpp::Node
   num_cores_ = boost::thread::hardware_concurrency();
   usage_warn_check_count_.resize(num_cores_ + 2);   // 2 = all + dummy
   usage_error_check_count_.resize(num_cores_ + 2);  // 2 = all + dummy
-
-  // Check if command exists
-  fs::path p = bp::search_path("mpstat");
-  mpstat_exists_ = (p.empty()) ? false : true;
 
   updater_.setHardwareID(hostname_);
   // Update diagnostic data collected by the timer callback.
@@ -229,167 +220,52 @@ void CPUMonitorBase::checkUsage()
   // Remember start time to measure elapsed time
   const auto t_start = std::chrono::high_resolution_clock::now();
 
-  bool usage_average = false;
-  {  // Start of critical section
-    std::lock_guard<std::mutex> lock_context(mutex_context_);
-    usage_average = usage_average_;  // Copy to local variable for later use.
-    if (!mpstat_exists_) {
-      // Note that the mutex_context_ is locked.
-      std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
-      usage_data_.clear();
-      usage_data_.summary_status = DiagStatus::ERROR;
-      usage_data_.summary_message = "mpstat error";
-      usage_data_.elapsed_ms = 0.0f;
-      usage_data_.error_key = "mpstat";
-      usage_data_.error_value =
-        "Command 'mpstat' not found, but can be installed with: sudo apt install sysstat";
-      return;
-    }
-  }  // End of critical section
-
-  // Get CPU Usage
-
-  // boost::process create file descriptor without O_CLOEXEC required for multithreading.
-  // So create file descriptor with O_CLOEXEC and pass it to boost::process.
-  int out_fd[2];
-  if (pipe2(out_fd, O_CLOEXEC) != 0) {
-    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
-    usage_data_.clear();
-    usage_data_.summary_status = DiagStatus::ERROR;
-    usage_data_.summary_message = "pipe2 error";
-    usage_data_.elapsed_ms = 0.0f;
-    usage_data_.error_key = "pipe2";
-    usage_data_.error_value = strerror(errno);
-    return;
-  }
-  bp::pipe out_pipe{out_fd[0], out_fd[1]};
-  bp::ipstream is_out{std::move(out_pipe)};
-
-  int err_fd[2];
-  if (pipe2(err_fd, O_CLOEXEC) != 0) {
-    std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
-    usage_data_.clear();
-    usage_data_.summary_status = DiagStatus::ERROR;
-    usage_data_.summary_message = "pipe2 error";
-    usage_data_.elapsed_ms = 0.0f;
-    usage_data_.error_key = "pipe2";
-    usage_data_.error_value = strerror(errno);
-    return;
-  }
-  bp::pipe err_pipe{err_fd[0], err_fd[1]};
-  bp::ipstream is_err{std::move(err_pipe)};
-
-  int level = DiagStatus::OK;
-  int whole_level = DiagStatus::OK;
-  std::vector<UsageData::CpuUsage> temporary_core_data{};
-
-  pt::ptree pt;
-  try {
-    // Execution of mpstat command takes 1 second.
-    // On failure, it will throw an exception or return non-zero exit code.
-    bp::child c("mpstat -P ALL 1 1 -o JSON", bp::std_out > is_out, bp::std_err > is_err);
-    c.wait();
-    if (c.exit_code() != 0) {
-      std::ostringstream os;
-      is_err >> os.rdbuf();
-      std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
-      usage_data_.clear();
-      usage_data_.summary_status = DiagStatus::ERROR;
-      usage_data_.summary_message = "mpstat error";
-      usage_data_.elapsed_ms = 0.0f;
-      usage_data_.error_key = "mpstat";
-      usage_data_.error_value = os.str();
-      return;
-    }
-    // Analyze JSON output
-    read_json(is_out, pt);
-
-    for (const pt::ptree::value_type & child1 : pt.get_child("sysstat.hosts")) {
-      const pt::ptree & hosts = child1.second;
-
-      for (const pt::ptree::value_type & child2 : hosts.get_child("statistics")) {
-        const pt::ptree & statistics = child2.second;
-
-        for (const pt::ptree::value_type & child3 : statistics.get_child("cpu-load")) {
-          const pt::ptree & cpu_load = child3.second;
-          bool get_cpu_name = false;
-
-          std::string cpu_name;
-          float usr{0.0f};
-          float nice{0.0f};
-          float sys{0.0f};
-          float iowait{0.0f};
-          float idle{0.0f};
-          float usage{0.0f};
-          float total{0.0f};
-
-          if (boost::optional<std::string> v = cpu_load.get_optional<std::string>("cpu")) {
-            cpu_name = v.get();
-            get_cpu_name = true;
-          }
-          if (boost::optional<float> v = cpu_load.get_optional<float>("usr")) {
-            usr = v.get();
-          }
-          if (boost::optional<float> v = cpu_load.get_optional<float>("nice")) {
-            nice = v.get();
-          }
-          if (boost::optional<float> v = cpu_load.get_optional<float>("sys")) {
-            sys = v.get();
-          }
-          if (boost::optional<float> v = cpu_load.get_optional<float>("idle")) {
-            idle = v.get();
-          }
-
-          total = 100.0f - iowait - idle;
-          usage = total * 1e-2;
-          if (get_cpu_name) {
-            level = CpuUsageToLevel(cpu_name, usage);
-          } else {
-            level = CpuUsageToLevel(std::string("err"), usage);
-          }
-
-          // Use local variable to avoid mutual exclusion.
-          if (usage_average == true) {
-            if (cpu_name == "all") {
-              whole_level = level;
-            }
-          } else {
-            whole_level = std::max(whole_level, level);
-          }
-
-          temporary_core_data.emplace_back(
-            UsageData::CpuUsage{cpu_name, level, usr, nice, sys, iowait, idle, total});
-        }
-      }
-    }
-  } catch (const std::exception & e) {
-    {
-      std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
-      usage_data_.clear();
-      usage_data_.summary_status = DiagStatus::ERROR;
-      usage_data_.summary_message = "mpstat exception";
-      usage_data_.elapsed_ms = 0.0f;
-      usage_data_.error_key = "mpstat";
-      usage_data_.error_value = e.what();
-      usage_data_.core_data.clear();
-    }
-    {
-      std::lock_guard<std::mutex> lock_context(mutex_context_);
-      std::fill(usage_warn_check_count_.begin(), usage_warn_check_count_.end(), 0);
-      std::fill(usage_error_check_count_.begin(), usage_error_check_count_.end(), 0);
-    }
-    return;
-  }
+  cpu_usage_statistics_.update_cpu_statistics();  // May take a while.
 
   std::lock_guard<std::mutex> lock_snapshot(mutex_snapshot_);
-  usage_data_.clear();
-  usage_data_.core_data = temporary_core_data;
+  usage_data_.clear();  // The vector is cleared, but the allocated memory won't be reallocated.
+
+  int whole_level = DiagStatus::OK;
+
+  int32_t num_cores = cpu_usage_statistics_.get_num_cores();
+  for (int32_t core_index = 0; core_index < num_cores; ++core_index) {
+    CpuUsageStatistics::CoreUsageInfo usage = cpu_usage_statistics_.get_core_usage_info(core_index);
+    UsageData::CpuUsage cpu_usage;
+    cpu_usage.label = usage.name;
+    cpu_usage.usr = usage.user_percent;
+    cpu_usage.nice = usage.nice_percent;
+    cpu_usage.sys = usage.system_percent;
+    cpu_usage.iowait = usage.iowait_percent;
+    cpu_usage.idle = usage.idle_percent;
+    cpu_usage.total = usage.total_usage_percent;
+    // Some of the members of CpuUsageStatistics::CoreUsageInfo are not used.
+
+    // CpuUsageToLevel() converts usage to warning and error levels.
+    // It also counts occurrence of warning and error in addition to conversion.
+    const float total_usage = usage.total_usage_percent * 1e-2;
+    int level;
+    if (!usage.name.empty()) {
+      level = CpuUsageToLevel(usage.name, total_usage);
+    } else {
+      level = CpuUsageToLevel(std::string("err"), total_usage);
+    }
+    cpu_usage.status = level;
+
+    if (usage_average_ == true) {
+      if (usage.name == "all") {
+        whole_level = level;
+      }
+    } else {
+      whole_level = std::max(whole_level, level);
+    }
+    usage_data_.core_data.push_back(cpu_usage);
+  }
   usage_data_.summary_status = whole_level;
   usage_data_.summary_message = load_dictionary_.at(whole_level);
   usage_data_.error_key = "";
   usage_data_.error_value = "";
 
-  // Measure elapsed time since start time and report
+  // Measure elapsed time since start time for reporting.
   const auto t_end = std::chrono::high_resolution_clock::now();
   const float elapsed_ms = std::chrono::duration<float, std::milli>(t_end - t_start).count();
   usage_data_.elapsed_ms = elapsed_ms;
@@ -544,7 +420,7 @@ void CPUMonitorBase::checkLoad()
   load_data_.load_average[1] = load_average[1] * 1e2;
   load_data_.load_average[2] = load_average[2] * 1e2;
 
-  // Measure elapsed time since start time and report
+  // Measure elapsed time since start time for reporting.
   const auto t_end = std::chrono::high_resolution_clock::now();
   const float elapsed_ms = std::chrono::duration<float, std::milli>(t_end - t_start).count();
   load_data_.elapsed_ms = elapsed_ms;
@@ -635,7 +511,7 @@ void CPUMonitorBase::checkFrequency()
   frequency_data_.summary_status = DiagStatus::OK;
   frequency_data_.summary_message = "OK";
 
-  // Measure elapsed time since start time and report
+  // Measure elapsed time since start time for reporting.
   const auto t_end = std::chrono::high_resolution_clock::now();
   const float elapsed_ms = std::chrono::duration<float, std::milli>(t_end - t_start).count();
   frequency_data_.elapsed_ms = elapsed_ms;
