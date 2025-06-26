@@ -131,7 +131,8 @@ private:
     const Header & header, const std::vector<Pose> & waypoints, const Pose & start_pose,
     const Pose & goal_pose, const UUID & uuid, const bool allow_goal_modification);
 
-  void publish_pose_log(const Pose & pose, const std::string & pose_type);
+  void print_pose_log(
+    const std::string & route_type, const Pose & initial_pose, const Pose & goal_pose);
 
   rclcpp::TimerBase::SharedPtr data_check_timer_;
   void check_initialization();
