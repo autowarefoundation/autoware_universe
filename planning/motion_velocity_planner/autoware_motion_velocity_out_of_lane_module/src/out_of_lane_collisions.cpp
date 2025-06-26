@@ -28,9 +28,6 @@
 
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/geometry/BoundingBox.h>
-#include <lanelet2_core/geometry/Lanelet.h>
-#include <lanelet2_core/geometry/Point.h>
-#include <lanelet2_core/geometry/Polygon.h>
 #include <lanelet2_core/primitives/BoundingBox.h>
 #include <lanelet2_core/primitives/Polygon.h>
 #include <lanelet2_routing/RoutingGraph.h>
