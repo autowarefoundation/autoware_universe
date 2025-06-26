@@ -41,6 +41,7 @@
 #include <iostream>
 #include <iterator>
 #include <limits>
+#include <stack>
 #include <unordered_set>
 #include <vector>
 
@@ -63,6 +64,9 @@ void update_collision_times(
   }
 }
 
+/**
+ * @brief return true if there is at least one match between the given lanelets and sorted ids
+ */
 bool at_least_one_lanelet_in_common(const lanelet::ConstLanelets & lls1, const lanelet::Ids & lls2)
 {
   for (const auto & ll : lls1) {
@@ -73,17 +77,10 @@ bool at_least_one_lanelet_in_common(const lanelet::ConstLanelets & lls1, const l
   return false;
 }
 
-lanelet::Ids get_predicted_path_lanelet_ids(
-  const autoware_perception_msgs::msg::PredictedPath & predicted_path,
-  const route_handler::RouteHandler & route_handler, const lanelet::ConstLanelet & lanelet,
-  const size_t path_idx, const bool already_entered_lanelet)
-{
-  return possible_ids;
-}
-
 /**
  * @brief Finds lanelet ids followed by a PredictedPath.
- *
+ * @details searches the lanelet routing graph for a full path of succeeding lanelets containing the
+ * predicted path
  * @param predicted_path The predicted path of an object.
  * @param route_handler the route handler with the lanelet map and routing graph
  * @return the lanelet ids followed by the path
@@ -103,64 +100,62 @@ lanelet::Ids get_predicted_path_lanelet_ids(
   const auto initial_lanelets =
     route_handler.getLaneletMapPtr()->laneletLayer.search({search_point, search_point});
 
-  // For each nearby lanelet, traverse the routing graph to find a sequence of
-  // succeeding lanelets that aligns with the predicted path.
   struct SearchState
   {
-    lanelet::ConstLanelet previous_lanelet;
-    size_t current_idx{};
-    bool already_entered_lanelet = false;
-    std::vector<lanelet::Id> path_ids;
+    lanelet::ConstLanelet lanelet;         // current lanelet considered
+    size_t current_idx{};                  // current index of the predicted path
+    bool already_entered_lanelet = false;  // whether the predicted path already entered the lanelet
+    std::vector<lanelet::Id> path_ids;     // the lanelet ids already traversed by the path
   };
   std::stack<SearchState> search_stack;
-  SearchState ss;
+  // initial search states starting from the first possible lanelets
   for (const auto & start_lanelet : initial_lanelets) {
     if (lanelet::geometry::within(search_point, start_lanelet.polygon2d().basicPolygon())) {
-      ss.previous_lanelet = start_lanelet;
+      SearchState ss;
+      ss.lanelet = start_lanelet;
       ss.current_idx = 1UL;
       ss.already_entered_lanelet = true;
+      ss.path_ids = {start_lanelet.id()};
       search_stack.push(ss);
     }
   }
   while (!search_stack.empty()) {
-    auto & ss = search_stack.top();
-    const auto & p = predicted_path.path[ss.current_idx].position;
+    const auto current_state = search_stack.top();
+    search_stack.pop();
+    SearchState new_state;
+    new_state.path_ids = current_state.path_ids;
+    const auto & p = predicted_path.path[current_state.current_idx].position;
     const lanelet::BasicPoint2d search_point(p.x, p.y);
 
-    if (lanelet::geometry::within(search_point, ss.previous_lanelet.polygon2d().basicPolygon())) {
-      if (ss.current_idx + 1 == predicted_path.path.size()) {  // found a full valid lanelet
-                                                               // sequence
-        followed_ids.push_back(ss.previous_lanelet.id());
-        followed_ids.insert(followed_ids.end(), ss.path_ids.begin(), ss.path_ids.end());
+    if (lanelet::geometry::within(search_point, current_state.lanelet.polygon2d().basicPolygon())) {
+      new_state.lanelet = current_state.lanelet;
+      new_state.already_entered_lanelet = true;
+      if (!current_state.already_entered_lanelet) {
+        new_state.path_ids.push_back(current_state.lanelet.id());
       }
-      if (!ss.already_entered_lanelet) {
-        ss.already_entered_lanelet = true;
-        ss.current_idx++;
-        ss.path_ids.
+      const auto reached_end_of_path = current_state.current_idx + 1 == predicted_path.path.size();
+      if (reached_end_of_path) {
+        followed_ids.push_back(current_state.lanelet.id());
+        followed_ids.insert(
+          followed_ids.end(), current_state.path_ids.begin(), current_state.path_ids.end());
+      } else {  // continue following the predicted path
+        new_state.current_idx = current_state.current_idx + 1;
+        search_stack.push(new_state);
       }
     } else {
-      search_stack.pop();
-    }
-
-    const lanelet::ConstLanelets succeeding_lanelets =
-      route_handler.getRoutingGraphPtr()->following(lanelet);
-    lanelet::Ids possible_ids;
-    for (const auto & ll : succeeding_lanelets) {
-      if (lanelet::geometry::within(search_point, ll.polygon2d().basicPolygon())) {
-        if (path_idx + 1 == predicted_path.path.size()) {  // found a full valid lanelet sequence
-          possible_ids.push_back(ll.id());
-        } else {  // continue the search
-          const auto ids =
-            get_predicted_path_lanelet_ids(predicted_path, route_handler, ll, path_idx + 1, false);
-          if (!ids.empty()) {  // not empty means that a full path was found
-            possible_ids.push_back(ll.id());
-            possible_ids.insert(possible_ids.end(), ids.begin(), ids.end());
-          }
-        }
+      if (!current_state.already_entered_lanelet) {  // the path does not follow the current lanelet
+        continue;
+      }
+      // explore the next lanelets
+      new_state.current_idx = current_state.current_idx;
+      const lanelet::ConstLanelets succeeding_lanelets =
+        route_handler.getRoutingGraphPtr()->following(current_state.lanelet);
+      for (const auto & succeeding_lanelet : succeeding_lanelets) {
+        new_state.lanelet = succeeding_lanelet;
+        search_stack.push(new_state);
       }
     }
   }
-
   // Remove duplicate ids
   std::sort(followed_ids.begin(), followed_ids.end());
   followed_ids.erase(std::unique(followed_ids.begin(), followed_ids.end()), followed_ids.end());
@@ -177,7 +172,11 @@ void calculate_object_path_time_collisions(
   auto time = 0.0;
   autoware_utils::StopWatch<std::chrono::microseconds> sw;
   const auto object_path_lanelet_ids = get_predicted_path_lanelet_ids(object_path, route_handler);
-  std::cout << sw.toc() << "us\n";
+  std::cout << sw.toc() << "us | ";
+  for (const auto & id : object_path_lanelet_ids) {
+    std::cout << id << " ";
+  }
+  std::cout << std::endl;
   for (const auto & object_pose : object_path.path) {
     const auto object_footprint = autoware_utils::to_polygon2d(object_pose, object_shape);
     std::vector<OutAreaNode> query_results;
