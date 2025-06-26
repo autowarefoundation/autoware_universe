@@ -71,23 +71,6 @@ private:
   autoware::component_interface_specs_universe::map::MapProjectorInfo::Message::ConstSharedPtr
     map_projector_info_;
 
-  void kinematic_state(const autoware::component_interface_specs_universe::localization::
-                         KinematicState::Message::ConstSharedPtr msg_ptr);
-  void acceleration_status(const autoware::component_interface_specs_universe::localization::
-                             Acceleration::Message::ConstSharedPtr msg_ptr);
-  void steering_status(const autoware::component_interface_specs_universe::vehicle::SteeringStatus::
-                         Message::ConstSharedPtr msg_ptr);
-  void gear_status(
-    const autoware::component_interface_specs_universe::vehicle::GearStatus::Message::ConstSharedPtr
-      msg_ptr);
-  void turn_indicator_status(const autoware::component_interface_specs_universe::vehicle::
-                               TurnIndicatorStatus::Message::ConstSharedPtr msg_ptr);
-  void map_projector_info(const autoware::component_interface_specs_universe::map::
-                            MapProjectorInfo::Message::ConstSharedPtr msg_ptr);
-  void hazard_light_status(const autoware::component_interface_specs_universe::vehicle::
-                             HazardLightStatus::Message::ConstSharedPtr msg_ptr);
-  void energy_status(const autoware::component_interface_specs_universe::vehicle::EnergyStatus::
-                       Message::ConstSharedPtr msg_ptr);
   uint8_t mapping(
     std::unordered_map<uint8_t, uint8_t> hash_map, uint8_t input, uint8_t default_value);
   void publish_kinematics();

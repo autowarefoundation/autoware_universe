@@ -245,15 +245,10 @@ PlanningNode::PlanningNode(const rclcpp::NodeOptions & options) : Node("planning
   adaptor.init_pub(pub_velocity_factors_);
   adaptor.init_pub(pub_steering_factors_);
   adaptor.init_sub(sub_kinematic_state_, this, &PlanningNode::on_kinematic_state);
-  adaptor.init_sub(sub_trajectory_, this, &PlanningNode::on_trajectory);
+  adaptor.init_sub(sub_trajectory_, nullptr);
 
   const auto rate = rclcpp::Rate(5);
   timer_ = rclcpp::create_timer(this, get_clock(), rate.period(), [this]() { on_timer(); });
-}
-
-void PlanningNode::on_trajectory(const Trajectory::ConstSharedPtr msg)
-{
-  trajectory_ = msg;
 }
 
 void PlanningNode::on_kinematic_state(const KinematicState::ConstSharedPtr msg)
@@ -271,6 +266,8 @@ void PlanningNode::on_timer()
   using autoware_adapi_v1_msgs::msg::VelocityFactor;
   auto velocity = merge_factors<VelocityFactorArray>(now(), factors_);
   auto steering = merge_factors<SteeringFactorArray>(now(), factors_);
+
+  sub_trajectory_->take_and_update(trajectory_);
 
   // Set the distance if it is nan.
   if (trajectory_ && kinematic_state_) {
