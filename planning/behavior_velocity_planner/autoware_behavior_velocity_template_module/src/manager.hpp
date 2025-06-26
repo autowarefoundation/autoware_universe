@@ -22,7 +22,7 @@
 #include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <functional>
 #include <memory>
@@ -38,7 +38,7 @@ namespace autoware::behavior_velocity_planner
  * @param node A reference to the ROS node.
  */
 class TemplateModuleManager
-: public autoware::behavior_velocity_planner::SceneModuleManagerInterface
+: public autoware::behavior_velocity_planner::SceneModuleManagerInterface<>
 {
 public:
   explicit TemplateModuleManager(rclcpp::Node & node);
@@ -53,6 +53,11 @@ public:
    */
   const char * getModuleName() override { return "template"; }
 
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    return RequiredSubscriptionInfo{};
+  }
+
 private:
   double dummy_parameter_{0.0};
 
@@ -64,7 +69,7 @@ private:
    *
    * @param path The path with lane ID information to determine module launch.
    */
-  void launchNewModules(const tier4_planning_msgs::msg::PathWithLaneId & path) override;
+  void launchNewModules(const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
 
   /**
    * @brief Get a function to check module expiration.
@@ -76,7 +81,7 @@ private:
    * @return A function for checking module expiration.
    */
   std::function<bool(const std::shared_ptr<SceneModuleInterface> &)> getModuleExpiredFunction(
-    const tier4_planning_msgs::msg::PathWithLaneId & path) override;
+    const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
 };
 
 /**

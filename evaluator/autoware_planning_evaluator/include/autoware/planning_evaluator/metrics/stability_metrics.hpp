@@ -15,7 +15,7 @@
 #ifndef AUTOWARE__PLANNING_EVALUATOR__METRICS__STABILITY_METRICS_HPP_
 #define AUTOWARE__PLANNING_EVALUATOR__METRICS__STABILITY_METRICS_HPP_
 
-#include "autoware/universe_utils/math/accumulator.hpp"
+#include "autoware_utils/math/accumulator.hpp"
 
 #include "autoware_planning_msgs/msg/trajectory.hpp"
 #include <nav_msgs/msg/odometry.hpp>
@@ -24,8 +24,8 @@ namespace planning_diagnostics
 {
 namespace metrics
 {
-using autoware::universe_utils::Accumulator;
 using autoware_planning_msgs::msg::Trajectory;
+using autoware_utils::Accumulator;
 
 /**
  * @brief calculate the discrete Frechet distance between two trajectories
@@ -56,7 +56,7 @@ Accumulator<double> calcLateralDistance(const Trajectory & traj1, const Trajecto
  * @param [in]  trajectory_eval_time_s time duration for trajectory evaluation in seconds
  * @return statistical accumulator containing the total lateral displacement
  */
-Accumulator<double> calcTrajectoryLateralDisplacement(
+Accumulator<double> calcLookaheadLateralTrajectoryDisplacement(
   const Trajectory traj1, const Trajectory traj2, const nav_msgs::msg::Odometry & ego_odom,
   const double trajectory_eval_time_s);
 

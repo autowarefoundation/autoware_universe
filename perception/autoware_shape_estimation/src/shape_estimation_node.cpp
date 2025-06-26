@@ -15,7 +15,7 @@
 #include "shape_estimation_node.hpp"
 
 #include "autoware/shape_estimation/shape_estimator.hpp"
-#include "autoware/universe_utils/math/unit_conversion.hpp"
+#include "autoware_utils/math/unit_conversion.hpp"
 
 #include "autoware_perception_msgs/msg/object_classification.hpp"
 
@@ -63,9 +63,8 @@ ShapeEstimationNode::ShapeEstimationNode(const rclcpp::NodeOptions & node_option
     min_points_ = declare_parameter<int>("model_params.minimum_points");
     std::string precision = declare_parameter<std::string>("model_params.precision");
     int batch_size = declare_parameter<int>("model_params.batch_size");
-    autoware::tensorrt_common::BatchConfig batch_config{batch_size, batch_size, batch_size};
     tensorrt_shape_estimator_ =
-      std::make_unique<TrtShapeEstimator>(model_path, precision, batch_config);
+      std::make_unique<TrtShapeEstimator>(model_path, precision, batch_size);
     if (this->declare_parameter("model_params.build_only", false)) {
       RCLCPP_INFO(this->get_logger(), "TensorRT engine is built and shutdown node.");
       rclcpp::shutdown();
@@ -74,13 +73,11 @@ ShapeEstimationNode::ShapeEstimationNode(const rclcpp::NodeOptions & node_option
 #endif
 
   processing_time_publisher_ =
-    std::make_unique<autoware::universe_utils::DebugPublisher>(this, "shape_estimation");
-  stop_watch_ptr_ =
-    std::make_unique<autoware::universe_utils::StopWatch<std::chrono::milliseconds>>();
+    std::make_unique<autoware_utils::DebugPublisher>(this, "shape_estimation");
+  stop_watch_ptr_ = std::make_unique<autoware_utils::StopWatch<std::chrono::milliseconds>>();
   stop_watch_ptr_->tic("cyclic_time");
   stop_watch_ptr_->tic("processing_time");
-  published_time_publisher_ =
-    std::make_unique<autoware::universe_utils::PublishedTimePublisher>(this);
+  published_time_publisher_ = std::make_unique<autoware_utils::PublishedTimePublisher>(this);
 }
 
 static autoware_perception_msgs::msg::ObjectClassification::_label_type get_label(
@@ -146,7 +143,7 @@ void ShapeEstimationNode::callback(const DetectedObjectsWithFeature::ConstShared
     if (use_vehicle_reference_yaw_ && is_vehicle) {
       ref_yaw_info = ReferenceYawInfo{
         static_cast<float>(tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation)),
-        autoware::universe_utils::deg2rad(10)};
+        autoware_utils::deg2rad(10)};
     }
     if (use_vehicle_reference_shape_size_ && is_vehicle) {
       ref_shape_size_info = ReferenceShapeSizeInfo{object.shape, ReferenceShapeSizeInfo::Mode::Min};
@@ -180,9 +177,9 @@ void ShapeEstimationNode::callback(const DetectedObjectsWithFeature::ConstShared
   // Publish
   pub_->publish(output_msg);
   published_time_publisher_->publish_if_subscribed(pub_, output_msg.header.stamp);
-  processing_time_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+  processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/cyclic_time_ms", stop_watch_ptr_->toc("cyclic_time", true));
-  processing_time_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+  processing_time_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
     "debug/processing_time_ms", stop_watch_ptr_->toc("processing_time", true));
 }
 }  // namespace autoware::shape_estimation

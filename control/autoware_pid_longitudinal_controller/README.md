@@ -195,8 +195,6 @@ AutonomouStuff Lexus RX 450h for under 40 km/h driving.
 | stopped_state_entry_vel             | double | threshold of the ego velocity in transition to the STOPPED state [m/s]                                                                                               | 0.01          |
 | stopped_state_entry_acc             | double | threshold of the ego acceleration in transition to the STOPPED state [m/s^2]                                                                                         | 0.1           |
 | emergency_state_overshoot_stop_dist | double | If `enable_overshoot_emergency` is true and the ego is `emergency_state_overshoot_stop_dist`-meter ahead of the stop point, the state will transit to EMERGENCY. [m] | 1.5           |
-| emergency_state_traj_trans_dev      | double | If the ego's position is `emergency_state_traj_tran_dev` meter away from the nearest trajectory point, the state will transit to EMERGENCY. [m]                      | 3.0           |
-| emergency_state_traj_rot_dev        | double | If the ego's orientation is `emergency_state_traj_rot_dev` rad away from the nearest trajectory point orientation, the state will transit to EMERGENCY. [rad]        | 0.784         |
 
 ### DRIVE Parameter
 

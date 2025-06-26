@@ -22,9 +22,9 @@
 
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/ros/update_param.hpp>
-#include <autoware/universe_utils/system/stop_watch.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/ros/update_param.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/duration.hpp>
 #include <rclcpp/logging.hpp>
@@ -48,13 +48,12 @@ void ObstacleVelocityLimiterModule::init(rclcpp::Node & node, const std::string 
   projection_params_ = obstacle_velocity_limiter::ProjectionParameters(node);
   obstacle_params_ = obstacle_velocity_limiter::ObstacleParameters(node);
   velocity_params_ = obstacle_velocity_limiter::VelocityParameters(node);
-  velocity_factor_interface_.init(autoware::motion_utils::PlanningBehavior::ROUTE_OBSTACLE);
 
   debug_publisher_ =
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/" + ns_ + "/debug_markers", 1);
   virtual_wall_publisher_ =
     node.create_publisher<visualization_msgs::msg::MarkerArray>("~/" + ns_ + "/virtual_walls", 1);
-  processing_diag_publisher_ = std::make_shared<autoware::universe_utils::ProcessingTimePublisher>(
+  processing_diag_publisher_ = std::make_shared<autoware_utils::ProcessingTimePublisher>(
     &node, "~/debug/" + ns_ + "/processing_time_ms_diag");
   processing_time_publisher_ =
     node.create_publisher<autoware_internal_debug_msgs::msg::Float64Stamped>(
@@ -136,22 +135,24 @@ void ObstacleVelocityLimiterModule::update_parameters(
 }
 
 VelocityPlanningResult ObstacleVelocityLimiterModule::plan(
-  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & ego_trajectory_points,
+  [[maybe_unused]] const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> &
+    raw_trajectory_points,
+  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
   const std::shared_ptr<const PlannerData> planner_data)
 {
-  autoware::universe_utils::StopWatch<std::chrono::microseconds> stopwatch;
+  autoware_utils::StopWatch<std::chrono::microseconds> stopwatch;
   stopwatch.tic();
   VelocityPlanningResult result;
   stopwatch.tic("preprocessing");
   const auto ego_idx = autoware::motion_utils::findNearestIndex(
-    ego_trajectory_points, planner_data->current_odometry.pose.pose);
+    smoothed_trajectory_points, planner_data->current_odometry.pose.pose);
   if (!ego_idx) {
     RCLCPP_WARN_THROTTLE(
       logger_, *clock_, rcutils_duration_value_t(1000),
       "Cannot calculate ego index on the trajectory");
     return result;
   }
-  auto original_traj_points = ego_trajectory_points;
+  auto original_traj_points = smoothed_trajectory_points;
   if (preprocessing_params_.calculate_steering_angles)
     obstacle_velocity_limiter::calculateSteeringAngles(
       original_traj_points, projection_params_.wheel_base);
@@ -170,7 +171,7 @@ VelocityPlanningResult ObstacleVelocityLimiterModule::plan(
   const auto preprocessing_us = stopwatch.toc("preprocessing");
   stopwatch.tic("obstacles");
   obstacle_masks.negative_masks = obstacle_velocity_limiter::createPolygonMasks(
-    planner_data->predicted_objects, obstacle_params_.dynamic_obstacles_buffer,
+    planner_data->objects, obstacle_params_.dynamic_obstacles_buffer,
     obstacle_params_.dynamic_obstacles_min_vel);
   if (obstacle_params_.ignore_on_path)
     obstacle_masks.negative_masks.push_back(obstacle_velocity_limiter::createTrajectoryFootprint(
@@ -189,8 +190,8 @@ VelocityPlanningResult ObstacleVelocityLimiterModule::plan(
       obstacle_masks.positive_mask =
         obstacle_velocity_limiter::createEnvelopePolygon(footprint_polygons);
     obstacle_velocity_limiter::addSensorObstacles(
-      obstacles, planner_data->occupancy_grid, planner_data->no_ground_pointcloud, obstacle_masks,
-      obstacle_params_);
+      obstacles, planner_data->occupancy_grid, planner_data->no_ground_pointcloud.pointcloud,
+      obstacle_masks, obstacle_params_);
   }
   const auto obstacles_us = stopwatch.toc("obstacles");
   autoware::motion_utils::VirtualWalls virtual_walls;

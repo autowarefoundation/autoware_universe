@@ -10,6 +10,9 @@ endif()
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
+# TODO(amadeuszsz): Remove -Wno-deprecated-declarations once removing implicit quantization
+add_compile_options(-Wno-deprecated-declarations)
+
 find_package(OpenCV REQUIRED)
 
 option(CUDA_VERBOSE "Verbose output of CUDA modules" OFF)
@@ -96,6 +99,17 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   # C++ are directly passed to nvcc (they are originally space separated
   # but nvcc assume comma separated as argument of `-Xcompiler` option).
   # That is why `cuda_add_library` is used here.
+
+  # cSpell: ignore gencode
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_75,code=sm_75")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_86,code=sm_86")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_87,code=sm_87")
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=sm_89")
+  # NOTE(knzo25): PTX support for newer GPUs until we can compile directly
+  list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_89,code=compute_89")
+  # TODO(knzo25): enable when the driver supports it
+  # list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_120,code=sm_120")
+
   cuda_add_library(${PROJECT_NAME}_gpu_preprocess
     SHARED
     src/preprocess.cu
@@ -109,6 +123,11 @@ if(TRT_AVAIL AND CUDA_AVAIL AND CUDNN_AVAIL)
   target_link_libraries(${PROJECT_NAME}
     ${autoware_tensorrt_common_LIBRARIES}
     ${PROJECT_NAME}_gpu_preprocess
+  )
+
+  install(
+    TARGETS ${PROJECT_NAME}_gpu_preprocess
+    LIBRARY DESTINATION lib
   )
 else()
   target_link_libraries(${PROJECT_NAME}

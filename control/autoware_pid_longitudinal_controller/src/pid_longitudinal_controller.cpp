@@ -16,8 +16,8 @@
 
 #include "autoware/motion_utils/marker/marker_helper.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
-#include "autoware/universe_utils/math/normalization.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
+#include "autoware_utils/math/normalization.hpp"
 
 #include <fmt/format.h>
 
@@ -214,9 +214,9 @@ PidLongitudinalController::PidLongitudinalController(
       : node.declare_parameter<double>("ego_nearest_yaw_threshold");  // [rad]
 
   // subscriber, publisher
-  m_pub_slope = node.create_publisher<tier4_debug_msgs::msg::Float32MultiArrayStamped>(
+  m_pub_slope = node.create_publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>(
     "~/output/slope_angle", rclcpp::QoS{1});
-  m_pub_debug = node.create_publisher<tier4_debug_msgs::msg::Float32MultiArrayStamped>(
+  m_pub_debug = node.create_publisher<autoware_internal_debug_msgs::msg::Float32MultiArrayStamped>(
     "~/output/longitudinal_diagnostic", rclcpp::QoS{1});
   m_pub_virtual_wall_marker = node.create_publisher<MarkerArray>("~/virtual_wall", 1);
 
@@ -726,7 +726,7 @@ void PidLongitudinalController::updateControlState(const ControlData & control_d
       m_pid_vel.reset();
       m_lpf_vel_error->reset(0.0);
       // prevent the car from taking a long time to start to move
-      m_prev_ctrl_cmd.acc = std::max(0.0, m_prev_raw_ctrl_cmd.acc);
+      m_prev_raw_ctrl_cmd.acc = std::max(0.0, m_prev_raw_ctrl_cmd.acc);
       return changeControlState(ControlState::DRIVE);
     }
     return;
@@ -863,7 +863,10 @@ PidLongitudinalController::Motion PidLongitudinalController::calcCtrlCmd(
     m_prev_raw_ctrl_cmd = raw_ctrl_cmd;
 
     // calc acc feedback
-    const double acc_err = control_data.current_motion.acc - raw_ctrl_cmd.acc;
+    const double vel_sign = (control_data.shift == Shift::Forward)
+                              ? 1.0
+                              : (control_data.shift == Shift::Reverse ? -1.0 : 0.0);
+    const double acc_err = control_data.current_motion.acc * vel_sign - raw_ctrl_cmd.acc;
     m_debug_values.setValues(DebugValues::TYPE::ERROR_ACC, acc_err);
     m_lpf_acc_error->filter(acc_err);
     m_debug_values.setValues(DebugValues::TYPE::ERROR_ACC_FILTERED, m_lpf_acc_error->getValue());
@@ -931,7 +934,7 @@ void PidLongitudinalController::publishDebugData(
   m_debug_values.setValues(DebugValues::TYPE::ACC_CMD_PUBLISHED, ctrl_cmd.acc);
 
   // publish debug values
-  tier4_debug_msgs::msg::Float32MultiArrayStamped debug_msg{};
+  autoware_internal_debug_msgs::msg::Float32MultiArrayStamped debug_msg{};
   debug_msg.stamp = clock_->now();
   for (const auto & v : m_debug_values.getValues()) {
     debug_msg.data.push_back(static_cast<decltype(debug_msg.data)::value_type>(v));
@@ -939,7 +942,7 @@ void PidLongitudinalController::publishDebugData(
   m_pub_debug->publish(debug_msg);
 
   // slope angle
-  tier4_debug_msgs::msg::Float32MultiArrayStamped slope_msg{};
+  autoware_internal_debug_msgs::msg::Float32MultiArrayStamped slope_msg{};
   slope_msg.stamp = clock_->now();
   slope_msg.data.push_back(
     static_cast<decltype(slope_msg.data)::value_type>(control_data.slope_angle));

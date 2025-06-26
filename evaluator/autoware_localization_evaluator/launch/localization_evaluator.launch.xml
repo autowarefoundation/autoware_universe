@@ -1,0 +1,10 @@
+<launch>
+  <arg name="input/localization" default="/localization/kinematic_state"/>
+  <arg name="input/localization/ref" default="/geometry_msgs/PoseWithCovarianceStampedGt"/>
+
+  <node pkg="autoware_localization_evaluator" exec="autoware_localization_evaluator_node" output="screen">
+    <param from="$(find-pkg-share autoware_localization_evaluator)/config/localization_evaluator.param.yaml"/>
+    <remap from="~/input/localization" to="$(var input/localization)"/>
+    <remap from="~/input/localization/ref" to="$(var input/localization/ref)"/>
+  </node>
+</launch>

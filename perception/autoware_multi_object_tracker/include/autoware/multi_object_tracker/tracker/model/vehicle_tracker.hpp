@@ -24,8 +24,6 @@
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
 
-#include <autoware/kalman_filter/kalman_filter.hpp>
-
 namespace autoware::multi_object_tracker
 {
 
@@ -37,16 +35,6 @@ private:
 
   double velocity_deviation_threshold_;
 
-  types::DynamicObject object_;
-  double z_;
-
-  struct BoundingBox
-  {
-    double length;
-    double width;
-    double height;
-  };
-  BoundingBox bounding_box_;
   Eigen::Vector2d tracking_offset_;
 
   BicycleMotionModel motion_model_;
@@ -55,19 +43,18 @@ private:
 public:
   VehicleTracker(
     const object_model::ObjectModel & object_model, const rclcpp::Time & time,
-    const types::DynamicObject & object, const size_t channel_size);
+    const types::DynamicObject & object);
 
   bool predict(const rclcpp::Time & time) override;
   bool measure(
     const types::DynamicObject & object, const rclcpp::Time & time,
-    const geometry_msgs::msg::Transform & self_transform) override;
-  bool measureWithPose(const types::DynamicObject & object);
+    const types::InputChannel & channel_info) override;
+  bool measureWithPose(
+    const types::DynamicObject & object, const types::InputChannel & channel_info);
   bool measureWithShape(const types::DynamicObject & object);
-  bool getTrackedObject(const rclcpp::Time & time, types::DynamicObject & object) const override;
-
-private:
-  types::DynamicObject getUpdatingObject(
-    const types::DynamicObject & object, const geometry_msgs::msg::Transform & self_transform);
+  bool getTrackedObject(
+    const rclcpp::Time & time, types::DynamicObject & object,
+    const bool to_publish = false) const override;
 };
 
 }  // namespace autoware::multi_object_tracker

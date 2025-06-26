@@ -22,13 +22,13 @@
 #include "object_manager.hpp"
 #include "result.hpp"
 
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/state_machine.hpp>
+#include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
 #include <autoware/motion_utils/marker/virtual_wall_marker_creator.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <tier4_debug_msgs/msg/float64_multi_array_stamped.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware_internal_debug_msgs/msg/float64_multi_array_stamped.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/primitives/LineString.h>
@@ -46,7 +46,7 @@
 namespace autoware::behavior_velocity_planner
 {
 
-class IntersectionModule : public SceneModuleInterface
+class IntersectionModule : public SceneModuleInterfaceWithRTC
 {
 public:
   struct PlannerParam
@@ -173,10 +173,16 @@ public:
       double ignore_parked_vehicle_speed_threshold;
       double occlusion_detection_hold_time;
       double temporal_stop_time_before_peeking;
-      bool temporal_stop_before_attention_area;
       double creep_velocity_without_traffic_light;
       double static_occlusion_with_traffic_light_timeout;
     } occlusion;
+
+    struct ConservativeMerging
+    {
+      bool enable_yield;
+      double minimum_lateral_distance_threshold;
+      double merging_judge_angle_threshold;
+    } conservative_merging;
 
     struct Debug
     {
@@ -214,6 +220,7 @@ public:
     bool passed_first_pass_judge{false};
     bool passed_second_pass_judge{false};
     std::optional<geometry_msgs::msg::Pose> absence_traffic_light_creep_wall{std::nullopt};
+    std::optional<geometry_msgs::msg::Pose> too_late_stop_wall_pose{std::nullopt};
 
     std::optional<std::vector<lanelet::CompoundPolygon3d>> attention_area{std::nullopt};
     std::optional<std::vector<lanelet::CompoundPolygon3d>> occlusion_attention_area{std::nullopt};
@@ -225,6 +232,7 @@ public:
     std::optional<std::vector<lanelet::CompoundPolygon3d>> yield_stuck_detect_area{std::nullopt};
 
     std::optional<geometry_msgs::msg::Polygon> candidate_collision_ego_lane_polygon{std::nullopt};
+    std::optional<geometry_msgs::msg::Polygon> candidate_collision_object_polygon{std::nullopt};
     autoware_perception_msgs::msg::PredictedObjects safe_under_traffic_control_targets;
     autoware_perception_msgs::msg::PredictedObjects unsafe_targets;
     autoware_perception_msgs::msg::PredictedObjects misjudge_targets;
@@ -304,7 +312,10 @@ public:
     const int64_t module_id, const int64_t lane_id, std::shared_ptr<const PlannerData> planner_data,
     const PlannerParam & planner_param, const std::set<lanelet::Id> & associative_ids,
     const std::string & turn_direction, const bool has_traffic_light, rclcpp::Node & node,
-    const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock);
+    const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+      planning_factor_interface);
 
   /**
    ***********************************************************
@@ -450,6 +461,18 @@ private:
    ***********************************************************
    ***********************************************************
    ***********************************************************
+   * @defgroup stuck-variables [var] stuck detection
+   * @{
+   */
+  //! indicate whether ego was trying to stop for stuck vehicle(for debouncing)
+  bool was_stopping_for_stuck_{false};
+  /** @} */
+
+private:
+  /**
+   ***********************************************************
+   ***********************************************************
+   ***********************************************************
    * @defgroup occlusion-variables [var] occlusion detection variables
    * @{
    */
@@ -460,9 +483,6 @@ private:
 
   //! debouncing for stable CLEARED decision
   StateMachine occlusion_stop_state_machine_;
-
-  //! debouncing for the brief stop at the boundary of attention area(if required by the flag)
-  StateMachine temporal_stop_before_attention_state_machine_;
 
   //! time counter for the stuck detection due to occlusion caused static objects
   StateMachine static_occlusion_timeout_state_machine_;
@@ -510,13 +530,14 @@ private:
    * @brief set RTC value according to calculated DecisionResult
    */
   void prepareRTCStatus(
-    const DecisionResult &, const tier4_planning_msgs::msg::PathWithLaneId & path);
+    const DecisionResult &, const autoware_internal_planning_msgs::msg::PathWithLaneId & path);
 
   /**
    * @brief act based on current RTC approval
    */
   void reactRTCApproval(
-    const DecisionResult & decision_result, tier4_planning_msgs::msg::PathWithLaneId * path);
+    const DecisionResult & decision_result,
+    autoware_internal_planning_msgs::msg::PathWithLaneId * path);
   /** @}*/
 
 private:
@@ -563,7 +584,7 @@ private:
     const lanelet::ConstLanelet & first_attention_lane,
     const std::optional<lanelet::CompoundPolygon3d> & second_attention_area_opt,
     const InterpolatedPathInfo & interpolated_path_info,
-    tier4_planning_msgs::msg::PathWithLaneId * original_path) const;
+    autoware_internal_planning_msgs::msg::PathWithLaneId * original_path) const;
 
   /**
    * @brief generate IntersectionLanelets
@@ -634,7 +655,7 @@ private:
    * intersection_lanelets.first_conflicting_lane(). They are ensured in prepareIntersectionData()
    */
   std::optional<StuckStop> isStuckStatus(
-    const tier4_planning_msgs::msg::PathWithLaneId & path,
+    const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
     const IntersectionStopLines & intersection_stoplines, const PathLanelets & path_lanelets) const;
 
   bool isTargetStuckVehicleType(
@@ -663,7 +684,7 @@ private:
    * intersection_stoplines.default_stopline, intersection_stoplines.first_attention_stopline
    */
   std::optional<YieldStuckStop> isYieldStuckStatus(
-    const tier4_planning_msgs::msg::PathWithLaneId & path,
+    const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
     const InterpolatedPathInfo & interpolated_path_info,
     const IntersectionStopLines & intersection_stoplines) const;
 
@@ -719,8 +740,8 @@ private:
    * intersection_stoplines.occlusion_stopline
    */
   PassJudgeStatus isOverPassJudgeLinesStatus(
-    const tier4_planning_msgs::msg::PathWithLaneId & path, const bool is_occlusion_state,
-    const IntersectionStopLines & intersection_stoplines);
+    const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
+    const bool is_occlusion_state, const IntersectionStopLines & intersection_stoplines);
   /** @} */
 
 private:
@@ -748,7 +769,7 @@ private:
     const PathLanelets & path_lanelets, const TimeDistanceArray & time_distance_array,
     const TrafficPrioritizedLevel & traffic_prioritized_level,
     const bool passed_1st_judge_line_first_time, const bool passed_2nd_judge_line_first_time,
-    tier4_debug_msgs::msg::Float64MultiArrayStamped * object_ttc_time_array);
+    autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * object_ttc_time_array);
 
   void cutPredictPathWithinDuration(
     const builtin_interfaces::msg::Time & object_stamp, const double time_thr,
@@ -781,7 +802,7 @@ private:
    * situation
    */
   std::string generateEgoRiskEvasiveDiagnosis(
-    const tier4_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
+    const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const size_t closest_idx,
     const TimeDistanceArray & ego_time_distance_array,
     const std::vector<std::pair<CollisionStatus::BlameType, std::shared_ptr<ObjectInfo>>> &
       too_late_detect_objects,
@@ -807,15 +828,17 @@ private:
    * intersection_stoplines.first_attention_stopline
    */
   TimeDistanceArray calcIntersectionPassingTime(
-    const tier4_planning_msgs::msg::PathWithLaneId & path, const bool is_prioritized,
+    const autoware_internal_planning_msgs::msg::PathWithLaneId & path, const bool is_prioritized,
     const IntersectionStopLines & intersection_stoplines,
-    tier4_debug_msgs::msg::Float64MultiArrayStamped * ego_ttc_array) const;
+    autoware_internal_debug_msgs::msg::Float64MultiArrayStamped * ego_ttc_array) const;
   /** @} */
 
   mutable DebugData debug_data_;
   mutable InternalDebugData internal_debug_data_{};
-  rclcpp::Publisher<tier4_debug_msgs::msg::Float64MultiArrayStamped>::SharedPtr ego_ttc_pub_;
-  rclcpp::Publisher<tier4_debug_msgs::msg::Float64MultiArrayStamped>::SharedPtr object_ttc_pub_;
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64MultiArrayStamped>::SharedPtr
+    ego_ttc_pub_;
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64MultiArrayStamped>::SharedPtr
+    object_ttc_pub_;
 };
 
 }  // namespace autoware::behavior_velocity_planner

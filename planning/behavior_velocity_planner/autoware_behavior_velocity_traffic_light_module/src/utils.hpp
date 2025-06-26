@@ -25,6 +25,8 @@
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
 #include <autoware/motion_utils/trajectory/path_with_lane_id.hpp>
 
+#include <autoware_perception_msgs/msg/traffic_light_element.hpp>
+
 #include <lanelet2_core/LaneletMap.h>
 
 namespace autoware::behavior_velocity_planner
@@ -60,22 +62,32 @@ auto findNearestCollisionPoint(
  * point, return std::nullopt.
  */
 auto createTargetPoint(
-  const tier4_planning_msgs::msg::PathWithLaneId & input, const LineString2d & stop_line,
-  const double offset) -> std::optional<std::pair<size_t, Eigen::Vector2d>>;
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & input,
+  const LineString2d & stop_line, const double offset)
+  -> std::optional<std::pair<size_t, Eigen::Vector2d>>;
 
 /**
  * @brief find intersection point between path and stop line and return the point.
  * @param input path.
  * @param stop line.
  * @param longitudinal offset.
- * @param extend length to find intersection point between path and stop line.
  * @return first: insert point index, second: insert point position. if there is no intersection
  * point, return std::nullopt.
  */
 auto calcStopPointAndInsertIndex(
-  const tier4_planning_msgs::msg::PathWithLaneId & input_path,
-  const lanelet::ConstLineString3d & lanelet_stop_lines, const double & offset,
-  const double & stop_line_extend_length) -> std::optional<std::pair<size_t, Eigen::Vector2d>>;
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & input_path,
+  const lanelet::ConstLineString3d & lanelet_stop_lines, const double & offset)
+  -> std::optional<std::pair<size_t, Eigen::Vector2d>>;
+
+/**
+ * @brief check if the traffic signal is red stop.
+ * @param lanelet
+ * @param elements
+ * @return true if the traffic signal is red stop, false otherwise.
+ */
+bool isTrafficSignalRedStop(
+  const lanelet::ConstLanelet & lanelet,
+  const std::vector<autoware_perception_msgs::msg::TrafficLightElement> & elements);
 
 }  // namespace autoware::behavior_velocity_planner
 

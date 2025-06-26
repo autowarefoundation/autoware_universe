@@ -15,19 +15,19 @@
 #ifndef AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__TURN_SIGNAL_DECIDER_HPP_
 #define AUTOWARE__BEHAVIOR_PATH_PLANNER_COMMON__TURN_SIGNAL_DECIDER_HPP_
 
-#include "autoware/universe_utils/geometry/boost_polygon_utils.hpp"
+#include "autoware_utils/geometry/boost_polygon_utils.hpp"
 
 #include <autoware/behavior_path_planner_common/parameters.hpp>
 #include <autoware/behavior_path_planner_common/utils/path_shifter/path_shifter.hpp>
 #include <autoware/route_handler/route_handler.hpp>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
-#include <autoware/universe_utils/geometry/geometry.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
 
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_vehicle_msgs/msg/hazard_lights_command.hpp>
 #include <autoware_vehicle_msgs/msg/turn_indicators_command.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <boost/geometry/algorithms/intersects.hpp>
 
@@ -43,12 +43,12 @@
 namespace autoware::behavior_path_planner
 {
 using autoware::route_handler::RouteHandler;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using autoware_vehicle_msgs::msg::HazardLightsCommand;
 using autoware_vehicle_msgs::msg::TurnIndicatorsCommand;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
 using nav_msgs::msg::Odometry;
-using tier4_planning_msgs::msg::PathWithLaneId;
 
 const std::map<std::string, uint8_t> g_signal_map = {
   {"left", TurnIndicatorsCommand::ENABLE_LEFT},
@@ -240,8 +240,8 @@ private:
     const ShiftedPath & path, const ShiftLine & shift_line, const lanelet::ConstLanelets & lanes,
     const autoware::vehicle_info_utils::VehicleInfo & vehicle_info) const
   {
-    using autoware::universe_utils::pose2transform;
-    using autoware::universe_utils::transformVector;
+    using autoware_utils::pose2transform;
+    using autoware_utils::transform_vector;
     using boost::geometry::intersects;
 
     const auto footprint = vehicle_info.createFootprint();
@@ -250,7 +250,7 @@ private:
 
     return std::any_of(start_itr, end_itr, [&footprint, &lanes](const auto & point) {
       const auto transform = pose2transform(point.point.pose);
-      const auto shifted_vehicle_footprint = transformVector(footprint, transform);
+      const auto shifted_vehicle_footprint = transform_vector(footprint, transform);
 
       auto check_for_vehicle_and_bound_intersection =
         [&shifted_vehicle_footprint](const auto & lane) {

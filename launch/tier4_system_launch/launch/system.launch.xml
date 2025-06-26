@@ -24,6 +24,14 @@
   <arg name="mrm_handler_param_path"/>
   <arg name="diagnostic_graph_aggregator_param_path"/>
   <arg name="diagnostic_graph_aggregator_graph_path"/>
+  <arg name="diag_struct_topic" default="/diagnostics_graph/struct"/>
+  <arg name="diag_status_topic" default="/diagnostics_graph/status"/>
+  <arg name="availability_converter_param_path" default="$(find-pkg-share autoware_diagnostic_graph_aggregator)/config/converter.param.yaml"/>
+  <arg name="command_mode_switcher_param_path" default="$(find-pkg-share autoware_command_mode_switcher)/config/default.param.yaml"/>
+  <arg name="command_mode_decider_param_path" default="$(find-pkg-share autoware_command_mode_decider)/config/default.param.yaml"/>
+  <arg name="mrm_state_topic" default="/system/fail_safe/mrm_state"/>
+  <arg name="change_operation_mode_srv" default="/system/operation_mode/change_operation_mode"/>
+  <arg name="change_autoware_control_srv" default="/system/operation_mode/change_autoware_control"/>
 
   <let name="sensor_launch_pkg" value="$(find-pkg-share $(var sensor_model)_launch)"/>
 
@@ -33,13 +41,30 @@
   <arg name="launch_rqt_robot_monitor" default="false"/>
   <arg name="launch_rqt_runtime_monitor_err" default="false"/>
 
+  <!-- temporary: control_command_gate migration -->
+  <arg name="use_control_command_gate" default="false"/>
+
   <group>
     <push-ros-namespace namespace="/system"/>
+
+    <group if="$(var use_control_command_gate)">
+      <include file="$(find-pkg-share autoware_command_mode_switcher)/launch/switcher.launch.xml">
+        <arg name="config" value="$(var command_mode_switcher_param_path)"/>
+      </include>
+    </group>
+    <group if="$(var use_control_command_gate)">
+      <include file="$(find-pkg-share autoware_command_mode_decider)/launch/decider.launch.xml">
+        <arg name="config" value="$(var command_mode_decider_param_path)"/>
+        <arg name="~/operation_mode/change_operation_mode" value="$(var change_operation_mode_srv)"/>
+        <arg name="~/operation_mode/change_autoware_control" value="$(var change_autoware_control_srv)"/>
+        <arg name="~/mrm/state" value="$(var mrm_state_topic)"/>
+      </include>
+    </group>
 
     <!-- System Monitor -->
     <group if="$(var launch_system_monitor)">
       <push-ros-namespace namespace="system_monitor"/>
-      <include file="$(find-pkg-share system_monitor)/launch/system_monitor.launch.xml">
+      <include file="$(find-pkg-share autoware_system_monitor)/launch/system_monitor.launch.xml">
         <arg name="cpu_monitor_config_file" value="$(var system_monitor_cpu_monitor_param_path)"/>
         <arg name="gpu_monitor_config_file" value="$(var system_monitor_gpu_monitor_param_path)"/>
         <arg name="hdd_monitor_config_file" value="$(var system_monitor_hdd_monitor_param_path)"/>
@@ -53,7 +78,7 @@
 
     <!-- Duplicated Node Checker -->
     <group>
-      <include file="$(find-pkg-share duplicated_node_checker)/launch/duplicated_node_checker.launch.xml">
+      <include file="$(find-pkg-share autoware_duplicated_node_checker)/launch/duplicated_node_checker.launch.xml">
         <arg name="config_file" value="$(var duplicated_node_checker_param_path)"/>
       </include>
     </group>
@@ -72,40 +97,43 @@
 
     <!-- Component State Monitor -->
     <group>
-      <include file="$(find-pkg-share component_state_monitor)/launch/component_state_monitor.launch.py">
+      <include file="$(find-pkg-share autoware_component_state_monitor)/launch/component_state_monitor.launch.py">
         <arg name="mode" value="$(var run_mode)"/>
         <arg name="file" value="$(var component_state_monitor_topic_path)"/>
       </include>
     </group>
 
     <!-- MRM Operator -->
-    <group>
-      <include file="$(find-pkg-share mrm_comfortable_stop_operator)/launch/mrm_comfortable_stop_operator.launch.py">
+    <group unless="$(var use_control_command_gate)">
+      <include file="$(find-pkg-share autoware_mrm_comfortable_stop_operator)/launch/mrm_comfortable_stop_operator.launch.py">
         <arg name="config_file" value="$(var mrm_comfortable_stop_operator_param_path)"/>
       </include>
     </group>
     <group>
-      <include file="$(find-pkg-share mrm_emergency_stop_operator)/launch/mrm_emergency_stop_operator.launch.py">
+      <include file="$(find-pkg-share autoware_mrm_emergency_stop_operator)/launch/mrm_emergency_stop_operator.launch.py">
         <arg name="config_file" value="$(var mrm_emergency_stop_operator_param_path)"/>
       </include>
     </group>
 
     <!-- Diagnostic Graph Aggregator -->
     <group>
-      <include file="$(find-pkg-share system_diagnostic_monitor)/launch/system_diagnostic_monitor.launch.xml">
+      <include file="$(find-pkg-share autoware_diagnostic_graph_aggregator)/launch/aggregator.launch.xml">
         <arg name="param_file" value="$(var diagnostic_graph_aggregator_param_path)"/>
         <arg name="graph_file" value="$(var diagnostic_graph_aggregator_graph_path)"/>
+        <arg name="~/struct" value="$(var diag_struct_topic)"/>
+        <arg name="~/status" value="$(var diag_status_topic)"/>
+        <arg name="converter_param_file" value="$(var availability_converter_param_path)"/>
       </include>
     </group>
 
     <!-- Hazard Status Converter -->
     <group>
-      <include file="$(find-pkg-share hazard_status_converter)/launch/hazard_status_converter.launch.xml"/>
+      <include file="$(find-pkg-share autoware_hazard_status_converter)/launch/hazard_status_converter.launch.xml"/>
     </group>
 
     <!-- MRM Handler -->
-    <group>
-      <include file="$(find-pkg-share mrm_handler)/launch/mrm_handler.launch.xml">
+    <group unless="$(var use_control_command_gate)">
+      <include file="$(find-pkg-share autoware_mrm_handler)/launch/mrm_handler.launch.xml">
         <arg name="config_file" value="$(var mrm_handler_param_path)"/>
       </include>
     </group>
@@ -113,7 +141,7 @@
 
   <!-- Dummy Diag Publisher -->
   <group if="$(var launch_dummy_diag_publisher)">
-    <include file="$(find-pkg-share dummy_diag_publisher)/launch/dummy_diag_publisher.launch.xml">
+    <include file="$(find-pkg-share autoware_dummy_diag_publisher)/launch/dummy_diag_publisher.launch.xml">
       <arg name="config_file" value="$(var dummy_diag_publisher_param_path)"/>
       <arg name="extra_config_file_sensor" value="$(var sensor_launch_pkg)/config/dummy_diag_publisher/sensor_kit.param.yaml"/>
       <arg name="launch_rqt_reconfigure" value="$(var launch_rqt_reconfigure)"/>

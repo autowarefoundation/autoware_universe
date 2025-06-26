@@ -23,12 +23,14 @@
 #include "rclcpp/logger.hpp"
 
 #include <autoware/route_handler/route_handler.hpp>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_frenet_planner/structures.hpp>
+#include <autoware_sampler_common/transform/spline_transform.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <lanelet2_core/Forward.h>
 
@@ -44,23 +46,24 @@ using autoware::behavior_path_planner::utils::path_safety_checker::
 using autoware::behavior_path_planner::utils::path_safety_checker::PoseWithVelocityStamped;
 using autoware::behavior_path_planner::utils::path_safety_checker::PredictedPathWithPolygon;
 using autoware::route_handler::Direction;
-using autoware::universe_utils::LineString2d;
-using autoware::universe_utils::Polygon2d;
 using autoware::vehicle_info_utils::VehicleInfo;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_perception_msgs::msg::PredictedPath;
+using autoware_utils::LineString2d;
+using autoware_utils::Polygon2d;
 using behavior_path_planner::lane_change::CommonDataPtr;
 using behavior_path_planner::lane_change::LanesPolygon;
 using behavior_path_planner::lane_change::LCParamPtr;
 using behavior_path_planner::lane_change::ModuleType;
 using behavior_path_planner::lane_change::PathSafetyStatus;
 using behavior_path_planner::lane_change::TargetLaneLeadingObjects;
+using behavior_path_planner::lane_change::TrajectoryGroup;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::Twist;
 using path_safety_checker::CollisionCheckDebugMap;
-using tier4_planning_msgs::msg::PathWithLaneId;
 
 rclcpp::Logger get_logger();
 
@@ -69,9 +72,27 @@ bool is_mandatory_lane_change(const ModuleType lc_type);
 void set_prepare_velocity(
   PathWithLaneId & prepare_segment, const double current_velocity, const double prepare_velocity);
 
-std::vector<int64_t> replaceWithSortedIds(
-  const std::vector<int64_t> & original_lane_ids,
-  const std::vector<std::vector<int64_t>> & sorted_lane_ids);
+/**
+ * @brief Replaces the current lane IDs with a sorted set of IDs based on a predefined mapping.
+ *
+ * This function checks if the current lane IDs match the previously processed lane IDs.
+ * If they do, it returns the previously sorted IDs for efficiency. Otherwise, it matches
+ * the current lane IDs to the appropriate sorted IDs from the provided mapping and updates
+ * the cached values.
+ *
+ * @param current_lane_ids The current lane IDs to be replaced or verified.
+ * @param sorted_lane_ids A vector of sorted lane ID groups, each representing a predefined
+ *                        order of IDs for specific conditions.
+ * @param prev_lane_ids Reference to the previously processed lane IDs for caching purposes.
+ * @param prev_sorted_lane_ids Reference to the previously sorted lane IDs for caching purposes.
+ *
+ * @return std::vector<int64_t> The sorted lane IDs if a match is found, or the original
+ *         `current_lane_ids` if no match exists.
+ */
+std::vector<int64_t> replace_with_sorted_ids(
+  const std::vector<int64_t> & current_lane_ids,
+  const std::vector<std::vector<int64_t>> & sorted_lane_ids, std::vector<int64_t> & prev_lane_ids,
+  std::vector<int64_t> & prev_sorted_lane_ids);
 
 std::vector<std::vector<int64_t>> get_sorted_lane_ids(const CommonDataPtr & common_data_ptr);
 
@@ -82,10 +103,6 @@ lanelet::ConstLanelets get_target_neighbor_lanes(
 bool path_footprint_exceeds_target_lane_bound(
   const CommonDataPtr & common_data_ptr, const PathWithLaneId & path, const VehicleInfo & ego_info,
   const double margin = 0.1);
-
-std::vector<DrivableLanes> generateDrivableLanes(
-  const std::vector<DrivableLanes> & original_drivable_lanes, const RouteHandler & route_handler,
-  const lanelet::ConstLanelets & current_lanes, const lanelet::ConstLanelets & lane_change_lanes);
 
 std::vector<DrivableLanes> generateDrivableLanes(
   const RouteHandler & route_handler, const lanelet::ConstLanelets & current_lanes,
@@ -432,5 +449,24 @@ std::vector<std::vector<PoseWithVelocityStamped>> convert_to_predicted_paths(
  * @return true if the pose is within the target or target neighbor polygons, false otherwise.
  */
 bool is_valid_start_point(const lane_change::CommonDataPtr & common_data_ptr, const Pose & pose);
+
+/**
+ * @brief Converts a lane change frenet candidate into a predicted path for the ego vehicle.
+ *
+ * This function generates a predicted path based on the provided Frenet candidate,
+ * simulating the vehicle's trajectory during the preparation and lane-changing phases.
+ * It interpolates poses and velocities over the duration of the prediction, considering
+ * the ego vehicle's initial conditions and the candidate's trajectory data.
+ *
+ * @param common_data_ptr Shared pointer to CommonData containing parameters and ego vehicle state.
+ * @param frenet_candidate A Frenet trajectory group representing the lane change candidate.
+ * @param deceleration_sampling_num Unused parameter for deceleration sampling count.
+ *
+ * @return std::vector<PoseWithVelocityStamped> The predicted path as a series of stamped poses
+ *         with associated velocities over the prediction time.
+ */
+std::vector<PoseWithVelocityStamped> convert_to_predicted_path(
+  const CommonDataPtr & common_data_ptr, const lane_change::TrajectoryGroup & frenet_candidate,
+  [[maybe_unused]] const size_t deceleration_sampling_num);
 }  // namespace autoware::behavior_path_planner::utils::lane_change
 #endif  // AUTOWARE__BEHAVIOR_PATH_LANE_CHANGE_MODULE__UTILS__UTILS_HPP_

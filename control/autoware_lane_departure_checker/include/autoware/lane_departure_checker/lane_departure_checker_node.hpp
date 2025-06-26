@@ -15,15 +15,17 @@
 #ifndef AUTOWARE__LANE_DEPARTURE_CHECKER__LANE_DEPARTURE_CHECKER_NODE_HPP_
 #define AUTOWARE__LANE_DEPARTURE_CHECKER__LANE_DEPARTURE_CHECKER_NODE_HPP_
 
-#include "autoware/lane_departure_checker/lane_departure_checker.hpp"
-#include "autoware/universe_utils/ros/polling_subscriber.hpp"
+#include "autoware/boundary_departure_checker/boundary_departure_checker.hpp"
+#include "autoware/lane_departure_checker/parameters.hpp"
+#include "autoware_utils/ros/polling_subscriber.hpp"
 
-#include <autoware/universe_utils/ros/debug_publisher.hpp>
-#include <autoware/universe_utils/ros/processing_time_publisher.hpp>
+#include <autoware_utils/ros/debug_publisher.hpp>
+#include <autoware_utils/ros/processing_time_publisher.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
+#include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_map_msgs/msg/lanelet_map_bin.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
@@ -31,7 +33,6 @@
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <tier4_debug_msgs/msg/float64_stamped.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
@@ -46,21 +47,7 @@
 namespace autoware::lane_departure_checker
 {
 using autoware_map_msgs::msg::LaneletMapBin;
-
-struct NodeParam
-{
-  bool will_out_of_lane_checker;
-  bool out_of_lane_checker;
-  bool boundary_departure_checker;
-
-  double update_rate;
-  bool visualize_lanelet;
-  bool include_right_lanes;
-  bool include_left_lanes;
-  bool include_opposite_lanes;
-  bool include_conflicting_lanes;
-  std::vector<std::string> boundary_types_to_detect;
-};
+using namespace boundary_departure_checker;  // NOLINT;
 
 class LaneDepartureCheckerNode : public rclcpp::Node
 {
@@ -69,22 +56,19 @@ public:
 
 private:
   // Subscriber
-  autoware::universe_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry> sub_odom_{
+  autoware_utils::InterProcessPollingSubscriber<nav_msgs::msg::Odometry> sub_odom_{
     this, "~/input/odometry"};
-  autoware::universe_utils::InterProcessPollingSubscriber<
-    LaneletMapBin, autoware::universe_utils::polling_policy::Newest>
+  autoware_utils::InterProcessPollingSubscriber<
+    LaneletMapBin, autoware_utils::polling_policy::Newest>
     sub_lanelet_map_bin_{this, "~/input/lanelet_map_bin", rclcpp::QoS{1}.transient_local()};
-  autoware::universe_utils::InterProcessPollingSubscriber<LaneletRoute> sub_route_{
-    this, "~/input/route"};
-  autoware::universe_utils::InterProcessPollingSubscriber<Trajectory> sub_reference_trajectory_{
+  autoware_utils::InterProcessPollingSubscriber<LaneletRoute> sub_route_{this, "~/input/route"};
+  autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_reference_trajectory_{
     this, "~/input/reference_trajectory"};
-  autoware::universe_utils::InterProcessPollingSubscriber<Trajectory> sub_predicted_trajectory_{
+  autoware_utils::InterProcessPollingSubscriber<Trajectory> sub_predicted_trajectory_{
     this, "~/input/predicted_trajectory"};
-  autoware::universe_utils::InterProcessPollingSubscriber<
-    autoware_adapi_v1_msgs::msg::OperationModeState>
+  autoware_utils::InterProcessPollingSubscriber<autoware_adapi_v1_msgs::msg::OperationModeState>
     sub_operation_mode_{this, "/api/operation_mode/state"};
-  autoware::universe_utils::InterProcessPollingSubscriber<
-    autoware_vehicle_msgs::msg::ControlModeReport>
+  autoware_utils::InterProcessPollingSubscriber<autoware_vehicle_msgs::msg::ControlModeReport>
     sub_control_mode_{this, "/vehicle/status/control_mode"};
 
   // Data Buffer
@@ -102,20 +86,12 @@ private:
   autoware_adapi_v1_msgs::msg::OperationModeState::ConstSharedPtr operation_mode_;
   autoware_vehicle_msgs::msg::ControlModeReport::ConstSharedPtr control_mode_;
 
-  // Callback
-  void onOdometry(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
-  void onLaneletMapBin(const LaneletMapBin::ConstSharedPtr msg);
-  void onRoute(const LaneletRoute::ConstSharedPtr msg);
-  void onReferenceTrajectory(const Trajectory::ConstSharedPtr msg);
-  void onPredictedTrajectory(const Trajectory::ConstSharedPtr msg);
-  void onOperationMode(const autoware_adapi_v1_msgs::msg::OperationModeState::ConstSharedPtr msg);
-  void onControlMode(const autoware_vehicle_msgs::msg::ControlModeReport::ConstSharedPtr msg);
-
   // Publisher
-  autoware::universe_utils::DebugPublisher debug_publisher_{this, "~/debug"};
-  autoware::universe_utils::ProcessingTimePublisher processing_diag_publisher_{
+  autoware_utils::DebugPublisher debug_publisher_{this, "~/debug"};
+  autoware_utils::ProcessingTimePublisher processing_diag_publisher_{
     this, "~/debug/processing_time_ms_diag"};
-  rclcpp::Publisher<tier4_debug_msgs::msg::Float64Stamped>::SharedPtr processing_time_publisher_;
+  rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
+    processing_time_publisher_;
 
   // Timer
   rclcpp::TimerBase::SharedPtr timer_;
@@ -138,13 +114,12 @@ private:
   // Core
   Input input_{};
   Output output_{};
-  std::unique_ptr<LaneDepartureChecker> lane_departure_checker_;
+  std::unique_ptr<BoundaryDepartureChecker> boundary_departure_checker_;
 
   // Diagnostic Updater
   diagnostic_updater::Updater updater_{this};
 
   void checkLaneDeparture(diagnostic_updater::DiagnosticStatusWrapper & stat);
-  void checkTrajectoryDeviation(diagnostic_updater::DiagnosticStatusWrapper & stat);
 
   // Visualization
   visualization_msgs::msg::MarkerArray createMarkerArray() const;

@@ -22,27 +22,25 @@
 #include "autoware/multi_object_tracker/object_model/types.hpp"
 #include "tracker_base.hpp"
 
-#include <autoware/kalman_filter/kalman_filter.hpp>
-
 namespace autoware::multi_object_tracker
 {
 
 class PassThroughTracker : public Tracker
 {
 private:
-  types::DynamicObject object_;
   types::DynamicObject prev_observed_object_;
   rclcpp::Logger logger_;
   rclcpp::Time last_update_time_;
 
 public:
-  PassThroughTracker(
-    const rclcpp::Time & time, const types::DynamicObject & object, const size_t channel_size);
+  PassThroughTracker(const rclcpp::Time & time, const types::DynamicObject & object);
   bool predict(const rclcpp::Time & time) override;
   bool measure(
     const types::DynamicObject & object, const rclcpp::Time & time,
-    const geometry_msgs::msg::Transform & self_transform) override;
-  bool getTrackedObject(const rclcpp::Time & time, types::DynamicObject & object) const override;
+    const types::InputChannel & channel_info) override;
+  bool getTrackedObject(
+    const rclcpp::Time & time, types::DynamicObject & object,
+    const bool to_publish = false) const override;
 };
 
 }  // namespace autoware::multi_object_tracker

@@ -1,5 +1,7 @@
 # tier4_adapi_rviz_plugin
 
+This package contains tools for testing AD API. For general AD API usage, we recommend using [tier4_state_rviz_plugin](../tier4_state_rviz_plugin/README.md).
+
 ## RoutePanel
 
 To use the panel, set the topic name from 2D Goal Pose Tool to `/rviz/routing/pose`.

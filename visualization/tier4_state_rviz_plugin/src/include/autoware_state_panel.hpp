@@ -49,12 +49,12 @@
 #include <autoware_adapi_v1_msgs/srv/change_operation_mode.hpp>
 #include <autoware_adapi_v1_msgs/srv/clear_route.hpp>
 #include <autoware_adapi_v1_msgs/srv/initialize_localization.hpp>
+#include <autoware_internal_planning_msgs/msg/velocity_limit.hpp>
 #include <autoware_vehicle_msgs/msg/gear_report.hpp>
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <tier4_external_api_msgs/msg/emergency.hpp>
 #include <tier4_external_api_msgs/srv/set_emergency.hpp>
-#include <tier4_planning_msgs/msg/velocity_limit.hpp>
 
 #include <qlabel.h>
 
@@ -119,7 +119,8 @@ protected:
   rclcpp::Client<tier4_external_api_msgs::srv::SetEmergency>::SharedPtr client_emergency_stop_;
   rclcpp::Subscription<tier4_external_api_msgs::msg::Emergency>::SharedPtr sub_emergency_;
 
-  rclcpp::Publisher<tier4_planning_msgs::msg::VelocityLimit>::SharedPtr pub_velocity_limit_;
+  rclcpp::Publisher<autoware_internal_planning_msgs::msg::VelocityLimit>::SharedPtr
+    pub_velocity_limit_;
 
   QLabel * velocity_limit_value_label_{nullptr};
   bool sliderIsDragging = false;

@@ -53,6 +53,10 @@ ament_auto_add_library(object_lanelet_filter SHARED
   lib/utils/utils.cpp
 )
 
+target_link_libraries(object_lanelet_filter
+  Eigen3::Eigen
+)
+
 ament_auto_add_library(object_position_filter SHARED
   src/position_filter/position_filter.cpp
   lib/utils/utils.cpp
@@ -82,6 +86,10 @@ if(BUILD_TESTING)
   ament_auto_add_gtest(detection_object_validation_tests
     test/test_utils.cpp
     test/object_position_filter/test_object_position_filter.cpp
+  )
+  ament_auto_add_gtest(object_lanelet_filter_tests
+    test/test_utils.cpp
+    test/lanelet_filter/test_lanelet_filter.cpp
   )
 endif()
 

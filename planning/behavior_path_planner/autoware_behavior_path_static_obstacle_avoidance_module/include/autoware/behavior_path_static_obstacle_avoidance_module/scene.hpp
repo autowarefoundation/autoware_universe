@@ -17,6 +17,7 @@
 
 #include "autoware/behavior_path_planner_common/interface/scene_module_interface.hpp"
 #include "autoware/behavior_path_planner_common/interface/scene_module_visitor.hpp"
+#include "autoware/behavior_path_planner_common/utils/path_safety_checker/safety_check.hpp"
 #include "autoware/behavior_path_static_obstacle_avoidance_module/data_structs.hpp"
 #include "autoware/behavior_path_static_obstacle_avoidance_module/helper.hpp"
 #include "autoware/behavior_path_static_obstacle_avoidance_module/shift_line_generator.hpp"
@@ -28,6 +29,7 @@
 
 #include <limits>
 #include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -46,7 +48,8 @@ public:
     const std::string & name, rclcpp::Node & node, std::shared_ptr<AvoidanceParameters> parameters,
     const std::unordered_map<std::string, std::shared_ptr<RTCInterface>> & rtc_interface_ptr_map,
     std::unordered_map<std::string, std::shared_ptr<ObjectsOfInterestMarkerInterface>> &
-      objects_of_interest_marker_interface_ptr_map);
+      objects_of_interest_marker_interface_ptr_map,
+    const std::shared_ptr<PlanningFactorInterface> & planning_factor_interface);
 
   CandidateOutput planCandidate() const override;
   BehaviorModuleOutput plan() override;
@@ -131,9 +134,10 @@ private:
       }
 
       if (finish_distance > -1.0e-03) {
-        steering_factor_interface_.set(
-          {left_shift.start_pose, left_shift.finish_pose}, {start_distance, finish_distance},
-          SteeringFactor::LEFT, SteeringFactor::TURNING, "");
+        planning_factor_interface_->add(
+          start_distance, finish_distance, left_shift.start_pose, left_shift.finish_pose,
+          PlanningFactor::SHIFT_LEFT,
+          utils::path_safety_checker::to_safety_factor_array(debug_data_.collision_check));
       }
     }
 
@@ -151,9 +155,10 @@ private:
       }
 
       if (finish_distance > -1.0e-03) {
-        steering_factor_interface_.set(
-          {right_shift.start_pose, right_shift.finish_pose}, {start_distance, finish_distance},
-          SteeringFactor::RIGHT, SteeringFactor::TURNING, "");
+        planning_factor_interface_->add(
+          start_distance, finish_distance, right_shift.start_pose, right_shift.finish_pose,
+          PlanningFactor::SHIFT_RIGHT,
+          utils::path_safety_checker::to_safety_factor_array(debug_data_.collision_check));
       }
     }
   }
@@ -180,9 +185,9 @@ private:
     }
 
     if (candidate_registered) {
-      uuid_map_.at("left") = generateUUID();
-      uuid_map_.at("right") = generateUUID();
-      candidate_uuid_ = generateUUID();
+      uuid_map_.at("left") = generate_uuid();
+      uuid_map_.at("right") = generate_uuid();
+      candidate_uuid_ = generate_uuid();
     }
   }
 
@@ -354,16 +359,11 @@ private:
   // generate output data
 
   /**
-   * @brief fill debug markers.
+   * @brief fill info and debug markers.
    */
-  void updateDebugMarker(
+  void updateMarker(
     const BehaviorModuleOutput & output, const AvoidancePlanningData & data,
     const PathShifter & shifter, const DebugData & debug) const;
-
-  /**
-   * @brief fill information markers that are shown in Rviz by default.
-   */
-  void updateInfoMarker(const AvoidancePlanningData & data) const;
 
   /**
    * @brief fill debug msg that are published as a topic.
@@ -400,7 +400,8 @@ private:
   {
     constexpr double threshold = 0.1;
     if (std::abs(path_shifter_.getBaseOffset()) > threshold) {
-      RCLCPP_INFO(getLogger(), "base offset is not zero. can't reset registered shift lines.");
+      RCLCPP_INFO_THROTTLE(
+        getLogger(), *clock_, 3000, "base offset is not zero. can't reset registered shift lines.");
       return;
     }
 
@@ -455,7 +456,7 @@ private:
 
   bool safe_{true};
 
-  std::optional<UUID> ignore_signal_{std::nullopt};
+  std::set<std::string> ignore_signal_ids_;
 
   std::shared_ptr<AvoidanceHelper> helper_;
 
@@ -476,13 +477,15 @@ private:
   ObjectDataArray clip_objects_;
 
   // TODO(Satoshi OTA) create detected object manager.
-  ObjectDataArray registered_objects_;
+  ObjectDataArray stored_objects_;
 
   // TODO(Satoshi OTA) remove this variable.
   mutable ObjectDataArray ego_stopped_objects_;
 
   // TODO(Satoshi OTA) remove this variable.
   mutable ObjectDataArray stopped_objects_;
+
+  mutable std::unordered_map<std::string, rclcpp::Time> unknown_type_object_first_seen_time_map_;
 
   mutable size_t safe_count_{0};
 

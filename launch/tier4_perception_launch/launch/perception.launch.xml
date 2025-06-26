@@ -11,12 +11,11 @@
   <arg name="object_recognition_detection_object_merger_distance_threshold_list_path"/>
   <arg name="object_recognition_detection_fusion_sync_param_path"/>
   <arg name="object_recognition_detection_roi_cluster_fusion_param_path"/>
-  <arg name="object_recognition_detection_roi_pointcloud_fusion_param_path"/>
+  <arg name="object_recognition_detection_irregular_object_detector_param_path"/>
   <arg name="object_recognition_detection_roi_detected_object_fusion_param_path"/>
+  <arg name="object_recognition_detection_pointpainting_fusion_common_param_path"/>
   <arg name="object_recognition_detection_lidar_model_param_path"/>
   <arg name="object_recognition_detection_radar_lanelet_filtering_range_param_path"/>
-  <arg name="object_recognition_detection_radar_crossing_objects_noise_filter_param_path"/>
-  <arg name="object_recognition_detection_radar_object_clustering_param_path"/>
   <arg name="object_recognition_detection_object_velocity_splitter_radar_param_path"/>
   <arg name="object_recognition_detection_object_velocity_splitter_radar_fusion_param_path"/>
   <arg name="object_recognition_detection_object_range_splitter_radar_param_path"/>
@@ -34,22 +33,62 @@
   <arg name="occupancy_grid_map_param_path"/>
   <arg name="occupancy_grid_map_updater"/>
   <arg name="occupancy_grid_map_updater_param_path"/>
-  <arg name="traffic_light_arbiter_param_path"/>
   <arg name="lidar_detection_model"/>
+  <arg name="each_traffic_light_map_based_detector_param_path"/>
+  <arg name="traffic_light_fine_detector_param_path"/>
+  <arg name="yolox_traffic_light_detector_param_path"/>
+  <arg name="car_traffic_light_classifier_param_path"/>
+  <arg name="pedestrian_traffic_light_classifier_param_path"/>
+  <arg name="traffic_light_roi_visualizer_param_path"/>
+  <arg name="traffic_light_occlusion_predictor_param_path"/>
+  <arg name="traffic_light_multi_camera_fusion_param_path"/>
+  <arg name="traffic_light_arbiter_param_path"/>
+  <arg name="crosswalk_traffic_light_estimator_param_path"/>
 
   <!-- ML model parameters -->
   <arg name="lidar_detection_model_type" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[0]&quot;)"/>
   <arg name="lidar_detection_model_name" default="$(eval &quot;'$(var lidar_detection_model)'.split('/')[1] if '/' in '$(var lidar_detection_model)' else ''&quot;)"/>
+  <arg name="use_short_range_detection" default="false" description="use short range detection for redundant VRU detection"/>
+  <arg name="lidar_short_range_detection_model_type" default="centerpoint_short_range" description="options: `centerpoint_short_range`">
+    <choice value="centerpoint_short_range"/>
+  </arg>
+  <arg name="lidar_short_range_detection_model_name" default="centerpoint_short_range" description="options: `centerpoint_short_range`">
+    <choice value="centerpoint_short_range"/>
+    <choice value=""/>
+  </arg>
+  <arg name="bevfusion_model_path" default="$(var data_path)/bevfusion"/>
   <arg name="centerpoint_model_path" default="$(var data_path)/lidar_centerpoint"/>
   <arg name="transfusion_model_path" default="$(var data_path)/lidar_transfusion"/>
+  <arg name="short_range_centerpoint_model_path" default="$(var data_path)/lidar_short_range_centerpoint"/>
   <arg name="pointpainting_model_path" default="$(var data_path)/image_projection_based_fusion"/>
 
   <!-- Common parameters -->
   <arg name="input/pointcloud" default="/sensing/lidar/concatenated/pointcloud" description="The topic will be used in the detection module"/>
-  <arg name="mode" default="camera_lidar_fusion" description="options: `camera_lidar_radar_fusion`, `camera_lidar_fusion`, `lidar_radar_fusion`, `lidar` or `radar`"/>
+  <arg name="mode" default="camera_lidar_fusion">
+    <choice value="camera_lidar_radar_fusion"/>
+    <choice value="camera_lidar_fusion"/>
+    <choice value="lidar_radar_fusion"/>
+    <choice value="lidar"/>
+    <choice value="radar"/>
+  </arg>
   <arg name="data_path" default="$(env HOME)/autoware_data" description="packages data and artifacts directory path"/>
-  <arg name="lidar_detection_model_type" default="$(var lidar_detection_model_type)" description="options: `transfusion`, `centerpoint`, `pointpainting`, `apollo`, `clustering`"/>
-  <arg name="lidar_detection_model_name" default="$(var lidar_detection_model_name)" description="options: `transfusion`, `centerpoint`, `centerpoint_tiny`, `centerpoint_sigma`, `pointpainting`"/>
+  <arg name="lidar_detection_model_type" default="$(var lidar_detection_model_type)">
+    <choice value="bevfusion"/>
+    <choice value="centerpoint"/>
+    <choice value="pointpainting"/>
+    <choice value="transfusion"/>
+    <choice value="apollo"/>
+    <choice value="clustering"/>
+  </arg>
+  <arg name="lidar_detection_model_name" default="$(var lidar_detection_model_name)">
+    <choice value="bevfusion_lidar"/>
+    <choice value="centerpoint"/>
+    <choice value="centerpoint_tiny"/>
+    <choice value="centerpoint_sigma"/>
+    <choice value="pointpainting"/>
+    <choice value="transfusion"/>
+    <choice value=""/>
+  </arg>
   <arg name="image_raw0" default="/sensing/camera/camera0/image_rect_color" description="image raw topic name"/>
   <arg name="camera_info0" default="/sensing/camera/camera0/camera_info" description="camera info topic name"/>
   <arg name="detection_rois0" default="/perception/object_recognition/detection/rois0" description="detection rois output topic name"/>
@@ -75,12 +114,18 @@
   <arg name="camera_info7" default="/sensing/camera/camera7/camera_info"/>
   <arg name="detection_rois7" default="/perception/object_recognition/detection/rois7"/>
   <arg name="image_number" default="6" description="choose image raw number(1-8)"/>
+  <arg name="image_topic_name" default="image_rect_color" description="image topic name options `image_rect_color`, `image_raw"/>
+  <arg name="segmentation_pointcloud_fusion_camera_ids" default="[0,1,5]" description="list of camera ids used for segmentation_pointcloud_fusion node"/>
+
+  <arg name="pointcloud_container_name" default="pointcloud_container"/>
+
+  <!-- Pipeline junctions -->
   <arg name="use_vector_map" default="true" description="use vector map in prediction"/>
   <arg name="use_pointcloud_map" default="true" description="use pointcloud map in detection"/>
   <arg name="use_low_height_cropbox" default="true" description="use low height crop filter in the euclidean clustering"/>
   <arg name="use_object_filter" default="true" description="use object filter"/>
   <arg name="objects_filter_method" default="lanelet_filter" description="options: `lanelet_filter` or `position_filter`"/>
-  <arg name="use_roi_based_cluster" default="true" description="use roi_based_cluster in clustering"/>
+  <arg name="use_irregular_object_detector" default="true" description="enable pipeline for small unknown object detection"/>
   <arg name="use_low_intensity_cluster_filter" default="true" description="use low_intensity_cluster_filter in clustering"/>
   <arg name="use_image_segmentation_based_filter" default="false" description="use image_segmentation_based_filter in clustering"/>
   <arg
@@ -88,33 +133,28 @@
     default="false"
     description="if use_empty_dynamic_object_publisher:=true, /perception/object_recognition/objects topic has an empty DynamicObjectArray"
   />
-  <arg name="pointcloud_container_name" default="pointcloud_container"/>
   <arg name="use_object_validator" default="true" description="use obstacle_pointcloud based object validator"/>
   <arg name="objects_validation_method" default="obstacle_pointcloud" description="options: `obstacle_pointcloud` or `occupancy_grid`"/>
   <arg name="use_perception_online_evaluator" default="false" description="use perception online evaluator"/>
+  <arg name="use_obstacle_segmentation_single_frame_filter" description="use single frame filter at the ground segmentation"/>
+  <arg name="use_obstacle_segmentation_time_series_filter" description="use time series filter at the ground segmentation"/>
 
-  <!-- Traffic light recognition parameters -->
-  <arg name="use_traffic_light_recognition" default="false"/>
-  <arg name="traffic_light_recognition/enable_fine_detection" default="true"/>
-  <arg name="traffic_light_recognition/fusion_only" default="false"/>
-  <arg name="all_traffic_light_camera" default="[camera6, camera7]" description="choose camera which use for traffic light recognition"/>
-  <arg
-    name="traffic_light_fine_detector_model_path"
-    default="$(var data_path)/traffic_light_fine_detector"
-    description="options: `tlr_yolox_s_batch_**`. The batch number must be either one of 1, 4, 6"
-  />
-  <arg name="traffic_light_fine_detector_model_name" default="tlr_car_ped_yolox_s_batch_6" description="options: `tlr_car_ped_yolox_s_batch_**`. The batch number must be either one of 1, 4, 6"/>
-  <arg name="traffic_light_classifier_model_path" default="$(var data_path)/traffic_light_classifier" description="classifier onnx model path"/>
-  <arg
-    name="car_traffic_light_classifier_model_name"
-    default="traffic_light_classifier_mobilenetv2_batch_6"
-    description="options: `traffic_light_classifier_mobilenetv2_batch_*` or `traffic_light_classifier_efficientNet_b1_batch_*`. The batch number must be either one of 1, 4, 6"
-  />
-  <arg
-    name="pedestrian_traffic_light_classifier_model_name"
-    default="ped_traffic_light_classifier_mobilenetv2_batch_4"
-    description="options: `ped_traffic_light_classifier_mobilenetv2_batch_*` or `ped_traffic_light_classifier_efficientNet_b1_batch_*`. The batch number must be either one of 1, 4, 6"
-  />
+  <!-- traffic light recognition options to switch launch function/module -->
+  <arg name="use_traffic_light_recognition"/>
+  <arg name="traffic_light_recognition/fusion_only"/>
+  <arg name="traffic_light_recognition/camera_namespaces"/>
+  <arg name="traffic_light_recognition/use_high_accuracy_detection"/>
+  <arg name="traffic_light_recognition/high_accuracy_detection_type"/>
+
+  <!-- traffic light recognition parameters -->
+  <arg name="traffic_light_recognition/whole_image_detection/model_path"/>
+  <arg name="traffic_light_recognition/whole_image_detection/label_path"/>
+  <arg name="traffic_light_recognition/fine_detection/model_path"/>
+  <arg name="traffic_light_recognition/fine_detection/label_path"/>
+  <arg name="traffic_light_recognition/classification/car/model_path"/>
+  <arg name="traffic_light_recognition/classification/car/label_path"/>
+  <arg name="traffic_light_recognition/classification/pedestrian/model_path"/>
+  <arg name="traffic_light_recognition/classification/pedestrian/label_path"/>
 
   <!-- Whether to use detection by tracker -->
   <arg name="use_detection_by_tracker" default="true"/>
@@ -171,14 +211,20 @@
         <arg name="use_multithread" value="true"/>
         <arg name="pointcloud_container_name" value="$(var pointcloud_container_name)"/>
         <arg name="input/pointcloud" value="$(var perception_pointcloud)"/>
+        <arg name="obstacle_segmentation_ground_segmentation_param_path" value="$(var obstacle_segmentation_ground_segmentation_param_path)"/>
+        <arg name="use_single_frame_filter" value="$(var use_obstacle_segmentation_single_frame_filter)"/>
+        <arg name="use_time_series_filter" value="$(var use_obstacle_segmentation_time_series_filter)"/>
       </include>
     </group>
 
     <!-- Occupancy grid map module -->
     <group>
       <push-ros-namespace namespace="occupancy_grid_map"/>
+      <let name="unfiltered_obstacle_pointcloud" value="/perception/obstacle_segmentation/pointcloud"/>
+      <let name="unfiltered_obstacle_pointcloud" value="/perception/obstacle_segmentation/single_frame/pointcloud" if="$(var use_obstacle_segmentation_single_frame_filter)"/>
+      <let name="unfiltered_obstacle_pointcloud" value="/perception/obstacle_segmentation/single_frame/pointcloud" if="$(var use_obstacle_segmentation_time_series_filter)"/>
       <include file="$(find-pkg-share tier4_perception_launch)/launch/occupancy_grid_map/probabilistic_occupancy_grid_map.launch.xml">
-        <arg name="input/obstacle_pointcloud" value="/perception/obstacle_segmentation/single_frame/pointcloud"/>
+        <arg name="input/obstacle_pointcloud" value="$(var unfiltered_obstacle_pointcloud)"/>
         <arg name="input/raw_pointcloud" value="$(var perception_pointcloud)"/>
         <arg name="output" value="/perception/occupancy_grid_map/map"/>
         <arg name="use_intra_process" value="true"/>
@@ -201,6 +247,9 @@
           <arg name="mode" value="$(var mode)"/>
           <arg name="lidar_detection_model_type" value="$(var lidar_detection_model_type)"/>
           <arg name="lidar_detection_model_name" value="$(var lidar_detection_model_name)"/>
+          <arg name="use_short_range_detection" value="$(var use_short_range_detection)"/>
+          <arg name="lidar_short_range_detection_model_type" value="$(var lidar_short_range_detection_model_type)"/>
+          <arg name="lidar_short_range_detection_model_name" value="$(var lidar_short_range_detection_model_name)"/>
           <arg name="use_multi_channel_tracker_merger" value="$(var use_multi_channel_tracker_merger)"/>
           <arg name="number_of_cameras" value="$(var image_number)"/>
           <arg name="input/camera0/image" value="$(var image_raw0)"/>
@@ -232,14 +281,14 @@
           <arg name="input/radar" value="$(var input/radar)"/>
           <arg name="sync_param_path" value="$(var object_recognition_detection_fusion_sync_param_path)"/>
           <arg name="roi_cluster_fusion_param_path" value="$(var object_recognition_detection_roi_cluster_fusion_param_path)"/>
-          <arg name="roi_pointcloud_fusion_param_path" value="$(var object_recognition_detection_roi_pointcloud_fusion_param_path)"/>
+          <arg name="irregular_object_detector_param_path" value="$(var object_recognition_detection_irregular_object_detector_param_path)"/>
           <arg name="roi_detected_object_fusion_param_path" value="$(var object_recognition_detection_roi_detected_object_fusion_param_path)"/>
+          <arg name="pointpainting_fusion_common_param_path" value="$(var object_recognition_detection_pointpainting_fusion_common_param_path)"/>
           <arg name="lidar_model_param_path" value="$(var object_recognition_detection_lidar_model_param_path)"/>
           <arg name="euclidean_param_path" value="$(var object_recognition_detection_euclidean_cluster_param_path)"/>
           <arg name="outlier_param_path" value="$(var object_recognition_detection_outlier_param_path)"/>
           <arg name="voxel_grid_based_euclidean_param_path" value="$(var object_recognition_detection_voxel_grid_based_euclidean_cluster_param_path)"/>
           <arg name="radar_lanelet_filtering_range_param_path" value="$(var object_recognition_detection_radar_lanelet_filtering_range_param_path)"/>
-          <arg name="radar_object_clustering_param_path" value="$(var object_recognition_detection_radar_object_clustering_param_path)"/>
           <arg name="detection_by_tracker_param_path" value="$(var object_recognition_detection_detection_by_tracker_param)"/>
 
           <arg name="use_detection_by_tracker" value="$(var use_detection_by_tracker)"/>
@@ -252,7 +301,9 @@
           <arg name="use_image_segmentation_based_filter" value="$(var use_image_segmentation_based_filter)"/>
           <arg name="use_object_filter" value="$(var use_object_filter)"/>
           <arg name="objects_filter_method" value="$(var objects_filter_method)"/>
-          <arg name="use_roi_based_cluster" value="$(var use_roi_based_cluster)"/>
+          <arg name="use_irregular_object_detector" value="$(var use_irregular_object_detector)"/>
+          <arg name="image_topic_name" value="$(var image_topic_name)"/>
+          <arg name="segmentation_pointcloud_fusion_camera_ids" value="$(var segmentation_pointcloud_fusion_camera_ids)"/>
         </include>
       </group>
 
@@ -261,6 +312,7 @@
         <push-ros-namespace namespace="tracking"/>
         <include file="$(find-pkg-share tier4_perception_launch)/launch/object_recognition/tracking/tracking.launch.xml">
           <arg name="mode" value="$(var mode)"/>
+          <arg name="lidar_detection_model_type" value="$(var lidar_detection_model_type)"/>
           <arg
             name="object_recognition_tracking_radar_object_tracker_data_association_matrix_param_path"
             value="$(var object_recognition_tracking_radar_object_tracker_data_association_matrix_param_path)"
@@ -287,7 +339,7 @@
 
     <group if="$(var use_empty_dynamic_object_publisher)">
       <push-ros-namespace namespace="object_recognition"/>
-      <node pkg="dummy_perception_publisher" exec="empty_objects_publisher" name="empty_objects_publisher" output="screen">
+      <node pkg="autoware_dummy_perception_publisher" exec="empty_objects_publisher" name="empty_objects_publisher" output="screen">
         <remap from="~/output/objects" to="/perception/object_recognition/objects"/>
       </node>
     </group>
@@ -296,21 +348,34 @@
     <group if="$(var use_traffic_light_recognition)">
       <push-ros-namespace namespace="traffic_light_recognition"/>
       <include file="$(find-pkg-share tier4_perception_launch)/launch/traffic_light_recognition/traffic_light.launch.xml">
-        <arg name="enable_fine_detection" value="$(var traffic_light_recognition/enable_fine_detection)"/>
         <arg name="fusion_only" value="$(var traffic_light_recognition/fusion_only)"/>
-        <arg name="all_camera_namespaces" value="$(var all_traffic_light_camera)"/>
+        <arg name="camera_namespaces" value="$(var traffic_light_recognition/camera_namespaces)"/>
+        <arg name="use_high_accuracy_detection" value="$(var traffic_light_recognition/use_high_accuracy_detection)"/>
+        <arg name="high_accuracy_detection_type" value="$(var traffic_light_recognition/high_accuracy_detection_type)"/>
+        <arg name="each_traffic_light_map_based_detector_param_path" value="$(var each_traffic_light_map_based_detector_param_path)"/>
+        <arg name="traffic_light_fine_detector_param_path" value="$(var traffic_light_fine_detector_param_path)"/>
+        <arg name="yolox_traffic_light_detector_param_path" value="$(var yolox_traffic_light_detector_param_path)"/>
+        <arg name="car_traffic_light_classifier_param_path" value="$(var car_traffic_light_classifier_param_path)"/>
+        <arg name="pedestrian_traffic_light_classifier_param_path" value="$(var pedestrian_traffic_light_classifier_param_path)"/>
+        <arg name="traffic_light_roi_visualizer_param_path" value="$(var traffic_light_roi_visualizer_param_path)"/>
+        <arg name="traffic_light_occlusion_predictor_param_path" value="$(var traffic_light_occlusion_predictor_param_path)"/>
+        <arg name="traffic_light_multi_camera_fusion_param_path" value="$(var traffic_light_multi_camera_fusion_param_path)"/>
         <arg name="traffic_light_arbiter_param_path" value="$(var traffic_light_arbiter_param_path)"/>
-        <arg name="traffic_light_fine_detector_model_path" value="$(var traffic_light_fine_detector_model_path)"/>
-        <arg name="traffic_light_fine_detector_model_name" value="$(var traffic_light_fine_detector_model_name)"/>
-        <arg name="traffic_light_classifier_model_path" value="$(var traffic_light_classifier_model_path)"/>
-        <arg name="car_traffic_light_classifier_model_name" value="$(var car_traffic_light_classifier_model_name)"/>
-        <arg name="pedestrian_traffic_light_classifier_model_name" value="$(var pedestrian_traffic_light_classifier_model_name)"/>
+        <arg name="crosswalk_traffic_light_estimator_param_path" value="$(var crosswalk_traffic_light_estimator_param_path)"/>
+        <arg name="whole_image_detection/model_path" value="$(var traffic_light_recognition/whole_image_detection/model_path)"/>
+        <arg name="whole_image_detection/label_path" value="$(var traffic_light_recognition/whole_image_detection/label_path)"/>
+        <arg name="fine_detection/model_path" value="$(var traffic_light_recognition/fine_detection/model_path)"/>
+        <arg name="fine_detection/label_path" value="$(var traffic_light_recognition/fine_detection/label_path)"/>
+        <arg name="classification/car/model_path" value="$(var traffic_light_recognition/classification/car/model_path)"/>
+        <arg name="classification/car/label_path" value="$(var traffic_light_recognition/classification/car/label_path)"/>
+        <arg name="classification/pedestrian/model_path" value="$(var traffic_light_recognition/classification/pedestrian/model_path)"/>
+        <arg name="classification/pedestrian/label_path" value="$(var traffic_light_recognition/classification/pedestrian/label_path)"/>
       </include>
     </group>
   </group>
 
   <!-- perception evaluator -->
   <group if="$(var use_perception_online_evaluator)">
-    <include file="$(find-pkg-share perception_online_evaluator)/launch/perception_online_evaluator.launch.xml"/>
+    <include file="$(find-pkg-share autoware_perception_online_evaluator)/launch/perception_online_evaluator.launch.xml"/>
   </group>
 </launch>

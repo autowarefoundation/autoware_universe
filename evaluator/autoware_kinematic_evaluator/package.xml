@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>autoware_kinematic_evaluator</name>
+  <version>0.46.0</version>
+  <description>kinematic evaluator ROS 2 node</description>
+
+  <maintainer email="dominik.jargot@robotec.ai">Dominik Jargot</maintainer>
+  <maintainer email="tomoya.kimura@tier4.jp">Tomoya Kimura</maintainer>
+  <maintainer email="shumpei.wakabayashi@tier4.jp">Shumpei Wakabayashi</maintainer>
+  <maintainer email="takamasa.horibe@tier4.jp">Takamasa Horibe</maintainer>
+  <maintainer email="takayuki.murooka@tier4.jp">Takayuki Murooka</maintainer>
+  <maintainer email="fumiya.watanabe@tier4.jp">Fumiya Watanabe</maintainer>
+  <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
+  <maintainer email="junya.sasaki@tier4.jp">Junya Sasaki</maintainer>
+
+  <license>Apache License 2.0</license>
+
+  <buildtool_depend>ament_cmake_auto</buildtool_depend>
+  <buildtool_depend>autoware_cmake</buildtool_depend>
+
+  <depend>autoware_planning_msgs</depend>
+  <depend>autoware_utils</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>eigen</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>ament_index_cpp</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>autoware_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

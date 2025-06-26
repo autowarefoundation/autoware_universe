@@ -1,4 +1,4 @@
-// Copyright 2021 Tier IV, Inc.
+// Copyright 2025 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,7 +27,8 @@
 namespace planning_diagnostics
 {
 MotionEvaluatorNode::MotionEvaluatorNode(const rclcpp::NodeOptions & node_options)
-: Node("motion_evaluator", node_options)
+: Node("motion_evaluator", node_options),
+  vehicle_info_(autoware::vehicle_info_utils::VehicleInfoUtils(*this).getVehicleInfo())
 {
   tf_buffer_ptr_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ptr_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_ptr_);
@@ -57,7 +58,8 @@ MotionEvaluatorNode::~MotionEvaluatorNode()
     json j;
     for (Metric metric : metrics_) {
       const std::string base_name = metric_to_str.at(metric) + "/";
-      const auto & stat = metrics_calculator_.calculate(metric, accumulated_trajectory_);
+      const auto & stat = metrics_calculator_.calculate(
+        metric, accumulated_trajectory_, vehicle_info_.vehicle_length_m);
       if (stat) {
         j[base_name + "min"] = stat->min();
         j[base_name + "max"] = stat->max();

@@ -15,8 +15,8 @@
 #include "manager.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware/universe_utils/ros/parameter.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
+#include <autoware_utils/ros/parameter.hpp>
 
 #include <tf2/utils.h>
 
@@ -30,7 +30,7 @@
 
 namespace autoware::behavior_velocity_planner
 {
-using autoware::universe_utils::getOrDeclareParameter;
+using autoware_utils::get_or_declare_parameter;
 using lanelet::autoware::DetectionArea;
 
 DetectionAreaModuleManager::DetectionAreaModuleManager(rclcpp::Node & node)
@@ -38,22 +38,26 @@ DetectionAreaModuleManager::DetectionAreaModuleManager(rclcpp::Node & node)
     node, getModuleName(), getEnableRTC(node, std::string(getModuleName()) + ".enable_rtc"))
 {
   const std::string ns(DetectionAreaModuleManager::getModuleName());
-  planner_param_.stop_margin = getOrDeclareParameter<double>(node, ns + ".stop_margin");
-  planner_param_.use_dead_line = getOrDeclareParameter<bool>(node, ns + ".use_dead_line");
-  planner_param_.dead_line_margin = getOrDeclareParameter<double>(node, ns + ".dead_line_margin");
+  planner_param_.stop_margin = get_or_declare_parameter<double>(node, ns + ".stop_margin");
+  planner_param_.use_dead_line = get_or_declare_parameter<bool>(node, ns + ".use_dead_line");
+  planner_param_.dead_line_margin =
+    get_or_declare_parameter<double>(node, ns + ".dead_line_margin");
   planner_param_.use_pass_judge_line =
-    getOrDeclareParameter<bool>(node, ns + ".use_pass_judge_line");
-  planner_param_.state_clear_time = getOrDeclareParameter<double>(node, ns + ".state_clear_time");
+    get_or_declare_parameter<bool>(node, ns + ".use_pass_judge_line");
+  planner_param_.state_clear_time =
+    get_or_declare_parameter<double>(node, ns + ".state_clear_time");
   planner_param_.hold_stop_margin_distance =
-    getOrDeclareParameter<double>(node, ns + ".hold_stop_margin_distance");
+    get_or_declare_parameter<double>(node, ns + ".hold_stop_margin_distance");
   planner_param_.distance_to_judge_over_stop_line =
-    getOrDeclareParameter<double>(node, ns + ".distance_to_judge_over_stop_line");
+    get_or_declare_parameter<double>(node, ns + ".distance_to_judge_over_stop_line");
   planner_param_.suppress_pass_judge_when_stopping =
-    getOrDeclareParameter<bool>(node, ns + ".suppress_pass_judge_when_stopping");
+    get_or_declare_parameter<bool>(node, ns + ".suppress_pass_judge_when_stopping");
+  planner_param_.enable_detected_obstacle_logging =
+    get_or_declare_parameter<bool>(node, ns + ".enable_detected_obstacle_logging");
 }
 
 void DetectionAreaModuleManager::launchNewModules(
-  const tier4_planning_msgs::msg::PathWithLaneId & path)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   for (const auto & detection_area_with_lane_id :
        planning_utils::getRegElemMapOnPath<DetectionArea>(
@@ -65,8 +69,9 @@ void DetectionAreaModuleManager::launchNewModules(
     if (!isModuleRegistered(module_id)) {
       registerModule(std::make_shared<DetectionAreaModule>(
         module_id, lane_id, *detection_area_with_lane_id.first, planner_param_,
-        logger_.get_child("detection_area_module"), clock_));
-      generateUUID(module_id);
+        logger_.get_child("detection_area_module"), clock_, time_keeper_,
+        planning_factor_interface_));
+      generate_uuid(module_id);
       updateRTCStatus(
         getUUID(module_id), true, State::WAITING_FOR_EXECUTION,
         std::numeric_limits<double>::lowest(), path.header.stamp);
@@ -74,16 +79,17 @@ void DetectionAreaModuleManager::launchNewModules(
   }
 }
 
-std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
+std::function<bool(const std::shared_ptr<SceneModuleInterfaceWithRTC> &)>
 DetectionAreaModuleManager::getModuleExpiredFunction(
-  const tier4_planning_msgs::msg::PathWithLaneId & path)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   const auto detection_area_id_set = planning_utils::getRegElemIdSetOnPath<DetectionArea>(
     path, planner_data_->route_handler_->getLaneletMapPtr(), planner_data_->current_odometry->pose);
 
-  return [detection_area_id_set](const std::shared_ptr<SceneModuleInterface> & scene_module) {
-    return detection_area_id_set.count(scene_module->getModuleId()) == 0;
-  };
+  return
+    [detection_area_id_set](const std::shared_ptr<SceneModuleInterfaceWithRTC> & scene_module) {
+      return detection_area_id_set.count(scene_module->getModuleId()) == 0;
+    };
 }
 
 }  // namespace autoware::behavior_velocity_planner

@@ -19,7 +19,7 @@
 
 #include <autoware/freespace_planning_algorithms/abstract_algorithm.hpp>
 
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <memory>
 
@@ -30,9 +30,7 @@ using autoware::freespace_planning_algorithms::AbstractPlanningAlgorithm;
 class FreespacePullOver : public PullOverPlannerBase
 {
 public:
-  FreespacePullOver(
-    rclcpp::Node & node, const GoalPlannerParameters & parameters,
-    const autoware::vehicle_info_utils::VehicleInfo & vehicle_info);
+  FreespacePullOver(rclcpp::Node & node, const GoalPlannerParameters & parameters);
 
   PullOverPlannerType getPlannerType() const override { return PullOverPlannerType::FREESPACE; }
 
@@ -41,7 +39,7 @@ public:
   std::optional<PullOverPath> plan(
     const GoalCandidate & modified_goal_pose, const size_t id,
     const std::shared_ptr<const PlannerData> planner_data,
-    const BehaviorModuleOutput & previous_module_output) override;
+    const BehaviorModuleOutput & upstream_module_output) override;
 
 protected:
   const double velocity_;

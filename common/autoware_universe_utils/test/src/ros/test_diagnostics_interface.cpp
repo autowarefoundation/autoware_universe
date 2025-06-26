@@ -25,9 +25,9 @@
 #include <memory>
 #include <string>
 
-using autoware::universe_utils::DiagnosticInterface;
+using autoware::universe_utils::DiagnosticsInterface;
 
-class TestDiagnosticInterface : public ::testing::Test
+class TestDiagnosticsInterface : public ::testing::Test
 {
 protected:
   void SetUp() override
@@ -44,9 +44,9 @@ protected:
  * Test clear():
  * Verify that calling clear() resets DiagnosticStatus values, level, and message.
  */
-TEST_F(TestDiagnosticInterface, ClearTest)
+TEST_F(TestDiagnosticsInterface, ClearTest)
 {
-  DiagnosticInterface module(node_.get(), "test_diagnostic");
+  DiagnosticsInterface module(node_.get(), "test_diagnostic");
 
   // Add some key-value pairs and update level/message
   module.add_key_value("param1", 42);
@@ -87,9 +87,9 @@ TEST_F(TestDiagnosticInterface, ClearTest)
  * Test add_key_value():
  * Verify that adding the same key updates its value instead of adding a duplicate.
  */
-TEST_F(TestDiagnosticInterface, AddKeyValueTest)
+TEST_F(TestDiagnosticsInterface, AddKeyValueTest)
 {
-  DiagnosticInterface module(node_.get(), "test_diagnostic");
+  DiagnosticsInterface module(node_.get(), "test_diagnostic");
 
   // Call the template version of add_key_value() with different types
   module.add_key_value("string_key", std::string("initial_value"));
@@ -139,9 +139,9 @@ TEST_F(TestDiagnosticInterface, AddKeyValueTest)
  * Verify that the level is updated to the highest severity and
  * that messages are concatenated if level > OK.
  */
-TEST_F(TestDiagnosticInterface, UpdateLevelAndMessageTest)
+TEST_F(TestDiagnosticsInterface, UpdateLevelAndMessageTest)
 {
-  DiagnosticInterface module(node_.get(), "test_diagnostic");
+  DiagnosticsInterface module(node_.get(), "test_diagnostic");
 
   // Initial status is level=OK(0), message=""
   module.update_level_and_message(diagnostic_msgs::msg::DiagnosticStatus::OK, "Initial OK");

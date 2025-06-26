@@ -14,20 +14,20 @@
 
 #pragma once
 
+#include "autoware/behavior_path_goal_planner_module/goal_candidate.hpp"
 #include "autoware/behavior_path_goal_planner_module/goal_planner_parameters.hpp"
-#include "autoware/behavior_path_goal_planner_module/goal_searcher_base.hpp"
 #include "autoware/behavior_path_planner_common/data_manager.hpp"
 
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <memory>
 #include <utility>
 #include <vector>
 
-using autoware::universe_utils::LinearRing2d;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
+using autoware_utils::LinearRing2d;
 using geometry_msgs::msg::Pose;
-using tier4_planning_msgs::msg::PathWithLaneId;
 
 namespace autoware::behavior_path_planner
 {
@@ -68,6 +68,10 @@ public:
   const std::vector<double> & parking_path_curvatures() const { return parking_path_curvatures_; }
   double full_path_max_curvature() const { return full_path_max_curvature_; }
   double parking_path_max_curvature() const { return parking_path_max_curvature_; }
+  double parking_path_curvature_total_derivative() const
+  {
+    return parking_path_curvature_total_derivative_;
+  }
   size_t path_idx() const { return path_idx_; }
 
   bool incrementPathIndex();
@@ -87,6 +91,8 @@ public:
 
   std::vector<Pose> debug_poses{};
 
+  std::optional<PathWithLaneId> debug_processed_prev_module_path;
+
 private:
   PullOverPath(
     const PullOverPlannerType & type, const size_t id, const Pose & start_pose,
@@ -94,7 +100,7 @@ private:
     const PathWithLaneId & full_path, const PathWithLaneId & parking_path,
     const std::vector<double> & full_path_curvatures,
     const std::vector<double> & parking_path_curvatures, const double full_path_max_curvature,
-    const double parking_path_max_curvature,
+    const double parking_path_max_curvature, const double parking_path_curvature_total_derivative,
     const std::vector<std::pair<double, double>> & pairs_terminal_velocity_and_accel);
 
   PullOverPlannerType type_;
@@ -109,6 +115,7 @@ private:
   std::vector<double> parking_path_curvatures_;
   double full_path_max_curvature_;
   double parking_path_max_curvature_;
+  double parking_path_curvature_total_derivative_;
 
   // accelerate with constant acceleration to the target velocity
   size_t path_idx_;
@@ -130,7 +137,7 @@ public:
   virtual std::optional<PullOverPath> plan(
     const GoalCandidate & modified_goal_pose, const size_t id,
     const std::shared_ptr<const PlannerData> planner_data,
-    const BehaviorModuleOutput & previous_module_output) = 0;
+    const BehaviorModuleOutput & upstream_module_output) = 0;
 
 protected:
   const autoware::vehicle_info_utils::VehicleInfo vehicle_info_;

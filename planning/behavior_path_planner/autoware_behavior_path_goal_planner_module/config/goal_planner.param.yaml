@@ -25,8 +25,8 @@
         high_curvature_threshold: 0.1
         bus_stop_area:
           use_bus_stop_area: false
-          goal_search_interval: 0.5
-          lateral_offset_interval: 0.25
+          goal_search_interval: 0.75
+          lateral_offset_interval: 0.3
 
       # occupancy grid map
       occupancy_grid:
@@ -39,19 +39,23 @@
 
       # object recognition
       object_recognition:
-        use_object_recognition: true
         collision_check_soft_margins: [5.0, 4.5, 4.0, 3.5, 3.0, 2.5, 2.0, 1.5, 1.0]  # the maximum margin when ego and objects are oriented.
         collision_check_hard_margins: [0.6]  # this should be larger than `surround_check_distance` of surround_obstacle_checker
         object_recognition_collision_check_max_extra_stopping_margin: 1.0
+        collision_check_outer_margin_factor: 2.0
         th_moving_object_velocity: 1.0
         detection_bound_offset: 15.0
         outer_road_detection_offset: 1.0
         inner_road_detection_offset: 0.0
 
+      # path decision state controller
+      path_decision_state_controller:
+        check_collision_duration: 1.0  # Duration to check collision before transition from DECIDING to DECIDED
 
       # pull over
       pull_over:
         minimum_request_length: 0.0
+        pull_over_prepare_length: 100.0
         pull_over_velocity: 3.0
         pull_over_minimum_velocity: 1.38
         decide_path_distance: 10.0
@@ -59,7 +63,7 @@
         maximum_jerk: 1.0
         path_priority: "efficient_path" # "efficient_path" or "close_goal"
         efficient_path_order: ["SHIFT", "ARC_FORWARD", "ARC_BACKWARD"] # only lane based pull over(exclude freespace parking)
-        lane_departure_check_expansion_margin: 0.0
+        lane_departure_check_expansion_margin: 0.2
 
         # shift parking
         shift_parking:
@@ -72,22 +76,19 @@
 
         # parallel parking path
         parallel_parking:
-          path_interval: 1.0
-          max_steer_angle: 0.35  # 20deg
+          max_steer_angle_margin_scale: 0.72
           forward:
             enable_arc_forward_parking: true
             after_forward_parking_straight_distance: 2.0
             forward_parking_velocity: 1.38
             forward_parking_lane_departure_margin: 0.0
             forward_parking_path_interval: 1.0
-            forward_parking_max_steer_angle: 0.35  # 20deg
           backward:
             enable_arc_backward_parking: true
             after_backward_parking_straight_distance: 2.0
             backward_parking_velocity: -1.38
             backward_parking_lane_departure_margin: 0.0
             backward_parking_path_interval: 1.0
-            backward_parking_max_steer_angle: 0.35  # 20deg
 
         # freespace parking
         freespace_parking:
@@ -130,6 +131,10 @@
             neighbor_radius: 8.0
             margin: 1.0
 
+        bezier_parking:
+          pull_over_angle_threshold: 0.5
+          after_shift_straight_distance: 1.5
+
       stop_condition:
         maximum_deceleration_for_stop: 1.0
         maximum_jerk_for_stop: 1.0
@@ -139,13 +144,13 @@
           min_velocity: 1.0
           min_acceleration: 1.0
           max_velocity: 1.0
-          time_horizon_for_front_object: 10.0
-          time_horizon_for_rear_object: 10.0
+          time_horizon_for_front_object: 5.0
+          time_horizon_for_rear_object: 5.0
           time_resolution: 0.5
           delay_until_departure: 1.0
         # For target object filtering
         target_filtering:
-          safety_check_time_horizon: 10.0
+          safety_check_time_horizon: 5.0
           safety_check_time_resolution: 1.0
           # detection range
           object_check_forward_distance: 100.0
@@ -179,7 +184,7 @@
           # safety check configuration
           enable_safety_check: true
           method: "integral_predicted_polygon"
-          keep_unsafe_time: 3.0
+          keep_unsafe_time: 0.5
           # collision check parameters
           publish_debug_marker: false
           rss_params:
@@ -192,7 +197,7 @@
             forward_margin: 1.0
             backward_margin: 1.0
             lat_margin: 1.0
-            time_horizon: 10.0
+            time_horizon: 5.0
           # hysteresis factor to expand/shrink polygon with the value
           hysteresis_factor_expand_rate: 1.0
           collision_check_yaw_diff_threshold: 3.1416

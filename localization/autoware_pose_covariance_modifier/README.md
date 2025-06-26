@@ -117,8 +117,8 @@ the [pose_twist_estimator.launch.xml](../../launch/tier4_localization_launch/lau
 
 ### Without this condition (default)
 
-- The output of the [ndt_scan_matcher](../../localization/autoware_ndt_scan_matcher) is directly sent
-  to [ekf_localizer](../../localization/autoware_ekf_localizer).
+- The output of the [ndt_scan_matcher](https://github.com/autowarefoundation/autoware_core/tree/main/localization/autoware_ndt_scan_matcher) is directly sent
+  to [ekf_localizer](https://github.com/autowarefoundation/autoware_core/tree/main/localization/autoware_ekf_localizer).
   - It has a preset covariance value.
   - **topic name:** `/localization/pose_estimator/pose_with_covariance`
 - The GNSS pose does not enter the ekf_localizer.
@@ -126,11 +126,11 @@ the [pose_twist_estimator.launch.xml](../../launch/tier4_localization_launch/lau
 
 ### With this condition
 
-- The output of the [ndt_scan_matcher](../../localization/autoware_ndt_scan_matcher) is renamed
+- The output of the [ndt_scan_matcher](https://github.com/autowarefoundation/autoware_core/tree/main/localization/autoware_ndt_scan_matcher) is renamed
   - **from:** `/localization/pose_estimator/pose_with_covariance`.
   - **to:** `/localization/pose_estimator/ndt_scan_matcher/pose_with_covariance`.
 - The `ndt_scan_matcher` output enters the `autoware_pose_covariance_modifier`.
-- The output of this package goes to [ekf_localizer](../../localization/autoware_ekf_localizer) with:
+- The output of this package goes to [ekf_localizer](https://github.com/autowarefoundation/autoware_core/tree/main/localization/autoware_ekf_localizer) with:
   - **topic name:** `/localization/pose_estimator/pose_with_covariance`.
 
 ## Node

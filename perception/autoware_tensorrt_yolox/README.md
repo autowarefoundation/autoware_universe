@@ -4,6 +4,8 @@
 
 This package detects target objects e.g., cars, trucks, bicycles, and pedestrians and segment target objects such as cars, trucks, buses and pedestrian, building, vegetation, road, sidewalk on a image based on [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX) model with multi-header structure.
 
+Additionally, the package also supports traffic light detection by switching onnx file which target classes listed on respective `label_file`. Currently 0: `unknown`, 1: `car_traffic_light` and 2: `pedestrian_traffic_light`.
+
 ## Inner-workings / Algorithms
 
 ### Cite
@@ -22,17 +24,26 @@ Zheng Ge, Songtao Liu, Feng Wang, Zeming Li, Jian Sun, "YOLOX: Exceeding YOLO Se
 
 ### Output
 
-| Name             | Type                                               | Description                                                         |
-| ---------------- | -------------------------------------------------- | ------------------------------------------------------------------- |
-| `out/objects`    | `tier4_perception_msgs/DetectedObjectsWithFeature` | The detected objects with 2D bounding boxes                         |
-| `out/image`      | `sensor_msgs/Image`                                | The image with 2D bounding boxes for visualization                  |
-| `out/mask`       | `sensor_msgs/Image`                                | The semantic segmentation mask                                      |
-| `out/color_mask` | `sensor_msgs/Image`                                | The colorized image of semantic segmentation mask for visualization |
+| Name             | Type                                               | Description                                                                                           |
+| ---------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `out/objects`    | `tier4_perception_msgs/DetectedObjectsWithFeature` | The detected objects or traffic light with 2D bounding boxes                                          |
+| `out/image`      | `sensor_msgs/Image`                                | The image with 2D bounding boxes for visualization                                                    |
+| `out/mask`       | `sensor_msgs/Image`                                | The semantic segmentation mask (only effective for semseg model)                                      |
+| `out/color_mask` | `sensor_msgs/Image`                                | The colorized image of semantic segmentation mask for visualization (only effective for semseg model) |
 
 ## Parameters
 
+### yolox_s_plus_opt
+
 {{ json_to_markdown("perception/autoware_tensorrt_yolox/schema/yolox_s_plus_opt.schema.json") }}
+
+### yolox_tiny
+
 {{ json_to_markdown("perception/autoware_tensorrt_yolox/schema/yolox_tiny.schema.json") }}
+
+### yolox_traffic_light_detector
+
+{{ json_to_markdown("perception/autoware_tensorrt_yolox/schema/yolox_traffic_light_detector.schema.json") }}
 
 ## Assumptions / Known limits
 
@@ -44,6 +55,14 @@ The label contained in detected 2D bounding boxes (i.e., `out/objects`) will be 
 - TRUCK
 - BICYCLE
 - MOTORCYCLE
+
+or
+
+- UNKNOWN
+- CAR_TRAFFIC_LIGHT
+- PEDESTRIAN_TRAFFIC_LIGHT
+
+for traffic light detector onnx model.
 
 If other labels (case insensitive) are contained in the file specified via the `label_file` parameter,
 those are labeled as `UNKNOWN`, while detected rectangles are drawn in the visualization result (`out/image`).

@@ -689,6 +689,11 @@
               "description": "For the compensation of the detection lost. The object is registered once it is observed as an avoidance target. When the detection loses, the timer will start and the object will be un-registered when the time exceeds this limit.",
               "default": 2.0
             },
+            "unstable_classification_time": {
+              "type": "number",
+              "description": "If the object is classified as UNKNOWN type for less than unstable_classification_time seconds, it is probably not an unknown type.",
+              "default": 2.0
+            },
             "detection_area": {
               "type": "object",
               "properties": {
@@ -886,6 +891,7 @@
             "object_check_goal_distance",
             "object_check_return_pose_distance",
             "max_compensation_time",
+            "unstable_classification_time",
             "detection_area",
             "merging_vehicle",
             "parked_vehicle",
@@ -1042,7 +1048,7 @@
             "extended_polygon_policy": {
               "type": "string",
               "enum": ["rectangle", "along_path"],
-              "description": "See https://github.com/autowarefoundation/autoware.universe/pull/6336.",
+              "description": "See https://github.com/autowarefoundation/autoware_universe/pull/6336.",
               "default": "along_path"
             },
             "expected_front_deceleration": {
@@ -1329,6 +1335,12 @@
         "policy": {
           "type": "object",
           "properties": {
+            "detection_reliability": {
+              "type": "string",
+              "enum": ["reliable", "not_enough"],
+              "description": "policy for module behavior. select 'reliable' or 'not_enough'. 'reliable': this module fully trusts the perception results and makes all decisions automatically.  'not_enough': because the perception results are not fully reliable, the system waits for the operator's judgment in situations where long-range perception is required.",
+              "default": "reliable"
+            },
             "make_approval_request": {
               "type": "string",
               "enum": ["per_shift_line", "per_avoidance_maneuver"],
@@ -1373,9 +1385,21 @@
                   "default": [0.5, 0.5, 0.5]
                 },
                 "min_jerk_values": {
-                  "type": "array",
-                  "description": "Avoidance path is generated with this jerk when there is enough distance from ego.",
-                  "default": [0.2, 0.2, 0.2]
+                  "type": "object",
+                  "properties": {
+                    "avoid": {
+                      "type": "array",
+                      "description": "Minimum lateral jerk constraint when laterally shifting to avoid an obstacle.",
+                      "default": [0.2, 0.2, 0.2]
+                    },
+                    "return": {
+                      "type": "array",
+                      "description": "Minimum lateral jerk constraint when laterally shifting to return to the original lane.",
+                      "default": [0.2, 0.2, 0.2]
+                    }
+                  },
+                  "required": ["avoid", "return"],
+                  "additionalProperties": false
                 },
                 "max_jerk_values": {
                   "type": "array",

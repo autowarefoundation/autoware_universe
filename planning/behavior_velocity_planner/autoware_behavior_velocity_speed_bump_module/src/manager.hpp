@@ -22,27 +22,32 @@
 #include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 
 #include <functional>
 #include <memory>
 
 namespace autoware::behavior_velocity_planner
 {
-class SpeedBumpModuleManager : public SceneModuleManagerInterface
+class SpeedBumpModuleManager : public SceneModuleManagerInterface<>
 {
 public:
   explicit SpeedBumpModuleManager(rclcpp::Node & node);
 
   const char * getModuleName() override { return "speed_bump"; }
 
+  RequiredSubscriptionInfo getRequiredSubscriptions() const override
+  {
+    return RequiredSubscriptionInfo{};
+  }
+
 private:
   SpeedBumpModule::PlannerParam planner_param_;
 
-  void launchNewModules(const tier4_planning_msgs::msg::PathWithLaneId & path) override;
+  void launchNewModules(const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
 
   std::function<bool(const std::shared_ptr<SceneModuleInterface> &)> getModuleExpiredFunction(
-    const tier4_planning_msgs::msg::PathWithLaneId & path) override;
+    const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
 };
 
 class SpeedBumpModulePlugin : public PluginWrapper<SpeedBumpModuleManager>

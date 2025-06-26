@@ -18,7 +18,7 @@
 #include "types.hpp"
 
 #include <autoware/route_handler/route_handler.hpp>
-#include <autoware/universe_utils/geometry/boost_geometry.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 
 #include <lanelet2_core/LaneletMap.h>
 
@@ -44,18 +44,8 @@ inline bool contains_lanelet(const lanelet::ConstLanelets & lanelets, const lane
 /// @param [in] route_handler route handler
 /// @return lanelets crossed by the ego vehicle
 lanelet::ConstLanelets calculate_trajectory_lanelets(
-  const universe_utils::LineString2d & trajectory_ls,
+  const autoware_utils::LineString2d & trajectory_ls,
   const std::shared_ptr<const route_handler::RouteHandler> route_handler);
-
-/// @brief calculate lanelets that may not be crossed by the trajectory but may be overlapped during
-/// a lane change
-/// @param [in] trajectory_lanelets lanelets driven by the ego vehicle
-/// @param [in] route_handler route handler
-/// @return lanelets that may be overlapped by a lane change (and are not already in
-/// trajectory_lanelets)
-lanelet::ConstLanelets get_missing_lane_change_lanelets(
-  const lanelet::ConstLanelets & trajectory_lanelets,
-  const std::shared_ptr<const route_handler::RouteHandler> & route_handler);
 
 /// @brief calculate lanelets that should be ignored
 /// @param [in] trajectory_lanelets lanelets followed by the ego vehicle

@@ -149,8 +149,9 @@ void AutowareStatePanel::onInitialize()
   client_emergency_stop_ = raw_node_->create_client<tier4_external_api_msgs::srv::SetEmergency>(
     "/api/autoware/set/emergency");
 
-  pub_velocity_limit_ = raw_node_->create_publisher<tier4_planning_msgs::msg::VelocityLimit>(
-    "/planning/scenario_planning/max_velocity_default", rclcpp::QoS{1}.transient_local());
+  pub_velocity_limit_ =
+    raw_node_->create_publisher<autoware_internal_planning_msgs::msg::VelocityLimit>(
+      "/planning/scenario_planning/max_velocity_default", rclcpp::QoS{1}.transient_local());
 
   QObject::connect(segmented_button, &CustomSegmentedButton::buttonClicked, this, [this](int id) {
     const QList<QAbstractButton *> buttons = segmented_button->getButtonGroup()->buttons();
@@ -557,6 +558,7 @@ void AutowareStatePanel::onRoute(const RouteState::ConstSharedPtr msg)
     default:
       state = None;
       bgColor = QColor(autoware::state_rviz_plugin::colors::default_colors.info.c_str());
+      route_state = QString("Routing | Unknown(%1)").arg(msg->state);
       break;
   }
 
@@ -609,6 +611,7 @@ void AutowareStatePanel::onLocalization(const LocalizationInitializationState::C
     default:
       state = None;
       bgColor = QColor(autoware::state_rviz_plugin::colors::default_colors.info.c_str());
+      localization_state = QString("Localization | Unknown(%1)").arg(msg->state);
       break;
   }
 
@@ -655,6 +658,7 @@ void AutowareStatePanel::onMotion(const MotionState::ConstSharedPtr msg)
     default:
       state = Danger;
       bgColor = QColor(autoware::state_rviz_plugin::colors::default_colors.info.c_str());
+      motion_state = QString("Motion | Unknown(%1)").arg(msg->state);
       break;
   }
 
@@ -713,7 +717,7 @@ void AutowareStatePanel::onMRMState(const MRMState::ConstSharedPtr msg)
     default:
       state = None;
       bgColor = QColor(autoware::state_rviz_plugin::colors::default_colors.info.c_str());
-      mrm_state = "MRM State | Unknown";
+      mrm_state = QString("MRM State | Unknown(%1)").arg(msg->state);
       break;
   }
 
@@ -757,7 +761,7 @@ void AutowareStatePanel::onMRMState(const MRMState::ConstSharedPtr msg)
       default:
         behavior_state = Crash;
         behavior_bgColor = QColor(autoware::state_rviz_plugin::colors::default_colors.info.c_str());
-        mrm_behavior = "MRM Behavior | Unknown";
+        mrm_behavior = QString("MRM Behavior | Unknown(%1)").arg(msg->behavior);
         break;
     }
 
@@ -804,7 +808,7 @@ void AutowareStatePanel::onSwitchStateChanged(int state)
 
 void AutowareStatePanel::onClickVelocityLimit()
 {
-  auto velocity_limit = std::make_shared<tier4_planning_msgs::msg::VelocityLimit>();
+  auto velocity_limit = std::make_shared<autoware_internal_planning_msgs::msg::VelocityLimit>();
   velocity_limit->stamp = raw_node_->now();
   velocity_limit->max_velocity = velocity_limit_value_label_->text().toDouble() / 3.6;
   pub_velocity_limit_->publish(*velocity_limit);

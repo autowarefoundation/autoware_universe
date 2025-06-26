@@ -151,7 +151,7 @@ Giving the longitudinal controller information about steer convergence allows it
 
 ## Debugging
 
-Debug information are published by the lateral and longitudinal controller using `tier4_debug_msgs/Float32MultiArrayStamped` messages.
+Debug information are published by the lateral and longitudinal controller using `autoware_internal_debug_msgs/Float32MultiArrayStamped` messages.
 
 A configuration file for [PlotJuggler](https://github.com/facontidavide/PlotJuggler) is provided in the `config` folder which, when loaded, allow to automatically subscribe and visualize information useful for debugging.
 

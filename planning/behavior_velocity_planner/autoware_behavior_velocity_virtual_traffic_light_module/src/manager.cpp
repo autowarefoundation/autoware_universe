@@ -14,12 +14,14 @@
 
 #include "manager.hpp"
 
-#include "autoware/universe_utils/geometry/boost_geometry.hpp"
+#include "autoware_utils/geometry/boost_geometry.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
-#include <autoware/universe_utils/math/unit_conversion.hpp>
-#include <autoware/universe_utils/ros/parameter.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
+#include <autoware_utils/ros/parameter.hpp>
+
+#include <tier4_v2x_msgs/msg/infrastructure_command_array.hpp>
 
 #include <boost/geometry/algorithms/intersects.hpp>
 
@@ -33,7 +35,7 @@
 
 namespace autoware::behavior_velocity_planner
 {
-using autoware::universe_utils::getOrDeclareParameter;
+using autoware_utils::get_or_declare_parameter;
 using lanelet::autoware::VirtualTrafficLight;
 
 VirtualTrafficLightModuleManager::VirtualTrafficLightModuleManager(rclcpp::Node & node)
@@ -43,25 +45,32 @@ VirtualTrafficLightModuleManager::VirtualTrafficLightModuleManager(rclcpp::Node 
 
   {
     auto & p = planner_param_;
-    p.max_delay_sec = getOrDeclareParameter<double>(node, ns + ".max_delay_sec");
-    p.near_line_distance = getOrDeclareParameter<double>(node, ns + ".near_line_distance");
-    p.dead_line_margin = getOrDeclareParameter<double>(node, ns + ".dead_line_margin");
+    p.max_delay_sec = get_or_declare_parameter<double>(node, ns + ".max_delay_sec");
+    p.near_line_distance = get_or_declare_parameter<double>(node, ns + ".near_line_distance");
+    p.dead_line_margin = get_or_declare_parameter<double>(node, ns + ".dead_line_margin");
     p.hold_stop_margin_distance =
-      getOrDeclareParameter<double>(node, ns + ".hold_stop_margin_distance");
-    p.max_yaw_deviation_rad = autoware::universe_utils::deg2rad(
-      getOrDeclareParameter<double>(node, ns + ".max_yaw_deviation_deg"));
+      get_or_declare_parameter<double>(node, ns + ".hold_stop_margin_distance");
+    p.max_yaw_deviation_rad = autoware_utils::deg2rad(
+      get_or_declare_parameter<double>(node, ns + ".max_yaw_deviation_deg"));
     p.check_timeout_after_stop_line =
-      getOrDeclareParameter<bool>(node, ns + ".check_timeout_after_stop_line");
+      get_or_declare_parameter<bool>(node, ns + ".check_timeout_after_stop_line");
   }
+
+  sub_virtual_traffic_light_states_ = autoware_utils::InterProcessPollingSubscriber<
+    tier4_v2x_msgs::msg::VirtualTrafficLightStateArray>::
+    create_subscription(&node, "~/input/virtual_traffic_light_states");
+
+  pub_infrastructure_commands_ =
+    node.create_publisher<tier4_v2x_msgs::msg::InfrastructureCommandArray>(
+      "~/output/infrastructure_commands", 1);
 }
 
 void VirtualTrafficLightModuleManager::launchNewModules(
-  const tier4_planning_msgs::msg::PathWithLaneId & path)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
-  autoware::universe_utils::LineString2d ego_path_linestring;
+  autoware_utils::LineString2d ego_path_linestring;
   for (const auto & path_point : path.points) {
-    ego_path_linestring.push_back(
-      autoware::universe_utils::fromMsg(path_point.point.pose.position).to_2d());
+    ego_path_linestring.push_back(autoware_utils::from_msg(path_point.point.pose.position).to_2d());
   }
 
   for (const auto & m : planning_utils::getRegElemMapOnPath<VirtualTrafficLight>(
@@ -84,21 +93,48 @@ void VirtualTrafficLightModuleManager::launchNewModules(
         ego_path_linestring, lanelet::utils::to2D(stop_line_opt.value()).basicLineString())) {
       registerModule(std::make_shared<VirtualTrafficLightModule>(
         module_id, lane_id, *m.first, m.second, planner_param_,
-        logger_.get_child("virtual_traffic_light_module"), clock_));
+        logger_.get_child("virtual_traffic_light_module"), clock_, time_keeper_,
+        planning_factor_interface_));
     }
   }
 }
 
-std::function<bool(const std::shared_ptr<SceneModuleInterface> &)>
+std::function<bool(const std::shared_ptr<VirtualTrafficLightModule> &)>
 VirtualTrafficLightModuleManager::getModuleExpiredFunction(
-  const tier4_planning_msgs::msg::PathWithLaneId & path)
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   const auto id_set = planning_utils::getLaneletIdSetOnPath<VirtualTrafficLight>(
     path, planner_data_->route_handler_->getLaneletMapPtr(), planner_data_->current_odometry->pose);
 
-  return [id_set](const std::shared_ptr<SceneModuleInterface> & scene_module) {
+  return [id_set](const std::shared_ptr<VirtualTrafficLightModule> & scene_module) {
     return id_set.count(scene_module->getModuleId()) == 0;
   };
+}
+
+void VirtualTrafficLightModuleManager::modifyPathVelocity(
+  autoware_internal_planning_msgs::msg::PathWithLaneId * path)
+{
+  // NOTE: virtual traffic light specific implementation
+  //       Since the argument of modifyPathVelocity cannot be changed, the specific information
+  //       of virtual traffic light states is set here.
+  const auto virtual_traffic_light_states = sub_virtual_traffic_light_states_->take_data();
+  for (const auto & scene_module : scene_modules_) {
+    scene_module->setCorrespondingVirtualTrafficLightState(virtual_traffic_light_states);
+  }
+
+  SceneModuleManagerInterface<VirtualTrafficLightModule>::modifyPathVelocity(path);
+
+  // NOTE: virtual traffic light specific implementation
+  //       publish infrastructure_command_array
+  tier4_v2x_msgs::msg::InfrastructureCommandArray infrastructure_command_array;
+  infrastructure_command_array.stamp = clock_->now();
+
+  for (const auto & scene_module : scene_modules_) {
+    if (const auto command = scene_module->getInfrastructureCommand()) {
+      infrastructure_command_array.commands.push_back(*command);
+    }
+  }
+  pub_infrastructure_commands_->publish(infrastructure_command_array);
 }
 }  // namespace autoware::behavior_velocity_planner
 

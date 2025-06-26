@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>autoware_behavior_velocity_walkway_module</name>
-  <version>0.40.0</version>
+  <version>0.46.0</version>
   <description>The autoware_behavior_velocity_walkway_module package</description>
 
   <maintainer email="satoshi.ota@tier4.jp">Satoshi Ota</maintainer>
@@ -18,12 +18,13 @@
   <buildtool_depend>autoware_cmake</buildtool_depend>
 
   <depend>autoware_behavior_velocity_crosswalk_module</depend>
+  <depend>autoware_behavior_velocity_planner</depend>
   <depend>autoware_behavior_velocity_planner_common</depend>
   <depend>autoware_lanelet2_extension</depend>
   <depend>autoware_motion_utils</depend>
   <depend>autoware_planning_msgs</depend>
   <depend>autoware_route_handler</depend>
-  <depend>autoware_universe_utils</depend>
+  <depend>autoware_utils</depend>
   <depend>autoware_vehicle_info_utils</depend>
   <depend>geometry_msgs</depend>
   <depend>libboost-dev</depend>
@@ -31,6 +32,7 @@
   <depend>rclcpp</depend>
   <depend>visualization_msgs</depend>
 
+  <test_depend>ament_cmake_ros</test_depend>
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
 

@@ -14,11 +14,15 @@
 
 #include "autoware/pointcloud_preprocessor/distortion_corrector/distortion_corrector_node.hpp"
 
+#include "autoware/pointcloud_preprocessor/diagnostics/distortion_corrector_diagnostics.hpp"
+#include "autoware/pointcloud_preprocessor/diagnostics/latency_diagnostics.hpp"
 #include "autoware/pointcloud_preprocessor/distortion_corrector/distortion_corrector.hpp"
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace autoware::pointcloud_preprocessor
 {
@@ -28,8 +32,8 @@ DistortionCorrectorComponent::DistortionCorrectorComponent(const rclcpp::NodeOpt
 {
   // initialize debug tool
 
-  using autoware::universe_utils::DebugPublisher;
-  using autoware::universe_utils::StopWatch;
+  using autoware_utils::DebugPublisher;
+  using autoware_utils::StopWatch;
   stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
   debug_publisher_ = std::make_unique<DebugPublisher>(this, "distortion_corrector");
   stop_watch_ptr_->tic("cyclic_time");
@@ -40,8 +44,9 @@ DistortionCorrectorComponent::DistortionCorrectorComponent(const rclcpp::NodeOpt
   use_imu_ = declare_parameter<bool>("use_imu");
   use_3d_distortion_correction_ = declare_parameter<bool>("use_3d_distortion_correction");
   update_azimuth_and_distance_ = declare_parameter<bool>("update_azimuth_and_distance");
-  auto has_static_tf_only =
-    declare_parameter<bool>("has_static_tf_only", false);  // TODO(amadeuszsz): remove default value
+  processing_time_threshold_sec_ = declare_parameter<float>("processing_time_threshold_sec");
+  timestamp_mismatch_fraction_threshold_ =
+    declare_parameter<float>("timestamp_mismatch_fraction_threshold");
 
   // Publisher
   {
@@ -52,13 +57,18 @@ DistortionCorrectorComponent::DistortionCorrectorComponent(const rclcpp::NodeOpt
       "~/output/pointcloud", rclcpp::SensorDataQoS(), pub_options);
   }
 
+  // Twist queue size needs to be larger than 'twist frequency' / 'pointcloud frequency'.
+  // To avoid individual tuning, a sufficiently large value is hard-coded.
+  // With 100, it can handle twist updates up to 1000Hz if the pointcloud is 10Hz.
+  const uint16_t TWIST_QUEUE_SIZE = 100;
+
   // Subscriber
-  twist_sub_ = this->create_subscription<geometry_msgs::msg::TwistWithCovarianceStamped>(
-    "~/input/twist", 10,
-    std::bind(&DistortionCorrectorComponent::twist_callback, this, std::placeholders::_1));
-  imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
-    "~/input/imu", 10,
-    std::bind(&DistortionCorrectorComponent::imu_callback, this, std::placeholders::_1));
+  twist_sub_ = autoware_utils::InterProcessPollingSubscriber<
+    geometry_msgs::msg::TwistWithCovarianceStamped, autoware_utils::polling_policy::All>::
+    create_subscription(this, "~/input/twist", rclcpp::QoS(TWIST_QUEUE_SIZE));
+  imu_sub_ = autoware_utils::InterProcessPollingSubscriber<
+    sensor_msgs::msg::Imu, autoware_utils::polling_policy::All>::
+    create_subscription(this, "~/input/imu", rclcpp::QoS(TWIST_QUEUE_SIZE));
   pointcloud_sub_ = this->create_subscription<PointCloud2>(
     "~/input/pointcloud", rclcpp::SensorDataQoS(),
     std::bind(&DistortionCorrectorComponent::pointcloud_callback, this, std::placeholders::_1));
@@ -66,25 +76,14 @@ DistortionCorrectorComponent::DistortionCorrectorComponent(const rclcpp::NodeOpt
   // Setup the distortion corrector
 
   if (use_3d_distortion_correction_) {
-    distortion_corrector_ = std::make_unique<DistortionCorrector3D>(*this, has_static_tf_only);
+    distortion_corrector_ = std::make_unique<DistortionCorrector3D>(*this);
   } else {
-    distortion_corrector_ = std::make_unique<DistortionCorrector2D>(*this, has_static_tf_only);
-  }
-}
-
-void DistortionCorrectorComponent::twist_callback(
-  const geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr twist_msg)
-{
-  distortion_corrector_->process_twist_message(twist_msg);
-}
-
-void DistortionCorrectorComponent::imu_callback(const sensor_msgs::msg::Imu::ConstSharedPtr imu_msg)
-{
-  if (!use_imu_) {
-    return;
+    distortion_corrector_ = std::make_unique<DistortionCorrector2D>(*this);
   }
 
-  distortion_corrector_->process_imu_message(base_frame_, imu_msg);
+  // Diagnostic
+  diagnostics_interface_ =
+    std::make_unique<autoware_utils::DiagnosticsInterface>(this, this->get_fully_qualified_name());
 }
 
 void DistortionCorrectorComponent::pointcloud_callback(PointCloud2::UniquePtr pointcloud_msg)
@@ -95,6 +94,19 @@ void DistortionCorrectorComponent::pointcloud_callback(PointCloud2::UniquePtr po
 
   if (points_sub_count < 1) {
     return;
+  }
+
+  std::vector<geometry_msgs::msg::TwistWithCovarianceStamped::ConstSharedPtr> twist_msgs =
+    twist_sub_->take_data();
+  for (const auto & msg : twist_msgs) {
+    distortion_corrector_->process_twist_message(msg);
+  }
+
+  if (use_imu_) {
+    std::vector<sensor_msgs::msg::Imu::ConstSharedPtr> imu_msgs = imu_sub_->take_data();
+    for (const auto & msg : imu_msgs) {
+      distortion_corrector_->process_imu_message(base_frame_, msg);
+    }
   }
 
   distortion_corrector_->set_pointcloud_transform(base_frame_, pointcloud_msg->header.frame_id);
@@ -117,27 +129,60 @@ void DistortionCorrectorComponent::pointcloud_callback(PointCloud2::UniquePtr po
 
   distortion_corrector_->undistort_pointcloud(use_imu_, angle_conversion_opt_, *pointcloud_msg);
 
+  const rclcpp::Time stamp(pointcloud_msg->header.stamp);
+
+  const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
+  const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
+  const double pipeline_latency_ms =
+    std::chrono::duration<double, std::milli>(
+      std::chrono::nanoseconds((this->get_clock()->now() - stamp).nanoseconds()))
+      .count();
+
+  undistorted_pointcloud_pub_->publish(std::move(pointcloud_msg));
   if (debug_publisher_) {
-    auto pipeline_latency_ms =
-      std::chrono::duration<double, std::milli>(
-        std::chrono::nanoseconds(
-          (this->get_clock()->now() - pointcloud_msg->header.stamp).nanoseconds()))
-        .count();
-    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "debug/cyclic_time_ms", cyclic_time_ms);
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
+      "debug/processing_time_ms", processing_time_ms);
+    debug_publisher_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/pipeline_latency_ms", pipeline_latency_ms);
   }
 
-  undistorted_pointcloud_pub_->publish(std::move(pointcloud_msg));
+  auto latency_diagnostics = std::make_shared<LatencyDiagnostics>(
+    stamp, processing_time_ms, pipeline_latency_ms, processing_time_threshold_sec_ * 1000.0);
+  auto distortion_corrector_diagnostics = std::make_shared<DistortionCorrectorDiagnostics>(
+    distortion_corrector_->get_timestamp_mismatch_count(),
+    distortion_corrector_->get_timestamp_mismatch_fraction(), use_3d_distortion_correction_,
+    update_azimuth_and_distance_, timestamp_mismatch_fraction_threshold_);
 
-  // add processing time for debug
-  if (debug_publisher_) {
-    const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
-    const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
-    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
-      "debug/cyclic_time_ms", cyclic_time_ms);
-    debug_publisher_->publish<tier4_debug_msgs::msg::Float64Stamped>(
-      "debug/processing_time_ms", processing_time_ms);
+  publish_diagnostics({latency_diagnostics, distortion_corrector_diagnostics});
+}
+
+void DistortionCorrectorComponent::publish_diagnostics(
+  const std::vector<std::shared_ptr<const DiagnosticsBase>> & diagnostics)
+{
+  diagnostics_interface_->clear();
+
+  std::string message;
+  int worst_level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+
+  for (const auto & diag : diagnostics) {
+    diag->add_to_interface(*diagnostics_interface_);
+    if (const auto status = diag->evaluate_status(); status.has_value()) {
+      worst_level = std::max(worst_level, status->first);
+      if (!message.empty()) {
+        message += " / ";
+      }
+      message += status->second;
+    }
   }
+
+  if (message.empty()) {
+    message = "Distortion correction successful";
+  }
+
+  diagnostics_interface_->update_level_and_message(static_cast<int8_t>(worst_level), message);
+  diagnostics_interface_->publish(this->get_clock()->now());
 }
 
 }  // namespace autoware::pointcloud_preprocessor

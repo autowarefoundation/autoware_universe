@@ -17,7 +17,7 @@
 
 #include "autoware/autonomous_emergency_braking/node.hpp"
 
-#include <autoware/universe_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils/geometry/boost_polygon_utils.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <geometry_msgs/msg/detail/point__struct.hpp>
@@ -44,10 +44,10 @@
 
 namespace autoware::motion::control::autonomous_emergency_braking::utils
 {
-using autoware::universe_utils::Polygon2d;
-using autoware::universe_utils::Polygon3d;
 using autoware_perception_msgs::msg::PredictedObject;
 using autoware_perception_msgs::msg::PredictedObjects;
+using autoware_utils::Polygon2d;
+using autoware_utils::Polygon3d;
 using geometry_msgs::msg::Point;
 using geometry_msgs::msg::Pose;
 using geometry_msgs::msg::TransformStamped;

@@ -1,0 +1,26 @@
+<launch>
+  <arg name="converter_param_file" default="$(find-pkg-share autoware_diagnostic_graph_aggregator)/config/converter.param.yaml"/>
+  <arg name="param_file" default="$(find-pkg-share autoware_diagnostic_graph_aggregator)/config/default.param.yaml"/>
+  <arg name="graph_file"/>
+  <arg name="~/struct" default="/diagnostics_graph/struct"/>
+  <arg name="~/status" default="/diagnostics_graph/status"/>
+  <arg name="~/unknowns" default="/diagnostics_graph/unknowns"/>
+  <arg name="~/reset" default="/diagnostics_graph/reset"/>
+  <arg name="~/availability" default="/system/command_mode/availability"/>
+
+  <node pkg="autoware_diagnostic_graph_aggregator" exec="aggregator_node">
+    <param from="$(var param_file)"/>
+    <param name="graph_file" value="$(var graph_file)"/>
+    <remap from="~/struct" to="$(var ~/struct)"/>
+    <remap from="~/status" to="$(var ~/status)"/>
+    <remap from="~/unknowns" to="$(var ~/unknowns)"/>
+    <remap from="~/reset" to="$(var ~/reset)"/>
+    <remap from="~/availability" to="$(var ~/availability)"/>
+  </node>
+
+  <node pkg="autoware_diagnostic_graph_aggregator" exec="converter_node">
+    <param from="$(var converter_param_file)"/>
+    <remap from="~/command_mode/availability" to="/system/command_mode/availability"/>
+    <remap from="~/operation_mode/availability" to="/system/operation_mode/availability"/>
+  </node>
+</launch>

@@ -12,7 +12,20 @@
   <arg name="pose_initializer_param_path"/>
   <arg name="twist2accel_param_path"/>
 
+  <arg name="each_traffic_light_map_based_detector_param_path"/>
+  <arg name="traffic_light_fine_detector_param_path"/>
+  <arg name="yolox_traffic_light_detector_param_path"/>
+  <arg name="car_traffic_light_classifier_param_path"/>
+  <arg name="pedestrian_traffic_light_classifier_param_path"/>
+  <arg name="traffic_light_roi_visualizer_param_path"/>
+  <arg name="traffic_light_occlusion_predictor_param_path"/>
+  <arg name="traffic_light_multi_camera_fusion_param_path"/>
+  <arg name="traffic_light_arbiter_param_path"/>
+  <arg name="crosswalk_traffic_light_estimator_param_path"/>
+
   <arg name="launch_simulator_perception_modules" default="true"/>
+  <arg name="use_pointcloud_container" default="true" description="use pointcloud container for simulator perception modules"/>
+
   <arg name="launch_dummy_perception"/>
   <arg name="launch_dummy_vehicle"/>
   <arg
@@ -40,14 +53,14 @@
 
   <group if="$(var launch_simulator_perception_modules)">
     <group if="$(var scenario_simulation)">
-      <include file="$(find-pkg-share fault_injection)/launch/fault_injection.launch.xml">
+      <include file="$(find-pkg-share autoware_fault_injection)/launch/fault_injection.launch.xml">
         <arg name="config_file" value="$(var fault_injection_param_path)"/>
       </include>
     </group>
 
     <!-- Dummy Perception -->
     <group if="$(var launch_dummy_perception)">
-      <include file="$(find-pkg-share dummy_perception_publisher)/launch/dummy_perception_publisher.launch.xml">
+      <include file="$(find-pkg-share autoware_dummy_perception_publisher)/launch/dummy_perception_publisher.launch.xml">
         <arg name="real" value="$(var perception/enable_detection_failure)"/>
         <arg name="use_object_recognition" value="$(var perception/enable_object_recognition)"/>
         <arg name="use_base_link_z" value="$(var perception/use_base_link_z)"/>
@@ -67,6 +80,7 @@
         <arg name="occupancy_grid_map_param_path" value="$(var laserscan_based_occupancy_grid_map_param_path)"/>
         <arg name="occupancy_grid_map_updater" value="$(var occupancy_grid_map_updater)"/>
         <arg name="occupancy_grid_map_updater_param_path" value="$(var occupancy_grid_map_updater_param_path)"/>
+        <arg name="use_pointcloud_container" value="$(var use_pointcloud_container)"/>
       </include>
     </group>
 
@@ -105,13 +119,13 @@
 
       <!-- perception evaluator -->
       <group if="$(var use_perception_online_evaluator)">
-        <include file="$(find-pkg-share perception_online_evaluator)/launch/perception_online_evaluator.launch.xml"/>
+        <include file="$(find-pkg-share autoware_perception_online_evaluator)/launch/perception_online_evaluator.launch.xml"/>
       </group>
 
       <!-- publish empty objects instead of object recognition module -->
       <group unless="$(var perception/enable_object_recognition)">
         <push-ros-namespace namespace="object_recognition"/>
-        <node pkg="dummy_perception_publisher" exec="empty_objects_publisher" name="empty_objects_publisher" output="screen">
+        <node pkg="autoware_dummy_perception_publisher" exec="empty_objects_publisher" name="empty_objects_publisher" output="screen">
           <remap from="~/output/objects" to="/perception/object_recognition/objects"/>
         </node>
       </group>
@@ -134,7 +148,30 @@
       <!-- traffic light module -->
       <group if="$(var perception/enable_traffic_light)">
         <push-ros-namespace namespace="traffic_light_recognition"/>
-        <include file="$(find-pkg-share tier4_perception_launch)/launch/traffic_light_recognition/traffic_light.launch.xml"/>
+        <include file="$(find-pkg-share tier4_perception_launch)/launch/traffic_light_recognition/traffic_light.launch.xml">
+          <arg name="fusion_only" value="$(var fusion_only)"/>
+          <arg name="camera_namespaces" value="[camera6, camera7]"/>
+          <arg name="use_high_accuracy_detection" value="true"/>
+          <arg name="high_accuracy_detection_type" value="fine_detection"/>
+          <arg name="each_traffic_light_map_based_detector_param_path" value="$(var each_traffic_light_map_based_detector_param_path)"/>
+          <arg name="traffic_light_fine_detector_param_path" value="$(var traffic_light_fine_detector_param_path)"/>
+          <arg name="yolox_traffic_light_detector_param_path" value="$(var yolox_traffic_light_detector_param_path)"/>
+          <arg name="car_traffic_light_classifier_param_path" value="$(var car_traffic_light_classifier_param_path)"/>
+          <arg name="pedestrian_traffic_light_classifier_param_path" value="$(var pedestrian_traffic_light_classifier_param_path)"/>
+          <arg name="traffic_light_roi_visualizer_param_path" value="$(var traffic_light_roi_visualizer_param_path)"/>
+          <arg name="traffic_light_occlusion_predictor_param_path" value="$(var traffic_light_occlusion_predictor_param_path)"/>
+          <arg name="traffic_light_multi_camera_fusion_param_path" value="$(var traffic_light_multi_camera_fusion_param_path)"/>
+          <arg name="traffic_light_arbiter_param_path" value="$(var traffic_light_arbiter_param_path)"/>
+          <arg name="crosswalk_traffic_light_estimator_param_path" value="$(var crosswalk_traffic_light_estimator_param_path)"/>
+          <arg name="whole_image_detection/model_path" value="$(env HOME)/autoware_data/tensorrt_yolox/yolox_s_car_ped_tl_detector_960_960_batch_1.onnx"/>
+          <arg name="whole_image_detection/label_path" value="$(env HOME)/autoware_data/tensorrt_yolox/car_ped_tl_detector_labels.txt"/>
+          <arg name="fine_detection/model_path" value="$(env HOME)/autoware_data/traffic_light_fine_detector/tlr_car_ped_yolox_s_batch_6.onnx"/>
+          <arg name="fine_detection/label_path" value="$(env HOME)/autoware_data/traffic_light_fine_detector/tlr_labels.txt"/>
+          <arg name="classification/car/model_path" value="$(env HOME)/autoware_data/traffic_light_classifier/traffic_light_classifier_mobilenetv2_batch_6.onnx"/>
+          <arg name="classification/car/label_path" value="$(env HOME)/autoware_data/traffic_light_classifier/lamp_labels.txt"/>
+          <arg name="classification/pedestrian/model_path" value="$(env HOME)/autoware_data/traffic_light_classifier/ped_traffic_light_classifier_mobilenetv2_batch_6.onnx"/>
+          <arg name="classification/pedestrian/label_path" value="$(env HOME)/autoware_data/traffic_light_classifier/lamp_labels_ped.txt"/>
+        </include>
       </group>
     </group>
   </group>
@@ -203,12 +240,12 @@
 
   <!-- Dummy doors -->
   <group if="$(var launch_dummy_doors)">
-    <include file="$(find-pkg-share vehicle_door_simulator)/launch/vehicle_door_simulator.launch.xml"/>
+    <include file="$(find-pkg-share autoware_vehicle_door_simulator)/launch/vehicle_door_simulator.launch.xml"/>
   </group>
 
   <!-- Simulator Adapter -->
   <group if="$(var launch_scenario_simulator_v2_adapter)">
-    <node name="scenario_simulator_v2_adapter" exec="scenario_simulator_v2_adapter" pkg="scenario_simulator_v2_adapter" output="screen">
+    <node exec="autoware_scenario_simulator_v2_adapter_node" pkg="autoware_scenario_simulator_v2_adapter" output="screen">
       <param name="metric_topic_list" value="[/planning/planning_evaluator/metrics, /control/control_evaluator/metrics, /system/processing_time_checker/metrics]"/>
     </node>
   </group>
@@ -219,7 +256,7 @@
     <!-- 'pose_only' mode publishes the pose topic as an alternative to ndt_localizer. 'full_motion' mode publishes the odometry and acceleration topics as an alternative to localization modules. -->
     <let name="motion_publish_mode" value="pose_only" if="$(eval '&quot;$(var localization_sim_mode)&quot;==&quot;pose_twist_estimator&quot;')"/>
     <let name="motion_publish_mode" value="full_motion" unless="$(eval '&quot;$(var localization_sim_mode)&quot;==&quot;pose_twist_estimator&quot;')"/>
-    <include file="$(find-pkg-share simple_planning_simulator)/launch/simple_planning_simulator.launch.py">
+    <include file="$(find-pkg-share autoware_simple_planning_simulator)/launch/simple_planning_simulator.launch.py">
       <arg name="vehicle_info_param_file" value="$(var vehicle_info_param_file)"/>
       <arg name="simulator_model_param_file" value="$(var simulator_model)"/>
       <arg name="initial_engage_state" value="$(var initial_engage_state)"/>

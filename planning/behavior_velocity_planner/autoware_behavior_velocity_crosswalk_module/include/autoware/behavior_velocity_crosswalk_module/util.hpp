@@ -1,4 +1,4 @@
-// Copyright 2020 Tier IV, Inc.
+// Copyright 2020 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@
 #include <boost/geometry/geometries/linestring.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
 
+#include <lanelet2_core/primitives/Polygon.h>
+
 #include <memory>
 #include <optional>
 #include <set>
@@ -34,14 +36,14 @@
 #include <Eigen/Geometry>
 #include <autoware/behavior_velocity_planner_common/planner_data.hpp>
 
-#include <tier4_planning_msgs/msg/path_with_lane_id.hpp>
+#include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <tier4_planning_msgs/msg/stop_factor.hpp>
 
 namespace autoware::behavior_velocity_planner
 {
 
-using tier4_planning_msgs::msg::PathPointWithLaneId;
-using tier4_planning_msgs::msg::PathWithLaneId;
+using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 using tier4_planning_msgs::msg::StopFactor;
 
 enum class CollisionState { YIELD, EGO_PASS_FIRST, EGO_PASS_LATER, IGNORE };
@@ -53,6 +55,12 @@ struct CollisionPoint
     std::nullopt};  // denote obj is passing the crosswalk along the vehicle lane
   double time_to_collision{};
   double time_to_vehicle{};
+};
+
+struct StopPoseWithObjectUuids
+{
+  geometry_msgs::msg::Pose stop_pose{};
+  std::vector<unique_identifier_msgs::msg::UUID> target_object_ids{};
 };
 
 struct DebugData
@@ -78,6 +86,7 @@ struct DebugData
 
   std::vector<geometry_msgs::msg::Pose> stop_poses;
   std::vector<geometry_msgs::msg::Pose> slow_poses;
+  std::vector<geometry_msgs::msg::Pose> pass_poses;
   std::vector<geometry_msgs::msg::Point> stop_factor_points;
   std::vector<geometry_msgs::msg::Point> crosswalk_polygon;
   std::vector<std::vector<geometry_msgs::msg::Point>> ego_polygons;
@@ -86,16 +95,22 @@ struct DebugData
   // occlusion data
   std::vector<lanelet::BasicPolygon2d> occlusion_detection_areas;
   geometry_msgs::msg::Point crosswalk_origin;
+
+  // parked vehicles stop
+  lanelet::BasicPolygon2d parked_vehicles_stop_search_area;
+  bool parked_vehicles_stop_already_stopped = false;
 };
 
 std::vector<std::pair<int64_t, lanelet::ConstLanelet>> getCrosswalksOnPath(
   const geometry_msgs::msg::Pose & current_pose,
-  const tier4_planning_msgs::msg::PathWithLaneId & path, const lanelet::LaneletMapPtr lanelet_map,
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
+  const lanelet::LaneletMapPtr lanelet_map,
   const std::shared_ptr<const lanelet::routing::RoutingGraphContainer> & overall_graphs);
 
 std::set<int64_t> getCrosswalkIdSetOnPath(
   const geometry_msgs::msg::Pose & current_pose,
-  const tier4_planning_msgs::msg::PathWithLaneId & path, const lanelet::LaneletMapPtr lanelet_map,
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path,
+  const lanelet::LaneletMapPtr lanelet_map,
   const std::shared_ptr<const lanelet::routing::RoutingGraphContainer> & overall_graphs);
 
 std::optional<std::pair<geometry_msgs::msg::Point, geometry_msgs::msg::Point>>

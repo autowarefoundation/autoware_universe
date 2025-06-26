@@ -15,26 +15,30 @@
 #include "scene.hpp"
 
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 #include "util.hpp"
 
 #include <autoware/behavior_velocity_planner_common/utilization/util.hpp>
 #include <rclcpp/rclcpp.hpp>
 
+#include <memory>
+
 namespace autoware::behavior_velocity_planner
 {
-using autoware::universe_utils::createPoint;
+using autoware_utils::create_point;
 
 NoDrivableLaneModule::NoDrivableLaneModule(
   const int64_t module_id, const int64_t lane_id, const PlannerParam & planner_param,
-  const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock)
-: SceneModuleInterface(module_id, logger, clock),
+  const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
+  const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
+  const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+    planning_factor_interface)
+: SceneModuleInterface(module_id, logger, clock, time_keeper, planning_factor_interface),
   lane_id_(lane_id),
   planner_param_(planner_param),
   debug_data_(),
   state_(State::INIT)
 {
-  velocity_factor_.init(PlanningBehavior::NO_DRIVABLE_LANE);
 }
 
 bool NoDrivableLaneModule::modifyPathVelocity(PathWithLaneId * path)
@@ -154,7 +158,7 @@ void NoDrivableLaneModule::handle_approaching_state(PathWithLaneId * path)
   }
 
   geometry_msgs::msg::Point stop_point =
-    autoware::universe_utils::getPoint(path->points.at(target_point_idx).point);
+    autoware_utils::get_point(path->points.at(target_point_idx).point);
 
   const auto & op_stop_pose =
     planning_utils::insertStopPoint(stop_point, target_segment_idx, *path);
@@ -162,8 +166,11 @@ void NoDrivableLaneModule::handle_approaching_state(PathWithLaneId * path)
   // Get stop point and stop factor
   {
     const auto & stop_pose = op_stop_pose.value();
-    velocity_factor_.set(
-      path->points, planner_data_->current_odometry->pose, stop_pose, VelocityFactor::APPROACHING);
+    planning_factor_interface_->add(
+      path->points, planner_data_->current_odometry->pose, stop_pose,
+      autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+      autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
+      0.0 /*shift distance*/, "");
 
     const auto virtual_wall_pose = autoware::motion_utils::calcLongitudinalOffsetPose(
       path->points, stop_pose.position, debug_data_.base_link2front);
@@ -209,9 +216,12 @@ void NoDrivableLaneModule::handle_inside_no_drivable_lane_state(PathWithLaneId *
 
   // Get stop point and stop factor
   {
-    const auto & stop_pose = autoware::universe_utils::getPose(path->points.at(0));
-    velocity_factor_.set(
-      path->points, planner_data_->current_odometry->pose, stop_pose, VelocityFactor::APPROACHING);
+    const auto & stop_pose = autoware_utils::get_pose(path->points.at(0));
+    planning_factor_interface_->add(
+      path->points, planner_data_->current_odometry->pose, stop_pose,
+      autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+      autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
+      0.0 /*shift distance*/, "");
 
     const auto & virtual_wall_pose = autoware::motion_utils::calcLongitudinalOffsetPose(
       path->points, stop_pose.position, debug_data_.base_link2front);
@@ -248,8 +258,11 @@ void NoDrivableLaneModule::handle_stopped_state(PathWithLaneId * path)
   // Get stop point and stop factor
   {
     const auto & stop_pose = ego_pos_on_path.pose;
-    velocity_factor_.set(
-      path->points, planner_data_->current_odometry->pose, stop_pose, VelocityFactor::STOPPED);
+    planning_factor_interface_->add(
+      path->points, planner_data_->current_odometry->pose, stop_pose,
+      autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+      autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
+      0.0 /*shift distance*/, "");
 
     const auto virtual_wall_pose = autoware::motion_utils::calcLongitudinalOffsetPose(
       path->points, stop_pose.position, debug_data_.base_link2front);
@@ -266,7 +279,7 @@ void NoDrivableLaneModule::initialize_debug_data(
   debug_data_.path_polygon_intersection = path_no_drivable_lane_polygon_intersection;
 
   for (const auto & p : no_drivable_lane.polygon2d().basicPolygon()) {
-    debug_data_.no_drivable_lane_polygon.push_back(createPoint(p.x(), p.y(), ego_pos.z));
+    debug_data_.no_drivable_lane_polygon.push_back(create_point(p.x(), p.y(), ego_pos.z));
   }
 }
 

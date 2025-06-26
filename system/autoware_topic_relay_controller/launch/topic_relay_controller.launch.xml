@@ -1,0 +1,8 @@
+<launch>
+  <arg name="node_name_suffix" default="default" description="node name suffix"/>
+  <arg name="config_file" default="$(find-pkg-share autoware_topic_relay_controller)/config/topic_relay_controller.param.yaml" description="config file path"/>
+
+  <node pkg="autoware_topic_relay_controller" exec="autoware_topic_relay_controller_node" name="topic_relay_controller_$(var node_name_suffix)" output="screen">
+    <param from="$(var config_file)"/>
+  </node>
+</launch>

@@ -5,5 +5,16 @@
       tl_state_timeout: 1.0
       stop_time_hysteresis: 0.1
       yellow_lamp_period: 2.75
+      yellow_light_stop_velocity: 1.0 # Velocity threshold (m/s) below which the vehicle will always stop before the traffic light when the signal turns yellow, regardless of the pass_judge decision.
       enable_pass_judge: true
       enable_rtc: false # If set to true, the scene modules require approval from the rtc (request to cooperate) function. If set to false, the modules can be executed without requiring rtc approval
+
+      restart_suppression:
+        min_behind_distance_to_stop: 0.5 #[m]
+        max_behind_distance_to_stop: 1.0 #[m]
+
+      v2i:
+        use_remaining_time: false
+        last_time_allowed_to_pass: 2.0 # [s] relative time against at the time of turn to red
+        velocity_threshold: 0.5 # [m/s] change the decision logic whether the current velocity is faster or not
+        required_time_to_departure: 3.0 # [s] prevent low speed pass

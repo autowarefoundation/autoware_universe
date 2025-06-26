@@ -21,6 +21,13 @@ rclcpp_components_register_node(external_velocity_limit_selector_node
   EXECUTABLE external_velocity_limit_selector
 )
 
+if(BUILD_TESTING)
+  add_launch_test(
+    test/test_external_velocity_limit_selector_node_launch.py
+    TIMEOUT "30"
+  )
+endif()
+
 ament_auto_package(INSTALL_TO_SHARE
   launch
   config

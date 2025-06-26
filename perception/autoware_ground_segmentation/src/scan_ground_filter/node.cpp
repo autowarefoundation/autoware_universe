@@ -16,9 +16,9 @@
 
 #include "grid_ground_filter.hpp"
 
-#include <autoware/universe_utils/geometry/geometry.hpp>
-#include <autoware/universe_utils/math/normalization.hpp>
-#include <autoware/universe_utils/math/unit_conversion.hpp>
+#include <autoware_utils/geometry/geometry.hpp>
+#include <autoware_utils/math/normalization.hpp>
+#include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 
 #include <memory>
@@ -28,12 +28,12 @@
 namespace autoware::ground_segmentation
 {
 using autoware::pointcloud_preprocessor::get_param;
-using autoware::universe_utils::calcDistance3d;
-using autoware::universe_utils::deg2rad;
-using autoware::universe_utils::normalizeDegree;
-using autoware::universe_utils::normalizeRadian;
-using autoware::universe_utils::ScopedTimeTrack;
 using autoware::vehicle_info_utils::VehicleInfoUtils;
+using autoware_utils::calc_distance3d;
+using autoware_utils::deg2rad;
+using autoware_utils::normalize_degree;
+using autoware_utils::normalize_radian;
+using autoware_utils::ScopedTimeTrack;
 
 ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions & options)
 : autoware::pointcloud_preprocessor::Filter("ScanGroundFilter", options)
@@ -67,6 +67,8 @@ ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions &
 
     // grid mode parameters
     use_recheck_ground_cluster_ = declare_parameter<bool>("use_recheck_ground_cluster");
+    recheck_start_distance_ =
+      static_cast<float>(declare_parameter<double>("recheck_start_distance"));
     use_lowest_point_ = declare_parameter<bool>("use_lowest_point");
     detection_range_z_max_ = static_cast<float>(declare_parameter<double>("detection_range_z_max"));
     low_priority_region_x_ = static_cast<float>(declare_parameter<double>("low_priority_region_x"));
@@ -89,6 +91,7 @@ ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions &
       param.radial_divider_angle_rad = radial_divider_angle_rad_;
 
       param.use_recheck_ground_cluster = use_recheck_ground_cluster_;
+      param.recheck_start_distance = recheck_start_distance_;
       param.use_lowest_point = use_lowest_point_;
       param.detection_range_z_max = detection_range_z_max_;
       param.non_ground_height_threshold = non_ground_height_threshold_;
@@ -110,8 +113,8 @@ ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions &
 
   // initialize debug tool
   {
-    using autoware::universe_utils::DebugPublisher;
-    using autoware::universe_utils::StopWatch;
+    using autoware_utils::DebugPublisher;
+    using autoware_utils::StopWatch;
     stop_watch_ptr_ = std::make_unique<StopWatch<std::chrono::milliseconds>>();
     debug_publisher_ptr_ = std::make_unique<DebugPublisher>(this, "scan_ground_filter");
     stop_watch_ptr_->tic("cyclic_time");
@@ -120,10 +123,10 @@ ScanGroundFilterComponent::ScanGroundFilterComponent(const rclcpp::NodeOptions &
     bool use_time_keeper = declare_parameter<bool>("publish_processing_time_detail");
     if (use_time_keeper) {
       detailed_processing_time_publisher_ =
-        this->create_publisher<autoware::universe_utils::ProcessingTimeDetail>(
+        this->create_publisher<autoware_utils::ProcessingTimeDetail>(
           "~/debug/processing_time_detail_ms", 1);
-      auto time_keeper = autoware::universe_utils::TimeKeeper(detailed_processing_time_publisher_);
-      time_keeper_ = std::make_shared<autoware::universe_utils::TimeKeeper>(time_keeper);
+      auto time_keeper = autoware_utils::TimeKeeper(detailed_processing_time_publisher_);
+      time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(time_keeper);
 
       // set time keeper to grid
       grid_ground_filter_ptr_->setTimeKeeper(time_keeper_);
@@ -159,7 +162,7 @@ void ScanGroundFilterComponent::convertPointcloud(
 
       // determine the azimuth angle group
       auto radius{static_cast<float>(std::hypot(input_point.x, input_point.y))};
-      auto theta{normalizeRadian(std::atan2(input_point.x, input_point.y), 0.0)};
+      auto theta{normalize_radian(std::atan2(input_point.x, input_point.y), 0.0)};
       auto radial_div{static_cast<size_t>(std::floor(theta * inv_radial_divider_angle_rad))};
 
       current_point.radius = radius;
@@ -238,9 +241,9 @@ void ScanGroundFilterComponent::classifyPointCloud(
         prev_gnd_slope = 0.0f;
         ground_cluster.initialize();
         non_ground_cluster.initialize();
-        points_distance = calcDistance3d(point_curr, prev_gnd_point);
+        points_distance = calc_distance3d(point_curr, prev_gnd_point);
       } else {
-        points_distance = calcDistance3d(point_curr, point_prev);
+        points_distance = calc_distance3d(point_curr, point_prev);
       }
 
       float radius_distance_from_gnd = pd.radius - prev_gnd_radius;
@@ -369,9 +372,9 @@ void ScanGroundFilterComponent::faster_filter(
   if (debug_publisher_ptr_ && stop_watch_ptr_) {
     const double cyclic_time_ms = stop_watch_ptr_->toc("cyclic_time", true);
     const double processing_time_ms = stop_watch_ptr_->toc("processing_time", true);
-    debug_publisher_ptr_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/cyclic_time_ms", cyclic_time_ms);
-    debug_publisher_ptr_->publish<tier4_debug_msgs::msg::Float64Stamped>(
+    debug_publisher_ptr_->publish<autoware_internal_debug_msgs::msg::Float64Stamped>(
       "debug/processing_time_ms", processing_time_ms);
   }
 }
@@ -438,6 +441,9 @@ rcl_interfaces::msg::SetParametersResult ScanGroundFilterComponent::onParameter(
     RCLCPP_DEBUG_STREAM(
       get_logger(),
       "Setting use_recheck_ground_cluster to: " << std::boolalpha << use_recheck_ground_cluster_);
+  }
+  if (get_param(param, "recheck_start_distance", recheck_start_distance_)) {
+    RCLCPP_DEBUG(get_logger(), "Setting recheck_start_distance to: %f.", recheck_start_distance_);
   }
   rcl_interfaces::msg::SetParametersResult result;
   result.successful = true;

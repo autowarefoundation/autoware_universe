@@ -15,8 +15,8 @@
 #include "autoware/planning_evaluator/metrics/deviation_metrics.hpp"
 
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
-#include "autoware/universe_utils/geometry/pose_deviation.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/pose_deviation.hpp"
 
 namespace planning_diagnostics
 {
@@ -39,13 +39,13 @@ Accumulator<double> calcLateralDeviation(const Trajectory & ref, const Trajector
   for (TrajectoryPoint p : traj.points) {
     const size_t nearest_index =
       autoware::motion_utils::findNearestIndex(ref.points, p.pose.position);
-    stat.add(autoware::universe_utils::calcLateralDeviation(
-      ref.points[nearest_index].pose, p.pose.position));
+    stat.add(
+      autoware_utils::calc_lateral_deviation(ref.points[nearest_index].pose, p.pose.position));
   }
   return stat;
 }
 
-Accumulator<double> calcLateralTrajectoryDisplacement(
+Accumulator<double> calcLocalLateralTrajectoryDisplacement(
   const Trajectory & prev, const Trajectory & traj, const Pose & ego_pose)
 {
   Accumulator<double> stat;
@@ -58,7 +58,8 @@ Accumulator<double> calcLateralTrajectoryDisplacement(
     autoware::motion_utils::calcLateralOffset(prev.points, ego_pose.position);
   const auto traj_lateral_deviation =
     autoware::motion_utils::calcLateralOffset(traj.points, ego_pose.position);
-  const auto lateral_trajectory_displacement = traj_lateral_deviation - prev_lateral_deviation;
+  const auto lateral_trajectory_displacement =
+    std::abs(traj_lateral_deviation - prev_lateral_deviation);
   stat.add(lateral_trajectory_displacement);
   return stat;
 }
@@ -77,7 +78,7 @@ Accumulator<double> calcYawDeviation(const Trajectory & ref, const Trajectory & 
   for (TrajectoryPoint p : traj.points) {
     const size_t nearest_index =
       autoware::motion_utils::findNearestIndex(ref.points, p.pose.position);
-    stat.add(autoware::universe_utils::calcYawDeviation(ref.points[nearest_index].pose, p.pose));
+    stat.add(autoware_utils::calc_yaw_deviation(ref.points[nearest_index].pose, p.pose));
   }
   return stat;
 }
@@ -102,21 +103,21 @@ Accumulator<double> calcVelocityDeviation(const Trajectory & ref, const Trajecto
 Accumulator<double> calcLongitudinalDeviation(const Pose & base_pose, const Point & target_point)
 {
   Accumulator<double> stat;
-  stat.add(std::abs(autoware::universe_utils::calcLongitudinalDeviation(base_pose, target_point)));
+  stat.add(std::abs(autoware_utils::calc_longitudinal_deviation(base_pose, target_point)));
   return stat;
 }
 
 Accumulator<double> calcLateralDeviation(const Pose & base_pose, const Point & target_point)
 {
   Accumulator<double> stat;
-  stat.add(std::abs(autoware::universe_utils::calcLateralDeviation(base_pose, target_point)));
+  stat.add(std::abs(autoware_utils::calc_lateral_deviation(base_pose, target_point)));
   return stat;
 }
 
 Accumulator<double> calcYawDeviation(const Pose & base_pose, const Pose & target_pose)
 {
   Accumulator<double> stat;
-  stat.add(std::abs(autoware::universe_utils::calcYawDeviation(base_pose, target_pose)));
+  stat.add(std::abs(autoware_utils::calc_yaw_deviation(base_pose, target_pose)));
   return stat;
 }
 }  // namespace metrics

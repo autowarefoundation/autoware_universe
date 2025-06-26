@@ -20,18 +20,18 @@ This plugin also can engage from the panel.
 
 ### Output
 
-| Name                                               | Type                                               | Description                                        |
-| -------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------- |
-| `/api/operation_mode/change_to_autonomous`         | `autoware_adapi_v1_msgs::srv::ChangeOperationMode` | The service to change operation mode to autonomous |
-| `/api/operation_mode/change_to_stop`               | `autoware_adapi_v1_msgs::srv::ChangeOperationMode` | The service to change operation mode to stop       |
-| `/api/operation_mode/change_to_local`              | `autoware_adapi_v1_msgs::srv::ChangeOperationMode` | The service to change operation mode to local      |
-| `/api/operation_mode/change_to_remote`             | `autoware_adapi_v1_msgs::srv::ChangeOperationMode` | The service to change operation mode to remote     |
-| `/api/operation_mode/enable_autoware_control`      | `autoware_adapi_v1_msgs::srv::ChangeOperationMode` | The service to enable vehicle control by Autoware  |
-| `/api/operation_mode/disable_autoware_control`     | `autoware_adapi_v1_msgs::srv::ChangeOperationMode` | The service to disable vehicle control by Autoware |
-| `/api/routing/clear_route`                         | `autoware_adapi_v1_msgs::srv::ClearRoute`          | The service to clear route state                   |
-| `/api/motion/accept_start`                         | `autoware_adapi_v1_msgs::srv::AcceptStart`         | The service to accept the vehicle to start         |
-| `/api/autoware/set/emergency`                      | `tier4_external_api_msgs::srv::SetEmergency`       | The service to set external emergency              |
-| `/planning/scenario_planning/max_velocity_default` | `tier4_planning_msgs::msg::VelocityLimit`          | The topic to set maximum speed of the vehicle      |
+| Name                                               | Type                                                  | Description                                        |
+| -------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------- |
+| `/api/operation_mode/change_to_autonomous`         | `autoware_adapi_v1_msgs::srv::ChangeOperationMode`    | The service to change operation mode to autonomous |
+| `/api/operation_mode/change_to_stop`               | `autoware_adapi_v1_msgs::srv::ChangeOperationMode`    | The service to change operation mode to stop       |
+| `/api/operation_mode/change_to_local`              | `autoware_adapi_v1_msgs::srv::ChangeOperationMode`    | The service to change operation mode to local      |
+| `/api/operation_mode/change_to_remote`             | `autoware_adapi_v1_msgs::srv::ChangeOperationMode`    | The service to change operation mode to remote     |
+| `/api/operation_mode/enable_autoware_control`      | `autoware_adapi_v1_msgs::srv::ChangeOperationMode`    | The service to enable vehicle control by Autoware  |
+| `/api/operation_mode/disable_autoware_control`     | `autoware_adapi_v1_msgs::srv::ChangeOperationMode`    | The service to disable vehicle control by Autoware |
+| `/api/routing/clear_route`                         | `autoware_adapi_v1_msgs::srv::ClearRoute`             | The service to clear route state                   |
+| `/api/motion/accept_start`                         | `autoware_adapi_v1_msgs::srv::AcceptStart`            | The service to accept the vehicle to start         |
+| `/api/autoware/set/emergency`                      | `tier4_external_api_msgs::srv::SetEmergency`          | The service to set external emergency              |
+| `/planning/scenario_planning/max_velocity_default` | `autoware_internal_planning_msgs::msg::VelocityLimit` | The topic to set maximum speed of the vehicle      |
 
 ## HowToUse
 

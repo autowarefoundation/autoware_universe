@@ -2,7 +2,7 @@
 
 ## Getting Started
 
-The Autoware.Universe Common folder consists of common and testing libraries that are used by other Autoware components, as well as useful plugins for visualization in RVIZ2.
+The Autoware Universe Common folder consists of common and testing libraries that are used by other Autoware components, as well as useful plugins for visualization in RVIZ2.
 
 !!! note
 

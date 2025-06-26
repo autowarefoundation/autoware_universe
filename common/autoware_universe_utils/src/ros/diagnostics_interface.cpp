@@ -23,7 +23,7 @@
 
 namespace autoware::universe_utils
 {
-DiagnosticInterface::DiagnosticInterface(rclcpp::Node * node, const std::string & diagnostic_name)
+DiagnosticsInterface::DiagnosticsInterface(rclcpp::Node * node, const std::string & diagnostic_name)
 : clock_(node->get_clock())
 {
   diagnostics_pub_ =
@@ -34,7 +34,7 @@ DiagnosticInterface::DiagnosticInterface(rclcpp::Node * node, const std::string 
   diagnostics_status_msg_.hardware_id = node->get_name();
 }
 
-void DiagnosticInterface::clear()
+void DiagnosticsInterface::clear()
 {
   diagnostics_status_msg_.values.clear();
   diagnostics_status_msg_.values.shrink_to_fit();
@@ -43,7 +43,7 @@ void DiagnosticInterface::clear()
   diagnostics_status_msg_.message = "";
 }
 
-void DiagnosticInterface::add_key_value(const diagnostic_msgs::msg::KeyValue & key_value_msg)
+void DiagnosticsInterface::add_key_value(const diagnostic_msgs::msg::KeyValue & key_value_msg)
 {
   auto it = std::find_if(
     std::begin(diagnostics_status_msg_.values), std::end(diagnostics_status_msg_.values),
@@ -56,7 +56,7 @@ void DiagnosticInterface::add_key_value(const diagnostic_msgs::msg::KeyValue & k
   }
 }
 
-void DiagnosticInterface::add_key_value(const std::string & key, const std::string & value)
+void DiagnosticsInterface::add_key_value(const std::string & key, const std::string & value)
 {
   diagnostic_msgs::msg::KeyValue key_value;
   key_value.key = key;
@@ -64,7 +64,7 @@ void DiagnosticInterface::add_key_value(const std::string & key, const std::stri
   add_key_value(key_value);
 }
 
-void DiagnosticInterface::add_key_value(const std::string & key, bool value)
+void DiagnosticsInterface::add_key_value(const std::string & key, bool value)
 {
   diagnostic_msgs::msg::KeyValue key_value;
   key_value.key = key;
@@ -72,7 +72,7 @@ void DiagnosticInterface::add_key_value(const std::string & key, bool value)
   add_key_value(key_value);
 }
 
-void DiagnosticInterface::update_level_and_message(const int8_t level, const std::string & message)
+void DiagnosticsInterface::update_level_and_message(const int8_t level, const std::string & message)
 {
   if ((level > diagnostic_msgs::msg::DiagnosticStatus::OK)) {
     if (!diagnostics_status_msg_.message.empty()) {
@@ -85,12 +85,12 @@ void DiagnosticInterface::update_level_and_message(const int8_t level, const std
   }
 }
 
-void DiagnosticInterface::publish(const rclcpp::Time & publish_time_stamp)
+void DiagnosticsInterface::publish(const rclcpp::Time & publish_time_stamp)
 {
   diagnostics_pub_->publish(create_diagnostics_array(publish_time_stamp));
 }
 
-diagnostic_msgs::msg::DiagnosticArray DiagnosticInterface::create_diagnostics_array(
+diagnostic_msgs::msg::DiagnosticArray DiagnosticsInterface::create_diagnostics_array(
   const rclcpp::Time & publish_time_stamp) const
 {
   diagnostic_msgs::msg::DiagnosticArray diagnostics_msg;

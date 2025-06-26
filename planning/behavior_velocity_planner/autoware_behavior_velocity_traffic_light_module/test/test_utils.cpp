@@ -13,20 +13,22 @@
 // limitations under the License.
 
 #include "../src/utils.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 
 #include <gtest/gtest.h>
 
 namespace autoware::behavior_velocity_planner
 {
 
-using tier4_planning_msgs::msg::PathPointWithLaneId;
-using tier4_planning_msgs::msg::PathWithLaneId;
+using autoware_internal_planning_msgs::msg::PathPointWithLaneId;
+using autoware_internal_planning_msgs::msg::PathWithLaneId;
 
-using autoware::universe_utils::createPoint;
-using autoware::universe_utils::createQuaternion;
+using autoware_utils::create_point;
+using autoware_utils::create_quaternion;
 
-PathWithLaneId generatePath(const geometry_msgs::msg::Pose & pose)
+PathWithLaneId generatePath(
+  const geometry_msgs::msg::Pose & pose,
+  const std::optional<double> & bound_y_offset = std::nullopt)
 {
   constexpr double interval_distance = 1.0;
 
@@ -36,6 +38,19 @@ PathWithLaneId generatePath(const geometry_msgs::msg::Pose & pose)
     p.point.pose = pose;
     p.point.pose.position.x += s;
     traj.points.push_back(p);
+  }
+
+  if (bound_y_offset) {
+    traj.left_bound = {
+      geometry_msgs::msg::Point{}.set__x(pose.position.x).set__y(pose.position.y + *bound_y_offset),
+      geometry_msgs::msg::Point{}
+        .set__x(pose.position.x + 10.0)
+        .set__y(pose.position.y + *bound_y_offset)};
+    traj.right_bound = {
+      geometry_msgs::msg::Point{}.set__x(pose.position.x).set__y(pose.position.y - *bound_y_offset),
+      geometry_msgs::msg::Point{}
+        .set__x(pose.position.x + 10.0)
+        .set__y(pose.position.y - *bound_y_offset)};
   }
 
   return traj;
@@ -81,8 +96,8 @@ TEST(BehaviorTrafficLightModuleUtilsTest, findNearestCollisionPoint)
 TEST(BehaviorTrafficLightModuleUtilsTest, createTargetPoint)
 {
   const auto pose = geometry_msgs::build<geometry_msgs::msg::Pose>()
-                      .position(createPoint(0.0, 0.0, 0.0))
-                      .orientation(createQuaternion(0.0, 0.0, 0.0, 1.0));
+                      .position(create_point(0.0, 0.0, 0.0))
+                      .orientation(create_quaternion(0.0, 0.0, 0.0, 1.0));
   const auto path = generatePath(pose);
 
   {
@@ -127,31 +142,28 @@ TEST(BehaviorTrafficLightModuleUtilsTest, createTargetPoint)
 TEST(BehaviorTrafficLightModuleUtilsTest, calcStopPointAndInsertIndex)
 {
   const auto pose = geometry_msgs::build<geometry_msgs::msg::Pose>()
-                      .position(createPoint(0.0, 0.0, 0.0))
-                      .orientation(createQuaternion(0.0, 0.0, 0.0, 1.0));
-  const auto path = generatePath(pose);
+                      .position(create_point(0.0, 0.0, 0.0))
+                      .orientation(create_quaternion(0.0, 0.0, 0.0, 1.0));
   constexpr double offset = 1.75;
 
-  {
+  {  // Path is empty
     lanelet::Points3d basic_line;
     basic_line.emplace_back(lanelet::InvalId, 5.5, -1.0, 0.0);
     basic_line.emplace_back(lanelet::InvalId, 5.5, 1.0, 0.0);
 
     const auto line = lanelet::LineString3d(lanelet::InvalId, basic_line);
-    constexpr double extend_length = 0.0;
-    const auto output = calcStopPointAndInsertIndex(PathWithLaneId{}, line, offset, extend_length);
+    const auto output = calcStopPointAndInsertIndex(PathWithLaneId{}, line, offset);
 
     EXPECT_FALSE(output.has_value());
   }
 
-  {
+  {  // Normal case
     lanelet::Points3d basic_line;
     basic_line.emplace_back(lanelet::InvalId, 5.5, -1.0, 0.0);
     basic_line.emplace_back(lanelet::InvalId, 5.5, 1.0, 0.0);
 
     const auto line = lanelet::LineString3d(lanelet::InvalId, basic_line);
-    constexpr double extend_length = 0.0;
-    const auto output = calcStopPointAndInsertIndex(path, line, offset, extend_length);
+    const auto output = calcStopPointAndInsertIndex(generatePath(pose, 1.0), line, offset);
 
     EXPECT_TRUE(output.has_value());
     EXPECT_EQ(output.value().first, size_t(4));
@@ -159,29 +171,13 @@ TEST(BehaviorTrafficLightModuleUtilsTest, calcStopPointAndInsertIndex)
     EXPECT_DOUBLE_EQ(output.value().second.y(), 0.0);
   }
 
-  {
+  {  // Stop line does not intersect path bound
     lanelet::Points3d basic_line;
-    basic_line.emplace_back(lanelet::InvalId, 5.5, 2.0, 0.0);
-    basic_line.emplace_back(lanelet::InvalId, 5.5, 1.0, 0.0);
+    basic_line.emplace_back(lanelet::InvalId, 5.5, 0.5, 0.0);
+    basic_line.emplace_back(lanelet::InvalId, 4.5, 0.5, 0.0);
 
     const auto line = lanelet::LineString3d(lanelet::InvalId, basic_line);
-    constexpr double extend_length = 2.0;
-    const auto output = calcStopPointAndInsertIndex(path, line, offset, extend_length);
-
-    EXPECT_TRUE(output.has_value());
-    EXPECT_EQ(output.value().first, size_t(4));
-    EXPECT_DOUBLE_EQ(output.value().second.x(), 3.75);
-    EXPECT_DOUBLE_EQ(output.value().second.y(), 0.0);
-  }
-
-  {
-    lanelet::Points3d basic_line;
-    basic_line.emplace_back(lanelet::InvalId, 5.5, 2.0, 0.0);
-    basic_line.emplace_back(lanelet::InvalId, 5.5, 1.0, 0.0);
-
-    const auto line = lanelet::LineString3d(lanelet::InvalId, basic_line);
-    constexpr double extend_length = 0.0;
-    const auto output = calcStopPointAndInsertIndex(path, line, offset, extend_length);
+    const auto output = calcStopPointAndInsertIndex(generatePath(pose, 1.0), line, offset);
 
     EXPECT_FALSE(output.has_value());
   }

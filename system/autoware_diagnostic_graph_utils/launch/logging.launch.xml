@@ -1,0 +1,15 @@
+<launch>
+  <arg name="root_path" default="/autoware/modes/autonomous"/>
+  <arg name="max_depth" default="3"/>
+  <arg name="show_rate" default="1.0"/>
+  <arg name="enable_terminal_log" default="false"/>
+  <arg name="ignore_dependent_error" default="false"/>
+
+  <node pkg="autoware_diagnostic_graph_utils" exec="logging_node" name="logging_diag_graph" output="both">
+    <param name="root_path" value="$(var root_path)"/>
+    <param name="max_depth" value="$(var max_depth)"/>
+    <param name="show_rate" value="$(var show_rate)"/>
+    <param name="enable_terminal_log" value="$(var enable_terminal_log)"/>
+    <param name="ignore_dependent_error" value="$(var ignore_dependent_error)"/>
+  </node>
+</launch>

@@ -6,6 +6,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -Wno-write-strings -fopen
 find_package(autoware_cmake REQUIRED)
 autoware_package()
 
+# TODO(amadeuszsz): Remove -Wno-deprecated-declarations once removing implicit quantization
+add_compile_options(-Wno-deprecated-declarations)
+
 find_package(CUDA)
 find_package(CUDNN)
 find_package(TENSORRT)
@@ -18,7 +21,6 @@ endif()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
   src/tensorrt_classifier.cpp
-  src/preprocess.cu
 )
 
 ament_target_dependencies(${PROJECT_NAME}
@@ -26,16 +28,27 @@ ament_target_dependencies(${PROJECT_NAME}
   OpenCV
 )
 
-target_include_directories(${PROJECT_NAME}
+cuda_add_library(${PROJECT_NAME}_gpu_preprocess
+  SHARED
+  src/preprocess.cu
+)
+
+target_include_directories(${PROJECT_NAME}_gpu_preprocess
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
+    $<INSTALL_INTERFACE:include/${PROJECT_NAME}>
     ${TENSORRT_INCLUDE_DIRS}
 )
 
 target_link_libraries(${PROJECT_NAME}
   ${TENSORRT_LIBRARIES}
+  ${PROJECT_NAME}_gpu_preprocess
   stdc++fs
+)
+
+install(
+  TARGETS ${PROJECT_NAME}_gpu_preprocess
+  LIBRARY DESTINATION lib
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE

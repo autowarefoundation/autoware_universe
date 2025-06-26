@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>autoware_adapi_visualizers</name>
+  <version>0.46.0</version>
+  <description>The adapi_visualizers package</description>
+  <maintainer email="isamu.takagi@tier4.jp">Takagi, Isamu</maintainer>
+  <maintainer email="ryohsuke.mitsudome@tier4.jp">Ryohsuke Mitsudome</maintainer>
+  <maintainer email="yukihiro.saito@tier4.jp">Yukihiro Saito</maintainer>
+  <maintainer email="junya.sasaki@tier4.jp">Junya Sasaki</maintainer>
+  <license>Apache License 2.0</license>
+
+  <exec_depend>autoware_adapi_v1_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>tf_transformations</exec_depend>
+  <exec_depend>visualization_msgs</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

@@ -23,8 +23,8 @@
 #define EIGEN_MPL2_ONLY
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>
+#include <autoware/behavior_velocity_rtc_interface/scene_module_interface_with_rtc.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -33,7 +33,7 @@
 
 namespace autoware::behavior_velocity_planner
 {
-class TrafficLightModule : public SceneModuleInterface
+class TrafficLightModule : public SceneModuleInterfaceWithRTC
 {
 public:
   using TrafficSignal = autoware_perception_msgs::msg::TrafficLightGroup;
@@ -54,6 +54,7 @@ public:
     std::vector<geometry_msgs::msg::Point> traffic_light_points;
     std::optional<geometry_msgs::msg::Point> highest_confidence_traffic_light_point = {
       std::nullopt};
+    bool is_remaining_time_used{false};
   };
 
   struct PlannerParam
@@ -61,15 +62,27 @@ public:
     double stop_margin;
     double tl_state_timeout;
     double yellow_lamp_period;
+    double yellow_light_stop_velocity;
     double stop_time_hysteresis;
     bool enable_pass_judge;
+    // Restart Suppression Parameter
+    double max_behind_dist_to_stop_for_restart_suppression;
+    double min_behind_dist_to_stop_for_restart_suppression;
+    // V2I Parameter
+    bool v2i_use_remaining_time;
+    double v2i_last_time_allowed_to_pass;
+    double v2i_velocity_threshold;
+    double v2i_required_time_to_departure;
   };
 
 public:
   TrafficLightModule(
     const int64_t lane_id, const lanelet::TrafficLight & traffic_light_reg_elem,
     lanelet::ConstLanelet lane, const PlannerParam & planner_param, const rclcpp::Logger logger,
-    const rclcpp::Clock::SharedPtr clock);
+    const rclcpp::Clock::SharedPtr clock,
+    const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
+    const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+      planning_factor_interface);
 
   bool modifyPathVelocity(PathWithLaneId * path) override;
 
@@ -88,9 +101,11 @@ public:
 private:
   bool isStopSignal();
 
-  tier4_planning_msgs::msg::PathWithLaneId insertStopPose(
-    const tier4_planning_msgs::msg::PathWithLaneId & input, const size_t & insert_target_point_idx,
-    const Eigen::Vector2d & target_point);
+  bool willTrafficLightTurnRedBeforeReachingStopLine(const double & distance_to_stop_line) const;
+
+  autoware_internal_planning_msgs::msg::PathWithLaneId insertStopPose(
+    const autoware_internal_planning_msgs::msg::PathWithLaneId & input,
+    const size_t & insert_target_point_idx, const Eigen::Vector2d & target_point);
 
   bool isPassthrough(const double & signed_arc_length) const;
 

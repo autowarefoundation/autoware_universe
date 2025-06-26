@@ -66,16 +66,16 @@ std::vector<TrafficLightConstPtr> filter_pedestrian_signals(const LaneletMapCons
 
 }  // namespace lanelet
 
-namespace autoware
+namespace autoware::traffic_light
 {
 TrafficLightArbiter::TrafficLightArbiter(const rclcpp::NodeOptions & options)
 : Node("traffic_light_arbiter", options)
 {
-  external_delay_tolerance_ = this->declare_parameter<double>("external_delay_tolerance", 5.0);
-  external_time_tolerance_ = this->declare_parameter<double>("external_time_tolerance", 5.0);
-  perception_time_tolerance_ = this->declare_parameter<double>("perception_time_tolerance", 1.0);
-  external_priority_ = this->declare_parameter<bool>("external_priority", false);
-  enable_signal_matching_ = this->declare_parameter<bool>("enable_signal_matching", false);
+  external_delay_tolerance_ = this->declare_parameter<double>("external_delay_tolerance");
+  external_time_tolerance_ = this->declare_parameter<double>("external_time_tolerance");
+  perception_time_tolerance_ = this->declare_parameter<double>("perception_time_tolerance");
+  external_priority_ = this->declare_parameter<bool>("external_priority");
+  enable_signal_matching_ = this->declare_parameter<bool>("enable_signal_matching");
 
   if (enable_signal_matching_) {
     signal_match_validator_ = std::make_unique<SignalMatchValidator>();
@@ -152,6 +152,17 @@ void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Tim
 {
   using ElementAndPriority = std::pair<Element, bool>;
   std::unordered_map<lanelet::Id, std::vector<ElementAndPriority>> regulatory_element_signals_map;
+
+  auto append_predictions = [](auto & map, const auto & groups) {
+    for (const auto & group : groups) {
+      auto & predictions = map[group.traffic_light_group_id];
+      predictions.insert(predictions.end(), group.predictions.begin(), group.predictions.end());
+    }
+  };
+  std::unordered_map<lanelet::Id, std::vector<PredictedTrafficLightState>> predictions_map;
+  // add in order from perception msg
+  append_predictions(predictions_map, latest_perception_msg_.traffic_light_groups);
+  append_predictions(predictions_map, latest_external_msg_.traffic_light_groups);
 
   if (map_regulatory_elements_set_ == nullptr) {
     RCLCPP_WARN_THROTTLE(
@@ -233,6 +244,7 @@ void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Tim
     TrafficSignal signal_msg;
     signal_msg.traffic_light_group_id = regulatory_element_id;
     signal_msg.elements = get_highest_confidence_elements(elements);
+    signal_msg.predictions = predictions_map[regulatory_element_id];
     output_signals_msg.traffic_light_groups.emplace_back(signal_msg);
   }
 
@@ -245,7 +257,7 @@ void TrafficLightArbiter::arbitrateAndPublish(const builtin_interfaces::msg::Tim
       get_logger(), *get_clock(), 5000, "Published traffic signal messages are not latest");
   }
 }
-}  // namespace autoware
+}  // namespace autoware::traffic_light
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(autoware::TrafficLightArbiter)
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::traffic_light::TrafficLightArbiter)

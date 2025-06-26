@@ -18,14 +18,12 @@
 
 #include "autoware/behavior_path_planner_common/data_manager.hpp"
 #include "autoware/behavior_path_planner_common/interface/scene_module_interface.hpp"
-#include "autoware/universe_utils/ros/parameter.hpp"
+#include "autoware_utils/ros/parameter.hpp"
 
 #include <rclcpp/node.hpp>
 #include <rclcpp/parameter.hpp>
 #include <rclcpp/publisher.hpp>
 
-#include <autoware_adapi_v1_msgs/msg/steering_factor_array.hpp>
-#include <autoware_adapi_v1_msgs/msg/velocity_factor_array.hpp>
 #include <unique_identifier_msgs/msg/uuid.hpp>
 
 #include <cstddef>
@@ -41,9 +39,7 @@ namespace autoware::behavior_path_planner
 using autoware::motion_utils::createDeadLineVirtualWallMarker;
 using autoware::motion_utils::createSlowDownVirtualWallMarker;
 using autoware::motion_utils::createStopVirtualWallMarker;
-using autoware::universe_utils::toHexString;
-using autoware_adapi_v1_msgs::msg::SteeringFactorArray;
-using autoware_adapi_v1_msgs::msg::VelocityFactorArray;
+using autoware_utils::to_hex_string;
 using unique_identifier_msgs::msg::UUID;
 using SceneModulePtr = std::shared_ptr<SceneModuleInterface>;
 using SceneModuleObserver = std::weak_ptr<SceneModuleInterface>;
@@ -106,49 +102,11 @@ public:
     }
   }
 
-  void publishSteeringFactor()
-  {
-    SteeringFactorArray steering_factor_array;
-    steering_factor_array.header.frame_id = "map";
-    steering_factor_array.header.stamp = node_->now();
-
-    for (const auto & m : observers_) {
-      if (m.expired()) {
-        continue;
-      }
-
-      const auto steering_factor = m.lock()->get_steering_factor();
-      if (steering_factor.behavior != PlanningBehavior::UNKNOWN) {
-        steering_factor_array.factors.emplace_back(steering_factor);
-      }
-    }
-
-    pub_steering_factors_->publish(steering_factor_array);
-  }
-
-  void publishVelocityFactor()
-  {
-    VelocityFactorArray velocity_factor_array;
-    velocity_factor_array.header.frame_id = "map";
-    velocity_factor_array.header.stamp = node_->now();
-
-    for (const auto & m : observers_) {
-      if (m.expired()) {
-        continue;
-      }
-
-      const auto velocity_factor = m.lock()->get_velocity_factor();
-      if (velocity_factor.behavior != PlanningBehavior::UNKNOWN) {
-        velocity_factor_array.factors.emplace_back(velocity_factor);
-      }
-    }
-
-    pub_velocity_factors_->publish(velocity_factor_array);
-  }
+  void publish_planning_factors() { planning_factor_interface_->publish(); }
 
   void publishVirtualWall() const
   {
-    using autoware::universe_utils::appendMarkerArray;
+    using autoware_utils::append_marker_array;
 
     MarkerArray markers{};
 
@@ -172,15 +130,15 @@ public:
       for (const auto & [opt_pose, create_virtual_wall] : pose_and_func_vec) {
         if (!!opt_pose) {
           const auto detail = opt_pose.value().detail;
-          const auto text = m.lock()->name() + (detail.empty() ? "" : " (" + detail + ")");
+          const auto text = m.lock()->name() + (detail.empty() ? "" : " \n(" + detail + ")");
           const auto virtual_wall = create_virtual_wall(
             opt_pose.value().pose, text, rclcpp::Clock().now(), marker_id, 0.0, "", true);
-          appendMarkerArray(virtual_wall, &markers);
+          append_marker_array(virtual_wall, &markers);
         }
       }
 
       const auto module_specific_wall = m.lock()->getModuleVirtualWall();
-      appendMarkerArray(module_specific_wall, &markers);
+      append_marker_array(module_specific_wall, &markers);
 
       m.lock()->resetWallPoses();
     }
@@ -190,7 +148,7 @@ public:
 
   void publishMarker() const
   {
-    using autoware::universe_utils::appendMarkerArray;
+    using autoware_utils::append_marker_array;
 
     MarkerArray info_markers{};
     MarkerArray debug_markers{};
@@ -223,9 +181,9 @@ public:
     }
 
     if (observers_.empty() && idle_module_ptr_ != nullptr) {
-      appendMarkerArray(idle_module_ptr_->getInfoMarkers(), &info_markers);
-      appendMarkerArray(idle_module_ptr_->getDebugMarkers(), &debug_markers);
-      appendMarkerArray(idle_module_ptr_->getDrivableLanesMarkers(), &drivable_lanes_markers);
+      append_marker_array(idle_module_ptr_->getInfoMarkers(), &info_markers);
+      append_marker_array(idle_module_ptr_->getDebugMarkers(), &debug_markers);
+      append_marker_array(idle_module_ptr_->getDrivableLanesMarkers(), &drivable_lanes_markers);
     }
 
     pub_info_marker_->publish(info_markers);
@@ -304,11 +262,7 @@ protected:
 
   rclcpp::Publisher<MarkerArray>::SharedPtr pub_drivable_lanes_;
 
-  rclcpp::Publisher<SteeringFactorArray>::SharedPtr pub_steering_factors_;
-
-  rclcpp::Publisher<VelocityFactorArray>::SharedPtr pub_velocity_factors_;
-
-  rclcpp::Publisher<universe_utils::ProcessingTimeDetail>::SharedPtr pub_processing_time_;
+  rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr pub_processing_time_;
 
   std::string name_;
 
@@ -317,6 +271,8 @@ protected:
   std::vector<SceneModuleObserver> observers_;
 
   std::unique_ptr<SceneModuleInterface> idle_module_ptr_;
+
+  std::shared_ptr<PlanningFactorInterface> planning_factor_interface_;
 
   std::unordered_map<std::string, std::shared_ptr<RTCInterface>> rtc_interface_ptr_map_;
 

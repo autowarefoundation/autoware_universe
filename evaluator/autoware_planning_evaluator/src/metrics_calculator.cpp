@@ -1,4 +1,4 @@
-// Copyright 2021 Tier IV, Inc.
+// Copyright 2025 Tier IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,11 +20,11 @@
 #include "autoware/planning_evaluator/metrics/obstacle_metrics.hpp"
 #include "autoware/planning_evaluator/metrics/stability_metrics.hpp"
 #include "autoware/planning_evaluator/metrics/trajectory_metrics.hpp"
-#include "autoware/universe_utils/geometry/geometry.hpp"
+#include "autoware_utils/geometry/geometry.hpp"
 namespace planning_diagnostics
 {
 std::optional<Accumulator<double>> MetricsCalculator::calculate(
-  const Metric metric, const Trajectory & traj) const
+  const Metric metric, const Trajectory & traj, const double vehicle_length_m) const
 {
   // Functions to calculate trajectory metrics
   switch (metric) {
@@ -34,6 +34,8 @@ std::optional<Accumulator<double>> MetricsCalculator::calculate(
       return metrics::calcTrajectoryInterval(traj);
     case Metric::relative_angle:
       return metrics::calcTrajectoryRelativeAngle(traj, parameters.trajectory.min_point_dist_m);
+    case Metric::resampled_relative_angle:
+      return metrics::calcTrajectoryResampledRelativeAngle(traj, vehicle_length_m);
     case Metric::length:
       return metrics::calcTrajectoryLength(traj);
     case Metric::duration:
@@ -50,8 +52,11 @@ std::optional<Accumulator<double>> MetricsCalculator::calculate(
       return metrics::calcYawDeviation(reference_trajectory_, traj);
     case Metric::velocity_deviation:
       return metrics::calcVelocityDeviation(reference_trajectory_, traj);
-    case Metric::lateral_trajectory_displacement:
-      return metrics::calcLateralTrajectoryDisplacement(previous_trajectory_, traj, ego_pose_);
+    case Metric::lateral_trajectory_displacement_local:
+      return metrics::calcLocalLateralTrajectoryDisplacement(previous_trajectory_, traj, ego_pose_);
+    case Metric::lateral_trajectory_displacement_lookahead:
+      return metrics::calcLookaheadLateralTrajectoryDisplacement(
+        previous_trajectory_, traj, ego_odometry_, parameters.trajectory.evaluation_time_s);
     case Metric::stability_frechet:
       return metrics::calcFrechetDistance(
         metrics::utils::get_lookahead_trajectory(
@@ -68,9 +73,6 @@ std::optional<Accumulator<double>> MetricsCalculator::calculate(
         metrics::utils::get_lookahead_trajectory(
           traj, ego_pose_, parameters.trajectory.lookahead.max_dist_m,
           parameters.trajectory.lookahead.max_time_s));
-    case Metric::trajectory_lateral_displacement:
-      return metrics::calcTrajectoryLateralDisplacement(
-        previous_trajectory_, traj, ego_odometry_, parameters.trajectory.evaluation_time_s);
     case Metric::obstacle_distance:
       return metrics::calcDistanceToObstacle(dynamic_objects_, traj);
     case Metric::obstacle_ttc:

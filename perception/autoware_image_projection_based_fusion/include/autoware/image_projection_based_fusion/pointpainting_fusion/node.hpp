@@ -23,6 +23,8 @@
 #include <autoware/image_projection_based_fusion/utils/utils.hpp>
 #include <autoware/lidar_centerpoint/centerpoint_trt.hpp>
 #include <autoware/lidar_centerpoint/detection_class_remapper.hpp>
+#include <autoware_utils/ros/diagnostics_interface.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
 
 #include <map>
 #include <memory>
@@ -41,26 +43,27 @@ inline bool isInsideBbox(
          proj_y >= roi.y_offset * zc && proj_y <= (roi.y_offset + roi.height) * zc;
 }
 
-class PointPaintingFusionNode
-: public FusionNode<sensor_msgs::msg::PointCloud2, DetectedObjects, DetectedObjectsWithFeature>
+class PointPaintingFusionNode : public FusionNode<PointCloudMsgType, RoiMsgType, DetectedObjects>
 {
 public:
   explicit PointPaintingFusionNode(const rclcpp::NodeOptions & options);
 
-protected:
-  void preprocess(sensor_msgs::msg::PointCloud2 & pointcloud_msg) override;
+private:
+  void preprocess(PointCloudMsgType & pointcloud_msg) override;
 
-  void fuseOnSingleImage(
-    const sensor_msgs::msg::PointCloud2 & input_pointcloud_msg, const std::size_t image_id,
-    const DetectedObjectsWithFeature & input_roi_msg,
-    sensor_msgs::msg::PointCloud2 & painted_pointcloud_msg) override;
+  void fuse_on_single_image(
+    const PointCloudMsgType & input_pointcloud_msg, const Det2dStatus<RoiMsgType> & det2d_status,
+    const RoiMsgType & input_rois_msg, PointCloudMsgType & painted_pointcloud_msg) override;
 
-  void postprocess(sensor_msgs::msg::PointCloud2 & painted_pointcloud_msg) override;
+  void postprocess(
+    const PointCloudMsgType & painted_pointcloud_msg, DetectedObjects & output_msg) override;
 
-  rclcpp::Publisher<DetectedObjects>::SharedPtr obj_pub_ptr_;
+  void diagnosePointPaintingProcessingTime(diagnostic_updater::DiagnosticStatusWrapper & stat);
+
+  rclcpp::Publisher<PointCloudMsgType>::SharedPtr painted_point_pub_ptr_;
+  std::unique_ptr<autoware_utils::DiagnosticsInterface> diagnostics_interface_ptr_;
 
   int omp_num_threads_{1};
-  float score_threshold_{0.0};
   std::vector<std::string> class_names_;
   std::map<std::string, float> class_index_;
   std::map<std::string, std::function<bool(int)>> isClassTable_;
@@ -73,7 +76,13 @@ protected:
 
   std::unique_ptr<image_projection_based_fusion::PointPaintingTRT> detector_ptr_{nullptr};
 
-  bool out_of_scope(const DetectedObjects & obj) override;
+  // for diagnostics
+  double max_allowed_processing_time_ms_;
+  double max_acceptable_consecutive_delay_ms_;
+  // set as optional to avoid sending error diagnostics before the node starts processing
+  std::optional<double> last_processing_time_ms_;
+  std::optional<rclcpp::Time> last_in_time_processing_timestamp_;
+  diagnostic_updater::Updater diagnostic_processing_time_updater_{this};
 };
 }  // namespace autoware::image_projection_based_fusion
 #endif  // AUTOWARE__IMAGE_PROJECTION_BASED_FUSION__POINTPAINTING_FUSION__NODE_HPP_

@@ -18,7 +18,8 @@
 #include "parameters.hpp"
 #include "types.hpp"
 
-#include <autoware/universe_utils/ros/transform_listener.hpp>
+#include <autoware/motion_velocity_planner_common/planner_data.hpp>
+#include <autoware_utils/ros/transform_listener.hpp>
 
 #include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <geometry_msgs/msg/pose.hpp>
@@ -163,7 +164,7 @@ polygon_t createObjectPolygon(
 /// @param [in] min_velocity objects with velocity lower will be ignored
 /// @return polygons of the objects
 multi_polygon_t createObjectPolygons(
-  const autoware_perception_msgs::msg::PredictedObjects & objects, const double buffer,
+  const std::vector<std::shared_ptr<PlannerData::Object>> & objects, const double buffer,
   const double min_velocity);
 
 /// @brief add obstacles obtained from sensors to the given Obstacles object
