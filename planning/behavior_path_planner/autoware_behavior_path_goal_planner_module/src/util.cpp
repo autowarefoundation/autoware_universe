@@ -199,7 +199,15 @@ lanelet::ConstLanelets getPullOverLanes(
     return route_handler.get_shoulder_lanelet_sequence(
       outermost_lane, backward_distance_with_buffer, forward_distance);
   }
-  return {outermost_lane};
+
+  const auto & route_lane_sequence = route_handler.getLaneletSequence(
+    outermost_lane, backward_distance_with_buffer, forward_distance);
+
+  if (route_lane_sequence.empty()) {
+    return {outermost_lane};
+  }
+
+  return route_lane_sequence;
 }
 
 static double getOffsetToLanesBoundary(
