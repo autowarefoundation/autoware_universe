@@ -97,11 +97,11 @@ lanelet::Ids get_predicted_path_lanelet_ids(
 
   // initial search states starting from the first possible lanelets
   const auto & start_position = predicted_path.path.front().position;
-  const lanelet::BasicPoint2d search_point(start_position.x, start_position.y);
+  const lanelet::BasicPoint2d start_point(start_position.x, start_position.y);
   const auto initial_lanelets =
-    route_handler.getLaneletMapPtr()->laneletLayer.search({search_point, search_point});
+    route_handler.getLaneletMapPtr()->laneletLayer.search({start_point, start_point});
   for (const auto & start_lanelet : initial_lanelets) {
-    if (lanelet::geometry::within(search_point, get_lanelet_polygon(start_lanelet.id()))) {
+    if (lanelet::geometry::within(start_point, get_lanelet_polygon(start_lanelet.id()))) {
       SearchState ss;
       ss.lanelet_id = start_lanelet.id();
       ss.current_idx = 1UL;
@@ -117,9 +117,9 @@ lanelet::Ids get_predicted_path_lanelet_ids(
     SearchState new_state;
     new_state.path_ids = current_state.path_ids;
     const auto & p = predicted_path.path[current_state.current_idx].position;
-    const lanelet::BasicPoint2d search_point(p.x, p.y);
+    const lanelet::BasicPoint2d point(p.x, p.y);
 
-    if (lanelet::geometry::within(search_point, get_lanelet_polygon(current_state.lanelet_id))) {
+    if (lanelet::geometry::within(point, get_lanelet_polygon(current_state.lanelet_id))) {
       new_state.lanelet_id = current_state.lanelet_id;
       new_state.already_entered_lanelet = true;
       if (!current_state.already_entered_lanelet) {
