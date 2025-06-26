@@ -19,8 +19,6 @@
 
 #include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
 
-#include "autoware/multi_object_tracker/tracker/motion_model/motion_model_base.hpp"
-
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <autoware_utils/math/normalization.hpp>
@@ -89,11 +87,12 @@ bool BicycleMotionModel::initialize(
   const double & slip, const double & slip_cov, const double & length)
 {
   // initialize state vector X
-  Eigen::MatrixXd X(DIM, 1);
+  StateVec X;
   X << x, y, yaw, vel, slip;
 
   // initialize covariance matrix P
-  Eigen::MatrixXd P = Eigen::MatrixXd::Zero(DIM, DIM);
+  StateMat P;
+  P.setZero();
   P(IDX::X, IDX::X) = pose_cov[XYZRPY_COV_IDX::X_X];
   P(IDX::Y, IDX::Y) = pose_cov[XYZRPY_COV_IDX::Y_Y];
   P(IDX::YAW, IDX::YAW) = pose_cov[XYZRPY_COV_IDX::YAW_YAW];
@@ -116,14 +115,14 @@ bool BicycleMotionModel::updateStatePose(
   constexpr int DIM_Y = 2;
 
   // update state
-  Eigen::MatrixXd Y(DIM_Y, 1);
+  Eigen::Matrix<double, DIM_Y, 1> Y;
   Y << x, y;
 
-  Eigen::MatrixXd C = Eigen::MatrixXd::Zero(DIM_Y, DIM);
+  Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
   C(0, IDX::X) = 1.0;
   C(1, IDX::Y) = 1.0;
 
-  Eigen::MatrixXd R = Eigen::MatrixXd::Zero(DIM_Y, DIM_Y);
+  Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
   R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
   R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
   R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X];
@@ -154,15 +153,15 @@ bool BicycleMotionModel::updateStatePoseHead(
   }
 
   // update state
-  Eigen::MatrixXd Y(DIM_Y, 1);
+  Eigen::Matrix<double, DIM_Y, 1> Y;
   Y << x, y, fixed_yaw;
 
-  Eigen::MatrixXd C = Eigen::MatrixXd::Zero(DIM_Y, DIM);
+  Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
   C(0, IDX::X) = 1.0;
   C(1, IDX::Y) = 1.0;
   C(2, IDX::YAW) = 1.0;
 
-  Eigen::MatrixXd R = Eigen::MatrixXd::Zero(DIM_Y, DIM_Y);
+  Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
   R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
   R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
   R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X];
@@ -187,22 +186,24 @@ bool BicycleMotionModel::updateStatePoseVel(
   constexpr int DIM_Y = 3;
 
   // update state
-  Eigen::MatrixXd Y(DIM_Y, 1);
+  Eigen::Matrix<double, DIM_Y, 1> Y;
   Y << x, y, vel;
 
-  Eigen::MatrixXd C = Eigen::MatrixXd::Zero(DIM_Y, DIM);
+  Eigen::Matrix<double, DIM_Y, 5> C;
+  C.setZero();
   C(0, IDX::X) = 1.0;
   C(1, IDX::Y) = 1.0;
   C(2, IDX::VEL) = 1.0;
 
-  Eigen::MatrixXd R = Eigen::MatrixXd::Zero(DIM_Y, DIM_Y);
+  Eigen::Matrix<double, DIM_Y, DIM_Y> R;
+  R.setZero();
   R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
   R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
   R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X];
   R(1, 1) = pose_cov[XYZRPY_COV_IDX::Y_Y];
   R(2, 2) = twist_cov[XYZRPY_COV_IDX::X_X];
 
-  return ekf_.update(Y, C, R);
+  return ekf_.update<DIM_Y>(Y, C, R);
 }
 
 bool BicycleMotionModel::updateStatePoseHeadVel(
@@ -228,16 +229,16 @@ bool BicycleMotionModel::updateStatePoseHeadVel(
   }
 
   // update state
-  Eigen::MatrixXd Y(DIM_Y, 1);
+  Eigen::Matrix<double, DIM_Y, 1> Y;
   Y << x, y, fixed_yaw, vel;
 
-  Eigen::MatrixXd C = Eigen::MatrixXd::Zero(DIM_Y, DIM);
+  Eigen::Matrix<double, DIM_Y, DIM> C = Eigen::Matrix<double, DIM_Y, DIM>::Zero();
   C(0, IDX::X) = 1.0;
   C(1, IDX::Y) = 1.0;
   C(2, IDX::YAW) = 1.0;
   C(3, IDX::VEL) = 1.0;
 
-  Eigen::MatrixXd R = Eigen::MatrixXd::Zero(DIM_Y, DIM_Y);
+  Eigen::Matrix<double, DIM_Y, DIM_Y> R = Eigen::Matrix<double, DIM_Y, DIM_Y>::Zero();
   R(0, 0) = pose_cov[XYZRPY_COV_IDX::X_X];
   R(0, 1) = pose_cov[XYZRPY_COV_IDX::X_Y];
   R(1, 0) = pose_cov[XYZRPY_COV_IDX::Y_X];
@@ -254,8 +255,8 @@ bool BicycleMotionModel::updateStatePoseHeadVel(
 
 bool BicycleMotionModel::limitStates()
 {
-  Eigen::MatrixXd X_t(DIM, 1);
-  Eigen::MatrixXd P_t(DIM, DIM);
+  StateVec X_t;
+  StateMat P_t;
   ekf_.getX(X_t);
   ekf_.getP(P_t);
 
@@ -294,8 +295,8 @@ bool BicycleMotionModel::adjustPosition(const double & x, const double & y)
   if (!checkInitialized()) return false;
 
   // adjust position
-  Eigen::MatrixXd X_t(DIM, 1);
-  Eigen::MatrixXd P_t(DIM, DIM);
+  StateVec X_t;
+  StateMat P_t;
   ekf_.getX(X_t);
   ekf_.getP(P_t);
   X_t(IDX::X) += x;
@@ -333,7 +334,7 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
    */
 
   // Current state vector X t
-  Eigen::MatrixXd X_t(DIM, 1);
+  StateVec X_t;
   ekf.getX(X_t);
 
   const double cos_yaw = std::cos(X_t(IDX::YAW) + X_t(IDX::SLIP));
@@ -348,7 +349,7 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   const double vv_dtdt_lr = vel * vel * dt * dt / lr_;
 
   // Predict state vector X t+1
-  Eigen::MatrixXd X_next_t(DIM, 1);  // predicted state
+  StateVec X_next_t;
   X_next_t(IDX::X) =
     X_t(IDX::X) + vel * cos_yaw * dt - 0.5 * vel * sin_slip * w_dtdt;  // dx = v * cos(yaw) * dt
   X_next_t(IDX::Y) =
@@ -360,7 +361,8 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   X_next_t(IDX::SLIP) = X_t(IDX::SLIP) * decay_rate;  // slip_angle = asin(lr * w / v)
 
   // State transition matrix A
-  Eigen::MatrixXd A = Eigen::MatrixXd::Identity(DIM, DIM);
+  ProcessMat A;
+  A.setIdentity();
   A(IDX::X, IDX::YAW) = -vel * sin_yaw * dt - 0.5 * vel * cos_yaw * w_dtdt;
   A(IDX::X, IDX::VEL) = cos_yaw * dt - sin_yaw * w_dtdt;
   A(IDX::X, IDX::SLIP) =
@@ -410,7 +412,8 @@ bool BicycleMotionModel::predictStateStep(const double dt, KalmanFilter & ekf) c
   const double q_cov_vel = motion_params_.q_cov_acc_long * dt2;
   const double q_cov_slip = q_cov_slip_rate * dt2;
 
-  Eigen::MatrixXd Q = Eigen::MatrixXd::Zero(DIM, DIM);
+  StateMat Q;
+  Q.setZero();
   // Rotate the covariance matrix according to the vehicle yaw
   // because q_cov_x and y are in the vehicle coordinate system.
   Q(IDX::X, IDX::X) = (q_cov_x * cos_yaw * cos_yaw + q_cov_y * sin_yaw * sin_yaw);
@@ -434,8 +437,8 @@ bool BicycleMotionModel::getPredictedState(
   geometry_msgs::msg::Twist & twist, std::array<double, 36> & twist_cov) const
 {
   // get predicted state
-  Eigen::MatrixXd X(DIM, 1);
-  Eigen::MatrixXd P(DIM, DIM);
+  StateVec X;
+  StateMat P;
   if (!MotionModel::getPredictedState(time, X, P)) {
     return false;
   }
@@ -475,14 +478,14 @@ bool BicycleMotionModel::getPredictedState(
   pose_cov[XYZRPY_COV_IDX::PITCH_PITCH] = pp_cov;
 
   // set twist covariance
-  Eigen::MatrixXd cov_jacob(3, 2);
+  Eigen::Matrix<double, 3, 2> cov_jacob;
   cov_jacob << std::cos(X(IDX::SLIP)), -X(IDX::VEL) * std::sin(X(IDX::SLIP)),
     std::sin(X(IDX::SLIP)), X(IDX::VEL) * std::cos(X(IDX::SLIP)), std::sin(X(IDX::SLIP)) / lr_,
     X(IDX::VEL) * std::cos(X(IDX::SLIP)) / lr_;
-  Eigen::MatrixXd cov_twist(2, 2);
+  Eigen::Matrix2d cov_twist;
   cov_twist << P(IDX::VEL, IDX::VEL), P(IDX::VEL, IDX::SLIP), P(IDX::SLIP, IDX::VEL),
     P(IDX::SLIP, IDX::SLIP);
-  Eigen::MatrixXd twist_cov_mat = cov_jacob * cov_twist * cov_jacob.transpose();
+  Eigen::Matrix3d twist_cov_mat = cov_jacob * cov_twist * cov_jacob.transpose();
   constexpr double vz_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
   constexpr double wx_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative
   constexpr double wy_cov = 0.1 * 0.1;  // TODO(yukkysaito) Currently tentative

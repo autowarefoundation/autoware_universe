@@ -24,8 +24,6 @@
 #include "autoware/multi_object_tracker/tracker/model/tracker_base.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/bicycle_motion_model.hpp"
 
-#include <autoware/kalman_filter/kalman_filter.hpp>
-
 namespace autoware::multi_object_tracker
 {
 
