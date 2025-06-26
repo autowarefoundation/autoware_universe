@@ -89,12 +89,6 @@ lanelet::Ids get_predicted_path_lanelet_ids(
   if (predicted_path.path.empty()) {
     return followed_ids;
   }
-
-  const auto & start_point = predicted_path.path.front().position;
-  const lanelet::BasicPoint2d search_point(start_point.x, start_point.y);
-  const auto initial_lanelets =
-    route_handler.getLaneletMapPtr()->laneletLayer.search({search_point, search_point});
-
   struct SearchState
   {
     lanelet::Id lanelet_id{};              // current lanelet considered
@@ -115,6 +109,10 @@ lanelet::Ids get_predicted_path_lanelet_ids(
   };
 
   // initial search states starting from the first possible lanelets
+  const auto & start_position = predicted_path.path.front().position;
+  const lanelet::BasicPoint2d search_point(start_position.x, start_position.y);
+  const auto initial_lanelets =
+    route_handler.getLaneletMapPtr()->laneletLayer.search({search_point, search_point});
   for (const auto & start_lanelet : initial_lanelets) {
     if (lanelet::geometry::within(search_point, get_lanelet_polygon(start_lanelet.id()))) {
       SearchState ss;
@@ -125,6 +123,7 @@ lanelet::Ids get_predicted_path_lanelet_ids(
       search_stack.push(ss);
     }
   }
+
   while (!search_stack.empty()) {
     const auto current_state = search_stack.top();
     search_stack.pop();
