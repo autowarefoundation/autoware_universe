@@ -35,7 +35,7 @@
             "score_thresholds": {
               "type": "array",
               "description": "A threshold value of existence probability score, all of objects with score less than their label threshold are ignored.",
-              "default": [0.40, 0.40, 0.40, 0.40, 0.40],
+              "default": [0.4, 0.4, 0.4, 0.4, 0.4],
               "minimum": 0.0,
               "maximum": 1.0
             },
