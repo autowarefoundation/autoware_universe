@@ -37,7 +37,7 @@ public:
     subscription_ = subscription;  // to keep the reference count
   }
 
-  typename SpecType::Message::ConstSharedPtr takeLatestData()
+  typename SpecType::Message::ConstSharedPtr take()
   {
     rclcpp::MessageInfo info;
     auto data = std::make_shared<typename SpecType::Message>();
@@ -51,9 +51,9 @@ public:
     return flag ? data : nullptr;
   }
 
-  bool updateWithLatestData(typename SpecType::Message::ConstSharedPtr & ptr)
+  bool take_and_update(typename SpecType::Message::ConstSharedPtr & ptr)
   {
-    const auto msg = takeLatestData();
+    const auto msg = take();
     if (!msg) {
       return false;
     }
@@ -61,9 +61,9 @@ public:
     return true;
   }
 
-  bool updateWithLatestData(typename SpecType::Message & ref)
+  bool take_and_update(typename SpecType::Message & ref)
   {
-    const auto msg = takeLatestData();
+    const auto msg = take();
     if (!msg) {
       return false;
     }

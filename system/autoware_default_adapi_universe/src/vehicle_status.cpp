@@ -93,7 +93,7 @@ uint8_t VehicleStatusNode::mapping(
   }
 }
 
-void VehicleNode::publish_kinematics()
+void VehicleStatusNode::publish_kinematics()
 {
   if (!kinematic_state_msgs_ || !acceleration_msgs_ || !map_projector_info_) return;
 

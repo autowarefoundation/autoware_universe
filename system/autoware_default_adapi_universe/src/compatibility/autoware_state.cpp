@@ -104,9 +104,9 @@ void AutowareStateNode::on_timer()
   };
 
   // Update each state
-  sub_localization_->updateWithLatestData(localization_state_);
-  sub_routing_->updateWithLatestData(routing_state_);
-  sub_operation_mode_->updateWithLatestData(operation_mode_state_);
+  sub_localization_->take_and_update(localization_state_);
+  sub_routing_->take_and_update(routing_state_);
+  sub_operation_mode_->take_and_update(operation_mode_state_);
 
   // Update launch state.
   if (launch_state_ == LaunchState::Initializing) {
