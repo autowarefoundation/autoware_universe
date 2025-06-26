@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- Input topics -->
+  <arg name="input/processing_time_prediction" default="/perception/object_recognition/prediction/map_based_prediction/debug/processing_time_ms"/>
+  <arg name="input/processing_time_tracking" default="/perception/object_recognition/tracking/multi_object_tracker/debug/meas_to_tracked_object_ms"/>
+  <arg name="input/validation_status" default="/planning/planning_validator/validation_status"/>
+  <arg name="input/processing_time_control" default="/control/control_system_latency"/>
+
+  <!-- Parameters -->
+  <arg name="config_file" default="$(find-pkg-share autoware_sensor_to_control_latency_checker)/config/sensor_to_control_latency_checker.param.yaml"/>
+
+  <node pkg="autoware_sensor_to_control_latency_checker" exec="autoware_sensor_to_control_latency_checker_node" name="sensor_to_control_latency_checker" output="screen">
+    <!-- Input remapping -->
+    <remap from="~/input/processing_time_prediction" to="$(var input/processing_time_prediction)"/>
+    <remap from="~/input/processing_time_tracking" to="$(var input/processing_time_tracking)"/>
+    <remap from="~/input/validation_status" to="$(var input/validation_status)"/>
+    <remap from="~/input/processing_time_control" to="$(var input/processing_time_control)"/>
+
+    <!-- Parameters -->
+    <param from="$(var config_file)"/>
+  </node>
+</launch>
