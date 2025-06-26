@@ -60,19 +60,6 @@ void update_collision_times(
 }
 
 /**
- * @brief return true if there is at least one match between the given lanelets and sorted ids
- */
-bool at_least_one_lanelet_in_common(const lanelet::ConstLanelets & lls1, const lanelet::Ids & lls2)
-{
-  for (const auto & ll : lls1) {
-    if (std::binary_search(lls2.begin(), lls2.end(), ll.id())) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/**
  * @brief Finds lanelet ids followed by a PredictedPath.
  * @details searches the lanelet routing graph for a full path of succeeding lanelets containing the
  * predicted path
@@ -168,6 +155,25 @@ lanelet::Ids get_predicted_path_lanelet_ids(
   return followed_ids;
 }
 
+/**
+ * @brief return true if there is at least one match between the given lanelets and lanelets ids
+ */
+bool at_least_one_lanelet_in_common(
+  const lanelet::ConstLanelets & out_lanelets, std::optional<lanelet::Ids> & predicted_path_ids,
+  const autoware_perception_msgs::msg::PredictedPath & predicted_path,
+  const route_handler::RouteHandler & route_handler)
+{
+  if (!predicted_path_ids.has_value()) {
+    predicted_path_ids = get_predicted_path_lanelet_ids(predicted_path, route_handler);
+  }
+  for (const auto & ll : out_lanelets) {
+    if (std::binary_search(predicted_path_ids->begin(), predicted_path_ids->end(), ll.id())) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void calculate_object_path_time_collisions(
   OutOfLaneData & out_of_lane_data,
   const autoware_perception_msgs::msg::PredictedPath & object_path,
@@ -177,7 +183,8 @@ void calculate_object_path_time_collisions(
 {
   const auto time_step = rclcpp::Duration(object_path.time_step).seconds();
   auto time = 0.0;
-  const auto object_path_lanelet_ids = get_predicted_path_lanelet_ids(object_path, route_handler);
+  std::optional<lanelet::Ids>
+    object_path_lanelet_ids;  // will be calculated only once if a collision is found
   for (const auto & object_pose : object_path.path) {
     const auto object_footprint = autoware_utils::to_polygon2d(object_pose, object_shape);
     std::vector<OutAreaNode> query_results;
@@ -189,7 +196,8 @@ void calculate_object_path_time_collisions(
       const auto & out_lanelets = out_of_lane_data.outside_points[index].overlapped_lanelets;
       if (
         !validate_predicted_paths_on_lanelets ||
-        at_least_one_lanelet_in_common(out_lanelets, object_path_lanelet_ids)) {
+        at_least_one_lanelet_in_common(
+          out_lanelets, object_path_lanelet_ids, object_path, route_handler)) {
         potential_collision_indexes.insert(index);
       }
     }
