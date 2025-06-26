@@ -29,12 +29,12 @@ namespace autoware::lidar_centerpoint
 
 struct is_score_greater
 {
-  is_score_greater(float *t) : t_(t) {}
+  is_score_greater(float * t) : t_(t) {}
 
   __device__ bool operator()(const Box3D & b) { return b.score > t_[b.label]; }
 
 private:
-  float *t_{nullptr};
+  float * t_{nullptr};
 };
 
 struct is_kept
@@ -138,10 +138,10 @@ __global__ void generateBoxes3D_kernel(
 
 PostProcessCUDA::PostProcessCUDA(const CenterPointConfig & config) : config_(config)
 {
-	// Move from host to device
-	score_thresholds_d_ = config_.score_thresholds_;
-	// Safely cast to raw pointer
-	score_thresholds_d_ptr_ = thrust::raw_pointer_cast(score_thresholds_d_.data());
+  // Move from host to device
+  score_thresholds_d_ = config_.score_thresholds_;
+  // Safely cast to raw pointer
+  score_thresholds_d_ptr_ = thrust::raw_pointer_cast(score_thresholds_d_.data());
 }
 
 // cspell: ignore divup

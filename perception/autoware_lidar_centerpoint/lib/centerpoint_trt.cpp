@@ -97,8 +97,7 @@ void CenterPointTRT::initPtr()
 
   points_aux_d_ = cuda::make_unique<float[]>(config_.cloud_capacity_ * config_.point_feature_size_);
   shuffle_indices_d_ = cuda::make_unique<unsigned int[]>(config_.cloud_capacity_);
-  
-  
+
   std::vector<unsigned int> indexes(config_.cloud_capacity_);
   std::iota(indexes.begin(), indexes.end(), 0);
 

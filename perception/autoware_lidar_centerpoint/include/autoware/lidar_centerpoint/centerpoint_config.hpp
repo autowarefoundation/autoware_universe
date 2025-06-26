@@ -61,12 +61,10 @@ public:
       head_out_vel_size_ = 4;
     }
 
-	score_thresholds_ =
-	  std::vector<float>(score_thresholds.begin(), score_thresholds.end());
+    score_thresholds_ = std::vector<float>(score_thresholds.begin(), score_thresholds.end());
 
     for (auto & score_threshold : score_thresholds_) {
-      score_threshold =
-        (score_threshold >= 0.f && score_threshold < 1.f) ? score_threshold : 0.f;
+      score_threshold = (score_threshold >= 0.f && score_threshold < 1.f) ? score_threshold : 0.f;
     }
 
     if (circle_nms_dist_threshold > 0) {

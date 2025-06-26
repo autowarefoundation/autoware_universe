@@ -21,6 +21,7 @@
 #include "cuda_runtime_api.h"
 
 #include <thrust/device_vector.h>
+
 #include <vector>
 
 namespace autoware::lidar_centerpoint
@@ -39,7 +40,7 @@ private:
   CenterPointConfig config_;
 
   thrust::device_vector<float> score_thresholds_d_;
-  float* score_thresholds_d_ptr_{nullptr};
+  float * score_thresholds_d_ptr_{nullptr};
 };
 
 }  // namespace autoware::lidar_centerpoint
