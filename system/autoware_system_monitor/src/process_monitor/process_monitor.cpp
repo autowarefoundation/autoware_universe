@@ -589,7 +589,15 @@ void ProcessMonitor::fillTaskInfo(
   ProcessInfo info;
   info.processId = std::to_string(raw_p->stat_info.pid);
   info.userName = convertUidToUserName(raw_p->status_info.real_uid);
-  info.priority = std::to_string(raw_p->stat_info.priority);
+  // For backward compatibility with the old implementation with Linux "top" command,
+  // real-time processes need exceptional handling.
+  // Linux "top" command shows priority less than -99 and more than 999 as "rt", which means
+  // "real-time".
+  if ((raw_p->stat_info.priority < -99) || (raw_p->stat_info.priority > 999)) {
+    info.priority = "rt";
+  } else {
+    info.priority = std::to_string(raw_p->stat_info.priority);
+  }
   info.niceValue = std::to_string(raw_p->stat_info.nice);
   auto virtual_image_size_kb = raw_p->stat_memory_info.size_page * page_size_kb_;
   auto resident_size_kb = raw_p->stat_memory_info.resident_page * page_size_kb_;

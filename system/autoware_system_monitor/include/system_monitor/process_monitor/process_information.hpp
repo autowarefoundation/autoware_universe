@@ -42,9 +42,9 @@ struct StatInfo
   uint64_t c_maj_flt;
   uint64_t utime_tick;
   uint64_t stime_tick;
-  uint64_t c_utime_tick;
-  uint64_t c_stime_tick;
-  uint64_t priority;
+  int64_t c_utime_tick;
+  int64_t c_stime_tick;
+  int64_t priority;
   int64_t nice;
   int32_t num_threads;
   int64_t it_real_value;    // not maintained since kernel 2.6.17
