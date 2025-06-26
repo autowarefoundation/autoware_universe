@@ -313,6 +313,8 @@ struct FilteringData
   PolygonRtree ignore_collisions_rtree;
   std::vector<universe_utils::Segment2d> cut_predicted_paths_segments;
   SegmentRtree cut_predicted_paths_rtree;
+  std::vector<universe_utils::Segment2d> strict_cut_predicted_paths_segments;
+  SegmentRtree strict_cut_predicted_paths_rtree;
 };
 using FilteringDataPerLabel = std::vector<FilteringData>;
 
