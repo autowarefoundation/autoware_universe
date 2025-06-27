@@ -70,6 +70,7 @@ message(STATUS "GPU PLATFORM: " ${CMAKE_GPU_PLATFORM})
 set(CPU_MONITOR_SOURCE
   src/cpu_monitor/cpu_monitor_base.cpp
   src/cpu_monitor/${CMAKE_CPU_PLATFORM}_cpu_monitor.cpp
+  src/cpu_monitor/cpu_usage_statistics.cpp
 )
 
 ament_auto_add_library(cpu_monitor_lib SHARED
@@ -207,15 +208,6 @@ if(BUILD_TESTING)
   ament_add_ros_isolated_gtest(test_cpu_monitor
     test/src/cpu_monitor/test_${CMAKE_CPU_PLATFORM}_cpu_monitor.cpp
     ${CPU_MONITOR_SOURCE}
-    TIMEOUT 120
-  )
-
-  ament_auto_add_executable(mpstat1
-    test/src/cpu_monitor/mpstat1.cpp
-  )
-
-  ament_auto_add_executable(mpstat2
-    test/src/cpu_monitor/mpstat2.cpp
   )
 
   target_include_directories(test_cpu_monitor
