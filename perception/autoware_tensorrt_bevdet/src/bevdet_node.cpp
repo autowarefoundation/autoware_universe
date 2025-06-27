@@ -16,10 +16,10 @@
 
 #include "autoware/tensorrt_bevdet/bevdet_node.hpp"
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <vector>
-#include <chrono>
 
 namespace autoware
 {
@@ -87,8 +87,8 @@ void TRTBEVDetNode::initModel()
   pub_boxes_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
     "~/output/boxes", rclcpp::SensorDataQoS{}.keep_last(1));
   if (debug_mode_) {
-  pub_markers_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
-    "~/output_bboxes", rclcpp::QoS{1});
+    pub_markers_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
+      "~/output_bboxes", rclcpp::QoS{1});
   }
 }
 
@@ -117,17 +117,28 @@ void TRTBEVDetNode::startImageSubscription()
   using std::placeholders::_5;
   using std::placeholders::_6;
 
-  sub_f_img_.subscribe(this, "~/input/topic_img_front", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
-  sub_b_img_.subscribe(this, "~/input/topic_img_back", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_f_img_.subscribe(
+    this, "~/input/topic_img_front", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_b_img_.subscribe(
+    this, "~/input/topic_img_back", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
 
-  sub_fl_img_.subscribe(this, "~/input/topic_img_front_left", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
-  sub_fr_img_.subscribe(this, "~/input/topic_img_front_right", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_fl_img_.subscribe(
+    this, "~/input/topic_img_front_left",
+    rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_fr_img_.subscribe(
+    this, "~/input/topic_img_front_right",
+    rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
 
-  sub_bl_img_.subscribe(this, "~/input/topic_img_back_left", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
-  sub_br_img_.subscribe(this, "~/input/topic_img_back_right", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_bl_img_.subscribe(
+    this, "~/input/topic_img_back_left",
+    rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_br_img_.subscribe(
+    this, "~/input/topic_img_back_right",
+    rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
 
   sync_ = std::make_shared<Sync>(
-    MultiCameraApproxSync(10), sub_fl_img_, sub_f_img_, sub_fr_img_, sub_bl_img_, sub_b_img_, sub_br_img_);
+    MultiCameraApproxSync(10), sub_fl_img_, sub_f_img_, sub_fr_img_, sub_bl_img_, sub_b_img_,
+    sub_br_img_);
 
   sync_->registerCallback(std::bind(&TRTBEVDetNode::callback, this, _1, _2, _3, _4, _5, _6));
 }
@@ -177,7 +188,7 @@ void TRTBEVDetNode::callback(
     }
     return img;
   };
-  
+
   imgs.emplace_back(clone_and_resize(msg_fl_img));
   imgs.emplace_back(clone_and_resize(msg_f_img));
   imgs.emplace_back(clone_and_resize(msg_fr_img));
@@ -201,7 +212,7 @@ void TRTBEVDetNode::callback(
   box3DToDetectedObjects(ego_boxes, bevdet_objects, class_names_, score_thre_, has_twist_);
 
   pub_boxes_->publish(bevdet_objects);
-  
+
   if (debug_mode_) {
     publishDebugMarkers(pub_markers_, bevdet_objects);
   }
@@ -227,10 +238,9 @@ void TRTBEVDetNode::cameraInfoCallback(int idx, const sensor_msgs::msg::CameraIn
   Eigen::Translation3f translation;
   try {
     getTransform(
-      tf_buffer_->lookupTransform("base_link", msg->header.frame_id, rclcpp::Time(0)),
-      rot, translation
-    );
-  } catch (tf2::TransformException &ex) {
+      tf_buffer_->lookupTransform("base_link", msg->header.frame_id, rclcpp::Time(0)), rot,
+      translation);
+  } catch (tf2::TransformException & ex) {
     RCLCPP_WARN(this->get_logger(), "Transform lookup failed: %s", ex.what());
     return;
   }

@@ -16,11 +16,10 @@
 #ifndef AUTOWARE__TENSORRT_BEVDET__BEVDET_NODE_HPP_
 #define AUTOWARE__TENSORRT_BEVDET__BEVDET_NODE_HPP_
 
-#include "autoware/tensorrt_bevdet/ros_utils.hpp"
 #include "autoware/tensorrt_bevdet/marker_utils.hpp"
+#include "autoware/tensorrt_bevdet/ros_utils.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_listener.h"
-#include <yaml-cpp/yaml.h>
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -32,6 +31,7 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/synchronizer.h>
+#include <yaml-cpp/yaml.h>
 
 #include <cassert>
 #include <chrono>
@@ -72,7 +72,7 @@ private:
   std::vector<std::string> imgs_name_;    ///< Names of the images
   std::vector<std::string> class_names_;  ///< Names of the object classes
 
-  camsData inference_input_;             ///< Inference inpput for camera parameters
+  camsData inference_input_;        ///< Inference inpput for camera parameters
   std::shared_ptr<BEVDet> bevdet_;  ///< Object for performing object detection
 
   uchar * imgs_dev_ = nullptr;  ///< Device pointer for storing the images
@@ -82,7 +82,7 @@ private:
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr
     pub_boxes_;  ///< Publisher for publishing the detected objects
 
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr 
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
     pub_markers_;  ///< Publisher for publishing markers for visualization
 
   // Subscribers of camera info for each camera, no need to synchronize
@@ -198,7 +198,6 @@ public:
    * @param msg The camera info message.
    */
   void cameraInfoCallback(int idx, const sensor_msgs::msg::CameraInfo::SharedPtr msg);
-
 };
 }  // namespace tensorrt_bevdet
 }  // namespace autoware
