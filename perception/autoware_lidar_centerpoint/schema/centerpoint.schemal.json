@@ -23,7 +23,7 @@
           "properties": {
             "score_thresholds": {
               "type": "array",
-              "description": "A threshold value of existence probability score, all of objects with score less than their label threshold are ignored.",
+              "description": "A threshold value of existence probability score, all of objects with score less than their label threshold are ignored. It follows the order from `class_names` in centerpoint_ml_package.schema.json.",
               "default": [0.35, 0.35, 0.35, 0.35, 0.35],
               "minimum": 0.0,
               "maximum": 1.0
