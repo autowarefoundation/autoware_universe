@@ -16,7 +16,6 @@
 
 #include "autoware/tensorrt_bevdet/bevdet_node.hpp"
 
-#include <chrono>
 #include <memory>
 #include <string>
 #include <vector>
