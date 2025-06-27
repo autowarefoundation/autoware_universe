@@ -32,6 +32,7 @@
 #include <rclcpp/duration.hpp>
 
 #include <autoware_perception_msgs/msg/object_classification.hpp>
+#include <autoware_planning_msgs/msg/detail/trajectory__struct.hpp>
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 
 #include <memory>
@@ -83,6 +84,9 @@ void RunOutModule::init(rclcpp::Node & node, const std::string & module_name)
 
   objects_of_interest_marker_interface_ = std::make_unique<
     autoware::objects_of_interest_marker_interface::ObjectsOfInterestMarkerInterface>(&node, ns_);
+  planning_factor_interface_ =
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
+      &node, "mvp_run_out");
 }
 
 double calculate_keep_stop_distance_range(
@@ -155,6 +159,24 @@ void RunOutModule::publish_debug_trajectory(
   debug_trajectory_publisher_->publish(debug_trajectory);
 }
 
+void RunOutModule::add_planning_factors(
+  const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
+  const VelocityPlanningResult & result)
+{
+  geometry_msgs::msg::Pose p;
+  for (const auto & slowdown : result.slowdown_intervals) {
+    p.position = slowdown.from;
+    planning_factor_interface_->add(
+      trajectory, trajectory.front().pose, p, PlanningFactor::SLOW_DOWN, SafetyFactorArray{}, true,
+      slowdown.velocity);
+  }
+  for (const auto & stop : result.stop_points) {
+    p.position = stop;
+    planning_factor_interface_->add(
+      trajectory, trajectory.front().pose, p, PlanningFactor::STOP, SafetyFactorArray{}, true, 0.0);
+  }
+}
+
 VelocityPlanningResult RunOutModule::plan(
   [[maybe_unused]] const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> &,
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & smoothed_trajectory_points,
@@ -213,6 +235,7 @@ VelocityPlanningResult RunOutModule::plan(
   virtual_wall_marker_creator.add_virtual_walls(run_out::create_virtual_walls(
     result, smoothed_trajectory_points, planner_data->vehicle_info_.max_longitudinal_offset_m));
   virtual_wall_publisher_->publish(virtual_wall_marker_creator.create_markers(now));
+  add_planning_factors(smoothed_trajectory_points, result);
   if (debug_publisher_->get_subscription_count() > 0) {
     const auto & filtering_data_to_publish =
       filtering_data[run_out::Parameters::string_to_label(params_.debug.object_label)];
