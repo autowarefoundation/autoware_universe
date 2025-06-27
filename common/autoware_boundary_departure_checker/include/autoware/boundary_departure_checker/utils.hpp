@@ -412,17 +412,16 @@ DeparturePoints get_departure_points(
   const double th_dist_hysteresis_m, const double lon_offset_m);
 
 /**
- * @brief Get nearby uncrossable linestrings around a given pose.
+ * @brief Find nearby uncrossable linestrings around the given pose.
  *
- * Searches the linestring layer for geometry within a square bounding box
- * centered at the given ego pose. Only linestrings with a type included
- * in the provided uncrossable boundary types are returned.
+ * Searches for linestrings within a square area centered at the ego pose.
+ * Filters results to include only those tagged with uncrossable boundary types.
  *
- * @param linestring_layer Layer containing all linestrings in the map.
- * @param ego_pose Reference pose to define the search area.
- * @param search_distance Search range around the ego pose (in meters).
+ * @param lanelet_map_ptr Shared pointer to the lanelet map.
+ * @param ego_pose Center of the search area.
+ * @param search_distance Distance from the pose to define the square search area (in meters).
  * @param uncrossable_boundary_types List of boundary type tags considered uncrossable.
- * @return Vector of nearby linestrings that are tagged as uncrossable.
+ * @return List of uncrossable linestrings near the given pose, or an error string if none found.
  */
 tl::expected<std::vector<lanelet::LineString3d>, std::string> get_uncrossable_linestrings_near_pose(
   const lanelet::LaneletMapPtr & lanelet_map_ptr, const Pose & ego_pose,
