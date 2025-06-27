@@ -41,7 +41,7 @@ void Compatibility::on_control(const Control & msg)
   if (adapi_pause_->is_paused()) {
     out.longitudinal.velocity = std::min(0.0f, out.longitudinal.velocity);
     out.longitudinal.acceleration =
-      std::max(stop_hold_acceleration_, out.longitudinal.acceleration);
+      std::min(stop_hold_acceleration_, out.longitudinal.acceleration);
   }
 
   CommandBridge::on_control(out);
