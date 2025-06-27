@@ -2241,7 +2241,8 @@ lanelet::ConstLanelets getAdjacentLane(
     }
   }
 
-  for (const auto & lane : lanes) {
+  for (std::size_t i = 0; i < lanes.size(); ++i) {
+    const auto & lane = lanes[i];
     for (const auto & next_lane : rh->getNextLanelets(lane)) {
       if (!exist(next_lane.id())) {
         lanes.push_back(next_lane);
