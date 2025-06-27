@@ -20,8 +20,6 @@
 #include "cuda.h"
 #include "cuda_runtime_api.h"
 
-#include <thrust/device_vector.h>
-
 #include <vector>
 
 namespace autoware::lidar_centerpoint
@@ -29,7 +27,7 @@ namespace autoware::lidar_centerpoint
 class PostProcessCUDA
 {
 public:
-  explicit PostProcessCUDA(const CenterPointConfig & config);
+  explicit PostProcessCUDA(const CenterPointConfig & config, cudaStream_t & stream);
 
   cudaError_t generateDetectedBoxes3D_launch(
     const float * out_heatmap, const float * out_offset, const float * out_z, const float * out_dim,
@@ -38,8 +36,8 @@ public:
 
 private:
   CenterPointConfig config_;
-
-  thrust::device_vector<float> score_thresholds_d_;
+  
+  cudaStream_t stream_;
   float * score_thresholds_d_ptr_{nullptr};
 };
 
