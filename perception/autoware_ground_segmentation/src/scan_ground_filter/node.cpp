@@ -248,30 +248,39 @@ void ScanGroundFilterComponent::classifyPointCloud(
 
       float radius_distance_from_gnd = pd.radius - prev_gnd_radius;
       float height_from_gnd = point_curr.z - prev_gnd_point.z;
-      float height_from_obj = point_curr.z - non_ground_cluster.getAverageHeight();
+      float height_from_obj = 0.0f;
+      if (non_ground_cluster.point_num > 0) {
+        height_from_obj = point_curr.z - non_ground_cluster.getAverageHeight();
+      }
       bool calculate_slope = true;
       bool is_point_close_to_prev =
         (points_distance <
          (pd.radius * radial_divider_angle_rad_ + split_points_distance_tolerance_));
 
-      float global_slope_ratio = point_curr.z / pd.radius;
+      if (is_point_close_to_prev) {
+        if (ground_cluster.point_num > 0) {
+          height_from_gnd = point_curr.z - ground_cluster.getAverageHeight();
+          radius_distance_from_gnd = pd.radius - ground_cluster.getAverageRadius();
+        }
+      }
+
+      float global_slope_ratio = pd.radius > 0.0f ? point_curr.z / pd.radius : 0.0f;
       // check points which is far enough from previous point
       if (global_slope_ratio > global_slope_max_ratio_) {
         point_label_curr = PointLabel::NON_GROUND;
         calculate_slope = false;
       } else if (
-        (point_label_prev == PointLabel::NON_GROUND) &&
+        (point_label_prev == PointLabel::NON_GROUND) && (non_ground_cluster.point_num > 0) &&
         (std::abs(height_from_obj) >= split_height_distance_)) {
         calculate_slope = true;
-      } else if (is_point_close_to_prev && std::abs(height_from_gnd) < split_height_distance_) {
+      } else if (
+        point_label_prev == PointLabel::GROUND && is_point_close_to_prev &&
+        std::abs(height_from_gnd) < split_height_distance_) {
         // close to the previous point, set point follow label
         point_label_curr = PointLabel::POINT_FOLLOW;
         calculate_slope = false;
       }
-      if (is_point_close_to_prev) {
-        height_from_gnd = point_curr.z - ground_cluster.getAverageHeight();
-        radius_distance_from_gnd = pd.radius - ground_cluster.getAverageRadius();
-      }
+
       if (calculate_slope) {
         // far from the previous point
         auto local_slope = std::atan2(height_from_gnd, radius_distance_from_gnd);
@@ -289,14 +298,7 @@ void ScanGroundFilterComponent::classifyPointCloud(
       }
       if (point_label_curr == PointLabel::NON_GROUND) {
         out_no_ground_indices.indices.push_back(pd.data_index);
-      } else if (  // NOLINT
-        (point_label_prev == PointLabel::NON_GROUND) &&
-        (point_label_curr == PointLabel::POINT_FOLLOW)) {
-        point_label_curr = PointLabel::NON_GROUND;
-        out_no_ground_indices.indices.push_back(pd.data_index);
-      } else if (  // NOLINT
-        (point_label_prev == PointLabel::GROUND) &&
-        (point_label_curr == PointLabel::POINT_FOLLOW)) {
+      } else if (point_label_curr == PointLabel::POINT_FOLLOW) {
         point_label_curr = PointLabel::GROUND;
       } else {
       }
