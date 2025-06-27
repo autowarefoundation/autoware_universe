@@ -266,11 +266,12 @@ void ControlEvaluatorNode::AddBoundaryDistanceMetricMsg(
 void ControlEvaluatorNode::AddUncrossableBoundaryDistanceMetricMsg(const Pose & ego_pose)
 {
   namespace bdc_utils = autoware::boundary_departure_checker::utils;
-  constexpr auto extra_margin{5.0};
+
+  constexpr auto search_dist_offset{5.0};  // Extra range to include slightly farther boundaries
 
   const auto search_distance =
     std::max(vehicle_info_.max_longitudinal_offset_m, vehicle_info_.max_lateral_offset_m) +
-    extra_margin;
+    search_dist_offset;
 
   const auto nearby_uncrossable_lines_opt = bdc_utils::get_uncrossable_linestrings_near_pose(
     route_handler_.getLaneletMapPtr(), ego_pose, search_distance);
