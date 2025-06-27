@@ -283,6 +283,10 @@ double DataAssociation::calculateScore(
   constexpr double mahalanobis_dist_threshold =
     11.62;  // This is an empirical value corresponding to the 99.6% confidence level
             // for a chi-square distribution with 2 degrees of freedom (critical value).
+<<<<<<< HEAD
+=======
+
+>>>>>>> 7a560a436 (fix: rebase error)
   if (mahalanobis_dist >= mahalanobis_dist_threshold) return INVALID_SCORE;
 
   const double min_giou = config_.min_giou_matrix(tracker_label, measurement_label);
