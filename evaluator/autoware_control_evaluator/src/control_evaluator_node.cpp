@@ -583,9 +583,8 @@ void ControlEvaluatorNode::onTimer()
       if (behavior_path) {
         AddBoundaryDistanceMetricMsg(*behavior_path, ego_pose);
       }
+      AddUncrossableBoundaryDistanceMetricMsg(ego_pose);
     }
-
-    AddUncrossableBoundaryDistanceMetricMsg(ego_pose);
   }
 
   // add steering metrics
