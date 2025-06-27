@@ -72,7 +72,7 @@ private:
   std::vector<std::string> imgs_name_;    ///< Names of the images
   std::vector<std::string> class_names_;  ///< Names of the object classes
 
-  camsData inference_input_;        ///< Inference inpput for camera parameters
+  camsData inference_input_;        ///< Inference input for camera parameters
   std::shared_ptr<BEVDet> bevdet_;  ///< Object for performing object detection
 
   uchar * imgs_dev_ = nullptr;  ///< Device pointer for storing the images

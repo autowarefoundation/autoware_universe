@@ -26,7 +26,7 @@
   <arg name="param_file" default="$(find-pkg-share autoware_tensorrt_bevdet)/config/bevdet.param.yaml"/>
 
   <arg name="precision" default="fp16" description="Precision mode (fp16 or fp32)"/>
-  <!-- supports vizulization with nuScenes when enabled -->
+  <!-- supports visualization with nuScenes when enabled -->
   <arg name="debug" default="false" description="Enable debug mode"/>
 
   <!-- bevdet node -->

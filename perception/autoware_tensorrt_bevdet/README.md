@@ -41,7 +41,7 @@ The core algorithm, named `BEVDet`, it unifies multi-view images into the perspe
 
 ## How to Use Tensorrt BEVDet Node
 
-### Prerequestics
+### Prerequisites
 
 - Tensorrt 10.8.0.43
 - CUDA 12.4
@@ -59,7 +59,7 @@ The `BEVDet` model was trained in `NuScenes` dataset for 20 epochs.
 
 ### Test Tensorrt BEVDet Node with Nuscenes
 
-1. Integerate this branch changes in your **autoware_universe/perception** directory
+1. Integrate this branch changes in your **autoware_universe/perception** directory
 
 2. Include this [bevdet_vendor pr](https://github.com/autowarefoundation/bevdet_vendor/pull/1) in **src/universe/external/bevdet_vendor** as this supports fp16 precision and api support for Tensorrt 10.x.x
 
