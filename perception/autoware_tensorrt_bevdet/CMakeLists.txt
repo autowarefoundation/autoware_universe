@@ -18,10 +18,12 @@ find_package(sensor_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(autoware_perception_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 ament_auto_add_library(${PROJECT_NAME}_component SHARED
     src/bevdet_node.cpp
     src/ros_utils.cpp
+    src/marker_utils.cpp
 )
 
 include_directories(

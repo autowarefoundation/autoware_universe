@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <chrono>
 
 namespace autoware
 {
@@ -30,6 +31,8 @@ TRTBEVDetNode::TRTBEVDetNode(const rclcpp::NodeOptions & node_options)
   // Get precision parameter
   precision_ = this->declare_parameter<std::string>("precision", "fp16");
   RCLCPP_INFO(this->get_logger(), "Using precision mode: %s", precision_.c_str());
+
+  debug_mode_ = this->declare_parameter<bool>("debug", false);
 
   // Only start camera info subscription and tf listener at the beginning
   img_n_ = this->declare_parameter<int>("data_params.CAM_NUM", 6);  // camera num 6
@@ -83,6 +86,10 @@ void TRTBEVDetNode::initModel()
 
   pub_boxes_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
     "~/output/boxes", rclcpp::SensorDataQoS{}.keep_last(1));
+  if (debug_mode_) {
+  pub_markers_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
+    "~/output_bboxes", rclcpp::QoS{1});
+  }
 }
 
 void TRTBEVDetNode::checkInitialization()
@@ -110,28 +117,17 @@ void TRTBEVDetNode::startImageSubscription()
   using std::placeholders::_5;
   using std::placeholders::_6;
 
-  sub_f_img_.subscribe(
-    this, "~/input/topic_img_front", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
-  sub_b_img_.subscribe(
-    this, "~/input/topic_img_back", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_f_img_.subscribe(this, "~/input/topic_img_front", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_b_img_.subscribe(this, "~/input/topic_img_back", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
 
-  sub_fl_img_.subscribe(
-    this, "~/input/topic_img_front_left",
-    rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
-  sub_fr_img_.subscribe(
-    this, "~/input/topic_img_front_right",
-    rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_fl_img_.subscribe(this, "~/input/topic_img_front_left", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_fr_img_.subscribe(this, "~/input/topic_img_front_right", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
 
-  sub_bl_img_.subscribe(
-    this, "~/input/topic_img_back_left",
-    rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
-  sub_br_img_.subscribe(
-    this, "~/input/topic_img_back_right",
-    rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_bl_img_.subscribe(this, "~/input/topic_img_back_left", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
+  sub_br_img_.subscribe(this, "~/input/topic_img_back_right", rclcpp::SensorDataQoS{}.keep_last(1).get_rmw_qos_profile());
 
   sync_ = std::make_shared<Sync>(
-    MultiCameraApproxSync(10), sub_fl_img_, sub_f_img_, sub_fr_img_, sub_bl_img_, sub_b_img_,
-    sub_br_img_);
+    MultiCameraApproxSync(10), sub_fl_img_, sub_f_img_, sub_fr_img_, sub_bl_img_, sub_b_img_, sub_br_img_);
 
   sync_->registerCallback(std::bind(&TRTBEVDetNode::callback, this, _1, _2, _3, _4, _5, _6));
 }
@@ -173,21 +169,21 @@ void TRTBEVDetNode::callback(
   const sensor_msgs::msg::Image::ConstSharedPtr & msg_b_img,
   const sensor_msgs::msg::Image::ConstSharedPtr & msg_br_img)
 {
-  cv::Mat img_fl, img_f, img_fr, img_bl, img_b, img_br;
   std::vector<cv::Mat> imgs;
-  img_fl = cv_bridge::toCvShare(msg_fl_img, "bgr8")->image.clone();
-  img_f = cv_bridge::toCvShare(msg_f_img, "bgr8")->image.clone();
-  img_fr = cv_bridge::toCvShare(msg_fr_img, "bgr8")->image.clone();
-  img_bl = cv_bridge::toCvShare(msg_bl_img, "bgr8")->image.clone();
-  img_b = cv_bridge::toCvShare(msg_b_img, "bgr8")->image.clone();
-  img_br = cv_bridge::toCvShare(msg_br_img, "bgr8")->image.clone();
-
-  imgs.emplace_back(img_fl);
-  imgs.emplace_back(img_f);
-  imgs.emplace_back(img_fr);
-  imgs.emplace_back(img_bl);
-  imgs.emplace_back(img_b);
-  imgs.emplace_back(img_br);
+  auto clone_and_resize = [&](const sensor_msgs::msg::Image::ConstSharedPtr & msg) -> cv::Mat {
+    cv::Mat img = cv_bridge::toCvShare(msg, "bgr8")->image.clone();
+    if (img.size() != cv::Size(img_w_, img_h_)) {
+      cv::resize(img, img, cv::Size(img_w_, img_h_));  // img_w_ = 1600, img_h_ = 900
+    }
+    return img;
+  };
+  
+  imgs.emplace_back(clone_and_resize(msg_fl_img));
+  imgs.emplace_back(clone_and_resize(msg_f_img));
+  imgs.emplace_back(clone_and_resize(msg_fr_img));
+  imgs.emplace_back(clone_and_resize(msg_bl_img));
+  imgs.emplace_back(clone_and_resize(msg_b_img));
+  imgs.emplace_back(clone_and_resize(msg_br_img));
 
   imageTransport(imgs, imgs_dev_, img_w_, img_h_);
 
@@ -205,6 +201,10 @@ void TRTBEVDetNode::callback(
   box3DToDetectedObjects(ego_boxes, bevdet_objects, class_names_, score_thre_, has_twist_);
 
   pub_boxes_->publish(bevdet_objects);
+  
+  if (debug_mode_) {
+    publishDebugMarkers(pub_markers_, bevdet_objects);
+  }
 }
 
 void TRTBEVDetNode::cameraInfoCallback(int idx, const sensor_msgs::msg::CameraInfo::SharedPtr msg)
@@ -212,9 +212,11 @@ void TRTBEVDetNode::cameraInfoCallback(int idx, const sensor_msgs::msg::CameraIn
   if (caminfo_received_[idx])
     return;  // already received;  not expected to modify because of we init the model only once
 
-  if (!initialized_) {  // get image width and height
-    img_w_ = msg->width;
-    img_h_ = msg->height;
+  if (!initialized_) {  // load image width and height from model config YAML
+    YAML::Node config = YAML::LoadFile(model_config_);
+    auto src_size = config["data_config"]["src_size"];
+    img_h_ = src_size[0].as<size_t>();  // height
+    img_w_ = src_size[1].as<size_t>();  // width
     initialized_ = true;
   }
   Eigen::Matrix3f intrinsics;
@@ -225,9 +227,10 @@ void TRTBEVDetNode::cameraInfoCallback(int idx, const sensor_msgs::msg::CameraIn
   Eigen::Translation3f translation;
   try {
     getTransform(
-      tf_buffer_->lookupTransform("base_link", msg->header.frame_id, rclcpp::Time(0)), rot,
-      translation);
-  } catch (tf2::TransformException & ex) {
+      tf_buffer_->lookupTransform("base_link", msg->header.frame_id, rclcpp::Time(0)),
+      rot, translation
+    );
+  } catch (tf2::TransformException &ex) {
     RCLCPP_WARN(this->get_logger(), "Transform lookup failed: %s", ex.what());
     return;
   }
