@@ -19,24 +19,27 @@
 #include <autoware/route_handler/route_handler.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>
+#include <autoware_utils/system/stop_watch.hpp>
 #include <rclcpp/duration.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 
+#include <boost/geometry/algorithms/detail/intersects/interface.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
 #include <boost/geometry/index/predicates.hpp>
 
 #include <lanelet2_core/Forward.h>
 #include <lanelet2_core/geometry/BoundingBox.h>
 #include <lanelet2_core/primitives/BoundingBox.h>
+#include <lanelet2_core/primitives/LineString.h>
 #include <lanelet2_core/primitives/Polygon.h>
 #include <lanelet2_routing/RoutingGraph.h>
 
 #include <algorithm>
+#include <chrono>
 #include <iterator>
 #include <limits>
 #include <stack>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -78,74 +81,92 @@ lanelet::Ids get_predicted_path_lanelet_ids(
   }
   struct SearchState
   {
-    lanelet::Id lanelet_id{};              // current lanelet considered
-    size_t current_idx{};                  // current index of the predicted path
-    bool already_entered_lanelet = false;  // whether the predicted path already entered the lanelet
-    std::vector<lanelet::Id> path_ids;     // the lanelet ids already traversed by the path
+    lanelet::Id lanelet_id{};        // current lanelet considered
+    std::set<lanelet::Id> path_ids;  // the lanelet ids already traversed by the path
   };
   std::stack<SearchState> search_stack;
 
   // avoid re-calculating the same basic polygon many times
-  std::unordered_map<lanelet::Id, lanelet::BasicPolygon2d> lanelet_polygons;
+  // std::unordered_map<lanelet::Id, lanelet::BasicPolygon2d> lanelet_polygons;
   const auto get_lanelet_polygon = [&](const lanelet::Id & id) {
-    if (lanelet_polygons.count(id) == 0UL) {
-      const auto & lanelet = route_handler.getLaneletMapPtr()->laneletLayer.get(id);
-      lanelet_polygons[id] = lanelet.polygon2d().basicPolygon();
-    }
-    return lanelet_polygons[id];
+    // if (lanelet_polygons.count(id) == 0UL) {
+    //   const auto & lanelet = route_handler.getLaneletMapPtr()->laneletLayer.get(id);
+    //   lanelet_polygons[id] = lanelet.polygon2d().basicPolygon();
+    // }
+    // return lanelet_polygons[id];
+    return route_handler.getLaneletMapPtr()->laneletLayer.get(id).polygon2d().basicPolygon();
   };
 
   // initial search states starting from the first possible lanelets
-  const auto & start_position = predicted_path.path.front().position;
-  const lanelet::BasicPoint2d start_point(start_position.x, start_position.y);
-  const auto initial_lanelets =
-    route_handler.getLaneletMapPtr()->laneletLayer.search({start_point, start_point});
-  for (const auto & start_lanelet : initial_lanelets) {
-    if (lanelet::geometry::within(start_point, get_lanelet_polygon(start_lanelet.id()))) {
-      SearchState ss;
-      ss.lanelet_id = start_lanelet.id();
-      ss.current_idx = 1UL;
-      ss.already_entered_lanelet = true;
-      ss.path_ids = {start_lanelet.id()};
-      search_stack.push(ss);
+  lanelet::BasicLineString2d ls;
+  for (const auto & p : predicted_path.path) {
+    ls.emplace_back(p.position.x, p.position.y);
+  }
+  const auto candidates =
+    route_handler.getLaneletMapPtr()->laneletLayer.search(lanelet::geometry::boundingBox2d(ls));
+  const auto final_candidates =
+    route_handler.getLaneletMapPtr()->laneletLayer.search({ls.back(), ls.back()});
+  lanelet::Ids final_ids;
+  for (const auto & final_candidate : final_candidates) {
+    if (lanelet::geometry::within(ls.back(), get_lanelet_polygon(final_candidate.id()))) {
+      final_ids.push_back(final_candidate.id());
     }
+  }
+  std::sort(final_ids.begin(), final_ids.end());
+  const auto initial_candidates =
+    route_handler.getLaneletMapPtr()->laneletLayer.search({ls.front(), ls.front()});
+  lanelet::Ids initial_ids;
+  for (const auto & initial_candidate : initial_candidates) {
+    if (lanelet::geometry::within(ls.front(), get_lanelet_polygon(initial_candidate.id()))) {
+      initial_ids.push_back(initial_candidate.id());
+    }
+  }
+  std::sort(initial_ids.begin(), initial_ids.end());
+  lanelet::Ids overlapped_lanelets = final_ids;
+  overlapped_lanelets.insert(overlapped_lanelets.end(), initial_ids.begin(), initial_ids.end());
+  for (const auto & candidate : candidates) {
+    const auto id = candidate.id();
+    // check if the id is already in the initial/final ids to avoid doing the geometry operation
+    // again
+    if (
+      !std::binary_search(initial_ids.begin(), initial_ids.end(), id) &&
+      !std::binary_search(final_ids.begin(), final_ids.end(), id) &&
+      !boost::geometry::disjoint(ls, get_lanelet_polygon(id))) {
+      overlapped_lanelets.push_back(id);
+    }
+  }
+  std::sort(overlapped_lanelets.begin(), overlapped_lanelets.end());
+
+  for (const auto initial_id : initial_ids) {
+    SearchState ss;
+    ss.lanelet_id = initial_id;
+    ss.path_ids = {initial_id};
+    search_stack.push(ss);
   }
 
   while (!search_stack.empty()) {
     const auto current_state = search_stack.top();
     search_stack.pop();
-    SearchState new_state;
-    new_state.path_ids = current_state.path_ids;
-    const auto & p = predicted_path.path[current_state.current_idx].position;
-    const lanelet::BasicPoint2d point(p.x, p.y);
-
-    if (lanelet::geometry::within(point, get_lanelet_polygon(current_state.lanelet_id))) {
-      new_state.lanelet_id = current_state.lanelet_id;
-      new_state.already_entered_lanelet = true;
-      if (!current_state.already_entered_lanelet) {
-        new_state.path_ids.push_back(current_state.lanelet_id);
-      }
-      const auto reached_end_of_path = current_state.current_idx + 1 == predicted_path.path.size();
-      if (reached_end_of_path) {
-        followed_ids.push_back(current_state.lanelet_id);
-        followed_ids.insert(
-          followed_ids.end(), current_state.path_ids.begin(), current_state.path_ids.end());
-      } else {  // continue following the predicted path
-        new_state.current_idx = current_state.current_idx + 1;
-        search_stack.push(new_state);
-      }
-    } else {
-      if (!current_state.already_entered_lanelet) {  // the path does not follow the current lanelet
-        continue;
-      }
-      // explore the next lanelets
-      new_state.current_idx = current_state.current_idx;
-      const lanelet::ConstLanelets succeeding_lanelets =
-        route_handler.getRoutingGraphPtr()->following(
-          route_handler.getLaneletsFromId(current_state.lanelet_id));
-      for (const auto & succeeding_lanelet : succeeding_lanelets) {
-        new_state.lanelet_id = succeeding_lanelet.id();
-        search_stack.push(new_state);
+    const auto is_final_lanelet =
+      std::binary_search(final_ids.begin(), final_ids.end(), current_state.lanelet_id);
+    if (is_final_lanelet) {
+      followed_ids.insert(
+        followed_ids.end(), current_state.path_ids.begin(), current_state.path_ids.end());
+      continue;
+    }
+    const lanelet::ConstLanelets succeeding_lanelets =
+      route_handler.getRoutingGraphPtr()->following(
+        route_handler.getLaneletsFromId(current_state.lanelet_id));
+    for (const auto & succeeding_lanelet : succeeding_lanelets) {
+      if (
+        std::binary_search(
+          overlapped_lanelets.begin(), overlapped_lanelets.end(), succeeding_lanelet.id()) &&
+        current_state.path_ids.count(succeeding_lanelet.id()) == 0) {
+        SearchState ss;
+        ss.lanelet_id = succeeding_lanelet.id();
+        ss.path_ids = current_state.path_ids;
+        ss.path_ids.insert(succeeding_lanelet.id());
+        search_stack.push(ss);
       }
     }
   }
@@ -164,7 +185,9 @@ bool at_least_one_lanelet_in_common(
   const route_handler::RouteHandler & route_handler)
 {
   if (!predicted_path_ids.has_value()) {
+    autoware_utils::StopWatch<std::chrono::microseconds> sw;
     predicted_path_ids = get_predicted_path_lanelet_ids(predicted_path, route_handler);
+    std::printf("PathIds calculated in %2.2fus\n", sw.toc());
   }
   for (const auto & ll : out_lanelets) {
     if (std::binary_search(predicted_path_ids->begin(), predicted_path_ids->end(), ll.id())) {
