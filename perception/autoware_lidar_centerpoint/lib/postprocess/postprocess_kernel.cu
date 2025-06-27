@@ -136,12 +136,13 @@ __global__ void generateBoxes3D_kernel(
   }
 }
 
-PostProcessCUDA::PostProcessCUDA(const CenterPointConfig & config, cudaStream_t & stream) : config_(config), stream_(stream)
+PostProcessCUDA::PostProcessCUDA(const CenterPointConfig & config, cudaStream_t & stream)
+: config_(config), stream_(stream)
 {
   // Move from host to device
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    score_thresholds_d_ptr, config_.score_thresholds_, config_.score_thresholds_.size() * sizeof(float),
-    cudaMemcpyHostToDevice, stream_));
+    score_thresholds_d_ptr, config_.score_thresholds_,
+    config_.score_thresholds_.size() * sizeof(float), cudaMemcpyHostToDevice, stream_));
 }
 
 // cspell: ignore divup

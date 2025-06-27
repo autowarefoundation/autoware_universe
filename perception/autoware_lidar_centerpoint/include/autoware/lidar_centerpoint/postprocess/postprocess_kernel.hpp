@@ -36,7 +36,7 @@ public:
 
 private:
   CenterPointConfig config_;
-  
+
   cudaStream_t stream_;
   float * score_thresholds_d_ptr_{nullptr};
 };
