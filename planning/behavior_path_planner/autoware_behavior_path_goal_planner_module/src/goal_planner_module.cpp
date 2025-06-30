@@ -226,11 +226,17 @@ LaneParkingPlanner::LaneParkingPlanner(
     if (planner_type == "SHIFT" && parameters.enable_shift_parking) {
       pull_over_planners_.push_back(std::make_shared<ShiftPullOver>(node, parameters));
     } else if (planner_type == "ARC_FORWARD" && parameters.enable_arc_forward_parking) {
-      pull_over_planners_.push_back(
-        std::make_shared<GeometricPullOver>(node, parameters, /*is_forward*/ true));
+      pull_over_planners_.push_back(std::make_shared<GeometricPullOver>(
+        node, parameters, /*is_forward*/ true, /*use_clothoid*/ false));
+    } else if (planner_type == "CLOTHOID_FORWARD" && parameters.enable_clothoid_forward_parking) {
+      pull_over_planners_.push_back(std::make_shared<GeometricPullOver>(
+        node, parameters, /*is_forward*/ true, /*use_clothoid*/ true));
     } else if (planner_type == "ARC_BACKWARD" && parameters.enable_arc_backward_parking) {
-      pull_over_planners_.push_back(
-        std::make_shared<GeometricPullOver>(node, parameters, /*is_forward*/ false));
+      pull_over_planners_.push_back(std::make_shared<GeometricPullOver>(
+        node, parameters, /*is_forward*/ false, /*use_clothoid*/ false));
+    } else if (planner_type == "CLOTHOID_BACKWARD" && parameters.enable_clothoid_backward_parking) {
+      pull_over_planners_.push_back(std::make_shared<GeometricPullOver>(
+        node, parameters, /*is_forward*/ false, /*use_clothoid*/ true));
     }
   }
 
@@ -1821,7 +1827,8 @@ PathWithLaneId GoalPlannerModule::generateStopPath(
     const double s_start = std::max(0.0, s_current - common_parameters.backward_path_length);
     const bool is_arc_backward =
       pull_over_path_opt.has_value() &&
-      pull_over_path_opt.value().type() == PullOverPlannerType::ARC_BACKWARD;
+      (pull_over_path_opt.value().type() == PullOverPlannerType::ARC_BACKWARD ||
+       pull_over_path_opt.value().type() == PullOverPlannerType::CLOTHOID_BACKWARD);
     const Pose path_end_pose =
       is_arc_backward ? pull_over_path_opt.value().start_pose() : route_handler->getGoalPose();
     const double s_end = std::clamp(

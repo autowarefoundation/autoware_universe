@@ -306,6 +306,42 @@ Generate two backward arc paths.
 | backward_parking_velocity                | [m/s] | double | velocity when backward parking                                            | -1.38         |
 | backward_parking_lane_departure_margin   | [m/s] | double | lane departure margin for front right corner of ego-vehicle when backward | 0.0           |
 
+### **clothoid parking**
+
+This method generates a pull over path with a clothoid curve, which has continuous curvature. There are two path generation methods: forward and backward.
+
+See also [[2]](https://ieeexplore.ieee.org/document/6871412) for details of the algorithm.
+
+#### clothoid forward parking
+
+Generate forward clothoid paths.
+
+![clothoid_forward_parking](./images/clothoid_forward_parking.drawio.svg)
+
+#### Parameters clothoid forward parking
+
+| Name                              | Unit  | Type   | Description                                     | Default value |
+| :-------------------------------- | :---- | :----- | :---------------------------------------------- | :------------ |
+| enable_clothoid_forward_parking   | [-]   | bool   | flag whether to enable clothoid forward parking | true          |
+| clothoid_forward_parking_velocity | [m/s] | double | velocity of forward parking                     | 2.00          |
+| forward_parking_max_steer_angle   | [m/s] | double | maximum steer angle                             | 0.4           |
+| forward_parking_steer_rate_lim    | [m/s] | double | maximum steer rate                              | 0.35          |
+
+#### clothoid backward parking (to be supported)
+
+Generate backward clothoid paths.
+
+![clothoid_backward_parking](./images/clothoid_backward_parking.drawio.svg).
+
+#### Parameters clothoid backward parking
+
+| Name                               | Unit  | Type   | Description                                      | Default value |
+| :--------------------------------- | :---- | :----- | :----------------------------------------------- | :------------ |
+| enable_clothoid_backward_parking   | [-]   | bool   | flag whether to enable clothoid backward parking | false         |
+| clothoid_backward_parking_velocity | [m/s] | double | velocity of backward parking                     | -2.00         |
+| backward_parking_max_steer_angle   | [m/s] | double | maximum steer angle                              | 0.4           |
+| backward_parking_steer_rate_lim    | [m/s] | double | maximum steer rate                               | 0.35          |
+
 ### freespace parking
 
 If the vehicle gets stuck with `LaneParkingPlanning`, `FreespaceParkingPlanner` is triggered.
