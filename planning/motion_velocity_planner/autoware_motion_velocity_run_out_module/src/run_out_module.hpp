@@ -62,6 +62,7 @@ public:
     required_subscription_info.predicted_objects = true;
     return required_subscription_info;
   }
+  void publish_planning_factor() override { planning_factor_interface_->publish(); };
 
 private:
   inline static const std::string ns_ = "run_out";
@@ -86,6 +87,10 @@ private:
   void publish_debug_trajectory(
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
     const VelocityPlanningResult & planning_result);
+  /// @brief populate the planning factors based on the module's planning result
+  void add_planning_factors(
+    const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
+    const VelocityPlanningResult & result);
 };
 }  // namespace autoware::motion_velocity_planner
 
