@@ -790,16 +790,15 @@ bool RearCollisionChecker::is_safe(DebugData & debug)
 
   {
     if (is_safe(pointcloud_objects, debug)) {
-      last_safe_time_ = now;
       if ((now - last_unsafe_time_).seconds() > p.common.off_time_buffer) {
+        last_safe_time_ = now;
         return true;
       }
+    } else if ((now - last_safe_time_).seconds() < p.common.on_time_buffer) {
+      RCLCPP_WARN(logger_, "[RCC] Momentary collision risk detected.");
+      return true;
     } else {
       last_unsafe_time_ = now;
-      RCLCPP_WARN(logger_, "[RCC] Momentary collision risk detected.");
-      if ((now - last_safe_time_).seconds() < p.common.on_time_buffer) {
-        return true;
-      }
     }
 
     {
