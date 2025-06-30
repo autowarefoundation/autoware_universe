@@ -163,6 +163,9 @@ void RunOutModule::add_planning_factors(
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
   const VelocityPlanningResult & result)
 {
+  if (trajectory.empty()) {
+    return;
+  }
   geometry_msgs::msg::Pose p;
   for (const auto & slowdown : result.slowdown_intervals) {
     p.position = slowdown.from;
