@@ -142,7 +142,7 @@ PostProcessCUDA::PostProcessCUDA(const CenterPointConfig & config, cudaStream_t 
 {
   // Move from host to device
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    score_thresholds_d_ptr, config_.score_thresholds_.data(),
+    score_thresholds_d_ptr_, config_.score_thresholds_.data(),
     config_.score_thresholds_.size() * sizeof(float), cudaMemcpyHostToDevice, stream_));
 }
 
