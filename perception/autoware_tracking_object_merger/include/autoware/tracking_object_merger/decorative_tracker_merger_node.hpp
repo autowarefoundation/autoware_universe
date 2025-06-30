@@ -25,7 +25,9 @@
 
 #include <rclcpp/rclcpp.hpp>
 
-#include "autoware_perception_msgs/msg/tracked_objects.hpp"
+#include <autoware_perception_msgs/msg/tracked_objects.hpp>
+#include <geometry_msgs/msg/point.hpp>
+#include <geometry_msgs/msg/twist.hpp>
 #include <std_msgs/msg/header.hpp>
 
 #ifdef ROS_DISTRO_GALACTIC
@@ -58,8 +60,19 @@ private:
     const std::string & prefix,
     std::unordered_map<std::string, std::unique_ptr<DataAssociation>> & data_association_map);
 
+  // Helper functions for object filtering
+  bool isVelocityInRange(const geometry_msgs::msg::Twist & twist) const;
+  bool isDistanceInRange(const geometry_msgs::msg::Point & position) const;
+  bool transformToFrame(
+    const autoware_perception_msgs::msg::TrackedObjects & input_objects,
+    const std::string & target_frame,
+    autoware_perception_msgs::msg::TrackedObjects & output_objects) const;
+
   void mainObjectsCallback(
     const autoware_perception_msgs::msg::TrackedObjects::ConstSharedPtr & main_objects);
+  bool filterSubObjects(
+    const autoware_perception_msgs::msg::TrackedObjects & objects,
+    autoware_perception_msgs::msg::TrackedObjects & filtered_objects);
   void subObjectsCallback(
     const autoware_perception_msgs::msg::TrackedObjects::ConstSharedPtr & msg);
 
@@ -80,6 +93,17 @@ private:
   void updateDiagnostics();
 
 private:
+  // Constants for object filtering
+  static constexpr double kMinVelocity = 5.0;          // [m/s]
+  static constexpr double kMaxVelocity = 150.0 / 3.6;  // [m/s]
+  static constexpr double kMinVelocitySq = kMinVelocity * kMinVelocity;
+  static constexpr double kMaxVelocitySq = kMaxVelocity * kMaxVelocity;
+
+  static constexpr double kMinDistance = 30.0;   // [m]
+  static constexpr double kMaxDistance = 500.0;  // [m]
+  static constexpr double kMinDistanceSq = kMinDistance * kMinDistance;
+  static constexpr double kMaxDistanceSq = kMaxDistance * kMaxDistance;
+
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
   rclcpp::Publisher<autoware_perception_msgs::msg::TrackedObjects>::SharedPtr merged_object_pub_;
