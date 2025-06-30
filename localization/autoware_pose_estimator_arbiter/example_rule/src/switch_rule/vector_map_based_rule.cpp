@@ -14,7 +14,11 @@
 
 #include "switch_rule/vector_map_based_rule.hpp"
 
+#if __has_include(<magic_enum/magic_enum.hpp>)
+#include <magic_enum/magic_enum.hpp>
+#else
 #include <magic_enum.hpp>
+#endif
 
 #include <memory>
 #include <string>

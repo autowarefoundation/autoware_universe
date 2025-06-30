@@ -15,7 +15,13 @@
 #include "utils.hpp"
 
 #include <autoware/trajectory/utils/closest.hpp>
+
+#if __has_include(<magic_enum/magic_enum.hpp>)
+#include <magic_enum/magic_enum.hpp>
+#else
 #include <magic_enum.hpp>
+#endif
+
 #include <range/v3/algorithm/sort.hpp>
 #include <range/v3/view.hpp>
 #include <tf2/convert.hpp>
