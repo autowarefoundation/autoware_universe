@@ -96,8 +96,8 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
 : FusionNode<PointCloudMsgType, RoiMsgType, DetectedObjects>("pointpainting_fusion", options)
 {
   omp_num_threads_ = this->declare_parameter<int>("omp_params.num_threads");
-  const auto score_thresholds = 
-  	this->declare_parameter<std::vector<double>>("post_process_params.score_thresholds");
+  const auto score_thresholds =
+    this->declare_parameter<std::vector<double>>("post_process_params.score_thresholds");
   const float circle_nms_dist_threshold = static_cast<float>(
     this->declare_parameter<double>("post_process_params.circle_nms_dist_threshold"));
   const auto yaw_norm_thresholds =
