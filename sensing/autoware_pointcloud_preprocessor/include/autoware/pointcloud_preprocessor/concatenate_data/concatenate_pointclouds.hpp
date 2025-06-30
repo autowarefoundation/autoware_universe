@@ -70,6 +70,7 @@
 
 #include <autoware_internal_debug_msgs/msg/int32_stamped.hpp>
 #include <autoware_internal_debug_msgs/msg/string_stamped.hpp>
+#include <autoware_sensing_msgs/msg/concatenated_point_cloud_info.hpp>
 #include <autoware_vehicle_msgs/msg/velocity_report.hpp>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
 #include <geometry_msgs/msg/twist_stamped.hpp>
@@ -111,6 +112,9 @@ public:
 private:
   /** \brief The output PointCloud publisher. */
   rclcpp::Publisher<PointCloud2>::SharedPtr pub_output_;
+  /** \brief The output ConcatenatedPointCloudInfo publisher. */
+  rclcpp::Publisher<autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo>::SharedPtr
+    pub_output_info_;
   /** \brief Delay Compensated PointCloud publisher*/
   std::map<std::string, rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr>
     transformed_raw_pc_publisher_map_;
@@ -149,7 +153,9 @@ private:
   std::map<std::string, double> offset_map_;
 
   void checkSyncStatus();
-  void combineClouds(sensor_msgs::msg::PointCloud2::SharedPtr & concat_cloud_ptr);
+  void combineClouds(
+    sensor_msgs::msg::PointCloud2::SharedPtr & concat_cloud_ptr,
+    autoware_sensing_msgs::msg::ConcatenatedPointCloudInfo::SharedPtr & concat_cloud_info_ptr);
   void publish();
 
   void convertToXYZIRCCloud(
