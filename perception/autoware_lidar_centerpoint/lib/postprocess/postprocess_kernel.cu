@@ -30,12 +30,12 @@ namespace autoware::lidar_centerpoint
 
 struct is_score_greater
 {
-  is_score_greater(float* t) : t_(t) {}
+  is_score_greater(float * t) : t_(t) {}
 
   __device__ bool operator()(const Box3D & b) { return b.score > t_[b.label]; }
 
 private:
-  float* t_{nullptr};
+  float * t_{nullptr};
 };
 
 struct is_kept
@@ -172,7 +172,8 @@ cudaError_t PostProcessCUDA::generateDetectedBoxes3D_launch(
 
   // suppress by score
   const auto num_det_boxes3d = thrust::count_if(
-    thrust::device, boxes3d_d.begin(), boxes3d_d.end(), is_score_greater(score_thresholds_d_ptr_.get()));
+    thrust::device, boxes3d_d.begin(), boxes3d_d.end(),
+    is_score_greater(score_thresholds_d_ptr_.get()));
   if (num_det_boxes3d == 0) {
     return cudaGetLastError();
   }
