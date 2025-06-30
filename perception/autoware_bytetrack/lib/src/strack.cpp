@@ -44,6 +44,7 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -168,13 +169,14 @@ void STrack::update(STrack & new_track, int frame_id, double classification_deca
   this->is_activated = true;
 
   // Classification update algorithm
-  // if new track label is the same, then the label will not change
+  // if new track label is the same, only update the score with decayed score or new score.
   // if new track label is different, we will:
   //       1. decay the existing score
   //       2. choose new/old label based on decayed score and new score
 
   if (this->label == new_track.label) {
-    this->score = new_track.score;  // same with existing methods
+    this->score =
+      std::max(classification_decay_constant * this->score, static_cast<double>(new_track.score));
   } else {
     this->score = this->score * classification_decay_constant;
     if (this->score < new_track.score) {
