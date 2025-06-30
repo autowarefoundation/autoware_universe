@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/lidar_centerpoint/cuda_utils.hpp"
 #include "autoware/lidar_centerpoint/postprocess/circle_nms_kernel.hpp"
 #include "autoware/lidar_centerpoint/postprocess/postprocess_kernel.hpp"
 
@@ -141,7 +142,7 @@ PostProcessCUDA::PostProcessCUDA(const CenterPointConfig & config, cudaStream_t 
 {
   // Move from host to device
   CHECK_CUDA_ERROR(cudaMemcpyAsync(
-    score_thresholds_d_ptr, config_.score_thresholds_,
+    score_thresholds_d_ptr, config_.score_thresholds_.data(),
     config_.score_thresholds_.size() * sizeof(float), cudaMemcpyHostToDevice, stream_));
 }
 
