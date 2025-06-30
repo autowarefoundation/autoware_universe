@@ -177,7 +177,10 @@ void STrack::update(STrack & new_track, int frame_id, double classification_deca
     this->score = new_track.score;  // same with existing methods
   } else {
     this->score = this->score * classification_decay_constant;
-    this->label = (this->score > new_track.score) ? this->label : new_track.label;
+    if (this->score < new_track.score) {
+      this->label = new_track.label;
+      this->score = new_track.score;
+    }
   }
 }
 
