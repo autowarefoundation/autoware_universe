@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "lanelet_filter.hpp"
+#include "lanelet_filter_base.hpp"
 
 #include "autoware/object_recognition_utils/object_recognition_utils.hpp"
 #include "autoware_lanelet2_extension/utility/message_conversion.hpp"
@@ -20,6 +20,11 @@
 #include "autoware_utils/geometry/geometry.hpp"
 
 #include <Eigen/Core>
+
+#include <autoware_perception_msgs/msg/detected_object.hpp>
+#include <autoware_perception_msgs/msg/detected_objects.hpp>
+#include <autoware_perception_msgs/msg/tracked_object.hpp>
+#include <autoware_perception_msgs/msg/tracked_objects.hpp>
 
 #include <boost/geometry/algorithms/convex_hull.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
@@ -35,6 +40,7 @@
 #include <cmath>
 #include <limits>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -44,10 +50,10 @@ namespace lanelet_filter
 {
 using TriangleMesh = std::vector<std::array<Eigen::Vector3d, 3>>;
 
-ObjectLaneletFilterNode::ObjectLaneletFilterNode(const rclcpp::NodeOptions & node_options)
-: Node("object_lanelet_filter_node", node_options),
-  tf_buffer_(this->get_clock()),
-  tf_listener_(tf_buffer_)
+template <typename ObjsMsgType, typename ObjMsgType>
+ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::ObjectLaneletFilterBase(
+  const std::string & node_name, const rclcpp::NodeOptions & node_options)
+: Node(node_name, node_options), tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_)
 {
   using std::placeholders::_1;
 
@@ -94,11 +100,10 @@ ObjectLaneletFilterNode::ObjectLaneletFilterNode(const rclcpp::NodeOptions & nod
   // Set publisher/subscriber
   map_sub_ = this->create_subscription<autoware_map_msgs::msg::LaneletMapBin>(
     "input/vector_map", rclcpp::QoS{1}.transient_local(),
-    std::bind(&ObjectLaneletFilterNode::mapCallback, this, _1));
-  object_sub_ = this->create_subscription<autoware_perception_msgs::msg::DetectedObjects>(
-    "input/object", rclcpp::QoS{1}, std::bind(&ObjectLaneletFilterNode::objectCallback, this, _1));
-  object_pub_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
-    "output/object", rclcpp::QoS{1});
+    std::bind(&ObjectLaneletFilterBase::mapCallback, this, _1));
+  object_sub_ = this->create_subscription<ObjsMsgType>(
+    "input/object", rclcpp::QoS{1}, std::bind(&ObjectLaneletFilterBase::objectCallback, this, _1));
+  object_pub_ = this->create_publisher<ObjsMsgType>("output/object", rclcpp::QoS{1});
 
   debug_publisher_ =
     std::make_unique<autoware_utils::DebugPublisher>(this, "object_lanelet_filter");
@@ -311,7 +316,8 @@ bool isPointAboveLaneletMesh(
     return false;
 }
 
-void ObjectLaneletFilterNode::mapCallback(
+template <typename ObjsMsgType, typename ObjMsgType>
+void ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::mapCallback(
   const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr map_msg)
 {
   lanelet_frame_id_ = map_msg->header.frame_id;
@@ -319,15 +325,16 @@ void ObjectLaneletFilterNode::mapCallback(
   lanelet::utils::conversion::fromBinMsg(*map_msg, lanelet_map_ptr_);
 }
 
-void ObjectLaneletFilterNode::objectCallback(
-  const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr input_msg)
+template <typename ObjsMsgType, typename ObjMsgType>
+void ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::objectCallback(
+  const typename ObjsMsgType::ConstSharedPtr input_msg)
 {
   stop_watch_ptr_->tic("processing_time");
 
   // Guard
   if (object_pub_->get_subscription_count() < 1) return;
 
-  autoware_perception_msgs::msg::DetectedObjects output_object_msg;
+  ObjsMsgType output_object_msg;
   output_object_msg.header = input_msg->header;
 
   if (!lanelet_map_ptr_) {
@@ -335,7 +342,7 @@ void ObjectLaneletFilterNode::objectCallback(
     return;
   }
 
-  autoware_perception_msgs::msg::DetectedObjects transformed_objects;
+  ObjsMsgType transformed_objects;
   if (!autoware::object_recognition_utils::transformObjects(
         *input_msg, lanelet_frame_id_, tf_buffer_, transformed_objects)) {
     RCLCPP_ERROR(get_logger(), "Failed transform to %s.", lanelet_frame_id_.c_str());
@@ -381,11 +388,10 @@ void ObjectLaneletFilterNode::objectCallback(
     "debug/processing_time_ms", stop_watch_ptr_->toc("processing_time", true));
 }
 
-bool ObjectLaneletFilterNode::filterObject(
-  const autoware_perception_msgs::msg::DetectedObject & transformed_object,
-  const autoware_perception_msgs::msg::DetectedObject & input_object,
-  const bgi::rtree<BoxAndLanelet, RtreeAlgo> & local_rtree,
-  autoware_perception_msgs::msg::DetectedObjects & output_object_msg)
+template <typename ObjsMsgType, typename ObjMsgType>
+bool ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::filterObject(
+  const ObjMsgType & transformed_object, const ObjMsgType & input_object,
+  const bgi::rtree<BoxAndLanelet, RtreeAlgo> & local_rtree, ObjsMsgType & output_object_msg)
 {
   const auto & label = transformed_object.classification.front().label;
   if (filter_target_.isTarget(label)) {
@@ -446,8 +452,9 @@ bool ObjectLaneletFilterNode::filterObject(
   return false;
 }
 
-geometry_msgs::msg::Polygon ObjectLaneletFilterNode::setFootprint(
-  const autoware_perception_msgs::msg::DetectedObject & detected_object)
+template <typename ObjsMsgType, typename ObjMsgType>
+geometry_msgs::msg::Polygon ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::setFootprint(
+  const ObjMsgType & detected_object)
 {
   geometry_msgs::msg::Polygon footprint;
   if (detected_object.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
@@ -471,8 +478,9 @@ geometry_msgs::msg::Polygon ObjectLaneletFilterNode::setFootprint(
   return footprint;
 }
 
-LinearRing2d ObjectLaneletFilterNode::getConvexHull(
-  const autoware_perception_msgs::msg::DetectedObjects & detected_objects)
+template <typename ObjsMsgType, typename ObjMsgType>
+LinearRing2d ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::getConvexHull(
+  const ObjsMsgType & detected_objects)
 {
   MultiPoint2d candidate_points;
   for (const auto & object : detected_objects.objects) {
@@ -491,8 +499,9 @@ LinearRing2d ObjectLaneletFilterNode::getConvexHull(
   return convex_hull;
 }
 
-Polygon2d ObjectLaneletFilterNode::getConvexHullFromObjectFootprint(
-  const autoware_perception_msgs::msg::DetectedObject & object)
+template <typename ObjsMsgType, typename ObjMsgType>
+Polygon2d ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::getConvexHullFromObjectFootprint(
+  const ObjMsgType & object)
 {
   MultiPoint2d candidate_points;
   const auto & pos = object.kinematics.pose_with_covariance.pose.position;
@@ -510,7 +519,8 @@ Polygon2d ObjectLaneletFilterNode::getConvexHullFromObjectFootprint(
 
 // fetch the intersected candidate lanelets with bounding box and then
 // check the intersections among the lanelets and the convex hull
-std::vector<BoxAndLanelet> ObjectLaneletFilterNode::getIntersectedLanelets(
+template <typename ObjsMsgType, typename ObjMsgType>
+std::vector<BoxAndLanelet> ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::getIntersectedLanelets(
   const LinearRing2d & convex_hull)
 {
   std::vector<BoxAndLanelet> intersected_lanelets_with_bbox;
@@ -549,7 +559,9 @@ std::vector<BoxAndLanelet> ObjectLaneletFilterNode::getIntersectedLanelets(
   return intersected_lanelets_with_bbox;
 }
 
-lanelet::BasicPolygon2d ObjectLaneletFilterNode::getPolygon(const lanelet::ConstLanelet & lanelet)
+template <typename ObjsMsgType, typename ObjMsgType>
+lanelet::BasicPolygon2d ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::getPolygon(
+  const lanelet::ConstLanelet & lanelet)
 {
   if (filter_settings_.lanelet_extra_margin <= 0) {
     return lanelet.polygon2d().basicPolygon();
@@ -568,8 +580,9 @@ lanelet::BasicPolygon2d ObjectLaneletFilterNode::getPolygon(const lanelet::Const
   return result;
 }
 
-bool ObjectLaneletFilterNode::isObjectOverlapLanelets(
-  const autoware_perception_msgs::msg::DetectedObject & object, const Polygon2d & polygon,
+template <typename ObjsMsgType, typename ObjMsgType>
+bool ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::isObjectOverlapLanelets(
+  const ObjMsgType & object, const Polygon2d & polygon,
   const std::vector<BoxAndLanelet> & lanelet_candidates)
 {
   // if object has bounding box, use polygon overlap
@@ -590,7 +603,8 @@ bool ObjectLaneletFilterNode::isObjectOverlapLanelets(
   }
 }
 
-bool ObjectLaneletFilterNode::isPolygonOverlapLanelets(
+template <typename ObjsMsgType, typename ObjMsgType>
+bool ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::isPolygonOverlapLanelets(
   const Polygon2d & polygon, const std::vector<BoxAndLanelet> & lanelet_candidates)
 {
   for (const auto & box_and_lanelet : lanelet_candidates) {
@@ -602,9 +616,9 @@ bool ObjectLaneletFilterNode::isPolygonOverlapLanelets(
   return false;
 }
 
-bool ObjectLaneletFilterNode::isSameDirectionWithLanelets(
-  const autoware_perception_msgs::msg::DetectedObject & object,
-  const std::vector<BoxAndLanelet> & lanelet_candidates)
+template <typename ObjsMsgType, typename ObjMsgType>
+bool ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::isSameDirectionWithLanelets(
+  const ObjMsgType & object, const std::vector<BoxAndLanelet> & lanelet_candidates)
 {
   const double object_yaw = tf2::getYaw(object.kinematics.pose_with_covariance.pose.orientation);
   const double object_velocity_norm = std::hypot(
@@ -640,9 +654,9 @@ bool ObjectLaneletFilterNode::isSameDirectionWithLanelets(
   return false;
 }
 
-bool ObjectLaneletFilterNode::isObjectAboveLanelet(
-  const autoware_perception_msgs::msg::DetectedObject & object,
-  const std::vector<BoxAndLanelet> & lanelet_candidates)
+template <typename ObjsMsgType, typename ObjMsgType>
+bool ObjectLaneletFilterBase<ObjsMsgType, ObjMsgType>::isObjectAboveLanelet(
+  const ObjMsgType & object, const std::vector<BoxAndLanelet> & lanelet_candidates)
 {
   // assuming the positions are already the center of the cluster (convex hull)
   // for an exact calculation of the center from the points,
@@ -679,9 +693,11 @@ bool ObjectLaneletFilterNode::isObjectAboveLanelet(
     filter_settings_.max_elevation_threshold);
 }
 
+// explicit instantiation
+template class ObjectLaneletFilterBase<
+  autoware_perception_msgs::msg::DetectedObjects, autoware_perception_msgs::msg::DetectedObject>;
+template class ObjectLaneletFilterBase<
+  autoware_perception_msgs::msg::TrackedObjects, autoware_perception_msgs::msg::TrackedObject>;
+
 }  // namespace lanelet_filter
 }  // namespace autoware::detected_object_validation
-
-#include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(
-  autoware::detected_object_validation::lanelet_filter::ObjectLaneletFilterNode)

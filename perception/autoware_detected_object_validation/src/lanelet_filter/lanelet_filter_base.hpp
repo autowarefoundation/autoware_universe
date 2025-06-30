@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LANELET_FILTER__LANELET_FILTER_HPP_
-#define LANELET_FILTER__LANELET_FILTER_HPP_
+#ifndef LANELET_FILTER__LANELET_FILTER_BASE_HPP_
+#define LANELET_FILTER__LANELET_FILTER_BASE_HPP_
 
 #include "autoware/detected_object_validation/utils/utils.hpp"
 #include "autoware_lanelet2_extension/utility/utilities.hpp"
@@ -25,7 +25,6 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include "autoware_map_msgs/msg/lanelet_map_bin.hpp"
-#include "autoware_perception_msgs/msg/detected_objects.hpp"
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <boost/geometry/index/rtree.hpp>
@@ -62,22 +61,24 @@ struct PolygonAndLanelet
 using BoxAndLanelet = std::pair<Box, PolygonAndLanelet>;
 using RtreeAlgo = bgi::rstar<16>;
 
-class ObjectLaneletFilterNode : public rclcpp::Node
+template <typename ObjsMsgType, typename ObjMsgType>
+class ObjectLaneletFilterBase : public rclcpp::Node
 {
 public:
-  explicit ObjectLaneletFilterNode(const rclcpp::NodeOptions & node_options);
+  explicit ObjectLaneletFilterBase(
+    const std::string & node_name, const rclcpp::NodeOptions & node_options);
 
 private:
-  void objectCallback(const autoware_perception_msgs::msg::DetectedObjects::ConstSharedPtr);
+  void objectCallback(const typename ObjsMsgType::ConstSharedPtr);
   void mapCallback(const autoware_map_msgs::msg::LaneletMapBin::ConstSharedPtr);
 
   void publishDebugMarkers(
     rclcpp::Time stamp, const LinearRing2d & hull, const std::vector<BoxAndLanelet> & lanelets);
 
-  rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr object_pub_;
+  typename rclcpp::Publisher<ObjsMsgType>::SharedPtr object_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr viz_pub_;
   rclcpp::Subscription<autoware_map_msgs::msg::LaneletMapBin>::SharedPtr map_sub_;
-  rclcpp::Subscription<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr object_sub_;
+  typename rclcpp::Subscription<ObjsMsgType>::SharedPtr object_sub_;
 
   std::unique_ptr<autoware_utils::DebugPublisher> debug_publisher_{nullptr};
   std::unique_ptr<autoware_utils::StopWatch<std::chrono::milliseconds>> stop_watch_ptr_;
@@ -107,26 +108,22 @@ private:
   } filter_settings_;
 
   bool filterObject(
-    const autoware_perception_msgs::msg::DetectedObject & transformed_object,
-    const autoware_perception_msgs::msg::DetectedObject & input_object,
+    const ObjMsgType & transformed_object, const ObjMsgType & input_object,
     const bg::index::rtree<BoxAndLanelet, RtreeAlgo> & local_rtree,
-    autoware_perception_msgs::msg::DetectedObjects & output_object_msg);
-  LinearRing2d getConvexHull(const autoware_perception_msgs::msg::DetectedObjects &);
-  Polygon2d getConvexHullFromObjectFootprint(
-    const autoware_perception_msgs::msg::DetectedObject & object);
+    ObjsMsgType & output_object_msg);
+  LinearRing2d getConvexHull(const ObjsMsgType &);
+  Polygon2d getConvexHullFromObjectFootprint(const ObjMsgType & object);
   std::vector<BoxAndLanelet> getIntersectedLanelets(const LinearRing2d &);
   bool isObjectOverlapLanelets(
-    const autoware_perception_msgs::msg::DetectedObject & object, const Polygon2d & polygon,
+    const ObjMsgType & object, const Polygon2d & polygon,
     const std::vector<BoxAndLanelet> & lanelet_candidates);
   bool isPolygonOverlapLanelets(
     const Polygon2d & polygon, const std::vector<BoxAndLanelet> & lanelet_candidates);
   bool isSameDirectionWithLanelets(
-    const autoware_perception_msgs::msg::DetectedObject & object,
-    const std::vector<BoxAndLanelet> & lanelet_candidates);
+    const ObjMsgType & object, const std::vector<BoxAndLanelet> & lanelet_candidates);
   bool isObjectAboveLanelet(
-    const autoware_perception_msgs::msg::DetectedObject & object,
-    const std::vector<BoxAndLanelet> & lanelet_candidates);
-  geometry_msgs::msg::Polygon setFootprint(const autoware_perception_msgs::msg::DetectedObject &);
+    const ObjMsgType & object, const std::vector<BoxAndLanelet> & lanelet_candidates);
+  geometry_msgs::msg::Polygon setFootprint(const ObjMsgType &);
 
   lanelet::BasicPolygon2d getPolygon(const lanelet::ConstLanelet & lanelet);
   std::unique_ptr<autoware_utils::PublishedTimePublisher> published_time_publisher_;
@@ -135,4 +132,4 @@ private:
 }  // namespace lanelet_filter
 }  // namespace autoware::detected_object_validation
 
-#endif  // LANELET_FILTER__LANELET_FILTER_HPP_
+#endif  // LANELET_FILTER__LANELET_FILTER_BASE_HPP_

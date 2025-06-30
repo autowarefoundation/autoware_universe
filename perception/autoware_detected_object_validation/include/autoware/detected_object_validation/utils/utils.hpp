@@ -36,7 +36,8 @@ struct FilterTargetLabel
   bool isTarget(const uint8_t label) const;
 };  // struct FilterTargetLabel
 
-inline bool hasBoundingBox(const autoware_perception_msgs::msg::DetectedObject & object)
+template <typename ObjMsgType>
+inline bool hasBoundingBox(const ObjMsgType & object)
 {
   if (object.shape.type == autoware_perception_msgs::msg::Shape::BOUNDING_BOX) {
     return true;
