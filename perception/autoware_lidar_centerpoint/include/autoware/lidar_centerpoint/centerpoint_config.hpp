@@ -28,7 +28,7 @@ public:
     const std::size_t class_size, const float point_feature_size, const std::size_t cloud_capacity,
     const std::size_t max_voxel_size, const std::vector<double> & point_cloud_range,
     const std::vector<double> & voxel_size, const std::size_t downsample_factor,
-    const std::size_t encoder_in_feature_size, const std::vector<double> & score_thresholds,
+    const std::size_t encoder_in_feature_size, const std::vector<float> & score_thresholds,
     const float circle_nms_dist_threshold, const std::vector<double> yaw_norm_thresholds,
     const bool has_variance, const std::string logger_name = "lidar_centerpoint")
   {
@@ -61,7 +61,7 @@ public:
       head_out_vel_size_ = 4;
     }
 
-    score_thresholds_ = std::vector<float>(score_thresholds.begin(), score_thresholds.end());
+    score_thresholds_ = score_thresholds;
 
     for (auto & score_threshold : score_thresholds_) {
       score_threshold = (score_threshold >= 0.f && score_threshold < 1.f) ? score_threshold : 0.f;

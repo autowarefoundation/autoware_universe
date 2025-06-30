@@ -15,6 +15,7 @@
 #ifndef AUTOWARE__LIDAR_CENTERPOINT__POSTPROCESS__POSTPROCESS_KERNEL_HPP_
 #define AUTOWARE__LIDAR_CENTERPOINT__POSTPROCESS__POSTPROCESS_KERNEL_HPP_
 
+#include "autoware/lidar_centerpoint/cuda_utils.hpp"
 #include "autoware/lidar_centerpoint/centerpoint_config.hpp"
 #include "autoware/lidar_centerpoint/utils.hpp"
 #include "cuda.h"
@@ -38,7 +39,7 @@ private:
   CenterPointConfig config_;
 
   cudaStream_t stream_;
-  float * score_thresholds_d_ptr_{nullptr};
+  cuda::unique_ptr<float[]> score_thresholds_d_ptr_{nullptr};
 };
 
 }  // namespace autoware::lidar_centerpoint
