@@ -17,7 +17,7 @@
  * @brief 802.11 netlink-based interface class
  */
 
-#include "system_monitor/net_monitor/nl80211.hpp"
+#include "nl80211.hpp"
 
 #include <linux/nl80211.h>
 #include <net/if.h>

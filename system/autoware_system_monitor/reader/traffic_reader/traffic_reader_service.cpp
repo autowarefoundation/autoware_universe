@@ -17,7 +17,7 @@
  * @brief traffic information read class
  */
 
-#include "system_monitor/traffic_reader/traffic_reader_service.hpp"
+#include "traffic_reader_service.hpp"
 
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/process.hpp>
