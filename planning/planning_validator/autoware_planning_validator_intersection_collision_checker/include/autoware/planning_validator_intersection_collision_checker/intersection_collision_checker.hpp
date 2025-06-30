@@ -68,8 +68,7 @@ private:
   void set_lanelets_debug_marker(const EgoLanelets & lanelets) const;
 
   bool check_collision(
-    const PointCloud::Ptr & filtered_point_cloud,
-    const rclcpp::Time & time_stamp);
+    const PointCloud::Ptr & filtered_point_cloud, const rclcpp::Time & time_stamp);
 
   std::optional<PCDObject> get_pcd_object(
     const rclcpp::Time & time_stamp, const PointCloud::Ptr & filtered_point_cloud,

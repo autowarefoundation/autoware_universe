@@ -18,9 +18,9 @@
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 
+#include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
-#include <boost/geometry/algorithms/correct.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -214,7 +214,8 @@ void set_right_turn_target_lanelets(
       it->second.ego_overlap_time = overlap_time;
       it->second.is_active = true;
     } else {
-      target_lanelets[id] = TargetLanelet(id, extend(ll, overlap_point), overlap_point, overlap_time);
+      target_lanelets[id] =
+        TargetLanelet(id, extend(ll, overlap_point), overlap_point, overlap_time);
     }
   }
 }
@@ -279,7 +280,8 @@ void set_left_turn_target_lanelets(
       it->second.ego_overlap_time = overlap_time;
       it->second.is_active = true;
     } else {
-      target_lanelets[id] = TargetLanelet(id, extend(ll, overlap_point), overlap_point, overlap_time);
+      target_lanelets[id] =
+        TargetLanelet(id, extend(ll, overlap_point), overlap_point, overlap_time);
     }
   }
 }

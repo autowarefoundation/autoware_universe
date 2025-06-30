@@ -79,7 +79,8 @@ void PlanningValidatorDebugMarkerPublisher::pushPoseMarker(
 }
 
 void PlanningValidatorDebugMarkerPublisher::pushPointMarker(
-  const geometry_msgs::msg::Point & point, const std::string & ns, int id, double scale, bool is_cube)
+  const geometry_msgs::msg::Point & point, const std::string & ns, int id, double scale,
+  bool is_cube)
 {
   const auto marker_type = is_cube ? Marker::CUBE : Marker::SPHERE;
   Marker marker = autoware_utils::create_default_marker(

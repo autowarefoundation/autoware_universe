@@ -67,7 +67,11 @@ struct TargetLanelet
     lanelet::Id id, const lanelet::ConstLanelets & lanelets,
     const geometry_msgs::msg::Pose & overlap_point,
     const std::pair<double, double> ego_overlap_time, const bool is_active = true)
-  : id(id), lanelets(lanelets), overlap_point(overlap_point), ego_overlap_time(ego_overlap_time), is_active(is_active)
+  : id(id),
+    lanelets(lanelets),
+    overlap_point(overlap_point),
+    ego_overlap_time(ego_overlap_time),
+    is_active(is_active)
   {
   }
 };
