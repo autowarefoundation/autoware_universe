@@ -16,6 +16,7 @@
 #define AUTOWARE__LIDAR_CENTERPOINT__POSTPROCESS__POSTPROCESS_KERNEL_HPP_
 
 #include "autoware/lidar_centerpoint/centerpoint_config.hpp"
+#include "autoware/lidar_centerpoint/cuda_utils.hpp"
 #include "autoware/lidar_centerpoint/utils.hpp"
 #include "cuda.h"
 #include "cuda_runtime_api.h"
@@ -27,7 +28,7 @@ namespace autoware::lidar_centerpoint
 class PostProcessCUDA
 {
 public:
-  explicit PostProcessCUDA(const CenterPointConfig & config);
+  explicit PostProcessCUDA(const CenterPointConfig & config, cudaStream_t & stream);
 
   cudaError_t generateDetectedBoxes3D_launch(
     const float * out_heatmap, const float * out_offset, const float * out_z, const float * out_dim,
@@ -36,6 +37,9 @@ public:
 
 private:
   CenterPointConfig config_;
+
+  cudaStream_t stream_;
+  cuda::unique_ptr<float[]> score_thresholds_d_ptr_{nullptr};
 };
 
 }  // namespace autoware::lidar_centerpoint

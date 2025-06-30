@@ -11,7 +11,7 @@
       circle_nms_dist_threshold: 0.3
       iou_nms_search_distance_2d: 10.0
       iou_nms_threshold: 0.1
-      score_threshold: 0.35
+      score_thresholds: [0.35, 0.35, 0.35, 0.35, 0.35]
       yaw_norm_thresholds: [0.3, 0.3, 0.3, 0.3, 0.0]
     densification_params:
       world_frame_id: "map"
