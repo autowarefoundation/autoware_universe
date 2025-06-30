@@ -6,7 +6,7 @@
       ttc_threshold: 1.0 # [s]
       ego_deceleration: 1.0 # [m/s^2]
       min_time_horizon: 10.0 # [s]
-      on_time_buffer: 0.3 # [s]
+      on_time_buffer: 0.5 # [s]
       off_time_buffer: 1.0 # [s]
 
       right_turn:
