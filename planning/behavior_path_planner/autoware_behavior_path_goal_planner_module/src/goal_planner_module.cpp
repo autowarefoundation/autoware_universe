@@ -1412,7 +1412,7 @@ void GoalPlannerModule::setTurnSignalInfo(
     planner_data_->parameters.ego_nearest_yaw_threshold);
 }
 
-void GoalPlannerModule::updateSteeringFactor(
+void GoalPlannerModule::updatePlanningFactor(
   const PullOverContextData & context_data, const std::array<Pose, 2> & pose,
   const std::array<double, 2> distance)
 {
@@ -1426,8 +1426,24 @@ void GoalPlannerModule::updateSteeringFactor(
     return PlanningFactor::NONE;
   });
 
+  const auto & pull_over_path = context_data.pull_over_path_opt.value();
+  const auto & full_path_points = pull_over_path.full_path().points;
+  const auto & reference_path_points = getPreviousModuleOutput().reference_path.points;
+
+  const auto start_idx =
+    autoware::motion_utils::findNearestIndex(full_path_points, pose[0].position);
+  const auto end_idx = autoware::motion_utils::findNearestIndex(full_path_points, pose[1].position);
+  const double start_velocity = full_path_points.at(start_idx).point.longitudinal_velocity_mps;
+  const double end_velocity = full_path_points.at(end_idx).point.longitudinal_velocity_mps;
+  const double start_shift_length =
+    autoware::motion_utils::calcLateralOffset(reference_path_points, pose[0].position);
+  const double end_shift_length =
+    autoware::motion_utils::calcLateralOffset(reference_path_points, pose[1].position);
+
   planning_factor_interface_->add(
-    distance[0], distance[1], pose[0], pose[1], planning_factor_direction, SafetyFactorArray{});
+    distance[0], distance[1], pose[0], pose[1], planning_factor_direction,
+    utils::path_safety_checker::to_safety_factor_array(debug_data_.collision_check), true,
+    start_velocity, end_velocity, start_shift_length, end_shift_length);
 }
 
 void GoalPlannerModule::decideVelocity(PullOverPath & pull_over_path)
@@ -1731,7 +1747,7 @@ void GoalPlannerModule::postProcess()
     updateRTCStatus(distance_to_path_change.first, distance_to_path_change.second);
   }
 
-  updateSteeringFactor(
+  updatePlanningFactor(
     context_data, {pull_over_path.start_pose(), pull_over_path.modified_goal_pose()},
     {distance_to_path_change.first, distance_to_path_change.second});
 
