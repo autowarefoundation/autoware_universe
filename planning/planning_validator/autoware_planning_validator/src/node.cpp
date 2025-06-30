@@ -238,7 +238,7 @@ void PlanningValidatorNode::publishDebugInfo()
     shiftPose(
       front_pose, context_->vehicle_info.front_overhang_m + context_->vehicle_info.wheel_base_m);
     auto offset_pose = front_pose;
-    shiftPose(offset_pose, 0.25);
+    shiftPose(offset_pose, 0.5);
     context_->debug_pose_publisher->pushVirtualWall(front_pose);
     const auto status_debug_str = context_->debug_pose_publisher->getStatusDebugString(*status);
     context_->debug_pose_publisher->pushWarningMsg(
