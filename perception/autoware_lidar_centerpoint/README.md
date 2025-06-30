@@ -46,21 +46,21 @@ Note that these parameters are associated with ONNX file, predefined during the 
 
 ### Core Parameters
 
-| Name                                             | Type         | Default Value             | Description                                                   |
-| ------------------------------------------------ | ------------ | ------------------------- | ------------------------------------------------------------- |
-| `encoder_onnx_path`                              | string       | `""`                      | path to VoxelFeatureEncoder ONNX file                         |
-| `encoder_engine_path`                            | string       | `""`                      | path to VoxelFeatureEncoder TensorRT Engine file              |
-| `head_onnx_path`                                 | string       | `""`                      | path to DetectionHead ONNX file                               |
-| `head_engine_path`                               | string       | `""`                      | path to DetectionHead TensorRT Engine file                    |
-| `build_only`                                     | bool         | `false`                   | shutdown the node after TensorRT engine file is built         |
-| `trt_precision`                                  | string       | `fp16`                    | TensorRT inference precision: `fp32` or `fp16`                |
-| `post_process_params.score_threshold`            | double       | `0.4`                     | detected objects with score less than threshold are ignored   |
-| `post_process_params.yaw_norm_thresholds`        | list[double] | [0.3, 0.3, 0.3, 0.3, 0.0] | An array of distance threshold values of norm of yaw [rad].   |
-| `post_process_params.iou_nms_search_distance_2d` | double       | -                         | If two objects are farther than the value, NMS isn't applied. |
-| `post_process_params.iou_nms_threshold`          | double       | -                         | IoU threshold for the IoU-based Non Maximum Suppression       |
-| `post_process_params.has_twist`                  | boolean      | false                     | Indicates whether the model outputs twist value.              |
-| `densification_params.world_frame_id`            | string       | `map`                     | the world frame id to fuse multi-frame pointcloud             |
-| `densification_params.num_past_frames`           | int          | `1`                       | the number of past frames to fuse with the current frame      |
+| Name                                             | Type         | Default Value                  | Description                                                              |
+| ------------------------------------------------ | ------------ | ------------------------------ | ------------------------------------------------------------------------ |
+| `encoder_onnx_path`                              | string       | `""`                           | path to VoxelFeatureEncoder ONNX file                                    |
+| `encoder_engine_path`                            | string       | `""`                           | path to VoxelFeatureEncoder TensorRT Engine file                         |
+| `head_onnx_path`                                 | string       | `""`                           | path to DetectionHead ONNX file                                          |
+| `head_engine_path`                               | string       | `""`                           | path to DetectionHead TensorRT Engine file                               |
+| `build_only`                                     | bool         | `false`                        | shutdown the node after TensorRT engine file is built                    |
+| `trt_precision`                                  | string       | `fp16`                         | TensorRT inference precision: `fp32` or `fp16`                           |
+| `post_process_params.score_thresholds`           | list[double] | [0.35, 0.35, 0.35, 0.35, 0.35] | detected objects with score less than their label threshold are ignored. |
+| `post_process_params.yaw_norm_thresholds`        | list[double] | [0.3, 0.3, 0.3, 0.3, 0.0]      | An array of distance threshold values of norm of yaw [rad].              |
+| `post_process_params.iou_nms_search_distance_2d` | double       | -                              | If two objects are farther than the value, NMS isn't applied.            |
+| `post_process_params.iou_nms_threshold`          | double       | -                              | IoU threshold for the IoU-based Non Maximum Suppression                  |
+| `post_process_params.has_twist`                  | boolean      | false                          | Indicates whether the model outputs twist value.                         |
+| `densification_params.world_frame_id`            | string       | `map`                          | the world frame id to fuse multi-frame pointcloud                        |
+| `densification_params.num_past_frames`           | int          | `1`                            | the number of past frames to fuse with the current frame                 |
 
 ### The `build_only` option
 

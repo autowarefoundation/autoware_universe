@@ -42,7 +42,7 @@ CenterPointTRT::CenterPointTRT(
 {
   vg_ptr_ = std::make_unique<VoxelGenerator>(densification_param, config_, stream_);
   pre_proc_ptr_ = std::make_unique<PreprocessCuda>(config_, stream_);
-  post_proc_ptr_ = std::make_unique<PostProcessCUDA>(config_);
+  post_proc_ptr_ = std::make_unique<PostProcessCUDA>(config_, stream_);
 
   initPtr();
   initTrt(encoder_param, head_param);
