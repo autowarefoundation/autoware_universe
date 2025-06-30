@@ -16,9 +16,11 @@
 
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/geometry/boost_geometry.hpp>
 
 #include <boost/geometry/algorithms/disjoint.hpp>
 #include <boost/geometry/algorithms/intersection.hpp>
+#include <boost/geometry/algorithms/correct.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -96,9 +98,14 @@ std::optional<std::pair<size_t, size_t>> get_overlap_index(
   const lanelet::ConstLanelet & ll, const TrajectoryPoints & trajectory_points,
   const autoware_utils::LineString2d & trajectory_ls)
 {
-  BasicLineString2d overlap_line;
-  boost::geometry::intersection(ll.polygon2d().basicPolygon(), trajectory_ls, overlap_line);
-  if (overlap_line.empty()) return {};
+  autoware_utils::MultiLineString2d overlap_lines;
+  autoware_utils::Polygon2d ll_polygon;
+  boost::geometry::convert(ll.polygon2d().basicPolygon(), ll_polygon);
+  boost::geometry::correct(ll_polygon);
+  boost::geometry::intersection(ll_polygon, trajectory_ls, overlap_lines);
+  if (overlap_lines.empty()) return {};
+
+  const auto overlap_line = overlap_lines.front();
 
   const auto nearest_idx_front = autoware::motion_utils::findNearestIndex(
     trajectory_points,
