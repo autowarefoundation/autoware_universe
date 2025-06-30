@@ -36,7 +36,6 @@
 #include <lanelet2_routing/RoutingGraph.h>
 
 #include <algorithm>
-#include <chrono>
 #include <iterator>
 #include <limits>
 #include <stack>
@@ -68,7 +67,7 @@ void update_collision_times(
  * predicted path
  * @param predicted_path The predicted path of an object.
  * @param route_handler the route handler with the lanelet map and routing graph
- * @return the lanelet ids followed by the path
+ * @return the sorted lanelet ids followed by the path
  */
 lanelet::Ids get_predicted_path_lanelet_ids(
   const autoware_perception_msgs::msg::PredictedPath & predicted_path,
@@ -79,24 +78,12 @@ lanelet::Ids get_predicted_path_lanelet_ids(
   if (predicted_path.path.empty()) {
     return followed_ids;
   }
-  struct SearchState
+  struct SearchState  // search state for exploring the routing graph
   {
-    lanelet::Id lanelet_id{};        // current lanelet considered
-    std::set<lanelet::Id> path_ids;  // the lanelet ids already traversed by the path
+    lanelet::Id lanelet_id{};                      // current lanelet considered
+    std::unordered_set<lanelet::Id> explored_ids;  // the lanelet ids already traversed by the path
   };
   std::stack<SearchState> search_stack;
-
-  // avoid re-calculating the same basic polygon many times
-  // std::unordered_map<lanelet::Id, lanelet::BasicPolygon2d> lanelet_polygons;
-  const auto get_lanelet_polygon = [&](const lanelet::Id & id) {
-    // if (lanelet_polygons.count(id) == 0UL) {
-    //   const auto & lanelet = route_handler.getLaneletMapPtr()->laneletLayer.get(id);
-    //   lanelet_polygons[id] = lanelet.polygon2d().basicPolygon();
-    // }
-    // return lanelet_polygons[id];
-    return route_handler.getLaneletMapPtr()->laneletLayer.get(id).polygon2d().basicPolygon();
-  };
-
   // initial search states starting from the first possible lanelets
   lanelet::BasicLineString2d ls;
   for (const auto & p : predicted_path.path) {
@@ -108,7 +95,8 @@ lanelet::Ids get_predicted_path_lanelet_ids(
     route_handler.getLaneletMapPtr()->laneletLayer.search({ls.back(), ls.back()});
   lanelet::Ids final_ids;
   for (const auto & final_candidate : final_candidates) {
-    if (lanelet::geometry::within(ls.back(), get_lanelet_polygon(final_candidate.id()))) {
+    if (lanelet::geometry::within(
+          ls.back(), route_handler.getLaneletsFromId(final_candidate.id()).polygon2d())) {
       final_ids.push_back(final_candidate.id());
     }
   }
@@ -117,7 +105,8 @@ lanelet::Ids get_predicted_path_lanelet_ids(
     route_handler.getLaneletMapPtr()->laneletLayer.search({ls.front(), ls.front()});
   lanelet::Ids initial_ids;
   for (const auto & initial_candidate : initial_candidates) {
-    if (lanelet::geometry::within(ls.front(), get_lanelet_polygon(initial_candidate.id()))) {
+    if (lanelet::geometry::within(
+          ls.front(), route_handler.getLaneletsFromId(initial_candidate.id()).polygon2d())) {
       initial_ids.push_back(initial_candidate.id());
     }
   }
@@ -126,12 +115,12 @@ lanelet::Ids get_predicted_path_lanelet_ids(
   overlapped_lanelets.insert(overlapped_lanelets.end(), initial_ids.begin(), initial_ids.end());
   for (const auto & candidate : candidates) {
     const auto id = candidate.id();
-    // check if the id is already in the initial/final ids to avoid doing the geometry operation
-    // again
+    // check if the id is already in the initial/final ids to avoid redoing the geometry operation
     if (
       !std::binary_search(initial_ids.begin(), initial_ids.end(), id) &&
       !std::binary_search(final_ids.begin(), final_ids.end(), id) &&
-      !boost::geometry::disjoint(ls, get_lanelet_polygon(id))) {
+      !boost::geometry::disjoint(
+        ls, route_handler.getLaneletsFromId(id).polygon2d().basicPolygon())) {
       overlapped_lanelets.push_back(id);
     }
   }
@@ -140,7 +129,7 @@ lanelet::Ids get_predicted_path_lanelet_ids(
   for (const auto initial_id : initial_ids) {
     SearchState ss;
     ss.lanelet_id = initial_id;
-    ss.path_ids = {initial_id};
+    ss.explored_ids = {initial_id};
     search_stack.push(ss);
   }
 
@@ -151,21 +140,21 @@ lanelet::Ids get_predicted_path_lanelet_ids(
       std::binary_search(final_ids.begin(), final_ids.end(), current_state.lanelet_id);
     if (is_final_lanelet) {
       followed_ids.insert(
-        followed_ids.end(), current_state.path_ids.begin(), current_state.path_ids.end());
+        followed_ids.end(), current_state.explored_ids.begin(), current_state.explored_ids.end());
       continue;
     }
     const lanelet::ConstLanelets succeeding_lanelets =
       route_handler.getRoutingGraphPtr()->following(
         route_handler.getLaneletsFromId(current_state.lanelet_id));
     for (const auto & succeeding_lanelet : succeeding_lanelets) {
-      if (
-        std::binary_search(
-          overlapped_lanelets.begin(), overlapped_lanelets.end(), succeeding_lanelet.id()) &&
-        current_state.path_ids.count(succeeding_lanelet.id()) == 0) {
+      const auto is_overlapped_lanelet = std::binary_search(
+        overlapped_lanelets.begin(), overlapped_lanelets.end(), succeeding_lanelet.id());
+      // prevent loops by making sure the id was not already explored
+      if (is_overlapped_lanelet && current_state.explored_ids.count(succeeding_lanelet.id()) == 0) {
         SearchState ss;
         ss.lanelet_id = succeeding_lanelet.id();
-        ss.path_ids = current_state.path_ids;
-        ss.path_ids.insert(succeeding_lanelet.id());
+        ss.explored_ids = current_state.explored_ids;
+        ss.explored_ids.insert(succeeding_lanelet.id());
         search_stack.push(ss);
       }
     }
@@ -184,10 +173,8 @@ bool at_least_one_lanelet_in_common(
   const autoware_perception_msgs::msg::PredictedPath & predicted_path,
   const route_handler::RouteHandler & route_handler)
 {
-  if (!predicted_path_ids.has_value()) {
-    autoware_utils::StopWatch<std::chrono::microseconds> sw;
+  if (!predicted_path_ids.has_value()) {  // ensure the predicted path ids are only calculated once
     predicted_path_ids = get_predicted_path_lanelet_ids(predicted_path, route_handler);
-    std::printf("PathIds calculated in %2.2fus\n", sw.toc());
   }
   for (const auto & ll : out_lanelets) {
     if (std::binary_search(predicted_path_ids->begin(), predicted_path_ids->end(), ll.id())) {
@@ -207,7 +194,7 @@ void calculate_object_path_time_collisions(
   const auto time_step = rclcpp::Duration(object_path.time_step).seconds();
   auto time = 0.0;
   std::optional<lanelet::Ids>
-    object_path_lanelet_ids;  // will be calculated only once if a collision is found
+    object_path_lanelet_ids;  // calculated only once for the 1st collision found
   for (const auto & object_pose : object_path.path) {
     const auto object_footprint = autoware_utils::to_polygon2d(object_pose, object_shape);
     std::vector<OutAreaNode> query_results;
