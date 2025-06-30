@@ -333,7 +333,8 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
 
   const bool is_over_default_stopline = util::isOverTargetIndex(
     *path, closest_idx, planner_data_->current_odometry->pose, default_stopline_idx);
-  const auto collision_stopline_idx = is_over_default_stopline ? closest_idx : default_stopline_idx;
+  const auto collision_stopline_idx =
+    is_over_default_stopline ? intersection_stoplines.collision_stopline : default_stopline_idx;
 
   // ==========================================================================================
   // pseudo collision detection on green light
