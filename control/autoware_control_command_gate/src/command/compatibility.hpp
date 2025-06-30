@@ -12,35 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef COMMAND__BUILTIN_HPP_
-#define COMMAND__BUILTIN_HPP_
+#ifndef COMMAND__COMPATIBILITY_HPP_
+#define COMMAND__COMPATIBILITY_HPP_
 
-#include "source.hpp"
+#include "compatibility/adapi_pause_interface.hpp"
+#include "interface.hpp"
 
 #include <rclcpp/rclcpp.hpp>
 
 #include <memory>
-#include <string>
 
 namespace autoware::control_command_gate
 {
 
-class BuiltinEmergency : public CommandSource
+// Provide vehicle_cmd_gate compatible interface.
+class Compatibility : public CommandBridge
 {
 public:
-  BuiltinEmergency(uint16_t id, const std::string & name, rclcpp::Node & node);
-  void resend_last_command() override;
+  Compatibility(std::unique_ptr<CommandOutput> && output, rclcpp::Node & node);
+  void publish();
   void set_prev_control(std::shared_ptr<Control> control) { prev_control_ = control; }
+  void on_control(const Control & msg) override;
 
 private:
-  void on_timer();
-  rclcpp::TimerBase::SharedPtr timer_;
-  rclcpp::Clock::SharedPtr clock_;
-
-  double acceleration_;
+  rclcpp::Node & node_;
   std::shared_ptr<Control> prev_control_;
+  std::unique_ptr<AdapiPauseInterface> adapi_pause_;
+  float stop_hold_acceleration_;
 };
 
 }  // namespace autoware::control_command_gate
 
-#endif  // COMMAND__BUILTIN_HPP_
+#endif  // COMMAND__COMPATIBILITY_HPP_
