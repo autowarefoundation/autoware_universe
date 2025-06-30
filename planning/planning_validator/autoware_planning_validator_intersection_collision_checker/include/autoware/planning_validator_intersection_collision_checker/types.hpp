@@ -60,25 +60,27 @@ struct TargetLanelet
   lanelet::ConstLanelets lanelets;
   geometry_msgs::msg::Pose overlap_point;
   std::pair<double, double> ego_overlap_time;
+  bool is_active{false};
 
   TargetLanelet() = default;
   TargetLanelet(
     lanelet::Id id, const lanelet::ConstLanelets & lanelets,
     const geometry_msgs::msg::Pose & overlap_point,
-    const std::pair<double, double> ego_overlap_time)
-  : id(id), lanelets(lanelets), overlap_point(overlap_point), ego_overlap_time(ego_overlap_time)
+    const std::pair<double, double> ego_overlap_time, const bool is_active = true)
+  : id(id),
+    lanelets(lanelets),
+    overlap_point(overlap_point),
+    ego_overlap_time(ego_overlap_time),
+    is_active(is_active)
   {
   }
 };
 
-using TargetLanelets = std::vector<TargetLanelet>;
-
-struct CollisionCheckerLanelets
+struct EgoLanelets
 {
   lanelet::ConstLanelet first_turn_lanelet;
   lanelet::ConstLanelets trajectory_lanelets;
   lanelet::ConstLanelets connected_lanelets;
-  TargetLanelets target_lanelets;
 };
 
 struct PCDObject
@@ -87,6 +89,7 @@ struct PCDObject
   geometry_msgs::msg::Pose pose;
   lanelet::Id overlap_lanelet_id;
   double track_duration{};
+  double avg_distance_to_overlap{};
   double distance_to_overlap{};
   double delay_compensated_distance_to_overlap{};
   double velocity{};
@@ -94,6 +97,7 @@ struct PCDObject
 };
 
 using PCDObjectsMap = std::unordered_map<lanelet::Id, PCDObject>;
+using TargetLaneletsMap = std::unordered_map<lanelet::Id, TargetLanelet>;
 
 }  // namespace autoware::planning_validator
 
