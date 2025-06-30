@@ -81,6 +81,7 @@ private:
   {
     history_.clear();
     target_lanelets_map_.clear();
+    last_valid_time_ = clock_->now();
   }
 
   std::unique_ptr<intersection_collision_checker_node::ParamListener> param_listener_;

@@ -148,17 +148,20 @@ bool IntersectionCollisionChecker::is_safe()
   const auto now = clock_->now();
 
   if (is_safe) {
-    last_valid_time_ = now;
     if ((now - last_invalid_time_).seconds() > p.off_time_buffer) {
+      last_valid_time_ = now;
       return true;
     }
-  } else {
-    last_invalid_time_ = now;
+    publish_planning_factor();
+    return false;
+  }
+  
     if ((now - last_valid_time_).seconds() < p.on_time_buffer) {
+    RCLCPP_WARN(logger_, "[ICC] Momentary collision risk detected.");
       return true;
-    }
   }
 
+  last_invalid_time_ = now;
   publish_planning_factor();
   return false;
 }
