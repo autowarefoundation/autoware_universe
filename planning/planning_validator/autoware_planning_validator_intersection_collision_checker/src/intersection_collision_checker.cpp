@@ -156,9 +156,9 @@ bool IntersectionCollisionChecker::is_safe()
     return false;
   }
   
-    if ((now - last_valid_time_).seconds() < p.on_time_buffer) {
+  if ((now - last_valid_time_).seconds() < p.on_time_buffer) {
     RCLCPP_WARN(logger_, "[ICC] Momentary collision risk detected.");
-      return true;
+    return true;
   }
 
   last_invalid_time_ = now;
@@ -179,8 +179,9 @@ EgoTrajectory IntersectionCollisionChecker::get_ego_trajectory() const
   const auto ego_back_pose = autoware_utils::calc_offset_pose(
     context_->data->current_kinematics->pose.pose, base_to_back_offset, 0.0, 0.0);
 
-  ego_traj.front_traj = context_->data->current_trajectory->points;
-  ego_traj.back_traj = context_->data->current_trajectory->points;
+  const auto & trajectory_points = context_->data->resampled_current_trajectory->points;
+  ego_traj.front_traj = trajectory_points;
+  ego_traj.back_traj = trajectory_points;
   autoware::motion_utils::calculate_time_from_start(
     ego_traj.front_traj, ego_front_pose.position, min_traj_vel);
   autoware::motion_utils::calculate_time_from_start(
