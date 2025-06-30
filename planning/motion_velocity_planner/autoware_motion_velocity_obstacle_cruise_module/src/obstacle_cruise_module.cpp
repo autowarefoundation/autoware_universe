@@ -416,7 +416,7 @@ std::optional<CruiseObstacle> ObstacleCruiseModule::create_cruise_obstacle(
   return CruiseObstacle{
     obj_uuid_str,
     predicted_objects_stamp,
-    object->get_predicted_pose(clock_->now(), predicted_objects_stamp),
+    object->get_predicted_current_pose(clock_->now(), predicted_objects_stamp),
     object->get_lon_vel_relative_to_traj(traj_points),
     object->get_lat_vel_relative_to_traj(traj_points),
     *collision_points};
@@ -751,7 +751,7 @@ std::optional<CruiseObstacle> ObstacleCruiseModule::create_yield_cruise_obstacle
   return CruiseObstacle{
     obj_uuid_str,
     predicted_objects_stamp,
-    object->get_predicted_pose(clock_->now(), predicted_objects_stamp),
+    object->get_predicted_current_pose(clock_->now(), predicted_objects_stamp),
     object->get_lon_vel_relative_to_traj(traj_points),
     object->get_lat_vel_relative_to_traj(traj_points),
     collision_points.value(),
