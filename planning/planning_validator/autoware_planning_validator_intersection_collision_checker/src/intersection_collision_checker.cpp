@@ -89,6 +89,7 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
   auto skip_validation = [&](const std::string & reason) {
     RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "%s", reason.c_str());
     is_critical = false;
+    reset_data();
   };
 
   if (!context_->data->obstacle_pointcloud) {
@@ -101,26 +102,28 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
 
   const auto ego_trajectory = get_ego_trajectory();
 
-  CollisionCheckerLanelets lanelets;
+  EgoLanelets lanelets;
   const auto turn_direction = get_lanelets(lanelets, ego_trajectory);
 
   set_lanelets_debug_marker(lanelets);
 
-  if (turn_direction == Direction::NONE) return;
+  if (turn_direction == Direction::NONE) {
+    reset_data();
+    return;
+  }
 
   if (lanelets.trajectory_lanelets.empty()) {
     return skip_validation("failed to get trajectory lanelets, skipping collision check.");
   }
 
-  if (lanelets.target_lanelets.empty()) {
+  if (target_lanelets_map_.empty()) {
     return skip_validation("failed to get target lanelets, skipping collision check.");
   }
 
-  context_->validation_status->is_valid_intersection_collision_check =
-    is_safe(lanelets.target_lanelets);
+  context_->validation_status->is_valid_intersection_collision_check = is_safe();
 }
 
-bool IntersectionCollisionChecker::is_safe(const TargetLanelets & target_lanelets)
+bool IntersectionCollisionChecker::is_safe()
 {
   PointCloud::Ptr filtered_pointcloud(new PointCloud);
   filter_pointcloud(context_->data->obstacle_pointcloud, filtered_pointcloud);
@@ -128,7 +131,7 @@ bool IntersectionCollisionChecker::is_safe(const TargetLanelets & target_lanelet
 
   safety_factor_array_ = SafetyFactorArray{};
   const bool is_safe = check_collision(
-    target_lanelets, filtered_pointcloud, context_->data->obstacle_pointcloud->header.stamp);
+    filtered_pointcloud, context_->data->obstacle_pointcloud->header.stamp);
 
   const auto & ego_pose = context_->data->current_kinematics->pose.pose;
   const auto & traj_points = context_->data->current_trajectory->points;
@@ -189,7 +192,7 @@ EgoTrajectory IntersectionCollisionChecker::get_ego_trajectory() const
 }
 
 Direction IntersectionCollisionChecker::get_lanelets(
-  CollisionCheckerLanelets & lanelets, const EgoTrajectory & ego_trajectory) const
+  EgoLanelets & lanelets, const EgoTrajectory & ego_trajectory) const
 {
   const auto & ego_pose = context_->data->current_kinematics->pose.pose;
   try {
@@ -204,6 +207,10 @@ Direction IntersectionCollisionChecker::get_lanelets(
 
   if (turn_direction == Direction::NONE) return turn_direction;
 
+  for (auto & target_lanelet : target_lanelets_map_) {
+    target_lanelet.second.is_active = false;
+  }
+
   const auto & p = params_.icc_parameters;
 
   const auto current_vel = context_->data->current_kinematics->twist.twist.linear.x;
@@ -211,10 +218,10 @@ Direction IntersectionCollisionChecker::get_lanelets(
   const auto time_horizon = std::max(p.min_time_horizon, stopping_time);
   if (turn_direction == Direction::RIGHT) {
     collision_checker_utils::set_right_turn_target_lanelets(
-      ego_trajectory, *context_->data->route_handler, params_, lanelets, time_horizon);
+      ego_trajectory, *context_->data->route_handler, params_, lanelets, target_lanelets_map_, time_horizon);
   } else {
     collision_checker_utils::set_left_turn_target_lanelets(
-      ego_trajectory, *context_->data->route_handler, params_, lanelets, time_horizon);
+      ego_trajectory, *context_->data->route_handler, params_, lanelets, target_lanelets_map_, time_horizon);
   }
 
   return turn_direction;
@@ -288,7 +295,7 @@ void IntersectionCollisionChecker::filter_pointcloud(
 }
 
 bool IntersectionCollisionChecker::check_collision(
-  const TargetLanelets & target_lanelets, const PointCloud::Ptr & filtered_point_cloud,
+  const PointCloud::Ptr & filtered_point_cloud,
   const rclcpp::Time & time_stamp)
 {
   bool is_safe = true;
@@ -302,10 +309,11 @@ bool IntersectionCollisionChecker::check_collision(
       return 0.0;
     };
 
-  for (const auto & target_lanelet : target_lanelets) {
-    if (target_lanelet.lanelets.empty()) continue;
+  for (const auto & target_lanelet : target_lanelets_map_) {
+    const auto target_ll = target_lanelet.second;
+    if (!target_ll.is_active || target_ll.lanelets.empty()) continue;
 
-    const auto pcd_object = get_pcd_object(time_stamp, filtered_point_cloud, target_lanelet);
+    const auto pcd_object = get_pcd_object(time_stamp, filtered_point_cloud, target_ll);
     if (!pcd_object.has_value()) continue;
 
     auto update_object = [&](PCDObject & object, const PCDObject & new_data) {
@@ -340,7 +348,7 @@ bool IntersectionCollisionChecker::check_collision(
 
       if (
         existing_object.track_duration > p.pointcloud.observation_time &&
-        ego_object_overlap_time(existing_object.ttc, target_lanelet.ego_overlap_time) <
+        ego_object_overlap_time(existing_object.ttc, target_ll.ego_overlap_time) <
           p.ttc_threshold) {
         is_safe = false;
         context_->debug_pose_publisher->pushPointMarker(
@@ -477,7 +485,7 @@ void IntersectionCollisionChecker::cluster_pointcloud(
 }
 
 void IntersectionCollisionChecker::set_lanelets_debug_marker(
-  const CollisionCheckerLanelets & lanelets) const
+  const EgoLanelets & lanelets) const
 {
   {  // trajectory lanelets
     lanelet::BasicPolygons2d ll_polygons;
@@ -500,12 +508,13 @@ void IntersectionCollisionChecker::set_lanelets_debug_marker(
 
   {  // target lanelets
     lanelet::BasicPolygons2d ll_polygons;
-    for (const auto & t_l : lanelets.target_lanelets) {
-      for (const auto & ll : t_l.lanelets) {
+    for (const auto & t_l : target_lanelets_map_) {
+      if (!t_l.second.is_active) continue;
+      for (const auto & ll : t_l.second.lanelets) {
         ll_polygons.push_back(ll.polygon2d().basicPolygon());
       }
       context_->debug_pose_publisher->pushPointMarker(
-        t_l.overlap_point.position, "collision_checker_target_lanelets", 2);
+        t_l.second.overlap_point.position, "collision_checker_target_lanelets", 2);
     }
     if (!ll_polygons.empty()) {
       context_->debug_pose_publisher->pushLaneletPolygonsMarker(
