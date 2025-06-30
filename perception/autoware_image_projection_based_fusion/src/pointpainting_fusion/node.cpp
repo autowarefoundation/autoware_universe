@@ -97,7 +97,7 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
 {
   omp_num_threads_ = this->declare_parameter<int>("omp_params.num_threads");
   const std::vector<float> score_thresholds =
-    this->declare_parameter<std::vector<float>>("post_process_params.score_thresholds");
+    static_cast<std::vector<float>>(this->declare_parameter<std::vector<float>>("post_process_params.score_thresholds"));
   const float circle_nms_dist_threshold = static_cast<float>(
     this->declare_parameter<double>("post_process_params.circle_nms_dist_threshold"));
   const auto yaw_norm_thresholds =
