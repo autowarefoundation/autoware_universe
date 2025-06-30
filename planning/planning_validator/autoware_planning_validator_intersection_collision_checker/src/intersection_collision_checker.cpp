@@ -355,8 +355,11 @@ bool IntersectionCollisionChecker::check_collision(
           p.ttc_threshold) {
         is_safe = false;
         context_->debug_pose_publisher->pushPointMarker(
-          existing_object.pose.position, "collision_checker_pcd_objects", 0);
-        add_safety_factor(existing_object.pose.position, target_lanelet.ego_overlap_time.first);
+          existing_object.pose.position, "collision_checker_pcd_objects", 0, 0.5, true);
+        context_->debug_pose_publisher->pushLineSegmentMarker(
+          existing_object.pose.position, target_ll.overlap_point.position,
+          "collision_checker_pcd_objects", 0);
+        add_safety_factor(existing_object.pose.position, target_ll.ego_overlap_time.first);
       } else {
         context_->debug_pose_publisher->pushPointMarker(
           existing_object.pose.position, "collision_checker_pcd_objects", 1);
