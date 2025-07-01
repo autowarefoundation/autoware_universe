@@ -68,6 +68,14 @@ private:
   size_t num_mode_;         //!< Number of modes (M).
   size_t num_future_;       //!< Number of predicted future timestamps (Tf).
   double score_threshold_;  //!< Score threshold [0, 1].
+
+  /**
+   * @brief Sort mode with its score.
+   *
+   * @param scores Read only pointer to the first element of the mode score.
+   * @return Indices of the sorted modes in descending order.
+   */
+  std::vector<size_t> sort_by_score(const float * scores) const;
 };
 }  // namespace autoware::simpl::processing
 #endif  // AUTOWARE__SIMPL__PROCESSING__POSTPROCESSOR_HPP_
