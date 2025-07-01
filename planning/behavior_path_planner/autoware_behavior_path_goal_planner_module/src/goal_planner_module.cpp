@@ -1478,8 +1478,8 @@ BehaviorModuleOutput GoalPlannerModule::planPullOver(PullOverContextData & conte
       goal_candidates_.empty()                                               ? "no goal candidate"
       : context_data.lane_parking_response.pull_over_path_candidates.empty() ? "no path candidate"
       : !context_data.pull_over_path_opt                                     ? "no static safe path"
-      : !is_stable_safe ? "unsafe against dynamic objects"
-                        : "too far goal";
+      : !is_stable_safe                                                      ? "dynamic object risk"
+                                                                             : "too far goal";
     return planPullOverAsCandidate(context_data, detail);
   }
 
