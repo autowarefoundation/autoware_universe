@@ -1433,6 +1433,9 @@ void GoalPlannerModule::updatePlanningFactor(
   const auto & full_path_points = pull_over_path.full_path().points;
   const auto & reference_path_points = getPreviousModuleOutput().reference_path.points;
 
+  const bool is_arc_backward = pull_over_path.type() == PullOverPlannerType::ARC_BACKWARD;
+  const std::string detail = is_arc_backward ? "backward" : "";
+
   const auto start_idx =
     autoware::motion_utils::findNearestIndex(full_path_points, pose[0].position);
   const auto end_idx = autoware::motion_utils::findNearestIndex(full_path_points, pose[1].position);
@@ -1446,7 +1449,7 @@ void GoalPlannerModule::updatePlanningFactor(
   planning_factor_interface_->add(
     distance[0], distance[1], pose[0], pose[1], planning_factor_direction,
     utils::path_safety_checker::to_safety_factor_array(debug_data_.collision_check), true,
-    start_velocity, end_velocity, start_shift_length, end_shift_length);
+    start_velocity, end_velocity, start_shift_length, end_shift_length, detail);
 }
 
 void GoalPlannerModule::decideVelocity(PullOverPath & pull_over_path)
