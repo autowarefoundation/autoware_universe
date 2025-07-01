@@ -71,8 +71,9 @@ shift_trajectory_for_keep_left(
         overlap_interval->start -
         compute_length_of_lanelets(lanelets_before_entering_bidirectional_lanelet.front());
     }
-    shifts_for_keep_left.emplace_back(experimental::trajectory::ShiftInterval{
-      shift_start_s, overlap_interval->start, keep_left_distance});
+    shifts_for_keep_left.emplace_back(
+      experimental::trajectory::ShiftInterval{
+        shift_start_s, overlap_interval->start, keep_left_distance});
 
     lanelet::ConstLanelets lanelets_after_exiting_bidirectional_lanelet = filter_lanelets_by_ids(
       bidirectional_lanelet->get_lanelets_after_exiting(), trajectory.get_contained_lane_ids());
@@ -90,8 +91,9 @@ shift_trajectory_for_keep_left(
       shift_end_s = overlap_interval->end + compute_length_of_lanelets(
                                               lanelets_after_exiting_bidirectional_lanelet.front());
     }
-    shifts_for_keep_left.emplace_back(experimental::trajectory::ShiftInterval{
-      overlap_interval->end, shift_end_s, -keep_left_distance});
+    shifts_for_keep_left.emplace_back(
+      experimental::trajectory::ShiftInterval{
+        overlap_interval->end, shift_end_s, -keep_left_distance});
   }
 
   auto shifted_trajectory =

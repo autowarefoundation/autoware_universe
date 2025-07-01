@@ -410,8 +410,10 @@ VelocityLimit PIDBasedPlanner::plan_cruise_with_velocity_limit(
     return pid_output_vel;
   }();
 
-  const double positive_target_vel = lpf_output_vel_ptr_->filter(std::max(
-    min_cruise_target_vel_, planner_data->current_odometry.twist.twist.linear.x + additional_vel));
+  const double positive_target_vel = lpf_output_vel_ptr_->filter(
+    std::max(
+      min_cruise_target_vel_,
+      planner_data->current_odometry.twist.twist.linear.x + additional_vel));
 
   // calculate target acceleration
   const double target_acc = [&]() {

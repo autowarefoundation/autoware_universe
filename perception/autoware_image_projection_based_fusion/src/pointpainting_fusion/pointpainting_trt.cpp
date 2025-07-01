@@ -99,22 +99,25 @@ bool PointPaintingTRT::preprocess(
   CHECK_CUDA_ERROR(cudaMemsetAsync(
     num_points_per_voxel_d_.get(), 0, config_.max_voxel_size_ * sizeof(float), stream_));
 
-  CHECK_CUDA_ERROR(image_projection_based_fusion::generateVoxels_random_launch(
-    points_d_.get(), count, config_.range_min_x_, config_.range_max_x_, config_.range_min_y_,
-    config_.range_max_y_, config_.range_min_z_, config_.range_max_z_, config_.voxel_size_x_,
-    config_.voxel_size_y_, config_.voxel_size_z_, config_.grid_size_y_, config_.grid_size_x_,
-    mask_d_.get(), voxels_buffer_d_.get(), stream_));
+  CHECK_CUDA_ERROR(
+    image_projection_based_fusion::generateVoxels_random_launch(
+      points_d_.get(), count, config_.range_min_x_, config_.range_max_x_, config_.range_min_y_,
+      config_.range_max_y_, config_.range_min_z_, config_.range_max_z_, config_.voxel_size_x_,
+      config_.voxel_size_y_, config_.voxel_size_z_, config_.grid_size_y_, config_.grid_size_x_,
+      mask_d_.get(), voxels_buffer_d_.get(), stream_));
 
-  CHECK_CUDA_ERROR(image_projection_based_fusion::generateBaseFeatures_launch(
-    mask_d_.get(), voxels_buffer_d_.get(), config_.grid_size_y_, config_.grid_size_x_,
-    config_.max_voxel_size_, num_voxels_d_.get(), voxels_d_.get(), num_points_per_voxel_d_.get(),
-    coordinates_d_.get(), stream_));
+  CHECK_CUDA_ERROR(
+    image_projection_based_fusion::generateBaseFeatures_launch(
+      mask_d_.get(), voxels_buffer_d_.get(), config_.grid_size_y_, config_.grid_size_x_,
+      config_.max_voxel_size_, num_voxels_d_.get(), voxels_d_.get(), num_points_per_voxel_d_.get(),
+      coordinates_d_.get(), stream_));
 
-  CHECK_CUDA_ERROR(image_projection_based_fusion::generateFeatures_launch(
-    voxels_d_.get(), num_points_per_voxel_d_.get(), coordinates_d_.get(), num_voxels_d_.get(),
-    config_.max_voxel_size_, config_.voxel_size_x_, config_.voxel_size_y_, config_.voxel_size_z_,
-    config_.range_min_x_, config_.range_min_y_, config_.range_min_z_, encoder_in_features_d_.get(),
-    config_.encoder_in_feature_size_, stream_));
+  CHECK_CUDA_ERROR(
+    image_projection_based_fusion::generateFeatures_launch(
+      voxels_d_.get(), num_points_per_voxel_d_.get(), coordinates_d_.get(), num_voxels_d_.get(),
+      config_.max_voxel_size_, config_.voxel_size_x_, config_.voxel_size_y_, config_.voxel_size_z_,
+      config_.range_min_x_, config_.range_min_y_, config_.range_min_z_,
+      encoder_in_features_d_.get(), config_.encoder_in_feature_size_, stream_));
 
   return true;
 }
