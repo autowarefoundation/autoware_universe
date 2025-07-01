@@ -49,7 +49,8 @@ private:
   // === Interface and inputs validation ====
   void subscribe_topics(rclcpp::Node & node);
   void publish_topics(rclcpp::Node & node);
-  [[nodiscard]] bool is_data_ready(std::unordered_map<std::string, double> & processing_times);
+  void take_data();
+  [[nodiscard]] bool is_data_ready();
   [[nodiscard]] bool is_data_valid() const;
   [[nodiscard]] bool is_data_timeout(const Odometry & odom) const;
   [[nodiscard]] bool is_goal_changed(
@@ -80,10 +81,12 @@ private:
   OperationModeState::ConstSharedPtr op_mode_state_ptr_;
   std::unordered_map<std::string, double> processing_times_ms_;
 
-  rclcpp::Subscription<Trajectory>::SharedPtr sub_ego_pred_traj_;
-  rclcpp::Subscription<Control>::SharedPtr sub_control_cmd_;
-  rclcpp::Subscription<SteeringReport>::SharedPtr sub_steering_angle_;
-  rclcpp::Subscription<OperationModeState>::SharedPtr sub_op_mode_state_;
+  autoware_utils::InterProcessPollingSubscriber<Trajectory>::SharedPtr ego_pred_traj_polling_sub_;
+  autoware_utils::InterProcessPollingSubscriber<Control>::SharedPtr control_cmd_polling_sub_;
+  autoware_utils::InterProcessPollingSubscriber<SteeringReport>::SharedPtr
+    steering_angle_polling_sub_;
+  autoware_utils::InterProcessPollingSubscriber<OperationModeState>::SharedPtr
+    op_mode_state_polling_sub_;
 
   rclcpp::Publisher<autoware_utils::ProcessingTimeDetail>::SharedPtr processing_time_detail_pub_;
 
