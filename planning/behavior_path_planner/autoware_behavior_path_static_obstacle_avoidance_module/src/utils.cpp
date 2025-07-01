@@ -1471,6 +1471,19 @@ std::vector<std::pair<double, Point>> calcEnvelopeOverhangDistance(
   std::sort(overhang_points.begin(), overhang_points.end(), [&](const auto & a, const auto & b) {
     return isOnRight(object_data) ? b.first < a.first : a.first < b.first;
   });
+  if (overhang_points.size() > 1) {
+    const auto p1 = overhang_points.at(0).second;
+    const auto p2 = overhang_points.at(1).second;
+    const auto point = autoware_utils::create_point(0.5 * (p1.x + p2.x), 0.5 * (p1.y + p2.y), 0.0);
+    // TODO(someone): search around first position where the ego should avoid the object.
+    const auto idx = autoware::motion_utils::findNearestIndex(path.points, point);
+    const auto lateral =
+      calc_lateral_deviation(autoware_utils::get_pose(path.points.at(idx)), point);
+    overhang_points.emplace_back(lateral, point);
+  }
+  std::sort(overhang_points.begin(), overhang_points.end(), [&](const auto & a, const auto & b) {
+    return isOnRight(object_data) ? b.first < a.first : a.first < b.first;
+  });
   return overhang_points;
 }
 
