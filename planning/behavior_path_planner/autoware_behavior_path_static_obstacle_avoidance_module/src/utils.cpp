@@ -1232,6 +1232,13 @@ auto calc_front_corner_offsets(
     const auto transform =
       autoware_utils::pose2transform(autoware_utils::get_pose(path.points.at(i)));
 
+    if (
+      autoware::motion_utils::calcSignedArcLength(path.points, i, path.points.size() - 1) <
+      vehicle_info.max_longitudinal_offset_m) {
+      ret.push_back(0.0);
+      continue;
+    }
+
     if (curvatures.at(i) > 0.0) {
       const auto transformed_front_right =
         autoware_utils::transform_point(front_right_corner, transform);
