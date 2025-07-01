@@ -278,7 +278,9 @@ double DataAssociation::calculateScore(
   const double mahalanobis_dist = getMahalanobisDistanceFast(dx, dy, inv_cov);
 
   constexpr double mahalanobis_dist_threshold =
-    13.816;  // 99.99% confidence level for 2 degrees of freedom, chi-square critical value
+    11.62;  // This is an empirical value corresponding to the 99.6% confidence level
+            // for a chi-square distribution with 2 degrees of freedom (critical value).
+
   if (mahalanobis_dist >= mahalanobis_dist_threshold) return 0.0;
 
   // 2d iou gate

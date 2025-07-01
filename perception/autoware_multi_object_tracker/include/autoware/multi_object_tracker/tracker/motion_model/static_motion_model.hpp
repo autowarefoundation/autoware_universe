@@ -15,7 +15,6 @@
 #ifndef AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__STATIC_MOTION_MODEL_HPP_
 #define AUTOWARE__MULTI_OBJECT_TRACKER__TRACKER__MOTION_MODEL__STATIC_MOTION_MODEL_HPP_
 
-#include "autoware/kalman_filter/kalman_filter.hpp"
 #include "autoware/multi_object_tracker/tracker/motion_model/motion_model_base.hpp"
 
 #include <Eigen/Core>
@@ -31,7 +30,7 @@
 namespace autoware::multi_object_tracker
 {
 
-class StaticMotionModel : public MotionModel
+class StaticMotionModel : public MotionModel<2>
 {
 private:
   // attributes
@@ -48,7 +47,6 @@ public:
   StaticMotionModel();
 
   enum IDX { X = 0, Y = 1 };
-  const char DIM = 2;
 
   bool initialize(
     const rclcpp::Time & time, const double & x, const double & y,

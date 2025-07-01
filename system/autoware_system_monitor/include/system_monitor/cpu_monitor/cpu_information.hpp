@@ -13,7 +13,7 @@
 // limitations under the License.
 
 /**
- * @file cpu_information.h
+ * @file cpu_information.hpp
  * @brief information about CPUs/cores
  */
 
@@ -85,7 +85,7 @@ struct UsageData
 
   struct CpuUsage
   {
-    std::string label;
+    std::string label;  // "all", "0", "1", etc. : short enough for "short string optimization"
     int status;
     float usr;
     float nice;

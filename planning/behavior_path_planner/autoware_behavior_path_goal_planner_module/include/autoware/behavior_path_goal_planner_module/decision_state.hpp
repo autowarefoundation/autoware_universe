@@ -55,8 +55,8 @@ public:
     const autoware_perception_msgs::msg::PredictedObjects & dynamic_target_objects,
     const std::shared_ptr<const PlannerData> planner_data,
     const std::shared_ptr<OccupancyGridBasedCollisionDetector> occupancy_grid_map,
-    const bool is_current_safe, const GoalPlannerParameters & parameters,
-    const GoalSearcher & goal_searcher,
+    const bool is_current_safe, const bool lane_change_status_changed,
+    const GoalPlannerParameters & parameters, const GoalSearcher & goal_searcher,
     std::vector<autoware_utils::Polygon2d> & ego_polygons_expanded);
 
   PathDecisionState get_current_state() const { return current_state_; }
@@ -75,8 +75,8 @@ private:
     const PredictedObjects & dynamic_target_objects,
     const std::shared_ptr<const PlannerData> planner_data,
     const std::shared_ptr<OccupancyGridBasedCollisionDetector> occupancy_grid_map,
-    const bool is_current_safe, const GoalPlannerParameters & parameters,
-    const GoalSearcher & goal_searcher,
+    const bool is_current_safe, const bool lane_change_status_changed,
+    const GoalPlannerParameters & parameters, const GoalSearcher & goal_searcher,
     std::vector<autoware_utils::Polygon2d> & ego_polygons_expanded) const;
 };
 

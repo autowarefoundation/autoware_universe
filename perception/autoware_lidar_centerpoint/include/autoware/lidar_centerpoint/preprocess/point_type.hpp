@@ -1,4 +1,4 @@
-// Copyright 2020,2025 Autoware Foundation
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/**
- * @file mpstat1.cpp
- * @brief dummy mpstat mpstat to return error
- */
+#ifndef AUTOWARE__LIDAR_CENTERPOINT__PREPROCESS__POINT_TYPE_HPP_
+#define AUTOWARE__LIDAR_CENTERPOINT__PREPROCESS__POINT_TYPE_HPP_
 
-int main(int /* argc */, char ** /* argv */)
+#include <cstdint>
+
+namespace autoware::lidar_centerpoint
 {
-  return -1;
-}
+
+struct InputPointType
+{
+  float x;
+  float y;
+  float z;
+  std::uint8_t intensity;
+  std::uint8_t return_type;
+  std::uint16_t channel;
+};
+
+}  // namespace autoware::lidar_centerpoint
+
+#endif  // AUTOWARE__LIDAR_CENTERPOINT__PREPROCESS__POINT_TYPE_HPP_

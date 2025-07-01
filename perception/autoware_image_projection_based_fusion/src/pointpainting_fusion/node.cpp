@@ -96,8 +96,10 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
 : FusionNode<PointCloudMsgType, RoiMsgType, DetectedObjects>("pointpainting_fusion", options)
 {
   omp_num_threads_ = this->declare_parameter<int>("omp_params.num_threads");
-  const float score_threshold =
-    static_cast<float>(this->declare_parameter<double>("post_process_params.score_threshold"));
+  const std::vector<double> score_thresholds_double =
+    this->declare_parameter<std::vector<double>>("post_process_params.score_thresholds");
+  const std::vector<float> score_thresholds(
+    score_thresholds_double.begin(), score_thresholds_double.end());
   const float circle_nms_dist_threshold = static_cast<float>(
     this->declare_parameter<double>("post_process_params.circle_nms_dist_threshold"));
   const auto yaw_norm_thresholds =
@@ -193,7 +195,7 @@ PointPaintingFusionNode::PointPaintingFusionNode(const rclcpp::NodeOptions & opt
     densification_world_frame_id, densification_num_past_frames);
   autoware::lidar_centerpoint::CenterPointConfig config(
     class_names_.size(), point_feature_size, cloud_capacity, max_voxel_size, pointcloud_range,
-    voxel_size, downsample_factor, encoder_in_feature_size, score_threshold,
+    voxel_size, downsample_factor, encoder_in_feature_size, score_thresholds,
     circle_nms_dist_threshold, yaw_norm_thresholds, has_variance_);
 
   // create detector

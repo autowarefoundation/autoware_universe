@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Parameters for Object Lanelet Filter",
+  "title": "Parameters for Detected Object Lanelet Filter",
   "type": "object",
   "definitions": {
     "object_lanelet_filter": {
