@@ -16,6 +16,7 @@
 
 #include <autoware_utils_geometry/geometry.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <string>
 #include <unordered_map>
@@ -122,11 +123,14 @@ PostProcessor::output_type PostProcessor::process(
     const auto & tracked_object = tracked_object_map.at(agent_ids.at(n));
 
     auto predicted_object = from_tracked_object(tracked_object);
-    for (size_t m = 0; m < num_mode_; ++m) {
-      const auto score_idx = n * num_mode_ + m;
-      const auto & score = static_cast<double>(scores.at(score_idx));
+
+    const auto mode_scores = scores.data() + n * num_mode_;
+    const auto mode_indices = sort_by_score(mode_scores);
+    for (size_t m : mode_indices) {
+      const auto & confidence = static_cast<double>(*(mode_scores + m));
+
       // skip if the score is lower than threshold
-      if (score < score_threshold_) {
+      if (confidence < score_threshold_) {
         continue;
       }
 
@@ -144,12 +148,23 @@ PostProcessor::output_type PostProcessor::process(
         waypoints.emplace_back(local_to_global(ox, oy, tracked_object));
       }
       predicted_object.kinematics.predicted_paths.emplace_back(
-        to_predicted_path(score, waypoints, tracked_object));
+        to_predicted_path(confidence, waypoints, tracked_object));
     }
     predicted_objects.emplace_back(predicted_object);
   }
 
   return autoware_perception_msgs::build<PredictedObjects>().header(header).objects(
     predicted_objects);
+}
+
+std::vector<size_t> PostProcessor::sort_by_score(const float * scores) const
+{
+  std::vector<size_t> output(num_mode_);
+  for (size_t i = 0; i < num_mode_; ++i) {
+    output[i] = i;
+  }
+  std::sort(
+    output.begin(), output.end(), [scores](size_t a, size_t b) { return scores[a] > scores[b]; });
+  return output;
 }
 }  // namespace autoware::simpl::processing
