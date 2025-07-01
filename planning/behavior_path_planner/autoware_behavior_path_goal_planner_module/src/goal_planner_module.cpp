@@ -1426,6 +1426,9 @@ void GoalPlannerModule::updatePlanningFactor(
     return PlanningFactor::NONE;
   });
 
+  if (!context_data.pull_over_path_opt.has_value()) {
+    return;
+  }
   const auto & pull_over_path = context_data.pull_over_path_opt.value();
   const auto & full_path_points = pull_over_path.full_path().points;
   const auto & reference_path_points = getPreviousModuleOutput().reference_path.points;
