@@ -120,6 +120,11 @@ DiagnosticArray Graph::create_unknown_msg(const rclcpp::Time & stamp) const
   return msg;
 }
 
+void Graph::set_initializing(bool initializing)
+{
+  for (const auto & node : nodes_) node->set_initializing(initializing);
+}
+
 void Graph::reset()
 {
   for (const auto & node : nodes_) node->reset();

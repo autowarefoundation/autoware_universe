@@ -122,15 +122,24 @@ void MissionPlanner::publish_processing_time(
   pub_processing_time_->publish(processing_time_msg);
 }
 
-void MissionPlanner::publish_pose_log(const Pose & pose, const std::string & pose_type)
+void MissionPlanner::print_pose_log(
+  const std::string & route_type, const Pose & initial_pose, const Pose & goal_pose)
 {
-  const auto & p = pose.position;
+  RCLCPP_INFO(this->get_logger(), "Route set via %s", route_type.c_str());
+
+  const auto & ip = initial_pose.position;
+  RCLCPP_INFO(this->get_logger(), "Initial pose - x: %f, y: %f, z: %f", ip.x, ip.y, ip.z);
+  const auto & iq = initial_pose.orientation;
   RCLCPP_INFO(
-    this->get_logger(), "%s pose - x: %f, y: %f, z: %f", pose_type.c_str(), p.x, p.y, p.z);
-  const auto & quaternion = pose.orientation;
+    this->get_logger(), "Initial orientation - qx: %f, qy: %f, qz: %f, qw: %f", iq.x, iq.y, iq.z,
+    iq.w);
+
+  const auto & gp = goal_pose.position;
+  RCLCPP_INFO(this->get_logger(), "Goal pose - x: %f, y: %f, z: %f", gp.x, gp.y, gp.z);
+  const auto & gq = goal_pose.orientation;
   RCLCPP_INFO(
-    this->get_logger(), "%s orientation - qx: %f, qy: %f, qz: %f, qw: %f", pose_type.c_str(),
-    quaternion.x, quaternion.y, quaternion.z, quaternion.w);
+    this->get_logger(), "Goal orientation - qx: %f, qy: %f, qz: %f, qw: %f", gq.x, gq.y, gq.z,
+    gq.w);
 }
 
 void MissionPlanner::check_initialization()
@@ -316,8 +325,7 @@ void MissionPlanner::on_set_lanelet_route(
   change_state(RouteState::SET);
   res->status.success = true;
 
-  publish_pose_log(odometry_->pose.pose, "initial");
-  publish_pose_log(req->goal_pose, "goal");
+  print_pose_log("set_lanelet_route", odometry_->pose.pose, req->goal_pose);
 }
 
 void MissionPlanner::on_set_waypoint_route(
@@ -377,8 +385,7 @@ void MissionPlanner::on_set_waypoint_route(
   change_state(RouteState::SET);
   res->status.success = true;
 
-  publish_pose_log(odometry_->pose.pose, "initial");
-  publish_pose_log(req->goal_pose, "goal");
+  print_pose_log("set_waypoint_route", odometry_->pose.pose, req->goal_pose);
 }
 
 void MissionPlanner::change_route()

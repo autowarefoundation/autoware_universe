@@ -63,7 +63,7 @@ TEST(GraphLevel, Timeout)
   EXPECT_TRUE(match(test.get("path3"), result_1_5));
 }
 
-TEST(GraphLevel, Latch1)
+TEST(GraphLevel, Latch)
 {
   // clang-format off
   const auto input      = "KKKKKEKKEEEKKEEEEEKKKKK";  // cspell:disable-line
@@ -87,7 +87,29 @@ TEST(GraphLevel, Latch1)
   EXPECT_TRUE(match(test.get("path3"), result_0_4));
 }
 
-TEST(GraphLevel, Latch2)
+TEST(GraphLevel, LatchInitializing)
+{
+  // clang-format off
+  const auto input  = "KKKKKEKKEEEKKEEEEEKKKKK";  // cspell:disable-line
+  const auto result = "KKKKKEKKEEEKKEEEEEKKKKK";  // cspell:disable-line
+  // clang-format on
+
+  autoware::diagnostic_graph_aggregator::TimelineTest test;
+  test.set_interval(0.1);
+  test.set_initializing({{0, true}});
+  test.set("dummy: name0", input);
+  test.set("dummy: name1", input);
+  test.set("dummy: name2", input);
+  test.set("dummy: name3", input);
+  test.execute(resource("levels/latch.yaml"));
+
+  EXPECT_TRUE(match(test.get("path0"), result));
+  EXPECT_TRUE(match(test.get("path1"), result));
+  EXPECT_TRUE(match(test.get("path2"), result));
+  EXPECT_TRUE(match(test.get("path3"), result));
+}
+
+TEST(GraphLevel, LatchReset10ms)
 {
   // clang-format off
   const auto input  = "KKKKKEKKKKKKKKKKKKKK";  // cspell:disable-line
@@ -103,7 +125,7 @@ TEST(GraphLevel, Latch2)
   EXPECT_TRUE(match(test.get("path1"), result));
 }
 
-TEST(GraphLevel, Latch3)
+TEST(GraphLevel, LatchReset15ms)
 {
   // clang-format off
   const auto input  = "KKKKKEKKKKKKKKKKKKKK";  // cspell:disable-line
@@ -119,7 +141,7 @@ TEST(GraphLevel, Latch3)
   EXPECT_TRUE(match(test.get("path1"), result));
 }
 
-TEST(GraphLevel, Latch4)
+TEST(GraphLevel, LatchResetOnError)
 {
   // clang-format off
   const auto input  = "KKKKKEEEEEEEEEEEEEEE";  // cspell:disable-line
@@ -135,7 +157,7 @@ TEST(GraphLevel, Latch4)
   EXPECT_TRUE(match(test.get("path1"), result));
 }
 
-TEST(GraphLevel, Latch5)
+TEST(GraphLevel, LatchResetOnWarn)
 {
   // clang-format off
   const auto input  = "KKKKKEWWWWWWWWWKKKKK";  // cspell:disable-line
@@ -151,7 +173,7 @@ TEST(GraphLevel, Latch5)
   EXPECT_TRUE(match(test.get("path1"), result));
 }
 
-TEST(GraphLevel, Hysteresis1)
+TEST(GraphLevel, HysteresisOkeyToError)
 {
   // clang-format off
   const auto input      = "KKKKKKKKKKKKKKKEEEEEEEEEE";  // cspell:disable-line
@@ -174,7 +196,7 @@ TEST(GraphLevel, Hysteresis1)
   EXPECT_TRUE(match(test.get("path3"), result_0_4));
 }
 
-TEST(GraphLevel, Hysteresis2)
+TEST(GraphLevel, HysteresisErrorToOkey)
 {
   // clang-format off
   const auto input      = "EEEEEEEEEEEEEEEKKKKKKKKKK";  // cspell:disable-line
@@ -197,7 +219,7 @@ TEST(GraphLevel, Hysteresis2)
   EXPECT_TRUE(match(test.get("path3"), result_0_4));
 }
 
-TEST(GraphLevel, Hysteresis3)
+TEST(GraphLevel, HysteresisPulseError)
 {
   // clang-format off
   const auto input      = "KKKKKKKKKKKKKKKEKKKKKEEEKKKKKEEEEEKKKKK";  // cspell:disable-line
@@ -220,7 +242,7 @@ TEST(GraphLevel, Hysteresis3)
   EXPECT_TRUE(match(test.get("path3"), result_0_4));
 }
 
-TEST(GraphLevel, Hysteresis4)
+TEST(GraphLevel, HysteresisPulseWarnError)
 {
   // clang-format off
   const auto input      = "KKKKKKKKKKKKKKKEWEWEEEWEEEWEEEEEWEEEEEWEEEEE";  // cspell:disable-line
