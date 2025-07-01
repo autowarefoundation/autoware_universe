@@ -17,6 +17,8 @@
 #include <autoware/object_recognition_utils/object_classification.hpp>
 #include <autoware_utils_geometry/geometry.hpp>
 
+#include <autoware_perception_msgs/msg/tracked_object_kinematics.hpp>
+
 #include <cmath>
 #include <utility>
 
@@ -67,12 +69,33 @@ std::pair<double, double> local_to_global(const geometry_msgs::msg::Vector3 & ve
 
   return {vx, vy};
 }
+
+double to_yaw(const autoware_perception_msgs::msg::TrackedObjectKinematics & kinematics)
+{
+  using autoware_perception_msgs::msg::TrackedObjectKinematics;
+
+  const auto & pose = kinematics.pose_with_covariance.pose;
+  const auto & twist = kinematics.twist_with_covariance.twist;
+
+  double yaw = autoware_utils_geometry::get_rpy(pose.orientation).z;
+  if (
+    kinematics.orientation_availability == TrackedObjectKinematics::SIGN_UNKNOWN &&
+    twist.linear.x < 0.0) {
+    yaw += M_PI;
+  } else if (
+    kinematics.orientation_availability == TrackedObjectKinematics::UNAVAILABLE &&
+    std::hypot(twist.linear.x, twist.linear.y) < 1e-2) {
+    yaw += std::atan2(twist.linear.y, twist.linear.x);
+  }
+
+  return yaw;
+}
 }  // namespace
 
 archetype::AgentState to_agent_state(const autoware_perception_msgs::msg::TrackedObject & object)
 {
   const auto & pose = object.kinematics.pose_with_covariance.pose;
-  const double yaw = autoware_utils_geometry::get_rpy(pose.orientation).z;
+  const double yaw = to_yaw(object.kinematics);
   const auto [vx, vy] = local_to_global(object.kinematics.twist_with_covariance.twist.linear, yaw);
   const auto label = to_agent_label(object);
 
