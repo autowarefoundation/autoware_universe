@@ -2,6 +2,95 @@
 Changelog for package autoware_cuda_pointcloud_preprocessor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(autoware_cuda_pointcloud_preprocessor): agnocast support (`#10812 <https://github.com/autowarefoundation/autoware_universe/issues/10812>`_)
+  * feat(autoware_cuda_pointcloud_preprocessor): add Agnocast support for incoming pointclouds
+  * chore: make compilable both with and without agnocast
+  * style(pre-commit): autofix
+  * ci: statisfy cppcheck and cmake_lint
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(autoware_cuda_pointcloud_preprocessor): diagnostic for cuda pointcloud preprocessor (`#10793 <https://github.com/autowarefoundation/autoware_universe/issues/10793>`_)
+  * feat: add ring, crop box diag
+  * feat: add distortion correction
+  * feat: add concat diagnostics
+  * chore: remove if debug publisher
+  * chore: clean code
+  * chore: clean code
+  * chore: utilize mask instead of atomicadd
+  * chore: count nan points and numbers of point after crop box filter
+  * chore: fix schema
+  * chore: move to structure
+  * chore: update library
+  * chore: prefix output
+  * chore: chagne shared pointer to const reference
+  * chore: use device vector for thrust count
+  * chore: fix output pointcloud name
+  * chore: add comment
+  * chore: reuse function
+  * chore: fix merging issue
+  * chore: prefix output
+  * chore: fix layout
+  * chore: add doc comment
+  * chore(autoware_cuda_pointcloud_preprocessor): disable uncrustify
+  ---------
+  Co-authored-by: Max SCHMELLER <max.schmeller@tier4.jp>
+* chore(autoware_cuda_pointcloud_preprocessor): add myself as maintainer (`#10809 <https://github.com/autowarefoundation/autoware_universe/issues/10809>`_)
+* fix(cuda_pointcloud_preprocessor): ensure ordered twist/imu queues (`#10748 <https://github.com/autowarefoundation/autoware_universe/issues/10748>`_)
+  * fix(cuda_pointcloud_preprocessor): ensure ordered twist/imu queues
+  * chore: satisfy uncrustify
+  * chore: uncrustify and clang-format conflict, disable uncrustify for statement
+  ---------
+  Co-authored-by: Max SCHMELLER <msc.schmeller@tier4.jp>
+* feat(cuda_pointcloud_preprocessor): update filtering parameter and process (`#10555 <https://github.com/autowarefoundation/autoware_universe/issues/10555>`_)
+* fix(cuda_pointcloud_preprocessor): reset data when receiving zero siz… (`#10723 <https://github.com/autowarefoundation/autoware_universe/issues/10723>`_)
+  * fix(cuda_pointcloud_preprocessor): reset data when receiving zero size pointcloud
+  * fix(cuda_pointcloud_preprocessor): hotfix for ghost output
+  - insert memory region reset for every iteration
+  - judge if each CUDA thread treat valid input point (or not)
+  * fix(cuda_pointcloud_preprocessor): apply valid point mask
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: Manato HIRABAYASHI <manato.hirabayashi@tier4.jp>
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Manato Hirabayashi <3022416+manato@users.noreply.github.com>
+* fix(autoware_cuda_pointcloud_preprocessor): fix CMakeLists.txt to install cuda_pointcloud_preprocessor library (`#10740 <https://github.com/autowarefoundation/autoware_universe/issues/10740>`_)
+  Co-authored-by: Amadeusz Szymko <amadeusz.szymko.2@tier4.jp>
+* feat: accelerate voxel filter (`#10566 <https://github.com/autowarefoundation/autoware_universe/issues/10566>`_)
+  * feat: add cuda_voxel_grid_downsample_filter
+  * refactor(cuda_voxel_grid_downsample_filter): clean up codes
+  * fix(cuda_voxel_grid_downsample_filter): suppress warning for arithmetic on pointer to void
+  * chore(cuda_voxel_grid_dowmsample_filter): remove debug code
+  * fix(cuda_voxel_grid_downsample_filter): support XYZIRC output format
+  Set output format to `Cloud XYZIRC` according to the [design
+  document](https://autowarefoundation.github.io/autoware-documentation/main/design/autoware-architecture/sensing/data-types/point-cloud/)
+  * style(pre-commit): autofix
+  * fix(cuda_boxel_grid_downsamle_filter): rearrange package structure
+  * chore(cuda_voxel_grid_dowmsample_filter): reuse OutputPointType in parent namespace
+  * chore(cuda_voxel_grid_downsample_filter): use macro defined in autoware_cuda_utils for error checking
+  * feat(cuda_voxel_grid_downsample_filter): support multiple data types for input intensity
+  * fix(cuda_voxel_grid_downsample_filter): cleanup included header files
+  * chore: correct comments
+  Co-authored-by: Kenzo Lobos Tsunekawa <kenzo.lobos@gmail.com>
+  * style(pre-commit): autofix
+  * feat(cuda_voxel_grid_downsample_filter): use cub instead of thrust for better acceleration
+  * style(pre-commit): autofix
+  * feat(cuda_voxel_grid_downsample_filter): use dedicated memory pool
+  * feat(cuda_voxel_grid_downsample_filter): introduce a parameter to control max size for GPU memory pool
+  * docs: add/modify schema and documents for cuda_voxel_grid_downsample_filter
+  * style(pre-commit): autofix
+  * chore: fix spell miss
+  * refactor: fix code style divergence error
+  * style(pre-commit): autofix
+  * fix: re-add INDENT-ON/OFF
+  * feat: use most significant bit calculation to make radix sort faster
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Kenzo Lobos Tsunekawa <kenzo.lobos@gmail.com>
+* Contributors: Fumiya Watanabe, Kotaro Uetake, Manato Hirabayashi, Max Schmeller, TaikiYamada4, Yi-Hsiang Fang (Vivid), keita1523
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -42,6 +131,9 @@ Changelog for package autoware_cuda_pointcloud_preprocessor
   * chore: now fixing uncrustify on source files
   ---------
 * Contributors: Kenzo Lobos Tsunekawa, TaikiYamada4, Takahisa Ishikawa, prime number
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

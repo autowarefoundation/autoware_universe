@@ -2,7 +2,33 @@
 Changelog for package autoware_control_evaluator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(control_evaluator): change metrics to non-absolute and add absolute metrics (`#10820 <https://github.com/autowarefoundation/autoware_universe/issues/10820>`_)
+  change metric name to _abs, and add no-abs metrics
+* feat(autoware_control_evaluator): add closest_object_distance metric (`#10803 <https://github.com/autowarefoundation/autoware_universe/issues/10803>`_)
+  * add closest_object_distance
+  * pre-commit
+  * add metric to list
+  * pre-commit
+  * fix TIER IV and autoware_utils_geometry
+  * add distance filter
+  * refactor code
+  * fix miss
+  ---------
+* chore(control_evaluator): refactor control evaluator's logics. (`#10741 <https://github.com/autowarefoundation/autoware_universe/issues/10741>`_)
+  * fix conflict
+  * fix bug
+  ---------
+* fix(control_evaluator): add check route handler readiness (`#10719 <https://github.com/autowarefoundation/autoware_universe/issues/10719>`_)
+  Co-authored-by: Jacek Namiota <jnamiota@autonomous-systems.pl>
+* Contributors: Kem (TiankuiXian), TaikiYamada4, namiota
+
 0.45.0 (2025-05-22)
+-------------------
+
+0.44.2 (2025-06-10)
 -------------------
 
 0.44.1 (2025-05-01)

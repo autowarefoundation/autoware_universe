@@ -17,6 +17,7 @@
 
 #include "autoware/lidar_centerpoint/cuda_utils.hpp"
 #include "autoware/lidar_centerpoint/postprocess/postprocess_kernel.hpp"
+#include "autoware/lidar_centerpoint/preprocess/preprocess_kernel.hpp"
 #include "autoware/lidar_centerpoint/preprocess/voxel_generator.hpp"
 
 #include <autoware/tensorrt_common/tensorrt_common.hpp>
@@ -64,6 +65,7 @@ protected:
   std::unique_ptr<VoxelGeneratorTemplate> vg_ptr_{nullptr};
   std::unique_ptr<tensorrt_common::TrtCommon> encoder_trt_ptr_{nullptr};
   std::unique_ptr<tensorrt_common::TrtCommon> head_trt_ptr_{nullptr};
+  std::unique_ptr<PreprocessCuda> pre_proc_ptr_{nullptr};
   std::unique_ptr<PostProcessCUDA> post_proc_ptr_{nullptr};
   cudaStream_t stream_{nullptr};
 

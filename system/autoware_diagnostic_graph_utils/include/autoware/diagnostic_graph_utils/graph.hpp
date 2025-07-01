@@ -50,6 +50,7 @@ public:
 
   int index() const { return index_; }
   std::vector<DiagUnit *> child_units() const;
+  std::vector<DiagNode *> child_nodes() const;
   std::vector<DiagLink *> child_links() const;
   void add_child(DiagLink * link) { child_links_.push_back(link); }
 
@@ -85,6 +86,7 @@ public:
   DiagnosticLevel level() const override { return status_.level; }
   DiagnosticLevel input_level() const { return status_.input_level; }
   DiagnosticLevel latch_level() const { return status_.latch_level; }
+  bool is_dependent() const { return status_.is_dependent; }
 
   void update(const DiagNodeStatus & msg) { status_ = msg; }
   std::string type() const { return struct_.type; }

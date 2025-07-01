@@ -2,12 +2,22 @@
 Changelog for package autoware_traffic_light_utils
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(autoware_behavior_velocity_traffic_light_module): add v2i (`#10768 <https://github.com/autowarefoundation/autoware_universe/issues/10768>`_)
+  add v2i
+* Contributors: TaikiYamada4, Yukinari Hisaki
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
 * fix(traffic_light_utils): remove condition in `setSignalUnknown` (`#10631 <https://github.com/autowarefoundation/autoware_universe/issues/10631>`_)
   remove condition
 * Contributors: Masato Saeki, TaikiYamada4
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

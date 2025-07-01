@@ -18,7 +18,7 @@
 
 #include <autoware_adapi_v1_msgs/msg/mrm_state.hpp>
 #include <autoware_adapi_v1_msgs/msg/operation_mode_state.hpp>
-#include <tier4_system_msgs/srv/change_operation_mode.hpp>
+#include <autoware_system_msgs/srv/change_operation_mode.hpp>
 
 #include <vector>
 
@@ -28,7 +28,7 @@ namespace autoware::command_mode_decider
 namespace modes = autoware::command_mode_types::modes;
 using autoware_adapi_v1_msgs::msg::MrmState;
 using autoware_adapi_v1_msgs::msg::OperationModeState;
-using tier4_system_msgs::srv::ChangeOperationMode;
+using autoware_system_msgs::srv::ChangeOperationMode;
 
 uint16_t CommandModeDecider::from_operation_mode(uint16_t operation_mode)
 {

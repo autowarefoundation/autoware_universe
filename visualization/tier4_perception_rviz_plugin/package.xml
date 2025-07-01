@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>tier4_perception_rviz_plugin</name>
-  <version>0.44.0</version>
+  <version>0.46.0</version>
   <description>Contains plugins to visualize object detection outputs</description>
   <maintainer email="yoshi.ri@tier4.jp">Yoshi Ri</maintainer>
   <maintainer email="lei.gu@tier4.jp">Lei Gu</maintainer>

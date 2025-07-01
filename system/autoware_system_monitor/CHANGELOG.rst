@@ -2,6 +2,21 @@
 Changelog for package autoware_system_monitor
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* fix(gpu_monitor): correct gpu memory calculation (`#10660 <https://github.com/autowarefoundation/autoware_universe/issues/10660>`_)
+  * chore(systme): fixed gpu memory calculation
+  * chore(autoware_system_monitor): fixed data types.
+  * style(pre-commit): autofix
+  * changed double literal to float literal
+  * restore the output format
+  * style(pre-commit): autofix
+  * correct the output format.
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: TaikiYamada4, Takayuki AKAMINE
+
 0.45.0 (2025-05-22)
 -------------------
 * fix(autoware_system_monitor): quick fix for autoware_system_monitor (`#10506 <https://github.com/autowarefoundation/autoware_universe/issues/10506>`_)
@@ -9,6 +24,9 @@ Changelog for package autoware_system_monitor
   * feat(autoware_system_monitor): quick fix, autoware_system_monitor, add comment by sasaki san: v0.1
   ---------
 * Contributors: 心刚
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

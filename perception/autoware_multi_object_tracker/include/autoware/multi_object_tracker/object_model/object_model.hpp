@@ -139,7 +139,7 @@ public:
         process_noise.acc_long = const_g * 0.35;
         process_noise.acc_lat = const_g * 0.15;
         process_noise.yaw_rate_min = deg2rad(1.5);
-        process_noise.yaw_rate_max = deg2rad(15.0);
+        process_noise.yaw_rate_max = deg2rad(18.0);
 
         process_limit.acc_long_max = const_g;
         process_limit.acc_lat_max = const_g;
@@ -155,7 +155,7 @@ public:
         // measurement noise model
         measurement_covariance.pos_x = sq(0.5);
         measurement_covariance.pos_y = sq(0.4);
-        measurement_covariance.yaw = sq(deg2rad(20.0));
+        measurement_covariance.yaw = sq(deg2rad(22.0));
         measurement_covariance.vel_long = sq(1.0);
 
         // bicycle motion model
@@ -183,7 +183,7 @@ public:
         process_noise.acc_long = const_g * 0.35;
         process_noise.acc_lat = const_g * 0.15;
         process_noise.yaw_rate_min = deg2rad(1.5);
-        process_noise.yaw_rate_max = deg2rad(15.0);
+        process_noise.yaw_rate_max = deg2rad(18.0);
 
         process_limit.acc_long_max = const_g;
         process_limit.acc_lat_max = const_g;
@@ -199,7 +199,7 @@ public:
         // measurement noise model
         measurement_covariance.pos_x = sq(0.5);
         measurement_covariance.pos_y = sq(0.4);
-        measurement_covariance.yaw = sq(deg2rad(20.0));
+        measurement_covariance.yaw = sq(deg2rad(22.0));
         measurement_covariance.vel_long = sq(kmph2mps(10.0));
 
         // bicycle motion model

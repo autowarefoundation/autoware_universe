@@ -2,7 +2,51 @@
 Changelog for package autoware_image_diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(image_blockage_diagnostics): refactor codes for detailed diagnostic (`#10670 <https://github.com/autowarefoundation/autoware_universe/issues/10670>`_)
+  * chore: remove default parameter and clean code
+  * chore: refactor for diagnostic interface
+  * refactor: seperate long functions
+  * chore: change variable naming
+  * chore: clean code
+  * chore: clean functions
+  * chore: fix diagnostic message
+  * chore: fix color mapping
+  * chore: fix spell error
+  * chore: fix schema order
+  * chore: clean code
+  * chore: clean code
+  * chore: check parameters
+  * chore: add twist
+  * chore: remove the warning state for each block
+  * chore: remove warning state
+  * chore: add timestamp
+  * chore: add hardware id
+  * chore: add hardware_id
+  * chore: remove twist implementation
+  * chore: add hysteresis check
+  * chore: clean function logic
+  * chore: fix schema
+  * chore: clean code
+  * chore: remove twist related parameters from file
+  * chore: add default value in schema
+  * chore: changes license
+  * chore: fix spell error
+  * chore: fix dft image
+  * chore: add debug mode
+  * chore: only establish publisher when debug is on
+  * chore: set default to false
+  * chore: unify diagnostics namespace usage for consistency
+  * chore: remove updater dependency
+  ---------
+* Contributors: TaikiYamada4, Yi-Hsiang Fang (Vivid)
+
 0.45.0 (2025-05-22)
+-------------------
+
+0.44.2 (2025-06-10)
 -------------------
 
 0.44.1 (2025-05-01)

@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>tier4_control_mode_rviz_plugin</name>
-  <version>0.1.0</version>
+  <version>0.46.0</version>
   <description>RViz plugin for displaying control mode</description>
   <maintainer email="kyoichi.sugahara@tier4.jp">Kyoichi Sugahara</maintainer>
   <maintainer email="yukinari.hisaki.2@tier4.jp">Yukinari Hisaki</maintainer>

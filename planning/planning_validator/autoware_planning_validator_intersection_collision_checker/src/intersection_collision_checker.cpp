@@ -18,27 +18,20 @@
 
 #include <autoware/signal_processing/lowpass_filter_1d.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
-#include <autoware_utils/geometry/boost_geometry.hpp>
-#include <autoware_utils/geometry/geometry.hpp>
 #include <autoware_utils/ros/parameter.hpp>
-#include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/transform/transforms.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
-#include <boost/geometry/algorithms/buffer.hpp>
-#include <boost/geometry/algorithms/disjoint.hpp>
-#include <boost/geometry/algorithms/envelope.hpp>
-#include <boost/geometry/algorithms/union.hpp>
-#include <boost/geometry/strategies/cartesian/buffer_point_square.hpp>
+#include <autoware_internal_planning_msgs/msg/planning_factor.hpp>
 
-#include <lanelet2_core/Forward.h>
-#include <lanelet2_core/LaneletMap.h>
-#include <lanelet2_core/geometry/BoundingBox.h>
-#include <lanelet2_core/geometry/LineString.h>
-#include <lanelet2_core/geometry/Point.h>
-#include <lanelet2_core/geometry/Polygon.h>
-#include <lanelet2_core/primitives/BoundingBox.h>
-#include <lanelet2_routing/RoutingGraph.h>
+#include <pcl/filters/crop_hull.h>
+#include <pcl/filters/extract_indices.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/registration/gicp.h>
+#include <pcl/segmentation/extract_clusters.h>
+#include <pcl/surface/convex_hull.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 #include <algorithm>
 #include <limits>
@@ -49,6 +42,8 @@
 
 namespace autoware::planning_validator
 {
+using autoware_internal_planning_msgs::msg::PlanningFactor;
+using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 using autoware_utils::get_or_declare_parameter;
 
 void IntersectionCollisionChecker::init(
@@ -61,74 +56,35 @@ void IntersectionCollisionChecker::init(
   logger_ = node.get_logger();
   context_ = context;
 
-  setup_parameters(node);
+  last_valid_time_ = clock_->now();
+  last_invalid_time_ = clock_->now();
+
+  param_listener_ = std::make_unique<intersection_collision_checker_node::ParamListener>(
+    node.get_node_parameters_interface());
+
+  planning_factor_interface_ =
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
+      &node, "intersection_collision_checker");
 
   setup_diag();
-}
-
-void IntersectionCollisionChecker::setup_parameters(rclcpp::Node & node)
-{
-  params_.enable = get_or_declare_parameter<bool>(node, "intersection_collision_checker.enable");
-  params_.is_critical =
-    get_or_declare_parameter<bool>(node, "intersection_collision_checker.is_critical");
-  params_.detection_range =
-    get_or_declare_parameter<double>(node, "intersection_collision_checker.detection_range");
-  params_.ttc_threshold =
-    get_or_declare_parameter<double>(node, "intersection_collision_checker.ttc_threshold");
-  params_.ego_deceleration =
-    get_or_declare_parameter<double>(node, "intersection_collision_checker.ego_deceleration");
-  params_.min_time_horizon =
-    get_or_declare_parameter<double>(node, "intersection_collision_checker.min_time_horizon");
-  params_.timeout =
-    get_or_declare_parameter<double>(node, "intersection_collision_checker.timeout");
-
-  params_.right_turn.enable =
-    get_or_declare_parameter<bool>(node, "intersection_collision_checker.right_turn.enable");
-  params_.right_turn.check_oncoming_lanes = get_or_declare_parameter<bool>(
-    node, "intersection_collision_checker.right_turn.check_oncoming_lanes");
-  params_.right_turn.check_crossing_lanes = get_or_declare_parameter<bool>(
-    node, "intersection_collision_checker.right_turn.check_crossing_lanes");
-  params_.right_turn.check_turning_lanes = get_or_declare_parameter<bool>(
-    node, "intersection_collision_checker.right_turn.check_turning_lanes");
-
-  params_.left_turn.enable =
-    get_or_declare_parameter<bool>(node, "intersection_collision_checker.left_turn.enable");
-  params_.left_turn.check_turning_lanes = get_or_declare_parameter<bool>(
-    node, "intersection_collision_checker.left_turn.check_turning_lanes");
-
-  params_.pointcloud.height_buffer = get_or_declare_parameter<double>(
-    node, "intersection_collision_checker.pointcloud.height_buffer");
-  params_.pointcloud.min_height =
-    get_or_declare_parameter<double>(node, "intersection_collision_checker.pointcloud.min_height");
-  params_.pointcloud.observation_time = get_or_declare_parameter<double>(
-    node, "intersection_collision_checker.pointcloud.observation_time");
-  params_.pointcloud.voxel_grid_filter.x = get_or_declare_parameter<double>(
-    node, "intersection_collision_checker.pointcloud.voxel_grid_filter.x");
-  params_.pointcloud.voxel_grid_filter.y = get_or_declare_parameter<double>(
-    node, "intersection_collision_checker.pointcloud.voxel_grid_filter.y");
-  params_.pointcloud.voxel_grid_filter.z = get_or_declare_parameter<double>(
-    node, "intersection_collision_checker.pointcloud.voxel_grid_filter.z");
-  params_.pointcloud.clustering.tolerance = get_or_declare_parameter<double>(
-    node, "intersection_collision_checker.pointcloud.clustering.tolerance");
-  params_.pointcloud.clustering.min_height = get_or_declare_parameter<double>(
-    node, "intersection_collision_checker.pointcloud.clustering.min_height");
-  params_.pointcloud.clustering.min_size = get_or_declare_parameter<int>(
-    node, "intersection_collision_checker.pointcloud.clustering.min_size");
-  params_.pointcloud.clustering.max_size = get_or_declare_parameter<int>(
-    node, "intersection_collision_checker.pointcloud.clustering.max_size");
 }
 
 void IntersectionCollisionChecker::setup_diag()
 {
   context_->add_diag(
     "intersection_validation_collision_check",
-    context_->validation_status->is_valid_collision_check, "risk of collision at intersection turn",
-    params_.is_critical);
+    context_->validation_status->is_valid_intersection_collision_check,
+    "risk of collision at intersection turn", false);
 }
 
 void IntersectionCollisionChecker::validate(bool & is_critical)
 {
-  context_->validation_status->is_valid_collision_check = true;
+  context_->validation_status->is_valid_intersection_collision_check = true;
+
+  params_ = param_listener_->get_params();
+  const auto & p = params_.icc_parameters;
+
+  if (!p.enable) return;
 
   auto skip_validation = [&](const std::string & reason) {
     RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "%s", reason.c_str());
@@ -160,28 +116,48 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
     return skip_validation("failed to get target lanelets, skipping collision check.");
   }
 
+  context_->validation_status->is_valid_intersection_collision_check =
+    is_safe(lanelets.target_lanelets);
+}
+
+bool IntersectionCollisionChecker::is_safe(const TargetLanelets & target_lanelets)
+{
   PointCloud::Ptr filtered_pointcloud(new PointCloud);
   filter_pointcloud(context_->data->obstacle_pointcloud, filtered_pointcloud);
-  if (filtered_pointcloud->empty()) return;
+  if (filtered_pointcloud->empty()) return true;
 
-  context_->validation_status->is_valid_collision_check = check_collision(
-    lanelets.target_lanelets, filtered_pointcloud,
-    context_->data->obstacle_pointcloud->header.stamp);
+  safety_factor_array_ = SafetyFactorArray{};
+  const bool is_safe = check_collision(
+    target_lanelets, filtered_pointcloud, context_->data->obstacle_pointcloud->header.stamp);
 
-  if (!context_->validation_status->is_valid_collision_check) {
-    last_invalid_time_ = context_->data->obstacle_pointcloud->header.stamp;
-    return;
+  const auto & ego_pose = context_->data->current_kinematics->pose.pose;
+  const auto & traj_points = context_->data->current_trajectory->points;
+  auto publish_planning_factor = [&]() {
+    safety_factor_array_.is_safe = false;
+    safety_factor_array_.detail = "possible collision at intersection";
+    safety_factor_array_.header.stamp = clock_->now();
+    planning_factor_interface_->add(
+      traj_points, ego_pose, ego_pose, PlanningFactor::STOP, safety_factor_array_);
+    planning_factor_interface_->publish();
+  };
+
+  const auto & p = params_.icc_parameters;
+  const auto now = clock_->now();
+
+  if (is_safe) {
+    last_valid_time_ = now;
+    if ((now - last_invalid_time_).seconds() > p.off_time_buffer) {
+      return true;
+    }
+  } else {
+    last_invalid_time_ = now;
+    if ((now - last_valid_time_).seconds() < p.on_time_buffer) {
+      return true;
+    }
   }
 
-  if (!last_invalid_time_) return;
-
-  const auto time_since_last_invalid = (clock_->now() - *last_invalid_time_).seconds();
-  if (time_since_last_invalid < params_.timeout) {
-    context_->validation_status->is_valid_collision_check = false;
-    return;
-  }
-
-  last_invalid_time_.reset();
+  publish_planning_factor();
+  return false;
 }
 
 EgoTrajectory IntersectionCollisionChecker::get_ego_trajectory() const
@@ -228,9 +204,11 @@ Direction IntersectionCollisionChecker::get_lanelets(
 
   if (turn_direction == Direction::NONE) return turn_direction;
 
+  const auto & p = params_.icc_parameters;
+
   const auto current_vel = context_->data->current_kinematics->twist.twist.linear.x;
-  const auto stopping_time = abs(current_vel / params_.ego_deceleration);
-  const auto time_horizon = std::max(params_.min_time_horizon, stopping_time);
+  const auto stopping_time = abs(current_vel / p.ego_deceleration);
+  const auto time_horizon = std::max(p.min_time_horizon, stopping_time);
   if (turn_direction == Direction::RIGHT) {
     collision_checker_utils::set_right_turn_target_lanelets(
       ego_trajectory, *context_->data->route_handler, params_, lanelets, time_horizon);
@@ -245,11 +223,12 @@ Direction IntersectionCollisionChecker::get_lanelets(
 Direction IntersectionCollisionChecker::get_turn_direction(
   const lanelet::ConstLanelets & trajectory_lanelets) const
 {
+  const auto & p = params_.icc_parameters;
   for (const auto & lanelet : trajectory_lanelets) {
     if (!lanelet.hasAttribute("turn_direction")) continue;
     const lanelet::Attribute & attr = lanelet.attribute("turn_direction");
-    if (attr.value() == "right" && params_.right_turn.enable) return Direction::RIGHT;
-    if (attr.value() == "left" && params_.left_turn.enable) return Direction::LEFT;
+    if (attr.value() == "right" && p.right_turn.enable) return Direction::RIGHT;
+    if (attr.value() == "left" && p.left_turn.enable) return Direction::LEFT;
   }
   return Direction::NONE;
 }
@@ -259,13 +238,15 @@ void IntersectionCollisionChecker::filter_pointcloud(
 {
   if (input->data.empty()) return;
 
+  const auto & p = params_.icc_parameters;
+
   pcl::fromROSMsg(*input, *filtered_pointcloud);
 
   {
     pcl::PassThrough<pcl::PointXYZ> filter;
     filter.setInputCloud(filtered_pointcloud);
     filter.setFilterFieldName("x");
-    filter.setFilterLimits(-1.0 * params_.detection_range, params_.detection_range);
+    filter.setFilterLimits(-1.0 * p.detection_range, p.detection_range);
     filter.filter(*filtered_pointcloud);
   }
 
@@ -276,8 +257,8 @@ void IntersectionCollisionChecker::filter_pointcloud(
     filter.setInputCloud(filtered_pointcloud);
     filter.setFilterFieldName("z");
     filter.setFilterLimits(
-      params_.pointcloud.min_height,
-      context_->vehicle_info.vehicle_height_m + params_.pointcloud.height_buffer);
+      p.pointcloud.min_height,
+      context_->vehicle_info.vehicle_height_m + p.pointcloud.height_buffer);
     filter.filter(*filtered_pointcloud);
   }
 
@@ -297,10 +278,11 @@ void IntersectionCollisionChecker::filter_pointcloud(
   }
 
   {
-    const auto & p = params_.pointcloud;
     pcl::VoxelGrid<pcl::PointXYZ> filter;
     filter.setInputCloud(filtered_pointcloud);
-    filter.setLeafSize(p.voxel_grid_filter.x, p.voxel_grid_filter.y, p.voxel_grid_filter.z);
+    filter.setLeafSize(
+      p.pointcloud.voxel_grid_filter.x, p.pointcloud.voxel_grid_filter.y,
+      p.pointcloud.voxel_grid_filter.z);
     filter.filter(*filtered_pointcloud);
   }
 }
@@ -310,6 +292,8 @@ bool IntersectionCollisionChecker::check_collision(
   const rclcpp::Time & time_stamp)
 {
   bool is_safe = true;
+
+  const auto & p = params_.icc_parameters;
 
   auto ego_object_overlap_time =
     [](const double object_ttc, const std::pair<double, double> & ego_time) {
@@ -332,7 +316,7 @@ bool IntersectionCollisionChecker::check_collision(
       object.track_duration += dt;
       const auto max_accel = 30.0;
       const auto raw_velocity = dl / dt;
-      const bool is_reliable = object.track_duration > params_.pointcloud.observation_time;
+      const bool is_reliable = object.track_duration > p.pointcloud.observation_time;
       if (is_reliable && std::abs(raw_velocity - object.velocity) / dt > max_accel) {
         object.velocity = 0.0;        // too high acceleration, reset velocity
         object.track_duration = 0.0;  // reset track duration
@@ -343,7 +327,9 @@ bool IntersectionCollisionChecker::check_collision(
       object.last_update_time = new_data.last_update_time;
       object.pose = new_data.pose;
       object.distance_to_overlap = new_data.distance_to_overlap;
-      object.ttc = object.distance_to_overlap / object.velocity;
+      object.delay_compensated_distance_to_overlap =
+        std::max(0.0, object.distance_to_overlap - object.velocity * p.pointcloud.latency);
+      object.ttc = object.delay_compensated_distance_to_overlap / object.velocity;
     };
 
     if (history_.find(pcd_object->overlap_lanelet_id) == history_.end()) {
@@ -353,12 +339,13 @@ bool IntersectionCollisionChecker::check_collision(
       update_object(existing_object, pcd_object.value());
 
       if (
-        existing_object.track_duration > params_.pointcloud.observation_time &&
+        existing_object.track_duration > p.pointcloud.observation_time &&
         ego_object_overlap_time(existing_object.ttc, target_lanelet.ego_overlap_time) <
-          params_.ttc_threshold) {
+          p.ttc_threshold) {
         is_safe = false;
         context_->debug_pose_publisher->pushPointMarker(
           existing_object.pose.position, "collision_checker_pcd_objects", 0);
+        add_safety_factor(existing_object.pose.position, target_lanelet.ego_overlap_time.first);
       } else {
         context_->debug_pose_publisher->pushPointMarker(
           existing_object.pose.position, "collision_checker_pcd_objects", 1);
@@ -419,6 +406,7 @@ std::optional<PCDObject> IntersectionCollisionChecker::get_pcd_object(
     object.overlap_lanelet_id = target_lanelet.id;
     object.track_duration = 0.0;
     object.distance_to_overlap = arc_length_to_overlap;
+    object.delay_compensated_distance_to_overlap = arc_length_to_overlap;
     object.velocity = 0.0;
     object.ttc = std::numeric_limits<double>::max();
     pcd_object = object;
@@ -444,14 +432,16 @@ void IntersectionCollisionChecker::cluster_pointcloud(
 {
   if (input->empty()) return;
 
+  const auto & p = params_.icc_parameters;
+
   const std::vector<pcl::PointIndices> cluster_indices = std::invoke([&]() {
     std::vector<pcl::PointIndices> cluster_idx;
     pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
     tree->setInputCloud(input);
     pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-    ec.setClusterTolerance(params_.pointcloud.clustering.tolerance);
-    ec.setMinClusterSize(params_.pointcloud.clustering.min_size);
-    ec.setMaxClusterSize(params_.pointcloud.clustering.max_size);
+    ec.setClusterTolerance(p.pointcloud.clustering.tolerance);
+    ec.setMinClusterSize(p.pointcloud.clustering.min_size);
+    ec.setMaxClusterSize(p.pointcloud.clustering.max_size);
     ec.setSearchMethod(tree);
     ec.setInputCloud(input);
     ec.extract(cluster_idx);
@@ -461,17 +451,17 @@ void IntersectionCollisionChecker::cluster_pointcloud(
   const auto ego_base_z = context_->data->current_kinematics->pose.pose.position.z;
   auto above_height_threshold = [&](const double z) {
     const auto rel_height = z - ego_base_z;
-    return rel_height > params_.pointcloud.clustering.min_height;
+    return rel_height > p.pointcloud.clustering.min_height;
   };
 
   for (const auto & indices : cluster_indices) {
     PointCloud::Ptr cluster(new PointCloud);
     bool cluster_above_height_threshold{false};
     for (const auto & index : indices.indices) {
-      const auto & p = (*input)[index];
+      const auto & point = (*input)[index];
 
-      cluster_above_height_threshold |= above_height_threshold(p.z);
-      cluster->push_back(p);
+      cluster_above_height_threshold |= above_height_threshold(point.z);
+      cluster->push_back(point);
     }
     if (!cluster_above_height_threshold) continue;
 
@@ -480,8 +470,8 @@ void IntersectionCollisionChecker::cluster_pointcloud(
     hull.setInputCloud(cluster);
     PointCloud::Ptr surface_hull(new PointCloud);
     hull.reconstruct(*surface_hull);
-    for (const auto & p : *surface_hull) {
-      output->push_back(p);
+    for (const auto & point : *surface_hull) {
+      output->push_back(point);
     }
   }
 }
@@ -522,6 +512,17 @@ void IntersectionCollisionChecker::set_lanelets_debug_marker(
         ll_polygons, "collision_checker_target_lanelets", 2);
     }
   }
+}
+
+void IntersectionCollisionChecker::add_safety_factor(
+  geometry_msgs::msg::Point & obs_point, const double ttc)
+{
+  SafetyFactor factor;
+  factor.is_safe = false;
+  factor.type = SafetyFactor::POINTCLOUD;
+  factor.ttc_begin = ttc;
+  factor.points.push_back(obs_point);
+  safety_factor_array_.factors.push_back(factor);
 }
 
 }  // namespace autoware::planning_validator

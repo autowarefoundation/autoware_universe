@@ -19,6 +19,8 @@
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
 #include "autoware_vehicle_info_utils/vehicle_info_utils.hpp"
 
+#include <angles/angles/angles.h>
+
 #include <algorithm>
 #include <cstdint>
 #include <memory>
@@ -184,6 +186,19 @@ void OverrunValidator::validate(
   res.will_overrun_stop_point = res.pred_dist_to_stop < -will_overrun_stop_point_dist_th;
 }
 
+void YawValidator::validate(
+  ControlValidatorStatus & res, const Trajectory & reference_trajectory,
+  const Odometry & kinematics) const
+{
+  const auto interpolated_trajectory_point =
+    motion_utils::calcInterpolatedPoint(reference_trajectory, kinematics.pose.pose);
+  res.yaw_deviation = std::abs(angles::shortest_angular_distance(
+    tf2::getYaw(interpolated_trajectory_point.pose.orientation),
+    tf2::getYaw(kinematics.pose.pose.orientation)));
+  res.is_valid_yaw = res.yaw_deviation <= yaw_deviation_error_th_;
+  res.is_warn_yaw = res.yaw_deviation > yaw_deviation_warn_th_;
+}
+
 ControlValidator::ControlValidator(const rclcpp::NodeOptions & options)
 : Node("control_validator", options), vehicle_info_()
 {
@@ -298,6 +313,16 @@ void ControlValidator::setup_diag()
       stat, validation_status_.is_valid_lateral_jerk,
       "The lateral jerk is larger than expected value.");
   });
+
+  d.add(ns + "yaw_deviation", [&](auto & stat) {
+    set_status(
+      stat, validation_status_.is_valid_yaw, "The vehicle yaw has deviated from the trajectory.");
+    // TODO(someone): implement the dual thresholds for WARN/ERROR for the other metrics
+    if (validation_status_.is_valid_yaw && validation_status_.is_warn_yaw) {
+      stat.summary(
+        DiagnosticStatus::WARN, "The vehicle yaw is deviating but is still under the error value.");
+    }
+  });
 }
 
 void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
@@ -361,6 +386,7 @@ void ControlValidator::on_control_cmd(const Control::ConstSharedPtr msg)
     validation_status_, *kinematics_msg, *control_cmd_msg, *acceleration_msg);
   velocity_validator.validate(validation_status_, *reference_trajectory_msg, *kinematics_msg);
   overrun_validator.validate(validation_status_, *reference_trajectory_msg, *kinematics_msg);
+  yaw_validator.validate(validation_status_, *reference_trajectory_msg, *kinematics_msg);
 
   // post process
   validation_status_.invalid_count =
