@@ -63,6 +63,11 @@ bool NodeUnit::dependency() const
   return dependency_ && dependency_->level() != DiagnosticStatus::OK;
 }
 
+void NodeUnit::set_initializing(bool initializing)
+{
+  latch_->set_initializing(initializing);
+}
+
 void NodeUnit::reset()
 {
   latch_->reset();

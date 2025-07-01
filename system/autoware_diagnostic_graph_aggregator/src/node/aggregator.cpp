@@ -52,6 +52,10 @@ AggregatorNode::AggregatorNode(const rclcpp::NodeOptions & options) : Node("aggr
     srv_reset_ = create_service<ResetDiagGraph>(
       "~/reset",
       std::bind(&AggregatorNode::on_reset, this, std::placeholders::_1, std::placeholders::_2));
+    srv_set_initializing_ = create_service<SetBool>(
+      "~/set_initializing",
+      std::bind(
+        &AggregatorNode::on_set_initializing, this, std::placeholders::_1, std::placeholders::_2));
 
     const auto rate = rclcpp::Rate(declare_parameter<double>("rate"));
     timer_ = rclcpp::create_timer(this, get_clock(), rate.period(), [this]() { on_timer(); });
@@ -90,6 +94,13 @@ void AggregatorNode::on_reset(
 {
   graph_->reset();
   response->status.success = true;
+}
+
+void AggregatorNode::on_set_initializing(
+  const SetBool::Request::SharedPtr request, const SetBool::Response::SharedPtr response)
+{
+  graph_->set_initializing(request->data);
+  response->success = true;
 }
 
 }  // namespace autoware::diagnostic_graph_aggregator

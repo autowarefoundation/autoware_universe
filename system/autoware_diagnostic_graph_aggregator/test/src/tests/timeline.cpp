@@ -92,13 +92,16 @@ void TimelineTest::execute(const std::string & path)
   const auto structure = graph.create_struct_msg(stamp);
   std::vector<std::string> result_sequence(structure.nodes.size());
   for (size_t step = 0; step < diagnostic_array_sequence.size(); ++step) {
-    DiagnosticArray array;
-    array.header.stamp = stamp;
-    array.status = diagnostic_array_sequence[step];
-
     if (reset_steps_.count(step)) {
       graph.reset();
     }
+    if (initializing_steps_.count(step)) {
+      graph.set_initializing(initializing_steps_.at(step));
+    }
+
+    DiagnosticArray array;
+    array.header.stamp = stamp;
+    array.status = diagnostic_array_sequence[step];
     graph.update(stamp, array);
     graph.update(stamp);
 
@@ -121,6 +124,11 @@ void TimelineTest::set_interval(double interval)
 void TimelineTest::set_reset(const std::unordered_set<size_t> & steps)
 {
   reset_steps_ = steps;
+}
+
+void TimelineTest::set_initializing(const std::unordered_map<size_t, bool> & steps)
+{
+  initializing_steps_ = steps;
 }
 
 void TimelineTest::set(const std::string & name, const std::string & levels)
