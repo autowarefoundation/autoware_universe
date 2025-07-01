@@ -297,6 +297,12 @@ private:
   }
 
   template <typename... Args>
+  inline void debug_throttle(Args &&... args) const
+  {
+    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 5000, "%s", args...);
+  }
+
+  template <typename... Args>
   inline void warn_throttle(Args &&... args) const
   {
     RCLCPP_WARN_THROTTLE(logger_, *clock_, 5000, "%s", args...);

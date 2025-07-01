@@ -1,0 +1,23 @@
+units:
+  - type: diag
+    path: path0
+    node: dummy
+    name: name0
+
+  - type: diag
+    path: path1
+    node: dummy
+    name: name1
+    timeout: 0.5
+
+  - type: diag
+    path: path2
+    node: dummy
+    name: name2
+    timeout: 1.0
+
+  - type: diag
+    path: path3
+    node: dummy
+    name: name3
+    timeout: 1.5

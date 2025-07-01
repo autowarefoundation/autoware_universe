@@ -2,6 +2,13 @@
 Changelog for package autoware_behavior_velocity_traffic_light_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(autoware_behavior_velocity_traffic_light_module): add v2i (`#10768 <https://github.com/autowarefoundation/autoware_universe/issues/10768>`_)
+  add v2i
+* Contributors: TaikiYamada4, Yukinari Hisaki
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -18,6 +25,9 @@ Changelog for package autoware_behavior_velocity_traffic_light_module
   Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
 * feat(behavior_velocity_planner): only wait for the required subscriptions (`#10546 <https://github.com/autowarefoundation/autoware_universe/issues/10546>`_)
 * Contributors: Mitsuhiro Sakamoto, TaikiYamada4, Takayuki Murooka
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

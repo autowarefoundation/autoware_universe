@@ -2,7 +2,29 @@
 Changelog for package autoware_hazard_status_converter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(diagnostic_graph_aggregator): support latch and dependent error (`#10829 <https://github.com/autowarefoundation/autoware_universe/issues/10829>`_)
+  * update aggregator
+  * update utils
+  * update hazard converter
+  * update adapi
+  * fix build error
+  * ignore spell check for yamls
+  * fix copyright year
+  * ignore spell check for timeline
+  * change link index to fix out of bounds access
+  * reflect link index change to utils
+  * fix for cppcheck
+  * fix for cppcheck
+  ---------
+* Contributors: TaikiYamada4, Takagi, Isamu
+
 0.45.0 (2025-05-22)
+-------------------
+
+0.44.2 (2025-06-10)
 -------------------
 
 0.44.1 (2025-05-01)

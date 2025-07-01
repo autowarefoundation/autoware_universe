@@ -20,10 +20,10 @@
 
 #include <autoware_internal_debug_msgs/msg/float64_stamped.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
-#include <tier4_planning_msgs/msg/route_state.hpp>
-#include <tier4_planning_msgs/srv/clear_route.hpp>
-#include <tier4_planning_msgs/srv/set_lanelet_route.hpp>
-#include <tier4_planning_msgs/srv/set_waypoint_route.hpp>
+#include <autoware_planning_msgs/msg/route_state.hpp>
+#include <autoware_planning_msgs/srv/clear_route.hpp>
+#include <autoware_planning_msgs/srv/set_lanelet_route.hpp>
+#include <autoware_planning_msgs/srv/set_waypoint_route.hpp>
 
 #include <optional>
 #include <variant>
@@ -33,10 +33,10 @@ namespace autoware::mission_planner_universe
 
 using autoware_common_msgs::msg::ResponseStatus;
 using autoware_planning_msgs::msg::LaneletRoute;
-using tier4_planning_msgs::msg::RouteState;
-using tier4_planning_msgs::srv::ClearRoute;
-using tier4_planning_msgs::srv::SetLaneletRoute;
-using tier4_planning_msgs::srv::SetWaypointRoute;
+using autoware_planning_msgs::msg::RouteState;
+using autoware_planning_msgs::srv::ClearRoute;
+using autoware_planning_msgs::srv::SetLaneletRoute;
+using autoware_planning_msgs::srv::SetWaypointRoute;
 using unique_identifier_msgs::msg::UUID;
 
 class RouteInterface

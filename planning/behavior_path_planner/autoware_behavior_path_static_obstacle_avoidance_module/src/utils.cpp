@@ -23,6 +23,7 @@
 
 #include <Eigen/Dense>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
+#include <autoware_utils_uuid/uuid_helper.hpp>
 
 #include <boost/geometry/algorithms/buffer.hpp>
 #include <boost/geometry/algorithms/convex_hull.hpp>
@@ -37,6 +38,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -298,10 +300,54 @@ bool isWithinIntersection(
   }
   const auto & polygon = *polygon_opt;
 
-  return boost::geometry::within(
-    lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(object.getPosition()))
-      .basicPoint(),
-    lanelet::utils::to2D(polygon.basicPolygon()));
+  if (std::string(object.overhang_lanelet.attributeOr("turn_direction", "else")) == "right") {
+    return boost::geometry::within(
+      lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(object.getPosition()))
+        .basicPoint(),
+      lanelet::utils::to2D(polygon.basicPolygon()));
+  }
+
+  if (std::string(object.overhang_lanelet.attributeOr("turn_direction", "else")) == "left") {
+    return boost::geometry::within(
+      lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(object.getPosition()))
+        .basicPoint(),
+      lanelet::utils::to2D(polygon.basicPolygon()));
+  }
+
+  if (std::string(object.overhang_lanelet.attributeOr("turn_direction", "else")) != "straight") {
+    return false;
+  }
+
+  lanelet::ConstLanelets prev_lanes;
+  if (!route_handler->getPreviousLaneletsWithinRoute(object.overhang_lanelet, &prev_lanes)) {
+    return false;
+  }
+
+  if (isOnRight(object)) {
+    for (const auto & prev_lane : prev_lanes) {
+      for (const auto & sibling_lane : route_handler->getNextLanelets(prev_lane)) {
+        if (std::string(sibling_lane.attributeOr("turn_direction", "else")) == "right") {
+          return boost::geometry::within(
+            lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(object.getPosition()))
+              .basicPoint(),
+            lanelet::utils::to2D(polygon.basicPolygon()));
+        }
+      }
+    }
+  } else {
+    for (const auto & prev_lane : prev_lanes) {
+      for (const auto & sibling_lane : route_handler->getNextLanelets(prev_lane)) {
+        if (std::string(sibling_lane.attributeOr("turn_direction", "else")) == "left") {
+          return boost::geometry::within(
+            lanelet::utils::to2D(lanelet::utils::conversion::toLaneletPoint(object.getPosition()))
+              .basicPoint(),
+            lanelet::utils::to2D(polygon.basicPolygon()));
+        }
+      }
+    }
+  }
+
+  return false;
 }
 
 bool isWithinFreespace(
@@ -1678,6 +1724,21 @@ void fillObjectMovingTime(
   }
 }
 
+void updateClassificationUnstableObjects(
+  ObjectData & object_data,
+  std::unordered_map<std::string, rclcpp::Time> & unknown_type_object_first_seen_time_map,
+  const double unstable_classification_time)
+{
+  if (filtering_utils::isUnknownTypeObject(object_data)) {
+    auto now = rclcpp::Clock(RCL_ROS_TIME).now();
+    std::string object_id = to_hex_string(object_data.object.object_id);
+    unknown_type_object_first_seen_time_map.try_emplace(object_id, now);
+    auto elapsed_time = (now - unknown_type_object_first_seen_time_map[object_id]).seconds();
+
+    object_data.is_classification_unstable = elapsed_time < unstable_classification_time;
+  }
+}
+
 void fillAvoidanceNecessity(
   ObjectData & object_data, const ObjectDataArray & registered_objects, const double vehicle_width,
   const std::shared_ptr<AvoidanceParameters> & parameters)
@@ -1975,11 +2036,7 @@ void filterTargetObjects(
     o.to_road_shoulder_distance = filtering_utils::getRoadShoulderDistance(o, data, planner_data);
 
     if (filtering_utils::isUnknownTypeObject(o)) {
-      // TARGET: UNKNOWN
-
-      // TODO(Satoshi Ota) parametrize stop time threshold if need.
-      constexpr double STOP_TIME_THRESHOLD = 3.0;  // [s]
-      if (o.stop_time < STOP_TIME_THRESHOLD) {
+      if (o.is_classification_unstable) {
         o.info = ObjectInfo::UNSTABLE_OBJECT;
         data.other_objects.push_back(o);
         continue;
@@ -2184,7 +2241,8 @@ lanelet::ConstLanelets getAdjacentLane(
     }
   }
 
-  for (const auto & lane : lanes) {
+  for (std::size_t i = 0; i < lanes.size(); ++i) {
+    const auto & lane = lanes[i];
     for (const auto & next_lane : rh->getNextLanelets(lane)) {
       if (!exist(next_lane.id())) {
         lanes.push_back(next_lane);

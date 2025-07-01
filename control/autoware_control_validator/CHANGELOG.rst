@@ -2,6 +2,9 @@
 Changelog for package autoware_control_validator
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+
 0.45.0 (2025-05-22)
 -------------------
 * Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
@@ -20,6 +23,9 @@ Changelog for package autoware_control_validator
   update
 * fix(control_validator): fix less trajectory point check (`#10508 <https://github.com/autowarefoundation/autoware_universe/issues/10508>`_)
 * Contributors: Kyoichi Sugahara, TaikiYamada4, Yuki TAKAGI
+
+0.44.2 (2025-06-10)
+-------------------
 
 0.44.1 (2025-05-01)
 -------------------

@@ -1,5 +1,0 @@
-units:
-  - path: /foo/bar
-    type: and
-  - link: /foo/baz
-    type: link

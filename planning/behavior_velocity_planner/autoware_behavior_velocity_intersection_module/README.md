@@ -470,7 +470,6 @@ entity TargetObject {
 | `.ignore_parked_vehicle_speed_threshold`       | double   | [m/s] velocity threshold for checking parked vehicle                                        |
 | `.occlusion_detection_hold_time`               | double   | [s] hold time of occlusion detection                                                        |
 | `.temporal_stop_time_before_peeking`           | double   | [s] temporal stop duration at default_stopline before starting peeking                      |
-| `.temporal_stop_before_attention_area`         | bool     | [-] flag to temporarily stop at first_attention_stopline before peeking into attention_area |
 | `.creep_velocity_without_traffic_light`        | double   | [m/s] creep velocity to occlusion_wo_tl_pass_judge_line                                     |
 | `.static_occlusion_with_traffic_light_timeout` | double   | [s] the timeout duration for ignoring static occlusion at intersection with traffic light   |
 
