@@ -685,19 +685,19 @@ bool StartPlannerModule::isExecutionReady() const
     if (!parameters_->enable_back && !is_inside_lanelets) {
       stop_reason = "ego outside lanes";
     } else if (is_inside_lanelets) {
-      stop_reason = "unsafe against static objects";
+      stop_reason = "static object risk";
     } else {
-      stop_reason = "failed to generate valid path";
+      stop_reason = "path planning failed";
     }
 
   } else if (isWaitingApproval()) {
     // Check for moving objects around
     if (!noMovingObjectsAround()) {
       is_safe = false;
-      stop_reason = "unsafe against moving objects around";
+      stop_reason = "nearby moving object";
     } else if (requiresDynamicObjectsCollisionDetection() && hasCollisionWithDynamicObjects()) {
       is_safe = false;
-      stop_reason = "unsafe against dynamic objects";
+      stop_reason = "dynamic object risk";
     }
   }
 
