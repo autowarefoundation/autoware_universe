@@ -851,6 +851,7 @@ BehaviorModuleOutput StartPlannerModule::plan()
     return output;
   }
 
+  // When backward maneuvers, control point contains the starting and turning points
   const auto backward_start_pose = status_.backward_path.points.front().point.pose;
   const auto backward_end_pose = status_.backward_path.points.back().point.pose;
 
@@ -998,6 +999,7 @@ BehaviorModuleOutput StartPlannerModule::planWaitingApproval()
     return output;
   }
 
+  // When backward maneuvers, control point contains the starting and turning points
   const auto backward_start_pose = status_.backward_path.points.front().point.pose;
   const auto backward_end_pose = status_.backward_path.points.back().point.pose;
 
