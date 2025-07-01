@@ -21,6 +21,7 @@
 #define SYSTEM_MONITOR__CPU_MONITOR__CPU_MONITOR_BASE_HPP_
 
 #include "system_monitor/cpu_monitor/cpu_information.hpp"
+#include "system_monitor/cpu_monitor/cpu_usage_statistics.hpp"
 
 #include <diagnostic_updater/diagnostic_updater.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -173,7 +174,6 @@ protected:
   std::vector<int> usage_warn_check_count_;  //!< @brief CPU list for usage over warn check counter
   std::vector<int>
     usage_error_check_count_;  //!< @brief CPU list for usage over error check counter
-  bool mpstat_exists_;         //!< @brief Check if mpstat command exists
   // Though node parameters are read-only after initialization, unit tests modify them.
   // Therefore, they should be protected with mutex_context_, too.
   float usage_warn_;       //!< @brief CPU usage(%) to generate warning
@@ -205,6 +205,11 @@ protected:
    */
   const std::map<int, const char *> thermal_dictionary_ = {
     {DiagStatus::OK, "OK"}, {DiagStatus::WARN, "unused"}, {DiagStatus::ERROR, "throttling"}};
+
+  /**
+   * @brief Class instance for collecting CPU usage statistics
+   */
+  CpuUsageStatistics cpu_usage_statistics_;
 
   // Publisher
   rclcpp::Publisher<tier4_external_api_msgs::msg::CpuUsage>::SharedPtr pub_cpu_usage_;

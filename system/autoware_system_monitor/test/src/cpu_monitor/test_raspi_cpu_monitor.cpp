@@ -77,12 +77,6 @@ public:
     frequencies_.clear();
   }
 
-  void setMpstatExists(bool mpstat_exists)
-  {
-    std::lock_guard<std::mutex> lock_context(mutex_context_);
-    mpstat_exists_ = mpstat_exists;
-  }
-
   void changeUsageWarn(float usage_warn)
   {
     std::lock_guard<std::mutex> lock_context(mutex_context_);
@@ -144,31 +138,14 @@ private:
 class CPUMonitorTestSuite : public ::testing::Test
 {
 public:
-  CPUMonitorTestSuite() : monitor_(nullptr), sub_(nullptr)
-  {
-    // Get directory of executable
-    const fs::path exe_path(argv_[0]);
-    exe_dir_ = exe_path.parent_path().generic_string();
-    // Get dummy executable path
-    mpstat_ = exe_dir_ + "/mpstat";
-    // Save environment variable PATH for restoration
-    auto env = boost::this_process::environment();
-    original_path_ = env["PATH"].to_string();
-  }
+  CPUMonitorTestSuite() : monitor_(nullptr), sub_(nullptr) {}
 
 protected:
   std::unique_ptr<TestCPUMonitor> monitor_;
   rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr sub_;
-  std::string exe_dir_;
-  std::string mpstat_;
-  std::string original_path_;
 
   void SetUp()
   {
-    // The environment variable PATH should be restored
-    // before creating an instance of TestCPUMonitor.
-    restorePath();
-
     using std::placeholders::_1;
     rclcpp::init(0, nullptr);
     rclcpp::NodeOptions node_options;
@@ -191,11 +168,6 @@ protected:
     if (fs::exists(TEST_FILE, error_code)) {
       fs::remove(TEST_FILE, error_code);
     }
-    // mpstat_ is a symbolic link.
-    // fs::exists() tests existence of the destination file, not the symbolic link.
-    if (fs::is_symlink(mpstat_, error_code)) {
-      fs::remove(mpstat_, error_code);
-    }
   }
 
   void TearDown()
@@ -206,13 +178,7 @@ protected:
     if (fs::exists(TEST_FILE, error_code)) {
       fs::remove(TEST_FILE, error_code);
     }
-    // mpstat_ is a symbolic link.
-    // fs::exists() tests existence of the destination file, not the symbolic link.
-    if (fs::is_symlink(mpstat_, error_code)) {
-      fs::remove(mpstat_, error_code);
-    }
     rclcpp::shutdown();
-    restorePath();
   }
 
   bool findValue(const DiagStatus status, const std::string & key, std::string & value)  // NOLINT
@@ -224,21 +190,6 @@ protected:
       }
     }
     return false;
-  }
-
-  void modifyPath()
-  {
-    // Modify PATH temporarily
-    auto env = boost::this_process::environment();
-    std::string new_path = env["PATH"].to_string();
-    new_path.insert(0, fmt::format("{}:", exe_dir_));
-    env["PATH"] = new_path;
-  }
-
-  void restorePath()
-  {
-    auto env = boost::this_process::environment();
-    env["PATH"] = original_path_;
   }
 
   void updatePublishSubscribe()
@@ -467,26 +418,6 @@ TEST_F(CPUMonitorTestSuite, usageErrorTest)
   }
 }
 
-// Warning/Error about CPU usage used to be implemented,
-TEST_F(CPUMonitorTestSuite, usageMpstatNotFoundTest)
-{
-  // Set flag false
-  monitor_->setMpstatExists(false);
-
-  updatePublishSubscribe();
-
-  // Verify
-  DiagStatus status;
-  std::string value;
-  ASSERT_TRUE(monitor_->findDiagStatus("CPU Usage", status));
-  ASSERT_EQ(status.level, DiagStatus::ERROR);
-  ASSERT_STREQ(status.message.c_str(), "mpstat error");
-  ASSERT_TRUE(findValue(status, "mpstat", value));
-  ASSERT_STREQ(
-    value.c_str(),
-    "Command 'mpstat' not found, but can be installed with: sudo apt install sysstat");
-}
-
 // Warning/Error about CPU load average used to be implemented,
 // but they were removed to avoid false alarms.
 #ifdef ENABLE_LOAD_AVERAGE_DIAGNOSTICS
@@ -612,45 +543,6 @@ TEST_F(CPUMonitorTestSuite, freqFrequencyFilesNotFoundTest)
 
   ASSERT_EQ(status.level, DiagStatus::ERROR);
   ASSERT_STREQ(status.message.c_str(), "frequency files not found");
-}
-
-TEST_F(CPUMonitorTestSuite, usageMpstatErrorTest)
-{
-  // Symlink mpstat1 to mpstat
-  fs::create_symlink(exe_dir_ + "/mpstat1", mpstat_);
-
-  // Modify PATH temporarily
-  modifyPath();
-
-  updatePublishSubscribe();
-
-  // Verify
-  DiagStatus status;
-  std::string value;
-
-  ASSERT_TRUE(monitor_->findDiagStatus("CPU Usage", status));
-  ASSERT_EQ(status.level, DiagStatus::ERROR);
-  ASSERT_STREQ(status.message.c_str(), "mpstat error");
-  ASSERT_TRUE(findValue(status, "mpstat", value));
-}
-
-TEST_F(CPUMonitorTestSuite, usageMpstatExceptionTest)
-{
-  // Symlink mpstat2 to mpstat
-  fs::create_symlink(exe_dir_ + "/mpstat2", mpstat_);
-
-  // Modify PATH temporarily
-  modifyPath();
-
-  updatePublishSubscribe();
-
-  // Verify
-  DiagStatus status;
-  std::string value;
-
-  ASSERT_TRUE(monitor_->findDiagStatus("CPU Usage", status));
-  ASSERT_EQ(status.level, DiagStatus::ERROR);
-  ASSERT_STREQ(status.message.c_str(), "mpstat exception");
 }
 
 // for coverage
