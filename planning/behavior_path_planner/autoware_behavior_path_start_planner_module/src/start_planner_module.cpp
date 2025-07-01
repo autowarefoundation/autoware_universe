@@ -694,7 +694,7 @@ bool StartPlannerModule::isExecutionReady() const
     // Check for moving objects around
     if (!noMovingObjectsAround()) {
       is_safe = false;
-      stop_reason = "nearby moving object";
+      stop_reason = "nearby moving object risk";
     } else if (requiresDynamicObjectsCollisionDetection() && hasCollisionWithDynamicObjects()) {
       is_safe = false;
       stop_reason = "dynamic object risk";
