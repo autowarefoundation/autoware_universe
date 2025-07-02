@@ -6,7 +6,7 @@
       ttc_threshold: 1.0 # [s]
       ego_deceleration: 1.0 # [m/s^2]
       min_time_horizon: 10.0 # [s]
-      on_time_buffer: 0.3 # [s]
+      on_time_buffer: 0.5 # [s]
       off_time_buffer: 1.0 # [s]
 
       right_turn:
@@ -31,5 +31,11 @@
           min_height: 0.5
           min_size: 10
           max_size: 10000
-        observation_time: 0.3  # [s]
+        velocity_estimation:
+          max_acceleration: 20.0  # [m/s^2]
+          observation_time: 0.3  # [s]
         latency: 0.3
+
+      filter:
+        min_velocity: 1.0  # [m/s]
+        moving_time: 0.5  # [s]

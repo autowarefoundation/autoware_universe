@@ -79,13 +79,29 @@ void PlanningValidatorDebugMarkerPublisher::pushPoseMarker(
 }
 
 void PlanningValidatorDebugMarkerPublisher::pushPointMarker(
-  const geometry_msgs::msg::Point & point, const std::string & ns, int id)
+  const geometry_msgs::msg::Point & point, const std::string & ns, int id, double scale,
+  bool is_cube)
 {
+  const auto marker_type = is_cube ? Marker::CUBE : Marker::SPHERE;
   Marker marker = autoware_utils::create_default_marker(
-    "map", node_->get_clock()->now(), ns, getMarkerId(ns), Marker::SPHERE,
-    autoware_utils::create_marker_scale(0.3, 0.3, 0.3), getColorFromId(id));
+    "map", node_->get_clock()->now(), ns, getMarkerId(ns), marker_type,
+    autoware_utils::create_marker_scale(scale, scale, scale), getColorFromId(id));
   marker.lifetime = rclcpp::Duration::from_seconds(0.2);
   marker.pose.position = point;
+
+  marker_array_.markers.push_back(marker);
+}
+
+void PlanningValidatorDebugMarkerPublisher::pushLineSegmentMarker(
+  const geometry_msgs::msg::Point & p1, const geometry_msgs::msg::Point & p2,
+  const std::string & ns, int id)
+{
+  Marker marker = autoware_utils::create_default_marker(
+    "map", node_->get_clock()->now(), ns, getMarkerId(ns), Marker::LINE_LIST,
+    autoware_utils::create_marker_scale(0.1, 0.1, 0.1), getColorFromId(id));
+  marker.lifetime = rclcpp::Duration::from_seconds(0.2);
+  marker.points.push_back(p1);
+  marker.points.push_back(p2);
 
   marker_array_.markers.push_back(marker);
 }

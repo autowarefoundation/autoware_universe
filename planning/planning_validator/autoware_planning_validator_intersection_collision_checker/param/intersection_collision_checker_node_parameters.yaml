@@ -84,11 +84,26 @@ intersection_collision_checker_node:
           type: int
           validation:
             gt<>: [0]
-      observation_time:
+      velocity_estimation:
+        max_acceleration:
+          type: double
+          validation:
+            gt<>: [0.0]
+        observation_time:
+          type: double
+          validation:
+            gt_eq<>: [0.0]
+      latency:
         type: double
         validation:
           gt_eq<>: [0.0]
-      latency:
+
+    filter:
+      min_velocity:
+        type: double
+        validation:
+          gt_eq<>: [0.0]
+      moving_time:
         type: double
         validation:
           gt_eq<>: [0.0]
