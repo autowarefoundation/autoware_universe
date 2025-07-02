@@ -15,6 +15,7 @@
 #include "control_command_gate.hpp"
 
 #include "command/builtin.hpp"
+#include "command/compatibility.hpp"
 #include "command/filter.hpp"
 #include "command/publisher.hpp"
 #include "command/source.hpp"
@@ -114,7 +115,11 @@ ControlCmdGate::ControlCmdGate(const rclcpp::NodeOptions & options)
     output_filter_ = filter.get();
     filter->set_nominal_filter_params(nominal_filter_params);
     filter->set_transition_filter_params(transition_filter_params);
-    selector_->set_output(std::move(filter));
+
+    auto compatibility = std::make_unique<Compatibility>(std::move(filter), *this);
+    compatibility_ = compatibility.get();
+    compatibility->set_prev_control(prev_control);
+    selector_->set_output(std::move(compatibility));
   }
 
   // Select initial command source. Note that the select function calls on_change_source.
@@ -128,6 +133,7 @@ ControlCmdGate::ControlCmdGate(const rclcpp::NodeOptions & options)
 void ControlCmdGate::on_timer()
 {
   selector_->update();
+  compatibility_->publish();
   publish_source_status();
 }
 

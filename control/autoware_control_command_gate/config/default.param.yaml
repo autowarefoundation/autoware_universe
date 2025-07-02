@@ -9,6 +9,7 @@
       21: emergency_stop
     rate: 10.0
     builtin_emergency_acceleration: -2.4
+    stop_hold_acceleration: -1.5
     diag_timeout_warn_duration: 1.0
     diag_timeout_error_duration: 2.0
     stop_check_duration: 1.0
