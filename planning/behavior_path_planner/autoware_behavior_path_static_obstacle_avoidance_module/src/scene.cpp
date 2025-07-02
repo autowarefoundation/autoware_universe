@@ -1270,13 +1270,11 @@ CandidateOutput StaticObstacleAvoidanceModule::planCandidate() const
   output.start_distance_to_path_change = sl_front.start_longitudinal;
   output.finish_distance_to_path_change = sl_back.end_longitudinal;
 
-  const uint16_t planning_factor_direction = std::invoke([&output]() {
-    return output.lateral_shift > 0.0 ? PlanningFactor::SHIFT_LEFT : PlanningFactor::SHIFT_RIGHT;
-  });
+  const uint16_t planning_factor_direction =
+    output.lateral_shift > 0.0 ? PlanningFactor::SHIFT_LEFT : PlanningFactor::SHIFT_RIGHT;
 
-  const std::string planning_factor_detail = std::invoke([&output]() {
-    return output.lateral_shift > 0.0 ? "candidate left shift" : "candidate right shift";
-  });
+  const std::string planning_factor_detail =
+    output.lateral_shift > 0.0 ? "left shift" : "right shift";
 
   const auto start_idx =
     autoware::motion_utils::findNearestIndex(shifted_path.path.points, sl_front.start.position);
