@@ -408,7 +408,7 @@ PredictedObject PredictorVru::getPredictedObjectAsCrosswalkUser(const TrackedObj
         const auto & object_twist = object.kinematics.twist_with_covariance.twist;
         // if the velocity is not too small, calculate the yaw from the velocity
         constexpr double VELOCITY_THRESHOLD = 1e-2;  // 0.01 m/s
-        double object_vel = std::hypot(object_twist.linear.x, object_twist.linear.y);
+        const double object_vel = std::hypot(object_twist.linear.x, object_twist.linear.y);
         if (object_vel > VELOCITY_THRESHOLD) {
           const auto object_vel_yaw = std::atan2(object_twist.linear.y, object_twist.linear.x);
           const auto object_orientation =
