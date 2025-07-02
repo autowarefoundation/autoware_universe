@@ -331,10 +331,9 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
       "attention lane, which is dangerous.";
   }
 
-  const bool is_over_default_stopline = util::isOverTargetIndex(
-    *path, closest_idx, planner_data_->current_odometry->pose, default_stopline_idx);
+  const bool can_stop_at_default_stopline = can_smoothly_stop_at(default_stopline_idx);
   const auto collision_stopline_idx =
-    is_over_default_stopline ? intersection_stoplines.collision_stopline : default_stopline_idx;
+    can_stop_at_default_stopline ? default_stopline_idx : intersection_stoplines.collision_stopline;
 
   // ==========================================================================================
   // pseudo collision detection on green light
