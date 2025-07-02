@@ -162,20 +162,18 @@ void BoundaryDeparturePreventionModule::update_parameters(
 
 void BoundaryDeparturePreventionModule::subscribe_topics(rclcpp::Node & node)
 {
-  sub_ego_pred_traj_ = node.create_subscription<Trajectory>(
-    "/control/trajectory_follower/lateral/predicted_trajectory", rclcpp::QoS{1},
-    [&](const Trajectory::ConstSharedPtr msg) { ego_pred_traj_ptr_ = msg; });
-
-  sub_control_cmd_ = node.create_subscription<Control>(
-    "/control/command/control_cmd", rclcpp::QoS{1},
-    [&](const Control::ConstSharedPtr msg) { control_cmd_ptr_ = msg; });
-  sub_steering_angle_ = node.create_subscription<SteeringReport>(
-    "/vehicle/status/steering_status", rclcpp::QoS{1},
-    [&](const SteeringReport::ConstSharedPtr msg) { steering_angle_ptr_ = msg; });
-
-  sub_op_mode_state_ = node.create_subscription<OperationModeState>(
-    "~/api/operation_mode/state", rclcpp::QoS{1},
-    [this](const OperationModeState::ConstSharedPtr msg) { op_mode_state_ptr_ = msg; });
+  ego_pred_traj_polling_sub_ =
+    autoware_utils::InterProcessPollingSubscriber<Trajectory>::create_subscription(
+      &node, "/control/trajectory_follower/lateral/predicted_trajectory", 1);
+  control_cmd_polling_sub_ =
+    autoware_utils::InterProcessPollingSubscriber<Control>::create_subscription(
+      &node, "/control/command/control_cmd", 1);
+  steering_angle_polling_sub_ =
+    autoware_utils::InterProcessPollingSubscriber<SteeringReport>::create_subscription(
+      &node, "/vehicle/status/steering_status", 1);
+  op_mode_state_polling_sub_ =
+    autoware_utils::InterProcessPollingSubscriber<OperationModeState>::create_subscription(
+      &node, "/api/operation_mode/state", 1);
 }
 
 void BoundaryDeparturePreventionModule::publish_topics(rclcpp::Node & node)
@@ -194,6 +192,27 @@ void BoundaryDeparturePreventionModule::publish_topics(rclcpp::Node & node)
     node.create_publisher<Float64Stamped>("~/debug/" + ns + "/processing_time_ms", 1);
 }
 
+void BoundaryDeparturePreventionModule::take_data()
+{
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  if (const auto ego_pred_traj_msg = ego_pred_traj_polling_sub_->take_data()) {
+    ego_pred_traj_ptr_ = ego_pred_traj_msg;
+  }
+
+  if (const auto control_command_msg = control_cmd_polling_sub_->take_data()) {
+    control_cmd_ptr_ = control_command_msg;
+  }
+
+  if (const auto steering_angle_msg = steering_angle_polling_sub_->take_data()) {
+    steering_angle_ptr_ = steering_angle_msg;
+  }
+
+  if (const auto op_mode_state_msg = op_mode_state_polling_sub_->take_data()) {
+    op_mode_state_ptr_ = op_mode_state_msg;
+  }
+}
+
 VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
   const TrajectoryPoints & raw_trajectory_points,
   [[maybe_unused]] const TrajectoryPoints & smoothed_trajectory_points,
@@ -202,6 +221,16 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
   StopWatch<std::chrono::milliseconds> stopwatch_ms;
   stopwatch_ms.tic("plan");
+
+  take_data();
+
+  if (!is_data_ready()) {
+    return {};
+  }
+
+  if (is_data_timeout(planner_data->current_odometry)) {
+    return {};
+  }
 
   const auto & vehicle_info = planner_data->vehicle_info_;
   const auto & ll_map_ptr = planner_data->route_handler->getLaneletMapPtr();
@@ -234,20 +263,31 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
   return *result_opt;
 }
 
-bool BoundaryDeparturePreventionModule::is_data_ready(
-  [[maybe_unused]] std::unordered_map<std::string, double> & processing_times)
+bool BoundaryDeparturePreventionModule::is_data_ready()
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   if (!ego_pred_traj_ptr_) {
-    RCLCPP_INFO_THROTTLE(
+    RCLCPP_INFO_SKIPFIRST_THROTTLE(
       logger_, *clock_ptr_, throttle_duration_ms, "waiting for predicted trajectory...");
     return false;
   }
 
   if (!op_mode_state_ptr_) {
-    RCLCPP_INFO_THROTTLE(
+    RCLCPP_INFO_SKIPFIRST_THROTTLE(
       logger_, *clock_ptr_, throttle_duration_ms, "waiting for operation mode state...");
+    return false;
+  }
+
+  if (!control_cmd_ptr_) {
+    RCLCPP_INFO_SKIPFIRST_THROTTLE(
+      logger_, *clock_ptr_, throttle_duration_ms, "waiting for control command...");
+    return false;
+  }
+
+  if (!steering_angle_ptr_) {
+    RCLCPP_INFO_SKIPFIRST_THROTTLE(
+      logger_, *clock_ptr_, throttle_duration_ms, "waiting for steering angle...");
     return false;
   }
 
@@ -259,7 +299,7 @@ bool BoundaryDeparturePreventionModule::is_data_valid() const
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   if (ego_pred_traj_ptr_->points.empty()) {
-    RCLCPP_INFO_THROTTLE(
+    RCLCPP_WARN_THROTTLE(
       logger_, *clock_ptr_, throttle_duration_ms, "empty predicted trajectory...");
     return false;
   }
@@ -271,11 +311,40 @@ bool BoundaryDeparturePreventionModule::is_data_timeout(const Odometry & odom) c
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const auto now = clock_ptr_->now();
-  const auto time_diff_s = (rclcpp::Time(odom.header.stamp) - now).seconds();
+  const auto odom_time_diff_s = (rclcpp::Time(odom.header.stamp) - now).seconds();
   constexpr auto th_pose_timeout_s = 1.0;
 
-  if (time_diff_s > th_pose_timeout_s) {
-    RCLCPP_INFO_THROTTLE(logger_, *clock_ptr_, throttle_duration_ms, "pose timeout...");
+  if (odom_time_diff_s > th_pose_timeout_s) {
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_ptr_, throttle_duration_ms, "pose timeout for %.3f seconds...",
+      odom_time_diff_s);
+    return true;
+  }
+
+  const auto ego_pred_traj_time_diff_s =
+    (rclcpp::Time(ego_pred_traj_ptr_->header.stamp) - now).seconds();
+
+  if (ego_pred_traj_time_diff_s > th_pose_timeout_s) {
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_ptr_, throttle_duration_ms,
+      "ego predicted trajectory timeout for %.3f seconds...", ego_pred_traj_time_diff_s);
+    return true;
+  }
+
+  const auto control_command_time_diff_s = (rclcpp::Time(control_cmd_ptr_->stamp) - now).seconds();
+  if (control_command_time_diff_s > th_pose_timeout_s) {
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_ptr_, throttle_duration_ms, "control commands timeout for %.3f seconds...",
+      control_command_time_diff_s);
+    return true;
+  }
+
+  const auto steering_angle_time_diff_s =
+    (rclcpp::Time(steering_angle_ptr_->stamp) - now).seconds();
+  if (steering_angle_time_diff_s > th_pose_timeout_s) {
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_ptr_, throttle_duration_ms, "control commands timeout for %.3f seconds...",
+      steering_angle_time_diff_s);
     return true;
   }
 
