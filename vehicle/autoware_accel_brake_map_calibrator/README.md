@@ -143,6 +143,7 @@ You can also save accel and brake map in the default directory where Autoware re
 | default_map_dir          | str    | directory of default map                                                                                                                                                          | [directory of *autoware_raw_vehicle_cmd_converter*]/data/default/ |
 | calibrated_map_dir       | str    | directory of calibrated map                                                                                                                                                       | [directory of *autoware_accel_brake_map_calibrator*]/config/      |
 | update_hz                | double | hz for update                                                                                                                                                                     | 10.0                                                              |
+| message_timeout          | double | Timeout (in seconds) for input message freshness checks. If a message is older than this threshold, it is considered stale and ignored.                                           | 0.1                                                               |
 
 ## Algorithm Parameters
 
