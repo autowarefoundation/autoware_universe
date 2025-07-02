@@ -113,7 +113,7 @@ private:
 
   bool curr_autoware_control_;
   bool curr_manual_control_;
-  bool prev_manual_control_;
+  std::optional<uint8_t> prev_control_mode_;
 
   uint16_t curr_operation_mode_;
   uint16_t curr_mode_;

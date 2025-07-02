@@ -74,31 +74,41 @@ bool CommandModeStatusTable::ready() const
   return true;
 }
 
-void CommandModeStatusTable::set(const StatusMessage & item, const rclcpp::Time & stamp)
+bool CommandModeStatusTable::set(const StatusMessage & item, const rclcpp::Time & stamp)
 {
   const auto iter = items_.find(item.mode);
-  if (iter != items_.end()) {
-    iter->second.status.data = CommandModeStatusItem(item);
-    iter->second.status.stamp = stamp;
+  if (iter == items_.end()) {
+    return false;
   }
+  const auto data = CommandModeStatusItem(item);
+  const auto is_changed = iter->second.status.data != data;
+  iter->second.status.data = data;
+  iter->second.status.stamp = stamp;
+  return is_changed;
 }
 
-void CommandModeStatusTable::set(const AvailabilityMessage & item, const rclcpp::Time & stamp)
+bool CommandModeStatusTable::set(const AvailabilityMessage & item, const rclcpp::Time & stamp)
 {
   const auto iter = items_.find(item.mode);
-  if (iter != items_.end()) {
-    iter->second.available.data = item.available;
-    iter->second.available.stamp = stamp;
+  if (iter == items_.end()) {
+    return false;
   }
+  const auto is_changed = iter->second.available.data != item.available;
+  iter->second.available.data = item.available;
+  iter->second.available.stamp = stamp;
+  return is_changed;
 }
 
-void CommandModeStatusTable::set(uint16_t mode, bool drivable, const rclcpp::Time & stamp)
+bool CommandModeStatusTable::set(uint16_t mode, bool drivable, const rclcpp::Time & stamp)
 {
   const auto iter = items_.find(mode);
-  if (iter != items_.end()) {
-    iter->second.drivable.data = drivable;
-    iter->second.drivable.stamp = stamp;
+  if (iter == items_.end()) {
+    return false;
   }
+  const auto is_changed = iter->second.drivable.data != drivable;
+  iter->second.drivable.data = drivable;
+  iter->second.drivable.stamp = stamp;
+  return is_changed;
 }
 
 void CommandModeStatusTable::check_timeout(const rclcpp::Time & now)

@@ -73,7 +73,6 @@ CommandModeDeciderBase::CommandModeDeciderBase(const rclcpp::NodeOptions & optio
 
   curr_autoware_control_ = false;
   curr_manual_control_ = false;
-  prev_manual_control_ = false;
   curr_operation_mode_ = autoware::command_mode_types::modes::unknown;
   curr_mode_ = autoware::command_mode_types::modes::unknown;
   last_mode_ = system_request_.operation_mode;
@@ -166,8 +165,9 @@ void CommandModeDeciderBase::on_diagnostics(diagnostic_updater::DiagnosticStatus
 
 void CommandModeDeciderBase::on_timer()
 {
-  // Update transition availability other than autonomous mode.
+  // TODO(Takagi, Isamu): Remove this process when all mode flags are supported.
   // Note: The is_modes_ready_ depends on this process.
+  // Update transition availability other than autonomous mode.
   const auto stamp = now();
   for (const auto & [mode, item] : command_mode_status_) {
     if (mode != command_mode_types::modes::autonomous) {
@@ -175,32 +175,30 @@ void CommandModeDeciderBase::on_timer()
     }
   }
 
-  if (!is_modes_ready_) {
-    return;
-  }
-  command_mode_status_.check_timeout(stamp);
   update();
 }
 
 void CommandModeDeciderBase::on_control_mode(const ControlModeReport & msg)
 {
+  const auto is_changed = prev_control_mode_ != msg.mode;
+  prev_control_mode_ = msg.mode;
   curr_autoware_control_ = (msg.mode == ControlModeReport::AUTONOMOUS);
   curr_manual_control_ = (msg.mode == ControlModeReport::MANUAL);
 
   // Check override.
-  if (!prev_manual_control_ && curr_manual_control_) {
+  if (is_changed && curr_manual_control_) {
     if (system_request_.autoware_control) {
       // curr_mode_ and last_mode_ will be updated in the update_current_mode function.
       system_request_.autoware_control = false;
       RCLCPP_WARN_STREAM(get_logger(), "override detected");
     }
   }
-  prev_manual_control_ = curr_manual_control_;
 
   // Update command mode status for manual mode.
   {
     StatusMessage item;
     item.mode = autoware::command_mode_types::modes::manual;
+    item.mrm = StatusMessage::NORMAL;
     item.transition = false;
     item.request = curr_manual_control_;
     item.vehicle_selected = curr_manual_control_;
@@ -220,9 +218,7 @@ void CommandModeDeciderBase::on_control_mode(const ControlModeReport & msg)
     command_mode_status_.set(item, msg.stamp);
   }
 
-  // Check if all command mode status items are ready.
-  is_modes_ready_ = is_modes_ready_ ? true : command_mode_status_.ready();
-  if (!is_modes_ready_) {
+  if (!is_changed) {
     return;
   }
   update();
@@ -230,38 +226,46 @@ void CommandModeDeciderBase::on_control_mode(const ControlModeReport & msg)
 
 void CommandModeDeciderBase::on_status(const CommandModeStatus & msg)
 {
-  // Update command mode status.
+  bool is_changed = false;
   for (const auto & item : msg.items) {
-    command_mode_status_.set(item, msg.stamp);
+    is_changed |= command_mode_status_.set(item, msg.stamp);
   }
-
-  // Check if all command mode status items are ready.
-  is_modes_ready_ = is_modes_ready_ ? true : command_mode_status_.ready();
-  if (!is_modes_ready_) return;
+  if (!is_changed) {
+    return;
+  }
   update();
 }
 
 void CommandModeDeciderBase::on_availability(const CommandModeAvailability & msg)
 {
+  bool is_changed = false;
   for (const auto & item : msg.items) {
-    command_mode_status_.set(item, msg.stamp);
+    is_changed |= command_mode_status_.set(item, msg.stamp);
   }
-
-  // Check if all command mode status items are ready.
-  is_modes_ready_ = is_modes_ready_ ? true : command_mode_status_.ready();
-  if (!is_modes_ready_) return;
+  if (!is_changed) {
+    return;
+  }
   update();
 }
 
 void CommandModeDeciderBase::on_transition_available(const ModeChangeAvailable & msg)
 {
-  command_mode_status_.set(command_mode_types::modes::autonomous, msg.available, msg.stamp);
+  // TODO(Takagi, Isamu): Update all modes when all mode flags are supported.
+  if (command_mode_status_.set(command_mode_types::modes::autonomous, msg.available, msg.stamp)) {
+    update();
+  }
 }
 
 void CommandModeDeciderBase::update()
 {
-  // Note: is_modes_ready_ should be checked in the function that called this.
-  // TODO(Takagi, Isamu): Check call rate.
+  if (!is_modes_ready_) {
+    is_modes_ready_ = command_mode_status_.ready();
+    if (!is_modes_ready_) {
+      return;
+    }
+  }
+  command_mode_status_.check_timeout(now());
+
   detect_operation_mode_timeout();
   update_request_mode();
   update_current_mode();
