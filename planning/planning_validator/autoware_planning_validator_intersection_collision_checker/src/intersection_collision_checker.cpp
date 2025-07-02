@@ -74,7 +74,7 @@ void IntersectionCollisionChecker::setup_diag()
   context_->add_diag(
     "intersection_validation_collision_check",
     context_->validation_status->is_valid_intersection_collision_check,
-    "risk of collision at intersection turn", false);
+    "risk of collision at intersection turn");
 }
 
 void IntersectionCollisionChecker::validate(bool & is_critical)
@@ -327,9 +327,10 @@ bool IntersectionCollisionChecker::check_collision(
       if (dt < 1e-6) return;  // too small time difference, skip update
 
       object.track_duration += dt;
-      const auto max_accel = 30.0;
+      const auto max_accel = p.pointcloud.velocity_estimation.max_acceleration;
+      const auto observation_time_th = p.pointcloud.velocity_estimation.observation_time;
       const auto raw_velocity = dl / dt;
-      const bool is_reliable = object.track_duration > p.pointcloud.observation_time;
+      const bool is_reliable = object.track_duration > observation_time_th;
       if (is_reliable && std::abs(raw_velocity - object.velocity) / dt > max_accel) {
         object.velocity = 0.0;        // too high acceleration, reset velocity
         object.track_duration = 0.0;  // reset track duration
@@ -342,6 +343,8 @@ bool IntersectionCollisionChecker::check_collision(
       object.distance_to_overlap = new_data.distance_to_overlap;
       object.delay_compensated_distance_to_overlap =
         std::max(0.0, object.distance_to_overlap - object.velocity * p.pointcloud.latency);
+      object.moving_time =
+        (object.velocity < p.filter.min_velocity) ? 0.0 : object.moving_time + dt;
       object.ttc = object.delay_compensated_distance_to_overlap / object.velocity;
     };
 
@@ -352,7 +355,8 @@ bool IntersectionCollisionChecker::check_collision(
       update_object(existing_object, pcd_object.value());
 
       if (
-        existing_object.track_duration > p.pointcloud.observation_time &&
+        existing_object.track_duration > p.pointcloud.velocity_estimation.observation_time &&
+        existing_object.moving_time > p.filter.moving_time &&
         ego_object_overlap_time(existing_object.ttc, target_ll.ego_overlap_time) <
           p.ttc_threshold) {
         is_safe = false;
@@ -424,6 +428,7 @@ std::optional<PCDObject> IntersectionCollisionChecker::get_pcd_object(
     object.distance_to_overlap = arc_length_to_overlap;
     object.delay_compensated_distance_to_overlap = arc_length_to_overlap;
     object.velocity = 0.0;
+    object.moving_time = 0.0;
     object.ttc = std::numeric_limits<double>::max();
     pcd_object = object;
   }

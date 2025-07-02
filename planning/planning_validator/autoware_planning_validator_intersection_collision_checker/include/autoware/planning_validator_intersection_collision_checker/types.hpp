@@ -92,6 +92,7 @@ struct PCDObject
   double distance_to_overlap{};
   double delay_compensated_distance_to_overlap{};
   double velocity{};
+  double moving_time{};
   double ttc{};
 };
 
