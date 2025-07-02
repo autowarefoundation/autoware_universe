@@ -154,13 +154,13 @@ void AutowareStatePanel::onInitialize()
   timer_list_mrm_ = rclcpp::create_timer(
     raw_node_, raw_node_->get_clock(), std::chrono::milliseconds(1000), [this]() {
       if (!client_list_mrm_->service_is_ready()) return;
-      timer_list_mrm_->cancel();
       client_list_mrm_->async_send_request(
         std::make_shared<ListMrmDescription::Request>(),
         [this](rclcpp::Client<ListMrmDescription>::SharedFuture future) {
           const auto color = autoware::state_rviz_plugin::colors::default_colors.danger;
           const auto response = future.get();
           if (response->status.success) {
+            timer_list_mrm_->cancel();
             for (const auto & mrm : response->descriptions) {
               mrm_behaviors_[mrm.behavior] = {mrm.name, color};
             }
