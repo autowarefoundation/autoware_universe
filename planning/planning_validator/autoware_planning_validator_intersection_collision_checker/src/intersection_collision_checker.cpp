@@ -314,6 +314,21 @@ bool IntersectionCollisionChecker::check_collision(
       return 0.0;
     };
 
+  static constexpr double close_distance_threshold = 1.0;
+  const auto stopping_time =
+    abs(context_->data->current_kinematics->twist.twist.linear.x / p.ego_deceleration);
+  auto is_colliding = [&](const PCDObject & object, const std::pair<double, double> & ego_time) {
+    if (object.track_duration < p.pointcloud.velocity_estimation.observation_time) return false;
+    if (object.distance_to_overlap < close_distance_threshold && ego_time.first < stopping_time)
+      return true;
+    if (
+      object.moving_time > p.filter.moving_time &&
+      ego_object_overlap_time(object.ttc, ego_time) < p.ttc_threshold) {
+      return true;
+    }
+    return false;
+  };
+
   for (const auto & target_lanelet : target_lanelets_map_) {
     const auto target_ll = target_lanelet.second;
     if (!target_ll.is_active || target_ll.lanelets.empty()) continue;
@@ -326,18 +341,17 @@ bool IntersectionCollisionChecker::check_collision(
       const auto dl = object.distance_to_overlap - new_data.distance_to_overlap;
       if (dt < 1e-6) return;  // too small time difference, skip update
 
-      object.track_duration += dt;
       const auto max_accel = p.pointcloud.velocity_estimation.max_acceleration;
       const auto observation_time_th = p.pointcloud.velocity_estimation.observation_time;
       const auto raw_velocity = dl / dt;
       const bool is_reliable = object.track_duration > observation_time_th;
-      if (is_reliable && std::abs(raw_velocity - object.velocity) / dt > max_accel) {
-        object.velocity = 0.0;        // too high acceleration, reset velocity
-        object.track_duration = 0.0;  // reset track duration
-      } else {
+      // update velocity only if the object is not yet reliable or velocity change is within limit
+      if (!is_reliable || std::abs(raw_velocity - object.velocity) / dt < max_accel) {
         object.velocity = autoware::signal_processing::lowpassFilter(
           raw_velocity, object.velocity, 0.5);  // apply low-pass filter to velocity
+        object.track_duration += dt;            // update track duration
       }
+
       object.last_update_time = new_data.last_update_time;
       object.pose = new_data.pose;
       object.distance_to_overlap = new_data.distance_to_overlap;
@@ -354,11 +368,7 @@ bool IntersectionCollisionChecker::check_collision(
       auto & existing_object = history_[pcd_object->overlap_lanelet_id];
       update_object(existing_object, pcd_object.value());
 
-      if (
-        existing_object.track_duration > p.pointcloud.velocity_estimation.observation_time &&
-        existing_object.moving_time > p.filter.moving_time &&
-        ego_object_overlap_time(existing_object.ttc, target_ll.ego_overlap_time) <
-          p.ttc_threshold) {
+      if (is_colliding(existing_object, target_ll.ego_overlap_time)) {
         is_safe = false;
         context_->debug_pose_publisher->pushPointMarker(
           existing_object.pose.position, "collision_checker_pcd_objects", 0, 0.5, true);
@@ -408,9 +418,9 @@ std::optional<PCDObject> IntersectionCollisionChecker::get_pcd_object(
     lanelet::utils::getArcCoordinates(target_lanelet.lanelets, target_lanelet.overlap_point);
   auto min_arc_length = std::numeric_limits<double>::max();
   for (const auto & p : *clustered_points) {
-    const auto p_geom = autoware_utils::create_point(p.x, p.y, p.z);
-    const auto center_pose = lanelet::utils::getClosestCenterPose(combine_lanelet, p_geom);
-    const auto arc_coord = lanelet::utils::getArcCoordinates(target_lanelet.lanelets, center_pose);
+    geometry_msgs::msg::Pose p_geom;
+    p_geom.position = autoware_utils::create_point(p.x, p.y, p.z);
+    const auto arc_coord = lanelet::utils::getArcCoordinates(target_lanelet.lanelets, p_geom);
     const auto arc_length_to_overlap = overlap_arc_coord.length - arc_coord.length;
     if (
       arc_length_to_overlap < std::numeric_limits<double>::epsilon() ||
@@ -422,7 +432,7 @@ std::optional<PCDObject> IntersectionCollisionChecker::get_pcd_object(
 
     PCDObject object;
     object.last_update_time = time_stamp;
-    object.pose.position = p_geom;
+    object.pose = p_geom;
     object.overlap_lanelet_id = target_lanelet.id;
     object.track_duration = 0.0;
     object.distance_to_overlap = arc_length_to_overlap;
