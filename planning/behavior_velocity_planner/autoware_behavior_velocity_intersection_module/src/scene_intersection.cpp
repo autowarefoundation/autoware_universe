@@ -76,6 +76,11 @@ IntersectionModule::IntersectionModule(
     occlusion_stop_state_machine_.setState(StateMachine::State::GO);
   }
   {
+    temporal_stop_before_attention_state_machine_.setMarginTime(
+      planner_param_.occlusion.occlusion_detection_hold_time);
+    temporal_stop_before_attention_state_machine_.setState(StateMachine::State::STOP);
+  }
+  {
     static_occlusion_timeout_state_machine_.setMarginTime(
       planner_param_.occlusion.static_occlusion_with_traffic_light_timeout);
     static_occlusion_timeout_state_machine_.setState(StateMachine::State::STOP);
@@ -214,7 +219,6 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
   if (!first_attention_stopline_idx_opt || !occlusion_peeking_stopline_idx_opt) {
     return InternalError{"occlusion stop line is null"};
   }
-  const auto first_attention_stopline_idx = first_attention_stopline_idx_opt.value();
   const auto occlusion_stopline_idx = occlusion_peeking_stopline_idx_opt.value();
 
   // ==========================================================================================
@@ -398,6 +402,15 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
     default_stopline_idx, planner_param_.occlusion.temporal_stop_time_before_peeking,
     before_creep_state_machine_);
   if (stopped_at_default_line) {
+    // ==========================================================================================
+    // ego stop at occlusion_stopline before entering attention area if there is no traffic light
+    // ==========================================================================================
+    const bool temporal_stop_before_attention_required =
+      !has_traffic_light_
+        ? !stoppedForDuration(
+            occlusion_stopline_idx, planner_param_.occlusion.temporal_stop_time_before_peeking,
+            temporal_stop_before_attention_state_machine_)
+        : false;
     if (!has_traffic_light_) {
       if (fromEgoDist(occlusion_wo_tl_pass_judge_line_idx) < 0) {
         if (has_collision) {
@@ -413,8 +426,13 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
           "no evasive action required"};
       }
       return OccludedAbsenceTrafficLight{
-        is_occlusion_cleared_with_margin, has_collision_with_margin,           closest_idx,
-        occlusion_stopline_idx,           occlusion_wo_tl_pass_judge_line_idx, occlusion_diag};
+        is_occlusion_cleared_with_margin,
+        has_collision_with_margin,
+        temporal_stop_before_attention_required,
+        closest_idx,
+        occlusion_stopline_idx,
+        occlusion_wo_tl_pass_judge_line_idx,
+        occlusion_diag};
     }
 
     // ==========================================================================================
@@ -450,28 +468,17 @@ DecisionResult IntersectionModule::modifyPathVelocityDetail(PathWithLaneId * pat
             occlusion_stop_state_machine_.getDuration())
         : (is_static_occlusion ? std::make_optional<double>(max_timeout) : std::nullopt);
     if (has_collision_with_margin) {
-      return OccludedCollisionStop{
-        is_occlusion_cleared_with_margin,
-        closest_idx,
-        collision_stopline_idx,
-        first_attention_stopline_idx,
-        occlusion_stopline_idx,
-        static_occlusion_timeout,
-        occlusion_diag};
+      return OccludedCollisionStop{is_occlusion_cleared_with_margin, closest_idx,
+                                   collision_stopline_idx,           occlusion_stopline_idx,
+                                   static_occlusion_timeout,         occlusion_diag};
     } else {
-      return PeekingTowardOcclusion{
-        is_occlusion_cleared_with_margin,
-        closest_idx,
-        collision_stopline_idx,
-        first_attention_stopline_idx,
-        occlusion_stopline_idx,
-        static_occlusion_timeout,
-        occlusion_diag};
+      return PeekingTowardOcclusion{is_occlusion_cleared_with_margin, closest_idx,
+                                    collision_stopline_idx,           occlusion_stopline_idx,
+                                    static_occlusion_timeout,         occlusion_diag};
     }
   } else {
-    const auto occlusion_stopline = occlusion_stopline_idx;
     return FirstWaitBeforeOcclusion{
-      is_occlusion_cleared_with_margin, closest_idx, default_stopline_idx, occlusion_stopline,
+      is_occlusion_cleared_with_margin, closest_idx, default_stopline_idx, occlusion_stopline_idx,
       occlusion_diag};
   }
 }
@@ -1047,7 +1054,21 @@ void reactRTCApprovalByDecisionResult(
         "intersection(Occlusion without traffic light, collision detected)");
     }
   }
-  if (!rtc_occlusion_approved) {
+  if (!rtc_occlusion_approved && decision_result.temporal_stop_before_attention_required) {
+    const auto stopline_idx = decision_result.occlusion_stopline_idx;
+    planning_utils::setVelocityFromIndex(stopline_idx, 0.0, path);
+    debug_data->occlusion_stop_wall_pose =
+      planning_utils::getAheadPose(stopline_idx, baselink2front, *path);
+    {
+      planning_factor_interface->add(
+        path->points, path->points.at(decision_result.closest_idx).point.pose,
+        path->points.at(stopline_idx).point.pose,
+        autoware_internal_planning_msgs::msg::PlanningFactor::STOP,
+        autoware_internal_planning_msgs::msg::SafetyFactorArray{}, true /*is_driving_forward*/, 0.0,
+        0.0 /*shift distance*/, "intersection(Occlusion without traffic light)");
+    }
+  }
+  if (!rtc_occlusion_approved && !decision_result.temporal_stop_before_attention_required) {
     const auto closest_idx = decision_result.closest_idx;
     const auto peeking_limit_line = decision_result.peeking_limit_line_idx;
     for (auto i = closest_idx; i <= peeking_limit_line; ++i) {
