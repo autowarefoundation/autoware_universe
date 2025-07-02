@@ -44,7 +44,7 @@ std::string get_absolute_path_to_test_data(
 
 }  // namespace autoware::test_utils
 
-namespace autoware::behavior_velocity_planner
+namespace autoware::behavior_path_planner
 {
 
 template <class T>
@@ -171,4 +171,4 @@ TEST(PlanningFactorTest, NodeTestWithPredictedObjects)
   rclcpp::shutdown();
 }
 
-}  // namespace autoware::behavior_velocity_planner
+}  // namespace autoware::behavior_path_planner
