@@ -17,10 +17,10 @@
  * @brief HDD monitor class
  */
 
-#include "system_monitor/hdd_monitor/hdd_monitor.hpp"
+#include "hdd_monitor.hpp"
 
-#include "system_monitor/hdd_reader/hdd_reader.hpp"
-#include "system_monitor/system_monitor_utility.hpp"
+#include "common/system_monitor_utility.hpp"
+#include "hdd_reader/hdd_reader.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/archive/text_iarchive.hpp>

@@ -17,9 +17,9 @@
  * @brief Raspberry Pi CPU monitor class
  */
 
-#include "system_monitor/cpu_monitor/raspi_cpu_monitor.hpp"
+#include "raspi_cpu_monitor.hpp"
 
-#include "system_monitor/system_monitor_utility.hpp"
+#include "common/system_monitor_utility.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
