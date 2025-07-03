@@ -49,7 +49,7 @@
 
     <param name="model_config" value="$(var model_config)"/>
     <param from="$(var param_file)" allow_substs="true"/>
-    
+
     <param name="precision" value="$(var precision)"/>
   </node>
 </launch>

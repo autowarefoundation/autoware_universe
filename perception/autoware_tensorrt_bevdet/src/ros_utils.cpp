@@ -52,7 +52,8 @@ uint8_t getSemanticType(const std::string & class_name)
 
 void box3DToDetectedObjects(
   const std::vector<Box> & boxes, autoware_perception_msgs::msg::DetectedObjects & bevdet_objects,
-  const std::vector<std::string> & class_names, const float & score_thre, const bool has_twist = true)
+  const std::vector<std::string> & class_names, const float & score_thre,
+  const bool has_twist = true)
 {
   for (const auto & b : boxes) {
     if (b.score < score_thre) continue;
