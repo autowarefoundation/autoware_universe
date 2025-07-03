@@ -27,7 +27,7 @@ namespace autoware::control_command_gate
 class CommandSource
 {
 public:
-  explicit CommandSource(uint16_t id, const std::string & name);
+  CommandSource(uint16_t id, const std::string & name);
   virtual ~CommandSource() = default;
   virtual void resend_last_command() = 0;
 
