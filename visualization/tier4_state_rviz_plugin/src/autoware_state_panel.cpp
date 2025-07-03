@@ -81,6 +81,15 @@ AutowareStatePanel::AutowareStatePanel(QWidget * parent) : rviz_common::Panel(pa
   QVBoxLayout * mainLayout = new QVBoxLayout(this);
   mainLayout->addWidget(scrollArea);
   setLayout(mainLayout);
+
+  // MRM Behavior Names
+  {
+    const auto & default_colors = autoware::state_rviz_plugin::colors::default_colors;
+    mrm_behaviors_[MRMState::NONE] = {"Inactive", default_colors.info};
+    mrm_behaviors_[MRMState::PULL_OVER] = {"Pull Over", default_colors.success};
+    mrm_behaviors_[MRMState::COMFORTABLE_STOP] = {"Comfortable Stop", default_colors.warning};
+    mrm_behaviors_[MRMState::EMERGENCY_STOP] = {"Emergency Stop", default_colors.danger};
+  }
 }
 
 void AutowareStatePanel::onInitialize()
@@ -138,6 +147,26 @@ void AutowareStatePanel::onInitialize()
   sub_mrm_ = raw_node_->create_subscription<MRMState>(
     "/api/fail_safe/mrm_state", rclcpp::QoS{1}.transient_local(),
     std::bind(&AutowareStatePanel::onMRMState, this, _1));
+
+  client_list_mrm_ =
+    raw_node_->create_client<ListMrmDescription>("/api/fail_safe/list_mrm_description");
+
+  timer_list_mrm_ = rclcpp::create_timer(
+    raw_node_, raw_node_->get_clock(), std::chrono::milliseconds(1000), [this]() {
+      if (!client_list_mrm_->service_is_ready()) return;
+      client_list_mrm_->async_send_request(
+        std::make_shared<ListMrmDescription::Request>(),
+        [this](rclcpp::Client<ListMrmDescription>::SharedFuture future) {
+          const auto color = autoware::state_rviz_plugin::colors::default_colors.danger;
+          const auto response = future.get();
+          if (response->status.success) {
+            timer_list_mrm_->cancel();
+            for (const auto & mrm : response->descriptions) {
+              mrm_behaviors_[mrm.behavior] = {mrm.name, color};
+            }
+          }
+        });
+    });
 
   // // Diagnostics
   // sub_diag_ = raw_node_->create_subscription<DiagnosticArray>(
@@ -726,43 +755,18 @@ void AutowareStatePanel::onMRMState(const MRMState::ConstSharedPtr msg)
 
   // behavior
   {
-    IconState behavior_state;
+    IconState behavior_state = Crash;
     QColor behavior_bgColor;
     QString mrm_behavior = "MRM Behavior | Unknown";
 
-    switch (msg->behavior) {
-      case MRMState::NONE:
-        behavior_state = Crash;
-        behavior_bgColor = QColor(autoware::state_rviz_plugin::colors::default_colors.info.c_str());
-        mrm_behavior = "MRM Behavior | Inactive";
-        break;
-
-      case MRMState::PULL_OVER:
-        behavior_state = Crash;
-        behavior_bgColor =
-          QColor(autoware::state_rviz_plugin::colors::default_colors.success.c_str());
-        mrm_behavior = "MRM Behavior | Pull Over";
-        break;
-
-      case MRMState::COMFORTABLE_STOP:
-        behavior_state = Crash;
-        behavior_bgColor =
-          QColor(autoware::state_rviz_plugin::colors::default_colors.warning.c_str());
-        mrm_behavior = "MRM Behavior | Comfortable Stop";
-        break;
-
-      case MRMState::EMERGENCY_STOP:
-        behavior_state = Crash;
-        behavior_bgColor =
-          QColor(autoware::state_rviz_plugin::colors::default_colors.danger.c_str());
-        mrm_behavior = "MRM Behavior | Emergency Stop";
-        break;
-
-      default:
-        behavior_state = Crash;
-        behavior_bgColor = QColor(autoware::state_rviz_plugin::colors::default_colors.info.c_str());
-        mrm_behavior = QString("MRM Behavior | Unknown(%1)").arg(msg->behavior);
-        break;
+    const auto iter = mrm_behaviors_.find(msg->behavior);
+    if (iter != mrm_behaviors_.end()) {
+      const auto & [name, color] = iter->second;
+      behavior_bgColor = QColor(color.c_str());
+      mrm_behavior = QString("MRM Behavior | %1").arg(name.c_str());
+    } else {
+      behavior_bgColor = QColor(autoware::state_rviz_plugin::colors::default_colors.info.c_str());
+      mrm_behavior = QString("MRM Behavior | Unknown(%1)").arg(msg->behavior);
     }
 
     mrm_behavior_icon->updateStyle(behavior_state, behavior_bgColor);
