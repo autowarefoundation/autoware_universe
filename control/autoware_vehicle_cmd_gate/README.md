@@ -73,21 +73,19 @@ Receive multiple control commands and select one to forward to the vehicle.
 | `on_transition.lat_acc_lim`                 | <double> | array of limits of lateral acceleration (activated in TRANSITION operation mode)                                                                                                            |
 | `on_transition.lat_jerk_lim`                | <double> | array of limits of lateral jerk (activated in TRANSITION operation mode)                                                                                                                    |
 
-
 ## Functionality
 
 ### Main Functionality
 
-* Receive multiple control commands (from Autoware planning, emergency handler, remote control, etc.) and select one to forward to the vehicle.
-* Apply a final guard on the selected command to enforce absolute safety limits (e.g., maximum steering rate). This is not a comfort filter.
-* Enforce transition guards during mode changes into autonomous driving (e.g., remote→autonomous, manual→autonomous) to limit sudden changes. Integration with the Operation Transition Manager is recommended, though code boundaries should be maintained due to its complexity.
+- Receive multiple control commands (from Autoware planning, emergency handler, remote control, etc.) and select one to forward to the vehicle.
+- Apply a final guard on the selected command to enforce absolute safety limits (e.g., maximum steering rate). This is not a comfort filter.
+- Enforce transition guards during mode changes into autonomous driving (e.g., remote→autonomous, manual→autonomous) to limit sudden changes. Integration with the Operation Transition Manager is recommended, though code boundaries should be maintained due to its complexity.
 
 ### Sub-Functionality
 
-* Check heartbeat signals to verify connectivity for each input (e.g., emergency external heartbeat).
-* Publish status indicating whether the final guard is active. Active guard in autonomous mode implies an unexpected constraint in command generation and requires attention.
-* Leverage guard status during mode transitions to notify operators/drivers that a strong constraint is active (focus on "transition in progress" rather than simple filter activation).
-
+- Check heartbeat signals to verify connectivity for each input (e.g., emergency external heartbeat).
+- Publish status indicating whether the final guard is active. Active guard in autonomous mode implies an unexpected constraint in command generation and requires attention.
+- Leverage guard status during mode transitions to notify operators/drivers that a strong constraint is active (focus on "transition in progress" rather than simple filter activation).
 
 ### Filter function
 
@@ -118,6 +116,6 @@ However, to ensure the continuity of commands, these commands will not change un
 
 ## Caution
 
-* This node depends on the Operation Mode Transition Manager for Engage state transitions at the design level.
-* As a top-level node, unintended features often accumulate; careful handling is necessary. This is the second generation of `vehicle_cmd_gate`. The first included ride comfort adjustments and broad safety features, leading to complexity and a rewrite. Subsequent additions (e.g., stop/start logic) increased complexity, and a third generation is planned.
-* Tests are essential and must be retained. Removing tests due to failures typically masks regressions.
+- This node depends on the Operation Mode Transition Manager for Engage state transitions at the design level.
+- As a top-level node, unintended features often accumulate; careful handling is necessary. This is the second generation of `vehicle_cmd_gate`. The first included ride comfort adjustments and broad safety features, leading to complexity and a rewrite. Subsequent additions (e.g., stop/start logic) increased complexity, and a third generation is planned.
+- Tests are essential and must be retained. Removing tests due to failures typically masks regressions.
