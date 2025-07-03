@@ -614,6 +614,17 @@ std::vector<lane_change::TrajectoryGroup> generate_frenet_candidates(
            calc_average_curvature(p2.lane_changing.curvatures);
   });
 
+  if (trajectory_groups.size() > 1) {
+    auto subrange = ranges::subrange(trajectory_groups.begin() + 1, trajectory_groups.end());
+
+    auto remove_start = ranges::remove_if(subrange, [&](const auto & traj) {
+      return calc_average_curvature(traj.lane_changing.curvatures) >
+             common_data_ptr->lc_param_ptr->frenet.th_max_curvature;
+    });
+
+    trajectory_groups.erase(remove_start, trajectory_groups.end());
+  }
+
   return trajectory_groups;
 }
 
