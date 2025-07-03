@@ -25,6 +25,7 @@
 #include <Eigen/Geometry>
 
 #include <sensor_msgs/msg/image.hpp>
+#include <autoware_perception_msgs/msg/detected_objects.hpp>
 
 #include <cpu_jpegdecoder.h>
 #include <cv_bridge/cv_bridge.h>
@@ -103,7 +104,6 @@ private:
     caminfo_received_;  ///< Flag indicating if camera info has been received for each camera
   bool camera_info_received_flag_ =
     false;                    ///< Flag indicating if camera info has been received for all cameras
-  bool initialized_ = false;  /// Flag indicating if img_w_ and img_h_ has been initialized
 
   // tf listener
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_{
@@ -198,6 +198,14 @@ public:
    * @param msg The camera info message.
    */
   void cameraInfoCallback(int idx, const sensor_msgs::msg::CameraInfo::SharedPtr msg);
+  
+  /**
+   * @brief Clones and resizes the input image message to the specified width and height.
+   * @param msg The input image message.
+   * @return The cloned and resized OpenCV Mat image.
+   */
+  cv::Mat cloneAndResize(const sensor_msgs::msg::Image::ConstSharedPtr & msg);
+
 };
 }  // namespace tensorrt_bevdet
 }  // namespace autoware

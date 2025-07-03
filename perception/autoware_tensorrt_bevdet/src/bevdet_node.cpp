@@ -31,7 +31,7 @@ TRTBEVDetNode::TRTBEVDetNode(const rclcpp::NodeOptions & node_options)
   precision_ = this->declare_parameter<std::string>("precision", "fp16");
   RCLCPP_INFO(this->get_logger(), "Using precision mode: %s", precision_.c_str());
 
-  debug_mode_ = this->declare_parameter<bool>("debug", false);
+  debug_mode_ = this->declare_parameter<bool>("debug");
 
   // Only start camera info subscription and tf listener at the beginning
   img_n_ = this->declare_parameter<int>("data_params.CAM_NUM", 6);  // camera num 6
@@ -59,7 +59,21 @@ TRTBEVDetNode::TRTBEVDetNode(const rclcpp::NodeOptions & node_options)
   class_names_ =
     this->declare_parameter<std::vector<std::string>>("post_process_params.class_names");
 
+  // load image width and height from model config YAML
+  YAML::Node config = YAML::LoadFile(model_config_);
+  auto src_size = config["data_config"]["src_size"];
+  img_h_ = src_size[0].as<size_t>();  // height
+  img_w_ = src_size[1].as<size_t>();  // width
+
   startCameraInfoSubscription();
+
+  // Create publishers for detected objects and markers
+  pub_boxes_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
+    "~/output/boxes", rclcpp::QoS{1});
+  if (debug_mode_) {
+    pub_markers_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
+      "~/output_bboxes", rclcpp::QoS{1});
+  }
 
   // Wait for camera info and tf transform initialization
   initialization_check_timer_ = this->create_wall_timer(
@@ -82,13 +96,6 @@ void TRTBEVDetNode::initModel()
 
   CHECK_CUDA(cudaMalloc(
     reinterpret_cast<void **>(&imgs_dev_), img_n_ * 3 * img_w_ * img_h_ * sizeof(uchar)));
-
-  pub_boxes_ = this->create_publisher<autoware_perception_msgs::msg::DetectedObjects>(
-    "~/output/boxes", rclcpp::SensorDataQoS{}.keep_last(1));
-  if (debug_mode_) {
-    pub_markers_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
-      "~/output_bboxes", rclcpp::QoS{1});
-  }
 }
 
 void TRTBEVDetNode::checkInitialization()
@@ -180,20 +187,13 @@ void TRTBEVDetNode::callback(
   const sensor_msgs::msg::Image::ConstSharedPtr & msg_br_img)
 {
   std::vector<cv::Mat> imgs;
-  auto clone_and_resize = [&](const sensor_msgs::msg::Image::ConstSharedPtr & msg) -> cv::Mat {
-    cv::Mat img = cv_bridge::toCvShare(msg, "bgr8")->image.clone();
-    if (img.size() != cv::Size(img_w_, img_h_)) {
-      cv::resize(img, img, cv::Size(img_w_, img_h_));  // img_w_ = 1600, img_h_ = 900
-    }
-    return img;
-  };
 
-  imgs.emplace_back(clone_and_resize(msg_fl_img));
-  imgs.emplace_back(clone_and_resize(msg_f_img));
-  imgs.emplace_back(clone_and_resize(msg_fr_img));
-  imgs.emplace_back(clone_and_resize(msg_bl_img));
-  imgs.emplace_back(clone_and_resize(msg_b_img));
-  imgs.emplace_back(clone_and_resize(msg_br_img));
+  imgs.emplace_back(cloneAndResize(msg_fl_img));
+  imgs.emplace_back(cloneAndResize(msg_f_img));
+  imgs.emplace_back(cloneAndResize(msg_fr_img));
+  imgs.emplace_back(cloneAndResize(msg_bl_img));
+  imgs.emplace_back(cloneAndResize(msg_b_img));
+  imgs.emplace_back(cloneAndResize(msg_br_img));
 
   imageTransport(imgs, imgs_dev_, img_w_, img_h_);
 
@@ -222,13 +222,6 @@ void TRTBEVDetNode::cameraInfoCallback(int idx, const sensor_msgs::msg::CameraIn
   if (caminfo_received_[idx])
     return;  // already received;  not expected to modify because of we init the model only once
 
-  if (!initialized_) {  // load image width and height from model config YAML
-    YAML::Node config = YAML::LoadFile(model_config_);
-    auto src_size = config["data_config"]["src_size"];
-    img_h_ = src_size[0].as<size_t>();  // height
-    img_w_ = src_size[1].as<size_t>();  // width
-    initialized_ = true;
-  }
   Eigen::Matrix3f intrinsics;
   getCameraIntrinsics(msg, intrinsics);
   cams_intrin_[idx] = intrinsics;
@@ -249,6 +242,15 @@ void TRTBEVDetNode::cameraInfoCallback(int idx, const sensor_msgs::msg::CameraIn
   caminfo_received_[idx] = true;
   camera_info_received_flag_ =
     std::all_of(caminfo_received_.begin(), caminfo_received_.end(), [](bool i) { return i; });
+}
+
+cv::Mat TRTBEVDetNode::cloneAndResize(const sensor_msgs::msg::Image::ConstSharedPtr & msg)
+{
+  cv::Mat img = cv_bridge::toCvShare(msg, "bgr8")->image.clone();
+  if (img.size() != cv::Size(img_w_, img_h_)) {
+    cv::resize(img, img, cv::Size(img_w_, img_h_));  // Resize if needed
+  }
+  return img;
 }
 
 TRTBEVDetNode::~TRTBEVDetNode()

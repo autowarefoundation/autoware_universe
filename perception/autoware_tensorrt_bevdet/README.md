@@ -18,26 +18,27 @@ The core algorithm, named `BEVDet`, it unifies multi-view images into the perspe
 
 ### Inputs
 
-| Name                               | Type                           | Description                         |
-| ---------------------------------- | ------------------------------ | ----------------------------------- |
-| `~/input/topic_img_fl`             | `sensor_msgs::msg::Image`      | input front_left camera image       |
-| `~/input/topic_img_f`              | `sensor_msgs::msg::Image`      | input front camera image            |
-| `~/input/topic_img_fr`             | `sensor_msgs::msg::Image`      | input front_right camera image      |
-| `~/input/topic_img_bl`             | `sensor_msgs::msg::Image`      | input back_left camera image        |
-| `~/input/topic_img_b`              | `sensor_msgs::msg::Image`      | input back camera image             |
-| `~/input/topic_img_br`             | `sensor_msgs::msg::Image`      | input back_right camera image       |
-| `~/input/topic_img_fl/camera_info` | `sensor_msgs::msg::CameraInfo` | input front_left camera parameters  |
-| `~/input/topic_img_f/camera_info`  | `sensor_msgs::msg::CameraInfo` | input front camera parameters       |
-| `~/input/topic_img_fr/camera_info` | `sensor_msgs::msg::CameraInfo` | input front_right camera parameters |
-| `~/input/topic_img_bl/camera_info` | `sensor_msgs::msg::CameraInfo` | input back_left camera parameters   |
-| `~/input/topic_img_b/camera_info`  | `sensor_msgs::msg::CameraInfo` | input back camera parameters        |
-| `~/input/topic_img_br/camera_info` | `sensor_msgs::msg::CameraInfo` | input back_right camera parameters  |
+| Name                                         | Type                           | Description                         |
+|----------------------------------------------|--------------------------------|-------------------------------------|
+| `~/input/topic_img_front_left`               | `sensor_msgs::msg::Image`      | input front_left camera image       |
+| `~/input/topic_img_front`                    | `sensor_msgs::msg::Image`      | input front camera image            |
+| `~/input/topic_img_front_right`              | `sensor_msgs::msg::Image`      | input front_right camera image      |
+| `~/input/topic_img_back_left`                | `sensor_msgs::msg::Image`      | input back_left camera image        |
+| `~/input/topic_img_back`                     | `sensor_msgs::msg::Image`      | input back camera image             |
+| `~/input/topic_img_back_right`               | `sensor_msgs::msg::Image`      | input back_right camera image       |
+| `~/input/topic_img_front_left/camera_info`   | `sensor_msgs::msg::CameraInfo` | input front_left camera parameters  |
+| `~/input/topic_img_front/camera_info`        | `sensor_msgs::msg::CameraInfo` | input front camera parameters       |
+| `~/input/topic_img_front_right/camera_info`  | `sensor_msgs::msg::CameraInfo` | input front_right camera parameters |
+| `~/input/topic_img_back_left/camera_info`    | `sensor_msgs::msg::CameraInfo` | input back_left camera parameters   |
+| `~/input/topic_img_back/camera_info`         | `sensor_msgs::msg::CameraInfo` | input back camera parameters        |
+| `~/input/topic_img_back_right/camera_info`   | `sensor_msgs::msg::CameraInfo` | input back_right camera parameters  |
 
 ### Outputs
 
 | Name             | Type                                             | Description      |
 | ---------------- | ------------------------------------------------ | ---------------- |
 | `~/output/boxes` | `autoware_perception_msgs::msg::DetectedObjects` | detected objects |
+| `~/output_bboxes`| `visualization_msgs::msg::MarkerArray`           |	detected objects for nuScenes visualization|
 
 ## How to Use Tensorrt BEVDet Node
 

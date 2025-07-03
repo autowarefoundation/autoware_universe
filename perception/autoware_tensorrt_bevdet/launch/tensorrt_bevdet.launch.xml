@@ -26,8 +26,6 @@
   <arg name="param_file" default="$(find-pkg-share autoware_tensorrt_bevdet)/config/bevdet.param.yaml"/>
 
   <arg name="precision" default="fp16" description="Precision mode (fp16 or fp32)"/>
-  <!-- supports visualization with nuScenes when enabled -->
-  <arg name="debug" default="false" description="Enable debug mode"/>
 
   <!-- bevdet node -->
   <node pkg="autoware_tensorrt_bevdet" exec="autoware_tensorrt_bevdet_node" name="tensorrt_bevdet" output="screen">
@@ -51,8 +49,7 @@
 
     <param name="model_config" value="$(var model_config)"/>
     <param from="$(var param_file)" allow_substs="true"/>
-
+    
     <param name="precision" value="$(var precision)"/>
-    <param name="debug" value="$(var debug)"/>
   </node>
 </launch>
