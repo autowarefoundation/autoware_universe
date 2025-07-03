@@ -118,4 +118,4 @@ However, to ensure the continuity of commands, these commands will not change un
 
 - This node depends on the Operation Mode Transition Manager for Engage state transitions at the design level.
 - As a top-level node, unintended features often accumulate; careful handling is necessary. This is the second generation of `vehicle_cmd_gate`. The first included ride comfort adjustments and broad safety features, leading to complexity and a rewrite. Subsequent additions (e.g., stop/start logic) increased complexity, and a third generation is planned.
-- Tests are essential and must be retained. Removing tests due to failures typically masks regressions.
+- Tests are essential and must be retained.
