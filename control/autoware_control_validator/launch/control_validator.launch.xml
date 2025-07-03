@@ -2,6 +2,7 @@
   <arg name="control_validator_param_path" default="$(find-pkg-share autoware_control_validator)/config/control_validator.param.yaml"/>
   <arg name="input_reference_trajectory" default="/planning/scenario_planning/trajectory"/>
   <arg name="input_predicted_trajectory" default="/control/trajectory_follower/lateral/predicted_trajectory"/>
+  <arg name="input_operational_mode_state" default="/api/operation_mode/state"/>
 
   <node name="control_validator" exec="autoware_control_validator_node" pkg="autoware_control_validator" output="screen">
     <!-- load config a file -->
@@ -10,6 +11,7 @@
     <!-- remap topic name -->
     <remap from="~/input/control_cmd" to="/control/command/control_cmd"/>
     <remap from="~/input/kinematics" to="/localization/kinematic_state"/>
+    <remap from="~/input/operational_mode_state" to="$(var input_operational_mode_state)"/>
     <remap from="~/input/measured_acceleration" to="/localization/acceleration"/>
     <remap from="~/input/reference_trajectory" to="$(var input_reference_trajectory)"/>
     <remap from="~/input/predicted_trajectory" to="$(var input_predicted_trajectory)"/>
