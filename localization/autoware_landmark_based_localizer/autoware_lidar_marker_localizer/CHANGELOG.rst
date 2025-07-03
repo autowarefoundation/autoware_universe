@@ -2,6 +2,25 @@
 Changelog for package autoware_lidar_marker_localizer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+
+0.45.0 (2025-05-22)
+-------------------
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(lidar_marker_localizer): fix typo in launch file (`#10405 <https://github.com/autowarefoundation/autoware_universe/issues/10405>`_)
+  fix typo
+* Contributors: Ryohsuke Mitsudome, Yamato Ando
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

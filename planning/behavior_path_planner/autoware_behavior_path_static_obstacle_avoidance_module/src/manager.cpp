@@ -106,6 +106,8 @@ void StaticObstacleAvoidanceModuleManager::updateModuleParams(
     update_param<double>(
       parameters, ns + "object_check_return_pose_distance", p->object_check_return_pose_distance);
     update_param<double>(parameters, ns + "max_compensation_time", p->object_last_seen_threshold);
+    update_param<double>(
+      parameters, ns + "unstable_classification_time", p->unstable_classification_time);
   }
 
   {
@@ -230,8 +232,12 @@ void StaticObstacleAvoidanceModuleManager::updateModuleParams(
     update_param<std::vector<double>>(parameters, ns + "velocity", velocity_map);
     std::vector<double> lateral_max_accel_map;
     update_param<std::vector<double>>(parameters, ns + "max_accel_values", lateral_max_accel_map);
-    std::vector<double> lateral_min_jerk_map;
-    update_param<std::vector<double>>(parameters, ns + "min_jerk_values", lateral_min_jerk_map);
+    std::vector<double> avoid_lateral_min_jerk_map;
+    update_param<std::vector<double>>(
+      parameters, ns + "min_jerk_values.avoid", avoid_lateral_min_jerk_map);
+    std::vector<double> return_lateral_min_jerk_map;
+    update_param<std::vector<double>>(
+      parameters, ns + "min_jerk_values.return", return_lateral_min_jerk_map);
     std::vector<double> lateral_max_jerk_map;
     update_param<std::vector<double>>(parameters, ns + "max_jerk_values", lateral_max_jerk_map);
 
@@ -243,8 +249,12 @@ void StaticObstacleAvoidanceModuleManager::updateModuleParams(
       p->lateral_max_accel_map = lateral_max_accel_map;
     }
 
-    if (!velocity_map.empty() && velocity_map.size() == lateral_min_jerk_map.size()) {
-      p->lateral_min_jerk_map = lateral_min_jerk_map;
+    if (!velocity_map.empty() && velocity_map.size() == avoid_lateral_min_jerk_map.size()) {
+      p->avoid_lateral_min_jerk_map = avoid_lateral_min_jerk_map;
+    }
+
+    if (!velocity_map.empty() && velocity_map.size() == return_lateral_min_jerk_map.size()) {
+      p->return_lateral_min_jerk_map = return_lateral_min_jerk_map;
     }
 
     if (!velocity_map.empty() && velocity_map.size() == lateral_max_jerk_map.size()) {

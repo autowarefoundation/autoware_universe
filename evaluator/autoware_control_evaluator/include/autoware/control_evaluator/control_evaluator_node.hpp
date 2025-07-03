@@ -1,4 +1,4 @@
-// Copyright 2025 Tier IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/ros/polling_subscriber.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <autoware_utils_math/accumulator.hpp>
 #include <autoware_vehicle_info_utils/vehicle_info_utils.hpp>
 #include <rclcpp/rclcpp.hpp>
 
@@ -32,6 +33,7 @@
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>
 #include <autoware_internal_planning_msgs/msg/planning_factor.hpp>
 #include <autoware_internal_planning_msgs/msg/planning_factor_array.hpp>
+#include <autoware_perception_msgs/msg/predicted_objects.hpp>
 #include <autoware_planning_msgs/msg/lanelet_route.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <tier4_metric_msgs/msg/metric.hpp>
@@ -47,6 +49,7 @@
 namespace control_diagnostics
 {
 using autoware::vehicle_info_utils::VehicleInfo;
+using autoware_perception_msgs::msg::PredictedObjects;
 using autoware_planning_msgs::msg::Trajectory;
 using autoware_utils::Accumulator;
 using autoware_utils::LineString2d;
@@ -73,20 +76,20 @@ public:
   explicit ControlEvaluatorNode(const rclcpp::NodeOptions & node_options);
   ~ControlEvaluatorNode() override;
 
-  void AddMetricMsg(const Metric & metric, const double & metric_value);
+  void AddMetricMsg(
+    const Metric & metric, const double & metric_value, const bool & accumulate_metric = true);
   void AddLateralDeviationMetricMsg(const Trajectory & traj, const Point & ego_point);
   void AddYawDeviationMetricMsg(const Trajectory & traj, const Pose & ego_pose);
-  void AddGoalLongitudinalDeviationMetricMsg(const Pose & ego_pose);
-  void AddGoalLateralDeviationMetricMsg(const Pose & ego_pose);
-  void AddGoalYawDeviationMetricMsg(const Pose & ego_pose);
+  void AddGoalDeviationMetricMsg(const Odometry & odom);
+  void AddObjectMetricMsg(const Odometry & odom, const PredictedObjects & objects);
   void AddBoundaryDistanceMetricMsg(const PathWithLaneId & behavior_path, const Pose & ego_pose);
+  void AddUncrossableBoundaryDistanceMetricMsg(const Pose & ego_pose);
 
   void AddLaneletInfoMsg(const Pose & ego_pose);
   void AddKinematicStateMetricMsg(
     const Odometry & odom, const AccelWithCovarianceStamped & accel_stamped);
   void AddSteeringMetricMsg(const SteeringReport & steering_report);
-  void AddStopDeviationMetricMsg(
-    const PlanningFactorArray::ConstSharedPtr & planning_factors, const std::string & module_name);
+  void AddStopDeviationMetricMsg(const Odometry & odom);
   void onTimer();
 
 private:
@@ -104,10 +107,13 @@ private:
     this, "~/input/behavior_path"};
   autoware_utils::InterProcessPollingSubscriber<SteeringReport> steering_sub_{
     this, "~/input/steering_status"};
-
+  autoware_utils::InterProcessPollingSubscriber<PredictedObjects> objects_sub_{
+    this, "~/input/objects"};
   std::unordered_map<
     std::string, autoware_utils::InterProcessPollingSubscriber<PlanningFactorArray>>
     planning_factors_sub_;
+  std::unordered_map<std::string, Accumulator<double>> stop_deviation_accumulators_;
+  std::unordered_map<std::string, Accumulator<double>> stop_deviation_abs_accumulators_;
   std::unordered_set<std::string> stop_deviation_modules_;
 
   rclcpp::Publisher<autoware_internal_debug_msgs::msg::Float64Stamped>::SharedPtr
@@ -119,21 +125,31 @@ private:
 
   // Parameters
   bool output_metrics_;
+  double distance_filter_thr_m_;
 
   // Metric
-  const std::vector<Metric> metrics_ = {
-    // collect all metrics
-    Metric::lateral_deviation,
-    Metric::yaw_deviation,
-    Metric::goal_longitudinal_deviation,
-    Metric::goal_lateral_deviation,
-    Metric::goal_yaw_deviation,
-    Metric::left_boundary_distance,
-    Metric::right_boundary_distance,
-    Metric::steering_angle,
-    Metric::steering_rate,
-    Metric::steering_acceleration,
-  };
+  const std::vector<Metric> metrics_ = {// collect all metrics
+                                        Metric::velocity,
+                                        Metric::acceleration,
+                                        Metric::jerk,
+                                        Metric::lateral_deviation,
+                                        Metric::lateral_deviation_abs,
+                                        Metric::yaw_deviation,
+                                        Metric::yaw_deviation_abs,
+                                        Metric::goal_longitudinal_deviation,
+                                        Metric::goal_longitudinal_deviation_abs,
+                                        Metric::goal_lateral_deviation,
+                                        Metric::goal_lateral_deviation_abs,
+                                        Metric::goal_yaw_deviation,
+                                        Metric::goal_yaw_deviation_abs,
+                                        Metric::left_boundary_distance,
+                                        Metric::right_boundary_distance,
+                                        Metric::steering_angle,
+                                        Metric::steering_rate,
+                                        Metric::steering_acceleration,
+                                        Metric::stop_deviation,
+                                        Metric::stop_deviation_abs,
+                                        Metric::closest_object_distance};
 
   std::array<Accumulator<double>, static_cast<size_t>(Metric::SIZE)>
     metric_accumulators_;  // 3(min, max, mean) * metric_size

@@ -14,9 +14,11 @@
 
 #include "autoware/pointcloud_preprocessor/pointcloud_densifier/pointcloud_densifier_node.hpp"
 
+#include <tf2/LinearMath/Transform.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <sensor_msgs/point_cloud2_iterator.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
 #include <pcl/point_cloud.h>
@@ -29,9 +31,7 @@ namespace autoware::pointcloud_preprocessor
 {
 
 PointCloudDensifierNode::PointCloudDensifierNode(const rclcpp::NodeOptions & options)
-: Filter("PointCloudDensifier", options),
-  tf_buffer_(std::make_shared<tf2_ros::Buffer>(this->get_clock())),
-  tf_listener_(std::make_shared<tf2_ros::TransformListener>(*tf_buffer_))
+: Filter("PointCloudDensifier", options)
 {
   // Initialize debug tools
   {
@@ -72,8 +72,11 @@ PointCloudDensifierNode::PointCloudDensifierNode(const rclcpp::NodeOptions & opt
   {
     using std::placeholders::_1;
     set_param_res_ = this->add_on_set_parameters_callback(
-      std::bind(&PointCloudDensifierNode::paramCallback, this, _1));
+      std::bind(&PointCloudDensifierNode::param_callback, this, _1));
   }
+
+  // Initialize Managed TF buffer
+  managed_tf_buffer_ = std::make_shared<managed_transform_buffer::ManagedTransformBuffer>();
 }
 
 // Legacy filter implementation - for backward compatibility
@@ -202,21 +205,23 @@ void PointCloudDensifierNode::transformAndMergePreviousClouds(
       continue;
     }
 
+    tf2::TimePoint current_time_point = tf2::TimePoint(
+      std::chrono::nanoseconds(current_msg->header.stamp.nanosec) +
+      std::chrono::seconds(current_msg->header.stamp.sec));
+    tf2::TimePoint prev_time_point = tf2::TimePoint(
+      std::chrono::nanoseconds(previous_cloud->header.stamp.nanosec) +
+      std::chrono::seconds(previous_cloud->header.stamp.sec));
+
+    auto previous_transform = managed_tf_buffer_->getTransform<tf2::Transform>(
+      previous_cloud->header.frame_id, "map", prev_time_point, tf2::Duration::zero(), get_logger());
+
+    auto current_transform = managed_tf_buffer_->getTransform<tf2::Transform>(
+      "map", current_msg->header.frame_id, current_time_point, tf2::Duration::zero(), get_logger());
+
+    // TF between previous and current cloud
+    auto tf = *current_transform * *previous_transform;
     geometry_msgs::msg::TransformStamped transform_stamped;
-    try {
-      tf2::TimePoint current_time_point = tf2::TimePoint(
-        std::chrono::nanoseconds(current_msg->header.stamp.nanosec) +
-        std::chrono::seconds(current_msg->header.stamp.sec));
-      tf2::TimePoint prev_time_point = tf2::TimePoint(
-        std::chrono::nanoseconds(previous_cloud->header.stamp.nanosec) +
-        std::chrono::seconds(previous_cloud->header.stamp.sec));
-      transform_stamped = tf_buffer_->lookupTransform(
-        current_msg->header.frame_id, current_time_point, previous_cloud->header.frame_id,
-        prev_time_point, "map");
-    } catch (tf2::TransformException & ex) {
-      RCLCPP_WARN(get_logger(), "Could not transform point cloud: %s", ex.what());
-      continue;
-    }
+    transform_stamped.transform = tf2::toMsg(tf);
 
     // Validate and obtain the transformation
     Eigen::Isometry3d transform_eigen = tf2::transformToEigen(transform_stamped);
@@ -276,7 +281,7 @@ bool PointCloudDensifierNode::isValidTransform(const Eigen::Matrix4d & transform
                                     1e-3;  // Check if it's a proper rigid transformation
 }
 
-rcl_interfaces::msg::SetParametersResult PointCloudDensifierNode::paramCallback(
+rcl_interfaces::msg::SetParametersResult PointCloudDensifierNode::param_callback(
   const std::vector<rclcpp::Parameter> & p)
 {
   std::scoped_lock lock(mutex_);

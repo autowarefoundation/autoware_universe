@@ -63,9 +63,9 @@
 // ROS includes
 #include <autoware/point_types/types.hpp>
 #include <autoware_utils/ros/debug_publisher.hpp>
-#include <autoware_utils/ros/managed_transform_buffer.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <diagnostic_updater/diagnostic_updater.hpp>
+#include <managed_transform_buffer/managed_transform_buffer.hpp>
 #include <point_cloud_msg_wrapper/point_cloud_msg_wrapper.hpp>
 
 #include <autoware_internal_debug_msgs/msg/int32_stamped.hpp>
@@ -81,8 +81,6 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/synchronizer.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
 
 namespace autoware::pointcloud_preprocessor
 {
@@ -135,14 +133,11 @@ private:
   /** \brief Output TF frame the concatenated points should be transformed to. */
   std::string output_frame_;
 
-  /** \brief The flag to indicate if only static TF are used. */
-  bool has_static_tf_only_;
-
   /** \brief Input point cloud topics. */
   // XmlRpc::XmlRpcValue input_topics_;
   std::vector<std::string> input_topics_;
 
-  std::unique_ptr<autoware_utils::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
+  std::unique_ptr<managed_transform_buffer::ManagedTransformBuffer> managed_tf_buffer_{nullptr};
 
   std::deque<geometry_msgs::msg::TwistStamped::ConstSharedPtr> twist_ptr_queue_;
 

@@ -2,6 +2,102 @@
 Changelog for package autoware_image_projection_based_fusion
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* fix(roi_cluster_fusion): fix typo (`#10833 <https://github.com/autowarefoundation/autoware_universe/issues/10833>`_)
+  * fix(roi_cluster_fusion): fix typo
+  * rename variable
+  * refactor: rename parameter
+  ---------
+* fix(roi_cluster_fusion): fix target frame's timestamp (`#10831 <https://github.com/autowarefoundation/autoware_universe/issues/10831>`_)
+  * chore: fix target frame timestamp
+  * chore: fix timestamp
+  ---------
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* fix(segmentation_pointcloud_fusion): add missing context  (`#10823 <https://github.com/autowarefoundation/autoware_universe/issues/10823>`_)
+  add perform(context)
+* fix(autoware_image_projection_based_fusion): fix parsing value of concatenate diagnostic (`#10792 <https://github.com/autowarefoundation/autoware_universe/issues/10792>`_)
+  fix: fix key value
+* fix(roi_pointcloud_fusion): add remap output option (`#10655 <https://github.com/autowarefoundation/autoware_universe/issues/10655>`_)
+  * fix(roi_pointcloud_fusion): add remap output option
+  * chore: docs update
+  * fix: update refine cluster func
+  * chore: fix schema
+  * fix: test utils
+  ---------
+* Contributors: Kento Yabuuchi, TaikiYamada4, Yi-Hsiang Fang (Vivid), badai nguyen
+
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* chore: perception code owner update (`#10645 <https://github.com/autowarefoundation/autoware_universe/issues/10645>`_)
+  * chore: update maintainers in multiple perception packages
+  * Revert "chore: update maintainers in multiple perception packages"
+  This reverts commit f2838c33d6cd82bd032039e2a12b9cb8ba6eb584.
+  * chore: update maintainers in multiple perception packages
+  * chore: add Kok Seang Tan as maintainer in multiple perception packages
+  ---------
+* fix(segmentation pointcloud fusion): fix launch for selectable camera IDs (`#10609 <https://github.com/autowarefoundation/autoware_universe/issues/10609>`_)
+  * fix(tier4_perception_launch): fix segmentation_pointcloud_fusion launch
+  * chore: remove duplicated line
+  ---------
+* fix(image_projection_based_fusion): fix redundantAssignment warning (`#10531 <https://github.com/autowarefoundation/autoware_universe/issues/10531>`_)
+* Contributors: Ryuta Kambe, Taekjin LEE, TaikiYamada4, badai nguyen
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(autoware_image_projection_based_fusion): add missing params `common_param_path` when not use container (`#10499 <https://github.com/autowarefoundation/autoware_universe/issues/10499>`_)
+  add missing params common_param_path when not use container
+* feat(pointpainting_fusion): add diagnostics for processing time of pointpainting (`#10397 <https://github.com/autowarefoundation/autoware_universe/issues/10397>`_)
+  * add diagnostics for pointpainting
+  * add common params
+  * add schema for common param
+  * style(pre-commit): autofix
+  * include diagnostic_msgs
+  * fix typo
+  * fix stop watch recording name
+  * fix parameter and message
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(autoware_lidar_centerpoint): added the cuda_blackboard to centerpoint (`#9453 <https://github.com/autowarefoundation/autoware_universe/issues/9453>`_)
+  * feat: introduced the cuda transport layer (cuda blackboard) to centerpoint
+  * chore: fixed compilation issue on pointpainting
+  * fix: fixed compile errors in the ml models
+  * fix: fixed standalone non-composed launcher
+  * chore: ci/cd
+  * chore: clang tidy related fix
+  * chore: removed non applicable override (point painting does not support the blackboard yet)
+  * chore: temporarily ignoring warning until pointpainting also supports the blackboard
+  * chore: ignoring spell
+  * feat: removed the deprecated compatible subs option in the constructor
+  * chore: bump the cuda blackboard version in the build depends
+  * Update perception/autoware_image_projection_based_fusion/src/pointpainting_fusion/pointpainting_trt.cpp
+  Co-authored-by: badai nguyen  <94814556+badai-nguyen@users.noreply.github.com>
+  * Update perception/autoware_image_projection_based_fusion/src/pointpainting_fusion/pointpainting_trt.cpp
+  Co-authored-by: badai nguyen  <94814556+badai-nguyen@users.noreply.github.com>
+  ---------
+  Co-authored-by: Amadeusz Szymko <amadeusz.szymko.2@tier4.jp>
+  Co-authored-by: badai nguyen <94814556+badai-nguyen@users.noreply.github.com>
+* chore(localization, perception): remove koji minoda as maintainer from multiple packages (`#10359 <https://github.com/autowarefoundation/autoware_universe/issues/10359>`_)
+  fix: remove Koji Minoda as maintainer from multiple package.xml files
+* fix(autoware_image_projection_based_fusion): unintended new container behavior (`#10346 <https://github.com/autowarefoundation/autoware_universe/issues/10346>`_)
+  fix: the current launcher was creating a new container with the same name
+* fix(roi_pointcloud_fusion): merge into pointcloud container (`#10334 <https://github.com/autowarefoundation/autoware_universe/issues/10334>`_)
+* fix(roi_pointcloud_fusion): add roi scale factor param (`#10333 <https://github.com/autowarefoundation/autoware_universe/issues/10333>`_)
+  * fix(roi_pointcloud_fusion): add roi scale factor param
+  * fix: missing declare
+  ---------
+* fix(image_projection_based_fusion): add outside of FOV checking (`#10329 <https://github.com/autowarefoundation/autoware_universe/issues/10329>`_)
+* Contributors: Kenzo Lobos Tsunekawa, Masaki Baba, Masato Saeki, Ryohsuke Mitsudome, Taekjin LEE, badai nguyen
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

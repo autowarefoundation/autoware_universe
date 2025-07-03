@@ -2,6 +2,52 @@
 Changelog for package autoware_radar_object_tracker
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* feat(autoware_radar_object_tracker): adaptation to autoware_utils (`#10464 <https://github.com/autowarefoundation/autoware_universe/issues/10464>`_)
+  * feat(autoware_radar_object_tracker): adaptation to autoware_utils
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: NorahXiong, TaikiYamada4
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* build(autoware_radar_object_tracker): fix missing diagnostic_updater dependency (`#10480 <https://github.com/autowarefoundation/autoware_universe/issues/10480>`_)
+* fix(radar_object_tracker): add required headers (`#10463 <https://github.com/autowarefoundation/autoware_universe/issues/10463>`_)
+* feat(radar_object_tracker): add diagnostics for checking radar input status (`#10432 <https://github.com/autowarefoundation/autoware_universe/issues/10432>`_)
+  * add diagnostics
+  * style(pre-commit): autofix
+  * Update perception/autoware_radar_object_tracker/src/radar_object_tracker_node.cpp
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update perception/autoware_radar_object_tracker/src/radar_object_tracker_node.hpp
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update perception/autoware_radar_object_tracker/src/radar_object_tracker_node.cpp
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update perception/autoware_radar_object_tracker/src/radar_object_tracker_node.cpp
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update perception/autoware_radar_object_tracker/config/radar_object_tracker.param.yaml
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * Update perception/autoware_radar_object_tracker/config/radar_object_tracker.param.yaml
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * fix var name
+  * change callback param name
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+* Contributors: Esteve Fernandez, Masaki Baba, Ryohsuke Mitsudome, Takagi, Isamu
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

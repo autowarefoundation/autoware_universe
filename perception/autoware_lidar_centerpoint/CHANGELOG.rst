@@ -2,6 +2,123 @@
 Changelog for package autoware_lidar_centerpoint
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* chore(perception): delete maintainer name (`#10816 <https://github.com/autowarefoundation/autoware_universe/issues/10816>`_)
+* feat(autoware_lidar_centerpoint): add ShortRange centerpoint as another new node base on autoware_lidar_centerpoint (`#10727 <https://github.com/autowarefoundation/autoware_universe/issues/10727>`_)
+  * Add shortrange_centerpoint launcher to autoware_lidar_centerpoint
+  * style(pre-commit): autofix
+  * Update README.md to include launching of shortrange centerpoint
+  * style(pre-commit): autofix
+  * Add option to launch shortrange centerpoint in tier4_perception_launch
+  * Add option to launch shortrange centerpoint in tier4_perception_launch
+  * style(pre-commit): autofix
+  * Update correct launcher name in lidar_dnn_detection.launch.xml
+  * Fix Update typo in lidar_dnn_detector launcher for shortrange centerpoint
+  * Add use_short_range_detection to launcher for switching shortrange detection
+  * Add use_short_range_detection to launcher for switching shortrange detection
+  * Format spaces
+  * style(pre-commit): autofix
+  * Rename shortrange to short_range
+  * Change shor_range centerpoint to one of the centerpoint variants
+  * Fix shortrange spelling warning
+  * Fix default value for use_short_range_centerpoint and fix missing short_range_centerpoint_common.param.yaml
+  * Fix default value for use_short_range_centerpoint
+  * Rename short_range_centerpoint to centerpoint_short_range for model name and type
+  * Rename short_range_centerpoint to centerpoint_short_range for model name and type
+  * Update value to default
+  * Update short range centerpoint namespace
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Kok Seang Tan, Satoshi Tanaka, TaikiYamada4
+
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* chore: perception code owner update (`#10645 <https://github.com/autowarefoundation/autoware_universe/issues/10645>`_)
+  * chore: update maintainers in multiple perception packages
+  * Revert "chore: update maintainers in multiple perception packages"
+  This reverts commit f2838c33d6cd82bd032039e2a12b9cb8ba6eb584.
+  * chore: update maintainers in multiple perception packages
+  * chore: add Kok Seang Tan as maintainer in multiple perception packages
+  ---------
+* feat(autoware_lidar_centerpoint): add distance of z to pillar center as a new lidar encoder feature in CenterPoint (`#10592 <https://github.com/autowarefoundation/autoware_universe/issues/10592>`_)
+  * Add support of distance of z to pillar center in centerpoint
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Amadeusz Szymko <amadeusz.szymko.2@tier4.jp>
+* feat(autoware_lidar_centerpoint): added target architectures for centerpoint (`#10616 <https://github.com/autowarefoundation/autoware_universe/issues/10616>`_)
+  * feat: added target architectures for centerpoint
+  * chore: mistook the capabilities of edge devices
+  ---------
+* Contributors: Kenzo Lobos Tsunekawa, Kok Seang Tan, Taekjin LEE, TaikiYamada4
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* feat(lidar_centerpoint): add diagnostics for processing time (`#10284 <https://github.com/autowarefoundation/autoware_universe/issues/10284>`_)
+  * add diagnostics for processing time
+  * style(pre-commit): autofix
+  * change to timer callback to check the error
+  * style(pre-commit): autofix
+  * add ms in name
+  * fix cppcheck error
+  * change parameter name
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * change structure
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  * change var name
+  * change config related part
+  * fix typo
+  * change launch arg name
+  * add schema file
+  * refactor(autoware_lidar_centerpoint): remove unused is_processing_delayed\_ variable
+  * add processing time in diag.
+  * style(pre-commit): autofix
+  * refactor
+  * style(pre-commit): autofix
+  * use diagnostic_updater instead of timer callback
+  * style(pre-commit): autofix
+  * change validation_callback_interval_ms type to number
+  * Update perception/autoware_lidar_centerpoint/src/node.cpp
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+  Co-authored-by: Taekjin LEE <technolojin@gmail.com>
+  Co-authored-by: Taekjin LEE <taekjin.lee@tier4.jp>
+* chore(perception): code owner revision (`#10358 <https://github.com/autowarefoundation/autoware_universe/issues/10358>`_)
+  * feat: add Masato Saeki and Taekjin Lee as maintainer to multiple package.xml files
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(autoware_lidar_centerpoint): added the cuda_blackboard to centerpoint (`#9453 <https://github.com/autowarefoundation/autoware_universe/issues/9453>`_)
+  * feat: introduced the cuda transport layer (cuda blackboard) to centerpoint
+  * chore: fixed compilation issue on pointpainting
+  * fix: fixed compile errors in the ml models
+  * fix: fixed standalone non-composed launcher
+  * chore: ci/cd
+  * chore: clang tidy related fix
+  * chore: removed non applicable override (point painting does not support the blackboard yet)
+  * chore: temporarily ignoring warning until pointpainting also supports the blackboard
+  * chore: ignoring spell
+  * feat: removed the deprecated compatible subs option in the constructor
+  * chore: bump the cuda blackboard version in the build depends
+  * Update perception/autoware_image_projection_based_fusion/src/pointpainting_fusion/pointpainting_trt.cpp
+  Co-authored-by: badai nguyen  <94814556+badai-nguyen@users.noreply.github.com>
+  * Update perception/autoware_image_projection_based_fusion/src/pointpainting_fusion/pointpainting_trt.cpp
+  Co-authored-by: badai nguyen  <94814556+badai-nguyen@users.noreply.github.com>
+  ---------
+  Co-authored-by: Amadeusz Szymko <amadeusz.szymko.2@tier4.jp>
+  Co-authored-by: badai nguyen <94814556+badai-nguyen@users.noreply.github.com>
+* chore(localization, perception): remove koji minoda as maintainer from multiple packages (`#10359 <https://github.com/autowarefoundation/autoware_universe/issues/10359>`_)
+  fix: remove Koji Minoda as maintainer from multiple package.xml files
+* Contributors: Kenzo Lobos Tsunekawa, Masaki Baba, Ryohsuke Mitsudome, Taekjin LEE
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

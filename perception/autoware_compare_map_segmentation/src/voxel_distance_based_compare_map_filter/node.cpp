@@ -39,9 +39,13 @@ void VoxelDistanceBasedStaticMapLoader::onMapCallback(
   // voxel
   voxel_map_ptr_.reset(new pcl::PointCloud<pcl::PointXYZ>);
   voxel_grid_.setLeafSize(voxel_leaf_size_, voxel_leaf_size_, voxel_leaf_size_);
+  // check if the pointcloud is filterable with PCL voxel grid
+  isFeasibleWithPCLVoxelGrid(map_pcl_ptr, voxel_grid_);
+
   voxel_grid_.setInputCloud(map_pcl_ptr);
   voxel_grid_.setSaveLeafLayout(true);
   voxel_grid_.filter(*voxel_map_ptr_);
+
   // kdtree
   map_ptr_ = map_pcl_ptr;
 
@@ -107,7 +111,7 @@ bool VoxelDistanceBasedDynamicMapLoader::is_close_to_map(
 
 VoxelDistanceBasedCompareMapFilterComponent::VoxelDistanceBasedCompareMapFilterComponent(
   const rclcpp::NodeOptions & options)
-: Filter("VoxelDistanceBasedCompareMapFilter", options)
+: Filter("VoxelDistanceBasedCompareMapFilter", options), diagnostic_updater_(this)
 {
   // initialize debug tool
   {
@@ -120,6 +124,15 @@ VoxelDistanceBasedCompareMapFilterComponent::VoxelDistanceBasedCompareMapFilterC
     stop_watch_ptr_->tic("processing_time");
   }
 
+  // setup diagnostics
+  {
+    diagnostic_updater_.setHardwareID(this->get_name());
+    diagnostic_updater_.add(
+      "Compare map filter status", this, &VoxelDistanceBasedCompareMapFilterComponent::checkStatus);
+    diagnostic_updater_.setPeriod(0.1);
+  }
+
+  // Declare parameters
   distance_threshold_ = declare_parameter<double>("distance_threshold");
   bool use_dynamic_map_loading = declare_parameter<bool>("use_dynamic_map_loading");
   double downsize_ratio_z_axis = declare_parameter<double>("downsize_ratio_z_axis");
@@ -138,12 +151,40 @@ VoxelDistanceBasedCompareMapFilterComponent::VoxelDistanceBasedCompareMapFilterC
   }
 }
 
+void VoxelDistanceBasedCompareMapFilterComponent::checkStatus(
+  diagnostic_updater::DiagnosticStatusWrapper & stat)
+{
+  // map loader status
+  DiagStatus & map_loader_status =
+    (*voxel_distance_based_map_loader_).diagnostics_map_voxel_status_;
+  if (map_loader_status.level == diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    stat.add("Map loader status", "OK");
+  } else {
+    stat.add("Map loader status", "NG");
+  }
+
+  // final status = map loader status
+  stat.summary(map_loader_status.level, map_loader_status.message);
+}
+
 void VoxelDistanceBasedCompareMapFilterComponent::filter(
   const PointCloud2ConstPtr & input, [[maybe_unused]] const IndicesPtr & indices,
   PointCloud2 & output)
 {
   std::scoped_lock lock(mutex_);
   stop_watch_ptr_->toc("processing_time", true);
+
+  // check grid map loader status
+  auto & map_diag_status = (*voxel_distance_based_map_loader_).diagnostics_map_voxel_status_;
+  if (map_diag_status.level != diagnostic_msgs::msg::DiagnosticStatus::OK) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 5000, "Map loader status: %s",
+      map_diag_status.message.c_str());
+    // return input point cloud, no filter implemented
+    output = *input;
+    return;
+  }
+
   int point_step = input->point_step;
   int offset_x = input->fields[pcl::getFieldIndex(*input, "x")].offset;
   int offset_y = input->fields[pcl::getFieldIndex(*input, "y")].offset;

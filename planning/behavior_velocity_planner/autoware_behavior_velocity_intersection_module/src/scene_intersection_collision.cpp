@@ -18,6 +18,7 @@
 #include <autoware/behavior_velocity_planner_common/utilization/boost_geometry_helper.hpp>  // for toGeomPoly
 #include <autoware/behavior_velocity_planner_common/utilization/trajectory_utils.hpp>  // for smoothPath
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/object_recognition_utils/predicted_path_utils.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
 #include <autoware_utils/geometry/boost_polygon_utils.hpp>  // for toPolygon2d
 #include <autoware_utils/geometry/geometry.hpp>
@@ -25,6 +26,7 @@
 
 #include <boost/geometry/algorithms/correct.hpp>
 #include <boost/geometry/algorithms/intersects.hpp>
+#include <boost/geometry/algorithms/union.hpp>
 #include <boost/geometry/algorithms/within.hpp>
 
 #include <fmt/format.h>
@@ -163,9 +165,9 @@ void IntersectionModule::updateObjectInfoManagerCollision(
   }
 
   const double passing_time = time_distance_array.back().first;
-  const auto & concat_lanelets = path_lanelets.all;
+  const auto & concat_lanelets = lanelet::utils::combineLaneletsShape(path_lanelets.all);
   const auto closest_arc_coords =
-    lanelet::utils::getArcCoordinates(concat_lanelets, planner_data_->current_odometry->pose);
+    lanelet::utils::getArcCoordinates({concat_lanelets}, planner_data_->current_odometry->pose);
   const auto & ego_lane = path_lanelets.ego_or_entry2exit;
   debug_data_.ego_lane = ego_lane.polygon3d();
   const auto ego_poly = ego_lane.polygon2d().basicPolygon();
@@ -263,6 +265,17 @@ void IntersectionModule::updateObjectInfoManagerCollision(
       }
       cutPredictPathWithinDuration(
         planner_data_->predicted_objects->header.stamp, passing_time, &predicted_path);
+      if (predicted_path.path.size() < 2) {
+        continue;
+      }
+      const double time_step =
+        predicted_path.time_step.sec + predicted_path.time_step.nanosec * 1e-9;
+      const double horizon = time_step * static_cast<double>(predicted_path.path.size());
+      predicted_path =
+        autoware::object_recognition_utils::resamplePredictedPath(predicted_path, 0.1, horizon);
+      if (predicted_path.path.size() < 2) {
+        continue;
+      }
       const auto object_passage_interval_opt = findPassageInterval(
         predicted_path, predicted_object.shape, ego_poly,
         intersection_lanelets.first_attention_lane(),
@@ -303,7 +316,7 @@ void IntersectionModule::updateObjectInfoManagerCollision(
           planner_data_->vehicle_info_.max_longitudinal_offset_m,
         lanelet::utils::getLaneletLength2d(concat_lanelets));
       const auto trimmed_ego_polygon = lanelet::utils::getPolygonFromArcLength(
-        concat_lanelets, ego_start_arc_length, ego_end_arc_length);
+        {concat_lanelets}, ego_start_arc_length, ego_end_arc_length);
       if (trimmed_ego_polygon.empty()) {
         continue;
       }
@@ -316,14 +329,19 @@ void IntersectionModule::updateObjectInfoManagerCollision(
 
       const auto & object_path = object_passage_interval.path;
       const auto [begin, end] = object_passage_interval.interval_position;
-      bool collision_detected = false;
+      Polygon2d object_polygon{};
       for (auto i = begin; i <= end; ++i) {
-        if (bg::intersects(
-              polygon, autoware_utils::to_polygon2d(object_path.at(i), predicted_object.shape))) {
-          collision_detected = true;
-          break;
+        std::vector<Polygon2d> unions{};
+        boost::geometry::union_(
+          object_polygon, autoware_utils::to_polygon2d(object_path.at(i), predicted_object.shape),
+          unions);
+        if (!unions.empty()) {
+          object_polygon = unions.front();
+          boost::geometry::correct(object_polygon);
         }
       }
+      const bool collision_detected = bg::intersects(polygon, object_polygon);
+      debug_data_.candidate_collision_object_polygon = toGeomPoly(object_polygon);
       auto get_object_info = [&]() {
         // debug info
         const auto & pose = predicted_object.kinematics.initial_pose_with_covariance.pose;

@@ -293,7 +293,7 @@ double AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::get_concatenated_offse
     const auto & status_map = concatenated_status.value();
 
     // Find required keys in the map
-    auto concat_success_it = status_map.find("cloud_concatenation_success");
+    auto concat_success_it = status_map.find("Pointcloud concatenation succeeded");
 
     if (concat_success_it != status_map.end()) {
       concatenation_success = (concat_success_it->second == "True");
@@ -302,8 +302,8 @@ double AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::get_concatenated_offse
       }
     }
 
-    auto ref_min_it = status_map.find("reference_timestamp_min");
-    auto ref_max_it = status_map.find("reference_timestamp_max");
+    auto ref_min_it = status_map.find("Minimum reference timestamp");
+    auto ref_max_it = status_map.find("Maximum reference timestamp");
     if (ref_min_it != status_map.end() && ref_max_it != status_map.end()) {
       try {
         double reference_min = std::stod(ref_min_it->second);
@@ -312,7 +312,7 @@ double AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::get_concatenated_offse
         if (!concatenation_success && msg3d_timestamp > reference_max) {
           offset = msg3d_timestamp - (reference_min + (reference_max - reference_min) / 2);
         } else if (!database_created_ && concatenation_success) {
-          auto concat_cloud_it = status_map.find("concatenated_cloud_timestamp");
+          auto concat_cloud_it = status_map.find("Concatenated pointcloud timestamp");
           if (concat_cloud_it != status_map.end()) {
             double concatenated_cloud_timestamp = std::stod(concat_cloud_it->second);
             update_fractional_timestamp_set(concatenated_cloud_timestamp);

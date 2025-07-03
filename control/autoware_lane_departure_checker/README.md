@@ -57,7 +57,6 @@ This package includes the following features:
 ### Output
 
 - [`diagnostic_updater`] lane_departure : Update diagnostic level when ego vehicle is out of lane.
-- [`diagnostic_updater`] trajectory_deviation : Update diagnostic level when ego vehicle deviates from trajectory.
 
 ## Parameters
 

@@ -2,6 +2,47 @@
 Changelog for package autoware_motion_velocity_obstacle_slow_down_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(autoware_motion_velocity_planner): only wait for required subscriptions (`#10732 <https://github.com/autowarefoundation/autoware_universe/issues/10732>`_)
+* feat(obstacle_slow_down): update parameter explanation (`#10721 <https://github.com/autowarefoundation/autoware_universe/issues/10721>`_)
+  * feat(obstacle_slow_down): update parameter explanation
+  * update
+  ---------
+* fix(obstacle_slow_down_module): fix object type specified params bug (`#10672 <https://github.com/autowarefoundation/autoware_universe/issues/10672>`_)
+* Contributors: Ryohsuke Mitsudome, TaikiYamada4, Takayuki Murooka, Yuki TAKAGI
+
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* fix(autoware_motion_velocity_obstacle_slow_down_module): fix for mishandling lateral-distance (`#10559 <https://github.com/autowarefoundation/autoware_universe/issues/10559>`_)
+  * Fix for mishandling lateral-distance
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* feat(autoware_motion_velocity_planner): point-cloud clustering optimization (`#10477 <https://github.com/autowarefoundation/autoware_universe/issues/10477>`_)
+  * Point-Cloud clustering optimization
+  * style(pre-commit): autofix
+  * fix
+  * style(pre-commit): autofix
+  ---------
+  Co-authored-by: pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
+* Contributors: Arjun Jagdish Ram, TaikiYamada4
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* chore(motion_velocity_planner): move common and node packages to core (`#10367 <https://github.com/autowarefoundation/autoware_universe/issues/10367>`_)
+* fix(motion_velocity_obstacle_xxx_module): fix debug topic name (`#10322 <https://github.com/autowarefoundation/autoware_universe/issues/10322>`_)
+* fix(motion_velocity_planner): remove Metric messages (`#10342 <https://github.com/autowarefoundation/autoware_universe/issues/10342>`_)
+* Contributors: Maxime CLEMENT, Ryohsuke Mitsudome, Takayuki Murooka
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

@@ -1,16 +1,98 @@
 <?xml version="1.0"?>
 <launch>
   <!-- Lidar parameters -->
-  <arg name="lidar_detection_model_type" description="options: `transfusion`, `centerpoint`, `pointpainting`, `apollo`, `clustering`"/>
-  <arg name="lidar_detection_model_name" description="options: `transfusion`, `centerpoint`, `centerpoint_tiny`, `centerpoint_sigma`, `pointpainting`"/>
+  <arg name="lidar_detection_model_type">
+    <choice value="bevfusion"/>
+    <choice value="centerpoint"/>
+    <choice value="pointpainting"/>
+    <choice value="transfusion"/>
+    <choice value="apollo"/>
+    <choice value="clustering"/>
+  </arg>
+  <arg name="lidar_detection_model_name">
+    <choice value="bevfusion_lidar"/>
+    <choice value="centerpoint"/>
+    <choice value="centerpoint_tiny"/>
+    <choice value="centerpoint_sigma"/>
+    <choice value="pointpainting"/>
+    <choice value="transfusion"/>
+    <choice value=""/>
+  </arg>
+
   <!-- Lidar detector parameters -->
+  <arg name="bevfusion_model_path" default="$(var data_path)/bevfusion"/>
   <arg name="centerpoint_model_path" default="$(var data_path)/lidar_centerpoint"/>
   <arg name="transfusion_model_path" default="$(var data_path)/lidar_transfusion"/>
+
+  <!-- short_range Lidar detector parameters -->
+  <arg name="use_short_range_detection" default="false" description="use short range detection for redundant VRU detection"/>
+  <arg name="lidar_short_range_detection_model_type" description="options: `centerpoint_short_range`">
+    <choice value="centerpoint_short_range"/>
+  </arg>
+  <arg name="lidar_short_range_detection_model_name" description="options: `centerpoint_short_range`">
+    <choice value="centerpoint_short_range"/>
+    <choice value=""/>
+  </arg>
+  <arg name="short_range_centerpoint_model_path" default="$(var data_path)/lidar_short_range_centerpoint"/>
 
   <!-- External interfaces -->
   <arg name="node/pointcloud_container"/>
   <arg name="input/pointcloud"/>
   <arg name="output/objects"/>
+  <arg name="output/short_range_objects"/>
+
+  <!-- short_range detection -->
+  <group if="$(var use_short_range_detection)">
+    <!-- short_range CenterPoint -->
+    <group if="$(eval &quot;'$(var lidar_short_range_detection_model_type)'=='centerpoint_short_range'&quot;)">
+      <let
+        name="lidar_short_range_detection_model_name"
+        value="$(eval &quot;'centerpoint_short_range' if ''=='$(var lidar_short_range_detection_model_name)' else '$(var lidar_short_range_detection_model_name)'&quot;)"
+      />
+      <push-ros-namespace namespace="short_range_centerpoint"/>
+      <arg name="lidar_short_range_model_param_path" default="$(find-pkg-share autoware_lidar_centerpoint)/config"/>
+
+      <group>
+        <include file="$(find-pkg-share autoware_lidar_centerpoint)/launch/lidar_centerpoint.launch.xml">
+          <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
+          <arg name="output/objects" value="$(var output/short_range_objects)"/>
+          <arg name="node_name" value="lidar_short_range_centerpoint"/>
+          <arg name="model_name" value="$(var lidar_short_range_detection_model_name)"/>
+          <arg name="model_path" value="$(var short_range_centerpoint_model_path)"/>
+          <arg name="model_param_path" value="$(var lidar_short_range_model_param_path)/$(var lidar_short_range_detection_model_name).param.yaml"/>
+          <arg name="ml_package_param_path" value="$(var short_range_centerpoint_model_path)/$(var lidar_short_range_detection_model_name)_ml_package.param.yaml"/>
+          <arg name="class_remapper_param_path" value="$(var short_range_centerpoint_model_path)/detection_class_remapper.param.yaml"/>
+          <arg name="common_param_path" value="$(var lidar_short_range_model_param_path)/centerpoint_common.param.yaml"/>
+
+          <arg name="use_pointcloud_container" value="true"/>
+          <arg name="pointcloud_container_name" value="$(var node/pointcloud_container)"/>
+        </include>
+      </group>
+    </group>
+  </group>
+
+  <!-- BEVFusion -->
+  <group if="$(eval &quot;'$(var lidar_detection_model_type)'=='bevfusion'&quot;)">
+    <let name="lidar_detection_model_name" value="$(eval &quot;'bevfusion_lidar' if ''=='$(var lidar_detection_model_name)' else '$(var lidar_detection_model_name)'&quot;)"/>
+    <push-ros-namespace namespace="bevfusion"/>
+    <arg name="lidar_model_param_path" default="$(find-pkg-share autoware_bevfusion)/config"/>
+
+    <group>
+      <include file="$(find-pkg-share autoware_bevfusion)/launch/bevfusion.launch.xml">
+        <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
+        <arg name="output/objects" value="$(var output/objects)"/>
+        <arg name="model_name" value="$(var lidar_detection_model_name)"/>
+        <arg name="model_path" value="$(var bevfusion_model_path)"/>
+        <arg name="model_param_path" value="$(var lidar_model_param_path)/$(var lidar_detection_model_name).param.yaml"/>
+        <arg name="ml_package_param_path" value="$(var bevfusion_model_path)/ml_package_$(var lidar_detection_model_name).param.yaml"/>
+        <arg name="class_remapper_param_path" value="$(var bevfusion_model_path)/detection_class_remapper.param.yaml"/>
+        <arg name="common_param_path" value="$(var lidar_model_param_path)/bevfusion_common.param.yaml"/>
+
+        <arg name="use_pointcloud_container" value="true"/>
+        <arg name="pointcloud_container_name" value="$(var node/pointcloud_container)"/>
+      </include>
+    </group>
+  </group>
 
   <!-- TransFusion -->
   <group if="$(eval &quot;'$(var lidar_detection_model_type)'=='transfusion'&quot;)">
@@ -27,6 +109,7 @@
         <arg name="model_param_path" value="$(var lidar_model_param_path)/$(var lidar_detection_model_name).param.yaml"/>
         <arg name="ml_package_param_path" value="$(var transfusion_model_path)/$(var lidar_detection_model_name)_ml_package.param.yaml"/>
         <arg name="class_remapper_param_path" value="$(var transfusion_model_path)/detection_class_remapper.param.yaml"/>
+        <arg name="common_param_path" value="$(var lidar_model_param_path)/transfusion_common.param.yaml"/>
 
         <arg name="use_pointcloud_container" value="true"/>
         <arg name="pointcloud_container_name" value="$(var node/pointcloud_container)"/>
@@ -44,11 +127,13 @@
       <include file="$(find-pkg-share autoware_lidar_centerpoint)/launch/lidar_centerpoint.launch.xml">
         <arg name="input/pointcloud" value="$(var input/pointcloud)"/>
         <arg name="output/objects" value="$(var output/objects)"/>
+        <arg name="node_name" value="lidar_centerpoint"/>
         <arg name="model_name" value="$(var lidar_detection_model_name)"/>
         <arg name="model_path" value="$(var centerpoint_model_path)"/>
         <arg name="model_param_path" value="$(var lidar_model_param_path)/$(var lidar_detection_model_name).param.yaml"/>
         <arg name="ml_package_param_path" value="$(var centerpoint_model_path)/$(var lidar_detection_model_name)_ml_package.param.yaml"/>
         <arg name="class_remapper_param_path" value="$(var centerpoint_model_path)/detection_class_remapper.param.yaml"/>
+        <arg name="common_param_path" value="$(var lidar_model_param_path)/centerpoint_common.param.yaml"/>
 
         <arg name="use_pointcloud_container" value="true"/>
         <arg name="pointcloud_container_name" value="$(var node/pointcloud_container)"/>

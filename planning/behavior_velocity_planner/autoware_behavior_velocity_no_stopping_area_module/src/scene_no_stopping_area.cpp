@@ -73,14 +73,14 @@ bool NoStoppingAreaModule::modifyPathVelocity(PathWithLaneId * path)
   // Get stop line geometry
   const auto stop_line = no_stopping_area::get_stop_line_geometry2d(
     original_path, no_stopping_area_reg_elem_, planner_param_.stop_line_margin,
-    planner_data_->stop_line_extend_length, planner_data_->vehicle_info_.vehicle_width_m);
+    planner_data_->vehicle_info_.vehicle_width_m);
   if (!stop_line) {
     setSafe(true);
     return true;
   }
   const auto stop_point = arc_lane_utils::createTargetPoint(
     original_path, stop_line.value(), planner_param_.stop_margin,
-    planner_data_->vehicle_info_.max_longitudinal_offset_m);
+    planner_data_->vehicle_info_.max_longitudinal_offset_m, {lane_id_});
   if (!stop_point) {
     setSafe(true);
     return true;

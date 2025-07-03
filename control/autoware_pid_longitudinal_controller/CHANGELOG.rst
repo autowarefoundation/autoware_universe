@@ -2,6 +2,28 @@
 Changelog for package autoware_pid_longitudinal_controller
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* fix(pid): fix a bug that acceleration feedback does not go in the correct direction when reverse (`#10822 <https://github.com/autowarefoundation/autoware_universe/issues/10822>`_)
+  * fix(pid): fix a bug that acceleration feedback does not go in the correct direction when reverse
+  * fix CI
+  ---------
+* fix(pid_longitudinal_controller): fix reseting the prev value (`#10684 <https://github.com/autowarefoundation/autoware_universe/issues/10684>`_)
+* Contributors: TaikiYamada4, Yuki TAKAGI, Yuxuan Liu
+
+0.45.0 (2025-05-22)
+-------------------
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
+0.44.0 (2025-04-18)
+-------------------
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

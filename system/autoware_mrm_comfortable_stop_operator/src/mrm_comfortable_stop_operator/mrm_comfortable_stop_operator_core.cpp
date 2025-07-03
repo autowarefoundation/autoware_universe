@@ -25,10 +25,10 @@ MrmComfortableStopOperator::MrmComfortableStopOperator(const rclcpp::NodeOptions
 : Node("mrm_comfortable_stop_operator", node_options)
 {
   // Parameter
-  params_.update_rate = static_cast<int>(declare_parameter<int>("update_rate", 1));
-  params_.min_acceleration = declare_parameter<double>("min_acceleration", -1.0);
-  params_.max_jerk = declare_parameter<double>("max_jerk", 0.3);
-  params_.min_jerk = declare_parameter<double>("min_jerk", 0.3);
+  params_.update_rate = static_cast<int>(declare_parameter<int>("update_rate"));
+  params_.min_acceleration = declare_parameter<double>("min_acceleration");
+  params_.max_jerk = declare_parameter<double>("max_jerk");
+  params_.min_jerk = declare_parameter<double>("min_jerk");
 
   // Server
   service_operation_ = create_service<tier4_system_msgs::srv::OperateMrm>(

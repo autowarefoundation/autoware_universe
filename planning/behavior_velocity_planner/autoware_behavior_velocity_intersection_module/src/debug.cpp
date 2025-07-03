@@ -289,6 +289,14 @@ visualization_msgs::msg::MarkerArray IntersectionModule::createDebugMarkerArray(
       &debug_marker_array, now);
   }
 
+  if (debug_data_.candidate_collision_object_polygon) {
+    append_marker_array(
+      debug::createPolygonMarkerArray(
+        debug_data_.candidate_collision_object_polygon.value(),
+        "candidate_collision_object_polygon", module_id_, now, 0.3, 0.0, 0.0, 0.5, 0.0, 0.0),
+      &debug_marker_array, now);
+  }
+
   static constexpr auto white = ::white();
   static constexpr auto green = ::green();
   static constexpr auto yellow = ::yellow();

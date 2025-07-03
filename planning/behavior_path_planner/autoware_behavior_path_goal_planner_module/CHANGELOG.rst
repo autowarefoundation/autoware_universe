@@ -2,6 +2,75 @@
 Changelog for package autoware_behavior_path_goal_planner_module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.46.0 (2025-06-20)
+-------------------
+* Merge remote-tracking branch 'upstream/main' into tmp/TaikiYamada/bump_version_base
+* feat(goal_planner): check previous module's stopline when regenerate candidates (`#10776 <https://github.com/autowarefoundation/autoware_universe/issues/10776>`_)
+* feat(goal_planner): add param of path_decision_state_controller.check_collision_duration (`#10767 <https://github.com/autowarefoundation/autoware_universe/issues/10767>`_)
+  * feat(goal_planner): add param of path_decision_state_controller.check_collision_duration
+  * update readme
+  ---------
+* fix(goal_planner): publish debug_objects_extraction_polygon (`#10766 <https://github.com/autowarefoundation/autoware_universe/issues/10766>`_)
+* feat: goal planner checking border; clean up `#10725 <https://github.com/autowarefoundation/autoware_universe/issues/10725>`_ (`#10755 <https://github.com/autowarefoundation/autoware_universe/issues/10755>`_)
+  * merging updates  in `#10725 <https://github.com/autowarefoundation/autoware_universe/issues/10725>`_
+  * fix hash and typo, precommit
+  ---------
+* feat(behavior_path_planner): organize a part of behavior path info/debug markers (`#10729 <https://github.com/autowarefoundation/autoware_universe/issues/10729>`_)
+  * feat(behavior_path_planner): organize a part of behavior path info/debug markers
+  * Update planning/behavior_path_planner/autoware_behavior_path_goal_planner_module/src/goal_planner_module.cpp
+  Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
+  * Update planning/behavior_path_planner/autoware_behavior_path_goal_planner_module/src/util.cpp
+  Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
+  ---------
+  Co-authored-by: Kosuke Takeuchi <kosuke.tnp@gmail.com>
+* Contributors: Kosuke Takeuchi, Mamoru Sobue, TaikiYamada4, Takayuki Murooka, Yuxuan Liu
+
+0.45.0 (2025-05-22)
+-------------------
+* Merge remote-tracking branch 'origin/main' into tmp/notbot/bump_version_base
+* refactor(departure_checker): move lane departure checker class to departure_checker  (`#10337 <https://github.com/autowarefoundation/autoware_universe/issues/10337>`_)
+  * RT1-9640: separate lane departure checker library
+  * move back parameter
+  * separating parameters
+  * renamed to boundary departure checker
+  * pre-commit
+  * remove trajectory deviation
+  * rename namespace
+  * move boundary departure checker to common folder
+  * rename class name
+  ---------
+* refactor(goal_planner): do not use only_route_lanes = false (`#10525 <https://github.com/autowarefoundation/autoware_universe/issues/10525>`_)
+  feat(route_handler): remove only_route_lanes argument because it is not used
+* Contributors: Mamoru Sobue, TaikiYamada4, Zulfaqar Azmi
+
+0.44.2 (2025-06-10)
+-------------------
+
+0.44.1 (2025-05-01)
+-------------------
+
+0.44.0 (2025-04-18)
+-------------------
+* Merge remote-tracking branch 'origin/main' into humble
+* fix(behavior_path_planner): apply THROTTLE to frequent log (`#10417 <https://github.com/autowarefoundation/autoware_universe/issues/10417>`_)
+* feat(start/goal_planner): use common max steer angle parameter from vehicle_info (`#10321 <https://github.com/autowarefoundation/autoware_universe/issues/10321>`_)
+  * fix(autoware_behavior_path_start_planner_module): update parameter name for geometric pull out max steer angle
+  * fix(docs): update unit for max_steer_angle_margin_scale in README
+  * fix dead link
+  ---------
+* feat(goal_planner): expand outer collision check margin  (`#10294 <https://github.com/autowarefoundation/autoware_universe/issues/10294>`_)
+  feat(goal_planner): expand outer collision check margin
+  margin comment
+  update svg
+* fix(goal_planner): use precise distance to objects for sorting candidate paths (`#10296 <https://github.com/autowarefoundation/autoware_universe/issues/10296>`_)
+  * fix(goal_planner): use precise distance to objects for sorting candidate paths
+  * shortest_distance_from_ego_footprint_to_objects_on_path
+  * improve doxygen
+  update docs
+  * fix build
+  ---------
+* Contributors: Kosuke Takeuchi, Kyoichi Sugahara, Ryohsuke Mitsudome, Takayuki Murooka
+
 0.43.0 (2025-03-21)
 -------------------
 * Merge remote-tracking branch 'origin/main' into chore/bump-version-0.43

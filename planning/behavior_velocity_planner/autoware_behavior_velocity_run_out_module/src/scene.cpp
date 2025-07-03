@@ -206,7 +206,7 @@ std::optional<DynamicObstacle> RunOutModule::detectCollision(
   const std::vector<std::pair<int64_t, lanelet::ConstLanelet>> & crosswalk_lanelets)
 {
   if (path.points.size() < 2) {
-    RCLCPP_WARN_STREAM(logger_, "path doesn't have enough points.");
+    RCLCPP_WARN_STREAM_THROTTLE(logger_, *clock_, 3000, "path doesn't have enough points.");
     return {};
   }
 
@@ -463,7 +463,8 @@ std::optional<geometry_msgs::msg::Pose> RunOutModule::calcPredictedObstaclePose(
   const auto predicted_path = run_out_utils::getHighestConfidencePath(predicted_paths);
 
   if (predicted_path.size() < 2) {
-    RCLCPP_WARN_STREAM(logger_, "predicted path doesn't have enough points");
+    RCLCPP_WARN_STREAM_THROTTLE(
+      logger_, *clock_, 3000, "predicted path doesn't have enough points");
     return {};
   }
 
@@ -639,7 +640,8 @@ bool RunOutModule::checkCollisionWithBoundingBox(
 
 bool RunOutModule::checkCollisionWithPolygon() const
 {
-  RCLCPP_WARN_STREAM(logger_, "detection for POLYGON type is not implemented yet.");
+  RCLCPP_WARN_STREAM_THROTTLE(
+    logger_, *clock_, 3000, "detection for POLYGON type is not implemented yet.");
 
   return false;
 }
@@ -669,7 +671,7 @@ std::optional<geometry_msgs::msg::Pose> RunOutModule::calcStopPoint(
     const auto stop_point = autoware::motion_utils::calcLongitudinalOffsetPose(
       path.points, dynamic_obstacle->nearest_collision_point, -base_to_collision_point, false);
     if (!stop_point) {
-      RCLCPP_WARN_STREAM(logger_, "failed to calculate stop point.");
+      RCLCPP_WARN_STREAM_THROTTLE(logger_, *clock_, 3000, "failed to calculate stop point.");
       return {};
     }
 
@@ -691,7 +693,7 @@ std::optional<geometry_msgs::msg::Pose> RunOutModule::calcStopPoint(
   auto stop_dist = autoware::motion_utils::calcDecelDistWithJerkAndAccConstraints(
     current_vel, target_vel, current_acc, planning_dec, jerk_acc, jerk_dec);
   if (!stop_dist) {
-    RCLCPP_WARN_STREAM(logger_, "failed to calculate stop distance.");
+    RCLCPP_WARN_STREAM_THROTTLE(logger_, *clock_, 3000, "failed to calculate stop distance.");
 
     // force to insert zero velocity
     stop_dist = std::make_optional<double>(dist_to_collision);
@@ -727,7 +729,7 @@ std::optional<geometry_msgs::msg::Pose> RunOutModule::calcStopPoint(
   const auto stop_point = autoware::motion_utils::calcLongitudinalOffsetPose(
     path.points, dynamic_obstacle->nearest_collision_point, -base_to_collision_point, false);
   if (!stop_point) {
-    RCLCPP_WARN_STREAM(logger_, "failed to calculate stop point.");
+    RCLCPP_WARN_STREAM_THROTTLE(logger_, *clock_, 3000, "failed to calculate stop point.");
     return {};
   }
 
@@ -829,7 +831,7 @@ void RunOutModule::insertVelocityForState(
     }
 
     default: {
-      RCLCPP_WARN_STREAM(logger_, "invalid state");
+      RCLCPP_WARN_STREAM_THROTTLE(logger_, *clock_, 3000, "invalid state");
       break;
     }
   }
@@ -878,7 +880,7 @@ void RunOutModule::insertApproachingVelocity(
   const auto stop_point = autoware::motion_utils::calcLongitudinalOffsetPose(
     output_path.points, dynamic_obstacle.nearest_collision_point, -base_to_collision_point, false);
   if (!stop_point) {
-    RCLCPP_WARN_STREAM(logger_, "failed to calculate stop point.");
+    RCLCPP_WARN_STREAM_THROTTLE(logger_, *clock_, 3000, "failed to calculate stop point.");
     return;
   }
 

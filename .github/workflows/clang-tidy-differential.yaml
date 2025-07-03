@@ -10,8 +10,10 @@ on:
         required: false
         default: ""
         type: string
+      # Why is it a JSON string?
+      # https://github.com/orgs/community/discussions/11692#discussioncomment-3541856
       runner:
-        default: ubuntu-24.04
+        default: "['ubuntu-24.04']"
         required: false
         type: string
       run-condition:
@@ -22,7 +24,7 @@ on:
 jobs:
   clang-tidy-differential:
     if: ${{ inputs.run-condition }}
-    runs-on: ${{ inputs.runner }}
+    runs-on: ${{ fromJson(inputs.runner) }}
     container: ${{ inputs.container }}${{ inputs.container-suffix }}
     steps:
       - name: Set PR fetch depth
@@ -66,7 +68,7 @@ jobs:
         shell: bash
 
       - name: Prepare build_depends.repos file (main branch)
-        if: ${{ github.event.pull_request.base.ref == 'main' }}
+        if: ${{ github.event.pull_request.base.ref != 'humble' }}
         uses: ./.github/actions/combine-repos-action
         with:
           base_file: build_depends_humble.repos

@@ -26,6 +26,7 @@
 #include "boost/lexical_cast.hpp"
 
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -387,7 +388,9 @@ void PlanningEvaluatorNode::onModifiedGoal(
       continue;
     }
     AddMetricMsg(metric, *metric_stat);
-    if (output_metrics_) {
+    if (
+      output_metrics_ && std::abs(ego_state_ptr->twist.twist.linear.x) < 0.001 &&
+      metric_stat->mean() < 3.0) {  // only record when ego stop close to the target in 3m
       const OutputMetric output_metric = str_to_output_metric.at(metric_to_str.at(metric));
       metrics_accumulator_.accumulate(output_metric, *metric_stat);
     }
