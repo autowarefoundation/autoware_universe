@@ -173,6 +173,7 @@ void TrajectoryChecker::validate(bool & is_critical)
       "trajectory has invalid value (NaN, Inf, etc). Stop validation process, raise an error.");
   }
 
+  is_critical_error_ = false;
   status->is_valid_interval = check_valid_interval(data, status);
   status->is_valid_longitudinal_max_acc = check_valid_max_longitudinal_acceleration(data, status);
   status->is_valid_longitudinal_min_acc = check_valid_min_longitudinal_acceleration(data, status);
