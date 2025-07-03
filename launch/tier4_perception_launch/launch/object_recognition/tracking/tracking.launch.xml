@@ -4,12 +4,10 @@
   <let name="ns" value="/perception/object_recognition/tracking"/>
 
   <!-- Radar Tracking and Merger parameters -->
-  <arg name="object_recognition_tracking_radar_object_tracker_data_association_matrix_param_path" description="association param file for radar far object tracking"/>
-  <arg name="object_recognition_tracking_radar_object_tracker_tracking_setting_param_path" description="tracking setting param file for radar far object tracking"/>
-  <arg name="object_recognition_tracking_radar_object_tracker_node_param_path" description="node param file for radar far object tracking"/>
+  <arg name="object_recognition_tracking_radar_tracked_object_lanelet_filter_param_path" description="param file for radar far object tracking"/>
   <arg name="object_recognition_tracking_object_merger_data_association_matrix_param_path" description="association param file for radar and lidar object merger"/>
   <arg name="object_recognition_tracking_object_merger_node_param_path" description="node param file for radar and lidar object merger"/>
-
+  
   <!-- Pipeline junctions -->
   <arg name="mode" default="lidar">
     <choice value="camera_lidar_radar_fusion"/>
@@ -44,11 +42,14 @@
 
   <group unless="$(var use_multi_channel_tracker_merger)">
     <!-- Internal interface -->
+    <let name="radar_tracked_object_lanelet_filter/input/object" value="$(var input/radar/tracked_objects)"/>
+    <let name="radar_tracked_object_lanelet_filter/output/object" value="$(var ns)/radar/tracked_objects"/>
+
     <let name="multi_object_tracker/output/objects" value="$(var output/objects)" unless="$(var use_radar_tracking_fusion)"/>
     <let name="multi_object_tracker/output/objects" value="$(var ns)/near_objects" if="$(var use_radar_tracking_fusion)"/>
 
     <let name="tracker_merger/input/main_objects" value="$(var multi_object_tracker/output/objects)"/>
-    <let name="tracker_merger/input/sub_objects" value="$(var input/radar/tracked_objects)"/>
+    <let name="tracker_merger/input/sub_objects" value="$(var radar_tracked_object_lanelet_filter/output/object)"/>
     <let name="tracker_merger/output/objects" value="$(var output/objects)"/>
 
     <!-- Multi object tracking -->
@@ -63,6 +64,13 @@
 
     <!-- Run with tracking merger to add far radar information -->
     <group if="$(var use_radar_tracking_fusion)">
+      <!-- radar tracked object filters -->
+      <include file="$(find-pkg-share autoware_detected_object_validation)/launch/tracked_object_lanelet_filter.launch.xml">
+        <arg name="input/object" value="$(var radar_tracked_object_lanelet_filter/input/object)"/>
+        <arg name="output/object" value="$(var radar_tracked_object_lanelet_filter/output/object)"/>
+        <arg name="filtering_range_param" value="$(var object_recognition_tracking_radar_tracked_object_lanelet_filter_param_path)"/>
+      </include>
+
       <!-- tracking object merger to merge near objects and far objects -->
       <include file="$(find-pkg-share autoware_tracking_object_merger)/launch/decorative_tracker_merger.launch.xml">
         <arg name="node_name" value="decorative_tracker_merger"/>
