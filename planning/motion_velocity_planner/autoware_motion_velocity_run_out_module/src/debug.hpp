@@ -309,6 +309,20 @@ inline MarkerArray make_debug_filtering_data_marker(const FilteringData & data)
     m.points.push_back(p);
   }
   markers.markers.push_back(m);
+  m.ns = "filtering_data_strict_cut_predicted_paths";
+  m.points.clear();
+  m.type = Marker::LINE_LIST;
+  m.color = universe_utils::createMarkerColor(1.0, 1.0, 0.0, 0.75);
+  m.scale = universe_utils::createMarkerScale(0.2, 0.2, 0.2);
+  for (const auto & segment : data.strict_cut_predicted_paths_segments) {
+    p.x = segment.first.x();
+    p.y = segment.first.y();
+    m.points.push_back(p);
+    p.x = segment.second.x();
+    p.y = segment.second.y();
+    m.points.push_back(p);
+  }
+  markers.markers.push_back(m);
   m.ns = "filtering_data_ignore_objects";
   m.points.clear();
   m.color = universe_utils::createMarkerColor(0.0, 0.0, 1.0, 0.75);

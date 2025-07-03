@@ -70,6 +70,11 @@ void add_ignore_and_cut_lanelets(
           data.cut_predicted_paths_segments.push_back(convert(ll.polygon2d().segment(i)));
         }
       }
+      if (contains_type(params.strict_cut_lanelet_subtypes, lanelet_subtype)) {
+        for (auto i = 0UL; i < ll.polygon2d().numSegments(); ++i) {
+          data.strict_cut_predicted_paths_segments.push_back(convert(ll.polygon2d().segment(i)));
+        }
+      }
       if (contains_type(params.ignore_objects_lanelet_subtypes, lanelet_subtype)) {
         universe_utils::LinearRing2d polygon;
         boost::geometry::convert(ll.polygon2d().basicPolygon(), polygon);
@@ -95,6 +100,12 @@ void add_ignore_and_cut_polygons(
       if (contains_type(params.cut_polygon_types, polygon_type)) {
         for (auto i = 0UL; i < p.numSegments(); ++i) {
           data_per_label[label].cut_predicted_paths_segments.push_back(convert(p.segment(i)));
+        }
+      }
+      if (contains_type(params.strict_cut_polygon_types, polygon_type)) {
+        for (auto i = 0UL; i < p.numSegments(); ++i) {
+          data_per_label[label].strict_cut_predicted_paths_segments.push_back(
+            convert(p.segment(i)));
         }
       }
       if (contains_type(params.ignore_objects_polygon_types, polygon_type)) {
@@ -127,6 +138,13 @@ void add_cut_segments(
       if (std::find(types.begin(), types.end(), attribute) != types.end()) {
         for (auto i = 0UL; i < ls.numSegments(); ++i) {
           data_per_label[label].cut_predicted_paths_segments.push_back(convert(ls.segment(i)));
+        }
+      }
+      const auto & strict_types = params.strict_cut_linestring_types;
+      if (std::find(strict_types.begin(), strict_types.end(), attribute) != strict_types.end()) {
+        for (auto i = 0UL; i < ls.numSegments(); ++i) {
+          data_per_label[label].strict_cut_predicted_paths_segments.push_back(
+            convert(ls.segment(i)));
         }
       }
     }
@@ -173,11 +191,17 @@ FilteringDataPerLabel calculate_filtering_data(
   for (const auto label : target_labels) {
     auto & data = data_per_label[label];
     std::vector<SegmentNode> nodes;
+    std::vector<SegmentNode> strict_nodes;
     nodes.reserve(data.cut_predicted_paths_segments.size());
+    strict_nodes.reserve(data.strict_cut_predicted_paths_segments.size());
     for (auto i = 0UL; i < data.cut_predicted_paths_segments.size(); ++i) {
       nodes.emplace_back(data.cut_predicted_paths_segments[i], i);
     }
+    for (auto i = 0UL; i < data.strict_cut_predicted_paths_segments.size(); ++i) {
+      strict_nodes.emplace_back(data.strict_cut_predicted_paths_segments[i], i);
+    }
     data.cut_predicted_paths_rtree = SegmentRtree(nodes);
+    data.strict_cut_predicted_paths_rtree = SegmentRtree(strict_nodes);
   }
   for (const auto label : target_labels) {
     auto & data = data_per_label[label];

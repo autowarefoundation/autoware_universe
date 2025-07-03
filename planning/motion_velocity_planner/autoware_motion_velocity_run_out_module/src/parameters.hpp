@@ -47,6 +47,9 @@ struct ObjectParameters
   std::vector<std::string> cut_linestring_types;
   std::vector<std::string> cut_polygon_types;
   std::vector<std::string> cut_lanelet_subtypes;
+  std::vector<std::string> strict_cut_linestring_types;
+  std::vector<std::string> strict_cut_polygon_types;
+  std::vector<std::string> strict_cut_lanelet_subtypes;
   bool cut_if_crossing_ego_from_behind;
   double confidence_filtering_threshold;
   bool confidence_filtering_only_use_highest;
@@ -236,6 +239,15 @@ struct Parameters
       object_parameters_per_label[label].cut_linestring_types =
         get_object_parameter<std::vector<std::string>>(
           node, ns, label, ".cut_predicted_paths.linestring_types");
+      object_parameters_per_label[label].strict_cut_polygon_types =
+        get_object_parameter<std::vector<std::string>>(
+          node, ns, label, ".cut_predicted_paths.strict_polygon_types");
+      object_parameters_per_label[label].strict_cut_lanelet_subtypes =
+        get_object_parameter<std::vector<std::string>>(
+          node, ns, label, ".cut_predicted_paths.strict_lanelet_subtypes");
+      object_parameters_per_label[label].strict_cut_linestring_types =
+        get_object_parameter<std::vector<std::string>>(
+          node, ns, label, ".cut_predicted_paths.strict_linestring_types");
       object_parameters_per_label[label].cut_if_crossing_ego_from_behind =
         get_object_parameter<bool>(
           node, ns, label, ".cut_predicted_paths.if_crossing_ego_from_behind");
@@ -336,14 +348,14 @@ struct Parameters
         params, ns + str + ".cut_predicted_paths.if_crossing_ego_from_behind",
         object_parameters_per_label[label].cut_if_crossing_ego_from_behind);
       updateParam(
-        params, ns + str + ".cut_predicted_paths.lanelet_subtypes",
-        object_parameters_per_label[label].cut_lanelet_subtypes);
+        params, ns + str + ".cut_predicted_paths.strict_lanelet_subtypes",
+        object_parameters_per_label[label].strict_cut_lanelet_subtypes);
       updateParam(
-        params, ns + str + ".cut_predicted_paths.polygon_types",
-        object_parameters_per_label[label].cut_polygon_types);
+        params, ns + str + ".cut_predicted_paths.strict_polygon_types",
+        object_parameters_per_label[label].strict_cut_polygon_types);
       updateParam(
-        params, ns + str + ".cut_predicted_paths.linestring_types",
-        object_parameters_per_label[label].cut_linestring_types);
+        params, ns + str + ".cut_predicted_paths.strict_linestring_types",
+        object_parameters_per_label[label].strict_cut_linestring_types);
       updateParam(
         params, ns + str + ".standstill_duration_after_cut",
         object_parameters_per_label[label].standstill_duration_after_cut);
