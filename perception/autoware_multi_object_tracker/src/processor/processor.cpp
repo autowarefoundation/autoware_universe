@@ -324,7 +324,19 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     for (const auto & [p2, idx2] : nearby) {
       auto & data2 = valid_trackers[idx2];
       if (!data2.is_valid) continue;
-
+      // Skip if both are pedestrians
+      if (data1.label == Label::PEDESTRIAN && data2.label == Label::PEDESTRIAN) {
+        // Use distance-based merging criteria for pedestrians
+        if (canMergePedestrianTargets(*data1.tracker, *data2.tracker, time)) {
+          data1.tracker->updateTotalExistenceProbability(
+            data2.tracker->getTotalExistenceProbability());
+          data1.tracker->mergeExistenceProbabilities(
+            data2.tracker->getExistenceProbabilityVector());
+          data2.is_valid = false;
+          to_remove.push_back(idx2);
+        }
+        continue;
+      }
       // Calculate IoU only if necessary
       constexpr double min_union_iou_area = 1e-2;
       const auto iou = shapes::get2dIoU(data2.object, data1.object, min_union_iou_area);
@@ -358,6 +370,44 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
   list_tracker_.remove_if([&trackers_to_remove](const std::shared_ptr<Tracker> & tracker) {
     return trackers_to_remove.count(tracker) > 0;
   });
+}
+
+bool TrackerProcessor::canMergePedestrianTargets(
+  const Tracker & target, const Tracker & other, const rclcpp::Time & time) const
+{
+  // Skip if the other is not confident
+  if (!other.isConfident(time, adaptive_threshold_cache_, ego_pose_)) {
+    return false;
+  }
+
+  // Compare known class probability
+  const float target_known_prob = target.getKnownObjectProbability();
+  const float other_known_prob = other.getKnownObjectProbability();
+  constexpr float min_known_prob = 0.2;
+
+  // The target class is known
+  if (target_known_prob >= min_known_prob) {
+    // If other class is unknown, don't remove target
+    if (other_known_prob < min_known_prob) {
+      return false;
+    }
+    // Compare probability vector
+    std::vector<float> target_existence_prob = target.getExistenceProbabilityVector();
+    std::vector<float> other_existence_prob = other.getExistenceProbabilityVector();
+    constexpr float prob_buffer = 0.4;
+    for (size_t i = 0; i < target_existence_prob.size(); ++i) {
+      if (target_existence_prob[i] + prob_buffer < other_existence_prob[i]) {
+        return true;
+      }
+    }
+    return target.getPositionCovarianceDeterminant() > other.getPositionCovarianceDeterminant();
+  }
+  if (other_known_prob < min_known_prob) {
+    // Both are unknown, remove the larger uncertainty one
+    return target.getPositionCovarianceDeterminant() > other.getPositionCovarianceDeterminant();
+  }
+  // If the other class is known, remove the target
+  return true;
 }
 
 bool TrackerProcessor::canMergeOverlappedTarget(

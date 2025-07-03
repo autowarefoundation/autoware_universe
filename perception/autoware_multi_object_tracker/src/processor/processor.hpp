@@ -93,6 +93,8 @@ private:
   std::list<std::shared_ptr<Tracker>> list_tracker_;
   void removeOldTracker(const rclcpp::Time & time);
   void mergeOverlappedTracker(const rclcpp::Time & time);
+  bool canMergePedestrianTargets(
+    const Tracker & target, const Tracker & other, const rclcpp::Time & time) const;
   bool canMergeOverlappedTarget(
     const Tracker & target, const Tracker & other, const rclcpp::Time & time,
     const double iou) const;

@@ -60,6 +60,7 @@ double getFormedYawAngle(
 namespace autoware::multi_object_tracker
 {
 using autoware_utils::ScopedTimeTrack;
+using Label = autoware_perception_msgs::msg::ObjectClassification;
 
 DataAssociation::DataAssociation(const AssociatorConfig & config)
 : config_(config), score_threshold_(0.01)
@@ -280,6 +281,13 @@ double DataAssociation::calculateScore(
   constexpr double mahalanobis_dist_threshold =
     13.816;  // 99.99% confidence level for 2 degrees of freedom, chi-square critical value
   if (mahalanobis_dist >= mahalanobis_dist_threshold) return 0.0;
+
+  // Skip IoU check for pedestrians and use distance-based score
+  if (measurement_label == Label::PEDESTRIAN) {
+    const double ratio_sq = (dist_sq < max_dist_sq) ? dist_sq / max_dist_sq : 1.0;
+    const double score = 1.0 - std::sqrt(ratio_sq);
+    return (score >= score_threshold_) * score;
+  }
 
   // 2d iou gate
   const double min_iou = config_.min_iou_matrix(tracker_label, measurement_label);
