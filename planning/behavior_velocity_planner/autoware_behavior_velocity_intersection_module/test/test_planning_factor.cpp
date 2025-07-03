@@ -34,6 +34,7 @@ std::string get_absolute_path_to_test_data(
   return dir + "/test_data/" + config_filename;
 }
 
+// TODO(odashima): move this functions to autoware_test_utils
 template <>
 nav_msgs::msg::MapMetaData parse(const YAML::Node & node)
 {
@@ -46,6 +47,7 @@ nav_msgs::msg::MapMetaData parse(const YAML::Node & node)
   return msg;
 }
 
+// TODO(odashima): move this functions to autoware_test_utils
 template <>
 nav_msgs::msg::OccupancyGrid parse(const YAML::Node & node)
 {
@@ -282,19 +284,8 @@ TEST(PlanningFactorTest, NodeTestWithPredictedObjectsForOcclusion)
   EXPECT_EQ(factor.control_points.size(), 1);
   EXPECT_LT(factor.control_points.front().distance, 30.0);
 
-  // make sure safety_factors is not empty
-  EXPECT_EQ(factor.safety_factors.factors.size(), 1);
-
-  const auto & safety_factor = factor.safety_factors.factors.front();
-  const auto expected_object_type = autoware_internal_planning_msgs::msg::SafetyFactor::OBJECT;
-  EXPECT_EQ(safety_factor.type, expected_object_type);
-  EXPECT_FALSE(safety_factor.is_safe);
-  EXPECT_EQ(safety_factor.points.size(), 1);
-
-  const bool is_object_id_included = std::any_of(
-    objects.objects.begin(), objects.objects.end(),
-    [&](const auto & object) { return object.object_id == safety_factor.object_id; });
-  EXPECT_TRUE(is_object_id_included);
+  // NOTE: intersection_occlusion does not include safety factors
+  EXPECT_EQ(factor.safety_factors.factors.size(), 0);
 
   rclcpp::shutdown();
 }
