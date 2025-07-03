@@ -1147,7 +1147,7 @@ void reactRTCApprovalByDecisionResult(
         path->points, path->points.at(decision_result.closest_idx).point.pose,
         path->points.at(stopline_idx).point.pose,
         autoware_internal_planning_msgs::msg::PlanningFactor::STOP, safety_factor_array,
-        true /*is_driving_forward*/, 0.0, 0.0 /*shift distance*/, "RTC interruption");
+        true /*is_driving_forward*/, 0.0, 0.0 /*shift distance*/, "");
     }
   }
   if (!rtc_occlusion_approved) {
