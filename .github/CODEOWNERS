@@ -223,7 +223,7 @@ visualization/tier4_control_mode_rviz_plugin/** kyoichi.sugahara@tier4.jp naoto.
 visualization/tier4_datetime_rviz_plugin/** isamu.takagi@tier4.jp
 visualization/tier4_perception_rviz_plugin/** lei.gu@tier4.jp yoshi.ri@tier4.jp
 visualization/tier4_planning_factor_rviz_plugin/** mamoru.sobue@tier4.jp satoshi.ota@tier4.jp shumpei.wakabayashi@tier4.jp
-visualization/tier4_state_rviz_plugin/** hiroki.ota@tier4.jp isamu.takagi@tier4.jp khalil@leodrive.ai
+visualization/tier4_state_rviz_plugin/** hiroki.ota@tier4.jp isamu.takagi@tier4.jp junya.sasaki@tier4.jp khalil@leodrive.ai ryohsuke.mitsudome@tier4.jp
 visualization/tier4_system_rviz_plugin/** koji.minoda@tier4.jp
 visualization/tier4_traffic_light_rviz_plugin/** satoshi.ota@tier4.jp
 visualization/tier4_vehicle_rviz_plugin/** yukihiro.saito@tier4.jp

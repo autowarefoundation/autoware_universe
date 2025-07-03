@@ -449,8 +449,8 @@ private:
   TurnSignalInfo calcTurnSignalInfo(const PullOverContextData & context_data);
   std::optional<lanelet::Id> ignore_signal_{std::nullopt};
 
-  // steering factor
-  void updateSteeringFactor(
+  // planning factor
+  void updatePlanningFactor(
     const PullOverContextData & context_data, const std::array<Pose, 2> & pose,
     const std::array<double, 2> distance);
 
