@@ -38,19 +38,17 @@
   <arg name="input/radar/channel" default="radar"/>
   <arg name="input/radar/far_objects" default="/perception/object_recognition/detection/radar/far_objects"/>
   <arg name="input/radar/objects" default="/perception/object_recognition/detection/radar/objects"/>
+  <arg name="input/radar/tracked_objects" default="/sensing/radar/tracked_objects"/>
 
   <arg name="output/objects" default="$(var ns)/objects"/>
 
   <group unless="$(var use_multi_channel_tracker_merger)">
     <!-- Internal interface -->
-    <let name="radar_tracker/input/objects" value="$(var input/radar/far_objects)"/>
-    <let name="radar_tracker/output/objects" value="$(var ns)/radar/far_objects"/>
-
     <let name="multi_object_tracker/output/objects" value="$(var output/objects)" unless="$(var use_radar_tracking_fusion)"/>
     <let name="multi_object_tracker/output/objects" value="$(var ns)/near_objects" if="$(var use_radar_tracking_fusion)"/>
 
     <let name="tracker_merger/input/main_objects" value="$(var multi_object_tracker/output/objects)"/>
-    <let name="tracker_merger/input/sub_objects" value="$(var radar_tracker/output/objects)"/>
+    <let name="tracker_merger/input/sub_objects" value="$(var input/radar/tracked_objects)"/>
     <let name="tracker_merger/output/objects" value="$(var output/objects)"/>
 
     <!-- Multi object tracking -->
@@ -65,15 +63,6 @@
 
     <!-- Run with tracking merger to add far radar information -->
     <group if="$(var use_radar_tracking_fusion)">
-      <!-- radar long range dynamic object tracking -->
-      <include file="$(find-pkg-share autoware_radar_object_tracker)/launch/radar_object_tracker.launch.xml">
-        <arg name="input" value="$(var radar_tracker/input/objects)"/>
-        <arg name="output" value="$(var radar_tracker/output/objects)"/>
-        <arg name="data_association_matrix_path" value="$(var object_recognition_tracking_radar_object_tracker_data_association_matrix_param_path)"/>
-        <arg name="tracker_setting_path" value="$(var object_recognition_tracking_radar_object_tracker_tracking_setting_param_path)"/>
-        <arg name="radar_object_tracker_param_path" value="$(var object_recognition_tracking_radar_object_tracker_node_param_path)"/>
-      </include>
-
       <!-- tracking object merger to merge near objects and far objects -->
       <include file="$(find-pkg-share autoware_tracking_object_merger)/launch/decorative_tracker_merger.launch.xml">
         <arg name="node_name" value="decorative_tracker_merger"/>
