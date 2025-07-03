@@ -316,7 +316,9 @@ public:
     const rclcpp::Logger logger, const rclcpp::Clock::SharedPtr clock,
     const std::shared_ptr<autoware_utils::TimeKeeper> time_keeper,
     const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
-      planning_factor_interface);
+      planning_factor_interface,
+    const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+      planning_factor_interface_for_occlusion);
 
   /**
    ***********************************************************
@@ -347,6 +349,22 @@ public:
   void setOcclusionActivation(const bool activation) { occlusion_activated_ = activation; }
   bool isOcclusionFirstStopRequired() const { return occlusion_first_stop_required_; }
   InternalDebugData & getInternalDebugData() const { return internal_debug_data_; }
+
+private:
+  /**
+   ***********************************************************
+   ***********************************************************
+   ***********************************************************
+   * @defgroup planning-factor-variables [var] planning factor variables
+   * following variables are used to publish planning factors
+   * @{
+   */
+
+  autoware_internal_planning_msgs::msg::SafetyFactorArray safety_factor_array_;
+
+  const std::shared_ptr<planning_factor_interface::PlanningFactorInterface>
+    planning_factor_interface_for_occlusion_;
+  /** @}*/
 
 private:
   /**

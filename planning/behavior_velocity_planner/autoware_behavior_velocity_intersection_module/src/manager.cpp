@@ -307,6 +307,15 @@ IntersectionModuleManager::IntersectionModuleManager(rclcpp::Node & node)
     node.create_publisher<std_msgs::msg::String>("~/debug/intersection/decision_state", 1);
   tl_observation_pub_ = node.create_publisher<autoware_perception_msgs::msg::TrafficLightGroup>(
     "~/debug/intersection_traffic_signal", 1);
+
+  const bool enable_console_output =
+    get_or_declare_parameter<bool>(node, "planning_factor_console_output.enable");
+  const int throttle_duration_ms =
+    get_or_declare_parameter<int>(node, "planning_factor_console_output.duration");
+
+  planning_factor_interface_for_occlusion_ =
+    std::make_shared<planning_factor_interface::PlanningFactorInterface>(
+      &node, "intersection_occlusion", enable_console_output, throttle_duration_ms);
 }
 
 void IntersectionModuleManager::launchNewModules(
@@ -347,7 +356,7 @@ void IntersectionModuleManager::launchNewModules(
     const auto new_module = std::make_shared<IntersectionModule>(
       module_id, lane_id, planner_data_, intersection_param_, associative_ids, turn_direction,
       has_traffic_light, node_, logger_.get_child("intersection_module"), clock_, time_keeper_,
-      planning_factor_interface_);
+      planning_factor_interface_, planning_factor_interface_for_occlusion_);
     generate_uuid(module_id);
     /* set RTC status as non_occluded status initially */
     const UUID uuid = getUUID(new_module->getModuleId());
@@ -440,6 +449,13 @@ void IntersectionModuleManager::sendRTC(const Time & stamp)
   if (nearest_tl_observation) {
     tl_observation_pub_->publish(nearest_tl_observation.value().signal);
   }
+}
+
+void IntersectionModuleManager::modifyPathVelocity(
+  autoware_internal_planning_msgs::msg::PathWithLaneId * path)
+{
+  SceneModuleManagerInterfaceWithRTC::modifyPathVelocity(path);
+  planning_factor_interface_for_occlusion_->publish();
 }
 
 void IntersectionModuleManager::setActivation()

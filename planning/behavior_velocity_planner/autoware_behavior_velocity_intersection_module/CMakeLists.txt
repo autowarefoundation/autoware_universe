@@ -30,7 +30,7 @@ target_link_libraries(${PROJECT_NAME}
   ${OpenCV_LIBRARIES}
 )
 
-ament_auto_package(INSTALL_TO_SHARE config)
+ament_auto_package(INSTALL_TO_SHARE config test_data)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
