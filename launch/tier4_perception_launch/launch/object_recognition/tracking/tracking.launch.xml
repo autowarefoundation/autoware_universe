@@ -7,7 +7,7 @@
   <arg name="object_recognition_tracking_radar_tracked_object_lanelet_filter_param_path" description="param file for radar far object tracking"/>
   <arg name="object_recognition_tracking_object_merger_data_association_matrix_param_path" description="association param file for radar and lidar object merger"/>
   <arg name="object_recognition_tracking_object_merger_node_param_path" description="node param file for radar and lidar object merger"/>
-  
+
   <!-- Pipeline junctions -->
   <arg name="mode" default="lidar">
     <choice value="camera_lidar_radar_fusion"/>
