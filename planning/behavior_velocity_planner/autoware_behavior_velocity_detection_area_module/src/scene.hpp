@@ -17,7 +17,6 @@
 
 #include <boost/optional.hpp>
 
-#include <cstddef>
 #include <memory>
 #include <utility>
 #include <vector>
