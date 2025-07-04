@@ -23,7 +23,12 @@
 #include <autoware_utils/ros/uuid_helper.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
 #include <autoware_utils_geometry/boost_geometry.hpp>
+
+#if __has_include(<magic_enum/magic_enum.hpp>)
+#include <magic_enum/magic_enum.hpp>
+#else
 #include <magic_enum.hpp>
+#endif
 
 #include <nav_msgs/msg/odometry.hpp>
 
