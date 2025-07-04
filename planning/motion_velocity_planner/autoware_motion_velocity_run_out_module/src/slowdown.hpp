@@ -71,8 +71,8 @@ std::optional<SlowdownInterval> calculate_slowdown_interval(
 /// @param [in] current_velocity [m/s] current ego velocity
 /// @param [inout] unfeasible_stop_deceleration maximum deceleration found that breaks the limit
 /// @param [in] params module parameters
-/// @return result with the calculated stop point and slowdown intervals
-VelocityPlanningResult calculate_slowdowns(
+/// @return result with the calculated stop point and slowdown intervals and their safety factors
+RunOutResult calculate_slowdowns(
   ObjectDecisionsTracker & decision_tracker,
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
   const double current_velocity, std::optional<double> & unfeasible_stop_deceleration,

@@ -23,6 +23,8 @@
 #include <cstdio>
 #include <optional>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::motion_velocity_planner::run_out
@@ -62,8 +64,10 @@ DecisionType calculate_decision_type(
 /// @brief update objects that did not have a decision at the given time
 void update_objects_without_decisions(
   ObjectDecisionsTracker & decisions_tracker, const rclcpp::Time & now);
-/// @brief calculate current decisions for the objects and update the decision tracker accordingly
-void calculate_decisions(
+/// @brief calculate current decisions for the objects, update the decision tracker accordingly, and
+/// return the safety factor of each object
+std::unordered_map<std::string, autoware_internal_planning_msgs::msg::SafetyFactor>
+calculate_decisions(
   ObjectDecisionsTracker & decisions_tracker, const std::vector<Object> & objects,
   const rclcpp::Time & now, const double keep_stop_distance_range, const Parameters & params);
 }  // namespace autoware::motion_velocity_planner::run_out

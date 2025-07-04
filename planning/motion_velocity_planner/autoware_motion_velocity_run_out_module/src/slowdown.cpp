@@ -151,23 +151,25 @@ std::optional<SlowdownInterval> calculate_slowdown_interval(
   return interval;
 }
 
-VelocityPlanningResult calculate_slowdowns(
+RunOutResult calculate_slowdowns(
   ObjectDecisionsTracker & decision_tracker,
   const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
   const double current_velocity, std::optional<double> & unfeasible_stop_deceleration,
   const Parameters & params)
 {
-  VelocityPlanningResult result;
+  RunOutResult result;
   for (auto & [object, history] : decision_tracker.history_per_object) {
     const auto stop_position = calculate_stop_position(
       history, trajectory, current_velocity, unfeasible_stop_deceleration, params);
     if (stop_position) {
-      result.stop_points.push_back(*stop_position);
+      result.velocity_planning_result.stop_points.push_back(*stop_position);
+      result.stop_objects.push_back(object);
     }
     const auto slowdown_interval =
       calculate_slowdown_interval(history, trajectory, current_velocity, params);
     if (slowdown_interval) {
-      result.slowdown_intervals.push_back(*slowdown_interval);
+      result.velocity_planning_result.slowdown_intervals.push_back(*slowdown_interval);
+      result.slowdown_objects.push_back(object);
     }
   }
   return result;

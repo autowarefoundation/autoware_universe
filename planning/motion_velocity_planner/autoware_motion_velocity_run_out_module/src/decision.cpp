@@ -21,6 +21,8 @@
 #include <cstdio>
 #include <optional>
 #include <sstream>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::motion_velocity_planner::run_out
@@ -235,11 +237,16 @@ void update_objects_without_decisions(
     }
   }
 }
-void calculate_decisions(
+std::unordered_map<std::string, autoware_internal_planning_msgs::msg::SafetyFactor>
+calculate_decisions(
   ObjectDecisionsTracker & decisions_tracker, const std::vector<Object> & objects,
   const rclcpp::Time & now, const double keep_stop_distance_range, const Parameters & params)
 {
+  std::unordered_map<std::string, autoware_internal_planning_msgs::msg::SafetyFactor>
+    safety_factor_per_object;
   for (const auto & object : objects) {
+    autoware_internal_planning_msgs::msg::SafetyFactor safety_factor;
+    safety_factor.object_id = object.object->predicted_object.object_id;
     std::optional<Decision> object_decision;
     auto & decision_history = decisions_tracker.history_per_object[object.uuid];
     std::stringstream object_decision_explanation;
@@ -253,6 +260,21 @@ void calculate_decisions(
     if (object_decision) {
       object_decision->explanation = object_decision_explanation.str();
       decision_history.add_decision(now.seconds(), *object_decision);
+
+      if (object_decision->type != nothing && object_decision->collision) {
+        safety_factor.is_safe = false;
+        safety_factor.ttc_begin = static_cast<float>(std::abs(
+          object_decision->collision->ego_time_interval.first_intersection.ego_time -
+          object_decision->collision->ego_time_interval.first_intersection.object_time));
+        safety_factor.ttc_end = static_cast<float>(std::abs(
+          object_decision->collision->ego_time_interval.last_intersection.ego_time -
+          object_decision->collision->ego_time_interval.last_intersection.object_time));
+        geometry_msgs::msg::Point p;
+        p.x = object_decision->collision->ego_time_interval.first_intersection.intersection.x();
+        p.y = object_decision->collision->ego_time_interval.first_intersection.intersection.y();
+        safety_factor.points.push_back(p);
+        safety_factor_per_object.emplace(object.uuid, safety_factor);
+      }
     }
   }
   // handle objects in the history which did not get updated this iteration
@@ -267,5 +289,6 @@ void calculate_decisions(
     history.remove_outdated(now, params.max_history_duration);
   }
   update_objects_without_decisions(decisions_tracker, now);
+  return safety_factor_per_object;
 }
 }  // namespace autoware::motion_velocity_planner::run_out
