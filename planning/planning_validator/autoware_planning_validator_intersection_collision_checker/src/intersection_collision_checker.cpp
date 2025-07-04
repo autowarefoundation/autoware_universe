@@ -306,6 +306,7 @@ bool IntersectionCollisionChecker::check_collision(
   bool is_safe = true;
 
   const auto & p = params_.icc_parameters;
+  const auto & vel_params = p.pointcloud.velocity_estimation;
 
   auto ego_object_overlap_time =
     [](const double object_ttc, const std::pair<double, double> & ego_time) {
@@ -341,15 +342,19 @@ bool IntersectionCollisionChecker::check_collision(
       const auto dl = object.distance_to_overlap - new_data.distance_to_overlap;
       if (dt < 1e-6) return;  // too small time difference, skip update
 
-      const auto max_accel = p.pointcloud.velocity_estimation.max_acceleration;
-      const auto observation_time_th = p.pointcloud.velocity_estimation.observation_time;
       const auto raw_velocity = dl / dt;
-      const bool is_reliable = object.track_duration > observation_time_th;
+      const auto raw_accel = std::abs(raw_velocity - object.velocity) / dt;
+      const bool is_reliable = object.track_duration > vel_params.observation_time;
+      static constexpr double eps = 0.01;  // small epsilon to avoid division by zero
       // update velocity only if the object is not yet reliable or velocity change is within limit
-      if (!is_reliable || std::abs(raw_velocity - object.velocity) / dt < max_accel) {
+      if (raw_accel > vel_params.reset_accel_th) {
+        object.velocity = 0.0;  // reset velocity if acceleration is too high
+        object.track_duration = 0.0;    // reset track duration
+      } else if (!is_reliable || raw_accel < vel_params.max_acceleration) {
         object.velocity = autoware::signal_processing::lowpassFilter(
           raw_velocity, object.velocity, 0.5);  // apply low-pass filter to velocity
-        object.track_duration += dt;            // update track duration
+        object.velocity = std::clamp(object.velocity, eps, vel_params.max_velocity);
+        object.track_duration += dt;
       }
 
       object.last_update_time = new_data.last_update_time;
