@@ -42,6 +42,10 @@ DetectionAreaModuleManager::DetectionAreaModuleManager(rclcpp::Node & node)
   planner_param_.use_dead_line = get_or_declare_parameter<bool>(node, ns + ".use_dead_line");
   planner_param_.dead_line_margin =
     get_or_declare_parameter<double>(node, ns + ".dead_line_margin");
+  planner_param_.use_max_acceleration =
+    get_or_declare_parameter<bool>(node, ns + ".use_max_acceleration");
+  planner_param_.max_acceleration =
+    get_or_declare_parameter<double>(node, ns + ".max_acceleration");
   planner_param_.use_pass_judge_line =
     get_or_declare_parameter<bool>(node, ns + ".use_pass_judge_line");
   planner_param_.state_clear_time =

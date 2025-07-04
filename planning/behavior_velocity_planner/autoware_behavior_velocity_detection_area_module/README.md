@@ -19,6 +19,8 @@ This module is activated when there is a detection area on the target lane.
 | `state_clear_time`                  | double | [s] when the vehicle is stopping for certain time without incoming obstacle, move to STOPPED state                                                       |
 | `stop_margin`                       | double | [m] a margin that the vehicle tries to stop before stop_line                                                                                             |
 | `dead_line_margin`                  | double | [m] ignore threshold that vehicle behind is collide with ego vehicle or not                                                                              |
+| `use_max_acceleration`              | bool   | [-] whether to consider feasible stop distance based on maximum acceleration when inserting stop point                                                   |
+| `max_acceleration`                  | double | [m/s^2] maximum acceleration used to calculate feasible stop distance when `use_max_acceleration` is true                                                |
 | `hold_stop_margin_distance`         | double | [m] parameter for restart prevention (See Algorithm section)                                                                                             |
 | `distance_to_judge_over_stop_line`  | double | [m] parameter for judging that the stop line has been crossed                                                                                            |
 | `suppress_pass_judge_when_stopping` | bool   | [m] parameter for suppressing pass judge when stopping                                                                                                   |
@@ -114,3 +116,9 @@ This module has parameter `hold_stop_margin_distance` in order to prevent from t
   ![example](docs/keep_stopping.svg){width=1000}
   <figcaption>inside the hold_stop_margin_distance</figcaption>
 </figure>
+
+#### Feasible stop distance
+
+If `use_max_acceleration` is _true_, the module ensures the vehicle can stop within the physical limit set by `max_acceleration`.
+
+Required braking distance: \(d*{req}=v^2/(2a*{max})\). If this exceeds the remaining distance to the stop line \(d*{stop}\), the stop point is shifted forward by \(d*{req}-d\_{stop}\). This adjustment is applied only once, when the module transitions to the STOP state.
