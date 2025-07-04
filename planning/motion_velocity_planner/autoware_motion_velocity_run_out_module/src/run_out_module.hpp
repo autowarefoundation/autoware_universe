@@ -35,6 +35,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace autoware::motion_velocity_planner
@@ -62,6 +63,7 @@ public:
     required_subscription_info.predicted_objects = true;
     return required_subscription_info;
   }
+  void publish_planning_factor() override { planning_factor_interface_->publish(); };
 
 private:
   inline static const std::string ns_ = "run_out";
@@ -86,6 +88,12 @@ private:
   void publish_debug_trajectory(
     const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
     const VelocityPlanningResult & planning_result);
+  /// @brief populate the planning factors based on the module's planning result
+  void add_planning_factors(
+    const std::vector<autoware_planning_msgs::msg::TrajectoryPoint> & trajectory,
+    const run_out::RunOutResult & result,
+    const std::unordered_map<std::string, autoware_internal_planning_msgs::msg::SafetyFactor> &
+      safety_factor_per_object);
 };
 }  // namespace autoware::motion_velocity_planner
 
