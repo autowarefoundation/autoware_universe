@@ -81,6 +81,7 @@ target_include_directories(concatenate_data PUBLIC
 ament_target_dependencies(concatenate_data
   SYSTEM
   autoware_point_types
+  autoware_sensing_msgs
   autoware_utils
   autoware_vehicle_msgs
   managed_transform_buffer
