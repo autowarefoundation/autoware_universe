@@ -50,9 +50,8 @@ private:
   void subscribe_topics(rclcpp::Node & node);
   void publish_topics(rclcpp::Node & node);
   void take_data();
-  [[nodiscard]] bool is_data_ready();
-  [[nodiscard]] bool is_data_valid() const;
-  [[nodiscard]] bool is_data_timeout(const Odometry & odom) const;
+  std::optional<std::string> is_data_invalid(const TrajectoryPoints & raw_trajectory_points) const;
+  std::optional<std::string> is_data_timeout(const Odometry & odom) const;
   [[nodiscard]] bool is_goal_changed(
     const trajectory::Trajectory<TrajectoryPoint> & aw_ref_traj, const Pose & new_goal);
 
