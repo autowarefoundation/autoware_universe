@@ -72,8 +72,9 @@ autoware_utils::Polygon2d project_to_pose(
 void make_ego_footprint_rtree(EgoData & ego_data, const PlannerParam & params)
 {
   for (const auto & p : ego_data.trajectory)
-    ego_data.trajectory_footprints.push_back(autoware_utils::to_footprint(
-      p.pose, params.ego_longitudinal_offset, 0.0, params.ego_lateral_offset * 2.0));
+    ego_data.trajectory_footprints.push_back(
+      autoware_utils::to_footprint(
+        p.pose, params.ego_longitudinal_offset, 0.0, params.ego_lateral_offset * 2.0));
   std::vector<BoxIndexPair> rtree_nodes;
   rtree_nodes.reserve(ego_data.trajectory_footprints.size());
   for (auto i = 0UL; i < ego_data.trajectory_footprints.size(); ++i) {

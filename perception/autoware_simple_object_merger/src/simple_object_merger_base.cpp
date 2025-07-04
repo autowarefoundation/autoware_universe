@@ -86,9 +86,10 @@ SimpleObjectMergerBase<ObjsMsgType>::SimpleObjectMergerBase(
     input1_.subscribe(
       this, node_param_.topic_names.at(1), rclcpp::QoS{1}.best_effort().get_rmw_qos_profile());
     sync_ptr_ = std::make_shared<Sync>(SyncPolicy(10), input0_, input1_);
-    sync_ptr_->registerCallback(std::bind(
-      &SimpleObjectMergerBase::approximateMerger, this, std::placeholders::_1,
-      std::placeholders::_2));
+    sync_ptr_->registerCallback(
+      std::bind(
+        &SimpleObjectMergerBase::approximateMerger, this, std::placeholders::_1,
+        std::placeholders::_2));
   } else {
     // Trigger the process by timer
     sub_objects_array.resize(input_topic_size_);

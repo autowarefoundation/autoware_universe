@@ -167,12 +167,14 @@ MultiObjectTracker::MultiObjectTracker(const rclcpp::NodeOptions & node_options)
         std::make_pair(Label::BUS, this->declare_parameter<std::string>("bus_tracker")));
       config.tracker_map.insert(
         std::make_pair(Label::TRAILER, this->declare_parameter<std::string>("trailer_tracker")));
-      config.tracker_map.insert(std::make_pair(
-        Label::PEDESTRIAN, this->declare_parameter<std::string>("pedestrian_tracker")));
+      config.tracker_map.insert(
+        std::make_pair(
+          Label::PEDESTRIAN, this->declare_parameter<std::string>("pedestrian_tracker")));
       config.tracker_map.insert(
         std::make_pair(Label::BICYCLE, this->declare_parameter<std::string>("bicycle_tracker")));
-      config.tracker_map.insert(std::make_pair(
-        Label::MOTORCYCLE, this->declare_parameter<std::string>("motorcycle_tracker")));
+      config.tracker_map.insert(
+        std::make_pair(
+          Label::MOTORCYCLE, this->declare_parameter<std::string>("motorcycle_tracker")));
 
       // Declare parameters
       config.tracker_lifetime = declare_parameter<double>("tracker_lifetime");
