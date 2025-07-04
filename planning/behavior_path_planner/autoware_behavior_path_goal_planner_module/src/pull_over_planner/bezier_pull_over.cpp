@@ -183,9 +183,9 @@ std::vector<PullOverPath> BezierPullOver::generateBezierPath(
     -before_shifted_pull_over_distance);
 
   std::vector<std::tuple<double, double, double>> params;
-  const size_t n_sample_v_init = 3;
-  const size_t n_sample_v_final = 3;
-  const size_t n_sample_acc = 2;
+  const size_t n_sample_v_init = 2;
+  const size_t n_sample_v_final = 2;
+  const size_t n_sample_acc = 1;
   for (unsigned i = 0; i <= n_sample_v_init; ++i) {
     for (unsigned j = 0; j <= n_sample_v_final; j++) {
       for (unsigned k = 0; k <= n_sample_acc; k++) {
