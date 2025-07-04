@@ -5,4 +5,7 @@
     elevation_resolution: 0.0174  # Resolution in elevation direction (radians, ~1 degree)
     voxel_points_threshold: 2     # Minimum points required per voxel
     min_radius: 0.5               # Minimum radius to consider (meters)
-    max_radius: 100.0             # Maximum radius to consider (meters) 
+    max_radius: 100.0             # Maximum radius to consider (meters)
+    use_return_type_classification: true  # Whether to use return type classification
+    primary_return_types: [1]     # Return types considered as primary returns
+    secondary_return_types: [2, 3, 4, 5]  # Return types considered as secondary returns 
