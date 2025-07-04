@@ -20,6 +20,8 @@
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
+#include <memory>
+
 namespace autoware::tensorrt_bevdet
 {
 /**

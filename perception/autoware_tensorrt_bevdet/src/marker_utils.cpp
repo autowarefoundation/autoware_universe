@@ -20,6 +20,7 @@
 
 #include <array>
 #include <map>
+#include <memory>
 #include <string>
 
 namespace autoware::tensorrt_bevdet
