@@ -16,6 +16,7 @@
         predicted_path_min_confidence : 0.1  # when using predicted paths, ignore the ones whose confidence is lower than this value.
         cut_predicted_paths_beyond_red_lights: true # if true, predicted paths are cut beyond the stop line of red traffic lights
         ignore_behind_ego: false # if true, objects behind the ego vehicle are ignored
+        extra_width: 1.0  # [m] extra width around detected objects, making it more likely to detect an out of lane collision
 
       action:  # action to insert in the trajectory if an object causes a conflict at an overlap
         use_map_stop_lines: true  # if true, try to stop at stop lines defined in the vector map
