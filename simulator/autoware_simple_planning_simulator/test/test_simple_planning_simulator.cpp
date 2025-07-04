@@ -15,7 +15,8 @@
 #include "ament_index_cpp/get_package_share_directory.hpp"
 #include "autoware/simple_planning_simulator/simple_planning_simulator_core.hpp"
 #include "gtest/gtest.h"
-#include "tf2/utils.h"
+
+#include <tf2/utils.hpp>
 
 #include "tier4_vehicle_msgs/msg/actuation_command_stamped.hpp"
 

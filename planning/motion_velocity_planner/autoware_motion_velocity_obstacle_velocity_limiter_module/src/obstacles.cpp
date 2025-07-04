@@ -17,12 +17,12 @@
 #include "occupancy_grid_utils.hpp"
 #include "pointcloud_utils.hpp"
 
+#include <tf2/utils.hpp>
+
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 #include <boost/assign.hpp>
 #include <boost/geometry.hpp>
-
-#include <tf2/utils.h>
 
 #include <algorithm>
 #include <vector>
