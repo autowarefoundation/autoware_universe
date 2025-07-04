@@ -72,7 +72,7 @@ FusionNode<Msg3D, Msg2D, ExportObj>::FusionNode(
   rois_timeout_sec_ = declare_parameter<double>("rois_timeout_sec");
 
   auto rois_timestamp_offsets = declare_parameter<std::vector<double>>("rois_timestamp_offsets");
-  if (rois_timestamp_offsets.size() != rois_number_) {
+  if (rois_timestamp_offsets.size() < rois_number_) {
     throw std::runtime_error(
       "Mismatch: rois_number (" + std::to_string(rois_number_) +
       ") does not match rois_timestamp_offsets size (" +
@@ -234,7 +234,7 @@ void FusionNode<Msg3D, Msg2D, ExportObj>::initialize_det2d_status(std::size_t ro
   }
   std::vector<bool> approximate_camera_projection =
     declare_parameter<std::vector<bool>>("approximate_camera_projection");
-  if (rois_number != approximate_camera_projection.size()) {
+  if (rois_number > approximate_camera_projection.size()) {
     const std::size_t current_size = approximate_camera_projection.size();
     throw std::runtime_error(
       "The number of elements in approximate_camera_projection should be the same as rois_number_. "

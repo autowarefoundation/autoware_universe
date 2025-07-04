@@ -162,7 +162,7 @@ AdvancedMatchingStrategy<Msg3D, Msg2D, ExportObj>::AdvancedMatchingStrategy(
       "matching_strategy.rois_timestamp_noise_window");
 
   auto rois_number = id_to_offset_map_.size();
-  if (rois_timestamp_noise_window.size() != rois_number) {
+  if (rois_timestamp_noise_window.size() < rois_number) {
     throw std::runtime_error(
       "Mismatch: rois_number (" + std::to_string(rois_number) +
       ") does not match rois_timestamp_noise_window size (" +
