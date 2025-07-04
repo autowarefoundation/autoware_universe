@@ -41,9 +41,34 @@
           "description": "the maximum radius to consider [m]",
           "default": "100.0",
           "minimum": 0
+        },
+        "use_return_type_classification": {
+          "type": "boolean",
+          "description": "whether to use return type classification (if false, all returns are processed)",
+          "default": "true"
+        },
+        "primary_return_types": {
+          "type": "array",
+          "description": "list of return type values considered as primary returns",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "default": "[1]"
+        },
+        "secondary_return_types": {
+          "type": "array",
+          "description": "list of return type values considered as secondary returns",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "default": "[2, 3, 4, 5]"
         }
       },
-      "required": ["radius_resolution", "azimuth_resolution", "elevation_resolution", "voxel_points_threshold", "min_radius", "max_radius"],
+      "required": ["radius_resolution", "azimuth_resolution", "elevation_resolution", "voxel_points_threshold", "min_radius", "max_radius", "use_return_type_classification", "primary_return_types", "secondary_return_types"],
       "additionalProperties": false
     }
   },
