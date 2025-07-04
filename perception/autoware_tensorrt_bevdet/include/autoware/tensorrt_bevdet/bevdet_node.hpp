@@ -24,8 +24,8 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-#include <sensor_msgs/msg/image.hpp>
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
+#include <sensor_msgs/msg/image.hpp>
 
 #include <cpu_jpegdecoder.h>
 #include <cv_bridge/cv_bridge.h>
@@ -103,7 +103,7 @@ private:
   std::vector<bool>
     caminfo_received_;  ///< Flag indicating if camera info has been received for each camera
   bool camera_info_received_flag_ =
-    false;                    ///< Flag indicating if camera info has been received for all cameras
+    false;  ///< Flag indicating if camera info has been received for all cameras
 
   // tf listener
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_{
