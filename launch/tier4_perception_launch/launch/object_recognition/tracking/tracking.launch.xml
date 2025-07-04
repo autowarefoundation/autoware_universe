@@ -42,7 +42,10 @@
 
   <group unless="$(var use_multi_channel_tracker_merger)">
     <!-- Internal interface -->
-    <let name="radar_tracked_object_lanelet_filter/input/object" value="$(var input/radar/tracked_objects)"/>
+    <let name="radar_tracked_object_sorter/input/objects" value="$(var input/radar/tracked_objects)"/>
+    <let name="radar_tracked_object_sorter/output/objects" value="$(var ns)/radar/sorted_tracked_objects"/>
+
+    <let name="radar_tracked_object_lanelet_filter/input/object" value="$(var radar_tracked_object_sorter/output/objects)"/>
     <let name="radar_tracked_object_lanelet_filter/output/object" value="$(var ns)/radar/tracked_objects"/>
 
     <let name="multi_object_tracker/output/objects" value="$(var output/objects)" unless="$(var use_radar_tracking_fusion)"/>
@@ -65,6 +68,12 @@
     <!-- Run with tracking merger to add far radar information -->
     <group if="$(var use_radar_tracking_fusion)">
       <!-- radar tracked object filters -->
+      <include file="$(find-pkg-share autoware_object_sorter)/launch/tracked_object_sorter.launch.xml">
+        <arg name="input/objects" value="$(var radar_tracked_object_sorter/input/objects)"/>
+        <arg name="output/objects" value="$(var radar_tracked_object_sorter/output/objects)"/>
+        <!-- <arg name="param_path" value="$(var object_recognition_tracking_radar_tracked_object_lanelet_filter_param_path)"/> -->
+      </include>
+
       <include file="$(find-pkg-share autoware_detected_object_validation)/launch/tracked_object_lanelet_filter.launch.xml">
         <arg name="input/object" value="$(var radar_tracked_object_lanelet_filter/input/object)"/>
         <arg name="output/object" value="$(var radar_tracked_object_lanelet_filter/output/object)"/>
