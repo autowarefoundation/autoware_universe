@@ -79,11 +79,14 @@ void calculate_object_path_time_collisions(
 
 void calculate_objects_time_collisions(
   OutOfLaneData & out_of_lane_data,
-  const std::vector<autoware_perception_msgs::msg::PredictedObject> & objects)
+  const std::vector<autoware_perception_msgs::msg::PredictedObject> & objects,
+  const double objects_extra_width)
 {
   for (const auto & object : objects) {
+    auto shape = object.shape;
+    shape.dimensions.y += objects_extra_width * 0.5;
     for (const auto & path : object.kinematics.predicted_paths) {
-      calculate_object_path_time_collisions(out_of_lane_data, path, object.shape);
+      calculate_object_path_time_collisions(out_of_lane_data, path, shape);
     }
   }
 }
