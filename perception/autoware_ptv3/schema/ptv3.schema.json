@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parameters for ptv3",
+  "type": "object",
+  "definitions": {
+    "ptv3": {
+      "type": "object",
+      "properties": {
+        "plugins_path": {
+          "type": "string",
+          "description": "A path to the TensorRT plugins.",
+          "default": "$(find-pkg-share autoware_ptv3)/plugins/libautoware_tensorrt_plugins.so",
+          "pattern": "\\.so$"
+        },
+        "trt_precision": {
+          "type": "string",
+          "description": "A precision of TensorRT engine.",
+          "default": "fp16",
+          "enum": ["fp16", "fp32"]
+        },
+        "cloud_capacity": {
+          "type": "integer",
+          "description": "Capacity of the point cloud buffer (should be set to at least the maximum theoretical number of points).",
+          "default": 2000000,
+          "minimum": 1
+        },
+        "onnx_path": {
+          "type": "string",
+          "description": "A path to ONNX model file.",
+          "default": "$(var model_path)/ptv3.onnx",
+          "pattern": "\\.onnx$"
+        },
+        "engine_path": {
+          "type": "string",
+          "description": "A path to TensorRT engine file.",
+          "default": "$(var model_path)/ptv3.engine",
+          "pattern": "\\.engine$"
+        },
+        "colors_red": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "description": "Red component of the class to RGB map for the segmented point cloud. Must have the same number of elements as the number of classes.",
+          "default": [255, 0, 255, 64, 0, 255]
+        },
+        "colors_green": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "description": "Green component of the class to RGB map for the segmented point cloud. Must have the same number of elements as the number of classes.",
+          "default": [0, 0, 0, 64, 255, 255]
+        },
+        "colors_blue": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "description": "Blue component of the class to RGB map for the segmented point cloud. Must have the same number of elements as the number of classes.",
+          "default": [0, 255, 255, 64, 0, 255]
+        },
+        "ground_prob_threshold": {
+          "type": "number",
+          "description": "Probability threshold to classify a point as ground.",
+          "default": 0.3,
+          "minimum": 0.0,
+          "maximum": 1.0
+        }
+      },
+      "required": [
+        "plugins_path",
+        "trt_precision",
+        "cloud_capacity",
+        "onnx_path",
+        "engine_path",
+        "colors_red",
+        "colors_green",
+        "colors_blue",
+        "ground_prob_threshold"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "/**": {
+      "type": "object",
+      "properties": {
+        "ros__parameters": {
+          "$ref": "#/definitions/ptv3"
+        }
+      },
+      "required": ["ros__parameters"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["/**"],
+  "additionalProperties": false
+}
