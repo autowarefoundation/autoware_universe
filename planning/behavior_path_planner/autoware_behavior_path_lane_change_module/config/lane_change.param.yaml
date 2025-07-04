@@ -44,6 +44,7 @@
         enable: true
         th_yaw_diff: 10.0  # [deg]
         th_curvature_smoothing: 0.1 # [/]
+        th_max_curvature: 0.015 # [/]
 
       # safety check
       safety_check:

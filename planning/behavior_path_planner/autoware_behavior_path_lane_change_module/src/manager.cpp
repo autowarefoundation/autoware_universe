@@ -233,6 +233,8 @@ LCParamPtr LaneChangeModuleManager::set_params(rclcpp::Node * node, const std::s
     get_or_declare_parameter<double>(*node, parameter("frenet.th_yaw_diff"));
   p.frenet.th_curvature_smoothing =
     get_or_declare_parameter<double>(*node, parameter("frenet.th_curvature_smoothing"));
+  p.frenet.th_max_curvature =
+    get_or_declare_parameter<double>(*node, parameter("frenet.th_max_curvature"));
 
   // lane change cancel
   p.cancel.enable_on_prepare_phase =
@@ -408,6 +410,7 @@ void LaneChangeModuleManager::updateModuleParams(const std::vector<rclcpp::Param
     update_param<double>(parameters, ns + "th_yaw_diff", p->frenet.th_yaw_diff_deg);
     update_param<double>(
       parameters, ns + "th_curvature_smoothing", p->frenet.th_curvature_smoothing);
+    update_param<double>(parameters, ns + "th_max_curvature", p->frenet.th_max_curvature);
   }
 
   {
