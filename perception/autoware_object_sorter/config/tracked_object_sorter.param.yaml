@@ -1,0 +1,4 @@
+/**:
+  ros__parameters:
+    velocity_threshold: 3.0 # [m/s]
+    range_threshold: 30.0 # [m]
