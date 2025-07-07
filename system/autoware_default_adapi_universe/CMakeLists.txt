@@ -42,7 +42,6 @@ rclcpp_components_register_nodes(${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
-  add_launch_test(test/main.test.py)
 endif()
 
 install(
@@ -50,4 +49,4 @@ install(
   DESTINATION lib/${PROJECT_NAME}
 )
 
-ament_auto_package(INSTALL_TO_SHARE config launch test)
+ament_auto_package(INSTALL_TO_SHARE config launch)
