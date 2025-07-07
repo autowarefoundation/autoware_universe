@@ -286,7 +286,8 @@ double DataAssociation::calculateScore(
   if (measurement_label == Label::PEDESTRIAN) {
     const double ratio_sq = (dist_sq < max_dist_sq) ? dist_sq / max_dist_sq : 1.0;
     const double score = 1.0 - std::sqrt(ratio_sq);
-    return (score >= score_threshold_) * score;
+    if (score >= score_threshold_) return score;
+    return 0.0;
   }
 
   // 2d iou gate

@@ -392,8 +392,8 @@ bool TrackerProcessor::canMergePedestrianTargets(
       return false;
     }
     // Compare probability vector
-    std::vector<float> target_existence_prob = target.getExistenceProbabilityVector();
-    std::vector<float> other_existence_prob = other.getExistenceProbabilityVector();
+    const std::vector<float> & target_existence_prob = target.getExistenceProbabilityVector();
+    const std::vector<float> & other_existence_prob = other.getExistenceProbabilityVector();
     constexpr float prob_buffer = 0.4;
     for (size_t i = 0; i < target_existence_prob.size(); ++i) {
       if (target_existence_prob[i] + prob_buffer < other_existence_prob[i]) {
