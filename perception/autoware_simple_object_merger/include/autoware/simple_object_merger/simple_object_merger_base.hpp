@@ -80,7 +80,6 @@ protected:
   typename rclcpp::Publisher<ObjsMsgType>::SharedPtr pub_objects_{};
 
   std::shared_ptr<autoware_utils::TransformListener> transform_listener_;
-  geometry_msgs::msg::TransformStamped::ConstSharedPtr transform_;
 
   // Data Buffer
   std::vector<typename ObjsMsgType::ConstSharedPtr> objects_data_{};

@@ -38,18 +38,23 @@ void SimpleDetectedObjectMergerNode::approximateMerger(
   const DetectedObjects::ConstSharedPtr & object_msg0,
   const DetectedObjects::ConstSharedPtr & object_msg1)
 {
-  transform_ = transform_listener_->get_transform(
+  auto transform0 = transform_listener_->get_transform(
     node_param_.new_frame_id, object_msg0->header.frame_id, object_msg0->header.stamp,
     rclcpp::Duration::from_seconds(0.01));
+  if (!transform0) {
+    return;
+  }
   DetectedObjects::SharedPtr transformed_objects0 =
-    getTransformedObjects(object_msg0, node_param_.new_frame_id, transform_);
+    getTransformedObjects(object_msg0, node_param_.new_frame_id, transform0);
 
-  // input1
-  transform_ = transform_listener_->get_transform(
+  auto transform1 = transform_listener_->get_transform(
     node_param_.new_frame_id, object_msg1->header.frame_id, object_msg1->header.stamp,
     rclcpp::Duration::from_seconds(0.01));
+  if (!transform1) {
+    return;
+  }
   DetectedObjects::SharedPtr transformed_objects1 =
-    getTransformedObjects(object_msg1, node_param_.new_frame_id, transform_);
+    getTransformedObjects(object_msg1, node_param_.new_frame_id, transform1);
 
   DetectedObjects output_objects;
   output_objects.header = object_msg0->header;
@@ -86,12 +91,14 @@ void SimpleDetectedObjectMergerNode::onTimer()
     double time_diff = rclcpp::Time(objects_data_.at(i)->header.stamp).seconds() -
                        rclcpp::Time(objects_data_.at(0)->header.stamp).seconds();
     if (std::abs(time_diff) < node_param_.timeout_threshold) {
-      transform_ = transform_listener_->get_transform(
+      auto transform = transform_listener_->get_transform(
         node_param_.new_frame_id, objects_data_.at(i)->header.frame_id,
         objects_data_.at(i)->header.stamp, rclcpp::Duration::from_seconds(0.01));
-
+      if (!transform) {
+        continue;
+      }
       typename DetectedObjects::SharedPtr transformed_objects =
-        getTransformedObjects(objects_data_.at(i), node_param_.new_frame_id, transform_);
+        getTransformedObjects(objects_data_.at(i), node_param_.new_frame_id, transform);
 
       output_objects.objects.insert(
         output_objects.objects.end(), std::begin(transformed_objects->objects),
