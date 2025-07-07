@@ -4,7 +4,8 @@
   <let name="ns" value="/perception/object_recognition/tracking"/>
 
   <!-- Radar Tracking and Merger parameters -->
-  <arg name="object_recognition_tracking_radar_tracked_object_lanelet_filter_param_path" description="param file for radar far object tracking"/>
+  <arg name="object_recognition_tracking_radar_tracked_object_sorter_param_path" description="param file for radar distance and velocity filters"/>
+  <arg name="object_recognition_tracking_radar_tracked_object_lanelet_filter_param_path" description="param file for radar lanelet filter"/>
   <arg name="object_recognition_tracking_object_merger_data_association_matrix_param_path" description="association param file for radar and lidar object merger"/>
   <arg name="object_recognition_tracking_object_merger_node_param_path" description="node param file for radar and lidar object merger"/>
 
@@ -71,7 +72,7 @@
       <include file="$(find-pkg-share autoware_object_sorter)/launch/tracked_object_sorter.launch.xml">
         <arg name="input/objects" value="$(var radar_tracked_object_sorter/input/objects)"/>
         <arg name="output/objects" value="$(var radar_tracked_object_sorter/output/objects)"/>
-        <!-- <arg name="param_path" value="$(var object_recognition_tracking_radar_tracked_object_lanelet_filter_param_path)"/> -->
+        <arg name="param_path" value="$(var object_recognition_tracking_radar_tracked_object_sorter_param_path)"/>
       </include>
 
       <include file="$(find-pkg-share autoware_detected_object_validation)/launch/tracked_object_lanelet_filter.launch.xml">
