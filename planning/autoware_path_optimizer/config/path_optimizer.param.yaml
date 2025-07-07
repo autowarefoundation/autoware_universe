@@ -35,6 +35,7 @@
 
     # mpt param
     mpt:
+      use_acados: false
       option:
         # TODO(murooka) enable the following. Currently enabling the flag makes QP so heavy
         steer_limit_constraint: false

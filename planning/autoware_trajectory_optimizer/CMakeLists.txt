@@ -28,6 +28,11 @@ ament_auto_add_library(autoware_trajectory_optimizer_plugins SHARED
   src/trajectory_optimizer_plugins/plugin_utils/trajectory_point_fixer_utils.cpp
 )
 
+# Link against autoware_path_optimizer library using full path
+target_link_libraries(autoware_trajectory_optimizer_plugins
+  ${autoware_path_optimizer_LIBRARIES}
+)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
@@ -39,6 +44,7 @@ if(BUILD_TESTING)
   target_link_libraries(test_autoware_trajectory_optimizer
     autoware_trajectory_optimizer_component
     autoware_trajectory_optimizer_plugins
+    ${autoware_path_optimizer_LIBRARIES}
   )
 endif()
 
