@@ -14,6 +14,7 @@
 
 #include "autoware/path_optimizer/mpt_optimizer.hpp"
 
+#include "acados_mpc/include/acados_interface.hpp"
 #include "autoware/interpolation/spline_interpolation_points_2d.hpp"
 #include "autoware/motion_utils/trajectory/conversion.hpp"
 #include "autoware/motion_utils/trajectory/trajectory.hpp"
@@ -191,6 +192,8 @@ MPTOptimizer::MPTParam::MPTParam(
     delta_arc_length = node->declare_parameter<double>("mpt.common.delta_arc_length");
   }
 
+  use_acados = node->declare_parameter<bool>("mpt.use_acados");
+
   // kinematics
   max_steer_rad = vehicle_info.max_steer_angle_rad;
 
@@ -303,6 +306,8 @@ void MPTOptimizer::MPTParam::onParam(const std::vector<rclcpp::Parameter> & para
   // common
   update_param<int>(parameters, "mpt.common.num_points", num_points);
   update_param<double>(parameters, "mpt.common.delta_arc_length", delta_arc_length);
+
+  update_param<bool>(parameters, "mpt.use_acados", use_acados);
 
   // kinematics
   update_param<double>(
@@ -426,6 +431,12 @@ MPTOptimizer::MPTOptimizer(
   debug_fixed_traj_pub_ = node->create_publisher<Trajectory>("~/debug/mpt_fixed_traj", 1);
   debug_ref_traj_pub_ = node->create_publisher<Trajectory>("~/debug/mpt_ref_traj", 1);
   debug_mpt_traj_pub_ = node->create_publisher<Trajectory>("~/debug/mpt_traj", 1);
+
+  debug_optimised_steering_pub_ =
+    node->create_publisher<std_msgs::msg::Float32MultiArray>("~/debug/optimised_steering", 1);
+
+  acados_mpt_client_ = node->create_client<autoware_internal_debug_msgs::srv::SplineDebug>(
+    "/acados_mpt_solver/get_optimised_trajectory");
 }
 
 void MPTOptimizer::updateVehicleCircles()
@@ -482,11 +493,57 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
   const auto & traj_points = p.traj_points;
 
   // 1. calculate reference points
-  auto ref_points = calcReferencePoints(planner_data, traj_points);
+  auto [ref_points, ref_points_spline] = calcReferencePoints(planner_data, traj_points);
   if (ref_points.size() < 2) {
     RCLCPP_INFO_EXPRESSION(
       logger_, enable_debug_info_, "return std::nullopt since ref_points size is less than 2.");
     return std::nullopt;
+  }
+
+  if (mpt_param_.use_acados) {
+    AcadosSolution acados_result =
+      runAcadosMPT(ref_points, ref_points_spline, p.ego_pose, vehicle_info_);
+
+    std::cout << "xtraj:" << std::endl;
+    for (const auto & state : acados_result.xtraj) {
+      for (const auto val : state) {
+        std::cout << val << " ";
+      }
+      std::cout << std::endl;
+    }
+
+    std::cout << "utraj:" << std::endl;
+    for (const auto & control : acados_result.utraj) {
+      for (const auto val : control) {
+        std::cout << val << " ";
+      }
+    }
+    std::cout << std::endl;
+
+    // Convert Acados solution to trajectory points
+    auto acados_traj_points = convertAcadosSolutionToTrajectory(ref_points, acados_result);
+
+    if (!acados_traj_points) {
+      RCLCPP_WARN(logger_, "Failed to convert Acados solution to trajectory");
+      return std::nullopt;
+    }
+
+    // Publish optimized steering (convert Acados controls to Eigen vector)
+    Eigen::VectorXd steering_angles(acados_result.utraj.size());
+    for (size_t i = 0; i < acados_result.utraj.size(); ++i) {
+      steering_angles(i) = acados_result.utraj[i][0];  // Extract delta (steering)
+    }
+    publishOptimizedSteering(steering_angles);
+
+    // Publish debug trajectories
+    publishDebugTrajectories(p.header, ref_points, *acados_traj_points);
+
+    debug_data_ptr_->ref_points = ref_points;
+    prev_ref_points_ptr_ = std::make_shared<std::vector<ReferencePoint>>(ref_points);
+    prev_optimized_traj_points_ptr_ =
+      std::make_shared<std::vector<TrajectoryPoint>>(*acados_traj_points);
+
+    return acados_traj_points;
   }
 
   // 2. calculate B and W matrices where x = B u + W
@@ -508,6 +565,13 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::optimizeTrajectory(
 
     return std::nullopt;
   }
+
+  std::cout << "optimized_variables:" << std::endl;
+  for (int i = 0; i < optimized_variables->size(); ++i)
+    std::cout << (*optimized_variables)(i) << " ";
+  std::cout << std::endl;
+
+  publishOptimizedSteering(*optimized_variables);
 
   // 7. convert to points with validation
   auto mpt_traj_points = calcMPTPoints(ref_points, *optimized_variables, mpt_mat);
@@ -535,8 +599,609 @@ std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::getPrevOptimizedTrajec
   return std::nullopt;
 }
 
-std::vector<ReferencePoint> MPTOptimizer::calcReferencePoints(
-  const PlannerData & planner_data, const std::vector<TrajectoryPoint> & smoothed_points) const
+void MPTOptimizer::publishOptimizedSteering(const Eigen::VectorXd & optimized_variables) const
+{
+  std_msgs::msg::Float32MultiArray msg;
+  msg.layout.dim.push_back(std_msgs::msg::MultiArrayDimension());
+  msg.layout.dim[0].size = optimized_variables.size();
+  msg.layout.dim[0].stride = optimized_variables.size();
+
+  for (size_t i = 0; i < static_cast<size_t>(optimized_variables.size()); ++i) {
+    msg.data.push_back(static_cast<float>(optimized_variables(i)));
+  }
+
+  debug_optimised_steering_pub_->publish(msg);
+}
+
+geometry_msgs::msg::Point getCorner(const geometry_msgs::msg::Pose & ego_pose, double dx, double dy)
+{
+  // Convert quaternion to roll, pitch, yaw
+  tf2::Quaternion q(
+    ego_pose.orientation.x, ego_pose.orientation.y, ego_pose.orientation.z, ego_pose.orientation.w);
+
+  double roll, pitch, yaw;
+  tf2::Matrix3x3(q).getRPY(roll, pitch, yaw);
+
+  const double cos_yaw = std::cos(yaw);
+  const double sin_yaw = std::sin(yaw);
+
+  geometry_msgs::msg::Point p;
+  p.x = ego_pose.position.x + dx * cos_yaw - dy * sin_yaw;
+  p.y = ego_pose.position.y + dx * sin_yaw + dy * cos_yaw;
+  p.z = ego_pose.position.z;
+  return p;
+}
+
+// Compute cubic spline coefficients from knots and values (natural cubic spline)
+// Returns flattened array of coefficients: [col0_row0, col0_row1, col0_row2, col0_row3, col1_row0,
+// ...] matching scipy's CubicSpline with column-major ('F') flatten
+std::vector<double> MPTOptimizer::computeCubicSplineCoeffs(
+  const std::vector<double> & knots, const std::vector<double> & values) const
+{
+  const size_t n = knots.size();
+  if (n < 2 || values.size() != n) {
+    return std::vector<double>(4 * std::max(0ul, n - 1), 0.0);
+  }
+
+  const size_t n_segments = n - 1;
+  std::vector<double> h(n_segments);
+  for (size_t i = 0; i < n_segments; ++i) {
+    h[i] = knots[i + 1] - knots[i];
+    if (h[i] <= 0) {
+      h[i] = 1e-6;  // Prevent division by zero
+    }
+  }
+
+  std::vector<double> M(n, 0.0);
+  if (n > 2) {
+    std::vector<double> a(n), b(n), c(n), d(n);
+    // Natural boundary: M[0] = 0
+    b[0] = 1.0;
+    c[0] = 0.0;
+    d[0] = 0.0;
+
+    for (size_t i = 1; i < n - 1; ++i) {
+      a[i] = h[i - 1];
+      b[i] = 2.0 * (h[i - 1] + h[i]);
+      c[i] = h[i];
+      d[i] = 6.0 * ((values[i + 1] - values[i]) / h[i] - (values[i] - values[i - 1]) / h[i - 1]);
+    }
+
+    // Natural boundary: M[n-1] = 0
+    a[n - 1] = 0.0;
+    b[n - 1] = 1.0;
+    d[n - 1] = 0.0;
+
+    // Thomas algorithm (tridiagonal solver)
+    c[0] /= b[0];
+    d[0] /= b[0];
+    for (size_t i = 1; i < n; ++i) {
+      double denom = b[i] - a[i] * c[i - 1];
+      if (i < n - 1) c[i] /= denom;
+      d[i] = (d[i] - a[i] * d[i - 1]) / denom;
+    }
+    M[n - 1] = d[n - 1];
+    for (size_t i = n - 1; i > 0; --i) {
+      M[i - 1] = d[i - 1] - c[i - 1] * M[i];
+    }
+  }
+
+  // Compute cubic polynomial coefficients for each segment
+  // Scipy's format: coeffs[0,:] = a3, coeffs[1,:] = a2, coeffs[2,:] = a1, coeffs[3,:] = a0
+  // where p(x) = a3*(x-xi)^3 + a2*(x-xi)^2 + a1*(x-xi) + a0
+  std::vector<double> coeffs_flat;
+  coeffs_flat.reserve(4 * n_segments);
+
+  for (size_t i = 0; i < n_segments; ++i) {
+    double hi = h[i];
+    double yi = values[i];
+    double yi1 = values[i + 1];
+    double Mi = M[i];
+    double Mi1 = M[i + 1];
+
+    double a3 = (Mi1 - Mi) / (6.0 * hi);
+    double a2 = Mi / 2.0;
+    double a1 = (yi1 - yi) / hi - hi * (2.0 * Mi + Mi1) / 6.0;
+    double a0 = yi;
+
+    // Column-major flatten: segment i coefficients are [a3, a2, a1, a0]
+    coeffs_flat.push_back(a3);
+    coeffs_flat.push_back(a2);
+    coeffs_flat.push_back(a1);
+    coeffs_flat.push_back(a0);
+  }
+
+  return coeffs_flat;
+}
+
+// Build parameter vector and initial state x0 from the request. If a parameter-size mismatch
+// is detected, this will set skipSolve=true and populate resp with empty results.
+std::array<double, NP> MPTOptimizer::buildParameters(
+  const std::shared_ptr<autoware_internal_debug_msgs::srv::SplineDebug::Request> req,
+  std::array<double, NX> & x0) const
+{
+  // knots
+  std::vector<double> knots(req->knots.data.begin(), req->knots.data.end());
+  size_t n_segments = (int)knots.size() - 1;
+  RCLCPP_ERROR(logger_, "Received request with %ld segments", n_segments);
+
+  // x_coeffs and y_coeffs are flattened arrays of length 4 * n_segments
+  std::vector<double> x_coeffs_flat(req->x_coeffs.data.begin(), req->x_coeffs.data.end());
+  std::vector<double> y_coeffs_flat(req->y_coeffs.data.begin(), req->y_coeffs.data.end());
+
+  // curvatures
+  std::vector<double> curvatures(req->curvatures.data.begin(), req->curvatures.data.end());
+
+  std::cerr << "Initial sizes: knots=" << knots.size() << " x_coeffs=" << x_coeffs_flat.size()
+            << " y_coeffs=" << y_coeffs_flat.size() << " curvatures=" << curvatures.size()
+            << std::endl;
+
+  size_t target_n_knots = CURVILINEAR_BICYCLE_MODEL_SPATIAL_N;
+  size_t target_segments = target_n_knots - 1;
+
+  // Adjust sizes if necessary (simple strategy: extend last values)
+  if (n_segments < target_segments) {
+    RCLCPP_ERROR(
+      logger_, "Extending from %ld to %ld segments (to match %ld knots)", n_segments,
+      target_segments, target_n_knots);
+    size_t n_missing = target_segments - n_segments;
+    double last_knot = knots.back();
+    double ds = mpt_param_.delta_arc_length;
+
+    for (size_t i = 0; i < n_missing; ++i) {
+      knots.push_back(last_knot + (i + 1) * ds);
+    }
+
+    // extend coeffs by repeating last column
+    for (size_t i = 0; i < 4; ++i) {
+      double v = x_coeffs_flat[(n_segments - 1) * 4 + i];
+      for (size_t j = 0; j < n_missing - 1; ++j) {
+        x_coeffs_flat.push_back(v);
+      }
+      v = y_coeffs_flat[(n_segments - 1) * 4 + i];
+      for (size_t j = 0; j < n_missing - 1; ++j) {
+        y_coeffs_flat.push_back(v);
+      }
+    }
+
+    double last_k = 0.0;
+    for (size_t j = 0; j < n_missing; ++j) {
+      curvatures.push_back(last_k);
+    }
+
+    std::cerr << "Extended knots to: " << knots.size() << std::endl;
+    std::cerr << "Extended x_coeffs to: " << x_coeffs_flat.size() << std::endl;
+    std::cerr << "Extended y_coeffs to: " << y_coeffs_flat.size() << std::endl;
+    std::cerr << "Extended curvatures to: " << curvatures.size() << std::endl;
+
+  } else if (n_segments > target_segments) {
+    RCLCPP_ERROR(
+      logger_, "Clipping from %ld to %ld segments (to match %ld knots)", n_segments,
+      target_segments, target_n_knots);
+    // clip to exactly target_n_knots knots (which gives target_segments segments)
+    knots.resize(target_n_knots);
+    x_coeffs_flat.resize(4 * target_segments);
+    y_coeffs_flat.resize(4 * target_segments);
+    curvatures.resize(target_n_knots);
+  }
+
+  // Ensure curvatures has same size as knots for cubic spline interpolation
+  if (curvatures.size() < knots.size()) {
+    double last_k = 0.0;
+    while (curvatures.size() < knots.size()) {
+      curvatures.push_back(last_k);
+    }
+  } else if (curvatures.size() > knots.size()) {
+    curvatures.resize(knots.size());
+  }
+
+  RCLCPP_ERROR(
+    logger_, "sizes: knots=%zu x_coeffs=%zu y_coeffs=%zu curvatures=%zu body_points=%zu",
+    knots.size(), x_coeffs_flat.size(), y_coeffs_flat.size(), curvatures.size(),
+    req->body_points.size());
+
+  if (req->body_points.size() != req->body_points_curvilinear.size()) {
+    RCLCPP_ERROR(
+      logger_, "body points length mismatch: body_points=%zu body_points_curvilinear=%zu",
+      req->body_points.size(), req->body_points_curvilinear.size());
+    assert(
+      req->body_points.size() == req->body_points_curvilinear.size() && "body points mismatch");
+  }
+
+  // body points curvilinear -> vector of doubles (s values then eY values)
+  std::vector<double> body_points_curvilinear;
+  for (const auto & pt : req->body_points_curvilinear) body_points_curvilinear.push_back(pt.x);
+  for (const auto & pt : req->body_points_curvilinear) body_points_curvilinear.push_back(pt.y);
+
+  // body points global
+  std::vector<double> body_points_xy;
+  for (const auto & pt : req->body_points) body_points_xy.push_back(pt.x);
+  for (const auto & pt : req->body_points) body_points_xy.push_back(pt.y);
+
+  // Build parameters vector similar to Python
+  std::array<double, NP> parameters;
+  double s_interp = 0.0;
+  size_t idx = 0;
+
+  // 1. s_interp
+  parameters[idx++] = s_interp;
+
+  // 2. knots
+  for (double v : knots) {
+    parameters[idx++] = v;
+  }
+
+  // 3. x_coeffs_flat
+  for (double v : x_coeffs_flat) {
+    parameters[idx++] = v;
+  }
+
+  // 4. knots again
+  for (double v : knots) {
+    parameters[idx++] = v;
+  }
+
+  // 5. y_coeffs_flat
+  for (double v : y_coeffs_flat) {
+    parameters[idx++] = v;
+  }
+
+  // 6. knots again
+  for (double v : knots) {
+    parameters[idx++] = v;
+  }
+
+  // 7. Compute cubic spline coefficients from curvatures
+  // Python uses: ClothoidSpline -> CubicSpline(knots, curvatures) -> coeffs (4×(N-1))
+  // We need to fit a cubic spline to (knots, curvatures) and extract the 4×(N-1) coefficients
+
+  // Debug: Check curvature values
+  std::cerr << "Curvatures size: " << curvatures.size() << ", first 10: ";
+  for (size_t i = 0; i < std::min(size_t(10), curvatures.size()); ++i) {
+    std::cerr << curvatures[i] << " ";
+  }
+  std::cerr << std::endl;
+  std::cerr << "Knots size: " << knots.size() << std::endl;
+
+  const std::vector<double> clothoid_coeffs_flat = computeCubicSplineCoeffs(knots, curvatures);
+  std::cerr << "Clothoid coeffs size: " << clothoid_coeffs_flat.size() << std::endl;
+  std::cerr << "Clothoid coeffs (first 20): ";
+  for (size_t i = 0; i < std::min(size_t(20), clothoid_coeffs_flat.size()); ++i) {
+    std::cerr << clothoid_coeffs_flat[i] << " ";
+  }
+  std::cerr << std::endl;
+
+  for (double v : clothoid_coeffs_flat) {
+    parameters[idx++] = v;
+  }
+
+  std::cerr << vehicle_info_.vehicle_length_m << ", " << vehicle_info_.vehicle_width_m << ", "
+            << vehicle_info_.min_longitudinal_offset_m << ", "
+            << vehicle_info_.max_longitudinal_offset_m << std::endl;
+
+  const double lf = -vehicle_info_.min_longitudinal_offset_m;
+  const double lr = vehicle_info_.max_longitudinal_offset_m;
+
+  parameters[idx++] = lf;
+  parameters[idx++] = lr;
+
+  // set x0: initial state vector
+  idx = 0;
+  x0[idx++] = 0.0;  // eY (lateral error)
+  x0[idx++] = 0.0;  // eψ (yaw error)
+  for (const auto & body_point_curvilinear : body_points_curvilinear) {
+    x0[idx++] = body_point_curvilinear;
+  }
+
+  std::cerr << "Initial state x0: ";
+  for (size_t i = 0; i < NX; ++i) {
+    std::cerr << x0[i] << " ";
+  }
+  std::cerr << std::endl;
+
+  // store reference path length for per-stage s_interp construction
+  if (!knots.empty()) sref_ = knots.back();
+
+  return parameters;
+}
+
+void MPTOptimizer::setParametersToSolver(const std::array<double, NP> & parameters)
+{
+  for (size_t stage = 0; stage < (int)N; ++stage) {
+    std::array<double, NP> params_copy = parameters;
+    double s_interp = 0.0;
+    if (sref_ > 0.0) {
+      s_interp = sref_ * ((double)stage / (double)N);
+    }
+    params_copy[0] = s_interp;
+    acados_interface_.setParameters(stage, params_copy);
+  }
+}
+
+std::optional<std::vector<TrajectoryPoint>> MPTOptimizer::convertAcadosSolutionToTrajectory(
+  std::vector<ReferencePoint> & ref_points, const AcadosSolution & acados_solution) const
+{
+  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
+
+  // Check if solution is valid
+  if (acados_solution.status != 0) {
+    RCLCPP_WARN(logger_, "Acados solver returned non-zero status: %d", acados_solution.status);
+    return std::nullopt;
+  }
+
+  // The Acados state vector contains:
+  // x[0] = eY (lateral error)
+  // x[1] = eψ (yaw/heading error)
+  // x[2:2+num_body_points] = s_body_points (not used for main trajectory)
+  // x[2+num_body_points:] = eY_body_points (not used for main trajectory)
+
+  // The control vector contains:
+  // u[0] = delta (steering angle)
+
+  const size_t N_states = acados_solution.xtraj.size();
+  const size_t N_controls = acados_solution.utraj.size();
+
+  // Ensure we have enough reference points
+  if (ref_points.size() < N_states) {
+    RCLCPP_WARN(
+      logger_, "Not enough reference points (%zu) for Acados states (%zu)", ref_points.size(),
+      N_states);
+    return std::nullopt;
+  }
+
+  std::vector<TrajectoryPoint> traj_points;
+  traj_points.reserve(N_states);
+
+  for (size_t i = 0; i < N_states; ++i) {
+    auto & ref_point = ref_points.at(i);
+    const auto & state = acados_solution.xtraj[i];
+
+    // Extract lateral and yaw errors from Acados state
+    const double lat_error = state[0];  // eY
+    const double yaw_error = state[1];  // eψ
+
+    // Validate optimization result
+    if (mpt_param_.enable_optimization_validation) {
+      if (
+        mpt_param_.max_validation_lat_error < std::abs(lat_error) ||
+        mpt_param_.max_validation_yaw_error < std::abs(yaw_error)) {
+        RCLCPP_WARN(
+          logger_, "Acados solution validation failed at index %zu: lat_error=%.3f, yaw_error=%.3f",
+          i, lat_error, yaw_error);
+        return std::nullopt;
+      }
+    }
+
+    // Store optimization result
+    ref_point.optimized_kinematic_state = KinematicState{lat_error, yaw_error};
+
+    // Store steering input (last state has no control)
+    if (i < N_controls) {
+      ref_point.optimized_input = acados_solution.utraj[i][0];  // delta (steering)
+    } else {
+      ref_point.optimized_input = 0.0;
+    }
+
+    // Create trajectory point with updated pose and velocity
+    TrajectoryPoint traj_point;
+    traj_point.pose = ref_point.offsetDeviation(lat_error, yaw_error);
+    traj_point.longitudinal_velocity_mps = ref_point.longitudinal_velocity_mps;
+
+    traj_points.push_back(traj_point);
+  }
+
+  return traj_points;
+}
+
+AcadosSolution MPTOptimizer::runAcadosMPT(
+  const std::vector<ReferencePoint> & ref_points,
+  const autoware::interpolation::SplineInterpolationPoints2d & ref_points_spline,
+  const geometry_msgs::msg::Pose & ego_pose,
+  const autoware::vehicle_info_utils::VehicleInfo & vehicle_info)
+{
+  // Get spline coefficients for x and y
+  const auto & knots = ref_points_spline.getSplineKnots();
+  const auto & x_coeffs = ref_points_spline.getSplineCoefficientsX();
+  const auto & y_coeffs = ref_points_spline.getSplineCoefficientsY();
+  const auto & curvatures = ref_points_spline.getSplineInterpolatedCurvatures();
+
+  // Create a Float32MultiArray message
+  std_msgs::msg::Float32MultiArray msg_knots;
+  msg_knots.layout.dim.push_back(std_msgs::msg::MultiArrayDimension());
+  msg_knots.layout.dim[0].size = knots.size();
+  msg_knots.layout.dim[0].stride = knots.size();
+  msg_knots.layout.dim[0].label = "knots";
+
+  for (const auto knot : knots) {
+    msg_knots.data.push_back(knot);
+  }
+
+  std_msgs::msg::Float32MultiArray msg_x;
+  msg_x.layout.dim.push_back(std_msgs::msg::MultiArrayDimension());
+  msg_x.layout.dim[0].size = x_coeffs.size();
+  msg_x.layout.dim[0].stride = 4;
+  msg_x.layout.dim[0].label = "x_coeffs";
+
+  // Populate the message with spline coefficients
+  for (const auto x_coeff : x_coeffs) {
+    msg_x.data.push_back(x_coeff);
+  }
+
+  // Create a Float32MultiArray message
+  std_msgs::msg::Float32MultiArray msg_y;
+  msg_y.layout.dim.push_back(std_msgs::msg::MultiArrayDimension());
+  msg_y.layout.dim[0].size = y_coeffs.size();
+  msg_y.layout.dim[0].stride = 4;
+  msg_y.layout.dim[0].label = "y_coeffs";
+
+  // Populate the message with spline coefficients
+  for (const auto y_coeff : y_coeffs) {
+    msg_y.data.push_back(y_coeff);
+  }
+
+  // Create a Float32MultiArray message
+  std_msgs::msg::Float32MultiArray msg_curvatures;
+  msg_curvatures.layout.dim.push_back(std_msgs::msg::MultiArrayDimension());
+  msg_curvatures.layout.dim[0].size = curvatures.size();
+  msg_curvatures.layout.dim[0].stride = curvatures.size();
+  msg_curvatures.layout.dim[0].label = "curvatures";
+
+  // Populate the message with curvatures
+  for (const auto curvature : curvatures) {
+    msg_curvatures.data.push_back(curvature);
+  }
+
+  const double half_width =
+    (vehicle_info.vehicle_width_m + vehicle_info.left_overhang_m + vehicle_info.right_overhang_m) /
+    2.0;
+
+  std_msgs::msg::Float32MultiArray msg_left_bounds;
+  msg_left_bounds.layout.dim.push_back(std_msgs::msg::MultiArrayDimension());
+  msg_left_bounds.layout.dim[0].size = ref_points.size();
+  msg_left_bounds.layout.dim[0].stride = ref_points.size();
+  msg_left_bounds.layout.dim[0].label = "left_bounds";
+
+  // Populate the message with left bounds
+  for (const auto & ref_point : ref_points) {
+    msg_left_bounds.data.push_back(
+      ref_point.bounds.upper_bound +
+      (vehicle_info.vehicle_width_m + vehicle_info.left_overhang_m) / 2.0);
+  }
+
+  std_msgs::msg::Float32MultiArray msg_right_bounds;
+  msg_right_bounds.layout.dim.push_back(std_msgs::msg::MultiArrayDimension());
+  msg_right_bounds.layout.dim[0].size = ref_points.size();
+  msg_right_bounds.layout.dim[0].stride = ref_points.size();
+  msg_right_bounds.layout.dim[0].label = "right_bounds";
+
+  // Populate the message with right bounds
+  for (const auto & ref_point : ref_points) {
+    msg_right_bounds.data.push_back(
+      ref_point.bounds.lower_bound -
+      (vehicle_info.vehicle_width_m + vehicle_info.right_overhang_m) / 2.0);
+  }
+
+  const double front = vehicle_info.vehicle_length_m / 2.0 + vehicle_info.front_overhang_m;
+  const double rear = vehicle_info.vehicle_length_m / 2.0 + vehicle_info.rear_overhang_m;
+
+  const auto [s_ego, e_y_ego] =
+    ref_points_spline.projectPointOntoSpline(ego_pose.position.x, ego_pose.position.y);
+  geometry_msgs::msg::Pose projected_ego_pose;
+  projected_ego_pose.position = ref_points_spline.getSplineInterpolatedPointAt(s_ego);
+  projected_ego_pose.orientation = ego_pose.orientation;
+
+  const size_t num_body_points = 6;
+  const std::array<geometry_msgs::msg::Point, num_body_points> boundary_points_body_frame = {
+    [&] {
+      geometry_msgs::msg::Point p;
+      p.x = front;
+      p.y = half_width;
+      p.z = 0.0;
+      return p;
+    }(),  // front-left
+    [&] {
+      geometry_msgs::msg::Point p;
+      p.x = front;
+      p.y = -half_width;
+      p.z = 0.0;
+      return p;
+    }(),  // front-right
+    // [&] { geometry_msgs::msg::Point p; p.x = front + 0.25 * (rear - front); p.y = -half_width;
+    // p.z = 0.0; return p; }(),
+    [&] {
+      geometry_msgs::msg::Point p;
+      p.x = front + 0.50 * (rear - front);
+      p.y = -half_width;
+      p.z = 0.0;
+      return p;
+    }(),
+    // [&] { geometry_msgs::msg::Point p; p.x = front + 0.75 * (rear - front); p.y = -half_width;
+    // p.z = 0.0; return p; }(),
+    [&] {
+      geometry_msgs::msg::Point p;
+      p.x = -rear;
+      p.y = -half_width;
+      p.z = 0.0;
+      return p;
+    }(),  // rear-right
+    [&] {
+      geometry_msgs::msg::Point p;
+      p.x = -rear;
+      p.y = half_width;
+      p.z = 0.0;
+      return p;
+    }(),  // rear-left
+    // [&] { geometry_msgs::msg::Point p; p.x = rear + 0.25 * (front - rear); p.y =  half_width; p.z
+    // = 0.0; return p; }(),
+    [&] {
+      geometry_msgs::msg::Point p;
+      p.x = rear + 0.50 * (front - rear);
+      p.y = half_width;
+      p.z = 0.0;
+      return p;
+    }(),
+    // [&] { geometry_msgs::msg::Point p; p.x = rear + 0.75 * (front - rear); p.y =  half_width; p.z
+    // = 0.0; return p; }()
+  };
+
+  const std::array<geometry_msgs::msg::Point, num_body_points> boundary_points_global_frame = {
+    getCorner(projected_ego_pose, front, half_width),   // front-left
+    getCorner(projected_ego_pose, front, -half_width),  // front-right
+    // getCorner(projected_ego_pose, front + 0.25*(rear-front),  -half_width),
+    getCorner(projected_ego_pose, front + 0.50 * (rear - front), -half_width),
+    // getCorner(projected_ego_pose, front + 0.75*(rear-front),  -half_width),
+    getCorner(projected_ego_pose, -rear, -half_width),  // rear-right
+    getCorner(projected_ego_pose, -rear, half_width),   // rear-left
+    // getCorner(projected_ego_pose, rear + 0.25*(front-rear),  half_width),
+    getCorner(projected_ego_pose, rear + 0.50 * (front - rear), half_width),
+    // getCorner(projected_ego_pose, rear + 0.75*(front-rear),  half_width)
+  };
+
+  std::array<geometry_msgs::msg::Point, num_body_points> corner_points_curvilinear;
+  std::transform(
+    boundary_points_global_frame.begin(), boundary_points_global_frame.end(),
+    corner_points_curvilinear.begin(), [&ref_points_spline](const geometry_msgs::msg::Point & p) {
+      const auto [s, e_y] = ref_points_spline.projectPointOntoSpline(p.x, p.y);
+      geometry_msgs::msg::Point projected;
+      projected.x = s;
+      projected.y = e_y;
+      projected.z = 0.0;
+      return projected;
+    });
+
+  std::shared_ptr<autoware_internal_debug_msgs::srv::SplineDebug::Request> req =
+    std::make_shared<autoware_internal_debug_msgs::srv::SplineDebug::Request>();
+
+  req->knots = msg_knots;
+  req->x_coeffs = msg_x;
+  req->y_coeffs = msg_y;
+  req->curvatures = msg_curvatures;
+  req->left_bounds = msg_left_bounds;
+  req->right_bounds = msg_right_bounds;
+
+  for (const auto & corner_point_body : boundary_points_body_frame) {
+    req->body_points.push_back(corner_point_body);
+  }
+  for (const auto & corner_point_curvilinear : corner_points_curvilinear) {
+    req->body_points_curvilinear.push_back(corner_point_curvilinear);
+  }
+
+  std::array<double, NX> x0;
+  // x0[0] = s_ego;
+  // x0[1] = e_y_ego;
+
+  std::array<double, NP> parameters = buildParameters(req, x0);
+
+  setParametersToSolver(parameters);
+
+  AcadosSolution acados_solution = acados_interface_.getControl(x0);
+
+  return acados_solution;
+}
+
+std::pair<std::vector<ReferencePoint>, autoware::interpolation::SplineInterpolationPoints2d>
+MPTOptimizer::calcReferencePoints(
+  const PlannerData & planner_data, const std::vector<TrajectoryPoint> & smoothed_points)
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -547,7 +1212,7 @@ std::vector<ReferencePoint> MPTOptimizer::calcReferencePoints(
 
   // 1. resample and convert smoothed points type from trajectory points to reference points
   time_keeper_->start_track("resampleReferencePoints");
-  auto ref_points = [&]() {
+  std::vector<ReferencePoint> ref_points = [&]() {
     const auto resampled_smoothed_points =
       trajectory_utils::resampleTrajectoryPointsWithoutStopPoint(
         smoothed_points, mpt_param_.delta_arc_length);
@@ -602,13 +1267,14 @@ std::vector<ReferencePoint> MPTOptimizer::calcReferencePoints(
   updateExtraPoints(ref_points);
 
   // 9. crop forward
-  // ref_points = autoware::motion_utils::cropForwardPoints(
-  //   ref_points, p.ego_pose.position, ego_seg_idx, forward_traj_length);
-  if (static_cast<size_t>(mpt_param_.num_points) < ref_points.size()) {
-    ref_points.resize(mpt_param_.num_points);
+  ref_points = autoware::motion_utils::cropForwardPoints(
+    ref_points, p.ego_pose.position, ego_seg_idx, forward_traj_length);
+
+  if (ref_points_spline.getSize() == 0) {
+    return std::make_pair(ref_points, ref_points_spline);
   }
 
-  return ref_points;
+  return std::make_pair(ref_points, ref_points_spline);
 }
 
 void MPTOptimizer::updateOrientation(
