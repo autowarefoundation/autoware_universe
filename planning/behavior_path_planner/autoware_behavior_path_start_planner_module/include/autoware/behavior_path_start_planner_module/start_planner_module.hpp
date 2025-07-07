@@ -335,6 +335,7 @@ ego pose.
   bool hasReachedPullOutEnd() const;
   bool hasFinishedBackwardDriving() const;
   bool hasCollisionWithDynamicObjects() const;
+  bool isInsideLanelets() const;
   bool isStopped();
   bool hasFinishedCurrentPath();
   void updateSafetyCheckTargetObjectsData(

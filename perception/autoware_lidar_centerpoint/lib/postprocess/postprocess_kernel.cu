@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "autoware/lidar_centerpoint/cuda_utils.hpp"
 #include "autoware/lidar_centerpoint/postprocess/circle_nms_kernel.hpp"
 #include "autoware/lidar_centerpoint/postprocess/postprocess_kernel.hpp"
 
@@ -29,12 +30,12 @@ namespace autoware::lidar_centerpoint
 
 struct is_score_greater
 {
-  is_score_greater(float t) : t_(t) {}
+  is_score_greater(float * t) : t_(t) {}
 
-  __device__ bool operator()(const Box3D & b) { return b.score > t_; }
+  __device__ bool operator()(const Box3D & b) { return b.score > t_[b.label]; }
 
 private:
-  float t_{0.0};
+  float * t_{nullptr};
 };
 
 struct is_kept
@@ -136,8 +137,16 @@ __global__ void generateBoxes3D_kernel(
   }
 }
 
-PostProcessCUDA::PostProcessCUDA(const CenterPointConfig & config) : config_(config)
+PostProcessCUDA::PostProcessCUDA(const CenterPointConfig & config, cudaStream_t & stream)
+: config_(config), stream_(stream)
 {
+  // Allocate memory for score thresholds on device using cuda::make_unique
+  score_thresholds_d_ptr_ = cuda::make_unique<float[]>(config_.score_thresholds_.size());
+
+  // Move from host to device
+  CHECK_CUDA_ERROR(cudaMemcpyAsync(
+    score_thresholds_d_ptr_.get(), config_.score_thresholds_.data(),
+    config_.score_thresholds_.size() * sizeof(float), cudaMemcpyHostToDevice, stream_));
 }
 
 // cspell: ignore divup
@@ -163,14 +172,15 @@ cudaError_t PostProcessCUDA::generateDetectedBoxes3D_launch(
 
   // suppress by score
   const auto num_det_boxes3d = thrust::count_if(
-    thrust::device, boxes3d_d.begin(), boxes3d_d.end(), is_score_greater(config_.score_threshold_));
+    thrust::device, boxes3d_d.begin(), boxes3d_d.end(),
+    is_score_greater(score_thresholds_d_ptr_.get()));
   if (num_det_boxes3d == 0) {
     return cudaGetLastError();
   }
   thrust::device_vector<Box3D> det_boxes3d_d(num_det_boxes3d);
   thrust::copy_if(
     thrust::device, boxes3d_d.begin(), boxes3d_d.end(), det_boxes3d_d.begin(),
-    is_score_greater(config_.score_threshold_));
+    is_score_greater(score_thresholds_d_ptr_.get()));
 
   // sort by score
   thrust::sort(det_boxes3d_d.begin(), det_boxes3d_d.end(), score_greater());

@@ -124,6 +124,7 @@ protected:
       rclcpp::Parameter("radial_divider_angle_deg", radial_divider_angle_deg_));
     parameters.emplace_back(
       rclcpp::Parameter("use_recheck_ground_cluster", use_recheck_ground_cluster_));
+    parameters.emplace_back(rclcpp::Parameter("recheck_start_distance", recheck_start_distance_));
     parameters.emplace_back(rclcpp::Parameter("use_lowest_point", use_lowest_point_));
     parameters.emplace_back(
       rclcpp::Parameter("publish_processing_time_detail", publish_processing_time_detail_));
@@ -204,6 +205,7 @@ public:
     center_pcl_shift_ = params["center_pcl_shift"].as<float>();
     radial_divider_angle_deg_ = params["radial_divider_angle_deg"].as<float>();
     use_recheck_ground_cluster_ = params["use_recheck_ground_cluster"].as<bool>();
+    recheck_start_distance_ = params["recheck_start_distance"].as<float>();
     use_lowest_point_ = params["use_lowest_point"].as<bool>();
     publish_processing_time_detail_ = params["publish_processing_time_detail"].as<bool>();
   }
@@ -223,6 +225,7 @@ public:
   float center_pcl_shift_;
   float radial_divider_angle_deg_;
   bool use_recheck_ground_cluster_;
+  float recheck_start_distance_;
   bool use_lowest_point_;
   bool publish_processing_time_detail_;
 };

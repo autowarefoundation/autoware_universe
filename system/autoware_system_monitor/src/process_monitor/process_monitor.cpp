@@ -567,7 +567,11 @@ bool ProcessMonitor::getCommandLineFromPid(const std::string & pid, std::string 
   // Leave the last 0x00 (end-of-C-string) intact.
   std::replace(buffer.begin(), (buffer.end() - 1), '\0', ' ');
   // Make sure the last character is a null terminator.
-  *(buffer.end() - 1) = '\0';
+
+  // Although buffer.back() is safer and more idiomatic,
+  // using it here causes a compile error with -Werror=stringop-overflow.
+  // Therefore, we safely access the last element by index.
+  buffer[buffer.size() - 1] = '\0';
   try {
     std::string cmdline = std::string(buffer.begin(), (buffer.end() - 1));
     // Remove trailing spaces
@@ -585,7 +589,15 @@ void ProcessMonitor::fillTaskInfo(
   ProcessInfo info;
   info.processId = std::to_string(raw_p->stat_info.pid);
   info.userName = convertUidToUserName(raw_p->status_info.real_uid);
-  info.priority = std::to_string(raw_p->stat_info.priority);
+  // For backward compatibility with the old implementation with Linux "top" command,
+  // real-time processes need exceptional handling.
+  // Linux "top" command shows priority less than -99 and more than 999 as "rt", which means
+  // "real-time".
+  if ((raw_p->stat_info.priority < -99) || (raw_p->stat_info.priority > 999)) {
+    info.priority = "rt";
+  } else {
+    info.priority = std::to_string(raw_p->stat_info.priority);
+  }
   info.niceValue = std::to_string(raw_p->stat_info.nice);
   auto virtual_image_size_kb = raw_p->stat_memory_info.size_page * page_size_kb_;
   auto resident_size_kb = raw_p->stat_memory_info.resident_page * page_size_kb_;

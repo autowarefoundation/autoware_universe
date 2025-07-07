@@ -27,28 +27,28 @@ using autoware_planning_msgs::msg::Trajectory;
 double calcLateralDeviation(const Trajectory & traj, const Point & point)
 {
   const size_t nearest_index = autoware::motion_utils::findNearestIndex(traj.points, point);
-  return std::abs(autoware_utils::calc_lateral_deviation(traj.points[nearest_index].pose, point));
+  return autoware_utils::calc_lateral_deviation(traj.points[nearest_index].pose, point);
 }
 
 double calcYawDeviation(const Trajectory & traj, const Pose & pose)
 {
   const size_t nearest_index = autoware::motion_utils::findNearestIndex(traj.points, pose.position);
-  return std::abs(autoware_utils::calc_yaw_deviation(traj.points[nearest_index].pose, pose));
+  return autoware_utils::calc_yaw_deviation(traj.points[nearest_index].pose, pose);
 }
 
 double calcLongitudinalDeviation(const Pose & base_pose, const Point & target_point)
 {
-  return std::abs(autoware_utils::calc_longitudinal_deviation(base_pose, target_point));
+  return autoware_utils::calc_longitudinal_deviation(base_pose, target_point);
 }
 
 double calcLateralDeviation(const Pose & base_pose, const Point & target_point)
 {
-  return std::abs(autoware_utils::calc_lateral_deviation(base_pose, target_point));
+  return autoware_utils::calc_lateral_deviation(base_pose, target_point);
 }
 
 double calcYawDeviation(const Pose & base_pose, const Pose & target_pose)
 {
-  return std::abs(autoware_utils::calc_yaw_deviation(base_pose, target_pose));
+  return autoware_utils::calc_yaw_deviation(base_pose, target_pose);
 }
 
 }  // namespace metrics

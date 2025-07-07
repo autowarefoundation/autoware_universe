@@ -144,6 +144,8 @@
         merging_vehicle:
           th_overhang_distance: 0.0                     # [m]
 
+        unstable_classification_time: 2.0                # [s] If the object is classified as UNKNOWN type for less than unstable_classification_time seconds, it is probably not an unknown type.
+
         # params for avoidance of vehicle type objects that are ambiguous as to whether they are parked.
         avoidance_for_ambiguous_vehicle:
           # policy for ego behavior for ambiguous vehicle.
@@ -265,6 +267,10 @@
         stop_buffer: 1.0                                # [m] FOR DEVELOPER
 
       policy:
+        # policy for module behavior. select "reliable" or "not_enough".
+        # "reliable": this module fully trusts the perception results and makes all decisions automatically.
+        # "not_enough": because the perception results are not fully reliable, the system waits for the operator's judgment in situations where long-range perception is required.
+        detection_reliability: "reliable"
         # policy for rtc request. select "per_shift_line" or "per_avoidance_maneuver".
         # "per_shift_line": request approval for each shift line.
         # "per_avoidance_maneuver": request approval for avoidance maneuver (avoid + return).
@@ -293,7 +299,9 @@
         lateral:
           velocity: [1.39, 4.17, 11.1]                   # [m/s]
           max_accel_values: [0.5, 0.5, 0.5]             # [m/ss]
-          min_jerk_values: [0.2, 0.2, 0.2]              # [m/sss]
+          min_jerk_values:
+            avoid: [0.2, 0.2, 0.2]                      # [m/sss]
+            return: [0.2, 0.2, 0.2]                     # [m/sss]
           max_jerk_values: [1.0, 1.0, 1.0]              # [m/sss]
 
         # longitudinal constraints

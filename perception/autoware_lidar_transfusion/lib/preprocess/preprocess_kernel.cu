@@ -37,7 +37,7 @@ namespace autoware::lidar_transfusion
 {
 
 PreprocessCuda::PreprocessCuda(const TransfusionConfig & config, cudaStream_t & stream)
-: stream_(stream), config_(config)
+: config_(config), stream_(stream)
 {
   mask_size_ = config_.grid_z_size_ * config_.grid_y_size_ * config_.grid_x_size_;
   voxels_size_ = config_.grid_z_size_ * config_.grid_y_size_ * config_.grid_x_size_ *

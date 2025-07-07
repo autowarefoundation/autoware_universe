@@ -11,6 +11,7 @@
   <arg name="model_param_path" default="$(find-pkg-share autoware_bevfusion)/config/$(var model_name).param.yaml"/>
   <arg name="ml_package_param_path" default="$(var model_path)/ml_package_$(var model_name).param.yaml"/>
   <arg name="class_remapper_param_path" default="$(var model_path)/detection_class_remapper.param.yaml"/>
+  <arg name="common_param_path" default="$(find-pkg-share autoware_bevfusion)/config/common_bevfusion.param.yaml"/>
   <arg name="build_only" default="false" description="shutdown node after TensorRT engine file is built"/>
   <arg name="log_level" default="info"/>
 
@@ -74,10 +75,12 @@
     <load_composable_node target="$(var pointcloud_container_name)">
       <composable_node pkg="autoware_bevfusion" plugin="autoware::bevfusion::BEVFusionNode" name="bevfusion">
         <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+        <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda"/>
         <remap from="~/output/objects" to="$(var output/objects)"/>
         <param from="$(var model_param_path)" allow_substs="true"/>
         <param from="$(var ml_package_param_path)" allow_substs="true"/>
         <param from="$(var class_remapper_param_path)"/>
+        <param from="$(var common_param_path)"/>
 
         <remap from="~/input/camera_info0" to="$(var camera_info0)"/>
         <remap from="~/input/camera_info1" to="$(var camera_info1)"/>
@@ -100,10 +103,12 @@
   <group unless="$(var use_pointcloud_container)">
     <node pkg="autoware_bevfusion" exec="autoware_bevfusion_node" name="bevfusion" output="screen" args="--ros-args --log-level $(var log_level)">
       <remap from="~/input/pointcloud" to="$(var input/pointcloud)"/>
+      <remap from="~/input/pointcloud/cuda" to="$(var input/pointcloud)/cuda"/>
       <remap from="~/output/objects" to="$(var output/objects)"/>
       <param from="$(var model_param_path)" allow_substs="true"/>
       <param from="$(var ml_package_param_path)" allow_substs="true"/>
       <param from="$(var class_remapper_param_path)"/>
+      <param from="$(var common_param_path)"/>
 
       <remap from="~/input/camera_info0" to="$(var camera_info0)"/>
       <remap from="~/input/camera_info1" to="$(var camera_info1)"/>

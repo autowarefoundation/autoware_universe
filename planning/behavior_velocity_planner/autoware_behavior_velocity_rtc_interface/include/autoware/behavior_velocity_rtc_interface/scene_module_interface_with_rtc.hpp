@@ -19,6 +19,7 @@
 #include <autoware/behavior_velocity_planner_common/scene_module_interface.hpp>
 #include <autoware/rtc_interface/rtc_interface.hpp>
 #include <autoware_utils/ros/parameter.hpp>
+#include <autoware_utils/system/time_keeper.hpp>
 #include <builtin_interfaces/msg/time.hpp>
 
 #include <autoware_internal_planning_msgs/msg/path_with_lane_id.hpp>

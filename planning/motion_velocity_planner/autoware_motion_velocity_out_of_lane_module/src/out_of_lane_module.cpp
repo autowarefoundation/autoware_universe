@@ -29,8 +29,10 @@
 #include <autoware/traffic_light_utils/traffic_light_utils.hpp>
 #include <autoware_utils/geometry/boost_geometry.hpp>
 #include <autoware_utils/ros/parameter.hpp>
+#include <autoware_utils/ros/published_time_publisher.hpp>
 #include <autoware_utils/ros/update_param.hpp>
 #include <autoware_utils/system/stop_watch.hpp>
+#include <rclcpp/logging.hpp>
 
 #include <boost/geometry/algorithms/envelope.hpp>
 #include <boost/geometry/algorithms/intersects.hpp>
@@ -95,6 +97,8 @@ void OutOfLaneModule::init_parameters(rclcpp::Node & node)
     get_or_declare_parameter<bool>(node, ns_ + ".objects.cut_predicted_paths_beyond_red_lights");
   pp.objects_ignore_behind_ego =
     get_or_declare_parameter<bool>(node, ns_ + ".objects.ignore_behind_ego");
+  pp.validate_predicted_paths_on_lanelets =
+    get_or_declare_parameter<bool>(node, ns_ + ".objects.validate_predicted_paths_on_lanelets");
 
   pp.precision = get_or_declare_parameter<double>(node, ns_ + ".action.precision");
   pp.use_map_stop_lines = get_or_declare_parameter<bool>(node, ns_ + ".action.use_map_stop_lines");
@@ -140,6 +144,9 @@ void OutOfLaneModule::update_parameters(const std::vector<rclcpp::Parameter> & p
     parameters, ns_ + ".objects.cut_predicted_paths_beyond_red_lights",
     pp.objects_cut_predicted_paths_beyond_red_lights);
   update_param(parameters, ns_ + ".objects.ignore_behind_ego", pp.objects_ignore_behind_ego);
+  update_param(
+    parameters, ns_ + ".objects.validate_predicted_paths_on_lanelets",
+    pp.validate_predicted_paths_on_lanelets);
 
   update_param(parameters, ns_ + ".action.precision", pp.precision);
   update_param(parameters, ns_ + ".action.use_map_stop_lines", pp.use_map_stop_lines);
@@ -345,8 +352,9 @@ void OutOfLaneModule::update_result(
   } else if (std::any_of(
                out_of_lane_data.outside_points.begin(), out_of_lane_data.outside_points.end(),
                [](const auto & p) { return p.to_avoid; })) {
-    RCLCPP_WARN(
-      logger_, "[out_of_lane] Could not insert slowdown point because of deceleration limits");
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 1000,
+      "[out_of_lane] Could not insert slowdown point because of deceleration limits");
   }
 }
 
@@ -389,7 +397,9 @@ VelocityPlanningResult OutOfLaneModule::plan(
   const auto filter_predicted_objects_us = stopwatch.toc("filter_predicted_objects");
 
   stopwatch.tic("calculate_time_collisions");
-  out_of_lane::calculate_objects_time_collisions(out_of_lane_data, objects.objects);
+  out_of_lane::calculate_objects_time_collisions(
+    out_of_lane_data, objects.objects, *planner_data->route_handler,
+    params_.validate_predicted_paths_on_lanelets);
   const auto calculate_time_collisions_us = stopwatch.toc("calculate_time_collisions");
 
   stopwatch.tic("calculate_times");
@@ -404,7 +414,8 @@ VelocityPlanningResult OutOfLaneModule::plan(
       return !boost::geometry::disjoint(ll.polygon2d().basicPolygon(), ego_data.current_footprint);
     }) != ego_data.out_lanelets.end();
   if (is_already_overlapping) {
-    RCLCPP_WARN(logger_, "Ego is already out of lane, skipping the module\n");
+    RCLCPP_WARN_THROTTLE(
+      logger_, *clock_, 1000, "Ego is already out of lane, skipping the module\n");
     debug_publisher_->publish(out_of_lane::debug::create_debug_marker_array(
       ego_data, out_of_lane_data, objects, debug_data_));
     return result;

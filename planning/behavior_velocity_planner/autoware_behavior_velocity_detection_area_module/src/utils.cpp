@@ -23,6 +23,7 @@
 #include <lanelet2_core/geometry/Point.h>
 
 #include <memory>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -99,10 +100,12 @@ std::pair<lanelet::BasicPoint2d, double> get_smallest_enclosing_circle(
 namespace autoware::behavior_velocity_planner::detection_area
 {
 autoware_utils::LineString2d get_stop_line_geometry2d(
-  const lanelet::autoware::DetectionArea & detection_area, const double extend_length)
+  const lanelet::autoware::DetectionArea & detection_area,
+  const autoware_internal_planning_msgs::msg::PathWithLaneId & path)
 {
   const auto stop_line = detection_area.stopLine();
-  return planning_utils::extendLine(stop_line[0], stop_line[1], extend_length);
+  return planning_utils::extendSegmentToBounds(
+    lanelet::utils::to2D(stop_line).basicLineString(), path.left_bound, path.right_bound);
 }
 
 std::vector<geometry_msgs::msg::Point> get_obstacle_points(
@@ -162,6 +165,12 @@ bool has_enough_braking_distance(
 
   return arc_lane_utils::calcSignedDistance(self_pose, line_pose.position) >
          pass_judge_line_distance;
+}
+
+double feasible_stop_distance_by_max_acceleration(
+  const double current_velocity, const double max_acceleration)
+{
+  return current_velocity * current_velocity / (2.0 * max_acceleration);
 }
 
 }  // namespace autoware::behavior_velocity_planner::detection_area

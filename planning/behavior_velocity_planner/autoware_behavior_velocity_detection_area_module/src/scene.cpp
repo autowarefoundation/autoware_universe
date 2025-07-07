@@ -23,7 +23,11 @@
 
 #include <lanelet2_core/geometry/Polygon.h>
 
+#include <cstring>
+#include <iomanip>
 #include <memory>
+#include <optional>
+#include <sstream>
 #include <utility>
 #include <vector>
 
@@ -49,6 +53,33 @@ DetectionAreaModule::DetectionAreaModule(
 {
 }
 
+void DetectionAreaModule::print_detected_obstacle(
+  const std::vector<geometry_msgs::msg::Point> & obstacle_points,
+  const geometry_msgs::msg::Pose & self_pose) const
+{
+  std::stringstream obstacles_ss;
+  if (last_obstacle_found_time_) {
+    rclcpp::Duration time_from_last_detection = clock_->now() - *last_obstacle_found_time_;
+    constexpr double obstacle_disappear_time_threshold = 0.1;
+    if (time_from_last_detection.seconds() > obstacle_disappear_time_threshold) {
+      obstacles_ss << std::fixed << std::setprecision(2) << time_from_last_detection.seconds()
+                   << "[s] since last obstacle cleared";
+    }
+  }
+
+  if (!obstacle_points.empty()) {
+    const auto p = obstacle_points[0];
+    const auto p_from_ego = autoware_utils::inverse_transform_point(p, self_pose);
+    obstacles_ss << "obstacle: map_coord(" << std::fixed << std::setprecision(2) << p.x << ", "
+                 << p.y << ", " << p.z << "), ego_coord(" << p_from_ego.x << ", " << p_from_ego.y
+                 << ", " << p_from_ego.z << ")";
+  }
+
+  logInfoThrottle(
+    1000, "ego: map_coord(%.2f, %.2f, %.2f), %s", self_pose.position.x, self_pose.position.y,
+    self_pose.position.z, obstacles_ss.str().c_str());
+}
+
 bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
 {
   // Store original path
@@ -67,17 +98,21 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
   }
 
   // Get stop line geometry
-  const auto stop_line = detection_area::get_stop_line_geometry2d(
-    detection_area_reg_elem_, planner_data_->stop_line_extend_length);
+  const auto stop_line =
+    detection_area::get_stop_line_geometry2d(detection_area_reg_elem_, original_path);
 
   // Get self pose
   const auto & self_pose = planner_data_->current_odometry->pose;
   const size_t current_seg_idx = findEgoSegmentIndex(path->points);
 
+  // Get current lanelet and connected lanelets
+  const auto connected_lane_ids =
+    planning_utils::collectConnectedLaneIds(lane_id_, planner_data_->route_handler_);
   // Get stop point
   const auto stop_point = arc_lane_utils::createTargetPoint(
     original_path, stop_line, planner_param_.stop_margin,
-    planner_data_->vehicle_info_.max_longitudinal_offset_m);
+    planner_data_->vehicle_info_.max_longitudinal_offset_m - forward_offset_to_stop_line_,
+    connected_lane_ids);
   if (!stop_point) {
     return true;
   }
@@ -110,12 +145,17 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
   setDistance(stop_dist);
 
   // Check state
+  const auto prev_state = state_;  // used to log the state change
+
   setSafe(detection_area::can_clear_stop_state(
     last_obstacle_found_time_, clock_->now(), planner_param_.state_clear_time));
   if (isActivated()) {
     last_obstacle_found_time_ = {};
     if (!planner_param_.suppress_pass_judge_when_stopping || !is_stopped) {
       state_ = State::GO;
+      if (prev_state != State::GO) {
+        logInfo("state changed: STOP -> GO");
+      }
     }
     return true;
   }
@@ -125,7 +165,7 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
     // Use '-' for margin because it's the backward distance from stop line
     const auto dead_line_point = arc_lane_utils::createTargetPoint(
       original_path, stop_line, -planner_param_.dead_line_margin,
-      planner_data_->vehicle_info_.max_longitudinal_offset_m);
+      planner_data_->vehicle_info_.max_longitudinal_offset_m, connected_lane_ids);
 
     if (dead_line_point) {
       const size_t dead_line_point_idx = dead_line_point->first;
@@ -140,7 +180,7 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
         original_path.points, self_pose.position, current_seg_idx, dead_line_pose.position,
         dead_line_seg_idx);
       if (dist_from_ego_to_dead_line < 0.0) {
-        RCLCPP_WARN(logger_, "[detection_area] vehicle is over dead line");
+        logWarn("vehicle is over dead line");
         setSafe(true);
         return true;
       }
@@ -162,15 +202,13 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
   if (planner_param_.use_pass_judge_line) {
     const auto current_velocity = planner_data_->current_velocity->twist.linear.x;
     const double pass_judge_line_distance = planning_utils::calcJudgeLineDistWithAccLimit(
-      current_velocity, planner_data_->current_acceleration->accel.accel.linear.x,
+      current_velocity, planner_data_->max_stop_acceleration_threshold,
       planner_data_->delay_response_time);
     if (
       state_ != State::STOP &&
       !detection_area::has_enough_braking_distance(
         self_pose, stop_point->second, pass_judge_line_distance, current_velocity)) {
-      RCLCPP_WARN_THROTTLE(
-        logger_, *clock_, std::chrono::milliseconds(1000).count(),
-        "[detection_area] vehicle is over stop border");
+      logWarnThrottle(1000, "[detection_area] vehicle is over stop border");
       setSafe(true);
       return true;
     }
@@ -178,6 +216,28 @@ bool DetectionAreaModule::modifyPathVelocity(PathWithLaneId * path)
 
   // Insert stop point
   state_ = State::STOP;
+  if (prev_state != State::STOP) {
+    if (planner_param_.use_max_acceleration) {
+      forward_offset_to_stop_line_ = std::max(
+        detection_area::feasible_stop_distance_by_max_acceleration(
+          planner_data_->current_velocity->twist.linear.x, planner_param_.max_acceleration) -
+          stop_dist,
+        0.0);
+
+      const auto offset_segment = arc_lane_utils::findOffsetSegment(
+        original_path, modified_stop_line_seg_idx, forward_offset_to_stop_line_);
+      if (offset_segment) {
+        modified_stop_pose = arc_lane_utils::calcTargetPose(original_path, *offset_segment);
+        modified_stop_line_seg_idx = offset_segment->first;
+      }
+    }
+    logInfo("state changed: GO -> STOP");
+  }
+
+  if (state_ == State::STOP && planner_param_.enable_detected_obstacle_logging) {
+    print_detected_obstacle(obstacle_points, self_pose);
+  }
+
   planning_utils::insertStopPoint(modified_stop_pose.position, modified_stop_line_seg_idx, *path);
 
   // For virtual wall

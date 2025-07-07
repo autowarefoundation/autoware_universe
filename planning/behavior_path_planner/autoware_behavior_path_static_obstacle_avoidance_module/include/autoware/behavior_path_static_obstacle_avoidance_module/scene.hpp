@@ -123,6 +123,12 @@ private:
       const double start_distance = autoware::motion_utils::calcSignedArcLength(
         path.points, ego_idx, left_shift.start_pose.position);
       const double finish_distance = start_distance + left_shift.relative_longitudinal;
+      const auto start_idx =
+        autoware::motion_utils::findNearestIndex(path.points, left_shift.start_pose.position);
+      const auto finish_idx =
+        autoware::motion_utils::findNearestIndex(path.points, left_shift.finish_pose.position);
+      const double start_velocity = path.points.at(start_idx).point.longitudinal_velocity_mps;
+      const double end_velocity = path.points.at(finish_idx).point.longitudinal_velocity_mps;
 
       // If force activated keep safety to false
       if (rtc_interface_ptr_map_.at("left")->isForceActivated(left_shift.uuid)) {
@@ -137,7 +143,9 @@ private:
         planning_factor_interface_->add(
           start_distance, finish_distance, left_shift.start_pose, left_shift.finish_pose,
           PlanningFactor::SHIFT_LEFT,
-          utils::path_safety_checker::to_safety_factor_array(debug_data_.collision_check));
+          utils::path_safety_checker::to_safety_factor_array(debug_data_.collision_check), true,
+          start_velocity, end_velocity, left_shift.start_shift_length, left_shift.end_shift_length,
+          "left shift");
       }
     }
 
@@ -145,6 +153,12 @@ private:
       const double start_distance = autoware::motion_utils::calcSignedArcLength(
         path.points, ego_idx, right_shift.start_pose.position);
       const double finish_distance = start_distance + right_shift.relative_longitudinal;
+      const auto start_idx =
+        autoware::motion_utils::findNearestIndex(path.points, right_shift.start_pose.position);
+      const auto finish_idx =
+        autoware::motion_utils::findNearestIndex(path.points, right_shift.finish_pose.position);
+      const double start_velocity = path.points.at(start_idx).point.longitudinal_velocity_mps;
+      const double end_velocity = path.points.at(finish_idx).point.longitudinal_velocity_mps;
 
       if (rtc_interface_ptr_map_.at("right")->isForceActivated(right_shift.uuid)) {
         rtc_interface_ptr_map_.at("right")->updateCooperateStatus(
@@ -158,7 +172,9 @@ private:
         planning_factor_interface_->add(
           start_distance, finish_distance, right_shift.start_pose, right_shift.finish_pose,
           PlanningFactor::SHIFT_RIGHT,
-          utils::path_safety_checker::to_safety_factor_array(debug_data_.collision_check));
+          utils::path_safety_checker::to_safety_factor_array(debug_data_.collision_check), true,
+          start_velocity, end_velocity, right_shift.start_shift_length,
+          right_shift.end_shift_length, "right shift");
       }
     }
   }
@@ -359,16 +375,11 @@ private:
   // generate output data
 
   /**
-   * @brief fill debug markers.
+   * @brief fill info and debug markers.
    */
-  void updateDebugMarker(
+  void updateMarker(
     const BehaviorModuleOutput & output, const AvoidancePlanningData & data,
     const PathShifter & shifter, const DebugData & debug) const;
-
-  /**
-   * @brief fill information markers that are shown in Rviz by default.
-   */
-  void updateInfoMarker(const AvoidancePlanningData & data) const;
 
   /**
    * @brief fill debug msg that are published as a topic.
@@ -453,6 +464,8 @@ private:
     Pose start_pose;
     Pose finish_pose;
     double relative_longitudinal{0.0};
+    double start_shift_length{0.0};
+    double end_shift_length{0.0};
   };
 
   using RegisteredShiftLineArray = std::vector<RegisteredShiftLine>;
@@ -482,13 +495,15 @@ private:
   ObjectDataArray clip_objects_;
 
   // TODO(Satoshi OTA) create detected object manager.
-  ObjectDataArray registered_objects_;
+  ObjectDataArray stored_objects_;
 
   // TODO(Satoshi OTA) remove this variable.
   mutable ObjectDataArray ego_stopped_objects_;
 
   // TODO(Satoshi OTA) remove this variable.
   mutable ObjectDataArray stopped_objects_;
+
+  mutable std::unordered_map<std::string, rclcpp::Time> unknown_type_object_first_seen_time_map_;
 
   mutable size_t safe_count_{0};
 
