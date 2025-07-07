@@ -60,6 +60,7 @@ private:
 
   // Parameter
   NodeParam node_param_{};
+  std::string range_calc_frame_id;
   double min_range_threshold_sq_;
 };
 

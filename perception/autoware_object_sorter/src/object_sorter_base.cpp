@@ -57,6 +57,7 @@ ObjectSorterBase<ObjsMsgType>::ObjectSorterBase(
     std::bind(&ObjectSorterBase::onSetParam, this, std::placeholders::_1));
 
   // Node Parameter
+  range_calc_frame_id = declare_parameter<std::string>("range_calc_frame_id");
   node_param_.min_velocity_threshold = declare_parameter<double>("min_velocity_threshold");
   node_param_.min_range_threshold = declare_parameter<double>("min_range_threshold");
 
@@ -86,7 +87,7 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
   geometry_msgs::msg::Vector3 ego_pos;
   try {
     const geometry_msgs::msg::TransformStamped ts = tf_buffer_.lookupTransform(
-      input_msg->header.frame_id, "base_link", input_msg->header.stamp,
+      input_msg->header.frame_id, range_calc_frame_id, input_msg->header.stamp,
       rclcpp::Duration::from_seconds(0.5));
     // Use the ego's position in the topic's frame id for computing the distance
     ego_pos = ts.transform.translation;
