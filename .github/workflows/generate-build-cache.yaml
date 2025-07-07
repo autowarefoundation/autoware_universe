@@ -67,7 +67,7 @@ jobs:
 
       - name: Resolve exact dependencies
         run: |
-          vcs import dependency_ws < build_depends.repos
+          vcs import --recursive dependency_ws < build_depends.repos
           vcs export dependency_ws --exact-with-tags > build-depends-exact.repos
 
       - name: Build dependencies
