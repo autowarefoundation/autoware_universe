@@ -392,6 +392,13 @@ void LaneChangeInterface::updateSteeringFactorPtr(const BehaviorModuleOutput & o
   const auto finish_distance = autoware::motion_utils::calcSignedArcLength(
     output.path.points, current_position, status.lane_change_path.info.shift_line.end.position);
 
+  const auto start_idx = autoware::motion_utils::findNearestIndex(
+    output.path.points, status.lane_change_path.info.shift_line.start.position);
+  const auto finish_idx = autoware::motion_utils::findNearestIndex(
+    output.path.points, status.lane_change_path.info.shift_line.end.position);
+  const double start_velocity = output.path.points.at(start_idx).point.longitudinal_velocity_mps;
+  const double end_velocity = output.path.points.at(finish_idx).point.longitudinal_velocity_mps;
+
   const auto planning_factor_direction = std::invoke([&]() {
     if (module_type_->getDirection() == Direction::LEFT) {
       return PlanningFactor::SHIFT_LEFT;
@@ -406,7 +413,9 @@ void LaneChangeInterface::updateSteeringFactorPtr(const BehaviorModuleOutput & o
   planning_factor_interface_->add(
     start_distance, finish_distance, status.lane_change_path.info.shift_line.start,
     status.lane_change_path.info.shift_line.end, planning_factor_direction,
-    utils::path_safety_checker::to_safety_factor_array(lane_change_debug.collision_check_objects));
+    utils::path_safety_checker::to_safety_factor_array(lane_change_debug.collision_check_objects),
+    true, start_velocity, end_velocity, status.lane_change_path.info.shift_line.start_shift_length,
+    status.lane_change_path.info.shift_line.end_shift_length, "");
 }
 
 void LaneChangeInterface::updateSteeringFactorPtr(
@@ -419,11 +428,23 @@ void LaneChangeInterface::updateSteeringFactorPtr(
     return PlanningFactor::SHIFT_RIGHT;
   });
 
+  const auto status = module_type_->getLaneChangeStatus();
+  const auto start_idx = autoware::motion_utils::findNearestIndex(
+    selected_path.path.points, status.lane_change_path.info.shift_line.start.position);
+  const auto finish_idx = autoware::motion_utils::findNearestIndex(
+    selected_path.path.points, status.lane_change_path.info.shift_line.end.position);
+  const double start_velocity =
+    selected_path.path.points.at(start_idx).point.longitudinal_velocity_mps;
+  const double end_velocity =
+    selected_path.path.points.at(finish_idx).point.longitudinal_velocity_mps;
+
   const auto & lane_change_debug = module_type_->getDebugData();
   planning_factor_interface_->add(
     output.start_distance_to_path_change, output.finish_distance_to_path_change,
     selected_path.info.shift_line.start, selected_path.info.shift_line.end,
     planning_factor_direction,
-    utils::path_safety_checker::to_safety_factor_array(lane_change_debug.collision_check_objects));
+    utils::path_safety_checker::to_safety_factor_array(lane_change_debug.collision_check_objects),
+    true, start_velocity, end_velocity, selected_path.info.shift_line.start_shift_length,
+    selected_path.info.shift_line.end_shift_length, "candidate");
 }
 }  // namespace autoware::behavior_path_planner
