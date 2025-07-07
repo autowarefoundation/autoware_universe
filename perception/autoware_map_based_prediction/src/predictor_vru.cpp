@@ -324,7 +324,7 @@ void PredictorVru::loadCurrentCrosswalkUsers(const TrackedObjects & objects)
 
   // load current crosswalk users
   for (const auto & object : objects.objects) {
-    const auto label_for_prediction = utils::changeLabelForPrediction(
+    const auto label_for_prediction = utils::changeVRULabelForPrediction(
       object.classification.front().label, object, lanelet_map_ptr_);
     if (
       label_for_prediction == ObjectClassification::PEDESTRIAN ||

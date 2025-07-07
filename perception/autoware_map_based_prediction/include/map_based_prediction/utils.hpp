@@ -74,7 +74,7 @@ bool withinRoadLanelet(
  * @param label
  * @return ObjectClassification::_label_type
  */
-ObjectClassification::_label_type changeLabelForPrediction(
+ObjectClassification::_label_type changeVRULabelForPrediction(
   const ObjectClassification::_label_type & label, const TrackedObject & object,
   const lanelet::LaneletMapPtr & lanelet_map_ptr_);
 
