@@ -207,7 +207,7 @@ Direction IntersectionCollisionChecker::get_lanelets(
     return Direction::NONE;
   }
 
-  const auto turn_direction = get_turn_direction(lanelets.trajectory_lanelets);
+  const auto turn_direction = get_turn_direction(lanelets.turn_lanelets);
 
   if (turn_direction == Direction::NONE) return turn_direction;
 
@@ -234,15 +234,13 @@ Direction IntersectionCollisionChecker::get_lanelets(
 }
 
 Direction IntersectionCollisionChecker::get_turn_direction(
-  const lanelet::ConstLanelets & trajectory_lanelets) const
+  const lanelet::ConstLanelets & turn_lanelets) const
 {
+  if (turn_lanelets.empty()) return Direction::NONE;
   const auto & p = params_.icc_parameters;
-  for (const auto & lanelet : trajectory_lanelets) {
-    if (!lanelet.hasAttribute("turn_direction")) continue;
-    const lanelet::Attribute & attr = lanelet.attribute("turn_direction");
-    if (attr.value() == "right" && p.right_turn.enable) return Direction::RIGHT;
-    if (attr.value() == "left" && p.left_turn.enable) return Direction::LEFT;
-  }
+  const lanelet::Attribute & attr = turn_lanelets.front().attributeOr("turn_direction", "else");
+  if (attr.value() == "right" && p.right_turn.enable) return Direction::RIGHT;
+  if (attr.value() == "left" && p.left_turn.enable) return Direction::LEFT;
   return Direction::NONE;
 }
 
@@ -348,8 +346,8 @@ bool IntersectionCollisionChecker::check_collision(
       static constexpr double eps = 0.01;  // small epsilon to avoid division by zero
       // update velocity only if the object is not yet reliable or velocity change is within limit
       if (raw_accel > vel_params.reset_accel_th) {
-        object.velocity = 0.0;  // reset velocity if acceleration is too high
-        object.track_duration = 0.0;    // reset track duration
+        object.velocity = 0.0;        // reset velocity if acceleration is too high
+        object.track_duration = 0.0;  // reset track duration
       } else if (!is_reliable || raw_accel < vel_params.max_acceleration) {
         object.velocity = autoware::signal_processing::lowpassFilter(
           raw_velocity, object.velocity, 0.5);  // apply low-pass filter to velocity
