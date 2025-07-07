@@ -57,10 +57,10 @@ ObjectSorterBase<ObjsMsgType>::ObjectSorterBase(
     std::bind(&ObjectSorterBase::onSetParam, this, std::placeholders::_1));
 
   // Node Parameter
-  node_param_.velocity_threshold = declare_parameter<double>("velocity_threshold");
-  node_param_.range_threshold = declare_parameter<double>("range_threshold");
+  node_param_.min_velocity_threshold = declare_parameter<double>("min_velocity_threshold");
+  node_param_.min_range_threshold = declare_parameter<double>("min_range_threshold");
 
-  range_threshold_sq_ = node_param_.range_threshold * node_param_.range_threshold;
+  min_range_threshold_sq_ = node_param_.min_range_threshold * node_param_.min_range_threshold;
 
   // Subscriber
   sub_objects_ = create_subscription<ObjsMsgType>(
@@ -99,8 +99,9 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
     // Filter by velocity
     if (
       // NOTE: use the raw velocity in the topic for now
-      std::abs(autoware_utils_geometry::calc_norm(
-        object.kinematics.twist_with_covariance.twist.linear)) < node_param_.velocity_threshold) {
+      std::abs(
+        autoware_utils_geometry::calc_norm(object.kinematics.twist_with_covariance.twist.linear)) <
+      node_param_.min_velocity_threshold) {
       // Low velocity object
       continue;
     }
@@ -110,7 +111,7 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
 
     // Filter by range
     const auto object_sq_dist = object_pos_x * object_pos_x + object_pos_y * object_pos_y;
-    if (object_sq_dist < range_threshold_sq_) {
+    if (object_sq_dist < min_range_threshold_sq_) {
       // Short range object
       continue;
     }
@@ -132,8 +133,8 @@ rcl_interfaces::msg::SetParametersResult ObjectSorterBase<ObjsMsgType>::onSetPar
     {
       auto & p = node_param_;
 
-      update_param(params, "velocity_threshold", p.velocity_threshold);
-      update_param(params, "range_threshold", p.range_threshold);
+      update_param(params, "min_velocity_threshold", p.min_velocity_threshold);
+      update_param(params, "min_range_threshold", p.min_range_threshold);
     }
   } catch (const rclcpp::exceptions::InvalidParameterTypeException & e) {
     result.successful = false;
@@ -141,7 +142,7 @@ rcl_interfaces::msg::SetParametersResult ObjectSorterBase<ObjsMsgType>::onSetPar
     return result;
   }
 
-  range_threshold_sq_ = node_param_.range_threshold * node_param_.range_threshold;
+  min_range_threshold_sq_ = node_param_.min_range_threshold * node_param_.min_range_threshold;
 
   result.successful = true;
   result.reason = "success";

@@ -35,8 +35,8 @@ public:
 
   struct NodeParam
   {
-    double velocity_threshold{};
-    double range_threshold{};
+    double min_velocity_threshold{};
+    double min_range_threshold{};
   };
 
 private:
@@ -60,7 +60,7 @@ private:
 
   // Parameter
   NodeParam node_param_{};
-  double range_threshold_sq_;
+  double min_range_threshold_sq_;
 };
 
 }  // namespace autoware::object_sorter
