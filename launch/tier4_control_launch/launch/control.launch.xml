@@ -221,6 +221,7 @@
           <composable_node pkg="autoware_control_validator" plugin="autoware::control_validator::ControlValidator" name="control_validator">
             <remap from="~/input/control_cmd" to="/control/command/control_cmd"/>
             <remap from="~/input/kinematics" to="/localization/kinematic_state"/>
+            <remap from="~/input/operational_mode_state" to="/api/operation_mode/state"/>
             <remap from="~/input/measured_acceleration" to="/localization/acceleration"/>
             <remap from="~/input/reference_trajectory" to="/planning/scenario_planning/trajectory"/>
             <remap from="~/input/predicted_trajectory" to="/control/trajectory_follower/lateral/predicted_trajectory"/>

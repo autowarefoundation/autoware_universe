@@ -44,6 +44,7 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -142,13 +143,16 @@ void STrack::re_activate(STrack & new_track, int frame_id, bool new_id)
   this->is_activated = true;
   this->frame_id = frame_id;
   this->score = new_track.score;
+
+  // In re-activation, we adopt new label as the current label
+  this->label = new_track.label;
   if (new_id) {
     this->track_id = next_id();
     this->unique_id = boost::uuids::random_generator()();
   }
 }
 
-void STrack::update(STrack & new_track, int frame_id)
+void STrack::update(STrack & new_track, int frame_id, double classification_decay_constant)
 {
   this->frame_id = frame_id;
   this->tracklet_len++;
@@ -164,7 +168,22 @@ void STrack::update(STrack & new_track, int frame_id)
   this->state = TrackState::Tracked;
   this->is_activated = true;
 
-  this->score = new_track.score;
+  // Classification update algorithm
+  // if new track label is the same, only update the score with decayed score or new score.
+  // if new track label is different, we will:
+  //       1. decay the existing score
+  //       2. choose new/old label based on decayed score and new score
+
+  if (this->label == new_track.label) {
+    this->score =
+      std::max(classification_decay_constant * this->score, static_cast<double>(new_track.score));
+  } else {
+    this->score = this->score * classification_decay_constant;
+    if (this->score < new_track.score) {
+      this->label = new_track.label;
+      this->score = new_track.score;
+    }
+  }
 }
 
 /** reflect kalman filter state to current object variables*/

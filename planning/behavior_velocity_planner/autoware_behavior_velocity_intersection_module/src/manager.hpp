@@ -66,6 +66,7 @@ private:
   /* called from SceneModuleInterfaceWithRTC::plan */
   void sendRTC(const Time & stamp) override;
   void setActivation() override;
+  void modifyPathVelocity(autoware_internal_planning_msgs::msg::PathWithLaneId * path) override;
   /* called from SceneModuleInterface::updateSceneModuleInstances */
   void deleteExpiredModules(
     const autoware_internal_planning_msgs::msg::PathWithLaneId & path) override;
@@ -73,6 +74,9 @@ private:
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr decision_state_pub_;
   rclcpp::Publisher<autoware_perception_msgs::msg::TrafficLightGroup>::SharedPtr
     tl_observation_pub_;
+
+  std::shared_ptr<autoware::planning_factor_interface::PlanningFactorInterface>
+    planning_factor_interface_for_occlusion_;
 };
 
 class MergeFromPrivateModuleManager : public SceneModuleManagerInterface<>
