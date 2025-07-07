@@ -50,7 +50,7 @@ using autoware_perception_msgs::msg::DetectedObjects;
 template <typename ObjsMsgType>
 ObjectSorterBase<ObjsMsgType>::ObjectSorterBase(
   const std::string & node_name, const rclcpp::NodeOptions & node_options)
-: Node(node_name, node_options)
+: Node(node_name, node_options), tf_buffer_(this->get_clock()), tf_listener_(tf_buffer_)
 {
   // Parameter Server
   set_param_res_ = this->add_on_set_parameters_callback(
@@ -72,7 +72,8 @@ ObjectSorterBase<ObjsMsgType>::ObjectSorterBase(
 }
 
 template <typename ObjsMsgType>
-void ObjectSorterBase<ObjsMsgType>::objectCallback(const typename ObjsMsgType::ConstSharedPtr msg)
+void ObjectSorterBase<ObjsMsgType>::objectCallback(
+  const typename ObjsMsgType::ConstSharedPtr input_msg)
 {
   // Guard
   if (pub_output_objects_->get_subscription_count() < 1) {
@@ -80,20 +81,35 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(const typename ObjsMsgType::C
   }
 
   ObjsMsgType output_objects;
-  output_objects.header = msg->header;
+  output_objects.header = input_msg->header;
 
-  for (const auto & object : msg->objects) {
+  geometry_msgs::msg::Vector3 ego_pos;
+  try {
+    const geometry_msgs::msg::TransformStamped ts = tf_buffer_.lookupTransform(
+      input_msg->header.frame_id, "base_link", input_msg->header.stamp,
+      rclcpp::Duration::from_seconds(0.5));
+    // Use the ego's position in the topic's frame id for computing the distance
+    ego_pos = ts.transform.translation;
+  } catch (tf2::TransformException & ex) {
+    RCLCPP_WARN(this->get_logger(), "Transform lookup failed: %s", ex.what());
+    return;
+  }
+
+  for (const auto & object : input_msg->objects) {
     // Filter by velocity
     if (
+      // NOTE: use the raw velocity in the topic for now
       std::abs(autoware_utils_geometry::calc_norm(
         object.kinematics.twist_with_covariance.twist.linear)) < node_param_.velocity_threshold) {
       // Low velocity object
       continue;
     }
 
+    const double object_pos_x = object.kinematics.pose_with_covariance.pose.position.x - ego_pos.x;
+    const double object_pos_y = object.kinematics.pose_with_covariance.pose.position.y - ego_pos.y;
+
     // Filter by range
-    const auto & position = object.kinematics.pose_with_covariance.pose.position;
-    const auto object_sq_dist = position.x * position.x + position.y * position.y;
+    const auto object_sq_dist = object_pos_x * object_pos_x + object_pos_y * object_pos_y;
     if (object_sq_dist < range_threshold_sq_) {
       // Short range object
       continue;

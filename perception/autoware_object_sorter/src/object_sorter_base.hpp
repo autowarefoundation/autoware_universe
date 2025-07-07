@@ -17,6 +17,9 @@
 
 #include "rclcpp/rclcpp.hpp"
 
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
+
 #include <string>
 #include <vector>
 
@@ -37,7 +40,7 @@ public:
   };
 
 private:
-  void objectCallback(const typename ObjsMsgType::ConstSharedPtr msg);
+  void objectCallback(const typename ObjsMsgType::ConstSharedPtr input_msg);
   void splitByVelocity(const ObjsMsgType & input_object);
   void splitByRange(const ObjsMsgType & input_object);
 
@@ -51,6 +54,9 @@ private:
   OnSetParametersCallbackHandle::SharedPtr set_param_res_;
   rcl_interfaces::msg::SetParametersResult onSetParam(
     const std::vector<rclcpp::Parameter> & params);
+
+  tf2_ros::Buffer tf_buffer_;
+  tf2_ros::TransformListener tf_listener_;
 
   // Parameter
   NodeParam node_param_{};
