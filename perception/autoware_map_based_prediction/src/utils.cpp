@@ -98,25 +98,6 @@ bool withinRoadLanelet(
   return withinRoadLanelet(object, surrounding_lanelets_with_dist, use_yaw_information);
 }
 
-ObjectClassification::_label_type getMaxProbabilityLabel(
-  const std::vector<ObjectClassification> & classifications,
-  const ObjectClassification::_label_type & default_label)
-{
-  if (classifications.empty()) {
-    return default_label;
-  }
-
-  // Find the classification with the maximum probability
-  auto max_it = std::max_element(
-    classifications.begin(), classifications.end(),
-    [](const ObjectClassification & a, const ObjectClassification & b) {
-      return a.probability < b.probability;
-    });
-
-  // Return the label of the classification with the maximum probability
-  return max_it->label;
-}
-
 /**
  * @brief change label for prediction
  *

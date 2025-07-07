@@ -68,10 +68,6 @@ bool withinRoadLanelet(
   const TrackedObject & object, const lanelet::LaneletMapPtr & lanelet_map_ptr,
   const bool use_yaw_information = false);
 
-ObjectClassification::_label_type getMaxProbabilityLabel(
-  const std::vector<ObjectClassification> & classifications,
-  const ObjectClassification::_label_type & default_label = ObjectClassification::UNKNOWN);
-
 /**
  * @brief change label for prediction
  *
