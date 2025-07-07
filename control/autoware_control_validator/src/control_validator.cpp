@@ -41,12 +41,35 @@ void LatencyValidator::validate(
 
 void TrajectoryValidator::validate(
   ControlValidatorStatus & res, const Trajectory & predicted_trajectory,
-  const Trajectory & reference_trajectory) const
+  const Trajectory & reference_trajectory)
 {
-  res.max_distance_deviation =
-    calc_max_lateral_distance(reference_trajectory, predicted_trajectory);
-  res.is_valid_max_distance_deviation =
-    res.max_distance_deviation <= max_distance_deviation_threshold;
+  // First, check with the current reference_trajectory
+  double max_dist_current = calc_max_lateral_distance(reference_trajectory, predicted_trajectory);
+  bool is_valid_current = max_dist_current <= max_distance_deviation_threshold;
+
+  // Note: The reason for comparing with the previous reference_trajectory is that
+  // the predicted_trajectory of the current cycle may not have been generated based on
+  // the reference_trajectory of the current cycle, but rather on the reference_trajectory of the
+  // previous cycle. Therefore, also check the deviation with the previous reference_trajectory.
+  // Only if the threshold is exceeded, also check with the previous reference_trajectory
+  bool is_valid_prev = true;
+  double max_dist_prev = 0.0;
+  if (!is_valid_current && prev_reference_trajectory_.has_value()) {
+    max_dist_prev =
+      calc_max_lateral_distance(prev_reference_trajectory_.value(), predicted_trajectory);
+    is_valid_prev = max_dist_prev <= max_distance_deviation_threshold;
+  }
+
+  // Only if both exceed the threshold, it is judged as abnormal
+  res.max_distance_deviation = std::max(max_dist_current, max_dist_prev);
+  res.is_valid_max_distance_deviation = is_valid_current || is_valid_prev;
+
+  // Save the previous reference_trajectory only if the timestamp is different from the current one
+  if (
+    !prev_reference_trajectory_.has_value() ||
+    prev_reference_trajectory_->header.stamp != reference_trajectory.header.stamp) {
+    prev_reference_trajectory_ = reference_trajectory;
+  }
 }
 
 void LateralJerkValidator::validate(
