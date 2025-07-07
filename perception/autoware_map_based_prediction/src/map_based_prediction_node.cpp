@@ -680,9 +680,10 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
       transformed_object.kinematics.pose_with_covariance.pose = pose_in_map.pose;
     }
 
-    // get tracking label and update it for the prediction
-    const auto & label_ = transformed_object.classification.front().label;
-    const auto label = utils::changeLabelForPrediction(label_, object, lanelet_map_ptr_);
+    // get the maximum probability label from the classification array
+    const auto & label_ = utils::getMaxProbabilityLabel(transformed_object.classification);
+    // overwrite the label for VRU in specific cases
+    const auto label = utils::changeVRULabelForPrediction(label_, object, lanelet_map_ptr_);
 
     switch (label) {
       case ObjectClassification::PEDESTRIAN:
