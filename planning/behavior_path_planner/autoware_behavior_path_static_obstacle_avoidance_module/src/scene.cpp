@@ -1270,15 +1270,27 @@ CandidateOutput StaticObstacleAvoidanceModule::planCandidate() const
   output.start_distance_to_path_change = sl_front.start_longitudinal;
   output.finish_distance_to_path_change = sl_back.end_longitudinal;
 
-  const uint16_t planning_factor_direction = std::invoke([&output]() {
-    return output.lateral_shift > 0.0 ? PlanningFactor::SHIFT_LEFT : PlanningFactor::SHIFT_RIGHT;
-  });
+  const uint16_t planning_factor_direction =
+    output.lateral_shift > 0.0 ? PlanningFactor::SHIFT_LEFT : PlanningFactor::SHIFT_RIGHT;
+
+  const std::string planning_factor_detail =
+    output.lateral_shift > 0.0 ? "left shift" : "right shift";
+
+  const auto start_idx =
+    autoware::motion_utils::findNearestIndex(shifted_path.path.points, sl_front.start.position);
+  const auto finish_idx =
+    autoware::motion_utils::findNearestIndex(shifted_path.path.points, sl_back.end.position);
+  const double start_velocity =
+    shifted_path.path.points.at(start_idx).point.longitudinal_velocity_mps;
+  const double end_velocity =
+    shifted_path.path.points.at(finish_idx).point.longitudinal_velocity_mps;
 
   planning_factor_interface_->add(
     output.start_distance_to_path_change, output.finish_distance_to_path_change, sl_front.start,
     sl_back.end, planning_factor_direction,
-    utils::path_safety_checker::to_safety_factor_array(debug_data_.collision_check), true, 0.0,
-    output.lateral_shift);
+    utils::path_safety_checker::to_safety_factor_array(debug_data_.collision_check), true,
+    start_velocity, end_velocity, 0.0 /* start_shift_length */, output.lateral_shift,
+    planning_factor_detail);
 
   output.path_candidate = shifted_path.path;
   return output;
@@ -1321,13 +1333,17 @@ void StaticObstacleAvoidanceModule::updatePathShifter(const AvoidLineArray & shi
   const auto & sl_front = shift_lines.front();
   const auto & sl_back = shift_lines.back();
   const auto relative_longitudinal = sl_back.end_longitudinal - sl_front.start_longitudinal;
+  const auto start_shift_length = sl_front.start_shift_length;
+  const auto end_shift_length = sl_back.end_shift_length;
 
   if (helper_->getRelativeShiftToPath(sl) > 0.0) {
     left_shift_array_.push_back(
-      {uuid_map_.at("left"), sl_front.start, sl_back.end, relative_longitudinal});
+      {uuid_map_.at("left"), sl_front.start, sl_back.end, relative_longitudinal, start_shift_length,
+       end_shift_length});
   } else if (helper_->getRelativeShiftToPath(sl) < 0.0) {
     right_shift_array_.push_back(
-      {uuid_map_.at("right"), sl_front.start, sl_back.end, relative_longitudinal});
+      {uuid_map_.at("right"), sl_front.start, sl_back.end, relative_longitudinal,
+       start_shift_length, end_shift_length});
   }
 
   uuid_map_.at("left") = generate_uuid();
@@ -1772,7 +1788,7 @@ void StaticObstacleAvoidanceModule::insertReturnDeadLine(
 
   // insert slow down speed.
   const double current_target_velocity = autoware::motion_utils::calc_feasible_velocity_from_jerk(
-    shift_length, helper_->getLateralMinJerkLimit(), to_stop_line);
+    shift_length, helper_->getAvoidanceLateralMinJerkLimit(), to_stop_line);
   if (current_target_velocity < getEgoSpeed()) {
     RCLCPP_DEBUG(getLogger(), "current velocity exceeds target slow down speed.");
     return;
@@ -1791,7 +1807,7 @@ void StaticObstacleAvoidanceModule::insertReturnDeadLine(
 
     // target speed with nominal jerk limits.
     const double v_target = autoware::motion_utils::calc_feasible_velocity_from_jerk(
-      shift_length, helper_->getLateralMinJerkLimit(), shift_longitudinal_distance);
+      shift_length, helper_->getAvoidanceLateralMinJerkLimit(), shift_longitudinal_distance);
     const double v_original = shifted_path.path.points.at(i).point.longitudinal_velocity_mps;
     const double v_insert =
       std::max(v_target - parameters_->buf_slow_down_speed, parameters_->min_slow_down_speed);
@@ -1985,7 +2001,7 @@ void StaticObstacleAvoidanceModule::insertPrepareVelocity(ShiftedPath & shifted_
 
   // insert slow down speed.
   const double current_target_velocity = autoware::motion_utils::calc_feasible_velocity_from_jerk(
-    shift_length, helper_->getLateralMinJerkLimit(), distance_to_object);
+    shift_length, helper_->getAvoidanceLateralMinJerkLimit(), distance_to_object);
   if (current_target_velocity + parameters_->buf_slow_down_speed < getEgoSpeed()) {
     utils::static_obstacle_avoidance::insertDecelPoint(
       getEgoPosition(), decel_distance, parameters_->velocity_map.front(), shifted_path.path,
@@ -2006,7 +2022,7 @@ void StaticObstacleAvoidanceModule::insertPrepareVelocity(ShiftedPath & shifted_
 
     // target speed with nominal jerk limits.
     const double v_target = autoware::motion_utils::calc_feasible_velocity_from_jerk(
-      shift_length, helper_->getLateralMinJerkLimit(), shift_longitudinal_distance);
+      shift_length, helper_->getAvoidanceLateralMinJerkLimit(), shift_longitudinal_distance);
     const double v_original = shifted_path.path.points.at(i).point.longitudinal_velocity_mps;
     const double v_insert = std::max(v_target - parameters_->buf_slow_down_speed, lower_speed);
 

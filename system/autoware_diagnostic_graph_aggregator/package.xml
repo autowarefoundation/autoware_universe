@@ -15,6 +15,7 @@
   <depend>diagnostic_msgs</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
+  <depend>std_srvs</depend>
   <depend>tier4_system_msgs</depend>
   <depend>yaml_cpp_vendor</depend>
 

@@ -27,6 +27,9 @@
 #include <magic_enum.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
+#include <autoware_internal_planning_msgs/msg/planning_factor.hpp>
+#include <autoware_internal_planning_msgs/msg/safety_factor_array.hpp>
+
 #include <pcl/filters/crop_hull.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/passthrough.h>
@@ -45,6 +48,9 @@
 
 namespace autoware::planning_validator
 {
+using autoware_internal_planning_msgs::msg::PlanningFactor;
+using autoware_internal_planning_msgs::msg::SafetyFactor;
+using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 using autoware_utils::get_or_declare_parameter;
 
 void RearCollisionChecker::init(
@@ -79,6 +85,10 @@ void RearCollisionChecker::init(
 
   time_keeper_ = std::make_shared<autoware_utils::TimeKeeper>(pub_debug_processing_time_detail_);
 
+  planning_factor_interface_ =
+    std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
+      &node, "rear_collision_checker");
+
   setup_diag();
 }
 
@@ -98,13 +108,14 @@ void RearCollisionChecker::validate(bool & is_critical)
   debug_data.processing_time_detail_ms = (clock_->now() - start_time).seconds() * 1e3;
 
   publish_marker(debug_data);
+  publish_planning_factor(debug_data);
 }
 
 void RearCollisionChecker::setup_diag()
 {
   context_->add_diag(
     "rear_collision_check", context_->validation_status->is_valid_rear_collision_check,
-    "obstacle detected behind the vehicle", false);
+    "obstacle detected behind the vehicle");
 }
 
 void RearCollisionChecker::fill_rss_distance(PointCloudObjects & objects) const
@@ -779,16 +790,15 @@ bool RearCollisionChecker::is_safe(DebugData & debug)
 
   {
     if (is_safe(pointcloud_objects, debug)) {
-      last_safe_time_ = now;
       if ((now - last_unsafe_time_).seconds() > p.common.off_time_buffer) {
+        last_safe_time_ = now;
         return true;
       }
+    } else if ((now - last_safe_time_).seconds() < p.common.on_time_buffer) {
+      RCLCPP_WARN(logger_, "[RCC] Momentary collision risk detected.");
+      return true;
     } else {
       last_unsafe_time_ = now;
-      RCLCPP_WARN(logger_, "[RCC] Momentary collision risk detected.");
-      if ((now - last_safe_time_).seconds() < p.common.on_time_buffer) {
-        return true;
-      }
     }
 
     {
@@ -881,6 +891,31 @@ void RearCollisionChecker::publish_marker(const DebugData & debug) const
     pub_string_->publish(string_stamp);
   }
 }
+
+void RearCollisionChecker::publish_planning_factor(const DebugData & debug) const
+{
+  if (debug.is_safe) return;
+
+  SafetyFactorArray factor_array;
+  factor_array.is_safe = false;
+  factor_array.detail = "possible collision with rear object";
+  factor_array.header.stamp = clock_->now();
+
+  SafetyFactor factor;
+  factor.type = SafetyFactor::POINTCLOUD;
+  for (const auto & obj : debug.pointcloud_objects) {
+    factor.is_safe = obj.safe;
+    factor.points.push_back(obj.pose.position);
+    factor_array.factors.push_back(factor);
+  }
+
+  const auto & traj_points = context_->data->current_trajectory->points;
+  const auto & ego_pose = context_->data->current_kinematics->pose.pose;
+  planning_factor_interface_->add(
+    traj_points, ego_pose, ego_pose, PlanningFactor::STOP, factor_array);
+  planning_factor_interface_->publish();
+}
+
 }  // namespace autoware::planning_validator
 
 #include <pluginlib/class_list_macros.hpp>

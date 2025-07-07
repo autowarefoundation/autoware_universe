@@ -44,9 +44,14 @@ public:
   void pushPoseMarker(
     const autoware_planning_msgs::msg::TrajectoryPoint & p, const std::string & ns, int id = 0);
   void pushPoseMarker(const geometry_msgs::msg::Pose & pose, const std::string & ns, int id = 0);
-  void pushPointMarker(const geometry_msgs::msg::Point & point, const std::string & ns, int id = 0);
+  void pushPointMarker(
+    const geometry_msgs::msg::Point & point, const std::string & ns, int id = 0, double scale = 0.3,
+    bool is_cube = false);
   void pushVirtualWall(const geometry_msgs::msg::Pose & pose);
   void pushWarningMsg(const geometry_msgs::msg::Pose & pose, const std::string & msg);
+  void pushLineSegmentMarker(
+    const geometry_msgs::msg::Point & p1, const geometry_msgs::msg::Point & p2,
+    const std::string & ns, int id = 0);
 
   void pushLaneletPolygonsMarker(
     const lanelet::BasicPolygons2d & polygon, const std::string & ns, int id = 0);
@@ -85,7 +90,7 @@ public:
     if (!status.is_valid_steering_rate) append_string("steering_rate");
     if (!status.is_valid_forward_trajectory_length) append_string("forward_traj_length");
     if (!status.is_valid_trajectory_shift) append_string("traj_shift");
-    if (!status.is_valid_collision_check) append_string("collision");
+    if (!status.is_valid_intersection_collision_check) append_string("collision");
 
     if (ss.str().empty()) {
       return "";

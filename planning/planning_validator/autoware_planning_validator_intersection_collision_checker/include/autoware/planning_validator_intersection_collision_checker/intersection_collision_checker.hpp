@@ -20,20 +20,10 @@
 #include <autoware/planning_validator/plugin_interface.hpp>
 #include <rclcpp/rclcpp.hpp>
 
-#include <pcl/common/transforms.h>
-#include <pcl/filters/crop_hull.h>
-#include <pcl/filters/extract_indices.h>
-#include <pcl/filters/passthrough.h>
-#include <pcl/filters/voxel_grid.h>
+#include <autoware_internal_planning_msgs/msg/safety_factor_array.hpp>
+
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-#include <pcl/registration/gicp.h>
-#include <pcl/segmentation/extract_clusters.h>
-#include <pcl/surface/convex_hull.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <tf2/utils.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
 
 #include <memory>
 #include <string>
@@ -42,6 +32,8 @@ namespace autoware::planning_validator
 {
 using sensor_msgs::msg::PointCloud2;
 using PointCloud = pcl::PointCloud<pcl::PointXYZ>;
+using autoware_internal_planning_msgs::msg::SafetyFactor;
+using autoware_internal_planning_msgs::msg::SafetyFactorArray;
 
 class IntersectionCollisionChecker : public PluginInterface
 {
@@ -54,7 +46,7 @@ public:
   std::string get_module_name() const override { return module_name_; };
 
 private:
-  void setup_parameters(rclcpp::Node & node);
+  [[nodiscard]] bool is_safe();
 
   [[nodiscard]] EgoTrajectory get_ego_trajectory() const;
 
@@ -62,7 +54,7 @@ private:
     const lanelet::ConstLanelets & trajectory_lanelets) const;
 
   [[nodiscard]] Direction get_lanelets(
-    CollisionCheckerLanelets & lanelets, const EgoTrajectory & ego_trajectory) const;
+    EgoLanelets & lanelets, const EgoTrajectory & ego_trajectory) const;
 
   void filter_pointcloud(
     PointCloud2::ConstSharedPtr & input, PointCloud::Ptr & filtered_point_cloud) const;
@@ -73,19 +65,32 @@ private:
 
   void cluster_pointcloud(const PointCloud::Ptr & input, PointCloud::Ptr & output) const;
 
-  void set_lanelets_debug_marker(const CollisionCheckerLanelets & lanelets) const;
+  void set_lanelets_debug_marker(const EgoLanelets & lanelets) const;
 
   bool check_collision(
-    const TargetLanelets & target_lanelets, const PointCloud::Ptr & filtered_point_cloud,
-    const rclcpp::Time & time_stamp);
+    const PointCloud::Ptr & filtered_point_cloud, const rclcpp::Time & time_stamp);
 
   std::optional<PCDObject> get_pcd_object(
     const rclcpp::Time & time_stamp, const PointCloud::Ptr & filtered_point_cloud,
     const TargetLanelet & target_lanelet) const;
 
-  CollisionCheckerParams params_;
+  void add_safety_factor(geometry_msgs::msg::Point & obs_point, const double ttc);
+
+  void reset_data()
+  {
+    history_.clear();
+    target_lanelets_map_.clear();
+    last_valid_time_ = clock_->now();
+  }
+
+  std::unique_ptr<intersection_collision_checker_node::ParamListener> param_listener_;
+  intersection_collision_checker_node::Params params_;
+
   PCDObjectsMap history_;
-  std::optional<rclcpp::Time> last_invalid_time_;
+  mutable TargetLaneletsMap target_lanelets_map_;
+  rclcpp::Time last_invalid_time_;
+  rclcpp::Time last_valid_time_;
+  SafetyFactorArray safety_factor_array_;
 };
 
 }  // namespace autoware::planning_validator

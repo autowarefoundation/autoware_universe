@@ -16,6 +16,7 @@
 #define AUTOWARE__PLANNING_VALIDATOR_INTERSECTION_COLLISION_CHECKER__TYPES_HPP_
 
 #include <autoware/route_handler/route_handler.hpp>
+#include <autoware_planning_validator_intersection_collision_checker/intersection_collision_checker_node_parameters.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include <autoware_planning_msgs/msg/trajectory.hpp>
@@ -59,24 +60,27 @@ struct TargetLanelet
   lanelet::ConstLanelets lanelets;
   geometry_msgs::msg::Pose overlap_point;
   std::pair<double, double> ego_overlap_time;
+  bool is_active{false};
 
   TargetLanelet() = default;
   TargetLanelet(
     lanelet::Id id, const lanelet::ConstLanelets & lanelets,
     const geometry_msgs::msg::Pose & overlap_point,
-    const std::pair<double, double> ego_overlap_time)
-  : id(id), lanelets(lanelets), overlap_point(overlap_point), ego_overlap_time(ego_overlap_time)
+    const std::pair<double, double> ego_overlap_time, const bool is_active = true)
+  : id(id),
+    lanelets(lanelets),
+    overlap_point(overlap_point),
+    ego_overlap_time(ego_overlap_time),
+    is_active(is_active)
   {
   }
 };
 
-using TargetLanelets = std::vector<TargetLanelet>;
-
-struct CollisionCheckerLanelets
+struct EgoLanelets
 {
+  lanelet::ConstLanelet first_turn_lanelet;
   lanelet::ConstLanelets trajectory_lanelets;
   lanelet::ConstLanelets connected_lanelets;
-  TargetLanelets target_lanelets;
 };
 
 struct PCDObject
@@ -86,57 +90,14 @@ struct PCDObject
   lanelet::Id overlap_lanelet_id;
   double track_duration{};
   double distance_to_overlap{};
+  double delay_compensated_distance_to_overlap{};
   double velocity{};
+  double moving_time{};
   double ttc{};
 };
 
 using PCDObjectsMap = std::unordered_map<lanelet::Id, PCDObject>;
-
-struct DirectionCheckFlags
-{
-  bool enable{};
-  bool check_oncoming_lanes{};
-  bool check_crossing_lanes{};
-  bool check_turning_lanes{};
-};
-
-struct PointcloudParams
-{
-  double height_buffer{};
-  double min_height{};
-  double observation_time{};
-
-  struct VoxelGridFilterParams
-  {
-    double x{};
-    double y{};
-    double z{};
-  } voxel_grid_filter;
-
-  struct ClusteringParams
-  {
-    double tolerance{};
-    double min_height{};
-    int min_size{};
-    int max_size{};
-  } clustering;
-};
-
-struct CollisionCheckerParams
-{
-  bool enable{};
-  bool is_critical{};
-  double detection_range{};
-  double ttc_threshold{};
-  double ego_deceleration{};
-  double min_time_horizon{};
-  double timeout{};
-
-  DirectionCheckFlags right_turn;
-  DirectionCheckFlags left_turn;
-
-  PointcloudParams pointcloud;
-};
+using TargetLaneletsMap = std::unordered_map<lanelet::Id, TargetLanelet>;
 
 }  // namespace autoware::planning_validator
 

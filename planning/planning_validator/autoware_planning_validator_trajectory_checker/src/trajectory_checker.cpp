@@ -173,6 +173,7 @@ void TrajectoryChecker::validate(bool & is_critical)
       "trajectory has invalid value (NaN, Inf, etc). Stop validation process, raise an error.");
   }
 
+  is_critical_error_ = false;
   status->is_valid_interval = check_valid_interval(data, status);
   status->is_valid_longitudinal_max_acc = check_valid_max_longitudinal_acceleration(data, status);
   status->is_valid_longitudinal_min_acc = check_valid_min_longitudinal_acceleration(data, status);
@@ -533,14 +534,11 @@ bool TrajectoryChecker::check_valid_longitudinal_distance_deviation(
 }
 
 double nearest_trajectory_yaw_shift(
-  const Trajectory::ConstSharedPtr last_valid_trajectory,
+  const Trajectory & last_valid_trajectory,
   const autoware_planning_msgs::msg::TrajectoryPoint & trajectory_point)
 {
-  if (!last_valid_trajectory) {
-    return true;
-  }
   const auto interpolated_previous_trajectory_point =
-    motion_utils::calcInterpolatedPoint(*last_valid_trajectory, trajectory_point.pose);
+    motion_utils::calcInterpolatedPoint(last_valid_trajectory, trajectory_point.pose);
   const auto yaw_shift_with_previous_trajectory = std::abs(angles::shortest_angular_distance(
     tf2::getYaw(trajectory_point.pose.orientation),
     tf2::getYaw(interpolated_previous_trajectory_point.pose.orientation)));
@@ -565,8 +563,9 @@ bool TrajectoryChecker::check_valid_yaw_deviation(
     tf2::getYaw(ego_pose.orientation)));
 
   const auto check_condition =
-    nearest_trajectory_yaw_shift(data->last_valid_trajectory, interpolated_trajectory_point) >
-    params_.yaw_deviation.nearest_yaw_trajectory_shift_required_for_checking;
+    !data->last_valid_trajectory ||
+    nearest_trajectory_yaw_shift(*data->last_valid_trajectory, interpolated_trajectory_point) >
+      params_.yaw_deviation.nearest_yaw_trajectory_shift_required_for_checking;
   if (check_condition && status->yaw_deviation > params_.yaw_deviation.threshold) {
     is_critical_error_ |= params_.yaw_deviation.is_critical;
     return false;
