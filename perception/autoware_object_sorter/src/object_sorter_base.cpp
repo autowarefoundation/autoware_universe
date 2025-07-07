@@ -84,6 +84,7 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
   ObjsMsgType output_objects;
   output_objects.header = input_msg->header;
 
+  bool transform_success = false;
   geometry_msgs::msg::Vector3 ego_pos;
   try {
     const geometry_msgs::msg::TransformStamped ts = tf_buffer_.lookupTransform(
@@ -91,9 +92,9 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
       rclcpp::Duration::from_seconds(0.5));
     // Use the ego's position in the topic's frame id for computing the distance
     ego_pos = ts.transform.translation;
+    transform_success = true;
   } catch (tf2::TransformException & ex) {
     RCLCPP_WARN(this->get_logger(), "Transform lookup failed: %s", ex.what());
-    return;
   }
 
   for (const auto & object : input_msg->objects) {
@@ -107,14 +108,18 @@ void ObjectSorterBase<ObjsMsgType>::objectCallback(
       continue;
     }
 
-    const double object_pos_x = object.kinematics.pose_with_covariance.pose.position.x - ego_pos.x;
-    const double object_pos_y = object.kinematics.pose_with_covariance.pose.position.y - ego_pos.y;
+    if (transform_success) {
+      const double object_pos_x =
+        object.kinematics.pose_with_covariance.pose.position.x - ego_pos.x;
+      const double object_pos_y =
+        object.kinematics.pose_with_covariance.pose.position.y - ego_pos.y;
 
-    // Filter by range
-    const auto object_sq_dist = object_pos_x * object_pos_x + object_pos_y * object_pos_y;
-    if (object_sq_dist < min_range_threshold_sq_) {
-      // Short range object
-      continue;
+      // Filter by range
+      const auto object_sq_dist = object_pos_x * object_pos_x + object_pos_y * object_pos_y;
+      if (object_sq_dist < min_range_threshold_sq_) {
+        // Short range object
+        continue;
+      }
     }
 
     output_objects.objects.push_back(object);
