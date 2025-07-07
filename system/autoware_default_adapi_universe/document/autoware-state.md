@@ -12,5 +12,6 @@ The service `/autoware/shutdown` to change autoware state to finalizing is also 
 
 This is the correspondence between AD API states and autoware states.
 The launch state is the data that this node holds internally.
+For the routing state arrival, the first 2.0 seconds correspond to ArrivedGoal, the rest correspond to WaitingForRoute.
 
 ![autoware-state-table](images/autoware-state-table.drawio.svg)

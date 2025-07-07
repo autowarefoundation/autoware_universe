@@ -268,11 +268,26 @@
                       "linestring_types": {
                         "type": "array",
                         "description": "types of linestrings in the vector map used to cut predicted paths",
-                        "default": "['guard_rail']"
+                        "default": "['NONE']"
                       },
                       "lanelet_subtypes": {
                         "type": "array",
                         "description": "subtypes of lanelets in the vector map used to cut predicted paths",
+                        "default": "['NONE']"
+                      },
+                      "strict_polygon_types": {
+                        "type": "array",
+                        "description": "types of polygons in the vector map used to strictly cut predicted paths",
+                        "default": "['NONE']"
+                      },
+                      "strict_linestring_types": {
+                        "type": "array",
+                        "description": "types of linestrings in the vector map used to strictly cut predicted paths",
+                        "default": "['guard_rail']"
+                      },
+                      "strict_lanelet_subtypes": {
+                        "type": "array",
+                        "description": "subtypes of lanelets in the vector map used to strictly cut predicted paths",
                         "default": "['NONE']"
                       }
                     }

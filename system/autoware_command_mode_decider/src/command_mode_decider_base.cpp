@@ -57,6 +57,7 @@ CommandModeDeciderBase::CommandModeDeciderBase(const rclcpp::NodeOptions & optio
   }
   plugin_ = loader_.createSharedInstance(plugin_name);
   plugin_->construct(this);
+  plugin_->initialize();
 
   transition_timeout_ = declare_parameter<double>("transition_timeout");
   request_timeout_ = declare_parameter<double>("request_timeout");
