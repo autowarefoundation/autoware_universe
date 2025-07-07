@@ -77,7 +77,7 @@ private:
   std::shared_ptr<BEVDet> bevdet_;  ///< Object for performing object detection
 
   uchar * imgs_dev_ = nullptr;  ///< Device pointer for storing the images
-  float score_thre_;            ///< Score threshold for object detection
+  float score_threshold_;            ///< Score threshold for object detection
   bool has_twist_ = true;       /// wether set twist for objects
 
   rclcpp::Publisher<autoware_perception_msgs::msg::DetectedObjects>::SharedPtr

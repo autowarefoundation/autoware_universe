@@ -44,7 +44,7 @@ TRTBEVDetNode::TRTBEVDetNode(const rclcpp::NodeOptions & node_options)
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-  score_thre_ = this->declare_parameter<float>("post_process_params.score_threshold", 0.2);
+  score_threshold_ = this->declare_parameter<float>("post_process_params.score_threshold", 0.2);
 
   model_config_ = this->declare_parameter("model_config", "bevdet_r50_4dlongterm_depth.yaml");
 
@@ -208,7 +208,7 @@ void TRTBEVDetNode::callback(
   bevdet_objects.header.frame_id = "base_link";
   bevdet_objects.header.stamp = msg_f_img->header.stamp;
 
-  box3DToDetectedObjects(ego_boxes, bevdet_objects, class_names_, score_thre_, has_twist_);
+  box3DToDetectedObjects(ego_boxes, bevdet_objects, class_names_, score_threshold_, has_twist_);
 
   pub_boxes_->publish(bevdet_objects);
 

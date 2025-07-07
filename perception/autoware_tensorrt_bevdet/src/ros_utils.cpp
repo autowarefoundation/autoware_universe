@@ -52,11 +52,11 @@ uint8_t getSemanticType(const std::string & class_name)
 
 void box3DToDetectedObjects(
   const std::vector<Box> & boxes, autoware_perception_msgs::msg::DetectedObjects & bevdet_objects,
-  const std::vector<std::string> & class_names, const float & score_thre,
+  const std::vector<std::string> & class_names, const float & score_threshold,
   const bool has_twist = true)
 {
   for (const auto & b : boxes) {
-    if (b.score < score_thre) continue;
+    if (b.score < score_threshold) continue;
     autoware_perception_msgs::msg::DetectedObject obj;
 
     obj.existence_probability = b.score;

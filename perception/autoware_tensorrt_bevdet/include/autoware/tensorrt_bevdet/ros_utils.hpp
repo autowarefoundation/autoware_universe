@@ -36,7 +36,7 @@ uint8_t getSemanticType(const std::string & class_name);
 
 void box3DToDetectedObjects(
   const std::vector<Box> & boxes, autoware_perception_msgs::msg::DetectedObjects & objects,
-  const std::vector<std::string> & class_names, const float & score_thre, const bool has_twist);
+  const std::vector<std::string> & class_names, const float & score_threshold, const bool has_twist);
 
 // Get the rotation and translation from a geometry_msgs::msg::TransformStamped
 void getTransform(
