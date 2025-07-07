@@ -19,6 +19,7 @@
 #include <autoware/interpolation/linear_interpolation.hpp>
 #include <autoware/motion_utils/resample/resample.hpp>
 #include <autoware/motion_utils/trajectory/trajectory.hpp>
+#include <autoware/object_recognition_utils/object_recognition_utils.hpp>
 #include <autoware_lanelet2_extension/utility/message_conversion.hpp>
 #include <autoware_lanelet2_extension/utility/query.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
@@ -28,7 +29,6 @@
 #include <autoware_utils/math/normalization.hpp>
 #include <autoware_utils/math/unit_conversion.hpp>
 #include <autoware_utils/ros/uuid_helper.hpp>
-#include <autoware/object_recognition_utils/object_recognition_utils.hpp> 
 
 #include <autoware_perception_msgs/msg/detected_objects.hpp>
 #include <diagnostic_msgs/msg/diagnostic_status.hpp>
@@ -682,7 +682,8 @@ void MapBasedPredictionNode::objectsCallback(const TrackedObjects::ConstSharedPt
     }
 
     // get the maximum probability label from the classification array
-    const auto & label_ = autoware::object_recognition_utils::getHighestProbLabel(transformed_object.classification);
+    const auto & label_ =
+      autoware::object_recognition_utils::getHighestProbLabel(transformed_object.classification);
     // overwrite the label for VRU in specific cases
     const auto label = utils::changeVRULabelForPrediction(label_, object, lanelet_map_ptr_);
 
