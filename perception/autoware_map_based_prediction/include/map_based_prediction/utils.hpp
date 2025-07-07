@@ -132,7 +132,6 @@ LaneletsData getCurrentLanelets(
   const double delta_yaw_threshold_for_searching_lanelet, const double sigma_lateral_offset,
   const double sigma_yaw_angle_deg);
 
-
 }  // namespace utils
 
 }  // namespace autoware::map_based_prediction

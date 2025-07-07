@@ -515,6 +515,5 @@ LaneletsData getCurrentLanelets(
   return LaneletsData{};
 }
 
-
 }  // namespace utils
 }  // namespace autoware::map_based_prediction
