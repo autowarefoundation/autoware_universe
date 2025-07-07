@@ -36,7 +36,7 @@ control/autoware_smart_mpc_trajectory_follower/** kosuke.takeuchi@tier4.jp masay
 control/autoware_stop_mode_operator/** isamu.takagi@tier4.jp
 control/autoware_trajectory_follower_base/** takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
 control/autoware_trajectory_follower_node/** takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp
-control/autoware_vehicle_cmd_gate/** takamasa.horibe@tier4.jp tomoya.kimura@tier4.jp
+control/autoware_vehicle_cmd_gate/** arjun.ram@tier4.jp takayuki.murooka@tier4.jp yukinari.hisaki.2@tier4.jp
 evaluator/autoware_control_evaluator/** daniel.sanchez@tier4.jp kosuke.takeuchi@tier4.jp takayuki.murooka@tier4.jp temkei.kem@tier4.jp
 evaluator/autoware_kinematic_evaluator/** dominik.jargot@robotec.ai fumiya.watanabe@tier4.jp junya.sasaki@tier4.jp satoshi.ota@tier4.jp shumpei.wakabayashi@tier4.jp takamasa.horibe@tier4.jp takayuki.murooka@tier4.jp tomoya.kimura@tier4.jp
 evaluator/autoware_localization_evaluator/** anh.nguyen.2@tier4.jp dominik.jargot@robotec.ai junya.sasaki@tier4.jp masahiro.sakamoto@tier4.jp shintaro.sakoda@tier4.jp taiki.yamada@tier4.jp yamato.ando@tier4.jp
@@ -155,7 +155,7 @@ planning/motion_velocity_planner/autoware_motion_velocity_obstacle_cruise_module
 planning/motion_velocity_planner/autoware_motion_velocity_obstacle_slow_down_module/** arjun.ram@tier4.jp maxime.clement@tier4.jp takayuki.murooka@tier4.jp yuki.takagi@tier4.jp
 planning/motion_velocity_planner/autoware_motion_velocity_obstacle_velocity_limiter_module/** alqudah.mohammad@tier4.jp maxime.clement@tier4.jp
 planning/motion_velocity_planner/autoware_motion_velocity_out_of_lane_module/** alqudah.mohammad@tier4.jp mamoru.sobue@tier4.jp maxime.clement@tier4.jp shumpei.wakabayashi@tier4.jp takayuki.murooka@tier4.jp tomoya.kimura@tier4.jp
-planning/motion_velocity_planner/autoware_motion_velocity_run_out_module/** alqudah.mohammad@tier4.jp maxime.clement@tier4.jp
+planning/motion_velocity_planner/autoware_motion_velocity_run_out_module/** alqudah.mohammad@tier4.jp maxime.clement@tier4.jp zulfaqar.azmi@tier4.jp
 planning/planning_validator/autoware_planning_validator/** alqudah.mohammad@tier4.jp kosuke.takeuchi@tier4.jp kyoichi.sugahara@tier4.jp takamasa.horibe@tier4.jp
 planning/planning_validator/autoware_planning_validator_intersection_collision_checker/** alqudah.mohammad@tier4.jp satoshi.ota@tier4.jp
 planning/planning_validator/autoware_planning_validator_latency_checker/** alqudah.mohammad@tier4.jp kyoichi.sugahara@tier4.jp satoshi.ota@tier4.jp
