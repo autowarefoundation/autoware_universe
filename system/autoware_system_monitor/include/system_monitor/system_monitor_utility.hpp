@@ -115,7 +115,8 @@ public:
       }
 
       const fs::path temperature_path = path / "temp";
-      thermal_zones->emplace_back(name, path.filename().generic_string(), temperature_path.generic_string());
+      thermal_zones->emplace_back(
+        name, path.filename().generic_string(), temperature_path.generic_string());
     }
   }
 
