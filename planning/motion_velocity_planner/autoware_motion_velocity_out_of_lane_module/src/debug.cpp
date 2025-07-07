@@ -65,6 +65,9 @@ void add_polygons_markers(
   auto debug_marker = base_marker;
   debug_marker.type = visualization_msgs::msg::Marker::LINE_LIST;
   for (const auto & f : polygons) {
+    if (f.empty()) {
+      continue;
+    }
     boost::geometry::for_each_segment(f, [&](const auto & s) {
       const auto & [p1, p2] = s;
       debug_marker.points.push_back(autoware_utils::create_marker_position(p1.x(), p1.y(), 0.0));
@@ -256,7 +259,7 @@ visualization_msgs::msg::MarkerArray create_debug_marker_array(
   base_marker.color = autoware_utils::create_marker_color(1.0, 1.0, 1.0, 1.0);
   // TODO(Maxime): move the debug marker publishing AFTER the trajectory generation
   // disabled to prevent performance issues when publishing the debug markers
-  // add_polygons_markers(debug_marker_array, base_marker, ego_data.trajectory_footprints);
+  add_polygons_markers(debug_marker_array, base_marker, ego_data.trajectory_footprints);
   add_out_lanelets(debug_marker_array, base_marker, ego_data.out_lanelets);
   add_out_of_lane_overlaps(
     debug_marker_array, base_marker, out_of_lane_data.outside_points, ego_data.trajectory_points);
