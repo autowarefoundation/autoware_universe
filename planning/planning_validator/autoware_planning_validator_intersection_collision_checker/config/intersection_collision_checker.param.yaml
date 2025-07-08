@@ -32,8 +32,10 @@
           min_size: 10
           max_size: 10000
         velocity_estimation:
-          max_acceleration: 20.0  # [m/s^2]
+          max_acceleration: 10.0  # [m/s^2]
+          max_velocity: 20.0  # [m/s]
           observation_time: 0.3  # [s]
+          reset_accel_th: 30.0  # [m/s^2]
         latency: 0.3
 
       filter:

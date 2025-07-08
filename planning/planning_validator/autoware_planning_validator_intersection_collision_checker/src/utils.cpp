@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <string>
 #include <utility>
 
 namespace autoware::planning_validator::collision_checker_utils
@@ -83,15 +84,25 @@ void set_trajectory_lanelets(
     }
   }
 
-  std::optional<lanelet::ConstLanelet> first_turn_ll;
+  bool lock_turn_lanelets = false;
+  auto set_turn_lanelet = [&](const lanelet::ConstLanelet & ll) {
+    if (lock_turn_lanelets) return;
+    if (!is_turn_lanelet(ll)) {
+      if (!lanelets.turn_lanelets.empty()) {
+        lock_turn_lanelets = true;
+      }
+    } else {
+      lanelets.turn_lanelets.push_back(ll);
+    }
+  };
+
   for (const auto & ll : lanelets.trajectory_lanelets) {
-    if (!first_turn_ll && is_turn_lanelet(ll)) first_turn_ll = ll;
+    if (!lock_turn_lanelets) set_turn_lanelet(ll);
+    // Add connected lanelets to the list
     for (const auto & connected_ll : route_handler.getNextLanelets(ll)) {
       lanelets.connected_lanelets.push_back(connected_ll);
     }
   }
-
-  if (first_turn_ll) lanelets.first_turn_lanelet = *first_turn_ll;
 }
 
 std::optional<std::pair<size_t, size_t>> get_overlap_index(
@@ -161,6 +172,11 @@ void set_right_turn_target_lanelets(
   const intersection_collision_checker_node::Params & params, const EgoLanelets & lanelets,
   TargetLaneletsMap & target_lanelets, const double time_horizon)
 {
+  if (lanelets.turn_lanelets.empty()) return;
+  const std::string turn_direction =
+    lanelets.turn_lanelets.front().attributeOr("turn_direction", "else");
+  if (turn_direction != "right") return;
+
   const auto & p = params.icc_parameters;
   autoware_utils::LineString2d trajectory_ls;
   for (const auto & traj_p : ego_traj.front_traj) {
@@ -177,7 +193,8 @@ void set_right_turn_target_lanelets(
     if (is_turn_lanelet(ll)) {
       return !p.right_turn.check_turning_lanes;
     }
-    if (is_crossing_lane(ll, lanelets.first_turn_lanelet, p.right_turn.crossing_lane_angle_th)) {
+    if (lanelets.turn_lanelets.empty()) return false;
+    if (is_crossing_lane(ll, lanelets.turn_lanelets.front(), p.right_turn.crossing_lane_angle_th)) {
       return !p.right_turn.check_crossing_lanes;
     }
     return false;
@@ -188,9 +205,11 @@ void set_right_turn_target_lanelets(
       return extend_lanelet(route_handler, ll, overlap_point, p.detection_range);
     };
 
+  const auto combined_turn_lls = lanelet::utils::combineLaneletsShape(lanelets.turn_lanelets);
   const auto lanelet_map_ptr = route_handler.getLaneletMapPtr();
-  const auto candidates = lanelet_map_ptr->laneletLayer.search(
-    boost::geometry::return_envelope<lanelet::BoundingBox2d>(trajectory_ls));
+  const auto candidates =
+    lanelet_map_ptr->laneletLayer.search(boost::geometry::return_envelope<lanelet::BoundingBox2d>(
+      combined_turn_lls.centerline2d().basicLineString()));
   for (const auto & ll : candidates) {
     const auto id = ll.id();
     if (
@@ -225,23 +244,14 @@ void set_left_turn_target_lanelets(
   const intersection_collision_checker_node::Params & params, const EgoLanelets & lanelets,
   TargetLaneletsMap & target_lanelets, const double time_horizon)
 {
-  std::optional<lanelet::ConstLanelet> turn_lanelet;
-  for (const auto & lanelet : lanelets.trajectory_lanelets) {
-    if (!lanelet.hasAttribute("turn_direction")) {
-      if (turn_lanelet) break;  // If we already found a turn lanelet, we can stop checking
-      continue;
-    }
-    if (lanelet.attribute("turn_direction") == "left") {
-      turn_lanelet = lanelet;
-    } else if (turn_lanelet) {
-      break;
-    }
-  }
+  if (lanelets.turn_lanelets.empty()) return;
+  const std::string turn_direction =
+    lanelets.turn_lanelets.front().attributeOr("turn_direction", "else");
+  if (turn_direction != "left") return;
 
-  if (!turn_lanelet) return;
-
+  const auto last_turn_ll = lanelets.turn_lanelets.back();
   lanelet::ConstLanelet next_lanelet;
-  if (!route_handler.getNextLaneletWithinRoute(*turn_lanelet, &next_lanelet)) return;
+  if (!route_handler.getNextLaneletWithinRoute(last_turn_ll, &next_lanelet)) return;
 
   autoware_utils::LineString2d trajectory_ls;
   for (const auto & p : ego_traj.front_traj) {
@@ -261,7 +271,7 @@ void set_left_turn_target_lanelets(
       return extend_lanelet(route_handler, ll, overlap_point, p.detection_range);
     };
 
-  const auto turn_lanelet_id = turn_lanelet->id();
+  const auto turn_lanelet_id = last_turn_ll.id();
   for (const auto & ll : route_handler.getPreviousLanelets(next_lanelet)) {
     const auto id = ll.id();
     if (id == turn_lanelet_id || ignore_turning(ll)) continue;
