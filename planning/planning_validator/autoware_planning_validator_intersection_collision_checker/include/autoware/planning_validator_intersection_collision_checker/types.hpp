@@ -78,7 +78,7 @@ struct TargetLanelet
 
 struct EgoLanelets
 {
-  lanelet::ConstLanelet first_turn_lanelet;
+  lanelet::ConstLanelets turn_lanelets;
   lanelet::ConstLanelets trajectory_lanelets;
   lanelet::ConstLanelets connected_lanelets;
 };
