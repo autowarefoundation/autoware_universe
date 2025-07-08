@@ -43,12 +43,16 @@ struct FrenetStateDebug
 {
   LaneChangePhaseMetrics prep_metric;
   frenet_planner::SamplingParameter sampling_parameter;
+  double lc_average_curvature;
   double max_lane_changing_length;
 
   FrenetStateDebug(
     LaneChangePhaseMetrics prep_metric, frenet_planner::SamplingParameter sampling_param,
-    const double max_len)
-  : prep_metric(prep_metric), sampling_parameter(sampling_param), max_lane_changing_length(max_len)
+    const double lc_average_curvature, const double max_len)
+  : prep_metric(prep_metric),
+    sampling_parameter(sampling_param),
+    lc_average_curvature(lc_average_curvature),
+    max_lane_changing_length(max_len)
   {
   }
 };

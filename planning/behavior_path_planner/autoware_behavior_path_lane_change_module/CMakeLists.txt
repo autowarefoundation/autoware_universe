@@ -20,6 +20,7 @@ if(BUILD_TESTING)
     test/test_behavior_path_planner_node_interface.cpp
     test/test_lane_change_utils.cpp
     test/test_lane_change_scene.cpp
+    test/test_planning_factor.cpp
   )
 
   target_link_libraries(test_${PROJECT_NAME}

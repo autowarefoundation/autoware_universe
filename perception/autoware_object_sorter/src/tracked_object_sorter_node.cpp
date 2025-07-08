@@ -1,4 +1,4 @@
-// Copyright 2022 TIER IV, Inc.
+// Copyright 2025 TIER IV, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,27 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef INTERFACE_HPP_
-#define INTERFACE_HPP_
+#include "tracked_object_sorter_node.hpp"
 
-#include <autoware/adapi_specs/interface.hpp>
-#include <rclcpp/rclcpp.hpp>
-
-// This file should be included after messages.
-#include "utils/types.hpp"
-
-namespace autoware::default_adapi
+namespace autoware::object_sorter
 {
 
-class InterfaceNode : public rclcpp::Node
+TrackedObjectSorterNode::TrackedObjectSorterNode(const rclcpp::NodeOptions & node_options)
+: ObjectSorterBase<autoware_perception_msgs::msg::TrackedObjects>(
+    "tracked_object_sorter_node", node_options)
 {
-public:
-  explicit InterfaceNode(const rclcpp::NodeOptions & options);
+}
 
-private:
-  Srv<autoware::adapi_specs::interface::Version> srv_;
-};
+}  // namespace autoware::object_sorter
 
-}  // namespace autoware::default_adapi
-
-#endif  // INTERFACE_HPP_
+#include "rclcpp_components/register_node_macro.hpp"
+RCLCPP_COMPONENTS_REGISTER_NODE(autoware::object_sorter::TrackedObjectSorterNode)
