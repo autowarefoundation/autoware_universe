@@ -224,11 +224,14 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
 
   take_data();
 
-  if (!is_data_ready()) {
+  if (const auto invalid_data_opt = is_data_invalid(raw_trajectory_points)) {
+    RCLCPP_WARN_SKIPFIRST_THROTTLE(
+      logger_, *clock_ptr_, throttle_duration_ms, "%s", invalid_data_opt->c_str());
     return {};
   }
 
-  if (is_data_timeout(planner_data->current_odometry)) {
+  if (const auto is_timeout_opt = is_data_timeout(planner_data->current_odometry)) {
+    RCLCPP_WARN_THROTTLE(logger_, *clock_ptr_, throttle_duration_ms, "%s", is_timeout_opt->c_str());
     return {};
   }
 
@@ -245,68 +248,66 @@ VelocityPlanningResult BoundaryDeparturePreventionModule::plan(
       std::make_unique<utils::SlowDownInterpolator>(node_param_.bdc_param.th_trigger);
   }
 
-  auto result_opt = plan_slow_down_intervals(raw_trajectory_points, planner_data);
+  try {
+    auto result_opt = plan_slow_down_intervals(raw_trajectory_points, planner_data);
 
-  processing_time_publisher_->publish(std::invoke([&]() {
-    autoware_internal_debug_msgs::msg::Float64Stamped msg;
-    msg.stamp = clock_ptr_->now();
-    msg.data = stopwatch_ms.toc();
-    return msg;
-  }));
+    processing_time_publisher_->publish(std::invoke([&]() {
+      autoware_internal_debug_msgs::msg::Float64Stamped msg;
+      msg.stamp = clock_ptr_->now();
+      msg.data = stopwatch_ms.toc();
+      return msg;
+    }));
 
-  if (!result_opt) {
-    RCLCPP_DEBUG(rclcpp::get_logger(get_module_name()), "%s", result_opt.error().c_str());
-    return {};
+    if (!result_opt) {
+      RCLCPP_DEBUG(logger_, "Planning skipped: %s", result_opt.error().c_str());
+      return {};
+    }
+
+    updater_ptr_->force_update();
+    return *result_opt;
+  } catch (const std::exception & e) {
+    RCLCPP_WARN(logger_, "Exception is caught: %s", e.what());
+  } catch (...) {
+    RCLCPP_ERROR(logger_, "Unknown exception is caught.");
   }
 
-  updater_ptr_->force_update();
-  return *result_opt;
+  return {};
 }
 
-bool BoundaryDeparturePreventionModule::is_data_ready()
+std::optional<std::string> BoundaryDeparturePreventionModule::is_data_invalid(
+  const TrajectoryPoints & raw_trajectory_points) const
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
-
   if (!ego_pred_traj_ptr_) {
-    RCLCPP_INFO_SKIPFIRST_THROTTLE(
-      logger_, *clock_ptr_, throttle_duration_ms, "waiting for predicted trajectory...");
-    return false;
+    return {"waiting for predicted trajectory..."};
+  }
+
+  if (ego_pred_traj_ptr_->points.empty()) {
+    return {"empty predicted trajectory..."};
   }
 
   if (!op_mode_state_ptr_) {
-    RCLCPP_INFO_SKIPFIRST_THROTTLE(
-      logger_, *clock_ptr_, throttle_duration_ms, "waiting for operation mode state...");
-    return false;
+    return {"waiting for operation mode state..."};
   }
 
   if (!control_cmd_ptr_) {
-    RCLCPP_INFO_SKIPFIRST_THROTTLE(
-      logger_, *clock_ptr_, throttle_duration_ms, "waiting for control command...");
-    return false;
+    return {"waiting for control command..."};
   }
 
   if (!steering_angle_ptr_) {
-    RCLCPP_INFO_SKIPFIRST_THROTTLE(
-      logger_, *clock_ptr_, throttle_duration_ms, "waiting for steering angle...");
-    return false;
+    return {"waiting for steering angle..."};
   }
 
-  return true;
-}
-
-bool BoundaryDeparturePreventionModule::is_data_valid() const
-{
-  autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
-
-  if (ego_pred_traj_ptr_->points.empty()) {
-    RCLCPP_WARN_THROTTLE(
-      logger_, *clock_ptr_, throttle_duration_ms, "empty predicted trajectory...");
-    return false;
+  constexpr size_t min_pts_size = 4;
+  if (raw_trajectory_points.size() < min_pts_size) {
+    return {"Insufficient reference trajectory points."};
   }
-  return true;
+
+  return std::nullopt;
 }
 
-bool BoundaryDeparturePreventionModule::is_data_timeout(const Odometry & odom) const
+std::optional<std::string> BoundaryDeparturePreventionModule::is_data_timeout(
+  const Odometry & odom) const
 {
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
@@ -315,40 +316,30 @@ bool BoundaryDeparturePreventionModule::is_data_timeout(const Odometry & odom) c
   constexpr auto th_pose_timeout_s = 1.0;
 
   if (odom_time_diff_s > th_pose_timeout_s) {
-    RCLCPP_WARN_THROTTLE(
-      logger_, *clock_ptr_, throttle_duration_ms, "pose timeout for %.3f seconds...",
-      odom_time_diff_s);
-    return true;
+    return fmt::format("pose timeout for {:.3f} seconds...", odom_time_diff_s);
   }
 
   const auto ego_pred_traj_time_diff_s =
     (rclcpp::Time(ego_pred_traj_ptr_->header.stamp) - now).seconds();
 
   if (ego_pred_traj_time_diff_s > th_pose_timeout_s) {
-    RCLCPP_WARN_THROTTLE(
-      logger_, *clock_ptr_, throttle_duration_ms,
-      "ego predicted trajectory timeout for %.3f seconds...", ego_pred_traj_time_diff_s);
-    return true;
+    return fmt::format(
+      "ego predicted trajectory timeout for {:.3f} seconds...", ego_pred_traj_time_diff_s);
   }
 
   const auto control_command_time_diff_s = (rclcpp::Time(control_cmd_ptr_->stamp) - now).seconds();
   if (control_command_time_diff_s > th_pose_timeout_s) {
-    RCLCPP_WARN_THROTTLE(
-      logger_, *clock_ptr_, throttle_duration_ms, "control commands timeout for %.3f seconds...",
-      control_command_time_diff_s);
-    return true;
+    return fmt::format(
+      "control commands timeout for {:.3f} seconds...", control_command_time_diff_s);
   }
 
   const auto steering_angle_time_diff_s =
     (rclcpp::Time(steering_angle_ptr_->stamp) - now).seconds();
   if (steering_angle_time_diff_s > th_pose_timeout_s) {
-    RCLCPP_WARN_THROTTLE(
-      logger_, *clock_ptr_, throttle_duration_ms, "control commands timeout for %.3f seconds...",
-      steering_angle_time_diff_s);
-    return true;
+    return fmt::format("steering report timeout for {:.3f} seconds...", steering_angle_time_diff_s);
   }
 
-  return false;
+  return std::nullopt;
 }
 
 bool BoundaryDeparturePreventionModule::is_goal_changed(
@@ -395,13 +386,6 @@ BoundaryDeparturePreventionModule::plan_slow_down_intervals(
     processing_times_ms_[tag] = stopwatch_ms.toc(true);
   };
 
-  if (!ego_pred_traj_ptr_) {
-    return tl::make_unexpected("Couldn't read predicted path pointer.");
-  }
-
-  if (raw_trajectory_points.empty()) {
-    return tl::make_unexpected("Empty reference trajectory.");
-  }
   if (autoware_utils::calc_distance2d(curr_position, goal_position) < min_effective_dist) {
     output_.departure_intervals.clear();
     return tl::make_unexpected("Too close to goal.");
