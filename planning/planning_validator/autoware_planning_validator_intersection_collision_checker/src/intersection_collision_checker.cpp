@@ -313,12 +313,13 @@ bool IntersectionCollisionChecker::check_collision(
       return 0.0;
     };
 
-  static constexpr double close_distance_threshold = 1.0;
-  const auto stopping_time =
-    abs(context_->data->current_kinematics->twist.twist.linear.x / p.ego_deceleration);
+  const auto ego_vel = context_->data->current_kinematics->twist.twist.linear.x;
+  const auto close_time_th =
+    ego_vel < p.filter.min_velocity ? p.min_time_horizon : abs(ego_vel / p.ego_deceleration);
+  static constexpr double close_distance_threshold = 3.0;
   auto is_colliding = [&](const PCDObject & object, const std::pair<double, double> & ego_time) {
     if (object.track_duration < p.pointcloud.velocity_estimation.observation_time) return false;
-    if (object.distance_to_overlap < close_distance_threshold && ego_time.first < stopping_time)
+    if (object.distance_to_overlap < close_distance_threshold && ego_time.first < close_time_th)
       return true;
     if (
       object.moving_time > p.filter.moving_time &&
@@ -345,7 +346,11 @@ bool IntersectionCollisionChecker::check_collision(
       const bool is_reliable = object.track_duration > vel_params.observation_time;
       static constexpr double eps = 0.01;  // small epsilon to avoid division by zero
       // update velocity only if the object is not yet reliable or velocity change is within limit
-      if (raw_accel > vel_params.reset_accel_th) {
+      if (
+        is_reliable && object.distance_to_overlap < close_distance_threshold &&
+        new_data.distance_to_overlap < close_distance_threshold) {
+        object.track_duration += dt;
+      } else if (raw_accel > vel_params.reset_accel_th) {
         object.velocity = 0.0;        // reset velocity if acceleration is too high
         object.track_duration = 0.0;  // reset track duration
       } else if (!is_reliable || raw_accel < vel_params.max_acceleration) {
