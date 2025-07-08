@@ -136,6 +136,8 @@
     <let name="switch/merger/camera_lidar_radar" value="true" unless="$(var use_multi_channel_tracker_merger)"/>
     <group scoped="false" if="$(var use_multi_channel_tracker_merger)">
       <let name="switch/filter/camera_lidar_object" value="true"/>
+      <let name="switch/detector/radar" value="true"/>
+      <!-- multi-channel only supports radar detected objects -->
       <let name="camera_lidar_rule_detector/output/objects" value="$(var ns)/clustering/camera_lidar_fusion/unfiltered/objects"/>
       <let name="camera_lidar_object_filter/output/objects" value="$(var ns)/clustering/camera_lidar_fusion/objects"/>
     </group>
@@ -156,6 +158,7 @@
     <let name="switch/detector/lidar_dnn" value="true"/>
     <let name="switch/detector/lidar_rule" value="true"/>
     <let name="switch/detector/radar" value="true"/>
+    <!-- radar_object_fusion_to_detected_object only supports radar detected objects -->
     <let name="switch/merger/lidar_radar" value="true" unless="$(var use_multi_channel_tracker_merger)"/>
     <let name="switch/detector/irregular_object" value="false"/>
   </group>
