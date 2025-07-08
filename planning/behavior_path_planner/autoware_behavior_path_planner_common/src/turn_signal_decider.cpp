@@ -799,7 +799,7 @@ std::pair<TurnSignalInfo, bool> TurnSignalDecider::getBehaviorTurnSignalInfo(
 
   if (
     (!is_pull_out && !is_lane_change && !is_pull_over) &&
-    !shiftSideOnlyHatchedRoadMarking(
+    !isAdjacentToHatchedRoadMarking(
       start_shift_length, end_shift_length, left_hatched_road_marking_only,
       right_hatched_road_marking_only, p.turn_signal_shift_length_threshold)) {
     return std::make_pair(TurnSignalInfo(p_path_start, p_path_end), true);

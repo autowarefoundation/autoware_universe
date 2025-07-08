@@ -179,7 +179,7 @@ private:
     return start_shift_length < threshold && end_shift_length < threshold;
   };
 
-  inline bool shiftSideOnlyHatchedRoadMarking(
+  inline bool isAdjacentToHatchedRoadMarking(
     const double start_shift_length, const double end_shift_length,
     const bool left_hatched_road_marking_only, const bool right_hatched_road_marking_only,
     const double threshold) const
