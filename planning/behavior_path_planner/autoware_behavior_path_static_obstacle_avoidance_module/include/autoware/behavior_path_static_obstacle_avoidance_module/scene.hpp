@@ -119,17 +119,17 @@ private:
   void updateRegisteredRTCStatus(const PathWithLaneId & path)
   {
     // NOTE(odashima): Prevent duplication of control points of PlanningFactor.
-    auto filterCloseShiftLines =
+    const auto filter_close_shift_lines =
       [](const RegisteredShiftLineArray & shift_lines) -> RegisteredShiftLineArray {
       constexpr double distance_threshold = 0.05;
       RegisteredShiftLineArray filtered_lines;
 
       for (size_t i = 0; i < shift_lines.size(); ++i) {
-        const auto & current_line = shift_lines[i];
+        const auto & current_line = shift_lines.at(i);
         bool should_keep = true;
 
         for (size_t j = i + 1; j < shift_lines.size(); ++j) {
-          const auto & next_line = shift_lines[j];
+          const auto & next_line = shift_lines.at(j);
 
           const double start_distance =
             autoware_utils_geometry::calc_distance2d(current_line.start_pose, next_line.start_pose);
@@ -150,8 +150,8 @@ private:
       return filtered_lines;
     };
 
-    const auto filtered_right_shifts = filterCloseShiftLines(right_shift_array_);
-    const auto filtered_left_shifts = filterCloseShiftLines(left_shift_array_);
+    const auto filtered_right_shifts = filter_close_shift_lines(right_shift_array_);
+    const auto filtered_left_shifts = filter_close_shift_lines(left_shift_array_);
 
     const auto ego_idx = planner_data_->findEgoIndex(path.points);
 
