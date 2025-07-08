@@ -1168,7 +1168,7 @@ bool NormalLaneChange::get_path_using_frenet(
 
     lane_change_debug_.frenet_states.emplace_back(
       frenet_candidate.prepare_metric, frenet_candidate.lane_changing.sampling_parameter,
-      frenet_candidate.max_lane_changing_length);
+      frenet_candidate.lc_average_curvature, frenet_candidate.max_lane_changing_length);
 
     std::optional<LaneChangePath> candidate_path_opt;
     try {

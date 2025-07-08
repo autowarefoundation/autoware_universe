@@ -119,6 +119,7 @@ struct FrenetPlannerParameters
   bool enable{true};
   double th_yaw_diff_deg{10.0};
   double th_curvature_smoothing{0.1};
+  double th_average_curvature{0.015};
 };
 
 struct TrajectoryParameters
