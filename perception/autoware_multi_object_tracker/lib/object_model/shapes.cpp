@@ -60,6 +60,25 @@ inline double getUnionArea(
   return getSumArea(union_polygons);
 }
 
+double get1dIoU(
+  const types::DynamicObject & source_object, const types::DynamicObject & target_object)
+{
+  static const double min_union = 0.01;
+  static const double min_length = 1e-6;
+
+  const auto r1 = source_object.shape.dimensions.x;
+  const auto r2 = target_object.shape.dimensions.x;
+  if (r1 < min_length || r2 < min_length) return 0.0;
+  const auto dx = source_object.pose.position.x - target_object.pose.position.x;
+  const auto dy = source_object.pose.position.y - target_object.pose.position.y;
+  const auto dist = std::sqrt(dx * dx + dy * dy);
+  const double intersection_length = std::max(0.0, r1 + r2 - dist);
+  if (intersection_length < min_union) return 0.0;
+  const double union_length = std::max(r1 + r2, dist);
+  const double iou = std::min(1.0, intersection_length / union_length);
+  return iou;
+}
+
 double get2dIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object,
   const double min_union_area)
