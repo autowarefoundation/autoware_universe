@@ -4,9 +4,8 @@
   <let name="ns" value="/perception/object_recognition/tracking"/>
 
   <!-- Radar Tracking and Merger parameters -->
-  <arg name="object_recognition_tracking_radar_object_tracker_data_association_matrix_param_path" description="association param file for radar far object tracking"/>
-  <arg name="object_recognition_tracking_radar_object_tracker_tracking_setting_param_path" description="tracking setting param file for radar far object tracking"/>
-  <arg name="object_recognition_tracking_radar_object_tracker_node_param_path" description="node param file for radar far object tracking"/>
+  <arg name="object_recognition_tracking_radar_tracked_object_sorter_param_path" description="param file for radar distance and velocity filters"/>
+  <arg name="object_recognition_tracking_radar_tracked_object_lanelet_filter_param_path" description="param file for radar lanelet filter"/>
   <arg name="object_recognition_tracking_object_merger_data_association_matrix_param_path" description="association param file for radar and lidar object merger"/>
   <arg name="object_recognition_tracking_object_merger_node_param_path" description="node param file for radar and lidar object merger"/>
 
@@ -38,19 +37,23 @@
   <arg name="input/radar/channel" default="radar"/>
   <arg name="input/radar/far_objects" default="/perception/object_recognition/detection/radar/far_objects"/>
   <arg name="input/radar/objects" default="/perception/object_recognition/detection/radar/objects"/>
+  <arg name="input/radar/tracked_objects" default="/sensing/radar/tracked_objects"/>
 
   <arg name="output/objects" default="$(var ns)/objects"/>
 
   <group unless="$(var use_multi_channel_tracker_merger)">
     <!-- Internal interface -->
-    <let name="radar_tracker/input/objects" value="$(var input/radar/far_objects)"/>
-    <let name="radar_tracker/output/objects" value="$(var ns)/radar/far_objects"/>
+    <let name="radar_tracked_object_sorter/input/objects" value="$(var input/radar/tracked_objects)"/>
+    <let name="radar_tracked_object_sorter/output/objects" value="$(var ns)/radar/sorted_tracked_objects"/>
+
+    <let name="radar_tracked_object_lanelet_filter/input/object" value="$(var radar_tracked_object_sorter/output/objects)"/>
+    <let name="radar_tracked_object_lanelet_filter/output/object" value="$(var ns)/radar/tracked_objects"/>
 
     <let name="multi_object_tracker/output/objects" value="$(var output/objects)" unless="$(var use_radar_tracking_fusion)"/>
     <let name="multi_object_tracker/output/objects" value="$(var ns)/near_objects" if="$(var use_radar_tracking_fusion)"/>
 
     <let name="tracker_merger/input/main_objects" value="$(var multi_object_tracker/output/objects)"/>
-    <let name="tracker_merger/input/sub_objects" value="$(var radar_tracker/output/objects)"/>
+    <let name="tracker_merger/input/sub_objects" value="$(var radar_tracked_object_lanelet_filter/output/object)"/>
     <let name="tracker_merger/output/objects" value="$(var output/objects)"/>
 
     <!-- Multi object tracking -->
@@ -65,13 +68,17 @@
 
     <!-- Run with tracking merger to add far radar information -->
     <group if="$(var use_radar_tracking_fusion)">
-      <!-- radar long range dynamic object tracking -->
-      <include file="$(find-pkg-share autoware_radar_object_tracker)/launch/radar_object_tracker.launch.xml">
-        <arg name="input" value="$(var radar_tracker/input/objects)"/>
-        <arg name="output" value="$(var radar_tracker/output/objects)"/>
-        <arg name="data_association_matrix_path" value="$(var object_recognition_tracking_radar_object_tracker_data_association_matrix_param_path)"/>
-        <arg name="tracker_setting_path" value="$(var object_recognition_tracking_radar_object_tracker_tracking_setting_param_path)"/>
-        <arg name="radar_object_tracker_param_path" value="$(var object_recognition_tracking_radar_object_tracker_node_param_path)"/>
+      <!-- radar tracked object filters -->
+      <include file="$(find-pkg-share autoware_object_sorter)/launch/tracked_object_sorter.launch.xml">
+        <arg name="input/objects" value="$(var radar_tracked_object_sorter/input/objects)"/>
+        <arg name="output/objects" value="$(var radar_tracked_object_sorter/output/objects)"/>
+        <arg name="param_path" value="$(var object_recognition_tracking_radar_tracked_object_sorter_param_path)"/>
+      </include>
+
+      <include file="$(find-pkg-share autoware_detected_object_validation)/launch/tracked_object_lanelet_filter.launch.xml">
+        <arg name="input/object" value="$(var radar_tracked_object_lanelet_filter/input/object)"/>
+        <arg name="output/object" value="$(var radar_tracked_object_lanelet_filter/output/object)"/>
+        <arg name="filtering_range_param" value="$(var object_recognition_tracking_radar_tracked_object_lanelet_filter_param_path)"/>
       </include>
 
       <!-- tracking object merger to merge near objects and far objects -->

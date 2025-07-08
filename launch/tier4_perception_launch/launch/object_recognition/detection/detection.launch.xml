@@ -46,6 +46,7 @@
   <arg name="use_low_intensity_cluster_filter"/>
   <arg name="use_image_segmentation_based_filter"/>
   <arg name="use_multi_channel_tracker_merger"/>
+  <arg name="use_radar_tracking_fusion"/>
   <arg name="use_irregular_object_detector"/>
   <arg name="irregular_object_detector_fusion_camera_ids" default="[0]"/>
 
@@ -131,7 +132,7 @@
     <let name="switch/filter/pointcloud" value="true"/>
     <let name="switch/detector/camera_lidar" value="true"/>
     <let name="switch/detector/lidar_dnn" value="true"/>
-    <let name="switch/detector/radar" value="true"/>
+    <let name="switch/detector/radar" value="true" unless="$(var use_radar_tracking_fusion)"/>
     <let name="switch/merger/camera_lidar_radar" value="true" unless="$(var use_multi_channel_tracker_merger)"/>
     <group scoped="false" if="$(var use_multi_channel_tracker_merger)">
       <let name="switch/filter/camera_lidar_object" value="true"/>
