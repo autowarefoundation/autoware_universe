@@ -259,7 +259,7 @@ visualization_msgs::msg::MarkerArray create_debug_marker_array(
   base_marker.color = autoware_utils::create_marker_color(1.0, 1.0, 1.0, 1.0);
   // TODO(Maxime): move the debug marker publishing AFTER the trajectory generation
   // disabled to prevent performance issues when publishing the debug markers
-  add_polygons_markers(debug_marker_array, base_marker, ego_data.trajectory_footprints);
+  // add_polygons_markers(debug_marker_array, base_marker, ego_data.trajectory_footprints);
   add_out_lanelets(debug_marker_array, base_marker, ego_data.out_lanelets);
   add_out_of_lane_overlaps(
     debug_marker_array, base_marker, out_of_lane_data.outside_points, ego_data.trajectory_points);
