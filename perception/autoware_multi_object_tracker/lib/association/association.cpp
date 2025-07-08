@@ -284,13 +284,13 @@ double DataAssociation::calculateScore(
   const double ratio_sq = dist_sq / max_dist_sq;
   const double score = 1.0 - std::sqrt(ratio_sq);
   if (score < score_threshold_) return 0.0;
-  // Early return for pedestrian (skip IoU check)
-  if (measurement_label == Label::PEDESTRIAN) return score;
 
   // 2d iou gate
   const double min_iou = config_.min_iou_matrix(tracker_label, measurement_label);
   constexpr double min_union_iou_area = 1e-2;
-  const double iou = shapes::get2dIoU(measurement_object, tracked_object, min_union_iou_area);
+  const double iou = measurement_label == Label::PEDESTRIAN
+                       ? shapes::get1dIoU(measurement_object, tracked_object)
+                       : shapes::get2dIoU(measurement_object, tracked_object, min_union_iou_area);
   if (iou < min_iou) return 0.0;
 
   return score;

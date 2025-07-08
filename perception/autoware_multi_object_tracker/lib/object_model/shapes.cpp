@@ -63,8 +63,8 @@ inline double getUnionArea(
 double get1dIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object)
 {
-  static const double min_union = 0.01;
-  static const double min_length = 1e-6;
+  static const double min_union_length = 0.1;  // As 0.01 used in 2dIoU, use 0.1 here
+  static const double min_length = 1e-3;       // As 1e-6 used in 2dIoU, use 1e-3 here
 
   const auto r1 = source_object.shape.dimensions.x;
   const auto r2 = target_object.shape.dimensions.x;
@@ -73,9 +73,10 @@ double get1dIoU(
   const auto dy = source_object.pose.position.y - target_object.pose.position.y;
   const auto dist = std::sqrt(dx * dx + dy * dy);
   const double intersection_length = std::max(0.0, r1 + r2 - dist);
-  if (intersection_length < min_union) return 0.0;
+  if (intersection_length < min_length) return 0.0;
   const double union_length = std::max(r1 + r2, dist);
-  const double iou = std::min(1.0, intersection_length / union_length);
+  const double iou =
+    union_length < min_union_length ? 0.0 : std::min(1.0, intersection_length / union_length);
   return iou;
 }
 
