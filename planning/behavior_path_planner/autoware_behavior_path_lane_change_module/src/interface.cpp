@@ -259,6 +259,24 @@ bool LaneChangeInterface::canTransitFailureState()
   }
 
   if (state == LaneChangeStates::Abort) {
+    if (!module_type_->isAbortState()) {
+      RCLCPP_DEBUG(getLogger(), "Transit to Abort state.");
+
+      const auto current_pose = module_type_->getEgoPose();
+
+      const auto planning_factor_direction = std::invoke([&]() {
+        if (module_type_->getDirection() == Direction::LEFT) {
+          return PlanningFactor::SHIFT_LEFT;
+        }
+        if (module_type_->getDirection() == Direction::RIGHT) {
+          return PlanningFactor::SHIFT_RIGHT;
+        }
+        return PlanningFactor::UNKNOWN;
+      });
+
+      planning_factor_interface_->add(
+        0.0, current_pose, planning_factor_direction, SafetyFactorArray{}, true, 0.0, 0.0, "abort");
+    }
     module_type_->toAbortState();
     return false;
   }
@@ -445,6 +463,6 @@ void LaneChangeInterface::updateSteeringFactorPtr(
     planning_factor_direction,
     utils::path_safety_checker::to_safety_factor_array(lane_change_debug.collision_check_objects),
     true, start_velocity, end_velocity, selected_path.info.shift_line.start_shift_length,
-    selected_path.info.shift_line.end_shift_length, "candidate");
+    selected_path.info.shift_line.end_shift_length, "");
 }
 }  // namespace autoware::behavior_path_planner

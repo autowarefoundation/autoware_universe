@@ -179,3 +179,7 @@ The following parameters can be set for the `autoware_planning_validator`:
 | `validity_checks.trajectory_shift.forward_shift_th`  | double | max valid Longitudinal distance between two consecutive trajectories (measured at nearest point to ego) [m] | 1.0           |
 | `validity_checks.trajectory_shift.backward_shift_th` | double | min valid longitudinal distance between two consecutive trajectories (measured at nearest point to ego) [m] | 0.1           |
 | `validity_checks.trajectory_shift.is_critical`       | bool   | if true, will use handling type specified for critical checks                                               | true          |
+
+!!! warning
+
+    When a validity check with `is_critical = true` is triggered, AND `handling_type.critical` is set to apply soft stop on last valid trajectory, THEN any other validity check triggered simultaneously will publish a WARN level diagnostic instead of ERROR level. This is to avoid contradictory behavior for different types of checks.
