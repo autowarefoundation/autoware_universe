@@ -38,13 +38,12 @@
   <depend>tier4_planning_msgs</depend>
   <depend>tier4_system_msgs</depend>
 
+  <exec_depend>autoware_default_adapi</exec_depend>
   <exec_depend>autoware_global_parameter_loader</exec_depend>
   <exec_depend>python3-flask</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>autoware_lint_common</test_depend>
-  <test_depend>launch_testing</test_depend>
-  <test_depend>launch_testing_ament_cmake</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

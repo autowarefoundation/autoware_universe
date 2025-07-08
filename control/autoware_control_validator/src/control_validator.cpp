@@ -66,6 +66,13 @@ void LateralJerkValidator::validate(
   rclcpp::Time prev_time(prev_control_cmd_->stamp);
   const double dt = (current_time - prev_time).seconds();
 
+  // Only perform calculation if the time difference is greater than or equal to 1 msec.
+  // This avoids instability due to too small dt and prevents division by zero.
+  if (dt < 1e-3) {
+    prev_control_cmd_ = std::make_unique<Control>(control_cmd);
+    return;
+  }
+
   const double prev_steering_cmd = prev_control_cmd_->lateral.steering_tire_angle;
   const double steering_rate = (steering_cmd - prev_steering_cmd) / dt;
 

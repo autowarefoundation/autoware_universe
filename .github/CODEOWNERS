@@ -87,6 +87,7 @@ perception/autoware_map_based_prediction/** kotaro.uetake@tier4.jp kyoichi.sugah
 perception/autoware_multi_object_tracker/** lei.gu@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 perception/autoware_object_merger/** lei.gu@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 perception/autoware_object_range_splitter/** lei.gu@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
+perception/autoware_object_sorter/** lei.gu@tier4.jp masaki.baba@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 perception/autoware_object_velocity_splitter/** lei.gu@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp
 perception/autoware_occupancy_grid_map_outlier_filter/** abrahammonrroy@yahoo.com taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp
 perception/autoware_probabilistic_occupancy_grid_map/** kenzo.lobos@tier4.jp mamoru.sobue@tier4.jp taekjin.lee@tier4.jp yoshi.ri@tier4.jp yukihiro.saito@tier4.jp

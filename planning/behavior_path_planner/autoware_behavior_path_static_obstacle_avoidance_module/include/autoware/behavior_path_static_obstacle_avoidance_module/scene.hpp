@@ -23,6 +23,7 @@
 #include "autoware/behavior_path_static_obstacle_avoidance_module/shift_line_generator.hpp"
 #include "autoware/behavior_path_static_obstacle_avoidance_module/type_alias.hpp"
 
+#include <autoware_utils_geometry/geometry.hpp>
 #include <rclcpp/logging.hpp>
 #include <rclcpp/node.hpp>
 #include <rclcpp/time.hpp>
@@ -117,9 +118,44 @@ private:
    */
   void updateRegisteredRTCStatus(const PathWithLaneId & path)
   {
+    // NOTE(odashima): Prevent duplication of control points of PlanningFactor.
+    const auto filter_close_shift_lines =
+      [](const RegisteredShiftLineArray & shift_lines) -> RegisteredShiftLineArray {
+      constexpr double distance_threshold = 0.05;
+      RegisteredShiftLineArray filtered_lines;
+
+      for (size_t i = 0; i < shift_lines.size(); ++i) {
+        const auto & current_line = shift_lines.at(i);
+        bool should_keep = true;
+
+        for (size_t j = i + 1; j < shift_lines.size(); ++j) {
+          const auto & next_line = shift_lines.at(j);
+
+          const double start_distance =
+            autoware_utils_geometry::calc_distance2d(current_line.start_pose, next_line.start_pose);
+          const double finish_distance = autoware_utils_geometry::calc_distance2d(
+            current_line.finish_pose, next_line.finish_pose);
+
+          if (start_distance < distance_threshold && finish_distance < distance_threshold) {
+            should_keep = false;
+            break;
+          }
+        }
+
+        if (should_keep) {
+          filtered_lines.push_back(current_line);
+        }
+      }
+
+      return filtered_lines;
+    };
+
+    const auto filtered_right_shifts = filter_close_shift_lines(right_shift_array_);
+    const auto filtered_left_shifts = filter_close_shift_lines(left_shift_array_);
+
     const auto ego_idx = planner_data_->findEgoIndex(path.points);
 
-    for (const auto & left_shift : left_shift_array_) {
+    for (const auto & left_shift : filtered_left_shifts) {
       const double start_distance = autoware::motion_utils::calcSignedArcLength(
         path.points, ego_idx, left_shift.start_pose.position);
       const double finish_distance = start_distance + left_shift.relative_longitudinal;
@@ -139,7 +175,7 @@ private:
           left_shift.uuid, true, State::RUNNING, start_distance, finish_distance, clock_->now());
       }
 
-      if (finish_distance > -1.0e-03) {
+      if (finish_distance > -1.0) {
         planning_factor_interface_->add(
           start_distance, finish_distance, left_shift.start_pose, left_shift.finish_pose,
           PlanningFactor::SHIFT_LEFT,
@@ -149,7 +185,7 @@ private:
       }
     }
 
-    for (const auto & right_shift : right_shift_array_) {
+    for (const auto & right_shift : filtered_right_shifts) {
       const double start_distance = autoware::motion_utils::calcSignedArcLength(
         path.points, ego_idx, right_shift.start_pose.position);
       const double finish_distance = start_distance + right_shift.relative_longitudinal;
@@ -168,7 +204,7 @@ private:
           right_shift.uuid, true, State::RUNNING, start_distance, finish_distance, clock_->now());
       }
 
-      if (finish_distance > -1.0e-03) {
+      if (finish_distance > -1.0) {
         planning_factor_interface_->add(
           start_distance, finish_distance, right_shift.start_pose, right_shift.finish_pose,
           PlanningFactor::SHIFT_RIGHT,
