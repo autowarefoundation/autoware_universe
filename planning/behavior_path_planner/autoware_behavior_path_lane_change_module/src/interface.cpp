@@ -259,7 +259,7 @@ bool LaneChangeInterface::canTransitFailureState()
   }
 
   if (state == LaneChangeStates::Abort) {
-    if (!module_type_->isAbortState() || true) {
+    if (!module_type_->isAbortState()) {
       RCLCPP_DEBUG(getLogger(), "Transit to Abort state.");
 
       const auto current_pose = module_type_->getEgoPose();
