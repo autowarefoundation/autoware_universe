@@ -182,4 +182,4 @@ The following parameters can be set for the `autoware_planning_validator`:
 
 !!! warning
 
-    When a validity check with `is_critical = true` is triggered, AND `handling_type.critical` is set to apply soft stop on last valid trajectory, THEN any other validity check triggered simultanuously will publish a WARN level diagnostic instead of ERROR level. This is to avoid contradictory behavior for different types of checks.
+    When a validity check with `is_critical = true` is triggered, AND `handling_type.critical` is set to apply soft stop on last valid trajectory, THEN any other validity check triggered simultaneously will publish a WARN level diagnostic instead of ERROR level. This is to avoid contradictory behavior for different types of checks.
