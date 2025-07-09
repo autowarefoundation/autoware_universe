@@ -160,6 +160,7 @@ private:
   double max_accel_;
   double min_accel_;
   double pedal_to_accel_delay_;
+  double timeout_sec_;
   int precision_;
   std::string csv_calibrated_map_dir_;
   std::string output_accel_file_;
@@ -170,7 +171,6 @@ private:
   const double dif_pedal_time_ = 0.16;  // 160ms
   const std::size_t twist_vec_max_size_ = 100;
   const std::size_t pedal_vec_max_size_ = 100;
-  const double timeout_sec_ = 0.1;
   int max_data_count_;
   const int max_data_save_num_ = 10000;
   const double map_resolution_ = 0.1;
