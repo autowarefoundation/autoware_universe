@@ -87,8 +87,8 @@ double get1dIoU(
   if (dist < r1 - r2) return (r2 * r2) / (r1 * r1);
   // if distance is between the difference and the sum of radii, return the ratio of the
   // intersection length to the union length
-  const double intersection_length = r1 + r2 - dist;
   if (r1 + r2 + dist < min_union_length) return 0.0;
+  const double intersection_length = r1 + r2 - dist;
   const double iou = intersection_length * r2 / (r1 * r1) * 0.5;
   return iou;
 }
