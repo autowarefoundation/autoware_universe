@@ -60,6 +60,39 @@ inline double getUnionArea(
   return getSumArea(union_polygons);
 }
 
+double get1dIoU(
+  const types::DynamicObject & source_object, const types::DynamicObject & target_object)
+{
+  constexpr double min_union_length = 0.1;  // As 0.01 used in 2dIoU, use 0.1 here
+  constexpr double min_length = 1e-3;       // As 1e-6 used in 2dIoU, use 1e-3 here
+  // Compute radii from dimensions (use max of x and y as diameter)
+  const double r_src =
+    std::max(source_object.shape.dimensions.x, source_object.shape.dimensions.y) * 0.5;
+  const double r_tgt =
+    std::max(target_object.shape.dimensions.x, target_object.shape.dimensions.y) * 0.5;
+  // if radius is smaller than the minimum length, return 0.0
+  if (r_src < min_length || r_tgt < min_length) return 0.0;
+  // Ensure r1 is the larger radius
+  const double r1 = std::max(r_tgt, r_src);
+  const double r2 = std::min(r_tgt, r_src);
+  const auto dx = source_object.pose.position.x - target_object.pose.position.x;
+  const auto dy = source_object.pose.position.y - target_object.pose.position.y;
+  // distance between centers
+  const auto dist = std::sqrt(dx * dx + dy * dy);
+  // if distance is larger than the sum of radius, return 0.0
+  if (dist > r1 + r2 - min_length) return 0.0;
+  // if distance is smaller than the difference of radius, return the ratio of the smaller radius to
+  // the larger radius
+  // Square used to mimic area ratio behavior as a rough 2D approximation
+  if (dist < r1 - r2) return (r2 * r2) / (r1 * r1);
+  // if distance is between the difference and the sum of radii, return the ratio of the
+  // intersection length to the union length
+  if (r1 + r2 + dist < min_union_length) return 0.0;
+  const double intersection_length = r1 + r2 - dist;
+  const double iou = intersection_length * r2 / (r1 * r1) * 0.5;
+  return iou;
+}
+
 double get2dIoU(
   const types::DynamicObject & source_object, const types::DynamicObject & target_object,
   const double min_union_area)
