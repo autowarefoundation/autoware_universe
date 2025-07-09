@@ -66,17 +66,23 @@ double get1dIoU(
   static const double min_union_length = 0.1;  // As 0.01 used in 2dIoU, use 0.1 here
   static const double min_length = 1e-3;       // As 1e-6 used in 2dIoU, use 1e-3 here
 
-  const auto r1 = source_object.shape.dimensions.x;
-  const auto r2 = target_object.shape.dimensions.x;
+  const double r1 =
+    std::max(source_object.shape.dimensions.x, target_object.shape.dimensions.x) / 2.0;
+  const double r2 =
+    std::min(source_object.shape.dimensions.x, target_object.shape.dimensions.x) / 2.0;
   if (r1 < min_length || r2 < min_length) return 0.0;
   const auto dx = source_object.pose.position.x - target_object.pose.position.x;
   const auto dy = source_object.pose.position.y - target_object.pose.position.y;
   const auto dist = std::sqrt(dx * dx + dy * dy);
+  if (dist > r1 + r2 - min_length) return 0.0;
+  if (dist < r1 - r2) return (r2 * r2) / (r1 * r1);
+
   const double intersection_length = std::max(0.0, r1 + r2 - dist);
-  if (intersection_length < min_length) return 0.0;
-  const double union_length = std::max(r1 + r2, dist);
+  const double union_length = r1 + r2 + dist;
   const double iou =
-    union_length < min_union_length ? 0.0 : std::min(1.0, intersection_length / union_length);
+    union_length < min_union_length
+      ? 0.0
+      : std::min(1.0, intersection_length * intersection_length / (union_length * union_length));
   return iou;
 }
 
