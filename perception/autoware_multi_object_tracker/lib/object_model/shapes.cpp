@@ -86,13 +86,10 @@ double get1dIoU(
   // Square used to mimic area ratio behavior as a rough 2D approximation
   if (dist < r1 - r2) return (r2 * r2) / (r1 * r1);
   // if distance is between the difference and the sum of radii, return the ratio of the
-  // intersection length to the union length Square used to mimic area ratio behavior as a rough 2D
-  // approximation
-  const double intersection_length = std::max(0.0, r1 + r2 - dist);
-  const double union_length = r1 + r2 + dist;
-  const double iou = union_length < min_union_length
-                       ? 0.0
-                       : std::min(1.0, intersection_length * r2 / (r1 * r1) * 0.5);
+  // intersection length to the union length
+  const double intersection_length = r1 + r2 - dist;
+  if (r1 + r2 + dist < min_union_length) return 0.0;
+  const double iou = intersection_length * r2 / (r1 * r1) * 0.5;
   return iou;
 }
 
