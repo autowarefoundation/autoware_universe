@@ -146,6 +146,18 @@ void PlanningValidatorDebugMarkerPublisher::pushLaneletPolygonsMarker(
   marker_array_.markers.push_back(marker);
 }
 
+void PlanningValidatorDebugMarkerPublisher::pushTextMarker(
+  const geometry_msgs::msg::Pose & pose, const std::string & text, const std::string & ns)
+{
+  visualization_msgs::msg::Marker marker = autoware_utils::create_default_marker(
+    "map", node_->get_clock()->now(), ns, getMarkerId(ns), Marker::TEXT_VIEW_FACING,
+    autoware_utils::create_marker_scale(0.5, 0.5, 0.5),
+    autoware_utils::create_marker_color(1.0, 1.0, 1.0, 0.999));
+  marker.text = text;
+  marker.pose = pose;
+  marker_array_.markers.push_back(marker);
+}
+
 void PlanningValidatorDebugMarkerPublisher::pushMarker(
   const visualization_msgs::msg::Marker & marker)
 {

@@ -52,6 +52,8 @@ public:
   void pushLineSegmentMarker(
     const geometry_msgs::msg::Point & p1, const geometry_msgs::msg::Point & p2,
     const std::string & ns, int id = 0);
+  void pushTextMarker(
+    const geometry_msgs::msg::Pose & pose, const std::string & text, const std::string & ns);
 
   void pushLaneletPolygonsMarker(
     const lanelet::BasicPolygons2d & polygon, const std::string & ns, int id = 0);

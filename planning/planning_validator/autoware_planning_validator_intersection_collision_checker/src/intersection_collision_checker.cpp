@@ -18,8 +18,10 @@
 
 #include <autoware/signal_processing/lowpass_filter_1d.hpp>
 #include <autoware_lanelet2_extension/utility/utilities.hpp>
+#include <autoware_utils/ros/marker_helper.hpp>
 #include <autoware_utils/ros/parameter.hpp>
 #include <autoware_utils/transform/transforms.hpp>
+#include <magic_enum.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include <autoware_internal_planning_msgs/msg/planning_factor.hpp>
@@ -62,6 +64,15 @@ void IntersectionCollisionChecker::init(
   param_listener_ = std::make_unique<intersection_collision_checker_node::ParamListener>(
     node.get_node_parameters_interface());
 
+  pub_cluster_pointcloud_ =
+    node.create_publisher<PointCloud2>("~/intersection_collision_checker/debug/cluster_points", 1);
+
+  pub_voxel_pointcloud_ =
+    node.create_publisher<PointCloud2>("~/intersection_collision_checker/debug/voxel_points", 1);
+
+  pub_string_ =
+    node.create_publisher<StringStamped>("~/intersection_collision_checker/debug/state", 1);
+
   planning_factor_interface_ =
     std::make_unique<autoware::planning_factor_interface::PlanningFactorInterface>(
       &node, "intersection_collision_checker");
@@ -101,60 +112,50 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
 
   if (!p.enable) return;
 
-  auto skip_validation = [&](const std::string & reason) {
-    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "%s, skip collision check", reason.c_str());
-    is_critical = false;
-    reset_data();
-  };
-
   std::string data_msg;
   if (!is_data_ready(data_msg)) {
-    return skip_validation(data_msg);
-  }
-
-  const auto ego_trajectory = get_ego_trajectory();
-
-  DebugData debug_data;
-  get_lanelets(debug_data, ego_trajectory);
-
-  set_lanelets_debug_marker(debug_data.ego_lanelets);
-
-  if (debug_data.turn_direction == Direction::NONE) {
+    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "%s, skip collision check", data_msg.c_str());
+    is_critical = false;
     reset_data();
     return;
   }
 
-  if (debug_data.ego_lanelets.trajectory_lanelets.empty()) {
-    return skip_validation("failed to get trajectory lanelets");
-  }
-
-  if (target_lanelets_map_.empty()) {
-    return skip_validation("failed to get target lanelets");
-  }
-
+  DebugData debug_data;
   context_->validation_status->is_valid_intersection_collision_check = is_safe(debug_data);
+  if (!debug_data.is_active) reset_data();
+
+  publish_markers(debug_data);
+  publish_planning_factor(debug_data);
 }
 
 bool IntersectionCollisionChecker::is_safe(DebugData & debug_data)
 {
+  const auto ego_trajectory = get_ego_trajectory();
+  get_lanelets(debug_data, ego_trajectory);
+
+  if (debug_data.turn_direction == Direction::NONE) return true;
+
+  if (debug_data.ego_lanelets.trajectory_lanelets.empty()) {
+    debug_data.text = "failed to get trajectory lanelets";
+    return true;
+  }
+
+  if (target_lanelets_map_.empty()) {
+    debug_data.text = "failed to get target lanelets";
+    return true;
+  }
+
   PointCloud::Ptr filtered_pointcloud(new PointCloud);
   filter_pointcloud(context_->data->obstacle_pointcloud, filtered_pointcloud, debug_data);
-  if (filtered_pointcloud->empty()) return true;
+  if (filtered_pointcloud->empty()) {
+    debug_data.text = "no points in the filtered pointcloud";
+    return true;
+  }
 
-  safety_factor_array_ = SafetyFactorArray{};
-  const bool is_safe =
-    check_collision(debug_data, filtered_pointcloud, context_->data->obstacle_pointcloud->header.stamp);
+  debug_data.is_active = true;
 
-  const auto & ego_pose = context_->data->current_kinematics->pose.pose;
-  const auto & traj_points = context_->data->current_trajectory->points;
-  auto publish_planning_factor = [&]() {
-    safety_factor_array_.is_safe = false;
-    safety_factor_array_.detail = "possible collision at intersection";
-    safety_factor_array_.header.stamp = clock_->now();
-    planning_factor_interface_->add(
-      traj_points, ego_pose, ego_pose, PlanningFactor::STOP, safety_factor_array_);
-    planning_factor_interface_->publish();
-  };
+  const bool is_safe = check_collision(
+    debug_data, filtered_pointcloud, context_->data->obstacle_pointcloud->header.stamp);
 
   const auto & p = params_.icc_parameters;
   const auto now = clock_->now();
@@ -164,7 +165,6 @@ bool IntersectionCollisionChecker::is_safe(DebugData & debug_data)
       last_valid_time_ = now;
       return true;
     }
-    publish_planning_factor();
     return false;
   }
 
@@ -174,7 +174,6 @@ bool IntersectionCollisionChecker::is_safe(DebugData & debug_data)
   }
 
   last_invalid_time_ = now;
-  publish_planning_factor();
   return false;
 }
 
@@ -235,12 +234,18 @@ void IntersectionCollisionChecker::get_lanelets(
   const auto time_horizon = std::max(p.min_time_horizon, stopping_time);
   if (debug_data.turn_direction == Direction::RIGHT) {
     collision_checker_utils::set_right_turn_target_lanelets(
-      ego_trajectory, *context_->data->route_handler, params_, debug_data.ego_lanelets, target_lanelets_map_,
-      time_horizon);
+      ego_trajectory, *context_->data->route_handler, params_, debug_data.ego_lanelets,
+      target_lanelets_map_, time_horizon);
   } else {
     collision_checker_utils::set_left_turn_target_lanelets(
-      ego_trajectory, *context_->data->route_handler, params_, debug_data.ego_lanelets, target_lanelets_map_,
-      time_horizon);
+      ego_trajectory, *context_->data->route_handler, params_, debug_data.ego_lanelets,
+      target_lanelets_map_, time_horizon);
+  }
+
+  for (const auto & target_lanelet : target_lanelets_map_) {
+    const auto & target_ll = target_lanelet.second;
+    if (!target_ll.is_active || target_ll.lanelets.empty()) continue;
+    debug_data.target_lanelets.push_back(target_ll);
   }
 }
 
@@ -256,7 +261,8 @@ Direction IntersectionCollisionChecker::get_turn_direction(
 }
 
 void IntersectionCollisionChecker::filter_pointcloud(
-  PointCloud2::ConstSharedPtr & input, PointCloud::Ptr & filtered_pointcloud, DebugData & debug_data) const
+  PointCloud2::ConstSharedPtr & input, PointCloud::Ptr & filtered_pointcloud,
+  DebugData & debug_data) const
 {
   if (input->data.empty()) return;
 
@@ -318,7 +324,8 @@ void IntersectionCollisionChecker::filter_pointcloud(
 }
 
 bool IntersectionCollisionChecker::check_collision(
-  DebugData & debug_data, const PointCloud::Ptr & filtered_point_cloud, const rclcpp::Time & time_stamp)
+  DebugData & debug_data, const PointCloud::Ptr & filtered_point_cloud,
+  const rclcpp::Time & time_stamp)
 {
   bool is_safe = true;
 
@@ -337,12 +344,10 @@ bool IntersectionCollisionChecker::check_collision(
     ego_vel < p.filter.min_velocity ? p.min_time_horizon : abs(ego_vel / p.ego_deceleration);
   static constexpr double close_distance_threshold = 3.0;
   auto is_colliding = [&](const PCDObject & object, const std::pair<double, double> & ego_time) {
-    if (object.track_duration < p.pointcloud.velocity_estimation.observation_time) return false;
+    if (!object.is_reliable) return false;
     if (object.distance_to_overlap < close_distance_threshold && ego_time.first < close_time_th)
       return true;
-    if (
-      object.moving_time > p.filter.moving_time &&
-      ego_object_overlap_time(object.ttc, ego_time) < p.ttc_threshold) {
+    if (object.is_moving && ego_object_overlap_time(object.ttc, ego_time) < p.ttc_threshold) {
       return true;
     }
     return false;
@@ -362,17 +367,18 @@ bool IntersectionCollisionChecker::check_collision(
 
       const auto raw_velocity = dl / dt;
       const auto raw_accel = std::abs(raw_velocity - object.velocity) / dt;
-      const bool is_reliable = object.track_duration > vel_params.observation_time;
+      object.is_reliable = object.track_duration > vel_params.observation_time;
       static constexpr double eps = 0.01;  // small epsilon to avoid division by zero
       // update velocity only if the object is not yet reliable or velocity change is within limit
       if (
-        is_reliable && object.distance_to_overlap < close_distance_threshold &&
+        object.is_reliable && object.distance_to_overlap < close_distance_threshold &&
         new_data.distance_to_overlap < close_distance_threshold) {
         object.track_duration += dt;
       } else if (raw_accel > vel_params.reset_accel_th) {
         object.velocity = 0.0;        // reset velocity if acceleration is too high
         object.track_duration = 0.0;  // reset track duration
-      } else if (!is_reliable || raw_accel < vel_params.max_acceleration) {
+        object.is_reliable = false;   // reset reliability
+      } else if (!object.is_reliable || raw_accel < vel_params.max_acceleration) {
         object.velocity = autoware::signal_processing::lowpassFilter(
           raw_velocity, object.velocity, 0.5);  // apply low-pass filter to velocity
         object.velocity = std::clamp(object.velocity, eps, vel_params.max_velocity);
@@ -386,6 +392,7 @@ bool IntersectionCollisionChecker::check_collision(
         std::max(0.0, object.distance_to_overlap - object.velocity * p.pointcloud.latency);
       object.moving_time =
         (object.velocity < p.filter.min_velocity) ? 0.0 : object.moving_time + dt;
+      object.is_moving = object.moving_time > p.filter.moving_time;
       object.ttc = object.delay_compensated_distance_to_overlap / object.velocity;
     };
 
@@ -394,19 +401,9 @@ bool IntersectionCollisionChecker::check_collision(
     } else {
       auto & existing_object = history_[pcd_object->overlap_lanelet_id];
       update_object(existing_object, pcd_object.value());
-
-      if (is_colliding(existing_object, target_ll.ego_overlap_time)) {
-        is_safe = false;
-        context_->debug_pose_publisher->pushPointMarker(
-          existing_object.pose.position, "collision_checker_pcd_objects", 0, 0.5, true);
-        context_->debug_pose_publisher->pushLineSegmentMarker(
-          existing_object.pose.position, target_ll.overlap_point.position,
-          "collision_checker_pcd_objects", 0);
-        add_safety_factor(existing_object.pose.position, target_ll.ego_overlap_time.first);
-      } else {
-        context_->debug_pose_publisher->pushPointMarker(
-          existing_object.pose.position, "collision_checker_pcd_objects", 1);
-      }
+      existing_object.is_safe = !is_colliding(existing_object, target_ll.ego_overlap_time);
+      is_safe &= existing_object.is_safe;
+      debug_data.pcd_objects.push_back(existing_object);
     }
   }
 
@@ -424,8 +421,8 @@ bool IntersectionCollisionChecker::check_collision(
 }
 
 std::optional<PCDObject> IntersectionCollisionChecker::get_pcd_object(
-  DebugData & debug_data, const rclcpp::Time & time_stamp, const PointCloud::Ptr & filtered_point_cloud,
-  const TargetLanelet & target_lanelet) const
+  DebugData & debug_data, const rclcpp::Time & time_stamp,
+  const PointCloud::Ptr & filtered_point_cloud, const TargetLanelet & target_lanelet) const
 {
   std::optional<PCDObject> pcd_object = std::nullopt;
 
@@ -542,12 +539,44 @@ void IntersectionCollisionChecker::cluster_pointcloud(
   }
 }
 
-void IntersectionCollisionChecker::set_lanelets_debug_marker(const EgoLanelets & lanelets) const
+void IntersectionCollisionChecker::publish_markers(const DebugData & debug_data) const
+{
+  {
+    std::ostringstream ss;
+    ss << std::fixed << std::setprecision(2) << std::boolalpha;
+    ss << "ACTIVE:" << debug_data.is_active << "\n";
+    ss << "SAFE:" << debug_data.is_safe << "\n";
+    ss << "TURN:" << magic_enum::enum_name(debug_data.turn_direction) << "\n";
+    ss << "INFO:" << debug_data.text << "\n";
+    ss << "TRACKING OBJECTS:" << debug_data.pcd_objects.size() << "\n";
+    ss << "PROCESSING TIME:" << debug_data.processing_time_detail_ms << "[ms]\n";
+
+    StringStamped string_stamp;
+    string_stamp.stamp = clock_->now();
+    string_stamp.data = ss.str();
+    pub_string_->publish(string_stamp);
+  }
+
+  if (!debug_data.is_active) return;
+
+  set_lanelets_debug_marker(debug_data);
+  set_pcd_objects_debug_marker(debug_data);
+
+  if (debug_data.voxel_points) {
+    pub_voxel_pointcloud_->publish(*debug_data.voxel_points);
+  }
+
+  if (debug_data.cluster_points) {
+    pub_cluster_pointcloud_->publish(*debug_data.cluster_points);
+  }
+}
+
+void IntersectionCollisionChecker::set_lanelets_debug_marker(const DebugData & debug_data) const
 {
   {  // trajectory lanelets
     lanelet::BasicPolygons2d ll_polygons;
     lanelet::BasicPolygons2d turn_ll_polygons;
-    for (const auto & ll : lanelets.trajectory_lanelets) {
+    for (const auto & ll : debug_data.ego_lanelets.trajectory_lanelets) {
       ll_polygons.push_back(ll.polygon2d().basicPolygon());
       if (ll.hasAttribute("turn_direction") && ll.attribute("turn_direction") != "straight") {
         turn_ll_polygons.push_back(ll.polygon2d().basicPolygon());
@@ -555,40 +584,107 @@ void IntersectionCollisionChecker::set_lanelets_debug_marker(const EgoLanelets &
     }
     if (!ll_polygons.empty()) {
       context_->debug_pose_publisher->pushLaneletPolygonsMarker(
-        ll_polygons, "collision_checker_trajectory_lanelets", 1);
+        ll_polygons, "ICC_trajectory_lanelets", 1);
     }
     if (!turn_ll_polygons.empty()) {
       context_->debug_pose_publisher->pushLaneletPolygonsMarker(
-        turn_ll_polygons, "collision_checker_turn_direction_lanelets", 0);
+        turn_ll_polygons, "ICC_turn_direction_lanelets", 0);
     }
   }
 
+  auto add_text_marker = [&](const TargetLanelet & target_ll, const std::string & ns = "") {
+    std::ostringstream ss;
+    ss << std::fixed << std::setprecision(2);
+    ss << "Lane ID:" << target_ll.id;
+    ss << "\nTimeToReach:" << target_ll.ego_overlap_time.first << "[s]";
+    ss << "\nTimeToLeave:" << target_ll.ego_overlap_time.second << "[s]";
+    auto pose = target_ll.overlap_point;
+    pose.position.z += 1.0;
+    context_->debug_pose_publisher->pushTextMarker(pose, ss.str(), ns + "_text");
+  };
+
   {  // target lanelets
     lanelet::BasicPolygons2d ll_polygons;
-    for (const auto & t_l : target_lanelets_map_) {
-      if (!t_l.second.is_active) continue;
-      for (const auto & ll : t_l.second.lanelets) {
+    for (const auto & target_ll : debug_data.target_lanelets) {
+      for (const auto & ll : target_ll.lanelets) {
         ll_polygons.push_back(ll.polygon2d().basicPolygon());
       }
       context_->debug_pose_publisher->pushPointMarker(
-        t_l.second.overlap_point.position, "collision_checker_target_lanelets", 2);
+        target_ll.overlap_point.position, "ICC_target_lanelets", 2);
+      add_text_marker(target_ll, "ICC_target_lanelets");
     }
     if (!ll_polygons.empty()) {
       context_->debug_pose_publisher->pushLaneletPolygonsMarker(
-        ll_polygons, "collision_checker_target_lanelets", 2);
+        ll_polygons, "ICC_target_lanelets", 2);
     }
   }
 }
 
-void IntersectionCollisionChecker::add_safety_factor(
-  geometry_msgs::msg::Point & obs_point, const double ttc)
+void IntersectionCollisionChecker::set_pcd_objects_debug_marker(const DebugData & debug_data) const
 {
+  auto get_debug_string = [&](const PCDObject & object) {
+    std::ostringstream ss;
+    ss << std::fixed << std::setprecision(2);
+    ss << "TrackDuration:" << object.track_duration << "[s]\n";
+    ss << "MovingTime:" << object.moving_time << "[s]\n";
+    ss << "DistToOverlap(RAW):" << object.distance_to_overlap << "[m]\n";
+    ss << "DistToOverlap(w/DC):" << object.delay_compensated_distance_to_overlap << "[m]\n";
+    ss << "Velocity:" << object.velocity << "[m/s]\n";
+    ss << "TTC:" << object.ttc << "[s]";
+    return ss.str();
+  };
+
+  auto add_marker = [&](const PCDObject & object) {
+    auto pose = object.pose;
+    pose.position.z += 1.0;
+    context_->debug_pose_publisher->pushTextMarker(
+      pose, get_debug_string(object), "ICC_pcd_objects_text");
+    if (object.is_safe) {
+      context_->debug_pose_publisher->pushPointMarker(object.pose.position, "ICC_pcd_objects", 1);
+      return;
+    }
+
+    context_->debug_pose_publisher->pushPointMarker(
+      object.pose.position, "ICC_pcd_objects", 0, 0.5, true);
+
+    if (target_lanelets_map_.count(object.overlap_lanelet_id) == 0) return;
+
+    const auto overlap_point =
+      target_lanelets_map_[object.overlap_lanelet_id].overlap_point.position;
+    context_->debug_pose_publisher->pushLineSegmentMarker(
+      object.pose.position, overlap_point, "ICC_pcd_objects", 0);
+  };
+
+  for (const auto & object : debug_data.pcd_objects) {
+    if (!object.is_reliable) continue;
+    add_marker(object);
+  }
+}
+
+void IntersectionCollisionChecker::publish_planning_factor(const DebugData & debug_data) const
+{
+  if (debug_data.is_safe) return;
+
+  SafetyFactorArray factor_array;
+  factor_array.is_safe = false;
+  factor_array.detail = "possible collision at intersection";
+  factor_array.header.stamp = clock_->now();
+
   SafetyFactor factor;
-  factor.is_safe = false;
   factor.type = SafetyFactor::POINTCLOUD;
-  factor.ttc_begin = ttc;
-  factor.points.push_back(obs_point);
-  safety_factor_array_.factors.push_back(factor);
+  for (const auto & obj : debug_data.pcd_objects) {
+    if (!obj.is_reliable) continue;
+    factor.is_safe = obj.is_safe;
+    factor.ttc_begin = obj.ttc;
+    factor.points.push_back(obj.pose.position);
+    factor_array.factors.push_back(factor);
+  }
+
+  const auto & traj_points = context_->data->current_trajectory->points;
+  const auto & ego_pose = context_->data->current_kinematics->pose.pose;
+  planning_factor_interface_->add(
+    traj_points, ego_pose, ego_pose, PlanningFactor::STOP, factor_array);
+  planning_factor_interface_->publish();
 }
 
 }  // namespace autoware::planning_validator
