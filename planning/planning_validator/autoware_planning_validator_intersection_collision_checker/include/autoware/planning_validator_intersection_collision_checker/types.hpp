@@ -22,6 +22,7 @@
 #include <autoware_planning_msgs/msg/trajectory.hpp>
 #include <autoware_planning_msgs/msg/trajectory_point.hpp>
 #include <geometry_msgs/msg/point.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <lanelet2_core/primitives/Lanelet.h>
 #include <lanelet2_core/primitives/LineString.h>
@@ -43,6 +44,7 @@ using lanelet::ConstLanelet;
 using lanelet::ConstLanelets;
 using route_handler::Direction;
 using route_handler::RouteHandler;
+using sensor_msgs::msg::PointCloud2;
 
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
@@ -94,6 +96,18 @@ struct PCDObject
   double velocity{};
   double moving_time{};
   double ttc{};
+};
+
+struct DebugData
+{
+  EgoLanelets ego_lanelets;
+  std::vector<TargetLanelet> target_lanelets;
+  std::vector<PCDObject> pcd_objects;
+  PointCloud2::SharedPtr cluster_points;
+  PointCloud2::SharedPtr voxel_points;
+  Direction turn_direction{Direction::NONE};
+  double processing_time_detail_ms{0.0};
+  bool is_safe{true};
 };
 
 using PCDObjectsMap = std::unordered_map<lanelet::Id, PCDObject>;

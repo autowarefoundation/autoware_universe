@@ -77,6 +77,21 @@ void IntersectionCollisionChecker::setup_diag()
     "risk of collision at intersection turn");
 }
 
+bool IntersectionCollisionChecker::is_data_ready(std::string & msg)
+{
+  if (!context_->data->obstacle_pointcloud) {
+    msg = "Point cloud data is not available.";
+    return false;
+  }
+
+  if (!context_->data->route_handler->isHandlerReady()) {
+    msg = "Route handler is not ready.";
+    return false;
+  }
+
+  return true;
+}
+
 void IntersectionCollisionChecker::validate(bool & is_critical)
 {
   context_->validation_status->is_valid_intersection_collision_check = true;
@@ -87,51 +102,48 @@ void IntersectionCollisionChecker::validate(bool & is_critical)
   if (!p.enable) return;
 
   auto skip_validation = [&](const std::string & reason) {
-    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "%s", reason.c_str());
+    RCLCPP_DEBUG_THROTTLE(logger_, *clock_, 1000, "%s, skip collision check", reason.c_str());
     is_critical = false;
     reset_data();
   };
 
-  if (!context_->data->obstacle_pointcloud) {
-    return skip_validation("point cloud data is not available, skipping collision check.");
-  }
-
-  if (!context_->data->route_handler->isHandlerReady()) {
-    return skip_validation("route handler is not ready, skipping collision check.");
+  std::string data_msg;
+  if (!is_data_ready(data_msg)) {
+    return skip_validation(data_msg);
   }
 
   const auto ego_trajectory = get_ego_trajectory();
 
-  EgoLanelets lanelets;
-  const auto turn_direction = get_lanelets(lanelets, ego_trajectory);
+  DebugData debug_data;
+  get_lanelets(debug_data, ego_trajectory);
 
-  set_lanelets_debug_marker(lanelets);
+  set_lanelets_debug_marker(debug_data.ego_lanelets);
 
-  if (turn_direction == Direction::NONE) {
+  if (debug_data.turn_direction == Direction::NONE) {
     reset_data();
     return;
   }
 
-  if (lanelets.trajectory_lanelets.empty()) {
-    return skip_validation("failed to get trajectory lanelets, skipping collision check.");
+  if (debug_data.ego_lanelets.trajectory_lanelets.empty()) {
+    return skip_validation("failed to get trajectory lanelets");
   }
 
   if (target_lanelets_map_.empty()) {
-    return skip_validation("failed to get target lanelets, skipping collision check.");
+    return skip_validation("failed to get target lanelets");
   }
 
-  context_->validation_status->is_valid_intersection_collision_check = is_safe();
+  context_->validation_status->is_valid_intersection_collision_check = is_safe(debug_data);
 }
 
-bool IntersectionCollisionChecker::is_safe()
+bool IntersectionCollisionChecker::is_safe(DebugData & debug_data)
 {
   PointCloud::Ptr filtered_pointcloud(new PointCloud);
-  filter_pointcloud(context_->data->obstacle_pointcloud, filtered_pointcloud);
+  filter_pointcloud(context_->data->obstacle_pointcloud, filtered_pointcloud, debug_data);
   if (filtered_pointcloud->empty()) return true;
 
   safety_factor_array_ = SafetyFactorArray{};
   const bool is_safe =
-    check_collision(filtered_pointcloud, context_->data->obstacle_pointcloud->header.stamp);
+    check_collision(debug_data, filtered_pointcloud, context_->data->obstacle_pointcloud->header.stamp);
 
   const auto & ego_pose = context_->data->current_kinematics->pose.pose;
   const auto & traj_points = context_->data->current_trajectory->points;
@@ -195,21 +207,22 @@ EgoTrajectory IntersectionCollisionChecker::get_ego_trajectory() const
   return ego_traj;
 }
 
-Direction IntersectionCollisionChecker::get_lanelets(
-  EgoLanelets & lanelets, const EgoTrajectory & ego_trajectory) const
+void IntersectionCollisionChecker::get_lanelets(
+  DebugData & debug_data, const EgoTrajectory & ego_trajectory) const
 {
   const auto & ego_pose = context_->data->current_kinematics->pose.pose;
   try {
     collision_checker_utils::set_trajectory_lanelets(
-      ego_trajectory.front_traj, *context_->data->route_handler, ego_pose, lanelets);
+      ego_trajectory.front_traj, *context_->data->route_handler, ego_pose, debug_data.ego_lanelets);
   } catch (const std::logic_error & e) {
     RCLCPP_ERROR(logger_, "failed to get trajectory lanelets: %s", e.what());
-    return Direction::NONE;
+    debug_data.turn_direction = Direction::NONE;
+    return;
   }
 
-  const auto turn_direction = get_turn_direction(lanelets.turn_lanelets);
+  debug_data.turn_direction = get_turn_direction(debug_data.ego_lanelets.turn_lanelets);
 
-  if (turn_direction == Direction::NONE) return turn_direction;
+  if (debug_data.turn_direction == Direction::NONE) return;
 
   for (auto & target_lanelet : target_lanelets_map_) {
     target_lanelet.second.is_active = false;
@@ -220,17 +233,15 @@ Direction IntersectionCollisionChecker::get_lanelets(
   const auto current_vel = context_->data->current_kinematics->twist.twist.linear.x;
   const auto stopping_time = abs(current_vel / p.ego_deceleration);
   const auto time_horizon = std::max(p.min_time_horizon, stopping_time);
-  if (turn_direction == Direction::RIGHT) {
+  if (debug_data.turn_direction == Direction::RIGHT) {
     collision_checker_utils::set_right_turn_target_lanelets(
-      ego_trajectory, *context_->data->route_handler, params_, lanelets, target_lanelets_map_,
+      ego_trajectory, *context_->data->route_handler, params_, debug_data.ego_lanelets, target_lanelets_map_,
       time_horizon);
   } else {
     collision_checker_utils::set_left_turn_target_lanelets(
-      ego_trajectory, *context_->data->route_handler, params_, lanelets, target_lanelets_map_,
+      ego_trajectory, *context_->data->route_handler, params_, debug_data.ego_lanelets, target_lanelets_map_,
       time_horizon);
   }
-
-  return turn_direction;
 }
 
 Direction IntersectionCollisionChecker::get_turn_direction(
@@ -245,7 +256,7 @@ Direction IntersectionCollisionChecker::get_turn_direction(
 }
 
 void IntersectionCollisionChecker::filter_pointcloud(
-  PointCloud2::ConstSharedPtr & input, PointCloud::Ptr & filtered_pointcloud) const
+  PointCloud2::ConstSharedPtr & input, PointCloud::Ptr & filtered_pointcloud, DebugData & debug_data) const
 {
   if (input->data.empty()) return;
 
@@ -296,10 +307,18 @@ void IntersectionCollisionChecker::filter_pointcloud(
       p.pointcloud.voxel_grid_filter.z);
     filter.filter(*filtered_pointcloud);
   }
+
+  {
+    const auto voxel_pointcloud = std::make_shared<sensor_msgs::msg::PointCloud2>();
+    pcl::toROSMsg(*filtered_pointcloud, *voxel_pointcloud);
+    voxel_pointcloud->header.stamp = context_->data->obstacle_pointcloud->header.stamp;
+    voxel_pointcloud->header.frame_id = "map";
+    debug_data.voxel_points = voxel_pointcloud;
+  }
 }
 
 bool IntersectionCollisionChecker::check_collision(
-  const PointCloud::Ptr & filtered_point_cloud, const rclcpp::Time & time_stamp)
+  DebugData & debug_data, const PointCloud::Ptr & filtered_point_cloud, const rclcpp::Time & time_stamp)
 {
   bool is_safe = true;
 
@@ -333,7 +352,7 @@ bool IntersectionCollisionChecker::check_collision(
     const auto target_ll = target_lanelet.second;
     if (!target_ll.is_active || target_ll.lanelets.empty()) continue;
 
-    const auto pcd_object = get_pcd_object(time_stamp, filtered_point_cloud, target_ll);
+    const auto pcd_object = get_pcd_object(debug_data, time_stamp, filtered_point_cloud, target_ll);
     if (!pcd_object.has_value()) continue;
 
     auto update_object = [&](PCDObject & object, const PCDObject & new_data) {
@@ -405,7 +424,7 @@ bool IntersectionCollisionChecker::check_collision(
 }
 
 std::optional<PCDObject> IntersectionCollisionChecker::get_pcd_object(
-  const rclcpp::Time & time_stamp, const PointCloud::Ptr & filtered_point_cloud,
+  DebugData & debug_data, const rclcpp::Time & time_stamp, const PointCloud::Ptr & filtered_point_cloud,
   const TargetLanelet & target_lanelet) const
 {
   std::optional<PCDObject> pcd_object = std::nullopt;
@@ -418,7 +437,7 @@ std::optional<PCDObject> IntersectionCollisionChecker::get_pcd_object(
   if (points_within->empty()) return pcd_object;
 
   PointCloud::Ptr clustered_points(new PointCloud);
-  cluster_pointcloud(points_within, clustered_points);
+  cluster_pointcloud(points_within, clustered_points, debug_data);
 
   if (clustered_points->empty()) return pcd_object;
 
@@ -467,7 +486,7 @@ void IntersectionCollisionChecker::get_points_within(
 }
 
 void IntersectionCollisionChecker::cluster_pointcloud(
-  const PointCloud::Ptr & input, PointCloud::Ptr & output) const
+  const PointCloud::Ptr & input, PointCloud::Ptr & output, DebugData & debug_data) const
 {
   if (input->empty()) return;
 
@@ -512,6 +531,14 @@ void IntersectionCollisionChecker::cluster_pointcloud(
     for (const auto & point : *surface_hull) {
       output->push_back(point);
     }
+  }
+
+  {
+    const auto clustered_pointcloud = std::make_shared<sensor_msgs::msg::PointCloud2>();
+    pcl::toROSMsg(*output, *clustered_pointcloud);
+    clustered_pointcloud->header.stamp = context_->data->obstacle_pointcloud->header.stamp;
+    clustered_pointcloud->header.frame_id = "map";
+    debug_data.cluster_points = clustered_pointcloud;
   }
 }
 
