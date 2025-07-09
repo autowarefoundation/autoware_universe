@@ -47,6 +47,17 @@
           "description": "whether to use return type classification (if false, all returns are processed)",
           "default": "true"
         },
+        "filter_secondary_returns": {
+          "type": "boolean", 
+          "description": "whether to filter secondary returns (if true, only primary returns are kept)",
+          "default": "false"
+        },
+        "secondary_noise_threshold": {
+          "type": "number",
+          "description": "threshold for classifying primary vs secondary returns",
+          "default": "1.0",
+          "minimum": 0
+        },
         "primary_return_types": {
           "type": "array",
           "description": "list of return type values considered as primary returns",
@@ -66,9 +77,37 @@
             "maximum": 255
           },
           "default": "[2, 3, 4, 5]"
+        },
+        "filter_ratio_error_threshold": {
+          "type": "number",
+          "description": "the filter ratio threshold for error diagnostics (ratio of output/input points)",
+          "default": "0.5",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "filter_ratio_warn_threshold": {
+          "type": "number",
+          "description": "the filter ratio threshold for warning diagnostics (ratio of output/input points)",
+          "default": "0.7",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "visibility_error_threshold": {
+          "type": "number",
+          "description": "the visibility threshold for error diagnostics",
+          "default": "0.5",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "visibility_warn_threshold": {
+          "type": "number",
+          "description": "the visibility threshold for warning diagnostics",
+          "default": "0.7",
+          "minimum": 0,
+          "maximum": 1
         }
       },
-      "required": ["radius_resolution", "azimuth_resolution", "elevation_resolution", "voxel_points_threshold", "min_radius", "max_radius", "use_return_type_classification", "primary_return_types", "secondary_return_types"],
+      "required": ["radius_resolution", "azimuth_resolution", "elevation_resolution", "voxel_points_threshold", "min_radius", "max_radius", "use_return_type_classification", "filter_secondary_returns", "secondary_noise_threshold", "primary_return_types", "secondary_return_types", "filter_ratio_error_threshold", "filter_ratio_warn_threshold", "visibility_error_threshold", "visibility_warn_threshold"],
       "additionalProperties": false
     }
   },
