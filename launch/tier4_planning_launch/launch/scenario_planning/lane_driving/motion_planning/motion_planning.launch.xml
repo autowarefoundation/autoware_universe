@@ -10,6 +10,7 @@
   <arg name="launch_obstacle_velocity_limiter_module" default="true"/>
   <arg name="launch_mvp_run_out_module" default="true"/>
   <arg name="launch_boundary_departure_prevention_module" default="true"/>
+  <arg name="launch_road_user_stop_module" default="true"/>
   <arg name="launch_module_list_end" default="&quot;&quot;]"/>
 
   <!-- assemble launch config for motion velocity planner -->
@@ -53,6 +54,11 @@
     name="motion_velocity_planner_launch_modules"
     value="$(eval &quot;'$(var motion_velocity_planner_launch_modules)' + 'autoware::motion_velocity_planner::experimental::BoundaryDeparturePreventionModule, '&quot;)"
     if="$(var launch_boundary_departure_prevention_module)"
+  />
+  <let
+    name="motion_velocity_planner_launch_modules"
+    value="$(eval &quot;'$(var motion_velocity_planner_launch_modules)' + 'autoware::motion_velocity_planner::RoadUserStopModule, '&quot;)"
+    if="$(var launch_road_user_stop_module)"
   />
 
   <let name="motion_velocity_planner_launch_modules" value="$(eval &quot;'$(var motion_velocity_planner_launch_modules)' + '$(var launch_module_list_end)'&quot;)"/>
@@ -163,6 +169,7 @@
     <load_composable_node target="/planning/scenario_planning/lane_driving/motion_planning/motion_planning_container">
       <composable_node pkg="autoware_motion_velocity_planner" plugin="autoware::motion_velocity_planner::MotionVelocityPlannerNode" name="motion_velocity_planner" namespace="">
         <!-- topic remap -->
+        <remap from="~/input/path_with_lane_id" to="/planning/scenario_planning/lane_driving/behavior_planning/path_with_lane_id"/>
         <remap from="~/input/trajectory" to="path_optimizer/trajectory"/>
         <remap from="~/input/vector_map" to="/map/vector_map"/>
         <remap from="~/input/vehicle_odometry" to="/localization/kinematic_state"/>
@@ -193,6 +200,7 @@
         <param from="$(var motion_velocity_planner_obstacle_velocity_limiter_param_path)"/>
         <param from="$(var motion_velocity_planner_run_out_param_path)"/>
         <param from="$(var motion_velocity_planner_boundary_departure_prevention_module_param_path)"/>
+        <param from="$(var motion_velocity_planner_road_user_stop_module_param_path)"/>
         <!-- <param from="$(var motion_velocity_planner_template_param_path)"/> -->
         <!-- composable node config -->
         <extra_arg name="use_intra_process_comms" value="false"/>

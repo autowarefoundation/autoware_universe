@@ -1,0 +1,28 @@
+/**:
+  ros__parameters:
+    road_user_stop:
+      detection:
+        target_object_types:
+          check_pedestrian: true
+          check_bicycle: true
+          check_motorcycle: true
+          check_unknown: true
+        search_length: 200.0  # [m]
+        adjacent_lane_check: true
+        exclude_crosswalk_users: true
+        crosswalk_margin: 1.0  # [m]
+        exclude_sidewalk_users: true
+        min_detection_duration: 0.1  # [s]
+
+      stop_decision:
+        stop_margin: 10.0  # [m]
+        max_deceleration: 2.0  # [m/s^2]
+
+      in_place_stop:
+        enable: true
+        wrong_way_angle_threshold: 150.0  # [deg]
+        deceleration: 1.0  # [m/s^2]
+
+      debug:
+        publish_debug_markers: true
+        print_debug_info: true
