@@ -48,17 +48,31 @@ class SystemMonitorUtility
 {
 public:
   /**
+   * @brief convert the given string to lowercases.
+   * @param [in] string reference to the string to be converted
+   */
+  static void to_lowercase(std::string & string)
+  {
+    for (char & c : string) {
+      c = std::tolower(static_cast<unsigned char>(c));
+    }
+  }
+
+  /**
    * @brief get thermal zone information
-   * @param [in] t thermal zone name
+   * @param [in] name thermal zone type name
    * @param [in] pointer to thermal zone information
    */
-  static void getThermalZone(const std::string & t, std::vector<thermal_zone> * therm)
+  static void getThermalZone(const std::string & name, std::vector<thermal_zone> * thermal_zones)
   {
-    if (therm == nullptr) {
+    if (thermal_zones == nullptr) {
       return;
     }
 
-    therm->clear();
+    thermal_zones->clear();
+
+    std::string lowercase_name = name;
+    to_lowercase(lowercase_name);
 
     const fs::path root("/sys/class/thermal");
 
@@ -69,10 +83,10 @@ public:
       }
 
       std::cmatch match;
-      const char * therm_dir = path.generic_string().c_str();
+      const char * directory = path.generic_string().c_str();
 
       // not thermal_zone[0-9]
-      if (!std::regex_match(therm_dir, match, std::regex(".*/thermal_zone(\\d+)"))) {
+      if (!std::regex_match(directory, match, std::regex(".*/thermal_zone(\\d+)"))) {
         continue;
       }
 
@@ -87,12 +101,22 @@ public:
       }
       ifs.close();
 
-      if (type != t) {
+      std::string lowercase_type = type;
+      to_lowercase(lowercase_type);
+
+      // Compare the strings in lowercase,
+      // because cases depend on architectures and driver implementations.
+      // In addition to character cases, strings may be different among platforms.
+      // Examples:
+      //   Jetson AGX Xavier: "CPU-therm", "GPU-therm"
+      //   Jetson AGX Orin:   "cpu-thermal", "gpu-thermal"
+      if (lowercase_type.find(lowercase_name) != 0) {
         continue;
       }
 
-      const fs::path temp_path = path / "temp";
-      therm->emplace_back(t, path.filename().generic_string(), temp_path.generic_string());
+      const fs::path temperature_path = path / "temp";
+      thermal_zones->emplace_back(
+        name, path.filename().generic_string(), temperature_path.generic_string());
     }
   }
 
