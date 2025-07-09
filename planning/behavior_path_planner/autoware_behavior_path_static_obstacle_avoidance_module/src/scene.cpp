@@ -301,6 +301,9 @@ void StaticObstacleAvoidanceModule::fillFundamentalData(
     data.reference_path, 0, data.reference_path.points.size(),
     autoware::motion_utils::calcSignedArcLength(data.reference_path.points, getEgoPosition(), 0));
 
+  data.front_corner_offsets = utils::static_obstacle_avoidance::calc_front_corner_offsets(
+    data.reference_path_rough, planner_data_);
+
   data.is_allowed_goal_modification =
     utils::isAllowedGoalModification(planner_data_->route_handler);
   data.distance_to_red_traffic_light = utils::traffic_light::calcDistanceToRedTrafficLight(

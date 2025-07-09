@@ -1089,8 +1089,10 @@ std::optional<double> getAvoidMargin(
                                      : object_parameter.lateral_hard_margin;
 
   const auto max_avoid_margin = lateral_hard_margin * object.distance_factor +
-                                object_parameter.lateral_soft_margin + 0.5 * vehicle_width;
-  const auto min_avoid_margin = lateral_hard_margin + 0.5 * vehicle_width;
+                                object_parameter.lateral_soft_margin +
+                                object.curvature_based_margin + 0.5 * vehicle_width;
+  const auto min_avoid_margin =
+    lateral_hard_margin + object.curvature_based_margin + 0.5 * vehicle_width;
   const auto soft_lateral_distance_limit =
     object.to_road_shoulder_distance - parameters->soft_drivable_bound_margin - 0.5 * vehicle_width;
   const auto hard_lateral_distance_limit =
@@ -1205,6 +1207,56 @@ double calcShiftLength(
   const auto shift_length =
     is_object_on_right ? (overhang_dist + avoid_margin) : (overhang_dist - avoid_margin);
   return std::fabs(shift_length) > 1e-3 ? shift_length : 0.0;
+}
+
+auto calc_front_corner_offsets(
+  const PathWithLaneId & path, const std::shared_ptr<const PlannerData> & planner_data)
+  -> std::vector<double>
+{
+  std::vector<double> ret;
+
+  lanelet::BasicLineString3d linestring{};
+  std::for_each(path.points.begin(), path.points.end(), [&](const auto & p) {
+    const auto point = autoware_utils::get_point(p);
+    linestring.emplace_back(point.x, point.y, point.z);
+  });
+
+  const auto vehicle_info = planner_data->parameters.vehicle_info;
+  const auto front_left_corner = autoware_utils::Point2d(
+    vehicle_info.max_longitudinal_offset_m, 0.5 * vehicle_info.vehicle_width_m);
+  const auto front_right_corner = autoware_utils::Point2d(
+    vehicle_info.max_longitudinal_offset_m, -0.5 * vehicle_info.vehicle_width_m);
+
+  const auto curvatures = autoware::motion_utils::calcCurvature(path.points);
+  for (size_t i = 0; i < path.points.size(); i++) {
+    const auto transform =
+      autoware_utils::pose2transform(autoware_utils::get_pose(path.points.at(i)));
+
+    if (
+      autoware::motion_utils::calcSignedArcLength(path.points, i, path.points.size() - 1) <
+      vehicle_info.max_longitudinal_offset_m) {
+      ret.push_back(0.0);
+      continue;
+    }
+
+    if (curvatures.at(i) > 0.0) {
+      const auto transformed_front_right =
+        autoware_utils::transform_point(front_right_corner, transform);
+      const auto curvature_based_margin =
+        boost::geometry::distance(transformed_front_right, lanelet::utils::to2D(linestring)) -
+        0.5 * vehicle_info.vehicle_width_m;
+      ret.push_back(std::max(0.0, curvature_based_margin));
+    } else {
+      const auto transformed_front_left =
+        autoware_utils::transform_point(front_left_corner, transform);
+      const auto curvature_based_margin =
+        boost::geometry::distance(transformed_front_left, lanelet::utils::to2D(linestring)) -
+        0.5 * vehicle_info.vehicle_width_m;
+      ret.push_back(std::max(0.0, curvature_based_margin));
+    }
+  }
+
+  return ret;
 }
 
 bool isWithinLanes(
@@ -1381,6 +1433,35 @@ void fillLongitudinalAndLengthByClosestEnvelopeFootprint(
   obj.length = max_distance - min_distance;
 }
 
+double calc_curvature_based_margin(
+  const ObjectData & object_data, const std::vector<double> & front_corner_offsets,
+  const PathWithLaneId & path, const Point & ego_pos, const double base_link2front)
+{
+  if (front_corner_offsets.size() != path.points.size()) {
+    throw std::logic_error(
+      "size mismatch: vectors front_corner_offsets and path points must have the same length.");
+  }
+
+  const auto backward_distance =
+    autoware::motion_utils::calcSignedArcLength(path.points, 0L, ego_pos);
+  double curvature_based_margin = 0.0;
+  for (size_t i = 0; i < path.points.size(); i++) {
+    const auto d =
+      autoware::motion_utils::calcSignedArcLength(path.points, 0L, i) - backward_distance;
+    if (d + base_link2front < object_data.longitudinal) {
+      continue;
+    }
+
+    curvature_based_margin = std::max(curvature_based_margin, front_corner_offsets.at(i));
+
+    if (d > object_data.longitudinal + object_data.length) {
+      break;
+    }
+  }
+
+  return curvature_based_margin;
+}
+
 std::vector<std::pair<double, Point>> calcEnvelopeOverhangDistance(
   const ObjectData & object_data, const PathWithLaneId & path)
 {
@@ -1388,6 +1469,19 @@ std::vector<std::pair<double, Point>> calcEnvelopeOverhangDistance(
 
   for (const auto & p : object_data.envelope_poly.outer()) {
     const auto point = autoware_utils::create_point(p.x(), p.y(), 0.0);
+    // TODO(someone): search around first position where the ego should avoid the object.
+    const auto idx = autoware::motion_utils::findNearestIndex(path.points, point);
+    const auto lateral =
+      calc_lateral_deviation(autoware_utils::get_pose(path.points.at(idx)), point);
+    overhang_points.emplace_back(lateral, point);
+  }
+  std::sort(overhang_points.begin(), overhang_points.end(), [&](const auto & a, const auto & b) {
+    return isOnRight(object_data) ? b.first < a.first : a.first < b.first;
+  });
+  if (overhang_points.size() > 1) {
+    const auto p1 = overhang_points.at(0).second;
+    const auto p2 = overhang_points.at(1).second;
+    const auto point = autoware_utils::create_point(0.5 * (p1.x + p2.x), 0.5 * (p1.y + p2.y), 0.0);
     // TODO(someone): search around first position where the ego should avoid the object.
     const auto idx = autoware::motion_utils::findNearestIndex(path.points, point);
     const auto lateral =
@@ -2031,8 +2125,12 @@ void filterTargetObjects(
     }
 
     // Find the footprint point closest to the path, set to object_data.overhang_distance.
+    const auto & ego_pos = planner_data->self_odometry->pose.pose.position;
     o.overhang_points =
       utils::static_obstacle_avoidance::calcEnvelopeOverhangDistance(o, data.reference_path);
+    o.curvature_based_margin = calc_curvature_based_margin(
+      o, data.front_corner_offsets, data.reference_path_rough, ego_pos,
+      planner_data->parameters.vehicle_info.max_longitudinal_offset_m);
     o.to_road_shoulder_distance = filtering_utils::getRoadShoulderDistance(o, data, planner_data);
 
     if (filtering_utils::isUnknownTypeObject(o)) {
