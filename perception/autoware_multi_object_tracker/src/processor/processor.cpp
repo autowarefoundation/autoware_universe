@@ -232,6 +232,23 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
     }
   };
 
+  auto isIoUOverThreshold = [this](
+                              const TrackerData & source_data, const TrackerData & target_data) {
+    constexpr double min_union_iou_area = 1e-2;
+    constexpr float min_known_prob = 0.2;
+    constexpr double min_valid_iou = 1e-6;
+    bool is_pedestrian =
+      (source_data.label == Label::PEDESTRIAN && target_data.label == Label::PEDESTRIAN);
+    bool is_target_known = target_data.tracker->getKnownObjectProbability() >= min_known_prob;
+    const auto iou =
+      is_pedestrian ? shapes::get1dIoU(source_data.object, target_data.object)
+                    : shapes::get2dIoU(source_data.object, target_data.object, min_union_iou_area);
+    if (iou < min_valid_iou) return false;
+
+    return is_target_known ? iou > config_.min_known_object_removal_iou
+                           : iou > config_.min_unknown_object_removal_iou;
+  };
+
   std::vector<TrackerData> valid_trackers;
   valid_trackers.reserve(list_tracker_.size());
 
@@ -325,14 +342,9 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
       auto & data2 = valid_trackers[idx2];
       if (!data2.is_valid) continue;
 
-      // Calculate IoU only if necessary
-      constexpr double min_union_iou_area = 1e-2;
-      const auto iou = shapes::get2dIoU(data2.object, data1.object, min_union_iou_area);
-
-      // Skip if IoU is too small
-      if (iou < 1e-6) continue;
-
-      if (canMergeOverlappedTarget(*data2.tracker, *data1.tracker, time, iou)) {
+      if (
+        canMergeOverlappedTarget(*data2.tracker, *data1.tracker, time) &&
+        isIoUOverThreshold(data2, data1)) {
         // Merge tracker2 into tracker1
         data1.tracker->updateTotalExistenceProbability(
           data2.tracker->getTotalExistenceProbability());
@@ -361,7 +373,7 @@ void TrackerProcessor::mergeOverlappedTracker(const rclcpp::Time & time)
 }
 
 bool TrackerProcessor::canMergeOverlappedTarget(
-  const Tracker & target, const Tracker & other, const rclcpp::Time & time, const double iou) const
+  const Tracker & target, const Tracker & other, const rclcpp::Time & time) const
 {
   // if the other is not confident, do not remove the target
   if (!other.isConfident(time, adaptive_threshold_cache_, ego_pose_)) {
@@ -380,32 +392,27 @@ bool TrackerProcessor::canMergeOverlappedTarget(
       return false;
     }
     // both are known class, check the IoU
-    if (iou > config_.min_known_object_removal_iou) {
-      // compare probability vector, prioritize lower index of the probability vector
-      std::vector<float> target_existence_prob = target.getExistenceProbabilityVector();
-      std::vector<float> other_existence_prob = other.getExistenceProbabilityVector();
-      constexpr float prob_buffer = 0.4;
-      for (size_t i = 0; i < target_existence_prob.size(); ++i) {
-        if (target_existence_prob[i] + prob_buffer < other_existence_prob[i]) {
-          // if a channel probability has a large difference in higher index, remove the target
-          return true;
-        }
+    // compare probability vector, prioritize lower index of the probability vector
+    std::vector<float> target_existence_prob = target.getExistenceProbabilityVector();
+    std::vector<float> other_existence_prob = other.getExistenceProbabilityVector();
+    constexpr float prob_buffer = 0.4;
+    for (size_t i = 0; i < target_existence_prob.size(); ++i) {
+      if (target_existence_prob[i] + prob_buffer < other_existence_prob[i]) {
+        // if a channel probability has a large difference in higher index, remove the target
+        return true;
       }
-
-      // if there is no big difference in the probability per channel, compare the covariance size
-      return target.getPositionCovarianceDeterminant() > other.getPositionCovarianceDeterminant();
     }
+
+    // if there is no big difference in the probability per channel, compare the covariance size
+    return target.getPositionCovarianceDeterminant() > other.getPositionCovarianceDeterminant();
   }
   // 2. the target class is unknown, check the IoU
-  if (iou > config_.min_unknown_object_removal_iou) {
-    if (other_known_prob < min_known_prob) {
-      // both are unknown, remove the larger uncertainty one
-      return target.getPositionCovarianceDeterminant() > other.getPositionCovarianceDeterminant();
-    }
-    // if the other class is known, remove the target
-    return true;
+  if (other_known_prob < min_known_prob) {
+    // both are unknown, remove the larger uncertainty one
+    return target.getPositionCovarianceDeterminant() > other.getPositionCovarianceDeterminant();
   }
-  return false;
+  // if the other class is known, remove the target
+  return true;
 }
 
 void TrackerProcessor::getTrackedObjects(
