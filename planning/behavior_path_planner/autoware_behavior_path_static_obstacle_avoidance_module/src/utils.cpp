@@ -1214,7 +1214,7 @@ bool isWithinLanes(
 {
   const auto & rh = planner_data->route_handler;
   const auto & ego_pose = planner_data->self_odometry->pose.pose;
-  double vehicle_width = planner_data->parameters.vehicle_info.vehicle_width_m;
+  const double vehicle_width = planner_data->parameters.vehicle_info.vehicle_width_m;
   autoware_utils_geometry::Point2d p1(0.0, -vehicle_width / 2.0);
   autoware_utils_geometry::Point2d p2(0.0, vehicle_width / 2.0);
   autoware_utils_geometry::LineString2d line;
