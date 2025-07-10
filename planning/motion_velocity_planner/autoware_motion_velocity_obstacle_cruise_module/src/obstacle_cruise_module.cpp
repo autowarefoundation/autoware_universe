@@ -204,6 +204,7 @@ std::vector<CruiseObstacle> ObstacleCruiseModule::filter_cruise_obstacle_for_pre
   autoware_utils::ScopedTimeTrack st(__func__, *time_keeper_);
 
   const auto & current_pose = odometry.pose.pose;
+  const auto & current_vel = odometry.twist.twist;
 
   const auto & p = trajectory_polygon_collision_check;
   const auto decimated_traj_points = utils::decimate_trajectory_points_from_ego(
