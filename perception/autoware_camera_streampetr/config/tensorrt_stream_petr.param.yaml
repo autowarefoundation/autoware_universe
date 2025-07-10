@@ -4,16 +4,13 @@
     rois_number: 6
     model_params:
       class_names: ["CAR", "TRUCK", "BUS", "BICYCLE", "PEDESTRIAN"]
-      backbone_path: "$(var model_path)/simplify_extract_img_feat.onnx"             # make sure the directory is writable for engine file
-      head_path: "$(var model_path)/simplify_pts_head_memory.onnx"                  # make sure the directory is writable for engine file    
-      position_embedding_path: "$(var model_path)/simplify_position_embedding.onnx" # make sure the directory is writable for engine file
       fp16_mode: true
       use_temporal: true
       detection_range: [-61.2, -61.2, -10.0, 61.2, 61.2, 10.0]
       input_image_height: 480
       input_image_width: 640
       num_proposals: 5400
-      max_camera_time_diff: 0.2                   # Maximum permitted time difference between camera images
+      max_camera_time_diff: 0.15                   # Maximum permitted time difference between camera images
     post_process_params:
       confidence_threshold: 0.35
       circle_nms_dist_threshold: 0.5   # turn off circle NMS by setting 0.0, otherwise set to around 0.5

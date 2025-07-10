@@ -125,6 +125,17 @@ StreamPetrNetwork::StreamPetrNetwork(const std::string & engine_backbone_path,
         stream_);
 }
 
+void StreamPetrNetwork::wipe_memory()
+{
+  if (is_inference_initialized_) {
+    // Reset the memory buffers to zeros
+    pts_head_->bindings["pre_memory_embedding"]->initialize_to_zeros(stream_);
+    pts_head_->bindings["pre_memory_reference_point"]->initialize_to_zeros(stream_);
+    pts_head_->bindings["pre_memory_egopose"]->initialize_to_zeros(stream_);
+    pts_head_->bindings["pre_memory_velo"]->initialize_to_zeros(stream_);
+  }
+}
+
 void StreamPetrNetwork::inference_detector(
 const std::shared_ptr<Tensor> imgs,
 const std::vector<float> & ego_pose,
@@ -137,23 +148,6 @@ std::vector<autoware_perception_msgs::msg::DetectedObject> & output_objects,
 std::vector<float> & forward_time_ms
 )
 {
-    // // Print min and max values for img_feats, x, and all other bindings
-    // auto print_min_max = [](const std::string& name, std::shared_ptr<autoware::camera_streampetr::Tensor> tensor) {
-    //   std::vector<float> data = tensor->cpu();
-    //   if (data.empty()) {
-    //     std::cout << "Tensor " << name << " is empty or not float type." << std::endl;
-    //     return;
-    //   }
-    //   float min_val = data[0];
-    //   float max_val = data[0];
-    //   bool has_nan = false;
-    //   for (const auto& v : data) {
-    //     if (v < min_val) min_val = v;
-    //     if (v > max_val) max_val = v;
-    //     if (std::isnan(v)) has_nan = true;
-    //   }
-    //   std::cout << "Tensor " << name << " min: " << min_val << ", max: " << max_val << ", has_nan: " << has_nan << std::endl;
-    // };
     if(!is_inference_initialized_){
       pos_embed_->bindings["img_metas_pad"]->load_from_vector(img_metas_pad);
       pos_embed_->bindings["intrinsics"]->load_from_vector(intrinsics);
@@ -176,37 +170,7 @@ std::vector<float> & forward_time_ms
       is_inference_initialized_ = true;
     }
 
-    // std::cout << "------------------------------------------------------------------------------------------------" << std::endl;
-    // std::cout << "BEFORE INFERENCE: Printing min and max values for bindings" << std::endl;
-    // // Print for backbone_->bindings["img_feats"]
-    // if (backbone_->bindings.count("img_feats")) {
-    //   print_min_max("backbone/img_feats", backbone_->bindings["img_feats"]);
-    // }
 
-    // // Print for pts_head_->bindings["x"]
-    // if (pts_head_->bindings.count("x")) {
-    //   print_min_max("pts_head/x", pts_head_->bindings["x"]);
-    // }
-
-    // // Print for all other bindings in backbone_
-    // for (const auto& kv : backbone_->bindings) {
-    //   if (kv.first != "img_feats") {
-    //     print_min_max("backbone/" + kv.first, kv.second);
-    //   }
-    // }
-
-    // // Print for all other bindings in pts_head_
-    // for (const auto& kv : pts_head_->bindings) {
-    //   if (kv.first != "x") {
-    //     print_min_max("pts_head/" + kv.first, kv.second);
-    //   }
-    // }
-
-    // for (const auto& kv : pos_embed_->bindings) {
-    //   if (kv.first != "img_feats") {
-    //     print_min_max("pos_embed/" + kv.first, kv.second);
-    //   }
-    // }
     cudaMemcpyAsync(
       backbone_->bindings["img"]->ptr,
       imgs->ptr,
@@ -246,44 +210,13 @@ std::vector<float> & forward_time_ms
           pts_head_->bindings["pre_memory_velo"]->mov(pts_head_->bindings["post_memory_velo"], stream_);
         }
         else{
-          pts_head_->bindings["pre_memory_embedding"]->initialize_to_zeros(stream_);
-          pts_head_->bindings["pre_memory_reference_point"]->initialize_to_zeros(stream_);
-          pts_head_->bindings["pre_memory_egopose"]->initialize_to_zeros(stream_);
-          pts_head_->bindings["pre_memory_velo"]->initialize_to_zeros(stream_);
+          wipe_memory();
         }
         dur_ptshead_->MarkEnd(stream_);
     }
 
 
     cudaStreamSynchronize(stream_);
-    // std::cout << "------------------------------------------------------------------------------------------------" << std::endl;
-    // std::cout << "AFTER INFERENCE: Printing min and max values for bindings" << std::endl;
-    // if (backbone_->bindings.count("img_feats")) {
-    //   print_min_max("backbone/image", imgs);
-    // }
-    // // Print for backbone_->bindings["img_feats"]
-    // if (backbone_->bindings.count("img_feats")) {
-    //   print_min_max("backbone/img_feats", backbone_->bindings["img_feats"]);
-    // }
-
-    // // Print for pts_head_->bindings["x"]
-    // if (pts_head_->bindings.count("x")) {
-    //   print_min_max("pts_head/x", pts_head_->bindings["x"]);
-    // }
-
-    // // Print for all other bindings in backbone_
-    // for (const auto& kv : backbone_->bindings) {
-    //   if (kv.first != "img_feats") {
-    //     print_min_max("backbone/" + kv.first, kv.second);
-    //   }
-    // }
-
-    // // Print for all other bindings in pts_head_
-    // for (const auto& kv : pts_head_->bindings) {
-    //   if (kv.first != "x") {
-    //     print_min_max("pts_head/" + kv.first, kv.second);
-    //   }
-    // }
 
     std::vector<Box3D> det_boxes3d; 
     dur_postprocess_->MarkBegin(stream_);

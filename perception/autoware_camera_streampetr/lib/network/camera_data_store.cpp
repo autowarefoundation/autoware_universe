@@ -167,7 +167,7 @@ void CameraDataStore::preprocess_image(const int camera_id, const std::uint8_t *
     RCLCPP_ERROR(logger_, "resizeAndExtractRoi_launch failed with error: %s", cudaGetErrorString(err));
   }
   
-  // // Save the processed image for debugging
+  // // Save the processed image for debugging during development
   // std::string filename = "/home/autoware/workspace/StreamPETR_TensorRT_ROS2/data/camera_" + std::to_string(camera_id) + ".jpg";
   // save_processed_image(camera_id, filename);
 
