@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <arg name="diffusion_planner_param_path" default="$(find-pkg-share autoware_diffusion_planner)/config/diffusion_planner.param.yaml"/>
+  <!-- <arg name="onnx_model_path" default="$(env HOME)/pilot-auto-new-framework/src/autoware/trajectory_generator/autoware_diffusion_planner/data/model.onnx"/> -->
+  <arg name="onnx_model_path" default="$(env HOME)/Desktop/diffusion_planner_chkpt_250521/latest_25-05-21.onnx"/>
+  <arg name="args_path" default="$(env HOME)/pilot-auto-new-framework/src/autoware/trajectory_generator/autoware_diffusion_planner/data/args.json"/>
+  <arg name="input/vector_map" default="/map/vector_map"/>
+
+  <node pkg="autoware_diffusion_planner" exec="autoware_diffusion_planner_node" name="diffusion_planner_node" output="screen">
+    <param from="$(var diffusion_planner_param_path)" allow_substs="true"/>
+    <remap from="~/output/trajectory" to="/planning/scenario_planning/lane_driving/unused/trajectory"/>
+    <remap from="~/output/trajectories" to="/diffusion_planner/trajectories"/>
+    <remap from="~/output/predicted_objects" to="~/diffusion_planner/predicted_objects"/>
+    <remap from="~/input/odometry" to="/localization/kinematic_state"/>
+    <remap from="~/input/acceleration" to="/localization/acceleration"/>
+    <remap from="~/input/route" to="/planning/mission_planning/route"/>
+    <remap from="~/input/traffic_signals" to="/perception/traffic_light_recognition/traffic_signals"/>
+    <remap from="~/input/tracked_objects" to="/perception/object_recognition/tracking/objects"/>
+    <remap from="~/input/vector_map" to="$(var input/vector_map)"/>
+    <param name="onnx_model_path" value="$(var onnx_model_path)"/>
+    <param name="args_path" value="$(var args_path)"/>
+    <param name="build_only" value="true"/>
+  </node>
+</launch>
