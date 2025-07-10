@@ -199,15 +199,15 @@ std::optional<SamplingParameters> init_sampling_parameters(
 {
   const auto & trajectory = common_data_ptr->lc_param_ptr->trajectory;
   const auto min_lc_vel = trajectory.min_lane_changing_velocity;
-  const auto [min_lateral_acc, max_lateral_acc] =
-    trajectory.lat_acc_map.find(std::max(min_lc_vel, prepare_metrics.velocity));
+  const auto max_lateral_acc =
+    trajectory.lat_acc_map.find(std::max(min_lc_vel, prepare_metrics.velocity)).second;
   const auto initial_velocity = prepare_metrics.velocity;
   const auto lon_accel = prepare_metrics.sampled_lon_accel;
 
   const auto use_remaining_distance =
     common_data_ptr->lc_param_ptr->frenet.use_entire_remaining_distance;
 
-  const auto [lc_length, duration, final_velocity] = std::invoke([&, max_lateral_acc]() {
+  const auto [lc_length, duration, final_velocity] = std::invoke([&]() {
     auto duration = autoware::motion_utils::calc_shift_time_from_jerk(
       std::abs(initial_state.position.d), trajectory.lateral_jerk, max_lateral_acc);
     auto final_velocity = std::max(min_lc_vel, initial_velocity + lon_accel * duration);
